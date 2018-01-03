@@ -327,6 +327,15 @@ module Xt3dModule
       call ustop()
     endif
     !
+    ! -- Check to make sure ANGLEDEGX is available for interface normals
+    if (this%dis%con%ianglex == 0) then
+      call store_error('Error. ANGLDEGX is not specified in the DIS ' // &
+        'package, but XT3D is active: '// trim(adjustl(this%origin)) //       &
+        '. ANGLDEGX must be provided in discretization package in order ' // &
+        'to use XT3D.')
+      call ustop()
+    endif
+    !
     ! -- allocate arrays
     call this%allocate_arrays()
     !

@@ -52,8 +52,8 @@ module GwfDisModule
     procedure :: allocate_arrays
     !
     ! -- Read a node-sized model array (reduced or not)
-    procedure, private :: read_int_array
-    procedure, private :: read_dbl_array
+    procedure :: read_int_array
+    procedure :: read_dbl_array
   end type GwfDisType
 
   contains

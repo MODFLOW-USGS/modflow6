@@ -579,7 +579,12 @@ C7C-----ANISOTROPY (VKA).
         ! Anisotropy is ratio HK/VK.
         do i=1,NROW
           do j=1,NCOL
-            model%NpfWriter%vk(j,i,knew) = hk(j,i,k) / vka(j,i,k)
+            if (vka(j,i,k) > 0.) then
+              r = hk(j,i,k) / vka(j,i,k)
+            else
+              r = 0.
+            end if
+            model%NpfWriter%vk(j,i,knew) = r
           enddo
         enddo
       endif

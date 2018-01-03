@@ -19,6 +19,7 @@ module GwfNpfModule
   public :: hcond
   public :: vcond
   public :: condmean
+  public :: thksatnm
 
   type, extends(NumericalPackageType) :: GwfNpfType
 
@@ -33,6 +34,8 @@ module GwfNpfModule
     integer(I4B), pointer                           :: ithickstrt   => null()   ! thickstrt option flag
     integer(I4B), pointer                           :: igwfnewtonur => null()   ! newton head dampening using node bottom option flag
     integer(I4B), pointer                           :: iusgnrhc     => null()   ! MODFLOW-USG saturation calculation option flag
+    integer(I4B), pointer                           :: icalcspdis   => null()   ! Calculate specific discharge at cell centers
+    integer(I4B), pointer                           :: isavspdis    => null()   ! Save specific discharge at cell centers
     real(DP), pointer                               :: hnoflo       => null()   ! default is 1.e30
     real(DP), pointer                               :: satomega     => null()   ! newton-raphson saturation omega
     integer(I4B),pointer                            :: irewet       => null()   ! rewetting (0:off, 1:on)
@@ -61,6 +64,14 @@ module GwfNpfModule
     real(DP), dimension(:), pointer                 :: condsat      => null()   ! saturated conductance (symmetric array)
     real(DP), pointer                               :: min_satthk   => null()   ! minimum saturated thickness
     integer(I4B), dimension(:), pointer             :: ibotnode     => null()   ! bottom node used if igwfnewtonur /= 0
+    !
+    real(DP), dimension(:, :), pointer              :: spdis        => null()   ! specific discharge : qx, qy, qz (nodes, 3) 
+    integer(I4B), pointer                           :: nedges       => null()   ! number of cell edges
+    integer(I4B), pointer                           :: lastedge     => null()   ! last edge number
+    integer(I4B), dimension(:), pointer             :: nodedge      => null()   ! array of node numbers that have edges
+    integer(I4B), dimension(:), pointer             :: ihcedge      => null()   ! edge type (horizontal or vertical)
+    real(DP), dimension(:, :), pointer              :: propsedge    => null()   ! edge properties (Q, area, nx, ny, distance) 
+    !
   contains
     procedure                               :: npf_df
     procedure                               :: npf_ac
@@ -88,6 +99,10 @@ module GwfNpfModule
     procedure, private                      :: prepcheck
     procedure, public                       :: rewet_check
     procedure, public                       :: hy_eff
+    procedure, public                       :: calc_spdis
+    procedure, public                       :: sav_spdis
+    procedure, public                       :: increase_edge_count
+    procedure, public                       :: set_edge_properties
   endtype
 
   contains
@@ -124,7 +139,7 @@ module GwfNpfModule
     return
   end subroutine npf_cr
 
-  subroutine npf_df(this, xt3d)
+  subroutine npf_df(this, xt3d, ingnc)
 ! ******************************************************************************
 ! npf_df -- Define
 ! ******************************************************************************
@@ -132,10 +147,12 @@ module GwfNpfModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    use SimModule, only: ustop, store_error
     use Xt3dModule, only: xt3d_cr
     ! -- dummy
     class(GwfNpftype) :: this
     type(Xt3dType), pointer :: xt3d
+    integer(I4B), intent(in) :: ingnc
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtheader =                                 &
@@ -157,6 +174,13 @@ module GwfNpfModule
     ! -- Save pointer to xt3d object
     this%xt3d => xt3d
     if (this%ixt3d > 0) xt3d%ixt3d = this%ixt3d
+    !
+    ! -- Ensure GNC and XT3D are not both on at the same time
+    if (this%ixt3d > 0 .and. ingnc > 0) then
+      call store_error('Error in model ' // trim(this%name_model) // &
+        '.  The XT3D option cannot be used with the GNC Package.')
+      call ustop()
+    endif
     !
     ! -- Return
     return
@@ -564,7 +588,7 @@ module GwfNpfModule
     return
   end subroutine npf_fn
 
-  subroutine npf_nur(this, neqmod, x, xtemp, inewtonur)
+  subroutine npf_nur(this, neqmod, x, xtemp, dx, inewtonur)
 ! ******************************************************************************
 ! bnd_nur -- under-relaxation
 ! Subroutine: (1) Under-relaxation of Groundwater Flow Model Heads for current
@@ -579,6 +603,7 @@ module GwfNpfModule
     integer(I4B), intent(in) :: neqmod
     real(DP), dimension(neqmod), intent(inout) :: x
     real(DP), dimension(neqmod), intent(in) :: xtemp
+    real(DP), dimension(neqmod), intent(inout) :: dx
     integer(I4B), intent(inout) :: inewtonur
     ! -- local
     integer(I4B) :: n
@@ -596,6 +621,7 @@ module GwfNpfModule
         if (x(n) < botm) then
           inewtonur = 1
           x(n) = xtemp(n)*(DONE-DP9) + botm*DP9
+          dx(n) = DZERO
         end if
       end if
     enddo
@@ -763,7 +789,6 @@ module GwfNpfModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    implicit none
     ! -- dummy
     class(GwfNpfType) :: this
     integer(I4B),intent(in) :: nja
@@ -789,6 +814,12 @@ module GwfNpfModule
     ! -- Write the face flows if requested
     if(ibinun /= 0) then
       call this%dis%record_connection_array(flowja, ibinun, this%iout)
+    endif
+    !
+    ! -- Calculate specific discharge at cell centers and write, if requested
+    if (this%icalcspdis /= 0) then
+      call this%calc_spdis(flowja)
+      if(ibinun /= 0) call this%sav_spdis(ibinun)
     endif
     !
     ! -- Return
@@ -871,6 +902,8 @@ module GwfNpfModule
     call mem_deallocate(this%idewatcv)
     call mem_deallocate(this%ithickstrt)
     call mem_deallocate(this%iusgnrhc)
+    call mem_deallocate(this%isavspdis)
+    call mem_deallocate(this%icalcspdis)
     call mem_deallocate(this%irewet)
     call mem_deallocate(this%wetfct)
     call mem_deallocate(this%iwetit)
@@ -880,6 +913,8 @@ module GwfNpfModule
     call mem_deallocate(this%iangle1)
     call mem_deallocate(this%iangle2)
     call mem_deallocate(this%iangle3)
+    call mem_deallocate(this%nedges)
+    call mem_deallocate(this%lastedge)
     !
     ! -- Deallocate arrays
     call mem_deallocate(this%icelltype)
@@ -892,6 +927,10 @@ module GwfNpfModule
     call mem_deallocate(this%angle1)
     call mem_deallocate(this%angle2)
     call mem_deallocate(this%angle3)
+    call mem_deallocate(this%nodedge)
+    call mem_deallocate(this%ihcedge)
+    call mem_deallocate(this%propsedge)
+    call mem_deallocate(this%spdis)
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
@@ -929,6 +968,8 @@ module GwfNpfModule
     call mem_allocate(this%idewatcv, 'IDEWATCV', this%origin)
     call mem_allocate(this%ithickstrt, 'ITHICKSTRT', this%origin)
     call mem_allocate(this%iusgnrhc, 'IUSGNRHC', this%origin)
+    call mem_allocate(this%icalcspdis, 'ICALCSPDIS', this%origin)
+    call mem_allocate(this%isavspdis, 'ISAVSPDIS', this%origin)
     call mem_allocate(this%irewet, 'IREWET', this%origin)
     call mem_allocate(this%wetfct, 'WETFCT', this%origin)
     call mem_allocate(this%iwetit, 'IWETIT', this%origin)
@@ -940,6 +981,8 @@ module GwfNpfModule
     call mem_allocate(this%angle1, 1, 'ANGLE1', trim(this%origin))
     call mem_allocate(this%angle2, 1, 'ANGLE2', trim(this%origin))
     call mem_allocate(this%angle3, 1, 'ANGLE3', trim(this%origin))
+    call mem_allocate(this%nedges, 'NEDGES', this%origin)
+    call mem_allocate(this%lastedge, 'LASTEDGE', this%origin)
     !
     ! -- set pointer to inewtonur
     call mem_setptr(this%igwfnewtonur, 'INEWTONUR', trim(this%name_model))
@@ -957,6 +1000,8 @@ module GwfNpfModule
     this%idewatcv = 0
     this%ithickstrt = 0
     this%iusgnrhc = 0
+    this%icalcspdis = 0
+    this%isavspdis = 0
     this%irewet = 0
     this%wetfct = DONE
     this%iwetit = 1
@@ -968,6 +1013,8 @@ module GwfNpfModule
     this%angle1(1) = DZERO
     this%angle2(1) = DZERO
     this%angle3(1) = DZERO
+    this%nedges = 0
+    this%lastedge = 0
     !
     ! -- If newton is on, then NPF creates asymmetric matrix
     this%iasym = this%inewton
@@ -1001,6 +1048,20 @@ module GwfNpfModule
     call mem_allocate(this%k33, 0, 'K33', trim(this%origin))
     call mem_allocate(this%wetdry, 0, 'WETDRY', trim(this%origin))
     call mem_allocate(this%ibotnode, 0, 'IBOTNODE', trim(this%origin))
+    !
+    ! -- Specific discharge
+    if (this%icalcspdis == 1) then
+      call mem_allocate(this%spdis, 3, ncells, 'SPDIS', trim(this%origin))
+      call mem_allocate(this%nodedge, this%nedges, 'NODEDGE', trim(this%origin))
+      call mem_allocate(this%ihcedge, this%nedges, 'IHCEDGE', trim(this%origin))
+      call mem_allocate(this%propsedge, 5, this%nedges, 'PROPSEDGE',           &
+        trim(this%origin))
+    else
+      call mem_allocate(this%spdis, 3, 0, 'SPDIS', trim(this%origin))
+      call mem_allocate(this%nodedge, 0, 'NODEDGE', trim(this%origin))
+      call mem_allocate(this%ihcedge, 0, 'IHCEDGE', trim(this%origin))
+      call mem_allocate(this%propsedge, 0, 0, 'PROPSEDGE', trim(this%origin))
+    endif
     !
     ! -- Return
     return
@@ -1104,6 +1165,9 @@ module GwfNpfModule
             if(keyword == 'RHS') then
               this%ixt3d = 2
             endif
+          case ('SAVE_SPECIFIC_DISCHARGE')
+            this%icalcspdis = 1
+            this%isavspdis = 1
           !
           ! -- right now these are options that are only available in the
           !    development version and are not included in the documentation.
@@ -1136,6 +1200,14 @@ module GwfNpfModule
         end select
       end do
       write(this%iout,'(1x,a)') 'END OF NPF OPTIONS'
+    end if
+    ! -- check if this%iusgnrhc has been enabled for a model that is not using
+    !    the Newton-Raphson formulation
+    if (this%iusgnrhc > 0 .and. this%inewton == 0) then
+      this%iusgnrhc = 0
+      write(this%iout, '(4x,a,1x,a)')                                          &
+        'MODFLOW-USG saturation calculation not needed for a model',           &
+        'that is using the standard conductance formulation.'
     end if
     !
     ! -- set omega value used for saturation calculations
@@ -1488,7 +1560,7 @@ module GwfNpfModule
     else
       ! -- Check to make sure that angles are available
       if(this%dis%con%ianglex == 0) then
-        write(errmsg, '(a)') 'Error.  ANGLEX not provided in ' //              &
+        write(errmsg, '(a)') 'Error.  ANGLDEGX not provided in ' //            &
                              'discretization file, but K22 was specified. '
         call store_error(errmsg)
       endif
@@ -2179,6 +2251,11 @@ module GwfNpfModule
 ! ******************************************************************************
 ! hcond -- Horizontal conductance between two cells
 !   inwtup: if 1, then upstream-weight condsat, otherwise recalculate
+!
+! hcond function uses a weighted transmissivity in the harmonic mean 
+! conductance calculations. This differs from the MODFLOW-NWT and MODFLOW-USG 
+! conductance calculations for the Newton-Raphson formulation which use a 
+! weighted hydraulic conductivity.  
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -2219,6 +2296,7 @@ module GwfNpfModule
     real(DP) :: sill_top, sill_bot
     real(DP) :: tpn, tpm
     real(DP) :: top, bot
+    real(DP) :: athk
 ! ------------------------------------------------------------------------------
     !
     ! -- If either n or m is inactive then conductance is zero
@@ -2280,9 +2358,20 @@ module GwfNpfModule
           thksatn = max(min(tpn, sill_top) - sill_bot, DZERO)
           thksatm = max(min(tpm, sill_top) - sill_bot, DZERO)
         endif
+        
+        athk = DONE
+        if (iusg == 1) then
+          if (ihc == 2) then
+            athk = min(thksatn, thksatm)
+          else
+            athk = DHALF * (thksatn + thksatm)
+          end if
+          thksatn = DONE
+          thksatm = DONE
+        end if
         !
         condnm = condmean(hkn, hkm, thksatn, thksatm, cln, clm,                &
-                          fawidth, icellavg)
+                          fawidth, icellavg) * athk
       end if
     endif
     !
@@ -2494,7 +2583,7 @@ module GwfNpfModule
     return
   end function logmean
 
-  function hyeff_calc(k11, k22, k33, ang1, ang2, ang3, vg1, vg2, vg3)           &
+  function hyeff_calc(k11, k22, k33, ang1, ang2, ang3, vg1, vg2, vg3)          &
     result(hyeff)
 ! ******************************************************************************
 ! hyeff_calc -- Calculate the effective horizontal hydraulic conductivity from
@@ -2565,5 +2654,496 @@ module GwfNpfModule
     ! -- Return
     return
   end function hyeff_calc
+
+  subroutine calc_spdis(this, flowja)
+! ******************************************************************************
+! calc_spdis -- Calculate the 3 conmponents of specific discharge 
+!     at the cell center.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use SimModule, only: ustop, store_error
+    ! -- dummy
+    class(GwfNpfType) :: this
+    real(DP), intent(in), dimension(:) :: flowja
+    ! -- local
+    integer(I4B) :: n
+    integer(I4B) :: m
+    integer(I4B) :: ipos
+    integer(I4B) :: isympos
+    integer(I4B) :: ihc
+    integer(I4B) :: ic
+    integer(I4B) :: iz
+    integer(I4B) :: nc
+    integer(I4B) :: ncz
+    real(DP) :: qz
+    real(DP) :: vx
+    real(DP) :: vy
+    real(DP) :: vz
+    real(DP) :: xn
+    real(DP) :: yn
+    real(DP) :: zn
+    real(DP) :: xc
+    real(DP) :: yc
+    real(DP) :: zc
+    real(DP) :: cl1
+    real(DP) :: cl2
+    real(DP) :: dltot
+    real(DP) :: ooclsum
+    real(DP) :: dsumx
+    real(DP) :: dsumy
+    real(DP) :: dsumz
+    real(DP) :: denom
+    real(DP) :: area
+    real(DP) :: dz
+    real(DP) :: axy
+    real(DP) :: ayx
+    real(DP), allocatable, dimension(:) :: vi
+    real(DP), allocatable, dimension(:) :: di
+    real(DP), allocatable, dimension(:) :: viz
+    real(DP), allocatable, dimension(:) :: diz
+    real(DP), allocatable, dimension(:) :: nix
+    real(DP), allocatable, dimension(:) :: niy
+    real(DP), allocatable, dimension(:) :: wix
+    real(DP), allocatable, dimension(:) :: wiy
+    real(DP), allocatable, dimension(:) :: wiz
+    real(DP), allocatable, dimension(:) :: bix
+    real(DP), allocatable, dimension(:) :: biy
+    logical :: nozee = .true.
+! ------------------------------------------------------------------------------
+    !
+    ! -- Ensure dis has necessary information
+    if(this%icalcspdis /= 0 .and. this%dis%con%ianglex == 0) then
+      call store_error('Error.  ANGLDEGX not provided in ' //                  &
+                       'discretization file.  ANGLDEGX required for ' //       &
+                       'calculation of specific discharge.')
+      call ustop()
+    endif
+    !
+    ! -- Find max number of connections and allocate weight arrays
+    nc = 0
+    do n = 1, this%dis%nodes
+      !
+      ! -- Count internal model connections
+      ic = this%dis%con%ia(n + 1) - this%dis%con%ia(n) - 1
+      !
+      ! -- Count edge connections
+      do m = 1, this%nedges
+        if (this%nodedge(m) == n) then
+          ic = ic + 1
+        endif
+      enddo
+      !
+      ! -- Set max number of connections for any cell
+      if (ic > nc) nc = ic
+    end do
+    !
+    ! -- Allocate storage arrays needed for cell-centered spdis calculation
+    allocate(vi(nc))
+    allocate(di(nc))
+    allocate(viz(nc))
+    allocate(diz(nc))
+    allocate(nix(nc))
+    allocate(niy(nc))
+    allocate(wix(nc))
+    allocate(wiy(nc))
+    allocate(wiz(nc))
+    allocate(bix(nc))
+    allocate(biy(nc))
+    !
+    ! -- Go through each cell and calculate specific discharge
+    do n = 1, this%dis%nodes
+      !
+      ! -- first calculate geometric properties for x and y directions and 
+      !    the specific discharge at a face (vi)
+      ic = 0
+      iz = 0
+      vi(:) = DZERO
+      di(:) = DZERO
+      viz(:) = DZERO
+      diz(:) = DZERO
+      nix(:) = DZERO
+      niy(:) = DZERO
+      do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
+        m = this%dis%con%ja(ipos)
+        isympos = this%dis%con%jas(ipos)
+        ihc = this%dis%con%ihc(isympos)
+        area = this%dis%con%hwva(isympos)
+        if (ihc == 0) then
+          !
+          ! -- vertical connection
+          iz = iz + 1
+          !call this%dis%connection_normal(n, m, ihc, xn, yn, zn, ipos)
+          call this%dis%connection_vector(n, m, nozee, this%sat(n), this%sat(m), &
+                                          ihc, xc, yc, zc, dltot)
+          cl1 = this%dis%con%cl1(isympos)
+          cl2 = this%dis%con%cl2(isympos)
+          ooclsum = DONE / (cl1 + cl2)
+          diz(iz) = dltot * cl1 * ooclsum
+          qz = flowja(ipos)
+          if (n > m) qz = -qz
+          viz(iz) = qz / area
+        else
+          !
+          ! -- horizontal connection
+          ic = ic + 1
+          dz = thksatnm(this%ibound(n), this%ibound(m), &
+                        this%icelltype(n), this%icelltype(m), &
+                        this%inewton, ihc, this%iusgnrhc,  &
+                        this%hnew(n), this%hnew(m), this%sat(n), this%sat(m), &
+                        this%dis%top(n), this%dis%top(m), this%dis%bot(n), &
+                        this%dis%bot(m), this%satomega)
+          area = area * dz
+          call this%dis%connection_normal(n, m, ihc, xn, yn, zn, ipos)
+          call this%dis%connection_vector(n, m, nozee, this%sat(n), this%sat(m), &
+                                          ihc, xc, yc, zc, dltot)
+          cl1 = this%dis%con%cl1(isympos)
+          cl2 = this%dis%con%cl2(isympos)
+          ooclsum = DONE / (cl1 + cl2)
+          nix(ic) = -xn
+          niy(ic) = -yn
+          di(ic) = dltot * cl1 * ooclsum
+          if (area > DZERO) then
+            vi(ic) = flowja(ipos) / area
+          else
+            vi(ic) = DZERO
+          endif
+        endif
+      end do
+      !
+      ! -- Look through edge flows that may have been provided by an exchange
+      !    and incorporate them into the averaging arrays
+      do m = 1, this%nedges
+        if (this%nodedge(m) == n) then
+          !
+          ! -- propsedge: (Q, area, nx, ny, distance)
+          ihc = this%ihcedge(m)
+          area = this%propsedge(2, m)
+          if (ihc == 0) then
+            iz = iz + 1
+            viz(iz) = this%propsedge(1, m) / area
+            diz(iz) = this%propsedge(5, m)
+          else
+            ic = ic + 1
+            nix(ic) = -this%propsedge(3, m)
+            niy(ic) = -this%propsedge(4, m)
+            di(ic) = this%propsedge(5, m)
+            if (area > DZERO) then
+              vi(ic) = this%propsedge(1, m) / area
+            else
+              vi(ic) = DZERO
+            endif
+          endif
+        endif
+      enddo
+      !
+      ! -- Assign numnber of vertical and horizontal connections
+      ncz = iz
+      nc = ic
+      !
+      ! -- calculate z weight (wiz) and z velocity
+      if (ncz == 1) then
+        wiz(1) = DONE
+      else
+        dsumz = DZERO
+        do iz = 1, ncz
+          dsumz = dsumz + diz(iz)
+        enddo
+        denom = (ncz - DONE)
+        if (denom < DZERO) denom = DZERO
+        dsumz = dsumz + DEM10 * dsumz
+        do iz = 1, ncz
+          if (dsumz > DZERO) wiz(iz) = DONE - diz(iz) / dsumz
+          if (denom > 0) then
+            wiz(iz) = wiz(iz) / denom
+          else
+            wiz(iz) = DZERO
+          endif
+        enddo
+      endif
+      vz = DZERO
+      do iz = 1, ncz
+        vz = vz + wiz(iz) * viz(iz)
+      enddo
+      !
+      ! -- distance-based weighting
+      nc = ic
+      dsumx = DZERO
+      dsumy = DZERO
+      dsumz = DZERO
+      do ic = 1, nc
+        wix(ic) = di(ic) * abs(nix(ic))
+        wiy(ic) = di(ic) * abs(niy(ic))
+        dsumx = dsumx + wix(ic)
+        dsumy = dsumy + wiy(ic)
+      enddo
+      !
+      ! -- Finish computing omega weights.  Add a tiny bit
+      !    to dsum so that the normalized omega weight later
+      !    evaluates to (essentially) 1 in the case of a single 
+      !    relevant connection, avoiding 0/0.
+      dsumx = dsumx + DEM10 * dsumx
+      dsumy = dsumy + DEM10 * dsumy
+      do ic = 1, nc
+        wix(ic) = (dsumx - wix(ic)) * abs(nix(ic))
+        wiy(ic) = (dsumy - wiy(ic)) * abs(niy(ic))
+      enddo
+      !
+      ! -- compute B weights
+      dsumx = DZERO
+      dsumy = DZERO
+      do ic = 1, nc
+        bix(ic) = wix(ic) * sign(DONE, nix(ic))
+        biy(ic) = wiy(ic) * sign(DONE, niy(ic))
+        dsumx = dsumx + wix(ic) * abs(nix(ic))
+        dsumy = dsumy + wiy(ic) * abs(niy(ic))
+      enddo
+      if (dsumx > DZERO) dsumx = DONE / dsumx
+      if (dsumy > DZERO) dsumy = DONE / dsumy
+      axy = DZERO
+      ayx = DZERO
+      do ic = 1, nc
+        bix(ic) = bix(ic) * dsumx
+        biy(ic) = biy(ic) * dsumy
+        axy = axy + bix(ic) * niy(ic)
+        ayx = ayx + biy(ic) * nix(ic)
+      enddo
+      !
+      ! -- calculate specific discharge
+      vx = DZERO
+      vy = DZERO
+      do ic = 1, nc
+        vx = vx + (bix(ic) - axy * biy(ic)) * vi(ic)
+        vy = vy + (biy(ic) - ayx * bix(ic)) * vi(ic)
+      enddo
+      denom = DONE - axy * ayx
+      vx = vx / denom
+      vy = vy / denom
+      !
+      this%spdis(1, n) = vx
+      this%spdis(2, n) = vy
+      this%spdis(3, n) = vz
+      !
+    end do
+    !
+    ! -- cleanup
+    deallocate(vi)
+    deallocate(di)
+    deallocate(nix)
+    deallocate(niy)
+    deallocate(wix)
+    deallocate(wiy)
+    deallocate(wiz)
+    deallocate(bix)
+    deallocate(biy)
+    !
+    ! -- return
+    return
+  end subroutine calc_spdis
+  
+  subroutine sav_spdis(this, ibinun)
+! ******************************************************************************
+! sav_spdis -- save specific discharge in binary format to ibinun
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwfNpfType) :: this
+    integer(I4B), intent(in) :: ibinun
+    ! -- local
+    character(len=16) :: text
+    character(len=16), dimension(3) :: auxtxt
+    integer(I4B) :: n
+    integer(I4B) :: naux
+! ------------------------------------------------------------------------------
+    !
+    ! -- Write the header
+    text = '      DATA-SPDIS'
+    naux = 3
+    auxtxt(:) = ['              qx', '              qy', '              qz']
+    call this%dis%record_srcdst_list_header(text, this%name_model, this%name,  &
+      this%name_model, this%name, naux, auxtxt, ibinun, this%dis%nodes,        &
+      this%iout)
+    !
+    ! -- Write a zero for Q, and then write qx, qy, qz as aux variables
+    do n = 1, this%dis%nodes
+      call this%dis%record_mf6_list_entry(ibinun, n, n, DZERO, naux,           &
+        this%spdis(:, n))
+    end do
+    !
+    ! -- return
+    return
+  end subroutine sav_spdis
+
+  subroutine increase_edge_count(this, nedges)
+! ******************************************************************************
+! increase_edge_count -- reserve space for nedges cells that have an edge on them.
+!   This must be called before the npf%allocate_arrays routine, which is called
+!   from npf%ar.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwfNpfType) :: this
+    integer(I4B), intent(in) :: nedges
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    this%nedges = this%nedges + nedges
+    !
+    ! -- return
+    return
+  end subroutine increase_edge_count
+
+  subroutine set_edge_properties(this, nodedge, ihcedge, q, area, nx, ny,      &
+                                 distance)
+! ******************************************************************************
+! edge_count -- provide the npf package with edge properties.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwfNpfType) :: this
+    integer(I4B), intent(in) :: nodedge
+    integer(I4B), intent(in) :: ihcedge
+    real(DP), intent(in) :: q
+    real(DP), intent(in) :: area
+    real(DP), intent(in) :: nx
+    real(DP), intent(in) :: ny
+    real(DP), intent(in) :: distance
+    ! -- local
+    integer(I4B) :: lastedge
+! ------------------------------------------------------------------------------
+    !
+    this%lastedge = this%lastedge + 1
+    lastedge = this%lastedge
+    this%nodedge(lastedge) = nodedge
+    this%ihcedge(lastedge) = ihcedge
+    this%propsedge(1, lastedge) = q
+    this%propsedge(2, lastedge) = area
+    this%propsedge(3, lastedge) = nx
+    this%propsedge(4, lastedge) = ny
+    this%propsedge(5, lastedge) = distance
+    !
+    ! -- return
+    return
+  end subroutine set_edge_properties
+
+  function thksatnm(ibdn, ibdm, ictn, ictm, inwtup, ihc, iusg,                 &
+                    hn, hm, satn, satm, topn, topm, botn, botm, satomega)      &
+                    result(res)
+! ******************************************************************************
+! thksatnm -- calculate saturated thickness at interface between two cells
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- return
+    real(DP) :: res
+    ! -- dummy
+    integer(I4B), intent(in) :: ibdn
+    integer(I4B), intent(in) :: ibdm
+    integer(I4B), intent(in) :: ictn
+    integer(I4B), intent(in) :: ictm
+    integer(I4B), intent(in) :: inwtup
+    integer(I4B), intent(in) :: ihc
+    integer(I4B), intent(in) :: iusg
+    real(DP), intent(in) :: hn
+    real(DP), intent(in) :: hm
+    real(DP), intent(in) :: satn
+    real(DP), intent(in) :: satm
+    real(DP), intent(in) :: topn
+    real(DP), intent(in) :: topm
+    real(DP), intent(in) :: botn
+    real(DP), intent(in) :: botm
+    real(DP), intent(in) :: satomega
+    ! -- local
+    integer(I4B) :: indk
+    real(DP) :: sn
+    real(DP) :: sm
+    real(DP) :: thksatn
+    real(DP) :: thksatm
+    real(DP) :: sill_top, sill_bot
+    real(DP) :: tpn, tpm
+    real(DP) :: top, bot
+! ------------------------------------------------------------------------------
+    !
+    ! -- If either n or m is inactive then saturated thickness is zero
+    if(ibdn == 0 .or. ibdm == 0) then
+      res = DZERO
+    !
+    ! -- if both cells are non-convertible then use average cell thickness
+    elseif(ictn == 0 .and. ictm == 0) then
+      res = DHALF * (topn - botn + topm - botm)
+    !
+    ! -- At least one of the cells is convertible, so calculate average saturated
+    !    thickness
+    else
+      if (inwtup == 1) then
+        ! -- set flag used to determine if bottom of cells n and m are
+        !    significantly different
+        indk = 0
+        if (abs(botm-botn) < DEM2) indk = 1
+        ! -- recalculate saturation if using MODFLOW-USG saturation
+        !    calculation approach
+        if (iusg == 1 .and. indk == 0) then
+          if (botm > botn) then
+            top = topm
+            bot = botm
+          else
+            top = topn
+            bot = botn
+          end if
+          sn = sQuadraticSaturation(top, bot, hn, satomega)
+          sm = sQuadraticSaturation(top, bot, hm, satomega)
+        else
+          sn = sQuadraticSaturation(topn, botn, hn, satomega)
+          sm = sQuadraticSaturation(topm, botm, hm, satomega)
+        end if
+        !
+        ! -- upstream weight the thickness
+        if (hn > hm) then
+          res = sn * (topn - botn)
+        else
+          res = sm * (topm - botm)
+        end if
+        !
+      else
+        thksatn = satn * (topn - botn)
+        thksatm = satm * (topm - botm)
+        !
+        ! -- If staggered connection, subtract parts of cell that are above and
+        !    below the sill top and bottom elevations
+        if(ihc == 2) then
+          !
+          ! -- Calculate sill_top and sill_bot
+          sill_top = min(topn, topm)
+          sill_bot = max(botn, botm)
+          !
+          ! -- Calculate tpn and tpm
+          tpn = botn + thksatn
+          tpm = botm + thksatm
+          !
+          ! -- Calculate saturated thickness for cells n and m
+          thksatn = max(min(tpn, sill_top) - sill_bot, DZERO)
+          thksatm = max(min(tpm, sill_top) - sill_bot, DZERO)
+        endif
+        !
+        res = DHALF * (thksatn + thksatm)
+      end if
+    endif
+    !
+    ! -- Return
+    return
+  end function thksatnm
   
 end module GwfNpfModule

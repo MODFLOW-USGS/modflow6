@@ -96,6 +96,7 @@ contains
     else
       ! -- Read data as binary
       locat = -locat
+      call read_binary_header(locat, iout, aname)
       read(locat,iostat=istat,iomsg=ermsgr) (iarr(j),j=1,jj)
       if (istat /= 0) then
         arrname = adjustl(aname)
@@ -184,6 +185,7 @@ contains
       ! -- Read data as binary
       locat = -locat
       do i=1,ii
+        call read_binary_header(locat, iout, aname)
         read(locat,iostat=istat,iomsg=ermsgr) (iarr(j,i),j=1,jj)
         if (istat /= 0) then
           arrname = adjustl(aname)
@@ -340,6 +342,7 @@ contains
     else
       ! -- Read data as binary
       locat = -locat
+      call read_binary_header(locat, iout, aname)
       read(locat,iostat=istat,iomsg=ermsgr) (darr(j),j=1,jj)
       if (istat /= 0) then
         arrname = adjustl(aname)
@@ -429,6 +432,7 @@ contains
       ! -- Read data as binary
       locat = -locat
       do i=1,ii
+        call read_binary_header(locat, iout, aname)
         read(locat,iostat=istat,iomsg=ermsgr) (darr(j,i),j=1,jj)
         if (istat /= 0) then
           arrname = adjustl(aname)
@@ -1044,4 +1048,44 @@ contains
     return
   end subroutine print_array_dbl
 
+  subroutine read_binary_header(locat, iout, arrname)
+    ! -- dummy
+    integer(I4B), intent(in) :: locat
+    integer(I4B), intent(in) :: iout
+    character(len=*), intent(in) :: arrname
+    ! -- local
+    integer(I4B) :: istat
+    integer(I4B) :: kstp, kper, m1, m2, m3
+    real(DP) :: pertim, totim
+    character(len=16) :: text
+    character(len=MAXCHARLEN) :: ermsg, ermsgr
+    character(len=*), parameter :: fmthdr = &
+      "(/,1X,'HEADER FROM BINARY FILE HAS FOLLOWING ENTRIES',&
+       &/,4X,'KSTP: ',I0,'  KPER: ',I0,&
+       &/,4x,'PERTIM: ',G0,'  TOTIM: ',G0,&
+       &/,4X,'TEXT: ',A,&
+       &/,4X,'MSIZE 1: ',I0,'  MSIZE 2: ',I0,'  MSIZE 3: ',I0)"
+    !
+    ! -- Read the header line from the binary file
+    read(locat, iostat=istat, iomsg=ermsgr) kstp, kper, pertim, totim, text, &
+      m1, m2, m3
+    !
+    ! -- Check for errors
+    if (istat /= 0) then
+      ermsg = 'Error reading data for array: ' // adjustl(trim(arrname))
+      call store_error(ermsg)
+      call store_error(ermsgr)
+      call store_error_unit(locat)
+      call ustop()
+    endif
+    !
+    ! -- Write message about the binary header
+    if (iout > 0) then
+      write(iout, fmthdr) kstp, kper, pertim, totim, text, m1, m2, m3
+    endif
+    !
+    ! -- return
+    return
+  end subroutine read_binary_header
+                             
 end module ArrayReadersModule

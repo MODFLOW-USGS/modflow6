@@ -61,7 +61,12 @@ bin/zbud6
 
 tmp_simulations/
 autotest/temp/
+autotest/tempbin/
 autotest/*.html
+
+mod_temp/
+obj_temp/
+src_temp/
 
 .ipynb_checkpoints/
 

@@ -65,6 +65,7 @@ module GwfModule
     procedure :: model_ptcchk            => gwf_ptcchk
     procedure :: model_ptc               => gwf_ptc
     procedure :: model_nur               => gwf_nur
+    procedure :: model_cq                => gwf_cq
     procedure :: model_bd                => gwf_bd
     procedure :: model_ot                => gwf_ot
     procedure :: model_fp                => gwf_fp
@@ -316,7 +317,7 @@ module GwfModule
     !
     ! -- Define packages and utility objects
     call this%dis%dis_df()
-    call this%npf%npf_df(this%xt3d)
+    call this%npf%npf_df(this%xt3d, this%ingnc)
     call this%oc%oc_df()
     call this%budget%budget_df(niunit, 'VOLUME', 'L**3')
     if(this%ingnc > 0) call this%gnc%gnc_df(this)
@@ -808,7 +809,7 @@ module GwfModule
     return
   end subroutine gwf_ptc
 
-  subroutine gwf_nur(this, neqmod, x, xtemp, inewtonur)
+  subroutine gwf_nur(this, neqmod, x, xtemp, dx, inewtonur)
 ! ******************************************************************************
 ! gwf_nur -- under-relaxation
 ! Subroutine: (1) Under-relaxation of Groundwater Flow Model Heads for current
@@ -825,6 +826,7 @@ module GwfModule
     integer(I4B), intent(in) :: neqmod
     real(DP), dimension(neqmod), intent(inout) :: x
     real(DP), dimension(neqmod), intent(in) :: xtemp
+    real(DP), dimension(neqmod), intent(inout) :: dx
     integer(I4B), intent(inout) :: inewtonur
     ! -- local
     !integer(I4B) :: n
@@ -841,7 +843,7 @@ module GwfModule
     !    under-relaxation is turned on.
     if (this%inewton /= 0 .and. this%inewtonur /= 0) then
       if (this%innpf > 0) then
-        call this%npf%npf_nur(neqmod, x, xtemp, inewtonur)
+        call this%npf%npf_nur(neqmod, x, xtemp, dx, inewtonur)
       end if
       !
       ! -- Call package nur routines
@@ -850,7 +852,8 @@ module GwfModule
         packobj => GetBndFromList(this%bndlist, ip)
         if (packobj%npakeq > 0) then
           i1 = i0 + packobj%npakeq - 1
-          call packobj%bnd_nur(packobj%npakeq, x(i0:i1), xtemp(i0:i1), inewtonur)
+          call packobj%bnd_nur(packobj%npakeq, x(i0:i1), xtemp(i0:i1), &
+                               dx(i0:i1), inewtonur)
           i0 = i1 + 1
         end if
       enddo
@@ -860,16 +863,47 @@ module GwfModule
     return
   end subroutine gwf_nur
 
-  subroutine gwf_bd(this, icnvg, isuppress_output)
+  subroutine gwf_cq(this, icnvg, isuppress_output)
 ! ******************************************************************************
-! gwf_bd --GroundWater Flow Model Budget
+! gwf_cq --Groundwater flow model calculate flow
 ! Subroutine: (1) Calculate intercell flows (flowja)
-!             (2) Calculate stress package contributions to model budget
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use ConstantsModule, only: DZERO
+    ! -- modules
+    ! -- dummy
+    class(GwfModelType) :: this
+    integer(I4B), intent(in) :: icnvg
+    integer(I4B), intent(in) :: isuppress_output
+    ! -- local
+    integer(I4B) :: i
+! ------------------------------------------------------------------------------
+    !
+    ! -- Construct the flowja array.  Flowja is calculated each time, even if
+    !    output is suppressed.  (flowja is positive into a cell.)
+    do i = 1, this%nja
+      this%flowja(i) = DZERO
+    enddo
+    if(this%innpf > 0) call this%npf%npf_flowja(this%neq, this%nja, this%x,    &
+                                                this%flowja)
+    if(this%inhfb > 0) call this%hfb%hfb_flowja(this%neq, this%nja, this%x,    &
+                                                this%flowja)
+    if(this%ingnc > 0) call this%gnc%flowja(this%flowja)
+    !
+    ! -- Return
+    return
+  end subroutine gwf_cq
+
+  subroutine gwf_bd(this, icnvg, isuppress_output)
+! ******************************************************************************
+! gwf_bd --GroundWater Flow Model Budget
+! Subroutine: (1) Calculate stress package contributions to model budget
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
     ! -- dummy
     class(GwfModelType) :: this
     integer(I4B), intent(in) :: icnvg
@@ -877,7 +911,6 @@ module GwfModule
     ! -- local
     integer(I4B) :: icbcfl, ibudfl, icbcun, iprobs, idvfl
     integer(I4B) :: ip
-    integer(I4B) :: i
     class(BndType),pointer :: packobj
 ! ------------------------------------------------------------------------------
     !
@@ -901,17 +934,6 @@ module GwfModule
       iprobs = 0
       idvfl  = 0
     endif
-    !
-    ! -- Construct the flowja array.  Flowja is calculated each time, even if
-    !    output is suppressed.  (flowja is positive into a cell.)
-    do i = 1, this%nja
-      this%flowja(i) = DZERO
-    enddo
-    if(this%innpf > 0) call this%npf%npf_flowja(this%neq, this%nja, this%x,    &
-                                                this%flowja)
-    if(this%inhfb > 0) call this%hfb%hfb_flowja(this%neq, this%nja, this%x,    &
-                                                this%flowja)
-    if(this%ingnc > 0) call this%gnc%flowja(this%flowja)
     !
     ! -- Budget routines (start by resetting)
     call this%budget%reset()
@@ -1051,7 +1073,6 @@ module GwfModule
     ! -- dummy
     class(GwfModelType) :: this
     ! -- local
-    integer(I4B) :: ip
     class(BndType), pointer :: packobj
 ! ------------------------------------------------------------------------------
     !

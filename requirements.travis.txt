@@ -1,0 +1,5 @@
+pydotplus>=2.0
+matplotlib
+netcdf4
+pyproj
+pyshp

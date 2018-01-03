@@ -467,7 +467,7 @@ module BndModule
     return
   end subroutine bnd_fn
 
-  subroutine bnd_nur(this, neqpak, x, xtemp, inewtonur)
+  subroutine bnd_nur(this, neqpak, x, xtemp, dx, inewtonur)
 ! ******************************************************************************
 ! bnd_nur -- under-relaxation
 ! Subroutine: (1) Under-relaxation of Groundwater Flow Model Package Heads
@@ -482,6 +482,7 @@ module BndModule
     integer(I4B), intent(in) :: neqpak
     real(DP), dimension(neqpak), intent(inout) :: x
     real(DP), dimension(neqpak), intent(in) :: xtemp
+    real(DP), dimension(neqpak), intent(inout) :: dx
     integer(I4B), intent(inout) :: inewtonur
     ! -- local
 ! ------------------------------------------------------------------------------

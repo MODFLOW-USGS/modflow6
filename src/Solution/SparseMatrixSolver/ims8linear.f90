@@ -128,6 +128,7 @@
       LOGICAL :: lreaddata
       character(len=LINELENGTH) :: errmsg, keyword
       CHARACTER (LEN= 10) :: clin(0:2)
+      CHARACTER (LEN= 31) :: clintit(0:2)
       CHARACTER (LEN= 20) :: cipc(0:4)
       CHARACTER (LEN= 20) :: cscale(0:2)
       CHARACTER (LEN= 25) :: corder(0:2)
@@ -148,6 +149,9 @@
       DATA clin  /'UNKNOWN   ', &
                   'CG        ', &
      &            'BCGS      '/
+      DATA clintit  /'             UNKNOWN           ', &
+                     '       CONJUGATE-GRADIENT      ', &
+     &               'BICONJUGATE-GRADIENT STABILIZED'/
       DATA cipc  /'UNKNOWN             ', &
      &            'INCOMPLETE LU       ', &
      &            'MOD. INCOMPLETE LU  ', &
@@ -165,7 +169,7 @@
      &                'RELATIVE L2NORM ', &
                       'L2 NORM W. REL. '/
 !       OUTPUT FORMATS
-02010 FORMAT (1X,/,14X,'SOLUTION BY THE CONJUGATE-GRADIENT METHOD', &
+02010 FORMAT (1X,/,7X,'SOLUTION BY THE',1X,A31,1X,'METHOD', &
      &        /,1X,66('-'),/, &
      &        ' MAXIMUM OF ',I6,' CALLS OF SOLUTION ROUTINE',/, &
      &        ' MAXIMUM OF ',I6, &
@@ -422,12 +426,12 @@
       endif
 !
 !-------PRINT MXITER,ITER1,IPC,ISCL,IORD,HCLOSE,RCLOSE
-      WRITE (IOUT,2010) MXITER, THIS%ITER1, &
-     &                   clin(THIS%ILINMETH), cipc(THIS%IPC), &
-     &                   cscale(THIS%ISCL), corder(THIS%IORD), &
-     &                   THIS%NORTH, THIS%HCLOSE, THIS%RCLOSE, &
-     &                   THIS%ICNVGOPT, ccnvgopt(THIS%ICNVGOPT), &
-     &                   THIS%RELAX
+      WRITE (IOUT,2010) clintit(THIS%ILINMETH), MXITER, THIS%ITER1, &
+     &                  clin(THIS%ILINMETH), cipc(THIS%IPC),        &
+     &                  cscale(THIS%ISCL), corder(THIS%IORD),       &
+     &                  THIS%NORTH, THIS%HCLOSE, THIS%RCLOSE,       &
+     &                  THIS%ICNVGOPT, ccnvgopt(THIS%ICNVGOPT),    &
+     &                  THIS%RELAX
       IF (THIS%LEVEL > 0) THEN
         WRITE (IOUT,2015) trim(adjustl(clevel)), &
      &                    trim(adjustl(cdroptol))

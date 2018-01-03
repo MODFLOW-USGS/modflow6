@@ -809,7 +809,7 @@ contains
       do n = 1, this%maxbound
         if (this%reaches(n)%nconn > 0) then
           !
-          ! -- check for missing or duplicate lake connections
+          ! -- check for missing or duplicate sfr connections
           if (nboundchk(n) == 0) then
             write(errmsg,'(a,1x,i0)')                                             &
               'ERROR.  NO CONNECTION DATA SPECIFIED FOR REACH', n
@@ -2577,7 +2577,7 @@ contains
 
   subroutine sfr_set_stressperiod(this, n, line, ichkustrm)
 ! ******************************************************************************
-! sfr_set_stressperiod -- Set a stress period attribute for mawweslls(imaw)
+! sfr_set_stressperiod -- Set a stress period attribute for sfr reach n
 !                         using keywords.
 ! ******************************************************************************
 !

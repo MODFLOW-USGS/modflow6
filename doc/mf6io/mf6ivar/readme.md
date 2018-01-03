@@ -18,6 +18,7 @@ A MODFLOW 6 variable, and its place within a block and on a line is defined usin
 * optional -- this is a logical keyword.  When true, the variable is an optional variable for MODFLOW 6.  Optional.
 * longname -- this is a long name for the variable.  Required.
 * description -- this is a written description of the variable.  Required.
+* preserve_case -- default is false, but should be set to true for file names
 
 
 # Definition Files

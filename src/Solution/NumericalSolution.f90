@@ -72,6 +72,7 @@ module NumericalSolutionModule
     integer(I4B), pointer                                :: ibflag => NULL()
     integer(I4B), dimension(:,:), pointer                :: lrch => NULL()
     real(DP), dimension(:), pointer                      :: hncg => NULL()
+    real(DP), dimension(:), pointer                      :: dxold => NULL()
     real(DP), dimension(:), pointer                      :: deold => NULL()
     real(DP), dimension(:), pointer                      :: wsave => NULL()
     real(DP), dimension(:), pointer                      :: hchold => NULL()
@@ -129,6 +130,8 @@ module NumericalSolutionModule
     procedure, private :: sln_backtracking
     procedure, private :: sln_backtracking_xupdate
     procedure, private :: sln_l2norm
+    procedure, private :: sln_maxval
+    procedure, private :: sln_calcdx
     procedure, private :: sln_underrelax
     procedure, private :: sln_outer_check
     procedure, private :: sln_get_loc
@@ -329,6 +332,7 @@ contains
     call mem_allocate(this%rhs, this%neq, 'RHS', this%name)
     call mem_allocate(this%active, this%neq, 'IACTIVE', this%name)
     call mem_allocate(this%xtemp, this%neq, 'XTEMP', this%name)
+    call mem_allocate(this%dxold, this%neq, 'DXOLD', this%name)
     call mem_allocate(this%hncg, 0, 'HNCG', this%name)
     call mem_allocate(this%lrch, 3, 0, 'LRCH', this%name)
     call mem_allocate(this%wsave, 0, 'WSAVE', this%name)
@@ -720,7 +724,7 @@ contains
     &      /1X,'   MAXIMUM NUMBER OF BACKTRACKS         (NUMTRACK) = ',I9)
 9004 FORMAT(1X,'BACKTRACKING TOLERANCE FACTOR               (BTOL) = ', E15.6, &
     &      /1X,'BACKTRACKING REDUCTION FACTOR             (BREDUC) = ', E15.6, &
-    &      /1X,'BACKTRACKING REIDUAL LIMIT               (RES_LIM) = ', E15.6)
+    &      /1X,'BACKTRACKING RESIDUAL LIMIT              (RES_LIM) = ', E15.6)
 
     if(this%mxiter.le.0) then
       write (errmsg,'(a)') 'IMS sln_ar: OUTER ITERATION NUMBER MUST BE > 0.'
@@ -798,7 +802,7 @@ contains
     call mem_reallocate(this%lrch, 3, this%mxiter, 'LRCH', this%name)
 
     ! delta-bar-delta under-relaxation
-    if(iabs(this%nonmeth).eq.3)then
+    if(this%nonmeth.eq.3)then
       call mem_reallocate(this%wsave, this%neq, 'WSAVE', this%name)
       call mem_reallocate(this%hchold, this%neq, 'HCHOLD', this%name)
       call mem_reallocate(this%deold, this%neq, 'DEOLD', this%name)
@@ -947,6 +951,7 @@ contains
     call mem_deallocate(this%rhs)
     call mem_deallocate(this%active)
     call mem_deallocate(this%xtemp)
+    call mem_deallocate(this%dxold)
     call mem_deallocate(this%hncg)
     call mem_deallocate(this%lrch)
     call mem_deallocate(this%wsave)
@@ -1033,6 +1038,7 @@ contains
     ! -- local
     class(NumericalModelType), pointer :: mp
     class(NumericalExchangeType), pointer :: cp
+    character(len=16) :: cval
     character(len=34) :: strh
     integer(I4B) :: im, ic
     integer(I4B) :: kiter
@@ -1050,22 +1056,23 @@ contains
     real(DP) :: totim
     real(DP) :: ttform
     real(DP) :: ttsoln
+    real(DP) :: dxmax
     ! -- formats
     character(len=*), parameter :: fmtnocnvg =                                 &
       "(1X,'Solution ', i0, ' did not converge for stress period ', i0,        &
        ' and time step ', i0)"
- 11 FORMAT(//1X,'OUTER ITERATION SUMMARY',/,1x,122('-'),/,                     &
-        1x,'     OUTER     INNER BACKTRACK BACKTRACK        INCOMING        ', &
+ 11 FORMAT(//1X,'OUTER ITERATION SUMMARY',/,1x,139('-'),/,                     &
+        18x,'     OUTER     INNER BACKTRACK BACKTRACK        INCOMING        ',&
            'OUTGOING         MAXIMUM                    MAXIMUM CHANGE',/,     &
-        1x,' ITERATION ITERATION      FLAG    NUMBER        RESIDUAL        ', &
+        18x,' ITERATION ITERATION      FLAG    NUMBER        RESIDUAL        ',&
            'RESIDUAL          CHANGE                    MODEL-(CELLID)',/,     &
-          1x,122('-'))
- 12 FORMAT(//1X,'OUTER ITERATION SUMMARY',/,1x,70('-'),/,                      &
-         1x,'     OUTER     INNER         MAXIMUM                    ',        &
+          1x,139('-'))
+ 12 FORMAT(//1X,'OUTER ITERATION SUMMARY',/,1x,87('-'),/,                      &
+         18x,'     OUTER     INNER         MAXIMUM                    ',       &
             'MAXIMUM CHANGE',/,                                                &
-         1x,' ITERATION ITERATION          CHANGE                    ',        &
+         18x,' ITERATION ITERATION          CHANGE                    ',       &
             'MODEL-(CELLID)',/,                                                &
-         1x,70('-'))
+         1x,87('-'))
 ! ------------------------------------------------------------------------------
     !
     ! -- write header for csv output
@@ -1137,6 +1144,7 @@ contains
       do im = 1, this%modellist%Count()
         mp => GetNumericalModelFromList(this%modellist, im)
         call mp%model_ptcchk(iptc)
+        iptc = iptc * this%iallowptc
         if (iptc /= 0) then
           if (n == 1) then
             write (iout, '(//)')
@@ -1242,8 +1250,8 @@ contains
         endif
         !-------------------------------------------------------
         ! -- check convergence of solution
+        call this%sln_outer_check(this%hncg(kiter), this%lrch(1,kiter))
         if (this%icnvg /= 0) then
-          call this%sln_outer_check(this%hncg(kiter), this%lrch(1,kiter))
           this%icnvg = 0
           if (abs(this%hncg(kiter)) <= this%hclose) this%icnvg = 1
         end if
@@ -1251,7 +1259,6 @@ contains
         ! -- Additional convergence check for pseudo-transient continuation
         !    term. Evaluate if the ptc value added to the diagonal has
         !    decayed sufficiently.
-        !if (this%iptc /= 0) then
         if (iptc > 0) then
           if (this%icnvg /= 0) then
             if (this%ptcrat > this%ptcthresh) then
@@ -1281,11 +1288,28 @@ contains
           enddo
         end if
         !
+        !--write maximum head change from linear solver to list file
+        itertot = itertot + iter
+        if (this%iprims > 0) then
+          cval = 'Linear Solver   '
+          call this%sln_get_loc(this%lrch(1,kiter), strh)
+          if (this%numtrack > 0) then
+            WRITE(IOUT,22) cval, kiter, iter, this%hncg(kiter),               &
+                           adjustr(trim(strh))
+          else
+            WRITE(IOUT,23) cval, kiter, iter, this%hncg(kiter),               &
+                           adjustr(trim(strh))
+          end if
+        end if
+        !
         ! -- dampening
-        if (this%icnvg /= 1) then ! .and. abs(this%nonmeth) > 0) then
-          if (abs(this%nonmeth) > 0) then
+        if (this%icnvg /= 1) then 
+          if (this%nonmeth > 0) then
             call this%sln_underrelax(kiter, this%hncg(kiter), this%neq,        &
                                      this%active, this%x, this%xtemp)
+          else
+            call this%sln_calcdx(this%neq, this%active,                        &
+                                 this%x, this%xtemp, this%dxold)
           endif
           !
           ! --adjust heads if necessary
@@ -1295,28 +1319,35 @@ contains
             i0 = mp%moffset + 1
             i1 = i0 + mp%neq - 1
             call mp%model_nur(mp%neq, this%x(i0:i1), this%xtemp(i0:i1),        &
-                              inewtonur)
+                              this%dxold(i0:i1), inewtonur)
           end do
           !
           ! --update maximum head change
           call this%sln_outer_check(this%hncg(kiter), this%lrch(1,kiter))
           if (inewtonur /= 0) then
-            if (abs(this%hncg(kiter)) <= this%hclose) this%icnvg = 1
+            call this%sln_maxval(this%neq, this%dxold, dxmax)
+            if (abs(dxmax) <= this%hclose .and.                                &
+                abs(this%hncg(kiter)) <= this%hclose) then
+              this%icnvg = 1
+            end if
+          end if
+          !
+          !--write maximum head change after under relaxation to list file
+          !itertot = itertot + iter
+          if (this%iprims > 0) then
+            cval = 'Under-relaxation'
+            call this%sln_get_loc(this%lrch(1,kiter), strh)
+            if (this%numtrack > 0) then
+             WRITE(IOUT,24) cval, kiter, this%hncg(kiter), adjustr(trim(strh))
+            else
+             WRITE(IOUT,25) cval, kiter, this%hncg(kiter), adjustr(trim(strh))
+            end if
           end if
         end if
-        !
-        !--write maximum head change to list file
-        itertot = itertot + iter
-        if (this%iprims > 0) then
-          call this%sln_get_loc(this%lrch(1,kiter), strh)
-          if (this%numtrack > 0) then
-           WRITE(IOUT,22) kiter, iter, this%hncg(kiter), adjustr(trim(strh))
-          else
-           WRITE(IOUT,23) kiter, iter, this%hncg(kiter), adjustr(trim(strh))
-          end if
-        end if
-22    FORMAT(1X,I10,I10,53X,1PG15.6,A34)
-23    FORMAT(1X,I10,I10,1X,1PG15.6,A34)
+22    FORMAT(1X,A16,1X,I10,I10,53X,1PG15.6,A34)
+23    FORMAT(1X,A16,1X,I10,I10,1X,1PG15.6,A34)
+24    FORMAT(1X,A16,1X,I10,10X,53X,1PG15.6,A34)
+25    FORMAT(1X,A16,1X,I10,10X,1X,1PG15.6,A34)
         !
         ! -- Write a message if convergence was not achieved
         if (kiter == this%mxiter) then
@@ -1373,13 +1404,25 @@ contains
       !
       if (this%icnvg == 0) isgcnvg = 0
       !
-      ! -- Calculate the budget terms for each model.
+      ! -- Calculate flow for each model
+      do im=1,this%modellist%Count()
+        mp => GetNumericalModelFromList(this%modellist, im)
+        call mp%model_cq(this%icnvg, isuppress_output)
+      enddo
+      !
+      ! -- Calculate flow for each exchange
+      do ic = 1, this%exchangelist%Count()
+        cp => GetNumericalExchangeFromList(this%exchangelist, ic)
+        call cp%exg_cq(isgcnvg, isuppress_output, this%id)
+      enddo
+      !
+      ! -- Budget terms for each model
       do im=1,this%modellist%Count()
         mp => GetNumericalModelFromList(this%modellist, im)
         call mp%model_bd(this%icnvg, isuppress_output)
       enddo
       !
-      ! -- Budget for each implicit exchange in this solution
+      ! -- Budget terms for each exchange
       do ic = 1, this%exchangelist%Count()
         cp => GetNumericalExchangeFromList(this%exchangelist, ic)
         call cp%exg_bd(isgcnvg, isuppress_output, this%id)
@@ -1799,7 +1842,7 @@ contains
     integer(I4B), intent(in) :: kper
     integer(I4B), intent(inout) :: in_iter
     integer(I4B), intent(in) :: itersum
-    integer(I4B), intent(in) :: iptc
+    integer(I4B), intent(inout) :: iptc
     real(DP), intent(in) :: ptcf
     ! -- local
     integer(I4B) :: n
@@ -1838,12 +1881,24 @@ contains
         endif
       endif
     end do
-    ! -- ptc
+    ! -- pseudo transient continuation
     iptct = iptc * this%iallowptc
     if (iptct /= 0) then
       call this%sln_l2norm(this%neq, this%nja,                                 &
                            this%ia, this%ja, this%active,                      &
                            this%amat, this%rhs, this%x, l2norm)
+      ! -- confirm that the l2norm exceeds previous l2norm
+      !    if not, there is no need to add ptc terms
+      if (kiter == 1) then
+        if (kper > 1 .or. kstp > 1) then
+          if (l2norm <= this%l2norm0) then
+            iptc = 0
+          end if
+        end if
+      end if
+    end if
+    iptct = iptc * this%iallowptc
+    if (iptct /= 0) then
       if (kiter == 1) then
         if (this%iptcout > 0) then
           write(this%iptcout, '(A10,6(1x,A15),2(1x,A15))') 'OUTER ITER',       &
@@ -2018,6 +2073,7 @@ contains
     class(NumericalExchangeType), pointer :: cp
     integer(I4B), intent(in) :: kiter
     ! -- local
+    character (len=16) :: cval
     integer(I4B) :: ic
     integer(I4B) :: im
     integer(I4B) :: nb
@@ -2137,8 +2193,9 @@ contains
     end if
     !
     ! -- write backtracking results
-66  FORMAT(1X,I10,10X,I10,I10,1X,1PG15.6,1X,1PG15.6)
-    WRITE(IOUT,66) kiter,ibflag,ibtcnt,resin,this%res_prev
+66  FORMAT(1X,A16,1X,I10,10X,I10,I10,1X,1PG15.6,1X,1PG15.6)
+    WRITE(IOUT,66) 'Backtracking    ', kiter, ibflag, ibtcnt,                  &
+                    resin, this%res_prev
     !
     ! -- return
     return
@@ -2226,6 +2283,65 @@ contains
     ! -- return
     return
   end subroutine sln_l2norm
+  
+  subroutine sln_maxval(this, neq, v, vnorm)
+! ******************************************************************************
+! sln_l2norm
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(NumericalSolutionType), intent(inout) :: this
+    integer(I4B), intent(in) :: neq
+    real(DP), dimension(neq), intent(in) :: v
+    real(DP), intent(inout) :: vnorm
+    ! -- local
+    integer(I4B) :: n
+    real(DP) :: d
+! ------------------------------------------------------------------------------ 
+    vnorm = DZERO
+    do n = 1, neq
+      d = v(n)
+      if (abs(d) > vnorm) then
+        vnorm = d
+      end if
+    end do
+    !
+    ! -- return
+    return
+  end subroutine sln_maxval
+  
+  subroutine sln_calcdx(this, neq, active, x, xtemp, dx)
+! ******************************************************************************
+! sln_l2norm
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(NumericalSolutionType), intent(inout) :: this
+    integer(I4B), intent(in) :: neq
+    integer(I4B), dimension(neq), intent(in) :: active
+    real(DP), dimension(neq), intent(in) :: x
+    real(DP), dimension(neq), intent(in) :: xtemp
+    real(DP), dimension(neq), intent(inout) :: dx
+    ! -- local
+    integer(I4B) :: n
+! ------------------------------------------------------------------------------ 
+    do n = 1, neq
+      ! -- skip inactive nodes
+      if (active(n) < 1) then
+        dx(n) = DZERO
+      else
+        dx(n) = x(n) - xtemp(n)
+      end if
+    end do
+    !
+    ! -- return
+    return
+  end subroutine sln_calcdx
+  
 
   subroutine sln_underrelax(this, kiter, bigch, neq, active, x, xtemp)
 ! ******************************************************************************
@@ -2255,6 +2371,7 @@ contains
         !
         ! -- compute step-size (delta x)
         delx = x(n) - xtemp(n)
+        this%dxold(n) = delx
 
         ! -- dampen head solution
         x(n) = xtemp(n) + this%gamma * delx
@@ -2290,6 +2407,7 @@ contains
         do n = 1, neq
           if (active(n) < 1) cycle
           delx = x(n) - xtemp(n)
+          this%dxold(n) = delx
           x(n) = xtemp(n) + relax * delx
         end do
       end if
@@ -2304,8 +2422,8 @@ contains
         delx = x(n) - xtemp(n)
 
         if ( kiter.eq.1 ) then
-          this%wsave(n) = done
-          this%hchold(n) = dem20
+          this%wsave(n) = DONE
+          this%hchold(n) = DEM20
           this%deold(n) = DZERO
         end if
         !
@@ -2328,12 +2446,13 @@ contains
           ! -- need to do it after underrelaxation and backtracking.
           this%hchold(n) = delx
         else
-          this%hchold(n) = (done - this%gamma) * delx + this%gamma *           &
-          this%hchold(n)
+          this%hchold(n) = (DONE - this%gamma) * delx +                        &
+                           this%gamma * this%hchold(n)
         end if
         !
         ! -- store slope (change) term for next iteration
         this%deold(n) = delx
+        this%dxold(n) = delx
         !
         ! -- compute accepted step-size and new head
         amom = DZERO
@@ -2348,7 +2467,7 @@ contains
     return
   end subroutine sln_underrelax
 
-  subroutine sln_outer_check(this,hncg, lrch)
+  subroutine sln_outer_check(this, hncg, lrch)
 ! ******************************************************************************
 ! sln_outer_check
 ! ******************************************************************************

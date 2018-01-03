@@ -50,8 +50,8 @@ module GwfDisuModule
     procedure :: write_grb
     !
     ! -- Read a node-sized model array (reduced or not)
-    procedure, private :: read_int_array
-    procedure, private :: read_dbl_array
+    procedure :: read_int_array
+    procedure :: read_dbl_array
   end type GwfDisuType
 
   contains
@@ -872,6 +872,8 @@ module GwfDisuModule
     !
     ! -- Set vector components based on ihc
     if(ihc == 0) then
+      !
+      ! -- connection is vertical
       xcomp = DZERO
       ycomp = DZERO
       if(nodem < noden) then
@@ -886,7 +888,6 @@ module GwfDisuModule
     else
       ! -- find from anglex, since anglex is symmetric, need to flip vector
       !    for lower triangle (nodem < noden)
-      !ipos = this%con%getjaindex(noden, nodem)
       angle = this%con%anglex(this%con%jas(ipos))
       dmult = DONE
       if (nodem < noden) dmult = -DONE
@@ -931,20 +932,18 @@ module GwfDisuModule
     real(DP) :: xn, xm, yn, ym, zn, zm
 ! ------------------------------------------------------------------------------
     !
+    ! -- Find xy coords
+    xn = this%cellxy(1, noden)
+    yn = this%cellxy(2, noden)
+    xm = this%cellxy(1, nodem)
+    ym = this%cellxy(2, nodem)
+    !
     ! -- Set vector components based on ihc
     if(ihc == 0) then
       !
-      ! -- vertical connection; set zcomp positive upward
-      xcomp = DZERO
-      ycomp = DZERO
-      if(nodem < noden) then
-        zcomp = DONE
-      else
-        zcomp = -DONE
-      endif
+      ! -- vertical connection, calculate z as cell center elevation
       zn = this%bot(noden) + DHALF * (this%top(noden) - this%bot(noden))
       zm = this%bot(nodem) + DHALF * (this%top(nodem) - this%bot(nodem))
-      conlen = abs(zm - zn)
     else
       !
       ! -- horizontal connection, with possible z component due to cell offsets
@@ -956,13 +955,11 @@ module GwfDisuModule
         zn = this%bot(noden) + DHALF * satn * (this%top(noden) - this%bot(noden))
         zm = this%bot(nodem) + DHALF * satm * (this%top(nodem) - this%bot(nodem))
       endif
-      xn = this%cellxy(1, noden)
-      yn = this%cellxy(2, noden)
-      xm = this%cellxy(1, nodem)
-      ym = this%cellxy(2, nodem)
-      call line_unit_vector(xn, yn, zn, xm, ym, zm, xcomp, ycomp, zcomp,       &
-                            conlen)
     endif
+    !
+    ! -- Use coords to find vector components and connection length
+    call line_unit_vector(xn, yn, zn, xm, ym, zm, xcomp, ycomp, zcomp,         &
+                          conlen)
     !
     ! -- return
     return
@@ -1037,7 +1034,9 @@ module GwfDisuModule
 !   is allowed to be a string (e.g. boundary name). In this case, if a string
 !   is encountered, return value as -2.
 ! ******************************************************************************
-    implicit none
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwfDisuType)               :: this
     integer(I4B),           intent(inout) :: lloc
@@ -1053,6 +1052,7 @@ module GwfDisuModule
     integer(I4B) :: lloclocal, ndum, istat, n
     real(DP) :: r
     character(len=LINELENGTH) :: ermsg, fname
+! ------------------------------------------------------------------------------
     !
     if (present(flag_string)) then
       if (flag_string) then
@@ -1107,7 +1107,9 @@ module GwfDisuModule
 !   result can be zero. If allow_zero is false, a zero in any index causes an
 !   error.
 ! ******************************************************************************
-    implicit none
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- return
     integer(I4B) :: nodeu
     ! -- dummy
@@ -1122,6 +1124,7 @@ module GwfDisuModule
     integer(I4B) :: istat
     real(DP) :: r
     character(len=LINELENGTH) :: ermsg, fname
+! ------------------------------------------------------------------------------
     !
     if (present(flag_string)) then
       if (flag_string) then

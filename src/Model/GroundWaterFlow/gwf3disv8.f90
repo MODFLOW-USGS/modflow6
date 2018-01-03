@@ -60,8 +60,8 @@ module GwfDisvModule
     procedure :: allocate_arrays
     procedure :: get_cell2d_area
     !
-    procedure, private :: read_int_array
-    procedure, private :: read_dbl_array
+    procedure :: read_int_array
+    procedure :: read_dbl_array
     !
   end type GwfDisvType
 

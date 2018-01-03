@@ -116,8 +116,26 @@ This section describes changes introduced into MODFLOW 6 with each release.  The
 
 \begin{itemize}
 
-\item 
-\currentmodflowversion
+\item \currentmodflowversion
+
+\underline{BASIC FUNCTIONALITY}
+\begin{itemize}
+\item Added a new option, called SAVE\_SPECIFIC\_STORAGE to the Node Property Flow Package.  When invoked, $x$, $y$, and $z$ specific storage components are calculated for the center of each model cell and written to the binary budget file.
+\item For binary input of grid data, such as initial heads, the array reading utility was not reading a header record consisting of KSTP, KPER, PERTIM, TOTIM, TEXT, NLAY, NROW, NCOL.  This meant that a binary head file written by MODFLOW could not be used as input for a subsequent simulation.  For binary input, the array reading utility now reads a header record before reading the array values.
+\end{itemize}
+
+\underline{STRESS PACKAGES}
+\begin{itemize}
+\item If a steady-state stress period followed a transient stress period, the storage terms written to the budget file were not being reset to zero.  The program now initializes these budget values to zero for steady-state periods before they are written.
+\end{itemize}
+
+\underline{SOLUTION}
+\begin{itemize}
+\item Prior to applying pseudo transient continuation terms, the Iterative Model Solution confirms that the L2-norm exceeds the previous L2-norm.  If it doesn't then pseudo transient continuation is turned off.  This fixes a rare situation in which convergence could not be achieved for consecutive steady state solutions with the same or similar answers. 
+\end{itemize}
+
+
+\item Version mf6.0.1--Sep 28, 2017
 
 \underline{BASIC FUNCTIONALITY}
 \begin{itemize}
@@ -330,7 +348,18 @@ The following is a list of test problems distributed with MODFLOW 6.  Characteri
 % -------------------------------------------------
 \section{Disclaimer and Notices}
 
-This software is preliminary or provisional and is subject to revision. It is being provided to meet the need for timely best science. The software has not received final approval by the U.S. Geological Survey (USGS). No warranty, expressed or implied, is made by the USGS or the U.S. Government as to the functionality of the software and related material nor shall the fact of release constitute any such warranty. The software is provided on the condition that neither the USGS nor the U.S. Government shall be held liable for any damages resulting from the authorized or unauthorized use of the software.
+This software has been approved for release by the U.S. Geological Survey (USGS). Although the software has been subjected to rigorous review, the USGS reserves the right to update the software as needed pursuant to further analysis and review. No warranty, expressed or implied, is made by the USGS or the U.S. Government as to the functionality of the software and related material nor shall the fact of release constitute any such warranty. Furthermore, the software is released on condition that neither the USGS nor the U.S. Government shall be held liable for any damages resulting from its authorized or unauthorized use. Also refer to the USGS Water Resources Software User Rights Notice for complete use, copyright, and distribution information.
+
+Notices related to this software are as follows:
+\begin{itemize}
+\item This software is a product of the U.S. Geological Survey, which is part of the U.S. Government.
+
+\item This software is freely distributed. There is no fee to download and (or) use this software.
+
+\item Users do not need a license or permission from the USGS to use this software. Users can download and install as many copies of the software as they need.
+
+\item As a work of the United States Government, this USGS product is in the public domain within the United States. You can copy, modify, distribute, and perform the work, even for commercial purposes, all without asking permission. Additionally, USGS waives copyright and related rights in the work worldwide through CC0 1.0 Universal Public Domain Dedication (https://creativecommons.org/publicdomain/zero/1.0/).
+\end{itemize}
 
 % -------------------------------------------------
 \section{References Cited}

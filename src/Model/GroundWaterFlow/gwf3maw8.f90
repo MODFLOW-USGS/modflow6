@@ -1415,7 +1415,7 @@ contains
     character(len=*),parameter :: fmtnostoragewells = &
       "(4x, 'WELL STORAGE WILL NOT BE SIMULATED.')"
     character(len=*),parameter :: fmtmawbin = &
-      "(4x, 'LAK ', 1x, a, 1x, ' WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I7)"
+      "(4x, 'MAW ', 1x, a, 1x, ' WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I7)"
 ! ------------------------------------------------------------------------------
     !
     ! -- Check for 'FLOWING_WELLS' and set this%iflowingwells
@@ -2128,7 +2128,7 @@ contains
   end subroutine maw_fn
 
 
-  subroutine maw_nur(this, neqpak, x, xtemp, inewtonur)
+  subroutine maw_nur(this, neqpak, x, xtemp, dx, inewtonur)
 ! ******************************************************************************
 ! maw_nur -- under-relaxation
 ! Subroutine: (1) Under-relaxation of Groundwater Flow Model MAW Package Heads
@@ -2142,6 +2142,7 @@ contains
     integer(I4B), intent(in) :: neqpak
     real(DP), dimension(neqpak), intent(inout) :: x
     real(DP), dimension(neqpak), intent(in) :: xtemp
+    real(DP), dimension(neqpak), intent(inout) :: dx
     integer(I4B), intent(inout) :: inewtonur
     ! -- local
     integer(I4B) :: n
@@ -2158,6 +2159,7 @@ contains
       if (x(n) < botw) then
         inewtonur = 1
         x(n) = xtemp(n)*(DONE-DP9) + botw*DP9
+        dx(n) = DZERO
       end if
     end do
     !
@@ -2482,7 +2484,7 @@ contains
     if(idvfl == 0) ibinun = 0
     if (isuppress_output /= 0) ibinun = 0
     !
-    ! -- write lake binary output
+    ! -- write maw binary output
     if (ibinun > 0) then
       do n = 1, this%nmawwells
         v = this%xnewpak(n)
@@ -3391,8 +3393,8 @@ contains
       if (nn1 == NAMEDBOUNDFLAG) then
         bname = obsrv%FeatureName
         if (bname /= '') then
-          ! -- Observation lake is based on a boundary name.
-          !    Iterate through all lakes to identify and store
+          ! -- Observation maw is based on a boundary name.
+          !    Iterate through all multi-aquifer wells to identify and store
           !    corresponding index in bound array.
           jfound = .false.
           if (obsrv%ObsTypeId=='MAW' .or.   &
@@ -3509,11 +3511,11 @@ contains
     ! formats
     !
     strng = obsrv%IDstring
-    ! -- Extract lake number from strng and store it.
+    ! -- Extract multi-aquifer well number from strng and store it.
     !    If 1st item is not an integer(I4B), it should be a
-    !    lake name--deal with it.
+    !    maw name--deal with it.
     icol = 1
-    ! -- get lake number or boundary name
+    ! -- get multi-aquifer well number or boundary name
     call extract_idnum_or_bndname(strng, icol, istart, istop, nn1, bndname)
     if (nn1 == NAMEDBOUNDFLAG) then
       obsrv%FeatureName = bndname
@@ -3530,7 +3532,7 @@ contains
         end if
       end if
     end if
-    ! -- store lake number (NodeNumber)
+    ! -- store multi-aquifer well number (NodeNumber)
     obsrv%NodeNumber = nn1
     !
     ! -- return

@@ -1820,7 +1820,7 @@ contains
     !
     ! -- write uzf binary budget output
     if (ibinun > 0) then
-      ! FLOW JA FACE - lake to lake connections using outlets
+      ! FLOW JA FACE - uzf to uzf connections using outlets
       nlen = 0
       do n = 1, this%nodes
         !

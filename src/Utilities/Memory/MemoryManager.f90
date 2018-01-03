@@ -1,6 +1,6 @@
 module MemoryManagerModule
 
-  use KindModule,             only: DP, I4B
+  use KindModule,             only: DP, I4B, I8B
   use ConstantsModule,        only: DZERO, LENORIGIN, LENVARNAME
   use SimModule,              only: store_error, ustop
   use MemoryTypeModule,       only: MemoryTSType, MemoryType
@@ -18,11 +18,11 @@ module MemoryManagerModule
   public :: mem_set_print_option
     
   type(MemoryListType) :: memorylist
-  integer(I4B) :: nvalues_alogical = 0
-  integer(I4B) :: nvalues_achr = 0
-  integer(I4B) :: nvalues_aint = 0
-  integer(I4B) :: nvalues_adbl = 0
-  integer(I4B) :: nvalues_ats= 0
+  integer(I8B) :: nvalues_alogical = 0
+  integer(I8B) :: nvalues_achr = 0
+  integer(I8B) :: nvalues_aint = 0
+  integer(I8B) :: nvalues_adbl = 0
+  integer(I8B) :: nvalues_ats = 0
   integer(I4B) :: iprmem = 0
 
   interface mem_allocate
@@ -938,7 +938,8 @@ contains
     character(len=LENORIGIN), allocatable, dimension(:) :: cunique
     real(DP) :: bytesmb
     integer(I4B) :: ipos
-    integer(I4B) :: icomp, ilen, nint, nreal
+    integer(I4B) :: icomp, ilen
+    integer(I8B) :: nint, nreal
     !
     ! -- Write info to simulation list file
     write(iout, fmttitle) 'INFORMATION ON VARIABLES STORED IN THE MEMORY MANAGER'

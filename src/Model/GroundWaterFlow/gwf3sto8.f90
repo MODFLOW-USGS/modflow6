@@ -450,8 +450,14 @@ module GwfStoModule
     rsyin = DZERO
     rsyout = DZERO
     !
-    ! -- Calculate terms if not steady-state stress period
-    if (this%iss == 0) then
+    ! -- Set strt to zero or calculate terms if not steady-state stress period
+    if (this%iss == 1) then
+      do n = 1, nodes
+        this%strgss(n) = DZERO
+        this%strgsy(n) = DZERO
+      end do
+      !
+    else
       !
       ! -- set variables
       tled = DONE / delt

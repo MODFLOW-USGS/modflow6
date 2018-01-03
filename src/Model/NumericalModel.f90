@@ -53,6 +53,7 @@ module NumericalModelModule
     procedure :: model_nr
     procedure :: model_cc
     procedure :: model_nur
+    procedure :: model_cq
     procedure :: model_bd
     procedure :: model_bdcalc
     procedure :: model_bdsave
@@ -155,13 +156,20 @@ module NumericalModelModule
     integer(I4B),intent(inout) :: icnvg
   end subroutine model_cc
 
-  subroutine model_nur(this, neqmod, x, xtemp, inewtonur)
+  subroutine model_nur(this, neqmod, x, xtemp, dx, inewtonur)
     class(NumericalModelType) :: this
     integer(I4B), intent(in) :: neqmod
     real(DP), dimension(neqmod), intent(inout) :: x
     real(DP), dimension(neqmod), intent(in) :: xtemp
+    real(DP), dimension(neqmod), intent(inout) :: dx
     integer(I4B), intent(inout) :: inewtonur
   end subroutine model_nur
+
+  subroutine model_cq(this, icnvg, isuppress_output)
+    class(NumericalModelType) :: this
+    integer(I4B),intent(in) :: icnvg
+    integer(I4B), intent(in) :: isuppress_output
+  end subroutine model_cq
 
   subroutine model_bd(this, icnvg, isuppress_output)
     class(NumericalModelType) :: this

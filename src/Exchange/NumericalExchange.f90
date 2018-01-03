@@ -44,6 +44,7 @@ module NumericalExchangeModule
     procedure :: exg_fc
     procedure :: exg_nr
     procedure :: exg_cc
+    procedure :: exg_cq
     procedure :: exg_bd
     procedure :: exg_cnvg
     procedure :: exg_ot
@@ -274,6 +275,27 @@ contains
     ! -- return
     return
   end subroutine exg_cc
+
+  subroutine exg_cq(this, icnvg, isuppress_output, isolnid)
+! ******************************************************************************
+! exg_cq -- Calculate flow
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule, only: LENBUDTXT
+    ! -- dummy
+    class(NumericalExchangeType) :: this
+    integer(I4B), intent(inout) :: icnvg
+    integer(I4B), intent(in) :: isuppress_output
+    integer(I4B), intent(in) :: isolnid
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    ! -- return
+    return
+  end subroutine exg_cq
 
   subroutine exg_bd(this, icnvg, isuppress_output, isolnid)
 ! ******************************************************************************
