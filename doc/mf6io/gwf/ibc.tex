@@ -1,0 +1,60 @@
+Input to the Subsidence (IBC) Package is read from the file that has type ``IBC6'' in the Name File.  If the IBC Package is not included for a model, then storage changes resulting from subsidence will not be calculated.  Only one IBC Package can be specified for a GWF model.
+
+\vspace{5mm}
+\subsubsection{Structure of Blocks}
+
+\vspace{5mm}
+\noindent \textit{FOR EACH SIMULATION}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-ibc-options.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-ibc-dimensions.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-ibc-griddata.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-ibc-packagedata.dat}
+\vspace{5mm}
+\noindent \textit{FOR ANY STRESS PERIOD}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-ibc-period.dat}
+\packageperioddescription
+
+\vspace{5mm}
+\subsubsection{Explanation of Variables}
+\begin{description}
+\input{./mf6ivar/tex/gwf-ibc-desc.tex}
+\end{description}
+
+\vspace{5mm}
+\subsubsection{Example Input File}
+\lstinputlisting[style=inputfile]{./mf6ivar/examples/gwf-ibc-example.dat}
+
+
+\vspace{5mm}
+\subsubsection{Available observation types}
+Subsidence Package observations include all of the terms that contribute to the continuity equation for each GWF cell. The data required for each IBC Package observation type is defined in table~\ref{table:gwf-ibcobstype}. Negative and positive values for \texttt{IBC} observations represent a loss from and gain to the GWF model, respectively.
+
+
+\begin{longtable}{p{2cm} p{2.75cm} p{2cm} p{1.25cm} p{7cm}}
+\caption{Available IBC Package observation types} \tabularnewline
+
+\hline
+\hline
+\textbf{Stress Package} & \textbf{Observation type} & \textbf{ID} & \textbf{ID2} & \textbf{Description} \\
+\hline
+\endfirsthead
+
+\captionsetup{textformat=simple}
+\caption*{\textbf{Table \arabic{table}.}{\quad}Available IBC Package observation types.---Continued} \\
+
+\hline
+\hline
+\textbf{Stress Package} & \textbf{Observation type} & \textbf{ID} & \textbf{ID2} & \textbf{Description} \\
+\hline
+\endhead
+
+\hline
+\endfoot
+
+\input{../Common/gwf-ibcobs.tex}
+\label{table:gwf-ibcobstype}
+\end{longtable}
+
+\vspace{5mm}
+\subsubsection{Example Observation Input File}
+\lstinputlisting[style=inputfile]{./mf6ivar/examples/gwf-ibc-example-obs.dat}

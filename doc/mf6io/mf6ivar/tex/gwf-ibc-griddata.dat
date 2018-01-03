@@ -1,0 +1,6 @@
+BEGIN GRIDDATA
+  SGM [LAYERED]
+    <sgm(nodes)> -- READARRAY
+  SGS [LAYERED]
+    <sgs(nodes)> -- READARRAY
+END GRIDDATA

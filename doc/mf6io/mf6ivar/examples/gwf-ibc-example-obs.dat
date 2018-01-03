@@ -1,0 +1,6 @@
+BEGIN CONTINUOUS FILEOUT  my_model.ibc.csv
+  tcomp3        total_compaction    1 1 7
+  ibcensystm0   ibc_elastic         nsystm0
+  ibcinsystm0   ibc_inelastic       nsystm0
+END CONTINUOUS 
+

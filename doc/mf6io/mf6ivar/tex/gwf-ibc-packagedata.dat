@@ -1,0 +1,5 @@
+BEGIN PACKAGEDATA
+  <ibcno> <cellid(ncelldim)> <cdelay> <pcs0> <thick_frac> <rnb> <ssv_cc> <sse_cr> <void> <kv> <h0> [<boundname>]
+  <ibcno> <cellid(ncelldim)> <cdelay> <pcs0> <thick_frac> <rnb> <ssv_cc> <sse_cr> <void> <kv> <h0> [<boundname>]
+  ...
+END PACKAGEDATA

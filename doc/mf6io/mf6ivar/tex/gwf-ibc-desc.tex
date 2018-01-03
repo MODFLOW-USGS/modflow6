@@ -1,0 +1,87 @@
+% DO NOT MODIFY THIS FILE DIRECTLY.  IT IS CREATED BY mf6ivar.py 
+
+\item \textbf{Block: OPTIONS}
+
+\begin{description}
+\item \texttt{SAVE\_FLOWS}---keyword to indicate that cell-by-cell flow terms will be written to the file specified with ``BUDGET SAVE FILE'' in Output Control.
+
+\item \texttt{ndelaycells}---number of nodes used to discretize the the delay intebed thickness to approximate the head distributions in systems of delay interbeds. If not specified, then a default value of 19 is assigned.
+
+\item \texttt{INTERBED\_STRESS\_OFFSET}---keyword to indicate that an initial stress offset specified in the \texttt{GRIDDATA} block will be applied to each interbed.
+
+\item \texttt{GEO\_STRESS\_OFFSET}---keyword to indicate that a geostatic stress offset will be specified in the \texttt{PERIOD} block.
+
+\item \texttt{STORAGECOEFFICIENT}---keyword to indicate that the elastic skeletal specific storage (\texttt{sse}) and inelastic skeletal specific storage (\texttt{ssv}) coefficients are specified rather than the recompression (\texttt{CR}) and compresion (\texttt{CC}) indices.
+
+\item \texttt{CONSTANT\_THICKNESS}---keyword to indicate that the thickness and void ratio of the interbed will not be varied during the simulation.
+
+\item \texttt{CELL\_FRACTION}---keyword to indicate that the thickness of interbeds will be specified in terms of the fraction of cell thickness.
+
+\item \texttt{COMPACTION}---keyword to specify that record corresponds to the compaction.
+
+\item \texttt{FILEOUT}---keyword to specify that an output filename is expected next.
+
+\item \texttt{compactionfile}---name of the binary output file to write compaction information.
+
+\item \texttt{TS6}---keyword to specify that record corresponds to a time-series file.
+
+\item \texttt{FILEIN}---keyword to specify that an input filename is expected next.
+
+\item \texttt{ts6\_filename}---defines a time-series file defining time series that can be used to assign time-varying values. See the ``Time-Variable Input'' section for instructions on using the time-series capability.
+
+\item \texttt{OBS6}---keyword to specify that record corresponds to an observations file.
+
+\item \texttt{obs6\_filename}---name of input file to define observations for the IBC package. See the ``Observation utility'' section for instructions for preparing observation input files. Table \ref{table:obstype} lists observation type(s) supported by the IBC package.
+
+\end{description}
+\item \textbf{Block: DIMENSIONS}
+
+\begin{description}
+\item \texttt{nibccells}---is the number of IBC cells.  More than 1 IBC cell can be assigned to a GWF cell; however, only 1 GWF cell can be assigned to a single IBC cell.
+
+\end{description}
+\item \textbf{Block: GRIDDATA}
+
+\begin{description}
+\item \texttt{sgm}---is specific gravity of moist or unsaturated sediments.
+
+\item \texttt{sgs}---is specific gravity of saturated sediments.
+
+\end{description}
+\item \textbf{Block: PACKAGEDATA}
+
+\begin{description}
+\item \texttt{ibcno}---integer value that defines the IBC interbed number associated with the specified PACKAGEDATA data on the line. \texttt{isubno} must be greater than zero and less than or equal to \texttt{nsubcells}.  IBC information must be specified for every IBC cell or the program will terminate with an error.  The program will also terminate with an error if information for a IBC intebed number is specified more than once.
+
+\item \texttt{cellid}---is the cell identifier, and depends on the type of grid that is used for the simulation.  For a structured grid that uses the DIS input file, \texttt{cellid} is the layer, row, and column.   For a grid that uses the DISV input file, \texttt{cellid} is the layer and cell2d number.  If the model uses the unstructured discretization (DISU) input file, then \texttt{cellid} is the node number for the cell.
+
+\item \texttt{cdelay}---character string that defines the subsidence delay type for the IBC cell. Possible subsidence package \texttt{cdelay} strings include: \texttt{NODELAY}--character keyword to indicate that delay will not be simulated in the IBC cell.  \texttt{DELAY}--character keyword to indicate that delay will be simulated in the IBC cell.
+
+\item \texttt{pcs0}---is the initial preconsolidation stress or initial offset from the calculated initial effective stress in the IBC interbed, in units of height of a column of water. \texttt{pcs0} is the initial offset from the calculated initial effective stress if \texttt{INTERBED\_STRESS\_OFFSET} is specified in the \texttt{OPTIONS} block.
+
+\item \texttt{thick\_frac}---is the interbed thickness or cell fraction of the IBC interbed. Interbed thickness is specified as a fraction of the cell thickness if \texttt{cell\_fraction} is specified in the \texttt{OPTIONS} block.
+
+\item \texttt{rnb}---is the interbed material factor $rn_{equiv}$ for the system of delay interbeds for interbed \texttt{ibcno}. \texttt{rnb} must be greater than or equal to 1 if \texttt{cdelay} is \texttt{delay}. Otherwise, \texttt{rnb} can be any value.
+
+\item \texttt{ssv\_cc}---is the initial inelastic skeletal specific storage or compression index in the IBC interbed. The initial inelastic skeletal specific storage is specified if \texttt{storage\_coefficient} is specified in the \texttt{OPTIONS} block.
+
+\item \texttt{sse\_cr}---is the initial elastic skeletal specific storage or recompression index in the IBC interbed. The initial elastic skeletal specific storage is specified if \texttt{storage\_coefficient} is specified in the \texttt{OPTIONS} block.
+
+\item \texttt{void}---is the initial initial void ratio of the IBC interbed.
+
+\item \texttt{kv}---is the vertical hydraulic conductivity of the IBC interbed. \texttt{kv} must be greater than 0 if \texttt{cdelay} is \texttt{delay}. Otherwise, \texttt{kv} can be any value.
+
+\item \texttt{h0}---is the initial head in the IBC interbed. \texttt{h0} can be anyvalue if \texttt{cdelay} is \texttt{nodelay}.
+
+\item \texttt{boundname}---name of the IBC cell cell.  \texttt{boundname} is an ASCII character variable that can contain as many as 40 characters.  If \texttt{boundname} contains spaces in it, then the entire name must be enclosed within single quotes.
+
+\end{description}
+\item \textbf{Block: PERIOD}
+
+\begin{description}
+\item \texttt{iper}---integer value specifying the starting stress period number for which the data specified in the PERIOD block apply.  \texttt{iper} must be less than or equal to \texttt{nper} in the TDIS Package and greater than zero.  The \texttt{iper} value assigned to a stress period block must be greater than the \texttt{iper} value assigned for the previous PERIOD block.  The information specified in the PERIOD block will continue to apply for all subsequent stress periods, unless the program encounters another PERIOD block.
+
+\item \texttt{sig0}---is the stress offset for the cell. \texttt{sig0} is added to the calculated geostatic stress for the cell. \texttt{glo} is specified only if \texttt{geo\_stress\_offset} is specified in the \texttt{OPTIONS} block.
+
+\end{description}
+
