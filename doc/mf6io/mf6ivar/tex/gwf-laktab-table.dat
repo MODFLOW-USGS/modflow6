@@ -1,0 +1,5 @@
+BEGIN TABLE
+  <stage> <volume> <sarea> [<barea>]
+  <stage> <volume> <sarea> [<barea>]
+  ...
+END TABLE

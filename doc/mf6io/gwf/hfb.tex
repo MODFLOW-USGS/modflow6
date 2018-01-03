@@ -1,0 +1,22 @@
+Input to the Horizontal Flow Barrier (HFB) Package is read from the file that has type ``HFB6'' in the Name File.  Only one HFB Package can be specified for a GWF model.
+
+\vspace{5mm}
+\subsubsection{Structure of Blocks}
+\vspace{5mm}
+
+\noindent \textit{FOR EACH SIMULATION}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-hfb-options.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-hfb-dimensions.dat}
+\vspace{5mm}
+\noindent \textit{FOR ANY STRESS PERIOD}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-hfb-period.dat}
+
+\vspace{5mm}
+\subsubsection{Explanation of Variables}
+\begin{description}
+\input{./mf6ivar/tex/gwf-hfb-desc.tex}
+\end{description}
+
+\vspace{5mm}
+\subsubsection{Example Input File}
+\lstinputlisting[style=inputfile]{./mf6ivar/examples/gwf-hfb-example.dat}

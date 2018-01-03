@@ -1,0 +1,16 @@
+BEGIN OPTIONS
+  PRECISION SINGLE
+  DIGITS 10
+  PRINT_INPUT
+END OPTIONS
+
+BEGIN CONTINUOUS FILEOUT my_model.lak.csv
+  l1stage  stage  1
+  l1vol    volume 1
+  vflow    lak    1 1
+  hflow1   lak    1 2
+  hflow2   lak    1 3
+  hflow3   lak    1 4
+  hflow4   lak    1 5 
+  lakflow  lak    lake_1      
+END CONTINUOUS

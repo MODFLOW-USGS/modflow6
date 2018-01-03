@@ -1,0 +1,25 @@
+BEGIN OPTIONS
+  DIGITS 8
+  PRINT_INPUT
+END OPTIONS
+
+BEGIN CONTINUOUS FILEOUT my_model.sfr.csv
+# obsname     obstype          id
+  gage1stage  STAGE            reach4
+  gage2stage  STAGE            7
+  gage2inflow INFLOW           7
+  gage2disch  DOWNSTREAM-FLOW  7
+  gage3stage  STAGE            14
+END CONTINUOUS
+
+BEGIN CONTINUOUS FILEOUT my_model.sfr.leakage.csv
+# obsname    obstype           id
+  leak1      SFR               reach1
+  leak10     SFR               10
+  leak11     SFR               11
+  leak12     SFR               12
+  leak13     SFR               13
+  leak14     SFR               14
+  leak15     SFR               15
+  leakcanal  SFR               canal  #Sum of flows between canal reaches and groundwater
+END CONTINUOUS

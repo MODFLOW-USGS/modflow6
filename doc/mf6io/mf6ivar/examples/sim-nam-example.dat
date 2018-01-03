@@ -1,0 +1,25 @@
+# This block is optional
+BEGIN OPTIONS
+END OPTIONS
+
+# Simulation timing information
+BEGIN TIMING
+  TDIS6 simulation.tdis
+END TIMING
+
+# List of models in the simulation
+BEGIN MODELS
+  #modeltype      namefile      modelname
+         GWF6    model1.nam    GWF_Model_1
+         GWF6    model2.nam    GWF_Model_2
+END MODELS
+
+# List of exchanges in the simulation
+BEGIN EXCHANGES
+  GWF6-GWF6 simulation.exg GWF_Model_1 GWF_Model_2
+END EXCHANGES
+
+# Models are part of the same numerical solution
+BEGIN SOLUTIONGROUP 1
+  IMS6 simulation.ims GWF_Model_1 GWF_Model_2
+END SOLUTIONGROUP

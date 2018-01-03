@@ -1,0 +1,226 @@
+module ZoneOutputModule
+  
+  use ConstantsModule, only: LINELENGTH
+  use BudgetModule, only: BudgetType, budget_cr
+  implicit none
+  private
+  public :: zoneoutput_init
+  public :: zoneoutput_write
+  public :: zoneoutput_finalize
+  
+  integer :: iout
+  integer :: ioutcsv = 0
+  type(BudgetType), dimension(:), allocatable :: budobj
+  
+  contains
+  
+  subroutine zoneoutput_init(iunit_out, iunit_csv, maxzone, nbudterms)
+! ******************************************************************************
+! zoneoutput_init
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    integer, intent(in) :: iunit_out
+    integer, intent(in) :: iunit_csv
+    integer, intent(in) :: maxzone
+    integer, intent(in) :: nbudterms
+    ! -- local
+    integer :: izone
+    character(len=LINELENGTH) :: bdzone
+! ------------------------------------------------------------------------------
+    iout = iunit_out
+    ioutcsv = iunit_csv
+    !
+    ! -- Create the budget objects to that budget tables can be
+    !    written to list file.
+    allocate(budobj(maxzone))
+    do izone = 1, maxzone
+      call budobj(izone)%allocate_scalars('ZONEBUDGET')
+      write(bdzone, '(a,i0)') 'ZONE ', izone
+      call budobj(izone)%budget_df(nbudterms + maxzone,                        &
+                                   labeltitle='PACKAGE/MODEL', bdzone=bdzone)
+    enddo
+    !
+    ! -- Return
+    return
+  end subroutine zoneoutput_init
+
+  subroutine zoneoutput_write(itime, kstp, kper, delt, totim, nbudterms,       &
+                              nmznfl, vbvl, vbznfl, packagenamearray,       &
+                              budtxtarray, internalflow)
+! ******************************************************************************
+! zoneoutput_write
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use ZoneModule, only: maxzone
+    ! -- dummy
+    integer, intent(in) :: itime
+    integer, intent(in) :: kstp
+    integer, intent(in) :: kper
+    double precision, intent(in) :: delt
+    double precision, intent(in) :: totim
+    integer, intent(in) :: nbudterms
+    integer, dimension(0:maxzone, 0:maxzone), intent(in) :: nmznfl
+    double precision, dimension(2, 0:maxzone, nbudterms), intent(in) :: vbvl
+    double precision, dimension(2, 0:maxzone, 0:maxzone), intent(in) :: vbznfl
+    character(len=16), dimension(:), intent(in) :: packagenamearray
+    character(len=16), dimension(:), intent(in) :: budtxtarray
+    integer, dimension(:), intent(in) :: internalflow
+    ! -- local
+    character(len=500) :: txt
+    integer :: ibudterm, izone, iinout, iz2, j
+    double precision :: val, rin, rout
+    character(len=16), dimension(:), allocatable :: spntmp
+! ------------------------------------------------------------------------------
+    !
+    ! -- If this is the first time, then write the CSV header, but skip
+    !    FLOW-JA-FACE as that is only used for zone to zone flow.
+    if (itime == 1) then
+      !
+      ! -- Because there can be more than one package of the same type, need
+      !    to add package name to CSV titles, but only if necessary.  Put
+      !    packagename into spntmp if there are multiple butxt entries of the
+      !    same type.
+      allocate(spntmp(nbudterms))
+      spntmp(:) = ''
+      do ibudterm = 1, nbudterms
+        do j = 1, nbudterms
+          if (j == ibudterm) cycle
+          if (budtxtarray(ibudterm) == budtxtarray(j)) then
+            spntmp(ibudterm) = packagenamearray(ibudterm)
+          endif
+        enddo
+      enddo
+      !
+      ! -- Write time and zone informatio to CSV header
+      write(ioutcsv, '(a)', advance='no') 'totim,' 
+      write(ioutcsv, '(a)', advance='no') 'kstp,'
+      write(ioutcsv, '(a)', advance='no') 'kper,'
+      write(ioutcsv, '(a)', advance='no') 'zone,'
+      do ibudterm = 1, nbudterms
+        if (internalflow(ibudterm) == 1) cycle
+        txt = ''
+        if (spntmp(ibudterm) /= '') then
+          txt = trim(adjustl(spntmp(ibudterm))) // '-'
+        endif
+        write(txt, '(a, a, a)') trim(txt),                                    &
+                                trim(adjustl(budtxtarray(ibudterm))),         &
+                                '-IN,'
+        write(ioutcsv, '(a)', advance='no') trim(txt)
+      enddo
+      !
+      ! -- Write budget terms to CSV header
+      do ibudterm = 1, nbudterms
+        if (internalflow(ibudterm) == 1) cycle
+        txt = ''
+        if (spntmp(ibudterm) /= '') then
+          txt = trim(adjustl(spntmp(ibudterm))) // '-'
+        endif
+        write(txt, '(a, a, a)') trim(txt),                                    &
+                                trim(adjustl(budtxtarray(ibudterm))),         &
+                                '-OUT,'
+        write(ioutcsv, '(a)', advance='no') trim(txt)
+      enddo
+      !
+      ! -- Write zone to zone flow names to CSV header
+      do izone = 0, maxzone
+        write(ioutcsv, '(a, i0)', advance='no') 'FROM ZONE ', izone
+        write(ioutcsv, '(a)', advance='no') ','
+      enddo
+      do izone = 0, maxzone
+        write(ioutcsv, '(a, i0)', advance='no') 'TO ZONE ', izone
+        if (izone < maxzone) write(ioutcsv, '(a)', advance='no') ','
+      enddo
+      write(ioutcsv, *)
+    endif
+    !
+    ! -- Write a line of CSV entries for each zone
+    zoneloop: do izone = 1, maxzone
+      !
+      ! -- Time and zone information
+      write(txt, '(G0)') totim
+      write(ioutcsv, '(a)', advance='no') trim(adjustl(txt)) // ','
+      write(txt, '(i0)') kstp
+      write(ioutcsv, '(a)', advance='no') trim(adjustl(txt)) // ','
+      write(txt, '(i0)') kper
+      write(ioutcsv, '(a)', advance='no') trim(adjustl(txt)) // ','
+      write(txt, '(i0)') izone
+      write(ioutcsv, '(a)', advance='no') trim(adjustl(txt)) // ','
+      !
+      ! -- CSV budget ins and outs
+      do iinout = 1, 2
+        do ibudterm = 1, nbudterms
+          if (internalflow(ibudterm) == 1) cycle
+          write(txt, '(G0)') vbvl(iinout, izone, ibudterm)
+          write(ioutcsv, '(a)', advance='no') trim(adjustl(txt))
+          write(ioutcsv, '(a)', advance='no') ','
+        enddo
+      enddo
+      !
+      ! -- CSV file zone to zone flow in and out
+      do iz2 = 0, maxzone
+        val = vbznfl(1, izone, iz2)
+        if (izone == iz2) val = 0.d0
+        write(txt, '(G0)') val
+        write(ioutcsv, '(a)', advance='no') trim(adjustl(txt))
+        write(ioutcsv, '(a)', advance='no') ','
+      enddo
+      do iz2 = 0, maxzone
+        val = vbznfl(2, izone, iz2)
+        if (izone == iz2) val = 0.d0
+        write(txt, '(G0)') val
+        write(ioutcsv, '(a)', advance='no') trim(adjustl(txt))
+        if (iz2 < maxzone) write(ioutcsv, '(a)', advance='no') ','
+      enddo
+      !
+      ! -- LST file ins and outs
+      call budobj(izone)%reset()
+      do ibudterm = 1, size(budtxtarray)
+        if (internalflow(ibudterm) == 1) cycle
+        call budobj(izone)%addentry(vbvl(1, izone, ibudterm),                  &
+                                    vbvl(2, izone, ibudterm),                  &
+                                    delt, budtxtarray(ibudterm),               &
+                                    rowlabel=packagenamearray(ibudterm))
+      enddo
+      !
+      ! -- LST file zone to zone
+      do iz2 = 0, maxzone
+        if (izone == iz2) cycle
+        if (nmznfl(izone, iz2) == 1) then
+          rin = vbznfl(1, izone, iz2)
+          rout =vbznfl(2, izone, iz2)
+          write(txt, '(a,i0)') 'ZONE ', iz2
+          call budobj(izone)%addentry(rin, rout, delt, txt)
+        endif
+      enddo      
+      call budobj(izone)%budget_ot(kstp, kper, iout)
+      !
+      ! -- write line ending after each zone
+      write(ioutcsv, *)
+    enddo zoneloop
+    !
+    ! -- Return
+    return
+  end subroutine zoneoutput_write
+  
+  subroutine zoneoutput_finalize()
+! ******************************************************************************
+! zoneoutput_finalize
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------
+    !
+    close(ioutcsv)
+    !
+    ! -- Return
+    return
+  end subroutine zoneoutput_finalize
+  
+end module ZoneOutputModule

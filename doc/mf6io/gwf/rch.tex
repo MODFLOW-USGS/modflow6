@@ -1,0 +1,51 @@
+
+Input to the Recharge (RCH) Package is read from the file that has type ``RCH6'' in the Name File.  Any number of RCH Packages can be specified for a single groundwater flow model.  All single valued variables are free format. 
+
+Recharge input can be specified using lists or arrays, unless the DISU Package is used.  List-based input must be used if discretization is specified using the DISU Package.  List-based input for recharge is the default, and is described here.  Instructions for specifying array-based recharge are described in the next section. 
+
+List-based input offers several advantages over the array-based input for specifying recharge.  First, multiple list entries can be specified for a single cell.  This makes it possible to divide a cell into multiple areas, and assign a different recharge rate for each area (perhaps based on land use or some other criteria).  In this case, the user would likely specify an auxiliary variable to serve as a multiplier.  This multiplier would be calculated by the user and provided in the input file as the fractional cell are for the individual recharge entries.  Another advantage to using list-based input for specifying recharge is that boundnames can be specified.  Boundnames work with the Observations capability and can be used to sum recharge rates for entries with the same boundname.  A disadvantage of the list-based input is that one cannot easily assign recharge to the entire model without specifying a list of model cells.  For this reason \mf also supports array-based input for recharge.
+
+\vspace{5mm}
+\subsubsection{Structure of Blocks}
+\vspace{5mm}
+
+\noindent \textit{FOR EACH SIMULATION}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-rch-options.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-rch-dimensions.dat}
+\vspace{5mm}
+\noindent \textit{FOR ANY STRESS PERIOD}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-rch-period.dat}
+
+\vspace{5mm}
+\subsubsection{Explanation of Variables}
+\begin{description}
+\input{./mf6ivar/tex/gwf-rch-desc.tex}
+\end{description}
+
+\vspace{5mm}
+\subsubsection{Example Input File}
+\lstinputlisting[style=inputfile]{./mf6ivar/examples/gwf-rch-example.dat}
+
+\vspace{5mm}
+\subsubsection{Available observation types}
+Recharge Package observations are limited to the simulated recharge flow rates (\texttt{rch}). The data required for the RCH Package observation type is defined in table~\ref{table:gwf-rchobstype}. Negative and positive values for an observation represent a loss from and gain to the GWF model, respectively.
+
+\begin{longtable}{p{2cm} p{2.75cm} p{2cm} p{1.25cm} p{7cm}}
+\caption{Available RCH Package observation types} \tabularnewline
+
+\hline
+\hline
+\textbf{Stress Package} & \textbf{Observation type} & \textbf{ID} & \textbf{ID2} & \textbf{Description} \\
+\hline
+\endhead
+
+\hline
+\endfoot
+
+\input{../Common/gwf-rchobs.tex}
+\label{table:gwf-rchobstype}
+\end{longtable}
+
+\vspace{5mm}
+\subsubsection{Example Observation Input File}
+\lstinputlisting[style=inputfile]{./mf6ivar/examples/gwf-rch-example-obs.dat}

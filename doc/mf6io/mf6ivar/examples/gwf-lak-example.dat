@@ -1,0 +1,95 @@
+begin options
+  PRINT_INPUT
+  BOUNDNAMES
+  PRINT_STAGE
+  PRINT_FLOWS
+  STAGE FILEOUT lak-1.stage.bin
+  BUDGET FILEOUT lak-1.cbc
+end options
+
+begin dimensions
+  nlakes 1
+  noutlets 1
+end dimensions
+
+begin packagedata
+# lakeno    strt lakeconn  boundname
+       1  110.00       57  LAKE_1
+end packagedata
+
+begin connectiondata
+# lakeno iconn layer row column   claketype bedleak belev telev  connlen connwidth
+       1     1     2  10     11    VERTICAL     0.1     0     0        0         0
+       1     2     2  10     11    VERTICAL     0.1     0     0        0         0
+       1     3     2  10     11    VERTICAL     0.1     0     0        0         0
+       1     4     2  10     11    VERTICAL     0.1     0     0        0         0
+       1     5     2  10     11    VERTICAL     0.1     0     0        0         0
+       1     6     2  10     11    VERTICAL     0.1     0     0        0         0
+       1     7     3  10     11    VERTICAL     0.1     0     0        0         0
+       1     8     3  10     11    VERTICAL     0.1     0     0        0         0
+       1     9     3  10     11    VERTICAL     0.1     0     0        0         0
+       1    10     2  10     11    VERTICAL     0.1     0     0        0         0
+       1    11     2  10     11    VERTICAL     0.1     0     0        0         0
+       1    12     3  10     11    VERTICAL     0.1     0     0        0         0
+       1    13     3  10     11    VERTICAL     0.1     0     0        0         0
+       1    14     3  10     11    VERTICAL     0.1     0     0        0         0
+       1    15     2  10     11    VERTICAL     0.1     0     0        0         0
+       1    16     2  10     11    VERTICAL     0.1     0     0        0         0
+       1    17     3  10     11    VERTICAL     0.1     0     0        0         0
+       1    18     3  10     11    VERTICAL     0.1     0     0        0         0
+       1    19     3  10     11    VERTICAL     0.1     0     0        0         0
+       1    20     2  10     11    VERTICAL     0.1     0     0        0         0
+       1    21     2  10     11    VERTICAL     0.1     0     0        0         0
+       1    22     2  10     11    VERTICAL     0.1     0     0        0         0
+       1    23     2  10     11    VERTICAL     0.1     0     0        0         0
+       1    24     2  10     11    VERTICAL     0.1     0     0        0         0
+       1    25     2  10     11    VERTICAL     0.1     0     0        0         0
+       1    26     1   6      7  HORIZONTAL     0.1     0     0      500       500
+       1    27     1   7      6  HORIZONTAL     0.1     0     0      500       500
+       1    28     1   6      8  HORIZONTAL     0.1     0     0      500       500
+       1    29     1   6      9  HORIZONTAL     0.1     0     0      500       500
+       1    30     1   6     10  HORIZONTAL     0.1     0     0      500       500
+       1    31     1   6     11  HORIZONTAL     0.1     0     0      500       500
+       1    32     1   7     12  HORIZONTAL     0.1     0     0      500       500
+       1    33     1   8      6  HORIZONTAL     0.1     0     0      500       500
+       1    34     1   8     12  HORIZONTAL     0.1     0     0      500       500
+       1    35     1   9      6  HORIZONTAL     0.1     0     0      500       500
+       1    36     1   9     12  HORIZONTAL     0.1     0     0      500       500
+       1    37     1  10      6  HORIZONTAL     0.1     0     0      500       500
+       1    38     1  10     12  HORIZONTAL     0.1     0     0      500       500
+       1    39     1  12      7  HORIZONTAL     0.1     0     0      500       500
+       1    40     1  11      6  HORIZONTAL     0.1     0     0      500       500
+       1    41     1  12      8  HORIZONTAL     0.1     0     0      500       500
+       1    42     1  12      9  HORIZONTAL     0.1     0     0      500       500
+       1    43     1  12     10  HORIZONTAL     0.1     0     0      500       500
+       1    44     1  12     11  HORIZONTAL     0.1     0     0      500       500
+       1    45     1  11     12  HORIZONTAL     0.1     0     0      500       500
+       1    46     2   7      8  HORIZONTAL     0.1     0     0      500       500
+       1    47     2   8      7  HORIZONTAL     0.1     0     0      500       500
+       1    48     2   7      9  HORIZONTAL     0.1     0     0      500       500
+       1    49     2   7     10  HORIZONTAL     0.1     0     0      500       500
+       1    50     2   8     11  HORIZONTAL     0.1     0     0      500       500
+       1    51     2   9      7  HORIZONTAL     0.1     0     0      500       500
+       1    52     2   9     11  HORIZONTAL     0.1     0     0      500       500
+       1    53     2  11      8  HORIZONTAL     0.1     0     0      500       500
+       1    54     2  10      7  HORIZONTAL     0.1     0     0      500       500
+       1    55     2  11      9  HORIZONTAL     0.1     0     0      500       500
+       1    56     2  11     10  HORIZONTAL     0.1     0     0      500       500
+       1    57     2  10     11  HORIZONTAL     0.1     0     0      500       500
+end connectiondata
+
+begin outlets
+# outletno  lakein lakeout    couttype  invert   width   rough   slope
+         1       1       0   SPECIFIED       0       0       0       0
+end outlets
+
+begin period 1
+ 1 rainfall 0.0116
+ 1 evaporation 0.0103
+ 1 rate -100.
+end period
+
+begin period 100
+  1 constant
+  1 rate 0.
+end period

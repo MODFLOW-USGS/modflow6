@@ -1,0 +1,61 @@
+Input to the Multi-Aquifer Well (MAW) Package is read from the file that has type ``MAW6'' in the Name File.  Any number of MAW Packages can be specified for a single groundwater flow model.  All single valued variables are free format.
+
+\vspace{5mm}
+\subsubsection{Structure of Blocks}
+\vspace{5mm}
+
+\noindent \textit{FOR EACH SIMULATION}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-maw-options.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-maw-dimensions.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-maw-packagedata.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-maw-connectiondata.dat}
+\vspace{5mm}
+\noindent \textit{FOR ANY STRESS PERIOD}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-maw-period.dat}
+
+\vspace{5mm}
+\subsubsection{Explanation of Variables}
+\begin{description}
+\input{./mf6ivar/tex/gwf-maw-desc.tex}
+\end{description}
+
+\vspace{5mm}
+\subsubsection{Example Input File -- Conductance Calculated using Thiem Equation}
+\lstinputlisting[style=inputfile]{./mf6ivar/examples/gwf-maw-example1.dat}
+\subsubsection{Example Input File -- Conductance Calculated using Screen Geometry}
+\lstinputlisting[style=inputfile]{./mf6ivar/examples/gwf-maw-example2.dat}
+\subsubsection{Example Input File -- Flowing Well with Conductance Specified}
+\lstinputlisting[style=inputfile]{./mf6ivar/examples/gwf-maw-example3.dat}
+
+\vspace{5mm}
+\subsubsection{Available observation types}
+Multi-Aquifer Well Package observations include well head and all of the terms that contribute to the continuity equation for each multi-aquifer well. Additional LAK Package observations include the conductance for a well-aquifer connection conductance (\texttt{conductance}) and the calculated flowing well-aquifer connection conductance (\texttt{fw-conductance}). The data required for each MAW Package observation type is defined in table~\ref{table:gwf-mawobstype}. Negative and positive values for \texttt{maw} observations represent a loss from and gain to the GWF model, respectively. For all other flow terms, negative and positive values represent a loss from and gain from the MAW package, respectively.
+
+\begin{longtable}{p{2cm} p{2.75cm} p{2cm} p{1.25cm} p{7cm}}
+\caption{Available MAW Package observation types} \tabularnewline
+
+\hline
+\hline
+\textbf{Stress Package} & \textbf{Observation type} & \textbf{ID} & \textbf{ID2} & \textbf{Description} \\
+\hline
+\endfirsthead
+
+\captionsetup{textformat=simple}
+\caption*{\textbf{Table \arabic{table}.}{\quad}Available MAW Package observation types.---Continued} \\
+
+\hline
+\hline
+\textbf{Stress Package} & \textbf{Observation type} & \textbf{ID} & \textbf{ID2} & \textbf{Description} \\
+\hline
+\endhead
+
+\hline
+\endfoot
+
+\input{../Common/gwf-mawobs.tex}
+\label{table:gwf-mawobstype}
+\end{longtable}
+
+\vspace{5mm}
+\subsubsection{Example Observation Input File}
+\lstinputlisting[style=inputfile]{./mf6ivar/examples/gwf-maw-example-obs.dat}

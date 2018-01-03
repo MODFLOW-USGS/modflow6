@@ -1,0 +1,5 @@
+BEGIN TABLES
+  <lakeno> TAB6 FILEIN <tab6_filename>
+  <lakeno> TAB6 FILEIN <tab6_filename>
+  ...
+END TABLES

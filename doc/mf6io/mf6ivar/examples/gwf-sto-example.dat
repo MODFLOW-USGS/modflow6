@@ -1,0 +1,32 @@
+BEGIN OPTIONS
+  SAVE_FLOWS
+END OPTIONS
+
+BEGIN GRIDDATA
+  #cell storage conversion 0:confined, 1:convertible
+  ICONVERT
+    constant 1
+  #specific storage (for all model cells)
+  SS
+    constant 1.e-5
+  #specific yield (specified by layer because of LAYERED keyword)
+  SY LAYERED
+    constant 0.2
+    constant 0.15
+    constant 0.15
+END GRIDDATA
+
+BEGIN PERIOD 1
+  STEADY-STATE
+END PERIOD
+
+BEGIN PERIOD 2
+  TRANSIENT
+END PERIOD
+
+#stress period 3 will be transient because
+#a BEGIN PERIOD block is not provided.
+
+BEGIN PERIOD 4
+  STEADY-STATE
+END PERIOD

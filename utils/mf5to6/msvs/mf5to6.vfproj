@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VisualStudioProject ProjectCreator="Intel Fortran" Keyword="Console Application" Version="11.0" ProjectIdGuid="{EE5F8367-9220-45ED-9B0B-5942AF51229C}">
+	<Platforms>
+		<Platform Name="Win32"/></Platforms>
+	<Configurations>
+		<Configuration Name="Debug|Win32" TargetName="$(ProjectName)d">
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" HeapArrays="0" WarnUnusedVariables="true" WarnUncalled="true" WarnInterfaces="true" Traceback="true" NullPointerCheck="true" BoundsCheck="true" UninitializedVariablesCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug"/>
+				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateDebugInformation="true" SubSystem="subSystemConsole"/>
+				<Tool Name="VFResourceCompilerTool"/>
+				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
+				<Tool Name="VFCustomBuildTool"/>
+				<Tool Name="VFPreLinkEventTool"/>
+				<Tool Name="VFPreBuildEventTool"/>
+				<Tool Name="VFPostBuildEventTool" CommandLine="copy $(OutDir)\$(TargetName)$(TargetExt) ..\..\..\bin"/>
+				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
+		<Configuration Name="Release|Win32">
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" HeapArrays="0" RuntimeLibrary="rtMultiThreadedDebug"/>
+				<Tool Name="VFLinkerTool" SuppressStartupBanner="true" GenerateDebugInformation="true" SubSystem="subSystemConsole"/>
+				<Tool Name="VFResourceCompilerTool"/>
+				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
+				<Tool Name="VFCustomBuildTool"/>
+				<Tool Name="VFPreLinkEventTool"/>
+				<Tool Name="VFPreBuildEventTool"/>
+				<Tool Name="VFPostBuildEventTool" CommandLine="copy $(OutDir)\$(TargetName)$(TargetExt) ..\..\..\bin"/>
+				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration></Configurations>
+	<Files>
+		<Filter Name="Header Files" Filter="fi;fd"/>
+		<Filter Name="Resource Files" Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"/>
+		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl">
+		<Filter Name="LGR">
+		<File RelativePath="..\src\LGR\GwfLgrModule.f"/>
+		<File RelativePath="..\src\LGR\GwfLgrSubs.f"/>
+		<File RelativePath="..\src\LGR\GwfSfrSubs.f"/></Filter>
+		<Filter Name="MF2005">
+		<File RelativePath="..\src\MF2005\de47.f"/>
+		<File RelativePath="..\src\MF2005\gmg7.f"/>
+		<File RelativePath="..\src\MF2005\gwf2mnw17.f"/>
+		<File RelativePath="..\src\MF2005\gwf2mnw2i7.f"/>
+		<File RelativePath="..\src\MF2005\GwfBasModule.f90"/>
+		<File RelativePath="..\src\MF2005\GwfBasOcSubs.f"/>
+		<File RelativePath="..\src\MF2005\GwfBasSubs.f"/>
+		<File RelativePath="..\src\MF2005\GwfBcfModule.f"/>
+		<File RelativePath="..\src\MF2005\GwfBcfSubs.f"/>
+		<File RelativePath="..\src\MF2005\GwfChdModule.f90"/>
+		<File RelativePath="..\src\MF2005\GwfChdSubs.f"/>
+		<File RelativePath="..\src\MF2005\GwfDrnModule.f"/>
+		<File RelativePath="..\src\MF2005\GwfDrnSubs.f"/>
+		<File RelativePath="..\src\MF2005\GwfEtsModule.f"/>
+		<File RelativePath="..\src\MF2005\GwfEtsSubs.f"/>
+		<File RelativePath="..\src\MF2005\GwfEvtModule.f"/>
+		<File RelativePath="..\src\MF2005\GwfEvtSubs.f"/>
+		<File RelativePath="..\src\MF2005\GwfFhbModule.f90"/>
+		<File RelativePath="..\src\MF2005\GwfFhbSubs.f90"/>
+		<File RelativePath="..\src\MF2005\GwfGhbModule.f"/>
+		<File RelativePath="..\src\MF2005\GwfGhbSubs.f"/>
+		<File RelativePath="..\src\MF2005\GwfLakModule.f90"/>
+		<File RelativePath="..\src\MF2005\GwfLakSubs.f"/>
+		<File RelativePath="..\src\MF2005\GwfLpfModule.f"/>
+		<File RelativePath="..\src\MF2005\GwfLpfSubs.f"/>
+		<File RelativePath="..\src\MF2005\GwfMnwModule.f"/>
+		<File RelativePath="..\src\MF2005\GwfMnwSubs.f"/>
+		<File RelativePath="..\src\MF2005\GwfRchModule.f"/>
+		<File RelativePath="..\src\MF2005\GwfRchSubs.f"/>
+		<File RelativePath="..\src\MF2005\GwfResModule.f"/>
+		<File RelativePath="..\src\MF2005\GwfResSubs.f"/>
+		<File RelativePath="..\src\MF2005\GwfRivModule.f"/>
+		<File RelativePath="..\src\MF2005\GwfRivSubs.f"/>
+		<File RelativePath="..\src\MF2005\GwfSfrCheck.f"/>
+		<File RelativePath="..\src\MF2005\GwfSfrModule.f"/>
+		<File RelativePath="..\src\MF2005\GwfWelModule.f90"/>
+		<File RelativePath="..\src\MF2005\obs2bas7.f"/>
+		<File RelativePath="..\src\MF2005\obs2chd7.f"/>
+		<File RelativePath="..\src\MF2005\obs2drn7.f"/>
+		<File RelativePath="..\src\MF2005\obs2ghb7.f"/>
+		<File RelativePath="..\src\MF2005\obs2riv7.f"/>
+		<File RelativePath="..\src\MF2005\parutl7.f"/>
+		<File RelativePath="..\src\MF2005\pcg7.f"/>
+		<File RelativePath="..\src\MF2005\pcgn2.f90"/>
+		<File RelativePath="..\src\MF2005\precutls.f90"/>
+		<File RelativePath="..\src\MF2005\sip7.f"/>
+		<File RelativePath="..\src\MF2005\utl7.f"/></Filter>
+		<Filter Name="MF6">
+		<Filter Name="Utilities">
+		<Filter Name="Memory">
+		<File RelativePath="..\..\..\src\Utilities\Memory\Memory.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\Memory\MemoryList.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\Memory\MemoryManager.f90"/></Filter>
+		<Filter Name="TimeSeries">
+		<File RelativePath="..\..\..\src\Utilities\TimeSeries\TimeSeries.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\TimeSeries\TimeSeriesRecord.f90"/></Filter>
+		<File RelativePath="..\..\..\src\Utilities\BlockParser.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\Constants.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\InputOutput.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\kind.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\List.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\OpenSpec.f90"/></Filter></Filter>
+		<Filter Name="NWT">
+		<File RelativePath="..\src\NWT\gwf2hfb7_NWT.f"/>
+		<File RelativePath="..\src\NWT\gwf2wel7_NWT.f"/>
+		<File RelativePath="..\src\NWT\GwfHfbSubs_NWT.f90"/>
+		<File RelativePath="..\src\NWT\GwfUpwModule.f90"/>
+		<File RelativePath="..\src\NWT\GwfUpwSubs.f90"/>
+		<File RelativePath="..\src\NWT\GwfUzfModule_NWT.f"/>
+		<File RelativePath="..\src\NWT\GwfUzfSubs_NWT.f"/>
+		<File RelativePath="..\src\NWT\NWT1_gmres.f90"/>
+		<File RelativePath="..\src\NWT\NWT1_ilupc_mod.f90"/>
+		<File RelativePath="..\src\NWT\NWT1_module.f"/>
+		<File RelativePath="..\src\NWT\NWT1_solver.f"/>
+		<File RelativePath="..\src\NWT\NWT1_xmd.f"/>
+		<File RelativePath="..\src\NWT\NWT1_xmdlib.f"/></Filter>
+		<Filter Name="Preproc">
+		<File RelativePath="..\src\Preproc\ArrayHandlers.f90"/>
+		<File RelativePath="..\src\Preproc\ConstantsPHMF.f90"/>
+		<File RelativePath="..\src\Preproc\Discretization3D.f90"/>
+		<File RelativePath="..\src\Preproc\DiscretizationBasePHMF.f90"/>
+		<File RelativePath="..\src\Preproc\File.f90"/>
+		<File RelativePath="..\src\Preproc\FileList.f90"/>
+		<File RelativePath="..\src\Preproc\Global.f90"/>
+		<File RelativePath="..\src\Preproc\GlobalPHMF.f90"/>
+		<File RelativePath="..\src\Preproc\GlobalVariables.f90"/>
+		<File RelativePath="..\src\Preproc\GlobalVariablesPHMF.f90"/>
+		<File RelativePath="..\src\Preproc\ObsBlock.f90"/>
+		<File RelativePath="..\src\Preproc\ObservePHMF.f90"/>
+		<File RelativePath="..\src\Preproc\Preproc.f90"/>
+		<File RelativePath="..\src\Preproc\SimPHMF.f90"/>
+		<File RelativePath="..\src\Preproc\SimVariables.f90"/>
+		<File RelativePath="..\src\Preproc\SimVariablesPHMF.f90"/>
+		<File RelativePath="..\src\Preproc\Utilities.f90"/></Filter>
+		<File RelativePath="..\src\ArrayReadersMF5.f90"/>
+		<File RelativePath="..\src\Auxiliary.f90"/>
+		<File RelativePath="..\src\CharacterContainer.f90"/>
+		<File RelativePath="..\src\ChdObsWriter.f90"/>
+		<File RelativePath="..\src\ChdPackageWriter.f90"/>
+		<File RelativePath="..\src\ChdType.f90"/>
+		<File RelativePath="..\src\Connection.f90"/>
+		<File RelativePath="..\src\ConverterCommon.f90"/>
+		<File RelativePath="..\src\DisWriter.f90"/>
+		<File RelativePath="..\src\DrnObsWriter.f90"/>
+		<File RelativePath="..\src\DrnPackageWriter.f90"/>
+		<File RelativePath="..\src\EvtPackageWriter.f90"/>
+		<File RelativePath="..\src\Exchange.f90"/>
+		<File RelativePath="..\src\ExchangeWriter.f90"/>
+		<File RelativePath="..\src\FhbPackageWriter.f90"/>
+		<File RelativePath="..\src\FileWriter.f90"/>
+		<File RelativePath="..\src\GhbObsWriter.f90"/>
+		<File RelativePath="..\src\GhbPackageWriter.f90"/>
+		<File RelativePath="..\src\HfbPackageWriter.f90"/>
+		<File RelativePath="..\src\IcWriter.f90"/>
+		<File RelativePath="..\src\ImsPackageWriter.f90"/>
+		<File RelativePath="..\src\Lake.f90"/>
+		<File RelativePath="..\src\LakeConnection.f90"/>
+		<File RelativePath="..\src\LakeOutlet.f90"/>
+		<File RelativePath="..\src\LakeTributary.f90"/>
+		<File RelativePath="..\src\LakPackageWriter.f90"/>
+		<File RelativePath="..\src\LineList.f90"/>
+		<File RelativePath="..\src\mach_mod.f90"/>
+		<File RelativePath="..\src\MawPackageWriter.f90"/>
+		<File RelativePath="..\src\mf5to6.f90"/>
+		<File RelativePath="..\src\Model.f90"/>
+		<File RelativePath="..\src\ModelConverter.f90"/>
+		<File RelativePath="..\src\ModelPackage.f90"/>
+		<File RelativePath="..\src\Mover.f90"/>
+		<File RelativePath="..\src\MultiLayerObsModule.f90"/>
+		<File RelativePath="..\src\MvrPackageWriter.f90"/>
+		<File RelativePath="..\src\NpfWriter.f90"/>
+		<File RelativePath="..\src\ObsWriter.f90"/>
+		<File RelativePath="..\src\OutputControlWriter.f90"/>
+		<File RelativePath="..\src\PackageWriter.f90"/>
+		<File RelativePath="..\src\ParamModule.f90"/>
+		<File RelativePath="..\src\RchPackageWriter.f90"/>
+		<File RelativePath="..\src\RivObsWriter.f90"/>
+		<File RelativePath="..\src\RivPackageWriter.f90"/>
+		<File RelativePath="..\src\SfrDiversion.f90"/>
+		<File RelativePath="..\src\SfrPackageWriter.f90"/>
+		<File RelativePath="..\src\SfrReach.f90"/>
+		<File RelativePath="..\src\SfrSegment.f90"/>
+		<File RelativePath="..\src\SimFileWriter.f90"/>
+		<File RelativePath="..\src\StoWriter.f90"/>
+		<File RelativePath="..\src\StressPeriod.f90"/>
+		<File RelativePath="..\src\TdisVariables.f90"/>
+		<File RelativePath="..\src\TdisWriter.f90"/>
+		<File RelativePath="..\src\UzfPackageWriter.f90"/>
+		<File RelativePath="..\src\WelPackageWriter.f90"/></Filter></Files>
+	<Globals/></VisualStudioProject>

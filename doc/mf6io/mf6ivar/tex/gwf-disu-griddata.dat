@@ -1,0 +1,8 @@
+BEGIN GRIDDATA
+  TOP
+    <top(nodes)> -- U1DDBL
+  BOT
+    <bot(nodes)> -- U1DDBL
+  AREA
+    <area(nodes)> -- U1DDBL
+END GRIDDATA

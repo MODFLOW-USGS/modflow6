@@ -1,0 +1,74 @@
+\mf differs from its predecessors in the form of the input.  Whereas previous MODFLOW versions read numerical values, arrays, and lists in a highly structured form, \mf reads information in the form of blocks and keywords.  \mf also reads arrays and lists of information, but these arrays and lists are tagged with identifying block names or keywords.  \mf will terminate with an error if it detects an unrecognized block or keyword.
+
+\subsection{Block and Keyword Input} 
+
+Input to \mf is provided within blocks.  A block is a section of an ASCII input file that begins with a line that has ``BEGIN'' followed by the name of the block and ends with a line the begins with ``END'' followed by the name of the block.  \mf will terminate with an error if blocks do not begin and end with the same name, or if a ``BEGIN'' or ``END'' line is missing.  Information within a block differs depending on the part of \mf that reads the block.  In general, keywords are used within blocks to turn options on or specify the type of information that follows the keyword.  If an unrecognized keyword is encountered in a block, \mf will terminate with an error.
+
+The keyword approach is adopted in \mf to improve readability of the \mf input files, enhance discovery of errors in input files, and improve support for backward compatibility by allowing the program to expand in functionality while allowing previously developed models to be run with newer versions of the program.
+
+Within these user instructions, keywords are shown in capital letters to differentiate them from other input that is provided by the user.  For example, ``BEGIN'' and ``END'' are recognized by \mf, and so they are capitalized.  Also, line indentation is used within these user instructions to help with readability of the blocks.  Typically, lines within a block are indented two spaces to accentuate that the lines are part of the block.  This indentation is not enforced by the program, but users are encouraged to use it within their own input files to improve readability.
+
+Unless stated otherwise in this user guide, information contained within a block can be listed in any order.  If the same keyword is provided more than once, then the program will use the last information provided by that keyword.
+
+Comment lines and blanks lines are also allowed within most blocks and within most input files.  Valid comment characters include ``\#'' ``!'', and ``//''.  Comments can also be placed at the end of some input lines, after the required information.  Comments are not allowed at the end of some lines if the program is required to read an arbitrary number of non-keyword items.  Comments included at the end of the line must be separated from the rest of the line by at least one space.
+
+Unless otherwise noted in the input instructions, multiple blocks of the same name cannot be specified in a single input file.  The block order within the input file must follow the order presented in the input instructions.  Each input file typically begins with an OPTIONS block, which is generally not required, followed by one or more data blocks.
+
+The following is an example of how the input instructions for a block are presented in this document.  
+\begin{lstlisting}[style=blockdefinition]
+BEGIN OPTIONS
+  [AUXILIARY <auxiliary(naux)>]
+  [PRINT_INPUT]
+  [MAXIMUM_ITERATION <maxsfrit>]
+END OPTIONS
+\end{lstlisting}
+This example shows the items that may be specified with this OPTIONS block.  Optional items are enclosed between ``['' and ``]'' symbols, and these optional items can be nested as shown with the ``\texttt{[AUXILIARY <auxiliary(naux)>]}'' item.  The ``\texttt{<}'' and ``\texttt{>}'' symbols indicate a variable that must be provided by the user.  In this case, \texttt{auxiliary} is an array of size \texttt{naux}.  Because there are bracket symbols around the entire item, the user it not required to specify anything for this item.  Likewise, the user may or may not invoke the ``\texttt{PRINT\_INPUT}'' option.  Lastly, the user can specify ``\texttt{MAXIMUM\_ITERATION}'' followed by a numeric value for ``\texttt{maxsfrit}''.  If the user does not specify an optional item, then a default condition will apply.  Behavior of the default condition is described in the input instructions for that item.
+
+\vspace{6pt}\noindent A valid user input block for OPTIONS might be:
+
+\begin{lstlisting}[style=inputfile]
+#This is my options block
+BEGIN OPTIONS
+  AUXILIARY temperature salinity
+  MAXIMUM_ITERATION 10
+END OPTIONS
+\end{lstlisting}
+
+\noindent The following is another valid user input block for OPTIONS:
+
+\begin{lstlisting}[style=inputfile]
+#This is an alternative options block
+BEGIN OPTIONS
+  # Assign two auxiliary variables
+  AUXILIARY temperature salinity
+  # Specify the maximum iteration
+  MAXIMUM_ITERATION 10
+  #specify the print input option
+  PRINT_INPUT
+END OPTIONS
+#done with the options block
+\end{lstlisting}
+
+\subsection{Specification of Block Information in OPEN/CLOSE File} 
+For most blocks, information can be read from a separate text file.  In this case, all of the information for the block must reside in the text file.  The file name is specified using the OPEN/CLOSE keyword as the first and only entry in the block as follows:
+
+\begin{lstlisting}[style=inputfile]
+#This is an alternative options block
+BEGIN OPTIONS
+  OPEN/CLOSE myoptblock.txt
+END OPTIONS
+\end{lstlisting}
+
+\noindent When MODFLOW encounters the OPEN/CLOSE keyword, the program opens the specified file on unit 99 and continues processing the information in the file as if it were within the block itself.  When the program reaches the end of the file, the file is closed, and the program returns to reading the original package file.  The next line after the OPEN/CLOSE line must end the block.
+
+Some blocks do not support the OPEN/CLOSE capability.  A list of all of the blocks, organized by component and input file type, are listed in a table in appendix A.  This table also indicates the blocks that do not support the OPEN/CLOSE capability.
+
+\subsection{File Name Input}
+Some blocks may require that a file name be entered.  Although spaces within a file name are not generally recommended, they can be specified if the entire file name is enclosed within single quotes, which means that the file name itself cannot have a single quote within it.  On Windows computers, file names are not case sensitive, and thus, ``model.dis'' can be referenced within the input files as ``MODEL.DIS''.  On some other operating systems, however, file names are case sensitive and the case used in the input instructions must exactly reflect the case used to name the file.
+
+\subsection{Lengths of Character Variables}
+Character variables, which are used to store names of models, packages, observations and other objects, are limited in the number of characters that can be used. Table \ref{table:characterlength} lists the limit used for each type of character variable.
+
+\FloatBarrier
+\input{../Common/characterlengthtable.tex}
+\FloatBarrier

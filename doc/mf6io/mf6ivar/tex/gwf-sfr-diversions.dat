@@ -1,0 +1,5 @@
+BEGIN DIVERSIONS
+  <rno> <idv> <iconr> <cprior>
+  <rno> <idv> <iconr> <cprior>
+  ...
+END DIVERSIONS

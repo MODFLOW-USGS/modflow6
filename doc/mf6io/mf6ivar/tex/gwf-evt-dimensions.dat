@@ -1,0 +1,4 @@
+BEGIN DIMENSIONS
+  MAXBOUND <maxbound>
+  NSEG <nseg>
+END DIMENSIONS

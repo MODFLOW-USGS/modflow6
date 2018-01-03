@@ -1,0 +1,55 @@
+#The OPTIONS block is optional
+BEGIN OPTIONS
+  AUXILIARY depth screen_length
+  BOUNDNAMES
+  PRINT_INPUT
+  PRINT_FLOWS
+  SAVE_FLOWS
+END OPTIONS
+
+#The DIMENSIONS block is required
+BEGIN DIMENSIONS
+  MAXBOUND 5
+END DIMENSIONS
+
+#The following block of wells will be activated for stress periods
+#2 and 3.  No wells are present in stress period 1 due to an
+#absence of a block for that period.
+BEGIN PERIOD 2
+    #layer  row  col      Q    depth  screen_length  boundname
+
+          #wells 1 and 2
+         7  102   17 -19000    275.9           17.6       CW_1
+         9  192   44 -13000    280.0           24.0       CW_2
+
+          #wells 3 through 5
+         9  109   67 -24000    295.1           12.1       CW_3
+        10   43   17 -12000    301.3            9.6       CW_4
+        11   12   17 -17000    315.0           18.6       CW_5
+
+END PERIOD
+
+#Turn off all wells for stress period 4
+BEGIN PERIOD 4
+  #An empty block indicates that there are no wells.
+END PERIOD
+
+#For stress period 5, turn on wells 1 and 4,
+#and add three wells that are grouped in a well field
+BEGIN PERIOD 5
+    #layer  row  col      Q    depth  screen_length  boundname
+         7  102   17 -19000    275.9           17.6       CW_1
+        10   43   17 -12000    301.3            9.6       CW_4
+
+    #wells in well field
+         5   27   50 -11000    190.0           20.0  well_field
+         5   27   51 -10000    185.0           20.0  well_field
+         5   28   50 -12000    187.3           15.0  well_field
+END PERIOD
+
+#Use a list of wells in file wells.dat for stress period 6 until
+#the end of the simulation.  Use the SFAC variable to multiply
+#all pumping rates by 1000.
+BEGIN PERIOD 6
+  OPEN/CLOSE wells.dat SFAC 1000.
+END PERIOD

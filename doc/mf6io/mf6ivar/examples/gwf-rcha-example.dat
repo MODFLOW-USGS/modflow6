@@ -1,0 +1,42 @@
+BEGIN OPTIONS
+  AUXILIARY var1 var2 mymult
+  READASARRAYS
+  HIGHEST_ACTIVE
+  PRINT_INPUT
+  PRINT_FLOWS
+  SAVE_FLOWS
+  AUXMULTNAME mymult
+END OPTIONS
+
+BEGIN PERIOD 1
+
+  # For this model, the absence of an IRCH array causes
+  # recharge to apply to model layer 1. To make recharge
+  # apply to layer 2 instead, the following lines
+  # (uncommented) could be used:
+  # IRCH
+  #   constant 2
+
+  # recharge rate
+  RECHARGE
+    constant 0.0040
+
+  # auxiliary variable (var1) array
+  var1
+    constant 100.
+
+  # auxiliary variable (var2) array
+  var2
+    constant 0.
+
+  # auxiliary variable (mymult) array
+  # Because ``AUXMULTNAME mymult'' was specified in the
+  # options block, the MYMULT array will be used to multiply
+  # the values in the RECHARGE array
+  MYMULT
+    INTERNAL FACTOR  1.0
+      0.5  1.0  1.0  0.5
+      1.0  1.0  1.0  1.0
+      0.5  1.0  1.0  0.5
+
+END PERIOD

@@ -1,0 +1,6 @@
+BEGIN SOLUTIONGROUP <group_num>
+  [MXITER <mxiter>]
+  <slntype> <slnfname> <slnmnames(nslnmod)>
+  <slntype> <slnfname> <slnmnames(nslnmod)>
+  ...
+END SOLUTIONGROUP

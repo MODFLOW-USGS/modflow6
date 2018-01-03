@@ -1,0 +1,27 @@
+Input to the Output Control Option of the Groundwater Flow Model is read from the file that is specified as type ``OC6'' in the Name File. If no ``OC6'' file is specified, default output control is used. The Output Control Option determines how and when heads are printed to the listing file and/or written to a separate binary output file.  Under the default, head and overall budget are written to the Listing File at the end of every stress period. The default printout format for head is 10G11.4.
+
+Output Control data must be specified using words.  The numeric codes supported in earlier MODFLOW versions can no longer be used.
+
+All budget output is saved in the "COMPACT BUDGET" form.  COMPACT BUDGET indicates that the cell-by-cell budget file(s) will be written in a more compact form than is used in the 1988 version of MODFLOW (McDonald and Harbaugh, 1988); however, programs that read these data in the form written by MODFLOW-88 will be unable to read the new compact file. 
+
+For the PRINT and SAVE options of heads, there is no longer an option to specify individual layers.  Whenever one of these arrays is printed or saved, all layers are printed or saved.
+
+\vspace{5mm}
+\subsubsection{Structure of Blocks}
+\vspace{5mm}
+
+\noindent \textit{FOR EACH SIMULATION}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-oc-options.dat}
+\vspace{5mm}
+\noindent \textit{FOR ANY STRESS PERIOD}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-oc-period.dat}
+
+\vspace{5mm}
+\subsubsection{Explanation of Variables}
+\begin{description}
+\input{./mf6ivar/tex/gwf-oc-desc.tex}
+\end{description}
+
+\vspace{5mm}
+\subsubsection{Example Input File}
+\lstinputlisting[style=inputfile]{./mf6ivar/examples/gwf-oc-example.dat}

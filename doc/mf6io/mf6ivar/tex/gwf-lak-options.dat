@@ -1,0 +1,16 @@
+BEGIN OPTIONS
+  [AUXILIARY <auxiliary(naux)>]
+  [BOUNDNAMES]
+  [PRINT_INPUT]
+  [PRINT_STAGE]
+  [PRINT_FLOWS]
+  [SAVE_FLOWS]
+  [STAGE FILEOUT <stagefile>]
+  [BUDGET FILEOUT <budgetfile>]
+  [TS6 FILEIN <ts6_filename>]
+  [OBS6 FILEIN <obs6_filename>]
+  [MOVER]
+  [SURFDEP <surfdep>]
+  [TIME_CONVERSION <time_conversion>]
+  [LENGTH_CONVERSION <length_conversion>]
+END OPTIONS

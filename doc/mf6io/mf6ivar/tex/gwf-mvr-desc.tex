@@ -1,0 +1,41 @@
+% DO NOT MODIFY THIS FILE DIRECTLY.  IT IS CREATED BY mf6ivar.py 
+
+\item \texttt{PRINT\_INPUT}---keyword to indicate that the list of MVR information will be written to the listing file immediately after it is read.
+
+\item \texttt{PRINT\_FLOWS}---keyword to indicate that the list of MVR flow rates will be printed to the listing file for every stress period time step in which ``BUDGET PRINT'' is specified in Output Control.  If there is no Output Control option and \texttt{PRINT\_FLOWS} is specified, then flow rates are printed for the last time step of each stress period.
+
+\item \texttt{MODELNAMES}---keyword to indicate that all package names will be preceded by the model name for the package.  Model names are required when the Mover Package is used with a GWF-GWF Exchange.  The MODELNAME keyword should not be used for a Mover Package that is for a single GWF Model.
+
+\item \texttt{BUDGET}---keyword to specify that record corresponds to the budget.
+
+\item \texttt{FILEOUT}---keyword to specify that an output filename is expected next.
+
+\item \texttt{budgetfile}---name of the output file to write budget information.
+
+\item \texttt{maxmvr}---integer value specifying the maximum number of water mover entries that will specified for any stress period.
+
+\item \texttt{maxpackages}---integer value specifying the number of unique packages that are included in this water mover input file.
+
+\item \texttt{mname}---name of model containing the package.
+
+\item \texttt{pname}---is the name of a package that may be included in a subsequent stress period block.
+
+\item \texttt{iper}---integer value specifying the starting stress period number for which the data specified in the PERIOD block apply.  \texttt{iper} must be less than \texttt{nper} in the TDIS Package and greater than zero.  The \texttt{iper} value assigned to a stress period block must be greater than the \texttt{iper} value assigned for the previous block.
+
+\item \texttt{mname1}---name of model containing the package, \texttt{pname1}.
+
+\item \texttt{pname1}---is the package name for the provider.  The package \texttt{pname1} must be designated to provide water through the MVR Package by specifying the keyword ``MOVER'' in its OPTIONS block.
+
+\item \texttt{id1}---is the identifier for the provider.  This is the well number, reach number, lake number, etc.
+
+\item \texttt{mname2}---name of model containing the package, \texttt{pname2}.
+
+\item \texttt{pname2}---is the package name for the receiver.  The package \texttt{pname2} must be designated to receive water from the MVR Package by specifying the keyword ``MOVER'' in its OPTIONS block.
+
+\item \texttt{id2}---is the identifier for the receiver.  This is the well number, reach number, lake number, etc.
+
+\item \texttt{mvrtype}---is the character string signifying the method for determining how much water will be moved.  Supported values are ``FACTOR'' ``EXCESS'' ``THRESHOLD'' and ``UPTO''.  These four options determine how the receiver flow rate, $Q_R$, is calculated.  These options are based the options available in the SFR2 Package for diverting stream flow.
+
+\item \texttt{value}---is the value to be used in the equation for calculating the amount of water to move.  For the ``FACTOR'' option, \texttt{value} is the $\alpha$ factor.  For the remaining options, \texttt{value} is the specified flow rate, $Q_S$.
+
+

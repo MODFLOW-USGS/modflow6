@@ -1,0 +1,48 @@
+\mf is run from the command line by entering the name of the \mf executable program.  If the run is successful, it will conclude with a statement about normal termination.
+
+{\small
+\begin{verbatim}
+                                  MODFLOW Version 6
+                U.S. GEOLOGICAL SURVEY MODULAR HYDROLOGIC MODEL
+                             Version 0.9.00 04/07/2017
+
+ Run start date and time (yyyy/mm/dd hh:mm:ss): 2017/03/31 14:10:29
+
+ Writing simulation list file: mfsim.lst
+ Using Simulation name file: mfsim.nam
+ Solving:  Stress period:     1    Time step:     1
+ Run end date and time (yyyy/mm/dd hh:mm:ss): 2017/03/31 14:10:30
+ Elapsed run time:  0.655 Seconds
+
+ Normal termination of simulation.
+\end{verbatim}
+}
+
+\noindent \mf requires that a simulation name file (described in a subsequent section titled ``Simulation Name File'') be present in the working directory.  This simulation name file must be named ``mfsim.nam''.  If the mfsim.nam file is not located in the present working directory, then \mf will terminate with the following error.  
+
+{\small
+\begin{verbatim}
+                                  MODFLOW Version 6
+                U.S. GEOLOGICAL SURVEY MODULAR HYDROLOGIC MODEL
+                             Version 0.9.00 04/07/2017
+
+ Run start date and time (yyyy/mm/dd hh:mm:ss): 2017/03/31 14:15:27
+
+ Writing simulation list file: mfsim.lst
+
+ERROR REPORT:
+
+ *** ERROR OPENING FILE "mfsim.nam" ON UNIT 1001
+       SPECIFIED FILE STATUS: OLD
+       SPECIFIED FILE FORMAT: FORMATTED
+       SPECIFIED FILE ACCESS: SEQUENTIAL
+       SPECIFIED FILE ACTION: READ
+         IOSTAT ERROR NUMBER: 29
+  -- STOP EXECUTION (openfile)
+ Stopping due to error(s)
+\end{verbatim}
+}
+
+During execution \mf creates a simulation output file, called a listing file, with the name ``mfsim.lst''.  This file contains general simulation information, including information about exchanges between models, timing, and solver progress.  Separate listing files are also written for each individual model.  These listing files contains the details for the specific models.
+
+In the event that \mf encounters an error, the error message is written to the command line window as well as to the simulation listing file.  The error message will also contain the name of the file that was being read when the error occurred, if possible.  This information can be used to diagnose potential causes of the error.  

@@ -1,0 +1,29 @@
+BEGIN OPTIONS
+  READASARRAYS
+  AUXILIARY var1 var2
+  HIGHEST_ACTIVE
+  PRINT_INPUT
+  PRINT_FLOWS
+  SAVE_FLOWS
+END OPTIONS
+
+BEGIN PERIOD 1
+  #For a structured grid, IEVT defaults to model
+  # layer 1, so no need to enter IEVT here.
+
+  #ET surface elevation
+  SURFACE
+    constant 150.0
+  #Maximum ET rate
+  RATE
+    constant 0.007
+  #ET extinction depth
+  DEPTH
+    constant 15.0
+  #auxiliary variable (var1) array
+  var1
+    constant 100.0
+  #auxiliary variable (var2) array
+  var2
+    constant 0.0
+END PERIOD

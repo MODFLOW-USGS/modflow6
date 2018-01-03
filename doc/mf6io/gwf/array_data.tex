@@ -1,0 +1,161 @@
+\subsection{Array Input (READARRAY)}
+Some GWF Model packages require arrays of information to be provided by the user.  This information is read using a generic READARRAY capability in \mfdot  Within this user guide, variables that are read with READARRAY are marked accordingly, as shown in example input instructions for a DATA block.  
+
+\begin{lstlisting}[style=blockdefinition]
+BEGIN DATA
+  ARRAY1
+    <array1(nval)> -- READARRAY
+END DATA
+\end{lstlisting}
+
+\noindent In this example, the uppercase ARRAY1 is a text string that is recognized by the program.  While reading through the DATA block, the program would recognize ARRAY1, and would then use READARRAY to fill \texttt{array1} with \texttt{nval} values.
+
+\subsubsection{READARRAY Control Line}
+
+READARRAY works similar to the array readers in previous MODFLOW versions.  It begins by reading a control line.  The control line has one of three forms shown below, and is limited to a length of 999 characters.
+
+\begin{lstlisting}[style=blockdefinition]
+1. CONSTANT <constant> 
+\end{lstlisting}
+With CONSTANT, all values in the array are set equal to \texttt{constant}. 
+
+\begin{lstlisting}[style=blockdefinition]
+2. INTERNAL [FACTOR <factor>] [IPRN <iprn>] 
+\end{lstlisting}
+With INTERNAL, the individual array elements will be read from the same file that contains the control line. 
+
+\begin{lstlisting}[style=blockdefinition]
+3. OPEN/CLOSE <fname> [FACTOR <factor>] [(BINARY)] [IPRN <iprn>]
+\end{lstlisting}
+With OPEN/CLOSE, the array will be read from the file whose name is specified by \texttt{fname}. This file will be opened just prior to reading the array and closed immediately after the array is read. A file that is read using this control line can contain only a single array. 
+
+\subsubsection{READARRAY Variable Descriptions}
+
+\begin{description}
+
+\item \texttt{<constant>}---is a real number constant for real arrays and an integer constant for integer arrays. The \texttt{constant} value is assigned to the entire array. 
+
+\item \texttt{FACTOR <factor>}---are a keyword and a real number factor for real arrays and an integer factor for integer arrays. The individual elements of the array are multiplied by \texttt{factor} after they are read. If \texttt{factor} is specified as 0, then it is changed to 1.
+
+\item \texttt{(BINARY)}---is an option that indicates the OPEN/CLOSE file contains array data in binary (unformatted) form. A binary file that can be read by MODFLOW may be created in only two ways. The first way is to use MODFLOW to create the file by saving heads in a binary file. This is commonly done when the user desires to use computed heads from one simulation as initial heads for a subsequent simulation. The other way to create a binary file is to write a special program that generates a binary file.  If the program is written in Fortran, then the program should be compiled using a Fortran compiler that is compatible with the compiler used to compile MODFLOW. ``(BINARY)'' can be specified only when using U2DDBL or U2DINT, and only when the control line is OPEN/CLOSE.
+
+\item \texttt{IPRN <iprn>}---are a keyword and a flag that indicates whether the array being read should be written to the Listing File after the array has been read and a code for indicating the format that should be used when the array is written. The format codes are the same as for MODFLOW-2005. IPRN is set to zero when the specified value exceeds those defined. If IPRN is less than zero or if the keyword and flag are omitted, the array will not be printed.
+
+\end{description}
+
+\begin{longtable}{p{2cm} p{2cm} p{2cm} p{2cm}}
+\caption{IPRN Code and corresponding print formats for array readers.  These print codes determine how the user-provided array is written to the list file} 
+\tabularnewline
+\hline
+\hline
+\textbf{IPRN} & \textbf{Real} & \textbf{Integer} \\
+\hline
+\endhead
+\hline
+\endfoot
+0 & 10G11.4 & 10I11 \\
+1 & 11G10.3 & 60I1 \\
+2 & 9G13.6 & 40I2 \\
+3 & 15F7.1 & 30I3 \\
+4 & 15F7.2 & 25I4 \\
+5 & 15F7.3 & 20I5 \\
+6 & 15F7.4 & 10I11 \\
+7 & 20F5.0 & 25I2 \\
+8 & 20F5.1 & 15I4 \\
+9 & 20F5.2 & 10I6 \\
+10 & 20F5.3 &  \\
+11 & 20F5.4 &  \\
+12 & 10G11.4 & \\
+13 & 10F6.0 &  \\
+14 & 10F6.1 &  \\
+15 & 10F6.2 &  \\
+16 & 10F6.3 &  \\
+17 & 10F6.4 &  \\
+18 & 10F6.5 &  \\
+19 & 5G12.5 &  \\
+20 & 6G11.4 &  \\
+21 & 7G9.2 &  \\
+%\label{table:ndim}
+\end{longtable}
+
+
+\subsubsection{READARRAY Examples}
+
+The following examples use free-format control lines for reading an array. The example array is a real array consisting of 4 rows with 7 columns per row: 
+
+\begin{lstlisting}[style=inputfile]
+CONSTANT 5.7      This sets an entire array to the value "5.7". 
+INTERNAL FACTOR 1.0 IPRN 3            This reads the array values from the 
+ 1.2 3.7 9.3 4.2 2.2 9.9 1.0      file that contains the control line. 
+ 3.3 4.9 7.3 7.5 8.2 8.7 6.6      Thus, the values immediately follow the 
+ 4.5 5.7 2.2 1.1 1.7 6.7 6.9      control line. 
+ 7.4 3.5 7.8 8.5 7.4 6.8 8.8 
+OPEN/CLOSE inp.txt FACTOR 1.0 IPRN 3    Read array from formatted file "inp.dat". 
+OPEN/CLOSE inp.bin FACTOR 1.0 IPRN 3     Read array from binary file "inp.bin". 
+OPEN/CLOSE test.dat FACTOR 1.0 IPRN 3     Read array from file "test.dat". 
+\end{lstlisting}
+
+
+Some arrays define information that is required for the entire model grid, or part of a model grid.  This type of information is provided in a special type of data block called a ``GRIDDATA'' block.  For example, hydraulic conductivity is required for every cell in the model grid.  Hydraulic conductivity is read from a ``GRIDDATA'' block in the NPF Package input file.  For GRIDDATA arrays with one value for every cell in the model grid, the arrays can optionally be read in a LAYERED format, in which an array is provided for each layer of the grid.  Alternatively, the array can be read for the entire model grid.  As an example, consider the GRIDDATA block for the IC Package shown below:
+
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-ic-griddata.dat}
+
+Here, the initial heads for the model are provided in the \texttt{strt} array.  If the optional LAYERED keyword is present, then a separate array is provided for each layer.  If the LAYERED keyword is not present, then the entire starting head array is read at once.  The LAYERED keyword may be useful to discretization packages of type DIS and DISV, which support the concept of layers.  Models defined with the DISU Package are not layered.
+
+For a structured DIS model, the READARRAY utility is used to read arrays that are dimensioned to the full size of the grid (of size \texttt{nlay*nrow*ncol}). This utility first reads an array name, which associates the input to be read with the desired array.  For these arrays, an optional keyword ``LAYERED'' can be located next to the array name.  If ``LAYERED'' is detected, then a control line is provided for each layer and the array is filled with values for each model layer.  If the ``LAYERED'' keyword is absent, then a single control line is used and the entire array is filled at once.
+
+For example, the following block shows one way the starting head array (STRT) could be specified for a model with 4 layers.  Following the array name and the ``LAYERED'' keyword are four control lines, one for each layer.
+
+\begin{lstlisting}[style=inputfile]
+  STRT LAYERED
+     CONSTANT 10.0  #layer 1
+     CONSTANT 10.0  #layer 2
+     CONSTANT 10.0  #layer 3
+     CONSTANT 10.0  #layer 4
+\end{lstlisting}
+
+In this next example, the ``LAYERED'' keyword is absent.  In this case, the control line applies to the entire \texttt{strt} array.  One control line is required, and a constant value of 10.0 will be assigned to STRT for all cells in the model grid.
+
+\begin{lstlisting}[style=inputfile]
+  STRT
+     CONSTANT 10.0  #applies to all cells in the grid
+\end{lstlisting}
+
+\subsection{List Input}
+Some items consist of several variables, such as layer, row, column, stage, and conductance, for example.  List input refers to a block of data with a separate item on each line.  For some common list types, the first set of variables is a cell identifier (denoted as \texttt{cellid} in this guide), such as layer, row, and column. With lists, the input data for each item must start on a new line. All variables for an item are assumed to be contained in a single line.  Each input variable has a data type, which can be Double Precision, Integer, or Character. Integers are whole numbers and must not include a decimal point or exponent. Double Precision numbers can include a decimal point and an exponent. If no decimal point is included in the entered value, then the decimal point is assumed to be at the right side of the value. Any printable character is allowed for character variables. 
+
+Variables starting with the letters I-N are most commonly integers; however, in some instances, a character string may start with the letters I-N. Variables starting with the letters A-H and O-Z are primarily double precision numbers; however, these variable names may also be used for character data.  In \mf all variables are explicitly declared within the source code, as opposed to the implicit type declaration in previous MODFLOW versions.  This explicit declaration means that the variable type can be easily determined from the source code.
+
+Free formatting is used throughout the input instructions.  With free format, values are not required to occupy a fixed number of columns in a line. Each value can occupy one or more columns as required to represent the value; however, the values must still be included in the prescribed order. One or more spaces, or a single comma optionally combined with spaces, must separate adjacent values. Also, a numeric value of zero must be explicitly represented with 0 and not by one or more spaces when free format is used, because detecting the difference between a space that represents 0 and a space that represents a value separator is not possible. Free format is similar to Fortran's list directed input.
+
+Two capabilities included in Fortran's list-directed input are not included in the free-format input implemented in \mfdot Null values in which input values are left unchanged from their previous values are not allowed. In general, MODFLOW's input values are not defined prior to their input.  A ``/'' cannot be used to terminate an input line without including values for all the variables; data values for all required input variables must be explicitly specified on an input line.  For character data, MODFLOW's free format implementation is less stringent than the list-directed input of Fortran. Fortran requires character data to be delineated by apostrophes. MODFLOW does not require apostrophes unless a blank or a comma is part of a character variable.
+
+As an example of a list, consider the PERIOD block for the GHB Package.  The input format is  shown below:
+
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-ghb-period.dat}
+
+Each line represents a separate item, which consists of variables.  In this case, the first variable of the item, \texttt{cellid} is an array of size \texttt{ncelldim}.  The next two variables of the item are \texttt{bhead} and \texttt{cond}.  Lastly, the item has two optional variables, \texttt{aux} and \texttt{boundname}.  Three of the variables shown in the list are colored in blue.  Variables that are colored in blue mean that they can be represented with a time series.  The time series capability is described in the section on Time-Variable Input in this document.  
+
+The following is simple example of a PERIOD block for the GHB Package, which shows how a list is entered by the user.
+
+\begin{lstlisting}[style=inputfile]
+BEGIN PERIOD 1
+#      lay       row       col     stage      cond
+         1        13         1     988.0     0.038
+         1        14         9    1045.0     0.038
+END PERIOD
+\end{lstlisting}
+
+As described earlier in the section on ``Block and Keyword Input,'' block information can be read from a separate text file.  To activate reading a list from separate text file, the first and only entry in the block must be a control line of the following form:  
+
+\begin{lstlisting}[style=blockdefinition]
+  OPEN/CLOSE <fname>
+\end{lstlisting}
+
+\noindent where \texttt{fname} is the name of the file containing the list.  Lists for the stress packages (CHD, WEL, DRN, RIV, GHB, RCH, and EVT) have an additional BINARY option.  The BINARY  option is not supported for the advanced stress packages (LAK, MAW, SFR, UZF).  The BINARY options is specified as follows:
+
+\begin{lstlisting}[style=blockdefinition]
+  OPEN/CLOSE <fname> [(BINARY)]
+\end{lstlisting}
+
+If the (BINARY) keyword is found on the control line, then the file is opened as an unformatted file on unit 99, and the list is read.  There are a number of requirements for using the (BINARY) option for lists.  All stress package lists begin with integer values for the \texttt{cellid} (layer, row, and column, for example).  These values must be represented as integer numbers in the unformatted file.  Also, all auxiliary data must be included in the binary file; auxiliary data must be represented as double precision numbers.  Lastly, the (BINARY) option does not support entry of \texttt{boundname}, and so the BOUNDNAMES option should not be activated in the OPTIONS block for the package.  

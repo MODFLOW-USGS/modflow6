@@ -1,0 +1,77 @@
+      MODULE GwfDrnModule
+        
+        public
+        
+        INTEGER,SAVE,POINTER  ::NDRAIN,MXDRN,NDRNVL,IDRNCB,IPRDRN
+        INTEGER,SAVE,POINTER  ::NPDRN,IDRNPB,NNPDRN
+        CHARACTER(LEN=16),SAVE, DIMENSION(:),   POINTER     ::DRNAUX
+        double precision, SAVE, DIMENSION(:,:), POINTER     ::DRAI
+      TYPE GWFDRNTYPE
+        INTEGER,POINTER  ::NDRAIN,MXDRN,NDRNVL,IDRNCB,IPRDRN
+        INTEGER,POINTER  ::NPDRN,IDRNPB,NNPDRN
+        CHARACTER(LEN=16), DIMENSION(:),   POINTER     ::DRNAUX
+        double precision,  DIMENSION(:,:), POINTER     ::DRAI
+      END TYPE
+      TYPE(GWFDRNTYPE), SAVE:: GWFDRNDAT(10)
+      
+      contains
+
+C*******************************************************************************
+
+      SUBROUTINE GWF2DRN7DA(IGRID)
+C  Deallocate DRN MEMORY
+C
+        CALL SGWF2DRN7PNT(IGRID)
+        DEALLOCATE(NDRAIN)
+        DEALLOCATE(MXDRN)
+        DEALLOCATE(NDRNVL)
+        DEALLOCATE(IDRNCB)
+        DEALLOCATE(IPRDRN)
+        DEALLOCATE(NPDRN)
+        DEALLOCATE(IDRNPB)
+        DEALLOCATE(NNPDRN)
+        DEALLOCATE(DRNAUX)
+        DEALLOCATE(DRAI)
+C
+      RETURN
+      END SUBROUTINE GWF2DRN7DA
+
+C*******************************************************************************
+
+      SUBROUTINE SGWF2DRN7PNT(IGRID)
+C  Change DRN data to a different grid.
+C
+        NDRAIN=>GWFDRNDAT(IGRID)%NDRAIN
+        MXDRN=>GWFDRNDAT(IGRID)%MXDRN
+        NDRNVL=>GWFDRNDAT(IGRID)%NDRNVL
+        IDRNCB=>GWFDRNDAT(IGRID)%IDRNCB
+        IPRDRN=>GWFDRNDAT(IGRID)%IPRDRN
+        NPDRN=>GWFDRNDAT(IGRID)%NPDRN
+        IDRNPB=>GWFDRNDAT(IGRID)%IDRNPB
+        NNPDRN=>GWFDRNDAT(IGRID)%NNPDRN
+        DRNAUX=>GWFDRNDAT(IGRID)%DRNAUX
+        DRAI=>GWFDRNDAT(IGRID)%DRAI
+C
+      RETURN
+      END SUBROUTINE SGWF2DRN7PNT
+
+C*******************************************************************************
+
+      SUBROUTINE SGWF2DRN7PSV(IGRID)
+C  Save DRN data for a grid.
+C
+        GWFDRNDAT(IGRID)%NDRAIN=>NDRAIN
+        GWFDRNDAT(IGRID)%MXDRN=>MXDRN
+        GWFDRNDAT(IGRID)%NDRNVL=>NDRNVL
+        GWFDRNDAT(IGRID)%IDRNCB=>IDRNCB
+        GWFDRNDAT(IGRID)%IPRDRN=>IPRDRN
+        GWFDRNDAT(IGRID)%NPDRN=>NPDRN
+        GWFDRNDAT(IGRID)%IDRNPB=>IDRNPB
+        GWFDRNDAT(IGRID)%NNPDRN=>NNPDRN
+        GWFDRNDAT(IGRID)%DRNAUX=>DRNAUX
+        GWFDRNDAT(IGRID)%DRAI=>DRAI
+C
+      RETURN
+      END SUBROUTINE SGWF2DRN7PSV
+      
+      END MODULE GwfDrnModule

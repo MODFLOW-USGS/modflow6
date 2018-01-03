@@ -1,0 +1,8 @@
+BEGIN PERIOD <iper>
+  [IRCH
+    <irch(ncol*nrow; ncpl)> -- U1DDBL]
+  RECHARGE
+    <recharge(ncol*nrow; ncpl)> -- U1DDBL
+  [AUX
+    <aux(ncol*nrow; ncpl)> -- U1DDBL]
+END PERIOD

@@ -1,0 +1,22 @@
+Input to the Ghost-Node Correction (GNC) Package is read from the file that has type ``GNC6'' in the Name File.  Only one GNC Package can be used per GWF Model.  All single valued variables are free format.  
+
+The GNC Package has two options for adding the correction terms to the system of equations.  The implicit option, which is the default, adds the terms on both the left-hand and right-hand sides of the equations.  When this default option is used, the BICGSTAB linear acceleration option should be specified within the LINEAR block of the Sparse Matrix Solver.  The BICGSTAB acceleration option is designed to handle the asymmetry in the conductance matrix.  When the EXPLICIT option is specified for the GNC Package, then the correction terms are added to the right-hand side, and either the CG or BICGSTAB acceleration methods can be used.
+
+\vspace{5mm}
+\subsubsection{Structure of Blocks}
+\vspace{5mm}
+
+\noindent \textit{FOR EACH SIMULATION}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-gnc-options.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-gnc-dimensions.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-gnc-gncdata.dat}
+
+\vspace{5mm}
+\subsubsection{Explanation of Variables}
+\begin{description}
+\input{./mf6ivar/tex/gwf-gnc-desc.tex}
+\end{description}
+
+\vspace{5mm}
+\subsubsection{Example Input File}
+\lstinputlisting[style=inputfile]{./mf6ivar/examples/gwf-gnc-example.dat}

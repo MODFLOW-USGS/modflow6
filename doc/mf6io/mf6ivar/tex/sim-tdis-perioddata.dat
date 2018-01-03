@@ -1,0 +1,5 @@
+BEGIN PERIODDATA
+  <perlen> <nstp> <tsmult>
+  <perlen> <nstp> <tsmult>
+  ...
+END PERIODDATA

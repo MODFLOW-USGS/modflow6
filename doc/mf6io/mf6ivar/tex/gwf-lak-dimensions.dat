@@ -1,0 +1,5 @@
+BEGIN DIMENSIONS
+  NLAKES <nlakes>
+  NOUTLETS <noutlets>
+  NTABLES <ntables>
+END DIMENSIONS

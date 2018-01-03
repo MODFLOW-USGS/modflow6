@@ -1,0 +1,4 @@
+BEGIN DIMENSIONS
+  NUMGNC <numgnc>
+  NUMALPHAJ <numalphaj>
+END DIMENSIONS

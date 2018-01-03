@@ -1,0 +1,5 @@
+BEGIN PACKAGEDATA
+  <rno> <cellid(ncelldim)> <rlen> <rwid> <rgrd> <rtp> <rbth> <rhk> <@man@> <ncon> <ustrf> <ndv> [<@aux(naux)@>] [<boundname>]
+  <rno> <cellid(ncelldim)> <rlen> <rwid> <rgrd> <rtp> <rbth> <rhk> <@man@> <ncon> <ustrf> <ndv> [<@aux(naux)@>] [<boundname>]
+  ...
+END PACKAGEDATA

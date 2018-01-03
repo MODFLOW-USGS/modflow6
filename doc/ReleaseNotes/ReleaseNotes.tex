@@ -1,0 +1,325 @@
+\documentclass[11pt,twoside,twocolumn]{usgsreport}
+\usepackage{usgsfonts}
+\usepackage{usgsgeo}
+\usepackage{usgsidx}
+\usepackage[tabletoc]{usgsreporta}
+
+\usepackage{amsmath}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{bm}
+\usepackage{calc}
+\usepackage{natbib}
+\usepackage{graphicx}
+\usepackage{longtable}
+
+\makeindex
+\usepackage{setspace}
+% uncomment to make double space 
+%\doublespacing
+\usepackage{etoolbox}
+%\usepackage{verbatim}
+
+\usepackage{titlesec}
+
+\usepackage[hidelinks]{hyperref}
+\hypersetup{
+    pdftitle={MODFLOW 6 Release Notes},
+    pdfauthor={MODFLOW 6 Development Team},
+    pdfsubject={MODFLOW 6 Release Notes},
+    pdfkeywords={MODFLOW, groundwater model, simulation},
+    bookmarksnumbered=true,     
+    bookmarksopen=true,         
+    bookmarksopenlevel=1,       
+    colorlinks=true,
+    allcolors={blue},          
+    pdfstartview=Fit,           
+    pdfpagemode=UseOutlines,
+    pdfpagelayout=TwoPageRight
+}
+
+
+\graphicspath{{./Figures/}}
+\input{../version.tex}
+
+
+\renewcommand{\cooperator}
+{the \textusgs\ Water Availability and Use Science Program}
+\renewcommand{\reporttitle}
+{MODFLOW 6 Release Notes}
+\renewcommand{\coverphoto}{coverimage.jpg}
+\renewcommand{\GSphotocredit}{Binary computer code illustration.}
+\renewcommand{\reportseries}{}
+\renewcommand{\reportnumber}{}
+\renewcommand{\reportyear}{2017}
+\ifdef{\reportversion}{\renewcommand{\reportversion}{\currentmodflowversion}}{}
+\renewcommand{\theauthors}{MODFLOW 6 Development Team}
+\renewcommand{\thetitlepageauthors}{\theauthors}
+%\renewcommand{\theauthorslastfirst}{}
+\renewcommand{\reportcitingtheauthors}{MODFLOW 6 Development Team}
+\renewcommand{\colophonmoreinfo}{}
+\renewcommand{\theoffice}{Office of Groundwater \\ U.S. Geological Survey \\ Mail Stop 411 \\ 12201 Sunrise Valley Drive \\ Reston, VA 20192 \\ (703) 648-5001}
+\renewcommand{\reportbodypages}{}
+\urlstyle{rm}
+\renewcommand{\reportwebsiteroot}{https://doi.org/10.5066/}
+\renewcommand{\reportwebsiteremainder}{F76Q1VQV}
+%\renewcommand{\doisecretary}{RYAN K. ZINKE}
+%\renewcommand{\usgsdirector}{William H. Werkheiser}
+%\ifdef{\usgsdirectortitle}{\renewcommand{\usgsdirectortitle}{Acting Director}}{}
+\ifdef{\usgsissn}{\renewcommand{\usgsissn}{}}{}
+\renewcommand{\theconventions}{}
+\definecolor{coverbar}{RGB}{32, 18, 88}
+\renewcommand{\bannercolor}{\color{coverbar}}
+%\renewcommand{\thePSC}{the MODFLOW 6 Development Team}
+%\renewcommand{\theeditor}{Christian D. Langevin}
+%\renewcommand{\theillustrator}{None}
+%\renewcommand{\thefirsttypesetter}{Joseph D. Hughes}
+%\renewcommand{\thesecondtypesetter}{Cian Dawson}
+\renewcommand{\reportrefname}{References Cited}
+
+\newcommand{\customcolophon}{
+Publishing support provided by the U.S. Geological Survey \\
+\theauthors
+\newline \newline
+For information concerning this publication, please contact:
+\newline \newline
+Office of Groundwater \\ U.S. Geological Survey \\ Mail Stop 411 \\ 12201 Sunrise Valley Drive \\ Reston, VA 20192 \\ (703) 648--5001 \\
+https://water.usgs.gov/ogw/
+}
+
+
+\begin{document}
+
+%\makefrontcover
+\ifdef{\makefrontcoveralt}{\makefrontcoveralt}{\makefrontcover}
+
+%\makefrontmatter
+%\maketoc
+\ifdef{\makefrontmatterabv}{\makefrontmatterabv}{\makefrontmatter}
+
+\onecolumn
+\pagestyle{body}
+\RaggedRight
+\hbadness=10000
+\pagestyle{body}
+\setlength{\parindent}{1.5pc}
+
+% -------------------------------------------------
+\section{Introduction}
+This document describes MODFLOW 6 Version \modflowversion.  This distribution is packaged for personal computers using the Microsoft Windows 7 operating system, although it may run on other versions of Windows.  The executable file was compiled for 64-bit Windows operating systems and should run on most personal computers.
+
+Version numbers for MODFLOW 6 will follow a major.minor.revision format.  The major number will be increased when there are substantial new changes that may break backward compatibility.  The minor number will be increased when important, but relatively minor new functionality is added.  The revision number will be added when errors are corrected in either the program or input files.
+
+% -------------------------------------------------
+\section{History}
+This section describes changes introduced into MODFLOW 6 with each release.  These changes may substantially affect users.
+
+\begin{itemize}
+
+\item 
+\currentmodflowversion
+
+\underline{BASIC FUNCTIONALITY}
+\begin{itemize}
+\item Removed support for the SINGLE observation type.  All observations must be CONTINUOUS, which means observation values are written for every time step. 
+\item Added support for a no-data value (3.0E30), which can be used as a placeholder in a time-series file containing multiple time series. Use of the no-data value facilitates combining separate time series into a single file when the time series contain records for differing simulation times.
+\item Model names specified in the simulation name file cannot have spaces in them.  A check was implemented to terminate with an error if the model name contains spaces.  Model names cannot exceed 16 characters.  Trailing spaces are allowed.
+\item The name and version of the compiler used to make the run file is now written to the terminal and to the simulation list file.
+\item Many of the Fortran source files were modified and reformatted.  Unused variables were removed.
+\end{itemize}
+
+\underline{ADVANCED STRESS PACKAGES}
+\begin{itemize}
+\item Updated MAW package so that well connection conductance calculations correctly account for THICKSTRT in the NPF package for layers that use THICKSTRT (and are confined).
+\item Added \texttt{CUMULATIVE} \texttt{coneqn} (conductance) option to MAW package.
+\item Fixed bug in LAK package weir lake outlet calculation.
+\item Fixed bug in LAK package when internal outlets were specified and combined with the MVR package that was also moving water internally in the same LAK package.
+\item Updated the table created when PRINT\_FLOWS is specified in the LAK package OPTIONS block to include internal flow terms if NOUTLETS is greater than 0. 
+\item Renamed Lake Tables DIMENSIONS block NENTRIES to NROW and added NCOL to DIMENSIONS block.
+\item Eliminated MAXIMUM\_OUTLET\_DEPTH = 10 [L] as default behavior for MANNING and WEIR LAK package lake outlet types. The maximum depth threshold was used in MODFLOW-2005 lake package because a table was used to calculate lake outflows to SFR. Can still use maximum depth threshold in develop versions of MODFLOW 6 by specifying MAXIMUM\_OUTLET\_DEPTH in the options block with a value.
+\item Removed MULTILAYER option for UZF package---this option didn't actually do anything.
+\item Added the requirement that the UZF number be specified as the first value on each line in the PACKAGEDATA block.
+\item Renamed MAXBOUND in the DIMENSIONS block of the SFR Package to be NREACHES.
+\item Implemented a check in the SFR Package to make sure that information is specified in the PACKAGEDATA block for every reach.  Program terminates with an error if information for a reach is not found.
+\end{itemize}
+
+\item
+Version mf6beta0.9.03---June 23, 2017
+
+\underline{BASIC FUNCTIONALITY}
+\begin{itemize}
+\item Renamed all FTYPE keywords to version 6.  They were named with an 8.  So, for example, the GHB Package is now activated in the GWF name file using ``GHB6'' instead of ``GHB8''.
+\item Keywords in the simulation name file must now be specified as TDIS6, GWF6, and GWF6-GWF6 to be consistent.
+\item The DIS Package had grid offsets (XOFFSET and YOFFSET) that could be specified as options.  These offsets were relative to the upper-left corner of the model grid.  The default value for YOFFSET was set to the sum of DELR so that (0, 0) would correspond to the lower-left corner of the model grid.  These options have been removed and replaced with XORIGIN and YORIGIN, which is the coordinate of the lower-left corner of the model grid.  The default value is zero for XORIGIN and YORIGIN.
+\item Can now specify XORIGIN, YORIGIN, and ANGROT as options for the DISV and DISU packages.  These values are written to the binary grid file, which can be used by post-processors to locate the model grid in space.  These options have no affect on the simulation results.  The default value is 0.0 if not specified.
+\item Added a new option to the TDIS input file called START\_DATE\_TIME.  This is a 30 character string that represents the simulation starting date and time, preferably in the format described at https://www.w3.org/TR/NOTE-datetime.  The value provided by the user has no affect on the simulation, but if it is provided, the value is written to the simulation list file.
+\item Changed default behavior for how memory usage is written to the end of the simulation list file.  Added new MEMORY\_PRINT\_OPTION to simulation options to control how memory usage is written.
+\item Corrections were made to the memory manager to ensure that all memory is deallocated at the end of a simulation.
+\end{itemize}
+
+\underline{INTERNAL FLOW PACKAGES}
+\begin{itemize}
+\item Changed the way hydraulic conductivity is specified in the NPF Package.  Users no longer specify HK, VK, and HANI.  Hydraulic conductivity is now specified as ``K''.  If hydraulic conductivity is isotropic, then this is all that needs to be specified.  For anisotropic cases, the user can specify an optional ``K22'' array and an optional ``K33'' array.  For an unrotated conductivity ellipsoid ``K22'' corresponds to hydraulic conductivity in the y direction and ``K33'' corresponds to hydraulic conductivity in the z direction, respectively.
+\end {itemize}
+
+\underline{ADVANCED STRESS PACKAGES}
+\begin{itemize}
+\item Modified the MAW Package to include the effects of aquifer anisotropy in the calculation of conductance.
+\item Simplified the SFR Package connectivity to reflect feedback from beta users. There is no longer a requirement to connect reaches that do not have flow between them.  Program will now terminate with an error if this condition is encountered.
+\item Added simple routing option to SFR package. This is the equivalent of the specified depth option (icalc=0) in previous versions of MODFLOW. If water is available in the reach, then there can be leakage from the SFR reach into the aquifer.  If no water is available, then no leakage is applied.  STAGE keyword also added and only applies to reaches that use the simple routing option. If the STAGE keyword is not specified for reaches that use the simple routing option the specified stage is set to the top of the reach (depth = 0).
+\item Added functionality to pass SFR leakage to the aquifer to the highest active layer.
+\item Converted SFR Manning's to a time-varying, time series aware variable.  
+\item Updated LAK package so that conductance calculations correctly account for THICKSTRT in the NPF package for layers that use THICKSTRT (and are confined). Also updated EMBEDDEDH and EMBEDDEDV so that the conductance for these connection types are constant for confined layers.
+\item Converted UZF stress-period data to time series aware data.
+\item Added time-series aware AUXILIARY variables to UZF package.
+\item Implemented AUXMULTNAME in options block for UZF package (AUXILIARY variables have to be specified). AUXMULTNAME is applied to the GWF cell area and is used to simulated more than one UZF cell per GWF cell. This could be used to simulate different land use classifications (i.e., agricultural and natural land use types) in the same GWF cell.
+\end{itemize}
+
+\underline{SOLUTION}
+\begin{itemize}
+\item Reworked IMS convergence information so that model specific convergence information is also printed to each model listing file when PRINT\_OPTION ALL is specified in the IMS OPTIONS block.
+\item Added csv output option for IMS convergence information. Solution convergence information and model specific convergence information (if the solution includes more than one model) is written to a comma separated value file. If PRINT\_OPTION is NONE or SUMMARY, csv output includes maximum head change convergence information at the end of each outer iteration for each time step. If PRINT\_OPTION is ALL, csv output includes maximum head change and maximum residual convergence information for the solution and each model (if the solution includes more than one model) and linear acceleration information for each inner iteration. 
+\end{itemize}
+
+\item
+Version mf6beta0.9.02---May 19, 2017
+\begin{itemize}
+\item Renamed gwf3.f90 to be lower case.
+\item Added the missing ``divrate'' variable to the ``sfrsetting'' description in mf6io.pdf.
+\item Added additional error trapping to the array reading utilities.
+\item There was a problem with the binary budget file when a GWF Exchange was used to connect a GWF Model with itself.  This has been fixed.
+\item Standardized `\texttt{to-mvr}' cell-by-cell item in standard stress packages and UZF package.
+\item Fixed incorrect `\texttt{UZF-EVT}' budget accumulator used in GWF listing budget. 
+\item Standardized justification of cell-by-cell `\texttt{text}' strings.
+\item Standardized use of AUXILIARY keyword.
+\end{itemize}
+
+\item
+Version mf6beta0.9.01---May 11, 2017
+\begin{itemize}
+\item Added a copy of the third MODFLOW 6 report. 
+\item Made several minor corrections to doc/mf6io.pdf.  
+\item If vertices were specified for DISU, then the last header line was not written to the binary grid file.  This has been corrected.
+\end{itemize}
+
+\item
+Version mf6beta0.9.00---May 10, 2017
+\begin{itemize}
+\item First public release of MODFLOW 6 in beta form. 
+\end{itemize}
+\end{itemize}
+
+
+% -------------------------------------------------
+\section{Known Issues}
+This section describes known issues with this release of MODFLOW 6.
+
+\begin{enumerate}
+
+\item
+The capability to use Unsaturated Zone Flow (UZF) routing beneath lakes and streams has not been implemented.
+
+\end{enumerate}
+
+
+% -------------------------------------------------
+\section{Distribution File}
+The following distribution file is for use on personal computers: \modflowversion.zip.  The distribution file is a compressed zip file. The following directory structure is incorporated in the zip file:
+
+% folder structured created by python script
+\input{folder_struct.tex}
+
+It is recommended that no user files are kept in the \modflowversion~directory structure.  If you do plan to put your own files in the \modflowversion~directory structure, do so only by creating additional subdirectories.
+
+% -------------------------------------------------
+\section{Installation and Executation}
+There is no installation of MODFLOW 6 other than the requirement that \modflowversion.zip must be unzipped into a location where it can be accessed.  
+
+To make the executable versions of MODFLOW 6 accessible from any directory, the directory containing the executables should be included in the PATH environment variable.  Also, if a prior release of MODFLOW 6 is installed on your system, the directory containing the executables for the prior release should be removed from the PATH environment variable.
+
+As an alternative, the executable file, mf6.exe, in the \modflowversion{}/bin directory can be copied into a directory already included in the PATH environment variable.
+
+To run MODFLOW 6, simply type \texttt{mf6} in a terminal window.  The current working directory must be set to a location where the model input files are located.  Upon execution, MODFLOW 6 will immediately look for file with the name \texttt{mfsim.nam} in the current working directory, and will terminate with an error if it does not find this file.
+
+% -------------------------------------------------
+\section{Compiling MODFLOW 6}
+MODFLOW 6 has been compiled using Intel Visual Fortran and gfortran on the Windows and Mac/OS operating systems.  Because the program uses relatively new Fortran capabilities, newer versions of the compilers may be required for successful compilation.  For example, to use gfortran to compile MODFLOW 6, gfortran version 4.9 or newer must be used.  If you have gfortran installed on your computer, you can tell which version it is by entering ``\verb|gfortran --version|'' at a terminal window.
+
+This distribution contains the Microsoft Visual Studio project files for compiling MODFLOW 6 on Windows using the Intel Fortran Compiler.  The files have been used successfully with Visual Studio 2015 and Intel(R) Visual Fortran Compiler 17.0.4.210.
+
+This distribution also comes with a makefile for compiling MODFLOW 6 with gfortran.  The makefile is contained in the \texttt{make} folder.
+
+For those familiar with Python, the pymake package can also be used to compile MODFLOW 6.  Additional information on the Python pymake utility can be found at: https://github.com/modflowpy/pymake.  
+
+% -------------------------------------------------
+\section{System Requirements}
+MODFLOW 6 is written in Fortran.  It uses features from the 95, 2003, and 2008 language.  The code has been used on UNIX-based computers and personal computers running various forms of the Microsoft Windows operating system.
+
+% -------------------------------------------------
+\section{Testing}
+The examples distributed with MODFLOW 6 can be run by navigating to the examples folder and executing the "run.bat" batch files within each example folder.  Alternatively, there is a runall.bat batch file under the examples folder that will run all of the test problems.
+
+% -------------------------------------------------
+\section{MODFLOW 6 Documentation}
+Details on the numerical methods and the underlying theory for MODFLOW 6 are described in the following reports:
+
+\begin{itemize}
+\item
+Hughes, J.D., Langevin, C.D., and Banta, E.R., 2017, Documentation for the MODFLOW 6 framework: U.S. Geological Survey Techniques and Methods, book 6, chap. A57, 40 p., https://doi.org/10.3133/tm6A57.
+
+\item
+Langevin, C.D., Hughes, J.D., Banta, E.R., Niswonger, R.G., Panday, Sorab, and Provost, A.M., 2017, Documentation for the MODFLOW 6 Groundwater Flow Model: U.S. Geological Survey Techniques and Methods, book 6, chap. A55, 197 p., https://doi.org/10.3133/tm6A55.
+
+\item
+Provost, A.M., Langevin, C.D., and Hughes, J.D., 2017, Documentation for the ``XT3D'' option in the Node Property Flow (NPF) Package of MODFLOW 6: U.S. Geological Survey Techniques and Methods, book 6, chap. A56, 40 p., https://doi.org/10.3133/tm6A56.
+
+\end{itemize}
+ 
+\noindent Description of the MODFLOW 6 input and output is included in this distribution in the ``doc'' folder as mf6io.pdf.
+
+% -------------------------------------------------
+\section{Test Problems}
+The following is a list of test problems distributed with MODFLOW 6.  Characteristics of these tests are contained in Table \ref{table:examples}.
+
+
+% example tex files created by python scripts
+
+\input{example_items.tex}
+
+\input{example_table.tex}
+
+% -------------------------------------------------
+\section{Disclaimer and Notices}
+
+This software is preliminary or provisional and is subject to revision. It is being provided to meet the need for timely best science. The software has not received final approval by the U.S. Geological Survey (USGS). No warranty, expressed or implied, is made by the USGS or the U.S. Government as to the functionality of the software and related material nor shall the fact of release constitute any such warranty. The software is provided on the condition that neither the USGS nor the U.S. Government shall be held liable for any damages resulting from the authorized or unauthorized use of the software.
+
+% -------------------------------------------------
+\section{References Cited}
+
+\begin{itemize}
+\item Keating, E., and Zyvoloski, G. 2009. A stable and efficient numerical algorithm for unconfined aquifer analysis. Ground Water, 47: 569--579. doi:10.1111/j.1745-6584.2009.00555.x
+
+\item Laattoe, T., Post, V. E.A. and Werner, A. D. 2014, Spatial periodic boundary condition for MODFLOW. Groundwater, v. 52: 606--612. doi:10.1111/gwat.12086
+
+\item Merritt, M.L., and Konikow, L.F. 2000, Documentation of a computer program to simulate lake-aquifer interaction using the MODFLOW ground-water flow model and the MOC3D solute-transport model. U.S. Geological Survey Water-Resources Investigations Report 00--4167, 146 p. https://pubs.er.usgs.gov/publication/wri004167.
+
+\item Neville, C.J., and M.J. Tonkin. 2004. Modeling multiaquifer wells with MODFLOW.  Ground Water, 42: 910--919. doi:10.1111/j.1745-6584.2004.t01-9-.x
+
+\item Panday, Sorab, Langevin, C.D., Niswonger, R.G., Ibaraki, Motomu, and Hughes, J.D. 2013, MODFLOW-USG version 1: An unstructured grid version of MODFLOW for simulating groundwater flow and tightly coupled processes using a control volume finite-difference formulation. U.S. Geological Survey Techniques and Methods, book 6, chap. A45, 66 p., https://pubs.usgs.gov/tm/06/a45.
+
+\item Prudic, D.E. 1989, Documentation of a computer program to simulate stream-aquifer relations using a modular, finite-difference, ground-water flow model. U.S. Geological Survey Open-File Report 88--729, 113 p. https://pubs.er.usgs.gov/publication/ofr88729.
+
+\item Reilly, T.E., O.L. Franke, and Bennett, G.D. 1989. Bias in groundwater samples caused by wellbore flow. Journal of Hydraulic Engineering 115, no. 2: 270--276. https://doi.org/10.1061/(ASCE)0733-9429(1989)115:2(270)
+
+\item Vilhelmsen, T.N., Christensen, S., and Mehl, S.W., 2012, Evaluation of MODFLOW-LGR in connection with a synthetic regional-scale model. Ground Water, 50: 118--132. doi:10.1111/j.1745-6584.2011.00826.x
+
+\item Zaidel, J. 2013, Discontinuous Steady-State Analytical Solutions of the Boussinesq Equation and Their Numerical Representation by MODFLOW. Groundwater, 51: 952--959. doi:10.1111/gwat.12019
+\end{itemize}
+
+
+\justifying
+\vspace*{\fill}
+\clearpage
+\pagestyle{backofreport}
+\makebackcover
+\end{document}  

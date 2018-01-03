@@ -1,0 +1,14 @@
+BEGIN CONNECTIONDATA
+  IAC
+    <iac(nodes)> -- U1DINT
+  JA
+    <ja(nja)> -- U1DINT
+  IHC
+    <ihc(nja)> -- U1DINT
+  CL12
+    <cl12(nja)> -- U1DDBL
+  HWVA
+    <hwva(nja)> -- U1DDBL
+  [ANGLDEGX
+    <angldegx(nja)> -- U1DDBL]
+END CONNECTIONDATA

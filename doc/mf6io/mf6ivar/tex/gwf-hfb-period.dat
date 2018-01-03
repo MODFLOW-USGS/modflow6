@@ -1,0 +1,5 @@
+BEGIN PERIOD <iper>
+  <cellid1(ncelldim)> <cellid2(ncelldim)> <hydchr>
+  <cellid1(ncelldim)> <cellid2(ncelldim)> <hydchr>
+  ...
+END PERIOD

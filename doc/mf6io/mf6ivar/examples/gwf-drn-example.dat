@@ -1,0 +1,22 @@
+#The OPTIONS block is optional
+BEGIN OPTIONS
+  BOUNDNAMES
+  PRINT_INPUT
+  PRINT_FLOWS
+  SAVE_FLOWS
+END OPTIONS
+
+#The DIMENSIONS block is required
+BEGIN DIMENSIONS
+  MAXBOUND 5
+END DIMENSIONS
+
+#The following block of drains will be activated for for the entire stress period
+BEGIN PERIOD 1
+  #node elevation conductance boundname
+        73        10.2             1000.        my_drn
+        76        10.2             1000.        my_drn
+        79        10.2             1000.        my_drn
+        80        10.2             1000.        my_drn
+        81        10.2             1000.        my_drn
+END PERIOD

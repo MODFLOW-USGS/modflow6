@@ -1,0 +1,15 @@
+BEGIN OPTIONS
+  DIGITS 7
+  PRINT_INPUT
+END OPTIONS
+
+BEGIN CONTINUOUS FILEOUT my_model.ghb.obs.csv
+# obsname      obstype  ID
+  ghb-2-6-10   GHB      2   6   10
+  ghb-2-7-10   GHB      2   7   10
+END CONTINUOUS
+
+BEGIN CONTINUOUS FILEOUT my_model.ghb.flows.csv
+# obsname        obstype  ID
+  Estuary2       GHB      Estuary-L2
+END CONTINUOUS

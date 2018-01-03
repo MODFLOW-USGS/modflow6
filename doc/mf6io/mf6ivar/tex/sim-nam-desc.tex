@@ -1,0 +1,35 @@
+% DO NOT MODIFY THIS FILE DIRECTLY.  IT IS CREATED BY mf6ivar.py 
+
+\item \texttt{CONTINUE}---keyword flag to indicate that the simulation should continue even if one or more solutions do not converge.
+
+\item \texttt{NOCHECK}---keyword flag to indicate that the model input check routines should not be called prior to each time step. Checks are performed by default.
+
+\item \texttt{memory\_print\_option}---is a flag that controls printing of detailed memory manager usage to the end of the simulation list file.  \texttt{NONE} means do not print detailed information. \texttt{SUMMARY} means print only the total memory for each simulation component. \texttt{ALL} means print information for each variable stored in the memory manager. \texttt{NONE} is default if \texttt{memory\_print\_option} is not specified.
+
+\item \texttt{tdis6}---is the name of the Temporal Discretization (TDIS) Input File.
+
+\item \texttt{mtype}---is the type of model to add to simulation.
+
+\item \texttt{mfname}---is the file name of the model name file.
+
+\item \texttt{mname}---is the user-assigned name of the model.  The model name cannot exceed 20 characters.  If the model name has spaces within it, then it must be enclosed in double quotation marks.  The model name is case insensitive; any lowercase letters are converted and stored as upper case letters.
+
+\item \texttt{exgtype}---is the exchange type.
+
+\item \texttt{exgfile}---is the input file for the exchange.
+
+\item \texttt{exgmnamea}---is the name of the first model that is part of this exchange.
+
+\item \texttt{exgmnameb}---is the name of the second model that is part of this exchange.
+
+\item \texttt{group\_num}---is the group number of the solution group
+
+\item \texttt{mxiter}---is the maximum number of outer iterations for this solution group.  The default value is 1.
+
+\item \texttt{slntype}---is the type of solution.  The Integrated Model Solution (IMS6) is the only supported option in this version.
+
+\item \texttt{slnfname}---name of file containing solution input.
+
+\item \texttt{slnmnames}---is the array of model names to add to this solution.
+
+

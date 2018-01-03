@@ -1,0 +1,94 @@
+
+\begingroup
+\makeatletter
+\ifx\LT@ii\@undefined\else
+\def\LT@entry#1#2{\noexpand\LT@entry{-#1}{#2}}
+\xdef\LT@i{\LT@ii}
+\fi
+\endgroup
+\begin{longtable}{p{2cm} p{2.75cm} p{2cm} p{1.25cm} p{7cm}}
+\caption{Available observation types} \tabularnewline
+
+\hline
+\hline
+\textbf{Model} & \textbf{Observation types} & \textbf{ID} & \textbf{ID2} & \textbf{Description} \\
+\hline
+\endfirsthead
+
+\captionsetup{textformat=simple}
+\caption*{\textbf{Table \arabic{table}.}{\quad}List of symbols used in this report.---Continued} \\
+
+\hline
+\hline
+\textbf{Model} & \textbf{Observation types} & \textbf{ID} & \textbf{ID2} & \textbf{Description} \\
+\hline
+\endhead
+
+\hline
+\endfoot
+
+\input{../Common/gwf-obs.tex}
+\end{longtable}
+\addtocounter{table}{-1}
+
+\begin{longtable}{p{2cm} p{2.75cm} p{2cm} p{1.25cm} p{7cm}}
+\hline
+\hline
+\textbf{Exchange} & \textbf{Observation type} & \textbf{ID} & \textbf{ID2} & \textbf{Description} \\
+\hline
+\endfirsthead
+
+\captionsetup{textformat=simple}
+\caption*{\textbf{Table \arabic{table}.}{\quad}Available observation types.---Continued} \\
+
+\hline
+\hline
+\textbf{Model} & \textbf{Observation types} & \textbf{ID} & \textbf{ID2} & \textbf{Description} \\
+\hline
+\endhead
+
+\hline
+\endfoot
+
+\input{../Common/gwf-gwfobs.tex}
+\end{longtable}
+\addtocounter{table}{-1}
+
+\begin{longtable}{p{2cm} p{2.75cm} p{2cm} p{1.25cm} p{7cm}}
+\hline
+\hline
+\textbf{Stress Package} & \textbf{Observation type} & \textbf{ID} & \textbf{ID2} & \textbf{Description} \\
+\hline
+\endfirsthead
+
+\captionsetup{textformat=simple}
+\caption*{\textbf{Table \arabic{table}.}{\quad}Available observation types.---Continued} \\
+
+\hline
+\hline
+\textbf{Model} & \textbf{Observation types} & \textbf{ID} & \textbf{ID2} & \textbf{Description} \\
+\hline
+\endhead
+
+\hline
+\endfoot
+
+\input{../Common/gwf-chdobs.tex} \\
+\input{../Common/gwf-drnobs.tex} \\
+\input{../Common/gwf-evtobs.tex} \\
+\input{../Common/gwf-ghbobs.tex} \\
+\input{../Common/gwf-rchobs.tex} \\
+\input{../Common/gwf-rivobs.tex} \\
+\input{../Common/gwf-welobs.tex} \\
+\hline
+\input{../Common/gwf-lakobs.tex} \\
+\hline
+\input{../Common/gwf-mawobs.tex} \\
+\hline
+\input{../Common/gwf-sfrobs.tex} \\
+\hline
+\input{../Common/gwf-uzfobs.tex}
+\label{table:obstype}
+\end{longtable}
+
+\normalsize

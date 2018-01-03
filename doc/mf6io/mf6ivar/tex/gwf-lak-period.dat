@@ -1,0 +1,8 @@
+BEGIN PERIOD <iper>
+  <lakeno> <laksetting>
+  <lakeno> <laksetting>
+  ...
+  <outletno> <outletsetting>
+  <outletno> <outletsetting>
+  ...
+END PERIOD

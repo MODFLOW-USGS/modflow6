@@ -1,0 +1,17 @@
+BEGIN OPTIONS
+  [AUXILIARY <auxiliary(naux)>]
+  [BOUNDNAMES]
+  [PRINT_INPUT]
+  [PRINT_HEAD]
+  [PRINT_FLOWS]
+  [SAVE_FLOWS]
+  [HEAD FILEOUT <headfile>]
+  [BUDGET FILEOUT <budgetfile>]
+  [NO_WELL_STORAGE]
+  [FLOWING_WELLS]
+  [SHUTDOWN_THETA <shutdown_theta>]
+  [SHUTDOWN_KAPPA <shutdown_kappa>]
+  [TS6 FILEIN <ts6_filename>]
+  [OBS6 FILEIN <obs6_filename>]
+  [MOVER]
+END OPTIONS

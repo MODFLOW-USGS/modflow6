@@ -1,0 +1,11 @@
+BEGIN OPTIONS
+  PRINT_INPUT
+END OPTIONS
+
+BEGIN CONTINUOUS FILEOUT my_model.evt.csv
+  et1-1    EVT   1  1  1
+  et1-2    EVT   1  1  2
+  et2-1    EVT   1  2  1
+  et2-2    EVT   1  2  2
+  et2-3    EVT   1  2  3
+END CONTINUOUS

@@ -1,0 +1,348 @@
+% Time-Variable Input
+
+In earlier versions of MODFLOW, most stress-boundary packages read input on a stress period-by-stress period basis, and those values were held constant during the stress period. In \programname{}, many stress values can be specified with a higher degree of time resolution (from time step to time step or from subtime step to subtime step) by using one of two time-variable approaches. Boundaries for which data are read as lists of cells can reference ``time series'' to implement the time variation. Boundaries for which data are read as 2-D arrays can reference ``time-array series'' to do so.
+
+When \programname{} needs data from a time series or time-array series for a time interval representing a time step or subtime step, the series is queried to provide a time-averaged value or array of values for the requested time interval.  For each series, the user specifies an interpolation method that determines how the value is assumed to behave between listed times. The interpolation method thus determines how the time averaging is performed. When a time-array series is used, interpolation is performed on an element-by-element basis to generate a 2-D array of interpolated values as needed. 
+
+The supported interpolation methods are STEPWISE, LINEAR, and LINEAREND. When the STEPWISE interpolation method is used, the value is assumed to remain constant at the value specified in one time-series record until the time listed in the subsequent record, when the value changes abruptly to the new value. In the LINEAR interpolation method, the value is assumed to change linearly between times listed in sequential records. LINEAREND is like LINEAR, except that instead of using the average value over a time step, the value at the end of a time step is used. Following sections document the structure of time-series and time-array-series files and their use.
+
+% Time series
+\subsection{Time Series}
+
+Any package that reads data as a list of cells and associated time-dependent input values can obtain those values from time series. For example, flow rates for a well or stage for a river boundary can be extracted from time series. During a simulation, values used for time-varying stresses (or auxiliary values) are based on the values provided in the time series and are updated each time step (or each subtime step, as appropriate). Input to define and use time series is described in this section. 
+
+A time series consists of a chronologically ordered list of time-series records, where each record includes a discrete time and a corresponding value. The value can be used to provide any time-varying numeric input, including stresses and auxiliary variables. A time series can be referenced in input for one or multiple variables in a given package.
+
+% Time-series files
+\subsubsection{Time-Series Files}
+
+Each time-series file is associated with exactly one package, and the name of a time-series file associated with a package is listed in the OPTIONS block for the package, preceded by the keywords ``TS6 FILEIN.'' Any number of time-series files can be associated with a given package; a TS6 entry is required for each time-series file. A time-series file can contain one or more time series. Time-series files are not listed in either the simulation Name File or the model Name File. A given time-series file cannot be associated with more than one package.  By convention, the extension ``.ts'' is used in names of time-series files.
+
+Each time-series file contains an ATTRIBUTES block followed by a TIMESERIES block containing a series of lines, where each line contains a time followed by values for one or more time series at the specified time. The ATTRIBUTES block is required to define the name for each time series and the interpolation method to be used when an operation requires interpolation between times listed in the time series.
+
+The time-series name(s) and interpolation method(s) are specified in the ATTRIBUTES block. Scale factor(s) for multiplying values optionally can be provided in the ATTRIBUTES block. NAME, METHOD, METHODS, SFAC, and SFACS are keywords. For appearance when a time-series file includes multiple time series, NAMES can be used as a synonym for the NAME keyword.  
+
+The syntax of the ATTRIBUTES block for a time-series file containing a single time series is as follows:
+
+% ATTRIBUTES block of TS6 file for a single time series
+\begin{lstlisting}[style=blockdefinition]
+BEGIN ATTRIBUTES
+  NAME    time-series-name
+  METHOD  interpolation-method
+  [ SFAC  sfac ]
+END ATTRIBUTES
+\end{lstlisting}
+
+When a time-series file contains multiple time series, the time-series names are listed in a NAME (or NAMES) entry, similar to the example above. If the time series are to have different interpolation methods, the METHODS keyword is used in place of the METHOD keyword, and an interpolation method corresponding to each name is listed. If the time series are to have different scale factors, the SFACS keyword is used in place of the SFAC keyword. 
+
+The syntax of the ATTRIBUTES block for a time-series file containing multiple time series is as follows:
+
+% ATTRIBUTES block of TS6 file for multiple time series
+\begin{lstlisting}[style=blockdefinition]
+BEGIN ATTRIBUTES
+  NAMES    time-series-name-1  [ time-series-name-2 ... time-series-name-n ]
+  METHODS  interpolation-method-1  [ interpolation-method-2 ... ]
+  [ SFACS  sfac-1  [ sfac-2 ... sfac-n ] ]
+END ATTRIBUTES
+\end{lstlisting}
+
+In a case where a time-series file contains multiple time series and a single interpolation method applies to all time series in the file, the METHOD keyword can be used, and a single interpolation method is read. Similary, if a single scale factor applies to all time series in the file, the SFAC keyword can be used, and a single scale factor is read.
+
+The ATTRIBUTES block is followed by a TIMESERIES block of the form:
+\begin{lstlisting}[style=blockdefinition]
+BEGIN TIMESERIES
+  time-series record
+  time-series record
+  ...
+  time-series record
+END TIMESERIES
+\end{lstlisting}
+
+\noindent where each time-series record is of the form:\\
+\begin{lstlisting}[style=blockdefinition]
+  tsr-time  tsr-value-1  [ tsr-value-2  tsr-value-3  ... ]
+\end{lstlisting}
+
+In situations where an individual time series in a file containing multiple time series does not include values for all specified times, a ``no-data'' value (3.0E30) can be used as a placeholder. When the ``no-data'' value is read for a time series, that time series will not include a time-series record for the corresponding time.
+
+% Explanation of Variables (Time-Series File)
+\subsubsection{Explanation of Variables}
+
+% time-series-name description
+\begin{description}
+\item \texttt{time-series-name}---Name by which a package references a particular time series. The name must be unique among all time series used in a package.
+\end{description}
+
+% interpolation-method description
+\begin{description}
+\item \texttt{interpolation-method}---Interpolation method, which is either STEPWISE, LINEAR, or LINEAREND.
+\end{description}
+
+% sfac description
+\begin{description}
+\item \texttt{sfac}---Scale factor, which will multiply all \texttt{tsr-value} values in the time series. SFAC and SFACS are optional attributes; if omitted, \texttt{sfac} = 1.0. 
+\end{description}
+
+% tsr-time description
+\begin{description}
+\item \texttt{tsr-time}---A numeric time relative to the start of the simulation, in the time unit used in the simulation. Times must be strictly increasing.
+\end{description}
+
+% tsr-value description
+\begin{description}
+\item \texttt{tsr-value}---A numeric data value corresponding to tsr-time. The value 3.0E30 is treated as a ``no-data'' value and can be used wherever a time series in a file containing multiple time series does not have a value corresponding to the time specified by \texttt{tsr-time}.
+\end{description}
+
+%\vspace{5mm}
+
+% Using time series in a package
+\subsubsection{Using Time Series in a Package}
+
+When one or more time series are to define numeric input for a package, the name(s) of time-series files need to be defined in an OPTIONS block at the top of the package input file. The keyword TS6 followed by the keyword FILEIN are used to identify the name of each time-series file. Each time-series file can contain one or more time series, and each OPTIONS block can contain zero or more TS6 entries. The syntax for a TS6 entry in an OPTIONS block is:
+
+% OPTIONS block: syntax for TIMESERIESFILE
+\begin{lstlisting}[style=blockdefinition]
+BEGIN OPTIONS
+  TS6  FILEIN  time-series-file-name
+END OPTIONS
+\end{lstlisting}
+
+% Explanation of Variables Read from a Package Input File
+\noindent \textbf{Explanation of Variables Read from a Package Input File:}
+
+% time-series-name description
+\begin{description}
+\item \texttt{TS6}---Keyword to specify that record corresponds to a time-series file.
+\item \texttt{FILEIN}---Keyword to specify that an input filename is expected next.
+\item \texttt{time-series-file-name}---Name of a time-series file in which time series used in the package are defined.
+\end{description}
+
+Each time series has a name. To specify that time-dependent values for one or more stress periods is to be extracted from a time series, the time-series name is listed in the position where a numeric value normally would be provided.
+
+\vspace{5 mm}
+
+% Example use of time series
+\noindent \textbf{Example use of time series to define package input}
+
+The following example illustrates the use of three time series in input for the Well Package in a model with a structured grid. For an unstructured grid, the layer, row, and column indices for each observation would be replaced by a node number.
+
+\vspace{5 mm}
+
+%Contents of file well_pump_rates.ts:
+Contents of file ``well\_pump\_rates.ts'':
+\begin{lstlisting}[style=inputfile]
+BEGIN ATTRIBUTES
+  NAMES well-A-series well-B-series well-C-series
+  METHODS stepwise linear stepwise
+END ATTRIBUTES
+
+BEGIN TIMESERIES
+  # time  well-A-series     well-B-series     well-C-series
+  0.0           0.0               0.0               0.0
+  1.0        -500.0               0.0            -400.0
+  2.0        -500.0           -1000.0            -500.0
+  5.0        -500.0           -1200.0            -200.0
+  8.0        -500.0           -1100.0               0.0
+END TIMESERIES
+\end{lstlisting}
+
+Contents of the Well Package input file:
+\begin{lstlisting}[style=inputfile]
+BEGIN OPTIONS
+  TS6 FILEIN  well_pump_rates.ts
+END OPTIONS
+
+BEGIN DIMENSIONS
+  MAXBOUND 4
+END DIMENSIONS
+
+BEGIN PERIOD 2
+  #layer  row  col  Q (or time series)
+       9  192   44  well-A-series
+      10   43   17  well-B-series
+      11   12   17  well-C-series     
+END PERIOD
+
+BEGIN PERIOD 4
+  #layer  row  col  Q (or time series)
+       9  192   44  well-A-series
+      10   43   17  well-B-series
+      11   12   17  well-C-series     
+       2   27   36   -900.0
+END PERIOD
+
+BEGIN PERIOD 8
+       2   27   36   -900.0
+END PERIOD
+\end{lstlisting}
+
+In the example above, the Well package would have zero wells active in stress period 1. Three wells whose discharge rates are controlled by time series well-A-series, well-B-series, and well-C-series would be active in stress periods 2 and 3. Stress periods 4 through 7 would include the three time-series-controlled wells plus a well with a constant discharge of 900 (L\textsuperscript{3}/T). In stress period 8, only the constant-discharge well would be active.
+
+% Time-Array Series
+\subsection{Time-Array Series}
+
+Any package that reads data for a structured model in the form of 2-D arrays can obtain those array data from a time-array series. For example, recharge rates or maximum evapotranspiration rates can be extracted from time-array series. During a simulation, values used for time-varying stresses (or auxiliary values) are based on the values provided in the time-array series and are updated each time step (or each subtime step, as appropriate). Input to define and use time-array series is described in this section. 
+
+A time-array series consists of a chronologically ordered list of arrays, where each array is associated with a discrete time. The array data can be used to provide any time-varying, array-based numeric input.
+
+% Time-Array-Series Files
+\subsubsection{Time-Array-Series Files}
+
+Each time-array-series file is associated with exactly one package, and the name of a time-array-series file associated with a package is listed in the OPTIONS block for the package, preceded by the keywords ``TAS6 FILEIN.'' Any number of time-array-series files can be associated with a given package; a TAS6 entry is required for each time-array-series file. Time-array-series files are not listed in either the simulation Name File or the model Name File. A given time-array-series file cannot be associated with more than one package.
+
+One time-array-series file defines a single time-array series. A time-array-series file contains an ATTRIBUTES block followed by a series of TIME blocks, where each TIME block contains data to define an array corresponding to a discrete time. The U2DREL array reading utility is used to read the array (see the ``Input Instructions for Array Reading Utility Subroutines'' section). The ATTRIBUTES block is required to define the name for the time-array series and the interpolation method to be used when an operation requires interpolation between times listed in the time-array series.  By convention, the extension ``.tas'' is used in names of time-array-series files.
+
+The syntax of the ATTRIBUTES block for a time-array-series file is as follows:
+
+% ATTRIBUTES block of Time-Array-Series file
+\begin{lstlisting}[style=blockdefinition]
+BEGIN ATTRIBUTES
+  NAME    time-array-series-name
+  METHOD  interpolation-method
+  [ SFAC  sfac ]
+END ATTRIBUTES
+\end{lstlisting}
+
+The ATTRIBUTES block is followed by any number of TIME blocks of the form:\\
+\begin{lstlisting}[style=blockdefinition]
+BEGIN TIME tas-time  
+  tas-array
+END TIME
+\end{lstlisting}
+
+% Explanation of Variables (Time-Array-Series File)
+\subsubsection{Explanation of Variables}
+
+% time-array-series-name description
+\begin{description}
+\item \texttt{time-array-series-name}---Name by which a package references a particular time-array series. The name must be unique among all time-array series used in a package.
+\end{description}
+
+% interpolation-method description
+\begin{description}
+\item \texttt{interpolation-method}---Interpolation method, which is either STEPWISE or LINEAR.
+\end{description}
+
+% tas-time description
+\begin{description}
+\item \texttt{sfac}---Scale factor, which will multiply all array values in time series. SFAC is an optional attribute; if omitted, SFAC = 1.0.
+\end{description}
+
+% tas-time description
+\begin{description}
+\item \texttt{tas-time}---A numeric time relative to the start of the simulation, in the time unit used in the simulation. Times must be strictly increasing.
+\end{description}
+
+% tas-array description
+\begin{description}
+\item \texttt{tas-array}---A 2-D array of numeric, floating-point values, or a constant value, readable by the U2DREL array-reading utility.
+\end{description}
+
+% Using Time-Array Series in a Package
+\subsubsection{Using Time-Array Series in a Package}
+When one or more time-array series are to define numeric input for a package, the name(s) of time-array-series file(s) need to be defined in an OPTIONS block at the top of the package input file. The keywords ``TAS6 FILEIN'' are used to identify the name of each time-array-series file. Each time-array-series file contains exactly one time-array series, and each OPTIONS block can contain zero or more TAS6 entries. The syntax for a TAS6 entry in an OPTIONS block is:
+
+% OPTIONS block: syntax for TIMEARRAYSERIESFILE
+\begin{lstlisting}[style=blockdefinition]
+BEGIN OPTIONS
+  TAS6 FILEIN  time-array-series-file-name
+END OPTIONS
+\end{lstlisting}
+
+A time-array series is linked to an array in one or more stress-period blocks used to define package input. To indicate that an array is to be controlled by a time-array series, the array property word is followed by the keyword TIMEARRAYSERIES and the time-array series name. When the TIMEARRAYSERIES keyword is found (and the array to be populated supports time-array series), the array reader is not invoked. Consequently, the array-control record and any associated input are omitted. The syntax to define the link is:
+
+% Syntax for stress-period block
+\begin{lstlisting}[style=blockdefinition]
+BEGIN PERIOD kper
+  property-name TIMEARRAYSERIES time-array-series-name
+END PERIOD
+\end{lstlisting}
+
+% Explanation of Variables Read from a Package Input File
+\noindent \textbf{Explanation of Variables Read from a Package Input File:}
+
+% time-array-series-name description
+\begin{description}
+\item \texttt{TAS6}---Keyword to specify that record corresponds to a time-array-series file.
+\item \texttt{FILEIN}---Keyword to specify that an input filename is expected next.
+\item \texttt{time-array-series-file-name}---Name of a time-array-series file in which a time-array series used in the package is defined.
+\end{description}
+
+\begin{description}
+\item \texttt{property-name}---Name of property represented by array to be controlled by a time-array series.
+\end{description}
+
+\begin{description}
+\item \texttt{time-array-series-name}---Name of time-array series. The time-array series must be defined in one of the files listed in the OPTIONS block with the TAS6 FILEIN keywords.
+\end{description}
+
+\vspace{5 mm}
+
+% Example use of time-array series
+\noindent \textbf{Example use of time-array series to define package input}
+
+The following example illustrates the use of a time-array series to control the Recharge property of the Recharge package in a model with a structured grid. In this example time-array series values are obtained from the time-array series ``RchArraySeries\_1'' defined in file ``rch\_time\_array\_series.tas.'' The RchMult array is an auxiliary-variable array that is identified by the AUXMULTNAME keyword to be a multiplier for the recharge array. Accordingly, the recharge array is defined each time step as the element-by-element product of values interpolated from the ``RchArraySeries\_1'' time-array series and values from the auxiliary-variable RchMult array.
+
+\vspace{5 mm}
+
+Contents of Recharge package input file:
+
+\begin{lstlisting}[style=inputfile]
+BEGIN OPTIONS
+  READASARRAYS
+  AUX RchMult 
+  TAS6 FILEIN rch_time_array_series.tas
+  AUXMULTNAME RchMult
+  PRINT_INPUT
+END OPTIONS
+
+BEGIN PERIOD 1
+  IRCH
+    CONSTANT  1
+  RECHARGE TIMEARRAYSERIES RchArraySeries_1
+  RchMult
+    INTERNAL  FACTOR  1.0
+  0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0
+  0.0  1.0  1.0  0.5  0.5  0.0  0.0  0.0  0.0  0.0
+  0.0  1.0  1.0  1.0  1.0  0.5  0.0  0.0  0.0  0.0
+  0.0  1.0  1.0  1.0  1.0  1.0  0.5  0.0  0.0  0.0
+  0.0  0.2  1.0  1.0  1.0  1.0  1.0  0.5  0.2  0.0
+  0.0  0.0  0.5  1.0  1.0  1.0  1.0  0.5  0.0  0.0
+  0.0  0.0  0.0  0.2  0.2  0.2  0.2  0.0  0.0  0.0
+  0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0
+  0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0
+  0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0
+END PERIOD
+\end{lstlisting}
+
+Contents of file ``rch\_time\_array\_series.tas'':
+
+\begin{lstlisting}[style=inputfile]
+BEGIN ATTRIBUTES
+  NAME RchArraySeries_1
+  METHOD  LINEAR
+END ATTRIBUTES
+
+BEGIN TIME 0.0
+  CONSTANT  0.0033
+END TIME
+
+BEGIN TIME 91.0
+  CONSTANT  0.0035
+END TIME
+
+BEGIN TIME 183.0
+  CONSTANT  0.0037
+END TIME
+
+BEGIN TIME 274.0
+  CONSTANT  0.0039
+END TIME
+
+BEGIN TIME 365.0
+  CONSTANT  0.0035
+END TIME
+\end{lstlisting}
+
+
+

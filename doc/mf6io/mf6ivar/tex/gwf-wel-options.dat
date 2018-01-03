@@ -1,0 +1,12 @@
+BEGIN OPTIONS
+  [AUXILIARY <auxiliary(naux)>]
+  [AUXMULTNAME <auxmultname>]
+  [BOUNDNAMES]
+  [PRINT_INPUT]
+  [PRINT_FLOWS]
+  [SAVE_FLOWS]
+  [AUTO_FLOW_REDUCE <auto_flow_reduce>]
+  [TS6 FILEIN <ts6_filename>]
+  [OBS6 FILEIN <obs6_filename>]
+  [MOVER]
+END OPTIONS

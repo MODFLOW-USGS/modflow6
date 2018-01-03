@@ -1,0 +1,5 @@
+BEGIN PACKAGES
+  [<mname>] <pname>
+  [<mname>] <pname>
+  ...
+END PACKAGES

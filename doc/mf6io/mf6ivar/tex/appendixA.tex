@@ -1,0 +1,159 @@
+\small
+\begin{longtable}{p{1.5cm} p{1.5cm} p{3cm} c}
+\caption{List of block names organized by component and input file type.  OPEN/CLOSE indicates whether or not the block information can be contained in separate file} \tabularnewline 
+
+\hline
+\hline
+\textbf{Component} & \textbf{FTYPE} & \textbf{Blockname} & \textbf{OPEN/CLOSE} \\
+\hline
+\endfirsthead
+
+
+\captionsetup{textformat=simple}
+\caption*{\textbf{Table A--\arabic{table}.}{\quad}List of block names organized by component and input file type.  OPEN/CLOSE indicates whether or not the block information can be contained in separate file.---Continued} \tabularnewline
+
+\hline
+\hline
+\textbf{Component} & \textbf{FTYPE} & \textbf{Blockname} & \textbf{OPEN/CLOSE} \\
+\hline
+\endhead
+
+\hline
+\endfoot
+
+
+\hline
+SIM & NAM & OPTIONS & yes \\ 
+SIM & NAM & TIMING & yes \\ 
+SIM & NAM & MODELS & yes \\ 
+SIM & NAM & EXCHANGES & yes \\ 
+SIM & NAM & SOLUTIONGROUP & yes \\ 
+\hline
+SIM & TDIS & OPTIONS & yes \\ 
+SIM & TDIS & DIMENSIONS & yes \\ 
+SIM & TDIS & PERIODDATA & yes \\ 
+\hline
+EXG & GWFGWF & OPTIONS & yes \\ 
+EXG & GWFGWF & DIMENSIONS & yes \\ 
+EXG & GWFGWF & EXCHANGEDATA & yes \\ 
+\hline
+SLN & IMS & OPTIONS & yes \\ 
+SLN & IMS & NONLINEAR & yes \\ 
+SLN & IMS & LINEAR & yes \\ 
+\hline
+GWF & NAM & OPTIONS & yes \\ 
+GWF & NAM & PACKAGES & yes \\ 
+\hline
+GWF & DIS & OPTIONS & yes \\ 
+GWF & DIS & DIMENSIONS & yes \\ 
+GWF & DIS & GRIDDATA & no \\ 
+\hline
+GWF & DISV & OPTIONS & yes \\ 
+GWF & DISV & DIMENSIONS & yes \\ 
+GWF & DISV & GRIDDATA & no \\ 
+GWF & DISV & VERTICES & yes \\ 
+GWF & DISV & CELL2D & yes \\ 
+\hline
+GWF & DISU & OPTIONS & yes \\ 
+GWF & DISU & DIMENSIONS & yes \\ 
+GWF & DISU & GRIDDATA & no \\ 
+GWF & DISU & CONNECTIONDATA & yes \\ 
+GWF & DISU & VERTICES & yes \\ 
+GWF & DISU & CELL2D & yes \\ 
+\hline
+GWF & IC & GRIDDATA & no \\ 
+\hline
+GWF & NPF & OPTIONS & yes \\ 
+GWF & NPF & GRIDDATA & no \\ 
+\hline
+GWF & STO & OPTIONS & yes \\ 
+GWF & STO & GRIDDATA & no \\ 
+GWF & STO & PERIOD & yes \\ 
+\hline
+GWF & HFB & OPTIONS & yes \\ 
+GWF & HFB & DIMENSIONS & yes \\ 
+GWF & HFB & PERIOD & yes \\ 
+\hline
+GWF & CHD & OPTIONS & yes \\ 
+GWF & CHD & DIMENSIONS & yes \\ 
+GWF & CHD & PERIOD & yes \\ 
+\hline
+GWF & WEL & OPTIONS & yes \\ 
+GWF & WEL & DIMENSIONS & yes \\ 
+GWF & WEL & PERIOD & yes \\ 
+\hline
+GWF & DRN & OPTIONS & yes \\ 
+GWF & DRN & DIMENSIONS & yes \\ 
+GWF & DRN & PERIOD & yes \\ 
+\hline
+GWF & RIV & OPTIONS & yes \\ 
+GWF & RIV & DIMENSIONS & yes \\ 
+GWF & RIV & PERIOD & yes \\ 
+\hline
+GWF & GHB & OPTIONS & yes \\ 
+GWF & GHB & DIMENSIONS & yes \\ 
+GWF & GHB & PERIOD & yes \\ 
+\hline
+GWF & RCH & OPTIONS & yes \\ 
+GWF & RCH & DIMENSIONS & yes \\ 
+GWF & RCH & PERIOD & yes \\ 
+\hline
+GWF & RCHA & OPTIONS & yes \\ 
+GWF & RCHA & PERIOD & yes \\ 
+\hline
+GWF & EVT & OPTIONS & yes \\ 
+GWF & EVT & DIMENSIONS & yes \\ 
+GWF & EVT & PERIOD & yes \\ 
+\hline
+GWF & EVTA & OPTIONS & yes \\ 
+GWF & EVTA & PERIOD & yes \\ 
+\hline
+GWF & MAW & OPTIONS & yes \\ 
+GWF & MAW & DIMENSIONS & yes \\ 
+GWF & MAW & PACKAGEDATA & yes \\ 
+GWF & MAW & CONNECTIONDATA & yes \\ 
+GWF & MAW & PERIOD & yes \\ 
+\hline
+GWF & SFR & OPTIONS & yes \\ 
+GWF & SFR & DIMENSIONS & yes \\ 
+GWF & SFR & PACKAGEDATA & yes \\ 
+GWF & SFR & CONNECTIONDATA & yes \\ 
+GWF & SFR & DIVERSIONS & yes \\ 
+GWF & SFR & PERIOD & yes \\ 
+\hline
+GWF & LAK & OPTIONS & yes \\ 
+GWF & LAK & DIMENSIONS & yes \\ 
+GWF & LAK & PACKAGEDATA & yes \\ 
+GWF & LAK & CONNECTIONDATA & yes \\ 
+GWF & LAK & TABLES & yes \\ 
+GWF & LAK & OUTLETS & yes \\ 
+GWF & LAK & PERIOD & yes \\ 
+\hline
+GWF & LAKTAB & DIMENSIONS & yes \\ 
+GWF & LAKTAB & TABLE & yes \\ 
+\hline
+GWF & UZF & OPTIONS & yes \\ 
+GWF & UZF & DIMENSIONS & yes \\ 
+GWF & UZF & PACKAGEDATA & yes \\ 
+GWF & UZF & PERIOD & yes \\ 
+\hline
+GWF & MVR & OPTIONS & yes \\ 
+GWF & MVR & DIMENSIONS & yes \\ 
+GWF & MVR & PACKAGES & yes \\ 
+GWF & MVR & PERIOD & yes \\ 
+\hline
+GWF & GNC & OPTIONS & yes \\ 
+GWF & GNC & DIMENSIONS & yes \\ 
+GWF & GNC & GNCDATA & yes \\ 
+\hline
+GWF & OC & OPTIONS & yes \\ 
+GWF & OC & PERIOD & yes \\ 
+\hline
+UTL & OBS & OPTIONS & yes \\ 
+UTL & OBS & CONTINUOUS & yes \\ 
+
+
+\hline
+\end{longtable}
+\label{table:blocks}
+\normalsize

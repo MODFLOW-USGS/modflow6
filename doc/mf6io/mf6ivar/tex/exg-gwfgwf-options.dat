@@ -1,0 +1,12 @@
+BEGIN OPTIONS
+  [AUXILIARY <auxiliary(naux)>]
+  [PRINT_INPUT]
+  [PRINT_FLOWS]
+  [SAVE_FLOWS]
+  [CELL_AVERAGING <cell_averaging>]
+  [VARIABLECV [DEWATERED]]
+  [NEWTON]
+  [GNC6 FILEIN <gnc6_filename>]
+  [MVR6 FILEIN <mvr6_filename>]
+  [OBS6 FILEIN <obs6_filename>]
+END OPTIONS

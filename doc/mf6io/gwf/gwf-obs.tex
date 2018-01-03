@@ -1,0 +1,26 @@
+
+GWF Model observations include the simulated groundwater head (\texttt{head}), calculated drawdown (\texttt{drawdown}) at a node, and the flow between two connected nodes (\texttt{flow-ja-face}). The data required for each GWF Model observation type is defined in table~\ref{table:gwfobstype}. For \texttt{flow-ja-face} observation types, negative and positive values represent a loss from and gain to the \texttt{cellid} specified for ID, respectively.
+
+\begin{longtable}{p{2cm} p{2.75cm} p{2cm} p{1.25cm} p{7cm}}
+\caption{Available GWF model observation types} \tabularnewline
+
+\hline
+\hline
+\textbf{Model} & \textbf{Observation type} & \textbf{ID} & \textbf{ID2} & \textbf{Description} \\
+\hline
+\endhead
+
+\hline
+\endfoot
+
+\input{../Common/gwf-obs.tex}
+\label{table:gwfobstype}
+\end{longtable}
+
+\vspace{5mm}
+\subsubsection{Example Observation Input File}
+
+An example GWF Model observation file is shown below.
+
+\lstinputlisting[style=inputfile]{./mf6ivar/examples/utl-obs-example-obs.dat}
+

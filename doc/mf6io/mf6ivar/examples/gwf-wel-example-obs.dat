@@ -1,0 +1,11 @@
+BEGIN OPTIONS
+  DIGITS 7
+  PRINT_INPUT
+END OPTIONS
+
+BEGIN CONTINUOUS FILEOUT my_model.wel.obs.csv
+# obsname           obstype  ID
+  wel-7-102-17      WEL      7  102  17
+  wel-7-102-17      WEL      CW_1
+  well-field        WEL      well_field
+END CONTINUOUS

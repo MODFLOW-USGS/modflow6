@@ -1,0 +1,16 @@
+BEGIN OPTIONS
+  DIGITS 8
+  PRINT_INPUT
+END OPTIONS
+
+BEGIN CONTINUOUS FILEOUT my_model.drn01.csv
+# obsname      obstype   ID
+  drn_73       DRN       73
+  drn_79       DRN       79
+END CONTINUOUS
+
+BEGIN CONTINUOUS FILEOUT my_model.drn02.csv
+# obsname     obstype   ID
+  drn_80      DRN       80
+  drn_all     DRN       my_drn
+END CONTINUOUS

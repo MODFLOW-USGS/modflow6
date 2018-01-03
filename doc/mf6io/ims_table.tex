@@ -1,0 +1,55 @@
+\begin{tabular}{| l | c | c | c | }
+\hline
+\hline
+Nonlinear Variable & default/\texttt{simple} & \texttt{moderate} & \texttt{complex} \\
+\hline
+\texttt{OUTER\_HCLOSE} & 0.001 & 0.01 & 0.1 \\
+\texttt{OUTER\_MAXIMUM} & 25 & 50 & 100 \\
+\texttt{UNDER\_RELAXATION} & \texttt{NONE} & \texttt{DBD} & \texttt{DBD} \\
+\texttt{UNDER\_RELAXATION\_THETA} & 0.0 & 0.9 & 0.8 \\
+\texttt{UNDER\_RELAXATION\_KAPPA} & 0.0 & 0.0001 & 0.0001 \\
+\texttt{UNDER\_RELAXATION\_GAMMA} & 0.0 & 0.0 & 0.0 \\
+\texttt{UNDER\_RELAXATION\_MOMENTUM} & 0.0 & 0.0 & 0.0 \\
+\texttt{BACKTRACKING\_NUMBER} & 0 & 0 & 20 \\
+\texttt{BACKTRACKING\_TOLERANCE} & 0.0 & 0.0 & 1.05 \\
+\texttt{BACKTRACKING\_REDUCTION\_FACTOR} & 0.0 & 0.0 & 0.1 \\
+\texttt{BACKTRACKING\_RESIDUAL\_LIMIT} & 0.0 & 0.0 & 0.002 \\
+%\texttt{LINEAR\_SOLVER} & \texttt{LINEAR} & \texttt{LINEAR} & \texttt{LINEAR} \\
+\hline
+\hline
+
+\hline
+\hline
+Linear Variable & default/\texttt{simple} & \texttt{moderate} & \texttt{complex} \\
+\hline
+\texttt{INNER\_MAXIMUM} & 50 & 100 & 500 \\
+\texttt{INNER\_HCLOSE} & 0.001 & 0.01 & 0.1 \\
+\texttt{INNER\_RCLOSE} & 0.1 & 0.1 & 0.1 \\
+\texttt{RCLOSE\_OPTION} & \texttt{infinity-norm} & \texttt{infinity-norm} & \texttt{infinity-norm} \\
+\texttt{LINEAR\_ACCELERATION} & \texttt{CG} & \texttt{BICGSTAB} & \texttt{BICGSTAB} \\
+\texttt{RELAXATION\_FACTOR} & 0.0 & 0.97 & 0.0 \\
+\texttt{PRECONDITIONER\_LEVELS} & 0 & 0 & 5 \\
+\texttt{PRECONDITIONER\_DROP\_TOLERANCE} & 0.0 & 0.0 & 0.0001 \\
+\texttt{NUMBER\_ORTHOGONALIZATIONS} & 0 & 0 & 2 \\
+\texttt{SCALING\_METHOD} & \texttt{NONE} & \texttt{NONE} & \texttt{NONE} \\
+\texttt{REORDERING\_METHOD} & \texttt{NONE} & \texttt{NONE} & \texttt{NONE} \\
+\hline
+\hline
+
+%\hline
+%\hline
+%$\chi$MD Variable & default/\texttt{simple} & \texttt{moderate} & \texttt{complex} \\
+%\hline
+%\texttt{INNER\_MAXIMUM} & 50 & 100 & 500 \\
+%\texttt{INNER\_HCLOSE} & 0.001 & 0.01 & 0.1 \\
+%\texttt{INNER\_RCLOSE} & 0.0 & 0.0 & 0.0 \\
+%\texttt{LINEAR\_ACCELERATION} & \texttt{CG} & \texttt{BICGSTAB} & \texttt{BICGSTAB} \\
+%\texttt{PRECONDITIONER\_LEVELS} & 3 & 3 & 5 \\
+%\texttt{PRECONDITIONER\_DROP\_TOLERANCE} & 0.0 & 0.001 & 0.00001 \\
+%\texttt{NUMBER\_ORTHOGONALIZATIONS} & 5 & 5 & 7 \\
+%\texttt{RED\_BLACK\_ORDERING} & \texttt{false} & \texttt{false} & \texttt{false} \\
+%\texttt{REORDERING\_METHOD} & \texttt{NONE} & \texttt{NONE} & \texttt{RKM} \\
+%\hline
+%\hline
+
+\end{tabular}

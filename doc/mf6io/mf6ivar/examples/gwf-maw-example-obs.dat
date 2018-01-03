@@ -1,0 +1,13 @@
+BEGIN OPTIONS
+  PRECISION SINGLE
+  DIGITS 10
+  PRINT_INPUT
+END OPTIONS
+
+BEGIN CONTINUOUS FILEOUT my_model.maw.csv
+  m1head    head  1
+  m1rate01  maw   1 1
+  m1rate02  maw   1 2
+  m1rate    maw   well-1
+  m2rate01  maw   well-2
+END CONTINUOUS

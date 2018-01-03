@@ -1,0 +1,11 @@
+BEGIN OPTIONS
+  PRINT_INPUT
+END OPTIONS
+
+BEGIN CONTINUOUS FILEOUT my_model.rch.csv
+  rch1-1    RCH   Rch-1-1
+  rch1-2    RCH   Rch-1-2
+  rch2-1    RCH   Rch-2-1
+  rch2-2    RCH   Rch-2-2
+  rch2-3    RCH   1  2  3
+END CONTINUOUS

@@ -1,0 +1,54 @@
+The simulation name file is read from a file in the current working directory with the name ``mfsim.nam''.  Input within the simulation name file is provided through the following input blocks, which must be listed in the order shown below.  The options block itself is optional.  All other blocks are required.
+
+\vspace{5mm}
+\subsection{Structure of Blocks}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/sim-nam-options.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/sim-nam-timing.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/sim-nam-models.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/sim-nam-exchanges.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/sim-nam-solutiongroup.dat}
+
+\vspace{5mm}
+\subsection{Explanation of Variables}
+\begin{description}
+\input{./mf6ivar/tex/sim-nam-desc.tex}
+\end{description}
+
+\begin{table}[h]
+\caption{Model types available in Version \modflowversion}
+\small
+\begin{center}
+\begin{tabular*}{\columnwidth}{l l}
+\hline
+\hline
+Mtype & Type of Model \\
+\hline
+GWF6 & Groundwater Flow Model \\
+\hline 
+\end{tabular*}
+\label{table:mtype}
+\end{center}
+\normalsize
+\end{table}
+
+\begin{table}[h]
+\caption{Exchange types available in Version \modflowversion}
+\small
+\begin{center}
+\begin{tabular*}{\columnwidth}{l p{15cm}}
+\hline
+\hline
+Exgtype & Type of Exchange \\
+\hline
+GWF6-GWF6 & Exchange between two Groundwater Flow Models \\
+\hline 
+\end{tabular*}
+\label{table:exgtype}
+\end{center}
+\normalsize
+\end{table}
+
+\vspace{5mm}
+\subsection{Example Input File}
+\lstinputlisting[style=inputfile]{./mf6ivar/examples/sim-nam-example.dat}
+

@@ -1,0 +1,9 @@
+BEGIN OPTIONS
+  [SAVE_FLOWS]
+  [ALTERNATIVE_CELL_AVERAGING <alternative_cell_averaging>]
+  [THICKSTRT]
+  [VARIABLECV [DEWATERED]]
+  [PERCHED]
+  [REWET WETFCT <wetfct> IWETIT <iwetit> IHDWET <ihdwet>]
+  [XT3D [RHS]]
+END OPTIONS

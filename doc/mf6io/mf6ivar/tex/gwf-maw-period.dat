@@ -1,0 +1,5 @@
+BEGIN PERIOD <iper>
+  <wellno> <mawsetting>
+  <wellno> <mawsetting>
+  ...
+END PERIOD

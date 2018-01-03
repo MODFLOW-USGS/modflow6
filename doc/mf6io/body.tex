@@ -1,0 +1,63 @@
+
+\input{./gwf/bcoptions.tex}
+
+%Introduction for input instructions
+\SECTION{Introduction}
+\input{introduction.tex}
+
+%Instructions for running a simulation
+\SECTION{Running a Simulation}
+\input{running_simulation.tex}
+
+%General form of input instructions
+\SECTION{Form of Input Instructions}
+\input{form_of_input.tex}
+
+%Simulation name file
+\newpage
+\SECTION{Simulation Name File}
+\input{simulation_namefile.tex}
+
+%Simulation timing
+\newpage
+\SECTION{Temporal Discretization (TDIS) Package}
+\input{simulation_timing.tex}
+
+%GWF Model Input Instructions
+\newpage
+\SECTION{Groundwater Flow (GWF) Model Input}
+\input{gwf/gwf.tex}
+
+%Sparse Matrix Solution (IMS)
+\newpage
+\SECTION{Iterative Model Solution}
+\input{ims.tex}
+
+%OBS Utility Input Instructions
+\newpage
+\SECTION{Observation (OBS) Utility}
+\input{obs/obs.tex}
+
+%Time-variable input
+\newpage
+\SECTION{Time-Variable Input}
+\input{gwf/tsi}
+
+%Binary files
+\newpage
+\SECTION{Description of Groundwater Flow (GWF) Model Binary Output Files }
+\input{gwf/binaryoutput}
+
+\newpage
+\ifx\usgsdirector\undefined
+\addcontentsline{toc}{section}{\hspace{1.5em}\bibname}
+\else
+\inreferences
+\REFSECTION
+\fi
+\input{bibliography.tex}
+
+\newpage
+\inappendix
+\SECTION{Appendix A. List of Blocks}
+\input{mf6ivar/tex/appendixA.tex}

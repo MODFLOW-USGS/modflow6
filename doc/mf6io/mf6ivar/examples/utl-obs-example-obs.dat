@@ -1,0 +1,24 @@
+begin options
+  digits 10
+  print_input
+end options
+
+begin continuous FILEOUT my_model.gwf.head.csv
+# obsname   obstype   ID 
+  L1        head      1 51 51 # heads at lay 1 row 51 col 51
+  L2        head      2 51 51 # heads at lay 2 row 51 col 51
+end continuous
+
+begin continuous FILEOUT my_model.gwf.ddn.csv
+# obsname   obstype   ID 
+  L1ddn     drawdown  1 51 51 # heads at lay 1 row 51 col 51
+  L2ddn     drawdown  2 51 51 # heads at lay 2 row 51 col 51
+end continuous
+
+begin continuous FILEOUT my_model.gwf.flow.csv
+# obsname   obstype       ID       ID1 
+  L1rfflow  flow-ja-face  1 51 51  1 51 52
+  L2rfflow  flow-ja-face  2 51 51  2 51 52
+  L1-L2flow flow-ja-face  1 51 51  2 51 51
+end continuous
+

@@ -1,0 +1,16 @@
+BEGIN OPTIONS
+  [AUXILIARY <auxiliary(naux)>]
+  [BOUNDNAMES]
+  [PRINT_INPUT]
+  [PRINT_STAGE]
+  [PRINT_FLOWS]
+  [SAVE_FLOWS]
+  [STAGE FILEOUT <stagefile>]
+  [BUDGET FILEOUT <budgetfile>]
+  [TS6 FILEIN <ts6_filename>]
+  [OBS6 FILEIN <obs6_filename>]
+  [MOVER]
+  [MAXIMUM_ITERATIONS <maximum_iterations>]
+  [MAXIMUM_DEPTH_CHANGE <maximum_depth_change>]
+  [UNIT_CONVERSION <unit_conversion>]
+END OPTIONS

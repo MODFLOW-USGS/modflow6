@@ -1,0 +1,18 @@
+BEGIN OPTIONS
+  [AUXILIARY <auxiliary(naux)>]
+  [AUXMULTNAME <auxmultname>]
+  [BOUNDNAMES]
+  [PRINT_INPUT]
+  [PRINT_FLOWS]
+  [SAVE_FLOWS]
+  [BUDGET FILEOUT <budgetfile>]
+  [TS6 FILEIN <ts6_filename>]
+  [OBS6 FILEIN <obs6_filename>]
+  [MOVER]
+  [SIMULATE_ET]
+  [LINEAR_GWET]
+  [SQUARE_GWET]
+  [SIMULATE_GWSEEP]
+  [UNSAT_ETWC]
+  [UNSAT_ETAE]
+END OPTIONS

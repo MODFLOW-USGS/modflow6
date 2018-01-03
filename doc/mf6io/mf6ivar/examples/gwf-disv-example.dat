@@ -1,0 +1,46 @@
+#The OPTIONS block is optional
+BEGIN OPTIONS
+  LENGTH_UNITS METERS
+END OPTIONS
+
+#The DIMENSIONS block is required
+BEGIN DIMENSIONS
+  NCPL 4
+  NLAY 3
+  NVERT 9
+END DIMENSIONS
+
+#The GRIDDATA block is required
+BEGIN GRIDDATA
+  TOP
+    CONSTANT 3.0
+  BOTM LAYERED
+    CONSTANT 2.0
+    CONSTANT 1.0
+    CONSTANT 0.0
+  IDOMAIN LAYERED
+    INTERNAL FACTOR 1
+      1 1 1 0
+    CONSTANT 1
+    CONSTANT 1
+END GRIDDATA
+
+#The VERTICES block is required
+BEGIN VERTICES
+  1 0. 1.
+  2 .5 1.
+  3 1. 1.
+  4 0 .5
+  5 .5 .5
+  6 1. .5
+  7 0. 0.
+  8 .5 0.
+  9 1. 0.
+END VERTICES
+
+BEGIN CELL2D
+  1 .25 .75 4 1 2 5 4
+  2 .75 .75 4 2 3 6 5
+  3 .25 .25 4 4 5 8 7
+  4 .75 .25 4 5 6 9 8
+END CELL2D

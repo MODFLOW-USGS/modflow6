@@ -1,0 +1,57 @@
+Input to the Unsaturated Zone Flow (UZF) Package is read from the file that has type ``UZF6'' in the Name File. All single valued variables are free format.
+
+\vspace{5mm}
+\subsubsection{Structure of Blocks}
+\vspace{5mm}
+
+\noindent \textit{FOR EACH SIMULATION}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-uzf-options.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-uzf-dimensions.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-uzf-packagedata.dat}
+
+\vspace{5mm}
+\noindent \textit{FOR ANY STRESS PERIOD}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-uzf-period.dat}
+
+\vspace{5mm}
+\subsubsection{Explanation of Variables}
+\begin{description}
+\input{./mf6ivar/tex/gwf-uzf-desc.tex}
+\end{description}
+
+\vspace{5mm}
+\subsubsection{Example Input File}
+\lstinputlisting[style=inputfile]{./mf6ivar/examples/gwf-uzf-example.dat}
+
+\vspace{5mm}
+\subsubsection{Available observation types}
+Unsaturated Zone Flow Package observations include all exchange terms with the GWF model and all of the terms that contribute to the continuity equation for each UZF cell. Additional UZF Package observations include the net infiltration into UZF cells in land-surface cells (\texttt{net-infiltration}) and the water content in UZF cells a specified depth below the top of a UZF cell (\texttt{water-content}). The data required for each UZF Package observation type is defined in table~\ref{table:gwf-uzfobstype}. Negative and positive values for \texttt{uzf-gwrch}, \texttt{uzf-gwd}, \texttt{uzf-gwd-to-mvr}, and \texttt{uzf-gwet} observations represent a loss from and gain to the GWF model, respectively. For all other flow terms, negative and positive values represent a loss from and gain from the UZF package, respectively.
+
+\begin{longtable}{p{2cm} p{2.75cm} p{2cm} p{1.25cm} p{7cm}}
+\caption{Available UZF Package observation types} \tabularnewline
+
+\hline
+\hline
+\textbf{Stress Package} & \textbf{Observation type} & \textbf{ID} & \textbf{ID2} & \textbf{Description} \\
+\hline
+\endfirsthead
+
+\captionsetup{textformat=simple}
+\caption*{\textbf{Table \arabic{table}.}{\quad}Available UZF Package observation types.---Continued} \tabularnewline
+
+\hline
+\hline
+\textbf{Stress Package} & \textbf{Observation type} & \textbf{ID} & \textbf{ID2} & \textbf{Description} \\
+\hline
+\endhead
+
+\hline
+\endfoot
+
+\input{../Common/gwf-uzfobs.tex}
+\label{table:gwf-uzfobstype}
+\end{longtable}
+
+\vspace{5mm}
+\subsubsection{Example Observation Input File}
+\lstinputlisting[style=inputfile]{./mf6ivar/examples/gwf-uzf-example-obs.dat}

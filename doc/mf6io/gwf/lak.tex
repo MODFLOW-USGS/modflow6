@@ -1,0 +1,86 @@
+Input to the Lake (LAK) Package is read from the file that has type ``LAK6'' in the Name File.  Any number of LAK Packages can be specified for a single groundwater flow model.  All single valued variables are free format.
+
+\vspace{5mm}
+\subsubsection{Structure of Blocks}
+\vspace{5mm}
+
+\noindent \textit{FOR EACH SIMULATION}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-lak-options.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-lak-dimensions.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-lak-packagedata.dat}
+\noindent \textit{IF \texttt{nlakeconn} IS GREATER THAN ZERO FOR ANY LAKE}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-lak-connectiondata.dat}
+\noindent \textit{IF \texttt{ntables} IS GREATER THAN ZERO}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-lak-tables.dat}
+\noindent \textit{IF \texttt{noutlets} IS GREATER THAN ZERO FOR ANY LAKE}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-lak-outlets.dat}
+
+\vspace{5mm}
+\noindent \textit{FOR ANY STRESS PERIOD}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-lak-period.dat}
+
+\vspace{5mm}
+\subsubsection{Explanation of Variables}
+\begin{description}
+\input{./mf6ivar/tex/gwf-lak-desc.tex}
+\end{description}
+
+\vspace{5mm}
+\subsubsection{Example Input File}
+\lstinputlisting[style=inputfile]{./mf6ivar/examples/gwf-lak-example.dat}
+
+\vspace{5mm}
+\subsubsection{Available observation types}
+Lake Package observations include lake stage and all of the terms that contribute to the continuity equation for each lake. Additional LAK Package observations include flow rates for individual outlets, lakes, or groups of lakes (\texttt{outlet}); the lake volume (\texttt{volume}); lake surface area (\texttt{surface-area}); wetted area for a lake-aquifer connection (\texttt{wetted-area}); and the conductance for a lake-aquifer connection conductance (\texttt{conductance}). The data required for each LAK Package observation type is defined in table~\ref{table:gwf-lakobstype}. Negative and positive values for \texttt{lak} observations represent a loss from and gain to the GWF model, respectively. For all other flow terms, negative and positive values represent a loss from and gain from the LAK package, respectively.
+
+\begin{longtable}{p{2cm} p{2.75cm} p{2cm} p{1.25cm} p{7cm}}
+\caption{Available LAK Package observation types} \tabularnewline
+
+\hline
+\hline
+\textbf{Stress Package} & \textbf{Observation type} & \textbf{ID} & \textbf{ID2} & \textbf{Description} \\
+\hline
+\endfirsthead
+
+\captionsetup{textformat=simple}
+\caption*{\textbf{Table \arabic{table}.}{\quad}Available LAK Package observation types.---Continued} \tabularnewline
+
+\hline
+\hline
+\textbf{Stress Package} & \textbf{Observation type} & \textbf{ID} & \textbf{ID2} & \textbf{Description} \\
+\hline
+\endhead
+
+
+\hline
+\endfoot
+
+\input{../Common/gwf-lakobs.tex}
+\label{table:gwf-lakobstype}
+\end{longtable}
+
+\vspace{5mm}
+\subsubsection{Example Observation Input File}
+\lstinputlisting[style=inputfile]{./mf6ivar/examples/gwf-lak-example-obs.dat}
+
+\newpage
+\subsection{Lake Table Input File}
+Lake tables of stage, volume, and surface area can be specified for individual lakes.  Lake tables are specified by including file names in the LAKE\_TABLES block of the LAK Package.  These file names correspond to a lake table input file.  The format of the lake table input file is described here.  All single valued variables are free format.
+
+\vspace{5mm}
+\subsubsection{Structure of Blocks}
+\vspace{5mm}
+
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-laktab-dimensions.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-laktab-table.dat}
+\vspace{5mm}
+
+\vspace{5mm}
+\subsubsection{Explanation of Variables}
+\begin{description}
+\input{./mf6ivar/tex/gwf-laktab-desc.tex}
+\end{description}
+
+\subsubsection{Example Input File}
+\lstinputlisting[style=inputfile]{./mf6ivar/examples/gwf-laktab-example.dat}
+

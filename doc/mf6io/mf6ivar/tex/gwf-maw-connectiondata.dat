@@ -1,0 +1,5 @@
+BEGIN CONNECTIONDATA
+  <wellno> <icon> <cellid(ncelldim)> <scrn_top> <scrn_bot> <hk_skin> <radius_skin>
+  <wellno> <icon> <cellid(ncelldim)> <scrn_top> <scrn_bot> <hk_skin> <radius_skin>
+  ...
+END CONNECTIONDATA

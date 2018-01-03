@@ -1,0 +1,5 @@
+BEGIN PERIOD <iper>
+  <uzfno> <@finf@> <@pet@> <@extdp@> <@extwc@> <@ha@> <@hroot@> <@rootact@> [<@aux(naux)@>]
+  <uzfno> <@finf@> <@pet@> <@extdp@> <@extwc@> <@ha@> <@hroot@> <@rootact@> [<@aux(naux)@>]
+  ...
+END PERIOD

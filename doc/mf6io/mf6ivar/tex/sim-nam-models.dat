@@ -1,0 +1,5 @@
+BEGIN MODELS
+  <mtype> <mfname> <mname>
+  <mtype> <mfname> <mname>
+  ...
+END MODELS

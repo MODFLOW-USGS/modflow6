@@ -1,0 +1,12 @@
+BEGIN GRIDDATA
+  DELR
+    <delr(ncol)> -- U1DDBL
+  DELC
+    <delc(nrow)> -- U1DDBL
+  TOP
+    <top(ncol, nrow)> -- U2DDBL
+  BOTM [LAYERED]
+    <botm(ncol, nrow, nlay)> -- READARRAY
+  [IDOMAIN [LAYERED]
+    <idomain(ncol, nrow, nlay)> -- READARRAY]
+END GRIDDATA

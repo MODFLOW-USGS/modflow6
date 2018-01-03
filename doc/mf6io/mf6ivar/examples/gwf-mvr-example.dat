@@ -1,0 +1,41 @@
+BEGIN OPTIONS
+  PRINT_INPUT
+  PRINT_FLOWS
+END OPTIONS
+
+BEGIN DIMENSIONS
+  MAXMVR 16
+  MAXPACKAGES 5
+END DIMENSIONS
+
+BEGIN PACKAGES
+  MAW_1
+  MAW_2
+  SFR_1
+  LAK_1
+  UZF_1
+END PACKAGES
+
+BEGIN PERIOD 1
+# ***PROVIDER***   ***RECEIVER***  ***FLOW INFO**
+#  PAK1  PAK1RCH    PAK2  PAK2RCH  TYPE     VALUE
+  MAW_1        1   MAW_2       21  EXCESS    5.00
+  MAW_1       11   SFR_1       77  FACTOR    0.25
+  MAW_1       21   UZF_1       93  FACTOR    0.01
+  MAW_1       21   LAK_1        3  FACTOR    1.00
+
+  SFR_1     1021   MAW_1       21  THRESHOLD 10.0
+  SFR_1      441   SFR_1       77  FACTOR    0.10
+  SFR_1       56   UZF_1       93  FACTOR    0.10
+  SFR_1     4587   LAK_1        3  FACTOR    1.00
+
+  UZF_1        4   MAW_1       11  FACTOR    1.00
+  UZF_1        5   SFR_1       22  FACTOR    1.00
+  UZF_1        6   UZF_1       45  FACTOR    1.00
+  UZF_1        7   LAK_1        3  FACTOR    1.00
+
+  LAK_1        1   MAW_1       11  EXCESS    1000.
+  LAK_1        2   SFR_1       22  UPTO      2000.
+  LAK_1        3   UZF_1       45  UPTO      3000.
+  LAK_1        4   LAK_1        3  UPTO      3000.
+END PERIOD 1

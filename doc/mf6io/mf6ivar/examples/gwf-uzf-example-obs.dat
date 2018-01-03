@@ -1,0 +1,26 @@
+BEGIN CONTINUOUS FILEOUT  my_model.obs.uzf.csv
+  id26_infil    infiltration  26
+  id126_infil   infiltration  126
+  id26_dpth=20  water-content 26 20.0
+  id126_dpth=51 water-content 126 1.0    #depth is below celtop
+  id126_rch     uzf-gwrch     126
+END CONTINUOUS
+
+BEGIN CONTINUOUS FILEOUT my_model.uzf.budget.uzf.csv
+  sinf         infiltration     uzfcells
+  frommvr      from-mvr         uzfcells
+  rejinf       rej-inf          uzfcells
+  rejinftomvr  rej-inf-to-mvr   uzfcells
+  uzet         uzet             uzfcells
+  storage      storage          uzfcells
+  net-inf      net-infiltration uzfcells
+END CONTINUOUS
+
+BEGIN CONTINUOUS FILEOUT  my_model.uzf.budget.gwf.csv
+  gwrch      uzf-gwrch        uzfcells
+  gwd        uzf-gwd          uzfcells
+  gwdtomvr   uzf-gwd-to-mvr   uzfcells
+  gwet       uzf-gwet         uzfcells
+END CONTINUOUS
+
+

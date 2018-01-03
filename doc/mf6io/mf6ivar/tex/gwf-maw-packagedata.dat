@@ -1,0 +1,5 @@
+BEGIN PACKAGEDATA
+  <wellno> <radius> <bottom> <strt> <condeqn> <ngwfnodes> [<@aux(naux)@>] [<boundname>]
+  <wellno> <radius> <bottom> <strt> <condeqn> <ngwfnodes> [<@aux(naux)@>] [<boundname>]
+  ...
+END PACKAGEDATA

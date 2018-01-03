@@ -1,0 +1,95 @@
+The MVR Package can be used to transfer water from a provider to a receiver.  Providers are extraction wells, streamflow routing reaches, lakes and other model features that can be conceptualized as having water available.  The list of packages that can provide water to the MVR Package are:
+
+\begin{itemize}
+  \item Well Package
+  \item Drain Package
+  \item River Package
+  \item General-Head Boundary Package
+  \item Multi-Aquifer Well Package
+  \item Streamflow Routing Package
+  \item Unsaturated Zone Flow Package
+  \item Lake Package
+\end{itemize}
+
+Receivers are package features within the model that solve a continuity equation of inflows, outflows, and change in storage.  These features include multi-aquifer wells, streamflow routing reaches, lakes, and unsaturated zone flow cells.  The list of packages that can receive water is shorter than the provider list, because the WEL, DRN, RIV, and GHB Packages do not represent a continuity equation (boundary stages or elevations are specified by the user).  Therefore, the list of packages that can act as receivers are:
+
+\begin{itemize}
+  \item Multi-Aquifer Well Package
+  \item Streamflow Routing Package
+  \item Unsaturated Zone Flow Package
+  \item Lake Package
+\end{itemize}
+
+\noindent The program will terminate with an error if the MVR is used with an unsupported package type.
+
+The MVR Package is based on the calculation of available water that can be moved from one package feature to another.  The equations used to determine how much water can be transferred are as follows, where $Q_P$ is the flow rate that can be supported by the provider (the available flow rate), and $Q_R$ is the actual rate of water transferred to the receiver.
+
+\begin{enumerate}
+\item A FACTOR can be specified such that 
+
+$Q_R = \alpha Q_P$
+
+\noindent where $\alpha$ is the factor to convert the provider flow rate to the receiver flow rate.
+
+\item An EXCESS rate can be specified by the user as $Q_S$ such that
+
+\[
+    Q_R = 
+\begin{cases}
+    Q_P - Q_S, & \text{if } Q_P > Q_S \\
+    0,              & \text{otherwise}
+\end{cases}
+\]
+
+\noindent In the EXCESS case, any water that exceeds the user specified rate is provided to the receiver.  No water is provided to the receiver if the available water is less than the user specified value.
+
+\item A THRESHOLD rate can be specified for $Q_S$ such that
+
+\[
+    Q_R = 
+\begin{cases}
+    0, & \text{if } Q_S > Q_P \\
+    Q_S,              & \text{otherwise}
+\end{cases}
+\]
+
+\noindent In the THRESHOLD case, no flow is provided to the receiver until the available water exceeds the user specified $Q_S$ rate.  Once the available water exceeds the user specified rate, then the $Q_S$ rate is provided to the receiver.
+
+\item An UPTO rate can be specified for $Q_S$ such that
+
+\[
+    Q_R = 
+\begin{cases}
+    Q_S, & \text{if } Q_P > Q_S \\
+    Q_P,              & \text{otherwise}
+\end{cases}
+\]
+
+\noindent In the UPTO case, all of the available water will be taken from the provider up to the $Q_S$ value specified by the user.  Once $Q_S$ is exceeded, the receiver will continue to get the $Q_S$ value specified by the user.
+\end{enumerate}
+
+\noindent In the MVR PERIOD block (as shown below), the user assigns the  equation to used for each individual entry by specifying FACTOR, EXCESS, THRESHOLD, or UPTO to the input variable \texttt{mvrtype}.
+
+Input to the Water Mover (MVR) Package is read from the file that has type ``MVR6'' in the Name File.  Only one MVR Package can be used per GWF Model.  All single valued variables are free format.
+
+\vspace{5mm}
+\subsubsection{Structure of Blocks}
+\vspace{5mm}
+
+\noindent \textit{FOR EACH SIMULATION}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-mvr-options.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-mvr-dimensions.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-mvr-packages.dat}
+\vspace{5mm}
+\noindent \textit{FOR ANY STRESS PERIOD}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-mvr-period.dat}
+
+\vspace{5mm}
+\subsubsection{Explanation of Variables}
+\begin{description}
+\input{./mf6ivar/tex/gwf-mvr-desc.tex}
+\end{description}
+
+\vspace{5mm}
+\subsubsection{Example Input File}
+\lstinputlisting[style=inputfile]{./mf6ivar/examples/gwf-mvr-example.dat}

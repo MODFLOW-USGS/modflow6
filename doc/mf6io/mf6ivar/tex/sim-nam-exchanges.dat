@@ -1,0 +1,5 @@
+BEGIN EXCHANGES
+  <exgtype> <exgfile> <exgmnamea> <exgmnameb>
+  <exgtype> <exgfile> <exgmnamea> <exgmnameb>
+  ...
+END EXCHANGES

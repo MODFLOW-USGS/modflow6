@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.25420.1
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{6989167D-11E4-40FE-8C1A-2192A86A7E90}") = "mf5to6", "mf5to6.vfproj", "{EE5F8367-9220-45ED-9B0B-5942AF51229C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x86 = Debug|x86
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{EE5F8367-9220-45ED-9B0B-5942AF51229C}.Debug|x86.ActiveCfg = Debug|Win32
+		{EE5F8367-9220-45ED-9B0B-5942AF51229C}.Debug|x86.Build.0 = Debug|Win32
+		{EE5F8367-9220-45ED-9B0B-5942AF51229C}.Release|x86.ActiveCfg = Release|Win32
+		{EE5F8367-9220-45ED-9B0B-5942AF51229C}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

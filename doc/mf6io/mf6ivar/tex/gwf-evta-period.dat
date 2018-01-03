@@ -1,0 +1,12 @@
+BEGIN PERIOD <iper>
+  [IEVT
+    <ievt(ncol*nrow; ncpl)> -- U1DDBL]
+  SURFACE
+    <surface(ncol*nrow; ncpl)> -- U1DDBL
+  RATE
+    <rate(ncol*nrow; ncpl)> -- U1DDBL
+  DEPTH
+    <depth(ncol*nrow; ncpl)> -- U1DDBL
+  AUX(IAUX)
+    <aux(iaux)(ncol*nrow; ncpl)> -- U1DDBL
+END PERIOD

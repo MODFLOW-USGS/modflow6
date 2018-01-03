@@ -1,0 +1,5 @@
+BEGIN EXCHANGEDATA
+  <cellidm1> <cellidm2> <ihc> <cl1> <cl2> <hwva> [<aux(naux)>]
+  <cellidm1> <cellidm2> <ihc> <cl1> <cl2> <hwva> [<aux(naux)>]
+  ...
+END EXCHANGEDATA

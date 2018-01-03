@@ -1,0 +1,18 @@
+BEGIN OPTIONS
+  SAVE_FLOWS
+END OPTIONS
+
+BEGIN GRIDDATA
+  #
+  #icelltype(nodes) is 0:confined, 1:convertible
+  ICELLTYPE
+    constant 0
+  #
+  # horizontal hydraulic conductivity
+  K
+    constant 1.0
+  #
+  # vertical hydraulic conductivity
+  K33
+    constant 0.1
+END GRIDDATA

@@ -1,0 +1,31 @@
+BEGIN OPTIONS
+  PRINT_INPUT (echo input to listing file)
+  PRINT_FLOWS  (print the flows to the listing file)
+  TS8 FILEIN tides.ts
+  BOUNDNAMES  
+END OPTIONS
+
+# Dimensions block
+BEGIN DIMENSIONS
+  MAXBOUND 15
+END DIMENSIONS
+
+# Stress-period block(s)
+BEGIN PERIOD 1
+#Lay Row  Col  Bhead Cond    boundname
+  2   1   10   tides   15.0    Estuary-L2
+  2   2   10   tides   15.0    Estuary-L2
+  2   3   10   tides   15.0    Estuary-L2 
+  2   4   10   tides   15.0    Estuary-L2
+  2   5   10   tides   15.0    Estuary-L2 
+  2   6   10   tides   15.0    Estuary-L2 
+  2   7   10   tides   15.0    Estuary-L2
+  2   8   10   tides   15.0    Estuary-L2  
+  2   9   10   tides   15.0    Estuary-L2  
+  2  10   10   tides   15.0    Estuary-L2
+  2  11   10   tides   15.0    Estuary-L2  
+  2  12   10   tides   15.0    Estuary-L2  
+  2  13   10   tides   15.0    Estuary-L2
+  2  14   10   tides   15.0    Estuary-L2  
+  2  15   10   tides   15.0    Estuary-L2  
+END PERIOD
