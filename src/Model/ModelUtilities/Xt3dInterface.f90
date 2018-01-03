@@ -19,7 +19,6 @@ module Xt3dModule
     integer(I4B),dimension(:),pointer       :: idxglox    => null()   !mapping array for extended neighbors used by xt3d
     integer(I4B), pointer                   :: numextnbrs => null()   !dimension of jax array
     integer(I4B), pointer                   :: ixt3d      => null()   !xt3d flag (0 is off, 1 is lhs, 2 is rhs)
-    logical, pointer                        :: lreswt     => null()   !lreswt flag
     logical, pointer                        :: nozee      => null()   !nozee flag
     real(DP), pointer                       :: vcthresh   => null()   !attenuation function threshold
     real(DP),dimension(:,:),pointer         :: rmatck     => null()   !rotation matrix for the conductivity tensor
@@ -422,8 +421,7 @@ module Xt3dModule
         ! -- cells 0 and 1.
         call qconds(this%nbrmax, nnbr0, inbr0, il01, vc0, vn0, dl0, dl0n,    &
           ck0, nnbr1, inbr1, il10, vc1, vn1, dl1, dl1n, ck1, ar01, ar10,     &
-          this%lreswt, this%vcthresh, allhc0, allhc1, chat01, chati0,        &
-          chat1j)
+          this%vcthresh, allhc0, allhc1, chat01, chati0, chat1j)
         ! -- If Newton, compute and save saturated flow, then scale
         ! -- conductance-like coefficients by the actual area for
         ! -- subsequent amat and rhs assembly.
@@ -531,8 +529,7 @@ module Xt3dModule
         ! -- cells 0 and 1.
         call qconds(this%nbrmax, nnbr0, inbr0, il01, vc0, vn0, dl0, dl0n,    &
           ck0, nnbr1, inbr1, il10, vc1, vn1, dl1, dl1n, ck1, ar01, ar10,     &
-          this%lreswt, this%vcthresh, allhc0, allhc1, chat01, chati0,        &
-          chat1j)
+          this%vcthresh, allhc0, allhc1, chat01, chati0, chat1j)
         ! -- Contribute to rows for cells 0 and 1.
         this%amatpc(ii00) = this%amatpc(ii00) - chat01
         this%amatpc(ii01) = this%amatpc(ii01) + chat01
@@ -619,8 +616,7 @@ module Xt3dModule
     ! -- cells 0 and 1.
     call qconds(this%nbrmax, nnbr0, inbr0, il01, vc0, vn0, dl0, dl0n,    &
       ck0, nnbr1, inbr1, il10, vc1, vn1, dl1, dl1n, ck1, ar01, ar10,     &
-      this%lreswt, this%vcthresh, allhc0, allhc1, chat01, chati0,        &
-      chat1j)
+      this%vcthresh, allhc0, allhc1, chat01, chati0, chat1j)
     ! -- Apply scale factor to compute "conductances" for hfb correction
     if(condhfb > DZERO) then
       term = chat01/(chat01 + condhfb)
@@ -835,8 +831,7 @@ module Xt3dModule
         ! -- cells 0 and 1.
         call qconds(this%nbrmax, nnbr0, inbr0, il01, vc0, vn0, dl0, dl0n,    &
           ck0, nnbr1, inbr1, il10, vc1, vn1, dl1, dl1n, ck1, ar01, ar10,     &
-          this%lreswt, this%vcthresh, allhc0, allhc1, chat01, chati0,        &
-          chat1j)
+          this%vcthresh, allhc0, allhc1, chat01, chati0, chat1j)
         ! -- Contribution to flow from primary connection.
         qnm = chat01*(hnew(m) - hnew(n))
         ! -- Contribution from immediate neighbors of node 0.
@@ -922,8 +917,7 @@ module Xt3dModule
     ! -- cells 0 and 1.
     call qconds(this%nbrmax, nnbr0, inbr0, il01, vc0, vn0, dl0, dl0n,    &
       ck0, nnbr1, inbr1, il10, vc1, vn1, dl1, dl1n, ck1, ar01, ar10,     &
-      this%lreswt, this%vcthresh, allhc0, allhc1, chat01, chati0,        &
-      chat1j)
+      this%vcthresh, allhc0, allhc1, chat01, chati0, chat1j)
     ! -- Apply scale factor to compute "conductances" for hfb correction
     if(condhfb > DZERO) then
       term = chat01/(chat01 + condhfb)
@@ -993,7 +987,6 @@ module Xt3dModule
     call mem_deallocate(this%inunit)
     call mem_deallocate(this%iout)
     call mem_deallocate(this%numextnbrs)
-    call mem_deallocate(this%lreswt)
     call mem_deallocate(this%nozee)
     call mem_deallocate(this%vcthresh)
     call mem_deallocate(this%lamatsaved)
@@ -1027,7 +1020,6 @@ module Xt3dModule
     call mem_allocate(this%inunit, 'INUNIT', this%origin)
     call mem_allocate(this%iout, 'IOUT', this%origin)
     call mem_allocate(this%numextnbrs, 'NUMEXTNBRS', this%origin)
-    call mem_allocate(this%lreswt, 'LRESWT', this%origin)
     call mem_allocate(this%nozee, 'NOZEE', this%origin)
     call mem_allocate(this%vcthresh, 'VCTHRESH', this%origin)
     call mem_allocate(this%lamatsaved, 'LAMATSAVED', this%origin)
@@ -1038,7 +1030,6 @@ module Xt3dModule
     this%inunit = 0
     this%iout = 0
     this%numextnbrs = 0
-    this%lreswt = .false.
     this%nozee = .false.
     this%vcthresh = 1.d-10
     this%lamatsaved = .false.

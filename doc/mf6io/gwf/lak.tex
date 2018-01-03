@@ -1,4 +1,4 @@
-Input to the Lake (LAK) Package is read from the file that has type ``LAK6'' in the Name File.  Any number of LAK Packages can be specified for a single groundwater flow model.  All single valued variables are free format.
+Input to the Lake (LAK) Package is read from the file that has type ``LAK6'' in the Name File.  Any number of LAK Packages can be specified for a single groundwater flow model.
 
 \vspace{5mm}
 \subsubsection{Structure of Blocks}
@@ -18,6 +18,7 @@ Input to the Lake (LAK) Package is read from the file that has type ``LAK6'' in 
 \vspace{5mm}
 \noindent \textit{FOR ANY STRESS PERIOD}
 \lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-lak-period.dat}
+\advancedpackageperioddescription{lake}{lakes}
 
 \vspace{5mm}
 \subsubsection{Explanation of Variables}
@@ -65,7 +66,7 @@ Lake Package observations include lake stage and all of the terms that contribut
 
 \newpage
 \subsection{Lake Table Input File}
-Lake tables of stage, volume, and surface area can be specified for individual lakes.  Lake tables are specified by including file names in the LAKE\_TABLES block of the LAK Package.  These file names correspond to a lake table input file.  The format of the lake table input file is described here.  All single valued variables are free format.
+Lake tables of stage, volume, and surface area can be specified for individual lakes.  Lake tables are specified by including file names in the LAKE\_TABLES block of the LAK Package.  These file names correspond to a lake table input file.  The format of the lake table input file is described here.
 
 \vspace{5mm}
 \subsubsection{Structure of Blocks}

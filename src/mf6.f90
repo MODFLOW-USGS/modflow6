@@ -9,7 +9,7 @@ program mf6
   ! -- modules
   use KindModule,             only: DP, I4B
   use ConstantsModule,        only: MFVNAM, VERSION, MFTITLE, FMTDISCLAIMER,   &
-                                    ISTDOUT
+                                    ISTDOUT, IDEVELOPMODE
   use CompilerVersion
   use InputOutputModule,      only: write_centered
   use SimulationCreateModule, only: simulation_cr, simulation_da
@@ -43,10 +43,15 @@ program mf6
   call write_centered('MODFLOW'//MFVNAM, ISTDOUT, 80)
   call write_centered(MFTITLE, ISTDOUT, 80)
   call write_centered('VERSION '//VERSION, ISTDOUT, 80)
+  !
+  ! -- Write if develop mode
+  if (IDEVELOPMODE == 1) call write_centered('***DEVELOP MODE***', ISTDOUT, 80)
+  !
   ! -- Write compiler version
   call get_compiler(compiler)
   call write_centered(' ', ISTDOUT, 80)
   call write_centered(trim(adjustl(compiler)), ISTDOUT, 80)
+  !
   ! -- Write disclaimer
   write(ISTDOUT, FMTDISCLAIMER)
   ! -- get start time

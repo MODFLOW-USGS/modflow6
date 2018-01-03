@@ -401,9 +401,8 @@ module ListReaderModule
     character(len=LINELENGTH) :: errmsg
     ! -- formats
     character(len=*), parameter :: fmtmxlsterronly = &
-      "('ERROR READING LIST FROM FILE: '," // &
-       "a,' ON UNIT: ',I0," // &
-       "' THE NUMBER OF RECORDS ENCOUNTERED EXCEEDS THE MAXIMUM NUMBER " // &
+      "('***ERROR READING LIST. &
+       &THE NUMBER OF RECORDS ENCOUNTERED EXCEEDS THE MAXIMUM NUMBER " // &
        "OF RECORDS.  TRY INCREASING MAXBOUND FOR THIS LIST." // &
        "  NUMBER OF RECORDS: ',I0,' MAXBOUND: ',I0)"
 ! ------------------------------------------------------------------------------
@@ -444,9 +443,11 @@ module ListReaderModule
       ! -- Check range
       if(ii > mxlist) then
         inquire(unit=this%inlist, name=fname)
-        write(errmsg, fmtmxlsterronly) trim(adjustl(fname)), this%inlist, ii,   &
-                                       mxlist
+        write(errmsg, fmtmxlsterronly) ii, mxlist
         call store_error(errmsg)
+        errmsg = 'Error occurred reading line: ' // trim(this%line)
+        call store_error(errmsg)
+        call store_error_unit(this%inlist)
         call ustop()
       endif
       !

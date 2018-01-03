@@ -72,7 +72,7 @@ type string
 tagged false
 reader urword
 longname name of model
-description is the user-assigned name of the model.  The model name cannot exceed 20 characters.  If the model name has spaces within it, then it must be enclosed in double quotation marks.  The model name is case insensitive; any lowercase letters are converted and stored as upper case letters.
+description is the user-assigned name of the model.  The model name cannot exceed 16 characters and must not have blanks within the name.  The model name is case insensitive; any lowercase letters are converted and stored as upper case letters.
 
 
 # --------------------- sim nam exchanges ---------------------
@@ -133,7 +133,7 @@ tagged false
 shape
 reader urword
 longname
-description is the group number of the solution group
+description is the group number of the solution group.  Solution groups must be numbered sequentially, starting with group number one.
 
 block solutiongroup
 name mxiter
@@ -141,7 +141,7 @@ type integer
 reader urword
 optional true
 longname maximum solution group iterations
-description is the maximum number of outer iterations for this solution group.  The default value is 1.
+description is the maximum number of outer iterations for this solution group.  The default value is 1.  If there is only one solution in the solution group, then MXITER must be 1.
 
 block solutiongroup
 name solutionrecarray

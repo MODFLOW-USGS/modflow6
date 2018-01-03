@@ -73,7 +73,7 @@ block griddata
 name delr
 type double precision
 shape (ncol)
-reader u1ddbl
+reader readarray
 longname spacing along a row
 description is the is the column spacing in the row direction.
 
@@ -81,7 +81,7 @@ block griddata
 name delc
 type double precision
 shape (nrow)
-reader u1ddbl
+reader readarray
 longname spacing along a column
 description is the is the row spacing in the column direction.
 
@@ -89,7 +89,7 @@ block griddata
 name top
 type double precision
 shape (ncol, nrow)
-reader u2ddbl
+reader readarray
 longname cell top elevation
 description is the top elevation for each cell in the top model layer.
 

@@ -277,7 +277,7 @@ tagged false
 in_record true
 reader urword
 longname lake number for this entry
-description integer value that defines the lake number for this lake entry. \texttt{lakeno} must be greater than zero and less than or equal to \texttt{nlakes}.
+description integer value that defines the lake number associated with the specified PACKAGEDATA data on the line. \texttt{lakeno} must be greater than zero and less than or equal to \texttt{nlakes}. Lake information must be specified for every lake or the program will terminate with an error.  The program will also terminate with an error if information for a lake is specified more than once.
 
 block packagedata
 name strt
@@ -341,7 +341,7 @@ tagged false
 in_record true
 reader urword
 longname lake number for this entry
-description integer value that defines the lake number for this lake entry. \texttt{lakeno} must be greater than zero and less than or equal to \texttt{nlakes}.
+description integer value that defines the lake number associated with the specified CONNECTIONDATA data on the line. \texttt{lakeno} must be greater than zero and less than or equal to \texttt{nlakes}. Lake connection information must be specified for every lake connection to the GWF model (\texttt{nlakeconn}) or the program will terminate with an error.  The program will also terminate with an error if connection information for a lake connection to the GWF model is specified more than once.
 
 block connectiondata
 name iconn
@@ -381,7 +381,7 @@ tagged false
 in_record true
 reader urword
 longname bed leakance
-description real value that defines the bed leakance for the lake-\texttt{GWF} connection. \texttt{bedk} must be greater than or equal to zero.
+description character string or real value that defines the bed leakance for the lake-\texttt{GWF} connection. \texttt{bedleak} must be greater than or equal to zero or specified to be \texttt{none}. If \texttt{bedleak} is specified to be \texttt{none}, the lake-\texttt{GWF} connection conductance is solely a function of aquifer properties in the connected \texttt{GWF} cell and lakebed sediments are assumed to be absent.
 
 block connectiondata
 name belev
@@ -442,7 +442,7 @@ tagged false
 in_record true
 reader urword
 longname lake number for this entry
-description integer value that defines the lake number for this lake entry. \texttt{lakeno} must be greater than zero and less than or equal to \texttt{nlakes}.
+description integer value that defines the lake number associated with the specified TABLES data on the line. \texttt{lakeno} must be greater than zero and less than or equal to \texttt{nlakes}. The program will terminate with an error if table information for a lake is specified more than once or the number of specified tables is less than \texttt{ntables}.
 
 block tables
 name tab6
@@ -496,7 +496,7 @@ tagged false
 in_record true
 reader urword
 longname outlet number for this entry
-description integer value that defines the outlet number for this outlet entry. \texttt{outletno} must be greater than zero and less than or equal to \texttt{noutlets}.
+description integer value that defines the outlet number associated with the specified OUTLETS data on the line. \texttt{outletno} must be greater than zero and less than or equal to \texttt{noutlets}. Outlet information must be specified for every outlet or the program will terminate with an error. The program will also terminate with an error if information for a outlet is specified more than once.
 
 block outlets
 name lakein
@@ -604,7 +604,7 @@ tagged false
 in_record true
 reader urword
 longname lake number for this entry
-description integer value that defines the lake number associated with the specified data on the line. \texttt{lakeno} must be greater than zero and less than or equal to \texttt{nlakes}.
+description integer value that defines the lake number associated with the specified PERIOD data on the line. \texttt{lakeno} must be greater than zero and less than or equal to \texttt{nlakes}.
 
 block period
 name laksetting
@@ -748,7 +748,7 @@ tagged false
 in_record true
 reader urword
 longname outlet number for this entry
-description integer value that defines the outlet number for this outlet entry. \texttt{outletno} must be greater than zero and less than or equal to \texttt{noutlets}.
+description integer value that defines the outlet number associated with the specified PERIOD data on the line. \texttt{outletno} must be greater than zero and less than or equal to \texttt{noutlets}.
 
 block period
 name outletsetting

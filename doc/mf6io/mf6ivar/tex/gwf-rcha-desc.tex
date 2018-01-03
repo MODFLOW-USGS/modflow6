@@ -1,5 +1,8 @@
 % DO NOT MODIFY THIS FILE DIRECTLY.  IT IS CREATED BY mf6ivar.py 
 
+\item \textbf{Block: OPTIONS}
+
+\begin{description}
 \item \texttt{READASARRAYS}---indicates that array-based input will be used for the Recharge Package.  This keyword must be specified to use array-based input.
 
 \item \texttt{FIXED\_CELL}---indicates that recharge will not be reassigned to a cell underlying the cell specified in the list if the specified cell is inactive.
@@ -24,7 +27,11 @@
 
 \item \texttt{obs6\_filename}---name of input file to define observations for the Recharge package. See the ``Observation utility'' section for instructions for preparing observation input files. Table \ref{table:obstype} lists observation type(s) supported by the Recharge package.
 
-\item \texttt{iper}---integer value specifying the starting stress period number for which the data specified in the PERIOD block apply.  \texttt{iper} must be less than \texttt{nper} in the TDIS Package and greater than zero.  The \texttt{iper} value assigned to a stress period block must be greater than the \texttt{iper} value assigned for the previous block.
+\end{description}
+\item \textbf{Block: PERIOD}
+
+\begin{description}
+\item \texttt{iper}---integer value specifying the starting stress period number for which the data specified in the PERIOD block apply.  \texttt{iper} must be less than or equal to \texttt{nper} in the TDIS Package and greater than zero.  The \texttt{iper} value assigned to a stress period block must be greater than the \texttt{iper} value assigned for the previous PERIOD block.  The information specified in the PERIOD block will continue to apply for all subsequent stress periods, unless the program encounters another PERIOD block.
 
 \item \texttt{irch}---\texttt{irch} is the layer number that defines the layer in each vertical column where recharge is applied. If \texttt{irch} is omitted, recharge by default is applied to cells in layer 1.  \texttt{irch} can only be used if READASARRAYS is specified in the OPTIONS block.
 
@@ -32,4 +39,5 @@
 
 \item \texttt{aux}---is an array of values for auxiliary variable aux(iaux), where iaux is a value from 1 to naux, and aux(iaux) must be listed as part of the auxiliary variables.  A separate array can be specified for each auxiliary variable.  If an array is not specified for an auxiliary variable, then a value of zero is assigned.  If the value specified here for the auxiliary variable is the same as auxmultname, then the recharge array will be multiplied by this array.
 
+\end{description}
 

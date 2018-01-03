@@ -609,13 +609,7 @@ module GwfDisvModule
       enddo
       !
       ! -- Terminate the block
-      call this%parser%GetNextLine(endOfBlock)
-      if(.not. endOfBlock) then
-        write(ermsg, *) "LOOKING FOR 'END VERTICES' BUT FOUND " // trim(line)
-        call store_error(ermsg)
-        call this%parser%StoreErrorUnit()
-        call ustop()
-      endif
+      call this%parser%terminateblock()
     else
       call store_error('ERROR.  REQUIRED VERTICES BLOCK NOT FOUND.')
       call this%parser%StoreErrorUnit()
@@ -746,13 +740,7 @@ module GwfDisvModule
       enddo
       !
       ! -- Terminate the block
-      call this%parser%GetNextLine(endOfBlock)
-      if(.not. endOfBlock) then
-        write(ermsg, *) "LOOKING FOR 'END CELL2D' BUT FOUND " // trim(line)
-        call store_error(ermsg)
-        call this%parser%StoreErrorUnit()
-        call ustop()
-      endif
+      call this%parser%terminateblock()
     else
       call store_error('ERROR.  REQUIRED CELL2D BLOCK NOT FOUND.')
       call this%parser%StoreErrorUnit()

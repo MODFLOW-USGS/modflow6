@@ -157,9 +157,9 @@ contains
     class(HashTableType), intent(inout) :: this
     integer(I4B) :: i, low, ihigh
     !
-    low  = lbound(this%array,dim=1)
-    ihigh = ubound(this%array,dim=1) 
     if (allocated(this%array)) then
+      low  = lbound(this%array,dim=1)
+      ihigh = ubound(this%array,dim=1) 
       do i=low,ihigh
         call this%array(i)%free_node()
       end do

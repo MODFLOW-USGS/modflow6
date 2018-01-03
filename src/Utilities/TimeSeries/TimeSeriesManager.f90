@@ -1,6 +1,6 @@
 module TimeSeriesManagerModule
 
-  use KindModule, only: DP, I4B
+  use KindModule,                only: DP, I4B
   use ConstantsModule,           only: DZERO, LENPACKAGENAME, MAXCHARLEN, &
                                        LINELENGTH, LENTIMESERIESNAME
   use HashTableModule,           only: HashTableType
@@ -9,38 +9,38 @@ module TimeSeriesManagerModule
   use SimModule,                 only: store_error, store_error_unit, ustop
   use TdisModule,                only: delt, kper, kstp, totim, totimc, &
                                        totimsav
-  use TimeSeriesGroupListModule, only: TimeSeriesGroupListType
+  use TimeSeriesFileListModule, only: TimeSeriesFileListType
   use TimeSeriesLinkModule,      only: TimeSeriesLinkType, &
                                        ConstructTimeSeriesLink, &
                                        GetTimeSeriesLinkFromList, &
                                        AddTimeSeriesLinkToList
   use TimeSeriesModule,          only: TimeSeriesContainerType, &
-                                       TimeSeriesGroupType, &
+                                       TimeSeriesFileType, &
                                        TimeSeriesType
 
   implicit none
 
   private
   public :: TimeSeriesManagerType, read_value_or_time_series, &
-            read_single_value_or_time_series
+            read_single_value_or_time_series, tsmanager_cr
 
   type TimeSeriesManagerType
-    ! -- Public members
-    integer(I4B),                                public :: iout = 0
-    ! -- Lists of links for linking bound and auxvar array time series.
-    type(TimeSeriesGroupListType), pointer, public :: TsGroupList => null()
-    type(ListType),                pointer, public :: boundTsLinks => null()
-    ! -- Private members
-    type(ListType),               pointer, private :: auxvarTsLinks => null()
-    type(HashTableType),                   private :: BndTsHashTable
+    integer(I4B), public                                :: iout = 0             ! output unit number
+    type(TimeSeriesFileListType), pointer, public       :: tsfileList => null() ! list of ts files objs
+    type(ListType), pointer, public                   :: boundTsLinks => null() ! links to bound and aux
+    integer(I4B)                                        :: numtsfiles = 0       ! number of ts files
+    character(len=MAXCHARLEN), allocatable, dimension(:) :: tsfiles             ! list of ts files
+    type(ListType), pointer, private               :: auxvarTsLinks => null()   ! list of aux links
+    type(HashTableType), private                   :: BndTsHashTable            ! hash of ts to tsobj
     type(TimeSeriesContainerType), allocatable, dimension(:), private :: TsContainers
   contains
     ! -- Public procedures
+    procedure, public :: tsmanager_df
     procedure, public :: ad => tsmgr_ad
     procedure, public :: da => tsmgr_da
+    procedure, public :: add_tsfile
     procedure, public :: CountLinks
     procedure, public :: GetLink
-    procedure, public :: InitializeTimeSeriesManager
     procedure, public :: Reset
     procedure, public :: HashBndTimeSeries
     ! -- Private procedures
@@ -48,24 +48,102 @@ module TimeSeriesManagerModule
     procedure, private :: make_link
   end type TimeSeriesManagerType
 
-contains
-
-  subroutine InitializeTimeSeriesManager(this)
-    implicit none
+  contains
+  
+  subroutine tsmanager_cr(this, iout)
+! ******************************************************************************
+! tsmanager_cr -- create the tsmanager
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- dummy
-    class(TimeSeriesManagerType) :: this
+    type(TimeSeriesManagerType) :: this
+    integer(I4B), intent(in) :: iout
+! ------------------------------------------------------------------------------
     !
+    this%iout = iout
     allocate(this%boundTsLinks)
     allocate(this%auxvarTsLinks)
-    allocate(this%TsGroupList)
+    allocate(this%tsfileList)
+    allocate(this%tsfiles(1000))
     !
     return
-  end subroutine InitializeTimeSeriesManager
-
+  end subroutine tsmanager_cr
+  
+  subroutine tsmanager_df(this)
+! ******************************************************************************
+! tsmanager_df -- define
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(TimeSeriesManagerType) :: this
+! ------------------------------------------------------------------------------
+    !
+    if (this%numtsfiles > 0) then
+      call this%HashBndTimeSeries(this%numtsfiles)
+    endif
+    !
+    ! -- return
+    return
+  end subroutine tsmanager_df
+                                              
+  subroutine add_tsfile(this, fname, inunit)
+! ******************************************************************************
+! add_tsfile -- add a time series file to this manager
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use SimModule, only: store_error, store_error_unit, ustop
+    use ArrayHandlersModule, only: ExpandArray
+    ! -- dummy
+    class(TimeSeriesManagerType) :: this
+    character(len=*), intent(in) :: fname
+    integer(I4B), intent(in) :: inunit
+    ! -- local
+    integer(I4B) :: isize
+    integer(I4B) :: i
+    class(TimeSeriesFileType), pointer :: tsfile => null()
+! ------------------------------------------------------------------------------
+    !
+    ! -- Check for fname duplicates
+    if (this%numtsfiles > 0) then
+      do i = 1, this%numtsfiles
+        if (this%tsfiles(i) == fname) then
+          call store_error('Found duplicate time-series file name: ' // trim(fname))
+          call store_error_unit(inunit)
+          call ustop()
+        endif
+      enddo
+    endif
+    !
+    ! -- Save fname
+    this%numtsfiles = this%numtsfiles + 1
+    isize = size(this%tsfiles)
+    if (this%numtsfiles > isize) then
+      call ExpandArray(this%tsfiles, 1000)
+    endif
+    this%tsfiles(this%numtsfiles) = fname
+    !
+    ! -- 
+    call this%tsfileList%Add(fname, this%iout, tsfile)
+    !
+    return
+  end subroutine add_tsfile
+  
   subroutine tsmgr_ad(this)
-    ! Time series manager -- time step (or subtime step) advance.
-    ! Call this each time step or subtime step.
-    implicit none
+! ******************************************************************************
+! tsmgr_ad -- time step (or subtime step) advance. Call this each time step or 
+!   subtime step.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeSeriesManagerType) :: this
     ! -- local
@@ -81,6 +159,7 @@ contains
     15  format(a,' package: Boundary ',i0,', entry ',i0,' value from time series "',a,'" = ',g12.5,' (',a,')')
     20  format(a,' package: Boundary ',i0,', ',a,' value from time series "',a,'" = ',g12.5)
     25  format(a,' package: Boundary ',i0,', ',a,' value from time series "',a,'" = ',g12.5,' (',a,')')
+! ------------------------------------------------------------------------------
     !
     ! -- Initialize time variables
     begintime = totimc
@@ -91,9 +170,9 @@ contains
     !    appropriate time series. (For list-type packages)
     nlinks = this%boundtslinks%Count()
     nauxlinks = this%auxvartslinks%Count()
-    do i=1,nlinks
+    do i = 1, nlinks
       tsLink => GetTimeSeriesLinkFromList(this%boundTsLinks, i)
-      if (i==1) then
+      if (i == 1) then
         if (tsLink%Iprpak == 1) then
           write(this%iout,5)kper,kstp
         endif
@@ -189,20 +268,21 @@ contains
         write(this%iout,'()')
       endif
     end if
-
     !
     return
   end subroutine tsmgr_ad
 
   subroutine tsmgr_da(this)
-    implicit none
+! ******************************************************************************
+! tsmgr_da -- deallocate
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeSeriesManagerType) :: this
     ! -- local
-    type(TimeSeriesLinkType), pointer :: tslink => null()
-    type(TimeSeriesGroupType), pointer :: tsgroup => null()
-    integer(I4B) :: i, n
-    type(TimeSeriesLinkType), pointer :: tsl => null()
+! ------------------------------------------------------------------------------
     !
     ! -- Deallocate time-series links in boundTsLinks
     call this%boundTsLinks%Clear(.true.)
@@ -212,26 +292,33 @@ contains
     call this%auxvarTsLinks%Clear(.true.)
     deallocate(this%auxvarTsLinks)
     !
-    ! -- Deallocate TsGroupList
-    call this%TsGroupList%da()
-    deallocate(this%TsGroupList)
+    ! -- Deallocate tsfileList
+    call this%tsfileList%da()
+    deallocate(this%tsfileList)
     !
     ! -- Deallocate the hash table
     call this%BndTsHashTable%FreeHash()
+    !
+    deallocate(this%tsfiles)
     !
     return
   end subroutine tsmgr_da
 
   subroutine Reset(this, pkgName)
-    ! Call this when a new BEGIN PERIOD block is read for a new
-    ! stress period.
-    implicit none
+! ******************************************************************************
+! reset -- Call this when a new BEGIN PERIOD block is read for a new stress
+!    period.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeSeriesManagerType) :: this
     character(len=*), intent(in) :: pkgName
     ! -- local
     integer(I4B)                      :: i, nlinks
     type(TimeSeriesLinkType), pointer :: tslink
+! ------------------------------------------------------------------------------
     ! Zero out values for time-series controlled stresses.
     ! Also deallocate all tslinks too.
     ! Then when time series are
@@ -274,7 +361,12 @@ contains
 
   subroutine make_link(this, timeSeries, pkgName, auxOrBnd, bndElem, &
                        irow, jcol, iprpak, tsLink, text, bndName)
-    implicit none
+! ******************************************************************************
+! make_link -- 
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeSeriesManagerType),      intent(inout) :: this
     type(TimeSeriesType),     pointer, intent(inout) :: timeSeries
@@ -287,6 +379,7 @@ contains
     character(len=*),                  intent(in)    :: text
     character(len=*),                  intent(in)    :: bndName
     ! -- local
+! ------------------------------------------------------------------------------
     !
     tsLink => null()
     call ConstructTimeSeriesLink(tsLink, timeSeries, pkgName, &
@@ -307,7 +400,12 @@ contains
   end subroutine make_link
 
   function GetLink(this, auxOrBnd, indx) result(tsLink)
-    implicit none
+! ******************************************************************************
+! GetLink -- 
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeSeriesManagerType) :: this
     character(len=3), intent(in) :: auxOrBnd
@@ -315,6 +413,7 @@ contains
     type(TimeSeriesLinkType), pointer :: tsLink
     ! -- local
     type(ListType), pointer :: list
+! ------------------------------------------------------------------------------
     !
     list => null()
     tsLink => null()
@@ -334,12 +433,18 @@ contains
   end function GetLink
 
   function CountLinks(this, auxOrBnd)
-    implicit none
+! ******************************************************************************
+! CountLinks -- 
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- return
     integer(I4B) :: CountLinks
     ! -- dummy
     class(TimeSeriesManagerType) :: this
     character(len=3), intent(in) :: auxOrBnd
+! ------------------------------------------------------------------------------
     !
     CountLinks = 0
     if (auxOrBnd == 'BND') then
@@ -352,15 +457,20 @@ contains
   end function CountLinks
 
   function get_time_series(this, name) result (res)
-    ! get_time_series
-    implicit none
+! ******************************************************************************
+! get_time_series -- 
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeSeriesManagerType)  :: this
     character(len=*), intent(in)  :: name
-    ! result
+    ! -- result
     type(TimeSeriesType), pointer :: res
     ! -- local
     integer(I4B) :: indx
+! ------------------------------------------------------------------------------
     !
     ! Get index from hash table, get time series from TsContainers,
     !     and assign result to time series contained in link.
@@ -373,12 +483,62 @@ contains
     return
   end function get_time_series
 
+  subroutine HashBndTimeSeries(this, ivecsize)
+! ******************************************************************************
+! HashBndTimeSeries -- 
+!   Store all boundary (stress) time series links in
+!   TsContainers and construct hash table BndTsHashTable.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class (TimeSeriesManagerType), intent(inout) :: this
+    integer(I4B), intent(in) :: ivecsize
+    ! -- local
+    integer(I4B) :: i, j, k, numtsfiles, numts
+    character(len=LENTIMESERIESNAME) :: name
+    type(TimeSeriesFileType), pointer :: tsfile => null()
+! ------------------------------------------------------------------------------
+    !
+    ! Initialize the hash table
+    call this%BndTsHashTable%InitHash(ivecsize)
+    !
+    ! Allocate the TsContainers array to accommodate all time-series links.
+    numts = this%tsfileList%CountTimeSeries()
+    allocate(this%TsContainers(numts))
+    !
+    ! Store a pointer to each time series in the TsContainers array
+    ! and put its key (time-series name) and index in the hash table.
+    numtsfiles = this%tsfileList%Counttsfiles()
+    k = 0
+    do i = 1, numtsfiles
+      tsfile => this%tsfileList%Gettsfile(i)
+      numts = tsfile%Count()
+      do j=1,numts
+        k = k + 1
+        this%TsContainers(k)%timeSeries => tsfile%GetTimeSeries(j)
+        if (associated(this%TsContainers(k)%timeSeries)) then
+          name = this%TsContainers(k)%timeSeries%Name
+          call this%BndTsHashTable%PutHash(name, k)
+        endif
+      enddo
+    enddo
+    !
+    return
+  end subroutine HashBndTimeSeries
+
   ! -- Non-type-bound procedures
 
   subroutine read_value_or_time_series(textInput, ii, jj, bndElem, &
                  pkgName, auxOrBnd, tsManager, iprpak, tsLink)
-    ! -- Call this subroutine if the time-series link is available or needed.
-    implicit none
+! ******************************************************************************
+! read_value_or_time_series -- 
+!   Call this subroutine if the time-series link is available or needed.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- dummy
     character(len=*),                  intent(in)    :: textInput
     integer(I4B),                      intent(in)    :: ii
@@ -397,6 +557,7 @@ contains
     character(len=LINELENGTH) :: ermsg
     character(len=LENTIMESERIESNAME) :: tsNameTemp
     logical :: found
+! ------------------------------------------------------------------------------
     !
     read (textInput,*,iostat=istat) r
     if (istat == 0) then
@@ -443,13 +604,18 @@ contains
     endif
   end subroutine read_value_or_time_series
 
-  subroutine read_single_value_or_time_series(textInput, bndElem, name, endtim,  &
+  subroutine read_single_value_or_time_series(textInput, bndElem, name, endtim,&
                                               pkgName, auxOrBnd, tsManager, &
                                               iprpak, ii, jj, linkText, &
                                               bndName, inunit)
-    ! -- Call this subroutine if the time-series link is NOT available or
-    !    needed and if you need to select the link by its Text member.
-    implicit none
+! ******************************************************************************
+! read_single_value_or_time_series -- 
+!    Call this subroutine if the time-series link is NOT available or
+!    needed and if you need to select the link by its Text member.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- dummy
     character(len=*),            intent(in)    :: textInput
     real(DP), pointer,           intent(inout) :: bndElem
@@ -474,6 +640,7 @@ contains
     type(TimeSeriesType),     pointer :: timeseries => null()
     type(TimeSeriesLinkType), pointer :: tslTemp => null()
     type(TimeSeriesLinkType), pointer :: tsLink => null()
+! ------------------------------------------------------------------------------
     !
     name = ''
     read (textInput, *, iostat=istat) v
@@ -567,46 +734,7 @@ contains
         call ustop()
       end if
     end if
-
-  end subroutine read_single_value_or_time_series
-
-  subroutine HashBndTimeSeries(this, ivecsize)
-    ! Store all boundary (stress) time series links in
-    ! TsContainers and construct hash table BndTsHashTable.
-    implicit none
-    ! -- dummy
-    class (TimeSeriesManagerType), intent(inout) :: this
-    integer(I4B), intent(in) :: ivecsize
-    ! -- local
-    integer(I4B) :: i, j, k, numgroups, numts
-    character(len=LENTIMESERIESNAME) :: name
-    type(TimeSeriesGroupType), pointer :: tsgroup => null()
-    !
-    ! Initialize the hash table
-    call this%BndTsHashTable%InitHash(ivecsize)
-    !
-    ! Allocate the TsContainers array to accommodate all time-series links.
-    numts = this%TsGroupList%CountTimeSeries()
-    allocate(this%TsContainers(numts))
-    !
-    ! Store a pointer each time series in the TsContainers array
-    ! and put its key (time-series name) and index in the hash table.
-    numgroups = this%TsGroupList%CountGroups()
-    k = 0
-    do i=1,numgroups
-      tsgroup => this%TsGroupList%GetGroup(i)
-      numts = tsgroup%Count()
-      do j=1,numts
-        k = k + 1
-        this%TsContainers(k)%timeSeries => tsgroup%GetTimeSeries(j)
-        if (associated(this%TsContainers(k)%timeSeries)) then
-          name = this%TsContainers(k)%timeSeries%Name
-          call this%BndTsHashTable%PutHash(name, k)
-        endif
-      enddo
-    enddo
-    !
     return
-  end subroutine HashBndTimeSeries
+  end subroutine read_single_value_or_time_series
 
 end module TimeSeriesManagerModule

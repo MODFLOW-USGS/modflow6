@@ -303,11 +303,11 @@ contains
     if(this%inmvr > 0) call this%mvr%mvr_ar()
     !
     ! -- Check to see if horizontal anisotropy is in either model1 or model2.
-    !    If so, then ANGLEX must be provided as an auxiliary variable for this
+    !    If so, then ANGLDEGX must be provided as an auxiliary variable for this
     !    GWF-GWF exchange (this%ianglex > 0).
     if(this%gwfmodel1%npf%ik22 /= 0 .or. this%gwfmodel2%npf%ik22 /= 0) then
       if(this%ianglex == 0) then
-        write(errmsg, '(a)') 'Error.  GWF-GWF requires that ANGLEX be ' //     &
+        write(errmsg, '(a)') 'Error.  GWF-GWF requires that ANGLDEGX be ' //   &
                              'specified as an auxiliary variable because ' //  &
                              'K22 was specified in one or both ' // &
                              'groundwater models.'
@@ -490,8 +490,8 @@ contains
     ! -- calculate the conductance for each exchange connection
     call this%condcalc()
     !
-    ! -- if gnc is active, then copy cond into gnc cond
-    ! -- todo: consider using a pointer here
+    ! -- if gnc is active, then copy cond into gnc cond (might consider a
+    !    pointer here in the future)
     if(this%ingnc > 0) then
       do iexg = 1, this%nexg
         this%gnc%cond(iexg) = this%cond(iexg)
@@ -974,7 +974,8 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- get options block
-    call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false.)
+    call this%parser%GetBlock('OPTIONS', isfound, ierr,                        &
+      supportOpenClose=.true., blockRequired=.false.)
     !
     ! -- parse options block if detected
     if (isfound) then
@@ -991,7 +992,7 @@ contains
                         istop, this%auxname, line, 'GWF_GWF_Exchange')
             !
             ! -- If ANGLDEGX is an auxiliary variable, then anisotropy can be
-            !    used in either model.  Store ANGLEX position in this%ianglex
+            !    used in either model.  Store ANGLDEGX position in this%ianglex
             ival = ifind(this%auxname, 'ANGLDEGX')
             if(ival > 0) this%ianglex = ival
           case ('PRINT_INPUT')

@@ -574,14 +574,7 @@
         end if
         totalsimtime = totalsimtime + perlen(n)
       enddo
-      call parser%GetNextLine(endOfBlock)
-      if (.not. endOfBlock) then
-        write(errmsg, '(a)') 'END PERIODDATA not detected. Instead found:'
-        call store_error(errmsg)
-        call parser%GetCurrentLine(line)
-        write(errmsg, '(a)') trim(line)
-        call store_error(errmsg)
-      endif
+      call parser%terminateblock()
       !
       ! -- Check for errors
       if(count_errors() > 0) then

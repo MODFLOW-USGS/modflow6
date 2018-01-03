@@ -2,7 +2,7 @@
 BEGIN OPTIONS
   AUXNAMES Mult
   BOUNDNAMES
-  TS8 FILEIN  EtRate.ts
+  TS6 FILEIN  EtRate.ts
   # Note: Time-series file EtRate.ts defines time series et_rate
   AUXMULTNAME  Mult
 PRINT_INPUT

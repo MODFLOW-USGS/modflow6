@@ -508,7 +508,14 @@ if __name__ == '__main__':
         desc = '% DO NOT MODIFY THIS FILE DIRECTLY.  IT IS CREATED BY mf6ivar.py \n\n'
         for b in blocks:
             blk_var_list = []
+
+            # Write the name of the block to the latex file
+            desc += '\item \\textbf{}\n\n'.format('{Block: ' + b.upper() + '}' )
+
+            desc += '\\begin{description}\n'
             desc += write_desc(vardict, b, blk_var_list)
+            desc += '\\end{description}\n'
+
             fname = os.path.join(texdir, os.path.splitext(txtname)[0] + '-' + b + '.dat')
             f = open(fname, 'w')
             s = write_block(vardict, b, blk_var_list) + '\n'

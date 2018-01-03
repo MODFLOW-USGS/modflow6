@@ -53,7 +53,6 @@ module LakModule
     integer(I4B), pointer :: istageout => null()
     integer(I4B), pointer :: ibudgetout => null()
     integer(I4B), pointer :: cbcauxitems => NULL()
-    integer(I4B), pointer :: isteady => NULL()
     integer(I4B), pointer :: nlakes => NULL()
     integer(I4B), pointer :: noutlets => NULL()
     integer(I4B), pointer :: ntables => NULL()
@@ -303,7 +302,6 @@ contains
     call mem_allocate(this%iprhed, 'IPRHED', this%origin)
     call mem_allocate(this%istageout, 'ISTAGEOUT', this%origin)
     call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%origin)
-    call mem_allocate(this%isteady, 'ISTEADY', this%origin)
     call mem_allocate(this%nlakes, 'NLAKES', this%origin)
     call mem_allocate(this%noutlets, 'NOUTLETS', this%origin)
     call mem_allocate(this%ntables, 'NTABLES', this%origin)
@@ -336,10 +334,8 @@ contains
     this%surfdep = DZERO
     this%delh = DEM5
     this%pdmax = DEM1
-    this%isteady = 0
     this%bditems = 11
     this%cbcauxitems = 1
-    !this%imover = 0
     !
     ! -- return
     return
@@ -780,9 +776,16 @@ contains
         end select
 
         ! -- bed leakance
-        this%bedleak(ipos) = this%parser%GetDouble()
+        !this%bedleak(ipos) = this%parser%GetDouble()
+        call this%parser%GetStringCaps(keyword)
+        select case(keyword)
+          case ('NONE')
+            this%bedleak(ipos) = -DONE
+          case default
+            read(keyword, *) this%bedleak(ipos)
+        end select
 
-        if (this%bedleak(ipos) < dzero) then
+        if (keyword /= 'NONE' .and. this%bedleak(ipos) < dzero) then
           write(errmsg,'(4x,a,1x,i4,1x,a)') &
             '****ERROR. bedleak FOR LAKE ', n, 'MUST BE >= 0'
           call store_error(errmsg)
@@ -1630,6 +1633,8 @@ contains
     real(DP) :: c1
     real(DP) :: c2
     real(DP), allocatable, dimension(:) :: clb, caq
+    character (len=14) :: cbedleak
+    character (len=14) :: cbedcond
     character (len=10), dimension(0:3) :: ctype
     character (len=15) :: nodestr
     !data
@@ -1746,7 +1751,9 @@ contains
           endif
           length = this%connlength(j)
         end if
-        if (this%bedleak(j) > DZERO) then
+        if (this%bedleak(j) < DZERO) then
+          clb(j) = -DONE
+        else if (this%bedleak(j) > DZERO) then
           clb(j) = done / this%bedleak(j)
         else
           clb(j) = DZERO
@@ -1756,7 +1763,9 @@ contains
         else
           caq(j) = DZERO
         end if
-        if (clb(j)*caq(j) > DZERO) then
+        if (this%bedleak(j) < DZERO) then
+          this%satcond(j) = area / caq(j)
+        else if (clb(j)*caq(j) > DZERO) then
           this%satcond(j) = area / (clb(j) + caq(j))
         else
           this%satcond(j) = DZERO
@@ -1773,7 +1782,7 @@ contains
       write(this%iout,'(1x,a)') &
      &  '    NUMBER     NUMBER CELLID          DIRECTION    LEAKANCE' // &
      &  '        LAKEBED        AQUIFER       COMBINED'
-      write(this%iout,"(1x,104('-'))")
+      write(this%iout,"(1x,108('-'))")
       do n = 1, this%nlakes
         idx = 0
         do j = this%idxlakeconn(n), this%idxlakeconn(n+1)-1
@@ -1788,20 +1797,28 @@ contains
           nn = this%cellid(j)
           area = this%warea(j)
           c1 = DZERO
-          if (clb(j) > DZERO) then
+          if (clb(j) < DZERO) then
+            cbedleak = '     NONE     '
+            cbedcond = '     NONE     '
+          else if (clb(j) > DZERO) then
             c1 = area * fact / clb(j)
+            write(cbedleak,'(g14.5)') this%bedleak(j)
+            write(cbedcond,'(g14.5)') c1
+          else
+            write(cbedleak,'(g14.5)') c1            
+            write(cbedcond,'(g14.5)') c1            
           end if
           c2 = DZERO
           if (caq(j) > DZERO) then
             c2 = area * fact / caq(j)
           end if
           call this%dis%noder_to_string(nn, nodestr)
-          write(this%iout,'(1x,i10,1x,i10,1x,a15,1x,a10,4(1x,g14.5))') &
-    &        n, idx, nodestr, ctype(this%ictype(j)), this%bedleak(j), &
-    &        c1, c2, this%satcond(j) * fact
+          write(this%iout,'(1x,i10,1x,i10,1x,a15,1x,a10,2(1x,a14),2(1x,g14.5))') &
+    &        n, idx, nodestr, ctype(this%ictype(j)), cbedleak,                &
+    &        cbedcond, c2, this%satcond(j) * fact
         end do
       end do
-      write(this%iout,"(1x,104('-'))")
+      write(this%iout,"(1x,108('-'))")
       write(this%iout,'(1x,a)') 'IF VERTICAL CONNECTION, CONDUCTANCE (L^2/T) IS BETWEEN AQUIFER CELL AND OVERLYING LAKE CELL.'
       write(this%iout,'(1x,a)')   'IF HORIZONTAL CONNECTION, CONDUCTANCES ARE PER UNIT SATURATED THICKNESS (L/T).'
       write(this%iout,'(1x,a)')   'IF EMBEDDED CONNECTION, CONDUCTANCES ARE PER UNIT EXCHANGE AREA (1/T).'
@@ -2334,7 +2351,7 @@ contains
     ! -- formats
 ! ------------------------------------------------------------------------------
     dvr = DZERO
-    if (this%isteady /= 1) then
+    if (this%gwfiss /= 1) then
       call this%lak_calculate_vol(ilak, stage, v)
       call this%lak_calculate_vol(ilak, stage0, v0)
       dvr = (v0 - v) / delt
@@ -3294,33 +3311,33 @@ contains
       !    development version and are not included in the documentation.
       !    These options are only available when IDEVELOPMODE in
       !    constants module is set to 1
-      case('GROUNDWATER_HEAD_CONDUCTANCE')
+      case('DEV_GROUNDWATER_HEAD_CONDUCTANCE')
         call this%parser%DevOpt()
         this%igwhcopt = 1
         write(this%iout, '(4x,a)')                                             &
      &    'CONDUCTANCE FOR HORIZONTAL CONNECTIONS WILL BE CALCULATED ' //      &
      &    'USING THE GROUNDWATER HEAD'
         found = .true.
-      case('MAXIMUM_OUTLET_DEPTH')
+      case('DEV_MAXIMUM_OUTLET_DEPTH')
         call this%parser%DevOpt()
         this%outdmax = this%parser%GetDouble()
         write(this%iout, fmtoutdmax) this%outdmax
         found = .true.
-      case('NO_FINAL_CHECK')
+      case('DEV_NO_FINAL_CHECK')
         call this%parser%DevOpt()
         this%iconvchk = 0
         write(this%iout, '(4x,a)')                                             &
      &    'A FINAL CONVERGENCE CHECK OF THE CHANGE IN LAKE STAGES ' //         &
      &    'WILL NOT BE MADE'
         found = .true.
-      case('NO_FINAL_RESIDUAL_CHECK')
+      case('DEV_NO_FINAL_RESIDUAL_CHECK')
         call this%parser%DevOpt()
         this%iconvresidchk = 0
         write(this%iout, '(4x,a)')                                             &
      &    'A FINAL CONVERGENCE CHECK OF THE CHANGE IN LAKE RESIDUALS ' //      &
      &    'WILL NOT BE MADE'
         found = .true.
-      case('MAXIMUM_PERCENT_DIFFERENCE')
+      case('DEV_MAXIMUM_PERCENT_DIFFERENCE')
         call this%parser%DevOpt()
         r = this%parser%GetDouble()
         if (r < DZERO) then
@@ -3446,24 +3463,8 @@ contains
                                 supportOpenClose=.true.)
       if(isfound) then
         !
-        ! -- save last value and read period number
-        this%lastonper = this%ionper
-        this%ionper = this%parser%GetInteger()
-        !
-        ! -- check to make sure period blocks are increasing
-        if (this%ionper < this%lastonper) then
-          write(errmsg, '(a, i0)') &
-            'ERROR IN STRESS PERIOD ', kper
-          call store_error(errmsg)
-          write(errmsg, '(a, i0)') &
-            'PERIOD NUMBERS NOT INCREASING.  FOUND ', this%ionper
-          call store_error(errmsg)
-          write(errmsg, '(a, i0)') &
-            'BUT LAST PERIOD BLOCK WAS ASSIGNED ', this%lastonper
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-          call ustop()
-        endif
+        ! -- read ionper and check for increasing period numbers
+        call this%read_check_ionper()
       else
         !
         ! -- PERIOD block not found
@@ -3482,12 +3483,6 @@ contains
     !
     ! -- Read data if ionper == kper
     if(this%ionper == kper) then
-      !
-      ! -- Remove all time-series links associated with this package
-      !call this%TsManager%Reset(this%name)
-      !
-      ! -- set steady-state flag based on gwfiss
-      this%isteady = this%gwfiss
 
       this%check_attr = 1
       stressperiod: do
@@ -3596,6 +3591,10 @@ contains
     integer(I4B) :: j, n
     integer(I4B) :: igwfnode
     real(DP) ::  hlak, blak
+    real(DP) :: dh
+    real(DP) :: dhdr
+    real(DP) :: r0
+    real(DP) :: r
   ! ------------------------------------------------------------------------------
     !!
     !! -- Calculate lak conductance and update package RHS and HCOF
@@ -3634,27 +3633,36 @@ contains
     end do
     !
     ! -- reset ibound for cells where lake stage is above the bottom
-    !    of the lake in the cell - only applied to vertical connections
+    !    of the lake in the cell or the lake is inactive - only applied to 
+    !    vertical connections
     do n = 1, this%nlakes
+      !
       hlak = this%xnewpak(n)
-      ! -- skip inactive lakes
-      if (this%iboundpak(n) == 0) cycle
+      !
+      ! -- Go through lake connections
       do j = this%idxlakeconn(n), this%idxlakeconn(n+1)-1
+        !
+        ! -- assign gwf node number
         igwfnode = this%cellid(j)
-        ! -- skip inactive or constant head cells
+        !
+        ! -- skip inactive or constant head GWF cells
         if (this%ibound(igwfnode) < 1) then
           cycle
         end if
+        !
         ! -- skip horizontal connections
         if (this%ictype(j) /= 0) then
           cycle
         end if
+        !
         ! -- skip embedded lakes
         if (this%ictype(j) == 2 .or. this%ictype(j) == 3) then
           cycle
         end if
+        !
+        ! -- Mark ibound for dry lakes; reset to 1 otherwise
         blak = this%belev(j)
-        if (hlak > blak) then
+        if (hlak > blak .or. this%iboundpak(n) == 0) then
           this%ibound(igwfnode) = 10000
         else
           this%ibound(igwfnode) = 1
@@ -3818,7 +3826,7 @@ contains
              4x,a10,4(1x,a15),/,4x,74('-'))
 02010 format(4x,i10,4(1x,G15.7))
 02020 format(4x,74('-'))
-
+02030 format('CONVERGENCE FAILED AS A RESULT OF LAKE PACKAGE',1x,a)
 ! --------------------------------------------------------------------------
     ifirst = 1
     if (this%iconvchk /= 0) then
@@ -3843,6 +3851,7 @@ contains
           if (iend == 1) then
             if (ifirst == 1) then
               ifirst = 0
+              write(*,2030) this%name
               write(this%iout, 2000) '      LAKE',                                 &
                 '        MAX. DH', '    DH CRITERIA',                              &
                 '      PCT DIFF.', 'PCT DIFF. CRIT.'
@@ -3923,8 +3932,6 @@ contains
     ! -- for observations
     integer(I4B) :: iprobslocal
     ! -- formats
-    character(len=*), parameter :: fmttkk = &
-      "(1X,/1X,A,'   PERIOD ',I0,'   STEP ',I0)"
 ! ------------------------------------------------------------------------------
     !
     ! -- recalculate package HCOF and RHS terms with latest groundwater and
@@ -4050,7 +4057,7 @@ contains
         ! -- add lake storage changes
         rrate = DZERO
         if (this%iboundpak(n) > 0) then
-          if (this%isteady /= 1) then
+          if (this%gwfiss /= 1) then
             call this%lak_calculate_vol(n, this%xoldpak(n), v0)
             rrate = -(v1 - v0) / delt
             call this%lak_accumulate_chterm(n, rrate, chratin, chratout)
@@ -4768,7 +4775,6 @@ contains
     call mem_deallocate(this%iprhed)
     call mem_deallocate(this%istageout)
     call mem_deallocate(this%ibudgetout)
-    call mem_deallocate(this%isteady)
     call mem_deallocate(this%nlakes)
     call mem_deallocate(this%noutlets)
     call mem_deallocate(this%ntables)
@@ -4851,6 +4857,9 @@ contains
     call mem_deallocate(this%satcond)
     call mem_deallocate(this%simcond)
     call mem_deallocate(this%simlakgw)
+    !
+    ! -- pointers to gwf variables
+    nullify(this%gwfiss)
     !
     ! -- Parent object
     call this%BndType%bnd_da()
@@ -5583,7 +5592,7 @@ contains
       if (this%xnewpak(n) < this%lakebot(n)) then
         this%xnewpak(n) = this%lakebot(n)
       end if
-      if (this%isteady /= 0) then
+      if (this%gwfiss /= 0) then
         this%xoldpak(n) = this%xnewpak(n)
       end if
       ! -- lake iteration items
@@ -5647,7 +5656,7 @@ contains
         this%withr1(n) = DZERO
         this%flwiter(n) = this%flwin(n)
         this%flwiter1(n) = this%flwin(n)
-        if (this%isteady /= 0) then
+        if (this%gwfiss /= 0) then
           this%flwiter(n) = DEP20 !1.D+10
           this%flwiter1(n) = DEP20 !1.D+10
         end if
@@ -5660,7 +5669,7 @@ contains
             cycle lakseep
           end if
           ! - set xoldpak to xnewpak if steady-state
-          if (this%isteady /= 0) then
+          if (this%gwfiss /= 0) then
             this%xoldpak(n) = this%xnewpak(n)
           end if
           hlak = this%xnewpak(n)
@@ -5762,7 +5771,7 @@ contains
             !
             ! -- add storage changes for transient stress periods
             hlak = this%xnewpak(n)
-            if (this%isteady /= 1) then
+            if (this%gwfiss /= 1) then
               call this%lak_calculate_vol(n, hlak, v1)
               resid = resid + (v0 - v1) / delt
               call this%lak_calculate_vol(n, hlak+delh, v1)
@@ -6071,7 +6080,7 @@ contains
     resid = ra + ev + wr + ro + qinf + ex + sin + sout + seep
     !
     ! -- include storage
-    if (this%isteady /= 1) then
+    if (this%gwfiss /= 1) then
       hlak0 = this%xoldpak(n)
       call this%lak_calculate_vol(n, hlak0, v0)
       call this%lak_calculate_vol(n, hlak, v1)

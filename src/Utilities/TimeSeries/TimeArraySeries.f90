@@ -3,10 +3,8 @@ module TimeArraySeriesModule
   use ArrayReadersModule, only: ReadArray
   use BlockParserModule,  only: BlockParserType
   use ConstantsModule,    only: LINELENGTH, UNDEFINED, STEPWISE, LINEAR, &
-                                LENTIMESERIESNAME, LENBIGLINE, LENHUGELINE
-  use InputOutputModule,  only: dclosetest, GetUnit, openfile, upcase, &
-                                urword, &
-                                read_data_line, GetLine
+                                LENTIMESERIESNAME, LENBIGLINE
+  use InputOutputModule,  only: dclosetest, GetUnit, openfile
   use KindModule,         only: DP, I4B
   use ListModule,         only: ListType, ListNodeType
   use SimModule,          only: count_errors, store_error, store_error_unit, &
@@ -17,6 +15,7 @@ module TimeArraySeriesModule
   use BaseDisModule,      only: DisBaseType
   use, intrinsic :: iso_fortran_env, only: IOSTAT_END
 
+  implicit none
   private
   public  :: TimeArraySeriesType, ConstructTimeArraySeries, &
              CastAsTimeArraySeriesType, GetTimeArraySeriesFromList
@@ -39,7 +38,7 @@ module TimeArraySeriesModule
     type(BlockParserType),      private :: parser
   contains
     ! -- Public procedures
-    procedure, public :: InitializeTas
+    procedure, public :: tas_init
     procedure, public :: GetAverageValues
     procedure, public :: GetInunit
     procedure, public :: da => tas_da
@@ -57,20 +56,19 @@ contains
   ! -- Constructor for TimeArraySeriesType
 
   subroutine ConstructTimeArraySeries(newTas, filename)
-    ! **************************************************************************
-    ! Allocate a new TimeArraySeriesType object.
-    ! **************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! --------------------------------------------------------------------------
-    implicit none
+! ******************************************************************************
+! ConstructTimeArraySeries -- Allocate a new TimeArraySeriesType object.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- dummy
     type(TimeArraySeriesType), pointer, intent(out) :: newTas
     character(len=*), intent(in) :: filename
     ! -- local
     character(len=LINELENGTH) :: ermsg
     logical :: lex
-    ! --------------------------------------------------------------------------
+! ------------------------------------------------------------------------------
     ! formats
     10 format('Error: Time-array-series file "',a,'" does not exist.')
     !
@@ -92,19 +90,19 @@ contains
 
   ! -- Public procedures
 
-  subroutine InitializeTas(this, dis, iout, autoDeallocate)
-    ! **************************************************************************
-    ! Initialize
-    ! -- Open time-array-series file and read options and first time array.
-    ! **************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! --------------------------------------------------------------------------
-    implicit none
+  subroutine tas_init(this, fname, dis, iout, tasname, autoDeallocate)
+! ******************************************************************************
+! tas_init -- initialize the time array series
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeArraySeriesType), intent(inout) :: this
+    character(len=*), intent(in) :: fname
     class(DisBaseType), pointer, intent(inout) :: dis
-    integer(I4B),                    intent(in)    :: iout
+    integer(I4B), intent(in) :: iout
+    character(len=*), intent(inout) :: tasname
     logical, optional,          intent(in)    :: autoDeallocate
     ! -- local
     integer(I4B) :: istatus
@@ -112,13 +110,13 @@ contains
     integer(I4B) :: inunit
     character(len=40) :: keyword, keyvalue
     character(len=LINELENGTH) :: ermsg
-    character(len=LENBIGLINE) :: fname
     logical :: found, continueread, endOfBlock
-    !---------------------------------------------------------------------------
+! ------------------------------------------------------------------------------
     !
     ! -- initialize some variables
     if (present(autoDeallocate)) this%autoDeallocate = autoDeallocate
-    fname = this%dataFile
+    this%dataFile = fname
+    allocate(this%list)
     !
     ! -- assign members
     this%dis => dis
@@ -160,6 +158,7 @@ contains
       select case (keyword)
       case ('NAME')
         this%Name = keyvalue
+        tasname = keyvalue
       case ('METHOD')
         select case (keyvalue)
         case ('STEPWISE')
@@ -227,18 +226,16 @@ contains
     endif
     !
     return
-  end subroutine InitializeTas
+  end subroutine tas_init
 
   subroutine GetAverageValues(this, nvals, values, time0, time1)
-    ! **************************************************************************
-    ! GetAverageValues
-    ! -- populate an array time-weighted average value for a specified time span.
-    !    Units: (ts-value-unit)
-    ! **************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! --------------------------------------------------------------------------
-    implicit none
+! ******************************************************************************
+! GetAverageValues -- populate an array time-weighted average value for a 
+!   specified time span.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeArraySeriesType), intent(inout) :: this
     integer(I4B),                    intent(in)    :: nvals
@@ -248,6 +245,7 @@ contains
     ! -- local
     integer(I4B) :: i
     real(DP) :: timediff
+! ------------------------------------------------------------------------------
     !
     timediff = time1 - time0
     if (timediff > 0) then
@@ -264,11 +262,17 @@ contains
   end subroutine GetAverageValues
 
   function GetInunit(this)
-    implicit none
+! ******************************************************************************
+! GetInunit -- return unit number
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- return
     integer(I4B) :: GetInunit
     ! -- dummy
     class(TimeArraySeriesType) :: this
+! ------------------------------------------------------------------------------
     !
     GetInunit = this%inunit
     !
@@ -278,8 +282,12 @@ contains
   ! -- Private procedures
 
   subroutine get_surrounding_records(this, time, taEarlier, taLater)
-    ! get_surrounding_records
-    implicit none
+! ******************************************************************************
+! get_surrounding_records -- get_surrounding_records
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeArraySeriesType), intent(inout) :: this
     real(DP),      intent(in)    :: time
@@ -292,7 +300,7 @@ contains
     type(ListNodeType), pointer :: node1 => null()
     type(TimeArrayType), pointer :: ta => null(), ta0 => null(), ta1 => null()
     class(*), pointer :: obj
-    !---------------------------------------------------------------------------
+! ------------------------------------------------------------------------------
     !
     taEarlier => null()
     taLater => null()
@@ -369,14 +377,12 @@ contains
   end subroutine get_surrounding_records
 
   logical function read_next_array(this)
-    ! **************************************************************************
-    ! read_next_array
-    ! -- Read next time array from input file and append to list.
-    ! **************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! --------------------------------------------------------------------------
-    implicit none
+! ******************************************************************************
+! read_next_array -- Read next time array from input file and append to list.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeArraySeriesType), intent(inout) :: this
     ! -- local
@@ -384,6 +390,9 @@ contains
     logical :: lopen, isFound
     character(len=LINELENGTH)     :: ermsg
     type(TimeArrayType), pointer  :: ta => null()
+    logical :: endofblock
+    character(len=LINELENGTH) :: line
+! ------------------------------------------------------------------------------
     !
     istart = 1
     istat = 0
@@ -419,13 +428,18 @@ contains
         call ReadArray(this%parser%iuactive, ta%taArray, this%Name, &
                         this%dis%ndim, ncol, nrow, 1, nodesperlayer, &
                         this%iout, 0, 0)
+        !
         ! -- multiply values by sfac
-        do i=1,nodesperlayer
+        do i = 1, nodesperlayer
           ta%taArray(i) = ta%taArray(i) * this%sfac
         enddo
+        !
         ! -- append the new time array to the list
         call AddTimeArrayToList(this%list, ta)
         read_next_array = .true.
+        !
+        ! -- make sure block is closed
+        call this%parser%terminateblock()
       endif
     endif
     return ! Normal return
@@ -434,15 +448,13 @@ contains
   end function read_next_array
 
   subroutine get_values_at_time(this, nvals, values, time)
-    ! **************************************************************************
-    ! get_values_at_time
-    ! -- Return an array of values for a specified time, same units as
-    !  time-series values.
-    ! **************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! --------------------------------------------------------------------------
-    implicit none
+! ******************************************************************************
+! get_values_at_time -- Return an array of values for a specified time, same 
+!   units as time-series values.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeArraySeriesType), intent(inout) :: this
     integer(I4B), intent(in) :: nvals
@@ -458,6 +470,7 @@ contains
     ! formats
     10 format('Error getting array at time ',g10.3, &
               ' for time-array series "',a,'"')
+! ------------------------------------------------------------------------------
     !
     ierr = 0
     call this%get_surrounding_records(time,taEarlier,taLater)
@@ -524,21 +537,17 @@ contains
       call ustop()
     endif
     !
-    ! -- Ned todo: Multiply each value by SFAC
-    !
     return
   end subroutine get_values_at_time
 
   subroutine get_integrated_values(this, nvals, values, time0, time1)
-    ! **************************************************************************
-    ! get_integrated_values
-    ! -- Populates an array with integrated values for a specified time span.
-    !    Units: (ts-value-unit)*time
-    ! **************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! --------------------------------------------------------------------------
-    implicit none
+! ******************************************************************************
+! get_integrated_values -- Populates an array with integrated values for a 
+!    specified time span.  Units: (ts-value-unit)*time
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeArraySeriesType), intent(inout) :: this
     integer(I4B),                    intent(in)    :: nvals
@@ -555,10 +564,11 @@ contains
     type(ListNodeType), pointer :: currNode => null(), nextNode => null()
     type(TimeArrayType), pointer :: currRecord => null(), nextRecord => null()
     class(*), pointer :: currObj => null(), nextObj => null()
-    ! formats
+    ! -- formats
 10  format('Error encountered while performing integration', &
         ' for time-array series "',a,'" for time interval: ', &
         g12.5,' to ',g12.5)
+! ------------------------------------------------------------------------------
     !
     values = 0.0d0
     value = 0.0d0
@@ -668,20 +678,17 @@ contains
       endif
     endif
     !
-    ! -- Ned todo: Multiply each value by SFAC
-    !
     return
   end subroutine get_integrated_values
 
   subroutine DeallocateBackward(this, fromNode)
-    ! **************************************************************************
-    ! DeallocateBackward
-    ! Deallocate fromNode and all previous nodes in list; reassign firstNode.
-    ! **************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! --------------------------------------------------------------------------
-    implicit none
+! ******************************************************************************
+! DeallocateBackward -- Deallocate fromNode and all previous nodes in list; 
+!   reassign firstNode.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeArraySeriesType),  intent(inout) :: this
     type(ListNodeType), pointer, intent(inout) :: fromNode
@@ -691,6 +698,7 @@ contains
     type(ListNodeType),  pointer :: prev => null()
     type(TimeArrayType), pointer :: ta => null()
     class(*),            pointer :: obj => null()
+! ------------------------------------------------------------------------------
     !
     if (associated(fromNode)) then
       ! -- reassign firstNode
@@ -718,15 +726,13 @@ contains
   end subroutine DeallocateBackward
 
   subroutine get_latest_preceding_node(this, time, tslNode)
-    ! **************************************************************************
-    ! get_latest_preceding_node
-    ! -- Return pointer to ListNodeType object for the node
-    !    representing the latest preceding time in the time series
-    ! **************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! --------------------------------------------------------------------------
-    implicit none
+! ******************************************************************************
+! get_latest_preceding_node -- Return pointer to ListNodeType object for the 
+!    node representing the latest preceding time in the time series
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeArraySeriesType),  intent(inout) :: this
     real(DP),            intent(in)    :: time
@@ -738,6 +744,7 @@ contains
     type(TimeArrayType), pointer :: ta => null()
     type(TimeArrayType), pointer :: ta0 => null()
     class(*),            pointer :: obj => null()
+! ------------------------------------------------------------------------------
     !
     tslNode => null()
     if (associated(this%list%firstNode)) then
@@ -794,11 +801,18 @@ contains
   end subroutine get_latest_preceding_node
 
   subroutine tas_da(this)
+! ******************************************************************************
+! tas_da -- deallocate
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeArraySeriesType), intent(inout) :: this
     ! -- local
     integer :: i, n
     type(TimeArrayType), pointer :: ta => null()
+! ------------------------------------------------------------------------------
     !
     ! -- Deallocate contents of each time array in list
     n = this%list%Count()
@@ -817,11 +831,17 @@ contains
   ! -- Procedures not type-bound
 
   function CastAsTimeArraySeriesType(obj) result (res)
-    ! Cast an unlimited polymorphic object as class(TimeArraySeriesType)
-    implicit none
+! ******************************************************************************
+! CastAsTimeArraySeriesType -- Cast an unlimited polymorphic object as 
+!   class(TimeArraySeriesType)
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- dummy
     class(*),   pointer, intent(inout) :: obj
     type(TimeArraySeriesType), pointer :: res
+! ------------------------------------------------------------------------------
     !
     res => null()
     if (.not. associated(obj)) return
@@ -835,13 +855,19 @@ contains
   end function CastAsTimeArraySeriesType
 
   function GetTimeArraySeriesFromList(list, indx) result (res)
-    implicit none
+! ******************************************************************************
+! GetTimeArraySeriesFromList -- get time array from list
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- dummy
     type(ListType),          intent(inout) :: list
     integer,                 intent(in)    :: indx
     type(TimeArraySeriesType), pointer :: res
     ! -- local
     class(*), pointer :: obj
+! ------------------------------------------------------------------------------
     !
     obj => list%GetItem(indx)
     res => CastAsTimeArraySeriesType(obj)

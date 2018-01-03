@@ -4,7 +4,6 @@ begin options
   print_flows
   boundnames
   flowing_wells
-  newton
 end options
 
 begin dimensions

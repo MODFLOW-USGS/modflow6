@@ -1,5 +1,5 @@
 MODULE GLOBAL
-  use ConstantsModule, only: MAXCHARLEN
+  use ConstantsModule, only: MAXCHARLEN, ISTDOUT
   ! scalars
   INTEGER,                   SAVE, POINTER :: NCOL, NROW, NLAY, NPER, NBOTM, NCNFBD
   INTEGER,                   SAVE, POINTER :: ITMUNI, LENUNI, IXSEC, ITRSS, INBAS
@@ -78,6 +78,8 @@ contains
     allocate(IFREFM, NODES, IOUT, MXITER)
     allocate(constantdelc, constantdelr, cbcfilename)
     !
+    ! -- initialize IOUT
+    iout = 0
     return
   end subroutine AllocateGlobalScalars
 

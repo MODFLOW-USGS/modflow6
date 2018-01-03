@@ -488,7 +488,7 @@ contains
       !    development version and are not included in the documentation.
       !    These options are only available when IDEVELOPMODE in
       !    constants module is set to 1
-      case('NO_CHECK')
+      case('DEV_NO_CHECK')
         call this%parser%DevOpt()
         this%icheck = 0
         write(this%iout, '(4x,A)') 'SFR CHECKS OF REACH GEOMETRY ' //         &
@@ -1093,24 +1093,8 @@ contains
                                 supportOpenClose=.true.)
       if(isfound) then
         !
-        ! -- save last value and read period number
-        this%lastonper = this%ionper
-        this%ionper = this%parser%GetInteger()
-        !
-        ! -- check to make sure period blocks are increasing
-        if (this%ionper < this%lastonper) then
-          write(errmsg, '(a, i0)') &
-            'ERROR IN STRESS PERIOD ', kper
-          call store_error(errmsg)
-          write(errmsg, '(a, i0)') &
-            'PERIOD NUMBERS NOT INCREASING.  FOUND ', this%ionper
-          call store_error(errmsg)
-          write(errmsg, '(a, i0)') &
-            'BUT LAST PERIOD BLOCK WAS ASSIGNED ', this%lastonper
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-          call ustop()
-        endif
+        ! -- read ionper and check for increasing period numbers
+        call this%read_check_ionper()
       else
         !
         ! -- PERIOD block not found
@@ -1433,8 +1417,6 @@ contains
     ! -- for observations
     integer(I4B) :: iprobslocal
     ! -- formats
-    character(len=*), parameter :: fmttkk = &
-      "(1X,/1X,A,'   PERIOD ',I0,'   STEP ',I0)"
 ! --------------------------------------------------------------------------
     !
     ! -- Suppress saving of simulated values; they
@@ -2418,7 +2400,7 @@ contains
             case ('EVAPORATION')
               v = this%reaches(n)%evap%value
             case ('SFR')
-              v = -this%reaches(n)%gwflow
+              v = this%reaches(n)%gwflow
             case ('UPSTREAM-FLOW')
               v = this%reaches(n)%usflow
               if (this%imover == 1) then

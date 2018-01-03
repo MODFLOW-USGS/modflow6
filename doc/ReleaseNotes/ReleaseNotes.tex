@@ -121,6 +121,45 @@ This section describes changes introduced into MODFLOW 6 with each release.  The
 
 \underline{BASIC FUNCTIONALITY}
 \begin{itemize}
+\item There is no requirement that FTYPE entries in the GWF name file should be upper case; however, an upper case convention was being enforced.  FTYPE entries can now be specified using any case.
+\item Tab characters within model input files were not being skipped correctly.  This has been fixed.
+\item The program was updated to use the ``approved for release'' disclaimer.  The previous version was still using a ``preliminary software'' disclaimer.
+\item The source code for time series and time array series was refactored.  Included in the refactoring was a correction to time array series to allow the time array to change from one stress period to the next.  The source file TimeSeriesGroupList.f90 was renamed to TimeSeriesFileList.f90.
+\end{itemize}
+
+\underline{STRESS PACKAGES}
+\begin{itemize}
+\item Fixed inconsistency with CHD package observation name in code (\texttt{chd-flow}) and name in the input-output document (\texttt{chd}). Using name defined in input-output document (\texttt{chd}).
+\item The cell area was not being used in the calculation of recharge and evapotranspiration when list input was used with time series.
+\item The AUXMULTNAME option was not being applied for recharge and evapotranspiration when the READASARRAYS option was used.
+\item The program was not terminating with an error if a PERIOD block was encountered with an iper value equal to the previous iper value.  Program now terminates with an error.
+\end{itemize}
+
+\underline{ADVANCED STRESS PACKAGES}
+\begin{itemize}
+\item Fixed incorrect sign for SFR package exchange with GWF model (\texttt{sfr}).
+\item Added option to specify \texttt{none} as the \texttt{bedleak} for a lake-\texttt{GWF} connection in lake (LAK) package. This option makes the lake-\texttt{GWF} connection conductance solely a function of aquifer properties in the connected \texttt{GWF} cell and lakebed sediments are assumed to be absent for this connection.
+\item Fixed bug in lake (LAK) and multi-aquifer well (MAW) packages that only reset steady-state flag if lake and/or multi-aquifer data are read for a stress period (in the pak\_rp() routines). Using pointer to GWF iss variable in the LAK package and resetting the MAW steady state flag in maw\_rp() routine every stress period, regardless of whether MAW data are specified for a stress period.
+\item Added a convergence check routine to the GWF Mover Package that requires at least two outer iterations if there are any active movers.  Because mover rates are lagged by one outer iteration, at least two outer iterations are required for some problems.
+\item Changed the behavior of the LAK Package so that recharge and evapotranspiration are applied to a vertically connected GWF model cell if the lake status is INACTIVE.  Prior to this change, recharge and evapotranspiration were only applied to an underlying GWF model cell if the lake was dry.
+\end{itemize}
+
+\underline{SOLUTION}
+\begin{itemize}
+\item Fixed bug in IMS that allowed convergence when outer iteration HCLOSE value was satisfied but the model did not converge during the inner iterations.
+\item Added STRICT rclose\_option that uses a infinity-Norm RCLOSE criteria but requires HCLOSE and RCLOSE be satisfied on the first inner iteration of an outer iteration. The STRICT option is identical to the closure criteria approach use in the PCG Package in MODFLOW-2005.
+\end{itemize}
+
+\underline{EXCHANGES}
+\begin{itemize}
+\item Use of an OPEN/CLOSE file was not being allowed for the OPTIONS and DIMENSIONS blocks of the GWF6-GWF6 exchange input file.  OPEN/CLOSE input is now allowed for both of these blocks.
+\end{itemize}
+
+\item
+Version mf6.0.0---August 10, 2017
+
+\underline{BASIC FUNCTIONALITY}
+\begin{itemize}
 \item Removed support for the SINGLE observation type.  All observations must be CONTINUOUS, which means observation values are written for every time step. 
 \item Added support for a no-data value (3.0E30), which can be used as a placeholder in a time-series file containing multiple time series. Use of the no-data value facilitates combining separate time series into a single file when the time series contain records for differing simulation times.
 \item Model names specified in the simulation name file cannot have spaces in them.  A check was implemented to terminate with an error if the model name contains spaces.  Model names cannot exceed 16 characters.  Trailing spaces are allowed.

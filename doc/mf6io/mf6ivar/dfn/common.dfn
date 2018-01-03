@@ -39,7 +39,7 @@ description integer value specifying the maximum number of {#1} cells that will 
 name obs6_filename
 description name of input file to define observations for the {#1} package. See the ``Observation utility'' section for instructions for preparing observation input files. Table \ref{table:obstype} lists observation type(s) supported by the {#1} package.
 
-name newton
+name no_newton
 description keyword that deactivates the Newton-Raphson formulation for the {#1} Package.
 
 name cellid
@@ -52,4 +52,4 @@ name mover
 description keyword to indicate that this instance of the {#1} Package can be used with the Water Mover (MVR) Package.  When the \texttt{MOVER} option is specified, additional memory is allocated within the package to store the available, provided, and received water.
 
 name iper
-description integer value specifying the starting stress period number for which the data specified in the PERIOD block apply.  \texttt{iper} must be less than \texttt{nper} in the TDIS Package and greater than zero.  The \texttt{iper} value assigned to a stress period block must be greater than the \texttt{iper} value assigned for the previous block.
+description integer value specifying the starting stress period number for which the data specified in the PERIOD block apply.  \texttt{iper} must be less than or equal to \texttt{nper} in the TDIS Package and greater than zero.  The \texttt{iper} value assigned to a stress period block must be greater than the \texttt{iper} value assigned for the previous PERIOD block.  The information specified in the PERIOD block will continue to apply for all subsequent stress periods, unless the program encounters another PERIOD block.

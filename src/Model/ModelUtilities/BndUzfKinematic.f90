@@ -1,14 +1,17 @@
 module UzfKinematicModule
   
   use KindModule, only: DP, I4B
+  use ConstantsModule, only: DZERO, DEM30, DEM20, DEM15, DEM14, DEM12, DEM10,   &
+                             DEM9, DEM7, DEM6, DEM5, DEM4, DEM3, DHALF, DONE,   &
+                             DTWO, DTHREE, DEP20
   use SmoothingModule
+  use TdisModule, only: ITMUNI, delt, kper
 
   implicit none
   private
   public :: UzfKinematicType
   
   type :: UzfKinematicType
-      integer(I4B), dimension(:), pointer :: elements             => null()
       real(DP), pointer :: thtr                      => null()
       real(DP), pointer :: thts                      => null()
       real(DP), pointer :: thti                      => null()
@@ -102,11 +105,10 @@ module UzfKinematicModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
    !modules
-   use ConstantsModule, only: DZERO
    !arguments
+   class(UzfKinematicType) :: this
    integer(I4B), intent(in) :: ipos
    integer(I4B), intent(in) :: nwav
-   class(UzfKinematicType) :: this
 ! ------------------------------------------------------------------------------
     allocate(this%uzdpst(nwav))
     allocate(this%uzthst(nwav))
@@ -153,6 +155,27 @@ module UzfKinematicModule
     allocate(this%extdpuz)
     allocate(this%landflag) 
     allocate(this%ivertcon)
+    this%uzdpst = DZERO
+    this%uzthst = DZERO
+    this%uzflst = DZERO
+    this%uzspst = DZERO
+    this%nwavst = 1
+    this%uzolsflx = DZERO
+    this%thtr = DZERO
+    this%thts = DZERO
+    this%thti = DZERO
+    this%eps = DZERO
+    this%ha = DZERO
+    this%hroot = DZERO
+    this%rootact = DZERO
+    this%extwc = DZERO
+    this%etact = DZERO
+    this%nwav = nwav
+    this%ntrail = 0
+    this%uzstor = DZERO
+    this%delstor = DZERO
+    this%totflux = DZERO
+    this%vflow = DZERO
     this%sinf = DZERO
     this%finf = DZERO
     this%finf_rej = DZERO
@@ -161,6 +184,7 @@ module UzfKinematicModule
     this%cellarea = DZERO
     this%celtop = DZERO
     this%celbot = DZERO
+    this%landtop = DZERO
     this%cvlm1 = DZERO
     this%watab = DZERO
     this%watabold = DZERO
@@ -171,12 +195,11 @@ module UzfKinematicModule
     this%surfseep = DZERO
     this%gwpet = DZERO
     this%pet = DZERO
+    this%petmax = DZERO
     this%extdp = DZERO
     this%extdpuz = DZERO
-    this%etact = DZERO
     this%landflag = 0
     this%ivertcon = 0
-    this%nwavst = 1
   end subroutine init
   !
   !
@@ -189,7 +212,6 @@ module UzfKinematicModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
    ! -- modules
-   use ConstantsModule, only: DZERO
    ! -- dummy
    class(UzfKinematicType) :: this
    ! -- locals
@@ -247,7 +269,7 @@ module UzfKinematicModule
 ! ------------------------------------------------------------------------------
   
   subroutine setdata(this,ipos,area,top,bot,surfdep,     &
-                     vks,thtr,thts,thti,eps,nwav,        &
+                     vks,thtr,thts,thti,eps,             &
                      ntrail,landflag,ivertcon,hgwf)
 ! ******************************************************************************
 ! setdata -- set uzf object material properties
@@ -257,9 +279,9 @@ module UzfKinematicModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     !modules
-    use ConstantsModule, only: DHALF,DZERO
     !arguments
-    integer(I4B), intent(in) :: ipos,nwav,ntrail,landflag,ivertcon
+    class(UzfKinematicType) :: this
+    integer(I4B), intent(in) :: ipos, ntrail, landflag, ivertcon
     real(DP), intent(in) :: area
     real(DP), intent(in) :: top
     real(DP), intent(in) :: bot
@@ -270,7 +292,6 @@ module UzfKinematicModule
     real(DP), intent(in) :: thti
     real(DP), intent(in) :: eps
     real(DP), intent(in) :: hgwf 
-    class(UzfKinematicType) :: this
 ! ------------------------------------------------------------------------------
     this%landflag = landflag
     this%ivertcon = ivertcon
@@ -292,7 +313,6 @@ module UzfKinematicModule
     this%thts = thts
     this%thti = thti
     this%eps = eps
-    this%nwav = nwav
     this%ntrail = ntrail
     this%pet = DZERO
     this%extdp = DZERO
@@ -311,10 +331,9 @@ module UzfKinematicModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     !modules
-    use ConstantsModule, only: DZERO
     !arguments
-    real(DP), intent(in) :: finf
     class(UzfKinematicType) :: this
+    real(DP), intent(in) :: finf
 ! ------------------------------------------------------------------------------
     if (this%landflag == 1) then
       this%sinf = finf
@@ -360,10 +379,9 @@ module UzfKinematicModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     !modules
-    use ConstantsModule, only: DZERO, DEM7
     !arguments
     class(UzfKinematicType) :: this
-    class(UzfKinematicType) :: thisbelow
+    type(UzfKinematicType) :: thisbelow
     integer(I4B), intent(in) :: jbelow
     real(DP), intent(in) :: pet, extdp
     ! -- dummy
@@ -410,10 +428,9 @@ module UzfKinematicModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     !modules
-    use ConstantsModule, only: DZERO,DEM3
     !arguments
     class(UzfKinematicType) :: this
-    class(UzfKinematicType) :: thisbelow
+    type(UzfKinematicType) :: thisbelow
     real(DP), intent(in) :: aet
     ! -- dummy
     real(DP) :: pet
@@ -438,7 +455,7 @@ module UzfKinematicModule
 ! ------------------------------------------------------------------------------
     !arguments
     class(UzfKinematicType) :: this
-    class(UzfKinematicType) :: thisbelow
+    type(UzfKinematicType) :: thisbelow
     real(DP), intent(in) :: extwc
     integer(I4B), intent(in) :: jbelow
 ! ------------------------------------------------------------------------------
@@ -458,7 +475,7 @@ module UzfKinematicModule
 ! ------------------------------------------------------------------------------
     !arguments
     class(UzfKinematicType) :: this
-    class(UzfKinematicType) :: thisbelow
+    type(UzfKinematicType) :: thisbelow
     real(DP), intent(in) :: ha,hroot,rootact
     integer(I4B), intent(in) :: jbelow
 ! ------------------------------------------------------------------------------
@@ -482,7 +499,6 @@ module UzfKinematicModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use ConstantsModule, only: DZERO
     class(UzfKinematicType) :: this
 ! ------------------------------------------------------------------------------
     this%surfseep = DZERO
@@ -503,7 +519,6 @@ module UzfKinematicModule
 ! ------------------------------------------------------------------------------
     !modules
     use TdisModule, only: delt
-    use ConstantsModule, only: DEM15,DZERO
     !arguments
     class(UzfKinematicType) :: this
     type(UzfKinematicType) :: thiswork
@@ -633,7 +648,6 @@ module UzfKinematicModule
 ! ------------------------------------------------------------------------------
     !modules
     use TdisModule, only: delt, kper
-    use ConstantsModule, only: DEM15,DEM3,DZERO
     !arguments
     class(UzfKinematicType) :: this
     type(UzfKinematicType) :: thisbelow
@@ -780,7 +794,6 @@ module UzfKinematicModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------      
     !modules
-    use ConstantsModule, only: DEM9,DZERO,DEM30
     !arguments
     class(UzfKinematicType) :: this
     integer(I4B), intent(in) :: ipos
@@ -828,7 +841,6 @@ module UzfKinematicModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     !modules
-    use ConstantsModule, only: DEM9,DZERO,DEM14,DEM5,DONE
     !arguments
     class(UzfKinematicType) :: this
     type(UzfKinematicType) :: thisbelow
@@ -871,7 +883,6 @@ module UzfKinematicModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
       !modules
-      use ConstantsModule, only: DONE
       !arguments
       class(UzfKinematicType) :: this
       integer(I4B), intent(in) :: ipos
@@ -905,7 +916,6 @@ module UzfKinematicModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
       !modules
-      use ConstantsModule, only: DZERO
       !argument
       class(UzfKinematicType) :: this
       integer(I4B), intent(in) :: ipos
@@ -951,13 +961,12 @@ module UzfKinematicModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
       !modules
-      use ConstantsModule, only: DZERO, DEM6
       !arguments
+      class(UzfKinematicType) :: this
       integer(I4B), intent(in) :: igwetflag,ipos
       real(DP), intent(in) :: hgwf
       real(DP), intent(inout) :: trhs,thcof,det,et
       ! -- dummy
-      class(UzfKinematicType) :: this
       real(DP) :: s,x,c
       external :: etfunc_lin, etfunc_nlin
       real(DP) :: etfunc_lin, etfunc_nlin
@@ -989,7 +998,6 @@ module UzfKinematicModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------    
       !modules
-      use ConstantsModule, only: DZERO,DEM4
       ! -- return
       real(DP) :: etfunc_lin
       ! -- dummy
@@ -1048,7 +1056,6 @@ module UzfKinematicModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-      use ConstantsModule, only: DZERO,DEM3,DEM4
 ! ------------------------------------------------------------------------------
       ! -- return
       real(DP) :: etfunc_nlin
@@ -1087,7 +1094,6 @@ module UzfKinematicModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use ConstantsModule, only: DEM30
 ! ------------------------------------------------------------------------------
     class(UzfKinematicType) :: this
     real(DP), intent(inout) :: totfluxtot
@@ -1114,7 +1120,6 @@ module UzfKinematicModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------   
-    use ConstantsModule, only: DZERO
 ! ------------------------------------------------------------------------------
     class(UzfKinematicType) :: this
     integer(I4B), intent(in) :: ipos
@@ -1177,7 +1182,6 @@ module UzfKinematicModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use ConstantsModule, only: DZERO
 ! ------------------------------------------------------------------------------
     class(UzfKinematicType) :: this
     real(DP), intent(inout) :: totfluxtot
@@ -1226,7 +1230,7 @@ module UzfKinematicModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
       class (UzfKinematicType) :: this1
-      class (UzfKinematicType) :: this2
+      type (UzfKinematicType) :: this2
       integer(I4B) :: j,shft,strt,stp,cntr
 ! ------------------------------------------------------------------------------
       do j = strt, stp, cntr
@@ -1248,7 +1252,6 @@ module UzfKinematicModule
 !     SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
       !modules
-      use ConstantsModule, only: DZERO,DEM6,DEM30,DTWO
       ! -- dummy
       class (UzfKinematicType) :: this
       real(DP), intent(inout) :: thickold
@@ -1338,8 +1341,6 @@ module UzfKinematicModule
 !     SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     !modules
-    use ConstantsModule, only: DEM9,DONE
-    use TdisModule,       ONLY:ITMUNI
     ! -- dummy
     class (UzfKinematicType) :: this
     real(DP), intent(out) :: feps1
@@ -1374,7 +1375,6 @@ module UzfKinematicModule
 !     SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
       !modules
-      use ConstantsModule, only: DEM9,DONE
       !arguments
       integer(I4B), intent(inout) :: ierr
       ! -- dummy
@@ -1457,9 +1457,8 @@ module UzfKinematicModule
 !     SPECIFICATIONS:
 ! ----------------------------------------------------------------------
       !modules
-      use ConstantsModule, only: DEM6,DEM7,DEM9,DEM12,DEM15,DONE,  &
-                                 DZERO,DEP20,DEM30
       !arguments
+      class (UzfKinematicType) :: this
       real(DP), intent(inout) :: thetab
       real(DP), intent(inout) :: fluxb
       real(DP), intent(in) :: feps2
@@ -1469,7 +1468,6 @@ module UzfKinematicModule
       real(DP), intent(in) :: delt
       integer(I4B), intent(in) :: ipos
       ! -- dummy
-      class (UzfKinematicType) :: this
       real(DP) :: bottomtime,shortest,fcheck
       real(DP) :: eps_m1,timenew,bottom,timedt
       real(DP) :: thtsrinv,diff,fluxhld2
@@ -1657,14 +1655,13 @@ module UzfKinematicModule
 !     SPECIFICATIONS:
 ! ----------------------------------------------------------------------
       !modules
-      use ConstantsModule, only: DEM15,DONE,DEM30
       !arguments
+      class (UzfKinematicType) :: this
       real(DP), intent(in) :: theta1
       real(DP), intent(in) :: theta2
       real(DP), intent(in) :: flux1
       real(DP), intent(inout) :: flux2
       ! -- dummy
-      class (UzfKinematicType) :: this
       real(DP) :: comp1, comp2, thsrinv, epsfksths
       real(DP) :: eps_m1, fhold, comp3
       real(DP) :: leadspeed
@@ -1695,11 +1692,10 @@ module UzfKinematicModule
 !     SPECIFICATIONS:
 ! ----------------------------------------------------------------------
       !modules
-      use ConstantsModule, only: DZERO,DEM30
       !arguments
+      class (UzfKinematicType) :: this
       real(DP), intent(inout) :: d1
       ! -- dummy
-      class (UzfKinematicType) :: this
       real(DP) :: fm, unsat_stor
       integer(I4B) :: j, k,nwavm1,jj
 ! ----------------------------------------------------------------------
@@ -1743,15 +1739,14 @@ module UzfKinematicModule
 !     SPECIFICATIONS:
 ! ----------------------------------------------------------------------
       !modules
-      use ConstantsModule, only: DZERO,DEM7,DEM10,DEM30,DONE
       !arguments
+      class (UzfKinematicType) :: this
       integer(I4B), intent(in) :: ipos,etflg,itest,iss
       real(DP), intent(in) :: delt
       real(DP), intent(inout) :: rout
       real(DP), intent(inout) :: rsto
       real(DP), intent(inout) :: ret
       ! -- dummy
-      class (UzfKinematicType) :: this
       real(DP) :: uzstorhold,bot,fm,depthsave,top
       real(DP) :: thick,thtsrinv
       integer(I4B) :: nwavhld, k,j
@@ -1843,15 +1838,13 @@ module UzfKinematicModule
 !     SPECIFICATIONS:
 ! ----------------------------------------------------------------------
       !modules
-      use ConstantsModule, only: DZERO,DEM3,DEM4,DEM5,DEM6,DEM7,    &
-                                 DEM10,DEM15,DEM30
       ! -- dummy
+      class (UzfKinematicType) :: this
       real(DP), intent(in) :: delt
       integer(I4B), intent(in) :: ietflag
       integer(I4B), intent(inout) :: ierr
       ! -- local
-      class (UzfKinematicType) :: this
-      class(UzfKinematicType), pointer :: uzfktemp
+      type(UzfKinematicType), pointer :: uzfktemp
       real(DP) :: diff,thetaout,fm,st
       real(DP) :: thtsrinv,epsfksthts,fmp
       real(DP) :: fktho,theta1,theta2,flux1,flux2
@@ -2132,10 +2125,9 @@ module UzfKinematicModule
 !     SPECIFICATIONS:
 ! ----------------------------------------------------------------------
       !modules
-      use ConstantsModule, only: DZERO,DTWO,DTHREE,DEM15,DEM6,DONE
+      class (UzfKinematicType) :: this
       real(DP), intent(in) :: tho
       ! -- dummy
-      class (UzfKinematicType) :: this
       real(DP) :: caph,lambda,star
 ! ----------------------------------------------------------------------
       caph = -DEM6
@@ -2158,11 +2150,10 @@ module UzfKinematicModule
 !     SPECIFICATIONS:
 ! ----------------------------------------------------------------------
       !modules
-      use ConstantsModule, only: DZERO
       !arguments
+      class (UzfKinematicType) :: this
       real(DP), intent(in) :: factor,fktho,h
       ! -- dummy
-      class (UzfKinematicType) :: this
       real(DP) :: rate_et_z
 ! ----------------------------------------------------------------------
       rate_et_z = factor*fktho*(h-this%hroot)

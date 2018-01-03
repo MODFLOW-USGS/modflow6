@@ -162,10 +162,8 @@ module GwfDisModule
     ! -- dummy
     class(GwfDisType) :: this
     ! -- locals
-    character(len=LINELENGTH) :: line, errmsg, keyword
-    integer(I4B) :: lloc, istart, istop
-    integer(I4B) :: ierr, ival, iuext
-    real(DP) :: rval
+    character(len=LINELENGTH) :: errmsg, keyword
+    integer(I4B) :: ierr
     logical :: isfound, endOfBlock
 ! ------------------------------------------------------------------------------
     !
@@ -174,7 +172,7 @@ module GwfDisModule
                               supportOpenClose=.true., blockRequired=.false.)
     !
     ! -- set default options
-      this%lenuni = 0
+    this%lenuni = 0
     !
     ! -- parse options block if detected
     if (isfound) then
@@ -185,8 +183,6 @@ module GwfDisModule
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
           case ('LENGTH_UNITS')
-            call urword(line, lloc, istart, istop, 1, ival, rval, this%iout,   &
-                        iuext)
             call this%parser%GetStringCaps(keyword)
             if(keyword == 'FEET') then
               this%lenuni = 1
@@ -1156,7 +1152,6 @@ module GwfDisModule
         zcomp = -DONE
       endif
     else
-      !todo set xcomp and ycomp
       xcomp = DZERO
       ycomp = DZERO
       zcomp = DZERO

@@ -48,6 +48,7 @@ module NumericalModelModule
     procedure :: model_ad
     procedure :: model_cf
     procedure :: model_fc
+    procedure :: model_ptcchk
     procedure :: model_ptc
     procedure :: model_nr
     procedure :: model_cc
@@ -119,8 +120,13 @@ module NumericalModelModule
     integer(I4B), intent(in) :: inwtflag
   end subroutine model_fc
 
+  subroutine model_ptcchk(this, iptc)
+    class(NumericalModelType) :: this
+    integer(I4B), intent(inout) :: iptc
+  end subroutine model_ptcchk
+
   subroutine model_ptc(this, kiter, neqsln, njasln, &
-                       ia, ja, x, rhs, amatsln, iptc,ptcf)
+                       ia, ja, x, rhs, amatsln, iptc, ptcf)
     class(NumericalModelType) :: this
     integer(I4B),intent(in) :: kiter
     integer(I4B), intent(in) :: neqsln
@@ -142,8 +148,9 @@ module NumericalModelModule
     integer(I4B), intent(in) :: inwtflag
   end subroutine model_nr
 
-  subroutine model_cc(this, iend, icnvg)
+  subroutine model_cc(this, kiter, iend, icnvg)
     class(NumericalModelType) :: this
+    integer(I4B),intent(in) :: kiter
     integer(I4B),intent(in) :: iend
     integer(I4B),intent(inout) :: icnvg
   end subroutine model_cc
@@ -322,7 +329,7 @@ module NumericalModelModule
       do ip = 1, this%bndlist%Count()
         packobj => GetBndFromList(this%bndlist, ip)
         if(packobj%npakeq == 0) cycle
-        istop = istart + packobj%npakeq
+        istop = istart + packobj%npakeq - 1
         if(istart <= ipaknode .and. ipaknode <= istop) then
           write(cellid, '(a, a, a, i0, a, i0, a)') '(',                        &
             trim(packobj%filtyp), '_',                                         &
@@ -332,7 +339,7 @@ module NumericalModelModule
         istart = istop + 1
       enddo
     endif
-    write(mcellid, '(a, i0, a, a)') 'GWF_', this%id, '-',                      &
+    write(mcellid, '(i0, a, a, a, a)') this%id, '_', this%macronym, '-',       &
       trim(adjustl(cellid))
     return
   end subroutine get_mcellid

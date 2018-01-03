@@ -1,5 +1,8 @@
 % DO NOT MODIFY THIS FILE DIRECTLY.  IT IS CREATED BY mf6ivar.py 
 
+\item \textbf{Block: OPTIONS}
+
+\begin{description}
 \item \texttt{auxiliary}---defines an array of one or more auxiliary variable names.  There is no limit on the number of auxiliary variables that can be provided on this line; however, lists of information provided in subsequent blocks must have a column of data for each auxiliary variable name defined here.   The number of auxiliary variables detected on this line determines the value for naux.  Comments cannot be provided anywhere on this line as they will be interpreted as auxiliary variable names.  Auxiliary variables may not be used by the package, but they will be available for use by other parts of the program.  The program will terminate with an error if auxiliary variables are specified on more than one line in the options block.
 
 \item \texttt{auxmultname}---name of auxiliary variable to be used as multiplier of drain conductance.
@@ -24,9 +27,17 @@
 
 \item \texttt{MOVER}---keyword to indicate that this instance of the Drain Package can be used with the Water Mover (MVR) Package.  When the \texttt{MOVER} option is specified, additional memory is allocated within the package to store the available, provided, and received water.
 
+\end{description}
+\item \textbf{Block: DIMENSIONS}
+
+\begin{description}
 \item \texttt{maxbound}---integer value specifying the maximum number of drains cells that will be specified for use during any stress period.
 
-\item \texttt{iper}---integer value specifying the starting stress period number for which the data specified in the PERIOD block apply.  \texttt{iper} must be less than \texttt{nper} in the TDIS Package and greater than zero.  The \texttt{iper} value assigned to a stress period block must be greater than the \texttt{iper} value assigned for the previous block.
+\end{description}
+\item \textbf{Block: PERIOD}
+
+\begin{description}
+\item \texttt{iper}---integer value specifying the starting stress period number for which the data specified in the PERIOD block apply.  \texttt{iper} must be less than or equal to \texttt{nper} in the TDIS Package and greater than zero.  The \texttt{iper} value assigned to a stress period block must be greater than the \texttt{iper} value assigned for the previous PERIOD block.  The information specified in the PERIOD block will continue to apply for all subsequent stress periods, unless the program encounters another PERIOD block.
 
 \item \texttt{cellid}---is the cell identifier, and depends on the type of grid that is used for the simulation.  For a structured grid that uses the DIS input file, \texttt{cellid} is the layer, row, and column.   For a grid that uses the DISV input file, \texttt{cellid} is the layer and cell2d number.  If the model uses the unstructured discretization (DISU) input file, then \texttt{cellid} is the node number for the cell.
 
@@ -38,4 +49,5 @@
 
 \item \texttt{boundname}---name of the drain cell.  \texttt{boundname} is an ASCII character variable that can contain as many as 40 characters.  If \texttt{boundname} contains spaces in it, then the entire name must be enclosed within single quotes.
 
+\end{description}
 

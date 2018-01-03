@@ -16,9 +16,6 @@ module GwfHfbModule
   type, extends(NumericalPackageType) :: GwfHfbType
     integer(I4B), pointer                        :: maxhfb     => null()   !max number of hfb's
     integer(I4B), pointer                        :: nhfb       => null()   !number of hfb's
-    !integer(I4B), pointer                        :: iprpak     => null()   !print input
-    integer(I4B), pointer                        :: ionper     => null()   !on stress period
-    integer(I4B), pointer                        :: lastonper  => null()   !last value of ionper (for checking)
     integer(I4B), dimension(:), pointer          :: noden      => null()   !first cell
     integer(I4B), dimension(:), pointer          :: nodem      => null()   !second cell
     integer(I4B), dimension(:), pointer          :: idxloc     => null()   !position in model ja
@@ -169,24 +166,8 @@ module GwfHfbModule
                                 supportOpenClose=.true.)
       if(isfound) then
         !
-        ! -- save last value and read period number
-        this%lastonper = this%ionper
-        this%ionper = this%parser%GetInteger()
-        !
-        ! -- check to make sure period blocks are increasing
-        if (this%ionper < this%lastonper) then
-          write(errmsg, '(a, i0)') &
-            'ERROR IN STRESS PERIOD ', kper
-          call store_error(errmsg)
-          write(errmsg, '(a, i0)') &
-            'PERIOD NUMBERS NOT INCREASING.  FOUND ', this%ionper
-          call store_error(errmsg)
-          write(errmsg, '(a, i0)') &
-            'BUT LAST PERIOD BLOCK WAS ASSIGNED ', this%lastonper
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-          call ustop()
-        endif
+        ! -- read ionper and check for increasing period numbers
+        call this%read_check_ionper()
       else
         !
         ! -- PERIOD block not found
@@ -471,9 +452,6 @@ module GwfHfbModule
     ! -- Scalars
     call mem_deallocate(this%maxhfb)
     call mem_deallocate(this%nhfb)
-    !call mem_deallocate(this%iprpak)
-    call mem_deallocate(this%ionper)
-    call mem_deallocate(this%lastonper)
     !
     ! -- Arrays
     if (this%inunit > 0) then
@@ -526,16 +504,10 @@ module GwfHfbModule
     ! -- allocate scalars
     call mem_allocate(this%maxhfb, 'MAXHFB', this%origin)
     call mem_allocate(this%nhfb, 'NHFB', this%origin)
-    !call mem_allocate(this%iprpak, 'IPRPAK', this%origin)
-    call mem_allocate(this%ionper, 'IONPER', this%origin)
-    call mem_allocate(this%lastonper, 'LASTONPER', this%origin)
     !
     ! -- initialize
     this%maxhfb = 0
     this%nhfb = 0
-    !this%iprpak = 0
-    this%ionper = 0
-    this%lastonper = 0
     !
     ! -- return
     return

@@ -111,8 +111,6 @@ module GwfMvrModule
     integer(I4B), pointer                         :: maxpackages => null()      !max number of packages to be specified
     integer(I4B), pointer                         :: maxcomb => null()          !max number of combination of packages
     integer(I4B), pointer                         :: nmvr => null()             !number of movers for current stress period
-    integer(I4B), pointer                         :: ionper => null()           !next stress period of data to be read
-    integer(I4B), pointer                         :: lastonper   => null()      !last value of ionper (for checking)
     integer(I4B), pointer                         :: iexgmvr => null()          !flag to indicate mover is for an exchange (not for a single model)
     integer(I4B), pointer                         :: imodelnames => null()      !flag to indicate package input file has model names in it
     real(DP), pointer                             :: omega => null()            !temporal weighting factor (not presently used)
@@ -128,6 +126,7 @@ module GwfMvrModule
     procedure :: mvr_rp
     procedure :: mvr_ad
     procedure :: mvr_fc
+    procedure :: mvr_cc
     procedure :: mvr_bd
     procedure :: mvr_ot
     procedure :: mvr_da
@@ -267,24 +266,8 @@ module GwfMvrModule
                                 supportOpenClose=.true.)
       if(isfound) then
         !
-        ! -- save last value and read period number
-        this%lastonper = this%ionper
-        this%ionper = this%parser%GetInteger()
-        !
-        ! -- check to make sure period blocks are increasing
-        if (this%ionper < this%lastonper) then
-          write(errmsg, '(a, i0)') &
-            'ERROR IN STRESS PERIOD ', kper
-          call store_error(errmsg)
-          write(errmsg, '(a, i0)') &
-            'PERIOD NUMBERS NOT INCREASING.  FOUND ', this%ionper
-          call store_error(errmsg)
-          write(errmsg, '(a, i0)') &
-            'BUT LAST PERIOD BLOCK WAS ASSIGNED ', this%lastonper
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-          call ustop()
-        endif
+        ! -- read ionper and check for increasing period numbers
+        call this%read_check_ionper()
       else
         !
         ! -- PERIOD block not found
@@ -437,6 +420,37 @@ module GwfMvrModule
     return
   end subroutine mvr_fc
 
+  subroutine mvr_cc(this, kiter, iend, icnvg)
+! ******************************************************************************
+! mvr_cc -- extra convergence check for mover
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(GwfMvrType) :: this
+    integer(I4B),intent(in) :: kiter
+    integer(I4B),intent(in) :: iend
+    integer(I4B),intent(inout) :: icnvg
+    ! -- local
+    ! -- formats
+    character(len=*),parameter :: fmtmvrcnvg = &
+      "(/,1x,'MOVER PACKAGE REQUIRES AT LEAST TWO OUTER ITERATIONS. CONVERGE &
+      &FLAG HAS BEEN RESET TO FALSE.')"
+! ------------------------------------------------------------------------------
+    !
+    ! -- If there are active movers, then at least 2 outers required
+    if (this%nmvr > 0) then
+      if (icnvg == 1 .and. kiter == 1) then
+        icnvg = 0
+        write(this%iout, fmtmvrcnvg)
+      endif
+    endif
+    !
+    ! -- return
+    return
+  end subroutine mvr_cc
+  
   subroutine mvr_bd(this, icbcfl, ibudfl, isuppress_output)
 ! ******************************************************************************
 ! mvr_bd -- Write mover terms to listing file
@@ -636,8 +650,6 @@ module GwfMvrModule
     call mem_deallocate(this%maxpackages)
     call mem_deallocate(this%maxcomb)
     call mem_deallocate(this%nmvr)
-    call mem_deallocate(this%ionper)
-    call mem_deallocate(this%lastonper)
     call mem_deallocate(this%iexgmvr)
     call mem_deallocate(this%imodelnames)
     call mem_deallocate(this%omega)
@@ -954,8 +966,6 @@ module GwfMvrModule
     call mem_allocate(this%maxpackages, 'MAXPACKAGES', this%origin)
     call mem_allocate(this%maxcomb, 'MAXCOMB', this%origin)
     call mem_allocate(this%nmvr, 'NMVR', this%origin)
-    call mem_allocate(this%ionper, 'IONPER', this%origin)
-    call mem_allocate(this%lastonper, 'LASTONPER', this%origin)
     call mem_allocate(this%iexgmvr, 'IEXGMVR', this%origin)
     call mem_allocate(this%imodelnames, 'IMODELNAMES', this%origin)
     !
@@ -965,8 +975,6 @@ module GwfMvrModule
     this%maxpackages = -1
     this%maxcomb = 0
     this%nmvr = 0
-    this%ionper = 0
-    this%lastonper = 0
     this%iexgmvr = 0
     this%imodelnames = 0
     this%omega = DONE

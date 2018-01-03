@@ -235,12 +235,12 @@ description value (or conversion factor) that is used in calculating stream dept
 # --------------------- gwf sfr dimensions ---------------------
 
 block dimensions
-name maxbound
+name nreaches
 type integer
 reader urword
 optional false
 longname maximum number reaches
-description REPLACE maxbound {'{#1}': 'stream reach'}
+description integer value specifying the number of stream reaches.  There must be \texttt{nreaches} entries in the PACKAGEDATA block.
 
 
 # --------------------- gwf sfr packagedata ---------------------
@@ -261,7 +261,7 @@ tagged false
 in_record true
 reader urword
 longname reach number for this entry
-description integer value that defines the reach number associated with the specified data on the line. \texttt{rno} must be greater than zero and less than or equal to \texttt{MAXBOUND}.
+description integer value that defines the reach number associated with the specified PACKAGEDATA data on the line. \texttt{rno} must be greater than zero and less than or equal to \texttt{nreaches}. Reach information must be specified for every reach or the program will terminate with an error.  The program will also terminate with an error if information for a reach is specified more than once.
 
 block packagedata
 name cellid
@@ -416,7 +416,7 @@ tagged false
 in_record true
 reader urword
 longname reach number for this entry
-description integer value that defines the reach number associated with the specified data on the line. \texttt{rno} must be greater than zero and less than or equal to \texttt{MAXBOUND}.
+description integer value that defines the reach number associated with the specified CONNECTIONDATA data on the line. \texttt{rno} must be greater than zero and less than or equal to \texttt{NREACHES}. Reach connection information must be specified for every reach or the program will terminate with an error.  The program will also terminate with an error if connection information for a reach is specified more than once.
 
 block connectiondata
 name ic
@@ -426,7 +426,7 @@ tagged false
 in_record true
 reader urword
 longname connected reach numbers
-description integer value that defines the reach number of the reach connected to the current reach and whether it is connected to the upstream or downstream end of the reach. Negative \texttt{ic} numbers indicate connected reaches are connected to the downstream end of the current reach. Positive \texttt{ic} numbers indicate connected reaches are connected to the upstream end of the current reach. The absolute value of \texttt{ic} must be greater than zero and less than or equal to \texttt{MAXBOUND}.
+description integer value that defines the reach number of the reach connected to the current reach and whether it is connected to the upstream or downstream end of the reach. Negative \texttt{ic} numbers indicate connected reaches are connected to the downstream end of the current reach. Positive \texttt{ic} numbers indicate connected reaches are connected to the upstream end of the current reach. The absolute value of \texttt{ic} must be greater than zero and less than or equal to \texttt{NREACHES}.
 
 # --------------------- gwf sfr diversions ---------------------
 
@@ -446,7 +446,7 @@ tagged false
 in_record true
 reader urword
 longname reach number for this entry
-description integer value that defines the reach number associated with the specified data on the line. \texttt{rno} must be greater than zero and less than or equal to \texttt{MAXBOUND}.
+description integer value that defines the reach number associated with the specified DIVERSIONS data on the line. \texttt{rno} must be greater than zero and less than or equal to \texttt{NREACHES}.  Reach diversion information must be specified for every reach with a \texttt{ndv} value greater than 0 or the program will terminate with an error.  The program will also terminate with an error if diversion information for a given reach diversion is specified more than once.
 
 block diversions
 name idv
@@ -466,7 +466,7 @@ tagged false
 in_record true
 reader urword
 longname downstream reach number for diversion
-description integer value that defines the downstream reach that will receive the diverted water. \texttt{idv} must be greater than zero and less than or equal to \texttt{MAXBOUND}. Furthermore, reach  \texttt{iconr} must be a downstream connection for reach \texttt{rno}.
+description integer value that defines the downstream reach that will receive the diverted water. \texttt{idv} must be greater than zero and less than or equal to \texttt{NREACHES}. Furthermore, reach  \texttt{iconr} must be a downstream connection for reach \texttt{rno}.
 
 block diversions
 name cprior
@@ -510,7 +510,7 @@ tagged false
 in_record true
 reader urword
 longname reach number for this entry
-description integer value that defines the reach number associated with the specified data on the line. \texttt{rno} must be greater than zero and less than or equal to \texttt{MAXBOUND}.
+description integer value that defines the reach number associated with the specified PERIOD data on the line. \texttt{rno} must be greater than zero and less than or equal to \texttt{NREACHES}.
 
 block period
 name sfrsetting

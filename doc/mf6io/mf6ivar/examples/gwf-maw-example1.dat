@@ -3,7 +3,6 @@ begin options
   print_head
   print_flows
   boundnames
-  newton
   head fileout maw-1.head.bin
   budget fileout maw-1.cbc
 end options

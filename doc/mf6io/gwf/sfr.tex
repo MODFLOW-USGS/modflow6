@@ -1,10 +1,10 @@
-Input to the Streamflow Routing (SFR) Package is read from the file that has type ``SFR6'' in the Name File. Any number of SFR Packages can be specified for a single groundwater flow model; however, water cannot be routed between reaches in separate packages except in cases where the MVR Package is used to route water between separate packages. All single valued variables are free format.
+Input to the Streamflow Routing (SFR) Package is read from the file that has type ``SFR6'' in the Name File. Any number of SFR Packages can be specified for a single groundwater flow model; however, water cannot be routed between reaches in separate packages except in cases where the MVR Package is used to route water between separate packages.
 
 Reach connectivity must be explicitly specified for this version of the SFR Package, unlike the abbreviated SFR Package segment connectivity specified in previous versions of MODFLOW. Explicit specification of reach connectivity has been adopted to facilitate better validation of stream network connectivity by the program. Explicit reach connectivity means that a reach must be specified as an upstream connection for all downstream connections to the reach. Downstream connections for a reach are denoted with a negative reach number. Flow in a reach is unidirectional, always flowing from the upstream end to the downstream end of a reach. An example of the reach connectivity for a hypothetical stream network is shown in figure~\ref{fig:sfr-connectivity}.
 
 \begin{figure}[ht]
 	\centering
-	\includegraphics[scale=1.0]{sfr-connectivity}
+	\includegraphics[scale=1.0]{../Figures/sfr-connectivity}
 	\caption[Illustration of a simple stream network having seven reaches with a junction having two reaches, a confluence of two reaches, and the resulting reach connectivity]{Simple stream network having seven reaches with a junction having two reaches, a confluence of two reaches, and the resulting reach connectivity. Downstream connections for a reach must include the reach as an upstream connection for all downstream connections to the reach. Downstream connections for a  reach are denoted with a negative reach number}
 	\label{fig:sfr-connectivity}
 \end{figure}
@@ -25,6 +25,7 @@ Reach connectivity must be explicitly specified for this version of the SFR Pack
 \vspace{5mm}
 \noindent \textit{FOR ANY STRESS PERIOD}
 \lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-sfr-period.dat}
+\advancedpackageperioddescription{reach}{reaches}
 
 \vspace{5mm}
 \subsubsection{Explanation of Variables}

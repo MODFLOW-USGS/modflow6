@@ -3,7 +3,7 @@ BEGIN OPTIONS
   PRINT_INPUT
 END OPTIONS
 
-BEGIN SINGLE FILEOUT my_model.chd01.csv
+BEGIN CONTINUOUS FILEOUT my_model.chd01.csv
 # obsname  obstype   ID
   chd_2_1  CHD       1 1 2
   chd_2_2  CHD       1 2 2

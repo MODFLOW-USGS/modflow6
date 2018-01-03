@@ -269,7 +269,7 @@ tagged false
 in_record true
 reader urword
 longname well number for this entry
-description integer value that defines the well number for this multi-aquifer well entry. \texttt{wellno} must be greater than zero and less than or equal to \texttt{nmawwells}.
+description integer value that defines the well number associated with the specified PACKAGEDATA data on the line. \texttt{wellno} must be greater than zero and less than or equal to \texttt{nmawwells}. Multi-aquifer well information must be specified for every multi-aquifer well or the program will terminate with an error.  The program will also terminate with an error if information for a multi-aquifer well is specified more than once.
 
 block packagedata
 name radius
@@ -363,7 +363,7 @@ tagged false
 in_record true
 reader urword
 longname well number for this entry
-description integer value that defines the well number for this multi-aquifer well entry. \texttt{wellno} must be greater than zero and less than or equal to \texttt{nmawwells}.
+description integer value that defines the well number associated with the specified CONNECTIONDATA data on the line. \texttt{wellno} must be greater than zero and less than or equal to \texttt{nmawwells}. Multi-aquifer well connection information must be specified for every multi-aquifer well connection to the GWF model (\texttt{ngwfnodes}) or the program will terminate with an error.  The program will also terminate with an error if connection information for a multi-aquifer well connection to the GWF model is specified more than once.
 
 block connectiondata
 name icon
@@ -457,7 +457,7 @@ tagged false
 in_record true
 reader urword
 longname well number for this entry
-description integer value that defines the well number for this multi-aquifer well entry. \texttt{wellno} must be greater than zero and less than or equal to \texttt{nmawwells}.
+description integer value that defines the well number associated with the specified PERIOD data on the line. \texttt{wellno} must be greater than zero and less than or equal to \texttt{nmawwells}.
 
 block period
 name mawsetting

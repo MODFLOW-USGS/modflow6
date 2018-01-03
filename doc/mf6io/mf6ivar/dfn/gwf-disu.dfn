@@ -72,7 +72,7 @@ block griddata
 name top
 type double precision
 shape (nodes)
-reader u1ddbl
+reader readarray
 longname cell top elevation
 description is the top elevation for each cell in the model grid.
 
@@ -80,7 +80,7 @@ block griddata
 name bot
 type double precision
 shape (nodes)
-reader u1ddbl
+reader readarray
 longname cell bottom elevation
 description is the bottom elevation for each cell.
 
@@ -88,7 +88,7 @@ block griddata
 name area
 type double precision
 shape (nodes)
-reader u1ddbl
+reader readarray
 longname cell surface area
 description is the cell surface area (in plan view).
 
@@ -99,7 +99,7 @@ block connectiondata
 name iac
 type integer
 shape (nodes)
-reader u1dint
+reader readarray
 longname number of cell connections
 description is the number of connections (plus 1) for each cell.  The sum of \texttt{iac} must be equal to \texttt{nja}.
 
@@ -107,7 +107,7 @@ block connectiondata
 name ja
 type integer
 shape (nja)
-reader u1dint
+reader readarray
 longname grid connectivity
 description is a list of cell number (n) followed by its connecting cell numbers (m) for each of the m cells connected to cell n. The number of values to provide for cell n is \texttt{iac(n)}.  This list is sequentially provided for the first to the last cell. The first value in the list must be cell n itself, and the remaining cells must be listed in an increasing order (sorted from lowest number to highest).  Note that the cell and its connections are only supplied for the GWF cells and their connections to the other GWF cells.  Also note that the JA list input may be chopped up to have every node number and its connectivity list on a separate line for ease in readability of the file. To further ease readability of the file, the node number of the cell whose connectivity is subsequently listed, may be expressed as a negative number the sign of which is subsequently corrected by the code.
 
@@ -115,7 +115,7 @@ block connectiondata
 name ihc
 type integer
 shape (nja)
-reader u1dint
+reader readarray
 longname connection type
 description is an index array indicating the direction between node n and all of its m connections.  If $ihc=0$ -- cell $n$ and cell $m$ are connected in the vertical direction.  Cell $n$ overlies cell $m$ if the cell number for $n$ is less than $m$; cell $m$ overlies cell $n$ if the cell number for $m$ is less than $n$.  If $ihc=1$ -- cell $n$ and cell $m$ are connected in the horizontal direction.  If $ihc=2$ -- cell $n$ and cell $m$ are connected in the horizontal direction, and the connection is vertically staggered.  A vertically staggered connection is one in which a cell is horizontally connected to more than one cell in a horizontal connection.
 
@@ -123,7 +123,7 @@ block connectiondata
 name cl12
 type double precision
 shape (nja)
-reader u1ddbl
+reader readarray
 longname connection lengths
 description is the array containing connection lengths between the center of cell $n$ and the shared face with each adjacent $m$ cell.
 
@@ -131,7 +131,7 @@ block connectiondata
 name hwva
 type double precision
 shape (nja)
-reader u1ddbl
+reader readarray
 longname connection lengths
 description is a symmetric array of size \texttt{nja}.  For horizontal connections, entries in \texttt{hwva} are the horizontal width perpendicular to flow.  For vertical connections, entries in \texttt{hwva} are the vertical area for flow.  Thus, values in the \texttt{hwva} array contain dimensions of both length and area.  Entries in the \texttt{hwva} array have a one-to-one correspondence with the connections specified in the \texttt{ja} array.  Likewise, there is a one-to-one correspondence between entries in the \texttt{hwva} array and entries in the \texttt{ihc} array, which specifies the connection type (horizontal or vertical).  Entries in the \texttt{hwva} array must be symmetric; the program will terminate with an error if the value for \texttt{hwva} for an $n-m$ connection does not equal the value for \texttt{hwva} for the corresponding $m-n$ connection.
 
@@ -140,7 +140,7 @@ name angldegx
 type double precision
 optional true
 shape (nja)
-reader u1ddbl
+reader readarray
 longname angle of face normal to connection
 description is the angle (in degrees) between the horizontal x-axis and the outward normal to the face between a cell and its connecting cells (see figure 8 in the MODFLOW-USG documentation). The angle varies between zero and 360.0.  \texttt{angldegx} is only needed if horizontal anisotropy is specified in the NPF Package.  \texttt{angldegx} does not need to be specified if horizontal anisotropy is not used.  \texttt{angldegx} is of size nja; values specified for vertical connections and for the diagonal position are not used.  Note that \texttt{angldegx} is read in degrees, which is different from MODFLOW-USG, which reads a similar variable (anglex) in radians.
 

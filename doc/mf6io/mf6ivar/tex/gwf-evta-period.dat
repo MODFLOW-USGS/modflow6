@@ -1,12 +1,12 @@
 BEGIN PERIOD <iper>
-  [IEVT
-    <ievt(ncol*nrow; ncpl)> -- U1DDBL]
-  SURFACE
-    <surface(ncol*nrow; ncpl)> -- U1DDBL
-  RATE
-    <rate(ncol*nrow; ncpl)> -- U1DDBL
-  DEPTH
-    <depth(ncol*nrow; ncpl)> -- U1DDBL
-  AUX(IAUX)
-    <aux(iaux)(ncol*nrow; ncpl)> -- U1DDBL
+  [IEVT [LAYERED]
+    <ievt(ncol*nrow; ncpl)> -- READARRAY]
+  SURFACE [LAYERED]
+    <surface(ncol*nrow; ncpl)> -- READARRAY
+  RATE [LAYERED]
+    <rate(ncol*nrow; ncpl)> -- READARRAY
+  DEPTH [LAYERED]
+    <depth(ncol*nrow; ncpl)> -- READARRAY
+  AUX(IAUX) [LAYERED]
+    <aux(iaux)(ncol*nrow; ncpl)> -- READARRAY
 END PERIOD

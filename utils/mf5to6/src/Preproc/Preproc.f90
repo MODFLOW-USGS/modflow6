@@ -12,9 +12,9 @@ module PreprocModule
   use DnmDis3dModule,            only: dis3d_cr, Dis3dType, CastAsDis3dType
   use DnmDisBaseModule,          only: DisBaseType
   use GLOBAL,                    only: NCOL, NROW, DELC, DELR
-  use globalPHMF,                only: iout, outfile
+  use globalPHMF,                only: ioutPHMF, outfile
   use GlobalVariablesPHMFModule, only: prognamPHMF, verbose, vnam
-  use InputOutputModule,         only: GetLine, GetUnit, uget_block, urword, &
+  use InputOutputModule,         only: GetUnit, uget_block, urword, &
                                        uterminate_block, GetUnit, openfile, &
                                        uget_any_block, dclosetest
   use ListModule,                only: ListType
@@ -108,17 +108,17 @@ contains
     ! Open an output file for messages, etc.
     inquire(file=outfile, opened=lop, number=iu)
     if (lop) then
-      iout = iu
+      ioutPHMF = iu
     else
-      iout = GetUnit()
-      open(unit=iout,file=outfile,status='REPLACE')
+      ioutPHMF = GetUnit()
+      open(unit=ioutPHMF,file=outfile,status='REPLACE')
     endif
-    write(iout,5)'Output listing from program ' // trim(prognamPHMF)
+    write(ioutPHMF,5)'Output listing from program ' // trim(prognamPHMF)
     !
     inpp = GetUnit()
     call openfile(inpp,0,fname,'PREPROC')
     !
-    call this%initialize_preproc(inpp, iout)
+    call this%initialize_preproc(inpp, ioutPHMF)
     !
     ! Read Options block
     call this%read_options()
@@ -228,7 +228,6 @@ contains
       readblockoptions: do
 !        lloc = 1
         ! -- read a line from input
-!        call GetLine(iin, line, eof, .true.)
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
 !        if (eof) then

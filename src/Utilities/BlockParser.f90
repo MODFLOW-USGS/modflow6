@@ -34,6 +34,7 @@ module BlockParserModule
     procedure, public :: GetLinesRead
     procedure, public :: GetNextLine
     procedure, public :: GetRemainingLine
+    procedure, public :: terminateblock
     procedure, public :: GetString
     procedure, public :: GetStringCaps
     procedure, public :: StoreErrorUnit
@@ -118,7 +119,6 @@ contains
     else
       blockRequiredLocal = .true.
     endif
-    !continueRead = .not. blockRequiredLocal
     continueRead = blockRequiredLocal
     this%blockName = blockName
     this%blockNameFound = ''
@@ -316,6 +316,25 @@ contains
     !
     return
   end subroutine GetRemainingLine
+  
+  subroutine terminateblock(this)
+    ! -- dummy
+    class(BlockParserType), intent(inout) :: this
+    ! -- local
+    logical :: endofblock
+    character(len=LINELENGTH) :: errmsg
+    !
+    call this%GetNextLine(endofblock)
+    if (.not. endofblock) then
+      errmsg = '****ERROR. LOOKING FOR "END ' // trim(this%blockname) // &
+        '".  FOUND: '
+      call store_error(errmsg)
+      errmsg = '"' // trim(this%line) // '"'
+      call store_error(errmsg)
+      call this%StoreErrorUnit()
+      call ustop()
+    endif
+  end subroutine terminateblock
 
   subroutine GetCellid(this, ndim, cellid, flag_string)
     ! -- dummy

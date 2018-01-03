@@ -24,7 +24,7 @@ module ChdPackageWriterModule
   use TdisVariablesModule, only: GlobalTdisWriter
   use TimeSeriesRecordModule, only: TimeSeriesRecordType, &
                                     ConstructTimeSeriesRecord
-  use TimeSeriesModule, only: TimeSeriesGroupType, SameTimeSeries
+  use TimeSeriesModule, only: TimeSeriesFileType, SameTimeSeries
   use UtilitiesModule, only: close_file
 
   implicit none
@@ -48,7 +48,7 @@ module ChdPackageWriterModule
     type(ListType),            pointer :: IbChdList => null()   ! CHDs from IBOUND
     type(ListType),            pointer :: TvChdList => null()   ! Time-variable CHDs from CHD package
     type(ListType),            pointer :: CnstChdList => null() ! Constant CHDs from CHD package
-    type(TimeSeriesGroupType), pointer :: ChdTsGroup => null()
+    type(TimeSeriesFileType), pointer :: ChdTsGroup => null()
     !type(ChdObsWriterType),    pointer :: ChdObsWriter => null()
   contains
     ! Public procedures

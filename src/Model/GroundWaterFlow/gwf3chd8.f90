@@ -316,17 +316,19 @@ contains
           else
             chout = chout + q
           end if
-        end do
+                  end do
         !
-        ! -- For chd, store total flow in rhs so it is available for other calculations
+        ! -- For chd, store total flow in rhs so it is available for other 
+        !    calculations
         this%rhs(i) = -rrate
         this%hcof(i) = DZERO
         !
         ! -- Print the individual rates if requested(this%iprflow<0)
         if (ibudfl /= 0) then
           if(this%iprflow /= 0) then
-            if (ibdlbl == 0) write(this%iout,fmttkk) this%text, kper, kstp
-            call this%dis%print_list_entry(i, node, rrate, this%iout, &
+                if(ibdlbl == 0) write(this%iout,fmttkk)                        &
+                  this%text // ' (' // trim(this%name) // ')', kper, kstp
+            call this%dis%print_list_entry(i, node, rrate, this%iout,          &
                     bname)
             ibdlbl=1
           end if
@@ -336,8 +338,8 @@ contains
         if (ibinun /= 0) then
           n2 = i
           if (present(imap)) n2 = imap(i)
-          call this%dis%record_mf6_list_entry(ibinun, node, n2, rrate,      &
-                                                  naux, this%auxvar(:,i),       &
+          call this%dis%record_mf6_list_entry(ibinun, node, n2, rrate,         &
+                                                  naux, this%auxvar(:,i),      &
                                                   olconv2=.FALSE.)
         end if
         !
@@ -426,7 +428,7 @@ subroutine chd_df_obs(this)
   ! -- local
   integer(I4B) :: indx
 ! ------------------------------------------------------------------------------
-  call this%obs%StoreObsType('chd-flow', .true., indx)
+  call this%obs%StoreObsType('chd', .true., indx)
   this%obs%obsData(indx)%ProcessIdPtr => DefaultObsIdProcessor
   return
 end subroutine chd_df_obs

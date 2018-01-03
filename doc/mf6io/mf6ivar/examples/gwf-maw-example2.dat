@@ -3,7 +3,6 @@ begin options
   print_head
   print_flows
   boundnames
-  newton
 end options
 
 begin dimensions

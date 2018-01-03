@@ -1,3 +1,3 @@
 BEGIN DIMENSIONS
-  MAXBOUND <maxbound>
+  NREACHES <nreaches>
 END DIMENSIONS

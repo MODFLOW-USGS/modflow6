@@ -131,7 +131,7 @@
       CHARACTER (LEN= 20) :: cipc(0:4)
       CHARACTER (LEN= 20) :: cscale(0:2)
       CHARACTER (LEN= 25) :: corder(0:2)
-      CHARACTER (LEN= 16), DIMENSION(0:3) :: ccnvgopt
+      CHARACTER (LEN= 16), DIMENSION(0:4) :: ccnvgopt
       CHARACTER (LEN= 15) :: clevel, cdroptol 
       integer(I4B) :: i, n
       integer(I4B) :: i0
@@ -160,6 +160,7 @@
      &            'RCM ORDERING             ', &
      &            'MINIMUM DEGREE ORDERING  '/
       DATA ccnvgopt  /'INFINITY NORM   ', &
+     &                'INFINITY NORM S ', &
      &                'L2 NORM         ', &
      &                'RELATIVE L2NORM ', &
                       'L2 NORM W. REL. '/
@@ -274,10 +275,12 @@
               this%rclose = parser%GetDouble()
               ! -- look for additional key words
               call parser%GetStringCaps(keyword)
-              if (keyword == 'L2NORM_RCLOSE') then
+              if (keyword == 'STRICT') then
                 THIS%ICNVGOPT = 1
-              else if (keyword == 'RELATIVE_RCLOSE') then
+              else if (keyword == 'L2NORM_RCLOSE') then
                 THIS%ICNVGOPT = 2
+              else if (keyword == 'RELATIVE_RCLOSE') then
+                THIS%ICNVGOPT = 3
               else if (keyword == 'L2NORM_RELATIVE_RCLOSE') then
                 THIS%ICNVGOPT = 3
               end if
@@ -399,7 +402,7 @@
         call store_error(errmsg)
       END IF
       IF (THIS%RCLOSE.EQ.DZERO) THEN
-        IF (THIS%ICNVGOPT /= 2) THEN
+        IF (THIS%ICNVGOPT /= 3) THEN
           WRITE( errmsg,'(A)' ) 'IMSLINEAR7AR: RCLOSE MUST .NE. 0.0'
           call store_error(errmsg)
         END IF
@@ -795,13 +798,13 @@
 !     + + + CODE + + +
 !
 !-------SET EPFACT BASED ON MFUSG TIMESTEP
-      IF (THIS%ICNVGOPT.EQ.1) THEN
+      IF (THIS%ICNVGOPT.EQ.2) THEN
         IF (KSTP.EQ.1) THEN
           THIS%EPFACT = 0.01
         ELSE
           THIS%EPFACT = 0.10
         END IF
-      ELSE IF (THIS%ICNVGOPT.EQ.3) THEN
+      ELSE IF (THIS%ICNVGOPT.EQ.4) THEN
         THIS%EPFACT = DEM4
       ELSE
         THIS%EPFACT = DONE
@@ -860,7 +863,10 @@
       THIS%L2NORM0 = SQRT(THIS%L2NORM0)
 !-------CHECK FOR EXACT SOLUTION
       itmax = THIS%ITER1
-      IF (rmax.EQ.DZERO ) itmax = 0
+      IF (rmax.EQ.DZERO) THEN
+        itmax = 0
+        ICNVG = 1
+      END IF
 !-------SOLUTION BY THE CONJUGATE GRADIENT METHOD
       IF (THIS%ILINMETH.EQ.1) THEN
         CALL IMSLINEARSUB_CG(ICNVG, itmax, innerit,                             &
@@ -1612,18 +1618,18 @@
             END DO
           END IF
 !-----------TEST FOR SOLVER CONVERGENCE                                 
-          IF (ICNVGOPT.EQ.1 .OR. ICNVGOPT.EQ.2 .OR. ICNVGOPT.EQ.3) THEN 
+          IF (ICNVGOPT.EQ.2 .OR. ICNVGOPT.EQ.3 .OR. ICNVGOPT.EQ.4) THEN 
             rcnvg = l2norm 
           ELSE 
             rcnvg = rmax 
           END IF 
-          CALL IMSLINEARSUB_TESTCNVG(ICNVGOPT, ICNVG,                           &
+          CALL IMSLINEARSUB_TESTCNVG(ICNVGOPT, ICNVG, INNERIT,                  &
                                      deltax, rcnvg,                             &
-                                     L2NORM0, EPFACT, HCLOSE, RCLOSE )         
+                                     L2NORM0, EPFACT, HCLOSE, RCLOSE)         
 !
 !           CHECK FOR EXACT SOLUTION                                    
-          IF (rcnvg.EQ.DZERO ) ICNVG = 1 
-          IF (ICNVG.NE.0 ) EXIT INNER 
+          IF (rcnvg.EQ.DZERO) ICNVG = 1 
+          IF (ICNVG.NE.0) EXIT INNER 
 !-----------CHECK THAT CURRENT AND PREVIOUS rho ARE DIFFERENT           
           isame = IMSLINEARSUB_SAME(rho, rho0) 
           IF (isame.NE.0) THEN 
@@ -1802,7 +1808,7 @@
 !              X(n)  = X(n) + tv 
 !              IF (ABS(tv).GT.ABS(deltax) ) deltax = tv 
 !            END DO 
-!            CALL IMSLINEARSUB_TESTCNVG(ICNVGOPT, ICNVG,                         &
+!            CALL IMSLINEARSUB_TESTCNVG(ICNVGOPT, ICNVG, INNERIT,                &
 !                                       deltax, rmax,                            &
 !                                       rmax, EPFACT, HCLOSE, RCLOSE )          
 !            IF (ICNVG.NE.0 ) EXIT INNER 
@@ -1887,17 +1893,17 @@
             END DO
           END IF
 !-----------TEST FOR SOLVER CONVERGENCE                                 
-          IF (ICNVGOPT.EQ.1 .OR. ICNVGOPT.EQ.2 .OR. ICNVGOPT.EQ.3) THEN 
+          IF (ICNVGOPT.EQ.2 .OR. ICNVGOPT.EQ.3 .OR. ICNVGOPT.EQ.4) THEN 
             rcnvg = l2norm 
           ELSE 
             rcnvg = rmax 
           END IF 
-          CALL IMSLINEARSUB_TESTCNVG(ICNVGOPT, ICNVG,                           &
+          CALL IMSLINEARSUB_TESTCNVG(ICNVGOPT, ICNVG, INNERIT,                  &
                                      deltax, rcnvg,                             &
                                      L2NORM0, EPFACT, HCLOSE, RCLOSE)         
 !           CHECK FOR EXACT SOLUTION                                    
-          IF (rcnvg.EQ.DZERO ) ICNVG = 1 
-          IF (ICNVG.NE.0 ) EXIT INNER
+          IF (rcnvg.EQ.DZERO) ICNVG = 1 
+          IF (ICNVG.NE.0) EXIT INNER
 !-----------CHECK THAT CURRENT AND PREVIOUS rho, alpha, AND omega ARE 
 !           DIFFERENT
           isame = IMSLINEARSUB_SAME(rho, rho0) 
@@ -1936,13 +1942,14 @@
       END SUBROUTINE IMSLINEARSUB_BCGS 
 !                                                                       
 !---------TEST FOR SOLVER CONVERGENCE                                   
-        SUBROUTINE IMSLINEARSUB_TESTCNVG(Icnvgopt, Icnvg,                       &
+        SUBROUTINE IMSLINEARSUB_TESTCNVG(Icnvgopt, Icnvg, Iiter,                &
                                          Hmax, Rmax,                            &
                                          Rmax0, Epfact, Hclose, Rclose )         
         IMPLICIT NONE 
 !       + + + DUMMY ARGUMENTS + + +                                       
         integer(I4B), INTENT(IN)         :: Icnvgopt 
         integer(I4B), INTENT(INOUT)      :: Icnvg 
+        integer(I4B), INTENT(IN)         :: Iiter
         real(DP), INTENT(IN) :: Hmax 
         real(DP), INTENT(IN) :: Rmax 
         real(DP), INTENT(IN) :: Rmax0 
@@ -1957,18 +1964,23 @@
             Icnvg = 1 
           END IF 
         ELSE IF (Icnvgopt.EQ.1) THEN 
+          IF (ABS(Hmax).LE.Hclose .AND. ABS(Rmax).LE.Rclose .AND.               &
+              iiter.EQ.1) THEN 
+            Icnvg = 1 
+          END IF 
+        ELSE IF (Icnvgopt.EQ.2) THEN 
           IF (ABS(Hmax).LE.Hclose .OR. Rmax.LE.Rclose) THEN 
             Icnvg = 1 
           ELSE IF (Rmax.LE.Rmax0*Epfact) THEN 
             Icnvg = -1 
           END IF
-        ELSE IF (Icnvgopt.EQ.2) THEN 
+        ELSE IF (Icnvgopt.EQ.3) THEN 
           IF (ABS(Hmax).LE.Hclose) THEN
             Icnvg = 1 
           ELSE IF (Rmax.LE.Rmax0*Rclose) THEN  
             Icnvg = -1 
           END IF
-        ELSE IF (Icnvgopt.EQ.3) THEN 
+        ELSE IF (Icnvgopt.EQ.4) THEN 
           IF (ABS(Hmax).LE.Hclose .AND. Rmax.LE.Rclose) THEN
             Icnvg = 1 
           ELSE IF (Rmax.LE.Rmax0*Epfact) THEN  

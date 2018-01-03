@@ -1,7 +1,7 @@
 BEGIN OPTIONS
   PRINT_INPUT (echo input to listing file)
   PRINT_FLOWS  (print the flows to the listing file)
-  TS8 FILEIN tides.ts
+  TS6 FILEIN tides.ts
   BOUNDNAMES  
 END OPTIONS
 

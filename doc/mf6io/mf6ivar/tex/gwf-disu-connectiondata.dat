@@ -1,14 +1,14 @@
 BEGIN CONNECTIONDATA
-  IAC
-    <iac(nodes)> -- U1DINT
-  JA
-    <ja(nja)> -- U1DINT
-  IHC
-    <ihc(nja)> -- U1DINT
-  CL12
-    <cl12(nja)> -- U1DDBL
-  HWVA
-    <hwva(nja)> -- U1DDBL
-  [ANGLDEGX
-    <angldegx(nja)> -- U1DDBL]
+  IAC [LAYERED]
+    <iac(nodes)> -- READARRAY
+  JA [LAYERED]
+    <ja(nja)> -- READARRAY
+  IHC [LAYERED]
+    <ihc(nja)> -- READARRAY
+  CL12 [LAYERED]
+    <cl12(nja)> -- READARRAY
+  HWVA [LAYERED]
+    <hwva(nja)> -- READARRAY
+  [ANGLDEGX [LAYERED]
+    <angldegx(nja)> -- READARRAY]
 END CONNECTIONDATA

@@ -1,10 +1,10 @@
 BEGIN GRIDDATA
-  DELR
-    <delr(ncol)> -- U1DDBL
-  DELC
-    <delc(nrow)> -- U1DDBL
-  TOP
-    <top(ncol, nrow)> -- U2DDBL
+  DELR [LAYERED]
+    <delr(ncol)> -- READARRAY
+  DELC [LAYERED]
+    <delc(nrow)> -- READARRAY
+  TOP [LAYERED]
+    <top(ncol, nrow)> -- READARRAY
   BOTM [LAYERED]
     <botm(ncol, nrow, nlay)> -- READARRAY
   [IDOMAIN [LAYERED]

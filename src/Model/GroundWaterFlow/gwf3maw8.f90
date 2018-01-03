@@ -88,8 +88,8 @@ module mawmodule
     integer(I4B), pointer :: ibudgetout => null()
     integer(I4B), pointer :: cbcauxitems => NULL()
     integer(I4B), pointer :: iflowingwells => NULL()
-    integer(I4B), pointer :: isteady => NULL()
-    integer(I4B), pointer :: isteadyopt => NULL()
+    integer(I4B), pointer :: imawiss => NULL()
+    integer(I4B), pointer :: imawissopt => NULL()
     integer(I4B), pointer :: nmawwells => NULL()
     integer(I4B), pointer :: check_attr => NULL()
     integer(I4B), pointer :: ishutoffcnt => NULL()
@@ -240,8 +240,8 @@ contains
     call mem_allocate(this%iheadout, 'IHEADOUT', this%origin)
     call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%origin)
     call mem_allocate(this%iflowingwells, 'IFLOWINGWELLS', this%origin)
-    call mem_allocate(this%isteady, 'ISTEADY', this%origin)
-    call mem_allocate(this%isteadyopt, 'ISTEADYOPT', this%origin)
+    call mem_allocate(this%imawiss, 'IMAWISS', this%origin)
+    call mem_allocate(this%imawissopt, 'IMAWISSOPT', this%origin)
     call mem_allocate(this%nmawwells, 'NMAWWELLS', this%origin)
     call mem_allocate(this%check_attr, 'check_attr', this%origin)
     call mem_allocate(this%ishutoffcnt, 'ISHUTOFFCNT', this%origin)
@@ -256,8 +256,8 @@ contains
     this%iheadout = 0
     this%ibudgetout = 0
     this%iflowingwells = 0
-    this%isteady = 0
-    this%isteadyopt = 0
+    this%imawiss = 0
+    this%imawissopt = 0
     this%ieffradopt = 0
     this%bditems = 8
     this%theta = DP7
@@ -1469,7 +1469,7 @@ contains
         write(this%iout, '(4x,A)') 'MOVER OPTION ENABLED'
         found = .true.
       case('NO_WELL_STORAGE')
-        this%isteadyopt = 1
+        this%imawissopt = 1
         write(this%iout, fmtnostoragewells)
         found = .true.
       !
@@ -1477,7 +1477,7 @@ contains
       !    development version and are not included in the documentation.
       !    These options are only available when IDEVELOPMODE in
       !    constants module is set to 1
-      case('PEACEMAN_EFFECTIVE_RADIUS')
+      case('DEV_PEACEMAN_EFFECTIVE_RADIUS')
         call this%parser%DevOpt()
         this%ieffradopt = 1
         write(this%iout, '(4x,a)')                                             &
@@ -1590,6 +1590,13 @@ contains
     ! -- initialize flags
     isfirst = 1
     !
+    ! -- set steady-state flag based on gwfiss
+    this%imawiss = this%gwfiss
+    ! -- reset maw steady flag if 'STEADY-STATE' specified in the OPTIONS block
+    if (this%imawissopt == 1) then
+      this%imawiss = 1
+    end if
+    !
     ! -- set nbound to maxbound
     this%nbound = this%maxbound
     !
@@ -1605,24 +1612,8 @@ contains
                                 supportOpenClose=.true.)
       if(isfound) then
         !
-        ! -- save last value and read period number
-        this%lastonper = this%ionper
-        this%ionper = this%parser%GetInteger()
-        !
-        ! -- check to make sure period blocks are increasing
-        if (this%ionper < this%lastonper) then
-          write(errmsg, '(a, i0)') &
-            'ERROR IN STRESS PERIOD ', kper
-          call store_error(errmsg)
-          write(errmsg, '(a, i0)') &
-            'PERIOD NUMBERS NOT INCREASING.  FOUND ', this%ionper
-          call store_error(errmsg)
-          write(errmsg, '(a, i0)') &
-            'BUT LAST PERIOD BLOCK WAS ASSIGNED ', this%lastonper
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-          call ustop()
-        endif
+        ! -- read ionper and check for increasing period numbers
+        call this%read_check_ionper()
       else
         !
         ! -- PERIOD block not found
@@ -1640,16 +1631,6 @@ contains
     !
     ! -- Read data if ionper == kper
     if(this%ionper == kper) then
-      !
-      ! -- Remove all time-series links associated with this package
-      !call this%TsManager%Reset(this%name)
-      !
-      ! -- set steady-state flag based on gwfiss
-      this%isteady = this%gwfiss
-      ! -- reset maw steady flag if 'STEADY-STATE' specified in the OPTIONS block
-      if (this%isteadyopt == 1) then
-        this%isteady = 1
-      end if
 
       this%check_attr = 1
       do
@@ -1698,7 +1679,7 @@ contains
 
       ! -- write summary of stress period data for MAW
       if (this%iprpak == 1) then
-        if (this%isteady /= 0) then
+        if (this%imawiss /= 0) then
           csteady = 'STEADY-STATE    '
         else
           csteady = 'TRANSIENT       '
@@ -1946,7 +1927,7 @@ contains
           end if
         end if
         ! -- add maw storage changes
-        if (this%isteady /= 1) then
+        if (this%imawiss /= 1) then
           if (this%mawwells(n)%ifwdischarge /= 1) then
             amatsln(iposd) = amatsln(iposd) - (this%mawwells(n)%area / delt)
             rhs(iloc) = rhs(iloc) - (this%mawwells(n)%area * this%mawwells(n)%xoldsto / delt)
@@ -2085,7 +2066,7 @@ contains
           end if
         end if
         ! -- add maw storage changes
-        if (this%isteady /= 1) then
+        if (this%imawiss /= 1) then
           if (this%mawwells(n)%ifwdischarge /= 1) then
             rate = this%mawwells(n)%area * hmaw / delt
             rterm = -rate
@@ -2244,8 +2225,6 @@ contains
     ! -- for observations
     integer(I4B) :: iprobslocal
     ! -- formats
-    character(len=*), parameter :: fmttkk = &
-      "(1X,/1X,A,'   PERIOD ',I0,'   STEP ',I0)"
 ! ------------------------------------------------------------------------------
     !
     ! -- recalculate package HCOF and RHS terms with latest groundwater and
@@ -2355,7 +2334,7 @@ contains
           end if
         end if
         ! -- add maw storage changes
-        if (this%isteady /= 1) then
+        if (this%imawiss /= 1) then
           rrate = -this%mawwells(n)%area * (this%mawwells(n)%xsto - this%mawwells(n)%xoldsto) / delt
           this%qsto(n) = rrate
           !
@@ -2475,7 +2454,7 @@ contains
       call this%budget%addentry(DZERO, mvrratout, delt,  &
                                 this%cmawbudget(7), isuppress_output)
     end if
-    if (this%isteadyopt /= 1) then
+    if (this%imawissopt /= 1) then
       call this%budget%addentry(storatin, storatout, delt,  &
                                 this%cmawbudget(3), isuppress_output)
     end if
@@ -2606,7 +2585,7 @@ contains
         end do
       end if
       ! STORAGE
-      if (this%isteadyopt /= 1) then
+      if (this%imawissopt /= 1) then
         naux = this%cbcauxitems
         this%cauxcbc(1) = 'VOLUME          '
         call ubdsv06(kstp, kper, this%cmawbudget(3),                            &
@@ -2847,11 +2826,11 @@ contains
           call UWWORD(line, iloc, 11, 1, 'flowing', n, q, CENTER=.TRUE.)
         end if
       end if
-      if (this%isteadyopt /= 1) then
+      if (this%imawissopt /= 1) then
         call UWWORD(line, iloc, 11, 1, 'well', n, q, CENTER=.TRUE.)
       end if
       call UWWORD(line, iloc, 11, 1, 'constant', n, q, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 11, 1, 'well', n, q, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 11, 1, 'well', n, q, CENTER=.TRUE., SEP=' ')
       call UWWORD(line, iloc, 11, 1, 'percent', n, q, CENTER=.TRUE.)
       ! -- create line separator
       linesep = repeat('-', iloc)
@@ -2880,11 +2859,11 @@ contains
           call UWWORD(line, iloc, 11, 1, 'to mvr', n, q, CENTER=.TRUE.)
         end if
       end if
-      if (this%isteadyopt /= 1) then
+      if (this%imawissopt /= 1) then
         call UWWORD(line, iloc, 11, 1, 'storage', n, q, CENTER=.TRUE.)
       end if
       call UWWORD(line, iloc, 11, 1, 'flow', n, q, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 11, 1, 'in - out', n, q, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 11, 1, 'in - out', n, q, CENTER=.TRUE., SEP=' ')
       call UWWORD(line, iloc, 11, 1, 'difference', n, q, CENTER=.TRUE.)
       ! -- write second line
       write(iout,'(1X,A)') line(1:iloc)
@@ -2968,7 +2947,7 @@ contains
             call UWWORD(line, iloc, 11, 3, text, n, qfwratetomvr)
           end if
         end if
-        if (this%isteadyopt /= 1) then
+        if (this%imawissopt /= 1) then
           qsto = this%qsto(n)
           call UWWORD(line, iloc, 11, 3, text, n, qsto)
         end if
@@ -2993,7 +2972,7 @@ contains
           qin = qin + qconst
         end if
         qerr = qin - qout
-        call UWWORD(line, iloc, 11, 3, text, n, qerr)
+        call UWWORD(line, iloc, 11, 3, text, n, qerr, SEP=' ')
         qavg = DHALF * (qin + qout)
         if (qavg > DZERO) then
           qpd = DHUNDRED * qerr / qavg
@@ -3057,8 +3036,8 @@ contains
     call mem_deallocate(this%iheadout)
     call mem_deallocate(this%ibudgetout)
     call mem_deallocate(this%iflowingwells)
-    call mem_deallocate(this%isteady)
-    call mem_deallocate(this%isteadyopt)
+    call mem_deallocate(this%imawiss)
+    call mem_deallocate(this%imawissopt)
     call mem_deallocate(this%nmawwells)
     call mem_deallocate(this%check_attr)
     call mem_deallocate(this%ishutoffcnt)
@@ -3071,6 +3050,9 @@ contains
     ! -- objects
     call this%budget%budget_da()
     deallocate(this%budget)
+    !
+    ! -- pointers to gwf variables
+    nullify(this%gwfiss)
     !
     ! -- call standard BndType deallocate
     call this%BndType%bnd_da()
@@ -3341,7 +3323,7 @@ contains
                 end if
               end if
             case ('STORAGE')
-              if (this%iboundpak(jj) /= 0 .and. this%isteadyopt /= 1) then
+              if (this%iboundpak(jj) /= 0 .and. this%imawissopt /= 1) then
                 v = this%qsto(jj)
               end if
             case ('CONSTANT')
@@ -3894,7 +3876,7 @@ contains
       end if
     end if
     ! -- calculate maw storage changes
-    if (this%isteady /= 1) then
+    if (this%imawiss /= 1) then
       if (this%mawwells(n)%ifwdischarge /= 1) then
         hdterm = this%mawwells(n)%xoldsto - htmp
       else

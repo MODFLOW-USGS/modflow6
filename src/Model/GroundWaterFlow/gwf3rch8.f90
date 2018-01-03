@@ -20,20 +20,20 @@ module RchModule
   !
   type, extends(BndType) :: RchType
     integer(I4B), pointer               :: inirch     => NULL()
-    integer(I4B), pointer, dimension(:) :: nodesontop => NULL()    ! Array of user provided cell numbers (nodelist contains cells where recharge is applied)
-    logical, private               :: fixed_cell = .false.
-    logical, private               :: read_as_arrays = .false.
+    integer(I4B), pointer, dimension(:) :: nodesontop => NULL()    ! User provided cell numbers; nodelist is cells where recharge is applied)
+    logical, private                    :: fixed_cell = .false.
+    logical, private                    :: read_as_arrays = .false.
   contains
     procedure :: rch_allocate_scalars
     procedure :: bnd_options         => rch_options
     procedure :: read_dimensions     => rch_read_dimensions
+    procedure :: read_initial_attr   => rch_read_initial_attr
     procedure :: bnd_rp              => rch_rp
     procedure :: set_nodesontop
     procedure :: bnd_cf              => rch_cf
     procedure :: bnd_fc              => rch_fc
     procedure :: bnd_da              => rch_da
     procedure :: define_listlabel    => rch_define_listlabel
-    procedure :: read_initial_attr   => rch_read_initial_attr
     procedure, public :: bnd_rp_ts   => rch_rp_ts
     procedure, private :: rch_rp_array
     procedure, private :: rch_rp_list
@@ -44,33 +44,6 @@ module RchModule
   end type RchType
 
   contains
-
-  subroutine rch_allocate_scalars(this)
-! ******************************************************************************
-! allocate_scalars -- allocate scalar members
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use MemoryManagerModule, only: mem_allocate
-    ! -- dummy
-    class(RchType),   intent(inout) :: this
-! ------------------------------------------------------------------------------
-    !
-    ! -- call standard BndType allocate scalars
-    call this%BndType%allocate_scalars()
-    !
-    ! -- allocate the object and assign values to object variables
-    call mem_allocate(this%inirch, 'INIRCH', this%origin)
-    !
-    ! -- Set values
-    this%inirch = 0
-    this%fixed_cell = .false.
-    !
-    ! -- return
-    return
-  end subroutine rch_allocate_scalars
 
   subroutine rch_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname)
 ! ******************************************************************************
@@ -122,31 +95,32 @@ module RchModule
     return
   end subroutine rch_create
 
-  subroutine rch_da(this)
+  subroutine rch_allocate_scalars(this)
 ! ******************************************************************************
-! rch_da -- deallocate
+! allocate_scalars -- allocate scalar members
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use MemoryManagerModule, only: mem_deallocate
+    use MemoryManagerModule, only: mem_allocate
     ! -- dummy
-    class(RchType) :: this
+    class(RchType),   intent(inout) :: this
 ! ------------------------------------------------------------------------------
     !
-    ! -- Deallocate parent package
-    call this%BndType%bnd_da()
+    ! -- call standard BndType allocate scalars
+    call this%BndType%allocate_scalars()
     !
-    ! -- scalars
-    call mem_deallocate(this%inirch)
+    ! -- allocate the object and assign values to object variables
+    call mem_allocate(this%inirch, 'INIRCH', this%origin)
     !
-    ! -- arrays
-    if(associated(this%nodesontop)) deallocate(this%nodesontop)
+    ! -- Set values
+    this%inirch = 0
+    this%fixed_cell = .false.
     !
     ! -- return
     return
-  end subroutine rch_da
+  end subroutine rch_allocate_scalars
 
   subroutine rch_options(this, option, found)
 ! ******************************************************************************
@@ -289,9 +263,9 @@ module RchModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    implicit none
     ! -- dummy
     class(RchType),intent(inout) :: this
+! ------------------------------------------------------------------------------
     !
     if (this%read_as_arrays) then
       call this%default_nodelist()
@@ -323,15 +297,15 @@ module RchModule
     logical :: supportopenclose
     character(len=LINELENGTH) :: line, errmsg
     ! -- formats
-    character(len=*),parameter :: fmtblkerr = &
+    character(len=*),parameter :: fmtblkerr =                                  &
       "('Error.  Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
-    character(len=*),parameter :: fmtlsp = &
+    character(len=*),parameter :: fmtlsp =                                     &
       "(1X,/1X,'REUSING ',A,'S FROM LAST STRESS PERIOD')"
-    character(len=*), parameter :: fmtnbd = &
-      "(1X,/1X,'THE NUMBER OF ACTIVE ',A,'S (',I6, &
-       ') IS GREATER THAN MAXIMUM(',I6,')')"
-    character(len=*), parameter :: fmtdimlayered = &
-      "('When READASARRAYS is specified for the selected discretization" // &
+    character(len=*), parameter :: fmtnbd =                                    &
+      "(1X,/1X,'THE NUMBER OF ACTIVE ',A,'S (',I6,                             &
+       &') IS GREATER THAN MAXIMUM(',I6,')')"
+    character(len=*), parameter :: fmtdimlayered =                             &
+      "('When READASARRAYS is specified for the selected discretization" //    &
       " package, DIMENSIONS block must be omitted.')"
 ! ------------------------------------------------------------------------------
     !
@@ -349,24 +323,8 @@ module RchModule
       call this%parser%GetBlock('PERIOD', isfound, ierr)
       if(isfound) then
         !
-        ! -- save last value and read period number
-        this%lastonper = this%ionper
-        this%ionper = this%parser%GetInteger()
-        !
-        ! -- check to make sure period blocks are increasing
-        if (this%ionper < this%lastonper) then
-          write(errmsg, '(a, i0)') &
-            'ERROR IN STRESS PERIOD ', kper
-          call store_error(errmsg)
-          write(errmsg, '(a, i0)') &
-            'PERIOD NUMBERS NOT INCREASING.  FOUND ', this%ionper
-          call store_error(errmsg)
-          write(errmsg, '(a, i0)') &
-            'BUT LAST PERIOD BLOCK WAS ASSIGNED ', this%lastonper
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-          call ustop()
-        endif
+        ! -- read ionper and check for increasing period numbers
+        call this%read_check_ionper()
       else
         !
         ! -- PERIOD block not found
@@ -403,15 +361,17 @@ module RchModule
         call this%bnd_rp_ts()
       else
         ! -- Read RECHARGE, NLARRAY, and AUX variables as arrays
-        call this%rch_rp_array(line, inrech, ierr)
+        call this%rch_rp_array(line, inrech)
       endif
     !
     else
       write(this%iout,fmtlsp) trim(this%filtyp)
     endif
     !
-    ! -- If recharge was read, then multiply by cell area
-    if(inrech /= 0) then
+    ! -- If recharge was read, then multiply by cell area.  If inrech = 2, then
+    !    recharge is begin managed as a time series, and the time series object
+    !    will multiply the recharge rate by the cell area.
+    if(inrech == 1) then
       do n = 1, this%nbound
         node = this%nodelist(n)
         this%bound(1, n) = this%bound(1, n) * this%dis%get_area(node)
@@ -422,7 +382,7 @@ module RchModule
     return
   end subroutine rch_rp
 
-  subroutine rch_rp_array(this, line, inrech, ierr)
+  subroutine rch_rp_array(this, line, inrech)
 ! ******************************************************************************
 ! rch_rp_array -- Read and Prepare Recharge as arrays
 ! ******************************************************************************
@@ -436,9 +396,9 @@ module RchModule
     ! -- dummy
     class(RchType),            intent(inout) :: this
     character(len=LINELENGTH), intent(inout) :: line
-    integer(I4B),                   intent(inout) :: inrech
-    integer(I4B),                   intent(inout) :: ierr
+    integer(I4B),              intent(inout) :: inrech
     ! -- local
+    integer(I4B) :: n
     integer(I4B) :: ipos
     integer(I4B) :: jcol, jauxcol, lpos
     character(len=LENTIMESERIESNAME) :: tasName
@@ -446,19 +406,23 @@ module RchModule
     character(len=24), dimension(2) :: aname
     character(len=LINELENGTH) :: keyword
     logical :: found, endOfBlock
-    logical :: convertFlux = .true.  ! Always convert recharge flux to flow
+    logical :: convertFlux
     real(DP), dimension(:), pointer :: bndArrayPtr => null()
     real(DP), dimension(:), pointer :: auxArrayPtr => null()
     real(DP), dimension(:), pointer :: auxMultArray => null()
     type(TimeArraySeriesLinkType),  pointer :: tasLink => null()
-    !data
+    ! -- formats
+    character(len=*),parameter :: fmtrchauxmult =                              &
+      "(4x, 'THE RECHARGE ARRAY IS BEING MULTIPLED BY THE AUXILIARY ARRAY WITH &
+        &THE NAME: ', A)"
+    ! -- data
     data aname(1) /'     LAYER OR NODE INDEX'/
     data aname(2) /'                RECHARGE'/
     !
 ! ------------------------------------------------------------------------------
     !
     jauxcol = 0
-    ! -- Read RECHARGE, NLARRAY, and AUX variables as arrays
+    ! -- Read RECHARGE, IRCH, and AUX variables as arrays
     do
       call this%parser%GetNextLine(endOfBlock)
       if (endOfBlock) exit
@@ -467,12 +431,6 @@ module RchModule
       ! -- Parse the keywords
       select case (keyword)
       case ('RECHARGE')
-        !
-        if(this%inirch == 0) then
-          call store_error('Error.  IRCH must be read at least once ')
-          call store_error('prior to reading the RECHARGE array.')
-          call ustop()
-        endif
         !
         ! -- Look for keyword TIMEARRAYSERIES and time-array series
         !    name on line, following RECHARGE
@@ -484,13 +442,14 @@ module RchModule
           bndArrayPtr => this%bound(jcol,:)
           ! Make a time-array-series link and add it to the list of links
           ! contained in the TimeArraySeriesManagerType object.
-          call this%TasManager%MakeTasLink(this%name, bndArrayPtr, &
-                                  this%iprpak, this%TimeArraySeriesFiles, &
-                                  tasName, this%dis, 'RECHARGE', &
-                                  convertFlux, this%nodelist, &
+          convertflux = .true.
+          call this%TasManager%MakeTasLink(this%name, bndArrayPtr,             &
+                                  this%iprpak, tasName, 'RECHARGE',            &
+                                  convertFlux, this%nodelist,                  &
                                   this%parser%iuactive)
           lpos = this%TasManager%CountLinks()
           tasLink => this%TasManager%GetLink(lpos)
+          inrech = 2
         else
           !
           ! -- Read the recharge array, then indicate
@@ -498,8 +457,8 @@ module RchModule
           call this%dis%read_layer_array(this%nodelist, this%bound, &
             this%ncolbnd, this%maxbound, 1, aname(2), this%parser%iuactive, &
             this%iout)
+          inrech = 1
         endif
-        inrech = 1
         !
       case ('IRCH')
         !
@@ -533,10 +492,11 @@ module RchModule
             auxArrayPtr => this%auxvar(jauxcol,:)
             ! Make a time-array-series link and add it to the list of links
             ! contained in the TimeArraySeriesManagerType object.
-            call this%TasManager%MakeTasLink(this%name, auxArrayPtr, &
-                                    this%iprpak, this%TimeArraySeriesFiles, &
-                                    tasName, this%dis, this%auxname(ipos), &
-                                    convertFlux, this%nodelist, &
+            convertflux = .false.
+            call this%TasManager%MakeTasLink(this%name, auxArrayPtr,           &
+                                    this%iprpak, tasName,                      &
+                                    this%auxname(ipos), convertFlux,           &
+                                    this%nodelist,                             &
                                     this%parser%iuactive)
           else
             !
@@ -549,28 +509,38 @@ module RchModule
         !
         ! -- Nothing found
         if(.not. found) then
-          call this%parser%GetRemainingLine(line)
-          call store_error('****ERROR. LOOKING FOR END.  FOUND: ')
-          call store_error(line)
+          call this%parser%GetCurrentLine(line)
+          call store_error('****ERROR. LOOKING FOR VALID VARIABLE NAME.  FOUND: ')
+          call store_error(trim(line))
           call this%parser%StoreErrorUnit()
           call ustop()
         endif
         !
-        ! If this aux variable has been designated as a multiplier array
-        ! by presence of AUXMULTNAME, set local pointer appropriately.
+        ! -- If this aux variable has been designated as a multiplier array
+        !    by presence of AUXMULTNAME, set local pointer appropriately.
         if (this%iauxmultcol > 0 .and. this%iauxmultcol == ipos) then
           auxMultArray => this%auxvar(this%iauxmultcol,:)
         endif
       end select
     end do
     !
-    ! If the multiplier-array pointer has been assigned and
-    ! stress is controlled by a time-array series, assign
-    ! multiplier-array pointer in time-array series link.
+    ! -- If the multiplier-array pointer has been assigned and
+    !    stress is controlled by a time-array series, assign
+    !    multiplier-array pointer in time-array series link.
     if (associated(auxMultArray)) then
       if (associated(tasLink)) then
         tasLink%RMultArray => auxMultArray
       endif
+    endif
+    !
+    ! -- If recharge was read and auxmultcol was specified, then multiply
+    !    the recharge rate by the multplier column
+    if(inrech == 1 .and. this%iauxmultcol > 0) then
+      write(this%iout, fmtrchauxmult) this%auxname(this%iauxmultcol)
+      do n = 1, this%nbound
+        this%bound(this%iscloc, n) = this%bound(this%iscloc, n) *              &
+          this%auxvar(this%iauxmultcol, n)
+      enddo
     endif
     !
     return
@@ -592,16 +562,19 @@ module RchModule
     !
 ! ------------------------------------------------------------------------------
     !
+    ! -- initialize
     nlist = -1
     maxboundorig = this%maxbound
+    !
+    ! -- read the list of recharge values; scale the recharge by auxmultcol
+    !    if it is specified.
     call this%dis%read_list(this%parser%iuactive, this%iout, this%iprpak,      &
                              nlist, this%inamedbound, this%iauxmultcol,        &
-                             this%nodelist,                                    &
-                             this%bound, this%auxvar, this%auxname,            &
-                             this%boundname, this%listlabel,                   &
-                             this%name, this%tsManager, this%iscloc)
+                             this%nodelist, this%bound, this%auxvar,           &
+                             this%auxname, this%boundname, this%listlabel,     &
+                             this%name, this%tsManager, this%iscloc,           &
+                             this%indxconvertflux)
     this%nbound = nlist
-    if (nlist > this%kbound) this%kbound = nlist
     if (this%maxbound > maxboundorig) then
       ! -- The arrays that belong to BndType have been extended.
       ! Now, RCH array nodesontop needs to be recreated.
@@ -611,6 +584,11 @@ module RchModule
     endif
     if (.not. this%fixed_cell) call this%set_nodesontop()
     inrech = 1
+    !
+    ! -- terminate the period block
+    call this%parser%terminateblock()
+    !
+    return
   end subroutine rch_rp_list
 
   subroutine set_nodesontop(this)
@@ -680,7 +658,6 @@ module RchModule
         cycle
       endif
       this%rhs(i) = -this%bound(1,i)
-      !write(this%iout,*)'in rch_cf, name i bound = ',trim(this%name),i,this%bound(1,i)
     enddo
     !
     ! -- return
@@ -721,6 +698,32 @@ module RchModule
     ! -- return
     return
   end subroutine rch_fc
+
+  subroutine rch_da(this)
+! ******************************************************************************
+! rch_da -- deallocate
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use MemoryManagerModule, only: mem_deallocate
+    ! -- dummy
+    class(RchType) :: this
+! ------------------------------------------------------------------------------
+    !
+    ! -- Deallocate parent package
+    call this%BndType%bnd_da()
+    !
+    ! -- scalars
+    call mem_deallocate(this%inirch)
+    !
+    ! -- arrays
+    if(associated(this%nodesontop)) deallocate(this%nodesontop)
+    !
+    ! -- return
+    return
+  end subroutine rch_da
 
   subroutine rch_define_listlabel(this)
 ! ******************************************************************************

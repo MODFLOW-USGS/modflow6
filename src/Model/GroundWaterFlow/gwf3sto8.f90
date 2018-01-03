@@ -16,8 +16,6 @@ module GwfStoModule
       ['          STO-SS', '          STO-SY']
 
   type, extends(NumericalPackageType) :: GwfStoType
-    integer(I4B), pointer                            :: ionper => null()        !stress period for the current PERIOD block
-    integer(I4B), pointer                            :: lastonper   => null()   !last value of ionper (for checking)
     integer(I4B), pointer                            :: isfac => null()         !indicates if ss is read as storativity
     integer(I4B), pointer                            :: isseg => null()         !indicates if ss is 0 below the top of a layer
     integer(I4B), pointer                            :: iss => null()           !steady state flag
@@ -164,24 +162,8 @@ module GwfStoModule
                                 supportOpenClose=.true.)
       if (isfound) then
         !
-        ! -- save last value and read period number
-        this%lastonper = this%ionper
-        this%ionper = this%parser%GetInteger()
-        !
-        ! -- check to make sure period blocks are increasing
-        if (this%ionper < this%lastonper) then
-          write(errmsg, '(a, i0)') &
-            'ERROR IN STRESS PERIOD ', kper
-          call store_error(errmsg)
-          write(errmsg, '(a, i0)') &
-            'PERIOD NUMBERS NOT INCREASING.  FOUND ', this%ionper
-          call store_error(errmsg)
-          write(errmsg, '(a, i0)') &
-            'BUT LAST PERIOD BLOCK WAS ASSIGNED ', this%lastonper
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-          call ustop()
-        endif
+        ! -- read ionper and check for increasing period numbers
+        call this%read_check_ionper()
       else
         !
         ! -- PERIOD block not found
@@ -244,7 +226,7 @@ module GwfStoModule
     class(GwfStoType) :: this
 ! ------------------------------------------------------------------------------
     !
-    ! -- todo: determine if this subroutine is needed
+    ! -- Subroutine does not do anything at the moment
     !
     ! -- Return
     return
@@ -621,10 +603,8 @@ module GwfStoModule
     ! -- Scalars
     call mem_deallocate(this%isfac)
     call mem_deallocate(this%isseg)
-    call mem_deallocate(this%ionper)
     call mem_deallocate(this%satomega)
     call mem_deallocate(this%iusesy)
-    call mem_deallocate(this%lastonper)
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
@@ -654,14 +634,10 @@ module GwfStoModule
     call mem_allocate(this%iusesy, 'IUSESY', this%origin)
     call mem_allocate(this%isfac, 'ISFAC', this%origin)
     call mem_allocate(this%isseg, 'ISSEG', this%origin)
-    call mem_allocate(this%ionper, 'IONPER', this%origin)
-    call mem_allocate(this%lastonper, 'LASTONPER', this%origin)
     call mem_allocate(this%satomega, 'SATOMEGA', this%origin)
     !
     ! -- Initialize
     this%iusesy = 0
-    this%ionper = 0
-    this%lastonper = 0
     this%isfac = 0
     this%isseg = 0
     this%satomega = DZERO
@@ -761,12 +737,12 @@ module GwfStoModule
           !    development version and are not included in the documentation.
           !    These options are only available when IDEVELOPMODE in
           !    constants module is set to 1
-          case ('NO_NEWTON')
+          case ('DEV_NO_NEWTON')
             call this%parser%DevOpt()
             this%inewton = 0
             write(this%iout, '(4x,a)')                                         &
                              'NEWTON-RAPHSON method disabled for unconfined cell storage'
-          case ('OLDSTORAGEFORMULATION')
+          case ('DEV_OLDSTORAGEFORMULATION')
             call this%parser%DevOpt()
             this%isseg = 1
             write(this%iout,fmtstoseg)

@@ -1,5 +1,8 @@
 % DO NOT MODIFY THIS FILE DIRECTLY.  IT IS CREATED BY mf6ivar.py 
 
+\item \textbf{Block: OPTIONS}
+
+\begin{description}
 \item \texttt{print\_option}---is a flag that controls printing of convergence information from the solver.  \texttt{NONE} means print nothing. \texttt{SUMMARY} means print only the total number of iterations and nonlinear residual reduction summaries. \texttt{ALL} means print linear matrix solver convergence information to the solution listing file and model specific linear matrix solver convergence information to each model listing file in addition to \texttt{SUMMARY} information. \texttt{NONE} is default if \texttt{print\_option} is not specified.
 
 \item \texttt{complexity}---is an optional keyword that defines default non-linear and linear solver parameters.  \texttt{SIMPLE} - indicates that default solver input values will be defined that work well for nearly linear models. This would be used for models that do not include nonlinear stress packages and models that are either confined or consist of a single unconfined layer that is thick enough to contain the water table within a single layer. \texttt{MODERATE} - indicates that default solver input values will be defined that work well for moderately nonlinear models. This would be used for models that include nonlinear stress packages and models that consist of one or more unconfined layers. The \texttt{MODERATE} option should be used when the \texttt{SIMPLE} option does not result in successful convergence.  \texttt{COMPLEX} - indicates that default solver input values will be defined that work well for highly nonlinear models. This would be used for models that include nonlinear stress packages and models that consist of one or more unconfined layers representing complex geology and surface-water/groundwater interaction. The \texttt{COMPLEX} option should be used when the \texttt{MODERATE} option does not result in successful convergence.  Non-linear and linear solver parameters assigned using a specified complexity can be modified in the \texttt{NONLINEAR} and \texttt{LINEAR} blocks. If the \texttt{complexity} option is not specified, \texttt{NONLINEAR} and \texttt{LINEAR} variables will be assigned the simple complexity values.
@@ -10,6 +13,10 @@
 
 \item \texttt{csvfile}---name of the ascii comma separated values output file to write solver convergence information. If \texttt{PRINT\_OPTION} is \texttt{NONE} or \texttt{SUMMARY}, comma separated values output includes maximum head change convergence information at the end of each outer iteration for each time step. If \texttt{PRINT\_OPTION} is \texttt{ALL}, comma separated values output includes maximum head change and maximum residual convergence information for the solution and each model (if the solution includes more than one model) and linear acceleration information for each inner iteration.
 
+\end{description}
+\item \textbf{Block: NONLINEAR}
+
+\begin{description}
 \item \texttt{outer\_hclose}---real value defining the head change criterion for convergence of the outer (nonlinear) iterations, in units of length. When the maximum absolute value of the head change at all nodes during an iteration is less than or equal to \texttt{outer\_hclose}, iteration stops. Commonly, \texttt{outer\_hclose} equals 0.01.
 
 \item \texttt{outer\_maximum}---integer value defining the maximum number of outer (nonlinear) iterations -- that is, calls to the solution routine. For a linear problem \texttt{outer\_maximum} should be 1.
@@ -32,13 +39,17 @@
 
 \item \texttt{backtracking\_residual\_limit}---real value defining the limit to which the residual is reduced with backtracking. If the residual is smaller than \texttt{backtracking\_residual\_limit}, then further backtracking is not performed. A value of 100 is suitable for large problems and residual reduction to smaller values may only slow down computations. \texttt{backtracking\_residual\_limit} only needs to be specified if \texttt{backtracking\_number} is greater than zero.
 
+\end{description}
+\item \textbf{Block: LINEAR}
+
+\begin{description}
 \item \texttt{inner\_maximum}---integer value defining the maximum number of inner (linear) iterations. The number typically depends on the characteristics of the matrix solution scheme being used. For nonlinear problems, \texttt{inner\_maximum} usually ranges from 60 to 600; a value of 100 will be sufficient for most linear problems.
 
 \item \texttt{inner\_hclose}---real value defining the head change criterion for convergence of the inner (linear) iterations, in units of length. When the maximum absolute value of the head change at all nodes during an iteration is less than or equal to \texttt{inner\_hclose}, the matrix solver assumes convergence. Commonly, \texttt{inner\_hclose} is set an order of magnitude less than the \texttt{outer\_hclose} value specified for the \texttt{NONLINEAR} block.
 
 \item \texttt{inner\_rclose}---real value that defines the flow residual tolerance for convergence of the IMS linear solver and specific flow residual criteria used. This value represents the maximum allowable residual at any single node.  Value is in units of length cubed per time, and must be consistent with \mf length and time units. Usually a value of $1.0 \times 10^{-1}$ is sufficient for the flow-residual criteria when meters and seconds are the defined \mf length and time.
 
-\item \texttt{rclose\_option}---an optional keyword that defines the specific flow residual criterion used.  \texttt{L2NORM\_RCLOSE}--an optional keyword that is used to specify that \texttt{inner\_rclose} represents a L-2 Norm closure criteria instead of a infinity-Norm (absolute convergence criteria). When \texttt{L2NORM\_RCLOSE} is specified, a reasonable initial \texttt{inner\_rclose} value is $\left( 1.0 \times 10^{-1} \times \text{active nodes} \right)$ when meters and seconds are the defined \mf length and time.  \texttt{RELATIVE\_RCLOSE}--an optional keyword that is used to specify that \texttt{inner\_rclose} represents a relative L-2 Norm reduction closure criteria instead of a infinity-Norm (absolute convergence criteria). When \texttt{RELATIVE\_RCLOSE} is specified, a reasonable initial \texttt{inner\_rclose} value is $1.0 \times 10^{-4}$ and convergence is achieved for a given inner (linear) iteration when $\Delta h \le$ \texttt{inner\_hclose} and the current L-2 Norm is $\le$ the product of the \texttt{RELATIVE\_RCLOSE} and the initial L-2 Norm for the current inner (linear) iteration. If \texttt{rclose\_option} is not specified, an absolute residual (infinity-norm) criterion is used.
+\item \texttt{rclose\_option}---an optional keyword that defines the specific flow residual criterion used.  \texttt{STRICT}--an optional keyword that is used to specify that \texttt{inner\_rclose} represents a infinity-Norm (absolute convergence criteria) and that the head and flow convergence criteria must be met on the first inner iteration (this criteria is equivalent to the criteria used by the MODFLOW-2005 PCG package~\citep{hill1990preconditioned}). \texttt{L2NORM\_RCLOSE}--an optional keyword that is used to specify that \texttt{inner\_rclose} represents a L-2 Norm closure criteria instead of a infinity-Norm (absolute convergence criteria). When \texttt{L2NORM\_RCLOSE} is specified, a reasonable initial \texttt{inner\_rclose} value is $\left( 1.0 \times 10^{-1} \times \text{active nodes} \right)$ when meters and seconds are the defined \mf length and time.  \texttt{RELATIVE\_RCLOSE}--an optional keyword that is used to specify that \texttt{inner\_rclose} represents a relative L-2 Norm reduction closure criteria instead of a infinity-Norm (absolute convergence criteria). When \texttt{RELATIVE\_RCLOSE} is specified, a reasonable initial \texttt{inner\_rclose} value is $1.0 \times 10^{-4}$ and convergence is achieved for a given inner (linear) iteration when $\Delta h \le$ \texttt{inner\_hclose} and the current L-2 Norm is $\le$ the product of the \texttt{RELATIVE\_RCLOSE} and the initial L-2 Norm for the current inner (linear) iteration. If \texttt{rclose\_option} is not specified, an absolute residual (infinity-norm) criterion is used.
 
 \item \texttt{linear\_acceleration}---a keyword that defines the linear acceleration method used by the default IMS linear solvers.  \texttt{CG} - preconditioned conjugate gradient method.  \texttt{BICGSTAB} - preconditioned bi-conjugate gradient stabilized method.
 
@@ -54,4 +65,5 @@
 
 \item \texttt{reordering\_method}---an optional keyword that defines the matrix reordering approach used. By default, matrix reordering is not applied.  \texttt{NONE} - original ordering.  \texttt{RCM} - reverse Cuthill McKee ordering.  \texttt{MD} - minimum degree ordering.
 
+\end{description}
 

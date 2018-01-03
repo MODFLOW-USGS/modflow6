@@ -899,7 +899,8 @@ module BaseDisModule
                             
   subroutine read_list(this, in, iout, iprpak, nlist, inamedbound,             &
                         iauxmultcol, nodelist,  rlist, auxvar, auxname,        &
-                        boundname, label, pkgname, tsManager, iscloc)
+                        boundname, label, pkgname, tsManager, iscloc,          &
+                        indxconvertflux)
 ! ******************************************************************************
 ! read_list -- Read a list using the list reader object.
 !              Convert user node numbers to reduced numbers.  
@@ -936,6 +937,7 @@ module BaseDisModule
     character(len=*),  intent(in) :: pkgName
     type(TimeSeriesManagerType)   :: tsManager
     integer(I4B), intent(in) :: iscloc
+    integer(I4B), intent(in), optional :: indxconvertflux
     ! -- local
     integer(I4B) :: l, nerr
     integer(I4B) :: nodeu, noder
@@ -951,7 +953,8 @@ module BaseDisModule
     call lstrdobj%read_list(in, iout, nlist, inamedbound, this%mshape,         &
                             nodelist, rlist, auxvar, auxname, boundname, label)
     !
-    ! -- Make time-series substitutions for rlist
+    ! -- Go through all locations where a text string was found instead of
+    !    a double precision value and make time-series links to rlist
     if(lstrdobj%ntxtrlist > 0) then
       do l = 1, lstrdobj%ntxtrlist
         ii = lstrdobj%idxtxtrow(l)
@@ -969,6 +972,18 @@ module BaseDisModule
           if (lstrdobj%inamedbound == 1) then
             tsLinkBnd%BndName = lstrdobj%boundname(tsLinkBnd%IRow)
           endif
+          !
+          ! -- if the value is a flux and needs to be converted to a flow
+          !    then set the tsLinkBnd appropriately
+          if (present(indxconvertflux)) then
+            if (indxconvertflux == jj) then
+              tsLinkBnd%convertflux = .true.
+              nodeu = nodelist(ii)
+              noder = this%get_nodenumber(nodeu, 0)
+              tsLinkBnd%CellArea = this%get_area(noder)
+            endif
+          endif
+          !
         endif
       enddo
     endif
@@ -993,7 +1008,6 @@ module BaseDisModule
     ! -- Multiply rlist by the multiplier column in auxvar
     if(iauxmultcol > 0) then
       do l = 1, nlist
-        ! Ned TODO: 1st rlist index needs to be for element where stress rate is stored 
         rlist(iscloc, l) = rlist(iscloc, l) * auxvar(iauxmultcol, l)
       enddo
     endif

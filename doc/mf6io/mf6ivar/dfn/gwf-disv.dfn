@@ -72,7 +72,7 @@ block griddata
 name top
 type double precision
 shape (1, ncpl)
-reader u2ddbl
+reader readarray
 longname model top elevation
 description is the top elevation for each cell in the top model layer.
 

@@ -16,7 +16,6 @@ module BndModule
   use TimeArraySeriesManagerModule, only: TimeArraySeriesManagerType
   use TimeSeriesLinkModule,         only: TimeSeriesLinkType
   use TimeSeriesManagerModule,      only: TimeSeriesManagerType
-  use TimeSeriesModule,             only: TimeSeriesGroupType
   use ListModule,                   only: ListType
   use PackageMoverModule,           only: PackageMoverType
   use BaseDisModule,                only: DisBaseType
@@ -36,18 +35,12 @@ module BndModule
     character(len=LENBOUNDNAME), pointer, dimension(:)  :: boundname   => null() !vector of boundnames
     ! -- scalars
     integer(I4B), pointer                               :: ibcnum      => null() !consecutive package number for this boundary condition
-!    integer(I4B), pointer                               :: ipakcb      => null() !integer flag indicating how to save/print budget
     integer(I4B), pointer                               :: maxbound    => null() !max number of boundaries
     integer(I4B), pointer                               :: nbound      => null() !number of boundaries for current stress period
     integer(I4B), pointer                               :: ncolbnd     => null() !number of columns of the bound array
-    integer(I4B), pointer                               :: kbound      => null() !
     integer(I4B), pointer                               :: iscloc      => null() !bound column to scale with SFAC
     integer(I4B), pointer                               :: naux        => null() !number of auxiliary variables
-    !integer(I4B), pointer                               :: iprpak      => null() !integer flag to echo input
-    !integer(I4B), pointer                               :: iprflow     => null() !flag to print simulated flows
     integer(I4B), pointer                               :: inamedbound => null() !flag to read boundnames
-    integer(I4B), pointer                               :: ionper      => null() !stress period for next data
-    integer(I4B), pointer                               :: lastonper   => null() !last value of ionper (for checking)
     integer(I4B), pointer                               :: iauxmultcol => null() !column to use as multiplier for column iscloc
     integer(I4B), pointer                               :: npakeq      => null() !number of equations in this package (normally 0 unless package adds rows to matrix)
     integer(I4B), pointer                               :: ioffset     => null() !offset of this package in the model
@@ -65,17 +58,14 @@ module BndModule
     type(PackageMoverType), pointer                     :: pakmvrobj   => null()
     !
     ! -- timeseries
-    integer(I4B)                                        :: numtsfiles = 0        !number of time series files
-    integer(I4B)                                        :: indxconvertflux = 0   !indxconvertflux is column of bound to multiply by area to convert flux to rate
+    type(TimeSeriesManagerType), pointer                :: TsManager   => null()! time series manager
+    type(TimeArraySeriesManagerType), pointer           :: TasManager  => null()! time array series manager
+    integer(I4B)                                        :: indxconvertflux = 0  ! indxconvertflux is column of bound to multiply by area to convert flux to rate
     logical :: AllowTimeArraySeries = .false.
     !
-    ! -- pointers for observations and time series
-    integer(I4B), pointer                               :: inobspkg    => null()
-    type(ObsType), pointer                              :: obs         => null()
-    type(TimeSeriesManagerType), pointer                :: TsManager   => null()
-    type(TimeArraySeriesManagerType), pointer           :: TasManager  => null()
-    character(len=MAXCHARLEN), allocatable, dimension(:) :: TimeSeriesFiles
-    character(len=MAXCHARLEN), allocatable, dimension(:) :: TimeArraySeriesFiles
+    ! -- pointers for observations
+    integer(I4B), pointer                               :: inobspkg    => null()! unit number for obs package
+    type(ObsType), pointer                              :: obs         => null()! observation package
     !
     ! -- pointers to model/solution variables
     integer(I4B), pointer                               :: neq                   !number of equations for model
@@ -132,6 +122,9 @@ module BndModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- module
+    use TimeSeriesManagerModule, only: tsmanager_cr
+    use TimeArraySeriesManagerModule, only: tasmanager_cr
     ! -- dummy
     class(BndType),intent(inout) :: this
     integer(I4B), intent(inout) :: neq
@@ -143,9 +136,9 @@ module BndModule
     ! -- set pointer to dis object for the model
     this%dis => dis
     !
-    ! -- Initialize time series managers
-    call this%TsManager%InitializeTimeSeriesManager()
-    call this%TasManager%InitializeTimeArraySeriesManager()
+    ! -- Create time series managers
+    call tsmanager_cr(this%TsManager, this%iout)
+    call tasmanager_cr(this%TasManager, dis, this%iout)
     !
     ! -- create obs package
     call obs_cr(this%obs, this%inobspkg)
@@ -160,6 +153,11 @@ module BndModule
     !
     ! -- set and read options
     call this%read_options()
+    !
+    ! -- Now that time series will have been read, need to call the df
+    !    routine to define the manager
+    call this%tsmanager%tsmanager_df()
+    call this%tasmanager%tasmanager_df()
     !
     ! -- read the package dimensions block
     call this%read_dimensions()
@@ -240,9 +238,7 @@ module BndModule
     ! -- format
 ! ------------------------------------------------------------------------------
     !
-    !
     call this%obs%obs_ar()
-    this%TasManager%dis => this%dis
     !
     ! -- Allocate arrays in package superclass
     call this%allocate_arrays()
@@ -259,7 +255,7 @@ module BndModule
     ! -- return
     return
   end subroutine bnd_ar
-
+  
   subroutine bnd_rp(this)
 ! ******************************************************************************
 ! bnd_rp -- Read and Prepare
@@ -302,24 +298,8 @@ module BndModule
                                 supportOpenClose=.true.)
       if (isfound) then
         !
-        ! -- save last value and read period number
-        this%lastonper = this%ionper
-        this%ionper = this%parser%GetInteger()
-        !
-        ! -- check to make sure period blocks are increasing
-        if (this%ionper < this%lastonper) then
-          write(errmsg, '(a, i0)') &
-            'ERROR IN STRESS PERIOD ', kper
-          call store_error(errmsg)
-          write(errmsg, '(a, i0)') &
-            'PERIOD NUMBERS NOT INCREASING.  FOUND ', this%ionper
-          call store_error(errmsg)
-          write(errmsg, '(a, i0)') &
-            'BUT LAST PERIOD BLOCK WAS ASSIGNED ', this%lastonper
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-          call ustop()
-        endif
+        ! -- read ionper and check for increasing period numbers
+        call this%read_check_ionper()
       else
         !
         ! -- PERIOD block not found
@@ -352,6 +332,7 @@ module BndModule
                                this%bound, this%auxvar, this%auxname,          &
                                this%boundname, this%listlabel,                 &
                                this%name, this%tsManager, this%iscloc)
+      this%nbound = nlist
       !
       ! Define the tsLink%Text value(s) appropriately.
       ! E.g. for WEL package, entry 1, assign tsLink%Text = 'Q'
@@ -359,27 +340,8 @@ module BndModule
       !                  entry 3 text = 'RBOT'; etc.
       call this%bnd_rp_ts()
       !
-      this%nbound = nlist
-      if (nlist > this%kbound) this%kbound = nlist
-      !
-      ! -- Assign cell area to each time-series link
-      nlinks = this%TsManager%CountLinks('BND')
-      do i=1,nlinks
-        tsLink => this%TsManager%GetLink('BND', i)
-        node = this%nodelist(tsLink%IRow)
-        tsLink%CellArea = this%dis%get_area(node)
-      enddo
-      !
-      call this%parser%GetNextLine(endOfBlock)
-      if (.not. endOfBlock) then
-        call this%parser%GetCurrentLine(line)
-        errmsg = '****ERROR. LOOKING FOR "END PERIOD".  FOUND: '
-        call store_error(errmsg)
-        errmsg = '"' // trim(line) // '"'
-        call store_error(errmsg)
-        call this%parser%StoreErrorUnit()
-        call ustop()
-      endif
+      ! -- Terminate the block
+      call this%parser%terminateblock()
       !
     else
       write(this%iout,fmtlsp) trim(this%filtyp)
@@ -624,7 +586,7 @@ module BndModule
     ! -- If cell-by-cell flows will be saved as a list, write header.
     if(ibinun /= 0) then
       naux = this%naux
-      call this%dis%record_srcdst_list_header(this%text, this%name_model,  &
+      call this%dis%record_srcdst_list_header(this%text, this%name_model,      &
                   this%name_model, this%name_model, this%name, naux,           &
                   this%auxname, ibinun, this%nbound, this%iout)
     endif
@@ -662,8 +624,9 @@ module BndModule
             !    and PRINT_FLOWS was specified (this%iprflow<0)
             if(ibudfl /= 0) then
               if(this%iprflow /= 0) then
-                if(ibdlbl == 0) write(this%iout,fmttkk) this%text, kper, kstp
-                call this%dis%print_list_entry(i, node, rrate, this%iout,    &
+                if(ibdlbl == 0) write(this%iout,fmttkk)                        &
+                  this%text // ' (' // trim(this%name) // ')', kper, kstp
+                call this%dis%print_list_entry(i, node, rrate, this%iout,      &
                         bname)
                 ibdlbl=1
               endif
@@ -843,7 +806,6 @@ module BndModule
     call mem_deallocate(this%auxvar)
     deallocate(this%boundname)
     deallocate(this%auxname)
-    deallocate(this%TimeSeriesFiles)
     nullify(this%icelltype)
     !
     ! -- pakmvrobj
@@ -855,18 +817,12 @@ module BndModule
     !
     ! -- Deallocate scalars
     call mem_deallocate(this%ibcnum)
-    !call mem_deallocate(this%ipakcb)
     call mem_deallocate(this%maxbound)
     call mem_deallocate(this%nbound)
     call mem_deallocate(this%ncolbnd)
-    call mem_deallocate(this%kbound)
     call mem_deallocate(this%iscloc)
     call mem_deallocate(this%naux)
-    !call mem_deallocate(this%iprpak)
-    !call mem_deallocate(this%iprflow)
     call mem_deallocate(this%inamedbound)
-    call mem_deallocate(this%ionper)
-    call mem_deallocate(this%lastonper)
     call mem_deallocate(this%iauxmultcol)
     call mem_deallocate(this%inobspkg)
     call mem_deallocate(this%imover)
@@ -914,18 +870,12 @@ module BndModule
     !
     ! -- allocate integer variables
     call mem_allocate(this%ibcnum, 'IBCNUM', this%origin)
-    !call mem_allocate(this%ipakcb, 'IPACKCB', this%origin)
     call mem_allocate(this%maxbound, 'MAXBOUND', this%origin)
     call mem_allocate(this%nbound, 'NBOUND', this%origin)
     call mem_allocate(this%ncolbnd, 'NCOLBND', this%origin)
-    call mem_allocate(this%kbound, 'KBOUND', this%origin)
     call mem_allocate(this%iscloc, 'ISCLOC', this%origin)
     call mem_allocate(this%naux, 'NAUX', this%origin)
-    !call mem_allocate(this%iprpak, 'IPRPAK', this%origin)
-    !call mem_allocate(this%iprflow, 'IPRFLOW', this%origin)
     call mem_allocate(this%inamedbound, 'INAMEDBOUND', this%origin)
-    call mem_allocate(this%ionper, 'IONPER', this%origin)
-    call mem_allocate(this%lastonper, 'LASTONPER', this%origin)
     call mem_allocate(this%iauxmultcol, 'IAUXMULTCOL', this%origin)
     call mem_allocate(this%inobspkg, 'INOBSPKG', this%origin)
     !
@@ -942,21 +892,15 @@ module BndModule
     !
     ! -- Allocate text strings
     allocate(this%auxname(0))
-    allocate(this%TimeSeriesFiles(1000))
     !
     ! -- Initialize variables
     this%ibcnum = 0
     this%maxbound = 0
     this%nbound = 0
     this%ncolbnd = 0
-    this%kbound = 0
     this%iscloc = 0
     this%naux = 0
-    !this%iprpak = 0
-    !this%iprflow = 0
     this%inamedbound = 0
-    this%ionper = 0
-    this%lastonper = 0
     this%iauxmultcol = 0
     this%inobspkg = 0
     this%imover = 0
@@ -1025,6 +969,11 @@ module BndModule
     else
       call mem_allocate(this%auxvar, this%naux, this%maxbound, 'AUXVAR',       &
                         this%origin)
+      do i = 1, this%maxbound
+        do j = 1, this%naux
+          this%auxvar(j, i) = DZERO
+        end do
+      end do
     endif
     !
     ! -- Allocate boundname
@@ -1041,7 +990,7 @@ module BndModule
     ! -- Initialize values
     do j = 1, this%maxbound
       do i = 1, this%ncolbnd
-        this%bound(i,j) = DZERO
+        this%bound(i, j) = DZERO
       end do
     end do
 
@@ -1106,20 +1055,17 @@ module BndModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule,     only: LINELENGTH
-    use ArrayHandlersModule, only: ExpandArray
     use InputOutputModule,   only: urdaux
     use SimModule,           only: ustop, store_error, store_error_unit
-    use TimeSeriesModule,    only: TimeSeriesGroupType
     ! -- dummy
     class(BndType),intent(inout) :: this
     ! -- local
     character(len=LINELENGTH) :: line, errmsg, fname, keyword
     character(len=LENAUXNAME) :: sfacauxname
     integer(I4B) :: lloc,istart,istop,n,ierr
-    integer(I4B) :: i, indx, inobs, isize, j
+    integer(I4B) :: inobs
     logical :: isfound, endOfBlock
     logical :: foundchildclassoption
-    class(TimeSeriesGroupType), pointer :: tsGroup => null()
     ! -- format
     character(len=*),parameter :: fmtflow = &
       "(4x, 'FLOWS WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I7)"
@@ -1178,13 +1124,8 @@ module BndModule
               call ustop()
             endif
             call this%parser%GetString(fname)
-            this%numtsfiles = this%numtsfiles + 1
-            isize = size(this%TimeSeriesFiles)
-            if (this%numtsfiles > isize) then
-              call ExpandArray(this%TimeSeriesFiles, 1000)
-            endif
-            this%TimeSeriesFiles(this%numtsfiles) = fname
             write(this%iout,fmtts)trim(fname)
+            call this%TsManager%add_tsfile(fname, this%inunit)
           case ('TAS6')
             if (this%AllowTimeArraySeries) then
               if (.not. this%dis%supports_layers()) then
@@ -1210,10 +1151,8 @@ module BndModule
               call ustop()
             endif
             call this%parser%GetString(fname)
-            call ExpandArray(this%TimeArraySeriesFiles, 1)
-            indx = size(this%TimeArraySeriesFiles)
-            this%TimeArraySeriesFiles(indx) = fname
             write(this%iout,fmttas)trim(fname)
+            call this%TasManager%add_tasfile(fname)
           case ('AUXMULTNAME')
             call this%parser%GetStringCaps(sfacauxname)
             this%iauxmultcol = -1
@@ -1245,7 +1184,7 @@ module BndModule
           !    development version and are not included in the documentation.
           !    These options are only available when IDEVELOPMODE in
           !    constants module is set to 1
-          case ('NO_NEWTON')
+          case ('DEV_NO_NEWTON')
             call this%parser%DevOpt()
             this%inewton = 0
             write(this%iout, '(4x,a)')                                         &
@@ -1271,27 +1210,6 @@ module BndModule
         ' OPTION BLOCK DETECTED.'
     end if
     !
-    ! -- Add names of time-series files to list of time-series groups.
-    if (this%numtsfiles > 0) then
-      do i=1,this%numtsfiles
-        fname = this%TimeSeriesFiles(i)
-        ! Check for duplicates. If duplicate, stop with error.
-        ! Otherwise, add fname to TsGroupList.
-        if (i > 1) then
-          do j=1,i-1
-            if (fname == this%TimeSeriesFiles(j)) then
-              errmsg = 'Found duplicate time-series file name: ' // trim(fname)
-              call store_error(errmsg)
-              call this%parser%StoreErrorUnit()
-              call ustop()
-            endif
-          enddo
-        endif
-        call this%TsManager%TsGroupList%Add(fname, this%iout, tsGroup)
-      enddo
-      call this%TsManager%HashBndTimeSeries(this%numtsfiles)
-    endif
-    !
     ! -- SFAC was specified, so find column of auxvar that will be multiplier
     if(this%iauxmultcol < 0) then
       !
@@ -1315,7 +1233,7 @@ module BndModule
       !
       ! -- Error if aux variable cannot be found
       if(this%iauxmultcol == 0) then
-        write(errmsg,'(4x,a,a)') '****ERROR. AUXMULTNAME WAS SPECIFIED AS ' //        &
+        write(errmsg,'(4x,a,a)') '****ERROR. AUXMULTNAME WAS SPECIFIED AS ' // &
           trim(adjustl(sfacauxname))//' BUT NO AUX VARIABLE FOUND WITH ' //    &
           'THIS NAME.'
         call store_error(errmsg)

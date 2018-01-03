@@ -107,51 +107,25 @@ module EvtModule
     packobj%iscloc = 2  ! sfac applies to max. ET rate
     ! indxconvertflux is Column index of bound that will be multiplied by
     ! cell area to convert flux rates to flow rates
-    packobj%indxconvertflux = 1
+    packobj%indxconvertflux = 2
     packobj%AllowTimeArraySeries = .true.
     !
     ! -- return
     return
   end subroutine evt_create
 
-  subroutine evt_da(this)
+  subroutine evt_allocate_scalars(this)
 ! ******************************************************************************
-! evt_da -- deallocate
+! allocate_scalars -- allocate scalar members
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use MemoryManagerModule, only: mem_deallocate
-    ! -- dummy
-    class(EvtType) :: this
-! ------------------------------------------------------------------------------
-    !
-    ! -- arrays
-    if(associated(this%nodesontop)) deallocate(this%nodesontop)
-    !
-    ! -- scalars
-    call mem_deallocate(this%inievt)
-    call mem_deallocate(this%nseg)
-    !
-    ! -- Deallocate parent package
-    call this%BndType%bnd_da()
-    !
-    ! -- return
-    return
-  end subroutine evt_da
-
-  subroutine evt_allocate_scalars(this)
-    ! **************************************************************************
-    ! allocate_scalars -- allocate scalar members
-    ! **************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! --------------------------------------------------------------------------
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(EvtType),   intent(inout) :: this
-    ! --------------------------------------------------------------------------
+! ------------------------------------------------------------------------------
     !
     ! -- call standard BndType allocate scalars
     call this%BndType%allocate_scalars()
@@ -170,15 +144,13 @@ module EvtModule
   end subroutine evt_allocate_scalars
 
   subroutine evt_options(this, option, found)
-    ! **************************************************************************
-    ! evt_options -- set options specific to EvtType
-    !
-    ! evt_options overrides BndType%bnd_options
-    ! **************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! --------------------------------------------------------------------------
-    implicit none
+! ******************************************************************************
+! evt_options -- set options specific to EvtType
+!   evt_options overrides BndType%bnd_options
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- dummy
     class(EvtType),   intent(inout) :: this
     character(len=*), intent(inout) :: option
@@ -196,7 +168,7 @@ module EvtModule
       "(4x, 'ET RATE AT SURFACE WILL BE ZERO.')"
     character(len=*), parameter :: fmtsrs = &
       "(4x, 'ET RATE AT SURFACE WILL BE AS SPECIFIED BY PETM0.')"
-    ! --------------------------------------------------------------------------
+! ------------------------------------------------------------------------------
     !
     ! -- Check for FIXED_CELL AND LAYERED
     select case (option)
@@ -366,7 +338,6 @@ module EvtModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    implicit none
     ! -- dummy
     class(EvtType),intent(inout) :: this
     !
@@ -378,19 +349,18 @@ module EvtModule
   end subroutine evt_read_initial_attr
 
   subroutine evt_rp(this)
-    ! **************************************************************************
-    ! evt_rp -- Read and Prepare
-    ! Subroutine: (1) read itmp
-    !             (2) read new boundaries if itmp>0
-    ! **************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! --------------------------------------------------------------------------
+! ******************************************************************************
+! evt_rp -- Read and Prepare
+!   Read new boundaries
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
     use ConstantsModule, only: LINELENGTH
     use TdisModule, only: kper, nper
     use SimModule, only: ustop, store_error
     use ArrayHandlersModule, only: ifind
-    implicit none
     ! -- dummy
     class(EvtType),intent(inout) :: this
     ! -- local
@@ -408,7 +378,7 @@ module EvtModule
     character(len=*), parameter :: fmtnbd = &
       "(1X,/1X,'THE NUMBER OF ACTIVE ',A,'S (',I6," // &
        "') IS GREATER THAN MAXIMUM(',I6,')')"
-    ! --------------------------------------------------------------------------
+! ------------------------------------------------------------------------------
     !
     ! -- Set ionper to the stress period number for which a new block of data
     !    will be read.
@@ -425,24 +395,8 @@ module EvtModule
       call this%parser%GetBlock('PERIOD', isfound, ierr)
       if(isfound) then
         !
-        ! -- save last value and read period number
-        this%lastonper = this%ionper
-        this%ionper = this%parser%GetInteger()
-        !
-        ! -- check to make sure period blocks are increasing
-        if (this%ionper < this%lastonper) then
-          write(errmsg, '(a, i0)') &
-            'ERROR IN STRESS PERIOD ', kper
-          call store_error(errmsg)
-          write(errmsg, '(a, i0)') &
-            'PERIOD NUMBERS NOT INCREASING.  FOUND ', this%ionper
-          call store_error(errmsg)
-          write(errmsg, '(a, i0)') &
-            'BUT LAST PERIOD BLOCK WAS ASSIGNED ', this%lastonper
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-          call ustop()
-        endif
+        ! -- read ionper and check for increasing period numbers
+        call this%read_check_ionper()
       else
         !
         ! -- PERIOD block not found
@@ -464,7 +418,7 @@ module EvtModule
     insurf = 0
     indepth = 0
     inievt = 0
-    if (this%ionper==kper) then
+    if (this%ionper == kper) then
       !
       ! -- Remove all time-series links associated with this package
       call this%TsManager%Reset(this%name)
@@ -481,7 +435,7 @@ module EvtModule
       else
         ! -- Read Evt input as arrays
         call this%evt_rp_array(line, inrate, insurf, indepth, &
-                               kpxdp, kpetm, ierr)
+                               kpxdp, kpetm)
       endif
       !
       ! -- Ensure that all required PXDP and PETM arrays
@@ -505,8 +459,10 @@ module EvtModule
       write(this%iout,fmtlsp) trim(this%filtyp)
     endif
     !
-    ! -- If rate was read, then multiply by cell area
-    if (inrate /= 0) then
+    ! -- If rate was read, then multiply by cell area.  If inrate = 2, then
+    !    rate is begin managed as a time series, and the time series object
+    !    will multiply the rate by the cell area.
+    if (inrate == 1) then
       do n = 1, this%nbound
         node = this%nodelist(n)
         this%bound(2, n) = this%bound(2, n) * this%dis%get_area(node)
@@ -518,19 +474,18 @@ module EvtModule
   end subroutine evt_rp
 
   subroutine set_nodesontop(this)
-    ! **************************************************************************
-    ! set_nodesontop -- store nodelist in nodesontop
-    ! **************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! --------------------------------------------------------------------------
-    implicit none
+! ******************************************************************************
+! set_nodesontop -- store nodelist in nodesontop
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- dummy
     class(EvtType),intent(inout) :: this
     ! -- local
     integer(I4B) :: n
     ! -- formats
-    ! --------------------------------------------------------------------------
+! ------------------------------------------------------------------------------
     !
     ! -- allocate if necessary
     if(.not. associated(this%nodesontop)) then
@@ -547,26 +502,21 @@ module EvtModule
   end subroutine set_nodesontop
 
   subroutine evt_cf(this)
-    ! **************************************************************************
-    ! evt_cf -- Formulate the HCOF and RHS terms
-    ! Subroutine: (1) skip if no ET
-    !             (2) calculate hcof and rhs
-    ! **************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! --------------------------------------------------------------------------
-    implicit none
+! ******************************************************************************
+! evt_cf -- Formulate the HCOF and RHS terms
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- dummy
     class(EvtType) :: this
     ! -- local
     integer(I4B) :: i, iseg, node
     integer(I4B) :: idxdepth, idxrate
-    !real(DP), parameter :: ONE = 1.d0
-    !real(DP), parameter :: ZERO = 0.d0
     real(DP) :: c, d, h, s, x
     real(DP) :: petm0
     real(DP) :: petm1, petm2, pxdp1, pxdp2, thcof, trhs
-    ! --------------------------------------------------------------------------
+! ------------------------------------------------------------------------------
     !
     ! -- Return if no ET nodes
     if (this%nbound == 0) return
@@ -717,18 +667,45 @@ module EvtModule
     return
   end subroutine evt_fc
 
-  subroutine evt_rp_array(this, line, inrate, insurf, indepth, &
-                          kpxdp, kpetm, ierr)
-    ! **************************************************************************
-    ! evt_rp_array -- Read and Prepare EVT as arrays
-    ! **************************************************************************
+  subroutine evt_da(this)
+! ******************************************************************************
+! evt_da -- deallocate
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use MemoryManagerModule, only: mem_deallocate
+    ! -- dummy
+    class(EvtType) :: this
+! ------------------------------------------------------------------------------
     !
-    !    SPECIFICATIONS:
-    ! --------------------------------------------------------------------------
+    ! -- arrays
+    if(associated(this%nodesontop)) deallocate(this%nodesontop)
+    !
+    ! -- scalars
+    call mem_deallocate(this%inievt)
+    call mem_deallocate(this%nseg)
+    !
+    ! -- Deallocate parent package
+    call this%BndType%bnd_da()
+    !
+    ! -- return
+    return
+  end subroutine evt_da
+
+  subroutine evt_rp_array(this, line, inrate, insurf, indepth, &
+                          kpxdp, kpetm)
+! ******************************************************************************
+! evt_rp_array -- Read and Prepare EVT as arrays
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
     use ConstantsModule, only: LENTIMESERIESNAME, LINELENGTH
     use SimModule, only: ustop, store_error
     use ArrayHandlersModule, only: ifind
-    implicit none
     ! -- dummy
     class(EvtType),            intent(inout) :: this
     character(len=LINELENGTH), intent(inout) :: line
@@ -737,29 +714,32 @@ module EvtModule
     integer(I4B),                   intent(inout) :: indepth
     integer(I4B),                   intent(inout) :: kpxdp
     integer(I4B),                   intent(inout) :: kpetm
-    integer(I4B),                   intent(inout) :: ierr
     ! -- local
-    integer(I4B) :: indx, ipos, istart, istop
+    integer(I4B) :: n
+    integer(I4B) :: indx, ipos
     integer(I4B) :: jcol, jauxcol, lpos
     character(len=LENTIMESERIESNAME) :: tasName
     character(len=24) ::  atemp
     character(len=24), dimension(6) :: aname
     character(len=100) :: ermsg, keyword
     logical :: found, endOfBlock
-    logical :: convertFlux = .true.
+    logical :: convertFlux
     real(DP), dimension(:), pointer :: bndArrayPtr => null()
     real(DP), dimension(:), pointer :: auxArrayPtr => null()
     real(DP), dimension(:), pointer :: auxMultArray => null()
     type(TimeArraySeriesLinkType),  pointer :: tasLink => null()
-    ! data
+    ! -- formats
+    character(len=*),parameter :: fmtevtauxmult =                              &
+      "(4x, 'THE ET RATE ARRAY IS BEING MULTIPLED BY THE AUXILIARY ARRAY WITH &
+        &THE NAME: ', A)"
+    ! -- data
     data aname(1) /'     LAYER OR NODE INDEX'/
     data aname(2) /'              ET SURFACE'/
     data aname(3) /' EVAPOTRANSPIRATION RATE'/
     data aname(4) /'        EXTINCTION DEPTH'/
     data aname(5) /'EXTINCT. DEP. PROPORTION'/
     data aname(6) /'      ET RATE PROPORTION'/
-    !
-    ! --------------------------------------------------------------------------
+! ------------------------------------------------------------------------------
     !
     jauxcol = 0
     ! -- Read IEVT, SURFACE, RATE, DEPTH, PXDP, PETM, and AUX
@@ -804,15 +784,6 @@ module EvtModule
         !
       case ('RATE')
         !
-        if (this%read_as_arrays) then
-          if (this%inievt == 0) then
-            call store_error('Error.  IEVT must be read at least once ')
-            call store_error('prior to reading the RATE array.')
-            call this%parser%StoreErrorUnit()
-            call ustop()
-          endif
-        endif
-        !
         ! -- Look for keyword TIMEARRAYSERIES and time-array series
         !    name on line, following RATE
         call this%parser%GetStringCaps(keyword)
@@ -825,12 +796,14 @@ module EvtModule
           bndArrayPtr => this%bound(jcol,:)
           ! Make a time-array-series link and add it to the list of links
           ! contained in the TimeArraySeriesManagerType object.
-          call this%TasManager%MakeTasLink(this%name, bndArrayPtr, &
-                                  this%iprpak, this%TimeArraySeriesFiles, &
-                                  tasName, this%dis, 'RATE', convertFlux, &
-                                  this%nodelist, this%parser%iuactive)
+          convertflux = .true.
+          call this%TasManager%MakeTasLink(this%name, bndArrayPtr,             &
+                                  this%iprpak, tasName, 'RATE',                &
+                                  convertFlux, this%nodelist,                  &
+                                  this%parser%iuactive)
           lpos = this%TasManager%CountLinks()
           tasLink => this%TasManager%GetLink(lpos)
+          inrate = 2
         else
           !
           ! -- Read the Max. ET Rate array, then indicate
@@ -838,8 +811,8 @@ module EvtModule
           call this%dis%read_layer_array(this%nodelist, this%bound, &
             this%ncolbnd, this%maxbound, 2, aname(3), this%parser%iuactive, &
             this%iout)
+          inrate = 1
         endif
-        inrate = 1
         !
       case ('DEPTH')
         !
@@ -923,10 +896,10 @@ module EvtModule
         !
         ! -- Check for auxname, and if found, then read into auxvar array
         found = .false.
-        ipos = ifind(this%auxname, line(istart:istop))
+        ipos = ifind(this%auxname, keyword)
         if (ipos > 0) then
           found = .true.
-          atemp = line(istart:istop)
+          atemp = keyword
           !
           ! -- Look for keyword TIMEARRAYSERIES and time-array series
           !    name on line, following auxname
@@ -938,11 +911,11 @@ module EvtModule
             auxArrayPtr => this%auxvar(jauxcol,:)
             ! Make a time-array-series link and add it to the list of links
             ! contained in the TimeArraySeriesManagerType object.
-            call this%TasManager%MakeTasLink(this%name, auxArrayPtr, &
-                                    this%iprpak, this%TimeArraySeriesFiles, &
-                                    tasName, this%dis, this%auxname(ipos), &
-                                    convertFlux, this%nodelist, &
-                                    this%parser%iuactive)
+            convertflux = .false.
+            call this%TasManager%MakeTasLink(this%name, auxArrayPtr,           &
+                                    this%iprpak, tasName,                      &
+                                    this%auxname(ipos), convertFlux,           &
+                                    this%nodelist, this%parser%iuactive)
           else
             !
             ! -- Read the aux variable array
@@ -955,8 +928,8 @@ module EvtModule
         ! -- Nothing found
         if (.not. found) then
           call this%parser%GetCurrentLine(line)
-          call store_error('****ERROR. LOOKING FOR END.  FOUND: ')
-          call store_error(line)
+          call store_error('****ERROR. LOOKING FOR VALID VARIABLE NAME.  FOUND: ')
+          call store_error(trim(line))
           call this%parser%StoreErrorUnit()
           call ustop()
         endif
@@ -990,6 +963,16 @@ module EvtModule
       endif
     endif
     !
+    ! -- If et rate was read and auxmultcol was specified, then multiply
+    !    the et rate by the multplier column
+    if(inrate == 1 .and. this%iauxmultcol > 0) then
+      write(this%iout, fmtevtauxmult) this%auxname(this%iauxmultcol)
+      do n = 1, this%nbound
+        this%bound(this%iscloc, n) = this%bound(this%iscloc, n) *              &
+          this%auxvar(this%iauxmultcol, n)
+      enddo
+    endif
+    !
     return
   end subroutine evt_rp_array
 
@@ -1000,25 +983,22 @@ module EvtModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    implicit none
     ! -- dummy
     class(EvtType), intent(inout) :: this
     integer(I4B),        intent(inout) :: inrate
     ! -- local
     integer(I4B) :: maxboundorig, nlist
-    !
 ! ------------------------------------------------------------------------------
     !
     nlist = -1
     maxboundorig = this%maxbound
     call this%dis%read_list(this%parser%iuactive, this%iout, this%iprpak,      &
                              nlist, this%inamedbound, this%iauxmultcol,        &
-                             this%nodelist,                                    &
-                             this%bound, this%auxvar, this%auxname,            &
-                             this%boundname, this%listlabel,                   &
-                             this%name, this%tsManager, this%iscloc)
+                             this%nodelist, this%bound, this%auxvar,           &
+                             this%auxname, this%boundname, this%listlabel,     &
+                             this%name, this%tsManager, this%iscloc,           &
+                             this%indxconvertflux)
     this%nbound = nlist
-    if (nlist > this%kbound) this%kbound = nlist
     if (this%maxbound > maxboundorig) then
       ! -- The arrays that belong to BndType have been extended.
       ! Now, EVT array nodesontop needs to be recreated.
@@ -1028,6 +1008,10 @@ module EvtModule
     endif
     if (.not. this%fixed_cell) call this%set_nodesontop()
     inrate = 1
+    !
+    ! -- terminate the period block
+    call this%parser%terminateblock()
+    !
     return
   end subroutine evt_rp_list
 
@@ -1153,7 +1137,7 @@ module EvtModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    implicit none
+    ! -- dummy
     class(EvtType) :: this
 ! ------------------------------------------------------------------------------
     evt_obs_supported = .true.
@@ -1171,7 +1155,6 @@ module EvtModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    implicit none
     ! -- dummy
     class(EvtType) :: this
     ! -- local
@@ -1187,19 +1170,25 @@ module EvtModule
   ! -- Procedure related to time series
 
   subroutine evt_rp_ts(this)
-    ! -- Assign tsLink%Text appropriately for
-    !    all time series in use by package.
-    !    In EVT package the SURFACE, RATE, DEPTH, PXDP, and PETM variables
-    !    can be controlled by time series.
-    !    Define Text only when time series is used for SURFACE, RATE, or DEPTH.
+! ******************************************************************************
+! evt_rp_ts -- Assign tsLink%Text appropriately for
+!    all time series in use by package.
+!    In EVT package the SURFACE, RATE, DEPTH, PXDP, and PETM variables
+!    can be controlled by time series.
+!    Define Text only when time series is used for SURFACE, RATE, or DEPTH.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- dummy
     class(EvtType), intent(inout) :: this
     ! -- local
     integer(I4B) :: i, nlinks
     type(TimeSeriesLinkType), pointer :: tslink => null()
+! ------------------------------------------------------------------------------
     !
     nlinks = this%TsManager%boundtslinks%Count()
-    do i=1,nlinks
+    do i = 1, nlinks
       tslink => GetTimeSeriesLinkFromList(this%TsManager%boundtslinks, i)
       if (associated(tslink)) then
         select case (tslink%JCol)

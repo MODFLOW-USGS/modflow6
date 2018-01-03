@@ -146,7 +146,7 @@
 		<File RelativePath="..\src\Utilities\TimeSeries\TimeArraySeriesLink.f90"/>
 		<File RelativePath="..\src\Utilities\TimeSeries\TimeArraySeriesManager.f90"/>
 		<File RelativePath="..\src\Utilities\TimeSeries\TimeSeries.f90"/>
-		<File RelativePath="..\src\Utilities\TimeSeries\TimeSeriesGroupList.f90"/>
+		<File RelativePath="..\src\Utilities\TimeSeries\TimeSeriesFileList.f90"/>
 		<File RelativePath="..\src\Utilities\TimeSeries\TimeSeriesLink.f90"/>
 		<File RelativePath="..\src\Utilities\TimeSeries\TimeSeriesManager.f90"/>
 		<File RelativePath="..\src\Utilities\TimeSeries\TimeSeriesRecord.f90"/></Filter>

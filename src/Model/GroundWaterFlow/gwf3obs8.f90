@@ -161,7 +161,7 @@ contains
     implicit none
     class(GwfObsType), intent(inout) :: this
     !
-    ! Ned todo: Do GWF observations need any checking? If so, add checks here
+    ! Do GWF observations need any checking? If so, add checks here
     return
   end subroutine gwf_obs_rp
 

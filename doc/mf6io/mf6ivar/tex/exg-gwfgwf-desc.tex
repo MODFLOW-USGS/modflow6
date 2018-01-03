@@ -1,5 +1,8 @@
 % DO NOT MODIFY THIS FILE DIRECTLY.  IT IS CREATED BY mf6ivar.py 
 
+\item \textbf{Block: OPTIONS}
+
+\begin{description}
 \item \texttt{auxiliary}---an array of auxiliary variable names.  There is no limit on the number of auxiliary variables that can be provided. Most auxiliary variables will not be used by the GWF-GWF Exchange, but they will be available for use by other parts of the program.  If an auxiliary variable with the name ``ANGLDEGX'' is found, then this information will be used as the angle (provided in degrees) between the connection face normal and the x axis.  Additional information on ``ANGLDEGX'' is provided in the description of the DISU Package.
 
 \item \texttt{PRINT\_INPUT}---keyword to indicate that the list of exchange entries will be echoed to the listing file immediately after it is read.
@@ -30,8 +33,16 @@
 
 \item \texttt{obs6\_filename}---is the file name of the observations input file for this exchange. See the ``Observation utility'' section for instructions for preparing observation input files. Table \ref{table:obstype} lists observation type(s) supported by the GWF-GWF package.
 
+\end{description}
+\item \textbf{Block: DIMENSIONS}
+
+\begin{description}
 \item \texttt{nexg}---keyword and integer value specifying the number of GWF-GWF exchanges.
 
+\end{description}
+\item \textbf{Block: EXCHANGEDATA}
+
+\begin{description}
 \item \texttt{cellidm1}---is the cellid of the cell in model 1 as specified in the simulation name file. For a structured grid that uses the DIS input file, \texttt{cellidm1} is the layer, row, and column numbers of the cell.   For a grid that uses the DISV input file, \texttt{cellidm1} is the layer number and cell2d number for the two cells.  If the model uses the unstructured discretization (DISU) input file, then \texttt{cellidm1} is the node number for the cell.
 
 \item \texttt{cellidm2}---is the cellid of the cell in model 2 as specified in the simulation name file. For a structured grid that uses the DIS input file, \texttt{cellidm2} is the layer, row, and column numbers of the cell.   For a grid that uses the DISV input file, \texttt{cellidm2} is the layer number and cell2d number for the two cells.  If the model uses the unstructured discretization (DISU) input file, then \texttt{cellidm2} is the node number for the cell.
@@ -46,4 +57,5 @@
 
 \item \texttt{aux}---represents the values of the auxiliary variables for each GWFGWF Exchange. The values of auxiliary variables must be present for each exchange. The values must be specified in the order of the auxiliary variables specified in the OPTIONS block.
 
+\end{description}
 

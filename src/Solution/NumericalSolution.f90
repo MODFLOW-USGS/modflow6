@@ -527,15 +527,15 @@ contains
         !    development version and are not included in the documentation.
         !    These options are only available when IDEVELOPMODE in
         !    constants module is set to 1
-        case ('PTC')
+        case ('DEV_PTC')
           call this%parser%DevOpt()
           this%iallowptc = 1
           write(IOUT,'(1x,A)') 'PSEUDO-TRANSIENT CONTINUATION ENABLED'
-        case ('NO_PTC')
+        case ('DEV_NO_PTC')
           call this%parser%DevOpt()
           this%iallowptc = 0
           write(IOUT,'(1x,A)') 'PSEUDO-TRANSIENT CONTINUATION DISABLED'
-        case('PTC_OUTPUT')
+        case('DEV_PTC_OUTPUT')
           call this%parser%DevOpt()
           this%iallowptc = 1
           call this%parser%GetStringCaps(keyword)
@@ -550,14 +550,14 @@ contains
               'KEYWORD MUST BE FOLLOWED BY FILEOUT'
             call store_error(errmsg)
           end if
-        case ('PTC_OPTION')
+        case ('DEV_PTC_OPTION')
           call this%parser%DevOpt()
           this%iallowptc = 1
           this%iptcopt = 1
           write(IOUT,'(1x,A)')                                                 &
             'PSEUDO-TRANSIENT CONTINUATION USES BNORM AND L2NORM TO ' //       &
             'SET INITIAL VALUE'
-        case ('PTC_EXPONENT')
+        case ('DEV_PTC_EXPONENT')
           call this%parser%DevOpt()
           rval = this%parser%GetDouble()
           if (rval < DZERO) then
@@ -569,7 +569,7 @@ contains
             write(IOUT,'(1x,A,1x,g15.7)')                                      &
               'PSEUDO-TRANSIENT CONTINUATION EXPONENT', this%ptcexp
           end if
-        case ('PTC_THRESHOLD')
+        case ('DEV_PTC_THRESHOLD')
           call this%parser%DevOpt()
           rval = this%parser%GetDouble()
           if (rval < DZERO) then
@@ -581,7 +581,7 @@ contains
             write(IOUT,'(1x,A,1x,g15.7)')                                      &
               'PSEUDO-TRANSIENT CONTINUATION THRESHOLD', this%ptcthresh
           end if
-        case ('PTC_DEL0')
+        case ('DEV_PTC_DEL0')
           call this%parser%DevOpt()
           rval = this%parser%GetDouble()
           if (rval < DZERO) then
@@ -792,12 +792,6 @@ contains
       call this%parser%StoreErrorUnit()
       call ustop()
     end if
-
-    ! -- write text indicating PTC is being used
-    if (this%iallowptc > 0) then
-      WRITE(IOUT,*) '***PSEUDO-TRANSIENT CONTINUATION WILL BE USED***'
-    end if
-
     !
     ! reallocate space for nonlinear arrays and initialize
     call mem_reallocate(this%hncg, this%mxiter, 'HNCG', this%name)
@@ -1060,6 +1054,18 @@ contains
     character(len=*), parameter :: fmtnocnvg =                                 &
       "(1X,'Solution ', i0, ' did not converge for stress period ', i0,        &
        ' and time step ', i0)"
+ 11 FORMAT(//1X,'OUTER ITERATION SUMMARY',/,1x,122('-'),/,                     &
+        1x,'     OUTER     INNER BACKTRACK BACKTRACK        INCOMING        ', &
+           'OUTGOING         MAXIMUM                    MAXIMUM CHANGE',/,     &
+        1x,' ITERATION ITERATION      FLAG    NUMBER        RESIDUAL        ', &
+           'RESIDUAL          CHANGE                    MODEL-(CELLID)',/,     &
+          1x,122('-'))
+ 12 FORMAT(//1X,'OUTER ITERATION SUMMARY',/,1x,70('-'),/,                      &
+         1x,'     OUTER     INNER         MAXIMUM                    ',        &
+            'MAXIMUM CHANGE',/,                                                &
+         1x,' ITERATION ITERATION          CHANGE                    ',        &
+            'MODEL-(CELLID)',/,                                                &
+         1x,70('-'))
 ! ------------------------------------------------------------------------------
     !
     ! -- write header for csv output
@@ -1126,6 +1132,23 @@ contains
         call mp%model_ad(kpicard, isubtime)
       enddo
       !
+      ! -- determine if PTC will be used in any model
+      n = 1
+      do im = 1, this%modellist%Count()
+        mp => GetNumericalModelFromList(this%modellist, im)
+        call mp%model_ptcchk(iptc)
+        if (iptc /= 0) then
+          if (n == 1) then
+            write (iout, '(//)')
+            n = 0
+          end if
+          write (iout, '(1x,a,1x,i0,1x,3a)')                                           &
+            'PSEUDO-TRANSIENT CONTINUATION WILL BE APPLIED TO MODEL', im, '("',        &
+            trim(adjustl(mp%name)), '") DURING THIS TIME STEP'
+        end if
+      enddo
+      
+      !
       ! -- Nonlinear iteration loop for this solution
       this%icnvg = 0
       outerloop: do kiter = 1, this%mxiter
@@ -1133,6 +1156,7 @@ contains
         ! --backtracking
         if (this%numtrack > 0) then
           if (kiter == 1) then
+            ! -- write header for solver output
             if (this%iprims > 0) then
               write (iout,11)
             end if
@@ -1142,25 +1166,12 @@ contains
           call this%sln_backtracking(mp, cp, kiter)
         else
           if (kiter == 1) then
+            ! -- write header for solver output
             if (this%iprims > 0) then
               write (iout,12)
             end if
           end if
         end if
-
-        11 FORMAT(//1X,'OUTER ITERATION SUMMARY',/,1x,122('-'),/,              &
-     &  1x,'     OUTER     INNER BACKTRACK BACKTRACK        INCOMING        ', &
-     &     'OUTGOING         MAXIMUM                    MAXIMUM CHANGE',/,     &
-     &  1x,' ITERATION ITERATION      FLAG    NUMBER        RESIDUAL        ', &
-           'RESIDUAL          CHANGE                    MODEL-(CELLID)',/,     &
-     &    1x,122('-'))
-     12 FORMAT(//1X,'OUTER ITERATION SUMMARY',/,1x,70('-'),/,                  &
-     &   1x,'     OUTER     INNER         MAXIMUM                    ',        &
-            'MAXIMUM CHANGE',/,                                                &
-     &   1x,' ITERATION ITERATION          CHANGE                    ',        &
-            'MODEL-(CELLID)',/,                                                &
-     &   1x,70('-'))
-
         !
         ! -- Set amat and rhs to zero
         call this%sln_reset()
@@ -1231,9 +1242,11 @@ contains
         endif
         !-------------------------------------------------------
         ! -- check convergence of solution
-        call this%sln_outer_check(this%hncg(kiter), this%lrch(1,kiter))
-        this%icnvg = 0
-        if (abs(this%hncg(kiter)) <= this%hclose) this%icnvg = 1
+        if (this%icnvg /= 0) then
+          call this%sln_outer_check(this%hncg(kiter), this%lrch(1,kiter))
+          this%icnvg = 0
+          if (abs(this%hncg(kiter)) <= this%hclose) this%icnvg = 1
+        end if
         !
         ! -- Additional convergence check for pseudo-transient continuation
         !    term. Evaluate if the ptc value added to the diagonal has
@@ -1264,7 +1277,7 @@ contains
           end if
           do im=1,this%modellist%Count()
             mp => GetNumericalModelFromList(this%modellist, im)
-            call mp%model_cc(iend, this%icnvg)
+            call mp%model_cc(kiter, iend, this%icnvg)
           enddo
         end if
         !

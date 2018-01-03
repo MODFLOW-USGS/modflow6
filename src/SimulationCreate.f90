@@ -86,7 +86,7 @@ module SimulationCreateModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use ConstantsModule,        only: MFVNAM, VERSION, MFTITLE, FMTDISCLAIMER, &
-                                      LENBIGLINE
+                                      LENBIGLINE, IDEVELOPMODE
     use CompilerVersion
     use InputOutputModule,      only: write_centered
     ! -- dummy
@@ -99,10 +99,15 @@ module SimulationCreateModule
     call write_centered('MODFLOW'//MFVNAM, iout, 80)
     call write_centered(MFTITLE, iout, 80)
     call write_centered('VERSION '//VERSION, iout, 80)
+    !
+    ! -- Write if develop mode
+    if (IDEVELOPMODE == 1) call write_centered('***DEVELOP MODE***', iout, 80)
+    !
     ! -- Write compiler version
     call get_compiler(compiler)
     call write_centered(' ', iout, 80)
     call write_centered(trim(adjustl(compiler)), iout, 80)
+    !
     ! -- Write disclaimer
     write(iout, FMTDISCLAIMER)
     !
@@ -325,8 +330,6 @@ module SimulationCreateModule
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     integer(I4B) :: im
-    integer(I4B) :: ilen
-    integer(I4B) :: i
     character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: keyword
     character(len=LINELENGTH) :: fname, mname
@@ -343,37 +346,8 @@ module SimulationCreateModule
         call parser%GetStringCaps(keyword)
         select case (keyword)
           case ('GWF6')
-            im = im + 1
             call parser%GetString(fname)
-            call expandarray(modelname)
-            call parser%GetStringCaps(mname)
-            ilen = len_trim(mname)
-            if (ilen > LENMODELNAME) then
-              write(errmsg, '(4x,a,a)')                                        &
-                    'ERROR. INVALID MODEL NAME: ', trim(mname)
-              call store_error(errmsg)
-              write(errmsg, '(4x,a,i0,a,i0)')                                  &
-                    'NAME LENGTH OF ', ilen, ' EXCEEDS MAXIMUM LENGTH OF ',    &
-                    LENMODELNAME
-              call store_error(errmsg)
-              call parser%StoreErrorUnit()
-              call ustop()
-            endif
-            do i = 1, ilen
-              if (mname(i:i) == ' ') then
-                write(errmsg, '(4x,a,a)')                                      &
-                      'ERROR. INVALID MODEL NAME: ', trim(mname)
-                call store_error(errmsg)
-                write(errmsg, '(4x,a)')                                        &
-                      'MODEL NAME CANNOT HAVE SPACES WITHIN IT.'
-                call store_error(errmsg)
-                call parser%StoreErrorUnit()
-                call ustop()
-              endif
-            enddo
-            modelname(im) = mname
-            write(iout, '(4x,a,i0)') 'GWF6 model ' // trim(mname) //           &
-              ' will be created as model ',im
+            call add_model(im, 'GWF6', mname)
             call gwf_cr(fname, im, modelname(im))
           case default
             write(errmsg, '(4x,a,a)') &
@@ -640,4 +614,55 @@ module SimulationCreateModule
     return
   end subroutine solution_groups_create
 
+  subroutine add_model(im, mtype, mname)
+! ******************************************************************************
+! Add the model to the list of modelnames, check that the model name is valid.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    integer, intent(inout) :: im
+    character(len=*), intent(in) :: mtype
+    character(len=*), intent(inout) :: mname
+    ! -- local
+    integer :: ilen
+    integer :: i
+    character(len=LINELENGTH) :: errmsg
+! ------------------------------------------------------------------------------
+    im = im + 1
+    call expandarray(modelname)
+    call parser%GetStringCaps(mname)
+    ilen = len_trim(mname)
+    if (ilen > LENMODELNAME) then
+      write(errmsg, '(4x,a,a)')                                                &
+            'ERROR. INVALID MODEL NAME: ', trim(mname)
+      call store_error(errmsg)
+      write(errmsg, '(4x,a,i0,a,i0)')                                          &
+            'NAME LENGTH OF ', ilen, ' EXCEEDS MAXIMUM LENGTH OF ',            &
+            LENMODELNAME
+      call store_error(errmsg)
+      call parser%StoreErrorUnit()
+      call ustop()
+    endif
+    do i = 1, ilen
+      if (mname(i:i) == ' ') then
+        write(errmsg, '(4x,a,a)')                                              &
+              'ERROR. INVALID MODEL NAME: ', trim(mname)
+        call store_error(errmsg)
+        write(errmsg, '(4x,a)')                                                &
+              'MODEL NAME CANNOT HAVE SPACES WITHIN IT.'
+        call store_error(errmsg)
+        call parser%StoreErrorUnit()
+        call ustop()
+      endif
+    enddo
+    modelname(im) = mname
+    write(iout, '(4x,a,i0)') mtype // ' model ' // trim(mname) //              &
+      ' will be created as model ', im  
+    !
+    ! -- return
+    return
+  end subroutine add_model
+  
 end module SimulationCreateModule

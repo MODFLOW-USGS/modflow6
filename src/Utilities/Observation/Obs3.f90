@@ -627,7 +627,10 @@ contains
       endif
     enddo
     !
-    if (count_errors()>0) call ustop()
+    if (count_errors() > 0) then
+      call store_error_unit(this%inunitobs)
+      call ustop()
+    end if
     !
     return
   end subroutine obs_ar2

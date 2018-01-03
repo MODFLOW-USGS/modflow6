@@ -3,7 +3,7 @@ BEGIN OPTIONS
   PRINT_FLOWS
   SAVE_FLOWS
   BOUNDNAMES
-  TS8 FILEIN river_stages.ts
+  TS6 FILEIN river_stages.ts
 END OPTIONS
 
 begin dimensions

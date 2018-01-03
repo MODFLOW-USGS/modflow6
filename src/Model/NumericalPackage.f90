@@ -28,6 +28,8 @@ module NumericalPackageModule
     integer(I4B), pointer                              :: iprpak      => null() !integer flag to echo input
     integer(I4B), pointer                              :: iprflow     => null() !flag to print simulated flows
     integer(I4B), pointer                              :: ipakcb      => null() !output flows (-1, 0, 1) - save_flows
+    integer(I4B), pointer                              :: ionper      => null() !stress period for next data
+    integer(I4B), pointer                              :: lastonper   => null() !last value of ionper (for checking)
     !
     ! -- derived types
     type(BlockParserType)                              :: parser                !parser object for reading blocks of information
@@ -37,6 +39,7 @@ module NumericalPackageModule
     procedure :: set_names
     procedure :: allocate_scalars
     procedure :: da
+    procedure :: read_check_ionper
   end type NumericalPackageType
   !
   contains
@@ -115,6 +118,8 @@ module NumericalPackageModule
     call mem_setptr(imodelprpak, 'IPRPAK', trim(this%name_model))
     call mem_setptr(imodelprflow, 'IPRFLOW', trim(this%name_model))
     call mem_setptr(imodelpakcb, 'IPAKCB', trim(this%name_model))
+    call mem_allocate(this%ionper, 'IONPER', this%origin)
+    call mem_allocate(this%lastonper, 'LASTONPER', this%origin)
     !
     ! -- initialize
     this%id = 0
@@ -125,6 +130,8 @@ module NumericalPackageModule
     this%iprpak = imodelprpak
     this%iprflow = imodelprflow
     this%ipakcb = imodelpakcb
+    this%ionper = 0
+    this%lastonper = 0
     !
     ! -- nullify unneeded pointers
     imodelnewton => NULL()
@@ -159,10 +166,50 @@ module NumericalPackageModule
     call mem_deallocate(this%iprpak)
     call mem_deallocate(this%iprflow)
     call mem_deallocate(this%ipakcb)
+    call mem_deallocate(this%ionper)
+    call mem_deallocate(this%lastonper)
     !
     ! -- Return
     return
   end subroutine da
   !
+  subroutine read_check_ionper(this)
+! ******************************************************************************
+! read_check_ionper -- Read ionper and check to make sure periods are increasing
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use TdisModule, only: kper
+    ! -- dummy
+    class(NumericalPackageType),intent(inout) :: this
+    ! -- local
+    character(len=LINELENGTH) :: errmsg
+! ------------------------------------------------------------------------------
+    !
+    ! -- save last value and read period number
+    this%lastonper = this%ionper
+    this%ionper = this%parser%GetInteger()
+    !
+    ! -- make check
+    if (this%ionper <= this%lastonper) then
+      write(errmsg, '(a, i0)') &
+        'ERROR IN STRESS PERIOD ', kper
+      call store_error(errmsg)
+      write(errmsg, '(a, i0)') &
+        'PERIOD NUMBERS NOT INCREASING.  FOUND ', this%ionper
+      call store_error(errmsg)
+      write(errmsg, '(a, i0)') &
+        'BUT LAST PERIOD BLOCK WAS ASSIGNED ', this%lastonper
+      call store_error(errmsg)
+      call this%parser%StoreErrorUnit()
+      call ustop()
+    endif
+    !
+    ! -- return
+    return
+  end subroutine read_check_ionper
+
 end module NumericalPackageModule
   

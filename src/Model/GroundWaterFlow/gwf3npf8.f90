@@ -2,7 +2,7 @@ module GwfNpfModule
   use KindModule,                 only: DP, I4B
   use ConstantsModule,            only: DZERO, DEM9, DEM8, DEM7, DEM6, DEM2,    &
                                         DHALF, DP9, DONE, DLNLOW, DLNHIGH,      &
-                                        DHNOFLO, DHDRY
+                                        DHNOFLO, DHDRY, DEM10
   use SmoothingModule,            only: sQuadraticSaturation,                   &
                                         sQuadraticSaturationDerivative
   use NumericalPackageModule,     only: NumericalPackageType
@@ -1104,28 +1104,28 @@ module GwfNpfModule
             if(keyword == 'RHS') then
               this%ixt3d = 2
             endif
-
-          case ('MINIMUM_SATURATED_THICKNESS')
-            this%min_satthk = this%parser%GetDouble()
-            write(this%iout, '(4x,a,1pg15.6)')                                 &
-                             'MINIMUM SATURATED THICKNESS HAS BEEN SET TO: ',  &
-                             this%min_satthk
           !
           ! -- right now these are options that are only available in the
           !    development version and are not included in the documentation.
           !    These options are only available when IDEVELOPMODE in
           !    constants module is set to 1
-          case ('NO_NEWTON')
+          case ('DEV_NO_NEWTON')
             call this%parser%DevOpt()
             this%inewton = 0
             write(this%iout, '(4x,a)')                                         &
                           'NEWTON-RAPHSON method disabled for unconfined cells'
             this%iasym = 0
-          case ('DEBUG_MODFLOWUSG_UPSTREAM_WEIGHTED_SATURATION')
+          case ('DEV_MODFLOWUSG_UPSTREAM_WEIGHTED_SATURATION')
             call this%parser%DevOpt()
             this%iusgnrhc = 1
             write(this%iout, '(4x,a)')                                         &
               'MODFLOW-USG saturation calculation method will be used '
+          case ('DEV_MINIMUM_SATURATED_THICKNESS')
+            call this%parser%DevOpt()
+            this%min_satthk = this%parser%GetDouble()
+            write(this%iout, '(4x,a,1pg15.6)')                                 &
+                             'MINIMUM SATURATED THICKNESS HAS BEEN SET TO: ',  &
+                             this%min_satthk
 
           case default
             write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN NPF OPTION: ',         &
@@ -2565,5 +2565,5 @@ module GwfNpfModule
     ! -- Return
     return
   end function hyeff_calc
-
+  
 end module GwfNpfModule

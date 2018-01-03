@@ -15,7 +15,6 @@ module NameFileModule
     logical :: opened_listfile = .false.
     character(len=LINELENGTH), dimension(:), allocatable :: opts
     character(len=LINELENGTH), dimension(:), allocatable :: input_files
-    character(len=LINELENGTH), dimension(:), allocatable :: output_files
     type(IunitType) :: iunit_obj
     type(BlockParserType) :: parser
   contains
@@ -27,8 +26,6 @@ module NameFileModule
     procedure :: get_nval_for_row      => namefile_get_nval_for_row
     procedure :: get_unitnumber_rowcol => namefile_get_unitnumber_rowcol
     procedure :: get_pakname           => namefile_get_pakname
-    procedure :: get_output_filename
-    procedure :: get_input_filename
   end type NameFileType
 
   contains
@@ -65,7 +62,6 @@ module NameFileModule
     this%filename = filename
     allocate(this%opts(0))
     allocate(this%input_files(0))
-    allocate(this%output_files(0))
     !
     ! -- Open the name file and initialize the block parser
     inunit = getunit()
@@ -75,7 +71,8 @@ module NameFileModule
     ! -- Read and set the options
     call this%parser%GetBlock('OPTIONS', isFound, ierr, blockRequired=.false.)
     if(isFound) then
-      ! Populate this%opts
+      !
+      ! -- Populate this%opts
       n = 0
       getopts: do
         call this%parser%GetNextLine(endOfBlock)
@@ -89,7 +86,7 @@ module NameFileModule
       if(iout > 0) then
         write(iout, fmtfname) 'OPTIONS', trim(adjustl(filename))
         write(iout, fmtbeg) 'BEGIN OPTIONS'
-        do i=1,n
+        do i = 1, n
           write(iout, fmtline) trim(adjustl(this%opts(i)))
         enddo
         write(iout, fmtend) 'END OPTIONS'
@@ -103,7 +100,8 @@ module NameFileModule
     ! -- Read and set the input_files
     call this%parser%GetBlock('PACKAGES', isFound, ierr)
     if(isFound) then
-      ! Populate this%input_files
+      !
+      ! -- Populate this%input_files
       n = 0
       getpaks: do
         call this%parser%GetNextLine(endOfBlock)
@@ -114,16 +112,19 @@ module NameFileModule
         this%input_files(n) = adjustl(line)
       enddo getpaks
       !
+      ! -- Write to list file
       if(iout > 0) then
         write(iout, fmtfname) 'PACKAGES', trim(adjustl(filename))
         write(iout, fmtbeg) 'BEGIN PACKAGES'
-        do i=1,n
+        do i = 1, n
           write(iout, fmtline) trim(adjustl(this%input_files(i)))
         enddo
         write(iout, fmtend) 'END PACKAGES'
       endif
     else
-      write(errmsg, '(a, a)') 'Error reading PACKAGES from file: ',         &
+      !
+      ! -- Package block not found.  Terminate with error.
+      write(errmsg, '(a, a)') 'Error reading PACKAGES from file: ',            &
                                trim(adjustl(filename))
       call store_error(errmsg)
       call ustop()
@@ -146,89 +147,11 @@ module NameFileModule
     character(len=*), dimension(niunit), intent(in) :: cunit
 ! ------------------------------------------------------------------------------
     !
-    call this%iunit_obj%allocate(niunit, cunit)
+    call this%iunit_obj%init(niunit, cunit)
     !
     ! -- return
     return
   end subroutine namefile_add_cunit
-
-  subroutine get_input_filename(this, ftype, fname, found)
-! ******************************************************************************
-! get_input_filename -- get the filename from namefilearray for the specified
-!   ftype.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    use InputOutputModule, only: upcase
-    ! -- dummy
-    class(NameFileType) :: this
-    character(len=*), intent(in) :: ftype
-    character(len=*), intent(inout) :: fname
-    logical, intent(inout) :: found
-    ! -- local
-    integer(I4B) :: i
-    integer(I4B) :: nwords
-    character(len=len(ftype)) :: ftype_copy
-    character(len=LINELENGTH), allocatable, dimension(:) :: words
-! ------------------------------------------------------------------------------
-    !
-    fname = ' '
-    found = .false.
-    ftype_copy = ftype
-    call upcase(ftype_copy)
-    findloop: do i = 1, size(this%input_files)
-      call ParseLine(this%input_files(i), nwords, words)
-      call upcase(words(1))
-      if(words(1) == ftype_copy) then
-        fname = words(2)
-        found = .true.
-        exit findloop
-      endif
-    enddo findloop
-    !
-    ! -- return
-    return
-  end subroutine get_input_filename
-
-  subroutine get_output_filename(this, ftype, fname, found)
-! ******************************************************************************
-! get_output_filename -- get the filename from namefilearray for the specified
-!   ftype.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    use InputOutputModule, only: upcase
-    ! -- dummy
-    class(NameFileType) :: this
-    character(len=*), intent(in) :: ftype
-    character(len=*), intent(inout) :: fname
-    logical, intent(inout) :: found
-    ! -- local
-    integer(I4B) :: i
-    integer(I4B) :: nwords
-    character(len=len(ftype)) :: ftype_copy
-    character(len=LINELENGTH), allocatable, dimension(:) :: words
-! ------------------------------------------------------------------------------
-    !
-    fname = ' '
-    found = .false.
-    ftype_copy = ftype
-    call upcase(ftype_copy)
-    findloop: do i = 1, size(this%output_files)
-      call ParseLine(this%output_files(i), nwords, words)
-      call upcase(words(1))
-      if(words(1) == ftype_copy) then
-        fname = words(2)
-        found = .true.
-        exit findloop
-      endif
-    enddo findloop
-    !
-    ! -- return
-    return
-  end subroutine get_output_filename
 
   subroutine namefile_openlistfile(this, iout)
 ! ******************************************************************************
@@ -309,7 +232,7 @@ module NameFileModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use SimModule, only: store_error, ustop
-    use InputOutputModule, only: getunit
+    use InputOutputModule, only: getunit, upcase
     ! -- dummy
     class(NameFileType) :: this
     integer(I4B), intent(in) :: iout
@@ -325,24 +248,15 @@ module NameFileModule
       !
       ! -- Parse the line and set defaults
       call ParseLine(this%input_files(i), nwords, words)
+      call upcase(words(1))
       ftype = words(1)
       accarg = 'SEQUENTIAL'
       fmtarg = 'FORMATTED'
       filstat = 'OLD'
       !
-      ! -- Get a free unit number
+      ! -- Get a free unit number and assign it to the file
       inunit = getunit()
-      !
-      ! -- Skip LIST if already opened
-      select case(ftype)
-        !case('DATA(BINARY)')
-        !  fmtarg = form
-        !  accarg = access
-        !case('DATA')
-        !  continue
-        case default
-          call this%iunit_obj%addfile(ftype, inunit, i, this%filename)
-      end select
+      call this%iunit_obj%addfile(ftype, inunit, i, this%filename)
       !
       ! -- Open the file
       call openfile(inunit, iout, trim(adjustl(words(2))),                     &

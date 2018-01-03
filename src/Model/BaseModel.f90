@@ -13,6 +13,7 @@ module BaseModelModule
 
   type :: BaseModelType
     character(len=LENMODELNAME), pointer :: name             => null()          ! name of the model
+    character(len=3), pointer            :: macronym         => null()          ! 3 letter model acronym (GWF, GWT, ...)
     integer(I4B), pointer                :: idsoln           => null()          ! id of the solution model is in
     integer(I4B), pointer                :: id               => null()          ! model id
     integer(I4B), pointer                :: iout             => null()          ! output unit number
@@ -118,6 +119,7 @@ module BaseModelModule
 ! ------------------------------------------------------------------------------
     !
     allocate(this%name)
+    allocate(this%macronym)
     allocate(this%single_model_run)
     call mem_allocate(this%id, 'ID', modelname)
     call mem_allocate(this%iout, 'IOUT', modelname)
@@ -128,6 +130,7 @@ module BaseModelModule
     call mem_allocate(this%idsoln, 'IDSOLN', modelname)
     !
     this%name = modelname
+    this%macronym = ''
     this%idsoln = 0
     this%id = 0
     this%iout = 0
@@ -156,6 +159,7 @@ module BaseModelModule
     !
     ! -- Strings
     deallocate(this%name)
+    deallocate(this%macronym)
     !
     ! -- Scalars
     deallocate(this%single_model_run)

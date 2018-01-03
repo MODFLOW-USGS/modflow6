@@ -1,5 +1,8 @@
 % DO NOT MODIFY THIS FILE DIRECTLY.  IT IS CREATED BY mf6ivar.py 
 
+\item \textbf{Block: OPTIONS}
+
+\begin{description}
 \item \texttt{auxiliary}---defines an array of one or more auxiliary variable names.  There is no limit on the number of auxiliary variables that can be provided on this line; however, lists of information provided in subsequent blocks must have a column of data for each auxiliary variable name defined here.   The number of auxiliary variables detected on this line determines the value for naux.  Comments cannot be provided anywhere on this line as they will be interpreted as auxiliary variable names.  Auxiliary variables may not be used by the package, but they will be available for use by other parts of the program.  The program will terminate with an error if auxiliary variables are specified on more than one line in the options block.
 
 \item \texttt{BOUNDNAMES}---keyword to indicate that boundary names may be provided with the list of lake cells.
@@ -40,13 +43,21 @@
 
 \item \texttt{length\_conversion}---real value that is used in converting outlet flow terms that use Manning's equation or gravitational acceleration to consistent length units. \texttt{length\_conversion} should be set to 3.28081, 1.0, and 100.0 when using length units (\texttt{length\_units}) of feet, meters, or centimeters in the simulation, respectively. \texttt{length\_conversion} does not need to be specified if no lake outlets are specified or \texttt{length\_units} are meters.
 
+\end{description}
+\item \textbf{Block: DIMENSIONS}
+
+\begin{description}
 \item \texttt{nlakes}---value specifying the number of lakes that will be simulated for all stress periods.
 
 \item \texttt{noutlets}---value specifying the number of outlets that will be simulated for all stress periods. If \texttt{NOUTLETS} is not specified, a default value of zero is used.
 
 \item \texttt{ntables}---value specifying the number of lakes tables that will be used to define the lake stage, volume relation, and surface area. If \texttt{NTABLES} is not specified, a default value of zero is used.
 
-\item \texttt{lakeno}---integer value that defines the lake number for this lake entry. \texttt{lakeno} must be greater than zero and less than or equal to \texttt{nlakes}.
+\end{description}
+\item \textbf{Block: PACKAGEDATA}
+
+\begin{description}
+\item \texttt{lakeno}---integer value that defines the lake number associated with the specified PACKAGEDATA data on the line. \texttt{lakeno} must be greater than zero and less than or equal to \texttt{nlakes}. Lake information must be specified for every lake or the program will terminate with an error.  The program will also terminate with an error if information for a lake is specified more than once.
 
 \item \texttt{strt}---real value that defines the starting stage for the lake.
 
@@ -56,7 +67,11 @@
 
 \item \texttt{boundname}---name of the lake cell.  \texttt{boundname} is an ASCII character variable that can contain as many as 40 characters.  If \texttt{boundname} contains spaces in it, then the entire name must be enclosed within single quotes.
 
-\item \texttt{lakeno}---integer value that defines the lake number for this lake entry. \texttt{lakeno} must be greater than zero and less than or equal to \texttt{nlakes}.
+\end{description}
+\item \textbf{Block: CONNECTIONDATA}
+
+\begin{description}
+\item \texttt{lakeno}---integer value that defines the lake number associated with the specified CONNECTIONDATA data on the line. \texttt{lakeno} must be greater than zero and less than or equal to \texttt{nlakes}. Lake connection information must be specified for every lake connection to the GWF model (\texttt{nlakeconn}) or the program will terminate with an error.  The program will also terminate with an error if connection information for a lake connection to the GWF model is specified more than once.
 
 \item \texttt{iconn}---integer value that defines the \texttt{GWF} connection number for this lake connection entry. \texttt{iconn} must be greater than zero and less than or equal to \texttt{nlakeconn} for lake \texttt{lakeno}.
 
@@ -64,7 +79,7 @@
 
 \item \texttt{claktype}---character string that defines the lake-\texttt{GWF} connection type for the lake connection. Possible lake-\texttt{GWF} connection type strings include:  \texttt{VERTICAL}--character keyword to indicate the lake-\texttt{GWF} connection is vertical  and connection conductance calculations use the hydraulic conductivity corresponding to the $K_{33}$ tensor component defined for \texttt{cellid} in the NPF package. \texttt{HORIZONTAL}--character keyword to indicate the lake-\texttt{GWF} connection is horizontal and connection conductance calculations use the hydraulic conductivity corresponding to the $K_{11}$ tensor component defined for \texttt{cellid} in the NPF package. \texttt{EMBEDDEDH}--character keyword to indicate the lake-\texttt{GWF} connection is embedded in a single cell and connection conductance calculations use the hydraulic conductivity corresponding to the $K_{11}$ tensor component defined for \texttt{cellid} in the NPF package. \texttt{EMBEDDEDV}--character keyword to indicate the lake-\texttt{GWF} connection is embedded in a single cell and connection conductance calculations use the hydraulic conductivity corresponding to the $K_{33}$ tensor component defined for \texttt{cellid} in the NPF package. Embedded lakes can only be connected to a single cell (\texttt{nlakconn = 1}) and there must be a lake table associated with each embedded lake.
 
-\item \texttt{bedleak}---real value that defines the bed leakance for the lake-\texttt{GWF} connection. \texttt{bedk} must be greater than or equal to zero.
+\item \texttt{bedleak}---character string or real value that defines the bed leakance for the lake-\texttt{GWF} connection. \texttt{bedleak} must be greater than or equal to zero or specified to be \texttt{none}. If \texttt{bedleak} is specified to be \texttt{none}, the lake-\texttt{GWF} connection conductance is solely a function of aquifer properties in the connected \texttt{GWF} cell and lakebed sediments are assumed to be absent.
 
 \item \texttt{belev}---real value that defines the bottom elevation for a \texttt{HORIZONTAL} lake-\texttt{GWF} connection. Any value can be specified if \texttt{claktype} is \texttt{VERTICAL}, \texttt{EMBEDDEDH}, or \texttt{EMBEDDEDV}. If \texttt{claktype} is \texttt{HORIZONTAL} and \texttt{belev} is not equal to \texttt{telev}, \texttt{belev} must be greater than or equal to the bottom of the \texttt{GWF} cell \texttt{cellid}. If \texttt{belev} is equal to \texttt{telev}, \texttt{belev} is reset to the bottom of the \texttt{GWF} cell \texttt{cellid}.
 
@@ -74,7 +89,11 @@
 
 \item \texttt{connwidth}---real value that defines the connection face width for a \texttt{HORIZONTAL} lake-\texttt{GWF} connection. \texttt{connwidth} must be greater than zero for a \texttt{HORIZONTAL} lake-\texttt{GWF} connection. Any value can be specified if \texttt{claktype} is \texttt{VERTICAL}, \texttt{EMBEDDEDH}, or \texttt{EMBEDDEDV}.
 
-\item \texttt{lakeno}---integer value that defines the lake number for this lake entry. \texttt{lakeno} must be greater than zero and less than or equal to \texttt{nlakes}.
+\end{description}
+\item \textbf{Block: TABLES}
+
+\begin{description}
+\item \texttt{lakeno}---integer value that defines the lake number associated with the specified TABLES data on the line. \texttt{lakeno} must be greater than zero and less than or equal to \texttt{nlakes}. The program will terminate with an error if table information for a lake is specified more than once or the number of specified tables is less than \texttt{ntables}.
 
 \item \texttt{TAB6}---keyword to specify that record corresponds to a table file.
 
@@ -82,7 +101,11 @@
 
 \item \texttt{tab6\_filename}---character string that defines the path and filename for the file containing lake table data for the lake connection. The \texttt{ctabname} file includes the number of entries in the file and the relation between stage, surface area, and volume for each entry in the file. Lake table files for \texttt{EMBEDDEDH} and \texttt{EMBEDDEDV} lake-\texttt{GWF} connections also include lake-\texttt{GWF} exchange area data for each entry in the file. Input instructions for the \texttt{ctabname} file is included at the LAK package lake table file input instructions section.
 
-\item \texttt{outletno}---integer value that defines the outlet number for this outlet entry. \texttt{outletno} must be greater than zero and less than or equal to \texttt{noutlets}.
+\end{description}
+\item \textbf{Block: OUTLETS}
+
+\begin{description}
+\item \texttt{outletno}---integer value that defines the outlet number associated with the specified OUTLETS data on the line. \texttt{outletno} must be greater than zero and less than or equal to \texttt{noutlets}. Outlet information must be specified for every outlet or the program will terminate with an error. The program will also terminate with an error if information for a outlet is specified more than once.
 
 \item \texttt{lakein}---integer value that defines the lake number that outlet is connected to. \texttt{lakein} must be greater than zero and less than or equal to \texttt{nlakes}.
 
@@ -98,9 +121,13 @@
 
 \item \textcolor{blue}{\texttt{slope}---real value that defines the bed slope for the lake outlet. Any value can be specified if \texttt{couttype} is not \texttt{MANNING}. If the Options block includes a \texttt{TIMESERIESFILE} entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.}
 
-\item \texttt{iper}---integer value specifying the starting stress period number for which the data specified in the PERIOD block apply.  \texttt{iper} must be less than \texttt{nper} in the TDIS Package and greater than zero.  The \texttt{iper} value assigned to a stress period block must be greater than the \texttt{iper} value assigned for the previous block.
+\end{description}
+\item \textbf{Block: PERIOD}
 
-\item \texttt{lakeno}---integer value that defines the lake number associated with the specified data on the line. \texttt{lakeno} must be greater than zero and less than or equal to \texttt{nlakes}.
+\begin{description}
+\item \texttt{iper}---integer value specifying the starting stress period number for which the data specified in the PERIOD block apply.  \texttt{iper} must be less than or equal to \texttt{nper} in the TDIS Package and greater than zero.  The \texttt{iper} value assigned to a stress period block must be greater than the \texttt{iper} value assigned for the previous PERIOD block.  The information specified in the PERIOD block will continue to apply for all subsequent stress periods, unless the program encounters another PERIOD block.
+
+\item \texttt{lakeno}---integer value that defines the lake number associated with the specified PERIOD data on the line. \texttt{lakeno} must be greater than zero and less than or equal to \texttt{nlakes}.
 
 \item \texttt{laksetting}---line of information that is parsed into a keyword and values.  Keyword values that can be used to start the \texttt{laksetting} string include: \texttt{STATUS}, \texttt{STAGE}, \texttt{RAINFALL}, \texttt{EVAPORATION}, \texttt{RUNOFF}, \texttt{WITHDRAWAL}, and \texttt{AUXILIARY}.
 
@@ -134,7 +161,7 @@ AUXILIARY <auxname> <@auxval@>
 
 \item \textcolor{blue}{\texttt{auxval}---value for the auxiliary variable. If the Options block includes a \texttt{TIMESERIESFILE} entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.}
 
-\item \texttt{outletno}---integer value that defines the outlet number for this outlet entry. \texttt{outletno} must be greater than zero and less than or equal to \texttt{noutlets}.
+\item \texttt{outletno}---integer value that defines the outlet number associated with the specified PERIOD data on the line. \texttt{outletno} must be greater than zero and less than or equal to \texttt{noutlets}.
 
 \item \texttt{outletsetting}---line of information that is parsed into a keyword and values.  Keyword values that can be used to start the \texttt{outletsetting} string include: \texttt{RATE}, \texttt{INVERT}, \texttt{WIDTH}, \texttt{SLOPE}, and \texttt{ROUGH}.
 
@@ -154,4 +181,5 @@ ROUGH <@rough@>
 
 \item \textcolor{blue}{\texttt{slope}---real or character value that defines the bed slope for the lake outlet. A specified \texttt{slope} value is only used for active lakes if \texttt{couttype} for lake outlet \texttt{outletno} is \texttt{MANNING}. If the Options block includes a \texttt{TIMESERIESFILE} entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.}
 
+\end{description}
 

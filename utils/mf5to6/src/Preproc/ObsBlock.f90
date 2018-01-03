@@ -6,7 +6,7 @@ module ObsBlockModule
   use ConstantsPHMFModule,       only: CONTINUOUS, SINGLE, LENOBSNAMENEW
   use DnmDis3dModule,            only: Dis3dType
   use GlobalVariablesPHMFModule, only: verbose
-  use InputOutputModule,         only: dclosetest, GetLine, UPCASE, URWORD, &
+  use InputOutputModule,         only: dclosetest, UPCASE, URWORD, &
                                        uterminate_block
   use ListModule,                only: ListType
   use ObserveModule,             only: ObserveType, AddObserveToList, &
@@ -118,7 +118,6 @@ contains
     !
     ! Read and process each line contained in block
     loop: do
-!      call GetLine(iu, oline, eof, ignore_comments)
       call parser%GetNextLine(endOfBlock)
       if (endOfBlock) exit
       lloc2 = 1

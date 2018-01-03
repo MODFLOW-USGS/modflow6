@@ -1,4 +1,4 @@
-\begin{thebibliography}{28}
+\begin{thebibliography}{29}
 \providecommand{\natexlab}[1]{#1}
 \expandafter\ifx\csname urlstyle\endcsname\relax
   \providecommand{\doi}[1]{doi:\discretionary{}{}{}#1}\else
@@ -63,6 +63,12 @@ Harbaugh, A.W., 2005, MODFLOW-2005, the U.S. Geological Survey modular
   ground-water model---the Ground-Water Flow Process: {U.S. Geological Survey
   Techniques and Methods, book 6, chap. A16, variously paged}, accessed June
   27, 2017, at \url{https://pubs.usgs.gov/tm/2005/tm6A16/}.
+
+\bibitem[{Hill(1990)}]{hill1990preconditioned}
+Hill, M.C., 1990, Preconditioned Conjugate-Gradient 2 (PCG2), a computer
+  program for solving ground-water flow equations: {U.S. Geological Survey
+  Water-Resources Investigations Report 90--4048, 25 p.}, accessed June 27,
+  2017, at \url{https://pubs.usgs.gov/wri/wrir_90-4048}.
 
 \bibitem[{Hill and others(2000)Hill, Banta, Harbaugh, and
   Anderman}]{hill2000modflow}

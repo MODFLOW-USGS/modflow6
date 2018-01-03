@@ -1,5 +1,5 @@
 
-Input to the Recharge (RCH) Package is read from the file that has type ``RCH6'' in the Name File.  Any number of RCH Packages can be specified for a single groundwater flow model.  All single valued variables are free format. 
+Input to the Recharge (RCH) Package is read from the file that has type ``RCH6'' in the Name File.  Any number of RCH Packages can be specified for a single groundwater flow model.
 
 Recharge input can be specified using lists or arrays, unless the DISU Package is used.  List-based input must be used if discretization is specified using the DISU Package.  List-based input for recharge is the default, and is described here.  Instructions for specifying array-based recharge are described in the next section. 
 
@@ -15,6 +15,7 @@ List-based input offers several advantages over the array-based input for specif
 \vspace{5mm}
 \noindent \textit{FOR ANY STRESS PERIOD}
 \lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-rch-period.dat}
+\packageperioddescription
 
 \vspace{5mm}
 \subsubsection{Explanation of Variables}

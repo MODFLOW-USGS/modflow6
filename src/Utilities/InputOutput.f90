@@ -3,21 +3,21 @@
 module InputOutputModule
 
   use KindModule, only: DP, I4B
-  use SimModule, only: store_error, ustop, store_error_unit, &
+  use SimModule, only: store_error, ustop, store_error_unit,                   &
                        store_error_filename
-  use ConstantsModule, only: LINELENGTH, LENBIGLINE, LENBOUNDNAME, &
+  use ConstantsModule, only: LINELENGTH, LENBIGLINE, LENBOUNDNAME,             &
                              NAMEDBOUNDFLAG, LINELENGTH, MAXCHARLEN
   private
-  public :: dclosetest, GetUnit, u8rdcom, uget_block,                 &
-            uterminate_block, UPCASE, URWORD, ULSTLB, UBDSV4,         &
-            ubdsv06, UBDSVB, UCOLNO, ULAPRW,                          &
-            ULASAV, ubdsv1, ubdsvc, ubdsvd, UWWORD,                   &
-            same_word, get_node, get_ijk, unitinquire, GetLine,       &
-            ParseLine, ulaprufw, write_centered, openfile,            &
-            linear_interpolate, lowcase,                              &
-            read_line, read_data_line, uget_any_block,                &
-            GetFileFromPath, extract_idnum_or_bndname, urdaux,        &
-            get_jk, uget_block_line, print_format, BuildFixedFormat,  &
+  public :: dclosetest, GetUnit, u8rdcom, uget_block,                          &
+            uterminate_block, UPCASE, URWORD, ULSTLB, UBDSV4,                  &
+            ubdsv06, UBDSVB, UCOLNO, ULAPRW,                                   &
+            ULASAV, ubdsv1, ubdsvc, ubdsvd, UWWORD,                            &
+            same_word, get_node, get_ijk, unitinquire,                         &
+            ParseLine, ulaprufw, write_centered, openfile,                     &
+            linear_interpolate, lowcase,                                       &
+            read_line, uget_any_block,                                         &
+            GetFileFromPath, extract_idnum_or_bndname, urdaux,                 &
+            get_jk, uget_block_line, print_format, BuildFixedFormat,           &
             BuildFloatFormat, BuildIntFormat
 
   contains
@@ -303,6 +303,7 @@ module InputOutputModule
             cycle cleartabs
           case default
             if (line(1:2).eq.comment) iscomment = .true.
+            if (len_trim(line) < 1) iscomment = .true.
             exit cleartabs
         end select
       end do cleartabs
@@ -365,7 +366,7 @@ module InputOutputModule
   end subroutine uget_block_line
 
 
-  subroutine uget_block(iin,iout,ctag,ierr,isfound,lloc,line,iuext,             &
+  subroutine uget_block(iin, iout, ctag, ierr, isfound, lloc, line, iuext,     &
                         blockRequired, supportopenclose)
 ! ******************************************************************************
 ! Read until the ctag block is found.  Return isfound with true, if found.
@@ -455,6 +456,16 @@ module InputOutputModule
           endif
         end if
         exit mainloop
+      else if (line(istart:istop) == 'END') then
+        call urword(line, lloc, istart, istop, 1, ival, rval, iin, iout)
+        if (line(istart:istop) == ctag) then
+          ermsg = 'Error: Looking for BEGIN ' // trim(ctag) // &
+                  ' but found END ' // line(istart:istop) // &
+                  ' instead.'
+          call store_error(ermsg)
+          call store_error_unit(iuext)
+          call ustop()
+        endif
       end if
     end do mainloop
     return
@@ -1518,77 +1529,6 @@ module InputOutputModule
     return
   end subroutine unitinquire
 
-  subroutine GetLine(inunit, line, eof, ignore_comments)
-    ! GetLine
-    ! -- This subroutine is for reading a data line, with optional support
-    !    for allowing a comment.
-    ! -- Returns EOF as .TRUE. if End-Of-File is encountered. Any other
-    !    error is reported and triggers ustop.
-    use ConstantsModule, only: LENBIGLINE, LINELENGTH
-    use iso_fortran_env, only: IOSTAT_END
-    implicit none
-    ! -- dummy
-    integer(I4B), intent(in) :: inunit
-    character(len=*), intent(inout) :: line
-    logical, intent(inout) :: eof
-    logical, optional, intent(in) :: ignore_comments
-    ! -- local
-    character(len=2), parameter :: comment = '//'
-    integer(I4B) :: istat
-    character(len=LINELENGTH) :: ermsg1, ermsg2
-    character(len=LENBIGLINE) :: lineleft
-    logical :: ignorecommentlocal, iscomment
-    ! formats
-    5 format(A) !cdl5000)
-    10 format('Error encountered reading from unit ',i5, &
-              '. Error reported as: ')
-    !---------------------------------------------------------------------------
-    ! -- Initialize some variables
-    eof = .false.
-    ignorecommentlocal = .false.
-    if (present(ignore_comments)) ignorecommentlocal = ignore_comments
-    !
-    pcomments: do
-      read(inunit,5,iostat=istat,iomsg=ermsg1)line
-      if (istat == IOSTAT_END) then
-        ! -- End-of-file encountered.
-        !    Backspace inunit, clear line, assign eof, and return.
-        !    Backspace is needed for gfortran.
-        backspace(inunit)
-        line = ' '
-        eof = .true.
-        return
-      elseif (istat /= 0) then
-        ! -- Read error encountered. Report error and call ustop.
-        write(ermsg2,10)inunit
-        call store_error(ermsg2)
-        call store_error(ermsg1)
-        call ustop()
-      endif
-      !
-      if (ignorecommentlocal) then
-        iscomment = .false.
-        lineleft = trim(adjustl(line))
-        select case (lineleft(1:1))
-          case ('#')
-            iscomment = .true.
-          case ('!')
-            iscomment = .true.
-          case default
-            if (line(1:2).eq.comment) iscomment = .true.
-        end select
-        if (.not.iscomment) then
-          exit pcomments
-        endif
-      else
-        exit pcomments
-      endif
-    enddo pcomments
-    !
-    ! -- Normal return
-    return
-  end subroutine GetLine
-
   subroutine ParseLine(line, nwords, words, inunit, filename)
     ! Parse a line into words. Blanks and commas are recognized as
     ! delimiters. Multiple blanks between words is OK, but multiple
@@ -1604,52 +1544,26 @@ module InputOutputModule
     character(len=*), intent(in), optional :: filename
     ! -- local
     integer(I4B) :: i, idum, istart, istop, linelen, lloc
-    integer(I4B) :: kcommas
     real(DP) :: rdum
-    logical :: endword
-    character(len=1) :: blank = ' '
-    character(len=1) :: comma = ','
-    character(len=LINELENGTH) :: ermsg
     !
     nwords = 0
     if (allocated(words)) then
       deallocate(words)
     endif
-    linelen = len_trim(line)
+    linelen = len(line)
     !
     ! -- Count words in line and allocate words array
-    kcommas = 0
-    endword = .true.
-    do i=1,linelen
-      if (line(i:i) == blank) then
-        endword = .true.
-      elseif (line(i:i) == comma) then
-        endword = .true.
-        kcommas = kcommas + 1
-        if (kcommas > 1) then
-          ermsg = 'Error: Consecutive commas in line:'
-          call store_error(ermsg)
-          call store_error(trim(line))
-          if (present(inunit)) then
-            call store_error_unit(inunit)
-          elseif (present(filename)) then
-            call store_error_filename(filename)
-          endif
-          call ustop()
-        endif
-      else
-        if (endword) then
-          nwords = nwords + 1
-          endword = .false.
-          kcommas = 0
-        endif
-      endif
+    lloc = 1
+    do
+      call URWORD(line, lloc, istart, istop, 0, idum, rdum, 0, 0)
+      if (istart == linelen) exit
+      nwords = nwords + 1
     enddo
     allocate(words(nwords))
     !
     ! -- Populate words array and return
     lloc = 1
-    do i=1,nwords
+    do i = 1, nwords
       call URWORD(line, lloc, istart, istop, 0, idum, rdum, 0, 0)
       words(i) = line(istart:istop)
     enddo
@@ -1825,50 +1739,6 @@ module InputOutputModule
     return
     !
   end function read_line
-
-  function read_data_line(iu, eof) result (astring)
-    ! This function reads from unit iu until it finds a non-comment,
-    ! non-blank line of arbitrary length and returns it.
-    ! The returned string can be stored in a deferred-length
-    ! character variable, for example:
-    !
-    !    integer(I4B) :: iu
-    !    character(len=:), allocatable :: my_string
-    !    logical :: eof
-    !    iu = 8
-    !    open(iu,file='my_file')
-    !    my_string = read_data_line(iu, eof)
-    !
-    implicit none
-    ! -- dummy
-    integer(I4B), intent(in)           :: iu
-    logical, intent(out)          :: eof
-    character(len=:), allocatable :: astring
-    ! -- local
-    character(len=1) :: c
-    !
-    astring = ' '
-    do
-      astring = read_line(iu, eof)
-      if (eof) then
-        ! -- End of file encountered. Just return
-        return
-      else
-        astring = trim(adjustl(astring))
-        ! append a space to be compatible with urword
-        astring = astring // ' '
-      endif
-      if (astring == ' ') then
-        cycle
-      endif
-      c = astring(1:1)
-      if (c /= '#' .and. c /= '!') then
-        exit
-      endif
-    enddo
-    !
-    return
-  end function read_data_line
 
   subroutine GetFileFromPath(pathname, filename)
     implicit none

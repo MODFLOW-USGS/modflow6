@@ -29,7 +29,7 @@ module ZoneModule
   
   contains
   
-  subroutine zone_init(inunit, nbudterms, ncr)
+  subroutine zone_init(inunit, nbudterms, ncr, mshape)
 ! ******************************************************************************
 ! zone_init
 ! ******************************************************************************
@@ -41,6 +41,8 @@ module ZoneModule
     integer, intent(in) :: inunit
     integer, intent(in) :: nbudterms
     integer, intent(inout) :: ncr
+    integer, dimension(:), intent(in) :: mshape
+    integer :: nlay, ncpl, istart, istop, k
     character(len=24) :: aname = '                   IZONE'
     integer :: ierr
     logical :: isfound, endOfBlock
@@ -50,7 +52,7 @@ module ZoneModule
     call parser%Initialize(inunit, iout)
     call parser%GetBlock('DIMENSIONS', isfound, ierr)
     if(isfound) then
-      write(iout,'(/,1x,a)')'PROCESSING ZONE DIMENSIONS'
+      write(iout,'(/, a)') 'Processing zone dimensions'
       do
         call parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
@@ -67,7 +69,7 @@ module ZoneModule
             call ustop()
           end select
       end do
-      write(iout,'(1x,a)')'END PROCESSING ZONE DIMENSIONS'
+      write(iout,'(a)') 'End processing zone dimensions'
     else
       write(errmsg,'(1x,a)')'ERROR.  REQUIRED ZONE DIMENSIONS BLOCK NOT FOUND.'
       call store_error(errmsg)
@@ -99,14 +101,38 @@ module ZoneModule
     ! -- get griddata block
     call parser%GetBlock('GRIDDATA', isfound, ierr)
     if(isfound) then
-      write(iout,'(/,1x,a)')'PROCESSING ZONE GRIDDATA'
+      write(iout,'(/, a)') 'Processing zone griddata'
       do
         call parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
         call parser%GetStringCaps(keyword)
         select case (keyword)
           case ('IZONE')
-            call ReadArray(inunit, izone, aname, 1, ncells, iout, 0)
+            call parser%GetStringCaps(keyword)
+            if (keyword .EQ. 'LAYERED') then
+              if (size(mshape) > 1) then
+                nlay = mshape(1)
+              else
+                write(errmsg,'(4x,a)') 'ERROR. LAYERED INPUT NOT SUPPORTED &
+                  &FOR IZONE.  LAYERED INPUT CAN ONLY BE USED FOR IZONE &
+                  &WHEN A BINARY GRID FILE IS PROVIDED AND THE MODEL IS LAYERED'
+                call store_error(errmsg)
+                call parser%StoreErrorUnit()
+                call ustop()
+              endif
+              ncpl = ncells / nlay
+              write(iout, '(4x, a, i0)') 'LAYERED detected.  Using NLAY = ', nlay
+              write(iout, '(4x, a, i0, a)') 'Reading ', ncpl, ' values per layer'
+              istart = 1
+              istop = ncpl
+              do k = 1, nlay
+                call ReadArray(inunit, izone(istart:istop), aname, 1, ncpl, iout, k)
+                istart = istop + 1
+                istop = istart + ncpl - 1
+              enddo
+            else
+              call ReadArray(inunit, izone, aname, 1, ncells, iout, 0)
+            endif
           case default
             write(errmsg,'(4x,a,a)')'ERROR. UNKNOWN ZONE GRIDDATA TAG: ',      &
                                      trim(keyword)
@@ -124,9 +150,9 @@ module ZoneModule
     ! -- Write messages
     close(inunit)
     maxzone = maxval(izone)
-    write(iout, '(4x, a, i0)') 'Successfully read zone array with ncells = ', ncells
+    write(iout, '(/, 4x, a, i0)') 'Successfully read zone array with NCELLS = ', ncells
     write(iout, '(4x, a, i0)') 'Maximum zone number is ', maxzone
-    write(iout,'(1x,a)')'END PROCESSING ZONE GRIDDATA'
+    write(iout,'(a)') 'End processing zone griddata'
     !
     ! -- nmznfl is map showing connections between two zones.  If 1, then
     !    there is flow between zones, and zone to zone flow will be written.

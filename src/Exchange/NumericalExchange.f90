@@ -487,7 +487,8 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- get options block
-    call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false.)
+    call this%parser%GetBlock('OPTIONS', isfound, ierr,                        &
+      supportOpenClose=.true., blockRequired=.false.)
     !
     ! -- parse options block if detected
     if (isfound) then
@@ -546,7 +547,8 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- get options block
-    call this%parser%GetBlock('DIMENSIONS', isfound, ierr)
+    call this%parser%GetBlock('DIMENSIONS', isfound, ierr,                     &
+      supportOpenClose=.true.)
     !
     ! -- parse options block if detected
     if (isfound) then
@@ -560,7 +562,7 @@ contains
             this%nexg = this%parser%GetInteger()
             write(iout,'(4x,a,i7)')'NEXG = ', this%nexg
           case default
-            write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN DIMENSION: ',    &
+            write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN DIMENSION: ',          &
                                      trim(keyword)
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()

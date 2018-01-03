@@ -62,6 +62,7 @@ module GwfModule
     procedure :: model_cf                => gwf_cf
     procedure :: model_fc                => gwf_fc
     procedure :: model_cc                => gwf_cc
+    procedure :: model_ptcchk            => gwf_ptcchk
     procedure :: model_ptc               => gwf_ptc
     procedure :: model_nur               => gwf_nur
     procedure :: model_bd                => gwf_bd
@@ -107,7 +108,7 @@ module GwfModule
     use InputOutputModule,          only: write_centered
     use ConstantsModule,            only: VERSION, MFVNAM, MFTITLE,            &
                                           FMTDISCLAIMER, LINELENGTH,           &
-                                          LENPACKAGENAME
+                                          LENPACKAGENAME, IDEVELOPMODE
     use CompilerVersion
     use MemoryManagerModule,        only: mem_allocate
     use GwfDisModule,               only: dis_cr
@@ -150,6 +151,7 @@ module GwfModule
     ! -- Assign values
     this%filename = filename
     this%name = modelname
+    this%macronym = 'GWF'
     this%id = id
     if(present(smr)) this%single_model_run = smr
     !
@@ -163,10 +165,16 @@ module GwfModule
     call write_centered(MFTITLE, this%iout, 80)
     call write_centered('GROUNDWATER FLOW MODEL (GWF)', this%iout, 80)
     call write_centered('VERSION '//VERSION, this%iout, 80)
+    !
+    ! -- Write if develop mode
+    if (IDEVELOPMODE == 1) call write_centered('***DEVELOP MODE***',           &
+      this%iout, 80)
+    !
     ! -- Write compiler version
     call get_compiler(compiler)
     call write_centered(' ', this%iout, 80)
     call write_centered(trim(adjustl(compiler)), this%iout, 80)
+    !
     ! -- Write disclaimer
     write(this%iout, FMTDISCLAIMER)
     !
@@ -178,12 +186,12 @@ module GwfModule
     ! -- Open files
     call namefile_obj%openfiles(this%iout)
     !
-    ! --
+    ! -- GWF options
     if (size(namefile_obj%opts) > 0) then
       write(this%iout, '(1x,a)') 'NAMEFILE OPTIONS:'
     end if
     !
-    ! -- parse options in the gwf name file
+    ! -- Parse options in the GWF name file
     do i = 1, size(namefile_obj%opts)
       call ParseLine(namefile_obj%opts(i), nwords, words)
       call upcase(words(1))
@@ -326,8 +334,6 @@ module GwfModule
     do ip=1,this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_df(this%neq, this%dis)
-      packobj%TsManager%iout = this%iout
-      packobj%TasManager%iout = this%iout
     enddo
     !
     ! -- Store information needed for observations
@@ -605,11 +611,6 @@ module GwfModule
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_fc(this%rhs, this%ia, this%idxglo, amatsln)
-      !inwtpak = inwtflag
-      !if(inwtflag == 1) inwtpak = packobj%inewton
-      !if (inwtpak == 0) then
-      !  call packobj%bnd_fc(this%rhs, this%ia, this%idxglo, amatsln)
-      !end if
     enddo
     !
     !--Fill newton terms
@@ -652,7 +653,7 @@ module GwfModule
     return
   end subroutine gwf_fc
 
-  subroutine gwf_cc(this, iend, icnvg)
+  subroutine gwf_cc(this, kiter, iend, icnvg)
 ! ******************************************************************************
 ! gwf_cc -- GroundWater Flow Model Final Convergence Check for Boundary Packages
 ! Subroutine: (1) calls package cc routines
@@ -660,12 +661,19 @@ module GwfModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- dummy
     class(GwfModelType) :: this
+    integer(I4B),intent(in) :: kiter
     integer(I4B),intent(in) :: iend
     integer(I4B),intent(inout) :: icnvg
+    ! -- local
     class(BndType), pointer :: packobj
     integer(I4B) :: ip
+    ! -- formats
 ! ------------------------------------------------------------------------------
+    !
+    ! -- If mover is on, then at least 2 outers required
+    if (this%inmvr > 0) call this%mvr%mvr_cc(kiter, iend, icnvg)
     !
     ! -- Call package cc routines
     do ip = 1, this%bndlist%Count()
@@ -676,6 +684,38 @@ module GwfModule
     ! -- return
     return
   end subroutine gwf_cc
+  
+  subroutine gwf_ptcchk(this, iptc)
+! ******************************************************************************
+! gwf_ptc -- check if pseudo-transient continuation factor should be used
+! Subroutine: (1) Check if pseudo-transient continuation factor should be used
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! modules
+    ! -- dummy
+    class(GwfModelType) :: this
+    integer(I4B), intent(inout) :: iptc
+! ------------------------------------------------------------------------------
+    ! -- determine if pseudo-transient continuation should be applied to this 
+    !    model - pseudo-transient continuation only appled to problems without 
+    !    storage
+    iptc = 0
+    if (this%iss > 0) then
+      if (this%insto == 0) then
+        ! -- and problems using Newton-Raphson
+        if (this%inewton > 0) then
+          iptc = this%inewton
+        else
+          iptc = this%npf%inewton
+        end if
+      end if
+    end if
+    !
+    ! -- return
+    return
+  end subroutine gwf_ptcchk
 
   subroutine gwf_ptc(this, kiter, neqsln, njasln, ia, ja,                       &
                      x, rhs, amatsln, iptc, ptcf)

@@ -5,12 +5,12 @@ module Xt3dAlgorithmModule
       contains
 !
       subroutine qconds(nnbrmx,nnbr0,inbr0,il01,vc0,vn0,dl0,dl0n,ck0,     &
-         nnbr1,inbr1,il10,vc1,vn1,dl1,dl1n,ck1,ar01,ar10,lreswt,          &
+         nnbr1,inbr1,il10,vc1,vn1,dl1,dl1n,ck1,ar01,ar10,                 &
          vcthresh,allhc0,allhc1,chat01,chati0,chat1j)
       use KindModule, only: DP, I4B
       implicit real(DP) (a-h,o-z)
       implicit integer(I4B) (i-n)
-      logical lreswt,allhc0,allhc1
+      logical allhc0,allhc1
       dimension inbr0(nnbrmx)
       dimension vc0(nnbrmx,3),vn0(nnbrmx,3)
       dimension dl0(nnbrmx),dl0n(nnbrmx)
@@ -78,10 +78,10 @@ module Xt3dAlgorithmModule
       else
 !........Compute contributions from cell 0.
          call abhats(nnbrmx,nnbr0,inbr0,il01,vc0,vn0,dl0,dl0n,ck0,        &
-            lreswt,vcthresh,allhc0,ar01,ahat0,bhat0)
+                     vcthresh,allhc0,ar01,ahat0,bhat0)
 !........Compute contributions from cell 1.
          call abhats(nnbrmx,nnbr1,inbr1,il10,vc1,vn1,dl1,dl1n,ck1,        &
-            lreswt,vcthresh,allhc1,ar10,ahat1,bhat1)
+                     vcthresh,allhc1,ar10,ahat1,bhat1)
 !........Compute "conductances" based on the two flux estimates.
          wght1 = ahat0/(ahat0 + ahat1)
          wght0 = 1d0 - wght1
@@ -95,12 +95,12 @@ module Xt3dAlgorithmModule
       return
       end subroutine qconds
 
-      subroutine abhats(nnbrmx,nnbr,inbr,il01,vc,vn,dl0,dln,ck,lreswt,    &
+      subroutine abhats(nnbrmx,nnbr,inbr,il01,vc,vn,dl0,dln,ck,    &
          vcthresh,allhc,ar01,ahat,bhat)
       use KindModule, only: DP, I4B
       implicit real(DP) (a-h,o-z)
       implicit integer(I4B) (i-n)
-      logical lreswt,allhc,iscomp
+      logical allhc,iscomp
       dimension vc(nnbrmx,3),vccde(nnbrmx,3),vn(nnbrmx,3)
       dimension dl0(nnbrmx),dln(nnbrmx)
       dimension inbr(nnbrmx),ck(3,3)
@@ -138,7 +138,7 @@ module Xt3dAlgorithmModule
          call tranvc(nnbrmx,nnbr,rmat,vc,vccde)
 !
 !........Get "a" and "b" weights for first perpendicular direction.
-         call abwts(nnbrmx,nnbr,inbr,il01,2,vccde,vc,ck,lreswt,           &
+         call abwts(nnbrmx,nnbr,inbr,il01,2,vccde,           &
             vcthresh,dl0,dln,acd,add,aed,bd)
 !
 !........If all neighboring connections are user-designated as
@@ -163,7 +163,7 @@ module Xt3dAlgorithmModule
                end if
   200       continue
             if (iscomp) then
-               call abwts(nnbrmx,nnbr,inbr,il01,3,vccde,vc,ck,lreswt,    &
+               call abwts(nnbrmx,nnbr,inbr,il01,3,vccde,    &
                   vcthresh,dl0,dln,ace,aee,ade,be)
             else
                ace = 0d0
@@ -315,17 +315,15 @@ module Xt3dAlgorithmModule
       return
       end subroutine tranvc
 
-      subroutine abwts(nnbrmx,nnbr,inbr,il01,nde1,vccde,vc,ck,lreswt,    &
+      subroutine abwts(nnbrmx,nnbr,inbr,il01,nde1,vccde,    &
          vcthresh,dl0,dln,acd,add,aed,bd)
       use KindModule, only: DP, I4B
       implicit real(DP) (a-h,o-z)
       implicit integer(I4B) (i-n)
       dimension inbr(nnbrmx)
-      logical lreswt
-      dimension vccde(nnbrmx,3), vc(nnbrmx,3), ck(3,3)
+      dimension vccde(nnbrmx,3)
       dimension dl0(nnbrmx), dln(nnbrmx)
       dimension omwt(nnbrmx), bd(nnbrmx)
-      dimension vwork(3)
 !
 !.....Compute "a" and "b" weights for the local connections with respect
 !        to the perpendicular direction of primary interest.
@@ -352,28 +350,15 @@ module Xt3dAlgorithmModule
          if ((il.eq.il01).or.(inbr(il).eq.0)) cycle
          vcmx = max(dabs(vccde(il,nde1)), vcmx)
          dlm = 5d-1*(dl0(il) + dln(il))
-!!!         if (lreswt) then
-!!!!...........Resistance-based weighting.  dl4wt is the effective
-!!!!              resistance (effective resistivity times distance,
-!!!!              or "apparent distance") between the point supplying
-!!!!              the gradient information and the point at which the
-!!!!              flux is being estimated.
-            vwork = dl0(il01)*vc(il01,:) - dlm*vc(il,:)
-            vgmg = dsqrt(dot_product(vwork, vwork))
-            vwork = matmul(ck, vwork)
-            ckvgmg = dsqrt(dot_product(vwork, vwork))
-            dl4wt = vgmg*vgmg/ckvgmg
-!!!         else
 !...........Distance-based weighting.  dl4wt is the distance between
 !              the point supplying the gradient information and the
 !              point at which the flux is being estimated.  Could be
 !              coded as a special case of resistance-based weighting
 !              (by setting the conductivity matrix to be the identity
 !              matrix), but this is more efficient.
-            cosang = vccde(il,1)
-            dl4wt = dsqrt(dlm*dlm + dl0(il01)*dl0(il01)                  &
-               - 2d0*dlm*dl0(il01)*cosang)
-!!!         end if
+          cosang = vccde(il,1)
+          dl4wt = dsqrt(dlm*dlm + dl0(il01)*dl0(il01)                          &
+                  - 2d0*dlm*dl0(il01)*cosang)
          omwt(il) = dabs(vccde(il,nde1))*dl4wt
          dsum = dsum + omwt(il)
   200 continue

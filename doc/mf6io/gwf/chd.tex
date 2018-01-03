@@ -1,5 +1,5 @@
 
-Input to the Constant-Head (CHD) Package is read from the file that has type ``CHD6'' in the Name File.  Any number of CHD Packages can be specified for a single groundwater flow model; however, an error will occur if a CHD Package attempts to make a GWF cell a constant-head cell when that cell has already been designated as a constant-head cell either within the present CHD Package or within another CHD Package.  All single valued variables are free format.  
+Input to the Constant-Head (CHD) Package is read from the file that has type ``CHD6'' in the Name File.  Any number of CHD Packages can be specified for a single groundwater flow model; however, an error will occur if a CHD Package attempts to make a GWF cell a constant-head cell when that cell has already been designated as a constant-head cell either within the present CHD Package or within another CHD Package.
 
 In previous MODFLOW versions, it was not possible to convert a constant-head cell to an active cell.  Once a cell was designated as a constant-head cell, it remained a constant-head cell until the end of the end of the simulation.  In \mf a constant-head cell will become active again if it is not included as a constant-head cell in subsequent stress periods.
 
@@ -15,6 +15,7 @@ Previous MODFLOW versions allowed specification of SHEAD and EHEAD, which were t
 \vspace{5mm}
 \noindent \textit{FOR ANY STRESS PERIOD}
 \lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-chd-period.dat}
+\packageperioddescription
 
 \vspace{5mm}
 \subsubsection{Explanation of Variables}

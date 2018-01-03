@@ -15,17 +15,17 @@ module TimeArraySeriesLinkModule
 
   type :: TimeArraySeriesLinkType
     ! -- Public members
+    character(len=LENPACKAGENAME),       public :: PackageName = ''
+    character(len=LENTIMESERIESTEXT),    public :: Text = ''
     integer(I4B),                        public :: Iprpak = 1
+    logical,                             public :: UseDefaultProc = .true.
+    logical,                             public :: ConvertFlux = .false.
     integer(I4B), dimension(:), pointer, public :: nodelist => null()
     ! BndArray can point to an array in either the bound or auxval
     ! array of BndType, or any other double precision variable or array
     ! element that contains a value that could be controlled by a time series.
     real(DP), dimension(:),     pointer, public :: BndArray => null()
     real(DP), dimension(:),     pointer, public :: RMultArray => null()
-    character(len=LENPACKAGENAME),       public :: PackageName = ''
-    character(len=LENTIMESERIESTEXT),    public :: Text = ''
-    logical,                             public :: UseDefaultProc = .true.
-    logical,                             public :: ConvertFlux = .false.
     type(TimeArraySeriesType),  pointer, public :: TimeArraySeries => null()
   contains
     procedure, public :: da => tasl_da
@@ -34,18 +34,32 @@ module TimeArraySeriesLinkModule
 contains
 
   subroutine tasl_da(this)
+! ******************************************************************************
+! tasl_da -- deallocate
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeArraySeriesLinkType), intent(inout) :: this
+! ------------------------------------------------------------------------------
     !
-    call this%TimeArraySeries%da()
-    deallocate(this%TimeArraySeries)
+    this%nodelist => null()
+    this%bndarray => null()
+    this%rmultarray => null()
+    this%TimeArraySeries => null()
     !
     return
   end subroutine tasl_da
 
   subroutine ConstructTimeArraySeriesLink(newTasLink, timeArraySeries, &
                                      pkgName, bndArray, iprpak, text)
-    implicit none
+! ******************************************************************************
+! ConstructTimeArraySeriesLink -- construct
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- dummy
     type(TimeArraySeriesLinkType), pointer,  intent(out) :: newTasLink
     type(TimeArraySeriesType), pointer,      intent(in)  :: timeArraySeries
@@ -55,6 +69,7 @@ contains
     character(len=*),                        intent(in)  :: text
     ! -- local
     character(len=LENPACKAGENAME) :: pkgNameTemp
+! ------------------------------------------------------------------------------
     !
     allocate(newTasLink)
     ! Store package name as all caps
@@ -70,10 +85,16 @@ contains
   end subroutine ConstructTimeArraySeriesLink
 
   function CastAsTimeArraySeriesLinkType(obj) result(res)
-    ! Cast an unlimited polymorphic object as TimeArraySeriesLinkType
-    implicit none
+! ******************************************************************************
+! CastAsTimeArraySeriesLinkType -- Cast an unlimited polymorphic object as 
+!   TimeArraySeriesLinkType
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     class(*), pointer, intent(inout) :: obj
     type(TimeArraySeriesLinkType), pointer :: res
+! ------------------------------------------------------------------------------
     !
     res => null()
     if (.not. associated(obj)) return
@@ -87,12 +108,18 @@ contains
   end function CastAsTimeArraySeriesLinkType
 
   subroutine AddTimeArraySeriesLinkToList(list, tasLink)
-    implicit none
+! ******************************************************************************
+! AddTimeArraySeriesLinkToList -- add to list
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- dummy
     type(ListType),                         intent(inout) :: list
     type(TimeArraySeriesLinkType), pointer, intent(inout) :: tasLink
     ! -- local
     class(*), pointer :: obj
+! ------------------------------------------------------------------------------
     !
     obj => tasLink
     call list%Add(obj)
@@ -101,13 +128,19 @@ contains
   end subroutine AddTimeArraySeriesLinkToList
 
   function GetTimeArraySeriesLinkFromList(list, idx) result (res)
-    implicit none
+! ******************************************************************************
+! GetTimeArraySeriesLinkFromList -- get from list
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- dummy
     type(ListType),             intent(inout) :: list
     integer(I4B),                    intent(in)    :: idx
     type(TimeArraySeriesLinkType), pointer    :: res
     ! -- local
     class(*), pointer :: obj
+! ------------------------------------------------------------------------------
     !
     obj => list%GetItem(idx)
     res => CastAsTimeArraySeriesLinkType(obj)

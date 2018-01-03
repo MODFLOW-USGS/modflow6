@@ -263,11 +263,21 @@ description is the number of UZF cells specified.  NWAVSETS has a default value 
 
 block packagedata
 name uzfrecarray
-type recarray cellid landflag ivertcon surfdep vks thtr thts thti eps boundname
+type recarray iuzno cellid landflag ivertcon surfdep vks thtr thts thti eps boundname
 shape (nuzfcells)
 reader urword
 longname
 description
+
+block packagedata
+name iuzno
+type integer
+shape
+tagged false
+in_record true
+reader urword
+longname uzf id number for this entry
+description integer value that defines the UZF cell number associated with the specified PACKAGEDATA data on the line. \texttt{iuzno} must be greater than zero and less than or equal to \texttt{nuzfcells}.  UZF information must be specified for every UZF cell or the program will terminate with an error.  The program will also terminate with an error if information for a UZF cell is specified more than once.
 
 block packagedata
 name cellid
@@ -388,21 +398,21 @@ description REPLACE iper {}
 
 block period
 name uzfperiodrecarray
-type recarray uzfno finf pet extdp extwc ha hroot rootact aux
+type recarray iuzno finf pet extdp extwc ha hroot rootact aux
 shape
 reader urword
 longname
 description
 
 block period
-name uzfno
+name iuzno
 type integer
 shape
 tagged false
 in_record true
 reader urword
-longname UZF number
-description is the UZF id number as determined by the order of information specified in the PACKAGEDATA block.
+longname UZF id number
+description integer value that defines the UZF cell number associated with the specified PERIOD data on the line.
 
 block period
 name finf

@@ -300,7 +300,7 @@ module OutputControlModule
     !
     allocate(this%name_model)
     allocate(this%cid)
-    this%cid = trim(adjustl(name_model)) // ' OC2'
+    this%cid = trim(adjustl(name_model)) // ' OC'
     call mem_allocate(this%inunit, 'INUNIT', this%cid)
     call mem_allocate(this%iout, 'IOUT', this%cid)
     call mem_allocate(this%iperoc, 'IPEROC', this%cid)
@@ -341,7 +341,7 @@ module OutputControlModule
     !
     ! -- parse options block if detected
     if (isfound) then
-      write(this%iout,'(1x,a)')'PROCESSING OC2 OPTIONS'
+      write(this%iout,'(1x,a)')'PROCESSING OC OPTIONS'
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit

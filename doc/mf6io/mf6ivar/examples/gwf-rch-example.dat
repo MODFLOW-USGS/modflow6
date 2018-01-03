@@ -4,7 +4,7 @@ BEGIN OPTIONS
   PRINT_FLOWS
   SAVE_FLOWS
   BOUNDNAMES
-  TS8 FILEIN recharge_rates.ts
+  TS6 FILEIN recharge_rates.ts
   # Note: Time-series file recharge_rates.ts defines time series rch_1
   AUXMULTNAME mult
 END OPTIONS

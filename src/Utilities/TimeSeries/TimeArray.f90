@@ -6,6 +6,7 @@ module TimeArrayModule
   use ListModule,       only: ListType
   use SimModule,        only: store_error, ustop
 
+  implicit none
   private
   public :: TimeArrayType, ConstructTimeArray, &
             AddTimeArrayToList, CastAsTimeArrayType, &
@@ -25,16 +26,22 @@ module TimeArrayModule
 contains
 
   subroutine ConstructTimeArray(newTa, dis)
-    ! Allocate and assign members of a new TimeArrayType object.
-    ! Allocate space for the array so that this subroutine can be
-    ! called repeatedly with the same array (but with different contents).
-    implicit none
+! ******************************************************************************
+! ConstructTimeArray -- construct time array
+!   Allocate and assign members of a new TimeArrayType object.
+!   Allocate space for the array so that this subroutine can be
+!   called repeatedly with the same array (but with different contents).
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- dummy
     type(TimeArrayType), pointer, intent(out) :: newTa
     class(DisBaseType),   pointer, intent(in)  :: dis
     ! -- local
     integer(I4B) :: isize
     character(len=LINELENGTH) :: ermsg
+! ------------------------------------------------------------------------------
     !
     ! Get dimensions for supported discretization type
     if (dis%supports_layers()) then
@@ -50,11 +57,16 @@ contains
   end subroutine ConstructTimeArray
 
   function CastAsTimeArrayType(obj) result(res)
-    ! Cast an unlimited polymorphic object as TimeArrayType
-    implicit none
+! ******************************************************************************
+! ConstructTimeArray -- Cast an unlimited polymorphic object as TimeArrayType
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- dummy
     class(*), pointer, intent(inout) :: obj
     type(TimeArrayType), pointer :: res
+! ------------------------------------------------------------------------------
     !
     res => null()
     if (.not. associated(obj)) return
@@ -67,12 +79,18 @@ contains
   end function CastAsTimeArrayType
 
   subroutine AddTimeArrayToList(list, timearray)
-    implicit none
+! ******************************************************************************
+! AddTimeArrayToList -- add ta to list
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- dummy
     type(ListType),               intent(inout) :: list
     type(TimeArrayType), pointer, intent(inout) :: timearray
     ! -- local
     class(*), pointer :: obj
+! ------------------------------------------------------------------------------
     !
     obj => timearray
     call list%Add(obj)
@@ -81,13 +99,19 @@ contains
   end subroutine AddTimeArrayToList
 
   function GetTimeArrayFromList(list, indx) result (res)
-    implicit none
+! ******************************************************************************
+! GetTimeArrayFromList -- get ta from list
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- dummy
     type(ListType), intent(inout) :: list
     integer(I4B),   intent(in)    :: indx
     type(TimeArrayType),  pointer :: res
     ! -- local
     class(*), pointer :: obj
+! ------------------------------------------------------------------------------
     !
     obj => list%GetItem(indx)
     res => CastAsTimeArrayType(obj)
@@ -96,10 +120,18 @@ contains
   end function GetTimeArrayFromList
 
   subroutine ta_da(this)
-    implicit none
+! ******************************************************************************
+! ta_da -- deallocate
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
     class(TimeArrayType) :: this
+! ------------------------------------------------------------------------------
     !
     deallocate(this%taArray)
+    this%taArray => null()
     !
     return
   end subroutine ta_da

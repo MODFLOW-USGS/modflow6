@@ -98,7 +98,7 @@ contains
     20 format(2x,a,2x,a)
     30 format(2x,a,2x,a,3(2x,i0))
     !
-    otype = 'CHD-FLOW'
+    otype = 'CHD'
     otypename = 'CHDIB'
     ! Assign ncharid as width sufficient to support integers
     ! up to number of CHDs from IBOUND.
@@ -190,7 +190,7 @@ contains
     20 format(2x,a,2x,a)
     30 format(2x,a,2x,a,3(2x,i0))
     !
-    otype = 'CHD-FLOW'
+    otype = 'CHD'
     otypename = 'CHD'
     ! Assign ncharid as width sufficient to support integers
     ! up to number of CHDs from IBOUND.

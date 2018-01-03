@@ -190,7 +190,7 @@ A time-array series consists of a chronologically ordered list of arrays, where 
 
 Each time-array-series file is associated with exactly one package, and the name of a time-array-series file associated with a package is listed in the OPTIONS block for the package, preceded by the keywords ``TAS6 FILEIN.'' Any number of time-array-series files can be associated with a given package; a TAS6 entry is required for each time-array-series file. Time-array-series files are not listed in either the simulation Name File or the model Name File. A given time-array-series file cannot be associated with more than one package.
 
-One time-array-series file defines a single time-array series. A time-array-series file contains an ATTRIBUTES block followed by a series of TIME blocks, where each TIME block contains data to define an array corresponding to a discrete time. The U2DREL array reading utility is used to read the array (see the ``Input Instructions for Array Reading Utility Subroutines'' section). The ATTRIBUTES block is required to define the name for the time-array series and the interpolation method to be used when an operation requires interpolation between times listed in the time-array series.  By convention, the extension ``.tas'' is used in names of time-array-series files.
+One time-array-series file defines a single time-array series. A time-array-series file contains an ATTRIBUTES block followed by a series of TIME blocks, where each TIME block contains data to define an array corresponding to a discrete time. The READARRAY array reading utility is used to read the array. The ATTRIBUTES block is required to define the name for the time-array series and the interpolation method to be used when an operation requires interpolation between times listed in the time-array series.  By convention, the extension ``.tas'' is used in names of time-array-series files.
 
 The syntax of the ATTRIBUTES block for a time-array-series file is as follows:
 
@@ -235,7 +235,7 @@ END TIME
 
 % tas-array description
 \begin{description}
-\item \texttt{tas-array}---A 2-D array of numeric, floating-point values, or a constant value, readable by the U2DREL array-reading utility.
+\item \texttt{tas-array}---A 2-D array of numeric, floating-point values, or a constant value, readable by the READARRAY array-reading utility.
 \end{description}
 
 % Using Time-Array Series in a Package

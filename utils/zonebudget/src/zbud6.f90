@@ -48,6 +48,7 @@ program zonbudmf6
   call process_budget(iunit_csv, iunit_bud, iunit_zon, iunit_grb)
   !
   ! -- close output files
+  write(iunit_lst, '(/, a)') 'Normal Termination'
   close(iunit_lst)
   close(iunit_csv)
   write(6, '(a)') 'Normal Termination'
@@ -164,6 +165,7 @@ subroutine process_budget(iunit_csv, iunit_bud, iunit_zon, iunit_grb)
   character(len=16), dimension(:), allocatable :: budtxtarray
   character(len=16), dimension(:), allocatable :: packagenamearray
   integer, dimension(:), allocatable :: internalflow
+  integer, allocatable, dimension(:) :: mshape
   integer :: ibudterm
   integer :: itime = 1
   integer :: ncrgrb
@@ -185,7 +187,7 @@ subroutine process_budget(iunit_csv, iunit_bud, iunit_zon, iunit_grb)
     inquire(unit=iunit_grb, opened=opengrb)
     if (opengrb) then
       hasiaja = .true.
-      call read_grb(iunit_grb, ia, ja)
+      call read_grb(iunit_grb, ia, ja, mshape)
       ncrgrb = size(ia) - 1
     else
       errmsg = 'BUDGET FILE HAS "FLOW-JA-FACE" RECORD BUT NO GRB FILE SPECIFIED.'
@@ -194,11 +196,25 @@ subroutine process_budget(iunit_csv, iunit_bud, iunit_zon, iunit_grb)
       call store_error(errmsg)
       call ustop()
     endif
+  else
+    inquire(unit=iunit_grb, opened=opengrb)
+    if (opengrb) then
+      errmsg = 'BINARY GRID FILE IS PRESENT, BUT BUDGET FILE DOES NOT HAVE &
+        &"FLOW-JA-FACE" RECORD IN THE IMETH=1 FORMAT. CHECK TO MAKE SURE &
+        &FLOWS ARE SAVED TO THE BUDGET FILE'
+      call store_error(errmsg)
+      call ustop()
+    endif
+    !
+    ! -- At this point, must be a budget file from an advanced package without
+    !    the IMETH=1 flow-ja-face record.
+    allocate(mshape(1))
+    mshape(1) = ncrgrb
   endif
   !
   ! -- Read the zone file to get number of cells/reaches
   ncr = ncrgrb
-  call zone_init(iunit_zon, nbudterms, ncr)
+  call zone_init(iunit_zon, nbudterms, ncr, mshape)
   !
   ! -- Initialize zone and zoneoutput modules
   !call zone_init(iunit_zon, nbudterms, ncr)
@@ -212,12 +228,15 @@ subroutine process_budget(iunit_csv, iunit_bud, iunit_zon, iunit_grb)
     !
     ! -- Clear budget accumulators and loop through budget terms
     call clear_accumulators()
-    write(iout, '(/, a)') 'Reading records from budget file.'
+    write(iout, '(/, a)') 'Reading records from budget file'
     do ibudterm = 1, nbudterms
       !
       ! -- read data
       call budgetdata_read(success, iout)
-      if (.not. success) exit timeloop
+      if (.not. success) then
+        write(iout, '(a)') 'Done reading records.  Exiting time loop.'
+        exit timeloop
+      endif
       !
       ! -- write message and check
       write(6, '(a)', advance='no') '.'
@@ -258,6 +277,7 @@ subroutine process_budget(iunit_csv, iunit_bud, iunit_zon, iunit_grb)
       endif
       !
     enddo
+    write(iout, '(a)') 'Done reading records from budget file'
     !
     ! -- Now that all constant heads read, can process budgets for them
     if(hasiaja .and. foundchd) then
