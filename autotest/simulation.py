@@ -24,15 +24,13 @@ import targets
 
 sfmt = '{:25s} - {}'
 
-class Simulation(object):
 
+class Simulation(object):
     def __init__(self, name):
         delFiles = True
         for idx, arg in enumerate(sys.argv):
             if arg.lower() == '--keep':
-                if len(sys.argv) > idx + 1:
-                    delFiles = False
-                    break
+                delFiles = False
 
         msg = sfmt.format('Initializing test', name)
         print(msg)
@@ -50,6 +48,24 @@ class Simulation(object):
 
     def __repr__(self):
         return self.name
+
+    def set_model(self, pth):
+        """
+        Set paths to MODFLOW 6 model and associated comparison test
+        """
+        # make sure this is a valid path
+        if not os.path.isdir(pth):
+            assert False, '{} is not a valid directory'.format(pth)
+
+        self.simpath = pth
+
+        # get MNODFLOW6 output file names
+        fpth = os.path.join(pth, 'mfsim.nam')
+        mf6inp, mf6outp = pymake.get_mf6_files(fpth)
+        self.outp = mf6outp
+
+        # determine comparison model
+        self.action = pymake.get_mf6_comparison(pth)
 
     def setup(self, src, dst):
         msg = sfmt.format('Setup test', self.name)
@@ -151,8 +167,9 @@ class Simulation(object):
         msg = sfmt.format('Comparison test', self.name)
         print(msg)
 
-        extdict = {'hds': 'head', 'hed': 'head', 'ucn': 'concentration'}
-        
+        extdict = {'hds': 'head', 'hed': 'head', 'bhd': 'head',
+                   'ucn': 'concentration'}
+
         success_tst = False
         if self.action is not None:
             cpth = os.path.join(self.simpath, self.action)
@@ -168,32 +185,35 @@ class Simulation(object):
             exfiles = []
             ipos = 0
             for file1 in self.outp:
-                ext = os.path.splitext(file1)[1]
+                ext = os.path.splitext(file1)[1][1:]
 
-                # Check to see if there is a corresponding compare file
-                if files_cmp is not None:
-                    if file1 + '.cmp' in files_cmp:
+                if ext.lower() in ['hds', 'hed', 'bhd', 'ahd']:
 
-                        # simulation file
-                        pth = os.path.join(self.simpath, file1)
-                        files1.append(pth)
+                    # simulation file
+                    pth = os.path.join(self.simpath, file1)
+                    files1.append(pth)
 
-                        # compare file
-                        idx = files_cmp.index(file1 + '.cmp')
-                        pth = os.path.join(cpth, files_cmp[idx])
-                        files2.append(pth)
-                        txt = sfmt.format('Comparison file {}'.format(ipos + 1),
-                                          os.path.basename(pth))
-                        print(txt)
+                    # look for an exclusion file
+                    pth = os.path.join(self.simpath, file1 + '.ex')
+                    if os.path.isfile(pth):
+                        exfiles.append(pth)
+                    else:
+                        exfiles.append(None)
 
-                        # look for an exclusion file
-                        pth = os.path.join(self.simpath, file1 + '.ex')
-                        if os.path.isfile(pth):
-                            exfiles.append(pth)
-                        else:
-                            exfiles.append(None)
-    
-                        ipos += 1
+                    # Check to see if there is a corresponding compare file
+                    if files_cmp is not None:
+
+                        if file1 + '.cmp' in files_cmp:
+                            # compare file
+                            idx = files_cmp.index(file1 + '.cmp')
+                            pth = os.path.join(cpth, files_cmp[idx])
+                            files2.append(pth)
+                            txt = sfmt.format(
+                                'Comparison file {}'.format(ipos + 1),
+                                os.path.basename(pth))
+                            print(txt)
+                    else:
+                        files2.append(None)
 
             if self.nam_cmp is None:
                 pth = None
@@ -202,7 +222,7 @@ class Simulation(object):
 
             for ipos in range(len(files1)):
                 file1 = files1[ipos]
-                ext = os.path.splitext(file1)[1][1:]
+                ext = os.path.splitext(file1)[1][1:].lower()
                 outfile = os.path.splitext(os.path.basename(file1))[0]
                 outfile = os.path.join(self.simpath, outfile + '.' + ext +
                                        '.cmp.out')
@@ -217,8 +237,9 @@ class Simulation(object):
                     if len(exfiles) > 0:
                         exfile = exfiles[ipos]
                         if exfile is not None:
-                            txt = sfmt.format('Exclusion file {}'.format(ipos + 1),
-                                              os.path.basename(exfile))
+                            txt = sfmt.format(
+                                'Exclusion file {}'.format(ipos + 1),
+                                os.path.basename(exfile))
                             print(txt)
 
                 # make comparison
@@ -228,11 +249,13 @@ class Simulation(object):
                                                    outfile=outfile,
                                                    files1=file1,
                                                    files2=file2,
-                                                   difftol=False,  # Change to true to have list of all nodes exceeding htol
+                                                   difftol=False,
+                                                   # Change to true to have list of all nodes exceeding htol
                                                    verbose=True,
                                                    exfile=exfile)
                 msg = sfmt.format('{} comparison {}'.format(extdict[ext],
-                                                            ipos+1), self.name)
+                                                            ipos + 1),
+                                  self.name)
                 if success_tst:
                     print(msg)
                 else:

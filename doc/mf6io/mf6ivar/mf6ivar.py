@@ -452,7 +452,7 @@ if __name__ == '__main__':
                   'gwf-maw',     # dfn completed  tex updated
                   'gwf-sfr',     # dfn completed  tex updated
                   'gwf-lak',     # dfn completed  tex updated
-                  'gwf-laktab',  # dfn completed  tex updated
+                  'utl-tab',     # dfn completed  tex updated
                   'gwf-uzf',     # dfn completed  tex updated
                   'gwf-mvr',     # dfn completed  tex updated
                   'gwf-gnc',     # dfn completed  tex updated
