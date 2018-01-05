@@ -145,9 +145,11 @@ script:
     - which python
     - python --version
     - python -c "import flopy; flopypth = flopy.__path__[0]; print('flopy is installed in {}'.format(flopypth))"
+    - python -c "import flopy; dir(flopy.mf6)"
     - cd ./autotest
     - python update_flopy.py
     - cd ..
+    - python -c "import flopy; dir(flopy.mf6)"
     - which nosetests
     - nosetests --version
     - nosetests -v --with-id --with-timer -w ./autotest

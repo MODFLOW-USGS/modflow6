@@ -7,7 +7,7 @@
 
 ## Automated Testing Status on Travis-CI
 
-### Version 6.0.1 subsidence &mdash; build 9
+### Version 6.0.1 subsidence &mdash; build 11
 [![Build Status](https://travis-ci.org/MODFLOW-USGS/modflow6.svg?branch=subsidence)](https://travis-ci.org/MODFLOW-USGS/modflow6)
 
 ## Introduction
