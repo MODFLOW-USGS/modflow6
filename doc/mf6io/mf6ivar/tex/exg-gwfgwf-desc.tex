@@ -11,7 +11,7 @@
 
 \item \texttt{SAVE\_FLOWS}---keyword to indicate that cell-by-cell flow terms will be written to the budget file for each model provided that the Output Control for the models are set up with the ``BUDGET SAVE FILE'' option.
 
-\item \texttt{cell\_averaging}---is a keyword and text keyword to indicate the method that will be used for calculating the conductance for horizontal cell connections.  The text value for \texttt{cell\_averaging} can be ``HARMONIC'', ``LOGARITHMIC'', or ``AMT-LMK'', which means ``arithmetic-mean thickness and logarithmic-mean hydraulic conductivity''. If the user does not specify a value for \texttt{cell\_averaging}, then the harmonic-mean method will be used.
+\item \texttt{cell\_averaging}---is a keyword and text keyword to indicate the method that will be used for calculating the conductance for horizontal cell connections.  The text value for CELL\_AVERAGING can be ``HARMONIC'', ``LOGARITHMIC'', or ``AMT-LMK'', which means ``arithmetic-mean thickness and logarithmic-mean hydraulic conductivity''. If the user does not specify a value for CELL\_AVERAGING, then the harmonic-mean method will be used.
 
 \item \texttt{VARIABLECV}---keyword to indicate that the vertical conductance will be calculated using the saturated thickness and properties of the overlying cell and the thickness and properties of the underlying cell.  If the DEWATERED keyword is also specified, then the vertical conductance is calculated using only the saturated thickness and properties of the overlying cell if the head in the underlying cell is below its top.  If these keywords are not specified, then the default condition is to calculate the vertical conductance at the start of the simulation using the initial head and the cell properties.  The vertical conductance remains constant for the entire simulation.
 
@@ -27,7 +27,7 @@
 
 \item \texttt{MVR6}---keyword to specify that record corresponds to a mover file.
 
-\item \texttt{mvr6\_filename}---is the file name of the water mover input file to apply to this exchange.  Information for the water mover are provided in the file provided with these keywords.  The format for specifying the water mover information is the same as described for the Water Mover (MVR) Package of the GWF Model, with two exceptions.  First, in the PACKAGES block, the model name must be included as a separate string before each package.  Second, the appropriate model name must be included before \texttt{pname1} and \texttt{pname2} in the BEGIN PERIOD block.  This allows providers and receivers to be located in both models listed as part of this exchange.
+\item \texttt{mvr6\_filename}---is the file name of the water mover input file to apply to this exchange.  Information for the water mover are provided in the file provided with these keywords.  The format for specifying the water mover information is the same as described for the Water Mover (MVR) Package of the GWF Model, with two exceptions.  First, in the PACKAGES block, the model name must be included as a separate string before each package.  Second, the appropriate model name must be included before package name 1 and package name 2 in the BEGIN PERIOD block.  This allows providers and receivers to be located in both models listed as part of this exchange.
 
 \item \texttt{OBS6}---keyword to specify that record corresponds to an observations file.
 
@@ -43,17 +43,17 @@
 \item \textbf{Block: EXCHANGEDATA}
 
 \begin{description}
-\item \texttt{cellidm1}---is the cellid of the cell in model 1 as specified in the simulation name file. For a structured grid that uses the DIS input file, \texttt{cellidm1} is the layer, row, and column numbers of the cell.   For a grid that uses the DISV input file, \texttt{cellidm1} is the layer number and cell2d number for the two cells.  If the model uses the unstructured discretization (DISU) input file, then \texttt{cellidm1} is the node number for the cell.
+\item \texttt{cellidm1}---is the cellid of the cell in model 1 as specified in the simulation name file. For a structured grid that uses the DIS input file, CELLIDM1 is the layer, row, and column numbers of the cell.   For a grid that uses the DISV input file, CELLIDM1 is the layer number and CELL2D number for the two cells.  If the model uses the unstructured discretization (DISU) input file, then CELLIDM1 is the node number for the cell.
 
-\item \texttt{cellidm2}---is the cellid of the cell in model 2 as specified in the simulation name file. For a structured grid that uses the DIS input file, \texttt{cellidm2} is the layer, row, and column numbers of the cell.   For a grid that uses the DISV input file, \texttt{cellidm2} is the layer number and cell2d number for the two cells.  If the model uses the unstructured discretization (DISU) input file, then \texttt{cellidm2} is the node number for the cell.
+\item \texttt{cellidm2}---is the cellid of the cell in model 2 as specified in the simulation name file. For a structured grid that uses the DIS input file, CELLIDM2 is the layer, row, and column numbers of the cell.   For a grid that uses the DISV input file, CELLIDM2 is the layer number and CELL2D number for the two cells.  If the model uses the unstructured discretization (DISU) input file, then CELLIDM2 is the node number for the cell.
 
-\item \texttt{ihc}---is an integer flag indicating the direction between node n and all of its m connections. If $ihc=0$ then the connection is vertical.  If $ihc=1$ then the connection is horizontal. If $ihc=2$ then the connection is horizontal for a vertically staggered grid.
+\item \texttt{ihc}---is an integer flag indicating the direction between node n and all of its m connections. If IHC = 0 then the connection is vertical.  If IHC = 1 then the connection is horizontal. If IHC = 2 then the connection is horizontal for a vertically staggered grid.
 
-\item \texttt{cl1}---is the distance between the center of cell nodem1 and the its shared face with nodem2.
+\item \texttt{cl1}---is the distance between the center of cell 1 and the its shared face with cell 2.
 
-\item \texttt{cl2}---is the distance between the center of cell nodem2 and the its shared face with nodem1.
+\item \texttt{cl2}---is the distance between the center of cell 1 and the its shared face with cell 2.
 
-\item \texttt{hwva}---is the horizontal width of the flow connection between \texttt{nodem1} and \texttt{nodem2} if $\texttt{ihc} > 0$, or it is the area of the vertical connection between \texttt{nodem1} and \texttt{nodem2} if $\texttt{ihc} = 0$.
+\item \texttt{hwva}---is the horizontal width of the flow connection between cell 1 and cell 2 if IHC $>$ 0, or it is the area perpendicular to flow of the vertical connection between cell 1 and cell 2 if IHC = 0.
 
 \item \texttt{aux}---represents the values of the auxiliary variables for each GWFGWF Exchange. The values of auxiliary variables must be present for each exchange. The values must be specified in the order of the auxiliary variables specified in the OPTIONS block.
 

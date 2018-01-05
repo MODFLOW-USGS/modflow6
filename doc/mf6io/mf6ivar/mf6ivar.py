@@ -452,11 +452,11 @@ if __name__ == '__main__':
                   'gwf-maw',     # dfn completed  tex updated
                   'gwf-sfr',     # dfn completed  tex updated
                   'gwf-lak',     # dfn completed  tex updated
-                  'utl-tab',     # dfn completed  tex updated
                   'gwf-uzf',     # dfn completed  tex updated
                   'gwf-mvr',     # dfn completed  tex updated
                   'gwf-gnc',     # dfn completed  tex updated
                   'gwf-oc',      # dfn completed  tex updated
+                  'utl-lak-tab', # dfn completed  tex updated
                   'utl-obs',
                   'utl-ts',
                   'utl-tas']
@@ -489,7 +489,7 @@ if __name__ == '__main__':
 
 
     for txtname in files:
-        component, package = os.path.splitext(txtname)[0].split('-')
+        component, package = os.path.splitext(txtname)[0].split('-')[0:2]
         vardict = parse_mf6var_file(os.path.join(dfndir, txtname))
 
         # make list of unique block names

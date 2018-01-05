@@ -174,7 +174,7 @@ def build_models():
 
     return
 
-# - No need to change any code below 
+# - No need to change any code below
 def test_mf6model():
     # initialize testing framework
     test = testing_framework()

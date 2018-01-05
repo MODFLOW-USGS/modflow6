@@ -1,0 +1,4 @@
+BEGIN TIME <time_from_model_start>
+   [LAYERED]
+    <tas_array(unknown)> -- READARRAY
+END TIME

@@ -2,6 +2,7 @@ import os
 import sys
 import shutil
 import subprocess
+import importlib
 from contextlib import contextmanager
 
 import flopy
@@ -9,8 +10,6 @@ import flopy
 flopypth = flopy.__path__[0]
 print('flopy is installed in {}'.format(flopypth))
 
-exclude_dfn = ['utl-tas.dfn', 
-               'utl-ts.dfn']
 
 @contextmanager
 def cwd(path):
@@ -20,22 +19,25 @@ def cwd(path):
         yield
     finally:
         os.chdir(oldpwd)
-        
-#def test_delete_mf6():
+
+
+# def test_delete_mf6():
 #    pth = os.path.join(flopypth, 'mf6', 'modflow')
 #    files = [entry for entry in os.listdir(pth) if os.path.isfile(os.path.join(pth, entry))]
 #    delete_files(files, pth)
 
-        
+
 def test_delete_dfn():
     pth = os.path.join(flopypth, 'mf6', 'data', 'dfn')
-    files = [entry for entry in os.listdir(pth) if os.path.isfile(os.path.join(pth, entry))]
-    delete_files(files, pth, exclude=exclude_dfn)
+    files = [entry for entry in os.listdir(pth) if
+             os.path.isfile(os.path.join(pth, entry))]
+    delete_files(files, pth)
 
-    
+
 def test_copy_dfn():
     pth0 = os.path.join('..', 'doc', 'mf6io', 'mf6ivar', 'dfn')
-    files = [entry for entry in os.listdir(pth0) if os.path.isfile(os.path.join(pth0, entry))]
+    files = [entry for entry in os.listdir(pth0) if
+             os.path.isfile(os.path.join(pth0, entry))]
     print(files)
     pth1 = os.path.join(flopypth, 'mf6', 'data', 'dfn')
     for fn in files:
@@ -46,11 +48,14 @@ def test_copy_dfn():
             print('copying {} from "{}" to "{}"'.format(fn, pth0, pth1))
             shutil.copyfile(fpth0, fpth1)
 
-   
+
 def test_create_packages():
     pth = os.path.join(flopypth, 'mf6', 'utils')
     cmd = ['python', 'createpackages.py']
     run_command(cmd, pth)
+
+    # reload flopy
+    importlib.reload(flopy)
 
 
 def delete_files(files, pth, allow_failure=False, exclude=None):
@@ -59,7 +64,7 @@ def delete_files(files, pth, allow_failure=False, exclude=None):
     else:
         if not isinstance(exclude, list):
             exclude = [exclude]
-        
+
     for fn in files:
         if fn in exclude:
             continue
@@ -103,8 +108,8 @@ def main():
     msg = 'Running {} test'.format(tnam)
     print(msg)
 
-    #print('deleting existing MODFLOW 6 FloPy files')
-    #test_delete_mf6()
+    # print('deleting existing MODFLOW 6 FloPy files')
+    # test_delete_mf6()
     print('deleting existing MODFLOW 6 dfn files')
     test_delete_dfn()
     print('copying MODFLOW 6 repo dfn files')

@@ -22,7 +22,7 @@ type keyword
 reader urword
 optional true
 longname keyword to indicate that an initial stress offset will be applied to each interbed
-description keyword to indicate that an initial stress offset specified in the \texttt{GRIDDATA} block will be applied to each interbed.
+description keyword to indicate that an initial stress offset specified in the GRIDDATA block will be applied to each interbed.
 
 block options
 name geo_stress_offset
@@ -30,7 +30,7 @@ type keyword
 reader urword
 optional true
 longname keyword to indicate that a geostatic stress offset will be specified for each cell
-description keyword to indicate that a geostatic stress offset will be specified in the \texttt{PERIOD} block.
+description keyword to indicate that a geostatic stress offset will be specified in the PERIOD block.
 
 block options
 name storagecoefficient
@@ -38,7 +38,7 @@ type keyword
 reader urword
 optional true
 longname keyword to indicate SSE and SSV are read instead of CR and CC
-description keyword to indicate that the elastic skeletal specific storage (\texttt{sse}) and inelastic skeletal specific storage (\texttt{ssv}) coefficients are specified rather than the recompression (\texttt{CR}) and compresion (\texttt{CC}) indices.
+description keyword to indicate that the elastic skeletal specific storage (SSE) and inelastic skeletal specific storage (SSV) coefficients are specified rather than the recompression (CR) and compresion (CC) indices.
 
 block options
 name constant_thickness
@@ -224,7 +224,7 @@ tagged false
 in_record true
 reader urword
 longname IBC id number for this entry
-description integer value that defines the IBC interbed number associated with the specified PACKAGEDATA data on the line. \texttt{isubno} must be greater than zero and less than or equal to \texttt{nsubcells}.  IBC information must be specified for every IBC cell or the program will terminate with an error.  The program will also terminate with an error if information for a IBC intebed number is specified more than once.
+description integer value that defines the IBC interbed number associated with the specified PACKAGEDATA data on the line. IBCNO must be greater than zero and less than or equal to NIBCCELLS.  IBC information must be specified for every IBC cell or the program will terminate with an error.  The program will also terminate with an error if information for a IBC intebed number is specified more than once.
 
 block packagedata
 name cellid
@@ -244,7 +244,7 @@ tagged false
 in_record true
 reader urword
 longname initial water content
-description character string that defines the subsidence delay type for the IBC cell. Possible subsidence package \texttt{cdelay} strings include: \texttt{NODELAY}--character keyword to indicate that delay will not be simulated in the IBC cell.  \texttt{DELAY}--character keyword to indicate that delay will be simulated in the IBC cell.
+description character string that defines the subsidence delay type for the IBC cell. Possible subsidence package CDELAY strings include: NODELAY--character keyword to indicate that delay will not be simulated in the IBC cell.  DELAY--character keyword to indicate that delay will be simulated in the IBC cell.
 
 block packagedata
 name pcs0
@@ -254,7 +254,7 @@ tagged false
 in_record true
 reader urword
 longname initial stress
-description is the initial preconsolidation stress or initial offset from the calculated initial effective stress in the IBC interbed, in units of height of a column of water. \texttt{pcs0} is the initial offset from the calculated initial effective stress if \texttt{INTERBED\_STRESS\_OFFSET} is specified in the \texttt{OPTIONS} block.
+description is the initial preconsolidation stress or initial offset from the calculated initial effective stress in the IBC interbed, in units of height of a column of water. PCS0 is the initial offset from the calculated initial effective stress if INTERBED\_STRESS\_OFFSET is specified in the OPTIONS block.
 
 block packagedata
 name thick_frac
@@ -264,7 +264,7 @@ tagged false
 in_record true
 reader urword
 longname interbed thickness or cell fraction 
-description is the interbed thickness or cell fraction of the IBC interbed. Interbed thickness is specified as a fraction of the cell thickness if \texttt{cell\_fraction} is specified in the \texttt{OPTIONS} block.
+description is the interbed thickness or cell fraction of the IBC interbed. Interbed thickness is specified as a fraction of the cell thickness if CELL\_FRACTION is specified in the OPTIONS block.
 
 block packagedata
 name rnb
@@ -274,7 +274,7 @@ tagged false
 in_record true
 reader urword
 longname delay interbed material factor 
-description is the interbed material factor $rn_{equiv}$ for the system of delay interbeds for interbed \texttt{ibcno}. \texttt{rnb} must be greater than or equal to 1 if \texttt{cdelay} is \texttt{delay}. Otherwise, \texttt{rnb} can be any value.
+description is the interbed material factor equivalent number of interbeds for the system of delay interbeds for interbed IBCNO. RNB must be greater than or equal to 1 if CDELAY is DELAY. Otherwise, RNB can be any value.
 
 block packagedata
 name ssv_cc
@@ -284,7 +284,7 @@ tagged false
 in_record true
 reader urword
 longname initial inelastic skeletal specific storage
-description is the initial inelastic skeletal specific storage or compression index in the IBC interbed. The initial inelastic skeletal specific storage is specified if \texttt{storage\_coefficient} is specified in the \texttt{OPTIONS} block.
+description is the initial inelastic skeletal specific storage or compression index in the IBC interbed. The initial inelastic skeletal specific storage is specified if STORAGE\_COEFFICIENT is specified in the OPTIONS block.
 
 block packagedata
 name sse_cr 
@@ -294,7 +294,7 @@ tagged false
 in_record true
 reader urword
 longname elastic skeletal specific storage
-description is the initial elastic skeletal specific storage or recompression index in the IBC interbed. The initial elastic skeletal specific storage is specified if \texttt{storage\_coefficient} is specified in the \texttt{OPTIONS} block.
+description is the initial elastic skeletal specific storage or recompression index in the IBC interbed. The initial elastic skeletal specific storage is specified if STORAGE\_COEFFICIENT is specified in the OPTIONS block.
 
 block packagedata
 name void 
@@ -314,7 +314,7 @@ tagged false
 in_record true
 reader urword
 longname interbed vertical hydraulic conductivity
-description is the vertical hydraulic conductivity of the IBC interbed. \texttt{kv} must be greater than 0 if \texttt{cdelay} is \texttt{delay}. Otherwise, \texttt{kv} can be any value.
+description is the vertical hydraulic conductivity of the IBC interbed. KV must be greater than 0 if CDELAY is DELAY. Otherwise, KV can be any value.
 
 block packagedata
 name h0 
@@ -324,7 +324,7 @@ tagged false
 in_record true
 reader urword
 longname initial interbed head
-description is the initial head in the IBC interbed. \texttt{h0} can be anyvalue if \texttt{cdelay} is \texttt{nodelay}.
+description is the initial head in the IBC interbed. H0 can be anyvalue if CDELAY is NODELAY.
 
 block packagedata
 name boundname
@@ -360,4 +360,4 @@ valid
 reader readarray
 optional true
 longname stress offset
-description is the stress offset for the cell. \texttt{sig0} is added to the calculated geostatic stress for the cell. \texttt{glo} is specified only if \texttt{geo\_stress\_offset} is specified in the \texttt{OPTIONS} block.
+description is the stress offset for the cell. SIG0 is added to the calculated geostatic stress for the cell. SIG0 is specified only if GEO\_STRESS\_OFFSET is specified in the OPTIONS block.

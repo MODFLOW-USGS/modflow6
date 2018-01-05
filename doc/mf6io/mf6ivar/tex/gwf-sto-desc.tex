@@ -5,7 +5,7 @@
 \begin{description}
 \item \texttt{SAVE\_FLOWS}---keyword to indicate that cell-by-cell flow terms will be written to the file specified with ``BUDGET SAVE FILE'' in Output Control.
 
-\item \texttt{STORAGECOEFFICIENT}---keyword to indicate that the \texttt{ss} array is read as storage coefficient rather than specific storage.
+\item \texttt{STORAGECOEFFICIENT}---keyword to indicate that the SS array is read as storage coefficient rather than specific storage.
 
 \end{description}
 \item \textbf{Block: GRIDDATA}
@@ -21,11 +21,11 @@
 \item \textbf{Block: PERIOD}
 
 \begin{description}
-\item \texttt{iper}---integer value specifying the starting stress period number for which the data specified in the PERIOD block apply.  \texttt{iper} must be less than or equal to \texttt{nper} in the TDIS Package and greater than zero.  The \texttt{iper} value assigned to a stress period block must be greater than the \texttt{iper} value assigned for the previous PERIOD block.  The information specified in the PERIOD block will continue to apply for all subsequent stress periods, unless the program encounters another PERIOD block.
+\item \texttt{iper}---integer value specifying the starting stress period number for which the data specified in the PERIOD block apply.  IPER must be less than or equal to NPER in the TDIS Package and greater than zero.  The IPER value assigned to a stress period block must be greater than the IPER value assigned for the previous PERIOD block.  The information specified in the PERIOD block will continue to apply for all subsequent stress periods, unless the program encounters another PERIOD block.
 
-\item \texttt{STEADY-STATE}---keyword to indicate that stress-period \texttt{iper} is steady-state. Steady-state conditions will apply until the \texttt{TRANSIENT} keyword is specified in a subsequent \texttt{BEGIN PERIOD} block.
+\item \texttt{STEADY-STATE}---keyword to indicate that stress-period IPER is steady-state. Steady-state conditions will apply until the TRANSIENT keyword is specified in a subsequent BEGIN PERIOD block.
 
-\item \texttt{TRANSIENT}---keyword to indicate that stress-period \texttt{iper} is transient. Transient conditions will apply until the \texttt{STEADY-STATE} keyword is specified in a subsequent \texttt{BEGIN PERIOD} block.
+\item \texttt{TRANSIENT}---keyword to indicate that stress-period IPER is transient. Transient conditions will apply until the STEADY-STATE keyword is specified in a subsequent BEGIN PERIOD block.
 
 \end{description}
 
