@@ -38,7 +38,6 @@ def test_copy_dfn():
     pth0 = os.path.join('..', 'doc', 'mf6io', 'mf6ivar', 'dfn')
     files = [entry for entry in os.listdir(pth0) if
              os.path.isfile(os.path.join(pth0, entry))]
-    print(files)
     pth1 = os.path.join(flopypth, 'mf6', 'data', 'dfn')
     for fn in files:
         ext = os.path.splitext(fn)[1].lower()
@@ -50,12 +49,46 @@ def test_copy_dfn():
 
 
 def test_create_packages():
+    # get list of files in mf6/modflow
+    pth = os.path.join(flopypth, 'mf6', 'modflow')
+    list_files(pth)
+
     pth = os.path.join(flopypth, 'mf6', 'utils')
-    cmd = ['python', 'createpackages.py']
-    run_command(cmd, pth)
+    fn = 'createpackages.py'
+
+    # determine if createpackages.py exists
+    fpth = os.path.join(pth, fn)
+    print('testing if "{}" exists'.format(fpth))
+    exist = os.path.isfile(fpth)
+    assert exist, '"{}" does not exist'.format(fpth)
+
+    # run createrpackages.py script
+    print('running...{}'.format(fn))
+    cmd = ['python', fn]
+    buff, ierr = run_command(cmd, pth)
+    assert ierr == 0, 'could not run {}'.format(fn)
+    print('successfully ran...{}'.format(fn))
 
     # reload flopy
+    print('reloading flopy')
     importlib.reload(flopy)
+
+    # get updated list of files in mf6/modflow
+    pth = os.path.join(flopypth, 'mf6', 'modflow')
+    list_files(pth)
+
+
+def list_files(pth, exts=['py']):
+    print('\nLIST OF FILES IN {}'.format(pth))
+    files = [entry for entry in os.listdir(pth) if
+             os.path.isfile(os.path.join(pth, entry))]
+    idx = 0
+    for fn in files:
+        ext = os.path.splitext(fn)[1][1:].lower()
+        if ext in exts:
+            idx += 1
+            print('    {:5d} - {}'.format(idx, fn))
+    return
 
 
 def delete_files(files, pth, allow_failure=False, exclude=None):
@@ -114,7 +147,7 @@ def main():
     test_delete_dfn()
     print('copying MODFLOW 6 repo dfn files')
     test_copy_dfn()
-    print('creating MODFLOW 6 package from repo dfn files')
+    print('creating MODFLOW 6 packages from repo dfn files')
     test_create_packages()
 
     return
