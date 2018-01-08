@@ -188,6 +188,10 @@ def build_models():
                          1., cc, cr, void,
                          kv, 0.]
                     swt6.append(d)
+    ds16 = [0, 2052, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    ds17 = [1, 10000, 1, 10000, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
     for idx, dir in enumerate(exdirs):
         name = ex[idx]
@@ -289,11 +293,11 @@ def build_models():
                                        hdry=hdry)
         chd = flopy.modflow.ModflowChd(mc, stress_period_data=cd)
         wel = flopy.modflow.ModflowWel(mc, stress_period_data=wd)
-        swt = flopy.modflow.ModflowSwt(mc, nsystm=4, ithk=1, ivoid=1,
+        swt = flopy.modflow.ModflowSwt(mc, iswtoc=1, nsystm=4, ithk=1, ivoid=1,
                                        istpcs=1, lnwt=[0, 1, 2, 3],
                                        cc=cc, cr=cr, thick=thick,
                                        void=void, pcsoff=ini_stress, sgs=sgs,
-                                       gl0=0.)
+                                       gl0=0., ids16=ds16, ids17=ds17)
         oc = flopy.modflow.ModflowOc(mc, stress_period_data=None)
         pcg = flopy.modflow.ModflowPcg(mc, mxiter=nouter, iter1=ninner,
                                        hclose=hclose, rclose=rclose,
