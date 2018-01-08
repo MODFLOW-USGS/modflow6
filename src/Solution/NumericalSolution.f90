@@ -1726,12 +1726,14 @@ contains
       class is (NumericalExchangeType)
         c=>cb
       end select
-      if(c%m1%idsoln==this%id) then
-        call this%addexchange(c)
-        cycle
-      elseif(c%m2%idsoln==this%id) then
-        call this%addexchange(c)
-        cycle
+      if(associated(c)) then
+        if(c%m1%idsoln==this%id) then
+          call this%addexchange(c)
+          cycle
+        elseif(c%m2%idsoln==this%id) then
+          call this%addexchange(c)
+          cycle
+        endif
       endif
     enddo
     !
