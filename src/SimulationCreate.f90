@@ -324,6 +324,7 @@ module SimulationCreateModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use GwfModule,              only: gwf_cr
+    use GwtModule,              only: gwt_cr
     use ConstantsModule,        only: LENMODELNAME
     ! -- dummy
     ! -- local
@@ -349,6 +350,10 @@ module SimulationCreateModule
             call parser%GetString(fname)
             call add_model(im, 'GWF6', mname)
             call gwf_cr(fname, im, modelname(im))
+          case ('GWT6')
+            call parser%GetString(fname)
+            call add_model(im, 'GWT6', mname)
+            call gwt_cr(fname, im, modelname(im))
           case default
             write(errmsg, '(4x,a,a)') &
                   '****ERROR. UNKNOWN SIMULATION MODEL: ',                     &
@@ -379,6 +384,7 @@ module SimulationCreateModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use GwfGwfExchangeModule,    only: gwfexchange_create
+    use GwfGwtExchangeModule,    only: gwfgwt_cr
     ! -- dummy
     ! -- local
     integer(I4B) :: ierr
@@ -432,6 +438,36 @@ module SimulationCreateModule
             write(iout, '(4x,a,i0,a,i0,a,i0)') 'GWF6-GWF6 exchange ', id,      &
               ' will be created to connect model ', m1, ' with model ', m2
             call gwfexchange_create(fname, id, m1, m2)
+          case ('GWF6-GWT6')
+            id = id + 1
+            !
+            ! -- get filename
+            call parser%GetString(fname)
+            !
+            ! -- get first modelname and then model id
+            call parser%GetStringCaps(name1)
+            m1 = ifind(modelname, name1)
+            if(m1 < 0) then
+              write(errmsg, fmtmerr) trim(name1)
+              call store_error(errmsg)
+              call parser%StoreErrorUnit()
+              call ustop()
+            endif
+            !
+            ! -- get second modelname and then model id
+            call parser%GetStringCaps(name2)
+            m2 = ifind(modelname, name2)
+            if(m2 < 0) then
+              write(errmsg, fmtmerr) trim(name2)
+              call store_error(errmsg)
+              call parser%StoreErrorUnit()
+              call ustop()
+            endif
+            !
+            ! -- Create the exchange object.
+            write(iout, '(4x,a,i0,a,i0,a,i0)') 'GWF6-GWT6 exchange ', id,      &
+              ' will be created to connect model ', m1, ' with model ', m2
+            call gwfgwt_cr(fname, id, m1, m2)
           case default
             write(errmsg, '(4x,a,a)') &
                   '****ERROR. UNKNOWN SIMULATION EXCHANGES: ',                 &
@@ -664,5 +700,5 @@ module SimulationCreateModule
     ! -- return
     return
   end subroutine add_model
-  
+
 end module SimulationCreateModule
