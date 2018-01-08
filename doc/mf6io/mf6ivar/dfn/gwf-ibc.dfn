@@ -10,7 +10,7 @@ description keyword to indicate that cell-by-cell flow terms will be written to 
 
 block options
 name ndelaycells
-type double precision
+type integer
 reader urword
 optional true
 longname number of interbed cell nodes

@@ -1,0 +1,261 @@
+import os
+import sys
+import numpy as np
+
+try:
+    import pymake
+except:
+    msg = 'Error. Pymake package is not available.\n'
+    msg += 'Try installing using the following command:\n'
+    msg += ' pip install https://github.com/modflowpy/pymake/zipball/master'
+    raise Exception(msg)
+
+try:
+    import flopy
+except:
+    msg = 'Error. FloPy package is not available.\n'
+    msg += 'Try installing using the following command:\n'
+    msg += ' pip install flopy'
+    raise Exception(msg)
+
+from framework import testing_framework
+from simulation import Simulation
+
+ex = ['ibc02a', 'ibc02b', 'ibc02c', 'ibc02d']
+exdirs = []
+for s in ex:
+    exdirs.append(os.path.join('temp', s))
+ddir = 'data'
+ss = [1.14e-3, 1.14e-3, 1.14e-3/500., 1.14e-3/500.]
+storagecoeff = [True, True, False, False]
+cdelay = [False, True, False, True]
+
+# run all examples on Travis
+#travis = [True for idx in range(len(exdirs))]
+# the delay bed problems only run on the development version of MODFLOW-2005
+# set travis to True when version 1.13.0 is released
+travis = [True, False, True, False]
+
+
+def build_models():
+
+    nlay, nrow, ncol = 1, 1, 1
+    nper = 10
+    perlen = [182.625 for i in range(nper)]
+    nstp = [10 for i in range(nper)]
+    tsmult = [1.05 for i in range(nper)]
+    steady = [False for i in range(nper)]
+    delr, delc = 1000., 1000.
+    top = -100.
+    botm = [-600.]
+    strt = 0.
+    hnoflo = 1e30
+    hdry = -1e30
+    hk = 1e6
+    laytyp = [0]
+    sy = 0.
+
+    nouter, ninner = 1000, 300
+    hclose, rclose, relax = 1e-6, 1e-6, 0.97
+
+    tdis_rc = []
+    for idx in range(nper):
+        tdis_rc.append((perlen[idx], nstp[idx], tsmult[idx]))
+
+    ib = 1
+
+    wd = {}
+    wd6 = {}
+    for i in range(nper):
+        if i % 2 == 0:
+            q = -118.3
+        else:
+            q = 23.66
+        d = [[0, 0, 0, q]]
+        d6 = [[(0, 0, 0), q]]
+        wd[i] = d
+        wd6[i] = d6
+
+    # sub data
+    cc = 0.005
+    cr = 5e-5
+    void = 0.82
+    kv = 9.72e-6
+    sgm = 0.
+    sgs = 0.
+    ini_stress = 0.0
+    thick = [20.]
+    sfe = cr * thick[0]
+    sfv = cc * thick[0]
+    lnd = [0]
+    ldnd = [0]
+    dp = [[kv, cr, cc]]
+
+    ds15 = [0, 2052, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    ds16 = [0, 9, 0, 9, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
+
+    for idx, dir in enumerate(exdirs):
+        name = ex[idx]
+
+        ss = 1.14e-3
+        sc6 = True
+        if not storagecoeff[idx]:
+            ss /= (top - botm[0])
+            sc6 = None
+
+        if cdelay[idx]:
+            nndb = 0
+            ndb = 1
+            cdelays = 'delay'
+        else:
+            nndb = 1
+            ndb = 0
+            cdelays = 'nodelay'
+
+        sub6 = [[1, (0, 0, 0), cdelays, ini_stress, thick[0],
+                 1., cc, cr, void, kv, 0.]]
+
+        # build MODFLOW 6 files
+        ws = dir
+        sim = flopy.mf6.MFSimulation(sim_name=name, version='mf6',
+                                     exe_name='mf6',
+                                     sim_ws=ws,
+                                     sim_tdis_file='simulation.tdis')
+        # create tdis package
+        tdis = flopy.mf6.ModflowTdis(sim, time_units='DAYS',
+                                     nper=nper, tdisrecarray=tdis_rc)
+
+        # create gwf model
+        gwf = flopy.mf6.MFModel(sim, model_type='gwf6', model_name=name,
+                                model_nam_file='{}.nam'.format(name),
+                                ims_file_name='{}.ims'.format(name))
+
+        # create iterative model solution and register the gwf model with it
+        ims = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
+                                   outer_hclose=hclose,
+                                   outer_maximum=nouter,
+                                   under_relaxation='NONE',
+                                   inner_maximum=ninner,
+                                   inner_hclose=hclose, rcloserecord=rclose,
+                                   linear_acceleration='CG',
+                                   scaling_method='NONE',
+                                   reordering_method='NONE',
+                                   relaxation_factor=relax)
+        sim.register_ims_package(ims, [gwf.name])
+
+        dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
+                                      delr=delr, delc=delc,
+                                      top=top, botm=botm,
+                                      fname='{}.dis'.format(name))
+
+
+        # initial conditions
+        ic = flopy.mf6.ModflowGwfic(gwf, strt=strt,
+                                    fname='{}.ic'.format(name))
+
+        # node property flow
+        npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False,
+                                      icelltype=laytyp,
+                                      k=hk,
+                                      k33=hk)
+        # storage
+        sto = flopy.mf6.ModflowGwfsto(gwf, save_flows=False, iconvert=laytyp,
+                                      ss=ss, sy=sy,
+                                      storagecoefficient=sc6,
+                                      transient={0: True})
+
+        # wel files
+        wel = flopy.mf6.ModflowGwfwel(gwf, print_input=True, print_flows=True,
+                                      maxbound=1,
+                                      periodrecarray=wd6,
+                                      save_flows=False)
+
+        # ibc files
+        ibc = flopy.mf6.ModflowGwfibc(gwf, ndelaycells=19,
+                                      storagecoefficient=True,
+                                      constant_thickness=True,
+                                      nibccells=1,
+                                      sgs=sgs, sgm=sgm, ibcrecarray=sub6)
+
+        # output control
+        oc = flopy.mf6.ModflowGwfoc(gwf,
+                                    budget_filerecord='{}.cbc'.format(name),
+                                    head_filerecord='{}.hds'.format(name),
+                                    headprintrecord=[
+                                        ('COLUMNS', 10, 'WIDTH', 15,
+                                         'DIGITS', 6, 'GENERAL')],
+                                    saverecord=[('HEAD', 'LAST')],
+                                    printrecord=[('HEAD', 'LAST'),
+                                                 ('BUDGET', 'LAST')])
+
+        # write MODFLOW 6 files
+        sim.write_simulation()
+
+        # build MODFLOW-2005 files
+        ws = os.path.join(dir, 'mf2005')
+        mc = flopy.modflow.Modflow(name, model_ws=ws)
+        dis = flopy.modflow.ModflowDis(mc, nlay=nlay, nrow=nrow, ncol=ncol,
+                                       nper=nper, perlen=perlen, nstp=nstp,
+                                       tsmult=tsmult, steady=steady, delr=delr,
+                                       delc=delc, top=top, botm=botm)
+        bas = flopy.modflow.ModflowBas(mc, ibound=ib, strt=strt, hnoflo=hnoflo,
+                                       stoper=0.01)
+        lpf = flopy.modflow.ModflowLpf(mc, laytyp=laytyp, hk=hk, vka=hk, ss=ss,
+                                       sy=sy, constantcv=True,
+                                       storagecoefficient=storagecoeff[idx],
+                                       hdry=hdry)
+        wel = flopy.modflow.ModflowWel(mc, stress_period_data=wd)
+        sub = flopy.modflow.ModflowSub(mc, ndb=ndb, nndb=nndb, nn=10,
+                                       isuboc=1, ln=lnd, ldn=ldnd, rnb=[1.],
+                                       dp=dp, dz=thick,
+                                       dhc=ini_stress, dstart=ini_stress,
+                                       hc=ini_stress, sfe=sfe, sfv=sfv,
+                                       ids15=ds15, ids16=ds16)
+        oc = flopy.modflow.ModflowOc(mc, stress_period_data=None)
+        pcg = flopy.modflow.ModflowPcg(mc, mxiter=nouter, iter1=ninner,
+                                       hclose=hclose, rclose=rclose,
+                                       relax=relax, ihcofadd=1)
+        mc.write_input()
+
+    return
+
+# - No need to change any code below
+def test_mf6model():
+    # initialize testing framework
+    test = testing_framework()
+
+    # build the models
+    build_models()
+
+    # run the test models
+    for idx, dir in enumerate(exdirs):
+        if not travis[idx]:
+            continue
+        yield test.run_mf6, Simulation(dir)
+
+    return
+
+
+def main():
+    # initialize testing framework
+    test = testing_framework()
+
+    # build the models
+    build_models()
+
+    # run the test models
+    for dir in exdirs:
+        sim = Simulation(dir)
+        test.run_mf6(sim)
+
+    return
+
+
+if __name__ == "__main__":
+    # print message
+    print('standalone run of {}'.format(os.path.basename(__file__)))
+
+    # run main routine
+    main()
+
+
