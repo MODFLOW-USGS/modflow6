@@ -26,7 +26,7 @@ sfmt = '{:25s} - {}'
 
 
 class Simulation(object):
-    def __init__(self, name):
+    def __init__(self, name, exfunc=None):
         delFiles = True
         for idx, arg in enumerate(sys.argv):
             if arg.lower() == '--keep':
@@ -44,6 +44,7 @@ class Simulation(object):
         msg = sfmt.format('Initializing test', name)
         print(msg)
         self.name = name
+        self.exfunc = exfunc
         self.simpath = None
         self.inpt = None
         self.outp = None

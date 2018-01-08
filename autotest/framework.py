@@ -30,4 +30,6 @@ class testing_framework(object):
         sim.set_model(sim.name)
         sim.run()
         sim.compare()
+        if sim.exfunc is not None:
+            sim.exfunc(sim)
         sim.teardown()
