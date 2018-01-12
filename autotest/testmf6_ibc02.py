@@ -34,6 +34,9 @@ cdelay = [False, True, False, True]
 # set travis to True when version 1.13.0 is released
 travis = [True, False, True, False]
 
+# set replace_exe to None to use default executable
+replace_exe = {'mf2005': 'mf2005devdbl'}
+
 
 def build_models():
     nlay, nrow, ncol = 1, 1, 1
@@ -242,7 +245,7 @@ def main():
 
     # run the test models
     for dir in exdirs:
-        sim = Simulation(dir)
+        sim = Simulation(dir, exe_dict=replace_exe)
         test.run_mf6(sim)
 
     return

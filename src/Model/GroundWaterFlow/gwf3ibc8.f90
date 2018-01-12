@@ -34,6 +34,7 @@ module IbcModule
     integer(I4B), pointer :: ndelaycells
     integer(I4B), pointer :: ndelaybeds
     integer(I4B), pointer :: igeocalc
+    real(DP), pointer :: omega
 
     integer(I4B) :: nibcobs
     logical :: first_time
@@ -201,6 +202,7 @@ contains
     call mem_allocate(this%iconstantb, 'ICONSTANTB', this%origin)
     call mem_allocate(this%icellf, 'ICELLF', this%origin)
     call mem_allocate(this%nbound, 'NIBCCELLS', this%origin)
+    call mem_allocate(this%omega, 'OMEGA', this%origin)
     !
     ! -- initialize values
     this%ndelaycells = 19
@@ -212,6 +214,7 @@ contains
     this%iconstantb = 0
     this%icellf = 0
     this%nbound = 0
+    this%omega = DONE
     this%first_time = .TRUE.
     !
     ! -- return
@@ -670,6 +673,8 @@ contains
       "(4x, A)"
     character(len=*),parameter :: fmtopti = &
       "(4x, A, 1X, I0)"
+    character(len=*),parameter :: fmtoptr = &
+      "(4x, A, 1X, G0)"
 ! -----------------------------------------------------------------------------
     select case (option)
     ! user specified number of delay cells used in each system of delay intebeds
@@ -704,6 +709,10 @@ contains
       this%icellf = 1
       write(this%iout, fmtopt) 'INTERBED THICKNESS WILL BE SPECIFIED ' //  &
                                'AS A CELL FRACTION'
+      found = .true.
+    case ('OMEGA')
+      this%omega =  this%parser%GetDouble()
+      write(this%iout, fmtoptr) 'DELAY BED OMEGA =', this%omega
       found = .true.
     ! default case
     case default
@@ -877,6 +886,7 @@ contains
     call mem_deallocate(this%istoragec)
     call mem_deallocate(this%iconstantb)
     call mem_deallocate(this%icellf)
+    call mem_deallocate(this%omega)
 
 
     !call this%BndType%bnd_da()
@@ -1222,7 +1232,7 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use TdisModule, only: delt
+    use TdisModule, only: delt, kstp, kper
     implicit none
     ! -- dummy variables
     class(IbcType) :: this
@@ -1538,7 +1548,7 @@ contains
           n = this%nodelist(i)
           pcs = this%pcs(i)
           if (this%igeocalc == 0) then
-            if (pcs < this%es(i)) then
+            if (this%es(i) < pcs) then
               pcs = this%es(i)
             end if
           else
@@ -1697,14 +1707,21 @@ contains
         dhmax = DZERO
         idelay = this%idelay(ib)
         do n = 1, this%ndelaycells
-          dh = this%dbh(n, idelay) - this%dbdh(n)
-          this%dbh(n, idelay) = this%dbdh(n)
+          dh = this%dbdh(n) - this%dbh(n, idelay) 
           if (abs(dh) > abs(dhmax)) then
             dhmax = this%dbdh(n)
           end if
+          ! update delay bed heads
+          !this%dbh(n, idelay) = this%dbdh(n)
+          this%dbh(n, idelay) = this%dbh(n, idelay) + this%omega * dh
         end do
+        if (this%omega /= DONE) then
+          icnvg = 1
+        end if
         if (abs(dhmax) < dclose) then
           icnvg = 1
+        end if
+        if (icnvg == 1) then
           exit
         end if
       end do
@@ -2330,9 +2347,9 @@ contains
       do i = 1, this%obs%npakobs
         obsrv => this%obs%pakobs(i)%obsrv
         nn = size(obsrv%indxbnds)
+        v = DZERO
         do j = 1, nn
           n = obsrv%indxbnds(j)
-          v = DZERO
           select case (obsrv%ObsTypeId)
             case ('IBC')
               v = this%gwflow(n)
@@ -2372,23 +2389,138 @@ contains
 
 
   subroutine ibc_rp_obs(this)
+!    ! -- dummy
+!    class(IbcType), intent(inout) :: this
+!    ! -- local
+!    integer(I4B) :: i, j, n, nn1, nn2
+!    integer(I4B) :: idelay
+!    character(len=200) :: ermsg
+!    character(len=LENBOUNDNAME) :: bname
+!    logical :: jfound
+!    class(ObserveType),   pointer :: obsrv => null()
+!    ! --------------------------------------------------------------------------
+!    ! -- formats
+!10  format('Error: Boundary "',a,'" for observation "',a, &
+!           '" is invalid in package "',a,'"')
+!30  format('Error: Boundary name not provided for observation "',a, &
+!           '" in package "',a,'"')
+!60  format('Error: Invalid node number in OBS input: ',i5)
+!    do i = 1, this%obs%npakobs
+!      obsrv => this%obs%pakobs(i)%obsrv
+!      !
+!      ! -- indxbnds needs to be deallocated and reallocated (using
+!      !    ExpandArray) each stress period because list of boundaries
+!      !    can change each stress period.
+!      if (allocated(obsrv%indxbnds)) then
+!        deallocate(obsrv%indxbnds)
+!      end if
+!      !
+!      ! -- get node number 1
+!      nn1 = obsrv%NodeNumber
+!      if (nn1 == NAMEDBOUNDFLAG) then
+!        bname = obsrv%FeatureName
+!        if (bname /= '') then
+!          ! -- Observation location(s) is(are) based on a boundary name.
+!          !    Iterate through all boundaries to identify and store
+!          !    corresponding index(indices) in bound array.
+!          jfound = .false.
+!          do j = 1, this%nbound
+!            if (this%boundname(j) == bname) then
+!              jfound = .true.
+!              call ExpandArray(obsrv%indxbnds)
+!              n = size(obsrv%indxbnds)
+!              obsrv%indxbnds(n) = j
+!            endif
+!          enddo
+!          if (.not. jfound) then
+!            write(ermsg,10)trim(bname), trim(obsrv%name), trim(this%name)
+!            call store_error(ermsg)
+!          endif
+!        else
+!          write (ermsg,30) trim(obsrv%name), trim(this%name)
+!          call store_error(ermsg)
+!        endif
+!      elseif (nn1 < 1 .or. nn1 > this%nbound) then
+!        write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
+!          'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
+!          ' interbed must be > 0 and <=', this%nbound, &
+!          '(specified value is ', nn1, ')'
+!        call store_error(ermsg)
+!      else
+!        idelay = this%idelay(nn1)
+!        call ExpandArray(obsrv%indxbnds)
+!        n = size(obsrv%indxbnds)
+!        if (n == 1) then
+!          if (obsrv%ObsTypeId=='DELAY-HEAD') then
+!            j = (idelay - 1) * this%ndelaycells + 1
+!            nn2 = obsrv%NodeNumber2
+!            if (nn2 < 1 .or. nn2 > this%ndelaycells) then
+!              write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
+!                'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
+!                ' interbed cell must be > 0 and <=', this%ndelaycells, &
+!                '(specified value is ', nn2, ')'
+!              call store_error(ermsg)
+!            else
+!              j = (idelay - 1) * this%ndelaycells + nn2
+!            end if
+!            obsrv%indxbnds(1) = j
+!          else
+!            obsrv%indxbnds(1) = nn1
+!          end if
+!        else
+!          ermsg = 'Programming error in ibc_rp_obs'
+!          call store_error(ermsg)
+!        end if
+!      end if
+!      !
+!      ! -- catch non-cumulative observation assigned to observation defined
+!      !    by a boundname that is assigned to more than one element
+!      if (obsrv%ObsTypeId == 'DELAY-HEAD') then
+!        nn1 = obsrv%NodeNumber
+!        if (nn1 == NAMEDBOUNDFLAG) then
+!          n = size(obsrv%indxbnds)
+!          if (n > 1) then
+!            write (ermsg, '(4x,a,4(1x,a))') &
+!              'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
+!              'for observation', trim(adjustl(obsrv%Name)), &
+!              ' must be assigned to a reach with a unique boundname.'
+!            call store_error(ermsg)
+!          end if
+!        end if
+!      end if
+!      !
+!      ! -- check that node number 1 is valid; call store_error if not
+!      n = size(obsrv%indxbnds)
+!      if (obsrv%ObsTypeId /= 'DELAY-HEAD') then
+!        do j = 1, n
+!          nn1 = obsrv%indxbnds(j)
+!          if (nn1 < 1 .or. nn1 > this%nbound) then
+!            write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
+!              'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
+!              ' interbed must be > 0 and <=', this%nbound, &
+!              '(specified value is ', nn1, ')'
+!            call store_error(ermsg)
+!          end if
+!        end do
+!      end if
+!    end do
+!    if (count_errors() > 0) then
+!      call this%parser%StoreErrorUnit()
+!      call ustop()
+!    endif
+!    !
+!    return
     ! -- dummy
     class(IbcType), intent(inout) :: this
     ! -- local
-    integer(I4B) :: i, j, n, nn1, nn2
-    integer(I4B) :: idelay
-    character(len=200) :: ermsg
+    integer(I4B) :: i, j, n
+    class(ObserveType), pointer :: obsrv => null()
     character(len=LENBOUNDNAME) :: bname
     logical :: jfound
-    class(ObserveType),   pointer :: obsrv => null()
-    ! --------------------------------------------------------------------------
-    ! -- formats
-10  format('Error: Boundary "',a,'" for observation "',a, &
-           '" is invalid in package "',a,'"')
-30  format('Error: Boundary name not provided for observation "',a, &
-           '" in package "',a,'"')
-60  format('Error: Invalid node number in OBS input: ',i5)
-    do i = 1, this%obs%npakobs
+    !
+    if (.not. this%bnd_obs_supported()) return
+    !
+    do i=1,this%obs%npakobs
       obsrv => this%obs%pakobs(i)%obsrv
       !
       ! -- indxbnds needs to be deallocated and reallocated (using
@@ -2396,99 +2528,43 @@ contains
       !    can change each stress period.
       if (allocated(obsrv%indxbnds)) then
         deallocate(obsrv%indxbnds)
-      end if
+      endif
+      obsrv%BndFound = .false.
       !
-      ! -- get node number 1
-      nn1 = obsrv%NodeNumber
-      if (nn1 == NAMEDBOUNDFLAG) then
-        bname = obsrv%FeatureName
-        if (bname /= '') then
-          ! -- Observation location(s) is(are) based on a boundary name.
-          !    Iterate through all boundaries to identify and store
-          !    corresponding index(indices) in bound array.
-          jfound = .false.
-          do j = 1, this%nbound
-            if (this%boundname(j) == bname) then
-              jfound = .true.
-              call ExpandArray(obsrv%indxbnds)
-              n = size(obsrv%indxbnds)
-              obsrv%indxbnds(n) = j
-            endif
-          enddo
-          if (.not. jfound) then
-            write(ermsg,10)trim(bname), trim(obsrv%name), trim(this%name)
-            call store_error(ermsg)
+      bname = obsrv%FeatureName
+      if (bname /= '') then
+        ! -- Observation location(s) is(are) based on a boundary name.
+        !    Iterate through all boundaries to identify and store
+        !    corresponding index(indices) in bound array.
+        jfound = .false.
+        do j=1,this%nbound
+          if (this%boundname(j) == bname) then
+            jfound = .true.
+            obsrv%BndFound = .true.
+            obsrv%CurrentTimeStepEndValue = DZERO
+            call ExpandArray(obsrv%indxbnds)
+            n = size(obsrv%indxbnds)
+            obsrv%indxbnds(n) = j
           endif
-        else
-          write (ermsg,30) trim(obsrv%name), trim(this%name)
-          call store_error(ermsg)
-        endif
-      elseif (nn1 < 1 .or. nn1 > this%nbound) then
-        write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
-          'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
-          ' interbed must be > 0 and <=', this%nbound, &
-          '(specified value is ', nn1, ')'
-        call store_error(ermsg)
+        enddo
       else
-        idelay = this%idelay(nn1)
-        call ExpandArray(obsrv%indxbnds)
-        n = size(obsrv%indxbnds)
-        if (n == 1) then
-          if (obsrv%ObsTypeId=='DELAY-HEAD') then
-            j = (idelay - 1) * this%ndelaycells + 1
-            nn2 = obsrv%NodeNumber2
-            if (nn2 < 1 .or. nn2 > this%ndelaycells) then
-              write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
-                'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
-                ' interbed cell must be > 0 and <=', this%ndelaycells, &
-                '(specified value is ', nn2, ')'
-              call store_error(ermsg)
-            else
-              j = (idelay - 1) * this%ndelaycells + nn2
-            end if
-            obsrv%indxbnds(1) = j
-          else
-            obsrv%indxbnds(1) = nn1
-          end if
-        else
-          ermsg = 'Programming error in ibc_rp_obs'
-          call store_error(ermsg)
-        end if
-      end if
-      !
-      ! -- catch non-cumulative observation assigned to observation defined
-      !    by a boundname that is assigned to more than one element
-      if (obsrv%ObsTypeId == 'DELAY-HEAD') then
-        nn1 = obsrv%NodeNumber
-        if (nn1 == NAMEDBOUNDFLAG) then
-          n = size(obsrv%indxbnds)
-          if (n > 1) then
-            write (ermsg, '(4x,a,4(1x,a))') &
-              'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
-              'for observation', trim(adjustl(obsrv%Name)), &
-              ' must be assigned to a reach with a unique boundname.'
-            call store_error(ermsg)
-          end if
-        end if
-      end if
-      !
-      ! -- check that node number 1 is valid; call store_error if not
-      n = size(obsrv%indxbnds)
-      if (obsrv%ObsTypeId /= 'DELAY-HEAD') then
-        do j = 1, n
-          nn1 = obsrv%indxbnds(j)
-          if (nn1 < 1 .or. nn1 > this%nbound) then
-            write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
-              'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
-              ' interbed must be > 0 and <=', this%nbound, &
-              '(specified value is ', nn1, ')'
-            call store_error(ermsg)
-          end if
-        end do
-      end if
-    end do
+        ! -- Observation location is a single node number
+        jfound = .false.
+        jloop: do j=1,this%nbound
+          if (this%nodelist(j) == obsrv%NodeNumber) then
+            jfound = .true.
+            obsrv%BndFound = .true.
+            obsrv%CurrentTimeStepEndValue = DZERO
+            call ExpandArray(obsrv%indxbnds)
+            n = size(obsrv%indxbnds)
+            obsrv%indxbnds(n) = j
+          endif
+        enddo jloop
+      endif
+    enddo
+    !
     if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
+      call store_error_unit(this%inunit)
       call ustop()
     endif
     !
@@ -2512,6 +2588,7 @@ contains
     integer(I4B) :: icol, istart, istop
     character(len=LINELENGTH) :: strng
     character(len=LENBOUNDNAME) :: bndname
+    logical :: flag_string
     ! formats
  30 format(i10)
     !
@@ -2521,7 +2598,9 @@ contains
     !    boundary name--deal with it.
     icol = 1
     ! -- get reach number or boundary name
-    call extract_idnum_or_bndname(strng, icol, istart, istop, nn1, bndname)
+    !call extract_idnum_or_bndname(strng, icol, istart, istop, nn1, bndname)
+    nn1 = dis%noder_from_string(icol, istart, istop, inunitobs, &
+                                iout, strng, flag_string)
     if (nn1 == NAMEDBOUNDFLAG) then
       obsrv%FeatureName = bndname
     else

@@ -17,6 +17,14 @@ longname number of interbed cell nodes
 description number of nodes used to discretize the the delay intebed thickness to approximate the head distributions in systems of delay interbeds. If not specified, then a default value of 19 is assigned.
 
 block options
+name omega
+type double precision
+reader urword
+optional true
+longname delay bed acceleration value
+description real value that defines the acceleration variable applied to delay bed heads. If not specified, then a default value of 1.0 is assigned.
+
+block options
 name interbed_stress_offset
 type keyword
 reader urword
