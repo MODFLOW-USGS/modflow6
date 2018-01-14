@@ -39,6 +39,7 @@ module IbcModule
     integer(I4B) :: nibcobs
     logical :: first_time
     integer, pointer :: gwfiss => NULL()
+    integer, pointer :: gwfiss0 => NULL()
     !integer, dimension(:), pointer :: nodelist => null()  !reduced node that the ibs is attached to
     integer, dimension(:), pointer :: unodelist => null()  !user node that the ibs is attached to
 
@@ -203,6 +204,7 @@ contains
     call mem_allocate(this%icellf, 'ICELLF', this%origin)
     call mem_allocate(this%nbound, 'NIBCCELLS', this%origin)
     call mem_allocate(this%omega, 'OMEGA', this%origin)
+    call mem_allocate(this%gwfiss0, 'GWFISS0', this%origin)
     !
     ! -- initialize values
     this%ndelaycells = 19
@@ -216,6 +218,7 @@ contains
     this%nbound = 0
     this%omega = DONE
     this%first_time = .TRUE.
+    this%gwfiss0 = 0
     !
     ! -- return
     return
@@ -887,6 +890,7 @@ contains
     call mem_deallocate(this%iconstantb)
     call mem_deallocate(this%icellf)
     call mem_deallocate(this%omega)
+    call mem_deallocate(this%gwfiss0)
 
 
     !call this%BndType%bnd_da()
@@ -1417,6 +1421,7 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    use TdisModule, only: kper
     ! -- dummy
     class(IbcType) :: this
     ! -- local
@@ -1464,6 +1469,19 @@ contains
       !
       ! -- delay beds
       else
+        ! update state if previous period was steady state
+        if (kper > 1) then
+          if (this%gwfiss0 /= 0) then
+            node = this%nodelist(n)
+            h = this%xnew(node)
+            do j = 1, this%ndelaycells
+              if (this%igeocalc == 0) then
+                this%dbh(j, idelay) = h
+              else
+              end if
+            end do
+          end if
+        end if
         b = DZERO
         do j = 1, this%ndelaycells
           b = b + this%dbdz(j, idelay)
@@ -1489,6 +1507,9 @@ contains
         end if
       end if
     end do
+    !
+    ! -- set gwfiss0
+    this%gwfiss0 = this%gwfiss
     !
     ! -- For each observation, push simulated value and corresponding
     !    simulation time from "current" to "preceding" and reset

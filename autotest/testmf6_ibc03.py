@@ -36,7 +36,7 @@ travis = [True, False]
 # set replace_exe to None to use default executable
 replace_exe = {'mf2005': 'mf2005devdbl'}
 
-htol = [None, 0.1]
+htol = [None, None]
 dtol = 1e-3
 
 
@@ -328,12 +328,12 @@ def build_models():
                                        hc=hc, sfe=sfe, sfv=sfv,
                                        ids15=ds15, ids16=ds16)
         oc = flopy.modflow.ModflowOc(mc, stress_period_data=None)
-        sip = flopy.modflow.ModflowSip(mc, accl=1., mxiter=nouter, nparm=5,
-                                       hclose=hclose, ipcalc=1,
-                                       wseed=0., iprsip=1)
-        # pcg = flopy.modflow.ModflowPcg(mc, mxiter=nouter, iter1=ninner,
-        #                                hclose=hclose, rclose=rclose,
-        #                                relax=relax)
+        # sip = flopy.modflow.ModflowSip(mc, accl=1., mxiter=nouter, nparm=5,
+        #                                hclose=hclose, ipcalc=1,
+        #                                wseed=0., iprsip=1)
+        pcg = flopy.modflow.ModflowPcg(mc, mxiter=nouter, iter1=ninner,
+                                       hclose=hclose, rclose=rclose,
+                                       relax=relax)
         mc.write_input()
 
     return
