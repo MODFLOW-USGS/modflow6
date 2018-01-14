@@ -1720,6 +1720,7 @@ contains
     ! -- Go through the list of exchange objects and if either model1 or model2
     !    are part of this solution, then include the exchange object as part of
     !    this solution.
+    c => null()
     do ic=1,baseexchangelist%Count()
       cb => GetBaseExchangeFromList(baseexchangelist, ic)
       select type (cb)
