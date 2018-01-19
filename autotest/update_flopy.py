@@ -1,5 +1,4 @@
 import os
-import sys
 import shutil
 import subprocess
 import importlib
@@ -113,7 +112,6 @@ def delete_files(files, pth, allow_failure=False, exclude=None):
 
 
 def run_command(argv, pth, timeout=10):
-    buff = ''
     ierr = 0
     with subprocess.Popen(argv,
                           stdout=subprocess.PIPE,

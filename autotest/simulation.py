@@ -26,18 +26,50 @@ sfmt = '{:25s} - {}'
 
 
 class Simulation(object):
-    def __init__(self, name):
+    def __init__(self, name, exfunc=None, exe_dict=None, htol=None):
         delFiles = True
         for idx, arg in enumerate(sys.argv):
             if arg.lower() == '--keep':
                 delFiles = False
+            elif arg[2:].lower() in list(targets.target_dict.keys()):
+                key = arg[2:].lower()
+                exe0 = targets.target_dict[key]
+                exe = os.path.join(os.path.dirname(exe0), sys.argv[idx+1])
+                msg = 'replacing {} executable '.format(key) + \
+                      '"{}" with '.format(targets.target_dict[key]) + \
+                      '"{}".'.format(exe)
+                print(msg)
+                targets.target_dict[key] = exe
+
+        if exe_dict is not None:
+            if not isinstance(exe_dict, dict):
+                msg = 'exe_dict must be a dictionary'
+                assert False, msg
+            keys = list(targets.target_dict.keys())
+            for key, value in exe_dict.items():
+                if key in keys:
+                    exe0 = targets.target_dict[key]
+                    exe = os.path.join(os.path.dirname(exe0), value)
+                    msg = 'replacing {} executable '.format(key) + \
+                          '"{}" with '.format(targets.target_dict[key]) + \
+                          '"{}".'.format(exe)
+                    print(msg)
+                    targets.target_dict[key] = exe
+
+
 
         msg = sfmt.format('Initializing test', name)
         print(msg)
         self.name = name
+        self.exfunc = exfunc
         self.simpath = None
         self.inpt = None
         self.outp = None
+
+        # set htol for comparisons
+        if htol is None:
+            htol = 0.001
+        self.htol = htol
 
         sysinfo = platform.system()
         self.delFiles = delFiles
@@ -249,6 +281,7 @@ class Simulation(object):
                                                    outfile=outfile,
                                                    files1=file1,
                                                    files2=file2,
+                                                   htol=self.htol,
                                                    difftol=False,
                                                    # Change to true to have list of all nodes exceeding htol
                                                    verbose=True,
