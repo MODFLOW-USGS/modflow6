@@ -26,7 +26,7 @@ sfmt = '{:25s} - {}'
 
 
 class Simulation(object):
-    def __init__(self, name, exfunc=None, exe_dict=None, htol=None):
+    def __init__(self, name, exfunc=None, exe_dict=None, htol=None, idx=None):
         delFiles = True
         for idx, arg in enumerate(sys.argv):
             if arg.lower() == '--keep':
@@ -70,6 +70,9 @@ class Simulation(object):
         if htol is None:
             htol = 0.001
         self.htol = htol
+
+        # set index for multi-simulation comparisons
+        self.idx = idx
 
         sysinfo = platform.system()
         self.delFiles = delFiles
