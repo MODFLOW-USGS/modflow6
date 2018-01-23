@@ -1,0 +1,9 @@
+# --------------------- gwt sto griddata ---------------------
+
+block griddata
+name porosity
+type double precision
+shape (nodes)
+reader readarray
+longname porosity
+description is the aquifer porosity.
