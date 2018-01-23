@@ -1,0 +1,5 @@
+BEGIN SOURCES
+  <pname> <component> <auxname>
+  <pname> <component> <auxname>
+  ...
+END SOURCES

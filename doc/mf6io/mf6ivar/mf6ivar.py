@@ -430,6 +430,7 @@ if __name__ == '__main__':
     file_order = ['sim-nam',     # dfn completed  tex updated
                   'sim-tdis',    # dfn completed  tex updated
                   'exg-gwfgwf',  # dfn completed  tex updated
+                  'exg-gwfgwt',
                   'sln-ims',     # dfn completed  tex updated
                   'gwf-nam',     # dfn completed  tex updated
                   'gwf-dis',     # dfn completed  tex updated
@@ -455,6 +456,13 @@ if __name__ == '__main__':
                   'gwf-mvr',     # dfn completed  tex updated
                   'gwf-gnc',     # dfn completed  tex updated
                   'gwf-oc',      # dfn completed  tex updated
+                  'gwt-adv',
+                  'gwt-dis',
+                  'gwt-ic',
+                  'gwt-nam',
+                  'gwt-oc',
+                  'gwt-ssm',
+                  'gwt-sto',
                   'utl-lak-tab', # dfn completed  tex updated
                   'utl-obs',
                   'utl-ts',

@@ -623,6 +623,52 @@
 | GWF | OC | PERIOD | LAST | KEYWORD | keyword to indicate save for last step in period. This keyword may be used in conjunction with other keywords to print or save results for multiple time steps. |
 | GWF | OC | PERIOD | FREQUENCY | INTEGER | save at the specified time step frequency. This keyword may be used in conjunction with other keywords to print or save results for multiple time steps. |
 | GWF | OC | PERIOD | STEPS | INTEGER (<NSTP) | save for each step specified in STEPS. This keyword may be used in conjunction with other keywords to print or save results for multiple time steps. |
+| GWT | ADV | OPTIONS | SCHEME | STRING | scheme used to solve the advection term |
+| GWT | DIS | OPTIONS | LENGTH_UNITS | STRING | is the length units used for this model.  Values can be ``FEET'', ``METERS'', or ``CENTIMETERS''.  If not specified, the default is ``UNKNOWN''. |
+| GWT | DIS | OPTIONS | NOGRB | KEYWORD | keyword to deactivate writing of the binary grid file. |
+| GWT | DIS | OPTIONS | XORIGIN | DOUBLE PRECISION | x-position of the lower-left corner of the model grid.  A default value of zero is assigned if not specified.  The value for XORIGIN does not affect the model simulation, but it is written to the binary grid file so that postprocessors can locate the grid in space. |
+| GWT | DIS | OPTIONS | YORIGIN | DOUBLE PRECISION | y-position of the lower-left corner of the model grid.  If not specified, then a default value equal to zero is used.  The value for YORIGIN does not affect the model simulation, but it is written to the binary grid file so that postprocessors can locate the grid in space. |
+| GWT | DIS | OPTIONS | ANGROT | DOUBLE PRECISION | counter-clockwise rotation angle (in degrees) of the lower-left corner of the model grid.  If not specified, then a default value of 0.0 is assigned.  The value for ANGROT does not affect the model simulation, but it is written to the binary grid file so that postprocessors can locate the grid in space. |
+| GWT | DIS | DIMENSIONS | NLAY | INTEGER | is the number of layers in the model grid. |
+| GWT | DIS | DIMENSIONS | NROW | INTEGER | is the number of rows in the model grid. |
+| GWT | DIS | DIMENSIONS | NCOL | INTEGER | is the number of columns in the model grid. |
+| GWT | DIS | GRIDDATA | DELR | DOUBLE PRECISION (NCOL) | is the is the column spacing in the row direction. |
+| GWT | DIS | GRIDDATA | DELC | DOUBLE PRECISION (NROW) | is the is the row spacing in the column direction. |
+| GWT | DIS | GRIDDATA | TOP | DOUBLE PRECISION (NCOL, NROW) | is the top elevation for each cell in the top model layer. |
+| GWT | DIS | GRIDDATA | BOTM | DOUBLE PRECISION (NCOL, NROW, NLAY) | is the bottom elevation for each cell. |
+| GWT | DIS | GRIDDATA | IDOMAIN | INTEGER (NCOL, NROW, NLAY) | is an optional array that characterizes the existence status of a cell.  If the IDOMAIN array is not specified, then all model cells exist within the solution.  If the IDOMAIN value for a cell is 0, the cell does not exist in the simulation.  Input and output values will be read and written for the cell, but internal to the program, the cell is excluded from the solution.  If the IDOMAIN value for a cell is 1, the cell exists in the simulation.  If the IDOMAIN value for a cell is -1, the cell does not exist in the simulation.  Furthermore, the first existing cell above will be connected to the first existing cell below.  This type of cell is referred to as a ``vertical pass through'' cell. |
+| GWT | IC | GRIDDATA | STRT | DOUBLE PRECISION (NODES) | is the initial (starting) concentration---that is, head at the beginning of the GWT Model simulation.  STRT must be specified for all simulations, including steady-state simulations. One value is read for every model cell. For simulations in which the first stress period is steady state, the values used for STRT generally do not affect the simulation. The execution time, however, will be less if STRT includes concentrations that are close to the steady-state solution. |
+| GWT | NAM | OPTIONS | LIST | STRING | is name of the listing file to create for this GWT model.  If not specified, then the name of the list file will be the basename of the GWT model name file and the '.lst' extension.  For example, if the GWT name file is called ``my.model.nam'' then the list file will be called ``my.model.lst''. |
+| GWT | NAM | OPTIONS | PRINT_INPUT | KEYWORD | keyword to indicate that the list of all model stress package information will be written to the listing file immediately after it is read. |
+| GWT | NAM | OPTIONS | PRINT_FLOWS | KEYWORD | keyword to indicate that the list of all model package flow rates will be printed to the listing file for every stress period time step in which ``BUDGET PRINT'' is specified in Output Control.  If there is no Output Control option and ``PRINT\_FLOWS'' is specified, then flow rates are printed for the last time step of each stress period. |
+| GWT | NAM | OPTIONS | SAVE_FLOWS | KEYWORD | keyword to indicate that all model package flow terms will be written to the file specified with ``BUDGET FILEOUT'' in Output Control. |
+| GWT | NAM | PACKAGES | FTYPE | STRING | is the file type, which must be one of the following character values shown in table~\ref{table:ftype}. Ftype may be entered in any combination of uppercase and lowercase. |
+| GWT | NAM | PACKAGES | FNAME | STRING | is the name of the file containing the package input.  The path to the file should be included if the file is not located in the folder where the program was run. |
+| GWT | NAM | PACKAGES | PNAME | STRING | is the user-defined name for the package. PNAME is restricted to 16 characters.  No spaces are allowed in PNAME.  PNAME character values are read and stored by the program for stress packages only.  These names may be useful for labeling purposes when multiple stress packages of the same type are located within a single GWT Model.  If PNAME is specified for a stress package, then PNAME will be used in the flow budget table in the listing file; it will also be used for the text entry in the cell-by-cell budget file.  PNAME is case insensitive and is stored in all upper case letters. |
+| GWT | OC | OPTIONS | BUDGET | KEYWORD | keyword to specify that record corresponds to the budget. |
+| GWT | OC | OPTIONS | FILEOUT | KEYWORD | keyword to specify that an output filename is expected next. |
+| GWT | OC | OPTIONS | BUDGETFILE | STRING | name of the output file to write budget information. |
+| GWT | OC | OPTIONS | CONCENTRATION | KEYWORD | keyword to specify that record corresponds to concentration. |
+| GWT | OC | OPTIONS | CONCENTRATIONFILE | STRING | name of the output file to write conc information. |
+| GWT | OC | OPTIONS | PRINT_FORMAT | KEYWORD | keyword to specify format for printing to the listing file. |
+| GWT | OC | OPTIONS | COLUMNS | INTEGER | number of columns for writing data. |
+| GWT | OC | OPTIONS | WIDTH | INTEGER | width for writing each number. |
+| GWT | OC | OPTIONS | DIGITS | INTEGER | number of digits to use for writing a number. |
+| GWT | OC | OPTIONS | FORMAT | STRING | write format can be EXPONENTIAL, FIXED, GENERAL, or SCIENTIFIC. |
+| GWT | OC | PERIOD | IPER | INTEGER | integer value specifying the starting stress period number for which the data specified in the PERIOD block apply.  IPER must be less than or equal to NPER in the TDIS Package and greater than zero.  The IPER value assigned to a stress period block must be greater than the IPER value assigned for the previous PERIOD block.  The information specified in the PERIOD block will continue to apply for all subsequent stress periods, unless the program encounters another PERIOD block. |
+| GWT | OC | PERIOD | SAVE | KEYWORD | keyword to indicate that information will be saved this stress period. |
+| GWT | OC | PERIOD | PRINT | KEYWORD | keyword to indicate that information will be printed this stress period. |
+| GWT | OC | PERIOD | RTYPE | STRING | type of information to save or print.  Can be BUDGET or CONCENTRATION. |
+| GWT | OC | PERIOD | OCSETTING | KEYSTRING | specifies the steps for which the data will be saved. |
+| GWT | OC | PERIOD | ALL | KEYWORD | keyword to indicate save for all time steps in period. |
+| GWT | OC | PERIOD | FIRST | KEYWORD | keyword to indicate save for first step in period. This keyword may be used in conjunction with other keywords to print or save results for multiple time steps. |
+| GWT | OC | PERIOD | LAST | KEYWORD | keyword to indicate save for last step in period. This keyword may be used in conjunction with other keywords to print or save results for multiple time steps. |
+| GWT | OC | PERIOD | FREQUENCY | INTEGER | save at the specified time step frequency. This keyword may be used in conjunction with other keywords to print or save results for multiple time steps. |
+| GWT | OC | PERIOD | STEPS | INTEGER (<NSTP) | save for each step specified in STEPS. This keyword may be used in conjunction with other keywords to print or save results for multiple time steps. |
+| GWT | SSM | SOURCES | PNAME | STRING | name of the package for which an auxiliary variable contains a source concentration. |
+| GWT | SSM | SOURCES | COMPONENT | INTEGER | species number. |
+| GWT | SSM | SOURCES | AUXNAME | STRING | name of the auxiliary variable in the package PNAME that contains the source concentration for the COMPONENT species. |
+| GWT | STO | GRIDDATA | POROSITY | DOUBLE PRECISION (NODES) | is the aquifer porosity. |
 | UTL | LAK | DIMENSIONS | NROW | INTEGER | integer value specifying the number of rows in the lake table. There must be NROW rows of data in the TABLE block. |
 | UTL | LAK | DIMENSIONS | NCOL | INTEGER | integer value specifying the number of colums in the lake table. There must be NCOL columns of data in the TABLE block. For lakes with HORIZONTAL and/or VERTICAL CTYPE connections, NCOL must be equal to 3. For lakes with EMBEDDEDH or EMBEDDEDV CTYPE connections, NCOL must be equal to 4. |
 | UTL | LAK | TABLE | STAGE | DOUBLE PRECISION | real value that defines the stage corresponding to the remaining data on the line. |

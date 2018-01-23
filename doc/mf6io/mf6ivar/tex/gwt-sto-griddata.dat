@@ -1,0 +1,4 @@
+BEGIN GRIDDATA
+  POROSITY [LAYERED]
+    <porosity(nodes)> -- READARRAY
+END GRIDDATA
