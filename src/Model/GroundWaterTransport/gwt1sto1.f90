@@ -471,7 +471,7 @@ module GwtStoModule
       call store_error(errmsg)
     end if
     !
-    ! -- terminate if erros
+    ! -- terminate if errors
     if(count_errors() > 0) then
       call this%parser%StoreErrorUnit()
       call ustop()

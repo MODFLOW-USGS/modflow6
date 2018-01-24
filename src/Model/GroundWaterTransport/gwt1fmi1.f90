@@ -17,6 +17,7 @@ module GwtFmiModule
     real(DP), dimension(:),         pointer :: flowerr => null()                ! residual error of the flow solution
     integer(I4B), dimension(:),     pointer :: ibound => null()                 ! pointer to GWT ibound
     real(DP), dimension(:),         pointer :: gwfflowja => null()              ! pointer to the GWF flowja array
+    real(DP), dimension(:, :),      pointer :: gwfspdis  => null()              ! pointer to npf specific discharge array
     real(DP), dimension(:),         pointer :: gwfhead   => null()              ! pointer to the GWF head array
     real(DP), dimension(:),         pointer :: gwfsat    => null()              ! pointer to the GWF saturation array
     integer(I4B), dimension(:),     pointer :: gwfibound => null()              ! pointer to the GWF ibound array
@@ -323,7 +324,8 @@ module GwtFmiModule
 ! ------------------------------------------------------------------------------
     !
     ! -- nullify pointers
-    this%gwfflowja => null() 
+    this%gwfflowja => null()
+    this%gwfspdis  => null()
     this%gwfhead   => null() 
     this%gwfsat    => null() 
     this%gwfibound => null() 

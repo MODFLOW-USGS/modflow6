@@ -75,7 +75,6 @@ module GwtAdvModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use MemoryManagerModule, only: mem_setptr
     ! -- dummy
     class(GwtAdvType)                       :: this
     class(DisBaseType), pointer, intent(in) :: dis

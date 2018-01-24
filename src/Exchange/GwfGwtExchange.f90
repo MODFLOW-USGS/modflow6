@@ -137,6 +137,7 @@ module GwfGwtExchangeModule
     gwtmodel%fmi%gwfibound => gwfmodel%ibound
     gwtmodel%fmi%gwfhead   => gwfmodel%x
     gwtmodel%fmi%gwfsat    => gwfmodel%npf%sat
+    gwtmodel%fmi%gwfspdis  => gwfmodel%npf%spdis
     !
     ! -- setup pointers to the flow storage rates. GWF strg arrays are
     !    available after the gwf_ar routine is called.

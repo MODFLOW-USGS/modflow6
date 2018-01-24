@@ -93,7 +93,7 @@ def build_models():
         dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
                                       delr=delr, delc=delc,
                                       top=top[idx], botm=botm,
-                                      idomain=1,
+                                      idomain=np.ones((nlay, nrow, ncol), dtype=np.int),
                                       fname='{}.dis'.format(gwfname))
 
         # initial conditions
@@ -216,7 +216,8 @@ def eval_transport(sim):
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
 
-    # This is the answer to this problem
+    # This is the answer to this problem.  These concentrations are for
+    # time step 200.
     cres = [[[1.00000000e+00, 1.00000000e+00, 1.00000000e+00, 1.00000000e+00,
               1.00000000e+00, 1.00000000e+00, 1.00000000e+00, 1.00000000e+00,
               1.00000000e+00, 1.00000000e+00, 1.00000000e+00, 9.99999999e-01,
