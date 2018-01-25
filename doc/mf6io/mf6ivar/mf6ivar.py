@@ -457,6 +457,8 @@ if __name__ == '__main__':
                   'gwf-gnc',     # dfn completed  tex updated
                   'gwf-oc',      # dfn completed  tex updated
                   'gwt-adv',
+                  'gwt-dsp',
+                  'gwt-cnc',
                   'gwt-dis',
                   'gwt-ic',
                   'gwt-nam',

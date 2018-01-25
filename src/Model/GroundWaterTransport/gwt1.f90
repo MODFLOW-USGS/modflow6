@@ -563,7 +563,7 @@ module GwtModule
     if(this%inadv > 0) then
       call this%adv%adv_fc(this%dis%nodes, amatsln, this%idxglo)
     endif
-    if(this%insto > 0) then
+    if(this%indsp > 0) then
       call this%dsp%dsp_fc(this%dis%nodes, amatsln, this%idxglo)
     endif
     if(this%inssm > 0) then
@@ -632,6 +632,7 @@ module GwtModule
       this%flowja(i) = DZERO
     enddo
     if(this%inadv > 0) call this%adv%adv_bd(this%x, this%flowja)
+    if(this%indsp > 0) call this%dsp%dsp_bd(this%x, this%flowja)
     !
     ! -- Budget routines (start by resetting)
     call this%budget%reset()

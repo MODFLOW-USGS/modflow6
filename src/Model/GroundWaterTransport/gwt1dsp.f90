@@ -22,6 +22,7 @@ module GwtDspModule
   
     procedure :: dsp_ar
     procedure :: dsp_fc
+    procedure :: dsp_bd
     procedure :: allocate_arrays
     procedure, private :: read_options
     procedure, private :: read_data
@@ -82,14 +83,14 @@ module GwtDspModule
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtdsp =                                    &
-      "(1x,/1x,'ADV-- DISPERSION PACKAGE, VERSION 1, 1/24/2018',               &
+      "(1x,/1x,'DSP-- DISPERSION PACKAGE, VERSION 1, 1/24/2018',               &
       &' INPUT READ FROM UNIT ', i0, //)"
 ! ------------------------------------------------------------------------------
     !
-    ! -- Print a message identifying the advection package.
+    ! -- Print a message identifying the dispersion package.
     write(this%iout, fmtdsp) this%inunit
     !
-    ! -- adv pointers to arguments that were passed in
+    ! -- dsp pointers to arguments that were passed in
     this%dis     => dis
     this%ibound  => ibound
     this%porosity => porosity
@@ -124,37 +125,110 @@ module GwtDspModule
     ! -- local
     integer(I4B) :: n, m, idiag, ipos
     real(DP) :: clnm, clmn, anm, wt, dstar, dnm
+    integer(I4B) :: ihc, ibdn, ibdm, ictn, ictm, inwtup, iusg
+    real(DP) :: hn, hm, satn, satm, topn, topm, botn, botm, satomega
 ! ------------------------------------------------------------------------------
     !
     ! -- loop through and calculate dispersion contribution
+    inwtup = this%fmi%igwfinwtup
+    iusg = this%fmi%igwfiusgnrhc
+    satomega = this%fmi%gwfsatomega
     do n = 1, nodes
       if(this%ibound(n) == 0) cycle
       idiag = this%dis%con%ia(n)
       do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
         m = this%dis%con%ja(ipos)
         if(this%ibound(m) == 0) cycle
-        
         clnm = this%dis%con%cl1(this%dis%con%jas(ipos))
         clmn = this%dis%con%cl2(this%dis%con%jas(ipos))
-        
-        !TODO: need real saturated thickness        
-        !anm = thksatnm(ibdn, ibdm, ictn, ictm, inwtup, ihc, iusg,              &
-        !               hn, hm, satn, satm, topn, topm, botn, botm, satomega)
-        anm = 1.d0
-        
+        wt = clmn / (clnm + clmn)
+        ihc = this%dis%con%ihc(this%dis%con%jas(ipos))
+        ibdn = this%fmi%gwfibound(n)
+        ibdm = this%fmi%gwfibound(m)
+        ictn = this%fmi%gwficelltype(n)
+        ictm = this%fmi%gwficelltype(m)
+        hn = this%fmi%gwfhead(n)
+        hm = this%fmi%gwfhead(m)
+        satn = this%fmi%gwfsat(n)
+        satm = this%fmi%gwfsat(m)
+        topn = this%dis%top(n)
+        topm = this%dis%top(m)
+        botn = this%dis%bot(n)
+        botm = this%dis%bot(m)
+        anm = thksatnm(ibdn, ibdm, ictn, ictm, inwtup, ihc, iusg,              &
+                       hn, hm, satn, satm, topn, topm, botn, botm, satomega)
         dstar = wt * this%porosity(n) * this%diffc(n) + &
                 (DONE - wt) * this%porosity(m) * this%diffc(m)
         dnm = dstar * anm / (clnm + clmn)
-        
         amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + dnm
         amatsln(idxglo(idiag)) = amatsln(idxglo(idiag)) - dnm
-
       enddo
     enddo
     !
     ! -- Return
     return
   end subroutine dsp_fc
+  
+  subroutine dsp_bd(this, cnew, flowja)
+! ******************************************************************************
+! dsp_bd -- Budget
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use GwfNpfModule, only: thksatnm
+    ! -- dummy
+    class(GwtDspType) :: this
+    real(DP), intent(in), dimension(:) :: cnew
+    real(DP), intent(inout), dimension(:) :: flowja
+    ! -- local
+    integer(I4B) :: nodes
+    integer(I4B) :: n, m, idiag, ipos
+    real(DP) :: clnm, clmn, anm, wt, dstar, dnm
+    integer(I4B) :: ihc, ibdn, ibdm, ictn, ictm, inwtup, iusg
+    real(DP) :: hn, hm, satn, satm, topn, topm, botn, botm, satomega
+! ------------------------------------------------------------------------------
+    !
+    ! -- Calculate advection and add to flowja
+    nodes = size(cnew)
+    inwtup = this%fmi%igwfinwtup
+    iusg = this%fmi%igwfiusgnrhc
+    satomega = this%fmi%gwfsatomega
+    do n = 1, nodes
+      if(this%ibound(n) == 0) cycle
+      idiag = this%dis%con%ia(n)
+      do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
+        m = this%dis%con%ja(ipos)
+        if(this%ibound(m) == 0) cycle
+        clnm = this%dis%con%cl1(this%dis%con%jas(ipos))
+        clmn = this%dis%con%cl2(this%dis%con%jas(ipos))
+        wt = clmn / (clnm + clmn)
+        ihc = this%dis%con%ihc(this%dis%con%jas(ipos))
+        ibdn = this%fmi%gwfibound(n)
+        ibdm = this%fmi%gwfibound(m)
+        ictn = this%fmi%gwficelltype(n)
+        ictm = this%fmi%gwficelltype(m)
+        hn = this%fmi%gwfhead(n)
+        hm = this%fmi%gwfhead(m)
+        satn = this%fmi%gwfsat(n)
+        satm = this%fmi%gwfsat(m)
+        topn = this%dis%top(n)
+        topm = this%dis%top(m)
+        botn = this%dis%bot(n)
+        botm = this%dis%bot(m)
+        anm = thksatnm(ibdn, ibdm, ictn, ictm, inwtup, ihc, iusg,              &
+                       hn, hm, satn, satm, topn, topm, botn, botm, satomega)
+        dstar = wt * this%porosity(n) * this%diffc(n) + &
+                (DONE - wt) * this%porosity(m) * this%diffc(m)
+        dnm = dstar * anm / (clnm + clmn)
+        flowja(ipos) = flowja(ipos) + dnm * (cnew(m) - cnew(n))
+      enddo
+    enddo
+    !
+    ! -- Return
+    return
+  end subroutine dsp_bd
   
   subroutine allocate_arrays(this, nodes)
 ! ******************************************************************************
@@ -209,7 +283,7 @@ module GwtDspModule
     !
     ! -- parse options block if detected
     if (isfound) then
-      write(this%iout,'(1x,a)')'PROCESSING ADVECTION OPTIONS'
+      write(this%iout,'(1x,a)')'PROCESSING DISPERSION OPTIONS'
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
@@ -247,7 +321,7 @@ module GwtDspModule
     character(len=24), dimension(1) :: aname
     ! -- formats
     ! -- data
-    data aname(1) /'               DIFFUSION'/
+    data aname(1) /'   DIFFUSION COEFFICIENT'/
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize
@@ -264,7 +338,7 @@ module GwtDspModule
         call this%parser%GetRemainingLine(line)
         lloc = 1
         select case (keyword)
-          case ('DIFFUSION')
+          case ('DIFFC')
             call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,&
                                          this%parser%iuactive, this%diffc,     &
                                          aname(1))

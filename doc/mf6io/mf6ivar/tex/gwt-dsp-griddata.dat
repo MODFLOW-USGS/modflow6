@@ -1,0 +1,4 @@
+BEGIN GRIDDATA
+  DIFFC [LAYERED]
+    <diffc(nodes)> -- READARRAY
+END GRIDDATA

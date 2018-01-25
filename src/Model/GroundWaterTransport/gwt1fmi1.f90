@@ -13,6 +13,7 @@ module GwtFmiModule
 
   type, extends(NumericalPackageType) :: GwtFmiType
     
+    type(ListType),                 pointer :: gwfbndlist => null()             ! list of gwf stress packages
     integer(I4B),                   pointer :: iflowerr => null()               ! add the flow error correction
     real(DP), dimension(:),         pointer :: flowerr => null()                ! residual error of the flow solution
     integer(I4B), dimension(:),     pointer :: ibound => null()                 ! pointer to GWT ibound
@@ -26,8 +27,12 @@ module GwtFmiModule
     real(DP), dimension(:),         pointer :: gwfstrgsy => null()              ! pointer to flow model QSTOSY
     integer(I4B), pointer                   :: igwfstrgss => null()             ! indicates if gwfstrgss is available
     integer(I4B), pointer                   :: igwfstrgsy => null()             ! indicates if gwfstrgsy is available
-    type(ListType),                 pointer :: gwfbndlist => null()             ! list of gwf stress packages
-
+    integer(I4B), dimension(:),     pointer :: gwficelltype => null()           ! pointer to the GWF icelltype array
+    integer(I4B), pointer                   :: igwfinwtup => null()             ! NR indicator
+    integer(I4B), pointer                   :: igwfiusgnrhc => null()           ! iusg indicator
+    real(DP), pointer                       :: gwfsatomega => null()            ! NR satomega value
+    
+    
   contains
   
     procedure :: fmi_ar
@@ -332,6 +337,10 @@ module GwtFmiModule
     this%gwfstrgss => null()    
     this%gwfstrgsy => null()    
     this%gwfbndlist => null()
+    this%gwficelltype => null()
+    this%igwfinwtup => null()
+    this%igwfiusgnrhc => null()
+    this%gwfsatomega => null()
     !
     ! -- deallocate fmi arrays
     call mem_deallocate(this%gwfthksat)
