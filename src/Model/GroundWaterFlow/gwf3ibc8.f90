@@ -1421,7 +1421,7 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use TdisModule, only: kper
+    use TdisModule, only: kper, kstp
     ! -- dummy
     class(IbcType) :: this
     ! -- local
@@ -1445,8 +1445,17 @@ contains
       idelay = this%idelay(n)
       ! no delay beds
       if (idelay == 0) then
+        node = this%nodelist(n)
+        if (kper == 1 .and. kstp == 1) then
+          if (this%igeocalc == 0) then
+            h = this%xnew(node)
+            pcs = this%pcs(n)
+            if (pcs > h) then
+              this%pcs(n) = h
+            end if
+          end if
+        end if
         if (.not. this%first_time) then
-          node = this%nodelist(n)
           es = this%es(n)
           pcs = this%pcs(n)
           if (this%igeocalc == 0) then

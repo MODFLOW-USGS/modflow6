@@ -156,9 +156,13 @@ def build_models():
     for idx in range(nper):
         tdis_rc.append((perlen[idx], nstp[idx], tsmult[idx]))
 
-    ib = np.zeros((nlay, nrow, ncol), dtype=np.int)
+    # this used to work
+    #ib = np.zeros((nlay, nrow, ncol), dtype=np.int)
+    #for k in range(nlay):
+    #    ib[k, :, :] = ib0.copy()
+    ib = []
     for k in range(nlay):
-        ib[k, :, :] = ib0.copy()
+        ib.append(ib0.astype(np.int).copy())
 
 
     # subwt data
