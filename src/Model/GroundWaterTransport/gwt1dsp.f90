@@ -5,6 +5,7 @@ module GwtDspModule
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule,          only: DisBaseType
   use GwtFmiModule,           only: GwtFmiType
+  use Xt3dModule,             only: Xt3dType, xt3d_cr
 
   implicit none
   private
@@ -13,16 +14,28 @@ module GwtDspModule
 
   type, extends(NumericalPackageType) :: GwtDspType
     
-    integer(I4B), dimension(:), pointer              :: ibound => null()        ! pointer to model ibound
-    type(GwtFmiType), pointer                        :: fmi => null()           ! pointer to fmi object
-    real(DP), dimension(:), pointer                  :: porosity   => null()    ! pointer to storage porosity
+    integer(I4B), dimension(:), pointer              :: ibound     => null()    ! pointer to GWT model ibound
+    type(GwtFmiType), pointer                        :: fmi        => null()    ! pointer to GWT fmi object
+    real(DP), dimension(:), pointer                  :: porosity   => null()    ! pointer to GWT storage porosity
     real(DP), dimension(:), pointer                  :: diffc      => null()    ! molecular diffusion coefficient for each cell
+    real(DP), dimension(:), pointer                  :: alh        => null()    ! longitudinal horizontal dispersivity
+    real(DP), dimension(:), pointer                  :: alv        => null()    ! longitudinal vertical dispersivity
+    real(DP), dimension(:), pointer                  :: ath        => null()    ! transverse horizontal dispersivity
+    real(DP), dimension(:), pointer                  :: atv        => null()    ! transverse vertical dispersivity
+    integer(I4B), pointer                            :: idiffc     => null()    ! flag indicating diffusion is active
+    integer(I4B), pointer                            :: idisp      => null()    ! flag indicating mechanical dispersion is active
+    integer(I4B), pointer                            :: ixt3d      => null()    ! flag indicating xt3d is active
+    type(Xt3dType), pointer                          :: xt3d       => null()    ! xt3d object
     
   contains
   
+    procedure :: dsp_df
+    procedure :: dsp_ac
+    procedure :: dsp_mc
     procedure :: dsp_ar
     procedure :: dsp_fc
     procedure :: dsp_bd
+    procedure :: allocate_scalars
     procedure :: allocate_arrays
     procedure, private :: read_options
     procedure, private :: read_data
@@ -67,6 +80,84 @@ module GwtDspModule
     return
   end subroutine dsp_cr
 
+  subroutine dsp_df(this)
+! ******************************************************************************
+! dsp_df -- Allocate and Read
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwtDspType)                       :: this
+    ! -- local
+    ! -- formats
+    character(len=*), parameter :: fmtdsp =                                    &
+      "(1x,/1x,'DSP-- DISPERSION PACKAGE, VERSION 1, 1/24/2018',               &
+      &' INPUT READ FROM UNIT ', i0, //)"
+! ------------------------------------------------------------------------------
+    !
+    ! -- xt3d create
+    if(this%ixt3d > 0) then
+      call xt3d_cr(this%xt3d, trim(this%origin), this%inunit, this%iout)
+    endif
+    !
+    ! -- Return
+    return
+  end subroutine dsp_df
+
+  subroutine dsp_ac(this, moffset, sparse, nodes, ia, ja)
+! ******************************************************************************
+! dsp_ac -- Add connections for extended neighbors to the sparse matrix
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use SparseModule, only: sparsematrix
+    use MemoryManagerModule, only: mem_allocate
+    ! -- dummy
+    class(GwtDspType) :: this
+    integer(I4B), intent(in) :: moffset, nodes
+    integer(I4B), dimension(:), intent(in) :: ia
+    integer(I4B), dimension(:), intent(in) :: ja
+    type(sparsematrix), intent(inout) :: sparse
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    ! -- Add extended neighbors (neighbors of neighbors)
+    if(this%ixt3d > 0) call this%xt3d%xt3d_ac(moffset, sparse, nodes, ia, ja)
+    !
+    ! -- Return
+    return
+  end subroutine dsp_ac
+
+  subroutine dsp_mc(this, moffset, nodes, ia, ja, iasln, jasln)
+! ******************************************************************************
+! dsp_mc -- Map connections and construct iax, jax, and idxglox
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use MemoryManagerModule, only: mem_allocate
+    ! -- dummy
+    class(GwtDspType) :: this
+    integer(I4B), intent(in) :: moffset, nodes
+    integer(I4B), dimension(:), intent(in) :: ia
+    integer(I4B), dimension(:), intent(in) :: ja
+    integer(I4B), dimension(:), intent(in) :: iasln
+    integer(I4B), dimension(:), intent(in) :: jasln
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    if(this%ixt3d > 0) call this%xt3d%xt3d_mc(moffset, nodes, ia, ja, iasln,   &
+                                              jasln, 0)
+    !
+    ! -- Return
+    return
+  end subroutine dsp_mc
+
   subroutine dsp_ar(this, dis, ibound, porosity)
 ! ******************************************************************************
 ! dsp_ar -- Allocate and Read
@@ -87,19 +178,19 @@ module GwtDspModule
       &' INPUT READ FROM UNIT ', i0, //)"
 ! ------------------------------------------------------------------------------
     !
-    ! -- Print a message identifying the dispersion package.
-    write(this%iout, fmtdsp) this%inunit
-    !
     ! -- dsp pointers to arguments that were passed in
     this%dis     => dis
     this%ibound  => ibound
     this%porosity => porosity
     !
-    ! -- Allocate arrays
-    call this%allocate_arrays(dis%nodes)
+    ! -- Print a message identifying the dispersion package.
+    write(this%iout, fmtdsp) this%inunit
     !
     ! -- Read dispersion options
     call this%read_options()
+    !
+    ! -- Allocate arrays
+    call this%allocate_arrays(dis%nodes)
     !
     ! -- Read dispersion data
     call this%read_data()
@@ -230,6 +321,38 @@ module GwtDspModule
     return
   end subroutine dsp_bd
   
+  subroutine allocate_scalars(this)
+! ******************************************************************************
+! allocate_scalars
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use MemoryManagerModule, only: mem_allocate
+    use ConstantsModule, only: DZERO
+    ! -- dummy
+    class(GwtDspType) :: this
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    ! -- allocate scalars in NumericalPackageType
+    call this%NumericalPackageType%allocate_scalars()
+    !
+    ! -- Allocate
+    call mem_allocate(this%idiffc, 'IDIFFC', this%origin)
+    call mem_allocate(this%idisp, 'IDISP', this%origin)
+    call mem_allocate(this%ixt3d, 'IXT3D', this%origin)
+    !
+    ! -- Initialize
+    this%idiffc = 0
+    this%idisp = 0
+    this%ixt3d = 1
+    !
+    ! -- Return
+    return
+  end subroutine allocate_scalars
+
   subroutine allocate_arrays(this, nodes)
 ! ******************************************************************************
 ! allocate_arrays
@@ -244,16 +367,14 @@ module GwtDspModule
     class(GwtDspType) :: this
     integer(I4B), intent(in) :: nodes
     ! -- local
-    integer(I4B) :: n
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate
-    call mem_allocate(this%diffc, nodes, 'DIFFC', this%origin)
-    !
-    ! -- Initialize
-    do n = 1, nodes
-      this%diffc(n) = DZERO
-    enddo
+    call mem_allocate(this%diffc, 0, 'DIFFC', trim(this%origin))
+    call mem_allocate(this%alh, 0, 'ALH', trim(this%origin))
+    call mem_allocate(this%alv, 0, 'ALV', trim(this%origin))
+    call mem_allocate(this%ath, 0, 'ATH', trim(this%origin))
+    call mem_allocate(this%atv, 0, 'ATV', trim(this%origin))
     !
     ! -- Return
     return
@@ -312,19 +433,26 @@ module GwtDspModule
 ! ------------------------------------------------------------------------------
     use ConstantsModule,   only: LINELENGTH
     use SimModule,         only: ustop, store_error, count_errors
+    use MemoryManagerModule, only: mem_reallocate
     ! -- dummy
     class(GwtDsptype) :: this
     ! -- local
     character(len=LINELENGTH) :: line, errmsg, keyword
     integer(I4B) :: istart, istop, lloc, ierr
     logical :: isfound, endOfBlock
-    character(len=24), dimension(1) :: aname
+    logical, dimension(5)           :: lname
+    character(len=24), dimension(5) :: aname
     ! -- formats
     ! -- data
     data aname(1) /'   DIFFUSION COEFFICIENT'/
+    data aname(2) /'                     ALH'/
+    data aname(3) /'                     ALV'/
+    data aname(4) /'                     ATH'/
+    data aname(5) /'                     ATV'/
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize
+    lname(:) = .false.
     isfound = .false.
     !
     ! -- get griddata block
@@ -338,16 +466,47 @@ module GwtDspModule
         call this%parser%GetRemainingLine(line)
         lloc = 1
         select case (keyword)
-          case ('DIFFC')
+        case ('DIFFC')
+            call mem_reallocate(this%diffc, this%dis%nodes, 'DIFFC',           &
+                              trim(this%origin))
             call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,&
                                          this%parser%iuactive, this%diffc,     &
                                          aname(1))
-          case default
-            write(errmsg,'(4x,a,a)')'ERROR. UNKNOWN GRIDDATA TAG: ',           &
-                                     trim(keyword)
-            call store_error(errmsg)
-            call this%parser%StoreErrorUnit()
-            call ustop()
+            lname(1) = .true.
+        case ('ALH')
+          call mem_reallocate(this%alh, this%dis%nodes, 'ALH',                 &
+                            trim(this%origin))
+          call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,  &
+                                         this%parser%iuactive, this%alh,       &
+                                         aname(2))
+            lname(2) = .true.
+        case ('ALV')
+          call mem_reallocate(this%alv, this%dis%nodes, 'ALV',                 &
+                            trim(this%origin))
+          call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,  &
+                                         this%parser%iuactive, this%alv,       &
+                                         aname(3))
+            lname(3) = .true.
+        case ('ATH')
+          call mem_reallocate(this%ath, this%dis%nodes, 'ATH',                 &
+                            trim(this%origin))
+          call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,  &
+                                         this%parser%iuactive, this%ath,       &
+                                         aname(4))
+            lname(4) = .true.
+        case ('ATV')
+          call mem_reallocate(this%atv, this%dis%nodes, 'ATV',                 &
+                            trim(this%origin))
+          call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,  &
+                                         this%parser%iuactive, this%atv,       &
+                                         aname(5))
+            lname(5) = .true.
+        case default
+          write(errmsg,'(4x,a,a)')'ERROR. UNKNOWN GRIDDATA TAG: ',             &
+                                    trim(keyword)
+          call store_error(errmsg)
+          call this%parser%StoreErrorUnit()
+          call ustop()
         end select
       end do
       write(this%iout,'(1x,a)')'END PROCESSING GRIDDATA'
@@ -357,6 +516,16 @@ module GwtDspModule
       call this%parser%StoreErrorUnit()
       call ustop()
     end if
+    !
+    if(lname(1)) this%idiffc = 1
+    if(lname(2)) this%idisp = this%idisp + 1
+    if(lname(3)) this%idisp = this%idisp + 1
+    if(lname(4)) this%idisp = this%idisp + 1
+    if(lname(5)) this%idisp = this%idisp + 1
+    if(this%idisp > 0 .and. this%idisp < 4) then
+      write(errmsg,'(1x,a)') 'SPECIFY ALL FOUR DISPERSIVITIES OR NONE OF THEM.'
+      call store_error(errmsg)
+    endif
     !
     ! -- terminate if errors
     if(count_errors() > 0) then

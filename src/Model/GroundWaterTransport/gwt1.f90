@@ -290,6 +290,7 @@ module GwtModule
     !
     ! -- Define packages and utility objects
     call this%dis%dis_df()
+    call this%dsp%dsp_df()
     call this%ssm%ssm_df(this%ncomp)
     call this%oc%oc_df()
     call this%budget%budget_df(niunit, 'MASS', 'M')
@@ -337,6 +338,8 @@ module GwtModule
     !
     ! -- Add the internal connections of this model to sparse
     call this%dis%dis_ac(this%moffset, sparse)
+    if (this%indsp > 0) &
+      call this%dsp%dsp_ac(this%moffset, sparse, this%dis%nodes, this%ia, this%ja)
     !
     ! -- Add any package connections
     do ip = 1, this%bndlist%Count()
@@ -368,6 +371,8 @@ module GwtModule
     ! -- Find the position of each connection in the global ia, ja structure
     !    and store them in idxglo.
     call this%dis%dis_mc(this%moffset, this%idxglo, iasln, jasln)
+    if (this%indsp > 0) call this%dsp%dsp_mc(this%moffset, this%dis%nodes,     &
+      this%ia, this%ja, iasln, jasln)
     !
     ! -- Map any package connections
     do ip=1,this%bndlist%Count()

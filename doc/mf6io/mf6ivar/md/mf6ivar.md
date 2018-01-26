@@ -625,6 +625,10 @@
 | GWF | OC | PERIOD | STEPS | INTEGER (<NSTP) | save for each step specified in STEPS. This keyword may be used in conjunction with other keywords to print or save results for multiple time steps. |
 | GWT | ADV | OPTIONS | SCHEME | STRING | scheme used to solve the advection term |
 | GWT | DSP | GRIDDATA | DIFFC | DOUBLE PRECISION (NODES) | molecular diffusion coefficient. |
+| GWT | DSP | GRIDDATA | ALH | DOUBLE PRECISION (NODES) | longitudinal dispersivity in horizontal direction. |
+| GWT | DSP | GRIDDATA | ALV | DOUBLE PRECISION (NODES) | longitudinal dispersivity in vertical direction. |
+| GWT | DSP | GRIDDATA | ATH | DOUBLE PRECISION (NODES) | transverse dispersivity in horizontal direction. |
+| GWT | DSP | GRIDDATA | ATV | DOUBLE PRECISION (NODES) | transverse dispersivity in vertical direction. |
 | GWT | CNC | OPTIONS | AUXILIARY | STRING (NAUX) | defines an array of one or more auxiliary variable names.  There is no limit on the number of auxiliary variables that can be provided on this line; however, lists of information provided in subsequent blocks must have a column of data for each auxiliary variable name defined here.   The number of auxiliary variables detected on this line determines the value for naux.  Comments cannot be provided anywhere on this line as they will be interpreted as auxiliary variable names.  Auxiliary variables may not be used by the package, but they will be available for use by other parts of the program.  The program will terminate with an error if auxiliary variables are specified on more than one line in the options block. |
 | GWT | CNC | OPTIONS | AUXMULTNAME | STRING | name of auxiliary variable to be used as multiplier of concentration value. |
 | GWT | CNC | OPTIONS | BOUNDNAMES | KEYWORD | keyword to indicate that boundary names may be provided with the list of constant concentration cells. |
