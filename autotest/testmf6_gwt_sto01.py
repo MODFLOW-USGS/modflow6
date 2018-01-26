@@ -21,34 +21,31 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['adv01']
-top = [1.]
-laytyp = [0]
+ex = ['sto01']
+laytyp = [1]
 ss = [0.]
 sy = [0.1]
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
 ddir = 'data'
+nlay, nrow, ncol = 4, 1, 1
 
 
 def build_models():
-    nlay, nrow, ncol = 1, 1, 100
+
     nper = 1
-    perlen = [5.0]
-    nstp = [200]
+    perlen = [3.0]
+    nstp = [3]
     tsmult = [1.]
-    steady = [True]
     delr = 1.
     delc = 1.
-    botm = [0.]
-    strt = 1.
+    top = 4.
+    botm = [3., 2., 1., 0.]
     hnoflo = 1e30
     hdry = -1e30
+    strt = [hdry, hdry, hdry, 0.5]
     hk = 1.0
-
-    c = {0: [[(0, 0, 99), 0.0000000]]}
-    w = {0: [[(0, 0, 0), 1.0, 1.0]]}
 
     nouter, ninner = 100, 300
     hclose, rclose, relax = 1e-6, 1e-6, 1.
@@ -92,7 +89,7 @@ def build_models():
 
         dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
                                       delr=delr, delc=delc,
-                                      top=top[idx], botm=botm,
+                                      top=top, botm=botm,
                                       idomain=np.ones((nlay, nrow, ncol), dtype=np.int),
                                       fname='{}.dis'.format(gwfname))
 
@@ -104,25 +101,23 @@ def build_models():
         npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False,
                                       icelltype=laytyp[idx],
                                       k=hk,
-                                      k33=hk)
+                                      k33=hk,
+                                      rewet_record=[('WETFCT', 0.01,
+                                                     'IWETIT', 1,
+                                                     'IHDWET', 0)],
+                                      wetdry=0.01)
         # storage
-        #sto = flopy.mf6.ModflowGwfsto(gwf, save_flows=False,
-        #                              iconvert=laytyp[idx],
-        #                              ss=ss[idx], sy=sy[idx],
-        #                              steady_state={0: True, 2: True},
-        #                              transient={1: True})
-
-        # chd files
-        chd = flopy.mf6.modflow.mfgwfchd.ModflowGwfchd(gwf,
-                                                       maxbound=len(c),
-                                                       periodrecarray=c,
-                                                       save_flows=False,
-                                                       pname='CHD-1')
+        sto = flopy.mf6.ModflowGwfsto(gwf, save_flows=False,
+                                      iconvert=laytyp[idx],
+                                      ss=ss[idx], sy=sy[idx],
+                                      steady_state={0: False},
+                                      transient={0: True})
 
         # wel files
+        welspdict = {0: [[(3, 0, 0), 0.1, 1.]],
+                     1: [[(3, 0, 0), -0.1, 0.]]}
         wel = flopy.mf6.ModflowGwfwel(gwf, print_input=True, print_flows=True,
-                                      maxbound=len(w),
-                                      periodrecarray=w,
+                                      periodrecarray=welspdict,
                                       save_flows=False,
                                       auxiliary='CONCENTRATION', pname='WEL-1')
 
@@ -133,9 +128,9 @@ def build_models():
                                     headprintrecord=[
                                         ('COLUMNS', 10, 'WIDTH', 15,
                                          'DIGITS', 6, 'GENERAL')],
-                                    saverecord=[('HEAD', 'LAST')],
-                                    printrecord=[('HEAD', 'LAST'),
-                                                 ('BUDGET', 'LAST')])
+                                    saverecord=[('HEAD', 'ALL')],
+                                    printrecord=[('HEAD', 'ALL'),
+                                                 ('BUDGET', 'ALL')])
 
         # create gwt model
         gwtname = 'gwt_' + name
@@ -159,12 +154,12 @@ def build_models():
 
         dis = flopy.mf6.ModflowGwtdis(gwt, nlay=nlay, nrow=nrow, ncol=ncol,
                                       delr=delr, delc=delc,
-                                      top=top[idx], botm=botm,
+                                      top=top, botm=botm,
                                       idomain=1,
                                       fname='{}.dis'.format(gwtname))
 
         # initial conditions
-        ic = flopy.mf6.ModflowGwtic(gwt, strt=0.,
+        ic = flopy.mf6.ModflowGwtic(gwt, strt=1.,
                                     fname='{}.ic'.format(gwtname))
 
         # advection
@@ -172,7 +167,7 @@ def build_models():
                                     fname='{}.adv'.format(gwtname))
 
         # storage
-        sto = flopy.mf6.ModflowGwtsto(gwt, porosity=0.1,
+        sto = flopy.mf6.ModflowGwtsto(gwt, porosity=sy[idx],
                                     fname='{}.sto'.format(gwtname))
 
         # sources
@@ -187,9 +182,9 @@ def build_models():
                                     concentrationprintrecord=[
                                         ('COLUMNS', 10, 'WIDTH', 15,
                                          'DIGITS', 6, 'GENERAL')],
-                                    saverecord=[('CONCENTRATION', 'LAST')],
-                                    printrecord=[('CONCENTRATION', 'LAST'),
-                                                 ('BUDGET', 'LAST')])
+                                    saverecord=[('CONCENTRATION', 'ALL')],
+                                    printrecord=[('CONCENTRATION', 'ALL'),
+                                                 ('BUDGET', 'ALL')])
 
         # GWF GWT exchange
         gwfgwt = flopy.mf6.ModflowGwfgwt(sim, exgtype='GWF6-GWT6',
@@ -212,40 +207,14 @@ def eval_transport(sim):
     try:
         cobj = flopy.utils.HeadFile(fpth, precision='double',
                                     text='CONCENTRATION')
-        conc = cobj.get_data()
+        conc1 = cobj.get_data(totim=3.)
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
 
-    # This is the answer to this problem.  These concentrations are for
-    # time step 200.
-    cres = [[[1.00000000e+00, 1.00000000e+00, 1.00000000e+00, 1.00000000e+00,
-              1.00000000e+00, 1.00000000e+00, 1.00000000e+00, 1.00000000e+00,
-              1.00000000e+00, 1.00000000e+00, 1.00000000e+00, 9.99999999e-01,
-              9.99999997e-01, 9.99999991e-01, 9.99999971e-01, 9.99999914e-01,
-              9.99999761e-01, 9.99999372e-01, 9.99998435e-01, 9.99996286e-01,
-              9.99991577e-01, 9.99981712e-01, 9.99961893e-01, 9.99923632e-01,
-              9.99852532e-01, 9.99725120e-01, 9.99504599e-01, 9.99135431e-01,
-              9.98536850e-01, 9.97595635e-01, 9.96158712e-01, 9.94026505e-01,
-              9.90948130e-01, 9.86619748e-01, 9.80687319e-01, 9.72754814e-01,
-              9.62398489e-01, 9.49187176e-01, 9.32707801e-01, 9.12594513e-01,
-              8.88559134e-01, 8.60420154e-01, 8.28127324e-01, 7.91779115e-01,
-              7.51630867e-01, 7.08092322e-01, 6.61714306e-01, 6.13165405e-01,
-              5.63200494e-01, 5.12623768e-01, 4.62249349e-01, 4.12862664e-01,
-              3.65185517e-01, 3.19847250e-01, 2.77363614e-01, 2.38124183e-01,
-              2.02388273e-01, 1.70288648e-01, 1.41841739e-01, 1.16962748e-01,
-              9.54838854e-02, 7.71740354e-02, 6.17583229e-02, 4.89363652e-02,
-              3.83983188e-02, 2.98381826e-02, 2.29641338e-02, 1.75059339e-02,
-              1.32196416e-02, 9.89000005e-03, 7.33093269e-03, 5.38459977e-03,
-              3.91944360e-03, 2.82760119e-03, 2.02199855e-03, 1.43337156e-03,
-              1.00739149e-03, 7.02013580e-04, 4.85116958e-04, 3.32465664e-04,
-              2.25991387e-04, 1.52379541e-04, 1.01928496e-04, 6.76460984e-05,
-              4.45462926e-05, 2.91101871e-05, 1.88792800e-05, 1.21527525e-05,
-              7.76522212e-06, 4.92565188e-06, 3.10201677e-06, 1.93969988e-06,
-              1.20440812e-06, 7.42676511e-07, 4.54831064e-07, 2.76669882e-07,
-              1.67174989e-07, 1.00349240e-07, 5.98446532e-08, 3.54600737e-08]]]
-    cres = np.array(cres)
-    assert np.allclose(cres, conc), ('simulated concentrations do not match '
-                                     'with known solution.')
+    # end of stress period 1
+    cres1 = np.ones((nlay, nrow, ncol), np.float)
+    assert np.allclose(cres1, conc1), ('simulated concentrations do not match '
+                                       'with known solution.')
 
     return
 
