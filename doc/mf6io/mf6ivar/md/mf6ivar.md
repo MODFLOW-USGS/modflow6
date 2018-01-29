@@ -171,11 +171,12 @@
 | GWF | STO | PERIOD | STEADY-STATE | KEYWORD | keyword to indicate that stress-period IPER is steady-state. Steady-state conditions will apply until the TRANSIENT keyword is specified in a subsequent BEGIN PERIOD block. |
 | GWF | STO | PERIOD | TRANSIENT | KEYWORD | keyword to indicate that stress-period IPER is transient. Transient conditions will apply until the STEADY-STATE keyword is specified in a subsequent BEGIN PERIOD block. |
 | GWF | IBC | OPTIONS | SAVE_FLOWS | KEYWORD | keyword to indicate that cell-by-cell flow terms will be written to the file specified with ``BUDGET SAVE FILE'' in Output Control. |
-| GWF | IBC | OPTIONS | NDELAYCELLS | DOUBLE PRECISION | number of nodes used to discretize the the delay intebed thickness to approximate the head distributions in systems of delay interbeds. If not specified, then a default value of 19 is assigned. |
+| GWF | IBC | OPTIONS | HALF_CELL | KEYWORD | keyword to indicate that delay interbeds will be simulated using a half-cell approach. |
+| GWF | IBC | OPTIONS | NDELAYCELLS | INTEGER | number of nodes used to discretize the the delay intebed thickness to approximate the head distributions in systems of delay interbeds. If not specified, then a default value of 19 is assigned. |
 | GWF | IBC | OPTIONS | INTERBED_STRESS_OFFSET | KEYWORD | keyword to indicate that an initial stress offset specified in the GRIDDATA block will be applied to each interbed. |
 | GWF | IBC | OPTIONS | GEO_STRESS_OFFSET | KEYWORD | keyword to indicate that a geostatic stress offset will be specified in the PERIOD block. |
 | GWF | IBC | OPTIONS | STORAGECOEFFICIENT | KEYWORD | keyword to indicate that the elastic skeletal specific storage (SSE) and inelastic skeletal specific storage (SSV) coefficients are specified rather than the recompression (CR) and compresion (CC) indices. |
-| GWF | IBC | OPTIONS | CONSTANT_THICKNESS | KEYWORD | keyword to indicate that the thickness and void ratio of the interbed will not be varied during the simulation. |
+| GWF | IBC | OPTIONS | CONSTANT_NODELAY_THICKNESS | KEYWORD | keyword to indicate that the thickness and void ratio of no delay interbeds will not be varied during the simulation. |
 | GWF | IBC | OPTIONS | CELL_FRACTION | KEYWORD | keyword to indicate that the thickness of interbeds will be specified in terms of the fraction of cell thickness. |
 | GWF | IBC | OPTIONS | COMPACTION | KEYWORD | keyword to specify that record corresponds to the compaction. |
 | GWF | IBC | OPTIONS | FILEOUT | KEYWORD | keyword to specify that an output filename is expected next. |

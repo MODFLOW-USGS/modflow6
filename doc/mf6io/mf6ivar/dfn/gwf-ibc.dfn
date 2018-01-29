@@ -9,20 +9,20 @@ longname keyword to save IBC flows
 description keyword to indicate that cell-by-cell flow terms will be written to the file specified with ``BUDGET SAVE FILE'' in Output Control.
 
 block options
+name half_cell
+type keyword
+reader urword
+optional true
+longname keyword to simulate delay interbeds using half-cell approach
+description keyword to indicate that delay interbeds will be simulated using a half-cell approach.
+
+block options
 name ndelaycells
 type integer
 reader urword
 optional true
 longname number of interbed cell nodes
 description number of nodes used to discretize the the delay intebed thickness to approximate the head distributions in systems of delay interbeds. If not specified, then a default value of 19 is assigned.
-
-block options
-name omega
-type double precision
-reader urword
-optional true
-longname delay bed acceleration value
-description real value that defines the acceleration variable applied to delay bed heads. If not specified, then a default value of 1.0 is assigned.
 
 block options
 name interbed_stress_offset
@@ -49,12 +49,12 @@ longname keyword to indicate SSE and SSV are read instead of CR and CC
 description keyword to indicate that the elastic skeletal specific storage (SSE) and inelastic skeletal specific storage (SSV) coefficients are specified rather than the recompression (CR) and compresion (CC) indices.
 
 block options
-name constant_thickness
+name constant_nodelay_thickness
 type keyword
 reader urword
 optional true
-longname keyword to indicate a constant interbed thickness
-description keyword to indicate that the thickness and void ratio of the interbed will not be varied during the simulation.
+longname keyword to indicate a constant no delay interbed thickness
+description keyword to indicate that the thickness and void ratio of no delay interbeds will not be varied during the simulation.
 
 block options
 name cell_fraction

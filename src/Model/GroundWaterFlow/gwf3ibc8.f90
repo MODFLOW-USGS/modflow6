@@ -26,7 +26,7 @@ module IbcModule
   !
 
   type, extends(BndType) :: IbcType
-    integer(I4B), pointer :: iconstantb
+    integer(I4B), pointer :: iconstantndb
     integer(I4B), pointer :: istoragec
     integer(I4B), pointer :: icellf
     integer(I4B), pointer :: ibedstressoff
@@ -34,7 +34,7 @@ module IbcModule
     integer(I4B), pointer :: ndelaycells
     integer(I4B), pointer :: ndelaybeds
     integer(I4B), pointer :: igeocalc
-    real(DP), pointer :: omega
+    integer(I4B), pointer :: ihalfcell
 
     integer(I4B) :: nibcobs
     logical :: first_time
@@ -64,7 +64,7 @@ module IbcModule
     real(DP), dimension(:), pointer :: totalcomp   => null()   !total interbed compaction
     real(DP), dimension(:), pointer :: gwflow      => null()   !gwf-flow
     ! -- delay interbed arrays
-    real(DP), dimension(:,:), pointer :: dbdz     => null()    !delay bed dz
+    real(DP), dimension(:), pointer   :: dbdz     => null()    !delay bed dz
     real(DP), dimension(:,:), pointer :: dbz      => null()    !delay bed cell z
     real(DP), dimension(:,:), pointer :: dbh      => null()    !delay bed cell h
     real(DP), dimension(:,:), pointer :: dbh0     => null()    !delay bed cell previous h
@@ -200,10 +200,10 @@ contains
     call mem_allocate(this%ibedstressoff, 'IBEDSTRESSOFF', this%origin)
     call mem_allocate(this%igeostressoff, 'IGEOSTRESSOFF', this%origin)
     call mem_allocate(this%istoragec, 'ISTORAGEC', this%origin)
-    call mem_allocate(this%iconstantb, 'ICONSTANTB', this%origin)
+    call mem_allocate(this%iconstantndb, 'ICONSTANTNDB', this%origin)
+    call mem_allocate(this%ihalfcell, 'IHALFCELL', this%origin)
     call mem_allocate(this%icellf, 'ICELLF', this%origin)
     call mem_allocate(this%nbound, 'NIBCCELLS', this%origin)
-    call mem_allocate(this%omega, 'OMEGA', this%origin)
     call mem_allocate(this%gwfiss0, 'GWFISS0', this%origin)
     !
     ! -- initialize values
@@ -213,10 +213,10 @@ contains
     this%ibedstressoff = 0
     this%igeostressoff = 0
     this%istoragec = 0
-    this%iconstantb = 0
+    this%iconstantndb = 0
+    this%ihalfcell = 0
     this%icellf = 0
     this%nbound = 0
-    this%omega = DONE
     this%first_time = .TRUE.
     this%gwfiss0 = 0
     !
@@ -331,7 +331,7 @@ contains
         strain = DZERO
         thick = this%thick(i)
         if (thick > DZERO) strain = -comp / thick
-        if (this%iconstantb == 0) then
+        if (this%iconstantndb == 0) then
           this%void(i) = strain + this%void(i) * (strain + DONE)
           this%thick(i) = thick * (strain + DONE)
         end if
@@ -586,7 +586,7 @@ contains
     if (ndelaybeds > 0) then
       !
       ! -- delay bed storage
-      call mem_reallocate(this%dbdz, this%ndelaycells, ndelaybeds, 'dbdz', trim(this%origin))
+      call mem_reallocate(this%dbdz, ndelaybeds, 'dbdz', trim(this%origin))
       call mem_reallocate(this%dbz, this%ndelaycells, ndelaybeds, 'dbz', trim(this%origin))
       call mem_reallocate(this%dbh, this%ndelaycells, ndelaybeds, 'dbh', trim(this%origin))
       call mem_reallocate(this%dbh0, this%ndelaycells, ndelaybeds, 'dbh0', trim(this%origin))
@@ -612,8 +612,12 @@ contains
         if (idelay == 0) then
           cycle
         end if
+        if (this%ihalfcell == 0) then
+            this%dbdz(idelay) = this%thick(n) / real(this%ndelaycells, DP)
+        else
+            this%dbdz(idelay) = DHALF * this%thick(n) / real(this%ndelaycells, DP)
+        end if
         do j = 1, this%ndelaycells
-          this%dbdz(j, idelay) = this%thick(n) / real(this%ndelaycells, DP)
           this%dbh(j, idelay) = this%h0(n)
           this%dbh0(j, idelay) = this%h0(n)
           this%dbvoid(j, idelay) = this%void(n)
@@ -702,8 +706,8 @@ contains
                                'SPECIFIED INSTEAD OF COMPRESSION INDICES'
       found = .true.
     ! constant delay interbed thickness and void ratio
-    case ('CONSTANT_THICKNESS')
-      this%iconstantb = 1
+    case ('CONSTANT_NODELAY_THICKNESS')
+      this%iconstantndb = 1
       write(this%iout, fmtopt) 'DELAY INTERBED THICKNESS AND VOID RATIO ' //  &
                                'WILL REMAIN CONSTANT IN THE SIMULATION'
       found = .true.
@@ -713,9 +717,11 @@ contains
       write(this%iout, fmtopt) 'INTERBED THICKNESS WILL BE SPECIFIED ' //  &
                                'AS A CELL FRACTION'
       found = .true.
-    case ('OMEGA')
-      this%omega =  this%parser%GetDouble()
-      write(this%iout, fmtoptr) 'DELAY BED OMEGA =', this%omega
+    ! half cell formulation for delay interbed
+    case ('HALF_CELL')
+      this%ihalfcell = 1
+      write(this%iout, fmtopt) 'DELAY INTERBEDS WILL BE SIMULATED USING ' //  &
+                               'A HALF-CELL FORMULATION'
       found = .true.
     ! default case
     case default
@@ -771,7 +777,7 @@ contains
     call mem_allocate(this%gwflow, this%nbound, 'gwflow', trim(this%origin))
     !
     ! -- delay bed storage
-    call mem_allocate(this%dbdz, 0, 0, 'dbdz', trim(this%origin))
+    call mem_allocate(this%dbdz, 0, 'dbdz', trim(this%origin))
     call mem_allocate(this%dbz, 0, 0, 'dbz', trim(this%origin))
     call mem_allocate(this%dbh, 0, 0, 'dbh', trim(this%origin))
     call mem_allocate(this%dbh0, 0, 0, 'dbh0', trim(this%origin))
@@ -887,9 +893,9 @@ contains
     call mem_deallocate(this%ibedstressoff)
     call mem_deallocate(this%igeostressoff)
     call mem_deallocate(this%istoragec)
-    call mem_deallocate(this%iconstantb)
+    call mem_deallocate(this%iconstantndb)
+    call mem_deallocate(this%ihalfcell)
     call mem_deallocate(this%icellf)
-    call mem_deallocate(this%omega)
     call mem_deallocate(this%gwfiss0)
 
 
@@ -1271,7 +1277,7 @@ contains
     x = haq
     if (x > top) x = top
     thk_fac = DONE
-    if (this%iconstantb == 0) then
+    if (this%iconstantndb == 0) then
       thk_fac = (x - bot) / thk_node
     end if
     thk_ibs = thk_fac * this%thick(i)
@@ -1493,7 +1499,7 @@ contains
         end if
         b = DZERO
         do j = 1, this%ndelaycells
-          b = b + this%dbdz(j, idelay)
+          b = b + this%dbdz(idelay)
           ! update preconsolidation stress
           if (.not. this%first_time) then
             if (this%igeocalc == 0) then
@@ -1511,9 +1517,6 @@ contains
           this%dbgeo0(j, idelay) = this%dbgeo(j, idelay)
           this%dbes0(j, idelay) = this%dbes(j, idelay)
         end do
-        if (this%iconstantb /= 0) then
-          this%thick(n) = b
-        end if
       end if
     end do
     !
@@ -1729,7 +1732,7 @@ contains
       do
         iter = iter + 1
         ! -- assemble coefficients
-        call this%assemble_delay(ib, 0)
+        call this%assemble_delay(ib)
         ! -- solve for head change in delay intebed cells
         call solve_delay(this%ndelaycells, this%dbal, this%dbad, this%dbau, &
                          this%dbrhs, this%dbdh, this%dbaw)
@@ -1742,12 +1745,8 @@ contains
             dhmax = this%dbdh(n)
           end if
           ! update delay bed heads
-          !this%dbh(n, idelay) = this%dbdh(n)
-          this%dbh(n, idelay) = this%dbh(n, idelay) + this%omega * dh
+          this%dbh(n, idelay) = this%dbdh(n)
         end do
-        if (this%omega /= DONE) then
-          icnvg = 1
-        end if
         if (abs(dhmax) < dclose) then
           icnvg = 1
         end if
@@ -1787,15 +1786,12 @@ contains
     b = this%thick(ib)
     dzz = DHALF * b
     z = znode + dzz
-    dz = this%dbdz(1, idelay)
+    dz = this%dbdz(idelay)
     ! -- calculate z for each delay interbed node
     do n = 1, this%ndelaycells
       z = z - dz
       this%dbz(n, idelay) = z
       z = z - dz
-      if (n < this%ndelaycells) then
-        dz = this%dbdz(n+1, idelay)
-      end if
     end do
     !
     ! -- return
@@ -1839,7 +1835,7 @@ contains
     sigma = this%gs(node)
     topaq = this%dis%top(node)
     botaq = this%dis%bot(node)
-    dzhalf = DHALF * this%dbdz(1, idelay)
+    dzhalf = DHALF * this%dbdz(idelay)
     sgm = this%sgm(node)
     sgs = this%sgs(node)
     top = this%dbz(1, idelay) + dzhalf
@@ -1940,7 +1936,7 @@ contains
   end subroutine calc_delay_sskessk
 
 
-  subroutine assemble_delay(this, ib, ihd)
+  subroutine assemble_delay(this, ib)
 ! ******************************************************************************
 ! assemble_delay -- Assemble coefficients for delay interbeds cells.
 ! ******************************************************************************
@@ -1951,9 +1947,7 @@ contains
     ! -- dummy variables
     class(IbcType), intent(inout) :: this
     integer(I4B), intent(in) :: ib
-    integer(I4B), intent(in), optional :: ihd
     ! -- local variables
-    integer(I4B) :: iadd
     integer(I4B) :: n
     integer(I4B) :: node
     integer(I4B) :: idelay
@@ -1971,19 +1965,7 @@ contains
     real(DP) :: h
     real(DP) :: aii
     real(DP) :: r
-    real(DP) :: ahm1
 ! ------------------------------------------------------------------------------
-    !
-    ! -- process optional variable
-    if (present(ihd)) then
-        if (ihd == 0) then
-          iadd = 0
-        else
-          iadd = 1
-        end if
-    else
-      iadd = 1
-    endif
     !
     ! -- initialize variables
     idelay = this%idelay(ib)
@@ -1992,7 +1974,7 @@ contains
     !
     !
     do n = 1, this%ndelaycells
-      dz = this%dbdz(n, idelay)
+      dz = this%dbdz(idelay)
       c = this%kv(ib) / dz
       c2 = DTWO * c
       c3 = DTHREE * c
@@ -2019,23 +2001,17 @@ contains
       else
         aii = aii - c2
       end if
-      ahm1 = aii * h
       ! -- off diagonals
       ! -- lower
       if (n > 1) then
         this%dbal(n) = c
-        ahm1 = ahm1 + c * this%dbh(n-1, idelay)
       end if
       ! -- upper
       if (n < this%ndelaycells) then
         this%dbau(n) = c
-        ahm1 = ahm1 + c * this%dbh(n+1, idelay)
-      end if
-      if (iadd == 0) then
-        ahm1 = DZERO
       end if
       this%dbad(n) = aii
-      this%dbrhs(n) = r - ahm1
+      this%dbrhs(n) = r
     end do
     !
     ! -- return
@@ -2114,7 +2090,7 @@ contains
     !
     if (this%thick(ib) > DZERO) then
       do n = 1, this%ndelaycells
-        dz = this%dbdz(n, idelay)
+        dz = this%dbdz(idelay)
         void = this%dbvoid(n, idelay)
         call this%calc_delay_sskessk(ib, n, sske, ssk)
         if (this%igeocalc == 0) then
@@ -2164,7 +2140,7 @@ contains
     !
     !
     if (this%thick(ib) > DZERO) then
-      call this%assemble_delay(ib, 0)
+      call this%assemble_delay(ib)
       do n = 1, this%ndelaycells
         v = this%dbad(n) * this%dbh(n, idelay)
         if (n > 1) then
@@ -2213,7 +2189,7 @@ contains
     !
     if (this%thick(ib) > DZERO) then
       do n = 1, this%ndelaycells
-        dz = this%dbdz(n, idelay)
+        dz = this%dbdz(idelay)
         void = this%dbvoid(n, idelay)
         call this%calc_delay_sskessk(ib, n, sske, ssk)
         if (this%igeocalc == 0) then
@@ -2231,11 +2207,6 @@ contains
           v = v + sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay))
         end if
         comp = comp + v
-        if (this%iconstantb == 0) then
-          strain = comp / dz
-          this%dbvoid(n, idelay) = strain + void * (strain + DONE)
-          this%dbdz(n, idelay) = dz * (strain + DONE)
-        end if
       end do
     end if
     !
@@ -2278,9 +2249,9 @@ contains
       node = this%nodelist(ib)
       haq = this%xnew(node)
       area = this%dis%get_area(node)
-      c1 = DTWO * this%kv(ib) / this%dbdz(1, idelay)
+      c1 = DTWO * this%kv(ib) / this%dbdz(idelay)
       rhs = -c1 * this%dbh(1, idelay)
-      c2 = DTWO * this%kv(ib) / this%dbdz(this%ndelaycells, idelay)
+      c2 = DTWO * this%kv(ib) / this%dbdz(idelay)
       rhs = rhs - c2 * this%dbh(this%ndelaycells, idelay)
       hcof = c1 + c2
     end if

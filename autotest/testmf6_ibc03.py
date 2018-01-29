@@ -125,7 +125,6 @@ def build_models():
     # static ibc and sub data
     sgm = 0.
     sgs = 0.
-    omega6 = 1.0
     omega = 1.0
 
     # no delay bed data
@@ -274,10 +273,9 @@ def build_models():
         opth = '{}.ibc.obs'.format(name)
         ibc = flopy.mf6.ModflowGwfibc(gwf, ndelaycells=39,
                                       storagecoefficient=True,
-                                      constant_thickness=True,
+                                      constant_nodelay_thickness=True,
                                       nibccells=maxibc,
                                       obs_filerecord=opth,
-                                      omega=omega6,
                                       sgs=sgs, sgm=sgm, ibcrecarray=sub6)
         orecarray = {}
         orecarray['ibc_obs.csv'] = [('tcomp1', 'total-compaction', (0, 4, 4)),

@@ -156,7 +156,6 @@ def build_models():
         opth = '{}.ibc.obs'.format(name)
         ibc = flopy.mf6.ModflowGwfibc(gwf, ndelaycells=19,
                                       storagecoefficient=True,
-                                      constant_thickness=True,
                                       obs_filerecord=opth,
                                       nibccells=1,
                                       sgs=sgs, sgm=sgm, ibcrecarray=sub6)

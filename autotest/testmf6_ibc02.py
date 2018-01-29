@@ -172,7 +172,7 @@ def build_models():
         # ibc files
         ibc = flopy.mf6.ModflowGwfibc(gwf, ndelaycells=19,
                                       storagecoefficient=True,
-                                      constant_thickness=True,
+                                      constant_nodelay_thickness=True,
                                       nibccells=1,
                                       sgs=sgs, sgm=sgm, ibcrecarray=sub6)
 
