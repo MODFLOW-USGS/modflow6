@@ -7,8 +7,13 @@
 
 ## Automated Testing Status on Travis-CI
 
-### Version 6.0.1 subsidence &mdash; build 22
+<<<<<<< HEAD
+### Version 6.0.1 subsidence &mdash; build 23
 [![Build Status](https://travis-ci.org/MODFLOW-USGS/modflow6.svg?branch=subsidence)](https://travis-ci.org/MODFLOW-USGS/modflow6)
+=======
+### Version 6.0.1 subsidence &mdash; build 23
+[![Build Status](https://travis-ci.org/MODFLOW-USGS/modflow6.svg?branch=subsidence)](https://travis-ci.org/MODFLOW-USGS/modflow6)
+>>>>>>> 4e04263796e5528e38e6bee4b68cda3b65e5026d
 
 ## Introduction
 
@@ -31,7 +36,11 @@ MODFLOW 6 is the latest core version of MODFLOW. It synthesizes many of the capa
 
 #### ***Software/Code citation for MODFLOW 6:***
 
+<<<<<<< HEAD
 [Langevin, C.D., Hughes, J.D., Banta, E.R., Provost, A.M., Niswonger, R.G., and Panday, Sorab, 2018, MODFLOW 6 Modular Hydrologic Model version 6.0.1 &mdash; subsidence: U.S. Geological Survey Software Release, 31 January 2018, https://doi.org/10.5066/F76Q1VQV](https://doi.org/10.5066/F76Q1VQV)
+=======
+[Langevin, C.D., Hughes, J.D., Banta, E.R., Provost, A.M., Niswonger, R.G., and Panday, Sorab, 2018, MODFLOW 6 Modular Hydrologic Model version 6.0.1 &mdash; subsidence: U.S. Geological Survey Software Release, 31 January 2018, https://doi.org/10.5066/F76Q1VQV](https://doi.org/10.5066/F76Q1VQV)
+>>>>>>> 4e04263796e5528e38e6bee4b68cda3b65e5026d
 
 
 ## Instructions for building definition files for new packages
