@@ -19,20 +19,22 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['ibc02a', 'ibc02b', 'ibc02c', 'ibc02d']
+ex = ['ibc02a', 'ibc02b', 'ibc02c', 'ibc02d', 'ibc02e']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
 ddir = 'data'
-ss = [1.14e-3, 1.14e-3, 1.14e-3 / 500., 1.14e-3 / 500.]
-storagecoeff = [True, True, False, False]
-cdelay = [False, True, False, True]
+ss = [1.14e-3, 1.14e-3, 1.14e-3 / 500., 1.14e-3 / 500., 1.14e-3]
+storagecoeff = [True, True, False, False, True]
+cdelay = [False, True, False, True, True]
+half_cell = [None, None, None, None, True]
+ndelaycells = [None, 19, None, 19, 10]
 
 # run all examples on Travis
 # travis = [True for idx in range(len(exdirs))]
 # the delay bed problems only run on the development version of MODFLOW-2005
 # set travis to True when version 1.13.0 is released
-travis = [True, False, True, False]
+travis = [True, False, True, False, False]
 
 # set replace_exe to None to use default executable
 replace_exe = {'mf2005': 'mf2005devdbl'}
@@ -170,7 +172,8 @@ def build_models():
                                       save_flows=False)
 
         # ibc files
-        ibc = flopy.mf6.ModflowGwfibc(gwf, ndelaycells=19,
+        ibc = flopy.mf6.ModflowGwfibc(gwf, ndelaycells=ndelaycells[idx],
+                                      half_cell=half_cell[idx],
                                       storagecoefficient=True,
                                       constant_nodelay_thickness=True,
                                       nibccells=1,

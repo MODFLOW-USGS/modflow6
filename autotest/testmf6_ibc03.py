@@ -20,23 +20,26 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['ibc03a', 'ibc03b']
+ex = ['ibc03a', 'ibc03b', 'ibc03c']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
-cvopt = [None, None]
-constantcv = [True, True]
-ndelaybeds = [0, 2]
+cvopt = [None, None, None]
+constantcv = [True, True, True]
+ndelaybeds = [0, 2, 2]
+halfcell = [None, None, True]
+ndelaycells = [None, 39, 20]
+
 ddir = 'data'
 
 ## run all examples on Travis
 #travis = [False for idx in range(len(exdirs))]
-travis = [True, False]
+travis = [True, False, False]
 
 # set replace_exe to None to use default executable
 replace_exe = {'mf2005': 'mf2005devdbl'}
 
-htol = [None, None]
+htol = [None, None, None]
 dtol = 1e-3
 
 
@@ -271,7 +274,8 @@ def build_models():
                                                        save_flows=False)
         # ibc files
         opth = '{}.ibc.obs'.format(name)
-        ibc = flopy.mf6.ModflowGwfibc(gwf, ndelaycells=39,
+        ibc = flopy.mf6.ModflowGwfibc(gwf, ndelaycells=ndelaycells[idx],
+                                      half_cell=halfcell[idx],
                                       storagecoefficient=True,
                                       constant_nodelay_thickness=True,
                                       nibccells=maxibc,

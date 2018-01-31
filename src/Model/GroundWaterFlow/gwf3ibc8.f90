@@ -35,6 +35,8 @@ module IbcModule
     integer(I4B), pointer :: ndelaybeds
     integer(I4B), pointer :: igeocalc
     integer(I4B), pointer :: ihalfcell
+    real(DP), pointer :: dbfact
+    real(DP), pointer :: dbfacti
 
     integer(I4B) :: nibcobs
     logical :: first_time
@@ -202,6 +204,8 @@ contains
     call mem_allocate(this%istoragec, 'ISTORAGEC', this%origin)
     call mem_allocate(this%iconstantndb, 'ICONSTANTNDB', this%origin)
     call mem_allocate(this%ihalfcell, 'IHALFCELL', this%origin)
+    call mem_allocate(this%dbfact, 'DBFACT', this%origin)
+    call mem_allocate(this%dbfacti, 'DBFACTI', this%origin)
     call mem_allocate(this%icellf, 'ICELLF', this%origin)
     call mem_allocate(this%nbound, 'NIBCCELLS', this%origin)
     call mem_allocate(this%gwfiss0, 'GWFISS0', this%origin)
@@ -215,6 +219,8 @@ contains
     this%istoragec = 0
     this%iconstantndb = 0
     this%ihalfcell = 0
+    this%dbfact = DONE
+    this%dbfacti = DONE
     this%icellf = 0
     this%nbound = 0
     this%first_time = .TRUE.
@@ -612,10 +618,15 @@ contains
         if (idelay == 0) then
           cycle
         end if
+        !
+        ! -- adjust thickness if solving half cell problem
+        this%thick(n) = this%dbfacti * this%thick(n)
+        !
+        ! -- calculate delay bed cell thickness
         if (this%ihalfcell == 0) then
-            this%dbdz(idelay) = this%thick(n) / real(this%ndelaycells, DP)
+          this%dbdz(idelay) = this%thick(n) / real(this%ndelaycells, DP)
         else
-            this%dbdz(idelay) = DHALF * this%thick(n) / real(this%ndelaycells, DP)
+          this%dbdz(idelay) = this%thick(n) / (real(this%ndelaycells, DP) - DHALF)
         end if
         do j = 1, this%ndelaycells
           this%dbh(j, idelay) = this%h0(n)
@@ -720,6 +731,8 @@ contains
     ! half cell formulation for delay interbed
     case ('HALF_CELL')
       this%ihalfcell = 1
+      this%dbfact = DTWO
+      this%dbfacti = DHALF
       write(this%iout, fmtopt) 'DELAY INTERBEDS WILL BE SIMULATED USING ' //  &
                                'A HALF-CELL FORMULATION'
       found = .true.
@@ -895,6 +908,8 @@ contains
     call mem_deallocate(this%istoragec)
     call mem_deallocate(this%iconstantndb)
     call mem_deallocate(this%ihalfcell)
+    call mem_deallocate(this%dbfact)
+    call mem_deallocate(this%dbfacti)
     call mem_deallocate(this%icellf)
     call mem_deallocate(this%gwfiss0)
 
@@ -1729,6 +1744,7 @@ contains
     if (this%thick(ib) > DZERO) then
       icnvg = 0
       iter = 0
+      idelay = this%idelay(ib)
       do
         iter = iter + 1
         ! -- assemble coefficients
@@ -1738,7 +1754,6 @@ contains
                          this%dbrhs, this%dbdh, this%dbaw)
         ! -- update delay bed head and check convergence
         dhmax = DZERO
-        idelay = this%idelay(ib)
         do n = 1, this%ndelaycells
           dh = this%dbdh(n) - this%dbh(n, idelay) 
           if (abs(dh) > abs(dhmax)) then
@@ -1784,9 +1799,14 @@ contains
     idelay = this%idelay(ib)
     znode = this%znode(ib)
     b = this%thick(ib)
-    dzz = DHALF * b
-    z = znode + dzz
     dz = this%dbdz(idelay)
+    if (this%ihalfcell == 0) then
+        dzz = DHALF * b
+        z = znode + dzz
+    else
+        dz = DHALF * dz
+        z = znode + dz 
+    end if
     ! -- calculate z for each delay interbed node
     do n = 1, this%ndelaycells
       z = z - dz
@@ -1904,9 +1924,16 @@ contains
     ssk = DZERO
     idelay = this%idelay(ib)
     !
-    !
+    ! -- calculate factor for the head-based case
     if (this%igeocalc == 0) then
       f = DONE
+      if (this%ihalfcell /= 0) then
+        if (n == 1) then
+          f = DHALF
+        end if
+      end if
+    !
+    ! -- calculate factor for the effective stress case
     else
       es = this%dbes0(n, idelay)
       denom = (DONE + this%dbvoid(n, idelay)) * es
@@ -1996,8 +2023,12 @@ contains
               sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay)))
       end if
       if (n == 1 .or. n == this%ndelaycells) then
-        aii = aii - c3
-        r = r - c2 * haq
+        if (this%ihalfcell == 0 .or. n == this%ndelaycells) then
+            aii = aii - c3
+            r = r - c2 * haq
+        else
+            aii = aii - c
+        end if
       else
         aii = aii - c2
       end if
@@ -2078,6 +2109,7 @@ contains
     real(DP) :: es
     real(DP) :: denom
     real(DP) :: f
+    real(DP) :: fhc
     real(DP) :: v
     real(DP) :: strain
     real(DP) :: void
@@ -2210,6 +2242,9 @@ contains
       end do
     end if
     !
+    ! -- adjust compaction
+    comp = comp * this%dbfact
+    !
     ! -- fill compaction
     this%comp(ib) = comp
     this%totalcomp(ib) = this%totalcomp(ib) + comp * this%rnb(ib)
@@ -2249,9 +2284,13 @@ contains
       node = this%nodelist(ib)
       haq = this%xnew(node)
       area = this%dis%get_area(node)
-      c1 = DTWO * this%kv(ib) / this%dbdz(idelay)
-      rhs = -c1 * this%dbh(1, idelay)
-      c2 = DTWO * this%kv(ib) / this%dbdz(idelay)
+      if (this%ihalfcell == 0) then
+        c1 = DTWO * this%kv(ib) / this%dbdz(idelay)
+        rhs = -c1 * this%dbh(1, idelay)
+      else
+        c1 = DZERO
+      end if
+      c2 = this%dbfact * DTWO * this%kv(ib) / this%dbdz(idelay)
       rhs = rhs - c2 * this%dbh(this%ndelaycells, idelay)
       hcof = c1 + c2
     end if
