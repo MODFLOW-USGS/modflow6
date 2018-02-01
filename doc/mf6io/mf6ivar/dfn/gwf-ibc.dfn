@@ -9,12 +9,12 @@ longname keyword to save IBC flows
 description keyword to indicate that cell-by-cell flow terms will be written to the file specified with ``BUDGET SAVE FILE'' in Output Control.
 
 block options
-name half_cell
+name delay_full_cell
 type keyword
 reader urword
 optional true
-longname keyword to simulate delay interbeds using half-cell approach
-description keyword to indicate that delay interbeds will be simulated using a half-cell approach.
+longname keyword to simulate head-based delay interbeds using full-cell approach
+description keyword to indicate that head-based delay interbeds will be simulated using a full-cell approach.
 
 block options
 name ndelaycells

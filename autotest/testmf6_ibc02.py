@@ -28,6 +28,7 @@ ss = [1.14e-3, 1.14e-3, 1.14e-3 / 500., 1.14e-3 / 500., 1.14e-3]
 storagecoeff = [True, True, False, False, True]
 cdelay = [False, True, False, True, True]
 half_cell = [None, None, None, None, True]
+full_cell = [None, True, None, True, None]
 ndelaycells = [None, 19, None, 19, 10]
 
 # run all examples on Travis
@@ -173,7 +174,7 @@ def build_models():
 
         # ibc files
         ibc = flopy.mf6.ModflowGwfibc(gwf, ndelaycells=ndelaycells[idx],
-                                      half_cell=half_cell[idx],
+                                      delay_full_cell=full_cell[idx],
                                       storagecoefficient=True,
                                       constant_nodelay_thickness=True,
                                       nibccells=1,

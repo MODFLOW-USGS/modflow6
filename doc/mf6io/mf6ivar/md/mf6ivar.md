@@ -171,7 +171,7 @@
 | GWF | STO | PERIOD | STEADY-STATE | KEYWORD | keyword to indicate that stress-period IPER is steady-state. Steady-state conditions will apply until the TRANSIENT keyword is specified in a subsequent BEGIN PERIOD block. |
 | GWF | STO | PERIOD | TRANSIENT | KEYWORD | keyword to indicate that stress-period IPER is transient. Transient conditions will apply until the STEADY-STATE keyword is specified in a subsequent BEGIN PERIOD block. |
 | GWF | IBC | OPTIONS | SAVE_FLOWS | KEYWORD | keyword to indicate that cell-by-cell flow terms will be written to the file specified with ``BUDGET SAVE FILE'' in Output Control. |
-| GWF | IBC | OPTIONS | HALF_CELL | KEYWORD | keyword to indicate that delay interbeds will be simulated using a half-cell approach. |
+| GWF | IBC | OPTIONS | DELAY_FULL_CELL | KEYWORD | keyword to indicate that head-based delay interbeds will be simulated using a full-cell approach. |
 | GWF | IBC | OPTIONS | NDELAYCELLS | INTEGER | number of nodes used to discretize the the delay intebed thickness to approximate the head distributions in systems of delay interbeds. If not specified, then a default value of 19 is assigned. |
 | GWF | IBC | OPTIONS | INTERBED_STRESS_OFFSET | KEYWORD | keyword to indicate that an initial stress offset specified in the GRIDDATA block will be applied to each interbed. |
 | GWF | IBC | OPTIONS | GEO_STRESS_OFFSET | KEYWORD | keyword to indicate that a geostatic stress offset will be specified in the PERIOD block. |

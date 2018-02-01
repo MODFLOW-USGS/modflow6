@@ -34,7 +34,8 @@ module IbcModule
     integer(I4B), pointer :: ndelaycells
     integer(I4B), pointer :: ndelaybeds
     integer(I4B), pointer :: igeocalc
-    integer(I4B), pointer :: ihalfcell
+    integer(I4B), pointer :: idbhalfcell
+    integer(I4B), pointer :: idbfullcell
     real(DP), pointer :: dbfact
     real(DP), pointer :: dbfacti
 
@@ -203,7 +204,8 @@ contains
     call mem_allocate(this%igeostressoff, 'IGEOSTRESSOFF', this%origin)
     call mem_allocate(this%istoragec, 'ISTORAGEC', this%origin)
     call mem_allocate(this%iconstantndb, 'ICONSTANTNDB', this%origin)
-    call mem_allocate(this%ihalfcell, 'IHALFCELL', this%origin)
+    call mem_allocate(this%idbhalfcell, 'IDBHALFCELL', this%origin)
+    call mem_allocate(this%idbfullcell, 'IDBFULLCELL', this%origin)
     call mem_allocate(this%dbfact, 'DBFACT', this%origin)
     call mem_allocate(this%dbfacti, 'DBFACTI', this%origin)
     call mem_allocate(this%icellf, 'ICELLF', this%origin)
@@ -218,7 +220,8 @@ contains
     this%igeostressoff = 0
     this%istoragec = 0
     this%iconstantndb = 0
-    this%ihalfcell = 0
+    this%idbhalfcell = 0
+    this%idbfullcell = 0
     this%dbfact = DONE
     this%dbfacti = DONE
     this%icellf = 0
@@ -623,7 +626,7 @@ contains
         this%thick(n) = this%dbfacti * this%thick(n)
         !
         ! -- calculate delay bed cell thickness
-        if (this%ihalfcell == 0) then
+        if (this%idbhalfcell == 0) then
           this%dbdz(idelay) = this%thick(n) / real(this%ndelaycells, DP)
         else
           this%dbdz(idelay) = this%thick(n) / (real(this%ndelaycells, DP) - DHALF)
@@ -729,12 +732,10 @@ contains
                                'AS A CELL FRACTION'
       found = .true.
     ! half cell formulation for delay interbed
-    case ('HALF_CELL')
-      this%ihalfcell = 1
-      this%dbfact = DTWO
-      this%dbfacti = DHALF
-      write(this%iout, fmtopt) 'DELAY INTERBEDS WILL BE SIMULATED USING ' //  &
-                               'A HALF-CELL FORMULATION'
+    case ('DELAY_FULL_CELL')
+      this%idbfullcell = 1
+      write(this%iout, fmtopt) 'HEAD-BASED DELAY INTERBEDS WILL BE ' //  &
+                               'SIMULATED USING A FULL-CELL FORMULATION'
       found = .true.
     ! default case
     case default
@@ -907,7 +908,8 @@ contains
     call mem_deallocate(this%igeostressoff)
     call mem_deallocate(this%istoragec)
     call mem_deallocate(this%iconstantndb)
-    call mem_deallocate(this%ihalfcell)
+    call mem_deallocate(this%idbfullcell)
+    call mem_deallocate(this%idbhalfcell)
     call mem_deallocate(this%dbfact)
     call mem_deallocate(this%dbfacti)
     call mem_deallocate(this%icellf)
@@ -1069,6 +1071,21 @@ contains
         exit
       end if
     end do
+    !
+    ! -- set idbhalfcell
+    if (this%igeocalc == 0) then
+      if (this%idbfullcell == 0) then
+        ! -- use half cell for head-based delay bed if delay_full_cell option not specified
+        this%idbhalfcell = 1
+        this%dbfact = DTWO
+        this%dbfacti = DHALF
+      ! -- use full cell for head-based delay bed if delay_full_cell option specified
+      else
+        this%idbhalfcell = 0
+      end if
+    else
+      this%idbfullcell = 1
+    end if
     !
     ! -- read interbed data
     call  this%ibc_read_packagedata()
@@ -1800,7 +1817,7 @@ contains
     znode = this%znode(ib)
     b = this%thick(ib)
     dz = this%dbdz(idelay)
-    if (this%ihalfcell == 0) then
+    if (this%idbhalfcell == 0) then
         dzz = DHALF * b
         z = znode + dzz
     else
@@ -1927,7 +1944,7 @@ contains
     ! -- calculate factor for the head-based case
     if (this%igeocalc == 0) then
       f = DONE
-      if (this%ihalfcell /= 0) then
+      if (this%idbhalfcell /= 0) then
         if (n == 1) then
           f = DHALF
         end if
@@ -2023,7 +2040,7 @@ contains
               sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay)))
       end if
       if (n == 1 .or. n == this%ndelaycells) then
-        if (this%ihalfcell == 0 .or. n == this%ndelaycells) then
+        if (this%idbhalfcell == 0 .or. n == this%ndelaycells) then
             aii = aii - c3
             r = r - c2 * haq
         else
@@ -2284,7 +2301,7 @@ contains
       node = this%nodelist(ib)
       haq = this%xnew(node)
       area = this%dis%get_area(node)
-      if (this%ihalfcell == 0) then
+      if (this%idbhalfcell == 0) then
         c1 = DTWO * this%kv(ib) / this%dbdz(idelay)
         rhs = -c1 * this%dbh(1, idelay)
       else

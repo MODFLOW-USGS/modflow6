@@ -28,6 +28,7 @@ cvopt = [None, None, None]
 constantcv = [True, True, True]
 ndelaybeds = [0, 2, 2]
 halfcell = [None, None, True]
+fullcell = [None, True, None]
 ndelaycells = [None, 39, 20]
 
 ddir = 'data'
@@ -275,7 +276,7 @@ def build_models():
         # ibc files
         opth = '{}.ibc.obs'.format(name)
         ibc = flopy.mf6.ModflowGwfibc(gwf, ndelaycells=ndelaycells[idx],
-                                      half_cell=halfcell[idx],
+                                      delay_full_cell=fullcell[idx],
                                       storagecoefficient=True,
                                       constant_nodelay_thickness=True,
                                       nibccells=maxibc,
