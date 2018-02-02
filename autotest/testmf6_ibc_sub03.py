@@ -409,7 +409,7 @@ def main():
     return
 
 
-# use python testmf6_ibc03.py --mf2005 mf2005devdbl
+# use python testmf6_ibc_sub03.py --mf2005 mf2005devdbl
 if __name__ == "__main__":
     # print message
     print('standalone run of {}'.format(os.path.basename(__file__)))
