@@ -379,6 +379,14 @@ def eval_comp(sim):
 
 # - No need to change any code below
 def test_mf6model():
+
+    # determine if running on Travis
+    is_travis = 'TRAVIS' in os.environ
+    r_exe = None
+    if not is_travis:
+        if replace_exe is not None:
+            r_exe = replace_exe
+
     # initialize testing framework
     test = testing_framework()
 
@@ -387,9 +395,11 @@ def test_mf6model():
 
     # run the test models
     for idx, dir in enumerate(exdirs):
-        if not travis[idx]:
+        if is_travis and not travis[idx]:
             continue
-        yield test.run_mf6, Simulation(dir, eval_comp, htol=htol[idx])
+        yield test.run_mf6, Simulation(dir, exfunc=eval_comp,
+                                       exe_dict=r_exe,
+                                       htol=htol[idx])
 
     return
 
@@ -403,7 +413,8 @@ def main():
 
     # run the test models
     for idx, dir in enumerate(exdirs):
-        sim = Simulation(dir, eval_comp, exe_dict=replace_exe, htol=htol[idx])
+        sim = Simulation(dir, exfunc=eval_comp,
+                         exe_dict=replace_exe, htol=htol[idx])
         test.run_mf6(sim)
 
     return

@@ -225,6 +225,13 @@ def build_models():
 
 # - No need to change any code below
 def test_mf6model():
+    # determine if running on Travis
+    is_travis = 'TRAVIS' in os.environ
+    r_exe = None
+    if not is_travis:
+        if replace_exe is not None:
+            r_exe = replace_exe
+
     # initialize testing framework
     test = testing_framework()
 
@@ -233,9 +240,9 @@ def test_mf6model():
 
     # run the test models
     for idx, dir in enumerate(exdirs):
-        if not travis[idx]:
+        if is_travis and not travis[idx]:
             continue
-        yield test.run_mf6, Simulation(dir)
+        yield test.run_mf6, Simulation(dir, exe_dict=r_exe)
 
     return
 

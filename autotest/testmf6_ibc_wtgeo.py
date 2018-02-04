@@ -33,7 +33,7 @@ ddir = 'data'
 
 ## run all examples on Travis
 # travis = [False for idx in range(len(exdirs))]
-travis = [True, False]
+travis = [False, False]
 
 mf2005 = [True, False]
 
@@ -507,6 +507,14 @@ def eval_comp(sim):
 
 # - No need to change any code below
 def test_mf6model():
+
+    # determine if running on Travis
+    is_travis = 'TRAVIS' in os.environ
+    r_exe = None
+    if not is_travis:
+        if replace_exe is not None:
+            r_exe = replace_exe
+
     # initialize testing framework
     test = testing_framework()
 
@@ -515,9 +523,11 @@ def test_mf6model():
 
     # run the test models
     for idx, dir in enumerate(exdirs):
-        if not travis[idx]:
+        if is_travis and not travis[idx]:
             continue
-        yield test.run_mf6, Simulation(dir, exfunc=eval_comp, htol=htol[idx],
+        yield test.run_mf6, Simulation(dir, exfunc=eval_comp,
+                                       exe_dict=r_exe,
+                                       htol=htol[idx],
                                        idxsim=idx)
 
     return
