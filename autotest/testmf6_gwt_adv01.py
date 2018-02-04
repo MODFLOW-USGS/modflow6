@@ -176,7 +176,7 @@ def build_models():
                                     fname='{}.sto'.format(gwtname))
 
         # sources
-        sourcerecarray = [['WEL-1, 1, CONCENTRATION']]
+        sourcerecarray = [('WEL-1', 1, 'CONCENTRATION')]
         ssm = flopy.mf6.ModflowGwtssm(gwt, sourcerecarray=sourcerecarray,
                                     fname='{}.ssm'.format(gwtname))
 

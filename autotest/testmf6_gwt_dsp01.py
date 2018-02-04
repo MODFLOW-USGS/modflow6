@@ -101,6 +101,7 @@ def build_models():
 
         # node property flow
         npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False,
+                                      save_specific_discharge=True,
                                       icelltype=laytyp[idx],
                                       k=hk,
                                       k33=hk)
@@ -164,7 +165,8 @@ def build_models():
 
         # advection
         dsp = flopy.mf6.ModflowGwtdsp(gwt, diffc=100.,
-                                    fname='{}.dsp'.format(gwtname))
+                                      alh=0., alv=0., ath=0., atv=0.,
+                                      fname='{}.dsp'.format(gwtname))
 
         # constant concentration
         cncs = {0: [[(0, 0, 0), 1.0]]}
@@ -178,7 +180,7 @@ def build_models():
                                     fname='{}.sto'.format(gwtname))
 
         # sources
-        #sourcerecarray = [['WEL-1, 1, CONCENTRATION']]
+        #sourcerecarray = [('WEL-1', 1, 'CONCENTRATION')]
         #ssm = flopy.mf6.ModflowGwtssm(gwt, sourcerecarray=sourcerecarray,
         #                            fname='{}.ssm'.format(gwtname))
 

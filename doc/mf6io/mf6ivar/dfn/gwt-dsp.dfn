@@ -1,3 +1,14 @@
+# --------------------- gwt dsp options ---------------------
+
+block options
+name xt3d
+type keyword
+shape
+reader urword
+optional true
+longname activate xt3d
+description activate the xt3d method to solve the dispersion term
+
 # --------------------- gwt dsp griddata ---------------------
 
 block griddata

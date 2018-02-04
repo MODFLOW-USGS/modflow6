@@ -26,6 +26,17 @@ module GwtDspModule
     integer(I4B), pointer                            :: idisp      => null()    ! flag indicating mechanical dispersion is active
     integer(I4B), pointer                            :: ixt3d      => null()    ! flag indicating xt3d is active
     type(Xt3dType), pointer                          :: xt3d       => null()    ! xt3d object
+    integer(I4B), pointer                            :: id22       => null()    ! flag indicating d22 is available
+    integer(I4B), pointer                            :: id33       => null()    ! flag indicating d33 is available
+    real(DP), dimension(:), pointer                  :: d11        => null()    ! dispersion coefficient
+    real(DP), dimension(:), pointer                  :: d22        => null()    ! dispersion coefficient
+    real(DP), dimension(:), pointer                  :: d33        => null()    ! dispersion coefficient
+    real(DP), dimension(:), pointer                  :: angle1     => null()    ! rotation angle 1
+    real(DP), dimension(:), pointer                  :: angle2     => null()    ! rotation angle 2
+    real(DP), dimension(:), pointer                  :: angle3     => null()    ! rotation angle 3
+    integer(I4B), pointer                            :: iangle1    => null()    ! flag indicating angle1 is available
+    integer(I4B), pointer                            :: iangle2    => null()    ! flag indicating angle2 is available
+    integer(I4B), pointer                            :: iangle3    => null()    ! flag indicating angle3 is available
     
   contains
   
@@ -33,12 +44,14 @@ module GwtDspModule
     procedure :: dsp_ac
     procedure :: dsp_mc
     procedure :: dsp_ar
+    procedure :: dsp_ad
     procedure :: dsp_fc
     procedure :: dsp_bd
     procedure :: allocate_scalars
     procedure :: allocate_arrays
     procedure, private :: read_options
     procedure, private :: read_data
+    procedure, private :: calcdisp
    
   end type GwtDspType
   
@@ -97,9 +110,14 @@ module GwtDspModule
       &' INPUT READ FROM UNIT ', i0, //)"
 ! ------------------------------------------------------------------------------
     !
+    ! -- Read dispersion options
+    call this%read_options()
+    !
     ! -- xt3d create
     if(this%ixt3d > 0) then
-      call xt3d_cr(this%xt3d, trim(this%origin), this%inunit, this%iout)
+      call xt3d_cr(this%xt3d, trim(this%origin), this%inunit, this%iout,       &
+                   ldispopt=.true.)
+      this%xt3d%ixt3d = this%ixt3d
     endif
     !
     ! -- Return
@@ -149,10 +167,13 @@ module GwtDspModule
     integer(I4B), dimension(:), intent(in) :: iasln
     integer(I4B), dimension(:), intent(in) :: jasln
     ! -- local
+    integer(I4B) :: inewton
 ! ------------------------------------------------------------------------------
     !
+    ! TODO: set inewton
+    inewton = 0
     if(this%ixt3d > 0) call this%xt3d%xt3d_mc(moffset, nodes, ia, ja, iasln,   &
-                                              jasln, 0)
+                                              jasln, inewton)
     !
     ! -- Return
     return
@@ -168,7 +189,7 @@ module GwtDspModule
     ! -- modules
     ! -- dummy
     class(GwtDspType)                       :: this
-    class(DisBaseType), pointer, intent(in) :: dis
+    class(DisBaseType), pointer             :: dis
     integer(I4B), dimension(:), pointer          :: ibound
     real(DP), dimension(:), pointer :: porosity
     ! -- local
@@ -186,9 +207,6 @@ module GwtDspModule
     ! -- Print a message identifying the dispersion package.
     write(this%iout, fmtdsp) this%inunit
     !
-    ! -- Read dispersion options
-    call this%read_options()
-    !
     ! -- Allocate arrays
     call this%allocate_arrays(dis%nodes)
     !
@@ -199,7 +217,42 @@ module GwtDspModule
     return
   end subroutine dsp_ar
 
-  subroutine dsp_fc(this, nodes, amatsln, idxglo)
+  subroutine dsp_ad(this)
+! ******************************************************************************
+! dsp_ad -- Map connections and construct iax, jax, and idxglox
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use TdisModule, only: kstp, kper
+    ! -- dummy
+     class(GwtDspType) :: this
+    ! -- local
+    real(DP), target :: min_satthk
+! ------------------------------------------------------------------------------
+    !
+    ! -- xt3d
+    ! TODO: might consider adding a new mf6 level set pointers method, and
+    ! doing this stuff there instead of in the time step loop.
+    if (kstp * kper == 1) then
+      ! TODO MIN_SATTHK cannot be a local variable here.  it goes out of scope
+      min_satthk = DZERO
+      if(this%ixt3d > 0) call this%xt3d%xt3d_ar(this%dis, this%ibound,         &
+        this%d11, this%id33, this%d33, this%fmi%gwfsat, this%id22, this%d22,   &
+        this%fmi%igwfinwtup, min_satthk, this%fmi%gwficelltype,                &
+        this%iangle1, this%iangle2, this%iangle3,                              &
+        this%angle1, this%angle2, this%angle3)
+    endif
+    !
+    ! -- Fill d11, d22, d33, angle1, angle2, angle3 using specific discharge
+    call this%calcdisp()
+    !
+    ! -- Return
+    return
+  end subroutine dsp_ad
+
+  subroutine dsp_fc(this, kiter, nodes, nja, njasln, amatsln, idxglo, rhs, cnew)
 ! ******************************************************************************
 ! dsp_fc -- Calculate coefficients and fill amat and rhs
 ! ******************************************************************************
@@ -210,9 +263,14 @@ module GwtDspModule
     use GwfNpfModule, only: thksatnm
     ! -- dummy
     class(GwtDspType) :: this
-    integer, intent(in) :: nodes
-    real(DP), dimension(:), intent(inout) :: amatsln
-    integer(I4B), intent(in), dimension(:) :: idxglo
+    integer(I4B) :: kiter
+    integer(I4B),intent(in) :: nodes
+    integer(I4B),intent(in) :: nja
+    integer(I4B),intent(in) :: njasln
+    real(DP),dimension(njasln),intent(inout) :: amatsln
+    integer(I4B),intent(in),dimension(nja) :: idxglo
+    real(DP),intent(inout),dimension(nodes) :: rhs
+    real(DP),intent(inout),dimension(nodes) :: cnew
     ! -- local
     integer(I4B) :: n, m, idiag, ipos
     real(DP) :: clnm, clmn, anm, wt, dstar, dnm
@@ -220,47 +278,51 @@ module GwtDspModule
     real(DP) :: hn, hm, satn, satm, topn, topm, botn, botm, satomega
 ! ------------------------------------------------------------------------------
     !
-    ! -- loop through and calculate dispersion contribution
-    inwtup = this%fmi%igwfinwtup
-    iusg = this%fmi%igwfiusgnrhc
-    satomega = this%fmi%gwfsatomega
-    do n = 1, nodes
-      if(this%ibound(n) == 0) cycle
-      idiag = this%dis%con%ia(n)
-      do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
-        m = this%dis%con%ja(ipos)
-        if(this%ibound(m) == 0) cycle
-        clnm = this%dis%con%cl1(this%dis%con%jas(ipos))
-        clmn = this%dis%con%cl2(this%dis%con%jas(ipos))
-        wt = clmn / (clnm + clmn)
-        ihc = this%dis%con%ihc(this%dis%con%jas(ipos))
-        ibdn = this%fmi%gwfibound(n)
-        ibdm = this%fmi%gwfibound(m)
-        ictn = this%fmi%gwficelltype(n)
-        ictm = this%fmi%gwficelltype(m)
-        hn = this%fmi%gwfhead(n)
-        hm = this%fmi%gwfhead(m)
-        satn = this%fmi%gwfsat(n)
-        satm = this%fmi%gwfsat(m)
-        topn = this%dis%top(n)
-        topm = this%dis%top(m)
-        botn = this%dis%bot(n)
-        botm = this%dis%bot(m)
-        anm = thksatnm(ibdn, ibdm, ictn, ictm, inwtup, ihc, iusg,              &
-                       hn, hm, satn, satm, topn, topm, botn, botm, satomega)
-        dstar = wt * this%porosity(n) * this%diffc(n) + &
-                (DONE - wt) * this%porosity(m) * this%diffc(m)
-        dnm = dstar * anm / (clnm + clmn)
-        amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + dnm
-        amatsln(idxglo(idiag)) = amatsln(idxglo(idiag)) - dnm
+    if(this%ixt3d > 0) then
+      call this%xt3d%xt3d_fc(kiter, nodes, nja, njasln, amatsln, idxglo, rhs,  &
+                             cnew)
+    else
+      inwtup = this%fmi%igwfinwtup
+      iusg = this%fmi%igwfiusgnrhc
+      satomega = this%fmi%gwfsatomega
+      do n = 1, nodes
+        if(this%ibound(n) == 0) cycle
+        idiag = this%dis%con%ia(n)
+        do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
+          m = this%dis%con%ja(ipos)
+          if(this%ibound(m) == 0) cycle
+          clnm = this%dis%con%cl1(this%dis%con%jas(ipos))
+          clmn = this%dis%con%cl2(this%dis%con%jas(ipos))
+          wt = clmn / (clnm + clmn)
+          ihc = this%dis%con%ihc(this%dis%con%jas(ipos))
+          ibdn = this%fmi%gwfibound(n)
+          ibdm = this%fmi%gwfibound(m)
+          ictn = this%fmi%gwficelltype(n)
+          ictm = this%fmi%gwficelltype(m)
+          hn = this%fmi%gwfhead(n)
+          hm = this%fmi%gwfhead(m)
+          satn = this%fmi%gwfsat(n)
+          satm = this%fmi%gwfsat(m)
+          topn = this%dis%top(n)
+          topm = this%dis%top(m)
+          botn = this%dis%bot(n)
+          botm = this%dis%bot(m)
+          anm = thksatnm(ibdn, ibdm, ictn, ictm, inwtup, ihc, iusg,              &
+                         hn, hm, satn, satm, topn, topm, botn, botm, satomega)
+          dstar = wt * this%porosity(n) * this%diffc(n) + &
+                  (DONE - wt) * this%porosity(m) * this%diffc(m)
+          dnm = dstar * anm / (clnm + clmn)
+          amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + dnm
+          amatsln(idxglo(idiag)) = amatsln(idxglo(idiag)) - dnm
+        enddo
       enddo
-    enddo
+    endif
     !
     ! -- Return
     return
   end subroutine dsp_fc
   
-  subroutine dsp_bd(this, cnew, flowja)
+  subroutine dsp_bd(this, nodes, nja, cnew, flowja)
 ! ******************************************************************************
 ! dsp_bd -- Budget
 ! ******************************************************************************
@@ -271,51 +333,55 @@ module GwtDspModule
     use GwfNpfModule, only: thksatnm
     ! -- dummy
     class(GwtDspType) :: this
-    real(DP), intent(in), dimension(:) :: cnew
+    integer(I4B), intent(inout) :: nodes
+    integer(I4B), intent(inout) :: nja
+    real(DP), intent(inout), dimension(:) :: cnew
     real(DP), intent(inout), dimension(:) :: flowja
     ! -- local
-    integer(I4B) :: nodes
     integer(I4B) :: n, m, idiag, ipos
     real(DP) :: clnm, clmn, anm, wt, dstar, dnm
     integer(I4B) :: ihc, ibdn, ibdm, ictn, ictm, inwtup, iusg
     real(DP) :: hn, hm, satn, satm, topn, topm, botn, botm, satomega
 ! ------------------------------------------------------------------------------
     !
-    ! -- Calculate advection and add to flowja
-    nodes = size(cnew)
-    inwtup = this%fmi%igwfinwtup
-    iusg = this%fmi%igwfiusgnrhc
-    satomega = this%fmi%gwfsatomega
-    do n = 1, nodes
-      if(this%ibound(n) == 0) cycle
-      idiag = this%dis%con%ia(n)
-      do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
-        m = this%dis%con%ja(ipos)
-        if(this%ibound(m) == 0) cycle
-        clnm = this%dis%con%cl1(this%dis%con%jas(ipos))
-        clmn = this%dis%con%cl2(this%dis%con%jas(ipos))
-        wt = clmn / (clnm + clmn)
-        ihc = this%dis%con%ihc(this%dis%con%jas(ipos))
-        ibdn = this%fmi%gwfibound(n)
-        ibdm = this%fmi%gwfibound(m)
-        ictn = this%fmi%gwficelltype(n)
-        ictm = this%fmi%gwficelltype(m)
-        hn = this%fmi%gwfhead(n)
-        hm = this%fmi%gwfhead(m)
-        satn = this%fmi%gwfsat(n)
-        satm = this%fmi%gwfsat(m)
-        topn = this%dis%top(n)
-        topm = this%dis%top(m)
-        botn = this%dis%bot(n)
-        botm = this%dis%bot(m)
-        anm = thksatnm(ibdn, ibdm, ictn, ictm, inwtup, ihc, iusg,              &
-                       hn, hm, satn, satm, topn, topm, botn, botm, satomega)
-        dstar = wt * this%porosity(n) * this%diffc(n) + &
-                (DONE - wt) * this%porosity(m) * this%diffc(m)
-        dnm = dstar * anm / (clnm + clmn)
-        flowja(ipos) = flowja(ipos) + dnm * (cnew(m) - cnew(n))
+    ! -- Calculate dispersion and add to flowja
+    if(this%ixt3d > 0) then
+      call this%xt3d%xt3d_flowja(nodes, nja, cnew, flowja)
+    else
+      inwtup = this%fmi%igwfinwtup
+      iusg = this%fmi%igwfiusgnrhc
+      satomega = this%fmi%gwfsatomega
+      do n = 1, nodes
+        if(this%ibound(n) == 0) cycle
+        idiag = this%dis%con%ia(n)
+        do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
+          m = this%dis%con%ja(ipos)
+          if(this%ibound(m) == 0) cycle
+          clnm = this%dis%con%cl1(this%dis%con%jas(ipos))
+          clmn = this%dis%con%cl2(this%dis%con%jas(ipos))
+          wt = clmn / (clnm + clmn)
+          ihc = this%dis%con%ihc(this%dis%con%jas(ipos))
+          ibdn = this%fmi%gwfibound(n)
+          ibdm = this%fmi%gwfibound(m)
+          ictn = this%fmi%gwficelltype(n)
+          ictm = this%fmi%gwficelltype(m)
+          hn = this%fmi%gwfhead(n)
+          hm = this%fmi%gwfhead(m)
+          satn = this%fmi%gwfsat(n)
+          satm = this%fmi%gwfsat(m)
+          topn = this%dis%top(n)
+          topm = this%dis%top(m)
+          botn = this%dis%bot(n)
+          botm = this%dis%bot(m)
+          anm = thksatnm(ibdn, ibdm, ictn, ictm, inwtup, ihc, iusg,              &
+                         hn, hm, satn, satm, topn, topm, botn, botm, satomega)
+          dstar = wt * this%porosity(n) * this%diffc(n) + &
+                  (DONE - wt) * this%porosity(m) * this%diffc(m)
+          dnm = dstar * anm / (clnm + clmn)
+          flowja(ipos) = flowja(ipos) + dnm * (cnew(m) - cnew(n))
+        enddo
       enddo
-    enddo
+    endif
     !
     ! -- Return
     return
@@ -343,11 +409,21 @@ module GwtDspModule
     call mem_allocate(this%idiffc, 'IDIFFC', this%origin)
     call mem_allocate(this%idisp, 'IDISP', this%origin)
     call mem_allocate(this%ixt3d, 'IXT3D', this%origin)
+    call mem_allocate(this%id22, 'ID22', this%origin)
+    call mem_allocate(this%id33, 'ID33', this%origin)
+    call mem_allocate(this%iangle1, 'IANGLE1', this%origin)
+    call mem_allocate(this%iangle2, 'IANGLE2', this%origin)
+    call mem_allocate(this%iangle3, 'IANGLE3', this%origin)
     !
     ! -- Initialize
     this%idiffc = 0
     this%idisp = 0
-    this%ixt3d = 1
+    this%ixt3d = 0
+    this%id22 = 1
+    this%id33 = 1
+    this%iangle1 = 1
+    this%iangle2 = 1
+    this%iangle3 = 1
     !
     ! -- Return
     return
@@ -375,6 +451,12 @@ module GwtDspModule
     call mem_allocate(this%alv, 0, 'ALV', trim(this%origin))
     call mem_allocate(this%ath, 0, 'ATH', trim(this%origin))
     call mem_allocate(this%atv, 0, 'ATV', trim(this%origin))
+    call mem_allocate(this%d11, nodes, 'D11', trim(this%origin))
+    call mem_allocate(this%d22, nodes, 'D22', trim(this%origin))
+    call mem_allocate(this%d33, nodes, 'D33', trim(this%origin))
+    call mem_allocate(this%angle1, nodes, 'ANGLE1', trim(this%origin))
+    call mem_allocate(this%angle2, nodes, 'ANGLE2', trim(this%origin))
+    call mem_allocate(this%angle3, nodes, 'ANGLE3', trim(this%origin))
     !
     ! -- Return
     return
@@ -410,6 +492,10 @@ module GwtDspModule
         if (endOfBlock) exit
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
+          case ('XT3D')
+            this%ixt3d = 1
+            write(this%iout, '(4x,a)')                                         &
+                             'XT3D FORMULATION IS SELECTED.'
           case default
             write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN DISPERSION OPTION: ',  &
                                      trim(keyword)
@@ -537,5 +623,78 @@ module GwtDspModule
     return
   end subroutine read_data
  
+  subroutine calcdisp(this)
+! ******************************************************************************
+! calcdisp -- Calculate dispersion coefficients
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwtDspType) :: this
+    ! -- local
+    integer(I4B) :: nodes, n
+    real(DP) :: q, qx, qy, qz
+    real(DP) :: alh, alv, ath, atv, a
+    real(DP) :: dstar
+! ------------------------------------------------------------------------------
+    !
+    ! -- loop through and calculate dispersion coefficients and angles
+    nodes = size(this%d11)
+    do n = 1, nodes
+      !
+      ! -- initialize
+      this%d11(n) = DZERO
+      this%d22(n) = DZERO
+      this%d33(n) = DZERO
+      this%angle1(n) = DZERO
+      this%angle2(n) = DZERO
+      this%angle3(n) = DZERO
+      if(this%ibound(n) == 0) cycle
+      !
+      ! -- specific discharge
+      qx = this%fmi%gwfspdis(1, n)
+      qy = this%fmi%gwfspdis(2, n)
+      qz = this%fmi%gwfspdis(3, n)
+      q = qx ** 2 + qy ** 2 + qz ** 2
+      if (q > DZERO) q = sqrt(q)
+      !
+      ! -- dispersion coefficients
+      alh = this%alh(n)
+      ath = this%ath(n)
+      dstar = this%diffc(n) * this%porosity(n)
+      this%d11(n) = alh * q + dstar
+      this%d22(n) = ath * q + dstar
+      this%d33(n) = ath * q + dstar
+      !
+      ! -- angles of rotation from model coordinates to direction of velocity
+      ! qx / q = cos(a1) * cos(a2)
+      ! qy / q = sin(a1) * cos(a2)
+      ! qz / q = sin(a2)
+      !
+      ! -- angle3 is zero
+      this%angle3(n) = DZERO
+      !
+      ! -- angle2
+      a = DZERO
+      if (q > DZERO) a = qz / q
+      this%angle2(n) = asin(a)
+      !
+      ! -- angle1
+      a = q * cos(this%angle2(n))
+      if (a /= DZERO) then
+        a = qx / a
+      else
+        a = DZERO
+      endif
+      this%angle1(n) = acos(a)
+      !
+    enddo
+    !
+    ! -- Return
+    return
+  end subroutine calcdisp
+  
 end module GwtDspModule
   

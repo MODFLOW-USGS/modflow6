@@ -290,7 +290,7 @@ module GwtModule
     !
     ! -- Define packages and utility objects
     call this%dis%dis_df()
-    call this%dsp%dsp_df()
+    if (this%indsp > 0) call this%dsp%dsp_df()
     call this%ssm%ssm_df(this%ncomp)
     call this%oc%oc_df()
     call this%budget%budget_df(niunit, 'MASS', 'M')
@@ -496,7 +496,8 @@ module GwtModule
     !
     ! -- Advance
     !if(this%insto > 0) call this%sto%sto_ad()
-    do ip=1,this%bndlist%Count()
+    if(this%indsp > 0) call this%dsp%dsp_ad()
+    do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_ad()
       if (isimcheck > 0) then
@@ -569,7 +570,8 @@ module GwtModule
       call this%adv%adv_fc(this%dis%nodes, amatsln, this%idxglo)
     endif
     if(this%indsp > 0) then
-      call this%dsp%dsp_fc(this%dis%nodes, amatsln, this%idxglo)
+      call this%dsp%dsp_fc(kiter, this%dis%nodes, this%nja, njasln, amatsln,   &
+                           this%idxglo, this%rhs, this%x)
     endif
     if(this%inssm > 0) then
       call this%ssm%ssm_fc(icomp, amatsln, this%idxglo, this%rhs)
@@ -637,7 +639,8 @@ module GwtModule
       this%flowja(i) = DZERO
     enddo
     if(this%inadv > 0) call this%adv%adv_bd(this%x, this%flowja)
-    if(this%indsp > 0) call this%dsp%dsp_bd(this%x, this%flowja)
+    if(this%indsp > 0) call this%dsp%dsp_bd(this%dis%nodes, this%nja, this%x,  &
+                                            this%flowja)
     !
     ! -- Budget routines (start by resetting)
     call this%budget%reset()
