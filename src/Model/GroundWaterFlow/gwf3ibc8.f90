@@ -54,6 +54,7 @@ module IbcModule
     real(DP), dimension(:), pointer :: ci          => null()   !compression index
     real(DP), dimension(:), pointer :: rci         => null()   !recompression
     real(DP), dimension(:), pointer :: gs          => null()   !geostatic stress
+    real(DP), dimension(:), pointer :: esc          => null()   !effective stress for a cell
     real(DP), dimension(:), pointer :: es          => null()   !effective stress
     real(DP), dimension(:), pointer :: es0         => null()   !last effective stress
     real(DP), dimension(:), pointer :: pcs         => null()   !preconsolidation stress
@@ -262,7 +263,7 @@ contains
     !character (len=LENPACKAGENAME) :: text
     character(len=LINELENGTH) :: msg
     !integer(I4B) :: imover
-    integer(I4B) :: i,n
+    integer(I4B) :: i, n
     real(DP) :: es, pcs, rho1, rho2, tled
     real(DP) :: delt_sto, es0, strain
     real(DP) :: top, bot, thk_node, thick, rrate, ratein,rateout
@@ -279,6 +280,7 @@ contains
     !real(DP) :: qtomvr
     !real(DP) :: ratin, ratout, rrate
     !integer(I4B) :: ibdlbl, naux
+    integer(I4B) :: ibc
     ! -- for observations
     integer(I4B) :: iprobslocal
     ! -- formats
@@ -294,83 +296,86 @@ contains
     ratein = DZERO
     rateout= DZERO
 
-    if(this%gwfiss.ne.0) then
+    ibc = 1
+    if(this%gwfiss /= 0) then
         call model_budget%addentry(ratein, rateout, delt, this%text,            &
                                isuppress_output, this%text)
-        return
+        ibc = 0
     end if
 
     tled = DONE
 
-    do i = 1, this%nbound
-      n = this%nodelist(i)
-      area = this%dis%get_area(n)
-      !
-      ! -- skip inactive and constant head cells
-      if (this%ibound(n) < 1) cycle
-      !
-      ! -- no delay interbeds
-      if (this%idelay(i) == 0) then
+    if (ibc == 1) then
+      do i = 1, this%nbound
+        n = this%nodelist(i)
+        area = this%dis%get_area(n)
         !
-        ! -- calculate ibc rho1 and rho2
-        call this%calc_nodelay_gwf(i, rho1, rho2, rhs, tled)
-        bot = this%dis%bot(n)
-        top = this%dis%top(n)
-        thk_node = top - bot
-        es = this%es(i)
-        pcs = this%pcs(i)
-        es0 = this%es0(i)
-        ! -- calculate compaction
-        if (this%igeocalc == 0) then
+        ! -- skip inactive and constant head cells
+        if (this%ibound(n) < 1) cycle
+        !
+        ! -- no delay interbeds
+        if (this%idelay(i) == 0) then
+          !
+          ! -- calculate ibc rho1 and rho2
+          call this%calc_nodelay_gwf(i, rho1, rho2, rhs, tled)
+          bot = this%dis%bot(n)
+          top = this%dis%top(n)
+          thk_node = top - bot
+          es = this%es(i)
+          pcs = this%pcs(i)
+          es0 = this%es0(i)
+          ! -- calculate compaction
+          if (this%igeocalc == 0) then
+            h = this%xnew(n)
+            comp = rho2 * (pcs - h) + rho1 * (es0 - pcs)
+          else
+            comp = -pcs * (rho2 - rho1) - (rho1 * es0) + (rho2 * es)
+          end if
+          delt_sto = comp * area
+          !!
+          !write(1051, '(i10,8(1x,g20.7))') i, this%gs(n), es, es0, &
+          !                                 pcs, rho1, rho2, delt_sto, comp
+          !
+          ! -- update compaction and total compaction
+          this%comp(i) = comp
+          this%totalcomp(i) = this%totalcomp(i) + comp
+          !
+          ! - calculate strain and change in interbed void ratio and thickness
+          strain = DZERO
+          thick = this%thick(i)
+          if (thick > DZERO) strain = -comp / thick
+          if (this%iconstantndb == 0) then
+            this%void(i) = strain + this%void(i) * (strain + DONE)
+            this%thick(i) = thick * (strain + DONE)
+          end if
+          !
+          !write(*,*) n,trim(msg),delt_sto
+          !call this%dis%noder_to_string(n,msg)
+          !write(*,*) n,trim(msg),this%rhs(i),this%hcof(i),rho1,rho2,rhs
+          !
+          ! -- water budget terms
+          if (delt_sto >= DZERO) then
+              ratein = ratein + delt_sto / delt
+          else
+              rateout = rateout + delt_sto / delt
+          end if
+          !
+          ! -- delay interbeds
+        else
           h = this%xnew(n)
-          comp = rho2 * (pcs - h) + rho1 * (es0 - pcs)
-        else
-          comp = -pcs * (rho2 - rho1) - (rho1 * es0) + (rho2 * es)
+          call this%calc_delay_dstor(i, rhs)
+          dsto = rhs / delt
+          delt_sto = rhs * area * this%rnb(i) / delt
+          !
+          ! -- calculate sum of compaction in delay interbed
+          call this%calc_delay_comp(i)
         end if
-        delt_sto = comp * area
-        !!
-        !write(1051, '(i10,8(1x,g20.7))') i, this%gs(n), es, es0, &
-        !                                 pcs, rho1, rho2, delt_sto, comp
+        this%gwflow(i) = delt_sto
         !
-        ! -- update compaction and total compaction
-        this%comp(i) = comp
-        this%totalcomp(i) = this%totalcomp(i) + comp
-        !
-        ! - calculate strain and change in interbed void ratio and thickness
-        strain = DZERO
-        thick = this%thick(i)
-        if (thick > DZERO) strain = -comp / thick
-        if (this%iconstantndb == 0) then
-          this%void(i) = strain + this%void(i) * (strain + DONE)
-          this%thick(i) = thick * (strain + DONE)
-        end if
-        !
-        !write(*,*) n,trim(msg),delt_sto
-        !call this%dis%noder_to_string(n,msg)
-        !write(*,*) n,trim(msg),this%rhs(i),this%hcof(i),rho1,rho2,rhs
-        !
-        ! -- water budget terms
-        if (delt_sto >= DZERO) then
-            ratein = ratein + delt_sto / delt
-        else
-            rateout = rateout + delt_sto / delt
-        end if
-        !
-        ! -- delay interbeds
-      else
-        h = this%xnew(n)
-        call this%calc_delay_dstor(i, rhs)
-        dsto = rhs / delt
-        delt_sto = rhs * area * this%rnb(i) / delt
-        !
-        ! -- calculate sum of compaction in delay interbed
-        call this%calc_delay_comp(i)
-      end if
-      this%gwflow(i) = delt_sto
-      !
-      !call model_budget%addentry(ratein, rateout, delt, this%text,                 &
-      !                           isuppress_output,this%text)
-    end do
+        !call model_budget%addentry(ratein, rateout, delt, this%text,                 &
+        !                           isuppress_output,this%text)
+      end do
+    end if
     !
     ! -- For continuous observations, save simulated values.
     if (this%obs%npakobs > 0 .and. iprobs > 0) then
@@ -767,6 +772,7 @@ contains
     call mem_allocate(this%unodelist, this%nbound, 'unodelist', trim(this%origin))
     call mem_allocate(this%nodelist, this%nbound, 'nodelist', trim(this%origin))
     call mem_allocate(this%gs, this%dis%nodes, 'gs', trim(this%origin))
+    call mem_allocate(this%esc, this%dis%nodes, 'esc', trim(this%origin))
     call mem_allocate(this%es, this%nbound, 'es', trim(this%origin))
     call mem_allocate(this%es0, this%nbound, 'es0', trim(this%origin))
     call mem_allocate(this%pcs, this%nbound, 'pcs', trim(this%origin))
@@ -823,6 +829,7 @@ contains
     ! -- initialize variables that are not specified by user
     do n = 1, this%dis%nodes
       this%gs(n) = DZERO
+      this%esc(n) = DZERO
     end do
     do n = 1, this%nbound
       this%totalcomp(n) = DZERO
@@ -859,6 +866,7 @@ contains
     call mem_deallocate(this%ci)
     call mem_deallocate(this%rci)
     call mem_deallocate(this%gs)
+    call mem_deallocate(this%esc)
     call mem_deallocate(this%es)
     call mem_deallocate(this%es0)
     call mem_deallocate(this%pcs)
@@ -1088,7 +1096,7 @@ contains
     end if
     !
     ! -- read interbed data
-    call  this%ibc_read_packagedata()
+    call this%ibc_read_packagedata()
 
 
     !
@@ -1159,6 +1167,8 @@ contains
     class(IbcType) :: this
     integer(I4B) :: i,n,ii,m,temp, iis
     real(DP) :: gs, top, bot, va_scale, x, gs_conn, area_n, area_conn
+    real(DP) :: es
+    real(DP) :: hs
     real(DP) :: hwva
     character(len=LINELENGTH) :: errmsg, msg1,msg2
 
@@ -1167,7 +1177,7 @@ contains
     ! -- calculate geostatic stress if necessary
     if (this%igeocalc /= 0) then
       do n = 1, this%dis%nodes
-        ! -- calc gln for this node
+        ! -- calc geostatic stress for this node
         bot = this%dis%bot(n)
         top = this%dis%top(n)
         x = this%xnew(n)
@@ -1211,6 +1221,17 @@ contains
         end do
         !write (*,*) n, gs
         this%gs(n) = gs
+      end do
+      ! -- calculate effective stress for a cell
+      do n = 1, this%dis%nodes
+        bot = this%dis%bot(n)
+        x = this%xnew(n)
+        hs = DZERO
+        if (x > bot) then
+          hs = x - bot
+        end if
+        es = this%gs(n) - hs
+        this%esc(n) = es
       end do
    end if
    !
@@ -1525,6 +1546,7 @@ contains
               if (this%igeocalc == 0) then
                 this%dbh(j, idelay) = h
               else
+                this%dbh(j, idelay) = h
               end if
             end do
           end if
@@ -1593,20 +1615,27 @@ contains
     if (this%nbound == 0) then
       ibc = 0
     end if
+!
 ! -- Return if steady state
     if (this%gwfiss /= 0) then
       ibc = 0
     end if
-
+!
+! -- update geostatic load calculation
+    call this%calc_aqgeo_stress()
+    call this%calc_aqznode()
+    call this%calc_aqeff_stress()
+!
+! -- calculate inverse time
     tled = DONE / delt
 !
 ! -- only make calculations if ibc = 1
     if (ibc == 1) then
-      !
-      ! -- update geostatic load calculation
-      call this%calc_aqgeo_stress()
-      call this%calc_aqznode()
-      call this%calc_aqeff_stress()
+      
+      !! -- update geostatic load calculation
+      !call this%calc_aqgeo_stress()
+      !call this%calc_aqznode()
+      !call this%calc_aqeff_stress()
 
       if (this%first_time) then
         do i = 1, this%nbound
@@ -2369,6 +2398,16 @@ contains
     this%obs%obsData(indx)%ProcessIdPtr => ibc_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
+    !    for geostatic-stress-cell observation type.
+    call this%obs%StoreObsType('gstress-cell', .false., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => ibc_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for effective-stress-cell observation type.
+    call this%obs%StoreObsType('estress-cell', .false., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => ibc_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
     !    for delay-head observation type.
     call this%obs%StoreObsType('delay-head', .false., indx)
     this%obs%obsData(indx)%ProcessIdPtr => ibc_process_obsID
@@ -2416,6 +2455,10 @@ contains
               v = this%totalcomp(n)
             case ('THICKNESS')
               v = this%thick(n)
+            case ('GSTRESS-CELL')
+              v = this%gs(n)
+            case ('ESTRESS-CELL')
+              v = this%esc(n)
             case ('DELAY-HEAD')
               if (n > this%ndelaycells) then
                 r = real(n, DP) / real(this%ndelaycells, DP)
@@ -2604,6 +2647,14 @@ contains
             obsrv%indxbnds(n) = j
           endif
         enddo
+      else if (obsrv%ObsTypeId == 'GSTRESS-CELL' .or. &
+               obsrv%ObsTypeId == 'ESTRESS-CELL') then
+        jfound = .true.
+        obsrv%BndFound = .true.
+        obsrv%CurrentTimeStepEndValue = DZERO
+        call ExpandArray(obsrv%indxbnds)
+        n = size(obsrv%indxbnds)
+        obsrv%indxbnds(n) = obsrv%NodeNumber
       else
         ! -- Observation location is a single node number
         jfound = .false.

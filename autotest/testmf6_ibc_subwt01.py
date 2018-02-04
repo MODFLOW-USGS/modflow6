@@ -20,7 +20,7 @@ except:
 
 from simulation import Simulation
 
-ex = ['ibc01a', 'ibc01b']
+ex = ['ibcsubwt01a', 'ibcsubwt01b']
 cvopt = [None, 'dewatered']
 constantcv = [True, False]
 exdirs = []

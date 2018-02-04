@@ -19,7 +19,7 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['ibc02a', 'ibc02b', 'ibc02c', 'ibc02d', 'ibc02e']
+ex = ['ibcsub02a', 'ibcsub02b', 'ibcsub02c', 'ibcsub02d', 'ibcsub02e']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
