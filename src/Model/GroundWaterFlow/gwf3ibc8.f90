@@ -830,6 +830,9 @@ contains
     do n = 1, this%dis%nodes
       this%gs(n) = DZERO
       this%esc(n) = DZERO
+      if (this%igeostressoff == 1) then
+        this%sig0(n) = DZERO
+      end if
     end do
     do n = 1, this%nbound
       this%totalcomp(n) = DZERO
@@ -1599,7 +1602,9 @@ contains
     implicit none
     class(IbcType) :: this
     integer(I4B) :: i, n
+    integer(I4B) :: j
     integer(I4B) :: ibc
+    integer(I4B) :: idelay
     real(DP) :: tled, top, bot, x, thk_fac, sto_fac
     real(DP) :: thk_node, thk_ibs, demon, rho1, rho2
     real(DP) :: pcs, area, fact, rhs
@@ -1656,8 +1661,20 @@ contains
             end if
           end if
           this%pcs(i) = pcs
-          bot = this%dis%bot(n)
+          ! -- fill delay bed pcs          
+          idelay = this%idelay(i)
+          if (idelay > 0) then
+            do j = 1, this%ndelaycells
+              if (this%igeocalc == 0) then
+              else
+                this%dbpcs(j, idelay) = this%pcs(i)
+              end if
+              this%dbes0(j, idelay) = this%es(i)
+            end do            
+          end if
+          
           ! scale cr and cc
+          bot = this%dis%bot(n)
           if (this%istoragec == 1) then
             if (this%igeocalc == 0) then
               fact = DONE
@@ -1817,7 +1834,7 @@ contains
       end do
     end if
     !
-    ! -- return
+    ! -- return%
     return
   end subroutine calc_delay_interbed
 
@@ -2408,6 +2425,16 @@ contains
     this%obs%obsData(indx)%ProcessIdPtr => ibc_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
+    !    for effective-stress-cell observation type.
+    call this%obs%StoreObsType('preconstress-cell', .false., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => ibc_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for effective-stress-cell observation type.
+    call this%obs%StoreObsType('preconstress', .false., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => ibc_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
     !    for delay-head observation type.
     call this%obs%StoreObsType('delay-head', .false., indx)
     this%obs%obsData(indx)%ProcessIdPtr => ibc_process_obsID
@@ -2459,6 +2486,16 @@ contains
               v = this%gs(n)
             case ('ESTRESS-CELL')
               v = this%esc(n)
+            case ('PRECONSTRESS')
+               if (n > this%ndelaycells) then
+                r = real(n, DP) / real(this%ndelaycells, DP)
+                idelay = int(floor(r)) + 1
+                ncol = mod(n, this%ndelaycells)
+              else
+                idelay = 1
+                ncol = n
+              end if
+              v = this%dbpcs(ncol, idelay)
             case ('DELAY-HEAD')
               if (n > this%ndelaycells) then
                 r = real(n, DP) / real(this%ndelaycells, DP)
@@ -2614,8 +2651,11 @@ contains
     class(IbcType), intent(inout) :: this
     ! -- local
     integer(I4B) :: i, j, n
+    integer(I4B) :: n2
+    integer(I4B) :: idelay
     class(ObserveType), pointer :: obsrv => null()
     character(len=LENBOUNDNAME) :: bname
+    character(len=200) :: ermsg
     logical :: jfound
     !
     if (.not. this%bnd_obs_supported()) return
@@ -2655,6 +2695,22 @@ contains
         call ExpandArray(obsrv%indxbnds)
         n = size(obsrv%indxbnds)
         obsrv%indxbnds(n) = obsrv%NodeNumber
+      else if (obsrv%ObsTypeId == 'PRECONSTRESS') then
+        n = obsrv%NodeNumber
+        idelay = this%idelay(n)
+        j = (idelay - 1) * this%ndelaycells + 1
+        n2 = obsrv%NodeNumber2
+        if (n2 < 1 .or. n2 > this%ndelaycells) then
+          write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
+            'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
+            ' interbed cell must be > 0 and <=', this%ndelaycells, &
+            '(specified value is ', n2, ')'
+          call store_error(ermsg)
+        else
+          j = (idelay - 1) * this%ndelaycells + n2
+        end if
+        call ExpandArray(obsrv%indxbnds)
+        obsrv%indxbnds(1) = j
       else
         ! -- Observation location is a single node number
         jfound = .false.
@@ -2706,13 +2762,18 @@ contains
     !    boundary name--deal with it.
     icol = 1
     ! -- get reach number or boundary name
-    !call extract_idnum_or_bndname(strng, icol, istart, istop, nn1, bndname)
-    nn1 = dis%noder_from_string(icol, istart, istop, inunitobs, &
-                                iout, strng, flag_string)
+    if (obsrv%ObsTypeId=='DELAY-HEAD' .or. & 
+        obsrv%ObsTypeId=='PRECONSTRESS') then
+      call extract_idnum_or_bndname(strng, icol, istart, istop, nn1, bndname)
+    else
+      nn1 = dis%noder_from_string(icol, istart, istop, inunitobs, &
+                                  iout, strng, flag_string)
+    end if
     if (nn1 == NAMEDBOUNDFLAG) then
       obsrv%FeatureName = bndname
     else
-      if (obsrv%ObsTypeId=='DELAY-HEAD') then
+      if (obsrv%ObsTypeId=='DELAY-HEAD' .or. &
+          obsrv%ObsTypeId=='PRECONSTRESS') then
         call extract_idnum_or_bndname(strng, icol, istart, istop, nn2, bndname)
         if (nn2 == NAMEDBOUNDFLAG) then
           obsrv%FeatureName = bndname

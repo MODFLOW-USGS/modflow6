@@ -20,13 +20,14 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['ibcsub01a']
+ex = ['ibcsub01a', 'ibcsub01b']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
 ddir = 'data'
 
-
+fullcell = [None, True]
+ndcell = [10, 21]
 
 # run all examples on Travis
 # travis = [True for idx in range(len(exdirs))]
@@ -36,6 +37,7 @@ travis = [False for idx in range(len(exdirs))]
 
 # set replace_exe to None to use default executable
 replace_exe = {'mf2005': 'mf2005devdbl'}
+
 
 def build_models():
     nlay, nrow, ncol = 1, 1, 3
@@ -48,6 +50,7 @@ def build_models():
     top = 0.
     botm = [-100.]
     strt = 0.
+    strt6 = 1.
     hnoflo = 1e30
     hdry = -1e30
     hk = 1e6
@@ -154,7 +157,8 @@ def build_models():
 
         # ibc files
         opth = '{}.ibc.obs'.format(name)
-        ibc = flopy.mf6.ModflowGwfibc(gwf, ndelaycells=19,
+        ibc = flopy.mf6.ModflowGwfibc(gwf, ndelaycells=ndcell[idx],
+                                      delay_full_cell=fullcell[idx],
                                       storagecoefficient=True,
                                       obs_filerecord=opth,
                                       nibccells=1,
@@ -209,6 +213,7 @@ def build_models():
 
     return
 
+
 def eval_sub(sim):
     print('evaluating subsidence...')
 
@@ -220,7 +225,8 @@ def eval_sub(sim):
         assert False, 'could not load data from "{}"'.format(fpth)
 
     # MODFLOW-2005 total compaction results
-    fpth = os.path.join(sim.simpath, 'mf2005', 'ibc04a.total_comp.hds')
+    fpth = os.path.join(sim.simpath, 'mf2005',
+                        '{}.total_comp.hds'.format(ex[sim.idxsim]))
     try:
         sobj = flopy.utils.HeadFile(fpth, text='LAYER COMPACTION')
         tc0 = sobj.get_ts((0, 0, 1))
@@ -246,7 +252,6 @@ def eval_sub(sim):
 
 # - No need to change any code below
 def test_mf6model():
-
     # determine if running on Travis
     is_travis = 'TRAVIS' in os.environ
     r_exe = None
@@ -265,7 +270,7 @@ def test_mf6model():
         if is_travis and not travis[idx]:
             continue
         yield test.run_mf6, Simulation(dir, exfunc=eval_sub,
-                                       exe_dict=r_exe)
+                                       exe_dict=r_exe, idxsim=idx)
 
     return
 
@@ -278,8 +283,9 @@ def main():
     build_models()
 
     # run the test models
-    for dir in exdirs:
-        sim = Simulation(dir, exfunc=eval_sub, exe_dict=replace_exe)
+    for idx, dir in enumerate(exdirs):
+        sim = Simulation(dir, exfunc=eval_sub, exe_dict=replace_exe,
+                         idxsim=idx)
         test.run_mf6(sim)
     return
 
