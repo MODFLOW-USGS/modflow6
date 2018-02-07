@@ -1963,6 +1963,7 @@ contains
         !
       endif
       do j = 1, this%mawwells(n)%ngwfnodes
+        if (this%iboundpak(n) == 0) cycle
         igwfnode = this%mawwells(n)%gwfnodes(j)
         call this%maw_calculate_saturation(n, j, igwfnode, sat)
         cmaw = this%mawwells(n)%satcond(j) * sat
@@ -2094,6 +2095,7 @@ contains
         end if
       end if
       do j = 1, this%mawwells(n)%ngwfnodes
+        if (this%iboundpak(n) == 0) cycle
         igwfnode = this%mawwells(n)%gwfnodes(j)
         hgwf = this%xnew(igwfnode)
         ! -- calculate upstream weighted conductance
@@ -3953,7 +3955,11 @@ contains
           !
           ! -- set bound, hcof, and rhs components
           call this%maw_calculate_saturation(n, j, node, sat)
-          cmaw = this%mawwells(n)%satcond(j) * sat
+          if (this%iboundpak(n) == 0) then
+            cmaw = DZERO
+          else
+            cmaw = this%mawwells(n)%satcond(j) * sat
+          endif
           this%mawwells(n)%simcond(j) = cmaw
 
           this%bound(2,ibnd) = cmaw
