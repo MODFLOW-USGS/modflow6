@@ -9,6 +9,7 @@ module GwfModule
   use GwfIcModule,                 only: GwfIcType
   use GwfNpfModule,                only: GwfNpfType
   use Xt3dModule,                  only: Xt3dType
+  use VKDModule,                   only: VKDType
   use GwfHfbModule,                only: GwfHfbType
   use GwfStoModule,                only: GwfStoType
   use GwfMvrModule,                only: GwfMvrType
@@ -33,6 +34,7 @@ module GwfModule
     type(GwfIcType),                pointer :: ic      => null()                ! initial conditions package
     type(GwfNpfType),               pointer :: npf     => null()                ! node property flow package
     type(Xt3dType),                 pointer :: xt3d    => null()                ! xt3d option for npf
+    type(VKDType),                  pointer :: vkd    => null()                ! VKD option for npf
     type(GwfStoType),               pointer :: sto     => null()                ! storage package
     type(GwfOcType),                pointer :: oc      => null()                ! output control package
     type(GhostNodeType),            pointer :: gnc     => null()                ! ghost node correction package
@@ -117,6 +119,7 @@ module GwfModule
     use GwfDisuModule,              only: disu_cr
     use GwfNpfModule,               only: npf_cr
     use Xt3dModule,                 only: xt3d_cr
+    use VKDModule,                  only: vkd_cr
     use GwfStoModule,               only: sto_cr
     use GwfMvrModule,               only: mvr_cr
     use GwfHfbModule,               only: hfb_cr
@@ -272,6 +275,7 @@ module GwfModule
     ! -- Create packages that are tied directly to model
     call npf_cr(this%npf, this%name, this%innpf, this%iout)
     call xt3d_cr(this%xt3d, this%name, this%innpf, this%iout)
+    call vkd_cr(this%vkd, this%name, this%innpf, this%iout)
     call gnc_cr(this%gnc, this%name, this%ingnc, this%iout)
     call hfb_cr(this%hfb, this%name, this%inhfb, this%iout)
     call sto_cr(this%sto, this%name, this%insto, this%iout)
@@ -317,7 +321,7 @@ module GwfModule
     !
     ! -- Define packages and utility objects
     call this%dis%dis_df()
-    call this%npf%npf_df(this%xt3d, this%ingnc)
+    call this%npf%npf_df(this%xt3d, this%vkd, this%ingnc)
     call this%oc%oc_df()
     call this%budget%budget_df(niunit, 'VOLUME', 'L**3')
     if(this%ingnc > 0) call this%gnc%gnc_df(this)

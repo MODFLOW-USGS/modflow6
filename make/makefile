@@ -6,7 +6,7 @@
 # the executable, and the executable name and path.
 OBJDIR = ./obj_temp
 BINDIR = .
-PROGRAM = mf6
+PROGRAM = ../bin/mf6
 
 SOURCEDIR1=../src
 SOURCEDIR2=../src/Exchange
@@ -83,7 +83,7 @@ $(OBJDIR)/PrintSaveManager.o \
 $(OBJDIR)/BaseModel.o \
 $(OBJDIR)/RectangularChGeometry.o \
 $(OBJDIR)/ObsOutputList.o \
-$(OBJDIR)/ArrayReaders2.o \
+$(OBJDIR)/ArrayReaders.o \
 $(OBJDIR)/Iunit.o \
 $(OBJDIR)/CircularGeometry.o \
 $(OBJDIR)/BaseSolution.o \
@@ -99,13 +99,14 @@ $(OBJDIR)/BndUzfKinematic.o \
 $(OBJDIR)/Connections.o \
 $(OBJDIR)/TimeSeries.o \
 $(OBJDIR)/BaseExchange.o \
-$(OBJDIR)/TimeSeriesGroupList.o \
+$(OBJDIR)/TimeSeriesFileList.o \
 $(OBJDIR)/TimeSeriesLink.o \
 $(OBJDIR)/TimeSeriesManager.o \
 $(OBJDIR)/DiscretizationBase.o \
 $(OBJDIR)/NumericalPackage.o \
 $(OBJDIR)/Xt3dInterface.o \
 $(OBJDIR)/gwf3disu8.o \
+$(OBJDIR)/VKDProcess.o \
 $(OBJDIR)/Observe.o \
 $(OBJDIR)/gwf3dis8.o \
 $(OBJDIR)/OutputControlData.o \
