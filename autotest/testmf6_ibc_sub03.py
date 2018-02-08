@@ -149,6 +149,7 @@ def build_models():
     ldnd = [0, 2]
     kv = 1e-6
     void = 0.82
+    theta = void / (1. + void)
     cc = 6e-4
     cr = 6e-6
     dp = [[kv, cr, cc]]
@@ -188,7 +189,7 @@ def build_models():
                         ibcno += 1
                         b = thicknd0[kdx]
                         d = [ibcno, (k, i, j), cdelays, hc[idx],
-                             b, 1., ccnd0[kdx], crnd0[kdx], 0.82, 999., -999.]
+                             b, 1., ccnd0[kdx], crnd0[kdx], theta, 999., -999.]
                         sub6.append(d)
 
         # create delay bed packagedata entries
@@ -204,7 +205,7 @@ def build_models():
                         # create nodelay entry
                         ibcno += 1
                         d = [ibcno, (k, i, j), cdelays, dhc[kdx], dz[kdx],
-                             rnb[kdx], cc, cr, void, kv, dstart[kdx][i, j]]
+                             rnb[kdx], cc, cr, theta, kv, dstart[kdx][i, j]]
                         sub6.append(d)
 
         maxibc = len(sub6)

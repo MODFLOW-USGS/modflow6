@@ -83,6 +83,7 @@ def build_models():
     cc = 0.005
     cr = 5e-5
     void = 0.82
+    theta = void / (1. + void)
     kv = 9.72e-6
     sgm = 0.
     sgs = 0.
@@ -116,7 +117,7 @@ def build_models():
             cdelays = 'nodelay'
 
         sub6 = [[1, (0, 0, 0), cdelays, ini_stress, thick[0],
-                 1., cc, cr, void, kv, 0.]]
+                 1., cc, cr, theta, kv, 0.]]
 
         # build MODFLOW 6 files
         ws = dir

@@ -61,7 +61,8 @@ module IbcModule
     real(DP), dimension(:), pointer :: znode       => null()   !elevation of node center
     real(DP), dimension(:), pointer :: thick       => null()   !fraction of cell thickness that interbed system occupies
     real(DP), dimension(:), pointer :: rnb         => null()   !interbed system material factor
-    real(DP), dimension(:), pointer :: void        => null()   !void space
+    real(DP), dimension(:), pointer :: theta       => null()   !porosity
+    real(DP), dimension(:), pointer :: void        => null()   !void ratio
     real(DP), dimension(:), pointer :: kv          => null()   !vertical hydraulic conductivity of interbed
     real(DP), dimension(:), pointer :: h0          => null()   !initial head in interbed
     real(DP), dimension(:), pointer :: comp        => null()   !interbed compaction
@@ -487,7 +488,8 @@ contains
               ' FOR PACKAGEDATA ENTRY', itmp
             call store_error(errmsg)
             cycle
-        end select
+          end select
+        idelay = ival
         this%idelay(itmp) = ival
 
         ! get initial preconsolidation stress
@@ -514,15 +516,17 @@ contains
 
         ! -- get rnb
         rval = this%parser%GetDouble()
-        if (rval < DONE) then
-            write(errmsg,'(4x,a,1x,g0,1x,a,1x,a,1x,i0)') &
-              '****ERROR. rnb (', rval,') MUST BE >= 1.', &
-              'FOR PACKAGEDATA ENTRY', itmp
-            call store_error(errmsg)
+        if (idelay > 0) then
+          if (rval < DONE) then
+              write(errmsg,'(4x,a,1x,g0,1x,a,1x,a,1x,i0)') &
+                '****ERROR. rnb (', rval,') MUST BE >= 1.', &
+                'FOR PACKAGEDATA ENTRY', itmp
+              call store_error(errmsg)
+          end if
         end if
         this%rnb(itmp) = rval
 
-        ! -- get ci or skv
+        ! -- get skv or ci
         rval =  this%parser%GetDouble()
         if (rval <= 0.0) then
             write(errmsg,'(4x,a,1x,i4,1x)') &
@@ -531,7 +535,7 @@ contains
         end if
         this%ci(itmp) = rval
 
-        ! -- get rci or ske
+        ! -- get ske or rci
         rval =  this%parser%GetDouble()
         if (rval <= 0.0) then
             write(errmsg,'(4x,a,1x,i4,1x)') &
@@ -540,18 +544,24 @@ contains
         end if
         this%rci(itmp) = rval
 
-        ! -- get void ratio
+        ! -- get porosity
         rval =  this%parser%GetDouble()
-        if (rval <= 0.0) then
-            write(errmsg,'(4x,a,1x,i4,1x)') &
-              '****ERROR. INVALID void FOR PACKAGEDATA ENTRY', itmp
-            call store_error(errmsg)
+        this%theta(itmp) = rval
+        if (idelay > 0) then
+          if (rval <= DZERO .or. rval > DONE) then
+              write(errmsg,'(4x,a,1x,i4,1x)') &
+                '****ERROR. INVALID porosity FOR PACKAGEDATA ENTRY', itmp
+              call store_error(errmsg)
+          end if
+          ! -- calculate the void ratio from the porosity
+          if (rval > DZERO .and. rval < DONE) then        
+            this%void(itmp) = rval / (DONE - rval)
+          end if
         end if
-        this%void(itmp) = rval
 
         ! -- get kv
         rval =  this%parser%GetDouble()
-        if (this%idelay(itmp) == 1) then
+        if (idelay > 0) then
           if (rval <= 0.0) then
              write(errmsg,'(4x,a,1x,i4,1x)') &
                '****ERROR. kv MUST BE GREATER THAN ZERO FOR PACKAGEDATA ENTRY', itmp
@@ -781,6 +791,7 @@ contains
     call mem_allocate(this%rnb, this%nbound, 'rnb', trim(this%origin))
     call mem_allocate(this%kv, this%nbound, 'kv', trim(this%origin))
     call mem_allocate(this%h0, this%nbound, 'h0', trim(this%origin))
+    call mem_allocate(this%theta, this%nbound, 'theta', trim(this%origin))
     call mem_allocate(this%void, this%nbound, 'void', trim(this%origin))
     call mem_allocate(this%ci, this%nbound, 'ci', trim(this%origin))
     call mem_allocate(this%rci, this%nbound, 'rci', trim(this%origin))
@@ -876,6 +887,7 @@ contains
     call mem_deallocate(this%znode)
     call mem_deallocate(this%thick)
     call mem_deallocate(this%rnb)
+    call mem_deallocate(this%theta)
     call mem_deallocate(this%void)
     call mem_deallocate(this%kv)
     call mem_deallocate(this%h0)
@@ -1761,7 +1773,7 @@ contains
         write(this%listlabel, '(a, a16)') trim(this%listlabel), 'RCI'
         write(this%listlabel, '(a, a16)') trim(this%listlabel), 'CI'
     endif
-        write(this%listlabel, '(a, a16)') trim(this%listlabel), 'VOID'
+        write(this%listlabel, '(a, a16)') trim(this%listlabel), 'THETA'
         write(this%listlabel, '(a, a16)') trim(this%listlabel), 'IDELAY'
     if(this%inamedbound == 1) then
       write(this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'

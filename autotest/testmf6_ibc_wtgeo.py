@@ -125,6 +125,7 @@ storagecoeff = [True, None]
 cr = 0.01
 cc = 0.25
 void = 0.82
+theta = void / (1. + void)
 
 # sub output data
 ds15 = [0, 0, 0, 2052, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -289,7 +290,7 @@ def build_models():
                         ibcno += 1
                         b = thicknd[kdx]
                         d = [ibcno, (k, i, j), cdelays, hc[kdx],
-                             b, 1., ndssv[kdx], ndsse[kdx], void, 999., -999.]
+                             b, 999., ndssv[kdx], ndsse[kdx], 999., 999., -999.]
                         sub6.append(d)
 
         # create delay bed packagedata entries
@@ -308,7 +309,7 @@ def build_models():
                         ibcno += 1
                         d = [ibcno, (k, i, j), cdelays, pcs0[k, i, j], dz[kdx],
                              rnb[kdx], dskv, dske,
-                             void, kv[kdx], h0[k, i, j]]
+                             theta, kv[kdx], h0[k, i, j]]
                         sub6.append(d)
 
         maxibc = len(sub6)

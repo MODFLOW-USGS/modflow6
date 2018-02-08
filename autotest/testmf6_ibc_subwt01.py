@@ -169,6 +169,7 @@ def build_models():
     cc = 0.25
     cr = 0.01
     void = 0.82
+    theta = void / (1. + void)
     kv = -999.
     sgm = 1.7
     sgs = 2.0
@@ -189,7 +190,7 @@ def build_models():
                 if iactive > 0:
                     ibcno += 1
                     d = [ibcno, (k, i, j), 'nodelay', ini_stress, thick[k],
-                         1., cc, cr, void,
+                         1., cc, cr, theta,
                          kv, 0.]
                     swt6.append(d)
     ds16 = [0, 2052, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,

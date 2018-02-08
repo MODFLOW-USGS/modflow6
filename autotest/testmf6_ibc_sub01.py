@@ -81,6 +81,7 @@ def build_models():
     cc = 100.
     cr = 1.
     void = 0.82
+    theta = void / (1. + void)
     kv = 0.025
     sgm = 0.
     sgs = 0.
@@ -96,7 +97,7 @@ def build_models():
     ds16 = [0, 0, 0, 100, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1]
 
     sub6 = [[1, (0, 0, 1), 'delay', ini_stress, thick[0],
-             1., cc, cr, void, kv, ini_stress]]
+             1., cc, cr, theta, kv, ini_stress]]
 
     for idx, dir in enumerate(exdirs):
         name = ex[idx]

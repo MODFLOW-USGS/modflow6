@@ -218,7 +218,7 @@ description is specific gravity of saturated sediments.
 
 block packagedata
 name ibcrecarray
-type recarray ibcno cellid cdelay pcs0 thick_frac rnb ssv_cc sse_cr void kv h0 boundname
+type recarray ibcno cellid cdelay pcs0 thick_frac rnb ssv_cc sse_cr theta kv h0 boundname
 shape (nibccells)
 reader urword
 longname
@@ -305,14 +305,14 @@ longname elastic skeletal specific storage
 description is the initial elastic skeletal specific storage or recompression index in the IBC interbed. The initial elastic skeletal specific storage is specified if STORAGE\_COEFFICIENT is specified in the OPTIONS block.
 
 block packagedata
-name void 
+name theta 
 type double precision
 shape
 tagged false
 in_record true
 reader urword
-longname initial void ratio
-description is the initial initial void ratio of the IBC interbed.
+longname initial porosity
+description is the initial porosity of the IBC interbed.
 
 block packagedata
 name kv 
