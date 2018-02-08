@@ -373,7 +373,7 @@ contains
     class(MawType),intent(inout) :: this
     ! -- local
     character(len=LINELENGTH) :: errmsg
-    character(len=LINELENGTH) :: text, keyword
+    character(len=LINELENGTH) :: text, keyword, cstr
     character(len=LINELENGTH) :: strttext
     character(len=LENBOUNDNAME) :: bndName, bndNameTemp
     character(len=9) :: cno
@@ -389,6 +389,9 @@ contains
     real(DP) :: endtim
     integer(I4B), dimension(:), pointer :: nboundchk
     ! -- format
+    character(len=*),parameter :: fmthdbot = &
+      "('well head (',G0,') must be >= BOTTOM_ELEVATION (',G0',).')"
+! ------------------------------------------------------------------------------
     !
     ! -- code
     !
@@ -529,6 +532,10 @@ contains
                                               this%iprpak, n, jj, 'HEAD', &
                                               bndName, this%parser%iuactive)
         this%mawwells(n)%strt = this%mawwells(n)%head%value
+        if (this%mawwells(n)%strt < this%mawwells(n)%bot) then
+          write(cstr, fmthdbot) this%mawwells(n)%strt, this%mawwells(n)%bot
+          call this%maw_set_attribute_error(n, 'STRT', trim(cstr))
+        end if
 
         ! -- fill aux data
         do iaux = 1, this%naux
@@ -1037,7 +1044,7 @@ contains
     integer(I4B), intent(in) :: imaw
     character (len=*), intent(in) :: line
     ! -- local
-    character(len=LINELENGTH) :: text
+    character(len=LINELENGTH) :: text, cstr
     character(len=LINELENGTH) :: caux
     character(len=LINELENGTH) :: keyword
     character(len=LINELENGTH) :: errmsg
@@ -1055,6 +1062,8 @@ contains
     integer(I4B) :: istat
     character(len=MAXCHARLEN) :: ermsg, ermsgr
     ! -- formats
+    character(len=*),parameter :: fmthdbot = &
+      "('well head (',G0,') must be >= BOTTOM_ELEVATION (',G0',).')"
 ! ------------------------------------------------------------------------------
     !
     ! -- Find time interval of current stress period.
@@ -1122,6 +1131,10 @@ contains
                                               this%iprpak, imaw, jj, 'HEAD', &
                                               bndName, this%inunit)
         this%xnewpak(imaw) = this%mawwells(imaw)%head%value
+        if (this%mawwells(imaw)%head%value < this%mawwells(imaw)%bot) then
+          write(cstr, fmthdbot) this%mawwells(imaw)%head%value, this%mawwells(imaw)%bot
+          call this%maw_set_attribute_error(imaw, 'WELL HEAD', trim(cstr))
+        end if
       case ('FLOWING_WELL')
         call urword(line, lloc, istart, istop, 3, ival, rval, this%iout, this%inunit)
         this%mawwells(imaw)%fwelev = rval
@@ -1247,9 +1260,12 @@ contains
       if (this%mawwells(n)%ngwfnodes < 1) then
         call this%maw_set_attribute_error(n, 'NGWFNODES', 'must be greater than 0.')
       end if
-      if (this%xnewpak(n) < this%mawwells(n)%bot) then
-        call this%maw_set_attribute_error(n, 'WELL HEAD', 'well head must be >= BOTTOM_ELEVATION.')
-      end if
+      ! -- CDL 2/5/2018 Moved to maw_set_stressperiod so it is only done if a
+      !    new head is read in.
+      !if (this%xnewpak(n) < this%mawwells(n)%bot) then
+        !write(cstr, fmthdbot) this%xnewpak(n), this%mawwells(n)%bot
+        !call this%maw_set_attribute_error(n, 'WELL HEAD', trim(cstr))
+      !end if
       if (this%mawwells(n)%radius == DEP20) then
         call this%maw_set_attribute_error(n, 'RADIUS', 'has not been specified.')
       end if
@@ -1947,34 +1963,36 @@ contains
         !
       endif
       do j = 1, this%mawwells(n)%ngwfnodes
-        igwfnode = this%mawwells(n)%gwfnodes(j)
-        call this%maw_calculate_saturation(n, j, igwfnode, sat)
-        cmaw = this%mawwells(n)%satcond(j) * sat
-        this%mawwells(n)%simcond(j) = cmaw
+        if (this%iboundpak(n) /= 0) then
+          igwfnode = this%mawwells(n)%gwfnodes(j)
+          call this%maw_calculate_saturation(n, j, igwfnode, sat)
+          cmaw = this%mawwells(n)%satcond(j) * sat
+          this%mawwells(n)%simcond(j) = cmaw
 
-        bnode = this%dis%bot(igwfnode)
-        bmaw = this%mawwells(n)%botscrn(j)
-        ! -- calculate cterm - relative to gwf
-        cterm = DZERO
-        if (hmaw < bmaw) then
-          cterm = cmaw * (bmaw - hmaw)
-        end if
-        ! -- add to maw row
-        iposd = this%idxdglo(idx)
-        iposoffd = this%idxoffdglo(idx)
-        amatsln(iposd) = amatsln(iposd) - cmaw
-        amatsln(iposoffd) = cmaw
-        ! -- add correction term
-        rhs(iloc) = rhs(iloc) + cterm
-        ! -- add to gwf row for maw connection
-        isymnode = this%mawwells(n)%gwfnodes(j)
-        isymloc = ia(isymnode)
-        ipossymd = this%idxsymdglo(idx)
-        ipossymoffd = this%idxsymoffdglo(idx)
-        amatsln(ipossymd) = amatsln(ipossymd) - cmaw
-        amatsln(ipossymoffd) = cmaw
-        ! -- add correction term
-        rhs(isymnode) = rhs(isymnode) - cterm
+          bnode = this%dis%bot(igwfnode)
+          bmaw = this%mawwells(n)%botscrn(j)
+          ! -- calculate cterm - relative to gwf
+          cterm = DZERO
+          if (hmaw < bmaw) then
+            cterm = cmaw * (bmaw - hmaw)
+          end if
+          ! -- add to maw row
+          iposd = this%idxdglo(idx)
+          iposoffd = this%idxoffdglo(idx)
+          amatsln(iposd) = amatsln(iposd) - cmaw
+          amatsln(iposoffd) = cmaw
+          ! -- add correction term
+          rhs(iloc) = rhs(iloc) + cterm
+          ! -- add to gwf row for maw connection
+          isymnode = this%mawwells(n)%gwfnodes(j)
+          isymloc = ia(isymnode)
+          ipossymd = this%idxsymdglo(idx)
+          ipossymoffd = this%idxsymoffdglo(idx)
+          amatsln(ipossymd) = amatsln(ipossymd) - cmaw
+          amatsln(ipossymoffd) = cmaw
+          ! -- add correction term
+          rhs(isymnode) = rhs(isymnode) - cterm
+        endif
         ! -- increment maw connection counter
         idx = idx + 1
       end do
@@ -2078,46 +2096,49 @@ contains
         end if
       end if
       do j = 1, this%mawwells(n)%ngwfnodes
-        igwfnode = this%mawwells(n)%gwfnodes(j)
-        hgwf = this%xnew(igwfnode)
-        ! -- calculate upstream weighted conductance
-        call this%maw_calculate_saturation(n, j, igwfnode, sat)
-        cmaw = this%mawwells(n)%satcond(j) * sat
-        this%mawwells(n)%simcond(j) = cmaw
-        ! -- set top and bottom of the screen
-        tmaw = this%mawwells(n)%topscrn(j)
-        bmaw = this%mawwells(n)%botscrn(j)
-        ! -- add to maw row
-        iposd = this%idxdglo(idx)
-        iposoffd = this%idxoffdglo(idx)
-        ! -- add to gwf row for maw connection
-        isymnode = this%mawwells(n)%gwfnodes(j)
-        isymloc = ia(isymnode)
-        ipossymd = this%idxsymdglo(idx)
-        ipossymoffd = this%idxsymoffdglo(idx)
-        ! -- calculate newton corrections
-        hups = hmaw
-        if (hgwf > hups) hups = hgwf
-        drterm = sQuadraticSaturationDerivative(tmaw, bmaw, hups)
-        ! -- maw is upstream
-        if (hmaw > hgwf) then
-          term = drterm * this%mawwells(n)%satcond(j) * (hmaw - hgwf)
-          rhs(iloc) = rhs(iloc) + term * hmaw
-          rhs(isymnode) = rhs(isymnode) - term * hmaw
-          amatsln(iposd) = amatsln(iposd) + term
-          if (this%ibound(igwfnode) > 0) then
-            amatsln(ipossymoffd) = amatsln(ipossymoffd) - term
+        if (this%iboundpak(n) /= 0) then
+          igwfnode = this%mawwells(n)%gwfnodes(j)
+          hgwf = this%xnew(igwfnode)
+          ! -- calculate upstream weighted conductance
+          call this%maw_calculate_saturation(n, j, igwfnode, sat)
+          cmaw = this%mawwells(n)%satcond(j) * sat
+          this%mawwells(n)%simcond(j) = cmaw
+          ! -- set top and bottom of the screen
+          tmaw = this%mawwells(n)%topscrn(j)
+          bmaw = this%mawwells(n)%botscrn(j)
+          ! -- add to maw row
+          iposd = this%idxdglo(idx)
+          iposoffd = this%idxoffdglo(idx)
+          ! -- add to gwf row for maw connection
+          isymnode = this%mawwells(n)%gwfnodes(j)
+          isymloc = ia(isymnode)
+          ipossymd = this%idxsymdglo(idx)
+          ipossymoffd = this%idxsymoffdglo(idx)
+          ! -- calculate newton corrections
+          hups = hmaw
+          if (hgwf > hups) hups = hgwf
+          drterm = sQuadraticSaturationDerivative(tmaw, bmaw, hups)
+          ! -- maw is upstream
+          if (hmaw > hgwf) then
+            term = drterm * this%mawwells(n)%satcond(j) * (hmaw - hgwf)
+            rhs(iloc) = rhs(iloc) + term * hmaw
+            rhs(isymnode) = rhs(isymnode) - term * hmaw
+            amatsln(iposd) = amatsln(iposd) + term
+            if (this%ibound(igwfnode) > 0) then
+              amatsln(ipossymoffd) = amatsln(ipossymoffd) - term
+            end if
+          ! -- gwf is upstream
+          else
+            term = -drterm * this%mawwells(n)%satcond(j) * (hgwf - hmaw)
+            rhs(iloc) = rhs(iloc) + term * hgwf
+            rhs(isymnode) = rhs(isymnode) - term * hgwf
+            if (this%iboundpak(n) > 0) then
+              amatsln(iposoffd) = amatsln(iposoffd) + term
+            end if
+            amatsln(ipossymd) = amatsln(ipossymd) - term
           end if
-        ! -- gwf is upstream
-        else
-          term = -drterm * this%mawwells(n)%satcond(j) * (hgwf - hmaw)
-          rhs(iloc) = rhs(iloc) + term * hgwf
-          rhs(isymnode) = rhs(isymnode) - term * hgwf
-          if (this%iboundpak(n) > 0) then
-            amatsln(iposoffd) = amatsln(iposoffd) + term
-          end if
-          amatsln(ipossymd) = amatsln(ipossymd) - term
-        end if
+        endif
+        !
         ! -- increment maw connection counter
         idx = idx + 1
       end do
@@ -2396,7 +2417,7 @@ contains
       hmaw = this%xnewpak(n)
       do j = 1, this%mawwells(n)%ngwfnodes
         this%qleak(ibnd) = DZERO
-        if (this%iboundpak(n) == 0) cycle
+        !if (this%iboundpak(n) == 0) cycle
         igwfnode = this%mawwells(n)%gwfnodes(j)
         hgwf = this%xnew(igwfnode)
         cmaw = this%mawwells(n)%simcond(j)
@@ -3937,7 +3958,11 @@ contains
           !
           ! -- set bound, hcof, and rhs components
           call this%maw_calculate_saturation(n, j, node, sat)
-          cmaw = this%mawwells(n)%satcond(j) * sat
+          if (this%iboundpak(n) == 0) then
+            cmaw = DZERO
+          else
+            cmaw = this%mawwells(n)%satcond(j) * sat
+          endif
           this%mawwells(n)%simcond(j) = cmaw
 
           this%bound(2,ibnd) = cmaw

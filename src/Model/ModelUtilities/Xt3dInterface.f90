@@ -49,6 +49,7 @@ module Xt3dModule
     real(DP), dimension(:), pointer         :: angle1     => null()   !k ellipse rotation in xy plane around z axis (yaw)
     real(DP), dimension(:), pointer         :: angle2     => null()   !k ellipse rotation up from xy plane around y axis (pitch)
     real(DP), dimension(:), pointer         :: angle3     => null()   !k tensor rotation around x axis (roll)
+    logical, pointer                        :: ldispersion => null()  !flag to indicate dispersion
   contains
     procedure :: xt3d_ac
     procedure :: xt3d_mc
@@ -80,7 +81,7 @@ module Xt3dModule
   
   contains
 
-    subroutine xt3d_cr(xt3dobj, name_model, inunit, iout)
+    subroutine xt3d_cr(xt3dobj, name_model, inunit, iout, ldispopt)
 ! ******************************************************************************
 ! xt3d_cr -- Create a new xt3d object
 ! ******************************************************************************
@@ -92,6 +93,7 @@ module Xt3dModule
     character(len=*), intent(in) :: name_model
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
+    logical, optional, intent(in) :: ldispopt
 ! ------------------------------------------------------------------------------
     !
     ! -- Create the object
@@ -103,6 +105,7 @@ module Xt3dModule
     ! -- Set variables
     xt3dobj%inunit = inunit
     xt3dobj%iout   = iout
+    if (present(ldispopt)) xt3dobj%ldispersion = ldispopt
     !
     ! -- Return
     return
@@ -1032,6 +1035,7 @@ module Xt3dModule
     call mem_allocate(this%nozee, 'NOZEE', this%origin)
     call mem_allocate(this%vcthresh, 'VCTHRESH', this%origin)
     call mem_allocate(this%lamatsaved, 'LAMATSAVED', this%origin)
+    call mem_allocate(this%ldispersion, 'LDISPERSION', this%origin)
     !  
     ! -- Initialize value
     this%ixt3d = 0
@@ -1042,6 +1046,7 @@ module Xt3dModule
     this%nozee = .false.
     this%vcthresh = 1.d-10
     this%lamatsaved = .false.
+    this%ldispersion = .false.
     !
     ! -- Return
     return
@@ -1126,7 +1131,7 @@ module Xt3dModule
     integer(I4B),dimension(this%nbrmax) :: inbr0, inbr1
 ! ------------------------------------------------------------------------------
     !
-    if(this%ixt3d == 2) then
+    if(this%ixt3d == 2 .or. this%ldispersion) then
       this%lamatsaved = .false.
       call mem_allocate(this%iallpc, 0, 'IALLPC', this%origin)
     else

@@ -129,6 +129,11 @@ This section describes changes introduced into MODFLOW 6 with each release.  The
 \item If a steady-state stress period followed a transient stress period, the storage terms written to the budget file were not being reset to zero.  The program now initializes these budget values to zero for steady-state periods before they are written.
 \end{itemize}
 
+\underline{ADVANCED STRESS PACKAGES}
+\begin{itemize}
+\item The STATUS INACTIVE option was not working correctly for the MAW Package.
+\end{itemize}
+
 \underline{SOLUTION}
 \begin{itemize}
 \item Prior to applying pseudo transient continuation terms, the Iterative Model Solution confirms that the L2-norm exceeds the previous L2-norm.  If it doesn't then pseudo transient continuation is turned off.  This fixes a rare situation in which convergence could not be achieved for consecutive steady state solutions with the same or similar answers. 

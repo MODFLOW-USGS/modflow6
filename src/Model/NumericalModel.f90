@@ -124,6 +124,7 @@ module NumericalModelModule
   subroutine model_ptcchk(this, iptc)
     class(NumericalModelType) :: this
     integer(I4B), intent(inout) :: iptc
+    iptc = 0
   end subroutine model_ptcchk
 
   subroutine model_ptc(this, kiter, neqsln, njasln, &

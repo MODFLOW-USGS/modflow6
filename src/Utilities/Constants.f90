@@ -3,7 +3,7 @@ module ConstantsModule
   use KindModule
   public
   ! -- modflow 6 version
-  character(len=40), parameter :: VERSION = '6.0.1 09/28/2017'
+  character(len=40), parameter :: VERSION = '6.0.x 02/08/2018'
   character(len=10), parameter :: MFVNAM = ' 6'
   character(len=*), parameter  :: MFTITLE =                                    &
     'U.S. GEOLOGICAL SURVEY MODULAR HYDROLOGIC MODEL'
