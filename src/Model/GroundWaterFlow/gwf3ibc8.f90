@@ -547,16 +547,14 @@ contains
         ! -- get porosity
         rval =  this%parser%GetDouble()
         this%theta(itmp) = rval
-        if (idelay > 0) then
-          if (rval <= DZERO .or. rval > DONE) then
-              write(errmsg,'(4x,a,1x,i4,1x)') &
-                '****ERROR. INVALID porosity FOR PACKAGEDATA ENTRY', itmp
-              call store_error(errmsg)
-          end if
-          ! -- calculate the void ratio from the porosity
-          if (rval > DZERO .and. rval < DONE) then        
-            this%void(itmp) = rval / (DONE - rval)
-          end if
+        if (rval <= DZERO .or. rval > DONE) then
+            write(errmsg,'(4x,a,1x,i4,1x)') &
+              '****ERROR. INVALID porosity FOR PACKAGEDATA ENTRY', itmp
+            call store_error(errmsg)
+        end if
+        ! -- calculate the void ratio from the porosity
+        if (rval > DZERO .and. rval < DONE) then        
+          this%void(itmp) = rval / (DONE - rval)
         end if
 
         ! -- get kv
@@ -846,6 +844,8 @@ contains
       end if
     end do
     do n = 1, this%nbound
+      this%theta(n) = DZERO
+      this%void(n) = DZERO
       this%totalcomp(n) = DZERO
     end do
     !

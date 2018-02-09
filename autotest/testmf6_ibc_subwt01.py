@@ -18,6 +18,7 @@ except:
     msg += ' pip install flopy'
     raise Exception(msg)
 
+from framework import testing_framework
 from simulation import Simulation
 
 ex = ['ibcsubwt01a', 'ibcsubwt01b']
@@ -27,6 +28,12 @@ exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
 ddir = 'data'
+
+# set travis to True when version 1.13.0 is released
+travis = [True, True]
+
+# set replace_exe to None to use default executable
+replace_exe = None
 
 def build_models():
     pth = os.path.join(ddir, 'ibc01_ibound.ref')
@@ -170,7 +177,7 @@ def build_models():
     cr = 0.01
     void = 0.82
     theta = void / (1. + void)
-    kv = -999.
+    kv = 999.
     sgm = 1.7
     sgs = 2.0
     ini_stress = 15.0
@@ -191,7 +198,7 @@ def build_models():
                     ibcno += 1
                     d = [ibcno, (k, i, j), 'nodelay', ini_stress, thick[k],
                          1., cc, cr, theta,
-                         kv, 0.]
+                         kv, 999.]
                     swt6.append(d)
     ds16 = [0, 2052, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -311,57 +318,49 @@ def build_models():
 
     return
 
-def run_mf6(sim):
-    """
-    Run the MODFLOW 6 simulation and compare to existing head file or
-    appropriate MODFLOW-2005, MODFLOW-NWT, MODFLOW-USG, or MODFLOW-LGR run.
-
-    """
-    print(os.getcwd())
-    sim.set_model(sim.name)
-    sim.run()
-    sim.compare()
-    sim.teardown()
-
-
+# - No need to change any code below
 def test_mf6model():
+    # determine if running on Travis
+    is_travis = 'TRAVIS' in os.environ
+    r_exe = None
+    if not is_travis:
+        if replace_exe is not None:
+            r_exe = replace_exe
+
+    # initialize testing framework
+    test = testing_framework()
 
     # build the models
     build_models()
 
     # run the test models
-    for dir in exdirs:
-        yield run_mf6, Simulation(dir)
+    for idx, dir in enumerate(exdirs):
+        if is_travis and not travis[idx]:
+            continue
+        yield test.run_mf6, Simulation(dir, exe_dict=r_exe)
 
     return
+
 
 def main():
-    # write message
-    tnam = os.path.splitext(os.path.basename(__file__))[0]
-    msg = 'Running {} test'.format(tnam)
-    print(msg)
+    # initialize testing framework
+    test = testing_framework()
 
     # build the models
     build_models()
 
     # run the test models
     for dir in exdirs:
-        sim = Simulation(dir)
-        run_mf6(sim)
+        sim = Simulation(dir, exe_dict=replace_exe)
+        test.run_mf6(sim)
 
     return
 
 
+# use python testmf6_ibc_sub02.py --mf2005 mf2005devdbl
 if __name__ == "__main__":
-
+    # print message
     print('standalone run of {}'.format(os.path.basename(__file__)))
-
-    delFiles = True
-    for idx, arg in enumerate(sys.argv):
-        if arg.lower() == '--keep':
-            if len(sys.argv) > idx + 1:
-                delFiles = False
-                break
 
     # run main routine
     main()
