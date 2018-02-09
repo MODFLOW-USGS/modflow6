@@ -208,7 +208,7 @@ module BaseDisModule
       endif
     enddo
     !
-    call this%write_grb(ict)
+    if (this%writegrb) call this%write_grb(ict)
     !
     ! -- Return
     return
