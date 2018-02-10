@@ -9,6 +9,14 @@ longname keyword to save IBC flows
 description keyword to indicate that cell-by-cell flow terms will be written to the file specified with ``BUDGET SAVE FILE'' in Output Control.
 
 block options
+name head_based
+type keyword
+reader urword
+optional true
+longname keyword to indicate the head-based formulation will be used
+description keyword to indicate the head-based formulation will be used to simulate no-delay and delay interbeds.
+
+block options
 name delay_full_cell
 type keyword
 reader urword
@@ -194,12 +202,21 @@ description is the number of IBC cells.  More than 1 IBC cell can be assigned to
 # --------------------- gwf ibc griddata ---------------------
 
 block griddata
+name ske_cr
+type double precision
+shape (nodes)
+valid
+reader readarray
+longname elastic skeletal specific storage
+description is elastic skeletal specific storage.
+
+block griddata
 name sgm
 type double precision
 shape (nodes)
 valid
 reader readarray
-optional false
+optional true
 longname specific gravity of moist sediments
 description is specific gravity of moist or unsaturated sediments.
 
@@ -209,7 +226,7 @@ type double precision
 shape (nodes)
 valid
 reader readarray
-optional false
+optional true
 longname specific gravity of saturated sediments
 description is specific gravity of saturated sediments.
 

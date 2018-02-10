@@ -276,13 +276,14 @@ def build_models():
                                                        save_flows=False)
         # ibc files
         opth = '{}.ibc.obs'.format(name)
-        ibc = flopy.mf6.ModflowGwfibc(gwf, ndelaycells=ndelaycells[idx],
+        ibc = flopy.mf6.ModflowGwfibc(gwf, head_based=True,
+                                      ndelaycells=ndelaycells[idx],
                                       delay_full_cell=fullcell[idx],
                                       storagecoefficient=True,
                                       constant_nodelay_thickness=True,
                                       nibccells=maxibc,
                                       obs_filerecord=opth,
-                                      sgs=sgs, sgm=sgm, ibcrecarray=sub6)
+                                      ske_cr=0.2, ibcrecarray=sub6)
         orecarray = {}
         orecarray['ibc_obs.csv'] = [('tcomp1', 'total-compaction', (0, 4, 4)),
                                     ('tcomp2', 'total-compaction', (1, 4, 4)),

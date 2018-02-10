@@ -50,11 +50,12 @@ module IbcModule
     !character(len=LENBOUNDNAME), pointer, dimension(:) :: boundname => null()
     real(DP), dimension(:), pointer :: sgm         => null()   !specific gravity moist sediments
     real(DP), dimension(:), pointer :: sgs         => null()   !specific gravity saturated sediments
+    real(DP), dimension(:), pointer :: ske_cr      => null()   !skeletal specified storage
     real(DP), dimension(:), pointer :: sig0        => null()   !geostatic offset
     real(DP), dimension(:), pointer :: ci          => null()   !compression index
     real(DP), dimension(:), pointer :: rci         => null()   !recompression
-    real(DP), dimension(:), pointer :: gs          => null()   !geostatic stress
-    real(DP), dimension(:), pointer :: esc          => null()   !effective stress for a cell
+    real(DP), dimension(:), pointer :: gsc         => null()   !geostatic stress for a cell
+    real(DP), dimension(:), pointer :: esc         => null()   !effective stress for a cell
     real(DP), dimension(:), pointer :: es          => null()   !effective stress
     real(DP), dimension(:), pointer :: es0         => null()   !last effective stress
     real(DP), dimension(:), pointer :: pcs         => null()   !preconsolidation stress
@@ -217,7 +218,7 @@ contains
     ! -- initialize values
     this%ndelaycells = 19
     this%ndelaybeds = 0
-    this%igeocalc = 0
+    this%igeocalc = 1
     this%ibedstressoff = 0
     this%igeostressoff = 0
     this%istoragec = 0
@@ -334,7 +335,7 @@ contains
           end if
           delt_sto = comp * area
           !!
-          !write(1051, '(i10,8(1x,g20.7))') i, this%gs(n), es, es0, &
+          !write(1051, '(i10,8(1x,g20.7))') i, this%gsc(n), es, es0, &
           !                                 pcs, rho1, rho2, delt_sto, comp
           !
           ! -- update compaction and total compaction
@@ -712,6 +713,10 @@ contains
 ! -----------------------------------------------------------------------------
     select case (option)
     ! user specified number of delay cells used in each system of delay intebeds
+    case ('HEAD_BASED')
+      this%igeocalc = 0
+      write(this%iout, fmtopt) 'HEAD-BASED FORMULATION WILL BE USED'
+      found = .true.
     case ('NDELAYCELLS')
       this%ndelaycells =  this%parser%GetInteger()
       write(this%iout, fmtopti) 'NUMBER OF DELAY CELLS =', this%ndelaycells
@@ -779,7 +784,7 @@ contains
     !call this%BndType%allocate_arrays()
     call mem_allocate(this%unodelist, this%nbound, 'unodelist', trim(this%origin))
     call mem_allocate(this%nodelist, this%nbound, 'nodelist', trim(this%origin))
-    call mem_allocate(this%gs, this%dis%nodes, 'gs', trim(this%origin))
+    call mem_allocate(this%gsc, this%dis%nodes, 'gsc', trim(this%origin))
     call mem_allocate(this%esc, this%dis%nodes, 'esc', trim(this%origin))
     call mem_allocate(this%es, this%nbound, 'es', trim(this%origin))
     call mem_allocate(this%es0, this%nbound, 'es0', trim(this%origin))
@@ -793,8 +798,14 @@ contains
     call mem_allocate(this%void, this%nbound, 'void', trim(this%origin))
     call mem_allocate(this%ci, this%nbound, 'ci', trim(this%origin))
     call mem_allocate(this%rci, this%nbound, 'rci', trim(this%origin))
-    call mem_allocate(this%sgm, this%dis%nodes, 'sgm', trim(this%origin))
-    call mem_allocate(this%sgs, this%dis%nodes, 'sgs', trim(this%origin))
+    if (this%igeocalc == 0) then
+      call mem_allocate(this%sgm, 1, 'sgm', trim(this%origin))
+      call mem_allocate(this%sgs, 1, 'sgs', trim(this%origin))
+    else
+      call mem_allocate(this%sgm, this%dis%nodes, 'sgm', trim(this%origin))
+      call mem_allocate(this%sgs, this%dis%nodes, 'sgs', trim(this%origin))
+    end if
+    call mem_allocate(this%ske_cr, this%dis%nodes, 'ske_cr', trim(this%origin))
     if (this%igeostressoff == 1) then
       call mem_allocate(this%sig0, this%dis%nodes, 'sig0', trim(this%origin))
     else
@@ -837,7 +848,7 @@ contains
     !
     ! -- initialize variables that are not specified by user
     do n = 1, this%dis%nodes
-      this%gs(n) = DZERO
+      this%gsc(n) = DZERO
       this%esc(n) = DZERO
       if (this%igeostressoff == 1) then
         this%sig0(n) = DZERO
@@ -876,10 +887,11 @@ contains
 
     call mem_deallocate(this%sgm)
     call mem_deallocate(this%sgs)
+    call mem_deallocate(this%ske_cr)
     call mem_deallocate(this%sig0)
     call mem_deallocate(this%ci)
     call mem_deallocate(this%rci)
-    call mem_deallocate(this%gs)
+    call mem_deallocate(this%gsc)
     call mem_deallocate(this%esc)
     call mem_deallocate(this%es)
     call mem_deallocate(this%es0)
@@ -1041,6 +1053,8 @@ contains
     ! -- local
     logical :: isfound, endOfBlock
     integer(I4B) :: ierr, lloc, istart, istop, ival, nlist, i, n
+    integer(I4B) :: isgm
+    integer(I4B) :: isgs
     real(DP) :: rval, pcs_n, area, bot, fact
     character(len=LINELENGTH) :: line, errmsg, aname, keyword
 
@@ -1057,6 +1071,10 @@ contains
     call this%ibc_allocate_arrays()
 
     !
+    ! -- initialize local variables
+    isgm = 0
+    isgs = 0
+    !
     ! -- read griddata block
     call this%parser%GetBlock('GRIDDATA', isfound, ierr)
     if (isfound) then
@@ -1067,33 +1085,73 @@ contains
         call this%parser%GetRemainingLine(line)
         lloc = 1
         select case (keyword)
+        case ('SKE_CR')
+          call this%dis%read_grid_array(line, lloc, istart, istop,              &
+                                        this%iout, this%parser%iuactive,        &
+                                        this%ske_cr, 'SKE_CR')
         case ('SGM')
-
-            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                         this%parser%iuactive, this%sgm, 'SGM')
+            if (this%igeocalc == 1) then
+              call this%dis%read_grid_array(line, lloc, istart, istop,          &
+                                            this%iout, this%parser%iuactive,    &
+                                            this%sgm, 'SGM')
+              isgm = 1
+            else
+              write(errmsg,'(4x,a,2(1x,a))') 'ERROR. SGM GRIDDATA CANNOT BE ',  &
+                                             'SPECIFIED IF USING THE HEAD-',    &
+                                             'BASED FORMULATION'
+              call store_error(errmsg)
+            end if
         case ('SGS')
-            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                         this%parser%iuactive, this%sgs, 'SGS')
+            if (this%igeocalc == 1) then
+              call this%dis%read_grid_array(line, lloc, istart, istop,          &
+                                            this%iout, this%parser%iuactive,    &
+                                            this%sgs, 'SGS')
+              isgs = 1
+            else
+              write(errmsg,'(4x,a,2(1x,a))') 'ERROR. SGS GRIDDATA CANNOT BE ',  &
+                                             'SPECIFIED IF USING THE HEAD-',    &
+                                             'BASED FORMULATION'
+              call store_error(errmsg)
+            end if
         case default
-            write(errmsg,'(4x,a,a)')'ERROR. UNKNOWN GRIDDATA TAG: ',           &
+            write(errmsg,'(4x,a,a)')'ERROR. UNKNOWN GRIDDATA TAG: ',            &
                                      trim(keyword)
             call store_error(errmsg)
-            call this%parser%StoreErrorUnit()
-            call ustop()
         end select
       end do
     else
       call store_error('ERROR.  REQUIRED GRIDDATA BLOCK NOT FOUND.')
-      call ustop()
     end if
     !
-    ! -- determine if geostatic stresses will be calculated
-    do n = 1, this%dis%nodes
-      if (this%sgm(n) > DZERO .or. this%sgs(n) > DZERO) then
-        this%igeocalc = 1
-        exit
+    ! -- deteminer
+    if (this%igeocalc > 0) then
+      if (isgm == 0) then
+        write(errmsg,'(4x,a,2(1x,a))') 'ERROR. SGM GRIDDATA MUST BE SPECIFIED', &
+                                       'SPECIFIED IF USING THE EFFECTIVE-',     &
+                                       'STRESS FORMULATION'
+        call store_error(errmsg)
       end if
-    end do
+      if (isgs == 0) then
+        write(errmsg,'(4x,a,2(1x,a))') 'ERROR. SGS GRIDDATA MUST BE SPECIFIED', &
+                                       'SPECIFIED IF USING THE EFFECTIVE-',     &
+                                       'STRESS FORMULATION'
+        call store_error(errmsg)
+      end if
+    end if
+    !
+    ! -- terminate if errors encountered in reach block
+    if (count_errors() > 0) then
+      call this%parser%StoreErrorUnit()
+      call ustop()
+    end if
+    !!
+    !! -- determine if geostatic stresses will be calculated
+    !do n = 1, this%dis%nodes
+    !  if (this%sgm(n) > DZERO .or. this%sgs(n) > DZERO) then
+    !    this%igeocalc = 1
+    !    exit
+    !  end if
+    !end do
     !
     ! -- set idbhalfcell
     if (this%igeocalc == 0) then
@@ -1205,13 +1263,13 @@ contains
         else
             gs = ((top-x) * this%sgm(n)) + ((x-bot) * this%sgs(n))
         end if
-        this%gs(n) = gs
+        this%gsc(n) = gs
       end do
       !
       ! -- calculate the area weighted geostatic stress above cell
       !   *** this needs to be checked for a complicated discretization ***
       do n = 1, this%dis%nodes
-        gs = this%gs(n)
+        gs = this%gsc(n)
         ! -- Go through the connecting cells
         do ii = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
           ! -- Set the m cell number
@@ -1227,7 +1285,7 @@ contains
               area_conn = this%dis%get_area(m)
               hwva = this%dis%con%hwva(iis)
               va_scale = this%dis%con%hwva(iis) / this%dis%get_area(m)
-              gs_conn = this%gs(m)
+              gs_conn = this%gsc(m)
               !call this%dis%noder_to_string(n,msg1)
               !call this%dis%noder_to_string(m,msg2)
               !write(*,*) n, trim(msg1), gs, m, trim(msg2), gs_conn
@@ -1235,7 +1293,7 @@ contains
           end if
         end do
         !write (*,*) n, gs
-        this%gs(n) = gs
+        this%gsc(n) = gs
       end do
       ! -- calculate effective stress for a cell
       do n = 1, this%dis%nodes
@@ -1245,7 +1303,7 @@ contains
         if (x > bot) then
           hs = x - bot
         end if
-        es = this%gs(n) - hs
+        es = this%gsc(n) - hs
         this%esc(n) = es
       end do
    end if
@@ -1282,9 +1340,9 @@ contains
         es = x
       else
         bot = this%dis%bot(n)
-        es = this%gs(n) - x + bot
+        es = this%gsc(n) - x + bot
         !if (es < DZERO) then
-        !  write(errmsg, fmt=fmtneg) n, this%gs(n), x, bot
+        !  write(errmsg, fmt=fmtneg) n, this%gsc(n), x, bot
         !  call store_error(errmsg)
         !end if
       end if
@@ -1375,13 +1433,13 @@ contains
       if (this%es(i) > this%pcs(i)) then
           rho2 = this%ci(i) * sto_fac
       end if
-      rhs = -rho2 * (this%gs(n) + bot) + (this%pcs(i) * (rho2 - rho1)) + &
+      rhs = -rho2 * (this%gsc(n) + bot) + (this%pcs(i) * (rho2 - rho1)) + &
              (rho1 * this%es0(i))
     end if
     !
     !
     !call this%dis%noder_to_string(n,msg)
-    !write(*,*) n, trim(msg), this%gs(n), this%es(n), sto_fac,           &
+    !write(*,*) n, trim(msg), this%gsc(n), this%es(n), sto_fac,           &
     !           rho1, rho2, rhs
     !write(*,*) n,trim(msg), rho1, rho2, rhs
     !
@@ -1927,7 +1985,7 @@ contains
     idelay = this%idelay(ib)
     node = this%nodelist(ib)
     haq = this%xnew(node)
-    sigma = this%gs(node)
+    sigma = this%gsc(node)
     topaq = this%dis%top(node)
     botaq = this%dis%bot(node)
     dzhalf = DHALF * this%dbdz(idelay)
@@ -2495,7 +2553,7 @@ contains
             case ('THICKNESS')
               v = this%thick(n)
             case ('GSTRESS-CELL')
-              v = this%gs(n)
+              v = this%gsc(n)
             case ('ESTRESS-CELL')
               v = this%esc(n)
             case ('PRECONSTRESS')

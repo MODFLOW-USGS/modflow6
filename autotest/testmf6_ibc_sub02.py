@@ -174,12 +174,13 @@ def build_models():
                                       save_flows=False)
 
         # ibc files
-        ibc = flopy.mf6.ModflowGwfibc(gwf, ndelaycells=ndelaycells[idx],
+        ibc = flopy.mf6.ModflowGwfibc(gwf, head_based=True,
+                                      ndelaycells=ndelaycells[idx],
                                       delay_full_cell=full_cell[idx],
                                       storagecoefficient=True,
                                       constant_nodelay_thickness=True,
-                                      nibccells=1,
-                                      sgs=sgs, sgm=sgm, ibcrecarray=sub6)
+                                      nibccells=1, ske_cr=0.2,
+                                      ibcrecarray=sub6)
 
         # output control
         oc = flopy.mf6.ModflowGwfoc(gwf,

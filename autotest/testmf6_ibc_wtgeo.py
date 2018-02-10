@@ -226,8 +226,9 @@ def build_models():
         ndske = []
         thicknd = []
         if storagecoeff[idx]:
-            tsgs = 0.
-            tsgm = 0.
+            tsgs = None
+            tsgm = None
+            head_based = True
             for k in lnd[:nd0]:
                 b = thicknd0[k]
                 bb = zthick[k, 0, 0] * 0.5
@@ -256,6 +257,7 @@ def build_models():
         else:
             tsgs = sgs
             tsgm = sgm
+            head_based = None
             dskv = cc
             dske = cr
             for k in lnd[:nd0]:
@@ -290,7 +292,7 @@ def build_models():
                         ibcno += 1
                         b = thicknd[kdx]
                         d = [ibcno, (k, i, j), cdelays, hc[kdx],
-                             b, 999., ndssv[kdx], ndsse[kdx], 999., 999., -999.]
+                             b, 999., ndssv[kdx], ndsse[kdx], theta, 999., -999.]
                         sub6.append(d)
 
         # create delay bed packagedata entries
@@ -389,13 +391,14 @@ def build_models():
                                                        save_flows=False)
         # ibc files
         opth = '{}.ibc.obs'.format(name)
-        ibc = flopy.mf6.ModflowGwfibc(gwf, ndelaycells=ndelaycells[idx],
+        ibc = flopy.mf6.ModflowGwfibc(gwf, head_based=head_based,
+                                      ndelaycells=ndelaycells[idx],
                                       delay_full_cell=fullcell[idx],
                                       storagecoefficient=storagecoeff[idx],
                                       constant_nodelay_thickness=True,
                                       nibccells=maxibc,
                                       obs_filerecord=opth,
-                                      sgs=tsgs, sgm=tsgm,
+                                      ske_cr=0.2, sgs=tsgs, sgm=tsgm,
                                       ibcrecarray=sub6)
         orecarray = {}
         tcstr = 'total-compaction'

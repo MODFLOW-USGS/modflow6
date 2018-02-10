@@ -171,6 +171,7 @@
 | GWF | STO | PERIOD | STEADY-STATE | KEYWORD | keyword to indicate that stress-period IPER is steady-state. Steady-state conditions will apply until the TRANSIENT keyword is specified in a subsequent BEGIN PERIOD block. |
 | GWF | STO | PERIOD | TRANSIENT | KEYWORD | keyword to indicate that stress-period IPER is transient. Transient conditions will apply until the STEADY-STATE keyword is specified in a subsequent BEGIN PERIOD block. |
 | GWF | IBC | OPTIONS | SAVE_FLOWS | KEYWORD | keyword to indicate that cell-by-cell flow terms will be written to the file specified with ``BUDGET SAVE FILE'' in Output Control. |
+| GWF | IBC | OPTIONS | HEAD_BASED | KEYWORD | keyword to indicate the head-based formulation will be used to simulate no-delay and delay interbeds. |
 | GWF | IBC | OPTIONS | DELAY_FULL_CELL | KEYWORD | keyword to indicate that head-based delay interbeds will be simulated using a full-cell approach. |
 | GWF | IBC | OPTIONS | NDELAYCELLS | INTEGER | number of nodes used to discretize the the delay intebed thickness to approximate the head distributions in systems of delay interbeds. If not specified, then a default value of 19 is assigned. |
 | GWF | IBC | OPTIONS | INTERBED_STRESS_OFFSET | KEYWORD | keyword to indicate that an initial stress offset specified in the GRIDDATA block will be applied to each interbed. |
@@ -187,6 +188,7 @@
 | GWF | IBC | OPTIONS | OBS6 | KEYWORD | keyword to specify that record corresponds to an observations file. |
 | GWF | IBC | OPTIONS | OBS6_FILENAME | STRING | name of input file to define observations for the IBC package. See the ``Observation utility'' section for instructions for preparing observation input files. Table \ref{table:obstype} lists observation type(s) supported by the IBC package. |
 | GWF | IBC | DIMENSIONS | NIBCCELLS | INTEGER | is the number of IBC cells.  More than 1 IBC cell can be assigned to a GWF cell; however, only 1 GWF cell can be assigned to a single IBC cell. |
+| GWF | IBC | GRIDDATA | SKE_CR | DOUBLE PRECISION (NODES) | is elastic skeletal specific storage. |
 | GWF | IBC | GRIDDATA | SGM | DOUBLE PRECISION (NODES) | is specific gravity of moist or unsaturated sediments. |
 | GWF | IBC | GRIDDATA | SGS | DOUBLE PRECISION (NODES) | is specific gravity of saturated sediments. |
 | GWF | IBC | PACKAGEDATA | IBCNO | INTEGER | integer value that defines the IBC interbed number associated with the specified PACKAGEDATA data on the line. IBCNO must be greater than zero and less than or equal to NIBCCELLS.  IBC information must be specified for every IBC cell or the program will terminate with an error.  The program will also terminate with an error if information for a IBC intebed number is specified more than once. |
@@ -197,7 +199,7 @@
 | GWF | IBC | PACKAGEDATA | RNB | DOUBLE PRECISION | is the interbed material factor equivalent number of interbeds for the system of delay interbeds for interbed IBCNO. RNB must be greater than or equal to 1 if CDELAY is DELAY. Otherwise, RNB can be any value. |
 | GWF | IBC | PACKAGEDATA | SSV_CC | DOUBLE PRECISION | is the initial inelastic skeletal specific storage or compression index in the IBC interbed. The initial inelastic skeletal specific storage is specified if STORAGE\_COEFFICIENT is specified in the OPTIONS block. |
 | GWF | IBC | PACKAGEDATA | SSE_CR | DOUBLE PRECISION | is the initial elastic skeletal specific storage or recompression index in the IBC interbed. The initial elastic skeletal specific storage is specified if STORAGE\_COEFFICIENT is specified in the OPTIONS block. |
-| GWF | IBC | PACKAGEDATA | VOID | DOUBLE PRECISION | is the initial initial void ratio of the IBC interbed. |
+| GWF | IBC | PACKAGEDATA | THETA | DOUBLE PRECISION | is the initial porosity of the IBC interbed. |
 | GWF | IBC | PACKAGEDATA | KV | DOUBLE PRECISION | is the vertical hydraulic conductivity of the IBC interbed. KV must be greater than 0 if CDELAY is DELAY. Otherwise, KV can be any value. |
 | GWF | IBC | PACKAGEDATA | H0 | DOUBLE PRECISION | is the initial head in the IBC interbed. H0 can be anyvalue if CDELAY is NODELAY. |
 | GWF | IBC | PACKAGEDATA | BOUNDNAME | STRING | name of the IBC cell cell.  BOUNDNAME is an ASCII character variable that can contain as many as 40 characters.  If BOUNDNAME contains spaces in it, then the entire name must be enclosed within single quotes. |
