@@ -66,7 +66,7 @@ def build_models():
                                      nper=nper, tdisrecarray=tdis_rc)
 
         # create gwf model
-        gwf = flopy.mf6.MFModel(sim, model_type='gwf6', model_name=name,
+        gwf = flopy.mf6.MFModel(sim, model_type='gwf6', modelname=name,
                                 model_nam_file='{}.nam'.format(name),
                                 ims_file_name='{}.ims'.format(name))
         gwf.name_file.newtonoptions = newtonoptions[idx]
