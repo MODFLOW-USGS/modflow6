@@ -20,11 +20,6 @@ def get_distribution_name(versiontexname):
     return None
 
 
-pth = os.path.join('..', '..')
-if pth not in sys.path:
-    sys.path.append(pth)
-from mf6pyutil import mf6pyutil
-
 # Set up the path to the distribution
 fname = os.path.join('..', 'version.tex')
 dist = get_distribution_name(fname)
