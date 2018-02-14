@@ -37,7 +37,7 @@ reader urword
 optional false
 longname stress period time information
 description
-default value (1.0, 1, 1.0)
+default_value ((1.0, 1, 1.0),)
 
 block perioddata
 name perlen
