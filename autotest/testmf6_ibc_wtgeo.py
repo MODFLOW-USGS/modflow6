@@ -324,12 +324,11 @@ def build_models():
                                      sim_tdis_file='simulation.tdis')
         # create tdis package
         tdis = flopy.mf6.ModflowTdis(sim, time_units='DAYS',
-                                     nper=nper, tdisrecarray=tdis_rc)
+                                     nper=nper, perioddata=tdis_rc)
 
         # create gwf model
-        gwf = flopy.mf6.MFModel(sim, model_type='gwf6', model_name=name,
-                                model_nam_file='{}.nam'.format(name),
-                                ims_file_name='{}.ims'.format(name))
+        gwf = flopy.mf6.MFModel(sim, model_type='gwf6', modelname=name,
+                                model_nam_file='{}.nam'.format(name))
 
         # create iterative model solution and register the gwf model with it
         ims = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
@@ -359,8 +358,7 @@ def build_models():
         hrecarray['head_obs.csv'] = [('hobs1', hstr, (0, 4, 4)),
                                      ('hobs2', hstr, (1, 4, 4)),
                                      ('hobs3', hstr, (2, 4, 4))]
-        hobs = flopy.mf6.ModflowUtlobs(gwf, add_to_package_list=True,
-                                       continuousrecarray=hrecarray)
+        hobs = flopy.mf6.ModflowUtlobs(gwf, continuous=hrecarray)
 
         # node property flow
         npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False,
@@ -381,13 +379,13 @@ def build_models():
         # wel file
         wel = flopy.mf6.ModflowGwfwel(gwf, print_input=True, print_flows=True,
                                       maxbound=maxwel,
-                                      periodrecarray=wd6,
+                                      stress_period_data=wd6,
                                       save_flows=False)
 
         # chd files
         chd = flopy.mf6.modflow.mfgwfchd.ModflowGwfchd(gwf,
                                                        maxbound=maxchd,
-                                                       periodrecarray=cd6,
+                                                       stress_period_data=cd6,
                                                        save_flows=False)
         # ibc files
         opth = '{}.ibc.obs'.format(name)
@@ -418,7 +416,7 @@ def build_models():
                                                   fname=opth,
                                                   parent_file=ibc, digits=10,
                                                   print_input=True,
-                                                  continuousrecarray=orecarray)
+                                                  continuous=orecarray)
 
         # output control
         oc = flopy.mf6.ModflowGwfoc(gwf,

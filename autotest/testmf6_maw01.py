@@ -126,7 +126,7 @@ def build_models():
         # wel files
         #wel = flopy.mf6.ModflowGwfwel(gwf, print_input=True, print_flows=True,
         #                              maxbound=len(ws),
-        #                              periodrecarray=wd6,
+        #                              stress_period_data=wd6,
         #                              save_flows=False)
         # MAW
         opth = '{}.maw.obs'.format(name)
