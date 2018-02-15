@@ -122,11 +122,17 @@ This section describes changes introduced into MODFLOW 6 with each release.  The
 \begin{itemize}
 \item Added a new option, called SAVE\_SPECIFIC\_STORAGE to the Node Property Flow Package.  When invoked, $x$, $y$, and $z$ specific storage components are calculated for the center of each model cell and written to the binary budget file.
 \item For binary input of grid data, such as initial heads, the array reading utility was not reading a header record consisting of KSTP, KPER, PERTIM, TOTIM, TEXT, NLAY, NROW, NCOL.  This meant that a binary head file written by MODFLOW could not be used as input for a subsequent simulation.  For binary input, the array reading utility now reads a header record before reading the array values.
+\item The NOGRB option in the discretization packages was not working.  This option will now prevent the binary grid file from being written.
 \end{itemize}
 
 \underline{STRESS PACKAGES}
 \begin{itemize}
 \item If a steady-state stress period followed a transient stress period, the storage terms written to the budget file were not being reset to zero.  The program now initializes these budget values to zero for steady-state periods before they are written.
+\end{itemize}
+
+\underline{ADVANCED STRESS PACKAGES}
+\begin{itemize}
+\item The STATUS INACTIVE option was not working correctly for the MAW Package.
 \end{itemize}
 
 \underline{SOLUTION}

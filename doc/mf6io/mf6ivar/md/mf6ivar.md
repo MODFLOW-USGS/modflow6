@@ -110,7 +110,7 @@
 | GWF | DISV | VERTICES | IV | INTEGER | is the vertex number.  Records in the VERTICES block must be listed in consecutive order from 1 to NVERT. |
 | GWF | DISV | VERTICES | XV | DOUBLE PRECISION | is the x-coordinate for the vertex. |
 | GWF | DISV | VERTICES | YV | DOUBLE PRECISION | is the y-coordinate for the vertex. |
-| GWF | DISV | CELL2D | ICELL2D | INTEGER | is the CELL2D number.  Records in the CELL2D block must be listed in consecutive order from 1 to NCPL. |
+| GWF | DISV | CELL2D | ICELL2D | INTEGER | is the CELL2D number.  Records in the CELL2D block must be listed in consecutive order from the first to the last. |
 | GWF | DISV | CELL2D | XC | DOUBLE PRECISION | is the x-coordinate for the cell center. |
 | GWF | DISV | CELL2D | YC | DOUBLE PRECISION | is the y-coordinate for the cell center. |
 | GWF | DISV | CELL2D | NCVERT | INTEGER | is the number of vertices required to define the cell.  There may be a different number of vertices for each cell. |

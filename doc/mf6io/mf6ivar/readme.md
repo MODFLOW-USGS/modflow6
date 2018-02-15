@@ -19,7 +19,8 @@ A MODFLOW 6 variable, and its place within a block and on a line is defined usin
 * longname -- this is a long name for the variable.  Required.
 * description -- this is a written description of the variable.  Required.
 * preserve_case -- default is false, but should be set to true for file names
-
+* default_value -- default value for the variable.  Should be executable with Python
+* numeric_index -- default is false.  if true, then this is an index variable.  Is useful for Flopy to treat as zero-based.
 
 # Definition Files
 

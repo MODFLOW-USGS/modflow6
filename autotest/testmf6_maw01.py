@@ -21,11 +21,8 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['npf01a_75x75', 'npf01b_75x75']
-top = [100., 0.]
-laytyp = [1, 0]
-ss = [0., 1.e-4]
-sy = [0.1, 0.]
+ex = ['maw01', 'maw01nwt', 'maw01nwtur']
+newtonoptions = [None, [''], ['UNDER_RELAXATION']]
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
@@ -33,38 +30,20 @@ ddir = 'data'
 
 
 def build_models():
-    nlay, nrow, ncol = 1, 75, 75
+
+    nlay, nrow, ncol = 1, 1, 3
     nper = 3
-    perlen = [1., 1000., 1.]
-    nstp = [1, 10, 1]
-    tsmult = [1., 1.5, 1.]
-    steady = [True, False, True]
-    lenx = 20000.
+    perlen = [1., 1., 1.]
+    nstp = [1, 1, 1]
+    tsmult = [1., 1., 1.]
+    steady = [True, True, True]
+    lenx = 300.
     delr = delc = lenx / float(nrow)
-    botm = [-100.]
-    strt = 40.
+    botm = [0.]
+    strt = 100.
     hnoflo = 1e30
     hdry = -1e30
-    mu = 5.
-    sigma = 1.23
-    np.random.seed(seed=9001)
-    hk = np.random.lognormal(mu, sigma, (nrow, ncol))
-
-    nc = int((nrow - 1) / 2) + 1
-    w = [(0, nc, nc, -1000.)]
-    wd = {1: w}
-    ws = [((0, nc, nc), -1000.)]
-    wd6 = {1: ws}
-
-    c = []
-    c6 = []
-    for i in range(nrow):
-        c.append([0, i, 0, 48., 48.])
-        c.append([0, i, ncol - 1, 40., 40.])
-        c6.append([(0, i, 0), 48.])
-        c6.append([(0, i, ncol - 1), 40.])
-    cd = {0: c}
-    cd6 = {0: c6}
+    hk = 1.
 
     nouter, ninner = 100, 300
     hclose, rclose, relax = 1e-6, 0.01, 1.
@@ -89,6 +68,7 @@ def build_models():
         # create gwf model
         gwf = flopy.mf6.MFModel(sim, model_type='gwf6', modelname=name,
                                 model_nam_file='{}.nam'.format(name))
+        gwf.name_file.newtonoptions = newtonoptions[idx]
 
         # create iterative model solution and register the gwf model with it
         ims = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
@@ -97,7 +77,7 @@ def build_models():
                                    under_relaxation='NONE',
                                    inner_maximum=ninner,
                                    inner_hclose=hclose, rcloserecord=rclose,
-                                   linear_acceleration='CG',
+                                   linear_acceleration='BICGSTAB',
                                    scaling_method='NONE',
                                    reordering_method='NONE',
                                    relaxation_factor=relax)
@@ -105,7 +85,7 @@ def build_models():
 
         dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
                                       delr=delr, delc=delc,
-                                      top=top[idx], botm=botm,
+                                      top=100., botm=0.,
                                       idomain=1,
                                       fname='{}.dis'.format(name))
 
@@ -114,28 +94,50 @@ def build_models():
                                     fname='{}.ic'.format(name))
 
         # node property flow
-        npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False,
-                                      icelltype=laytyp[idx],
+        npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=True,
+                                      icelltype=1,
                                       k=hk,
-                                      k33=hk)
+                                      k33=hk,
+                                      fname='{}.npf'.format(name))
         # storage
-        sto = flopy.mf6.ModflowGwfsto(gwf, save_flows=False,
-                                      iconvert=laytyp[idx],
-                                      ss=ss[idx], sy=sy[idx],
-                                      steady_state={0: True, 2: True},
-                                      transient={1: True})
+        sto = flopy.mf6.ModflowGwfsto(gwf, save_flows=True,
+                                      iconvert=1,
+                                      ss=0., sy=0.1,
+                                      steady_state={0: True},
+                                      transient={1: False},
+                                      fname='{}.sto'.format(name))
 
         # chd files
-        chd = flopy.mf6.modflow.mfgwfchd.ModflowGwfchd(gwf,
-                                                       maxbound=len(c6),
-                                                       stress_period_data=cd6,
-                                                       save_flows=False)
+        chdlist0 = []
+        chdlist0.append([(0, 0, 0), 100.])
+        chdlist0.append([(0, 0, 2), 100.])
+
+        chdlist1 = []
+        chdlist1.append([(0, 0, 0), 25.])
+        chdlist1.append([(0, 0, 2), 25.])
+
+        chdspdict = {0: chdlist0, 1: chdlist1, 2: chdlist0}
+        chd = flopy.mf6.ModflowGwfchd(gwf,
+                                      stress_period_data=chdspdict,
+                                      save_flows=False,
+                                      fname='{}.chd'.format(name))
 
         # wel files
-        wel = flopy.mf6.ModflowGwfwel(gwf, print_input=True, print_flows=True,
-                                      maxbound=len(ws),
-                                      stress_period_data=wd6,
-                                      save_flows=False)
+        #wel = flopy.mf6.ModflowGwfwel(gwf, print_input=True, print_flows=True,
+        #                              maxbound=len(ws),
+        #                              periodrecarray=wd6,
+        #                              save_flows=False)
+        # MAW
+        wellbottom = 50.
+        wellrecarray = [[0, 0.1, wellbottom, 100., 'THEIM', 1]]
+        wellconnectionsrecarray = [[0, 0, (0, 0, 1), 100., wellbottom, 1., 0.1]]
+        wellperiodrecarray = [[0, 'rate', 0.]]
+        maw = flopy.mf6.ModflowGwfmaw(gwf, fname='{}.maw'.format(name),
+                                      print_input=True, print_head=True,
+                                      print_flows=True, save_flows=True,
+                                      packagedata=wellrecarray,
+                                      connectiondata=wellconnectionsrecarray,
+                                      perioddata=wellperiodrecarray)
 
         # output control
         oc = flopy.mf6.ModflowGwfoc(gwf,
@@ -144,32 +146,14 @@ def build_models():
                                     headprintrecord=[
                                         ('COLUMNS', 10, 'WIDTH', 15,
                                          'DIGITS', 6, 'GENERAL')],
-                                    saverecord=[('HEAD', 'LAST')],
-                                    printrecord=[('HEAD', 'LAST'),
-                                                 ('BUDGET', 'LAST')])
+                                    saverecord=[('HEAD', 'ALL')],
+                                    printrecord=[('HEAD', 'ALL'),
+                                                 ('BUDGET', 'ALL')],
+                                    fname='{}.oc'.format(name))
 
         # write MODFLOW 6 files
         sim.write_simulation()
 
-        # build MODFLOW-2005 files
-        ws = os.path.join(dir, 'mf2005')
-        mc = flopy.modflow.Modflow(name, model_ws=ws)
-        dis = flopy.modflow.ModflowDis(mc, nlay=nlay, nrow=nrow, ncol=ncol,
-                                       nper=nper, perlen=perlen, nstp=nstp,
-                                       tsmult=tsmult, steady=steady, delr=delr,
-                                       delc=delc, top=top[idx], botm=botm)
-        bas = flopy.modflow.ModflowBas(mc, ibound=1, strt=strt, hnoflo=hnoflo)
-        lpf = flopy.modflow.ModflowLpf(mc, laytyp=laytyp[idx], hk=hk, vka=hk,
-                                       ss=ss[idx], sy=sy[idx],
-                                       constantcv=True,
-                                       hdry=hdry)
-        chd = flopy.modflow.ModflowChd(mc, stress_period_data=cd)
-        wel = flopy.modflow.ModflowWel(mc, stress_period_data=wd)
-        oc = flopy.modflow.ModflowOc(mc, stress_period_data=None)
-        pcg = flopy.modflow.ModflowPcg(mc, mxiter=nouter, iter1=ninner,
-                                       hclose=hclose, rclose=rclose,
-                                       relax=relax)
-        mc.write_input()
 
     return
 
