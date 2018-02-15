@@ -94,6 +94,7 @@ module mawmodule
     integer(I4B), pointer :: check_attr => NULL()
     integer(I4B), pointer :: ishutoffcnt => NULL()
     integer(I4B), pointer :: ieffradopt => NULL()
+    real(DP), pointer :: satomega => null()
     ! -- for budgets
     integer(I4B), pointer :: bditems => NULL()
     ! -- for underrelaxation of estimated well q if using shutoff
@@ -246,6 +247,7 @@ contains
     call mem_allocate(this%check_attr, 'check_attr', this%origin)
     call mem_allocate(this%ishutoffcnt, 'ISHUTOFFCNT', this%origin)
     call mem_allocate(this%ieffradopt, 'IEFFRADOPT', this%origin)
+    call mem_allocate(this%satomega, 'SATOMEGA', this%origin)
     call mem_allocate(this%bditems, 'BDITEMS', this%origin)
     call mem_allocate(this%theta, 'THETA', this%origin)
     call mem_allocate(this%kappa, 'KAPPA', this%origin)
@@ -259,6 +261,7 @@ contains
     this%imawiss = 0
     this%imawissopt = 0
     this%ieffradopt = 0
+    this%satomega = DZERO
     this%bditems = 8
     this%theta = DP7
     this%kappa = DEM4
@@ -445,7 +448,7 @@ contains
         rval = this%parser%GetDouble()
         if (rval <= DZERO) then
           write(errmsg,'(4x,a,1x,i6,1x,a)') &
-            '****ERROR. RADIUS FOR WELL', n, 'MUST BE GREATER THAN ZERO.'
+            '****ERROR. RADIUS FOR WELL', n, 'MUST BE GR5EATER THAN ZERO.'
           call store_error(errmsg)
           cycle
         end if
@@ -605,12 +608,19 @@ contains
     ! -- local
     character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: cellid
+    character(len=30) :: nodestr
     integer(I4B) :: ierr, ival
     integer(I4b) :: ipos
     logical :: isfound, endOfBlock
     real(DP) :: rval
-    integer(I4B) :: j, n
+    real(DP) :: topnn
+    real(DP) :: botnn
+    real(DP) :: botw
+    integer(I4B) :: j
+    integer(I4B) :: jj
+    integer(I4B) :: n
     integer(I4B) :: nn
+    integer(I4B) :: nn2
     integer(I4B), dimension(:), pointer :: nboundchk
     integer(I4B), dimension(:), pointer :: iachk
     
@@ -667,29 +677,38 @@ contains
         ! -- read gwfnodes from the line
         call this%parser%GetCellid(this%dis%ndim, cellid)
         nn  = this%dis%noder_from_cellid(cellid, this%inunit, this%iout)
+        topnn = this%dis%top(nn)
+        botnn = this%dis%bot(nn)
+        botw = this%mawwells(n)%bot
         ! -- set gwf node number for connection
         this%mawwells(n)%gwfnodes(j) = nn
         ! -- top of screen
         rval = this%parser%GetDouble()
-        if (this%mawwells(n)%ieqn==0 .OR. this%mawwells(n)%ieqn==2 .OR. &
-            this%mawwells(n)%ieqn==3 .OR. this%mawwells(n)%ieqn==4) then
-          if (rval > this%dis%top(nn)) then
-            rval = this%dis%top(nn)
+        if (this%mawwells(n)%ieqn /= 4) then
+          rval = topnn
+        else
+          if (rval > topnn) then
+            rval = topnn
           end if
-          this%mawwells(n)%topscrn(j)  = rval
-        else if (this%mawwells(n)%ieqn==1) then
-          this%mawwells(n)%topscrn(j) = this%dis%top(nn)
         end if
+        this%mawwells(n)%topscrn(j)  = rval
         ! -- bottom of screen
         rval = this%parser%GetDouble()
-        if (this%mawwells(n)%ieqn==0 .OR.this%mawwells(n)%ieqn==2 .OR. &
-            this%mawwells(n)%ieqn==3 .OR. this%mawwells(n)%ieqn==4) then
-          if (rval < this%dis%bot(nn)) then
-            rval = this%dis%bot(nn)
+        if (this%mawwells(n)%ieqn /= 4) then
+          rval = botnn
+        else
+          if (rval < botnn) then
+            rval = botnn
           end if
-          this%mawwells(n)%botscrn(j)  = rval
-        else if (this%mawwells(n)%ieqn==1) then
-          this%mawwells(n)%botscrn(j) = this%dis%bot(nn)
+        end if
+        this%mawwells(n)%botscrn(j)  = rval
+        ! adjust the bottom of the well for all conductance approaches
+        ! except for "mean"
+        if (this%mawwells(n)%ieqn /= 4) then
+          if (rval < botw) then
+            botw = rval
+            this%mawwells(n)%bot = rval
+          end if
         end if
         ! -- hydraulic conductivity or conductance
         rval = this%parser%GetDouble()
@@ -725,6 +744,31 @@ contains
             call store_error(errmsg)
           end if
         end do
+      end do
+      !
+      ! -- make sure that more than one connection per cell is only specified 
+      !    wells using the mean conducance type
+      do n = 1, this%nmawwells
+        if (this%mawwells(n)%ieqn /= 4) then
+          do j = 1, this%mawwells(n)%ngwfnodes
+            nn = this%mawwells(n)%gwfnodes(j) 
+            do jj = 1, this%mawwells(n)%ngwfnodes
+              ! skip current maw node
+              if (jj == j) then
+                cycle
+              end if
+              nn2 =  this%mawwells(n)%gwfnodes(jj) 
+              if (nn2 == nn) then
+                call this%dis%noder_to_string(nn, nodestr)
+                write(errmsg,'(a,1x,i0,1x,a,1x,i0,3(1x,a))')                    &
+                  'ERROR.  ONLY ONE CONNECTION CAN BE SPECIFIED FOR MAW WELL',  &
+                  n, 'CONNECTION', j, 'TO GWF CELL', trim(adjustl(nodestr)),   &
+                  'UNLESS THE MEAN CONDEQN IS SPECIFIED'
+                call store_error(errmsg)
+              end if
+            end do
+          end do
+        end if
       end do
     else
       call store_error('ERROR.  REQUIRED CONNECTIONDATA BLOCK NOT FOUND.')
@@ -1527,6 +1571,11 @@ contains
     !
     call this%obs%obs_ar()
     !
+    ! -- set omega value used for saturation calculations
+    if (this%inewton > 0) then
+      this%satomega = DEM6
+    end if
+    !
     ! -- Allocate arrays in MAW and in package superclass
     call this%maw_allocate_arrays()
     !
@@ -1870,7 +1919,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule,only:delt
+    use TdisModule,only: delt, kper, kstp
     ! -- dummy
     class(MawType) :: this
     real(DP), dimension(:), intent(inout) :: rhs
@@ -2117,7 +2166,7 @@ contains
           ! -- calculate newton corrections
           hups = hmaw
           if (hgwf > hups) hups = hgwf
-          drterm = sQuadraticSaturationDerivative(tmaw, bmaw, hups)
+          drterm = sQuadraticSaturationDerivative(tmaw, bmaw, hups, this%satomega)
           ! -- maw is upstream
           if (hmaw > hgwf) then
             term = drterm * this%mawwells(n)%satcond(j) * (hmaw - hgwf)
@@ -3065,6 +3114,7 @@ contains
     call mem_deallocate(this%check_attr)
     call mem_deallocate(this%ishutoffcnt)
     call mem_deallocate(this%ieffradopt)
+    call mem_deallocate(this%satomega)
     call mem_deallocate(this%bditems)
     call mem_deallocate(this%theta)
     call mem_deallocate(this%kappa)
@@ -3728,7 +3778,7 @@ contains
         if (htmp < botw) htmp = botw
       end if
       ! -- calculate saturation
-      sat = sQuadraticSaturation(topw, botw, htmp)
+      sat = sQuadraticSaturation(topw, botw, htmp, this%satomega)
     else
       sat = DONE
     end if
@@ -3968,7 +4018,7 @@ contains
           this%bound(2,ibnd) = cmaw
 
           bmaw = this%bound(3,ibnd)
-
+          
           this%hcof(ibnd) = -cmaw
           !
           ! -- fill rhs

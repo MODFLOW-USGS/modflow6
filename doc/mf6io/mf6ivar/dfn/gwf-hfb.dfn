@@ -36,7 +36,7 @@ longname stress period number
 description REPLACE iper {}
 
 block period
-name hfbrecarray
+name stress_period_data
 type recarray cellid1 cellid2 hydchr
 shape (maxhfb)
 reader urword

@@ -1,0 +1,299 @@
+\documentclass[11pt,twoside,twocolumn]{usgsreport}
+\usepackage{usgsfonts}
+\usepackage{usgsgeo}
+\usepackage{usgsidx}
+\usepackage[tabletoc]{usgsreporta}
+
+\usepackage{amsmath}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{bm}
+\usepackage{calc}
+\usepackage{natbib}
+\usepackage{graphicx}
+\usepackage{longtable}
+
+\makeindex
+\usepackage{setspace}
+\usepackage{lipsum}
+% uncomment to make double space 
+%\doublespacing
+\usepackage{etoolbox}
+\usepackage{verbatim}
+
+\usepackage[hidelinks]{hyperref}
+\hypersetup{
+    pdftitle={Mf5to6 User Guide},
+    pdfauthor={Edward R. Banta},
+    pdfsubject={MF2005-to-MF6 input converter},
+    pdfkeywords={groundwater, MODFLOW, simulation, input, converter},
+    bookmarksnumbered=true,     
+    bookmarksopen=true,         
+    bookmarksopenlevel=1,       
+    colorlinks=true,
+    allcolors={blue},          
+    pdfstartview=Fit,           
+    pdfpagemode=UseOutlines,
+    pdfpagelayout=TwoPageRight
+}
+
+
+\graphicspath{{./Figures/}}
+\input{../version.tex}
+
+\renewcommand{\cooperator}
+{the \textusgs\ Water Availability and Use Science Program}
+\renewcommand{\reporttitle}
+{User Guide For \programname{}}
+\renewcommand{\coverphoto}{coverimage.jpg}
+\renewcommand{\GSphotocredit}{Binary computer code illustration.}
+\renewcommand{\reportseries}{}
+\renewcommand{\reportnumber}{}
+\renewcommand{\reportyear}{2017}
+\ifdef{\reportversion}{\renewcommand{\reportversion}{\currentmodflowversion}}{}
+\renewcommand{\theauthors}{MODFLOW 6 Development Team}
+\renewcommand{\thetitlepageauthors}{\theauthors}
+\renewcommand{\reportcitingtheauthors}{\theauthors}
+\renewcommand{\colophonmoreinfo}{}
+\renewcommand{\theoffice}{Office of Groundwater \\ U.S. Geological Survey \\ Mail Stop 411 \\ 12201 Sunrise Valley Drive \\ Reston, VA 20192 \\ (703) 648-5001}
+\renewcommand{\reportbodypages}{}
+\urlstyle{rm}
+\renewcommand{\reportwebsiteroot}{https://doi.org/10.5066/}
+\renewcommand{\reportwebsiteremainder}{F76Q1VQV}
+%\renewcommand{\doisecretary}{RYAN K. ZINKE}
+%\renewcommand{\usgsdirector}{William H. Werkheiser}
+%\ifdef{\usgsdirectortitle}{\renewcommand{\usgsdirectortitle}{Acting Director}}{}
+\ifdef{\usgsissn}{\renewcommand{\usgsissn}{}}{}
+\renewcommand{\theconventions}{}
+\definecolor{coverbar}{RGB}{100, 27, 86}
+\renewcommand{\bannercolor}{\color{coverbar}}
+%\renewcommand{\thePSC}{the MODFLOW 6 Development Team}
+%\renewcommand{\theeditor}{Christian D. Langevin}
+%\renewcommand{\theillustrator}{None}
+%\renewcommand{\thefirsttypesetter}{Joseph D. Hughes}
+%\renewcommand{\thesecondtypesetter}{Cian Dawson}
+\renewcommand{\reportrefname}{References Cited}
+
+\newcommand{\customcolophon}{
+Publishing support provided by the U.S. Geological Survey \\
+\theauthors
+\newline \newline
+For information concerning this publication, please contact:
+\newline \newline
+Office of Groundwater \\ U.S. Geological Survey \\ Mail Stop 411 \\ 12201 Sunrise Valley Drive \\ Reston, VA 20192 \\ (703) 648--5001 \\
+https://water.usgs.gov/ogw/
+}
+
+
+\newcommand{\programname}{Mf5to6}
+\newcommand{\mfname}{MODFLOW~6}
+\ifdef{\reportversion}{\renewcommand{\reportversion}{\currentmodflowversion}}{\newcommand{\reportversion}{\currentmodflowversion}}
+\newcommand{\reportdate}{\today}
+
+%\setcounter{tab}{0}%
+
+\begin{document}
+%\makefrontcover
+%\makefrontmatter
+
+\ifdef{\makefrontcoveralt}
+{
+\makefrontcoveralt
+\makefrontmatterabv
+}
+{
+\vspace*{\fill}
+\begin{center}
+{\Large
+\reporttitle
+
+A Utility For Converting MODFLOW-2005 Models To MODFLOW 6
+
+\vspace{5mm}
+\reportversion
+
+\vspace{5mm}
+
+\large
+%\reportdate
+
+\vspace{10mm}
+\large
+By \theauthors
+}
+\vspace{40mm}
+\vspace*{\fill}
+\end{center}
+
+\newpage
+
+
+
+\maketoc
+}
+
+\onecolumn
+\pagestyle{body}
+\RaggedRight
+\hbadness=10000
+\pagestyle{body}
+\setlength{\parindent}{1.5pc}
+
+
+%Introduction for input instructions
+\SECTION{Introduction}
+%\input{introduction.tex}
+This document contains instructions for running \programname{}, a utility for converting input files for selected models based on MODFLOW-2005 (Harbaugh, 2005) to a new set of files suitable for use with \mfname{}. In many cases output of the resulting \mfname{} model will essentially duplicate the original model. However, \mfname{} does not exactly reproduce all of the original model capabilities, and some user modifications to \programname{}-generated \mfname{} files may be needed to obtain satisfactory results. In addition, some packages are not yet supported by \mfname{}, and some packages supported by \mfname{} are not yet supported by \programname{}. The current version of \programname{} is designed to work with \mfname{} version \modflowversion{}. 
+
+\mfname{} does not support parameters as they are used in MODFLOW-2005. However, \programname{} supports MODFLOW-2005-style input files that use parameters. When parameters are defined in model input, \programname{} uses parameter values, which may be defined in a PVAL file, and it uses the multiplication and zone arrays as defined in MULT and ZONE files, respectively, to appropriately assign values in \mfname{} input.
+
+\programname{} will attempt to convert any input file listed in the original name file. \programname{} will identify most files listed in the original name file as either input or output files, based on the file type. However, DATA and DATA(BINARY) files can be either input or output files. To distinguish between input and output files having the DATA or DATA(BINARY) file type, ensure that either ``OLD'' or ``REPLACE'' is listed in the name file after the file name of each of these input or output files, respectively. \programname{} will report an error if OLD or REPLACE is omitted where needed.
+
+The versions of MODFLOW that are supported for conversion by \programname{} are listed in Table \ref{tab:suppver}.
+
+%\vspace{5mm}
+
+\begin{table}[h]
+\caption{MODFLOW versions supported by \programname{}}\label{tab:suppver}
+\small 
+%\begin{center}
+\begin{tabular}{ll}\hline
+MODFLOW version & Reference\\
+\hline
+\hline
+MODFLOW-2005 & \cite{modflow2005}\\
+MODFLOW-LGR & \cite{mehl2007modflow}\\
+MODFLOW-NWT & \cite{modflownwt}\\
+\hline
+\end{tabular}
+%\end{center}
+\normalsize
+\end{table}
+
+%Using Mf5to6
+%Syntax
+\SECTION{Using \programname{}}
+%\input{running_simulation.tex}
+\programname{} is designed to be run at a command prompt. The syntax is as follows:\\
+\vspace{6pt}
+
+mf5to6  \textit{mf2005-name-file}  \textit{basename}
+% \textit{[mf5to6-options-file]}
+
+\begin{tabbing}
+\hspace*{1.2cm}\= \kill
+where: \> \textit{mf2005-name-file} is the name of an existing name file for a supported model (Table \ref{tab:suppver}), \\
+ and \\
+\>\textit{basename} is a text string to be used as the base for names of \mfname{} input and output files. \\
+% and \\
+%\> \textit{mf5to6-options-file} is the name of a file containing input to control optional processing by \programname{}. 
+\end{tabbing}
+
+Invoke \programname{} in the folder where the name file for your original model resides; \programname{} creates new MF6 input files in the same folder. The names of all new input and output files will start with the basename you provide.
+
+In the MODFLOW-2005 DIS input file, ensure that ITMUNI (seconds=1; minutes=2; hours=3; days=4; years=5) and LENUNI (feet=1; meters=2; centimeters=3) are defined appropriately with non-zero values.
+
+For an LGR model, which uses multiple MODFLOW-2005 name files to define parent and child models, \textit{mf2005-name-file} is the name of the main LGR input file. \programname{} will convert the parent model and each child model.
+
+%If \textit{mf5to6-options-file} is specified, it should contain an OPTIONS block, as follows.
+
+%\begin{verbatim}
+%OPTIONS
+%  PATHTOPOSTOBSMF  path-to-PostObsMF-executable
+%  SCRIPT  script-type
+%END OPTIONS
+%\end{verbatim}
+
+%\begin{tabbing}
+%\hspace*{1.2cm}\= \kill
+%where: \> \textit{path-to-PostObsMF-executable} is the operating system path pointing to the PostObsMF executable file, 
+% and \\
+%\> \textit{script-type} is BATCH. A \textit{script-type} of PYTHON is planned but not yet supported. 
+%\end{tabbing}
+
+%When \textit{mf5to6-options-file} is specified and the model specified by \textit{mf2005-name-file} contains head observations, \programname{} will generate a script of type \textit{script-type} that can be used to invoke the PostObsMF utility after the MF6 model has been run. When the script is run, PostObsMF will combine simulated heads generated by MF6 and weighting factors generated by \programname{} to produce simulated values equivalent to those produced by MODFLOW-2005.
+
+%Output generated by MF5to6
+\SECTION{Output Generated By \programname{}}
+
+To inform the user of progress as \programname{} processes each input file, a message identifying the file type is displayed in the command-prompt window. In addition to output sent to the command-prompt window, \programname{} writes output to a file named \textit{basename}\_conversion\_messages.txt. This file will contain most of the input-echoing output normally written by the supported models. Additional information generated by \programname{} will be written at the bottom of this file.
+
+After all input files have been processed, messages related to the conversion process are written to the command-prompt window and to the \textit{basename}\_conversion\_messages.txt file. The messages may be notes, warnings, or errors, and are identified accordingly. If a MODFLOW-2005 file type not supported by \programname{} is encountered, a warning is issued and processing continues. Errors generally cause the program to halt. Users are advised to carefully read all notes, warnings, and errors. These messages can help the user track down problems that may arise in running the resulting set of \mfname{} input files. Most importantly, files of types that are not supported are identified. Acceptable results are unlikely if the \mfname{} model does not include input corresponding to all MODFLOW-2005 input files. 
+
+The Iterative Model Solution (IMS) is the only solver supported in \mfname{}. IMS is not supported in MODFLOW-2005. As a result, an IMS input file needs to be generated for use with \mfname{}. \programname{} attempts to generate an IMS file with settings assigned appropriately for the model, based on input provided for the original solver package. However, it may be necessary to modify the IMS file to obtain solver convergence. If the solver your model uses is not supported by MODFLOW-2005, an error message will be issued. In this situation, remove (or comment out) the line in the name file that activates the non-supported solver, and \programname{} will generate an IMS input file with default values. Adjust these values as needed to obtain convergence.
+
+%\vspace{5mm}
+\SECTION{Supported Packages}
+
+MODFLOW-2005 packages supported by the current version of \programname{} and their corresponding packages in \mfname{} are listed in Table \ref{tab:supportedpackages}. In some cases, input in a MODFLOW-2005 file may contribute to input for more than one \mfname{} file -- for such cases, the MODFLOW-2005 file type appears in more than one table row. Similarly, \mfname{} may require input from more than one MODFLOW-2005 file, and these are listed individually. MODFLOW-2005 input files that are not listed are not converted, but the program will continue to process input files that are listed. Warnings are issued for unsupported file types. File types that are not supported by MODFLOW-2005 will result in an error and cause the program to terminate prematurely.
+
+%\vspace{5mm}
+
+\begin{table}[ht]
+\caption{Packages supported by \programname{}. Packages are identified by file type as used in the MODFLOW name file}
+\small
+%\begin{center}
+\begin{tabular*}{\columnwidth}{l l l}
+\hline
+\hline
+MF2005 Package & MF6 Package & Note \\
+\hline
+BAS6 & CHD6 & Constant heads from IBOUND arrays \\
+BAS6 & DIS6 & Time and length units  \\
+BAS6 & IC6 & Starting heads \\
+BAS6 & NPF6 & Confined/unconfined units; active cells \\
+BCF6 & NPF6 & Aquifer properties \\
+BCF6 & STO6 & Storage properties  \\
+CHD & CHD6 & Time-varying specified heads \\
+CHOB & CHD6 & Constant-head flow observations \\
+DE4 & IMS6 & Solver input \\
+DIS & DIS6 & Spatial discretization \\
+DIS & TDIS6 & Temporal discretization  \\
+DRN & DRN6 & Drains  \\
+DROB & DRN6 & Drain flow observations  \\
+EVT & EVT6 & Evapotranspiration \\
+ETS & EVT6 & Evapotranspiration \\
+FHB & WEL6 & Time-varying specified flows \\
+FHB & CHD6 & Time-varying specified heads \\
+GBOB & GHB6 & General-head boundary flow observations \\
+GHB & GHB6 & General-head boundaries \\
+GMG & IMS6 & Solver input \\
+HFB6 & HFB6 & Horizontal-flow boundaries \\
+HOB & OBS6 & Head observations \\
+LAK & LAK6 & Lakes \\
+LPF & NPF6 & Aquifer properties \\
+LPF & STO6 & Storage properties \\
+MNW2 & MAW6 & Multi-aquifer wells  \\
+MULT & various packages & Multiplier arrays used in MODFLOW-2005  \\
+NWT & IMS6 & Solver input \\
+OC & OC6 & Output control \\
+PCG & IMS6 & Solver input  \\
+PCGN & IMS6 & Solver input  \\
+PVAL & various packages & Parameter values used in MODFLOW-2005 \\
+RCH & RCH6 & Recharge \\
+RIV & RIV6 & Rivers \\
+RVOB & RIV6 & River flow observations  \\
+SFR2 & SFR6 & Streamflow routing. Not all SFR2 options are supported in SFR6  \\
+SIP & IMS6 & Solver input  \\
+UPW & NPF6 & Upstream weighting \\
+UZF & UZF6 & Unsaturated zone flow \\
+WEL & WEL6 & Wells \\
+ZONE & various packages & Zone arrays used in MODFLOW-2005 \\
+\hline 
+\end{tabular*}
+\label{tab:supportedpackages}
+%\end{center}
+\normalsize
+\end{table}
+
+\REFSECTION
+%\SECTION{References Cited}
+\bibliography{../MODFLOW6References}
+\bibliographystyle{../usgs.bst}
+
+\justifying
+\vspace*{\fill}
+\clearpage
+\pagestyle{backofreport}
+\makebackcover
+\end{document}
