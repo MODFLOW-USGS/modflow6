@@ -84,12 +84,11 @@ def build_models():
                                      sim_tdis_file='simulation.tdis')
         # create tdis package
         tdis = flopy.mf6.ModflowTdis(sim, time_units='DAYS',
-                                     nper=nper, tdisrecarray=tdis_rc)
+                                     nper=nper, perioddata=tdis_rc)
 
         # create gwf model
         gwf = flopy.mf6.MFModel(sim, model_type='gwf6', modelname=name,
-                                model_nam_file='{}.nam'.format(name),
-                                ims_file_name='{}.ims'.format(name))
+                                model_nam_file='{}.nam'.format(name))
 
         # create iterative model solution and register the gwf model with it
         ims = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
@@ -129,13 +128,13 @@ def build_models():
         # chd files
         chd = flopy.mf6.modflow.mfgwfchd.ModflowGwfchd(gwf,
                                                        maxbound=len(c6),
-                                                       periodrecarray=cd6,
+                                                       stress_period_data=cd6,
                                                        save_flows=False)
 
         # wel files
         wel = flopy.mf6.ModflowGwfwel(gwf, print_input=True, print_flows=True,
                                       maxbound=len(ws),
-                                      periodrecarray=wd6,
+                                      stress_period_data=wd6,
                                       save_flows=False)
 
         # output control

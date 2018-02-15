@@ -63,12 +63,11 @@ def build_models():
                                      sim_tdis_file='simulation.tdis')
         # create tdis package
         tdis = flopy.mf6.ModflowTdis(sim, time_units='DAYS',
-                                     nper=nper, tdisrecarray=tdis_rc)
+                                     nper=nper, perioddata=tdis_rc)
 
         # create gwf model
         gwf = flopy.mf6.MFModel(sim, model_type='gwf6', modelname=name,
-                                model_nam_file='{}.nam'.format(name),
-                                ims_file_name='{}.ims'.format(name))
+                                model_nam_file='{}.nam'.format(name))
         gwf.name_file.newtonoptions = newtonoptions[idx]
 
         # create iterative model solution and register the gwf model with it
@@ -119,7 +118,7 @@ def build_models():
 
         chdspdict = {0: chdlist0, 1: chdlist1, 2: chdlist0}
         chd = flopy.mf6.ModflowGwfchd(gwf,
-                                      periodrecarray=chdspdict,
+                                      stress_period_data=chdspdict,
                                       save_flows=False,
                                       fname='{}.chd'.format(name))
 
@@ -130,15 +129,15 @@ def build_models():
         #                              save_flows=False)
         # MAW
         wellbottom = 50.
-        wellrecarray = [[0 + 1, 0.1, wellbottom, 100., 'THEIM', 1]]
-        wellconnectionsrecarray = [[0 + 1, 0 + 1, (0, 0, 1), 100., wellbottom, 1., 0.1]]
-        wellperiodrecarray = [[0 + 1, 'rate', 0.]]
+        wellrecarray = [[0, 0.1, wellbottom, 100., 'THEIM', 1]]
+        wellconnectionsrecarray = [[0, 0, (0, 0, 1), 100., wellbottom, 1., 0.1]]
+        wellperiodrecarray = [[0, 'rate', 0.]]
         maw = flopy.mf6.ModflowGwfmaw(gwf, fname='{}.maw'.format(name),
                                       print_input=True, print_head=True,
                                       print_flows=True, save_flows=True,
-                                      wellrecarray=wellrecarray,
-                                      wellconnectionsrecarray=wellconnectionsrecarray,
-                                      wellperiodrecarray=wellperiodrecarray)
+                                      packagedata=wellrecarray,
+                                      connectiondata=wellconnectionsrecarray,
+                                      perioddata=wellperiodrecarray)
 
         # output control
         oc = flopy.mf6.ModflowGwfoc(gwf,
