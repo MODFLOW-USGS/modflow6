@@ -75,13 +75,12 @@ def build_models():
                                      sim_tdis_file='simulation.tdis')
         # create tdis package
         tdis = flopy.mf6.ModflowTdis(sim, time_units='DAYS',
-                                     nper=nper, tdisrecarray=tdis_rc)
+                                     nper=nper, perioddata=tdis_rc)
 
         # create gwf model
         gwfname = 'gwf_' + name
-        gwf = flopy.mf6.MFModel(sim, model_type='gwf6', model_name=gwfname,
-                                model_nam_file='{}.nam'.format(gwfname),
-                                ims_file_name='{}.ims'.format(gwfname))
+        gwf = flopy.mf6.MFModel(sim, model_type='gwf6', modelname=gwfname,
+                                model_nam_file='{}.nam'.format(gwfname))
 
         # create iterative model solution and register the gwf model with it
         imsgwf = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
@@ -121,13 +120,13 @@ def build_models():
 
         # chd files
         chd = flopy.mf6.ModflowGwfchd(gwf,
-                                      periodrecarray=chdspdict,
+                                      stress_period_data=chdspdict,
                                       save_flows=False,
                                       pname='CHD-1')
 
         # wel files
         wel = flopy.mf6.ModflowGwfwel(gwf, print_input=True, print_flows=True,
-                                      periodrecarray=w,
+                                      stress_period_data=w,
                                       save_flows=False,
                                       auxiliary='CONCENTRATION', pname='WEL-1')
 
@@ -144,9 +143,8 @@ def build_models():
 
         # create gwt model
         gwtname = 'gwt_' + name
-        gwt = flopy.mf6.MFModel(sim, model_type='gwt6', model_name=gwtname,
-                                model_nam_file='{}.nam'.format(gwtname),
-                                ims_file_name='{}.ims'.format(gwtname))
+        gwt = flopy.mf6.MFModel(sim, model_type='gwt6', modelname=gwtname,
+                                model_nam_file='{}.nam'.format(gwtname))
 
         # create iterative model solution and register the gwt model with it
         imsgwt = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
@@ -182,7 +180,7 @@ def build_models():
 
         # sources
         sourcerecarray = [('WEL-1', 1, 'CONCENTRATION')]
-        ssm = flopy.mf6.ModflowGwtssm(gwt, sourcerecarray=sourcerecarray,
+        ssm = flopy.mf6.ModflowGwtssm(gwt, sources=sourcerecarray,
                                     fname='{}.ssm'.format(gwtname))
 
         # output control

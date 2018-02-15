@@ -4,7 +4,7 @@
 # --------------------- gwt ssm sources ---------------------
 
 block sources
-name sourcerecarray
+name sources
 type recarray pname component auxname
 reader urword
 optional false

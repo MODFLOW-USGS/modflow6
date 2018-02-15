@@ -35,7 +35,7 @@ description REPLACE save_flows {'{#1}': 'all model package'}
 # --------------------- gwt nam packages ---------------------
 
 block packages
-name packagerecarray
+name packages
 type recarray ftype fname pname
 reader urword
 optional false
