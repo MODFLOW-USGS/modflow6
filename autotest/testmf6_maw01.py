@@ -46,7 +46,8 @@ def build_models():
     hk = 1.
 
     nouter, ninner = 100, 300
-    hclose, rclose, relax = 1e-6, 0.01, 1.
+    hclose, rclose, relax = 1e-9, 1e-3, 1.
+    krylov = ['CG', 'BICGSTAB', 'BICGSTAB']
 
     tdis_rc = []
     for idx in range(nper):
@@ -77,7 +78,7 @@ def build_models():
                                    under_relaxation='NONE',
                                    inner_maximum=ninner,
                                    inner_hclose=hclose, rcloserecord=rclose,
-                                   linear_acceleration='BICGSTAB',
+                                   linear_acceleration=krylov[idx],
                                    scaling_method='NONE',
                                    reordering_method='NONE',
                                    relaxation_factor=relax)
@@ -104,7 +105,7 @@ def build_models():
                                       iconvert=1,
                                       ss=0., sy=0.1,
                                       steady_state={0: True},
-                                      transient={1: False},
+                                      # transient={1: False},
                                       fname='{}.sto'.format(name))
 
         # chd files
@@ -128,6 +129,7 @@ def build_models():
         #                              periodrecarray=wd6,
         #                              save_flows=False)
         # MAW
+        opth = '{}.maw.obs'.format(name)
         wellbottom = 50.
         wellrecarray = [[0, 0.1, wellbottom, 100., 'THEIM', 1]]
         wellconnectionsrecarray = [[0, 0, (0, 0, 1), 100., wellbottom, 1., 0.1]]
@@ -135,9 +137,17 @@ def build_models():
         maw = flopy.mf6.ModflowGwfmaw(gwf, fname='{}.maw'.format(name),
                                       print_input=True, print_head=True,
                                       print_flows=True, save_flows=True,
+                                      obs_filerecord=opth,
                                       packagedata=wellrecarray,
                                       connectiondata=wellconnectionsrecarray,
                                       perioddata=wellperiodrecarray)
+        mawo_dict = {}
+        mawo_dict['maw_obs.csv'] = [('mh1', 'head', 1)]
+        maw_obs = flopy.mf6.ModflowUtlobs(gwf,
+                                          fname=opth,
+                                          parent_file=maw, digits=20,
+                                          print_input=True,
+                                          continuous=mawo_dict)
 
         # output control
         oc = flopy.mf6.ModflowGwfoc(gwf,
@@ -157,6 +167,35 @@ def build_models():
 
     return
 
+def eval_maw(sim):
+    print('evaluating MAW heads...')
+
+    # MODFLOW 6 maw results
+    fpth = os.path.join(sim.simpath, 'maw_obs.csv')
+    try:
+        tc = np.genfromtxt(fpth, names=True, delimiter=',')
+    except:
+        assert False, 'could not load data from "{}"'.format(fpth)
+
+    # create known results array
+    tc0 = np.array([100., 25., 100.])
+
+    # calculate maximum absolute error
+    diff = tc['MH1'] - tc0
+    diffmax = np.abs(diff).max()
+    dtol = 1e-9
+    msg = 'maximum absolute maw head difference ({}) '.format(diffmax)
+
+    if diffmax > dtol:
+        sim.success = False
+        msg += 'exceeds {}'.format(dtol)
+        assert diffmax < dtol, msg
+    else:
+        sim.success = True
+        print('    ' + msg)
+
+    return
+
 # - No need to change any code below
 def test_mf6model():
     # initialize testing framework
@@ -166,8 +205,8 @@ def test_mf6model():
     build_models()
 
     # run the test models
-    for dir in exdirs:
-        yield test.run_mf6, Simulation(dir)
+    for idx, dir in enumerate(exdirs):
+        yield test.run_mf6, Simulation(dir, exfunc=eval_maw, idxsim=idx)
 
     return
 
@@ -180,8 +219,8 @@ def main():
     build_models()
 
     # run the test models
-    for dir in exdirs:
-        sim = Simulation(dir)
+    for idx, dir in enumerate(exdirs):
+        sim = Simulation(dir, exfunc=eval_maw, idxsim=idx)
         test.run_mf6(sim)
 
     return

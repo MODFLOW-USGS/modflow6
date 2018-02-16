@@ -63,6 +63,7 @@ tmp_simulations/
 autotest/temp/
 autotest/tempbin/
 autotest/*.html
+autotest/notebooks/
 
 mod_temp/
 obj_temp/
