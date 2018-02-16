@@ -6,7 +6,6 @@ import pymake
 pth = os.path.join('..', '..')
 if pth not in sys.path:
     sys.path.append(pth)
-from mf6pyutil import mf6pyutil
 
 
 def get_distribution_name(versiontexname):
@@ -73,15 +72,13 @@ for exname in files:
     
     # number of models
     mfnamefile = os.path.join(expth, exname, 'mfsim.nam')
-    #model_files = mf6pyutil.get_input_files(mfnamefile)
-    model_files, outfiles = pymake.autotest.get_mf6_input_files(mfnamefile)
+    model_files, outfiles = pymake.autotest.get_mf6_files(mfnamefile)
     nmodels = len([w for w in model_files if w.lower().endswith('.nam')])
     # s += '& {} '.format(nmodels)
 
 
     # Number of stress periods
     tdis = [w for w in model_files if w.upper().endswith('.TDIS')][0]
-    #nper = mf6pyutil.get_nper(os.path.join(expth, exname, tdis))
     nper = pymake.autotest.get_mf6_nper(os.path.join(expth, exname, tdis))
     s += '& {} '.format(nper)
 
@@ -99,7 +96,6 @@ for exname in files:
     s += '& '
     mshapes = []
     for disfile in dis_files:
-        #mshape = mf6pyutil.get_mshape(os.path.join(expth, exname, disfile))
         mshape = pymake.autotest.get_mf6_mshape(os.path.join(expth, exname, disfile))
         mshapes.append(mshape)
     cellstring = '\parbox[t]{3cm}{' + ''.join(r' {} \\'.format(ms) for ms in mshapes) + '}'
@@ -110,9 +106,6 @@ for exname in files:
     s += '& '
     lines = []
     for nf in namefiles:
-        #ftypes = mf6pyutil.get_ftypes(os.path.join(expth, exname, nf),
-        #           ['CHD8', 'WEL8', 'DRN8', 'RIV8', 'GHB8', 'SFR8', 'RCH8',
-        #            'EVT8', 'SFR8', 'UZF8', 'MAW8', 'LAK8', 'MVR8'])
         ftypes = pymake.autotest.get_mf6_ftypes(os.path.join(expth, exname, nf),
                    ['CHD6', 'WEL6', 'DRN6', 'RIV6', 'GHB6', 'SFR6', 'RCH6',
                     'EVT6', 'SFR6', 'UZF6', 'MAW6', 'LAK6', 'MVR6'])
