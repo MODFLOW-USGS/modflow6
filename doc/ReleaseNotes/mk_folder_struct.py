@@ -34,7 +34,6 @@ def get_distribution_name(versiontexname):
 pth = os.path.join('..', '..')
 if pth not in sys.path:
     sys.path.append(pth)
-from mf6pyutil import mf6pyutil
 
 # Find version information
 fname = os.path.join('..', 'version.tex')

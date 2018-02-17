@@ -121,6 +121,7 @@ fullcell = [None, True]
 ndelaycells = [20, 39]
 sgm = 1.7
 sgs = 2.
+compind = [None, True]
 storagecoeff = [True, None]
 cr = 0.01
 cc = 0.25
@@ -392,12 +393,12 @@ def build_models():
         ibc = flopy.mf6.ModflowGwfibc(gwf, head_based=head_based,
                                       ndelaycells=ndelaycells[idx],
                                       delay_full_cell=fullcell[idx],
-                                      storagecoefficient=storagecoeff[idx],
+                                      compression_indices=compind[idx],
                                       constant_nodelay_thickness=True,
                                       nibccells=maxibc,
                                       obs_filerecord=opth,
                                       ske_cr=0.2, sgs=tsgs, sgm=tsgm,
-                                      ibcrecarray=sub6)
+                                      packagedata=sub6)
         orecarray = {}
         tcstr = 'total-compaction'
         esstr = 'estress-cell'

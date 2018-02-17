@@ -221,7 +221,7 @@ contains
     this%igeocalc = 1
     this%ibedstressoff = 0
     this%igeostressoff = 0
-    this%istoragec = 0
+    this%istoragec = 1
     this%iconstantndb = 0
     this%idbhalfcell = 0
     this%idbfullcell = 0
@@ -731,11 +731,13 @@ contains
       this%igeostressoff = 1
       write(this%iout, fmtopt) 'OFFSET WILL BE APPLIED TO STRESSES'
       found = .true.
-    ! storage coefficients (SSE and SSV) will be specified instead of CR and CC
-    case ('STORAGECOEFFICIENT')
-      this%istoragec = 1
-      write(this%iout, fmtopt) 'ELASTIC AND INELASTIC STORAGE WILL BE ' //  &
-                               'SPECIFIED INSTEAD OF COMPRESSION INDICES'
+    ! compression indicies (CR amd CC) will be specified instead of 
+    ! storage coefficients (SSE and SSV) 
+    case ('COMPRESSION_INDICES')
+      this%istoragec = 0
+      write(this%iout, fmtopt) 'COMPRESSION INDICES WILL BE SPECIFIED ' //       &
+                               'INSTEAD OF ELASTIC AND INELASTIC SPECIFIC ' //   &
+                               'COEFFICIENTS'
       found = .true.
     ! constant delay interbed thickness and void ratio
     case ('CONSTANT_NODELAY_THICKNESS')

@@ -272,10 +272,11 @@ def build_models():
 
         # ibc files
         ibc = flopy.mf6.ModflowGwfibc(gwf, interbed_stress_offset=True,
+                                      compression_indices=True,
                                       geo_stress_offset=True,
                                       nibccells=len(swt6),
                                       sgs=sgs, sgm=sgm, ske_cr=0.2,
-                                      ibcrecarray=swt6,
+                                      packagedata=swt6,
                                       sig0={0: [0., 0., 0., 0.]})
 
         # output control
