@@ -91,7 +91,7 @@ def build_models():
                                       fname='{}.dis'.format(name))
 
         # initial conditions
-        # write initial heads to a binary file
+        # write initial heads to binary file
         fname = 'ic.strt.bin'
         pth = os.path.join(exdirs[idx], fname)
         f = open(pth, 'wb')
@@ -127,7 +127,7 @@ def build_models():
                                     fname='{}.ic'.format(name))
 
         # node property flow
-        # write icelltype to a binary file
+        # write icelltype to binary file
         fname = 'npf.icelltype.bin'
         pth = os.path.join(exdirs[idx], fname)
         f = open(pth, 'wb')
