@@ -283,11 +283,14 @@ def get_description(desc):
     if desc.strip().split()[0] == 'REPLACE':
         bcoption = desc.strip().split()[1]
         constantstring = COMMONDESCRIPTIONS[bcoption]['description']
-        d = eval(desc[desc.index('{'):])
+        istart = desc.index('{')
+        istop = desc.rfind('}') + 1
+        d = eval(desc[istart:istop])
+        #d = eval(desc[desc.index('{'):])
         for k in d:
             v = d[k]
             constantstring = constantstring.replace(k, v)
-        desc = constantstring
+        desc = constantstring + desc[istop:]
     return desc
 
 

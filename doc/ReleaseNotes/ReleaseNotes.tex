@@ -120,9 +120,11 @@ This section describes changes introduced into MODFLOW 6 with each release.  The
 
 \underline{BASIC FUNCTIONALITY}
 \begin{itemize}
-\item Added a new option, called SAVE\_SPECIFIC\_STORAGE to the Node Property Flow Package.  When invoked, $x$, $y$, and $z$ specific storage components are calculated for the center of each model cell and written to the binary budget file.
+\item Added a new option, called SAVE\_SPECIFIC\_DISCHARGE to the Node Property Flow Package.  When invoked, $x$, $y$, and $z$ specific storage components are calculated for the center of each model cell and written to the binary budget file.
 \item For binary input of grid data, such as initial heads, the array reading utility was not reading a header record consisting of KSTP, KPER, PERTIM, TOTIM, TEXT, NLAY, NROW, NCOL.  This meant that a binary head file written by MODFLOW could not be used as input for a subsequent simulation.  For binary input, the array reading utility now reads a header record before reading the array values.
 \item The NOGRB option in the discretization packages was not working.  This option will now prevent the binary grid file from being written.
+\item Removed the PRIVATE attribute for two methods of the discretization packages so that the program works as intended with the latest Intel Fortran release.
+\item Switched to using a long integer for the memory manager so that memory usage is calculated correctly for large models.
 \end{itemize}
 
 \underline{STRESS PACKAGES}
@@ -133,8 +135,8 @@ This section describes changes introduced into MODFLOW 6 with each release.  The
 \underline{ADVANCED STRESS PACKAGES}
 \begin{itemize}
 \item The STATUS INACTIVE option was not working correctly for the MAW Package.
-\item Modified the MAW connection conductance calculation so that a linear relation between the water-level in a cell and saturation is used for the standard formulation. In previous version, the same quadratic saturation function was being used for the standard and Newton-Raphson formulation to calculate the MAW connection conductance. 
-\item Modified the MAW Package so that the top and bottom of the screen for a connection are reset to the top and bottom of the cell, respectively, for SPECIFIED, THEIM, SKIN, and CUMULATIVE conductance equations (CONDEQN). Also, the program will now terminate with an error if MAW wells using SPECIFIED, THEIM, SKIN, or CUMULATIVE conductance equations have more than one connection to a single GWF cell. 
+\item Modified the MAW connection conductance calculation so that a linear relation between the water level in a cell and saturation is used for the standard formulation. In the previous version, the same quadratic saturation function was being used for the standard and Newton-Raphson formulation to calculate the MAW connection conductance. 
+\item Modified the MAW Package so that the top and bottom of the screen for a connection are reset to the top and bottom of the cell, respectively, for SPECIFIED, THEIM, SKIN, and CUMULATIVE conductance equations (CONDEQN). Also, the program will now terminate with an error if a MAW well using SPECIFIED, THEIM, SKIN, or CUMULATIVE conductance equations has more than one connection to a single GWF cell. 
 \item Modified the MAW package so that the well bottom (BOTTOM) is reset to the cell bottom in the lowermost GWF cell connection in cases where the specified well bottom is above the bottom of this GWF cell.
 \end{itemize}
 
@@ -311,7 +313,7 @@ To run MODFLOW 6, simply type \texttt{mf6} in a terminal window.  The current wo
 \section{Compiling MODFLOW 6}
 MODFLOW 6 has been compiled using Intel Visual Fortran and gfortran on the Windows and Mac/OS operating systems.  Because the program uses relatively new Fortran capabilities, newer versions of the compilers may be required for successful compilation.  For example, to use gfortran to compile MODFLOW 6, gfortran version 4.9 or newer must be used.  If you have gfortran installed on your computer, you can tell which version it is by entering ``\verb|gfortran --version|'' at a terminal window.
 
-This distribution contains the Microsoft Visual Studio project files for compiling MODFLOW 6 on Windows using the Intel Fortran Compiler.  The files have been used successfully with Visual Studio 2015 and Intel(R) Visual Fortran Compiler 17.0.4.210.
+This distribution contains the Microsoft Visual Studio project files for compiling MODFLOW 6 on Windows using the Intel Fortran Compiler.  The files have been used successfully with Visual Studio 2017 and Intel(R) Visual Fortran Compiler 18.0.1.156.
 
 This distribution also comes with a makefile for compiling MODFLOW 6 with gfortran.  The makefile is contained in the \texttt{make} folder.
 
