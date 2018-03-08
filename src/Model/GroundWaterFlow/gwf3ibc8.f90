@@ -51,6 +51,9 @@ module IbcModule
     real(DP), dimension(:), pointer :: sgm         => null()   !specific gravity moist sediments
     real(DP), dimension(:), pointer :: sgs         => null()   !specific gravity saturated sediments
     real(DP), dimension(:), pointer :: ske_cr      => null()   !skeletal specified storage
+    real(DP), dimension(:), pointer :: sk_theta    => null()   !skeletal (aquifer) porosity
+    real(DP), dimension(:), pointer :: sk_void     => null()   !skeletal (aquifer) void ratio
+    real(DP), dimension(:), pointer :: sk_thick    => null()   !skeletal (aquifer) thickness
     real(DP), dimension(:), pointer :: sig0        => null()   !geostatic offset
     real(DP), dimension(:), pointer :: ci          => null()   !compression index
     real(DP), dimension(:), pointer :: rci         => null()   !recompression
@@ -524,6 +527,8 @@ contains
                 'FOR PACKAGEDATA ENTRY', itmp
               call store_error(errmsg)
           end if
+        else
+          rval = DONE
         end if
         this%rnb(itmp) = rval
 
@@ -667,14 +672,14 @@ contains
       end do
     end if
 
-    !
-    ! -- terminate if errors encountered in reach block
-    if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
-      call ustop()
-    end if
+    !!
+    !! -- terminate if errors encountered in reach block
+    !if (count_errors() > 0) then
+    !  call this%parser%StoreErrorUnit()
+    !  call ustop()
+    !end if
 
-    !TODO - check the total frac for each nbound node to make sure < 1.0
+    ! TODO - check the total frac for each nbound node to make sure < 1.0
     !
     ! -- return
     return
@@ -808,6 +813,13 @@ contains
       call mem_allocate(this%sgs, this%dis%nodes, 'sgs', trim(this%origin))
     end if
     call mem_allocate(this%ske_cr, this%dis%nodes, 'ske_cr', trim(this%origin))
+    call mem_allocate(this%sk_theta, this%dis%nodes, 'sk_theta', trim(this%origin))
+    if (this%igeocalc == 0) then
+      call mem_allocate(this%sk_void, 1, 'sk_void', trim(this%origin))
+    else
+      call mem_allocate(this%sk_void, this%dis%nodes, 'sk_void', trim(this%origin))
+    end if
+    call mem_allocate(this%sk_thick, this%dis%nodes, 'sk_thick', trim(this%origin))
     if (this%igeostressoff == 1) then
       call mem_allocate(this%sig0, this%dis%nodes, 'sig0', trim(this%origin))
     else
@@ -890,6 +902,9 @@ contains
     call mem_deallocate(this%sgm)
     call mem_deallocate(this%sgs)
     call mem_deallocate(this%ske_cr)
+    call mem_deallocate(this%sk_theta)
+    call mem_deallocate(this%sk_void)
+    call mem_deallocate(this%sk_thick)
     call mem_deallocate(this%sig0)
     call mem_deallocate(this%ci)
     call mem_deallocate(this%rci)
@@ -1054,12 +1069,25 @@ contains
     class(IbcType),intent(inout) :: this
     ! -- local
     logical :: isfound, endOfBlock
-    integer(I4B) :: ierr, lloc, istart, istop, ival, nlist, i, n
+    character(len=LINELENGTH) :: line, errmsg, aname, keyword
+    integer(I4B) :: ierr
+    integer(I4B) :: lloc
+    integer(I4B) :: istart
+    integer(I4B) :: istop
+    integer(I4B) :: ival
+    integer(I4B) :: nlist
+    integer(I4B) :: i
+    integer(I4B) :: n
+    integer(I4B) :: node
     integer(I4B) :: isgm
     integer(I4B) :: isgs
-    real(DP) :: rval, pcs_n, area, bot, fact
-    character(len=LINELENGTH) :: line, errmsg, aname, keyword
-
+    real(DP) :: rval
+    real(DP) :: pcs_n
+    real(DP) :: area
+    real(DP) :: top
+    real(DP) :: bot
+    real(DP) :: thick
+    real(DP) :: theta
     ! -- format
 ! ------------------------------------------------------------------------------
     !
@@ -1071,7 +1099,6 @@ contains
 
     ! -- Allocate arrays in package superclass
     call this%ibc_allocate_arrays()
-
     !
     ! -- initialize local variables
     isgm = 0
@@ -1091,6 +1118,10 @@ contains
           call this%dis%read_grid_array(line, lloc, istart, istop,              &
                                         this%iout, this%parser%iuactive,        &
                                         this%ske_cr, 'SKE_CR')
+        case ('SK_THETA')
+          call this%dis%read_grid_array(line, lloc, istart, istop,              &
+                                        this%iout, this%parser%iuactive,        &
+                                        this%sk_theta, 'SK_THETA')
         case ('SGM')
             if (this%igeocalc == 1) then
               call this%dis%read_grid_array(line, lloc, istart, istop,          &
@@ -1140,12 +1171,12 @@ contains
         call store_error(errmsg)
       end if
     end if
-    !
-    ! -- terminate if errors encountered in reach block
-    if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
-      call ustop()
-    end if
+    !!
+    !! -- terminate if errors encountered in reach block
+    !if (count_errors() > 0) then
+    !  call this%parser%StoreErrorUnit()
+    !  call ustop()
+    !end if
     !!
     !! -- determine if geostatic stresses will be calculated
     !do n = 1, this%dis%nodes
@@ -1172,7 +1203,48 @@ contains
     !
     ! -- read interbed data
     call this%ibc_read_packagedata()
-
+    !
+    ! -- calculate the aquifer void ratio and thickness without the interbeds
+    do n = 1, this%dis%nodes
+      if (this%igeocalc /= 0) then
+        theta = this%sk_theta(n)
+        if (theta > DONE .or. theta < DZERO) then
+          ! add error message
+          write(errmsg,'(4x,a,1x,a,g0,a,1x,a,1x,a)') &
+                                       'ERROR. AQUIFER POROSITY IS LESS THAN', &
+                                       '0 OR GREATER THAN 1 (', theta, ')',    &
+                                       'in cell', ''
+        else
+          this%sk_void(n) = theta / (DONE - theta)
+        end if
+      end if
+      top = this%dis%top(n)
+      bot = this%dis%bot(n)
+      this%sk_thick(n) = top - bot
+    end do
+    !
+    ! -- subtract the interbed thickness from aquifer thickness
+    do n = 1, this%nbound
+      node = this%nodelist(n)
+      this%sk_thick(node) = this%sk_thick(node) - this%rnb(n) * this%thick(n)
+    end do
+    !
+    ! -- evaluate if any sk_thick values are less than 0
+    do n = 1, this%dis%nodes
+      thick = this%sk_thick(n)
+      if (thick < DZERO) then
+        write(errmsg,'(4x,a,1x,g0,a,1x,a,1x,a)') &
+                                      'ERROR. AQUIFER THICKNESS IS LESS THAN ZERO (', &
+                                       thick, ')', 'in cell', ''
+        call store_error(errmsg)
+      end if
+    end do
+    !
+    ! -- terminate if errors griddata, packagedata blocks, TDIS, or STO data
+    if (count_errors() > 0) then
+      call this%parser%StoreErrorUnit()
+      call ustop()
+    end if
 
     !
     ! -- return
@@ -1555,10 +1627,11 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use TdisModule, only: kper, kstp
+    use TdisModule, only: nper, kper, kstp
     ! -- dummy
     class(IbcType) :: this
     ! -- local
+    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: n
     integer(I4B) :: j
     integer(I4B) :: idelay
@@ -1570,6 +1643,21 @@ contains
     real(DP) :: bot
     real(DP) :: fact
 ! ------------------------------------------------------------------------------
+    !
+    ! -- evaluate if steady-state stress periods are specified for more 
+    !    than the first and last stress period if interbeds are simulated
+    if (this%nbound > 0) then
+      if (kper > 1 .and. kper < nper) then
+        if (this%gwfiss /= 0) then
+          write(errmsg, '(1x,a,i0,a,1x,a,1x,a,1x,i0,1x,a)')                     &
+            'ERROR:  Only the first and last (', nper, ')',                     &
+            'stress period can be steady if interbeds are simulated.',          &
+            'Stress period', kper, 'has been defined to be steady state.'
+          call store_error(errmsg)
+          call ustop()
+        end if
+      end if
+    end if
     !
     ! -- Advance the time series manager
     call this%TsManager%ad()

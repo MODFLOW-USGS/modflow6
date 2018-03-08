@@ -219,8 +219,8 @@ def build_models():
                                      nper=nper, perioddata=tdis_rc)
 
         # create gwf model
-        gwf = flopy.mf6.MFModel(sim, model_type='gwf6', modelname=name,
-                                model_nam_file='{}.nam'.format(name))
+        gwf = flopy.mf6.ModflowGwf(sim, modelname=name,
+                                   model_nam_file='{}.nam'.format(name))
 
         # create iterative model solution and register the gwf model with it
         ims = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
@@ -275,7 +275,7 @@ def build_models():
                                       compression_indices=True,
                                       geo_stress_offset=True,
                                       nibccells=len(swt6),
-                                      sgs=sgs, sgm=sgm, ske_cr=0.2,
+                                      sgs=sgs, sgm=sgm, ske_cr=0.01,
                                       packagedata=swt6,
                                       sig0={0: [0., 0., 0., 0.]})
 

@@ -209,6 +209,17 @@ valid
 reader readarray
 longname elastic skeletal specific storage
 description is elastic skeletal specific storage.
+default_value 1e-5
+
+block griddata
+name sk_theta
+type double precision
+shape (nodes)
+valid
+reader readarray
+longname initial aquifer porosity
+description is the initial porosity of the aquifer.
+default_value 0.2
 
 block griddata
 name sgm
@@ -229,7 +240,6 @@ reader readarray
 optional true
 longname specific gravity of saturated sediments
 description is specific gravity of saturated sediments.
-
 
 # --------------------- gwf ibc packagedata ---------------------
 
@@ -328,8 +338,9 @@ shape
 tagged false
 in_record true
 reader urword
-longname initial porosity
+longname initial interbed porosity
 description is the initial porosity of the IBC interbed.
+default_value 0.2
 
 block packagedata
 name kv 

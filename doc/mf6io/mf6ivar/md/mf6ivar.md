@@ -189,6 +189,7 @@
 | GWF | IBC | OPTIONS | OBS6_FILENAME | STRING | name of input file to define observations for the IBC package. See the ``Observation utility'' section for instructions for preparing observation input files. Table \ref{table:obstype} lists observation type(s) supported by the IBC package. |
 | GWF | IBC | DIMENSIONS | NIBCCELLS | INTEGER | is the number of IBC cells.  More than 1 IBC cell can be assigned to a GWF cell; however, only 1 GWF cell can be assigned to a single IBC cell. |
 | GWF | IBC | GRIDDATA | SKE_CR | DOUBLE PRECISION (NODES) | is elastic skeletal specific storage. |
+| GWF | IBC | GRIDDATA | SK_THETA | DOUBLE PRECISION (NODES) | is the initial porosity of the aquifer. |
 | GWF | IBC | GRIDDATA | SGM | DOUBLE PRECISION (NODES) | is specific gravity of moist or unsaturated sediments. |
 | GWF | IBC | GRIDDATA | SGS | DOUBLE PRECISION (NODES) | is specific gravity of saturated sediments. |
 | GWF | IBC | PACKAGEDATA | IBCNO | INTEGER | integer value that defines the IBC interbed number associated with the specified PACKAGEDATA data on the line. IBCNO must be greater than zero and less than or equal to NIBCCELLS.  IBC information must be specified for every IBC cell or the program will terminate with an error.  The program will also terminate with an error if information for a IBC intebed number is specified more than once. |
