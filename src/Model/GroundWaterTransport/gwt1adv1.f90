@@ -121,7 +121,8 @@ module GwtAdvModule
     real(DP) :: omega, qnm
 ! ------------------------------------------------------------------------------
     !
-    ! -- Calculate advection terms and add to solution rhs and hcof
+    ! -- Calculate advection terms and add to solution rhs and hcof.  qnm 
+    !    is the volumetric flow rate and has dimensions of L^/T.
     do n = 1, nodes
       if(this%ibound(n) == 0) cycle
       idiag = this%dis%con%ia(n)
@@ -157,7 +158,8 @@ module GwtAdvModule
     real(DP) :: omega, qnm
 ! ------------------------------------------------------------------------------
     !
-    ! -- Calculate advection and add to flowja
+    ! -- Calculate advection and add to flowja. qnm is the volumetric flow
+    !    rate and has dimensions of L^/T.
     nodes = size(cnew)
     do n = 1, nodes
       if(this%ibound(n) == 0) cycle
