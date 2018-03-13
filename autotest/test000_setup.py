@@ -418,12 +418,12 @@ def build(srcdir, srcdir2, target, starget, extrafiles=None):
 
 
 if __name__ == "__main__":
-    test_create_dirs()
-    test_build_modflow()
-    test_build_mfnwt()
-    test_build_usg()
-    test_build_lgr()
+    #test_create_dirs()
+    #test_build_modflow()
+    #test_build_mfnwt()
+    #test_build_usg()
+    #test_build_lgr()
     test_build_modflow6()
-    test_build_mf5to6()
-    test_build_zonebudget()
+    #test_build_mf5to6()
+    #test_build_zonebudget()
     

@@ -688,7 +688,13 @@ module GwtDspModule
       else
         a = DZERO
       endif
-      this%angle1(n) = acos(a)
+      !
+      ! -- acos(1) not defined, so set to zero if necessary
+      if (a < DONE) then
+        this%angle1(n) = acos(a)
+      else
+        this%angle1(n) = DZERO
+      endif
       !
     enddo
     !
@@ -697,4 +703,3 @@ module GwtDspModule
   end subroutine calcdisp
   
 end module GwtDspModule
-  
