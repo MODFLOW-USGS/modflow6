@@ -297,7 +297,6 @@ module GwfNpfModule
     ! -- allocate arrays
     call this%allocate_arrays(dis%nodes, dis%njas)
     !
-    ! -- tmp VKD
     if(this%ivkd > 0) call this%vkd%vkd_ar(dis, ibound, this%k11, this%ik33,          &
       this%k33, this%sat, this%ik22, this%k22, this%inewton, this%min_satthk,  &
       this%icelltype, this%satomega)

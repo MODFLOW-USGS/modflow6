@@ -239,14 +239,26 @@ contains
       cond = DZERO
     else
       
+!!$      allocate(d(size(this%ek(n,:))))
+!!$      call sPChip_set_derivatives (size(this%ek(n,:)),this%ek(n,:), this%kk(n,:), d)
+!!$      t1 = sPChip_integrate (size(this%ek(n,:)), this%ek(n,:), this%kk(n,:), d, this%dis%bot(n),hn)
+!!$      t2 = sPChip_integrate (size(this%ek(m,:)), this%ek(m,:), this%kk(m,:), d, this%dis%bot(m),hm)
+!!$      tsn = sPChip_integrate (size(this%ek(n,:)), this%ek(n,:), this%kk(n,:), d, this%dis%bot(n),this%dis%top(n))
+!!$      tsm = sPChip_integrate (Size(this%ek(m,:)), this%ek(m,:), this%kk(m,:), d, this%dis%bot(m),this%dis%top(m))              
+!!$      deallocate(d)
+
       allocate(d(size(this%ek(n,:))))
       call sPChip_set_derivatives (size(this%ek(n,:)),this%ek(n,:), this%kk(n,:), d)
       t1 = sPChip_integrate (size(this%ek(n,:)), this%ek(n,:), this%kk(n,:), d, this%dis%bot(n),hn)
-      t2 = sPChip_integrate (size(this%ek(n,:)), this%ek(m,:), this%kk(m,:), d, this%dis%bot(m),hm)
       tsn = sPChip_integrate (size(this%ek(n,:)), this%ek(n,:), this%kk(n,:), d, this%dis%bot(n),this%dis%top(n))
-      tsm = sPChip_integrate (Size(this%ek(n,:)), this%ek(m,:), this%kk(m,:), d, this%dis%bot(m),this%dis%top(m))              
       deallocate(d)
-                
+
+      allocate(d(size(this%ek(m,:))))
+      call sPChip_set_derivatives (size(this%ek(m,:)),this%ek(m,:), this%kk(m,:), d)
+      t2 = sPChip_integrate (size(this%ek(m,:)), this%ek(m,:), this%kk(m,:), d, this%dis%bot(m),hm)
+      tsm = sPChip_integrate (Size(this%ek(m,:)), this%ek(m,:), this%kk(m,:), d, this%dis%bot(m),this%dis%top(m))              
+      deallocate(d)
+      
       if (t1*t2 > DZERO) then
         sn = sQuadraticSaturation(tsn, DZERO, t1, this%satomega)
         sm = sQuadraticSaturation(tsm, DZERO, t2, this%satomega)
@@ -324,7 +336,7 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- Assign origin
-    this%origin = '  VKD'
+    this%origin = 'VKD'
     !
     ! -- Allocate scalars
     call mem_allocate(this%ivkd, 'IVKD', this%origin) !wittw
