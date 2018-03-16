@@ -1,11 +1,12 @@
-module IbcModule
+module GwfCsubModule
   use ConstantsModule, only: DPREC, DZERO, DHALF, DONE, DTWO, DTHREE, DTEN, &
                              LENFTYPE, LENPACKAGENAME, LINELENGTH, LENBOUNDNAME, &
-                             NAMEDBOUNDFLAG
+                             NAMEDBOUNDFLAG, LENBUDTXT
   use KindModule, only: I4B, DP
-  use BndModule, only: BndType
+  use NumericalPackageModule, only: NumericalPackageType
+  !use BndModule, only: BndType
   use ObserveModule,        only: ObserveType
-  use ObsModule, only: ObsType
+  use ObsModule,            only: ObsType, obs_cr
   use BlockParserModule,      only: BlockParserType
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
                                   GetTimeSeriesLinkFromList
@@ -17,20 +18,30 @@ module IbcModule
   implicit none
   !
   private
-  public :: ibc_create
-  public :: IbcType
+  public :: csub_cr
+  public :: GwfCsubType
+  !
+  character(len=LENBUDTXT), dimension(4) :: budtxt =                           & !text labels for budget terms
+      ['      CSUB-SSKE', '     CSUB-IBSKE', '     CSUB-IBSKV',                &
+       ' CSUB-WATERCOMP']
+  
   !
   real(DP), parameter :: dlog10es = 0.4342942_DP
-  character(len=LENFTYPE)       :: ftype = 'IBC'
-  character(len=LENPACKAGENAME) :: text  = '            IBC'
+  character(len=LENFTYPE)       :: ftype = 'CSUB'
+  character(len=LENPACKAGENAME) :: text  = '          CSUB'
   !
 
-  type, extends(BndType) :: IbcType
+  type, extends(NumericalPackageType) :: GwfCsubType
+    character(len=LENBOUNDNAME), pointer, dimension(:)  :: boundname   => null() !vector of boundnames
+    character(len=500)                                  :: listlabel   = ''      !title of table written for RP
+    integer(I4B), pointer :: istounit
     integer(I4B), pointer :: iconstantndb
     integer(I4B), pointer :: istoragec
     integer(I4B), pointer :: icellf
     integer(I4B), pointer :: ibedstressoff
     integer(I4B), pointer :: igeostressoff
+    integer(I4B), pointer :: inamedbound => null() !flag to read boundnames
+    integer(I4B), pointer :: ninterbeds
     integer(I4B), pointer :: ndelaycells
     integer(I4B), pointer :: ndelaybeds
     integer(I4B), pointer :: igeocalc
@@ -43,8 +54,11 @@ module IbcModule
     logical :: first_time
     integer, pointer :: gwfiss => NULL()
     integer, pointer :: gwfiss0 => NULL()
-    !integer, dimension(:), pointer :: nodelist => null()  !reduced node that the ibs is attached to
-    integer, dimension(:), pointer :: unodelist => null()  !user node that the ibs is attached to
+    integer(I4B), dimension(:), pointer              :: ibound => null()        !pointer to model ibound
+    integer, dimension(:), pointer :: stoiconvert => null()
+    real(DP), dimension(:), pointer :: stosc1 => null()
+    integer, dimension(:), pointer :: nodelist => null()   !reduced node that the interbed is attached to
+    integer, dimension(:), pointer :: unodelist => null()  !user node that the interbed is attached to
 
     integer, dimension(:), pointer :: idelay => null() ! 0 = nodelay, > 0 = delay
     !character(len=LENBOUNDNAME), pointer, dimension(:) :: boundname => null()
@@ -93,100 +107,103 @@ module IbcModule
     real(DP), dimension(:), pointer :: dbaw       => null()    !delay bed work vector
     ! -- observation data
     !real(DP), dimension(:), pointer :: simvals        => null()
+    !
+    ! -- pointers for observations
+    integer(I4B), pointer                               :: inobspkg    => null()! unit number for obs package
+    type(ObsType), pointer                              :: obs         => null()! observation package
 
   contains
-    procedure :: bnd_ck => ibc_ck
-    procedure :: bnd_cf => ibc_cf
+!    procedure :: bnd_ck => csub_ck
+    procedure :: csub_fc
     procedure :: define_listlabel
-    procedure :: bnd_options => ibc_options
-    !procedure :: bnd_df => ibc_df
-    procedure :: bnd_ar => ibc_ar
-    procedure :: bnd_da => ibc_da
-    procedure :: bnd_rp => ibc_rp
-    procedure :: bnd_ad => ibc_ad
-    procedure :: bnd_bd => ibc_bd
-    procedure :: read_dimensions => ibc_read_dimensions
-    procedure, private :: ibc_allocate_scalars
-    procedure, private :: ibc_allocate_arrays
-    procedure, private :: ibc_read_packagedata
-    procedure, private :: calc_aqgeo_stress
-    procedure, private :: calc_aqeff_stress
-    procedure, private :: calc_aqznode
-    procedure, private :: calc_nodelay_gwf
-    !procedure :: geo_st_above
+    procedure :: read_options
+    !procedure :: bnd_df => csub_df
+    procedure :: csub_ar
+    procedure :: csub_da
+    procedure :: csub_rp
+    procedure :: csub_ad
+    procedure :: bdcalc => csub_bdcalc
+    procedure :: bdsav => csub_bdsav
+    procedure :: read_dimensions => csub_read_dimensions
+    procedure, private :: csub_allocate_scalars
+    procedure, private :: csub_allocate_arrays
+    procedure, private :: csub_read_packagedata
+    !
+    ! -- stress methods
+    procedure, private :: csub_aqgeo_calc_stress
+    procedure, private :: csub_aqeff_calc_stress
+    procedure, private :: csub_aq_calc_znode
+    !
+    ! -- interbed methods
+    procedure, private :: csub_interbed_set_initial
+    procedure, private :: csub_calc_interbeds
+    !
+    ! -- no-delay interbed methods
+    procedure, private :: csub_nodelay_calc_gwf
     !
     ! -- delay interbed methods
-    procedure, private :: calc_delay_interbed
-    procedure, private :: calc_delay_z
-    procedure, private :: calc_delay_stress
-    procedure, private :: calc_delay_sskessk
-    procedure, private :: assemble_delay
-    procedure, private :: calc_delay_comp
-    procedure, private :: calc_delay_dstor
-    procedure, private :: calc_delay_gwf
-    procedure, private :: calc_delay_err
-!    procedure, private :: solve_delay
+    procedure, private :: csub_delay_calc_interbed
+    procedure, private :: csub_delay_calc_z
+    procedure, private :: csub_delay_calc_stress
+    procedure, private :: csub_delay_calc_sskessk
+    procedure, private :: csub_delay_assemble
+    procedure, private :: csub_delay_calc_comp
+    procedure, private :: csub_delay_calc_dstor
+    procedure, private :: csub_delay_calc_gwf
+    procedure, private :: csub_delay_calc_err
+    !
     ! -- methods for observations
-    procedure, public :: bnd_obs_supported => ibc_obs_supported
-    procedure, public :: bnd_df_obs => ibc_df_obs
-    procedure, public :: bnd_rp_obs => ibc_rp_obs
-    procedure, private :: ibc_bd_obs
+    procedure, public :: bnd_obs_supported => csub_obs_supported
+    procedure, public :: bnd_df_obs => csub_df_obs
+    procedure, public :: bnd_rp_obs => csub_rp_obs
+    procedure, private :: csub_bd_obs
+    !
     ! -- method for time series
-    !procedure, public :: bnd_rp_ts => ibc_rp_ts
-  end type IbcType
+    !procedure, public :: bnd_rp_ts => csub_rp_ts
+  end type GwfCsubType
 
 contains
 
-  subroutine ibc_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname)
+  subroutine csub_cr(csubobj, name_model, istounit, inunit, iout)
 ! ******************************************************************************
-! ibc_create -- Create a New ibc Package
-! Subroutine: (1) create new-style package
-!             (2) point bndobj to the new package
+! csub_cr -- Create a New CSUB Object
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
     implicit none
-    class(BndType), pointer :: packobj
-    integer,intent(in) :: id
-    integer,intent(in) :: ibcnum
-    integer,intent(in) :: inunit
-    integer,intent(in) :: iout
-    character(len=*), intent(in) :: namemodel
-    character(len=*), intent(in) :: pakname
+    type(GwfCsubType), pointer :: csubobj
+    character(len=*), intent(in) :: name_model
+    integer(I4B), intent(in) :: inunit
+    integer(I4B), intent(in) :: istounit
+    integer(I4B), intent(in) :: iout
     ! -- local
-    type(IbcType), pointer :: ibcobj
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate the object and assign values to object variables
-    allocate(ibcobj)
-    packobj => ibcobj
-    !
+    allocate(csubobj)
+
     ! -- create name and origin
-    call packobj%set_names(ibcnum, namemodel, pakname, ftype)
-    ibcobj%text = text
+    call csubobj%set_names(1, name_model, ftype, ftype)
     !
-    ! -- allocate scalars
-    !call packobj%allocate_scalars()
-    call ibcobj%ibc_allocate_scalars()
+    ! -- Allocate scalars
+    call csubobj%csub_allocate_scalars()
     !
-    ! -- initialize package
-    call packobj%pack_initialize()
+    ! -- Set variables
+    csubobj%istounit = istounit
+    csubobj%inunit = inunit
+    csubobj%iout = iout
     !
-    packobj%inunit=inunit
-    packobj%iout=iout
-    packobj%id=id
-    packobj%ibcnum = ibcnum
-    packobj%ncolbnd=6 !initial_stress frac cr(or ci) cc(or rci) void delay
-    packobj%iscloc=1 !sfac applies to initial stress?
+    ! -- Initialize block parser
+    call csubobj%parser%Initialize(csubobj%inunit, csubobj%iout)
     !
     ! -- return
     return
-  end subroutine ibc_create
+  end subroutine csub_cr
 
 
-   subroutine ibc_allocate_scalars(this)
+   subroutine csub_allocate_scalars(this)
 ! ******************************************************************************
 ! allocate_scalars -- allocate scalar members
 ! ******************************************************************************
@@ -196,18 +213,22 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
-    class(IbcType),   intent(inout) :: this
+    class(GwfCsubType),   intent(inout) :: this
 ! ------------------------------------------------------------------------------
     !
     ! -- call standard BndType allocate scalars
-    call this%BndType%allocate_scalars()
+    call this%NumericalPackageType%allocate_scalars()
     !
     ! -- allocate the object and assign values to object variables
+    call mem_allocate(this%istounit, 'ISTOUNIT', this%origin)
+    call mem_allocate(this%inobspkg, 'INOBSPKG', this%origin)
+    call mem_allocate(this%ninterbeds, 'NINTERBEDS', this%origin)
     call mem_allocate(this%ndelaycells, 'NDELAYCELLS', this%origin)
     call mem_allocate(this%ndelaybeds, 'NDELAYBEDS', this%origin)
     call mem_allocate(this%igeocalc, 'IGEOCALC', this%origin)
     call mem_allocate(this%ibedstressoff, 'IBEDSTRESSOFF', this%origin)
     call mem_allocate(this%igeostressoff, 'IGEOSTRESSOFF', this%origin)
+    call mem_allocate(this%inamedbound, 'INAMEDBOUND', this%origin)
     call mem_allocate(this%istoragec, 'ISTORAGEC', this%origin)
     call mem_allocate(this%iconstantndb, 'ICONSTANTNDB', this%origin)
     call mem_allocate(this%idbhalfcell, 'IDBHALFCELL', this%origin)
@@ -215,15 +236,17 @@ contains
     call mem_allocate(this%dbfact, 'DBFACT', this%origin)
     call mem_allocate(this%dbfacti, 'DBFACTI', this%origin)
     call mem_allocate(this%icellf, 'ICELLF', this%origin)
-    call mem_allocate(this%nbound, 'NIBCCELLS', this%origin)
+    call mem_allocate(this%ninterbeds, 'NIBCCELLS', this%origin)
     call mem_allocate(this%gwfiss0, 'GWFISS0', this%origin)
     !
     ! -- initialize values
+    this%ninterbeds = 0
     this%ndelaycells = 19
     this%ndelaybeds = 0
     this%igeocalc = 1
     this%ibedstressoff = 0
     this%igeostressoff = 0
+    this%inamedbound = 0
     this%istoragec = 1
     this%iconstantndb = 0
     this%idbhalfcell = 0
@@ -231,19 +254,19 @@ contains
     this%dbfact = DONE
     this%dbfacti = DONE
     this%icellf = 0
-    this%nbound = 0
+    this%ninterbeds = 0
     this%first_time = .TRUE.
     this%gwfiss0 = 0
     !
     ! -- return
     return
-   end subroutine ibc_allocate_scalars
+   end subroutine csub_allocate_scalars
 
 
-   subroutine ibc_bd(this, x, idvfl, icbcfl, ibudfl, icbcun, iprobs,            &
-                     isuppress_output, model_budget, imap, iadv)
+   subroutine csub_bdcalc(this, nodes, hnew, hold, isuppress_output, model_budget)
 ! ******************************************************************************
-! ibc_bd -- calculate budget for interbeds
+! csub_bd -- calculate budget for skeletal storage, interbeds, and water
+!            compression   
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -253,17 +276,12 @@ contains
     use ConstantsModule, only: LENBOUNDNAME, DZERO, DONE
     use BudgetModule, only: BudgetType
     ! -- dummy
-    class(IbcType) :: this
-    real(DP),dimension(:),intent(in) :: x
-    integer(I4B), intent(in) :: idvfl
-    integer(I4B), intent(in) :: icbcfl
-    integer(I4B), intent(in) :: ibudfl
-    integer(I4B), intent(in) :: icbcun
-    integer(I4B), intent(in) :: iprobs
+    class(GwfCsubType) :: this
+    integer(I4B), intent(in) :: nodes
+    real(DP), intent(in), dimension(nodes) :: hnew
+    real(DP), intent(in), dimension(nodes) :: hold
     integer(I4B), intent(in) :: isuppress_output
     type(BudgetType), intent(inout) :: model_budget
-    integer(I4B), dimension(:), optional, intent(in) :: imap
-    integer(I4B), optional, intent(in) :: iadv
     ! -- local
     !character (len=LENPACKAGENAME) :: text
     character(len=LINELENGTH) :: msg
@@ -296,22 +314,22 @@ contains
     iprobslocal = 0
     !
     !
-    call this%BndType%bnd_bd(x, idvfl, icbcfl, ibudfl, icbcun, iprobslocal,     &
-                    isuppress_output, model_budget, imap, iadv)
+    !call this%BndType%bnd_bd(x, idvfl, icbcfl, ibudfl, icbcun, iprobslocal,     &
+    !                isuppress_output, model_budget, imap, iadv)
     ratein = DZERO
     rateout= DZERO
 
     ibc = 1
     if(this%gwfiss /= 0) then
-        call model_budget%addentry(ratein, rateout, delt, this%text,            &
-                               isuppress_output, this%text)
+        call model_budget%addentry(ratein, rateout, delt, budtxt(1),            &
+                               isuppress_output, budtxt(1))
         ibc = 0
     end if
 
     tled = DONE
 
     if (ibc == 1) then
-      do i = 1, this%nbound
+      do i = 1, this%ninterbeds
         n = this%nodelist(i)
         area = this%dis%get_area(n)
         !
@@ -322,7 +340,7 @@ contains
         if (this%idelay(i) == 0) then
           !
           ! -- calculate ibc rho1 and rho2
-          call this%calc_nodelay_gwf(i, rho1, rho2, rhs, tled)
+          call this%csub_nodelay_calc_gwf(i, hnew(n), rho1, rho2, rhs, tled)
           bot = this%dis%bot(n)
           top = this%dis%top(n)
           thk_node = top - bot
@@ -331,7 +349,7 @@ contains
           es0 = this%es0(i)
           ! -- calculate compaction
           if (this%igeocalc == 0) then
-            h = this%xnew(n)
+            h = hnew(n)
             comp = rho2 * (pcs - h) + rho1 * (es0 - pcs)
           else
             comp = -pcs * (rho2 - rho1) - (rho1 * es0) + (rho2 * es)
@@ -367,13 +385,13 @@ contains
           !
           ! -- delay interbeds
         else
-          h = this%xnew(n)
-          call this%calc_delay_dstor(i, rhs)
+          h = hnew(n)
+          call this%csub_delay_calc_dstor(i, rhs)
           dsto = rhs / delt
           delt_sto = rhs * area * this%rnb(i) / delt
           !
           ! -- calculate sum of compaction in delay interbed
-          call this%calc_delay_comp(i)
+          call this%csub_delay_calc_comp(i)
         end if
         this%gwflow(i) = delt_sto
         !
@@ -381,18 +399,74 @@ contains
         !                           isuppress_output,this%text)
       end do
     end if
-    !
-    ! -- For continuous observations, save simulated values.
-    if (this%obs%npakobs > 0 .and. iprobs > 0) then
-      call this%ibc_bd_obs()
-    end if
+    !!
+    !! -- For continuous observations, save simulated values.
+    !if (this%obs%npakobs > 0 .and. iprobs > 0) then
+    !  call this%csub_bd_obs()
+    !end if
 
     ! -- return
     return
 
-   end subroutine ibc_bd
+   end subroutine csub_bdcalc
 
-  subroutine ibc_read_packagedata(this)
+  subroutine csub_bdsav(this, icbcfl, icbcun)
+! ******************************************************************************
+! sto_bdsav -- Save budget terms
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(GwfCsubType) :: this
+    integer(I4B), intent(in) :: icbcfl
+    integer(I4B), intent(in) :: icbcun
+    ! -- local
+    integer(I4B) :: ibinun
+    !character(len=16), dimension(2) :: aname
+    integer(I4B) :: iprint, nvaluesp, nwidthp
+    character(len=1) :: cdatafmp=' ', editdesc=' '
+    real(DP) :: dinact
+! ------------------------------------------------------------------------------
+    !
+    ! -- Set unit number for binary output
+    if(this%ipakcb < 0) then
+      ibinun = icbcun
+    elseif(this%ipakcb == 0) then
+      ibinun = 0
+    else
+      ibinun = this%ipakcb
+    endif
+    if(icbcfl == 0) ibinun = 0
+    !
+    ! -- Record the storage rates if requested
+    if(ibinun /= 0) then
+      iprint = 0
+      dinact = DZERO
+      !!
+      !! -- storage(ss)
+      !call this%dis%record_array(this%strgss, this%iout, iprint, -ibinun,    &
+      !                           budtxt(1), cdatafmp, nvaluesp,              &
+      !                           nwidthp, editdesc, dinact)
+      !!
+      !! -- storage(sy)
+      !if (this%iusesy == 1) then
+      !  call this%dis%record_array(this%strgsy, this%iout, iprint, -ibinun,  &
+      !                             budtxt(2), cdatafmp, nvaluesp,            &
+      !                             nwidthp, editdesc, dinact)
+      !end if
+    endif
+    !
+    ! -- For continuous observations, save simulated values.
+    if (this%obs%npakobs > 0) then
+      call this%csub_bd_obs()
+    end if
+    !
+    ! -- Return
+    return
+  end subroutine csub_bdsav
+
+  subroutine csub_read_packagedata(this)
 ! ******************************************************************************
 ! pak1read_dimensions -- Read the dimensions for this package
 ! ******************************************************************************
@@ -404,7 +478,7 @@ contains
 !    use SimModule, only: ustop, store_error, count_errors, store_error_unit
     use TimeSeriesManagerModule, only: read_single_value_or_time_series
     ! -- dummy
-    class(IbcType),intent(inout) :: this
+    class(GwfCsubType),intent(inout) :: this
     ! -- local
     character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: text, keyword
@@ -431,8 +505,8 @@ contains
     ndelaybeds = 0
     !
     ! -- allocate temporary arrays
-    allocate(nboundchk(this%nbound))
-    do n = 1, this%nbound
+    allocate(nboundchk(this%ninterbeds))
+    do n = 1, this%ninterbeds
       nboundchk(n) = 0
     end do
     !
@@ -441,7 +515,7 @@ contains
     !
     ! -- parse locations block if detected
     if (isfound) then
-      write(this%iout,'(/1x,a)')'PROCESSING '//trim(adjustl(this%text))// &
+      write(this%iout,'(/1x,a)')'PROCESSING '//trim(adjustl(ftype))// &
         ' PACKAGEDATA'
       do
         call this%parser%GetNextLine(endOfBlock)
@@ -449,9 +523,9 @@ contains
         ! -- read interbed number
         itmp = this%parser%GetInteger()
 
-        if (itmp < 1 .or. itmp > this%nbound) then
+        if (itmp < 1 .or. itmp > this%ninterbeds) then
           write(errmsg,'(4x,a,1x,i0,1x,a,1x,i0)') &
-            '****ERROR. INTERBED NUMBER (', itmp, ') MUST BE > 0 and <= ', this%nbound
+            '****ERROR. INTERBED NUMBER (', itmp, ') MUST BE > 0 and <= ', this%ninterbeds
           call store_error(errmsg)
           cycle
         end if
@@ -586,17 +660,15 @@ contains
         bndName = bndNameTemp(1:16)
         endif
         this%boundname(itmp) = bndName
-        this%rhs(itmp) = 0.0
-        this%hcof(itmp) = 0.0
       end do
-      write(this%iout,'(1x,a)')'END OF '//trim(adjustl(this%text))//' PACKAGEDATA'
+      write(this%iout,'(1x,a)')'END OF '//trim(adjustl(ftype))//' PACKAGEDATA'
     else
       call store_error('ERROR.  REQUIRED PACKAGEDATA BLOCK NOT FOUND.')
     endif
     !
     ! -- Check to make sure that every reach is specified and that no reach
     !    is specified more than once.
-    do n = 1, this%nbound
+    do n = 1, this%ninterbeds
       if (nboundchk(n) == 0) then
         write(errmsg, '(a, i0, a)') 'ERROR: INFORMATION FOR INTERBED ', n,     &
                                     ' NOT SPECIFIED IN PACKAGEDATA BLOCK.'
@@ -635,7 +707,7 @@ contains
       call mem_reallocate(this%dbaw, this%ndelaycells, 'dbaw', trim(this%origin))
       !
       ! -- initialize delay bed storage
-      do n = 1, this%nbound
+      do n = 1, this%ninterbeds
         idelay = this%idelay(n)
         if (idelay == 0) then
           cycle
@@ -683,13 +755,11 @@ contains
     !
     ! -- return
     return
-  end subroutine ibc_read_packagedata
+  end subroutine csub_read_packagedata
 
-  subroutine ibc_options(this, option, found)
+  subroutine read_options(this)
 ! ******************************************************************************
-! ibc_options -- set options specific to IbcType
-!
-! ibc_options overrides BndType%bnd_options
+! read_options -- set options
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -699,12 +769,16 @@ contains
 !    use SimModule, only: ustop, store_error
     use InputOutputModule, only: urword, getunit, openfile
     implicit none
-    !dummy
-    class(IbcType),   intent(inout) :: this
-    character(len=*), intent(inout) :: option
-    logical,          intent(inout) :: found
-    !local
-    !formats
+    ! -- dummy
+    class(GwfCsubType),   intent(inout) :: this
+    ! -- local
+    character(len=LINELENGTH) :: errmsg
+    character(len=LINELENGTH) :: keyword
+    logical :: isfound
+    logical :: endOfBlock
+    integer(I4B) :: ierr
+    integer(I4B) :: inobs
+    ! -- formats
     character(len=*),parameter :: fmtssessv = &
       "(4x, 'USING SSE AND SSV INSTEAD OF CR AND CC.')"
     character(len=*),parameter :: fmtoffset = &
@@ -716,64 +790,101 @@ contains
     character(len=*),parameter :: fmtoptr = &
       "(4x, A, 1X, G0)"
 ! -----------------------------------------------------------------------------
-    select case (option)
-    ! user specified number of delay cells used in each system of delay intebeds
-    case ('HEAD_BASED')
-      this%igeocalc = 0
-      write(this%iout, fmtopt) 'HEAD-BASED FORMULATION WILL BE USED'
-      found = .true.
-    case ('NDELAYCELLS')
-      this%ndelaycells =  this%parser%GetInteger()
-      write(this%iout, fmtopti) 'NUMBER OF DELAY CELLS =', this%ndelaycells
-      found = .true.
-    ! offset is applied to geostatic stress
-    ! initial stress is actually an offset from calculated initial stress
-    case ('INTERBED_STRESS_OFFSET')
-      this%ibedstressoff = 1
-      write(this%iout, fmtopt) 'OFFSET WILL BE APPLIED TO INITIAL INTERBED EFFECTIVE STRESS'
-      found = .true.
-    case ('GEO_STRESS_OFFSET')
-      this%igeostressoff = 1
-      write(this%iout, fmtopt) 'OFFSET WILL BE APPLIED TO STRESSES'
-      found = .true.
-    ! compression indicies (CR amd CC) will be specified instead of 
-    ! storage coefficients (SSE and SSV) 
-    case ('COMPRESSION_INDICES')
-      this%istoragec = 0
-      write(this%iout, fmtopt) 'COMPRESSION INDICES WILL BE SPECIFIED ' //       &
-                               'INSTEAD OF ELASTIC AND INELASTIC SPECIFIC ' //   &
-                               'COEFFICIENTS'
-      found = .true.
-    ! constant delay interbed thickness and void ratio
-    case ('CONSTANT_NODELAY_THICKNESS')
-      this%iconstantndb = 1
-      write(this%iout, fmtopt) 'DELAY INTERBED THICKNESS AND VOID RATIO ' //  &
-                               'WILL REMAIN CONSTANT IN THE SIMULATION'
-      found = .true.
-    ! cell fraction will be specified instead of interbed thickness
-    case ('CELL_FRACTION')
-      this%icellf = 1
-      write(this%iout, fmtopt) 'INTERBED THICKNESS WILL BE SPECIFIED ' //  &
-                               'AS A CELL FRACTION'
-      found = .true.
-    ! half cell formulation for delay interbed
-    case ('DELAY_FULL_CELL')
-      this%idbfullcell = 1
-      write(this%iout, fmtopt) 'HEAD-BASED DELAY INTERBEDS WILL BE ' //  &
-                               'SIMULATED USING A FULL-CELL FORMULATION'
-      found = .true.
-    ! default case
-    case default
-      !
-      ! -- No options found
-      found = .false.
-    end select
+    !
+    ! -- get options block
+    call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false.)
+    !
+    ! -- parse options block if detected
+    if (isfound) then
+      write(this%iout,'(1x,a)')'PROCESSING CSUB OPTIONS'
+      do
+        call this%parser%GetNextLine(endOfBlock)
+        if (endOfBlock) exit
+        call this%parser%GetStringCaps(keyword)
+        select case (keyword)
+          ! user specified number of delay cells used in each system of delay intebeds
+          case ('HEAD_BASED')
+            this%igeocalc = 0
+            write(this%iout, fmtopt) 'HEAD-BASED FORMULATION WILL BE USED'
+          case ('NDELAYCELLS')
+            this%ndelaycells =  this%parser%GetInteger()
+            write(this%iout, fmtopti) 'NUMBER OF DELAY CELLS =', this%ndelaycells
+          ! offset is applied to geostatic stress
+          ! initial stress is actually an offset from calculated initial stress
+          case ('INTERBED_STRESS_OFFSET')
+            this%ibedstressoff = 1
+            write(this%iout, fmtopt) 'OFFSET WILL BE APPLIED TO INITIAL INTERBED EFFECTIVE STRESS'
+          case ('GEO_STRESS_OFFSET')
+            this%igeostressoff = 1
+            write(this%iout, fmtopt) 'OFFSET WILL BE APPLIED TO STRESSES'
+          ! compression indicies (CR amd CC) will be specified instead of 
+          ! storage coefficients (SSE and SSV) 
+          case ('COMPRESSION_INDICES')
+            this%istoragec = 0
+            write(this%iout, fmtopt) 'COMPRESSION INDICES WILL BE SPECIFIED ' //       &
+                                     'INSTEAD OF ELASTIC AND INELASTIC SPECIFIC ' //   &
+                                     'COEFFICIENTS'
+          ! constant delay interbed thickness and void ratio
+          case ('CONSTANT_NODELAY_THICKNESS')
+            this%iconstantndb = 1
+            write(this%iout, fmtopt) 'DELAY INTERBED THICKNESS AND VOID RATIO ' //  &
+                                     'WILL REMAIN CONSTANT IN THE SIMULATION'
+          ! cell fraction will be specified instead of interbed thickness
+          case ('CELL_FRACTION')
+            this%icellf = 1
+            write(this%iout, fmtopt) 'INTERBED THICKNESS WILL BE SPECIFIED ' //  &
+                                     'AS A CELL FRACTION'
+          ! half cell formulation for delay interbed
+          case ('DELAY_FULL_CELL')
+            this%idbfullcell = 1
+            write(this%iout, fmtopt) 'HEAD-BASED DELAY INTERBEDS WILL BE ' //  &
+                                     'SIMULATED USING A FULL-CELL FORMULATION'
+          case ('OBS6')
+            call this%parser%GetStringCaps(keyword)
+            if(trim(adjustl(keyword)) /= 'FILEIN') then
+              errmsg = 'OBS6 keyword must be followed by "FILEIN" ' //         &
+                       'then by filename.'
+              call store_error(errmsg)
+            endif
+            if (this%obs%active) then
+              errmsg = 'Multiple OBS6 keywords detected in OPTIONS block. ' // &
+                       'Only one OBS6 entry allowed for a package.'
+              call store_error(errmsg)
+            endif
+            this%obs%active = .true.
+            call this%parser%GetString(this%obs%inputFilename)
+            inobs = GetUnit()
+            call openfile(inobs, this%iout, this%obs%inputFilename, 'OBS')
+            this%obs%inUnitObs = inobs
+          !
+          ! -- right now these are options that are only available in the
+          !    development version and are not included in the documentation.
+          !    These options are only available when IDEVELOPMODE in
+          !    constants module is set to 1
+          
+          !
+          ! default case
+          case default
+            write(errmsg,'(4x,a,3(1x,a))') '****ERROR. UNKNOWN ',               &
+                                           trim(adjustl(ftype)),                &
+                                           'OPTION: ', trim(keyword)
+            call store_error(errmsg)
+        end select
+      end do
+      write(this%iout,'(1x,a)') 'END OF ' // trim(adjustl(ftype)) // ' OPTIONS'
+    end if
+    !
+    ! -- terminate if errors encountered in reach block
+    if (count_errors() > 0) then
+      call this%parser%StoreErrorUnit()
+      call ustop()
+    end if
     !
     ! -- return
     return
-  end subroutine ibc_options
+  end subroutine read_options
 
-  subroutine ibc_allocate_arrays(this)
+  subroutine csub_allocate_arrays(this)
 ! ******************************************************************************
 ! allocate_arrays -- Allocate Package Members
 ! Subroutine: (1) allocate
@@ -784,27 +895,27 @@ contains
 ! ------------------------------------------------------------------------------
     use MemoryManagerModule, only: mem_allocate, mem_setptr
     implicit none
-    class(IbcType),   intent(inout) :: this
+    class(GwfCsubType),   intent(inout) :: this
     ! -- local variables
     integer(I4B) :: n
 
     !call this%BndType%allocate_arrays()
-    call mem_allocate(this%unodelist, this%nbound, 'unodelist', trim(this%origin))
-    call mem_allocate(this%nodelist, this%nbound, 'nodelist', trim(this%origin))
+    call mem_allocate(this%unodelist, this%ninterbeds, 'unodelist', trim(this%origin))
+    call mem_allocate(this%nodelist, this%ninterbeds, 'nodelist', trim(this%origin))
     call mem_allocate(this%gsc, this%dis%nodes, 'gsc', trim(this%origin))
     call mem_allocate(this%esc, this%dis%nodes, 'esc', trim(this%origin))
-    call mem_allocate(this%es, this%nbound, 'es', trim(this%origin))
-    call mem_allocate(this%es0, this%nbound, 'es0', trim(this%origin))
-    call mem_allocate(this%pcs, this%nbound, 'pcs', trim(this%origin))
-    call mem_allocate(this%znode, this%nbound, 'znode', trim(this%origin))
-    call mem_allocate(this%thick, this%nbound, 'thick', trim(this%origin))
-    call mem_allocate(this%rnb, this%nbound, 'rnb', trim(this%origin))
-    call mem_allocate(this%kv, this%nbound, 'kv', trim(this%origin))
-    call mem_allocate(this%h0, this%nbound, 'h0', trim(this%origin))
-    call mem_allocate(this%theta, this%nbound, 'theta', trim(this%origin))
-    call mem_allocate(this%void, this%nbound, 'void', trim(this%origin))
-    call mem_allocate(this%ci, this%nbound, 'ci', trim(this%origin))
-    call mem_allocate(this%rci, this%nbound, 'rci', trim(this%origin))
+    call mem_allocate(this%es, this%ninterbeds, 'es', trim(this%origin))
+    call mem_allocate(this%es0, this%ninterbeds, 'es0', trim(this%origin))
+    call mem_allocate(this%pcs, this%ninterbeds, 'pcs', trim(this%origin))
+    call mem_allocate(this%znode, this%ninterbeds, 'znode', trim(this%origin))
+    call mem_allocate(this%thick, this%ninterbeds, 'thick', trim(this%origin))
+    call mem_allocate(this%rnb, this%ninterbeds, 'rnb', trim(this%origin))
+    call mem_allocate(this%kv, this%ninterbeds, 'kv', trim(this%origin))
+    call mem_allocate(this%h0, this%ninterbeds, 'h0', trim(this%origin))
+    call mem_allocate(this%theta, this%ninterbeds, 'theta', trim(this%origin))
+    call mem_allocate(this%void, this%ninterbeds, 'void', trim(this%origin))
+    call mem_allocate(this%ci, this%ninterbeds, 'ci', trim(this%origin))
+    call mem_allocate(this%rci, this%ninterbeds, 'rci', trim(this%origin))
     if (this%igeocalc == 0) then
       call mem_allocate(this%sgm, 1, 'sgm', trim(this%origin))
       call mem_allocate(this%sgs, 1, 'sgs', trim(this%origin))
@@ -825,10 +936,10 @@ contains
     else
       call mem_allocate(this%sig0, 1, 'sig0', trim(this%origin))
     end if
-    call mem_allocate(this%idelay, this%nbound, 'idelay', trim(this%origin))
-    call mem_allocate(this%comp, this%nbound, 'comp', trim(this%origin))
-    call mem_allocate(this%totalcomp, this%nbound, 'totalcomp', trim(this%origin))
-    call mem_allocate(this%gwflow, this%nbound, 'gwflow', trim(this%origin))
+    call mem_allocate(this%idelay, this%ninterbeds, 'idelay', trim(this%origin))
+    call mem_allocate(this%comp, this%ninterbeds, 'comp', trim(this%origin))
+    call mem_allocate(this%totalcomp, this%ninterbeds, 'totalcomp', trim(this%origin))
+    call mem_allocate(this%gwflow, this%ninterbeds, 'gwflow', trim(this%origin))
     !
     ! -- delay bed storage
     call mem_allocate(this%dbdz, 0, 'dbdz', trim(this%origin))
@@ -851,14 +962,16 @@ contains
     call mem_allocate(this%dbdh, 0, 'dbdh', trim(this%origin))
     call mem_allocate(this%dbaw, 0, 'dbaw', trim(this%origin))
     !
-    call mem_allocate(this%rhs, this%nbound, 'rhs', trim(this%origin))
-    call mem_allocate(this%hcof, this%nbound, 'hcof', trim(this%origin))
+!    call mem_allocate(this%rhs, this%ninterbeds, 'rhs', trim(this%origin))
+!    call mem_allocate(this%hcof, this%ninterbeds, 'hcof', trim(this%origin))
     !
     ! --
-    call mem_allocate(this%simvals,this%nbound,'simvals', trim(this%origin))
-    allocate(this%boundname(this%nbound))
+!    call mem_allocate(this%simvals, this%ninterbeds,'simvals', trim(this%origin))
+    allocate(this%boundname(this%ninterbeds))
 
     call mem_setptr(this%gwfiss, 'ISS', trim(this%name_model))
+    call mem_setptr(this%stoiconvert, 'ICONVERT', trim(this%name_model // ' STO'))
+    call mem_setptr(this%stosc1, 'SC1', trim(this%name_model // ' STO'))
     !
     ! -- initialize variables that are not specified by user
     do n = 1, this%dis%nodes
@@ -868,7 +981,7 @@ contains
         this%sig0(n) = DZERO
       end if
     end do
-    do n = 1, this%nbound
+    do n = 1, this%ninterbeds
       this%theta(n) = DZERO
       this%void(n) = DZERO
       this%totalcomp(n) = DZERO
@@ -877,11 +990,11 @@ contains
     ! -- return
     return
 
-  end subroutine ibc_allocate_arrays
+  end subroutine csub_allocate_arrays
 
-   subroutine ibc_da(this)
+   subroutine csub_da(this)
 ! ******************************************************************************
-! ibc_da -- Deallocate variables
+! csub_da -- Deallocate variables
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -890,74 +1003,84 @@ contains
     use MemoryManagerModule, only: mem_deallocate
     implicit none
     ! -- dummy
-    class(IbcType) :: this
+    class(GwfCsubType) :: this
 ! ------------------------------------------------------------------------------
     !
     ! -- Deallocate arrays
-    call mem_deallocate(this%unodelist)
-    call mem_deallocate(this%nodelist)
-    call mem_deallocate(this%idelay)
-    deallocate(this%boundname)
+    if(this%inunit > 0) then
+      call mem_deallocate(this%unodelist)
+      call mem_deallocate(this%nodelist)
+      call mem_deallocate(this%idelay)
+      deallocate(this%boundname)
 
-    call mem_deallocate(this%sgm)
-    call mem_deallocate(this%sgs)
-    call mem_deallocate(this%ske_cr)
-    call mem_deallocate(this%sk_theta)
-    call mem_deallocate(this%sk_void)
-    call mem_deallocate(this%sk_thick)
-    call mem_deallocate(this%sig0)
-    call mem_deallocate(this%ci)
-    call mem_deallocate(this%rci)
-    call mem_deallocate(this%gsc)
-    call mem_deallocate(this%esc)
-    call mem_deallocate(this%es)
-    call mem_deallocate(this%es0)
-    call mem_deallocate(this%pcs)
-    call mem_deallocate(this%znode)
-    call mem_deallocate(this%thick)
-    call mem_deallocate(this%rnb)
-    call mem_deallocate(this%theta)
-    call mem_deallocate(this%void)
-    call mem_deallocate(this%kv)
-    call mem_deallocate(this%h0)
-    call mem_deallocate(this%comp)
-    call mem_deallocate(this%totalcomp)
-    call mem_deallocate(this%gwflow)
-    !
-    ! -- delay bed storage
-    call mem_deallocate(this%dbdz)
-    call mem_deallocate(this%dbz)
-    call mem_deallocate(this%dbh)
-    call mem_deallocate(this%dbh0)
-    call mem_deallocate(this%dbvoid)
-    call mem_deallocate(this%dbvoid0)
-    call mem_deallocate(this%dbgeo)
-    call mem_deallocate(this%dbgeo0)
-    call mem_deallocate(this%dbes)
-    call mem_deallocate(this%dbes0)
-    call mem_deallocate(this%dbpcs)
-    !
-    ! -- delay interbed solution arrays
-    call mem_deallocate(this%dbal)
-    call mem_deallocate(this%dbad)
-    call mem_deallocate(this%dbau)
-    call mem_deallocate(this%dbrhs)
-    call mem_deallocate(this%dbdh)
-    call mem_deallocate(this%dbaw)
-    !
-    !
-    call mem_deallocate(this%rhs)
-    call mem_deallocate(this%hcof)
-    call mem_deallocate(this%simvals)
-    !
-    ! -- pointers to gwf variables
-    nullify(this%gwfiss)
+      call mem_deallocate(this%sgm)
+      call mem_deallocate(this%sgs)
+      call mem_deallocate(this%ske_cr)
+      call mem_deallocate(this%sk_theta)
+      call mem_deallocate(this%sk_void)
+      call mem_deallocate(this%sk_thick)
+      call mem_deallocate(this%sig0)
+      call mem_deallocate(this%ci)
+      call mem_deallocate(this%rci)
+      call mem_deallocate(this%gsc)
+      call mem_deallocate(this%esc)
+      call mem_deallocate(this%es)
+      call mem_deallocate(this%es0)
+      call mem_deallocate(this%pcs)
+      call mem_deallocate(this%znode)
+      call mem_deallocate(this%thick)
+      call mem_deallocate(this%rnb)
+      call mem_deallocate(this%theta)
+      call mem_deallocate(this%void)
+      call mem_deallocate(this%kv)
+      call mem_deallocate(this%h0)
+      call mem_deallocate(this%comp)
+      call mem_deallocate(this%totalcomp)
+      call mem_deallocate(this%gwflow)
+      !
+      ! -- delay bed storage
+      call mem_deallocate(this%dbdz)
+      call mem_deallocate(this%dbz)
+      call mem_deallocate(this%dbh)
+      call mem_deallocate(this%dbh0)
+      call mem_deallocate(this%dbvoid)
+      call mem_deallocate(this%dbvoid0)
+      call mem_deallocate(this%dbgeo)
+      call mem_deallocate(this%dbgeo0)
+      call mem_deallocate(this%dbes)
+      call mem_deallocate(this%dbes0)
+      call mem_deallocate(this%dbpcs)
+      !
+      ! -- delay interbed solution arrays
+      call mem_deallocate(this%dbal)
+      call mem_deallocate(this%dbad)
+      call mem_deallocate(this%dbau)
+      call mem_deallocate(this%dbrhs)
+      call mem_deallocate(this%dbdh)
+      call mem_deallocate(this%dbaw)
+      !
+      !
+  !    call mem_deallocate(this%rhs)
+  !    call mem_deallocate(this%hcof)
+  !    call mem_deallocate(this%simvals)
+      !
+      ! -- pointers to gwf variables
+      nullify(this%gwfiss)
+      !
+      ! -- pointers to storage variables
+      nullify(this%stoiconvert)
+      nullify(this%stosc1)
+    end if
     !
     ! -- deallocate scalars
+    call mem_deallocate(this%istounit)
+    call mem_deallocate(this%inobspkg)
+    call mem_deallocate(this%ninterbeds)
     call mem_deallocate(this%ndelaycells)
     call mem_deallocate(this%ndelaybeds)
     call mem_deallocate(this%ibedstressoff)
     call mem_deallocate(this%igeostressoff)
+    call mem_deallocate(this%inamedbound)
     call mem_deallocate(this%istoragec)
     call mem_deallocate(this%iconstantndb)
     call mem_deallocate(this%idbfullcell)
@@ -973,9 +1096,9 @@ contains
     !
     ! -- Return
     return
-   end subroutine ibc_da
+   end subroutine csub_da
 
-   subroutine ibc_read_dimensions(this)
+   subroutine csub_read_dimensions(this)
 ! ******************************************************************************
 ! pak1read_dimensions -- Read the dimensions for this package
 ! ******************************************************************************
@@ -986,7 +1109,7 @@ contains
     use KindModule, only: I4B
 !    use SimModule, only: ustop, store_error, count_errors
     ! -- dummy
-    class(IbcType),intent(inout) :: this
+    class(GwfCsubType),intent(inout) :: this
     ! -- local
     character(len=LINELENGTH) :: errmsg
     character(len=LENBOUNDNAME) :: keyword
@@ -996,7 +1119,7 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize dimensions to -1
-    this%nbound= -1
+    this%ninterbeds = -1
     !
     ! -- get dimensions block
     call this%parser%GetBlock('DIMENSIONS', isfound, ierr, &
@@ -1004,7 +1127,7 @@ contains
     !
     ! -- parse dimensions block if detected
     if (isfound) then
-      write(this%iout,'(/1x,a)')'PROCESSING '//trim(adjustl(this%text))// &
+      write(this%iout,'(/1x,a)')'PROCESSING '//trim(adjustl(ftype))// &
         ' DIMENSIONS'
       do
         call this%parser%GetNextLine(endOfBlock)
@@ -1012,25 +1135,25 @@ contains
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
           case ('NIBCCELLS')
-            this%nbound = this%parser%GetInteger()
-            write(this%iout,'(4x,a,i7)')'NIBCCELLS = ', this%nbound
+            this%ninterbeds = this%parser%GetInteger()
+            write(this%iout,'(4x,a,i7)')'NIBCCELLS = ', this%ninterbeds
           case default
             write(errmsg,'(4x,a,a)') &
-              '****ERROR. UNKNOWN '//trim(this%text)//' DIMENSION: ', &
+              '****ERROR. UNKNOWN '//trim(ftype)//' DIMENSION: ', &
                                      trim(keyword)
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
             call ustop()
         end select
       end do
-      write(this%iout,'(1x,a)')'END OF '//trim(adjustl(this%text))//' DIMENSIONS'
+      write(this%iout,'(1x,a)')'END OF '//trim(adjustl(ftype))//' DIMENSIONS'
     else
       call store_error('ERROR.  REQUIRED DIMENSIONS BLOCK NOT FOUND.')
       call ustop()
     end if
     !
     ! -- verify dimensions were set correctly
-    if (this%nbound < 0) then
+    if (this%ninterbeds < 0) then
       write(errmsg, '(1x,a)') &
         'ERROR:  nibccells WAS NOT SPECIFIED OR WAS SPECIFIED INCORRECTLY.'
       call store_error(errmsg)
@@ -1048,11 +1171,11 @@ contains
     !
     ! -- return
     return
-  end subroutine ibc_read_dimensions
+  end subroutine csub_read_dimensions
 
-  subroutine ibc_ar(this)
+  subroutine csub_ar(this, dis, ibound)
 ! ******************************************************************************
-! ibc_ar -- Allocate and Read
+! csub_ar -- Allocate and Read
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -1066,7 +1189,9 @@ contains
 !    use SimModule, only: ustop, store_error, count_errors, store_error_unit
     implicit none
     ! -- dummy
-    class(IbcType),intent(inout) :: this
+    class(GwfCsubType),intent(inout) :: this
+    class(DisBaseType), pointer, intent(in) :: dis
+    integer(I4B), dimension(:), pointer          :: ibound
     ! -- local
     logical :: isfound, endOfBlock
     character(len=LINELENGTH) :: line, errmsg, aname, keyword
@@ -1089,16 +1214,62 @@ contains
     real(DP) :: thick
     real(DP) :: theta
     ! -- format
+    character(len=*), parameter :: fmtcsub =                                    &
+      "(1x,/1x,'CSUB -- COMPACTION PACKAGE, VERSION 1, 3/16/2018',             &
+      ' INPUT READ FROM UNIT ', i0, //)"
 ! ------------------------------------------------------------------------------
+    !
+    ! --print a message identifying the csub package.
+    write(this%iout, fmtcsub) this%inunit
+    !
+    ! -- store pointers to arguments that were passed in
+    this%dis     => dis
+    this%ibound  => ibound
+    !
+    ! -- create obs package
+    call obs_cr(this%obs, this%inobspkg)
     !
     ! - observation data
     call this%obs%obs_ar()
+!    !
+!    ! -- time series data
+!    this%TasManager%dis => this%dis
     !
-    ! -- time series data
-    this%TasManager%dis => this%dis
+    ! -- Read csub options
+    call this%read_options()
+    !
+    ! -- read dimensions
+    call this%parser%GetBlock('DIMENSIONS', isfound, ierr)
+    if (isfound) then
+      do
+        call this%parser%GetNextLine(endOfBlock)
+        if (endOfBlock) exit
+        call this%parser%GetStringCaps(keyword)
+        call this%parser%GetRemainingLine(line)
+        lloc = 1
+        select case (keyword)
+          case ('NINTERBEDS')
+              this%ninterbeds =  this%parser%GetInteger()
+              write(this%iout, '(4x,a,1x,i0)') 'NUMBER OF INTERBED SYSTEMS =',  &
+                                                this%ninterbeds
+          case default
+              write(errmsg,'(4x,a,a)')'ERROR. UNKNOWN DIMENSIONS TAG: ',        &
+                                       trim(keyword)
+              call store_error(errmsg)
+        end select
+      end do
+    else
+      call store_error('ERROR.  REQUIRED DIMENSIONS BLOCK NOT FOUND.')
+    end if
+    !
+    ! -- terminate if errors dimensions block data
+    if (count_errors() > 0) then
+      call this%parser%StoreErrorUnit()
+      call ustop()
+    end if
 
-    ! -- Allocate arrays in package superclass
-    call this%ibc_allocate_arrays()
+    ! -- Allocate arrays in 
+    call this%csub_allocate_arrays()
     !
     ! -- initialize local variables
     isgm = 0
@@ -1202,7 +1373,7 @@ contains
     end if
     !
     ! -- read interbed data
-    call this%ibc_read_packagedata()
+    call this%csub_read_packagedata()
     !
     ! -- calculate the aquifer void ratio and thickness without the interbeds
     do n = 1, this%dis%nodes
@@ -1224,7 +1395,7 @@ contains
     end do
     !
     ! -- subtract the interbed thickness from aquifer thickness
-    do n = 1, this%nbound
+    do n = 1, this%ninterbeds
       node = this%nodelist(n)
       this%sk_thick(node) = this%sk_thick(node) - this%rnb(n) * this%thick(n)
     end do
@@ -1249,11 +1420,11 @@ contains
     !
     ! -- return
     return
-  end subroutine ibc_ar
+  end subroutine csub_ar
 
-  subroutine ibc_ck(this)
+  subroutine csub_ck(this)
 ! ******************************************************************************
-! ibc_ck -- Check ibc boundary condition data
+! csub_ck -- Check ibc boundary condition data
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -1263,57 +1434,73 @@ contains
 !    use SimModule, only: ustop, store_error, count_errors, store_error_unit
     implicit none
     ! -- dummy
-    class(IbcType),intent(inout) :: this
+    class(GwfCsubType),intent(inout) :: this
     ! -- local
     character(len=LINELENGTH) :: errmsg
 
     ! -- return
     return
-  end subroutine ibc_ck
+  end subroutine csub_ck
 
 
-  subroutine calc_aqznode(this)
+  subroutine csub_aq_calc_znode(this, nodes, hnew)
 ! ******************************************************************************
-! calc_aqznode -- calculate the z of the node using current (xnew) water levels
+! csub_aq_calc_znode -- calculate the z of the node using current (xnew) water levels
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     implicit none
-    class(IbcType) :: this
-    integer(I4B) :: i,n
-    real(DP) :: top,bot,x
+    class(GwfCsubType) :: this
+    integer(I4B), intent(in) :: nodes
+    real(DP), dimension(nodes), intent(in) :: hnew
+    ! local
+    integer(I4B) :: i
+    integer(I4B) :: n
+    real(DP) :: top
+    real(DP) :: bot
+    real(DP) :: hcell
 
 ! ------------------------------------------------------------------------------
 
-    do i = 1, this%nbound
+    do i = 1, this%ninterbeds
       n = this%nodelist(i)
       bot = this%dis%bot(n)
       top = this%dis%top(n)
-      x = this%xnew(n)
-      if (x.gt.top .or. x.lt.bot) then
+      hcell = hnew(n)
+      if (hcell > top .or. hcell < bot) then
           this%znode(i) = (top + bot) * 0.5
       else
-          this%znode(i) = (x + bot) * 0.5
+          this%znode(i) = (hcell + bot) * 0.5
       end if
     end do
     !
     ! -- return
     return
-  end subroutine calc_aqznode
+  end subroutine csub_aq_calc_znode
 
 
-  subroutine calc_aqgeo_stress(this)
+  subroutine csub_aqgeo_calc_stress(this, nodes, hnew)
 ! ******************************************************************************
-! calc_aqgeo_stress -- calculate the geostatic stress for every node in the model
+! csub_aqgeo_calc_stress -- calculate the geostatic stress for every node in the model
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     implicit none
-    class(IbcType) :: this
+    class(GwfCsubType) :: this
+    integer(I4B), intent(in) :: nodes
+    real(DP), dimension(nodes), intent(in) :: hnew
+    ! -- local
     integer(I4B) :: i,n,ii,m,temp, iis
-    real(DP) :: gs, top, bot, va_scale, x, gs_conn, area_n, area_conn
+    real(DP) :: gs
+    real(DP) :: top
+    real(DP) :: bot
+    real(DP) :: va_scale
+    real(DP) :: hcell
+    real(DP) :: gs_conn
+    real(DP) :: area_n
+    real(DP) :: area_conn
     real(DP) :: es
     real(DP) :: hs
     real(DP) :: hwva
@@ -1327,15 +1514,15 @@ contains
         ! -- calc geostatic stress for this node
         bot = this%dis%bot(n)
         top = this%dis%top(n)
-        x = this%xnew(n)
+        hcell = hnew(n)
         gs = DZERO
 
-        if (x >= top) then
+        if (hcell >= top) then
             gs = (top-bot) * this%sgs(n)
-        else if (x <= bot) then
+        else if (hcell <= bot) then
             gs = (top-bot) * this%sgm(n)
         else
-            gs = ((top-x) * this%sgm(n)) + ((x-bot) * this%sgs(n))
+            gs = ((top-hcell) * this%sgm(n)) + ((hcell-bot) * this%sgs(n))
         end if
         this%gsc(n) = gs
       end do
@@ -1372,10 +1559,10 @@ contains
       ! -- calculate effective stress for a cell
       do n = 1, this%dis%nodes
         bot = this%dis%bot(n)
-        x = this%xnew(n)
+        hcell = hnew(n)
         hs = DZERO
-        if (x > bot) then
-          hs = x - bot
+        if (hcell > bot) then
+          hs = hcell - bot
         end if
         es = this%gsc(n) - hs
         this%esc(n) = es
@@ -1385,21 +1572,24 @@ contains
    ! -- return
    return
 
-  end subroutine calc_aqgeo_stress
+  end subroutine csub_aqgeo_calc_stress
 
 
-  subroutine calc_aqeff_stress(this)
+  subroutine csub_aqeff_calc_stress(this, nodes, hnew)
 ! ******************************************************************************
-! calc_aqeff_stress -- calculate the effective stress for nodes with interbeds
+! csub_aqeff_calc_stress -- calculate the effective stress for nodes with interbeds
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
 !    use SimModule, only: ustop, store_error, count_errors, store_error_unit
     implicit none
-    class(IbcType) :: this
+    class(GwfCsubType) :: this
+    integer(I4B), intent(in) :: nodes
+    real(DP), dimension(nodes), intent(in) :: hnew
+    ! local
     integer(I4B) :: i, n, ii, m
-    real(DP) :: es, bot, x
+    real(DP) :: es, bot, hcell
     real(DP) :: sadd
     character(len=LINELENGTH) :: errmsg
     character(len=*), parameter :: fmtneg = &
@@ -1407,16 +1597,16 @@ contains
         "XNEW (',f10.4,'), BOTM (',f10.4,')')"
 ! ------------------------------------------------------------------------------
 
-    do i = 1, this%nbound
+    do i = 1, this%ninterbeds
       n = this%nodelist(i)
-      x = this%xnew(n)
+      hcell = hnew(n)
       if (this%igeocalc == 0) then
-        es = x
+        es = hcell
       else
         bot = this%dis%bot(n)
-        es = this%gsc(n) - x + bot
+        es = this%gsc(n) - hcell + bot
         !if (es < DZERO) then
-        !  write(errmsg, fmt=fmtneg) n, this%gsc(n), x, bot
+        !  write(errmsg, fmt=fmtneg) n, this%gsc(n), hcell, bot
         !  call store_error(errmsg)
         !end if
       end if
@@ -1431,12 +1621,12 @@ contains
       call store_error_unit(this%inunit)
       call ustop()
     end if
-  end subroutine calc_aqeff_stress
+  end subroutine csub_aqeff_calc_stress
 
 
-  subroutine calc_nodelay_gwf(this, i, rho1, rho2, rhs, argtled)
+  subroutine csub_nodelay_calc_gwf(this, i, hcell, rho1, rho2, rhs, argtled)
 ! ******************************************************************************
-! calc_nodelay_gwf -- Calculate rho1, rho2, and rhs for no-delay
+! csub_nodelay_calc_gwf -- Calculate rho1, rho2, and rhs for no-delay
 !                               interbeds
 ! ******************************************************************************
 !
@@ -1445,8 +1635,9 @@ contains
     use TdisModule, only: delt, kstp, kper
     implicit none
     ! -- dummy variables
-    class(IbcType) :: this
+    class(GwfCsubType) :: this
     integer(I4B), intent(in) :: i
+    real(DP), intent(in) :: hcell
     real(DP), intent(inout) :: rho1
     real(DP), intent(inout) :: rho2
     real(DP), intent(inout) :: rhs
@@ -1459,8 +1650,6 @@ contains
     real(DP) :: thk_node,thk_ibs,denom,pcs_n, fact
     real(DP) :: es0
     real(DP) :: f
-    real(DP) :: haq
-    real(DP) :: haq0
     character(len=LINELENGTH) :: msg
 ! ------------------------------------------------------------------------------
     if (present(argtled)) then
@@ -1473,8 +1662,7 @@ contains
     bot = this%dis%bot(n)
     top = this%dis%top(n)
     thk_node = top - bot
-    haq = this%xnew(n)
-    x = haq
+    x = hcell
     if (x > top) x = top
     thk_fac = DONE
     if (this%iconstantndb == 0) then
@@ -1499,7 +1687,7 @@ contains
     rho1 = this%rci(i) * sto_fac
     rho2 = rho1
     if (this%igeocalc == 0) then
-      if (haq < this%pcs(i)) then
+      if (hcell < this%pcs(i)) then
         rho2 = this%ci(i) * sto_fac
       end if
       rhs = -(rho2 * this%pcs(i) + rho1 * (this%es0(i) - this%pcs(i)))
@@ -1520,11 +1708,11 @@ contains
     ! -- return
     return
 
-  end subroutine calc_nodelay_gwf
+  end subroutine csub_nodelay_calc_gwf
 
-  subroutine ibc_rp(this)
+  subroutine csub_rp(this)
 ! ******************************************************************************
-! ibc_rp -- Read and Prepare
+! csub_rp -- Read and Prepare
 ! Subroutine: (1) read itmp
 !             (2) read new boundaries if itmp>0
 ! ******************************************************************************
@@ -1536,7 +1724,7 @@ contains
 !    use SimModule, only: store_error, ustop, count_errors
     implicit none
     ! -- dummy
-    class(IbcType),intent(inout) :: this
+    class(GwfCsubType),intent(inout) :: this
     ! -- local
     character(len=LINELENGTH) :: line, errmsg, keyword
     integer(I4B) :: istart, istop, lloc, ierr
@@ -1618,18 +1806,20 @@ contains
     !
     ! -- return
     return
-  end subroutine ibc_rp
+  end subroutine csub_rp
 
-  subroutine ibc_ad(this)
+  subroutine csub_ad(this, nodes, hnew)
 ! ******************************************************************************
-! ibc_ad -- Advance ibc data
+! csub_ad -- Advance ibc data
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use TdisModule, only: nper, kper, kstp
     ! -- dummy
-    class(IbcType) :: this
+    class(GwfCsubType) :: this
+    integer(I4B), intent(in) :: nodes
+    real(DP), dimension(nodes), intent(in) :: hnew
     ! -- local
     character(len=LINELENGTH) :: errmsg
     integer(I4B) :: n
@@ -1646,7 +1836,7 @@ contains
     !
     ! -- evaluate if steady-state stress periods are specified for more 
     !    than the first and last stress period if interbeds are simulated
-    if (this%nbound > 0) then
+    if (this%ninterbeds > 0) then
       if (kper > 1 .and. kper < nper) then
         if (this%gwfiss /= 0) then
           write(errmsg, '(1x,a,i0,a,1x,a,1x,a,1x,i0,1x,a)')                     &
@@ -1658,19 +1848,26 @@ contains
         end if
       end if
     end if
+!    !
+!    ! -- Advance the time series manager
+!    call this%TsManager%ad()
     !
-    ! -- Advance the time series manager
-    call this%TsManager%ad()
+    ! -- set initial conditions
+    if (this%first_time) then
+      if (this%gwfiss == 0) then
+        call this%csub_interbed_set_initial(nodes, hnew)
+      end if
+    end if
     !
     ! -- update state variables
-    do n = 1, this%nbound
+    do n = 1, this%ninterbeds
       idelay = this%idelay(n)
       ! no delay beds
       if (idelay == 0) then
         node = this%nodelist(n)
         if (kper == 1 .and. kstp == 1) then
           if (this%igeocalc == 0) then
-            h = this%xnew(node)
+            h = hnew(node)
             pcs = this%pcs(n)
             if (pcs > h) then
               this%pcs(n) = h
@@ -1681,7 +1878,7 @@ contains
           es = this%es(n)
           pcs = this%pcs(n)
           if (this%igeocalc == 0) then
-            h = this%xnew(node)
+            h = hnew(node)
             if (h < pcs) then
               this%pcs(n) = h
             end if
@@ -1692,7 +1889,7 @@ contains
           end if
           ! -- update previous effective stress
           if (this%igeocalc == 0) then
-            this%es0(n) = this%xnew(node)
+            this%es0(n) = hnew(node)
           else
             this%es0(n) = this%es(n)
           end if
@@ -1704,7 +1901,7 @@ contains
         if (kper > 1) then
           if (this%gwfiss0 /= 0) then
             node = this%nodelist(n)
-            h = this%xnew(node)
+            h = hnew(node)
             do j = 1, this%ndelaycells
               if (this%igeocalc == 0) then
                 this%dbh(j, idelay) = h
@@ -1747,11 +1944,150 @@ contains
     !
     ! -- return
     return
-  end subroutine ibc_ad
+  end subroutine csub_ad
 
-  subroutine ibc_cf(this)
+  subroutine csub_interbed_set_initial(this, nodes, hnew)
 ! ******************************************************************************
-! ibc_cf -- Formulate the HCOF and RHS terms
+! csub_interbed_set_initial -- Set initial state for interbeds
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    class(GwfCsubType) :: this
+    integer(I4B), intent(in) :: nodes
+    real(DP), dimension(nodes), intent(in) :: hnew
+    integer(I4B) :: i
+    integer(I4B) :: n
+    integer(I4B) :: j
+    integer(I4B) :: idelay
+    real(DP) :: pcs
+    real(DP) :: fact
+    real(DP) :: bot
+! ------------------------------------------------------------------------------
+    !
+    ! -- update geostatic load calculation
+    call this%csub_aqgeo_calc_stress(nodes, hnew)
+    call this%csub_aq_calc_znode(nodes, hnew)
+    call this%csub_aqeff_calc_stress(nodes, hnew)
+
+    do i = 1, this%ninterbeds
+      n = this%nodelist(i)
+      pcs = this%pcs(i)
+      if (this%igeocalc == 0) then
+        if (this%es(i) < pcs) then
+          pcs = this%es(i)
+        end if
+      else
+        ! -- transfer initial preconsolidation stress (and apply offset if needed)
+        if (this%ibedstressoff == 1) then
+            pcs = this%es(i) + this%pcs(i)
+        else
+          if (pcs < this%es(i)) then
+            pcs = this%es(i)
+          end if
+        end if
+      end if
+      this%pcs(i) = pcs
+      ! -- fill delay bed pcs          
+      idelay = this%idelay(i)
+      if (idelay > 0) then
+        do j = 1, this%ndelaycells
+          if (this%igeocalc == 0) then
+          else
+            this%dbpcs(j, idelay) = this%pcs(i)
+          end if
+          this%dbes0(j, idelay) = this%es(i)
+        end do            
+      end if
+          
+      ! scale cr and cc
+      bot = this%dis%bot(n)
+      if (this%istoragec == 1) then
+        if (this%igeocalc == 0) then
+          fact = DONE
+        else
+          ! fact = area * (1.0 - void) * (eff st) - (znode - bot) * (sgs  -DONE)
+          fact = this%es(i) - (this%znode(i) - bot) * (this%sgs(n) - DONE)
+          fact = fact *  (DONE + this%void(i))
+        end if
+      else
+          fact = dlog10es
+      end if
+      this%ci(i) = this%ci(i) * fact
+      this%rci(i) = this%rci(i) * fact
+      this%es0(i) = this%es(i)
+    end do
+    this%first_time = .false.
+    !
+    ! -- return
+    return
+  end subroutine csub_interbed_set_initial
+
+  subroutine csub_fc(this, kiter, nodes, hold, hnew, nja, njasln, amat, &
+                     idxglo, rhs)
+! ******************************************************************************
+! sto_fc -- Fill the solution amat and rhs with storage contribution newton
+!               term
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    use TdisModule, only: delt
+    ! -- dummy
+    class(GwfCsubType) :: this
+    integer(I4B),intent(in) :: kiter
+    integer(I4B),intent(in) :: nodes
+    real(DP), intent(in), dimension(nodes) :: hold
+    real(DP), intent(in), dimension(nodes) :: hnew
+    integer(I4B),intent(in) :: nja
+    integer(I4B),intent(in) :: njasln
+    real(DP), dimension(njasln),intent(inout) :: amat
+    integer(I4B), intent(in),dimension(nja) :: idxglo
+    real(DP),intent(inout),dimension(nodes) :: rhs
+    ! -- local
+    integer(I4B) :: i
+    integer(I4B) :: n
+    integer(I4B) :: idiag
+    real(DP) :: tled
+    real(DP) :: area
+    real(DP) :: hcell
+    real(DP) :: hcof
+    real(DP) :: rhsterm
+! ------------------------------------------------------------------------------
+    !
+    ! -- update geostatic load calculation
+    call this%csub_aqgeo_calc_stress(nodes, hnew)
+    call this%csub_aq_calc_znode(nodes, hnew)
+    call this%csub_aqeff_calc_stress(nodes, hnew) 
+    !
+    ! -- 
+    if (this%gwfiss == 0) then
+      tled = DONE / delt
+      !
+      ! -- skeletal storage
+    
+      !
+      ! -- interbed storage
+      if (this%ninterbeds == 0) then
+        do i = 1, this%ninterbeds
+          n = this%nodelist(i)
+          idiag = this%dis%con%ia(n)
+          area = this%dis%get_area(n)
+          hcell = hnew(n)
+          call this%csub_calc_interbeds(i, n, tled, area, hcell, hcof, rhsterm)
+          amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
+          rhs(n) = rhs(n) + rhsterm
+        end do
+      end if
+    end if    
+    !
+    ! -- return
+    return
+  end subroutine csub_fc
+  
+  subroutine csub_calc_interbeds(this, i, n, tled, area, hcell, hcof, rhs)
+! ******************************************************************************
+! csub_cf -- Formulate the HCOF and RHS terms
 ! Subroutine: (1) skip if no ibcs
 !             (2) calculate hcof and rhs
 ! ******************************************************************************
@@ -1760,134 +2096,43 @@ contains
 ! ------------------------------------------------------------------------------
     use TdisModule, only: delt, kper
     implicit none
-    class(IbcType) :: this
-    integer(I4B) :: i, n
-    integer(I4B) :: j
-    integer(I4B) :: ibc
-    integer(I4B) :: idelay
-    real(DP) :: tled, top, bot, x, thk_fac, sto_fac
-    real(DP) :: thk_node, thk_ibs, demon, rho1, rho2
-    real(DP) :: pcs, area, fact, rhs
+    class(GwfCsubType) :: this
+    integer(I4B),intent(in) :: i
+    integer(I4B),intent(in) :: n
+    real(DP), intent(in) :: tled
+    real(DP), intent(in) :: area
+    real(DP), intent(in) :: hcell
+    real(DP), intent(inout) :: hcof
+    real(DP), intent(inout) :: rhs
+    ! locals
+    real(DP) :: rho1, rho2
     real(DP) :: f
 ! ------------------------------------------------------------------------------
 !
 ! -- initialize variables
     rhs = DZERO
     rho2 = DZERO
-    ibc = 1
-!
-! -- Return if no ibcs
-    if (this%nbound == 0) then
-      ibc = 0
-    end if
-!
-! -- Return if steady state
-    if (this%gwfiss /= 0) then
-      ibc = 0
-    end if
-!
-! -- update geostatic load calculation
-    call this%calc_aqgeo_stress()
-    call this%calc_aqznode()
-    call this%calc_aqeff_stress()
-!
-! -- calculate inverse time
-    tled = DONE / delt
-!
-! -- only make calculations if ibc = 1
-    if (ibc == 1) then
-      
-      !! -- update geostatic load calculation
-      !call this%calc_aqgeo_stress()
-      !call this%calc_aqznode()
-      !call this%calc_aqeff_stress()
-
-      if (this%first_time) then
-        do i = 1, this%nbound
-          n = this%nodelist(i)
-          pcs = this%pcs(i)
-          if (this%igeocalc == 0) then
-            if (this%es(i) < pcs) then
-              pcs = this%es(i)
-            end if
-          else
-            ! -- transfer initial preconsolidation stress (and apply offset if needed)
-            if (this%ibedstressoff == 1) then
-                pcs = this%es(i) + this%pcs(i)
-            else
-              if (pcs < this%es(i)) then
-                pcs = this%es(i)
-              end if
-            end if
-          end if
-          this%pcs(i) = pcs
-          ! -- fill delay bed pcs          
-          idelay = this%idelay(i)
-          if (idelay > 0) then
-            do j = 1, this%ndelaycells
-              if (this%igeocalc == 0) then
-              else
-                this%dbpcs(j, idelay) = this%pcs(i)
-              end if
-              this%dbes0(j, idelay) = this%es(i)
-            end do            
-          end if
-          
-          ! scale cr and cc
-          bot = this%dis%bot(n)
-          if (this%istoragec == 1) then
-            if (this%igeocalc == 0) then
-              fact = DONE
-            else
-              ! fact = area * (1.0 - void) * (eff st) - (znode - bot) * (sgs  -DONE)
-              fact = this%es(i) - (this%znode(i) - bot) * (this%sgs(n) - DONE)
-              fact = fact *  (DONE + this%void(i))
-            end if
-          else
-              fact = dlog10es
-          end if
-          this%ci(i) = this%ci(i) * fact
-          this%rci(i) = this%rci(i) * fact
-          this%es0(i) = this%es(i)
-        end do
-        this%first_time = .false.
-      end if
-
-      do i = 1, this%nbound
-        n = this%nodelist(i)
-        area = this%dis%get_area(n)
+    hcof = DZERO
+    !
+    ! -- skip inactive and constant head cells
+    if (this%ibound(n) > 0) then
+      if (this%idelay(i) == 0) then
         !
-        ! -- skip inactive and constant head cells
-        if (this%ibound(n) < 1) then
-          this%rhs(i) = DZERO
-          this%hcof(i) = DZERO
-          cycle
-        end if
-        if (this%idelay(i) == 0) then
-          !
-          ! -- calculate ibc rho1 and rho2
-          call this%calc_nodelay_gwf(i, rho1, rho2, rhs)
-          f = area
-        else
-          call this%calc_delay_interbed(i)
-          call this%calc_delay_gwf(i, rho2, rhs)
-          !call this%calc_delay_dstor(i, rhs)
-          !rhs = -rhs * tled
-          f = area * this%rnb(i)
-        end if
-        this%rhs(i) = rhs * f
-        this%hcof(i) = -rho2 * f
-      end do
-    else
-      do i = 1, this%nbound
-        this%rhs(i) = rhs
-        this%hcof(i) = rho2
-      end do
+        ! -- calculate ibc rho1 and rho2
+        call this%csub_nodelay_calc_gwf(i, hcell, rho1, rho2, rhs)
+        f = area
+      else
+        call this%csub_delay_calc_interbed(i, hcell)
+        call this%csub_delay_calc_gwf(i, rho2, rhs)
+        f = area * this%rnb(i)
+      end if
+      rhs = rhs * f
+      hcof = -rho2 * f
     end if
     !
     ! -- return
     return
-  end subroutine ibc_cf
+  end subroutine  csub_calc_interbeds
 
   subroutine define_listlabel(this)
 ! ******************************************************************************
@@ -1897,7 +2142,7 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    class(IbcType), intent(inout) :: this
+    class(GwfCsubType), intent(inout) :: this
 ! ------------------------------------------------------------------------------
     !
     ! -- create the header list label
@@ -1931,15 +2176,16 @@ contains
     return
   end subroutine define_listlabel
 
-  subroutine calc_delay_interbed(this, ib)
+  subroutine csub_delay_calc_interbed(this, ib, hcell)
 ! ******************************************************************************
-! calc_delay_interbed -- Calculate flow in delay interbeds.
+! csub_delay_calc_interbed -- Calculate flow in delay interbeds.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    class(IbcType), intent(inout) :: this
+    class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: ib
+    real(DP), intent(in) :: hcell
     ! -- local variables
     integer(I4B) :: n
     integer(I4B) :: node
@@ -1958,10 +2204,10 @@ contains
     ! -- initialize variables
     !
     ! -- calculate z for each delay bed cell
-    call this%calc_delay_z(ib)
+    call this%csub_delay_calc_z(ib)
     !
     ! -- calculate geostatic stress for each delay bed cell
-    call this%calc_delay_stress(ib)
+    call this%csub_delay_calc_stress(ib, hcell)
     !
     ! -- solve for delay bed heads
     if (this%thick(ib) > DZERO) then
@@ -1971,9 +2217,9 @@ contains
       do
         iter = iter + 1
         ! -- assemble coefficients
-        call this%assemble_delay(ib)
+        call this%csub_delay_assemble(ib, hcell)
         ! -- solve for head change in delay intebed cells
-        call solve_delay(this%ndelaycells, this%dbal, this%dbad, this%dbau, &
+        call csub_delay_solve(this%ndelaycells, this%dbal, this%dbad, this%dbau, &
                          this%dbrhs, this%dbdh, this%dbaw)
         ! -- update delay bed head and check convergence
         dhmax = DZERO
@@ -1996,17 +2242,17 @@ contains
     !
     ! -- return%
     return
-  end subroutine calc_delay_interbed
+  end subroutine csub_delay_calc_interbed
 
 
-  subroutine calc_delay_z(this, ib)
+  subroutine csub_delay_calc_z(this, ib)
 ! ******************************************************************************
-! calc_delay_z -- Calculate z for delay interbeds cells.
+! csub_delay_calc_z -- Calculate z for delay interbeds cells.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    class(IbcType), intent(inout) :: this
+    class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: ib
     ! -- local variables
     integer(I4B) :: n
@@ -2040,23 +2286,23 @@ contains
     ! -- return
     return
 
-  end subroutine calc_delay_z
+  end subroutine csub_delay_calc_z
 
-  subroutine calc_delay_stress(this, ib)
+  subroutine csub_delay_calc_stress(this, ib, hcell)
 ! ******************************************************************************
-! calc_delay_stress -- Calculate geostatic and effective stress in delay
+! csub_delay_calc_stress -- Calculate geostatic and effective stress in delay
 !                      interbeds.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    class(IbcType), intent(inout) :: this
+    class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: ib
+    real(DP), intent(in) :: hcell
     ! -- local variables
     integer(I4B) :: n
     integer(I4B) :: idelay
     integer(I4B) :: node
-    real(DP) :: haq
     real(DP) :: sigma
     real(DP) :: topaq
     real(DP) :: botaq
@@ -2074,7 +2320,6 @@ contains
     n = this%nodelist(ib)
     idelay = this%idelay(ib)
     node = this%nodelist(ib)
-    haq = this%xnew(node)
     sigma = this%gsc(node)
     topaq = this%dis%top(node)
     botaq = this%dis%bot(node)
@@ -2085,12 +2330,12 @@ contains
     !
     ! -- calculate the geostatic load in the aquifer at the top of the interbed
     if (this%igeocalc > 0) then
-      if (haq > top) then
+      if (hcell > top) then
         sadd = (top - botaq) * sgs
-      else if (haq < botaq) then
+      else if (hcell < botaq) then
         sadd = (top - botaq) * sgm
       else
-        sadd = ((top - haq) * sgm) + ((haq - botaq) * sgs)
+        sadd = ((top - hcell) * sgm) + ((hcell - botaq) * sgs)
       end if
       sigma = sigma - sadd
     end if
@@ -2120,17 +2365,17 @@ contains
     !
     ! -- return
     return
-  end subroutine calc_delay_stress
+  end subroutine csub_delay_calc_stress
 
-  subroutine calc_delay_sskessk(this, ib, n, sske, ssk)
+  subroutine csub_delay_calc_sskessk(this, ib, n, sske, ssk)
 ! ******************************************************************************
-! calc_delay_sskessk -- Calculate sske and sske for a node in a delay
+! csub_delay_calc_sskessk -- Calculate sske and sske for a node in a delay
 !                       interbed cell.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    class(IbcType), intent(inout) :: this
+    class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: ib
     integer(I4B), intent(in) :: n
     real(DP), intent(inout) :: sske
@@ -2183,25 +2428,25 @@ contains
     !
     ! -- return
     return
-  end subroutine calc_delay_sskessk
+  end subroutine csub_delay_calc_sskessk
 
 
-  subroutine assemble_delay(this, ib)
+  subroutine csub_delay_assemble(this, ib, hcell)
 ! ******************************************************************************
-! assemble_delay -- Assemble coefficients for delay interbeds cells.
+! csub_delay_assemble -- Assemble coefficients for delay interbeds cells.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use TdisModule, only: delt
     ! -- dummy variables
-    class(IbcType), intent(inout) :: this
+    class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: ib
+    real(DP), intent(in) :: hcell
     ! -- local variables
     integer(I4B) :: n
     integer(I4B) :: node
     integer(I4B) :: idelay
-    real(DP) :: haq
     real(DP) :: dz
     real(DP) :: c
     real(DP) :: c2
@@ -2220,7 +2465,6 @@ contains
     ! -- initialize variables
     idelay = this%idelay(ib)
     node = this%nodelist(ib)
-    haq = this%xnew(node)
     !
     !
     do n = 1, this%ndelaycells
@@ -2229,7 +2473,7 @@ contains
       c2 = DTWO * c
       c3 = DTHREE * c
       f = dz / delt
-      call this%calc_delay_sskessk(ib, n, sske, ssk)
+      call this%csub_delay_calc_sskessk(ib, n, sske, ssk)
       ! -- diagonal and right hand side
       aii = -ssk * f
       z = this%dbz(n, idelay)
@@ -2248,7 +2492,7 @@ contains
       if (n == 1 .or. n == this%ndelaycells) then
         if (this%idbhalfcell == 0 .or. n == this%ndelaycells) then
             aii = aii - c3
-            r = r - c2 * haq
+            r = r - c2 * hcell
         else
             aii = aii - c
         end if
@@ -2271,11 +2515,11 @@ contains
     ! -- return
     return
 
-  end subroutine assemble_delay
+  end subroutine csub_delay_assemble
 
-  subroutine solve_delay(n, tl, td, tu, b, x, w)
+  subroutine csub_delay_solve(n, tl, td, tu, b, x, w)
 ! ******************************************************************************
-! solve_delay -- Solve for head change in delay interbeds cells.
+! csub_delay_solve -- Solve for head change in delay interbeds cells.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -2310,16 +2554,16 @@ contains
     end do
     ! -- return
     return
-  end subroutine solve_delay
+  end subroutine csub_delay_solve
 
-  subroutine calc_delay_dstor(this, ib, rhs)
+  subroutine csub_delay_calc_dstor(this, ib, rhs)
 ! ******************************************************************************
-! calc_delay_dstor -- Calculate change in storage in a delay interbed.
+! csub_delay_calc_dstor -- Calculate change in storage in a delay interbed.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    class(IbcType), intent(inout) :: this
+    class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: ib
     real(DP), intent(inout) :: rhs
     ! -- local variables
@@ -2347,7 +2591,7 @@ contains
       do n = 1, this%ndelaycells
         dz = this%dbdz(idelay)
         void = this%dbvoid(n, idelay)
-        call this%calc_delay_sskessk(ib, n, sske, ssk)
+        call this%csub_delay_calc_sskessk(ib, n, sske, ssk)
         if (this%igeocalc == 0) then
           v = ssk * (this%dbpcs(n, idelay) - this%dbh(n, idelay))
           v = v + sske * (this%dbh0(n, idelay) - this%dbpcs(n, idelay))
@@ -2368,17 +2612,18 @@ contains
     !
     ! -- return
     return
-  end subroutine calc_delay_dstor
+  end subroutine csub_delay_calc_dstor
 
-  subroutine calc_delay_err(this, ib, err)
+  subroutine csub_delay_calc_err(this, ib, hcell, err)
 ! ******************************************************************************
-! calc_delay_err -- Calculate error in a delay interbed.
+! csub_delay_calc_err -- Calculate error in a delay interbed.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    class(IbcType), intent(inout) :: this
+    class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: ib
+    real(DP), intent(in) :: hcell
     real(DP), intent(inout) :: err
     ! -- local variables
     integer(I4B) :: idelay
@@ -2395,7 +2640,7 @@ contains
     !
     !
     if (this%thick(ib) > DZERO) then
-      call this%assemble_delay(ib)
+      call this%csub_delay_assemble(ib, hcell)
       do n = 1, this%ndelaycells
         v = this%dbad(n) * this%dbh(n, idelay)
         if (n > 1) then
@@ -2411,16 +2656,16 @@ contains
     !
     ! -- return
     return
-  end subroutine calc_delay_err
+  end subroutine csub_delay_calc_err
 
-  subroutine calc_delay_comp(this, ib)
+  subroutine csub_delay_calc_comp(this, ib)
 ! ******************************************************************************
-! calc_delay_comp -- Calculate compaction in a delay interbed.
+! csub_delay_calc_comp -- Calculate compaction in a delay interbed.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    class(IbcType), intent(inout) :: this
+    class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: ib
     ! -- local variables
     integer(I4B) :: idelay
@@ -2446,7 +2691,7 @@ contains
       do n = 1, this%ndelaycells
         dz = this%dbdz(idelay)
         void = this%dbvoid(n, idelay)
-        call this%calc_delay_sskessk(ib, n, sske, ssk)
+        call this%csub_delay_calc_sskessk(ib, n, sske, ssk)
         if (this%igeocalc == 0) then
           v = ssk * (this%dbpcs(n, idelay) - this%dbh(n, idelay))
           v = v + sske * (this%dbh0(n, idelay) - this%dbpcs(n, idelay))
@@ -2474,24 +2719,23 @@ contains
     !
     ! -- return
     return
-  end subroutine calc_delay_comp
+  end subroutine csub_delay_calc_comp
 
-  subroutine calc_delay_gwf(this, ib, hcof, rhs)
+  subroutine csub_delay_calc_gwf(this, ib, hcof, rhs)
 ! ******************************************************************************
-! calc_delay_gwf -- Calculate hcof and rhs for delay interbed contribution to
+! csub_delay_calc_gwf -- Calculate hcof and rhs for delay interbed contribution to
 !                   GWF cell.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    class(IbcType), intent(inout) :: this
+    class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: ib
     real(DP), intent(inout) :: hcof
     real(DP), intent(inout) :: rhs
     ! -- local variables
     integer(I4B) :: idelay
     integer(I4B) :: node
-    real(DP) :: haq
     real(DP) :: area
     real(DP) :: f
     real(DP) :: c1
@@ -2505,7 +2749,6 @@ contains
     if (this%thick(ib) > DZERO) then
       ! -- calculate terms for gwf matrix
       node = this%nodelist(ib)
-      haq = this%xnew(node)
       area = this%dis%get_area(node)
       if (this%idbhalfcell == 0) then
         c1 = DTWO * this%kv(ib) / this%dbdz(idelay)
@@ -2520,28 +2763,28 @@ contains
     !
     ! -- return
     return
-  end subroutine calc_delay_gwf
+  end subroutine csub_delay_calc_gwf
   !
   ! -- Procedures related to observations (type-bound)
-  logical function ibc_obs_supported(this)
+  logical function csub_obs_supported(this)
   ! ******************************************************************************
-  ! ibc_obs_supported
+  ! csub_obs_supported
   !   -- Return true because ibc package supports observations.
   !   -- Overrides BndType%bnd_obs_supported()
   ! ******************************************************************************
   !
   !    SPECIFICATIONS:
   ! ------------------------------------------------------------------------------
-    class(IbcType) :: this
+    class(GwfCsubType) :: this
   ! ------------------------------------------------------------------------------
-    ibc_obs_supported = .true.
+    csub_obs_supported = .true.
     return
-  end function ibc_obs_supported
+  end function csub_obs_supported
 
 
-  subroutine ibc_df_obs(this)
+  subroutine csub_df_obs(this)
   ! ******************************************************************************
-  ! ibc_df_obs (implements bnd_df_obs)
+  ! csub_df_obs (implements bnd_df_obs)
   !   -- Store observation type supported by ibc package.
   !   -- Overrides BndType%bnd_df_obs
   ! ******************************************************************************
@@ -2549,7 +2792,7 @@ contains
   !    SPECIFICATIONS:
   ! ------------------------------------------------------------------------------
     ! -- dummy
-    class(IbcType) :: this
+    class(GwfCsubType) :: this
     ! -- local
     integer(I4B) :: indx
   ! ------------------------------------------------------------------------------
@@ -2557,63 +2800,63 @@ contains
     ! -- Store obs type and assign procedure pointer
     !    for ibc observation type.
     call this%obs%StoreObsType('ibc', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => ibc_process_obsID
+    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for compaction observation type.
     call this%obs%StoreObsType('compaction', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => ibc_process_obsID
+    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for total-compaction observation type.
     call this%obs%StoreObsType('total-compaction', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => ibc_process_obsID
+    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for total-compaction observation type.
     call this%obs%StoreObsType('thickness', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => ibc_process_obsID
+    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for geostatic-stress-cell observation type.
     call this%obs%StoreObsType('gstress-cell', .false., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => ibc_process_obsID
+    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for effective-stress-cell observation type.
     call this%obs%StoreObsType('estress-cell', .false., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => ibc_process_obsID
+    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for effective-stress-cell observation type.
     call this%obs%StoreObsType('preconstress-cell', .false., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => ibc_process_obsID
+    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for effective-stress-cell observation type.
     call this%obs%StoreObsType('preconstress', .false., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => ibc_process_obsID
+    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for delay-head observation type.
     call this%obs%StoreObsType('delay-head', .false., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => ibc_process_obsID
+    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     return
-  end subroutine ibc_df_obs
+  end subroutine csub_df_obs
 
 
-  subroutine ibc_bd_obs(this)
+  subroutine csub_bd_obs(this)
     ! **************************************************************************
-    ! ibc_bd_obs
+    ! csub_bd_obs
     !   -- Calculate observations this time step and call
-    !      ObsType%SaveOneSimval for each IbcType observation.
+    !      ObsType%SaveOneSimval for each GwfCsubType observation.
     ! **************************************************************************
     !
     !    SPECIFICATIONS:
     ! --------------------------------------------------------------------------
     ! -- dummy
-    class(IbcType), intent(inout) :: this
+    class(GwfCsubType), intent(inout) :: this
     ! -- local
     integer(I4B) :: i, j, n, nn
     integer(I4B) :: idelay
@@ -2682,12 +2925,12 @@ contains
     end if
     !
     return
-  end subroutine ibc_bd_obs
+  end subroutine csub_bd_obs
 
 
-  subroutine ibc_rp_obs(this)
+  subroutine csub_rp_obs(this)
 !    ! -- dummy
-!    class(IbcType), intent(inout) :: this
+!    class(GwfCsubType), intent(inout) :: this
 !    ! -- local
 !    integer(I4B) :: i, j, n, nn1, nn2
 !    integer(I4B) :: idelay
@@ -2721,7 +2964,7 @@ contains
 !          !    Iterate through all boundaries to identify and store
 !          !    corresponding index(indices) in bound array.
 !          jfound = .false.
-!          do j = 1, this%nbound
+!          do j = 1, this%ninterbeds
 !            if (this%boundname(j) == bname) then
 !              jfound = .true.
 !              call ExpandArray(obsrv%indxbnds)
@@ -2737,10 +2980,10 @@ contains
 !          write (ermsg,30) trim(obsrv%name), trim(this%name)
 !          call store_error(ermsg)
 !        endif
-!      elseif (nn1 < 1 .or. nn1 > this%nbound) then
+!      elseif (nn1 < 1 .or. nn1 > this%ninterbeds) then
 !        write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
 !          'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
-!          ' interbed must be > 0 and <=', this%nbound, &
+!          ' interbed must be > 0 and <=', this%ninterbeds, &
 !          '(specified value is ', nn1, ')'
 !        call store_error(ermsg)
 !      else
@@ -2765,7 +3008,7 @@ contains
 !            obsrv%indxbnds(1) = nn1
 !          end if
 !        else
-!          ermsg = 'Programming error in ibc_rp_obs'
+!          ermsg = 'Programming error in csub_rp_obs'
 !          call store_error(ermsg)
 !        end if
 !      end if
@@ -2791,10 +3034,10 @@ contains
 !      if (obsrv%ObsTypeId /= 'DELAY-HEAD') then
 !        do j = 1, n
 !          nn1 = obsrv%indxbnds(j)
-!          if (nn1 < 1 .or. nn1 > this%nbound) then
+!          if (nn1 < 1 .or. nn1 > this%ninterbeds) then
 !            write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
 !              'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
-!              ' interbed must be > 0 and <=', this%nbound, &
+!              ' interbed must be > 0 and <=', this%ninterbeds, &
 !              '(specified value is ', nn1, ')'
 !            call store_error(ermsg)
 !          end if
@@ -2808,7 +3051,7 @@ contains
 !    !
 !    return
     ! -- dummy
-    class(IbcType), intent(inout) :: this
+    class(GwfCsubType), intent(inout) :: this
     ! -- local
     integer(I4B) :: i, j, n
     integer(I4B) :: n2
@@ -2837,7 +3080,7 @@ contains
         !    Iterate through all boundaries to identify and store
         !    corresponding index(indices) in bound array.
         jfound = .false.
-        do j=1,this%nbound
+        do j=1,this%ninterbeds
           if (this%boundname(j) == bname) then
             jfound = .true.
             obsrv%BndFound = .true.
@@ -2874,7 +3117,7 @@ contains
       else
         ! -- Observation location is a single node number
         jfound = .false.
-        jloop: do j=1,this%nbound
+        jloop: do j = 1, this%ninterbeds
           if (this%nodelist(j) == obsrv%NodeNumber) then
             jfound = .true.
             obsrv%BndFound = .true.
@@ -2893,12 +3136,12 @@ contains
     endif
     !
     return
-  end subroutine ibc_rp_obs
+  end subroutine csub_rp_obs
 
 
   !
   ! -- Procedures related to observations (NOT type-bound)
-  subroutine ibc_process_obsID(obsrv, dis, inunitobs, iout)
+  subroutine csub_process_obsID(obsrv, dis, inunitobs, iout)
     ! -- This procedure is pointed to by ObsDataType%ProcesssIdPtr. It processes
     !    the ID string of an observation definition for ibc-package observations.
     ! -- dummy
@@ -2948,7 +3191,7 @@ contains
     obsrv%NodeNumber = nn1
     !
     return
-  end subroutine ibc_process_obsID
+  end subroutine csub_process_obsID
 
 
-end module IbcModule
+end module GwfCsubModule

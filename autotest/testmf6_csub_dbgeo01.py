@@ -20,14 +20,17 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['ibcsub01a', 'ibcsub01b']
+ex = ['ibcdbgeo01a']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
 ddir = 'data'
 
-fullcell = [None, True]
-ndcell = [10, 21]
+ndcell = [21, 21]
+strt = [10., -100.]
+chdh = [5, -100.]
+gso = [True, None]
+bso = [True, None]
 
 # run all examples on Travis
 # travis = [True for idx in range(len(exdirs))]
@@ -49,14 +52,12 @@ def build_models():
     delr, delc = 1., 1.
     top = 0.
     botm = [-100.]
-    strt = 0.
-    strt6 = 1.
     hnoflo = 1e30
     hdry = -1e30
     hk = 1e6
     laytyp = [0]
-    ss = 1e-4
-    sy = 0.
+    ss = 0.
+    sy = 0.2
 
     nouter, ninner = 1000, 300
     hclose, rclose, relax = 1e-6, 1e-6, 0.97
@@ -67,47 +68,35 @@ def build_models():
 
     ib = 1
 
-    c = []
-    c6 = []
-    for j in range(0, ncol, 2):
-        c.append([0, 0, j, strt, strt])
-        c6.append([(0, 0, j), strt])
-    cd = {0: c}
-    cd6 = {0: c6}
-
     # sub data
-    ndb = 1
-    nndb = 0
-    cc = 100.
-    cr = 1.
+    cc = 0.25
+    cr = 0.01
     void = 0.82
     theta = void / (1. + void)
-    kv = 0.025
-    sgm = 0.
-    sgs = 0.
-    ini_stress = 1.0
-    thick = [1.]
-    sfe = cr * thick[0]
-    sfv = cc * thick[0]
-    lnd = [0]
-    ldnd = [0]
-    dp = [[kv, cr, cc]]
-
-    ds15 = [0, 0, 0, 2052, 0, 0, 0, 0, 0, 0, 0, 0]
-    ds16 = [0, 0, 0, 100, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1]
+    kv = 1e-3
+    sgm = 1.7
+    sgs = 2.2
+    ini_stress = 0.0
+    thick = [10.]
 
     sub6 = [[1, (0, 0, 1), 'delay', ini_stress, thick[0],
-             1., cc, cr, theta, kv, ini_stress]]
+             1., cc, cr, void, kv, ini_stress]]
 
     for idx, dir in enumerate(exdirs):
+
+        c6 = []
+        for j in range(0, ncol, 2):
+            c6.append([(0, 0, j), chdh[idx]])
+        cd6 = {0: c6}
+
+
         name = ex[idx]
 
         # build MODFLOW 6 files
         ws = dir
         sim = flopy.mf6.MFSimulation(sim_name=name, version='mf6',
                                      exe_name='mf6',
-                                     sim_ws=ws,
-                                     sim_tdis_file='simulation.tdis')
+                                     sim_ws=ws)
         # create tdis package
         tdis = flopy.mf6.ModflowTdis(sim, time_units='DAYS',
                                      nper=nper, perioddata=tdis_rc)
@@ -135,7 +124,7 @@ def build_models():
                                       fname='{}.dis'.format(name))
 
         # initial conditions
-        ic = flopy.mf6.ModflowGwfic(gwf, strt=strt,
+        ic = flopy.mf6.ModflowGwfic(gwf, strt=strt[idx],
                                     fname='{}.ic'.format(name))
 
         # node property flow
@@ -157,14 +146,18 @@ def build_models():
 
         # ibc files
         opth = '{}.ibc.obs'.format(name)
-        ibc = flopy.mf6.ModflowGwfibc(gwf, head_based=True,
-                                      ndelaycells=ndcell[idx],
-                                      delay_full_cell=fullcell[idx],
-                                      obs_filerecord=opth,
-                                      nibccells=1,
-                                      ske_cr=0.2, packagedata=sub6)
+        ibc = flopy.mf6.ModflowGwfcsub(gwf, ndelaycells=ndcell[idx],
+                                       compression_indices=True,
+                                       geo_stress_offset=gso[idx],
+                                       interbed_stress_offset=bso[idx],
+                                       obs_filerecord=opth,
+                                       ninterbeds=1,
+                                       sgs=sgs, sgm=sgm, packagedata=sub6)
         orecarray = {}
-        orecarray['ibc_obs.csv'] = [('tcomp', 'total-compaction', (0, 0, 1))]
+        orecarray['ibc_obs.csv'] = [('tcomp', 'total-compaction', (0, 0, 1)),
+                                    ('gs', 'gstress-cell', (0, 0, 1)),
+                                    ('es', 'estress-cell', (0, 0, 1)),
+                                    ('pcs', 'preconstress', (0, 0))]
         ibc_obs_package = flopy.mf6.ModflowUtlobs(gwf,
                                                   fname=opth,
                                                   parent_file=ibc, digits=10,
@@ -184,32 +177,6 @@ def build_models():
 
         # write MODFLOW 6 files
         sim.write_simulation()
-
-        # build MODFLOW-2005 files
-        ws = os.path.join(dir, 'mf2005')
-        mc = flopy.modflow.Modflow(name, model_ws=ws)
-        dis = flopy.modflow.ModflowDis(mc, nlay=nlay, nrow=nrow, ncol=ncol,
-                                       nper=nper, perlen=perlen, nstp=nstp,
-                                       tsmult=tsmult, steady=steady, delr=delr,
-                                       delc=delc, top=top, botm=botm)
-        bas = flopy.modflow.ModflowBas(mc, ibound=ib, strt=strt, hnoflo=hnoflo,
-                                       stoper=0.01)
-        lpf = flopy.modflow.ModflowLpf(mc, laytyp=laytyp, hk=hk, vka=hk, ss=ss,
-                                       sy=sy, constantcv=True,
-                                       storagecoefficient=True,
-                                       hdry=hdry)
-        chd = flopy.modflow.ModflowChd(mc, stress_period_data=cd)
-        sub = flopy.modflow.ModflowSub(mc, ndb=ndb, nndb=nndb, nn=10,
-                                       isuboc=1, ln=lnd, ldn=ldnd, rnb=[1.],
-                                       dp=dp, dz=thick,
-                                       dhc=ini_stress, dstart=ini_stress,
-                                       hc=ini_stress, sfe=sfe, sfv=sfv,
-                                       ids15=ds15, ids16=ds16)
-        oc = flopy.modflow.ModflowOc(mc, stress_period_data=None)
-        pcg = flopy.modflow.ModflowPcg(mc, mxiter=nouter, iter1=ninner,
-                                       hclose=hclose, rclose=rclose,
-                                       relax=relax, ihcofadd=1)
-        mc.write_input()
 
     return
 
@@ -284,13 +251,13 @@ def main():
 
     # run the test models
     for idx, dir in enumerate(exdirs):
-        sim = Simulation(dir, exfunc=eval_sub, exe_dict=replace_exe,
+        sim = Simulation(dir, exfunc=None, exe_dict=replace_exe,
                          idxsim=idx)
         test.run_mf6(sim)
     return
 
 
-# use python testmf6_ibc_sub01.py --mf2005 mf2005devdbl
+# use python testmf6_csub_sub01.py --mf2005 mf2005devdbl
 if __name__ == "__main__":
     # print message
     print('standalone run of {}'.format(os.path.basename(__file__)))

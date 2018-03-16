@@ -212,8 +212,7 @@ def build_models():
         ws = dir
         sim = flopy.mf6.MFSimulation(sim_name=name, version='mf6',
                                      exe_name='mf6',
-                                     sim_ws=ws,
-                                     sim_tdis_file='simulation.tdis')
+                                     sim_ws=ws)
         # create tdis package
         tdis = flopy.mf6.ModflowTdis(sim, time_units='DAYS',
                                      nper=nper, perioddata=tdis_rc)
@@ -271,13 +270,13 @@ def build_models():
                                       save_flows=False)
 
         # ibc files
-        ibc = flopy.mf6.ModflowGwfibc(gwf, interbed_stress_offset=True,
-                                      compression_indices=True,
-                                      geo_stress_offset=True,
-                                      nibccells=len(swt6),
-                                      sgs=sgs, sgm=sgm, ske_cr=0.01,
-                                      packagedata=swt6,
-                                      sig0={0: [0., 0., 0., 0.]})
+        ibc = flopy.mf6.ModflowGwfcsub(gwf, interbed_stress_offset=True,
+                                       compression_indices=True,
+                                       geo_stress_offset=True,
+                                       ninterbeds=len(swt6),
+                                       sgs=sgs, sgm=sgm, ske_cr=0.01,
+                                       packagedata=swt6,
+                                       sig0={0: [0., 0., 0., 0.]})
 
         # output control
         oc = flopy.mf6.ModflowGwfoc(gwf,
@@ -358,7 +357,7 @@ def main():
     return
 
 
-# use python testmf6_ibc_sub02.py --mf2005 mf2005devdbl
+# use python testmf6_csub_sub02.py --mf2005 mf2005devdbl
 if __name__ == "__main__":
     # print message
     print('standalone run of {}'.format(os.path.basename(__file__)))

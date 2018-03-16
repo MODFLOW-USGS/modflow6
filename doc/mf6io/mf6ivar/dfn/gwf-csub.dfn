@@ -1,11 +1,11 @@
-# --------------------- gwf ibc options ---------------------
+# --------------------- gwf csub options ---------------------
 
 block options
 name save_flows
 type keyword
 reader urword
 optional true
-longname keyword to save IBC flows
+longname keyword to save CSUB flows
 description keyword to indicate that cell-by-cell flow terms will be written to the file specified with ``BUDGET SAVE FILE'' in Output Control.
 
 block options
@@ -186,20 +186,20 @@ tagged false
 reader urword
 optional false
 longname obs6 input filename
-description REPLACE obs6_filename {'{#1}': 'IBC'}
+description REPLACE obs6_filename {'{#1}': 'CSUB'}
 
-# --------------------- gwf ibc dimensions ---------------------
+# --------------------- gwf csub dimensions ---------------------
 
 block dimensions
-name nibccells
+name ninterbeds
 type integer
 reader urword
 optional false
-longname number of IBC cells
-description is the number of IBC cells.  More than 1 IBC cell can be assigned to a GWF cell; however, only 1 GWF cell can be assigned to a single IBC cell.
+longname number of CSUB interbed systems
+description is the number of CSUB interbed systems.  More than 1 CSUB interbed systems can be assigned to a GWF cell; however, only 1 GWF cell can be assigned to a single CSUB interbed system.
 
 
-# --------------------- gwf ibc griddata ---------------------
+# --------------------- gwf csub griddata ---------------------
 
 block griddata
 name ske_cr
@@ -241,25 +241,25 @@ optional true
 longname specific gravity of saturated sediments
 description is specific gravity of saturated sediments.
 
-# --------------------- gwf ibc packagedata ---------------------
+# --------------------- gwf csub packagedata ---------------------
 
 block packagedata
 name packagedata
-type recarray ibcno cellid cdelay pcs0 thick_frac rnb ssv_cc sse_cr theta kv h0 boundname
-shape (nibccells)
+type recarray icsubno cellid cdelay pcs0 thick_frac rnb ssv_cc sse_cr theta kv h0 boundname
+shape (ncsubcells)
 reader urword
 longname
 description
 
 block packagedata
-name ibcno
+name icsubno
 type integer
 shape
 tagged false
 in_record true
 reader urword
-longname IBC id number for this entry
-description integer value that defines the IBC interbed number associated with the specified PACKAGEDATA data on the line. IBCNO must be greater than zero and less than or equal to NIBCCELLS.  IBC information must be specified for every IBC cell or the program will terminate with an error.  The program will also terminate with an error if information for a IBC intebed number is specified more than once.
+longname CSUB id number for this entry
+description integer value that defines the CSUB interbed number associated with the specified PACKAGEDATA data on the line. CSUBNO must be greater than zero and less than or equal to NCSUBCELLS.  CSUB information must be specified for every CSUB cell or the program will terminate with an error.  The program will also terminate with an error if information for a CSUB intebed number is specified more than once.
 
 block packagedata
 name cellid
@@ -279,7 +279,7 @@ tagged false
 in_record true
 reader urword
 longname initial water content
-description character string that defines the subsidence delay type for the IBC cell. Possible subsidence package CDELAY strings include: NODELAY--character keyword to indicate that delay will not be simulated in the IBC cell.  DELAY--character keyword to indicate that delay will be simulated in the IBC cell.
+description character string that defines the subsidence delay type for the CSUB cell. Possible subsidence package CDELAY strings include: NODELAY--character keyword to indicate that delay will not be simulated in the CSUB cell.  DELAY--character keyword to indicate that delay will be simulated in the CSUB cell.
 
 block packagedata
 name pcs0
@@ -289,7 +289,7 @@ tagged false
 in_record true
 reader urword
 longname initial stress
-description is the initial preconsolidation stress or initial offset from the calculated initial effective stress in the IBC interbed, in units of height of a column of water. PCS0 is the initial offset from the calculated initial effective stress if INTERBED\_STRESS\_OFFSET is specified in the OPTIONS block.
+description is the initial preconsolidation stress or initial offset from the calculated initial effective stress in the CSUB interbed, in units of height of a column of water. PCS0 is the initial offset from the calculated initial effective stress if INTERBED\_STRESS\_OFFSET is specified in the OPTIONS block.
 
 block packagedata
 name thick_frac
@@ -299,7 +299,7 @@ tagged false
 in_record true
 reader urword
 longname interbed thickness or cell fraction 
-description is the interbed thickness or cell fraction of the IBC interbed. Interbed thickness is specified as a fraction of the cell thickness if CELL\_FRACTION is specified in the OPTIONS block.
+description is the interbed thickness or cell fraction of the CSUB interbed. Interbed thickness is specified as a fraction of the cell thickness if CELL\_FRACTION is specified in the OPTIONS block.
 
 block packagedata
 name rnb
@@ -309,7 +309,7 @@ tagged false
 in_record true
 reader urword
 longname delay interbed material factor 
-description is the interbed material factor equivalent number of interbeds for the system of delay interbeds for interbed IBCNO. RNB must be greater than or equal to 1 if CDELAY is DELAY. Otherwise, RNB can be any value.
+description is the interbed material factor equivalent number of interbeds for the system of delay interbeds for interbed CSUBNO. RNB must be greater than or equal to 1 if CDELAY is DELAY. Otherwise, RNB can be any value.
 
 block packagedata
 name ssv_cc
@@ -319,7 +319,7 @@ tagged false
 in_record true
 reader urword
 longname initial inelastic skeletal specific storage
-description is the initial inelastic skeletal specific storage or compression index in the IBC interbed. The initial inelastic skeletal specific storage is specified if STORAGE\_COEFFICIENT is specified in the OPTIONS block.
+description is the initial inelastic skeletal specific storage or compression index in the CSUB interbed. The initial inelastic skeletal specific storage is specified if STORAGE\_COEFFICIENT is specified in the OPTIONS block.
 
 block packagedata
 name sse_cr 
@@ -329,7 +329,7 @@ tagged false
 in_record true
 reader urword
 longname elastic skeletal specific storage
-description is the initial elastic skeletal specific storage or recompression index in the IBC interbed. The initial elastic skeletal specific storage is specified if STORAGE\_COEFFICIENT is specified in the OPTIONS block.
+description is the initial elastic skeletal specific storage or recompression index in the CSUB interbed. The initial elastic skeletal specific storage is specified if STORAGE\_COEFFICIENT is specified in the OPTIONS block.
 
 block packagedata
 name theta 
@@ -339,7 +339,7 @@ tagged false
 in_record true
 reader urword
 longname initial interbed porosity
-description is the initial porosity of the IBC interbed.
+description is the initial porosity of the CSUB interbed.
 default_value 0.2
 
 block packagedata
@@ -350,7 +350,7 @@ tagged false
 in_record true
 reader urword
 longname interbed vertical hydraulic conductivity
-description is the vertical hydraulic conductivity of the IBC interbed. KV must be greater than 0 if CDELAY is DELAY. Otherwise, KV can be any value.
+description is the vertical hydraulic conductivity of the CSUB interbed. KV must be greater than 0 if CDELAY is DELAY. Otherwise, KV can be any value.
 
 block packagedata
 name h0 
@@ -360,7 +360,7 @@ tagged false
 in_record true
 reader urword
 longname initial interbed head
-description is the initial head in the IBC interbed. H0 can be anyvalue if CDELAY is NODELAY.
+description is the initial head in the CSUB interbed. H0 can be anyvalue if CDELAY is NODELAY.
 
 block packagedata
 name boundname
@@ -371,9 +371,9 @@ in_record true
 reader urword
 optional true
 longname well name
-description REPLACE boundname {'{#1}': 'IBC cell'}
+description REPLACE boundname {'{#1}': 'CSUB cell'}
 
-# --------------------- gwf ibc period ---------------------
+# --------------------- gwf csub period ---------------------
 
 block period
 name iper

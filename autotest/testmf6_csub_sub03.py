@@ -214,8 +214,7 @@ def build_models():
         ws = dir
         sim = flopy.mf6.MFSimulation(sim_name=name, version='mf6',
                                      exe_name='mf6',
-                                     sim_ws=ws,
-                                     sim_tdis_file='simulation.tdis')
+                                     sim_ws=ws)
         # create tdis package
         tdis = flopy.mf6.ModflowTdis(sim, time_units='DAYS',
                                      nper=nper, perioddata=tdis_rc)
@@ -275,13 +274,13 @@ def build_models():
                                                        save_flows=False)
         # ibc files
         opth = '{}.ibc.obs'.format(name)
-        ibc = flopy.mf6.ModflowGwfibc(gwf, head_based=True,
-                                      ndelaycells=ndelaycells[idx],
-                                      delay_full_cell=fullcell[idx],
-                                      constant_nodelay_thickness=True,
-                                      nibccells=maxibc,
-                                      obs_filerecord=opth,
-                                      ske_cr=0.2, packagedata=sub6)
+        ibc = flopy.mf6.ModflowGwfcsub(gwf, head_based=True,
+                                       ndelaycells=ndelaycells[idx],
+                                       delay_full_cell=fullcell[idx],
+                                       constant_nodelay_thickness=True,
+                                       ninterbeds=maxibc,
+                                       obs_filerecord=opth,
+                                       ske_cr=0.2, packagedata=sub6)
         orecarray = {}
         orecarray['ibc_obs.csv'] = [('tcomp1', 'total-compaction', (0, 4, 4)),
                                     ('tcomp2', 'total-compaction', (1, 4, 4)),
@@ -420,7 +419,7 @@ def main():
     return
 
 
-# use python testmf6_ibc_sub03.py --mf2005 mf2005devdbl
+# use python testmf6_csub_sub03.py --mf2005 mf2005devdbl
 if __name__ == "__main__":
     # print message
     print('standalone run of {}'.format(os.path.basename(__file__)))
