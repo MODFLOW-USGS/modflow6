@@ -519,6 +519,8 @@ module GwtModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- modules
+    use TdisModule, only: kstp, kper
     ! -- dummy
     class(GwtModelType) :: this
     integer(I4B),intent(in) :: kiter
@@ -526,6 +528,9 @@ module GwtModule
     class(BndType), pointer :: packobj
     integer(I4B) :: ip
 ! ------------------------------------------------------------------------------
+    !
+    ! -- Recalculate dispersion coefficients
+    if(this%indsp > 0) call this%dsp%dsp_cf(kiter)
     !
     ! -- Call package cf routines
     do ip = 1, this%bndlist%Count()
@@ -544,6 +549,7 @@ module GwtModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- modules
     ! -- dummy
     class(GwtModelType) :: this
     integer(I4B), intent(in) :: kiter

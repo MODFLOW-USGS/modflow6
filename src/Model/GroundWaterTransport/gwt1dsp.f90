@@ -37,6 +37,7 @@ module GwtDspModule
     integer(I4B), pointer                            :: iangle1    => null()    ! flag indicating angle1 is available
     integer(I4B), pointer                            :: iangle2    => null()    ! flag indicating angle2 is available
     integer(I4B), pointer                            :: iangle3    => null()    ! flag indicating angle3 is available
+    real(DP), dimension(:), pointer                  :: gwfflowjaold => null()  ! stored gwf flowja values from the last time disp coeffs were calculated
     
   contains
   
@@ -45,6 +46,7 @@ module GwtDspModule
     procedure :: dsp_mc
     procedure :: dsp_ar
     procedure :: dsp_ad
+    procedure :: dsp_cf
     procedure :: dsp_fc
     procedure :: dsp_bd
     procedure :: allocate_scalars
@@ -219,7 +221,7 @@ module GwtDspModule
 
   subroutine dsp_ad(this)
 ! ******************************************************************************
-! dsp_ad -- Map connections and construct iax, jax, and idxglox
+! dsp_ad -- Advance
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -251,6 +253,52 @@ module GwtDspModule
     ! -- Return
     return
   end subroutine dsp_ad
+
+  subroutine dsp_cf(this, kiter)
+! ******************************************************************************
+! dsp_cf --Coefficients
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwtDspType) :: this
+    integer(I4B), intent(in) :: kiter 
+    ! -- local
+    integer(I4B) :: n, ipos, iflwchng
+    real(DP) :: fd
+! ------------------------------------------------------------------------------
+    !
+    ! -- Calculate xt3d coefficients if flow solution has changed
+    if (this%ixt3d > 0) then
+      iflwchng = 0
+      nodeloop: do n = 1, this%dis%nodes
+        do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
+          fd = abs(this%gwfflowjaold(ipos) - this%fmi%gwfflowja(ipos))
+          if(fd > 1.D-8) then
+            iflwchng = 1
+            exit nodeloop
+          endif
+        enddo
+      enddo nodeloop
+      !
+      ! -- If flow has changed, then update coefficients
+      if (iflwchng == 1) then
+        !
+        ! -- Calculate xt3d coefficients
+        call this%xt3d%xt3d_fcpc(this%dis%nodes)
+        !
+        ! -- Save gwf flows
+        do ipos = 1, size(this%gwfflowjaold)
+          this%gwfflowjaold(ipos) = this%fmi%gwfflowja(ipos)
+        enddo
+      endif
+    endif
+    !
+    ! -- Return
+    return
+  end subroutine dsp_cf
 
   subroutine dsp_fc(this, kiter, nodes, nja, njasln, amatsln, idxglo, rhs, cnew)
 ! ******************************************************************************
@@ -457,6 +505,8 @@ module GwtDspModule
     call mem_allocate(this%angle1, nodes, 'ANGLE1', trim(this%origin))
     call mem_allocate(this%angle2, nodes, 'ANGLE2', trim(this%origin))
     call mem_allocate(this%angle3, nodes, 'ANGLE3', trim(this%origin))
+    call mem_allocate(this%gwfflowjaold, this%dis%con%nja, 'GWFFLOWJAOLD',     &
+      trim(this%origin))
     !
     ! -- Return
     return
