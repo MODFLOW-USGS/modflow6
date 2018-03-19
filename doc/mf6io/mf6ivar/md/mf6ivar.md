@@ -17,7 +17,7 @@
 | SIM | NAM | SOLUTIONGROUP | MXITER | INTEGER | is the maximum number of outer iterations for this solution group.  The default value is 1.  If there is only one solution in the solution group, then MXITER must be 1. |
 | SIM | NAM | SOLUTIONGROUP | SLNTYPE | STRING | is the type of solution.  The Integrated Model Solution (IMS6) is the only supported option in this version. |
 | SIM | NAM | SOLUTIONGROUP | SLNFNAME | STRING | name of file containing solution input. |
-| SIM | NAM | SOLUTIONGROUP | SLNMNAMES | STRING (NSLNMOD) | is the array of model names to add to this solution. |
+| SIM | NAM | SOLUTIONGROUP | SLNMNAMES | STRING (:) | is the array of model names to add to this solution.  The number of model names is determined by the number of model names the user provides on this line. |
 | SIM | TDIS | OPTIONS | TIME_UNITS | STRING | is the time units of the simulation.  This is a text string that is used as a label within model output files.  Values for time\_units may be ``unknown'',  ``seconds'', ``minutes'', ``hours'', ``days'', or ``years''.  The default time unit is ``unknown''. |
 | SIM | TDIS | OPTIONS | START_DATE_TIME | STRING | is the starting date and time of the simulation.  This is a text string that is used as a label within the simulation list file.  The value has no affect on the simulation.  The recommended format for the starting date and time is described at https://www.w3.org/TR/NOTE-datetime. |
 | SIM | TDIS | DIMENSIONS | NPER | INTEGER | is the number of stress periods for the simulation. |
