@@ -20,7 +20,7 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['ibcsub03a', 'ibcsub03b', 'ibcsub03c']
+ex = ['csub_sub03a', 'csub_sub03b', 'csub_sub03c']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
@@ -273,23 +273,23 @@ def build_models():
                                                        stress_period_data=cd6,
                                                        save_flows=False)
         # ibc files
-        opth = '{}.ibc.obs'.format(name)
-        ibc = flopy.mf6.ModflowGwfcsub(gwf, head_based=True,
-                                       ndelaycells=ndelaycells[idx],
-                                       delay_full_cell=fullcell[idx],
-                                       constant_nodelay_thickness=True,
-                                       ninterbeds=maxibc,
-                                       obs_filerecord=opth,
-                                       ske_cr=0.2, packagedata=sub6)
+        opth = '{}.csub.obs'.format(name)
+        csub = flopy.mf6.ModflowGwfcsub(gwf, head_based=True,
+                                        ndelaycells=ndelaycells[idx],
+                                        delay_full_cell=fullcell[idx],
+                                        constant_nodelay_thickness=True,
+                                        ninterbeds=maxibc,
+                                        obs_filerecord=opth,
+                                        ske_cr=0.2, packagedata=sub6)
         orecarray = {}
-        orecarray['ibc_obs.csv'] = [('tcomp1', 'total-compaction', (0, 4, 4)),
-                                    ('tcomp2', 'total-compaction', (1, 4, 4)),
-                                    ('tcomp3', 'total-compaction', (2, 4, 4))]
-        ibc_obs_package = flopy.mf6.ModflowUtlobs(gwf,
-                                                  fname=opth,
-                                                  parent_file=ibc, digits=10,
-                                                  print_input=True,
-                                                  continuous=orecarray)
+        orecarray['csub_obs.csv'] = [('tcomp1', 'total-compaction', (0, 4, 4)),
+                                     ('tcomp2', 'total-compaction', (1, 4, 4)),
+                                     ('tcomp3', 'total-compaction', (2, 4, 4))]
+        csub_obs_package = flopy.mf6.ModflowUtlobs(gwf,
+                                                   fname=opth,
+                                                   parent_file=csub, digits=10,
+                                                   print_input=True,
+                                                   continuous=orecarray)
 
         # output control
         oc = flopy.mf6.ModflowGwfoc(gwf,
@@ -345,7 +345,7 @@ def eval_comp(sim):
     print('evaluating compaction...')
 
     # MODFLOW 6 total compaction results
-    fpth = os.path.join(sim.simpath, 'ibc_obs.csv')
+    fpth = os.path.join(sim.simpath, 'csub_obs.csv')
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=',')
     except:

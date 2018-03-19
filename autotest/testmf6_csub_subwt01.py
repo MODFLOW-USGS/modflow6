@@ -21,7 +21,7 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['ibcsubwt01a', 'ibcsubwt01b']
+ex = ['csub_subwt01a', 'csub_subwt01b']
 cvopt = [None, 'dewatered']
 constantcv = [True, False]
 exdirs = []

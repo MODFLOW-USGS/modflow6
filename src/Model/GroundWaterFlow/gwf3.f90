@@ -280,7 +280,8 @@ module GwfModule
     call gnc_cr(this%gnc, this%name, this%ingnc, this%iout)
     call hfb_cr(this%hfb, this%name, this%inhfb, this%iout)
     call sto_cr(this%sto, this%name, this%insto, this%iout)
-    call csub_cr(this%csub, this%name, this%insto, this%incsub, this%iout)
+    call csub_cr(this%csub, this%name, this%insto, this%sto%name,               &
+                 this%incsub, this%iout)
     call ic_cr(this%ic, this%name, this%inic, this%iout, this%dis)
     call mvr_cr(this%mvr, this%name, this%inmvr, this%iout)
     call oc_cr(this%oc, this%name, this%inoc, this%iout)
@@ -612,11 +613,13 @@ module GwfModule
                                                 this%nja, njasln, amatsln,     &
                                                 this%idxglo, this%rhs, this%x)
     if(this%ingnc > 0) call this%gnc%gnc_fc(kiter, this%ia, amatsln)
+    ! -- storage
     if(this%insto > 0) then
       call this%sto%sto_fc(kiter, this%dis%nodes, this%xold,                   &
                             this%x, this%nja, njasln,                          &
                             amatsln, this%idxglo, this%rhs)
     end if
+    ! -- skeletal storage, compaction, and land subsidence 
     if(this%incsub > 0) then
       call this%csub%csub_fc(kiter, this%dis%nodes, this%xold,                 &
                              this%x, this%nja, njasln,                         &

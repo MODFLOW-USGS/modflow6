@@ -19,12 +19,15 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['ibcsub02a', 'ibcsub02b', 'ibcsub02c', 'ibcsub02d', 'ibcsub02e']
+ex = ['csub_sub02a', 'csub_sub02b', 'csub_sub02c', 'csub_sub02d',
+      'csub_sub02e']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
 ddir = 'data'
-ss = [1.14e-3, 1.14e-3, 1.14e-3 / 500., 1.14e-3 / 500., 1.14e-3]
+sk_ske = 1.14e-3 / 500.
+sk_S = sk_ske * 500.
+ss = [sk_S, sk_S, sk_ske, sk_ske, sk_S]
 storagecoeff = [True, True, False, False, True]
 cdelay = [False, True, False, True, True]
 half_cell = [None, None, None, None, True]
@@ -176,7 +179,7 @@ def build_models():
                                       ndelaycells=ndelaycells[idx],
                                       delay_full_cell=full_cell[idx],
                                       constant_nodelay_thickness=True,
-                                      ninterbeds=1, ske_cr=0.2,
+                                      ninterbeds=1, ske_cr=sk_ske,
                                       packagedata=sub6)
 
         # output control

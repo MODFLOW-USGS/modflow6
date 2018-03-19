@@ -21,8 +21,9 @@ module GwfCsubModule
   public :: csub_cr
   public :: GwfCsubType
   !
-  character(len=LENBUDTXT), dimension(4) :: budtxt =                           & !text labels for budget terms
-      ['      CSUB-SSKE', '     CSUB-IBSKE', '     CSUB-IBSKV',                &
+  character(len=LENBUDTXT), dimension(4) :: budtxt =                            & !text labels for budget terms
+      [' CSUB-AQELASTIC',                                                       & 
+       '   CSUB-ELASTIC', ' CSUB-INELASTIC',                                    &
        ' CSUB-WATERCOMP']
   
   !
@@ -33,7 +34,8 @@ module GwfCsubModule
 
   type, extends(NumericalPackageType) :: GwfCsubType
     character(len=LENBOUNDNAME), pointer, dimension(:)  :: boundname   => null() !vector of boundnames
-    character(len=500)                                  :: listlabel   = ''      !title of table written for RP
+    character(len=500) :: listlabel   = ''      !title of table written for RP
+    character(len=LENPACKAGENAME) :: stoname
     integer(I4B), pointer :: istounit
     integer(I4B), pointer :: iconstantndb
     integer(I4B), pointer :: istoragec
@@ -70,7 +72,7 @@ module GwfCsubModule
     real(DP), dimension(:), pointer :: sk_thick    => null()   !skeletal (aquifer) thickness
     real(DP), dimension(:), pointer :: sig0        => null()   !geostatic offset
     real(DP), dimension(:), pointer :: ci          => null()   !compression index
-    real(DP), dimension(:), pointer :: rci         => null()   !recompression
+    real(DP), dimension(:), pointer :: rci         => null()   !recompression index
     real(DP), dimension(:), pointer :: gsc         => null()   !geostatic stress for a cell
     real(DP), dimension(:), pointer :: esc         => null()   !effective stress for a cell
     real(DP), dimension(:), pointer :: es          => null()   !effective stress
@@ -86,6 +88,8 @@ module GwfCsubModule
     real(DP), dimension(:), pointer :: comp        => null()   !interbed compaction
     real(DP), dimension(:), pointer :: totalcomp   => null()   !total interbed compaction
     real(DP), dimension(:), pointer :: gwflow      => null()   !gwf-flow
+    real(DP), dimension(:), pointer :: storagee    => null()   !elastic storage
+    real(DP), dimension(:), pointer :: storagei    => null()   !inelastic storage
     ! -- delay interbed arrays
     real(DP), dimension(:), pointer   :: dbdz     => null()    !delay bed dz
     real(DP), dimension(:,:), pointer :: dbz      => null()    !delay bed cell z
@@ -114,7 +118,6 @@ module GwfCsubModule
 
   contains
 !    procedure :: bnd_ck => csub_ck
-    procedure :: csub_fc
     procedure :: define_listlabel
     procedure :: read_options
     !procedure :: bnd_df => csub_df
@@ -122,6 +125,7 @@ module GwfCsubModule
     procedure :: csub_da
     procedure :: csub_rp
     procedure :: csub_ad
+    procedure :: csub_fc
     procedure :: bdcalc => csub_bdcalc
     procedure :: bdsav => csub_bdsav
     procedure :: read_dimensions => csub_read_dimensions
@@ -153,9 +157,9 @@ module GwfCsubModule
     procedure, private :: csub_delay_calc_err
     !
     ! -- methods for observations
-    procedure, public :: bnd_obs_supported => csub_obs_supported
-    procedure, public :: bnd_df_obs => csub_df_obs
-    procedure, public :: bnd_rp_obs => csub_rp_obs
+    procedure, public :: csub_obs_supported
+    procedure, public :: csub_df_obs
+    procedure, private :: csub_rp_obs
     procedure, private :: csub_bd_obs
     !
     ! -- method for time series
@@ -164,7 +168,7 @@ module GwfCsubModule
 
 contains
 
-  subroutine csub_cr(csubobj, name_model, istounit, inunit, iout)
+  subroutine csub_cr(csubobj, name_model, istounit, stoname, inunit, iout)
 ! ******************************************************************************
 ! csub_cr -- Create a New CSUB Object
 ! ******************************************************************************
@@ -177,6 +181,7 @@ contains
     character(len=*), intent(in) :: name_model
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: istounit
+    character(len=*), intent(in) :: stoname
     integer(I4B), intent(in) :: iout
     ! -- local
 ! ------------------------------------------------------------------------------
@@ -192,6 +197,7 @@ contains
     !
     ! -- Set variables
     csubobj%istounit = istounit
+    csubobj%stoname = stoname
     csubobj%inunit = inunit
     csubobj%iout = iout
     !
@@ -287,20 +293,32 @@ contains
     character(len=LINELENGTH) :: msg
     !integer(I4B) :: imover
     integer(I4B) :: i, n
-    real(DP) :: es, pcs, rho1, rho2, tled
+    real(DP) :: es
+    real(DP) :: pcs
+    real(DP) :: rho1
+    real(DP) :: rho2
+    real(DP) :: tled
+    real(DP) :: tledm
     real(DP) :: delt_sto, es0, strain
-    real(DP) :: top, bot, thk_node, thick, rrate, ratein,rateout
+    real(DP) :: top, bot, thk_node, thick, rrate, ratein, rateout
     real(DP) :: comp
     real(DP) :: area
     real(DP) :: h
     real(DP) :: hcof
     real(DP) :: rhs
+    real(DP) :: stoe
+    real(DP) :: stoi
     real(DP) :: err
     real(DP) :: qaq
     real(DP) :: dsto
     real(DP) :: qaqa
     real(DP) :: qaqrhs
-    !real(DP) :: qtomvr
+    real(DP) :: rateibein
+    real(DP) :: rateibeout
+    real(DP) :: rateibiin
+    real(DP) :: rateibiout
+    
+    
     !real(DP) :: ratin, ratout, rrate
     !integer(I4B) :: ibdlbl, naux
     integer(I4B) :: ibc
@@ -312,24 +330,24 @@ contains
     ! -- Suppress saving of simulated values; they
     !    will be saved at end of this procedure.
     iprobslocal = 0
-    !
-    !
-    !call this%BndType%bnd_bd(x, idvfl, icbcfl, ibudfl, icbcun, iprobslocal,     &
-    !                isuppress_output, model_budget, imap, iadv)
+
     ratein = DZERO
     rateout= DZERO
 
-    ibc = 1
-    if(this%gwfiss /= 0) then
-        call model_budget%addentry(ratein, rateout, delt, budtxt(1),            &
-                               isuppress_output, budtxt(1))
-        ibc = 0
-    end if
-
     tled = DONE
-
-    if (ibc == 1) then
-      do i = 1, this%ninterbeds
+    tledm = DONE / DELT
+    !
+    ! -- skeletal storage
+    
+    !
+    ! -- interbed storage
+    rateibein = DZERO
+    rateibeout = DZERO
+    rateibiin = DZERO
+    rateibiout = DZERO
+    
+    do i = 1, this%ninterbeds
+      if (this%gwfiss == 0) then
         n = this%nodelist(i)
         area = this%dis%get_area(n)
         !
@@ -338,6 +356,7 @@ contains
         !
         ! -- no delay interbeds
         if (this%idelay(i) == 0) then
+          stoi = DZERO
           !
           ! -- calculate ibc rho1 and rho2
           call this%csub_nodelay_calc_gwf(i, hnew(n), rho1, rho2, rhs, tled)
@@ -351,13 +370,26 @@ contains
           if (this%igeocalc == 0) then
             h = hnew(n)
             comp = rho2 * (pcs - h) + rho1 * (es0 - pcs)
+            if (rho2 /= rho1) then
+              stoi = rho2 * (pcs - h)
+              stoe = rho1 * (es0 - pcs)
+            else
+              stoe = comp
+            end if
           else
             comp = -pcs * (rho2 - rho1) - (rho1 * es0) + (rho2 * es)
+            if (rho2 /= rho1) then
+              stoi = -pcs * rho2 + (rho2 * es)
+              stoe = pcs * rho1 - (rho1 * es0)
+            else
+              stoe = comp
+            end if
           end if
           delt_sto = comp * area
-          !!
-          !write(1051, '(i10,8(1x,g20.7))') i, this%gsc(n), es, es0, &
-          !                                 pcs, rho1, rho2, delt_sto, comp
+          stoe = stoe * area
+          stoi = stoi * area
+          this%storagee(i) = stoe * tledm
+          this%storagei(i) = stoi * tledm
           !
           ! -- update compaction and total compaction
           this%comp(i) = comp
@@ -371,39 +403,59 @@ contains
             this%void(i) = strain + this%void(i) * (strain + DONE)
             this%thick(i) = thick * (strain + DONE)
           end if
-          !
-          !write(*,*) n,trim(msg),delt_sto
-          !call this%dis%noder_to_string(n,msg)
-          !write(*,*) n,trim(msg),this%rhs(i),this%hcof(i),rho1,rho2,rhs
-          !
-          ! -- water budget terms
-          if (delt_sto >= DZERO) then
-              ratein = ratein + delt_sto / delt
-          else
-              rateout = rateout + delt_sto / delt
-          end if
+          !!
+          !! -- water budget terms
+          !if (delt_sto >= DZERO) then
+          !    ratein = ratein + delt_sto * tledm
+          !else
+          !    rateout = rateout + delt_sto * tledm
+          !end if
           !
           ! -- delay interbeds
         else
           h = hnew(n)
-          call this%csub_delay_calc_dstor(i, rhs)
-          dsto = rhs / delt
-          delt_sto = rhs * area * this%rnb(i) / delt
+          call this%csub_delay_calc_dstor(i, stoe, stoi)
+          dsto = (stoe + stoi) * tledm
+          delt_sto = (stoe + stoi) * area * this%rnb(i) * tledm
+          this%storagee(i) = stoe * area * this%rnb(i) * tledm
+          this%storagei(i) = stoi * area * this%rnb(i) * tledm
           !
           ! -- calculate sum of compaction in delay interbed
           call this%csub_delay_calc_comp(i)
         end if
         this%gwflow(i) = delt_sto
         !
-        !call model_budget%addentry(ratein, rateout, delt, this%text,                 &
-        !                           isuppress_output,this%text)
-      end do
+        ! -- budget terms
+        if (this%storagee(i) < DZERO) then
+          rateibeout = rateibeout - this%storagee(i)
+        else
+          rateibein = rateibein + this%storagee(i)
+        end if
+        if (this%storagei(i) < DZERO) then
+          rateibiout = rateibiout - this%storagei(i)
+        else
+          rateibiin = rateibiin + this%storagei(i)
+        end if
+      else
+        this%storagee(i) = DZERO
+        this%storagei(i) = DZERO
+      end if
+    end do
+    !
+    ! -- Add contributions to model budget 
+    !
+    ! -- interbed elastic storage
+    call model_budget%addentry(rateibein, rateibeout, delt, budtxt(2),        &
+                                isuppress_output, text)
+    !
+    ! -- interbed elastic storage
+    call model_budget%addentry(rateibiin, rateibiout, delt, budtxt(3),        &
+                                isuppress_output, text)
+    !
+    ! -- For continuous observations, save simulated values.
+    if (this%obs%npakobs > 0) then
+      call this%csub_bd_obs()
     end if
-    !!
-    !! -- For continuous observations, save simulated values.
-    !if (this%obs%npakobs > 0 .and. iprobs > 0) then
-    !  call this%csub_bd_obs()
-    !end if
 
     ! -- return
     return
@@ -457,9 +509,10 @@ contains
       !end if
     endif
     !
-    ! -- For continuous observations, save simulated values.
+    ! -- Save observations.
     if (this%obs%npakobs > 0) then
-      call this%csub_bd_obs()
+      !call this%csub_bd_obs()
+      call this%obs%obs_ot()
     end if
     !
     ! -- Return
@@ -856,6 +909,8 @@ contains
             inobs = GetUnit()
             call openfile(inobs, this%iout, this%obs%inputFilename, 'OBS')
             this%obs%inUnitObs = inobs
+            call this%obs%obs_df(this%iout, ftype, this%filtyp, this%dis)
+            call this%csub_df_obs()
           !
           ! -- right now these are options that are only available in the
           !    development version and are not included in the documentation.
@@ -897,25 +952,11 @@ contains
     implicit none
     class(GwfCsubType),   intent(inout) :: this
     ! -- local variables
+    character(len=LENPACKAGENAME) :: stoname
     integer(I4B) :: n
+    integer(I4B) :: iblen
 
-    !call this%BndType%allocate_arrays()
-    call mem_allocate(this%unodelist, this%ninterbeds, 'unodelist', trim(this%origin))
-    call mem_allocate(this%nodelist, this%ninterbeds, 'nodelist', trim(this%origin))
-    call mem_allocate(this%gsc, this%dis%nodes, 'gsc', trim(this%origin))
-    call mem_allocate(this%esc, this%dis%nodes, 'esc', trim(this%origin))
-    call mem_allocate(this%es, this%ninterbeds, 'es', trim(this%origin))
-    call mem_allocate(this%es0, this%ninterbeds, 'es0', trim(this%origin))
-    call mem_allocate(this%pcs, this%ninterbeds, 'pcs', trim(this%origin))
-    call mem_allocate(this%znode, this%ninterbeds, 'znode', trim(this%origin))
-    call mem_allocate(this%thick, this%ninterbeds, 'thick', trim(this%origin))
-    call mem_allocate(this%rnb, this%ninterbeds, 'rnb', trim(this%origin))
-    call mem_allocate(this%kv, this%ninterbeds, 'kv', trim(this%origin))
-    call mem_allocate(this%h0, this%ninterbeds, 'h0', trim(this%origin))
-    call mem_allocate(this%theta, this%ninterbeds, 'theta', trim(this%origin))
-    call mem_allocate(this%void, this%ninterbeds, 'void', trim(this%origin))
-    call mem_allocate(this%ci, this%ninterbeds, 'ci', trim(this%origin))
-    call mem_allocate(this%rci, this%ninterbeds, 'rci', trim(this%origin))
+    ! -- grid based data
     if (this%igeocalc == 0) then
       call mem_allocate(this%sgm, 1, 'sgm', trim(this%origin))
       call mem_allocate(this%sgs, 1, 'sgs', trim(this%origin))
@@ -936,10 +977,33 @@ contains
     else
       call mem_allocate(this%sig0, 1, 'sig0', trim(this%origin))
     end if
-    call mem_allocate(this%idelay, this%ninterbeds, 'idelay', trim(this%origin))
-    call mem_allocate(this%comp, this%ninterbeds, 'comp', trim(this%origin))
-    call mem_allocate(this%totalcomp, this%ninterbeds, 'totalcomp', trim(this%origin))
-    call mem_allocate(this%gwflow, this%ninterbeds, 'gwflow', trim(this%origin))
+    ! -- interbed data
+    iblen = 1
+    if (this%ninterbeds > 0) then
+      iblen = this%ninterbeds
+    end if
+    call mem_allocate(this%unodelist, iblen, 'unodelist', trim(this%origin))
+    call mem_allocate(this%nodelist, iblen, 'nodelist', trim(this%origin))
+    call mem_allocate(this%gsc, this%dis%nodes, 'gsc', trim(this%origin))
+    call mem_allocate(this%esc, this%dis%nodes, 'esc', trim(this%origin))
+    call mem_allocate(this%es, iblen, 'es', trim(this%origin))
+    call mem_allocate(this%es0, iblen, 'es0', trim(this%origin))
+    call mem_allocate(this%pcs, iblen, 'pcs', trim(this%origin))
+    call mem_allocate(this%znode, iblen, 'znode', trim(this%origin))
+    call mem_allocate(this%thick, iblen, 'thick', trim(this%origin))
+    call mem_allocate(this%rnb, iblen, 'rnb', trim(this%origin))
+    call mem_allocate(this%kv, iblen, 'kv', trim(this%origin))
+    call mem_allocate(this%h0, iblen, 'h0', trim(this%origin))
+    call mem_allocate(this%theta, iblen, 'theta', trim(this%origin))
+    call mem_allocate(this%void, iblen, 'void', trim(this%origin))
+    call mem_allocate(this%ci, iblen, 'ci', trim(this%origin))
+    call mem_allocate(this%rci, iblen, 'rci', trim(this%origin))
+    call mem_allocate(this%idelay, iblen, 'idelay', trim(this%origin))
+    call mem_allocate(this%comp, iblen, 'comp', trim(this%origin))
+    call mem_allocate(this%totalcomp, iblen, 'totalcomp', trim(this%origin))
+    call mem_allocate(this%gwflow, iblen, 'gwflow', trim(this%origin))
+    call mem_allocate(this%storagee, iblen, 'storagee', trim(this%origin))
+    call mem_allocate(this%storagei, iblen, 'storagei', trim(this%origin))
     !
     ! -- delay bed storage
     call mem_allocate(this%dbdz, 0, 'dbdz', trim(this%origin))
@@ -962,16 +1026,16 @@ contains
     call mem_allocate(this%dbdh, 0, 'dbdh', trim(this%origin))
     call mem_allocate(this%dbaw, 0, 'dbaw', trim(this%origin))
     !
-!    call mem_allocate(this%rhs, this%ninterbeds, 'rhs', trim(this%origin))
-!    call mem_allocate(this%hcof, this%ninterbeds, 'hcof', trim(this%origin))
-    !
-    ! --
-!    call mem_allocate(this%simvals, this%ninterbeds,'simvals', trim(this%origin))
+    ! -- allocate boundname
     allocate(this%boundname(this%ninterbeds))
-
+    !
+    ! -- set pointers to gwf variables
     call mem_setptr(this%gwfiss, 'ISS', trim(this%name_model))
-    call mem_setptr(this%stoiconvert, 'ICONVERT', trim(this%name_model // ' STO'))
-    call mem_setptr(this%stosc1, 'SC1', trim(this%name_model // ' STO'))
+    !
+    ! -- set pointers to variables in the storage package
+    stoname = trim(this%name_model) // ' ' // trim(this%stoname)
+    call mem_setptr(this%stoiconvert, 'ICONVERT', trim(stoname))
+    call mem_setptr(this%stosc1, 'SC1', trim(stoname))
     !
     ! -- initialize variables that are not specified by user
     do n = 1, this%dis%nodes
@@ -1011,8 +1075,8 @@ contains
       call mem_deallocate(this%unodelist)
       call mem_deallocate(this%nodelist)
       call mem_deallocate(this%idelay)
-      deallocate(this%boundname)
-
+      !
+      ! -- grid-based storage data
       call mem_deallocate(this%sgm)
       call mem_deallocate(this%sgs)
       call mem_deallocate(this%ske_cr)
@@ -1020,6 +1084,9 @@ contains
       call mem_deallocate(this%sk_void)
       call mem_deallocate(this%sk_thick)
       call mem_deallocate(this%sig0)
+      !
+      ! -- interbed storage
+      deallocate(this%boundname)
       call mem_deallocate(this%ci)
       call mem_deallocate(this%rci)
       call mem_deallocate(this%gsc)
@@ -1037,6 +1104,8 @@ contains
       call mem_deallocate(this%comp)
       call mem_deallocate(this%totalcomp)
       call mem_deallocate(this%gwflow)
+      call mem_deallocate(this%storagee)
+      call mem_deallocate(this%storagei)
       !
       ! -- delay bed storage
       call mem_deallocate(this%dbdz)
@@ -1060,9 +1129,6 @@ contains
       call mem_deallocate(this%dbaw)
       !
       !
-  !    call mem_deallocate(this%rhs)
-  !    call mem_deallocate(this%hcof)
-  !    call mem_deallocate(this%simvals)
       !
       ! -- pointers to gwf variables
       nullify(this%gwfiss)
@@ -1204,6 +1270,8 @@ contains
     integer(I4B) :: i
     integer(I4B) :: n
     integer(I4B) :: node
+    integer(I4B) :: iske
+    integer(I4B) :: istheta
     integer(I4B) :: isgm
     integer(I4B) :: isgs
     real(DP) :: rval
@@ -1229,14 +1297,11 @@ contains
     ! -- create obs package
     call obs_cr(this%obs, this%inobspkg)
     !
-    ! - observation data
-    call this%obs%obs_ar()
-!    !
-!    ! -- time series data
-!    this%TasManager%dis => this%dis
-    !
     ! -- Read csub options
     call this%read_options()
+    !
+    ! - observation data
+    call this%obs%obs_ar()
     !
     ! -- read dimensions
     call this%parser%GetBlock('DIMENSIONS', isfound, ierr)
@@ -1272,6 +1337,8 @@ contains
     call this%csub_allocate_arrays()
     !
     ! -- initialize local variables
+    iske = 0
+    istheta = 0
     isgm = 0
     isgs = 0
     !
@@ -1289,10 +1356,12 @@ contains
           call this%dis%read_grid_array(line, lloc, istart, istop,              &
                                         this%iout, this%parser%iuactive,        &
                                         this%ske_cr, 'SKE_CR')
+          iske = 1
         case ('SK_THETA')
           call this%dis%read_grid_array(line, lloc, istart, istop,              &
                                         this%iout, this%parser%iuactive,        &
                                         this%sk_theta, 'SK_THETA')
+          istheta = 1
         case ('SGM')
             if (this%igeocalc == 1) then
               call this%dis%read_grid_array(line, lloc, istart, istop,          &
@@ -1327,12 +1396,22 @@ contains
       call store_error('ERROR.  REQUIRED GRIDDATA BLOCK NOT FOUND.')
     end if
     !
-    ! -- deteminer
+    ! -- detemine if sk_ske and sk_theta have been specified
+    if (iske == 0) then
+      write(errmsg,'(4x,a)') 'ERROR. SK_SKE GRIDDATA MUST BE SPECIFIED'
+      call store_error(errmsg)
+    end if
+    if (istheta == 0) then
+      write(errmsg,'(4x,a)') 'ERROR. SK_THETA GRIDDATA MUST BE SPECIFIED'
+      call store_error(errmsg)
+    end if
+    !
+    ! -- determine if sgm and sgs have been specified, if effective stress formulation
     if (this%igeocalc > 0) then
       if (isgm == 0) then
         write(errmsg,'(4x,a,2(1x,a))') 'ERROR. SGM GRIDDATA MUST BE SPECIFIED', &
-                                       'SPECIFIED IF USING THE EFFECTIVE-',     &
-                                       'STRESS FORMULATION'
+                                       'IF USING THE EFFECTIVE-STRESS',         &
+                                       'FORMULATION'
         call store_error(errmsg)
       end if
       if (isgs == 0) then
@@ -1342,20 +1421,6 @@ contains
         call store_error(errmsg)
       end if
     end if
-    !!
-    !! -- terminate if errors encountered in reach block
-    !if (count_errors() > 0) then
-    !  call this%parser%StoreErrorUnit()
-    !  call ustop()
-    !end if
-    !!
-    !! -- determine if geostatic stresses will be calculated
-    !do n = 1, this%dis%nodes
-    !  if (this%sgm(n) > DZERO .or. this%sgs(n) > DZERO) then
-    !    this%igeocalc = 1
-    !    exit
-    !  end if
-    !end do
     !
     ! -- set idbhalfcell
     if (this%igeocalc == 0) then
@@ -1804,6 +1869,9 @@ contains
       call ustop()
     end if
     !
+    ! -- read observations
+    call this%csub_rp_obs()
+    !
     ! -- return
     return
   end subroutine csub_rp
@@ -2068,7 +2136,7 @@ contains
     
       !
       ! -- interbed storage
-      if (this%ninterbeds == 0) then
+      if (this%ninterbeds /= 0) then
         do i = 1, this%ninterbeds
           n = this%nodelist(i)
           idiag = this%dis%con%ia(n)
@@ -2556,7 +2624,7 @@ contains
     return
   end subroutine csub_delay_solve
 
-  subroutine csub_delay_calc_dstor(this, ib, rhs)
+  subroutine csub_delay_calc_dstor(this, ib, rhse, rhsi)
 ! ******************************************************************************
 ! csub_delay_calc_dstor -- Calculate change in storage in a delay interbed.
 ! ******************************************************************************
@@ -2565,7 +2633,8 @@ contains
 ! ------------------------------------------------------------------------------
     class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: ib
-    real(DP), intent(inout) :: rhs
+    real(DP), intent(inout) :: rhse
+    real(DP), intent(inout) :: rhsi
     ! -- local variables
     integer(I4B) :: idelay
     integer(I4B) :: n
@@ -2576,26 +2645,29 @@ contains
     real(DP) :: es
     real(DP) :: denom
     real(DP) :: f
-    real(DP) :: fhc
-    real(DP) :: v
+    real(DP) :: fmult
+    real(DP) :: v1
+    real(DP) :: v2
     real(DP) :: strain
     real(DP) :: void
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
     idelay = this%idelay(ib)
-    rhs = DZERO
+    rhse = DZERO
+    rhsi = DZERO
     !
     !
     if (this%thick(ib) > DZERO) then
       do n = 1, this%ndelaycells
         dz = this%dbdz(idelay)
         void = this%dbvoid(n, idelay)
+        fmult = DONE
         call this%csub_delay_calc_sskessk(ib, n, sske, ssk)
         if (this%igeocalc == 0) then
-          v = ssk * (this%dbpcs(n, idelay) - this%dbh(n, idelay))
-          v = v + sske * (this%dbh0(n, idelay) - this%dbpcs(n, idelay))
-          v = v * dz
+          v1 = ssk * (this%dbpcs(n, idelay) - this%dbh(n, idelay))
+          v2 = sske * (this%dbh0(n, idelay) - this%dbpcs(n, idelay))
+          fmult = dz
         else
           denom = (DONE + void) * this%dbes0(n, idelay)
           if (denom /= DZERO) then
@@ -2603,10 +2675,15 @@ contains
           else
             f = DZERO
           end if
-          v = ssk * (this%dbes(n, idelay) - this%dbpcs(n, idelay))
-          v = v + sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay))
+          v1 = ssk * (this%dbes(n, idelay) - this%dbpcs(n, idelay))
+          v2 = sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay))
         end if
-        rhs = rhs + v
+        if (ssk /= sske) then
+          rhsi = rhsi + v1 * fmult
+          rhse = rhse + v2 * fmult
+        else
+          rhse = rhse + (v1 + v2) * fmult
+        end if
       end do
     end if
     !
@@ -2769,8 +2846,7 @@ contains
   logical function csub_obs_supported(this)
   ! ******************************************************************************
   ! csub_obs_supported
-  !   -- Return true because ibc package supports observations.
-  !   -- Overrides BndType%bnd_obs_supported()
+  !   -- Return true because csub package supports observations.
   ! ******************************************************************************
   !
   !    SPECIFICATIONS:
@@ -2929,127 +3005,6 @@ contains
 
 
   subroutine csub_rp_obs(this)
-!    ! -- dummy
-!    class(GwfCsubType), intent(inout) :: this
-!    ! -- local
-!    integer(I4B) :: i, j, n, nn1, nn2
-!    integer(I4B) :: idelay
-!    character(len=200) :: ermsg
-!    character(len=LENBOUNDNAME) :: bname
-!    logical :: jfound
-!    class(ObserveType),   pointer :: obsrv => null()
-!    ! --------------------------------------------------------------------------
-!    ! -- formats
-!10  format('Error: Boundary "',a,'" for observation "',a, &
-!           '" is invalid in package "',a,'"')
-!30  format('Error: Boundary name not provided for observation "',a, &
-!           '" in package "',a,'"')
-!60  format('Error: Invalid node number in OBS input: ',i5)
-!    do i = 1, this%obs%npakobs
-!      obsrv => this%obs%pakobs(i)%obsrv
-!      !
-!      ! -- indxbnds needs to be deallocated and reallocated (using
-!      !    ExpandArray) each stress period because list of boundaries
-!      !    can change each stress period.
-!      if (allocated(obsrv%indxbnds)) then
-!        deallocate(obsrv%indxbnds)
-!      end if
-!      !
-!      ! -- get node number 1
-!      nn1 = obsrv%NodeNumber
-!      if (nn1 == NAMEDBOUNDFLAG) then
-!        bname = obsrv%FeatureName
-!        if (bname /= '') then
-!          ! -- Observation location(s) is(are) based on a boundary name.
-!          !    Iterate through all boundaries to identify and store
-!          !    corresponding index(indices) in bound array.
-!          jfound = .false.
-!          do j = 1, this%ninterbeds
-!            if (this%boundname(j) == bname) then
-!              jfound = .true.
-!              call ExpandArray(obsrv%indxbnds)
-!              n = size(obsrv%indxbnds)
-!              obsrv%indxbnds(n) = j
-!            endif
-!          enddo
-!          if (.not. jfound) then
-!            write(ermsg,10)trim(bname), trim(obsrv%name), trim(this%name)
-!            call store_error(ermsg)
-!          endif
-!        else
-!          write (ermsg,30) trim(obsrv%name), trim(this%name)
-!          call store_error(ermsg)
-!        endif
-!      elseif (nn1 < 1 .or. nn1 > this%ninterbeds) then
-!        write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
-!          'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
-!          ' interbed must be > 0 and <=', this%ninterbeds, &
-!          '(specified value is ', nn1, ')'
-!        call store_error(ermsg)
-!      else
-!        idelay = this%idelay(nn1)
-!        call ExpandArray(obsrv%indxbnds)
-!        n = size(obsrv%indxbnds)
-!        if (n == 1) then
-!          if (obsrv%ObsTypeId=='DELAY-HEAD') then
-!            j = (idelay - 1) * this%ndelaycells + 1
-!            nn2 = obsrv%NodeNumber2
-!            if (nn2 < 1 .or. nn2 > this%ndelaycells) then
-!              write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
-!                'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
-!                ' interbed cell must be > 0 and <=', this%ndelaycells, &
-!                '(specified value is ', nn2, ')'
-!              call store_error(ermsg)
-!            else
-!              j = (idelay - 1) * this%ndelaycells + nn2
-!            end if
-!            obsrv%indxbnds(1) = j
-!          else
-!            obsrv%indxbnds(1) = nn1
-!          end if
-!        else
-!          ermsg = 'Programming error in csub_rp_obs'
-!          call store_error(ermsg)
-!        end if
-!      end if
-!      !
-!      ! -- catch non-cumulative observation assigned to observation defined
-!      !    by a boundname that is assigned to more than one element
-!      if (obsrv%ObsTypeId == 'DELAY-HEAD') then
-!        nn1 = obsrv%NodeNumber
-!        if (nn1 == NAMEDBOUNDFLAG) then
-!          n = size(obsrv%indxbnds)
-!          if (n > 1) then
-!            write (ermsg, '(4x,a,4(1x,a))') &
-!              'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
-!              'for observation', trim(adjustl(obsrv%Name)), &
-!              ' must be assigned to a reach with a unique boundname.'
-!            call store_error(ermsg)
-!          end if
-!        end if
-!      end if
-!      !
-!      ! -- check that node number 1 is valid; call store_error if not
-!      n = size(obsrv%indxbnds)
-!      if (obsrv%ObsTypeId /= 'DELAY-HEAD') then
-!        do j = 1, n
-!          nn1 = obsrv%indxbnds(j)
-!          if (nn1 < 1 .or. nn1 > this%ninterbeds) then
-!            write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
-!              'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
-!              ' interbed must be > 0 and <=', this%ninterbeds, &
-!              '(specified value is ', nn1, ')'
-!            call store_error(ermsg)
-!          end if
-!        end do
-!      end if
-!    end do
-!    if (count_errors() > 0) then
-!      call this%parser%StoreErrorUnit()
-!      call ustop()
-!    endif
-!    !
-!    return
     ! -- dummy
     class(GwfCsubType), intent(inout) :: this
     ! -- local
@@ -3061,7 +3016,7 @@ contains
     character(len=200) :: ermsg
     logical :: jfound
     !
-    if (.not. this%bnd_obs_supported()) return
+    if (.not. this%csub_obs_supported()) return
     !
     do i=1,this%obs%npakobs
       obsrv => this%obs%pakobs(i)%obsrv
