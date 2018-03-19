@@ -567,7 +567,8 @@ module GwtModule
                            amatsln, this%idxglo, this%rhs)
     endif
     if(this%inadv > 0) then
-      call this%adv%adv_fc(this%dis%nodes, amatsln, this%idxglo)
+      call this%adv%adv_fc(this%dis%nodes, amatsln, this%idxglo, this%x,       &
+                           this%rhs)
     endif
     if(this%indsp > 0) then
       call this%dsp%dsp_fc(kiter, this%dis%nodes, this%nja, njasln, amatsln,   &

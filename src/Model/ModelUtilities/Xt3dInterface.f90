@@ -81,7 +81,7 @@ module Xt3dModule
   
   contains
 
-    subroutine xt3d_cr(xt3dobj, name_model, inunit, iout, ldispopt)
+  subroutine xt3d_cr(xt3dobj, name_model, inunit, iout, ldispopt)
 ! ******************************************************************************
 ! xt3d_cr -- Create a new xt3d object
 ! ******************************************************************************
@@ -109,7 +109,7 @@ module Xt3dModule
     !
     ! -- Return
     return
-    end subroutine xt3d_cr
+  end subroutine xt3d_cr
 
   subroutine xt3d_ac(this, moffset, sparse, nodes, ia, ja)
 ! ******************************************************************************

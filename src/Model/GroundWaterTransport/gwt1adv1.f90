@@ -1,7 +1,7 @@
 module GwtAdvModule
   
   use KindModule,             only: DP, I4B
-  use ConstantsModule,        only: DONE, DZERO, DHALF
+  use ConstantsModule,        only: DONE, DZERO, DHALF, DTWO
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule,          only: DisBaseType
   use GwtFmiModule,           only: GwtFmiType
@@ -26,6 +26,8 @@ module GwtAdvModule
     procedure :: allocate_scalars
     procedure, private :: read_options
     procedure :: adv_weight
+    procedure :: advtvd
+    procedure :: advtvds
     
   end type GwtAdvType
   
@@ -103,7 +105,7 @@ module GwtAdvModule
     return
   end subroutine adv_ar
 
-  subroutine adv_fc(this, nodes, amatsln, idxglo)
+  subroutine adv_fc(this, nodes, amatsln, idxglo, cnew, rhs)
 ! ******************************************************************************
 ! adv_fc -- Calculate coefficients and fill amat and rhs
 ! ******************************************************************************
@@ -116,6 +118,8 @@ module GwtAdvModule
     integer, intent(in) :: nodes
     real(DP), dimension(:), intent(inout) :: amatsln
     integer(I4B), intent(in), dimension(:) :: idxglo
+    real(DP), intent(in), dimension(:) :: cnew
+    real(DP), dimension(:), intent(inout) :: rhs
     ! -- local
     integer(I4B) :: n, m, idiag, ipos
     real(DP) :: omega, qnm
@@ -136,10 +140,116 @@ module GwtAdvModule
       enddo
     enddo
     !
+    ! -- TVD
+    if (this%iadvwt == 2) then
+      do n = 1, nodes
+        if(this%ibound(n) == 0) cycle
+        call this%advtvd(n, cnew, rhs)
+      enddo
+    endif
+    !
     ! -- Return
     return
   end subroutine adv_fc
-  
+    
+  subroutine advtvd(this, n, cnew, rhs)
+! ******************************************************************************
+! advtvd -- Calculate TVD
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy  
+    class(GwtAdvType) :: this
+    integer(I4B), intent(in) :: n
+    real(DP), dimension(:), intent(in) :: cnew
+    real(DP), dimension(:), intent(inout) :: rhs
+    ! -- local
+    integer(I4B) :: m, ipos
+! ------------------------------------------------------------------------------
+    !
+    ! -- Loop through each n connection
+    do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
+      m = this%dis%con%ja(ipos)
+      if (m > n .and. this%ibound(m) /= 0) then
+        call this%advtvds(n, m, ipos, cnew, rhs)
+      endif
+    enddo
+    !
+    ! -- Return
+    return
+  end subroutine advtvd
+
+  subroutine advtvds(this, n, m, iposnm, cnew, rhs)
+! ******************************************************************************
+! advtvds -- Calculate TVD
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule, only: DPREC
+    ! -- dummy  
+    class(GwtAdvType) :: this
+    integer(I4B), intent(in) :: n
+    integer(I4B), intent(in) :: m
+    integer(I4B), intent(in) :: iposnm
+    real(DP), dimension(:), intent(in) :: cnew    
+    real(DP), dimension(:), intent(inout) :: rhs    
+    ! -- local
+    integer(I4B) :: ipos, isympos, iup, idn, i2up, j
+    real(DP) :: qnm, qmax, qupj, elupdn, elup2up
+    real(DP) :: smooth, cdiff, alimiter
+! ------------------------------------------------------------------------------
+    !
+    ! -- Find upstream node
+    isympos = this%dis%con%jas(iposnm)
+    qnm = this%fmi%gwfflowja(iposnm)
+    if (qnm > DZERO) then
+      ! -- positive flow into n means m is upstream
+      iup = m
+      idn = n
+    else
+      iup = n
+      idn = m
+    endif
+    elupdn = this%dis%con%cl1(isympos) + this%dis%con%cl2(isympos)
+    !
+    ! -- Find second node upstream to iup
+    i2up = 0
+    qmax = DZERO
+    do ipos = this%dis%con%ia(iup) + 1, this%dis%con%ia(iup + 1) - 1
+      j = this%dis%con%ja(ipos)
+      if(this%ibound(j) == 0) cycle
+      qupj = this%fmi%gwfflowja(ipos)
+      isympos = this%dis%con%jas(ipos)
+      if (qupj > qmax) then
+        qmax = qupj
+        i2up = j
+        elup2up = this%dis%con%cl1(isympos) + this%dis%con%cl2(isympos)
+      endif
+    enddo
+    !
+    ! -- Calculate flux limiting term
+    if (i2up > 0) then
+      smooth = DZERO
+      cdiff = ABS(cnew(idn) - cnew(iup))
+      if (cdiff > DPREC) then
+        smooth = (cnew(iup) - cnew(i2up)) / elup2up *                          &
+                 elupdn / (cnew(idn) - cnew(iup))
+      endif
+      if (smooth > DZERO) then
+        alimiter = DTWO * smooth / (DONE + smooth)
+        rhs(n) = rhs(n) - DHALF * alimiter * qnm * (cnew(idn) - cnew(iup))
+        rhs(m) = rhs(m) + DHALF * alimiter * qnm * (cnew(idn) - cnew(iup))
+      endif
+    endif
+    !
+    ! -- Return
+    return
+  end subroutine advtvds
+
   subroutine adv_bd(this, cnew, flowja)
 ! ******************************************************************************
 ! adv_bd -- Budget
@@ -300,8 +410,8 @@ module GwtAdvModule
       end do
       if (this%iadvwt /= 1) then
         this%iasym = 1
-        write(this%iout,'(1x,a)')'SELECTED ADVECTION SCHEME RESULTS IN AN '&
-          &'ASYMMETRIC MATRIX.'
+        write(this%iout,'(1x,a)')'SELECTED ADVECTION SCHEME RESULTS IN AN &
+          &ASYMMETRIC MATRIX.'
       endif
       write(this%iout,'(1x,a)')'END OF ADVECTION OPTIONS'
     end if
@@ -331,7 +441,8 @@ module GwtAdvModule
     ! -- local
     real(DP) :: lnm, lmn
 ! ------------------------------------------------------------------------------
-    if(iadvwt == 1) then
+    select case(iadvwt)
+    case(1)
       ! -- calculate weight based on distances between nodes and the shared
       !    face of the connection
       if (this%dis%con%ihc(this%dis%con%jas(ipos)) == 0) then
@@ -344,18 +455,14 @@ module GwtAdvModule
         lmn = this%dis%con%cl2(this%dis%con%jas(ipos))
       endif
       omega = lmn / (lnm + lmn)
-    elseif (iadvwt == 0) then
-      ! -- use upstream weighting
+    case(0, 2)
+      ! -- use upstream weighting for upstream and tvd schemes
       if(qnm > DZERO) then
         omega = DZERO
       else
         omega = DONE
       endif
-    else
-      ! tvd not implemented          
-      !omega = 1./0.
-      call ustop()
-    endif
+    end select
     !
     ! -- return
     return
