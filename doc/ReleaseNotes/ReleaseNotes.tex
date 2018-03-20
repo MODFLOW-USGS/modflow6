@@ -118,6 +118,13 @@ This section describes changes introduced into MODFLOW 6 with each release.  The
 
 \item \currentmodflowversion
 
+\underline{STRESS PACKAGES}
+\begin{itemize}
+\item If the AUXMULTNAME keyword was used in combination with time series, then the multiplier was erroneously applied to all time series, and not just the time series in the column to be scaled.  
+\end{itemize}
+
+\item Version mf6.0.2--Feb 23, 2018
+
 \underline{BASIC FUNCTIONALITY}
 \begin{itemize}
 \item Added a new option, called SAVE\_SPECIFIC\_DISCHARGE to the Node Property Flow Package.  When invoked, $x$, $y$, and $z$ specific storage components are calculated for the center of each model cell and written to the binary budget file.
