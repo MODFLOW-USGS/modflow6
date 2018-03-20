@@ -964,11 +964,14 @@ module BaseDisModule
         call read_value_or_time_series(lstrdobj%txtrlist(l), ii, jj,           &
                 bndElem, pkgName, 'BND', tsManager, iprpak, tsLinkBnd)
         if (associated(tsLinkBnd)) then
-          ! If iauxmultcol > 0, assign tsLinkBnd%RMultiplier to auxvar multiplier
-          if (iauxmultcol > 0) then
+          !
+          ! -- If iauxmultcol is the same as this column, then assign 
+          !    tsLinkBnd%RMultiplier to auxvar multiplier
+          if (iauxmultcol == jj) then
             tsLinkBnd%RMultiplier => auxvar(iauxmultcol, ii)
           endif
-          ! If boundaries are named, save the name in the link
+          !
+          ! -- If boundaries are named, save the name in the link
           if (lstrdobj%inamedbound == 1) then
             tsLinkBnd%BndName = lstrdobj%boundname(tsLinkBnd%IRow)
           endif
