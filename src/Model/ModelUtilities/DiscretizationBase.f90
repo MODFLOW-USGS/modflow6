@@ -967,7 +967,7 @@ module BaseDisModule
           !
           ! -- If iauxmultcol is the same as this column, then assign 
           !    tsLinkBnd%RMultiplier to auxvar multiplier
-          if (iauxmultcol == jj) then
+          if (iauxmultcol > 0 .and. jj == iscloc) then
             tsLinkBnd%RMultiplier => auxvar(iauxmultcol, ii)
           endif
           !
