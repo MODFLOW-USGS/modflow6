@@ -1,7 +1,7 @@
 module GwfCsubModule
   use ConstantsModule, only: DPREC, DZERO, DHALF, DONE, DTWO, DTHREE, DTEN, &
                              LENFTYPE, LENPACKAGENAME, LINELENGTH, LENBOUNDNAME, &
-                             NAMEDBOUNDFLAG, LENBUDTXT
+                             NAMEDBOUNDFLAG, LENBUDTXT, LENAUXNAME
   use KindModule, only: I4B, DP
   use NumericalPackageModule, only: NumericalPackageType
   !use BndModule, only: BndType
@@ -33,7 +33,8 @@ module GwfCsubModule
   !
 
   type, extends(NumericalPackageType) :: GwfCsubType
-    character(len=LENBOUNDNAME), pointer, dimension(:)  :: boundname   => null() !vector of boundnames
+    character(len=LENBOUNDNAME), pointer, dimension(:)   :: boundname => null() !vector of boundnames
+    character(len=LENAUXNAME), allocatable, dimension(:) :: auxname             !name for each auxiliary variable
     character(len=500) :: listlabel   = ''      !title of table written for RP
     character(len=LENPACKAGENAME) :: stoname
     integer(I4B), pointer :: istounit
@@ -43,6 +44,7 @@ module GwfCsubModule
     integer(I4B), pointer :: ibedstressoff
     integer(I4B), pointer :: igeostressoff
     integer(I4B), pointer :: inamedbound => null() !flag to read boundnames
+    integer(I4B), pointer :: naux        => null() !number of auxiliary variables
     integer(I4B), pointer :: ninterbeds
     integer(I4B), pointer :: ndelaycells
     integer(I4B), pointer :: ndelaybeds
@@ -71,6 +73,8 @@ module GwfCsubModule
     real(DP), dimension(:), pointer :: sk_void     => null()   !skeletal (aquifer) void ratio
     real(DP), dimension(:), pointer :: sk_thick    => null()   !skeletal (aquifer) thickness
     real(DP), dimension(:), pointer :: sig0        => null()   !geostatic offset
+    !
+    ! -- interbed variables
     real(DP), dimension(:), pointer :: ci          => null()   !compression index
     real(DP), dimension(:), pointer :: rci         => null()   !recompression index
     real(DP), dimension(:), pointer :: gsc         => null()   !geostatic stress for a cell
@@ -88,6 +92,7 @@ module GwfCsubModule
     real(DP), dimension(:), pointer :: comp        => null()   !interbed compaction
     real(DP), dimension(:), pointer :: totalcomp   => null()   !total interbed compaction
     real(DP), dimension(:), pointer :: gwflow      => null()   !gwf-flow
+    real(DP), pointer, dimension(:,:) :: auxvar    => null()   !auxiliary variable array
     real(DP), dimension(:), pointer :: storagee    => null()   !elastic storage
     real(DP), dimension(:), pointer :: storagei    => null()   !inelastic storage
     ! -- delay interbed arrays
@@ -113,8 +118,8 @@ module GwfCsubModule
     !real(DP), dimension(:), pointer :: simvals        => null()
     !
     ! -- pointers for observations
-    integer(I4B), pointer                               :: inobspkg    => null()! unit number for obs package
-    type(ObsType), pointer                              :: obs         => null()! observation package
+    integer(I4B), pointer :: inobspkg    => null()! unit number for obs package
+    type(ObsType), pointer  :: obs         => null()! observation package
 
   contains
 !    procedure :: bnd_ck => csub_ck
@@ -235,6 +240,7 @@ contains
     call mem_allocate(this%ibedstressoff, 'IBEDSTRESSOFF', this%origin)
     call mem_allocate(this%igeostressoff, 'IGEOSTRESSOFF', this%origin)
     call mem_allocate(this%inamedbound, 'INAMEDBOUND', this%origin)
+    call mem_allocate(this%naux, 'NAUX', this%origin)
     call mem_allocate(this%istoragec, 'ISTORAGEC', this%origin)
     call mem_allocate(this%iconstantndb, 'ICONSTANTNDB', this%origin)
     call mem_allocate(this%idbhalfcell, 'IDBHALFCELL', this%origin)
@@ -245,6 +251,9 @@ contains
     call mem_allocate(this%ninterbeds, 'NIBCCELLS', this%origin)
     call mem_allocate(this%gwfiss0, 'GWFISS0', this%origin)
     !
+    ! -- Allocate text strings
+    allocate(this%auxname(0))
+    !
     ! -- initialize values
     this%ninterbeds = 0
     this%ndelaycells = 19
@@ -253,6 +262,7 @@ contains
     this%ibedstressoff = 0
     this%igeostressoff = 0
     this%inamedbound = 0
+    this%naux = 0
     this%istoragec = 1
     this%iconstantndb = 0
     this%idbhalfcell = 0
@@ -469,16 +479,21 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    use TdisModule, only: kstp, kper, delt, pertim, totim
+    use InputOutputModule, only: ulasav, ubdsv06
     ! -- dummy
     class(GwfCsubType) :: this
     integer(I4B), intent(in) :: icbcfl
     integer(I4B), intent(in) :: icbcun
     ! -- local
-    integer(I4B) :: ibinun
-    !character(len=16), dimension(2) :: aname
-    integer(I4B) :: iprint, nvaluesp, nwidthp
     character(len=1) :: cdatafmp=' ', editdesc=' '
+    integer(I4B) :: ibinun
+    integer(I4B) :: iprint, nvaluesp, nwidthp
+    integer(I4B) :: n
+    integer(I4B) :: node
+    integer(I4B) :: naux
     real(DP) :: dinact
+    real(DP) :: Q
 ! ------------------------------------------------------------------------------
     !
     ! -- Set unit number for binary output
@@ -492,7 +507,7 @@ contains
     if(icbcfl == 0) ibinun = 0
     !
     ! -- Record the storage rates if requested
-    if(ibinun /= 0) then
+    if (ibinun /= 0) then
       iprint = 0
       dinact = DZERO
       !!
@@ -507,7 +522,32 @@ contains
       !                             budtxt(2), cdatafmp, nvaluesp,            &
       !                             nwidthp, editdesc, dinact)
       !end if
-    endif
+      if (this%ninterbeds > 0) then
+        naux = 0
+        ! -- interbed elastic storage
+        call ubdsv06(kstp, kper, budtxt(2), this%name_model, this%name,         &
+                     this%name_model, this%name,                                &
+                     ibinun, naux, this%auxname, this%ninterbeds, 1, 1,         &
+                     this%ninterbeds, this%iout, delt, pertim, totim)
+        do n = 1, this%ninterbeds
+          q = this%storagee(n)
+          node = this%nodelist(n)
+          call this%dis%record_mf6_list_entry(ibinun, node, node, q, naux,      &
+                                              this%auxvar(:,n))
+        end do
+        ! -- interbed inelastic storage
+        call ubdsv06(kstp, kper, budtxt(3), this%name_model, this%name,         &
+                     this%name_model, this%name,                                &
+                     ibinun, naux, this%auxname, this%ninterbeds, 1, 1,         &
+                     this%ninterbeds, this%iout, delt, pertim, totim)
+        do n = 1, this%ninterbeds
+          q = this%storagei(n)
+          node = this%nodelist(n)
+          call this%dis%record_mf6_list_entry(ibinun, node, node, q, naux,      &
+                                              this%auxvar(:,n))
+        end do
+      end if
+    end if
     !
     ! -- Save observations.
     if (this%obs%npakobs > 0) then
@@ -820,18 +860,27 @@ contains
     use ConstantsModule, only: MAXCHARLEN, DZERO
     use OpenSpecModule, only: access, form
 !    use SimModule, only: ustop, store_error
-    use InputOutputModule, only: urword, getunit, openfile
+    use InputOutputModule, only: urword, getunit, urdaux, openfile
     implicit none
     ! -- dummy
     class(GwfCsubType),   intent(inout) :: this
     ! -- local
     character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: keyword
+    character(len=LINELENGTH) :: line
     logical :: isfound
     logical :: endOfBlock
+    integer(I4B) :: lloc
+    integer(I4B) :: istart
+    integer(I4B) :: istop
+    integer(I4B) :: n    
     integer(I4B) :: ierr
     integer(I4B) :: inobs
     ! -- formats
+    character(len=*),parameter :: fmtflow = &
+      "(4x, 'FLOWS WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I7)"
+    character(len=*),parameter :: fmtflow2 = &
+      "(4x, 'FLOWS WILL BE SAVED TO BUDGET FILE SPECIFIED IN OUTPUT CONTROL')"
     character(len=*),parameter :: fmtssessv = &
       "(4x, 'USING SSE AND SSV INSTEAD OF CR AND CC.')"
     character(len=*),parameter :: fmtoffset = &
@@ -855,7 +904,47 @@ contains
         if (endOfBlock) exit
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
-          ! user specified number of delay cells used in each system of delay intebeds
+          case('AUX', 'AUXILIARY')
+            call this%parser%GetRemainingLine(line)
+            lloc = 1
+            call urdaux(this%naux, this%parser%iuactive, this%iout, lloc, &
+                        istart, istop, this%auxname, line, ftype)
+          case ('SAVE_FLOWS')
+            this%ipakcb = -1
+            write(this%iout, fmtflow2)
+          case ('PRINT_INPUT')
+            this%iprpak = 1
+            write(this%iout,'(4x,a)') 'LISTS OF '//trim(adjustl(this%name))// &
+              ' CELLS WILL BE PRINTED.'
+          case ('PRINT_FLOWS')
+            this%iprflow = 1
+            write(this%iout,'(4x,a)') trim(adjustl(this%name))// &
+              ' FLOWS WILL BE PRINTED TO LISTING FILE.'
+          case ('BOUNDNAMES')
+            this%inamedbound = 1
+            write(this%iout,'(4x,a)') trim(adjustl(this%name))// &
+              ' BOUNDARIES HAVE NAMES IN LAST COLUMN.'          ! user specified number of delay cells used in each system of delay intebeds
+          case ('OBS6')
+            call this%parser%GetStringCaps(keyword)
+            if(trim(adjustl(keyword)) /= 'FILEIN') then
+              errmsg = 'OBS6 keyword must be followed by "FILEIN" ' //         &
+                       'then by filename.'
+              call store_error(errmsg)
+            endif
+            if (this%obs%active) then
+              errmsg = 'Multiple OBS6 keywords detected in OPTIONS block. ' // &
+                       'Only one OBS6 entry allowed for a package.'
+              call store_error(errmsg)
+            endif
+            this%obs%active = .true.
+            call this%parser%GetString(this%obs%inputFilename)
+            inobs = GetUnit()
+            call openfile(inobs, this%iout, this%obs%inputFilename, 'OBS')
+            this%obs%inUnitObs = inobs
+            call this%obs%obs_df(this%iout, this%name, this%filtyp, this%dis)
+            call this%csub_df_obs()
+          !
+          ! -- CSUB specific options
           case ('HEAD_BASED')
             this%igeocalc = 0
             write(this%iout, fmtopt) 'HEAD-BASED FORMULATION WILL BE USED'
@@ -892,25 +981,6 @@ contains
             this%idbfullcell = 1
             write(this%iout, fmtopt) 'HEAD-BASED DELAY INTERBEDS WILL BE ' //  &
                                      'SIMULATED USING A FULL-CELL FORMULATION'
-          case ('OBS6')
-            call this%parser%GetStringCaps(keyword)
-            if(trim(adjustl(keyword)) /= 'FILEIN') then
-              errmsg = 'OBS6 keyword must be followed by "FILEIN" ' //         &
-                       'then by filename.'
-              call store_error(errmsg)
-            endif
-            if (this%obs%active) then
-              errmsg = 'Multiple OBS6 keywords detected in OPTIONS block. ' // &
-                       'Only one OBS6 entry allowed for a package.'
-              call store_error(errmsg)
-            endif
-            this%obs%active = .true.
-            call this%parser%GetString(this%obs%inputFilename)
-            inobs = GetUnit()
-            call openfile(inobs, this%iout, this%obs%inputFilename, 'OBS')
-            this%obs%inUnitObs = inobs
-            call this%obs%obs_df(this%iout, ftype, this%filtyp, this%dis)
-            call this%csub_df_obs()
           !
           ! -- right now these are options that are only available in the
           !    development version and are not included in the documentation.
@@ -953,8 +1023,10 @@ contains
     class(GwfCsubType),   intent(inout) :: this
     ! -- local variables
     character(len=LENPACKAGENAME) :: stoname
+    integer(I4B) :: j
     integer(I4B) :: n
     integer(I4B) :: iblen
+    integer(I4B) :: naux
 
     ! -- grid based data
     if (this%igeocalc == 0) then
@@ -982,6 +1054,16 @@ contains
     if (this%ninterbeds > 0) then
       iblen = this%ninterbeds
     end if
+    naux = 1
+    if (this%naux > 0) then
+      naux = this%naux
+    end if
+    call mem_allocate(this%auxvar, naux, iblen, 'AUXVAR', this%origin)
+    do n = 1, iblen
+      do j = 1, naux
+        this%auxvar(j, n) = DZERO
+      end do
+    end do
     call mem_allocate(this%unodelist, iblen, 'unodelist', trim(this%origin))
     call mem_allocate(this%nodelist, iblen, 'nodelist', trim(this%origin))
     call mem_allocate(this%gsc, this%dis%nodes, 'gsc', trim(this%origin))
@@ -1087,6 +1169,8 @@ contains
       !
       ! -- interbed storage
       deallocate(this%boundname)
+      deallocate(this%auxname)
+      call mem_deallocate(this%auxvar)
       call mem_deallocate(this%ci)
       call mem_deallocate(this%rci)
       call mem_deallocate(this%gsc)
@@ -1147,6 +1231,7 @@ contains
     call mem_deallocate(this%ibedstressoff)
     call mem_deallocate(this%igeostressoff)
     call mem_deallocate(this%inamedbound)
+    call mem_deallocate(this%naux)
     call mem_deallocate(this%istoragec)
     call mem_deallocate(this%iconstantndb)
     call mem_deallocate(this%idbfullcell)

@@ -43,6 +43,9 @@ replace_exe = {'mf2005': 'mf2005devdbl'}
 htol = [None, None, None]
 dtol = 1e-3
 
+bud_lst = ['CSUB-ELASTIC_IN', 'CSUB-INELASTIC_IN',
+           'CSUB-ELASTIC_OUT', 'CSUB-INELASTIC_OUT']
+
 
 # SUB package problem 3
 def build_models():
@@ -220,8 +223,8 @@ def build_models():
                                      nper=nper, perioddata=tdis_rc)
 
         # create gwf model
-        gwf = flopy.mf6.ModflowGwf(sim, modelname=name,
-                                   model_nam_file='{}.nam'.format(name))
+        gwf = flopy.mf6.ModflowGwf(sim, modelname=name)
+                                   #model_nam_file='{}.nam'.format(name))
 
         # create iterative model solution and register the gwf model with it
         ims = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
@@ -275,6 +278,7 @@ def build_models():
         # ibc files
         opth = '{}.csub.obs'.format(name)
         csub = flopy.mf6.ModflowGwfcsub(gwf, head_based=True,
+                                        save_flows=True,
                                         ndelaycells=ndelaycells[idx],
                                         delay_full_cell=fullcell[idx],
                                         constant_nodelay_thickness=True,
@@ -298,7 +302,8 @@ def build_models():
                                     headprintrecord=[
                                         ('COLUMNS', 10, 'WIDTH', 15,
                                          'DIGITS', 6, 'GENERAL')],
-                                    saverecord=[('HEAD', 'LAST')],
+                                    saverecord=[('HEAD', 'LAST'),
+                                                ('BUDGET', 'LAST')],
                                     printrecord=[('HEAD', 'LAST'),
                                                  ('BUDGET', 'LAST')])
 
@@ -364,6 +369,57 @@ def eval_comp(sim):
     diff = tc['TCOMP3'] - tc0[:, 1]
     diffmax = np.abs(diff).max()
     msg = 'maximum absolute total-compaction difference ({}) '.format(diffmax)
+
+    if diffmax > dtol:
+        sim.success = False
+        msg += 'exceeds {}'.format(dtol)
+        assert diffmax < dtol, msg
+    else:
+        sim.success = True
+        print('    ' + msg)
+
+    # get results from listing file
+    fpth = os.path.join(sim.simpath,
+                        '{}.lst'.format(os.path.basename(sim.name)))
+    budl = flopy.utils.Mf6ListBudget(fpth)
+    names = list(bud_lst)
+    d0 = budl.get_budget(names=names)[0]
+    dtype = d0.dtype
+    nbud = d0.shape[0]
+
+    # get results from cbc file
+    cbc_bud = ['CSUB-ELASTIC', 'CSUB-INELASTIC']
+    d = np.recarray(nbud, dtype=dtype)
+    for key in bud_lst:
+        d[key] = 0.
+    fpth = os.path.join(sim.simpath,
+                        '{}.cbc'.format(os.path.basename(sim.name)))
+    cobj = flopy.utils.CellBudgetFile(fpth, precision='double')
+    kk = cobj.get_kstpkper()
+    times = cobj.get_times()
+    for idx, (k, t) in enumerate(zip(kk, times)):
+        for text in cbc_bud:
+            qin = 0.
+            qout = 0.
+            v = cobj.get_data(kstpkper=k, text=text)[0]
+            for vv in v['q']:
+                if vv < 0.:
+                    qout -= vv
+                else:
+                    qin += vv
+            d['totim'][idx] = t
+            d['time_step'][idx] = k[0]
+            d['stress_period'] = k[1]
+            key = '{}_IN'.format(text)
+            d[key][idx] = qin
+            key = '{}_OUT'.format(text)
+            d[key][idx] = qout
+
+    diff = np.zeros((nbud, len(bud_lst)), dtype=np.float)
+    for idx, key in enumerate(bud_lst):
+        diff[:, idx] = d0[key] - d[key]
+    diffmax = np.abs(diff).max()
+    msg = 'maximum absolute total-budget difference ({}) '.format(diffmax)
 
     if diffmax > dtol:
         sim.success = False
