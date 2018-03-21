@@ -327,8 +327,7 @@ def build_models():
                                      nper=nper, perioddata=tdis_rc)
 
         # create gwf model
-        gwf = flopy.mf6.ModflowGwf(sim, modelname=name,
-                                   model_nam_file='{}.nam'.format(name))
+        gwf = flopy.mf6.ModflowGwf(sim, modelname=name)
 
         # create iterative model solution and register the gwf model with it
         ims = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',

@@ -27,9 +27,8 @@ module GwfCsubModule
        ' CSUB-WATERCOMP']
   
   !
+  ! -- local paramter - derivative of the log of effective stress
   real(DP), parameter :: dlog10es = 0.4342942_DP
-  character(len=LENFTYPE)       :: ftype = 'CSUB'
-  character(len=LENPACKAGENAME) :: text  = '          CSUB'
   !
 
   type, extends(NumericalPackageType) :: GwfCsubType
@@ -118,8 +117,8 @@ module GwfCsubModule
     !real(DP), dimension(:), pointer :: simvals        => null()
     !
     ! -- pointers for observations
-    integer(I4B), pointer :: inobspkg    => null()! unit number for obs package
-    type(ObsType), pointer  :: obs         => null()! observation package
+    integer(I4B), pointer :: inobspkg => null()                !unit number for obs package
+    type(ObsType), pointer :: obs => null()                    !observation package
 
   contains
 !    procedure :: bnd_ck => csub_ck
@@ -195,7 +194,7 @@ contains
     allocate(csubobj)
 
     ! -- create name and origin
-    call csubobj%set_names(1, name_model, ftype, ftype)
+    call csubobj%set_names(1, name_model, 'CSUB', 'CSUB')
     !
     ! -- Allocate scalars
     call csubobj%csub_allocate_scalars()
@@ -255,6 +254,8 @@ contains
     allocate(this%auxname(0))
     !
     ! -- initialize values
+    this%istounit = 0
+    this%inobspkg = 0
     this%ninterbeds = 0
     this%ndelaycells = 19
     this%ndelaybeds = 0
@@ -456,11 +457,11 @@ contains
     !
     ! -- interbed elastic storage
     call model_budget%addentry(rateibein, rateibeout, delt, budtxt(2),        &
-                                isuppress_output, text)
+                                isuppress_output, '            CSUB')
     !
     ! -- interbed elastic storage
     call model_budget%addentry(rateibiin, rateibiout, delt, budtxt(3),        &
-                                isuppress_output, text)
+                                isuppress_output, '            CSUB')
     !
     ! -- For continuous observations, save simulated values.
     if (this%obs%npakobs > 0) then
@@ -608,7 +609,7 @@ contains
     !
     ! -- parse locations block if detected
     if (isfound) then
-      write(this%iout,'(/1x,a)')'PROCESSING '//trim(adjustl(ftype))// &
+      write(this%iout,'(/1x,a)')'PROCESSING '//trim(adjustl(this%name))// &
         ' PACKAGEDATA'
       do
         call this%parser%GetNextLine(endOfBlock)
@@ -754,7 +755,7 @@ contains
         endif
         this%boundname(itmp) = bndName
       end do
-      write(this%iout,'(1x,a)')'END OF '//trim(adjustl(ftype))//' PACKAGEDATA'
+      write(this%iout,'(1x,a)')'END OF '//trim(adjustl(this%name))//' PACKAGEDATA'
     else
       call store_error('ERROR.  REQUIRED PACKAGEDATA BLOCK NOT FOUND.')
     endif
@@ -908,7 +909,7 @@ contains
             call this%parser%GetRemainingLine(line)
             lloc = 1
             call urdaux(this%naux, this%parser%iuactive, this%iout, lloc, &
-                        istart, istop, this%auxname, line, ftype)
+                        istart, istop, this%auxname, line, this%name)
           case ('SAVE_FLOWS')
             this%ipakcb = -1
             write(this%iout, fmtflow2)
@@ -941,6 +942,8 @@ contains
             inobs = GetUnit()
             call openfile(inobs, this%iout, this%obs%inputFilename, 'OBS')
             this%obs%inUnitObs = inobs
+            this%inobspkg = inobs
+            
             call this%obs%obs_df(this%iout, this%name, this%filtyp, this%dis)
             call this%csub_df_obs()
           !
@@ -991,12 +994,12 @@ contains
           ! default case
           case default
             write(errmsg,'(4x,a,3(1x,a))') '****ERROR. UNKNOWN ',               &
-                                           trim(adjustl(ftype)),                &
+                                           trim(adjustl(this%name)),                &
                                            'OPTION: ', trim(keyword)
             call store_error(errmsg)
         end select
       end do
-      write(this%iout,'(1x,a)') 'END OF ' // trim(adjustl(ftype)) // ' OPTIONS'
+      write(this%iout,'(1x,a)') 'END OF ' // trim(adjustl(this%name)) // ' OPTIONS'
     end if
     !
     ! -- terminate if errors encountered in reach block
@@ -1278,7 +1281,7 @@ contains
     !
     ! -- parse dimensions block if detected
     if (isfound) then
-      write(this%iout,'(/1x,a)')'PROCESSING '//trim(adjustl(ftype))// &
+      write(this%iout,'(/1x,a)')'PROCESSING '//trim(adjustl(this%name))// &
         ' DIMENSIONS'
       do
         call this%parser%GetNextLine(endOfBlock)
@@ -1290,14 +1293,14 @@ contains
             write(this%iout,'(4x,a,i7)')'NIBCCELLS = ', this%ninterbeds
           case default
             write(errmsg,'(4x,a,a)') &
-              '****ERROR. UNKNOWN '//trim(ftype)//' DIMENSION: ', &
+              '****ERROR. UNKNOWN '//trim(this%name)//' DIMENSION: ', &
                                      trim(keyword)
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
             call ustop()
         end select
       end do
-      write(this%iout,'(1x,a)')'END OF '//trim(adjustl(ftype))//' DIMENSIONS'
+      write(this%iout,'(1x,a)')'END OF '//trim(adjustl(this%name))//' DIMENSIONS'
     else
       call store_error('ERROR.  REQUIRED DIMENSIONS BLOCK NOT FOUND.')
       call ustop()
