@@ -9,12 +9,39 @@ longname keyword to save CSUB flows
 description keyword to indicate that cell-by-cell flow terms will be written to the file specified with ``BUDGET SAVE FILE'' in Output Control.
 
 block options
+name gammaw
+type double precision
+reader urword
+optional true
+longname specific gravity of water
+description specific gravity of water. For freshwater, GAMMAW is 9806.65 Newtons/cubic meters or 62.48 lb/cubic foot in SI and English units, respectively. By default, GAMMAW is 9806.65.
+default_value 9806.65
+
+block options
+name beta
+type double precision
+reader urword
+optional true
+longname compressibility of water
+description compressibility of water. Typical values of BETA are 4.6512e-10 1/Pa or 2.2270e-8 lb/square foot in SI and English units, respectively. By default, BETA is 4.6512e-10.
+default_value 4.6512e-10
+
+block options
+name time_factor
+type double precision
+reader urword
+optional true
+longname effective stress time factor
+description effective stress time factor used to calculate the storage parameters. A TIME\_FACTOR value of 1 results in the use of the current estimate of the effective stress to calculate storage parameters. A TIME\_FACTOR value of 0 results in the use of the effective stress from the previous time step to calculate storage parameters. A TIME\_FACTOR value between 0 and 1, results in a weighted effective stress value to calculate storage parameters. Any TIME\_FACTOR value can be specified if HEAD\_BASED is specified in the OPTIONS block. By default, TIME\_FACTOR is 1.
+default_value 1.
+
+block options
 name head_based
 type keyword
 reader urword
 optional true
 longname keyword to indicate the head-based formulation will be used
-description keyword to indicate the head-based formulation will be used to simulate no-delay and delay interbeds.
+description keyword to indicate the head-based formulation will be used to simulate coarse-grained aquifer materials and no-delay and delay interbeds.
 
 block options
 name delay_full_cell

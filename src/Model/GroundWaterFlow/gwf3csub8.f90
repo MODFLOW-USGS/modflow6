@@ -1,7 +1,8 @@
 module GwfCsubModule
   use ConstantsModule, only: DPREC, DZERO, DHALF, DONE, DTWO, DTHREE, DTEN, &
                              LENFTYPE, LENPACKAGENAME, LINELENGTH, LENBOUNDNAME, &
-                             NAMEDBOUNDFLAG, LENBUDTXT, LENAUXNAME
+                             NAMEDBOUNDFLAG, LENBUDTXT, LENAUXNAME, &
+                             DGRAVITY
   use KindModule, only: I4B, DP
   use NumericalPackageModule, only: NumericalPackageType
   !use BndModule, only: BndType
@@ -36,89 +37,90 @@ module GwfCsubModule
     character(len=LENAUXNAME), allocatable, dimension(:) :: auxname             !name for each auxiliary variable
     character(len=500) :: listlabel   = ''      !title of table written for RP
     character(len=LENPACKAGENAME) :: stoname
-    integer(I4B), pointer :: istounit
-    integer(I4B), pointer :: iconstantndb
-    integer(I4B), pointer :: istoragec
-    integer(I4B), pointer :: icellf
-    integer(I4B), pointer :: ibedstressoff
-    integer(I4B), pointer :: igeostressoff
-    integer(I4B), pointer :: inamedbound => null() !flag to read boundnames
-    integer(I4B), pointer :: naux        => null() !number of auxiliary variables
-    integer(I4B), pointer :: ninterbeds
-    integer(I4B), pointer :: ndelaycells
-    integer(I4B), pointer :: ndelaybeds
-    integer(I4B), pointer :: igeocalc
-    integer(I4B), pointer :: idbhalfcell
-    integer(I4B), pointer :: idbfullcell
-    real(DP), pointer :: dbfact
-    real(DP), pointer :: dbfacti
+    integer(I4B), pointer :: istounit               => null()
+    integer(I4B), pointer :: iconstantndb           => null()
+    integer(I4B), pointer :: istoragec              => null()
+    integer(I4B), pointer :: icellf                 => null()
+    integer(I4B), pointer :: ibedstressoff          => null()
+    integer(I4B), pointer :: igeostressoff          => null()
+    integer(I4B), pointer :: inamedbound            => null()   !flag to read boundnames
+    integer(I4B), pointer :: naux                   => null()   !number of auxiliary variables
+    integer(I4B), pointer :: ninterbeds             => null()
+    integer(I4B), pointer :: ndelaycells            => null()
+    integer(I4B), pointer :: ndelaybeds             => null()
+    integer(I4B), pointer :: igeocalc               => null()
+    integer(I4B), pointer :: idbhalfcell            => null()
+    integer(I4B), pointer :: idbfullcell            => null()
+    real(DP), pointer :: time_factor                => null()   !time factor to apply to the current and previous effective stress
+    real(DP), pointer :: gammaw                     => null()   !product of fluid density, and gravity
+    real(DP), pointer :: beta                       => null()   !water compressibility
+    real(DP), pointer :: brg                        => null()   !product of gammaw and water compressibility
+    real(DP), pointer :: dbfact                     => null()
+    real(DP), pointer :: dbfacti                    => null()
 
-    integer(I4B) :: nibcobs
     logical :: first_time
-    integer, pointer :: gwfiss => NULL()
-    integer, pointer :: gwfiss0 => NULL()
-    integer(I4B), dimension(:), pointer              :: ibound => null()        !pointer to model ibound
-    integer, dimension(:), pointer :: stoiconvert => null()
-    real(DP), dimension(:), pointer :: stosc1 => null()
-    integer, dimension(:), pointer :: nodelist => null()   !reduced node that the interbed is attached to
-    integer, dimension(:), pointer :: unodelist => null()  !user node that the interbed is attached to
+    integer(I4B), pointer :: gwfiss                 => NULL()   !pointer to model iss flag
+    integer(I4B), pointer :: gwfiss0                => NULL()   !iss flag for last stress period
+    integer(I4B), dimension(:), pointer :: ibound   => null()   !pointer to model ibound
+    integer(I4B), dimension(:), pointer :: stoiconv => null()   !pointer to iconvert in storage
+    real(DP), dimension(:), pointer :: stosc1       => null()   !pointer to sc1 in storage
+    integer, dimension(:), pointer :: nodelist      => null()   !reduced node that the interbed is attached to
+    integer, dimension(:), pointer :: unodelist     => null()   !user node that the interbed is attached to
 
-    integer, dimension(:), pointer :: idelay => null() ! 0 = nodelay, > 0 = delay
-    !character(len=LENBOUNDNAME), pointer, dimension(:) :: boundname => null()
-    real(DP), dimension(:), pointer :: sgm         => null()   !specific gravity moist sediments
-    real(DP), dimension(:), pointer :: sgs         => null()   !specific gravity saturated sediments
-    real(DP), dimension(:), pointer :: ske_cr      => null()   !skeletal specified storage
-    real(DP), dimension(:), pointer :: sk_theta    => null()   !skeletal (aquifer) porosity
-    real(DP), dimension(:), pointer :: sk_void     => null()   !skeletal (aquifer) void ratio
-    real(DP), dimension(:), pointer :: sk_thick    => null()   !skeletal (aquifer) thickness
-    real(DP), dimension(:), pointer :: sig0        => null()   !geostatic offset
+    integer(I4B), dimension(:), pointer :: idelay   => null()   !0 = nodelay, > 0 = delay
+    real(DP), dimension(:), pointer :: sgm          => null()   !specific gravity moist sediments
+    real(DP), dimension(:), pointer :: sgs          => null()   !specific gravity saturated sediments
+    real(DP), dimension(:), pointer :: ske_cr       => null()   !skeletal specified storage
+    real(DP), dimension(:), pointer :: sk_theta     => null()   !skeletal (aquifer) porosity
+    real(DP), dimension(:), pointer :: sk_void      => null()   !skeletal (aquifer) void ratio
+    real(DP), dimension(:), pointer :: sk_thick     => null()   !skeletal (aquifer) thickness
+    real(DP), dimension(:), pointer :: sk_es        => null()   !skeletal (aquifer) effective stress
+    real(DP), dimension(:), pointer :: sk_es0       => null()   !skeletal (aquifer) effective stress for the previous time step
+    real(DP), dimension(:), pointer :: sig0         => null()   !geostatic offset
     !
     ! -- interbed variables
-    real(DP), dimension(:), pointer :: ci          => null()   !compression index
-    real(DP), dimension(:), pointer :: rci         => null()   !recompression index
-    real(DP), dimension(:), pointer :: gsc         => null()   !geostatic stress for a cell
-    real(DP), dimension(:), pointer :: esc         => null()   !effective stress for a cell
-    real(DP), dimension(:), pointer :: es          => null()   !effective stress
-    real(DP), dimension(:), pointer :: es0         => null()   !last effective stress
-    real(DP), dimension(:), pointer :: pcs         => null()   !preconsolidation stress
-    real(DP), dimension(:), pointer :: znode       => null()   !elevation of node center
-    real(DP), dimension(:), pointer :: thick       => null()   !fraction of cell thickness that interbed system occupies
-    real(DP), dimension(:), pointer :: rnb         => null()   !interbed system material factor
-    real(DP), dimension(:), pointer :: theta       => null()   !porosity
-    real(DP), dimension(:), pointer :: void        => null()   !void ratio
-    real(DP), dimension(:), pointer :: kv          => null()   !vertical hydraulic conductivity of interbed
-    real(DP), dimension(:), pointer :: h0          => null()   !initial head in interbed
-    real(DP), dimension(:), pointer :: comp        => null()   !interbed compaction
-    real(DP), dimension(:), pointer :: totalcomp   => null()   !total interbed compaction
-    real(DP), dimension(:), pointer :: gwflow      => null()   !gwf-flow
-    real(DP), pointer, dimension(:,:) :: auxvar    => null()   !auxiliary variable array
-    real(DP), dimension(:), pointer :: storagee    => null()   !elastic storage
-    real(DP), dimension(:), pointer :: storagei    => null()   !inelastic storage
+    real(DP), dimension(:), pointer :: ci           => null()   !compression index
+    real(DP), dimension(:), pointer :: rci          => null()   !recompression index
+    real(DP), dimension(:), pointer :: gsc          => null()   !geostatic stress for a cell
+    real(DP), dimension(:), pointer :: esc          => null()   !effective stress for a cell
+    real(DP), dimension(:), pointer :: es           => null()   !effective stress
+    real(DP), dimension(:), pointer :: es0          => null()   !last effective stress
+    real(DP), dimension(:), pointer :: pcs          => null()   !preconsolidation stress
+    real(DP), dimension(:), pointer :: znode        => null()   !elevation of node center
+    real(DP), dimension(:), pointer :: thick        => null()   !fraction of cell thickness that interbed system occupies
+    real(DP), dimension(:), pointer :: rnb          => null()   !interbed system material factor
+    real(DP), dimension(:), pointer :: theta        => null()   !porosity
+    real(DP), dimension(:), pointer :: void         => null()   !void ratio
+    real(DP), dimension(:), pointer :: kv           => null()   !vertical hydraulic conductivity of interbed
+    real(DP), dimension(:), pointer :: h0           => null()   !initial head in interbed
+    real(DP), dimension(:), pointer :: comp         => null()   !interbed compaction
+    real(DP), dimension(:), pointer :: totalcomp    => null()   !total interbed compaction
+    real(DP), dimension(:), pointer :: gwflow       => null()   !gwf-flow
+    real(DP), pointer, dimension(:,:) :: auxvar     => null()   !auxiliary variable array
+    real(DP), dimension(:), pointer :: storagee     => null()   !elastic storage
+    real(DP), dimension(:), pointer :: storagei     => null()   !inelastic storage
     ! -- delay interbed arrays
-    real(DP), dimension(:), pointer   :: dbdz     => null()    !delay bed dz
-    real(DP), dimension(:,:), pointer :: dbz      => null()    !delay bed cell z
-    real(DP), dimension(:,:), pointer :: dbh      => null()    !delay bed cell h
-    real(DP), dimension(:,:), pointer :: dbh0     => null()    !delay bed cell previous h
-    real(DP), dimension(:,:), pointer :: dbvoid   => null()    !delay bed cell void ratio
-    real(DP), dimension(:,:), pointer :: dbvoid0  => null()    !delay bed cell previous void ratio
-    real(DP), dimension(:,:), pointer :: dbgeo    => null()    !delay bed cell geostatic stress
-    real(DP), dimension(:,:), pointer :: dbgeo0   => null()    !delay bed cell previous geostatic stress
-    real(DP), dimension(:,:), pointer :: dbes     => null()    !delay bed cell effective stress
-    real(DP), dimension(:,:), pointer :: dbes0    => null()    !delay bed cell previous effective stress
-    real(DP), dimension(:,:), pointer :: dbpcs    => null()    !delay bed cell preconsolidation stress
+    real(DP), dimension(:), pointer   :: dbdz       => null()   !delay bed dz
+    real(DP), dimension(:,:), pointer :: dbz        => null()   !delay bed cell z
+    real(DP), dimension(:,:), pointer :: dbh        => null()   !delay bed cell h
+    real(DP), dimension(:,:), pointer :: dbh0       => null()   !delay bed cell previous h
+    real(DP), dimension(:,:), pointer :: dbvoid     => null()   !delay bed cell void ratio
+    real(DP), dimension(:,:), pointer :: dbvoid0    => null()   !delay bed cell previous void ratio
+    real(DP), dimension(:,:), pointer :: dbgeo      => null()   !delay bed cell geostatic stress
+    real(DP), dimension(:,:), pointer :: dbgeo0     => null()   !delay bed cell previous geostatic stress
+    real(DP), dimension(:,:), pointer :: dbes       => null()   !delay bed cell effective stress
+    real(DP), dimension(:,:), pointer :: dbes0      => null()   !delay bed cell previous effective stress
+    real(DP), dimension(:,:), pointer :: dbpcs      => null()   !delay bed cell preconsolidation stress
     ! -- delay interbed solution arrays
-    real(DP), dimension(:), pointer :: dbal       => null()    !delay bed lower diagonal
-    real(DP), dimension(:), pointer :: dbad       => null()    !delay bed diagonal
-    real(DP), dimension(:), pointer :: dbau       => null()    !delay bed upper diagonal
-    real(DP), dimension(:), pointer :: dbrhs      => null()    !delay bed right hand side
-    real(DP), dimension(:), pointer :: dbdh       => null()    !delay bed dh
-    real(DP), dimension(:), pointer :: dbaw       => null()    !delay bed work vector
+    real(DP), dimension(:), pointer :: dbal         => null()   !delay bed lower diagonal
+    real(DP), dimension(:), pointer :: dbad         => null()   !delay bed diagonal
+    real(DP), dimension(:), pointer :: dbau         => null()   !delay bed upper diagonal
+    real(DP), dimension(:), pointer :: dbrhs        => null()   !delay bed right hand side
+    real(DP), dimension(:), pointer :: dbdh         => null()   !delay bed dh
+    real(DP), dimension(:), pointer :: dbaw         => null()   !delay bed work vector
     ! -- observation data
-    !real(DP), dimension(:), pointer :: simvals        => null()
-    !
-    ! -- pointers for observations
-    integer(I4B), pointer :: inobspkg => null()                !unit number for obs package
-    type(ObsType), pointer :: obs => null()                    !observation package
+    integer(I4B), pointer :: inobspkg               => null()   !unit number for obs package
+    type(ObsType), pointer :: obs                   => null()   !observation package
 
   contains
 !    procedure :: bnd_ck => csub_ck
@@ -137,10 +139,15 @@ module GwfCsubModule
     procedure, private :: csub_allocate_arrays
     procedure, private :: csub_read_packagedata
     !
+    ! -- helper methods
+    procedure, private :: csub_calc_void
+    procedure, private :: csub_calc_theta
+    !
     ! -- stress methods
-    procedure, private :: csub_aqgeo_calc_stress
-    procedure, private :: csub_aqeff_calc_stress
-    procedure, private :: csub_aq_calc_znode
+    procedure, private :: csub_sk_calc_znode
+    procedure, private :: csub_sk_calc_geostress
+    procedure, private :: csub_sk_calc_effstress
+    procedure, private :: csub_interbed_calc_effstress
     !
     ! -- interbed methods
     procedure, private :: csub_interbed_set_initial
@@ -226,7 +233,7 @@ contains
     class(GwfCsubType),   intent(inout) :: this
 ! ------------------------------------------------------------------------------
     !
-    ! -- call standard BndType allocate scalars
+    ! -- call standard NumericalPackageType allocate scalars
     call this%NumericalPackageType%allocate_scalars()
     !
     ! -- allocate the object and assign values to object variables
@@ -244,6 +251,10 @@ contains
     call mem_allocate(this%iconstantndb, 'ICONSTANTNDB', this%origin)
     call mem_allocate(this%idbhalfcell, 'IDBHALFCELL', this%origin)
     call mem_allocate(this%idbfullcell, 'IDBFULLCELL', this%origin)
+    call mem_allocate(this%time_factor, 'TIME_FACTOR', this%origin)
+    call mem_allocate(this%gammaw, 'GAMMAW', this%origin)
+    call mem_allocate(this%beta, 'BETA', this%origin)
+    call mem_allocate(this%brg, 'BRG', this%origin)
     call mem_allocate(this%dbfact, 'DBFACT', this%origin)
     call mem_allocate(this%dbfacti, 'DBFACTI', this%origin)
     call mem_allocate(this%icellf, 'ICELLF', this%origin)
@@ -268,6 +279,10 @@ contains
     this%iconstantndb = 0
     this%idbhalfcell = 0
     this%idbfullcell = 0
+    this%time_factor = DONE
+    this%gammaw = DGRAVITY * 1000._DP
+    this%beta = 4.6512e-10_DP
+    this%brg = this%gammaw * this%beta
     this%dbfact = DONE
     this%dbfacti = DONE
     this%icellf = 0
@@ -374,9 +389,11 @@ contains
           bot = this%dis%bot(n)
           top = this%dis%top(n)
           thk_node = top - bot
-          es = this%es(i)
+          !es = this%es(i)
+          es = this%sk_es(n)
           pcs = this%pcs(i)
-          es0 = this%es0(i)
+          !es0 = this%es0(i)
+          es0 = this%sk_es0(n)
           ! -- calculate compaction
           if (this%igeocalc == 0) then
             h = hnew(n)
@@ -877,6 +894,7 @@ contains
     integer(I4B) :: n    
     integer(I4B) :: ierr
     integer(I4B) :: inobs
+    integer(I4B) :: ibrg
     ! -- formats
     character(len=*),parameter :: fmtflow = &
       "(4x, 'FLOWS WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I7)"
@@ -893,6 +911,9 @@ contains
     character(len=*),parameter :: fmtoptr = &
       "(4x, A, 1X, G0)"
 ! -----------------------------------------------------------------------------
+    !
+    ! -- initialize variables
+    ibrg = 0
     !
     ! -- get options block
     call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false.)
@@ -948,6 +969,17 @@ contains
             call this%csub_df_obs()
           !
           ! -- CSUB specific options
+          case ('TIME_FACTOR')
+            this%time_factor =  this%parser%GetDouble()
+            write(this%iout, fmtoptr) 'TIME_FACTOR =', this%time_factor
+          case ('GAMMAW')
+            this%gammaw =  this%parser%GetDouble()
+            write(this%iout, fmtoptr) 'GAMMAW =', this%gammaw
+            ibrg = 1
+          case ('BETA')
+            this%beta =  this%parser%GetDouble()
+            write(this%iout, fmtoptr) 'BETA =', this%beta
+            ibrg = 1
           case ('HEAD_BASED')
             this%igeocalc = 0
             write(this%iout, fmtopt) 'HEAD-BASED FORMULATION WILL BE USED'
@@ -1002,6 +1034,12 @@ contains
       write(this%iout,'(1x,a)') 'END OF ' // trim(adjustl(this%name)) // ' OPTIONS'
     end if
     !
+    ! -- recalculate BRG if necessary
+    if (ibrg /= 0) then
+      this%brg = this%gammaw * this%beta
+    end if
+    write(this%iout, fmtoptr) 'GAMMAW * BETA =', this%brg
+    !
     ! -- terminate if errors encountered in reach block
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
@@ -1047,6 +1085,8 @@ contains
       call mem_allocate(this%sk_void, this%dis%nodes, 'sk_void', trim(this%origin))
     end if
     call mem_allocate(this%sk_thick, this%dis%nodes, 'sk_thick', trim(this%origin))
+    call mem_allocate(this%sk_es, this%dis%nodes, 'sk_es', trim(this%origin))
+    call mem_allocate(this%sk_es0, this%dis%nodes, 'sk_es0', trim(this%origin))
     if (this%igeostressoff == 1) then
       call mem_allocate(this%sig0, this%dis%nodes, 'sig0', trim(this%origin))
     else
@@ -1119,7 +1159,7 @@ contains
     !
     ! -- set pointers to variables in the storage package
     stoname = trim(this%name_model) // ' ' // trim(this%stoname)
-    call mem_setptr(this%stoiconvert, 'ICONVERT', trim(stoname))
+    call mem_setptr(this%stoiconv, 'ICONVERT', trim(stoname))
     call mem_setptr(this%stosc1, 'SC1', trim(stoname))
     !
     ! -- initialize variables that are not specified by user
@@ -1168,6 +1208,8 @@ contains
       call mem_deallocate(this%sk_theta)
       call mem_deallocate(this%sk_void)
       call mem_deallocate(this%sk_thick)
+      call mem_deallocate(this%sk_es)
+      call mem_deallocate(this%sk_es0)
       call mem_deallocate(this%sig0)
       !
       ! -- interbed storage
@@ -1221,7 +1263,7 @@ contains
       nullify(this%gwfiss)
       !
       ! -- pointers to storage variables
-      nullify(this%stoiconvert)
+      nullify(this%stoiconv)
       nullify(this%stosc1)
     end if
     !
@@ -1239,14 +1281,17 @@ contains
     call mem_deallocate(this%iconstantndb)
     call mem_deallocate(this%idbfullcell)
     call mem_deallocate(this%idbhalfcell)
+    call mem_deallocate(this%time_factor)
+    call mem_deallocate(this%gammaw)
+    call mem_deallocate(this%beta)
+    call mem_deallocate(this%brg)
     call mem_deallocate(this%dbfact)
     call mem_deallocate(this%dbfacti)
     call mem_deallocate(this%icellf)
     call mem_deallocate(this%gwfiss0)
-
-
-    !call this%BndType%bnd_da()
-
+    !
+    ! -- deallocate parent
+    call this%NumericalPackageType%da()
     !
     ! -- Return
     return
@@ -1596,9 +1641,10 @@ contains
   end subroutine csub_ck
 
 
-  subroutine csub_aq_calc_znode(this, nodes, hnew)
+  subroutine csub_sk_calc_znode(this, nodes, hnew)
 ! ******************************************************************************
-! csub_aq_calc_znode -- calculate the z of the node using current (xnew) water levels
+! csub_sk_calc_znode -- calculate the z of the gwf node using current (xnew) 
+!                       water levels
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -1630,12 +1676,13 @@ contains
     !
     ! -- return
     return
-  end subroutine csub_aq_calc_znode
+  end subroutine csub_sk_calc_znode
 
 
-  subroutine csub_aqgeo_calc_stress(this, nodes, hnew)
+  subroutine csub_sk_calc_geostress(this, nodes, hnew)
 ! ******************************************************************************
-! csub_aqgeo_calc_stress -- calculate the geostatic stress for every node in the model
+! csub_sk_calc_geostress -- calculate the geostatic stress for every gwf node 
+!                           in the model
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -1725,12 +1772,67 @@ contains
    ! -- return
    return
 
-  end subroutine csub_aqgeo_calc_stress
+  end subroutine csub_sk_calc_geostress
 
 
-  subroutine csub_aqeff_calc_stress(this, nodes, hnew)
+  subroutine csub_sk_calc_effstress(this, nodes, hnew)
 ! ******************************************************************************
-! csub_aqeff_calc_stress -- calculate the effective stress for nodes with interbeds
+! csub_sk_calc_effstress -- calculate the effective stress for every gwf node
+!                           in the model  
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    implicit none
+    ! -- dummy
+    class(GwfCsubType) :: this
+    integer(I4B), intent(in) :: nodes
+    real(DP), dimension(nodes), intent(in) :: hnew
+    ! -- local variables
+    integer(I4B) :: n
+    real(DP) :: hcell
+    real(DP) :: es
+    real(DP) :: bot
+    real(DP) :: sadd
+    character(len=LINELENGTH) :: errmsg
+    character(len=*), parameter :: fmtneg = &
+        "('NEGATIVE EFFECTIVE STRESS FOR NODE (',i0,') GEOSTATIC (',f10.4,'), " // &
+        "XNEW (',f10.4,'), BOTM (',f10.4,')')"
+! ------------------------------------------------------------------------------
+
+    do n = 1, nodes
+      hcell = hnew(n)
+      if (this%igeocalc == 0) then
+        es = hcell
+      else
+        bot = this%dis%bot(n)
+        if (hcell < bot) then
+          hcell = bot
+        end if
+        es = this%gsc(n) - hcell + bot
+        !if (es < DZERO) then
+        !  write(errmsg, fmt=fmtneg) n, this%gsc(n), hcell, bot
+        !  call store_error(errmsg)
+        !end if
+      end if
+      sadd = DZERO
+      if (this%igeostressoff == 1) then
+        sadd = this%sig0(n)
+      end if
+      this%sk_es(n) = es + sadd
+    end do
+
+    if (count_errors() > 0) then
+      call store_error_unit(this%inunit)
+      call ustop()
+    end if
+  end subroutine csub_sk_calc_effstress
+
+
+  subroutine csub_interbed_calc_effstress(this, nodes, hnew)
+! ******************************************************************************
+! csub_interbed_calc_effstress -- calculate the effective stress for gwf nodes 
+!                                 with interbeds
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -1742,7 +1844,9 @@ contains
     real(DP), dimension(nodes), intent(in) :: hnew
     ! local
     integer(I4B) :: i, n, ii, m
-    real(DP) :: es, bot, hcell
+    real(DP) :: hcell
+    real(DP) :: es
+    real(DP) :: bot
     real(DP) :: sadd
     character(len=LINELENGTH) :: errmsg
     character(len=*), parameter :: fmtneg = &
@@ -1757,6 +1861,9 @@ contains
         es = hcell
       else
         bot = this%dis%bot(n)
+        if (hcell < bot) then
+          hcell = bot
+        end if
         es = this%gsc(n) - hcell + bot
         !if (es < DZERO) then
         !  write(errmsg, fmt=fmtneg) n, this%gsc(n), hcell, bot
@@ -1774,7 +1881,7 @@ contains
       call store_error_unit(this%inunit)
       call ustop()
     end if
-  end subroutine csub_aqeff_calc_stress
+  end subroutine csub_interbed_calc_effstress
 
 
   subroutine csub_nodelay_calc_gwf(this, i, hcell, rho1, rho2, rhs, argtled)
@@ -1825,7 +1932,8 @@ contains
     if (this%igeocalc == 0) then
       f = DONE
     else
-      es0 = this%es0(i)
+!      es0 = this%es0(i)
+      es0 = this%sk_es0(n)
       denom = (DONE + this%void(i)) * (es0 - (this%znode(i) - bot)) * &
               (this%sgs(n) - DONE)
       if (denom /= DZERO) then
@@ -1843,13 +1951,17 @@ contains
       if (hcell < this%pcs(i)) then
         rho2 = this%ci(i) * sto_fac
       end if
-      rhs = -(rho2 * this%pcs(i) + rho1 * (this%es0(i) - this%pcs(i)))
+!      rhs = -(rho2 * this%pcs(i) + rho1 * (this%es0(i) - this%pcs(i)))
+      rhs = -(rho2 * this%pcs(i) + rho1 * (this%sk_es0(n) - this%pcs(i)))
     else
-      if (this%es(i) > this%pcs(i)) then
+!      if (this%es(i) > this%pcs(i)) then
+      if (this%sk_es(n) > this%pcs(i)) then
           rho2 = this%ci(i) * sto_fac
       end if
+      !rhs = -rho2 * (this%gsc(n) + bot) + (this%pcs(i) * (rho2 - rho1)) + &
+      !       (rho1 * this%es0(i))
       rhs = -rho2 * (this%gsc(n) + bot) + (this%pcs(i) * (rho2 - rho1)) + &
-             (rho1 * this%es0(i))
+             (rho1 * this%sk_es0(n))
     end if
     !
     !
@@ -2016,6 +2128,17 @@ contains
     end if
     !
     ! -- update state variables
+    !
+    ! -- coarse-grained materials
+    do n = 1, nodes
+      if (this%igeocalc == 0) then
+        this%sk_es0(n)= hnew(n)
+      else
+        this%sk_es0(n) = this%sk_es(n)
+      end if
+    end do
+    !
+    ! -- interbeds
     do n = 1, this%ninterbeds
       idelay = this%idelay(n)
       ! no delay beds
@@ -2031,7 +2154,8 @@ contains
           end if
         end if
         if (.not. this%first_time) then
-          es = this%es(n)
+          !es = this%es(n)
+          es = this%sk_es(node)
           pcs = this%pcs(n)
           if (this%igeocalc == 0) then
             h = hnew(node)
@@ -2047,7 +2171,8 @@ contains
           if (this%igeocalc == 0) then
             this%es0(n) = hnew(node)
           else
-            this%es0(n) = this%es(n)
+            !this%es0(n) = this%es(n)
+            this%es0(n) = this%sk_es(node)
           end if
         end if
       !
@@ -2122,24 +2247,37 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- update geostatic load calculation
-    call this%csub_aqgeo_calc_stress(nodes, hnew)
-    call this%csub_aq_calc_znode(nodes, hnew)
-    call this%csub_aqeff_calc_stress(nodes, hnew)
+    call this%csub_sk_calc_znode(nodes, hnew)
+    call this%csub_sk_calc_geostress(nodes, hnew)
+    call this%csub_sk_calc_effstress(nodes, hnew)
+    call this%csub_interbed_calc_effstress(nodes, hnew)
 
+    !
+    ! -- coarse-grained materials
+    do n = 1, nodes
+      this%sk_es0(n) = this%sk_es(n)
+    end do
+    !
+    ! -- interbeds
     do i = 1, this%ninterbeds
       n = this%nodelist(i)
       pcs = this%pcs(i)
       if (this%igeocalc == 0) then
-        if (this%es(i) < pcs) then
-          pcs = this%es(i)
+        !if (this%es(i) < pcs) then
+        !  pcs = this%es(i)
+        if (this%sk_es(n) < pcs) then
+          pcs = this%sk_es(n)
         end if
       else
         ! -- transfer initial preconsolidation stress (and apply offset if needed)
         if (this%ibedstressoff == 1) then
-            pcs = this%es(i) + this%pcs(i)
+            !pcs = this%es(i) + this%pcs(i)
+            pcs = this%sk_es(n) + this%pcs(i)
         else
-          if (pcs < this%es(i)) then
-            pcs = this%es(i)
+          !if (pcs < this%es(i)) then
+          !  pcs = this%es(i)
+          if (pcs < this%sk_es(n)) then
+            pcs = this%sk_es(n)
           end if
         end if
       end if
@@ -2152,7 +2290,8 @@ contains
           else
             this%dbpcs(j, idelay) = this%pcs(i)
           end if
-          this%dbes0(j, idelay) = this%es(i)
+          !this%dbes0(j, idelay) = this%es(i)
+          this%dbes0(j, idelay) = this%sk_es(n)
         end do            
       end if
           
@@ -2162,8 +2301,8 @@ contains
         if (this%igeocalc == 0) then
           fact = DONE
         else
-          ! fact = area * (1.0 - void) * (eff st) - (znode - bot) * (sgs  -DONE)
-          fact = this%es(i) - (this%znode(i) - bot) * (this%sgs(n) - DONE)
+          !fact = this%es(i) - (this%znode(i) - bot) * (this%sgs(n) - DONE)
+          fact = this%sk_es(n) - (this%znode(i) - bot) * (this%sgs(n) - DONE)
           fact = fact *  (DONE + this%void(i))
         end if
       else
@@ -2171,7 +2310,8 @@ contains
       end if
       this%ci(i) = this%ci(i) * fact
       this%rci(i) = this%rci(i) * fact
-      this%es0(i) = this%es(i)
+      !this%es0(i) = this%es(i)
+      this%es0(i) = this%sk_es(n)
     end do
     this%first_time = .false.
     !
@@ -2212,9 +2352,10 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- update geostatic load calculation
-    call this%csub_aqgeo_calc_stress(nodes, hnew)
-    call this%csub_aq_calc_znode(nodes, hnew)
-    call this%csub_aqeff_calc_stress(nodes, hnew) 
+    call this%csub_sk_calc_znode(nodes, hnew)
+    call this%csub_sk_calc_geostress(nodes, hnew)
+    call this%csub_sk_calc_effstress(nodes, hnew)
+    call this%csub_interbed_calc_effstress(nodes, hnew)
     !
     ! -- 
     if (this%gwfiss == 0) then
@@ -2332,6 +2473,90 @@ contains
     return
   end subroutine define_listlabel
 
+  subroutine csub_sk_calc_sske(this, n, sske)
+! ******************************************************************************
+! csub_sk_calc_sske -- Calculate sske for a gwf cell.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    class(GwfCsubType), intent(inout) :: this
+    integer(I4B), intent(in) :: n
+    real(DP), intent(inout) :: sske
+    ! -- local variables
+    integer(I4B) :: idelay
+    real(DP) :: es
+    real(DP) :: void
+    real(DP) :: denom
+    real(DP) :: f
+! ------------------------------------------------------------------------------
+    !
+    ! -- initialize variables
+    sske = DZERO
+    !
+    ! -- calculate factor for the head-based case
+    if (this%igeocalc == 0) then
+      f = DONE
+    !
+    ! -- calculate factor for the effective stress case
+    else
+      es = this%time_factor * this%sk_es(n) +                                   &
+           (DONE - this%time_factor) * this%sk_es0(n)
+      void = this%csub_calc_void(this%sk_theta(n))
+      denom = (DONE + void) * es
+      if (denom /= DZERO) then
+        f = DONE / denom
+      else
+        f = DZERO
+      end if
+    end if
+    sske = f * this%ske_cr(n)
+    !
+    ! -- return
+    return
+  end subroutine csub_sk_calc_sske
+  
+  
+  function csub_calc_void(this, theta) result(void)
+! ******************************************************************************
+! csub_calc_void -- Calculate void ratio from the porosity
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    class(GwfCsubType), intent(inout) :: this
+    ! -- dummy
+    real(DP), intent(in) :: theta
+    ! -- local variables
+    real(DP) :: void
+! ------------------------------------------------------------------------------
+    void = theta / (DONE - theta)
+    !
+    ! -- return
+    return
+  end function csub_calc_void
+  
+  
+  function csub_calc_theta(this, void) result(theta)
+! ******************************************************************************
+! csub_calc_theta -- Calculate porosity from the void ratio
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    class(GwfCsubType), intent(inout) :: this
+    ! -- dummy
+    real(DP), intent(in) :: void
+    ! -- local variables
+    real(DP) :: theta
+! ------------------------------------------------------------------------------
+    theta = void / (DONE + void)
+    !
+    ! -- return
+    return
+  end function csub_calc_theta
+  
+  
   subroutine csub_delay_calc_interbed(this, ib, hcell)
 ! ******************************************************************************
 ! csub_delay_calc_interbed -- Calculate flow in delay interbeds.

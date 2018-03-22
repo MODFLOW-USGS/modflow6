@@ -1,5 +1,8 @@
 BEGIN OPTIONS
   [SAVE_FLOWS]
+  [GAMMAW <gammaw>]
+  [BETA <beta>]
+  [TIME_FACTOR <time_factor>]
   [HEAD_BASED]
   [DELAY_FULL_CELL]
   [NDELAYCELLS <ndelaycells>]
