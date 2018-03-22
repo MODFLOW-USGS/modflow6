@@ -235,9 +235,24 @@ def eval_transport(sim):
     try:
         cobj = flopy.utils.HeadFile(fpth, precision='double',
                                     text='CONCENTRATION')
+        times = cobj.get_times()
+        t = times[-1]
+        csim = cobj.get_data(totim=t)
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
 
+    cres = np.array([
+       27.81683893, 27.74118085, 27.59074397, 27.36730147, 27.07355559,
+       26.71321033, 26.2911281 , 25.81372488, 25.28373078, 24.70376874,
+       24.07707513, 23.40732213, 22.69843933, 21.95594778, 21.18681381,
+       20.39770536, 19.59505602, 18.78507897, 17.97370171, 17.16651555,
+       16.36870142, 15.58507333, 14.82012258, 14.07804048, 13.36269606,
+       12.67762756, 12.02604254, 11.41082379, 10.83453961, 10.29945756,
+        9.80756102,  9.36056761,  8.95994886,  8.60695017,  8.30261058,
+        8.04778147,  7.84314372,  7.68922285,  7.5864015 ,  7.53492928])
+
+    csim = csim[:, 2, 12]
+    assert np.allclose(cres, csim), 'simulated concentrations do not match with known solution.'
 
     return
 
