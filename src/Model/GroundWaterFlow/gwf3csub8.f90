@@ -1,8 +1,8 @@
 module GwfCsubModule
-  use ConstantsModule, only: DPREC, DZERO, DHALF, DONE, DTWO, DTHREE, DTEN, &
-                             LENFTYPE, LENPACKAGENAME, LINELENGTH, LENBOUNDNAME, &
-                             NAMEDBOUNDFLAG, LENBUDTXT, LENAUXNAME, &
-                             DGRAVITY
+  use ConstantsModule, only: DPREC, DZERO, DEM6, DHALF, DONE, DTWO, DTHREE,     &
+                             DGRAVITY, DTEN, LENFTYPE, LENPACKAGENAME,          &
+                             LINELENGTH, LENBOUNDNAME, NAMEDBOUNDFLAG,          &
+                             LENBUDTXT, LENAUXNAME
   use KindModule, only: I4B, DP
   use NumericalPackageModule, only: NumericalPackageType
   use ObserveModule,        only: ObserveType
@@ -30,7 +30,7 @@ module GwfCsubModule
   ! -- local paramter - derivative of the log of effective stress
   real(DP), parameter :: dlog10es = 0.4342942_DP
   !
-
+  ! CSUB type
   type, extends(NumericalPackageType) :: GwfCsubType
     character(len=LENBOUNDNAME), pointer, dimension(:)   :: boundname => null() !vector of boundnames
     character(len=LENAUXNAME), allocatable, dimension(:) :: auxname             !name for each auxiliary variable
@@ -56,6 +56,7 @@ module GwfCsubModule
     real(DP), pointer :: brg                        => null()   !product of gammaw and water compressibility
     real(DP), pointer :: dbfact                     => null()
     real(DP), pointer :: dbfacti                    => null()
+    real(DP), pointer :: satomega                   => null()      !newton-raphson saturation omega
 
     logical :: first_time
     integer(I4B), pointer :: gwfiss                 => NULL()   !pointer to model iss flag
@@ -68,13 +69,14 @@ module GwfCsubModule
 
     real(DP), dimension(:), pointer :: sgm          => null()   !specific gravity moist sediments
     real(DP), dimension(:), pointer :: sgs          => null()   !specific gravity saturated sediments
+    real(DP), dimension(:), pointer :: sig0         => null()   !geostatic offset
     real(DP), dimension(:), pointer :: ske_cr       => null()   !skeletal specified storage
     real(DP), dimension(:), pointer :: sk_theta     => null()   !skeletal (aquifer) porosity
     real(DP), dimension(:), pointer :: sk_thick     => null()   !skeletal (aquifer) thickness
     real(DP), dimension(:), pointer :: sk_gs        => null()   !geostatic stress for a cell
     real(DP), dimension(:), pointer :: sk_es        => null()   !skeletal (aquifer) effective stress
     real(DP), dimension(:), pointer :: sk_es0       => null()   !skeletal (aquifer) effective stress for the previous time step
-    real(DP), dimension(:), pointer :: sig0         => null()   !geostatic offset
+    real(DP), dimension(:), pointer :: sk_znode     => null()   !elevation of node center
     !
     ! -- interbed variables
     integer(I4B), dimension(:), pointer :: idelay   => null()   !0 = nodelay, > 0 = delay
@@ -83,7 +85,6 @@ module GwfCsubModule
     real(DP), dimension(:), pointer :: es           => null()   !effective stress
     real(DP), dimension(:), pointer :: es0          => null()   !last effective stress
     real(DP), dimension(:), pointer :: pcs          => null()   !preconsolidation stress
-    real(DP), dimension(:), pointer :: znode        => null()   !elevation of node center
     real(DP), dimension(:), pointer :: thick        => null()   !fraction of cell thickness that interbed system occupies
     real(DP), dimension(:), pointer :: rnb          => null()   !interbed system material factor
     real(DP), dimension(:), pointer :: theta        => null()   !porosity
@@ -254,6 +255,7 @@ contains
     call mem_allocate(this%brg, 'BRG', this%origin)
     call mem_allocate(this%dbfact, 'DBFACT', this%origin)
     call mem_allocate(this%dbfacti, 'DBFACTI', this%origin)
+    call mem_allocate(this%satomega, 'SATOMEGA', this%origin)
     call mem_allocate(this%icellf, 'ICELLF', this%origin)
     call mem_allocate(this%ninterbeds, 'NIBCCELLS', this%origin)
     call mem_allocate(this%gwfiss0, 'GWFISS0', this%origin)
@@ -282,6 +284,13 @@ contains
     this%brg = this%gammaw * this%beta
     this%dbfact = DONE
     this%dbfacti = DONE
+    !
+    ! -- set omega value used for saturation calculations
+    if (this%inewton > 0) then
+      this%satomega = DEM6
+    else
+      this%satomega = DZERO
+    end if
     this%icellf = 0
     this%ninterbeds = 0
     this%first_time = .TRUE.
@@ -1063,9 +1072,11 @@ contains
     if (this%igeocalc == 0) then
       call mem_allocate(this%sgm, 1, 'sgm', trim(this%origin))
       call mem_allocate(this%sgs, 1, 'sgs', trim(this%origin))
+      call mem_allocate(this%sk_znode, 1, 'sk_znode', trim(this%origin))
     else
       call mem_allocate(this%sgm, this%dis%nodes, 'sgm', trim(this%origin))
       call mem_allocate(this%sgs, this%dis%nodes, 'sgs', trim(this%origin))
+      call mem_allocate(this%sk_znode, this%dis%nodes, 'sk_znode', trim(this%origin))
     end if
     call mem_allocate(this%ske_cr, this%dis%nodes, 'ske_cr', trim(this%origin))
     call mem_allocate(this%sk_theta, this%dis%nodes, 'sk_theta', trim(this%origin))
@@ -1096,7 +1107,6 @@ contains
     call mem_allocate(this%nodelist, iblen, 'nodelist', trim(this%origin))
     call mem_allocate(this%sk_gs, this%dis%nodes, 'SK_GS', trim(this%origin))
     call mem_allocate(this%pcs, iblen, 'pcs', trim(this%origin))
-    call mem_allocate(this%znode, iblen, 'znode', trim(this%origin))
     call mem_allocate(this%thick, iblen, 'thick', trim(this%origin))
     call mem_allocate(this%rnb, iblen, 'rnb', trim(this%origin))
     call mem_allocate(this%kv, iblen, 'kv', trim(this%origin))
@@ -1187,6 +1197,7 @@ contains
       call mem_deallocate(this%ske_cr)
       call mem_deallocate(this%sk_theta)
       call mem_deallocate(this%sk_thick)
+      call mem_deallocate(this%sk_znode)
       call mem_deallocate(this%sig0)
       call mem_deallocate(this%sk_gs)
       call mem_deallocate(this%sk_es)
@@ -1199,7 +1210,6 @@ contains
       call mem_deallocate(this%ci)
       call mem_deallocate(this%rci)
       call mem_deallocate(this%pcs)
-      call mem_deallocate(this%znode)
       call mem_deallocate(this%thick)
       call mem_deallocate(this%rnb)
       call mem_deallocate(this%theta)
@@ -1260,6 +1270,7 @@ contains
     call mem_deallocate(this%brg)
     call mem_deallocate(this%dbfact)
     call mem_deallocate(this%dbfacti)
+    call mem_deallocate(this%satomega)
     call mem_deallocate(this%icellf)
     call mem_deallocate(this%gwfiss0)
     !
@@ -1625,7 +1636,6 @@ contains
     integer(I4B), intent(in) :: nodes
     real(DP), dimension(nodes), intent(in) :: hnew
     ! local
-    integer(I4B) :: i
     integer(I4B) :: n
     real(DP) :: top
     real(DP) :: bot
@@ -1633,17 +1643,18 @@ contains
 
 ! ------------------------------------------------------------------------------
 
-    do i = 1, this%ninterbeds
-      n = this%nodelist(i)
-      bot = this%dis%bot(n)
-      top = this%dis%top(n)
-      hcell = hnew(n)
-      if (hcell > top .or. hcell < bot) then
-          this%znode(i) = (top + bot) * 0.5
-      else
-          this%znode(i) = (hcell + bot) * 0.5
-      end if
-    end do
+    if (this%igeocalc /= 0) then
+      do n = 1, nodes
+        bot = this%dis%bot(n)
+        top = this%dis%top(n)
+        hcell = hnew(n)
+        if (hcell > top .or. hcell < bot) then
+            this%sk_znode(n) = (top + bot) * 0.5
+        else
+            this%sk_znode(n) = (hcell + bot) * 0.5
+        end if
+      end do
+    end if
     !
     ! -- return
     return
@@ -1811,7 +1822,7 @@ contains
     else
       es0 = this%sk_es0(n)
       void = this%csub_calc_void(this%theta(i))
-      denom = (DONE + void) * (es0 - (this%znode(i) - bot)) * &
+      denom = (DONE + void) * (es0 - (this%sk_znode(n) - bot)) * &
               (this%sgs(n) - DONE)
       if (denom /= DZERO) then
         f = DONE / denom
@@ -2112,6 +2123,21 @@ contains
     !
     ! -- coarse-grained materials
     do n = 1, nodes
+      ! scale cr and cc
+      bot = this%dis%bot(n)
+      if (this%istoragec == 1) then
+        if (this%igeocalc == 0) then
+          fact = DONE
+        else
+          void = this%csub_calc_void(this%sk_theta(n))
+          fact = this%sk_es(n) - (this%sk_znode(n) - bot) * (this%sgs(n) - DONE)
+          fact = fact * (DONE + void)
+        end if
+      else
+          fact = dlog10es
+      end if
+      this%ske_cr(n) = this%ske_cr(n) * fact
+      ! -- iniitalize previous initial stress
       this%sk_es0(n) = this%sk_es(n)
     end do
     !
@@ -2153,7 +2179,7 @@ contains
           fact = DONE
         else
           void = this%csub_calc_void(this%theta(i))
-          fact = this%sk_es(n) - (this%znode(i) - bot) * (this%sgs(n) - DONE)
+          fact = this%sk_es(n) - (this%sk_znode(n) - bot) * (this%sgs(n) - DONE)
           fact = fact * (DONE + void)
         end if
       else
@@ -2484,6 +2510,7 @@ contains
     integer(I4B), intent(in) :: ib
     ! -- local variables
     integer(I4B) :: n
+    integer(I4B) :: node
     integer(I4B) :: idelay
     real(DP) :: znode
     real(DP) :: dzz
@@ -2494,7 +2521,8 @@ contains
     !
     ! -- initialize variables
     idelay = this%idelay(ib)
-    znode = this%znode(ib)
+    node = this%nodelist(ib)
+    znode = this%sk_znode(node)
     b = this%thick(ib)
     dz = this%dbdz(idelay)
     if (this%idbhalfcell == 0) then
