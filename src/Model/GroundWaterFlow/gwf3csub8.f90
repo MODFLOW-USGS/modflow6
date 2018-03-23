@@ -70,7 +70,6 @@ module GwfCsubModule
     real(DP), dimension(:), pointer :: sgs          => null()   !specific gravity saturated sediments
     real(DP), dimension(:), pointer :: ske_cr       => null()   !skeletal specified storage
     real(DP), dimension(:), pointer :: sk_theta     => null()   !skeletal (aquifer) porosity
-    real(DP), dimension(:), pointer :: sk_void      => null()   !skeletal (aquifer) void ratio
     real(DP), dimension(:), pointer :: sk_thick     => null()   !skeletal (aquifer) thickness
     real(DP), dimension(:), pointer :: sk_gs        => null()   !geostatic stress for a cell
     real(DP), dimension(:), pointer :: sk_es        => null()   !skeletal (aquifer) effective stress
@@ -88,7 +87,6 @@ module GwfCsubModule
     real(DP), dimension(:), pointer :: thick        => null()   !fraction of cell thickness that interbed system occupies
     real(DP), dimension(:), pointer :: rnb          => null()   !interbed system material factor
     real(DP), dimension(:), pointer :: theta        => null()   !porosity
-    real(DP), dimension(:), pointer :: void         => null()   !void ratio
     real(DP), dimension(:), pointer :: kv           => null()   !vertical hydraulic conductivity of interbed
     real(DP), dimension(:), pointer :: h0           => null()   !initial head in interbed
     real(DP), dimension(:), pointer :: comp         => null()   !interbed compaction
@@ -103,8 +101,8 @@ module GwfCsubModule
     real(DP), dimension(:,:), pointer :: dbz        => null()   !delay bed cell z
     real(DP), dimension(:,:), pointer :: dbh        => null()   !delay bed cell h
     real(DP), dimension(:,:), pointer :: dbh0       => null()   !delay bed cell previous h
-    real(DP), dimension(:,:), pointer :: dbvoid     => null()   !delay bed cell void ratio
-    real(DP), dimension(:,:), pointer :: dbvoid0    => null()   !delay bed cell previous void ratio
+    real(DP), dimension(:,:), pointer :: dbtheta    => null()   !delay bed cell porosity
+    real(DP), dimension(:,:), pointer :: dbtheta0   => null()   !delay bed cell previous porosity
     real(DP), dimension(:,:), pointer :: dbgeo      => null()   !delay bed cell geostatic stress
     real(DP), dimension(:,:), pointer :: dbgeo0     => null()   !delay bed cell previous geostatic stress
     real(DP), dimension(:,:), pointer :: dbes       => null()   !delay bed cell effective stress
@@ -338,6 +336,8 @@ contains
     real(DP) :: dsto
     real(DP) :: qaqa
     real(DP) :: qaqrhs
+    real(DP) :: void
+    real(DP) :: theta
     real(DP) :: rateibein
     real(DP) :: rateibeout
     real(DP) :: rateibiin
@@ -423,19 +423,15 @@ contains
           !
           ! - calculate strain and change in interbed void ratio and thickness
           strain = DZERO
+          void = this%csub_calc_void(this%theta(i))
           thick = this%thick(i)
           if (thick > DZERO) strain = -comp / thick
           if (this%iconstantndb == 0) then
-            this%void(i) = strain + this%void(i) * (strain + DONE)
+            void = strain + void * (strain + DONE)
+            theta = this%csub_calc_theta(void)
+            this%theta(i) = theta
             this%thick(i) = thick * (strain + DONE)
           end if
-          !!
-          !! -- water budget terms
-          !if (delt_sto >= DZERO) then
-          !    ratein = ratein + delt_sto * tledm
-          !else
-          !    rateout = rateout + delt_sto * tledm
-          !end if
           !
           ! -- delay interbeds
         else
@@ -741,10 +737,6 @@ contains
               '****ERROR. INVALID porosity FOR PACKAGEDATA ENTRY', itmp
             call store_error(errmsg)
         end if
-        ! -- calculate the void ratio from the porosity
-        if (rval > DZERO .and. rval < DONE) then        
-          this%void(itmp) = rval / (DONE - rval)
-        end if
 
         ! -- get kv
         rval =  this%parser%GetDouble()
@@ -799,8 +791,8 @@ contains
       call mem_reallocate(this%dbz, this%ndelaycells, ndelaybeds, 'dbz', trim(this%origin))
       call mem_reallocate(this%dbh, this%ndelaycells, ndelaybeds, 'dbh', trim(this%origin))
       call mem_reallocate(this%dbh0, this%ndelaycells, ndelaybeds, 'dbh0', trim(this%origin))
-      call mem_reallocate(this%dbvoid, this%ndelaycells, ndelaybeds, 'dbvoid', trim(this%origin))
-      call mem_reallocate(this%dbvoid0, this%ndelaycells, ndelaybeds, 'dbvoid0', trim(this%origin))
+      call mem_reallocate(this%dbtheta, this%ndelaycells, ndelaybeds, 'dbtheta', trim(this%origin))
+      call mem_reallocate(this%dbtheta0, this%ndelaycells, ndelaybeds, 'dbtheta0', trim(this%origin))
       call mem_reallocate(this%dbgeo, this%ndelaycells, ndelaybeds, 'dbgeo', trim(this%origin))
       call mem_reallocate(this%dbgeo0, this%ndelaycells, ndelaybeds, 'dbgeo0', trim(this%origin))
       call mem_reallocate(this%dbes, this%ndelaycells, ndelaybeds, 'dbes', trim(this%origin))
@@ -834,8 +826,8 @@ contains
         do j = 1, this%ndelaycells
           this%dbh(j, idelay) = this%h0(n)
           this%dbh0(j, idelay) = this%h0(n)
-          this%dbvoid(j, idelay) = this%void(n)
-          this%dbvoid0(j, idelay) = this%void(n)
+          this%dbtheta(j, idelay) = this%theta(n)
+          this%dbtheta0(j, idelay) = this%theta(n)
           this%dbgeo(j, idelay) = DZERO
           this%dbgeo0(j, idelay) = DZERO
           this%dbes(j, idelay) = DZERO
@@ -1077,11 +1069,6 @@ contains
     end if
     call mem_allocate(this%ske_cr, this%dis%nodes, 'ske_cr', trim(this%origin))
     call mem_allocate(this%sk_theta, this%dis%nodes, 'sk_theta', trim(this%origin))
-    if (this%igeocalc == 0) then
-      call mem_allocate(this%sk_void, 1, 'sk_void', trim(this%origin))
-    else
-      call mem_allocate(this%sk_void, this%dis%nodes, 'sk_void', trim(this%origin))
-    end if
     call mem_allocate(this%sk_thick, this%dis%nodes, 'sk_thick', trim(this%origin))
     call mem_allocate(this%sk_es, this%dis%nodes, 'sk_es', trim(this%origin))
     call mem_allocate(this%sk_es0, this%dis%nodes, 'sk_es0', trim(this%origin))
@@ -1115,7 +1102,6 @@ contains
     call mem_allocate(this%kv, iblen, 'kv', trim(this%origin))
     call mem_allocate(this%h0, iblen, 'h0', trim(this%origin))
     call mem_allocate(this%theta, iblen, 'theta', trim(this%origin))
-    call mem_allocate(this%void, iblen, 'void', trim(this%origin))
     call mem_allocate(this%ci, iblen, 'ci', trim(this%origin))
     call mem_allocate(this%rci, iblen, 'rci', trim(this%origin))
     call mem_allocate(this%idelay, iblen, 'idelay', trim(this%origin))
@@ -1130,8 +1116,8 @@ contains
     call mem_allocate(this%dbz, 0, 0, 'dbz', trim(this%origin))
     call mem_allocate(this%dbh, 0, 0, 'dbh', trim(this%origin))
     call mem_allocate(this%dbh0, 0, 0, 'dbh0', trim(this%origin))
-    call mem_allocate(this%dbvoid, 0, 0, 'dbvoid', trim(this%origin))
-    call mem_allocate(this%dbvoid0, 0, 0, 'dbvoid0', trim(this%origin))
+    call mem_allocate(this%dbtheta, 0, 0, 'dbtheta', trim(this%origin))
+    call mem_allocate(this%dbtheta0, 0, 0, 'dbtheta0', trim(this%origin))
     call mem_allocate(this%dbgeo, 0, 0, 'dbgeo', trim(this%origin))
     call mem_allocate(this%dbgeo0, 0, 0, 'dbgeo0', trim(this%origin))
     call mem_allocate(this%dbes, 0, 0, 'dbes', trim(this%origin))
@@ -1167,7 +1153,6 @@ contains
     end do
     do n = 1, this%ninterbeds
       this%theta(n) = DZERO
-      this%void(n) = DZERO
       this%totalcomp(n) = DZERO
     end do
     !
@@ -1201,7 +1186,6 @@ contains
       call mem_deallocate(this%sgs)
       call mem_deallocate(this%ske_cr)
       call mem_deallocate(this%sk_theta)
-      call mem_deallocate(this%sk_void)
       call mem_deallocate(this%sk_thick)
       call mem_deallocate(this%sig0)
       call mem_deallocate(this%sk_gs)
@@ -1219,7 +1203,6 @@ contains
       call mem_deallocate(this%thick)
       call mem_deallocate(this%rnb)
       call mem_deallocate(this%theta)
-      call mem_deallocate(this%void)
       call mem_deallocate(this%kv)
       call mem_deallocate(this%h0)
       call mem_deallocate(this%comp)
@@ -1233,8 +1216,8 @@ contains
       call mem_deallocate(this%dbz)
       call mem_deallocate(this%dbh)
       call mem_deallocate(this%dbh0)
-      call mem_deallocate(this%dbvoid)
-      call mem_deallocate(this%dbvoid0)
+      call mem_deallocate(this%dbtheta)
+      call mem_deallocate(this%dbtheta0)
       call mem_deallocate(this%dbgeo)
       call mem_deallocate(this%dbgeo0)
       call mem_deallocate(this%dbes)
@@ -1573,8 +1556,6 @@ contains
                                        'ERROR. AQUIFER POROSITY IS LESS THAN', &
                                        '0 OR GREATER THAN 1 (', theta, ')',    &
                                        'in cell', ''
-        else
-          this%sk_void(n) = theta / (DONE - theta)
         end if
       end if
       top = this%dis%top(n)
@@ -1791,10 +1772,19 @@ contains
     real(DP), intent(in), optional :: argtled
     ! -- local variables
     integer(I4B) :: n
-    real(DP) :: tled,top,bot,thk_fac,sto_fac
+    real(DP) :: tled
+    real(DP) :: top
+    real(DP) :: bot
+    real(DP) :: thk_fac
+    real(DP) :: sto_fac
     real(DP) :: area
     real(DP) :: x
-    real(DP) :: thk_node,thk_ibs,denom,pcs_n, fact
+    real(DP) :: thk_node
+    real(DP) :: thk_ibs
+    real(DP) :: denom
+    real(DP) :: pcs_n
+    real(DP) :: fact
+    real(DP) :: void
     real(DP) :: es0
     real(DP) :: f
     character(len=LINELENGTH) :: msg
@@ -1820,7 +1810,8 @@ contains
       f = DONE
     else
       es0 = this%sk_es0(n)
-      denom = (DONE + this%void(i)) * (es0 - (this%znode(i) - bot)) * &
+      void = this%csub_calc_void(this%theta(i))
+      denom = (DONE + void) * (es0 - (this%znode(i) - bot)) * &
               (this%sgs(n) - DONE)
       if (denom /= DZERO) then
         f = DONE / denom
@@ -2112,6 +2103,7 @@ contains
     real(DP) :: pcs
     real(DP) :: fact
     real(DP) :: bot
+    real(DP) :: void
 ! ------------------------------------------------------------------------------
     !
     ! -- update geostatic load calculation
@@ -2160,8 +2152,9 @@ contains
         if (this%igeocalc == 0) then
           fact = DONE
         else
+          void = this%csub_calc_void(this%theta(i))
           fact = this%sk_es(n) - (this%znode(i) - bot) * (this%sgs(n) - DONE)
-          fact = fact *  (DONE + this%void(i))
+          fact = fact * (DONE + void)
         end if
       else
           fact = dlog10es
@@ -2618,6 +2611,7 @@ contains
     ! -- local variables
     integer(I4B) :: idelay
     real(DP) :: es
+    real(DP) :: void
     real(DP) :: denom
     real(DP) :: f
 ! ------------------------------------------------------------------------------
@@ -2639,7 +2633,8 @@ contains
     ! -- calculate factor for the effective stress case
     else
       es = this%dbes0(n, idelay)
-      denom = (DONE + this%dbvoid(n, idelay)) * es
+      void = this%csub_calc_void(this%dbtheta(n, idelay))
+      denom = (DONE + void) * es
       if (denom /= DZERO) then
         f = DONE / denom
       else
@@ -2828,7 +2823,7 @@ contains
     if (this%thick(ib) > DZERO) then
       do n = 1, this%ndelaycells
         dz = this%dbdz(idelay)
-        void = this%dbvoid(n, idelay)
+        void = this%csub_calc_void(this%dbtheta(n, idelay))
         fmult = DONE
         call this%csub_delay_calc_sskessk(ib, n, sske, ssk)
         if (this%igeocalc == 0) then
@@ -2934,7 +2929,7 @@ contains
     if (this%thick(ib) > DZERO) then
       do n = 1, this%ndelaycells
         dz = this%dbdz(idelay)
-        void = this%dbvoid(n, idelay)
+        void = this%csub_calc_void(this%dbtheta(n, idelay))
         call this%csub_delay_calc_sskessk(ib, n, sske, ssk)
         if (this%igeocalc == 0) then
           v = ssk * (this%dbpcs(n, idelay) - this%dbh(n, idelay))
