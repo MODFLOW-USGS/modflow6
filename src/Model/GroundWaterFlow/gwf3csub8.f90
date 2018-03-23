@@ -5,7 +5,6 @@ module GwfCsubModule
                              DGRAVITY
   use KindModule, only: I4B, DP
   use NumericalPackageModule, only: NumericalPackageType
-  !use BndModule, only: BndType
   use ObserveModule,        only: ObserveType
   use ObsModule,            only: ObsType, obs_cr
   use BlockParserModule,      only: BlockParserType
@@ -35,7 +34,7 @@ module GwfCsubModule
   type, extends(NumericalPackageType) :: GwfCsubType
     character(len=LENBOUNDNAME), pointer, dimension(:)   :: boundname => null() !vector of boundnames
     character(len=LENAUXNAME), allocatable, dimension(:) :: auxname             !name for each auxiliary variable
-    character(len=500) :: listlabel   = ''      !title of table written for RP
+    character(len=500) :: listlabel   = ''                                      !title of table written for RP
     character(len=LENPACKAGENAME) :: stoname
     integer(I4B), pointer :: istounit               => null()
     integer(I4B), pointer :: iconstantndb           => null()
@@ -67,22 +66,21 @@ module GwfCsubModule
     integer, dimension(:), pointer :: nodelist      => null()   !reduced node that the interbed is attached to
     integer, dimension(:), pointer :: unodelist     => null()   !user node that the interbed is attached to
 
-    integer(I4B), dimension(:), pointer :: idelay   => null()   !0 = nodelay, > 0 = delay
     real(DP), dimension(:), pointer :: sgm          => null()   !specific gravity moist sediments
     real(DP), dimension(:), pointer :: sgs          => null()   !specific gravity saturated sediments
     real(DP), dimension(:), pointer :: ske_cr       => null()   !skeletal specified storage
     real(DP), dimension(:), pointer :: sk_theta     => null()   !skeletal (aquifer) porosity
     real(DP), dimension(:), pointer :: sk_void      => null()   !skeletal (aquifer) void ratio
     real(DP), dimension(:), pointer :: sk_thick     => null()   !skeletal (aquifer) thickness
+    real(DP), dimension(:), pointer :: sk_gs        => null()   !geostatic stress for a cell
     real(DP), dimension(:), pointer :: sk_es        => null()   !skeletal (aquifer) effective stress
     real(DP), dimension(:), pointer :: sk_es0       => null()   !skeletal (aquifer) effective stress for the previous time step
     real(DP), dimension(:), pointer :: sig0         => null()   !geostatic offset
     !
     ! -- interbed variables
+    integer(I4B), dimension(:), pointer :: idelay   => null()   !0 = nodelay, > 0 = delay
     real(DP), dimension(:), pointer :: ci           => null()   !compression index
     real(DP), dimension(:), pointer :: rci          => null()   !recompression index
-    real(DP), dimension(:), pointer :: gsc          => null()   !geostatic stress for a cell
-    real(DP), dimension(:), pointer :: esc          => null()   !effective stress for a cell
     real(DP), dimension(:), pointer :: es           => null()   !effective stress
     real(DP), dimension(:), pointer :: es0          => null()   !last effective stress
     real(DP), dimension(:), pointer :: pcs          => null()   !preconsolidation stress
@@ -99,6 +97,7 @@ module GwfCsubModule
     real(DP), pointer, dimension(:,:) :: auxvar     => null()   !auxiliary variable array
     real(DP), dimension(:), pointer :: storagee     => null()   !elastic storage
     real(DP), dimension(:), pointer :: storagei     => null()   !inelastic storage
+    !
     ! -- delay interbed arrays
     real(DP), dimension(:), pointer   :: dbdz       => null()   !delay bed dz
     real(DP), dimension(:,:), pointer :: dbz        => null()   !delay bed cell z
@@ -111,6 +110,7 @@ module GwfCsubModule
     real(DP), dimension(:,:), pointer :: dbes       => null()   !delay bed cell effective stress
     real(DP), dimension(:,:), pointer :: dbes0      => null()   !delay bed cell previous effective stress
     real(DP), dimension(:,:), pointer :: dbpcs      => null()   !delay bed cell preconsolidation stress
+    !
     ! -- delay interbed solution arrays
     real(DP), dimension(:), pointer :: dbal         => null()   !delay bed lower diagonal
     real(DP), dimension(:), pointer :: dbad         => null()   !delay bed diagonal
@@ -118,6 +118,7 @@ module GwfCsubModule
     real(DP), dimension(:), pointer :: dbrhs        => null()   !delay bed right hand side
     real(DP), dimension(:), pointer :: dbdh         => null()   !delay bed dh
     real(DP), dimension(:), pointer :: dbaw         => null()   !delay bed work vector
+    !
     ! -- observation data
     integer(I4B), pointer :: inobspkg               => null()   !unit number for obs package
     type(ObsType), pointer :: obs                   => null()   !observation package
@@ -145,9 +146,7 @@ module GwfCsubModule
     !
     ! -- stress methods
     procedure, private :: csub_sk_calc_znode
-    procedure, private :: csub_sk_calc_geostress
-    procedure, private :: csub_sk_calc_effstress
-    procedure, private :: csub_interbed_calc_effstress
+    procedure, private :: csub_sk_calc_stress
     !
     ! -- interbed methods
     procedure, private :: csub_interbed_set_initial
@@ -389,11 +388,10 @@ contains
           bot = this%dis%bot(n)
           top = this%dis%top(n)
           thk_node = top - bot
-          !es = this%es(i)
           es = this%sk_es(n)
           pcs = this%pcs(i)
-          !es0 = this%es0(i)
           es0 = this%sk_es0(n)
+          !
           ! -- calculate compaction
           if (this%igeocalc == 0) then
             h = hnew(n)
@@ -1109,10 +1107,7 @@ contains
     end do
     call mem_allocate(this%unodelist, iblen, 'unodelist', trim(this%origin))
     call mem_allocate(this%nodelist, iblen, 'nodelist', trim(this%origin))
-    call mem_allocate(this%gsc, this%dis%nodes, 'gsc', trim(this%origin))
-    call mem_allocate(this%esc, this%dis%nodes, 'esc', trim(this%origin))
-    call mem_allocate(this%es, iblen, 'es', trim(this%origin))
-    call mem_allocate(this%es0, iblen, 'es0', trim(this%origin))
+    call mem_allocate(this%sk_gs, this%dis%nodes, 'SK_GS', trim(this%origin))
     call mem_allocate(this%pcs, iblen, 'pcs', trim(this%origin))
     call mem_allocate(this%znode, iblen, 'znode', trim(this%origin))
     call mem_allocate(this%thick, iblen, 'thick', trim(this%origin))
@@ -1164,8 +1159,8 @@ contains
     !
     ! -- initialize variables that are not specified by user
     do n = 1, this%dis%nodes
-      this%gsc(n) = DZERO
-      this%esc(n) = DZERO
+      this%sk_gs(n) = DZERO
+      this%sk_es(n) = DZERO
       if (this%igeostressoff == 1) then
         this%sig0(n) = DZERO
       end if
@@ -1208,9 +1203,10 @@ contains
       call mem_deallocate(this%sk_theta)
       call mem_deallocate(this%sk_void)
       call mem_deallocate(this%sk_thick)
+      call mem_deallocate(this%sig0)
+      call mem_deallocate(this%sk_gs)
       call mem_deallocate(this%sk_es)
       call mem_deallocate(this%sk_es0)
-      call mem_deallocate(this%sig0)
       !
       ! -- interbed storage
       deallocate(this%boundname)
@@ -1218,10 +1214,6 @@ contains
       call mem_deallocate(this%auxvar)
       call mem_deallocate(this%ci)
       call mem_deallocate(this%rci)
-      call mem_deallocate(this%gsc)
-      call mem_deallocate(this%esc)
-      call mem_deallocate(this%es)
-      call mem_deallocate(this%es0)
       call mem_deallocate(this%pcs)
       call mem_deallocate(this%znode)
       call mem_deallocate(this%thick)
@@ -1256,8 +1248,6 @@ contains
       call mem_deallocate(this%dbrhs)
       call mem_deallocate(this%dbdh)
       call mem_deallocate(this%dbaw)
-      !
-      !
       !
       ! -- pointers to gwf variables
       nullify(this%gwfiss)
@@ -1679,9 +1669,9 @@ contains
   end subroutine csub_sk_calc_znode
 
 
-  subroutine csub_sk_calc_geostress(this, nodes, hnew)
+  subroutine csub_sk_calc_stress(this, nodes, hnew)
 ! ******************************************************************************
-! csub_sk_calc_geostress -- calculate the geostatic stress for every gwf node 
+! csub_sk_calc_stress -- calculate the geostatic stress for every gwf node 
 !                           in the model
 ! ******************************************************************************
 !
@@ -1704,6 +1694,7 @@ contains
     real(DP) :: es
     real(DP) :: hs
     real(DP) :: hwva
+    real(DP) :: sadd
     character(len=LINELENGTH) :: errmsg, msg1,msg2
 
 ! ------------------------------------------------------------------------------
@@ -1724,13 +1715,13 @@ contains
         else
             gs = ((top-hcell) * this%sgm(n)) + ((hcell-bot) * this%sgs(n))
         end if
-        this%gsc(n) = gs
+        this%sk_gs(n) = gs
       end do
       !
       ! -- calculate the area weighted geostatic stress above cell
       !   *** this needs to be checked for a complicated discretization ***
       do n = 1, this%dis%nodes
-        gs = this%gsc(n)
+        gs = this%sk_gs(n)
         ! -- Go through the connecting cells
         do ii = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
           ! -- Set the m cell number
@@ -1746,7 +1737,7 @@ contains
               area_conn = this%dis%get_area(m)
               hwva = this%dis%con%hwva(iis)
               va_scale = this%dis%con%hwva(iis) / this%dis%get_area(m)
-              gs_conn = this%gsc(m)
+              gs_conn = this%sk_gs(m)
               !call this%dis%noder_to_string(n,msg1)
               !call this%dis%noder_to_string(m,msg2)
               !write(*,*) n, trim(msg1), gs, m, trim(msg2), gs_conn
@@ -1754,8 +1745,9 @@ contains
           end if
         end do
         !write (*,*) n, gs
-        this%gsc(n) = gs
+        this%sk_gs(n) = gs
       end do
+      !
       ! -- calculate effective stress for a cell
       do n = 1, this%dis%nodes
         bot = this%dis%bot(n)
@@ -1764,124 +1756,19 @@ contains
         if (hcell > bot) then
           hs = hcell - bot
         end if
-        es = this%gsc(n) - hs
-        this%esc(n) = es
+        es = this%sk_gs(n) - hs
+        sadd = DZERO
+        if (this%igeostressoff == 1) then
+          sadd = this%sig0(n)
+        end if
+        this%sk_es(n) = es + sadd
       end do
    end if
    !
    ! -- return
    return
 
-  end subroutine csub_sk_calc_geostress
-
-
-  subroutine csub_sk_calc_effstress(this, nodes, hnew)
-! ******************************************************************************
-! csub_sk_calc_effstress -- calculate the effective stress for every gwf node
-!                           in the model  
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    implicit none
-    ! -- dummy
-    class(GwfCsubType) :: this
-    integer(I4B), intent(in) :: nodes
-    real(DP), dimension(nodes), intent(in) :: hnew
-    ! -- local variables
-    integer(I4B) :: n
-    real(DP) :: hcell
-    real(DP) :: es
-    real(DP) :: bot
-    real(DP) :: sadd
-    character(len=LINELENGTH) :: errmsg
-    character(len=*), parameter :: fmtneg = &
-        "('NEGATIVE EFFECTIVE STRESS FOR NODE (',i0,') GEOSTATIC (',f10.4,'), " // &
-        "XNEW (',f10.4,'), BOTM (',f10.4,')')"
-! ------------------------------------------------------------------------------
-
-    do n = 1, nodes
-      hcell = hnew(n)
-      if (this%igeocalc == 0) then
-        es = hcell
-      else
-        bot = this%dis%bot(n)
-        if (hcell < bot) then
-          hcell = bot
-        end if
-        es = this%gsc(n) - hcell + bot
-        !if (es < DZERO) then
-        !  write(errmsg, fmt=fmtneg) n, this%gsc(n), hcell, bot
-        !  call store_error(errmsg)
-        !end if
-      end if
-      sadd = DZERO
-      if (this%igeostressoff == 1) then
-        sadd = this%sig0(n)
-      end if
-      this%sk_es(n) = es + sadd
-    end do
-
-    if (count_errors() > 0) then
-      call store_error_unit(this%inunit)
-      call ustop()
-    end if
-  end subroutine csub_sk_calc_effstress
-
-
-  subroutine csub_interbed_calc_effstress(this, nodes, hnew)
-! ******************************************************************************
-! csub_interbed_calc_effstress -- calculate the effective stress for gwf nodes 
-!                                 with interbeds
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-!    use SimModule, only: ustop, store_error, count_errors, store_error_unit
-    implicit none
-    class(GwfCsubType) :: this
-    integer(I4B), intent(in) :: nodes
-    real(DP), dimension(nodes), intent(in) :: hnew
-    ! local
-    integer(I4B) :: i, n, ii, m
-    real(DP) :: hcell
-    real(DP) :: es
-    real(DP) :: bot
-    real(DP) :: sadd
-    character(len=LINELENGTH) :: errmsg
-    character(len=*), parameter :: fmtneg = &
-        "('NEGATIVE EFFECTIVE STRESS FOR NODE (',i0,') GEOSTATIC (',f10.4,'), " // &
-        "XNEW (',f10.4,'), BOTM (',f10.4,')')"
-! ------------------------------------------------------------------------------
-
-    do i = 1, this%ninterbeds
-      n = this%nodelist(i)
-      hcell = hnew(n)
-      if (this%igeocalc == 0) then
-        es = hcell
-      else
-        bot = this%dis%bot(n)
-        if (hcell < bot) then
-          hcell = bot
-        end if
-        es = this%gsc(n) - hcell + bot
-        !if (es < DZERO) then
-        !  write(errmsg, fmt=fmtneg) n, this%gsc(n), hcell, bot
-        !  call store_error(errmsg)
-        !end if
-      end if
-      sadd = DZERO
-      if (this%igeostressoff == 1) then
-        sadd = this%sig0(n)
-      end if
-      this%es(i) = es + sadd
-    end do
-
-    if (count_errors() > 0) then
-      call store_error_unit(this%inunit)
-      call ustop()
-    end if
-  end subroutine csub_interbed_calc_effstress
+  end subroutine csub_sk_calc_stress
 
 
   subroutine csub_nodelay_calc_gwf(this, i, hcell, rho1, rho2, rhs, argtled)
@@ -1932,7 +1819,6 @@ contains
     if (this%igeocalc == 0) then
       f = DONE
     else
-!      es0 = this%es0(i)
       es0 = this%sk_es0(n)
       denom = (DONE + this%void(i)) * (es0 - (this%znode(i) - bot)) * &
               (this%sgs(n) - DONE)
@@ -1951,24 +1837,14 @@ contains
       if (hcell < this%pcs(i)) then
         rho2 = this%ci(i) * sto_fac
       end if
-!      rhs = -(rho2 * this%pcs(i) + rho1 * (this%es0(i) - this%pcs(i)))
       rhs = -(rho2 * this%pcs(i) + rho1 * (this%sk_es0(n) - this%pcs(i)))
     else
-!      if (this%es(i) > this%pcs(i)) then
       if (this%sk_es(n) > this%pcs(i)) then
           rho2 = this%ci(i) * sto_fac
       end if
-      !rhs = -rho2 * (this%gsc(n) + bot) + (this%pcs(i) * (rho2 - rho1)) + &
-      !       (rho1 * this%es0(i))
-      rhs = -rho2 * (this%gsc(n) + bot) + (this%pcs(i) * (rho2 - rho1)) + &
+      rhs = -rho2 * (this%sk_gs(n) + bot) + (this%pcs(i) * (rho2 - rho1)) + &
              (rho1 * this%sk_es0(n))
     end if
-    !
-    !
-    !call this%dis%noder_to_string(n,msg)
-    !write(*,*) n, trim(msg), this%gsc(n), this%es(n), sto_fac,           &
-    !           rho1, rho2, rhs
-    !write(*,*) n,trim(msg), rho1, rho2, rhs
     !
     ! -- return
     return
@@ -2154,7 +2030,6 @@ contains
           end if
         end if
         if (.not. this%first_time) then
-          !es = this%es(n)
           es = this%sk_es(node)
           pcs = this%pcs(n)
           if (this%igeocalc == 0) then
@@ -2166,13 +2041,6 @@ contains
             if (es > pcs) then
               this%pcs(n) = es
             end if
-          end if
-          ! -- update previous effective stress
-          if (this%igeocalc == 0) then
-            this%es0(n) = hnew(node)
-          else
-            !this%es0(n) = this%es(n)
-            this%es0(n) = this%sk_es(node)
           end if
         end if
       !
@@ -2248,10 +2116,7 @@ contains
     !
     ! -- update geostatic load calculation
     call this%csub_sk_calc_znode(nodes, hnew)
-    call this%csub_sk_calc_geostress(nodes, hnew)
-    call this%csub_sk_calc_effstress(nodes, hnew)
-    call this%csub_interbed_calc_effstress(nodes, hnew)
-
+    call this%csub_sk_calc_stress(nodes, hnew)
     !
     ! -- coarse-grained materials
     do n = 1, nodes
@@ -2263,19 +2128,14 @@ contains
       n = this%nodelist(i)
       pcs = this%pcs(i)
       if (this%igeocalc == 0) then
-        !if (this%es(i) < pcs) then
-        !  pcs = this%es(i)
         if (this%sk_es(n) < pcs) then
           pcs = this%sk_es(n)
         end if
       else
         ! -- transfer initial preconsolidation stress (and apply offset if needed)
         if (this%ibedstressoff == 1) then
-            !pcs = this%es(i) + this%pcs(i)
             pcs = this%sk_es(n) + this%pcs(i)
         else
-          !if (pcs < this%es(i)) then
-          !  pcs = this%es(i)
           if (pcs < this%sk_es(n)) then
             pcs = this%sk_es(n)
           end if
@@ -2290,7 +2150,6 @@ contains
           else
             this%dbpcs(j, idelay) = this%pcs(i)
           end if
-          !this%dbes0(j, idelay) = this%es(i)
           this%dbes0(j, idelay) = this%sk_es(n)
         end do            
       end if
@@ -2301,7 +2160,6 @@ contains
         if (this%igeocalc == 0) then
           fact = DONE
         else
-          !fact = this%es(i) - (this%znode(i) - bot) * (this%sgs(n) - DONE)
           fact = this%sk_es(n) - (this%znode(i) - bot) * (this%sgs(n) - DONE)
           fact = fact *  (DONE + this%void(i))
         end if
@@ -2310,8 +2168,6 @@ contains
       end if
       this%ci(i) = this%ci(i) * fact
       this%rci(i) = this%rci(i) * fact
-      !this%es0(i) = this%es(i)
-      this%es0(i) = this%sk_es(n)
     end do
     this%first_time = .false.
     !
@@ -2353,11 +2209,9 @@ contains
     !
     ! -- update geostatic load calculation
     call this%csub_sk_calc_znode(nodes, hnew)
-    call this%csub_sk_calc_geostress(nodes, hnew)
-    call this%csub_sk_calc_effstress(nodes, hnew)
-    call this%csub_interbed_calc_effstress(nodes, hnew)
+    call this%csub_sk_calc_stress(nodes, hnew)
     !
-    ! -- 
+    ! -- formulate csub terms
     if (this%gwfiss == 0) then
       tled = DONE / delt
       !
@@ -2701,7 +2555,7 @@ contains
     n = this%nodelist(ib)
     idelay = this%idelay(ib)
     node = this%nodelist(ib)
-    sigma = this%gsc(node)
+    sigma = this%sk_gs(node)
     topaq = this%dis%top(node)
     botaq = this%dis%bot(node)
     dzhalf = DHALF * this%dbdz(idelay)
@@ -3275,9 +3129,9 @@ contains
             case ('THICKNESS')
               v = this%thick(n)
             case ('GSTRESS-CELL')
-              v = this%gsc(n)
+              v = this%sk_gs(n)
             case ('ESTRESS-CELL')
-              v = this%esc(n)
+              v = this%sk_es(n)
             case ('PRECONSTRESS')
                if (n > this%ndelaycells) then
                 r = real(n, DP) / real(this%ndelaycells, DP)
