@@ -179,7 +179,7 @@ def build_models():
                                       ndelaycells=ndelaycells[idx],
                                       delay_full_cell=full_cell[idx],
                                       constant_nodelay_thickness=True,
-                                      ninterbeds=1, ske_cr=sk_ske,
+                                      ninterbeds=1, ske_cr=0.,
                                       packagedata=sub6)
 
         # output control

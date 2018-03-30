@@ -273,7 +273,7 @@ def build_models():
                                        compression_indices=True,
                                        geo_stress_offset=True,
                                        ninterbeds=len(swt6),
-                                       sgs=sgs, sgm=sgm, ske_cr=0.01,
+                                       sgs=sgs, sgm=sgm, ske_cr=0.00,
                                        packagedata=swt6,
                                        sig0={0: [0., 0., 0., 0.]})
 

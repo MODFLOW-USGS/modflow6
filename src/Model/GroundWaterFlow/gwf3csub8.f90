@@ -3,7 +3,7 @@ module GwfCsubModule
   use ConstantsModule, only: DPREC, DZERO, DEM6, DHALF, DONE, DTWO, DTHREE,     &
                              DGRAVITY, DTEN, LENFTYPE, LENPACKAGENAME,          &
                              LINELENGTH, LENBOUNDNAME, NAMEDBOUNDFLAG,          &
-                             LENBUDTXT, LENAUXNAME
+                             LENBUDTXT, LENAUXNAME, LENORIGIN
   use SmoothingModule,        only: sQuadraticSaturation,                      &
                                     sQuadraticSaturationDerivative
   use NumericalPackageModule, only: NumericalPackageType
@@ -37,7 +37,7 @@ module GwfCsubModule
     character(len=LENBOUNDNAME), pointer, dimension(:)   :: boundname => null() !vector of boundnames
     character(len=LENAUXNAME), allocatable, dimension(:) :: auxname             !name for each auxiliary variable
     character(len=500) :: listlabel   = ''                                      !title of table written for RP
-    character(len=LENPACKAGENAME) :: stoname
+    character(len=LENORIGIN) :: stoname
     integer(I4B), pointer :: istounit               => null()
     integer(I4B), pointer :: iconstantndb           => null()
     integer(I4B), pointer :: istoragec              => null()
@@ -1123,7 +1123,7 @@ contains
     implicit none
     class(GwfCsubType),   intent(inout) :: this
     ! -- local variables
-    character(len=LENPACKAGENAME) :: stoname
+    character(len=LENORIGIN) :: stoname
     integer(I4B) :: j
     integer(I4B) :: n
     integer(I4B) :: iblen
