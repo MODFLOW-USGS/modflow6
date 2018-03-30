@@ -1,9 +1,11 @@
 module GwfCsubModule
+  use KindModule, only: I4B, DP
   use ConstantsModule, only: DPREC, DZERO, DEM6, DHALF, DONE, DTWO, DTHREE,     &
                              DGRAVITY, DTEN, LENFTYPE, LENPACKAGENAME,          &
                              LINELENGTH, LENBOUNDNAME, NAMEDBOUNDFLAG,          &
                              LENBUDTXT, LENAUXNAME
-  use KindModule, only: I4B, DP
+  use SmoothingModule,        only: sQuadraticSaturation,                      &
+                                    sQuadraticSaturationDerivative
   use NumericalPackageModule, only: NumericalPackageType
   use ObserveModule,        only: ObserveType
   use ObsModule,            only: ObsType, obs_cr
@@ -76,6 +78,8 @@ module GwfCsubModule
     real(DP), dimension(:), pointer :: sk_gs        => null()   !geostatic stress for a cell
     real(DP), dimension(:), pointer :: sk_es        => null()   !skeletal (aquifer) effective stress
     real(DP), dimension(:), pointer :: sk_es0       => null()   !skeletal (aquifer) effective stress for the previous time step
+    real(DP), dimension(:), pointer :: sk_comp      => null()   !skeletal (aquifer) compaction
+    real(DP), dimension(:), pointer :: sk_stor      => null()   !skeletal (aquifer) storage
     real(DP), dimension(:), pointer :: sk_znode     => null()   !elevation of node center
     !
     ! -- interbed variables
@@ -146,6 +150,10 @@ module GwfCsubModule
     ! -- stress methods
     procedure, private :: csub_sk_calc_znode
     procedure, private :: csub_sk_calc_stress
+    !
+    ! -- coarse-grained skeletal methods
+    procedure, private :: csub_calc_sk
+    procedure, private :: csub_sk_calc_sske
     !
     ! -- interbed methods
     procedure, private :: csub_interbed_set_initial
@@ -347,6 +355,8 @@ contains
     real(DP) :: qaqrhs
     real(DP) :: void
     real(DP) :: theta
+    real(DP) :: rateskin
+    real(DP) :: rateskout
     real(DP) :: rateibein
     real(DP) :: rateibeout
     real(DP) :: rateibiin
@@ -364,22 +374,64 @@ contains
     ! -- Suppress saving of simulated values; they
     !    will be saved at end of this procedure.
     iprobslocal = 0
-
     ratein = DZERO
     rateout= DZERO
-
-    tled = DONE
-    tledm = DONE / DELT
     !
-    ! -- skeletal storage
-    
+    ! -- coarse-grained skeletal storage
+    rateskin = DZERO
+    rateskout= DZERO
+    tled = DONE / DELT
+    do n = 1, this%dis%nodes
+      area = this%dis%get_area(n)
+      rrate = DZERO
+      if (this%gwfiss == 0) then
+        if (this%ibound(n) > 0) then
+          !
+          ! -- calculate coarse-grained skeletal storage terms
+          call this%csub_calc_sk(n, tled, area, hnew(n), hold(n), hcof, rhs)
+          rrate = hcof * hnew(n) - rhs
+          !
+          ! -- budget terms
+          if (rrate < DZERO) then
+            rateskout = rateskout - rrate
+          else
+            rateskin = rateskin + rrate
+          end if
+        end if
+      end if
+      !
+      ! -- update coarse-grained skeletal storage variable
+      this%sk_stor(n) = rrate
+      !
+      ! -- update states if required
+      if (isuppress_output == 0) then
+        !
+        ! -- update compaction
+        comp = rrate * DELT / area
+        this%sk_comp(n) = this%sk_comp(n) + comp
+        !
+        ! - calculate strain and change in interbed void ratio and thickness
+        if (this%iconstantndb == 0) then
+          strain = DZERO
+          void = this%csub_calc_void(this%sk_theta(n))
+          thick = this%sk_thick(n)
+          if (thick > DZERO) strain = -comp / thick
+          void = strain + void * (strain + DONE)
+          theta = this%csub_calc_theta(void)
+          this%sk_theta(n) = theta
+          this%sk_thick(n) = thick * (strain + DONE)
+        end if
+      end if
+    end do
     !
     ! -- interbed storage
     rateibein = DZERO
     rateibeout = DZERO
     rateibiin = DZERO
     rateibiout = DZERO
-    
+
+    tled = DONE
+    tledm = DONE / DELT
     do i = 1, this%ninterbeds
       if (this%gwfiss == 0) then
         n = this%nodelist(i)
@@ -426,20 +478,26 @@ contains
           this%storagee(i) = stoe * tledm
           this%storagei(i) = stoi * tledm
           !
-          ! -- update compaction and total compaction
+          ! -- update compaction
           this%comp(i) = comp
-          this%totalcomp(i) = this%totalcomp(i) + comp
           !
-          ! - calculate strain and change in interbed void ratio and thickness
-          strain = DZERO
-          void = this%csub_calc_void(this%theta(i))
-          thick = this%thick(i)
-          if (thick > DZERO) strain = -comp / thick
-          if (this%iconstantndb == 0) then
-            void = strain + void * (strain + DONE)
-            theta = this%csub_calc_theta(void)
-            this%theta(i) = theta
-            this%thick(i) = thick * (strain + DONE)
+          ! -- update states if required
+          if (isuppress_output == 0) then
+            !
+            ! -- update total compaction
+            this%totalcomp(i) = this%totalcomp(i) + comp
+            !
+            ! - calculate strain and change in interbed void ratio and thickness
+            strain = DZERO
+            void = this%csub_calc_void(this%theta(i))
+            thick = this%thick(i)
+            if (thick > DZERO) strain = -comp / thick
+            if (this%iconstantndb == 0) then
+              void = strain + void * (strain + DONE)
+              theta = this%csub_calc_theta(void)
+              this%theta(i) = theta
+              this%thick(i) = thick * (strain + DONE)
+            end if
           end if
           !
           ! -- delay interbeds
@@ -451,8 +509,12 @@ contains
           this%storagee(i) = stoe * area * this%rnb(i) * tledm
           this%storagei(i) = stoi * area * this%rnb(i) * tledm
           !
-          ! -- calculate sum of compaction in delay interbed
-          call this%csub_delay_calc_comp(i)
+          ! -- update states if required
+          if (isuppress_output == 0) then
+            !
+            ! -- calculate sum of compaction in delay interbed
+            call this%csub_delay_calc_comp(i)
+          end if
         end if
         this%gwflow(i) = delt_sto
         !
@@ -476,12 +538,18 @@ contains
     ! -- Add contributions to model budget 
     !
     ! -- interbed elastic storage
-    call model_budget%addentry(rateibein, rateibeout, delt, budtxt(2),        &
+    call model_budget%addentry(rateskin, rateskout, delt, budtxt(1),            &
                                 isuppress_output, '            CSUB')
-    !
-    ! -- interbed elastic storage
-    call model_budget%addentry(rateibiin, rateibiout, delt, budtxt(3),        &
-                                isuppress_output, '            CSUB')
+    if (this%ninterbeds > 0) then
+      !
+      ! -- interbed elastic storage
+      call model_budget%addentry(rateibein, rateibeout, delt, budtxt(2),        &
+                                  isuppress_output, '            CSUB')
+      !
+      ! -- interbed elastic storage
+      call model_budget%addentry(rateibiin, rateibiout, delt, budtxt(3),        &
+                                  isuppress_output, '            CSUB')
+    end if
     !
     ! -- For continuous observations, save simulated values.
     if (this%obs%npakobs > 0) then
@@ -531,11 +599,11 @@ contains
     if (ibinun /= 0) then
       iprint = 0
       dinact = DZERO
-      !!
-      !! -- storage(ss)
-      !call this%dis%record_array(this%strgss, this%iout, iprint, -ibinun,    &
-      !                           budtxt(1), cdatafmp, nvaluesp,              &
-      !                           nwidthp, editdesc, dinact)
+      !
+      ! -- skeletal storage (sske)
+      call this%dis%record_array(this%sk_stor, this%iout, iprint, -ibinun,    &
+                                 budtxt(1), cdatafmp, nvaluesp,               &
+                                 nwidthp, editdesc, dinact)
       !!
       !! -- storage(sy)
       !if (this%iusesy == 1) then
@@ -772,8 +840,8 @@ contains
         this%boundname(itmp) = bndName
       end do
       write(this%iout,'(1x,a)')'END OF '//trim(adjustl(this%name))//' PACKAGEDATA'
-    else
-      call store_error('ERROR.  REQUIRED PACKAGEDATA BLOCK NOT FOUND.')
+    !else
+    !  call store_error('ERROR.  REQUIRED PACKAGEDATA BLOCK NOT FOUND.')
     endif
     !
     ! -- Check to make sure that every reach is specified and that no reach
@@ -853,14 +921,7 @@ contains
         this%dbaw(n) = DZERO
       end do
     end if
-
-    !!
-    !! -- terminate if errors encountered in reach block
-    !if (count_errors() > 0) then
-    !  call this%parser%StoreErrorUnit()
-    !  call ustop()
-    !end if
-
+    !
     ! TODO - check the total frac for each nbound node to make sure < 1.0
     !
     ! -- return
@@ -1083,6 +1144,8 @@ contains
     call mem_allocate(this%sk_thick, this%dis%nodes, 'sk_thick', trim(this%origin))
     call mem_allocate(this%sk_es, this%dis%nodes, 'sk_es', trim(this%origin))
     call mem_allocate(this%sk_es0, this%dis%nodes, 'sk_es0', trim(this%origin))
+    call mem_allocate(this%sk_comp, this%dis%nodes, 'sk_comp', trim(this%origin))
+    call mem_allocate(this%sk_stor, this%dis%nodes, 'sk_stor', trim(this%origin))
     if (this%igeostressoff == 1) then
       call mem_allocate(this%sig0, this%dis%nodes, 'sig0', trim(this%origin))
     else
@@ -1157,6 +1220,7 @@ contains
     do n = 1, this%dis%nodes
       this%sk_gs(n) = DZERO
       this%sk_es(n) = DZERO
+      this%sk_comp(n) = DZERO
       if (this%igeostressoff == 1) then
         this%sig0(n) = DZERO
       end if
@@ -1202,6 +1266,8 @@ contains
       call mem_deallocate(this%sk_gs)
       call mem_deallocate(this%sk_es)
       call mem_deallocate(this%sk_es0)
+      call mem_deallocate(this%sk_comp)
+      call mem_deallocate(this%sk_stor)
       !
       ! -- interbed storage
       deallocate(this%boundname)
@@ -2221,6 +2287,13 @@ contains
     integer(I4B) :: idiag
     real(DP) :: tled
     real(DP) :: area
+    real(DP) :: top
+    real(DP) :: bot
+    real(DP) :: tthk
+    real(DP) :: snold
+    real(DP) :: snnew
+    real(DP) :: sske
+    real(DP) :: rho1
     real(DP) :: hcell
     real(DP) :: hcof
     real(DP) :: rhsterm
@@ -2234,8 +2307,19 @@ contains
     if (this%gwfiss == 0) then
       tled = DONE / delt
       !
-      ! -- skeletal storage
-    
+      ! -- coarse-grained skeletal storage
+      do n = 1, this%dis%nodes
+        idiag = this%dis%con%ia(n)
+        area = this%dis%get_area(n)
+        if (this%ibound(n) < 1) cycle
+        !
+        ! -- calculate coarse-grained skeletal storage terms
+        call this%csub_calc_sk(n, tled, area, hnew(n), hold(n), hcof, rhsterm)
+        !
+        ! -- add storage terms to amat and rhs for skeletal stoeage
+        amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
+        rhs(n) = rhs(n) + rhsterm
+      end do
       !
       ! -- interbed storage
       if (this%ninterbeds /= 0) then
@@ -2254,6 +2338,69 @@ contains
     ! -- return
     return
   end subroutine csub_fc
+  
+  subroutine csub_calc_sk(this, n, tled, area, hcell, hcellold, hcof, rhs)
+! ******************************************************************************
+! csub_calc_sk -- Formulate the HCOF and RHS skeletal storage terms
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    implicit none
+    class(GwfCsubType) :: this
+    integer(I4B),intent(in) :: n
+    real(DP), intent(in) :: tled
+    real(DP), intent(in) :: area
+    real(DP), intent(in) :: hcell
+    real(DP), intent(in) :: hcellold
+    real(DP), intent(inout) :: hcof
+    real(DP), intent(inout) :: rhs
+    ! locals
+    real(DP) :: top
+    real(DP) :: bot
+    real(DP) :: tthk
+    real(DP) :: snold
+    real(DP) :: snnew
+    real(DP) :: sske
+    real(DP) :: rho1
+    real(DP) :: f
+! ------------------------------------------------------------------------------
+!
+! -- initialize variables
+    rhs = DZERO
+    hcof = DZERO
+    !
+    ! -- aquifer elevations and thickness
+    top = this%dis%top(n)
+    bot = this%dis%bot(n)
+    tthk = this%sk_thick(n)
+    ! -- aquifer saturation
+    if (this%stoiconv(n) /= 0) then
+      snold = sQuadraticSaturation(top, bot, hcellold, this%satomega)
+      snnew = sQuadraticSaturation(top, bot, hcell, this%satomega)
+    else
+      snold = DONE
+      snnew = DONE
+    end if
+    !
+    ! -- storage coefficients
+    call this%csub_sk_calc_sske(n, sske)
+    rho1 = sske * area * tthk * tled
+    !
+    ! -- calculate hcof term
+    hcof = -rho1 * snnew
+    !
+    ! -- calculate rhs term
+    if (this%igeocalc == 0) then
+      rhs = -rho1 * snold * hcellold
+    else
+      rhs = rho1 * snold * this%sk_es0(n) -                                     &
+            rho1 * snnew * (this%sk_gs(n) + this%sk_znode(n)) 
+    end if
+    !
+    ! -- return
+    return
+  end subroutine  csub_calc_sk
   
   subroutine csub_calc_interbeds(this, i, n, tled, area, hcell, hcof, rhs)
 ! ******************************************************************************
@@ -3094,6 +3241,11 @@ contains
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
+    !    for compaction-cell observation type.
+    call this%obs%StoreObsType('compaction-cell', .false., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
     !    for effective-stress-cell observation type.
     call this%obs%StoreObsType('preconstress-cell', .false., indx)
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
@@ -3155,6 +3307,8 @@ contains
               v = this%sk_gs(n)
             case ('ESTRESS-CELL')
               v = this%sk_es(n)
+            case ('COMPACTION-CELL')
+              v = this%sk_comp(n)
             case ('PRECONSTRESS')
                if (n > this%ndelaycells) then
                 r = real(n, DP) / real(this%ndelaycells, DP)
@@ -3236,7 +3390,8 @@ contains
           endif
         enddo
       else if (obsrv%ObsTypeId == 'GSTRESS-CELL' .or. &
-               obsrv%ObsTypeId == 'ESTRESS-CELL') then
+               obsrv%ObsTypeId == 'ESTRESS-CELL' .or. &
+               obsrv%ObsTypeId == 'COMPACTION-CELL') then
         jfound = .true.
         obsrv%BndFound = .true.
         obsrv%CurrentTimeStepEndValue = DZERO
