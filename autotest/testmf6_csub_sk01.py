@@ -41,7 +41,8 @@ replace_exe = None
 htol = [None, None, None]
 dtol = 1e-3
 
-bud_lst = ['CSUB-AQELASTIC_IN', 'CSUB-AQELASTIC_OUT']
+bud_lst = ['CSUB-AQELASTIC_IN', 'CSUB-AQELASTIC_OUT',
+           'CSUB-WATERCOMP_IN', 'CSUB-WATERCOMP_OUT']
 
 
 # SUB package problem 3
@@ -58,7 +59,7 @@ def build_models():
     zthick = [top - botm[0],
               botm[0] - botm[1],
               botm[1] - botm[2]]
-    strt = 0.
+    strt = 100.
     hnoflo = 1e30
     hdry = -1e30
 
@@ -77,10 +78,6 @@ def build_models():
     # set rest of npf variables
     laytyp = [1, 0, 0]
     sy = [0.1, 0., 0.]
-    S = []
-    for k in range(nlay):
-        ss = 0.
-        S.append(ss)
 
     nouter, ninner = 500, 300
     hclose, rclose, relax = 1e-9, 1e-6, 1.
@@ -131,6 +128,7 @@ def build_models():
     omega = 1.0
     void = 0.82
     theta = void / (1. + void)
+    sw = 4.65120000e-10 * 9806.65000000 * theta
 
     # no delay bed data
     nndb = 3
@@ -198,7 +196,7 @@ def build_models():
                                       k33=vka)
         # storage
         sto = flopy.mf6.ModflowGwfsto(gwf, save_flows=False, iconvert=laytyp,
-                                      ss=S, sy=sy,
+                                      ss=0., sy=sy,
                                       storagecoefficient=True,
                                       steady_state={0: True},
                                       transient={1: True})
@@ -261,9 +259,9 @@ def build_models():
         bas = flopy.modflow.ModflowBas(mc, ibound=ib, strt=strt, hnoflo=hnoflo,
                                        stoper=0.01)
         lpf = flopy.modflow.ModflowLpf(mc, laytyp=laytyp, hk=hk, vka=vka,
-                                       ss=S, sy=sy,
+                                       ss=sw, sy=sy,
                                        constantcv=constantcv[idx],
-                                       storagecoefficient=True,
+                                       storagecoefficient=False,
                                        hdry=hdry)
         chd = flopy.modflow.ModflowChd(mc, stress_period_data=cd)
         rch = flopy.modflow.ModflowRch(mc, rech=rech)
@@ -335,7 +333,7 @@ def eval_comp(sim):
     nbud = d0.shape[0]
 
     # get results from cbc file
-    cbc_bud = ['CSUB-AQELASTIC']
+    cbc_bud = ['CSUB-AQELASTIC', 'CSUB-WATERCOMP']
     d = np.recarray(nbud, dtype=dtype)
     for key in bud_lst:
         d[key] = 0.
@@ -370,6 +368,26 @@ def eval_comp(sim):
         diff[:, idx] = d0[key] - d[key]
     diffmax = np.abs(diff).max()
     msg = 'maximum absolute total-budget difference ({}) '.format(diffmax)
+
+    # write summary
+    fpth = os.path.join(sim.simpath,
+                        '{}.bud.cmp.out'.format(os.path.basename(sim.name)))
+    f = open(fpth, 'w')
+    for i in range(diff.shape[0]):
+        if i == 0:
+            line = '{:>10s}'.format('TIME')
+            for idx, key in enumerate(bud_lst):
+                line += '{:>25s}'.format(key+'_LST')
+                line += '{:>25s}'.format(key+'_CBC')
+                line += '{:>25s}'.format(key + '_DIF')
+            f.write(line + '\n')
+        line = '{:10g}'.format(d['totim'][i])
+        for idx, key in enumerate(bud_lst):
+            line += '{:25g}'.format(d0[key][i])
+            line += '{:25g}'.format(d[key][i])
+            line += '{:25g}'.format(diff[i, idx])
+        f.write(line + '\n')
+    f.close()
 
     if diffmax > dtol:
         sim.success = False

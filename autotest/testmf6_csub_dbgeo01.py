@@ -152,7 +152,7 @@ def build_models():
                                        obs_filerecord=opth,
                                        ninterbeds=1,
                                        sgs=sgs, sgm=sgm, packagedata=sub6,
-                                       ske_cr=0.)
+                                       beta=0., ske_cr=0.)
         orecarray = {}
         orecarray['ibc_obs.csv'] = [('tcomp', 'total-compaction', (0, 0, 1)),
                                     ('gs', 'gstress-cell', (0, 0, 1)),

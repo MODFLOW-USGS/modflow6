@@ -395,7 +395,8 @@ def build_models():
                                        constant_nodelay_thickness=True,
                                        ninterbeds=maxibc,
                                        obs_filerecord=opth,
-                                       ske_cr=0., sgs=tsgs, sgm=tsgm,
+                                       beta=0., ske_cr=0.,
+                                       sgs=tsgs, sgm=tsgm,
                                        packagedata=sub6)
         orecarray = {}
         tcstr = 'total-compaction'

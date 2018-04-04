@@ -160,7 +160,8 @@ def build_models():
                                        delay_full_cell=fullcell[idx],
                                        obs_filerecord=opth,
                                        ninterbeds=1,
-                                       ske_cr=0.0, packagedata=sub6)
+                                       beta=0., ske_cr=0.0,
+                                       packagedata=sub6)
         orecarray = {}
         orecarray['ibc_obs.csv'] = [('tcomp', 'total-compaction', (0, 0, 1))]
         ibc_obs_package = flopy.mf6.ModflowUtlobs(gwf,

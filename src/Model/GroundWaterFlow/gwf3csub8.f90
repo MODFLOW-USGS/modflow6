@@ -69,6 +69,7 @@ module GwfCsubModule
     integer, dimension(:), pointer :: nodelist      => null()   !reduced node that the interbed is attached to
     integer, dimension(:), pointer :: unodelist     => null()   !user node that the interbed is attached to
 
+    real(DP), dimension(:), pointer :: sk_znode     => null()   !elevation of node center
     real(DP), dimension(:), pointer :: sgm          => null()   !specific gravity moist sediments
     real(DP), dimension(:), pointer :: sgs          => null()   !specific gravity saturated sediments
     real(DP), dimension(:), pointer :: sig0         => null()   !geostatic offset
@@ -80,7 +81,7 @@ module GwfCsubModule
     real(DP), dimension(:), pointer :: sk_es0       => null()   !skeletal (aquifer) effective stress for the previous time step
     real(DP), dimension(:), pointer :: sk_comp      => null()   !skeletal (aquifer) compaction
     real(DP), dimension(:), pointer :: sk_stor      => null()   !skeletal (aquifer) storage
-    real(DP), dimension(:), pointer :: sk_znode     => null()   !elevation of node center
+    real(DP), dimension(:), pointer :: sk_wcstor    => null()   !skeletal (aquifer) water compressibility storage
     !
     ! -- interbed variables
     integer(I4B), dimension(:), pointer :: idelay   => null()   !0 = nodelay, > 0 = delay
@@ -154,10 +155,12 @@ module GwfCsubModule
     ! -- coarse-grained skeletal methods
     procedure, private :: csub_calc_sk
     procedure, private :: csub_sk_calc_sske
+    procedure, private :: csub_sk_calc_wcomp
     !
     ! -- interbed methods
     procedure, private :: csub_interbed_set_initial
-    procedure, private :: csub_calc_interbeds
+    procedure, private :: csub_interbed_calc_terms
+    procedure, private :: csub_interbed_calc_wcomp
     !
     ! -- no-delay interbed methods
     procedure, private :: csub_nodelay_calc_gwf
@@ -339,8 +342,16 @@ contains
     real(DP) :: rho2
     real(DP) :: tled
     real(DP) :: tledm
-    real(DP) :: delt_sto, es0, strain
-    real(DP) :: top, bot, thk_node, thick, rrate, ratein, rateout
+    real(DP) :: delt_sto
+    real(DP) :: es0
+    real(DP) :: strain
+    real(DP) :: top
+    real(DP) :: bot
+    real(DP) :: thk_node
+    real(DP) :: thick
+    real(DP) :: rrate
+    real(DP) :: ratein
+    real(DP) :: rateout
     real(DP) :: comp
     real(DP) :: area
     real(DP) :: h
@@ -361,10 +372,9 @@ contains
     real(DP) :: rateibeout
     real(DP) :: rateibiin
     real(DP) :: rateibiout
-    
-    
-    !real(DP) :: ratin, ratout, rrate
-    !integer(I4B) :: ibdlbl, naux
+    real(DP) :: rratewc
+    real(DP) :: ratewcin
+    real(DP) :: ratewcout
     integer(I4B) :: ibc
     ! -- for observations
     integer(I4B) :: iprobslocal
@@ -376,6 +386,8 @@ contains
     iprobslocal = 0
     ratein = DZERO
     rateout= DZERO
+    ratewcin = DZERO
+    ratewcout = DZERO
     !
     ! -- coarse-grained skeletal storage
     rateskin = DZERO
@@ -384,6 +396,7 @@ contains
     do n = 1, this%dis%nodes
       area = this%dis%get_area(n)
       rrate = DZERO
+      rratewc = DZERO
       if (this%gwfiss == 0) then
         if (this%ibound(n) > 0) then
           !
@@ -397,11 +410,24 @@ contains
           else
             rateskin = rateskin + rrate
           end if
+          !
+          ! -- calculate coarse-grained skeletal water compressibility storage terms
+          call this%csub_sk_calc_wcomp(n, tled, area, hnew(n), hold(n), hcof, rhs)
+          rratewc = hcof * hnew(n) - rhs
+          !
+          ! -- water compressibility budget terms
+          if (rratewc < DZERO) then
+            ratewcout = ratewcout - rratewc
+          else
+            ratewcin = ratewcin + rratewc
+          end if
         end if
       end if
       !
-      ! -- update coarse-grained skeletal storage variable
+      ! -- update coarse-grained skeletal storage and water
+      !    compresion variables
       this%sk_stor(n) = rrate
+      this%sk_wcstor(n) = rratewc
       !
       ! -- update states if required
       if (isuppress_output == 0) then
@@ -433,6 +459,7 @@ contains
     tled = DONE
     tledm = DONE / DELT
     do i = 1, this%ninterbeds
+      rratewc = DZERO
       if (this%gwfiss == 0) then
         n = this%nodelist(i)
         area = this%dis%get_area(n)
@@ -529,6 +556,19 @@ contains
         else
           rateibiin = rateibiin + this%storagei(i)
         end if
+        !
+        ! -- interbed water compressibility
+        call this%csub_interbed_calc_wcomp(i, n, tledm, area,                   &
+                                           hnew(n), hold(n), hcof, rhs)
+        rratewc = hcof * hnew(n) - rhs
+        this%sk_wcstor(n) = this%sk_wcstor(n) + rratewc
+        !
+        ! -- water compressibility budget terms
+        if (rratewc < DZERO) then
+          ratewcout = ratewcout - rratewc
+        else
+          ratewcin = ratewcin + rratewc
+        end if
       else
         this%storagee(i) = DZERO
         this%storagei(i) = DZERO
@@ -550,6 +590,8 @@ contains
       call model_budget%addentry(rateibiin, rateibiout, delt, budtxt(3),        &
                                   isuppress_output, '            CSUB')
     end if
+    call model_budget%addentry(ratewcin, ratewcout, delt, budtxt(4),            &
+                                isuppress_output, '            CSUB')
     !
     ! -- For continuous observations, save simulated values.
     if (this%obs%npakobs > 0) then
@@ -636,6 +678,11 @@ contains
                                               this%auxvar(:,n))
         end do
       end if
+      !
+      ! -- water compressibility
+      call this%dis%record_array(this%sk_wcstor, this%iout, iprint, -ibinun,  &
+                                 budtxt(4), cdatafmp, nvaluesp,               &
+                                 nwidthp, editdesc, dinact)
     end if
     !
     ! -- Save observations.
@@ -1146,6 +1193,7 @@ contains
     call mem_allocate(this%sk_es0, this%dis%nodes, 'sk_es0', trim(this%origin))
     call mem_allocate(this%sk_comp, this%dis%nodes, 'sk_comp', trim(this%origin))
     call mem_allocate(this%sk_stor, this%dis%nodes, 'sk_stor', trim(this%origin))
+    call mem_allocate(this%sk_wcstor, this%dis%nodes, 'sk_wcstor', trim(this%origin))
     if (this%igeostressoff == 1) then
       call mem_allocate(this%sig0, this%dis%nodes, 'sig0', trim(this%origin))
     else
@@ -1221,6 +1269,7 @@ contains
       this%sk_gs(n) = DZERO
       this%sk_es(n) = DZERO
       this%sk_comp(n) = DZERO
+      this%sk_wcstor(n) = DZERO
       if (this%igeostressoff == 1) then
         this%sig0(n) = DZERO
       end if
@@ -1268,6 +1317,7 @@ contains
       call mem_deallocate(this%sk_es0)
       call mem_deallocate(this%sk_comp)
       call mem_deallocate(this%sk_stor)
+      call mem_deallocate(this%sk_wcstor)
       !
       ! -- interbed storage
       deallocate(this%boundname)
@@ -1919,6 +1969,7 @@ contains
 
   end subroutine csub_nodelay_calc_gwf
 
+  
   subroutine csub_rp(this)
 ! ******************************************************************************
 ! csub_rp -- Read and Prepare
@@ -2297,6 +2348,7 @@ contains
     real(DP) :: hcell
     real(DP) :: hcof
     real(DP) :: rhsterm
+    real(DP) :: wc1
 ! ------------------------------------------------------------------------------
     !
     ! -- update geostatic load calculation
@@ -2311,12 +2363,21 @@ contains
       do n = 1, this%dis%nodes
         idiag = this%dis%con%ia(n)
         area = this%dis%get_area(n)
+        !
+        ! -- skip inactive cells
         if (this%ibound(n) < 1) cycle
         !
         ! -- calculate coarse-grained skeletal storage terms
         call this%csub_calc_sk(n, tled, area, hnew(n), hold(n), hcof, rhsterm)
         !
-        ! -- add storage terms to amat and rhs for skeletal stoeage
+        ! -- add skeletal storage terms to amat and rhs for skeletal storage
+        amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
+        rhs(n) = rhs(n) + rhsterm
+        !
+        ! -- calculate coarse-grained skeletal water compressibility storage terms
+        call this%csub_sk_calc_wcomp(n, tled, area, hnew(n), hold(n), hcof, rhsterm)
+        !
+        ! -- add water compression storage terms to amat and rhs for skeletal storage
         amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
         rhs(n) = rhs(n) + rhsterm
       end do
@@ -2328,7 +2389,16 @@ contains
           idiag = this%dis%con%ia(n)
           area = this%dis%get_area(n)
           hcell = hnew(n)
-          call this%csub_calc_interbeds(i, n, tled, area, hcell, hcof, rhsterm)
+          call this%csub_interbed_calc_terms(i, n, tled, area, hcell,           &
+                                             hcof, rhsterm)
+          amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
+          rhs(n) = rhs(n) + rhsterm
+          !
+          ! -- calculate interbed water compressibility terms
+          call this%csub_interbed_calc_wcomp(i, n, tled, area,                  &
+                                             hnew(n), hold(n), hcof, rhsterm)
+          !
+          ! -- add water compression storage terms to amat and rhs for interbed
           amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
           rhs(n) = rhs(n) + rhsterm
         end do
@@ -2402,7 +2472,7 @@ contains
     return
   end subroutine  csub_calc_sk
   
-  subroutine csub_calc_interbeds(this, i, n, tled, area, hcell, hcof, rhs)
+  subroutine csub_interbed_calc_terms(this, i, n, tled, area, hcell, hcof, rhs)
 ! ******************************************************************************
 ! csub_cf -- Formulate the HCOF and RHS terms
 ! Subroutine: (1) skip if no ibcs
@@ -2422,7 +2492,8 @@ contains
     real(DP), intent(inout) :: hcof
     real(DP), intent(inout) :: rhs
     ! locals
-    real(DP) :: rho1, rho2
+    real(DP) :: rho1
+    real(DP) :: rho2
     real(DP) :: f
 ! ------------------------------------------------------------------------------
 !
@@ -2435,10 +2506,12 @@ contains
     if (this%ibound(n) > 0) then
       if (this%idelay(i) == 0) then
         !
-        ! -- calculate ibc rho1 and rho2
+        ! -- calculate no-delay interbed rho1 and rho2
         call this%csub_nodelay_calc_gwf(i, hcell, rho1, rho2, rhs)
         f = area
       else
+        !
+        ! -- calculate delay interbed rho1 and rho2
         call this%csub_delay_calc_interbed(i, hcell)
         call this%csub_delay_calc_gwf(i, rho2, rhs)
         f = area * this%rnb(i)
@@ -2449,7 +2522,7 @@ contains
     !
     ! -- return
     return
-  end subroutine  csub_calc_interbeds
+  end subroutine  csub_interbed_calc_terms
 
   subroutine define_listlabel(this)
 ! ******************************************************************************
@@ -2535,6 +2608,132 @@ contains
     ! -- return
     return
   end subroutine csub_sk_calc_sske
+
+  
+  subroutine csub_sk_calc_wcomp(this, n, tled, area, hcell, hcellold, hcof, rhs)
+! ******************************************************************************
+! csub_sk_calc_wcomp -- Calculate water compressibility term for a gwf cell.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    class(GwfCsubType), intent(inout) :: this
+    integer(I4B),intent(in) :: n
+    real(DP), intent(in) :: tled
+    real(DP), intent(in) :: area
+    real(DP), intent(in) :: hcell
+    real(DP), intent(in) :: hcellold
+    real(DP), intent(inout) :: hcof
+    real(DP), intent(inout) :: rhs
+    ! locals
+    real(DP) :: top
+    real(DP) :: bot
+    real(DP) :: tthk
+    real(DP) :: snold
+    real(DP) :: snnew
+    real(DP) :: sske
+    real(DP) :: wc1
+! ------------------------------------------------------------------------------
+!
+! -- initialize variables
+    rhs = DZERO
+    hcof = DZERO
+    !
+    ! -- aquifer elevations and thickness
+    top = this%dis%top(n)
+    bot = this%dis%bot(n)
+    tthk = this%sk_thick(n)
+    ! -- aquifer saturation
+    if (this%stoiconv(n) /= 0) then
+      snold = sQuadraticSaturation(top, bot, hcellold, this%satomega)
+      snnew = sQuadraticSaturation(top, bot, hcell, this%satomega)
+    else
+      snold = DONE
+      snnew = DONE
+    end if
+    !
+    ! -- storage coefficients
+    wc1 = this%gammaw * this%beta * area * tthk * this%sk_theta(n) * tled
+    !
+    ! -- calculate hcof term
+    hcof = -wc1 * snnew
+    !
+    ! -- calculate rhs term
+    rhs = -wc1 * snold * hcellold
+    !
+    ! -- return
+    return
+  end subroutine csub_sk_calc_wcomp
+
+  
+  subroutine csub_interbed_calc_wcomp(this, i, n, tled, area,                   &
+                                      hcell, hcellold, hcof, rhs)
+! ******************************************************************************
+! csub_interbed_calc_wcomp -- Calculate water compressibility term for an 
+!                             interbed.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    class(GwfCsubType), intent(inout) :: this
+    integer(I4B),intent(in) :: i
+    integer(I4B),intent(in) :: n
+    real(DP), intent(in) :: tled
+    real(DP), intent(in) :: area
+    real(DP), intent(in) :: hcell
+    real(DP), intent(in) :: hcellold
+    real(DP), intent(inout) :: hcof
+    real(DP), intent(inout) :: rhs
+    ! locals
+    integer(I4B) :: j
+    integer(I4B) :: idelay
+    real(DP) :: top
+    real(DP) :: bot
+    real(DP) :: tthk
+    real(DP) :: snold
+    real(DP) :: snnew
+    real(DP) :: f
+    real(DP) :: wc1
+! ------------------------------------------------------------------------------
+!
+! -- initialize variables
+    rhs = DZERO
+    hcof = DZERO
+    !
+    ! -- aquifer elevations and thickness
+    top = this%dis%top(n)
+    bot = this%dis%bot(n)
+    tthk = this%sk_thick(n)
+    ! -- aquifer saturation
+    if (this%stoiconv(n) /= 0) then
+      snold = sQuadraticSaturation(top, bot, hcellold, this%satomega)
+      snnew = sQuadraticSaturation(top, bot, hcell, this%satomega)
+    else
+      snold = DONE
+      snnew = DONE
+    end if
+    !
+    !
+    idelay = this%idelay(i)
+    f = this%gammaw * this%beta * area * tled
+    if (idelay == 0) then
+      wc1 = f * this%theta(i) * this%thick(i)
+      hcof = -wc1 * snnew
+      rhs = -wc1 * snold * hcellold
+    else
+      if (this%thick(i) > DZERO) then
+        do j = 1, this%ndelaycells
+          wc1 = f * this%dbdz(idelay) * this%dbtheta(j, idelay)
+          rhs = rhs - wc1 * (snold * this%dbh0(j, idelay) -                     &
+                             snnew * this%dbh(j, idelay))
+        end do
+        rhs = rhs * this%rnb(i)
+      end if
+    end if
+    !
+    ! -- return
+    return
+  end subroutine csub_interbed_calc_wcomp
   
   
   function csub_calc_void(this, theta) result(void)
@@ -3178,6 +3377,8 @@ contains
     ! -- return
     return
   end subroutine csub_delay_calc_gwf
+  
+  
   !
   ! -- Procedures related to observations (type-bound)
   logical function csub_obs_supported(this)

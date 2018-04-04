@@ -283,7 +283,8 @@ def build_models():
                                         constant_nodelay_thickness=True,
                                         ninterbeds=maxibc,
                                         obs_filerecord=opth,
-                                        ske_cr=0., packagedata=sub6)
+                                        beta=0., ske_cr=0.,
+                                        packagedata=sub6)
         orecarray = {}
         orecarray['csub_obs.csv'] = [('tcomp1', 'total-compaction', (0, 4, 4)),
                                      ('tcomp2', 'total-compaction', (1, 4, 4)),
