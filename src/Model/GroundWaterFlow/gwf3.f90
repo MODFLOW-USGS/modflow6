@@ -594,7 +594,7 @@ module GwfModule
     ! -- local
     class(BndType), pointer :: packobj
     integer(I4B) :: ip
-    integer(I4B) :: inwt, inwtsto, inwtpak
+    integer(I4B) :: inwt, inwtsto, inwtcsub, inwtpak
 ! ------------------------------------------------------------------------------
     !
     ! -- newton flags
@@ -603,6 +603,10 @@ module GwfModule
     inwtsto = inwtflag
     if(this%insto > 0) then
       if(inwtflag == 1) inwtsto = this%sto%inewton
+    endif
+    inwtcsub = inwtflag
+    if(this%incsub > 0) then
+      if(inwtflag == 1) inwtcsub = this%csub%inewton
     endif
     !
     ! -- Fill standard conductance terms
@@ -654,6 +658,14 @@ module GwfModule
       if (inwtsto /= 0) then
         call this%sto%sto_fn(kiter, this%dis%nodes, this%xold, this%x,         &
                               this%nja, njasln, amatsln, this%idxglo, this%rhs)
+      end if
+    end if
+    !
+    ! -- Fill newton terms for skeletal storage, compaction, and land subsidence 
+    if(this%incsub > 0) then
+      if (inwtcsub /= 0) then
+        call this%csub%csub_fn(kiter, this%dis%nodes, this%xold, this%x,        &
+                               this%nja, njasln, amatsln, this%idxglo, this%rhs)
       end if
     end if
     !

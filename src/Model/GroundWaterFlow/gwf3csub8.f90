@@ -137,6 +137,7 @@ module GwfCsubModule
     procedure :: csub_rp
     procedure :: csub_ad
     procedure :: csub_fc
+    procedure :: csub_fn
     procedure :: bdcalc => csub_bdcalc
     procedure :: bdsav => csub_bdsav
     procedure :: read_dimensions => csub_read_dimensions
@@ -154,8 +155,10 @@ module GwfCsubModule
     !
     ! -- coarse-grained skeletal methods
     procedure, private :: csub_calc_sk
+    procedure, private :: csub_calc_sk_nt
     procedure, private :: csub_sk_calc_sske
     procedure, private :: csub_sk_calc_wcomp
+    procedure, private :: csub_sk_calc_wcomp_nt
     !
     ! -- interbed methods
     procedure, private :: csub_interbed_set_initial
@@ -2314,8 +2317,7 @@ contains
   subroutine csub_fc(this, kiter, nodes, hold, hnew, nja, njasln, amat, &
                      idxglo, rhs)
 ! ******************************************************************************
-! sto_fc -- Fill the solution amat and rhs with storage contribution newton
-!               term
+! sto_fc -- Fill the solution amat and rhs with storage contribution terms
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -2408,6 +2410,106 @@ contains
     ! -- return
     return
   end subroutine csub_fc
+
+  subroutine csub_fn(this, kiter, nodes, hold, hnew, nja, njasln, amat, &
+                     idxglo, rhs)
+! ******************************************************************************
+! sto_fn -- Fill the solution amat and rhs with storage contribution newton
+!               term
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    use TdisModule, only: delt
+    ! -- dummy
+    class(GwfCsubType) :: this
+    integer(I4B),intent(in) :: kiter
+    integer(I4B),intent(in) :: nodes
+    real(DP), intent(in), dimension(nodes) :: hold
+    real(DP), intent(in), dimension(nodes) :: hnew
+    integer(I4B),intent(in) :: nja
+    integer(I4B),intent(in) :: njasln
+    real(DP), dimension(njasln),intent(inout) :: amat
+    integer(I4B), intent(in),dimension(nja) :: idxglo
+    real(DP),intent(inout),dimension(nodes) :: rhs
+    ! -- local
+    integer(I4B) :: i
+    integer(I4B) :: n
+    integer(I4B) :: idiag
+    real(DP) :: tled
+    real(DP) :: area
+    real(DP) :: top
+    real(DP) :: bot
+    real(DP) :: tthk
+    real(DP) :: snold
+    real(DP) :: snnew
+    real(DP) :: sske
+    real(DP) :: rho1
+    real(DP) :: hcell
+    real(DP) :: hcof
+    real(DP) :: rhsterm
+    real(DP) :: wc1
+! ------------------------------------------------------------------------------
+    !
+    ! -- formulate csub terms
+    if (this%gwfiss == 0) then
+      tled = DONE / delt
+      !
+      ! -- coarse-grained skeletal storage
+      do n = 1, this%dis%nodes
+        idiag = this%dis%con%ia(n)
+        area = this%dis%get_area(n)
+        !
+        ! -- skip inactive cells
+        if (this%ibound(n) < 1) cycle
+        !
+        ! -- skip non-convertible cells
+        if (this%stoiconv(n) == 0) cycle
+        !
+        ! -- calculate coarse-grained skeletal storage newton terms
+        call this%csub_calc_sk_nt(n, tled, area, hnew(n), hcof, rhsterm)
+        !
+        ! -- add skeletal storage newton terms to amat and rhs for 
+        !   skeletal storage
+        amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
+        rhs(n) = rhs(n) + rhsterm
+        !
+        ! -- calculate coarse-grained skeletal water compressibility storage 
+        !    newton terms
+        call this%csub_sk_calc_wcomp_nt(n, tled, area, hnew(n), hcof, rhsterm)
+        !
+        ! -- add water compression storage newton terms to amat and rhs for 
+        !    skeletal storage
+        amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
+        rhs(n) = rhs(n) + rhsterm
+      end do
+    !  !
+    !  ! -- interbed storage
+    !  if (this%ninterbeds /= 0) then
+    !    do i = 1, this%ninterbeds
+    !      n = this%nodelist(i)
+    !      idiag = this%dis%con%ia(n)
+    !      area = this%dis%get_area(n)
+    !      hcell = hnew(n)
+    !      call this%csub_interbed_calc_terms(i, n, tled, area, hcell,           &
+    !                                         hcof, rhsterm)
+    !      amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
+    !      rhs(n) = rhs(n) + rhsterm
+    !      !
+    !      ! -- calculate interbed water compressibility terms
+    !      call this%csub_interbed_calc_wcomp(i, n, tled, area,                  &
+    !                                         hnew(n), hold(n), hcof, rhsterm)
+    !      !
+    !      ! -- add water compression storage terms to amat and rhs for interbed
+    !      amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
+    !      rhs(n) = rhs(n) + rhsterm
+    !    end do
+    !  end if
+    end if    
+    !
+    ! -- return
+    return
+  end subroutine csub_fn
   
   subroutine csub_calc_sk(this, n, tled, area, hcell, hcellold, hcof, rhs)
 ! ******************************************************************************
@@ -2471,6 +2573,58 @@ contains
     ! -- return
     return
   end subroutine  csub_calc_sk
+  
+  subroutine csub_calc_sk_nt(this, n, tled, area, hcell, hcof, rhs)
+! ******************************************************************************
+! csub_calc_sk_nt -- Formulate skeletal storage newton terms
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    implicit none
+    class(GwfCsubType) :: this
+    integer(I4B),intent(in) :: n
+    real(DP), intent(in) :: tled
+    real(DP), intent(in) :: area
+    real(DP), intent(in) :: hcell
+    real(DP), intent(inout) :: hcof
+    real(DP), intent(inout) :: rhs
+    ! locals
+    real(DP) :: top
+    real(DP) :: bot
+    real(DP) :: tthk
+    real(DP) :: derv
+    real(DP) :: sske
+    real(DP) :: rho1
+    real(DP) :: f
+! ------------------------------------------------------------------------------
+!
+! -- initialize variables
+    rhs = DZERO
+    hcof = DZERO
+    !
+    ! -- aquifer elevations and thickness
+    top = this%dis%top(n)
+    bot = this%dis%bot(n)
+    tthk = this%sk_thick(n)
+    !
+    ! -- calculate saturation derivitive
+    derv = sQuadraticSaturationDerivative(top, bot, hcell)    
+    !
+    ! -- storage coefficients
+    call this%csub_sk_calc_sske(n, sske)
+    rho1 = sske * area * tthk * tled
+    !
+    ! -- calculate hcof term
+    hcof = -rho1 * derv * hcell
+    !
+    ! -- calculate rhs term
+    rhs = hcof * hcell
+    !
+    ! -- return
+    return
+  end subroutine  csub_calc_sk_nt
+
   
   subroutine csub_interbed_calc_terms(this, i, n, tled, area, hcell, hcof, rhs)
 ! ******************************************************************************
@@ -2664,6 +2818,56 @@ contains
     ! -- return
     return
   end subroutine csub_sk_calc_wcomp
+
+  
+  subroutine csub_sk_calc_wcomp_nt(this, n, tled, area, hcell, hcof, rhs)
+! ******************************************************************************
+! csub_sk_calc_wcomp -- Calculate water compressibility newton terms for a 
+!                       gwf cell.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    class(GwfCsubType), intent(inout) :: this
+    integer(I4B),intent(in) :: n
+    real(DP), intent(in) :: tled
+    real(DP), intent(in) :: area
+    real(DP), intent(in) :: hcell
+    real(DP), intent(inout) :: hcof
+    real(DP), intent(inout) :: rhs
+    ! locals
+    real(DP) :: top
+    real(DP) :: bot
+    real(DP) :: tthk
+    real(DP) :: derv
+    real(DP) :: sske
+    real(DP) :: wc1
+! ------------------------------------------------------------------------------
+!
+! -- initialize variables
+    rhs = DZERO
+    hcof = DZERO
+    !
+    ! -- aquifer elevations and thickness
+    top = this%dis%top(n)
+    bot = this%dis%bot(n)
+    tthk = this%sk_thick(n)
+    !
+    ! -- calculate saturation derivitive
+    derv = sQuadraticSaturationDerivative(top, bot, hcell)    
+    !
+    ! -- storage coefficients
+    wc1 = this%gammaw * this%beta * area * tthk * this%sk_theta(n) * tled
+    !
+    ! -- calculate hcof term
+    hcof = -wc1 * derv * hcell
+    !
+    ! -- calculate rhs term
+    rhs = hcof * hcell
+    !
+    ! -- return
+    return
+  end subroutine csub_sk_calc_wcomp_nt
 
   
   subroutine csub_interbed_calc_wcomp(this, i, n, tled, area,                   &

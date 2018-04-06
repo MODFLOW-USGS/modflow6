@@ -20,13 +20,17 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['csub_sk01a'] #, 'csub_sk01b', 'csub_sk01c']
+ex = ['csub_sk01a', 'csub_sk01b'] #, 'csub_sk01c']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
 cvopt = [None, None, None]
 constantcv = [True, True, True]
 ndelaybeds = [0, 0, 0]
+
+cmppths = ['mf2005', 'mfnwt']
+tops = [0., 150.]
+newtons = [False, True]
 
 ddir = 'data'
 
@@ -38,7 +42,7 @@ travis = [True, True, True]
 #replace_exe = {'mf2005': 'mf2005devdbl'}
 replace_exe = None
 
-htol = [None, None, None]
+htol = [None, 0.3, None]
 dtol = 1e-3
 
 bud_lst = ['CSUB-AQELASTIC_IN', 'CSUB-AQELASTIC_OUT',
@@ -77,7 +81,8 @@ def build_models():
 
     # set rest of npf variables
     laytyp = [1, 0, 0]
-    sy = [0.1, 0., 0.]
+    laytypu = [4, 0, 0]
+    sy = 0. #[0.1, 0., 0.]
 
     nouter, ninner = 500, 300
     hclose, rclose, relax = 1e-9, 1e-6, 1.
@@ -133,7 +138,6 @@ def build_models():
     # no delay bed data
     nndb = 3
     lnd = [0, 1, 2]
-    #hc = [-7., -7., -7.]
     hc = [botm[-1] for k in range(nlay)]
     thicknd0 = [zthick[0], zthick[1], zthick[2]]
     ccnd0 = [6e-6, 3e-6, 6e-6]
@@ -151,6 +155,7 @@ def build_models():
 
     for idx, dir in enumerate(exdirs):
         name = ex[idx]
+        newton = newtons[idx]
 
         maxibc = 0
 
@@ -164,7 +169,13 @@ def build_models():
                                      nper=nper, perioddata=tdis_rc)
 
         # create gwf model
-        gwf = flopy.mf6.ModflowGwf(sim, modelname=name)
+        newtonoptions = None
+        imsla = 'CG'
+        if newton:
+            newtonoptions = ''
+            imsla = 'BICGSTAB'
+        gwf = flopy.mf6.ModflowGwf(sim, modelname=name,
+                                   newtonoptions=newtonoptions)
 
         # create iterative model solution and register the gwf model with it
         ims = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
@@ -173,7 +184,7 @@ def build_models():
                                    under_relaxation='NONE',
                                    inner_maximum=ninner,
                                    inner_hclose=hclose, rcloserecord=rclose,
-                                   linear_acceleration='CG',
+                                   linear_acceleration=imsla,
                                    scaling_method='NONE',
                                    reordering_method='NONE',
                                    relaxation_factor=relax)
@@ -181,7 +192,7 @@ def build_models():
 
         dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
                                       delr=delr, delc=delc,
-                                      top=top, botm=botm,
+                                      top=tops[idx], botm=botm,
                                       fname='{}.dis'.format(name))
 
         # initial conditions
@@ -190,6 +201,7 @@ def build_models():
 
         # node property flow
         npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False,
+                                      #dev_modflowusg_upstream_weighted_saturation=True,
                                       icelltype=laytyp,
                                       cvoptions=cvopt[idx],
                                       k=hk,
@@ -223,7 +235,8 @@ def build_models():
                                         ninterbeds=0,
                                         obs_filerecord=opth,
                                         sk_theta=theta,
-                                        ske_cr=crnd0, packagedata=None)
+                                        ske_cr=crnd0,
+                                        packagedata=None)
         orecarray = {}
         orecarray['csub_obs.csv'] = [('tcomp1', 'compaction-cell', (0, 4, 4)),
                                      ('tcomp2', 'compaction-cell', (1, 4, 4)),
@@ -250,19 +263,32 @@ def build_models():
         sim.write_simulation()
 
         # build MODFLOW-2005 files
-        ws = os.path.join(dir, 'mf2005')
-        mc = flopy.modflow.Modflow(name, model_ws=ws)
+        cpth = cmppths[idx]
+        ws = os.path.join(dir, cpth)
+        mc = flopy.modflow.Modflow(name, model_ws=ws, version=cpth)
         dis = flopy.modflow.ModflowDis(mc, nlay=nlay, nrow=nrow, ncol=ncol,
                                        nper=nper, perlen=perlen, nstp=nstp,
                                        tsmult=tsmult, steady=steady, delr=delr,
-                                       delc=delc, top=top, botm=botm)
+                                       delc=delc, top=tops[idx], botm=botm)
         bas = flopy.modflow.ModflowBas(mc, ibound=ib, strt=strt, hnoflo=hnoflo,
                                        stoper=0.01)
-        lpf = flopy.modflow.ModflowLpf(mc, laytyp=laytyp, hk=hk, vka=vka,
-                                       ss=sw, sy=sy,
-                                       constantcv=constantcv[idx],
-                                       storagecoefficient=False,
-                                       hdry=hdry)
+        if newton:
+            if cpth == 'mfnwt':
+                upw = flopy.modflow.ModflowUpw(mc, laytyp=laytyp,
+                                               hk=hk, vka=vka,
+                                               ss=sw, sy=sy,
+                                               hdry=hdry)
+            else:
+                lpf = flopy.modflow.ModflowLpf(mc, laytyp=laytypu,
+                                               hk=hk, vka=vka,
+                                               ss=sw, sy=sy,
+                                               hdry=hdry, constantcv=True)
+        else:
+            lpf = flopy.modflow.ModflowLpf(mc, laytyp=laytyp, hk=hk, vka=vka,
+                                           ss=sw, sy=sy,
+                                           constantcv=constantcv[idx],
+                                           storagecoefficient=False,
+                                           hdry=hdry)
         chd = flopy.modflow.ModflowChd(mc, stress_period_data=cd)
         rch = flopy.modflow.ModflowRch(mc, rech=rech)
         wel = flopy.modflow.ModflowWel(mc, stress_period_data=wd)
@@ -271,9 +297,27 @@ def build_models():
                                        hc=hc, sfe=sfe, sfv=sfv,
                                        ids15=ds15, ids16=ds16)
         oc = flopy.modflow.ModflowOc(mc, stress_period_data=None)
-        pcg = flopy.modflow.ModflowPcg(mc, mxiter=nouter, iter1=ninner,
-                                       hclose=hclose, rclose=rclose,
-                                       relax=relax)
+        if newton:
+            if cpth == 'mfnwt':
+                fluxtol = (float(nlay * nrow * ncol) - 4.) * rclose
+                nwt = flopy.modflow.ModflowNwt(mc,
+                                               headtol=hclose, fluxtol=fluxtol,
+                                               maxiterout=nouter, linmeth=2,
+                                               maxitinner=ninner,
+                                               unitnumber=132,
+                                               options='SPECIFIED',
+                                               backflag=0, idroptol=0)
+            else:
+                sms = flopy.modflow.ModflowSms(mc, hclose=hclose,
+                                               hiclose=hclose,
+                                               mxiter=nouter, iter1=ninner,
+                                               rclosepcgu=rclose,
+                                               relaxpcgu=relax,
+                                               unitnumber=132)
+        else:
+            pcg = flopy.modflow.ModflowPcg(mc, mxiter=nouter, iter1=ninner,
+                                           hclose=hclose, rclose=rclose,
+                                           relax=relax)
         mc.write_input()
 
     return
@@ -290,8 +334,9 @@ def eval_comp(sim):
         assert False, 'could not load data from "{}"'.format(fpth)
 
     # MODFLOW-2005 total compaction results
+    cpth = cmppths[sim.idxsim]
     fn = '{}.total_comp.hds'.format(os.path.basename(sim.name))
-    fpth = os.path.join(sim.simpath, 'mf2005', fn)
+    fpth = os.path.join(sim.simpath, cpth, fn)
     try:
         sobj = flopy.utils.HeadFile(fpth, text='LAYER COMPACTION')
         tc0 = sobj.get_ts((2, 4, 4))
@@ -422,7 +467,8 @@ def test_mf6model():
             continue
         yield test.run_mf6, Simulation(dir, exfunc=eval_comp,
                                        exe_dict=r_exe,
-                                       htol=htol[idx])
+                                       htol=htol[idx],
+                                       idxsim=idx)
 
     return
 
@@ -437,7 +483,7 @@ def main():
     # run the test models
     for idx, dir in enumerate(exdirs):
         sim = Simulation(dir, exfunc=eval_comp,
-                         exe_dict=replace_exe, htol=htol[idx])
+                         exe_dict=replace_exe, htol=htol[idx], idxsim=idx)
         test.run_mf6(sim)
 
     return
