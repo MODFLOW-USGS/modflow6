@@ -2647,13 +2647,11 @@ contains
     real(DP), intent(inout) :: rhs
     ! locals
     real(DP) :: rho1
-    real(DP) :: rho2
     real(DP) :: f
 ! ------------------------------------------------------------------------------
 !
 ! -- initialize variables
     rhs = DZERO
-    rho2 = DZERO
     hcof = DZERO
     !
     ! -- skip inactive and constant head cells
@@ -2661,17 +2659,17 @@ contains
       if (this%idelay(i) == 0) then
         !
         ! -- calculate no-delay interbed rho1 and rho2
-        call this%csub_nodelay_calc_gwf(i, hcell, rho1, rho2, rhs)
+        call this%csub_nodelay_calc_gwf(i, hcell, rho1, hcof, rhs)
         f = area
       else
         !
         ! -- calculate delay interbed rho1 and rho2
         call this%csub_delay_calc_interbed(i, hcell)
-        call this%csub_delay_calc_gwf(i, rho2, rhs)
+        call this%csub_delay_calc_gwf(i, hcof, rhs)
         f = area * this%rnb(i)
       end if
       rhs = rhs * f
-      hcof = -rho2 * f
+      hcof = -hcof * f
     end if
     !
     ! -- return
@@ -2732,6 +2730,7 @@ contains
     real(DP), intent(inout) :: sske
     ! -- local variables
     integer(I4B) :: idelay
+    real(DP) :: bot
     real(DP) :: es
     real(DP) :: void
     real(DP) :: denom
@@ -2747,10 +2746,13 @@ contains
     !
     ! -- calculate factor for the effective stress case
     else
+      bot = this%dis%bot(n)
       es = this%time_factor * this%sk_es(n) +                                   &
            (DONE - this%time_factor) * this%sk_es0(n)
       void = this%csub_calc_void(this%sk_theta(n))
-      denom = (DONE + void) * es
+      !denom = (DONE + void) * es
+      denom = (DONE + void) * (es - (this%sk_znode(n) - bot)) *                 &
+              (this%sgs(n) - DONE)
       if (denom /= DZERO) then
         f = DONE / denom
       else
