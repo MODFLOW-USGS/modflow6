@@ -475,7 +475,8 @@ contains
           stoi = DZERO
           !
           ! -- calculate ibc rho1 and rho2
-          call this%csub_nodelay_calc_gwf(i, hnew(n), rho1, rho2, rhs, tled)
+          call this%csub_nodelay_calc_gwf(i, hnew(n), hold(n), rho1, rho2, rhs, &
+                                          tled)
           bot = this%dis%bot(n)
           top = this%dis%top(n)
           thk_node = top - bot
@@ -1882,7 +1883,8 @@ contains
   end subroutine csub_sk_calc_stress
 
 
-  subroutine csub_nodelay_calc_gwf(this, i, hcell, rho1, rho2, rhs, argtled)
+  subroutine csub_nodelay_calc_gwf(this, i, hcell, hcellold, rho1, rho2, rhs,   &
+                                   argtled)
 ! ******************************************************************************
 ! csub_nodelay_calc_gwf -- Calculate rho1, rho2, and rhs for no-delay
 !                               interbeds
@@ -1896,6 +1898,7 @@ contains
     class(GwfCsubType) :: this
     integer(I4B), intent(in) :: i
     real(DP), intent(in) :: hcell
+    real(DP), intent(in) :: hcellold
     real(DP), intent(inout) :: rho1
     real(DP), intent(inout) :: rho2
     real(DP), intent(inout) :: rhs
@@ -1905,12 +1908,14 @@ contains
     real(DP) :: tled
     real(DP) :: top
     real(DP) :: bot
+    real(DP) :: snold
+    real(DP) :: snnew
     real(DP) :: thk_fac
     real(DP) :: sto_fac
     real(DP) :: area
-    real(DP) :: x
-    real(DP) :: thk_node
-    real(DP) :: thk_ibs
+!    real(DP) :: x
+!    real(DP) :: thk_node
+!    real(DP) :: thk_ibs
     real(DP) :: denom
     real(DP) :: pcs_n
     real(DP) :: fact
@@ -1928,14 +1933,22 @@ contains
     area = this%dis%get_area(n)
     bot = this%dis%bot(n)
     top = this%dis%top(n)
-    thk_node = top - bot
-    x = hcell
-    if (x > top) x = top
-    thk_fac = DONE
-    if (this%iconstantndb == 0) then
-      thk_fac = (x - bot) / thk_node
+    !thk_node = top - bot
+    !x = hcell
+    !if (x > top) x = top
+    !thk_fac = DONE
+    !if (this%iconstantndb == 0) then
+    !  thk_fac = (x - bot) / thk_node
+    !end if
+    !thk_ibs = thk_fac * this%thick(i)
+    ! -- aquifer saturation
+    if (this%stoiconv(n) /= 0) then
+      snold = sQuadraticSaturation(top, bot, hcellold, this%satomega)
+      snnew = sQuadraticSaturation(top, bot, hcell, this%satomega)
+    else
+      snold = DONE
+      snnew = DONE
     end if
-    thk_ibs = thk_fac * this%thick(i)
     if (this%igeocalc == 0) then
       f = DONE
     else
@@ -1949,7 +1962,8 @@ contains
         f = DZERO
       end if
     end if
-    sto_fac = tled * thk_ibs * f
+!    sto_fac = tled * thk_ibs * f
+    sto_fac = tled * snnew * this%thick(i) * f
     !
     ! -- calculate rho1 and rho2
     rho1 = this%rci(i) * sto_fac
@@ -2391,8 +2405,8 @@ contains
           idiag = this%dis%con%ia(n)
           area = this%dis%get_area(n)
           hcell = hnew(n)
-          call this%csub_interbed_calc_terms(i, n, tled, area, hcell,           &
-                                             hcof, rhsterm)
+          call this%csub_interbed_calc_terms(i, n, tled, area,                  &
+                                             hnew(n), hold(n), hcof, rhsterm)
           amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
           rhs(n) = rhs(n) + rhsterm
           !
@@ -2491,7 +2505,7 @@ contains
     !      idiag = this%dis%con%ia(n)
     !      area = this%dis%get_area(n)
     !      hcell = hnew(n)
-    !      call this%csub_interbed_calc_terms(i, n, tled, area, hcell,           &
+    !      call this%csub_interbed_calc_terms(i, n, tled, area, hnew(n), hold(n) &
     !                                         hcof, rhsterm)
     !      amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
     !      rhs(n) = rhs(n) + rhsterm
@@ -2626,7 +2640,8 @@ contains
   end subroutine  csub_calc_sk_nt
 
   
-  subroutine csub_interbed_calc_terms(this, i, n, tled, area, hcell, hcof, rhs)
+  subroutine csub_interbed_calc_terms(this, i, n, tled, area, hcell, hcellold,  &
+                                      hcof, rhs)
 ! ******************************************************************************
 ! csub_cf -- Formulate the HCOF and RHS terms
 ! Subroutine: (1) skip if no ibcs
@@ -2643,6 +2658,7 @@ contains
     real(DP), intent(in) :: tled
     real(DP), intent(in) :: area
     real(DP), intent(in) :: hcell
+    real(DP), intent(in) :: hcellold
     real(DP), intent(inout) :: hcof
     real(DP), intent(inout) :: rhs
     ! locals
@@ -2659,7 +2675,7 @@ contains
       if (this%idelay(i) == 0) then
         !
         ! -- calculate no-delay interbed rho1 and rho2
-        call this%csub_nodelay_calc_gwf(i, hcell, rho1, hcof, rhs)
+        call this%csub_nodelay_calc_gwf(i, hcell, hcellold, rho1, hcof, rhs)
         f = area
       else
         !
