@@ -27,12 +27,12 @@ description compressibility of water. Typical values of BETA are 4.6512e-10 1/Pa
 default_value 4.6512e-10
 
 block options
-name time_factor
+name time_weight
 type double precision
 reader urword
 optional true
-longname effective stress time factor
-description effective stress time factor used to calculate the storage parameters. A TIME\_FACTOR value of 1 results in the use of the current estimate of the effective stress to calculate storage parameters. A TIME\_FACTOR value of 0 results in the use of the effective stress from the previous time step to calculate storage parameters. A TIME\_FACTOR value between 0 and 1, results in a weighted effective stress value to calculate storage parameters. Any TIME\_FACTOR value can be specified if HEAD\_BASED is specified in the OPTIONS block. By default, TIME\_FACTOR is 1.
+longname effective stress time weight
+description effective stress time weight used to calculate the storage parameters. A TIME\_WEIGHT value of 1. results in the use of the current estimate of the effective stress to calculate storage parameters. A TIME\_WEIGHT value of 0. results in the use of the effective stress from the previous time step to calculate storage parameters. Any TIME\_FACTOR value can be specified if HEAD\_BASED is specified in the OPTIONS block.  TIME\_WEIGHT must be either 0. or 1. if HEAD\_BASED is not specified in the OPTIONS block. By default, TIME\_FACTOR is 1.
 default_value 1.
 
 block options
@@ -84,12 +84,12 @@ longname keyword to indicate CR and CC are read instead of SSE and SSV
 description keyword to indicate that the the recompression (CR) and compresion (CC) indices are specified instead of the elastic skeletal specific storage (SSE) and inelastic skeletal specific storage (SSV) coefficients.
 
 block options
-name constant_nodelay_thickness
+name update_material_properties
 type keyword
 reader urword
 optional true
-longname keyword to indicate a constant no delay interbed thickness
-description keyword to indicate that the thickness and void ratio of no delay interbeds will not be varied during the simulation.
+longname keyword to indicate constant material properties
+description keyword to indicate that the thickness and void ratio of skeletal and no delay interbed sediments will not vary during the simulation.
 
 block options
 name cell_fraction

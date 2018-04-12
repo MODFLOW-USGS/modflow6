@@ -392,7 +392,6 @@ def build_models():
                                        ndelaycells=ndelaycells[idx],
                                        delay_full_cell=fullcell[idx],
                                        compression_indices=compind[idx],
-                                       constant_nodelay_thickness=True,
                                        ninterbeds=maxibc,
                                        obs_filerecord=opth,
                                        beta=0., ske_cr=0.,

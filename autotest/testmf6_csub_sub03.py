@@ -280,7 +280,6 @@ def build_models():
                                         save_flows=True,
                                         ndelaycells=ndelaycells[idx],
                                         delay_full_cell=fullcell[idx],
-                                        constant_nodelay_thickness=True,
                                         ninterbeds=maxibc,
                                         obs_filerecord=opth,
                                         beta=0., ske_cr=0.,

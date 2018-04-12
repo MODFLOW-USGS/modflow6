@@ -231,7 +231,6 @@ def build_models():
         opth = '{}.csub.obs'.format(name)
         csub = flopy.mf6.ModflowGwfcsub(gwf, head_based=True,
                                         save_flows=True,
-                                        constant_nodelay_thickness=True,
                                         ninterbeds=0,
                                         obs_filerecord=opth,
                                         sk_theta=theta,

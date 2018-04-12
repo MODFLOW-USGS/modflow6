@@ -178,7 +178,6 @@ def build_models():
         ibc = flopy.mf6.ModflowGwfcsub(gwf, head_based=True,
                                        ndelaycells=ndelaycells[idx],
                                        delay_full_cell=full_cell[idx],
-                                       constant_nodelay_thickness=True,
                                        ninterbeds=1,
                                        beta=0., ske_cr=0.,
                                        packagedata=sub6)

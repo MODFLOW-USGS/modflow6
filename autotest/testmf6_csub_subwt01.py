@@ -272,6 +272,8 @@ def build_models():
         ibc = flopy.mf6.ModflowGwfcsub(gwf, interbed_stress_offset=True,
                                        compression_indices=True,
                                        geo_stress_offset=True,
+                                       update_material_properties=True,
+                                       time_weight=0.,
                                        ninterbeds=len(swt6),
                                        sgs=sgs, sgm=sgm,
                                        beta=0., ske_cr=0.00,
