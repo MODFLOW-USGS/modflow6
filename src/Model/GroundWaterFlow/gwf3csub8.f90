@@ -151,9 +151,10 @@ module GwfCsubModule
     procedure, private :: csub_read_packagedata
     !
     ! -- helper methods
-    procedure, private :: csub_calc_sfacts
     procedure, private :: csub_calc_void
     procedure, private :: csub_calc_theta
+    procedure, private :: csub_calc_sfacts
+    procedure, private :: csub_adj_matprop
     !
     ! -- stress methods
     procedure, private :: csub_sk_calc_znode
@@ -353,7 +354,7 @@ contains
     real(DP) :: tledm
     real(DP) :: delt_sto
     real(DP) :: es0
-    real(DP) :: strain
+    !real(DP) :: strain
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: thk_node
@@ -447,15 +448,15 @@ contains
         !
         ! - calculate strain and change in interbed void ratio and thickness
         if (this%iupdatematprop /= 0) then
-          
-          strain = DZERO
-          void = this%csub_calc_void(this%sk_theta(n))
-          thick = this%sk_thick(n)
-          if (thick > DZERO) strain = -comp / thick
-          void = strain + void * (strain + DONE)
-          theta = this%csub_calc_theta(void)
-          this%sk_theta(n) = theta
-          this%sk_thick(n) = thick * (strain + DONE)
+          !strain = DZERO
+          !void = this%csub_calc_void(this%sk_theta(n))
+          !thick = this%sk_thick(n)
+          !if (thick > DZERO) strain = -comp / thick
+          !void = strain + void * (strain + DONE)
+          !theta = this%csub_calc_theta(void)
+          !this%sk_theta(n) = theta
+          !this%sk_thick(n) = thick * (strain + DONE)
+          call this%csub_adj_matprop(comp, this%sk_thick(n), this%sk_theta(n))
         end if
       end if
     end do
@@ -526,16 +527,19 @@ contains
             this%totalcomp(i) = this%totalcomp(i) + comp
             !
             ! - calculate strain and change in interbed void ratio and thickness
-            strain = DZERO
-            void = this%csub_calc_void(this%theta(i))
-            thick = this%thick(i)
-            if (thick > DZERO) strain = -comp / thick
             if (this%iupdatematprop /= 0) then
-              void = strain + void * (strain + DONE)
-              theta = this%csub_calc_theta(void)
-              this%theta(i) = theta
-              this%thick(i) = thick * (strain + DONE)
+              call this%csub_adj_matprop(comp, this%thick(i), this%sk_theta(n))
             end if
+            !strain = DZERO
+            !void = this%csub_calc_void(this%theta(i))
+            !thick = this%thick(i)
+            !if (thick > DZERO) strain = -comp / thick
+            !if (this%iupdatematprop /= 0) then
+            !  void = strain + void * (strain + DONE)
+            !  theta = this%csub_calc_theta(void)
+            !  this%theta(i) = theta
+            !  this%thick(i) = thick * (strain + DONE)
+            !end if
           end if
           !
           ! -- delay interbeds
@@ -2883,56 +2887,6 @@ contains
     return
   end subroutine csub_sk_calc_sske
 
-  subroutine csub_calc_sfacts(this, node, bot, znode, theta, theta0, es, es0,   &
-                              fact, fact0)
-! ******************************************************************************
-! csub_calc_sfacts -- Calculate sske and sske0 factor for a gwf cell or 
-!                     interbed.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(GwfCsubType), intent(inout) :: this
-    integer(I4B), intent(in) :: node
-    real(DP), intent(in) :: bot
-    real(DP), intent(in) :: znode
-    real(DP), intent(in) :: theta
-    real(DP), intent(in) :: theta0
-    real(DP), intent(in) :: es
-    real(DP), intent(in) :: es0
-    real(DP), intent(inout) :: fact
-    real(DP), intent(inout) :: fact0
-    ! -- local variables
-    real(DP) :: esv
-    real(DP) :: void
-    real(DP) :: denom
-    real(DP) :: f
-    real(DP) :: f0
-! ------------------------------------------------------------------------------
-    !
-    ! -- initialize variables
-    fact = DZERO
-    fact0 = DZERO
-    !
-    ! -- calculate factor for the effective stress case
-    esv = this%time_alpha * es +                                             &
-          (DONE - this%time_alpha) * es0
-    void = this%csub_calc_void(theta)
-    denom = (DONE + void) * (esv - (znode - bot)) * (this%sgs(node) - DONE)
-    if (denom /= DZERO) then
-      fact = DONE / denom
-    end if
-    esv = es0
-    void = this%csub_calc_void(theta0)
-    denom = (DONE + void) * (esv - (znode - bot)) * (this%sgs(node) - DONE)
-    if (denom /= DZERO) then
-      fact0 = DONE / denom
-    end if
-    !
-    ! -- return
-    return
-  end subroutine csub_calc_sfacts
-
   
   subroutine csub_sk_calc_wcomp(this, n, tled, area, hcell, hcellold, hcof, rhs)
 ! ******************************************************************************
@@ -3148,8 +3102,87 @@ contains
     ! -- return
     return
   end function csub_calc_theta
+
   
+  subroutine csub_calc_sfacts(this, node, bot, znode, theta, theta0, es, es0,   &
+                              fact, fact0)
+! ******************************************************************************
+! csub_calc_sfacts -- Calculate sske and sske0 factor for a gwf cell or 
+!                     interbed.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    class(GwfCsubType), intent(inout) :: this
+    integer(I4B), intent(in) :: node
+    real(DP), intent(in) :: bot
+    real(DP), intent(in) :: znode
+    real(DP), intent(in) :: theta
+    real(DP), intent(in) :: theta0
+    real(DP), intent(in) :: es
+    real(DP), intent(in) :: es0
+    real(DP), intent(inout) :: fact
+    real(DP), intent(inout) :: fact0
+    ! -- local variables
+    real(DP) :: esv
+    real(DP) :: void
+    real(DP) :: denom
+    real(DP) :: f
+    real(DP) :: f0
+! ------------------------------------------------------------------------------
+    !
+    ! -- initialize variables
+    fact = DZERO
+    fact0 = DZERO
+    !
+    ! -- calculate factor for the effective stress case
+    esv = this%time_alpha * es +                                             &
+          (DONE - this%time_alpha) * es0
+    void = this%csub_calc_void(theta)
+    denom = (DONE + void) * (esv - (znode - bot)) * (this%sgs(node) - DONE)
+    if (denom /= DZERO) then
+      fact = DONE / denom
+    end if
+    esv = es0
+    void = this%csub_calc_void(theta0)
+    denom = (DONE + void) * (esv - (znode - bot)) * (this%sgs(node) - DONE)
+    if (denom /= DZERO) then
+      fact0 = DONE / denom
+    end if
+    !
+    ! -- return
+    return
+  end subroutine csub_calc_sfacts  
+
   
+  subroutine csub_adj_matprop(this, comp, thick, theta)
+! ******************************************************************************
+! csub_adj_matprop -- Adjust theta and thickness based on compaction.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    class(GwfCsubType), intent(inout) :: this
+    real(DP), intent(in) :: comp
+    real(DP), intent(inout) :: thick
+    real(DP), intent(inout) :: theta
+    ! -- local variables
+    real(DP) :: strain
+    real(DP) :: void
+! ------------------------------------------------------------------------------
+    !
+    ! -- initialize variables
+    strain = DZERO
+    void = this%csub_calc_void(theta)
+    if (thick > DZERO) strain = -comp / thick
+    void = strain + void * (strain + DONE)
+    theta = this%csub_calc_theta(void)
+    thick = thick * (strain + DONE)
+    !
+    ! -- return
+    return
+  end subroutine csub_adj_matprop   
+
   subroutine csub_delay_calc_interbed(this, ib, hcell)
 ! ******************************************************************************
 ! csub_delay_calc_interbed -- Calculate flow in delay interbeds.
@@ -3558,7 +3591,7 @@ contains
     real(DP) :: fmult
     real(DP) :: v1
     real(DP) :: v2
-    real(DP) :: strain
+    !real(DP) :: strain
     real(DP) :: void
 ! ------------------------------------------------------------------------------
     !
@@ -3617,7 +3650,7 @@ contains
     integer(I4B) :: n
     real(DP) :: hcof
     real(DP) :: v
-    real(DP) :: strain
+    !real(DP) :: strain
     real(DP) :: void
 ! ------------------------------------------------------------------------------
     !
@@ -3665,7 +3698,7 @@ contains
     real(DP) :: denom
     real(DP) :: f
     real(DP) :: v
-    real(DP) :: strain
+    !real(DP) :: strain
     real(DP) :: void
 ! ------------------------------------------------------------------------------
     !
