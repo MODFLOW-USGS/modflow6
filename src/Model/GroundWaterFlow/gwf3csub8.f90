@@ -133,10 +133,8 @@ module GwfCsubModule
     type(ObsType), pointer :: obs                   => null()   !observation package
 
   contains
-!    procedure :: bnd_ck => csub_ck
     procedure :: define_listlabel
     procedure :: read_options
-    !procedure :: bnd_df => csub_df
     procedure :: csub_ar
     procedure :: csub_da
     procedure :: csub_rp
@@ -354,7 +352,6 @@ contains
     real(DP) :: tledm
     real(DP) :: delt_sto
     real(DP) :: es0
-    !real(DP) :: strain
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: thk_node
@@ -446,16 +443,8 @@ contains
         comp = rrate * DELT / area
         this%sk_comp(n) = this%sk_comp(n) + comp
         !
-        ! - calculate strain and change in interbed void ratio and thickness
+        ! - calculate strain and change in skeletal void ratio and thickness
         if (this%iupdatematprop /= 0) then
-          !strain = DZERO
-          !void = this%csub_calc_void(this%sk_theta(n))
-          !thick = this%sk_thick(n)
-          !if (thick > DZERO) strain = -comp / thick
-          !void = strain + void * (strain + DONE)
-          !theta = this%csub_calc_theta(void)
-          !this%sk_theta(n) = theta
-          !this%sk_thick(n) = thick * (strain + DONE)
           call this%csub_adj_matprop(comp, this%sk_thick(n), this%sk_theta(n))
         end if
       end if
@@ -530,16 +519,6 @@ contains
             if (this%iupdatematprop /= 0) then
               call this%csub_adj_matprop(comp, this%thick(i), this%sk_theta(n))
             end if
-            !strain = DZERO
-            !void = this%csub_calc_void(this%theta(i))
-            !thick = this%thick(i)
-            !if (thick > DZERO) strain = -comp / thick
-            !if (this%iupdatematprop /= 0) then
-            !  void = strain + void * (strain + DONE)
-            !  theta = this%csub_calc_theta(void)
-            !  this%theta(i) = theta
-            !  this%thick(i) = thick * (strain + DONE)
-            !end if
           end if
           !
           ! -- delay interbeds
@@ -1779,26 +1758,6 @@ contains
     return
   end subroutine csub_ar
 
-  subroutine csub_ck(this)
-! ******************************************************************************
-! csub_ck -- Check ibc boundary condition data
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use ConstantsModule, only: LINELENGTH
-!    use SimModule, only: ustop, store_error, count_errors, store_error_unit
-    implicit none
-    ! -- dummy
-    class(GwfCsubType),intent(inout) :: this
-    ! -- local
-    character(len=LINELENGTH) :: errmsg
-
-    ! -- return
-    return
-  end subroutine csub_ck
-
 
   subroutine csub_sk_calc_znode(this, nodes, hnew)
 ! ******************************************************************************
@@ -1871,12 +1830,13 @@ contains
     ! -- calculate geostatic stress if necessary
     if (this%igeocalc /= 0) then
       do n = 1, this%dis%nodes
-        ! -- calc geostatic stress for this node
+        !
+        ! -- calculate geostatic stress for this node
+        !    this represents the incremental value for the cell
         bot = this%dis%bot(n)
         top = this%dis%top(n)
         hcell = hnew(n)
         gs = DZERO
-
         if (hcell >= top) then
             gs = (top-bot) * this%sgs(n)
         else if (hcell <= bot) then
@@ -1891,8 +1851,10 @@ contains
       !   *** this needs to be checked for a complicated discretization ***
       do n = 1, this%dis%nodes
         gs = this%sk_gs(n)
+        !
         ! -- Go through the connecting cells
         do ii = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
+          !
           ! -- Set the m cell number
           !m = this%dis%con%jas(ii)
           m = this%dis%con%ja(ii)
@@ -1927,7 +1889,7 @@ contains
         end if
         es = this%sk_gs(n) - hs
         sadd = DZERO
-        if (this%igeostressoff == 1) then
+        if (this%igeostressoff /= 0) then
           sadd = this%sig0(n)
         end if
         this%sk_es(n) = es + sadd
@@ -1996,14 +1958,6 @@ contains
     area = this%dis%get_area(n)
     bot = this%dis%bot(n)
     top = this%dis%top(n)
-    !thk_node = top - bot
-    !x = hcell
-    !if (x > top) x = top
-    !thk_fac = DONE
-    !if (this%iupdatematprop == 0) then
-    !  thk_fac = (x - bot) / thk_node
-    !end if
-    !thk_ibs = thk_fac * this%thick(i)
     ! -- aquifer saturation
     if (this%stoiconv(n) /= 0) then
       snold = sQuadraticSaturation(top, bot, hcellold, this%satomega)
@@ -2026,20 +1980,9 @@ contains
       theta = this%theta(i)
       theta0 = this%theta0(i)
       call this%csub_calc_sfacts(n, bot, znode, theta, theta0, es, es0, f, f0)
-      !es0 = this%sk_es0(n)
-      !void = this%csub_calc_void(this%theta(i))
-      !denom = (DONE + void) * (es0 - (this%sk_znode(n) - bot)) * &
-      !        (this%sgs(n) - DONE)
-      !if (denom /= DZERO) then
-      !  f = DONE / denom
-      !else
-      !  f = DZERO
-      !end if
     end if
-!    sto_fac = tled * thk_ibs * f
     sto_fac = tled * snnew * this%thick(i) * f
     sto_fac0 = tled * snold * this%thick0(i) * f0
-!    sto_fac0 = tled * snnew * this%thick0(i) * f0
     !
     ! -- calculate rho1 and rho2
     rho1 = this%rci(i) * sto_fac0
@@ -2868,17 +2811,6 @@ contains
       theta = this%sk_theta(n)
       theta0 = this%sk_theta0(n)
       call this%csub_calc_sfacts(n, bot, znode, theta, theta0, es, es0, f, f0)
-      !bot = this%dis%bot(n)
-      !es = this%time_alpha * this%sk_es(n) +                                   &
-      !     (DONE - this%time_alpha) * this%sk_es0(n)
-      !void = this%csub_calc_void(this%sk_theta(n))
-      !denom = (DONE + void) * (es - (this%sk_znode(n) - bot)) *                 &
-      !        (this%sgs(n) - DONE)
-      !if (denom /= DZERO) then
-      !  f = DONE / denom
-      !else
-      !  f = DZERO
-      !end if
     end if
     sske = f * this%ske_cr(n)
     sske0 = f0 * this%ske_cr(n)
@@ -2907,10 +2839,12 @@ contains
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: tthk
+    real(DP) :: tthk0
     real(DP) :: snold
     real(DP) :: snnew
     real(DP) :: sske
     real(DP) :: wc1
+    real(DP) :: wc2
 ! ------------------------------------------------------------------------------
 !
 ! -- initialize variables
@@ -2921,6 +2855,7 @@ contains
     top = this%dis%top(n)
     bot = this%dis%bot(n)
     tthk = this%sk_thick(n)
+    tthk0 = this%sk_thick0(n)
     ! -- aquifer saturation
     if (this%stoiconv(n) /= 0) then
       snold = sQuadraticSaturation(top, bot, hcellold, this%satomega)
@@ -2931,10 +2866,11 @@ contains
     end if
     !
     ! -- storage coefficients
-    wc1 = this%gammaw * this%beta * area * tthk * this%sk_theta(n) * tled
+    wc1 = this%gammaw * this%beta * area * tthk0 * this%sk_theta0(n) * tled
+    wc2 = this%gammaw * this%beta * area * tthk * this%sk_theta(n) * tled
     !
     ! -- calculate hcof term
-    hcof = -wc1 * snnew
+    hcof = -wc2 * snnew
     !
     ! -- calculate rhs term
     rhs = -wc1 * snold * hcellold
@@ -2965,7 +2901,7 @@ contains
     real(DP) :: tthk
     real(DP) :: derv
     real(DP) :: sske
-    real(DP) :: wc1
+    real(DP) :: wc2
 ! ------------------------------------------------------------------------------
 !
 ! -- initialize variables
@@ -2981,10 +2917,10 @@ contains
     derv = sQuadraticSaturationDerivative(top, bot, hcell)    
     !
     ! -- storage coefficients
-    wc1 = this%gammaw * this%beta * area * tthk * this%sk_theta(n) * tled
+    wc2 = this%gammaw * this%beta * area * tthk * this%sk_theta(n) * tled
     !
     ! -- calculate hcof term
-    hcof = -wc1 * derv * hcell
+    hcof = -wc2 * derv * hcell
     !
     ! -- calculate rhs term
     rhs = hcof * hcell
@@ -3018,10 +2954,12 @@ contains
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: tthk
+    real(DP) :: tthk0
     real(DP) :: snold
     real(DP) :: snnew
     real(DP) :: f
     real(DP) :: wc1
+    real(DP) :: wc2
 ! ------------------------------------------------------------------------------
 !
 ! -- initialize variables
@@ -3045,14 +2983,15 @@ contains
     idelay = this%idelay(i)
     f = this%gammaw * this%beta * area * tled
     if (idelay == 0) then
-      wc1 = f * this%theta(i) * this%thick(i)
-      hcof = -wc1 * snnew
+      wc1 = f * this%theta0(i) * this%thick0(i)
+      wc2 = f * this%theta(i) * this%thick(i)
+      hcof = -wc2 * snnew
       rhs = -wc1 * snold * hcellold
     else
       if (this%thick(i) > DZERO) then
         do j = 1, this%ndelaycells
-          wc1 = f * this%dbdz(idelay) * this%dbtheta(j, idelay)
-          rhs = rhs - wc1 * (snold * this%dbh0(j, idelay) -                     &
+          wc2 = f * this%dbdz(idelay) * this%dbtheta(j, idelay)
+          rhs = rhs - wc2 * (snold * this%dbh0(j, idelay) -                     &
                              snnew * this%dbh(j, idelay))
         end do
         rhs = rhs * this%rnb(i)
@@ -3174,10 +3113,14 @@ contains
     ! -- initialize variables
     strain = DZERO
     void = this%csub_calc_void(theta)
+    !
+    ! -- calculate strain
     if (thick > DZERO) strain = -comp / thick
-    void = strain + void * (strain + DONE)
+    !
+    ! -- update void ratio, theta, and thickness
+    void = void + strain * (DONE + void)
     theta = this%csub_calc_theta(void)
-    thick = thick * (strain + DONE)
+    thick = thick - comp
     !
     ! -- return
     return
@@ -3591,7 +3534,6 @@ contains
     real(DP) :: fmult
     real(DP) :: v1
     real(DP) :: v2
-    !real(DP) :: strain
     real(DP) :: void
 ! ------------------------------------------------------------------------------
     !
@@ -3650,7 +3592,6 @@ contains
     integer(I4B) :: n
     real(DP) :: hcof
     real(DP) :: v
-    !real(DP) :: strain
     real(DP) :: void
 ! ------------------------------------------------------------------------------
     !
@@ -3698,7 +3639,6 @@ contains
     real(DP) :: denom
     real(DP) :: f
     real(DP) :: v
-    !real(DP) :: strain
     real(DP) :: void
 ! ------------------------------------------------------------------------------
     !
