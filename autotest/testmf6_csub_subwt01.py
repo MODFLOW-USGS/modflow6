@@ -200,9 +200,9 @@ def build_models():
                          1., cc, cr, theta,
                          kv, 999.]
                     swt6.append(d)
-    ds16 = [0, 2052, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    ds16 = [0, 0, 0, 2052, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    ds17 = [1, 10000, 1, 10000, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    ds17 = [0, 10000, 0, 10000, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
     for idx, dir in enumerate(exdirs):
@@ -268,17 +268,33 @@ def build_models():
                                       stress_period_data=wd6,
                                       save_flows=False)
 
-        # ibc files
-        ibc = flopy.mf6.ModflowGwfcsub(gwf, interbed_stress_offset=True,
-                                       compression_indices=True,
-                                       geo_stress_offset=True,
-                                       update_material_properties=True,
-                                       time_weight=0.,
-                                       ninterbeds=len(swt6),
-                                       sgs=sgs, sgm=sgm,
-                                       beta=0., ske_cr=0.00,
-                                       packagedata=swt6,
-                                       sig0={0: [0., 0., 0., 0.]})
+        # csub files
+        opth = '{}.csub.obs'.format(name)
+        csub = flopy.mf6.ModflowGwfcsub(gwf, interbed_stress_offset=True,
+                                        compression_indices=True,
+                                        geo_stress_offset=True,
+                                        update_material_properties=True,
+                                        time_weight=0.,
+                                        ninterbeds=len(swt6),
+                                        obs_filerecord=opth,
+                                        sgs=sgs, sgm=sgm,
+                                        beta=0., ske_cr=0.00,
+                                        packagedata=swt6,
+                                        sig0={0: [0., 0., 0., 0.]})
+        orecarray = {}
+        orecarray['csub_obs.csv'] = [('w1l1', 'total-compaction', (0, 8, 9)),
+                                     ('w1l2', 'total-compaction', (1, 8, 9)),
+                                     ('w1l3', 'total-compaction', (2, 8, 9)),
+                                     ('w1l4', 'total-compaction', (3, 8, 9)),
+                                     ('w2l1', 'total-compaction', (0, 11, 6)),
+                                     ('w2l2', 'total-compaction', (1, 11, 6)),
+                                     ('w2l3', 'total-compaction', (2, 11, 6)),
+                                     ('w2l4', 'total-compaction', (3, 11, 6))]
+        csub_obs_package = flopy.mf6.ModflowUtlobs(gwf,
+                                                   fname=opth,
+                                                   parent_file=csub, digits=10,
+                                                   print_input=True,
+                                                   continuous=orecarray)
 
         # output control
         oc = flopy.mf6.ModflowGwfoc(gwf,
