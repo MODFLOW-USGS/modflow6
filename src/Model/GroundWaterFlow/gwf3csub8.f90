@@ -82,7 +82,8 @@ module GwfCsubModule
     real(DP), dimension(:), pointer :: sk_gs        => null()   !geostatic stress for a cell
     real(DP), dimension(:), pointer :: sk_es        => null()   !skeletal (aquifer) effective stress
     real(DP), dimension(:), pointer :: sk_es0       => null()   !skeletal (aquifer) effective stress for the previous time step
-    real(DP), dimension(:), pointer :: sk_comp      => null()   !skeletal (aquifer) compaction
+    real(DP), dimension(:), pointer :: sk_comp      => null()   !skeletal (aquifer) incremental compaction
+    real(DP), dimension(:), pointer :: sk_tcomp     => null()   !skeletal (aquifer) total compaction
     real(DP), dimension(:), pointer :: sk_stor      => null()   !skeletal (aquifer) storage
     real(DP), dimension(:), pointer :: sk_wcstor    => null()   !skeletal (aquifer) water compressibility storage
     !
@@ -100,8 +101,8 @@ module GwfCsubModule
     real(DP), dimension(:), pointer :: rnb          => null()   !interbed system material factor
     real(DP), dimension(:), pointer :: kv           => null()   !vertical hydraulic conductivity of interbed
     real(DP), dimension(:), pointer :: h0           => null()   !initial head in interbed
-    real(DP), dimension(:), pointer :: comp         => null()   !interbed compaction
-    real(DP), dimension(:), pointer :: totalcomp    => null()   !total interbed compaction
+    real(DP), dimension(:), pointer :: comp         => null()   !interbed incremental compaction
+    real(DP), dimension(:), pointer :: tcomp        => null()   !total interbed compaction
     real(DP), dimension(:), pointer :: gwflow       => null()   !gwf-flow
     real(DP), pointer, dimension(:,:) :: auxvar     => null()   !auxiliary variable array
     real(DP), dimension(:), pointer :: storagee     => null()   !elastic storage
@@ -356,6 +357,7 @@ contains
     real(DP) :: bot
     real(DP) :: thk_node
     real(DP) :: thick
+    real(DP) :: theta
     real(DP) :: rrate
     real(DP) :: ratein
     real(DP) :: rateout
@@ -372,7 +374,6 @@ contains
     real(DP) :: qaqa
     real(DP) :: qaqrhs
     real(DP) :: void
-    real(DP) :: theta
     real(DP) :: rateskin
     real(DP) :: rateskout
     real(DP) :: rateibein
@@ -436,16 +437,25 @@ contains
       this%sk_stor(n) = rrate
       this%sk_wcstor(n) = rratewc
       !
+      ! -- update compaction
+      comp = rrate * DELT / area
+      this%sk_comp(n) = comp
+      ! 
+      !
       ! -- update states if required
       if (isuppress_output == 0) then
         !
         ! -- update compaction
         comp = rrate * DELT / area
-        this%sk_comp(n) = this%sk_comp(n) + comp
+        this%sk_tcomp(n) = this%sk_tcomp(n) + comp
         !
         ! - calculate strain and change in skeletal void ratio and thickness
         if (this%iupdatematprop /= 0) then
-          call this%csub_adj_matprop(comp, this%sk_thick(n), this%sk_theta(n))
+          thick = this%sk_thick0(n)
+          theta = this%sk_theta0(n)
+          call this%csub_adj_matprop(comp, thick, theta)
+          this%sk_thick(n) = thick
+          this%sk_theta(n) = theta
         end if
       end if
     end do
@@ -513,11 +523,15 @@ contains
           if (isuppress_output == 0) then
             !
             ! -- update total compaction
-            this%totalcomp(i) = this%totalcomp(i) + comp
+            this%tcomp(i) = this%tcomp(i) + comp
             !
             ! - calculate strain and change in interbed void ratio and thickness
             if (this%iupdatematprop /= 0) then
-              call this%csub_adj_matprop(comp, this%thick(i), this%sk_theta(n))
+              thick = this%thick0(n)
+              theta = this%theta0(n)
+              call this%csub_adj_matprop(comp, thick, theta)
+              this%thick(n) = thick
+              this%theta(n) = theta
             end if
           end if
           !
@@ -1211,6 +1225,7 @@ contains
     call mem_allocate(this%sk_es, this%dis%nodes, 'sk_es', trim(this%origin))
     call mem_allocate(this%sk_es0, this%dis%nodes, 'sk_es0', trim(this%origin))
     call mem_allocate(this%sk_comp, this%dis%nodes, 'sk_comp', trim(this%origin))
+    call mem_allocate(this%sk_tcomp, this%dis%nodes, 'sk_tcomp', trim(this%origin))
     call mem_allocate(this%sk_stor, this%dis%nodes, 'sk_stor', trim(this%origin))
     call mem_allocate(this%sk_wcstor, this%dis%nodes, 'sk_wcstor', trim(this%origin))
     if (this%igeostressoff == 1) then
@@ -1253,7 +1268,7 @@ contains
     call mem_allocate(this%rci, iblen, 'rci', trim(this%origin))
     call mem_allocate(this%idelay, iblen, 'idelay', trim(this%origin))
     call mem_allocate(this%comp, iblen, 'comp', trim(this%origin))
-    call mem_allocate(this%totalcomp, iblen, 'totalcomp', trim(this%origin))
+    call mem_allocate(this%tcomp, iblen, 'tcomp', trim(this%origin))
     call mem_allocate(this%gwflow, iblen, 'gwflow', trim(this%origin))
     call mem_allocate(this%storagee, iblen, 'storagee', trim(this%origin))
     call mem_allocate(this%storagei, iblen, 'storagei', trim(this%origin))
@@ -1295,6 +1310,7 @@ contains
       this%sk_gs(n) = DZERO
       this%sk_es(n) = DZERO
       this%sk_comp(n) = DZERO
+      this%sk_tcomp(n) = DZERO
       this%sk_wcstor(n) = DZERO
       if (this%igeostressoff == 1) then
         this%sig0(n) = DZERO
@@ -1302,7 +1318,7 @@ contains
     end do
     do n = 1, this%ninterbeds
       this%theta(n) = DZERO
-      this%totalcomp(n) = DZERO
+      this%tcomp(n) = DZERO
     end do
     !
     ! -- return
@@ -1349,6 +1365,7 @@ contains
       call mem_deallocate(this%sk_es)
       call mem_deallocate(this%sk_es0)
       call mem_deallocate(this%sk_comp)
+      call mem_deallocate(this%sk_tcomp)
       call mem_deallocate(this%sk_stor)
       call mem_deallocate(this%sk_wcstor)
       !
@@ -1372,7 +1389,7 @@ contains
       call mem_deallocate(this%kv)
       call mem_deallocate(this%h0)
       call mem_deallocate(this%comp)
-      call mem_deallocate(this%totalcomp)
+      call mem_deallocate(this%tcomp)
       call mem_deallocate(this%gwflow)
       call mem_deallocate(this%storagee)
       call mem_deallocate(this%storagei)
@@ -2171,7 +2188,6 @@ contains
         this%sk_theta0(n) = this%sk_theta(n)
         this%sk_thick0(n) = this%sk_thick(n)
       end if
-
     end do
     !
     ! -- interbeds
@@ -3675,7 +3691,7 @@ contains
     !
     ! -- fill compaction
     this%comp(ib) = comp
-    this%totalcomp(ib) = this%totalcomp(ib) + comp * this%rnb(ib)
+    this%tcomp(ib) = this%tcomp(ib) + comp * this%rnb(ib)
     !
     ! -- return
     return
@@ -3843,12 +3859,12 @@ contains
         do j = 1, nn
           n = obsrv%indxbnds(j)
           select case (obsrv%ObsTypeId)
-            case ('IBC')
+            case ('CSUB')
               v = this%gwflow(n)
             case ('COMPACTION')
               v = this%comp(n)
             case ('TOTAL-COMPACTION')
-              v = this%totalcomp(n)
+              v = this%tcomp(n)
             case ('THICKNESS')
               v = this%thick(n)
             case ('GSTRESS-CELL')
@@ -3856,7 +3872,7 @@ contains
             case ('ESTRESS-CELL')
               v = this%sk_es(n)
             case ('COMPACTION-CELL')
-              v = this%sk_comp(n)
+              v = this%sk_tcomp(n)
             case ('PRECONSTRESS')
                if (n > this%ndelaycells) then
                 r = real(n, DP) / real(this%ndelaycells, DP)
