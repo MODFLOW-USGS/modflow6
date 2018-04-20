@@ -750,6 +750,7 @@ module GwtDspModule
     real(DP) :: hwva, cond
 ! ------------------------------------------------------------------------------
     !
+    ! -- todo: get ivarcv and idewatcv from flow model
     ivarcv = 1
     idewatcv = 0
     icellavg = 0
@@ -791,7 +792,9 @@ module GwtDspModule
         anm = thksatnm(ibdn, ibdm, ictn, ictm, inwtup, ihc, iusg,              &
                         hn, hm, satn, satm, topn, topm, botn, botm, satomega)
         !
-        ! -- Calculate dispersion coefficient
+        ! -- Calculate dispersion coefficient for cell n in the direction
+        !    normal to the shared n-m face and for cell m in the direction
+        !    normal to the shared n-m face.
         call this%dis%connection_normal(n, m, ihc, vg1, vg2, vg3, ipos)
         dn = hyeff_calc(this%d11(n), this%d22(n), this%d33(n),                 &
                         this%angle1(n), this%angle2(n), this%angle3(n),        &
@@ -799,12 +802,9 @@ module GwtDspModule
         dm = hyeff_calc(this%d11(m), this%d22(m), this%d33(m),                 &
                         this%angle1(m), this%angle2(m), this%angle3(m),        &
                         vg1, vg2, vg3)
-        
-        !dnm_mean = dn * clnm + dm * clmn
-        !this%dispcoef(isympos) = dnm_mean * anm / (clnm + clmn)
-
         !
-        ! -- Calculate dispersion conductance based on NPF subroutines
+        ! -- Calculate dispersion conductance based on NPF subroutines and the
+        !    effective dispersion coefficients dn and dm.
         if(ihc == 0) then
           !
           ! -- Calculate vertical conductance
@@ -835,7 +835,7 @@ module GwtDspModule
                        hwva, satomega)
         endif
         this%dispcoef(isympos) = cond
-        
+        !
       enddo
     enddo
     !
