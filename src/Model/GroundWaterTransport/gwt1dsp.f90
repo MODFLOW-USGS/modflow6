@@ -809,9 +809,10 @@ module GwtDspModule
           !
           ! -- Calculate vertical conductance
           cond = vcond(ibdn, ibdm,                                             &
-                       ictn, ictm, inwtup,                                     &
+                       1, 1,                                                   &
+                       inwtup,                                                 &
                        ivarcv, idewatcv,                                       &
-                       1.d30, hn, hm,                                          &
+                       1.d30, -1.d30, -1.d30,                                  &
                        dn, dm,                                                 &
                        satn, satm,                                             &
                        topn, topm,                                             &

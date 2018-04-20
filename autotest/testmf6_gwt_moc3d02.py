@@ -21,7 +21,8 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['moc3d02']
+ex = ['moc3d02a', 'moc3d02b']
+xt3d = [None, True]
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
@@ -189,7 +190,7 @@ def build_models():
                                       fname='{}.adv'.format(gwtname))
 
         # dispersion
-        dsp = flopy.mf6.ModflowGwtdsp(gwt, xt3d=True, diffc=diffc,
+        dsp = flopy.mf6.ModflowGwtdsp(gwt, xt3d=xt3d[idx], diffc=diffc,
                                       alh=alphal, alv=alphal,
                                       ath=alphath, atv=alphatv,
                                       fname='{}.dsp'.format(gwtname))
