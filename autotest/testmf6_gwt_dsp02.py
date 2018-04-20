@@ -21,11 +21,9 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['dsp02']
-top = [1.]
-laytyp = [0]
-ss = [0.]
-sy = [0.1]
+# test dispersion without and with xt3d
+ex = ['dsp02a', 'dsp02b']
+xt3d = [None, True]
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
@@ -46,6 +44,10 @@ def build_models():
     hnoflo = 1e30
     hdry = -1e30
     hk = 1.0
+    top = 1.
+    laytyp = 0
+    ss = 0.
+    sy = 0.1
 
     chdlist = []
     ib = np.ones((nlay, nrow, ncol), dtype=np.int)
@@ -95,7 +97,7 @@ def build_models():
 
         dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
                                       delr=delr, delc=delc,
-                                      top=top[idx], botm=botm,
+                                      top=top, botm=botm,
                                       idomain=np.ones((nlay, nrow, ncol), dtype=np.int),
                                       fname='{}.dis'.format(gwfname))
 
@@ -106,15 +108,9 @@ def build_models():
         # node property flow
         npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False,
                                       save_specific_discharge=True,
-                                      icelltype=laytyp[idx],
+                                      icelltype=laytyp,
                                       k=hk,
                                       k33=hk)
-        # storage
-        #sto = flopy.mf6.ModflowGwfsto(gwf, save_flows=False,
-        #                              iconvert=laytyp[idx],
-        #                              ss=ss[idx], sy=sy[idx],
-        #                              steady_state={0: True, 2: True},
-        #                              transient={1: True})
 
         # chd files
         chd = flopy.mf6.ModflowGwfchd(gwf,
@@ -154,7 +150,7 @@ def build_models():
 
         dis = flopy.mf6.ModflowGwtdis(gwt, nlay=nlay, nrow=nrow, ncol=ncol,
                                       delr=delr, delc=delc,
-                                      top=top[idx], botm=botm,
+                                      top=top, botm=botm,
                                       idomain=1,
                                       fname='{}.dis'.format(gwtname))
 
@@ -167,7 +163,7 @@ def build_models():
                                     fname='{}.adv'.format(gwtname))
 
         # advection
-        dsp = flopy.mf6.ModflowGwtdsp(gwt, diffc=100.,
+        dsp = flopy.mf6.ModflowGwtdsp(gwt, xt3d=xt3d[idx], diffc=100.,
                                       alh=0., alv=0., ath=0., atv=0.,
                                       fname='{}.dsp'.format(gwtname))
 

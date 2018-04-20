@@ -1,7 +1,7 @@
 module GwtDspModule
 
   use KindModule,             only: DP, I4B
-  use ConstantsModule,        only: DONE, DZERO, DHALF
+  use ConstantsModule,        only: DONE, DZERO, DHALF, DPI
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule,          only: DisBaseType
   use GwtFmiModule,           only: GwtFmiType
@@ -26,6 +26,7 @@ module GwtDspModule
     integer(I4B), pointer                            :: idisp      => null()    ! flag indicating mechanical dispersion is active
     integer(I4B), pointer                            :: ixt3d      => null()    ! flag indicating xt3d is active
     type(Xt3dType), pointer                          :: xt3d       => null()    ! xt3d object
+    real(DP), dimension(:), pointer                  :: dispcoef   => null()    ! disp coefficient (only if xt3d not active)
     integer(I4B), pointer                            :: id22       => null()    ! flag indicating d22 is available
     integer(I4B), pointer                            :: id33       => null()    ! flag indicating d33 is available
     real(DP), dimension(:), pointer                  :: d11        => null()    ! dispersion coefficient
@@ -53,7 +54,8 @@ module GwtDspModule
     procedure :: allocate_arrays
     procedure, private :: read_options
     procedure, private :: read_data
-    procedure, private :: calcdisp
+    procedure, private :: calcdispellipse
+    procedure, private :: calcdispcoef
    
   end type GwtDspType
   
@@ -248,7 +250,12 @@ module GwtDspModule
     endif
     !
     ! -- Fill d11, d22, d33, angle1, angle2, angle3 using specific discharge
-    call this%calcdisp()
+    call this%calcdispellipse()
+    !
+    ! -- If xt3d not in use, recalculate dispersion coefficients
+    if (this%ixt3d == 0) then
+      call this%calcdispcoef()
+    endif
     !
     ! -- Return
     return
@@ -320,48 +327,33 @@ module GwtDspModule
     real(DP),intent(inout),dimension(nodes) :: rhs
     real(DP),intent(inout),dimension(nodes) :: cnew
     ! -- local
-    integer(I4B) :: n, m, idiag, ipos
-    real(DP) :: clnm, clmn, anm, wt, dstar, dnm
-    integer(I4B) :: ihc, ibdn, ibdm, ictn, ictm, inwtup, iusg
-    real(DP) :: hn, hm, satn, satm, topn, topm, botn, botm, satomega
+    integer(I4B) :: n, m, idiag, idiagm, ipos, isympos, isymcon
+    real(DP) :: dnm
 ! ------------------------------------------------------------------------------
     !
     if(this%ixt3d > 0) then
       call this%xt3d%xt3d_fc(kiter, nodes, nja, njasln, amatsln, idxglo, rhs,  &
                              cnew)
     else
-      inwtup = this%fmi%igwfinwtup
-      iusg = this%fmi%igwfiusgnrhc
-      satomega = this%fmi%gwfsatomega
       do n = 1, nodes
         if(this%ibound(n) == 0) cycle
         idiag = this%dis%con%ia(n)
         do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
           m = this%dis%con%ja(ipos)
+          if (m < n) cycle
           if(this%ibound(m) == 0) cycle
-          clnm = this%dis%con%cl1(this%dis%con%jas(ipos))
-          clmn = this%dis%con%cl2(this%dis%con%jas(ipos))
-          wt = clmn / (clnm + clmn)
-          ihc = this%dis%con%ihc(this%dis%con%jas(ipos))
-          ibdn = this%fmi%gwfibound(n)
-          ibdm = this%fmi%gwfibound(m)
-          ictn = this%fmi%gwficelltype(n)
-          ictm = this%fmi%gwficelltype(m)
-          hn = this%fmi%gwfhead(n)
-          hm = this%fmi%gwfhead(m)
-          satn = this%fmi%gwfsat(n)
-          satm = this%fmi%gwfsat(m)
-          topn = this%dis%top(n)
-          topm = this%dis%top(m)
-          botn = this%dis%bot(n)
-          botm = this%dis%bot(m)
-          anm = thksatnm(ibdn, ibdm, ictn, ictm, inwtup, ihc, iusg,              &
-                         hn, hm, satn, satm, topn, topm, botn, botm, satomega)
-          dstar = wt * this%porosity(n) * this%diffc(n) + &
-                  (DONE - wt) * this%porosity(m) * this%diffc(m)
-          dnm = dstar * anm / (clnm + clmn)
+          isympos = this%dis%con%jas(ipos)
+          dnm = this%dispcoef(isympos)
+          !
+          ! -- Contribution to row n
           amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + dnm
           amatsln(idxglo(idiag)) = amatsln(idxglo(idiag)) - dnm
+          !
+          ! -- Contribution to row m
+          idiagm = this%dis%con%ia(m)
+          isymcon = this%dis%con%isym(ipos)
+          amatsln(idxglo(isymcon)) = amatsln(idxglo(isymcon)) + dnm
+          amatsln(idxglo(idiagm)) = amatsln(idxglo(idiagm)) - dnm
         enddo
       enddo
     endif
@@ -386,46 +378,21 @@ module GwtDspModule
     real(DP), intent(inout), dimension(:) :: cnew
     real(DP), intent(inout), dimension(:) :: flowja
     ! -- local
-    integer(I4B) :: n, m, idiag, ipos
-    real(DP) :: clnm, clmn, anm, wt, dstar, dnm
-    integer(I4B) :: ihc, ibdn, ibdm, ictn, ictm, inwtup, iusg
-    real(DP) :: hn, hm, satn, satm, topn, topm, botn, botm, satomega
+    integer(I4B) :: n, m, ipos, isympos
+    real(DP) :: dnm
 ! ------------------------------------------------------------------------------
     !
     ! -- Calculate dispersion and add to flowja
     if(this%ixt3d > 0) then
       call this%xt3d%xt3d_flowja(nodes, nja, cnew, flowja)
     else
-      inwtup = this%fmi%igwfinwtup
-      iusg = this%fmi%igwfiusgnrhc
-      satomega = this%fmi%gwfsatomega
       do n = 1, nodes
         if(this%ibound(n) == 0) cycle
-        idiag = this%dis%con%ia(n)
         do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
           m = this%dis%con%ja(ipos)
           if(this%ibound(m) == 0) cycle
-          clnm = this%dis%con%cl1(this%dis%con%jas(ipos))
-          clmn = this%dis%con%cl2(this%dis%con%jas(ipos))
-          wt = clmn / (clnm + clmn)
-          ihc = this%dis%con%ihc(this%dis%con%jas(ipos))
-          ibdn = this%fmi%gwfibound(n)
-          ibdm = this%fmi%gwfibound(m)
-          ictn = this%fmi%gwficelltype(n)
-          ictm = this%fmi%gwficelltype(m)
-          hn = this%fmi%gwfhead(n)
-          hm = this%fmi%gwfhead(m)
-          satn = this%fmi%gwfsat(n)
-          satm = this%fmi%gwfsat(m)
-          topn = this%dis%top(n)
-          topm = this%dis%top(m)
-          botn = this%dis%bot(n)
-          botm = this%dis%bot(m)
-          anm = thksatnm(ibdn, ibdm, ictn, ictm, inwtup, ihc, iusg,              &
-                         hn, hm, satn, satm, topn, topm, botn, botm, satomega)
-          dstar = wt * this%porosity(n) * this%diffc(n) + &
-                  (DONE - wt) * this%porosity(m) * this%diffc(m)
-          dnm = dstar * anm / (clnm + clmn)
+          isympos = this%dis%con%jas(ipos)
+          dnm = this%dispcoef(isympos)
           flowja(ipos) = flowja(ipos) + dnm * (cnew(m) - cnew(n))
         enddo
       enddo
@@ -507,6 +474,14 @@ module GwtDspModule
     call mem_allocate(this%angle3, nodes, 'ANGLE3', trim(this%origin))
     call mem_allocate(this%gwfflowjaold, this%dis%con%nja, 'GWFFLOWJAOLD',     &
       trim(this%origin))
+    !
+    ! -- Allocate dispersion coefficient array if xt3d not in use
+    if (this%ixt3d == 0) then
+      call mem_allocate(this%dispcoef, this%dis%njas, 'DISPCOEF',              &
+        trim(this%origin))
+    else
+      call mem_allocate(this%dispcoef, 0, 'DISPCOEF', trim(this%origin))
+    endif
     !
     ! -- Return
     return
@@ -673,9 +648,9 @@ module GwtDspModule
     return
   end subroutine read_data
  
-  subroutine calcdisp(this)
+  subroutine calcdispellipse(this)
 ! ******************************************************************************
-! calcdisp -- Calculate dispersion coefficients
+! calcdispellipse -- Calculate dispersion coefficients
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -740,16 +715,132 @@ module GwtDspModule
       endif
       !
       ! -- acos(1) not defined, so set to zero if necessary
-      if (a < DONE) then
-        this%angle1(n) = acos(a)
-      else
+      if (a < -DONE) then
+        this%angle1(n) = DPI
+      elseif (a > DONE) then
         this%angle1(n) = DZERO
+      else
+        this%angle1(n) = acos(a)
       endif
       !
     enddo
     !
     ! -- Return
     return
-  end subroutine calcdisp
+  end subroutine calcdispellipse
+
+  subroutine calcdispcoef(this)
+! ******************************************************************************
+! calcdispcoef -- Calculate dispersion coefficients
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use GwfNpfModule, only: thksatnm, hyeff_calc, hcond, vcond
+    ! -- dummy
+    class(GwtDspType) :: this
+    ! -- local
+    integer(I4B) :: nodes, n, m, idiag, ipos
+    real(DP) :: clnm, clmn, anm, dnm_mean, dn, dm
+    real(DP) :: vg1, vg2, vg3
+    integer(I4B) :: ihc, ibdn, ibdm, ictn, ictm, inwtup, iusg, isympos
+    real(DP) :: hn, hm, satn, satm, topn, topm, botn, botm, satomega
+    integer(I4B) :: ivarcv, idewatcv, icellavg
+    real(DP) :: hwva, cond
+! ------------------------------------------------------------------------------
+    !
+    ivarcv = 1
+    idewatcv = 0
+    icellavg = 0
+    inwtup = this%fmi%igwfinwtup
+    iusg = this%fmi%igwfiusgnrhc
+    satomega = this%fmi%gwfsatomega
+    nodes = size(this%d11)
+    do n = 1, nodes
+      if(this%ibound(n) == 0) cycle
+      idiag = this%dis%con%ia(n)
+      do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
+        !
+        ! -- Set m to connected cell
+        m = this%dis%con%ja(ipos)
+        !
+        ! -- skip for lower triangle
+        if (m < n) cycle
+        isympos = this%dis%con%jas(ipos)
+        this%dispcoef(isympos) = DZERO
+        if(this%ibound(m) == 0) cycle
+        !
+        ! -- cell dimensions
+        hwva = this%dis%con%hwva(isympos)
+        clnm = this%dis%con%cl1(isympos)
+        clmn = this%dis%con%cl2(isympos)
+        ihc = this%dis%con%ihc(isympos)
+        ibdn = this%fmi%gwfibound(n)
+        ibdm = this%fmi%gwfibound(m)
+        ictn = this%fmi%gwficelltype(n)
+        ictm = this%fmi%gwficelltype(m)
+        hn = this%fmi%gwfhead(n)
+        hm = this%fmi%gwfhead(m)
+        satn = this%fmi%gwfsat(n)
+        satm = this%fmi%gwfsat(m)
+        topn = this%dis%top(n)
+        topm = this%dis%top(m)
+        botn = this%dis%bot(n)
+        botm = this%dis%bot(m)
+        anm = thksatnm(ibdn, ibdm, ictn, ictm, inwtup, ihc, iusg,              &
+                        hn, hm, satn, satm, topn, topm, botn, botm, satomega)
+        !
+        ! -- Calculate dispersion coefficient
+        call this%dis%connection_normal(n, m, ihc, vg1, vg2, vg3, ipos)
+        dn = hyeff_calc(this%d11(n), this%d22(n), this%d33(n),                 &
+                        this%angle1(n), this%angle2(n), this%angle3(n),        &
+                        vg1, vg2, vg3)
+        dm = hyeff_calc(this%d11(m), this%d22(m), this%d33(m),                 &
+                        this%angle1(m), this%angle2(m), this%angle3(m),        &
+                        vg1, vg2, vg3)
+        
+        !dnm_mean = dn * clnm + dm * clmn
+        !this%dispcoef(isympos) = dnm_mean * anm / (clnm + clmn)
+
+        !
+        ! -- Calculate dispersion conductance based on NPF subroutines
+        if(ihc == 0) then
+          !
+          ! -- Calculate vertical conductance
+          cond = vcond(ibdn, ibdm,                                             &
+                       ictn, ictm, inwtup,                                     &
+                       ivarcv, idewatcv,                                       &
+                       1.d30, hn, hm,                                          &
+                       dn, dm,                                                 &
+                       satn, satm,                                             &
+                       topn, topm,                                             &
+                       botn, botm,                                             &
+                       hwva)
+        else
+          !
+          ! -- Horizontal conductance
+          cond = hcond(ibdn, ibdm,                                             &
+                       1, 1,                                                   &
+                       inwtup, inwtup,                                         &
+                       ihc,                                                    &
+                       icellavg, iusg,                                         &
+                       1.d30, hn, hm,                                          &
+                       satn, satm,                                             &
+                       dn, dm,                                                 &
+                       topn, topm,                                             &
+                       botn, botm,                                             &
+                       clnm, clmn,                                             &
+                       hwva, satomega)
+        endif
+        this%dispcoef(isympos) = cond
+        
+      enddo
+    enddo
+    !
+    ! -- Return
+    return
+  end subroutine calcdispcoef
+  
   
 end module GwtDspModule

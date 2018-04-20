@@ -103,12 +103,6 @@ def build_models():
                                       icelltype=laytyp[idx],
                                       k=hk,
                                       k33=hk)
-        # storage
-        #sto = flopy.mf6.ModflowGwfsto(gwf, save_flows=False,
-        #                              iconvert=laytyp[idx],
-        #                              ss=ss[idx], sy=sy[idx],
-        #                              steady_state={0: True, 2: True},
-        #                              transient={1: True})
 
         # chd files
         chd = flopy.mf6.ModflowGwfchd(gwf, maxbound=len(c),
@@ -161,7 +155,7 @@ def build_models():
                                     fname='{}.adv'.format(gwtname))
 
         # advection
-        dsp = flopy.mf6.ModflowGwtdsp(gwt, diffc=100.,
+        dsp = flopy.mf6.ModflowGwtdsp(gwt, xt3d=None, diffc=100.,
                                       alh=0., alv=0., ath=0., atv=0.,
                                       fname='{}.dsp'.format(gwtname))
 
