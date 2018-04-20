@@ -5,11 +5,40 @@ import subprocess
 import os
 import sys
 import datetime
+import json
 
-files = ['version.py', 'version.tex', 'README.md']
+files = ['version.py', 'version.tex', 'README.md', 'DISCLAIMER.md',
+         'code.json']
 
 vpth = 'doc'
 prod = 'MODFLOW 6'
+
+approved = '''Disclaimer
+----------
+
+This software has been approved for release by the U.S. Geological Survey
+(USGS). Although the software has been subjected to rigorous review, the USGS
+reserves the right to update the software as needed pursuant to further analysis
+and review. No warranty, expressed or implied, is made by the USGS or the U.S.
+Government as to the functionality of the software and related material nor
+shall the fact of release constitute any such warranty. Furthermore, the
+software is released on condition that neither the USGS nor the U.S. Government
+shall be held liable for any damages resulting from its authorized or
+unauthorized use.
+'''
+
+preliminary = '''Disclaimer
+----------
+
+This software is preliminary or provisional and is subject to revision. It is
+being provided to meet the need for timely best science. The software has not
+received final approval by the U.S. Geological Survey (USGS). No warranty,
+expressed or implied, is made by the USGS or the U.S. Government as to the
+functionality of the software and related material nor shall the fact of release
+constitute any such warranty. The software is provided on the condition that
+neither the USGS nor the U.S. Government shall be held liable for any damages
+resulting from the authorized or unauthorized use of the software.
+'''
 
 def get_version_str(v0, v1, v2, v3):
     version_type = ('{}'.format(v0),
@@ -27,6 +56,13 @@ def get_tag(v0, v1, v2):
     tag = '.'.join(tag_type)
     return tag
 
+def get_disclaimer(branch):
+    if branch.lower() == 'master':
+        disclaimer = approved
+    else:
+        disclaimer = preliminary
+    return disclaimer
+    
 
 def update_version():
     try:
@@ -149,12 +185,16 @@ def update_readme_markdown(vmajor, vminor, vmicro, vbuild):
 
     # create version
     version = get_tag(vmajor, vminor, vmicro)
+    
+    # create disclaimer text
+    disclaimer = get_disclaimer(branch)
 
     # read README.md into memory
     with open(files[2], 'r') as file:
         lines = [line.rstrip() for line in file]
 
     # rewrite README.md
+    terminate = False
     f = open(files[2], 'w')
     for line in lines:
         if '### Version ' in line:
@@ -180,9 +220,39 @@ def update_readme_markdown(vmajor, vminor, vmicro, vbuild):
                    '{}, '.format(now.strftime('%d %B %Y')) + \
                    'https://doi.org/10.5066/F76Q1VQV]' + \
                    '(https://doi.org/10.5066/F76Q1VQV)'
+        elif 'Disclaimer' in line:
+            line = disclaimer
+            terminate = True
         f.write('{}\n'.format(line))
+        if terminate:
+            break
     f.close()
-
+    
+    # write disclaimer markdown file
+    f = open(files[3], 'w')
+    f.write(disclaimer)
+    f.close()
+    
+    # load and modify json file
+    jsonFile = open(files[4], 'r') # Open the JSON file for reading
+    data = json.load(jsonFile) # Read the JSON into the buffer
+    jsonFile.close() # Close the JSON file
+    
+    # modify the json file data
+    now = datetime.datetime.now()
+    sdate = now.strftime('%Y-%m-%d')
+    data[0]['date']['metadataLastUpdated'] = sdate
+    if branch.lower() == 'master':
+        data[0]['version'] = version
+        data[0]['status'] = 'Production'
+    else:
+        data[0]['version'] = version + '.{}'.format(vbuild)
+        data[0]['status'] = 'Release Candidate'
+    
+    # rewrite the json file
+    with open(files[4], 'w') as f:
+        json.dump(data, f, indent=4)  
+          
     return
 
 
