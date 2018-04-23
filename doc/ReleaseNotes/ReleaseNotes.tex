@@ -123,6 +123,12 @@ This section describes changes introduced into MODFLOW 6 with each release.  The
 \item If the AUXMULTNAME keyword was used in combination with time series, then the multiplier was erroneously applied to all time series, and not just the time series in the column to be scaled.  
 \end{itemize}
 
+\underline{SOLUTION}
+\begin{itemize}
+\item Fixed bug related to not allocating the preconditioner work array if a non-zero drop tolerance is specified but the number of levels is not specified or specified to be zero. In the case where the number of levels is not specified or specified to be zero the preconditioner work array is dimensioned to the product of the number of cells (NEQ) and the maximum number of connections for any cell.
+\item Updated linear solver output so number of levels and drop tolerance are output if either are specified to be greater than zero. 
+\end{itemize}
+
 \item Version mf6.0.2--Feb 23, 2018
 
 \underline{BASIC FUNCTIONALITY}
