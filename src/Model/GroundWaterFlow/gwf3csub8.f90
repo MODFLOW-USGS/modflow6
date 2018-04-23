@@ -160,6 +160,7 @@ module GwfCsubModule
     procedure, private :: csub_sk_calc_stress
     !
     ! -- coarse-grained skeletal methods
+    procedure, private :: csub_sk_update
     procedure, private :: csub_calc_sk
     procedure, private :: csub_calc_sk_nt
     procedure, private :: csub_sk_calc_sske
@@ -172,7 +173,9 @@ module GwfCsubModule
     procedure, private :: csub_interbed_calc_wcomp
     !
     ! -- no-delay interbed methods
+    procedure, private :: csub_nodelay_update
     procedure, private :: csub_nodelay_calc_gwf
+    procedure, private :: csub_nodelay_calc_comp
     !
     ! -- delay interbed methods
     procedure, private :: csub_delay_calc_interbed
@@ -481,20 +484,25 @@ contains
         if (this%idelay(i) == 0) then
           stoi = DZERO
           !
-          ! -- calculate ibc rho1 and rho2
-          call this%csub_nodelay_calc_gwf(i, hnew(n), hold(n), rho1, rho2, rhs, &
-                                          tled)
-          bot = this%dis%bot(n)
-          top = this%dis%top(n)
-          thk_node = top - bot
+          ! -- calculate compaction
+          call this%csub_nodelay_calc_comp(i, hnew(n), hold(n), comp, rho1, rho2)
+          !!
+          !! -- calculate no-delay interbed rho1 and rho2
+          !call this%csub_nodelay_calc_gwf(i, hnew(n), hold(n), rho1, rho2, rhs, &
+          !                                tled)
+          !!bot = this%dis%bot(n)
+          !!top = this%dis%top(n)
+          !!thk_node = top - bot
+          !
+          ! -- interbed stresses
           es = this%sk_es(n)
           pcs = this%pcs(i)
           es0 = this%sk_es0(n)
           !
-          ! -- calculate compaction
+          ! -- calculate inelastic and elastic compaction
           if (this%igeocalc == 0) then
             h = hnew(n)
-            comp = rho2 * (pcs - h) + rho1 * (es0 - pcs)
+!            comp = rho2 * (pcs - h) + rho1 * (es0 - pcs)
             if (rho2 /= rho1) then
               stoi = rho2 * (pcs - h)
               stoe = rho1 * (es0 - pcs)
@@ -502,7 +510,7 @@ contains
               stoe = comp
             end if
           else
-            comp = -pcs * (rho2 - rho1) - (rho1 * es0) + (rho2 * es)
+!            comp = -pcs * (rho2 - rho1) - (rho1 * es0) + (rho2 * es)
             if (rho2 /= rho1) then
               stoi = -pcs * rho2 + (rho2 * es)
               stoe = pcs * rho1 - (rho1 * es0)
@@ -1917,8 +1925,38 @@ contains
    return
 
   end subroutine csub_sk_calc_stress
+  
+  
+  subroutine csub_nodelay_update(this, i)
+! ******************************************************************************
+! csub_nodelay_update -- Update material properties for no-delay interbeds.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    class(GwfCsubType), intent(inout) :: this
+    integer(I4B),intent(in) :: i
+    ! locals
+    real(DP) :: comp
+    real(DP) :: thick
+    real(DP) :: theta
+! ------------------------------------------------------------------------------
+!
+! -- update thickness and theta
+    comp = this%comp(i)
+    if (ABS(comp) > DZERO) then
+      thick = this%thick0(i)
+      theta = this%theta0(i)
+      call this%csub_adj_matprop(comp, thick, theta)
+      this%thick(i) = thick
+      this%theta(i) = theta
+    end if
+    !
+    ! -- return
+    return
+  end subroutine csub_nodelay_update
 
-
+  
   subroutine csub_nodelay_calc_gwf(this, i, hcell, hcellold, rho1, rho2, rhs,   &
                                    argtled)
 ! ******************************************************************************
@@ -2021,6 +2059,55 @@ contains
     return
 
   end subroutine csub_nodelay_calc_gwf
+
+
+  subroutine csub_nodelay_calc_comp(this, i, hcell, hcellold, comp, rho1, rho2)
+! ******************************************************************************
+! csub_nodelay_calc_comp -- Calculate compaction, rho1, and rho2 for no-delay
+!                           interbeds
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    implicit none
+    ! -- dummy variables
+    class(GwfCsubType) :: this
+    integer(I4B), intent(in) :: i
+    real(DP), intent(in) :: hcell
+    real(DP), intent(in) :: hcellold
+    real(DP), intent(inout) :: comp
+    real(DP), intent(inout) :: rho1
+    real(DP), intent(inout) :: rho2
+    ! -- local variables
+    integer(I4B) :: node
+    real(DP) :: es
+    real(DP) :: es0
+    real(DP) :: pcs
+    real(DP) :: tled
+    real(DP) :: rhs
+! ------------------------------------------------------------------------------
+    !
+    ! -- initialize variables
+    node = this%nodelist(i)
+    tled = DONE
+    es = this%sk_es(node)
+    es0 = this%sk_es0(node)
+    pcs = this%pcs(i)
+    !
+    ! -- calculate no-delay interbed rho1 and rho2
+    call this%csub_nodelay_calc_gwf(i, hcell, hcellold, rho1, rho2, rhs, tled)
+    !
+    ! -- calculate no-delay interbed compaction
+    if (this%igeocalc == 0) then
+      comp = rho2 * (pcs - hcell) + rho1 * (es0 - pcs)
+    else
+      comp = -pcs * (rho2 - rho1) - (rho1 * es0) + (rho2 * es)
+    end if
+    !
+    ! -- return
+    return
+
+  end subroutine csub_nodelay_calc_comp
 
   
   subroutine csub_rp(this)
@@ -2179,6 +2266,7 @@ contains
     !
     ! -- coarse-grained materials
     do n = 1, nodes
+      this%sk_comp(n) = DZERO
       if (this%igeocalc == 0) then
         this%sk_es0(n)= hnew(n)
       else
@@ -2195,6 +2283,7 @@ contains
       idelay = this%idelay(n)
       ! no delay beds
       if (idelay == 0) then
+        this%comp(n) = DZERO
         node = this%nodelist(n)
         if (this%iupdatematprop /= 0) then
           this%theta0(n) = this%theta(n)
@@ -2426,6 +2515,11 @@ contains
         !
         ! -- skip inactive cells
         if (this%ibound(n) < 1) cycle
+        !
+        ! -- update thickness and void ratio
+        if (this%iupdatematprop /= 0) then
+          call this%csub_sk_update(n)
+        end if
         !
         ! -- calculate coarse-grained skeletal storage terms
         call this%csub_calc_sk(n, tled, area, hnew(n), hold(n), hcof, rhsterm)
@@ -2712,7 +2806,9 @@ contains
     real(DP), intent(inout) :: hcof
     real(DP), intent(inout) :: rhs
     ! locals
+    real(DP) :: comp
     real(DP) :: rho1
+    real(DP) :: rho2
     real(DP) :: f
 ! ------------------------------------------------------------------------------
 !
@@ -2723,6 +2819,19 @@ contains
     ! -- skip inactive and constant head cells
     if (this%ibound(n) > 0) then
       if (this%idelay(i) == 0) then
+        !
+        ! -- update material properties
+        if (this%iupdatematprop /= 0) then
+          if (this%time_alpha > DZERO) then
+            !
+            ! -- calculate compaction
+            call this%csub_nodelay_calc_comp(i, hcell, hcellold, comp, rho1, rho2)
+            this%comp(i) = comp
+            !
+            ! -- update thickness and void ratio
+            call this%csub_nodelay_update(i)
+          end if
+        end if
         !
         ! -- calculate no-delay interbed rho1 and rho2
         call this%csub_nodelay_calc_gwf(i, hcell, hcellold, rho1, hcof, rhs)
@@ -2834,6 +2943,38 @@ contains
     ! -- return
     return
   end subroutine csub_sk_calc_sske
+
+  
+  subroutine csub_sk_update(this, n)
+! ******************************************************************************
+! csub_sk_update -- Update material properties for coarse grained sediments.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    class(GwfCsubType), intent(inout) :: this
+    integer(I4B),intent(in) :: n
+    ! locals
+    real(DP) :: comp
+    real(DP) :: thick
+    real(DP) :: theta
+! ------------------------------------------------------------------------------
+!
+! -- update thickness and theta
+    if (this%time_alpha > DZERO) then
+      comp = this%sk_comp(n)
+      if (ABS(comp) > DZERO) then
+        thick = this%sk_thick0(n)
+        theta = this%sk_theta0(n)
+        call this%csub_adj_matprop(comp, thick, theta)
+        this%sk_thick(n) = thick
+        this%sk_theta(n) = theta
+      end if
+    end if
+    !
+    ! -- return
+    return
+  end subroutine csub_sk_update
 
   
   subroutine csub_sk_calc_wcomp(this, n, tled, area, hcell, hcellold, hcof, rhs)
