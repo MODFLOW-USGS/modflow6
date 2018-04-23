@@ -20,6 +20,7 @@ module GwfNpfModule
   public :: vcond
   public :: condmean
   public :: thksatnm
+  public :: hyeff_calc
 
   type, extends(NumericalPackageType) :: GwfNpfType
 
@@ -2648,8 +2649,12 @@ module GwfNpfModule
     ve3 = r(1, 3) * vg1 + r(2, 3) * vg2 + r(3, 3) * vg3
     !
     ! -- Effective hydraulic conductivity
-    hyeff = ve1 ** 2 / k11 + ve2 ** 2 / k22 + ve3 ** 2 / k33
-    hyeff = DONE / hyeff
+    !hyeff = ve1 ** 2 / k11 + ve2 ** 2 / k22 + ve3 ** 2 / k33
+    hyeff = DZERO
+    if (k11 /= DZERO) hyeff = hyeff + ve1 ** 2 / k11
+    if (k22 /= DZERO) hyeff = hyeff + ve2 ** 2 / k22
+    if (k33 /= DZERO) hyeff = hyeff + ve3 ** 2 / k33
+    if (hyeff /= DZERO) hyeff = DONE / hyeff
     !
     ! -- Return
     return
@@ -2919,8 +2924,10 @@ module GwfNpfModule
         vy = vy + (biy(ic) - ayx * bix(ic)) * vi(ic)
       enddo
       denom = DONE - axy * ayx
-      vx = vx / denom
-      vy = vy / denom
+      if (denom /= DZERO) then
+        vx = vx / denom
+        vy = vy / denom
+      endif
       !
       this%spdis(1, n) = vx
       this%spdis(2, n) = vy
