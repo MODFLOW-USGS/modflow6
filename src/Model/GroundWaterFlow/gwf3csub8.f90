@@ -70,7 +70,7 @@ module GwfCsubModule
     integer, dimension(:), pointer :: nodelist      => null()   !reduced node that the interbed is attached to
     integer, dimension(:), pointer :: unodelist     => null()   !user node that the interbed is attached to
 
-    real(DP), dimension(:), pointer :: sk_znode     => null()   !elevation of node center
+    !real(DP), dimension(:), pointer :: sk_znode     => null()   !elevation of node center
     real(DP), dimension(:), pointer :: sgm          => null()   !specific gravity moist sediments
     real(DP), dimension(:), pointer :: sgs          => null()   !specific gravity saturated sediments
     real(DP), dimension(:), pointer :: sig0         => null()   !geostatic offset
@@ -152,11 +152,12 @@ module GwfCsubModule
     ! -- helper methods
     procedure, private :: csub_calc_void
     procedure, private :: csub_calc_theta
+    procedure, private :: csub_calc_znode
     procedure, private :: csub_calc_sfacts
     procedure, private :: csub_adj_matprop
     !
     ! -- stress methods
-    procedure, private :: csub_sk_calc_znode
+    !procedure, private :: csub_sk_calc_znode
     procedure, private :: csub_sk_calc_stress
     !
     ! -- coarse-grained skeletal methods
@@ -1212,11 +1213,11 @@ contains
     if (this%igeocalc == 0) then
       call mem_allocate(this%sgm, 1, 'sgm', trim(this%origin))
       call mem_allocate(this%sgs, 1, 'sgs', trim(this%origin))
-      call mem_allocate(this%sk_znode, 1, 'sk_znode', trim(this%origin))
+      !call mem_allocate(this%sk_znode, 1, 'sk_znode', trim(this%origin))
     else
       call mem_allocate(this%sgm, this%dis%nodes, 'sgm', trim(this%origin))
       call mem_allocate(this%sgs, this%dis%nodes, 'sgs', trim(this%origin))
-      call mem_allocate(this%sk_znode, this%dis%nodes, 'sk_znode', trim(this%origin))
+      !call mem_allocate(this%sk_znode, this%dis%nodes, 'sk_znode', trim(this%origin))
     end if
     call mem_allocate(this%ske_cr, this%dis%nodes, 'ske_cr', trim(this%origin))
     call mem_allocate(this%sk_theta, this%dis%nodes, 'sk_theta', trim(this%origin))
@@ -1365,7 +1366,7 @@ contains
       end if
       call mem_deallocate(this%sk_theta)
       call mem_deallocate(this%sk_thick)
-      call mem_deallocate(this%sk_znode)
+      !call mem_deallocate(this%sk_znode)
       call mem_deallocate(this%sig0)
       call mem_deallocate(this%sk_gs)
       call mem_deallocate(this%sk_es)
@@ -1784,42 +1785,42 @@ contains
   end subroutine csub_ar
 
 
-  subroutine csub_sk_calc_znode(this, nodes, hnew)
-! ******************************************************************************
-! csub_sk_calc_znode -- calculate the z of the gwf node using current (xnew) 
-!                       water levels
-! ******************************************************************************
+!  subroutine csub_sk_calc_znode(this, nodes, hnew)
+!! ******************************************************************************
+!! csub_sk_calc_znode -- calculate the z of the gwf node using current (xnew) 
+!!                       water levels
+!! ******************************************************************************
+!!
+!!    SPECIFICATIONS:
+!! ------------------------------------------------------------------------------
+!    implicit none
+!    class(GwfCsubType) :: this
+!    integer(I4B), intent(in) :: nodes
+!    real(DP), dimension(nodes), intent(in) :: hnew
+!    ! local
+!    integer(I4B) :: n
+!    real(DP) :: top
+!    real(DP) :: bot
+!    real(DP) :: hcell
 !
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    implicit none
-    class(GwfCsubType) :: this
-    integer(I4B), intent(in) :: nodes
-    real(DP), dimension(nodes), intent(in) :: hnew
-    ! local
-    integer(I4B) :: n
-    real(DP) :: top
-    real(DP) :: bot
-    real(DP) :: hcell
-
-! ------------------------------------------------------------------------------
-
-    if (this%igeocalc /= 0) then
-      do n = 1, nodes
-        bot = this%dis%bot(n)
-        top = this%dis%top(n)
-        hcell = hnew(n)
-        if (hcell > top .or. hcell < bot) then
-            this%sk_znode(n) = (top + bot) * 0.5
-        else
-            this%sk_znode(n) = (hcell + bot) * 0.5
-        end if
-      end do
-    end if
-    !
-    ! -- return
-    return
-  end subroutine csub_sk_calc_znode
+!! ------------------------------------------------------------------------------
+!
+!    if (this%igeocalc /= 0) then
+!      do n = 1, nodes
+!        bot = this%dis%bot(n)
+!        top = this%dis%top(n)
+!        hcell = hnew(n)
+!        if (hcell > top .or. hcell < bot) then
+!            this%sk_znode(n) = (top + bot) * DHALF
+!        else
+!            this%sk_znode(n) = (hcell + bot) * DHALF
+!        end if
+!      end do
+!    end if
+!    !
+!    ! -- return
+!    return
+!  end subroutine csub_sk_calc_znode
 
 
   subroutine csub_sk_calc_stress(this, nodes, hnew)
@@ -2001,6 +2002,7 @@ contains
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: znode
+    real(DP) :: znode0
     real(DP) :: snold
     real(DP) :: snnew
     real(DP) :: thk_fac
@@ -2046,13 +2048,18 @@ contains
       f = DONE
       f0 = DONE
     else
-      !bot = this%dis%bot(n)
-      znode = this%sk_znode(n)
+      !znode = this%sk_znode(n)
+      znode = this%csub_calc_znode(n, hcell)
+      znode0 = this%csub_calc_znode(n, hcellold)
+      if (this%time_alpha == DZERO) then
+        znode0 = znode
+      end if
       es = this%sk_es(n)
       es0 = this%sk_es0(n)
       theta = this%theta(i)
       theta0 = this%theta0(i)
-      call this%csub_calc_sfacts(n, bot, znode, theta, theta0, es, es0, f, f0)
+      call this%csub_calc_sfacts(n, bot, znode, znode0, theta, theta0,          &
+                                 es, es0, f, f0)
     end if
     sto_fac = tled * snnew * this%thick(i) * f
     sto_fac0 = tled * snold * this%thick0(i) * f0
@@ -2400,10 +2407,11 @@ contains
     real(DP) :: fact
     real(DP) :: bot
     real(DP) :: void
+    real(DP) :: znode
 ! ------------------------------------------------------------------------------
     !
     ! -- update geostatic load calculation
-    call this%csub_sk_calc_znode(nodes, hnew)
+    !call this%csub_sk_calc_znode(nodes, hnew)
     call this%csub_sk_calc_stress(nodes, hnew)
     !
     ! -- coarse-grained materials
@@ -2415,7 +2423,9 @@ contains
           fact = DONE
         else
           void = this%csub_calc_void(this%sk_theta(n))
-          fact = this%sk_es(n) - (this%sk_znode(n) - bot) * (this%sgs(n) - DONE)
+          !fact = this%sk_es(n) - (this%sk_znode(n) - bot) * (this%sgs(n) - DONE)
+          znode = this%csub_calc_znode(n, hnew(n))
+          fact = this%sk_es(n) - (znode - bot) * (this%sgs(n) - DONE)
           fact = fact * (DONE + void)
         end if
       else
@@ -2464,7 +2474,9 @@ contains
           fact = DONE
         else
           void = this%csub_calc_void(this%theta(i))
-          fact = this%sk_es(n) - (this%sk_znode(n) - bot) * (this%sgs(n) - DONE)
+          !fact = this%sk_es(n) - (this%sk_znode(n) - bot) * (this%sgs(n) - DONE)
+          znode = this%csub_calc_znode(n, hnew(n))
+          fact = this%sk_es(n) - (znode - bot) * (this%sgs(n) - DONE)
           fact = fact * (DONE + void)
         end if
       else
@@ -2520,7 +2532,7 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- update geostatic load calculation
-    call this%csub_sk_calc_znode(nodes, hnew)
+    !call this%csub_sk_calc_znode(nodes, hnew)
     call this%csub_sk_calc_stress(nodes, hnew)
     !
     ! -- formulate csub terms
@@ -2725,9 +2737,12 @@ contains
       snold = DONE
       snnew = DONE
     end if
+    if (this%time_alpha == DZERO) then
+      snold = snnew
+    end if
     !
     ! -- storage coefficients
-    call this%csub_sk_calc_sske(n, sske, sske0)
+    call this%csub_sk_calc_sske(n, sske, sske0, hcell, hcellold)
     rho1 = sske0 * area * tthk0 * tled
     rho2 = sske * area * tthk * tled
     !
@@ -2739,7 +2754,7 @@ contains
       rhs = -rho1 * snold * hcellold
     else
       rhs = rho1 * snold * this%sk_es0(n) -                                     &
-            rho2 * snnew * (this%sk_gs(n) + this%sk_znode(n)) 
+            rho2 * snnew * (this%sk_gs(n) + bot) 
     end if
     !
     ! -- return
@@ -2785,7 +2800,7 @@ contains
     derv = sQuadraticSaturationDerivative(top, bot, hcell)    
     !
     ! -- storage coefficients
-    call this%csub_sk_calc_sske(n, sske, sske0)
+    call this%csub_sk_calc_sske(n, sske, sske0, hcell, hcell)
     rho2 = sske * area * tthk * tled
     !
     ! -- calculate hcof term
@@ -2908,7 +2923,7 @@ contains
     return
   end subroutine define_listlabel
 
-  subroutine csub_sk_calc_sske(this, n, sske, sske0)
+  subroutine csub_sk_calc_sske(this, n, sske, sske0, hcell, hcellold)
 ! ******************************************************************************
 ! csub_sk_calc_sske -- Calculate sske for a gwf cell.
 ! ******************************************************************************
@@ -2919,10 +2934,13 @@ contains
     integer(I4B), intent(in) :: n
     real(DP), intent(inout) :: sske
     real(DP), intent(inout) :: sske0
+    real(DP), intent(in) :: hcell
+    real(DP), intent(in) :: hcellold
     ! -- local variables
     integer(I4B) :: idelay
     real(DP) :: bot
     real(DP) :: znode
+    real(DP) :: znode0
     real(DP) :: es
     real(DP) :: es0
     real(DP) :: theta
@@ -2945,12 +2963,18 @@ contains
     ! -- calculate factor for the effective stress case
     else
       bot = this%dis%bot(n)
-      znode = this%sk_znode(n)
+      !znode = this%sk_znode(n)
+      znode = this%csub_calc_znode(n, hcell)
+      znode0 = this%csub_calc_znode(n, hcellold)
+      if (this%time_alpha == DZERO) then
+        znode0 = znode
+      end if
       es = this%sk_es(n)
       es0 = this%sk_es0(n)
       theta = this%sk_theta(n)
       theta0 = this%sk_theta0(n)
-      call this%csub_calc_sfacts(n, bot, znode, theta, theta0, es, es0, f, f0)
+      call this%csub_calc_sfacts(n, bot, znode, znode0, theta, theta0,          &
+                                 es, es0, f, f0)
     end if
     sske = f * this%ske_cr(n)
     sske0 = f0 * this%ske_cr(n)
@@ -3083,6 +3107,9 @@ contains
       snold = DONE
       snnew = DONE
     end if
+    if (this%time_alpha == DZERO) then
+      snold = snnew
+    end if
     !
     ! -- storage coefficients
     wc1 = this%gammaw * this%beta * area * tthk0 * this%sk_theta0(n) * tled
@@ -3197,6 +3224,9 @@ contains
       snold = DONE
       snnew = DONE
     end if
+    if (this%time_alpha == DZERO) then
+      snold = snnew
+    end if
     !
     !
     idelay = this%idelay(i)
@@ -3260,10 +3290,44 @@ contains
     ! -- return
     return
   end function csub_calc_theta
+  
+  
+  function csub_calc_znode(this, node, hcell) result(znode)
+! ******************************************************************************
+! csub_calc_znode -- Calculate elevation of the center of the saturated 
+!                    cell thickness
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    class(GwfCsubType), intent(inout) :: this
+    ! -- dummy
+    integer(I4B), intent(in) :: node
+    real(DP), intent(in) :: hcell
+    ! -- local variables
+    real(DP) :: znode
+    real(DP) :: v
+    real(DP) :: top
+    real(DP) :: bot
+! ------------------------------------------------------------------------------
+    top = this%dis%top(node)
+    bot = this%dis%bot(node)
+    if (hcell > top) then
+      v = top
+    else if (hcell < bot) then
+      v = bot
+    else
+      v = hcell
+    end if
+    znode = (v + bot) * DHALF
+    !
+    ! -- return
+    return
+  end function csub_calc_znode
 
   
-  subroutine csub_calc_sfacts(this, node, bot, znode, theta, theta0, es, es0,   &
-                              fact, fact0)
+  subroutine csub_calc_sfacts(this, node, bot, znode, znode0, theta, theta0,    &
+                              es, es0, fact, fact0)
 ! ******************************************************************************
 ! csub_calc_sfacts -- Calculate sske and sske0 factor for a gwf cell or 
 !                     interbed.
@@ -3275,6 +3339,7 @@ contains
     integer(I4B), intent(in) :: node
     real(DP), intent(in) :: bot
     real(DP), intent(in) :: znode
+    real(DP), intent(in) :: znode0
     real(DP), intent(in) :: theta
     real(DP), intent(in) :: theta0
     real(DP), intent(in) :: es
@@ -3373,7 +3438,7 @@ contains
     ! -- initialize variables
     !
     ! -- calculate z for each delay bed cell
-    call this%csub_delay_calc_zcell(ib)
+    call this%csub_delay_calc_zcell(ib, hcell)
     !
     ! -- calculate geostatic stress for each delay bed cell
     call this%csub_delay_calc_stress(ib, hcell)
@@ -3414,7 +3479,7 @@ contains
   end subroutine csub_delay_sln
 
 
-  subroutine csub_delay_calc_zcell(this, ib)
+  subroutine csub_delay_calc_zcell(this, ib, hcell)
 ! ******************************************************************************
 ! csub_delay_calc_zcell -- Calculate z for delay interbeds cells.
 ! ******************************************************************************
@@ -3423,6 +3488,7 @@ contains
 ! ------------------------------------------------------------------------------
     class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: ib
+    real(DP), intent(in) :: hcell
     ! -- local variables
     integer(I4B) :: n
     integer(I4B) :: node
@@ -3437,7 +3503,8 @@ contains
     ! -- initialize variables
     idelay = this%idelay(ib)
     node = this%nodelist(ib)
-    znode = this%sk_znode(node)
+    !znode = this%sk_znode(node)
+    znode = this%csub_calc_znode(node, hcell)
     b = this%thick(ib)
     dz = this%dbdz(idelay)
     if (this%idbhalfcell == 0) then
