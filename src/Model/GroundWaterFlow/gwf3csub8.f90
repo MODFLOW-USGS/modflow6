@@ -161,6 +161,7 @@ module GwfCsubModule
     !
     ! -- coarse-grained skeletal methods
     procedure, private :: csub_sk_update
+    procedure, private :: csub_sk_calc_comp
     procedure, private :: csub_calc_sk
     procedure, private :: csub_calc_sk_nt
     procedure, private :: csub_sk_calc_sske
@@ -406,6 +407,7 @@ contains
     tled = DONE / DELT
     do n = 1, this%dis%nodes
       area = this%dis%get_area(n)
+      comp = DZERO
       rrate = DZERO
       rratewc = DZERO
       if (this%gwfiss == 0) then
@@ -414,6 +416,9 @@ contains
           ! -- calculate coarse-grained skeletal storage terms
           call this%csub_calc_sk(n, tled, area, hnew(n), hold(n), hcof, rhs)
           rrate = hcof * hnew(n) - rhs
+          !
+          ! -- calculate compaction
+          call this%csub_sk_calc_comp(n, hnew(n), hold(n), comp)
           !
           ! -- budget terms
           if (rrate < DZERO) then
@@ -440,25 +445,26 @@ contains
       this%sk_stor(n) = rrate
       this%sk_wcstor(n) = rratewc
       !
-      ! -- update compaction
-      comp = rrate * DELT / area
+      ! -- update incremental compaction
+      !comp = rrate * DELT / area
       this%sk_comp(n) = comp
       ! 
       !
       ! -- update states if required
       if (isuppress_output == 0) then
         !
-        ! -- update compaction
-        comp = rrate * DELT / area
+        ! -- update total compaction
+        !comp = rrate * DELT / area
         this%sk_tcomp(n) = this%sk_tcomp(n) + comp
         !
         ! - calculate strain and change in skeletal void ratio and thickness
         if (this%iupdatematprop /= 0) then
-          thick = this%sk_thick0(n)
-          theta = this%sk_theta0(n)
-          call this%csub_adj_matprop(comp, thick, theta)
-          this%sk_thick(n) = thick
-          this%sk_theta(n) = theta
+          call this%csub_sk_update(n)
+          !thick = this%sk_thick0(n)
+          !theta = this%sk_theta0(n)
+          !call this%csub_adj_matprop(comp, thick, theta)
+          !this%sk_thick(n) = thick
+          !this%sk_theta(n) = theta
         end if
       end if
     end do
@@ -613,7 +619,17 @@ contains
     if (this%obs%npakobs > 0) then
       call this%csub_bd_obs()
     end if
-
+    !
+    ! -- terminate if errors encountered when updating material properties
+    if (this%iupdatematprop /= 0) then
+      if (this%time_alpha > DZERO) then
+        if (count_errors() > 0) then
+          call this%parser%StoreErrorUnit()
+          call ustop()
+        end if
+      end if
+    end if
+    !
     ! -- return
     return
 
@@ -779,7 +795,7 @@ contains
         nboundchk(itmp) = nboundchk(itmp) + 1
 
         ! -- read cellid
-        call this%parser%GetCellid(this%dis%ndim,cellid)
+        call this%parser%GetCellid(this%dis%ndim, cellid)
         nn = this%dis%noder_from_cellid(cellid, &
                                       this%parser%iuactive, this%iout)
         n = this%dis%nodeu_from_cellid(cellid, &
@@ -1736,7 +1752,9 @@ contains
     end if
     !
     ! -- read interbed data
-    call this%csub_read_packagedata()
+    if (this%ninterbeds > 0) then
+      call this%csub_read_packagedata()
+    end if
     !
     ! -- calculate the aquifer void ratio and thickness without the interbeds
     do n = 1, this%dis%nodes
@@ -1937,6 +1955,7 @@ contains
     class(GwfCsubType), intent(inout) :: this
     integer(I4B),intent(in) :: i
     ! locals
+    character(len=LINELENGTH) :: errmsg
     real(DP) :: comp
     real(DP) :: thick
     real(DP) :: theta
@@ -1948,6 +1967,16 @@ contains
       thick = this%thick0(i)
       theta = this%theta0(i)
       call this%csub_adj_matprop(comp, thick, theta)
+      if (thick <= DZERO) then
+        write(errmsg,'(4x,a,1x,i0,1x,a)') &
+          '****ERROR. ADJUSTED THICKNESS FOR NO-DELAY INTERBED (', i, ') IS <= 0'
+        call store_error(errmsg)
+      end if
+      if (theta <= DZERO) then
+        write(errmsg,'(4x,a,1x,i0,1x,a)') &
+          '****ERROR. ADJUSTED THETA FOR NO-DELAY INTERBED (', i, ') IS <= 0'
+        call store_error(errmsg)
+      end if
       this%thick(i) = thick
       this%theta(i) = theta
     end if
@@ -2498,6 +2527,7 @@ contains
     real(DP) :: hcof
     real(DP) :: rhsterm
     real(DP) :: wc1
+    real(DP) :: comp
 ! ------------------------------------------------------------------------------
     !
     ! -- update geostatic load calculation
@@ -2516,9 +2546,17 @@ contains
         ! -- skip inactive cells
         if (this%ibound(n) < 1) cycle
         !
-        ! -- update thickness and void ratio
+        ! -- update skeletal material properties
         if (this%iupdatematprop /= 0) then
-          call this%csub_sk_update(n)
+          if (this%time_alpha > DZERO) then
+            !
+            ! -- calculate compaction
+            call this%csub_sk_calc_comp(n, hnew(n), hold(n), comp)
+            this%sk_comp(n) = comp
+            !
+            ! -- update skeletal thickness and void ratio
+            call this%csub_sk_update(n)
+          end if
         end if
         !
         ! -- calculate coarse-grained skeletal storage terms
@@ -2558,6 +2596,16 @@ contains
         end do
       end if
     end if    
+    !
+    ! -- terminate if errors encountered when updating material properties
+    if (this%iupdatematprop /= 0) then
+      if (this%time_alpha > DZERO) then
+        if (count_errors() > 0) then
+          call this%parser%StoreErrorUnit()
+          call ustop()
+        end if
+      end if
+    end if
     !
     ! -- return
     return
@@ -2943,6 +2991,40 @@ contains
     ! -- return
     return
   end subroutine csub_sk_calc_sske
+  
+  subroutine csub_sk_calc_comp(this, n, hcell, hcellold, comp)
+! ******************************************************************************
+! csub_sk_calc_comp -- Calculate skeletal compaction
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    implicit none
+    class(GwfCsubType) :: this
+    integer(I4B),intent(in) :: n
+    real(DP), intent(in) :: hcell
+    real(DP), intent(in) :: hcellold
+    real(DP), intent(inout) :: comp
+    ! locals
+    real(DP) :: area
+    real(DP) :: tled
+    real(DP) :: hcof
+    real(DP) :: rhs
+! ------------------------------------------------------------------------------
+!
+! -- initialize variables
+    area = DONE
+    tled = DONE
+    !
+    ! -- calculate terms
+    call this%csub_calc_sk(n, tled, area, hcell, hcellold, hcof, rhs)
+    !
+    ! - calculate compaction
+    comp = hcof * hcell - rhs
+    !
+    ! -- return
+    return
+  end subroutine  csub_sk_calc_comp
 
   
   subroutine csub_sk_update(this, n)
@@ -2955,21 +3037,32 @@ contains
     class(GwfCsubType), intent(inout) :: this
     integer(I4B),intent(in) :: n
     ! locals
+    character(len=LINELENGTH) :: errmsg
+    character(len=20) :: cellid
     real(DP) :: comp
     real(DP) :: thick
     real(DP) :: theta
 ! ------------------------------------------------------------------------------
 !
 ! -- update thickness and theta
-    if (this%time_alpha > DZERO) then
-      comp = this%sk_comp(n)
-      if (ABS(comp) > DZERO) then
-        thick = this%sk_thick0(n)
-        theta = this%sk_theta0(n)
-        call this%csub_adj_matprop(comp, thick, theta)
-        this%sk_thick(n) = thick
-        this%sk_theta(n) = theta
+    comp = this%sk_comp(n)
+    call this%dis%noder_to_string(n, cellid)
+    if (ABS(comp) > DZERO) then
+      thick = this%sk_thick0(n)
+      theta = this%sk_theta0(n)
+      call this%csub_adj_matprop(comp, thick, theta)
+      if (thick <= DZERO) then
+        write(errmsg,'(4x,a,1x,a,1x,a)') &
+          '****ERROR. ADJUSTED THICKNESS FOR CELL (', cellid, ') IS <= 0'
+        call store_error(errmsg)
       end if
+      if (theta <= DZERO) then
+        write(errmsg,'(4x,a,1x,a,1x,a)') &
+          '****ERROR. ADJUSTED THETA FOR CELL (', cellid, ') IS <= 0'
+        call store_error(errmsg)
+      end if
+      this%sk_thick(n) = thick
+      this%sk_theta(n) = theta
     end if
     !
     ! -- return
