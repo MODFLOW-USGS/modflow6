@@ -83,7 +83,7 @@ def build_models():
     # set rest of npf variables
     laytyp = [1, 0, 0]
     laytypu = [4, 0, 0]
-    sy = 0. #[0.1, 0., 0.]
+    sy = [0.1, 0., 0.]
 
     nouter, ninner = 500, 300
     hclose, rclose, relax = 1e-9, 1e-6, 1.
@@ -134,12 +134,10 @@ def build_models():
     void = 0.82
     ini_stress = 15.0
     theta = void / (1. + void)
-    sw = 0. #4.65120000e-10 * 9806.65000000 * theta
+    sw = 4.65120000e-10 * 9806.65000000 * theta
 
     # no delay bed data
-    # nndb = 3
     lnd = [0, 1, 2]
-    # hc = [botm[-1] for k in range(nlay)]
     thicknd0 = [zthick[0], zthick[1], zthick[2]]
     cr = [0.001, 0.0005, 0.001]
     sske = [6e-6, 3e-6, 6e-6]
@@ -176,6 +174,14 @@ def build_models():
         else:
             sc = sske
             compression_indices = None
+        # water compressibility cannot be compared for cases where the material
+        # properties are adjusted since the porosity changes in mf6
+        if iump[idx] == 0:
+            beta = 4.6512e-10
+            wc = sw
+        else:
+            beta = 0.
+            wc = 0.
 
         gwf = flopy.mf6.ModflowGwf(sim, modelname=name,
                                    newtonoptions=newtonoptions)
@@ -243,8 +249,7 @@ def build_models():
                                         sgs=sgs,
                                         sk_theta=theta,
                                         ske_cr=sc,
-                                        beta=0.,
-                                        #ske_cr=ccnd0,
+                                        beta=beta,
                                         packagedata=None,
                                         sig0={0: [0., 0., 0.]})
         orecarray = {}
@@ -286,12 +291,12 @@ def build_models():
             if cpth == 'mfnwt':
                 upw = flopy.modflow.ModflowUpw(mc, laytyp=laytyp,
                                                hk=hk, vka=vka,
-                                               ss=sw, sy=sy,
+                                               ss=wc, sy=sy,
                                                hdry=hdry)
             else:
                 lpf = flopy.modflow.ModflowLpf(mc, laytyp=laytypu,
                                                hk=hk, vka=vka,
-                                               ss=sw, sy=sy,
+                                               ss=wc, sy=sy,
                                                hdry=hdry, constantcv=True)
         else:
             lpf = flopy.modflow.ModflowLpf(mc, laytyp=laytyp, hk=hk, vka=vka,
