@@ -20,32 +20,30 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['csub_sk02a'] #, 'csub_sk02b']
+ex = ['csub_sk02a', 'csub_sk02b', 'csub_sk02c', 'csub_sk02d']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
-cvopt = [None, None]
-constantcv = [True, True]
+constantcv = [True for idx in range(len(exdirs))]
 
-cmppths = ['mfnwt', 'mfnwt']
-tops = [150., 150.]
-newtons = [True, True]
-ump = [None, True]
-iump = [0, 1]
-tw = [0., 0.]
-icrcc = [0, 0]
+cmppths = ['mfnwt' for idx in range(len(exdirs))]
+tops = [150. for idx in range(len(exdirs))]
+newtons = [True for idx in range(len(exdirs))]
+ump = [None, None, True, True]
+iump = [0, 0, 1, 1]
+tw = [0. for idx in range(len(exdirs))]
+icrcc = [0, 1, 0, 1]
 
 ddir = 'data'
 
 ## run all examples on Travis
-#travis = [False for idx in range(len(exdirs))]
-travis = [True, True]
+travis = [True for idx in range(len(exdirs))]
 
 # set replace_exe to None to use default executable
 #replace_exe = {'mf2005': 'mf2005devdbl'}
 replace_exe = None
 
-htol = [None, None]
+htol = [None for idx in range(len(exdirs))]
 dtol = 1e-3
 
 bud_lst = ['CSUB-AQELASTIC_IN', 'CSUB-AQELASTIC_OUT',
@@ -144,14 +142,7 @@ def build_models():
     # hc = [botm[-1] for k in range(nlay)]
     thicknd0 = [zthick[0], zthick[1], zthick[2]]
     cr = [0.001, 0.0005, 0.001]
-    #cr = [0.01, 0.005, 0.01]
-    ccnd0 = [6e-6, 3e-6, 6e-6]
-    crnd0 = [6e-6, 3e-6, 6e-6]
-    # sfv = []
-    # sfe = []
-    # for k in range(nlay):
-    #     sfv.append(ccnd0[k] * thicknd0[k])
-    #     sfe.append(crnd0[k] * thicknd0[k])
+    sske = [6e-6, 3e-6, 6e-6]
 
     # subwt output data
     ds16 = [0, 0, 0, 2052, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -163,8 +154,6 @@ def build_models():
     for idx, dir in enumerate(exdirs):
         name = ex[idx]
         newton = newtons[idx]
-
-        maxibc = 0
 
         # build MODFLOW 6 files
         ws = dir
@@ -181,6 +170,13 @@ def build_models():
         if newton:
             newtonoptions = ''
             imsla = 'BICGSTAB'
+        if icrcc[idx] == 0:
+            sc = cr
+            compression_indices = True
+        else:
+            sc = sske
+            compression_indices = None
+
         gwf = flopy.mf6.ModflowGwf(sim, modelname=name,
                                    newtonoptions=newtonoptions)
 
@@ -210,7 +206,6 @@ def build_models():
         npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False,
                                       #dev_modflowusg_upstream_weighted_saturation=True,
                                       icelltype=laytyp,
-                                      cvoptions=cvopt[idx],
                                       k=hk,
                                       k33=vka)
         # storage
@@ -242,12 +237,12 @@ def build_models():
                                         geo_stress_offset=True,
                                         save_flows=True,
                                         ninterbeds=0,
-                                        compression_indices=True,
+                                        compression_indices=compression_indices,
                                         obs_filerecord=opth,
                                         sgm=sgm,
                                         sgs=sgs,
                                         sk_theta=theta,
-                                        ske_cr=cr,
+                                        ske_cr=sc,
                                         beta=0.,
                                         #ske_cr=ccnd0,
                                         packagedata=None,
@@ -311,15 +306,11 @@ def build_models():
                                        ithk=1, ivoid=iump[idx],
                                        icrcc=icrcc[idx],
                                        istpcs=1, lnwt=lnd,
-                                       #cc=ccnd0, cr=ccnd0,
-                                       cc=cr, cr=cr,
+                                       cc=sc, cr=sc,
+                                       sse=sc, ssv=sc,
                                        thick=thicknd0,
                                        void=void, pcsoff=ini_stress, sgs=sgs,
                                        gl0=0., ids16=ds16, ids17=ds17)
-        # sub = flopy.modflow.ModflowSub(mc, ndb=0, nndb=nndb,
-        #                                isuboc=1, ln=lnd,
-        #                                hc=hc, sfe=sfe, sfv=sfv,
-        #                                ids15=ds15, ids16=ds16)
         oc = flopy.modflow.ModflowOc(mc, stress_period_data=None)
         if newton:
             if cpth == 'mfnwt':
