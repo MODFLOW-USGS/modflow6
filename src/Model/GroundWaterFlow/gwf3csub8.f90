@@ -162,32 +162,32 @@ module GwfCsubModule
     ! -- coarse-grained skeletal methods
     procedure, private :: csub_sk_update
     procedure, private :: csub_sk_calc_comp
-    procedure, private :: csub_calc_sk
-    procedure, private :: csub_calc_sk_nt
     procedure, private :: csub_sk_calc_sske
-    procedure, private :: csub_sk_calc_wcomp
-    procedure, private :: csub_sk_calc_wcomp_nt
+    procedure, private :: csub_sk_fc
+    procedure, private :: csub_sk_fn
+    procedure, private :: csub_sk_wcomp_fc
+    procedure, private :: csub_sk_wcomp_fn
     !
     ! -- interbed methods
     procedure, private :: csub_interbed_set_initial
-    procedure, private :: csub_interbed_calc_terms
-    procedure, private :: csub_interbed_calc_wcomp
+    procedure, private :: csub_interbed_fc
+    procedure, private :: csub_interbed_wcomp_fc
     !
     ! -- no-delay interbed methods
     procedure, private :: csub_nodelay_update
-    procedure, private :: csub_nodelay_calc_gwf
+    procedure, private :: csub_nodelay_fc
     procedure, private :: csub_nodelay_calc_comp
     !
     ! -- delay interbed methods
-    procedure, private :: csub_delay_calc_interbed
-    procedure, private :: csub_delay_calc_z
+    procedure, private :: csub_delay_calc_zcell
     procedure, private :: csub_delay_calc_stress
-    procedure, private :: csub_delay_calc_sskessk
-    procedure, private :: csub_delay_assemble
+    procedure, private :: csub_delay_calc_ssksske
     procedure, private :: csub_delay_calc_comp
     procedure, private :: csub_delay_calc_dstor
-    procedure, private :: csub_delay_calc_gwf
     procedure, private :: csub_delay_calc_err
+    procedure, private :: csub_delay_fc
+    procedure, private :: csub_delay_sln
+    procedure, private :: csub_delay_assemble
     !
     ! -- methods for observations
     procedure, public :: csub_obs_supported
@@ -414,7 +414,7 @@ contains
         if (this%ibound(n) > 0) then
           !
           ! -- calculate coarse-grained skeletal storage terms
-          call this%csub_calc_sk(n, tled, area, hnew(n), hold(n), hcof, rhs)
+          call this%csub_sk_fc(n, tled, area, hnew(n), hold(n), hcof, rhs)
           rrate = hcof * hnew(n) - rhs
           !
           ! -- calculate compaction
@@ -428,7 +428,7 @@ contains
           end if
           !
           ! -- calculate coarse-grained skeletal water compressibility storage terms
-          call this%csub_sk_calc_wcomp(n, tled, area, hnew(n), hold(n), hcof, rhs)
+          call this%csub_sk_wcomp_fc(n, tled, area, hnew(n), hold(n), hcof, rhs)
           rratewc = hcof * hnew(n) - rhs
           !
           ! -- water compressibility budget terms
@@ -460,11 +460,6 @@ contains
         ! - calculate strain and change in skeletal void ratio and thickness
         if (this%iupdatematprop /= 0) then
           call this%csub_sk_update(n)
-          !thick = this%sk_thick0(n)
-          !theta = this%sk_theta0(n)
-          !call this%csub_adj_matprop(comp, thick, theta)
-          !this%sk_thick(n) = thick
-          !this%sk_theta(n) = theta
         end if
       end if
     end do
@@ -492,13 +487,6 @@ contains
           !
           ! -- calculate compaction
           call this%csub_nodelay_calc_comp(i, hnew(n), hold(n), comp, rho1, rho2)
-          !!
-          !! -- calculate no-delay interbed rho1 and rho2
-          !call this%csub_nodelay_calc_gwf(i, hnew(n), hold(n), rho1, rho2, rhs, &
-          !                                tled)
-          !!bot = this%dis%bot(n)
-          !!top = this%dis%top(n)
-          !!thk_node = top - bot
           !
           ! -- interbed stresses
           es = this%sk_es(n)
@@ -508,7 +496,6 @@ contains
           ! -- calculate inelastic and elastic compaction
           if (this%igeocalc == 0) then
             h = hnew(n)
-!            comp = rho2 * (pcs - h) + rho1 * (es0 - pcs)
             if (rho2 /= rho1) then
               stoi = rho2 * (pcs - h)
               stoe = rho1 * (es0 - pcs)
@@ -516,7 +503,6 @@ contains
               stoe = comp
             end if
           else
-!            comp = -pcs * (rho2 - rho1) - (rho1 * es0) + (rho2 * es)
             if (rho2 /= rho1) then
               stoi = -pcs * rho2 + (rho2 * es)
               stoe = pcs * rho1 - (rho1 * es0)
@@ -541,11 +527,7 @@ contains
             !
             ! - calculate strain and change in interbed void ratio and thickness
             if (this%iupdatematprop /= 0) then
-              thick = this%thick0(i)
-              theta = this%theta0(i)
-              call this%csub_adj_matprop(comp, thick, theta)
-              this%thick(i) = thick
-              this%theta(i) = theta
+              call this%csub_nodelay_update(i)
             end if
           end if
           !
@@ -580,8 +562,8 @@ contains
         end if
         !
         ! -- interbed water compressibility
-        call this%csub_interbed_calc_wcomp(i, n, tledm, area,                   &
-                                           hnew(n), hold(n), hcof, rhs)
+        call this%csub_interbed_wcomp_fc(i, n, tledm, area,                     &
+                                         hnew(n), hold(n), hcof, rhs)
         rratewc = hcof * hnew(n) - rhs
         this%sk_wcstor(n) = this%sk_wcstor(n) + rratewc
         !
@@ -1853,7 +1835,12 @@ contains
     integer(I4B), intent(in) :: nodes
     real(DP), dimension(nodes), intent(in) :: hnew
     ! -- local
-    integer(I4B) :: i,n,ii,m,temp, iis
+    integer(I4B) :: i
+    integer(I4B) :: n
+    integer(I4B) :: ii
+    integer(I4B) :: m
+    integer(I4B) :: temp
+    integer(I4B) :: iis
     real(DP) :: gs
     real(DP) :: top
     real(DP) :: bot
@@ -1866,7 +1853,9 @@ contains
     real(DP) :: hs
     real(DP) :: hwva
     real(DP) :: sadd
-    character(len=LINELENGTH) :: errmsg, msg1,msg2
+    character(len=LINELENGTH) :: errmsg
+    !character(len=LINELENGTH) :: msg1
+    !character(len=LINELENGTH) :: msg2
 
 ! ------------------------------------------------------------------------------
     !
@@ -1968,13 +1957,15 @@ contains
       theta = this%theta0(i)
       call this%csub_adj_matprop(comp, thick, theta)
       if (thick <= DZERO) then
-        write(errmsg,'(4x,a,1x,i0,1x,a)') &
-          '****ERROR. ADJUSTED THICKNESS FOR NO-DELAY INTERBED (', i, ') IS <= 0'
+        write(errmsg,'(4x,2a,1x,i0,1x,a,1x,g0,1x,a)')                           &
+          '****ERROR. ADJUSTED THICKNESS FOR NO-DELAY ',                        &
+          'INTERBED', i, 'IS <= 0 (', thick, ')'
         call store_error(errmsg)
       end if
       if (theta <= DZERO) then
-        write(errmsg,'(4x,a,1x,i0,1x,a)') &
-          '****ERROR. ADJUSTED THETA FOR NO-DELAY INTERBED (', i, ') IS <= 0'
+        write(errmsg,'(4x,2a,1x,i0,1x,a,1x,g0,1x,a)')                           &
+          '****ERROR. ADJUSTED THETA FOR NO-DELAY ',                            &
+          'INTERBED (', i, ') IS <= 0 (', theta, ')'
         call store_error(errmsg)
       end if
       this%thick(i) = thick
@@ -1986,11 +1977,9 @@ contains
   end subroutine csub_nodelay_update
 
   
-  subroutine csub_nodelay_calc_gwf(this, i, hcell, hcellold, rho1, rho2, rhs,   &
-                                   argtled)
+  subroutine csub_nodelay_fc(this, i, hcell, hcellold, rho1, rho2, rhs, argtled)
 ! ******************************************************************************
-! csub_nodelay_calc_gwf -- Calculate rho1, rho2, and rhs for no-delay
-!                               interbeds
+! csub_nodelay_fc -- Calculate rho1, rho2, and rhs for no-delay interbeds
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -2087,7 +2076,7 @@ contains
     ! -- return
     return
 
-  end subroutine csub_nodelay_calc_gwf
+  end subroutine csub_nodelay_fc
 
 
   subroutine csub_nodelay_calc_comp(this, i, hcell, hcellold, comp, rho1, rho2)
@@ -2124,7 +2113,7 @@ contains
     pcs = this%pcs(i)
     !
     ! -- calculate no-delay interbed rho1 and rho2
-    call this%csub_nodelay_calc_gwf(i, hcell, hcellold, rho1, rho2, rhs, tled)
+    call this%csub_nodelay_fc(i, hcell, hcellold, rho1, rho2, rhs, tled)
     !
     ! -- calculate no-delay interbed compaction
     if (this%igeocalc == 0) then
@@ -2560,14 +2549,14 @@ contains
         end if
         !
         ! -- calculate coarse-grained skeletal storage terms
-        call this%csub_calc_sk(n, tled, area, hnew(n), hold(n), hcof, rhsterm)
+        call this%csub_sk_fc(n, tled, area, hnew(n), hold(n), hcof, rhsterm)
         !
         ! -- add skeletal storage terms to amat and rhs for skeletal storage
         amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
         rhs(n) = rhs(n) + rhsterm
         !
         ! -- calculate coarse-grained skeletal water compressibility storage terms
-        call this%csub_sk_calc_wcomp(n, tled, area, hnew(n), hold(n), hcof, rhsterm)
+        call this%csub_sk_wcomp_fc(n, tled, area, hnew(n), hold(n), hcof, rhsterm)
         !
         ! -- add water compression storage terms to amat and rhs for skeletal storage
         amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
@@ -2581,14 +2570,14 @@ contains
           idiag = this%dis%con%ia(n)
           area = this%dis%get_area(n)
           hcell = hnew(n)
-          call this%csub_interbed_calc_terms(i, n, tled, area,                  &
-                                             hnew(n), hold(n), hcof, rhsterm)
+          call this%csub_interbed_fc(i, n, tled, area,                          &
+                                     hnew(n), hold(n), hcof, rhsterm)
           amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
           rhs(n) = rhs(n) + rhsterm
           !
           ! -- calculate interbed water compressibility terms
-          call this%csub_interbed_calc_wcomp(i, n, tled, area,                  &
-                                             hnew(n), hold(n), hcof, rhsterm)
+          call this%csub_interbed_wcomp_fc(i, n, tled, area,                    &
+                                           hnew(n), hold(n), hcof, rhsterm)
           !
           ! -- add water compression storage terms to amat and rhs for interbed
           amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
@@ -2667,7 +2656,7 @@ contains
         if (this%stoiconv(n) == 0) cycle
         !
         ! -- calculate coarse-grained skeletal storage newton terms
-        call this%csub_calc_sk_nt(n, tled, area, hnew(n), hcof, rhsterm)
+        call this%csub_sk_fn(n, tled, area, hnew(n), hcof, rhsterm)
         !
         ! -- add skeletal storage newton terms to amat and rhs for 
         !   skeletal storage
@@ -2676,44 +2665,22 @@ contains
         !
         ! -- calculate coarse-grained skeletal water compressibility storage 
         !    newton terms
-        call this%csub_sk_calc_wcomp_nt(n, tled, area, hnew(n), hcof, rhsterm)
+        call this%csub_sk_wcomp_fn(n, tled, area, hnew(n), hcof, rhsterm)
         !
         ! -- add water compression storage newton terms to amat and rhs for 
         !    skeletal storage
         amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
         rhs(n) = rhs(n) + rhsterm
       end do
-    !  !
-    !  ! -- interbed storage
-    !  if (this%ninterbeds /= 0) then
-    !    do i = 1, this%ninterbeds
-    !      n = this%nodelist(i)
-    !      idiag = this%dis%con%ia(n)
-    !      area = this%dis%get_area(n)
-    !      hcell = hnew(n)
-    !      call this%csub_interbed_calc_terms(i, n, tled, area, hnew(n), hold(n) &
-    !                                         hcof, rhsterm)
-    !      amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
-    !      rhs(n) = rhs(n) + rhsterm
-    !      !
-    !      ! -- calculate interbed water compressibility terms
-    !      call this%csub_interbed_calc_wcomp(i, n, tled, area,                  &
-    !                                         hnew(n), hold(n), hcof, rhsterm)
-    !      !
-    !      ! -- add water compression storage terms to amat and rhs for interbed
-    !      amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
-    !      rhs(n) = rhs(n) + rhsterm
-    !    end do
-    !  end if
     end if    
     !
     ! -- return
     return
   end subroutine csub_fn
   
-  subroutine csub_calc_sk(this, n, tled, area, hcell, hcellold, hcof, rhs)
+  subroutine csub_sk_fc(this, n, tled, area, hcell, hcellold, hcof, rhs)
 ! ******************************************************************************
-! csub_calc_sk -- Formulate the HCOF and RHS skeletal storage terms
+! csub_sk_fc -- Formulate the HCOF and RHS skeletal storage terms
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -2777,11 +2744,11 @@ contains
     !
     ! -- return
     return
-  end subroutine  csub_calc_sk
+  end subroutine csub_sk_fc
   
-  subroutine csub_calc_sk_nt(this, n, tled, area, hcell, hcof, rhs)
+  subroutine csub_sk_fn(this, n, tled, area, hcell, hcof, rhs)
 ! ******************************************************************************
-! csub_calc_sk_nt -- Formulate skeletal storage newton terms
+! csub_sk_fn -- Formulate skeletal storage newton terms
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -2829,10 +2796,10 @@ contains
     !
     ! -- return
     return
-  end subroutine  csub_calc_sk_nt
+  end subroutine csub_sk_fn
 
   
-  subroutine csub_interbed_calc_terms(this, i, n, tled, area, hcell, hcellold,  &
+  subroutine csub_interbed_fc(this, i, n, tled, area, hcell, hcellold,  &
                                       hcof, rhs)
 ! ******************************************************************************
 ! csub_cf -- Formulate the HCOF and RHS terms
@@ -2882,13 +2849,13 @@ contains
         end if
         !
         ! -- calculate no-delay interbed rho1 and rho2
-        call this%csub_nodelay_calc_gwf(i, hcell, hcellold, rho1, hcof, rhs)
+        call this%csub_nodelay_fc(i, hcell, hcellold, rho1, hcof, rhs)
         f = area
       else
         !
         ! -- calculate delay interbed hcof and rhs
-        call this%csub_delay_calc_interbed(i, hcell)
-        call this%csub_delay_calc_gwf(i, hcof, rhs)
+        call this%csub_delay_sln(i, hcell)
+        call this%csub_delay_fc(i, hcof, rhs)
         f = area * this%rnb(i)
       end if
       rhs = rhs * f
@@ -2897,7 +2864,7 @@ contains
     !
     ! -- return
     return
-  end subroutine  csub_interbed_calc_terms
+  end subroutine csub_interbed_fc
 
   subroutine define_listlabel(this)
 ! ******************************************************************************
@@ -3017,7 +2984,7 @@ contains
     tled = DONE
     !
     ! -- calculate terms
-    call this%csub_calc_sk(n, tled, area, hcell, hcellold, hcof, rhs)
+    call this%csub_sk_fc(n, tled, area, hcell, hcellold, hcof, rhs)
     !
     ! - calculate compaction
     comp = hcof * hcell - rhs
@@ -3052,13 +3019,15 @@ contains
       theta = this%sk_theta0(n)
       call this%csub_adj_matprop(comp, thick, theta)
       if (thick <= DZERO) then
-        write(errmsg,'(4x,a,1x,a,1x,a)') &
-          '****ERROR. ADJUSTED THICKNESS FOR CELL (', cellid, ') IS <= 0'
+        write(errmsg,'(4x,a,1x,a,1x,a,1x,g0,1x,a)')                             &
+          '****ERROR. ADJUSTED THICKNESS FOR CELL', trim(adjustl(cellid)),      &
+          'IS <= 0 (', thick, ')'
         call store_error(errmsg)
       end if
       if (theta <= DZERO) then
-        write(errmsg,'(4x,a,1x,a,1x,a)') &
-          '****ERROR. ADJUSTED THETA FOR CELL (', cellid, ') IS <= 0'
+        write(errmsg,'(4x,a,1x,a,1x,a,1x,g0,1x,a)')                             &
+          '****ERROR. ADJUSTED THETA FOR CELL', trim(adjustl(cellid)),          &
+          'IS <= 0 (', theta, ')'
         call store_error(errmsg)
       end if
       this%sk_thick(n) = thick
@@ -3070,9 +3039,9 @@ contains
   end subroutine csub_sk_update
 
   
-  subroutine csub_sk_calc_wcomp(this, n, tled, area, hcell, hcellold, hcof, rhs)
+  subroutine csub_sk_wcomp_fc(this, n, tled, area, hcell, hcellold, hcof, rhs)
 ! ******************************************************************************
-! csub_sk_calc_wcomp -- Calculate water compressibility term for a gwf cell.
+! csub_sk_wcomp_fc -- Calculate water compressibility term for a gwf cell.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -3127,12 +3096,12 @@ contains
     !
     ! -- return
     return
-  end subroutine csub_sk_calc_wcomp
+  end subroutine csub_sk_wcomp_fc
 
   
-  subroutine csub_sk_calc_wcomp_nt(this, n, tled, area, hcell, hcof, rhs)
+  subroutine csub_sk_wcomp_fn(this, n, tled, area, hcell, hcof, rhs)
 ! ******************************************************************************
-! csub_sk_calc_wcomp -- Calculate water compressibility newton terms for a 
+! csub_sk_wcomp_fc -- Calculate water compressibility newton terms for a 
 !                       gwf cell.
 ! ******************************************************************************
 !
@@ -3177,14 +3146,14 @@ contains
     !
     ! -- return
     return
-  end subroutine csub_sk_calc_wcomp_nt
+  end subroutine csub_sk_wcomp_fn
 
   
-  subroutine csub_interbed_calc_wcomp(this, i, n, tled, area,                   &
+  subroutine csub_interbed_wcomp_fc(this, i, n, tled, area,                   &
                                       hcell, hcellold, hcof, rhs)
 ! ******************************************************************************
-! csub_interbed_calc_wcomp -- Calculate water compressibility term for an 
-!                             interbed.
+! csub_interbed_wcomp_fc -- Calculate water compressibility term for an 
+!                           interbed.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -3250,7 +3219,7 @@ contains
     !
     ! -- return
     return
-  end subroutine csub_interbed_calc_wcomp
+  end subroutine csub_interbed_wcomp_fc
   
   
   function csub_calc_void(this, theta) result(void)
@@ -3376,9 +3345,9 @@ contains
     return
   end subroutine csub_adj_matprop   
 
-  subroutine csub_delay_calc_interbed(this, ib, hcell)
+  subroutine csub_delay_sln(this, ib, hcell)
 ! ******************************************************************************
-! csub_delay_calc_interbed -- Calculate flow in delay interbeds.
+! csub_delay_sln -- Calculate flow in delay interbeds.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -3404,7 +3373,7 @@ contains
     ! -- initialize variables
     !
     ! -- calculate z for each delay bed cell
-    call this%csub_delay_calc_z(ib)
+    call this%csub_delay_calc_zcell(ib)
     !
     ! -- calculate geostatic stress for each delay bed cell
     call this%csub_delay_calc_stress(ib, hcell)
@@ -3442,12 +3411,12 @@ contains
     !
     ! -- return%
     return
-  end subroutine csub_delay_calc_interbed
+  end subroutine csub_delay_sln
 
 
-  subroutine csub_delay_calc_z(this, ib)
+  subroutine csub_delay_calc_zcell(this, ib)
 ! ******************************************************************************
-! csub_delay_calc_z -- Calculate z for delay interbeds cells.
+! csub_delay_calc_zcell -- Calculate z for delay interbeds cells.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -3488,7 +3457,7 @@ contains
     ! -- return
     return
 
-  end subroutine csub_delay_calc_z
+  end subroutine csub_delay_calc_zcell
 
   subroutine csub_delay_calc_stress(this, ib, hcell)
 ! ******************************************************************************
@@ -3569,10 +3538,10 @@ contains
     return
   end subroutine csub_delay_calc_stress
 
-  subroutine csub_delay_calc_sskessk(this, ib, n, sske, ssk)
+  subroutine csub_delay_calc_ssksske(this, ib, n, ssk, sske)
 ! ******************************************************************************
-! csub_delay_calc_sskessk -- Calculate sske and sske for a node in a delay
-!                       interbed cell.
+! csub_delay_calc_ssksske -- Calculate ssk and sske for a node in a delay
+!                            interbed cell.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -3580,8 +3549,8 @@ contains
     class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: ib
     integer(I4B), intent(in) :: n
-    real(DP), intent(inout) :: sske
     real(DP), intent(inout) :: ssk
+    real(DP), intent(inout) :: sske
     ! -- local variables
     integer(I4B) :: idelay
     real(DP) :: es
@@ -3632,7 +3601,7 @@ contains
     !
     ! -- return
     return
-  end subroutine csub_delay_calc_sskessk
+  end subroutine csub_delay_calc_ssksske
 
 
   subroutine csub_delay_assemble(this, ib, hcell)
@@ -3677,7 +3646,7 @@ contains
       c2 = DTWO * c
       c3 = DTHREE * c
       f = dz / delt
-      call this%csub_delay_calc_sskessk(ib, n, sske, ssk)
+      call this%csub_delay_calc_ssksske(ib, n, ssk, sske)
       ! -- diagonal and right hand side
       aii = -ssk * f
       z = this%dbz(n, idelay)
@@ -3798,7 +3767,7 @@ contains
         dz = this%dbdz(idelay)
         void = this%csub_calc_void(this%dbtheta(n, idelay))
         fmult = DONE
-        call this%csub_delay_calc_sskessk(ib, n, sske, ssk)
+        call this%csub_delay_calc_ssksske(ib, n, ssk, sske)
         if (this%igeocalc == 0) then
           v1 = ssk * (this%dbpcs(n, idelay) - this%dbh(n, idelay))
           v2 = sske * (this%dbh0(n, idelay) - this%dbpcs(n, idelay))
@@ -3901,7 +3870,7 @@ contains
       do n = 1, this%ndelaycells
         dz = this%dbdz(idelay)
         void = this%csub_calc_void(this%dbtheta(n, idelay))
-        call this%csub_delay_calc_sskessk(ib, n, sske, ssk)
+        call this%csub_delay_calc_ssksske(ib, n, ssk, sske)
         if (this%igeocalc == 0) then
           v = ssk * (this%dbpcs(n, idelay) - this%dbh(n, idelay))
           v = v + sske * (this%dbh0(n, idelay) - this%dbpcs(n, idelay))
@@ -3931,10 +3900,10 @@ contains
     return
   end subroutine csub_delay_calc_comp
 
-  subroutine csub_delay_calc_gwf(this, ib, hcof, rhs)
+  subroutine csub_delay_fc(this, ib, hcof, rhs)
 ! ******************************************************************************
-! csub_delay_calc_gwf -- Calculate hcof and rhs for delay interbed contribution to
-!                   GWF cell.
+! csub_delay_fc -- Calculate hcof and rhs for delay interbed contribution to
+!                  GWF cell.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -3973,7 +3942,7 @@ contains
     !
     ! -- return
     return
-  end subroutine csub_delay_calc_gwf
+  end subroutine csub_delay_fc
   
   
   !
