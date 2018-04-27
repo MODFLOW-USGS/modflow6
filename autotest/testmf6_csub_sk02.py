@@ -139,7 +139,7 @@ def build_models():
     # no delay bed data
     lnd = [0, 1, 2]
     thicknd0 = [zthick[0], zthick[1], zthick[2]]
-    cr = [0.001, 0.0005, 0.001]
+    cr = [0.01, 0.005, 0.01]
     sske = [6e-6, 3e-6, 6e-6]
 
     # subwt output data
