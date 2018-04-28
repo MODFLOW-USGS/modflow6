@@ -20,7 +20,7 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['csub_wtgeoa'] #, 'csub_wtgeob', 'csub_wtgeoc', 'csub_wtgeod', 'csub_wtgeoe']
+ex = ['csub_wtgeoa', 'csub_wtgeob'] #, 'csub_wtgeoc', 'csub_wtgeod', 'csub_wtgeoe']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
@@ -37,7 +37,7 @@ delay = [False, False, False, True, True]
 ddir = 'data'
 
 ## run all examples on Travis
-travis = [False for idx in range(len(exdirs))]
+travis = [True for idx in range(len(exdirs))]
 
 # set replace_exe to None to use default executable
 #replace_exe = {'mf2005': 'mf2005devdbl'}
@@ -45,12 +45,15 @@ replace_exe = None
 
 htol = [None for idx in range(len(exdirs))]
 dtol = 1e-3
+budtol = 1e-2
 
 bud_lst = ['CSUB-AQELASTIC_IN', 'CSUB-AQELASTIC_OUT',
-           'CSUB-WATERCOMP_IN', 'CSUB-WATERCOMP_OUT']
+           'CSUB-WATERCOMP_IN', 'CSUB-WATERCOMP_OUT',
+           'CSUB-ELASTIC_IN', 'CSUB-ELASTIC_OUT',
+           'CSUB-INELASTIC_IN', 'CSUB-INELASTIC_OUT']
 
 # static model data
-nlay, nrow, ncol = 3, 10, 10
+# temporal discretization
 nper = 31
 perlen = [1.] + [365.2500000 for i in range(nper - 1)]
 nstp = [1] + [6 for i in range(nper - 1)]
@@ -61,9 +64,12 @@ for idx in range(nper):
     tdis_rc.append((perlen[idx], nstp[idx], tsmult[idx]))
 
 # spatial discretization data
+nlay, nrow, ncol = 3, 10, 10
+shape3d = (nlay, nrow, ncol)
+size3d = nlay * nrow * ncol
 delr, delc = 1000., 2000.
 botm = [-100, -150., -350.]
-strt = 100.
+strt = 0.
 hnoflo = 1e30
 hdry = -1e30
 
@@ -228,6 +234,7 @@ def build_models():
         sfv = []
         sfe = []
         hc = []
+        thickib0 = []
         cdelays = 'nodelay'
         for k in range(nlay):
             b = zthick[k] * facndb[k]
@@ -235,6 +242,7 @@ def build_models():
                 continue
             nndb += 1
             ln.append(k)
+            thickib0.append(b)
             if headformulation[idx]:
                 sfv.append(skv[k] * b)
                 sfe.append(ske[k] * b)
@@ -274,6 +282,7 @@ def build_models():
             else:
                 nndb += 1
                 ln.append(k)
+                thickib0.append(b)
                 if headformulation[idx]:
                     sfv.append(skv[k] * b)
                     sfe.append(ske[k] * b)
@@ -300,6 +309,7 @@ def build_models():
                 continue
             nndb += 1
             ln.append(k)
+            thickib0.append(b)
             if headformulation[idx]:
                 sfv.append(ske[k] * b)
                 sfe.append(ske[k] * b)
@@ -441,13 +451,14 @@ def build_models():
                                            hc=hc, sfe=sfe, sfv=sfv,
                                            ids15=ds15, ids16=ds16)
         else:
-            swt = flopy.modflow.ModflowSwt(mc, iswtoc=1, nsystm=3,
+            swt = flopy.modflow.ModflowSwt(mc, iswtoc=1, nsystm=len(sfe),
                                            ithk=1, ivoid=iump[idx],
                                            icrcc=1,
-                                           istpcs=1, lnwt=ln,
-                                           sse=sc, ssv=sc,
+                                           istpcs=0, lnwt=ln,
+                                           sse=sfe, ssv=sfv,
                                            thick=thickib0,
-                                           void=void, pcsoff=ini_stress,
+                                           void=void,
+                                           pcs=pcs, pcsoff=0.,
                                            sgm=sgm, sgs=sgs,
                                            gl0=0.,
                                            ids16=ds16swt, ids17=ds17swt)
@@ -525,7 +536,8 @@ def eval_comp(sim):
     nbud = d0.shape[0]
 
     # get results from cbc file
-    cbc_bud = ['CSUB-AQELASTIC', 'CSUB-WATERCOMP']
+    cbc_bud = ['CSUB-AQELASTIC', 'CSUB-WATERCOMP',
+               'CSUB-ELASTIC', 'CSUB-INELASTIC']
     d = np.recarray(nbud, dtype=dtype)
     for key in bud_lst:
         d[key] = 0.
@@ -539,6 +551,11 @@ def eval_comp(sim):
             qin = 0.
             qout = 0.
             v = cobj.get_data(kstpkper=k, text=text)[0]
+            if isinstance(v, np.recarray):
+                vt = np.zeros(size3d, dtype=np.float)
+                for jdx, node in enumerate(v['node']):
+                    vt[node-1] += v['q'][jdx]
+                v = vt.reshape(shape3d)
             for kk in range(v.shape[0]):
                 for ii in range(v.shape[1]):
                     for jj in range(v.shape[2]):
@@ -581,7 +598,7 @@ def eval_comp(sim):
         f.write(line + '\n')
     f.close()
 
-    if diffmax > dtol:
+    if diffmax > budtol:
         sim.success = False
         msg += 'exceeds {}'.format(dtol)
         assert diffmax < dtol, msg

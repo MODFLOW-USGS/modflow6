@@ -4242,7 +4242,7 @@ contains
         enddo
       else if (obsrv%ObsTypeId == 'GSTRESS-CELL' .or. &
                obsrv%ObsTypeId == 'ESTRESS-CELL' .or. &
-               obsrv%ObsTypeId == 'SKELETAL-COMPACTION') then
+               obsrv%ObsTypeId == 'COMPACTION-SKELETAL') then
         jfound = .true.
         obsrv%BndFound = .true.
         obsrv%CurrentTimeStepEndValue = DZERO
