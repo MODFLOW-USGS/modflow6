@@ -1773,12 +1773,14 @@ contains
       end if
     end do
     !
+    ! -- read observations
+    call this%csub_rp_obs()
+    !
     ! -- terminate if errors griddata, packagedata blocks, TDIS, or STO data
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
       call ustop()
     end if
-
     !
     ! -- return
     return
@@ -2228,9 +2230,9 @@ contains
       call this%parser%StoreErrorUnit()
       call ustop()
     end if
-    !
-    ! -- read observations
-    call this%csub_rp_obs()
+    !!
+    !! -- read observations
+    !call this%csub_rp_obs()
     !
     ! -- return
     return
@@ -4076,7 +4078,12 @@ contains
     !
     ! -- Store obs type and assign procedure pointer
     !    for compaction-cell observation type.
-    call this%obs%StoreObsType('compaction-cell', .false., indx)
+    call this%obs%StoreObsType('compaction-cell', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for compaction-skeletal observation type.
+    call this%obs%StoreObsType('compaction-skeletal', .false., indx)
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
@@ -4110,7 +4117,10 @@ contains
     ! -- dummy
     class(GwfCsubType), intent(inout) :: this
     ! -- local
-    integer(I4B) :: i, j, n, nn
+    integer(I4B) :: i
+    integer(I4B) :: j
+    integer(I4B) :: n
+    integer(I4B) :: nn
     integer(I4B) :: idelay
     integer(I4B) :: ncol
     real(DP) :: v
@@ -4141,8 +4151,15 @@ contains
               v = this%sk_gs(n)
             case ('ESTRESS-CELL')
               v = this%sk_es(n)
-            case ('COMPACTION-CELL')
+            case ('COMPACTION-SKELETAL')
               v = this%sk_tcomp(n)
+            case ('COMPACTION-CELL')
+              ! -- add the skeletal component
+              if (j == 1) then
+                v = this%sk_tcomp(n)
+              else
+                v = this%tcomp(n)
+              end if
             case ('PRECONSTRESS')
                if (n > this%ndelaycells) then
                 r = real(n, DP) / real(this%ndelaycells, DP)
@@ -4225,7 +4242,7 @@ contains
         enddo
       else if (obsrv%ObsTypeId == 'GSTRESS-CELL' .or. &
                obsrv%ObsTypeId == 'ESTRESS-CELL' .or. &
-               obsrv%ObsTypeId == 'COMPACTION-CELL') then
+               obsrv%ObsTypeId == 'SKELETAL-COMPACTION') then
         jfound = .true.
         obsrv%BndFound = .true.
         obsrv%CurrentTimeStepEndValue = DZERO
@@ -4251,6 +4268,18 @@ contains
       else
         ! -- Observation location is a single node number
         jfound = .false.
+        ! -- save node number in first position
+        if (obsrv%ObsTypeId == 'COMPACTION-CELL') then 
+          n = size(obsrv%indxbnds)
+          if (n == 0) then
+            jfound = .true.
+            obsrv%BndFound = .true.
+            obsrv%CurrentTimeStepEndValue = DZERO
+            call ExpandArray(obsrv%indxbnds)
+            n = size(obsrv%indxbnds)
+            obsrv%indxbnds(n) = obsrv%NodeNumber
+          end if
+        end if
         jloop: do j = 1, this%ninterbeds
           if (this%nodelist(j) == obsrv%NodeNumber) then
             jfound = .true.

@@ -37,7 +37,7 @@ delay = [False, False, False, True, True]
 ddir = 'data'
 
 ## run all examples on Travis
-travis = [False for idx in range(len(exdirs))]
+travis = [False for idx in range(len(exdirs))]
 
 # set replace_exe to None to use default executable
 #replace_exe = {'mf2005': 'mf2005devdbl'}
@@ -494,11 +494,16 @@ def eval_comp(sim):
     fpth = os.path.join(sim.simpath,
                         '{}.comp.cmp.out'.format(os.path.basename(sim.name)))
     f = open(fpth, 'w')
+    line = '{:>15s}'.format('TOTIM')
+    line += ' {:>15s}'.format('CSUB')
+    line += ' {:>15s}'.format('MF')
+    line += ' {:>15s}'.format('DIFF')
+    f.write(line + '\n')
     for i in range(diff.shape[0]):
-        line = '{:10.2g}'.format(tc0[i, 0])
-        line += '{:10.2g}'.format(tc['TCOMP3'][i])
-        line += '{:10.2g}'.format(tc0[i, 1])
-        line += '{:10.2g}'.format(diff[i])
+        line = '{:15g}'.format(tc0[i, 0])
+        line += ' {:15g}'.format(tc['TCOMP3'][i])
+        line += ' {:15g}'.format(tc0[i, 1])
+        line += ' {:15g}'.format(diff[i])
         f.write(line + '\n')
     f.close()
 
