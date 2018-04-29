@@ -86,6 +86,8 @@ module GwfCsubModule
     real(DP), dimension(:), pointer :: sk_tcomp     => null()   !skeletal (aquifer) total compaction
     real(DP), dimension(:), pointer :: sk_stor      => null()   !skeletal (aquifer) storage
     real(DP), dimension(:), pointer :: sk_wcstor    => null()   !skeletal (aquifer) water compressibility storage
+    real(DP), dimension(:), pointer :: sk_ske       => null()   !skeletal (aquifer) elastic storage coefficient
+    real(DP), dimension(:), pointer :: sk_sk        => null()   !skeletal (aquifer) first storage coefficient
     !
     ! -- interbed variables
     integer(I4B), dimension(:), pointer :: idelay   => null()   !0 = nodelay, > 0 = delay
@@ -107,6 +109,8 @@ module GwfCsubModule
     real(DP), pointer, dimension(:,:) :: auxvar     => null()   !auxiliary variable array
     real(DP), dimension(:), pointer :: storagee     => null()   !elastic storage
     real(DP), dimension(:), pointer :: storagei     => null()   !inelastic storage
+    real(DP), dimension(:), pointer :: ske          => null()   !elastic storage coefficient
+    real(DP), dimension(:), pointer :: sk           => null()   !first storage coefficient
     !
     ! -- delay interbed arrays
     real(DP), dimension(:), pointer   :: dbdz       => null()   !delay bed dz
@@ -1235,6 +1239,8 @@ contains
     call mem_allocate(this%sk_tcomp, this%dis%nodes, 'sk_tcomp', trim(this%origin))
     call mem_allocate(this%sk_stor, this%dis%nodes, 'sk_stor', trim(this%origin))
     call mem_allocate(this%sk_wcstor, this%dis%nodes, 'sk_wcstor', trim(this%origin))
+    call mem_allocate(this%sk_ske, this%dis%nodes, 'sk_ske', trim(this%origin))
+    call mem_allocate(this%sk_sk, this%dis%nodes, 'sk_sk', trim(this%origin))
     if (this%igeostressoff == 1) then
       call mem_allocate(this%sig0, this%dis%nodes, 'sig0', trim(this%origin))
     else
@@ -1279,6 +1285,8 @@ contains
     call mem_allocate(this%gwflow, iblen, 'gwflow', trim(this%origin))
     call mem_allocate(this%storagee, iblen, 'storagee', trim(this%origin))
     call mem_allocate(this%storagei, iblen, 'storagei', trim(this%origin))
+    call mem_allocate(this%ske, iblen, 'ske', trim(this%origin))
+    call mem_allocate(this%sk, iblen, 'sk', trim(this%origin))
     !
     ! -- delay bed storage
     call mem_allocate(this%dbdz, 0, 'dbdz', trim(this%origin))
@@ -1375,6 +1383,8 @@ contains
       call mem_deallocate(this%sk_tcomp)
       call mem_deallocate(this%sk_stor)
       call mem_deallocate(this%sk_wcstor)
+      call mem_deallocate(this%sk_ske)
+      call mem_deallocate(this%sk_sk)
       !
       ! -- interbed storage
       deallocate(this%boundname)
@@ -1400,6 +1410,8 @@ contains
       call mem_deallocate(this%gwflow)
       call mem_deallocate(this%storagee)
       call mem_deallocate(this%storagei)
+      call mem_deallocate(this%ske)
+      call mem_deallocate(this%sk)
       !
       ! -- delay bed storage
       call mem_deallocate(this%dbdz)
@@ -2082,6 +2094,10 @@ contains
              (rho1 * this%sk_es0(n))
     end if
     !
+    ! -- save ske and sk
+    this%ske = rho1
+    this%sk = rho2
+    !
     ! -- return
     return
 
@@ -2747,6 +2763,10 @@ contains
     call this%csub_sk_calc_sske(n, sske, sske0, hcell, hcellold)
     rho1 = sske0 * area * tthk0 * tled
     rho2 = sske * area * tthk * tled
+    !
+    ! -- update sk and ske
+    this%sk_ske(n) = sske0 * tthk0
+    this%sk_sk(n) = sske * tthk
     !
     ! -- calculate hcof term
     hcof = -rho2 * snnew
@@ -4067,6 +4087,16 @@ contains
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
+    !    for interbed ske observation type.
+    call this%obs%StoreObsType('ske', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for interbed sk observation type.
+    call this%obs%StoreObsType('sk', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
     !    for geostatic-stress-cell observation type.
     call this%obs%StoreObsType('gstress-cell', .false., indx)
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
@@ -4079,6 +4109,16 @@ contains
     ! -- Store obs type and assign procedure pointer
     !    for compaction-cell observation type.
     call this%obs%StoreObsType('compaction-cell', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for ske-cell observation type.
+    call this%obs%StoreObsType('ske-cell', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for sk-cell observation type.
+    call this%obs%StoreObsType('sk-cell', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
@@ -4147,12 +4187,30 @@ contains
               v = this%tcomp(n)
             case ('THICKNESS')
               v = this%thick(n)
+            case ('SKE')
+              v = this%ske(n)
+            case ('SK')
+              v = this%sk(n)
             case ('GSTRESS-CELL')
               v = this%sk_gs(n)
             case ('ESTRESS-CELL')
               v = this%sk_es(n)
             case ('COMPACTION-SKELETAL')
               v = this%sk_tcomp(n)
+            case ('SKE-CELL')
+              ! -- add the skeletal component
+              if (j == 1) then
+                v = this%sk_ske(n)
+              else
+                v = this%ske(n)
+              end if
+            case ('SK-CELL')
+              ! -- add the skeletal component
+              if (j == 1) then
+                v = this%sk_sk(n)
+              else
+                v = this%sk(n)
+              end if
             case ('COMPACTION-CELL')
               ! -- add the skeletal component
               if (j == 1) then
@@ -4269,7 +4327,9 @@ contains
         ! -- Observation location is a single node number
         jfound = .false.
         ! -- save node number in first position
-        if (obsrv%ObsTypeId == 'COMPACTION-CELL') then 
+        if (obsrv%ObsTypeId == 'COMPACTION-CELL' .or.                           &
+            obsrv%ObsTypeId == 'SKE-CELL' .or.                                  &
+            obsrv%ObsTypeId == 'SK-CELL') then 
           n = size(obsrv%indxbnds)
           if (n == 0) then
             jfound = .true.

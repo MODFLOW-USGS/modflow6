@@ -399,10 +399,21 @@ def build_models():
                                         beta=beta,
                                         packagedata=sub6,
                                         sig0={0: [0., 0., 0.]})
+        obspos = [(0, 4, 4), (1, 4, 4), (2, 4, 4)]
+        obstype = ['compaction-cell', 'gstress-cell', 'estress-cell',
+                   'ske-cell']
+        obstag = ['tcomp', 'gs', 'es', 'ske']
+        obsarr = []
+        for iobs, cobs in enumerate(obstype):
+            for jobs, otup in enumerate(obspos):
+                otag = '{}{}'.format(obstag[iobs], jobs+1)
+                obsarr.append((otag, cobs, otup))
+
         orecarray = {}
-        orecarray['csub_obs.csv'] = [('tcomp1', 'compaction-cell', (0, 4, 4)),
-                                     ('tcomp2', 'compaction-cell', (1, 4, 4)),
-                                     ('tcomp3', 'compaction-cell', (2, 4, 4))]
+        # orecarray['csub_obs.csv'] = [('tcomp1', 'compaction-cell', (0, 4, 4)),
+        #                              ('tcomp2', 'compaction-cell', (1, 4, 4)),
+        #                              ('tcomp3', 'compaction-cell', (2, 4, 4))]
+        orecarray['csub_obs.csv'] = obsarr
         csub_obs_package = flopy.mf6.ModflowUtlobs(gwf,
                                                    fname=opth,
                                                    parent_file=csub, digits=10,
