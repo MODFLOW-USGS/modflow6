@@ -44,6 +44,7 @@ replace_exe = None
 
 htol = [None, 0.3, None]
 dtol = 1e-3
+budtol = 0.01
 
 bud_lst = ['CSUB-AQELASTIC_IN', 'CSUB-AQELASTIC_OUT',
            'CSUB-WATERCOMP_IN', 'CSUB-WATERCOMP_OUT']
@@ -236,10 +237,17 @@ def build_models():
                                         sk_theta=theta,
                                         ske_cr=crnd0,
                                         packagedata=None)
+        obspos = [(0, 4, 4), (1, 4, 4), (2, 4, 4)]
+        obstype = ['compaction-cell', 'csub-cell']
+        obstag = ['tcomp', 'csub']
+        obsarr = []
+        for iobs, cobs in enumerate(obstype):
+            for jobs, otup in enumerate(obspos):
+                otag = '{}{}'.format(obstag[iobs], jobs+1)
+                obsarr.append((otag, cobs, otup))
+
         orecarray = {}
-        orecarray['csub_obs.csv'] = [('tcomp1', 'compaction-cell', (0, 4, 4)),
-                                     ('tcomp2', 'compaction-cell', (1, 4, 4)),
-                                     ('tcomp3', 'compaction-cell', (2, 4, 4))]
+        orecarray['csub_obs.csv'] = obsarr
         csub_obs_package = flopy.mf6.ModflowUtlobs(gwf,
                                                    fname=opth,
                                                    parent_file=csub, digits=10,
@@ -253,10 +261,10 @@ def build_models():
                                     headprintrecord=[
                                         ('COLUMNS', 10, 'WIDTH', 15,
                                          'DIGITS', 6, 'GENERAL')],
-                                    saverecord=[('HEAD', 'LAST'),
-                                                ('BUDGET', 'LAST')],
+                                    saverecord=[('HEAD', 'ALL'),
+                                                ('BUDGET', 'ALL')],
                                     printrecord=[('HEAD', 'LAST'),
-                                                 ('BUDGET', 'LAST')])
+                                                 ('BUDGET', 'ALL')])
 
         # write MODFLOW 6 files
         sim.write_simulation()
@@ -291,11 +299,14 @@ def build_models():
         chd = flopy.modflow.ModflowChd(mc, stress_period_data=cd)
         rch = flopy.modflow.ModflowRch(mc, rech=rech)
         wel = flopy.modflow.ModflowWel(mc, stress_period_data=wd)
-        sub = flopy.modflow.ModflowSub(mc, ndb=0, nndb=nndb,
+        sub = flopy.modflow.ModflowSub(mc, ndb=0, nndb=nndb, ipakcb=1001,
                                        isuboc=1, ln=lnd,
                                        hc=hc, sfe=sfe, sfv=sfv,
                                        ids15=ds15, ids16=ds16)
-        oc = flopy.modflow.ModflowOc(mc, stress_period_data=None)
+        oc = flopy.modflow.ModflowOc(mc, stress_period_data=None,
+                                     save_every=1,
+                                     save_types=['save head', 'save budget',
+                                                 'print budget'])
         if newton:
             if cpth == 'mfnwt':
                 fluxtol = (float(nlay * nrow * ncol) - 4.) * rclose
@@ -433,7 +444,7 @@ def eval_comp(sim):
         f.write(line + '\n')
     f.close()
 
-    if diffmax > dtol:
+    if diffmax > budtol:
         sim.success = False
         msg += 'exceeds {}'.format(dtol)
         assert diffmax < dtol, msg

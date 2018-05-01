@@ -218,7 +218,7 @@ def build_models():
                                      nper=nper, perioddata=tdis_rc)
 
         # create gwf model
-        gwf = flopy.mf6.ModflowGwf(sim, modelname=name)
+        gwf = flopy.mf6.ModflowGwf(sim, modelname=name, save_flows=True)
 
         # create iterative model solution and register the gwf model with it
         ims = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
@@ -289,7 +289,8 @@ def build_models():
                                      ('w2l1', 'total-compaction', (0, 11, 6)),
                                      ('w2l2', 'total-compaction', (1, 11, 6)),
                                      ('w2l3', 'total-compaction', (2, 11, 6)),
-                                     ('w2l4', 'total-compaction', (3, 11, 6))]
+                                     ('w2l4', 'total-compaction', (3, 11, 6)),
+                                     ('w2l4q', 'csub-cell', (3, 11, 6))]
         csub_obs_package = flopy.mf6.ModflowUtlobs(gwf,
                                                    fname=opth,
                                                    parent_file=csub, digits=10,
@@ -303,9 +304,10 @@ def build_models():
                                     headprintrecord=[
                                         ('COLUMNS', 10, 'WIDTH', 15,
                                          'DIGITS', 6, 'GENERAL')],
-                                    saverecord=[('HEAD', 'LAST')],
+                                    saverecord=[('HEAD', 'ALL'),
+                                                ('BUDGET', 'ALL')],
                                     printrecord=[('HEAD', 'LAST'),
-                                                 ('BUDGET', 'LAST')])
+                                                 ('BUDGET', 'ALL')])
 
         # write MODFLOW 6 files
         sim.write_simulation()
@@ -323,12 +325,16 @@ def build_models():
                                        hdry=hdry)
         chd = flopy.modflow.ModflowChd(mc, stress_period_data=cd)
         wel = flopy.modflow.ModflowWel(mc, stress_period_data=wd)
-        swt = flopy.modflow.ModflowSwt(mc, iswtoc=1, nsystm=4, ithk=1, ivoid=1,
+        swt = flopy.modflow.ModflowSwt(mc, ipakcb=1001,
+                                       iswtoc=1, nsystm=4, ithk=1, ivoid=1,
                                        istpcs=1, lnwt=[0, 1, 2, 3],
                                        cc=cc, cr=cr, thick=thick,
                                        void=void, pcsoff=ini_stress, sgs=sgs,
                                        gl0=0., ids16=ds16, ids17=ds17)
-        oc = flopy.modflow.ModflowOc(mc, stress_period_data=None)
+        oc = flopy.modflow.ModflowOc(mc, stress_period_data=None,
+                                     save_every=1,
+                                     save_types=['save head', 'save budget',
+                                                 'print budget'])
         pcg = flopy.modflow.ModflowPcg(mc, mxiter=nouter, iter1=ninner,
                                        hclose=hclose, rclose=rclose,
                                        relax=relax)

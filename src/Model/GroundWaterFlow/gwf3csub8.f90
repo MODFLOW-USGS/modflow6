@@ -105,7 +105,6 @@ module GwfCsubModule
     real(DP), dimension(:), pointer :: h0           => null()   !initial head in interbed
     real(DP), dimension(:), pointer :: comp         => null()   !interbed incremental compaction
     real(DP), dimension(:), pointer :: tcomp        => null()   !total interbed compaction
-    real(DP), dimension(:), pointer :: gwflow       => null()   !gwf-flow
     real(DP), pointer, dimension(:,:) :: auxvar     => null()   !auxiliary variable array
     real(DP), dimension(:), pointer :: storagee     => null()   !elastic storage
     real(DP), dimension(:), pointer :: storagei     => null()   !inelastic storage
@@ -515,7 +514,7 @@ contains
               stoe = comp
             end if
           end if
-          delt_sto = comp * area
+          delt_sto = comp * area * tledm
           stoe = stoe * area
           stoi = stoi * area
           this%storagee(i) = stoe * tledm
@@ -552,7 +551,6 @@ contains
             call this%csub_delay_calc_comp(i)
           end if
         end if
-        this%gwflow(i) = delt_sto
         !
         ! -- budget terms
         if (this%storagee(i) < DZERO) then
@@ -1282,7 +1280,6 @@ contains
     call mem_allocate(this%idelay, iblen, 'idelay', trim(this%origin))
     call mem_allocate(this%comp, iblen, 'comp', trim(this%origin))
     call mem_allocate(this%tcomp, iblen, 'tcomp', trim(this%origin))
-    call mem_allocate(this%gwflow, iblen, 'gwflow', trim(this%origin))
     call mem_allocate(this%storagee, iblen, 'storagee', trim(this%origin))
     call mem_allocate(this%storagei, iblen, 'storagei', trim(this%origin))
     call mem_allocate(this%ske, iblen, 'ske', trim(this%origin))
@@ -1407,7 +1404,6 @@ contains
       call mem_deallocate(this%h0)
       call mem_deallocate(this%comp)
       call mem_deallocate(this%tcomp)
-      call mem_deallocate(this%gwflow)
       call mem_deallocate(this%storagee)
       call mem_deallocate(this%storagei)
       call mem_deallocate(this%ske)
@@ -1784,9 +1780,9 @@ contains
         call store_error(errmsg)
       end if
     end do
-    !
-    ! -- read observations
-    call this%csub_rp_obs()
+    !!
+    !! -- read observations
+    !call this%csub_rp_obs()
     !
     ! -- terminate if errors griddata, packagedata blocks, TDIS, or STO data
     if (count_errors() > 0) then
@@ -2095,8 +2091,8 @@ contains
     end if
     !
     ! -- save ske and sk
-    this%ske = rho1
-    this%sk = rho2
+    this%ske(i) = rho1
+    this%sk(i) = rho2
     !
     ! -- return
     return
@@ -2246,9 +2242,9 @@ contains
       call this%parser%StoreErrorUnit()
       call ustop()
     end if
-    !!
-    !! -- read observations
-    !call this%csub_rp_obs()
+    !
+    ! -- read observations
+    call this%csub_rp_obs()
     !
     ! -- return
     return
@@ -2765,8 +2761,8 @@ contains
     rho2 = sske * area * tthk * tled
     !
     ! -- update sk and ske
-    this%sk_ske(n) = sske0 * tthk0
-    this%sk_sk(n) = sske * tthk
+    this%sk_ske(n) = sske0 * tthk0 * snold
+    this%sk_sk(n) = sske * tthk * snnew
     !
     ! -- calculate hcof term
     hcof = -rho2 * snnew
@@ -4067,8 +4063,8 @@ contains
   ! ------------------------------------------------------------------------------
     !
     ! -- Store obs type and assign procedure pointer
-    !    for ibc observation type.
-    call this%obs%StoreObsType('ibc', .true., indx)
+    !    for csub observation type.
+    call this%obs%StoreObsType('csub', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
@@ -4104,6 +4100,11 @@ contains
     ! -- Store obs type and assign procedure pointer
     !    for effective-stress-cell observation type.
     call this%obs%StoreObsType('estress-cell', .false., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for csub-cell observation type.
+    call this%obs%StoreObsType('csub-cell', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
@@ -4180,7 +4181,7 @@ contains
           n = obsrv%indxbnds(j)
           select case (obsrv%ObsTypeId)
             case ('CSUB')
-              v = this%gwflow(n)
+              v = this%storagee(n) + this%storagei(n)
             case ('COMPACTION')
               v = this%comp(n)
             case ('TOTAL-COMPACTION')
@@ -4197,6 +4198,13 @@ contains
               v = this%sk_es(n)
             case ('COMPACTION-SKELETAL')
               v = this%sk_tcomp(n)
+            case ('CSUB-CELL')
+              ! -- add the skeletal component
+              if (j == 1) then
+                v = this%sk_stor(n)
+              else
+                v = this%storagee(n) + this%storagei(n)
+              end if
             case ('SKE-CELL')
               ! -- add the skeletal component
               if (j == 1) then
@@ -4329,9 +4337,9 @@ contains
         ! -- save node number in first position
         if (obsrv%ObsTypeId == 'COMPACTION-CELL' .or.                           &
             obsrv%ObsTypeId == 'SKE-CELL' .or.                                  &
-            obsrv%ObsTypeId == 'SK-CELL') then 
-          n = size(obsrv%indxbnds)
-          if (n == 0) then
+            obsrv%ObsTypeId == 'SK-CELL' .or.                                   &
+            obsrv%ObsTypeId == 'CSUB-CELL') then 
+          if (.NOT. obsrv%BndFound) then
             jfound = .true.
             obsrv%BndFound = .true.
             obsrv%CurrentTimeStepEndValue = DZERO
@@ -4360,8 +4368,6 @@ contains
     !
     return
   end subroutine csub_rp_obs
-
-
   !
   ! -- Procedures related to observations (NOT type-bound)
   subroutine csub_process_obsID(obsrv, dis, inunitobs, iout)
