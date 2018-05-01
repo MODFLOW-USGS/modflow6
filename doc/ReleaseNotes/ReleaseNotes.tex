@@ -121,6 +121,7 @@ This section describes changes introduced into MODFLOW 6 with each release.  The
 \underline{STRESS PACKAGES}
 \begin{itemize}
 \item If the AUXMULTNAME keyword was used in combination with time series, then the multiplier was erroneously applied to all time series, and not just the time series in the column to be scaled.  
+\item For the array-based recharge and evapotranspiration packages, the IRCH and IEVT variables (if specified) must be specified as the first variable listed in the PERIOD block.  A check was added so that the program will terminate with an error if IRCH or IEVT is not the first variable listed in the PERIOD block.
 \end{itemize}
 
 \underline{SOLUTION}

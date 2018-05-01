@@ -20,7 +20,7 @@ module RchModule
   !
   type, extends(BndType) :: RchType
     integer(I4B), pointer               :: inirch     => NULL()
-    integer(I4B), pointer, dimension(:) :: nodesontop => NULL()    ! User provided cell numbers; nodelist is cells where recharge is applied)
+    integer(I4B), pointer, dimension(:) :: nodesontop => NULL()                 ! User provided cell numbers; nodelist is cells where recharge is applied)
     logical, private                    :: fixed_cell = .false.
     logical, private                    :: read_as_arrays = .false.
   contains
@@ -360,7 +360,7 @@ module RchModule
         call this%rch_rp_list(inrech)
         call this%bnd_rp_ts()
       else
-        ! -- Read RECHARGE, NLARRAY, and AUX variables as arrays
+        ! -- Read RECHARGE, IRCH, and AUX variables as arrays
         call this%rch_rp_array(line, inrech)
       endif
     !
@@ -400,7 +400,7 @@ module RchModule
     ! -- local
     integer(I4B) :: n
     integer(I4B) :: ipos
-    integer(I4B) :: jcol, jauxcol, lpos
+    integer(I4B) :: jcol, jauxcol, lpos, ivarsread
     character(len=LENTIMESERIESNAME) :: tasName
     character(len=24) ::  atemp
     character(len=24), dimension(2) :: aname
@@ -421,7 +421,10 @@ module RchModule
     !
 ! ------------------------------------------------------------------------------
     !
+    ! -- Initialize
     jauxcol = 0
+    ivarsread = 0
+    !
     ! -- Read RECHARGE, IRCH, and AUX variables as arrays
     do
       call this%parser%GetNextLine(endOfBlock)
@@ -461,6 +464,15 @@ module RchModule
         endif
         !
       case ('IRCH')
+        !
+        ! -- Check to see if other variables have already been read.  If so,
+        !    then terminate with an error that IRCH must be read first.
+        if (ivarsread > 0) then
+          call store_error('****ERROR. IRCH IS NOT FIRST VARIABLE IN &
+            &PERIOD BLOCK OR IT IS SPECIFIED MORE THAN ONCE.')
+          call this%parser%StoreErrorUnit()
+          call ustop()
+        endif
         !
         ! -- Read the IRCH array
         call this%dis%nlarray_to_nodelist(this%nodelist, this%maxbound, &
@@ -522,6 +534,10 @@ module RchModule
           auxMultArray => this%auxvar(this%iauxmultcol,:)
         endif
       end select
+      !
+      ! -- Increment the number of variables read
+      ivarsread = ivarsread + 1
+      !
     end do
     !
     ! -- If the multiplier-array pointer has been assigned and
