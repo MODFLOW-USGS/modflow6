@@ -8,8 +8,9 @@ program mf6
 ! ------------------------------------------------------------------------------
   ! -- modules
   use KindModule,             only: DP, I4B
-  use ConstantsModule,        only: MFVNAM, VERSION, MFTITLE, FMTDISCLAIMER,   &
-                                    ISTDOUT, IDEVELOPMODE
+  use ConstantsModule,        only: ISTDOUT
+  use VersionModule,          only: VERSION, MFVNAM, MFTITLE, FMTDISCLAIMER,   & 
+                                    IDEVELOPMODE
   use CompilerVersion
   use InputOutputModule,      only: write_centered
   use SimulationCreateModule, only: simulation_cr, simulation_da

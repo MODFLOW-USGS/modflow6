@@ -85,8 +85,9 @@ module SimulationCreateModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use ConstantsModule,        only: MFVNAM, VERSION, MFTITLE, FMTDISCLAIMER, &
-                                      LENBIGLINE, IDEVELOPMODE
+    use ConstantsModule,        only: LENBIGLINE
+    use VersionModule,          only: VERSION, MFVNAM, MFTITLE, FMTDISCLAIMER,  & 
+                                      IDEVELOPMODE
     use CompilerVersion
     use InputOutputModule,      only: write_centered
     ! -- dummy
