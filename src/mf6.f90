@@ -12,6 +12,7 @@ program mf6
   use VersionModule,          only: VERSION, MFVNAM, MFTITLE, FMTDISCLAIMER,   & 
                                     IDEVELOPMODE
   use CompilerVersion
+  use CommandArguments,       only: GetCommandLineArguments
   use InputOutputModule,      only: write_centered
   use SimulationCreateModule, only: simulation_cr, simulation_da
   use TimerModule,            only: start_time, elapsed_time
@@ -39,6 +40,9 @@ program mf6
   character(len=80) :: compiler
   ! -- formats
 ! ------------------------------------------------------------------------------
+  !
+  ! -- parse any command line arguments
+  call GetCommandLineArguments()
   !
   ! -- Write banner to screen (unit 6) and start timer
   call write_centered('MODFLOW'//MFVNAM, ISTDOUT, 80)
