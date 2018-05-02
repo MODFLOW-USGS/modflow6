@@ -1,8 +1,8 @@
 module BlockParserModule
   
   use KindModule, only: DP, I4B
-  use ConstantsModule,   only: LENHUGELINE, LINELENGTH, MAXCHARLEN,            &
-                               IDEVELOPMODE
+  use ConstantsModule,   only: LENHUGELINE, LINELENGTH, MAXCHARLEN
+  use VersionModule,     only: IDEVELOPMODE
   use InputOutputModule, only: uget_block, uget_any_block, uterminate_block, &
                                u8rdcom, urword, upcase
   use SimModule,         only: store_error, store_error_unit, ustop

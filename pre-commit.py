@@ -40,6 +40,35 @@ neither the USGS nor the U.S. Government shall be held liable for any damages
 resulting from the authorized or unauthorized use of the software.
 '''
 
+approvedfmt = '''  character(len=*), parameter :: FMTDISCLAIMER =                                &
+    "(/,                                                                        &
+    &'This software has been approved for release by the U.S. Geological ',/,   &
+    &'Survey (USGS). Although the software has been subjected to rigorous ',/,  &
+    &'review, the USGS reserves the right to update the software as needed ',/, &
+    &'pursuant to further analysis and review. No warranty, expressed or ',/,   &
+    &'implied, is made by the USGS or the U.S. Government as to the ',/,        &
+    &'functionality of the software and related material nor shall the ',/,     &
+    &'fact of release constitute any such warranty. Furthermore, the ',/,       &
+    &'software is released on condition that neither the USGS nor the U.S. ',/, &
+    &'Government shall be held liable for any damages resulting from its ',/,   &
+    &'authorized or unauthorized use. Also refer to the USGS Water ',/,         &
+    &'Resources Software User Rights Notice for complete use, copyright, ',/,   &
+    &'and distribution information.',/)"'''
+
+preliminaryfmt = '''  character(len=*), parameter :: FMTDISCLAIMER =                                &
+    "(/,                                                                        &
+    &'This software is preliminary or provisional and is subject to ',/,        &
+    &'revision. It is being provided to meet the need for timely best ',/,      &
+    &'science. The software has not received final approval by the U.S. ',/,    &
+    &'Geological Survey (USGS). No warranty, expressed or implied, is made ',/, &
+    &'by the USGS or the U.S. Government as to the functionality of the ',/,    &
+    &'software and related material nor shall the fact of release ',/,          &
+    &'constitute any such warranty. The software is provided on the ',/,        &
+    &'condition that neither the USGS nor the U.S. Government shall be held ',/,&
+    &'liable for any damages resulting from the authorized or unauthorized ',/, &
+    &'use of the software.',/)"'''
+
+
 def get_version_str(v0, v1, v2, v3):
     version_type = ('{}'.format(v0),
                     '{}'.format(v1),
@@ -56,11 +85,20 @@ def get_tag(v0, v1, v2):
     tag = '.'.join(tag_type)
     return tag
 
+
 def get_disclaimer(branch):
     if branch.lower() == 'master':
         disclaimer = approved
     else:
         disclaimer = preliminary
+    return disclaimer
+
+
+def get_disclaimerfmt(branch):
+    if branch.lower() == 'master':
+        disclaimer = approvedfmt
+    else:
+        disclaimer = preliminaryfmt
     return disclaimer
     
 
@@ -150,6 +188,9 @@ def update_version():
     except:
         print('There was a problem updating the version file')
         sys.exit(1)
+        
+    # update version.f90
+    update_mf6_version(vmajor, vminor, vmicro, vbuild)
 
     # update README.md with new version information
     update_readme_markdown(vmajor, vminor, vmicro, vbuild)
@@ -165,8 +206,7 @@ def add_updated_files():
         print('Could not add updated files')
         sys.exit(1)
 
-
-def update_readme_markdown(vmajor, vminor, vmicro, vbuild):
+def get_branch():
     try:
         # determine current buildstat branch
         b = subprocess.Popen(("git", "status"),
@@ -180,9 +220,79 @@ def update_readme_markdown(vmajor, vminor, vmicro, vbuild):
             if 'On branch' in line:
                 branch = line.replace('On branch ', '').rstrip()
     except:
+        branch = None
+    
+    return branch
+
+def update_mf6_version(vmajor, vminor, vmicro, vbuild):
+    branch = get_branch()
+    if branch is None:
+        print('Cannot update MODFLOW 6 version - could not determine current branch')
+        return
+        
+    # create version
+    version = get_tag(vmajor, vminor, vmicro)
+    idevelopmode = 0
+    if 'master' not in branch.lower():
+        version = '{}.{}'.format(version, vbuild)
+        idevelopmode = 1
+    
+    # develop date text
+    now = datetime.datetime.now()
+    sdate = now.strftime('%m/%d/%Y')
+    
+    # create disclaimer text
+    disclaimerfmt = get_disclaimerfmt(branch)
+    
+    # read version.f90 into memory
+    fpth = os.path.join('src', 'Utilities', 'version.f90')
+    with open(fpth, 'r') as file:
+        lines = [line.rstrip() for line in file]
+
+    # rewrite version.f90
+    skip = False
+    f = open(fpth, 'w')
+    for line in lines:
+        # skip all of the disclaimer text
+        if skip:
+            if ',/)"' in line:
+                skip = False
+            continue
+        elif 'IDEVELOPMODE' in line:
+            line = '  integer(I4B), parameter :: ' + \
+                   'IDEVELOPMODE = {}'.format(idevelopmode)
+        elif 'VERSION' in line:
+            line = "  character(len=40), parameter :: " + \
+                   "VERSION = '{} {}'".format(version, sdate)
+        elif 'FMTDISCLAIMER' in line:
+            line = disclaimerfmt
+            skip = True
+        f.write('{}\n'.format(line))
+    f.close()
+
+    return
+
+def update_readme_markdown(vmajor, vminor, vmicro, vbuild):
+#    try:
+#        # determine current buildstat branch
+#        b = subprocess.Popen(("git", "status"),
+#                             stdout=subprocess.PIPE,
+#                             stderr=subprocess.STDOUT).communicate()[0]
+#        if isinstance(b, bytes):
+#            b = b.decode('utf-8')
+#
+#        # determine current buildstat branch
+#        for line in b.splitlines():
+#            if 'On branch' in line:
+#                branch = line.replace('On branch ', '').rstrip()
+#    except:
+#        print('Cannot update README.md - could not determine current branch')
+#        return
+    branch = get_branch()
+    if branch is None:
         print('Cannot update README.md - could not determine current branch')
         return
-
+        
     # create version
     version = get_tag(vmajor, vminor, vmicro)
     

@@ -121,6 +121,13 @@ This section describes changes introduced into MODFLOW 6 with each release.  The
 \underline{STRESS PACKAGES}
 \begin{itemize}
 \item If the AUXMULTNAME keyword was used in combination with time series, then the multiplier was erroneously applied to all time series, and not just the time series in the column to be scaled.  
+\item For the array-based recharge and evapotranspiration packages, the IRCH and IEVT variables (if specified) must be specified as the first variable listed in the PERIOD block.  A check was added so that the program will terminate with an error if IRCH or IEVT is not the first variable listed in the PERIOD block.
+\end{itemize}
+
+\underline{SOLUTION}
+\begin{itemize}
+\item Fixed bug related to not allocating the preconditioner work array if a non-zero drop tolerance is specified but the number of levels is not specified or specified to be zero. In the case where the number of levels is not specified or specified to be zero the preconditioner work array is dimensioned to the product of the number of cells (NEQ) and the maximum number of connections for any cell.
+\item Updated linear solver output so number of levels and drop tolerance are output if either are specified to be greater than zero. 
 \end{itemize}
 
 \item Version mf6.0.2--Feb 23, 2018

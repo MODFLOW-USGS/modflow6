@@ -182,7 +182,8 @@
 		<File RelativePath="..\src\Utilities\SmoothingFunctions.f90"/>
 		<File RelativePath="..\src\Utilities\Sparse.f90"/>
 		<File RelativePath="..\src\Utilities\StringList.f90"/>
-		<File RelativePath="..\src\Utilities\Timer.f90"/></Filter>
+		<File RelativePath="..\src\Utilities\Timer.f90"/>
+		<File RelativePath="..\src\Utilities\version.f90"/></Filter>
 		<File RelativePath="..\src\mf6.f90"/>
 		<File RelativePath="..\src\mf6lists.f90"/>
 		<File RelativePath="..\src\SimulationCreate.f90"/></Filter></Files>
