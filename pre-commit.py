@@ -7,10 +7,11 @@ import sys
 import datetime
 import json
 
-files = ['version.py', 'version.tex', 'README.md', 'DISCLAIMER.md',
-         'code.json']
+files = ['version.txt', 'version.tex', 'README.md', 'DISCLAIMER.md',
+         'code.json', 'version.f90']
+paths = ['.', 'doc', '.', '.', 
+         '.', 'src/Utilities']
 
-vpth = 'doc'
 prod = 'MODFLOW 6'
 
 approved = '''Disclaimer
@@ -87,7 +88,7 @@ def get_tag(v0, v1, v2):
 
 
 def get_disclaimer(branch):
-    if branch.lower() == 'master':
+    if 'release' in branch.lower() or 'master' in branch.lower():
         disclaimer = approved
     else:
         disclaimer = preliminary
@@ -95,7 +96,7 @@ def get_disclaimer(branch):
 
 
 def get_disclaimerfmt(branch):
-    if branch.lower() == 'master':
+    if 'release' in branch.lower() or 'master' in branch.lower():
         disclaimer = approvedfmt
     else:
         disclaimer = preliminaryfmt
@@ -104,13 +105,16 @@ def get_disclaimerfmt(branch):
 
 def update_version():
     try:
-        pth = os.path.join(vpth, files[0])
-
         vmajor = 0
         vminor = 0
         vmicro = 0
         vbuild = 0
-        lines = [line.rstrip('\n') for line in open(pth, 'r')]
+
+        # read version.txt into memory
+        pth = files[0]
+        with open(pth, 'r') as file:
+            lines = [line.rstrip() for line in file]
+
         for line in lines:
             t = line.split()
             if 'major =' in line:
@@ -148,21 +152,24 @@ def update_version():
         # write new version file
         now = datetime.datetime.now()
         f = open(pth, 'w')
-        f.write('# {} version file automatically '.format(prod) +
-                'created using...{0}\n'.format(os.path.basename(__file__)))
-        f.write('# created on...' +
-                '{0}\n'.format(
-                    now.strftime('%B %d, %Y %H:%M:%S')))
-        f.write('\n')
-        f.write('major = {}\n'.format(vmajor))
-        f.write('minor = {}\n'.format(vminor))
-        f.write('micro = {}\n'.format(vmicro))
-        f.write('build = {}\n'.format(vbuild))
-        f.write('commit = {}\n\n'.format(vcommit))
-        f.write("__version__ = '{:d}.{:d}.{:d}'.format(major, minor, micro)\n")
-        f.write(
-            "__build__ = '{:d}.{:d}.{:d}.{:d}'.format(major, minor, micro, build)\n")
-        f.write("__git_commit__ = '{:d}'.format(commit)\n")
+        for line in lines:
+            if 'version file automatically' in line:
+                line = '# {} version file automatically '.format(prod) + \
+                       'created using...{}'.format(os.path.basename(__file__))
+            elif 'created on...' in line:
+                line = '# created on...' + \
+                       '{}'.format(now.strftime('%B %d, %Y %H:%M:%S'))
+            elif 'major =' in line:
+                line = 'major = {}'.format(vmajor)
+            elif 'minor =' in line:
+                line = 'minor = {}'.format(vminor)
+            elif 'micro =' in line:
+                line = 'micro = {}'.format(vmicro)
+            elif 'build =' in line:
+                line = 'build = {}'.format(vbuild)
+            elif 'commit =' in line:
+                line = 'commit = {}'.format(vcommit)
+            f.write('{}\n'.format(line))
         f.close()
         print('Succesfully updated {}'.format(files[0]))
         
@@ -171,7 +178,7 @@ def update_version():
             version = get_tag(vmajor, vminor, vmicro)
         else:
             version = get_version_str(vmajor, vminor, vmicro, vbuild)
-        pth = os.path.join(vpth, files[1])
+        pth = os.path.join(paths[1], files[1])
         f = open(pth, 'w')
         line = '\\newcommand{\\modflowversion}{mf' + \
                '{}'.format(version) + '}' 
@@ -197,10 +204,17 @@ def update_version():
 
 
 def add_updated_files():
+    cargs = ['git', 'add']
+    for (p, f) in zip(paths, files):
+        if p == '.':
+            fpth = f
+        else:
+            fpth = os.path.join(p, f)
+        cargs.append(fpth)
     try:
         # add modified version file
         print('Adding updated files to repo')
-        b = subprocess.Popen(("git", "add", "-u"),
+        b = subprocess.Popen(cargs,
                              stdout=subprocess.PIPE).communicate()[0]
     except:
         print('Could not add updated files')
@@ -224,6 +238,7 @@ def get_branch():
     
     return branch
 
+
 def update_mf6_version(vmajor, vminor, vmicro, vbuild):
     branch = get_branch()
     if branch is None:
@@ -233,7 +248,7 @@ def update_mf6_version(vmajor, vminor, vmicro, vbuild):
     # create version
     version = get_tag(vmajor, vminor, vmicro)
     idevelopmode = 0
-    if 'master' not in branch.lower():
+    if 'release' not in branch.lower() and 'master' not in branch.lower():
         version = '{}.{}'.format(version, vbuild)
         idevelopmode = 1
     
@@ -245,7 +260,7 @@ def update_mf6_version(vmajor, vminor, vmicro, vbuild):
     disclaimerfmt = get_disclaimerfmt(branch)
     
     # read version.f90 into memory
-    fpth = os.path.join('src', 'Utilities', 'version.f90')
+    fpth = os.path.join(paths[5], files[5])
     with open(fpth, 'r') as file:
         lines = [line.rstrip() for line in file]
 
@@ -272,22 +287,9 @@ def update_mf6_version(vmajor, vminor, vmicro, vbuild):
 
     return
 
+
 def update_readme_markdown(vmajor, vminor, vmicro, vbuild):
-#    try:
-#        # determine current buildstat branch
-#        b = subprocess.Popen(("git", "status"),
-#                             stdout=subprocess.PIPE,
-#                             stderr=subprocess.STDOUT).communicate()[0]
-#        if isinstance(b, bytes):
-#            b = b.decode('utf-8')
-#
-#        # determine current buildstat branch
-#        for line in b.splitlines():
-#            if 'On branch' in line:
-#                branch = line.replace('On branch ', '').rstrip()
-#    except:
-#        print('Cannot update README.md - could not determine current branch')
-#        return
+
     branch = get_branch()
     if branch is None:
         print('Cannot update README.md - could not determine current branch')
@@ -352,7 +354,7 @@ def update_readme_markdown(vmajor, vminor, vmicro, vbuild):
     now = datetime.datetime.now()
     sdate = now.strftime('%Y-%m-%d')
     data[0]['date']['metadataLastUpdated'] = sdate
-    if branch.lower() == 'master':
+    if 'release' in branch.lower() or 'master' in branch.lower():
         data[0]['version'] = version
         data[0]['status'] = 'Production'
     else:
