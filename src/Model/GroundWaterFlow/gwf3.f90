@@ -110,9 +110,9 @@ module GwfModule
     use BaseModelModule,            only: AddBaseModelToList
     use SimModule,                  only: ustop, store_error, count_errors
     use InputOutputModule,          only: write_centered
-    use ConstantsModule,            only: VERSION, MFVNAM, MFTITLE,            &
-                                          FMTDISCLAIMER, LINELENGTH,           &
-                                          LENPACKAGENAME, IDEVELOPMODE
+    use ConstantsModule,            only: LINELENGTH, LENPACKAGENAME
+    use VersionModule,              only: VERSION, MFVNAM, MFTITLE,             &
+                                          FMTDISCLAIMER, IDEVELOPMODE
     use CompilerVersion
     use MemoryManagerModule,        only: mem_allocate
     use GwfDisModule,               only: dis_cr

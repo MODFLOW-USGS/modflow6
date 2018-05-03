@@ -138,7 +138,7 @@ class Simulation(object):
         print(msg)
 
         # Set nam as namefile name without path
-        nam = 'mfsim.nam'
+        nam = None
 
         # run mf6 models
         exe = os.path.abspath(targets.target_dict[targets.program])

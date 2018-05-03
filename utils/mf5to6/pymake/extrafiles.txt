@@ -9,3 +9,4 @@
 ../../../src/Utilities/kind.f90
 ../../../src/Utilities/List.f90
 ../../../src/Utilities/OpenSpec.f90
+../../../src/Utilities/version.f90
