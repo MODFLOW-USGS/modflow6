@@ -623,7 +623,7 @@
 | GWF | OC | PERIOD | LAST | KEYWORD | keyword to indicate save for last step in period. This keyword may be used in conjunction with other keywords to print or save results for multiple time steps. |
 | GWF | OC | PERIOD | FREQUENCY | INTEGER | save at the specified time step frequency. This keyword may be used in conjunction with other keywords to print or save results for multiple time steps. |
 | GWF | OC | PERIOD | STEPS | INTEGER (<NSTP) | save for each step specified in STEPS. This keyword may be used in conjunction with other keywords to print or save results for multiple time steps. |
-| GWT | ADV | OPTIONS | SCHEME | STRING | scheme used to solve the advection term.  Can be upstream, central, or tvd. |
+| GWT | ADV | OPTIONS | SCHEME | STRING | scheme used to solve the advection term.  Can be upstream, central, or TVD. |
 | GWT | DSP | OPTIONS | XT3D | KEYWORD | activate the xt3d method to solve the dispersion term |
 | GWT | DSP | GRIDDATA | DIFFC | DOUBLE PRECISION (NODES) | molecular diffusion coefficient. |
 | GWT | DSP | GRIDDATA | ALH | DOUBLE PRECISION (NODES) | longitudinal dispersivity in horizontal direction. |

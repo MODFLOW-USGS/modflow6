@@ -25,6 +25,7 @@ module GwtAdvModule
     
     procedure :: allocate_scalars
     procedure, private :: read_options
+    procedure, private :: advctvd
     procedure :: adv_weight
     procedure :: advtvd
     procedure :: advtvds
@@ -166,6 +167,7 @@ module GwtAdvModule
     real(DP), dimension(:), intent(in) :: cnew
     real(DP), dimension(:), intent(inout) :: rhs
     ! -- local
+    real(DP) :: ctvd
     integer(I4B) :: m, ipos
 ! ------------------------------------------------------------------------------
     !
@@ -173,7 +175,10 @@ module GwtAdvModule
     do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
       m = this%dis%con%ja(ipos)
       if (m > n .and. this%ibound(m) /= 0) then
-        call this%advtvds(n, m, ipos, cnew, rhs)
+        ctvd = this%advctvd(n, m, ipos, cnew)
+        rhs(n) = rhs(n) - ctvd
+        rhs(m) = rhs(m) + ctvd
+        !call this%advtvds(n, m, ipos, cnew, rhs)
       endif
     enddo
     !
@@ -249,6 +254,78 @@ module GwtAdvModule
     ! -- Return
     return
   end subroutine advtvds
+
+  function advctvd(this, n, m, iposnm, cnew) result(ctvd)
+! ******************************************************************************
+! advctvd -- Calculate TVD
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule, only: DPREC
+    ! -- return
+    real(DP) :: ctvd
+    ! -- dummy  
+    class(GwtAdvType) :: this
+    integer(I4B), intent(in) :: n
+    integer(I4B), intent(in) :: m
+    integer(I4B), intent(in) :: iposnm
+    real(DP), dimension(:), intent(in) :: cnew
+    ! -- local
+    integer(I4B) :: ipos, isympos, iup, idn, i2up, j
+    real(DP) :: qnm, qmax, qupj, elupdn, elup2up
+    real(DP) :: smooth, cdiff, alimiter
+! ------------------------------------------------------------------------------
+    !
+    ! -- intialize
+    ctvd = DZERO
+    !
+    ! -- Find upstream node
+    isympos = this%dis%con%jas(iposnm)
+    qnm = this%fmi%gwfflowja(iposnm)
+    if (qnm > DZERO) then
+      ! -- positive flow into n means m is upstream
+      iup = m
+      idn = n
+    else
+      iup = n
+      idn = m
+    endif
+    elupdn = this%dis%con%cl1(isympos) + this%dis%con%cl2(isympos)
+    !
+    ! -- Find second node upstream to iup
+    i2up = 0
+    qmax = DZERO
+    do ipos = this%dis%con%ia(iup) + 1, this%dis%con%ia(iup + 1) - 1
+      j = this%dis%con%ja(ipos)
+      if(this%ibound(j) == 0) cycle
+      qupj = this%fmi%gwfflowja(ipos)
+      isympos = this%dis%con%jas(ipos)
+      if (qupj > qmax) then
+        qmax = qupj
+        i2up = j
+        elup2up = this%dis%con%cl1(isympos) + this%dis%con%cl2(isympos)
+      endif
+    enddo
+    !
+    ! -- Calculate flux limiting term
+    if (i2up > 0) then
+      smooth = DZERO
+      cdiff = ABS(cnew(idn) - cnew(iup))
+      if (cdiff > DPREC) then
+        smooth = (cnew(iup) - cnew(i2up)) / elup2up *                          &
+                 elupdn / (cnew(idn) - cnew(iup))
+      endif
+      if (smooth > DZERO) then
+        alimiter = DTWO * smooth / (DONE + smooth)
+        ctvd = DHALF * alimiter * qnm * (cnew(idn) - cnew(iup))
+      endif
+    endif
+    !
+    ! -- Return
+    return
+  end function advctvd
 
   subroutine adv_bd(this, cnew, flowja)
 ! ******************************************************************************
