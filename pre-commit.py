@@ -7,10 +7,7 @@ import sys
 import datetime
 import json
 
-files = ['version.txt', 'version.tex', 'README.md', 'DISCLAIMER.md',
-         'code.json', 'version.f90']
-paths = ['.', 'doc', '.', '.', 
-         '.', 'src/Utilities']
+from hook_files import paths, files
 
 prod = 'MODFLOW 6'
 
