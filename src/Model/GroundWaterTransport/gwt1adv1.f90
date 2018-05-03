@@ -26,9 +26,9 @@ module GwtAdvModule
     procedure :: allocate_scalars
     procedure, private :: read_options
     procedure, private :: advctvd
+    procedure, private :: advtvd_bd
     procedure :: adv_weight
     procedure :: advtvd
-    procedure :: advtvds
     
   end type GwtAdvType
   
@@ -178,82 +178,12 @@ module GwtAdvModule
         ctvd = this%advctvd(n, m, ipos, cnew)
         rhs(n) = rhs(n) - ctvd
         rhs(m) = rhs(m) + ctvd
-        !call this%advtvds(n, m, ipos, cnew, rhs)
       endif
     enddo
     !
     ! -- Return
     return
   end subroutine advtvd
-
-  subroutine advtvds(this, n, m, iposnm, cnew, rhs)
-! ******************************************************************************
-! advtvds -- Calculate TVD
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use ConstantsModule, only: DPREC
-    ! -- dummy  
-    class(GwtAdvType) :: this
-    integer(I4B), intent(in) :: n
-    integer(I4B), intent(in) :: m
-    integer(I4B), intent(in) :: iposnm
-    real(DP), dimension(:), intent(in) :: cnew    
-    real(DP), dimension(:), intent(inout) :: rhs    
-    ! -- local
-    integer(I4B) :: ipos, isympos, iup, idn, i2up, j
-    real(DP) :: qnm, qmax, qupj, elupdn, elup2up
-    real(DP) :: smooth, cdiff, alimiter
-! ------------------------------------------------------------------------------
-    !
-    ! -- Find upstream node
-    isympos = this%dis%con%jas(iposnm)
-    qnm = this%fmi%gwfflowja(iposnm)
-    if (qnm > DZERO) then
-      ! -- positive flow into n means m is upstream
-      iup = m
-      idn = n
-    else
-      iup = n
-      idn = m
-    endif
-    elupdn = this%dis%con%cl1(isympos) + this%dis%con%cl2(isympos)
-    !
-    ! -- Find second node upstream to iup
-    i2up = 0
-    qmax = DZERO
-    do ipos = this%dis%con%ia(iup) + 1, this%dis%con%ia(iup + 1) - 1
-      j = this%dis%con%ja(ipos)
-      if(this%ibound(j) == 0) cycle
-      qupj = this%fmi%gwfflowja(ipos)
-      isympos = this%dis%con%jas(ipos)
-      if (qupj > qmax) then
-        qmax = qupj
-        i2up = j
-        elup2up = this%dis%con%cl1(isympos) + this%dis%con%cl2(isympos)
-      endif
-    enddo
-    !
-    ! -- Calculate flux limiting term
-    if (i2up > 0) then
-      smooth = DZERO
-      cdiff = ABS(cnew(idn) - cnew(iup))
-      if (cdiff > DPREC) then
-        smooth = (cnew(iup) - cnew(i2up)) / elup2up *                          &
-                 elupdn / (cnew(idn) - cnew(iup))
-      endif
-      if (smooth > DZERO) then
-        alimiter = DTWO * smooth / (DONE + smooth)
-        rhs(n) = rhs(n) - DHALF * alimiter * qnm * (cnew(idn) - cnew(iup))
-        rhs(m) = rhs(m) + DHALF * alimiter * qnm * (cnew(idn) - cnew(iup))
-      endif
-    endif
-    !
-    ! -- Return
-    return
-  end subroutine advtvds
 
   function advctvd(this, n, m, iposnm, cnew) result(ctvd)
 ! ******************************************************************************
@@ -361,10 +291,47 @@ module GwtAdvModule
       enddo
     enddo
     !
+    ! -- TVD
+    if (this%iadvwt == 2) call this%advtvd_bd(cnew, flowja)
+    !
     ! -- Return
     return
   end subroutine adv_bd
   
+  subroutine advtvd_bd(this, cnew, flowja)
+! ******************************************************************************
+! advtvd_bd -- Add TVD contribution to flowja
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy  
+    class(GwtAdvType) :: this
+    real(DP), dimension(:), intent(in) :: cnew
+    real(DP), dimension(:), intent(inout) :: flowja
+    ! -- local
+    real(DP) :: ctvd, qnm
+    integer(I4B) :: nodes, n, m, ipos
+! ------------------------------------------------------------------------------
+    !
+    nodes = size(cnew)
+    do n = 1, nodes
+      if(this%ibound(n) == 0) cycle
+      do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
+        m = this%dis%con%ja(ipos)
+        if (this%ibound(m) /= 0) then
+          qnm = this%fmi%gwfflowja(ipos)
+          ctvd = this%advctvd(n, m, ipos, cnew)
+          flowja(ipos) = flowja(ipos) + qnm * ctvd
+        endif
+      enddo
+    enddo
+    !
+    ! -- Return
+    return
+  end subroutine advtvd_bd
+
   subroutine adv_da(this)
 ! ******************************************************************************
 ! adv_da -- Deallocate variables
