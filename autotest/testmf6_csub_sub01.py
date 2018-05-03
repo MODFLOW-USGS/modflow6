@@ -27,7 +27,7 @@ for s in ex:
 ddir = 'data'
 
 fullcell = [None, True]
-ndcell = [10, 21]
+ndcell = [10, 19]
 
 # run all examples on Travis
 # travis = [True for idx in range(len(exdirs))]

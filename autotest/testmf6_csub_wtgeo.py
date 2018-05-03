@@ -20,7 +20,7 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['csub_wtgeoa', 'csub_wtgeob'] #, 'csub_wtgeoc', 'csub_wtgeod', 'csub_wtgeoe']
+ex = ['csub_wtgeoa', 'csub_wtgeob', 'csub_wtgeoc'] #, 'csub_wtgeod', 'csub_wtgeoe']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
@@ -58,7 +58,6 @@ nper = 31
 perlen = [1.] + [365.2500000 for i in range(nper - 1)]
 nstp = [1] + [6 for i in range(nper - 1)]
 tsmult = [1.0] + [1.3 for i in range(nper - 1)]
-#tsmult = [1.0] + [1.0 for i in range(nper - 1)]
 steady = [True] + [False for i in range(nper - 1)]
 tdis_rc = []
 for idx in range(nper):
@@ -135,11 +134,10 @@ sgs = 2.0
 void = 0.82
 preconhead = -7.
 theta = void / (1. + void)
-sw = 0. #4.65120000e-10 * 9806.65000000 * theta
-sy = 0 #[0.1, 0., 0.]
+sw = 4.65120000e-10 * 9806.65000000 * theta
+sy = [0.1, 0., 0.]
 ske = [6e-6, 3e-6, 6e-6]
 skv = [6e-4, 3e-4, 6e-4]
-#skv = [6e-6, 3e-6, 6e-6]
 ske_cr = [ske[0], 0, ske[-1]]
 kv = 1e-6
 facndb = [0.6, 1., 0.15]
@@ -326,8 +324,8 @@ def build_models():
         # water compressibility cannot be compared for cases where the material
         # properties are adjusted since the porosity changes in mf6
         if iump[idx] == 0:
-            beta = 0. #4.6512e-10
-            wc = 0. #sw
+            beta = 4.6512e-10
+            wc = sw
         else:
             beta = 0.
             wc = 0.

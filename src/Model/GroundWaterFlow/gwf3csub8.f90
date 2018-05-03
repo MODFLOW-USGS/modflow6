@@ -735,14 +735,19 @@ contains
     character(len=50), dimension(:), allocatable :: caux
     integer(I4B) :: ival
     logical :: isfound, endOfBlock
-    real(DP) :: rval, top, bot
-    integer(I4B) :: n, nn
-    integer(I4B) :: j, jj
+    integer(I4B) :: n
+    integer(I4B) :: nn
+    integer(I4B) :: j
+    integer(I4B) :: jj
     integer(I4B) :: iaux
     integer(I4B) :: itmp
     integer(I4B) :: ierr
     integer(I4B) :: ndelaybeds
     integer(I4B) :: idelay
+    integer(I4B) :: node
+    real(DP) :: rval
+    real(DP) :: top
+    real(DP) :: bot
     real(DP) :: endtim
     real(DP) :: baq
     integer, allocatable, dimension(:) :: nboundchk
@@ -975,6 +980,12 @@ contains
           this%dbes0(j, idelay) = DZERO
           this%dbpcs(j, idelay) = this%pcs(n)
         end do
+        ! 
+        ! -- initialize elevation of delay bed cells
+        node = this%nodelist(n)
+        top = this%dis%top(node)
+        call this%csub_delay_calc_zcell(n, top)
+
       end do
       do n = 1, this%ndelaycells
         this%dbal(n) = DZERO
@@ -3454,9 +3465,9 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
-    !
-    ! -- calculate z for each delay bed cell
-    call this%csub_delay_calc_zcell(ib, hcell)
+    !!
+    !! -- calculate z for each delay bed cell
+    !call this%csub_delay_calc_zcell(ib, hcell)
     !
     ! -- calculate geostatic stress for each delay bed cell
     call this%csub_delay_calc_stress(ib, hcell)
@@ -3511,6 +3522,8 @@ contains
     integer(I4B) :: n
     integer(I4B) :: node
     integer(I4B) :: idelay
+    real(DP) :: bot
+    real(DP) :: top
     real(DP) :: znode
     real(DP) :: dzz
     real(DP) :: z
@@ -3521,15 +3534,25 @@ contains
     ! -- initialize variables
     idelay = this%idelay(ib)
     node = this%nodelist(ib)
-    !znode = this%sk_znode(node)
-    znode = this%csub_calc_znode(node, hcell)
     b = this%thick(ib)
-    dz = this%dbdz(idelay)
+    bot = this%dis%bot(node)
+    if (this%idbhalfcell == 0) then
+      top = bot + b
+    else
+      top = bot + DTWO * b
+    end if
+    !
+    ! -- calculate znode based on water-level in the cell
+    !znode = this%csub_calc_znode(node, hcell)
+    !
+    ! -- calculate znode based on assumption that the delay bed bottom 
+    !    is equal to the cell bottom
+    znode = this%csub_calc_znode(node, top)
+    dz = DHALF * this%dbdz(idelay)
     if (this%idbhalfcell == 0) then
         dzz = DHALF * b
         z = znode + dzz
     else
-        dz = DHALF * dz
         z = znode + dz 
     end if
     ! -- calculate z for each delay interbed node
