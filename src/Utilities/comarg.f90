@@ -122,7 +122,7 @@ module CommandArguments
       end if
     end if
     !
-    ! -- command line arguments present
+    ! -- command line arguments present or mfsim.nam file does not exist
     if (iterm > 0) then
       call USTOP()
     end if
