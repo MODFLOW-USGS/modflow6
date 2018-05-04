@@ -6,14 +6,6 @@ import os
 import numpy as np
 
 try:
-    import pymake
-except:
-    msg = 'Error. Pymake package is not available.\n'
-    msg += 'Try installing using the following command:\n'
-    msg += ' pip install https://github.com/modflowpy/pymake/zipball/master'
-    raise Exception(msg)
-
-try:
     import flopy
 except:
     msg = 'Error. FloPy package is not available.\n'
@@ -31,7 +23,7 @@ for s in ex:
 ddir = 'data'
 
 
-def build_models():
+def get_model(idx, dir):
 
     nlay, nrow, ncol = 5, 6, 7
     nper = 1
@@ -50,151 +42,154 @@ def build_models():
     hclose, rclose, relax = 1e-6, 1e-3, 1.
 
     tdis_rc = []
-    for idx in range(nper):
+    for i in range(nper):
         tdis_rc.append((perlen, nstp, tsmult))
 
-    for idx, dir in enumerate(exdirs):
-        name = ex[idx]
+    name = ex[idx]
 
-        # build MODFLOW 6 files
-        ws = dir
-        sim = flopy.mf6.MFSimulation(sim_name=name, version='mf6',
-                                     exe_name='mf6',
-                                     sim_ws=ws)
-        # create tdis package
-        tdis = flopy.mf6.ModflowTdis(sim, time_units='DAYS',
-                                     nper=nper, perioddata=tdis_rc)
+    # build MODFLOW 6 files
+    ws = dir
+    sim = flopy.mf6.MFSimulation(sim_name=name, version='mf6',
+                                 exe_name='mf6',
+                                 sim_ws=ws)
+    # create tdis package
+    tdis = flopy.mf6.ModflowTdis(sim, time_units='DAYS',
+                                 nper=nper, perioddata=tdis_rc)
 
-        # create gwf model
-        gwf = flopy.mf6.MFModel(sim, model_type='gwf6', modelname=name,
-                                model_nam_file='{}.nam'.format(name))
-        gwf.name_file.newtonoptions = None
+    # create gwf model
+    gwf = flopy.mf6.MFModel(sim, model_type='gwf6', modelname=name,
+                            model_nam_file='{}.nam'.format(name))
+    gwf.name_file.newtonoptions = None
 
-        # create iterative model solution and register the gwf model with it
-        ims = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
-                                   outer_hclose=hclose,
-                                   outer_maximum=nouter,
-                                   under_relaxation='NONE',
-                                   inner_maximum=ninner,
-                                   inner_hclose=hclose, rcloserecord=rclose,
-                                   linear_acceleration='CG',
-                                   scaling_method='NONE',
-                                   reordering_method='NONE',
-                                   relaxation_factor=relax)
-        sim.register_ims_package(ims, [gwf.name])
+    # create iterative model solution and register the gwf model with it
+    ims = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
+                               outer_hclose=hclose,
+                               outer_maximum=nouter,
+                               under_relaxation='NONE',
+                               inner_maximum=ninner,
+                               inner_hclose=hclose, rcloserecord=rclose,
+                               linear_acceleration='CG',
+                               scaling_method='NONE',
+                               reordering_method='NONE',
+                               relaxation_factor=relax)
+    sim.register_ims_package(ims, [gwf.name])
 
-        dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
-                                      delr=delr, delc=delc,
-                                      top=0., botm=botm,
-                                      idomain=1,
-                                      fname='{}.dis'.format(name))
+    dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
+                                  delr=delr, delc=delc,
+                                  top=0., botm=botm,
+                                  idomain=1,
+                                  fname='{}.dis'.format(name))
 
-        # initial conditions
-        # write initial heads to binary file
-        fname = 'ic.strt.bin'
-        pth = os.path.join(exdirs[idx], fname)
-        f = open(pth, 'wb')
-        if idx == 0:
-            for k in range(nlay):
-                header = flopy.utils.BinaryHeader.create(bintype='HEAD',
-                                                         precision='double',
-                                                         text='HEAD',
-                                                         nrow=nrow,
-                                                         ncol=ncol,
-                                                         ilay=k+1, pertim=1.0,
-                                                         totim=1.0, kstp=1,
-                                                         kper=1)
-                flopy.utils.Util2d.write_bin((nrow, ncol), f,
-                                             np.ones((nrow, ncol),
-                                                     dtype=np.float),
-                                             header_data=header)
-        elif idx == 1:
+    # initial conditions
+    # write initial heads to binary file
+    fname = 'ic.strt.bin'
+    pth = os.path.join(exdirs[idx], fname)
+    f = open(pth, 'wb')
+    if idx == 0:
+        for k in range(nlay):
             header = flopy.utils.BinaryHeader.create(bintype='HEAD',
                                                      precision='double',
-                                                     text='HEAD', nrow=1,
-                                                     ncol=ncol*nrow*nlay,
-                                                     ilay=1, pertim=1.0,
-                                                     totim=1.0, kstp=1, kper=1)
+                                                     text='HEAD',
+                                                     nrow=nrow,
+                                                     ncol=ncol,
+                                                     ilay=k+1, pertim=1.0,
+                                                     totim=1.0, kstp=1,
+                                                     kper=1)
             flopy.utils.Util2d.write_bin((nrow, ncol), f,
-                                         np.ones((nrow*ncol*nlay),
+                                         np.ones((nrow, ncol),
                                                  dtype=np.float),
                                          header_data=header)
-        f.close()
-        strt = {'factor': 1., 'filename': fname,
-                'data': None, 'binary': True, 'iprn': 1}
-        ic = flopy.mf6.ModflowGwfic(gwf, strt=strt,
-                                    fname='{}.ic'.format(name))
+    elif idx == 1:
+        header = flopy.utils.BinaryHeader.create(bintype='HEAD',
+                                                 precision='double',
+                                                 text='HEAD', nrow=1,
+                                                 ncol=ncol*nrow*nlay,
+                                                 ilay=1, pertim=1.0,
+                                                 totim=1.0, kstp=1, kper=1)
+        flopy.utils.Util2d.write_bin((nrow, ncol), f,
+                                     np.ones((nrow*ncol*nlay),
+                                             dtype=np.float),
+                                     header_data=header)
+    f.close()
+    strt = {'factor': 1., 'filename': fname,
+            'data': None, 'binary': True, 'iprn': 1}
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt,
+                                fname='{}.ic'.format(name))
 
-        # node property flow
-        # write icelltype to binary file
-        fname = 'npf.icelltype.bin'
-        pth = os.path.join(exdirs[idx], fname)
-        f = open(pth, 'wb')
-        if idx == 0:
-            for k in range(nlay):
-                header = flopy.utils.BinaryHeader.create(bintype='head',
-                                                         text='ICELLTYPE',
-                                                         precision='double',
-                                                         nrow=nrow,
-                                                         ncol=ncol,
-                                                         ilay=k+1, pertim=1.0,
-                                                         totim=1.0, kstp=1,
-                                                         kper=1)
-                header.tofile(f)
-                flopy.utils.Util2d.write_bin((nrow, ncol), f,
-                                             np.ones((nrow, ncol),
-                                                     dtype=np.int32),
-                                             header_data=header)
-        elif idx == 1:
+    # node property flow
+    # write icelltype to binary file
+    fname = 'npf.icelltype.bin'
+    pth = os.path.join(exdirs[idx], fname)
+    f = open(pth, 'wb')
+    if idx == 0:
+        for k in range(nlay):
             header = flopy.utils.BinaryHeader.create(bintype='head',
                                                      text='ICELLTYPE',
                                                      precision='double',
-                                                     nrow=1,
-                                                     ncol=ncol*nrow*nlay,
-                                                     ilay=1, pertim=1.0,
-                                                     totim=1.0, kstp=1, kper=1)
+                                                     nrow=nrow,
+                                                     ncol=ncol,
+                                                     ilay=k+1, pertim=1.0,
+                                                     totim=1.0, kstp=1,
+                                                     kper=1)
             header.tofile(f)
             flopy.utils.Util2d.write_bin((nrow, ncol), f,
-                                         np.ones((nrow*ncol*nlay),
+                                         np.ones((nrow, ncol),
                                                  dtype=np.int32),
                                          header_data=header)
-        f.close()
-        icelltype = {'factor': 1., 'filename': fname,
-                     'data': None, 'binary': True, 'iprn': 1}
-        npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=True,
-                                      icelltype=icelltype,
-                                      k=hk,
-                                      k33=hk,
-                                      fname='{}.npf'.format(name))
+    elif idx == 1:
+        header = flopy.utils.BinaryHeader.create(bintype='head',
+                                                 text='ICELLTYPE',
+                                                 precision='double',
+                                                 nrow=1,
+                                                 ncol=ncol*nrow*nlay,
+                                                 ilay=1, pertim=1.0,
+                                                 totim=1.0, kstp=1, kper=1)
+        header.tofile(f)
+        flopy.utils.Util2d.write_bin((nrow, ncol), f,
+                                     np.ones((nrow*ncol*nlay),
+                                             dtype=np.int32),
+                                     header_data=header)
+    f.close()
+    icelltype = {'factor': 1., 'filename': fname,
+                 'data': None, 'binary': True, 'iprn': 1}
+    npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=True,
+                                  icelltype=icelltype,
+                                  k=hk,
+                                  k33=hk,
+                                  fname='{}.npf'.format(name))
 
-        # chd files
-        chdlist0 = []
-        chdlist0.append([(0, 0, 0), 1.])
-        chdlist0.append([(nlay-1, nrow-1, ncol-1), 0.])
+    # chd files
+    chdlist0 = []
+    chdlist0.append([(0, 0, 0), 1.])
+    chdlist0.append([(nlay-1, nrow-1, ncol-1), 0.])
 
-        chdspdict = {0: chdlist0}
-        chd = flopy.mf6.ModflowGwfchd(gwf,
-                                      stress_period_data=chdspdict,
-                                      save_flows=False,
-                                      fname='{}.chd'.format(name))
+    chdspdict = {0: chdlist0}
+    chd = flopy.mf6.ModflowGwfchd(gwf,
+                                  stress_period_data=chdspdict,
+                                  save_flows=False,
+                                  fname='{}.chd'.format(name))
 
-        # output control
-        oc = flopy.mf6.ModflowGwfoc(gwf,
-                                    budget_filerecord='{}.cbc'.format(name),
-                                    head_filerecord='{}.hds'.format(name),
-                                    headprintrecord=[
-                                        ('COLUMNS', 10, 'WIDTH', 15,
-                                         'DIGITS', 6, 'GENERAL')],
-                                    saverecord=[('HEAD', 'ALL')],
-                                    printrecord=[('HEAD', 'ALL'),
-                                                 ('BUDGET', 'ALL')],
-                                    fname='{}.oc'.format(name))
+    # output control
+    oc = flopy.mf6.ModflowGwfoc(gwf,
+                                budget_filerecord='{}.cbc'.format(name),
+                                head_filerecord='{}.hds'.format(name),
+                                headprintrecord=[
+                                    ('COLUMNS', 10, 'WIDTH', 15,
+                                     'DIGITS', 6, 'GENERAL')],
+                                saverecord=[('HEAD', 'ALL')],
+                                printrecord=[('HEAD', 'ALL'),
+                                             ('BUDGET', 'ALL')],
+                                fname='{}.oc'.format(name))
 
-        # write MODFLOW 6 files
+    return sim
+
+
+def build_models():
+    for idx, dir in enumerate(exdirs):
+        sim = get_model(idx, dir)
         sim.write_simulation()
-
-
     return
+
 
 # - No need to change any code below
 def test_mf6model():
