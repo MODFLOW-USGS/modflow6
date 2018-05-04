@@ -3,14 +3,6 @@ import sys
 import numpy as np
 
 try:
-    import pymake
-except:
-    msg = 'Error. Pymake package is not available.\n'
-    msg += 'Try installing using the following command:\n'
-    msg += ' pip install https://github.com/modflowpy/pymake/zipball/master'
-    raise Exception(msg)
-
-try:
     import flopy
 except:
     msg = 'Error. FloPy package is not available.\n'
@@ -55,8 +47,8 @@ nouter, ninner = 1000, 100
 hclose, rclose, relax = 1e-1, 0.01, 1.
 
 tdis_rc = []
-for idx in range(nper):
-    tdis_rc.append((perlen[idx], nstp[idx], tsmult[idx]))
+for i in range(nper):
+    tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
 
 def get_local_data(idx):
@@ -69,135 +61,137 @@ def get_local_data(idx):
     return ncolst, nmodels, mnames
 
 
+def get_model(idx, dir):
+    name = ex[idx]
+    nlay = nlays[idx]
+
+    if nlay == 1:
+        botm = [-50.]
+    elif nlay == 3:
+        botm = [50., 0., -50.]
+
+    c6left = []
+    c6right = []
+    vl = hbndl[0]
+    vr = strt
+    for k in range(nlay):
+        for i in range(nrow):
+            if botm[k] < vl:
+                c6left.append([(k, i, 0), vl])
+            if botm[k] < vr:
+                c6right.append([(k, i, ncols[idx][-1] - 1), vr])
+    cd6left = {0: c6left}
+    cd6right = {0: c6right}
+    c6left = []
+    vl = hbndl[1]
+    for k in range(nlay):
+        for i in range(nrow):
+            if botm[k] < vl:
+                c6left.append([(k, i, 0), vl])
+    cd6left[1] = c6left
+
+    # build MODFLOW 6 files
+    ws = dir
+    sim = flopy.mf6.MFSimulation(sim_name=name, version='mf6',
+                                 exe_name='mf6',
+                                 sim_ws=ws)
+    # create tdis package
+    tdis = flopy.mf6.ModflowTdis(sim, time_units='DAYS',
+                                 nper=nper, perioddata=tdis_rc)
+
+    # create iterative model solution and register the gwf model with it
+    ims = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
+                               outer_hclose=hclose,
+                               outer_maximum=nouter,
+                               under_relaxation='NONE',
+                               inner_maximum=ninner,
+                               inner_hclose=hclose, rcloserecord=rclose,
+                               linear_acceleration='CG',
+                               scaling_method='NONE',
+                               reordering_method='NONE',
+                               relaxation_factor=relax)
+
+    # set local data for this model
+    ncolst, nmodels, mnames = get_local_data(idx)
+
+    sim.register_ims_package(ims, mnames)
+
+    # create exchange file, if needed
+    if nmodels > 1:
+        exchd = []
+        for k in range(nlay):
+            for i in range(nrow):
+                t = []
+                t.append((k, i, ncolst[0] - 1))
+                t.append((k, i, 0))
+                t.append(1)
+                t.append(delr / 2.)
+                t.append(delr / 2.)
+                t.append(delc)
+                exchd.append(t)
+        excf = flopy.mf6.ModflowGwfgwf(sim, exgtype='GWF6-GWF6',
+                                       nexg=len(exchd),
+                                       exgmnamea=mnames[0],
+                                       exgmnameb=mnames[1],
+                                       exchangedata=exchd)
+
+    # create gwf model
+    for jdx in range(nmodels):
+        mname = mnames[jdx]
+
+        gwf = flopy.mf6.ModflowGwf(sim, modelname=mname,
+                                   model_nam_file='{}.nam'.format(mname))
+
+        dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow,
+                                      ncol=ncolst[jdx],
+                                      delr=delr, delc=delc,
+                                      top=top, botm=botm,
+                                      fname='{}.dis'.format(mname))
+
+        # initial conditions
+        ic = flopy.mf6.ModflowGwfic(gwf, strt=strt,
+                                    fname='{}.ic'.format(mname))
+
+        # node property flow
+        npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False,
+                                      rewet_record=rewet_record,
+                                      icelltype=1, k=hk, wetdry=wetdry)
+
+        # chd files
+        if jdx == 0:
+            fn = '{}.chd1.chd'.format(mname)
+            chd1 = flopy.mf6.modflow.ModflowGwfchd(gwf,
+                                                   stress_period_data=cd6left,
+                                                   save_flows=False,
+                                                   fname=fn, pname='chd1',
+                                                   print_input=True)
+        if jdx == nmodels - 1:
+            fn = '{}.chd2.chd'.format(mname)
+            chd2 = flopy.mf6.modflow.ModflowGwfchd(gwf,
+                                                   stress_period_data=cd6right,
+                                                   save_flows=False,
+                                                   fname=fn, pname='chd2',
+                                                   print_input=True)
+
+        # output control
+        oc = flopy.mf6.ModflowGwfoc(gwf,
+                                    budget_filerecord='{}.cbc'.format(
+                                        mname),
+                                    head_filerecord='{}.hds'.format(mname),
+                                    headprintrecord=[
+                                        ('COLUMNS', 10, 'WIDTH', 15,
+                                         'DIGITS', 6, 'GENERAL')],
+                                    saverecord=[('HEAD', 'LAST')],
+                                    printrecord=[('HEAD', 'LAST'),
+                                                 ('BUDGET', 'LAST')])
+
+    return sim
+
+
 def build_models():
-    # build each model
     for idx, dir in enumerate(exdirs):
-        name = ex[idx]
-        nlay = nlays[idx]
-
-        if nlay == 1:
-            botm = [-50.]
-        elif nlay == 3:
-            botm = [50., 0., -50.]
-
-        c6left = []
-        c6right = []
-        vl = hbndl[0]
-        vr = strt
-        for k in range(nlay):
-            for i in range(nrow):
-                if botm[k] < vl:
-                    c6left.append([(k, i, 0), vl])
-                if botm[k] < vr:
-                    c6right.append([(k, i, ncols[idx][-1] - 1), vr])
-        cd6left = {0: c6left}
-        cd6right = {0: c6right}
-        c6left = []
-        vl = hbndl[1]
-        for k in range(nlay):
-            for i in range(nrow):
-                if botm[k] < vl:
-                    c6left.append([(k, i, 0), vl])
-        cd6left[1] = c6left
-
-        # build MODFLOW 6 files
-        ws = dir
-        sim = flopy.mf6.MFSimulation(sim_name=name, version='mf6',
-                                     exe_name='mf6',
-                                     sim_ws=ws)
-        # create tdis package
-        tdis = flopy.mf6.ModflowTdis(sim, time_units='DAYS',
-                                     nper=nper, perioddata=tdis_rc)
-
-        # create iterative model solution and register the gwf model with it
-        ims = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
-                                   outer_hclose=hclose,
-                                   outer_maximum=nouter,
-                                   under_relaxation='NONE',
-                                   inner_maximum=ninner,
-                                   inner_hclose=hclose, rcloserecord=rclose,
-                                   linear_acceleration='CG',
-                                   scaling_method='NONE',
-                                   reordering_method='NONE',
-                                   relaxation_factor=relax)
-
-        # set local data for this model
-        ncolst, nmodels, mnames = get_local_data(idx)
-
-        sim.register_ims_package(ims, mnames)
-
-        # create exchange file, if needed
-        if nmodels > 1:
-            exchd = []
-            for k in range(nlay):
-                for i in range(nrow):
-                    t = []
-                    t.append((k, i, ncolst[0] - 1))
-                    t.append((k, i, 0))
-                    t.append(1)
-                    t.append(delr / 2.)
-                    t.append(delr / 2.)
-                    t.append(delc)
-                    exchd.append(t)
-            excf = flopy.mf6.ModflowGwfgwf(sim, exgtype='GWF6-GWF6',
-                                           nexg=len(exchd),
-                                           exgmnamea=mnames[0],
-                                           exgmnameb=mnames[1],
-                                           exchangedata=exchd)
-
-        # create gwf model
-        for jdx in range(nmodels):
-            mname = mnames[jdx]
-
-            gwf = flopy.mf6.ModflowGwf(sim, modelname=mname,
-                                       model_nam_file='{}.nam'.format(mname))
-
-            dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow,
-                                          ncol=ncolst[jdx],
-                                          delr=delr, delc=delc,
-                                          top=top, botm=botm,
-                                          fname='{}.dis'.format(mname))
-
-            # initial conditions
-            ic = flopy.mf6.ModflowGwfic(gwf, strt=strt,
-                                        fname='{}.ic'.format(mname))
-
-            # node property flow
-            npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False,
-                                          rewet_record=rewet_record,
-                                          icelltype=1, k=hk, wetdry=wetdry)
-
-            # chd files
-            if jdx == 0:
-                fn = '{}.chd1.chd'.format(mname)
-                chd1 = flopy.mf6.modflow.ModflowGwfchd(gwf,
-                                                       stress_period_data=cd6left,
-                                                       save_flows=False,
-                                                       fname=fn, pname='chd1',
-                                                       print_input=True)
-            if jdx == nmodels - 1:
-                fn = '{}.chd2.chd'.format(mname)
-                chd2 = flopy.mf6.modflow.ModflowGwfchd(gwf,
-                                                       stress_period_data=cd6right,
-                                                       save_flows=False,
-                                                       fname=fn, pname='chd2',
-                                                       print_input=True)
-
-            # output control
-            oc = flopy.mf6.ModflowGwfoc(gwf,
-                                        budget_filerecord='{}.cbc'.format(
-                                            mname),
-                                        head_filerecord='{}.hds'.format(mname),
-                                        headprintrecord=[
-                                            ('COLUMNS', 10, 'WIDTH', 15,
-                                             'DIGITS', 6, 'GENERAL')],
-                                        saverecord=[('HEAD', 'LAST')],
-                                        printrecord=[('HEAD', 'LAST'),
-                                                     ('BUDGET', 'LAST')])
-
-        # write MODFLOW 6 files
+        sim = get_model(idx, dir)
         sim.write_simulation()
-
     return
 
 
