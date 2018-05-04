@@ -1,5 +1,13 @@
 # --------------------- gwt ssm options ---------------------
 
+block options
+name print_flows
+type keyword
+reader urword
+optional true
+longname print calculated flows to listing file
+description REPLACE print_flows {'{#1}': 'SSM'}
+
 
 # --------------------- gwt ssm sources ---------------------
 

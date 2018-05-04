@@ -62,8 +62,8 @@ def get_model(idx, dir):
 
     # create gwf model
     gwfname = 'gwf_' + name
-    gwf = flopy.mf6.MFModel(sim, model_type='gwf6', modelname=gwfname,
-                            model_nam_file='{}.nam'.format(gwfname))
+    gwf = flopy.mf6.ModflowGwf(sim, modelname=gwfname, save_flows=True,
+                                model_nam_file='{}.nam'.format(gwfname))
 
     # create iterative model solution and register the gwf model with it
     imsgwf = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
@@ -122,7 +122,8 @@ def get_model(idx, dir):
                                 headprintrecord=[
                                     ('COLUMNS', 10, 'WIDTH', 15,
                                      'DIGITS', 6, 'GENERAL')],
-                                saverecord=[('HEAD', 'LAST')],
+                                saverecord=[('HEAD', 'LAST'),
+                                            ('BUDGET', 'LAST')],
                                 printrecord=[('HEAD', 'LAST'),
                                              ('BUDGET', 'LAST')])
 
@@ -130,6 +131,7 @@ def get_model(idx, dir):
     gwtname = 'gwt_' + name
     gwt = flopy.mf6.MFModel(sim, model_type='gwt6', modelname=gwtname,
                             model_nam_file='{}.nam'.format(gwtname))
+    gwt.name_file.save_flows = True
 
     # create iterative model solution and register the gwt model with it
     imsgwt = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
@@ -175,7 +177,8 @@ def get_model(idx, dir):
                                 concentrationprintrecord=[
                                     ('COLUMNS', 10, 'WIDTH', 15,
                                      'DIGITS', 6, 'GENERAL')],
-                                saverecord=[('CONCENTRATION', 'LAST')],
+                                saverecord=[('CONCENTRATION', 'LAST'),
+                                            ('BUDGET', 'LAST')],
                                 printrecord=[('CONCENTRATION', 'LAST'),
                                              ('BUDGET', 'LAST')])
 

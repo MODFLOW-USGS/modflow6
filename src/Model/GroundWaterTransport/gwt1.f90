@@ -62,6 +62,7 @@ module GwtModule
     procedure :: model_cf                => gwt_cf
     procedure :: model_fc                => gwt_fc
     !procedure :: model_cc                => gwt_cc
+    procedure :: model_cq                => gwt_cq
     procedure :: model_bd                => gwt_bd
     procedure :: model_ot                => gwt_ot
     
@@ -70,6 +71,7 @@ module GwtModule
     procedure, private :: ftype_check
     procedure :: get_nsubtimes
     procedure :: get_iasym => gwt_get_iasym
+    procedure, private :: gwt_bdsav
     
   end type GwtModelType
 
@@ -497,6 +499,7 @@ module GwtModule
     ! -- Advance
     !if(this%insto > 0) call this%sto%sto_ad()
     if(this%indsp > 0) call this%dsp%dsp_ad()
+    if(this%inssm > 0) call this%ssm%ssm_ad()
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_ad()
@@ -594,6 +597,36 @@ module GwtModule
     return
   end subroutine gwt_fc
 
+  subroutine gwt_cq(this, icnvg, isuppress_output)
+! ******************************************************************************
+! gwt_cq --Groundwater transport model calculate flow
+! Subroutine: (1) Calculate intercell flows (flowja)
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwtModelType) :: this
+    integer(I4B), intent(in) :: icnvg
+    integer(I4B), intent(in) :: isuppress_output
+    ! -- local
+    integer(I4B) :: i
+! ------------------------------------------------------------------------------
+    !
+    ! -- Construct the flowja array.  Flowja is calculated each time, even if
+    !    output is suppressed.  (flowja is positive into a cell.)
+    do i = 1, this%nja
+      this%flowja(i) = DZERO
+    enddo
+    if(this%inadv > 0) call this%adv%adv_flowja(this%x, this%flowja)
+    if(this%indsp > 0) call this%dsp%dsp_flowja(this%dis%nodes, this%nja,      &
+                                                this%x, this%flowja)
+    !
+    ! -- Return
+    return
+  end subroutine gwt_cq
+
   subroutine gwt_bd(this, icnvg, isuppress_output)
 ! ******************************************************************************
 ! gwt_bd --GroundWater Transport Model Budget
@@ -611,7 +644,6 @@ module GwtModule
     ! -- local
     integer(I4B) :: icbcfl, ibudfl, icbcun, iprobs, idvfl
     integer(I4B) :: ip
-    integer(I4B) :: i
     class(BndType),pointer :: packobj
     integer(I4B) :: icomp
 ! ------------------------------------------------------------------------------
@@ -640,27 +672,27 @@ module GwtModule
       idvfl  = 0
     endif
     !
-    ! -- Construct the flowja array.  Flowja is calculated each time, even if
-    !    output is suppressed.  (flowja is positive into a cell.)
-    do i = 1, this%nja
-      this%flowja(i) = DZERO
-    enddo
-    if(this%inadv > 0) call this%adv%adv_bd(this%x, this%flowja)
-    if(this%indsp > 0) call this%dsp%dsp_bd(this%dis%nodes, this%nja, this%x,  &
-                                            this%flowja)
-    !
     ! -- Budget routines (start by resetting)
     call this%budget%reset()
     !
-    ! -- package budgets
+    ! -- Storage budgets
     if(this%insto > 0) then
       call this%sto%sto_bdcalc(this%dis%nodes, this%x, this%xold,              &
                                isuppress_output, this%budget)
       call this%sto%sto_bdsav(icbcfl, icbcun)
     endif
+    !
+    ! -- Advection and dispersion flowja
+    call this%gwt_bdsav(this%nja, this%flowja, icbcfl, icbcun)
+    !
+    ! -- SSM
     if(this%inssm > 0) then
       call this%ssm%ssm_bdcalc(icomp, this%x, isuppress_output, this%budget)
+      call this%ssm%ssm_bdsav(icomp, this%x, icbcfl, ibudfl, icbcun, iprobs,   &
+                              isuppress_output)
     endif
+    !
+    ! - FMI
     if(this%infmi > 0) then
       call this%fmi%fmi_bdcalc(icomp, this%x, isuppress_output, this%budget)
     endif
@@ -685,6 +717,43 @@ module GwtModule
     ! -- Return
     return
   end subroutine gwt_bd
+
+  subroutine gwt_bdsav(this, nja, flowja, icbcfl, icbcun)
+! ******************************************************************************
+! gwt_bdsav -- Write intercell flows
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(GwtModelType) :: this
+    integer(I4B),intent(in) :: nja
+    real(DP),dimension(nja),intent(in) :: flowja
+    integer(I4B), intent(in) :: icbcfl
+    integer(I4B), intent(in) :: icbcun
+    ! -- local
+    integer(I4B) :: ibinun
+    ! -- formats
+! ------------------------------------------------------------------------------
+    !
+    ! -- Set unit number for binary output
+    if(this%ipakcb < 0) then
+      ibinun = icbcun
+    elseif(this%ipakcb == 0) then
+      ibinun = 0
+    else
+      ibinun = this%ipakcb
+    endif
+    if(icbcfl == 0) ibinun = 0
+    !
+    ! -- Write the face flows if requested
+    if(ibinun /= 0) then
+      call this%dis%record_connection_array(flowja, ibinun, this%iout)
+    endif
+    !
+    ! -- Return
+    return
+  end subroutine gwt_bdsav
 
   subroutine gwt_ot(this)
 ! ******************************************************************************
@@ -841,8 +910,6 @@ module GwtModule
     class(GwtModelType) :: this
     ! -- local
     integer(I4B) :: iasym
-    integer(I4B) :: ip
-    class(BndType), pointer :: packobj
 ! ------------------------------------------------------------------------------
     !
     ! -- Start by setting iasym to zero

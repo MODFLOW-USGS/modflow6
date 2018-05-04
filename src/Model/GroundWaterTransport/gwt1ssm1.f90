@@ -14,6 +14,7 @@ module GwtSsmModule
   type, extends(NumericalPackageType) :: GwtSsmType
     
     integer, pointer                                 :: ncomp                   ! number of components
+    integer, pointer                                 :: nbound                  ! number of flow boundaries in this time step
     integer, dimension(:, :), pointer                :: iauxpakcomp => null()   ! aux col for component concentration
     integer(I4B), dimension(:), pointer              :: ibound => null()        ! pointer to model ibound
     type(GwtFmiType), pointer                        :: fmi => null()           ! pointer to fmi object
@@ -22,9 +23,10 @@ module GwtSsmModule
   
     procedure :: ssm_df
     procedure :: ssm_ar
+    procedure :: ssm_ad
     procedure :: ssm_fc
     procedure :: ssm_bdcalc
-    !procedure :: ssm_bdsav
+    procedure :: ssm_bdsav
     procedure :: ssm_da
     procedure :: allocate_scalars
     procedure, private :: allocate_arrays
@@ -134,6 +136,32 @@ module GwtSsmModule
     return
   end subroutine ssm_ar
 
+  subroutine ssm_ad(this)
+! ******************************************************************************
+! ssm_ad -- Calculate number of flow boundaries
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwtSsmType) :: this
+    ! -- local
+    class(BndType), pointer :: packobj
+    integer(I4B) :: ip
+! ------------------------------------------------------------------------------
+    !
+    ! -- Calculate total number of flow boundaries
+    this%nbound = 0
+    do ip = 1, this%fmi%gwfbndlist%Count()
+      packobj => GetBndFromList(this%fmi%gwfbndlist, ip)
+      this%nbound = this%nbound + packobj%nbound
+    end do
+    !
+    ! -- Return
+    return
+  end subroutine ssm_ad
+  
   subroutine ssm_fc(this, icomp, amatsln, idxglo, rhs)
 ! ******************************************************************************
 ! ssm_fc -- Calculate coefficients and fill amat and rhs
@@ -281,6 +309,154 @@ module GwtSsmModule
     return
   end subroutine ssm_bdcalc
 
+  subroutine ssm_bdsav(this, icomp, cnew, icbcfl, ibudfl, icbcun, iprobs,         &
+                       isuppress_output, imap)
+! ******************************************************************************
+! ssm_bdsav -- Calculate SSM Budget
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use TdisModule, only: kstp, kper
+    use ConstantsModule, only: LENPACKAGENAME, LENBOUNDNAME, LENAUXNAME, DZERO
+    use BudgetModule, only: BudgetType
+    ! -- dummy
+    class(GwtSsmType) :: this
+    integer, intent(in) :: icomp
+    real(DP), intent(in), dimension(:) :: cnew
+    integer(I4B), intent(in) :: icbcfl
+    integer(I4B), intent(in) :: ibudfl
+    integer(I4B), intent(in) :: icbcun
+    integer(I4B), intent(in) :: iprobs
+    integer(I4B), intent(in) :: isuppress_output
+    integer(I4B), dimension(:), optional, intent(in) :: imap
+    ! -- local
+    class(BndType), pointer :: packobj
+    character (len=LENPACKAGENAME) :: text
+    integer(I4B) :: ip
+    integer(I4B) :: n
+    integer(I4B) :: iauxpos
+    integer(I4B) :: i, n2, ibinun
+    real(DP) :: qbnd
+    real(DP) :: cbnd, ctmp
+    real(DP) :: rrate
+    integer(I4B) :: ibdlbl, naux
+    real(DP), dimension(0,0) :: auxvar
+    character(len=LENAUXNAME), dimension(0) :: auxname
+    ! -- for observations
+    character(len=LENBOUNDNAME) :: bname
+    ! -- formats
+    character(len=*), parameter :: fmttkk = &
+      "(1X,/1X,A,'   PERIOD ',I0,'   STEP ',I0)"
+! ------------------------------------------------------------------------------
+    !
+    !
+    ! -- Initialize
+    ibdlbl = 0
+    text = 'SSM'
+    !
+    ! -- Set unit number for binary output
+    if (this%ipakcb < 0) then
+      ibinun = icbcun
+    else if (this%ipakcb == 0) then
+      ibinun = 0
+    else
+      ibinun = this%ipakcb
+    end if
+    if (icbcfl == 0) ibinun = 0
+    if (isuppress_output /= 0) ibinun = 0
+    !
+    ! -- If cell-by-cell flows will be saved as a list, write header.
+    if(ibinun /= 0) then
+      naux = 0
+      call this%dis%record_srcdst_list_header(text, this%name_model,      &
+                  this%name_model, this%name_model, this%name, naux,           &
+                  auxname, ibinun, this%nbound, this%iout)
+    endif
+    !
+    ! -- If no boundaries, skip flow calculations.
+    if(this%nbound > 0) then
+      !
+      ! -- Loop through each boundary calculating flow.
+      do ip = 1, this%fmi%gwfbndlist%Count()
+        packobj => GetBndFromList(this%fmi%gwfbndlist, ip)
+        !
+        ! -- do for each boundary
+        do i = 1, packobj%nbound
+          !
+          ! -- set nodenumber and initialize
+          n = packobj%nodelist(i)
+          rrate = DZERO
+          !
+          ! -- skip if transport cell is inactive or constant concentration
+          if (this%ibound(n) <= 0) cycle
+          !
+          ! -- Calculate the volumetric flow rate
+          qbnd = packobj%hcof(i) * packobj%xnew(n) - packobj%rhs(i)
+          !
+          ! -- get the first auxiliary variable
+          iauxpos = this%iauxpakcomp(icomp, ip)
+          if(iauxpos > 0) then
+            cbnd = packobj%auxvar(iauxpos, i)
+          else
+            cbnd = DZERO
+          endif
+          !
+          ! -- Add terms based on qbnd sign
+          if(qbnd <= DZERO) then
+            ctmp = cnew(n)
+          else
+            ctmp = cbnd
+          endif
+          !
+          ! -- Rate is now a mass flux
+          rrate = qbnd * ctmp
+          !
+          ! -- Print the individual rates if the budget is being printed
+          !    and PRINT_FLOWS was specified (this%iprflow<0)
+          if(ibudfl /= 0) then
+            if(this%iprflow /= 0) then
+              if(ibdlbl == 0) write(this%iout,fmttkk)                        &
+                text // ' (' // trim(this%name) // ')', kper, kstp
+              bname = packobj%name
+              call this%dis%print_list_entry(i, n, rrate, this%iout,      &
+                      bname)
+              ibdlbl=1
+            endif
+          endif
+          !
+          ! -- If saving cell-by-cell flows in list, write flow
+          if (ibinun /= 0) then
+            n2 = i
+            if (present(imap)) n2 = imap(i)
+            call this%dis%record_mf6_list_entry(ibinun, n, n2, rrate,          &
+                                                    naux, auxvar(:,i),         &
+                                                    olconv2=.FALSE.)
+          end if
+          !
+          ! -- Save simulated value to simvals array.
+          !this%simvals(i) = rrate
+          !
+        enddo
+        !
+      enddo
+    endif
+    if (ibudfl /= 0) then
+      if (this%iprflow /= 0) then
+          write(this%iout,'(1x)')
+      end if
+    end if
+    !
+    ! -- Save the simulated values to the ObserveType objects
+    !if (iprobs /= 0 .and. this%obs%npakobs > 0) then
+    !  call this%bnd_bd_obs()
+    !endif
+    !
+    ! -- return
+    return
+  end subroutine ssm_bdsav
+
   subroutine ssm_da(this)
 ! ******************************************************************************
 ! ssm_da -- Deallocate variables
@@ -303,6 +479,7 @@ module GwtSsmModule
     !
     ! -- Scalars
     call mem_deallocate(this%ncomp)
+    call mem_deallocate(this%nbound)
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
@@ -330,6 +507,7 @@ module GwtSsmModule
     !
     ! -- Allocate
     call mem_allocate(this%ncomp, 'NCOMP', this%name)
+    call mem_allocate(this%nbound, 'NBOUND', this%name)
     !
     ! -- Initialize
     !
@@ -381,6 +559,9 @@ module GwtSsmModule
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     ! -- formats
+    character(len=*), parameter :: fmtiprflow =                                &
+      "(4x,'SSM FLOW INFORMATION WILL BE PRINTED TO LISTING FILE " // &
+      "WHENEVER ICBCFL IS NOT ZERO.')"
 ! ------------------------------------------------------------------------------
     !
     ! -- get options block
@@ -394,6 +575,9 @@ module GwtSsmModule
         if (endOfBlock) exit
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
+          case ('PRINT_FLOWS')
+            this%iprflow = 1
+            write(this%iout, fmtiprflow)
           case default
             write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN SSM OPTION: ',         &
                                      trim(keyword)

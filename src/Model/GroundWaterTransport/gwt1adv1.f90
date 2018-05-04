@@ -21,7 +21,7 @@ module GwtAdvModule
   
     procedure :: adv_ar
     procedure :: adv_fc
-    procedure :: adv_bd
+    procedure :: adv_flowja
     
     procedure :: allocate_scalars
     procedure, private :: read_options
@@ -257,9 +257,9 @@ module GwtAdvModule
     return
   end function advctvd
 
-  subroutine adv_bd(this, cnew, flowja)
+  subroutine adv_flowja(this, cnew, flowja)
 ! ******************************************************************************
-! adv_bd -- Budget
+! adv_flowja -- Calculate advection contribution to flowja
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -296,7 +296,7 @@ module GwtAdvModule
     !
     ! -- Return
     return
-  end subroutine adv_bd
+  end subroutine adv_flowja
   
   subroutine advtvd_bd(this, cnew, flowja)
 ! ******************************************************************************

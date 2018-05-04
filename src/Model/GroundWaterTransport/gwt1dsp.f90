@@ -49,7 +49,7 @@ module GwtDspModule
     procedure :: dsp_ad
     procedure :: dsp_cf
     procedure :: dsp_fc
-    procedure :: dsp_bd
+    procedure :: dsp_flowja
     procedure :: allocate_scalars
     procedure :: allocate_arrays
     procedure, private :: read_options
@@ -362,9 +362,9 @@ module GwtDspModule
     return
   end subroutine dsp_fc
   
-  subroutine dsp_bd(this, nodes, nja, cnew, flowja)
+  subroutine dsp_flowja(this, nodes, nja, cnew, flowja)
 ! ******************************************************************************
-! dsp_bd -- Budget
+! dsp_flowja -- Calculate dispersion contribution to flowja
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -400,7 +400,7 @@ module GwtDspModule
     !
     ! -- Return
     return
-  end subroutine dsp_bd
+  end subroutine dsp_flowja
   
   subroutine allocate_scalars(this)
 ! ******************************************************************************
