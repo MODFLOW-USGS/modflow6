@@ -20,7 +20,8 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['csub_wtgeoa', 'csub_wtgeob', 'csub_wtgeoc'] #, 'csub_wtgeod', 'csub_wtgeoe']
+ex = ['csub_wtgeoa', 'csub_wtgeob',
+      'csub_wtgeoc']  # , 'csub_wtgeod', 'csub_wtgeoe']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
@@ -40,7 +41,7 @@ ddir = 'data'
 travis = [True for idx in range(len(exdirs))]
 
 # set replace_exe to None to use default executable
-#replace_exe = {'mf2005': 'mf2005devdbl'}
+# replace_exe = {'mf2005': 'mf2005devdbl'}
 replace_exe = None
 
 htol = [None for idx in range(len(exdirs))]
@@ -182,64 +183,101 @@ def calc_stress(sgm0, sgs0, h, bt):
     # calculate effective stress at the bottom of the layer
     es = []
     for k in range(nlay):
-        es.append(geo[k] - (h - bt[k+1]))
+        es.append(geo[k] - (h - bt[k + 1]))
     return geo, es
 
 
 # variant SUB package problem 3
-def build_models():
+def get_model(idx, dir):
+    name = ex[idx]
 
+    # build MODFLOW 6 files
+    ws = dir
+    sim = flopy.mf6.MFSimulation(sim_name=name, version='mf6',
+                                 exe_name='mf6',
+                                 sim_ws=ws)
+    # create tdis package
+    tdis = flopy.mf6.ModflowTdis(sim, time_units='DAYS',
+                                 nper=nper, perioddata=tdis_rc)
 
-    for idx, dir in enumerate(exdirs):
-        name = ex[idx]
+    # create gwf model
+    top = tops[idx]
+    zthick = [top - botm[0],
+              botm[0] - botm[1],
+              botm[1] - botm[2]]
+    elevs = [top] + botm
 
-        # build MODFLOW 6 files
-        ws = dir
-        sim = flopy.mf6.MFSimulation(sim_name=name, version='mf6',
-                                     exe_name='mf6',
-                                     sim_ws=ws)
-        # create tdis package
-        tdis = flopy.mf6.ModflowTdis(sim, time_units='DAYS',
-                                     nper=nper, perioddata=tdis_rc)
+    # csub packagedata container counter
+    if headformulation[idx]:
+        head_based = True
+        sgmt = None
+        sgst = None
+    else:
+        head_based = None
+        sgmt = sgm
+        sgst = sgs
 
-        # create gwf model
-        top = tops[idx]
-        zthick = [top - botm[0],
-                  botm[0] - botm[1],
-                  botm[1] - botm[2]]
-        elevs = [top] + botm
+    # fill preconsolidation stress with preconsolidation head
+    # calculate preconsolidation stress, if necessary
+    pcs = [preconhead for k in range(nlay)]
+    gs, es = calc_stress(sgm, sgs, preconhead, elevs)
+    if not headformulation[idx]:
+        pcs = es
 
-        # csub packagedata container counter
+    # create no delay bed packagedata entries
+    sub6 = []
+    ibcno = 0
+    nndb = 0
+    ln = []
+    sfv = []
+    sfe = []
+    hc = []
+    thickib0 = []
+    cdelays = 'nodelay'
+    for k in range(nlay):
+        b = zthick[k] * facndb[k]
+        if b <= 0.:
+            continue
+        nndb += 1
+        ln.append(k)
+        thickib0.append(b)
         if headformulation[idx]:
-            head_based = True
-            sgmt = None
-            sgst = None
+            sfv.append(skv[k] * b)
+            sfe.append(ske[k] * b)
+            hc.append(pcs[k])
         else:
-            head_based = None
-            sgmt = sgm
-            sgst = sgs
+            sfv.append(skv[k])
+            sfe.append(ske[k])
+        for i in range(nrow):
+            for j in range(ncol):
+                # skip constant head cells
+                if k == 0 and i == nrow - 1 and j in ccol:
+                    continue
+                # create nodelay entry
+                # no delay beds
+                ibcno += 1
+                d = [ibcno, (k, i, j), cdelays, pcs[k],
+                     b, 1., skv[k], ske[k], theta, 999., -999.]
+                sub6.append(d)
 
-        # fill preconsolidation stress with preconsolidation head
-        # calculate preconsolidation stress, if necessary
-        pcs = [preconhead for k in range(nlay)]
-        gs, es = calc_stress(sgm, sgs, preconhead, elevs)
-        if not headformulation[idx]:
-            pcs = es
-
-        # create no delay bed packagedata entries
-        sub6 = []
-        ibcno = 0
-        nndb = 0
-        ln = []
-        sfv = []
-        sfe = []
-        hc = []
-        thickib0 = []
+    if delay[idx]:
+        cdelays = 'delay'
+    else:
         cdelays = 'nodelay'
-        for k in range(nlay):
-            b = zthick[k] * facndb[k]
-            if b <= 0.:
-                continue
+    ndb = 0
+    nmz = 0
+    ldn = []
+    nz = []
+    for k in range(nlay):
+        b = zthick[k] * facdb[k]
+        if b <= 0.:
+            continue
+        if delay[idx]:
+            ndb += 1
+            nmz = 1
+            nz.append(1)
+            ldn.append[k]
+        else:
             nndb += 1
             ln.append(k)
             thickib0.append(b)
@@ -250,249 +288,200 @@ def build_models():
             else:
                 sfv.append(skv[k])
                 sfe.append(ske[k])
-            for i in range(nrow):
-                for j in range(ncol):
-                    # skip constant head cells
-                    if k == 0 and i == nrow - 1 and j in ccol:
-                        continue
-                    # create nodelay entry
-                    # no delay beds
-                    ibcno += 1
-                    d = [ibcno, (k, i, j), cdelays, pcs[k],
-                         b, 1., skv[k], ske[k], theta, 999., -999.]
-                    sub6.append(d)
+        for i in range(nrow):
+            for j in range(ncol):
+                # skip constant head cells
+                if k == 0 and i == nrow - 1 and j in ccol:
+                    continue
+                # create nodelay entry
+                # no delay beds
+                ibcno += 1
+                d = [ibcno, (k, i, j), cdelays, pcs[k],
+                     b, 1., skv[k], ske[k], theta, kv, 0.]
+                sub6.append(d)
 
-        if delay[idx]:
-            cdelays = 'delay'
-        else:
-            cdelays = 'nodelay'
-        ndb = 0
-        nmz = 0
-        ldn = []
-        nz = []
-        for k in range(nlay):
-            b = zthick[k] * facdb[k]
-            if b <= 0.:
-                continue
-            if delay[idx]:
-                ndb += 1
-                nmz = 1
-                nz.append(1)
-                ldn.append[k]
-            else:
-                nndb += 1
-                ln.append(k)
-                thickib0.append(b)
-                if headformulation[idx]:
-                    sfv.append(skv[k] * b)
-                    sfe.append(ske[k] * b)
-                    hc.append(pcs[k])
-                else:
-                    sfv.append(skv[k])
-                    sfe.append(ske[k])
-            for i in range(nrow):
-                for j in range(ncol):
-                    # skip constant head cells
-                    if k == 0 and i == nrow - 1 and j in ccol:
-                        continue
-                    # create nodelay entry
-                    # no delay beds
-                    ibcno += 1
-                    d = [ibcno, (k, i, j), cdelays, pcs[k],
-                         b, 1., skv[k], ske[k], theta, kv, 0.]
-                    sub6.append(d)
-
-        # add skeletal component
-        for k in range(nlay):
-            b = zthick[k] * facsk[k]
-            if b <= 0.:
-                continue
-            nndb += 1
-            ln.append(k)
-            thickib0.append(b)
-            if headformulation[idx]:
-                sfv.append(ske[k] * b)
-                sfe.append(ske[k] * b)
-                hc.append(pcs[k])
-            else:
-                sfv.append(ske[k])
-                sfe.append(ske[k])
-
-        maxcsub = len(sub6)
-
-
-        # water compressibility cannot be compared for cases where the material
-        # properties are adjusted since the porosity changes in mf6
-        if iump[idx] == 0:
-            beta = 4.6512e-10
-            wc = sw
-        else:
-            beta = 0.
-            wc = 0.
-
-        gwf = flopy.mf6.ModflowGwf(sim, modelname=name,
-                                   newtonoptions=newtonoptions)
-
-        # create iterative model solution and register the gwf model with it
-        ims = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
-                                   outer_hclose=hclose,
-                                   outer_maximum=nouter,
-                                   under_relaxation='NONE',
-                                   inner_maximum=ninner,
-                                   inner_hclose=hclose, rcloserecord=rclose,
-                                   linear_acceleration=imsla,
-                                   scaling_method='NONE',
-                                   reordering_method='NONE',
-                                   relaxation_factor=relax)
-        sim.register_ims_package(ims, [gwf.name])
-
-        dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
-                                      delr=delr, delc=delc,
-                                      top=top, botm=botm,
-                                      fname='{}.dis'.format(name))
-
-        # initial conditions
-        ic = flopy.mf6.ModflowGwfic(gwf, strt=strt,
-                                    fname='{}.ic'.format(name))
-
-        # node property flow
-        npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False,
-                                      #dev_modflowusg_upstream_weighted_saturation=True,
-                                      icelltype=laytyp,
-                                      k=hk,
-                                      k33=vka)
-        # storage
-        sto = flopy.mf6.ModflowGwfsto(gwf, save_flows=False, iconvert=laytyp,
-                                      ss=0., sy=sy,
-                                      storagecoefficient=True,
-                                      steady_state={0: True},
-                                      transient={1: True})
-
-        # recharge
-        rch = flopy.mf6.ModflowGwfrcha(gwf, readasarrays=True, recharge=rech)
-
-        # wel file
-        wel = flopy.mf6.ModflowGwfwel(gwf, print_input=True, print_flows=True,
-                                      maxbound=maxwel,
-                                      stress_period_data=wd6,
-                                      save_flows=False)
-
-        # chd files
-        chd = flopy.mf6.modflow.mfgwfchd.ModflowGwfchd(gwf,
-                                                       maxbound=maxchd,
-                                                       stress_period_data=cd6,
-                                                       save_flows=False)
-        # ibc files
-        opth = '{}.csub.obs'.format(name)
-        csub = flopy.mf6.ModflowGwfcsub(gwf,
-                                        head_based=head_based,
-                                        update_material_properties=ump[idx],
-                                        time_weight=tw[idx],
-                                        geo_stress_offset=True,
-                                        save_flows=True,
-                                        ninterbeds=maxcsub,
-                                        obs_filerecord=opth,
-                                        sgm=sgmt,
-                                        sgs=sgst,
-                                        sk_theta=theta,
-                                        ske_cr=ske_cr,
-                                        beta=beta,
-                                        packagedata=sub6,
-                                        sig0={0: [0., 0., 0.]})
-        obspos = [(0, 4, 4), (1, 4, 4), (2, 4, 4)]
-        obstype = ['compaction-cell', 'gstress-cell', 'estress-cell',
-                   'ske-cell', 'sk-cell', 'csub-cell']
-        obstag = ['tcomp', 'gs', 'es', 'ske', 'sk', 'csub']
-        obsarr = []
-        for iobs, cobs in enumerate(obstype):
-            for jobs, otup in enumerate(obspos):
-                otag = '{}{}'.format(obstag[iobs], jobs+1)
-                obsarr.append((otag, cobs, otup))
-
-        orecarray = {}
-        # orecarray['csub_obs.csv'] = [('tcomp1', 'compaction-cell', (0, 4, 4)),
-        #                              ('tcomp2', 'compaction-cell', (1, 4, 4)),
-        #                              ('tcomp3', 'compaction-cell', (2, 4, 4))]
-        orecarray['csub_obs.csv'] = obsarr
-        csub_obs_package = flopy.mf6.ModflowUtlobs(gwf,
-                                                   fname=opth,
-                                                   parent_file=csub, digits=10,
-                                                   print_input=True,
-                                                   continuous=orecarray)
-
-        # output control
-        oc = flopy.mf6.ModflowGwfoc(gwf,
-                                    budget_filerecord='{}.cbc'.format(name),
-                                    head_filerecord='{}.hds'.format(name),
-                                    headprintrecord=[
-                                        ('COLUMNS', 10, 'WIDTH', 15,
-                                         'DIGITS', 6, 'GENERAL')],
-                                    saverecord=[('HEAD', 'ALL'),
-                                                ('BUDGET', 'ALL')],
-                                    printrecord=[('HEAD', 'LAST'),
-                                                 ('BUDGET', 'ALL')])
-
-        # write MODFLOW 6 files
-        sim.write_simulation()
-
-        # build MODFLOW-NWT files
-        cpth = cmppth
-        ws = os.path.join(dir, cpth)
-        mc = flopy.modflow.Modflow(name, model_ws=ws, version=cpth)
-        dis = flopy.modflow.ModflowDis(mc, nlay=nlay, nrow=nrow, ncol=ncol,
-                                       nper=nper, perlen=perlen, nstp=nstp,
-                                       tsmult=tsmult, steady=steady, delr=delr,
-                                       delc=delc, top=top, botm=botm)
-        bas = flopy.modflow.ModflowBas(mc, ibound=ib, strt=strt, hnoflo=hnoflo,
-                                       stoper=0.01)
-        upw = flopy.modflow.ModflowUpw(mc, laytyp=laytyp,
-                                       hk=hk, vka=vka,
-                                       ss=wc, sy=sy,
-                                       hdry=hdry)
-        chd = flopy.modflow.ModflowChd(mc, stress_period_data=cd)
-        rch = flopy.modflow.ModflowRch(mc, rech=rech)
-        wel = flopy.modflow.ModflowWel(mc, stress_period_data=wd)
+    # add skeletal component
+    for k in range(nlay):
+        b = zthick[k] * facsk[k]
+        if b <= 0.:
+            continue
+        nndb += 1
+        ln.append(k)
+        thickib0.append(b)
         if headformulation[idx]:
-            sub = flopy.modflow.ModflowSub(mc, ipakcb=1001,
-                                           ndb=ndb, nndb=nndb, nmz=nmz,
-                                           nn=10,
-                                           ac2=1.0,
-                                           isuboc=1, ln=ln, ldn=ldn, rnb=rnb,
-                                           dp=dp, dz=dz, nz=nz,
-                                           dhc=dhc, dstart=dstart,
-                                           hc=hc, sfe=sfe, sfv=sfv,
-                                           ids15=ds15, ids16=ds16)
+            sfv.append(ske[k] * b)
+            sfe.append(ske[k] * b)
+            hc.append(pcs[k])
         else:
-            swt = flopy.modflow.ModflowSwt(mc, ipakcb=1001,
-                                           iswtoc=1, nsystm=len(sfe),
-                                           ithk=1, ivoid=iump[idx],
-                                           icrcc=1,
-                                           istpcs=0, lnwt=ln,
-                                           sse=sfe, ssv=sfv,
-                                           thick=thickib0,
-                                           void=void,
-                                           pcs=pcs, pcsoff=0.,
-                                           sgm=sgm, sgs=sgs,
-                                           gl0=0.,
-                                           ids16=ds16swt, ids17=ds17swt)
-        oc = flopy.modflow.ModflowOc(mc, stress_period_data=None,
-                                     save_every=1,
-                                     save_types=['save head', 'save budget',
-                                                 'print budget'])
-        fluxtol = (float(nlay * nrow * ncol) - 4.) * rclose
-        nwt = flopy.modflow.ModflowNwt(mc,
-                                       headtol=hclose, fluxtol=fluxtol,
-                                       maxiterout=nouter, linmeth=2,
-                                       maxitinner=ninner,
-                                       unitnumber=132,
-                                       options='SPECIFIED',
-                                       backflag=0, idroptol=0)
-        mc.write_input()
+            sfv.append(ske[k])
+            sfe.append(ske[k])
 
-    return
+    maxcsub = len(sub6)
+
+    # water compressibility cannot be compared for cases where the material
+    # properties are adjusted since the porosity changes in mf6
+    if iump[idx] == 0:
+        beta = 4.6512e-10
+        wc = sw
+    else:
+        beta = 0.
+        wc = 0.
+
+    gwf = flopy.mf6.ModflowGwf(sim, modelname=name,
+                               newtonoptions=newtonoptions)
+
+    # create iterative model solution and register the gwf model with it
+    ims = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
+                               outer_hclose=hclose,
+                               outer_maximum=nouter,
+                               under_relaxation='NONE',
+                               inner_maximum=ninner,
+                               inner_hclose=hclose, rcloserecord=rclose,
+                               linear_acceleration=imsla,
+                               scaling_method='NONE',
+                               reordering_method='NONE',
+                               relaxation_factor=relax)
+    sim.register_ims_package(ims, [gwf.name])
+
+    dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
+                                  delr=delr, delc=delc,
+                                  top=top, botm=botm,
+                                  fname='{}.dis'.format(name))
+
+    # initial conditions
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt,
+                                fname='{}.ic'.format(name))
+
+    # node property flow
+    npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False,
+                                  # dev_modflowusg_upstream_weighted_saturation=True,
+                                  icelltype=laytyp,
+                                  k=hk,
+                                  k33=vka)
+    # storage
+    sto = flopy.mf6.ModflowGwfsto(gwf, save_flows=False, iconvert=laytyp,
+                                  ss=0., sy=sy,
+                                  storagecoefficient=True,
+                                  steady_state={0: True},
+                                  transient={1: True})
+
+    # recharge
+    rch = flopy.mf6.ModflowGwfrcha(gwf, readasarrays=True, recharge=rech)
+
+    # wel file
+    wel = flopy.mf6.ModflowGwfwel(gwf, print_input=True, print_flows=True,
+                                  maxbound=maxwel,
+                                  stress_period_data=wd6,
+                                  save_flows=False)
+
+    # chd files
+    chd = flopy.mf6.modflow.mfgwfchd.ModflowGwfchd(gwf,
+                                                   maxbound=maxchd,
+                                                   stress_period_data=cd6,
+                                                   save_flows=False)
+    # ibc files
+    opth = '{}.csub.obs'.format(name)
+    csub = flopy.mf6.ModflowGwfcsub(gwf,
+                                    head_based=head_based,
+                                    update_material_properties=ump[idx],
+                                    time_weight=tw[idx],
+                                    geo_stress_offset=True,
+                                    save_flows=True,
+                                    ninterbeds=maxcsub,
+                                    obs_filerecord=opth,
+                                    sgm=sgmt,
+                                    sgs=sgst,
+                                    sk_theta=theta,
+                                    ske_cr=ske_cr,
+                                    beta=beta,
+                                    packagedata=sub6,
+                                    sig0={0: [0., 0., 0.]})
+    obspos = [(0, 4, 4), (1, 4, 4), (2, 4, 4)]
+    obstype = ['compaction-cell', 'gstress-cell', 'estress-cell',
+               'ske-cell', 'sk-cell', 'csub-cell']
+    obstag = ['tcomp', 'gs', 'es', 'ske', 'sk', 'csub']
+    obsarr = []
+    for iobs, cobs in enumerate(obstype):
+        for jobs, otup in enumerate(obspos):
+            otag = '{}{}'.format(obstag[iobs], jobs + 1)
+            obsarr.append((otag, cobs, otup))
+
+    orecarray = {}
+    orecarray['csub_obs.csv'] = obsarr
+    csub_obs_package = flopy.mf6.ModflowUtlobs(gwf,
+                                               fname=opth,
+                                               parent_file=csub, digits=10,
+                                               print_input=True,
+                                               continuous=orecarray)
+
+    # output control
+    oc = flopy.mf6.ModflowGwfoc(gwf,
+                                budget_filerecord='{}.cbc'.format(name),
+                                head_filerecord='{}.hds'.format(name),
+                                headprintrecord=[
+                                    ('COLUMNS', 10, 'WIDTH', 15,
+                                     'DIGITS', 6, 'GENERAL')],
+                                saverecord=[('HEAD', 'ALL'),
+                                            ('BUDGET', 'ALL')],
+                                printrecord=[('HEAD', 'LAST'),
+                                             ('BUDGET', 'ALL')])
+
+    # build MODFLOW-NWT files
+    cpth = cmppth
+    ws = os.path.join(dir, cpth)
+    mc = flopy.modflow.Modflow(name, model_ws=ws, version=cpth)
+    dis = flopy.modflow.ModflowDis(mc, nlay=nlay, nrow=nrow, ncol=ncol,
+                                   nper=nper, perlen=perlen, nstp=nstp,
+                                   tsmult=tsmult, steady=steady, delr=delr,
+                                   delc=delc, top=top, botm=botm)
+    bas = flopy.modflow.ModflowBas(mc, ibound=ib, strt=strt, hnoflo=hnoflo,
+                                   stoper=0.01)
+    upw = flopy.modflow.ModflowUpw(mc, laytyp=laytyp,
+                                   hk=hk, vka=vka,
+                                   ss=wc, sy=sy,
+                                   hdry=hdry)
+    chd = flopy.modflow.ModflowChd(mc, stress_period_data=cd)
+    rch = flopy.modflow.ModflowRch(mc, rech=rech)
+    wel = flopy.modflow.ModflowWel(mc, stress_period_data=wd)
+    if headformulation[idx]:
+        sub = flopy.modflow.ModflowSub(mc, ipakcb=1001,
+                                       ndb=ndb, nndb=nndb, nmz=nmz,
+                                       nn=10,
+                                       ac2=1.0,
+                                       isuboc=1, ln=ln, ldn=ldn, rnb=rnb,
+                                       dp=dp, dz=dz, nz=nz,
+                                       dhc=dhc, dstart=dstart,
+                                       hc=hc, sfe=sfe, sfv=sfv,
+                                       ids15=ds15, ids16=ds16)
+    else:
+        swt = flopy.modflow.ModflowSwt(mc, ipakcb=1001,
+                                       iswtoc=1, nsystm=len(sfe),
+                                       ithk=1, ivoid=iump[idx],
+                                       icrcc=1,
+                                       istpcs=0, lnwt=ln,
+                                       sse=sfe, ssv=sfv,
+                                       thick=thickib0,
+                                       void=void,
+                                       pcs=pcs, pcsoff=0.,
+                                       sgm=sgm, sgs=sgs,
+                                       gl0=0.,
+                                       ids16=ds16swt, ids17=ds17swt)
+    oc = flopy.modflow.ModflowOc(mc, stress_period_data=None,
+                                 save_every=1,
+                                 save_types=['save head', 'save budget',
+                                             'print budget'])
+    fluxtol = (float(nlay * nrow * ncol) - 4.) * rclose
+    nwt = flopy.modflow.ModflowNwt(mc,
+                                   headtol=hclose, fluxtol=fluxtol,
+                                   maxiterout=nouter, linmeth=2,
+                                   maxitinner=ninner,
+                                   unitnumber=132,
+                                   options='SPECIFIED',
+                                   backflag=0, idroptol=0)
+    return sim, mc
+
 
 def eval_comp(sim):
-
     print('evaluating compaction...')
 
     # MODFLOW 6 total compaction results
@@ -570,7 +559,7 @@ def eval_comp(sim):
             if isinstance(v, np.recarray):
                 vt = np.zeros(size3d, dtype=np.float)
                 for jdx, node in enumerate(v['node']):
-                    vt[node-1] += v['q'][jdx]
+                    vt[node - 1] += v['q'][jdx]
                 v = vt.reshape(shape3d)
             for kk in range(v.shape[0]):
                 for ii in range(v.shape[1]):
@@ -602,8 +591,8 @@ def eval_comp(sim):
         if i == 0:
             line = '{:>10s}'.format('TIME')
             for idx, key in enumerate(bud_lst):
-                line += '{:>25s}'.format(key+'_LST')
-                line += '{:>25s}'.format(key+'_CBC')
+                line += '{:>25s}'.format(key + '_LST')
+                line += '{:>25s}'.format(key + '_CBC')
                 line += '{:>25s}'.format(key + '_DIF')
             f.write(line + '\n')
         line = '{:10g}'.format(d['totim'][i])
@@ -626,8 +615,16 @@ def eval_comp(sim):
 
 
 # - No need to change any code below
-def test_mf6model():
+def build_models():
+    for idx, dir in enumerate(exdirs):
+        sim, mc = get_model(idx, dir)
+        sim.write_simulation()
+        if mc is not None:
+            mc.write_input()
+    return
 
+
+def test_mf6model():
     # determine if running on Travis
     is_travis = 'TRAVIS' in os.environ
     r_exe = None

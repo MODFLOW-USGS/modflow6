@@ -2,14 +2,6 @@ import os
 import numpy as np
 
 try:
-    import pymake
-except:
-    msg = 'Error. Pymake package is not available.\n'
-    msg += 'Try installing using the following command:\n'
-    msg += ' pip install https://github.com/modflowpy/pymake/zipball/master'
-    raise Exception(msg)
-
-try:
     import flopy
 except:
     msg = 'Error. FloPy package is not available.\n'
@@ -41,144 +33,141 @@ travis = [False for idx in range(len(exdirs))]
 # set replace_exe to None to use default executable
 replace_exe = {'mf2005': 'mf2005devdbl'}
 
+# static model data
+nlay, nrow, ncol = 1, 1, 3
+nper = 1
+perlen = [1000. for i in range(nper)]
+nstp = [100 for i in range(nper)]
+tsmult = [1.05 for i in range(nper)]
+steady = [False for i in range(nper)]
+delr, delc = 1., 1.
+top = 0.
+botm = [-100.]
+hnoflo = 1e30
+hdry = -1e30
+hk = 1e6
+laytyp = [0]
+ss = 0.
+sy = 0.2
 
-def build_models():
-    nlay, nrow, ncol = 1, 1, 3
-    nper = 1
-    perlen = [1000. for i in range(nper)]
-    nstp = [100 for i in range(nper)]
-    tsmult = [1.05 for i in range(nper)]
-    steady = [False for i in range(nper)]
-    delr, delc = 1., 1.
-    top = 0.
-    botm = [-100.]
-    hnoflo = 1e30
-    hdry = -1e30
-    hk = 1e6
-    laytyp = [0]
-    ss = 0.
-    sy = 0.2
+nouter, ninner = 1000, 300
+hclose, rclose, relax = 1e-6, 1e-6, 0.97
 
-    nouter, ninner = 1000, 300
-    hclose, rclose, relax = 1e-6, 1e-6, 0.97
+tdis_rc = []
+for idx in range(nper):
+    tdis_rc.append((perlen[idx], nstp[idx], tsmult[idx]))
 
-    tdis_rc = []
-    for idx in range(nper):
-        tdis_rc.append((perlen[idx], nstp[idx], tsmult[idx]))
+ib = 1
 
-    ib = 1
+# sub data
+cc = 0.25
+cr = 0.01
+void = 0.82
+theta = void / (1. + void)
+kv = 1e-3
+sgm = 1.7
+sgs = 2.2
+ini_stress = 0.0
+thick = [10.]
 
-    # sub data
-    cc = 0.25
-    cr = 0.01
-    void = 0.82
-    theta = void / (1. + void)
-    kv = 1e-3
-    sgm = 1.7
-    sgs = 2.2
-    ini_stress = 0.0
-    thick = [10.]
-
-    sub6 = [[1, (0, 0, 1), 'delay', ini_stress, thick[0],
-             1., cc, cr, void, kv, ini_stress]]
-
-    for idx, dir in enumerate(exdirs):
-
-        c6 = []
-        for j in range(0, ncol, 2):
-            c6.append([(0, 0, j), chdh[idx]])
-        cd6 = {0: c6}
+sub6 = [[1, (0, 0, 1), 'delay', ini_stress, thick[0],
+         1., cc, cr, void, kv, ini_stress]]
 
 
-        name = ex[idx]
+def get_model(idx, dir):
+    c6 = []
+    for j in range(0, ncol, 2):
+        c6.append([(0, 0, j), chdh[idx]])
+    cd6 = {0: c6}
 
-        # build MODFLOW 6 files
-        ws = dir
-        sim = flopy.mf6.MFSimulation(sim_name=name, version='mf6',
-                                     exe_name='mf6',
-                                     sim_ws=ws)
-        # create tdis package
-        tdis = flopy.mf6.ModflowTdis(sim, time_units='DAYS',
-                                     nper=nper, perioddata=tdis_rc)
+    name = ex[idx]
 
-        # create gwf model
-        gwf = flopy.mf6.ModflowGwf(sim, modelname=name)
+    # build MODFLOW 6 files
+    ws = dir
+    sim = flopy.mf6.MFSimulation(sim_name=name, version='mf6',
+                                 exe_name='mf6',
+                                 sim_ws=ws)
+    # create tdis package
+    tdis = flopy.mf6.ModflowTdis(sim, time_units='DAYS',
+                                 nper=nper, perioddata=tdis_rc)
 
-        # create iterative model solution and register the gwf model with it
-        ims = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
-                                   outer_hclose=hclose,
-                                   outer_maximum=nouter,
-                                   under_relaxation='NONE',
-                                   inner_maximum=ninner,
-                                   inner_hclose=hclose, rcloserecord=rclose,
-                                   linear_acceleration='CG',
-                                   scaling_method='NONE',
-                                   reordering_method='NONE',
-                                   relaxation_factor=relax)
-        sim.register_ims_package(ims, [gwf.name])
+    # create gwf model
+    gwf = flopy.mf6.ModflowGwf(sim, modelname=name)
 
-        dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
-                                      delr=delr, delc=delc,
-                                      top=top, botm=botm,
-                                      fname='{}.dis'.format(name))
+    # create iterative model solution and register the gwf model with it
+    ims = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
+                               outer_hclose=hclose,
+                               outer_maximum=nouter,
+                               under_relaxation='NONE',
+                               inner_maximum=ninner,
+                               inner_hclose=hclose, rcloserecord=rclose,
+                               linear_acceleration='CG',
+                               scaling_method='NONE',
+                               reordering_method='NONE',
+                               relaxation_factor=relax)
+    sim.register_ims_package(ims, [gwf.name])
 
-        # initial conditions
-        ic = flopy.mf6.ModflowGwfic(gwf, strt=strt[idx],
-                                    fname='{}.ic'.format(name))
+    dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
+                                  delr=delr, delc=delc,
+                                  top=top, botm=botm,
+                                  fname='{}.dis'.format(name))
 
-        # node property flow
-        npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False,
-                                      icelltype=laytyp,
-                                      k=hk,
-                                      k33=hk)
-        # storage
-        sto = flopy.mf6.ModflowGwfsto(gwf, save_flows=False, iconvert=laytyp,
-                                      ss=ss, sy=sy,
-                                      storagecoefficient=True,
-                                      transient={0: True})
+    # initial conditions
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt[idx],
+                                fname='{}.ic'.format(name))
 
-        # chd files
-        chd = flopy.mf6.modflow.mfgwfchd.ModflowGwfchd(gwf,
-                                                       maxbound=len(c6),
-                                                       stress_period_data=cd6,
-                                                       save_flows=False)
+    # node property flow
+    npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False,
+                                  icelltype=laytyp,
+                                  k=hk,
+                                  k33=hk)
+    # storage
+    sto = flopy.mf6.ModflowGwfsto(gwf, save_flows=False, iconvert=laytyp,
+                                  ss=ss, sy=sy,
+                                  storagecoefficient=True,
+                                  transient={0: True})
 
-        # ibc files
-        opth = '{}.ibc.obs'.format(name)
-        ibc = flopy.mf6.ModflowGwfcsub(gwf, ndelaycells=ndcell[idx],
-                                       compression_indices=True,
-                                       geo_stress_offset=gso[idx],
-                                       interbed_stress_offset=bso[idx],
-                                       obs_filerecord=opth,
-                                       ninterbeds=1,
-                                       sgs=sgs, sgm=sgm, packagedata=sub6,
-                                       beta=0., ske_cr=0.)
-        orecarray = {}
-        orecarray['ibc_obs.csv'] = [('tcomp', 'total-compaction', (0, 0, 1)),
-                                    ('gs', 'gstress-cell', (0, 0, 1)),
-                                    ('es', 'estress-cell', (0, 0, 1)),
-                                    ('pcs', 'preconstress', (0, 0))]
-        ibc_obs_package = flopy.mf6.ModflowUtlobs(gwf,
-                                                  fname=opth,
-                                                  parent_file=ibc, digits=10,
-                                                  print_input=True,
-                                                  continuous=orecarray)
+    # chd files
+    chd = flopy.mf6.modflow.mfgwfchd.ModflowGwfchd(gwf,
+                                                   maxbound=len(c6),
+                                                   stress_period_data=cd6,
+                                                   save_flows=False)
 
-        # output control
-        oc = flopy.mf6.ModflowGwfoc(gwf,
-                                    budget_filerecord='{}.cbc'.format(name),
-                                    head_filerecord='{}.hds'.format(name),
-                                    headprintrecord=[
-                                        ('COLUMNS', 10, 'WIDTH', 15,
-                                         'DIGITS', 6, 'GENERAL')],
-                                    saverecord=[('HEAD', 'LAST')],
-                                    printrecord=[('HEAD', 'LAST'),
-                                                 ('BUDGET', 'LAST')])
+    # ibc files
+    opth = '{}.ibc.obs'.format(name)
+    ibc = flopy.mf6.ModflowGwfcsub(gwf, ndelaycells=ndcell[idx],
+                                   compression_indices=True,
+                                   geo_stress_offset=gso[idx],
+                                   interbed_stress_offset=bso[idx],
+                                   obs_filerecord=opth,
+                                   ninterbeds=1,
+                                   sgs=sgs, sgm=sgm, packagedata=sub6,
+                                   beta=0., ske_cr=0.)
+    orecarray = {}
+    orecarray['ibc_obs.csv'] = [('tcomp', 'total-compaction', (0, 0, 1)),
+                                ('gs', 'gstress-cell', (0, 0, 1)),
+                                ('es', 'estress-cell', (0, 0, 1)),
+                                ('pcs', 'preconstress', (0, 0))]
+    ibc_obs_package = flopy.mf6.ModflowUtlobs(gwf,
+                                              fname=opth,
+                                              parent_file=ibc, digits=10,
+                                              print_input=True,
+                                              continuous=orecarray)
 
-        # write MODFLOW 6 files
-        sim.write_simulation()
+    # output control
+    oc = flopy.mf6.ModflowGwfoc(gwf,
+                                budget_filerecord='{}.cbc'.format(name),
+                                head_filerecord='{}.hds'.format(name),
+                                headprintrecord=[
+                                    ('COLUMNS', 10, 'WIDTH', 15,
+                                     'DIGITS', 6, 'GENERAL')],
+                                saverecord=[('HEAD', 'LAST')],
+                                printrecord=[('HEAD', 'LAST'),
+                                             ('BUDGET', 'LAST')])
 
-    return
+    mc = None
+
+    return sim, mc
 
 
 def eval_sub(sim):
@@ -218,6 +207,15 @@ def eval_sub(sim):
 
 
 # - No need to change any code below
+def build_models():
+    for idx, dir in enumerate(exdirs):
+        sim, mc = get_model(idx, dir)
+        sim.write_simulation()
+        if mc is not None:
+            mc.write_input()
+    return
+
+
 def test_mf6model():
     # determine if running on Travis
     is_travis = 'TRAVIS' in os.environ

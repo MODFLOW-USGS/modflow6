@@ -3607,7 +3607,7 @@ contains
     sgs = this%sgs(node)
     top = this%dbz(1, idelay) + dzhalf
     !
-    ! -- calculate the geostatic load in the aquifer at the top of the interbed
+    ! -- calculate the geostatic load in the cell at the top of the interbed
     if (this%igeocalc > 0) then
       if (hcell > top) then
         sadd = (top - botaq) * sgs
@@ -3625,7 +3625,6 @@ contains
       if (this%igeocalc == 0) then
         this%dbes(n, idelay) = h
       ! -- geostatic calculated at the bottom of the delay cell
-      ! -- CHECK ***evaluate if this is the correct location***
       else
         z = this%dbz(n, idelay)
         top = z + dzhalf
@@ -3639,6 +3638,7 @@ contains
         end if
         sigma = sigma + sadd
         this%dbgeo(n, idelay) = sigma
+        this%dbes(n, idelay) = sigma - h + bot
       end if
     end do
     !
@@ -3661,10 +3661,16 @@ contains
     real(DP), intent(inout) :: sske
     ! -- local variables
     integer(I4B) :: idelay
+    integer(I4B) :: node
+    real(DP) :: znode
+    real(DP) :: zbot
     real(DP) :: es
+    real(DP) :: es0
     real(DP) :: void
     real(DP) :: denom
+    real(DP) :: denom0
     real(DP) :: f
+    real(DP) :: f0
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
@@ -3680,30 +3686,50 @@ contains
           f = DHALF
         end if
       end if
+      f0 = f
     !
     ! -- calculate factor for the effective stress case
     else
-      es = this%dbes0(n, idelay)
+      node = this%nodelist(ib)
       void = this%csub_calc_void(this%dbtheta(n, idelay))
-      denom = (DONE + void) * es
+      !
+      ! -- get elevation of delay node and calculate the bottom 
+      !    of the delay node
+      znode = this%dbz(n, idelay)
+      zbot = znode - DHALF * this%dbdz(idelay)
+      !
+      ! -- set the appropriate current and previous effective stress
+      es = this%dbes(n, idelay)
+      es0 = this%dbes0(n, idelay)
+      es = this%time_alpha * es + (DONE - this%time_alpha) * es0
+      !
+      ! -- denom and denom0 are calculate at the center of the node and
+      !    result in a mean sske and ssk for the delay cell
+      denom = (DONE + void) * (es - (znode - zbot)) * (this%sgs(node) - DONE)
+      denom0 = (DONE + void) * (es0 - (znode - zbot)) * (this%sgs(node) - DONE)
       if (denom /= DZERO) then
         f = DONE / denom
       else
         f = DZERO
       end if
+      if (denom0 /= DZERO) then
+        f0 = DONE / denom
+      else
+        f0 = DZERO
+      end if
     end if
-    sske = f * this%rci(ib)
+    sske = f0 * this%rci(ib)
     if (this%igeocalc == 0) then
       if (this%dbh(n, idelay) < this%dbpcs(n, idelay)) then
         ssk = f * this%ci(ib)
       else
-        ssk = sske
+        ssk = f * this%rci(ib)
       end if
     else
       if (es > this%dbpcs(n, idelay)) then
         ssk = f * this%ci(ib)
       else
-        ssk = sske
+        ssk = f * this%rci(ib)
       end if
     end if
     !
@@ -3736,8 +3762,8 @@ contains
     real(DP) :: sske
     real(DP) :: ssk
     real(DP) :: z
-    real(DP) :: top
-    real(DP) :: bot
+    real(DP) :: ztop
+    real(DP) :: zbot
     real(DP) :: h
     real(DP) :: aii
     real(DP) :: r
@@ -3758,8 +3784,8 @@ contains
       ! -- diagonal and right hand side
       aii = -ssk * f
       z = this%dbz(n, idelay)
-      top = z + dz
-      bot = z - dz
+      ztop = z + dz
+      zbot = z - dz
       h = this%dbh(n, idelay)
       if (this%igeocalc == 0) then
         r = -f * &
@@ -3767,7 +3793,7 @@ contains
               sske * (this%dbh0(n, idelay) - this%dbpcs(n, idelay)))
       else
         r = -f * &
-             (ssk * (this%dbgeo(n, idelay) + z - this%dbpcs(n, idelay)) + &
+             (ssk * (this%dbgeo(n, idelay) + zbot - this%dbpcs(n, idelay)) +    &
               sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay)))
       end if
       if (n == 1 .or. n == this%ndelaycells) then
@@ -3856,6 +3882,7 @@ contains
     real(DP) :: sske
     real(DP) :: ssk
     real(DP) :: es
+    real(DP) :: es0
     real(DP) :: denom
     real(DP) :: f
     real(DP) :: fmult
@@ -3874,19 +3901,12 @@ contains
       do n = 1, this%ndelaycells
         dz = this%dbdz(idelay)
         void = this%csub_calc_void(this%dbtheta(n, idelay))
-        fmult = DONE
+        fmult = dz
         call this%csub_delay_calc_ssksske(ib, n, ssk, sske)
         if (this%igeocalc == 0) then
           v1 = ssk * (this%dbpcs(n, idelay) - this%dbh(n, idelay))
           v2 = sske * (this%dbh0(n, idelay) - this%dbpcs(n, idelay))
-          fmult = dz
         else
-          denom = (DONE + void) * this%dbes0(n, idelay)
-          if (denom /= DZERO) then
-            f = dz / denom
-          else
-            f = DZERO
-          end if
           v1 = ssk * (this%dbes(n, idelay) - this%dbpcs(n, idelay))
           v2 = sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay))
         end if
@@ -3964,7 +3984,6 @@ contains
     real(DP) :: ssk
     real(DP) :: es
     real(DP) :: denom
-    real(DP) :: f
     real(DP) :: v
     real(DP) :: void
 ! ------------------------------------------------------------------------------
@@ -3982,17 +4001,11 @@ contains
         if (this%igeocalc == 0) then
           v = ssk * (this%dbpcs(n, idelay) - this%dbh(n, idelay))
           v = v + sske * (this%dbh0(n, idelay) - this%dbpcs(n, idelay))
-          v = v * dz
         else
-          denom = (DONE + void) * this%dbes0(n, idelay)
-          if (denom /= DZERO) then
-            f = dz / denom
-          else
-            f = DZERO
-          end if
           v = ssk * (this%dbes(n, idelay) - this%dbpcs(n, idelay))
           v = v + sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay))
         end if
+        v = v * dz
         comp = comp + v
       end do
     end if
