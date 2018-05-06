@@ -688,6 +688,7 @@
 | GWT | OC | PERIOD | LAST | KEYWORD | keyword to indicate save for last step in period. This keyword may be used in conjunction with other keywords to print or save results for multiple time steps. |
 | GWT | OC | PERIOD | FREQUENCY | INTEGER | save at the specified time step frequency. This keyword may be used in conjunction with other keywords to print or save results for multiple time steps. |
 | GWT | OC | PERIOD | STEPS | INTEGER (<NSTP) | save for each step specified in STEPS. This keyword may be used in conjunction with other keywords to print or save results for multiple time steps. |
+| GWT | SSM | OPTIONS | PRINT_FLOWS | KEYWORD | keyword to indicate that the list of SSM flow rates will be printed to the listing file for every stress period time step in which ``BUDGET PRINT'' is specified in Output Control.  If there is no Output Control option and ``PRINT\_FLOWS'' is specified, then flow rates are printed for the last time step of each stress period. |
 | GWT | SSM | SOURCES | PNAME | STRING | name of the package for which an auxiliary variable contains a source concentration. |
 | GWT | SSM | SOURCES | COMPONENT | INTEGER | species number. |
 | GWT | SSM | SOURCES | AUXNAME | STRING | name of the auxiliary variable in the package PNAME that contains the source concentration for the COMPONENT species. |
