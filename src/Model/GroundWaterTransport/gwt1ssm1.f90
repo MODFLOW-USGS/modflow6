@@ -562,6 +562,9 @@ module GwtSsmModule
     character(len=*), parameter :: fmtiprflow =                                &
       "(4x,'SSM FLOW INFORMATION WILL BE PRINTED TO LISTING FILE " // &
       "WHENEVER ICBCFL IS NOT ZERO.')"
+    character(len=*), parameter :: fmtisvflow =                                &
+      "(4x,'CELL-BY-CELL FLOW INFORMATION WILL BE SAVED TO BINARY FILE " //    &
+      "WHENEVER ICBCFL IS NOT ZERO.')"
 ! ------------------------------------------------------------------------------
     !
     ! -- get options block
@@ -578,6 +581,9 @@ module GwtSsmModule
           case ('PRINT_FLOWS')
             this%iprflow = 1
             write(this%iout, fmtiprflow)
+          case ('SAVE_FLOWS')
+            this%ipakcb = -1
+            write(this%iout, fmtisvflow)
           case default
             write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN SSM OPTION: ',         &
                                      trim(keyword)
