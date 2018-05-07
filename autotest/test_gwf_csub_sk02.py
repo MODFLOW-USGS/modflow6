@@ -350,7 +350,7 @@ def eval_comp(sim):
 
     # MODFLOW-2005 total compaction results
     cpth = cmppths[sim.idxsim]
-    fn = '{}.total_comp.hds'.format(os.path.basename(sim.name))
+    fn = '{}.swt_total_comp.hds'.format(os.path.basename(sim.name))
     fpth = os.path.join(sim.simpath, cpth, fn)
     try:
         sobj = flopy.utils.HeadFile(fpth, text='LAYER COMPACTION')

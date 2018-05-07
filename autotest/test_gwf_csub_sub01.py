@@ -20,7 +20,7 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['ibcsub01a', 'ibcsub01b']
+ex = ['csub_sub01a', 'csub_sub01b']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
@@ -156,6 +156,7 @@ def get_model(idx, dir):
     # ibc files
     opth = '{}.ibc.obs'.format(name)
     ibc = flopy.mf6.ModflowGwfcsub(gwf, head_based=True,
+                                   interbed_stress_offset=True,
                                    ndelaycells=ndcell[idx],
                                    delay_full_cell=fullcell[idx],
                                    obs_filerecord=opth,

@@ -21,18 +21,18 @@ from framework import testing_framework
 from simulation import Simulation
 
 ex = ['csub_wtgeoa', 'csub_wtgeob',
-      'csub_wtgeoc']  # , 'csub_wtgeod', 'csub_wtgeoe']
+      'csub_wtgeoc'] #, 'csub_wtgeod'] #, 'csub_wtgeoe']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
 constantcv = [True for idx in range(len(exdirs))]
 
 cmppth = 'mfnwt'
-tops = [0., 0., 150., 150., 150.]
+tops = [0., 0., 150., 0., 150.]
 ump = [None, None, True, None, True]
 iump = [0, 0, 1, 0, 1]
 tw = [0. for idx in range(len(exdirs))]
-headformulation = [True, False, False, False, False]
+headformulation = [True, False, False, True, False]
 delay = [False, False, False, True, True]
 
 ddir = 'data'
@@ -136,7 +136,7 @@ void = 0.82
 preconhead = -7.
 theta = void / (1. + void)
 sw = 4.65120000e-10 * 9806.65000000 * theta
-sy = [0.1, 0., 0.]
+sy = 0. #[0.1, 0., 0.]
 ske = [6e-6, 3e-6, 6e-6]
 skv = [6e-4, 3e-4, 6e-4]
 ske_cr = [ske[0], 0, ske[-1]]
@@ -273,11 +273,15 @@ def get_model(idx, dir):
         if b <= 0.:
             continue
         if delay[idx]:
+            bb = dz[0]
+            rnbt = rnb[0]
             ndb += 1
             nmz = 1
             nz.append(1)
-            ldn.append[k]
+            ldn.append(k)
         else:
+            bb = b
+            rnbt = 1
             nndb += 1
             ln.append(k)
             thickib0.append(b)
@@ -297,7 +301,7 @@ def get_model(idx, dir):
                 # no delay beds
                 ibcno += 1
                 d = [ibcno, (k, i, j), cdelays, pcs[k],
-                     b, 1., skv[k], ske[k], theta, kv, 0.]
+                     bb, rnbt, skv[k], ske[k], theta, kv, 0.]
                 sub6.append(d)
 
     # add skeletal component
@@ -321,8 +325,8 @@ def get_model(idx, dir):
     # water compressibility cannot be compared for cases where the material
     # properties are adjusted since the porosity changes in mf6
     if iump[idx] == 0:
-        beta = 4.6512e-10
-        wc = sw
+        beta = 0. #4.6512e-10
+        wc = 0. #sw
     else:
         beta = 0.
         wc = 0.
@@ -493,13 +497,28 @@ def eval_comp(sim):
 
     # MODFLOW-2005 total compaction results
     cpth = cmppth
-    fn = '{}.total_comp.hds'.format(os.path.basename(sim.name))
+    fn2 = None
+    if headformulation[sim.idxsim]:
+        fn = '{}.total_comp.hds'.format(os.path.basename(sim.name))
+    else:
+        fn = '{}.swt_total_comp.hds'.format(os.path.basename(sim.name))
+        if delay[sim.idxsim]:
+            fn2 = '{}.total_comp.hds'.format(os.path.basename(sim.name))
     fpth = os.path.join(sim.simpath, cpth, fn)
     try:
         sobj = flopy.utils.HeadFile(fpth, text='LAYER COMPACTION')
         tc0 = sobj.get_ts((2, 4, 4))
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
+    # add compaction from delay bed
+    if fn2 is not None:
+        fpth = os.path.join(sim.simpath, cpth, fn2)
+        try:
+            sobj = flopy.utils.HeadFile(fpth, text='LAYER COMPACTION')
+            v = sobj.get_ts((2, 4, 4))
+            tc0[:, 1] += v[:, 1]
+        except:
+            assert False, 'could not load data from "{}"'.format(fpth)
 
     # calculate maximum absolute error
     diff = tc['TCOMP3'] - tc0[:, 1]

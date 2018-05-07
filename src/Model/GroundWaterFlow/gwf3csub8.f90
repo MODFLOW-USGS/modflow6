@@ -2433,6 +2433,7 @@ contains
     real(DP) :: bot
     real(DP) :: void
     real(DP) :: znode
+    real(DP) :: hcell
 ! ------------------------------------------------------------------------------
     !
     ! -- update geostatic load calculation
@@ -2466,8 +2467,13 @@ contains
       n = this%nodelist(i)
       pcs = this%pcs(i)
       if (this%igeocalc == 0) then
-        if (this%sk_es(n) < pcs) then
-          pcs = this%sk_es(n)
+        if (this%ibedstressoff == 1) then
+          pcs = this%sk_es(n) + pcs
+        else
+          !if (this%sk_es(n) < pcs) then
+          if (pcs > this%sk_es(n)) then
+            pcs = this%sk_es(n)
+          end if
         end if
       else
         ! -- transfer initial preconsolidation stress (and apply offset if needed)
@@ -2485,13 +2491,25 @@ contains
       if (idelay > 0) then
         do j = 1, this%ndelaycells
           if (this%igeocalc == 0) then
+            this%dbpcs(j, idelay) = this%pcs(i)
           else
             this%dbpcs(j, idelay) = this%pcs(i)
           end if
           this%dbes0(j, idelay) = this%sk_es(n)
+        end do 
+        !
+        ! -- fill delay bed head with aquifer head or offset from aquifer head
+        hcell = hnew(n)
+        do j = 1, this%ndelaycells
+          if (this%ibedstressoff == 1) then
+            this%dbh(j, idelay) = hcell + this%dbh(j, idelay)
+          else
+            this%dbh(j, idelay) = hcell
+          end if
+          this%dbh0(j, idelay) = this%dbh(j, idelay)
         end do            
       end if
-          
+      !    
       ! scale cr and cc
       bot = this%dis%bot(n)
       if (this%istoragec == 1) then
