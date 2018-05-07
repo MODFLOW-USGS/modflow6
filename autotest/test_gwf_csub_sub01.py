@@ -20,6 +20,9 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
+paktest = 'csub'
+budtol = 1e-2
+
 ex = ['csub_sub01a', 'csub_sub01b']
 exdirs = []
 for s in ex:
@@ -38,16 +41,22 @@ travis = [False for idx in range(len(exdirs))]
 # set replace_exe to None to use default executable
 replace_exe = {'mf2005': 'mf2005devdbl'}
 
-# static modeling
+# static model data
+# spatial discretization
 nlay, nrow, ncol = 1, 1, 3
+shape3d = (nlay, nrow, ncol)
+size3d = nlay * nrow * ncol
+delr, delc = 1., 1.
+top = 0.
+botm = [-100.]
+
+# temporal discretization
 nper = 1
 perlen = [1000. for i in range(nper)]
 nstp = [100 for i in range(nper)]
 tsmult = [1.05 for i in range(nper)]
 steady = [False for i in range(nper)]
-delr, delc = 1., 1.
-top = 0.
-botm = [-100.]
+
 strt = 0.
 strt6 = 1.
 hnoflo = 1e30
@@ -156,7 +165,9 @@ def get_model(idx, dir):
     # ibc files
     opth = '{}.ibc.obs'.format(name)
     ibc = flopy.mf6.ModflowGwfcsub(gwf, head_based=True,
+                                   save_flows=True,
                                    interbed_stress_offset=True,
+                                   time_weight=0.,
                                    ndelaycells=ndcell[idx],
                                    delay_full_cell=fullcell[idx],
                                    obs_filerecord=opth,
@@ -164,7 +175,7 @@ def get_model(idx, dir):
                                    beta=0., ske_cr=0.0,
                                    packagedata=sub6)
     orecarray = {}
-    orecarray['ibc_obs.csv'] = [('tcomp', 'total-compaction', (0, 0, 1))]
+    orecarray['csub_obs.csv'] = [('tcomp', 'total-compaction', (0, 0, 1))]
     ibc_obs_package = flopy.mf6.ModflowUtlobs(gwf,
                                               fname=opth,
                                               parent_file=ibc, digits=10,
@@ -178,9 +189,10 @@ def get_model(idx, dir):
                                 headprintrecord=[
                                     ('COLUMNS', 10, 'WIDTH', 15,
                                      'DIGITS', 6, 'GENERAL')],
-                                saverecord=[('HEAD', 'LAST')],
-                                printrecord=[('HEAD', 'LAST'),
-                                             ('BUDGET', 'LAST')])
+                                saverecord=[('HEAD', 'ALL'),
+                                            ('BUDGET', 'ALL')],
+                                printrecord=[('HEAD', 'ALL'),
+                                             ('BUDGET', 'ALL')])
 
     # build MODFLOW-2005 files
     ws = os.path.join(dir, 'mf2005')
@@ -202,7 +214,10 @@ def get_model(idx, dir):
                                    dhc=ini_stress, dstart=ini_stress,
                                    hc=ini_stress, sfe=sfe, sfv=sfv,
                                    ids15=ds15, ids16=ds16)
-    oc = flopy.modflow.ModflowOc(mc, stress_period_data=None)
+    oc = flopy.modflow.ModflowOc(mc, stress_period_data=None,
+                                 save_every=1,
+                                 save_types=['save head', 'save budget',
+                                             'print budget'])
     pcg = flopy.modflow.ModflowPcg(mc, mxiter=nouter, iter1=ninner,
                                    hclose=hclose, rclose=rclose,
                                    relax=relax, ihcofadd=1)
@@ -214,7 +229,7 @@ def eval_sub(sim):
     print('evaluating subsidence...')
 
     # MODFLOW 6 total compaction results
-    fpth = os.path.join(sim.simpath, 'ibc_obs.csv')
+    fpth = os.path.join(sim.simpath, 'csub_obs.csv')
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=',')
     except:
@@ -235,6 +250,23 @@ def eval_sub(sim):
     dtol = 1e-6
     msg = 'maximum absolute total-compaction difference ({}) '.format(diffmax)
 
+    # write summary
+    fpth = os.path.join(sim.simpath,
+                        '{}.comp.cmp.out'.format(os.path.basename(sim.name)))
+    f = open(fpth, 'w')
+    line = '{:>15s}'.format('TOTIM')
+    line += ' {:>15s}'.format('CSUB')
+    line += ' {:>15s}'.format('MF')
+    line += ' {:>15s}'.format('DIFF')
+    f.write(line + '\n')
+    for i in range(diff.shape[0]):
+        line = '{:15g}'.format(tc0[i, 0])
+        line += ' {:15g}'.format(tc['TCOMP'][i])
+        line += ' {:15g}'.format(tc0[i, 1])
+        line += ' {:15g}'.format(diff[i])
+        f.write(line + '\n')
+    f.close()
+
     if diffmax > dtol:
         sim.success = False
         msg += 'exceeds {}'.format(dtol)
@@ -243,7 +275,107 @@ def eval_sub(sim):
         sim.success = True
         print('    ' + msg)
 
+    # compare budgets
+    cbc_compare(sim)
+
     return
+
+# compare cbc and lst budgets
+def cbc_compare(sim):
+    # open cbc file
+    fpth = os.path.join(sim.simpath,
+                        '{}.cbc'.format(os.path.basename(sim.name)))
+    cobj = flopy.utils.CellBudgetFile(fpth, precision='double')
+
+    # build list of cbc data to retrieve
+    avail = cobj.get_unique_record_names()
+    cbc_bud = []
+    bud_lst = []
+    for t in avail:
+        if isinstance(t, bytes):
+            t = t.decode()
+        t = t.strip()
+        if paktest in t.lower():
+            cbc_bud.append(t)
+            bud_lst.append('{}_IN'.format(t))
+            bud_lst.append('{}_OUT'.format(t))
+
+    # get results from listing file
+    fpth = os.path.join(sim.simpath,
+                        '{}.lst'.format(os.path.basename(sim.name)))
+    budl = flopy.utils.Mf6ListBudget(fpth)
+    names = list(bud_lst)
+    d0 = budl.get_budget(names=names)[0]
+    dtype = d0.dtype
+    nbud = d0.shape[0]
+    d = np.recarray(nbud, dtype=dtype)
+    for key in bud_lst:
+        d[key] = 0.
+
+
+    # get data from cbc dile
+    kk = cobj.get_kstpkper()
+    times = cobj.get_times()
+    for idx, (k, t) in enumerate(zip(kk, times)):
+        for text in cbc_bud:
+            qin = 0.
+            qout = 0.
+            v = cobj.get_data(kstpkper=k, text=text)[0]
+            if isinstance(v, np.recarray):
+                vt = np.zeros(size3d, dtype=np.float)
+                for jdx, node in enumerate(v['node']):
+                    vt[node - 1] += v['q'][jdx]
+                v = vt.reshape(shape3d)
+            for kk in range(v.shape[0]):
+                for ii in range(v.shape[1]):
+                    for jj in range(v.shape[2]):
+                        vv = v[kk, ii, jj]
+                        if vv < 0.:
+                            qout -= vv
+                        else:
+                            qin += vv
+            d['totim'][idx] = t
+            d['time_step'][idx] = k[0]
+            d['stress_period'] = k[1]
+            key = '{}_IN'.format(text)
+            d[key][idx] = qin
+            key = '{}_OUT'.format(text)
+            d[key][idx] = qout
+
+    diff = np.zeros((nbud, len(bud_lst)), dtype=np.float)
+    for idx, key in enumerate(bud_lst):
+        diff[:, idx] = d0[key] - d[key]
+    diffmax = np.abs(diff).max()
+    msg = 'maximum absolute total-budget difference ({}) '.format(diffmax)
+
+    # write summary
+    fpth = os.path.join(sim.simpath,
+                        '{}.bud.cmp.out'.format(os.path.basename(sim.name)))
+    f = open(fpth, 'w')
+    for i in range(diff.shape[0]):
+        if i == 0:
+            line = '{:>10s}'.format('TIME')
+            for idx, key in enumerate(bud_lst):
+                line += '{:>25s}'.format(key + '_LST')
+                line += '{:>25s}'.format(key + '_CBC')
+                line += '{:>25s}'.format(key + '_DIF')
+            f.write(line + '\n')
+        line = '{:10g}'.format(d['totim'][i])
+        for idx, key in enumerate(bud_lst):
+            line += '{:25g}'.format(d0[key][i])
+            line += '{:25g}'.format(d[key][i])
+            line += '{:25g}'.format(diff[i, idx])
+        f.write(line + '\n')
+    f.close()
+
+    if diffmax > budtol:
+        sim.success = False
+        msg += 'exceeds {}'.format(dtol)
+        assert diffmax < dtol, msg
+    else:
+        sim.success = True
+        print('    ' + msg)
+
 
 
 # - No need to change any code below

@@ -188,7 +188,6 @@ module GwfCsubModule
     procedure, private :: csub_delay_calc_ssksske
     procedure, private :: csub_delay_calc_comp
     procedure, private :: csub_delay_calc_dstor
-    procedure, private :: csub_delay_calc_err
     procedure, private :: csub_delay_fc
     procedure, private :: csub_delay_sln
     procedure, private :: csub_delay_assemble
@@ -359,7 +358,6 @@ contains
     real(DP) :: rho2
     real(DP) :: tled
     real(DP) :: tledm
-    real(DP) :: delt_sto
     real(DP) :: es0
     real(DP) :: top
     real(DP) :: bot
@@ -378,7 +376,6 @@ contains
     real(DP) :: stoi
     real(DP) :: err
     real(DP) :: qaq
-    real(DP) :: dsto
     real(DP) :: qaqa
     real(DP) :: qaqrhs
     real(DP) :: void
@@ -514,7 +511,6 @@ contains
               stoe = comp
             end if
           end if
-          delt_sto = comp * area * tledm
           stoe = stoe * area
           stoi = stoi * area
           this%storagee(i) = stoe * tledm
@@ -539,8 +535,6 @@ contains
         else
           h = hnew(n)
           call this%csub_delay_calc_dstor(i, stoe, stoi)
-          dsto = (stoe + stoi) * tledm
-          delt_sto = (stoe + stoi) * area * this%rnb(i) * tledm
           this%storagee(i) = stoe * area * this%rnb(i) * tledm
           this%storagei(i) = stoi * area * this%rnb(i) * tledm
           !
@@ -3621,12 +3615,12 @@ contains
     topaq = this%dis%top(node)
     botaq = this%dis%bot(node)
     dzhalf = DHALF * this%dbdz(idelay)
-    sgm = this%sgm(node)
-    sgs = this%sgs(node)
     top = this%dbz(1, idelay) + dzhalf
     !
     ! -- calculate the geostatic load in the cell at the top of the interbed
     if (this%igeocalc > 0) then
+      sgm = this%sgm(node)
+      sgs = this%sgs(node)
       if (hcell > top) then
         sadd = (top - botaq) * sgs
       else if (hcell < botaq) then
@@ -3699,6 +3693,8 @@ contains
     ! -- calculate factor for the head-based case
     if (this%igeocalc == 0) then
       f = DONE
+      !
+      ! -- scale factor for half-cell problem
       if (this%idbhalfcell /= 0) then
         if (n == 1) then
           f = DHALF
@@ -3776,7 +3772,7 @@ contains
     real(DP) :: c
     real(DP) :: c2
     real(DP) :: c3
-    real(DP) :: f
+    real(DP) :: fmult
     real(DP) :: sske
     real(DP) :: ssk
     real(DP) :: z
@@ -3790,31 +3786,38 @@ contains
     ! -- initialize variables
     idelay = this%idelay(ib)
     node = this%nodelist(ib)
+    dz = this%dbdz(idelay)
+    fmult = dz / delt
     !
     !
     do n = 1, this%ndelaycells
-      dz = this%dbdz(idelay)
       c = this%kv(ib) / dz
       c2 = DTWO * c
       c3 = DTHREE * c
-      f = dz / delt
+      !
+      ! -- calculate  ssk and sske
       call this%csub_delay_calc_ssksske(ib, n, ssk, sske)
+      !
       ! -- diagonal and right hand side
-      aii = -ssk * f
+      aii = -ssk * fmult
       z = this%dbz(n, idelay)
       ztop = z + dz
       zbot = z - dz
       h = this%dbh(n, idelay)
       if (this%igeocalc == 0) then
-        r = -f * &
+        r = -fmult * &
              (ssk * (this%dbpcs(n, idelay)) + &
               sske * (this%dbh0(n, idelay) - this%dbpcs(n, idelay)))
       else
-        r = -f * &
+        r = -fmult * &
              (ssk * (this%dbgeo(n, idelay) + zbot - this%dbpcs(n, idelay)) +    &
               sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay)))
       end if
+      !
+      ! -- add connection to the gwf cell
       if (n == 1 .or. n == this%ndelaycells) then
+        !
+        ! -- gwf cell is connected to n=ndelaycell for half cell connection 
         if (this%idbhalfcell == 0 .or. n == this%ndelaycells) then
             aii = aii - c3
             r = r - c2 * hcell
@@ -3824,11 +3827,13 @@ contains
       else
         aii = aii - c2
       end if
+      !
       ! -- off diagonals
       ! -- lower
       if (n > 1) then
         this%dbal(n) = c
       end if
+      !
       ! -- upper
       if (n < this%ndelaycells) then
         this%dbau(n) = c
@@ -3881,45 +3886,37 @@ contains
     return
   end subroutine csub_delay_solve
 
-  subroutine csub_delay_calc_dstor(this, ib, rhse, rhsi)
+  subroutine csub_delay_calc_dstor(this, ib, stoe, stoi)
 ! ******************************************************************************
 ! csub_delay_calc_dstor -- Calculate change in storage in a delay interbed.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: ib
-    real(DP), intent(inout) :: rhse
-    real(DP), intent(inout) :: rhsi
+    real(DP), intent(inout) :: stoe
+    real(DP), intent(inout) :: stoi
     ! -- local variables
     integer(I4B) :: idelay
     integer(I4B) :: n
-    real(DP) :: comp
-    real(DP) :: dz
     real(DP) :: sske
     real(DP) :: ssk
-    real(DP) :: es
-    real(DP) :: es0
-    real(DP) :: denom
-    real(DP) :: f
     real(DP) :: fmult
     real(DP) :: v1
     real(DP) :: v2
-    real(DP) :: void
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
     idelay = this%idelay(ib)
-    rhse = DZERO
-    rhsi = DZERO
+    stoe = DZERO
+    stoi = DZERO
     !
     !
     if (this%thick(ib) > DZERO) then
+      fmult = this%dbfact * this%dbdz(idelay)
       do n = 1, this%ndelaycells
-        dz = this%dbdz(idelay)
-        void = this%csub_calc_void(this%dbtheta(n, idelay))
-        fmult = dz
         call this%csub_delay_calc_ssksske(ib, n, ssk, sske)
         if (this%igeocalc == 0) then
           v1 = ssk * (this%dbpcs(n, idelay) - this%dbh(n, idelay))
@@ -3929,10 +3926,10 @@ contains
           v2 = sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay))
         end if
         if (ssk /= sske) then
-          rhsi = rhsi + v1 * fmult
-          rhse = rhse + v2 * fmult
+          stoi = stoi + v1 * fmult
+          stoe = stoe + v2 * fmult
         else
-          rhse = rhse + (v1 + v2) * fmult
+          stoe = stoe + (v1 + v2) * fmult
         end if
       end do
     end if
@@ -3940,49 +3937,6 @@ contains
     ! -- return
     return
   end subroutine csub_delay_calc_dstor
-
-  subroutine csub_delay_calc_err(this, ib, hcell, err)
-! ******************************************************************************
-! csub_delay_calc_err -- Calculate error in a delay interbed.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(GwfCsubType), intent(inout) :: this
-    integer(I4B), intent(in) :: ib
-    real(DP), intent(in) :: hcell
-    real(DP), intent(inout) :: err
-    ! -- local variables
-    integer(I4B) :: idelay
-    integer(I4B) :: n
-    real(DP) :: hcof
-    real(DP) :: v
-    real(DP) :: void
-! ------------------------------------------------------------------------------
-    !
-    ! -- initialize variables
-    idelay = this%idelay(ib)
-    err = DZERO
-    !
-    !
-    if (this%thick(ib) > DZERO) then
-      call this%csub_delay_assemble(ib, hcell)
-      do n = 1, this%ndelaycells
-        v = this%dbad(n) * this%dbh(n, idelay)
-        if (n > 1) then
-          v = v + this%dbal(n) * this%dbh(n-1, idelay)
-        end if
-        if (n < this%ndelaycells) then
-          v = v + this%dbau(n) * this%dbh(n+1, idelay)
-        end if
-        v = v - this%dbrhs(n)
-        err = err + v
-      end do
-    end if
-    !
-    ! -- return
-    return
-  end subroutine csub_delay_calc_err
 
   subroutine csub_delay_calc_comp(this, ib)
 ! ******************************************************************************
@@ -3997,13 +3951,10 @@ contains
     integer(I4B) :: idelay
     integer(I4B) :: n
     real(DP) :: comp
-    real(DP) :: dz
     real(DP) :: sske
     real(DP) :: ssk
-    real(DP) :: es
-    real(DP) :: denom
+    real(DP) :: fmult
     real(DP) :: v
-    real(DP) :: void
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
@@ -4012,9 +3963,8 @@ contains
     !
     !
     if (this%thick(ib) > DZERO) then
+      fmult = this%dbdz(idelay) * this%dbfact
       do n = 1, this%ndelaycells
-        dz = this%dbdz(idelay)
-        void = this%csub_calc_void(this%dbtheta(n, idelay))
         call this%csub_delay_calc_ssksske(ib, n, ssk, sske)
         if (this%igeocalc == 0) then
           v = ssk * (this%dbpcs(n, idelay) - this%dbh(n, idelay))
@@ -4023,13 +3973,10 @@ contains
           v = ssk * (this%dbes(n, idelay) - this%dbpcs(n, idelay))
           v = v + sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay))
         end if
-        v = v * dz
+        v = v * fmult
         comp = comp + v
       end do
     end if
-    !
-    ! -- adjust compaction
-    comp = comp * this%dbfact
     !
     ! -- fill compaction
     this%comp(ib) = comp

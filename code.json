@@ -1,24 +1,24 @@
 [
     {
         "status": "Release Candidate", 
-        "languages": [
-            "Fortran2008"
-        ], 
+        "downloadURL": "https://code.usgs.gov/usgs/modflow/modflow6/archive/master.zip", 
         "repositoryURL": "https://code.usgs.gov/usgs/modflow/modflow6.git", 
-        "laborHours": -1, 
+        "disclaimerURL": "https://code.usgs.gov/usgs/modflow/modflow6/blob/master/DISCLAIMER.md", 
         "description": "MODFLOW is the USGS's modular hydrologic model. MODFLOW is considered an international standard for simulating and predicting groundwater conditions and groundwater/surface-water interactions.", 
         "tags": [
             "MODFLOW", 
             "groundwater model"
         ], 
-        "name": "modflow6", 
-        "downloadURL": "https://code.usgs.gov/usgs/modflow/modflow6/archive/master.zip", 
+        "vcs": "git", 
+        "languages": [
+            "Fortran2008"
+        ], 
         "contact": {
             "name": "Christian D. Langevin", 
             "email": "langevin@usgs.gov"
         }, 
-        "vcs": "git", 
-        "version": "6.0.2.98", 
+        "laborHours": -1, 
+        "version": "6.0.2.99", 
         "date": {
             "metadataLastUpdated": "2018-05-07"
         }, 
@@ -33,6 +33,6 @@
             "usageType": "openSource"
         }, 
         "homepageURL": "https://code.usgs.gov/usgs/modflow/modflow6/", 
-        "disclaimerURL": "https://code.usgs.gov/usgs/modflow/modflow6/blob/master/DISCLAIMER.md"
+        "name": "modflow6"
     }
 ]
