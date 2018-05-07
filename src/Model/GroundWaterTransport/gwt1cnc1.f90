@@ -280,7 +280,7 @@ contains
     ! -- If cell-by-cell flows will be saved as a list, write header.
     if(ibinun /= 0) then
       naux = this%naux
-      call this%dis%record_srcdst_list_header(this%text, this%name_model,  &
+      call this%dis%record_srcdst_list_header(this%text, this%name_model,      &
                   this%name_model, this%name_model, this%name, naux,           &
                   this%auxname, ibinun, this%nbound, this%iout)
     endif

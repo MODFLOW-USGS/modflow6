@@ -1,6 +1,4 @@
 ! todo
-  ! TVD
-  ! dispersion, xt3d
   ! transient flow case
   ! newton-raphson (head below bottom)
   ! transport for SFR, LAK, MAW, UZF, MVR
