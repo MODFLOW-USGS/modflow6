@@ -20,6 +20,7 @@ module GwtModule
   use GwtStoModule,                only: GwtStoType
   use GwtSsmModule,                only: GwtSsmType
   use GwtOcModule,                 only: GwtOcType
+  use GwtObsModule,                only: GwtObsType, gwt_obs_cr
   use BudgetModule,                only: BudgetType
   
   implicit none
@@ -37,6 +38,7 @@ module GwtModule
     type(GwtDspType),               pointer :: dsp     => null()                ! dispersion package
     type(GwtSsmType),               pointer :: ssm     => null()                ! source sink mixing package
     type(GwtOcType),                pointer :: oc      => null()                ! output control package
+    type(GwtObsType),               pointer :: obs     => null()                ! observation package
     type(BudgetType),               pointer :: budget  => null()                ! budget object
     integer(I4B),                   pointer :: inic    => null()                ! unit number IC
     integer(I4B),                   pointer :: infmi   => null()                ! unit number FMI
@@ -245,7 +247,7 @@ module GwtModule
     call dsp_cr(this%dsp, this%name, this%indsp, this%iout, this%fmi)
     call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi)
     call oc_cr(this%oc, this%name, this%inoc, this%iout)
-    !call gwf_obs_cr(this%obs, this%inobs)
+    call gwt_obs_cr(this%obs, this%inobs)
 
     !call npf_cr(this%npf, this%name, this%innpf, this%iout)
     !call xt3d_cr(this%xt3d, this%name, this%innpf, this%iout)
@@ -313,7 +315,7 @@ module GwtModule
     enddo
     !
     ! -- Store information needed for observations
-    !call this%obs%obs_df(this%iout, this%name, 'GWT', this%dis)
+    call this%obs%obs_df(this%iout, this%name, 'GWT', this%dis)
     !
     ! -- return
     return
@@ -410,7 +412,7 @@ module GwtModule
     if(this%indsp > 0) call this%dsp%dsp_ar(this%dis, this%ibound,             &
                                             this%sto%porosity)
     if(this%inssm > 0) call this%ssm%ssm_ar(this%dis, this%ibound)
-    !if(this%inobs > 0) call this%obs%gwf_obs_ar(this%ic, this%x, this%flowja)
+    if(this%inobs > 0) call this%obs%gwt_obs_ar(this%ic, this%x, this%flowja)
     !
     ! -- Call dis_ar to write binary grid file
     !call this%dis%dis_ar(this%npf%icelltype)
@@ -507,7 +509,7 @@ module GwtModule
     enddo
     !
     ! -- Push simulated values to preceding time/subtime step
-    !call this%obs%obs_ad()
+    call this%obs%obs_ad()
     !
     ! -- return
     return
@@ -696,7 +698,7 @@ module GwtModule
     endif
     !
     ! -- Clear obs
-    !call this%obs%obs_bd_clear()
+    call this%obs%obs_bd_clear()
     !
     ! -- Boundary packages calculate budget and total flows to model budget
     do ip = 1, this%bndlist%Count()
@@ -708,7 +710,7 @@ module GwtModule
     ! -- Calculate and write simulated values for observations
     if(iprobs /= 0) then
       if (icnvg > 0) then
-        !call this%obs%obs_bd()
+        call this%obs%obs_bd()
       endif
     endif
     !
@@ -819,7 +821,7 @@ module GwtModule
       !
       if (ibudfl /= 0) then
         !
-        ! -- gwf model budget
+        ! -- gwt model budget
         call this%budget%budget_ot(kstp, kper, this%iout)
       end if
     end if
@@ -828,7 +830,7 @@ module GwtModule
     if(ipflg == 1) call tdis_ot(this%iout)
     !
     ! -- OBS output
-!    call this%obs%obs_ot()
+    call this%obs%obs_ot()
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_ot_obs()
@@ -861,14 +863,14 @@ module GwtModule
     call this%sto%sto_da()
     call this%budget%budget_da()
     call this%oc%oc_da()
-!    call this%obs%obs_da()
+    call this%obs%obs_da()
     !
     ! -- Internal package objects
     deallocate(this%dis)
     deallocate(this%ic)
     deallocate(this%sto)
     deallocate(this%budget)
-!    deallocate(this%obs)
+    deallocate(this%obs)
     deallocate(this%oc)
     !
     ! -- Boundary packages

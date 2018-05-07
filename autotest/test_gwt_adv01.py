@@ -182,6 +182,20 @@ def get_model(idx, dir):
                                 printrecord=[('CONCENTRATION', 'LAST'),
                                              ('BUDGET', 'LAST')])
 
+    obs_data = {'conc_obs.csv': [
+                ('(1-1-10)', 'CONCENTRATION', (0, 0, 9)),
+                ('(1-1-50)', 'CONCENTRATION', (0, 0, 49))],
+                'flow_obs.csv': [
+                ('c10-c11', 'FLOW-JA-FACE', (0, 0, 9), (0, 0, 10)),
+                ('c50-c51', 'FLOW-JA-FACE', (0, 0, 49), (0, 0, 50)),
+                ('c99-c100', 'FLOW-JA-FACE', (0, 0, 98), (0, 0, 99)),
+                ]}
+
+    obs_package = flopy.mf6.ModflowUtlobs(gwt, pname='conc_obs',
+                                          fname='{}.obs'.format(gwtname),
+                                          digits=10, print_input=True,
+                                          continuous=obs_data)
+
     # GWF GWT exchange
     gwfgwt = flopy.mf6.ModflowGwfgwt(sim, exgtype='GWF6-GWT6',
                                      exgmnamea=gwfname, exgmnameb=gwtname,
