@@ -73,7 +73,7 @@ module OutputControlData
     ! -- formats
     character(len=*), parameter :: fmtocsaveerr =                              &
       "(1X,'REQUESTING TO SAVE ',A,' BUT ',A,' SAVE FILE NOT SPECIFIED. ',     &
-           A,' SAVE FILE MUST BE SPECIFIED IN OUTPUT CONTROL OPTIONS.')"
+       &A,' SAVE FILE MUST BE SPECIFIED IN OUTPUT CONTROL OPTIONS.')"
 ! ------------------------------------------------------------------------------
     !
     ! -- Check to make sure save file was specified
@@ -287,8 +287,8 @@ module OutputControlData
     real(DP) :: rval
     ! -- format
     character(len=*),parameter :: fmtocsave = &
-      "(4X,A,' INFORMATION WILL BE WRITTEN TO:',              &
-       /,6X,'UNIT NUMBER: ', I0,/,6X, 'FILE NAME: ', A)"
+      "(4X,A,' INFORMATION WILL BE WRITTEN TO:',                               &
+       &/,6X,'UNIT NUMBER: ', I0,/,6X, 'FILE NAME: ', A)"
 ! ------------------------------------------------------------------------------
     !
     line(:) = linein(:)

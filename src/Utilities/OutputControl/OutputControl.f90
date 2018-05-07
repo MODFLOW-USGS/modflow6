@@ -107,7 +107,7 @@ module OutputControlModule
       "(' ERROR READING OUTPUT CONTROL PERIOD BLOCK: ')"
     character(len=*), parameter :: fmtroc =                                    &
       "(1X,/1X,'OUTPUT CONTROL FOR STRESS PERIOD ',I0,                         &
-        ' IS REPEATED USING SETTINGS FROM A PREVIOUS STRESS PERIOD.')"
+       &' IS REPEATED USING SETTINGS FROM A PREVIOUS STRESS PERIOD.')"
     character(len=*), parameter :: fmtpererr =                                 &
       "(1x,'CURRENT STRESS PERIOD GREATER THAN PERIOD IN OUTPUT CONTROL.')"
     character(len=*), parameter :: fmtpererr2 =                                 &

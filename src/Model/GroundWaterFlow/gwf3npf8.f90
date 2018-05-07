@@ -158,7 +158,7 @@ module GwfNpfModule
     ! -- formats
     character(len=*), parameter :: fmtheader =                                 &
       "(1x, /1x, 'NPF -- NODE PROPERTY FLOW PACKAGE, VERSION 1, 3/30/2015',    &
-        ' INPUT READ FROM UNIT ', i0, //)"
+       &' INPUT READ FROM UNIT ', i0, //)"
     ! -- data
 ! ------------------------------------------------------------------------------
     !
@@ -1682,7 +1682,7 @@ module GwfNpfModule
     ! -- format
     character(len=*),parameter :: fmtcnv = &
     "(1X,'CELL ', A, &
-     ' ELIMINATED BECAUSE ALL HYDRAULIC CONDUCTIVITIES TO NODE ARE 0.')"
+     &' ELIMINATED BECAUSE ALL HYDRAULIC CONDUCTIVITIES TO NODE ARE 0.')"
     character(len=*),parameter :: fmtnct = &
     "(1X,'Negative cell thickness at cell ', A)"
     character(len=*),parameter :: fmtihbe = &
@@ -1943,7 +1943,7 @@ module GwfNpfModule
     ! -- formats
     character(len=*),parameter :: fmtnct =                                     &
       "(1X,/1X,'Negative cell thickness at (layer,row,col)',                   &
-       I4,',',I5,',',I5)"
+       &I4,',',I5,',',I5)"
     character(len=*),parameter :: fmttopbot =                                  &
       "(1X,'Top elevation, bottom elevation:',1P,2G13.5)"
     character(len=*),parameter :: fmttopbotthk =                               &
@@ -2124,7 +2124,7 @@ module GwfNpfModule
     ! -- formats
     character(len=*),parameter :: fmtcnvtn =                                   &
       "(1X,/1X,'CELL CONVERSIONS FOR ITER.=',I0,                               &
-       '  STEP=',I0,'  PERIOD=',I0,'   (NODE or LRC)')"
+       &'  STEP=',I0,'  PERIOD=',I0,'   (NODE or LRC)')"
     character(len=*),parameter :: fmtnode = "(1X,3X,5(A4, A20))"
 ! ------------------------------------------------------------------------------
     ! -- Keep track of cell conversions

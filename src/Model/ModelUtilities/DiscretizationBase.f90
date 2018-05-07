@@ -298,7 +298,6 @@ module BaseDisModule
     integer(I4B), intent(in) :: nodeu
     character(len=*), intent(inout) :: str
     ! -- local
-    character(len=10) :: nstr
 ! ------------------------------------------------------------------------------
     !
     call store_error('Program error: DisBaseType method nodeu_to_string not &
@@ -1072,7 +1071,7 @@ module BaseDisModule
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
     ! -- local
-    integer(I4B) :: il, ir, ic, ncol, nrow, nlay, nval, noder, nodeu
+    integer(I4B) :: il, ir, ic, ncol, nrow, nlay, nval, nodeu
     logical :: found
     character(len=LINELENGTH) :: ermsg
 ! ------------------------------------------------------------------------------

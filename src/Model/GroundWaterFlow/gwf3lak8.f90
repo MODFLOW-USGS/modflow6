@@ -1094,7 +1094,7 @@ contains
     logical :: isfound, endOfBlock
     integer(I4B) :: iu
     integer(I4B) :: n
-    integer(I4B) :: ipos, i
+    integer(I4B) :: ipos
     integer(I4B) :: j
     integer(I4B) :: jmin
     integer(I4B) :: iconn
@@ -3591,10 +3591,6 @@ contains
     integer(I4B) :: j, n
     integer(I4B) :: igwfnode
     real(DP) ::  hlak, blak
-    real(DP) :: dh
-    real(DP) :: dhdr
-    real(DP) :: r0
-    real(DP) :: r
   ! ------------------------------------------------------------------------------
     !!
     !! -- Calculate lak conductance and update package RHS and HCOF
