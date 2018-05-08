@@ -2916,7 +2916,13 @@ module GwfNpfModule
         ayx = ayx + biy(ic) * nix(ic)
       enddo
       !
-      ! -- calculate specific discharge
+      ! -- Calculate specific discharge.  The divide by zero checking below
+      !    is problematic for cells with only one flow, such as can happen
+      !    with triangular cells in corners.  In this case, the resulting
+      !    cell velocity will be calculated as zero.  The method should be
+      !    improved so that edge flows of zero are included in these
+      !    calculations.  But this needs to be done with consideration for LGR
+      !    cases in which flows are submitted from an exchange.
       vx = DZERO
       vy = DZERO
       do ic = 1, nc
