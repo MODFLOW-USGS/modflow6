@@ -552,7 +552,6 @@ module GwfDisvModule
     use ConstantsModule,   only: LINELENGTH, DZERO
     ! -- dummy
     class(GwfDisvType) :: this
-    character(len=LINELENGTH) :: line
     integer(I4B) :: i
     integer(I4B) :: ierr, ival
     logical :: isfound, endOfBlock
@@ -644,7 +643,6 @@ module GwfDisvModule
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(GwfDisvType) :: this
-    character(len=LINELENGTH) :: line
     integer(I4B) :: i, j, ivert, ivert1, ncvert
     integer(I4B) :: ierr, ival
     logical :: isfound, endOfBlock
@@ -844,7 +842,7 @@ module GwfDisvModule
     character(len=LINELENGTH) :: fname
     character(len=*),parameter :: fmtgrdsave = &
       "(4X,'BINARY GRID INFORMATION WILL BE WRITTEN TO:',                      &
-       /,6X,'UNIT NUMBER: ', I0,/,6X, 'FILE NAME: ', A)"
+       &/,6X,'UNIT NUMBER: ', I0,/,6X, 'FILE NAME: ', A)"
 ! ------------------------------------------------------------------------------
     !
     ! -- Initialize
@@ -1947,7 +1945,7 @@ module GwfDisvModule
     ! -- formats
     character(len=*),parameter :: fmthsv = &
       "(1X,/1X,a,' WILL BE SAVED ON UNIT ',I4, &
-       ' AT END OF TIME STEP',I5,', STRESS PERIOD ',I4)"
+       &' AT END OF TIME STEP',I5,', STRESS PERIOD ',I4)"
 ! ------------------------------------------------------------------------------
     !
     ! -- set variables

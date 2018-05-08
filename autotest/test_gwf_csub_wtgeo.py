@@ -21,7 +21,7 @@ from framework import testing_framework
 from simulation import Simulation
 
 ex = ['csub_wtgeoa', 'csub_wtgeob',
-      'csub_wtgeoc'] #, 'csub_wtgeod'] #, 'csub_wtgeoe']
+      'csub_wtgeoc', 'csub_wtgeod'] #, 'csub_wtgeoe']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
@@ -44,14 +44,10 @@ travis = [True for idx in range(len(exdirs))]
 # replace_exe = {'mf2005': 'mf2005devdbl'}
 replace_exe = None
 
-htol = [None for idx in range(len(exdirs))]
+htol = [None, None, None, 0.2, None]
 dtol = 1e-3
 budtol = 1e-2
-
-bud_lst = ['CSUB-AQELASTIC_IN', 'CSUB-AQELASTIC_OUT',
-           'CSUB-WATERCOMP_IN', 'CSUB-WATERCOMP_OUT',
-           'CSUB-ELASTIC_IN', 'CSUB-ELASTIC_OUT',
-           'CSUB-INELASTIC_IN', 'CSUB-INELASTIC_OUT']
+paktest = 'csub'
 
 # static model data
 # temporal discretization
@@ -136,7 +132,7 @@ void = 0.82
 preconhead = -7.
 theta = void / (1. + void)
 sw = 4.65120000e-10 * 9806.65000000 * theta
-sy = 0. #[0.1, 0., 0.]
+sy = [0.1, 0., 0.]
 ske = [6e-6, 3e-6, 6e-6]
 skv = [6e-4, 3e-4, 6e-4]
 ske_cr = [ske[0], 0, ske[-1]]
@@ -148,7 +144,7 @@ facsk = [0.4, 0., 0.4]
 dp = [[kv, ske[0], skv[0]]]
 rnb = [17.718]
 dhc = [preconhead]
-dstart = [0.]
+dstart = [strt]
 dz = [5.08]
 nz = [1]
 
@@ -275,6 +271,7 @@ def get_model(idx, dir):
         if delay[idx]:
             bb = dz[0]
             rnbt = rnb[0]
+            hib = strt
             ndb += 1
             nmz = 1
             nz.append(1)
@@ -282,6 +279,7 @@ def get_model(idx, dir):
         else:
             bb = b
             rnbt = 1
+            hib = -999.
             nndb += 1
             ln.append(k)
             thickib0.append(b)
@@ -301,7 +299,7 @@ def get_model(idx, dir):
                 # no delay beds
                 ibcno += 1
                 d = [ibcno, (k, i, j), cdelays, pcs[k],
-                     bb, rnbt, skv[k], ske[k], theta, kv, 0.]
+                     bb, rnbt, skv[k], ske[k], theta, kv, hib]
                 sub6.append(d)
 
     # add skeletal component
@@ -325,8 +323,8 @@ def get_model(idx, dir):
     # water compressibility cannot be compared for cases where the material
     # properties are adjusted since the porosity changes in mf6
     if iump[idx] == 0:
-        beta = 0. #4.6512e-10
-        wc = 0. #sw
+        beta = 4.6512e-10
+        wc = sw
     else:
         beta = 0.
         wc = 0.
@@ -386,6 +384,7 @@ def get_model(idx, dir):
     # ibc files
     opth = '{}.csub.obs'.format(name)
     csub = flopy.mf6.ModflowGwfcsub(gwf,
+                                    ndelaycells=10,
                                     head_based=head_based,
                                     update_material_properties=ump[idx],
                                     time_weight=tw[idx],
@@ -550,6 +549,32 @@ def eval_comp(sim):
         sim.success = True
         print('    ' + msg)
 
+    # compare budgets
+    cbc_compare(sim)
+
+    return
+
+
+# compare cbc and lst budgets
+def cbc_compare(sim):
+    # open cbc file
+    fpth = os.path.join(sim.simpath,
+                        '{}.cbc'.format(os.path.basename(sim.name)))
+    cobj = flopy.utils.CellBudgetFile(fpth, precision='double')
+
+    # build list of cbc data to retrieve
+    avail = cobj.get_unique_record_names()
+    cbc_bud = []
+    bud_lst = []
+    for t in avail:
+        if isinstance(t, bytes):
+            t = t.decode()
+        t = t.strip()
+        if paktest in t.lower():
+            cbc_bud.append(t)
+            bud_lst.append('{}_IN'.format(t))
+            bud_lst.append('{}_OUT'.format(t))
+
     # get results from listing file
     fpth = os.path.join(sim.simpath,
                         '{}.lst'.format(os.path.basename(sim.name)))
@@ -558,16 +583,11 @@ def eval_comp(sim):
     d0 = budl.get_budget(names=names)[0]
     dtype = d0.dtype
     nbud = d0.shape[0]
-
-    # get results from cbc file
-    cbc_bud = ['CSUB-AQELASTIC', 'CSUB-WATERCOMP',
-               'CSUB-ELASTIC', 'CSUB-INELASTIC']
     d = np.recarray(nbud, dtype=dtype)
     for key in bud_lst:
         d[key] = 0.
-    fpth = os.path.join(sim.simpath,
-                        '{}.cbc'.format(os.path.basename(sim.name)))
-    cobj = flopy.utils.CellBudgetFile(fpth, precision='double')
+
+    # get data from cbc dile
     kk = cobj.get_kstpkper()
     times = cobj.get_times()
     for idx, (k, t) in enumerate(zip(kk, times)):

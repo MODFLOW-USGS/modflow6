@@ -390,8 +390,6 @@ contains
     logical :: lopen, isFound
     character(len=LINELENGTH)     :: ermsg
     type(TimeArrayType), pointer  :: ta => null()
-    logical :: endofblock
-    character(len=LINELENGTH) :: line
 ! ------------------------------------------------------------------------------
     !
     istart = 1
