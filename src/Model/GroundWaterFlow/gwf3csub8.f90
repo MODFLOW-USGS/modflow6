@@ -2427,7 +2427,7 @@ contains
     integer(I4B), intent(in) :: nodes
     real(DP), dimension(nodes), intent(in) :: hnew
     integer(I4B) :: i
-    integer(I4B) :: n
+    integer(I4B) :: node
     integer(I4B) :: j
     integer(I4B) :: idelay
     real(DP) :: pcs0
@@ -2438,6 +2438,7 @@ contains
     real(DP) :: znode
     real(DP) :: hcell
     real(DP) :: dzhalf
+    real(DP) :: ztop
     real(DP) :: zbot
     real(DP) :: sadd
     real(DP) :: dbpcs
@@ -2448,64 +2449,63 @@ contains
     call this%csub_sk_calc_stress(nodes, hnew)
     !
     ! -- coarse-grained materials
-    do n = 1, nodes
+    do node = 1, nodes
       ! scale cr and cc
-      bot = this%dis%bot(n)
+      bot = this%dis%bot(node)
       if (this%istoragec == 1) then
         if (this%igeocalc == 0) then
           fact = DONE
         else
-          void = this%csub_calc_void(this%sk_theta(n))
-          !fact = this%sk_es(n) - (this%sk_znode(n) - bot) * (this%sgs(n) - DONE)
-          znode = this%csub_calc_znode(n, hnew(n))
-          fact = this%sk_es(n) - (znode - bot) * (this%sgs(n) - DONE)
+          void = this%csub_calc_void(this%sk_theta(node))
+          znode = this%csub_calc_znode(node, hnew(node))
+          fact = this%sk_es(node) - (znode - bot) * (this%sgs(node) - DONE)
           fact = fact * (DONE + void)
         end if
       else
           fact = dlog10es
       end if
-      this%ske_cr(n) = this%ske_cr(n) * fact
+      this%ske_cr(node) = this%ske_cr(node) * fact
       ! -- initialize previous initial stress
-      this%sk_es0(n) = this%sk_es(n)
+      this%sk_es0(node) = this%sk_es(node)
     end do
     !
     ! -- interbeds
     do i = 1, this%ninterbeds
-      n = this%nodelist(i)
-      bot = this%dis%bot(n)
-      hcell = hnew(n)
+      idelay = this%idelay(i)
+      dzhalf = DHALF * this%dbdz(idelay)
+      node = this%nodelist(i)
+      bot = this%dis%bot(node)
+      hcell = hnew(node)
       pcs = this%pcs(i)
       pcs0 = pcs
       if (this%igeocalc == 0) then
         if (this%ibedstressoff == 1) then
-          pcs = this%sk_es(n) + pcs0
+          pcs = this%sk_es(node) + pcs0
         else
-          !if (this%sk_es(n) < pcs) then
-          if (pcs > this%sk_es(n)) then
-            pcs = this%sk_es(n)
+          !if (this%sk_es(node) < pcs) then
+          if (pcs > this%sk_es(node)) then
+            pcs = this%sk_es(node)
           end if
         end if
       else
+        !
         ! -- transfer initial preconsolidation stress (and apply offset if needed)
         if (this%ibedstressoff == 1) then
-            !pcs = this%sk_es(n) + this%pcs(i)
-            pcs = this%sk_es(n) + pcs0
+            pcs = this%sk_es(node) + pcs0
         else
-          if (pcs < this%sk_es(n)) then
-            pcs = this%sk_es(n)
+          if (pcs < this%sk_es(node)) then
+            pcs = this%sk_es(node)
           end if
         end if
       end if
       this%pcs(i) = pcs
       !
       ! -- delay bed          
-      idelay = this%idelay(i)
-      if (idelay > 0) then
-        !
-        ! -- fill delay bed effective stress
-        call this%csub_delay_calc_stress(i, hcell)
+      if (idelay /= 0) then
         !
         ! -- fill delay bed head with aquifer head or offset from aquifer head
+        !    heads need to be filled first since used to calculate 
+        !    the effective stress for each delay bed
         do j = 1, this%ndelaycells
           if (this%ibedstressoff == 1) then
             this%dbh(j, idelay) = hcell + this%dbh(j, idelay)
@@ -2515,36 +2515,40 @@ contains
           this%dbh0(j, idelay) = this%dbh(j, idelay)
         end do            
         !
+        ! -- fill delay bed effective stress
+        call this%csub_delay_calc_stress(i, hcell)
+        !
         ! -- fill delay bed pcs          
         pcs = this%pcs(i)
-        dzhalf = DHALF * this%dbdz(idelay)
         do j = 1, this%ndelaycells
           if (this%igeocalc == 0) then
             this%dbpcs(j, idelay) = pcs
           else
             zbot = this%dbz(j, idelay) - dzhalf
-            sadd = this%sgs(n) * (zbot - bot)
-            dbpcs = pcs - (zbot - bot) * (this%sgs(n) - DONE)
-            if (this%dbes(j, idelay) > dbpcs) then
-              dbpcs = this%dbes(j, idelay)
-            end if
+            sadd = this%sgs(node) * (zbot - bot)
+            dbpcs = pcs - (zbot - bot) * (this%sgs(node) - DONE)
+            !if (this%dbes(j, idelay) > dbpcs) then
+            !  dbpcs = this%dbes(j, idelay)
+            !end if
             this%dbpcs(j, idelay) = dbpcs
           end if
-          !this%dbes0(j, idelay) = this%sk_es(n)
           this%dbes0(j, idelay) = this%dbes(j, idelay)
         end do 
       end if
       !    
       ! scale cr and cc
-      bot = this%dis%bot(n)
       if (this%istoragec == 1) then
         if (this%igeocalc == 0) then
           fact = DONE
         else
           void = this%csub_calc_void(this%theta(i))
-          !fact = this%sk_es(n) - (this%sk_znode(n) - bot) * (this%sgs(n) - DONE)
-          znode = this%csub_calc_znode(n, hcell)
-          fact = this%sk_es(n) - (znode - bot) * (this%sgs(n) - DONE)
+          if (idelay == 0) then
+            ztop = hcell
+          else
+            ztop = this%dbz(1, idelay) + dzhalf
+          end if
+          znode = this%csub_calc_znode(node, ztop)
+          fact = this%sk_es(node) - (znode - bot) * (this%sgs(node) - DONE)
           fact = fact * (DONE + void)
         end if
       else
@@ -3450,14 +3454,12 @@ contains
     esv = this%time_alpha * es +                                             &
           (DONE - this%time_alpha) * es0
     void = this%csub_calc_void(theta)
-    !denom = (DONE + void) * (esv - (znode - bot)) * (this%sgs(node) - DONE)
     denom = (DONE + void) * (esv - (znode - bot) * (this%sgs(node) - DONE))
     if (denom /= DZERO) then
       fact = DONE / denom
     end if
     esv = es0
     void = this%csub_calc_void(theta0)
-    !denom = (DONE + void) * (esv - (znode - bot)) * (this%sgs(node) - DONE)
     denom = (DONE + void) * (esv - (znode - bot) * (this%sgs(node) - DONE))
     if (denom /= DZERO) then
       fact0 = DONE / denom
@@ -3530,7 +3532,7 @@ contains
     !! -- calculate z for each delay bed cell
     !call this%csub_delay_calc_zcell(ib, hcell)
     !
-    ! -- calculate geostatic stress for each delay bed cell
+    ! -- calculate geostatic and effective stress for each delay bed cell
     call this%csub_delay_calc_stress(ib, hcell)
     !
     ! -- solve for delay bed heads
@@ -3540,12 +3542,16 @@ contains
       idelay = this%idelay(ib)
       do
         iter = iter + 1
+        !
         ! -- assemble coefficients
         call this%csub_delay_assemble(ib, hcell)
-        ! -- solve for head change in delay intebed cells
-        call csub_delay_solve(this%ndelaycells, this%dbal, this%dbad, this%dbau, &
-                         this%dbrhs, this%dbdh, this%dbaw)
-        ! -- update delay bed head and check convergence
+        !
+        ! -- solve for head change in delay interbed cells
+        call csub_delay_solve(this%ndelaycells,                                 & 
+                              this%dbal, this%dbad, this%dbau,                  &
+                              this%dbrhs, this%dbdh, this%dbaw)
+        !
+        ! -- calculate maximum head change and update delay bed heads 
         dhmax = DZERO
         do n = 1, this%ndelaycells
           dh = this%dbdh(n) - this%dbh(n, idelay) 
@@ -3555,6 +3561,11 @@ contains
           ! update delay bed heads
           this%dbh(n, idelay) = this%dbdh(n)
         end do
+        !
+        ! -- update delay bed stresses
+        call this%csub_delay_calc_stress(ib, hcell)
+        !
+        ! -- check delay bed convergence 
         if (abs(dhmax) < dclose) then
           icnvg = 1
         end if
@@ -3564,7 +3575,7 @@ contains
       end do
     end if
     !
-    ! -- return%
+    ! -- return
     return
   end subroutine csub_delay_sln
 
@@ -3767,8 +3778,6 @@ contains
       !
       ! -- denom and denom0 are calculate at the center of the node and
       !    result in a mean sske and ssk for the delay cell
-      !denom = (DONE + void) * (es - (znode - zbot)) * (this%sgs(node) - DONE)
-      !denom0 = (DONE + void) * (es0 - (znode - zbot)) * (this%sgs(node) - DONE)
       denom = (DONE + void) * (es - (znode - zbot) * (this%sgs(node) - DONE))
       denom0 = (DONE + void) * (es0 - (znode - zbot) * (this%sgs(node) - DONE))
       if (denom /= DZERO) then
@@ -3790,7 +3799,7 @@ contains
         ssk = f * this%rci(ib)
       end if
     else
-      if (es > this%dbpcs(n, idelay)) then
+      if (this%dbes(n, idelay) > this%dbpcs(n, idelay)) then
         ssk = f * this%ci(ib)
       else
         ssk = f * this%rci(ib)
@@ -3956,12 +3965,16 @@ contains
     real(DP) :: fmult
     real(DP) :: v1
     real(DP) :: v2
+    real(DP) :: ske
+    real(DP) :: sk
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
     idelay = this%idelay(ib)
     stoe = DZERO
     stoi = DZERO
+    ske = DZERO
+    sk = DZERO
     !
     !
     if (this%thick(ib) > DZERO) then
@@ -3975,14 +3988,24 @@ contains
           v1 = ssk * (this%dbes(n, idelay) - this%dbpcs(n, idelay))
           v2 = sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay))
         end if
+        !
+        ! -- calculate inelastic and elastic storage components
         if (ssk /= sske) then
           stoi = stoi + v1 * fmult
           stoe = stoe + v2 * fmult
         else
           stoe = stoe + (v1 + v2) * fmult
         end if
+        !
+        ! calculate inelastic and elastic storativity
+        ske = ske + sske * fmult
+        sk = sk + ssk * fmult
       end do
     end if
+    !
+    ! -- save ske and sk
+    this%ske(ib) = ske
+    this%sk(ib) = sk * fmult
     !
     ! -- return
     return

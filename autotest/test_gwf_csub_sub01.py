@@ -175,7 +175,8 @@ def get_model(idx, dir):
                                    beta=0., ske_cr=0.0,
                                    packagedata=sub6)
     orecarray = {}
-    orecarray['csub_obs.csv'] = [('tcomp', 'total-compaction', (0, 0, 1))]
+    orecarray['csub_obs.csv'] = [('tcomp', 'compaction-cell', (0, 0, 1)),
+                                 ('sk', 'sk', (0, 0, 1))]
     ibc_obs_package = flopy.mf6.ModflowUtlobs(gwf,
                                               fname=opth,
                                               parent_file=ibc, digits=10,

@@ -18,9 +18,9 @@ for s in ex:
     exdirs.append(os.path.join('temp', s))
 ddir = 'data'
 
-ndcell = [21, 21]
-strt = [10., -100.]
-chdh = [5, -100.]
+ndcell = [21, 21, 21]
+strt = [0., 10., -100.]
+chdh = [0, 5, -100.]
 gso = [True, None]
 bso = [True, None]
 
@@ -69,15 +69,15 @@ nouter, ninner = 1000, 300
 hclose, rclose, relax = 1e-6, 1e-6, 0.97
 
 # sub data
-cc = 0.25
-cr = 0.01
+cc = 100. #0.25
+cr = 1. #0.01
 void = 0.82
 theta = void / (1. + void)
-kv = 1e-3
+kv = 0.025
 sgm = 1.7
 sgs = 2.2
-ini_stress = 0.0
-thick = [10.]
+ini_stress = 1.0
+thick = [1., 10.]
 
 # calculate geostatic and effective stress
 def calc_stress(sgm0, sgs0, h, bt):
@@ -111,7 +111,7 @@ def get_model(idx, dir):
 
     geo, es = calc_stress(sgm, sgs, strt[idx], botm)
     sub6 = [[1, (0, 0, 1), 'delay', -1., thick[0],
-             1., cc, cr, theta, kv, 0.]]
+             1., cc, cr, theta, kv, 1.]]
 
     name = ex[idx]
 
@@ -170,7 +170,7 @@ def get_model(idx, dir):
     opth = '{}.csub.obs'.format(name)
     ibc = flopy.mf6.ModflowGwfcsub(gwf, ndelaycells=ndcell[idx],
                                    time_weight=0.,
-                                   compression_indices=True,
+                                   #compression_indices=True,
                                    #geo_stress_offset=gso[idx],
                                    interbed_stress_offset=bso[idx],
                                    obs_filerecord=opth,
@@ -178,10 +178,11 @@ def get_model(idx, dir):
                                    sgs=sgs, sgm=sgm, packagedata=sub6,
                                    beta=0., ske_cr=0.)
     orecarray = {}
-    orecarray['ibc_obs.csv'] = [('tcomp', 'total-compaction', (0, 0, 1)),
+    orecarray['csub_obs.csv'] = [('tcomp', 'total-compaction', (0, 0, 1)),
                                 ('gs', 'gstress-cell', (0, 0, 1)),
                                 ('es', 'estress-cell', (0, 0, 1)),
-                                ('pcs', 'preconstress', (0, 0))]
+                                ('pcs', 'preconstress', (0, 0)),
+                                ('sk', 'sk', (0, 0, 1))]
     ibc_obs_package = flopy.mf6.ModflowUtlobs(gwf,
                                               fname=opth,
                                               parent_file=ibc, digits=10,
