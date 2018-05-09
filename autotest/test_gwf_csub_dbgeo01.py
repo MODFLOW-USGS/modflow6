@@ -12,7 +12,7 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['ibcdbgeo01a']
+ex = ['csub_dbgeo01a']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
@@ -34,30 +34,39 @@ travis = [False for idx in range(len(exdirs))]
 replace_exe = {'mf2005': 'mf2005devdbl'}
 
 # static model data
+# spatial discretization
 nlay, nrow, ncol = 1, 1, 3
+delr, delc = 1., 1.
+top = 0.
+bots = [-100.]
+botm = [top] + bots
+
+
+# temporal discretization
 nper = 1
 perlen = [1000. for i in range(nper)]
 nstp = [100 for i in range(nper)]
 tsmult = [1.05 for i in range(nper)]
 steady = [False for i in range(nper)]
-delr, delc = 1., 1.
-top = 0.
-botm = [-100.]
+tdis_rc = []
+for idx in range(nper):
+    tdis_rc.append((perlen[idx], nstp[idx], tsmult[idx]))
+
 hnoflo = 1e30
 hdry = -1e30
+
+# idomain data
+ib = 1
+
+# npf and sto data
 hk = 1e6
 laytyp = [0]
 ss = 0.
 sy = 0.2
 
+# solver data
 nouter, ninner = 1000, 300
 hclose, rclose, relax = 1e-6, 1e-6, 0.97
-
-tdis_rc = []
-for idx in range(nper):
-    tdis_rc.append((perlen[idx], nstp[idx], tsmult[idx]))
-
-ib = 1
 
 # sub data
 cc = 0.25
@@ -70,8 +79,28 @@ sgs = 2.2
 ini_stress = 0.0
 thick = [10.]
 
-sub6 = [[1, (0, 0, 1), 'delay', ini_stress, thick[0],
-         1., cc, cr, void, kv, ini_stress]]
+# calculate geostatic and effective stress
+def calc_stress(sgm0, sgs0, h, bt):
+    geo = []
+    for k in range(nlay):
+        top = bt[k]
+        bot = bt[k + 1]
+        ht = h
+        if ht > top:
+            gs = (top - bot) * sgs0
+        elif ht < bot:
+            gs = (top - bot) * sgm0
+        else:
+            gs = ((top - ht) * sgm0) + ((ht - bot) * sgs0)
+        geo.append(gs)
+    # calculate total geostatic stress at bottom of layer
+    for k in range(1, nlay):
+        geo[k] += geo[k - 1]
+    # calculate effective stress at the bottom of the layer
+    es = []
+    for k in range(nlay):
+        es.append(geo[k] - (h - bt[k + 1]))
+    return geo, es
 
 
 def get_model(idx, dir):
@@ -79,6 +108,10 @@ def get_model(idx, dir):
     for j in range(0, ncol, 2):
         c6.append([(0, 0, j), chdh[idx]])
     cd6 = {0: c6}
+
+    geo, es = calc_stress(sgm, sgs, strt[idx], botm)
+    sub6 = [[1, (0, 0, 1), 'delay', -1., thick[0],
+             1., cc, cr, theta, kv, 0.]]
 
     name = ex[idx]
 
@@ -109,7 +142,7 @@ def get_model(idx, dir):
 
     dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
                                   delr=delr, delc=delc,
-                                  top=top, botm=botm,
+                                  top=top, botm=bots,
                                   fname='{}.dis'.format(name))
 
     # initial conditions
@@ -134,10 +167,11 @@ def get_model(idx, dir):
                                                    save_flows=False)
 
     # ibc files
-    opth = '{}.ibc.obs'.format(name)
+    opth = '{}.csub.obs'.format(name)
     ibc = flopy.mf6.ModflowGwfcsub(gwf, ndelaycells=ndcell[idx],
+                                   time_weight=0.,
                                    compression_indices=True,
-                                   geo_stress_offset=gso[idx],
+                                   #geo_stress_offset=gso[idx],
                                    interbed_stress_offset=bso[idx],
                                    obs_filerecord=opth,
                                    ninterbeds=1,
@@ -161,9 +195,9 @@ def get_model(idx, dir):
                                 headprintrecord=[
                                     ('COLUMNS', 10, 'WIDTH', 15,
                                      'DIGITS', 6, 'GENERAL')],
-                                saverecord=[('HEAD', 'LAST')],
+                                saverecord=[('HEAD', 'ALL')],
                                 printrecord=[('HEAD', 'LAST'),
-                                             ('BUDGET', 'LAST')])
+                                             ('BUDGET', 'ALL')])
 
     mc = None
 
@@ -174,34 +208,34 @@ def eval_sub(sim):
     print('evaluating subsidence...')
 
     # MODFLOW 6 total compaction results
-    fpth = os.path.join(sim.simpath, 'ibc_obs.csv')
+    fpth = os.path.join(sim.simpath, 'csub_obs.csv')
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=',')
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
 
-    # MODFLOW-2005 total compaction results
-    fpth = os.path.join(sim.simpath, 'mf2005',
-                        '{}.total_comp.hds'.format(ex[sim.idxsim]))
-    try:
-        sobj = flopy.utils.HeadFile(fpth, text='LAYER COMPACTION')
-        tc0 = sobj.get_ts((0, 0, 1))
-    except:
-        assert False, 'could not load data from "{}"'.format(fpth)
-
-    # calculate maximum absolute error
-    diff = tc['TCOMP'] - tc0[:, 1]
-    diffmax = np.abs(diff).max()
-    dtol = 1e-6
-    msg = 'maximum absolute total-compaction difference ({}) '.format(diffmax)
-
-    if diffmax > dtol:
-        sim.success = False
-        msg += 'exceeds {}'.format(dtol)
-        assert diffmax < dtol, msg
-    else:
-        sim.success = True
-        print('    ' + msg)
+    # # MODFLOW-2005 total compaction results
+    # fpth = os.path.join(sim.simpath, 'mf2005',
+    #                     '{}.total_comp.hds'.format(ex[sim.idxsim]))
+    # try:
+    #     sobj = flopy.utils.HeadFile(fpth, text='LAYER COMPACTION')
+    #     tc0 = sobj.get_ts((0, 0, 1))
+    # except:
+    #     assert False, 'could not load data from "{}"'.format(fpth)
+    #
+    # # calculate maximum absolute error
+    # diff = tc['TCOMP'] - tc0[:, 1]
+    # diffmax = np.abs(diff).max()
+    # dtol = 1e-6
+    # msg = 'maximum absolute total-compaction difference ({}) '.format(diffmax)
+    #
+    # if diffmax > dtol:
+    #     sim.success = False
+    #     msg += 'exceeds {}'.format(dtol)
+    #     assert diffmax < dtol, msg
+    # else:
+    #     sim.success = True
+    #     print('    ' + msg)
 
     return
 
