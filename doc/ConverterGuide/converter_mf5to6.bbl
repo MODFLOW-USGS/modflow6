@@ -1,0 +1,28 @@
+\begin{thebibliography}{3}
+\providecommand{\natexlab}[1]{#1}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi:\discretionary{}{}{}#1}\else
+  \providecommand{\doi}{doi:\discretionary{}{}{}\begingroup
+  \urlstyle{rm}\Url}\fi
+
+\bibitem[{Harbaugh(2005)}]{modflow2005}
+Harbaugh, A.W., 2005, MODFLOW-2005, the U.S. Geological Survey modular
+  ground-water model---the Ground-Water Flow Process: {U.S. Geological Survey
+  Techniques and Methods, book 6, chap. A16, variously paged}, accessed June
+  27, 2017, at \url{https://pubs.usgs.gov/tm/2005/tm6A16/}.
+
+\bibitem[{Mehl and Hill(2007)}]{mehl2007modflow}
+Mehl, S.W., and Hill, M.C., 2007, {MODFLOW-2005}, the U.S. Geological Survey
+  modular ground-water model -- Documentation of shared node local grid
+  refinement ({LGR}) and the boundary flow and head ({BFH}) package: {U.S.
+  Geological Survey Techniques and Methods, book 6, chap. A21. 13 p.}, accessed
+  June 27, 2017, at \url{https://pubs.usgs.gov/tm/2007/06A21/}.
+
+\bibitem[{Niswonger and others(2011)Niswonger, Panday, and
+  Ibaraki}]{modflownwt}
+Niswonger, R.G., Panday, Sorab, and Ibaraki, Motomu, 2011, MODFLOW-NWT, A
+  Newton formulation for MODFLOW-2005: {U.S. Geological Survey Techniques and
+  Methods, book 6, chap. A37, 44 p.}, accessed June 27, 2017, at
+  \url{https://pubs.er.usgs.gov/publication/tm6A37}.
+
+\end{thebibliography}

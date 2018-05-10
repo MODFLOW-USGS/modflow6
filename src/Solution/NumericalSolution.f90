@@ -1858,7 +1858,7 @@ contains
     real(DP) :: bnorm
     character(len=50) :: fname
     character(len=*), parameter :: fmtfname = "('mf6mat_', i0, '_', i0, &
-      '_', i0, '.txt')"
+      '_', i0, '_', i0, '.txt')"
 ! ------------------------------------------------------------------------------
     !
     ! -- take care of loose ends for all nodes before call to solver
@@ -1961,15 +1961,15 @@ contains
   !-------------------------------------------------------
       itestmat = 0
       if(itestmat == 1) then
-        write(fname, fmtfname) kper, kstp, kiter
+        write(fname, fmtfname) this%id, kper, kstp, kiter
         print *, 'Saving amat to: ', trim(adjustl(fname))
         open(99,file=trim(adjustl(fname)))
         WRITE(99,*)'NODE, RHS, AMAT FOLLOW'
         DO N=1,this%NEQ
           I1 = this%IA(N)
           I2 = this%IA(N+1)-1
-          WRITE(99,*)N,this%RHS(N),(this%AMAT(I),I=I1,I2)
-          write(99,*)n,this%rhs(n),(this%ja(i),i=i1,i2)
+          WRITE(99,'(*(G0,:,","))') N, this%RHS(N), (this%ja(i),i=i1,i2), &
+                        (this%AMAT(I),I=I1,I2)
         ENDDO
 66      FORMAT(I9,1X,G15.6,2X,100G15.6)
         close(99)

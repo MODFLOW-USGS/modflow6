@@ -51,6 +51,7 @@ contains
     integer(I4B), intent(in)                   :: k    ! layer number; 0 to not print
     ! -- local
     integer(I4B) :: iclose, iconst, iprn, j, locat, ncpl, ndig
+    integer(I4B) :: nval, nvalt
     logical :: prowcolnum
     character(len=100) :: prfmt
     integer(I4B) :: istat
@@ -96,19 +97,28 @@ contains
     else
       ! -- Read data as binary
       locat = -locat
-      call read_binary_header(locat, iout, aname)
-      read(locat,iostat=istat,iomsg=ermsgr) (iarr(j),j=1,jj)
-      if (istat /= 0) then
-        arrname = adjustl(aname)
-        ermsg = 'Error reading data for array: ' // trim(arrname)
-        call store_error(ermsg)
-        call store_error(ermsgr)
-        call store_error_unit(locat)
-        call ustop()
-      endif
+      nvalt = 0
+      do
+        call read_binary_header(locat, iout, aname, nval)
+        read(locat,iostat=istat,iomsg=ermsgr) (iarr(j), j=nvalt+1, nvalt+nval)
+        if (istat /= 0) then
+          arrname = adjustl(aname)
+          ermsg = 'Error reading data for array: ' // trim(arrname)
+          call store_error(ermsg)
+          call store_error(ermsgr)
+          call store_error_unit(locat)
+          call ustop()
+        endif
+        nvalt = nvalt + nval
+        if (nvalt == size(iarr)) exit
+      enddo      
+      !
+      ! -- multiply array by constant
       do j=1,jj
         iarr(j) = iarr(j) * iconst
       enddo
+      !
+      ! -- close the file
       if (iclose == 1) then
         close(locat)
       endif
@@ -135,6 +145,7 @@ contains
     integer(I4B), intent(in)                      :: k     ! layer number; 0 to not print
     ! -- local
     integer(I4B) :: i, iclose, iconst, iprn, j, locat, ncpl, ndig
+    integer(I4B) :: nval
     logical :: prowcolnum
     character(len=100) :: prfmt
     integer(I4B) :: istat
@@ -185,7 +196,7 @@ contains
       ! -- Read data as binary
       locat = -locat
       do i=1,ii
-        call read_binary_header(locat, iout, aname)
+        call read_binary_header(locat, iout, aname, nval)
         read(locat,iostat=istat,iomsg=ermsgr) (iarr(j,i),j=1,jj)
         if (istat /= 0) then
           arrname = adjustl(aname)
@@ -300,6 +311,7 @@ contains
     logical :: prowcolnum
     character(len=100) :: prfmt
     integer(I4B) :: istat
+    integer(I4B) :: nvalt, nval
     character(len=30) :: arrname
     character(len=MAXCHARLEN) :: ermsg, ermsgr
     ! -- formats
@@ -342,19 +354,28 @@ contains
     else
       ! -- Read data as binary
       locat = -locat
-      call read_binary_header(locat, iout, aname)
-      read(locat,iostat=istat,iomsg=ermsgr) (darr(j),j=1,jj)
-      if (istat /= 0) then
-        arrname = adjustl(aname)
-        ermsg = 'Error reading data for array: ' // trim(arrname)
-        call store_error(ermsg)
-        call store_error(ermsgr)
-        call store_error_unit(locat)
-        call ustop()
-      endif
-      do j=1,jj
+      nvalt = 0
+      do
+        call read_binary_header(locat, iout, aname, nval)
+        read(locat,iostat=istat,iomsg=ermsgr) (darr(j), j=nvalt+1, nvalt+nval)
+        if (istat /= 0) then
+          arrname = adjustl(aname)
+          ermsg = 'Error reading data for array: ' // trim(arrname)
+          call store_error(ermsg)
+          call store_error(ermsgr)
+          call store_error_unit(locat)
+          call ustop()
+        endif
+        nvalt = nvalt + nval
+        if (nvalt == size(darr)) exit
+      enddo
+      !
+      ! -- multiply entire array by constant
+      do j = 1, jj
         darr(j) = darr(j) * cnstnt
       enddo
+      !
+      ! -- close the file
       if (iclose == 1) then
         close(locat)
       endif
@@ -381,6 +402,7 @@ contains
     integer(I4B), intent(in)                      :: k     ! layer number; 0 to not print
     ! -- local
     integer(I4B) :: i, iclose, iprn, j, locat, ncpl, ndig
+    integer(I4B) :: nval
     real(DP) :: cnstnt
     logical :: prowcolnum
     character(len=100) :: prfmt
@@ -431,9 +453,9 @@ contains
     else
       ! -- Read data as binary
       locat = -locat
-      do i=1,ii
-        call read_binary_header(locat, iout, aname)
-        read(locat,iostat=istat,iomsg=ermsgr) (darr(j,i),j=1,jj)
+      do i = 1, ii
+        call read_binary_header(locat, iout, aname, nval)
+        read(locat,iostat=istat,iomsg=ermsgr) (darr(j,i), j = 1, jj)
         if (istat /= 0) then
           arrname = adjustl(aname)
           ermsg = 'Error reading data for array: ' // trim(arrname)
@@ -442,7 +464,7 @@ contains
           call store_error_unit(locat)
           call ustop()
         endif
-        do j=1,jj
+        do j = 1, jj
           darr(j,i) = darr(j,i) * cnstnt
         enddo
       enddo
@@ -1048,11 +1070,12 @@ contains
     return
   end subroutine print_array_dbl
 
-  subroutine read_binary_header(locat, iout, arrname)
+  subroutine read_binary_header(locat, iout, arrname, nval)
     ! -- dummy
     integer(I4B), intent(in) :: locat
     integer(I4B), intent(in) :: iout
     character(len=*), intent(in) :: arrname
+    integer, intent(out) :: nval
     ! -- local
     integer(I4B) :: istat
     integer(I4B) :: kstp, kper, m1, m2, m3
@@ -1083,6 +1106,9 @@ contains
     if (iout > 0) then
       write(iout, fmthdr) kstp, kper, pertim, totim, text, m1, m2, m3
     endif
+    !
+    ! -- Assign the number of values that follow the header
+    nval = m1 * m2
     !
     ! -- return
     return
