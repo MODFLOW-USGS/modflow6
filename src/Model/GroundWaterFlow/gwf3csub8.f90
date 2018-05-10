@@ -1,7 +1,8 @@
 module GwfCsubModule
   use KindModule, only: I4B, DP
-  use ConstantsModule, only: DPREC, DZERO, DEM6, DHALF, DONE, DTWO, DTHREE,     &
-                             DGRAVITY, DTEN, DNODATA,                           &
+  use ConstantsModule, only: DPREC, DZERO, DEM6, DHALF, DEM1,                   &
+                             DONE, DTWO, DTHREE,                                &
+                             DGRAVITY, DTEN, DHUNDRED, DNODATA,                 &
                              LENFTYPE, LENPACKAGENAME,                          &
                              LINELENGTH, LENBOUNDNAME, NAMEDBOUNDFLAG,          &
                              LENBUDTXT, LENAUXNAME, LENORIGIN
@@ -145,6 +146,7 @@ module GwfCsubModule
     procedure :: csub_ad
     procedure :: csub_fc
     procedure :: csub_fn
+    procedure :: csub_cc
     procedure :: bdcalc => csub_bdcalc
     procedure :: bdsav => csub_bdsav
     procedure :: read_dimensions => csub_read_dimensions
@@ -191,6 +193,7 @@ module GwfCsubModule
     procedure, private :: csub_delay_fc
     procedure, private :: csub_delay_sln
     procedure, private :: csub_delay_assemble
+    procedure, private :: csub_delay_calc_err
     !
     ! -- methods for observations
     procedure, public :: csub_obs_supported
@@ -326,6 +329,100 @@ contains
     ! -- return
     return
    end subroutine csub_allocate_scalars
+
+  subroutine csub_cc(this, iend, icnvg, nodes, hnew)
+! **************************************************************************
+! csub_cc -- Final convergence check for package
+! **************************************************************************
+!
+!    SPECIFICATIONS:
+! --------------------------------------------------------------------------
+    use TdisModule, only:delt
+    ! -- dummy
+    class(GwfCsubType) :: this
+    integer(I4B), intent(in) :: iend
+    integer(I4B), intent(inout) :: icnvg
+    integer(I4B), intent(in) :: nodes
+    real(DP), dimension(nodes), intent(in) :: hnew
+    ! -- local
+    integer(I4B) :: ifirst
+    integer(I4B) :: ib
+    integer(I4B) :: node
+    integer(I4B) :: idelay
+    real(DP) :: area
+    real(DP) :: hcell
+    real(DP) :: err
+    real(DP) :: stoe
+    real(DP) :: stoi
+    real(DP) :: tled
+    real(DP) :: hcof
+    real(DP) :: rhs
+    real(DP) :: v1
+    real(DP) :: v2
+    real(DP) :: df
+    real(DP) :: avgf
+    real(DP) :: pd
+    ! format
+02000 format(4x,'CSUB PACKAGE FAILED CONVERGENCE CRITERIA',//,                  &
+             4x,a10,2(1x,a15),/,4x,42('-'))
+02010 format(4x,i10,2(1x,G15.7))
+02020 format(4x,42('-'))
+02030 format('CONVERGENCE FAILED AS A RESULT OF CSUB PACKAGE',1x,a)
+! --------------------------------------------------------------------------
+    ifirst = 1
+    tled = DONE / DELT
+    !if (this%iconvchk /= 0) then
+    if (this%gwfiss == 0) then
+      final_check: do ib = 1, this%ninterbeds
+        idelay = this%idelay(ib)
+        if (idelay == 0) cycle
+        node = this%nodelist(ib)
+        area = this%dis%get_area(node)
+        hcell = hnew(node)
+        !
+        ! --
+        call this%csub_delay_calc_err(ib, hcell, err)
+        !
+        ! --
+        call this%csub_delay_calc_dstor(ib, stoe, stoi)
+        v1 = (stoe + stoi) * area * this%rnb(ib) * tled
+        !
+        !
+        call this%csub_delay_fc(ib, hcof, rhs)
+        v2 = (-hcof * hcell - rhs) * area * this%rnb(ib)
+
+        df = v2 - v1
+        avgf = DHALF * (v1 + v2)
+        pd = DZERO
+        if (avgf > DZERO) then
+          pd = DHUNDRED * df / avgf
+        end if
+        
+        if (ABS(pd) > DEM1) then
+          icnvg = 0
+          ! write convergence check information if this is the last outer iteration
+          if (iend == 1) then
+            if (ifirst == 1) then
+              ifirst = 0
+              write(*,2030) this%name
+              write(this%iout, 2000) '   INTEBED',                                 &
+                '      PCT DIFF.', 'PCT DIFF. CRIT.'
+            end if
+            write(*,2010) ib, pd, DEM1
+            write(this%iout,2010) ib, pd, DEM1
+          else
+            exit final_check
+          end if
+        end if
+      end do final_check
+      if (ifirst == 0) then
+        write(this%iout,2020)
+      end if
+    end if
+    !
+    ! -- return
+    return
+  end subroutine csub_cc
 
 
    subroutine csub_bdcalc(this, nodes, hnew, hold, isuppress_output, model_budget)
@@ -537,6 +634,11 @@ contains
           call this%csub_delay_calc_dstor(i, stoe, stoi)
           this%storagee(i) = stoe * area * this%rnb(i) * tledm
           this%storagei(i) = stoi * area * this%rnb(i) * tledm
+          !
+          !
+          call this%csub_delay_fc(i, hcof, rhs)
+          err = -hcof * h - rhs
+          err = err / tledm
           !
           ! -- update states if required
           if (isuppress_output == 0) then
@@ -2472,7 +2574,6 @@ contains
     ! -- interbeds
     do i = 1, this%ninterbeds
       idelay = this%idelay(i)
-      dzhalf = DHALF * this%dbdz(idelay)
       node = this%nodelist(i)
       bot = this%dis%bot(node)
       hcell = hnew(node)
@@ -2502,6 +2603,7 @@ contains
       !
       ! -- delay bed          
       if (idelay /= 0) then
+        dzhalf = DHALF * this%dbdz(idelay)
         !
         ! -- fill delay bed head with aquifer head or offset from aquifer head
         !    heads need to be filled first since used to calculate 
@@ -3524,7 +3626,7 @@ contains
     real(DP) :: c1
     real(DP) :: c2
     real(DP) :: f
-    real(DP), parameter :: dclose = DTEN * DPREC
+    real(DP), parameter :: dclose = DHUNDRED * DPREC
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
@@ -3556,7 +3658,7 @@ contains
         do n = 1, this%ndelaycells
           dh = this%dbdh(n) - this%dbh(n, idelay) 
           if (abs(dh) > abs(dhmax)) then
-            dhmax = this%dbdh(n)
+            dhmax = dh !this%dbdh(n)
           end if
           ! update delay bed heads
           this%dbh(n, idelay) = this%dbdh(n)
@@ -3665,6 +3767,7 @@ contains
     real(DP) :: z
     real(DP) :: top
     real(DP) :: bot
+    real(DP) :: u
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
@@ -3695,11 +3798,13 @@ contains
       h = this%dbh(n, idelay)
       if (this%igeocalc == 0) then
         this%dbes(n, idelay) = h
-      ! -- geostatic calculated at the bottom of the delay cell
       else
+        !
+        ! -- geostatic calculated at the bottom of the delay cell
         z = this%dbz(n, idelay)
         top = z + dzhalf
         bot = z - dzhalf
+        u = h - bot
         if (h > top) then
             sadd = (top - bot) * sgs
         else if (h < bot) then
@@ -3709,7 +3814,7 @@ contains
         end if
         sigma = sigma + sadd
         this%dbgeo(n, idelay) = sigma
-        this%dbes(n, idelay) = sigma - h + bot
+        this%dbes(n, idelay) = sigma - u
       end if
     end do
     !
@@ -3786,7 +3891,7 @@ contains
         f = DZERO
       end if
       if (denom0 /= DZERO) then
-        f0 = DONE / denom
+        f0 = DONE / denom0
       else
         f0 = DZERO
       end if
@@ -3828,6 +3933,7 @@ contains
     integer(I4B) :: node
     integer(I4B) :: idelay
     real(DP) :: dz
+    real(DP) :: dzhalf
     real(DP) :: c
     real(DP) :: c2
     real(DP) :: c3
@@ -3846,13 +3952,14 @@ contains
     idelay = this%idelay(ib)
     node = this%nodelist(ib)
     dz = this%dbdz(idelay)
+    dzhalf = DHALF * dz
     fmult = dz / delt
+    c = this%kv(ib) / dz
+    c2 = DTWO * c
+    c3 = DTHREE * c
     !
     !
     do n = 1, this%ndelaycells
-      c = this%kv(ib) / dz
-      c2 = DTWO * c
-      c3 = DTHREE * c
       !
       ! -- calculate  ssk and sske
       call this%csub_delay_calc_ssksske(ib, n, ssk, sske)
@@ -3860,8 +3967,8 @@ contains
       ! -- diagonal and right hand side
       aii = -ssk * fmult
       z = this%dbz(n, idelay)
-      ztop = z + dz
-      zbot = z - dz
+      ztop = z + dzhalf
+      zbot = z - dzhalf
       h = this%dbh(n, idelay)
       if (this%igeocalc == 0) then
         r = -fmult * &
@@ -3944,7 +4051,52 @@ contains
     ! -- return
     return
   end subroutine csub_delay_solve
+  
+  
+  subroutine csub_delay_calc_err(this, ib, hcell, err)
+! ******************************************************************************
+! csub_delay_calc_err -- Calculate error in a delay interbed.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    class(GwfCsubType), intent(inout) :: this
+    integer(I4B), intent(in) :: ib
+    real(DP), intent(in) :: hcell
+    real(DP), intent(inout) :: err
+    ! -- local variables
+    integer(I4B) :: idelay
+    integer(I4B) :: n
+    real(DP) :: hcof
+    real(DP) :: v
+    real(DP) :: void
+! ------------------------------------------------------------------------------
+    !
+    ! -- initialize variables
+    idelay = this%idelay(ib)
+    err = DZERO
+    !
+    !
+    if (this%thick(ib) > DZERO) then
+      call this%csub_delay_assemble(ib, hcell)
+      do n = 1, this%ndelaycells
+        v = this%dbad(n) * this%dbh(n, idelay)
+        if (n > 1) then
+          v = v + this%dbal(n) * this%dbh(n-1, idelay)
+        end if
+        if (n < this%ndelaycells) then
+          v = v + this%dbau(n) * this%dbh(n+1, idelay)
+        end if
+        v = v - this%dbrhs(n)
+        err = err + v
+      end do
+    end if
+    !
+    ! -- return
+    return
+  end subroutine csub_delay_calc_err
 
+ 
   subroutine csub_delay_calc_dstor(this, ib, stoe, stoi)
 ! ******************************************************************************
 ! csub_delay_calc_dstor -- Calculate change in storage in a delay interbed.
@@ -3967,6 +4119,9 @@ contains
     real(DP) :: v2
     real(DP) :: ske
     real(DP) :: sk
+    real(DP) :: z
+    real(DP) :: zbot
+    real(DP) :: dzhalf
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
@@ -3979,13 +4134,18 @@ contains
     !
     if (this%thick(ib) > DZERO) then
       fmult = this%dbfact * this%dbdz(idelay)
+      dzhalf = DHALF * this%dbdz(idelay)
       do n = 1, this%ndelaycells
         call this%csub_delay_calc_ssksske(ib, n, ssk, sske)
         if (this%igeocalc == 0) then
           v1 = ssk * (this%dbpcs(n, idelay) - this%dbh(n, idelay))
           v2 = sske * (this%dbh0(n, idelay) - this%dbpcs(n, idelay))
         else
-          v1 = ssk * (this%dbes(n, idelay) - this%dbpcs(n, idelay))
+          !v1 = ssk * (this%dbes(n, idelay) - this%dbpcs(n, idelay))
+          z = this%dbz(n, idelay)
+          zbot = z - dzhalf
+          v1 = ssk * (this%dbgeo(n, idelay) - this%dbh(n, idelay) + zbot - &
+                      this%dbpcs(n, idelay))
           v2 = sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay))
         end if
         !
@@ -4005,7 +4165,7 @@ contains
     !
     ! -- save ske and sk
     this%ske(ib) = ske
-    this%sk(ib) = sk * fmult
+    this%sk(ib) = sk
     !
     ! -- return
     return
@@ -4074,7 +4234,6 @@ contains
     ! -- local variables
     integer(I4B) :: idelay
     integer(I4B) :: node
-    real(DP) :: area
     real(DP) :: f
     real(DP) :: c1
     real(DP) :: c2
@@ -4087,7 +4246,6 @@ contains
     if (this%thick(ib) > DZERO) then
       ! -- calculate terms for gwf matrix
       node = this%nodelist(ib)
-      area = this%dis%get_area(node)
       if (this%idbhalfcell == 0) then
         c1 = DTWO * this%kv(ib) / this%dbdz(idelay)
         rhs = -c1 * this%dbh(1, idelay)

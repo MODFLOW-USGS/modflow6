@@ -65,12 +65,12 @@ ss = 0.
 sy = 0.2
 
 # solver data
-nouter, ninner = 1000, 300
+nouter, ninner = 50, 100
 hclose, rclose, relax = 1e-6, 1e-6, 0.97
 
 # sub data
-cc = 100. #0.25
-cr = 1. #0.01
+cc = 99.161639 #100.
+cr = 0.99161639 #1.
 void = 0.82
 theta = void / (1. + void)
 kv = 0.025

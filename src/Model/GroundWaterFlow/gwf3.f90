@@ -703,6 +703,11 @@ module GwfModule
     ! -- If mover is on, then at least 2 outers required
     if (this%inmvr > 0) call this%mvr%mvr_cc(kiter, iend, icnvg)
     !
+    ! -- csub
+    if (this%incsub > 0) then
+      call this%csub%csub_cc(iend, icnvg, this%dis%nodes, this%x)
+    end if
+    !
     ! -- Call package cc routines
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
