@@ -1,6 +1,15 @@
 # --------------------- gwf csub options ---------------------
 
 block options
+name strain_table
+type string
+valid none summary all
+reader urword
+optional true
+longname strain table option
+description is a text keyword to set strain table options for output of final skeletal and interbed strain values.  The text value for STRAIN\_TABLE can be ``NONE'', ``SUMMARY'', or ``ALL''. ``NONE'' prevents output of final strain values at the end of the simulation. ``SUMMARY'' results in output of final strain values for cells and interbeds where the compaction is greater to or equal to 1 percent of the initial thickness at the end of the simulation. ``ALL'' results in output of final strain values for all cells at the end of the simulation. The ``SUMMARY'' option is used if STRAIN\_TABLE is not specified.
+
+block options
 name save_flows
 type keyword
 reader urword

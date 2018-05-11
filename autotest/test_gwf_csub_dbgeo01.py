@@ -169,6 +169,7 @@ def get_model(idx, dir):
     # ibc files
     opth = '{}.csub.obs'.format(name)
     csub = flopy.mf6.ModflowGwfcsub(gwf, ndelaycells=ndcell[idx],
+                                    strain_table='all',
                                     time_weight=0.,
                                     delay_saturation_scaling=True,
                                     #compression_indices=True,

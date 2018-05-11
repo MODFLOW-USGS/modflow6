@@ -1,4 +1,5 @@
 BEGIN OPTIONS
+  [STRAIN_TABLE <strain_table>]
   [SAVE_FLOWS]
   [GAMMAW <gammaw>]
   [BETA <beta>]
