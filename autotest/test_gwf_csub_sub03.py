@@ -76,7 +76,7 @@ hk = [20., hk1, 5.]
 vka = [1e6, 7.5e-5, 1e6]
 
 # set rest of npf variables
-laytyp = [1, 0, 0]
+laytyp = [0, 0, 0] #[1, 0, 0]
 ffrac = [.6, 0., .6]
 sy = [0.1, 0., 0.]
 S = []

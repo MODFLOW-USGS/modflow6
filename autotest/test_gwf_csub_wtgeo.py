@@ -36,7 +36,7 @@ ump = [None, None, True, None, True, None, True]
 iump = [0, 0, 1, 0, 1, 0, 1]
 tw = [0. for idx in range(len(exdirs))]
 headformulation = [True, False, False, True, True, False, False]
-delay = [False, False, False, True, True, True, False]
+delay = [False, False, False, True, True, True, True]
 
 ddir = 'data'
 
@@ -87,7 +87,6 @@ vka = [1e6, 7.5e-5, 1e6]
 
 # all cells are active and layer 1 is convertible
 ib = 1
-laytyp = [1, 0, 0]
 
 # solver options
 nouter, ninner = 500, 300
@@ -208,6 +207,16 @@ def get_model(idx, dir):
               botm[0] - botm[1],
               botm[1] - botm[2]]
     elevs = [top] + botm
+
+    if top == 0:
+        laytyp = [0, 0, 0]
+        dss = None
+    else:
+        laytyp = [1, 0, 0]
+        if delay[idx]:
+            dss = True
+        else:
+            dss = None
 
     # calculate sk, ndb, and db factors
     # facndb = [0.15, 1., 0.15]
@@ -417,6 +426,7 @@ def get_model(idx, dir):
                                     update_material_properties=ump[idx],
                                     time_weight=tw[idx],
                                     geo_stress_offset=True,
+                                    delay_saturation_scaling=dss,
                                     save_flows=True,
                                     ninterbeds=maxcsub,
                                     obs_filerecord=opth,

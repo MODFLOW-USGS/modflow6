@@ -32,7 +32,7 @@ type double precision
 reader urword
 optional true
 longname effective stress time weight
-description effective stress time weight used to calculate the storage parameters. A TIME\_WEIGHT value of 1. results in the use of the current estimate of the effective stress to calculate storage parameters. A TIME\_WEIGHT value of 0. results in the use of the effective stress from the previous time step to calculate storage parameters. Any TIME\_FACTOR value can be specified if HEAD\_BASED is specified in the OPTIONS block.  TIME\_WEIGHT must be either 0. or 1. if HEAD\_BASED is not specified in the OPTIONS block. By default, TIME\_FACTOR is 1.
+description effective stress time weight used to calculate the storage parameters. A TIME\_WEIGHT value of 1 results in the use of the current estimate of the effective stress to calculate storage parameters. A TIME\_WEIGHT value of 0 results in the use of the effective stress from the previous time step to calculate storage parameters. Any TIME\_FACTOR value can be specified if HEAD\_BASED is specified in the OPTIONS block.  TIME\_WEIGHT must be either 0 or 1 if HEAD\_BASED is not specified in the OPTIONS block. By default, TIME\_FACTOR is 1.
 default_value 1.
 
 block options
@@ -57,7 +57,15 @@ type integer
 reader urword
 optional true
 longname number of interbed cell nodes
-description number of nodes used to discretize the the delay intebed thickness to approximate the head distributions in systems of delay interbeds. If not specified, then a default value of 19 is assigned.
+description number of nodes used to discretize the delay interbed. If not specified, then a default value of 19 is assigned.
+
+block options
+name delay_saturation_scaling
+type keyword
+reader urword
+optional true
+longname keyword to indicate that delay interbeds can be assigned to convertible cells
+description keyword to indicate that delay interbeds can be assigned to convertible cells. By default, delay interbeds are not allowed in convertible cells. The program will terminate with an error if DELAY\_SATURATION\_SCALING is not specified and delay intebeds are assigned to convertible cells. The program will also terminate if DELAY\_SATURATION\_SCALING is specified and water-levels fall below the top of the interbed during a simulation.
 
 block options
 name interbed_stress_offset

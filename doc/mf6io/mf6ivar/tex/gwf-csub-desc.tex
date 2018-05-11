@@ -9,13 +9,15 @@
 
 \item \texttt{beta}---compressibility of water. Typical values of BETA are 4.6512e-10 1/Pa or 2.2270e-8 lb/square foot in SI and English units, respectively. By default, BETA is 4.6512e-10.
 
-\item \texttt{time\_weight}---effective stress time weight used to calculate the storage parameters. A TIME\_WEIGHT value of 1. results in the use of the current estimate of the effective stress to calculate storage parameters. A TIME\_WEIGHT value of 0. results in the use of the effective stress from the previous time step to calculate storage parameters. Any TIME\_FACTOR value can be specified if HEAD\_BASED is specified in the OPTIONS block.  TIME\_WEIGHT must be either 0. or 1. if HEAD\_BASED is not specified in the OPTIONS block. By default, TIME\_FACTOR is 1.
+\item \texttt{time\_weight}---effective stress time weight used to calculate the storage parameters. A TIME\_WEIGHT value of 1 results in the use of the current estimate of the effective stress to calculate storage parameters. A TIME\_WEIGHT value of 0 results in the use of the effective stress from the previous time step to calculate storage parameters. Any TIME\_FACTOR value can be specified if HEAD\_BASED is specified in the OPTIONS block.  TIME\_WEIGHT must be either 0 or 1 if HEAD\_BASED is not specified in the OPTIONS block. By default, TIME\_FACTOR is 1.
 
 \item \texttt{HEAD\_BASED}---keyword to indicate the head-based formulation will be used to simulate coarse-grained aquifer materials and no-delay and delay interbeds.
 
 \item \texttt{DELAY\_FULL\_CELL}---keyword to indicate that head-based delay interbeds will be simulated using a full-cell approach.
 
-\item \texttt{ndelaycells}---number of nodes used to discretize the the delay intebed thickness to approximate the head distributions in systems of delay interbeds. If not specified, then a default value of 19 is assigned.
+\item \texttt{ndelaycells}---number of nodes used to discretize the delay interbed. If not specified, then a default value of 19 is assigned.
+
+\item \texttt{DELAY\_SATURATION\_SCALING}---keyword to indicate that delay interbeds can be assigned to convertible cells. By default, delay interbeds are not allowed in convertible cells. The program will terminate with an error if DELAY\_SATURATION\_SCALING is not specified and delay intebeds are assigned to convertible cells. The program will also terminate if DELAY\_SATURATION\_SCALING is specified and water-levels fall below the top of the interbed during a simulation.
 
 \item \texttt{INTERBED\_STRESS\_OFFSET}---keyword to indicate that an initial stress offset specified in the GRIDDATA block will be applied to each interbed.
 

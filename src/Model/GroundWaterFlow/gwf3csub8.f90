@@ -44,6 +44,7 @@ module GwfCsubModule
     integer(I4B), pointer :: iupdatematprop         => null()
     integer(I4B), pointer :: istoragec              => null()
     integer(I4B), pointer :: icellf                 => null()
+    integer(I4B), pointer :: idbsatscaling          => null()
     integer(I4B), pointer :: ibedstressoff          => null()
     integer(I4B), pointer :: igeostressoff          => null()
     integer(I4B), pointer :: inamedbound            => null()   !flag to read boundnames
@@ -185,6 +186,7 @@ module GwfCsubModule
     procedure, private :: csub_nodelay_calc_comp
     !
     ! -- delay interbed methods
+    procedure, private :: csub_delay_chk
     procedure, private :: csub_delay_calc_zcell
     procedure, private :: csub_delay_calc_stress
     procedure, private :: csub_delay_calc_ssksske
@@ -272,6 +274,7 @@ contains
     call mem_allocate(this%ndelaybeds, 'NDELAYBEDS', this%origin)
     call mem_allocate(this%initialized, 'INITIALIZED', this%origin)
     call mem_allocate(this%igeocalc, 'IGEOCALC', this%origin)
+    call mem_allocate(this%idbsatscaling, 'IDBSATSCALING', this%origin)
     call mem_allocate(this%ibedstressoff, 'IBEDSTRESSOFF', this%origin)
     call mem_allocate(this%igeostressoff, 'IGEOSTRESSOFF', this%origin)
     call mem_allocate(this%inamedbound, 'INAMEDBOUND', this%origin)
@@ -302,6 +305,7 @@ contains
     this%ndelaybeds = 0
     this%initialized = 0
     this%igeocalc = 1
+    this%idbsatscaling = 0
     this%ibedstressoff = 0
     this%igeostressoff = 0
     this%inamedbound = 0
@@ -426,7 +430,8 @@ contains
   end subroutine csub_cc
 
 
-   subroutine csub_bdcalc(this, nodes, hnew, hold, isuppress_output, model_budget)
+   subroutine csub_bdcalc(this, nodes, hnew, hold, isuppress_output,            &
+                          model_budget)
 ! ******************************************************************************
 ! csub_bd -- calculate budget for skeletal storage, interbeds, and water
 !            compression   
@@ -435,7 +440,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
    ! -- modules
-    use TdisModule, only: kstp, kper, delt
+    use TdisModule, only: delt
     use ConstantsModule, only: LENBOUNDNAME, DZERO, DONE
     use BudgetModule, only: BudgetType
     ! -- dummy
@@ -446,10 +451,8 @@ contains
     integer(I4B), intent(in) :: isuppress_output
     type(BudgetType), intent(inout) :: model_budget
     ! -- local
-    !character (len=LENPACKAGENAME) :: text
-    character(len=LINELENGTH) :: msg
-    !integer(I4B) :: imover
-    integer(I4B) :: i, n
+    integer(I4B) :: ib
+    integer(I4B) :: node
     real(DP) :: es
     real(DP) :: pcs
     real(DP) :: rho1
@@ -457,11 +460,6 @@ contains
     real(DP) :: tled
     real(DP) :: tledm
     real(DP) :: es0
-    real(DP) :: top
-    real(DP) :: bot
-    real(DP) :: thk_node
-    real(DP) :: thick
-    real(DP) :: theta
     real(DP) :: rrate
     real(DP) :: ratein
     real(DP) :: rateout
@@ -473,10 +471,6 @@ contains
     real(DP) :: stoe
     real(DP) :: stoi
     real(DP) :: err
-    real(DP) :: qaq
-    real(DP) :: qaqa
-    real(DP) :: qaqrhs
-    real(DP) :: void
     real(DP) :: rateskin
     real(DP) :: rateskout
     real(DP) :: rateibein
@@ -486,7 +480,6 @@ contains
     real(DP) :: rratewc
     real(DP) :: ratewcin
     real(DP) :: ratewcout
-    integer(I4B) :: ibc
     ! -- for observations
     integer(I4B) :: iprobslocal
     ! -- formats
@@ -504,20 +497,21 @@ contains
     rateskin = DZERO
     rateskout= DZERO
     tled = DONE / DELT
-    do n = 1, this%dis%nodes
-      area = this%dis%get_area(n)
+    do node = 1, this%dis%nodes
+      area = this%dis%get_area(node)
       comp = DZERO
       rrate = DZERO
       rratewc = DZERO
       if (this%gwfiss == 0) then
-        if (this%ibound(n) > 0) then
+        if (this%ibound(node) > 0) then
           !
           ! -- calculate coarse-grained skeletal storage terms
-          call this%csub_sk_fc(n, tled, area, hnew(n), hold(n), hcof, rhs)
-          rrate = hcof * hnew(n) - rhs
+          call this%csub_sk_fc(node, tled, area, hnew(node), hold(node),        &
+                               hcof, rhs)
+          rrate = hcof * hnew(node) - rhs
           !
           ! -- calculate compaction
-          call this%csub_sk_calc_comp(n, hnew(n), hold(n), comp)
+          call this%csub_sk_calc_comp(node, hnew(node), hold(node), comp)
           !
           ! -- budget terms
           if (rrate < DZERO) then
@@ -527,8 +521,9 @@ contains
           end if
           !
           ! -- calculate coarse-grained skeletal water compressibility storage terms
-          call this%csub_sk_wcomp_fc(n, tled, area, hnew(n), hold(n), hcof, rhs)
-          rratewc = hcof * hnew(n) - rhs
+          call this%csub_sk_wcomp_fc(node, tled, area, hnew(node), hold(node),  &
+                                     hcof, rhs)
+          rratewc = hcof * hnew(node) - rhs
           !
           ! -- water compressibility budget terms
           if (rratewc < DZERO) then
@@ -541,12 +536,12 @@ contains
       !
       ! -- update coarse-grained skeletal storage and water
       !    compresion variables
-      this%sk_stor(n) = rrate
-      this%sk_wcstor(n) = rratewc
+      this%sk_stor(node) = rrate
+      this%sk_wcstor(node) = rratewc
       !
       ! -- update incremental compaction
       !comp = rrate * DELT / area
-      this%sk_comp(n) = comp
+      this%sk_comp(node) = comp
       ! 
       !
       ! -- update states if required
@@ -554,11 +549,11 @@ contains
         !
         ! -- update total compaction
         !comp = rrate * DELT / area
-        this%sk_tcomp(n) = this%sk_tcomp(n) + comp
+        this%sk_tcomp(node) = this%sk_tcomp(node) + comp
         !
         ! - calculate strain and change in skeletal void ratio and thickness
         if (this%iupdatematprop /= 0) then
-          call this%csub_sk_update(n)
+          call this%csub_sk_update(node)
         end if
       end if
     end do
@@ -571,30 +566,31 @@ contains
 
     tled = DONE
     tledm = DONE / DELT
-    do i = 1, this%ninterbeds
+    do ib = 1, this%ninterbeds
       rratewc = DZERO
       if (this%gwfiss == 0) then
-        n = this%nodelist(i)
-        area = this%dis%get_area(n)
+        node = this%nodelist(ib)
+        area = this%dis%get_area(node)
         !
         ! -- skip inactive and constant head cells
-        if (this%ibound(n) < 1) cycle
+        if (this%ibound(node) < 1) cycle
         !
         ! -- no delay interbeds
-        if (this%idelay(i) == 0) then
+        if (this%idelay(ib) == 0) then
           stoi = DZERO
           !
           ! -- calculate compaction
-          call this%csub_nodelay_calc_comp(i, hnew(n), hold(n), comp, rho1, rho2)
+          call this%csub_nodelay_calc_comp(ib, hnew(node), hold(node), comp,    &
+                                           rho1, rho2)
           !
           ! -- interbed stresses
-          es = this%sk_es(n)
-          pcs = this%pcs(i)
-          es0 = this%sk_es0(n)
+          es = this%sk_es(node)
+          pcs = this%pcs(ib)
+          es0 = this%sk_es0(node)
           !
           ! -- calculate inelastic and elastic compaction
           if (this%igeocalc == 0) then
-            h = hnew(n)
+            h = hnew(node)
             if (rho2 /= rho1) then
               stoi = rho2 * (pcs - h)
               stoe = rho1 * (es0 - pcs)
@@ -611,33 +607,33 @@ contains
           end if
           stoe = stoe * area
           stoi = stoi * area
-          this%storagee(i) = stoe * tledm
-          this%storagei(i) = stoi * tledm
+          this%storagee(ib) = stoe * tledm
+          this%storagei(ib) = stoi * tledm
           !
           ! -- update compaction
-          this%comp(i) = comp
+          this%comp(ib) = comp
           !
           ! -- update states if required
           if (isuppress_output == 0) then
             !
             ! -- update total compaction
-            this%tcomp(i) = this%tcomp(i) + comp
+            this%tcomp(ib) = this%tcomp(ib) + comp
             !
             ! - calculate strain and change in interbed void ratio and thickness
             if (this%iupdatematprop /= 0) then
-              call this%csub_nodelay_update(i)
+              call this%csub_nodelay_update(ib)
             end if
           end if
           !
           ! -- delay interbeds
         else
-          h = hnew(n)
-          call this%csub_delay_calc_dstor(i, stoe, stoi)
-          this%storagee(i) = stoe * area * this%rnb(i) * tledm
-          this%storagei(i) = stoi * area * this%rnb(i) * tledm
+          h = hnew(node)
+          call this%csub_delay_calc_dstor(ib, stoe, stoi)
+          this%storagee(ib) = stoe * area * this%rnb(ib) * tledm
+          this%storagei(ib) = stoi * area * this%rnb(ib) * tledm
           !
           !
-          call this%csub_delay_fc(i, hcof, rhs)
+          call this%csub_delay_fc(ib, hcof, rhs)
           err = -hcof * h - rhs
           err = err / tledm
           !
@@ -645,27 +641,27 @@ contains
           if (isuppress_output == 0) then
             !
             ! -- calculate sum of compaction in delay interbed
-            call this%csub_delay_calc_comp(i)
+            call this%csub_delay_calc_comp(ib)
           end if
         end if
         !
         ! -- budget terms
-        if (this%storagee(i) < DZERO) then
-          rateibeout = rateibeout - this%storagee(i)
+        if (this%storagee(ib) < DZERO) then
+          rateibeout = rateibeout - this%storagee(ib)
         else
-          rateibein = rateibein + this%storagee(i)
+          rateibein = rateibein + this%storagee(ib)
         end if
-        if (this%storagei(i) < DZERO) then
-          rateibiout = rateibiout - this%storagei(i)
+        if (this%storagei(ib) < DZERO) then
+          rateibiout = rateibiout - this%storagei(ib)
         else
-          rateibiin = rateibiin + this%storagei(i)
+          rateibiin = rateibiin + this%storagei(ib)
         end if
         !
         ! -- interbed water compressibility
-        call this%csub_interbed_wcomp_fc(i, n, tledm, area,                     &
-                                         hnew(n), hold(n), hcof, rhs)
-        rratewc = hcof * hnew(n) - rhs
-        this%sk_wcstor(n) = this%sk_wcstor(n) + rratewc
+        call this%csub_interbed_wcomp_fc(ib, node, tledm, area,                 &
+                                         hnew(node), hold(node), hcof, rhs)
+        rratewc = hcof * hnew(node) - rhs
+        this%sk_wcstor(node) = this%sk_wcstor(node) + rratewc
         !
         ! -- water compressibility budget terms
         if (rratewc < DZERO) then
@@ -674,8 +670,8 @@ contains
           ratewcin = ratewcin + rratewc
         end if
       else
-        this%storagee(i) = DZERO
-        this%storagei(i) = DZERO
+        this%storagee(ib) = DZERO
+        this%storagei(ib) = DZERO
       end if
     end do
     !
@@ -734,7 +730,7 @@ contains
     character(len=1) :: cdatafmp=' ', editdesc=' '
     integer(I4B) :: ibinun
     integer(I4B) :: iprint, nvaluesp, nwidthp
-    integer(I4B) :: n
+    integer(I4B) :: ib
     integer(I4B) :: node
     integer(I4B) :: naux
     real(DP) :: dinact
@@ -757,16 +753,9 @@ contains
       dinact = DZERO
       !
       ! -- skeletal storage (sske)
-      call this%dis%record_array(this%sk_stor, this%iout, iprint, -ibinun,    &
-                                 budtxt(1), cdatafmp, nvaluesp,               &
+      call this%dis%record_array(this%sk_stor, this%iout, iprint, -ibinun,      &
+                                 budtxt(1), cdatafmp, nvaluesp,                 &
                                  nwidthp, editdesc, dinact)
-      !!
-      !! -- storage(sy)
-      !if (this%iusesy == 1) then
-      !  call this%dis%record_array(this%strgsy, this%iout, iprint, -ibinun,  &
-      !                             budtxt(2), cdatafmp, nvaluesp,            &
-      !                             nwidthp, editdesc, dinact)
-      !end if
       if (this%ninterbeds > 0) then
         naux = 0
         ! -- interbed elastic storage
@@ -774,22 +763,22 @@ contains
                      this%name_model, this%name,                                &
                      ibinun, naux, this%auxname, this%ninterbeds, 1, 1,         &
                      this%ninterbeds, this%iout, delt, pertim, totim)
-        do n = 1, this%ninterbeds
-          q = this%storagee(n)
-          node = this%nodelist(n)
+        do ib = 1, this%ninterbeds
+          q = this%storagee(ib)
+          node = this%nodelist(ib)
           call this%dis%record_mf6_list_entry(ibinun, node, node, q, naux,      &
-                                              this%auxvar(:,n))
+                                              this%auxvar(:,ib))
         end do
         ! -- interbed inelastic storage
         call ubdsv06(kstp, kper, budtxt(3), this%name_model, this%name,         &
                      this%name_model, this%name,                                &
                      ibinun, naux, this%auxname, this%ninterbeds, 1, 1,         &
                      this%ninterbeds, this%iout, delt, pertim, totim)
-        do n = 1, this%ninterbeds
-          q = this%storagei(n)
-          node = this%nodelist(n)
+        do ib = 1, this%ninterbeds
+          q = this%storagei(ib)
+          node = this%nodelist(ib)
           call this%dis%record_mf6_list_entry(ibinun, node, node, q, naux,      &
-                                              this%auxvar(:,n))
+                                              this%auxvar(:,ib))
         end do
       end if
       !
@@ -824,8 +813,7 @@ contains
     class(GwfCsubType),intent(inout) :: this
     ! -- local
     character(len=LINELENGTH) :: errmsg
-    character(len=LINELENGTH) :: text, keyword
-    character(len=LINELENGTH) :: strttext, cellid
+    character(len=LINELENGTH) :: cellid
     character(len=LENBOUNDNAME) :: bndName, bndNameTemp
     character(len=7) :: cdelay
     character(len=9) :: cno
@@ -834,8 +822,8 @@ contains
     logical :: isfound, endOfBlock
     integer(I4B) :: n
     integer(I4B) :: nn
-    integer(I4B) :: j
-    integer(I4B) :: jj
+    integer(I4B) :: ib
+    !integer(I4B) :: j
     integer(I4B) :: iaux
     integer(I4B) :: itmp
     integer(I4B) :: ierr
@@ -845,7 +833,6 @@ contains
     real(DP) :: rval
     real(DP) :: top
     real(DP) :: bot
-    real(DP) :: endtim
     real(DP) :: baq
     integer, allocatable, dimension(:) :: nboundchk
     !
@@ -1012,86 +999,116 @@ contains
     !
     ! -- Check to make sure that every reach is specified and that no reach
     !    is specified more than once.
-    do n = 1, this%ninterbeds
-      if (nboundchk(n) == 0) then
-        write(errmsg, '(a, i0, a)') 'ERROR: INFORMATION FOR INTERBED ', n,     &
+    do ib = 1, this%ninterbeds
+      if (nboundchk(ib) == 0) then
+        write(errmsg, '(a, i0, a)') 'ERROR: INFORMATION FOR INTERBED ', ib,     &
                                     ' NOT SPECIFIED IN PACKAGEDATA BLOCK.'
         call store_error(errmsg)
-      else if (nboundchk(n) > 1) then
-        write(errmsg, '(a, i0, i0)') 'ERROR: INFORMATION SPECIFIED ',          &
-                                     nboundchk(n), ' TIMES FOR INTERBED ', n
+      else if (nboundchk(ib) > 1) then
+        write(errmsg, '(a, i0, i0)') 'ERROR: INFORMATION SPECIFIED ',           &
+                                     nboundchk(ib), ' TIMES FOR INTERBED ', ib
         call store_error(errmsg)
       endif
     end do
     deallocate(nboundchk)
     !
-    ! -- reallocate and initialize delay bed arrays
+    ! -- set the number of delay interbeds
     this%ndelaybeds = ndelaybeds
+    !
+    ! -- process delay interbeds
     if (ndelaybeds > 0) then
       !
-      ! -- delay bed storage
-      call mem_reallocate(this%dbdz, ndelaybeds, 'dbdz', trim(this%origin))
-      call mem_reallocate(this%dbz, this%ndelaycells, ndelaybeds, 'dbz', trim(this%origin))
-      call mem_reallocate(this%dbh, this%ndelaycells, ndelaybeds, 'dbh', trim(this%origin))
-      call mem_reallocate(this%dbh0, this%ndelaycells, ndelaybeds, 'dbh0', trim(this%origin))
-      call mem_reallocate(this%dbtheta, this%ndelaycells, ndelaybeds, 'dbtheta', trim(this%origin))
-      call mem_reallocate(this%dbtheta0, this%ndelaycells, ndelaybeds, 'dbtheta0', trim(this%origin))
-      call mem_reallocate(this%dbgeo, this%ndelaycells, ndelaybeds, 'dbgeo', trim(this%origin))
-      call mem_reallocate(this%dbgeo0, this%ndelaycells, ndelaybeds, 'dbgeo0', trim(this%origin))
-      call mem_reallocate(this%dbes, this%ndelaycells, ndelaybeds, 'dbes', trim(this%origin))
-      call mem_reallocate(this%dbes0, this%ndelaycells, ndelaybeds, 'dbes0', trim(this%origin))
-      call mem_reallocate(this%dbpcs, this%ndelaycells, ndelaybeds, 'dbpcs', trim(this%origin))
-      !
-      ! -- delay interbed solution arrays
-      call mem_reallocate(this%dbal, this%ndelaycells, 'dbal', trim(this%origin))
-      call mem_reallocate(this%dbad, this%ndelaycells, 'dbad', trim(this%origin))
-      call mem_reallocate(this%dbau, this%ndelaycells, 'dbau', trim(this%origin))
-      call mem_reallocate(this%dbrhs, this%ndelaycells, 'dbrhs', trim(this%origin))
-      call mem_reallocate(this%dbdh, this%ndelaycells, 'dbdh', trim(this%origin))
-      call mem_reallocate(this%dbaw, this%ndelaycells, 'dbaw', trim(this%origin))
-      !
-      ! -- initialize delay bed storage
-      do n = 1, this%ninterbeds
-        idelay = this%idelay(n)
-        if (idelay == 0) then
-          cycle
-        end if
-        !
-        ! -- adjust thickness if solving half cell problem
-        this%thick(n) = this%dbfacti * this%thick(n)
-        !
-        ! -- calculate delay bed cell thickness
-        if (this%idbhalfcell == 0) then
-          this%dbdz(idelay) = this%thick(n) / real(this%ndelaycells, DP)
-        else
-          this%dbdz(idelay) = this%thick(n) / (real(this%ndelaycells, DP) - DHALF)
-        end if
-        do j = 1, this%ndelaycells
-          this%dbh(j, idelay) = this%h0(n)
-          this%dbh0(j, idelay) = this%h0(n)
-          this%dbtheta(j, idelay) = this%theta(n)
-          this%dbtheta0(j, idelay) = this%theta(n)
-          this%dbgeo(j, idelay) = DZERO
-          this%dbgeo0(j, idelay) = DZERO
-          this%dbes(j, idelay) = DZERO
-          this%dbes0(j, idelay) = DZERO
-          this%dbpcs(j, idelay) = this%pcs(n)
+      ! -- check that delay interbeds are not specified in convertible cells
+      !    unless DELAY_SATURATION_SCALING option is specified
+      ierr = 0
+      if (this%idbsatscaling == 0) then
+        do ib = 1, this%ninterbeds
+          idelay = this%idelay(ib)
+          if (idelay == 0) then
+            cycle
+          end if
+          node = this%nodelist(ib)
+          call this%dis%noder_to_string(node, cellid)
+          if (this%stoiconv(node) /= 0) then
+            write(errmsg, '(a,i0,a,1x,a,1x,a)') &
+              'ERROR: DELAY INTERBED (', ib,                                    &
+              ') SPECIFIED IN CONVERTIBLE CELL', trim(adjustl(cellid)),         &
+              'USE THE DELAY_SATURATION_SCALING OPTION TO ALLOW ' //            &
+              'DELAY BEDS IN CONVERTIBLE CELLS'
+            call store_error(errmsg)
+          end if
         end do
-        ! 
-        ! -- initialize elevation of delay bed cells
-        node = this%nodelist(n)
-        top = this%dis%top(node)
-        call this%csub_delay_calc_zcell(n, top)
+      end if
+      !
+      ! -- reallocate and initialize delay interbed arrays
+      if (ierr == 0) then
+        !
+        ! -- reallocate delay bed arrays
+        call mem_reallocate(this%dbdz, ndelaybeds, 'dbdz', trim(this%origin))
+        call mem_reallocate(this%dbz, this%ndelaycells, ndelaybeds, 'dbz', trim(this%origin))
+        call mem_reallocate(this%dbh, this%ndelaycells, ndelaybeds, 'dbh', trim(this%origin))
+        call mem_reallocate(this%dbh0, this%ndelaycells, ndelaybeds, 'dbh0', trim(this%origin))
+        call mem_reallocate(this%dbtheta, this%ndelaycells, ndelaybeds, 'dbtheta', trim(this%origin))
+        call mem_reallocate(this%dbtheta0, this%ndelaycells, ndelaybeds, 'dbtheta0', trim(this%origin))
+        call mem_reallocate(this%dbgeo, this%ndelaycells, ndelaybeds, 'dbgeo', trim(this%origin))
+        call mem_reallocate(this%dbgeo0, this%ndelaycells, ndelaybeds, 'dbgeo0', trim(this%origin))
+        call mem_reallocate(this%dbes, this%ndelaycells, ndelaybeds, 'dbes', trim(this%origin))
+        call mem_reallocate(this%dbes0, this%ndelaycells, ndelaybeds, 'dbes0', trim(this%origin))
+        call mem_reallocate(this%dbpcs, this%ndelaycells, ndelaybeds, 'dbpcs', trim(this%origin))
+        !
+        ! -- reallocate delay interbed solution arrays
+        call mem_reallocate(this%dbal, this%ndelaycells, 'dbal', trim(this%origin))
+        call mem_reallocate(this%dbad, this%ndelaycells, 'dbad', trim(this%origin))
+        call mem_reallocate(this%dbau, this%ndelaycells, 'dbau', trim(this%origin))
+        call mem_reallocate(this%dbrhs, this%ndelaycells, 'dbrhs', trim(this%origin))
+        call mem_reallocate(this%dbdh, this%ndelaycells, 'dbdh', trim(this%origin))
+        call mem_reallocate(this%dbaw, this%ndelaycells, 'dbaw', trim(this%origin))
+        !
+        ! -- initialize delay bed storage
+        do ib = 1, this%ninterbeds
+          idelay = this%idelay(ib)
+          if (idelay == 0) then
+            cycle
+          end if
+          !
+          ! -- adjust thickness if solving half cell problem
+          this%thick(ib) = this%dbfacti * this%thick(ib)
+          !
+          ! -- calculate delay bed cell thickness
+          if (this%idbhalfcell == 0) then
+            this%dbdz(idelay) = this%thick(ib) / real(this%ndelaycells, DP)
+          else
+            this%dbdz(idelay) = this%thick(ib) / (real(this%ndelaycells, DP) - DHALF)
+          end if
+          !
+          ! -- initialize delay interbed variables
+          do n = 1, this%ndelaycells
+            this%dbh(n, idelay) = this%h0(ib)
+            this%dbh0(n, idelay) = this%h0(ib)
+            this%dbtheta(n, idelay) = this%theta(ib)
+            this%dbtheta0(n, idelay) = this%theta(ib)
+            this%dbgeo(n, idelay) = DZERO
+            this%dbgeo0(n, idelay) = DZERO
+            this%dbes(n, idelay) = DZERO
+            this%dbes0(n, idelay) = DZERO
+            this%dbpcs(n, idelay) = this%pcs(ib)
+          end do
+          ! 
+          ! -- initialize elevation of delay bed cells
+          call this%csub_delay_calc_zcell(ib)
 
-      end do
-      do n = 1, this%ndelaycells
-        this%dbal(n) = DZERO
-        this%dbad(n) = DZERO
-        this%dbau(n) = DZERO
-        this%dbrhs(n) = DZERO
-        this%dbdh(n) = DZERO
-        this%dbaw(n) = DZERO
-      end do
+        end do
+        !
+        ! -- initialize delay bed solution arrays
+        do n = 1, this%ndelaycells
+          this%dbal(n) = DZERO
+          this%dbad(n) = DZERO
+          this%dbau(n) = DZERO
+          this%dbrhs(n) = DZERO
+          this%dbdh(n) = DZERO
+          this%dbaw(n) = DZERO
+        end do
+      end if
     end if
     !
     ! TODO - check the total frac for each nbound node to make sure < 1.0
@@ -1123,7 +1140,6 @@ contains
     integer(I4B) :: lloc
     integer(I4B) :: istart
     integer(I4B) :: istop
-    integer(I4B) :: n    
     integer(I4B) :: ierr
     integer(I4B) :: inobs
     integer(I4B) :: ibrg
@@ -1219,21 +1235,31 @@ contains
           case ('NDELAYCELLS')
             this%ndelaycells =  this%parser%GetInteger()
             write(this%iout, fmtopti) 'NUMBER OF DELAY CELLS =', this%ndelaycells
-          ! offset is applied to geostatic stress
-          ! initial stress is actually an offset from calculated initial stress
+          case ('DELAY_SATURATION_SCALING')
+            this%idbsatscaling = 1
+            write(this%iout, fmtopt) &
+              'DELAY-INTERBEDS WILL BE ALLOWED IN CONVERTIBLE CELLS'
+          !
+          ! -- initial effective stress will be calculated as an offset from 
+          !    calculated initial stress
           case ('INTERBED_STRESS_OFFSET')
             this%ibedstressoff = 1
-            write(this%iout, fmtopt) 'OFFSET WILL BE APPLIED TO INITIAL INTERBED EFFECTIVE STRESS'
+            write(this%iout, fmtopt) &
+              'OFFSET WILL BE APPLIED TO INITIAL INTERBED EFFECTIVE STRESS'
+          !
+          ! -- an offset will be applied to geostatic stress
           case ('GEO_STRESS_OFFSET')
             this%igeostressoff = 1
-            write(this%iout, fmtopt) 'OFFSET WILL BE APPLIED TO STRESSES'
-          ! compression indicies (CR amd CC) will be specified instead of 
-          ! storage coefficients (SSE and SSV) 
+            write(this%iout, fmtopt) &
+              'A USER-DEFINED OFFSET WILL BE APPLIED TO GEOSTATIC STRESS'
+          !
+          ! -- compression indicies (CR amd CC) will be specified instead of 
+          !    storage coefficients (SSE and SSV) 
           case ('COMPRESSION_INDICES')
             this%istoragec = 0
-            write(this%iout, fmtopt) 'COMPRESSION INDICES WILL BE SPECIFIED ' //       &
-                                     'INSTEAD OF ELASTIC AND INELASTIC SPECIFIC ' //   &
-                                     'COEFFICIENTS'
+            write(this%iout, fmtopt) &
+              'COMPRESSION INDICES WILL BE SPECIFIED INSTEAD OF ' //            &
+              'ELASTIC AND INELASTIC SPECIFIC COEFFICIENTS'
           ! variable thickness and void ratio
           case ('UPDATE_MATERIAL_PROPERTIES')
             this%iupdatematprop = 1
@@ -1674,24 +1700,20 @@ contains
     integer(I4B), dimension(:), pointer          :: ibound
     ! -- local
     logical :: isfound, endOfBlock
-    character(len=LINELENGTH) :: line, errmsg, aname, keyword
-    integer(I4B) :: ierr
-    integer(I4B) :: lloc
-    integer(I4B) :: istart
-    integer(I4B) :: istop
-    integer(I4B) :: ival
-    integer(I4B) :: nlist
-    integer(I4B) :: i
-    integer(I4B) :: n
-    integer(I4B) :: node
+    character(len=LINELENGTH) :: line
+    character(len=LINELENGTH) :: errmsg
+    character(len=LINELENGTH) :: keyword
     integer(I4B) :: iske
     integer(I4B) :: istheta
     integer(I4B) :: isgm
     integer(I4B) :: isgs
     integer(I4B) :: idelay
-    real(DP) :: rval
-    real(DP) :: pcs_n
-    real(DP) :: area
+    integer(I4B) :: ierr
+    integer(I4B) :: lloc
+    integer(I4B) :: istart
+    integer(I4B) :: istop
+    integer(I4B) :: ib
+    integer(I4B) :: node
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: thick
@@ -1859,9 +1881,9 @@ contains
     end if
     !
     ! -- calculate the aquifer void ratio and thickness without the interbeds
-    do n = 1, this%dis%nodes
+    do node = 1, this%dis%nodes
       if (this%igeocalc /= 0) then
-        theta = this%sk_theta(n)
+        theta = this%sk_theta(node)
         if (theta > DONE .or. theta < DZERO) then
           ! add error message
           write(errmsg,'(4x,a,1x,a,g0,a,1x,a,1x,a)') &
@@ -1870,26 +1892,26 @@ contains
                                        'in cell', ''
         end if
       end if
-      top = this%dis%top(n)
-      bot = this%dis%bot(n)
-      this%sk_thick(n) = top - bot
+      top = this%dis%top(node)
+      bot = this%dis%bot(node)
+      this%sk_thick(node) = top - bot
     end do
     !
     ! -- subtract the interbed thickness from aquifer thickness
-    do n = 1, this%ninterbeds
-      node = this%nodelist(n)
-      idelay = this%idelay(n)
+    do ib = 1, this%ninterbeds
+      node = this%nodelist(ib)
+      idelay = this%idelay(ib)
       if (idelay == 0) then
-        v = this%thick(n)
+        v = this%thick(ib)
       else
-        v = this%dbfact * this%rnb(n) * this%thick(n)
+        v = this%dbfact * this%rnb(ib) * this%thick(ib)
       end if
       this%sk_thick(node) = this%sk_thick(node) - v
     end do
     !
     ! -- evaluate if any sk_thick values are less than 0
-    do n = 1, this%dis%nodes
-      thick = this%sk_thick(n)
+    do node = 1, this%dis%nodes
+      thick = this%sk_thick(node)
       if (thick < DZERO) then
         write(errmsg,'(4x,a,1x,g0,a,1x,a,1x,a)') &
                                       'ERROR. AQUIFER THICKNESS IS LESS THAN ZERO (', &
@@ -1897,9 +1919,6 @@ contains
         call store_error(errmsg)
       end if
     end do
-    !!
-    !! -- read observations
-    !call this%csub_rp_obs()
     !
     ! -- terminate if errors griddata, packagedata blocks, TDIS, or STO data
     if (count_errors() > 0) then
@@ -1963,11 +1982,9 @@ contains
     integer(I4B), intent(in) :: nodes
     real(DP), dimension(nodes), intent(in) :: hnew
     ! -- local
-    integer(I4B) :: i
-    integer(I4B) :: n
+    integer(I4B) :: node
     integer(I4B) :: ii
     integer(I4B) :: m
-    integer(I4B) :: temp
     integer(I4B) :: iis
     real(DP) :: gs
     real(DP) :: top
@@ -1975,84 +1992,77 @@ contains
     real(DP) :: va_scale
     real(DP) :: hcell
     real(DP) :: gs_conn
-    real(DP) :: area_n
+    real(DP) :: area_node
     real(DP) :: area_conn
     real(DP) :: es
     real(DP) :: hs
     real(DP) :: hwva
     real(DP) :: sadd
     character(len=LINELENGTH) :: errmsg
-    !character(len=LINELENGTH) :: msg1
-    !character(len=LINELENGTH) :: msg2
 
 ! ------------------------------------------------------------------------------
     !
     ! -- calculate geostatic stress if necessary
     if (this%igeocalc /= 0) then
-      do n = 1, this%dis%nodes
+      do node = 1, this%dis%nodes
         !
         ! -- calculate geostatic stress for this node
         !    this represents the incremental value for the cell
-        bot = this%dis%bot(n)
-        top = this%dis%top(n)
-        hcell = hnew(n)
+        bot = this%dis%bot(node)
+        top = this%dis%top(node)
+        hcell = hnew(node)
         gs = DZERO
         if (hcell >= top) then
-            gs = (top-bot) * this%sgs(n)
+            gs = (top-bot) * this%sgs(node)
         else if (hcell <= bot) then
-            gs = (top-bot) * this%sgm(n)
+            gs = (top-bot) * this%sgm(node)
         else
-            gs = ((top-hcell) * this%sgm(n)) + ((hcell-bot) * this%sgs(n))
+            gs = ((top-hcell) * this%sgm(node)) + ((hcell-bot) * this%sgs(node))
         end if
-        this%sk_gs(n) = gs
+        this%sk_gs(node) = gs
       end do
       !
       ! -- calculate the area weighted geostatic stress above cell
       !   *** this needs to be checked for a complicated discretization ***
-      do n = 1, this%dis%nodes
-        gs = this%sk_gs(n)
+      do node = 1, this%dis%nodes
+        gs = this%sk_gs(node)
         !
         ! -- Go through the connecting cells
-        do ii = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
+        do ii = this%dis%con%ia(node) + 1, this%dis%con%ia(node + 1) - 1
           !
           ! -- Set the m cell number
-          !m = this%dis%con%jas(ii)
           m = this%dis%con%ja(ii)
           iis = this%dis%con%jas(ii)
           !
           ! -- Calculate conductance depending on whether connection is
           !    vertical (0), horizontal (1), or staggered horizontal (2)
-          ! m < n = m is vertically above n
-          area_n = this%dis%get_area(n)
-          if (this%dis%con%ihc(iis) == 0 .and. m < n) then
+          !    m < node = m is vertically above node
+          area_node = this%dis%get_area(node)
+          if (this%dis%con%ihc(iis) == 0 .and. m < node) then
               area_conn = this%dis%get_area(m)
               hwva = this%dis%con%hwva(iis)
               va_scale = this%dis%con%hwva(iis) / this%dis%get_area(m)
               gs_conn = this%sk_gs(m)
-              !call this%dis%noder_to_string(n,msg1)
-              !call this%dis%noder_to_string(m,msg2)
-              !write(*,*) n, trim(msg1), gs, m, trim(msg2), gs_conn
               gs = gs + (gs_conn * va_scale)
           end if
         end do
-        !write (*,*) n, gs
-        this%sk_gs(n) = gs
+        this%sk_gs(node) = gs
       end do
       !
       ! -- calculate effective stress for a cell
-      do n = 1, this%dis%nodes
-        bot = this%dis%bot(n)
-        hcell = hnew(n)
+      do node = 1, this%dis%nodes
+        bot = this%dis%bot(node)
+        hcell = hnew(node)
         hs = DZERO
         if (hcell > bot) then
           hs = hcell - bot
         end if
-        es = this%sk_gs(n) - hs
+        es = this%sk_gs(node) - hs
         sadd = DZERO
         if (this%igeostressoff /= 0) then
-          sadd = this%sig0(n)
+          sadd = this%sig0(node)
         end if
-        this%sk_es(n) = es + sadd
+        this%sk_es(node) = es + sadd
       end do
    end if
    !
@@ -2105,18 +2115,18 @@ contains
   end subroutine csub_nodelay_update
 
   
-  subroutine csub_nodelay_fc(this, i, hcell, hcellold, rho1, rho2, rhs, argtled)
+  subroutine csub_nodelay_fc(this, ib, hcell, hcellold, rho1, rho2, rhs, argtled)
 ! ******************************************************************************
 ! csub_nodelay_fc -- Calculate rho1, rho2, and rhs for no-delay interbeds
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use TdisModule, only: delt, kstp, kper
+    use TdisModule, only: delt
     implicit none
     ! -- dummy variables
     class(GwfCsubType) :: this
-    integer(I4B), intent(in) :: i
+    integer(I4B), intent(in) :: ib
     real(DP), intent(in) :: hcell
     real(DP), intent(in) :: hcellold
     real(DP), intent(inout) :: rho1
@@ -2124,7 +2134,7 @@ contains
     real(DP), intent(inout) :: rhs
     real(DP), intent(in), optional :: argtled
     ! -- local variables
-    integer(I4B) :: n
+    integer(I4B) :: node
     real(DP) :: tled
     real(DP) :: top
     real(DP) :: bot
@@ -2132,36 +2142,27 @@ contains
     real(DP) :: znode0
     real(DP) :: snold
     real(DP) :: snnew
-    real(DP) :: thk_fac
     real(DP) :: sto_fac
     real(DP) :: sto_fac0
     real(DP) :: area
-!    real(DP) :: x
-!    real(DP) :: thk_node
-!    real(DP) :: thk_ibs
-    real(DP) :: denom
-    real(DP) :: pcs_n
-    real(DP) :: fact
     real(DP) :: theta
     real(DP) :: theta0
-    real(DP) :: void
     real(DP) :: es
     real(DP) :: es0
     real(DP) :: f
     real(DP) :: f0
-    character(len=LINELENGTH) :: msg
 ! ------------------------------------------------------------------------------
     if (present(argtled)) then
       tled = argtled
     else
       tled = DONE / delt
     endif
-    n = this%nodelist(i)
-    area = this%dis%get_area(n)
-    bot = this%dis%bot(n)
-    top = this%dis%top(n)
+    node = this%nodelist(ib)
+    area = this%dis%get_area(node)
+    bot = this%dis%bot(node)
+    top = this%dis%top(node)
     ! -- aquifer saturation
-    if (this%stoiconv(n) /= 0) then
+    if (this%stoiconv(node) /= 0) then
       snold = sQuadraticSaturation(top, bot, hcellold, this%satomega)
       snnew = sQuadraticSaturation(top, bot, hcell, this%satomega)
     else
@@ -2175,41 +2176,40 @@ contains
       f = DONE
       f0 = DONE
     else
-      !znode = this%sk_znode(n)
-      znode = this%csub_calc_znode(n, hcell)
-      znode0 = this%csub_calc_znode(n, hcellold)
+      znode = this%csub_calc_znode(node, hcell)
+      znode0 = this%csub_calc_znode(node, hcellold)
       if (this%time_alpha == DZERO) then
         znode0 = znode
       end if
-      es = this%sk_es(n)
-      es0 = this%sk_es0(n)
-      theta = this%theta(i)
-      theta0 = this%theta0(i)
-      call this%csub_calc_sfacts(n, bot, znode, znode0, theta, theta0,          &
+      es = this%sk_es(node)
+      es0 = this%sk_es0(node)
+      theta = this%theta(ib)
+      theta0 = this%theta0(ib)
+      call this%csub_calc_sfacts(node, bot, znode, znode0, theta, theta0,          &
                                  es, es0, f, f0)
     end if
-    sto_fac = tled * snnew * this%thick(i) * f
-    sto_fac0 = tled * snold * this%thick0(i) * f0
+    sto_fac = tled * snnew * this%thick(ib) * f
+    sto_fac0 = tled * snold * this%thick0(ib) * f0
     !
     ! -- calculate rho1 and rho2
-    rho1 = this%rci(i) * sto_fac0
-    rho2 = this%rci(i) * sto_fac
+    rho1 = this%rci(ib) * sto_fac0
+    rho2 = this%rci(ib) * sto_fac
     if (this%igeocalc == 0) then
-      if (hcell < this%pcs(i)) then
-        rho2 = this%ci(i) * sto_fac
+      if (hcell < this%pcs(ib)) then
+        rho2 = this%ci(ib) * sto_fac
       end if
-      rhs = -(rho2 * this%pcs(i) + rho1 * (this%sk_es0(n) - this%pcs(i)))
+      rhs = -(rho2 * this%pcs(ib) + rho1 * (this%sk_es0(node) - this%pcs(ib)))
     else
-      if (this%sk_es(n) > this%pcs(i)) then
-          rho2 = this%ci(i) * sto_fac
+      if (this%sk_es(node) > this%pcs(ib)) then
+          rho2 = this%ci(ib) * sto_fac
       end if
-      rhs = -rho2 * (this%sk_gs(n) + bot) + (this%pcs(i) * (rho2 - rho1)) + &
-             (rho1 * this%sk_es0(n))
+      rhs = -rho2 * (this%sk_gs(node) + bot) + (this%pcs(ib) * (rho2 - rho1)) + &
+             (rho1 * this%sk_es0(node))
     end if
     !
     ! -- save ske and sk
-    this%ske(i) = rho1
-    this%sk(i) = rho2
+    this%ske(ib) = rho1
+    this%sk(ib) = rho2
     !
     ! -- return
     return
@@ -2217,7 +2217,7 @@ contains
   end subroutine csub_nodelay_fc
 
 
-  subroutine csub_nodelay_calc_comp(this, i, hcell, hcellold, comp, rho1, rho2)
+  subroutine csub_nodelay_calc_comp(this, ib, hcell, hcellold, comp, rho1, rho2)
 ! ******************************************************************************
 ! csub_nodelay_calc_comp -- Calculate compaction, rho1, and rho2 for no-delay
 !                           interbeds
@@ -2228,7 +2228,7 @@ contains
     implicit none
     ! -- dummy variables
     class(GwfCsubType) :: this
-    integer(I4B), intent(in) :: i
+    integer(I4B), intent(in) :: ib
     real(DP), intent(in) :: hcell
     real(DP), intent(in) :: hcellold
     real(DP), intent(inout) :: comp
@@ -2244,14 +2244,14 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
-    node = this%nodelist(i)
+    node = this%nodelist(ib)
     tled = DONE
     es = this%sk_es(node)
     es0 = this%sk_es0(node)
-    pcs = this%pcs(i)
+    pcs = this%pcs(ib)
     !
     ! -- calculate no-delay interbed rho1 and rho2
-    call this%csub_nodelay_fc(i, hcell, hcellold, rho1, rho2, rhs, tled)
+    call this%csub_nodelay_fc(ib, hcell, hcellold, rho1, rho2, rhs, tled)
     !
     ! -- calculate no-delay interbed compaction
     if (this%igeocalc == 0) then
@@ -2388,8 +2388,6 @@ contains
     real(DP) :: h
     real(DP) :: es
     real(DP) :: pcs
-    real(DP) :: bot
-    real(DP) :: fact
 ! ------------------------------------------------------------------------------
     !
     ! -- evaluate if steady-state stress periods are specified for more 
@@ -2574,6 +2572,24 @@ contains
       this%sk_es0(node) = this%sk_es(node)
     end do
     !
+    ! -- check that aquifer head is greater than or equal to the
+    !    top of each delay interbed
+    do ib = 1, this%ninterbeds
+      idelay = this%idelay(ib)
+      if (idelay == 0) then
+        cycle
+      end if
+      node = this%nodelist(ib)
+      hcell = hnew(node)
+      call this%csub_delay_chk(ib, hcell)
+    end do
+    !
+    ! -- terminate if the aquifer head is below the top of delay interbeds
+    if (count_errors() > 0) then
+      call this%parser%StoreErrorUnit()
+      call ustop()
+    end if
+    !
     ! -- interbeds
     do ib = 1, this%ninterbeds
       idelay = this%idelay(ib)
@@ -2692,24 +2708,16 @@ contains
     integer(I4B) :: ib
     integer(I4B) :: node
     integer(I4B) :: idiag
+    integer(I4B) :: idelay
     real(DP) :: tled
     real(DP) :: area
-    real(DP) :: top
-    real(DP) :: bot
-    real(DP) :: tthk
-    real(DP) :: snold
-    real(DP) :: snnew
-    real(DP) :: sske
-    real(DP) :: rho1
     real(DP) :: hcell
     real(DP) :: hcof
     real(DP) :: rhsterm
-    real(DP) :: wc1
     real(DP) :: comp
 ! ------------------------------------------------------------------------------
     !
     ! -- update geostatic load calculation
-    !call this%csub_sk_calc_znode(nodes, hnew)
     call this%csub_sk_calc_stress(nodes, hnew)
     !
     ! -- formulate csub terms
@@ -2738,29 +2746,53 @@ contains
         end if
         !
         ! -- calculate coarse-grained skeletal storage terms
-        call this%csub_sk_fc(node, tled, area, hnew(node), hold(node), hcof, rhsterm)
+        call this%csub_sk_fc(node, tled, area, hnew(node), hold(node),          &
+                             hcof, rhsterm)
         !
         ! -- add skeletal storage terms to amat and rhs for skeletal storage
         amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
         rhs(node) = rhs(node) + rhsterm
         !
-        ! -- calculate coarse-grained skeletal water compressibility storage terms
-        call this%csub_sk_wcomp_fc(node, tled, area, hnew(node), hold(node), hcof, rhsterm)
+        ! -- calculate coarse-grained skeletal water compressibility 
+        !    storage terms
+        call this%csub_sk_wcomp_fc(node, tled, area, hnew(node), hold(node),    &
+                                   hcof, rhsterm)
         !
-        ! -- add water compression storage terms to amat and rhs for skeletal storage
+        ! -- add water compression storage terms to amat and rhs for 
+        !   skeletal storage
         amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
         rhs(node) = rhs(node) + rhsterm
       end do
       !
       ! -- interbed storage
       if (this%ninterbeds /= 0) then
+        !
+        ! -- check that aquifer head is greater than or equal to the
+        !    top of each delay interbed
+        do ib = 1, this%ninterbeds
+          idelay = this%idelay(ib)
+          if (idelay == 0) then
+            cycle
+          end if
+          node = this%nodelist(ib)
+          hcell = hnew(node)
+          call this%csub_delay_chk(ib, hcell)
+        end do
+        !
+        ! -- terminate if the aquifer head is below the top of delay interbeds
+        if (count_errors() > 0) then
+          call this%parser%StoreErrorUnit()
+          call ustop()
+        end if
+        !
+        ! -- calculate the contribution of interbeds to the 
+        !    groundwater flow equation
         do ib = 1, this%ninterbeds
           node = this%nodelist(ib)
           idiag = this%dis%con%ia(node)
           area = this%dis%get_area(node)
-          hcell = hnew(node)
-          call this%csub_interbed_fc(ib, node, tled, area,                      &
-                                     hnew(node), hold(node), hcof, rhsterm)
+          call this%csub_interbed_fc(ib, node, area, hnew(node), hold(node),    &
+                                     hcof, rhsterm)
           amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
           rhs(node) = rhs(node) + rhsterm
           !
@@ -2812,22 +2844,12 @@ contains
     integer(I4B), intent(in),dimension(nja) :: idxglo
     real(DP),intent(inout),dimension(nodes) :: rhs
     ! -- local
-    integer(I4B) :: ib
     integer(I4B) :: node
     integer(I4B) :: idiag
     real(DP) :: tled
     real(DP) :: area
-    real(DP) :: top
-    real(DP) :: bot
-    real(DP) :: tthk
-    real(DP) :: snold
-    real(DP) :: snnew
-    real(DP) :: sske
-    real(DP) :: rho1
-    real(DP) :: hcell
     real(DP) :: hcof
     real(DP) :: rhsterm
-    real(DP) :: wc1
 ! ------------------------------------------------------------------------------
     !
     ! -- formulate csub terms
@@ -2895,7 +2917,6 @@ contains
     real(DP) :: sske0
     real(DP) :: rho1
     real(DP) :: rho2
-    real(DP) :: f
 ! ------------------------------------------------------------------------------
 !
 ! -- initialize variables
@@ -2966,7 +2987,6 @@ contains
     real(DP) :: sske
     real(DP) :: sske0
     real(DP) :: rho2
-    real(DP) :: f
 ! ------------------------------------------------------------------------------
 !
 ! -- initialize variables
@@ -2996,8 +3016,7 @@ contains
   end subroutine csub_sk_fn
 
   
-  subroutine csub_interbed_fc(this, ib, node, tled, area, hcell, hcellold,  &
-                                      hcof, rhs)
+  subroutine csub_interbed_fc(this, ib, node, area, hcell, hcellold, hcof, rhs)
 ! ******************************************************************************
 ! csub_cf -- Formulate the HCOF and RHS terms
 ! Subroutine: (1) skip if no ibcs
@@ -3006,12 +3025,10 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use TdisModule, only: delt, kper
     implicit none
     class(GwfCsubType) :: this
     integer(I4B),intent(in) :: ib
     integer(I4B),intent(in) :: node
-    real(DP), intent(in) :: tled
     real(DP), intent(in) :: area
     real(DP), intent(in) :: hcell
     real(DP), intent(in) :: hcellold
@@ -3120,7 +3137,6 @@ contains
     real(DP), intent(in) :: hcell
     real(DP), intent(in) :: hcellold
     ! -- local variables
-    integer(I4B) :: idelay
     real(DP) :: bot
     real(DP) :: znode
     real(DP) :: znode0
@@ -3128,8 +3144,6 @@ contains
     real(DP) :: es0
     real(DP) :: theta
     real(DP) :: theta0
-    real(DP) :: void
-    real(DP) :: denom
     real(DP) :: f
     real(DP) :: f0
 ! ------------------------------------------------------------------------------
@@ -3146,7 +3160,6 @@ contains
     ! -- calculate factor for the effective stress case
     else
       bot = this%dis%bot(n)
-      !znode = this%sk_znode(n)
       znode = this%csub_calc_znode(n, hcell)
       znode0 = this%csub_calc_znode(n, hcellold)
       if (this%time_alpha == DZERO) then
@@ -3269,7 +3282,6 @@ contains
     real(DP) :: tthk0
     real(DP) :: snold
     real(DP) :: snnew
-    real(DP) :: sske
     real(DP) :: wc1
     real(DP) :: wc2
 ! ------------------------------------------------------------------------------
@@ -3330,7 +3342,6 @@ contains
     real(DP) :: bot
     real(DP) :: tthk
     real(DP) :: derv
-    real(DP) :: sske
     real(DP) :: wc2
 ! ------------------------------------------------------------------------------
 !
@@ -3383,8 +3394,6 @@ contains
     integer(I4B) :: idelay
     real(DP) :: top
     real(DP) :: bot
-    real(DP) :: tthk
-    real(DP) :: tthk0
     real(DP) :: snold
     real(DP) :: snnew
     real(DP) :: f
@@ -3401,7 +3410,6 @@ contains
     ! -- aquifer elevations and thickness
     top = this%dis%top(node)
     bot = this%dis%bot(node)
-    tthk = this%sk_thick(node)
     ! -- aquifer saturation
     if (this%stoiconv(node) /= 0) then
       snold = sQuadraticSaturation(top, bot, hcellold, this%satomega)
@@ -3550,8 +3558,6 @@ contains
     real(DP) :: esv
     real(DP) :: void
     real(DP) :: denom
-    real(DP) :: f
-    real(DP) :: f0
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
@@ -3568,7 +3574,7 @@ contains
     end if
     esv = es0
     void = this%csub_calc_void(theta0)
-    denom = (DONE + void) * (esv - (znode - bot) * (this%sgs(node) - DONE))
+    denom = (DONE + void) * (esv - (znode0 - bot) * (this%sgs(node) - DONE))
     if (denom /= DZERO) then
       fact0 = DONE / denom
     end if
@@ -3622,26 +3628,24 @@ contains
     real(DP), intent(in) :: hcell
     ! -- local variables
     integer(I4B) :: n
-    integer(I4B) :: node
-    integer(I4B) :: idelay
     integer(I4B) :: icnvg
     integer(I4B) :: iter
+    integer(I4B) :: idelay
     real(DP) :: dh
     real(DP) :: dhmax
-    real(DP) :: area
-    real(DP) :: c1
-    real(DP) :: c2
-    real(DP) :: f
     real(DP), parameter :: dclose = DHUNDRED * DPREC
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
-    !!
-    !! -- calculate z for each delay bed cell
-    !call this%csub_delay_calc_zcell(ib, hcell)
     !
     ! -- calculate geostatic and effective stress for each delay bed cell
     call this%csub_delay_calc_stress(ib, hcell)
+    !
+    ! -- terminate if the aquifer head is below the top of delay interbeds
+    if (count_errors() > 0) then
+      call this%parser%StoreErrorUnit()
+      call ustop()
+    end if
     !
     ! -- solve for delay bed heads
     if (this%thick(ib) > DZERO) then
@@ -3688,7 +3692,7 @@ contains
   end subroutine csub_delay_sln
 
 
-  subroutine csub_delay_calc_zcell(this, ib, hcell)
+  subroutine csub_delay_calc_zcell(this, ib)
 ! ******************************************************************************
 ! csub_delay_calc_zcell -- Calculate z for delay interbeds cells.
 ! ******************************************************************************
@@ -3697,7 +3701,6 @@ contains
 ! ------------------------------------------------------------------------------
     class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: ib
-    real(DP), intent(in) :: hcell
     ! -- local variables
     integer(I4B) :: n
     integer(I4B) :: node
@@ -3722,9 +3725,6 @@ contains
       top = bot + DTWO * b
     end if
     !
-    ! -- calculate znode based on water-level in the cell
-    !znode = this%csub_calc_znode(node, hcell)
-    !
     ! -- calculate znode based on assumption that the delay bed bottom 
     !    is equal to the cell bottom
     znode = this%csub_calc_znode(node, top)
@@ -3746,6 +3746,47 @@ contains
     return
 
   end subroutine csub_delay_calc_zcell
+
+  subroutine csub_delay_chk(this, ib, hcell)
+! ******************************************************************************
+! csub_delay_chk -- Check the head relative to the top of a delay interbed.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    class(GwfCsubType), intent(inout) :: this
+    integer(I4B), intent(in) :: ib
+    real(DP), intent(in) :: hcell
+    ! -- local variables
+    character(len=LINELENGTH) :: errmsg
+    character(len=20) :: cellid
+    integer(I4B) :: idelay
+    integer(I4B) :: node
+    real(DP) :: dzhalf
+    real(DP) :: top
+! ------------------------------------------------------------------------------
+    !
+    ! -- initialize variables
+    idelay = this%idelay(ib)
+    node = this%nodelist(ib)
+    dzhalf = DHALF * this%dbdz(idelay)
+    top = this%dbz(1, idelay) + dzhalf
+    !
+    ! -- check that aquifer head is above the top of the interbed
+    if (hcell < top) then
+      call this%dis%noder_to_string(node, cellid)
+      write(errmsg, '(a,g0,a,1x,a,1x,a,1x,i0,1x,a,g0,a)') &
+        'ERROR: HEAD (', hcell, ') IN CONVERTIBLE CELL', trim(adjustl(cellid)), &
+        'IS LESS THAN THE TOP OF DELAY INTERBED', ib,                           &
+        '(', top,')'
+      call store_error(errmsg)
+    end if
+    !
+    ! -- return
+    return
+
+  end subroutine csub_delay_chk
+
 
   subroutine csub_delay_calc_stress(this, ib, hcell)
 ! ******************************************************************************
@@ -4073,9 +4114,7 @@ contains
     ! -- local variables
     integer(I4B) :: idelay
     integer(I4B) :: n
-    real(DP) :: hcof
     real(DP) :: v
-    real(DP) :: void
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
@@ -4239,7 +4278,6 @@ contains
     real(DP), intent(inout) :: rhs
     ! -- local variables
     integer(I4B) :: idelay
-    real(DP) :: f
     real(DP) :: c1
     real(DP) :: c2
 ! ------------------------------------------------------------------------------
@@ -4286,7 +4324,7 @@ contains
   subroutine csub_df_obs(this)
   ! ******************************************************************************
   ! csub_df_obs (implements bnd_df_obs)
-  !   -- Store observation type supported by ibc package.
+  !   -- Store observation type supported by csub package.
   !   -- Overrides BndType%bnd_df_obs
   ! ******************************************************************************
   !
@@ -4406,7 +4444,7 @@ contains
     type(ObserveType), pointer :: obsrv => null()
     !---------------------------------------------------------------------------
     !
-    ! Write simulated values for all ibc observations
+    ! Write simulated values for all csub observations
     if (this%obs%npakobs>0) then
       call this%obs%obs_bd_clear()
       do i = 1, this%obs%npakobs
@@ -4608,7 +4646,7 @@ contains
   ! -- Procedures related to observations (NOT type-bound)
   subroutine csub_process_obsID(obsrv, dis, inunitobs, iout)
     ! -- This procedure is pointed to by ObsDataType%ProcesssIdPtr. It processes
-    !    the ID string of an observation definition for ibc-package observations.
+    !    the ID string of an observation definition for csub-package observations.
     ! -- dummy
     type(ObserveType),      intent(inout) :: obsrv
     class(DisBaseType), intent(in)    :: dis

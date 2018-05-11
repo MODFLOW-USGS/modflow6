@@ -60,7 +60,7 @@ ib = 1
 
 # npf and sto data
 hk = 1e6
-laytyp = [0]
+laytyp = [1]
 ss = 0.
 sy = 0.2
 
@@ -168,15 +168,16 @@ def get_model(idx, dir):
 
     # ibc files
     opth = '{}.csub.obs'.format(name)
-    ibc = flopy.mf6.ModflowGwfcsub(gwf, ndelaycells=ndcell[idx],
-                                   time_weight=0.,
-                                   #compression_indices=True,
-                                   #geo_stress_offset=gso[idx],
-                                   interbed_stress_offset=bso[idx],
-                                   obs_filerecord=opth,
-                                   ninterbeds=1,
-                                   sgs=sgs, sgm=sgm, packagedata=sub6,
-                                   beta=0., ske_cr=0.)
+    csub = flopy.mf6.ModflowGwfcsub(gwf, ndelaycells=ndcell[idx],
+                                    time_weight=0.,
+                                    delay_saturation_scaling=True,
+                                    #compression_indices=True,
+                                    #geo_stress_offset=gso[idx],
+                                    interbed_stress_offset=bso[idx],
+                                    obs_filerecord=opth,
+                                    ninterbeds=1,
+                                    sgs=sgs, sgm=sgm, packagedata=sub6,
+                                    beta=0., ske_cr=0.)
     orecarray = {}
     orecarray['csub_obs.csv'] = [('tcomp', 'total-compaction', (0, 0, 1)),
                                 ('gs', 'gstress-cell', (0, 0, 1)),
@@ -185,7 +186,7 @@ def get_model(idx, dir):
                                 ('sk', 'sk', (0, 0, 1))]
     ibc_obs_package = flopy.mf6.ModflowUtlobs(gwf,
                                               fname=opth,
-                                              parent_file=ibc, digits=10,
+                                              parent_file=csub, digits=10,
                                               print_input=True,
                                               continuous=orecarray)
 
