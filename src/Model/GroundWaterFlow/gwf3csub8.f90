@@ -51,6 +51,7 @@ module GwfCsubModule
     integer(I4B), pointer :: ninterbeds             => null()
     integer(I4B), pointer :: ndelaycells            => null()
     integer(I4B), pointer :: ndelaybeds             => null()
+    integer(I4B), pointer :: initialized            => null()
     integer(I4B), pointer :: igeocalc               => null()
     integer(I4B), pointer :: idbhalfcell            => null()
     integer(I4B), pointer :: idbfullcell            => null()
@@ -62,7 +63,6 @@ module GwfCsubModule
     real(DP), pointer :: dbfacti                    => null()
     real(DP), pointer :: satomega                   => null()      !newton-raphson saturation omega
 
-    logical :: first_time
     integer(I4B), pointer :: gwfiss                 => NULL()   !pointer to model iss flag
     integer(I4B), pointer :: gwfiss0                => NULL()   !iss flag for last stress period
     integer(I4B), dimension(:), pointer :: ibound   => null()   !pointer to model ibound
@@ -270,6 +270,7 @@ contains
     call mem_allocate(this%ninterbeds, 'NINTERBEDS', this%origin)
     call mem_allocate(this%ndelaycells, 'NDELAYCELLS', this%origin)
     call mem_allocate(this%ndelaybeds, 'NDELAYBEDS', this%origin)
+    call mem_allocate(this%initialized, 'INITIALIZED', this%origin)
     call mem_allocate(this%igeocalc, 'IGEOCALC', this%origin)
     call mem_allocate(this%ibedstressoff, 'IBEDSTRESSOFF', this%origin)
     call mem_allocate(this%igeostressoff, 'IGEOSTRESSOFF', this%origin)
@@ -299,6 +300,7 @@ contains
     this%ninterbeds = 0
     this%ndelaycells = 19
     this%ndelaybeds = 0
+    this%initialized = 0
     this%igeocalc = 1
     this%ibedstressoff = 0
     this%igeostressoff = 0
@@ -323,7 +325,6 @@ contains
     end if
     this%icellf = 0
     this%ninterbeds = 0
-    this%first_time = .TRUE.
     this%gwfiss0 = 0
     !
     ! -- return
@@ -1551,6 +1552,7 @@ contains
     call mem_deallocate(this%ninterbeds)
     call mem_deallocate(this%ndelaycells)
     call mem_deallocate(this%ndelaybeds)
+    call mem_deallocate(this%initialized)
     call mem_deallocate(this%ibedstressoff)
     call mem_deallocate(this%igeostressoff)
     call mem_deallocate(this%inamedbound)
@@ -2367,7 +2369,7 @@ contains
 
   subroutine csub_ad(this, nodes, hnew)
 ! ******************************************************************************
-! csub_ad -- Advance ibc data
+! csub_ad -- Advance csub data
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -2379,14 +2381,13 @@ contains
     real(DP), dimension(nodes), intent(in) :: hnew
     ! -- local
     character(len=LINELENGTH) :: errmsg
+    integer(I4B) :: ib
     integer(I4B) :: n
-    integer(I4B) :: j
     integer(I4B) :: idelay
     integer(I4B) :: node
     real(DP) :: h
     real(DP) :: es
     real(DP) :: pcs
-    real(DP) :: b
     real(DP) :: bot
     real(DP) :: fact
 ! ------------------------------------------------------------------------------
@@ -2410,7 +2411,7 @@ contains
 !    call this%TsManager%ad()
     !
     ! -- set initial conditions
-    if (this%first_time) then
+    if (this%initialized == 0) then
       if (this%gwfiss == 0) then
         call this%csub_interbed_set_initial(nodes, hnew)
       end if
@@ -2419,89 +2420,91 @@ contains
     ! -- update state variables
     !
     ! -- coarse-grained materials
-    do n = 1, nodes
-      this%sk_comp(n) = DZERO
+    do node = 1, nodes
+      this%sk_comp(node) = DZERO
       if (this%igeocalc == 0) then
-        this%sk_es0(n)= hnew(n)
+        this%sk_es0(node)= hnew(node)
       else
-        this%sk_es0(n) = this%sk_es(n)
+        this%sk_es0(node) = this%sk_es(node)
       end if
       if (this%iupdatematprop /= 0) then
-        this%sk_theta0(n) = this%sk_theta(n)
-        this%sk_thick0(n) = this%sk_thick(n)
+        this%sk_theta0(node) = this%sk_theta(node)
+        this%sk_thick0(node) = this%sk_thick(node)
       end if
     end do
     !
     ! -- interbeds
-    do n = 1, this%ninterbeds
-      idelay = this%idelay(n)
-      ! no delay beds
+    do ib = 1, this%ninterbeds
+      idelay = this%idelay(ib)
+      !
+      ! -- no delay interbeds
       if (idelay == 0) then
-        this%comp(n) = DZERO
-        node = this%nodelist(n)
+        this%comp(ib) = DZERO
+        node = this%nodelist(ib)
         if (this%iupdatematprop /= 0) then
-          this%theta0(n) = this%theta(n)
-          this%thick0(n) = this%thick(n)
+          this%theta0(ib) = this%theta(ib)
+          this%thick0(ib) = this%thick(ib)
         end if
         if (kper == 1 .and. kstp == 1) then
           if (this%igeocalc == 0) then
             h = hnew(node)
-            pcs = this%pcs(n)
+            pcs = this%pcs(ib)
             if (pcs > h) then
-              this%pcs(n) = h
+              this%pcs(ib) = h
             end if
           end if
         end if
-        if (.not. this%first_time) then
+        if (this%initialized /= 0) then
           es = this%sk_es(node)
-          pcs = this%pcs(n)
+          pcs = this%pcs(ib)
           if (this%igeocalc == 0) then
             h = hnew(node)
             if (h < pcs) then
-              this%pcs(n) = h
+              this%pcs(ib) = h
             end if
           else
             if (es > pcs) then
-              this%pcs(n) = es
+              this%pcs(ib) = es
             end if
           end if
         end if
       !
-      ! -- delay beds
+      ! -- delay interbeds
       else
-        ! update state if previous period was steady state
+        !
+        ! -- update state if previous period was steady state
         if (kper > 1) then
           if (this%gwfiss0 /= 0) then
-            node = this%nodelist(n)
+            node = this%nodelist(ib)
             h = hnew(node)
-            do j = 1, this%ndelaycells
+            do n = 1, this%ndelaycells
               if (this%igeocalc == 0) then
-                this%dbh(j, idelay) = h
+                this%dbh(n, idelay) = h
               else
-                this%dbh(j, idelay) = h
+                this%dbh(n, idelay) = h
               end if
             end do
           end if
         end if
-        b = DZERO
-        do j = 1, this%ndelaycells
-          b = b + this%dbdz(idelay)
+        !
+        ! -- update preconsolidation stress, stresses, and head
+        do n = 1, this%ndelaycells
           ! update preconsolidation stress
-          if (.not. this%first_time) then
+          if (this%initialized /= 0) then
             if (this%igeocalc == 0) then
-              if (this%dbh(j, idelay) < this%dbpcs(j, idelay)) then
-                this%dbpcs(j, idelay) = this%dbh(j, idelay)
+              if (this%dbh(n, idelay) < this%dbpcs(n, idelay)) then
+                this%dbpcs(n, idelay) = this%dbh(n, idelay)
               end if
-              this%dbes(j, idelay) = this%dbh(j, idelay)
+              this%dbes(n, idelay) = this%dbh(n, idelay)
             else
-              if (this%dbes(j, idelay) > this%dbpcs(j, idelay)) then
-                this%dbpcs(j, idelay) = this%dbes(j, idelay)
+              if (this%dbes(n, idelay) > this%dbpcs(n, idelay)) then
+                this%dbpcs(n, idelay) = this%dbes(n, idelay)
               end if
             end if
           end if
-          this%dbh0(j, idelay) = this%dbh(j, idelay)
-          this%dbgeo0(j, idelay) = this%dbgeo(j, idelay)
-          this%dbes0(j, idelay) = this%dbes(j, idelay)
+          this%dbh0(n, idelay) = this%dbh(n, idelay)
+          this%dbgeo0(n, idelay) = this%dbgeo(n, idelay)
+          this%dbes0(n, idelay) = this%dbes(n, idelay)
         end do
       end if
     end do
@@ -2528,9 +2531,9 @@ contains
     class(GwfCsubType) :: this
     integer(I4B), intent(in) :: nodes
     real(DP), dimension(nodes), intent(in) :: hnew
-    integer(I4B) :: i
+    integer(I4B) :: ib
     integer(I4B) :: node
-    integer(I4B) :: j
+    integer(I4B) :: n
     integer(I4B) :: idelay
     real(DP) :: pcs0
     real(DP) :: pcs
@@ -2572,12 +2575,12 @@ contains
     end do
     !
     ! -- interbeds
-    do i = 1, this%ninterbeds
-      idelay = this%idelay(i)
-      node = this%nodelist(i)
+    do ib = 1, this%ninterbeds
+      idelay = this%idelay(ib)
+      node = this%nodelist(ib)
       bot = this%dis%bot(node)
       hcell = hnew(node)
-      pcs = this%pcs(i)
+      pcs = this%pcs(ib)
       pcs0 = pcs
       if (this%igeocalc == 0) then
         if (this%ibedstressoff == 1) then
@@ -2599,7 +2602,7 @@ contains
           end if
         end if
       end if
-      this%pcs(i) = pcs
+      this%pcs(ib) = pcs
       !
       ! -- delay bed          
       if (idelay /= 0) then
@@ -2608,33 +2611,33 @@ contains
         ! -- fill delay bed head with aquifer head or offset from aquifer head
         !    heads need to be filled first since used to calculate 
         !    the effective stress for each delay bed
-        do j = 1, this%ndelaycells
+        do n = 1, this%ndelaycells
           if (this%ibedstressoff == 1) then
-            this%dbh(j, idelay) = hcell + this%dbh(j, idelay)
+            this%dbh(n, idelay) = hcell + this%dbh(n, idelay)
           else
-            this%dbh(j, idelay) = hcell
+            this%dbh(n, idelay) = hcell
           end if
-          this%dbh0(j, idelay) = this%dbh(j, idelay)
+          this%dbh0(n, idelay) = this%dbh(n, idelay)
         end do            
         !
         ! -- fill delay bed effective stress
-        call this%csub_delay_calc_stress(i, hcell)
+        call this%csub_delay_calc_stress(ib, hcell)
         !
         ! -- fill delay bed pcs          
-        pcs = this%pcs(i)
-        do j = 1, this%ndelaycells
+        pcs = this%pcs(ib)
+        do n = 1, this%ndelaycells
           if (this%igeocalc == 0) then
-            this%dbpcs(j, idelay) = pcs
+            this%dbpcs(n, idelay) = pcs
           else
-            zbot = this%dbz(j, idelay) - dzhalf
+            zbot = this%dbz(n, idelay) - dzhalf
             sadd = this%sgs(node) * (zbot - bot)
             dbpcs = pcs - (zbot - bot) * (this%sgs(node) - DONE)
-            !if (this%dbes(j, idelay) > dbpcs) then
-            !  dbpcs = this%dbes(j, idelay)
+            !if (this%dbes(n, idelay) > dbpcs) then
+            !  dbpcs = this%dbes(n, idelay)
             !end if
-            this%dbpcs(j, idelay) = dbpcs
+            this%dbpcs(n, idelay) = dbpcs
           end if
-          this%dbes0(j, idelay) = this%dbes(j, idelay)
+          this%dbes0(n, idelay) = this%dbes(n, idelay)
         end do 
       end if
       !    
@@ -2643,7 +2646,7 @@ contains
         if (this%igeocalc == 0) then
           fact = DONE
         else
-          void = this%csub_calc_void(this%theta(i))
+          void = this%csub_calc_void(this%theta(ib))
           if (idelay == 0) then
             ztop = hcell
           else
@@ -2656,10 +2659,10 @@ contains
       else
           fact = dlog10es
       end if
-      this%ci(i) = this%ci(i) * fact
-      this%rci(i) = this%rci(i) * fact
+      this%ci(ib) = this%ci(ib) * fact
+      this%rci(ib) = this%rci(ib) * fact
     end do
-    this%first_time = .false.
+    this%initialized = 1
     !
     ! -- return
     return
@@ -2668,7 +2671,7 @@ contains
   subroutine csub_fc(this, kiter, nodes, hold, hnew, nja, njasln, amat, &
                      idxglo, rhs)
 ! ******************************************************************************
-! sto_fc -- Fill the solution amat and rhs with storage contribution terms
+! csub_fc -- Fill the solution amat and rhs with storage contribution terms
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -2686,8 +2689,8 @@ contains
     integer(I4B), intent(in),dimension(nja) :: idxglo
     real(DP),intent(inout),dimension(nodes) :: rhs
     ! -- local
-    integer(I4B) :: i
-    integer(I4B) :: n
+    integer(I4B) :: ib
+    integer(I4B) :: node
     integer(I4B) :: idiag
     real(DP) :: tled
     real(DP) :: area
@@ -2714,60 +2717,61 @@ contains
       tled = DONE / delt
       !
       ! -- coarse-grained skeletal storage
-      do n = 1, this%dis%nodes
-        idiag = this%dis%con%ia(n)
-        area = this%dis%get_area(n)
+      do node = 1, this%dis%nodes
+        idiag = this%dis%con%ia(node)
+        area = this%dis%get_area(node)
         !
         ! -- skip inactive cells
-        if (this%ibound(n) < 1) cycle
+        if (this%ibound(node) < 1) cycle
         !
         ! -- update skeletal material properties
         if (this%iupdatematprop /= 0) then
           if (this%time_alpha > DZERO) then
             !
             ! -- calculate compaction
-            call this%csub_sk_calc_comp(n, hnew(n), hold(n), comp)
-            this%sk_comp(n) = comp
+            call this%csub_sk_calc_comp(node, hnew(node), hold(node), comp)
+            this%sk_comp(node) = comp
             !
             ! -- update skeletal thickness and void ratio
-            call this%csub_sk_update(n)
+            call this%csub_sk_update(node)
           end if
         end if
         !
         ! -- calculate coarse-grained skeletal storage terms
-        call this%csub_sk_fc(n, tled, area, hnew(n), hold(n), hcof, rhsterm)
+        call this%csub_sk_fc(node, tled, area, hnew(node), hold(node), hcof, rhsterm)
         !
         ! -- add skeletal storage terms to amat and rhs for skeletal storage
         amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
-        rhs(n) = rhs(n) + rhsterm
+        rhs(node) = rhs(node) + rhsterm
         !
         ! -- calculate coarse-grained skeletal water compressibility storage terms
-        call this%csub_sk_wcomp_fc(n, tled, area, hnew(n), hold(n), hcof, rhsterm)
+        call this%csub_sk_wcomp_fc(node, tled, area, hnew(node), hold(node), hcof, rhsterm)
         !
         ! -- add water compression storage terms to amat and rhs for skeletal storage
         amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
-        rhs(n) = rhs(n) + rhsterm
+        rhs(node) = rhs(node) + rhsterm
       end do
       !
       ! -- interbed storage
       if (this%ninterbeds /= 0) then
-        do i = 1, this%ninterbeds
-          n = this%nodelist(i)
-          idiag = this%dis%con%ia(n)
-          area = this%dis%get_area(n)
-          hcell = hnew(n)
-          call this%csub_interbed_fc(i, n, tled, area,                          &
-                                     hnew(n), hold(n), hcof, rhsterm)
+        do ib = 1, this%ninterbeds
+          node = this%nodelist(ib)
+          idiag = this%dis%con%ia(node)
+          area = this%dis%get_area(node)
+          hcell = hnew(node)
+          call this%csub_interbed_fc(ib, node, tled, area,                      &
+                                     hnew(node), hold(node), hcof, rhsterm)
           amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
-          rhs(n) = rhs(n) + rhsterm
+          rhs(node) = rhs(node) + rhsterm
           !
           ! -- calculate interbed water compressibility terms
-          call this%csub_interbed_wcomp_fc(i, n, tled, area,                    &
-                                           hnew(n), hold(n), hcof, rhsterm)
+          call this%csub_interbed_wcomp_fc(ib, node, tled, area,                &
+                                           hnew(node), hold(node),              &
+                                           hcof, rhsterm)
           !
           ! -- add water compression storage terms to amat and rhs for interbed
           amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
-          rhs(n) = rhs(n) + rhsterm
+          rhs(node) = rhs(node) + rhsterm
         end do
       end if
     end if    
@@ -2808,8 +2812,8 @@ contains
     integer(I4B), intent(in),dimension(nja) :: idxglo
     real(DP),intent(inout),dimension(nodes) :: rhs
     ! -- local
-    integer(I4B) :: i
-    integer(I4B) :: n
+    integer(I4B) :: ib
+    integer(I4B) :: node
     integer(I4B) :: idiag
     real(DP) :: tled
     real(DP) :: area
@@ -2831,32 +2835,32 @@ contains
       tled = DONE / delt
       !
       ! -- coarse-grained skeletal storage
-      do n = 1, this%dis%nodes
-        idiag = this%dis%con%ia(n)
-        area = this%dis%get_area(n)
+      do node = 1, this%dis%nodes
+        idiag = this%dis%con%ia(node)
+        area = this%dis%get_area(node)
         !
         ! -- skip inactive cells
-        if (this%ibound(n) < 1) cycle
+        if (this%ibound(node) < 1) cycle
         !
         ! -- skip non-convertible cells
-        if (this%stoiconv(n) == 0) cycle
+        if (this%stoiconv(node) == 0) cycle
         !
         ! -- calculate coarse-grained skeletal storage newton terms
-        call this%csub_sk_fn(n, tled, area, hnew(n), hcof, rhsterm)
+        call this%csub_sk_fn(node, tled, area, hnew(node), hcof, rhsterm)
         !
         ! -- add skeletal storage newton terms to amat and rhs for 
         !   skeletal storage
         amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
-        rhs(n) = rhs(n) + rhsterm
+        rhs(node) = rhs(node) + rhsterm
         !
         ! -- calculate coarse-grained skeletal water compressibility storage 
         !    newton terms
-        call this%csub_sk_wcomp_fn(n, tled, area, hnew(n), hcof, rhsterm)
+        call this%csub_sk_wcomp_fn(node, tled, area, hnew(node), hcof, rhsterm)
         !
         ! -- add water compression storage newton terms to amat and rhs for 
         !    skeletal storage
         amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
-        rhs(n) = rhs(n) + rhsterm
+        rhs(node) = rhs(node) + rhsterm
       end do
     end if    
     !
@@ -2864,7 +2868,7 @@ contains
     return
   end subroutine csub_fn
   
-  subroutine csub_sk_fc(this, n, tled, area, hcell, hcellold, hcof, rhs)
+  subroutine csub_sk_fc(this, node, tled, area, hcell, hcellold, hcof, rhs)
 ! ******************************************************************************
 ! csub_sk_fc -- Formulate the HCOF and RHS skeletal storage terms
 ! ******************************************************************************
@@ -2873,7 +2877,7 @@ contains
 ! ------------------------------------------------------------------------------
     implicit none
     class(GwfCsubType) :: this
-    integer(I4B),intent(in) :: n
+    integer(I4B),intent(in) :: node
     real(DP), intent(in) :: tled
     real(DP), intent(in) :: area
     real(DP), intent(in) :: hcell
@@ -2899,12 +2903,12 @@ contains
     hcof = DZERO
     !
     ! -- aquifer elevations and thickness
-    top = this%dis%top(n)
-    bot = this%dis%bot(n)
-    tthk = this%sk_thick(n)
-    tthk0 = this%sk_thick0(n)
+    top = this%dis%top(node)
+    bot = this%dis%bot(node)
+    tthk = this%sk_thick(node)
+    tthk0 = this%sk_thick0(node)
     ! -- aquifer saturation
-    if (this%stoiconv(n) /= 0) then
+    if (this%stoiconv(node) /= 0) then
       snold = sQuadraticSaturation(top, bot, hcellold, this%satomega)
       snnew = sQuadraticSaturation(top, bot, hcell, this%satomega)
     else
@@ -2916,13 +2920,13 @@ contains
     end if
     !
     ! -- storage coefficients
-    call this%csub_sk_calc_sske(n, sske, sske0, hcell, hcellold)
+    call this%csub_sk_calc_sske(node, sske, sske0, hcell, hcellold)
     rho1 = sske0 * area * tthk0 * tled
     rho2 = sske * area * tthk * tled
     !
     ! -- update sk and ske
-    this%sk_ske(n) = sske0 * tthk0 * snold
-    this%sk_sk(n) = sske * tthk * snnew
+    this%sk_ske(node) = sske0 * tthk0 * snold
+    this%sk_sk(node) = sske * tthk * snnew
     !
     ! -- calculate hcof term
     hcof = -rho2 * snnew
@@ -2931,15 +2935,15 @@ contains
     if (this%igeocalc == 0) then
       rhs = -rho1 * snold * hcellold
     else
-      rhs = rho1 * snold * this%sk_es0(n) -                                     &
-            rho2 * snnew * (this%sk_gs(n) + bot) 
+      rhs = rho1 * snold * this%sk_es0(node) -                                  &
+            rho2 * snnew * (this%sk_gs(node) + bot) 
     end if
     !
     ! -- return
     return
   end subroutine csub_sk_fc
   
-  subroutine csub_sk_fn(this, n, tled, area, hcell, hcof, rhs)
+  subroutine csub_sk_fn(this, node, tled, area, hcell, hcof, rhs)
 ! ******************************************************************************
 ! csub_sk_fn -- Formulate skeletal storage newton terms
 ! ******************************************************************************
@@ -2948,7 +2952,7 @@ contains
 ! ------------------------------------------------------------------------------
     implicit none
     class(GwfCsubType) :: this
-    integer(I4B),intent(in) :: n
+    integer(I4B),intent(in) :: node
     real(DP), intent(in) :: tled
     real(DP), intent(in) :: area
     real(DP), intent(in) :: hcell
@@ -2970,15 +2974,15 @@ contains
     hcof = DZERO
     !
     ! -- aquifer elevations and thickness
-    top = this%dis%top(n)
-    bot = this%dis%bot(n)
-    tthk = this%sk_thick(n)
+    top = this%dis%top(node)
+    bot = this%dis%bot(node)
+    tthk = this%sk_thick(node)
     !
     ! -- calculate saturation derivitive
     derv = sQuadraticSaturationDerivative(top, bot, hcell)    
     !
     ! -- storage coefficients
-    call this%csub_sk_calc_sske(n, sske, sske0, hcell, hcell)
+    call this%csub_sk_calc_sske(node, sske, sske0, hcell, hcell)
     rho2 = sske * area * tthk * tled
     !
     ! -- calculate hcof term
@@ -2992,7 +2996,7 @@ contains
   end subroutine csub_sk_fn
 
   
-  subroutine csub_interbed_fc(this, i, n, tled, area, hcell, hcellold,  &
+  subroutine csub_interbed_fc(this, ib, node, tled, area, hcell, hcellold,  &
                                       hcof, rhs)
 ! ******************************************************************************
 ! csub_cf -- Formulate the HCOF and RHS terms
@@ -3005,8 +3009,8 @@ contains
     use TdisModule, only: delt, kper
     implicit none
     class(GwfCsubType) :: this
-    integer(I4B),intent(in) :: i
-    integer(I4B),intent(in) :: n
+    integer(I4B),intent(in) :: ib
+    integer(I4B),intent(in) :: node
     real(DP), intent(in) :: tled
     real(DP), intent(in) :: area
     real(DP), intent(in) :: hcell
@@ -3025,31 +3029,32 @@ contains
     hcof = DZERO
     !
     ! -- skip inactive and constant head cells
-    if (this%ibound(n) > 0) then
-      if (this%idelay(i) == 0) then
+    if (this%ibound(node) > 0) then
+      if (this%idelay(ib) == 0) then
         !
         ! -- update material properties
         if (this%iupdatematprop /= 0) then
           if (this%time_alpha > DZERO) then
             !
             ! -- calculate compaction
-            call this%csub_nodelay_calc_comp(i, hcell, hcellold, comp, rho1, rho2)
-            this%comp(i) = comp
+            call this%csub_nodelay_calc_comp(ib, hcell, hcellold, comp,         &
+                                             rho1, rho2)
+            this%comp(ib) = comp
             !
             ! -- update thickness and void ratio
-            call this%csub_nodelay_update(i)
+            call this%csub_nodelay_update(ib)
           end if
         end if
         !
         ! -- calculate no-delay interbed rho1 and rho2
-        call this%csub_nodelay_fc(i, hcell, hcellold, rho1, hcof, rhs)
+        call this%csub_nodelay_fc(ib, hcell, hcellold, rho1, hcof, rhs)
         f = area
       else
         !
         ! -- calculate delay interbed hcof and rhs
-        call this%csub_delay_sln(i, hcell)
-        call this%csub_delay_fc(i, hcof, rhs)
-        f = area * this%rnb(i)
+        call this%csub_delay_sln(ib, hcell)
+        call this%csub_delay_fc(ib, hcof, rhs)
+        f = area * this%rnb(ib)
       end if
       rhs = rhs * f
       hcof = -hcof * f
@@ -3161,7 +3166,7 @@ contains
     return
   end subroutine csub_sk_calc_sske
   
-  subroutine csub_sk_calc_comp(this, n, hcell, hcellold, comp)
+  subroutine csub_sk_calc_comp(this, node, hcell, hcellold, comp)
 ! ******************************************************************************
 ! csub_sk_calc_comp -- Calculate skeletal compaction
 ! ******************************************************************************
@@ -3170,7 +3175,7 @@ contains
 ! ------------------------------------------------------------------------------
     implicit none
     class(GwfCsubType) :: this
-    integer(I4B),intent(in) :: n
+    integer(I4B),intent(in) :: node
     real(DP), intent(in) :: hcell
     real(DP), intent(in) :: hcellold
     real(DP), intent(inout) :: comp
@@ -3186,7 +3191,7 @@ contains
     tled = DONE
     !
     ! -- calculate terms
-    call this%csub_sk_fc(n, tled, area, hcell, hcellold, hcof, rhs)
+    call this%csub_sk_fc(node, tled, area, hcell, hcellold, hcof, rhs)
     !
     ! - calculate compaction
     comp = hcof * hcell - rhs
@@ -3196,7 +3201,7 @@ contains
   end subroutine  csub_sk_calc_comp
 
   
-  subroutine csub_sk_update(this, n)
+  subroutine csub_sk_update(this, node)
 ! ******************************************************************************
 ! csub_sk_update -- Update material properties for coarse grained sediments.
 ! ******************************************************************************
@@ -3204,7 +3209,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     class(GwfCsubType), intent(inout) :: this
-    integer(I4B),intent(in) :: n
+    integer(I4B),intent(in) :: node
     ! locals
     character(len=LINELENGTH) :: errmsg
     character(len=20) :: cellid
@@ -3214,11 +3219,11 @@ contains
 ! ------------------------------------------------------------------------------
 !
 ! -- update thickness and theta
-    comp = this%sk_comp(n)
-    call this%dis%noder_to_string(n, cellid)
+    comp = this%sk_comp(node)
+    call this%dis%noder_to_string(node, cellid)
     if (ABS(comp) > DZERO) then
-      thick = this%sk_thick0(n)
-      theta = this%sk_theta0(n)
+      thick = this%sk_thick0(node)
+      theta = this%sk_theta0(node)
       call this%csub_adj_matprop(comp, thick, theta)
       if (thick <= DZERO) then
         write(errmsg,'(4x,a,1x,a,1x,a,1x,g0,1x,a)')                             &
@@ -3232,8 +3237,8 @@ contains
           'IS <= 0 (', theta, ')'
         call store_error(errmsg)
       end if
-      this%sk_thick(n) = thick
-      this%sk_theta(n) = theta
+      this%sk_thick(node) = thick
+      this%sk_theta(node) = theta
     end if
     !
     ! -- return
@@ -3241,7 +3246,8 @@ contains
   end subroutine csub_sk_update
 
   
-  subroutine csub_sk_wcomp_fc(this, n, tled, area, hcell, hcellold, hcof, rhs)
+  subroutine csub_sk_wcomp_fc(this, node, tled, area, hcell, hcellold,          &
+                              hcof, rhs)
 ! ******************************************************************************
 ! csub_sk_wcomp_fc -- Calculate water compressibility term for a gwf cell.
 ! ******************************************************************************
@@ -3249,7 +3255,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     class(GwfCsubType), intent(inout) :: this
-    integer(I4B),intent(in) :: n
+    integer(I4B),intent(in) :: node
     real(DP), intent(in) :: tled
     real(DP), intent(in) :: area
     real(DP), intent(in) :: hcell
@@ -3273,12 +3279,12 @@ contains
     hcof = DZERO
     !
     ! -- aquifer elevations and thickness
-    top = this%dis%top(n)
-    bot = this%dis%bot(n)
-    tthk = this%sk_thick(n)
-    tthk0 = this%sk_thick0(n)
+    top = this%dis%top(node)
+    bot = this%dis%bot(node)
+    tthk = this%sk_thick(node)
+    tthk0 = this%sk_thick0(node)
     ! -- aquifer saturation
-    if (this%stoiconv(n) /= 0) then
+    if (this%stoiconv(node) /= 0) then
       snold = sQuadraticSaturation(top, bot, hcellold, this%satomega)
       snnew = sQuadraticSaturation(top, bot, hcell, this%satomega)
     else
@@ -3290,8 +3296,8 @@ contains
     end if
     !
     ! -- storage coefficients
-    wc1 = this%gammaw * this%beta * area * tthk0 * this%sk_theta0(n) * tled
-    wc2 = this%gammaw * this%beta * area * tthk * this%sk_theta(n) * tled
+    wc1 = this%gammaw * this%beta * area * tthk0 * this%sk_theta0(node) * tled
+    wc2 = this%gammaw * this%beta * area * tthk * this%sk_theta(node) * tled
     !
     ! -- calculate hcof term
     hcof = -wc2 * snnew
@@ -3304,7 +3310,7 @@ contains
   end subroutine csub_sk_wcomp_fc
 
   
-  subroutine csub_sk_wcomp_fn(this, n, tled, area, hcell, hcof, rhs)
+  subroutine csub_sk_wcomp_fn(this, node, tled, area, hcell, hcof, rhs)
 ! ******************************************************************************
 ! csub_sk_wcomp_fc -- Calculate water compressibility newton terms for a 
 !                       gwf cell.
@@ -3313,7 +3319,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     class(GwfCsubType), intent(inout) :: this
-    integer(I4B),intent(in) :: n
+    integer(I4B),intent(in) :: node
     real(DP), intent(in) :: tled
     real(DP), intent(in) :: area
     real(DP), intent(in) :: hcell
@@ -3333,15 +3339,15 @@ contains
     hcof = DZERO
     !
     ! -- aquifer elevations and thickness
-    top = this%dis%top(n)
-    bot = this%dis%bot(n)
-    tthk = this%sk_thick(n)
+    top = this%dis%top(node)
+    bot = this%dis%bot(node)
+    tthk = this%sk_thick(node)
     !
     ! -- calculate saturation derivitive
     derv = sQuadraticSaturationDerivative(top, bot, hcell)    
     !
     ! -- storage coefficients
-    wc2 = this%gammaw * this%beta * area * tthk * this%sk_theta(n) * tled
+    wc2 = this%gammaw * this%beta * area * tthk * this%sk_theta(node) * tled
     !
     ! -- calculate hcof term
     hcof = -wc2 * derv * hcell
@@ -3354,7 +3360,7 @@ contains
   end subroutine csub_sk_wcomp_fn
 
   
-  subroutine csub_interbed_wcomp_fc(this, i, n, tled, area,                   &
+  subroutine csub_interbed_wcomp_fc(this, ib, node, tled, area,                 &
                                       hcell, hcellold, hcof, rhs)
 ! ******************************************************************************
 ! csub_interbed_wcomp_fc -- Calculate water compressibility term for an 
@@ -3364,8 +3370,8 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     class(GwfCsubType), intent(inout) :: this
-    integer(I4B),intent(in) :: i
-    integer(I4B),intent(in) :: n
+    integer(I4B),intent(in) :: ib
+    integer(I4B),intent(in) :: node
     real(DP), intent(in) :: tled
     real(DP), intent(in) :: area
     real(DP), intent(in) :: hcell
@@ -3373,7 +3379,7 @@ contains
     real(DP), intent(inout) :: hcof
     real(DP), intent(inout) :: rhs
     ! locals
-    integer(I4B) :: j
+    integer(I4B) :: n
     integer(I4B) :: idelay
     real(DP) :: top
     real(DP) :: bot
@@ -3393,11 +3399,11 @@ contains
     hcof = DZERO
     !
     ! -- aquifer elevations and thickness
-    top = this%dis%top(n)
-    bot = this%dis%bot(n)
-    tthk = this%sk_thick(n)
+    top = this%dis%top(node)
+    bot = this%dis%bot(node)
+    tthk = this%sk_thick(node)
     ! -- aquifer saturation
-    if (this%stoiconv(n) /= 0) then
+    if (this%stoiconv(node) /= 0) then
       snold = sQuadraticSaturation(top, bot, hcellold, this%satomega)
       snnew = sQuadraticSaturation(top, bot, hcell, this%satomega)
     else
@@ -3409,17 +3415,17 @@ contains
     end if
     !
     !
-    idelay = this%idelay(i)
+    idelay = this%idelay(ib)
     f = this%gammaw * this%beta * area * tled
     if (idelay == 0) then
-      wc1 = f * this%theta0(i) * this%thick0(i)
-      wc2 = f * this%theta(i) * this%thick(i)
+      wc1 = f * this%theta0(ib) * this%thick0(ib)
+      wc2 = f * this%theta(ib) * this%thick(ib)
       hcof = -wc2 * snnew
       rhs = -wc1 * snold * hcellold
     else
-      if (this%thick(i) > DZERO) then
+      if (this%thick(ib) > DZERO) then
         dz = this%dbfact * this%dbdz(idelay)
-        do j = 1, this%ndelaycells
+        do n = 1, this%ndelaycells
           fmult = DONE
           !
           ! -- scale factor for half-cell problem
@@ -3428,16 +3434,16 @@ contains
               fmult = DHALF
             end if
           end if
-          wc2 = fmult * f * dz * this%dbtheta(j, idelay)
+          wc2 = fmult * f * dz * this%dbtheta(n, idelay)
           wc1 = wc2
-          rhs = rhs - (wc1 * snold * this%dbh0(j, idelay) -                     &
-                       wc2 * snnew * this%dbh(j, idelay))
+          rhs = rhs - (wc1 * snold * this%dbh0(n, idelay) -                     &
+                       wc2 * snnew * this%dbh(n, idelay))
         end do
-        rhs = rhs * this%rnb(i)
-        !fmult = this%dbfact * this%thick(i) * this%dbtheta(1, idelay)
+        rhs = rhs * this%rnb(ib)
+        !fmult = this%dbfact * this%thick(ib) * this%dbtheta(1, idelay)
         !wc2 = fmult * f
         !wc1 = wc2
-        !rhs = -this%rnb(i) * (wc1 * snold * hcellold - wc2 * snnew * hcell)
+        !rhs = -this%rnb(ib) * (wc1 * snold * hcellold - wc2 * snnew * hcell)
       end if
     end if
     !
@@ -4233,7 +4239,6 @@ contains
     real(DP), intent(inout) :: rhs
     ! -- local variables
     integer(I4B) :: idelay
-    integer(I4B) :: node
     real(DP) :: f
     real(DP) :: c1
     real(DP) :: c2
@@ -4245,7 +4250,6 @@ contains
     rhs = DZERO
     if (this%thick(ib) > DZERO) then
       ! -- calculate terms for gwf matrix
-      node = this%nodelist(ib)
       if (this%idbhalfcell == 0) then
         c1 = DTWO * this%kv(ib) / this%dbdz(idelay)
         rhs = -c1 * this%dbh(1, idelay)
