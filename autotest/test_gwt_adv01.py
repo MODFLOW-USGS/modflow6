@@ -94,12 +94,6 @@ def get_model(idx, dir):
                                   icelltype=laytyp[idx],
                                   k=hk,
                                   k33=hk)
-    # storage
-    #sto = flopy.mf6.ModflowGwfsto(gwf, save_flows=False,
-    #                              iconvert=laytyp[idx],
-    #                              ss=ss[idx], sy=sy[idx],
-    #                              steady_state={0: True, 2: True},
-    #                              transient={1: True})
 
     # chd files
     chd = flopy.mf6.modflow.mfgwfchd.ModflowGwfchd(gwf,
