@@ -421,6 +421,7 @@ def get_model(idx, dir):
     # ibc files
     opth = '{}.csub.obs'.format(name)
     csub = flopy.mf6.ModflowGwfcsub(gwf,
+                                    specified_initial_interbed_state=True,
                                     ndelaycells=10,
                                     head_based=head_based,
                                     update_material_properties=ump[idx],

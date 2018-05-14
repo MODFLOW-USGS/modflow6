@@ -269,7 +269,8 @@ def get_model(idx, dir):
 
     # csub files
     opth = '{}.csub.obs'.format(name)
-    csub = flopy.mf6.ModflowGwfcsub(gwf, interbed_stress_offset=True,
+    csub = flopy.mf6.ModflowGwfcsub(gwf,
+                                    #interbed_stress_offset=True,
                                     compression_indices=True,
                                     geo_stress_offset=True,
                                     update_material_properties=True,

@@ -21,7 +21,11 @@
 
 \item \texttt{DELAY\_SATURATION\_SCALING}---keyword to indicate that delay interbeds can be assigned to convertible cells. By default, delay interbeds are not allowed in convertible cells. The program will terminate with an error if DELAY\_SATURATION\_SCALING is not specified and delay intebeds are assigned to convertible cells. The program will also terminate if DELAY\_SATURATION\_SCALING is specified and water-levels fall below the top of the interbed during a simulation.
 
-\item \texttt{INTERBED\_STRESS\_OFFSET}---keyword to indicate that an initial stress offset specified in the GRIDDATA block will be applied to each interbed.
+\item \texttt{SPECIFIED\_INITIAL\_INTERBED\_STATE}---keyword to indicate that absolute preconsolidation stresses (heads) and delay bed heads will be specified for interbeds defined in the PACKAGEDATA block. The SPECIFIED\_INITIAL\_INTERBED\_STATE option is equivalent to specifying the SPECIFIED\_INITIAL\_PRECONSOLITATION\_STRESS and SPECIFIED\_INITIAL\_DELAY\_HEAD. If SPECIFIED\_INITIAL\_INTERBED\_STATE is not specified then preconsolidation stress (head) and delay bed head values specified in the PACKAGEDATA block are relative to simulated values if the first stress period is steady-state or initial stresses and GWF heads if the first stress period is transient.
+
+\item \texttt{SPECIFIED\_INITIAL\_PRECONSOLIDATION\_STRESS}---keyword to indicate that absolute preconsolidation stresses (heads) will be specified for interbeds defined in the PACKAGEDATA block. If SPECIFIED\_INITIAL\_PRECONSOLITATION\_STRESS and SPECIFIED\_INITIAL\_INTERBED\_STATE are not specified then preconsolidation stress (head) values specified in the PACKAGEDATA block are relative to simulated values if the first stress period is steady-state or initial stresses (heads) if the first stress period is transient.
+
+\item \texttt{SPECIFIED\_INITIAL\_DELAY\_HEAD}---keyword to indicate that absolute initial delay bed head will be specified for interbeds defined in the PACKAGEDATA block. If SPECIFIED\_INITIAL\_DELAY\_HEAD and SPECIFIED\_INITIAL\_INTERBED\_STATE are not specified then delay bead head values specified in the PACKAGEDATA block are relative to simulated values if the first stress period is steady-state or initial GWF heads if the first stress period is transient.
 
 \item \texttt{GEO\_STRESS\_OFFSET}---keyword to indicate that a geostatic stress offset will be specified in the PERIOD block.
 
@@ -75,7 +79,7 @@
 
 \item \texttt{cdelay}---character string that defines the subsidence delay type for the CSUB cell. Possible subsidence package CDELAY strings include: NODELAY--character keyword to indicate that delay will not be simulated in the CSUB cell.  DELAY--character keyword to indicate that delay will be simulated in the CSUB cell.
 
-\item \texttt{pcs0}---is the initial preconsolidation stress or initial offset from the calculated initial effective stress in the CSUB interbed, in units of height of a column of water. PCS0 is the initial offset from the calculated initial effective stress if INTERBED\_STRESS\_OFFSET is specified in the OPTIONS block.
+\item \texttt{pcs0}---is the initial offset from the calculated initial effective stress or initial preconsolidation stress in the CSUB interbed, in units of height of a column of water. PCS0 is the initial preconsolidation stress if SPECIFIED\_INITIAL\_INTERBED\_STATE or SPECIFIED\_INITIAL\_PRECONSOLIDATION\_STRESS are specified in the OPTIONS block.
 
 \item \texttt{thick\_frac}---is the interbed thickness or cell fraction of the CSUB interbed. Interbed thickness is specified as a fraction of the cell thickness if CELL\_FRACTION is specified in the OPTIONS block.
 
@@ -89,7 +93,7 @@
 
 \item \texttt{kv}---is the vertical hydraulic conductivity of the CSUB interbed. KV must be greater than 0 if CDELAY is DELAY. Otherwise, KV can be any value.
 
-\item \texttt{h0}---is the initial head in the CSUB interbed. H0 can be anyvalue if CDELAY is NODELAY.
+\item \texttt{h0}---is the initial offset from the head in cell cellid or the initial head in the CSUB interbed. H0 can be any value if CDELAY is NODELAY. H0 is the initial head in the delay bed if SPECIFIED\_INITIAL\_INTERBED\_STATE or SPECIFIED\_INITIAL\_DELAY\_HEAD are specified in the OPTIONS block.
 
 \item \texttt{boundname}---name of the CSUB cell cell.  BOUNDNAME is an ASCII character variable that can contain as many as 40 characters.  If BOUNDNAME contains spaces in it, then the entire name must be enclosed within single quotes.
 

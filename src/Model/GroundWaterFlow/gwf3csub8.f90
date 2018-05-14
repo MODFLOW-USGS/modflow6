@@ -47,6 +47,8 @@ module GwfCsubModule
     integer(I4B), pointer :: icellf                 => null()
     integer(I4B), pointer :: idbsatscaling          => null()
     integer(I4B), pointer :: ibedstressoff          => null()
+    integer(I4B), pointer :: ispecified_pcs         => null()
+    integer(I4B), pointer :: ispecified_dbh         => null()
     integer(I4B), pointer :: igeostressoff          => null()
     integer(I4B), pointer :: inamedbound            => null()   !flag to read boundnames
     integer(I4B), pointer :: naux                   => null()   !number of auxiliary variables
@@ -280,6 +282,8 @@ contains
     call mem_allocate(this%igeocalc, 'IGEOCALC', this%origin)
     call mem_allocate(this%idbsatscaling, 'IDBSATSCALING', this%origin)
     call mem_allocate(this%ibedstressoff, 'IBEDSTRESSOFF', this%origin)
+    call mem_allocate(this%ispecified_pcs, 'ISPECIFIED_PCS', this%origin)
+    call mem_allocate(this%ispecified_dbh, 'ISPECIFIED_DBH', this%origin)
     call mem_allocate(this%igeostressoff, 'IGEOSTRESSOFF', this%origin)
     call mem_allocate(this%inamedbound, 'INAMEDBOUND', this%origin)
     call mem_allocate(this%naux, 'NAUX', this%origin)
@@ -312,6 +316,8 @@ contains
     this%igeocalc = 1
     this%idbsatscaling = 0
     this%ibedstressoff = 0
+    this%ispecified_pcs = 0
+    this%ispecified_dbh = 0
     this%igeostressoff = 0
     this%inamedbound = 0
     this%naux = 0
@@ -1453,6 +1459,23 @@ contains
             this%idbsatscaling = 1
             write(this%iout, fmtopt) &
               'DELAY-INTERBEDS WILL BE ALLOWED IN CONVERTIBLE CELLS'
+          case ('SPECIFIED_INITIAL_INTERBED_STATE')
+            this%ispecified_pcs = 1
+            this%ispecified_dbh = 1
+            write(this%iout, fmtopt) &
+              'PRECONSOLIDATION STRESS AND DELAY INTERBED HEADS WILL BE ' //    &
+              'SPECIFIED AS ABSOLUTE VALUES INSTEAD OF RELATIVE TO ' //         &
+              'INITIAL STRESS CONDITIONS AND GWF HEADS'
+          case ('SPECIFIED_INITIAL_PRECONSOLIDATION_STRESS')
+            this%ispecified_pcs = 1
+            write(this%iout, fmtopt) &
+              'PRECONSOLIDATION STRESS WILL BE SPECIFIED AS ABSOLUTE VALUES ' //&
+              'INSTEAD OF RELATIVE TO INITIAL STRESS CONDITIONS'
+          case ('SPECIFIED_INITIAL_DELAY_HEAD')
+            this%ispecified_dbh = 1
+            write(this%iout, fmtopt) &
+              'DELAY INTERBED HEADS WILL BE SPECIFIED AS ABSOLUTE VALUES ' //   &
+              'INSTEAD OF RELATIVE TO INITIAL GWF HEADS'
           !
           ! -- initial effective stress will be calculated as an offset from 
           !    calculated initial stress
@@ -1813,6 +1836,8 @@ contains
     call mem_deallocate(this%ndelaybeds)
     call mem_deallocate(this%initialized)
     call mem_deallocate(this%ibedstressoff)
+    call mem_deallocate(this%ispecified_pcs)
+    call mem_deallocate(this%ispecified_dbh)
     call mem_deallocate(this%igeostressoff)
     call mem_deallocate(this%inamedbound)
     call mem_deallocate(this%naux)
@@ -2834,10 +2859,16 @@ contains
       pcs = this%pcs(ib)
       pcs0 = pcs
       if (this%igeocalc == 0) then
-        if (this%ibedstressoff == 1) then
+        !if (this%ibedstressoff == 1) then
+        !  pcs = this%sk_es(node) + pcs0
+        !else
+        !  if (pcs > this%sk_es(node)) then
+        !    pcs = this%sk_es(node)
+        !  end if
+        !end if
+        if (this%ispecified_pcs == 0) then
           pcs = this%sk_es(node) + pcs0
         else
-          !if (this%sk_es(node) < pcs) then
           if (pcs > this%sk_es(node)) then
             pcs = this%sk_es(node)
           end if
@@ -2845,7 +2876,14 @@ contains
       else
         !
         ! -- transfer initial preconsolidation stress (and apply offset if needed)
-        if (this%ibedstressoff == 1) then
+        !if (this%ibedstressoff == 1) then
+        !    pcs = this%sk_es(node) + pcs0
+        !else
+        !  if (pcs < this%sk_es(node)) then
+        !    pcs = this%sk_es(node)
+        !  end if
+        !end if
+        if (this%ispecified_pcs == 0) then
             pcs = this%sk_es(node) + pcs0
         else
           if (pcs < this%sk_es(node)) then
@@ -2863,7 +2901,12 @@ contains
         !    heads need to be filled first since used to calculate 
         !    the effective stress for each delay bed
         do n = 1, this%ndelaycells
-          if (this%ibedstressoff == 1) then
+          !if (this%ibedstressoff == 1) then
+          !  this%dbh(n, idelay) = hcell + this%dbh(n, idelay)
+          !else
+          !  this%dbh(n, idelay) = hcell
+          !end if
+          if (this%ispecified_dbh == 0) then
             this%dbh(n, idelay) = hcell + this%dbh(n, idelay)
           else
             this%dbh(n, idelay) = hcell
