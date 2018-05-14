@@ -7,7 +7,7 @@
 
 ## Automated Testing Status on Travis-CI
 
-### Version 6.0.2 transport &mdash; build 79
+### Version 6.0.2 transport &mdash; build 80
 [![Build Status](https://travis-ci.org/MODFLOW-USGS/modflow6.svg?branch=transport)](https://travis-ci.org/MODFLOW-USGS/modflow6)
 
 ## Introduction
