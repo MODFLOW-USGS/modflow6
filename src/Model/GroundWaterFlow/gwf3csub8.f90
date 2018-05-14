@@ -18,6 +18,7 @@ module GwfCsubModule
   use BaseDisModule, only: DisBaseType
   use SimModule, only: count_errors, store_error, store_error_unit, ustop
   use ArrayHandlersModule, only: ExpandArray
+  use SortModule, only: qsort
   !
   implicit none
   !
@@ -828,60 +829,84 @@ contains
     character(len=20) :: cellid
     character(len=10) :: cflag
     character(len=16) :: text
+    integer(I4B) :: i
     integer(I4B) :: ib
+    integer(I4B) :: i0
+    integer(I4B) :: i1
     integer(I4B) :: node
     integer(I4B) :: iloc
     integer(I4B) :: n
+    integer(I4B) :: nn
     integer(I4B) :: idelay
     integer(I4B) :: iexceed
-    integer(I4B) :: iprn
+    integer(I4B), parameter :: ncells = 20
     real(DP) :: rval
     real(DP) :: strain
     real(DP) :: pctcomp
+    integer(I4B), dimension(:), allocatable :: imap_arr
+    real(DP), dimension(:), allocatable :: pctcomp_arr
     ! format
-02000 FORMAT ( 1X, ///1X, A, 1X, A)
+02000 FORMAT (1X,///1X,A,1X,A,1X,A)
 ! --------------------------------------------------------------------------
-    if (this%istrainopt /= 0) then
+    if (this%ninterbeds > 0) then
+      allocate(imap_arr(this%ninterbeds))
+      allocate(pctcomp_arr(this%ninterbeds))
+      iexceed = 0
+      do ib = 1, this%ninterbeds
+        strain = this%tcomp(ib) / this%thickini(ib)
+        pctcomp = DHUNDRED * strain
+        pctcomp_arr(ib) = pctcomp
+        imap_arr(ib) = ib
+        if (pctcomp >= DONE) then
+          iexceed = iexceed + 1
+        end if
+      end do
+      call qsort(imap_arr, pctcomp_arr)
       !
-      ! -- interbed strain table
-      if (this%ninterbeds > 0) then
-        write (this%iout, 2000) trim(this%name), 'INTERBED STRAIN SUMMARY'
-        iloc = 1
-        line = ''
-        call UWWORD(line, iloc, 10, 1, 'interbed', n, rval, CENTER=.TRUE.)
-        call UWWORD(line, iloc, 10, 1, 'interbed', n, rval, CENTER=.TRUE.)
-        call UWWORD(line, iloc, 20, 1, 'interbed', n, rval, CENTER=.TRUE.)
-        call UWWORD(line, iloc, 16, 1, 'initial', n, rval, CENTER=.TRUE.)
-        call UWWORD(line, iloc, 16, 1, 'final', n, rval, CENTER=.TRUE.)
-        call UWWORD(line, iloc, 16, 1, 'total', n, rval, CENTER=.TRUE.)
-        call UWWORD(line, iloc, 16, 1, 'final', n, rval, CENTER=.TRUE.)
-        call UWWORD(line, iloc, 16, 1, 'percent', n, rval, CENTER=.TRUE.)
-        call UWWORD(line, iloc, 10, 1, '', n, rval, CENTER=.TRUE.)
-        ! -- create line separator
-        linesep = repeat('-', iloc)
-        ! -- write first line
-        write(this%iout,'(1X,A)') linesep(1:iloc)
-        write(this%iout,'(1X,A)') line(1:iloc)
-        ! -- create second header line
-        iloc = 1
-        line = ''
-        iloc = 1
-        line = ''
-        call UWWORD(line, iloc, 10, 1, 'number', n, rval, CENTER=.TRUE.)
-        call UWWORD(line, iloc, 10, 1, 'type', n, rval, CENTER=.TRUE.)
-        call UWWORD(line, iloc, 20, 1, 'location', n, rval, CENTER=.TRUE.)
-        call UWWORD(line, iloc, 16, 1, 'thickness', n, rval, CENTER=.TRUE.)
-        call UWWORD(line, iloc, 16, 1, 'thickness', n, rval, CENTER=.TRUE.)
-        call UWWORD(line, iloc, 16, 1, 'compaction', n, rval, CENTER=.TRUE.)
-        call UWWORD(line, iloc, 16, 1, 'strain', n, rval, CENTER=.TRUE.)
-        call UWWORD(line, iloc, 16, 1, 'compaction', n, rval, CENTER=.TRUE.)
-        call UWWORD(line, iloc, 10, 1, 'flag', n, rval, CENTER=.TRUE.)
-        ! -- write second line
-        write(this%iout,'(1X,A)') line(1:iloc)
-        write(this%iout,'(1X,A)') linesep(1:iloc)
-        ! -- write data
-        iexceed = 0
-        do ib = 1, this%ninterbeds
+      ! -- summary interbed strain table
+      i0 = max(1, this%ninterbeds-ncells+1)
+      i1 = this%ninterbeds
+      msg = ''
+      if (iexceed /= 0) then
+        write(msg,'(a,1x,i0,1x,a)') '--', (i1 - i0 + 1), 'LARGEST VALUES SHOWN'
+      end if
+      write (this%iout, 2000) trim(this%name), 'INTERBED STRAIN SUMMARY',       &
+        trim(adjustl(msg))
+      iloc = 1
+      line = ''
+      call UWWORD(line, iloc, 10, 1, 'interbed', n, rval, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 10, 1, 'interbed', n, rval, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 20, 1, 'interbed', n, rval, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 16, 1, 'initial', n, rval, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 16, 1, 'final', n, rval, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 16, 1, 'total', n, rval, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 16, 1, 'final', n, rval, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 16, 1, 'percent', n, rval, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 10, 1, '', n, rval, CENTER=.TRUE.)
+      ! -- create line separator
+      linesep = repeat('-', iloc)
+      ! -- write first line
+      write(this%iout,'(1X,A)') linesep(1:iloc)
+      write(this%iout,'(1X,A)') line(1:iloc)
+      ! -- create second header line
+      iloc = 1
+      line = ''
+      call UWWORD(line, iloc, 10, 1, 'number', n, rval, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 10, 1, 'type', n, rval, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 20, 1, 'location', n, rval, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 16, 1, 'thickness', n, rval, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 16, 1, 'thickness', n, rval, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 16, 1, 'compaction', n, rval, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 16, 1, 'strain', n, rval, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 16, 1, 'compaction', n, rval, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 10, 1, 'flag', n, rval, CENTER=.TRUE.)
+      ! -- write second line
+      write(this%iout,'(1X,A)') line(1:iloc)
+      write(this%iout,'(1X,A)') linesep(1:iloc)
+      ! -- write data
+      if (iexceed /= 0) then
+        do i = i1, i0, -1
+          ib = imap_arr(i)
           idelay = this%idelay(ib)
           if (idelay == 0) then
             ctype = 'no-delay'
@@ -897,82 +922,103 @@ contains
           else
             cflag = ''
           end if
-          iprn = 0
-          if (len_trim(cflag) > 0) then
-            iexceed = iexceed + 1
-            iprn = 1
-          end if
-          if (this%istrainopt == 2) then
-            iprn = 1
-          end if
-          if (iprn /= 0) then
-            node = this%nodelist(ib)
-            call this%dis%noder_to_string(node, cellid)
-            iloc = 1
-            line = ''
-            call UWWORD(line, iloc, 10, 2, text, ib, rval)
-            call UWWORD(line, iloc, 10, 1, ctype, n, rval)
-            call UWWORD(line, iloc, 20, 1, cellid, n, rval, CENTER=.TRUE.)
-            call UWWORD(line, iloc, 16, 3, text, n, this%thickini(ib))
-            call UWWORD(line, iloc, 16, 3, text, n, this%thick(ib))
-            call UWWORD(line, iloc, 16, 3, text, n, this%tcomp(ib))
-            call UWWORD(line, iloc, 16, 3, text, n, strain)
-            call UWWORD(line, iloc, 16, 3, text, n, pctcomp)
-            call UWWORD(line, iloc, 10, 1, cflag, ib, rval)
-            write(this%iout, '(1X,A)') line(1:iloc)
-          end if
+          node = this%nodelist(ib)
+          call this%dis%noder_to_string(node, cellid)
+          iloc = 1
+          line = ''
+          call UWWORD(line, iloc, 10, 2, text, ib, rval)
+          call UWWORD(line, iloc, 10, 1, ctype, n, rval)
+          call UWWORD(line, iloc, 20, 1, cellid, n, rval, CENTER=.TRUE.)
+          call UWWORD(line, iloc, 16, 3, text, n, this%thickini(ib))
+          call UWWORD(line, iloc, 16, 3, text, n, this%thick(ib))
+          call UWWORD(line, iloc, 16, 3, text, n, this%tcomp(ib))
+          call UWWORD(line, iloc, 16, 3, text, n, strain)
+          call UWWORD(line, iloc, 16, 3, text, n, pctcomp)
+          call UWWORD(line, iloc, 10, 1, cflag, ib, rval)
+          write(this%iout, '(1X,A)') line(1:iloc)
         end do
-        if (iexceed == 0) then
-          msg = 'PERCENT COMPACTION WAS LESS THAN 1 PERCENT IN ALL INTERBEDS'
-          write(this%iout, '(/1X,A)') trim(adjustl(msg))
-        else
-          write(this%iout, '(/1X,A,1X,I0,1X,A)') &
-            'PERCENT COMPACTION IS GREATER THAN OR EQUAL TO 1 PERCENT IN',      &
-            iexceed, 'INTERBED(S)'
-        end if
+        write(this%iout, '(/1X,A,1X,I0,1X,A,1X,I0,1X,A,/1X,A,/1X,A)') &
+          'PERCENT COMPACTION IS GREATER THAN OR EQUAL TO 1 PERCENT IN',      &
+          iexceed, 'OF', this%ninterbeds, 'INTERBED(S).',                     &
+          'USE THE STRAIN_TABLE_INTERBED OPTION TO OUTPUT A CSV ' //          &
+          'FILE WITH PERCENT COMPACTION ', 'VALUES FOR ALL INTERBEDS.'
+      else
+        msg = 'PERCENT COMPACTION WAS LESS THAN 1 PERCENT IN ALL INTERBEDS'
+        write(this%iout, '(/1X,A)') trim(adjustl(msg))
       end if
       !
-      ! -- skeletal strain
-      write (this%iout, 2000) trim(this%name), 'SKELETAL STRAIN SUMMARY'
-      iloc = 1
-      line = ''
-      call UWWORD(line, iloc, 20, 1, 'cell', n, rval, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 16, 1, 'initial', n, rval, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 16, 1, 'final', n, rval, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 16, 1, 'total', n, rval, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 16, 1, 'final', n, rval, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 16, 1, 'percent', n, rval, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 10, 1, '', n, rval, CENTER=.TRUE.)
-      ! -- create line separator
-      linesep = repeat('-', iloc)
-      ! -- write first line
-      write(this%iout,'(1X,A)') linesep(1:iloc)
-      write(this%iout,'(1X,A)') line(1:iloc)
-      ! -- create second header line
-      iloc = 1
-      line = ''
-      iloc = 1
-      line = ''
-      call UWWORD(line, iloc, 20, 1, 'location', n, rval, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 16, 1, 'thickness', n, rval, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 16, 1, 'thickness', n, rval, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 16, 1, 'compaction', n, rval, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 16, 1, 'strain', n, rval, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 16, 1, 'compaction', n, rval, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 10, 1, 'flag', n, rval, CENTER=.TRUE.)
-      ! -- write second line
-      write(this%iout,'(1X,A)') line(1:iloc)
-      write(this%iout,'(1X,A)') linesep(1:iloc)
-      ! -- write data
-      iexceed = 0
-      do node = 1, this%dis%nodes
+      ! -- write csv file
+      if (this%istrainopt /= 0) then
+      end if
+      !
+      ! -- deallocate temporary storage
+      deallocate(imap_arr)
+      deallocate(pctcomp_arr)
+    end if
+    
+    allocate(imap_arr(this%dis%nodes))
+    allocate(pctcomp_arr(this%dis%nodes))
+    iexceed = 0
+    do node = 1, this%dis%nodes
+      strain = DZERO
+      if (this%sk_thickini(node) > DZERO) then
+        strain = this%sk_tcomp(node) / this%sk_thickini(node)
+      end if
+      pctcomp = DHUNDRED * strain
+      pctcomp_arr(node) = pctcomp
+      imap_arr(node) = node
+      if (pctcomp >= DONE) then
+        iexceed = iexceed + 1
+      end if
+    end do
+    call qsort(imap_arr, pctcomp_arr)
+    !
+    ! -- summary skeletal strain table
+    i0 = max(1, this%dis%nodes-ncells+1)
+    i1 = this%dis%nodes
+    msg = ''
+    if (iexceed /= 0) then
+      write(msg,'(a,1x,i0,1x,a)') '--', (i1 - i0 + 1), 'LARGEST VALUES SHOWN'
+    end if
+    write (this%iout, 2000) trim(this%name), 'SKELETAL STRAIN SUMMARY',         &
+      trim(adjustl(msg))
+    iloc = 1
+    line = ''
+    call UWWORD(line, iloc, 20, 1, 'cell', n, rval, CENTER=.TRUE.)
+    call UWWORD(line, iloc, 16, 1, 'initial', n, rval, CENTER=.TRUE.)
+    call UWWORD(line, iloc, 16, 1, 'final', n, rval, CENTER=.TRUE.)
+    call UWWORD(line, iloc, 16, 1, 'total', n, rval, CENTER=.TRUE.)
+    call UWWORD(line, iloc, 16, 1, 'final', n, rval, CENTER=.TRUE.)
+    call UWWORD(line, iloc, 16, 1, 'percent', n, rval, CENTER=.TRUE.)
+    call UWWORD(line, iloc, 10, 1, '', n, rval, CENTER=.TRUE.)
+    ! -- create line separator
+    linesep = repeat('-', iloc)
+    ! -- write first line
+    write(this%iout,'(1X,A)') linesep(1:iloc)
+    write(this%iout,'(1X,A)') line(1:iloc)
+    ! -- create second header line
+    iloc = 1
+    line = ''
+    call UWWORD(line, iloc, 20, 1, 'location', n, rval, CENTER=.TRUE.)
+    call UWWORD(line, iloc, 16, 1, 'thickness', n, rval, CENTER=.TRUE.)
+    call UWWORD(line, iloc, 16, 1, 'thickness', n, rval, CENTER=.TRUE.)
+    call UWWORD(line, iloc, 16, 1, 'compaction', n, rval, CENTER=.TRUE.)
+    call UWWORD(line, iloc, 16, 1, 'strain', n, rval, CENTER=.TRUE.)
+    call UWWORD(line, iloc, 16, 1, 'compaction', n, rval, CENTER=.TRUE.)
+    call UWWORD(line, iloc, 10, 1, 'flag', n, rval, CENTER=.TRUE.)
+    ! -- write second line
+    write(this%iout,'(1X,A)') line(1:iloc)
+    write(this%iout,'(1X,A)') linesep(1:iloc)
+    ! -- write data
+    if (iexceed /= 0) then
+      do nn = i1, i0, -1
+        node = imap_arr(nn)
         if (this%sk_thickini(node) > DZERO) then
           strain = this%sk_tcomp(node) / this%sk_thickini(node)
-          pctcomp = DHUNDRED * strain
         else
           strain = DZERO
-          pctcomp = DZERO
         end if
+        pctcomp = DHUNDRED * strain
         if (pctcomp >= 5.0_DP) then
           cflag = '**>=5%'
         else if (pctcomp >= DONE) then
@@ -980,38 +1026,36 @@ contains
         else
           cflag = ''
         end if
-        iprn = 0
-        if (len_trim(cflag) > 0) then
-          iexceed = iexceed + 1
-          iprn = 1
-        end if
-        if (this%istrainopt == 2) then
-          iprn = 1
-        end if
-        if (iprn /= 0) then
-          call this%dis%noder_to_string(node, cellid)
-          iloc = 1
-          line = ''
-          call UWWORD(line, iloc, 20, 1, cellid, n, rval, CENTER=.TRUE.)
-          call UWWORD(line, iloc, 16, 3, text, n, this%sk_thickini(node))
-          call UWWORD(line, iloc, 16, 3, text, n, this%sk_thick(node))
-          call UWWORD(line, iloc, 16, 3, text, n, this%sk_tcomp(node))
-          call UWWORD(line, iloc, 16, 3, text, n, strain)
-          call UWWORD(line, iloc, 16, 3, text, n, pctcomp)
-          call UWWORD(line, iloc, 10, 1, cflag, ib, rval)
-          write(this%iout, '(1X,A)') line(1:iloc)
-        end if
+        call this%dis%noder_to_string(node, cellid)
+        iloc = 1
+        line = ''
+        call UWWORD(line, iloc, 20, 1, cellid, n, rval, CENTER=.TRUE.)
+        call UWWORD(line, iloc, 16, 3, text, n, this%sk_thickini(node))
+        call UWWORD(line, iloc, 16, 3, text, n, this%sk_thick(node))
+        call UWWORD(line, iloc, 16, 3, text, n, this%sk_tcomp(node))
+        call UWWORD(line, iloc, 16, 3, text, n, strain)
+        call UWWORD(line, iloc, 16, 3, text, n, pctcomp)
+        call UWWORD(line, iloc, 10, 1, cflag, ib, rval)
+        write(this%iout, '(1X,A)') line(1:iloc)
       end do
-      if (iexceed == 0) then
-        msg = 'SKELETAL PERCENT COMPACTION WAS LESS THAN 1 PERCENT ' //         &
-              'IN ALL CELLS '
-        write(this%iout, '(/1X,A)') trim(adjustl(msg))
-      else
-        write(this%iout, '(/1X,A,1X,I0,1X,A)') &
-          'SKELETAL PERCENT COMPACTION IS GREATER THAN OR EQUAL TO 1 ' //       &
-          'PERCENT IN', iexceed, 'CELL(S)'
-      end if
+      write(this%iout, '(/1X,A,1X,I0,1X,A,1X,I0,1X,A,/1X,A,/1X,A)') &
+        'SKELETAL STORAGE PERCENT COMPACTION IS GREATER THAN OR ' //          &
+        'EQUAL TO 1 PERCENT IN', iexceed, 'OF', this%dis%nodes, 'CELL(S).',   &
+        'USE THE STRAIN_TABLE_SKELETAL OPTION TO OUTPUT A CSV ' //            &
+        'FILE WITH PERCENT COMPACTION ', 'VALUES FOR ALL CELLS.'
+    else
+      msg = 'SKELETAL STORAGE PERCENT COMPACTION WAS LESS THAN ' //           &
+            '1 PERCENT IN ALL CELLS '
+      write(this%iout, '(/1X,A)') trim(adjustl(msg))
     end if
+    !
+    ! -- write csv file
+    if (this%istrainopt /= 0) then
+    end if
+    !
+    ! -- deallocate temporary storage
+    deallocate(imap_arr)
+    deallocate(pctcomp_arr)
     !
     ! -- return
     return
