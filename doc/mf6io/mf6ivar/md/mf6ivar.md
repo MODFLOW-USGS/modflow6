@@ -171,7 +171,11 @@
 | GWF | STO | PERIOD | IPER | INTEGER | integer value specifying the starting stress period number for which the data specified in the PERIOD block apply.  IPER must be less than or equal to NPER in the TDIS Package and greater than zero.  The IPER value assigned to a stress period block must be greater than the IPER value assigned for the previous PERIOD block.  The information specified in the PERIOD block will continue to apply for all subsequent stress periods, unless the program encounters another PERIOD block. |
 | GWF | STO | PERIOD | STEADY-STATE | KEYWORD | keyword to indicate that stress-period IPER is steady-state. Steady-state conditions will apply until the TRANSIENT keyword is specified in a subsequent BEGIN PERIOD block. |
 | GWF | STO | PERIOD | TRANSIENT | KEYWORD | keyword to indicate that stress-period IPER is transient. Transient conditions will apply until the STEADY-STATE keyword is specified in a subsequent BEGIN PERIOD block. |
-| GWF | CSUB | OPTIONS | STRAIN_TABLE | STRING | is a text keyword to set strain table options for output of final skeletal and interbed strain values.  The text value for STRAIN\_TABLE can be ``NONE'', ``SUMMARY'', or ``ALL''. ``NONE'' prevents output of final strain values at the end of the simulation. ``SUMMARY'' results in output of final strain values for cells and interbeds where the compaction is greater to or equal to 1 percent of the initial thickness at the end of the simulation. ``ALL'' results in output of final strain values for all cells at the end of the simulation. The ``SUMMARY'' option is used if STRAIN\_TABLE is not specified. |
+| GWF | CSUB | OPTIONS | STRAIN_CSV_INTERBED | KEYWORD | keyword to specify the record that corresponds to final interbed strain output. |
+| GWF | CSUB | OPTIONS | FILEOUT | KEYWORD | keyword to specify that an output filename is expected next. |
+| GWF | CSUB | OPTIONS | INTERBEDSTRAINFILE | STRING | name of the comma-separated-values output file to write final interbed strain information. |
+| GWF | CSUB | OPTIONS | STRAIN_CSV_SKELETAL | KEYWORD | keyword to specify the record that corresponds to final skeletal strain output. |
+| GWF | CSUB | OPTIONS | SKELETALSTRAINFILE | STRING | name of the comma-separated-values output file to write final skeletal strain information. |
 | GWF | CSUB | OPTIONS | SAVE_FLOWS | KEYWORD | keyword to indicate that cell-by-cell flow terms will be written to the file specified with ``BUDGET SAVE FILE'' in Output Control. |
 | GWF | CSUB | OPTIONS | GAMMAW | DOUBLE PRECISION | specific gravity of water. For freshwater, GAMMAW is 9806.65 Newtons/cubic meters or 62.48 lb/cubic foot in SI and English units, respectively. By default, GAMMAW is 9806.65. |
 | GWF | CSUB | OPTIONS | BETA | DOUBLE PRECISION | compressibility of water. Typical values of BETA are 4.6512e-10 1/Pa or 2.2270e-8 lb/square foot in SI and English units, respectively. By default, BETA is 4.6512e-10. |
@@ -188,7 +192,6 @@
 | GWF | CSUB | OPTIONS | UPDATE_MATERIAL_PROPERTIES | KEYWORD | keyword to indicate that the thickness and void ratio of skeletal and no delay interbed sediments will not vary during the simulation. |
 | GWF | CSUB | OPTIONS | CELL_FRACTION | KEYWORD | keyword to indicate that the thickness of interbeds will be specified in terms of the fraction of cell thickness. |
 | GWF | CSUB | OPTIONS | COMPACTION | KEYWORD | keyword to specify that record corresponds to the compaction. |
-| GWF | CSUB | OPTIONS | FILEOUT | KEYWORD | keyword to specify that an output filename is expected next. |
 | GWF | CSUB | OPTIONS | COMPACTIONFILE | STRING | name of the binary output file to write compaction information. |
 | GWF | CSUB | OPTIONS | TS6 | KEYWORD | keyword to specify that record corresponds to a time-series file. |
 | GWF | CSUB | OPTIONS | FILEIN | KEYWORD | keyword to specify that an input filename is expected next. |

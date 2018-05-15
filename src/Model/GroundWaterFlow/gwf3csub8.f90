@@ -18,7 +18,7 @@ module GwfCsubModule
   use BaseDisModule, only: DisBaseType
   use SimModule, only: count_errors, store_error, store_error_unit, ustop
   use ArrayHandlersModule, only: ExpandArray
-  use SortModule, only: qsort
+  use SortModule, only: qsort, selectn
   !
   implicit none
   !
@@ -42,7 +42,8 @@ module GwfCsubModule
     character(len=500) :: listlabel   = ''                                      !title of table written for RP
     character(len=LENORIGIN) :: stoname
     integer(I4B), pointer :: istounit               => null()
-    integer(I4B), pointer :: istrainopt             => null()
+    integer(I4B), pointer :: istrainib              => null()
+    integer(I4B), pointer :: istrainsk              => null()
     integer(I4B), pointer :: iupdatematprop         => null()
     integer(I4B), pointer :: istoragec              => null()
     integer(I4B), pointer :: icellf                 => null()
@@ -289,7 +290,8 @@ contains
     call mem_allocate(this%inamedbound, 'INAMEDBOUND', this%origin)
     call mem_allocate(this%naux, 'NAUX', this%origin)
     call mem_allocate(this%istoragec, 'ISTORAGEC', this%origin)
-    call mem_allocate(this%istrainopt, 'ISTRAINOPT', this%origin)
+    call mem_allocate(this%istrainib, 'ISTRAINIB', this%origin)
+    call mem_allocate(this%istrainsk, 'ISTRAINSK', this%origin)
     call mem_allocate(this%iupdatematprop, 'IUPDATEMATPROP', this%origin)
     call mem_allocate(this%idbhalfcell, 'IDBHALFCELL', this%origin)
     call mem_allocate(this%idbfullcell, 'IDBFULLCELL', this%origin)
@@ -323,7 +325,8 @@ contains
     this%inamedbound = 0
     this%naux = 0
     this%istoragec = 1
-    this%istrainopt = 1
+    this%istrainib = 0
+    this%istrainsk = 0
     this%iupdatematprop = 0
     this%idbhalfcell = 0
     this%idbfullcell = 0
@@ -840,35 +843,38 @@ contains
     integer(I4B) :: idelay
     integer(I4B) :: iexceed
     integer(I4B), parameter :: ncells = 20
+    integer(I4B) :: nlen
     real(DP) :: rval
     real(DP) :: strain
     real(DP) :: pctcomp
-    integer(I4B), dimension(:), allocatable :: imap_arr
+    integer(I4B), dimension(:), allocatable :: imap_sel
     real(DP), dimension(:), allocatable :: pctcomp_arr
     ! format
 02000 FORMAT (1X,///1X,A,1X,A,1X,A)
 ! --------------------------------------------------------------------------
     if (this%ninterbeds > 0) then
-      allocate(imap_arr(this%ninterbeds))
+      nlen = min(ncells,this%ninterbeds)
+      allocate(imap_sel(nlen))
       allocate(pctcomp_arr(this%ninterbeds))
       iexceed = 0
       do ib = 1, this%ninterbeds
         strain = this%tcomp(ib) / this%thickini(ib)
         pctcomp = DHUNDRED * strain
         pctcomp_arr(ib) = pctcomp
-        imap_arr(ib) = ib
         if (pctcomp >= DONE) then
           iexceed = iexceed + 1
         end if
       end do
-      call qsort(imap_arr, pctcomp_arr)
+      call selectn(imap_sel, pctcomp_arr, reverse=.TRUE.)
       !
       ! -- summary interbed strain table
       i0 = max(1, this%ninterbeds-ncells+1)
       i1 = this%ninterbeds
       msg = ''
       if (iexceed /= 0) then
-        write(msg,'(a,1x,i0,1x,a)') '--', (i1 - i0 + 1), 'LARGEST VALUES SHOWN'
+        write(msg,'(a,1x,i0,1x,a,1x,i0,1x,a)')                                  &
+          '-- LARGEST', (i1 - i0 + 1), 'OF', this%ninterbeds,                   &
+          'INTERBED STRAIN VALUES SHOWN'
       end if
       write (this%iout, 2000) trim(this%name), 'INTERBED STRAIN SUMMARY',       &
         trim(adjustl(msg))
@@ -905,8 +911,8 @@ contains
       write(this%iout,'(1X,A)') linesep(1:iloc)
       ! -- write data
       if (iexceed /= 0) then
-        do i = i1, i0, -1
-          ib = imap_arr(i)
+        do i = 1, nlen
+          ib = imap_sel(i)
           idelay = this%idelay(ib)
           if (idelay == 0) then
             ctype = 'no-delay'
@@ -940,7 +946,7 @@ contains
         write(this%iout, '(/1X,A,1X,I0,1X,A,1X,I0,1X,A,/1X,A,/1X,A)') &
           'PERCENT COMPACTION IS GREATER THAN OR EQUAL TO 1 PERCENT IN',      &
           iexceed, 'OF', this%ninterbeds, 'INTERBED(S).',                     &
-          'USE THE STRAIN_TABLE_INTERBED OPTION TO OUTPUT A CSV ' //          &
+          'USE THE STRAIN_CSV_INTERBED OPTION TO OUTPUT A CSV ' //            &
           'FILE WITH PERCENT COMPACTION ', 'VALUES FOR ALL INTERBEDS.'
       else
         msg = 'PERCENT COMPACTION WAS LESS THAN 1 PERCENT IN ALL INTERBEDS'
@@ -948,15 +954,53 @@ contains
       end if
       !
       ! -- write csv file
-      if (this%istrainopt /= 0) then
+      if (this%istrainib /= 0) then
+        iloc = 1
+        line = ''
+        call UWWORD(line, iloc, 20, 1, 'interbed_number', n, rval, SEP=',')
+        call UWWORD(line, iloc, 20, 1, 'interbed_type', n, rval, SEP=',')
+        call UWWORD(line, iloc, 22, 1, 'cellid', n, rval, SEP=',')
+        call UWWORD(line, iloc, 20, 1, 'initial_thickness', n, rval, SEP=',')
+        call UWWORD(line, iloc, 20, 1, 'final_thickness', n, rval, SEP=',')
+        call UWWORD(line, iloc, 20, 1, 'total_compaction', n, rval, SEP=',')
+        call UWWORD(line, iloc, 20, 1, 'total_strain', n, rval, SEP=',')
+        call UWWORD(line, iloc, 20, 1, 'percent_compaction', n, rval)
+        ! -- write second line
+        write(this%istrainib,'(1X,A)') line(1:iloc)
+        ! -- write data
+        do ib = 1, this%ninterbeds
+          idelay = this%idelay(ib)
+          if (idelay == 0) then
+            ctype = 'no-delay'
+          else
+            ctype = 'delay'
+          end if
+          strain = this%tcomp(ib) / this%thickini(ib)
+          pctcomp = DHUNDRED * strain
+          node = this%nodelist(ib)
+          call this%dis%noder_to_string(node, cellid)
+          iloc = 1
+          line = ''
+          call UWWORD(line, iloc, 20, 2, text, ib, rval, SEP=',')
+          call UWWORD(line, iloc, 20, 1, ctype, n, rval, SEP=',')
+          call UWWORD(line, iloc, 22, 1, '"'//trim(adjustl(cellid))//'"',       &
+                      n, rval, SEP=',')
+          call UWWORD(line, iloc, 20, 3, text, n, this%thickini(ib), SEP=',')
+          call UWWORD(line, iloc, 20, 3, text, n, this%thick(ib), SEP=',')
+          call UWWORD(line, iloc, 20, 3, text, n, this%tcomp(ib), SEP=',')
+          call UWWORD(line, iloc, 20, 3, text, n, strain, SEP=',')
+          call UWWORD(line, iloc, 20, 3, text, n, pctcomp)
+          write(this%istrainib, '(1X,A)') line(1:iloc)
+        end do
       end if
       !
       ! -- deallocate temporary storage
-      deallocate(imap_arr)
+      deallocate(imap_sel)
       deallocate(pctcomp_arr)
     end if
     
-    allocate(imap_arr(this%dis%nodes))
+    nlen = min(ncells,this%dis%nodes)
+    allocate(imap_sel(nlen))
     allocate(pctcomp_arr(this%dis%nodes))
     iexceed = 0
     do node = 1, this%dis%nodes
@@ -966,19 +1010,20 @@ contains
       end if
       pctcomp = DHUNDRED * strain
       pctcomp_arr(node) = pctcomp
-      imap_arr(node) = node
       if (pctcomp >= DONE) then
         iexceed = iexceed + 1
       end if
     end do
-    call qsort(imap_arr, pctcomp_arr)
+    call selectn(imap_sel, pctcomp_arr, reverse=.TRUE.)
     !
     ! -- summary skeletal strain table
     i0 = max(1, this%dis%nodes-ncells+1)
     i1 = this%dis%nodes
     msg = ''
     if (iexceed /= 0) then
-      write(msg,'(a,1x,i0,1x,a)') '--', (i1 - i0 + 1), 'LARGEST VALUES SHOWN'
+      write(msg,'(a,1x,i0,1x,a,1x,i0,1x,a)')                                    &
+        '-- LARGEST ', (i1 - i0 + 1), 'OF', this%dis%nodes,                     &
+        'CELL SKELETAL VALUES SHOWN'
     end if
     write (this%iout, 2000) trim(this%name), 'SKELETAL STRAIN SUMMARY',         &
       trim(adjustl(msg))
@@ -1011,8 +1056,8 @@ contains
     write(this%iout,'(1X,A)') linesep(1:iloc)
     ! -- write data
     if (iexceed /= 0) then
-      do nn = i1, i0, -1
-        node = imap_arr(nn)
+      do nn = 1, nlen
+        node = imap_sel(nn)
         if (this%sk_thickini(node) > DZERO) then
           strain = this%sk_tcomp(node) / this%sk_thickini(node)
         else
@@ -1041,7 +1086,7 @@ contains
       write(this%iout, '(/1X,A,1X,I0,1X,A,1X,I0,1X,A,/1X,A,/1X,A)') &
         'SKELETAL STORAGE PERCENT COMPACTION IS GREATER THAN OR ' //          &
         'EQUAL TO 1 PERCENT IN', iexceed, 'OF', this%dis%nodes, 'CELL(S).',   &
-        'USE THE STRAIN_TABLE_SKELETAL OPTION TO OUTPUT A CSV ' //            &
+        'USE THE STRAIN_CSV_SKELETAL OPTION TO OUTPUT A CSV ' //              &
         'FILE WITH PERCENT COMPACTION ', 'VALUES FOR ALL CELLS.'
     else
       msg = 'SKELETAL STORAGE PERCENT COMPACTION WAS LESS THAN ' //           &
@@ -1050,11 +1095,44 @@ contains
     end if
     !
     ! -- write csv file
-    if (this%istrainopt /= 0) then
+    if (this%istrainsk /= 0) then
+      iloc = 1
+      line = ''
+      call UWWORD(line, iloc, 20, 1, 'node', n, rval, SEP=',')
+      call UWWORD(line, iloc, 22, 1, 'cellid', n, rval, SEP=',')
+      call UWWORD(line, iloc, 20, 1, 'initial_thickness', n, rval, SEP=',')
+      call UWWORD(line, iloc, 20, 1, 'final_thickness', n, rval, SEP=',')
+      call UWWORD(line, iloc, 20, 1, 'total_compaction', n, rval, SEP=',')
+      call UWWORD(line, iloc, 20, 1, 'total_strain', n, rval, SEP=',')
+      call UWWORD(line, iloc, 20, 1, 'percent_compaction', n, rval)
+      ! -- write second line
+      write(this%istrainsk,'(1X,A)') line(1:iloc)
+      ! -- write data
+      do node = 1, this%dis%nodes
+        if (this%sk_thickini(node) > DZERO) then
+          strain = this%sk_tcomp(node) / this%sk_thickini(node)
+        else
+          strain = DZERO
+        end if
+        pctcomp = DHUNDRED * strain
+        call this%dis%noder_to_string(node, cellid)
+        iloc = 1
+        line = ''
+        call UWWORD(line, iloc, 20, 2, text, node, rval, SEP=',')
+        call UWWORD(line, iloc, 22, 1, '"'//trim(adjustl(cellid))//'"',       &
+                    n, rval, SEP=',')
+        call UWWORD(line, iloc, 20, 3, text, n, this%sk_thickini(node),       &
+                    SEP=',')
+        call UWWORD(line, iloc, 20, 3, text, n, this%sk_thick(node), SEP=',')
+        call UWWORD(line, iloc, 20, 3, text, n, this%sk_tcomp(node), SEP=',')
+        call UWWORD(line, iloc, 20, 3, text, n, strain, SEP=',')
+        call UWWORD(line, iloc, 20, 3, text, n, pctcomp)
+        write(this%istrainsk, '(1X,A)') line(1:iloc)
+      end do
     end if
     !
     ! -- deallocate temporary storage
-    deallocate(imap_arr)
+    deallocate(imap_sel)
     deallocate(pctcomp_arr)
     !
     ! -- return
@@ -1390,7 +1468,6 @@ contains
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: MAXCHARLEN, DZERO
     use OpenSpecModule, only: access, form
-!    use SimModule, only: ustop, store_error
     use InputOutputModule, only: urword, getunit, urdaux, openfile
     implicit none
     ! -- dummy
@@ -1399,6 +1476,7 @@ contains
     character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: keyword
     character(len=LINELENGTH) :: line
+    character(len=MAXCHARLEN) :: fname
     logical :: isfound
     logical :: endOfBlock
     integer(I4B) :: lloc
@@ -1423,6 +1501,8 @@ contains
       "(4x, A, 1X, I0)"
     character(len=*),parameter :: fmtoptr = &
       "(4x, A, 1X, G0)"
+    character(len=*),parameter :: fmtstrain = &
+      "(4x, 'CSUB ', 1x, a, 1x, ' WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I7)"
 ! -----------------------------------------------------------------------------
     !
     ! -- initialize variables
@@ -1541,22 +1621,35 @@ contains
             write(this%iout, fmtopt) &
               'COMPRESSION INDICES WILL BE SPECIFIED INSTEAD OF ' //            &
               'ELASTIC AND INELASTIC SPECIFIC COEFFICIENTS'
-          ! variable thickness and void ratio
-          case ('STRAIN_TABLE')
+          ! strain table options
+          case ('STRAIN_CSV_INTERBED')
             call this%parser%GetStringCaps(keyword)
-            select case(trim(adjustl(keyword)))
-              case('NONE')
-                this%istrainopt = 0             
-              case('SUMMARY')
-                this%istrainopt = 1             
-              case('ALL')
-                this%istrainopt = 2
-              case default
-                errmsg = 'UNKNOWN STRAIN_TABLE OPTION ' // trim(adjustl(keyword))
-                call store_error(errmsg)
-            end select
-            write(this%iout, fmtopt) 'STRAIN TABLE OUTPUT OPTION=' //           &
-                                     trim(adjustl(keyword))
+            if (keyword == 'FILEOUT') then
+              call this%parser%GetString(fname)
+              this%istrainib = getunit()
+              call openfile(this%istrainib, this%iout, fname, 'CSV_OUTPUT',     &
+                            filstat_opt='REPLACE')
+              write(this%iout,fmtstrain) &
+                'INTERBED STRAIN CSV', fname, this%istrainib
+            else
+              errmsg = 'OPTIONAL STRAIN_CSV_INTERBED KEYWORD MUST BE ' //       &
+                       'FOLLOWED BY FILEOUT'
+              call store_error(errmsg)
+            end if
+          case ('STRAIN_CSV_SKELETAL')
+            call this%parser%GetStringCaps(keyword)
+            if (keyword == 'FILEOUT') then
+              call this%parser%GetString(fname)
+              this%istrainsk = getunit()
+              call openfile(this%istrainsk, this%iout, fname, 'CSV_OUTPUT',     &
+                            filstat_opt='REPLACE')
+              write(this%iout,fmtstrain) &
+                'SKELETAL STRAIN CSV', fname, this%istrainsk
+            else
+              errmsg = 'OPTIONAL STRAIN_CSV_SKELETAL KEYWORD MUST BE ' //       &
+                       'FOLLOWED BY FILEOUT'
+              call store_error(errmsg)
+            end if
           ! variable thickness and void ratio
           case ('UPDATE_MATERIAL_PROPERTIES')
             this%iupdatematprop = 1
@@ -1886,6 +1979,8 @@ contains
     call mem_deallocate(this%inamedbound)
     call mem_deallocate(this%naux)
     call mem_deallocate(this%istoragec)
+    call mem_deallocate(this%istrainib)
+    call mem_deallocate(this%istrainsk)
     call mem_deallocate(this%iupdatematprop)
     call mem_deallocate(this%idbfullcell)
     call mem_deallocate(this%idbhalfcell)
@@ -3955,6 +4050,7 @@ contains
     integer(I4B) :: idelay
     real(DP) :: dh
     real(DP) :: dhmax
+    real(DP) :: dhmax0
     real(DP), parameter :: dclose = DHUNDRED * DPREC
 ! ------------------------------------------------------------------------------
     !
@@ -4002,10 +4098,15 @@ contains
         ! -- check delay bed convergence 
         if (abs(dhmax) < dclose) then
           icnvg = 1
+        else if (iter /= 1) then
+          if (abs(dhmax)-abs(dhmax0) < DPREC) then
+            icnvg = 1
+          end if
         end if
         if (icnvg == 1) then
           exit
         end if
+        dhmax0 = dhmax
       end do
     end if
     !

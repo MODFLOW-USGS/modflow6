@@ -5,15 +5,23 @@ module SortModule
   implicit none
 
   private
-  public :: qsort
+  public :: qsort, selectn
   
   contains
-    subroutine qsort(indx,v)
+    subroutine qsort(indx, v, reverse)
+! **************************************************************************
+! qsort -- quick sort that also includes an index number
+! **************************************************************************
+!
+!    SPECIFICATIONS:
+! --------------------------------------------------------------------------
       ! -- dummy arguments
       integer(I4B), dimension(:), intent(inout) :: indx
       real(DP), dimension(:), intent(inout) :: v
+      logical, intent(in), optional :: reverse
       ! -- local variables
       character(len=LINELENGTH) :: errmsg
+      logical :: lrev
       integer(I4B), parameter :: nn=15
       integer(I4B), parameter :: nstack=50
       integer(I4B) :: nsize
@@ -25,13 +33,25 @@ module SortModule
       integer(I4B) :: iright
       integer(I4B), dimension(nstack) :: istack
       integer(I4B) :: iidx
+      integer(I4B) :: ia
       real(DP) :: a
       ! -- functions
       ! -- code
+      !
+      ! -- process optional dummy variables
+      if (present(reverse)) then
+        lrev = reverse
+      else
+        lrev = .FALSE.
+      endif
+      !
+      ! -- initialize variables
       nsize = size(v)
       jstack = 0
       ileft = 1
       iright = nsize
+      !
+      ! -- perform quicksort
       do
         if (iright - ileft < nn) then
           do j = (ileft + 1), iright
@@ -68,21 +88,30 @@ module SortModule
           i = ileft + 1
           j = iright
           a = v(ileft + 1)
+          ia = indx(ileft + 1)
           do
             do
                 i = i + 1
-                if (v(i) >= a) exit
+                if (v(i) >= a) then
+                  exit
+                end if
             end do
             do
                 j = j - 1
-                if (v(j) <= a) exit
+                if (v(j) <= a) then
+                  exit
+                end if
             end do
-            if (j < i) exit
+            if (j < i) then
+              exit
+            end if
             call rswap(v(i), v(j))
             call iswap(indx(i), indx(j))
           end do
           v(ileft + 1) = v(j)
+          indx(ileft + 1) = indx(j)
           v(j) = a
+          indx(j) = ia
           jstack = jstack + 2
           if (jstack > nstack) then
             write(errmsg,'(4x,a,3(1x,a))') &
@@ -101,9 +130,108 @@ module SortModule
         end if
       end do
       !
+      ! -- reverse order of the heap index
+      if (lrev) then
+        j = nsize
+        do i = 1, nsize / 2
+          call rswap(v(i), v(j))
+          call iswap(indx(i), indx(j))
+          j = j - 1
+        end do
+      end if
+      !
       ! -- return
       return
     end subroutine qsort
+    
+    subroutine selectn(indx, v, reverse)
+! **************************************************************************
+! selectn -- heap selection
+! **************************************************************************
+!
+!    SPECIFICATIONS:
+! --------------------------------------------------------------------------
+      ! -- dummy arguments
+      integer(I4B), dimension(:), intent(inout) :: indx
+      real(DP), dimension(:), intent(inout) :: v
+      logical, intent(in), optional :: reverse
+      ! -- local variables
+      logical :: lrev
+      integer(I4B) :: nsizei
+      integer(I4B) :: nsizev
+      integer(I4B) :: i
+      integer(I4B) :: j
+      integer(I4B) :: k
+      integer(I4B) :: n
+      integer(I4B) :: iidx
+      real(DP), dimension(:), allocatable :: vv
+      ! -- functions
+      ! -- code
+      !
+      ! -- process optional dummy variables
+      if (present(reverse)) then
+        lrev = reverse
+      else
+        lrev = .FALSE.
+      endif
+      !
+      ! -- initialize heap
+      nsizev = size(v)
+      nsizei = min(nsizev, size(indx))
+      allocate(vv(nsizei))
+      !
+      ! -- initialize heap index (indx) and heap (vv)
+      do n = 1, nsizei
+        vv(n) = v(n)
+        indx(n) = n
+      end do
+      !
+      ! -- initial sort
+      call qsort(indx, vv)
+      !
+      ! -- evaluate the remaining elements in v
+      do i = nsizei+1, nsizev
+        !
+        ! -- put the current value on the heap
+        if (v(i) > vv(1)) then
+          vv(1) = v(i)
+          indx(1) = i
+          j = 1
+          do
+            k = 2 * j
+            if (k > nsizei) then
+              exit
+            end if
+            if (k /= nsizei) then
+              if (vv(k) > vv(k+1)) then
+                k = k + 1
+              end if
+            end if
+            if (vv(j) <= vv(k)) then
+              exit
+            end if
+            call rswap(vv(k), vv(j))
+            call iswap(indx(k), indx(j))
+            j = k
+          end do
+        end if
+      end do
+      !
+      ! -- final sort
+      call qsort(indx, vv)
+      !
+      ! -- reverse order of the heap index
+      if (lrev) then
+        j = nsizei
+        do i = 1, nsizei / 2
+          call iswap(indx(i), indx(j))
+          j = j - 1
+        end do
+      end if
+      !
+      ! -- return
+      return
+    end subroutine selectn
 
     subroutine rswap(a, b)
       ! -- dummy arguments 

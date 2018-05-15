@@ -3,7 +3,15 @@
 \item \textbf{Block: OPTIONS}
 
 \begin{description}
-\item \texttt{strain\_table}---is a text keyword to set strain table options for output of final skeletal and interbed strain values.  The text value for STRAIN\_TABLE can be ``NONE'', ``SUMMARY'', or ``ALL''. ``NONE'' prevents output of final strain values at the end of the simulation. ``SUMMARY'' results in output of final strain values for cells and interbeds where the compaction is greater to or equal to 1 percent of the initial thickness at the end of the simulation. ``ALL'' results in output of final strain values for all cells at the end of the simulation. The ``SUMMARY'' option is used if STRAIN\_TABLE is not specified.
+\item \texttt{STRAIN\_CSV\_INTERBED}---keyword to specify the record that corresponds to final interbed strain output.
+
+\item \texttt{FILEOUT}---keyword to specify that an output filename is expected next.
+
+\item \texttt{interbedstrainfile}---name of the comma-separated-values output file to write final interbed strain information.
+
+\item \texttt{STRAIN\_CSV\_SKELETAL}---keyword to specify the record that corresponds to final skeletal strain output.
+
+\item \texttt{skeletalstrainfile}---name of the comma-separated-values output file to write final skeletal strain information.
 
 \item \texttt{SAVE\_FLOWS}---keyword to indicate that cell-by-cell flow terms will be written to the file specified with ``BUDGET SAVE FILE'' in Output Control.
 
@@ -36,8 +44,6 @@
 \item \texttt{CELL\_FRACTION}---keyword to indicate that the thickness of interbeds will be specified in terms of the fraction of cell thickness.
 
 \item \texttt{COMPACTION}---keyword to specify that record corresponds to the compaction.
-
-\item \texttt{FILEOUT}---keyword to specify that an output filename is expected next.
 
 \item \texttt{compactionfile}---name of the binary output file to write compaction information.
 

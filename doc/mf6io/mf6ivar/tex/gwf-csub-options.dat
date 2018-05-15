@@ -1,5 +1,6 @@
 BEGIN OPTIONS
-  [STRAIN_TABLE <strain_table>]
+  [STRAIN_CSV_INTERBED FILEOUT <interbedstrainfile>]
+  [STRAIN_CSV_SKELETAL FILEOUT <skeletalstrainfile>]
   [SAVE_FLOWS]
   [GAMMAW <gammaw>]
   [BETA <beta>]

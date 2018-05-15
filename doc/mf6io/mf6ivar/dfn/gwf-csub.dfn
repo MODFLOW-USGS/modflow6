@@ -1,14 +1,81 @@
 # --------------------- gwf csub options ---------------------
 
 block options
-name strain_table
-type string
-valid none summary all
+name strainib_filerecord
+type record strain_csv_interbed fileout interbedstrainfile
+shape
 reader urword
+tagged true
 optional true
-longname strain table option
-description is a text keyword to set strain table options for output of final skeletal and interbed strain values.  The text value for STRAIN\_TABLE can be ``NONE'', ``SUMMARY'', or ``ALL''. ``NONE'' prevents output of final strain values at the end of the simulation. ``SUMMARY'' results in output of final strain values for cells and interbeds where the compaction is greater to or equal to 1 percent of the initial thickness at the end of the simulation. ``ALL'' results in output of final strain values for all cells at the end of the simulation. The ``SUMMARY'' option is used if STRAIN\_TABLE is not specified.
+longname
+description
 
+block options
+name strain_csv_interbed
+type keyword
+shape
+in_record true
+reader urword
+tagged true
+optional false
+longname budget keyword
+description keyword to specify the record that corresponds to final interbed strain output.
+
+block options
+name fileout
+type keyword
+shape
+in_record true
+reader urword
+tagged true
+optional false
+longname file keyword
+description keyword to specify that an output filename is expected next.
+
+block options
+name interbedstrainfile
+type string
+shape
+in_record true
+reader urword
+tagged false
+optional false
+longname file keyword
+description name of the comma-separated-values output file to write final interbed strain information.
+
+block options
+name strainsk_filerecord
+type record strain_csv_skeletal fileout skeletalstrainfile
+shape
+reader urword
+tagged true
+optional true
+longname
+description
+
+block options
+name strain_csv_skeletal
+type keyword
+shape
+in_record true
+reader urword
+tagged true
+optional false
+longname budget keyword
+description keyword to specify the record that corresponds to final skeletal strain output.
+
+block options
+name skeletalstrainfile
+type string
+shape
+in_record true
+reader urword
+tagged false
+optional false
+longname file keyword
+description name of the comma-separated-values output file to write final skeletal strain information.
+
+##
 block options
 name save_flows
 type keyword

@@ -275,8 +275,12 @@ def get_model(idx, dir):
                                                    save_flows=False)
     # ibc files
     opth = '{}.csub.obs'.format(name)
+    ibcsv = '{}.ib.strain.csv'.format(name)
+    skcsv = '{}.sk.strain.csv'.format(name)
     csub = flopy.mf6.ModflowGwfcsub(gwf, head_based=True,
                                     save_flows=True,
+                                    strainib_filerecord=ibcsv,
+                                    strainsk_filerecord=skcsv,
                                     ndelaycells=ndelaycells[idx],
                                     delay_full_cell=fullcell[idx],
                                     ninterbeds=maxibc,
