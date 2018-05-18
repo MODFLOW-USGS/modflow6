@@ -65,6 +65,8 @@ autotest/tempbin/
 autotest/*.html
 autotest/notebooks/
 
+distribution/*.zip
+
 mod_temp/
 obj_temp/
 src_temp/
