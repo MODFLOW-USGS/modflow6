@@ -106,7 +106,7 @@ module GwtDspModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtDspType)                       :: this
+    class(GwtDspType) :: this
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtdsp =                                    &
@@ -686,9 +686,16 @@ module GwtDspModule
       if (q > DZERO) q = sqrt(q)
       !
       ! -- dispersion coefficients
-      alh = this%alh(n)
-      ath = this%ath(n)
-      dstar = this%diffc(n) * this%porosity(n)
+      alh = DZERO
+      ath = DZERO
+      if (this%idisp > 0) then
+        alh = this%alh(n)
+        ath = this%ath(n)
+      endif
+      dstar = DZERO
+      if (this%idiffc > 0) then
+        dstar = this%diffc(n) * this%porosity(n)
+      endif
       this%d11(n) = alh * q + dstar
       this%d22(n) = ath * q + dstar
       this%d33(n) = ath * q + dstar
@@ -742,7 +749,7 @@ module GwtDspModule
     class(GwtDspType) :: this
     ! -- local
     integer(I4B) :: nodes, n, m, idiag, ipos
-    real(DP) :: clnm, clmn, anm, dnm_mean, dn, dm
+    real(DP) :: clnm, clmn, anm, dn, dm
     real(DP) :: vg1, vg2, vg3
     integer(I4B) :: ihc, ibdn, ibdm, ictn, ictm, inwtup, iusg, isympos
     real(DP) :: hn, hm, satn, satm, topn, topm, botn, botm, satomega

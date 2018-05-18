@@ -1037,6 +1037,8 @@ module GwfNpfModule
     class(GwfNpftype) :: this
     integer(I4B), intent(in) :: ncells
     integer(I4B), intent(in) :: njas
+    ! -- local
+    integer(I4B) :: i, j
 ! ------------------------------------------------------------------------------
     !
     call mem_allocate(this%icelltype, ncells, 'ICELLTYPE', trim(this%origin))
@@ -1057,6 +1059,11 @@ module GwfNpfModule
       call mem_allocate(this%ihcedge, this%nedges, 'IHCEDGE', trim(this%origin))
       call mem_allocate(this%propsedge, 5, this%nedges, 'PROPSEDGE',           &
         trim(this%origin))
+      do i = 1, ncells
+        do j = 1, 3
+          this%spdis(j, i) = DZERO
+        end do
+      end do
     else
       call mem_allocate(this%spdis, 3, 0, 'SPDIS', trim(this%origin))
       call mem_allocate(this%nodedge, 0, 'NODEDGE', trim(this%origin))

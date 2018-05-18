@@ -1,0 +1,23 @@
+% DO NOT MODIFY THIS FILE DIRECTLY.  IT IS CREATED BY mf6ivar.py 
+
+\item \textbf{Block: OPTIONS}
+
+\begin{description}
+\item \texttt{HHFORMULATION}---use the variable-density hydraulic head formulation instead of the equivalent freshwater head formulation.
+
+\item \texttt{denseref}---fluid reference density used in the equation of state.  This value is set to 1000. if not specified as an option.
+
+\item \texttt{drhodc}---slope of the density-concentration line used in the equation of state.  This value is set to 0.7 if not specified as an option.
+
+\end{description}
+\item \textbf{Block: PERIOD}
+
+\begin{description}
+\item \texttt{iper}---integer value specifying the starting stress period number for which the data specified in the PERIOD block apply.  IPER must be less than or equal to NPER in the TDIS Package and greater than zero.  The IPER value assigned to a stress period block must be greater than the IPER value assigned for the previous PERIOD block.  The information specified in the PERIOD block will continue to apply for all subsequent stress periods, unless the program encounters another PERIOD block.
+
+\item \texttt{elevation}---cell center elevation for each cell in the grid.  This may be useful for constructing two-dimensional cross section models using an areal grid.
+
+\item \texttt{dense}---user-specified fluid density array.  If this array is specified, then these density values remain constant at the user-specified values.
+
+\end{description}
+

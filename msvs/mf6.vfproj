@@ -5,7 +5,7 @@
 		<Platform Name="x64"/></Platforms>
 	<Configurations>
 		<Configuration Name="Debug|Win32" OutputDirectory="../bin" TargetName="$(ProjectName)d">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" HeapArrays="0" StandardWarnings="standardWarningsF08" WarnUnusedVariables="true" WarnUncalled="true" WarnInterfaces="true" OptDiagFile="optrpt" FloatingPointExceptionHandling="fpe0" Traceback="true" BoundsCheck="true" UninitializedVariablesCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebugDLL"/>
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" HeapArrays="0" StandardWarnings="standardWarningsF08" WarnUnusedVariables="true" WarnUncalled="true" WarnInterfaces="true" OptDiagFile="optrpt" LocalSavedScalarsSNaN="true" InitArrays="true" FloatingPointExceptionHandling="fpe0" Traceback="true" BoundsCheck="true" UninitializedVariablesCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebugDLL"/>
 				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateDebugInformation="true" ProgramDatabaseFile="$(IntDir)\$(TargetName).pdb" SubSystem="subSystemConsole"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
@@ -82,6 +82,7 @@
 		<File RelativePath="..\src\Model\Geometry\RectangularGeometry.f90"/></Filter>
 		<Filter Name="GroundWaterFlow">
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3buy8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3chd8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3dis8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3disu8.f90"/>

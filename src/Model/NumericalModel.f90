@@ -1,7 +1,7 @@
 module NumericalModelModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: LINELENGTH, LENBUDTXT, LENPACKAGENAME
+  use ConstantsModule, only: LINELENGTH, LENBUDTXT, LENPACKAGENAME, DZERO
   use BaseModelModule, only: BaseModelType
   use BaseDisModule, only: DisBaseType
   use SparseModule, only: sparsematrix
@@ -285,10 +285,16 @@ module NumericalModelModule
   subroutine allocate_arrays(this)
     use MemoryManagerModule, only: mem_allocate
     class(NumericalModelType) :: this
+    integer (I4B) :: i
     !
     call mem_allocate(this%xold,   this%neq, 'XOLD',   trim(this%name))
     call mem_allocate(this%flowja, this%nja, 'FLOWJA', trim(this%name))
     call mem_allocate(this%idxglo, this%nja, 'IDXGLO', trim(this%name))
+    !
+    ! -- Initialize
+    do i = 1, this%nja
+      this%flowja(i) = DZERO
+    end do
     !
     ! -- return
     return

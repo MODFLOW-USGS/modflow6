@@ -155,6 +155,11 @@ module GwfGwtExchangeModule
       endif
     endif
     !
+    ! -- Set a pointer to conc
+    if (gwfmodel%inbuy > 0) then
+      call gwfmodel%buy%set_concentration_pointer(gwtmodel%x, gwtmodel%ibound)
+    endif
+    !
     ! -- return
     return
   end subroutine exg_ar

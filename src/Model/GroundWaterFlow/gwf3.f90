@@ -9,6 +9,7 @@ module GwfModule
   use GwfIcModule,                 only: GwfIcType
   use GwfNpfModule,                only: GwfNpfType
   use Xt3dModule,                  only: Xt3dType
+  use GwfBuyModule,                only: GwfBuyType
   use GwfHfbModule,                only: GwfHfbType
   use GwfStoModule,                only: GwfStoType
   use GwfMvrModule,                only: GwfMvrType
@@ -31,6 +32,7 @@ module GwfModule
     type(GwfIcType),                pointer :: ic      => null()                ! initial conditions package
     type(GwfNpfType),               pointer :: npf     => null()                ! node property flow package
     type(Xt3dType),                 pointer :: xt3d    => null()                ! xt3d option for npf
+    type(GwfBuyType),               pointer :: buy     => null()                ! buoyancy package
     type(GwfStoType),               pointer :: sto     => null()                ! storage package
     type(GwfOcType),                pointer :: oc      => null()                ! output control package
     type(GhostNodeType),            pointer :: gnc     => null()                ! ghost node correction package
@@ -41,6 +43,7 @@ module GwfModule
     integer(I4B),                   pointer :: inic    => null()                ! unit number IC
     integer(I4B),                   pointer :: inoc    => null()                ! unit number OC
     integer(I4B),                   pointer :: innpf   => null()                ! unit number NPF
+    integer(I4B),                   pointer :: inbuy   => null()                ! unit number BUY
     integer(I4B),                   pointer :: insto   => null()                ! unit number STO
     integer(I4B),                   pointer :: inmvr   => null()                ! unit number MVR
     integer(I4B),                   pointer :: inhfb   => null()                ! unit number HFB
@@ -86,7 +89,7 @@ module GwfModule
                 'GHB6 ', 'RCH6 ', 'EVT6 ', 'OBS6 ', 'GNC6 ', & ! 15
                 '     ', 'CHD6 ', '     ', '     ', '     ', & ! 20
                 '     ', 'MAW6 ', 'SFR6 ', 'LAK6 ', 'UZF6 ', & ! 25
-                'DISV6', 'MVR6 ', '     ', '     ', '     ', & ! 30
+                'DISV6', 'MVR6 ', 'BUY6 ', '     ', '     ', & ! 30
                 70 * '     '/
 
   contains
@@ -115,6 +118,7 @@ module GwfModule
     use GwfDisuModule,              only: disu_cr
     use GwfNpfModule,               only: npf_cr
     use Xt3dModule,                 only: xt3d_cr
+    use GwfBuyModule,               only: buy_cr
     use GwfStoModule,               only: sto_cr
     use GwfMvrModule,               only: mvr_cr
     use GwfHfbModule,               only: hfb_cr
@@ -246,6 +250,7 @@ module GwfModule
     call namefile_obj%get_unitnumber('IC6',  this%inic, 1)
     call namefile_obj%get_unitnumber('OC6',  this%inoc, 1)
     call namefile_obj%get_unitnumber('NPF6', this%innpf, 1)
+    call namefile_obj%get_unitnumber('BUY6', this%inbuy, 1)
     call namefile_obj%get_unitnumber('STO6', this%insto, 1)
     call namefile_obj%get_unitnumber('MVR6', this%inmvr, 1)
     call namefile_obj%get_unitnumber('HFB6', this%inhfb, 1)
@@ -270,6 +275,7 @@ module GwfModule
     ! -- Create packages that are tied directly to model
     call npf_cr(this%npf, this%name, this%innpf, this%iout)
     call xt3d_cr(this%xt3d, this%name, this%innpf, this%iout)
+    call buy_cr(this%buy, this%name, this%inbuy, this%iout)
     call gnc_cr(this%gnc, this%name, this%ingnc, this%iout)
     call hfb_cr(this%hfb, this%name, this%inhfb, this%iout)
     call sto_cr(this%sto, this%name, this%insto, this%iout)
@@ -438,6 +444,7 @@ module GwfModule
     if(this%inic  > 0) call this%ic%ic_ar(this%x)
     if(this%innpf > 0) call this%npf%npf_ar(this%dis, this%ic,                 &
                                             this%ibound, this%x)
+    if(this%inbuy > 0) call this%buy%buy_ar(this%dis, this%npf, this%ibound)
     if(this%inhfb > 0) call this%hfb%hfb_ar(this%ibound, this%xt3d, this%dis)
     if(this%insto > 0) call this%sto%sto_ar(this%dis, this%ibound)
     if(this%inmvr > 0) call this%mvr%mvr_ar()
@@ -483,6 +490,7 @@ module GwfModule
     if (.not. readnewdata) return
     !
     ! -- Read and prepare
+    if(this%inbuy > 0) call this%buy%buy_rp()
     if(this%inhfb > 0) call this%hfb%hfb_rp()
     if(this%inoc > 0)  call this%oc%oc_rp()
     if(this%insto > 0) call this%sto%sto_rp()
@@ -597,6 +605,8 @@ module GwfModule
     if(this%innpf > 0) call this%npf%npf_fc(kiter, this%dis%nodes,             &
                                                 this%nja, njasln, amatsln,     &
                                                 this%idxglo, this%rhs, this%x)
+    if(this%inbuy > 0) call this%buy%buy_fc(kiter, njasln, amatsln,  &
+                                            this%idxglo, this%rhs, this%x)
     if(this%inhfb > 0) call this%hfb%hfb_fc(kiter, this%dis%nodes,             &
                                                 this%nja, njasln, amatsln,     &
                                                 this%idxglo, this%rhs, this%x)
@@ -885,6 +895,7 @@ module GwfModule
     enddo
     if(this%innpf > 0) call this%npf%npf_flowja(this%neq, this%nja, this%x,    &
                                                 this%flowja)
+    if(this%inbuy > 0) call this%buy%buy_flowja(this%x, this%flowja)
     if(this%inhfb > 0) call this%hfb%hfb_flowja(this%neq, this%nja, this%x,    &
                                                 this%flowja)
     if(this%ingnc > 0) call this%gnc%flowja(this%flowja)
@@ -1098,6 +1109,7 @@ module GwfModule
     call this%ic%ic_da()
     call this%npf%npf_da()
     call this%xt3d%xt3d_da()
+    call this%buy%buy_da()
     call this%gnc%gnc_da()
     call this%sto%sto_da()
     call this%budget%budget_da()
@@ -1111,6 +1123,7 @@ module GwfModule
     deallocate(this%ic)
     deallocate(this%npf)
     deallocate(this%xt3d)
+    deallocate(this%buy)
     deallocate(this%gnc)
     deallocate(this%sto)
     deallocate(this%budget)
@@ -1131,6 +1144,7 @@ module GwfModule
     call mem_deallocate(this%inoc)
     call mem_deallocate(this%inobs)
     call mem_deallocate(this%innpf)
+    call mem_deallocate(this%inbuy)
     call mem_deallocate(this%insto)
     call mem_deallocate(this%inmvr)
     call mem_deallocate(this%inhfb)
@@ -1252,6 +1266,7 @@ module GwfModule
     call mem_allocate(this%inic,  'INIC',  modelname)
     call mem_allocate(this%inoc,  'INOC',  modelname)
     call mem_allocate(this%innpf, 'INNPF', modelname)
+    call mem_allocate(this%inbuy, 'INBUY', modelname)
     call mem_allocate(this%insto, 'INSTO', modelname)
     call mem_allocate(this%inmvr, 'INMVR', modelname)
     call mem_allocate(this%inhfb, 'INHFB', modelname)
@@ -1263,6 +1278,7 @@ module GwfModule
     this%inic = 0
     this%inoc = 0
     this%innpf = 0
+    this%inbuy = 0
     this%insto = 0
     this%inmvr = 0
     this%inhfb = 0
