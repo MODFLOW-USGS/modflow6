@@ -33,6 +33,8 @@ def get_mf6_models():
                'test051_uzf1d_a')
 
     exclude_travis = ('test006_gwf3_transport',
+                      'test022_MNW2_Fig28',
+                      'test007_751x751_confined',
                       'test006_Gwf1-Lnf1')
 
     # build list of directories with valid example files
