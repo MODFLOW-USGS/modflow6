@@ -1,38 +1,38 @@
 [
     {
-        "status": "Release Candidate", 
-        "downloadURL": "https://code.usgs.gov/usgs/modflow/modflow6/archive/master.zip", 
-        "repositoryURL": "https://code.usgs.gov/usgs/modflow/modflow6.git", 
-        "disclaimerURL": "https://code.usgs.gov/usgs/modflow/modflow6/blob/master/DISCLAIMER.md", 
-        "description": "MODFLOW is the USGS's modular hydrologic model. MODFLOW is considered an international standard for simulating and predicting groundwater conditions and groundwater/surface-water interactions.", 
+        "status": "Release Candidate",
+        "downloadURL": "https://code.usgs.gov/usgs/modflow/modflow6/archive/master.zip",
+        "repositoryURL": "https://code.usgs.gov/usgs/modflow/modflow6.git",
+        "laborHours": -1,
+        "disclaimerURL": "https://code.usgs.gov/usgs/modflow/modflow6/blob/master/DISCLAIMER.md",
         "tags": [
-            "MODFLOW", 
+            "MODFLOW",
             "groundwater model"
-        ], 
-        "vcs": "git", 
+        ],
+        "description": "MODFLOW is the USGS's modular hydrologic model. MODFLOW is considered an international standard for simulating and predicting groundwater conditions and groundwater/surface-water interactions.",
         "languages": [
             "Fortran2008"
-        ], 
+        ],
         "contact": {
-            "name": "Christian D. Langevin", 
+            "name": "Christian D. Langevin",
             "email": "langevin@usgs.gov"
-        }, 
-        "laborHours": -1, 
-        "version": "6.0.2.115", 
+        },
+        "vcs": "git",
+        "version": "6.0.2.116",
         "date": {
-            "metadataLastUpdated": "2018-05-15"
-        }, 
-        "organization": "U.S. Geological Survey", 
+            "metadataLastUpdated": "2018-05-18"
+        },
+        "organization": "U.S. Geological Survey",
         "permissions": {
             "licenses": [
                 {
-                    "URL": "https://code.usgs.gov/usgs/modflow/modflow6/blob/master/LICENSE.md", 
+                    "URL": "https://code.usgs.gov/usgs/modflow/modflow6/blob/master/LICENSE.md",
                     "name": "Public Domain, CC0-1.0"
                 }
-            ], 
+            ],
             "usageType": "openSource"
-        }, 
-        "homepageURL": "https://code.usgs.gov/usgs/modflow/modflow6/", 
+        },
+        "homepageURL": "https://code.usgs.gov/usgs/modflow/modflow6/",
         "name": "modflow6"
     }
 ]

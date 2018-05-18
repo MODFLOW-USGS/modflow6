@@ -79,10 +79,7 @@ vka = [1e6, 7.5e-5, 1e6]
 laytyp = [0, 0, 0] #[1, 0, 0]
 ffrac = [.6, 0., .6]
 sy = [0.1, 0., 0.]
-S = []
-for k in range(nlay):
-    ss = (1. - ffrac[k]) * zthick[k] * 3e-6
-    S.append(ss)
+ss = [3e-6, 0., 3e-6]
 
 nouter, ninner = 500, 300
 hclose, rclose, relax = 1e-9, 1e-6, 1.
@@ -194,7 +191,8 @@ def get_model(idx, dir):
                          b, 1., ccnd0[kdx], crnd0[kdx], theta, 999., -999.]
                     sub6.append(d)
 
-    # create delay bed packagedata entries
+    # create delay bed packagedata entries and skeletal storage
+    S = []
     ndb = ndelaybeds[idx]
     if ndb > 0:
         cdelays = 'delay'
@@ -209,8 +207,18 @@ def get_model(idx, dir):
                     d = [ibcno, (k, i, j), cdelays, dhc[kdx], dz[kdx],
                          rnb[kdx], cc, cr, theta, kv, dstart[kdx][i, j]]
                     sub6.append(d)
+        # create S for aquifer, delay beds, and no-delay beds
+        for k in range(nlay):
+            sst = (1. - ffrac[k]) * zthick[k] * ss[k]
+            S.append(sst)
+    else:
+        # create S for aquifer and no-delay beds
+        for k in range(nlay):
+            sst = (zthick[k] - thicknd0[k]) * ss[k]
+            S.append(sst)
 
     maxibc = len(sub6)
+    
 
     # build MODFLOW 6 files
     ws = dir
@@ -254,7 +262,8 @@ def get_model(idx, dir):
                                   k33=vka)
     # storage
     sto = flopy.mf6.ModflowGwfsto(gwf, save_flows=False, iconvert=laytyp,
-                                  ss=S, sy=sy,
+                                  #ss=S, sy=sy,
+                                  ss=0., sy=sy,
                                   storagecoefficient=True,
                                   steady_state={0: True},
                                   transient={1: True})
@@ -277,15 +286,18 @@ def get_model(idx, dir):
     opth = '{}.csub.obs'.format(name)
     ibcsv = '{}.ib.strain.csv'.format(name)
     skcsv = '{}.sk.strain.csv'.format(name)
+    copth = '{}.compaction.bin'.format(name)
     csub = flopy.mf6.ModflowGwfcsub(gwf, head_based=True,
+                                    time_weight=0.,
                                     save_flows=True,
                                     strainib_filerecord=ibcsv,
                                     strainsk_filerecord=skcsv,
+                                    compaction_filerecord=copth,
                                     ndelaycells=ndelaycells[idx],
                                     delay_full_cell=fullcell[idx],
                                     ninterbeds=maxibc,
                                     obs_filerecord=opth,
-                                    beta=0., ske_cr=0.,
+                                    beta=0., ske_cr=ss,
                                     packagedata=sub6)
     orecarray = {}
     orecarray['csub_obs.csv'] = [('tcomp1', 'total-compaction', (0, 4, 4)),

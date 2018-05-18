@@ -980,7 +980,7 @@ module GwfModule
     if (this%incsub > 0) then
       call this%csub%bdcalc(this%dis%nodes, this%x, this%xold,                 &
                             isuppress_output, this%budget)
-      call this%csub%bdsav(icbcfl, icbcun)
+      call this%csub%bdsav(idvfl, icbcfl, icbcun)
     end if
     !
     ! -- Node Property Flow

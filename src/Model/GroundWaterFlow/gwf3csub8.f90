@@ -2,7 +2,7 @@ module GwfCsubModule
   use KindModule, only: I4B, DP
   use ConstantsModule, only: DPREC, DZERO, DEM6, DHALF, DEM1,                   &
                              DONE, DTWO, DTHREE,                                &
-                             DGRAVITY, DTEN, DHUNDRED, DNODATA,                 &
+                             DGRAVITY, DTEN, DHUNDRED, DNODATA, DHNOFLO,        &
                              LENFTYPE, LENPACKAGENAME,                          &
                              LINELENGTH, LENBOUNDNAME, NAMEDBOUNDFLAG,          &
                              LENBUDTXT, LENAUXNAME, LENORIGIN
@@ -30,6 +30,9 @@ module GwfCsubModule
       [' CSUB-AQELASTIC',                                                       & 
        '   CSUB-ELASTIC', ' CSUB-INELASTIC',                                    &
        ' CSUB-WATERCOMP']
+  character(len=LENBUDTXT), dimension(4) :: comptxt =                           & !text labels for compaction terms
+      ['CSUB-COMPACTION', ' CSUB-ZDISPLACE',                                    & 
+       ' CSUB-INELASTIC', '   CSUB-ELASTIC']
   
   !
   ! -- local paramter - derivative of the log of effective stress
@@ -44,6 +47,7 @@ module GwfCsubModule
     integer(I4B), pointer :: istounit               => null()
     integer(I4B), pointer :: istrainib              => null()
     integer(I4B), pointer :: istrainsk              => null()
+    integer(I4B), pointer :: icompout               => null()
     integer(I4B), pointer :: iupdatematprop         => null()
     integer(I4B), pointer :: istoragec              => null()
     integer(I4B), pointer :: icellf                 => null()
@@ -74,10 +78,10 @@ module GwfCsubModule
     integer(I4B), dimension(:), pointer :: ibound   => null()   !pointer to model ibound
     integer(I4B), dimension(:), pointer :: stoiconv => null()   !pointer to iconvert in storage
     real(DP), dimension(:), pointer :: stosc1       => null()   !pointer to sc1 in storage
+    real(DP), dimension(:), pointer :: buff         => null()   !buff array
     integer, dimension(:), pointer :: nodelist      => null()   !reduced node that the interbed is attached to
     integer, dimension(:), pointer :: unodelist     => null()   !user node that the interbed is attached to
 
-    !real(DP), dimension(:), pointer :: sk_znode     => null()   !elevation of node center
     real(DP), dimension(:), pointer :: sgm          => null()   !specific gravity moist sediments
     real(DP), dimension(:), pointer :: sgs          => null()   !specific gravity saturated sediments
     real(DP), dimension(:), pointer :: sig0         => null()   !geostatic offset
@@ -292,6 +296,7 @@ contains
     call mem_allocate(this%istoragec, 'ISTORAGEC', this%origin)
     call mem_allocate(this%istrainib, 'ISTRAINIB', this%origin)
     call mem_allocate(this%istrainsk, 'ISTRAINSK', this%origin)
+    call mem_allocate(this%icompout, 'ICOMPOUT', this%origin)
     call mem_allocate(this%iupdatematprop, 'IUPDATEMATPROP', this%origin)
     call mem_allocate(this%idbhalfcell, 'IDBHALFCELL', this%origin)
     call mem_allocate(this%idbfullcell, 'IDBFULLCELL', this%origin)
@@ -327,6 +332,7 @@ contains
     this%istoragec = 1
     this%istrainib = 0
     this%istrainsk = 0
+    this%icompout = 0
     this%iupdatematprop = 0
     this%idbhalfcell = 0
     this%idbfullcell = 0
@@ -729,7 +735,7 @@ contains
 
    end subroutine csub_bdcalc
 
-  subroutine csub_bdsav(this, icbcfl, icbcun)
+  subroutine csub_bdsav(this, idvfl, icbcfl, icbcun)
 ! ******************************************************************************
 ! sto_bdsav -- Save budget terms
 ! ******************************************************************************
@@ -740,6 +746,7 @@ contains
     use InputOutputModule, only: ulasav, ubdsv06
     ! -- dummy
     class(GwfCsubType) :: this
+    integer(I4B), intent(in) :: idvfl
     integer(I4B), intent(in) :: icbcfl
     integer(I4B), intent(in) :: icbcun
     ! -- local
@@ -748,9 +755,15 @@ contains
     integer(I4B) :: iprint, nvaluesp, nwidthp
     integer(I4B) :: ib
     integer(I4B) :: node
+    integer(I4B) :: nodem
+    integer(I4B) :: i
+    integer(I4B) :: k
+    integer(I4B) :: ncpl
+    integer(I4B) :: nlay
     integer(I4B) :: naux
     real(DP) :: dinact
     real(DP) :: Q
+    
 ! ------------------------------------------------------------------------------
     !
     ! -- Set unit number for binary output
@@ -804,9 +817,56 @@ contains
                                  nwidthp, editdesc, dinact)
     end if
     !
+    ! -- Save compaction results
+    !
+    ! -- Set unit number for binary compaction output
+    if(this%icompout /= 0) then
+      ibinun = this%icompout
+    else
+      ibinun = 0
+    endif
+    if(idvfl == 0) ibinun = 0
+    !
+    ! -- save compaction results
+    if(ibinun /= 0) then
+      iprint = 0
+      dinact = DHNOFLO
+      !
+      ! -- fill buff with total compaction
+      do node = 1, this%dis%nodes
+        this%buff(node) = this%sk_tcomp(node)
+      end do
+      do ib = 1, this%ninterbeds
+        node = this%nodelist(ib)
+        this%buff(node) = this%buff(node) + this%tcomp(ib)
+      end do
+      call this%dis%record_array(this%buff, this%iout, iprint, ibinun,          &
+                                 comptxt(1), cdatafmp, nvaluesp,                &
+                                 nwidthp, editdesc, dinact)
+      !
+      ! -- calculate z-displacement
+      ncpl = this%dis%get_ncpl()
+      if (ncpl == this%dis%nodes) then
+        ! TO DO - 
+      else
+        nlay = this%dis%nodes / ncpl
+        do k = nlay - 1, 1, -1
+          do i = 1, ncpl
+            node = k * ncpl + i
+            nodem = (k - 1) * ncpl + i
+            this%buff(node) = this%buff(node) + this%buff(nodem)
+          end do
+        end do
+      end if
+      call this%dis%record_array(this%buff, this%iout, iprint, ibinun,          &
+                                 comptxt(2), cdatafmp, nvaluesp,                &
+                                 nwidthp, editdesc, dinact)
+      
+      
+    end if
+    !
     ! -- Save observations.
     if (this%obs%npakobs > 0) then
-      !call this%csub_bd_obs()
       call this%obs%obs_ot()
     end if
     !
@@ -1501,7 +1561,7 @@ contains
       "(4x, A, 1X, I0)"
     character(len=*),parameter :: fmtoptr = &
       "(4x, A, 1X, G0)"
-    character(len=*),parameter :: fmtstrain = &
+    character(len=*),parameter :: fmtfileout = &
       "(4x, 'CSUB ', 1x, a, 1x, ' WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I7)"
 ! -----------------------------------------------------------------------------
     !
@@ -1621,7 +1681,7 @@ contains
             write(this%iout, fmtopt) &
               'COMPRESSION INDICES WILL BE SPECIFIED INSTEAD OF ' //            &
               'ELASTIC AND INELASTIC SPECIFIC COEFFICIENTS'
-          ! strain table options
+          ! -- strain table options
           case ('STRAIN_CSV_INTERBED')
             call this%parser%GetStringCaps(keyword)
             if (keyword == 'FILEOUT') then
@@ -1629,7 +1689,7 @@ contains
               this%istrainib = getunit()
               call openfile(this%istrainib, this%iout, fname, 'CSV_OUTPUT',     &
                             filstat_opt='REPLACE')
-              write(this%iout,fmtstrain) &
+              write(this%iout,fmtfileout) &
                 'INTERBED STRAIN CSV', fname, this%istrainib
             else
               errmsg = 'OPTIONAL STRAIN_CSV_INTERBED KEYWORD MUST BE ' //       &
@@ -1643,10 +1703,25 @@ contains
               this%istrainsk = getunit()
               call openfile(this%istrainsk, this%iout, fname, 'CSV_OUTPUT',     &
                             filstat_opt='REPLACE')
-              write(this%iout,fmtstrain) &
+              write(this%iout,fmtfileout) &
                 'SKELETAL STRAIN CSV', fname, this%istrainsk
             else
               errmsg = 'OPTIONAL STRAIN_CSV_SKELETAL KEYWORD MUST BE ' //       &
+                       'FOLLOWED BY FILEOUT'
+              call store_error(errmsg)
+            end if
+          ! -- compaction output
+          case ('COMPACTION')
+            call this%parser%GetStringCaps(keyword)
+            if (keyword == 'FILEOUT') then
+              call this%parser%GetString(fname)
+              this%icompout = getunit()
+              call openfile(this%icompout, this%iout, fname, 'DATA(BINARY)',    &
+                            form, access, 'REPLACE')
+              write(this%iout,fmtfileout) &
+                'COMPACTION', fname, this%icompout
+            else 
+              errmsg = 'OPTIONAL COMPACTION KEYWORD MUST BE ' //                &
                        'FOLLOWED BY FILEOUT'
               call store_error(errmsg)
             end if
@@ -1736,6 +1811,11 @@ contains
     integer(I4B) :: naux
 
     ! -- grid based data
+    if (this%icompout == 0) then
+      call mem_allocate(this%buff, 1, 'BUFF', trim(this%origin))
+    else
+      call mem_allocate(this%buff, this%dis%nodes, 'BUFF', trim(this%origin))
+    end if
     if (this%igeocalc == 0) then
       call mem_allocate(this%sgm, 1, 'sgm', trim(this%origin))
       call mem_allocate(this%sgs, 1, 'sgs', trim(this%origin))
@@ -1885,6 +1965,7 @@ contains
       call mem_deallocate(this%idelay)
       !
       ! -- grid-based storage data
+      call mem_deallocate(this%buff)
       call mem_deallocate(this%sgm)
       call mem_deallocate(this%sgs)
       call mem_deallocate(this%ske_cr)
@@ -1981,6 +2062,7 @@ contains
     call mem_deallocate(this%istoragec)
     call mem_deallocate(this%istrainib)
     call mem_deallocate(this%istrainsk)
+    call mem_deallocate(this%icompout)
     call mem_deallocate(this%iupdatematprop)
     call mem_deallocate(this%idbfullcell)
     call mem_deallocate(this%idbhalfcell)
@@ -2100,6 +2182,7 @@ contains
     character(len=LINELENGTH) :: line
     character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: keyword
+    character(len=20) :: cellid
     integer(I4B) :: iske
     integer(I4B) :: istheta
     integer(I4B) :: isgm
@@ -2311,13 +2394,26 @@ contains
     do node = 1, this%dis%nodes
       thick = this%sk_thick(node)
       if (thick < DZERO) then
-        write(errmsg,'(4x,a,1x,g0,a,1x,a,1x,a)') &
-                                      'ERROR. AQUIFER THICKNESS IS LESS THAN ZERO (', &
-                                       thick, ')', 'in cell', ''
+        call this%dis%noder_to_string(node, cellid)
+        write(errmsg,'(4x,a,1x,g0,a,1x,a,1x,a)')                                &
+          'ERROR. AQUIFER THICKNESS IS LESS THAN ZERO (',                       &
+           thick, ')', 'in cell', trim(adjustl(cellid))
         call store_error(errmsg)
       end if
       this%sk_thickini(node) = thick
     end do
+    !
+    ! -- evaluate if non-zero specific storage values are specified in the 
+    !    STO package
+    do node = 1, this%dis%nodes
+      if (this%stosc1(node) /= DZERO) then
+        write(errmsg,'(4x,a,3(1x,a))')                                          &
+          'ERROR. SPECIFIC STORAGE VALUES IN THE STORAGE (STO) PACKAGE MUST',   &
+          'BE 0 WHEN USING THE', trim(adjustl(this%name)), 'PACKAGE'
+        call store_error(errmsg)
+        exit
+      end if
+    end do    
     !
     ! -- terminate if errors griddata, packagedata blocks, TDIS, or STO data
     if (count_errors() > 0) then

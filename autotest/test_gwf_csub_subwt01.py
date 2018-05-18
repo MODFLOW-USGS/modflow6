@@ -22,12 +22,17 @@ from framework import testing_framework
 from simulation import Simulation
 
 ex = ['csub_subwt01a', 'csub_subwt01b']
-cvopt = [None, 'dewatered']
-constantcv = [True, False]
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
 ddir = 'data'
+cmppth = 'mfnwt'
+dtol = 1e-3
+budtol = 1e-2
+paktest = 'csub'
+
+ump = ['None', True]
+ivoid = [0, 1]
 
 # set travis to True when version 1.13.0 is released
 travis = [True, True]
@@ -39,21 +44,30 @@ replace_exe = None
 pth = os.path.join(ddir, 'ibc01_ibound.ref')
 ib0 = np.genfromtxt(pth)
 
-nlay, nrow, ncol = 4, ib0.shape[0], ib0.shape[1]
+# temporal discretization
 nper = 3
 perlen = [1., 21915., 21915.]
 nstp = [1, 60, 60]
 tsmult = [1., 1., 1.]
 steady = [True, False, False]
+
+# spatial discretization
+nlay, nrow, ncol = 4, ib0.shape[0], ib0.shape[1]
+shape3d = (nlay, nrow, ncol)
+size3d = nlay * nrow * ncol
+nactive = np.count_nonzero(ib0) * nlay
+
 delr, delc = 2000., 2000.
 top = 150.
 botm = [50., -100., -150., -350.]
 strt = 100.
+
 hnoflo = 1e30
 hdry = -1e30
+
+# upw data
 laytyp = [1, 0, 0, 0]
 hk = [4., 4., 1e-2, 4.]
-ss = [0., 1e-6, 1e-6, 1e-6]
 sy = [0.3, 0., 0., 0.]
 
 w1 = [(0, 0, 7, 2.2000000E+03),
@@ -157,7 +171,8 @@ chd6 = [((0, 19, 7), 100.00000),
 cd6 = {0: chd6}
 
 nouter, ninner = 100, 300
-hclose, rclose, relax = 1e-6, 0.01, 1.
+hclose, rclose, relax = 1e-6, 0.01, 0.97
+fluxtol = nactive * rclose
 
 tdis_rc = []
 for idx in range(nper):
@@ -182,6 +197,16 @@ sgs = 2.0
 ini_stress = 15.0
 delay_flag = 0
 thick = [45., 70., 50., 90.]
+
+zthick = [top - botm[0],
+          botm[0] - botm[1],
+          botm[1] - botm[2],
+          botm[2] - botm[3]]
+
+beta = 4.65120000e-10
+gammaw = 9806.65000000
+sw = beta * gammaw * theta
+ss = [sw for k in range(nlay)]
 
 swt6 = []
 ibcno = 0
@@ -218,7 +243,8 @@ def get_model(idx, dir):
                                  nper=nper, perioddata=tdis_rc)
 
     # create gwf model
-    gwf = flopy.mf6.ModflowGwf(sim, modelname=name, save_flows=True)
+    gwf = flopy.mf6.ModflowGwf(sim, modelname=name, save_flows=True,
+                               newtonoptions='')
 
     # create iterative model solution and register the gwf model with it
     ims = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
@@ -227,7 +253,7 @@ def get_model(idx, dir):
                                under_relaxation='NONE',
                                inner_maximum=ninner,
                                inner_hclose=hclose, rcloserecord=rclose,
-                               linear_acceleration='CG',
+                               linear_acceleration='BICGSTAB',
                                scaling_method='NONE',
                                reordering_method='NONE',
                                relaxation_factor=relax)
@@ -245,13 +271,12 @@ def get_model(idx, dir):
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False,
-                                  cvoptions=cvopt[idx],
                                   icelltype=laytyp,
                                   k=hk,
                                   k33=hk)
     # storage
     sto = flopy.mf6.ModflowGwfsto(gwf, save_flows=False, iconvert=laytyp,
-                                  ss=ss, sy=sy,
+                                  ss=0., sy=sy,
                                   steady_state={0: True},
                                   transient={1: True})
 
@@ -273,12 +298,15 @@ def get_model(idx, dir):
                                     #interbed_stress_offset=True,
                                     compression_indices=True,
                                     geo_stress_offset=True,
-                                    update_material_properties=True,
+                                    update_material_properties=ump[idx],
                                     time_weight=0.,
                                     ninterbeds=len(swt6),
                                     obs_filerecord=opth,
                                     sgs=sgs, sgm=sgm,
-                                    beta=0., ske_cr=0.00,
+                                    beta=beta,
+                                    gammaw=gammaw,
+                                    ske_cr=0.,
+                                    sk_theta=theta,
                                     packagedata=swt6,
                                     sig0={0: [0., 0., 0., 0.]})
     orecarray = {}
@@ -310,20 +338,23 @@ def get_model(idx, dir):
                                              ('BUDGET', 'ALL')])
 
     # build MODFLOW-2005 files
-    ws = os.path.join(dir, 'mf2005')
-    mc = flopy.modflow.Modflow(name, model_ws=ws)
+    ws = os.path.join(dir, cmppth)
+    mc = flopy.modflow.Modflow(name, model_ws=ws, version=cmppth)
     dis = flopy.modflow.ModflowDis(mc, nlay=nlay, nrow=nrow, ncol=ncol,
                                    nper=nper, perlen=perlen, nstp=nstp,
                                    tsmult=tsmult, steady=steady, delr=delr,
                                    delc=delc, top=top, botm=botm)
     bas = flopy.modflow.ModflowBas(mc, ibound=ib, strt=strt, hnoflo=hnoflo)
-    lpf = flopy.modflow.ModflowLpf(mc, laytyp=laytyp, hk=hk, vka=hk, ss=ss,
-                                   sy=sy, constantcv=constantcv[idx],
+    upw = flopy.modflow.ModflowUpw(mc, laytyp=laytyp,
+                                   hk=hk, vka=hk,
+                                   ss=ss, sy=sy,
                                    hdry=hdry)
     chd = flopy.modflow.ModflowChd(mc, stress_period_data=cd)
     wel = flopy.modflow.ModflowWel(mc, stress_period_data=wd)
     swt = flopy.modflow.ModflowSwt(mc, ipakcb=1001,
-                                   iswtoc=1, nsystm=4, ithk=1, ivoid=1,
+                                   iswtoc=1, nsystm=4,
+                                   ithk=1,
+                                   ivoid=ivoid[idx],
                                    istpcs=1, lnwt=[0, 1, 2, 3],
                                    cc=cc, cr=cr, thick=thick,
                                    void=void, pcsoff=ini_stress, sgs=sgs,
@@ -332,11 +363,171 @@ def get_model(idx, dir):
                                  save_every=1,
                                  save_types=['save head', 'save budget',
                                              'print budget'])
-    pcg = flopy.modflow.ModflowPcg(mc, mxiter=nouter, iter1=ninner,
-                                   hclose=hclose, rclose=rclose,
-                                   relax=relax)
+    nwt = flopy.modflow.ModflowNwt(mc,
+                                   headtol=hclose, fluxtol=fluxtol,
+                                   maxiterout=nouter, linmeth=2,
+                                   maxitinner=ninner,
+                                   unitnumber=132,
+                                   options='SPECIFIED',
+                                   backflag=0, idroptol=0)
 
     return sim, mc
+
+
+def eval_comp(sim):
+
+    print('evaluating compaction...')
+    # MODFLOW 6 total compaction results
+    fpth = os.path.join(sim.simpath, 'csub_obs.csv')
+    try:
+        tc = np.genfromtxt(fpth, names=True, delimiter=',')
+    except:
+        assert False, 'could not load data from "{}"'.format(fpth)
+
+    # MODFLOW-NWT total compaction results
+    cpth = cmppth
+    fn = '{}.swt_total_comp.hds'.format(os.path.basename(sim.name))
+    fpth = os.path.join(sim.simpath, cpth, fn)
+    try:
+        sobj = flopy.utils.HeadFile(fpth, text='LAYER COMPACTION')
+        tc0 = sobj.get_ts((3, 11, 6))
+    except:
+        assert False, 'could not load data from "{}"'.format(fpth)
+
+    # calculate maximum absolute error
+    loctag = 'W2L4'
+    diff = tc[loctag] - tc0[:, 1]
+    diffmax = np.abs(diff).max()
+    msg = 'maximum absolute total-compaction difference ({}) '.format(diffmax)
+
+    # write summary
+    fpth = os.path.join(sim.simpath,
+                        '{}.comp.cmp.out'.format(os.path.basename(sim.name)))
+    f = open(fpth, 'w')
+    line = '{:>15s}'.format('TOTIM')
+    line += ' {:>15s}'.format('CSUB')
+    line += ' {:>15s}'.format('MF')
+    line += ' {:>15s}'.format('DIFF')
+    f.write(line + '\n')
+    for i in range(diff.shape[0]):
+        line = '{:15g}'.format(tc0[i, 0])
+        line += ' {:15g}'.format(tc[loctag][i])
+        line += ' {:15g}'.format(tc0[i, 1])
+        line += ' {:15g}'.format(diff[i])
+        f.write(line + '\n')
+    f.close()
+
+    if diffmax > dtol:
+        sim.success = False
+        msg += 'exceeds {}'.format(dtol)
+        assert diffmax < dtol, msg
+    else:
+        sim.success = True
+        print('    ' + msg)
+
+    # compare budgets
+    cbc_compare(sim)
+
+    return
+
+
+# compare cbc and lst budgets
+def cbc_compare(sim):
+    print('evaluating cbc and budget...')
+    # open cbc file
+    fpth = os.path.join(sim.simpath,
+                        '{}.cbc'.format(os.path.basename(sim.name)))
+    cobj = flopy.utils.CellBudgetFile(fpth, precision='double')
+
+    # build list of cbc data to retrieve
+    avail = cobj.get_unique_record_names()
+    cbc_bud = []
+    bud_lst = []
+    for t in avail:
+        if isinstance(t, bytes):
+            t = t.decode()
+        t = t.strip()
+        if paktest in t.lower():
+            cbc_bud.append(t)
+            bud_lst.append('{}_IN'.format(t))
+            bud_lst.append('{}_OUT'.format(t))
+
+    # get results from listing file
+    fpth = os.path.join(sim.simpath,
+                        '{}.lst'.format(os.path.basename(sim.name)))
+    budl = flopy.utils.Mf6ListBudget(fpth)
+    names = list(bud_lst)
+    d0 = budl.get_budget(names=names)[0]
+    dtype = d0.dtype
+    nbud = d0.shape[0]
+    d = np.recarray(nbud, dtype=dtype)
+    for key in bud_lst:
+        d[key] = 0.
+
+    # get data from cbc dile
+    kk = cobj.get_kstpkper()
+    times = cobj.get_times()
+    for idx, (k, t) in enumerate(zip(kk, times)):
+        for text in cbc_bud:
+            qin = 0.
+            qout = 0.
+            v = cobj.get_data(kstpkper=k, text=text)[0]
+            if isinstance(v, np.recarray):
+                vt = np.zeros(size3d, dtype=np.float)
+                for jdx, node in enumerate(v['node']):
+                    vt[node - 1] += v['q'][jdx]
+                v = vt.reshape(shape3d)
+            for kk in range(v.shape[0]):
+                for ii in range(v.shape[1]):
+                    for jj in range(v.shape[2]):
+                        vv = v[kk, ii, jj]
+                        if vv < 0.:
+                            qout -= vv
+                        else:
+                            qin += vv
+            d['totim'][idx] = t
+            d['time_step'][idx] = k[0]
+            d['stress_period'] = k[1]
+            key = '{}_IN'.format(text)
+            d[key][idx] = qin
+            key = '{}_OUT'.format(text)
+            d[key][idx] = qout
+
+    diff = np.zeros((nbud, len(bud_lst)), dtype=np.float)
+    for idx, key in enumerate(bud_lst):
+        diff[:, idx] = d0[key] - d[key]
+    diffmax = np.abs(diff).max()
+    msg = 'maximum absolute total-budget difference ({}) '.format(diffmax)
+
+    # write summary
+    fpth = os.path.join(sim.simpath,
+                        '{}.bud.cmp.out'.format(os.path.basename(sim.name)))
+    f = open(fpth, 'w')
+    for i in range(diff.shape[0]):
+        if i == 0:
+            line = '{:>10s}'.format('TIME')
+            for idx, key in enumerate(bud_lst):
+                line += '{:>25s}'.format(key + '_LST')
+                line += '{:>25s}'.format(key + '_CBC')
+                line += '{:>25s}'.format(key + '_DIF')
+            f.write(line + '\n')
+        line = '{:10g}'.format(d['totim'][i])
+        for idx, key in enumerate(bud_lst):
+            line += '{:25g}'.format(d0[key][i])
+            line += '{:25g}'.format(d[key][i])
+            line += '{:25g}'.format(diff[i, idx])
+        f.write(line + '\n')
+    f.close()
+
+    if diffmax > budtol:
+        sim.success = False
+        msg += 'exceeds {}'.format(dtol)
+        assert diffmax < dtol, msg
+    else:
+        sim.success = True
+        print('    ' + msg)
+
+    return
 
 
 # - No need to change any code below
@@ -367,7 +558,8 @@ def test_mf6model():
     for idx, dir in enumerate(exdirs):
         if is_travis and not travis[idx]:
             continue
-        yield test.run_mf6, Simulation(dir, exe_dict=r_exe)
+        yield test.run_mf6, Simulation(dir, exe_dict=r_exe,
+                                       exfunc=eval_comp)
 
     return
 
@@ -381,7 +573,8 @@ def main():
 
     # run the test models
     for dir in exdirs:
-        sim = Simulation(dir, exe_dict=replace_exe)
+        sim = Simulation(dir, exe_dict=replace_exe,
+                         exfunc=eval_comp)
         test.run_mf6(sim)
 
     return

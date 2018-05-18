@@ -63,7 +63,7 @@ hnoflo = 1e30
 hdry = -1e30
 hk = 1e6
 laytyp = [0]
-ss = 1e-4
+S = 1e-4
 sy = 0.
 
 nouter, ninner = 1000, 300
@@ -100,6 +100,7 @@ sfv = cc * thick[0]
 lnd = [0]
 ldnd = [0]
 dp = [[kv, cr, cc]]
+ss = S / (100. - thick[0])
 
 ds15 = [0, 0, 0, 2052, 0, 0, 0, 0, 0, 0, 0, 0]
 ds16 = [0, 0, 0, 100, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1]
@@ -152,7 +153,7 @@ def get_model(idx, dir):
                                   k33=hk)
     # storage
     sto = flopy.mf6.ModflowGwfsto(gwf, save_flows=False, iconvert=laytyp,
-                                  ss=ss, sy=sy,
+                                  ss=0., sy=sy,
                                   storagecoefficient=True,
                                   transient={0: True})
 
@@ -172,7 +173,7 @@ def get_model(idx, dir):
                                    delay_full_cell=fullcell[idx],
                                    obs_filerecord=opth,
                                    ninterbeds=1,
-                                   beta=0., ske_cr=0.0,
+                                   beta=0., ske_cr=ss,
                                    packagedata=sub6)
     orecarray = {}
     orecarray['csub_obs.csv'] = [('tcomp', 'compaction-cell', (0, 0, 1)),
@@ -204,7 +205,7 @@ def get_model(idx, dir):
                                    delc=delc, top=top, botm=botm)
     bas = flopy.modflow.ModflowBas(mc, ibound=ib, strt=strt, hnoflo=hnoflo,
                                    stoper=0.01)
-    lpf = flopy.modflow.ModflowLpf(mc, laytyp=laytyp, hk=hk, vka=hk, ss=ss,
+    lpf = flopy.modflow.ModflowLpf(mc, laytyp=laytyp, hk=hk, vka=hk, ss=S,
                                    sy=sy, constantcv=True,
                                    storagecoefficient=True,
                                    hdry=hdry)

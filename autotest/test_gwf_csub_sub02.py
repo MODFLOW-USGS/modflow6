@@ -25,8 +25,8 @@ exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
 ddir = 'data'
-sk_ske = 1.14e-3 / 500.
-sk_S = sk_ske * 500.
+sk_ske = 1.14e-3 / (500. - 20.)
+sk_S = sk_ske * (500. - 20.)
 ss = [sk_S, sk_S, sk_ske, sk_ske, sk_S]
 storagecoeff = [True, True, False, False, True]
 cdelay = [False, True, False, True, True]
@@ -164,7 +164,7 @@ def get_model(idx, dir):
                                   k33=hk)
     # storage
     sto = flopy.mf6.ModflowGwfsto(gwf, save_flows=False, iconvert=laytyp,
-                                  ss=ss, sy=sy,
+                                  ss=0., sy=sy,
                                   storagecoefficient=sc6,
                                   transient={0: True})
 
@@ -179,7 +179,7 @@ def get_model(idx, dir):
                                    ndelaycells=ndelaycells[idx],
                                    delay_full_cell=full_cell[idx],
                                    ninterbeds=1,
-                                   beta=0., ske_cr=0.,
+                                   beta=0., ske_cr=sk_ske,
                                    packagedata=sub6)
 
     # output control
