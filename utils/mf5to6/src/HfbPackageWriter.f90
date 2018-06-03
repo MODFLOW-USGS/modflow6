@@ -82,7 +82,7 @@ contains
     this%fileobj%FType = 'HFB6'
     this%PkgType = 'HFB'
 !    this%PackageName = 'HFB'
-    fname = trim(this%ModelBasename) // '.hfb6'
+    fname = trim(this%ModelBasename) // '.hfb'
     call this%InitializeFile(fname, this%fileobj%FType, this%PackageName)
     !
     if (this%IuOrig > 0) then

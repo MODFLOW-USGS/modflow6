@@ -289,7 +289,7 @@ contains
     ! Initialize IMS file
     this%Active = .true.
     this%fileobj%FCode = FCINPUT
-    fname = trim(this%ModelBasename) // '.ims6'
+    fname = trim(this%ModelBasename) // '.ims'
     call this%InitializeFile(fname, ftype, this%PackageName)
     !
     ! Define IMS input variables

@@ -2,7 +2,7 @@ module ZoneModule
 
   use SimVariablesModule, only: iout
   use SimModule, only: store_error, store_error_unit, ustop
-  use ConstantsModule, only: LINELENGTH
+  use ConstantsModule, only: LINELENGTH, DEP20
   use BlockParserModule, only: BlockParserType
 
   implicit none
@@ -19,6 +19,7 @@ module ZoneModule
   public :: nmznfl, vbvl, vbznfl
   
   integer :: ncells
+  integer :: minzone
   integer :: maxzone
   integer, dimension(:), allocatable :: izone
   integer, dimension(:), allocatable :: ich
@@ -45,6 +46,7 @@ module ZoneModule
     integer :: nlay, ncpl, istart, istop, k
     character(len=24) :: aname = '                   IZONE'
     integer :: ierr
+    integer :: n
     logical :: isfound, endOfBlock
 ! ------------------------------------------------------------------------------
     !
@@ -149,8 +151,23 @@ module ZoneModule
     !
     ! -- Write messages
     close(inunit)
-    maxzone = maxval(izone)
+    !
+    ! -- Find max and min values
+    minzone = HUGE(minzone)
+    maxzone = 0
+    do n = 1, size(izone)
+      if (izone(n) /= 0) then
+        if (izone(n) < minzone) then
+          minzone = izone(n) 
+        end if
+        if (izone(n) > maxzone) then
+          maxzone = izone(n) 
+        end if
+      end if
+    end do
+    !maxzone = maxval(izone)
     write(iout, '(/, 4x, a, i0)') 'Successfully read zone array with NCELLS = ', ncells
+    write(iout, '(4x, a, i0)') 'Minimum zone number is ', minzone
     write(iout, '(4x, a, i0)') 'Maximum zone number is ', maxzone
     write(iout,'(a)') 'End processing zone griddata'
     !
