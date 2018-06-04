@@ -47,8 +47,14 @@ def get_mf6_models():
     """
         Get a list of test models
     """
+    # determine if running on travis
+    is_travis = 'TRAVIS' in os.environ
+
     # get current branch
-    branch = get_branch()
+    if is_travis:
+        branch = os.environ['BRANCH']
+    else:
+        branch = get_branch()
     print('On branch {}'.format(branch))
 
     # tuple of example files to exclude
