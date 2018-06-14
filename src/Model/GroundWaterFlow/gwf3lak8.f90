@@ -1094,7 +1094,7 @@ contains
     logical :: isfound, endOfBlock
     integer(I4B) :: iu
     integer(I4B) :: n
-    integer(I4B) :: ipos, i
+    integer(I4B) :: ipos
     integer(I4B) :: j
     integer(I4B) :: jmin
     integer(I4B) :: iconn
@@ -3418,31 +3418,6 @@ contains
       "('Error.  Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
     character(len=*),parameter :: fmtlsp = &
       "(1X,/1X,'REUSING ',A,'S FROM LAST STRESS PERIOD')"
-    character(len=*),parameter :: fmtstdy = &
-      "(1X,//21X,'MULTI-AQUIFER WELL DATA'," // &
-      "/21X,'FOR STRESS PERIOD',I6," // &
-      "/20X,A16,1X,'LAK LAKES'," // &
-      "//29X,'RATE DATA'," // &
-      "/1X,65('-'),/1X,'  WELL NO.     STATUS       RATE SPEC. HEAD " // &
-      " PUMP ELEV  RED. LEN.')"
-    character(len=*), parameter :: fmtwelld = &
-      "(1X,I10,1X,A10,1X,G10.4,1X,A10,G10.3,1X,A10)"
-    character(len=*),parameter :: fmtfwh = &
-      "(1X,//21X,'MULTI-AQUIFER WELL DATA'," // &
-      "/21X,'FOR STRESS PERIOD',I6," // &
-      "//25X,'FLOWING WELL DATA'," // &
-      "/1X,65('-'),/12X,'  WELL NO.  ELEVATION   CONDUCT.  RED. LEN.')"
-    character(len=*), parameter :: fmtfwd = &
-      "(12X,I10,1X,3(G10.4,1X))"
-    character(len=*),parameter :: fmtsoh = &
-      "(1X,//21X,'MULTI-AQUIFER WELL DATA'," // &
-      "/21X,'FOR STRESS PERIOD',I6," // &
-      "//25X,'WELL SHUTOFF DATA'," // &
-      "/1X,65('-'),/12X,'  WELL NO.  ELEVATION       MINQ       MAXQ')"
-    character(len=*), parameter :: fmtsod = &
-      "(12X,I10,1X,G10.4,1X,2(A10,1X))"
-    character(len=*), parameter :: fmtline = &
-      "(1X,65('-'),//)"
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize flags
@@ -3591,10 +3566,6 @@ contains
     integer(I4B) :: j, n
     integer(I4B) :: igwfnode
     real(DP) ::  hlak, blak
-    real(DP) :: dh
-    real(DP) :: dhdr
-    real(DP) :: r0
-    real(DP) :: r
   ! ------------------------------------------------------------------------------
     !!
     !! -- Calculate lak conductance and update package RHS and HCOF

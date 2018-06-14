@@ -6,8 +6,8 @@ module NumericalSolutionModule
   use ConstantsModule,         only: LINELENGTH, LENSOLUTIONNAME,              &
                                      DZERO, DEM20, DEM15, DEM6, DEM4,          &
                                      DEM3, DEM2, DEM1, DHALF,                  &
-                                     DONE, DTHREE, DEP6, DEP20,                &
-                                     IDEVELOPMODE
+                                     DONE, DTHREE, DEP6, DEP20
+  use VersionModule,           only: IDEVELOPMODE
   use BaseModelModule,         only: BaseModelType
   use BaseSolutionModule,      only: BaseSolutionType, AddBaseSolutionToList
   use ListModule,              only: ListType

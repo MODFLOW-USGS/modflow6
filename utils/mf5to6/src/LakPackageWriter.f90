@@ -123,7 +123,7 @@ contains
     this%fileobj%FCode = FCINPUT
     this%fileobj%FType = 'LAK6'
     this%fileobj%PkgName = this%PackageName
-    fname = trim(this%ModelBasename) // '.lak6'
+    fname = trim(this%ModelBasename) // '.lak'
     call this%FileWriterType%InitializeFile(fname, this%fileobj%FType, &
                                             this%PackageName)
     this%IunitBcf = iunit(1)

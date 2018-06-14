@@ -251,7 +251,7 @@ module GwfMvrModule
       "(1X,/1X,'REUSING ',A,'S FROM LAST STRESS PERIOD')"
     character(len=*), parameter :: fmtnbd = &
       "(1X,/1X,'THE NUMBER OF ACTIVE ',A,'S (',I6, &
-       ') IS GREATER THAN MAXIMUM(',I6,')')"
+       &') IS GREATER THAN MAXIMUM(',I6,')')"
 ! ------------------------------------------------------------------------------
     !
     ! -- Set ionper to the stress period number for which a new block of data

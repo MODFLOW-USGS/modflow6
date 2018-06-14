@@ -95,7 +95,7 @@ module GwfStoModule
     ! -- formats
     character(len=*), parameter :: fmtsto =                                    &
       "(1x,/1x,'STO -- STORAGE PACKAGE, VERSION 1, 5/19/2014',                 &
-      ' INPUT READ FROM UNIT ', i0, //)"
+      &' INPUT READ FROM UNIT ', i0, //)"
 ! ------------------------------------------------------------------------------
     !
     ! --print a message identifying the storage package.
@@ -715,10 +715,10 @@ module GwfStoModule
       "(4x, 'FLOWS WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I7)"
     character(len=*), parameter :: fmtstoc =                                   &
       "(4X,'STORAGECOEFFICIENT OPTION:',/,                                     &
-      1X,'Read storage coefficient rather than specific storage')"
+      &1X,'Read storage coefficient rather than specific storage')"
     character(len=*), parameter :: fmtstoseg =                                 &
       "(4X,'OLDSTORAGEFORMULATION OPTION:',/,                                  &
-      1X,'Specific storage changes only occur above cell top')"
+      &1X,'Specific storage changes only occur above cell top')"
 ! ------------------------------------------------------------------------------
     !
     ! -- get options block

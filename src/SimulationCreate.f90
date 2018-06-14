@@ -2,7 +2,7 @@ module SimulationCreateModule
 
   use KindModule,             only: DP, I4B
   use ConstantsModule,        only: LINELENGTH, LENMODELNAME, LENBIGLINE, DZERO
-  use SimVariablesModule,     only: iout
+  use SimVariablesModule,     only: simfile, simlstfile, iout
   use SimModule,              only: ustop, store_error, count_errors,          &
                                     store_error_unit
   use InputOutputModule,      only: getunit, urword, openfile
@@ -37,13 +37,15 @@ module SimulationCreateModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- local
-    character(len=LINELENGTH) :: simfile
-    character(len=LINELENGTH) :: simlstfile
+    !character(len=LINELENGTH) :: simfile
+    !character(len=LINELENGTH) :: simlstfile
 ! ------------------------------------------------------------------------------
+    !!
+    !! -- set default simfile and simlstfile
+    !simfile    = 'mfsim.nam'
+    !simlstfile = 'mfsim.lst'
     !
-    ! -- set default simfile and simlstfile
-    simfile    = 'mfsim.nam'
-    simlstfile = 'mfsim.lst'
+    ! -- initialize iout 
     iout = 0
     !
     ! -- Open simulation list file
@@ -85,8 +87,9 @@ module SimulationCreateModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use ConstantsModule,        only: MFVNAM, VERSION, MFTITLE, FMTDISCLAIMER, &
-                                      LENBIGLINE, IDEVELOPMODE
+    use ConstantsModule,        only: LENBIGLINE
+    use VersionModule,          only: VERSION, MFVNAM, MFTITLE, FMTDISCLAIMER,  & 
+                                      IDEVELOPMODE
     use CompilerVersion
     use InputOutputModule,      only: write_centered
     ! -- dummy

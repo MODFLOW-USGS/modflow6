@@ -180,7 +180,7 @@ contains
     !
     this%fileobj%FType = 'SFR6'
     this%PkgType = 'SFR'
-    fname = trim(this%ModelBasename) // '.sfr6'
+    fname = trim(this%ModelBasename) // '.sfr'
     call this%FileWriterType%InitializeFile(fname, this%fileobj%FType, &
                                             this%PackageName)
     this%IuOrig = iunit(44)
@@ -403,6 +403,7 @@ contains
     integer :: i, irch, nrch, nseg
     integer :: rchnumpkg, rchnumseg
     real :: area
+    real :: q
     type(SfrSegmentType), pointer :: segptr
     type(SfrReachType), pointer :: rch
     !
@@ -437,15 +438,39 @@ contains
               !rch%diversion = SEG(2,i)
             endif
           else
-            rch%inflow = SEG(2,i)  ! inflow to 1st reach of segment
+            q = SEG(2,i)  ! inflow to 1st reach of segment
+            if (q /= rch%inflow) then
+              rch%inflow = q
+              rch%inflow_iprn = 1
+            else
+              rch%inflow_iprn = 0
+            end if
           endif
         else
           rch%ustrf = 0.0
           rch%inflow = 0.0
         endif
-        rch%rainfall = STRM(14,rchnumpkg) / area   ! convert rainfall Q to flux
-        rch%evap = STRM(13,rchnumpkg) / area       ! convert evaporation Q to flux
-        rch%runoff = STRM(12,rchnumpkg)
+        q = STRM(14,rchnumpkg) / area   ! convert rainfall Q to flux
+        if (q /= rch%rainfall) then
+          rch%rainfall = q
+          rch%rainfall_iprn = 1
+        else
+          rch%rainfall_iprn = 0
+        end if
+        q = STRM(13,rchnumpkg) / area       ! convert evaporation Q to flux
+        if (q /= rch%evap) then
+          rch%evap = q
+          rch%evap_iprn = 1
+        else
+          rch%evap_iprn = 0
+        end if
+        q = STRM(12,rchnumpkg)
+        if (q /= rch%runoff) then
+          rch%runoff = q
+          rch%runoff_iprn = 1
+        else
+          rch%runoff_iprn = 0
+        end if
       enddo
     enddo
     !
@@ -482,17 +507,25 @@ contains
       if (.not. rch%KeepReachActive) cycle reachloop
       icalc = rch%icalc
       ! inflow
-      write(line,40)rch%newReachNum,'inflow',rch%inflow
-      call lineList%AddLine(line)
+      if (rch%inflow_iprn /= 0) then
+        write(line,40)rch%newReachNum,'inflow',rch%inflow
+        call lineList%AddLine(line)
+      end if
       ! rainfall
-      write(line,40)rch%newReachNum,'rainfall',rch%rainfall
-      call lineList%AddLine(line)
+      if (rch%rainfall_iprn /= 0) then
+        write(line,40)rch%newReachNum,'rainfall',rch%rainfall
+        call lineList%AddLine(line)
+      end if
       ! evaporation
-      write(line,40)rch%newReachNum,'evaporation',rch%evap
-      call lineList%AddLine(line)
+      if (rch%evap_iprn /= 0) then
+        write(line,40)rch%newReachNum,'evaporation',rch%evap
+        call lineList%AddLine(line)
+      end if
       ! runoff
-      write(line,40)rch%newReachNum,'runoff',rch%runoff
-      call lineList%AddLine(line)
+      if (rch%runoff_iprn /= 0) then
+        write(line,40)rch%newReachNum,'runoff',rch%runoff
+        call lineList%AddLine(line)
+      end if
       ! iterate through diversions (volumetric or as fraction of upstream flow)
       ndiv = rch%Diversions%Count()
       divloop: do idiv=1,ndiv

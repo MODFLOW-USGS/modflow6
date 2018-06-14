@@ -717,7 +717,7 @@ module EvtModule
     ! -- local
     integer(I4B) :: n
     integer(I4B) :: indx, ipos
-    integer(I4B) :: jcol, jauxcol, lpos
+    integer(I4B) :: jcol, jauxcol, lpos, ivarsread
     character(len=LENTIMESERIESNAME) :: tasName
     character(len=24) ::  atemp
     character(len=24), dimension(6) :: aname
@@ -741,7 +741,10 @@ module EvtModule
     data aname(6) /'      ET RATE PROPORTION'/
 ! ------------------------------------------------------------------------------
     !
+    ! -- Initialize
     jauxcol = 0
+    ivarsread = 0
+    !
     ! -- Read IEVT, SURFACE, RATE, DEPTH, PXDP, PETM, and AUX
     !    as arrays
     kpetm = 0
@@ -754,6 +757,15 @@ module EvtModule
       ! -- Parse the keywords
       select case (keyword)
       case ('IEVT')
+        !
+        ! -- Check to see if other variables have already been read.  If so,
+        !    then terminate with an error that IEVT must be read first.
+        if (ivarsread > 0) then
+          call store_error('****ERROR. IEVT IS NOT FIRST VARIABLE IN &
+            &PERIOD BLOCK OR IT IS SPECIFIED MORE THAN ONCE.')
+          call this%parser%StoreErrorUnit()
+          call ustop()
+        endif
         !
         ! -- Read the IEVT array
         call this%dis%nlarray_to_nodelist(this%nodelist, this%maxbound, &
@@ -940,6 +952,10 @@ module EvtModule
           auxMultArray => this%auxvar(this%iauxmultcol,:)
         endif
       end select
+      !
+      ! -- Increment the number of variables read
+      ivarsread = ivarsread + 1
+      !
     end do
     !
     ! -- Ensure that all required PXDP and PETM arrays

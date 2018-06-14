@@ -900,7 +900,7 @@ contains
     data ccond(1) /'THEIM     '/
     data ccond(2) /'SKIN      '/
     data ccond(3) /'CUMULATIVE'/
-    data ccond(2) /'MEAN      '/
+    data ccond(4) /'MEAN      '/
     ! -- format
     character(len=*), parameter :: fmtwelln = &
       "(1X,//43X,'MULTI-AQUIFER WELL DATA'" // &

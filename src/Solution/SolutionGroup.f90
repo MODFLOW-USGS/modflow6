@@ -68,7 +68,7 @@ module SolutionGroupModule
     ! -- formats
     character(len=*), parameter :: fmtnocnvg =                                 &
       "(1X,'Solution Group ', i0, ' did not converge for stress period ', i0,  &
-       ' and time step ', i0)"
+       &' and time step ', i0)"
 ! ------------------------------------------------------------------------------
     !
     ! -- Suppress output during picard iterations

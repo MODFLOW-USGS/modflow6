@@ -88,7 +88,7 @@ contains
     this%fileobj%FType = 'EVT6'
     this%PkgType = 'EVT'
 !    this%PackageName = 'EVT'
-    fname = trim(this%ModelBasename) // '.evt6'
+    fname = trim(this%ModelBasename) // '.evt'
     call this%FileWriterType%InitializeFile(fname, this%fileobj%FType, &
                                             this%PackageName)
     select case (this%source)

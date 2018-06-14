@@ -1,7 +1,7 @@
 module SimModule
   use KindModule,         only: DP, I4B
   use ConstantsModule,    only: MAXCHARLEN,LINELENGTH, ISTDOUT
-  use SimVariablesModule, only: iout
+  use SimVariablesModule, only: iout, ireturnerr
   implicit none
   private
   public :: count_errors, iverbose, sim_message, store_error, ustop,  &
@@ -474,6 +474,7 @@ subroutine ustop(stopmess,ioutlocal)
   endif
   !
   if (errorfound) then
+    ireturnerr = 2
     write(*,fmt) msg
     if (iout > 0) write(iout,fmt) msg
     if (present(ioutlocal)) then
@@ -481,8 +482,19 @@ subroutine ustop(stopmess,ioutlocal)
     endif
   endif
   !
+  ! -- close iout file
   close(iout)
-  stop
+  !
+  ! -- return appropriate error codes when terminating the program
+  if (ireturnerr == 0) then
+    stop
+  elseif (ireturnerr == 1) then
+    stop 1
+  elseif (ireturnerr == 2) then
+    stop 2
+  else
+    stop 999
+  end if
 end subroutine ustop
 
   subroutine converge_reset()
@@ -549,7 +561,7 @@ end subroutine ustop
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimVariablesModule, only: isimcnvg, numnoconverge
+    use SimVariablesModule, only: isimcnvg, numnoconverge, ireturnerr
     ! -- formats
     character(len=*), parameter :: fmtnocnvg =                                 &
       "(1x, 'Simulation convergence failure occurred ', i0, ' time(s).')"
@@ -562,6 +574,7 @@ end subroutine ustop
     endif
     !
     if(isimcnvg == 0) then
+      ireturnerr = 1
       call ustop('Premature termination of simulation.', iout)
     else
       call ustop('Normal termination of simulation.', iout)

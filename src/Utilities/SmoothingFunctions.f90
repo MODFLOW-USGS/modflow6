@@ -175,25 +175,33 @@ module SmoothingModule
     return
   end subroutine sQuadratic
 
-  subroutine sChSmooth(h, smooth, dwdh)
+  subroutine sChSmooth(d, smooth, dwdh)
 ! ******************************************************************************
 ! Function to smooth channel variables during channel drying
 ! ******************************************************************************
 ! 
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    real(DP), intent(in) :: h
+    real(DP), intent(in) :: d
     real(DP), intent(inout) :: smooth
     real(DP), intent(inout) :: dwdh
-    !--local variables
-    real(DP) :: s, aa, ad, b, x, y
+    !
+    ! -- local variables
+    real(DP) :: s
+    real(DP) :: diff
+    real(DP) :: aa
+    real(DP) :: ad
+    real(DP) :: b
+    real(DP) :: x
+    real(DP) :: y
 ! ------------------------------------------------------------------------------
 !   code
 !    
     smooth = DZERO
     s = DEM5
-    x = h
-    if ( x-s > DZERO ) then
+    x = d
+    diff = x - s
+    if ( diff > DZERO ) then
       smooth = DONE
       dwdh = DZERO
     else
@@ -205,7 +213,7 @@ module SmoothingModule
       if ( x <= DZERO ) then
         y = DZERO
         dwdh = DZERO
-      else if ( x-s > -DEM14 ) then
+      else if ( diff > -DEM14 ) then
         y = DONE
         dwdh = DZERO
       end if
@@ -296,7 +304,7 @@ end subroutine sChSmooth
   end function sCubicSaturation
 
   
-  function sQuadraticSaturation(top, bot, x, eps) result(y)
+  function sQuadraticSaturation(top, bot, x, eps, bmin) result(y)
 ! ******************************************************************************
 ! Nonlinear smoothing function returns value between 0-1;
 ! Quadratic saturation function
@@ -311,8 +319,10 @@ end subroutine sChSmooth
     real(DP), intent(in) :: bot
     real(DP), intent(in) :: x
     real(DP), optional, intent(in) :: eps
+    real(DP), optional, intent(in) :: bmin
     ! -- local
     real(DP) :: teps
+    real(DP) :: tbmin
     real(DP) :: b
     real(DP) :: br
     real(DP) :: bri
@@ -325,6 +335,11 @@ end subroutine sChSmooth
     else
       teps = DEM6
     end if
+    if (present(bmin)) then
+      tbmin = bmin
+    else
+      tbmin = DZERO
+    end if
     b = top - bot
     if (b > DZERO) then
       if (x < bot) then
@@ -336,9 +351,10 @@ end subroutine sChSmooth
       end if
       av = DONE / (DONE - teps) 
       bri = DONE - br
-      if (br < DZERO) then
-        y = DZERO
-      elseif (br < teps) then
+      if (br < tbmin) then
+        br = tbmin
+      end if
+      if (br < teps) then
         y = av * DHALF * (br*br) / teps
       elseif (br < (DONE-teps)) then
         y = av * br + DHALF * (DONE - av)
@@ -399,7 +415,7 @@ end subroutine sChSmooth
   end function svanGenuchtenSaturation
  
   
-  function sQuadraticSaturationDerivative(top, bot, x, eps) result(y)
+  function sQuadraticSaturationDerivative(top, bot, x, eps, bmin) result(y)
 ! ******************************************************************************
 ! Derivative of nonlinear smoothing function returns value between 0-1;
 ! Derivative of the quadratic saturation function
@@ -414,8 +430,10 @@ end subroutine sChSmooth
     real(DP), intent(in) :: bot
     real(DP), intent(in) :: x
     real(DP), optional, intent(in) :: eps
+    real(DP), optional, intent(in) :: bmin
     ! -- local
     real(DP) :: teps
+    real(DP) :: tbmin
     real(DP) :: b
     real(DP) :: br
     real(DP) :: bri
@@ -428,6 +446,11 @@ end subroutine sChSmooth
     else
       teps = DEM6
     end if
+    if (present(bmin)) then
+      tbmin = bmin
+    else
+      tbmin = DZERO
+    end if
     b = top - bot
     if (x < bot) then
       br = DZERO
@@ -438,9 +461,10 @@ end subroutine sChSmooth
     end if
     av = DONE / (DONE - teps) 
     bri = DONE - br
-    if (br < DZERO) then
-      y = DZERO
-    elseif (br < teps) then
+    if (br < tbmin) then
+      br = tbmin
+    end if
+    if (br < teps) then
       y = av * br / teps
     elseif (br < (DONE-teps)) then
       y = av

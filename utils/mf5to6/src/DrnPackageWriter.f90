@@ -42,7 +42,7 @@ contains
     this%fileobj%FType = 'DRN6'
     this%PkgType = 'DRN'
 !    this%PackageName = 'DRN'
-    fname = trim(this%ModelBasename) // '.drn6'
+    fname = trim(this%ModelBasename) // '.drn'
     call this%FileWriterType%InitializeFile(fname, this%fileobj%FType, &
                                             this%PackageName)
     call GWF2DRN7AR(this%IuOrig, igrid)
