@@ -6,7 +6,7 @@
 # the executable, and the executable name and path.
 OBJDIR = ./obj_temp
 BINDIR = .
-PROGRAM = mf6
+PROGRAM = ../bin/mf6
 
 SOURCEDIR1=../src
 SOURCEDIR2=../src/Exchange
@@ -108,6 +108,7 @@ $(OBJDIR)/gwf3dis8.o \
 $(OBJDIR)/OutputControlData.o \
 $(OBJDIR)/TimeArraySeries.o \
 $(OBJDIR)/gwf3disu8.o \
+$(OBJDIR)/VKDProcess.o \
 $(OBJDIR)/Xt3dInterface.o \
 $(OBJDIR)/NumericalPackage.o \
 $(OBJDIR)/Observe.o \

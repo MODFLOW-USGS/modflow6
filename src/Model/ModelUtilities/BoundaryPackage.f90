@@ -45,13 +45,13 @@ module BndModule
     integer(I4B), pointer                               :: npakeq      => null() !number of equations in this package (normally 0 unless package adds rows to matrix)
     integer(I4B), pointer                               :: ioffset     => null() !offset of this package in the model
     ! -- arrays
-    integer(I4B), pointer, dimension(:)                 :: nodelist    => null() !vector of reduced node numbers
-    real(DP), pointer, dimension(:,:)                   :: bound       => null() !array of package specific boundary numbers
-    real(DP), pointer, dimension(:)                     :: hcof        => null() !diagonal contribution
-    real(DP), pointer, dimension(:)                     :: rhs         => null() !right-hand side contribution
-    real(DP), pointer, dimension(:,:)                   :: auxvar      => null() !auxiliary variable array
-    real(DP), pointer, dimension(:)                     :: simvals     => null() !simulated values
-    real(DP), pointer, dimension(:)                     :: simtomvr    => null() !simulated values
+    integer(I4B), pointer, contiguous, dimension(:)                 :: nodelist    => null() !vector of reduced node numbers
+    real(DP), pointer, contiguous, dimension(:,:)                   :: bound       => null() !array of package specific boundary numbers
+    real(DP), pointer, contiguous, dimension(:)                     :: hcof        => null() !diagonal contribution
+    real(DP), pointer, contiguous, dimension(:)                     :: rhs         => null() !right-hand side contribution
+    real(DP), pointer, contiguous, dimension(:,:)                   :: auxvar      => null() !auxiliary variable array
+    real(DP), pointer, contiguous, dimension(:)                     :: simvals     => null() !simulated values
+    real(DP), pointer, contiguous, dimension(:)                     :: simtomvr    => null() !simulated values
     !
     ! -- water mover flag and object
     integer(I4B), pointer                               :: imover      => null()
@@ -930,8 +930,8 @@ module BndModule
     use MemoryManagerModule, only: mem_allocate, mem_setptr
     ! -- dummy
     class(BndType) :: this
-    integer(I4B), dimension(:), pointer, optional :: nodelist
-    real(DP), dimension(:, :), pointer, optional :: auxvar
+    integer(I4B), dimension(:), pointer, contiguous, optional :: nodelist
+    real(DP), dimension(:, :), pointer, contiguous, optional :: auxvar
     ! -- local
     integer(I4B) :: i
     integer(I4B) :: j

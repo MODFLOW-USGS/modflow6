@@ -21,9 +21,9 @@ module VKDModule
     integer(I4B), pointer                   :: ivkd        => null()    !vkd flag (0 is off, 1 is lhs, 2 is rhs)
 !!$    class(DisBaseType), pointer             :: dis        => null()   !discretization object
 !!$    class(BlockParserType), pointer             :: parser     => null()   !discretization object
-    real(DP), dimension(:,:), pointer               :: kk           => null()   ! k knots
-    real(DP), dimension(:,:), pointer               :: ek           => null()   ! elevation knots
-    real(DP), dimension(:), pointer                 :: pt           => null()   ! tmp pointer
+    real(DP), dimension(:,:), pointer, contiguous               :: kk           => null()   ! k knots
+    real(DP), dimension(:,:), pointer, contiguous               :: ek           => null()   ! elevation knots
+    real(DP), dimension(:), pointer, contiguous                 :: pt           => null()   ! tmp pointer
     integer(I4B), pointer                           :: ikk          => null()   ! flag that kk is specified
     integer(I4B), pointer                           :: iek          => null()   ! flag that ek is specified
     

@@ -47,12 +47,12 @@ module GwfNpfModule
     integer(I4B), pointer                           :: icellavg     => null()   ! harmonic(0), logarithmic(1), or arithmetic thick-log K (2)
     real(DP), pointer                               :: wetfct       => null()   ! wetting factor
     real(DP), pointer                               :: hdry         => null()   ! default is -1.d30
-    integer(I4B), dimension(:), pointer             :: icelltype    => null()   ! confined (0), convertible (1), vkd (> 1)
+    integer(I4B), dimension(:), pointer, contiguous             :: icelltype    => null()   ! confined (0), convertible (1), vkd (> 1)
     !
     ! K properties
-    real(DP), dimension(:), pointer                 :: k11          => null()   ! hydraulic conductivity; if anisotropic, then this is Kx prior to rotation
-    real(DP), dimension(:), pointer                 :: k22          => null()   ! hydraulic conductivity; if specified then this is Ky prior to rotation
-    real(DP), dimension(:), pointer                 :: k33          => null()   ! hydraulic conductivity; if specified then this is Kz prior to rotation
+    real(DP), dimension(:), pointer, contiguous                 :: k11          => null()   ! hydraulic conductivity; if anisotropic, then this is Kx prior to rotation
+    real(DP), dimension(:), pointer, contiguous                 :: k22          => null()   ! hydraulic conductivity; if specified then this is Ky prior to rotation
+    real(DP), dimension(:), pointer, contiguous                 :: k33          => null()   ! hydraulic conductivity; if specified then this is Kz prior to rotation
 !!$    real(DP), dimension(:,:), pointer               :: kk           => null()   ! k knots
 !!$    real(DP), dimension(:,:), pointer               :: ek           => null()   ! elevation knots
 !!$    real(DP), dimension(:), pointer                 :: pt           => null()   ! tmp pointer
@@ -63,22 +63,22 @@ module GwfNpfModule
     integer(I4B), pointer                           :: iangle1      => null()   ! flag to indicate angle1 was read
     integer(I4B), pointer                           :: iangle2      => null()   ! flag to indicate angle2 was read
     integer(I4B), pointer                           :: iangle3      => null()   ! flag to indicate angle3 was read
-    real(DP), dimension(:), pointer                 :: angle1       => null()   ! k ellipse rotation in xy plane around z axis (yaw)
-    real(DP), dimension(:), pointer                 :: angle2       => null()   ! k ellipse rotation up from xy plane around y axis (pitch)
-    real(DP), dimension(:), pointer                 :: angle3       => null()   ! k tensor rotation around x axis (roll)
+    real(DP), dimension(:), pointer, contiguous                 :: angle1       => null()   ! k ellipse rotation in xy plane around z axis (yaw)
+    real(DP), dimension(:), pointer, contiguous                 :: angle2       => null()   ! k ellipse rotation up from xy plane around y axis (pitch)
+    real(DP), dimension(:), pointer, contiguous                 :: angle3       => null()   ! k tensor rotation around x axis (roll)
     !
-    real(DP), dimension(:), pointer                 :: wetdry       => null()   ! wetdry array
-    real(DP), dimension(:), pointer                 :: sat          => null()   ! saturation (0. to 1.) for each cell
-    real(DP), dimension(:), pointer                 :: condsat      => null()   ! saturated conductance (symmetric array)
+    real(DP), dimension(:), pointer, contiguous                 :: wetdry       => null()   ! wetdry array
+    real(DP), dimension(:), pointer, contiguous                 :: sat          => null()   ! saturation (0. to 1.) for each cell
+    real(DP), dimension(:), pointer, contiguous                 :: condsat      => null()   ! saturated conductance (symmetric array)
     real(DP), pointer                               :: min_satthk   => null()   ! minimum saturated thickness
-    integer(I4B), dimension(:), pointer             :: ibotnode     => null()   ! bottom node used if igwfnewtonur /= 0
+    integer(I4B), dimension(:), pointer, contiguous             :: ibotnode     => null()   ! bottom node used if igwfnewtonur /= 0
     !
-    real(DP), dimension(:, :), pointer              :: spdis        => null()   ! specific discharge : qx, qy, qz (nodes, 3) 
+    real(DP), dimension(:, :), pointer, contiguous              :: spdis        => null()   ! specific discharge : qx, qy, qz (nodes, 3) 
     integer(I4B), pointer                           :: nedges       => null()   ! number of cell edges
     integer(I4B), pointer                           :: lastedge     => null()   ! last edge number
-    integer(I4B), dimension(:), pointer             :: nodedge      => null()   ! array of node numbers that have edges
-    integer(I4B), dimension(:), pointer             :: ihcedge      => null()   ! edge type (horizontal or vertical)
-    real(DP), dimension(:, :), pointer              :: propsedge    => null()   ! edge properties (Q, area, nx, ny, distance) 
+    integer(I4B), dimension(:), pointer, contiguous             :: nodedge      => null()   ! array of node numbers that have edges
+    integer(I4B), dimension(:), pointer, contiguous             :: ihcedge      => null()   ! edge type (horizontal or vertical)
+    real(DP), dimension(:, :), pointer, contiguous              :: propsedge    => null()   ! edge properties (Q, area, nx, ny, distance) 
     !
   contains
     procedure                               :: npf_df
@@ -1786,7 +1786,7 @@ module GwfNpfModule
     integer(I4B) :: n, m, ii, nn, ihc
     integer(I4B) :: nextn
     real(DP) :: minbot, botm
-    integer(I4B), dimension(:), pointer :: ithickstartflag
+    integer(I4B), dimension(:), pointer, contiguous :: ithickstartflag
     ! -- format
     character(len=*),parameter :: fmtcnv = &
     "(1X,'CELL ', A, &

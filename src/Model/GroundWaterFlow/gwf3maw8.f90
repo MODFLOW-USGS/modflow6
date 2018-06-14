@@ -121,9 +121,9 @@ module mawmodule
     real(DP), pointer, dimension(:)  :: cterm         => null() !package c vector
     ! -- vector data (start of flattening for future removal of MawWellType)
     character (len=LENBOUNDNAME), dimension(:), pointer :: cmawname => null()
-    integer(I4B), pointer, dimension(:) :: idxmawconn => null()
+    integer(I4B), pointer, contiguous, dimension(:) :: idxmawconn => null()
     ! -- imap vector
-    integer(I4B), pointer, dimension(:) :: imap       => null()
+    integer(I4B), pointer, contiguous, dimension(:) :: imap       => null()
     !
     ! -- maw output data
     real(DP), dimension(:), pointer, contiguous :: qauxcbc => null()

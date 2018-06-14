@@ -24,9 +24,9 @@ module NumericalModelModule
     real(DP), dimension(:), pointer         :: x          => null()             !dependent variable (head, conc, etc)
     real(DP), dimension(:), pointer         :: rhs        => null()             !right-hand side vector
     real(DP), dimension(:), pointer         :: cond       => null()             !conductance matrix
-    integer(I4B), dimension(:), pointer     :: idxglo     => null()             !pointer to position in solution matrix
-    real(DP), dimension(:), pointer         :: xold       => null()             !dependent variable for previous timestep
-    real(DP), dimension(:), pointer         :: flowja     => null()             !intercell flows
+    integer(I4B), dimension(:), pointer, contiguous     :: idxglo     => null()             !pointer to position in solution matrix
+    real(DP), dimension(:), pointer, contiguous         :: xold       => null()             !dependent variable for previous timestep
+    real(DP), dimension(:), pointer, contiguous         :: flowja     => null()             !intercell flows
     integer(I4B), dimension(:), pointer     :: ibound     => null()             !ibound array
     !
     ! -- Derived types

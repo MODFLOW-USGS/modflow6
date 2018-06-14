@@ -14,23 +14,23 @@ module Xt3dModule
     integer(I4B), pointer                   :: iout       => null()
     character(len=LENORIGIN), pointer       :: origin     => null()   !origin name of this package (e.g. 'GWF_1 NPF')
     integer(I4B), pointer, dimension(:)     :: ibound     => null()   !pointer to model ibound
-    integer(I4B),dimension(:),pointer       :: iax        => null()   !ia array for extended neighbors used by xt3d
-    integer(I4B),dimension(:),pointer       :: jax        => null()   !ja array for extended neighbors used by xt3d
-    integer(I4B),dimension(:),pointer       :: idxglox    => null()   !mapping array for extended neighbors used by xt3d
+    integer(I4B),dimension(:),pointer, contiguous       :: iax        => null()   !ia array for extended neighbors used by xt3d
+    integer(I4B),dimension(:),pointer, contiguous       :: jax        => null()   !ja array for extended neighbors used by xt3d
+    integer(I4B),dimension(:),pointer, contiguous       :: idxglox    => null()   !mapping array for extended neighbors used by xt3d
     integer(I4B), pointer                   :: numextnbrs => null()   !dimension of jax array
     integer(I4B), pointer                   :: ixt3d      => null()   !xt3d flag (0 is off, 1 is lhs, 2 is rhs)
     logical, pointer                        :: nozee      => null()   !nozee flag
     real(DP), pointer                       :: vcthresh   => null()   !attenuation function threshold
-    real(DP),dimension(:,:),pointer         :: rmatck     => null()   !rotation matrix for the conductivity tensor
-    real(DP),dimension(:,:),pointer         :: vecc       => null()   !connection vectors
-    real(DP),dimension(:,:),pointer         :: vecn       => null()   !interface normals
-    real(DP),dimension(:),pointer           :: conlen     => null()   !direct connection lengths
-    real(DP), dimension(:),pointer          :: qsat       => null()   !saturated flow saved for Newton
-    real(DP), dimension(:),pointer          :: qrhs       => null()   !rhs part of flow saved for Newton
+    real(DP),dimension(:,:),pointer, contiguous         :: rmatck     => null()   !rotation matrix for the conductivity tensor
+    real(DP),dimension(:,:),pointer, contiguous         :: vecc       => null()   !connection vectors
+    real(DP),dimension(:,:),pointer, contiguous         :: vecn       => null()   !interface normals
+    real(DP),dimension(:),pointer, contiguous           :: conlen     => null()   !direct connection lengths
+    real(DP), dimension(:),pointer, contiguous          :: qsat       => null()   !saturated flow saved for Newton
+    real(DP), dimension(:),pointer, contiguous          :: qrhs       => null()   !rhs part of flow saved for Newton
     integer(I4B), pointer                   :: nbrmax     => null()   !maximum number of neighbors for any cell
-    real(DP), dimension(:),pointer          :: amatpc     => null()   !saved contributions to amat from permanently confined connections, direct neighbors
-    real(DP), dimension(:),pointer          :: amatpcx    => null()   !saved contributions to amat from permanently confined connections, extended neighbors
-    integer(I4B), dimension(:),pointer      :: iallpc     => null()   !indicates for each node whether all connections processed by xt3d are permanently confined (0 no, 1 yes)
+    real(DP), dimension(:),pointer, contiguous          :: amatpc     => null()   !saved contributions to amat from permanently confined connections, direct neighbors
+    real(DP), dimension(:),pointer, contiguous          :: amatpcx    => null()   !saved contributions to amat from permanently confined connections, extended neighbors
+    integer(I4B), dimension(:),pointer, contiguous      :: iallpc     => null()   !indicates for each node whether all connections processed by xt3d are permanently confined (0 no, 1 yes)
     logical, pointer                        :: lamatsaved => null()   !indicates whether amat has been saved for permanently confined connections
     class(DisBaseType), pointer             :: dis        => null()   !discretization object
     ! pointers to npf variables

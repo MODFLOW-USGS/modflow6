@@ -16,17 +16,17 @@ module ConnectionsModule
     integer(I4B), pointer                   :: nja        => null()             !number of connections
     integer(I4B), pointer                   :: njas       => null()             !number of symmetric connections
     integer(I4B), pointer                   :: ianglex    => null()             !indicates whether or not anglex was read
-    integer(I4B), pointer, dimension(:)     :: ia         => null()             !(size:nodes+1) csr index array
-    integer(I4B), pointer, dimension(:)     :: ja         => null()             !(size:nja) csr pointer array
-    real(DP), dimension(:), pointer         :: cl1        => null()             !(size:njas) connection length between node n and shared face with node m
-    real(DP), dimension(:), pointer         :: cl2        => null()             !(size:njas) connection length between node m and shared face with node n
-    real(DP), dimension(:), pointer         :: hwva       => null()             !(size:njas) horizontal perpendicular width (ihc>0) or vertical flow area (ihc=0)
-    real(DP), dimension(:), pointer         :: anglex     => null()             !(size:njas) connection angle of face normal with x axis (read in degrees, stored as radians)
-    integer(I4B), dimension(:), pointer     :: isym       => null()             !(size:nja) returns csr index of symmetric counterpart
-    integer(I4B), dimension(:), pointer     :: jas        => null()             !(size:nja) map any connection to upper triangle (for pulling out of symmetric array)
-    integer(I4B), dimension(:), pointer     :: ihc        => null()             !(size:njas) horizontal connection (0:vertical, 1:mean thickness, 2:staggered)
-    integer(I4B), dimension(:), pointer     :: iausr      => null()             !(size:nodesusr+1) 
-    integer(I4B), dimension(:), pointer     :: jausr      => null()             !(size:nja)
+    integer(I4B), pointer, contiguous, dimension(:)     :: ia         => null()             !(size:nodes+1) csr index array
+    integer(I4B), pointer, contiguous, dimension(:)     :: ja         => null()             !(size:nja) csr pointer array
+    real(DP), dimension(:), pointer, contiguous         :: cl1        => null()             !(size:njas) connection length between node n and shared face with node m
+    real(DP), dimension(:), pointer, contiguous         :: cl2        => null()             !(size:njas) connection length between node m and shared face with node n
+    real(DP), dimension(:), pointer, contiguous         :: hwva       => null()             !(size:njas) horizontal perpendicular width (ihc>0) or vertical flow area (ihc=0)
+    real(DP), dimension(:), pointer, contiguous         :: anglex     => null()             !(size:njas) connection angle of face normal with x axis (read in degrees, stored as radians)
+    integer(I4B), dimension(:), pointer, contiguous     :: isym       => null()             !(size:nja) returns csr index of symmetric counterpart
+    integer(I4B), dimension(:), pointer, contiguous     :: jas        => null()             !(size:nja) map any connection to upper triangle (for pulling out of symmetric array)
+    integer(I4B), dimension(:), pointer, contiguous     :: ihc        => null()             !(size:njas) horizontal connection (0:vertical, 1:mean thickness, 2:staggered)
+    integer(I4B), dimension(:), pointer, contiguous     :: iausr      => null()             !(size:nodesusr+1) 
+    integer(I4B), dimension(:), pointer, contiguous     :: jausr      => null()             !(size:nja)
     type(BlockParserType)                   :: parser                           !block parser
   contains
     procedure :: con_da
@@ -624,7 +624,7 @@ module ConnectionsModule
     real(DP), dimension(nrow),             intent(in) :: delc
     real(DP), dimension(nodes),            intent(in) :: top
     real(DP), dimension(nodes),            intent(in) :: bot
-    integer(I4B),          dimension(:), target,        intent(in) :: nodereduced
+    integer(I4B),          dimension(:), target, contiguous,  intent(in) :: nodereduced
     integer(I4B),          dimension(:),                intent(in) :: nodeuser
     ! -- local
     integer(I4B), dimension(:, :, :), pointer, contiguous :: nrdcd_ptr => null()

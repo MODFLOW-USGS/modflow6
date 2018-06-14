@@ -18,14 +18,14 @@ module DnmDisBaseModule
     integer, pointer                        :: nodes      => null()  !number of nodes in solution
     integer, pointer                        :: nodesuser  => null()  !number of user nodes (same as nodes for unstructured model)
     integer, pointer                        :: ndim       => null()  !number of spatial model dimensions (1 for unstructured)
-    integer, pointer, dimension(:)          :: mshape     => null()  !shape of the model; (nodes) for DisBaseType
+    integer, pointer, contiguous, dimension(:)          :: mshape     => null()  !shape of the model; (nodes) for DisBaseType
     integer, pointer                        :: nja        => null()  !number of connections plus number of nodes
     integer, pointer                        :: njas       => null()  !(nja-nodes)/2
     integer, pointer                        :: lenuni     => null()  !length unit
     integer, pointer                        :: idsymrd    => null()  !indicates how symmetric arrays are read
-    double precision, dimension(:), pointer :: top        => null()  !(size:nodes) cell top elevation
-    double precision, dimension(:), pointer :: bot        => null()  !(size:nodes) cell bottom elevation
-    double precision, dimension(:), pointer :: area       => null()  !(size:nodes) cell area, in plan view
+    double precision, dimension(:), pointer, contiguous :: top        => null()  !(size:nodes) cell top elevation
+    double precision, dimension(:), pointer, contiguous :: bot        => null()  !(size:nodes) cell bottom elevation
+    double precision, dimension(:), pointer, contiguous :: area       => null()  !(size:nodes) cell area, in plan view
     ! for PreHeadsMF
     ! For structured DIS, origin is outside corner of cell at row 1, column 1.
     double precision :: Xorigin = DZERO ! X coordinate of grid origin

@@ -16,8 +16,8 @@ module DnmDis3dModule
     integer, pointer               :: nlay         !number of layers
     integer, pointer               :: nrow         !number of rows
     integer, pointer               :: ncol         !number of columns
-    integer, dimension(:), pointer :: nodereduced  !(size:nodesuser) given user nodenumber provide the reduced nodenumber (size 0 if not reduced)
-    integer, dimension(:), pointer :: nodeuser     !(size:nodes) given a reduced nodenumber, provide the user nodenumber (size 0 if not reduced)
+    integer, dimension(:), pointer, contiguous :: nodereduced  !(size:nodesuser) given user nodenumber provide the reduced nodenumber (size 0 if not reduced)
+    integer, dimension(:), pointer, contiguous :: nodeuser     !(size:nodes) given a reduced nodenumber, provide the user nodenumber (size 0 if not reduced)
     ! for PreHeadsMF
     double precision :: gridXmax = DZERO
     double precision :: gridYmin = DZERO

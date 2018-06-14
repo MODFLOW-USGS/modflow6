@@ -19,8 +19,8 @@ module GwfDisuModule
 
   type, extends(DisBaseType) :: GwfDisuType
     integer(I4B), pointer                              :: nvert       => null() ! number of x,y vertices
-    real(DP), dimension(:,:), pointer                  :: vertices    => null() ! cell vertices stored as 2d array of x and y
-    real(DP), dimension(:,:), pointer                  :: cellxy      => null() ! cell center stored as 2d array of x and y
+    real(DP), dimension(:,:), pointer, contiguous                  :: vertices    => null() ! cell vertices stored as 2d array of x and y
+    real(DP), dimension(:,:), pointer, contiguous                  :: cellxy      => null() ! cell center stored as 2d array of x and y
     integer(I4B), dimension(:), pointer                :: iavert      => null() ! cell vertex pointer ia array
     integer(I4B), dimension(:), pointer                :: javert      => null() ! cell vertex pointer ja array
   contains

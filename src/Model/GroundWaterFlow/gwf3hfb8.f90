@@ -16,12 +16,12 @@ module GwfHfbModule
   type, extends(NumericalPackageType) :: GwfHfbType
     integer(I4B), pointer                        :: maxhfb     => null()   !max number of hfb's
     integer(I4B), pointer                        :: nhfb       => null()   !number of hfb's
-    integer(I4B), dimension(:), pointer          :: noden      => null()   !first cell
-    integer(I4B), dimension(:), pointer          :: nodem      => null()   !second cell
-    integer(I4B), dimension(:), pointer          :: idxloc     => null()   !position in model ja
-    real(DP), dimension(:), pointer              :: hydchr     => null()   !hydraulic characteristic of the barrier
-    real(DP), dimension(:), pointer              :: csatsav    => null()   !value of condsat prior to hfb modification
-    real(DP), dimension(:), pointer              :: condsav    => null()   !saved conductance of combined npf and hfb
+    integer(I4B), dimension(:), pointer, contiguous          :: noden      => null()   !first cell
+    integer(I4B), dimension(:), pointer, contiguous          :: nodem      => null()   !second cell
+    integer(I4B), dimension(:), pointer, contiguous          :: idxloc     => null()   !position in model ja
+    real(DP), dimension(:), pointer, contiguous              :: hydchr     => null()   !hydraulic characteristic of the barrier
+    real(DP), dimension(:), pointer, contiguous              :: csatsav    => null()   !value of condsat prior to hfb modification
+    real(DP), dimension(:), pointer, contiguous              :: condsav    => null()   !saved conductance of combined npf and hfb
     type(Xt3dType), pointer                      :: xt3d       => null()   !pointer to xt3d object
     !
     integer(I4B), pointer, dimension(:)          :: ibound     => null()   !pointer to model ibound
