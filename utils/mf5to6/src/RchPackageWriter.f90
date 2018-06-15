@@ -48,7 +48,7 @@ contains
     !
     this%fileobj%FType = 'RCH6'
     this%PkgType = 'RCH'
-    fname = trim(this%ModelBasename) // '.rch6'
+    fname = trim(this%ModelBasename) // '.rch'
     call this%FileWriterType%InitializeFile(fname, this%fileobj%FType, &
                                             this%PackageName)
     call GWF2RCH7AR(this%IuOrig, igrid)

@@ -402,8 +402,8 @@ contains
         endif
         !
         fawidth = this%hwva(iexg)
-        csat = hcond(1, 1, 1, 1, this%inewton, 0, ihc, 0,                     &
-                      this%icellavg, DONE,                                    &
+        csat = hcond(1, 1, 1, 1, this%inewton, 0, ihc,                        &
+                      this%icellavg, 0, 0, DONE,                              &
                       topn, topm, satn, satm, hyn, hym,                       &
                       topn, topm,                                             &
                       botn, botm,                                             &
@@ -642,6 +642,8 @@ contains
         !
         ! get saturated conductivity for derivative
         cond = this%condsat(iexg)
+        !
+        ! -- TO DO deal with MODFLOW-NWT upstream weighting option
         !
         ! -- compute terms
         consterm = -cond * (hup - hdn)
@@ -1649,7 +1651,7 @@ contains
         !
         fawidth = this%hwva(iexg)
         cond = hcond(ibdn, ibdm, ictn, ictm, this%inewton, this%inewton,       &
-                     this%ihc(iexg), this%icellavg, 0, this%condsat(iexg),     &
+                     this%ihc(iexg), this%icellavg, 0, 0, this%condsat(iexg),  &
                      hn, hm, satn, satm, hyn, hym, topn, topm, botn, botm,     &
                      this%cl1(iexg), this%cl2(iexg), fawidth, this%satomega)
       endif
