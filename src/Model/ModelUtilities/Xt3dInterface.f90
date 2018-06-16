@@ -514,6 +514,14 @@ module Xt3dModule
     real(DP),dimension(this%nbrmax) :: chati0, chat1j
 ! ------------------------------------------------------------------------------
     !
+    ! -- Initialize amatpc and amatpcx to zero
+    do n = 1, size(this%amatpc)
+      this%amatpc(n) = DZERO
+    enddo
+    do n = 1, size(this%amatpcx)
+      this%amatpcx(n) = DZERO
+    enddo
+    !
     ! -- Calculate xt3d conductance-like coefficients for permanently confined
     ! -- connections and put into amatpc and amatpcx as appropriate
     do n = 1, nodes

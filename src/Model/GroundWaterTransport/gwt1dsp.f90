@@ -458,6 +458,7 @@ module GwtDspModule
     class(GwtDspType) :: this
     integer(I4B), intent(in) :: nodes
     ! -- local
+     integer(I4B) :: i
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate
@@ -482,6 +483,11 @@ module GwtDspModule
     else
       call mem_allocate(this%dispcoef, 0, 'DISPCOEF', trim(this%origin))
     endif
+    !
+    ! -- Initialize gwfflowjaold
+    do i = 1, size(this%gwfflowjaold)
+      this%gwfflowjaold(i) = DZERO
+    enddo
     !
     ! -- Return
     return
@@ -700,36 +706,40 @@ module GwtDspModule
       this%d22(n) = ath * q + dstar
       this%d33(n) = ath * q + dstar
       !
-      ! -- angles of rotation from model coordinates to direction of velocity
-      ! qx / q = cos(a1) * cos(a2)
-      ! qy / q = sin(a1) * cos(a2)
-      ! qz / q = sin(a2)
-      !
-      ! -- angle3 is zero
-      this%angle3(n) = DZERO
-      !
-      ! -- angle2
-      a = DZERO
-      if (q > DZERO) a = qz / q
-      this%angle2(n) = asin(a)
-      !
-      ! -- angle1
-      a = q * cos(this%angle2(n))
-      if (a /= DZERO) then
-        a = qx / a
-      else
+      ! -- Angles of rotation if velocity based dispersion tensor
+      if (this%idisp > 0) then
+        !
+        ! -- angles of rotation from model coordinates to direction of velocity
+        ! qx / q = cos(a1) * cos(a2)
+        ! qy / q = sin(a1) * cos(a2)
+        ! qz / q = sin(a2)
+        !
+        ! -- angle3 is zero
+        this%angle3(n) = DZERO
+        !
+        ! -- angle2
         a = DZERO
+        if (q > DZERO) a = qz / q
+        this%angle2(n) = asin(a)
+        !
+        ! -- angle1
+        a = q * cos(this%angle2(n))
+        if (a /= DZERO) then
+          a = qx / a
+        else
+          a = DZERO
+        endif
+        !
+        ! -- acos(1) not defined, so set to zero if necessary
+        if (a <= -DONE) then
+          this%angle1(n) = DPI
+        elseif (a >= DONE) then
+          this%angle1(n) = DZERO
+        else
+          this%angle1(n) = acos(a)
+        endif
+        !
       endif
-      !
-      ! -- acos(1) not defined, so set to zero if necessary
-      if (a < -DONE) then
-        this%angle1(n) = DPI
-      elseif (a > DONE) then
-        this%angle1(n) = DZERO
-      else
-        this%angle1(n) = acos(a)
-      endif
-      !
     enddo
     !
     ! -- Return

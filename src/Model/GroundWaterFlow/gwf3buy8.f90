@@ -667,11 +667,9 @@ module GwfBuyModule
       ! -- Parse the keywords
       select case (keyword)
       case ('ELEVATION')
-        if (this%ireadelev == 0) then
-          call mem_reallocate(this%elev, this%dis%nodes, aname(1),             &
-                              trim(this%origin))
-          this%ireadelev = 1
-        endif
+        call mem_reallocate(this%elev, this%dis%nodes, 'ELEV',                 &
+                           trim(this%origin))
+        this%ireadelev = 1
         call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,    &
                                       this%parser%iuactive, this%elev,         &
                                       aname(1))
