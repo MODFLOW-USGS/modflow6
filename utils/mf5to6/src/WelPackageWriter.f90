@@ -44,7 +44,7 @@ contains
     !
     this%fileobj%FType = 'WEL6'
     this%PkgType = 'WEL'
-    fname = trim(this%ModelBasename) // '.wel6'
+    fname = trim(this%ModelBasename) // '.wel'
     call this%FileWriterType%InitializeFile(fname, this%fileobj%FType, &
                                             this%PackageName)
     iunitnwt = 0

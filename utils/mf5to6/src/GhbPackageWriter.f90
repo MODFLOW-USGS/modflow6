@@ -41,7 +41,7 @@ contains
     !
     this%fileobj%FType = 'GHB6'
     this%PkgType = 'GHB'
-    fname = trim(this%ModelBasename) // '.ghb6'
+    fname = trim(this%ModelBasename) // '.ghb'
     call this%FileWriterType%InitializeFile(fname, this%fileobj%FType, &
                                             this%PackageName)
     call GWF2GHB7AR(this%IuOrig, igrid)

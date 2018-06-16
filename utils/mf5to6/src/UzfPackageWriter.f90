@@ -91,7 +91,7 @@ contains
     this%fileobj%FCode = FCINPUT
     this%fileobj%FType = 'UZF6'
     this%fileobj%PkgName = this%PackageName
-    fname = trim(this%ModelBasename) // '.uzf6'
+    fname = trim(this%ModelBasename) // '.uzf'
     call this%FileWriterType%InitializeFile(fname, this%fileobj%FType, &
                                             this%PackageName)
     this%IunitBcf = iunit(1)

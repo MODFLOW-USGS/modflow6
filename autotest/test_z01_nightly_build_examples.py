@@ -1,5 +1,6 @@
 import os
 import sys
+import subprocess
 
 try:
     import pymake
@@ -23,10 +24,39 @@ exdir = os.path.join('..', '..', 'modflow6-examples', 'mf6')
 testpaths = os.path.join('..', exdir)
 
 
+def get_branch():
+    try:
+        # determine current buildstat branch
+        b = subprocess.Popen(("git", "status"),
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT).communicate()[0]
+        if isinstance(b, bytes):
+            b = b.decode('utf-8')
+
+        # determine current buildstat branch
+        for line in b.splitlines():
+            if 'On branch' in line:
+                branch = line.replace('On branch ', '').rstrip()
+    except:
+        branch = None
+
+    return branch
+
+
 def get_mf6_models():
     """
         Get a list of test models
     """
+    # determine if running on travis
+    is_travis = 'TRAVIS' in os.environ
+
+    # get current branch
+    if is_travis:
+        branch = os.environ['BRANCH']
+    else:
+        branch = get_branch()
+    print('On branch {}'.format(branch))
+
     # tuple of example files to exclude
     exclude = ('test006_03models',
                'test018_NAC',
@@ -41,9 +71,18 @@ def get_mf6_models():
     exclude = list(exclude + exclude_travis)
     dirs = [d for d in os.listdir(exdir)
             if 'test' in d and d not in exclude]
+
+    # exclude dev examples on master or release branches
+    if 'master' in branch.lower() or 'release' in branch.lower():
+        drmv = []
+        for d in dirs:
+            if '_dev' in d.lower():
+                drmv.append(d)
+        for d in drmv:
+            dirs.remove(d)
+
     # sort in numerical order for case sensitive os
     dirs = sorted(dirs, key=lambda v: (v.upper(), v[0].islower()))
-
 
     # determine if only a selection of models should be run
     select_dirs = None
@@ -57,6 +96,11 @@ def get_mf6_models():
             if len(sys.argv) > idx + 1:
                 select_packages = sys.argv[idx + 1:]
                 select_packages = [item.upper() for item in select_packages]
+                break
+        elif arg.lower() == '--match':
+            if len(sys.argv) > idx + 1:
+                like = sys.argv[idx + 1]
+                dirs = [item for item in dirs if like in item]
                 break
 
     # determine if the selection of model is in the test models to evaluate
@@ -95,7 +139,6 @@ def get_mf6_models():
                 msg += ' {}'.format(pak)
             msg += ']'
             print(msg)
-
 
     return dirs
 
@@ -174,4 +217,3 @@ if __name__ == "__main__":
 
     # run main routine
     main()
-
