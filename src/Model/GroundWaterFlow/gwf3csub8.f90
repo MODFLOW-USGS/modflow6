@@ -840,7 +840,7 @@ contains
         node = this%nodelist(ib)
         this%buff(node) = this%buff(node) + this%tcomp(ib)
       end do
-      call this%dis%record_array(this%buff, this%iout, iprint, ibinun,          &
+      call this%dis%record_array(this%buff, this%iout, iprint, -ibinun,         &
                                  comptxt(1), cdatafmp, nvaluesp,                &
                                  nwidthp, editdesc, dinact)
       !
@@ -858,7 +858,7 @@ contains
           end do
         end do
       end if
-      call this%dis%record_array(this%buff, this%iout, iprint, ibinun,          &
+      call this%dis%record_array(this%buff, this%iout, iprint, -ibinun,         &
                                  comptxt(2), cdatafmp, nvaluesp,                &
                                  nwidthp, editdesc, dinact)
       
