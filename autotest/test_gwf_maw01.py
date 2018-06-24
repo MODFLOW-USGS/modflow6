@@ -129,7 +129,7 @@ def get_model(idx, dir):
     # MAW
     opth = '{}.maw.obs'.format(name)
     wellbottom = 50.
-    wellrecarray = [[0, 0.1, wellbottom, 100., 'THEIM', 1]]
+    wellrecarray = [[0, 0.1, wellbottom, 100., 'THIEM', 1]]
     wellconnectionsrecarray = [[0, 0, (0, 0, 1), 100., wellbottom, 1., 0.1]]
     wellperiodrecarray = [[0, 'rate', 0.]]
     maw = flopy.mf6.ModflowGwfmaw(gwf, fname='{}.maw'.format(name),

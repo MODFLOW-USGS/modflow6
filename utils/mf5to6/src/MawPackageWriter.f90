@@ -357,7 +357,7 @@ contains
         ! B and C in equation 2 are automatically set = 0.0. User must define
         ! Rw in dataset 2c or 2d.
         ! If LOSSTYPE = THIEM, then specify Rw (the radius of the well).
-        condeqn = 'THEIM'
+        condeqn = 'THIEM'
       case (2)
         ! "SKIN" in mnw2 input: user specified characteristics of skin.
         ! This option allows for formation damage or skin corrections at the
