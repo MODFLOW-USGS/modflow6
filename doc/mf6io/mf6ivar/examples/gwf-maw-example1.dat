@@ -13,8 +13,8 @@ end dimensions
 
 begin packagedata
 #  wellno radius bottom strt condeqn ngwnodes name          
-        1   0.15 -100.0 9.14   theim        2 pwell       
-        2   0.25 -100.0 9.14   theim        1 iwell       
+        1   0.15 -100.0 9.14   thiem        2 pwell
+        2   0.25 -100.0 9.14   thiem        1 iwell
 end packagedata
 
 begin connectiondata
