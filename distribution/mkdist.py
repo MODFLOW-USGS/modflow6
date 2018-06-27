@@ -359,6 +359,56 @@ def clean_latex_files():
     return
 
 
+def update_mf6io_tex_files(distfolder):
+
+    texpth = '../doc/mf6io'
+    fname1 = os.path.join(texpth, 'mf6output.tex')
+    fname2 = os.path.join(texpth, 'mf6noname.tex')
+    mf6pth = os.path.join(distfolder, 'bin') + 'mf6.exe'
+    mf6pth = os.path.abspath(mf6pth)
+    expth = os.path.join(distfolder, 'examples', 'ex01-twri')
+    expth = os.path.abspath(expth)
+
+    assert os.path.isfile(mf6pth)
+    assert os.path.isdir(expth)
+
+    # run an example model
+    if os.path.isdir('./temp'):
+        shutil.rmtree('./temp')
+    shutil.copytree(expth, './temp')
+    cmd = [os.path.abspath(mf6pth)]
+    buff, ierr = run_command(cmd, './temp')
+    lines = buff.split('\r\n')
+    with open(fname1, 'w') as f:
+        f.write('{}\n'.format('{\\small'))
+        f.write('{}\n'.format('\\begin{lstlisting}[style=modeloutput]'))
+        for line in lines:
+            f.write(line.rstrip() + '\n')
+        f.write('{}\n'.format('\\end{lstlisting}'))
+        f.write('{}\n'.format('}'))
+
+    # run model without a namefile present
+    if os.path.isdir('./temp'):
+        shutil.rmtree('./temp')
+    os.mkdir('./temp')
+    cmd = [os.path.abspath(mf6pth)]
+    buff, ierr = run_command(cmd, './temp')
+    lines = buff.split('\r\n')
+    with open(fname2, 'w') as f:
+        f.write('{}\n'.format('{\\small'))
+        f.write('{}\n'.format('\\begin{lstlisting}[style=modeloutput]'))
+        for line in lines:
+            f.write(line.rstrip() + '\n')
+        f.write('{}\n'.format('\\end{lstlisting}'))
+        f.write('{}\n'.format('}'))
+
+    # clean up
+    if os.path.isdir('./temp'):
+        shutil.rmtree('./temp')
+
+    return
+
+
 def build_latex_docs():
     print('Building latex files')
     pth = os.path.join('..', 'doc')
@@ -589,6 +639,7 @@ if __name__ == '__main__':
 
     # Clean and then remake latex docs
     clean_latex_files()
+    update_mf6io_tex_files(distfolder)
     update_latex_releaseinfo()
     build_latex_docs()
 
