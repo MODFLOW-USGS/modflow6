@@ -359,12 +359,57 @@ def clean_latex_files():
     return
 
 
+def rebuild_tex_from_dfn():
+
+    npth = os.path.join('..', 'doc', 'mf6io', 'mf6ivar')
+    pth = './'
+
+    with cwd(npth):
+
+        # get list of TeX files
+        files = [f for f in os.listdir('tex') if
+                 os.path.isfile(os.path.join('tex', f))]
+        for f in files:
+            fpth = os.path.join('tex', f)
+            os.remove(fpth)
+
+        # run python
+        argv = ['python', 'mf6ivar.py']
+        buff, ierr = run_command(argv, pth)
+        msg = '\nERROR {}: could not run {} with {}'.format(ierr, argv[0],
+                                                            argv[1])
+        assert ierr == 0, buff + msg
+
+        # get list for dfn files
+        dfnfiles = [os.path.splitext(f)[0] for f in os.listdir('dfn') if
+                    os.path.isfile(os.path.join('dfn', f)) and
+                    'dfn' in os.path.splitext(f)[1]]
+        texfiles = [os.path.splitext(f)[0] for f in os.listdir('tex') if
+                    os.path.isfile(os.path.join('tex', f)) and
+                    'tex' in os.path.splitext(f)[1]]
+        missing = ''
+        icnt = 0
+        for f in dfnfiles:
+            if 'common' in f:
+                continue
+            fpth = '{}-desc'.format(f)
+            if fpth not in texfiles:
+                icnt += 1
+                missing += '  {:3d} {}.tex\n'.format(icnt, fpth)
+        msg = '\n{} TeX file(s) are missing. '.format(icnt) + \
+              'Missing files:\n{}'.format(missing)
+        assert icnt == 0, msg
+
+    return
+
+
 def update_mf6io_tex_files(distfolder):
 
     texpth = '../doc/mf6io'
     fname1 = os.path.join(texpth, 'mf6output.tex')
     fname2 = os.path.join(texpth, 'mf6noname.tex')
-    mf6pth = os.path.join(distfolder, 'bin') + 'mf6.exe'
+    fname3 = os.path.join(texpth, 'mf6switches.tex')
+    mf6pth = os.path.join(distfolder, 'bin', 'mf6.exe')
     mf6pth = os.path.abspath(mf6pth)
     expth = os.path.join(distfolder, 'examples', 'ex01-twri')
     expth = os.path.abspath(expth)
@@ -395,6 +440,18 @@ def update_mf6io_tex_files(distfolder):
     buff, ierr = run_command(cmd, './temp')
     lines = buff.split('\r\n')
     with open(fname2, 'w') as f:
+        f.write('{}\n'.format('{\\small'))
+        f.write('{}\n'.format('\\begin{lstlisting}[style=modeloutput]'))
+        for line in lines:
+            f.write(line.rstrip() + '\n')
+        f.write('{}\n'.format('\\end{lstlisting}'))
+        f.write('{}\n'.format('}'))
+
+    # run mf6 command with -h to show help
+    cmd = [os.path.abspath(mf6pth), '-h']
+    buff, ierr = run_command(cmd, './temp')
+    lines = buff.split('\r\n')
+    with open(fname3, 'w') as f:
         f.write('{}\n'.format('{\\small'))
         f.write('{}\n'.format('\\begin{lstlisting}[style=modeloutput]'))
         for line in lines:
@@ -508,12 +565,18 @@ if __name__ == '__main__':
     fname = os.path.join(distfolder, 'src', 'Utilities', 'version.f90')
     change_version_module(fname, '{} {}'.format(version, versiondate))
 
-    # Create makefile
+    # Create makefile in the make folder and then copy into distribution
     print('Creating makefile')
-    with cwd(fd['make']):
+    makedir = os.path.join('..', 'make')
+    makefile = os.path.join(makedir, 'makefile')
+    if os.path.isfile(makefile):
+        os.remove(makefile)
+    with cwd(makedir):
         pymake.main(os.path.join('..', 'src'), 'mf6', 'gfortran', 'gcc',
                     makeclean=True, dryrun=True, include_subdirs=True,
                     makefile=True, extrafiles=None)
+    print('  {} ===> {}'.format(makefile, fd['make']))
+    shutil.copy(makefile, fd['make'])
 
     # build MODFLOW 6 executable
     srcdir = fd['src']
@@ -639,6 +702,7 @@ if __name__ == '__main__':
 
     # Clean and then remake latex docs
     clean_latex_files()
+    rebuild_tex_from_dfn()
     update_mf6io_tex_files(distfolder)
     update_latex_releaseinfo()
     build_latex_docs()
