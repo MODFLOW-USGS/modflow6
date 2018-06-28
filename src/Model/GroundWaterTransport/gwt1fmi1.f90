@@ -31,6 +31,8 @@ module GwtFmiModule
     integer(I4B), pointer                   :: igwfinwtup => null()             ! NR indicator
     integer(I4B), pointer                   :: igwfiusgnrhc => null()           ! iusg indicator
     real(DP), pointer                       :: gwfsatomega => null()            ! NR satomega value
+    integer(I4B), pointer                   :: igwfinwtupw => null()            ! inwtupw indicator
+    real(DP), pointer                       :: gwfsatmin => null()              ! NR satmin value
     
     
   contains
@@ -341,6 +343,8 @@ module GwtFmiModule
     this%igwfinwtup => null()
     this%igwfiusgnrhc => null()
     this%gwfsatomega => null()
+    this%igwfinwtupw => null()
+    this%gwfsatmin => null()
     !
     ! -- deallocate fmi arrays
     call mem_deallocate(this%gwfthksat)

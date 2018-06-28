@@ -763,8 +763,8 @@ module GwtDspModule
     real(DP) :: vg1, vg2, vg3
     integer(I4B) :: ihc, ibdn, ibdm, ictn, ictm, inwtup, iusg, isympos
     real(DP) :: hn, hm, satn, satm, topn, topm, botn, botm, satomega
-    integer(I4B) :: ivarcv, idewatcv, icellavg
-    real(DP) :: hwva, cond
+    integer(I4B) :: ivarcv, idewatcv, icellavg, inwtupw
+    real(DP) :: hwva, cond, satmin
 ! ------------------------------------------------------------------------------
     !
     ! -- todo: get ivarcv and idewatcv from flow model
@@ -774,6 +774,8 @@ module GwtDspModule
     inwtup = this%fmi%igwfinwtup
     iusg = this%fmi%igwfiusgnrhc
     satomega = this%fmi%gwfsatomega
+    inwtupw = this%fmi%igwfinwtupw
+    satmin = this%fmi%gwfsatmin
     nodes = size(this%d11)
     do n = 1, nodes
       if(this%ibound(n) == 0) cycle
@@ -842,14 +844,14 @@ module GwtDspModule
                        1, 1,                                                   &
                        inwtup, inwtup,                                         &
                        ihc,                                                    &
-                       icellavg, iusg,                                         &
+                       icellavg, iusg, inwtupw,                                &
                        1.d30, hn, hm,                                          &
                        satn, satm,                                             &
                        dn, dm,                                                 &
                        topn, topm,                                             &
                        botn, botm,                                             &
                        clnm, clmn,                                             &
-                       hwva, satomega)
+                       hwva, satomega, satmin)
         endif
         this%dispcoef(isympos) = cond
         !

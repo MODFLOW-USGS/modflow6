@@ -431,18 +431,18 @@ module GwfNpfModule
         else
           !
           ! -- Horizontal conductance
-          cond = hcond(this%ibound(n), this%ibound(m),                       &
-                       this%icelltype(n), this%icelltype(m),                 &
-                       this%inewton, this%inewton,                           &
-                       this%dis%con%ihc(this%dis%con%jas(ii)),               &
-                       this%icellavg, this%iusgnrhc, this%inwtupw,           &
-                       this%condsat(this%dis%con%jas(ii)),                   &
-                       hnew(n), hnew(m), this%sat(n), this%sat(m), hyn, hym, &
-                       this%dis%top(n), this%dis%top(m),                     &
-                       this%dis%bot(n), this%dis%bot(m),                     &
-                       this%dis%con%cl1(this%dis%con%jas(ii)),               &
-                       this%dis%con%cl2(this%dis%con%jas(ii)),               &
-                       this%dis%con%hwva(this%dis%con%jas(ii)),              &
+          cond = hcond(this%ibound(n), this%ibound(m),                         &
+                       this%icelltype(n), this%icelltype(m),                   &
+                       this%inewton, this%inewton,                             &
+                       this%dis%con%ihc(this%dis%con%jas(ii)),                 &
+                       this%icellavg, this%iusgnrhc, this%inwtupw,             &
+                       this%condsat(this%dis%con%jas(ii)),                     &
+                       hnew(n), hnew(m), this%sat(n), this%sat(m), hyn, hym,   &
+                       this%dis%top(n), this%dis%top(m),                       &
+                       this%dis%bot(n), this%dis%bot(m),                       &
+                       this%dis%con%cl1(this%dis%con%jas(ii)),                 &
+                       this%dis%con%cl2(this%dis%con%jas(ii)),                 &
+                       this%dis%con%hwva(this%dis%con%jas(ii)),                &
                        this%satomega, this%satmin)
         endif
         !

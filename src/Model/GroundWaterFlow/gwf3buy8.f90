@@ -366,7 +366,7 @@ module GwfBuyModule
                      this%npf%icelltype(n), this%npf%icelltype(m),             &
                      this%npf%inewton, this%npf%inewton,                       &
                      this%dis%con%ihc(this%dis%con%jas(icon)),                 &
-                     this%npf%icellavg, this%npf%iusgnrhc,                     &
+                     this%npf%icellavg, this%npf%iusgnrhc, this%npf%inwtupw,   &
                      this%npf%condsat(this%dis%con%jas(icon)),                 &
                      hn, hm, this%npf%sat(n), this%npf%sat(m),                 &
                      hyn, hym,                                                 &
@@ -375,7 +375,7 @@ module GwfBuyModule
                      this%dis%con%cl1(this%dis%con%jas(icon)),                 &
                      this%dis%con%cl2(this%dis%con%jas(icon)),                 &
                      this%dis%con%hwva(this%dis%con%jas(icon)),                &
-                     this%npf%satomega )
+                     this%npf%satomega, this%npf%satmin)
     endif
     !
     ! -- Calculate buoyancy term
@@ -458,7 +458,7 @@ module GwfBuyModule
                      this%npf%icelltype(n), this%npf%icelltype(m),             &
                      this%npf%inewton, this%npf%inewton,                       &
                      this%dis%con%ihc(this%dis%con%jas(icon)),                 &
-                     this%npf%icellavg, this%npf%iusgnrhc,                     &
+                     this%npf%icellavg, this%npf%iusgnrhc, this%npf%inwtupw,   &
                      this%npf%condsat(this%dis%con%jas(icon)),                 &
                      hn, hm, this%npf%sat(n), this%npf%sat(m),                 &
                      hyn, hym,                                                 &
@@ -467,7 +467,7 @@ module GwfBuyModule
                      this%dis%con%cl1(this%dis%con%jas(icon)),                 &
                      this%dis%con%cl2(this%dis%con%jas(icon)),                 &
                      this%dis%con%hwva(this%dis%con%jas(icon)),                &
-                     this%npf%satomega )
+                     this%npf%satomega, this%npf%satmin)
     endif
     !
     ! -- Calculate terms
