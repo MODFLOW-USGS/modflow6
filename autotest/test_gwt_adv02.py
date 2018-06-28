@@ -47,6 +47,7 @@ def build_models():
     hdry = -1e30
     hk = 1.0
 
+    # put constant heads all around the box
     chdlist = []
     ib = np.ones((nlay, nrow, ncol), dtype=np.int)
     ib[:, 1:nrow-1, 1:ncol-1] = 0
@@ -55,6 +56,7 @@ def build_models():
         chdlist.append([(k, i, j), 0.])
     chdspdict = {0: chdlist}
 
+    # injection well with rate and concentration of 1.
     w = {0: [[(0, int(nrow / 2), int(ncol / 2)), 1.0, 1.0]]}
 
     nouter, ninner = 100, 300
