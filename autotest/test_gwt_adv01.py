@@ -1,3 +1,10 @@
+"""
+MODFLOW 6 Autotest
+Test the advection schemes in the gwt advection package for a one-dimensional
+model grid of square cells.
+
+"""
+
 import os
 import sys
 import numpy as np
