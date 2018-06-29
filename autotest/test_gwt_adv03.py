@@ -1,3 +1,11 @@
+"""
+MODFLOW 6 Autotest
+Test the advection schemes in the gwt advection package for two-dimensional
+injection of solute into the middle of a square grid.  The test will pass
+if the results are symmetric.
+
+"""
+
 import os
 import sys
 import numpy as np
@@ -21,18 +29,15 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['adv02']
-top = [1.]
-laytyp = [0]
-ss = [0.]
-sy = [0.1]
+ex = ['adv03a', 'adv03b', 'adb03c']
+scheme = ['upstream', 'central', 'tvd']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
 ddir = 'data'
 
 
-def build_models():
+def get_model(idx, dir):
     nlay, nrow, ncol = 1, 21, 21
     nper = 1
     perlen = [5.0]
@@ -47,12 +52,15 @@ def build_models():
     hdry = -1e30
     hk = 1.0
 
+    top = 1.
+    laytyp = 0
+
     # put constant heads all around the box
     chdlist = []
     ib = np.ones((nlay, nrow, ncol), dtype=np.int)
     ib[:, 1:nrow-1, 1:ncol-1] = 0
-    idx = np.where(ib > 0)
-    for k, i, j in zip(idx[0], idx[1], idx[2]):
+    idloc = np.where(ib > 0)
+    for k, i, j in zip(idloc[0], idloc[1], idloc[2]):
         chdlist.append([(k, i, j), 0.])
     chdspdict = {0: chdlist}
 
@@ -63,147 +71,143 @@ def build_models():
     hclose, rclose, relax = 1e-6, 1e-6, 1.
 
     tdis_rc = []
-    for idx in range(nper):
-        tdis_rc.append((perlen[idx], nstp[idx], tsmult[idx]))
+    for i in range(nper):
+        tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    for idx, dir in enumerate(exdirs):
-        name = ex[idx]
+    name = ex[idx]
 
-        # build MODFLOW 6 files
-        ws = dir
-        sim = flopy.mf6.MFSimulation(sim_name=name, version='mf6',
-                                     exe_name='mf6',
-                                     sim_ws=ws)
-        # create tdis package
-        tdis = flopy.mf6.ModflowTdis(sim, time_units='DAYS',
-                                     nper=nper, perioddata=tdis_rc)
+    # build MODFLOW 6 files
+    ws = dir
+    sim = flopy.mf6.MFSimulation(sim_name=name, version='mf6',
+                                 exe_name='mf6',
+                                 sim_ws=ws)
+    # create tdis package
+    tdis = flopy.mf6.ModflowTdis(sim, time_units='DAYS',
+                                 nper=nper, perioddata=tdis_rc)
 
-        # create gwf model
-        gwfname = 'gwf_' + name
-        gwf = flopy.mf6.MFModel(sim, model_type='gwf6', modelname=gwfname,
-                                model_nam_file='{}.nam'.format(gwfname))
+    # create gwf model
+    gwfname = 'gwf_' + name
+    gwf = flopy.mf6.MFModel(sim, model_type='gwf6', modelname=gwfname,
+                            model_nam_file='{}.nam'.format(gwfname))
 
-        # create iterative model solution and register the gwf model with it
-        imsgwf = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
-                                      outer_hclose=hclose,
-                                      outer_maximum=nouter,
-                                      under_relaxation='NONE',
-                                      inner_maximum=ninner,
-                                      inner_hclose=hclose, rcloserecord=rclose,
-                                      linear_acceleration='CG',
-                                      scaling_method='NONE',
-                                      reordering_method='NONE',
-                                      relaxation_factor=relax,
-                                      fname='{}.ims'.format(gwfname))
-        sim.register_ims_package(imsgwf, [gwf.name])
+    # create iterative model solution and register the gwf model with it
+    imsgwf = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
+                                  outer_hclose=hclose,
+                                  outer_maximum=nouter,
+                                  under_relaxation='NONE',
+                                  inner_maximum=ninner,
+                                  inner_hclose=hclose, rcloserecord=rclose,
+                                  linear_acceleration='CG',
+                                  scaling_method='NONE',
+                                  reordering_method='NONE',
+                                  relaxation_factor=relax,
+                                  fname='{}.ims'.format(gwfname))
+    sim.register_ims_package(imsgwf, [gwf.name])
 
-        dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
-                                      delr=delr, delc=delc,
-                                      top=top[idx], botm=botm,
-                                      idomain=np.ones((nlay, nrow, ncol), dtype=np.int),
-                                      fname='{}.dis'.format(gwfname))
+    dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
+                                  delr=delr, delc=delc,
+                                  top=top, botm=botm,
+                                  idomain=np.ones((nlay, nrow, ncol), dtype=np.int),
+                                  fname='{}.dis'.format(gwfname))
 
-        # initial conditions
-        ic = flopy.mf6.ModflowGwfic(gwf, strt=strt,
-                                    fname='{}.ic'.format(gwfname))
+    # initial conditions
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt,
+                                fname='{}.ic'.format(gwfname))
 
-        # node property flow
-        npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False,
-                                      icelltype=laytyp[idx],
-                                      k=hk,
-                                      k33=hk)
-        # storage
-        #sto = flopy.mf6.ModflowGwfsto(gwf, save_flows=False,
-        #                              iconvert=laytyp[idx],
-        #                              ss=ss[idx], sy=sy[idx],
-        #                              steady_state={0: True, 2: True},
-        #                              transient={1: True})
+    # node property flow
+    npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False,
+                                  icelltype=laytyp,
+                                  k=hk,
+                                  k33=hk)
+    # storage
+    #sto = flopy.mf6.ModflowGwfsto(gwf, save_flows=False,
+    #                              iconvert=laytyp[idx],
+    #                              ss=ss[idx], sy=sy[idx],
+    #                              steady_state={0: True, 2: True},
+    #                              transient={1: True})
 
-        # chd files
-        chd = flopy.mf6.ModflowGwfchd(gwf,
-                                      stress_period_data=chdspdict,
-                                      save_flows=False,
-                                      pname='CHD-1')
+    # chd files
+    chd = flopy.mf6.ModflowGwfchd(gwf,
+                                  stress_period_data=chdspdict,
+                                  save_flows=False,
+                                  pname='CHD-1')
 
-        # wel files
-        wel = flopy.mf6.ModflowGwfwel(gwf, print_input=True, print_flows=True,
-                                      stress_period_data=w,
-                                      save_flows=False,
-                                      auxiliary='CONCENTRATION', pname='WEL-1')
+    # wel files
+    wel = flopy.mf6.ModflowGwfwel(gwf, print_input=True, print_flows=True,
+                                  stress_period_data=w,
+                                  save_flows=False,
+                                  auxiliary='CONCENTRATION', pname='WEL-1')
 
-        # output control
-        oc = flopy.mf6.ModflowGwfoc(gwf,
-                                    budget_filerecord='{}.cbc'.format(gwfname),
-                                    head_filerecord='{}.hds'.format(gwfname),
-                                    headprintrecord=[
-                                        ('COLUMNS', 10, 'WIDTH', 15,
-                                         'DIGITS', 6, 'GENERAL')],
-                                    saverecord=[('HEAD', 'LAST')],
-                                    printrecord=[('HEAD', 'LAST'),
-                                                 ('BUDGET', 'LAST')])
+    # output control
+    oc = flopy.mf6.ModflowGwfoc(gwf,
+                                budget_filerecord='{}.cbc'.format(gwfname),
+                                head_filerecord='{}.hds'.format(gwfname),
+                                headprintrecord=[
+                                    ('COLUMNS', 10, 'WIDTH', 15,
+                                     'DIGITS', 6, 'GENERAL')],
+                                saverecord=[('HEAD', 'LAST')],
+                                printrecord=[('HEAD', 'LAST'),
+                                             ('BUDGET', 'LAST')])
 
-        # create gwt model
-        gwtname = 'gwt_' + name
-        gwt = flopy.mf6.MFModel(sim, model_type='gwt6', modelname=gwtname,
-                                model_nam_file='{}.nam'.format(gwtname))
+    # create gwt model
+    gwtname = 'gwt_' + name
+    gwt = flopy.mf6.MFModel(sim, model_type='gwt6', modelname=gwtname,
+                            model_nam_file='{}.nam'.format(gwtname))
 
-        # create iterative model solution and register the gwt model with it
-        imsgwt = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
-                                      outer_hclose=hclose,
-                                      outer_maximum=nouter,
-                                      under_relaxation='NONE',
-                                      inner_maximum=ninner,
-                                      inner_hclose=hclose, rcloserecord=rclose,
-                                      linear_acceleration='BICGSTAB',
-                                      scaling_method='NONE',
-                                      reordering_method='NONE',
-                                      relaxation_factor=relax,
-                                      fname='{}.ims'.format(gwtname))
-        sim.register_ims_package(imsgwt, [gwt.name])
+    # create iterative model solution and register the gwt model with it
+    imsgwt = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
+                                  outer_hclose=hclose,
+                                  outer_maximum=nouter,
+                                  under_relaxation='NONE',
+                                  inner_maximum=ninner,
+                                  inner_hclose=hclose, rcloserecord=rclose,
+                                  linear_acceleration='BICGSTAB',
+                                  scaling_method='NONE',
+                                  reordering_method='NONE',
+                                  relaxation_factor=relax,
+                                  fname='{}.ims'.format(gwtname))
+    sim.register_ims_package(imsgwt, [gwt.name])
 
-        dis = flopy.mf6.ModflowGwtdis(gwt, nlay=nlay, nrow=nrow, ncol=ncol,
-                                      delr=delr, delc=delc,
-                                      top=top[idx], botm=botm,
-                                      idomain=1,
-                                      fname='{}.dis'.format(gwtname))
+    dis = flopy.mf6.ModflowGwtdis(gwt, nlay=nlay, nrow=nrow, ncol=ncol,
+                                  delr=delr, delc=delc,
+                                  top=top, botm=botm,
+                                  idomain=1,
+                                  fname='{}.dis'.format(gwtname))
 
-        # initial conditions
-        ic = flopy.mf6.ModflowGwtic(gwt, strt=0.,
-                                    fname='{}.ic'.format(gwtname))
+    # initial conditions
+    ic = flopy.mf6.ModflowGwtic(gwt, strt=0.,
+                                fname='{}.ic'.format(gwtname))
 
-        # advection
-        adv = flopy.mf6.ModflowGwtadv(gwt, scheme='UPSTREAM',
-                                    fname='{}.adv'.format(gwtname))
+    # advection
+    adv = flopy.mf6.ModflowGwtadv(gwt, scheme=scheme[idx],
+                                fname='{}.adv'.format(gwtname))
 
-        # storage
-        sto = flopy.mf6.ModflowGwtsto(gwt, porosity=0.1,
-                                    fname='{}.sto'.format(gwtname))
+    # storage
+    sto = flopy.mf6.ModflowGwtsto(gwt, porosity=0.1,
+                                fname='{}.sto'.format(gwtname))
 
-        # sources
-        sourcerecarray = [('WEL-1', 1, 'CONCENTRATION')]
-        ssm = flopy.mf6.ModflowGwtssm(gwt, sources=sourcerecarray,
-                                    fname='{}.ssm'.format(gwtname))
+    # sources
+    sourcerecarray = [('WEL-1', 1, 'CONCENTRATION')]
+    ssm = flopy.mf6.ModflowGwtssm(gwt, sources=sourcerecarray,
+                                fname='{}.ssm'.format(gwtname))
 
-        # output control
-        oc = flopy.mf6.ModflowGwtoc(gwt,
-                                    budget_filerecord='{}.cbc'.format(gwtname),
-                                    concentration_filerecord='{}.ucn'.format(gwtname),
-                                    concentrationprintrecord=[
-                                        ('COLUMNS', 10, 'WIDTH', 15,
-                                         'DIGITS', 6, 'GENERAL')],
-                                    saverecord=[('CONCENTRATION', 'LAST')],
-                                    printrecord=[('CONCENTRATION', 'LAST'),
-                                                 ('BUDGET', 'LAST')])
+    # output control
+    oc = flopy.mf6.ModflowGwtoc(gwt,
+                                budget_filerecord='{}.cbc'.format(gwtname),
+                                concentration_filerecord='{}.ucn'.format(gwtname),
+                                concentrationprintrecord=[
+                                    ('COLUMNS', 10, 'WIDTH', 15,
+                                     'DIGITS', 6, 'GENERAL')],
+                                saverecord=[('CONCENTRATION', 'LAST')],
+                                printrecord=[('CONCENTRATION', 'LAST'),
+                                             ('BUDGET', 'LAST')])
 
-        # GWF GWT exchange
-        gwfgwt = flopy.mf6.ModflowGwfgwt(sim, exgtype='GWF6-GWT6',
-                                         exgmnamea=gwfname, exgmnameb=gwtname,
-                                         fname='{}.gwfgwt'.format(name))
+    # GWF GWT exchange
+    gwfgwt = flopy.mf6.ModflowGwfgwt(sim, exgtype='GWF6-GWT6',
+                                     exgmnamea=gwfname, exgmnameb=gwtname,
+                                     fname='{}.gwfgwt'.format(name))
 
-        # write MODFLOW 6 files
-        sim.write_simulation()
-
-    return
+    return sim
 
 
 def eval_transport(sim):
@@ -234,6 +238,13 @@ def eval_transport(sim):
 
 
 # - No need to change any code below
+def build_models():
+    for idx, dir in enumerate(exdirs):
+        sim = get_model(idx, dir)
+        sim.write_simulation()
+    return
+
+
 def test_mf6model():
     # initialize testing framework
     test = testing_framework()
