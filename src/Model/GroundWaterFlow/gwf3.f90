@@ -117,7 +117,7 @@ module GwfModule
     use GwfDisuModule,              only: disu_cr
     use GwfNpfModule,               only: npf_cr
     use Xt3dModule,                 only: xt3d_cr
-    use VKDModule,                  only: vkd_cr
+!!!!    use VKDModule,                  only: vkd_cr
     use GwfStoModule,               only: sto_cr
     use GwfMvrModule,               only: mvr_cr
     use GwfHfbModule,               only: hfb_cr
@@ -273,7 +273,7 @@ module GwfModule
     ! -- Create packages that are tied directly to model
     call npf_cr(this%npf, this%name, this%innpf, this%iout)
     call xt3d_cr(this%xt3d, this%name, this%innpf, this%iout)
-    call vkd_cr(this%vkd, this%name, this%innpf, this%iout)
+!!$    call vkd_cr(this%vkd, this%name, this%innpf, this%iout)
     call gnc_cr(this%gnc, this%name, this%ingnc, this%iout)
     call hfb_cr(this%hfb, this%name, this%inhfb, this%iout)
     call sto_cr(this%sto, this%name, this%insto, this%iout)
@@ -320,6 +320,7 @@ module GwfModule
     ! -- Define packages and utility objects
     call this%dis%dis_df()
     call this%npf%npf_df(this%xt3d, this%vkd, this%ingnc)
+    call vkd_cr(this%vkd, this%name, this%innpf, this%iout)
     call this%oc%oc_df()
     call this%budget%budget_df(niunit, 'VOLUME', 'L**3')
     if(this%ingnc > 0) call this%gnc%gnc_df(this)

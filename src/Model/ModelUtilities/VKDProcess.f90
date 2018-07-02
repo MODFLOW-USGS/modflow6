@@ -17,8 +17,10 @@ module VKDModule
 !!$    integer(I4B), pointer                   :: inunit     => null()
 !!$    integer(I4B), pointer                   :: iout       => null()
 !!$    character(len=LENORIGIN), pointer       :: origin     => null()   !origin name of this package (e.g. 'GWF_1 NPF')
-    integer(I4B), pointer, dimension(:)     :: ibound     => null()   !pointer to model ibound
-    integer(I4B), pointer                   :: ivkd        => null()    !vkd flag (0 is off, 1 is lhs, 2 is rhs)
+    integer(I4B), pointer, dimension(:)             :: ibound       => null()   !pointer to model ibound
+    integer(I4B), pointer                           :: ivkd         => null()   ! vkd flag (0 is off, 1 is on)
+    integer(I4B), pointer                           :: inUnitVkd    => null()   ! vkd input file unit number
+
 !!$    class(DisBaseType), pointer             :: dis        => null()   !discretization object
 !!$    class(BlockParserType), pointer             :: parser     => null()   !discretization object
     real(DP), dimension(:,:), pointer, contiguous               :: kk           => null()   ! k knots
@@ -42,7 +44,7 @@ module VKDModule
 !!$    procedure :: vkd_ac
     procedure :: vkd_ar
     procedure :: vkd_hcond
-!!$    procedure :: read_vkd
+    procedure :: read_data
 !!$    procedure :: read_kk
 !!$    procedure :: read_ek
     procedure :: vkd_satThk
@@ -80,6 +82,8 @@ contains
     ! -- Set variables
     vkdobj%inunit = inunit
     vkdobj%iout   = iout
+    write(*,*) ' WILL ', iout
+    write(*,*) ' WILL ', vkdobj%iout
     !
     ! -- Return
     return
@@ -117,7 +121,8 @@ contains
     ! -- data
 ! ------------------------------------------------------------------------------
     !
-    ! -- Print a message identifying the xt3d module.
+    ! -- Print a message identifying the VKD module.
+    
     write(this%iout, fmtheader)
     !
     ! -- Store pointers to arguments that were passed in
@@ -142,9 +147,147 @@ contains
     ! -- allocate arrays
     call this%allocate_arrays(this%dis%nodes)
     !
+
+    ! -- put new read in here
+    call this%read_data()
+
+    
     ! -- Return
     return
   end subroutine vkd_ar
+
+  subroutine read_data(this)
+! ******************************************************************************
+! read_data -- read the vkd data block
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule,   only: LINELENGTH, DONE, DPIO180
+    use MemoryManagerModule, only: mem_reallocate
+    use SimModule,         only: ustop, store_error, count_errors
+    ! -- dummy
+    class(VKDType) :: this
+    ! -- local
+    character(len=LINELENGTH) :: line, errmsg, cellstr, keyword
+    integer(I4B) :: n, istart, istop, lloc, ierr, nerr
+    logical :: isfound, endOfBlock
+    logical, dimension(10)           :: lname
+    character(len=24), dimension(10) :: aname
+    integer(I4B), pointer                         :: index           => null()   ! tmp pointer
+    ! -- formats
+    ! -- formats
+    character(len=*), parameter :: fmtiprflow =                                &
+      "(4x,'CELL-BY-CELL FLOW INFORMATION WILL BE PRINTED TO LISTING FILE " // &
+      "WHENEVER ICBCFL IS NOT ZERO.')"
+    character(len=*), parameter :: fmtisvflow =                                &
+      "(4x,'CELL-BY-CELL FLOW INFORMATION WILL BE SAVED TO BINARY FILE " //    &
+      "WHENEVER ICBCFL IS NOT ZERO.')"
+    character(len=*), parameter :: fmtnct =                                    &
+      "(1x, 'Negative cell thickness at cell: ', a)"
+    character(len=*), parameter :: fmtkerr =                                   &
+      "(1x, 'Hydraulic property ',a,' is <= 0 for cell ',a, ' ', 1pg15.6)"
+    character(len=*), parameter :: fmtkerr2 =                                  &
+        "(1x, '... ', i0,' additional errors not shown for ',a)"
+    ! -- data
+    data aname(1) /'                      KK'/
+    data aname(2) /'                     EK'/
+! ------------------------------------------------------------------------------
+    !
+    ! -- Initialize
+    lname(:) = .false.
+    allocate(index)
+    !
+    ! -- get npfdata block
+    call this%parser%GetBlock('GRIDDATA', isfound, ierr)
+    if(isfound) then
+      write(this%iout,'(1x,a)')'PROCESSING GRIDDATA'
+      do
+        call this%parser%GetNextLine(endOfBlock)
+        if (endOfBlock) exit
+        call this%parser%GetStringCaps(keyword)
+        call this%parser%GetRemainingLine(line)
+        lloc = 1
+        select case (keyword)
+          case ('KK')
+!!$            call this%vkd%read_kk(index line, lloc, istart, istop, aname(9))
+
+            this%ikk = this%ikk + 1
+            call mem_reallocate(this%kk, this%dis%nodes, this%ikk, 'KK', &
+                trim(this%origin))
+            this%pt => this%kk(:, this%ikk)
+            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
+                                    this%parser%iuactive, this%pt, aname(9))
+            lname(1) = .true.
+          case ('EK')
+!!$            call this%vkd%read_ek(index, line, lloc, istart, istop, aname(10))
+            this%iek = this%iek + 1
+            call mem_reallocate(this%ek, this%dis%nodes, this%iek, 'EK', &
+                trim(this%origin))
+            this%pt => this%ek(:, this%iek)
+            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
+                                    this%parser%iuactive, this%pt, aname(10))
+            lname(2) = .true.
+
+          case default
+            write(errmsg,'(4x,a,a)')'VKD ERROR. UNKNOWN GRIDDATA TAG: ',         &
+                                     trim(keyword)
+            call store_error(errmsg)
+            call this%parser%StoreErrorUnit()
+            call ustop()
+        end select
+      end do
+    else
+      write(errmsg,'(1x,a)')'ERROR.  REQUIRED GRIDDATA BLOCK NOT FOUND.'
+      call store_error(errmsg)
+      call this%parser%StoreErrorUnit()
+      call ustop()
+    end if
+    !
+    ! -- Check for ICELLTYPE
+    if(.not. lname(1)) then
+      write(errmsg, '(a, a, a)') 'Error in GRIDDATA block: ',                  &
+                                 trim(adjustl(aname(1))), ' not found.'
+      call store_error(errmsg)
+    endif
+    !
+    ! -- Check for K or check K11
+    if(.not. lname(2)) then
+      write(errmsg, '(a, a, a)') 'Error in GRIDDATA block: ',                  &
+                                 trim(adjustl(aname(2))), ' not found.'
+      call store_error(errmsg)
+    else
+      nerr = 0
+      do n = 1, size(this%k11)
+        if(this%k11(n) <= DZERO) then
+          nerr = nerr + 1
+          if(nerr <= 20) then
+            call this%dis%noder_to_string(n, cellstr)
+            write(errmsg, fmtkerr) trim(adjustl(aname(2))), trim(cellstr),     &
+                                   this%k11(n)
+            call store_error(errmsg)
+          endif
+        endif
+      enddo
+      if(nerr > 20) then
+        write(errmsg, fmtkerr2) nerr, trim(adjustl(aname(2)))
+        call store_error(errmsg)
+      endif
+    endif
+    !
+    if(count_errors() > 0) then
+      call this%parser%StoreErrorUnit()
+      call ustop()
+    endif
+    !
+    ! -- Final NPFDATA message
+    write(this%iout,'(1x,a)')'END PROCESSING GRIDDATA'
+    !
+    ! -- Return
+    return
+  end subroutine read_data
+
   
 !!$  subroutine read_kk(this, line, lloc, istart, istop, name)
 !!$! ******************************************************************************
@@ -339,7 +482,10 @@ contains
     this%origin = 'VKD'
     !
     ! -- Allocate scalars
-    call mem_allocate(this%ivkd, 'IVKD', this%origin) !wittw
+
+    call mem_allocate(this%ivkd, 'IVKD', this%origin)
+    call mem_allocate(this%inUnitVkd, 'INUNITVKD', this%origin)
+    
     call mem_allocate(this%ikk, 'IKK', this%origin) !wittw
     call mem_allocate(this%iek, 'IEK', this%origin) !wittw
     call mem_allocate(this%inunit, 'INUNIT', this%origin)

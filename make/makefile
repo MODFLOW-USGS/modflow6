@@ -44,10 +44,12 @@ ${SOURCEDIR14}
 # Define the Fortran compile flags
 FC = gfortran
 FFLAGS = -O2 -fbacktrace -ffpe-summary=overflow -ffpe-trap=overflow,zero,invalid 
+FFLAGS = -g -ggdb -fbacktrace -ffpe-summary=overflow -ffpe-trap=overflow,zero,invalid 
 
 # Define the C compile flags
 CC = gcc
 CFLAGS = -O3 -D_UF 
+CFLAGS = -g -ggdb -D_UF 
 
 # Define the libraries
 SYSLIBS = -lc 
@@ -56,6 +58,7 @@ OBJECTS = \
 $(OBJDIR)/OpenSpec.o \
 $(OBJDIR)/kind.o \
 $(OBJDIR)/List.o \
+$(OBJDIR)/version.o \
 $(OBJDIR)/SimVariables.o \
 $(OBJDIR)/ims8reordering.o \
 $(OBJDIR)/BaseGeometry.o \
@@ -108,9 +111,10 @@ $(OBJDIR)/gwf3dis8.o \
 $(OBJDIR)/OutputControlData.o \
 $(OBJDIR)/TimeArraySeries.o \
 $(OBJDIR)/gwf3disu8.o \
+$(OBJDIR)/NumericalPackage.o \
 $(OBJDIR)/VKDProcess.o \
 $(OBJDIR)/Xt3dInterface.o \
-$(OBJDIR)/NumericalPackage.o \
+$(OBJDIR)/comarg.o \
 $(OBJDIR)/Observe.o \
 $(OBJDIR)/ObsUtility.o \
 $(OBJDIR)/gwf3ic8.o \

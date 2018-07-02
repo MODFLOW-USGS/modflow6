@@ -9,7 +9,7 @@ module GwfNpfModule
   use BaseDisModule,              only: DisBaseType
   use GwfIcModule,                only: GwfIcType
   use Xt3dModule,                 only: Xt3dType
-  use VKDModule,                  only: VKDType
+  use VKDModule,                  only: VKDType, vkd_cr
   use BlockParserModule,          only: BlockParserType
 
   implicit none
@@ -31,6 +31,7 @@ module GwfNpfModule
     real(DP), dimension(:), pointer                 :: hnew         => null()   ! pointer to model xnew
     integer(I4B), pointer                           :: ixt3d        => null()   ! xt3d flag (0 is off, 1 is lhs, 2 is rhs)
     integer(I4B), pointer                           :: ivkd         => null()   ! vkd flag (0 is off, 1 is on)
+    integer(I4B), pointer                           :: inUnitVkd    => null()   ! vkd input file unit number
     integer(I4B), pointer                           :: iperched     => null()   ! vertical flow corrections if 1
     integer(I4B), pointer                           :: ivarcv       => null()   ! CV is function of water table
     integer(I4B), pointer                           :: idewatcv     => null()   ! CV may be a discontinuous function of water table
@@ -157,7 +158,6 @@ module GwfNpfModule
     ! -- modules
     use SimModule, only: ustop, store_error
     use Xt3dModule, only: xt3d_cr
-    use VKDModule, only: vkd_cr
     ! -- dummy
     class(GwfNpftype) :: this
     type(Xt3dType), pointer :: xt3d
@@ -187,10 +187,11 @@ module GwfNpfModule
     !
     ! -- Save pointer to vkd object
     this%vkd => vkd
+!!$    if (this%ivkd > 0) vkd%ivkd = this%ivkd    
     !
     ! -- Ensure GNC and VKD are not both on at the same time
     !     implement this later
-    if (this%vkd%ivkd > 0 .and. ingnc > 0) then
+    if (this%ivkd > 0 .and. ingnc > 0) then
       call store_error('Error in model ' // trim(this%name_model) // &
         '.  The VKD option cannot be used with the GNC Package.')
       call ustop()
@@ -206,7 +207,7 @@ module GwfNpfModule
 
     !
     ! -- Ensure VKD and XT3D are not both on at the same time
-    if (this%ixt3d > 0 .and. this%vkd%ivkd > 0) then
+    if (this%ixt3d > 0 .and. this%ivkd > 0) then
       write(*,*) this%ivkd
       call store_error('Error in model ' // trim(this%name_model) // &
         '.  The XT3D option cannot be used with the VKD Package.')
@@ -297,10 +298,6 @@ module GwfNpfModule
     ! -- allocate arrays
     call this%allocate_arrays(dis%nodes, dis%njas)
     !
-    if(this%ivkd > 0) call this%vkd%vkd_ar(dis, ibound, this%k11, this%ik33,          &
-      this%k33, this%sat, this%ik22, this%k22, this%inewton, this%min_satthk,  &
-      this%icelltype, this%satomega)
-    !
     ! -- read the data block
     call this%read_data()
     !
@@ -312,6 +309,11 @@ module GwfNpfModule
       this%k33, this%sat, this%ik22, this%k22, this%inewton, this%min_satthk,  &
       this%icelltype, this%iangle1, this%iangle2, this%iangle3,                &
       this%angle1, this%angle2, this%angle3)
+    !
+    ! -- vkd
+    if(this%ivkd > 0) call this%vkd%vkd_ar(dis, ibound, this%k11, this%ik33,          &
+      this%k33, this%sat, this%ik22, this%k22, this%inewton, this%min_satthk,  &
+      this%icelltype, this%satomega)
     !
     ! -- Return
     return
@@ -956,6 +958,7 @@ module GwfNpfModule
     !
     ! -- Scalars
     call mem_deallocate(this%ixt3d)
+    call mem_deallocate(this%ivkd)
     call mem_deallocate(this%satomega)
     call mem_deallocate(this%hnoflo)
     call mem_deallocate(this%hdry)
@@ -1028,6 +1031,7 @@ module GwfNpfModule
     ! -- Allocate scalars
     call mem_allocate(this%ixt3d, 'IXT3D', this%origin)
     call mem_allocate(this%ivkd, 'IVKD', this%origin)
+    call mem_allocate(this%inUnitVkd, 'INUNITVKD', this%origin)
     call mem_allocate(this%satomega, 'SATOMEGA', this%origin)
     call mem_allocate(this%hnoflo, 'HNOFLO', this%origin)
     call mem_allocate(this%hdry, 'HDRY', this%origin)
@@ -1156,11 +1160,12 @@ module GwfNpfModule
     ! -- modules
     use ConstantsModule,   only: LINELENGTH
     use SimModule, only: ustop, store_error
+    use VKDModule,                  only: vkd_cr
     implicit none
     ! -- dummy
     class(GwfNpftype) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg, keyword
+    character(len=LINELENGTH) :: errmsg, keyword, fname
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     ! -- formats
@@ -1173,7 +1178,9 @@ module GwfNpfModule
     character(len=*), parameter :: fmtcellavg =                                &
       "(4x,'ALTERNATIVE CELL AVERAGING HAS BEEN SET TO ', a)"
     character(len=*), parameter :: fmtnct =                                    &
-      "(1x, 'Negative cell thickness at cell: ', a)"
+        "(1x, 'Negative cell thickness at cell: ', a)"
+    character(len=*), parameter :: fmtvkd = &
+        "(4x, 'VKD DATA WILL BE READ FROM FILE: ', a)"
     ! -- data
 ! ------------------------------------------------------------------------------
     !
@@ -1247,7 +1254,21 @@ module GwfNpfModule
           case ('VKD')
             this%ivkd = 1
             write(this%iout, '(4x,a)')                                         &
-                             'VKD FORMULATION IS SELECTED.'
+                'VKD FORMULATION IS SELECTED.'
+            call this%parser%GetStringCaps(keyword)
+            if(trim(adjustl(keyword)) /= 'FILEIN') then
+              errmsg = 'VKD keyword must be followed by "FILEIN" ' //         &
+                  'then by filename.'
+              call store_error(errmsg)
+              call this%parser%StoreErrorUnit()
+              call ustop()
+            endif
+            
+            call this%parser%GetString(fname)
+            write(this%iout,fmtvkd)trim(fname)
+            open(file=fname, newunit=this%inUnitVkd)
+            call vkd_cr(this%vkd, this%name, this%inUnitVkd, this%iout)
+            
           case ('SAVE_SPECIFIC_DISCHARGE')
             this%icalcspdis = 1
             this%isavspdis = 1
@@ -1509,8 +1530,8 @@ module GwfNpfModule
     data aname(6) /'                  ANGLE1'/
     data aname(7) /'                  ANGLE2'/
     data aname(8) /'                  ANGLE3'/
-    data aname(9) /'                      KK'/
-    data aname(10) /'                     EK'/
+!!$    data aname(9) /'                      KK'/
+!!$    data aname(10) /'                     EK'/
 ! ------------------------------------------------------------------------------
     !
     ! -- Initialize
@@ -1527,6 +1548,7 @@ module GwfNpfModule
         call this%parser%GetStringCaps(keyword)
         call this%parser%GetRemainingLine(line)
         lloc = 1
+        write(*,*) 'willy', keyword
         select case (keyword)
           case ('ICELLTYPE')
             call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
@@ -1575,25 +1597,25 @@ module GwfNpfModule
                                     this%parser%iuactive, this%angle3, aname(8))
             lname(8) = .true.
             ! wittw
-          case ('KK')
-!!$            call this%vkd%read_kk(index line, lloc, istart, istop, aname(9))
-
-            this%vkd%ikk = this%vkd%ikk + 1
-            call mem_reallocate(this%vkd%kk, this%dis%nodes, this%vkd%ikk, 'KK', &
-                trim(this%vkd%origin))
-            this%vkd%pt => this%vkd%kk(:, this%vkd%ikk)
-            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                    this%parser%iuactive, this%vkd%pt, aname(9))
-            lname(9) = .true.
-          case ('EK')
-!!$            call this%vkd%read_ek(index, line, lloc, istart, istop, aname(10))
-            this%vkd%iek = this%vkd%iek + 1
-            call mem_reallocate(this%vkd%ek, this%dis%nodes, this%vkd%iek, 'EK', &
-                trim(this%vkd%origin))
-            this%vkd%pt => this%vkd%ek(:, this%vkd%iek)
-            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                    this%parser%iuactive, this%vkd%pt, aname(10))
-            lname(10) = .true.
+!!$          case ('KK')
+!CCCCC            call this%vkd%read_kk(index line, lloc, istart, istop, aname(9))
+!!$
+!!$            this%vkd%ikk = this%vkd%ikk + 1
+!!$            call mem_reallocate(this%vkd%kk, this%dis%nodes, this%vkd%ikk, 'KK', &
+!!$                trim(this%vkd%origin))
+!!$            this%vkd%pt => this%vkd%kk(:, this%vkd%ikk)
+!!$            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
+!!$                                    this%parser%iuactive, this%vkd%pt, aname(9))
+!!$            lname(9) = .true.
+!!$          case ('EK')
+!CCCCC            call this%vkd%read_ek(index, line, lloc, istart, istop, aname(10))
+!!$            this%vkd%iek = this%vkd%iek + 1
+!!$            call mem_reallocate(this%vkd%ek, this%dis%nodes, this%vkd%iek, 'EK', &
+!!$                trim(this%vkd%origin))
+!!$            this%vkd%pt => this%vkd%ek(:, this%vkd%iek)
+!!$            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
+!!$                                    this%parser%iuactive, this%vkd%pt, aname(10))
+!!$            lname(10) = .true.
 
           case default
             write(errmsg,'(4x,a,a)')'ERROR. UNKNOWN GRIDDATA TAG: ',           &
