@@ -247,7 +247,7 @@ def get_model(idx, dir):
 
         # maw files
         if jdx == nmodels - 1:
-            mpd = [[0, 0.25, bot, strt, 'THEIM', 1]]
+            mpd = [[0, 0.25, bot, strt, 'THIEM', 1]]
             mcd = [[0, 0, (0, 15, int(ncolst[jdx]) - 31), top, bot, 999.,
                     999.]]
             perioddata = [[0, 'RATE', -1e-5]]

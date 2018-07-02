@@ -59,6 +59,8 @@ bin/mf6
 bin/mf5to6
 bin/zbud6
 
+make/makefile
+
 tmp_simulations/
 autotest/temp/
 autotest/tempbin/
