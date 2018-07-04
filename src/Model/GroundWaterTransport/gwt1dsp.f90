@@ -269,6 +269,7 @@ module GwtDspModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    use TdisModule, only: kstp, kper
     ! -- dummy
     class(GwtDspType) :: this
     integer(I4B), intent(in) :: kiter 
@@ -278,17 +279,23 @@ module GwtDspModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Calculate xt3d coefficients if flow solution has changed
+    !    Force iflwchng to be 1 for the very first iteration just in case
+    !    there is no advection so that the xt3d_fcpc routine is called
     if (this%ixt3d > 0) then
       iflwchng = 0
-      nodeloop: do n = 1, this%dis%nodes
-        do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
-          fd = abs(this%gwfflowjaold(ipos) - this%fmi%gwfflowja(ipos))
-          if(fd > 1.D-8) then
-            iflwchng = 1
-            exit nodeloop
-          endif
-        enddo
-      enddo nodeloop
+      if (kper*kstp*kiter == 1) then
+        iflwchng = 1
+      else
+        nodeloop: do n = 1, this%dis%nodes
+          do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
+            fd = abs(this%gwfflowjaold(ipos) - this%fmi%gwfflowja(ipos))
+            if(fd > 1.D-8) then
+              iflwchng = 1
+              exit nodeloop
+            endif
+          enddo
+        enddo nodeloop
+      endif
       !
       ! -- If flow has changed, then update coefficients
       if (iflwchng == 1) then
