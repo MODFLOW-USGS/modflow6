@@ -177,6 +177,10 @@ module GwfNpfModule
     ! -- Initialize block parser
     call this%parser%Initialize(this%inunit, this%iout)
     !
+    ! -- Save pointer to vkd object
+    this%vkd => vkd
+    !!$    if (this%ivkd > 0) vkd%ivkd = this%ivkd    
+    !
     ! -- set, read, and check options
     call this%read_options()
     call this%check_options()
@@ -184,10 +188,6 @@ module GwfNpfModule
     ! -- Save pointer to xt3d object
     this%xt3d => xt3d
     if (this%ixt3d > 0) xt3d%ixt3d = this%ixt3d    
-    !
-    ! -- Save pointer to vkd object
-    this%vkd => vkd
-!!$    if (this%ivkd > 0) vkd%ivkd = this%ivkd    
     !
     ! -- Ensure GNC and VKD are not both on at the same time
     !     implement this later
@@ -299,9 +299,24 @@ module GwfNpfModule
     call this%allocate_arrays(dis%nodes, dis%njas)
     !
     ! -- read the data block
+    write(*,*) 'rrrr read data'
     call this%read_data()
     !
+
+    ! -- initialise vkd ib array
+    this%vkd%ibvkd = 0
+    ! -- vkd
+    if(this%ivkd > 0) then
+      write(*,*) 'calling vkd_ar'
+      call this%vkd%vkd_ar(dis, ibound, this%k11, this%ik33,          &
+      this%k33, this%sat, this%ik22, this%k22, this%inewton, this%min_satthk,  &
+      this%icelltype, this%satomega)
+    endif
+    write(*,*) 'done vkd_ar'
+
+    
     ! -- Initialize and check data
+    write(*,*) 'rrrr precheck'
     call this%prepcheck()
     !
     ! -- xt3d
@@ -310,10 +325,14 @@ module GwfNpfModule
       this%icelltype, this%iangle1, this%iangle2, this%iangle3,                &
       this%angle1, this%angle2, this%angle3)
     !
-    ! -- vkd
-    if(this%ivkd > 0) call this%vkd%vkd_ar(dis, ibound, this%k11, this%ik33,          &
-      this%k33, this%sat, this%ik22, this%k22, this%inewton, this%min_satthk,  &
-      this%icelltype, this%satomega)
+!!$    ! -- vkd
+!!$    if(this%ivkd > 0) then
+!!$      write(*,*) 'calling vkd_ar'
+!!$      call this%vkd%vkd_ar(dis, ibound, this%k11, this%ik33,          &
+!!$      this%k33, this%sat, this%ik22, this%k22, this%inewton, this%min_satthk,  &
+!!$      this%icelltype, this%satomega)
+!!$    endif
+!!$    write(*,*) 'not calling vkd_ar'
     !
     ! -- Return
     return
@@ -468,7 +487,12 @@ module GwfNpfModule
           !
           ! -- Horizontal conductance
           ! wittw miss this
-          if ( this%icelltype(n) < 2 ) then
+          if ((this%vkd%ibvkd(n) > 0) .and. (this%vkd%ibvkd(m) > 0)) then
+            ! call hcond_vkd
+            cond = this%vkd%vkd_hcond(n, m, this%dis%con%cl1(this%dis%con%jas(ii)), &
+                this%dis%con%cl2(this%dis%con%jas(ii)), this%dis%con%hwva(this%dis%con%jas(ii)), &
+                this%condsat(this%dis%con%jas(ii)), hnew(n), hnew(m), this%inewton)
+          else
             cond = hcond(this%ibound(n), this%ibound(m),                       &
                 this%icelltype(n), this%icelltype(m),                 &
                 this%inewton, this%inewton,                           &
@@ -482,11 +506,6 @@ module GwfNpfModule
                 this%dis%con%cl2(this%dis%con%jas(ii)),               &
                 this%dis%con%hwva(this%dis%con%jas(ii)),              &
                 this%satomega )
-          else
-            ! call hcond_vkd
-            cond = this%vkd%vkd_hcond(n, m, this%dis%con%cl1(this%dis%con%jas(ii)), &
-                this%dis%con%cl2(this%dis%con%jas(ii)), this%dis%con%hwva(this%dis%con%jas(ii)), &
-                this%condsat(this%dis%con%jas(ii)), hnew(n), hnew(m), this%inewton)
           endif
         endif
         !
@@ -1131,6 +1150,7 @@ module GwfNpfModule
 !!$    call mem_allocate(this%kk, 0, 0, 'KK', trim(this%origin))
 !!$    call mem_allocate(this%ek, 0, 0, 'EK', trim(this%origin))
 !!$    call mem_allocate(this%pt, ncells, 'TMP', trim(this%origin))
+    call mem_allocate(this%vkd%ibvkd, ncells, 'TMP', trim(this%origin))
     !
     ! -- Specific discharge
     if (this%icalcspdis == 1) then
@@ -1268,6 +1288,7 @@ module GwfNpfModule
             write(this%iout,fmtvkd)trim(fname)
             open(file=fname, newunit=this%inUnitVkd)
             call vkd_cr(this%vkd, this%name, this%inUnitVkd, this%iout)
+            write(*,*) ' wittw ', this%vkd%iout
             
           case ('SAVE_SPECIFIC_DISCHARGE')
             this%icalcspdis = 1

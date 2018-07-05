@@ -43,13 +43,13 @@ ${SOURCEDIR14}
 
 # Define the Fortran compile flags
 FC = gfortran
-FFLAGS = -O2 -fbacktrace -ffpe-summary=overflow -ffpe-trap=overflow,zero,invalid 
+FFLAGS = -O2 -fbacktrace 
 FFLAGS = -g -ggdb -fbacktrace -ffpe-summary=overflow -ffpe-trap=overflow,zero,invalid 
 
 # Define the C compile flags
 CC = gcc
 CFLAGS = -O3 -D_UF 
-CFLAGS = -g -ggdb -D_UF 
+# CFLAGS = -g -ggdb -D_UF 
 
 # Define the libraries
 SYSLIBS = 
@@ -58,11 +58,6 @@ OBJECTS = \
 $(OBJDIR)/OpenSpec.o \
 $(OBJDIR)/kind.o \
 $(OBJDIR)/List.o \
-$(OBJDIR)/version.o \
-$(OBJDIR)/SimVariables.o \
-$(OBJDIR)/ims8reordering.o \
-$(OBJDIR)/BaseGeometry.o \
-$(OBJDIR)/Sparse.o \
 $(OBJDIR)/HashTable.o \
 $(OBJDIR)/version.o \
 $(OBJDIR)/Constants.o \
@@ -114,12 +109,7 @@ $(OBJDIR)/BndUzfKinematic.o \
 $(OBJDIR)/SolutionGroup.o \
 $(OBJDIR)/BaseExchange.o \
 $(OBJDIR)/OutputControlData.o \
-$(OBJDIR)/TimeArraySeries.o \
-$(OBJDIR)/gwf3disu8.o \
-$(OBJDIR)/NumericalPackage.o \
-$(OBJDIR)/VKDProcess.o \
-$(OBJDIR)/Xt3dInterface.o \
-$(OBJDIR)/comarg.o \
+$(OBJDIR)/TimeArray.o \
 $(OBJDIR)/Observe.o \
 $(OBJDIR)/Xt3dInterface.o \
 $(OBJDIR)/gwf3mvr8.o \
@@ -129,6 +119,7 @@ $(OBJDIR)/gwf3dis8.o \
 $(OBJDIR)/gwf3disu8.o \
 $(OBJDIR)/gwf3disv8.o \
 $(OBJDIR)/gwf3sto8.o \
+$(OBJDIR)/VKDProcess.o \
 $(OBJDIR)/TimeArraySeries.o \
 $(OBJDIR)/ObsUtility.o \
 $(OBJDIR)/ObsContainer.o \

@@ -2,7 +2,8 @@ module VKDModule
   use KindModule,                 only: DP, I4B
   use ConstantsModule,            only: DZERO, DEM9, DEM8, DEM7, DEM6, DEM2,    &
                                         DHALF, DP9, DONE, DLNLOW, DLNHIGH,      &
-                                        DHNOFLO, DHDRY, DEM10, LENORIGIN
+                                        DHNOFLO, DHDRY, DEM10, LENORIGIN,       &
+                                        LINELENGTH
   use SmoothingModule,            only: sQuadraticSaturation, sPChip_set_derivatives, sPChip_integrate, &
                                         sQuadraticSaturationDerivative
   use BaseDisModule,              only: DisBaseType
@@ -18,10 +19,13 @@ module VKDModule
 !!$    integer(I4B), pointer                   :: iout       => null()
 !!$    character(len=LENORIGIN), pointer       :: origin     => null()   !origin name of this package (e.g. 'GWF_1 NPF')
     integer(I4B), pointer, dimension(:)             :: ibound       => null()   !pointer to model ibound
+    integer(I4B), pointer, contiguous, dimension(:) :: ibvkd         => null()   !pointer to model vkd ibound
     integer(I4B), pointer                           :: ivkd         => null()   ! vkd flag (0 is off, 1 is on)
+    integer(I4B), pointer                           :: numvkd       => null()   ! number of cells with VKD active
+    integer(I4B), pointer                           :: numelevs     => null()   ! number of VKD knots
     integer(I4B), pointer                           :: inUnitVkd    => null()   ! vkd input file unit number
-
-!!$    class(DisBaseType), pointer             :: dis        => null()   !discretization object
+!!$    integer(I4B), pointer                           :: iprpak   => null()       ! print flag
+!    class(DisBaseType), pointer             :: dis        => null()   !discretization object
 !!$    class(BlockParserType), pointer             :: parser     => null()   !discretization object
     real(DP), dimension(:,:), pointer, contiguous               :: kk           => null()   ! k knots
     real(DP), dimension(:,:), pointer, contiguous               :: ek           => null()   ! elevation knots
@@ -40,6 +44,7 @@ module VKDModule
     real(DP), pointer                       :: min_satthk => null()   !min saturated thickness
     real(DP), pointer                       :: satomega => null()
     integer(I4B), dimension(:), pointer     :: icelltype  => null()   !cell type (confined or unconfined)
+    type (VKDCellType), dimension(:), pointer, contiguous :: cells => null()                    ! VKD cell data
   contains
 !!$    procedure :: vkd_ac
     procedure :: vkd_ar
@@ -50,8 +55,15 @@ module VKDModule
     procedure :: vkd_satThk
     procedure :: allocate_scalars
     procedure, private :: allocate_arrays
+    procedure, private :: read_dimensions
+    procedure, private :: read_options
   end type VKDType
-  
+
+  type :: VKDCellType
+    integer(I4B), pointer :: igwfnode => null()
+    real(DP), dimension(:), pointer, contiguous :: ek => null()
+    real(DP), dimension(:), pointer, contiguous :: kk => null()
+  end type VKDCellType
   
 !
 ! -- Mathematical core of the VKD method.
@@ -123,7 +135,7 @@ contains
     !
     ! -- Print a message identifying the VKD module.
     
-    write(this%iout, fmtheader)
+!!$    write(this%iout, fmtheader)
     !
     ! -- Store pointers to arguments that were passed in
     this%dis     => dis
@@ -142,12 +154,22 @@ contains
     ! hmmm
     ! -- Initialize block parser
     call this%parser%Initialize(this%inunit, this%iout)
+
+    !!!!!!!! WITTW
+    ! -- read gnc options
+    call this%read_options()
+    !
+    ! -- read gnc dimensions
+    call this%read_dimensions()
+    !!!!!!!! WITTW
     
     !
     ! -- allocate arrays
     call this%allocate_arrays(this%dis%nodes)
     !
-
+    ! -- allocate space for vkd cell data
+    !
+    allocate(this%cells(this%numvkd))
     ! -- put new read in here
     call this%read_data()
 
@@ -156,6 +178,117 @@ contains
     return
   end subroutine vkd_ar
 
+
+  
+!!!!!!!!!!! WITTW
+
+  subroutine read_options(this)
+! ******************************************************************************
+! read_options -- read a gnc options block
+! Subroutine: (1) read options from input file
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use SimModule, only: ustop, store_error
+    ! -- dummy
+    class(VKDType) :: this
+    ! -- local
+    character(len=LINELENGTH) :: errmsg, keyword
+    integer(I4B) :: ierr
+    logical :: isfound, endOfBlock
+! ------------------------------------------------------------------------------
+    !
+    ! -- get options block
+    call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false.)
+    !
+    ! -- parse options block if detected
+    if (isfound) then
+      write(this%iout,'(1x,a)')'PROCESSING VKD OPTIONS'
+      do
+        call this%parser%GetNextLine(endOfBlock)
+        if (endOfBlock) exit
+        call this%parser%GetStringCaps(keyword)
+        select case (keyword)
+          case ('PRINT_INPUT')
+            this%iprpak = 1
+            write(this%iout,'(4x,a)') &
+              'THE LIST OF VKD CORRECTIONS WILL BE PRINTED.'
+          case default
+            write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN VKD OPTION: ', &
+                                     trim(keyword)
+            call store_error(errmsg)
+            call this%parser%StoreErrorUnit()
+            call ustop()
+        end select
+      end do
+      write(this%iout,'(1x,a)')'END OF VKD OPTIONS'
+    end if
+    !
+    ! -- return
+    return
+  end subroutine read_options
+
+
+
+  
+  subroutine read_dimensions(this)
+! ******************************************************************************
+! read_dimensions -- Single Model GNC Read Dimensions
+! Subroutine: (1) read dimensions (size of gnc list) from input file
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use SimModule, only: ustop, store_error
+    ! -- dummy
+    class(VKDType) :: this
+    ! -- local
+    character(len=LINELENGTH) :: errmsg, keyword
+    integer(I4B) :: ierr
+    logical :: isfound, endOfBlock
+! ------------------------------------------------------------------------------
+    !
+    ! -- get options block
+    call this%parser%GetBlock('DIMENSIONS', isfound, ierr)
+    !
+    ! -- parse options block if detected
+    if (isfound) then
+      write(this%iout,'(1x,a)')'PROCESSING VKD DIMENSIONS'
+      do
+        call this%parser%GetNextLine(endOfBlock)
+        if (endOfBlock) exit
+        call this%parser%GetStringCaps(keyword)
+        select case (keyword)
+          case ('NUMVKD')
+            this%numvkd = this%parser%GetInteger()
+            write(this%iout,'(4x,a,i7)')'NUMVKD = ', this%numvkd
+          case ('NUMELEVS')
+            ! N.B. plus two for implicit knots at top and bottom of layer
+            this%numelevs = this%parser%GetInteger() + 2
+            write(this%iout,'(4x,a,i7)')'NUMELEVS = ', this%numelevs
+          case default
+            write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN VKD DIMENSION: ', &
+                                     trim(keyword)
+            call store_error(errmsg)
+            call this%parser%StoreErrorUnit()
+            call ustop()
+        end select
+      end do
+      write(this%iout,'(1x,a)')'END OF VKD DIMENSIONS'
+    else
+      call store_error('ERROR.  REQUIRED DIMENSIONS BLOCK NOT FOUND.')
+      call ustop()
+    end if
+    !
+    ! -- return
+    return
+  end subroutine read_dimensions
+
+
+  
   subroutine read_data(this)
 ! ******************************************************************************
 ! read_data -- read the vkd data block
@@ -170,8 +303,8 @@ contains
     ! -- dummy
     class(VKDType) :: this
     ! -- local
-    character(len=LINELENGTH) :: line, errmsg, cellstr, keyword
-    integer(I4B) :: n, istart, istop, lloc, ierr, nerr
+    character(len=LINELENGTH) :: line, errmsg, cellid, keyword
+    integer(I4B) :: n, istart, istop, lloc, ierr, nerr, i
     logical :: isfound, endOfBlock
     logical, dimension(10)           :: lname
     character(len=24), dimension(10) :: aname
@@ -197,46 +330,71 @@ contains
     !
     ! -- Initialize
     lname(:) = .false.
+
+    n = 1
     allocate(index)
     !
     ! -- get npfdata block
-    call this%parser%GetBlock('GRIDDATA', isfound, ierr)
+    call this%parser%GetBlock('PACKAGEDATA', isfound, ierr)
     if(isfound) then
-      write(this%iout,'(1x,a)')'PROCESSING GRIDDATA'
+      write(this%iout,'(1x,a)')'PROCESSING PACKAGEDATA'
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
-        call this%parser%GetStringCaps(keyword)
-        call this%parser%GetRemainingLine(line)
-        lloc = 1
-        select case (keyword)
-          case ('KK')
-!!$            call this%vkd%read_kk(index line, lloc, istart, istop, aname(9))
 
-            this%ikk = this%ikk + 1
-            call mem_reallocate(this%kk, this%dis%nodes, this%ikk, 'KK', &
-                trim(this%origin))
-            this%pt => this%kk(:, this%ikk)
-            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                    this%parser%iuactive, this%pt, aname(9))
-            lname(1) = .true.
-          case ('EK')
-!!$            call this%vkd%read_ek(index, line, lloc, istart, istop, aname(10))
-            this%iek = this%iek + 1
-            call mem_reallocate(this%ek, this%dis%nodes, this%iek, 'EK', &
-                trim(this%origin))
-            this%pt => this%ek(:, this%iek)
-            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                    this%parser%iuactive, this%pt, aname(10))
-            lname(2) = .true.
+        ! -- get model node number
+        call this%parser%GetCellid(this%dis%ndim, cellid, flag_string=.true.)
+        allocate(this%cells(n)%igwfnode)
+        this%cells(n)%igwfnode = this%dis%noder_from_cellid(cellid, &
+            this%inunit, this%iout, flag_string=.true.)
+        ! set cell vkd active (use as node => n dict)
+        this%ibvkd(this%cells(n)%igwfnode) = n
+        allocate(this%cells(n)%kk(this%numelevs))
+        allocate(this%cells(n)%ek(this%numelevs))
 
-          case default
-            write(errmsg,'(4x,a,a)')'VKD ERROR. UNKNOWN GRIDDATA TAG: ',         &
-                                     trim(keyword)
-            call store_error(errmsg)
-            call this%parser%StoreErrorUnit()
-            call ustop()
-        end select
+        ! -- get ek & kk
+        do i = 2, this%numelevs - 1
+          this%cells(n)%ek(i) = this%parser%GetDouble()
+        enddo
+        do i = 2, this%numelevs - 1
+          this%cells(n)%kk(i) = this%parser%GetDouble()
+        enddo
+        !
+        ! add implicit knots at top and bottom of layer
+        this%cells(n)%ek(1) = this%dis%bot(this%cells(n)%igwfnode)
+        this%cells(n)%ek(this%numelevs) = this%dis%top(this%cells(n)%igwfnode)
+        this%cells(n)%kk(1) = this%cells(n)%kk(2)
+        this%cells(n)%kk(this%numelevs) = this%cells(n)%kk(this%numelevs - 1)
+!!$        
+!!$        lloc = 1
+!!$        select case (keyword)
+!!$          case ('KK')
+!!$
+!!$            this%ikk = this%ikk + 1
+!!$            call mem_reallocate(this%kk, this%dis%nodes, this%ikk, 'KK', &
+!!$                trim(this%origin))
+!!$            this%pt => this%kk(:, this%ikk)
+!!$            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
+!!$                                    this%parser%iuactive, this%pt, aname(9))
+!!$            lname(1) = .true.
+!!$          case ('EK')
+!!$            this%iek = this%iek + 1
+!!$            call mem_reallocate(this%ek, this%dis%nodes, this%iek, 'EK', &
+!!$                trim(this%origin))
+!!$            this%pt => this%ek(:, this%iek)
+!!$            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
+!!$                                    this%parser%iuactive, this%pt, aname(10))
+!!$            lname(2) = .true.
+!!$
+!!$          case default
+!!$            write(errmsg,'(4x,a,a)')'VKD ERROR. UNKNOWN GRIDDATA TAG: ',         &
+!!$                                     trim(keyword)
+!!$            call store_error(errmsg)
+!!$            call this%parser%StoreErrorUnit()
+!!$            call ustop()
+!!$        end select
+        ! increment cell counter
+        n = n + 1
       end do
     else
       write(errmsg,'(1x,a)')'ERROR.  REQUIRED GRIDDATA BLOCK NOT FOUND.'
@@ -244,42 +402,42 @@ contains
       call this%parser%StoreErrorUnit()
       call ustop()
     end if
-    !
-    ! -- Check for ICELLTYPE
-    if(.not. lname(1)) then
-      write(errmsg, '(a, a, a)') 'Error in GRIDDATA block: ',                  &
-                                 trim(adjustl(aname(1))), ' not found.'
-      call store_error(errmsg)
-    endif
-    !
-    ! -- Check for K or check K11
-    if(.not. lname(2)) then
-      write(errmsg, '(a, a, a)') 'Error in GRIDDATA block: ',                  &
-                                 trim(adjustl(aname(2))), ' not found.'
-      call store_error(errmsg)
-    else
-      nerr = 0
-      do n = 1, size(this%k11)
-        if(this%k11(n) <= DZERO) then
-          nerr = nerr + 1
-          if(nerr <= 20) then
-            call this%dis%noder_to_string(n, cellstr)
-            write(errmsg, fmtkerr) trim(adjustl(aname(2))), trim(cellstr),     &
-                                   this%k11(n)
-            call store_error(errmsg)
-          endif
-        endif
-      enddo
-      if(nerr > 20) then
-        write(errmsg, fmtkerr2) nerr, trim(adjustl(aname(2)))
-        call store_error(errmsg)
-      endif
-    endif
-    !
-    if(count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
-      call ustop()
-    endif
+!!$    !
+!!$    ! -- Check for ICELLTYPE
+!!$    if(.not. lname(1)) then
+!!$      write(errmsg, '(a, a, a)') 'Error in GRIDDATA block: ',                  &
+!!$                                 trim(adjustl(aname(1))), ' not found.'
+!!$      call store_error(errmsg)
+!!$    endif
+!!$    !
+!!$    ! -- Check for K or check K11
+!!$    if(.not. lname(2)) then
+!!$      write(errmsg, '(a, a, a)') 'Error in GRIDDATA block: ',                  &
+!!$                                 trim(adjustl(aname(2))), ' not found.'
+!!$      call store_error(errmsg)
+!!$    else
+!!$      nerr = 0
+!!$      do n = 1, size(this%k11)
+!!$        if(this%k11(n) <= DZERO) then
+!!$          nerr = nerr + 1
+!!$          if(nerr <= 20) then
+!!$            call this%dis%noder_to_string(n, cellstr)
+!!$            write(errmsg, fmtkerr) trim(adjustl(aname(2))), trim(cellstr),     &
+!!$                                   this%k11(n)
+!!$            call store_error(errmsg)
+!!$          endif
+!!$        endif
+!!$      enddo
+!!$      if(nerr > 20) then
+!!$        write(errmsg, fmtkerr2) nerr, trim(adjustl(aname(2)))
+!!$        call store_error(errmsg)
+!!$      endif
+!!$    endif
+!!$    !
+!!$    if(count_errors() > 0) then
+!!$      call this%parser%StoreErrorUnit()
+!!$      call ustop()
+!!$    endif
     !
     ! -- Final NPFDATA message
     write(this%iout,'(1x,a)')'END PROCESSING GRIDDATA'
@@ -375,31 +533,27 @@ contains
     ! -- local
     real(DP) :: t1, t2, sn, sm, tsn, tsm
     real(DP), allocatable :: d(:)
-
-
+    integer(I4B) :: posn, posm ! position of node in vkd%cells
+    !
     ! anisotropy hyeff ***************
     if(this%ibound(n) == 0 .or. this%ibound(m) == 0) then
       cond = DZERO
     else
-      
-!!$      allocate(d(size(this%ek(n,:))))
-!!$      call sPChip_set_derivatives (size(this%ek(n,:)),this%ek(n,:), this%kk(n,:), d)
-!!$      t1 = sPChip_integrate (size(this%ek(n,:)), this%ek(n,:), this%kk(n,:), d, this%dis%bot(n),hn)
-!!$      t2 = sPChip_integrate (size(this%ek(m,:)), this%ek(m,:), this%kk(m,:), d, this%dis%bot(m),hm)
-!!$      tsn = sPChip_integrate (size(this%ek(n,:)), this%ek(n,:), this%kk(n,:), d, this%dis%bot(n),this%dis%top(n))
-!!$      tsm = sPChip_integrate (Size(this%ek(m,:)), this%ek(m,:), this%kk(m,:), d, this%dis%bot(m),this%dis%top(m))              
-!!$      deallocate(d)
 
-      allocate(d(size(this%ek(n,:))))
-      call sPChip_set_derivatives (size(this%ek(n,:)),this%ek(n,:), this%kk(n,:), d)
-      t1 = sPChip_integrate (size(this%ek(n,:)), this%ek(n,:), this%kk(n,:), d, this%dis%bot(n),hn)
-      tsn = sPChip_integrate (size(this%ek(n,:)), this%ek(n,:), this%kk(n,:), d, this%dis%bot(n),this%dis%top(n))
+      posn = this%ibvkd(n)
+      posm = this%ibvkd(m)
+      !
+      allocate(d(this%numelevs))
+!      call sPChip_set_derivatives (size(this%ek(n,:)),this%cell(n,:), this%kk(n,:), d)
+      call sPChip_set_derivatives (this%numelevs, this%cells(posn)%ek, this%cells(posn)%kk, d)
+      t1 = sPChip_integrate (this%numelevs, this%cells(posn)%ek, this%cells(posn)%kk, d, this%dis%bot(n), hn)
+      tsn = sPChip_integrate (this%numelevs, this%cells(posn)%ek, this%cells(posn)%kk, d, this%dis%bot(n),this%dis%top(n))
       deallocate(d)
 
-      allocate(d(size(this%ek(m,:))))
-      call sPChip_set_derivatives (size(this%ek(m,:)),this%ek(m,:), this%kk(m,:), d)
-      t2 = sPChip_integrate (size(this%ek(m,:)), this%ek(m,:), this%kk(m,:), d, this%dis%bot(m),hm)
-      tsm = sPChip_integrate (Size(this%ek(m,:)), this%ek(m,:), this%kk(m,:), d, this%dis%bot(m),this%dis%top(m))              
+      allocate(d(this%numelevs))
+      call sPChip_set_derivatives (this%numelevs, this%cells(posm)%ek, this%cells(posm)%kk, d)
+      t2 = sPChip_integrate (this%numelevs, this%cells(posm)%ek, this%cells(posm)%kk, d, this%dis%bot(m),hm)
+      tsm = sPChip_integrate (this%numelevs, this%cells(posm)%ek, this%cells(posm)%kk, d, this%dis%bot(m),this%dis%top(m))              
       deallocate(d)
       
       if (t1*t2 > DZERO) then
@@ -448,12 +602,13 @@ contains
     ! -- local
     real(DP) :: th, ts
     real(DP), allocatable :: d(:)
-
+    integer(I4B) :: posn, posm ! position of node in vkd%cells
+    !
     ! T at h / T at top
-    allocate(d(size(this%ek(n,:))))
-    call sPChip_set_derivatives(size(this%ek(n,:)), this%ek(n,:), this%kk(n,:), d)
-    ts = sPChip_integrate(size(this%ek(n,:)), this%ek(n,:), this%kk(n,:), d, this%dis%bot(n), this%dis%top(n))
-    th = sPChip_integrate(size(this%ek(n,:)), this%ek(n,:), this%kk(n,:), d, this%dis%bot(n), hn)      
+    allocate(d(this%numelevs))
+    call sPChip_set_derivatives(this%numelevs, this%cells(posn)%ek, this%cells(posn)%kk, d)
+    ts = sPChip_integrate(this%numelevs, this%cells(posn)%ek, this%cells(posn)%kk, d, this%dis%bot(n), this%dis%top(n))
+    th = sPChip_integrate(this%numelevs, this%cells(posn)%ek, this%cells(posn)%kk, d, this%dis%bot(n), hn)      
     deallocate(d)
 
     ! -- Newton-Raphson Formulation
@@ -485,11 +640,13 @@ contains
 
     call mem_allocate(this%ivkd, 'IVKD', this%origin)
     call mem_allocate(this%inUnitVkd, 'INUNITVKD', this%origin)
-    
+    call mem_allocate(this%numvkd, 'NUMVKD', this%origin)
+    call mem_allocate(this%numelevs, 'NUMELEVS', this%origin)
     call mem_allocate(this%ikk, 'IKK', this%origin) !wittw
     call mem_allocate(this%iek, 'IEK', this%origin) !wittw
     call mem_allocate(this%inunit, 'INUNIT', this%origin)
     call mem_allocate(this%iout, 'IOUT', this%origin)
+    call mem_allocate(this%iprpak, 'IPRPAK', this%origin)
 !!$
 !!$    call mem_allocate(this%ixt3d, 'IXT3D', this%origin)
 !!$    call mem_allocate(this%nbrmax, 'NBRMAX', this%origin)
@@ -525,9 +682,12 @@ contains
     integer(I4B), intent(in) :: ncells
 ! ------------------------------------------------------------------------------
     !wittw
-    call mem_allocate(this%kk, 0, 0, 'KK', trim(this%origin))
-    call mem_allocate(this%ek, 0, 0, 'EK', trim(this%origin))
-    call mem_allocate(this%pt, ncells, 'TMP', trim(this%origin))
+    allocate(this%cells(this%numvkd))
+!!$    call mem_allocate(this%cells, this%numvkd, 'CELLS', trim(this%origin))
+!!$    call mem_allocate(this%kk, 0, 0, 'KK', trim(this%origin))
+!!$    call mem_allocate(this%ek, 0, 0, 'EK', trim(this%origin))
+!!$    call mem_allocate(this%pt, ncells, 'TMP', trim(this%origin))
+    call mem_allocate(this%ibvkd, ncells, 'IBVKD', trim(this%origin))  
     !
     ! -- Return
     return

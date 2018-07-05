@@ -9,7 +9,7 @@ module GwfModule
   use GwfIcModule,                 only: GwfIcType
   use GwfNpfModule,                only: GwfNpfType
   use Xt3dModule,                  only: Xt3dType
-  use VKDModule,                   only: VKDType
+  use VKDModule,                   only: VKDType, vkd_cr
   use GwfHfbModule,                only: GwfHfbType
   use GwfStoModule,                only: GwfStoType
   use GwfMvrModule,                only: GwfMvrType
@@ -441,6 +441,7 @@ module GwfModule
     !
     ! -- Allocate and read modules attached to model
     if(this%inic  > 0) call this%ic%ic_ar(this%x)
+    write(*,*) 'nnnnnn npf ar'
     if(this%innpf > 0) call this%npf%npf_ar(this%dis, this%ic,                 &
                                             this%ibound, this%x)
     if(this%inhfb > 0) call this%hfb%hfb_ar(this%ibound, this%xt3d, this%dis)
