@@ -704,6 +704,7 @@ module GwtDspModule
       if (this%idisp > 0) then
         alh = this%alh(n)
         ath = this%ath(n)
+        atv = this%atv(n)
       endif
       dstar = DZERO
       if (this%idiffc > 0) then
@@ -711,7 +712,7 @@ module GwtDspModule
       endif
       this%d11(n) = alh * q + dstar
       this%d22(n) = ath * q + dstar
-      this%d33(n) = ath * q + dstar
+      this%d33(n) = atv * q + dstar
       !
       ! -- Angles of rotation if velocity based dispersion tensor
       if (this%idisp > 0) then
