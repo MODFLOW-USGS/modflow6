@@ -241,7 +241,7 @@ def eval_transport(sim):
 
     cres = np.array(cres)
     assert np.allclose(cres, conc[-1, :, :]), ('simulated concentrations '
-        'do not match with known solution.')
+        'do not match with known solution.', cres, conc[-1, :, :])
 
     return
 
