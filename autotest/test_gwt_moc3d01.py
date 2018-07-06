@@ -175,7 +175,7 @@ def get_model(idx, dir):
     # dispersion
     dsp = flopy.mf6.ModflowGwtdsp(gwt, xt3d=True, diffc=diffc[idx],
                                   alh=alphal[idx], alv=alphal[idx],
-                                  ath=0.0, atv=0.0,
+                                  ath1=0.0, atv=0.0,
                                   fname='{}.dsp'.format(gwtname))
 
     # constant concentration

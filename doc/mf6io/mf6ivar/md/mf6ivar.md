@@ -632,10 +632,11 @@
 | GWT | ADV | OPTIONS | SCHEME | STRING | scheme used to solve the advection term.  Can be upstream, central, or TVD. |
 | GWT | DSP | OPTIONS | XT3D | KEYWORD | activate the xt3d method to solve the dispersion term |
 | GWT | DSP | GRIDDATA | DIFFC | DOUBLE PRECISION (NODES) | molecular diffusion coefficient. |
-| GWT | DSP | GRIDDATA | ALH | DOUBLE PRECISION (NODES) | longitudinal dispersivity in horizontal direction. |
-| GWT | DSP | GRIDDATA | ALV | DOUBLE PRECISION (NODES) | longitudinal dispersivity in vertical direction. |
-| GWT | DSP | GRIDDATA | ATH | DOUBLE PRECISION (NODES) | transverse dispersivity in horizontal direction. |
-| GWT | DSP | GRIDDATA | ATV | DOUBLE PRECISION (NODES) | transverse dispersivity in vertical direction. |
+| GWT | DSP | GRIDDATA | ALH | DOUBLE PRECISION (NODES) | longitudinal dispersivity in horizontal direction.  If mechanical dispersion is represented (by specifying any dispersivity values) then this array is required. |
+| GWT | DSP | GRIDDATA | ALV | DOUBLE PRECISION (NODES) | longitudinal dispersivity in vertical direction.  If this value is not specified and mechanical dispersion is represented, then this array is set equal to ALH. |
+| GWT | DSP | GRIDDATA | ATH1 | DOUBLE PRECISION (NODES) | transverse dispersivity in horizontal direction.  If mechanical dispersion is represented (by specifying any dispersivity values) then this array is required. |
+| GWT | DSP | GRIDDATA | ATH2 | DOUBLE PRECISION (NODES) | transverse dispersivity in horizontal direction.  If this value is not specified and mechanical dispersion is represented, then this array is set equal to ATH1. |
+| GWT | DSP | GRIDDATA | ATV | DOUBLE PRECISION (NODES) | transverse dispersivity when flow is in vertical direction.  If this value is not specified and mechanical dispersion is represented, then this array is set equal to ATH2. |
 | GWT | CNC | OPTIONS | AUXILIARY | STRING (NAUX) | defines an array of one or more auxiliary variable names.  There is no limit on the number of auxiliary variables that can be provided on this line; however, lists of information provided in subsequent blocks must have a column of data for each auxiliary variable name defined here.   The number of auxiliary variables detected on this line determines the value for naux.  Comments cannot be provided anywhere on this line as they will be interpreted as auxiliary variable names.  Auxiliary variables may not be used by the package, but they will be available for use by other parts of the program.  The program will terminate with an error if auxiliary variables are specified on more than one line in the options block. |
 | GWT | CNC | OPTIONS | AUXMULTNAME | STRING | name of auxiliary variable to be used as multiplier of concentration value. |
 | GWT | CNC | OPTIONS | BOUNDNAMES | KEYWORD | keyword to indicate that boundary names may be provided with the list of constant concentration cells. |

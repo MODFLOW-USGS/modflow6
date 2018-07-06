@@ -11,13 +11,15 @@
 \begin{description}
 \item \texttt{diffc}---molecular diffusion coefficient.
 
-\item \texttt{alh}---longitudinal dispersivity in horizontal direction.
+\item \texttt{alh}---longitudinal dispersivity in horizontal direction.  If mechanical dispersion is represented (by specifying any dispersivity values) then this array is required.
 
-\item \texttt{alv}---longitudinal dispersivity in vertical direction.
+\item \texttt{alv}---longitudinal dispersivity in vertical direction.  If this value is not specified and mechanical dispersion is represented, then this array is set equal to ALH.
 
-\item \texttt{ath}---transverse dispersivity in horizontal direction.
+\item \texttt{ath1}---transverse dispersivity in horizontal direction.  If mechanical dispersion is represented (by specifying any dispersivity values) then this array is required.
 
-\item \texttt{atv}---transverse dispersivity in vertical direction.
+\item \texttt{ath2}---transverse dispersivity in horizontal direction.  If this value is not specified and mechanical dispersion is represented, then this array is set equal to ATH1.
+
+\item \texttt{atv}---transverse dispersivity when flow is in vertical direction.  If this value is not specified and mechanical dispersion is represented, then this array is set equal to ATH2.
 
 \end{description}
 

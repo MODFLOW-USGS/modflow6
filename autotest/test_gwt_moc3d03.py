@@ -182,7 +182,7 @@ def build_models():
         # dispersion
         dsp = flopy.mf6.ModflowGwtdsp(gwt, xt3d=True, diffc=diffc,
                                       alh=alphal, alv=alphal,
-                                      ath=alphath, atv=alphatv,
+                                      ath1=alphath, atv=alphatv,
                                       fname='{}.dsp'.format(gwtname))
 
         # storage

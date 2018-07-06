@@ -20,7 +20,8 @@ module GwtDspModule
     real(DP), dimension(:), pointer                  :: diffc      => null()    ! molecular diffusion coefficient for each cell
     real(DP), dimension(:), pointer                  :: alh        => null()    ! longitudinal horizontal dispersivity
     real(DP), dimension(:), pointer                  :: alv        => null()    ! longitudinal vertical dispersivity
-    real(DP), dimension(:), pointer                  :: ath        => null()    ! transverse horizontal dispersivity
+    real(DP), dimension(:), pointer                  :: ath1       => null()    ! transverse horizontal dispersivity
+    real(DP), dimension(:), pointer                  :: ath2       => null()    ! transverse horizontal dispersivity
     real(DP), dimension(:), pointer                  :: atv        => null()    ! transverse vertical dispersivity
     integer(I4B), pointer                            :: idiffc     => null()    ! flag indicating diffusion is active
     integer(I4B), pointer                            :: idisp      => null()    ! flag indicating mechanical dispersion is active
@@ -38,7 +39,7 @@ module GwtDspModule
     integer(I4B), pointer                            :: iangle1    => null()    ! flag indicating angle1 is available
     integer(I4B), pointer                            :: iangle2    => null()    ! flag indicating angle2 is available
     integer(I4B), pointer                            :: iangle3    => null()    ! flag indicating angle3 is available
-    real(DP), dimension(:), pointer                  :: gwfflowjaold => null()  ! stored gwf flowja values from the last time disp coeffs were calculated
+    real(DP), dimension(:), pointer                  :: gwfflowjaold => null()  ! gwf flowja values last time disp coeffs were calculated
     
   contains
   
@@ -469,11 +470,12 @@ module GwtDspModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate
-    call mem_allocate(this%diffc, 0, 'DIFFC', trim(this%origin))
     call mem_allocate(this%alh, 0, 'ALH', trim(this%origin))
     call mem_allocate(this%alv, 0, 'ALV', trim(this%origin))
-    call mem_allocate(this%ath, 0, 'ATH', trim(this%origin))
+    call mem_allocate(this%ath1, 0, 'ATH1', trim(this%origin))
+    call mem_allocate(this%ath2, 0, 'ATH2', trim(this%origin))
     call mem_allocate(this%atv, 0, 'ATV', trim(this%origin))
+    call mem_allocate(this%diffc, 0, 'DIFFC', trim(this%origin))
     call mem_allocate(this%d11, nodes, 'D11', trim(this%origin))
     call mem_allocate(this%d22, nodes, 'D22', trim(this%origin))
     call mem_allocate(this%d33, nodes, 'D33', trim(this%origin))
@@ -557,22 +559,23 @@ module GwtDspModule
 ! ------------------------------------------------------------------------------
     use ConstantsModule,   only: LINELENGTH
     use SimModule,         only: ustop, store_error, count_errors
-    use MemoryManagerModule, only: mem_reallocate
+    use MemoryManagerModule, only: mem_reallocate, mem_setptr
     ! -- dummy
     class(GwtDsptype) :: this
     ! -- local
     character(len=LINELENGTH) :: line, errmsg, keyword
     integer(I4B) :: istart, istop, lloc, ierr
     logical :: isfound, endOfBlock
-    logical, dimension(5)           :: lname
-    character(len=24), dimension(5) :: aname
+    logical, dimension(6)           :: lname
+    character(len=24), dimension(6) :: aname
     ! -- formats
     ! -- data
     data aname(1) /'   DIFFUSION COEFFICIENT'/
     data aname(2) /'                     ALH'/
     data aname(3) /'                     ALV'/
-    data aname(4) /'                     ATH'/
-    data aname(5) /'                     ATV'/
+    data aname(4) /'                    ATH1'/
+    data aname(5) /'                    ATH2'/
+    data aname(6) /'                     ATV'/
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize
@@ -611,20 +614,27 @@ module GwtDspModule
                                          this%parser%iuactive, this%alv,       &
                                          aname(3))
             lname(3) = .true.
-        case ('ATH')
-          call mem_reallocate(this%ath, this%dis%nodes, 'ATH',                 &
+        case ('ATH1')
+          call mem_reallocate(this%ath1, this%dis%nodes, 'ATH1',               &
                             trim(this%origin))
           call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,  &
-                                         this%parser%iuactive, this%ath,       &
+                                         this%parser%iuactive, this%ath1,      &
                                          aname(4))
-            lname(4) = .true.
+          lname(4) = .true.
+        case ('ATH2')
+          call mem_reallocate(this%ath2, this%dis%nodes, 'ATH2',               &
+                            trim(this%origin))
+          call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,  &
+                                         this%parser%iuactive, this%ath2,      &
+                                         aname(5))
+          lname(5) = .true.
         case ('ATV')
           call mem_reallocate(this%atv, this%dis%nodes, 'ATV',                 &
                             trim(this%origin))
           call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,  &
                                          this%parser%iuactive, this%atv,       &
-                                         aname(5))
-            lname(5) = .true.
+                                         aname(6))
+            lname(6) = .true.
         case default
           write(errmsg,'(4x,a,a)')'ERROR. UNKNOWN GRIDDATA TAG: ',             &
                                     trim(keyword)
@@ -646,9 +656,33 @@ module GwtDspModule
     if(lname(3)) this%idisp = this%idisp + 1
     if(lname(4)) this%idisp = this%idisp + 1
     if(lname(5)) this%idisp = this%idisp + 1
-    if(this%idisp > 0 .and. this%idisp < 4) then
-      write(errmsg,'(1x,a)') 'SPECIFY ALL FOUR DISPERSIVITIES OR NONE OF THEM.'
-      call store_error(errmsg)
+    !
+    ! -- if dispersivities are specified, then both alh and ath1 must be included
+    if(this%idisp > 0) then
+      !
+      ! -- make sure alh was specified
+      if (.not. lname(2)) then
+        write(errmsg,'(1x,a)') 'IF DISPERSIVITIES ARE SPECIFED THEN ALH IS REQUIRED.'
+        call store_error(errmsg)
+      endif
+      !
+      ! -- make sure ath1 was specified
+      if (.not. lname(2)) then
+        write(errmsg,'(1x,a)') 'IF DISPERSIVITIES ARE SPECIFED THEN ATH1 IS REQUIRED.'
+        call store_error(errmsg)
+      endif
+      !
+      ! -- If alv not specified then point it to alh
+      if(.not. lname(3)) &
+        call mem_setptr(this%alv, 'ALH', trim(this%name_model)//' DSP')
+      !
+      ! -- If ath2 not specified then point it to ath1
+      if (.not. lname(5)) &
+        call mem_setptr(this%ath2, 'ATH1', trim(this%name_model)//' DSP')
+      !
+      ! -- If atv not specified then point it to ath2
+      if (.not. lname(6)) &
+        call mem_setptr(this%atv, 'ATH2', trim(this%name_model)//' DSP')
     endif
     !
     ! -- terminate if errors
@@ -674,7 +708,9 @@ module GwtDspModule
     ! -- local
     integer(I4B) :: nodes, n
     real(DP) :: q, qx, qy, qz
-    real(DP) :: alh, alv, ath, atv, a
+    real(DP) :: alh, alv, ath1, ath2, atv, a
+    real(DP) :: al, at1, at2
+    real(DP) :: qzoqsquared
     real(DP) :: dstar
 ! ------------------------------------------------------------------------------
     !
@@ -700,19 +736,37 @@ module GwtDspModule
       !
       ! -- dispersion coefficients
       alh = DZERO
-      ath = DZERO
+      alv = DZERO
+      ath1 = DZERO
+      ath2 = DZERO
+      atv = DZERO
       if (this%idisp > 0) then
         alh = this%alh(n)
-        ath = this%ath(n)
+        alv = this%alv(n)
+        ath1 = this%ath1(n)
+        ath2 = this%ath2(n)
         atv = this%atv(n)
       endif
       dstar = DZERO
       if (this%idiffc > 0) then
         dstar = this%diffc(n) * this%porosity(n)
       endif
-      this%d11(n) = alh * q + dstar
-      this%d22(n) = ath * q + dstar
-      this%d33(n) = atv * q + dstar
+      !
+      ! -- Calculate the longitudal and transverse dispersivities
+      al = DZERO
+      at1 = DZERO
+      at2 = DZERO
+      if (q > DZERO) then
+        qzoqsquared = (qz / q) ** 2
+        al = alh * (DONE - qzoqsquared) + alv * qzoqsquared
+        at1 = ath1 * (DONE - qzoqsquared) + atv * qzoqsquared
+        at2 = ath2 * (DONE - qzoqsquared) + atv * qzoqsquared
+      endif
+      !
+      ! -- Calculate and save the diagonal components of the dispersion tensor
+      this%d11(n) = al * q + dstar
+      this%d22(n) = at1 * q + dstar
+      this%d33(n) = at2 * q + dstar
       !
       ! -- Angles of rotation if velocity based dispersion tensor
       if (this%idisp > 0) then

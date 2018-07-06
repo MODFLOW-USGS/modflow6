@@ -5,8 +5,10 @@ BEGIN GRIDDATA
     <alh(nodes)> -- READARRAY]
   [ALV [LAYERED]
     <alv(nodes)> -- READARRAY]
-  [ATH [LAYERED]
-    <ath(nodes)> -- READARRAY]
+  [ATH1 [LAYERED]
+    <ath1(nodes)> -- READARRAY]
+  [ATH2 [LAYERED]
+    <ath2(nodes)> -- READARRAY]
   [ATV [LAYERED]
     <atv(nodes)> -- READARRAY]
 END GRIDDATA

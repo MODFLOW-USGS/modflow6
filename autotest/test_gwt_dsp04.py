@@ -163,7 +163,7 @@ def get_model(idx, dir):
 
     # advection
     dsp = flopy.mf6.ModflowGwtdsp(gwt, xt3d=xt3d[idx], diffc=100.,
-                                  alh=0., alv=0., ath=0., atv=0.,
+                                  alh=0., alv=0., ath1=0., atv=0.,
                                   fname='{}.dsp'.format(gwtname))
 
     # constant concentration
