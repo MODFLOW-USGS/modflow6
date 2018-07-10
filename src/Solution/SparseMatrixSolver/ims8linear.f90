@@ -2,7 +2,7 @@
   
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LINELENGTH, LENSOLUTIONNAME,                      &
-                             IZERO, DZERO, DPREC,                              &
+                             IZERO, DZERO, DPREC, DSAME,                       &
                              DEM8, DEM6, DEM5, DEM4, DEM3, DEM2, DEM1,         &
                              DONE, DTWO
   use IMSReorderingModule, only: ims_genrcm, ims_odrv, ims_dperm, ims_vperm
@@ -2289,7 +2289,7 @@
       real(DP), intent(in)   :: b
 !     + + + local definitions + + +
       real(DP) :: denom
-      real(DP) :: rerror
+      real(DP) :: rdiff
 !     + + + parameters + + +
 !     + + + functions + + +
 !     + + + code + + +
@@ -2298,15 +2298,16 @@
         ivalue = 1
       else
         if (abs(b) > abs(a)) then
-          rerror = abs( (a - b) / b )
+          denom = b
         else
           denom = a
-          if (abs(denom).eq.DZERO) then
-            denom = dprec
+          if (abs(denom) == DZERO) then
+            denom = DPREC
           end if
-          rerror = abs( (a - b) / denom )
         end if
-        if (rerror <= DEM5) then
+        rdiff = abs( (a - b) / denom )
+        !if (rdiff <= DEM5) then
+        if (rdiff <= DSAME) then
           ivalue = 1
         end if
       end if
