@@ -48,17 +48,13 @@ module GwfNpfModule
     integer(I4B), pointer                           :: icellavg     => null()   ! harmonic(0), logarithmic(1), or arithmetic thick-log K (2)
     real(DP), pointer                               :: wetfct       => null()   ! wetting factor
     real(DP), pointer                               :: hdry         => null()   ! default is -1.d30
-    integer(I4B), dimension(:), pointer, contiguous             :: icelltype    => null()   ! confined (0), convertible (1), vkd (> 1)
+    integer(I4B), dimension(:), pointer, contiguous             :: icelltype    => null()   ! confined (0), convertible (1)
+    integer(I4B), dimension(:), pointer, contiguous :: ibvkd        => null()   ! VKD ibound array
     !
     ! K properties
     real(DP), dimension(:), pointer, contiguous                 :: k11          => null()   ! hydraulic conductivity; if anisotropic, then this is Kx prior to rotation
     real(DP), dimension(:), pointer, contiguous                 :: k22          => null()   ! hydraulic conductivity; if specified then this is Ky prior to rotation
     real(DP), dimension(:), pointer, contiguous                 :: k33          => null()   ! hydraulic conductivity; if specified then this is Kz prior to rotation
-!!$    real(DP), dimension(:,:), pointer               :: kk           => null()   ! k knots
-!!$    real(DP), dimension(:,:), pointer               :: ek           => null()   ! elevation knots
-!!$    real(DP), dimension(:), pointer                 :: pt           => null()   ! tmp pointer
-!!$    integer(I4B), pointer                           :: ikk          => null()   ! flag that kk is specified
-!!$    integer(I4B), pointer                           :: iek          => null()   ! flag that ek is specified
     integer(I4B), pointer                           :: ik22         => null()   ! flag that k22 is specified
     integer(I4B), pointer                           :: ik33         => null()   ! flag that k33 is specified
     integer(I4B), pointer                           :: iangle1      => null()   ! flag to indicate angle1 was read
@@ -179,7 +175,6 @@ module GwfNpfModule
     !
     ! -- Save pointer to vkd object
     this%vkd => vkd
-    !!$    if (this%ivkd > 0) vkd%ivkd = this%ivkd    
     !
     ! -- set, read, and check options
     call this%read_options()
@@ -299,24 +294,19 @@ module GwfNpfModule
     call this%allocate_arrays(dis%nodes, dis%njas)
     !
     ! -- read the data block
-    write(*,*) 'rrrr read data'
     call this%read_data()
     !
-
     ! -- initialise vkd ib array
-    this%vkd%ibvkd = 0
+    this%ibvkd = 0
     ! -- vkd
     if(this%ivkd > 0) then
-      write(*,*) 'calling vkd_ar'
       call this%vkd%vkd_ar(dis, ibound, this%k11, this%ik33,          &
       this%k33, this%sat, this%ik22, this%k22, this%inewton, this%min_satthk,  &
       this%icelltype, this%satomega)
+      this%ibvkd = this%vkd%ibvkd    
     endif
-    write(*,*) 'done vkd_ar'
-
-    
+    !
     ! -- Initialize and check data
-    write(*,*) 'rrrr precheck'
     call this%prepcheck()
     !
     ! -- xt3d
@@ -324,15 +314,6 @@ module GwfNpfModule
       this%k33, this%sat, this%ik22, this%k22, this%inewton, this%min_satthk,  &
       this%icelltype, this%iangle1, this%iangle2, this%iangle3,                &
       this%angle1, this%angle2, this%angle3)
-    !
-!!$    ! -- vkd
-!!$    if(this%ivkd > 0) then
-!!$      write(*,*) 'calling vkd_ar'
-!!$      call this%vkd%vkd_ar(dis, ibound, this%k11, this%ik33,          &
-!!$      this%k33, this%sat, this%ik22, this%k22, this%inewton, this%min_satthk,  &
-!!$      this%icelltype, this%satomega)
-!!$    endif
-!!$    write(*,*) 'not calling vkd_ar'
     !
     ! -- Return
     return
@@ -413,7 +394,7 @@ module GwfNpfModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: DONE
-!!$    use SmoothingModule, only: sPChip_set_derivatives, sPChip_integrate
+    !
     ! -- dummy
     class(GwfNpfType) :: this
     integer(I4B) :: kiter
@@ -486,8 +467,8 @@ module GwfNpfModule
         else
           !
           ! -- Horizontal conductance
-          ! wittw miss this
-          if ((this%vkd%ibvkd(n) > 0) .and. (this%vkd%ibvkd(m) > 0)) then
+          ! 
+          if ((this%ibvkd(n) > 0) .and. (this%ibvkd(m) > 0)) then
             ! call hcond_vkd
             cond = this%vkd%vkd_hcond(n, m, this%dis%con%cl1(this%dis%con%jas(ii)), &
                 this%dis%con%cl2(this%dis%con%jas(ii)), this%dis%con%hwva(this%dis%con%jas(ii)), &
@@ -749,27 +730,26 @@ module GwfNpfModule
     real(DP),intent(in) :: hn
     real(DP),intent(inout) :: thksat
     ! ------------------------------------------------------------------------------
-    if(this%icelltype(n) < 2) then
+    !
+    if(this%ibvkd(n) == 0) then
       !
-      ! -- Standard Formulation
+      ! -- Standard Formulation no VKD
       if(hn >= this%dis%top(n)) then
         thksat = DONE
       else
         thksat = (hn - this%dis%bot(n)) / (this%dis%top(n) - this%dis%bot(n))
       endif
-    else
-      thksat = this%vkd%vkd_satThk(n, hn)
+    !
+    ! -- Newton-Raphson Formulation no VKD
+    if(this%inewton /= 0) then
+      thksat = sQuadraticSaturation(this%dis%top(n), this%dis%bot(n), hn,      &
+          this%satomega)
+      if (thksat < this%min_satthk) thksat = this%min_satthk
     endif
     !
-    ! -- Newton-Raphson Formulation
-    if(this%inewton /= 0) then
-!!$      if(this%icelltype(n) < 2) then
-        thksat = sQuadraticSaturation(this%dis%top(n), this%dis%bot(n), hn,      &
-            this%satomega)
-!!$      else
-!!$        !vkd + nwt
-!!$        thksat = sQuadraticSaturation(ts, 0.0D+00, th, this%satomega)
-      if (thksat < this%min_satthk) thksat = this%min_satthk
+    ! -- VKD Formulation both cases
+    else
+      thksat = this%vkd%vkd_satThk(n, hn)
     endif
     !
     ! -- Return
@@ -819,7 +799,8 @@ module GwfNpfModule
                       this%dis%bot(n), this%dis%bot(m),                        &
                       this%dis%con%hwva(this%dis%con%jas(icon)))
     else
-      if(this%icelltype(n) < 2) then
+      !
+      if(this%ibvkd(n) == 0) then
         condnm = hcond(this%ibound(n), this%ibound(m),                           &
             this%icelltype(n), this%icelltype(m),                     &
             this%inewton, this%inewton,                               &
@@ -835,7 +816,7 @@ module GwfNpfModule
             this%satomega)
       else
         
-        ! call hcond_vkd
+        ! vkd
         condnm = this%vkd%vkd_hcond(n, m, this%dis%con%cl1(this%dis%con%jas(icon)), &
             this%dis%con%cl2(this%dis%con%jas(icon)), this%dis%con%hwva(this%dis%con%jas(icon)), &
             this%condsat(this%dis%con%jas(icon)), hn, hm, this%inewton)
@@ -984,8 +965,6 @@ module GwfNpfModule
     call mem_deallocate(this%icellavg)
     call mem_deallocate(this%ik22)
     call mem_deallocate(this%ik33)
-!!$    call mem_deallocate(this%ikk) !wittw
-!!$    call mem_deallocate(this%iek) !wittw
     call mem_deallocate(this%iperched)
     call mem_deallocate(this%ivarcv)
     call mem_deallocate(this%idewatcv)
@@ -1020,9 +999,6 @@ module GwfNpfModule
     call mem_deallocate(this%ihcedge)
     call mem_deallocate(this%propsedge)
     call mem_deallocate(this%spdis)
-!!$    !wittw
-!!$    call mem_deallocate(this%kk)
-!!$    call mem_deallocate(this%ek)
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
@@ -1057,8 +1033,6 @@ module GwfNpfModule
     call mem_allocate(this%icellavg, 'ICELLAVG', this%origin)
     call mem_allocate(this%ik22, 'IK22', this%origin)
     call mem_allocate(this%ik33, 'IK33', this%origin)
-!!$    call mem_allocate(this%ikk, 'IKK', this%origin) !wittw
-!!$    call mem_allocate(this%iek, 'IEK', this%origin) !wittw
     call mem_allocate(this%iperched, 'IPERCHED', this%origin)
     call mem_allocate(this%ivarcv, 'IVARCV', this%origin)
     call mem_allocate(this%idewatcv, 'IDEWATCV', this%origin)
@@ -1146,11 +1120,7 @@ module GwfNpfModule
     call mem_allocate(this%k33, 0, 'K33', trim(this%origin))
     call mem_allocate(this%wetdry, 0, 'WETDRY', trim(this%origin))
     call mem_allocate(this%ibotnode, 0, 'IBOTNODE', trim(this%origin))
-!!$    !wittw
-!!$    call mem_allocate(this%kk, 0, 0, 'KK', trim(this%origin))
-!!$    call mem_allocate(this%ek, 0, 0, 'EK', trim(this%origin))
-!!$    call mem_allocate(this%pt, ncells, 'TMP', trim(this%origin))
-    call mem_allocate(this%vkd%ibvkd, ncells, 'TMP', trim(this%origin))
+    call mem_allocate(this%ibvkd, ncells, 'IBVKD', trim(this%origin))
     !
     ! -- Specific discharge
     if (this%icalcspdis == 1) then
@@ -1288,7 +1258,6 @@ module GwfNpfModule
             write(this%iout,fmtvkd)trim(fname)
             open(file=fname, newunit=this%inUnitVkd)
             call vkd_cr(this%vkd, this%name, this%inUnitVkd, this%iout)
-            write(*,*) ' wittw ', this%vkd%iout
             
           case ('SAVE_SPECIFIC_DISCHARGE')
             this%icalcspdis = 1
@@ -1551,8 +1520,7 @@ module GwfNpfModule
     data aname(6) /'                  ANGLE1'/
     data aname(7) /'                  ANGLE2'/
     data aname(8) /'                  ANGLE3'/
-!!$    data aname(9) /'                      KK'/
-!!$    data aname(10) /'                     EK'/
+!
 ! ------------------------------------------------------------------------------
     !
     ! -- Initialize
@@ -1569,7 +1537,7 @@ module GwfNpfModule
         call this%parser%GetStringCaps(keyword)
         call this%parser%GetRemainingLine(line)
         lloc = 1
-        write(*,*) 'willy', keyword
+        !
         select case (keyword)
           case ('ICELLTYPE')
             call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
@@ -1617,27 +1585,6 @@ module GwfNpfModule
             call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
                                     this%parser%iuactive, this%angle3, aname(8))
             lname(8) = .true.
-            ! wittw
-!!$          case ('KK')
-!CCCCC            call this%vkd%read_kk(index line, lloc, istart, istop, aname(9))
-!!$
-!!$            this%vkd%ikk = this%vkd%ikk + 1
-!!$            call mem_reallocate(this%vkd%kk, this%dis%nodes, this%vkd%ikk, 'KK', &
-!!$                trim(this%vkd%origin))
-!!$            this%vkd%pt => this%vkd%kk(:, this%vkd%ikk)
-!!$            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-!!$                                    this%parser%iuactive, this%vkd%pt, aname(9))
-!!$            lname(9) = .true.
-!!$          case ('EK')
-!CCCCC            call this%vkd%read_ek(index, line, lloc, istart, istop, aname(10))
-!!$            this%vkd%iek = this%vkd%iek + 1
-!!$            call mem_reallocate(this%vkd%ek, this%dis%nodes, this%vkd%iek, 'EK', &
-!!$                trim(this%vkd%origin))
-!!$            this%vkd%pt => this%vkd%ek(:, this%vkd%iek)
-!!$            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-!!$                                    this%parser%iuactive, this%vkd%pt, aname(10))
-!!$            lname(10) = .true.
-
           case default
             write(errmsg,'(4x,a,a)')'ERROR. UNKNOWN GRIDDATA TAG: ',           &
                                      trim(keyword)
@@ -2006,7 +1953,7 @@ module GwfNpfModule
           !
           ! -- Horizontal conductance for fully saturated conditions
           fawidth = this%dis%con%hwva(this%dis%con%jas(ii))
-          if(this%icelltype(n) < 2) then
+          if (this%ibvkd(n) == 0) then
             csat = hcond(1, 1, 1, 1, this%inewton, 0,                            &
                 this%dis%con%ihc(this%dis%con%jas(ii)),                 &
                 this%icellavg, this%iusgnrhc,                           &
@@ -2020,9 +1967,9 @@ module GwfNpfModule
           else
             !wittw overwrite calls to hcond and condmean
             csat = this%vkd%vkd_hcond(n, m, this%dis%con%cl1(this%dis%con%jas(ii)), &
-                this%dis%con%cl2(this%dis%con%jas(ii)), this%dis%con%hwva(this%dis%con%jas(ii)), &
-                this%condsat(this%dis%con%jas(ii)), this%dis%top(n), this%dis%top(m), &
-                0)
+                this%dis%con%cl2(this%dis%con%jas(ii)), &
+                this%dis%con%hwva(this%dis%con%jas(ii)), &
+                this%condsat(this%dis%con%jas(ii)), this%dis%top(n), this%dis%top(m), 0)
           endif
           ! end wittw
         end if
