@@ -6,21 +6,21 @@
         ], 
         "repositoryURL": "https://code.usgs.gov/usgs/modflow/modflow6.git", 
         "disclaimerURL": "https://code.usgs.gov/usgs/modflow/modflow6/blob/master/DISCLAIMER.md", 
-        "name": "modflow6", 
         "tags": [
             "MODFLOW", 
             "groundwater model"
         ], 
+        "vcs": "git", 
+        "name": "modflow6", 
+        "downloadURL": "https://code.usgs.gov/usgs/modflow/modflow6/archive/master.zip", 
         "contact": {
             "name": "Christian D. Langevin", 
             "email": "langevin@usgs.gov"
         }, 
-        "downloadURL": "https://code.usgs.gov/usgs/modflow/modflow6/archive/master.zip", 
-        "vcs": "git", 
         "laborHours": -1, 
-        "version": "6.0.2.39", 
+        "version": "6.0.2.41", 
         "date": {
-            "metadataLastUpdated": "2018-06-30"
+            "metadataLastUpdated": "2018-07-10"
         }, 
         "organization": "U.S. Geological Survey", 
         "permissions": {

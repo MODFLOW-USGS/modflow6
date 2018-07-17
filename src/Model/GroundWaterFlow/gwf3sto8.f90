@@ -784,6 +784,7 @@ module GwfStoModule
     class(GwfStotype) :: this
     ! -- local
     character(len=LINELENGTH) :: line, errmsg, keyword
+    character(len=LINELENGTH) :: cellstr
     integer(I4B) :: istart, istop, lloc, ierr
     logical :: isfound, endOfBlock
     logical :: readiconv
@@ -884,6 +885,27 @@ module GwfStoModule
       call this%parser%StoreErrorUnit()
       call ustop()
     endif
+    !
+    ! -- Check SS and SY for negative values
+    do n = 1, this%dis%nodes
+      if (this%sc1(n) < DZERO) then
+        call this%dis%noder_to_string(n, cellstr)
+        write(errmsg, '(a,2(1x,a),1x,g0,1x,a)')                                 &
+          'Error in SS DATA: SS value in cell', trim(adjustl(cellstr)),         &
+          'is less than zero (', this%sc1(n), ').'
+        call store_error(errmsg)
+      end if
+      if (readsy) then
+        if (this%sc2(n) < DZERO) then
+          call this%dis%noder_to_string(n, cellstr)
+          write(errmsg, '(a,2(1x,a),1x,g0,1x,a)')                               &
+            'Error in SY DATA: SY value in cell', trim(adjustl(cellstr)),       &
+            'is less than zero (', this%sc2(n), ').'
+          call store_error(errmsg)
+        end if
+      end if
+    end do
+    
     !
     ! -- calculate sc1
     if (readss) then
