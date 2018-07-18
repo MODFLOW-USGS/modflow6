@@ -43,8 +43,9 @@ ${SOURCEDIR14}
 
 # Define the Fortran compile flags
 FC = gfortran
-FFLAGS = -O2 -fbacktrace 
-FFLAGS = -g -ggdb -fbacktrace -ffpe-summary=overflow -ffpe-trap=overflow,zero,invalid 
+FFLAGS = -O2 -fbacktrace
+F90FLAGS= -march=native -mtune=native -O2 -fwhole-program -fstack-arrays -flto -fopenmp -fopt-info -mavx
+#FFLAGS = -g -ggdb -fbacktrace -ffpe-summary=overflow -ffpe-trap=overflow,zero,invalid 
 
 # Define the C compile flags
 CC = gcc

@@ -16,8 +16,9 @@ module VKDModule
 
   type, extends(NumericalPackageType) :: VKDType
     integer(I4B), pointer, dimension(:)             :: ibound       => null()   !pointer to model ibound
-    integer(I4B), pointer, contiguous, dimension(:) :: ibvkd         => null()   !pointer to model vkd ibound
+    integer(I4B), pointer, contiguous, dimension(:) :: ibvkd        => null()   !pointer to model vkd ibound
     integer(I4B), pointer                           :: ivkd         => null()   ! vkd flag (0 is off, 1 is on)
+    integer(I4B), pointer                           :: implicit     => null()   ! exclude implicit nodes for testing
     integer(I4B), pointer                           :: numvkd       => null()   ! number of cells with VKD active
     integer(I4B), pointer                           :: numelevs     => null()   ! number of VKD knots
     integer(I4B), pointer                           :: inUnitVkd    => null()   ! vkd input file unit number
@@ -84,6 +85,7 @@ contains
     ! -- Set variables
     vkdobj%inunit = inunit
     vkdobj%iout   = iout
+    vkdobj%implicit = 0
     !
     ! -- Return
     return
@@ -194,7 +196,11 @@ contains
           case ('PRINT_INPUT')
             this%iprpak = 1
             write(this%iout,'(4x,a)') &
-              'THE LIST OF VKD CORRECTIONS WILL BE PRINTED.'
+                'THE LIST OF VKD CORRECTIONS WILL BE PRINTED.'
+          case ('EXCLUDE_IMPLICIT')
+            this%implicit = 1
+            write(this%iout,'(4x,a)') &
+              'IMPLICIT KNOTS EXCLUDED - DEVELOPMENT OPTION ONLY'
           case default
             write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN VKD OPTION: ', &
                                      trim(keyword)
@@ -245,7 +251,9 @@ contains
             write(this%iout,'(4x,a,i7)')'NUMVKD = ', this%numvkd
           case ('NUMELEVS')
             ! N.B. plus two for implicit knots at top and bottom of layer
-            this%numelevs = this%parser%GetInteger() + 2
+            this%numelevs = this%parser%GetInteger()
+            ! allow option to not have implicit nodes (just for development)
+            if(this%implicit .eq. 0) this%numelevs = this%numelevs + 2
             write(this%iout,'(4x,a,i7)')'NUMELEVS = ', this%numelevs
           case default
             write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN VKD DIMENSION: ', &
@@ -329,18 +337,28 @@ contains
         allocate(this%cells(n)%ek(this%numelevs))
         !
         ! -- get ek & kk
-        do i = 2, this%numelevs - 1
-          this%cells(n)%ek(i) = this%parser%GetDouble()
-        enddo
-        do i = 2, this%numelevs - 1
-          this%cells(n)%kk(i) = this%parser%GetDouble()
-        enddo
-        !
-        ! add implicit knots at top and bottom of layer
-        this%cells(n)%ek(1) = this%dis%bot(this%cells(n)%igwfnode)
-        this%cells(n)%ek(this%numelevs) = this%dis%top(this%cells(n)%igwfnode)
-        this%cells(n)%kk(1) = this%cells(n)%kk(2)
-        this%cells(n)%kk(this%numelevs) = this%cells(n)%kk(this%numelevs - 1)
+        if(this%implicit .eq. 0) then
+          do i = 2, this%numelevs - 1
+            this%cells(n)%ek(i) = this%parser%GetDouble()
+          enddo
+          do i = 2, this%numelevs - 1
+            this%cells(n)%kk(i) = this%parser%GetDouble()
+          enddo
+          !
+          ! add implicit knots at top and bottom of layer
+          this%cells(n)%ek(1) = this%dis%bot(this%cells(n)%igwfnode)
+          this%cells(n)%ek(this%numelevs) = this%dis%top(this%cells(n)%igwfnode)
+          this%cells(n)%kk(1) = this%cells(n)%kk(2)
+          this%cells(n)%kk(this%numelevs) = this%cells(n)%kk(this%numelevs - 1)
+        else
+          ! no implicit nodes development option
+          do i = 1, this%numelevs
+            this%cells(n)%ek(i) = this%parser%GetDouble()
+          enddo
+          do i = 1, this%numelevs
+            this%cells(n)%kk(i) = this%parser%GetDouble()
+          enddo
+        endif
         !
         if (this%iprpak /= 0) then
           write (this%iout,'(A8,20F10.3)') cellid, this%cells(n)%ek(:), this%cells(n)%kk(:)
@@ -399,16 +417,15 @@ contains
       posm = this%ibvkd(m)
       !
       allocate(d(this%numelevs))
-!      call sPChip_set_derivatives (size(this%ek(n,:)),this%cell(n,:), this%kk(n,:), d)
       call sPChip_set_derivatives (this%numelevs, this%cells(posn)%ek, this%cells(posn)%kk, d)
       t1 = sPChip_integrate (this%numelevs, this%cells(posn)%ek, this%cells(posn)%kk, d, this%dis%bot(n), hn)
-      tsn = sPChip_integrate (this%numelevs, this%cells(posn)%ek, this%cells(posn)%kk, d, this%dis%bot(n),this%dis%top(n))
+      tsn = sPChip_integrate (this%numelevs, this%cells(posn)%ek, this%cells(posn)%kk, d, this%dis%bot(n), this%dis%top(n))
       deallocate(d)
 
       allocate(d(this%numelevs))
       call sPChip_set_derivatives (this%numelevs, this%cells(posm)%ek, this%cells(posm)%kk, d)
-      t2 = sPChip_integrate (this%numelevs, this%cells(posm)%ek, this%cells(posm)%kk, d, this%dis%bot(m),hm)
-      tsm = sPChip_integrate (this%numelevs, this%cells(posm)%ek, this%cells(posm)%kk, d, this%dis%bot(m),this%dis%top(m))              
+      t2 = sPChip_integrate (this%numelevs, this%cells(posm)%ek, this%cells(posm)%kk, d, this%dis%bot(m), hm)
+      tsm = sPChip_integrate (this%numelevs, this%cells(posm)%ek, this%cells(posm)%kk, d, this%dis%bot(m), this%dis%top(m))              
       deallocate(d)
       
       if (t1*t2 > DZERO) then
@@ -502,6 +519,7 @@ contains
     call mem_allocate(this%inunit, 'INUNIT', this%origin)
     call mem_allocate(this%iout, 'IOUT', this%origin)
     call mem_allocate(this%iprpak, 'IPRPAK', this%origin)
+    call mem_allocate(this%implicit, 'IMPLICIT', this%origin)
     !  
     ! -- Initialize value
     !
