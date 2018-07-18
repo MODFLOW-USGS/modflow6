@@ -114,7 +114,7 @@ module GwfMvrModule
     integer(I4B), pointer                         :: iexgmvr => null()          !flag to indicate mover is for an exchange (not for a single model)
     integer(I4B), pointer                         :: imodelnames => null()      !flag to indicate package input file has model names in it
     real(DP), pointer                             :: omega => null()            !temporal weighting factor (not presently used)
-    integer(I4B), dimension(:), pointer           :: ientries => null()         !number of entries for each combination
+    integer(I4B), dimension(:), pointer, contiguous           :: ientries => null()         !number of entries for each combination
     character(len=LENORIGIN+1),                                                &
       dimension(:), pointer                       :: pakorigins                 !array of model//package names
     character(len=LENPACKAGENAME),                                             &
@@ -251,7 +251,7 @@ module GwfMvrModule
       "(1X,/1X,'REUSING ',A,'S FROM LAST STRESS PERIOD')"
     character(len=*), parameter :: fmtnbd = &
       "(1X,/1X,'THE NUMBER OF ACTIVE ',A,'S (',I6, &
-       ') IS GREATER THAN MAXIMUM(',I6,')')"
+       &') IS GREATER THAN MAXIMUM(',I6,')')"
 ! ------------------------------------------------------------------------------
     !
     ! -- Set ionper to the stress period number for which a new block of data

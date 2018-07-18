@@ -20,12 +20,12 @@ module GwfDisvModule
     integer(I4B), pointer                          :: nlay        => null()     ! number of layers
     integer(I4B), pointer                          :: ncpl        => null()     ! number of cells per layer
     integer(I4B), pointer                          :: nvert       => null()     ! number of x,y vertices
-    integer(I4B), dimension(:), pointer            :: nodereduced => null()     ! (size:nodesuser)contains reduced nodenumber (size 0 if not reduced); -1 means vertical pass through, 0 is idomain = 0
-    integer(I4B), dimension(:), pointer            :: nodeuser    => null()     ! (size:nodes) given a reduced nodenumber, provide the user nodenumber (size 0 if not reduced)
-    real(DP), dimension(:,:), pointer              :: vertices    => null()     ! cell vertices stored as 2d array of x and y
-    real(DP), dimension(:,:), pointer              :: cellxy      => null()     ! cell center stored as 2d array of x and y
-    integer(I4B), dimension(:), pointer            :: iavert      => null()     ! cell vertex pointer ia array
-    integer(I4B), dimension(:), pointer            :: javert      => null()     ! cell vertex pointer ja array
+    integer(I4B), dimension(:), pointer, contiguous            :: nodereduced => null()     ! (size:nodesuser)contains reduced nodenumber (size 0 if not reduced); -1 means vertical pass through, 0 is idomain = 0
+    integer(I4B), dimension(:), pointer, contiguous            :: nodeuser    => null()     ! (size:nodes) given a reduced nodenumber, provide the user nodenumber (size 0 if not reduced)
+    real(DP), dimension(:,:), pointer, contiguous              :: vertices    => null()     ! cell vertices stored as 2d array of x and y
+    real(DP), dimension(:,:), pointer, contiguous              :: cellxy      => null()     ! cell center stored as 2d array of x and y
+    integer(I4B), dimension(:), pointer, contiguous            :: iavert      => null()     ! cell vertex pointer ia array
+    integer(I4B), dimension(:), pointer, contiguous            :: javert      => null()     ! cell vertex pointer ja array
     real(DP), dimension(:, :, :), pointer          :: botm        => null()     ! top and bottom elevations for each cell (ncpl, 1, 0:nlay)
     integer(I4B), dimension(:, :, :), pointer      :: idomain     => null()     ! idomain (ncpl, 1, nlay)
     type(DisvGeomType)                             :: cell1                     ! cell object used to calculate geometric properties
@@ -552,7 +552,6 @@ module GwfDisvModule
     use ConstantsModule,   only: LINELENGTH, DZERO
     ! -- dummy
     class(GwfDisvType) :: this
-    character(len=LINELENGTH) :: line
     integer(I4B) :: i
     integer(I4B) :: ierr, ival
     logical :: isfound, endOfBlock
@@ -644,7 +643,6 @@ module GwfDisvModule
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(GwfDisvType) :: this
-    character(len=LINELENGTH) :: line
     integer(I4B) :: i, j, ivert, ivert1, ncvert
     integer(I4B) :: ierr, ival
     logical :: isfound, endOfBlock
@@ -844,7 +842,7 @@ module GwfDisvModule
     character(len=LINELENGTH) :: fname
     character(len=*),parameter :: fmtgrdsave = &
       "(4X,'BINARY GRID INFORMATION WILL BE WRITTEN TO:',                      &
-       /,6X,'UNIT NUMBER: ', I0,/,6X, 'FILE NAME: ', A)"
+       &/,6X,'UNIT NUMBER: ', I0,/,6X, 'FILE NAME: ', A)"
 ! ------------------------------------------------------------------------------
     !
     ! -- Initialize
@@ -1947,7 +1945,7 @@ module GwfDisvModule
     ! -- formats
     character(len=*),parameter :: fmthsv = &
       "(1X,/1X,a,' WILL BE SAVED ON UNIT ',I4, &
-       ' AT END OF TIME STEP',I5,', STRESS PERIOD ',I4)"
+       &' AT END OF TIME STEP',I5,', STRESS PERIOD ',I4)"
 ! ------------------------------------------------------------------------------
     !
     ! -- set variables

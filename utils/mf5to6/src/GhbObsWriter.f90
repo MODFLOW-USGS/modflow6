@@ -47,7 +47,7 @@ contains
     this%PkgType = 'GHB'
     this%Active = .true.
     ftype = 'OBS6'
-    fname = trim(basename) // '.ghb6.obs6'
+    fname = trim(basename) // '.ghb.obs'
     ! Invoke superclass initializer
     call this%FileWriterType%InitializeFile(fname, ftype)
     this%FileWriterType%fileobj%FCode = FCINPUT

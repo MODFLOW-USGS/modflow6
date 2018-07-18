@@ -19,8 +19,8 @@ module GwfDisuModule
 
   type, extends(DisBaseType) :: GwfDisuType
     integer(I4B), pointer                              :: nvert       => null() ! number of x,y vertices
-    real(DP), dimension(:,:), pointer                  :: vertices    => null() ! cell vertices stored as 2d array of x and y
-    real(DP), dimension(:,:), pointer                  :: cellxy      => null() ! cell center stored as 2d array of x and y
+    real(DP), dimension(:,:), pointer, contiguous                  :: vertices    => null() ! cell vertices stored as 2d array of x and y
+    real(DP), dimension(:,:), pointer, contiguous                  :: cellxy      => null() ! cell center stored as 2d array of x and y
     integer(I4B), dimension(:), pointer                :: iavert      => null() ! cell vertex pointer ia array
     integer(I4B), dimension(:), pointer                :: javert      => null() ! cell vertex pointer ja array
   contains
@@ -699,7 +699,7 @@ module GwfDisuModule
     character(len=LINELENGTH) :: fname
     character(len=*),parameter :: fmtgrdsave = &
       "(4X,'BINARY GRID INFORMATION WILL BE WRITTEN TO:',                      &
-       /,6X,'UNIT NUMBER: ', I0,/,6X, 'FILE NAME: ', A)"
+       &/,6X,'UNIT NUMBER: ', I0,/,6X, 'FILE NAME: ', A)"
 ! ------------------------------------------------------------------------------
     !
     ! -- Initialize
@@ -1406,7 +1406,7 @@ module GwfDisuModule
     ! -- formats
     character(len=*),parameter :: fmthsv = &
       "(1X,/1X,a,' WILL BE SAVED ON UNIT ',I4, &
-       ' AT END OF TIME STEP',I5,', STRESS PERIOD ',I4)"
+       &' AT END OF TIME STEP',I5,', STRESS PERIOD ',I4)"
 ! ------------------------------------------------------------------------------
     !
     ! -- set variables

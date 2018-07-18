@@ -20,7 +20,7 @@ description integer value specifying the number of colums in the lake table. The
 # --------------------- gwf laktab table ---------------------
 
 block table
-name laktabrecarray
+name table
 type recarray stage volume sarea barea
 shape (nrow)
 reader urword

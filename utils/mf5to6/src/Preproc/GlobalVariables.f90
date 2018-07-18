@@ -1,6 +1,7 @@
 module GlobalVariablesModule
   
-  use ConstantsModule, only: MAXCHARLEN, VERSION
+  use ConstantsModule, only: MAXCHARLEN
+  use VersionModule, only: VERSION
   use OpenSpecModule,  only: ACCESS, ACTION, FORM
 
   implicit none

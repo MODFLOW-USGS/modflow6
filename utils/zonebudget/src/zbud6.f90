@@ -1,6 +1,7 @@
 program zonbudmf6
   use SimModule, only: ustop
-  use ConstantsModule, only: LENHUGELINE, VERSION
+  use ConstantsModule, only: LENHUGELINE
+  use VersionModule, only: VERSION
   use SimVariablesModule, only: iout
   use InputOutputModule,  only: openfile, write_centered
   

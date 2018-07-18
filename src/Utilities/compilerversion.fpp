@@ -12,7 +12,7 @@
         integer(I4B) :: imajor = 0
         integer(I4B) :: iminor = 0
         integer(I4B) :: imicro = 0
-        public :: get_compiler
+        public :: get_compiler, get_compile_date
         contains
   
         subroutine get_compiler(txt)
@@ -53,4 +53,21 @@
           ! return
           return
         end subroutine get_compiler
+        
+        
+        subroutine get_compile_date(txt)
+          character(len=20), intent(inout) :: txt
+        ! -- set variables
+#ifdef __GFORTRAN__ 
+          cdate = __DATE__ // ' ' // __TIME__
+#endif
+#ifdef __INTEL_COMPILER
+          cdate = __DATE__ // ' ' // __TIME__
+#endif
+          write(txt,'(a)') trim(adjustl(cdate))
+          !
+          ! return
+          return
+        end subroutine get_compile_date
+        
       end module CompilerVersion

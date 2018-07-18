@@ -14,23 +14,23 @@ module Xt3dModule
     integer(I4B), pointer                   :: iout       => null()
     character(len=LENORIGIN), pointer       :: origin     => null()   !origin name of this package (e.g. 'GWF_1 NPF')
     integer(I4B), pointer, dimension(:)     :: ibound     => null()   !pointer to model ibound
-    integer(I4B),dimension(:),pointer       :: iax        => null()   !ia array for extended neighbors used by xt3d
-    integer(I4B),dimension(:),pointer       :: jax        => null()   !ja array for extended neighbors used by xt3d
-    integer(I4B),dimension(:),pointer       :: idxglox    => null()   !mapping array for extended neighbors used by xt3d
+    integer(I4B),dimension(:),pointer, contiguous       :: iax        => null()   !ia array for extended neighbors used by xt3d
+    integer(I4B),dimension(:),pointer, contiguous       :: jax        => null()   !ja array for extended neighbors used by xt3d
+    integer(I4B),dimension(:),pointer, contiguous       :: idxglox    => null()   !mapping array for extended neighbors used by xt3d
     integer(I4B), pointer                   :: numextnbrs => null()   !dimension of jax array
     integer(I4B), pointer                   :: ixt3d      => null()   !xt3d flag (0 is off, 1 is lhs, 2 is rhs)
     logical, pointer                        :: nozee      => null()   !nozee flag
     real(DP), pointer                       :: vcthresh   => null()   !attenuation function threshold
-    real(DP),dimension(:,:),pointer         :: rmatck     => null()   !rotation matrix for the conductivity tensor
-    real(DP),dimension(:,:),pointer         :: vecc       => null()   !connection vectors
-    real(DP),dimension(:,:),pointer         :: vecn       => null()   !interface normals
-    real(DP),dimension(:),pointer           :: conlen     => null()   !direct connection lengths
-    real(DP), dimension(:),pointer          :: qsat       => null()   !saturated flow saved for Newton
-    real(DP), dimension(:),pointer          :: qrhs       => null()   !rhs part of flow saved for Newton
+    real(DP),dimension(:,:),pointer, contiguous         :: rmatck     => null()   !rotation matrix for the conductivity tensor
+    real(DP),dimension(:,:),pointer, contiguous         :: vecc       => null()   !connection vectors
+    real(DP),dimension(:,:),pointer, contiguous         :: vecn       => null()   !interface normals
+    real(DP),dimension(:),pointer, contiguous           :: conlen     => null()   !direct connection lengths
+    real(DP), dimension(:),pointer, contiguous          :: qsat       => null()   !saturated flow saved for Newton
+    real(DP), dimension(:),pointer, contiguous          :: qrhs       => null()   !rhs part of flow saved for Newton
     integer(I4B), pointer                   :: nbrmax     => null()   !maximum number of neighbors for any cell
-    real(DP), dimension(:),pointer          :: amatpc     => null()   !saved contributions to amat from permanently confined connections, direct neighbors
-    real(DP), dimension(:),pointer          :: amatpcx    => null()   !saved contributions to amat from permanently confined connections, extended neighbors
-    integer(I4B), dimension(:),pointer      :: iallpc     => null()   !indicates for each node whether all connections processed by xt3d are permanently confined (0 no, 1 yes)
+    real(DP), dimension(:),pointer, contiguous          :: amatpc     => null()   !saved contributions to amat from permanently confined connections, direct neighbors
+    real(DP), dimension(:),pointer, contiguous          :: amatpcx    => null()   !saved contributions to amat from permanently confined connections, extended neighbors
+    integer(I4B), dimension(:),pointer, contiguous      :: iallpc     => null()   !indicates for each node whether all connections processed by xt3d are permanently confined (0 no, 1 yes)
     logical, pointer                        :: lamatsaved => null()   !indicates whether amat has been saved for permanently confined connections
     class(DisBaseType), pointer             :: dis        => null()   !discretization object
     ! pointers to npf variables
@@ -49,6 +49,7 @@ module Xt3dModule
     real(DP), dimension(:), pointer         :: angle1     => null()   !k ellipse rotation in xy plane around z axis (yaw)
     real(DP), dimension(:), pointer         :: angle2     => null()   !k ellipse rotation up from xy plane around y axis (pitch)
     real(DP), dimension(:), pointer         :: angle3     => null()   !k tensor rotation around x axis (roll)
+    logical, pointer                        :: ldispersion => null()  !flag to indicate dispersion
   contains
     procedure :: xt3d_ac
     procedure :: xt3d_mc
@@ -80,7 +81,7 @@ module Xt3dModule
   
   contains
 
-    subroutine xt3d_cr(xt3dobj, name_model, inunit, iout)
+    subroutine xt3d_cr(xt3dobj, name_model, inunit, iout, ldispopt)
 ! ******************************************************************************
 ! xt3d_cr -- Create a new xt3d object
 ! ******************************************************************************
@@ -92,6 +93,7 @@ module Xt3dModule
     character(len=*), intent(in) :: name_model
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
+    logical, optional, intent(in) :: ldispopt
 ! ------------------------------------------------------------------------------
     !
     ! -- Create the object
@@ -103,6 +105,7 @@ module Xt3dModule
     ! -- Set variables
     xt3dobj%inunit = inunit
     xt3dobj%iout   = iout
+    if (present(ldispopt)) xt3dobj%ldispersion = ldispopt
     !
     ! -- Return
     return
@@ -1000,6 +1003,7 @@ module Xt3dModule
     call mem_deallocate(this%vcthresh)
     call mem_deallocate(this%lamatsaved)
     call mem_deallocate(this%nbrmax)
+    call mem_deallocate(this%ldispersion)
     !
     ! -- Return
     return
@@ -1032,6 +1036,7 @@ module Xt3dModule
     call mem_allocate(this%nozee, 'NOZEE', this%origin)
     call mem_allocate(this%vcthresh, 'VCTHRESH', this%origin)
     call mem_allocate(this%lamatsaved, 'LAMATSAVED', this%origin)
+    call mem_allocate(this%ldispersion, 'LDISPERSION', this%origin)
     !  
     ! -- Initialize value
     this%ixt3d = 0
@@ -1042,6 +1047,7 @@ module Xt3dModule
     this%nozee = .false.
     this%vcthresh = 1.d-10
     this%lamatsaved = .false.
+    this%ldispersion = .false.
     !
     ! -- Return
     return
@@ -1126,7 +1132,7 @@ module Xt3dModule
     integer(I4B),dimension(this%nbrmax) :: inbr0, inbr1
 ! ------------------------------------------------------------------------------
     !
-    if(this%ixt3d == 2) then
+    if(this%ixt3d == 2 .or. this%ldispersion) then
       this%lamatsaved = .false.
       call mem_allocate(this%iallpc, 0, 'IALLPC', this%origin)
     else

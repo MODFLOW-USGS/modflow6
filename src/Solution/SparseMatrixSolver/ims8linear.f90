@@ -2,7 +2,7 @@
   
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LINELENGTH, LENSOLUTIONNAME,                      &
-                             IZERO, DZERO, DPREC,                              &
+                             IZERO, DZERO, DPREC, DSAME,                       &
                              DEM8, DEM6, DEM5, DEM4, DEM3, DEM2, DEM1,         &
                              DONE, DTWO
   use IMSReorderingModule, only: ims_genrcm, ims_odrv, ims_dperm, ims_vperm
@@ -402,7 +402,7 @@
         call store_error(errmsg)
       END IF
       IF (THIS%NORTH < 0) THEN
-        WRITE( errmsg,'(A)' ) 'IMSLINEAR7AR: NORTH MUST .GE. 0.0'
+        WRITE( errmsg,'(A)' ) 'IMSLINEAR7AR: NORTH MUST .GE. 0'
         call store_error(errmsg)
       END IF
       IF (THIS%RCLOSE.EQ.DZERO) THEN
@@ -432,7 +432,7 @@
      &                  THIS%NORTH, THIS%HCLOSE, THIS%RCLOSE,       &
      &                  THIS%ICNVGOPT, ccnvgopt(THIS%ICNVGOPT),    &
      &                  THIS%RELAX
-      IF (THIS%LEVEL > 0) THEN
+      IF (THIS%LEVEL > 0 .OR. THIS%DROPTOL > DZERO) THEN
         WRITE (IOUT,2015) trim(adjustl(clevel)), &
      &                    trim(adjustl(cdroptol))
       ELSE
@@ -458,7 +458,18 @@
       ! -- ILUT AND MILUT
       IF (THIS%IPC.EQ.3 .OR. THIS%IPC.EQ.4) THEN
         THIS%NIAPC = THIS%NEQ
-        iwk        = THIS%NEQ * (THIS%LEVEL * 2 + 1)
+        IF (THIS%LEVEL > 0) THEN
+          iwk      = THIS%NEQ * (THIS%LEVEL * 2 + 1)
+        ELSE
+          iwk = 0
+          DO n = 1, NEQ
+            i = IA(n+1) - IA(n)
+            IF (i > iwk) THEN
+              iwk = i
+            END IF
+          END DO
+          iwk      = THIS%NEQ * iwk
+        END IF
         THIS%NJAPC = iwk
         ijlu       = iwk
         ijw        = 2 * THIS%NEQ
@@ -2278,7 +2289,7 @@
       real(DP), intent(in)   :: b
 !     + + + local definitions + + +
       real(DP) :: denom
-      real(DP) :: rerror
+      real(DP) :: rdiff
 !     + + + parameters + + +
 !     + + + functions + + +
 !     + + + code + + +
@@ -2287,15 +2298,16 @@
         ivalue = 1
       else
         if (abs(b) > abs(a)) then
-          rerror = abs( (a - b) / b )
+          denom = b
         else
           denom = a
-          if (abs(denom).eq.DZERO) then
-            denom = dprec
+          if (abs(denom) == DZERO) then
+            denom = DPREC
           end if
-          rerror = abs( (a - b) / denom )
         end if
-        if (rerror <= DEM5) then
+        rdiff = abs( (a - b) / denom )
+        !if (rdiff <= DEM5) then
+        if (rdiff <= DSAME) then
           ivalue = 1
         end if
       end if

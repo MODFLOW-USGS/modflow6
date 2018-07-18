@@ -9,6 +9,7 @@ module GwfModule
   use GwfIcModule,                 only: GwfIcType
   use GwfNpfModule,                only: GwfNpfType
   use Xt3dModule,                  only: Xt3dType
+  use VKDModule,                   only: VKDType, vkd_cr
   use GwfHfbModule,                only: GwfHfbType
   use GwfStoModule,                only: GwfStoType
   use GwfMvrModule,                only: GwfMvrType
@@ -16,11 +17,9 @@ module GwfModule
   use GwfOcModule,                 only: GwfOcType
   use GhostNodeModule,             only: GhostNodeType, gnc_cr
   use GwfObsModule,                only: GwfObsType, gwf_obs_cr
-  use ObserveModule,               only: ObserveType
   use SimModule,                   only: count_errors, store_error,            &
                                          store_error_unit, ustop
   use BaseModelModule,             only: BaseModelType
-  use ListModule,                  only: ListType
 
   implicit none
 
@@ -33,6 +32,7 @@ module GwfModule
     type(GwfIcType),                pointer :: ic      => null()                ! initial conditions package
     type(GwfNpfType),               pointer :: npf     => null()                ! node property flow package
     type(Xt3dType),                 pointer :: xt3d    => null()                ! xt3d option for npf
+    type(VKDType),                  pointer :: vkd    => null()                ! VKD option for npf
     type(GwfStoType),               pointer :: sto     => null()                ! storage package
     type(GwfOcType),                pointer :: oc      => null()                ! output control package
     type(GhostNodeType),            pointer :: gnc     => null()                ! ghost node correction package
@@ -107,9 +107,9 @@ module GwfModule
     use BaseModelModule,            only: AddBaseModelToList
     use SimModule,                  only: ustop, store_error, count_errors
     use InputOutputModule,          only: write_centered
-    use ConstantsModule,            only: VERSION, MFVNAM, MFTITLE,            &
-                                          FMTDISCLAIMER, LINELENGTH,           &
-                                          LENPACKAGENAME, IDEVELOPMODE
+    use ConstantsModule,            only: LINELENGTH, LENPACKAGENAME
+    use VersionModule,              only: VERSION, MFVNAM, MFTITLE,             &
+                                          FMTDISCLAIMER, IDEVELOPMODE
     use CompilerVersion
     use MemoryManagerModule,        only: mem_allocate
     use GwfDisModule,               only: dis_cr
@@ -117,6 +117,7 @@ module GwfModule
     use GwfDisuModule,              only: disu_cr
     use GwfNpfModule,               only: npf_cr
     use Xt3dModule,                 only: xt3d_cr
+!!!!    use VKDModule,                  only: vkd_cr
     use GwfStoModule,               only: sto_cr
     use GwfMvrModule,               only: mvr_cr
     use GwfHfbModule,               only: hfb_cr
@@ -272,6 +273,7 @@ module GwfModule
     ! -- Create packages that are tied directly to model
     call npf_cr(this%npf, this%name, this%innpf, this%iout)
     call xt3d_cr(this%xt3d, this%name, this%innpf, this%iout)
+!!$    call vkd_cr(this%vkd, this%name, this%innpf, this%iout)
     call gnc_cr(this%gnc, this%name, this%ingnc, this%iout)
     call hfb_cr(this%hfb, this%name, this%inhfb, this%iout)
     call sto_cr(this%sto, this%name, this%insto, this%iout)
@@ -317,7 +319,8 @@ module GwfModule
     !
     ! -- Define packages and utility objects
     call this%dis%dis_df()
-    call this%npf%npf_df(this%xt3d, this%ingnc)
+    call this%npf%npf_df(this%xt3d, this%vkd, this%ingnc)
+    call vkd_cr(this%vkd, this%name, this%innpf, this%iout)
     call this%oc%oc_df()
     call this%budget%budget_df(niunit, 'VOLUME', 'L**3')
     if(this%ingnc > 0) call this%gnc%gnc_df(this)
@@ -993,7 +996,7 @@ module GwfModule
     ! -- formats
     character(len=*),parameter :: fmtnocnvg = &
       "(1X,/9X,'****FAILED TO MEET SOLVER CONVERGENCE CRITERIA IN TIME STEP ', &
-      I0,' OF STRESS PERIOD ',I0,'****')"
+      &I0,' OF STRESS PERIOD ',I0,'****')"
 ! ------------------------------------------------------------------------------
     !
     ! -- Set ibudfl flag for printing budget information
@@ -1148,11 +1151,22 @@ module GwfModule
   end subroutine gwf_da
 
   function gwf_get_nsubtimes(this) result(nsubtimes)
+! ******************************************************************************
+! gwf_get_nsubtimes -- Return number of subtimesteps
+! Subtimesteps not implemented yet, so just return 1.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     !
     ! -- result
     integer(I4B) :: nsubtimes
     class(GwfModelType) :: this
+! ------------------------------------------------------------------------------
+    !
     nsubtimes = 1
+    !
+    ! -- return
     return
   end function gwf_get_nsubtimes
 

@@ -152,7 +152,7 @@ module FhbPackageWriterModule
         c%source = 'FHB'
         call c%AllocatePointers()
         c%ipr = 1
-        fname = trim(this%ModelBasename) // '.fhb.chd6'
+        fname = trim(this%ModelBasename) // '.fhb.chd'
         call c%InitializeFile(fname, 'CHD6', this%PackageName)
         c%PrintInput = .true.
         c%PackageName = 'CHD-FHB'
@@ -208,7 +208,7 @@ module FhbPackageWriterModule
         c%MaxActiveBnd = nhedused
         !
         ! Create a time-series file for heads
-        c%TsFile = trim(this%ModelBasename) // '.fhb.chd6.ts'
+        c%TsFile = trim(this%ModelBasename) // '.fhb.chd.ts'
         IFHBD3 = size(SBHED,1)
         if (NBDTIM == 1) then
           method = 'STEPWISE'

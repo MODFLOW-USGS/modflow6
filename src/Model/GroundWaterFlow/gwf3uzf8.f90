@@ -68,21 +68,21 @@ module UzfModule
     integer(I4B), pointer                       :: igwetflag    => null()
     integer(I4B), pointer                       :: iseepflag    => null()
     integer(I4B), pointer                       :: imaxcellcnt  => null()
-    integer(I4B), dimension(:), pointer         :: mfcellid     => null()
-    real(DP), dimension(:), pointer             :: appliedinf   => null()
-    real(DP), dimension(:), pointer             :: rejinf       => null()
-    real(DP), dimension(:), pointer             :: rejinf0      => null()
-    real(DP), dimension(:), pointer             :: rejinftomvr  => null()
-    real(DP), dimension(:), pointer             :: infiltration => null()
-    real(DP), dimension(:), pointer             :: recharge     => null()
-    real(DP), dimension(:), pointer             :: gwet         => null()
-    real(DP), dimension(:), pointer             :: uzet         => null()
-    real(DP), dimension(:), pointer             :: gwd          => null()
-    real(DP), dimension(:), pointer             :: gwd0         => null()
-    real(DP), dimension(:), pointer             :: gwdtomvr     => null()
-    real(DP), dimension(:), pointer             :: rch          => null()
-    real(DP), dimension(:), pointer             :: rch0         => null()
-    real(DP), dimension(:), pointer             :: qsto         => null()
+    integer(I4B), dimension(:), pointer, contiguous         :: mfcellid     => null()
+    real(DP), dimension(:), pointer, contiguous             :: appliedinf   => null()
+    real(DP), dimension(:), pointer, contiguous             :: rejinf       => null()
+    real(DP), dimension(:), pointer, contiguous             :: rejinf0      => null()
+    real(DP), dimension(:), pointer, contiguous             :: rejinftomvr  => null()
+    real(DP), dimension(:), pointer, contiguous             :: infiltration => null()
+    real(DP), dimension(:), pointer, contiguous             :: recharge     => null()
+    real(DP), dimension(:), pointer, contiguous             :: gwet         => null()
+    real(DP), dimension(:), pointer, contiguous             :: uzet         => null()
+    real(DP), dimension(:), pointer, contiguous             :: gwd          => null()
+    real(DP), dimension(:), pointer, contiguous             :: gwd0         => null()
+    real(DP), dimension(:), pointer, contiguous             :: gwdtomvr     => null()
+    real(DP), dimension(:), pointer, contiguous             :: rch          => null()
+    real(DP), dimension(:), pointer, contiguous             :: rch0         => null()
+    real(DP), dimension(:), pointer, contiguous             :: qsto         => null()
     integer(I4B), pointer                       :: iuzf2uzf     => null()
     !
     ! -- integer vectors
@@ -90,21 +90,21 @@ module UzfModule
     integer(I4B), dimension(:), pointer, contiguous :: ja => null()
     !
     ! -- timeseries aware variables
-    type (MemoryTSType), pointer, dimension(:) :: sinf => null()
-    type (MemoryTSType), pointer, dimension(:) :: pet => null()
-    type (MemoryTSType), pointer, dimension(:) :: extdp => null()
-    type (MemoryTSType), pointer, dimension(:) :: extwc => null()
-    type (MemoryTSType), pointer, dimension(:) :: ha => null()
-    type (MemoryTSType), pointer, dimension(:) :: hroot => null()
-    type (MemoryTSType), pointer, dimension(:) :: rootact => null()
-    type (MemoryTSType), pointer, dimension(:) :: lauxvar => null()
+    type (MemoryTSType), pointer, contiguous, dimension(:) :: sinf => null()
+    type (MemoryTSType), pointer, contiguous, dimension(:) :: pet => null()
+    type (MemoryTSType), pointer, contiguous, dimension(:) :: extdp => null()
+    type (MemoryTSType), pointer, contiguous, dimension(:) :: extwc => null()
+    type (MemoryTSType), pointer, contiguous, dimension(:) :: ha => null()
+    type (MemoryTSType), pointer, contiguous, dimension(:) :: hroot => null()
+    type (MemoryTSType), pointer, contiguous, dimension(:) :: rootact => null()
+    type (MemoryTSType), pointer, contiguous, dimension(:) :: lauxvar => null()
     !
     ! -- convergence check
     integer(I4B), pointer  :: iconvchk    => null()
     real(DP), pointer      :: pdmax    => null()
     !
     ! formulate variables
-    real(DP), dimension(:), pointer            :: deriv       => null()
+    real(DP), dimension(:), pointer, contiguous            :: deriv       => null()
     !
     ! budget variables
     real(DP), pointer                          :: totfluxtot  => null()
@@ -123,9 +123,9 @@ module UzfModule
     real(DP), dimension(:), pointer, contiguous :: qauxcbc => null()
     !
     ! -- observations
-    real(DP), dimension(:), pointer            :: obs_theta   => null()
-    real(DP), dimension(:), pointer            :: obs_depth   => null()
-    integer(I4B), dimension(:), pointer        :: obs_num     => null()
+    real(DP), dimension(:), pointer, contiguous            :: obs_theta   => null()
+    real(DP), dimension(:), pointer, contiguous            :: obs_depth   => null()
+    integer(I4B), dimension(:), pointer, contiguous        :: obs_num     => null()
 
   contains
 

@@ -33,11 +33,11 @@ module GwfGwfExchangeModule
     integer(I4B), pointer                            :: icdist    => null()     ! flag indicating cdist was read, if read, icdist is index in auxvar
     integer(I4B), pointer                            :: inamedbound => null()   ! flag to read boundnames
     real(DP), pointer                                :: satomega  => null()     ! saturation smoothing
-    integer(I4B), dimension(:), pointer              :: ihc       => null()     ! horizontal connection indicator array
-    real(DP), dimension(:), pointer                  :: condsat   => null()     ! saturated conductance
-    real(DP), dimension(:), pointer                  :: cl1       => null()     ! connection length 1
-    real(DP), dimension(:), pointer                  :: cl2       => null()     ! connection length 2
-    real(DP), dimension(:), pointer                  :: hwva      => null()     ! horizontal widths, vertical flow areas
+    integer(I4B), dimension(:), pointer, contiguous              :: ihc       => null()     ! horizontal connection indicator array
+    real(DP), dimension(:), pointer, contiguous                  :: condsat   => null()     ! saturated conductance
+    real(DP), dimension(:), pointer, contiguous                  :: cl1       => null()     ! connection length 1
+    real(DP), dimension(:), pointer, contiguous                  :: cl2       => null()     ! connection length 2
+    real(DP), dimension(:), pointer, contiguous                  :: hwva      => null()     ! horizontal widths, vertical flow areas
     integer(I4B), pointer                            :: ingnc     => null()     ! unit number for gnc (0 if off)
     type(GhostNodeType), pointer                     :: gnc       => null()     ! gnc object
     integer(I4B), pointer                            :: inmvr     => null()     ! unit number for mover (0 if off)
@@ -402,8 +402,8 @@ contains
         endif
         !
         fawidth = this%hwva(iexg)
-        csat = hcond(1, 1, 1, 1, this%inewton, 0, ihc, 0,                     &
-                      this%icellavg, DONE,                                    &
+        csat = hcond(1, 1, 1, 1, this%inewton, 0, ihc,                        &
+                      this%icellavg, 0, DONE,                                 &
                       topn, topm, satn, satm, hyn, hym,                       &
                       topn, topm,                                             &
                       botn, botm,                                             &
@@ -642,6 +642,8 @@ contains
         !
         ! get saturated conductivity for derivative
         cond = this%condsat(iexg)
+        !
+        ! -- TO DO deal with MODFLOW-NWT upstream weighting option
         !
         ! -- compute terms
         consterm = -cond * (hup - hdn)
@@ -1649,7 +1651,7 @@ contains
         !
         fawidth = this%hwva(iexg)
         cond = hcond(ibdn, ibdm, ictn, ictm, this%inewton, this%inewton,       &
-                     this%ihc(iexg), this%icellavg, 0, this%condsat(iexg),     &
+                     this%ihc(iexg), this%icellavg, 0, this%condsat(iexg),  &
                      hn, hm, satn, satm, hyn, hym, topn, topm, botn, botm,     &
                      this%cl1(iexg), this%cl2(iexg), fawidth, this%satomega)
       endif

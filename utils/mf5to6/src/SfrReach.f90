@@ -33,6 +33,10 @@ module SfrReachModule
     real, public    :: rainfall
     real, public    :: evap
     real, public    :: runoff
+    integer, public :: inflow_iprn
+    integer, public :: rainfall_iprn
+    integer, public :: evap_iprn
+    integer, public :: runoff_iprn
     !real, public    :: diversion
     !
     ! Segment-based (SFR2) stream network topology
@@ -75,6 +79,10 @@ contains
     this%rainfall = 0.0
     this%evap = 0.0
     this%runoff = 0.0
+    this%inflow_iprn = 0
+    this%rainfall_iprn = 0
+    this%evap_iprn = 0
+    this%runoff_iprn = 0
     !this%diversion  = 0.0
     this%ustrf = 0.0
     !

@@ -33,14 +33,14 @@ module BaseDisModule
     real(DP), pointer                       :: yorigin    => null()             ! y-position of the lower-left grid corner (default is 0.)
     real(DP), pointer                       :: xorigin    => null()             ! x-position of the lower-left grid corner (default is 0.)
     real(DP), pointer                       :: angrot     => null()             ! counter-clockwise rotation angle of the lower-left corner (default is 0.0)
-    integer(I4B), pointer, dimension(:)     :: mshape     => null()             !shape of the model; (nodes) for DisBaseType
-    real(DP), dimension(:), pointer         :: top        => null()             !(size:nodes) cell top elevation
-    real(DP), dimension(:), pointer         :: bot        => null()             !(size:nodes) cell bottom elevation
-    real(DP), dimension(:), pointer         :: area       => null()             !(size:nodes) cell area, in plan view
+    integer(I4B), pointer, contiguous, dimension(:)     :: mshape     => null()             !shape of the model; (nodes) for DisBaseType
+    real(DP), dimension(:), pointer, contiguous         :: top        => null()             !(size:nodes) cell top elevation
+    real(DP), dimension(:), pointer, contiguous         :: bot        => null()             !(size:nodes) cell bottom elevation
+    real(DP), dimension(:), pointer, contiguous         :: area       => null()             !(size:nodes) cell area, in plan view
     type(ConnectionsType), pointer          :: con        => null()             !connections object
     type(BlockParserType)                   :: parser                           !object to read blocks
-    real(DP), dimension(:), pointer         :: dbuff  => null()
-    integer(I4B), dimension(:), pointer     :: ibuff  => null()
+    real(DP), dimension(:), pointer, contiguous         :: dbuff  => null()
+    integer(I4B), dimension(:), pointer, contiguous     :: ibuff  => null()
   contains
     procedure :: dis_df
     procedure :: dis_ac
@@ -208,7 +208,7 @@ module BaseDisModule
       endif
     enddo
     !
-    call this%write_grb(ict)
+    if (this%writegrb) call this%write_grb(ict)
     !
     ! -- Return
     return
@@ -298,7 +298,6 @@ module BaseDisModule
     integer(I4B), intent(in) :: nodeu
     character(len=*), intent(inout) :: str
     ! -- local
-    character(len=10) :: nstr
 ! ------------------------------------------------------------------------------
     !
     call store_error('Program error: DisBaseType method nodeu_to_string not &
@@ -964,11 +963,14 @@ module BaseDisModule
         call read_value_or_time_series(lstrdobj%txtrlist(l), ii, jj,           &
                 bndElem, pkgName, 'BND', tsManager, iprpak, tsLinkBnd)
         if (associated(tsLinkBnd)) then
-          ! If iauxmultcol > 0, assign tsLinkBnd%RMultiplier to auxvar multiplier
-          if (iauxmultcol > 0) then
+          !
+          ! -- If iauxmultcol is the same as this column, then assign 
+          !    tsLinkBnd%RMultiplier to auxvar multiplier
+          if (iauxmultcol > 0 .and. jj == iscloc) then
             tsLinkBnd%RMultiplier => auxvar(iauxmultcol, ii)
           endif
-          ! If boundaries are named, save the name in the link
+          !
+          ! -- If boundaries are named, save the name in the link
           if (lstrdobj%inamedbound == 1) then
             tsLinkBnd%BndName = lstrdobj%boundname(tsLinkBnd%IRow)
           endif
@@ -1069,7 +1071,7 @@ module BaseDisModule
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
     ! -- local
-    integer(I4B) :: il, ir, ic, ncol, nrow, nlay, nval, noder, nodeu
+    integer(I4B) :: il, ir, ic, ncol, nrow, nlay, nval, nodeu
     logical :: found
     character(len=LINELENGTH) :: ermsg
 ! ------------------------------------------------------------------------------

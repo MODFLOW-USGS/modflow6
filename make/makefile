@@ -1,4 +1,4 @@
-# makefile created on 2017-08-07 08:41:50.112373
+# makefile created on 2018-06-27 13:15:32.698366
 # by pymake (version 1.1.0)
 # using the gfortran fortran and gcc c/c++ compilers.
 
@@ -6,7 +6,7 @@
 # the executable, and the executable name and path.
 OBJDIR = ./obj_temp
 BINDIR = .
-PROGRAM = mf6
+PROGRAM = ../bin/mf6
 
 SOURCEDIR1=../src
 SOURCEDIR2=../src/Exchange
@@ -43,103 +43,109 @@ ${SOURCEDIR14}
 
 # Define the Fortran compile flags
 FC = gfortran
-FFLAGS = -O2 -fbacktrace -ffpe-summary=overflow -ffpe-trap=overflow,zero,invalid 
+FFLAGS = -O2 -fbacktrace
+F90FLAGS= -march=native -mtune=native -O2 -fwhole-program -fstack-arrays -flto -fopenmp -fopt-info -mavx
+#FFLAGS = -g -ggdb -fbacktrace -ffpe-summary=overflow -ffpe-trap=overflow,zero,invalid 
 
 # Define the C compile flags
 CC = gcc
 CFLAGS = -O3 -D_UF 
+#CFLAGS = -g -ggdb -D_UF 
 
 # Define the libraries
-SYSLIBS = -lc 
+SYSLIBS = 
 
 OBJECTS = \
-$(OBJDIR)/kind.o \
-$(OBJDIR)/Constants.o \
 $(OBJDIR)/OpenSpec.o \
-$(OBJDIR)/ims8reordering.o \
-$(OBJDIR)/HashTable.o \
-$(OBJDIR)/Memory.o \
-$(OBJDIR)/SimVariables.o \
-$(OBJDIR)/Timer.o \
-$(OBJDIR)/SmoothingFunctions.o \
-$(OBJDIR)/Xt3dAlgorithm.o \
-$(OBJDIR)/BaseGeometry.o \
-$(OBJDIR)/ArrayHandlers.o \
+$(OBJDIR)/kind.o \
 $(OBJDIR)/List.o \
-$(OBJDIR)/compilerversion.o \
-$(OBJDIR)/Sparse.o \
-$(OBJDIR)/Sim.o \
-$(OBJDIR)/mf6lists.o \
+$(OBJDIR)/HashTable.o \
+$(OBJDIR)/version.o \
+$(OBJDIR)/Constants.o \
 $(OBJDIR)/TimeSeriesRecord.o \
-$(OBJDIR)/InputOutput.o \
+$(OBJDIR)/SimVariables.o \
+$(OBJDIR)/Xt3dAlgorithm.o \
+$(OBJDIR)/mf6lists.o \
+$(OBJDIR)/Memory.o \
 $(OBJDIR)/ObsOutput.o \
-$(OBJDIR)/StringList.o \
+$(OBJDIR)/SmoothingFunctions.o \
 $(OBJDIR)/MemoryList.o \
-$(OBJDIR)/MemoryManager.o \
-$(OBJDIR)/PackageMover.o \
-$(OBJDIR)/ListReader.o \
-$(OBJDIR)/Mover.o \
-$(OBJDIR)/PrintSaveManager.o \
-$(OBJDIR)/BaseModel.o \
-$(OBJDIR)/RectangularChGeometry.o \
-$(OBJDIR)/ObsOutputList.o \
-$(OBJDIR)/ArrayReaders2.o \
-$(OBJDIR)/Iunit.o \
-$(OBJDIR)/CircularGeometry.o \
-$(OBJDIR)/BaseSolution.o \
-$(OBJDIR)/Budget.o \
+$(OBJDIR)/BaseGeometry.o \
+$(OBJDIR)/Sparse.o \
+$(OBJDIR)/ArrayHandlers.o \
+$(OBJDIR)/StringList.o \
+$(OBJDIR)/Timer.o \
+$(OBJDIR)/compilerversion.o \
+$(OBJDIR)/ims8reordering.o \
+$(OBJDIR)/Sim.o \
+$(OBJDIR)/InputOutput.o \
 $(OBJDIR)/BlockParser.o \
+$(OBJDIR)/Iunit.o \
+$(OBJDIR)/TimeSeries.o \
+$(OBJDIR)/Budget.o \
 $(OBJDIR)/DisvGeom.o \
+$(OBJDIR)/ArrayReaders.o \
+$(OBJDIR)/TimeSeriesFileList.o \
+$(OBJDIR)/CircularGeometry.o \
 $(OBJDIR)/RectangularGeometry.o \
+$(OBJDIR)/MemoryManager.o \
+$(OBJDIR)/RectangularChGeometry.o \
+$(OBJDIR)/ListReader.o \
+$(OBJDIR)/Connections.o \
+$(OBJDIR)/TimeSeriesLink.o \
+$(OBJDIR)/PrintSaveManager.o \
+$(OBJDIR)/ObsOutputList.o \
+$(OBJDIR)/tdis.o \
+$(OBJDIR)/comarg.o \
+$(OBJDIR)/Mover.o \
+$(OBJDIR)/BaseModel.o \
 $(OBJDIR)/NameFile.o \
 $(OBJDIR)/ims8linear.o \
-$(OBJDIR)/tdis.o \
-$(OBJDIR)/SolutionGroup.o \
-$(OBJDIR)/BndUzfKinematic.o \
-$(OBJDIR)/Connections.o \
-$(OBJDIR)/TimeSeries.o \
-$(OBJDIR)/BaseExchange.o \
-$(OBJDIR)/TimeSeriesGroupList.o \
-$(OBJDIR)/TimeSeriesLink.o \
 $(OBJDIR)/TimeSeriesManager.o \
+$(OBJDIR)/PackageMover.o \
 $(OBJDIR)/DiscretizationBase.o \
+$(OBJDIR)/BaseSolution.o \
 $(OBJDIR)/NumericalPackage.o \
-$(OBJDIR)/Xt3dInterface.o \
-$(OBJDIR)/gwf3disu8.o \
-$(OBJDIR)/Observe.o \
-$(OBJDIR)/gwf3dis8.o \
+$(OBJDIR)/BndUzfKinematic.o \
+$(OBJDIR)/SolutionGroup.o \
+$(OBJDIR)/BaseExchange.o \
 $(OBJDIR)/OutputControlData.o \
 $(OBJDIR)/TimeArray.o \
-$(OBJDIR)/gwf3ic8.o \
+$(OBJDIR)/Observe.o \
+$(OBJDIR)/Xt3dInterface.o \
 $(OBJDIR)/gwf3mvr8.o \
-$(OBJDIR)/gwf3disv8.o \
-$(OBJDIR)/TimeArraySeries.o \
-$(OBJDIR)/gwf3sto8.o \
-$(OBJDIR)/gwf3npf8.o \
 $(OBJDIR)/gwf3hfb8.o \
-$(OBJDIR)/TimeArraySeriesLink.o \
+$(OBJDIR)/gwf3ic8.o \
+$(OBJDIR)/gwf3dis8.o \
+$(OBJDIR)/gwf3disu8.o \
+$(OBJDIR)/gwf3disv8.o \
+$(OBJDIR)/gwf3sto8.o \
+$(OBJDIR)/VKDProcess.o \
+$(OBJDIR)/TimeArraySeries.o \
 $(OBJDIR)/ObsUtility.o \
 $(OBJDIR)/ObsContainer.o \
 $(OBJDIR)/OutputControl.o \
-$(OBJDIR)/TimeArraySeriesManager.o \
+$(OBJDIR)/gwf3npf8.o \
+$(OBJDIR)/TimeArraySeriesLink.o \
 $(OBJDIR)/gwf3oc8.o \
 $(OBJDIR)/Obs3.o \
-$(OBJDIR)/gwf3obs8.o \
+$(OBJDIR)/TimeArraySeriesManager.o \
 $(OBJDIR)/BoundaryPackage.o \
-$(OBJDIR)/gwf3lak8.o \
-$(OBJDIR)/gwf3drn8.o \
-$(OBJDIR)/gwf3rch8.o \
-$(OBJDIR)/NumericalModel.o \
-$(OBJDIR)/GhostNode.o \
-$(OBJDIR)/NumericalExchange.o \
 $(OBJDIR)/gwf3ghb8.o \
 $(OBJDIR)/gwf3evt8.o \
-$(OBJDIR)/gwf3chd8.o \
-$(OBJDIR)/gwf3sfr8.o \
 $(OBJDIR)/gwf3wel8.o \
+$(OBJDIR)/gwf3chd8.o \
 $(OBJDIR)/gwf3uzf8.o \
-$(OBJDIR)/gwf3riv8.o \
 $(OBJDIR)/gwf3maw8.o \
+$(OBJDIR)/gwf3rch8.o \
+$(OBJDIR)/gwf3obs8.o \
+$(OBJDIR)/gwf3sfr8.o \
+$(OBJDIR)/NumericalModel.o \
+$(OBJDIR)/gwf3riv8.o \
+$(OBJDIR)/gwf3lak8.o \
+$(OBJDIR)/gwf3drn8.o \
+$(OBJDIR)/NumericalExchange.o \
+$(OBJDIR)/GhostNode.o \
 $(OBJDIR)/NumericalSolution.o \
 $(OBJDIR)/gwf3.o \
 $(OBJDIR)/GwfGwfExchange.o \
@@ -193,4 +199,3 @@ clean :
 .PHONY : cleanobj
 cleanobj : 
 	-rm -rf $(OBJDIR)
-

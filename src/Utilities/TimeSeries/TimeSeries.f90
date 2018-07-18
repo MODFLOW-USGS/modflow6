@@ -711,15 +711,15 @@ contains
         elseif (dclosetest(t1, time1, epsil)) then
           done = .true.
         else
+          ! -- We are not done yet
           if (.not. associated(currNode%nextNode)) then
-            ! -- try to read the next record
+            ! -- Not done and no more data, so try to read the next record
             if (.not. this%read_next_record()) then
               write(errmsg,10)trim(this%Name),time0,time1
               call store_error(errmsg)
               call ustop()
             endif
-          endif
-          if (associated(currNode%nextNode)) then
+          elseif (associated(currNode%nextNode)) then
             currNode => currNode%nextNode
           endif
         endif
