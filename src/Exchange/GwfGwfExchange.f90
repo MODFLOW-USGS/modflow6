@@ -1,6 +1,7 @@
 module GwfGwfExchangeModule
 
-  use KindModule, only: DP, I4B
+  use KindModule,              only: DP, I4B
+  use ConstantsModule,         only: DZERO
   use ArrayHandlersModule,     only: ExpandArray
   use BaseModelModule,         only: GetBaseModelFromList
   use BaseExchangeModule,      only: BaseExchangeType, AddBaseExchangeToList
@@ -9,6 +10,7 @@ module GwfGwfExchangeModule
   use NumericalExchangeModule, only: NumericalExchangeType
   use NumericalModelModule,    only: NumericalModelType
   use GwfModule,               only: GwfModelType
+  use GwfHaloModule,           only: GwfHaloModelType
   use GhostNodeModule,         only: GhostNodeType
   use GwfMvrModule,            only: GwfMvrType
   use ObserveModule,           only: ObserveType
@@ -23,6 +25,7 @@ module GwfGwfExchangeModule
   public :: gwfexchange_create
 
   type, extends(NumericalExchangeType) :: GwfExchangeType
+    type(GwfHaloModelType), pointer                  :: gwfhalo   => null()     ! pointer to halo model
     type(GwfModelType), pointer                      :: gwfmodel1 => null()     ! pointer to GWF Model 1
     type(GwfModelType), pointer                      :: gwfmodel2 => null()     ! pointer to GWF Model 2
     integer(I4B), pointer                            :: inewton   => null()     ! newton flag (1 newton is on)
@@ -89,6 +92,7 @@ contains
     use BaseModelModule, only: BaseModelType
     use ListsModule, only: baseexchangelist
     use ObsModule, only: obs_cr
+    use GwfHaloModule, only: gwfhalo_cr
     ! -- dummy
     character(len=*),intent(in) :: filename
     integer(I4B), intent(in) :: id, m1id, m2id
@@ -114,6 +118,9 @@ contains
     exchange%filename = filename
     exchange%typename = 'GWF-GWF'
     exchange%implicit = .true.
+    !
+    ! -- Create the halo model
+    call gwfhalo_cr(exchange%gwfhalo, id, 'GWFHALO_'//trim(adjustl(cint)))
     !
     ! -- set exchange%m1
     mb => GetBaseModelFromList(basemodellist, m1id)
@@ -217,6 +224,11 @@ contains
     ! -- Store obs
     call this%gwf_gwf_df_obs()
     call this%obs%obs_df(iout, this%name, 'GWF-GWF', this%gwfmodel1%dis)
+    !
+    ! -- Define the halo model
+    call this%gwfhalo%gwfhalo_df(this%gwfmodel1, this%gwfmodel2,               &
+      this%nodem1, this%nodem2, this%ihc, this%cl1, this%cl2, this%hwva,       &
+      this%inewton)
     !
     ! -- return
     return
@@ -418,6 +430,9 @@ contains
     ! -- Observation AR
     call this%obs%obs_ar()
     !
+    ! -- halo ar
+    call this%gwfhalo%gwfhalo_ar()
+    !
     ! -- Return
     return
   end subroutine gwf_gwf_ar
@@ -470,6 +485,9 @@ contains
     ! -- Push simulated values to preceding time/subtime step
     call this%obs%obs_ad()
     !
+    ! -- advance halo model
+    call this%gwfhalo%model_ad(kpicard, isubtime)
+    !
     ! -- Return
     return
   end subroutine gwf_gwf_ad
@@ -490,6 +508,9 @@ contains
     ! -- Rewet cells across models using the wetdry parameters in each model's
     !    npf package, and the head in the connected model.
     call this%rewet(kiter)
+    !
+    ! -- handle cf routines for halo model
+    call this%gwfhalo%gwfhalo_cf(kiter)
     !
     ! -- Return
     return
@@ -514,10 +535,41 @@ contains
     ! -- local
     integer(I4B) :: inwt, iexg
     integer(I4B) :: njasln
+    integer(I4B) :: n, m, nodensln, nodemsln, idiagsln
+    real(DP), dimension(3, 2) :: terms
 ! ------------------------------------------------------------------------------
     !
     ! -- calculate the conductance for each exchange connection
     call this%condcalc()
+    !
+    ! -- Call fill method of parent to put this%cond into amatsln
+    !call this%NumericalExchangeType%exg_fc(kiter, iasln, amatsln)
+    !
+    ! -- Use halo model to calculate amat terms
+    !call this%gwfhalo%gwfhalo_fc(kiter, this%cond)
+    do iexg = 1, this%nexg
+      !
+      ! -- initialize terms to zero
+      terms(:, :) = DZERO
+      !
+      n = this%nodem1(iexg)
+      m = this%nodem2(iexg)
+      nodensln = this%nodem1(iexg) + this%m1%moffset
+      nodemsln = this%nodem2(iexg) + this%m2%moffset
+      call this%gwfhalo%gwfhalo_fc_calc(n, m, terms)
+      !
+      ! -- row n
+      idiagsln = iasln(nodensln)
+      amatsln(idiagsln) = amatsln(idiagsln) + terms(1, 1) !- this%cond(i)
+      amatsln(this%idxglo(iexg)) = amatsln(this%idxglo(iexg)) + terms(2, 1) !this%cond(i)
+      this%gwfmodel1%rhs(n) = this%gwfmodel1%rhs(n) + terms(3, 1)
+      !
+      ! -- row m
+      idiagsln = iasln(nodemsln)
+      amatsln(idiagsln) = amatsln(idiagsln) + terms(1, 2) !- this%cond(i)
+      amatsln(this%idxsymglo(iexg)) = amatsln(this%idxsymglo(iexg)) + terms(2, 2) !this%cond(i)
+      this%gwfmodel2%rhs(m) = this%gwfmodel2%rhs(m) + terms(3, 2)
+    enddo
     !
     ! -- if gnc is active, then copy cond into gnc cond (might consider a
     !    pointer here in the future)
@@ -526,9 +578,6 @@ contains
         this%gnc%cond(iexg) = this%cond(iexg)
       enddo
     endif
-    !
-    ! -- Call fill method of parent to put this%cond into amatsln
-    call this%NumericalExchangeType%exg_fc(kiter, iasln, amatsln)
     !
     ! -- Fill the gnc terms in the solution matrix
     if(this%ingnc > 0) then
@@ -562,6 +611,122 @@ contains
     return
   end subroutine gwf_gwf_fc
 
+!  subroutine gwf_gwf_fn(this, kiter, iasln, amatsln)
+!! ******************************************************************************
+!! gwf_gwf_fn -- Fill amatsln with Newton terms
+!! ******************************************************************************
+!!
+!!    SPECIFICATIONS:
+!! ------------------------------------------------------------------------------
+!    ! -- modules
+!    use SmoothingModule, only: sQuadraticSaturationDerivative
+!    ! -- dummy
+!    class(GwfExchangeType) :: this
+!    integer(I4B), intent(in) :: kiter
+!    integer(I4B), dimension(:), intent(in) :: iasln
+!    real(DP), dimension(:), intent(inout) :: amatsln
+!    ! -- local
+!    logical :: nisup
+!    integer(I4B) :: iexg
+!    integer(I4B) :: n, m
+!    integer(I4B) :: nodensln, nodemsln
+!    integer(I4B) :: ibdn, ibdm
+!    integer(I4B) :: idiagnsln, idiagmsln
+!    real(DP) :: topn, topm
+!    real(DP) :: botn, botm
+!    real(DP) :: topup, botup
+!    real(DP) :: hn, hm
+!    real(DP) :: hup, hdn
+!    real(DP) :: cond
+!    real(DP) :: term
+!    real(DP) :: consterm
+!    real(DP) :: derv
+!! ------------------------------------------------------------------------------
+!    !
+!    do iexg = 1, this%nexg
+!      n = this%nodem1(iexg)
+!      m = this%nodem2(iexg)
+!      nodensln = this%nodem1(iexg) + this%m1%moffset
+!      nodemsln = this%nodem2(iexg) + this%m2%moffset
+!      ibdn = this%gwfmodel1%ibound(n)
+!      ibdm = this%gwfmodel2%ibound(m)
+!      topn = this%gwfmodel1%dis%top(n)
+!      topm = this%gwfmodel2%dis%top(m)
+!      botn = this%gwfmodel1%dis%bot(n)
+!      botm = this%gwfmodel2%dis%bot(m)
+!      hn = this%gwfmodel1%x(n)
+!      hm = this%gwfmodel2%x(m)
+!      if(this%ihc(iexg) == 0) then
+!        ! -- vertical connection, newton not supported
+!      else
+!        ! -- determine upstream node
+!        nisup = .false.
+!        if(hm < hn) nisup = .true.
+!        !
+!        ! -- set upstream top and bot
+!        if(nisup) then
+!          topup = topn
+!          botup = botn
+!          hup = hn
+!          hdn = hm
+!        else
+!          topup = topm
+!          botup = botm
+!          hup = hm
+!          hdn = hn
+!        endif
+!        !
+!        ! -- no newton terms if upstream cell is confined
+!        if (nisup) then
+!          if (this%gwfmodel1%npf%icelltype(n) == 0) cycle
+!        else
+!          if (this%gwfmodel2%npf%icelltype(m) == 0) cycle
+!        end if
+!        !
+!        ! -- set topup and botup
+!        if(this%ihc(iexg) == 2) then
+!          topup = min(topn, topm)
+!          botup = max(botn, botm)
+!        endif
+!        !
+!        ! get saturated conductivity for derivative
+!        cond = this%condsat(iexg)
+!        !
+!        ! -- TO DO deal with MODFLOW-NWT upstream weighting option
+!        !
+!        ! -- compute terms
+!        consterm = -cond * (hup - hdn)
+!        derv = sQuadraticSaturationDerivative(topup, botup, hup)
+!        idiagnsln = iasln(nodensln)
+!        idiagmsln = iasln(nodemsln)
+!        if(nisup) then
+!          !
+!          ! -- fill jacobian with n being upstream
+!          term = consterm * derv
+!          this%gwfmodel1%rhs(n) = this%gwfmodel1%rhs(n) + term * hn
+!          this%gwfmodel2%rhs(m) = this%gwfmodel2%rhs(m) - term * hn
+!          amatsln(idiagnsln) = amatsln(idiagnsln) + term
+!          if(ibdm > 0) then
+!            amatsln(this%idxsymglo(iexg)) = amatsln(this%idxsymglo(iexg)) - term
+!          endif
+!        else
+!          !
+!          ! -- fill jacobian with m being upstream
+!          term = -consterm * derv
+!          this%gwfmodel1%rhs(n) = this%gwfmodel1%rhs(n) + term * hm
+!          this%gwfmodel2%rhs(m) = this%gwfmodel2%rhs(m) - term * hm
+!          amatsln(idiagmsln) = amatsln(idiagmsln) - term
+!          if(ibdn > 0) then
+!            amatsln(this%idxglo(iexg)) = amatsln(this%idxglo(iexg)) + term
+!          endif
+!        endif
+!      endif
+!    enddo
+!    !
+!    ! -- Return
+!    return
+!  end subroutine gwf_gwf_fn
+
   subroutine gwf_gwf_fn(this, kiter, iasln, amatsln)
 ! ******************************************************************************
 ! gwf_gwf_fn -- Fill amatsln with Newton terms
@@ -577,101 +742,32 @@ contains
     integer(I4B), dimension(:), intent(in) :: iasln
     real(DP), dimension(:), intent(inout) :: amatsln
     ! -- local
-    logical :: nisup
-    integer(I4B) :: iexg
-    integer(I4B) :: n, m
-    integer(I4B) :: nodensln, nodemsln
-    integer(I4B) :: ibdn, ibdm
-    integer(I4B) :: idiagnsln, idiagmsln
-    real(DP) :: topn, topm
-    real(DP) :: botn, botm
-    real(DP) :: topup, botup
-    real(DP) :: hn, hm
-    real(DP) :: hup, hdn
-    real(DP) :: cond
-    real(DP) :: term
-    real(DP) :: consterm
-    real(DP) :: derv
+    integer(I4B) :: iexg, n, m, nodensln, nodemsln, idiagsln
+    real(DP), dimension(3, 2) :: terms
 ! ------------------------------------------------------------------------------
     !
     do iexg = 1, this%nexg
+      !
+      ! -- initialize terms to zero
+      terms(:, :) = DZERO
+      !
       n = this%nodem1(iexg)
       m = this%nodem2(iexg)
       nodensln = this%nodem1(iexg) + this%m1%moffset
       nodemsln = this%nodem2(iexg) + this%m2%moffset
-      ibdn = this%gwfmodel1%ibound(n)
-      ibdm = this%gwfmodel2%ibound(m)
-      topn = this%gwfmodel1%dis%top(n)
-      topm = this%gwfmodel2%dis%top(m)
-      botn = this%gwfmodel1%dis%bot(n)
-      botm = this%gwfmodel2%dis%bot(m)
-      hn = this%gwfmodel1%x(n)
-      hm = this%gwfmodel2%x(m)
-      if(this%ihc(iexg) == 0) then
-        ! -- vertical connection, newton not supported
-      else
-        ! -- determine upstream node
-        nisup = .false.
-        if(hm < hn) nisup = .true.
-        !
-        ! -- set upstream top and bot
-        if(nisup) then
-          topup = topn
-          botup = botn
-          hup = hn
-          hdn = hm
-        else
-          topup = topm
-          botup = botm
-          hup = hm
-          hdn = hn
-        endif
-        !
-        ! -- no newton terms if upstream cell is confined
-        if (nisup) then
-          if (this%gwfmodel1%npf%icelltype(n) == 0) cycle
-        else
-          if (this%gwfmodel2%npf%icelltype(m) == 0) cycle
-        end if
-        !
-        ! -- set topup and botup
-        if(this%ihc(iexg) == 2) then
-          topup = min(topn, topm)
-          botup = max(botn, botm)
-        endif
-        !
-        ! get saturated conductivity for derivative
-        cond = this%condsat(iexg)
-        !
-        ! -- TO DO deal with MODFLOW-NWT upstream weighting option
-        !
-        ! -- compute terms
-        consterm = -cond * (hup - hdn)
-        derv = sQuadraticSaturationDerivative(topup, botup, hup)
-        idiagnsln = iasln(nodensln)
-        idiagmsln = iasln(nodemsln)
-        if(nisup) then
-          !
-          ! -- fill jacobian with n being upstream
-          term = consterm * derv
-          this%gwfmodel1%rhs(n) = this%gwfmodel1%rhs(n) + term * hn
-          this%gwfmodel2%rhs(m) = this%gwfmodel2%rhs(m) - term * hn
-          amatsln(idiagnsln) = amatsln(idiagnsln) + term
-          if(ibdm > 0) then
-            amatsln(this%idxsymglo(iexg)) = amatsln(this%idxsymglo(iexg)) - term
-          endif
-        else
-          !
-          ! -- fill jacobian with m being upstream
-          term = -consterm * derv
-          this%gwfmodel1%rhs(n) = this%gwfmodel1%rhs(n) + term * hm
-          this%gwfmodel2%rhs(m) = this%gwfmodel2%rhs(m) - term * hm
-          amatsln(idiagmsln) = amatsln(idiagmsln) - term
-          if(ibdn > 0) then
-            amatsln(this%idxglo(iexg)) = amatsln(this%idxglo(iexg)) + term
-          endif
-        endif
-      endif
+      call this%gwfhalo%gwfhalo_fn_calc(n, m, terms)
+      !
+      ! -- row n
+      idiagsln = iasln(nodensln)
+      amatsln(idiagsln) = amatsln(idiagsln) + terms(1, 1) !- this%cond(i)
+      amatsln(this%idxglo(iexg)) = amatsln(this%idxglo(iexg)) + terms(2, 1) !this%cond(i)
+      this%gwfmodel1%rhs(n) = this%gwfmodel1%rhs(n) + terms(3, 1)
+      !
+      ! -- row m
+      idiagsln = iasln(nodemsln)
+      amatsln(idiagsln) = amatsln(idiagsln) + terms(1, 2) !- this%cond(i)
+      amatsln(this%idxsymglo(iexg)) = amatsln(this%idxsymglo(iexg)) + terms(2, 2) !this%cond(i)
+      this%gwfmodel2%rhs(m) = this%gwfmodel2%rhs(m) + terms(3, 2)
     enddo
     !
     ! -- Return
@@ -2076,5 +2172,319 @@ contains
     return
   end subroutine gwf_gwf_process_obsID
 
+  subroutine gwf_cr_halo(this, id, modelname)
+! ******************************************************************************
+! gwf_cr_halo -- Create a new groundwater flow model object for exchange
+! Subroutine: (1) creates model object and add to exchange modellist
+!             (2) assign values
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use GwfDisuModule,              only: disu_cr
+    use GwfNpfModule,               only: npf_cr
+    use Xt3dModule,                 only: xt3d_cr
+    use GhostNodeModule,            only: gnc_cr
+    use GwfMvrModule,               only: mvr_cr
+    use GwfIcModule,                only: ic_cr
+    ! -- dummy
+    type(GwfModelType), pointer   :: this
+    integer(I4B), intent(in)      :: id
+    character(len=*), intent(in)  :: modelname
+    ! -- local
+    integer :: in_dum, iout_dum
+    ! -- format
+! ------------------------------------------------------------------------------
+    !
+    ! -- Allocate a new GWF Model (this)
+    allocate(this)
+    call this%allocate_scalars(modelname)
+    !
+    ! -- Assign values
+    this%name = modelname
+    this%macronym = 'GWF'
+    this%id = id
+    !
+    ! -- TODO: to be replaced by optional arguments
+    in_dum = -1
+    iout_dum = -1
+    !
+    ! -- Create discretization object
+    call disu_cr(this%dis, this%name, in_dum, iout_dum)
+    !
+    ! -- Create packages that are tied directly to model
+    call npf_cr(this%npf, this%name, in_dum, iout_dum)
+    call xt3d_cr(this%xt3d, this%name, in_dum, iout_dum)
+    call gnc_cr(this%gnc, this%name, in_dum, iout_dum)
+    call ic_cr(this%ic, this%name, in_dum, iout_dum, this%dis)
+    call mvr_cr(this%mvr, this%name, in_dum, iout_dum)
+    !
+    ! -- return
+    return
+  end subroutine gwf_cr_halo
+  
+  subroutine gwf_df_halo(gwfhalo, gwf1, gwf2, nodem1, nodem2, ihc, cl1, cl2,   &
+    hwva)
+! ******************************************************************************
+! gwf_df_halo -- define the halo model by creating the ia/ja arrays and copying
+!   information from each individual model into the halo model
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use SparseModule, only: sparsematrix
+    use ConnectionsModule, only: fillisym, filljas
+    ! -- dummy
+    type(GwfModelType), intent(inout) :: gwfhalo
+    type(GwfModelType), intent(in) :: gwf1
+    type(GwfModelType), intent(in) :: gwf2
+    integer(I4B), dimension(:), intent(in) :: nodem1
+    integer(I4B), dimension(:), intent(in) :: nodem2
+    integer(I4B), dimension(:), intent(in) :: ihc
+    real(DP), dimension(:), intent(in) :: cl1
+    real(DP), dimension(:), intent(in) :: cl2
+    real(DP), dimension(:), intent(in) :: hwva
+    ! -- local
+    integer(I4B) :: nexg
+    integer(I4B) :: nodesm1, nodesm2
+    integer(I4B) :: n, m
+    integer(I4B) :: ngwf, mgwf
+    integer(I4B) :: ipos, iexg, i
+    integer(I4B) :: isym, isymgwf
+    integer(I4B) :: ierror
+    type(sparsematrix) :: sparse
+    integer(I4B), dimension(:), allocatable :: rowmaxnnz
+    integer(I4B), dimension(:), allocatable :: imapm1tohalo
+    integer(I4B), dimension(:), allocatable :: imapm2tohalo
+! ------------------------------------------------------------------------------
+    !
+    ! -- initialize nexg to size of nodem1 which is also size of nodem2
+    nexg = size(nodem1)
+    allocate(imapm1tohalo(gwf1%neq))  ! todo: memory manager?
+    allocate(imapm2tohalo(gwf2%neq))  ! todo: memory manager?
+    do n = 1, gwf1%neq
+      imapm1tohalo(n) = 0
+    enddo
+    do n = 1, gwf2%neq
+      imapm2tohalo(n) = 0
+    enddo
+    !
+    ! -- Determine the number of m1 nodes in the halo model
+    do n = 1, nexg
+      ngwf = nodem1(n)
+      imapm1tohalo(ngwf) = 1
+      do ipos = gwf1%dis%con%ia(ngwf) + 1, gwf1%dis%con%ia(ngwf + 1) - 1
+        mgwf = gwf1%dis%con%ja(ipos)
+        imapm1tohalo(mgwf) = 1
+      end do
+    enddo
+    nodesm1 = sum(imapm1tohalo)
+    !
+    ! -- Determine the number of m2 nodes in the halo model
+    do n = 1, nexg
+      ngwf = nodem2(n)
+      imapm2tohalo(ngwf) = 1
+      do ipos = gwf2%dis%con%ia(ngwf) + 1, gwf2%dis%con%ia(ngwf + 1) - 1
+        mgwf = gwf2%dis%con%ja(ipos)
+        imapm2tohalo(mgwf) = 1
+      end do
+    enddo
+    nodesm2 = sum(imapm2tohalo)
+    !
+    ! -- Assign halo node numbers to mapping arrays
+    n = 1
+    do ngwf = 1, gwf1%neq
+      if (imapm1tohalo(ngwf) > 0) then
+        imapm1tohalo(ngwf) = n
+        n = n + 1
+      endif
+    end do
+    do ngwf = 1, gwf2%neq
+      if (imapm2tohalo(ngwf) > 0) then
+        imapm2tohalo(ngwf) = n
+        n = n + 1
+      endif
+    end do
+    !
+    ! -- Determine the size of the halo model and allocate mapping arrays
+    gwfhalo%neq = nodesm1 + nodesm2
+    gwfhalo%dis%nodes = gwfhalo%neq
+    gwfhalo%dis%nodesuser = gwfhalo%neq
+    !
+    ! -- Allocate the arrays of the halo model disu package
+    call gwfhalo%dis%allocate_arrays()
+    !
+    ! -- Copy the top, bot, and areas to halo
+    do ngwf = 1, gwf1%neq
+      n = imapm1tohalo(ngwf)
+      if (n > 0) then
+        gwfhalo%dis%top(n) = gwf1%dis%top(ngwf)
+        gwfhalo%dis%bot(n) = gwf1%dis%bot(ngwf)
+        gwfhalo%dis%area(n) = gwf1%dis%area(ngwf)
+      end if
+    end do
+    do ngwf = 1, gwf2%neq
+      n = imapm2tohalo(ngwf)
+      if (n > 0) then
+        gwfhalo%dis%top(n) = gwf2%dis%top(ngwf)
+        gwfhalo%dis%bot(n) = gwf2%dis%bot(ngwf)
+        gwfhalo%dis%area(n) = gwf2%dis%area(ngwf)
+      end if
+    end do
+    !
+    ! -- Setup a sparse matrix object in order to determine halo connectivity
+    allocate(rowmaxnnz(gwfhalo%neq))
+    do n = 1, gwfhalo%neq
+      rowmaxnnz(n) = 6
+    enddo
+    call sparse%init(gwfhalo%neq, gwfhalo%neq, rowmaxnnz)
+    !
+    ! -- Diagonals for all halo model cells
+    do n = 1, gwfhalo%neq
+      call sparse%addconnection(n, n, 1)
+    enddo
+    !
+    ! -- Connections between gwf1 and gwf2
+    do iexg = 1, nexg
+      ngwf = nodem1(iexg)
+      mgwf = nodem2(iexg)
+      n = imapm1tohalo(ngwf)
+      m = imapm2tohalo(mgwf)
+      call sparse%addconnection(n, m, 1)
+      call sparse%addconnection(m, n, 1)
+    enddo
+    !
+    ! -- Internal connections of model 1
+    do iexg = 1, nexg
+      ngwf = nodem1(iexg)
+      do ipos = gwf1%dis%con%ia(ngwf) + 1, gwf1%dis%con%ia(ngwf + 1) - 1
+        mgwf = gwf1%dis%con%ja(ipos)
+        n = imapm1tohalo(ngwf)
+        m = imapm1tohalo(mgwf)
+        call sparse%addconnection(n, m, 1)
+        call sparse%addconnection(m, n, 1)
+      end do
+    enddo
+    !
+    ! -- Internal connections of model 2
+    do iexg = 1, nexg
+      ngwf = nodem2(iexg)
+      do ipos = gwf2%dis%con%ia(ngwf) + 1, gwf2%dis%con%ia(ngwf + 1) - 1
+        mgwf = gwf2%dis%con%ja(ipos)
+        n = imapm2tohalo(ngwf)
+        m = imapm2tohalo(mgwf)
+        call sparse%addconnection(n, m, 1)
+        call sparse%addconnection(m, n, 1)
+      end do
+    enddo
+    !
+    allocate(gwfhalo%dis%con)
+    call gwfhalo%dis%con%allocate_scalars(gwfhalo%name)
+    gwfhalo%dis%con%nodes = gwfhalo%neq
+    gwfhalo%dis%con%nja = sparse%nnz
+    gwfhalo%dis%con%njas = (gwfhalo%dis%con%nja - gwfhalo%dis%con%nodes) / 2
+    gwfhalo%dis%njas = gwfhalo%dis%con%njas
+    !
+    ! -- Allocate index arrays of size nja and symmetric arrays
+    call gwfhalo%dis%con%allocate_arrays()
+    !
+    ! -- Fill the IA and JA arrays from sparse, then destroy sparse
+    call sparse%filliaja(gwfhalo%dis%con%ia, gwfhalo%dis%con%ja, ierror)
+    call sparse%destroy()
+    !
+    ! -- Create the isym and jas arrays
+    call fillisym(gwfhalo%dis%con%nodes, gwfhalo%dis%con%nja,                  &
+      gwfhalo%dis%con%ia, gwfhalo%dis%con%ja, gwfhalo%dis%con%isym)
+    call filljas(gwfhalo%dis%con%nodes, gwfhalo%dis%con%nja,                   &
+      gwfhalo%dis%con%ia, gwfhalo%dis%con%ja, gwfhalo%dis%con%isym,            &
+      gwfhalo%dis%con%jas)    
+    !
+    ! -- Fill the ihc, cl1, cl2, and hwva arrays in the halo model
+    do iexg = 1, nexg
+      ngwf = nodem1(iexg)
+      do ipos = gwf1%dis%con%ia(ngwf) + 1, gwf1%dis%con%ia(ngwf + 1) - 1
+        mgwf = gwf1%dis%con%ja(ipos)
+        n = imapm1tohalo(ngwf)
+        m = imapm1tohalo(mgwf)
+        i = gwfhalo%dis%con%getjaindex(n, m)
+        isym = gwfhalo%dis%con%jas(i)
+        isymgwf = gwf1%dis%con%jas(ipos)
+        gwfhalo%dis%con%ihc(isym) = gwf1%dis%con%ihc(isymgwf)
+        gwfhalo%dis%con%cl1(isym) = gwf1%dis%con%cl1(isymgwf)
+        gwfhalo%dis%con%cl2(isym) = gwf1%dis%con%cl2(isymgwf)
+        gwfhalo%dis%con%hwva(isym) = gwf1%dis%con%hwva(isymgwf)
+      end do
+    enddo
+    do iexg = 1, nexg
+      ngwf = nodem2(iexg)
+      do ipos = gwf2%dis%con%ia(ngwf) + 1, gwf2%dis%con%ia(ngwf + 1) - 1
+        mgwf = gwf2%dis%con%ja(ipos)
+        n = imapm2tohalo(ngwf)
+        m = imapm2tohalo(mgwf)
+        i = gwfhalo%dis%con%getjaindex(n, m)
+        isym = gwfhalo%dis%con%jas(i)
+        isymgwf = gwf2%dis%con%jas(ipos)
+        gwfhalo%dis%con%ihc(isym) = gwf2%dis%con%ihc(isymgwf)
+        gwfhalo%dis%con%cl1(isym) = gwf2%dis%con%cl1(isymgwf)
+        gwfhalo%dis%con%cl2(isym) = gwf2%dis%con%cl2(isymgwf)
+        gwfhalo%dis%con%hwva(isym) = gwf2%dis%con%hwva(isymgwf)
+      end do
+    enddo
+    do iexg = 1, nexg
+      n = imapm1tohalo(nodem1(iexg))
+      m = imapm2tohalo(nodem2(iexg))
+      i = gwfhalo%dis%con%getjaindex(n, m)
+      isym = gwfhalo%dis%con%jas(i)
+      gwfhalo%dis%con%ihc(isym) = ihc(iexg)
+      gwfhalo%dis%con%cl1(isym) = cl1(iexg)
+      gwfhalo%dis%con%cl2(isym) = cl2(iexg)
+      gwfhalo%dis%con%hwva(isym) = hwva(iexg)
+    enddo
+    !
+    ! -- return
+    return
+  end subroutine gwf_df_halo
+  
+  subroutine gwf_ar_halo(gwfhalo, gwf1, gwf2)
+! ******************************************************************************
+! gwf_ar_halo -- allocate in the halo model 
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use MemoryManagerModule, only: mem_allocate
+    ! -- dummy
+    type(GwfModelType), intent(in) :: gwfhalo
+    type(GwfModelType), intent(in) :: gwf1
+    type(GwfModelType), intent(in) :: gwf2
+    ! -- local
+    integer(I4B), pointer, dimension(:) :: ibound
+    real(DP), pointer, dimension(:) :: x
+! ------------------------------------------------------------------------------
+    !
+    ! -- set NPF pointers
+    gwfhalo%npf%dis     => gwfhalo%dis
+    gwfhalo%npf%ic      => gwfhalo%ic
+    !
+    ! -- Create ibound and x arrays for halo model
+    call mem_allocate(ibound, gwfhalo%neq, 'IBOUND', gwfhalo%name)
+    call mem_allocate(x, gwfhalo%neq, 'X', gwfhalo%name)
+    gwfhalo%npf%ibound  => ibound
+    gwfhalo%npf%hnew    => x
+    !
+    ! -- allocate NPF arrays
+    call gwfhalo%npf%allocate_arrays(gwfhalo%dis%nodes, gwfhalo%dis%njas)
+    !
+    ! -- prepcheck
+    call gwfhalo%npf%prepcheck()
+    !
+    ! -- return
+    return
+  end subroutine gwf_ar_halo
+      
+  
 end module GwfGwfExchangeModule
 

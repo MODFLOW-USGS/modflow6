@@ -8,6 +8,8 @@ module ConnectionsModule
   implicit none
   private
   public :: ConnectionsType
+  public :: fillisym
+  public :: filljas
 
   type ConnectionsType
     character(len=LENMODELNAME), pointer    :: name_model => null()             !name of the model
@@ -1065,7 +1067,7 @@ module ConnectionsModule
 
   subroutine fillisym(neq, nja, ia, ja, isym)
 ! ******************************************************************************
-! fillisym -- Private function to fill the isym array
+! fillisym -- Subroutine to fill the isym array
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:

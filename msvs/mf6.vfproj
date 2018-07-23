@@ -108,6 +108,7 @@
 		<File RelativePath="..\src\Model\ModelUtilities\Connections.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\DiscretizationBase.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\DisvGeom.f90"/>
+		<File RelativePath="..\src\Model\ModelUtilities\gwfhalo.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\Mover.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\PackageMover.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\Xt3dAlgorithm.f90"/>

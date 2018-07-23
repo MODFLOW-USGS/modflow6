@@ -83,7 +83,9 @@ module GwfNpfModule
     procedure                               :: npf_ad
     procedure                               :: npf_cf
     procedure                               :: npf_fc
+    procedure                               :: npf_fc_calc
     procedure                               :: npf_fn
+    procedure                               :: npf_fn_calc
     procedure                               :: npf_flowja
     procedure                               :: npf_bdadj
     procedure                               :: npf_nur
@@ -94,13 +96,14 @@ module GwfNpfModule
     procedure, private                      :: wd         => sgwf_npf_wetdry
     procedure, private                      :: wdmsg      => sgwf_npf_wdmsg
     procedure                               :: allocate_scalars
-    procedure, private                      :: allocate_arrays
+    procedure                               :: allocate_arrays
     procedure, private                      :: read_options
     procedure, private                      :: rewet_options
     procedure, private                      :: check_options
     procedure, private                      :: read_data
-    procedure, private                      :: prepcheck
+    procedure                               :: prepcheck
     procedure, public                       :: rewet_check
+    procedure, public                       :: sat_calc
     procedure, public                       :: hy_eff
     procedure, public                       :: calc_spdis
     procedure, public                       :: sav_spdis
@@ -325,8 +328,6 @@ module GwfNpfModule
     integer(I4B),intent(in) :: nodes
     real(DP),intent(inout),dimension(nodes) :: hnew
     ! -- local
-    integer(I4B) :: n
-    real(DP) :: satn
 ! ------------------------------------------------------------------------------
     !
     ! -- Perform wetting and drying
@@ -335,20 +336,127 @@ module GwfNpfModule
     end if
     !
     ! -- Calculate saturation for convertible cells
-    do n = 1, this%dis%nodes
-      if(this%icelltype(n) /= 0) then
-        if(this%ibound(n) == 0) then
-          satn = DZERO
-        else
-          call this%thksat(n, hnew(n), satn)
-        endif
-        this%sat(n) = satn
-      endif
-    enddo
+    call this%sat_calc(hnew)
     !
     ! -- Return
     return
   end subroutine npf_cf
+
+!  subroutine npf_fc_old(this, kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew)
+!! ******************************************************************************
+!! npf_fc -- Formulate
+!! ******************************************************************************
+!!
+!!    SPECIFICATIONS:
+!! ------------------------------------------------------------------------------
+!    ! -- modules
+!    use ConstantsModule, only: DONE
+!    ! -- dummy
+!    class(GwfNpfType) :: this
+!    integer(I4B) :: kiter
+!    integer(I4B),intent(in) :: nodes
+!    integer(I4B),intent(in) :: nja
+!    integer(I4B),intent(in) :: njasln
+!    real(DP),dimension(njasln),intent(inout) :: amat
+!    integer(I4B),intent(in),dimension(nja) :: idxglo
+!    real(DP),intent(inout),dimension(nodes) :: rhs
+!    real(DP),intent(inout),dimension(nodes) :: hnew
+!    ! -- local
+!    integer(I4B) :: n, m, ii, idiag, ihc
+!    integer(I4B) :: isymcon, idiagm
+!    real(DP) :: hyn, hym
+!    real(DP) :: cond
+!! ------------------------------------------------------------------------------
+!    !
+!    ! -- Calculate conductance and put into amat
+!    !
+!    if(this%ixt3d > 0) then
+!      call this%xt3d%xt3d_fc(kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew)
+!    else
+!    !
+!    do n = 1, nodes
+!      do ii = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
+!        m = this%dis%con%ja(ii)
+!        !
+!        ! -- Calculate conductance only for upper triangle but insert into
+!        !    upper and lower parts of amat.
+!        if(m < n) cycle
+!        ihc = this%dis%con%ihc(this%dis%con%jas(ii))
+!        hyn = this%hy_eff(n, m, ihc, ipos=ii)
+!        hym = this%hy_eff(m, n, ihc, ipos=ii)
+!        !
+!        ! -- Vertical connection
+!        if(ihc == 0) then
+!          !
+!          ! -- Calculate vertical conductance
+!          cond =  vcond(this%ibound(n), this%ibound(m),                        &
+!                        this%icelltype(n), this%icelltype(m), this%inewton,    &
+!                        this%ivarcv, this%idewatcv,                            &
+!                        this%condsat(this%dis%con%jas(ii)), hnew(n), hnew(m),  &
+!                        hyn, hym,                                              &
+!                        this%sat(n), this%sat(m),                              &
+!                        this%dis%top(n), this%dis%top(m),                      &
+!                        this%dis%bot(n), this%dis%bot(m),                      &
+!                        this%dis%con%hwva(this%dis%con%jas(ii)))
+!          !
+!          ! -- Vertical flow for perched conditions
+!          if(this%iperched /= 0) then
+!            if(this%icelltype(m) /= 0) then
+!              if(hnew(m) < this%dis%top(m)) then
+!                !
+!                ! -- Fill row n
+!                idiag = this%dis%con%ia(n)
+!                rhs(n) = rhs(n) - cond * this%dis%bot(n)
+!                amat(idxglo(idiag)) = amat(idxglo(idiag)) - cond
+!                !
+!                ! -- Fill row m
+!                isymcon = this%dis%con%isym(ii)
+!                amat(idxglo(isymcon)) = amat(idxglo(isymcon)) + cond
+!                rhs(m) = rhs(m) + cond * this%dis%bot(n)
+!                !
+!                ! -- cycle the connection loop
+!                cycle
+!              endif
+!            endif
+!          endif
+!          !
+!        else
+!          !
+!          ! -- Horizontal conductance
+!          cond = hcond(this%ibound(n), this%ibound(m),                       &
+!                       this%icelltype(n), this%icelltype(m),                 &
+!                       this%inewton, this%inewton,                           &
+!                       this%dis%con%ihc(this%dis%con%jas(ii)),               &
+!                       this%icellavg, this%iusgnrhc, this%inwtupw,           &
+!                       this%condsat(this%dis%con%jas(ii)),                   &
+!                       hnew(n), hnew(m), this%sat(n), this%sat(m), hyn, hym, &
+!                       this%dis%top(n), this%dis%top(m),                     &
+!                       this%dis%bot(n), this%dis%bot(m),                     &
+!                       this%dis%con%cl1(this%dis%con%jas(ii)),               &
+!                       this%dis%con%cl2(this%dis%con%jas(ii)),               &
+!                       this%dis%con%hwva(this%dis%con%jas(ii)),              &
+!                       this%satomega, this%satmin)
+!        endif
+!        !
+!        ! -- Fill row n
+!        idiag = this%dis%con%ia(n)
+!        amat(idxglo(ii)) = amat(idxglo(ii)) + cond
+!        amat(idxglo(idiag)) = amat(idxglo(idiag)) - cond
+!        !
+!        ! -- Fill row m
+!        isymcon = this%dis%con%isym(ii)
+!        idiagm = this%dis%con%ia(m)
+!        amat(idxglo(isymcon)) = amat(idxglo(isymcon)) + cond
+!        amat(idxglo(idiagm)) = amat(idxglo(idiagm)) - cond
+!      enddo
+!    enddo
+!    !
+!    endif
+!    !
+!    ! -- Return
+!    return
+!  end subroutine npf_fc_old
+
 
   subroutine npf_fc(this, kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew)
 ! ******************************************************************************
@@ -370,10 +478,9 @@ module GwfNpfModule
     real(DP),intent(inout),dimension(nodes) :: rhs
     real(DP),intent(inout),dimension(nodes) :: hnew
     ! -- local
-    integer(I4B) :: n, m, ii, idiag, ihc
+    integer(I4B) :: n, m, ii, idiag
     integer(I4B) :: isymcon, idiagm
-    real(DP) :: hyn, hym
-    real(DP) :: cond
+    real(DP), dimension(3, 2) :: terms
 ! ------------------------------------------------------------------------------
     !
     ! -- Calculate conductance and put into amat
@@ -389,73 +496,24 @@ module GwfNpfModule
         ! -- Calculate conductance only for upper triangle but insert into
         !    upper and lower parts of amat.
         if(m < n) cycle
-        ihc = this%dis%con%ihc(this%dis%con%jas(ii))
-        hyn = this%hy_eff(n, m, ihc, ipos=ii)
-        hym = this%hy_eff(m, n, ihc, ipos=ii)
         !
-        ! -- Vertical connection
-        if(ihc == 0) then
-          !
-          ! -- Calculate vertical conductance
-          cond =  vcond(this%ibound(n), this%ibound(m),                        &
-                        this%icelltype(n), this%icelltype(m), this%inewton,    &
-                        this%ivarcv, this%idewatcv,                            &
-                        this%condsat(this%dis%con%jas(ii)), hnew(n), hnew(m),  &
-                        hyn, hym,                                              &
-                        this%sat(n), this%sat(m),                              &
-                        this%dis%top(n), this%dis%top(m),                      &
-                        this%dis%bot(n), this%dis%bot(m),                      &
-                        this%dis%con%hwva(this%dis%con%jas(ii)))
-          !
-          ! -- Vertical flow for perched conditions
-          if(this%iperched /= 0) then
-            if(this%icelltype(m) /= 0) then
-              if(hnew(m) < this%dis%top(m)) then
-                !
-                ! -- Fill row n
-                idiag = this%dis%con%ia(n)
-                rhs(n) = rhs(n) - cond * this%dis%bot(n)
-                amat(idxglo(idiag)) = amat(idxglo(idiag)) - cond
-                !
-                ! -- Fill row m
-                isymcon = this%dis%con%isym(ii)
-                amat(idxglo(isymcon)) = amat(idxglo(isymcon)) + cond
-                rhs(m) = rhs(m) + cond * this%dis%bot(n)
-                !
-                ! -- cycle the connection loop
-                cycle
-              endif
-            endif
-          endif
-          !
-        else
-          !
-          ! -- Horizontal conductance
-          cond = hcond(this%ibound(n), this%ibound(m),                       &
-                       this%icelltype(n), this%icelltype(m),                 &
-                       this%inewton, this%inewton,                           &
-                       this%dis%con%ihc(this%dis%con%jas(ii)),               &
-                       this%icellavg, this%iusgnrhc, this%inwtupw,           &
-                       this%condsat(this%dis%con%jas(ii)),                   &
-                       hnew(n), hnew(m), this%sat(n), this%sat(m), hyn, hym, &
-                       this%dis%top(n), this%dis%top(m),                     &
-                       this%dis%bot(n), this%dis%bot(m),                     &
-                       this%dis%con%cl1(this%dis%con%jas(ii)),               &
-                       this%dis%con%cl2(this%dis%con%jas(ii)),               &
-                       this%dis%con%hwva(this%dis%con%jas(ii)),              &
-                       this%satomega, this%satmin)
-        endif
+        ! -- initialize and calculate amat and rhs terms
+        terms(:, :) = DZERO
+        call this%npf_fc_calc(n, m, ii, hnew, terms)
         !
-        ! -- Fill row n
+        ! -- Fill row n terms
         idiag = this%dis%con%ia(n)
-        amat(idxglo(ii)) = amat(idxglo(ii)) + cond
-        amat(idxglo(idiag)) = amat(idxglo(idiag)) - cond
+        amat(idxglo(idiag)) = amat(idxglo(idiag)) + terms(1, 1)
+        amat(idxglo(ii)) = amat(idxglo(ii)) + terms(2, 1)
+        rhs(n) = rhs(n) + terms(3, 1)
         !
-        ! -- Fill row m
+        ! -- Fill row m terms
         isymcon = this%dis%con%isym(ii)
         idiagm = this%dis%con%ia(m)
-        amat(idxglo(isymcon)) = amat(idxglo(isymcon)) + cond
-        amat(idxglo(idiagm)) = amat(idxglo(idiagm)) - cond
+        amat(idxglo(idiagm)) = amat(idxglo(idiagm)) + terms(1, 2)
+        amat(idxglo(isymcon)) = amat(idxglo(isymcon)) + terms(2, 2)
+        rhs(m) = rhs(m) + terms(3, 2)
+        !
       enddo
     enddo
     !
@@ -465,6 +523,246 @@ module GwfNpfModule
     return
   end subroutine npf_fc
 
+  subroutine npf_fc_calc(this, n, m, ii, hnew, terms)
+! ******************************************************************************
+! npf_fc_calc -- Formulate
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule, only: DONE
+    ! -- dummy
+    class(GwfNpfType) :: this
+    integer(I4B), intent(in) :: n
+    integer(I4B), intent(in) :: m
+    integer(I4B), intent(in) :: ii
+    real(DP), intent(in), dimension(:) :: hnew
+    real(DP), intent(inout), dimension(:, :) :: terms
+    ! -- local
+    integer(I4B) :: ihc
+    real(DP) :: hyn, hym
+    real(DP) :: cond
+! ------------------------------------------------------------------------------
+    !
+    ! -- Calculate amat and rhs terms and put into terms array
+    !
+    if(this%ixt3d > 0) then
+      print *, 'not implemented'
+      stop
+      !call this%xt3d%xt3d_fc(kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew)
+    else
+      !
+      ! -- terms(3, 2)
+      !    a[n, n] a[n, m] rhs[n]
+      !    a[m, m] a[m, n] rhs[n]
+      ihc = this%dis%con%ihc(this%dis%con%jas(ii))
+      hyn = this%hy_eff(n, m, ihc, ipos=ii)
+      hym = this%hy_eff(m, n, ihc, ipos=ii)
+      !
+      ! -- Vertical connection
+      if(ihc == 0) then
+        !
+        ! -- Calculate vertical conductance
+        cond =  vcond(this%ibound(n), this%ibound(m),                        &
+                      this%icelltype(n), this%icelltype(m), this%inewton,    &
+                      this%ivarcv, this%idewatcv,                            &
+                      this%condsat(this%dis%con%jas(ii)), hnew(n), hnew(m),  &
+                      hyn, hym,                                              &
+                      this%sat(n), this%sat(m),                              &
+                      this%dis%top(n), this%dis%top(m),                      &
+                      this%dis%bot(n), this%dis%bot(m),                      &
+                      this%dis%con%hwva(this%dis%con%jas(ii)))
+        !
+        ! -- Vertical flow for perched conditions
+        if(this%iperched /= 0) then
+          if(this%icelltype(m) /= 0) then
+            if(hnew(m) < this%dis%top(m)) then
+              !
+              ! -- Terms for row n
+              terms(1, 1) = terms(1, 1) - cond                    ! a[n, n]
+              terms(3, 1) = terms(3, 1) - cond * this%dis%bot(n)  ! rhs[n]
+              !
+              ! -- Terms for row m
+              terms(2, 2) = terms(2, 2) + cond                    ! a[m, n]
+              terms(3, 2) = terms(3, 2) + cond * this%dis%bot(n)  ! rhs[m]
+              !
+              ! -- terms are filled, so return
+              return
+            endif
+          endif
+        endif
+        !
+      else
+        !
+        ! -- Horizontal conductance
+        cond = hcond(this%ibound(n), this%ibound(m),                       &
+                     this%icelltype(n), this%icelltype(m),                 &
+                     this%inewton, this%inewton,                           &
+                     this%dis%con%ihc(this%dis%con%jas(ii)),               &
+                     this%icellavg, this%iusgnrhc, this%inwtupw,           &
+                     this%condsat(this%dis%con%jas(ii)),                   &
+                     hnew(n), hnew(m), this%sat(n), this%sat(m), hyn, hym, &
+                     this%dis%top(n), this%dis%top(m),                     &
+                     this%dis%bot(n), this%dis%bot(m),                     &
+                     this%dis%con%cl1(this%dis%con%jas(ii)),               &
+                     this%dis%con%cl2(this%dis%con%jas(ii)),               &
+                     this%dis%con%hwva(this%dis%con%jas(ii)),              &
+                     this%satomega, this%satmin)
+      endif
+      !
+      ! -- Terms for row n
+      terms(2, 1) = terms(2, 1) + cond  ! a[n, m]
+      terms(1, 1) = terms(1, 1) - cond  ! a[n, n]
+      !
+      ! -- Terms for row m
+      terms(2, 2) = terms(2, 2) + cond
+      terms(1, 2) = terms(1, 2) - cond
+      !
+    endif
+    !
+    ! -- Return
+    return
+  end subroutine npf_fc_calc
+
+!  subroutine npf_fn_old(this, kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew)
+!! ******************************************************************************
+!! npf_fn -- Fill newton terms
+!! ******************************************************************************
+!!
+!!    SPECIFICATIONS:
+!! ------------------------------------------------------------------------------
+!    ! -- dummy
+!    class(GwfNpfType) :: this
+!    integer(I4B) :: kiter
+!    integer(I4B),intent(in) :: nodes
+!    integer(I4B),intent(in) :: nja
+!    integer(I4B),intent(in) :: njasln
+!    real(DP),dimension(njasln),intent(inout) :: amat
+!    integer(I4B),intent(in),dimension(nja) :: idxglo
+!    real(DP),intent(inout),dimension(nodes) :: rhs
+!    real(DP),intent(inout),dimension(nodes) :: hnew
+!    ! -- local
+!    integer(I4B) :: n,m,ii,idiag
+!    integer(I4B) :: isymcon, idiagm
+!    integer(I4B) :: iups
+!    integer(I4B) :: idn
+!    real(DP) :: cond
+!    real(DP) :: consterm
+!    real(DP) :: filledterm
+!    real(DP) :: derv
+!    real(DP) :: hds
+!    real(DP) :: term
+!    real(DP) :: afac
+!    real(DP) :: topup
+!    real(DP) :: botup
+!    real(DP) :: topdn
+!    real(DP) :: botdn
+!! ------------------------------------------------------------------------------
+!    !
+!    ! -- add newton terms to solution matrix
+!    !
+!    if(this%ixt3d > 0) then
+!      call this%xt3d%xt3d_fn(kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew)
+!    else
+!    !
+!    do n=1, nodes
+!      idiag=this%dis%con%ia(n)
+!      do ii=this%dis%con%ia(n)+1,this%dis%con%ia(n+1)-1
+!        m=this%dis%con%ja(ii)
+!        isymcon = this%dis%con%isym(ii)
+!        ! work on upper triangle
+!        if(m < n) cycle
+!        if(this%dis%con%ihc(this%dis%con%jas(ii))==0 .and.                     &
+!           this%ivarcv == 0) then
+!          !call this%vcond(n,m,hnew(n),hnew(m),ii,cond)
+!          ! do nothing
+!        else
+!          ! determine upstream node
+!          iups = m
+!          if (hnew(m) < hnew(n)) iups = n
+!          idn = n
+!          if (iups == n) idn = m
+!          !
+!          ! -- no newton terms if upstream cell is confined
+!          if (this%icelltype(iups) == 0) cycle
+!          !
+!          ! -- Set the upstream top and bot, and then recalculate for a
+!          !    vertically staggered horizontal connection
+!          topup = this%dis%top(iups)
+!          botup = this%dis%bot(iups)
+!          if(this%dis%con%ihc(this%dis%con%jas(ii)) == 2) then
+!            topup = min(this%dis%top(n), this%dis%top(m))
+!            botup = max(this%dis%bot(n), this%dis%bot(m))
+!          endif
+!          !
+!          ! get saturated conductivity for derivative
+!          cond = this%condsat(this%dis%con%jas(ii))
+!          !
+!          ! -- if using MODFLOW-NWT upstream weighting option apply
+!          !    factor to remove average thickness
+!          if (this%inwtupw /= 0) then
+!            topdn = this%dis%top(idn)
+!            botdn = this%dis%bot(idn)
+!            afac = DTWO / (DONE + (topdn - botdn) / (topup - botup))
+!            cond = cond * afac
+!          end if
+!          !
+!          ! compute additional term
+!          consterm = -cond * (hnew(iups) - hnew(idn)) !needs to use hwadi instead of hnew(idn)
+!          !filledterm = cond
+!          filledterm = amat(idxglo(ii))
+!          derv = sQuadraticSaturationDerivative(topup, botup, hnew(iups),       &
+!                                                this%satomega, this%satmin)
+!          idiagm = this%dis%con%ia(m)
+!          ! fill jacobian for n being the upstream node
+!          if (iups == n) then
+!            hds = hnew(m)
+!            !isymcon =  this%dis%con%isym(ii)
+!            term = consterm * derv
+!            rhs(n) = rhs(n) + term * hnew(n) !+ amat(idxglo(isymcon)) * (dwadi * hds - hds) !need to add dwadi
+!            rhs(m) = rhs(m) - term * hnew(n) !- amat(idxglo(isymcon)) * (dwadi * hds - hds) !need to add dwadi
+!            ! fill in row of n
+!            amat(idxglo(idiag)) = amat(idxglo(idiag)) + term
+!            ! fill newton term in off diagonal if active cell
+!            if (this%ibound(n) > 0) then
+!              amat(idxglo(ii)) = amat(idxglo(ii)) !* dwadi !need to add dwadi
+!            end if
+!            !fill row of m
+!            amat(idxglo(idiagm)) = amat(idxglo(idiagm)) !- filledterm * (dwadi - DONE) !need to add dwadi
+!            ! fill newton term in off diagonal if active cell
+!            if (this%ibound(m) > 0) then
+!              amat(idxglo(isymcon)) = amat(idxglo(isymcon)) - term
+!            end if
+!          ! fill jacobian for m being the upstream node
+!          else
+!            hds = hnew(n)
+!            term = -consterm * derv
+!            rhs(n) = rhs(n) + term * hnew(m) !+ amat(idxglo(ii)) * (dwadi * hds - hds) !need to add dwadi
+!            rhs(m) = rhs(m) - term * hnew(m) !- amat(idxglo(ii)) * (dwadi * hds - hds) !need to add dwadi
+!            ! fill in row of n
+!            amat(idxglo(idiag)) = amat(idxglo(idiag)) !- filledterm * (dwadi - DONE) !need to add dwadi
+!            ! fill newton term in off diagonal if active cell
+!            if (this%ibound(n) > 0) then
+!              amat(idxglo(ii)) = amat(idxglo(ii)) + term
+!            end if
+!            !fill row of m
+!            amat(idxglo(idiagm)) = amat(idxglo(idiagm)) - term
+!            ! fill newton term in off diagonal if active cell
+!            if (this%ibound(m) > 0) then
+!              amat(idxglo(isymcon)) = amat(idxglo(isymcon)) !* dwadi  !need to add dwadi
+!            end if
+!          end if
+!        endif
+!
+!      enddo
+!    end do
+!    !
+!    end if
+!    !
+!    ! -- Return
+!    return
+!  end subroutine npf_fn_old
 
   subroutine npf_fn(this, kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew)
 ! ******************************************************************************
@@ -473,6 +771,8 @@ module GwfNpfModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule, only: DONE
     ! -- dummy
     class(GwfNpfType) :: this
     integer(I4B) :: kiter
@@ -484,16 +784,75 @@ module GwfNpfModule
     real(DP),intent(inout),dimension(nodes) :: rhs
     real(DP),intent(inout),dimension(nodes) :: hnew
     ! -- local
-    integer(I4B) :: n,m,ii,idiag
+    integer(I4B) :: n, m, ii, idiag
     integer(I4B) :: isymcon, idiagm
+    real(DP), dimension(3, 2) :: terms
+! ------------------------------------------------------------------------------
+    !
+    ! -- Calculate conductance and put into amat
+    !
+    if(this%ixt3d > 0) then
+      call this%xt3d%xt3d_fn(kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew)
+    else
+    !
+    do n = 1, nodes
+      do ii = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
+        m = this%dis%con%ja(ii)
+        !
+        ! -- Calculate conductance only for upper triangle but insert into
+        !    upper and lower parts of amat.
+        if(m < n) cycle
+        !
+        ! -- initialize and calculate amat and rhs terms
+        terms(:, :) = DZERO
+        call this%npf_fn_calc(n, m, ii, hnew, terms)
+        !
+        ! -- Fill row n terms
+        idiag = this%dis%con%ia(n)
+        amat(idxglo(idiag)) = amat(idxglo(idiag)) + terms(1, 1)
+        amat(idxglo(ii)) = amat(idxglo(ii)) + terms(2, 1)
+        rhs(n) = rhs(n) + terms(3, 1)
+        !
+        ! -- Fill row m terms
+        isymcon = this%dis%con%isym(ii)
+        idiagm = this%dis%con%ia(m)
+        amat(idxglo(idiagm)) = amat(idxglo(idiagm)) + terms(1, 2)
+        amat(idxglo(isymcon)) = amat(idxglo(isymcon)) + terms(2, 2)
+        rhs(m) = rhs(m) + terms(3, 2)
+        !
+      enddo
+    enddo
+    !
+    endif
+    !
+    ! -- Return
+    return
+  end subroutine npf_fn
+
+  subroutine npf_fn_calc(this, n, m, ii, hnew, terms)
+! ******************************************************************************
+! npf_fn_calc -- Calculate newton terms
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(GwfNpfType) :: this
+    integer(I4B), intent(in) :: n
+    integer(I4B), intent(in) :: m
+    integer(I4B), intent(in) :: ii
+    real(DP), intent(in), dimension(:) :: hnew
+    real(DP), intent(inout), dimension(:, :) :: terms
+    ! -- local
+    !integer(I4B) :: idiag
+    !integer(I4B) :: isymcon, idiagm
     integer(I4B) :: iups
     integer(I4B) :: idn
-    real(DP) :: athk
     real(DP) :: cond
     real(DP) :: consterm
-    real(DP) :: filledterm
+    !real(DP) :: filledterm
     real(DP) :: derv
-    real(DP) :: hds
+    !real(DP) :: hds
     real(DP) :: term
     real(DP) :: afac
     real(DP) :: topup
@@ -505,106 +864,113 @@ module GwfNpfModule
     ! -- add newton terms to solution matrix
     !
     if(this%ixt3d > 0) then
-      call this%xt3d%xt3d_fn(kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew)
+      print *, 'not implemented'
+      stop
+      !call this%xt3d%xt3d_fn(kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew)
     else
-    !
-    do n=1, nodes
-      idiag=this%dis%con%ia(n)
-      do ii=this%dis%con%ia(n)+1,this%dis%con%ia(n+1)-1
-        m=this%dis%con%ja(ii)
-        isymcon = this%dis%con%isym(ii)
-        ! work on upper triangle
-        if(m < n) cycle
-        if(this%dis%con%ihc(this%dis%con%jas(ii))==0 .and.                     &
-           this%ivarcv == 0) then
-          !call this%vcond(n,m,hnew(n),hnew(m),ii,cond)
-          ! do nothing
-        else
-          ! determine upstream node
-          iups = m
-          if (hnew(m) < hnew(n)) iups = n
-          idn = n
-          if (iups == n) idn = m
-          !
-          ! -- no newton terms if upstream cell is confined
-          if (this%icelltype(iups) == 0) cycle
-          !
-          ! -- Set the upstream top and bot, and then recalculate for a
-          !    vertically staggered horizontal connection
-          topup = this%dis%top(iups)
-          botup = this%dis%bot(iups)
-          if(this%dis%con%ihc(this%dis%con%jas(ii)) == 2) then
-            topup = min(this%dis%top(n), this%dis%top(m))
-            botup = max(this%dis%bot(n), this%dis%bot(m))
-          endif
-          !
-          ! get saturated conductivity for derivative
-          cond = this%condsat(this%dis%con%jas(ii))
-          !
-          ! -- if using MODFLOW-NWT upstream weighting option apply
-          !    factor to remove average thickness
-          if (this%inwtupw /= 0) then
-            topdn = this%dis%top(idn)
-            botdn = this%dis%bot(idn)
-            afac = DTWO / (DONE + (topdn - botdn) / (topup - botup))
-            cond = cond * afac
-          end if
-          !
-          ! compute additional term
-          consterm = -cond * (hnew(iups) - hnew(idn)) !needs to use hwadi instead of hnew(idn)
-          !filledterm = cond
-          filledterm = amat(idxglo(ii))
-          derv = sQuadraticSaturationDerivative(topup, botup, hnew(iups),       &
-                                                this%satomega, this%satmin)
-          idiagm = this%dis%con%ia(m)
-          ! fill jacobian for n being the upstream node
-          if (iups == n) then
-            hds = hnew(m)
-            !isymcon =  this%dis%con%isym(ii)
-            term = consterm * derv
-            rhs(n) = rhs(n) + term * hnew(n) !+ amat(idxglo(isymcon)) * (dwadi * hds - hds) !need to add dwadi
-            rhs(m) = rhs(m) - term * hnew(n) !- amat(idxglo(isymcon)) * (dwadi * hds - hds) !need to add dwadi
-            ! fill in row of n
-            amat(idxglo(idiag)) = amat(idxglo(idiag)) + term
-            ! fill newton term in off diagonal if active cell
-            if (this%ibound(n) > 0) then
-              amat(idxglo(ii)) = amat(idxglo(ii)) !* dwadi !need to add dwadi
-            end if
-            !fill row of m
-            amat(idxglo(idiagm)) = amat(idxglo(idiagm)) !- filledterm * (dwadi - DONE) !need to add dwadi
-            ! fill newton term in off diagonal if active cell
-            if (this%ibound(m) > 0) then
-              amat(idxglo(isymcon)) = amat(idxglo(isymcon)) - term
-            end if
-          ! fill jacobian for m being the upstream node
-          else
-            hds = hnew(n)
-            term = -consterm * derv
-            rhs(n) = rhs(n) + term * hnew(m) !+ amat(idxglo(ii)) * (dwadi * hds - hds) !need to add dwadi
-            rhs(m) = rhs(m) - term * hnew(m) !- amat(idxglo(ii)) * (dwadi * hds - hds) !need to add dwadi
-            ! fill in row of n
-            amat(idxglo(idiag)) = amat(idxglo(idiag)) !- filledterm * (dwadi - DONE) !need to add dwadi
-            ! fill newton term in off diagonal if active cell
-            if (this%ibound(n) > 0) then
-              amat(idxglo(ii)) = amat(idxglo(ii)) + term
-            end if
-            !fill row of m
-            amat(idxglo(idiagm)) = amat(idxglo(idiagm)) - term
-            ! fill newton term in off diagonal if active cell
-            if (this%ibound(m) > 0) then
-              amat(idxglo(isymcon)) = amat(idxglo(isymcon)) !* dwadi  !need to add dwadi
-            end if
-          end if
+      ! -- Not XT3D
+      !idiag = this%dis%con%ia(n)
+      !m = this%dis%con%ja(ii)
+      !isymcon = this%dis%con%isym(ii)
+      if(this%dis%con%ihc(this%dis%con%jas(ii))==0 .and.                     &
+          this%ivarcv == 0) then
+        ! -- do nothing for vertical flow
+      else
+        ! -- determine upstream node
+        iups = m
+        if (hnew(m) < hnew(n)) iups = n
+        idn = n
+        if (iups == n) idn = m
+        !
+        ! -- no newton terms if upstream cell is confined
+        if (this%icelltype(iups) == 0) return
+        !
+        ! -- Set the upstream top and bot, and then recalculate for a
+        !    vertically staggered horizontal connection
+        topup = this%dis%top(iups)
+        botup = this%dis%bot(iups)
+        if(this%dis%con%ihc(this%dis%con%jas(ii)) == 2) then
+          topup = min(this%dis%top(n), this%dis%top(m))
+          botup = max(this%dis%bot(n), this%dis%bot(m))
         endif
-
-      enddo
-    end do
+        !
+        ! -- get saturated conductivity for derivative
+        cond = this%condsat(this%dis%con%jas(ii))
+        !
+        ! -- if using MODFLOW-NWT upstream weighting option apply
+        !    factor to remove average thickness
+        if (this%inwtupw /= 0) then
+          topdn = this%dis%top(idn)
+          botdn = this%dis%bot(idn)
+          afac = DTWO / (DONE + (topdn - botdn) / (topup - botup))
+          cond = cond * afac
+        end if
+        !
+        ! -- compute additional term
+        consterm = -cond * (hnew(iups) - hnew(idn)) !needs to use hwadi instead of hnew(idn)
+        !filledterm = cond
+        !filledterm = amat(idxglo(ii))
+        derv = sQuadraticSaturationDerivative(topup, botup, hnew(iups),       &
+                                              this%satomega, this%satmin)
+        !idiagm = this%dis%con%ia(m)
+        ! -- fill jacobian for n being the upstream node
+        if (iups == n) then
+          !hds = hnew(m)
+          !isymcon =  this%dis%con%isym(ii)
+          term = consterm * derv
+          !rhs(n) = rhs(n) + term * hnew(n) !+ amat(idxglo(isymcon)) * (dwadi * hds - hds) !need to add dwadi
+          !rhs(m) = rhs(m) - term * hnew(n) !- amat(idxglo(isymcon)) * (dwadi * hds - hds) !need to add dwadi
+          terms(3, 1) = terms(3, 1) + term * hnew(n)
+          terms(3, 2) = terms(3, 2) - term * hnew(n)
+          !
+          ! -- fill in row of n
+          !amat(idxglo(idiag)) = amat(idxglo(idiag)) + term
+          terms(1, 1) = terms(1, 1) + term
+          
+          ! fill newton term in off diagonal if active cell
+          !if (this%ibound(n) > 0) then
+          !  amat(idxglo(ii)) = amat(idxglo(ii)) !* dwadi !need to add dwadi
+          !end if
+          !
+          ! -- fill row of m
+          !amat(idxglo(idiagm)) = amat(idxglo(idiagm)) !- filledterm * (dwadi - DONE) !need to add dwadi
+          ! fill newton term in off diagonal if active cell
+          if (this%ibound(m) > 0) then
+            !amat(idxglo(isymcon)) = amat(idxglo(isymcon)) - term
+            terms(2, 2) = terms(2, 2) - term
+          end if
+        else
+          ! -- fill jacobian for m being the upstream node
+          !hds = hnew(n)
+          term = -consterm * derv
+          !rhs(n) = rhs(n) + term * hnew(m) !+ amat(idxglo(ii)) * (dwadi * hds - hds) !need to add dwadi
+          !rhs(m) = rhs(m) - term * hnew(m) !- amat(idxglo(ii)) * (dwadi * hds - hds) !need to add dwadi
+          terms(3, 1) = terms(3, 1) + term * hnew(m)
+          terms(3, 2) = terms(3, 2) - term * hnew(m)
+          !
+          ! -- fill in row of n
+          !amat(idxglo(idiag)) = amat(idxglo(idiag)) !- filledterm * (dwadi - DONE) !need to add dwadi
+          ! -- fill newton term in off diagonal if active cell
+          if (this%ibound(n) > 0) then
+            !amat(idxglo(ii)) = amat(idxglo(ii)) + term
+            terms(2, 1) = terms(2, 1) + term
+          end if
+          !
+          ! -- fill row of m
+          !amat(idxglo(idiagm)) = amat(idxglo(idiagm)) - term
+          terms(1, 2) = terms(1, 2) - term
+          ! -- fill newton term in off diagonal if active cell
+          !if (this%ibound(m) > 0) then
+          !  amat(idxglo(isymcon)) = amat(idxglo(isymcon)) !* dwadi  !need to add dwadi
+          !end if
+        end if
+      endif
     !
     end if
     !
     ! -- Return
     return
-  end subroutine npf_fn
+  end subroutine npf_fn_calc
 
   subroutine npf_nur(this, neqmod, x, xtemp, dx, inewtonur)
 ! ******************************************************************************
@@ -2218,6 +2584,39 @@ module GwfNpfModule
     ! -- Return
     return
   end subroutine sgwf_npf_wdmsg
+
+  subroutine sat_calc(this, hnew)
+! ******************************************************************************
+! sat_calc -- recalculate saturation array
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwfNpfType) :: this
+    real(DP), dimension(:), intent(in) :: hnew
+    ! -- local
+    integer(I4B) :: n
+    real(DP) :: satn
+    ! -- formats
+! ------------------------------------------------------------------------------
+    !
+    ! -- Calculate saturation for convertible cells
+    do n = 1, this%dis%nodes
+      if(this%icelltype(n) /= 0) then
+        if(this%ibound(n) == 0) then
+          satn = DZERO
+        else
+          call this%thksat(n, hnew(n), satn)
+        endif
+        this%sat(n) = satn
+      endif
+    enddo
+    !
+    ! -- Return
+    return
+  end subroutine sat_calc
 
   function hy_eff(this, n, m, ihc, ipos, vg) result(hy)
 ! ******************************************************************************
