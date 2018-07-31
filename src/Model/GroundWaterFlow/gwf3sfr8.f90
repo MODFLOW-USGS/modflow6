@@ -77,6 +77,7 @@ module SfrModule
     real(DP), pointer :: depth => null()
     real(DP), pointer :: stage => null()
     real(DP), pointer :: gwflow => null()
+    real(DP), pointer :: simevap => null()
     ! -- arrays of data for reach
     integer(I4B), dimension(:), pointer, contiguous :: iconn => null()
     integer(I4B), dimension(:), pointer, contiguous :: idir => null()
@@ -1454,7 +1455,8 @@ contains
       a = this%geo(n)%surface_area()
       ae = this%geo(n)%surface_area_wet(depth)
       qr = this%reaches(n)%rain%value * a
-      qe = -this%reaches(n)%evap%value * ae
+      !qe = -this%reaches(n)%evap%value * ae
+      qe = -this%reaches(n)%simevap
       !
       ! -- inflow and runoff
       qi = this%reaches(n)%inflow%value
@@ -1736,7 +1738,8 @@ contains
                    this%maxbound, this%iout, delt, pertim, totim)
       do n = 1, this%maxbound
         ae = this%geo(n)%surface_area_wet(depth)
-        q = -this%reaches(n)%evap%value * ae
+        !q = -this%reaches(n)%evap%value * ae
+        q = -this%reaches(n)%simevap
         call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,         &
                                                 this%auxvar(:,n),              &
                                                 olconv=.FALSE.,                &
@@ -2025,7 +2028,8 @@ contains
          qr = this%reaches(n)%rain%value * a
          qi =  this%reaches(n)%inflow%value
          qro = this%reaches(n)%runoff%value
-         qe = this%reaches(n)%evap%value * ae
+         !qe = this%reaches(n)%evap%value * ae
+         qe = this%reaches(n)%simevap
          if (qe > DZERO) then
            qe = -qe
          end if
@@ -2398,7 +2402,8 @@ contains
             case ('RUNOFF')
               v = this%reaches(n)%runoff%value
             case ('EVAPORATION')
-              v = this%reaches(n)%evap%value
+              !v = this%reaches(n)%evap%value
+              v = this%reaches(n)%simevap
             case ('SFR')
               v = this%reaches(n)%gwflow
             case ('UPSTREAM-FLOW')
@@ -2857,6 +2862,7 @@ contains
     allocate(this%reaches(n)%depth)
     allocate(this%reaches(n)%stage)
     allocate(this%reaches(n)%gwflow)
+    allocate(this%reaches(n)%simevap)
     !
     ! -- initialize a few items
     this%reaches(n)%status = 'ACTIVE'
@@ -2881,6 +2887,7 @@ contains
     this%reaches(n)%depth = DZERO
     this%reaches(n)%stage = DZERO
     this%reaches(n)%gwflow = DZERO
+    this%reaches(n)%simevap = DZERO
     !
     ! -- return
     return
@@ -2954,6 +2961,7 @@ contains
     deallocate(this%reaches(n)%depth)
     deallocate(this%reaches(n)%stage)
     deallocate(this%reaches(n)%gwflow)
+    deallocate(this%reaches(n)%simevap)
     !
     ! -- return
     return
@@ -3129,6 +3137,16 @@ contains
     !
     ! -- calculate sum of sources to the reach excluding groundwater leakage
     qc = qu + qi + qr - qe + qro + qfrommvr
+    !
+    ! -- adjust evaporation if sum of sources is negative
+    if (qc < DZERO) then
+      qe = qu + qi + qr + qro + qfrommvr
+      qc = qu + qi + qr - qe + qro + qfrommvr
+    end if
+    !
+    ! -- set simulated evaporation
+    this%reaches(n)%simevap = qe
+    !
     ! -- calculate flow at the middle of the reach and excluding groundwater leakage
     qmp = qu + qi + qfrommvr + DHALF * (qr - qe + qro)
     qmpsrc = qmp
@@ -3564,7 +3582,8 @@ contains
     a = this%geo(n)%surface_area()
     ae = this%geo(n)%surface_area_wet(depth)
     qr = this%reaches(n)%rain%value * a
-    qe = this%reaches(n)%evap%value * ae
+    !qe = this%reaches(n)%evap%value * ae
+    qe = this%reaches(n)%evap%value * a
     !
     ! -- calculate mover term
     qfrommvr = DZERO
@@ -3574,6 +3593,12 @@ contains
     !
     ! -- calculate down stream flow
     qsrc = qu + qi + qr - qe + qro + qfrommvr
+    !
+    ! -- adjust evaporation if qscr is negative
+    if (qsrc < DZERO) then
+      qe = qu + qi + qr + qro + qfrommvr
+      qsrc = qu + qi + qr - qe + qro + qfrommvr
+    end if
     !
     ! -- return
     return
