@@ -78,6 +78,7 @@ module SfrModule
     real(DP), pointer :: stage => null()
     real(DP), pointer :: gwflow => null()
     real(DP), pointer :: simevap => null()
+    real(DP), pointer :: simrunoff => null()
     ! -- arrays of data for reach
     integer(I4B), dimension(:), pointer, contiguous :: iconn => null()
     integer(I4B), dimension(:), pointer, contiguous :: idir => null()
@@ -1724,7 +1725,8 @@ contains
                    ibinun, naux, this%auxname, this%maxbound, 1, 1,            &
                    this%maxbound, this%iout, delt, pertim, totim)
       do n = 1, this%maxbound
-        q = this%reaches(n)%runoff%value
+        !q = this%reaches(n)%runoff%value
+        q = this%reaches(n)%simrunoff
         call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,         &
                                                 this%auxvar(:,n),              &
                                                 olconv=.FALSE.,                &
@@ -2027,7 +2029,8 @@ contains
          qu = this%reaches(n)%usflow
          qr = this%reaches(n)%rain%value * a
          qi =  this%reaches(n)%inflow%value
-         qro = this%reaches(n)%runoff%value
+         !qro = this%reaches(n)%runoff%value
+         qro = this%reaches(n)%simrunoff
          !qe = this%reaches(n)%evap%value * ae
          qe = this%reaches(n)%simevap
          if (qe > DZERO) then
@@ -2400,7 +2403,8 @@ contains
             case ('RAINFALL')
               v = this%reaches(n)%rain%value
             case ('RUNOFF')
-              v = this%reaches(n)%runoff%value
+              !v = this%reaches(n)%runoff%value
+              v = this%reaches(n)%simrunoff
             case ('EVAPORATION')
               !v = this%reaches(n)%evap%value
               v = this%reaches(n)%simevap
@@ -2863,6 +2867,7 @@ contains
     allocate(this%reaches(n)%stage)
     allocate(this%reaches(n)%gwflow)
     allocate(this%reaches(n)%simevap)
+    allocate(this%reaches(n)%simrunoff)
     !
     ! -- initialize a few items
     this%reaches(n)%status = 'ACTIVE'
@@ -2888,6 +2893,7 @@ contains
     this%reaches(n)%stage = DZERO
     this%reaches(n)%gwflow = DZERO
     this%reaches(n)%simevap = DZERO
+    this%reaches(n)%simrunoff = DZERO
     !
     ! -- return
     return
@@ -2962,6 +2968,7 @@ contains
     deallocate(this%reaches(n)%stage)
     deallocate(this%reaches(n)%gwflow)
     deallocate(this%reaches(n)%simevap)
+    deallocate(this%reaches(n)%simrunoff)
     !
     ! -- return
     return
@@ -3068,6 +3075,7 @@ contains
       real(DP) :: qgwf
       real(DP) :: qmpsrc
       real(DP) :: qc
+      real(DP) :: qt
       real(DP) :: tp
       real(DP) :: bt
       real(DP) :: hsfr
@@ -3138,14 +3146,27 @@ contains
     ! -- calculate sum of sources to the reach excluding groundwater leakage
     qc = qu + qi + qr - qe + qro + qfrommvr
     !
-    ! -- adjust evaporation if sum of sources is negative
+    ! -- adjust runoff or evaporation if sum of sources is negative
     if (qc < DZERO) then
-      qe = qu + qi + qr + qro + qfrommvr
+      !
+      ! -- calculate sources without et
+      qt = qu + qi + qr + qro + qfrommvr
+      !
+      ! -- runoff exceeds sources of water for reach
+      if (qt < DZERO) then
+        qro = -(qu + qi + qr + qfrommvr)
+        qe = DZERO
+      !
+      ! -- evaporation exceeds sources of water for reach
+      else
+        qe = qu + qi + qr + qro + qfrommvr
+      end if
       qc = qu + qi + qr - qe + qro + qfrommvr
     end if
     !
-    ! -- set simulated evaporation
+    ! -- set simulated evaporation and runoff
     this%reaches(n)%simevap = qe
+    this%reaches(n)%simrunoff = qro
     !
     ! -- calculate flow at the middle of the reach and excluding groundwater leakage
     qmp = qu + qi + qfrommvr + DHALF * (qr - qe + qro)
@@ -3567,6 +3588,7 @@ contains
       real(DP), intent(inout) :: qsrc
       ! -- local
       real(DP) :: qu, qi, qr, qe, qro, qfrommvr
+      real(DP) :: qt
       real(DP) :: a, ae
   ! ------------------------------------------------------------------------------
     !
@@ -3594,9 +3616,21 @@ contains
     ! -- calculate down stream flow
     qsrc = qu + qi + qr - qe + qro + qfrommvr
     !
-    ! -- adjust evaporation if qscr is negative
+    ! -- adjust runoff or evaporation if sum of sources is negative
     if (qsrc < DZERO) then
-      qe = qu + qi + qr + qro + qfrommvr
+      !
+      ! -- calculate sources without et
+      qt = qu + qi + qr + qro + qfrommvr
+      !
+      ! -- runoff exceeds sources of water for reach
+      if (qt < DZERO) then
+        qro = -(qu + qi + qr + qfrommvr)
+        qe = DZERO
+      !
+      ! -- evaporation exceeds sources of water for reach
+      else
+        qe = qu + qi + qr + qro + qfrommvr
+      end if
       qsrc = qu + qi + qr - qe + qro + qfrommvr
     end if
     !
