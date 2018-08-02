@@ -27,9 +27,9 @@
 \item \textbf{Block: PACKAGES}
 
 \begin{description}
-\item \texttt{mname}---name of model containing the package.
+\item \texttt{mname}---name of model containing the package.  Model names are assigned by the user in the simulation name file.
 
-\item \texttt{pname}---is the name of a package that may be included in a subsequent stress period block.
+\item \texttt{pname}---is the name of a package that may be included in a subsequent stress period block.  The package name is assigned in the name file for the GWF Model.  Package names are optionally provided in the name file.  If they are not provided by the user, then packages are assigned a default value, which is the package acronym followed by a hyphen and the package number.  For example, the first Drain Package is named DRN-1.  The second Drain Package is named DRN-2, and so forth.
 
 \end{description}
 \item \textbf{Block: PERIOD}
