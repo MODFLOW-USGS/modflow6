@@ -25,11 +25,10 @@ module KindModule
     write(iout, '(a)') 'Real Variables'
     write(iout, '(2x,a,i0)') 'PRECISION: ', precision(rdum)
     write(iout, '(2x,a,i0)') 'KIND: ', DP
-    write(iout, '(2x,a,1pg15.6)') 'TINY (smallest value): ', tiny(rdum)
+    write(iout, '(2x,a,1pg15.6)') 'TINY (smallest non-zero value): ', tiny(rdum)
     write(iout, '(2x,a,1pg15.6)') 'HUGE (largest value): ', huge(rdum)
     write(iout, '(a)') 'Integer Variables'
     write(iout, '(2x,a,i0)') 'KIND: ', I4B
-    write(iout, '(2x,a,i0)') '-HUGE (smallest value): ', -huge(idum)
     write(iout, '(2x,a,i0)') 'HUGE (largest value): ', huge(idum)
     write(iout, '(2x,a,i0)') 'BIT_SIZE: ', bit_size(idum)
     !
