@@ -1,5 +1,6 @@
 module GrbModule
 
+  use KindModule
   use SimVariablesModule, only: iout
   use SimModule, only: store_error, store_error_unit, ustop
   implicit none
@@ -18,22 +19,22 @@ module GrbModule
     ! -- modules
     use InputOutputModule, only: urword
     ! -- dummy
-    integer, intent(in) :: inunit
-    integer, allocatable, dimension(:), intent(out) :: ia
-    integer, allocatable, dimension(:), intent(out) :: ja
-    integer, allocatable, dimension(:), intent(out) :: mshape
+    integer(I4B), intent(in) :: inunit
+    integer(I4B), allocatable, dimension(:), intent(out) :: ia
+    integer(I4B), allocatable, dimension(:), intent(out) :: ja
+    integer(I4B), allocatable, dimension(:), intent(out) :: mshape
     ! -- local
     character(len=50) :: hdrtxt
-    integer :: lloc, istart, istop
+    integer(I4B) :: lloc, istart, istop
     character(len=50) :: dataname
     character(len=50) :: datatype
-    integer :: ntxt, lentxt, ndim, i, j, n, nval
-    integer :: nja, ncells
-    double precision :: r, d
+    integer(I4B) :: ntxt, lentxt, ndim, i, j, n, nval
+    integer(I4B) :: nja, ncells
+    real(DP) :: r, d
     character(len=:), dimension(:), allocatable :: dfntxt
-    integer, dimension(:), allocatable :: ishape
-    integer, dimension(:), allocatable :: itmp
-    double precision, dimension(:), allocatable :: dtmp
+    integer(I4B), dimension(:), allocatable :: ishape
+    integer(I4B), dimension(:), allocatable :: itmp
+    real(DP), dimension(:), allocatable :: dtmp
 ! ------------------------------------------------------------------------------
     !
     ! -- message
