@@ -1338,160 +1338,177 @@ contains
     integer(I4B) :: jj
     real(DP) :: endtim
     integer(I4B), dimension(:), pointer :: nboundchk
-! ------------------------------------------------------------------------------
-
+    !
     ! -- format
     !
     ! -- code
-    !
-    ! -- skip if no outlets
-    if (this%noutlets < 1) return
-    !
-    ! -- allocate and initialize local variables
-    allocate(nboundchk(this%noutlets))
-    do n = 1, this%noutlets
-      nboundchk(n) = 0
-    end do
+! ------------------------------------------------------------------------------
     !
     ! -- get well_connections block
-    call this%parser%GetBlock('OUTLETS', isfound, ierr, supportOpenClose=.true.)
+    call this%parser%GetBlock('OUTLETS', isfound, ierr,                         &
+                              supportOpenClose=.true., blockRequired=.false.)
     !
     ! -- parse outlets block if detected
     if (isfound) then
-
-      ! -- allocate outlet data using memory manager
-      call mem_allocate(this%lakein, this%NOUTLETS, 'LAKEIN', this%origin)
-      call mem_allocate(this%lakeout, this%NOUTLETS, 'LAKEOUT', this%origin)
-      call mem_allocate(this%iouttype, this%NOUTLETS, 'IOUTTYPE', this%origin)
-      call mem_allocate(this%outrate, this%NOUTLETS, 'OUTRATE', this%origin)
-      call mem_allocate(this%outinvert, this%NOUTLETS, 'OUTINVERT', this%origin)
-      call mem_allocate(this%outwidth, this%NOUTLETS, 'OUTWIDTH', this%origin)
-      call mem_allocate(this%outrough, this%NOUTLETS, 'OUTROUGH', this%origin)
-      call mem_allocate(this%outslope, this%NOUTLETS, 'OUTSLOPE', this%origin)
-      call mem_allocate(this%simoutrate, this%NOUTLETS, 'SIMOUTRATE', this%origin)
-
-      ! -- process the lake connection data
-      write(this%iout,'(/1x,a)')'PROCESSING '//trim(adjustl(this%text))// &
-        ' OUTLETS'
-      readoutlet: do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        n = this%parser%GetInteger()
-
-        if (n < 1 .or. n > this%noutlets) then
-          write(errmsg,'(4x,a,1x,i6)') &
-            '****ERROR. outletno MUST BE > 0 and <= ', this%noutlets
-          call store_error(errmsg)
-          cycle readoutlet
-        end if
+      if (this%noutlets > 0) then
         !
-        ! -- increment nboundchk
-        nboundchk(n) = nboundchk(n) + 1
+        ! -- allocate and initialize local variables
+        allocate(nboundchk(this%noutlets))
+        do n = 1, this%noutlets
+          nboundchk(n) = 0
+        end do
         !
-        ! -- read outlet lakein
-        ival = this%parser%GetInteger()
-        if (ival <1 .or. ival > this%noutlets) then
-          write(errmsg,'(4x,a,1x,i4,1x,a,1x,i6)') &
-            '****ERROR. lakein FOR OUTLET ', n, 'MUST BE > 0 and <= ', this%noutlets
-          call store_error(errmsg)
-          cycle readoutlet
-        end if
-        this%lakein(n) = ival
+        ! -- allocate outlet data using memory manager
+        call mem_allocate(this%lakein, this%NOUTLETS, 'LAKEIN', this%origin)
+        call mem_allocate(this%lakeout, this%NOUTLETS, 'LAKEOUT', this%origin)
+        call mem_allocate(this%iouttype, this%NOUTLETS, 'IOUTTYPE', this%origin)
+        call mem_allocate(this%outrate, this%NOUTLETS, 'OUTRATE', this%origin)
+        call mem_allocate(this%outinvert, this%NOUTLETS, 'OUTINVERT',           &
+                          this%origin)
+        call mem_allocate(this%outwidth, this%NOUTLETS, 'OUTWIDTH', this%origin)
+        call mem_allocate(this%outrough, this%NOUTLETS, 'OUTROUGH', this%origin)
+        call mem_allocate(this%outslope, this%NOUTLETS, 'OUTSLOPE', this%origin)
+        call mem_allocate(this%simoutrate, this%NOUTLETS, 'SIMOUTRATE',         &
+                          this%origin)
 
-        ! -- read outlet lakeout
-        ival = this%parser%GetInteger()
-        if (ival <0 .or. ival > this%nlakes) then
-          write(errmsg,'(4x,a,1x,i4,1x,a,1x,i6)') &
-            '****ERROR. lakeout FOR OUTLET ', n, 'MUST BE >= 0 and <= ', this%noutlets
-          call store_error(errmsg)
-          cycle readoutlet
-        end if
-        this%lakeout(n) = ival
+        ! -- process the lake connection data
+        write(this%iout,'(/1x,a)')'PROCESSING '//trim(adjustl(this%text))//     &
+          ' OUTLETS'
+        readoutlet: do
+          call this%parser%GetNextLine(endOfBlock)
+          if (endOfBlock) exit
+          n = this%parser%GetInteger()
 
-        ! -- read ictype
-        call this%parser%GetStringCaps(keyword)
-        select case (keyword)
-          case ('SPECIFIED')
-            this%iouttype(n) = 0
-          case ('MANNING')
-            this%iouttype(n) = 1
-          case ('WEIR')
-            this%iouttype(n) = 2
-          case default
-            write(errmsg,'(4x,a,1x,i4,1x,a,a,a)') &
-              '****ERROR. UNKNOWN couttype FOR OUTLET ', n, &
-              '(', trim(keyword), ')'
+          if (n < 1 .or. n > this%noutlets) then
+            write(errmsg,'(4x,a,1x,i6)') &
+              '****ERROR. outletno MUST BE > 0 and <= ', this%noutlets
             call store_error(errmsg)
             cycle readoutlet
-          end select
+          end if
+          !
+          ! -- increment nboundchk
+          nboundchk(n) = nboundchk(n) + 1
+          !
+          ! -- read outlet lakein
+          ival = this%parser%GetInteger()
+          if (ival <1 .or. ival > this%noutlets) then
+            write(errmsg,'(4x,a,1x,i4,1x,a,1x,i6)') &
+              '****ERROR. lakein FOR OUTLET ', n, 'MUST BE > 0 and <= ',        &
+              this%noutlets
+            call store_error(errmsg)
+            cycle readoutlet
+          end if
+          this%lakein(n) = ival
 
-        ! -- build bndname for outlet
-        write (citem,'(i9.9)') n
-        bndName = 'OUTLET' // citem
+          ! -- read outlet lakeout
+          ival = this%parser%GetInteger()
+          if (ival <0 .or. ival > this%nlakes) then
+            write(errmsg,'(4x,a,1x,i4,1x,a,1x,i6)') &
+              '****ERROR. lakeout FOR OUTLET ', n, 'MUST BE >= 0 and <= ',      &
+              this%noutlets
+            call store_error(errmsg)
+            cycle readoutlet
+          end if
+          this%lakeout(n) = ival
 
-        ! -- set a few variables for timeseries aware variables
-        endtim = DZERO
-        jj = 1
+          ! -- read ictype
+          call this%parser%GetStringCaps(keyword)
+          select case (keyword)
+            case ('SPECIFIED')
+              this%iouttype(n) = 0
+            case ('MANNING')
+              this%iouttype(n) = 1
+            case ('WEIR')
+              this%iouttype(n) = 2
+            case default
+              write(errmsg,'(4x,a,1x,i4,1x,a,a,a)') &
+                '****ERROR. UNKNOWN couttype FOR OUTLET ', n,                   &
+                '(', trim(keyword), ')'
+              call store_error(errmsg)
+              cycle readoutlet
+            end select
 
-        ! -- outlet invert
-        call this%parser%GetString(text)
-        call read_single_value_or_time_series(text, &
-                                              this%outinvert(n)%value, &
-                                              this%outinvert(n)%name, &
-                                              endtim,  &
-                                              this%name, 'BND', this%TsManager, &
-                                              this%iprpak, n, jj, 'INVERT', &
-                                              bndName, this%parser%iuactive)
+          ! -- build bndname for outlet
+          write (citem,'(i9.9)') n
+          bndName = 'OUTLET' // citem
 
-        ! -- outlet width
-        call this%parser%GetString(text)
-        call read_single_value_or_time_series(text, &
-                                              this%outwidth(n)%value, &
-                                              this%outwidth(n)%name, &
-                                              endtim,  &
-                                              this%name, 'BND', this%TsManager, &
-                                              this%iprpak, n, jj, 'WIDTH', &
-                                              bndName, this%parser%iuactive)
+          ! -- set a few variables for timeseries aware variables
+          endtim = DZERO
+          jj = 1
 
-        ! -- outlet roughness
-        call this%parser%GetString(text)
-        call read_single_value_or_time_series(text, &
-                                              this%outrough(n)%value, &
-                                              this%outrough(n)%name, &
-                                              endtim,  &
-                                              this%name, 'BND', this%TsManager, &
-                                              this%iprpak, n, jj, 'ROUGH', &
-                                              bndName, this%parser%iuactive)
+          ! -- outlet invert
+          call this%parser%GetString(text)
+          call read_single_value_or_time_series(text,                           &
+                                                this%outinvert(n)%value,        &
+                                                this%outinvert(n)%name,         &
+                                                endtim,                         &
+                                                this%name, 'BND',               &
+                                                this%TsManager,                 &
+                                                this%iprpak, n, jj, 'INVERT',   &
+                                                bndName, this%parser%iuactive)
 
-        ! -- outlet slope
-        call this%parser%GetString(text)
-        call read_single_value_or_time_series(text, &
-                                              this%outslope(n)%value, &
-                                              this%outslope(n)%name, &
-                                              endtim,  &
-                                              this%name, 'BND', this%TsManager, &
-                                              this%iprpak, n, jj, 'SLOPE', &
-                                              bndName, this%parser%iuactive)
+          ! -- outlet width
+          call this%parser%GetString(text)
+          call read_single_value_or_time_series(text,                           &
+                                                this%outwidth(n)%value,         &
+                                                this%outwidth(n)%name,          &
+                                                endtim,                         &
+                                                this%name, 'BND',               &
+                                                this%TsManager,                 &
+                                                this%iprpak, n, jj, 'WIDTH',    &
+                                                bndName, this%parser%iuactive)
+
+          ! -- outlet roughness
+          call this%parser%GetString(text)
+          call read_single_value_or_time_series(text,                           &
+                                                this%outrough(n)%value,         &
+                                                this%outrough(n)%name,          &
+                                                endtim,                         &
+                                                this%name, 'BND',               &
+                                                this%TsManager,                 &
+                                                this%iprpak, n, jj, 'ROUGH',    &
+                                                bndName, this%parser%iuactive)
+
+          ! -- outlet slope
+          call this%parser%GetString(text)
+          call read_single_value_or_time_series(text, &
+                                                this%outslope(n)%value,         &
+                                                this%outslope(n)%name,          &
+                                                endtim,                         &
+                                                this%name, 'BND',               &
+                                                this%TsManager,                 &
+                                                this%iprpak, n, jj, 'SLOPE',    &
+                                                bndName, this%parser%iuactive)
 
 
-      end do readoutlet
-      write(this%iout,'(1x,a)')'END OF '//trim(adjustl(this%text))//' OUTLETS'
-      
-      !
-      ! -- check for duplicate or missing outlets
-      do n = 1, this%noutlets
-        if (nboundchk(n) == 0) then
-          write(errmsg,'(a,1x,i0)')  'ERROR.  NO DATA SPECIFIED FOR OUTLET', n
+        end do readoutlet
+        write(this%iout,'(1x,a)') 'END OF ' // trim(adjustl(this%text)) //      &
+                                   ' OUTLETS'
+        !
+        ! -- check for duplicate or missing outlets
+        do n = 1, this%noutlets
+          if (nboundchk(n) == 0) then
+            write(errmsg,'(a,1x,i0)') 'ERROR.  NO DATA SPECIFIED FOR OUTLET', n
+            call store_error(errmsg)
+          else if (nboundchk(n) > 1) then
+            write(errmsg,'(a,1x,i0,1x,a,1x,i0,1x,a)')                           &
+              'ERROR.  DATA FOR OUTLET', n, 'SPECIFIED', nboundchk(n), 'TIMES'
+            call store_error(errmsg)
+          end if
+        end do
+        !
+        ! -- deallocate local storage
+        deallocate(nboundchk)
+      else
+        write(errmsg,'(a,1x,a)') 'ERROR.  AN OUTLETS BLOCK SHOULD NOT BE',      &
+          'SPECIFIED IF NOUTLETS IS NOT SPECIFIED OR IS SPECIFIED TO BE 0.'
           call store_error(errmsg)
-        else if (nboundchk(n) > 1) then
-          write(errmsg,'(a,1x,i0,1x,a,1x,i0,1x,a)')                             &
-            'ERROR.  DATA FOR OUTLET', n, 'SPECIFIED', nboundchk(n), 'TIMES'
-          call store_error(errmsg)
-        end if
-      end do
+      end if
       
     else
-      call store_error('ERROR.  REQUIRED OUTLETS BLOCK NOT FOUND.')
+      if (this%noutlets > 0) then
+        call store_error('ERROR.  REQUIRED OUTLETS BLOCK NOT FOUND.')
+      end if
     end if
     !
     ! -- write summary of lake_connection error messages
@@ -1500,9 +1517,6 @@ contains
       call this%parser%StoreErrorUnit()
       call ustop()
     end if
-    !
-    ! -- deallocate local storage
-    deallocate(nboundchk)
     !
     ! -- return
     return

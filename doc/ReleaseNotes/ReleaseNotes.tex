@@ -134,8 +134,9 @@ This section describes changes introduced into MODFLOW 6 with each release.  The
 \underline{ADVANCED STRESS PACKAGES}
 \begin{itemize}
 \item Fixed spelling of the THIEM keyword in the source code and in the input instructions of the MAW Package.
-\item Fixed issue with the SFR package when the specified evaporation exceeds the sum of specified and calculated reach inflows, rainfall, and specified runoff. In this case, evaporation is set equal to the sum of specified and calculated reach inflows, rainfall, and specified runoff. Also if a negative runoff is specified and this value exceeds specified and calculated reach inflows, and rainfall then runoff is set to the sum of reach inflows and evaporation is set to zero.
-\item Fixed issue in MAW package budget information written to the listing file and MAW cell-by-cell budget file when a previously active well is inactivated. The ratesim variable was not being reset to zero for these wells and the simulated rate from the last stress period when the well was active was being reported.
+\item Fixed an issue with the SFR package when the specified evaporation exceeds the sum of specified and calculated reach inflows, rainfall, and specified runoff. In this case, evaporation is set equal to the sum of specified and calculated reach inflows, rainfall, and specified runoff. Also if a negative runoff is specified and this value exceeds specified and calculated reach inflows, and rainfall then runoff is set to the sum of reach inflows and evaporation is set to zero.
+\item Fixed an issue in the MAW package budget information written to the listing file and MAW cell-by-cell budget file when a previously active well is inactivated. The ratesim variable was not being reset to zero for these wells and the simulated rate from the last stress period when the well was active was being reported.
+\item Fixed an issue in the LAK package when NOUTLETS is not specified or specified to be zero n the DIMENSIONS block and an OUTLETS block is specified. Previously, this did not cause an error condition in the LAK package but could cause segmentation fault error conditions in the MVR package if OUTLETS are specified and providers. An error condition will occur if the OUTLETS block is present and  NOUTLETS is not specified or specified to be zero in the DIMENSIONS block.
 \end{itemize}
 
 \underline{SOLUTION}
