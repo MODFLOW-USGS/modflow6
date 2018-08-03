@@ -22,6 +22,8 @@ module ZoneModule
   integer :: minzone
   integer :: maxzone
   integer, dimension(:), allocatable :: izone
+  integer, dimension(:), allocatable :: iuniqzone
+  integer, dimension(:), allocatable :: izonemap
   integer, dimension(:), allocatable :: ich
   integer, dimension(:, :), allocatable :: nmznfl
   double precision, dimension(:, :, :), allocatable :: vbznfl
@@ -98,6 +100,7 @@ module ZoneModule
       ncr = ncells
     endif
     allocate(izone(ncells))
+    allocate(iuniqzone(ncells))
     allocate(ich(ncells))
     !
     ! -- get griddata block
@@ -154,7 +157,7 @@ module ZoneModule
     !
     ! -- Find max and min values
     minzone = HUGE(minzone)
-    maxzone = 0
+    maxzone = -HUGE(maxzone)
     do n = 1, size(izone)
       if (izone(n) /= 0) then
         if (izone(n) < minzone) then
