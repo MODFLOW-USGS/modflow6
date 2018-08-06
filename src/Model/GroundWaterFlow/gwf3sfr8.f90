@@ -852,31 +852,33 @@ contains
     call this%sparse%destroy()
     deallocate(this%sparse)
     !
-    ! -- allocate and initialize local variables for diversions
-    ndiv = 0
-    do n = 1, this%maxbound
-      ndiv = ndiv + this%reaches(n)%ndiv
-    end do
-    allocate(iachk(this%maxbound+1))
-    allocate(nboundchk(ndiv))
-    iachk(1) = 1
-    do n = 1, this%maxbound
-      iachk(n+1) = iachk(n) + this%reaches(n)%ndiv
-    end do
-    do n = 1, ndiv
-      nboundchk(n) = 0
-    end do
-    !
     ! -- read diversions
-    if (this%idiversions /= 0) then
-      !
-      ! -- read connection data
-      call this%parser%GetBlock('DIVERSIONS', isfound, ierr, supportOpenClose=.true.)
-      !
-      ! -- parse reach connectivity block if detected
-      if (isfound) then
-        write(this%iout,'(/1x,a)')'PROCESSING '//trim(adjustl(this%text))// &
-          ' DIVERSIONS'
+    call this%parser%GetBlock('DIVERSIONS', isfound, ierr,                      &
+                              supportOpenClose=.true.,                          &
+                              blockRequired=.false.)
+    !
+    ! -- parse reach connectivity block if detected
+    if (isfound) then
+      if (this%idiversions /= 0) then
+        write(this%iout,'(/1x,a)') 'PROCESSING ' // trim(adjustl(this%text)) // &
+                                   ' DIVERSIONS'
+        !
+        ! -- allocate and initialize local variables for diversions
+        ndiv = 0
+        do n = 1, this%maxbound
+          ndiv = ndiv + this%reaches(n)%ndiv
+        end do
+        allocate(iachk(this%maxbound+1))
+        allocate(nboundchk(ndiv))
+        iachk(1) = 1
+        do n = 1, this%maxbound
+          iachk(n+1) = iachk(n) + this%reaches(n)%ndiv
+        end do
+        do n = 1, ndiv
+          nboundchk(n) = 0
+        end do
+        !
+        ! -- read diversion data
         do
           call this%parser%GetNextLine(endOfBlock)
           if (endOfBlock) exit
@@ -885,7 +887,8 @@ contains
           n = this%parser%GetInteger()
           if (n < 1 .or. n > this%maxbound) then
             write (cnum, '(i0)') n
-            errmsg = 'ERROR: reach number should be between 1 and ' // trim(cnum) // '.'
+            errmsg = 'ERROR: reach number should be between 1 and ' //          &
+                      trim(cnum) // '.'
             call store_error(errmsg)
             cycle
           end if
@@ -893,7 +896,8 @@ contains
           ! -- make sure reach has at least one diversion
           if (this%reaches(n)%ndiv < 1) then
             write (cnum, '(i0)') n
-            errmsg = 'ERROR: diversions cannot be specified for reach ' // trim(cnum)
+            errmsg = 'ERROR: diversions cannot be specified ' //                &
+                     'for reach ' // trim(cnum)
             call store_error(errmsg)
             cycle
           end if
@@ -904,7 +908,8 @@ contains
             write (cnum, '(i0)') n
             errmsg = 'ERROR: reach  ' // trim(cnum)
             write (cnum, '(i0)') this%reaches(n)%ndiv
-            errmsg = trim(errmsg) // ' diversion number should be between 1 and ' // trim(cnum) // '.'
+            errmsg = trim(errmsg) // ' diversion number should be between ' //  &
+                     '1 and ' // trim(cnum) // '.'
             call store_error(errmsg)
             cycle
           end if
@@ -919,7 +924,8 @@ contains
           ival = this%parser%GetInteger()
           if (ival < 1 .or. ival > this%maxbound) then
             write (cnum, '(i0)') ival
-            errmsg = 'ERROR: diversion target reach number should be between 1 and ' // trim(cnum) // '.'
+            errmsg = 'ERROR: diversion target reach number should be ' //       &
+                     'between 1 and ' // trim(cnum) // '.'
             call store_error(errmsg)
             cycle
           end if
@@ -946,7 +952,8 @@ contains
 
         end do
         
-        write(this%iout,'(1x,a)')'END OF '//trim(adjustl(this%text))//' DIVERSIONS'
+        write(this%iout,'(1x,a)') 'END OF ' // trim(adjustl(this%text)) //      &
+                                  ' DIVERSIONS'
         
         do n = 1, this%maxbound
           do j = 1, this%reaches(n)%ndiv
@@ -965,19 +972,27 @@ contains
             end if
           end do
         end do
+        !
+        ! -- deallocate local variables
+        deallocate(iachk)
+        deallocate(nboundchk)
       else
+        !
+        ! -- error condition
+        write(errmsg,'(a,1x,a)') 'ERROR.  A DIVERSIONS BLOCK SHOULD NOT BE',    &
+          'SPECIFIED IF DIVERSIONS ARE NOT SPECIFIED.'
+          call store_error(errmsg)
+      end if
+    else
+      if (this%idiversions /= 0) then
         call store_error('ERROR.  REQUIRED DIVERSIONS BLOCK NOT FOUND.')
       end if
-      !
-      ! -- deallocate local variables
-      deallocate(iachk)
-      deallocate(nboundchk)
-      !
-      ! -- write summary of package block error messages
-      if (count_errors() > 0) then
-        call this%parser%StoreErrorUnit()
-        call ustop()
-      end if
+    end if
+    !
+    ! -- write summary of package block error messages
+    if (count_errors() > 0) then
+      call this%parser%StoreErrorUnit()
+      call ustop()
     end if
     !
     ! -- check the sfr data
