@@ -627,7 +627,7 @@ tagged false
 in_record true
 reader urword
 longname
-description line of information that is parsed into a keyword and values.  Keyword values that can be used to start the LAKSETTING string include: STATUS, STAGE, STAGE, EVAPORATION, RUNOFFON, WITHDRAWAL, and AUXILIARY.
+description line of information that is parsed into a keyword and values.  Keyword values that can be used to start the LAKSETTING string include: STATUS, STAGE, RAINFALL, EVAPORATION, RUNOFFON, WITHDRAWAL, and AUXILIARY.
 
 block period
 name status

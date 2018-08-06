@@ -1,14 +1,5 @@
 import os
-import sys
 import numpy as np
-
-try:
-    import pymake
-except:
-    msg = 'Error. Pymake package is not available.\n'
-    msg += 'Try installing using the following command:\n'
-    msg += ' pip install https://github.com/modflowpy/pymake/zipball/master'
-    raise Exception(msg)
 
 try:
     import flopy
@@ -21,8 +12,7 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['maw01', 'maw01nwt', 'maw01nwtur']
-newtonoptions = [None, [''], ['UNDER_RELAXATION']]
+ex = ['ts01']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
@@ -31,27 +21,23 @@ ddir = 'data'
 
 def get_model(idx, dir):
 
-    nlay, nrow, ncol = 1, 1, 3
-    nper = 3
-    perlen = [1., 1., 1.]
-    nstp = [1, 1, 1]
-    tsmult = [1., 1., 1.]
-    steady = [True, True, True]
+    nlay, nrow, ncol = 1, 3, 3
+    nper = 2
+    perlen = [1., 14966]
+    nstp = 1
+    tsmult = 1.
+    steady = [True, False]
     lenx = 300.
     delr = delc = lenx / float(nrow)
-    botm = [0.]
-    strt = 100.
-    hnoflo = 1e30
-    hdry = -1e30
+    botm = -1.
     hk = 1.
 
     nouter, ninner = 100, 300
-    hclose, rclose, relax = 1e-9, 1e-3, 1.
-    krylov = ['CG', 'BICGSTAB', 'BICGSTAB']
+    hclose, rclose, relax = 1e-6, 1e-3, 1.
 
     tdis_rc = []
     for i in range(nper):
-        tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
+        tdis_rc.append((perlen[i], nstp, tsmult))
 
     name = ex[idx]
 
@@ -67,7 +53,7 @@ def get_model(idx, dir):
     # create gwf model
     gwf = flopy.mf6.MFModel(sim, model_type='gwf6', modelname=name,
                             model_nam_file='{}.nam'.format(name))
-    gwf.name_file.newtonoptions = newtonoptions[idx]
+    gwf.name_file.newtonoptions = None
 
     # create iterative model solution and register the gwf model with it
     ims = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
@@ -76,7 +62,7 @@ def get_model(idx, dir):
                                under_relaxation='NONE',
                                inner_maximum=ninner,
                                inner_hclose=hclose, rcloserecord=rclose,
-                               linear_acceleration=krylov[idx],
+                               linear_acceleration='CG',
                                scaling_method='NONE',
                                reordering_method='NONE',
                                relaxation_factor=relax)
@@ -84,68 +70,59 @@ def get_model(idx, dir):
 
     dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
                                   delr=delr, delc=delc,
-                                  top=100., botm=0.,
+                                  top=0., botm=botm,
                                   idomain=1,
                                   fname='{}.dis'.format(name))
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt,
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=0.,
                                 fname='{}.ic'.format(name))
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=True,
-                                  icelltype=1,
+                                  icelltype=0,
                                   k=hk,
                                   k33=hk,
                                   fname='{}.npf'.format(name))
-    # storage
-    sto = flopy.mf6.ModflowGwfsto(gwf, save_flows=True,
-                                  iconvert=1,
-                                  ss=0., sy=0.1,
-                                  steady_state={0: True},
-                                  # transient={1: False},
-                                  fname='{}.sto'.format(name))
 
     # chd files
     chdlist0 = []
-    chdlist0.append([(0, 0, 0), 100.])
-    chdlist0.append([(0, 0, 2), 100.])
+    chdlist0.append([(0, 0, 0), 1.])
+    chdlist0.append([(nlay-1, nrow-1, ncol-1), 0.])
 
-    chdlist1 = []
-    chdlist1.append([(0, 0, 0), 25.])
-    chdlist1.append([(0, 0, 2), 25.])
-
-    chdspdict = {0: chdlist0, 1: chdlist1, 2: chdlist0}
+    chdspdict = {0: chdlist0}
     chd = flopy.mf6.ModflowGwfchd(gwf,
                                   stress_period_data=chdspdict,
                                   save_flows=False,
                                   fname='{}.chd'.format(name))
 
+
     # wel files
-    #wel = flopy.mf6.ModflowGwfwel(gwf, print_input=True, print_flows=True,
-    #                              maxbound=len(ws),
-    #                              periodrecarray=wd6,
-    #                              save_flows=False)
-    # MAW
-    opth = '{}.maw.obs'.format(name)
-    wellbottom = 50.
-    wellrecarray = [[0, 0.1, wellbottom, 100., 'THIEM', 1]]
-    wellconnectionsrecarray = [[0, 0, (0, 0, 1), 100., wellbottom, 1., 0.1]]
-    wellperiodrecarray = [[0, 'rate', 0.]]
-    maw = flopy.mf6.ModflowGwfmaw(gwf, fname='{}.maw'.format(name),
-                                  print_input=True, print_head=True,
-                                  print_flows=True, save_flows=True,
-                                  obs_filerecord=opth,
-                                  packagedata=wellrecarray,
-                                  connectiondata=wellconnectionsrecarray,
-                                  perioddata=wellperiodrecarray)
-    mawo_dict = {}
-    mawo_dict['maw_obs.csv'] = [('mh1', 'head', 1)]
-    maw_obs = flopy.mf6.ModflowUtlobs(gwf,
-                                      fname=opth,
-                                      parent_file=maw, digits=20,
-                                      print_input=True,
-                                      continuous=mawo_dict)
+    wellist1 = []
+    #wellist1.append([(0, 2, 2), -.5])
+    #wellist1.append([(0, 2, 2), -.5])
+    wellist1.append([(0, 2, 2), 'ts01'])
+    wellist1.append([(0, 2, 2), 'ts02'])
+    wel = flopy.mf6.ModflowGwfwel(gwf, pname='wel', print_input=True,
+                                  print_flows=True,
+                                  stress_period_data={1: wellist1},
+                                  ts_filerecord='well-rates.ts')
+
+    # well ts package
+    ts_recarray = [(0.0, 0.0, 0.0),
+                   (700., 3.e30, -.5),
+                   (31775., -0.5, 3.e30),
+                   (41272., 3.e30, 3.e30),
+                   (15000., 0., 0.),
+                   ]
+    wts = flopy.mf6.ModflowUtlts(gwf, pname='well_ts',
+                                 fname='well-rates.ts',
+                                 parent_file=wel,
+                                 timeseries=ts_recarray,
+                                 time_series_namerecord=[('ts01', 'ts02')],
+                                 interpolation_methodrecord=[(
+                                                             'linear',
+                                                             'linear')])
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(gwf,
@@ -169,35 +146,6 @@ def build_models():
     return
 
 
-def eval_maw(sim):
-    print('evaluating MAW heads...')
-
-    # MODFLOW 6 maw results
-    fpth = os.path.join(sim.simpath, 'maw_obs.csv')
-    try:
-        tc = np.genfromtxt(fpth, names=True, delimiter=',')
-    except:
-        assert False, 'could not load data from "{}"'.format(fpth)
-
-    # create known results array
-    tc0 = np.array([100., 25., 100.])
-
-    # calculate maximum absolute error
-    diff = tc['MH1'] - tc0
-    diffmax = np.abs(diff).max()
-    dtol = 1e-9
-    msg = 'maximum absolute maw head difference ({}) '.format(diffmax)
-
-    if diffmax > dtol:
-        sim.success = False
-        msg += 'exceeds {}'.format(dtol)
-        assert diffmax < dtol, msg
-    else:
-        sim.success = True
-        print('    ' + msg)
-
-    return
-
 # - No need to change any code below
 def test_mf6model():
     # initialize testing framework
@@ -208,7 +156,7 @@ def test_mf6model():
 
     # run the test models
     for idx, dir in enumerate(exdirs):
-        yield test.run_mf6, Simulation(dir, exfunc=eval_maw, idxsim=idx)
+        yield test.run_mf6, Simulation(dir)
 
     return
 
@@ -222,7 +170,7 @@ def main():
 
     # run the test models
     for idx, dir in enumerate(exdirs):
-        sim = Simulation(dir, exfunc=eval_maw, idxsim=idx)
+        sim = Simulation(dir)
         test.run_mf6(sim)
 
     return

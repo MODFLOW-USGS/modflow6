@@ -671,7 +671,11 @@ module BndModule
     call model_budget%addentry(ratin, ratout, delt, this%text,                 &
                                isuppress_output, this%name)
     if (imover == 1) then
-      text = adjustr(trim(adjustl(this%text)) // '-TO-MVR')
+      ratin = DZERO
+      ratout = DZERO
+      ibdlbl = 0
+      text = trim(adjustl(this%text)) // '-TO-MVR'
+      text = adjustr(text)
       !
       ! -- If cell-by-cell flows will be saved as a list, write header.
       if(ibinun /= 0) then

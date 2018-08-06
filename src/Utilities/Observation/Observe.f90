@@ -186,6 +186,13 @@ contains
     ! -- Remaining text is ID [and ID2]; store it
     ltrim = len_trim(defLine)
     call urword(defLine,icol,istart,istop,1,n,r,iout,inunit)
+    !
+    ! -- Test for quote at end of substring
+    if (istop < ltrim) then
+      if (defLine(istop+1:istop+1) == '''') then
+        ltrim = istop
+      end if
+    end if
     newObservation%IDstring = (defLine(istart:ltrim))
     !
     ! Store UnitNumber, FormattedOutput, and IndxObsOutput

@@ -1457,7 +1457,8 @@ module GwfDisModule
     ! -- Read the array
     if(this%ndim > 1) then
       nval = ncol * nrow
-      call ReadArray(inunit, this%dbuff, aname, this%ndim, nval, iout, 0)
+      call ReadArray(inunit, this%dbuff, aname, this%ndim, ncol, nrow, nlay,   &
+        nval, iout, 0, 0)
       !
       ! -- Copy array into bound
       ipos = 1
@@ -1497,7 +1498,7 @@ module GwfDisModule
     !
     ! -- return
   end subroutine read_layer_array
-
+                              
   subroutine record_array(this, darray, iout, iprint, idataun, aname,     &
                            cdatafmp, nvaluesp, nwidthp, editdesc, dinact)
 ! ******************************************************************************

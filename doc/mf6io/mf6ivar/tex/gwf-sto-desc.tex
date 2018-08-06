@@ -11,11 +11,11 @@
 \item \textbf{Block: GRIDDATA}
 
 \begin{description}
-\item \texttt{iconvert}---is a flag for each cell that specifies whether or not a cell is convertible for the storage calculation.  0 indicates confined storage is used. $>$0 indicates confined storage is used when head is above cell top and unconfined storage is used when head is below cell top.  A mixed formulation is when when a cell converts from confined to unconfined (or vice versa) during a single time step.
+\item \texttt{iconvert}---is a flag for each cell that specifies whether or not a cell is convertible for the storage calculation. 0 indicates confined storage is used. $>$0 indicates confined storage is used when head is above cell top and a mixed formulation of unconfined and confined storage is used when head is below cell top.
 
-\item \texttt{ss}---is specific storage (or the storage coefficient if STORAGECOEFFICIENT is specified as an option).
+\item \texttt{ss}---is specific storage (or the storage coefficient if STORAGECOEFFICIENT is specified as an option). Specific storage values must be greater than or equal to 0.
 
-\item \texttt{sy}---is specific yield.
+\item \texttt{sy}---is specific yield. Specific yield values must be greater than or equal to 0. Specific yield does not have to be specified if there are no convertible cells (ICONVERT=0 in every cell).
 
 \end{description}
 \item \textbf{Block: PERIOD}

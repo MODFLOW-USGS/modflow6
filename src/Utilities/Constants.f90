@@ -57,7 +57,6 @@ module ConstantsModule
   real(DP), parameter :: DHDRY = -1.e30_DP
   real(DP), parameter :: DNODATA = 3.0e30_DP
 
-  real(DP), parameter :: DPREC = EPSILON(1.0_DP)
   real(DP), parameter :: DEM1  = 1.0e-1_DP
   real(DP), parameter :: D5EM2 = 5.0e-2_DP
   real(DP), parameter :: DEM2  = 1.0e-2_DP
@@ -74,6 +73,9 @@ module ConstantsModule
   real(DP), parameter :: DEM15 = 1.0e-15_DP
   real(DP), parameter :: DEM20 = 1.0e-20_DP
   real(DP), parameter :: DEM30 = 1.0e-30_DP
+
+  real(DP), parameter :: DPREC = EPSILON(1.0_DP)
+  real(DP), parameter :: DSAME = DHUNDRED * DPREC
 
   real(DP), parameter :: DLNLOW = 0.995_DP
   real(DP), parameter :: DLNHIGH = 1.005_DP

@@ -77,6 +77,8 @@ module SfrModule
     real(DP), pointer :: depth => null()
     real(DP), pointer :: stage => null()
     real(DP), pointer :: gwflow => null()
+    real(DP), pointer :: simevap => null()
+    real(DP), pointer :: simrunoff => null()
     ! -- arrays of data for reach
     integer(I4B), dimension(:), pointer, contiguous :: iconn => null()
     integer(I4B), dimension(:), pointer, contiguous :: idir => null()
@@ -850,31 +852,33 @@ contains
     call this%sparse%destroy()
     deallocate(this%sparse)
     !
-    ! -- allocate and initialize local variables for diversions
-    ndiv = 0
-    do n = 1, this%maxbound
-      ndiv = ndiv + this%reaches(n)%ndiv
-    end do
-    allocate(iachk(this%maxbound+1))
-    allocate(nboundchk(ndiv))
-    iachk(1) = 1
-    do n = 1, this%maxbound
-      iachk(n+1) = iachk(n) + this%reaches(n)%ndiv
-    end do
-    do n = 1, ndiv
-      nboundchk(n) = 0
-    end do
-    !
     ! -- read diversions
-    if (this%idiversions /= 0) then
-      !
-      ! -- read connection data
-      call this%parser%GetBlock('DIVERSIONS', isfound, ierr, supportOpenClose=.true.)
-      !
-      ! -- parse reach connectivity block if detected
-      if (isfound) then
-        write(this%iout,'(/1x,a)')'PROCESSING '//trim(adjustl(this%text))// &
-          ' DIVERSIONS'
+    call this%parser%GetBlock('DIVERSIONS', isfound, ierr,                      &
+                              supportOpenClose=.true.,                          &
+                              blockRequired=.false.)
+    !
+    ! -- parse reach connectivity block if detected
+    if (isfound) then
+      if (this%idiversions /= 0) then
+        write(this%iout,'(/1x,a)') 'PROCESSING ' // trim(adjustl(this%text)) // &
+                                   ' DIVERSIONS'
+        !
+        ! -- allocate and initialize local variables for diversions
+        ndiv = 0
+        do n = 1, this%maxbound
+          ndiv = ndiv + this%reaches(n)%ndiv
+        end do
+        allocate(iachk(this%maxbound+1))
+        allocate(nboundchk(ndiv))
+        iachk(1) = 1
+        do n = 1, this%maxbound
+          iachk(n+1) = iachk(n) + this%reaches(n)%ndiv
+        end do
+        do n = 1, ndiv
+          nboundchk(n) = 0
+        end do
+        !
+        ! -- read diversion data
         do
           call this%parser%GetNextLine(endOfBlock)
           if (endOfBlock) exit
@@ -883,7 +887,8 @@ contains
           n = this%parser%GetInteger()
           if (n < 1 .or. n > this%maxbound) then
             write (cnum, '(i0)') n
-            errmsg = 'ERROR: reach number should be between 1 and ' // trim(cnum) // '.'
+            errmsg = 'ERROR: reach number should be between 1 and ' //          &
+                      trim(cnum) // '.'
             call store_error(errmsg)
             cycle
           end if
@@ -891,7 +896,8 @@ contains
           ! -- make sure reach has at least one diversion
           if (this%reaches(n)%ndiv < 1) then
             write (cnum, '(i0)') n
-            errmsg = 'ERROR: diversions cannot be specified for reach ' // trim(cnum)
+            errmsg = 'ERROR: diversions cannot be specified ' //                &
+                     'for reach ' // trim(cnum)
             call store_error(errmsg)
             cycle
           end if
@@ -902,7 +908,8 @@ contains
             write (cnum, '(i0)') n
             errmsg = 'ERROR: reach  ' // trim(cnum)
             write (cnum, '(i0)') this%reaches(n)%ndiv
-            errmsg = trim(errmsg) // ' diversion number should be between 1 and ' // trim(cnum) // '.'
+            errmsg = trim(errmsg) // ' diversion number should be between ' //  &
+                     '1 and ' // trim(cnum) // '.'
             call store_error(errmsg)
             cycle
           end if
@@ -917,7 +924,8 @@ contains
           ival = this%parser%GetInteger()
           if (ival < 1 .or. ival > this%maxbound) then
             write (cnum, '(i0)') ival
-            errmsg = 'ERROR: diversion target reach number should be between 1 and ' // trim(cnum) // '.'
+            errmsg = 'ERROR: diversion target reach number should be ' //       &
+                     'between 1 and ' // trim(cnum) // '.'
             call store_error(errmsg)
             cycle
           end if
@@ -944,7 +952,8 @@ contains
 
         end do
         
-        write(this%iout,'(1x,a)')'END OF '//trim(adjustl(this%text))//' DIVERSIONS'
+        write(this%iout,'(1x,a)') 'END OF ' // trim(adjustl(this%text)) //      &
+                                  ' DIVERSIONS'
         
         do n = 1, this%maxbound
           do j = 1, this%reaches(n)%ndiv
@@ -963,19 +972,27 @@ contains
             end if
           end do
         end do
+        !
+        ! -- deallocate local variables
+        deallocate(iachk)
+        deallocate(nboundchk)
       else
+        !
+        ! -- error condition
+        write(errmsg,'(a,1x,a)') 'ERROR.  A DIVERSIONS BLOCK SHOULD NOT BE',    &
+          'SPECIFIED IF DIVERSIONS ARE NOT SPECIFIED.'
+          call store_error(errmsg)
+      end if
+    else
+      if (this%idiversions /= 0) then
         call store_error('ERROR.  REQUIRED DIVERSIONS BLOCK NOT FOUND.')
       end if
-      !
-      ! -- deallocate local variables
-      deallocate(iachk)
-      deallocate(nboundchk)
-      !
-      ! -- write summary of package block error messages
-      if (count_errors() > 0) then
-        call this%parser%StoreErrorUnit()
-        call ustop()
-      end if
+    end if
+    !
+    ! -- write summary of package block error messages
+    if (count_errors() > 0) then
+      call this%parser%StoreErrorUnit()
+      call ustop()
     end if
     !
     ! -- check the sfr data
@@ -1454,7 +1471,8 @@ contains
       a = this%geo(n)%surface_area()
       ae = this%geo(n)%surface_area_wet(depth)
       qr = this%reaches(n)%rain%value * a
-      qe = -this%reaches(n)%evap%value * ae
+      !qe = -this%reaches(n)%evap%value * ae
+      qe = -this%reaches(n)%simevap
       !
       ! -- inflow and runoff
       qi = this%reaches(n)%inflow%value
@@ -1722,7 +1740,8 @@ contains
                    ibinun, naux, this%auxname, this%maxbound, 1, 1,            &
                    this%maxbound, this%iout, delt, pertim, totim)
       do n = 1, this%maxbound
-        q = this%reaches(n)%runoff%value
+        !q = this%reaches(n)%runoff%value
+        q = this%reaches(n)%simrunoff
         call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,         &
                                                 this%auxvar(:,n),              &
                                                 olconv=.FALSE.,                &
@@ -1736,7 +1755,8 @@ contains
                    this%maxbound, this%iout, delt, pertim, totim)
       do n = 1, this%maxbound
         ae = this%geo(n)%surface_area_wet(depth)
-        q = -this%reaches(n)%evap%value * ae
+        !q = -this%reaches(n)%evap%value * ae
+        q = -this%reaches(n)%simevap
         call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,         &
                                                 this%auxvar(:,n),              &
                                                 olconv=.FALSE.,                &
@@ -2024,8 +2044,10 @@ contains
          qu = this%reaches(n)%usflow
          qr = this%reaches(n)%rain%value * a
          qi =  this%reaches(n)%inflow%value
-         qro = this%reaches(n)%runoff%value
-         qe = this%reaches(n)%evap%value * ae
+         !qro = this%reaches(n)%runoff%value
+         qro = this%reaches(n)%simrunoff
+         !qe = this%reaches(n)%evap%value * ae
+         qe = this%reaches(n)%simevap
          if (qe > DZERO) then
            qe = -qe
          end if
@@ -2396,9 +2418,11 @@ contains
             case ('RAINFALL')
               v = this%reaches(n)%rain%value
             case ('RUNOFF')
-              v = this%reaches(n)%runoff%value
+              !v = this%reaches(n)%runoff%value
+              v = this%reaches(n)%simrunoff
             case ('EVAPORATION')
-              v = this%reaches(n)%evap%value
+              !v = this%reaches(n)%evap%value
+              v = this%reaches(n)%simevap
             case ('SFR')
               v = this%reaches(n)%gwflow
             case ('UPSTREAM-FLOW')
@@ -2857,6 +2881,8 @@ contains
     allocate(this%reaches(n)%depth)
     allocate(this%reaches(n)%stage)
     allocate(this%reaches(n)%gwflow)
+    allocate(this%reaches(n)%simevap)
+    allocate(this%reaches(n)%simrunoff)
     !
     ! -- initialize a few items
     this%reaches(n)%status = 'ACTIVE'
@@ -2881,6 +2907,8 @@ contains
     this%reaches(n)%depth = DZERO
     this%reaches(n)%stage = DZERO
     this%reaches(n)%gwflow = DZERO
+    this%reaches(n)%simevap = DZERO
+    this%reaches(n)%simrunoff = DZERO
     !
     ! -- return
     return
@@ -2954,6 +2982,8 @@ contains
     deallocate(this%reaches(n)%depth)
     deallocate(this%reaches(n)%stage)
     deallocate(this%reaches(n)%gwflow)
+    deallocate(this%reaches(n)%simevap)
+    deallocate(this%reaches(n)%simrunoff)
     !
     ! -- return
     return
@@ -3060,6 +3090,7 @@ contains
       real(DP) :: qgwf
       real(DP) :: qmpsrc
       real(DP) :: qc
+      real(DP) :: qt
       real(DP) :: tp
       real(DP) :: bt
       real(DP) :: hsfr
@@ -3129,6 +3160,29 @@ contains
     !
     ! -- calculate sum of sources to the reach excluding groundwater leakage
     qc = qu + qi + qr - qe + qro + qfrommvr
+    !
+    ! -- adjust runoff or evaporation if sum of sources is negative
+    if (qc < DZERO) then
+      !
+      ! -- calculate sources without et
+      qt = qu + qi + qr + qro + qfrommvr
+      !
+      ! -- runoff exceeds sources of water for reach
+      if (qt < DZERO) then
+        qro = -(qu + qi + qr + qfrommvr)
+        qe = DZERO
+      !
+      ! -- evaporation exceeds sources of water for reach
+      else
+        qe = qu + qi + qr + qro + qfrommvr
+      end if
+      qc = qu + qi + qr - qe + qro + qfrommvr
+    end if
+    !
+    ! -- set simulated evaporation and runoff
+    this%reaches(n)%simevap = qe
+    this%reaches(n)%simrunoff = qro
+    !
     ! -- calculate flow at the middle of the reach and excluding groundwater leakage
     qmp = qu + qi + qfrommvr + DHALF * (qr - qe + qro)
     qmpsrc = qmp
@@ -3549,6 +3603,7 @@ contains
       real(DP), intent(inout) :: qsrc
       ! -- local
       real(DP) :: qu, qi, qr, qe, qro, qfrommvr
+      real(DP) :: qt
       real(DP) :: a, ae
   ! ------------------------------------------------------------------------------
     !
@@ -3564,7 +3619,8 @@ contains
     a = this%geo(n)%surface_area()
     ae = this%geo(n)%surface_area_wet(depth)
     qr = this%reaches(n)%rain%value * a
-    qe = this%reaches(n)%evap%value * ae
+    !qe = this%reaches(n)%evap%value * ae
+    qe = this%reaches(n)%evap%value * a
     !
     ! -- calculate mover term
     qfrommvr = DZERO
@@ -3574,6 +3630,24 @@ contains
     !
     ! -- calculate down stream flow
     qsrc = qu + qi + qr - qe + qro + qfrommvr
+    !
+    ! -- adjust runoff or evaporation if sum of sources is negative
+    if (qsrc < DZERO) then
+      !
+      ! -- calculate sources without et
+      qt = qu + qi + qr + qro + qfrommvr
+      !
+      ! -- runoff exceeds sources of water for reach
+      if (qt < DZERO) then
+        qro = -(qu + qi + qr + qfrommvr)
+        qe = DZERO
+      !
+      ! -- evaporation exceeds sources of water for reach
+      else
+        qe = qu + qi + qr + qro + qfrommvr
+      end if
+      qsrc = qu + qi + qr - qe + qro + qfrommvr
+    end if
     !
     ! -- return
     return

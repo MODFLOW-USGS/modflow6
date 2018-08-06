@@ -72,3 +72,16 @@ Character variables, which are used to store names of models, packages, observat
 \FloatBarrier
 \input{../Common/characterlengthtable.tex}
 \FloatBarrier
+
+\subsection{Integer and Floating Point Variables}
+\mf uses integer and floating point variables throughout the program.  The sizes of these variables are defined in a single module within the program.  Information about the precision, range, and size of integers and floating point real variables is written to the top of the simulation list file: 
+
+{\small
+\begin{lstlisting}[style=modeloutput]
+MODFLOW was compiled using uniform precision.
+Real Variables  PRECISION: 15  KIND: 8  TINY (smallest non-zero value):    2.225074-308  HUGE (largest value):    1.797693+308Integer Variables  KIND: 4  HUGE (largest value): 2147483647  BIT_SIZE: 32
+\end{lstlisting}
+}
+
+This information indicates that real variables have about 15 digits of precision.  The smallest positive non-zero value that can be stored is 2.2e-308.  The largest value that can be stored is 1.8e+308.  If the user enters a value in an input file that cannot be stored, such as 1.9335e-310 for example, then the program can produce unexpected results.  This does not affect an exact value of zero, which can be stored accurately.  Integer variables also have a maximum and minimum value, which is about 2 billion.  Values larger and smaller than this cannot be stored.  These numbers are rarely exceeded for most practical problems, but as the size of models (number of nodes) increase into the billions, then the program may need to be recompiled using a larger size for integer variables.
+
