@@ -162,7 +162,7 @@ module ZoneOutputModule
       write(ioutcsv, '(a)', advance='no') trim(adjustl(txt)) // ','
       write(txt, '(i0)') kper
       write(ioutcsv, '(a)', advance='no') trim(adjustl(txt)) // ','
-      write(txt, '(i0)') izone
+      write(txt, '(i0)') iuniqzone(izone)
       write(ioutcsv, '(a)', advance='no') trim(adjustl(txt)) // ','
       !
       ! -- CSV budget ins and outs
