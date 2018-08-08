@@ -1,9 +1,26 @@
-CSUB & elastic-cell & cellid & -- & elastic compaction in a GWF cell. \\
-CSUB & inelastic-cell & cellid & -- & inelastic compaction in a GWF cell. \\
-CSUB & compaction-inelastic & cellid or boundname & -- & Flow from inelastic storage between the groundwater system and a subsidence cell. \\
-CSUB & compaction & cellid & -- & compaction in a GWF cell. \\
-CSUB & total\_compaction & cellid & -- & total compaction in a GWF cell. Total compaction is the cumulative compaction in the cell and every cell below cellid.\\
+CSUB & csub & cellid or boundname & -- & Flow between the groundwater system and interbeds in a GWF cell or group of GWF cells. \\
+CSUB & inelastic-csub & cellid or boundname & -- & Flow between the groundwater system and interbeds from inelastic compaction in a GWF cell or group of GWF cells. \\
+CSUB & elastic-csub & cellid or boundname & -- & Flow between the groundwater system and interbeds from elastic compaction in a GWF cell or group of GWF cells. \\
+CSUB & skeletal-csub & cellid & -- & Flow between the groundwater system and coarse skeletal materials in a GWF cell. \\
+CSUB & csub-cell & cellid & -- & Flow between the groundwater system for all interbeds and coarse skeletal materials in a GWF cell. \\
+
+CSUB & sk & cellid or boundname & -- & Convertible interbed storativity in a GWF cell or group of GWF cells. Convertible interbed storativity is inelastic interbed storativity if the current effective stress is greater than the preconsolidation stress. \\
+CSUB & ske & cellid or boundname & -- & Elastic interbed storativity in a GWF cell or group of GWF cells. \\
+CSUB & sk-cell & cellid & -- & Convertible interbed and skeletal storativity in a GWF cell. Convertible interbed storativity is inelastic interbed storativity if the current effective stress is greater than the preconsolidation stress. \\
+CSUB & ske-cell & cellid & -- & Elastic interbed and skeletal storativity in a GWF cell. \\
+
 CSUB & estress-cell & cellid & -- & effective stress in a GWF cell. \\
 CSUB & gstress-cell & cellid & -- & geostatic stress in a GWF cell. \\
-CSUB & compaction-cell & cellid & -- & compaction in a GWF cell. \\
-CSUB & compaction-skeletal & cellid & -- & skeletal compaction in a GWF cell. \\
+
+CSUB & interbed-compaction & cellid or boundname & -- & interbed compaction in a GWF cell or group of GWF cells. \\
+CSUB & inelastic-compaction & cellid or boundname & -- & inelastic interbed compaction in a GWF cell or group of GWF cells. \\
+CSUB & elastic-compaction & cellid or boundname & -- & elastic interbed compaction in a GWF cell or group of GWF cells. \\
+CSUB & skeletal-compaction & cellid  & -- & elastic compaction in coarse skeletal materials in a GWF cell. \\
+CSUB & compaction-cell & cellid  & -- & total compaction in interbed and coarse skeletal materials in a GWF cell. \\
+
+CSUB & thickness & cellid or boundname & -- & thickness of interbeds in a GWF cell or group of GWF cells. \\
+
+CSUB & delay-head & icsubno  & idcellno & head in interbed delay cell idcellno (1 $<=$ idcellno $<=$ NDELAYCELLS). \\
+CSUB & preconstress & icsubno  & idcellno & preconsolidation stress in interbed delay cell idcellno (1 $<=$ idcellno $<=$ NDELAYCELLS). \\
+CSUB & preconstress-cell & cellid  & -- & preconsolidation stress in a GWF cell containing at least one interbed. \\
+

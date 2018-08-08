@@ -12,7 +12,7 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['csub_sto01']
+ex = ['sto_sto01']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))

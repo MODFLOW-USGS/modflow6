@@ -1,6 +1,6 @@
 BEGIN OPTIONS
-  [STRAIN_CSV_INTERBED FILEOUT <interbedstrainfile>]
-  [STRAIN_CSV_SKELETAL FILEOUT <skeletalstrainfile>]
+  [STRAIN_CSV_INTERBED FILEOUT <interbedstrain_filename>]
+  [STRAIN_CSV_SKELETAL FILEOUT <skeletalstrain_filename>]
   [SAVE_FLOWS]
   [GAMMAW <gammaw>]
   [BETA <beta>]
@@ -16,7 +16,11 @@ BEGIN OPTIONS
   [COMPRESSION_INDICES]
   [UPDATE_MATERIAL_PROPERTIES]
   [CELL_FRACTION]
-  [COMPACTION FILEOUT <compactionfile>]
+  [COMPACTION FILEOUT <compaction_filename>]
+  [COMPACTION_ELASTIC FILEOUT <elastic_compaction_filename>]
+  [COMPACTION_ELASTIC FILEOUT <inelastic_compaction_filename>]
+  [COMPACTION_SKELETAL FILEOUT <skeletal_compaction_filename>]
+  [ZDISPLACEMENT FILEOUT <zdisplacement_filename>]
   [TS6 FILEIN <ts6_filename>]
   [OBS6 FILEIN <obs6_filename>]
 END OPTIONS

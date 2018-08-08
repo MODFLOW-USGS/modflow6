@@ -30,9 +30,9 @@ module GwfCsubModule
       [' CSUB-AQELASTIC',                                                       & 
        '   CSUB-ELASTIC', ' CSUB-INELASTIC',                                    &
        ' CSUB-WATERCOMP']
-  character(len=LENBUDTXT), dimension(4) :: comptxt =                           & !text labels for compaction terms
-      ['CSUB-COMPACTION', ' CSUB-ZDISPLACE',                                    & 
-       ' CSUB-INELASTIC', '   CSUB-ELASTIC']
+  character(len=LENBUDTXT), dimension(5) :: comptxt =                           & !text labels for compaction terms
+      ['CSUB-COMPACTION', ' CSUB-INELASTIC', '   CSUB-ELASTIC',                 &
+       '  CSUB-SKELETAL', ' CSUB-ZDISPLACE']
   
   !
   ! -- local paramter - derivative of the log of effective stress
@@ -47,7 +47,11 @@ module GwfCsubModule
     integer(I4B), pointer :: istounit               => null()
     integer(I4B), pointer :: istrainib              => null()
     integer(I4B), pointer :: istrainsk              => null()
-    integer(I4B), pointer :: icompout               => null()
+    integer(I4B), pointer :: ioutcomp               => null()
+    integer(I4B), pointer :: ioutcompi              => null()
+    integer(I4B), pointer :: ioutcompe              => null()
+    integer(I4B), pointer :: ioutcomps              => null()
+    integer(I4B), pointer :: ioutzdisp              => null()
     integer(I4B), pointer :: iupdatematprop         => null()
     integer(I4B), pointer :: istoragec              => null()
     integer(I4B), pointer :: icellf                 => null()
@@ -117,6 +121,8 @@ module GwfCsubModule
     real(DP), dimension(:), pointer :: h0           => null()   !initial head in interbed
     real(DP), dimension(:), pointer :: comp         => null()   !interbed incremental compaction
     real(DP), dimension(:), pointer :: tcomp        => null()   !total interbed compaction
+    real(DP), dimension(:), pointer :: tcompi       => null()   !total inelastic interbed compaction
+    real(DP), dimension(:), pointer :: tcompe       => null()   !total elastic interbed compaction
     real(DP), pointer, dimension(:,:) :: auxvar     => null()   !auxiliary variable array
     real(DP), dimension(:), pointer :: storagee     => null()   !elastic storage
     real(DP), dimension(:), pointer :: storagei     => null()   !inelastic storage
@@ -296,7 +302,11 @@ contains
     call mem_allocate(this%istoragec, 'ISTORAGEC', this%origin)
     call mem_allocate(this%istrainib, 'ISTRAINIB', this%origin)
     call mem_allocate(this%istrainsk, 'ISTRAINSK', this%origin)
-    call mem_allocate(this%icompout, 'ICOMPOUT', this%origin)
+    call mem_allocate(this%ioutcomp, 'IOUTCOMP', this%origin)
+    call mem_allocate(this%ioutcompi, 'IOUTCOMPI', this%origin)
+    call mem_allocate(this%ioutcompe, 'IOUTCOMPE', this%origin)
+    call mem_allocate(this%ioutcomps, 'IOUTCOMPS', this%origin)
+    call mem_allocate(this%ioutzdisp, 'IOUTZDISP', this%origin)
     call mem_allocate(this%iupdatematprop, 'IUPDATEMATPROP', this%origin)
     call mem_allocate(this%idbhalfcell, 'IDBHALFCELL', this%origin)
     call mem_allocate(this%idbfullcell, 'IDBFULLCELL', this%origin)
@@ -332,7 +342,11 @@ contains
     this%istoragec = 1
     this%istrainib = 0
     this%istrainsk = 0
-    this%icompout = 0
+    this%ioutcomp = 0
+    this%ioutcompi = 0
+    this%ioutcompe = 0
+    this%ioutcomps = 0
+    this%ioutzdisp = 0
     this%iupdatematprop = 0
     this%idbhalfcell = 0
     this%idbfullcell = 0
@@ -486,6 +500,8 @@ contains
     real(DP) :: ratein
     real(DP) :: rateout
     real(DP) :: comp
+    real(DP) :: compi
+    real(DP) :: compe
     real(DP) :: area
     real(DP) :: h
     real(DP) :: hcof
@@ -627,6 +643,8 @@ contains
               stoe = comp
             end if
           end if
+          compe = stoe
+          compi = stoi
           stoe = stoe * area
           stoi = stoi * area
           this%storagee(ib) = stoe * tledm
@@ -640,6 +658,9 @@ contains
             !
             ! -- update total compaction
             this%tcomp(ib) = this%tcomp(ib) + comp
+            this%tcompe(ib) = this%tcompe(ib) + compe
+            this%tcompi(ib) = this%tcompi(ib) + compi
+            
             !
             ! - calculate strain and change in interbed void ratio and thickness
             if (this%iupdatematprop /= 0) then
@@ -819,16 +840,16 @@ contains
     !
     ! -- Save compaction results
     !
-    ! -- Set unit number for binary compaction output
-    if(this%icompout /= 0) then
-      ibinun = this%icompout
+    ! -- Set unit number for binary compaction and z-displacement output
+    if(this%ioutcomp /= 0 .or. this%ioutzdisp /= 0) then
+      ibinun = 1
     else
       ibinun = 0
     endif
     if(idvfl == 0) ibinun = 0
     !
     ! -- save compaction results
-    if(ibinun /= 0) then
+    if (ibinun /= 0) then
       iprint = 0
       dinact = DHNOFLO
       !
@@ -840,29 +861,118 @@ contains
         node = this%nodelist(ib)
         this%buff(node) = this%buff(node) + this%tcomp(ib)
       end do
-      call this%dis%record_array(this%buff, this%iout, iprint, -ibinun,         &
-                                 comptxt(1), cdatafmp, nvaluesp,                &
-                                 nwidthp, editdesc, dinact)
       !
-      ! -- calculate z-displacement
-      ncpl = this%dis%get_ncpl()
-      if (ncpl == this%dis%nodes) then
-        ! TO DO - 
-      else
-        nlay = this%dis%nodes / ncpl
-        do k = nlay - 1, 1, -1
-          do i = 1, ncpl
-            node = k * ncpl + i
-            nodem = (k - 1) * ncpl + i
-            this%buff(node) = this%buff(node) + this%buff(nodem)
-          end do
-        end do
+      ! -- write compaction data to binary file
+      if (this%ioutcomp /= 0) then
+        ibinun = this%ioutcomp
+        call this%dis%record_array(this%buff, this%iout, iprint, -ibinun,       &
+                                   comptxt(1), cdatafmp, nvaluesp,              &
+                                   nwidthp, editdesc, dinact)
       end if
+      !
+      ! -- calculate z-displacement (subsidence) and write data to binary file
+      if (this%ioutzdisp /= 0) then
+        ibinun = this%ioutzdisp
+        !
+        ! -- calculate z-displacement
+        ncpl = this%dis%get_ncpl()
+        if (ncpl == this%dis%nodes) then
+          ! TO DO - 
+        else
+          nlay = this%dis%nodes / ncpl
+          do k = nlay - 1, 1, -1
+            do i = 1, ncpl
+              node = k * ncpl + i
+              nodem = (k - 1) * ncpl + i
+              this%buff(node) = this%buff(node) + this%buff(nodem)
+            end do
+          end do
+        end if
+        call this%dis%record_array(this%buff, this%iout, iprint, -ibinun,       &
+                                   comptxt(5), cdatafmp, nvaluesp,              &
+                                   nwidthp, editdesc, dinact)
+      
+      end if
+    end if
+    !
+    ! -- Set unit number for binary inelastic interbed compaction
+    if(this%ioutcompi /= 0) then
+      ibinun = this%ioutcompi
+    else
+      ibinun = 0
+    endif
+    if(idvfl == 0) ibinun = 0
+    !
+    ! -- save compaction results
+    if(ibinun /= 0) then
+      iprint = 0
+      dinact = DHNOFLO
+      !
+      ! -- fill buff with total inelastic compaction
+      do node = 1, this%dis%nodes
+        this%buff(node) = DZERO
+      end do
+      do ib = 1, this%ninterbeds
+        node = this%nodelist(ib)
+        this%buff(node) = this%buff(node) + this%tcompi(ib)
+      end do
+      !
+      ! -- write inelastic interbed compaction data to binary file
       call this%dis%record_array(this%buff, this%iout, iprint, -ibinun,         &
                                  comptxt(2), cdatafmp, nvaluesp,                &
                                  nwidthp, editdesc, dinact)
-      
-      
+    end if
+    !
+    ! -- Set unit number for binary elastic interbed compaction
+    if(this%ioutcompe /= 0) then
+      ibinun = this%ioutcompe
+    else
+      ibinun = 0
+    endif
+    if(idvfl == 0) ibinun = 0
+    !
+    ! -- save compaction results
+    if(ibinun /= 0) then
+      iprint = 0
+      dinact = DHNOFLO
+      !
+      ! -- fill buff with total inelastic compaction
+      do node = 1, this%dis%nodes
+        this%buff(node) = DZERO
+      end do
+      do ib = 1, this%ninterbeds
+        node = this%nodelist(ib)
+        this%buff(node) = this%buff(node) + this%tcompe(ib)
+      end do
+      !
+      ! -- write inelastic interbed compaction data to binary file
+      call this%dis%record_array(this%buff, this%iout, iprint, -ibinun,         &
+                                 comptxt(3), cdatafmp, nvaluesp,                &
+                                 nwidthp, editdesc, dinact)
+    end if
+    !
+    ! -- Set unit number for binary skeletal compaction
+    if(this%ioutcomps /= 0) then
+      ibinun = this%ioutcomps
+    else
+      ibinun = 0
+    endif
+    if(idvfl == 0) ibinun = 0
+    !
+    ! -- save compaction results
+    if(ibinun /= 0) then
+      iprint = 0
+      dinact = DHNOFLO
+      !
+      ! -- fill buff with total inelastic compaction
+      do node = 1, this%dis%nodes
+        this%buff(node) = this%sk_tcomp(node)
+      end do
+      !
+      ! -- write skeletal compaction data to binary file
+      call this%dis%record_array(this%buff, this%iout, iprint, -ibinun,         &
+                                 comptxt(4), cdatafmp, nvaluesp,                &
+                                 nwidthp, editdesc, dinact)
     end if
     !
     ! -- Save observations.
@@ -1715,13 +1825,69 @@ contains
             call this%parser%GetStringCaps(keyword)
             if (keyword == 'FILEOUT') then
               call this%parser%GetString(fname)
-              this%icompout = getunit()
-              call openfile(this%icompout, this%iout, fname, 'DATA(BINARY)',    &
+              this%ioutcomp = getunit()
+              call openfile(this%ioutcomp, this%iout, fname, 'DATA(BINARY)',    &
                             form, access, 'REPLACE')
               write(this%iout,fmtfileout) &
-                'COMPACTION', fname, this%icompout
+                'COMPACTION', fname, this%ioutcomp
             else 
               errmsg = 'OPTIONAL COMPACTION KEYWORD MUST BE ' //                &
+                       'FOLLOWED BY FILEOUT'
+              call store_error(errmsg)
+            end if
+          case ('COMPACTION_INELASTIC')
+            call this%parser%GetStringCaps(keyword)
+            if (keyword == 'FILEOUT') then
+              call this%parser%GetString(fname)
+              this%ioutcompi = getunit()
+              call openfile(this%ioutcompi, this%iout, fname,                   &
+                            'DATA(BINARY)', form, access, 'REPLACE')
+              write(this%iout,fmtfileout) &
+                'COMPACTION_INELASTIC', fname, this%ioutcompi
+            else 
+              errmsg = 'OPTIONAL COMPACTION_INELASTIC KEYWORD MUST BE ' //      &
+                       'FOLLOWED BY FILEOUT'
+              call store_error(errmsg)
+            end if
+          case ('COMPACTION_ELASTIC')
+            call this%parser%GetStringCaps(keyword)
+            if (keyword == 'FILEOUT') then
+              call this%parser%GetString(fname)
+              this%ioutcompe = getunit()
+              call openfile(this%ioutcompe, this%iout, fname,                   &
+                            'DATA(BINARY)', form, access, 'REPLACE')
+              write(this%iout,fmtfileout) &
+                'COMPACTION_ELASTIC', fname, this%ioutcompe
+            else 
+              errmsg = 'OPTIONAL COMPACTION_ELASTIC KEYWORD MUST BE ' //        &
+                       'FOLLOWED BY FILEOUT'
+              call store_error(errmsg)
+            end if
+          case ('COMPACTION_SKELETAL')
+            call this%parser%GetStringCaps(keyword)
+            if (keyword == 'FILEOUT') then
+              call this%parser%GetString(fname)
+              this%ioutcomps = getunit()
+              call openfile(this%ioutcomps, this%iout, fname,                   &
+                            'DATA(BINARY)', form, access, 'REPLACE')
+              write(this%iout,fmtfileout) &
+                'COMPACTION_SKELETAL', fname, this%ioutcomps
+            else 
+              errmsg = 'OPTIONAL COMPACTION_ELASTIC KEYWORD MUST BE ' //        &
+                       'FOLLOWED BY FILEOUT'
+              call store_error(errmsg)
+            end if
+          case ('ZDISPLACEMENT')
+            call this%parser%GetStringCaps(keyword)
+            if (keyword == 'FILEOUT') then
+              call this%parser%GetString(fname)
+              this%ioutzdisp = getunit()
+              call openfile(this%ioutzdisp, this%iout, fname,                   &
+                            'DATA(BINARY)', form, access, 'REPLACE')
+              write(this%iout,fmtfileout) &
+                'ZDISPLACEMENT', fname, this%ioutzdisp
+            else 
+              errmsg = 'OPTIONAL ZDISPLACEMENT KEYWORD MUST BE ' //             &
                        'FOLLOWED BY FILEOUT'
               call store_error(errmsg)
             end if
@@ -1811,7 +1977,9 @@ contains
     integer(I4B) :: naux
 
     ! -- grid based data
-    if (this%icompout == 0) then
+    if (this%ioutcomp == 0 .and. this%ioutcompi == 0 .and.                      &
+        this%ioutcompe == 0 .and. this%ioutcomps == 0 .and.                     &
+        this%ioutzdisp == 0) then
       call mem_allocate(this%buff, 1, 'BUFF', trim(this%origin))
     else
       call mem_allocate(this%buff, this%dis%nodes, 'BUFF', trim(this%origin))
@@ -1885,6 +2053,8 @@ contains
     call mem_allocate(this%idelay, iblen, 'idelay', trim(this%origin))
     call mem_allocate(this%comp, iblen, 'comp', trim(this%origin))
     call mem_allocate(this%tcomp, iblen, 'tcomp', trim(this%origin))
+    call mem_allocate(this%tcompi, iblen, 'tcompi', trim(this%origin))
+    call mem_allocate(this%tcompe, iblen, 'tcompe', trim(this%origin))
     call mem_allocate(this%storagee, iblen, 'storagee', trim(this%origin))
     call mem_allocate(this%storagei, iblen, 'storagei', trim(this%origin))
     call mem_allocate(this%ske, iblen, 'ske', trim(this%origin))
@@ -1937,6 +2107,8 @@ contains
     do n = 1, this%ninterbeds
       this%theta(n) = DZERO
       this%tcomp(n) = DZERO
+      this%tcompi(n) = DZERO
+      this%tcompe(n) = DZERO
     end do
     !
     ! -- return
@@ -2011,6 +2183,8 @@ contains
       call mem_deallocate(this%h0)
       call mem_deallocate(this%comp)
       call mem_deallocate(this%tcomp)
+      call mem_deallocate(this%tcompi)
+      call mem_deallocate(this%tcompe)
       call mem_deallocate(this%storagee)
       call mem_deallocate(this%storagei)
       call mem_deallocate(this%ske)
@@ -2062,7 +2236,11 @@ contains
     call mem_deallocate(this%istoragec)
     call mem_deallocate(this%istrainib)
     call mem_deallocate(this%istrainsk)
-    call mem_deallocate(this%icompout)
+    call mem_deallocate(this%ioutcomp)
+    call mem_deallocate(this%ioutcompi)
+    call mem_deallocate(this%ioutcompe)
+    call mem_deallocate(this%ioutcomps)
+    call mem_deallocate(this%ioutzdisp)
     call mem_deallocate(this%iupdatematprop)
     call mem_deallocate(this%idbfullcell)
     call mem_deallocate(this%idbhalfcell)
@@ -4748,15 +4926,21 @@ contains
     integer(I4B) :: idelay
     integer(I4B) :: n
     real(DP) :: comp
+    real(DP) :: compi
+    real(DP) :: compe
     real(DP) :: sske
     real(DP) :: ssk
     real(DP) :: fmult
     real(DP) :: v
+    real(DP) :: v1
+    real(DP) :: v2
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
     idelay = this%idelay(ib)
     comp = DZERO
+    compi = DZERO
+    compe = DZERO
     !
     !
     if (this%thick(ib) > DZERO) then
@@ -4764,20 +4948,30 @@ contains
       do n = 1, this%ndelaycells
         call this%csub_delay_calc_ssksske(ib, n, ssk, sske)
         if (this%igeocalc == 0) then
-          v = ssk * (this%dbpcs(n, idelay) - this%dbh(n, idelay))
-          v = v + sske * (this%dbh0(n, idelay) - this%dbpcs(n, idelay))
+          v1 = ssk * (this%dbpcs(n, idelay) - this%dbh(n, idelay))
+          v2 = sske * (this%dbh0(n, idelay) - this%dbpcs(n, idelay))
         else
-          v = ssk * (this%dbes(n, idelay) - this%dbpcs(n, idelay))
-          v = v + sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay))
+          v1 = ssk * (this%dbes(n, idelay) - this%dbpcs(n, idelay))
+          v2 = sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay))
         end if
-        v = v * fmult
+        v = (v1 + v2) * fmult
         comp = comp + v
+        !
+        ! -- calculate inelastic and elastic storage components
+        if (ssk /= sske) then
+          compi = compi + v1 * fmult
+          compe = compe + v2 * fmult
+        else
+          compe = compe + (v1 + v2) * fmult
+        end if
       end do
     end if
     !
     ! -- fill compaction
     this%comp(ib) = comp
     this%tcomp(ib) = this%tcomp(ib) + comp * this%rnb(ib)
+    this%tcompi(ib) = this%tcompi(ib) + compi * this%rnb(ib)
+    this%tcompe(ib) = this%tcompe(ib) + compe * this%rnb(ib)
     !
     ! -- return
     return
@@ -4861,18 +5055,23 @@ contains
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
-    !    for compaction observation type.
-    call this%obs%StoreObsType('compaction', .true., indx)
+    !    for inelastic-csub observation type.
+    call this%obs%StoreObsType('inelastic-csub', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
-    !    for total-compaction observation type.
-    call this%obs%StoreObsType('total-compaction', .true., indx)
+    !    for elastic-csub observation type.
+    call this%obs%StoreObsType('elastic-csub', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
-    !    for total-compaction observation type.
-    call this%obs%StoreObsType('thickness', .true., indx)
+    !    for skeletal-csub observation type.
+    call this%obs%StoreObsType('skeletal-csub', .false., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for csub-cell observation type.
+    call this%obs%StoreObsType('csub-cell', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
@@ -4886,26 +5085,6 @@ contains
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
-    !    for geostatic-stress-cell observation type.
-    call this%obs%StoreObsType('gstress-cell', .false., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
-    !
-    ! -- Store obs type and assign procedure pointer
-    !    for effective-stress-cell observation type.
-    call this%obs%StoreObsType('estress-cell', .false., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
-    !
-    ! -- Store obs type and assign procedure pointer
-    !    for csub-cell observation type.
-    call this%obs%StoreObsType('csub-cell', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
-    !
-    ! -- Store obs type and assign procedure pointer
-    !    for compaction-cell observation type.
-    call this%obs%StoreObsType('compaction-cell', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
-    !
-    ! -- Store obs type and assign procedure pointer
     !    for ske-cell observation type.
     call this%obs%StoreObsType('ske-cell', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
@@ -4916,17 +5095,52 @@ contains
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
-    !    for compaction-skeletal observation type.
-    call this%obs%StoreObsType('compaction-skeletal', .false., indx)
+    !    for geostatic-stress-cell observation type.
+    call this%obs%StoreObsType('gstress-cell', .false., indx)
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for effective-stress-cell observation type.
+    call this%obs%StoreObsType('estress-cell', .false., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for total-compaction observation type.
+    call this%obs%StoreObsType('interbed-compaction', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for inelastic-compaction observation type.
+    call this%obs%StoreObsType('inelastic-compaction', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for inelastic-compaction observation type.
+    call this%obs%StoreObsType('elastic-compaction', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for skeletal-compaction observation type.
+    call this%obs%StoreObsType('skeletal-compaction', .false., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for compaction-cell observation type.
+    call this%obs%StoreObsType('compaction-cell', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for total-compaction observation type.
+    call this%obs%StoreObsType('thickness', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for preconstress-cell observation type.
     call this%obs%StoreObsType('preconstress-cell', .false., indx)
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
-    !    for effective-stress-cell observation type.
+    !    for preconstress observation type.
     call this%obs%StoreObsType('preconstress', .false., indx)
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
@@ -4975,22 +5189,12 @@ contains
           select case (obsrv%ObsTypeId)
             case ('CSUB')
               v = this%storagee(n) + this%storagei(n)
-            case ('COMPACTION')
-              v = this%comp(n)
-            case ('TOTAL-COMPACTION')
-              v = this%tcomp(n)
-            case ('THICKNESS')
-              v = this%thick(n)
-            case ('SKE')
-              v = this%ske(n)
-            case ('SK')
-              v = this%sk(n)
-            case ('GSTRESS-CELL')
-              v = this%sk_gs(n)
-            case ('ESTRESS-CELL')
-              v = this%sk_es(n)
-            case ('COMPACTION-SKELETAL')
-              v = this%sk_tcomp(n)
+            case ('INELASTIC-CSUB')
+              v = this%storagei(n)
+            case ('ELASTIC-CSUB')
+              v = this%storagee(n)
+            case ('SKELETAL-CSUB')
+              v = this%sk_stor(n)
             case ('CSUB-CELL')
               ! -- add the skeletal component
               if (j == 1) then
@@ -4998,6 +5202,10 @@ contains
               else
                 v = this%storagee(n) + this%storagei(n)
               end if
+            case ('SKE')
+              v = this%ske(n)
+            case ('SK')
+              v = this%sk(n)
             case ('SKE-CELL')
               ! -- add the skeletal component
               if (j == 1) then
@@ -5012,6 +5220,18 @@ contains
               else
                 v = this%sk(n)
               end if
+            case ('GSTRESS-CELL')
+              v = this%sk_gs(n)
+            case ('ESTRESS-CELL')
+              v = this%sk_es(n)
+            case ('INTERBED-COMPACTION')
+              v = this%tcomp(n)
+            case ('INELASTIC-COMPACTION')
+              v = this%tcompi(n)
+            case ('ELASTIC-COMPACTION')
+              v = this%tcompe(n)
+            case ('SKELETAL-COMPACTION')
+              v = this%sk_tcomp(n)
             case ('COMPACTION-CELL')
               ! -- add the skeletal component
               if (j == 1) then
@@ -5019,17 +5239,19 @@ contains
               else
                 v = this%tcomp(n)
               end if
-            case ('PRECONSTRESS')
-               if (n > this%ndelaycells) then
-                r = real(n, DP) / real(this%ndelaycells, DP)
-                idelay = int(floor(r)) + 1
-                ncol = mod(n, this%ndelaycells)
-              else
-                idelay = 1
-                ncol = n
-              end if
-              v = this%dbpcs(ncol, idelay)
-            case ('DELAY-HEAD')
+            case ('THICKNESS')
+              v = this%thick(n)
+            !case ('PRECONSTRESS')
+            !   if (n > this%ndelaycells) then
+            !    r = real(n, DP) / real(this%ndelaycells, DP)
+            !    idelay = int(floor(r)) + 1
+            !    ncol = mod(n, this%ndelaycells)
+            !  else
+            !    idelay = 1
+            !    ncol = n
+            !  end if
+            !  v = this%dbpcs(ncol, idelay)
+            case ('DELAY-HEAD', 'PRECONSTRESS')
               if (n > this%ndelaycells) then
                 r = real(n, DP) / real(this%ndelaycells, DP)
                 idelay = int(floor(r)) + 1
@@ -5038,7 +5260,14 @@ contains
                 idelay = 1
                 ncol = n
               end if
-              v = this%dbh(ncol, idelay)
+              select case(obsrv%ObsTypeId)
+                case ('PRECONSTRESS')
+                  v = this%dbpcs(ncol, idelay)
+                case ('DELAY-HEAD')
+                  v = this%dbh(ncol, idelay)
+              end select
+            case ('PRECONSTRESS-CELL')
+              v = this%pcs(n)
             case default
               msg = 'Error: Unrecognized observation type: ' // trim(obsrv%ObsTypeId)
               call store_error(msg)
@@ -5099,9 +5328,10 @@ contains
             obsrv%indxbnds(n) = j
           endif
         enddo
-      else if (obsrv%ObsTypeId == 'GSTRESS-CELL' .or. &
-               obsrv%ObsTypeId == 'ESTRESS-CELL' .or. &
-               obsrv%ObsTypeId == 'COMPACTION-SKELETAL') then
+      else if (obsrv%ObsTypeId == 'GSTRESS-CELL' .or.                           &
+               obsrv%ObsTypeId == 'ESTRESS-CELL' .or.                           &
+               obsrv%ObsTypeId == 'SKELETAL-CSUB' .or.                          &
+               obsrv%ObsTypeId == 'SKELETAL-COMPACTION') then
         jfound = .true.
         obsrv%BndFound = .true.
         obsrv%CurrentTimeStepEndValue = DZERO
@@ -5128,10 +5358,10 @@ contains
         ! -- Observation location is a single node number
         jfound = .false.
         ! -- save node number in first position
-        if (obsrv%ObsTypeId == 'COMPACTION-CELL' .or.                           &
+        if (obsrv%ObsTypeId == 'CSUB-CELL' .or.                                 &
             obsrv%ObsTypeId == 'SKE-CELL' .or.                                  &
             obsrv%ObsTypeId == 'SK-CELL' .or.                                   &
-            obsrv%ObsTypeId == 'CSUB-CELL') then 
+            obsrv%ObsTypeId == 'COMPACTION-CELL') then 
           if (.NOT. obsrv%BndFound) then
             jfound = .true.
             obsrv%BndFound = .true.

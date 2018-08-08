@@ -310,14 +310,14 @@ def get_model(idx, dir):
                                     packagedata=swt6,
                                     sig0={0: [0., 0., 0., 0.]})
     orecarray = {}
-    orecarray['csub_obs.csv'] = [('w1l1', 'total-compaction', (0, 8, 9)),
-                                 ('w1l2', 'total-compaction', (1, 8, 9)),
-                                 ('w1l3', 'total-compaction', (2, 8, 9)),
-                                 ('w1l4', 'total-compaction', (3, 8, 9)),
-                                 ('w2l1', 'total-compaction', (0, 11, 6)),
-                                 ('w2l2', 'total-compaction', (1, 11, 6)),
-                                 ('w2l3', 'total-compaction', (2, 11, 6)),
-                                 ('w2l4', 'total-compaction', (3, 11, 6)),
+    orecarray['csub_obs.csv'] = [('w1l1', 'interbed-compaction', (0, 8, 9)),
+                                 ('w1l2', 'interbed-compaction', (1, 8, 9)),
+                                 ('w1l3', 'interbed-compaction', (2, 8, 9)),
+                                 ('w1l4', 'interbed-compaction', (3, 8, 9)),
+                                 ('w2l1', 'interbed-compaction', (0, 11, 6)),
+                                 ('w2l2', 'interbed-compaction', (1, 11, 6)),
+                                 ('w2l3', 'interbed-compaction', (2, 11, 6)),
+                                 ('w2l4', 'interbed-compaction', (3, 11, 6)),
                                  ('w2l4q', 'csub-cell', (3, 11, 6))]
     csub_obs_package = flopy.mf6.ModflowUtlobs(gwf,
                                                fname=opth,

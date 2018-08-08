@@ -206,7 +206,7 @@ def get_model(idx, dir):
                                     sgs=sgs, sgm=sgm, packagedata=sub6,
                                     beta=0., ske_cr=0.)
     orecarray = {}
-    orecarray['csub_obs.csv'] = [('tcomp', 'total-compaction', (0, 0, 1)),
+    orecarray['csub_obs.csv'] = [('tcomp', 'interbed-compaction', (0, 0, 1)),
                                  ('gs', 'gstress-cell', (0, 0, 1)),
                                  ('es', 'estress-cell', (0, 0, 1)),
                                  ('pcs', 'preconstress', (0, 0)),

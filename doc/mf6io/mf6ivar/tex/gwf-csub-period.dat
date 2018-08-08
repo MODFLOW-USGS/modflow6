@@ -1,4 +1,4 @@
 BEGIN PERIOD <iper>
-  [SIG0 [LAYERED]
+  [SIG0
     <sig0(nodes)> -- READARRAY]
 END PERIOD

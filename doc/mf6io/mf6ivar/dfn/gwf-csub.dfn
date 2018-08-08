@@ -2,7 +2,7 @@
 
 block options
 name strainib_filerecord
-type record strain_csv_interbed fileout interbedstrainfile
+type record strain_csv_interbed fileout interbedstrain_filename
 shape
 reader urword
 tagged true
@@ -33,7 +33,7 @@ longname file keyword
 description keyword to specify that an output filename is expected next.
 
 block options
-name interbedstrainfile
+name interbedstrain_filename
 type string
 shape
 in_record true
@@ -45,7 +45,7 @@ description name of the comma-separated-values output file to write final interb
 
 block options
 name strainsk_filerecord
-type record strain_csv_skeletal fileout skeletalstrainfile
+type record strain_csv_skeletal fileout skeletalstrain_filename
 shape
 reader urword
 tagged true
@@ -65,7 +65,7 @@ longname budget keyword
 description keyword to specify the record that corresponds to final skeletal strain output.
 
 block options
-name skeletalstrainfile
+name skeletalstrain_filename
 type string
 shape
 in_record true
@@ -201,7 +201,7 @@ description keyword to indicate that the thickness of interbeds will be specifie
 
 block options
 name compaction_filerecord
-type record compaction fileout compactionfile
+type record compaction fileout compaction_filename
 shape
 reader urword
 tagged true
@@ -232,7 +232,7 @@ longname file keyword
 description keyword to specify that an output filename is expected next.
 
 block options
-name compactionfile
+name compaction_filename
 type string
 shape
 in_record true
@@ -241,6 +241,134 @@ tagged false
 optional false
 longname file keyword
 description name of the binary output file to write compaction information.
+
+block options
+name compaction_elastic_filerecord
+type record compaction_elastic fileout elastic_compaction_filename
+shape
+reader urword
+tagged true
+optional true
+longname
+description
+
+block options
+name compaction_elastic
+type keyword
+shape
+in_record true
+reader urword
+tagged true
+optional false
+longname budget keyword
+description keyword to specify that record corresponds to the elastic interbed compaction binary file.
+
+block options
+name elastic_compaction_filename
+type string
+shape
+in_record true
+reader urword
+tagged false
+optional false
+longname file keyword
+description name of the binary output file to write elastic interbed compaction information.
+
+block options
+name compaction_inelastic_filerecord
+type record compaction_elastic fileout inelastic_compaction_filename
+shape
+reader urword
+tagged true
+optional true
+longname
+description
+
+block options
+name compaction_inelastic
+type keyword
+shape
+in_record true
+reader urword
+tagged true
+optional false
+longname budget keyword
+description keyword to specify that record corresponds to the inelastic interbed compaction binary file.
+
+block options
+name inelastic_compaction_filename
+type string
+shape
+in_record true
+reader urword
+tagged false
+optional false
+longname file keyword
+description name of the binary output file to write inelastic interbed compaction information.
+
+block options
+name compaction_skeletal_filerecord
+type record compaction_skeletal fileout skeletal_compaction_filename
+shape
+reader urword
+tagged true
+optional true
+longname
+description
+
+block options
+name compaction_skeletal
+type keyword
+shape
+in_record true
+reader urword
+tagged true
+optional false
+longname budget keyword
+description keyword to specify that record corresponds to the elastic skeletal compaction binary file.
+
+block options
+name skeletal_compaction_filename
+type string
+shape
+in_record true
+reader urword
+tagged false
+optional false
+longname file keyword
+description name of the binary output file to write elastic skeletal compaction information.
+
+block options
+name zdisplacement_filerecord
+type record zdisplacement fileout zdisplacement_filename
+shape
+reader urword
+tagged true
+optional true
+longname
+description
+
+block options
+name zdisplacement
+type keyword
+shape
+in_record true
+reader urword
+tagged true
+optional false
+longname budget keyword
+description keyword to specify that record corresponds to the z-displacement binary file.
+
+block options
+name zdisplacement_filename
+type string
+shape
+in_record true
+reader urword
+tagged false
+optional false
+longname file keyword
+description name of the binary output file to write z-displacement information.
 
 block options
 name ts_filerecord

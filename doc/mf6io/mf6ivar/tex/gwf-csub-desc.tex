@@ -7,11 +7,11 @@
 
 \item \texttt{FILEOUT}---keyword to specify that an output filename is expected next.
 
-\item \texttt{interbedstrainfile}---name of the comma-separated-values output file to write final interbed strain information.
+\item \texttt{interbedstrain\_filename}---name of the comma-separated-values output file to write final interbed strain information.
 
 \item \texttt{STRAIN\_CSV\_SKELETAL}---keyword to specify the record that corresponds to final skeletal strain output.
 
-\item \texttt{skeletalstrainfile}---name of the comma-separated-values output file to write final skeletal strain information.
+\item \texttt{skeletalstrain\_filename}---name of the comma-separated-values output file to write final skeletal strain information.
 
 \item \texttt{SAVE\_FLOWS}---keyword to indicate that cell-by-cell flow terms will be written to the file specified with ``BUDGET SAVE FILE'' in Output Control.
 
@@ -45,7 +45,23 @@
 
 \item \texttt{COMPACTION}---keyword to specify that record corresponds to the compaction.
 
-\item \texttt{compactionfile}---name of the binary output file to write compaction information.
+\item \texttt{compaction\_filename}---name of the binary output file to write compaction information.
+
+\item \texttt{COMPACTION\_ELASTIC}---keyword to specify that record corresponds to the elastic interbed compaction binary file.
+
+\item \texttt{elastic\_compaction\_filename}---name of the binary output file to write elastic interbed compaction information.
+
+\item \texttt{COMPACTION\_INELASTIC}---keyword to specify that record corresponds to the inelastic interbed compaction binary file.
+
+\item \texttt{inelastic\_compaction\_filename}---name of the binary output file to write inelastic interbed compaction information.
+
+\item \texttt{COMPACTION\_SKELETAL}---keyword to specify that record corresponds to the elastic skeletal compaction binary file.
+
+\item \texttt{skeletal\_compaction\_filename}---name of the binary output file to write elastic skeletal compaction information.
+
+\item \texttt{ZDISPLACEMENT}---keyword to specify that record corresponds to the z-displacement binary file.
+
+\item \texttt{zdisplacement\_filename}---name of the binary output file to write z-displacement information.
 
 \item \texttt{TS6}---keyword to specify that record corresponds to a time-series file.
 

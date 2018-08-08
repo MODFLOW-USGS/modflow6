@@ -173,9 +173,9 @@
 | GWF | STO | PERIOD | TRANSIENT | KEYWORD | keyword to indicate that stress-period IPER is transient. Transient conditions will apply until the STEADY-STATE keyword is specified in a subsequent BEGIN PERIOD block. |
 | GWF | CSUB | OPTIONS | STRAIN_CSV_INTERBED | KEYWORD | keyword to specify the record that corresponds to final interbed strain output. |
 | GWF | CSUB | OPTIONS | FILEOUT | KEYWORD | keyword to specify that an output filename is expected next. |
-| GWF | CSUB | OPTIONS | INTERBEDSTRAINFILE | STRING | name of the comma-separated-values output file to write final interbed strain information. |
+| GWF | CSUB | OPTIONS | INTERBEDSTRAIN_FILENAME | STRING | name of the comma-separated-values output file to write final interbed strain information. |
 | GWF | CSUB | OPTIONS | STRAIN_CSV_SKELETAL | KEYWORD | keyword to specify the record that corresponds to final skeletal strain output. |
-| GWF | CSUB | OPTIONS | SKELETALSTRAINFILE | STRING | name of the comma-separated-values output file to write final skeletal strain information. |
+| GWF | CSUB | OPTIONS | SKELETALSTRAIN_FILENAME | STRING | name of the comma-separated-values output file to write final skeletal strain information. |
 | GWF | CSUB | OPTIONS | SAVE_FLOWS | KEYWORD | keyword to indicate that cell-by-cell flow terms will be written to the file specified with ``BUDGET SAVE FILE'' in Output Control. |
 | GWF | CSUB | OPTIONS | GAMMAW | DOUBLE PRECISION | specific gravity of water. For freshwater, GAMMAW is 9806.65 Newtons/cubic meters or 62.48 lb/cubic foot in SI and English units, respectively. By default, GAMMAW is 9806.65. |
 | GWF | CSUB | OPTIONS | BETA | DOUBLE PRECISION | compressibility of water. Typical values of BETA are 4.6512e-10 1/Pa or 2.2270e-8 lb/square foot in SI and English units, respectively. By default, BETA is 4.6512e-10. |
@@ -192,7 +192,15 @@
 | GWF | CSUB | OPTIONS | UPDATE_MATERIAL_PROPERTIES | KEYWORD | keyword to indicate that the thickness and void ratio of skeletal and no delay interbed sediments will not vary during the simulation. |
 | GWF | CSUB | OPTIONS | CELL_FRACTION | KEYWORD | keyword to indicate that the thickness of interbeds will be specified in terms of the fraction of cell thickness. |
 | GWF | CSUB | OPTIONS | COMPACTION | KEYWORD | keyword to specify that record corresponds to the compaction. |
-| GWF | CSUB | OPTIONS | COMPACTIONFILE | STRING | name of the binary output file to write compaction information. |
+| GWF | CSUB | OPTIONS | COMPACTION_FILENAME | STRING | name of the binary output file to write compaction information. |
+| GWF | CSUB | OPTIONS | COMPACTION_ELASTIC | KEYWORD | keyword to specify that record corresponds to the elastic interbed compaction binary file. |
+| GWF | CSUB | OPTIONS | ELASTIC_COMPACTION_FILENAME | STRING | name of the binary output file to write elastic interbed compaction information. |
+| GWF | CSUB | OPTIONS | COMPACTION_INELASTIC | KEYWORD | keyword to specify that record corresponds to the inelastic interbed compaction binary file. |
+| GWF | CSUB | OPTIONS | INELASTIC_COMPACTION_FILENAME | STRING | name of the binary output file to write inelastic interbed compaction information. |
+| GWF | CSUB | OPTIONS | COMPACTION_SKELETAL | KEYWORD | keyword to specify that record corresponds to the elastic skeletal compaction binary file. |
+| GWF | CSUB | OPTIONS | SKELETAL_COMPACTION_FILENAME | STRING | name of the binary output file to write elastic skeletal compaction information. |
+| GWF | CSUB | OPTIONS | ZDISPLACEMENT | KEYWORD | keyword to specify that record corresponds to the z-displacement binary file. |
+| GWF | CSUB | OPTIONS | ZDISPLACEMENT_FILENAME | STRING | name of the binary output file to write z-displacement information. |
 | GWF | CSUB | OPTIONS | TS6 | KEYWORD | keyword to specify that record corresponds to a time-series file. |
 | GWF | CSUB | OPTIONS | FILEIN | KEYWORD | keyword to specify that an input filename is expected next. |
 | GWF | CSUB | OPTIONS | TS6_FILENAME | STRING | defines a time-series file defining time series that can be used to assign time-varying values. See the ``Time-Variable Input'' section for instructions on using the time-series capability. |
