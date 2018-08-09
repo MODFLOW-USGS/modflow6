@@ -9,6 +9,14 @@ except:
     msg += ' pip install flopy'
     raise Exception(msg)
 
+try:
+    import pymake
+except:
+    msg = 'Error. Pymake package is not available.\n'
+    msg += 'Try installing using the following command:\n'
+    msg += ' pip install https://github.com/modflowpy/pymake/zipball/master'
+    raise Exception(msg)
+
 from framework import testing_framework
 from simulation import Simulation
 
@@ -34,7 +42,11 @@ dtol = 1e-3
 budtol = 1e-2
 
 bud_lst = ['STO-SS_IN', 'STO-SS_OUT',
-           'STO-SY_IN', 'STO-SY_OUT']
+           'STO-SY_IN', 'STO-SY_OUT',
+           'CSUB-AQELASTIC_IN', 'CSUB-AQELASTIC_OUT',
+           'CSUB-ELASTIC_IN', 'CSUB-ELASTIC_OUT',
+           'CSUB-INELASTIC_IN', 'CSUB-INELASTIC_OUT',
+           'CSUB-WATERCOMP_IN', 'CSUB-WATERCOMP_OUT']
 
 # static model data
 # temporal discretization
@@ -68,6 +80,8 @@ idomain[0, 10:, :] = 0
 idomain[1, 0:5, :] = 0
 idomain[1, 15:, :] = 0
 idomain[2, 0:10, :] = 0
+iex = np.zeros((nlay, nrow, ncol), dtype=np.int32)
+iex[idomain == 0] = 1
 
 # calculate hk
 hk1fact = 1. / 50.
@@ -125,10 +139,12 @@ for r, c, q in zip(wrp, wcp, wq):
 wd = {1: d}
 wd6 = {1: d6}
 maxwel = len(wd[1])
+maxwel = len(wd[1])
 
 # storage and compaction data
-ske = [6e-4, 3e-4, 6e-4]
-ss = [3e-6, 0., 3e-6]
+#ske = [6e-4, 3e-4, 6e-4]
+#ss = [3e-6, 0., 3e-6]
+ss = [0., 0., 0.]
 void = 0.82
 theta = void / (1. + void)
 
@@ -181,8 +197,8 @@ for k in range(nlay):
 maxcsub = len(sub6)
 
 # sub output data
-ds15 = [0, 0, 0, 2052, 0, 0, 0, 0, 0, 0, 0, 0]
-ds16 = [0, nper - 1, 0, nstp[-1] - 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1]
+ds15 = [0, 0, 0, 2052, 0, 0, 0, 2053, 0, 0, 0, 0]
+ds16 = [0, nper - 1, 0, nstp[-1] - 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1]
 
 
 # variant SUB package problem 3
@@ -383,7 +399,9 @@ def eval_zdisplacement(sim):
     nbud = d0.shape[0]
 
     # get results from cbc file
-    cbc_bud = ['STO-SS', 'STO-SY']
+    cbc_bud = ['STO-SS', 'STO-SY',
+               'CSUB-AQELASTIC', 'CSUB-ELASTIC',
+               'CSUB-INELASTIC', 'CSUB-WATERCOMP']
     d = np.recarray(nbud, dtype=dtype)
     for key in bud_lst:
         d[key] = 0.
@@ -451,6 +469,30 @@ def eval_zdisplacement(sim):
     else:
         sim.success = True
         print('    ' + msg)
+
+    # compare z-displacement data
+    fpth1 = os.path.join(sim.simpath,
+                        '{}.zdisplacement.bin'.format(os.path.basename(sim.name)))
+    fpth2 = os.path.join(sim.simpath, cmppth, 'csub_zdisp01.vert_disp.hds')
+    text1 = 'CSUB-ZDISPLACE'
+    text2 = 'Z DISPLACEMENT'
+    fout = os.path.join(sim.simpath,
+                        '{}.z-displacement.bin.out'.format(os.path.basename(sim.name)))
+    success_tst = pymake.compare_heads(None, None,
+                                       text=text1, text2=text2,
+                                       outfile=fout,
+                                       files1=fpth1,
+                                       files2=fpth2,
+                                       difftol=True,
+                                       verbose=True,
+                                       exarr=iex)
+    msg = 'z-displacement comparison success = {}'.format(success_tst)
+    if success_tst:
+        sim.success = True
+        print(msg)
+    else:
+        sim.success = False
+        assert success_tst, msg
 
     return
 

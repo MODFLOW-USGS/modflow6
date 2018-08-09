@@ -83,6 +83,7 @@ module GwfCsubModule
     integer(I4B), dimension(:), pointer :: stoiconv => null()   !pointer to iconvert in storage
     real(DP), dimension(:), pointer :: stosc1       => null()   !pointer to sc1 in storage
     real(DP), dimension(:), pointer :: buff         => null()   !buff array
+    real(DP), dimension(:), pointer :: buffusr      => null()   !buffusr array
     integer, dimension(:), pointer :: nodelist      => null()   !reduced node that the interbed is attached to
     integer, dimension(:), pointer :: unodelist     => null()   !user node that the interbed is attached to
 
@@ -777,6 +778,7 @@ contains
     integer(I4B) :: ib
     integer(I4B) :: node
     integer(I4B) :: nodem
+    integer(I4B) :: nodeu
     integer(I4B) :: i
     integer(I4B) :: k
     integer(I4B) :: ncpl
@@ -865,7 +867,7 @@ contains
       ! -- write compaction data to binary file
       if (this%ioutcomp /= 0) then
         ibinun = this%ioutcomp
-        call this%dis%record_array(this%buff, this%iout, iprint, -ibinun,       &
+        call this%dis%record_array(this%buff, this%iout, iprint, ibinun,        &
                                    comptxt(1), cdatafmp, nvaluesp,              &
                                    nwidthp, editdesc, dinact)
       end if
@@ -874,21 +876,45 @@ contains
       if (this%ioutzdisp /= 0) then
         ibinun = this%ioutzdisp
         !
+        ! -- initialize buffusr 
+        do nodeu = 1, this%dis%nodesuser
+          this%buffusr(nodeu) = DZERO
+        end do
+        !
+        ! -- fill buffusr with buff
+        do node = 1, this%dis%nodes
+          nodeu = this%dis%get_nodeuser(node)
+          this%buffusr(nodeu) = this%buff(node) 
+        end do
+        !
         ! -- calculate z-displacement
         ncpl = this%dis%get_ncpl()
-        if (ncpl == this%dis%nodes) then
+        !
+        ! -- disu
+        if (this%dis%ndim == 1) then
           ! TO DO - 
+        ! -- disv or dis
         else
-          nlay = this%dis%nodes / ncpl
+          nlay = this%dis%nodesuser / ncpl
           do k = nlay - 1, 1, -1
             do i = 1, ncpl
-              node = k * ncpl + i
-              nodem = (k - 1) * ncpl + i
-              this%buff(node) = this%buff(node) + this%buff(nodem)
+              node = (k - 1) * ncpl + i
+              nodem = k * ncpl + i
+              this%buffusr(node) = this%buffusr(node) + this%buffusr(nodem)
             end do
           end do
         end if
-        call this%dis%record_array(this%buff, this%iout, iprint, -ibinun,       &
+        !
+        ! -- fill buff with data from buffusr
+        do nodeu = 1, this%dis%nodesuser
+          node = this%dis%get_nodenumber_idx1(nodeu, 1)
+          if (node /= 0) then
+            this%buff(node) = this%buffusr(nodeu)
+          end if
+        end do
+        !
+        ! -- write z-displacement
+        call this%dis%record_array(this%buff, this%iout, iprint, ibinun,        &
                                    comptxt(5), cdatafmp, nvaluesp,              &
                                    nwidthp, editdesc, dinact)
       
@@ -903,12 +929,12 @@ contains
     endif
     if(idvfl == 0) ibinun = 0
     !
-    ! -- save compaction results
+    ! -- save inelastic interbed compaction results
     if(ibinun /= 0) then
       iprint = 0
       dinact = DHNOFLO
       !
-      ! -- fill buff with total inelastic compaction
+      ! -- fill buff with inelastic interbed compaction
       do node = 1, this%dis%nodes
         this%buff(node) = DZERO
       end do
@@ -918,7 +944,7 @@ contains
       end do
       !
       ! -- write inelastic interbed compaction data to binary file
-      call this%dis%record_array(this%buff, this%iout, iprint, -ibinun,         &
+      call this%dis%record_array(this%buff, this%iout, iprint, ibinun,          &
                                  comptxt(2), cdatafmp, nvaluesp,                &
                                  nwidthp, editdesc, dinact)
     end if
@@ -931,12 +957,12 @@ contains
     endif
     if(idvfl == 0) ibinun = 0
     !
-    ! -- save compaction results
+    ! -- save elastic interbed compaction results
     if(ibinun /= 0) then
       iprint = 0
       dinact = DHNOFLO
       !
-      ! -- fill buff with total inelastic compaction
+      ! -- fill buff with elastic interbed compaction
       do node = 1, this%dis%nodes
         this%buff(node) = DZERO
       end do
@@ -945,8 +971,8 @@ contains
         this%buff(node) = this%buff(node) + this%tcompe(ib)
       end do
       !
-      ! -- write inelastic interbed compaction data to binary file
-      call this%dis%record_array(this%buff, this%iout, iprint, -ibinun,         &
+      ! -- write elastic interbed compaction data to binary file
+      call this%dis%record_array(this%buff, this%iout, iprint, ibinun,          &
                                  comptxt(3), cdatafmp, nvaluesp,                &
                                  nwidthp, editdesc, dinact)
     end if
@@ -959,18 +985,18 @@ contains
     endif
     if(idvfl == 0) ibinun = 0
     !
-    ! -- save compaction results
+    ! -- save skeletal compaction results
     if(ibinun /= 0) then
       iprint = 0
       dinact = DHNOFLO
       !
-      ! -- fill buff with total inelastic compaction
+      ! -- fill buff with skeletal compaction
       do node = 1, this%dis%nodes
         this%buff(node) = this%sk_tcomp(node)
       end do
       !
       ! -- write skeletal compaction data to binary file
-      call this%dis%record_array(this%buff, this%iout, iprint, -ibinun,         &
+      call this%dis%record_array(this%buff, this%iout, iprint, ibinun,          &
                                  comptxt(4), cdatafmp, nvaluesp,                &
                                  nwidthp, editdesc, dinact)
     end if
@@ -1984,6 +2010,12 @@ contains
     else
       call mem_allocate(this%buff, this%dis%nodes, 'BUFF', trim(this%origin))
     end if
+    if (this%ioutcomp == 0 .and. this%ioutzdisp == 0) then
+      call mem_allocate(this%buffusr, 1, 'buffusr', trim(this%origin))
+    else
+      call mem_allocate(this%buffusr, this%dis%nodesuser, 'buffusr',            &
+                        trim(this%origin))
+    end if
     if (this%igeocalc == 0) then
       call mem_allocate(this%sgm, 1, 'sgm', trim(this%origin))
       call mem_allocate(this%sgs, 1, 'sgs', trim(this%origin))
@@ -2138,6 +2170,7 @@ contains
       !
       ! -- grid-based storage data
       call mem_deallocate(this%buff)
+      call mem_deallocate(this%buffusr)
       call mem_deallocate(this%sgm)
       call mem_deallocate(this%sgs)
       call mem_deallocate(this%ske_cr)
