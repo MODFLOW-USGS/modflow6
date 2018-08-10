@@ -21,18 +21,22 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['csub_subwt01a', 'csub_subwt01b']
+ex = ['csub_subwt01a', 'csub_subwt01b', 'csub_subwt01c']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
 ddir = 'data'
 cmppth = 'mfnwt'
+
+htol = [None, None, 0.075]
 dtol = 1e-3
 budtol = 1e-2
+
 paktest = 'csub'
 
-ump = ['None', True]
-ivoid = [0, 1]
+ump = ['None', True, 'None']
+ivoid = [0, 1, 0]
+gs0 = [0., 0., 1700.]
 
 # set travis to True when version 1.13.0 is released
 travis = [True, True]
@@ -203,7 +207,8 @@ zthick = [top - botm[0],
           botm[1] - botm[2],
           botm[2] - botm[3]]
 
-beta = 4.65120000e-10
+beta = 0.
+#beta = 4.65120000e-10
 gammaw = 9806.65000000
 sw = beta * gammaw * theta
 ss = [sw for k in range(nlay)]
@@ -293,6 +298,7 @@ def get_model(idx, dir):
                                   save_flows=False)
 
     # csub files
+    sig0 = {0: [gs0[idx] for k in range(nlay)]}
     opth = '{}.csub.obs'.format(name)
     csub = flopy.mf6.ModflowGwfcsub(gwf,
                                     #interbed_stress_offset=True,
@@ -308,7 +314,7 @@ def get_model(idx, dir):
                                     ske_cr=0.,
                                     sk_theta=theta,
                                     packagedata=swt6,
-                                    sig0={0: [0., 0., 0., 0.]})
+                                    sig0=sig0)
     orecarray = {}
     orecarray['csub_obs.csv'] = [('w1l1', 'interbed-compaction', (0, 8, 9)),
                                  ('w1l2', 'interbed-compaction', (1, 8, 9)),
@@ -358,7 +364,7 @@ def get_model(idx, dir):
                                    istpcs=1, lnwt=[0, 1, 2, 3],
                                    cc=cc, cr=cr, thick=thick,
                                    void=void, pcsoff=ini_stress, sgs=sgs,
-                                   gl0=0., ids16=ds16, ids17=ds17)
+                                   gl0=gs0[idx], ids16=ds16, ids17=ds17)
     oc = flopy.modflow.ModflowOc(mc, stress_period_data=None,
                                  save_every=1,
                                  save_types=['save head', 'save budget',
@@ -366,10 +372,10 @@ def get_model(idx, dir):
     nwt = flopy.modflow.ModflowNwt(mc,
                                    headtol=hclose, fluxtol=fluxtol,
                                    maxiterout=nouter, linmeth=2,
-                                   maxitinner=ninner,
                                    unitnumber=132,
                                    options='SPECIFIED',
-                                   backflag=0, idroptol=0)
+                                   backflag=0, idroptol=0,
+                                   hclosexmd=hclose, mxiterxmd=ninner)
 
     return sim, mc
 
@@ -559,7 +565,8 @@ def test_mf6model():
         if is_travis and not travis[idx]:
             continue
         yield test.run_mf6, Simulation(dir, exe_dict=r_exe,
-                                       exfunc=eval_comp)
+                                       exfunc=eval_comp,
+                                       htol=htol[idx])
 
     return
 
@@ -574,7 +581,8 @@ def main():
     # run the test models
     for dir in exdirs:
         sim = Simulation(dir, exe_dict=replace_exe,
-                         exfunc=eval_comp)
+                         exfunc=eval_comp,
+                         htol=htol[idx])
         test.run_mf6(sim)
 
     return

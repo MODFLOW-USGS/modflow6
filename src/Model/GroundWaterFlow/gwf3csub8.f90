@@ -2713,45 +2713,72 @@ contains
       do node = 1, this%dis%nodes
         !
         ! -- calculate geostatic stress for this node
-        !    this represents the incremental value for the cell
-        bot = this%dis%bot(node)
+        !    this represents the geostatic stress component 
+        !    for the cell
         top = this%dis%top(node)
+        bot = this%dis%bot(node)
         hcell = hnew(node)
         gs = DZERO
         if (hcell >= top) then
-            gs = (top-bot) * this%sgs(node)
+            gs = (top - bot) * this%sgs(node)
         else if (hcell <= bot) then
-            gs = (top-bot) * this%sgm(node)
+            gs = (top - bot) * this%sgm(node)
         else
-            gs = ((top-hcell) * this%sgm(node)) + ((hcell-bot) * this%sgs(node))
+            gs = ((top - hcell) * this%sgm(node)) +                             &
+                 ((hcell - bot) * this%sgs(node))
         end if
-        this%sk_gs(node) = gs
+        !
+        ! -- add user-specified overlying geostatic stress
+        sadd = DZERO
+        if (this%igeostressoff /= 0) then
+          sadd = this%sig0(node)
+        end if
+        this%sk_gs(node) = gs + sadd
       end do
       !
-      ! -- calculate the area weighted geostatic stress above cell
-      !   *** this needs to be checked for a complicated discretization ***
+      ! -- calculate geostatic stress above cell
       do node = 1, this%dis%nodes
+        !
+        ! -- area of cell 
+        area_node = this%dis%get_area(node)
+        !
+        ! -- geostatic stress of cell
         gs = this%sk_gs(node)
         !
-        ! -- Go through the connecting cells
+        ! -- Add geostatic stress of overlying cells (ihc=0)
+        !    m < node = m is vertically above node
         do ii = this%dis%con%ia(node) + 1, this%dis%con%ia(node + 1) - 1
           !
           ! -- Set the m cell number
           m = this%dis%con%ja(ii)
           iis = this%dis%con%jas(ii)
           !
-          ! -- Calculate conductance depending on whether connection is
-          !    vertical (0), horizontal (1), or staggered horizontal (2)
-          !    m < node = m is vertically above node
-          area_node = this%dis%get_area(node)
-          if (this%dis%con%ihc(iis) == 0 .and. m < node) then
-              area_conn = this%dis%get_area(m)
-              hwva = this%dis%con%hwva(iis)
-              va_scale = this%dis%con%hwva(iis) / this%dis%get_area(m)
-              gs_conn = this%sk_gs(m)
-              gs = gs + (gs_conn * va_scale)
+          ! -- vertical connection
+          if (this%dis%con%ihc(iis) == 0) then
+            !
+            ! -- node has an overlying cell
+            if (m < node) then
+              !
+              ! -- dis and disv discretization
+              if (this%dis%ndim /= 1) then
+                gs = gs + this%sk_gs(m)
+              !
+              ! -- disu discretization
+              !    *** this needs to be checked ***
+              else
+                area_conn = this%dis%get_area(m)
+                hwva = this%dis%con%hwva(iis)
+                va_scale = this%dis%con%hwva(iis) / this%dis%get_area(m)
+                gs_conn = this%sk_gs(m)
+                gs = gs + (gs_conn * va_scale)
+              end if
+
+            end if
           end if
         end do
+        !
+        ! -- geostatic stress for cell with geostatic stress 
+        !    of overlying cells
         this%sk_gs(node) = gs
       end do
       !
@@ -2764,11 +2791,7 @@ contains
           hs = hcell - bot
         end if
         es = this%sk_gs(node) - hs
-        sadd = DZERO
-        if (this%igeostressoff /= 0) then
-          sadd = this%sig0(node)
-        end if
-        this%sk_es(node) = es + sadd
+        this%sk_es(node) = es
       end do
    end if
    !
