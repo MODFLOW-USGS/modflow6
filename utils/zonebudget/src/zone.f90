@@ -1,9 +1,11 @@
 module ZoneModule
 
+  use KindModule
   use SimVariablesModule, only: iout
   use SimModule, only: store_error, store_error_unit, ustop
-  use ConstantsModule, only: LINELENGTH
+  use ConstantsModule, only: LINELENGTH, DEP20
   use BlockParserModule, only: BlockParserType
+  use SortModule, only: unique_values
 
   implicit none
   private
@@ -16,15 +18,18 @@ module ZoneModule
   public :: flowch_accumulate
   public :: zone_finalize
   public :: maxzone
+  public :: iuniqzone
   public :: nmznfl, vbvl, vbznfl
   
-  integer :: ncells
-  integer :: maxzone
-  integer, dimension(:), allocatable :: izone
-  integer, dimension(:), allocatable :: ich
-  integer, dimension(:, :), allocatable :: nmznfl
-  double precision, dimension(:, :, :), allocatable :: vbznfl
-  double precision, dimension(:, :, :), allocatable :: vbvl
+  integer(I4B) :: ncells
+  integer(I4B) :: maxzone
+  integer(I4B), dimension(:), allocatable :: izoneuser
+  integer(I4B), dimension(:), allocatable :: iuniqzone
+  integer(I4B), dimension(:), allocatable :: izone
+  integer(I4B), dimension(:), allocatable :: ich
+  integer(I4B), dimension(:, :), allocatable :: nmznfl
+  real(DP), dimension(:, :, :), allocatable :: vbznfl
+  real(DP), dimension(:, :, :), allocatable :: vbvl
   character(len=LINELENGTH) :: errmsg, keyword
   
   contains
@@ -38,13 +43,18 @@ module ZoneModule
 ! ------------------------------------------------------------------------------
     use ArrayReadersModule, only: ReadArray
     type(BlockParserType) :: parser
-    integer, intent(in) :: inunit
-    integer, intent(in) :: nbudterms
-    integer, intent(inout) :: ncr
-    integer, dimension(:), intent(in) :: mshape
-    integer :: nlay, ncpl, istart, istop, k
+    integer(I4B), intent(in) :: inunit
+    integer(I4B), intent(in) :: nbudterms
+    integer(I4B), intent(inout) :: ncr
+    integer(I4B), dimension(:), intent(in) :: mshape
+    integer(I4B) :: nlay, ncpl, istart, istop, k
     character(len=24) :: aname = '                   IZONE'
-    integer :: ierr
+    integer(I4B) :: ierr
+    integer(I4B) :: i
+    integer(I4B) :: n
+    integer(I4B) :: iminval
+    integer(I4B) :: imaxval
+    integer(I4B), dimension(:), allocatable :: izonecount
     logical :: isfound, endOfBlock
 ! ------------------------------------------------------------------------------
     !
@@ -95,6 +105,7 @@ module ZoneModule
       !    Setting ncr to ncells
       ncr = ncells
     endif
+    allocate(izoneuser(ncells))
     allocate(izone(ncells))
     allocate(ich(ncells))
     !
@@ -126,12 +137,12 @@ module ZoneModule
               istart = 1
               istop = ncpl
               do k = 1, nlay
-                call ReadArray(inunit, izone(istart:istop), aname, 1, ncpl, iout, k)
+                call ReadArray(inunit, izoneuser(istart:istop), aname, 1, ncpl, iout, k)
                 istart = istop + 1
                 istop = istart + ncpl - 1
               enddo
             else
-              call ReadArray(inunit, izone, aname, 1, ncells, iout, 0)
+              call ReadArray(inunit, izoneuser, aname, 1, ncells, iout, 0)
             endif
           case default
             write(errmsg,'(4x,a,a)')'ERROR. UNKNOWN ZONE GRIDDATA TAG: ',      &
@@ -149,9 +160,69 @@ module ZoneModule
     !
     ! -- Write messages
     close(inunit)
-    maxzone = maxval(izone)
+    !
+    ! -- Find max and min values
+    iminval = HUGE(iminval)
+    imaxval = -HUGE(imaxval)
+    do n = 1, size(izoneuser)
+      izone(n) = izoneuser(n)
+      if (izoneuser(n) /= 0) then
+        if (izoneuser(n) < iminval) then
+          iminval = izoneuser(n) 
+        end if
+        if (izoneuser(n) > imaxval) then
+          imaxval = izoneuser(n) 
+        end if
+      end if
+    end do
+    !
+    ! -- write minimum and maximum zone numbers
     write(iout, '(/, 4x, a, i0)') 'Successfully read zone array with NCELLS = ', ncells
-    write(iout, '(4x, a, i0)') 'Maximum zone number is ', maxzone
+    write(iout, '(4x, a, i0)') 'Minimum user-specified zone number is ', iminval
+    write(iout, '(4x, a, i0)') 'Maximum user-specified zone number is ', imaxval
+    !
+    ! -- find unique zones
+    call unique_values(izone, iuniqzone)
+    !
+    ! -- pop off a zero zone value
+    call pop_zero_zone(iuniqzone)
+    !
+    ! -- set max zone number
+    maxzone = size(iuniqzone)
+    !
+    ! -- allocate and initialize izonecount
+    allocate(izonecount(0:maxzone))
+    do i = 0, maxzone
+      izonecount(i) = 0
+    end do
+    !
+    ! -- fill izonemap with uniqzone number
+    do n = 1, size(izone)
+      if (izoneuser(n) == 0) then
+        izone(n) = 0
+        izonecount(0) = izonecount(0) + 1
+      else
+        do i = 1, maxzone
+          if (izoneuser(n) == iuniqzone(i)) then
+            izone(n) = i
+            izonecount(i) = izonecount(i) + 1
+            exit
+          end if
+        end do
+      end if
+    end do
+    !
+    ! -- write zone mapping
+    write(iout, '(//,4x,3(a20,1x))') 'USER ZONE', 'ZONE NUMBER', 'CELL COUNT'
+    write(iout, '(4x,62("-"))') 
+    write(iout, '(4x,3(i20,1x))') 0, 0, izonecount(0)
+    do i = 1, maxzone
+      write(iout, '(4x,3(i20,1x))') iuniqzone(i), i, izonecount(i)
+    end do
+    write(iout, '(4x,62("-"),/)') 
+    
+    !
+    !maxzone = maxval(izone)
     write(iout,'(a)') 'End processing zone griddata'
     !
     ! -- nmznfl is map showing connections between two zones.  If 1, then
@@ -159,6 +230,9 @@ module ZoneModule
     allocate(nmznfl(0:maxzone, 0:maxzone))
     allocate(vbznfl(2, 0:maxzone, 0:maxzone))
     allocate(vbvl(2, 0:maxzone, nbudterms))
+    !
+    ! -- deallocate local variables
+    deallocate(izonecount)
     !
     ! -- close the zone file
     close(inunit)
@@ -192,12 +266,12 @@ module ZoneModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    integer, dimension(:), intent(in) :: nodesrc
-    integer, dimension(:), intent(in) :: nodedst
-    double precision, dimension(:, :), intent(in) :: flowdata
+    integer(I4B), dimension(:), intent(in) :: nodesrc
+    integer(I4B), dimension(:), intent(in) :: nodedst
+    real(DP), dimension(:, :), intent(in) :: flowdata
     ! -- local
-    integer :: i, n, m, iz1, iz2
-    double precision :: q
+    integer(I4B) :: i, n, m, iz1, iz2
+    real(DP) :: q
 ! ------------------------------------------------------------------------------
     !
     ! -- add up flowja terms
@@ -227,12 +301,12 @@ module ZoneModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    integer, dimension(:), intent(in) :: ia
-    integer, dimension(:), intent(in) :: ja
-    double precision, dimension(:), intent(in) :: flowja
+    integer(I4B), dimension(:), intent(in) :: ia
+    integer(I4B), dimension(:), intent(in) :: ja
+    real(DP), dimension(:), intent(in) :: flowja
     ! -- local
-    integer :: ipos, n, m, iz1, iz2
-    double precision :: q
+    integer(I4B) :: ipos, n, m, iz1, iz2
+    real(DP) :: q
 ! ------------------------------------------------------------------------------
     !
     ! -- add up flowja terms
@@ -264,12 +338,12 @@ module ZoneModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    integer, intent(in) :: ibudterm
-    integer, dimension(:), intent(in) :: nodesrc
-    double precision, dimension(:, :), intent(in) :: flowdata
+    integer(I4B), intent(in) :: ibudterm
+    integer(I4B), dimension(:), intent(in) :: nodesrc
+    real(DP), dimension(:, :), intent(in) :: flowdata
     ! -- local
-    integer :: i, n, iz1
-    double precision :: q
+    integer(I4B) :: i, n, iz1
+    real(DP) :: q
 ! ------------------------------------------------------------------------------
     !
     ! -- accumulate flow terms
@@ -296,10 +370,10 @@ module ZoneModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    integer, intent(in) :: ibudterm
-    integer, dimension(:), intent(in) :: nodesrc
+    integer(I4B), intent(in) :: ibudterm
+    integer(I4B), dimension(:), intent(in) :: nodesrc
     ! -- local
-    integer :: i, n
+    integer(I4B) :: i, n
 ! ------------------------------------------------------------------------------
     !
     ! -- accumulate flow terms
@@ -320,12 +394,12 @@ module ZoneModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    integer, dimension(:), intent(in) :: ia
-    integer, dimension(:), intent(in) :: ja
-    double precision, dimension(:), intent(in) :: flowja
+    integer(I4B), dimension(:), intent(in) :: ia
+    integer(I4B), dimension(:), intent(in) :: ja
+    real(DP), dimension(:), intent(in) :: flowja
     ! -- local
-    integer :: ipos, n, m, iz, ibudterm
-    double precision :: q
+    integer(I4B) :: ipos, n, m, iz, ibudterm
+    real(DP) :: q
 ! ------------------------------------------------------------------------------
     !
     ! -- add up flowja terms
@@ -355,6 +429,60 @@ module ZoneModule
     ! -- return
     return
   end subroutine flowch_accumulate
+  
+  subroutine pop_zero_zone(ia)
+    ! -- dummy arguments
+    integer(I4B), dimension(:), allocatable, intent(inout) :: ia
+    ! -- local variables
+    integer(I4B) :: i
+    integer(I4B) :: n
+    integer(I4B) :: nlen
+    integer(I4B) :: ipop
+    integer(I4B), dimension(:), allocatable :: ib
+! ------------------------------------------------------------------------------
+    nlen = size(ia)
+    ipop = 0
+    !
+    ! -- determine if there is a zero value in the integer attay
+    do i = 1, nlen
+      if (ia(i) == 0) then
+        ipop = i
+        exit
+      end if
+    end do
+    !
+    ! -- remove zero value from ia
+    if (ipop /= 0) then
+      !
+      ! -- allocate ib
+      allocate(ib(nlen-1))
+      !
+      ! -- fill itmp with everything in ia except 0
+      n = 1
+      do i = 1, nlen
+        if (i == ipop) then
+          cycle
+        end if
+        ib(n) = ia(i)
+        n = n + 1
+      end do
+      !
+      ! -- deallocate ia
+      deallocate(ia)
+      !
+      ! -- allocate ia and fill with ib
+      allocate(ia(size(ib)))
+      do i = 1, size(ib)
+        ia(i) = ib(i)
+      end do
+      !
+      ! -- deallocate ib
+      deallocate(ib)
+    end if
+    !
+    ! -- return
+    return
+  end subroutine pop_zero_zone
 
   subroutine zone_finalize()
 ! ******************************************************************************

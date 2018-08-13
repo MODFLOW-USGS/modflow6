@@ -1,5 +1,6 @@
 module GrbModule
 
+  use KindModule
   use SimVariablesModule, only: iout
   use SimModule, only: store_error, store_error_unit, ustop
   implicit none
@@ -18,22 +19,23 @@ module GrbModule
     ! -- modules
     use InputOutputModule, only: urword
     ! -- dummy
-    integer, intent(in) :: inunit
-    integer, allocatable, dimension(:), intent(out) :: ia
-    integer, allocatable, dimension(:), intent(out) :: ja
-    integer, allocatable, dimension(:), intent(out) :: mshape
+    integer(I4B), intent(in) :: inunit
+    integer(I4B), allocatable, dimension(:), intent(out) :: ia
+    integer(I4B), allocatable, dimension(:), intent(out) :: ja
+    integer(I4B), allocatable, dimension(:), intent(out) :: mshape
     ! -- local
     character(len=50) :: hdrtxt
-    integer :: lloc, istart, istop
+    integer(I4B) :: lloc, istart, istop
     character(len=50) :: dataname
     character(len=50) :: datatype
-    integer :: ntxt, lentxt, ndim, i, j, n, nval
-    integer :: nja, ncells
-    double precision :: r, d
-    character(len=:), dimension(:), allocatable :: dfntxt
-    integer, dimension(:), allocatable :: ishape
-    integer, dimension(:), allocatable :: itmp
-    double precision, dimension(:), allocatable :: dtmp
+    integer(I4B) :: ntxt, lentxt, ndim, i, j, n, nval
+    integer(I4B) :: nja, ncells
+    real(DP) :: r, d
+    character(len=:), allocatable :: line
+    character(len=:), allocatable :: dfntxt
+    integer(I4B), dimension(:), allocatable :: ishape
+    integer(I4B), dimension(:), allocatable :: itmp
+    real(DP), dimension(:), allocatable :: dtmp
 ! ------------------------------------------------------------------------------
     !
     ! -- message
@@ -85,20 +87,22 @@ module GrbModule
     call urword(hdrtxt, lloc, istart, istop, 2, lentxt, r, iout, inunit)
     !
     ! -- read txt definitions
-    allocate(character(len=lentxt)::dfntxt(ntxt))
+    allocate(character(len=lentxt)::line)
+    allocate(character(len=lentxt*ntxt)::dfntxt)
     read(inunit) dfntxt
     ! -- read each data record
-    do n = 1, ntxt
+    do n = 1, lentxt*ntxt, lentxt
+      line = dfntxt(n:n+lentxt-1)
       lloc = 1
-      call urword(dfntxt(n), lloc, istart, istop, 0, i, r, iout, inunit)
-      dataname = dfntxt(n)(istart:istop)
-      call urword(dfntxt(n), lloc, istart, istop, 0, i, r, iout, inunit)
-      datatype = dfntxt(n)(istart:istop)
-      call urword(dfntxt(n), lloc, istart, istop, 0, i, r, iout, inunit)
-      call urword(dfntxt(n), lloc, istart, istop, 2, ndim, r, iout, inunit)
+      call urword(line, lloc, istart, istop, 0, i, r, iout, inunit)
+      dataname = line(istart:istop)
+      call urword(line, lloc, istart, istop, 0, i, r, iout, inunit)
+      datatype = line(istart:istop)
+      call urword(line, lloc, istart, istop, 0, i, r, iout, inunit)
+      call urword(line, lloc, istart, istop, 2, ndim, r, iout, inunit)
       allocate(ishape(ndim))
       do j = 1, ndim
-        call urword(dfntxt(n), lloc, istart, istop, 2, ishape(j), r, iout, inunit)
+        call urword(line, lloc, istart, istop, 2, ishape(j), r, iout, inunit)
       enddo
       select case (trim(datatype))
         case('INTEGER')
@@ -151,6 +155,10 @@ module GrbModule
     enddo
     close(inunit)
     write(iout, '(a)') 'Done processing Binary Grid File'
+    !
+    ! -- deallocate local storage
+    deallocate(line)
+    deallocate(dfntxt)
     !
     ! -- return
     return

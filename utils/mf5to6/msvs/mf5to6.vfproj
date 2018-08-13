@@ -93,7 +93,8 @@
 		<File RelativePath="..\..\..\src\Utilities\InputOutput.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\kind.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\List.f90"/>
-		<File RelativePath="..\..\..\src\Utilities\OpenSpec.f90"/></Filter></Filter>
+		<File RelativePath="..\..\..\src\Utilities\OpenSpec.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\version.f90"/></Filter></Filter>
 		<Filter Name="NWT">
 		<File RelativePath="..\src\NWT\gwf2hfb7_NWT.f"/>
 		<File RelativePath="..\src\NWT\gwf2wel7_NWT.f"/>

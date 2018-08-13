@@ -1003,6 +1003,7 @@ module Xt3dModule
     call mem_deallocate(this%vcthresh)
     call mem_deallocate(this%lamatsaved)
     call mem_deallocate(this%nbrmax)
+    call mem_deallocate(this%ldispersion)
     !
     ! -- Return
     return

@@ -37,7 +37,9 @@
 		<File RelativePath="..\..\..\src\Utilities\kind.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\OpenSpec.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\Sim.f90"/>
-		<File RelativePath="..\..\..\src\Utilities\SimVariables.f90"/></Filter>
+		<File RelativePath="..\..\..\src\Utilities\SimVariables.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\sort.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\version.f90"/></Filter>
 		<File RelativePath="..\src\budgetdata.f90"/>
 		<File RelativePath="..\src\grb.f90"/>
 		<File RelativePath="..\src\zbud6.f90"/>

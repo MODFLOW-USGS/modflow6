@@ -95,7 +95,7 @@ module GwfStoModule
     ! -- formats
     character(len=*), parameter :: fmtsto =                                    &
       "(1x,/1x,'STO -- STORAGE PACKAGE, VERSION 1, 5/19/2014',                 &
-      ' INPUT READ FROM UNIT ', i0, //)"
+      &' INPUT READ FROM UNIT ', i0, //)"
 ! ------------------------------------------------------------------------------
     !
     ! --print a message identifying the storage package.
@@ -715,10 +715,10 @@ module GwfStoModule
       "(4x, 'FLOWS WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I7)"
     character(len=*), parameter :: fmtstoc =                                   &
       "(4X,'STORAGECOEFFICIENT OPTION:',/,                                     &
-      1X,'Read storage coefficient rather than specific storage')"
+      &1X,'Read storage coefficient rather than specific storage')"
     character(len=*), parameter :: fmtstoseg =                                 &
       "(4X,'OLDSTORAGEFORMULATION OPTION:',/,                                  &
-      1X,'Specific storage changes only occur above cell top')"
+      &1X,'Specific storage changes only occur above cell top')"
 ! ------------------------------------------------------------------------------
     !
     ! -- get options block
@@ -784,6 +784,7 @@ module GwfStoModule
     class(GwfStotype) :: this
     ! -- local
     character(len=LINELENGTH) :: line, errmsg, keyword
+    character(len=LINELENGTH) :: cellstr
     integer(I4B) :: istart, istop, lloc, ierr
     logical :: isfound, endOfBlock
     logical :: readiconv
@@ -884,6 +885,27 @@ module GwfStoModule
       call this%parser%StoreErrorUnit()
       call ustop()
     endif
+    !
+    ! -- Check SS and SY for negative values
+    do n = 1, this%dis%nodes
+      if (this%sc1(n) < DZERO) then
+        call this%dis%noder_to_string(n, cellstr)
+        write(errmsg, '(a,2(1x,a),1x,g0,1x,a)')                                 &
+          'Error in SS DATA: SS value in cell', trim(adjustl(cellstr)),         &
+          'is less than zero (', this%sc1(n), ').'
+        call store_error(errmsg)
+      end if
+      if (readsy) then
+        if (this%sc2(n) < DZERO) then
+          call this%dis%noder_to_string(n, cellstr)
+          write(errmsg, '(a,2(1x,a),1x,g0,1x,a)')                               &
+            'Error in SY DATA: SY value in cell', trim(adjustl(cellstr)),       &
+            'is less than zero (', this%sc2(n), ').'
+          call store_error(errmsg)
+        end if
+      end if
+    end do
+    
     !
     ! -- calculate sc1
     if (readss) then

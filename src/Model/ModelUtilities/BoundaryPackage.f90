@@ -283,7 +283,7 @@ module BndModule
       "(1X,/1X,'REUSING ',A,'S FROM LAST STRESS PERIOD')"
     character(len=*), parameter :: fmtnbd = &
       "(1X,/1X,'THE NUMBER OF ACTIVE ',A,'S (',I6, &
-       ') IS GREATER THAN MAXIMUM(',I6,')')"
+       &') IS GREATER THAN MAXIMUM(',I6,')')"
 ! ------------------------------------------------------------------------------
     !
     ! -- Set ionper to the stress period number for which a new block of data
@@ -671,7 +671,11 @@ module BndModule
     call model_budget%addentry(ratin, ratout, delt, this%text,                 &
                                isuppress_output, this%name)
     if (imover == 1) then
-      text = adjustr(trim(adjustl(this%text)) // '-TO-MVR')
+      ratin = DZERO
+      ratout = DZERO
+      ibdlbl = 0
+      text = trim(adjustl(this%text)) // '-TO-MVR'
+      text = adjustr(text)
       !
       ! -- If cell-by-cell flows will be saved as a list, write header.
       if(ibinun /= 0) then

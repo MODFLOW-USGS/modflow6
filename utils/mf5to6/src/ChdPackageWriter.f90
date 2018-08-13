@@ -165,7 +165,7 @@ contains
     if (this%source == 'CHD') then
       this%fileobj%FType = 'CHD6'
       this%PkgType = 'CHD'
-      fname = trim(this%ModelBasename) // '.chd6'
+      fname = trim(this%ModelBasename) // '.chd'
       call this%FileWriterType%InitializeFile(fname, this%fileobj%FType, &
                                               this%PackageName)
     endif
@@ -241,7 +241,7 @@ contains
         ' CHD nodes have been defined from IBOUND and starting heads')
     !
     kk = 0
-    fname = trim(this%ModelBasename) // '.ibound.chd6'
+    fname = trim(this%ModelBasename) // '.ibound.chd'
     ! Iterate through IBOUND to find CH cells (IBOUND < 0)
     do kold=1,NLAY
       k = this%Layptr(kold)

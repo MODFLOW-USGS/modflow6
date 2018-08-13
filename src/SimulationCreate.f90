@@ -1,8 +1,8 @@
 module SimulationCreateModule
 
-  use KindModule,             only: DP, I4B
+  use KindModule,             only: DP, I4B, write_kindinfo
   use ConstantsModule,        only: LINELENGTH, LENMODELNAME, LENBIGLINE, DZERO
-  use SimVariablesModule,     only: iout
+  use SimVariablesModule,     only: simfile, simlstfile, iout
   use SimModule,              only: ustop, store_error, count_errors,          &
                                     store_error_unit
   use InputOutputModule,      only: getunit, urword, openfile
@@ -37,13 +37,15 @@ module SimulationCreateModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- local
-    character(len=LINELENGTH) :: simfile
-    character(len=LINELENGTH) :: simlstfile
+    !character(len=LINELENGTH) :: simfile
+    !character(len=LINELENGTH) :: simlstfile
 ! ------------------------------------------------------------------------------
+    !!
+    !! -- set default simfile and simlstfile
+    !simfile    = 'mfsim.nam'
+    !simlstfile = 'mfsim.lst'
     !
-    ! -- set default simfile and simlstfile
-    simfile    = 'mfsim.nam'
-    simlstfile = 'mfsim.lst'
+    ! -- initialize iout 
     iout = 0
     !
     ! -- Open simulation list file
@@ -85,8 +87,9 @@ module SimulationCreateModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use ConstantsModule,        only: MFVNAM, VERSION, MFTITLE, FMTDISCLAIMER, &
-                                      LENBIGLINE, IDEVELOPMODE
+    use ConstantsModule,        only: LENBIGLINE
+    use VersionModule,          only: VERSION, MFVNAM, MFTITLE, FMTDISCLAIMER,  & 
+                                      IDEVELOPMODE
     use CompilerVersion
     use InputOutputModule,      only: write_centered
     ! -- dummy
@@ -118,9 +121,8 @@ module SimulationCreateModule
     !
     ! -- Write precision of real variables
     write(iout, '(/,a)') 'MODFLOW was compiled using uniform precision.'
-    write(iout, '(a,i0)') 'Precision of REAL variables: ', precision(DZERO)
-    write(iout, '(a,i0)') 'Fortran KIND value for REAL variables: ', DP
-    write(iout, '(a,i0,/)') 'Fortran KIND value for INTEGER variables: ', I4B
+    call write_kindinfo(iout)
+    write(iout, *)
     !
     ! -- Return
     return

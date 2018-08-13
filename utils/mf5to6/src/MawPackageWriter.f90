@@ -62,7 +62,7 @@ contains
     this%fileobj%FType = 'MAW6'
     this%PkgType = 'MAW'
     write(this%PackageName,12)trim(this%PkgType),igrid
-    fname = trim(this%ModelBasename) // '.maw6'
+    fname = trim(this%ModelBasename) // '.maw'
     call this%FileWriterType%InitializeFile(fname, this%fileobj%FType, &
                                             this%PackageName)
     call GWF2MNW27AR(this%IuOrig, igrid)
@@ -335,18 +335,18 @@ contains
         ! the original WEL Package of MODFLOW, but specifying the single-node
         ! well within the MNW2 Package enables the use of constraints.)
         ! ERB: Probably just specify a large CWC to approximate no loss.
-!        condeqn = 'SPECIFIED'
-!        if (radius <= 0.0d0) radius = 1.0d0
-!        if (cwcmsg /= '') then
-!          call store_warning(cwcmsg)
-!          cwcmsg = ''
-!        endif
-        if (nonemsg /= '') then
-          call store_error(nonemsg)
-          nonemsg = ''
+        condeqn = 'SPECIFIED'
+        if (radius <= 0.0d0) radius = 1.0d0
+        if (cwcmsg /= '') then
+          call store_warning(cwcmsg)
+          cwcmsg = ''
         endif
-        condeqn = 'INVALID'
-        mnw2(3,i) = -9  ! flags invalid LossType
+        !if (nonemsg /= '') then
+        !  call store_error(nonemsg)
+        !  nonemsg = ''
+        !endif
+        !condeqn = 'INVALID'
+        !mnw2(3,i) = -9  ! flags invalid LossType
       case (1)
         ! "THIEM" in mnw2 input
         ! This option allows for only the cell-to-well correction at the well
@@ -357,7 +357,7 @@ contains
         ! B and C in equation 2 are automatically set = 0.0. User must define
         ! Rw in dataset 2c or 2d.
         ! If LOSSTYPE = THIEM, then specify Rw (the radius of the well).
-        condeqn = 'THEIM'
+        condeqn = 'THIEM'
       case (2)
         ! "SKIN" in mnw2 input: user specified characteristics of skin.
         ! This option allows for formation damage or skin corrections at the

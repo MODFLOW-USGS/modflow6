@@ -288,7 +288,7 @@ contains
       ftypelocal = 'CHD6'
       fwt => this%IbChdWriter
       fwt%PkgType = 'CHD'
-      fname = trim(this%BaseName) // '.chd6'
+      fname = trim(this%BaseName) // '.chd'
       FCodeLocal = FCUNKNOWN
       pkgname = this%IbChdWriter%PackageName
       ! CHD (constant) will be activated only if needed
@@ -296,7 +296,7 @@ contains
     case ('DIS6')
       if (this%ConversionDone) return
       fwt => this%DisWriter
-      fname = trim(this%BaseName) // '.dis6'
+      fname = trim(this%BaseName) // '.dis'
       FCodeLocal = FCINPUT
       if (associated(this%DisWriter%fileobj)) then
         pkgname = this%DisWriter%fileobj%PkgName
@@ -306,7 +306,7 @@ contains
     case ('IC6')
       if (this%ConversionDone) return
       fwt => this%IcWriter
-      fname = trim(this%BaseName) // '.ic6'
+      fname = trim(this%BaseName) // '.ic'
       FCodeLocal = FCINPUT
       if (associated(this%IcWriter%fileobj)) then
         pkgname = this%IcWriter%fileobj%PkgName
@@ -316,7 +316,7 @@ contains
     case ('NPF6')
       if (this%ConversionDone) return
       fwt => this%NpfWriter
-      fname = trim(this%BaseName) // '.npf6'
+      fname = trim(this%BaseName) // '.npf'
       FCodeLocal = FCINPUT
       if (associated(this%NpfWriter%fileobj)) then
         pkgname = this%NpfWriter%fileobj%PkgName
@@ -326,7 +326,7 @@ contains
     case ('STO6')
       if (this%ConversionDone) return
       fwt => this%StoWriter
-      fname = trim(this%BaseName) // '.sto6'
+      fname = trim(this%BaseName) // '.sto'
       FCodeLocal = FCUNKNOWN
       if (associated(this%StoWriter%fileobj)) then
         pkgname = this%StoWriter%fileobj%PkgName
@@ -336,7 +336,7 @@ contains
     case ('TDIS6')
       if (this%ConversionDone) return
       fwt => this%TdisWriter
-      fname = trim(this%BaseName) // '.tdis6'
+      fname = trim(this%BaseName) // '.tdis'
       FCodeLocal = FCINPUT
       if (associated(this%TdisWriter%fileobj)) then
         pkgname = this%TdisWriter%fileobj%PkgName
@@ -346,7 +346,7 @@ contains
     case ('OC6')
       if (this%ConversionDone) return
       fwt => this%OcWriter
-      fname = trim(this%BaseName) // '.oc6'
+      fname = trim(this%BaseName) // '.oc'
       FCodeLocal = FCUNKNOWN
       ! OC will be activated only if needed
       if (fwt%Active) FCodeLocal = FCINPUT

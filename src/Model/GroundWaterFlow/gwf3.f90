@@ -16,11 +16,9 @@ module GwfModule
   use GwfOcModule,                 only: GwfOcType
   use GhostNodeModule,             only: GhostNodeType, gnc_cr
   use GwfObsModule,                only: GwfObsType, gwf_obs_cr
-  use ObserveModule,               only: ObserveType
   use SimModule,                   only: count_errors, store_error,            &
                                          store_error_unit, ustop
   use BaseModelModule,             only: BaseModelType
-  use ListModule,                  only: ListType
 
   implicit none
 
@@ -107,9 +105,9 @@ module GwfModule
     use BaseModelModule,            only: AddBaseModelToList
     use SimModule,                  only: ustop, store_error, count_errors
     use InputOutputModule,          only: write_centered
-    use ConstantsModule,            only: VERSION, MFVNAM, MFTITLE,            &
-                                          FMTDISCLAIMER, LINELENGTH,           &
-                                          LENPACKAGENAME, IDEVELOPMODE
+    use ConstantsModule,            only: LINELENGTH, LENPACKAGENAME
+    use VersionModule,              only: VERSION, MFVNAM, MFTITLE,             &
+                                          FMTDISCLAIMER, IDEVELOPMODE
     use CompilerVersion
     use MemoryManagerModule,        only: mem_allocate
     use GwfDisModule,               only: dis_cr
@@ -993,7 +991,7 @@ module GwfModule
     ! -- formats
     character(len=*),parameter :: fmtnocnvg = &
       "(1X,/9X,'****FAILED TO MEET SOLVER CONVERGENCE CRITERIA IN TIME STEP ', &
-      I0,' OF STRESS PERIOD ',I0,'****')"
+      &I0,' OF STRESS PERIOD ',I0,'****')"
 ! ------------------------------------------------------------------------------
     !
     ! -- Set ibudfl flag for printing budget information
@@ -1148,11 +1146,22 @@ module GwfModule
   end subroutine gwf_da
 
   function gwf_get_nsubtimes(this) result(nsubtimes)
+! ******************************************************************************
+! gwf_get_nsubtimes -- Return number of subtimesteps
+! Subtimesteps not implemented yet, so just return 1.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     !
     ! -- result
     integer(I4B) :: nsubtimes
     class(GwfModelType) :: this
+! ------------------------------------------------------------------------------
+    !
     nsubtimes = 1
+    !
+    ! -- return
     return
   end function gwf_get_nsubtimes
 

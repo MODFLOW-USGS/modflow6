@@ -2827,7 +2827,7 @@ c       For the "NONE" option, multiply the Kh by 1000 to equivalate Hnew and hw
         if(LOSSTYPE.EQ.0) then
           cel2wel2=1.0D3*((Txx*Tyy)**0.5D0)/thck
 c
-c       THEIM option (LOSSTYPE.EQ.1) only needs A, so no need to calculate  B or C
+c       THIEM option (LOSSTYPE.EQ.1) only needs A, so no need to calculate  B or C
 c
 c       SKIN (LINEAR) option, calculate B, C=0
         elseif(LOSSTYPE.EQ.2) then
@@ -4218,7 +4218,7 @@ c       if ro/rw is <1, 'A' term will be negative.  Warn user and cut off flow f
         Ay = log(roy/rw) / Tpi2y
         Ax = log(rox/rw) / Tpi2x
 c
-c       THEIM option (LOSSTYPE.EQ.1) only needs A, so no need to calculate  B or C
+c       THIEM option (LOSSTYPE.EQ.1) only needs A, so no need to calculate  B or C
 c
 c       SKIN (LINEAR) option, calculate B, C=0
         if(LOSSTYPE.EQ.2) then

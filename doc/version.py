@@ -3,9 +3,9 @@
 
 major = 6
 minor = 0
-micro = 2
+micro = 3
 build = 0
-commit = 37
+commit = 0
 
 __version__ = '{:d}.{:d}.{:d}'.format(major, minor, micro)
 __build__ = '{:d}.{:d}.{:d}.{:d}'.format(major, minor, micro, build)

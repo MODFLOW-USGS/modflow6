@@ -298,7 +298,6 @@ module BaseDisModule
     integer(I4B), intent(in) :: nodeu
     character(len=*), intent(inout) :: str
     ! -- local
-    character(len=10) :: nstr
 ! ------------------------------------------------------------------------------
     !
     call store_error('Program error: DisBaseType method nodeu_to_string not &
@@ -964,11 +963,14 @@ module BaseDisModule
         call read_value_or_time_series(lstrdobj%txtrlist(l), ii, jj,           &
                 bndElem, pkgName, 'BND', tsManager, iprpak, tsLinkBnd)
         if (associated(tsLinkBnd)) then
-          ! If iauxmultcol > 0, assign tsLinkBnd%RMultiplier to auxvar multiplier
-          if (iauxmultcol > 0) then
+          !
+          ! -- If iauxmultcol is the same as this column, then assign 
+          !    tsLinkBnd%RMultiplier to auxvar multiplier
+          if (iauxmultcol > 0 .and. jj == iscloc) then
             tsLinkBnd%RMultiplier => auxvar(iauxmultcol, ii)
           endif
-          ! If boundaries are named, save the name in the link
+          !
+          ! -- If boundaries are named, save the name in the link
           if (lstrdobj%inamedbound == 1) then
             tsLinkBnd%BndName = lstrdobj%boundname(tsLinkBnd%IRow)
           endif
@@ -1069,7 +1071,7 @@ module BaseDisModule
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
     ! -- local
-    integer(I4B) :: il, ir, ic, ncol, nrow, nlay, nval, noder, nodeu
+    integer(I4B) :: il, ir, ic, ncol, nrow, nlay, nval, nodeu
     logical :: found
     character(len=LINELENGTH) :: ermsg
 ! ------------------------------------------------------------------------------

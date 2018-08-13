@@ -65,6 +65,12 @@ def set_compiler():
             msg += '{} - '.format(arg.lower()) + \
                    '{} will be built with ifort.'.format(starget)
             fct = 'ifort'
+        elif arg.lower() == '--icc':
+            if len(msg) > 0:
+                msg += '\n'
+            msg += '{} - '.format(arg.lower()) + \
+                   '{} will be built with cl.'.format(starget)
+            cct = 'icc'
         elif arg.lower() == '--cl':
             if len(msg) > 0:
                 msg += '\n'

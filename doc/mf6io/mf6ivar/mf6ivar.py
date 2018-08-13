@@ -220,8 +220,9 @@ def block_entry(varname, block, vardict, prefix='  '):
         shape = v['shape']
         reader = v['reader'].upper()
         layered = ''
-        if reader == 'READARRAY':
-            layered = ' [LAYERED]'
+        if 'layered' in v:
+            if v['layered'] == 'true':
+                layered = ' [LAYERED]'
         s = '{}{}\n{}{}<{}{}> -- {}'.format(s, layered, prefix, prefix, varname,
                                           shape, reader)
 
@@ -243,7 +244,7 @@ def block_entry(varname, block, vardict, prefix='  '):
     return s
 
 
-def write_block(vardict, block, blk_var_list):
+def write_block(vardict, block, blk_var_list, varexcludeprefix=None):
     s = 'BEGIN {}'.format(block.upper())
     for variable in blk_var_list:
         ts = block_entry(variable[0], block, vardict).strip()
@@ -257,6 +258,12 @@ def write_block(vardict, block, blk_var_list):
         v = vardict[key]
         if b == block:
             addv = True
+            if varexcludeprefix is not None:
+                # exclude variables that start with `dev_`.  These are
+                # develop options that shouldn't go into the documentation.
+                n = name.upper()
+                if n.startswith(varexcludeprefix.upper()):
+                    addv = False
             if 'in_record' in v:
                 if v['in_record'] == 'true':
                     # do not separately include this variable
@@ -294,7 +301,7 @@ def get_description(desc):
     return desc
 
 
-def write_desc(vardict, block, blk_var_list):
+def write_desc(vardict, block, blk_var_list, varexcludeprefix=None):
     s = ''
     for iv, (name, b) in enumerate(vardict):
         v = vardict[(name, b)]
@@ -303,6 +310,12 @@ def write_desc(vardict, block, blk_var_list):
                 optional = 'optional' in v and v['optional'] == 'true'
                 blk_var_list.append((v['name'], optional))
             addv = True
+            if varexcludeprefix is not None:
+                # exclude variables that start with `dev_`.  These are
+                # develop options that shouldn't go into the documentation.
+                n = name.upper()
+                if n.startswith(varexcludeprefix.upper()):
+                    addv = False
             if v['type'].startswith('rec'):
                 addv = False
             if addv:
@@ -516,12 +529,14 @@ if __name__ == '__main__':
             desc += '\item \\textbf{}\n\n'.format('{Block: ' + b.upper() + '}' )
 
             desc += '\\begin{description}\n'
-            desc += write_desc(vardict, b, blk_var_list)
+            desc += write_desc(vardict, b, blk_var_list,
+                               varexcludeprefix='dev_')
             desc += '\\end{description}\n'
 
             fname = os.path.join(texdir, os.path.splitext(txtname)[0] + '-' + b + '.dat')
             f = open(fname, 'w')
-            s = write_block(vardict, b, blk_var_list) + '\n'
+            s = write_block(vardict, b, blk_var_list,
+                            varexcludeprefix='dev_') + '\n'
             f.write(s)
             if VERBOSE:
                 print(s)

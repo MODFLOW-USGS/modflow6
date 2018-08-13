@@ -1,6 +1,8 @@
 program zonbudmf6
+  use KindModule
   use SimModule, only: ustop
-  use ConstantsModule, only: LENHUGELINE, VERSION
+  use ConstantsModule, only: LENHUGELINE
+  use VersionModule, only: VERSION
   use SimVariablesModule, only: iout
   use InputOutputModule,  only: openfile, write_centered
   
@@ -8,12 +10,12 @@ program zonbudmf6
   
   character(len=10), parameter :: mfvnam=' Version 6'
   character(len=LENHUGELINE) :: fnam, flst, fcsv
-  integer :: iunit_lst = 20
-  integer :: iunit_csv = 21
-  integer :: iunit_nam = 22
-  integer :: iunit_bud = 23
-  integer :: iunit_zon = 24
-  integer :: iunit_grb = 25
+  integer(I4B) :: iunit_lst = 20
+  integer(I4B) :: iunit_csv = 21
+  integer(I4B) :: iunit_nam = 22
+  integer(I4B) :: iunit_bud = 23
+  integer(I4B) :: iunit_zon = 24
+  integer(I4B) :: iunit_grb = 25
   logical :: exists
   
   ! -- Write title to screen
@@ -63,6 +65,7 @@ subroutine read_namefile(iunit_nam, iunit_bud, iunit_zon, iunit_grb)
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
   ! -- modules
+  use KindModule
   use SimVariablesModule, only: iout
   use SimModule, only: store_error, ustop
   use ConstantsModule, only: LENHUGELINE, LINELENGTH
@@ -77,7 +80,7 @@ subroutine read_namefile(iunit_nam, iunit_bud, iunit_zon, iunit_grb)
   integer, intent(inout) :: iunit_grb
   ! -- local
   type(BlockParserType) :: parser
-  integer :: ierr, iu
+  integer(I4B) :: ierr, iu
   logical :: isfound, endOfBlock
   character(len=LINELENGTH) :: keyword, errmsg
   character(len=LENHUGELINE) :: filename
@@ -138,6 +141,7 @@ subroutine process_budget(iunit_csv, iunit_bud, iunit_zon, iunit_grb)
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
   ! -- modules
+  use KindModule
   use ConstantsModule, only: LINELENGTH
   use SimVariablesModule, only: iout
   use SimModule, only: store_error, ustop
@@ -166,11 +170,11 @@ subroutine process_budget(iunit_csv, iunit_bud, iunit_zon, iunit_grb)
   character(len=16), dimension(:), allocatable :: packagenamearray
   integer, dimension(:), allocatable :: internalflow
   integer, allocatable, dimension(:) :: mshape
-  integer :: ibudterm
-  integer :: itime = 1
-  integer :: ncrgrb
-  integer :: ncrbud = 0
-  integer :: ncr
+  integer(I4B) :: ibudterm
+  integer(I4B) :: itime = 1
+  integer(I4B) :: ncrgrb
+  integer(I4B) :: ncrbud = 0
+  integer(I4B) :: ncr
   logical :: opengrb
   logical :: success
   logical :: hasiaja = .false.
@@ -312,6 +316,7 @@ end subroutine process_budget
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    use KindModule
     use InputOutputModule, only: urword
     use ConstantsModule, only: LENHUGELINE
     implicit none
@@ -321,15 +326,15 @@ end subroutine process_budget
     character(len=*), intent(inout) :: fcsv
     ! -- local
     character(len=LENHUGELINE) :: line
-    integer :: inunit = 0
-    integer :: ilen
-    integer :: istat
-    integer :: lloc
-    integer :: istart
-    integer :: istop
-    integer :: ival
-    integer :: i
-    double precision :: rval
+    integer(I4B) :: inunit = 0
+    integer(I4B) :: ilen
+    integer(I4B) :: istat
+    integer(I4B) :: lloc
+    integer(I4B) :: istart
+    integer(I4B) :: istop
+    integer(I4B) :: ival
+    integer(I4B) :: i
+    real(DP) :: rval
 ! ------------------------------------------------------------------------------
     !
     ! -- Get the command line string

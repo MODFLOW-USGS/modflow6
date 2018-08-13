@@ -154,6 +154,7 @@
 		<File RelativePath="..\src\Utilities\ArrayReaders.f90"/>
 		<File RelativePath="..\src\Utilities\BlockParser.f90"/>
 		<File RelativePath="..\src\Utilities\Budget.f90"/>
+		<File RelativePath="..\src\Utilities\comarg.f90"/>
 		<File RelativePath="..\src\Utilities\compilerversion.fpp">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration></File>
@@ -169,9 +170,11 @@
 		<File RelativePath="..\src\Utilities\Sim.f90"/>
 		<File RelativePath="..\src\Utilities\SimVariables.f90"/>
 		<File RelativePath="..\src\Utilities\SmoothingFunctions.f90"/>
+		<File RelativePath="..\src\Utilities\sort.f90"/>
 		<File RelativePath="..\src\Utilities\Sparse.f90"/>
 		<File RelativePath="..\src\Utilities\StringList.f90"/>
-		<File RelativePath="..\src\Utilities\Timer.f90"/></Filter>
+		<File RelativePath="..\src\Utilities\Timer.f90"/>
+		<File RelativePath="..\src\Utilities\version.f90"/></Filter>
 		<File RelativePath="..\src\mf6.f90"/>
 		<File RelativePath="..\src\mf6lists.f90"/>
 		<File RelativePath="..\src\SimulationCreate.f90"/></Filter></Files>

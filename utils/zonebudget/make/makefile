@@ -1,4 +1,4 @@
-# makefile created on 2017-08-07 08:51:15.746978
+# makefile created on 2018-08-09 13:41:24.005512
 # by pymake (version 1.1.0)
 # using the gfortran fortran and gcc c/c++ compilers.
 
@@ -19,28 +19,30 @@ ${SOURCEDIR2}
 
 # Define the Fortran compile flags
 FC = gfortran
-FFLAGS = -O2 -fbacktrace -ffpe-summary=overflow -ffpe-trap=overflow,zero,invalid 
+FFLAGS = -O2 -fbacktrace 
 
 # Define the C compile flags
 CC = gcc
 CFLAGS = -O3 -D_UF 
 
 # Define the libraries
-SYSLIBS = -lc 
+SYSLIBS = 
 
 OBJECTS = \
 $(OBJDIR)/kind.o \
-$(OBJDIR)/SimVariables.o \
 $(OBJDIR)/OpenSpec.o \
 $(OBJDIR)/Constants.o \
+$(OBJDIR)/version.o \
+$(OBJDIR)/SimVariables.o \
 $(OBJDIR)/ArrayHandlers.o \
 $(OBJDIR)/Sim.o \
+$(OBJDIR)/Budget.o \
 $(OBJDIR)/InputOutput.o \
 $(OBJDIR)/budgetdata.o \
 $(OBJDIR)/grb.o \
-$(OBJDIR)/ArrayReaders2.o \
+$(OBJDIR)/sort.o \
+$(OBJDIR)/ArrayReaders.o \
 $(OBJDIR)/BlockParser.o \
-$(OBJDIR)/Budget.o \
 $(OBJDIR)/zone.o \
 $(OBJDIR)/zoneoutput.o \
 $(OBJDIR)/zbud6.o 

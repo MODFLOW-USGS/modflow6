@@ -647,7 +647,7 @@ module UzfKinematicModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     !modules
-    use TdisModule, only: delt, kper
+    use TdisModule, only: delt
     !arguments
     class(UzfKinematicType) :: this
     type(UzfKinematicType) :: thisbelow

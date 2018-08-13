@@ -1,15 +1,17 @@
 module ZoneOutputModule
   
+  use KindModule
   use ConstantsModule, only: LINELENGTH
   use BudgetModule, only: BudgetType, budget_cr
+  use ZoneModule, only: iuniqzone
   implicit none
   private
   public :: zoneoutput_init
   public :: zoneoutput_write
   public :: zoneoutput_finalize
   
-  integer :: iout
-  integer :: ioutcsv = 0
+  integer(I4B) :: iout
+  integer(I4B) :: ioutcsv = 0
   type(BudgetType), dimension(:), allocatable :: budobj
   
   contains
@@ -22,12 +24,12 @@ module ZoneOutputModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    integer, intent(in) :: iunit_out
-    integer, intent(in) :: iunit_csv
-    integer, intent(in) :: maxzone
-    integer, intent(in) :: nbudterms
+    integer(I4B), intent(in) :: iunit_out
+    integer(I4B), intent(in) :: iunit_csv
+    integer(I4B), intent(in) :: maxzone
+    integer(I4B), intent(in) :: nbudterms
     ! -- local
-    integer :: izone
+    integer(I4B) :: izone
     character(len=LINELENGTH) :: bdzone
 ! ------------------------------------------------------------------------------
     iout = iunit_out
@@ -38,7 +40,7 @@ module ZoneOutputModule
     allocate(budobj(maxzone))
     do izone = 1, maxzone
       call budobj(izone)%allocate_scalars('ZONEBUDGET')
-      write(bdzone, '(a,i0)') 'ZONE ', izone
+      write(bdzone, '(a,i0)') 'ZONE ', iuniqzone(izone) 
       call budobj(izone)%budget_df(nbudterms + maxzone,                        &
                                    labeltitle='PACKAGE/MODEL', bdzone=bdzone)
     enddo
@@ -57,24 +59,25 @@ module ZoneOutputModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ZoneModule, only: maxzone
+    use ZoneModule, only: maxzone, iuniqzone
     ! -- dummy
-    integer, intent(in) :: itime
-    integer, intent(in) :: kstp
-    integer, intent(in) :: kper
-    double precision, intent(in) :: delt
-    double precision, intent(in) :: totim
-    integer, intent(in) :: nbudterms
-    integer, dimension(0:maxzone, 0:maxzone), intent(in) :: nmznfl
-    double precision, dimension(2, 0:maxzone, nbudterms), intent(in) :: vbvl
-    double precision, dimension(2, 0:maxzone, 0:maxzone), intent(in) :: vbznfl
+    integer(I4B), intent(in) :: itime
+    integer(I4B), intent(in) :: kstp
+    integer(I4B), intent(in) :: kper
+    real(DP), intent(in) :: delt
+    real(DP), intent(in) :: totim
+    integer(I4B), intent(in) :: nbudterms
+    integer(I4B), dimension(0:maxzone, 0:maxzone), intent(in) :: nmznfl
+    real(DP), dimension(2, 0:maxzone, nbudterms), intent(in) :: vbvl
+    real(DP), dimension(2, 0:maxzone, 0:maxzone), intent(in) :: vbznfl
     character(len=16), dimension(:), intent(in) :: packagenamearray
     character(len=16), dimension(:), intent(in) :: budtxtarray
-    integer, dimension(:), intent(in) :: internalflow
+    integer(I4B), dimension(:), intent(in) :: internalflow
     ! -- local
     character(len=500) :: txt
-    integer :: ibudterm, izone, iinout, iz2, j
-    double precision :: val, rin, rout
+    integer(I4B) :: ibudterm, izone, iinout, iz2, j
+    integer(I4B) :: izv
+    real(DP) :: val, rin, rout
     character(len=16), dimension(:), allocatable :: spntmp
 ! ------------------------------------------------------------------------------
     !
@@ -129,11 +132,21 @@ module ZoneOutputModule
       !
       ! -- Write zone to zone flow names to CSV header
       do izone = 0, maxzone
-        write(ioutcsv, '(a, i0)', advance='no') 'FROM ZONE ', izone
+        if (izone == 0) then
+          izv = izone
+        else  
+          izv =  iuniqzone(izone)
+        end if
+        write(ioutcsv, '(a, i0)', advance='no') 'FROM ZONE ', izv 
         write(ioutcsv, '(a)', advance='no') ','
       enddo
       do izone = 0, maxzone
-        write(ioutcsv, '(a, i0)', advance='no') 'TO ZONE ', izone
+        if (izone == 0) then
+          izv = izone
+        else  
+          izv =  iuniqzone(izone)
+        end if
+        write(ioutcsv, '(a, i0)', advance='no') 'TO ZONE ', izv 
         if (izone < maxzone) write(ioutcsv, '(a)', advance='no') ','
       enddo
       write(ioutcsv, *)
@@ -149,7 +162,7 @@ module ZoneOutputModule
       write(ioutcsv, '(a)', advance='no') trim(adjustl(txt)) // ','
       write(txt, '(i0)') kper
       write(ioutcsv, '(a)', advance='no') trim(adjustl(txt)) // ','
-      write(txt, '(i0)') izone
+      write(txt, '(i0)') iuniqzone(izone)
       write(ioutcsv, '(a)', advance='no') trim(adjustl(txt)) // ','
       !
       ! -- CSV budget ins and outs
@@ -194,7 +207,12 @@ module ZoneOutputModule
         if (nmznfl(izone, iz2) == 1) then
           rin = vbznfl(1, izone, iz2)
           rout =vbznfl(2, izone, iz2)
-          write(txt, '(a,i0)') 'ZONE ', iz2
+          if (iz2 == 0) then
+            izv = iz2
+          else  
+            izv =  iuniqzone(iz2)
+          end if
+          write(txt, '(a,i0)') 'ZONE ', izv 
           call budobj(izone)%addentry(rin, rout, delt, txt)
         endif
       enddo      
