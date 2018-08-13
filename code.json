@@ -1,38 +1,38 @@
 [
     {
-        "status": "Release Candidate", 
+        "status": "Production",
         "languages": [
             "Fortran2008"
-        ], 
-        "repositoryURL": "https://code.usgs.gov/usgs/modflow/modflow6.git", 
-        "laborHours": -1, 
-        "description": "MODFLOW is the USGS's modular hydrologic model. MODFLOW is considered an international standard for simulating and predicting groundwater conditions and groundwater/surface-water interactions.", 
+        ],
+        "repositoryURL": "https://code.usgs.gov/usgs/modflow/modflow6.git",
+        "laborHours": -1,
+        "description": "MODFLOW is the USGS's modular hydrologic model. MODFLOW is considered an international standard for simulating and predicting groundwater conditions and groundwater/surface-water interactions.",
         "tags": [
-            "MODFLOW", 
+            "MODFLOW",
             "groundwater model"
-        ], 
-        "name": "modflow6", 
-        "downloadURL": "https://code.usgs.gov/usgs/modflow/modflow6/archive/master.zip", 
+        ],
+        "name": "modflow6",
+        "downloadURL": "https://code.usgs.gov/usgs/modflow/modflow6/archive/master.zip",
         "contact": {
-            "name": "Christian D. Langevin", 
+            "name": "Christian D. Langevin",
             "email": "langevin@usgs.gov"
-        }, 
-        "vcs": "git", 
-        "version": "6.0.2.62", 
+        },
+        "vcs": "git",
+        "version": "6.0.3",
         "date": {
             "metadataLastUpdated": "2018-08-09"
-        }, 
-        "organization": "U.S. Geological Survey", 
+        },
+        "organization": "U.S. Geological Survey",
         "permissions": {
             "licenses": [
                 {
-                    "URL": "https://code.usgs.gov/usgs/modflow/modflow6/blob/master/LICENSE.md", 
+                    "URL": "https://code.usgs.gov/usgs/modflow/modflow6/blob/master/LICENSE.md",
                     "name": "Public Domain, CC0-1.0"
                 }
-            ], 
+            ],
             "usageType": "openSource"
-        }, 
-        "homepageURL": "https://code.usgs.gov/usgs/modflow/modflow6/", 
+        },
+        "homepageURL": "https://code.usgs.gov/usgs/modflow/modflow6/",
         "disclaimerURL": "https://code.usgs.gov/usgs/modflow/modflow6/blob/master/DISCLAIMER.md"
     }
 ]
