@@ -22,16 +22,16 @@ module NumericalExchangeModule
     integer(I4B), pointer                        :: iprflow                     !print flag for cell by cell flows
     integer(I4B), pointer                        :: ipakcb                      !save flag for cell by cell flows
     integer(I4B), pointer                        :: nexg                        !number of exchanges
-    integer(I4B), dimension(:), pointer          :: nodem1                      !node numbers in model 1
-    integer(I4B), dimension(:), pointer          :: nodem2                      !node numbers in model 2
-    real(DP), pointer, dimension(:)              :: cond                        !conductance
-    integer(I4B), dimension(:), pointer          :: idxglo                      !pointer to solution amat for each connection
-    integer(I4B), dimension(:), pointer          :: idxsymglo                   !pointer to symmetric amat position for each connection
+    integer(I4B), dimension(:), pointer, contiguous          :: nodem1                      !node numbers in model 1
+    integer(I4B), dimension(:), pointer, contiguous          :: nodem2                      !node numbers in model 2
+    real(DP), dimension(:), pointer, contiguous              :: cond                        !conductance
+    integer(I4B), dimension(:), pointer, contiguous          :: idxglo                      !pointer to solution amat for each connection
+    integer(I4B), dimension(:), pointer, contiguous          :: idxsymglo                   !pointer to symmetric amat position for each connection
     class(NumericalModelType), pointer           :: m1                          !pointer to model 1
     class(NumericalModelType), pointer           :: m2                          !pointer to model 2
     integer(I4B), pointer                        :: naux                        !number of auxiliary variables
     character(len=16), allocatable, dimension(:) :: auxname                     !array of auxiliary variable names
-    real(DP), pointer, dimension(:, :)           :: auxvar                      !array of auxiliary variable values
+    real(DP), dimension(:, :), pointer, contiguous           :: auxvar                      !array of auxiliary variable values
     type(BlockParserType)                        :: parser                      !block parser
   contains
     procedure :: exg_df

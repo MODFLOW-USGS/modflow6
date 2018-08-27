@@ -32,7 +32,7 @@ module BndModule
     character(len=500)                                  :: listlabel   = ''      !title of table written for RP
     character(len=LENPACKAGENAME)                       :: text = ''
     character(len=LENAUXNAME), allocatable, dimension(:):: auxname               !name for each auxiliary variable
-    character(len=LENBOUNDNAME), pointer, dimension(:)  :: boundname   => null() !vector of boundnames
+    character(len=LENBOUNDNAME), dimension(:), pointer, contiguous  :: boundname   => null() !vector of boundnames
     ! -- scalars
     integer(I4B), pointer                               :: ibcnum      => null() !consecutive package number for this boundary condition
     integer(I4B), pointer                               :: maxbound    => null() !max number of boundaries
@@ -45,13 +45,13 @@ module BndModule
     integer(I4B), pointer                               :: npakeq      => null() !number of equations in this package (normally 0 unless package adds rows to matrix)
     integer(I4B), pointer                               :: ioffset     => null() !offset of this package in the model
     ! -- arrays
-    integer(I4B), pointer, dimension(:)                 :: nodelist    => null() !vector of reduced node numbers
-    real(DP), pointer, dimension(:,:)                   :: bound       => null() !array of package specific boundary numbers
-    real(DP), pointer, dimension(:)                     :: hcof        => null() !diagonal contribution
-    real(DP), pointer, dimension(:)                     :: rhs         => null() !right-hand side contribution
-    real(DP), pointer, dimension(:,:)                   :: auxvar      => null() !auxiliary variable array
-    real(DP), pointer, dimension(:)                     :: simvals     => null() !simulated values
-    real(DP), pointer, dimension(:)                     :: simtomvr    => null() !simulated values
+    integer(I4B), dimension(:), pointer, contiguous                 :: nodelist    => null() !vector of reduced node numbers
+    real(DP), dimension(:,:), pointer, contiguous                   :: bound       => null() !array of package specific boundary numbers
+    real(DP), dimension(:), pointer, contiguous                     :: hcof        => null() !diagonal contribution
+    real(DP), dimension(:), pointer, contiguous                     :: rhs         => null() !right-hand side contribution
+    real(DP), dimension(:,:), pointer, contiguous                   :: auxvar      => null() !auxiliary variable array
+    real(DP), dimension(:), pointer, contiguous                     :: simvals     => null() !simulated values
+    real(DP), dimension(:), pointer, contiguous                     :: simtomvr    => null() !simulated values
     !
     ! -- water mover flag and object
     integer(I4B), pointer                               :: imover      => null()
@@ -69,11 +69,11 @@ module BndModule
     !
     ! -- pointers to model/solution variables
     integer(I4B), pointer                               :: neq                   !number of equations for model
-    integer(I4B), dimension(:), pointer                 :: ibound      => null() !ibound array
-    real(DP), dimension(:), pointer                     :: xnew        => null() !dependent variable (head) for this time step
-    real(DP), dimension(:), pointer                     :: xold        => null() !dependent variable for last time step
-    real(DP), dimension(:), pointer                     :: flowja      => null() !intercell flows
-    integer(I4B), dimension(:), pointer                 :: icelltype   => null() !pointer to icelltype array in NPF
+    integer(I4B), dimension(:), pointer, contiguous                 :: ibound      => null() !ibound array
+    real(DP), dimension(:), pointer, contiguous                     :: xnew        => null() !dependent variable (head) for this time step
+    real(DP), dimension(:), pointer, contiguous                     :: xold        => null() !dependent variable for last time step
+    real(DP), dimension(:), pointer, contiguous                     :: flowja      => null() !intercell flows
+    integer(I4B), dimension(:), pointer, contiguous                 :: icelltype   => null() !pointer to icelltype array in NPF
 
   contains
     procedure :: bnd_df
@@ -934,8 +934,8 @@ module BndModule
     use MemoryManagerModule, only: mem_allocate, mem_setptr
     ! -- dummy
     class(BndType) :: this
-    integer(I4B), dimension(:), pointer, optional :: nodelist
-    real(DP), dimension(:, :), pointer, optional :: auxvar
+    integer(I4B), dimension(:), pointer, contiguous, optional :: nodelist
+    real(DP), dimension(:, :), pointer, contiguous, optional :: auxvar
     ! -- local
     integer(I4B) :: i
     integer(I4B) :: j
@@ -1035,10 +1035,10 @@ module BndModule
 ! ------------------------------------------------------------------------------
     class(BndType) :: this
     integer(I4B), pointer :: neq
-    integer(I4B), dimension(:), pointer :: ibound
-    real(DP), dimension(:), pointer :: xnew
-    real(DP), dimension(:), pointer :: xold
-    real(DP), dimension(:), pointer :: flowja
+    integer(I4B), dimension(:), pointer, contiguous :: ibound
+    real(DP), dimension(:), pointer, contiguous :: xnew
+    real(DP), dimension(:), pointer, contiguous :: xold
+    real(DP), dimension(:), pointer, contiguous :: flowja
 ! ------------------------------------------------------------------------------
     !
     ! -- Set the pointers

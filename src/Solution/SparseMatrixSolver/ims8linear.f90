@@ -41,11 +41,11 @@
     ! POINTERS TO SOLUTION VARIABLES
     integer(I4B), POINTER :: NEQ => NULL()
     integer(I4B), POINTER :: NJA => NULL()
-    integer(I4B), DIMENSION(:), POINTER, CONTIGUOUS :: IA => NULL()
-    integer(I4B), DIMENSION(:), POINTER, CONTIGUOUS :: JA => NULL()
-    real(DP), DIMENSION(:), POINTER, CONTIGUOUS :: AMAT => NULL()
-    real(DP), DIMENSION(:), POINTER :: RHS => NULL()
-    real(DP), DIMENSION(:), POINTER :: X => NULL()
+    integer(I4B), dimension(:), pointer, contiguous :: IA => NULL()
+    integer(I4B), dimension(:), pointer, contiguous :: JA => NULL()
+    real(DP), dimension(:), pointer, contiguous :: AMAT => NULL()
+    real(DP), dimension(:), pointer, contiguous :: RHS => NULL()
+    real(DP), dimension(:), pointer, contiguous :: X => NULL()
     ! VECTORS
     real(DP),POINTER,DIMENSION(:),CONTIGUOUS::DSCALE => NULL()
     real(DP),POINTER,DIMENSION(:),CONTIGUOUS::DSCALE2 => NULL()

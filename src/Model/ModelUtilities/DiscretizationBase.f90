@@ -33,14 +33,14 @@ module BaseDisModule
     real(DP), pointer                       :: yorigin    => null()             ! y-position of the lower-left grid corner (default is 0.)
     real(DP), pointer                       :: xorigin    => null()             ! x-position of the lower-left grid corner (default is 0.)
     real(DP), pointer                       :: angrot     => null()             ! counter-clockwise rotation angle of the lower-left corner (default is 0.0)
-    integer(I4B), pointer, dimension(:)     :: mshape     => null()             !shape of the model; (nodes) for DisBaseType
-    real(DP), dimension(:), pointer         :: top        => null()             !(size:nodes) cell top elevation
-    real(DP), dimension(:), pointer         :: bot        => null()             !(size:nodes) cell bottom elevation
-    real(DP), dimension(:), pointer         :: area       => null()             !(size:nodes) cell area, in plan view
+    integer(I4B), dimension(:), pointer, contiguous     :: mshape     => null()             !shape of the model; (nodes) for DisBaseType
+    real(DP), dimension(:), pointer, contiguous         :: top        => null()             !(size:nodes) cell top elevation
+    real(DP), dimension(:), pointer, contiguous         :: bot        => null()             !(size:nodes) cell bottom elevation
+    real(DP), dimension(:), pointer, contiguous         :: area       => null()             !(size:nodes) cell area, in plan view
     type(ConnectionsType), pointer          :: con        => null()             !connections object
     type(BlockParserType)                   :: parser                           !object to read blocks
-    real(DP), dimension(:), pointer         :: dbuff  => null()
-    integer(I4B), dimension(:), pointer     :: ibuff  => null()
+    real(DP), dimension(:), pointer, contiguous         :: dbuff  => null()
+    integer(I4B), dimension(:), pointer, contiguous     :: ibuff  => null()
   contains
     procedure :: dis_df
     procedure :: dis_ac
@@ -849,7 +849,7 @@ module BaseDisModule
     integer(I4B), intent(inout)                        :: istop
     integer(I4B), intent(in)                           :: in
     integer(I4B), intent(in)                           :: iout
-    integer(I4B), dimension(:), pointer, intent(inout) :: iarray
+    integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: iarray
     character(len=*), intent(in)                       :: aname
     ! -- local
     character(len=LINELENGTH) :: ermsg
@@ -880,7 +880,7 @@ module BaseDisModule
     integer(I4B), intent(inout)                    :: istop
     integer(I4B), intent(in)                       :: in
     integer(I4B), intent(in)                       :: iout
-    real(DP), dimension(:), pointer, intent(inout) :: darray
+    real(DP), dimension(:), pointer, contiguous, intent(inout) :: darray
     character(len=*), intent(in)                   :: aname
     ! -- local
     integer(I4B) :: ival
@@ -926,11 +926,11 @@ module BaseDisModule
     integer(I4B), intent(inout) :: nlist
     integer(I4B), intent(in) :: inamedbound
     integer(I4B), intent(in) :: iauxmultcol
-    integer(I4B), pointer, dimension(:), intent(inout) :: nodelist
-    real(DP), pointer, dimension(:,:), intent(inout) :: rlist
-    real(DP), pointer, dimension(:,:), intent(inout) :: auxvar
+    integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: nodelist
+    real(DP), dimension(:,:), pointer, contiguous, intent(inout) :: rlist
+    real(DP), dimension(:,:), pointer, contiguous, intent(inout) :: auxvar
     character(len=16), dimension(:), intent(inout) :: auxname
-    character(len=LENBOUNDNAME), pointer, dimension(:),                        &
+    character(len=LENBOUNDNAME), dimension(:), pointer, contiguous,                        &
                                           intent(inout) :: boundname
     character(len=500), intent(in) :: label
     character(len=*),  intent(in) :: pkgName
@@ -1108,7 +1108,7 @@ module BaseDisModule
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(DisBaseType), intent(inout)              :: this
-    real(DP), dimension(:), pointer, intent(inout) :: darray
+    real(DP), dimension(:), pointer, contiguous, intent(inout) :: darray
     integer(I4B), intent(in)                       :: iout
     integer(I4B), intent(in)                       :: iprint
     integer(I4B), intent(in)                       :: idataun

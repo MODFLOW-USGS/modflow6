@@ -24,10 +24,10 @@
 !      Mover aware packages define the following members:
 !
 !      integer(I4B), pointer            :: imover        => null()
-!      real(DP), pointer, dimension(:)  :: qtformvr      => null()
-!      real(DP), pointer, dimension(:)  :: qformvr       => null()
-!      real(DP), pointer, dimension(:)  :: qtomvr        => null()
-!      real(DP), pointer, dimension(:)  :: qfrommvr      => null()
+!      real(DP), dimension(:), pointer, contiguous  :: qtformvr      => null()
+!      real(DP), dimension(:), pointer, contiguous  :: qformvr       => null()
+!      real(DP), dimension(:), pointer, contiguous  :: qtomvr        => null()
+!      real(DP), dimension(:), pointer, contiguous  :: qfrommvr      => null()
 !
 !      Note qtformvr is filled as a positive number to indicate that it is
 !      water available to be moved.  If qtformvr is negative, then
@@ -114,12 +114,12 @@ module GwfMvrModule
     integer(I4B), pointer                         :: iexgmvr => null()          !flag to indicate mover is for an exchange (not for a single model)
     integer(I4B), pointer                         :: imodelnames => null()      !flag to indicate package input file has model names in it
     real(DP), pointer                             :: omega => null()            !temporal weighting factor (not presently used)
-    integer(I4B), dimension(:), pointer           :: ientries => null()         !number of entries for each combination
+    integer(I4B), dimension(:), pointer, contiguous           :: ientries => null()         !number of entries for each combination
     character(len=LENORIGIN+1),                                                &
-      dimension(:), pointer                       :: pakorigins                 !array of model//package names
+      dimension(:), pointer, contiguous                       :: pakorigins                 !array of model//package names
     character(len=LENPACKAGENAME),                                             &
-      dimension(:), pointer                       :: paknames                   !array of package names
-    type(MvrType), pointer, dimension(:)          :: mvr => null()              !array of movers
+      dimension(:), pointer, contiguous                       :: paknames                   !array of package names
+    type(MvrType), dimension(:), pointer, contiguous          :: mvr => null()              !array of movers
     type(BudgetType), pointer                     :: budget => null()           !mover budget object
   contains
     procedure :: mvr_ar

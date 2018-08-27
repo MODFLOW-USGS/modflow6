@@ -123,7 +123,7 @@ contains
   end subroutine allocate_int
   
   subroutine allocate_int1d(aint, isize, name, origin)
-    integer(I4B), dimension(:), pointer, intent(inout) :: aint
+    integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: aint
     integer(I4B), intent(in) :: isize
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
@@ -150,7 +150,7 @@ contains
   end subroutine allocate_int1d
   
   subroutine allocate_int2d(aint, ncol, nrow, name, origin)
-    integer(I4B), dimension(:, :), pointer, intent(inout) :: aint
+    integer(I4B), dimension(:, :), pointer, contiguous, intent(inout) :: aint
     integer(I4B), intent(in) :: ncol
     integer(I4B), intent(in) :: nrow
     character(len=*), intent(in) :: name
@@ -206,7 +206,7 @@ contains
   end subroutine allocate_dbl
   
   subroutine allocate_dbl1d(adbl, isize, name, origin)
-    real(DP), dimension(:), pointer, intent(inout) :: adbl
+    real(DP), dimension(:), pointer, contiguous, intent(inout) :: adbl
     integer(I4B), intent(in) :: isize
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
@@ -233,7 +233,7 @@ contains
   end subroutine allocate_dbl1d
   
   subroutine allocate_dbl2d(adbl, ncol, nrow, name, origin)
-    real(DP), dimension(:, :), pointer, intent(inout) :: adbl
+    real(DP), dimension(:, :), pointer, contiguous, intent(inout) :: adbl
     integer(I4B), intent(in) :: ncol
     integer(I4B), intent(in) :: nrow
     character(len=*), intent(in) :: name
@@ -263,7 +263,7 @@ contains
   end subroutine allocate_dbl2d
 
   subroutine allocate_ts1d(ats, isize, name, origin)
-    type (MemoryTSType), dimension(:), pointer, intent(inout) :: ats
+    type (MemoryTSType), dimension(:), pointer, contiguous, intent(inout) :: ats
     integer(I4B), intent(in) :: isize
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
@@ -299,7 +299,7 @@ contains
   end subroutine allocate_ts1d
   
   subroutine reallocate_int1d(aint, isize, name, origin)
-    integer(I4B), dimension(:), pointer, intent(inout) :: aint
+    integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: aint
     integer(I4B), intent(in) :: isize
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
@@ -343,7 +343,7 @@ contains
   end subroutine reallocate_int1d
   
   subroutine reallocate_int2d(aint, ncol, nrow, name, origin)
-    integer(I4B), dimension(:, :), pointer, intent(inout) :: aint
+    integer(I4B), dimension(:, :), pointer, contiguous, intent(inout) :: aint
     integer(I4B), intent(in) :: ncol
     integer(I4B), intent(in) :: nrow
     character(len=*), intent(in) :: name
@@ -394,7 +394,7 @@ contains
   end subroutine reallocate_int2d
   
   subroutine reallocate_dbl1d(adbl, isize, name, origin)
-    real(DP), dimension(:), pointer, intent(inout) :: adbl
+    real(DP), dimension(:), pointer, contiguous, intent(inout) :: adbl
     integer(I4B), intent(in) :: isize
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
@@ -439,7 +439,7 @@ contains
   end subroutine reallocate_dbl1d
   
   subroutine reallocate_dbl2d(adbl, ncol, nrow, name, origin)
-    real(DP), dimension(:, :), pointer, intent(inout) :: adbl
+    real(DP), dimension(:, :), pointer, contiguous, intent(inout) :: adbl
     integer(I4B), intent(in) :: ncol
     integer(I4B), intent(in) :: nrow
     character(len=*), intent(in) :: name
@@ -522,7 +522,7 @@ contains
   end subroutine setptr_int
   
   subroutine setptr_int1d(aint, name, origin)
-    integer(I4B), dimension(:), pointer, intent(inout) :: aint
+    integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: aint
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
     class(MemoryType), pointer :: mt
@@ -538,7 +538,7 @@ contains
   end subroutine setptr_int1d
   
   subroutine setptr_int2d(aint, name, origin)
-    integer(I4B), dimension(:, :), pointer, intent(inout) :: aint
+    integer(I4B), dimension(:, :), pointer, contiguous, intent(inout) :: aint
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
     class(MemoryType), pointer :: mt
@@ -570,7 +570,7 @@ contains
   end subroutine setptr_dbl
   
   subroutine setptr_dbl1d(adbl, name, origin)
-    real(DP), dimension(:), pointer, intent(inout) :: adbl
+    real(DP), dimension(:), pointer, contiguous, intent(inout) :: adbl
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
     class(MemoryType), pointer :: mt
@@ -586,7 +586,7 @@ contains
   end subroutine setptr_dbl1d
   
   subroutine setptr_dbl2d(adbl, name, origin)
-    real(DP), dimension(:, :), pointer, intent(inout) :: adbl
+    real(DP), dimension(:, :), pointer, contiguous, intent(inout) :: adbl
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
     class(MemoryType), pointer :: mt
@@ -603,7 +603,7 @@ contains
 
   
   subroutine copyptr_int1d(aint, name, origin, origin2)
-    integer(I4B), dimension(:), pointer, intent(inout) :: aint
+    integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: aint
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
     character(len=*), intent(in), optional :: origin2
@@ -630,7 +630,7 @@ contains
   end subroutine copyptr_int1d
 
   subroutine copyptr_int2d(aint, name, origin, origin2)
-    integer(I4B), dimension(:,:), pointer, intent(inout) :: aint
+    integer(I4B), dimension(:,:), pointer, contiguous, intent(inout) :: aint
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
     character(len=*), intent(in), optional :: origin2
@@ -662,7 +662,7 @@ contains
   end subroutine copyptr_int2d
   
   subroutine copyptr_dbl1d(adbl, name, origin, origin2)
-    real(DP), dimension(:), pointer, intent(inout) :: adbl
+    real(DP), dimension(:), pointer, contiguous, intent(inout) :: adbl
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
     character(len=*), intent(in), optional :: origin2
@@ -689,7 +689,7 @@ contains
   end subroutine copyptr_dbl1d
 
   subroutine copyptr_dbl2d(adbl, name, origin, origin2)
-    real(DP), dimension(:,:), pointer, intent(inout) :: adbl
+    real(DP), dimension(:,:), pointer, contiguous, intent(inout) :: adbl
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
     character(len=*), intent(in), optional :: origin2
@@ -787,7 +787,7 @@ contains
   end subroutine deallocate_dbl
   
   subroutine deallocate_int1d(aint1d)
-    integer(I4B), dimension(:), pointer, intent(inout) :: aint1d
+    integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: aint1d
     class(MemoryType), pointer :: mt
     integer(I4B) :: ipos
     logical :: found
@@ -809,7 +809,7 @@ contains
   end subroutine deallocate_int1d
   
   subroutine deallocate_int2d(aint2d)
-    integer(I4B), dimension(:, :), pointer, intent(inout) :: aint2d
+    integer(I4B), dimension(:, :), pointer, contiguous, intent(inout) :: aint2d
     class(MemoryType), pointer :: mt
     integer(I4B) :: ipos
     logical :: found
@@ -831,7 +831,7 @@ contains
   end subroutine deallocate_int2d
   
   subroutine deallocate_dbl1d(adbl1d)
-    real(DP), dimension(:), pointer, intent(inout) :: adbl1d
+    real(DP), dimension(:), pointer, contiguous, intent(inout) :: adbl1d
     class(MemoryType), pointer :: mt
     integer(I4B) :: ipos
     logical :: found
@@ -853,7 +853,7 @@ contains
   end subroutine deallocate_dbl1d
   
   subroutine deallocate_dbl2d(adbl2d)
-    real(DP), dimension(:, :), pointer, intent(inout) :: adbl2d
+    real(DP), dimension(:, :), pointer, contiguous, intent(inout) :: adbl2d
     class(MemoryType), pointer :: mt
     integer(I4B) :: ipos
     logical :: found
@@ -875,7 +875,7 @@ contains
   end subroutine deallocate_dbl2d
   
   subroutine deallocate_ts1d(ats1d)
-    type (MemoryTSType), dimension(:), pointer, intent(inout) :: ats1d
+    type (MemoryTSType), dimension(:), pointer, contiguous, intent(inout) :: ats1d
     class(MemoryType), pointer :: mt
     integer(I4B) :: ipos
     integer(I4B) :: i

@@ -28,7 +28,7 @@ module TimeArraySeriesManagerModule
     ! -- Private members
     type(ListType), pointer, private                 :: boundTasLinks => null() ! list of TAS links
     character(len=LINELENGTH), allocatable, dimension(:) :: tasfiles            ! list of TA file names
-    type(TimeArraySeriesType), pointer, dimension(:) :: taslist                 ! array of TA pointers
+    type(TimeArraySeriesType), dimension(:), pointer, contiguous :: taslist                 ! array of TA pointers
     character(len=LENTIMESERIESNAME), allocatable, dimension(:) :: tasnames     ! array of TA names
   contains
     ! -- Public procedures
@@ -313,7 +313,7 @@ contains
     character(len=*), intent(in) :: tasName
     character(len=*), intent(in) :: text
     logical, intent(in) :: convertFlux
-    integer(I4B), dimension(:), pointer, intent(in) :: nodelist
+    integer(I4B), dimension(:), pointer, contiguous, intent(in) :: nodelist
     integer(I4B), intent(in) :: inunit
     ! -- local
     integer(I4B) :: i, nfiles, iloc

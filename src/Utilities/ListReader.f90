@@ -25,12 +25,12 @@ module ListReaderModule
     integer(I4B)                                                :: ntxtauxvar    ! number of text entries found in auxvar
     character(len=LINELENGTH)                                   :: label         ! label for printing list
     character(len=LINELENGTH)                                   :: line          ! line string for reading file
-    integer(I4B), dimension(:), pointer                         :: mshape        ! pointer to model shape
-    integer(I4B), dimension(:), pointer                         :: nodelist      ! pointer to nodelist
-    real(DP), dimension(:, :), pointer                          :: rlist         ! pointer to rlist
-    real(DP), dimension(:, :), pointer                          :: auxvar        ! pointer to auxvar
-    character(len=16), dimension(:), pointer                    :: auxname       ! pointer to aux names
-    character(len=LENBOUNDNAME), pointer, dimension(:)          :: boundname     ! pointer to boundname
+    integer(I4B), dimension(:), pointer, contiguous                         :: mshape        ! pointer to model shape
+    integer(I4B), dimension(:), pointer, contiguous                         :: nodelist      ! pointer to nodelist
+    real(DP), dimension(:, :), pointer, contiguous                          :: rlist         ! pointer to rlist
+    real(DP), dimension(:, :), pointer, contiguous                          :: auxvar        ! pointer to auxvar
+    character(len=16), dimension(:), pointer                                :: auxname       ! pointer to aux names
+    character(len=LENBOUNDNAME), dimension(:), pointer, contiguous          :: boundname     ! pointer to boundname
     integer(I4B), dimension(:), allocatable                     :: idxtxtrow     ! row locations of text in rlist
     integer(I4B), dimension(:), allocatable                     :: idxtxtcol     ! col locations of text in rlist
     integer(I4B), dimension(:), allocatable                     :: idxtxtauxrow  ! row locations of text in auxvar
@@ -65,12 +65,12 @@ module ListReaderModule
     integer(I4B), intent(in) :: iout
     integer(I4B), intent(inout) :: nlist
     integer(I4B), intent(in) :: inamedbound
-    integer(I4B), dimension(:), intent(in), pointer :: mshape
-    integer(I4B), dimension(:), intent(inout), pointer :: nodelist
-    real(DP), dimension(:, :), intent(inout), pointer :: rlist
-    real(DP), dimension(:, :), intent(inout), pointer :: auxvar
+    integer(I4B), dimension(:), intent(in), contiguous, pointer :: mshape
+    integer(I4B), dimension(:), intent(inout), contiguous, pointer :: nodelist
+    real(DP), dimension(:, :), intent(inout), contiguous, pointer :: rlist
+    real(DP), dimension(:, :), intent(inout), contiguous, pointer :: auxvar
     character(len=16), dimension(:), intent(inout), target :: auxname
-    character(len=LENBOUNDNAME), pointer, dimension(:), intent(inout) :: boundname
+    character(len=LENBOUNDNAME), dimension(:), pointer, contiguous, intent(inout) :: boundname
     character(len=500), intent(in) :: label
     ! -- local
 ! ------------------------------------------------------------------------------

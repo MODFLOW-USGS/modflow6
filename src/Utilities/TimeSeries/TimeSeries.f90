@@ -63,7 +63,7 @@ module TimeSeriesModule
     integer(I4B),                                public :: iout = 0
     integer(I4B),                                public :: nTimeSeries = 0
     character(len=LINELENGTH),                   public :: datafile = ''
-    type(TimeSeriesType), dimension(:), pointer, public :: timeSeries => null()
+    type(TimeSeriesType), dimension(:), pointer, contiguous, public :: timeSeries => null()
     type(BlockParserType), pointer,              public :: parser
   contains
     ! -- Public procedures

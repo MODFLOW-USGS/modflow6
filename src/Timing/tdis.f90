@@ -34,9 +34,9 @@
   real(DP), public, pointer                    :: totimsav                      !saved value for totim, used for subtiming
   real(DP), public, pointer                    :: pertimsav                     !saved value for pertim, used for subtiming
   real(DP), public, pointer                    :: totalsimtime                  !time at end of simulation
-  real(DP), public, dimension(:), pointer      :: perlen                        !length of each stress period
-  integer(I4B), public, dimension(:), pointer  :: nstp                          !number of time steps in each stress period
-  real(DP), public, dimension(:), pointer      :: tsmult                        !time step multiplier for each stress period
+  real(DP), public, dimension(:), pointer, contiguous      :: perlen                        !length of each stress period
+  integer(I4B), public, dimension(:), pointer, contiguous  :: nstp                          !number of time steps in each stress period
+  real(DP), public, dimension(:), pointer, contiguous      :: tsmult                        !time step multiplier for each stress period
   character(len=LENDATETIME), pointer          :: datetime0                     !starting date and time for the simulation
   !
   type(BlockParserType), private :: parser

@@ -61,7 +61,7 @@ module MvrModule
     character(len=LENMODELNAME+LENPACKAGENAME+1) :: origin
     integer(I4B) :: lloc, istart, istop, ival, i
     real(DP) :: rval
-    real(DP), dimension(:), pointer :: temp_ptr => null()
+    real(DP), dimension(:), pointer, contiguous :: temp_ptr => null()
     logical :: valid
     character(len=LINELENGTH) :: errmsg
     logical :: mnamel

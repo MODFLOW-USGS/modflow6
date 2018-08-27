@@ -163,8 +163,8 @@ module ObsModule
     character(len=2*LENPACKAGENAME+4),        public      :: pkgName = ''
     character(len=LENFTYPE),                  public      :: filtyp = ''
     logical,                         pointer, public      :: active => null()
-    type(ObsContainerType), dimension(:), pointer, public :: pakobs => null()
-    type(ObsDataType), dimension(:), pointer, public      :: obsData => null()
+    type(ObsContainerType), dimension(:), pointer, contiguous, public :: pakobs => null()
+    type(ObsDataType), dimension(:), pointer, contiguous, public      :: obsData => null()
     ! -- Private members
     integer(I4B),                     private :: iprecision = 2  ! 2=double; 1=single
     integer(I4B),                     private :: idigits = 5
@@ -927,7 +927,7 @@ contains
     ! -- dummy
     class(ObsType), intent(inout) :: this
     integer(I4B), intent(out)   :: nObs
-    type(ObsContainerType), pointer, dimension(:), intent(inout) :: obsArray
+    type(ObsContainerType), dimension(:), pointer, contiguous, intent(inout) :: obsArray
     ! -- local
     !
     nObs = this%get_num()

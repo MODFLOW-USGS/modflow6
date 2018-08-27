@@ -147,7 +147,7 @@ contains
     integer(I4B),      intent(in) :: numunit   ! Output unit number
     logical,           intent(in) :: formatted ! Formatted output?
     integer(I4B),      intent(in) :: indx      ! Index in ObsOutput array
-    type(ObsDataType), dimension(:), pointer, intent(in) :: obsData
+    type(ObsDataType), dimension(:), pointer, contiguous, intent(in) :: obsData
     integer(I4B),      intent(in) :: inunit
     ! -- local
     real(DP) :: r

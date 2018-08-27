@@ -20,7 +20,7 @@ module TimeArraySeriesLinkModule
     integer(I4B),                        public :: Iprpak = 1
     logical,                             public :: UseDefaultProc = .true.
     logical,                             public :: ConvertFlux = .false.
-    integer(I4B), dimension(:), pointer, public :: nodelist => null()
+    integer(I4B), dimension(:), pointer, contiguous, public :: nodelist => null()
     ! BndArray can point to an array in either the bound or auxval
     ! array of BndType, or any other double precision variable or array
     ! element that contains a value that could be controlled by a time series.
