@@ -39,7 +39,7 @@ ivoid = [0, 1, 0]
 gs0 = [0., 0., 1700.]
 
 # set travis to True when version 1.13.0 is released
-travis = [True, True]
+travis = [True, True, False]
 
 # set replace_exe to None to use default executable
 replace_exe = None
