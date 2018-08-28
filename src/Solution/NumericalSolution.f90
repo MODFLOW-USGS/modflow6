@@ -46,7 +46,7 @@ module NumericalSolutionModule
     real(DP), dimension(:), pointer, contiguous          :: xtemp => NULL()
     type(BlockParserType) :: parser
     !
-    !sparse matrix data
+    ! -- sparse matrix data
     real(DP), pointer                                    :: theta => NULL()
     real(DP), pointer                                    :: akappa => NULL()
     real(DP), pointer                                    :: gamma => NULL()
@@ -70,14 +70,15 @@ module NumericalSolutionModule
     integer(I4B), pointer                                :: numtrack => NULL()
     integer(I4B), pointer                                :: iprims => NULL()
     integer(I4B), pointer                                :: ibflag => NULL()
-    integer(I4B), dimension(:,:), pointer, contiguous                :: lrch => NULL()
-    real(DP), dimension(:), pointer, contiguous                      :: hncg => NULL()
-    real(DP), dimension(:), pointer, contiguous                      :: dxold => NULL()
-    real(DP), dimension(:), pointer, contiguous                      :: deold => NULL()
-    real(DP), dimension(:), pointer, contiguous                      :: wsave => NULL()
-    real(DP), dimension(:), pointer, contiguous                      :: hchold => NULL()
-    ! summary
-    character(len=31), dimension(:), pointer, contiguous             :: caccel => NULL()
+    integer(I4B), dimension(:,:), pointer, contiguous    :: lrch => NULL()
+    real(DP), dimension(:), pointer, contiguous          :: hncg => NULL()
+    real(DP), dimension(:), pointer, contiguous          :: dxold => NULL()
+    real(DP), dimension(:), pointer, contiguous          :: deold => NULL()
+    real(DP), dimension(:), pointer, contiguous          :: wsave => NULL()
+    real(DP), dimension(:), pointer, contiguous          :: hchold => NULL()
+    !
+    ! -- convergence summary information
+    character(len=31), dimension(:), pointer, contiguous :: caccel => NULL()
     integer(I4B), pointer                                :: icsvout => NULL()
     integer(I4B), pointer                                :: nitermax => NULL()
     integer(I4B), pointer                                :: nitercnt => NULL()
@@ -92,7 +93,8 @@ module NumericalSolutionModule
     real(DP), dimension(:), pointer, contiguous          :: drmax => NULL()
     real(DP), pointer, dimension(:,:), contiguous        :: convdvmax => NULL()
     real(DP), pointer, dimension(:,:), contiguous        :: convdrmax => NULL()
-    ! ptc
+    !
+    ! -- pseudo-transient continuation
     integer(I4B), pointer                                :: iallowptc => NULL()
     integer(I4B), pointer                                :: iptcopt => NULL()
     integer(I4B), pointer                                :: iptcout => NULL()
@@ -104,10 +106,10 @@ module NumericalSolutionModule
     real(DP), pointer                                    :: ptcthresh => NULL()
     real(DP), pointer                                    :: ptcrat => NULL()
     !
-    ! linear accelerator storage
+    ! -- linear accelerator storage
     type(IMSLINEAR_DATA), POINTER                        :: imslinear => NULL()
     !
-    ! sparse object
+    ! -- sparse object
     type(sparsematrix)                                   :: sparse
 
   contains

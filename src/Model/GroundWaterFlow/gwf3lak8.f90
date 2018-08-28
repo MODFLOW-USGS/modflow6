@@ -77,17 +77,20 @@ module LakModule
     real(DP), dimension(:), pointer, contiguous  :: laketop => null()
     real(DP), dimension(:), pointer, contiguous  :: lakebot => null()
     real(DP), dimension(:), pointer, contiguous  :: sareamax => null()
-    character(len=LENBOUNDNAME), dimension(:), pointer, contiguous :: lakename => null()
+    character(len=LENBOUNDNAME), dimension(:), pointer,                         &
+                                 contiguous :: lakename => null()
     character (len=8), dimension(:), pointer, contiguous :: status => null()
     real(DP), dimension(:), pointer, contiguous  :: avail => null()
     real(DP), dimension(:), pointer, contiguous  :: lkgwsink => null()
     ! -- time series aware data
     type (MemoryTSType), dimension(:), pointer, contiguous :: stage => null()
     type (MemoryTSType), dimension(:), pointer, contiguous :: rainfall => null()
-    type (MemoryTSType), dimension(:), pointer, contiguous :: evaporation => null()
+    type (MemoryTSType), dimension(:), pointer,                                 &
+                         contiguous :: evaporation => null()
     type (MemoryTSType), dimension(:), pointer, contiguous :: runoff => null()
     type (MemoryTSType), dimension(:), pointer, contiguous :: inflow => null()
-    type (MemoryTSType), dimension(:), pointer, contiguous :: withdrawal => null()
+    type (MemoryTSType), dimension(:), pointer,                                 &
+                         contiguous :: withdrawal => null()
     type (MemoryTSType), dimension(:), pointer, contiguous :: lauxvar => null()
     !
     ! -- table data
@@ -145,7 +148,8 @@ module LakModule
     integer(I4B), dimension(:), pointer, contiguous :: lakeout => null()
     integer(I4B), dimension(:), pointer, contiguous :: iouttype => null()
     type (MemoryTSType), dimension(:), pointer, contiguous :: outrate => null()
-    type (MemoryTSType), dimension(:), pointer, contiguous :: outinvert => null()
+    type (MemoryTSType), dimension(:), pointer,                                 &
+                         contiguous :: outinvert => null()
     type (MemoryTSType), dimension(:), pointer, contiguous :: outwidth => null()
     type (MemoryTSType), dimension(:), pointer, contiguous :: outrough => null()
     type (MemoryTSType), dimension(:), pointer, contiguous :: outslope => null()
@@ -167,9 +171,9 @@ module LakModule
     integer(I4B), pointer :: gwfik33 => NULL()
     !
     ! -- package x, xold, and ibound
-    integer(I4B), dimension(:), pointer, contiguous :: iboundpak     => null() !package ibound
-    real(DP), dimension(:), pointer, contiguous     :: xnewpak       => null() !package x vector
-    real(DP), dimension(:), pointer, contiguous     :: xoldpak       => null() !package xold vector
+    integer(I4B), dimension(:), pointer, contiguous :: iboundpak => null()       !package ibound
+    real(DP), dimension(:), pointer, contiguous :: xnewpak => null()             !package x vector
+    real(DP), dimension(:), pointer, contiguous :: xoldpak => null()             !package xold vector
     !
     ! -- type bound procedures
     contains

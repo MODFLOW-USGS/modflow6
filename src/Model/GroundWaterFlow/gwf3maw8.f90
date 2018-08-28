@@ -78,10 +78,14 @@ module mawmodule
   public :: maw_create
   !
   type, extends(BndType) :: MawType
+    !
     ! -- scalars
     ! -- characters
+    !
     character(len=16), dimension(:), pointer, contiguous :: cmawbudget => NULL()
-    character(len=LENAUXNAME), dimension(:), pointer, contiguous :: cauxcbc => NULL()
+    character(len=LENAUXNAME), dimension(:), pointer,                           &
+                               contiguous :: cauxcbc => NULL()
+    !
     ! -- integers
     integer(I4B), pointer :: iprhed => null()
     integer(I4B), pointer :: iheadout => null()
@@ -95,33 +99,41 @@ module mawmodule
     integer(I4B), pointer :: ishutoffcnt => NULL()
     integer(I4B), pointer :: ieffradopt => NULL()
     real(DP), pointer :: satomega => null()
+    !
     ! -- for budgets
     integer(I4B), pointer :: bditems => NULL()
+    !
     ! -- for underrelaxation of estimated well q if using shutoff
     real(DP), pointer :: theta => NULL()
     real(DP), pointer :: kappa => NULL()
+    !
     ! -- derived types
     type(BudgetType), pointer :: budget => NULL()
     type(MawWellType), dimension(:), pointer, contiguous :: mawwells => NULL()
+    !
     ! -- pointer to gwf iss and gwf hk
     integer(I4B), pointer :: gwfiss => NULL()
     real(DP), dimension(:), pointer, contiguous :: gwfk11 => NULL()
     real(DP), dimension(:), pointer, contiguous :: gwfk22 => NULL()
     integer(I4B), pointer :: gwfik22 => NULL()
     real(DP), dimension(:), pointer, contiguous :: gwfsat => NULL()
+    !
     ! -- arrays for handling the rows added to the solution matrix
-    integer(I4B), dimension(:), pointer, contiguous           :: idxlocnode    => null() !map position in global rhs and x array of pack entry
-    integer(I4B), dimension(:), pointer, contiguous           :: idxdglo       => null() !map position in global array of package diagonal row entries
-    integer(I4B), dimension(:), pointer, contiguous           :: idxoffdglo    => null() !map position in global array of package off diagonal row entries
-    integer(I4B), dimension(:), pointer, contiguous           :: idxsymdglo    => null() !map position in global array of package diagonal entries to model rows
-    integer(I4B), dimension(:), pointer, contiguous           :: idxsymoffdglo => null() !map position in global array of package off diagonal entries to model rows
-    integer(I4B), dimension(:), pointer, contiguous           :: iboundpak     => null() !package ibound
-    real(DP), dimension(:), pointer, contiguous  :: xnewpak       => null() !package x vector
-    real(DP), dimension(:), pointer, contiguous  :: xoldpak       => null() !package xold vector
-    real(DP), dimension(:), pointer, contiguous  :: cterm         => null() !package c vector
+    integer(I4B), dimension(:), pointer, contiguous :: idxlocnode => null()      !map position in global rhs and x array of pack entry
+    integer(I4B), dimension(:), pointer, contiguous :: idxdglo => null()         !map position in global array of package diagonal row entries
+    integer(I4B), dimension(:), pointer, contiguous :: idxoffdglo => null()      !map position in global array of package off diagonal row entries
+    integer(I4B), dimension(:), pointer, contiguous :: idxsymdglo => null()      !map position in global array of package diagonal entries to model rows
+    integer(I4B), dimension(:), pointer, contiguous :: idxsymoffdglo => null()   !map position in global array of package off diagonal entries to model rows
+    integer(I4B), dimension(:), pointer, contiguous :: iboundpak => null()       !package ibound
+    real(DP), dimension(:), pointer, contiguous  :: xnewpak => null()            !package x vector
+    real(DP), dimension(:), pointer, contiguous  :: xoldpak => null()            !package xold vector
+    real(DP), dimension(:), pointer, contiguous  :: cterm => null()              !package c vector
+    !
     ! -- vector data (start of flattening for future removal of MawWellType)
-    character (len=LENBOUNDNAME), dimension(:), pointer, contiguous :: cmawname => null()
+    character (len=LENBOUNDNAME), dimension(:), pointer,                        &
+                                  contiguous :: cmawname => null()
     integer(I4B), dimension(:), pointer, contiguous :: idxmawconn => null()
+    !
     ! -- imap vector
     integer(I4B), dimension(:), pointer, contiguous :: imap       => null()
     !

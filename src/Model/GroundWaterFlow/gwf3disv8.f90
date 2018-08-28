@@ -17,19 +17,19 @@ module GwfDisvModule
   public disv_cr, GwfDisvType
 
   type, extends(DisBaseType) :: GwfDisvType
-    integer(I4B), pointer                          :: nlay        => null()     ! number of layers
-    integer(I4B), pointer                          :: ncpl        => null()     ! number of cells per layer
-    integer(I4B), pointer                          :: nvert       => null()     ! number of x,y vertices
-    integer(I4B), dimension(:), pointer, contiguous            :: nodereduced => null()     ! (size:nodesuser)contains reduced nodenumber (size 0 if not reduced); -1 means vertical pass through, 0 is idomain = 0
-    integer(I4B), dimension(:), pointer, contiguous            :: nodeuser    => null()     ! (size:nodes) given a reduced nodenumber, provide the user nodenumber (size 0 if not reduced)
-    real(DP), dimension(:,:), pointer, contiguous              :: vertices    => null()     ! cell vertices stored as 2d array of x and y
-    real(DP), dimension(:,:), pointer, contiguous              :: cellxy      => null()     ! cell center stored as 2d array of x and y
-    integer(I4B), dimension(:), pointer, contiguous            :: iavert      => null()     ! cell vertex pointer ia array
-    integer(I4B), dimension(:), pointer, contiguous            :: javert      => null()     ! cell vertex pointer ja array
-    real(DP), dimension(:, :, :), pointer          :: botm        => null()     ! top and bottom elevations for each cell (ncpl, 1, 0:nlay)
-    integer(I4B), dimension(:, :, :), pointer      :: idomain     => null()     ! idomain (ncpl, 1, nlay)
-    type(DisvGeomType)                             :: cell1                     ! cell object used to calculate geometric properties
-    type(DisvGeomType)                             :: cell2                     ! cell object used to calculate geometric properties
+    integer(I4B), pointer :: nlay  => null()                                     ! number of layers
+    integer(I4B), pointer :: ncpl => null()                                      ! number of cells per layer
+    integer(I4B), pointer :: nvert => null()                                     ! number of x,y vertices
+    integer(I4B), dimension(:), pointer, contiguous :: nodereduced => null()     ! (size:nodesuser)contains reduced nodenumber (size 0 if not reduced); -1 means vertical pass through, 0 is idomain = 0
+    integer(I4B), dimension(:), pointer, contiguous :: nodeuser => null()        ! (size:nodes) given a reduced nodenumber, provide the user nodenumber (size 0 if not reduced)
+    real(DP), dimension(:,:), pointer, contiguous :: vertices => null()          ! cell vertices stored as 2d array of x and y
+    real(DP), dimension(:,:), pointer, contiguous :: cellxy => null()            ! cell center stored as 2d array of x and y
+    integer(I4B), dimension(:), pointer, contiguous :: iavert => null()          ! cell vertex pointer ia array
+    integer(I4B), dimension(:), pointer, contiguous :: javert => null()          ! cell vertex pointer ja array
+    real(DP), dimension(:, :, :), pointer :: botm => null()                      ! top and bottom elevations for each cell (ncpl, 1, 0:nlay)
+    integer(I4B), dimension(:, :, :), pointer :: idomain  => null()              ! idomain (ncpl, 1, nlay)
+    type(DisvGeomType) :: cell1                                                  ! cell object used to calculate geometric properties
+    type(DisvGeomType)  :: cell2                                                 ! cell object used to calculate geometric properties
   contains
     procedure :: dis_df => disv_df
     procedure :: dis_da => disv_da

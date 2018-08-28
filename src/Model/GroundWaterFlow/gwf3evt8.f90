@@ -20,13 +20,13 @@ module EvtModule
   !
   type, extends(BndType) :: EvtType
     ! -- logicals
-    logical, private               :: segsdefined = .true.
-    logical, private               :: fixed_cell = .false.
-    logical, private               :: read_as_arrays = .false.
-    logical, private               :: surfratespecified = .false.
+    logical, private :: segsdefined = .true.
+    logical, private :: fixed_cell = .false.
+    logical, private :: read_as_arrays = .false.
+    logical, private:: surfratespecified = .false.
     ! -- integers
-    integer(I4B), pointer               :: inievt => null()
-    integer(I4B), pointer, private      :: nseg => null()
+    integer(I4B), pointer :: inievt => null()
+    integer(I4B), pointer, private :: nseg => null()
     ! -- arrays
     integer(I4B), dimension(:), pointer, contiguous :: nodesontop => null()
   contains

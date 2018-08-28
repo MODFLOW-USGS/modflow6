@@ -59,12 +59,12 @@ module TimeSeriesModule
 
   type TimeSeriesFileType
     ! -- Private members
-    integer(I4B),                                public :: inunit = 0
-    integer(I4B),                                public :: iout = 0
-    integer(I4B),                                public :: nTimeSeries = 0
-    character(len=LINELENGTH),                   public :: datafile = ''
+    integer(I4B), public :: inunit = 0
+    integer(I4B), public :: iout = 0
+    integer(I4B), public :: nTimeSeries = 0
+    character(len=LINELENGTH), public :: datafile = ''
     type(TimeSeriesType), dimension(:), pointer, contiguous, public :: timeSeries => null()
-    type(BlockParserType), pointer,              public :: parser
+    type(BlockParserType), pointer, public :: parser
   contains
     ! -- Public procedures
     procedure, public :: Count

@@ -38,15 +38,17 @@ module UzfModule
     integer(I4B), pointer :: iwcontout => null()
     integer(I4B), pointer :: ibudgetout => null()
     !
-    type(BudgetType), pointer                          :: budget      => null() !budget object
-    integer(I4B), pointer                              :: bditems     => null() !number of budget items
-    integer(I4B), pointer                              :: nbdtxt      => null() !number of budget text items
-    character(len=LENBUDTXT), dimension(:), pointer, contiguous    :: bdtxt       => null() !budget items written to cbc file
-    type(UzfKinematicType), pointer                    :: uzfobj      => null() !uzf kinematic object
-    type(UzfKinematicType), pointer                    :: uzfobjwork  => null() !uzf kinematic work object
-    type(UzfKinematicType), pointer                    :: uzfobjbelow => null() !uzf kinematic object of underlying cell
-    type(UzfKinematicType), dimension(:), pointer, contiguous      :: elements    => null() !array of all the kinematic uzf objects
-    character(len=72), pointer                         :: nameuzf     => null() !cdl--(not sure.  Delete?)
+    type(BudgetType), pointer                          :: budget      => null()  !budget object
+    integer(I4B), pointer                              :: bditems     => null()  !number of budget items
+    integer(I4B), pointer                              :: nbdtxt      => null()  !number of budget text items
+    character(len=LENBUDTXT), dimension(:), pointer,                            &
+                              contiguous               :: bdtxt       => null()  !budget items written to cbc file
+    type(UzfKinematicType), pointer                    :: uzfobj      => null()  !uzf kinematic object
+    type(UzfKinematicType), pointer                    :: uzfobjwork  => null()  !uzf kinematic work object
+    type(UzfKinematicType), pointer                    :: uzfobjbelow => null()  !uzf kinematic object of underlying cell
+    type(UzfKinematicType), dimension(:), pointer,                              &
+                            contiguous                 :: elements    => null()  !array of all the kinematic uzf objects
+    character(len=72), pointer                         :: nameuzf     => null()  !cdl--(not sure.  Delete?)
     !
     ! -- pointer to gwf variables
     integer(I4B), pointer                      :: gwfiss      => null()

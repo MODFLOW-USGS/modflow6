@@ -27,15 +27,15 @@ module TimeArraySeriesModule
     ! -- Public members
     character(len=LENTIMESERIESNAME), public :: Name = ''
     ! -- Private members
-    integer(I4B),               private :: inunit = 0
-    integer(I4B),               private :: iout = 0
-    integer(I4B),               private :: iMethod = UNDEFINED
-    real(DP),                   private :: sfac = DONE
-    character(len=LINELENGTH),  private :: dataFile = ''
-    logical,                    private :: autoDeallocate = .true.
-    type(ListType),    pointer, private :: list => null()
+    integer(I4B), private                :: inunit = 0
+    integer(I4B), private                :: iout = 0
+    integer(I4B), private                :: iMethod = UNDEFINED
+    real(DP), private                    :: sfac = DONE
+    character(len=LINELENGTH), private   :: dataFile = ''
+    logical, private                     :: autoDeallocate = .true.
+    type(ListType), pointer, private     :: list => null()
     class(DisBaseType), pointer, private :: dis => null()
-    type(BlockParserType),      private :: parser
+    type(BlockParserType), private       :: parser
   contains
     ! -- Public procedures
     procedure, public :: tas_init

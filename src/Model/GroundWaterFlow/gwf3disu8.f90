@@ -18,11 +18,11 @@ module GwfDisuModule
   public :: disu_cr
 
   type, extends(DisBaseType) :: GwfDisuType
-    integer(I4B), pointer                              :: nvert       => null() ! number of x,y vertices
-    real(DP), dimension(:,:), pointer, contiguous                  :: vertices    => null() ! cell vertices stored as 2d array of x and y
-    real(DP), dimension(:,:), pointer, contiguous                  :: cellxy      => null() ! cell center stored as 2d array of x and y
-    integer(I4B), dimension(:), pointer, contiguous                :: iavert      => null() ! cell vertex pointer ia array
-    integer(I4B), dimension(:), pointer, contiguous                :: javert      => null() ! cell vertex pointer ja array
+    integer(I4B), pointer :: nvert => null()                                     ! number of x,y vertices
+    real(DP), dimension(:,:), pointer, contiguous :: vertices => null()          ! cell vertices stored as 2d array of x and y
+    real(DP), dimension(:,:), pointer, contiguous :: cellxy => null()            ! cell center stored as 2d array of x and y
+    integer(I4B), dimension(:), pointer, contiguous :: iavert => null()          ! cell vertex pointer ia array
+    integer(I4B), dimension(:), pointer, contiguous:: javert => null()           ! cell vertex pointer ja array
   contains
     procedure :: dis_df => disu_df
     procedure :: dis_da => disu_da

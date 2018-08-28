@@ -15,9 +15,9 @@ module GwfObsModule
 
   type, extends(ObsType) :: GwfObsType
     ! -- Private members
-    type(GwfIcType), pointer, private                :: ic => null()     ! initial conditions
-    real(DP), dimension(:), pointer, contiguous, private         :: x => null()      ! head
-    real(DP), dimension(:), pointer, contiguous, private         :: flowja => null() ! intercell flows
+    type(GwfIcType), pointer, private                    :: ic => null()         ! initial conditions
+    real(DP), dimension(:), pointer, contiguous, private :: x => null()          ! head
+    real(DP), dimension(:), pointer, contiguous, private :: flowja => null()     ! intercell flows
   contains
     ! -- Public procedures
     procedure, public :: gwf_obs_ar

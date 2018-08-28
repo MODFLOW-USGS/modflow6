@@ -19,10 +19,10 @@ module RchModule
   character(len=LENPACKAGENAME) :: text  = '             RCH'
   !
   type, extends(BndType) :: RchType
-    integer(I4B), pointer               :: inirch     => NULL()
-    integer(I4B), dimension(:), pointer, contiguous :: nodesontop => NULL()                 ! User provided cell numbers; nodelist is cells where recharge is applied)
-    logical, private                    :: fixed_cell = .false.
-    logical, private                    :: read_as_arrays = .false.
+    integer(I4B), pointer :: inirch => NULL()
+    integer(I4B), dimension(:), pointer, contiguous :: nodesontop => NULL()      ! User provided cell numbers; nodelist is cells where recharge is applied)
+    logical, private :: fixed_cell = .false.
+    logical, private :: read_as_arrays = .false.
   contains
     procedure :: rch_allocate_scalars
     procedure :: bnd_options         => rch_options

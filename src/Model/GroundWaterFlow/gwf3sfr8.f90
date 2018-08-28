@@ -123,7 +123,8 @@ module SfrModule
     type(BudgetType), pointer :: budget => NULL()
     type(SfrDataType), dimension(:), pointer, contiguous :: reaches => NULL()
     type(sparsematrix), pointer :: sparse => null()
-    type(RectangularChGeometryType), dimension(:), pointer, contiguous :: geo => null()
+    type(RectangularChGeometryType), dimension(:), pointer,                     &
+                                     contiguous :: geo => null()
     ! -- type bound procedures
     contains
     procedure :: sfr_allocate_scalars
