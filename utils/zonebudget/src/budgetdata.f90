@@ -1,5 +1,6 @@
 module BudgetDataModule
 
+  use KindModule
   use SimModule, only: store_error, store_error_unit, ustop
   use ConstantsModule, only: LINELENGTH
   implicit none
@@ -13,29 +14,29 @@ module BudgetDataModule
             srcmodelname, dstmodelname, hasimeth1flowja
   
   logical :: hasimeth1flowja = .false.
-  integer :: inunit
-  integer :: nbudterms = 0
-  integer :: kstp
-  integer :: kper
+  integer(I4B) :: inunit
+  integer(I4B) :: nbudterms = 0
+  integer(I4B) :: kstp
+  integer(I4B) :: kper
   character(len=16) :: budtxt
-  integer :: nval
-  integer :: idum1
-  integer :: idum2
-  integer :: imeth
-  double precision :: delt
-  double precision :: pertim
-  double precision :: totim
+  integer(I4B) :: nval
+  integer(I4B) :: idum1
+  integer(I4B) :: idum2
+  integer(I4B) :: imeth
+  real(DP) :: delt
+  real(DP) :: pertim
+  real(DP) :: totim
   character(len=16) :: srcmodelname
   character(len=16) :: srcpackagename
-  integer :: ndat
+  integer(I4B) :: ndat
   character(len=16), dimension(:), allocatable :: auxtxt
-  integer :: nlist
-  integer, allocatable, dimension(:) :: ia
-  integer, allocatable, dimension(:) :: ja
-  double precision, dimension(:), allocatable :: flowja
-  integer, dimension(:), allocatable :: nodesrc
-  integer, dimension(:), allocatable :: nodedst
-  double precision, dimension(:, :), allocatable :: flowdata
+  integer(I4B) :: nlist
+  integer(I4B), allocatable, dimension(:) :: ia
+  integer(I4B), allocatable, dimension(:) :: ja
+  real(DP), dimension(:), allocatable :: flowja
+  integer(I4B), dimension(:), allocatable :: nodesrc
+  integer(I4B), dimension(:), allocatable :: nodedst
+  real(DP), dimension(:, :), allocatable :: flowdata
   character(len=16) :: dstmodelname
   character(len=16) :: dstpackagename
   
@@ -49,11 +50,11 @@ module BudgetDataModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    integer, intent(in) :: iu
-    integer, intent(in) :: iout
-    integer, intent(out) :: ncrbud
+    integer(I4B), intent(in) :: iu
+    integer(I4B), intent(in) :: iout
+    integer(I4B), intent(out) :: ncrbud
     ! -- local
-    integer :: icount, kstp_last, kper_last
+    integer(I4B) :: icount, kstp_last, kper_last
     logical :: success
 ! ------------------------------------------------------------------------------
     inunit = iu
@@ -96,9 +97,9 @@ module BudgetDataModule
 ! ------------------------------------------------------------------------------
     ! -- dummy
     logical, intent(out) :: success
-    integer, intent(in), optional :: iout_opt
+    integer(I4B), intent(in), optional :: iout_opt
     ! -- local
-    integer :: i, n, iostat, iout
+    integer(I4B) :: i, n, iostat, iout
     character(len=LINELENGTH) :: errmsg
 ! ------------------------------------------------------------------------------
     !

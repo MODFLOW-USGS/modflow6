@@ -1,5 +1,5 @@
 BEGIN GRIDDATA
-  TOP [LAYERED]
+  TOP
     <top(1, ncpl)> -- READARRAY
   BOTM [LAYERED]
     <botm(nlay, ncpl)> -- READARRAY

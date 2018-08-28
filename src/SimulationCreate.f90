@@ -1,6 +1,6 @@
 module SimulationCreateModule
 
-  use KindModule,             only: DP, I4B
+  use KindModule,             only: DP, I4B, write_kindinfo
   use ConstantsModule,        only: LINELENGTH, LENMODELNAME, LENBIGLINE, DZERO
   use SimVariablesModule,     only: simfile, simlstfile, iout
   use SimModule,              only: ustop, store_error, count_errors,          &
@@ -121,9 +121,8 @@ module SimulationCreateModule
     !
     ! -- Write precision of real variables
     write(iout, '(/,a)') 'MODFLOW was compiled using uniform precision.'
-    write(iout, '(a,i0)') 'Precision of REAL variables: ', precision(DZERO)
-    write(iout, '(a,i0)') 'Fortran KIND value for REAL variables: ', DP
-    write(iout, '(a,i0,/)') 'Fortran KIND value for INTEGER variables: ', I4B
+    call write_kindinfo(iout)
+    write(iout, *)
     !
     ! -- Return
     return

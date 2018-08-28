@@ -1,8 +1,8 @@
 BEGIN PERIOD <iper>
-  [IRCH [LAYERED]
+  [IRCH
     <irch(ncol*nrow; ncpl)> -- READARRAY]
-  RECHARGE [LAYERED]
+  RECHARGE
     <recharge(ncol*nrow; ncpl)> -- READARRAY
-  [AUX [LAYERED]
+  [AUX
     <aux(ncol*nrow; ncpl)> -- READARRAY]
 END PERIOD

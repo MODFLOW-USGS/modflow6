@@ -112,7 +112,7 @@ ZONEBUDGET is a FORTRAN program that calculates subregional water budgets using 
 
 % -------------------------------------------------
 \section{Functional Design of the Program}
-A subregion of a model for which ZONEBUDGET calculates a water budget is termed a zone, and a zone is indicated by a zone number. Zone numbers can range from zero to any positive integer.  A zone number must be assigned to each cell in the model grid. Although 0 is a valid zone number, a budget is not calculated for Zone 0. Thus, the user can exclude cells from budget calculations by assigning them to Zone 0. Zones are defined by reading a file, called the zone file, which contains one zone value for each cell.  
+A subregion of a model for which ZONEBUDGET calculates a water budget is termed a zone, and a zone is indicated by a zone number. Zone numbers can be any negative or positive integer.  A zone number must be assigned to each cell in the model grid. Although 0 is a valid zone number, a budget is not calculated for Zone 0. Thus, the user can exclude cells from budget calculations by assigning them to Zone 0. Zones are defined by reading a file, called the zone file, which contains one zone value for each cell.  
 
 ZONEBUDGET makes use of the cell-by-cell flow data that MODFLOW saves on disk. This cell-by-cell data defines the flow into each model cell from each possible source or sink. Outflows are indicated as negative inflows. Possible sources and sinks include stress package inflows and outflows, storage, and flow between adjacent cells.
 
@@ -249,7 +249,7 @@ END GRIDDATA
 
 \begin{itemize}
 \item \texttt{NCELLS <ncells>}---is the keyword and number of cells (or reaches) contained in the budget file.
-\item \texttt{<izone>}---is an integer array containing the zone number for each cell in the grid.  The LAYERED option can only be used if a binary grid file is provided, and the model is layered.  For GWF Models, the DIS or DISV Package must be used in order for the model to be layered.  This izone array is read by the READARRAY utility.  READARRAY allows an array to be read in several different forms:
+\item \texttt{<izone>}---is an integer array containing the zone number for each cell in the grid.  IZONE values can be positive or negative integers. An IZONE value of zero indicates cells for which no budget is desired or calculated. The LAYERED option can only be used if a binary grid file is provided, and the model is layered.  For GWF Models, the DIS or DISV Package must be used in order for the model to be layered.  This izone array is read by the READARRAY utility.  READARRAY allows an array to be read in several different forms:
 
 \begin{itemize}
 
@@ -294,7 +294,13 @@ This section describes changes introduced into MODFLOW 6 with each official rele
 \item
 \currentmodflowversion
 \begin{itemize}
-  \item No changes.
+  \item Added functionality to allow for non-sequential zone numbers. User-specified zone numbers are internally converted to sequential zone numbers but results are still reported using user-specified zone numbers. This functionality eliminates memory allocation issues when large zone numbers (for example, Hydrologic Unit Codes (HUC)) are used. This functionality also permits use of negative zone numbers.
+  \item Fixed issue related to deferred length character array dfntxt used in grb.f90 to read ascii header data in grb file when compiled with gfortran version 4.9. Revised code to use deferred length characters variables instead of deferred length character arrays.
+\end{itemize}
+
+\item Version 6.0.2---February 22, 2018
+\begin{itemize}
+  \item None.
 \end{itemize}
 
 \item Version 6.0.1---September 28, 2017

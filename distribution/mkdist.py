@@ -1,14 +1,15 @@
 """
-Python code to create a MODFLOW 6 distribution
+Python code to create a MODFLOW 6 distribution.  This has been used mostly
+on Windows and requires that Latex be installed, and Python with the
+pymake package.
 
 To make a distribution:
-  1.  update version in doc/version.tex
-  2.  run this script, mkdist.py
-  3.  run doc/ReleaseNotes/mk_example_items.py
-  4.  run doc/ReleaseNotes/mk_example_table.py
-  5.  run doc/ReleaseNotes/mk_folder_struct.py
-  6.  use latex to build ReleaseNotes.pdf
-  7.  run this script again
+  1.  Create a release branch
+  2.  Run the pre-commit.py script, which will create the proper dist name
+  3.  Run this script
+  4.  Post the distribution zip file
+  5.  Merge the release changes into the master branch
+  6.  Tag the master branch with the correct version
 
 """
 
@@ -196,15 +197,24 @@ def make_zonebudget(srcpath, destpath, win_target_os, exepath):
     sourcepath = os.path.join(srcpath, 'src')
     copytree(sourcepath, fd['src'], ignore=shutil.ignore_patterns('.DS_Store'))
 
-    # Create makefile
+    # Create makefile in the utils/zonebudget/pymake folder
     print('Creating zonebudget makefile')
-    shutil.copyfile(os.path.join(srcpath, 'pymake', 'extrafiles.txt'),
-                    os.path.join(fd['make'], 'extrafiles.txt'))
-    with cwd(fd['make']):
+    with cwd(os.path.join(srcpath, 'pymake')):
         pymake.main(os.path.join('..', 'src'), 'zbud6', 'gfortran', 'gcc',
                     makeclean=True, dryrun=True, include_subdirs=True,
                     makefile=True, extrafiles='extrafiles.txt')
-    os.remove(os.path.join(fd['make'], 'extrafiles.txt'))
+        os.path.isfile('makefile')
+
+    # Copy makefile to utils/zonebudget/make folder
+    shutil.copyfile(os.path.join(srcpath, 'pymake', 'makefile'),
+                    os.path.join(srcpath, 'make', 'makefile'))
+
+    # Copy makefile to distribution/xxx/utils/zonebudget/make folder
+    shutil.copyfile(os.path.join(srcpath, 'pymake', 'makefile'),
+                    os.path.join(fd['make'], 'makefile'))
+
+    # Remove the makefile from the pymake folder
+    os.remove(os.path.join(srcpath, 'pymake', 'makefile'))
 
     # Copy the Visual Studio project file
     flist = [os.path.join(srcpath, 'msvs', 'zonebudget.vfproj')]
@@ -256,15 +266,28 @@ def make_mf5to6(srcpath, destpath, win_target_os, exepath):
     sourcepath = os.path.join(srcpath, 'src')
     copytree(sourcepath, fd['src'], ignore=shutil.ignore_patterns('.DS_Store'))
 
-    # Create makefile
+    # Create makefile in the utils/mf5to6/pymake folder
     print('Creating mf5to6 makefile')
-    shutil.copyfile(os.path.join(srcpath, 'pymake', 'extrafiles.txt'),
-                    os.path.join(fd['make'], 'extrafiles.txt'))
-    with cwd(fd['make']):
+    with cwd(os.path.join(srcpath, 'pymake')):
         pymake.main(os.path.join('..', 'src'), name, 'gfortran', 'gcc',
                     makeclean=True, dryrun=True, include_subdirs=True,
                     makefile=True, extrafiles='extrafiles.txt')
-    os.remove(os.path.join(fd['make'], 'extrafiles.txt'))
+        os.path.isfile('makefile')
+
+    # Copy makefile to utils/mf5to6/make folder
+    print('Copying mf5to6 makefile')
+    makefile = os.path.join(srcpath, 'pymake', 'makefile')
+    d = os.path.join(srcpath, 'make', 'makefile')
+    print('  {} ===> {}'.format(makefile, d))
+    shutil.copyfile(makefile, d)
+
+    # Copy makefile to distribution/xxx/utils/mf5to6/make folder
+    d = os.path.join(fd['make'], 'makefile')
+    print('  {} ===> {}'.format(makefile, d))
+    shutil.copyfile(makefile, d)
+
+    # Remove the makefile from the pymake folder
+    os.remove(makefile)
 
     # Copy the Visual Studio project file
     flist = [os.path.join(srcpath, 'msvs', 'mf5to6.vfproj')]
@@ -562,8 +585,9 @@ if __name__ == '__main__':
              ignore=shutil.ignore_patterns('.DS_Store'))
 
     # modify the constants fortran source file with version information
-    fname = os.path.join(distfolder, 'src', 'Utilities', 'version.f90')
-    change_version_module(fname, '{} {}'.format(version, versiondate))
+    # this is now handled by pre-commit.py
+    #fname = os.path.join(distfolder, 'src', 'Utilities', 'version.f90')
+    #change_version_module(fname, '{} {}'.format(version, versiondate))
 
     # Create makefile in the make folder and then copy into distribution
     print('Creating makefile')
@@ -751,166 +775,3 @@ if __name__ == '__main__':
     print('\n')
 
 
-"""
-
-
-
-# Copy the Window executables
-print('Copying mf6 executable')
-bin32 = os.path.join('..', 'bin', 'mf6.exe')
-shutil.copy(bin32, os.path.join(binpath, 'mf6.exe'))
-print('  {} ===> {}'.format(bin32, os.path.join(binpath, 'mf6.exe')))
-print('\n')
-
-
-# Copy the Mac executables
-print('Copying mf6.mac')
-bin32 = os.path.join('..', 'bin', 'mf6.mac')
-shutil.copy(bin32, os.path.join(binpath, 'mf6.mac'))
-print('  {} ===> {}'.format(bin32, os.path.join(binpath, 'mf6.mac')))
-print('\n')
-
-
-# Copy the translator executable
-print('Copying translator executable')
-bin32 = os.path.join('..', 'mf5to6', 'msvs', 'mf5to6', 'Release', 'mf5to6.exe')
-shutil.copy(bin32, os.path.join(binpath, 'mf5to6.exe'))
-print('  {} ===> {}'.format(bin32, os.path.join(binpath, 'mf5to6.exe')))
-print('\n')
-
-
-# Copy the source folder
-s = os.path.join('..', 'src')
-shutil.copytree(s, sourcepath, ignore=shutil.ignore_patterns('.DS_Store'))
-print('  {} ===> {}'.format(s, sourcepath))
-print('\n')
-
-
-# Copy the Visual Studio solution and project files
-flist = [os.path.join('..', 'msvs', 'mf6', 'mf6.sln'),
-		 os.path.join('..', 'msvs', 'mf6', 'mf6.vfproj'),
-		 ]
-print('Copying msvs files')
-for d in flist:
-	print('  {} ===> {}'.format(d, msvspath)	)
-	shutil.copy(d, msvspath)
-print('\n')
-
-
-# Copy the pymake batch and python files
-flist = [os.path.join('..', 'pymake', 'makebin.py'),
-		 os.path.join('..', 'pymake', 'make_win_gfortran.bat'),
-		 os.path.join('..', 'pymake', 'make_win_intel.bat'),
-		 ]
-print('Copying pymake files')
-for d in flist:
-	print('  {} ===> {}'.format(d, pymakepath)	)
-	shutil.copy(d, pymakepath)
-print('\n')
-
-
-# Copy the documentation
-doclist = [os.path.join('..', 'doc', 'GwfModelReport', 'GwfModelReport.01.pdf'),
-           os.path.join('..', 'doc', 'ReleaseNotes', 'ReleaseNotes.pdf'),
-		   os.path.join('..', 'doc', 'UserGuide', 'userguide.pdf'),
-		   os.path.join('..', 'doc', 'ConverterGuide', 'converter_mf5to6.pdf'),
-#		   os.path.join('..', 'doc', 'XT3DReport', 'XT3DReport.01.pdf'),
-		   ]
-print('Copying documentation')
-for d in doclist:
-	print('  {} ===> {}'.format(d, docpath)	)
-	shutil.copy(d, docpath)
-print('\n')
-
-
-# Copy the example problems
-exsrcpath = '../examples'
-examplelist = [
-    ['test021_twri', 'twri'],
-    ['AdvGW_tidal', 'tidal'],
-    ['test003_gwfs', 'flow2d'],
-    ['test004_bcfss', 'bcf2ss'],
-    ['test035_fhb', 'fhb'],
-    ['test030_hani_col', 'hanicol'],
-    ['test030_hani_row', 'hanirow'],
-    ['test006_gwf3_gnc', 'mfusgP1u'],
-    ['test006_2models', 'mfusgP1Lgr'],
-    ['test006_2models_mvr', 'P1LgrMVR'],
-    ['test007_751x751', '775x751'],
-    ['test028_sfr', 'sfrEx1'],
-    ['test045_lake2tr', 'lakEx2'],
-    ['test045_lake4ss', 'lakEx4'],
-    ['test024_Reilly', 'ReillyMAW'],
-    ['test023_FlowingWell', 'FlowingMAW'],
-    ['test011_mflgr_ex3', 'mflgrEx3'],
-    ['test019_VilhelmsenGC', 'VilhelmsenGC'],
-    ['test019_VilhelmsenGF', 'VilhelmsenGF'],
-    ['test019_VilhelmsenLGR', 'VilhelmsenLGR'],
-    ['test020_NevilleTonkinTransient', 'neville'],
-    ['test013_Zaidel', 'zaidel'],
-    ['test016_Keating', 'keating'],
-    ['test034_nwtp2', 'mfnwtEx2'],
-    ['test014_NWTP3High', 'mfnwtEx3H'],
-    ['test014_NWTP3Low', 'mfnwtEx3L'],
-    ['test050_circle_island', 'islandDISV'],
-    ['test008_henry', 'henry'],
-    ['test046_periodic_bc', 'periodicbc'],
-    ['test031_many_gwf', 'multiGWF'],
-    ['test030_hani_xt3d', 'hanixt3d'],
-    ]
-
-# Create a runall.bat file in examples
-frunallbat = open(os.path.join(expath, 'runall.bat'), 'w')
-
-
-# For each example, copy the necessary files from the development directory
-# into the distribution directory.
-print('Copying examples')
-for i, (exsrc, exdest) in enumerate(examplelist):
-    srcpath = os.path.join(exsrcpath, exsrc)
-
-    prefix = 'ex{:02d}-'.format(i + 1)
-    destfoldername = prefix + exdest
-    dstpath = os.path.join(expath, prefix + exdest)
-    print('  {:<35} ===> {:<20}'.format(exsrc, prefix + exdest))
-
-    # Copy all of the mf6 input from srcpath to dstpath
-    extrafiles = ['description.txt']
-    mf6pyutil.copy_mf6_input(srcpath, dstpath, extrafiles=extrafiles)
-
-    # Create a batch file for running the model
-    fname = os.path.join(dstpath, 'run.bat')
-    with open(fname, 'w') as f:
-        s = r'..\..\bin\mf6.exe'
-        f.write(s + '\n')
-        s = 'pause'
-        f.write(s + '\n')
-
-    # Create a batch file for running the model without pausing
-    fname = os.path.join(dstpath, 'run_nopause.bat')
-    with open(fname, 'w') as f:
-        s = r'..\..\bin\mf6.exe'
-        f.write(s + '\n')
-
-    frunallbat.write('cd ' + destfoldername + '\n')
-    frunallbat.write('call run_nopause.bat' + '\n')
-    frunallbat.write('cd ..' + '\n\n')
-print('\n')
-
-frunallbat.write('pause' + '\n')
-frunallbat.close()
-
-# Zip the distribution
-zipname = version + '.zip'
-if os.path.exists(zipname):
-    print('Removing existing file: {}'.format(zipname))
-    os.remove(zipname)
-print('Creating zipped file: {}'.format(zipname))
-zipdir(dest, zipname)
-print('\n')
-
-print('Done...')
-print('\n')
-
-
-"""

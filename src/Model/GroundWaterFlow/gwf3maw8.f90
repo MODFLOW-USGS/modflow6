@@ -1963,7 +1963,9 @@ contains
       end if
       hmaw = this%xnewpak(n)
       ! -- add pumping rate to active or constant maw well
-      if (this%iboundpak(n) /= 0) then
+      if (this%iboundpak(n) == 0) then
+        this%mawwells(n)%ratesim = DZERO
+      else
         call this%maw_calculate_wellq(n, hmaw, rate)
         this%mawwells(n)%ratesim = rate
         !write (1999,'(i5,5(g15.7))') this%ishutoffcnt, hmaw, rate, this%mawwells(n)%shutoffqold, &
