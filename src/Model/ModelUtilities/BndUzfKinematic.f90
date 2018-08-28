@@ -1875,8 +1875,8 @@ module UzfKinematicModule
     !
     ! store original wave characteristics
     call uzfktemp%wave_shift(this,0,1,Nwv,1)
-    factor = 1.0d0
-    this%etact = dzero
+    factor = DONE
+    this%etact = DZERO
     if ( this%thts-this%thtr < DEM7 ) then
       thtsrinv = 1.0/DEM7
     else

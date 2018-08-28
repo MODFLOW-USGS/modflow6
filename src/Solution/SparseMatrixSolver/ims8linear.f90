@@ -731,7 +731,7 @@
           THIS%IORD = 0
           THIS%HCLOSE = DEM3
           THIS%RCLOSE = DEM1
-          THIS%RELAX = 0.0D0
+          THIS%RELAX = DZERO
           THIS%LEVEL = 0
           THIS%DROPTOL = DZERO
           THIS%NORTH = 0
@@ -757,7 +757,7 @@
           THIS%IORD = 0
           THIS%HCLOSE = DEM1
           THIS%RCLOSE = DEM1
-          THIS%RELAX = 0.0D0
+          THIS%RELAX = DZERO
           THIS%LEVEL = 5
           THIS%DROPTOL = DEM4
           THIS%NORTH = 2
@@ -1057,7 +1057,7 @@
               DO n = 1, NEQ 
                 id   = IA(n) 
                 v    = AMAT(id) 
-                c1   = 1.0D0 / SQRT( ABS( v ) ) 
+                c1   = DONE / SQRT( ABS( v ) ) 
                 DSCALE(n)  = c1 
                 DSCALE2(n) = c1 
               END DO 
@@ -1076,17 +1076,17 @@
             CASE ( 2 ) 
 !               SCALE EACH ROW SO THAT THE L-2 NORM IS 1                
               DO n = 1, NEQ 
-                c1 = 0.0D0 
+                c1 = DZERO 
                 i0 = IA(n) 
                 i1 = IA(n+1) - 1 
                 DO i = i0, i1 
                   c1 = c1 + AMAT(i) * AMAT(i) 
                 END DO 
                 c1 = SQRT( c1 ) 
-                IF (c1.EQ.0.0D0) THEN 
-                  c1 = 1.0D0 
+                IF (c1.EQ.DZERO) THEN 
+                  c1 = DONE 
                 ELSE 
-                  c1 = 1.0D0 / c1 
+                  c1 = DONE / c1 
                 END IF 
                 DSCALE(n) = c1 
 !                 INITIAL SCALING OF AMAT -- AMAT = DSCALE(row) * AMAT(i)
@@ -1096,9 +1096,9 @@
               END DO 
 !               SCALE EACH COLUMN SO THAT THE L-2 NORM IS 1             
               DO n = 1, NEQ 
-                DSCALE2(n) = 0.0D0 
+                DSCALE2(n) = DZERO 
               END DO 
-              c2 = 0.0D0 
+              c2 = DZERO 
               DO n = 1, NEQ 
                 i0 = IA(n) 
                 i1 = IA(n+1) - 1 
@@ -1110,10 +1110,10 @@
               END DO 
               DO n = 1, NEQ 
                 c2 = DSCALE2(n) 
-                IF (c2.EQ.0.0D0) THEN 
-                  c2 = 1.0D0 
+                IF (c2.EQ.DZERO) THEN 
+                  c2 = DONE 
                 ELSE 
-                  c2 = 1.0D0 / SQRT( c2 ) 
+                  c2 = DONE / SQRT( c2 ) 
                 END IF 
                 DSCALE2(n) = c2 
               END DO 
@@ -1145,7 +1145,7 @@
             DO i = i0, i1 
               jc = JA(i) 
               c2 = DSCALE2(jc) 
-              AMAT(i) = ( 1.0D0 / c1 ) * AMAT(i) * ( 1.0D0 / c2 ) 
+              AMAT(i) = ( DONE / c1 ) * AMAT(i) * ( DONE / c2 ) 
             END DO 
 !             UNSCALE X AND B                                           
             c2   = DSCALE2(n) 
@@ -1204,7 +1204,7 @@
      &          /,' ADDING SMALL VALUE TO PIVOT (IMSLINEARSUB_PCU)')           
 !       + + + CODE + + +                                                  
         izero = 0 
-        delta = 0.0D0 
+        delta = DZERO 
         PCSCALE: DO
           SELECT CASE(IPC) 
 !             ILU0 AND MILU0                                              

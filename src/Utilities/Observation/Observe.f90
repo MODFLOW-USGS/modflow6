@@ -14,7 +14,7 @@ module ObserveModule
   use KindModule, only: DP, I4B
   use BaseDisModule,     only: DisBaseType
   use ConstantsModule,   only: LENBOUNDNAME, LENOBSNAME, LENOBSTYPE, &
-                               MAXOBSTYPES, DNODATA
+                               MAXOBSTYPES, DNODATA, DZERO
   use InputOutputModule, only: dclosetest, urword
   use ListModule,        only: ListType
   use SimModule,         only: store_warning, store_error, &
@@ -42,16 +42,16 @@ module ObserveModule
     integer(I4B),                     public :: JaIndex = -2
     ! -- members that can be used as needed by packages or models
     integer(I4B),                     public :: intPak1 = 0
-    real(DP),                         public :: Obsdepth = 0.0d0
-    real(DP),                         public :: dblPak1 = 0.0d0
+    real(DP),                         public :: Obsdepth = DZERO
+    real(DP),                         public :: dblPak1 = DZERO
     ! -- indxbnds is intended to hold indices of position(s) in bound
     !    array of boundaries included in the observation.
     integer(I4B), allocatable, dimension(:), public :: indxbnds
     ! Set FormattedOutput false if output unit is opened for unformatted i/o
     logical,                     public :: FormattedOutput = .true.
     logical,                     public :: BndFound = .false.
-    real(DP),                    public :: CurrentTimeStepEndValue = 0.0d0
-    real(DP),                    public :: CurrentTimeStepEndTime = 0.0d0
+    real(DP),                    public :: CurrentTimeStepEndValue = DZERO
+    real(DP),                    public :: CurrentTimeStepEndTime = DZERO
     ! -- Members specific to continuous observations
     integer(I4B),                     public :: indxObsOutput = -1
     ! -- Private members
@@ -106,7 +106,7 @@ contains
     class(ObserveType), intent(inout) :: this
     !
     ! -- Reset current value to zero.
-    this%CurrentTimeStepEndValue = 0.0d0
+    this%CurrentTimeStepEndValue = DZERO
     return
   end subroutine ResetCurrent
 
@@ -147,7 +147,7 @@ contains
     integer(I4B),      intent(in) :: numunit   ! Output unit number
     logical,           intent(in) :: formatted ! Formatted output?
     integer(I4B),      intent(in) :: indx      ! Index in ObsOutput array
-    type(ObsDataType), dimension(:), pointer, contiguous, intent(in) :: obsData
+    type(ObsDataType), dimension(:), pointer, intent(in) :: obsData
     integer(I4B),      intent(in) :: inunit
     ! -- local
     real(DP) :: r
