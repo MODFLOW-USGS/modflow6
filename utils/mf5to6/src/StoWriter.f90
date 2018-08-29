@@ -16,9 +16,9 @@ module StoWriterModule
     integer,               pointer :: Nlaynew => null()
     integer, dimension(:), pointer :: Layptr => null()
     integer, pointer, dimension(:)  :: Iconvert  ! confined (0) or convertible (1), upstream (4)?
-    double precision, pointer, dimension(:,:,:) :: Ss ! specific storage (or storage coefficient)
-    double precision, pointer, dimension(:,:,:) :: Sy ! specific yield
-    logical, pointer, dimension(:)  :: Transient
+    double precision, pointer, dimension(:,:,:) :: Ss => null() ! specific storage (or storage coefficient)
+    double precision, pointer, dimension(:,:,:) :: Sy => null() ! specific yield
+    logical, pointer, dimension(:)  :: Transient => null()
     logical :: Newton
   contains
     procedure :: AllocateArrays

@@ -31,7 +31,7 @@ program mf5to6
   type(ExchangeType), pointer :: exchange => null()
   type(SimFileWriterType) :: SimFileWriter
   type(SfrPackageWriterType), pointer :: SfrWriter => null()
-  class(*),                 pointer :: obj
+  class(*),                 pointer :: obj => null()
   character(len=MAXCHARLEN) :: fname, namfil, basnam, basnamtemp, msg
   logical :: WriteDisFile
   ! formats
