@@ -23,28 +23,29 @@ module GwfGwfExchangeModule
   public :: gwfexchange_create
 
   type, extends(NumericalExchangeType) :: GwfExchangeType
-    type(GwfModelType), pointer                      :: gwfmodel1 => null()     ! pointer to GWF Model 1
-    type(GwfModelType), pointer                      :: gwfmodel2 => null()     ! pointer to GWF Model 2
-    integer(I4B), pointer                            :: inewton   => null()     ! newton flag (1 newton is on)
-    integer(I4B), pointer                            :: icellavg  => null()     ! cell averaging
-    integer(I4B), pointer                            :: ivarcv    => null()     ! variable cv
-    integer(I4B), pointer                            :: idewatcv  => null()     ! dewatered cv
-    integer(I4B), pointer                            :: ianglex   => null()     ! flag indicating anglex was read, if read, ianglex is index in auxvar
-    integer(I4B), pointer                            :: icdist    => null()     ! flag indicating cdist was read, if read, icdist is index in auxvar
-    integer(I4B), pointer                            :: inamedbound => null()   ! flag to read boundnames
-    real(DP), pointer                                :: satomega  => null()     ! saturation smoothing
-    integer(I4B), dimension(:), pointer, contiguous              :: ihc       => null()     ! horizontal connection indicator array
-    real(DP), dimension(:), pointer, contiguous                  :: condsat   => null()     ! saturated conductance
-    real(DP), dimension(:), pointer, contiguous                  :: cl1       => null()     ! connection length 1
-    real(DP), dimension(:), pointer, contiguous                  :: cl2       => null()     ! connection length 2
-    real(DP), dimension(:), pointer, contiguous                  :: hwva      => null()     ! horizontal widths, vertical flow areas
-    integer(I4B), pointer                            :: ingnc     => null()     ! unit number for gnc (0 if off)
-    type(GhostNodeType), pointer                     :: gnc       => null()     ! gnc object
-    integer(I4B), pointer                            :: inmvr     => null()     ! unit number for mover (0 if off)
-    type(GwfMvrType), pointer                        :: mvr       => null()     ! water mover object
-    integer(I4B), pointer                            :: inobs     => null()     ! unit number for GWF-GWF observations
-    type(ObsType), pointer                           :: obs       => null()     ! observation object
-    character(len=LENBOUNDNAME), dimension(:), pointer, contiguous :: boundname   => null() ! boundnames
+    type(GwfModelType), pointer                      :: gwfmodel1   => null()    ! pointer to GWF Model 1
+    type(GwfModelType), pointer                      :: gwfmodel2   => null()    ! pointer to GWF Model 2
+    integer(I4B), pointer                            :: inewton     => null()    ! newton flag (1 newton is on)
+    integer(I4B), pointer                            :: icellavg    => null()    ! cell averaging
+    integer(I4B), pointer                            :: ivarcv      => null()    ! variable cv
+    integer(I4B), pointer                            :: idewatcv    => null()    ! dewatered cv
+    integer(I4B), pointer                            :: ianglex     => null()    ! flag indicating anglex was read, if read, ianglex is index in auxvar
+    integer(I4B), pointer                            :: icdist      => null()    ! flag indicating cdist was read, if read, icdist is index in auxvar
+    integer(I4B), pointer                            :: inamedbound => null()    ! flag to read boundnames
+    real(DP), pointer                                :: satomega    => null()    ! saturation smoothing
+    integer(I4B), dimension(:), pointer, contiguous  :: ihc         => null()    ! horizontal connection indicator array
+    real(DP), dimension(:), pointer, contiguous      :: condsat     => null()    ! saturated conductance
+    real(DP), dimension(:), pointer, contiguous      :: cl1         => null()    ! connection length 1
+    real(DP), dimension(:), pointer, contiguous      :: cl2         => null()    ! connection length 2
+    real(DP), dimension(:), pointer, contiguous      :: hwva        => null()    ! horizontal widths, vertical flow areas
+    integer(I4B), pointer                            :: ingnc       => null()    ! unit number for gnc (0 if off)
+    type(GhostNodeType), pointer                     :: gnc         => null()    ! gnc object
+    integer(I4B), pointer                            :: inmvr       => null()    ! unit number for mover (0 if off)
+    type(GwfMvrType), pointer                        :: mvr         => null()    ! water mover object
+    integer(I4B), pointer                            :: inobs       => null()    ! unit number for GWF-GWF observations
+    type(ObsType), pointer                           :: obs         => null()    ! observation object
+    character(len=LENBOUNDNAME), dimension(:),                                  &
+                                 pointer, contiguous :: boundname   => null()    ! boundnames
   contains
     procedure          :: exg_df      => gwf_gwf_df
     procedure          :: exg_ac      => gwf_gwf_ac

@@ -23,13 +23,13 @@ module TimeArraySeriesManagerModule
 
   type TimeArraySeriesManagerType
     ! -- Public members
-    integer(I4B), public :: iout = 0                                            ! output unit num
-    class(DisBaseType), pointer, public :: dis => null()                        ! pointer to dis
+    integer(I4B), public :: iout = 0                                             ! output unit num
+    class(DisBaseType), pointer, public :: dis => null()                         ! pointer to dis
     ! -- Private members
-    type(ListType), pointer, private :: boundTasLinks => null()                 ! list of TAS links
-    character(len=LINELENGTH), allocatable, dimension(:)  :: tasfiles           ! list of TA file names
-    type(TimeArraySeriesType), dimension(:), pointer, contiguous :: taslist     ! array of TA pointers
-    character(len=LENTIMESERIESNAME), allocatable, dimension(:) :: tasnames     ! array of TA names
+    type(ListType), pointer, private :: boundTasLinks => null()                  ! list of TAS links
+    character(len=LINELENGTH), allocatable, dimension(:)  :: tasfiles            ! list of TA file names
+    type(TimeArraySeriesType), dimension(:), pointer, contiguous :: taslist      ! array of TA pointers
+    character(len=LENTIMESERIESNAME), allocatable, dimension(:) :: tasnames      ! array of TA names
   contains
     ! -- Public procedures
     procedure, public :: tasmanager_df

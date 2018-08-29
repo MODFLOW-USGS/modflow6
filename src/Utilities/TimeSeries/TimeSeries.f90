@@ -25,12 +25,12 @@ module TimeSeriesModule
 
   type TimeSeriesType
     ! -- Public members
-    integer(I4B), public                         :: iMethod = UNDEFINED
-    character(len=LENTIMESERIESNAME), public     :: Name = ''
+    integer(I4B), public :: iMethod = UNDEFINED
+    character(len=LENTIMESERIESNAME), public :: Name = ''
     ! -- Private members
-    real(DP), private                            :: sfac = DONE
-    logical, public                              :: autoDeallocate = .true.
-    type(ListType), pointer, private             :: list => null()
+    real(DP), private :: sfac = DONE
+    logical, public :: autoDeallocate = .true.
+    type(ListType), pointer, private :: list => null()
     class(TimeSeriesFileType), pointer, private :: tsfile => null()
   contains
     ! -- Public procedures

@@ -14,7 +14,7 @@ module TimeArrayModule
 
   type :: TimeArrayType
     ! -- Public members
-    real(DP),                        public :: taTime
+    real(DP), public :: taTime
     real(DP), dimension(:), pointer, contiguous, public :: taArray => null()
   contains
     ! -- Public procedures

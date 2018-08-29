@@ -19,8 +19,8 @@ module IunitModule
 
   type :: IunitRowType
     integer(I4B) :: nval = 0
-    integer(I4B), allocatable, dimension(:) :: iunit                            ! unit numbers for this row
-    integer(I4B), allocatable, dimension(:) :: ipos                             ! position in the input files character array
+    integer(I4B), allocatable, dimension(:) :: iunit                             ! unit numbers for this row
+    integer(I4B), allocatable, dimension(:) :: ipos                              ! position in the input files character array
   end type IunitRowType
 
   type :: IunitType

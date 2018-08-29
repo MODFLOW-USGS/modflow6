@@ -25,14 +25,15 @@ module TimeSeriesManagerModule
             read_single_value_or_time_series, tsmanager_cr
 
   type TimeSeriesManagerType
-    integer(I4B), public                                :: iout = 0             ! output unit number
-    type(TimeSeriesFileListType), pointer, public       :: tsfileList => null() ! list of ts files objs
-    type(ListType), pointer, public                   :: boundTsLinks => null() ! links to bound and aux
-    integer(I4B)                                        :: numtsfiles = 0       ! number of ts files
-    character(len=MAXCHARLEN), allocatable, dimension(:) :: tsfiles             ! list of ts files
-    type(ListType), pointer, private               :: auxvarTsLinks => null()   ! list of aux links
-    type(HashTableType), private                   :: BndTsHashTable            ! hash of ts to tsobj
-    type(TimeSeriesContainerType), allocatable, dimension(:), private :: TsContainers
+    integer(I4B), public :: iout = 0                                             ! output unit number
+    type(TimeSeriesFileListType), pointer, public :: tsfileList => null()        ! list of ts files objs
+    type(ListType), pointer, public :: boundTsLinks => null()                    ! links to bound and aux
+    integer(I4B) :: numtsfiles = 0       ! number of ts files
+    character(len=MAXCHARLEN), allocatable, dimension(:) :: tsfiles              ! list of ts files
+    type(ListType), pointer, private :: auxvarTsLinks => null()                  ! list of aux links
+    type(HashTableType), private :: BndTsHashTable                               ! hash of ts to tsobj
+    type(TimeSeriesContainerType), allocatable, dimension(:),                   &
+                                   private :: TsContainers
   contains
     ! -- Public procedures
     procedure, public :: tsmanager_df

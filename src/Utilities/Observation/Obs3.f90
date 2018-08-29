@@ -156,27 +156,27 @@ module ObsModule
 
   type :: ObsType
     ! -- Public members
-    integer(I4B), public                                  :: iout = 0
-    integer(I4B), public                                  :: npakobs = 0
-    integer(I4B), pointer, public                         :: inUnitObs => null()
-    character(len=LINELENGTH), pointer, public            :: inputFilename => null()
-    character(len=2*LENPACKAGENAME+4),        public      :: pkgName = ''
-    character(len=LENFTYPE),                  public      :: filtyp = ''
-    logical,                         pointer, public      :: active => null()
+    integer(I4B), public :: iout = 0
+    integer(I4B), public :: npakobs = 0
+    integer(I4B), pointer, public :: inUnitObs => null()
+    character(len=LINELENGTH), pointer, public :: inputFilename => null()
+    character(len=2*LENPACKAGENAME+4), public :: pkgName = ''
+    character(len=LENFTYPE), public :: filtyp = ''
+    logical, pointer, public :: active => null()
     type(ObsContainerType), dimension(:), pointer, public :: pakobs => null()
-    type(ObsDataType), dimension(:), pointer, public      :: obsData => null()
+    type(ObsDataType), dimension(:), pointer, public :: obsData => null()
     ! -- Private members
-    integer(I4B),                     private :: iprecision = 2  ! 2=double; 1=single
-    integer(I4B),                     private :: idigits = 5
-    character(len=LINELENGTH),        private :: outputFilename = ''
-    character(len=20),                private :: blockTypeFound = ''
-    character(len=20),                private :: obsfmtcont = ''
-    logical,                          private :: echo = .false.
-    logical,                          private :: more
-    type(ListType),                   private :: obsList
+    integer(I4B), private :: iprecision = 2                                      ! 2=double; 1=single
+    integer(I4B), private :: idigits = 5
+    character(len=LINELENGTH), private :: outputFilename = ''
+    character(len=20), private :: blockTypeFound = ''
+    character(len=20), private:: obsfmtcont = ''
+    logical, private :: echo = .false.
+    logical, private :: more
+    type(ListType), private :: obsList
     type(ObsOutputListType), pointer, private :: obsOutputList => null()
-    class(DisBaseType),      pointer, private :: dis => null()
-    type(BlockParserType),            private :: parser
+    class(DisBaseType), pointer, private :: dis => null()
+    type(BlockParserType), private :: parser
   contains
     ! -- Public procedures
     procedure, public  :: obs_df

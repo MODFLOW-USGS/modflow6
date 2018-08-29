@@ -12,21 +12,21 @@ module MvrModule
     [character(len=12) :: 'FACTOR', 'EXCESS', 'THRESHOLD', 'UPTO']
   
   type MvrType
-    character(len=LENMODELNAME+LENPACKAGENAME+1) :: pname1 = ''                 !provider package name
-    character(len=LENMODELNAME+LENPACKAGENAME+1) :: pname2 = ''                 !receiver package name
-    integer(I4B)                                 :: irch1 = 0                   !provider reach number
-    integer(I4B)                                 :: irch2 = 0                   !receiver reach number
-    character(len=20)                            :: mvrtype = ''                !FACTOR, THRESHOLD, UPTO, EXCESS
-    real(DP)                                     :: value = DZERO               !factor or rate depending on mvrtype
-    real(DP)                                     :: qpold = DZERO               !provider rate from last time step
-    real(DP)                                     :: qpnew = DZERO               !new provider rate
-    real(DP)                                     :: qpactual = DZERO            !rate provided to the receiver
-    real(DP)                                     :: qanew = DZERO               !rate available at time of providing
-    real(DP)                                     :: qaold = DZERO               !rate available fromtime step
-    real(DP), pointer                            :: qtformvr_ptr => null()      !pointer to total available flow (qtformvr)
-    real(DP), pointer                            :: qformvr_ptr => null()       !pointer to available flow after being consumed (qformvr)
-    real(DP), pointer                            :: qtomvr_ptr => null()        !pointer to provider flow rate (qtomvr)
-    real(DP), pointer                            :: qfrommvr_ptr => null()      !pointer to receiver flow rate (qfrommvr)
+    character(len=LENMODELNAME+LENPACKAGENAME+1) :: pname1 = ''                  !provider package name
+    character(len=LENMODELNAME+LENPACKAGENAME+1) :: pname2 = ''                  !receiver package name
+    integer(I4B)                                 :: irch1 = 0                    !provider reach number
+    integer(I4B)                                 :: irch2 = 0                    !receiver reach number
+    character(len=20)                            :: mvrtype = ''                 !FACTOR, THRESHOLD, UPTO, EXCESS
+    real(DP)                                     :: value = DZERO                !factor or rate depending on mvrtype
+    real(DP)                                     :: qpold = DZERO                !provider rate from last time step
+    real(DP)                                     :: qpnew = DZERO                !new provider rate
+    real(DP)                                     :: qpactual = DZERO             !rate provided to the receiver
+    real(DP)                                     :: qanew = DZERO                !rate available at time of providing
+    real(DP)                                     :: qaold = DZERO                !rate available fromtime step
+    real(DP), pointer                            :: qtformvr_ptr => null()       !pointer to total available flow (qtformvr)
+    real(DP), pointer                            :: qformvr_ptr => null()        !pointer to available flow after being consumed (qformvr)
+    real(DP), pointer                            :: qtomvr_ptr => null()         !pointer to provider flow rate (qtomvr)
+    real(DP), pointer                            :: qfrommvr_ptr => null()       !pointer to receiver flow rate (qfrommvr)
   contains
     procedure :: set
     procedure :: set_qpold

@@ -112,9 +112,11 @@ matrix:
             - latex-xcolor
             - unzip
      
-  allow_failures:
-    - env: CVER=gfortran7
-    - env: CVER=gfortran8
+  # allowed failures - uncomment lines below to allow failure
+  #                    of specific gfortran compilers
+  #allow_failures:
+  #  - env: CVER=gfortran7
+  #  - env: CVER=gfortran8
      
 
 
