@@ -4,7 +4,7 @@ module NumericalSolutionModule
   use KindModule,              only: DP, I4B
   use TimerModule,             only: code_timer
   use ConstantsModule,         only: LINELENGTH, LENSOLUTIONNAME,              &
-                                     DZERO, DEM20, DEM15, DEM6, DEM4,          &
+                                     DPREC, DZERO, DEM20, DEM15, DEM6, DEM4,   &
                                      DEM3, DEM2, DEM1, DHALF,                  &
                                      DONE, DTHREE, DEP6, DEP20
   use VersionModule,           only: IDEVELOPMODE
@@ -2304,11 +2304,20 @@ contains
     ! -- local
     integer(I4B) :: n
     real(DP) :: d
+    real(DP) :: denom
+    real(DP) :: dnorm
 ! ------------------------------------------------------------------------------ 
-    vnorm = DZERO
-    do n = 1, neq
+    vnorm = v(1)
+    do n = 2, neq
       d = v(n)
-      if (abs(d) > vnorm) then
+      denom = abs(vnorm)
+      if (denom == DZERO) then
+        denom = DPREC
+      end if
+      !
+      ! -- calculate normalized value
+      dnorm = abs(d) / denom
+      if (dnorm > DONE) then
         vnorm = d
       end if
     end do
@@ -2386,29 +2395,29 @@ contains
     else if (this%nonmeth == 2) then
       if (kiter == 1) then
         relax = done
-        this%relaxold = done
+        this%relaxold = DONE
         this%bigch = bigch
         this%bigchold = bigch
       else
         ! -- compute relaxation factor
         es = this%bigch / (this%bigchold * this%relaxold)
         aes = abs(es)
-        if (es.lt.-done) then
+        if (es < -DONE) then
           relax = dhalf / aes
         else
-          relax = (dthree + es) / (dthree + aes)
+          relax = (DTHREE + es) / (DTHREE + aes)
         end if
       end if
       this%relaxold = relax
       !
       ! -- modify cooley to use exponential average of past changes
-      this%bigchold = (done - this%gamma) * this%bigch  + this%gamma *         &
+      this%bigchold = (DONE - this%gamma) * this%bigch  + this%gamma *         &
                       this%bigchold
       ! -- this method does it right after newton - need to do it after
       !    underrelaxation and backtracking.
       !
       ! -- compute new head after under-relaxation
-      if (relax.lt.done) then
+      if (relax < DONE) then
         do n = 1, neq
           if (active(n) < 1) cycle
           delx = x(n) - xtemp(n)
@@ -2426,7 +2435,7 @@ contains
         ! -- compute step-size (delta x) and initialize d-b-d parameters
         delx = x(n) - xtemp(n)
 
-        if ( kiter.eq.1 ) then
+        if ( kiter == 1 ) then
           this%wsave(n) = DONE
           this%hchold(n) = DEM20
           this%deold(n) = DZERO
@@ -2442,7 +2451,7 @@ contains
         else
           ww = this%wsave(n) + this%akappa
         end if
-        if ( ww.gt.done ) ww = done
+        if ( ww > DONE ) ww = DONE
         this%wsave(n) = ww
 
         ! -- compute exponential average of past changes in hchold
@@ -2461,7 +2470,7 @@ contains
         !
         ! -- compute accepted step-size and new head
         amom = DZERO
-        if (kiter.gt.4) amom = this%amomentum
+        if (kiter > 4) amom = this%amomentum
         delx = delx * ww + amom * this%hchold(n)
         x(n) = xtemp(n) + delx
       end do
