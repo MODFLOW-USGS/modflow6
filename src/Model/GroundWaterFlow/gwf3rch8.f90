@@ -19,10 +19,10 @@ module RchModule
   character(len=LENPACKAGENAME) :: text  = '             RCH'
   !
   type, extends(BndType) :: RchType
-    integer(I4B), pointer               :: inirch     => NULL()
-    integer(I4B), pointer, dimension(:) :: nodesontop => NULL()                 ! User provided cell numbers; nodelist is cells where recharge is applied)
-    logical, private                    :: fixed_cell = .false.
-    logical, private                    :: read_as_arrays = .false.
+    integer(I4B), pointer :: inirch => NULL()
+    integer(I4B), dimension(:), pointer, contiguous :: nodesontop => NULL()      ! User provided cell numbers; nodelist is cells where recharge is applied)
+    logical, private :: fixed_cell = .false.
+    logical, private :: read_as_arrays = .false.
   contains
     procedure :: rch_allocate_scalars
     procedure :: bnd_options         => rch_options
@@ -407,6 +407,9 @@ module RchModule
     character(len=LINELENGTH) :: keyword
     logical :: found, endOfBlock
     logical :: convertFlux
+    !
+    ! -- these time array series pointers need to be non-contiguous
+    !    beacuse a slice of bound is passed
     real(DP), dimension(:), pointer :: bndArrayPtr => null()
     real(DP), dimension(:), pointer :: auxArrayPtr => null()
     real(DP), dimension(:), pointer :: auxMultArray => null()

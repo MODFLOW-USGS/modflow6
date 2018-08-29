@@ -13,24 +13,24 @@ module GhostNodeModule
   public :: gnc_cr
 
   type, extends(NumericalPackageType) :: GhostNodeType
-    logical, pointer                                  :: smgnc       => null()  ! single model gnc
-    logical, pointer                                  :: implicit    => null()  ! lhs or rhs
-    logical, pointer                                  :: i2kn        => null()  ! not used
-    integer(I4B), pointer                             :: nexg        => null()  ! number of gncs
-    integer(I4B), pointer                             :: numjs       => null()  ! number of connecting nodes
-    class(NumericalModelType), pointer                :: m1          => null()  ! pointer to model 1
-    class(NumericalModelType), pointer                :: m2          => null()  ! pointer to model 2
-    integer(I4B), dimension(:), pointer               :: nodem1      => null()  ! array of nodes in model 1
-    integer(I4B), dimension(:), pointer               :: nodem2      => null()  ! array of nodes in model 2
-    integer(I4B), dimension(:, :), pointer            :: nodesj      => null()  ! array of interpolation nodes
-    real(DP), dimension(:), pointer                   :: cond        => null()  ! array of conductance
-    integer(I4B), dimension(:), pointer               :: idxglo      => null()  ! connection position in amat
-    integer(I4B), dimension(:), pointer               :: idxsymglo   => null()  ! symmetric position in amat
-    real(DP), dimension(:, :), pointer                :: alphasj     => null()  ! interpolation factors
-    integer(I4B), dimension(:), pointer               :: idiagn      => null()  ! amat diagonal position of n
-    integer(I4B), dimension(:), pointer               :: idiagm      => null()  ! amat diagonal position of m
-    integer(I4B), dimension(:,:), pointer             :: jposinrown  => null()  ! amat j position in row n
-    integer(I4B), dimension(:,:), pointer             :: jposinrowm  => null()  ! amat j position in row m
+    logical, pointer                                   :: smgnc       => null()  ! single model gnc
+    logical, pointer                                   :: implicit    => null()  ! lhs or rhs
+    logical, pointer                                   :: i2kn        => null()  ! not used
+    integer(I4B), pointer                              :: nexg        => null()  ! number of gncs
+    integer(I4B), pointer                              :: numjs       => null()  ! number of connecting nodes
+    class(NumericalModelType), pointer                 :: m1          => null()  ! pointer to model 1
+    class(NumericalModelType), pointer                 :: m2          => null()  ! pointer to model 2
+    integer(I4B), dimension(:), pointer, contiguous    :: nodem1      => null()  ! array of nodes in model 1
+    integer(I4B), dimension(:), pointer, contiguous    :: nodem2      => null()  ! array of nodes in model 2
+    integer(I4B), dimension(:, :), pointer, contiguous :: nodesj      => null()  ! array of interpolation nodes
+    real(DP), dimension(:), pointer, contiguous        :: cond        => null()  ! array of conductance
+    integer(I4B), dimension(:), pointer, contiguous    :: idxglo      => null()  ! connection position in amat
+    integer(I4B), dimension(:), pointer, contiguous    :: idxsymglo   => null()  ! symmetric position in amat
+    real(DP), dimension(:, :), pointer, contiguous     :: alphasj     => null()  ! interpolation factors
+    integer(I4B), dimension(:), pointer, contiguous    :: idiagn      => null()  ! amat diagonal position of n
+    integer(I4B), dimension(:), pointer, contiguous    :: idiagm      => null()  ! amat diagonal position of m
+    integer(I4B), dimension(:,:), pointer, contiguous  :: jposinrown  => null()  ! amat j position in row n
+    integer(I4B), dimension(:,:), pointer, contiguous  :: jposinrowm  => null()  ! amat j position in row m
   contains
     procedure          :: gnc_df
     procedure          :: gnc_ac

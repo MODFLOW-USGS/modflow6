@@ -13,14 +13,14 @@ module DnmDis3dModule
   public dis3d_cr, Dis3dType, CastAsDis3dType
 
   type, extends(DisBaseType) :: Dis3dType
-    integer, pointer               :: nlay         !number of layers
-    integer, pointer               :: nrow         !number of rows
-    integer, pointer               :: ncol         !number of columns
-    integer, dimension(:), pointer :: nodereduced  !(size:nodesuser) given user nodenumber provide the reduced nodenumber (size 0 if not reduced)
-    integer, dimension(:), pointer :: nodeuser     !(size:nodes) given a reduced nodenumber, provide the user nodenumber (size 0 if not reduced)
+    integer, pointer                            :: nlay  => null()        !number of layers
+    integer, pointer                            :: nrow   => null()       !number of rows
+    integer, pointer                            :: ncol   => null()       !number of columns
+    integer, dimension(:), pointer, contiguous  :: nodereduced  => null() !(size:nodesuser) given user nodenumber provide the reduced nodenumber (size 0 if not reduced)
+    integer, dimension(:), pointer, contiguous  :: nodeuser  => null()    !(size:nodes) given a reduced nodenumber, provide the user nodenumber (size 0 if not reduced)
     ! for PreHeadsMF
-    double precision :: gridXmax = DZERO
-    double precision :: gridYmin = DZERO
+    double precision                            :: gridXmax = DZERO
+    double precision                            :: gridYmin = DZERO
     double precision, dimension(:), allocatable :: delr
     double precision, dimension(:), allocatable :: delc
     integer,      dimension(:,:,:), allocatable :: idomain

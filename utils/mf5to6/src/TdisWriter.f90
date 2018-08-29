@@ -13,7 +13,7 @@ module TdisWriterModule
   type, extends(FileWriterType) :: TdisWriterType
     character(len=10), private :: TimeUnit = 'UNDEFINED'
     integer, private :: Nper = -1
-    type(StressPeriodType), dimension(:), pointer :: StressPeriods
+    type(StressPeriodType), dimension(:), pointer :: StressPeriods => null()
   contains
     procedure, public :: InitializeFile => initialize_tdis
     procedure, public :: Alloc

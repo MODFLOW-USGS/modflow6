@@ -17,19 +17,19 @@ module GwfDisvModule
   public disv_cr, GwfDisvType
 
   type, extends(DisBaseType) :: GwfDisvType
-    integer(I4B), pointer                          :: nlay        => null()     ! number of layers
-    integer(I4B), pointer                          :: ncpl        => null()     ! number of cells per layer
-    integer(I4B), pointer                          :: nvert       => null()     ! number of x,y vertices
-    integer(I4B), dimension(:), pointer            :: nodereduced => null()     ! (size:nodesuser)contains reduced nodenumber (size 0 if not reduced); -1 means vertical pass through, 0 is idomain = 0
-    integer(I4B), dimension(:), pointer            :: nodeuser    => null()     ! (size:nodes) given a reduced nodenumber, provide the user nodenumber (size 0 if not reduced)
-    real(DP), dimension(:,:), pointer              :: vertices    => null()     ! cell vertices stored as 2d array of x and y
-    real(DP), dimension(:,:), pointer              :: cellxy      => null()     ! cell center stored as 2d array of x and y
-    integer(I4B), dimension(:), pointer            :: iavert      => null()     ! cell vertex pointer ia array
-    integer(I4B), dimension(:), pointer            :: javert      => null()     ! cell vertex pointer ja array
-    real(DP), dimension(:, :, :), pointer          :: botm        => null()     ! top and bottom elevations for each cell (ncpl, 1, 0:nlay)
-    integer(I4B), dimension(:, :, :), pointer      :: idomain     => null()     ! idomain (ncpl, 1, nlay)
-    type(DisvGeomType)                             :: cell1                     ! cell object used to calculate geometric properties
-    type(DisvGeomType)                             :: cell2                     ! cell object used to calculate geometric properties
+    integer(I4B), pointer :: nlay  => null()                                     ! number of layers
+    integer(I4B), pointer :: ncpl => null()                                      ! number of cells per layer
+    integer(I4B), pointer :: nvert => null()                                     ! number of x,y vertices
+    integer(I4B), dimension(:), pointer, contiguous :: nodereduced => null()     ! (size:nodesuser)contains reduced nodenumber (size 0 if not reduced); -1 means vertical pass through, 0 is idomain = 0
+    integer(I4B), dimension(:), pointer, contiguous :: nodeuser => null()        ! (size:nodes) given a reduced nodenumber, provide the user nodenumber (size 0 if not reduced)
+    real(DP), dimension(:,:), pointer, contiguous :: vertices => null()          ! cell vertices stored as 2d array of x and y
+    real(DP), dimension(:,:), pointer, contiguous :: cellxy => null()            ! cell center stored as 2d array of x and y
+    integer(I4B), dimension(:), pointer, contiguous :: iavert => null()          ! cell vertex pointer ia array
+    integer(I4B), dimension(:), pointer, contiguous :: javert => null()          ! cell vertex pointer ja array
+    real(DP), dimension(:, :, :), pointer :: botm => null()                      ! top and bottom elevations for each cell (ncpl, 1, 0:nlay)
+    integer(I4B), dimension(:, :, :), pointer :: idomain  => null()              ! idomain (ncpl, 1, nlay)
+    type(DisvGeomType) :: cell1                                                  ! cell object used to calculate geometric properties
+    type(DisvGeomType)  :: cell2                                                 ! cell object used to calculate geometric properties
   contains
     procedure :: dis_df => disv_df
     procedure :: dis_da => disv_da
@@ -1703,7 +1703,7 @@ module GwfDisvModule
     integer(I4B), intent(inout)                        :: istop
     integer(I4B), intent(in)                           :: in
     integer(I4B), intent(in)                           :: iout
-    integer(I4B), dimension(:), pointer, intent(inout) :: iarray
+    integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: iarray
     character(len=*), intent(in)                       :: aname
     ! -- local
     integer(I4B) :: ival
@@ -1713,7 +1713,7 @@ module GwfDisvModule
     integer(I4B) :: ncol
     integer(I4B) :: nval
     integer(I4B) :: nodeu, noder
-    integer(I4B), dimension(:), pointer :: itemp
+    integer(I4B), dimension(:), pointer, contiguous :: itemp
 ! ------------------------------------------------------------------------------
     !
     ! -- Point the temporary pointer array, which is passed to the reading
@@ -1778,7 +1778,7 @@ module GwfDisvModule
     integer(I4B), intent(inout)                    :: istop
     integer(I4B), intent(in)                       :: in
     integer(I4B), intent(in)                       :: iout
-    real(DP), dimension(:), pointer, intent(inout) :: darray
+    real(DP), dimension(:), pointer, contiguous, intent(inout) :: darray
     character(len=*), intent(in)                   :: aname
     ! -- local
     integer(I4B) :: ival
@@ -1788,7 +1788,7 @@ module GwfDisvModule
     integer(I4B) :: ncol
     integer(I4B) :: nval
     integer(I4B) :: nodeu, noder
-    real(DP), dimension(:), pointer :: dtemp
+    real(DP), dimension(:), pointer, contiguous :: dtemp
 ! ------------------------------------------------------------------------------
     !
     ! -- Point the temporary pointer array, which is passed to the reading
@@ -1923,7 +1923,7 @@ module GwfDisvModule
     ! -- modules
     ! -- dummy
     class(GwfDisvType), intent(inout)              :: this
-    real(DP), dimension(:), pointer, intent(inout) :: darray
+    real(DP), dimension(:), pointer, contiguous, intent(inout) :: darray
     integer(I4B), intent(in)                       :: iout
     integer(I4B), intent(in)                       :: iprint
     integer(I4B), intent(in)                       :: idataun
@@ -1941,7 +1941,7 @@ module GwfDisvModule
     integer(I4B) :: nval
     integer(I4B) :: nodeu, noder
     integer(I4B) :: istart, istop
-    real(DP), dimension(:), pointer :: dtemp
+    real(DP), dimension(:), pointer, contiguous :: dtemp
     ! -- formats
     character(len=*),parameter :: fmthsv = &
       "(1X,/1X,a,' WILL BE SAVED ON UNIT ',I4, &

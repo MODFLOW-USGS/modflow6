@@ -18,8 +18,8 @@ module OutputControlData
     integer(I4B), pointer                   :: nwidthp  => null()
     real(DP), pointer                       :: dnodata  => null()
     integer(I4B), pointer                   :: inodata  => null()
-    real(DP), dimension(:), pointer         :: dblvec   => null()
-    integer(I4B), dimension(:), pointer     :: intvec   => null()
+    real(DP), dimension(:), pointer, contiguous         :: dblvec   => null()
+    integer(I4B), dimension(:), pointer, contiguous     :: intvec   => null()
     class(DisBaseType), pointer             :: dis      => null()
     type(PrintSaveManagerType), pointer     :: psmobj   => null()
   contains
@@ -175,7 +175,7 @@ module OutputControlData
     ! -- dummy
     class(OutputControlDataType) :: this
     character(len=*), intent(in) :: cname
-    real(DP), dimension(:), pointer, intent(in) :: dblvec
+    real(DP), dimension(:), pointer, contiguous, intent(in) :: dblvec
     class(DisBaseType), pointer, intent(in) :: dis
     character(len=*), intent(in) :: cdefpsm
     character(len=*), intent(in) :: cdeffmp
@@ -207,7 +207,7 @@ module OutputControlData
     ! -- dummy
     class(OutputControlDataType) :: this
     character(len=*), intent(in) :: cname
-    integer(I4B), dimension(:), pointer, intent(in) :: intvec
+    integer(I4B), dimension(:), pointer, contiguous, intent(in) :: intvec
     class(DisBaseType), pointer, intent(in) :: dis
     character(len=*), intent(in) :: cdefpsm
     character(len=*), intent(in) :: cdeffmp
