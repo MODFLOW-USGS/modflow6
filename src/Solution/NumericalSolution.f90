@@ -351,9 +351,11 @@ contains
     call mem_allocate(this%convdvmax, this%convnmod, 0, 'CONVDVMAX', this%name)
     call mem_allocate(this%convdrmax, this%convnmod, 0, 'CONVDRMAX', this%name)
     !
-    ! -- initialize
+    ! -- initialize allocated arrays
     do i = 1, this%neq
       this%x(i) = DZERO
+      this%xtemp(i) = DZERO
+      this%dxold(i) = DZERO
       this%active(i) = 1 !default is active
     enddo
     !
