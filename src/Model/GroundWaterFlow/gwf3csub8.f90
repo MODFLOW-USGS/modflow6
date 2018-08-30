@@ -30,9 +30,9 @@ module GwfCsubModule
       [' CSUB-AQELASTIC',                                                       & 
        '   CSUB-ELASTIC', ' CSUB-INELASTIC',                                    &
        ' CSUB-WATERCOMP']
-  character(len=LENBUDTXT), dimension(5) :: comptxt =                           & !text labels for compaction terms
+  character(len=LENBUDTXT), dimension(6) :: comptxt =                           & !text labels for compaction terms
       ['CSUB-COMPACTION', ' CSUB-INELASTIC', '   CSUB-ELASTIC',                 &
-       '  CSUB-SKELETAL', ' CSUB-ZDISPLACE']
+       '  CSUB-INTERBED', '  CSUB-SKELETAL', ' CSUB-ZDISPLACE']
   
   !
   ! -- local paramter - derivative of the log of effective stress
@@ -50,6 +50,7 @@ module GwfCsubModule
     integer(I4B), pointer :: ioutcomp => null()
     integer(I4B), pointer :: ioutcompi => null()
     integer(I4B), pointer :: ioutcompe => null()
+    integer(I4B), pointer :: ioutcompib => null()
     integer(I4B), pointer :: ioutcomps => null()
     integer(I4B), pointer :: ioutzdisp => null()
     integer(I4B), pointer :: iupdatematprop => null()
@@ -307,6 +308,7 @@ contains
     call mem_allocate(this%ioutcomp, 'IOUTCOMP', this%origin)
     call mem_allocate(this%ioutcompi, 'IOUTCOMPI', this%origin)
     call mem_allocate(this%ioutcompe, 'IOUTCOMPE', this%origin)
+    call mem_allocate(this%ioutcompib, 'IOUTCOMPIB', this%origin)
     call mem_allocate(this%ioutcomps, 'IOUTCOMPS', this%origin)
     call mem_allocate(this%ioutzdisp, 'IOUTZDISP', this%origin)
     call mem_allocate(this%iupdatematprop, 'IUPDATEMATPROP', this%origin)
@@ -347,6 +349,7 @@ contains
     this%ioutcomp = 0
     this%ioutcompi = 0
     this%ioutcompe = 0
+    this%ioutcompib = 0
     this%ioutcomps = 0
     this%ioutzdisp = 0
     this%iupdatematprop = 0
@@ -916,7 +919,7 @@ contains
         !
         ! -- write z-displacement
         call this%dis%record_array(this%buff, this%iout, iprint, ibinun,        &
-                                   comptxt(5), cdatafmp, nvaluesp,              &
+                                   comptxt(6), cdatafmp, nvaluesp,              &
                                    nwidthp, editdesc, dinact)
       
       end if
@@ -978,6 +981,34 @@ contains
                                  nwidthp, editdesc, dinact)
     end if
     !
+    ! -- Set unit number for binary interbed compaction
+    if(this%ioutcompib /= 0) then
+      ibinun = this%ioutcompib
+    else
+      ibinun = 0
+    endif
+    if(idvfl == 0) ibinun = 0
+    !
+    ! -- save interbed compaction results
+    if(ibinun /= 0) then
+      iprint = 0
+      dinact = DHNOFLO
+      !
+      ! -- fill buff with interbed compaction
+      do node = 1, this%dis%nodes
+        this%buff(node) = DZERO
+      end do
+      do ib = 1, this%ninterbeds
+        node = this%nodelist(ib)
+        this%buff(node) = this%buff(node) + this%tcompe(ib) + this%tcompi(ib)
+      end do
+      !
+      ! -- write interbed compaction data to binary file
+      call this%dis%record_array(this%buff, this%iout, iprint, ibinun,          &
+                                 comptxt(4), cdatafmp, nvaluesp,                &
+                                 nwidthp, editdesc, dinact)
+    end if
+    !
     ! -- Set unit number for binary skeletal compaction
     if(this%ioutcomps /= 0) then
       ibinun = this%ioutcomps
@@ -998,7 +1029,7 @@ contains
       !
       ! -- write skeletal compaction data to binary file
       call this%dis%record_array(this%buff, this%iout, iprint, ibinun,          &
-                                 comptxt(4), cdatafmp, nvaluesp,                &
+                                 comptxt(5), cdatafmp, nvaluesp,                &
                                  nwidthp, editdesc, dinact)
     end if
     !
@@ -1890,6 +1921,20 @@ contains
                        'FOLLOWED BY FILEOUT'
               call store_error(errmsg)
             end if
+          case ('COMPACTION_INTERBED')
+            call this%parser%GetStringCaps(keyword)
+            if (keyword == 'FILEOUT') then
+              call this%parser%GetString(fname)
+              this%ioutcompib = getunit()
+              call openfile(this%ioutcompib, this%iout, fname,                  &
+                            'DATA(BINARY)', form, access, 'REPLACE')
+              write(this%iout,fmtfileout) &
+                'COMPACTION_INTERBED', fname, this%ioutcompib
+            else 
+              errmsg = 'OPTIONAL COMPACTION_INTERBED KEYWORD MUST BE ' //       &
+                       'FOLLOWED BY FILEOUT'
+              call store_error(errmsg)
+            end if
           case ('COMPACTION_SKELETAL')
             call this%parser%GetStringCaps(keyword)
             if (keyword == 'FILEOUT') then
@@ -2005,8 +2050,8 @@ contains
 
     ! -- grid based data
     if (this%ioutcomp == 0 .and. this%ioutcompi == 0 .and.                      &
-        this%ioutcompe == 0 .and. this%ioutcomps == 0 .and.                     &
-        this%ioutzdisp == 0) then
+        this%ioutcompe == 0 .and. this%ioutcompib == 0 .and.                    &
+        this%ioutcomps == 0 .and. this%ioutzdisp == 0) then
       call mem_allocate(this%buff, 1, 'BUFF', trim(this%origin))
     else
       call mem_allocate(this%buff, this%dis%nodes, 'BUFF', trim(this%origin))
@@ -2273,6 +2318,7 @@ contains
     call mem_deallocate(this%ioutcomp)
     call mem_deallocate(this%ioutcompi)
     call mem_deallocate(this%ioutcompe)
+    call mem_deallocate(this%ioutcompib)
     call mem_deallocate(this%ioutcomps)
     call mem_deallocate(this%ioutzdisp)
     call mem_deallocate(this%iupdatematprop)

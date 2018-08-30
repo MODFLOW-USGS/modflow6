@@ -217,7 +217,7 @@ in_record true
 reader urword
 tagged true
 optional false
-longname budget keyword
+longname compaction keyword
 description keyword to specify that record corresponds to the compaction.
 
 block options
@@ -260,7 +260,7 @@ in_record true
 reader urword
 tagged true
 optional false
-longname budget keyword
+longname elastic interbed compaction keyword
 description keyword to specify that record corresponds to the elastic interbed compaction binary file.
 
 block options
@@ -276,7 +276,7 @@ description name of the binary output file to write elastic interbed compaction 
 
 block options
 name compaction_inelastic_filerecord
-type record compaction_elastic fileout inelastic_compaction_filename
+type record compaction_inelastic fileout inelastic_compaction_filename
 shape
 reader urword
 tagged true
@@ -292,7 +292,7 @@ in_record true
 reader urword
 tagged true
 optional false
-longname budget keyword
+longname inelastic interbed compaction keyword
 description keyword to specify that record corresponds to the inelastic interbed compaction binary file.
 
 block options
@@ -305,6 +305,38 @@ tagged false
 optional false
 longname file keyword
 description name of the binary output file to write inelastic interbed compaction information.
+
+block options
+name compaction_interbed_filerecord
+type record compaction_interbed fileout interbed_compaction_filename
+shape
+reader urword
+tagged true
+optional true
+longname
+description
+
+block options
+name compaction_interbed
+type keyword
+shape
+in_record true
+reader urword
+tagged true
+optional false
+longname interbed compaction keyword
+description keyword to specify that record corresponds to the interbed compaction binary file.
+
+block options
+name interbed_compaction_filename
+type string
+shape
+in_record true
+reader urword
+tagged false
+optional false
+longname file keyword
+description name of the binary output file to write interbed compaction information.
 
 block options
 name compaction_skeletal_filerecord
@@ -324,7 +356,7 @@ in_record true
 reader urword
 tagged true
 optional false
-longname budget keyword
+longname skeletal compaction keyword
 description keyword to specify that record corresponds to the elastic skeletal compaction binary file.
 
 block options
