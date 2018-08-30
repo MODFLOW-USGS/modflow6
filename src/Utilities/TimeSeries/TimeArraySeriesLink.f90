@@ -15,18 +15,18 @@ module TimeArraySeriesLinkModule
 
   type :: TimeArraySeriesLinkType
     ! -- Public members
-    character(len=LENPACKAGENAME),       public :: PackageName = ''
-    character(len=LENTIMESERIESTEXT),    public :: Text = ''
-    integer(I4B),                        public :: Iprpak = 1
-    logical,                             public :: UseDefaultProc = .true.
-    logical,                             public :: ConvertFlux = .false.
-    integer(I4B), dimension(:), pointer, public :: nodelist => null()
+    character(len=LENPACKAGENAME), public :: PackageName = ''
+    character(len=LENTIMESERIESTEXT), public :: Text = ''
+    integer(I4B), public :: Iprpak = 1
+    logical, public :: UseDefaultProc = .true.
+    logical, public :: ConvertFlux = .false.
+    integer(I4B), dimension(:), pointer, contiguous, public :: nodelist => null()
     ! BndArray can point to an array in either the bound or auxval
     ! array of BndType, or any other double precision variable or array
     ! element that contains a value that could be controlled by a time series.
-    real(DP), dimension(:),     pointer, public :: BndArray => null()
-    real(DP), dimension(:),     pointer, public :: RMultArray => null()
-    type(TimeArraySeriesType),  pointer, public :: TimeArraySeries => null()
+    real(DP), dimension(:), pointer, public :: BndArray => null()
+    real(DP), dimension(:), pointer, public :: RMultArray => null()
+    type(TimeArraySeriesType), pointer, public :: TimeArraySeries => null()
   contains
     procedure, public :: da => tasl_da
   end type TimeArraySeriesLinkType
