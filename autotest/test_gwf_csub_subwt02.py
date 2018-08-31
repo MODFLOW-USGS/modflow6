@@ -21,14 +21,14 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['csub_subwt01a', 'csub_subwt01b', 'csub_subwt01c', 'csub_subwt01d']
+ex = ['csub_subwt02a', 'csub_subwt02b', 'csub_subwt02c', 'csub_subwt02d']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
 ddir = 'data'
-cmppth = 'mf2005'
+cmppth = 'mfnwt'
 
-htol = [None for n in ex]
+htol = [None, None, None, None]
 dtol = 1e-3
 budtol = 1e-2
 
@@ -39,10 +39,14 @@ ivoid = [0, 1, 0, 1]
 gs0 = [0., 0., 1700., 1700.]
 
 # set travis to True when version 1.13.0 is released
-travis = [True for n in ex]
+travis = [True, True, True, True]
 
 # set replace_exe to None to use default executable
 replace_exe = None
+
+# static model data
+pth = os.path.join(ddir, 'ibc01_ibound.ref')
+ib0 = np.genfromtxt(pth)
 
 # temporal discretization
 nper = 3
@@ -52,40 +56,127 @@ tsmult = [1., 1., 1.]
 steady = [True, False, False]
 
 # spatial discretization
-nlay, nrow, ncol = 1, 1, 3
+nlay, nrow, ncol = 4, ib0.shape[0], ib0.shape[1]
 shape3d = (nlay, nrow, ncol)
 size3d = nlay * nrow * ncol
+nactive = np.count_nonzero(ib0) * nlay
 
 delr, delc = 2000., 2000.
 top = 150.
-botm = [-350.]
+botm = [50., -100., -150., -350.]
 strt = 100.
 
 hnoflo = 1e30
 hdry = -1e30
 
 # upw data
-laytyp = [1]
-hk = [4.]
-sy = [0.3]
+laytyp = [1, 0, 0, 0]
+hk = [4., 4., 1e-2, 4.]
+sy = [0.3, 0., 0., 0.]
 
-hstart = [100., 50.]
+w1 = [(0, 0, 7, 2.2000000E+03),
+      (0, 1, 4, 2.2000000E+03),
+      (0, 1, 7, 2.2000000E+03),
+      (0, 1, 11, 2.2000000E+03),
+      (0, 2, 3, 2.2000000E+03),
+      (0, 3, 11, 2.2000000E+03),
+      (0, 4, 2, 2.2000000E+03),
+      (0, 4, 12, 2.2000000E+03),
+      (0, 5, 13, 2.2000000E+03),
+      (0, 6, 1, 2.2000000E+03),
+      (0, 13, 1, 2.2000000E+03),
+      (0, 13, 13, 2.2000000E+03),
+      (0, 15, 2, 2.2000000E+03),
+      (0, 15, 12, 2.2000000E+03),
+      (0, 16, 12, 2.2000000E+03),
+      (0, 17, 3, 2.2000000E+03),
+      (0, 17, 11, 2.2000000E+03),
+      (0, 18, 6, 2.2000000E+03)]
+w2 = [(0, 0, 7, 2.2000000E+03),
+      (0, 1, 4, 2.2000000E+03),
+      (0, 1, 7, 2.2000000E+03),
+      (0, 1, 11, 2.2000000E+03),
+      (0, 2, 3, 2.2000000E+03),
+      (0, 3, 11, 2.2000000E+03),
+      (0, 4, 2, 2.2000000E+03),
+      (0, 4, 12, 2.2000000E+03),
+      (0, 5, 13, 2.2000000E+03),
+      (0, 6, 1, 2.2000000E+03),
+      (0, 13, 1, 2.2000000E+03),
+      (0, 13, 13, 2.2000000E+03),
+      (0, 15, 2, 2.2000000E+03),
+      (0, 15, 12, 2.2000000E+03),
+      (0, 16, 12, 2.2000000E+03),
+      (0, 17, 3, 2.2000000E+03),
+      (0, 17, 11, 2.2000000E+03),
+      (0, 18, 6, 2.2000000E+03),
+      (1, 8, 9, -7.2000000E+04),
+      (3, 11, 6, -7.2000000E+04)]
+wd = {0: w1, 1: w2, 2: w1}
 
-chd0 = [(0, 0, 0, hstart[0]+1, hstart[0]+1),
-        (0, 0, 2, hstart[0], hstart[0])]
-chd1 = [(0, 0, 0, hstart[1]+1, hstart[1]+1),
-        (0, 0, 2, hstart[1], hstart[1])]
-cd = {0: chd0, 1: chd1, 2: chd0}
+ws1 = [((0, 0, 7), 2.2000000E+03),
+       ((0, 1, 4), 2.2000000E+03),
+       ((0, 1, 7), 2.2000000E+03),
+       ((0, 1, 11), 2.2000000E+03),
+       ((0, 2, 3), 2.2000000E+03),
+       ((0, 3, 11), 2.2000000E+03),
+       ((0, 4, 2), 2.2000000E+03),
+       ((0, 4, 12), 2.2000000E+03),
+       ((0, 5, 13), 2.2000000E+03),
+       ((0, 6, 1), 2.2000000E+03),
+       ((0, 13, 1), 2.2000000E+03),
+       ((0, 13, 13), 2.2000000E+03),
+       ((0, 15, 2), 2.2000000E+03),
+       ((0, 15, 12), 2.2000000E+03),
+       ((0, 16, 12), 2.2000000E+03),
+       ((0, 17, 3), 2.2000000E+03),
+       ((0, 17, 11), 2.2000000E+03),
+       ((0, 18, 6), 2.2000000E+03)]
+ws2 = [((0, 0, 7), 2.2000000E+03),
+       ((0, 1, 4), 2.2000000E+03),
+       ((0, 1, 7), 2.2000000E+03),
+       ((0, 1, 11), 2.2000000E+03),
+       ((0, 2, 3), 2.2000000E+03),
+       ((0, 3, 11), 2.2000000E+03),
+       ((0, 4, 2), 2.2000000E+03),
+       ((0, 4, 12), 2.2000000E+03),
+       ((0, 5, 13), 2.2000000E+03),
+       ((0, 6, 1), 2.2000000E+03),
+       ((0, 13, 1), 2.2000000E+03),
+       ((0, 13, 13), 2.2000000E+03),
+       ((0, 15, 2), 2.2000000E+03),
+       ((0, 15, 12), 2.2000000E+03),
+       ((0, 16, 12), 2.2000000E+03),
+       ((0, 17, 3), 2.2000000E+03),
+       ((0, 17, 11), 2.2000000E+03),
+       ((0, 18, 6), 2.2000000E+03),
+       ((1, 8, 9), -7.2000000E+04),
+       ((3, 11, 6), -7.2000000E+04)]
+wd6 = {0: ws1, 1: ws2, 2: ws1}
 
-chd6_0 = [((0, 0, 0), hstart[0]+1),
-          ((0, 0, 2), hstart[0])]
-chd6_1 = [((0, 0, 0), hstart[1]+1),
-          ((0, 0, 2), hstart[1])]
-cd6 = {0: chd6_0, 1: chd6_1, 2: chd6_0}
+chd1 = [(0, 19, 7, 100.00000, 100.00000),
+        (0, 19, 8, 100.00000, 100.00000),
+        (1, 19, 7, 100.00000, 100.00000),
+        (1, 19, 8, 100.00000, 100.00000),
+        (2, 19, 7, 100.00000, 100.00000),
+        (2, 19, 8, 100.00000, 100.00000),
+        (3, 19, 7, 100.00000, 100.00000),
+        (3, 19, 8, 100.00000, 100.00000)]
+cd = {0: chd1}
+
+chd6 = [((0, 19, 7), 100.00000),
+        ((0, 19, 8), 100.00000),
+        ((1, 19, 7), 100.00000),
+        ((1, 19, 8), 100.00000),
+        ((2, 19, 7), 100.00000),
+        ((2, 19, 8), 100.00000),
+        ((3, 19, 7), 100.00000),
+        ((3, 19, 8), 100.00000)]
+cd6 = {0: chd6}
 
 nouter, ninner = 100, 300
 hclose, rclose, relax = 1e-6, 0.01, 0.97
-fluxtol = rclose
+fluxtol = nactive * rclose
 
 tdis_rc = []
 for idx in range(nper):
@@ -94,7 +185,10 @@ for idx in range(nper):
 # this used to work
 # ib = np.zeros((nlay, nrow, ncol), dtype=np.int)
 # for k in range(nlay):
-ib = [1]
+#    ib[k, :, :] = ib0.copy()
+ib = []
+for k in range(nlay):
+    ib.append(ib0.astype(np.int).copy())
 
 # subwt data
 cc = 0.25
@@ -104,11 +198,14 @@ theta = void / (1. + void)
 kv = 999.
 sgm = 1.7
 sgs = 2.0
-ini_stress = 0. #15.0
+ini_stress = 15.0
 delay_flag = 0
 thick = [45., 70., 50., 90.]
 
-zthick = [top - botm[0]]
+zthick = [top - botm[0],
+          botm[0] - botm[1],
+          botm[1] - botm[2],
+          botm[2] - botm[3]]
 
 beta = 0.
 #beta = 4.65120000e-10
@@ -118,15 +215,17 @@ ss = [sw for k in range(nlay)]
 
 swt6 = []
 ibcno = 0
-for k in range(len(thick)):
+for k in range(nlay):
     for i in range(nrow):
         for j in range(ncol):
             iactive = 0
-            if j == 1:
+            if ib0[i, j] > 0:
                 iactive = 1
+            if i == 19 and (j == 7 or j == 8):
+                iactive = 0
             if iactive > 0:
                 ibcno += 1
-                d = [ibcno, (0, i, j), 'nodelay', ini_stress, thick[k],
+                d = [ibcno, (k, i, j), 'nodelay', ini_stress, thick[k],
                      1., cc, cr, theta,
                      kv, 999.]
                 swt6.append(d)
@@ -149,7 +248,8 @@ def get_model(idx, dir):
                                  nper=nper, perioddata=tdis_rc)
 
     # create gwf model
-    gwf = flopy.mf6.ModflowGwf(sim, modelname=name, save_flows=True)
+    gwf = flopy.mf6.ModflowGwf(sim, modelname=name, save_flows=True,
+                               newtonoptions='')
 
     # create iterative model solution and register the gwf model with it
     ims = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
@@ -187,12 +287,20 @@ def get_model(idx, dir):
 
     # chd files
     chd = flopy.mf6.modflow.mfgwfchd.ModflowGwfchd(gwf,
-                                                   maxbound=len(chd6_0),
+                                                   maxbound=len(chd6),
                                                    stress_period_data=cd6,
                                                    save_flows=False)
 
+    # wel files
+    wel = flopy.mf6.ModflowGwfwel(gwf, print_input=True, print_flows=True,
+                                  maxbound=len(ws2),
+                                  stress_period_data=wd6,
+                                  save_flows=False)
+
     # csub files
-    sig0 = {0: [gs0[idx] for k in range(nlay)]}
+    gg = [0. for k in range(nlay)]
+    gg[0] = gs0[idx]
+    sig0 = {0: gg}
     opth = '{}.csub.obs'.format(name)
     csub = flopy.mf6.ModflowGwfcsub(gwf,
                                     #interbed_stress_offset=True,
@@ -210,8 +318,15 @@ def get_model(idx, dir):
                                     packagedata=swt6,
                                     sig0=sig0)
     orecarray = {}
-    orecarray['csub_obs.csv'] = [('w1l1', 'interbed-compaction', (0, 0, 1)),
-                                 ('w1l1t', 'csub-cell', (0, 0, 1))]
+    orecarray['csub_obs.csv'] = [('w1l1', 'interbed-compaction', (0, 8, 9)),
+                                 ('w1l2', 'interbed-compaction', (1, 8, 9)),
+                                 ('w1l3', 'interbed-compaction', (2, 8, 9)),
+                                 ('w1l4', 'interbed-compaction', (3, 8, 9)),
+                                 ('w2l1', 'interbed-compaction', (0, 11, 6)),
+                                 ('w2l2', 'interbed-compaction', (1, 11, 6)),
+                                 ('w2l3', 'interbed-compaction', (2, 11, 6)),
+                                 ('w2l4', 'interbed-compaction', (3, 11, 6)),
+                                 ('w2l4q', 'csub-cell', (3, 11, 6))]
     csub_obs_package = flopy.mf6.ModflowUtlobs(gwf,
                                                fname=opth,
                                                parent_file=csub, digits=10,
@@ -238,20 +353,17 @@ def get_model(idx, dir):
                                    tsmult=tsmult, steady=steady, delr=delr,
                                    delc=delc, top=top, botm=botm)
     bas = flopy.modflow.ModflowBas(mc, ibound=ib, strt=strt, hnoflo=hnoflo)
-    lpf = flopy.modflow.ModflowLpf(mc, laytyp=laytyp,
+    upw = flopy.modflow.ModflowUpw(mc, laytyp=laytyp,
                                    hk=hk, vka=hk,
                                    ss=ss, sy=sy,
                                    hdry=hdry)
-    # upw = flopy.modflow.ModflowUpw(mc, laytyp=laytyp,
-    #                                hk=hk, vka=hk,
-    #                                ss=ss, sy=sy,
-    #                                hdry=hdry)
     chd = flopy.modflow.ModflowChd(mc, stress_period_data=cd)
+    wel = flopy.modflow.ModflowWel(mc, stress_period_data=wd)
     swt = flopy.modflow.ModflowSwt(mc, ipakcb=1001,
                                    iswtoc=1, nsystm=4,
                                    ithk=1,
                                    ivoid=ivoid[idx],
-                                   istpcs=1, lnwt=[0, 0, 0, 0],
+                                   istpcs=1, lnwt=[0, 1, 2, 3],
                                    cc=cc, cr=cr, thick=thick,
                                    void=void, pcsoff=ini_stress, sgs=sgs,
                                    gl0=gs0[idx], ids16=ds16, ids17=ds17)
@@ -259,17 +371,13 @@ def get_model(idx, dir):
                                  save_every=1,
                                  save_types=['save head', 'save budget',
                                              'print budget'])
-    pcg = flopy.modflow.ModflowPcg(mc, mxiter=nouter, iter1=ninner,
-                                   hclose=hclose, rclose=rclose,
-                                   relax=relax, ihcofadd=1)
-    # nwt = flopy.modflow.ModflowNwt(mc,
-    #                                headtol=hclose, fluxtol=fluxtol,
-    #                                maxiterout=nouter, linmeth=2,
-    #                                unitnumber=132,
-    #                                options='SPECIFIED',
-    #                                backflag=0, idroptol=0,
-    #                                hclosexmd=hclose, mxiterxmd=ninner,
-    #                                ibotav=1)
+    nwt = flopy.modflow.ModflowNwt(mc,
+                                   headtol=hclose, fluxtol=fluxtol,
+                                   maxiterout=nouter, linmeth=2,
+                                   unitnumber=132,
+                                   options='SPECIFIED',
+                                   backflag=0, idroptol=0,
+                                   hclosexmd=hclose, mxiterxmd=ninner)
 
     return sim, mc
 
@@ -290,12 +398,12 @@ def eval_comp(sim):
     fpth = os.path.join(sim.simpath, cpth, fn)
     try:
         sobj = flopy.utils.HeadFile(fpth, text='LAYER COMPACTION')
-        tc0 = sobj.get_ts((0, 0, 1))
+        tc0 = sobj.get_ts((3, 11, 6))
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
 
     # calculate maximum absolute error
-    loctag = 'W1L1'
+    loctag = 'W2L4'
     diff = tc[loctag] - tc0[:, 1]
     diffmax = np.abs(diff).max()
     msg = 'maximum absolute total-compaction difference ({}) '.format(diffmax)
