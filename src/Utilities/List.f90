@@ -6,13 +6,13 @@ module ListModule
 
   type :: ListType
     ! -- Public members
-    type(ListNodeType),  pointer, public :: firstNode => null()
-    character(len=20),            public :: name = ' '
+    type(ListNodeType), pointer, public :: firstNode => null()
+    character(len=20), public :: name = ' '
     ! -- Private members
     type(ListNodeType), pointer, private :: lastNode => null()
     type(ListNodeType), pointer, private :: currentNode => null()
-    integer(I4B),                private :: currentNodeIndex = 0
-    integer(I4B),                private :: nodeCount = 0
+    integer(I4B), private :: currentNodeIndex = 0
+    integer(I4B), private :: nodeCount = 0
   contains
     ! -- Public procedures
     procedure, public :: Add

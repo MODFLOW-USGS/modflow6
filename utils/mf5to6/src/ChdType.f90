@@ -22,7 +22,7 @@ module ChdModule
     character(len=MAXCHARLEN)                   :: tsfilename = ''
     character(len=LENTIMESERIESNAME)            :: AlternateTsName = ''
     character(len=LENTIMESERIESNAME)            :: OriginalTsName = ''
-    type(TimeSeriesType), pointer               :: timeSeries
+    type(TimeSeriesType), pointer               :: timeSeries => null()
   contains
     procedure :: CopyTo
   end type ChdType

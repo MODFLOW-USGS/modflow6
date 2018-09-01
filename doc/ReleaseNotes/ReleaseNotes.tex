@@ -106,7 +106,7 @@ https://water.usgs.gov/ogw/
 
 % -------------------------------------------------
 \section{Introduction}
-This document describes MODFLOW 6 Version \modflowversion.  This distribution is packaged for personal computers using the Microsoft Windows 7 operating system, although it may run on other versions of Windows.  The executable file was compiled for 64-bit Windows operating systems and should run on most personal computers.
+This document describes MODFLOW 6 Version \modflowversion.  This distribution is packaged for personal computers using the Microsoft Windows 7 and 10 operating systems, although it may run on other versions of Windows.  The executable file was compiled for 64-bit Windows operating systems and should run on most personal computers.
 
 Version numbers for MODFLOW 6 will follow a major.minor.revision format.  The major number will be increased when there are substantial new changes that may break backward compatibility.  The minor number will be increased when important, but relatively minor new functionality is added.  The revision number will be added when errors are corrected in either the program or input files.
 
@@ -117,6 +117,36 @@ This section describes changes introduced into MODFLOW 6 with each release.  The
 \begin{itemize}
 
 \item \currentmodflowversion
+
+\underline{BASIC FUNCTIONALITY}
+\begin{itemize}
+\item Addressed issue with pointing contiguous pointer vectors/arrays to non-contiguous pointer vectors/arrays that caused code compilation failure with gfortran-8. A consequence of addressing this issue is that all pointer vectors/arrays that are allocated or pointed to using the memory manager must be defined to be contiguous.
+\item -
+\item - 
+\end{itemize}
+
+\underline{STRESS PACKAGES}
+\begin{itemize}
+\item -
+\item -
+\item - 
+\end{itemize}
+
+\underline{ADVANCED STRESS PACKAGES}
+\begin{itemize}
+\item -
+\item -
+\item - 
+\end{itemize}
+
+\underline{SOLUTION}
+\begin{itemize}
+\item -
+\item -
+\item - 
+\end{itemize}
+
+\item Version mf6.0.3--Aug. 9, 2018
 
 \underline{BASIC FUNCTIONALITY}
 \begin{itemize}

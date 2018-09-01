@@ -12,16 +12,16 @@ module BaseModelModule
             GetBaseModelFromList
 
   type :: BaseModelType
-    character(len=LENMODELNAME), pointer :: name             => null()          ! name of the model
-    character(len=3), pointer            :: macronym         => null()          ! 3 letter model acronym (GWF, GWT, ...)
-    integer(I4B), pointer                :: idsoln           => null()          ! id of the solution model is in
-    integer(I4B), pointer                :: id               => null()          ! model id
-    integer(I4B), pointer                :: iout             => null()          ! output unit number
-    integer(I4B), pointer                :: inewton          => null()          ! newton-raphson flag
-    integer(I4B), pointer                :: iprpak           => null()          ! integer flag to echo input
-    integer(I4B), pointer                :: iprflow          => null()          ! flag to print simulated flows
-    integer(I4B), pointer                :: ipakcb           => null()          ! save_flows flag
-    logical, pointer                     :: single_model_run => null()          ! indicate if it is a single model run
+    character(len=LENMODELNAME), pointer :: name             => null()           ! name of the model
+    character(len=3), pointer            :: macronym         => null()           ! 3 letter model acronym (GWF, GWT, ...)
+    integer(I4B), pointer                :: idsoln           => null()           ! id of the solution model is in
+    integer(I4B), pointer                :: id               => null()           ! model id
+    integer(I4B), pointer                :: iout             => null()           ! output unit number
+    integer(I4B), pointer                :: inewton          => null()           ! newton-raphson flag
+    integer(I4B), pointer                :: iprpak           => null()           ! integer flag to echo input
+    integer(I4B), pointer                :: iprflow          => null()           ! flag to print simulated flows
+    integer(I4B), pointer                :: ipakcb           => null()           ! save_flows flag
+    logical, pointer                     :: single_model_run => null()           ! indicate if it is a single model run
   contains
     procedure :: model_df
     procedure :: model_ar

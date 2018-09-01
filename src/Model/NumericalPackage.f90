@@ -14,25 +14,25 @@ module NumericalPackageModule
   type :: NumericalPackageType
 
     ! -- strings
-    character(len=LENPACKAGENAME)                      :: name        = ''      !name of the package
-    character(len=LENMODELNAME)                        :: name_model  = ''      !name of model to which package belongs
-    character(len=LENORIGIN)                           :: origin      = ''      !name of model // name of package
-    character(len=LENFTYPE)                            :: filtyp      = ''      !file type (CHD, DRN, RIV, etc.)
+    character(len=LENPACKAGENAME)                      :: name        = ''       !name of the package
+    character(len=LENMODELNAME)                        :: name_model  = ''       !name of model to which package belongs
+    character(len=LENORIGIN)                           :: origin      = ''       !name of model // name of package
+    character(len=LENFTYPE)                            :: filtyp      = ''       !file type (CHD, DRN, RIV, etc.)
     !
     ! -- integers
-    integer(I4B), pointer                              :: id          => null() !consecutive package number in model
-    integer(I4B), pointer                              :: inunit      => null() !unit number for input file
-    integer(I4B), pointer                              :: iout        => null() !unit number for writing package output
-    integer(I4B), pointer                              :: inewton     => null() !newton flag
-    integer(I4B), pointer                              :: iasym       => null() !package causes matrix asymmetry
-    integer(I4B), pointer                              :: iprpak      => null() !integer flag to echo input
-    integer(I4B), pointer                              :: iprflow     => null() !flag to print simulated flows
-    integer(I4B), pointer                              :: ipakcb      => null() !output flows (-1, 0, 1) - save_flows
-    integer(I4B), pointer                              :: ionper      => null() !stress period for next data
-    integer(I4B), pointer                              :: lastonper   => null() !last value of ionper (for checking)
+    integer(I4B), pointer                              :: id          => null()  !consecutive package number in model
+    integer(I4B), pointer                              :: inunit      => null()  !unit number for input file
+    integer(I4B), pointer                              :: iout        => null()  !unit number for writing package output
+    integer(I4B), pointer                              :: inewton     => null()  !newton flag
+    integer(I4B), pointer                              :: iasym       => null()  !package causes matrix asymmetry
+    integer(I4B), pointer                              :: iprpak      => null()  !integer flag to echo input
+    integer(I4B), pointer                              :: iprflow     => null()  !flag to print simulated flows
+    integer(I4B), pointer                              :: ipakcb      => null()  !output flows (-1, 0, 1) - save_flows
+    integer(I4B), pointer                              :: ionper      => null()  !stress period for next data
+    integer(I4B), pointer                              :: lastonper   => null()  !last value of ionper (for checking)
     !
     ! -- derived types
-    type(BlockParserType)                              :: parser                !parser object for reading blocks of information
+    type(BlockParserType)                              :: parser                 !parser object for reading blocks of information
     class(DisBaseType), pointer                        :: dis => null()
     
   contains

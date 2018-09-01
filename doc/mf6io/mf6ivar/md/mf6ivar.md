@@ -44,7 +44,7 @@
 | EXG | GWFGWF | EXCHANGEDATA | CELLIDM2 | INTEGER | is the cellid of the cell in model 2 as specified in the simulation name file. For a structured grid that uses the DIS input file, CELLIDM2 is the layer, row, and column numbers of the cell.   For a grid that uses the DISV input file, CELLIDM2 is the layer number and CELL2D number for the two cells.  If the model uses the unstructured discretization (DISU) input file, then CELLIDM2 is the node number for the cell. |
 | EXG | GWFGWF | EXCHANGEDATA | IHC | INTEGER | is an integer flag indicating the direction between node n and all of its m connections. If IHC = 0 then the connection is vertical.  If IHC = 1 then the connection is horizontal. If IHC = 2 then the connection is horizontal for a vertically staggered grid. |
 | EXG | GWFGWF | EXCHANGEDATA | CL1 | DOUBLE PRECISION | is the distance between the center of cell 1 and the its shared face with cell 2. |
-| EXG | GWFGWF | EXCHANGEDATA | CL2 | DOUBLE PRECISION | is the distance between the center of cell 1 and the its shared face with cell 2. |
+| EXG | GWFGWF | EXCHANGEDATA | CL2 | DOUBLE PRECISION | is the distance between the center of cell 2 and the its shared face with cell 1. |
 | EXG | GWFGWF | EXCHANGEDATA | HWVA | DOUBLE PRECISION | is the horizontal width of the flow connection between cell 1 and cell 2 if IHC $>$ 0, or it is the area perpendicular to flow of the vertical connection between cell 1 and cell 2 if IHC = 0. |
 | EXG | GWFGWF | EXCHANGEDATA | AUX | DOUBLE PRECISION (NAUX) | represents the values of the auxiliary variables for each GWFGWF Exchange. The values of auxiliary variables must be present for each exchange. The values must be specified in the order of the auxiliary variables specified in the OPTIONS block. |
 | SLN | IMS | OPTIONS | PRINT_OPTION | STRING | is a flag that controls printing of convergence information from the solver.  NONE means print nothing. SUMMARY means print only the total number of iterations and nonlinear residual reduction summaries. ALL means print linear matrix solver convergence information to the solution listing file and model specific linear matrix solver convergence information to each model listing file in addition to SUMMARY information. NONE is default if PRINT\_OPTION is not specified. |
@@ -197,6 +197,8 @@
 | GWF | CSUB | OPTIONS | ELASTIC_COMPACTION_FILENAME | STRING | name of the binary output file to write elastic interbed compaction information. |
 | GWF | CSUB | OPTIONS | COMPACTION_INELASTIC | KEYWORD | keyword to specify that record corresponds to the inelastic interbed compaction binary file. |
 | GWF | CSUB | OPTIONS | INELASTIC_COMPACTION_FILENAME | STRING | name of the binary output file to write inelastic interbed compaction information. |
+| GWF | CSUB | OPTIONS | COMPACTION_INTERBED | KEYWORD | keyword to specify that record corresponds to the interbed compaction binary file. |
+| GWF | CSUB | OPTIONS | INTERBED_COMPACTION_FILENAME | STRING | name of the binary output file to write interbed compaction information. |
 | GWF | CSUB | OPTIONS | COMPACTION_SKELETAL | KEYWORD | keyword to specify that record corresponds to the elastic skeletal compaction binary file. |
 | GWF | CSUB | OPTIONS | SKELETAL_COMPACTION_FILENAME | STRING | name of the binary output file to write elastic skeletal compaction information. |
 | GWF | CSUB | OPTIONS | ZDISPLACEMENT | KEYWORD | keyword to specify that record corresponds to the z-displacement binary file. |

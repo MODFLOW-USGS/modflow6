@@ -15,7 +15,7 @@ module DisvGeom
     integer(I4B) :: nlay
     integer(I4B) :: ncpl
     logical :: reduced
-    integer(I4B) :: nodes  ! number of reduced nodes; nodes = nlay *ncpl when grid is NOT reduced
+    integer(I4B) :: nodes                                                        ! number of reduced nodes; nodes = nlay *ncpl when grid is NOT reduced
     real(DP) :: top
     real(DP) :: bot
     real(DP), pointer, dimension(:) :: top_grid => null()
@@ -24,8 +24,8 @@ module DisvGeom
     integer(I4B), pointer, dimension(:) :: javert => null()
     real(DP), pointer, dimension(:, :) :: vertex_grid => null()
     real(DP), pointer, dimension(:, :) :: cellxy_grid => null()
-    integer(I4B), pointer, dimension(:, :) :: nodereduced => null()           ! nodered = nodereduced(nodeusr)
-    integer(I4B), pointer, dimension(:) :: nodeuser => null()                 ! nodeusr = nodesuser(nodered)
+    integer(I4B), pointer, dimension(:, :) :: nodereduced => null()              ! nodered = nodereduced(nodeusr)
+    integer(I4B), pointer, dimension(:) :: nodeuser => null()                    ! nodeusr = nodesuser(nodered)
   contains
     procedure :: init
     generic :: set => set_kj, set_nodered

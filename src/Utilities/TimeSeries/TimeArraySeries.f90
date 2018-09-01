@@ -2,8 +2,8 @@ module TimeArraySeriesModule
 
   use ArrayReadersModule, only: ReadArray
   use BlockParserModule,  only: BlockParserType
-  use ConstantsModule,    only: LINELENGTH, UNDEFINED, STEPWISE, LINEAR, &
-                                LENTIMESERIESNAME, LENBIGLINE
+  use ConstantsModule,    only: LINELENGTH, UNDEFINED, STEPWISE, LINEAR,        &
+                                LENTIMESERIESNAME, LENBIGLINE, DZERO, DONE
   use InputOutputModule,  only: dclosetest, GetUnit, openfile
   use KindModule,         only: DP, I4B
   use ListModule,         only: ListType, ListNodeType
@@ -27,15 +27,15 @@ module TimeArraySeriesModule
     ! -- Public members
     character(len=LENTIMESERIESNAME), public :: Name = ''
     ! -- Private members
-    integer(I4B),               private :: inunit = 0
-    integer(I4B),               private :: iout = 0
-    integer(I4B),               private :: iMethod = UNDEFINED
-    real(DP),                   private :: sfac = 1.0d0
-    character(len=LINELENGTH),  private :: dataFile = ''
-    logical,                    private :: autoDeallocate = .true.
-    type(ListType),    pointer, private :: list => null()
+    integer(I4B), private :: inunit = 0
+    integer(I4B), private :: iout = 0
+    integer(I4B), private :: iMethod = UNDEFINED
+    real(DP), private :: sfac = DONE
+    character(len=LINELENGTH), private :: dataFile = ''
+    logical, private :: autoDeallocate = .true.
+    type(ListType), pointer, private :: list => null()
     class(DisBaseType), pointer, private :: dis => null()
-    type(BlockParserType),      private :: parser
+    type(BlockParserType), private :: parser
   contains
     ! -- Public procedures
     procedure, public :: tas_init
@@ -556,7 +556,7 @@ contains
     integer(I4B) :: i
     real(DP) :: area, currTime, nextTime, ratio0, ratio1, t0, &
                         t01, t1, timediff, value, value0, value1, valuediff
-    logical :: done
+    logical :: ldone
     character(len=LINELENGTH) :: ermsg
     type(ListNodeType), pointer :: precNode => null()
     type(ListNodeType), pointer :: currNode => null(), nextNode => null()
@@ -568,14 +568,14 @@ contains
         g12.5,' to ',g12.5)
 ! ------------------------------------------------------------------------------
     !
-    values = 0.0d0
-    value = 0.0d0
-    done = .false.
-    t1 = -1.0d0
+    values = DZERO
+    value = DZERO
+    ldone = .false.
+    t1 = -DONE
     call this%get_latest_preceding_node(time0, precNode)
     if (associated(precNode)) then
       currNode => precNode
-      do while (.not. done)
+      do while (.not. ldone)
         currObj => currNode%GetItem()
         currRecord => CastAsTimeArrayType(currObj)
         currTime = currRecord%taTime
@@ -640,12 +640,12 @@ contains
           endif
         else
           ! Current node time = time1 so should be done
-          done = .true.
+          ldone = .true.
         endif
         !
         ! -- Are we done yet?
         if (t1 >= time1) then
-          done = .true.
+          ldone = .true.
         else
           if (.not. associated(currNode%nextNode)) then
             ! -- try to read the next array

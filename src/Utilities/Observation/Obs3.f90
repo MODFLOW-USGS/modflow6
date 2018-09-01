@@ -156,27 +156,27 @@ module ObsModule
 
   type :: ObsType
     ! -- Public members
-    integer(I4B), public                                  :: iout = 0
-    integer(I4B), public                                  :: npakobs = 0
-    integer(I4B), pointer, public                         :: inUnitObs => null()
-    character(len=LINELENGTH), pointer, public            :: inputFilename => null()
-    character(len=2*LENPACKAGENAME+4),        public      :: pkgName = ''
-    character(len=LENFTYPE),                  public      :: filtyp = ''
-    logical,                         pointer, public      :: active => null()
+    integer(I4B), public :: iout = 0
+    integer(I4B), public :: npakobs = 0
+    integer(I4B), pointer, public :: inUnitObs => null()
+    character(len=LINELENGTH), pointer, public :: inputFilename => null()
+    character(len=2*LENPACKAGENAME+4), public :: pkgName = ''
+    character(len=LENFTYPE), public :: filtyp = ''
+    logical, pointer, public :: active => null()
     type(ObsContainerType), dimension(:), pointer, public :: pakobs => null()
-    type(ObsDataType), dimension(:), pointer, public      :: obsData => null()
+    type(ObsDataType), dimension(:), pointer, public :: obsData => null()
     ! -- Private members
-    integer(I4B),                     private :: iprecision = 2  ! 2=double; 1=single
-    integer(I4B),                     private :: idigits = 5
-    character(len=LINELENGTH),        private :: outputFilename = ''
-    character(len=20),                private :: blockTypeFound = ''
-    character(len=20),                private :: obsfmtcont = ''
-    logical,                          private :: echo = .false.
-    logical,                          private :: more
-    type(ListType),                   private :: obsList
+    integer(I4B), private :: iprecision = 2                                      ! 2=double; 1=single
+    integer(I4B), private :: idigits = 5
+    character(len=LINELENGTH), private :: outputFilename = ''
+    character(len=20), private :: blockTypeFound = ''
+    character(len=20), private:: obsfmtcont = ''
+    logical, private :: echo = .false.
+    logical, private :: more
+    type(ListType), private :: obsList
     type(ObsOutputListType), pointer, private :: obsOutputList => null()
-    class(DisBaseType),      pointer, private :: dis => null()
-    type(BlockParserType),            private :: parser
+    class(DisBaseType), pointer, private :: dis => null()
+    type(BlockParserType), private :: parser
   contains
     ! -- Public procedures
     procedure, public  :: obs_df
@@ -416,23 +416,27 @@ contains
     deallocate(this%inputFilename)
     deallocate(this%obsData)
     !
+    ! -- deallocate pakobs components and pakobs
+    if (associated(this%pakobs)) then
+      do i = 1, this%npakobs
+        if (allocated(this%pakobs(i)%obsrv%indxbnds)) then
+          deallocate(this%pakobs(i)%obsrv%indxbnds)
+        end if
+        !
+        ! -- nullify pointer to this%pakobs(i)%obsrv
+        !    deallocate does not work in gfortran-8 since no
+        !    allocatable variables in obsrv except for indxbnds
+        nullify(this%pakobs(i)%obsrv)
+      end do
+      deallocate(this%pakobs)
+    end if
+    !
     ! -- deallocate obsOutputList
     call this%obsOutputList%DeallocObsOutputList()
     deallocate(this%obsOutputList)
     !
     ! -- deallocate obslist
     call this%obslist%Clear()
-    !
-    ! -- deallocate pakobs
-    if (associated(this%pakobs)) then
-      do i = 1, size(this%pakobs)
-        if (allocated(this%pakobs(i)%obsrv%indxbnds)) then
-          deallocate(this%pakobs(i)%obsrv%indxbnds)
-        endif
-        deallocate(this%pakobs(i)%obsrv)
-      enddo
-      deallocate(this%pakobs)
-    endif
     !
     ! -- nullify
     nullify(this%inUnitObs)
@@ -605,9 +609,9 @@ contains
     class(DisBaseType)            :: dis
     ! -- local
     integer(I4B) :: i
-    type(ObsDataType), pointer :: obsDat => null()
-    character(len=LENOBSTYPE)  :: obsTypeID
-    class(ObserveType),    pointer :: obsrv => null()
+    type(ObsDataType), pointer  :: obsDat => null()
+    character(len=LENOBSTYPE)   :: obsTypeID
+    class(ObserveType), pointer :: obsrv => null()
     !
     call this%read_observations()
     ! -- allocate and populate observations array
@@ -927,7 +931,7 @@ contains
     ! -- dummy
     class(ObsType), intent(inout) :: this
     integer(I4B), intent(out)   :: nObs
-    type(ObsContainerType), pointer, dimension(:), intent(inout) :: obsArray
+    type(ObsContainerType), dimension(:), pointer, intent(inout) :: obsArray
     ! -- local
     !
     nObs = this%get_num()

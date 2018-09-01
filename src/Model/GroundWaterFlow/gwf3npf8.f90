@@ -25,55 +25,55 @@ module GwfNpfModule
 
   type, extends(NumericalPackageType) :: GwfNpfType
 
-    type(GwfIcType), pointer                        :: ic           => null()   ! initial conditions object
-    type(Xt3dType), pointer                         :: xt3d         => null()   ! xt3d pointer
-    integer(I4B), dimension(:), pointer             :: ibound       => null()   ! pointer to model ibound
-    real(DP), dimension(:), pointer                 :: hnew         => null()   ! pointer to model xnew
-    integer(I4B), pointer                           :: ixt3d        => null()   ! xt3d flag (0 is off, 1 is lhs, 2 is rhs)
-    integer(I4B), pointer                           :: iperched     => null()   ! vertical flow corrections if 1
-    integer(I4B), pointer                           :: ivarcv       => null()   ! CV is function of water table
-    integer(I4B), pointer                           :: idewatcv     => null()   ! CV may be a discontinuous function of water table
-    integer(I4B), pointer                           :: ithickstrt   => null()   ! thickstrt option flag
-    integer(I4B), pointer                           :: igwfnewtonur => null()   ! newton head dampening using node bottom option flag
-    integer(I4B), pointer                           :: iusgnrhc     => null()   ! MODFLOW-USG saturation calculation option flag
-    integer(I4B), pointer                           :: inwtupw      => null()   ! MODFLOW-NWT upstream weighting option flag
-    integer(I4B), pointer                           :: icalcspdis   => null()   ! Calculate specific discharge at cell centers
-    integer(I4B), pointer                           :: isavspdis    => null()   ! Save specific discharge at cell centers
-    real(DP), pointer                               :: hnoflo       => null()   ! default is 1.e30
-    real(DP), pointer                               :: satomega     => null()   ! newton-raphson saturation omega
-    integer(I4B),pointer                            :: irewet       => null()   ! rewetting (0:off, 1:on)
-    integer(I4B),pointer                            :: iwetit       => null()   ! wetting interval (default is 1)
-    integer(I4B),pointer                            :: ihdwet       => null()   ! (0 or not 0)
-    integer(I4B), pointer                           :: icellavg     => null()   ! harmonic(0), logarithmic(1), or arithmetic thick-log K (2)
-    real(DP), pointer                               :: wetfct       => null()   ! wetting factor
-    real(DP), pointer                               :: hdry         => null()   ! default is -1.d30
-    integer(I4B), dimension(:), pointer             :: icelltype    => null()   ! confined (0) or convertible (1)
+    type(GwfIcType), pointer                        :: ic           => null()    ! initial conditions object
+    type(Xt3dType), pointer                         :: xt3d         => null()    ! xt3d pointer
+    integer(I4B), dimension(:), pointer, contiguous :: ibound       => null()    ! pointer to model ibound
+    real(DP), dimension(:), pointer, contiguous     :: hnew         => null()    ! pointer to model xnew
+    integer(I4B), pointer                           :: ixt3d        => null()    ! xt3d flag (0 is off, 1 is lhs, 2 is rhs)
+    integer(I4B), pointer                           :: iperched     => null()    ! vertical flow corrections if 1
+    integer(I4B), pointer                           :: ivarcv       => null()    ! CV is function of water table
+    integer(I4B), pointer                           :: idewatcv     => null()    ! CV may be a discontinuous function of water table
+    integer(I4B), pointer                           :: ithickstrt   => null()    ! thickstrt option flag
+    integer(I4B), pointer                           :: igwfnewtonur => null()    ! newton head dampening using node bottom option flag
+    integer(I4B), pointer                           :: iusgnrhc     => null()    ! MODFLOW-USG saturation calculation option flag
+    integer(I4B), pointer                           :: inwtupw      => null()    ! MODFLOW-NWT upstream weighting option flag
+    integer(I4B), pointer                           :: icalcspdis   => null()    ! Calculate specific discharge at cell centers
+    integer(I4B), pointer                           :: isavspdis    => null()    ! Save specific discharge at cell centers
+    real(DP), pointer                               :: hnoflo       => null()    ! default is 1.e30
+    real(DP), pointer                               :: satomega     => null()    ! newton-raphson saturation omega
+    integer(I4B),pointer                            :: irewet       => null()    ! rewetting (0:off, 1:on)
+    integer(I4B),pointer                            :: iwetit       => null()    ! wetting interval (default is 1)
+    integer(I4B),pointer                            :: ihdwet       => null()    ! (0 or not 0)
+    integer(I4B), pointer                           :: icellavg     => null()    ! harmonic(0), logarithmic(1), or arithmetic thick-log K (2)
+    real(DP), pointer                               :: wetfct       => null()    ! wetting factor
+    real(DP), pointer                               :: hdry         => null()    ! default is -1.d30
+    integer(I4B), dimension(:), pointer, contiguous :: icelltype    => null()    ! confined (0) or convertible (1)
     !
     ! K properties
-    real(DP), dimension(:), pointer                 :: k11          => null()   ! hydraulic conductivity; if anisotropic, then this is Kx prior to rotation
-    real(DP), dimension(:), pointer                 :: k22          => null()   ! hydraulic conductivity; if specified then this is Ky prior to rotation
-    real(DP), dimension(:), pointer                 :: k33          => null()   ! hydraulic conductivity; if specified then this is Kz prior to rotation
-    integer(I4B), pointer                           :: ik22         => null()   ! flag that k22 is specified
-    integer(I4B), pointer                           :: ik33         => null()   ! flag that k33 is specified
-    integer(I4B), pointer                           :: iangle1      => null()   ! flag to indicate angle1 was read
-    integer(I4B), pointer                           :: iangle2      => null()   ! flag to indicate angle2 was read
-    integer(I4B), pointer                           :: iangle3      => null()   ! flag to indicate angle3 was read
-    real(DP), dimension(:), pointer                 :: angle1       => null()   ! k ellipse rotation in xy plane around z axis (yaw)
-    real(DP), dimension(:), pointer                 :: angle2       => null()   ! k ellipse rotation up from xy plane around y axis (pitch)
-    real(DP), dimension(:), pointer                 :: angle3       => null()   ! k tensor rotation around x axis (roll)
+    real(DP), dimension(:), pointer, contiguous     :: k11          => null()    ! hydraulic conductivity; if anisotropic, then this is Kx prior to rotation
+    real(DP), dimension(:), pointer, contiguous     :: k22          => null()    ! hydraulic conductivity; if specified then this is Ky prior to rotation
+    real(DP), dimension(:), pointer, contiguous     :: k33          => null()    ! hydraulic conductivity; if specified then this is Kz prior to rotation
+    integer(I4B), pointer                           :: ik22         => null()    ! flag that k22 is specified
+    integer(I4B), pointer                           :: ik33         => null()    ! flag that k33 is specified
+    integer(I4B), pointer                           :: iangle1      => null()    ! flag to indicate angle1 was read
+    integer(I4B), pointer                           :: iangle2      => null()    ! flag to indicate angle2 was read
+    integer(I4B), pointer                           :: iangle3      => null()    ! flag to indicate angle3 was read
+    real(DP), dimension(:), pointer, contiguous     :: angle1       => null()    ! k ellipse rotation in xy plane around z axis (yaw)
+    real(DP), dimension(:), pointer, contiguous     :: angle2       => null()    ! k ellipse rotation up from xy plane around y axis (pitch)
+    real(DP), dimension(:), pointer, contiguous     :: angle3       => null()    ! k tensor rotation around x axis (roll)
     !
-    real(DP), dimension(:), pointer                 :: wetdry       => null()   ! wetdry array
-    real(DP), dimension(:), pointer                 :: sat          => null()   ! saturation (0. to 1.) for each cell
-    real(DP), dimension(:), pointer                 :: condsat      => null()   ! saturated conductance (symmetric array)
-    real(DP), pointer                               :: satmin   => null()   ! minimum saturated thickness
-    integer(I4B), dimension(:), pointer             :: ibotnode     => null()   ! bottom node used if igwfnewtonur /= 0
+    real(DP), dimension(:), pointer, contiguous     :: wetdry       => null()    ! wetdry array
+    real(DP), dimension(:), pointer, contiguous     :: sat          => null()    ! saturation (0. to 1.) for each cell
+    real(DP), dimension(:), pointer, contiguous     :: condsat      => null()    ! saturated conductance (symmetric array)
+    real(DP), pointer                               :: satmin       => null()    ! minimum saturated thickness
+    integer(I4B), dimension(:), pointer, contiguous :: ibotnode     => null()    ! bottom node used if igwfnewtonur /= 0
     !
-    real(DP), dimension(:, :), pointer              :: spdis        => null()   ! specific discharge : qx, qy, qz (nodes, 3) 
-    integer(I4B), pointer                           :: nedges       => null()   ! number of cell edges
-    integer(I4B), pointer                           :: lastedge     => null()   ! last edge number
-    integer(I4B), dimension(:), pointer             :: nodedge      => null()   ! array of node numbers that have edges
-    integer(I4B), dimension(:), pointer             :: ihcedge      => null()   ! edge type (horizontal or vertical)
-    real(DP), dimension(:, :), pointer              :: propsedge    => null()   ! edge properties (Q, area, nx, ny, distance) 
+    real(DP), dimension(:, :), pointer, contiguous  :: spdis        => null()    ! specific discharge : qx, qy, qz (nodes, 3) 
+    integer(I4B), pointer                           :: nedges       => null()    ! number of cell edges
+    integer(I4B), pointer                           :: lastedge     => null()    ! last edge number
+    integer(I4B), dimension(:), pointer, contiguous :: nodedge      => null()    ! array of node numbers that have edges
+    integer(I4B), dimension(:), pointer, contiguous :: ihcedge      => null()    ! edge type (horizontal or vertical)
+    real(DP), dimension(:, :), pointer, contiguous  :: propsedge    => null()    ! edge properties (Q, area, nx, ny, distance) 
     !
   contains
     procedure                               :: npf_df
@@ -252,8 +252,8 @@ module GwfNpfModule
     class(GwfNpftype) :: this
     class(DisBaseType), pointer, intent(inout) :: dis
     type(GwfIcType), pointer, intent(in) :: ic
-    integer(I4B), pointer, dimension(:), intent(inout) :: ibound
-    real(DP), pointer, dimension(:), intent(inout) :: hnew
+    integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: ibound
+    real(DP), dimension(:), pointer, contiguous, intent(inout) :: hnew
     ! -- local
     ! -- formats
     ! -- data
@@ -1746,7 +1746,7 @@ module GwfNpfModule
     integer(I4B) :: n, m, ii, nn, ihc
     integer(I4B) :: nextn
     real(DP) :: minbot, botm
-    integer(I4B), dimension(:), pointer :: ithickstartflag
+    integer(I4B), dimension(:), pointer, contiguous :: ithickstartflag
     ! -- format
     character(len=*),parameter :: fmtcnv = &
     "(1X,'CELL ', A, &

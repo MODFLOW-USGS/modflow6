@@ -31,10 +31,10 @@ program mf6
                                     endofsimulation
   implicit none
   ! -- local
-  class(SolutionGroupType), pointer :: sgp
-  class(BaseSolutionType),  pointer :: sp
-  class(BaseModelType),     pointer :: mp
-  class(BaseExchangeType),  pointer :: ep
+  class(SolutionGroupType), pointer :: sgp => null()
+  class(BaseSolutionType), pointer :: sp => null()
+  class(BaseModelType), pointer :: mp => null()
+  class(BaseExchangeType), pointer :: ep => null()
   integer(I4B) :: im, ic, is, isg
   logical :: exit_tsloop
   character(len=80) :: compiler

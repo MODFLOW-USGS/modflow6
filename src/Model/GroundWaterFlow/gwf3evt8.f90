@@ -20,15 +20,15 @@ module EvtModule
   !
   type, extends(BndType) :: EvtType
     ! -- logicals
-    logical, private               :: segsdefined = .true.
-    logical, private               :: fixed_cell = .false.
-    logical, private               :: read_as_arrays = .false.
-    logical, private               :: surfratespecified = .false.
+    logical, private :: segsdefined = .true.
+    logical, private :: fixed_cell = .false.
+    logical, private :: read_as_arrays = .false.
+    logical, private:: surfratespecified = .false.
     ! -- integers
-    integer(I4B), pointer               :: inievt => null()
-    integer(I4B), pointer, private      :: nseg => null()
+    integer(I4B), pointer :: inievt => null()
+    integer(I4B), pointer, private :: nseg => null()
     ! -- arrays
-    integer(I4B), pointer, dimension(:) :: nodesontop => null()
+    integer(I4B), dimension(:), pointer, contiguous :: nodesontop => null()
   contains
     procedure :: evt_allocate_scalars
     procedure :: bnd_options         => evt_options
@@ -724,6 +724,9 @@ module EvtModule
     character(len=100) :: ermsg, keyword
     logical :: found, endOfBlock
     logical :: convertFlux
+    !
+    ! -- these time array series pointers need to be non-contiguous
+    !    beacuse a slice of bound is passed
     real(DP), dimension(:), pointer :: bndArrayPtr => null()
     real(DP), dimension(:), pointer :: auxArrayPtr => null()
     real(DP), dimension(:), pointer :: auxMultArray => null()
