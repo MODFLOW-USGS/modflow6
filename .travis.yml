@@ -164,7 +164,6 @@ install:
     - conda info -a
     - conda install nose
     - python --version
-    - pip install -r requirements.travis.txt
     - pip install https://github.com/modflowpy/flopy/zipball/develop
     - pip install https://github.com/modflowpy/pymake/zipball/master
     - pip install nose-timer
