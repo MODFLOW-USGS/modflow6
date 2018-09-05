@@ -13,28 +13,27 @@ module GwtFmiModule
 
   type, extends(NumericalPackageType) :: GwtFmiType
     
-    type(ListType),                 pointer :: gwfbndlist => null()             ! list of gwf stress packages
-    integer(I4B),                   pointer :: iflowerr => null()               ! add the flow error correction
-    real(DP), dimension(:),         pointer :: flowerr => null()                ! residual error of the flow solution
-    integer(I4B), dimension(:),     pointer :: ibound => null()                 ! pointer to GWT ibound
-    real(DP), dimension(:),         pointer :: gwfflowja => null()              ! pointer to the GWF flowja array
-    real(DP), dimension(:, :),      pointer :: gwfspdis  => null()              ! pointer to npf specific discharge array
-    real(DP), dimension(:),         pointer :: gwfhead   => null()              ! pointer to the GWF head array
-    real(DP), dimension(:),         pointer :: gwfsat    => null()              ! pointer to the GWF saturation array
-    integer(I4B), dimension(:),     pointer :: gwfibound => null()              ! pointer to the GWF ibound array
-    real(DP), dimension(:),         pointer :: gwfthksat => null()              ! calculated saturated thickness
-    real(DP), dimension(:),         pointer :: gwfstrgss => null()              ! pointer to flow model QSTOSS
-    real(DP), dimension(:),         pointer :: gwfstrgsy => null()              ! pointer to flow model QSTOSY
-    integer(I4B), pointer                   :: igwfstrgss => null()             ! indicates if gwfstrgss is available
-    integer(I4B), pointer                   :: igwfstrgsy => null()             ! indicates if gwfstrgsy is available
-    integer(I4B), dimension(:),     pointer :: gwficelltype => null()           ! pointer to the GWF icelltype array
-    integer(I4B), pointer                   :: igwfinwtup => null()             ! NR indicator
-    integer(I4B), pointer                   :: igwfiusgnrhc => null()           ! iusg indicator
-    real(DP), pointer                       :: gwfsatomega => null()            ! NR satomega value
-    integer(I4B), pointer                   :: igwfinwtupw => null()            ! inwtupw indicator
-    real(DP), pointer                       :: gwfsatmin => null()              ! NR satmin value
-    
-    
+    type(ListType), pointer                         :: gwfbndlist => null()     ! list of gwf stress packages
+    integer(I4B), pointer                           :: iflowerr => null()       ! add the flow error correction
+    real(DP), dimension(:), pointer, contiguous     :: flowerr => null()        ! residual error of the flow solution
+    integer(I4B), dimension(:), pointer, contiguous :: ibound => null()         ! pointer to GWT ibound
+    real(DP), dimension(:), pointer, contiguous     :: gwfflowja => null()      ! pointer to the GWF flowja array
+    real(DP), dimension(:, :), pointer, contiguous  :: gwfspdis  => null()      ! pointer to npf specific discharge array
+    real(DP), dimension(:), pointer, contiguous     :: gwfhead   => null()      ! pointer to the GWF head array
+    real(DP), dimension(:), pointer, contiguous     :: gwfsat    => null()      ! pointer to the GWF saturation array
+    integer(I4B), dimension(:), pointer, contiguous :: gwfibound => null()      ! pointer to the GWF ibound array
+    real(DP), dimension(:), pointer, contiguous     :: gwfthksat => null()      ! calculated saturated thickness
+    real(DP), dimension(:), pointer, contiguous     :: gwfstrgss => null()      ! pointer to flow model QSTOSS
+    real(DP), dimension(:), pointer, contiguous     :: gwfstrgsy => null()      ! pointer to flow model QSTOSY
+    integer(I4B), pointer                           :: igwfstrgss => null()     ! indicates if gwfstrgss is available
+    integer(I4B), pointer                           :: igwfstrgsy => null()     ! indicates if gwfstrgsy is available
+    integer(I4B), dimension(:), pointer, contiguous :: gwficelltype => null()   ! pointer to the GWF icelltype array
+    integer(I4B), pointer                           :: igwfinwtup => null()     ! NR indicator
+    integer(I4B), pointer                           :: igwfiusgnrhc => null()   ! iusg indicator
+    real(DP), pointer                               :: gwfsatomega => null()    ! NR satomega value
+    integer(I4B), pointer                           :: igwfinwtupw => null()    ! inwtupw indicator
+    real(DP), pointer                               :: gwfsatmin => null()      ! NR satmin value
+
   contains
   
     procedure :: fmi_ar
@@ -97,9 +96,9 @@ module GwtFmiModule
     ! -- modules
     use MemoryManagerModule, only: mem_setptr
     ! -- dummy
-    class(GwtFmiType)                       :: this
+    class(GwtFmiType) :: this
     class(DisBaseType), pointer, intent(in) :: dis
-    integer(I4B), dimension(:), pointer          :: ibound
+    integer(I4B), dimension(:), pointer, contiguous :: ibound
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtfmi =                                    &

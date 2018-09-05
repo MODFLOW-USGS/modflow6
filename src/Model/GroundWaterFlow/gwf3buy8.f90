@@ -13,17 +13,17 @@ module GwfBuyModule
   public :: buy_cr
 
   type, extends(NumericalPackageType) :: GwfBuyType
-    type(GwfNpfType), pointer           :: npf        => null()                 ! npf object
-    integer(I4B), pointer               :: iform      => null()                 ! formulation: 0 equivalent freshwater, 1 hydraulic head
-    integer(I4B), pointer               :: ireadelev  => null()                 ! if 1 then elev has been allocated and filled
-    integer(I4B), pointer               :: ireaddense => null()                 ! if 1 then dense has been read from input file
-    real(DP), pointer                   :: denseref   => null()                 ! reference fluid density
-    real(DP), pointer                   :: drhodc     => null()                 ! change in density with change in concentration
-    real(DP), dimension(:), pointer     :: dense      => null()                 ! density
-    real(DP), dimension(:), pointer     :: elev       => null()                 ! cell center elevation (optional; if not specified, hten use (top+bot)/2)
-    integer(I4B), dimension(:), pointer :: ibound     => null()                 ! store pointer to ibound
-    real(DP), dimension(:), pointer     :: conc       => null()                 ! pointer to concentration array
-    integer(I4B), dimension(:), pointer :: icbund     => null()                 ! store pointer to gwt ibound array
+    type(GwfNpfType), pointer                   :: npf        => null()         ! npf object
+    integer(I4B), pointer                       :: iform      => null()         ! formulation: 0 equivalent freshwater, 1 hydraulic head
+    integer(I4B), pointer                       :: ireadelev  => null()         ! if 1 then elev has been allocated and filled
+    integer(I4B), pointer                       :: ireaddense => null()         ! if 1 then dense has been read from input file
+    real(DP), pointer                           :: denseref   => null()         ! reference fluid density
+    real(DP), pointer                           :: drhodc     => null()         ! change in density with change in concentration
+    real(DP), dimension(:), pointer, contiguous :: dense      => null()         ! density
+    real(DP), dimension(:), pointer, contiguous :: elev       => null()         ! cell center elevation (optional; if not specified, hten use (top+bot)/2)
+    integer(I4B), dimension(:), pointer         :: ibound     => null()         ! store pointer to ibound
+    real(DP), dimension(:), pointer             :: conc       => null()         ! pointer to concentration array
+    integer(I4B), dimension(:), pointer         :: icbund     => null()         ! store pointer to gwt ibound array
   contains    
     procedure :: buy_ar
     procedure :: buy_rp

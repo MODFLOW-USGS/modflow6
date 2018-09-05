@@ -12,9 +12,9 @@ module GwtStoModule
 
   type, extends(NumericalPackageType) :: GwtStoType
     
-    real(DP), dimension(:), pointer                  :: porosity => null()      ! porosity
-    real(DP), dimension(:), pointer                  :: strg => null()          ! rate of mass storage
-    integer(I4B), dimension(:), pointer              :: ibound => null()        ! pointer to model ibound
+    real(DP), dimension(:), pointer, contiguous      :: porosity => null()      ! porosity
+    real(DP), dimension(:), pointer, contiguous      :: strg => null()          ! rate of mass storage
+    integer(I4B), dimension(:), pointer, contiguous  :: ibound => null()        ! pointer to model ibound
     type(GwtFmiType), pointer                        :: fmi => null()           ! pointer to fmi object
 
   contains
@@ -81,7 +81,7 @@ module GwtStoModule
     ! -- dummy
     class(GwtStoType) :: this
     class(DisBaseType), pointer, intent(in) :: dis
-    integer(I4B), dimension(:), pointer :: ibound
+    integer(I4B), dimension(:), pointer, contiguous :: ibound
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtsto =                                    &

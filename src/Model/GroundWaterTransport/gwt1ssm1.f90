@@ -13,11 +13,11 @@ module GwtSsmModule
 
   type, extends(NumericalPackageType) :: GwtSsmType
     
-    integer, pointer                                 :: ncomp                   ! number of components
-    integer, pointer                                 :: nbound                  ! number of flow boundaries in this time step
-    integer, dimension(:, :), pointer                :: iauxpakcomp => null()   ! aux col for component concentration
-    integer(I4B), dimension(:), pointer              :: ibound => null()        ! pointer to model ibound
-    type(GwtFmiType), pointer                        :: fmi => null()           ! pointer to fmi object
+    integer, pointer                                   :: ncomp                 ! number of components
+    integer, pointer                                   :: nbound                ! number of flow boundaries in this time step
+    integer(I4B), dimension(:, :), pointer, contiguous :: iauxpakcomp => null() ! aux col for component concentration
+    integer(I4B), dimension(:), pointer, contiguous    :: ibound => null()      ! pointer to model ibound
+    type(GwtFmiType), pointer                          :: fmi => null()         ! pointer to fmi object
 
   contains
   
@@ -106,9 +106,9 @@ module GwtSsmModule
     ! -- modules
     use MemoryManagerModule, only: mem_setptr
     ! -- dummy
-    class(GwtSsmType)                       :: this
+    class(GwtSsmType) :: this
     class(DisBaseType), pointer, intent(in) :: dis
-    integer(I4B), dimension(:), pointer     :: ibound
+    integer(I4B), dimension(:), pointer, contiguous :: ibound
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtssm =                                    &

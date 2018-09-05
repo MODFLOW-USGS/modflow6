@@ -14,32 +14,32 @@ module GwtDspModule
 
   type, extends(NumericalPackageType) :: GwtDspType
     
-    integer(I4B), dimension(:), pointer              :: ibound     => null()    ! pointer to GWT model ibound
+    integer(I4B), dimension(:), pointer, contiguous  :: ibound     => null()    ! pointer to GWT model ibound
     type(GwtFmiType), pointer                        :: fmi        => null()    ! pointer to GWT fmi object
-    real(DP), dimension(:), pointer                  :: porosity   => null()    ! pointer to GWT storage porosity
-    real(DP), dimension(:), pointer                  :: diffc      => null()    ! molecular diffusion coefficient for each cell
-    real(DP), dimension(:), pointer                  :: alh        => null()    ! longitudinal horizontal dispersivity
-    real(DP), dimension(:), pointer                  :: alv        => null()    ! longitudinal vertical dispersivity
-    real(DP), dimension(:), pointer                  :: ath1       => null()    ! transverse horizontal dispersivity
-    real(DP), dimension(:), pointer                  :: ath2       => null()    ! transverse horizontal dispersivity
-    real(DP), dimension(:), pointer                  :: atv        => null()    ! transverse vertical dispersivity
+    real(DP), dimension(:), pointer, contiguous      :: porosity   => null()    ! pointer to GWT storage porosity
+    real(DP), dimension(:), pointer, contiguous      :: diffc      => null()    ! molecular diffusion coefficient for each cell
+    real(DP), dimension(:), pointer, contiguous      :: alh        => null()    ! longitudinal horizontal dispersivity
+    real(DP), dimension(:), pointer, contiguous      :: alv        => null()    ! longitudinal vertical dispersivity
+    real(DP), dimension(:), pointer, contiguous      :: ath1       => null()    ! transverse horizontal dispersivity
+    real(DP), dimension(:), pointer, contiguous      :: ath2       => null()    ! transverse horizontal dispersivity
+    real(DP), dimension(:), pointer, contiguous      :: atv        => null()    ! transverse vertical dispersivity
     integer(I4B), pointer                            :: idiffc     => null()    ! flag indicating diffusion is active
     integer(I4B), pointer                            :: idisp      => null()    ! flag indicating mechanical dispersion is active
     integer(I4B), pointer                            :: ixt3d      => null()    ! flag indicating xt3d is active
     type(Xt3dType), pointer                          :: xt3d       => null()    ! xt3d object
-    real(DP), dimension(:), pointer                  :: dispcoef   => null()    ! disp coefficient (only if xt3d not active)
+    real(DP), dimension(:), pointer, contiguous      :: dispcoef   => null()    ! disp coefficient (only if xt3d not active)
     integer(I4B), pointer                            :: id22       => null()    ! flag indicating d22 is available
     integer(I4B), pointer                            :: id33       => null()    ! flag indicating d33 is available
-    real(DP), dimension(:), pointer                  :: d11        => null()    ! dispersion coefficient
-    real(DP), dimension(:), pointer                  :: d22        => null()    ! dispersion coefficient
-    real(DP), dimension(:), pointer                  :: d33        => null()    ! dispersion coefficient
-    real(DP), dimension(:), pointer                  :: angle1     => null()    ! rotation angle 1
-    real(DP), dimension(:), pointer                  :: angle2     => null()    ! rotation angle 2
-    real(DP), dimension(:), pointer                  :: angle3     => null()    ! rotation angle 3
+    real(DP), dimension(:), pointer, contiguous      :: d11        => null()    ! dispersion coefficient
+    real(DP), dimension(:), pointer, contiguous      :: d22        => null()    ! dispersion coefficient
+    real(DP), dimension(:), pointer, contiguous      :: d33        => null()    ! dispersion coefficient
+    real(DP), dimension(:), pointer, contiguous      :: angle1     => null()    ! rotation angle 1
+    real(DP), dimension(:), pointer, contiguous      :: angle2     => null()    ! rotation angle 2
+    real(DP), dimension(:), pointer, contiguous      :: angle3     => null()    ! rotation angle 3
     integer(I4B), pointer                            :: iangle1    => null()    ! flag indicating angle1 is available
     integer(I4B), pointer                            :: iangle2    => null()    ! flag indicating angle2 is available
     integer(I4B), pointer                            :: iangle3    => null()    ! flag indicating angle3 is available
-    real(DP), dimension(:), pointer                  :: gwfflowjaold => null()  ! gwf flowja values last time disp coeffs were calculated
+    real(DP), dimension(:), pointer, contiguous      :: gwfflowjaold => null()  ! gwf flowja values last time disp coeffs were calculated
     
   contains
   
@@ -193,10 +193,10 @@ module GwtDspModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtDspType)                       :: this
-    class(DisBaseType), pointer             :: dis
-    integer(I4B), dimension(:), pointer          :: ibound
-    real(DP), dimension(:), pointer :: porosity
+    class(GwtDspType) :: this
+    class(DisBaseType), pointer :: dis
+    integer(I4B), dimension(:), pointer, contiguous :: ibound
+    real(DP), dimension(:), pointer, contiguous :: porosity
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtdsp =                                    &
