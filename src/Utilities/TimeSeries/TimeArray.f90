@@ -14,8 +14,8 @@ module TimeArrayModule
 
   type :: TimeArrayType
     ! -- Public members
-    real(DP),                        public :: taTime
-    real(DP), dimension(:), pointer, public :: taArray => null()
+    real(DP), public :: taTime
+    real(DP), dimension(:), pointer, contiguous, public :: taArray => null()
   contains
     ! -- Public procedures
     ! -- When gfortran adds support for finalization, the

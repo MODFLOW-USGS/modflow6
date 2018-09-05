@@ -4,7 +4,7 @@ module TimeSeriesModule
   use BlockParserModule,      only: BlockParserType
   use ConstantsModule,        only: LINELENGTH, UNDEFINED, STEPWISE, LINEAR, &
                                     LINEAREND, LENTIMESERIESNAME, LENHUGELINE, &
-                                    DONE, DNODATA
+                                    DZERO, DONE, DNODATA
   use InputOutputModule,      only: GetUnit, openfile, ParseLine, upcase, &
                                     dclosetest
   use ListModule,             only: ListType, ListNodeType
@@ -25,12 +25,12 @@ module TimeSeriesModule
 
   type TimeSeriesType
     ! -- Public members
-    integer(I4B), public                         :: iMethod = UNDEFINED
-    character(len=LENTIMESERIESNAME), public     :: Name = ''
+    integer(I4B), public :: iMethod = UNDEFINED
+    character(len=LENTIMESERIESNAME), public :: Name = ''
     ! -- Private members
-    real(DP), private                            :: sfac = DONE
-    logical, public                              :: autoDeallocate = .true.
-    type(ListType), pointer, private             :: list => null()
+    real(DP), private :: sfac = DONE
+    logical, public :: autoDeallocate = .true.
+    type(ListType), pointer, private :: list => null()
     class(TimeSeriesFileType), pointer, private :: tsfile => null()
   contains
     ! -- Public procedures
@@ -59,12 +59,12 @@ module TimeSeriesModule
 
   type TimeSeriesFileType
     ! -- Private members
-    integer(I4B),                                public :: inunit = 0
-    integer(I4B),                                public :: iout = 0
-    integer(I4B),                                public :: nTimeSeries = 0
-    character(len=LINELENGTH),                   public :: datafile = ''
-    type(TimeSeriesType), dimension(:), pointer, public :: timeSeries => null()
-    type(BlockParserType), pointer,              public :: parser
+    integer(I4B), public :: inunit = 0
+    integer(I4B), public :: iout = 0
+    integer(I4B), public :: nTimeSeries = 0
+    character(len=LINELENGTH), public :: datafile = ''
+    type(TimeSeriesType), dimension(:), pointer, contiguous, public :: timeSeries => null()
+    type(BlockParserType), pointer, public :: parser
   contains
     ! -- Public procedures
     procedure, public :: Count
@@ -627,7 +627,7 @@ contains
     ! -- local
     real(DP) :: area, currTime, nextTime, ratio0, ratio1, t0, t01, t1, &
                         timediff, value, value0, value1, valuediff
-    logical :: done
+    logical :: ldone
     character(len=LINELENGTH) :: errmsg
     type(ListNodeType), pointer :: tslNodePreceding => null()
     type(ListNodeType), pointer :: currNode => null(), nextNode => null()
@@ -639,19 +639,19 @@ contains
         ' for time series "',a,'" for time interval: ',g12.5,' to ',g12.5)
 ! ------------------------------------------------------------------------------
     !
-    value = 0.0d0
-    done = .false.
-    t1 = -1.0d0
+    value = DZERO
+    ldone = .false.
+    t1 = -DONE
     call this%get_latest_preceding_node(time0, tslNodePreceding)
     if (associated(tslNodePreceding)) then
       currNode => tslNodePreceding
-      do while (.not. done)
+      do while (.not. ldone)
         currObj => currNode%GetItem()
         currRecord => CastAsTimeSeriesRecordType(currObj)
         currTime = currRecord%tsrTime
         if (dclosetest(currTime, time1, epsil)) then
-          ! Current node time = time1 so should be done
-          done = .true.
+          ! Current node time = time1 so should be ldone
+          ldone = .true.
         elseif (currTime < time1) then
           if (.not. associated(currNode%nextNode)) then
             ! -- try to read the next record
@@ -696,7 +696,7 @@ contains
               if (this%iMethod == LINEAR) then
                 area = 0.5d0 * t01 * (value0 + value1)
               elseif (this%iMethod == LINEAREND) then
-                area = 0.0d0
+                area = DZERO
                 value = value1
               endif
             end select
@@ -707,9 +707,9 @@ contains
         !
         ! -- Are we done yet?
         if (t1 > time1) then
-          done = .true.
+          ldone = .true.
         elseif (dclosetest(t1, time1, epsil)) then
-          done = .true.
+          ldone = .true.
         else
           ! -- We are not done yet
           if (.not. associated(currNode%nextNode)) then

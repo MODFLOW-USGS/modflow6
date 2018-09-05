@@ -7,15 +7,15 @@
           implicit none
           
           type rowtype
-              integer(I4B) :: nnz                                               ! number of nonzero entries in the row
-              integer(I4B),allocatable,dimension(:) :: icolarray                ! array of column numbers
+              integer(I4B) :: nnz                                                ! number of nonzero entries in the row
+              integer(I4B), allocatable, dimension(:) :: icolarray               ! array of column numbers
           end type rowtype
 
           type, public :: sparsematrix
-              integer(I4B) :: nrow                                              ! number of rows in the matrix
-              integer(I4B) :: ncol                                              ! number of columns in the matrix
-              integer(I4B) :: nnz                                               ! number of nonzero matrix entries
-              type(rowtype),allocatable,dimension(:) :: row                     ! one rowtype for each matrix row
+              integer(I4B) :: nrow                                               ! number of rows in the matrix
+              integer(I4B) :: ncol                                               ! number of columns in the matrix
+              integer(I4B) :: nnz                                                ! number of nonzero matrix entries
+              type(rowtype), allocatable, dimension(:) :: row                    ! one rowtype for each matrix row
               contains
                 procedure :: init => initialize
                 procedure :: addconnection

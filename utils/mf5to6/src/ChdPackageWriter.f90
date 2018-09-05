@@ -41,13 +41,13 @@ module ChdPackageWriterModule
     integer :: kpercurrent
     integer :: numtimeseries = 0
     integer :: maxchds = 0
-    integer,          dimension(:,:,:), pointer :: ibnd
-    integer,          dimension(:,:,:), pointer :: ichdvar
-    double precision, dimension(:,:,:), pointer :: chdshead
-    double precision, dimension(:,:,:), pointer :: chdehead
-    type(ListType),            pointer :: IbChdList => null()   ! CHDs from IBOUND
-    type(ListType),            pointer :: TvChdList => null()   ! Time-variable CHDs from CHD package
-    type(ListType),            pointer :: CnstChdList => null() ! Constant CHDs from CHD package
+    integer,          dimension(:,:,:), pointer :: ibnd => null()
+    integer,          dimension(:,:,:), pointer :: ichdvar => null()
+    double precision, dimension(:,:,:), pointer :: chdshead => null()
+    double precision, dimension(:,:,:), pointer :: chdehead => null()
+    type(ListType),            pointer :: IbChdList => null()                    ! CHDs from IBOUND
+    type(ListType),            pointer :: TvChdList => null()                    ! Time-variable CHDs from CHD package
+    type(ListType),            pointer :: CnstChdList => null()                  ! Constant CHDs from CHD package
     type(TimeSeriesFileType), pointer :: ChdTsGroup => null()
     !type(ChdObsWriterType),    pointer :: ChdObsWriter => null()
   contains

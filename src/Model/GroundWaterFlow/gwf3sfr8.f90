@@ -61,9 +61,9 @@ module SfrModule
     real(DP), pointer :: ftotnd => null()
     ! -- diversion data
     integer(I4B), pointer :: ndiv => null()
-    type (SfrDivType), dimension(:), pointer :: diversion => null()
+    type (SfrDivType), dimension(:), pointer, contiguous :: diversion => null()
     ! -- aux data
-    type (SfrTSType), pointer, dimension(:) :: auxvar => null()
+    type (SfrTSType), dimension(:), pointer, contiguous :: auxvar => null()
     ! -- boundary data
     type (SfrTSType), pointer :: rough => null()
     type (SfrTSType), pointer :: rain => null()
@@ -94,8 +94,8 @@ module SfrModule
     ! -- scalars
     ! -- for budgets
     ! -- characters
-    character(len=16), dimension(:), pointer :: csfrbudget => NULL()
-    character(len=16), dimension(:), pointer :: cauxcbc => NULL()
+    character(len=16), dimension(:), pointer, contiguous :: csfrbudget => NULL()
+    character(len=16), dimension(:), pointer, contiguous :: cauxcbc => NULL()
     ! -- integers
     integer(I4B), pointer :: iprhed => null()
     integer(I4B), pointer :: istageout => null()
@@ -121,9 +121,10 @@ module SfrModule
     real(DP), dimension(:), pointer, contiguous :: dbuff => null()
     ! -- derived types
     type(BudgetType), pointer :: budget => NULL()
-    type(SfrDataType), pointer, dimension(:) :: reaches => NULL()
+    type(SfrDataType), dimension(:), pointer, contiguous :: reaches => NULL()
     type(sparsematrix), pointer :: sparse => null()
-    type(RectangularChGeometryType), pointer, dimension(:) :: geo => null()
+    type(RectangularChGeometryType), dimension(:), pointer,                     &
+                                     contiguous :: geo => null()
     ! -- type bound procedures
     contains
     procedure :: sfr_allocate_scalars
@@ -2249,10 +2250,10 @@ contains
 ! ------------------------------------------------------------------------------
     class(SfrType) :: this
     integer(I4B), pointer :: neq
-    integer(I4B), dimension(:), pointer :: ibound
-    real(DP), dimension(:), pointer :: xnew
-    real(DP), dimension(:), pointer :: xold
-    real(DP), dimension(:), pointer :: flowja
+    integer(I4B), dimension(:), pointer, contiguous :: ibound
+    real(DP), dimension(:), pointer, contiguous :: xnew
+    real(DP), dimension(:), pointer, contiguous :: xold
+    real(DP), dimension(:), pointer, contiguous :: flowja
     ! -- local
 ! ------------------------------------------------------------------------------
     !

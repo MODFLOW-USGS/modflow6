@@ -11,13 +11,13 @@ module PackageMoverModule
   
   type PackageMoverType
     
-    character(len=LENORIGIN)         :: origin
-    integer, pointer                 :: nproviders
-    integer, pointer                 :: nreceivers
-    real(DP), pointer, dimension(:)  :: qtformvr      => null()
-    real(DP), pointer, dimension(:)  :: qformvr       => null()
-    real(DP), pointer, dimension(:)  :: qtomvr        => null()
-    real(DP), pointer, dimension(:)  :: qfrommvr      => null()
+    character(len=LENORIGIN)                     :: origin
+    integer, pointer                             :: nproviders
+    integer, pointer                             :: nreceivers
+    real(DP), dimension(:), pointer, contiguous  :: qtformvr      => null()
+    real(DP), dimension(:), pointer, contiguous  :: qformvr       => null()
+    real(DP), dimension(:), pointer, contiguous  :: qtomvr        => null()
+    real(DP), dimension(:), pointer, contiguous  :: qfrommvr      => null()
 
   contains
     procedure :: ar

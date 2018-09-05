@@ -21,13 +21,13 @@ module ObsOutputModule
   type :: ObsOutputType
     ! -- Public members
     ! kind specified to ensure consistent binary output
-    integer(kind=4), public           :: nobs = 0
-    integer(I4B), public              :: nunit = 0
-    character(len=500), public        :: filename = ''
+    integer(kind=4), public :: nobs = 0
+    integer(I4B), public :: nunit = 0
+    character(len=500), public :: filename = ''
     character(len=LENOBSNAME), allocatable, dimension(:), public :: obsnames
     character(len=LENBIGLINE), public :: header = ''
     character(len=LENBIGLINE), public :: lineout = ''
-    logical, public                   :: FormattedOutput = .true.
+    logical, public :: FormattedOutput = .true.
   contains
     ! -- Public procedures
     procedure, public :: ClearLineout

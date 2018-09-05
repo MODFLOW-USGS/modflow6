@@ -16,15 +16,15 @@ module GwfDisModule
   public dis_cr, GwfDisType
 
   type, extends(DisBaseType) :: GwfDisType
-    integer(I4B), pointer                     :: nlay         => null()         ! number of layers
-    integer(I4B), pointer                     :: nrow         => null()         ! number of rows
-    integer(I4B), pointer                     :: ncol         => null()         ! number of columns
-    integer(I4B), dimension(:), pointer       :: nodereduced  => null()         ! (size:nodesuser)contains reduced nodenumber (size 0 if not reduced); -1 means vertical pass through, 0 is idomain = 0
-    integer(I4B), dimension(:), pointer       :: nodeuser     => null()         ! (size:nodes) given a reduced nodenumber, provide the user nodenumber (size 0 if not reduced)
-    real(DP), dimension(:), pointer           :: delr         => null()         ! spacing along a row
-    real(DP), dimension(:), pointer           :: delc         => null()         ! spacing along a column
-    real(DP), dimension(:, :, :), pointer     :: botm         => null()         ! top and bottom elevations for each cell (ncol, nrow, nlay)
-    integer(I4B), dimension(:, :, :), pointer :: idomain      => null()         ! idomain (ncol, nrow, nlay)
+    integer(I4B), pointer :: nlay => null()                                      ! number of layers
+    integer(I4B), pointer :: nrow => null()                                      ! number of rows
+    integer(I4B), pointer :: ncol => null()                                      ! number of columns
+    integer(I4B), dimension(:), pointer, contiguous :: nodereduced => null()     ! (size:nodesuser)contains reduced nodenumber (size 0 if not reduced); -1 means vertical pass through, 0 is idomain = 0
+    integer(I4B), dimension(:), pointer, contiguous :: nodeuser => null()        ! (size:nodes) given a reduced nodenumber, provide the user nodenumber (size 0 if not reduced)
+    real(DP), dimension(:), pointer, contiguous :: delr => null()                ! spacing along a row
+    real(DP), dimension(:), pointer, contiguous :: delc => null()                ! spacing along a column
+    real(DP), dimension(:, :, :), pointer :: botm => null()                      ! top and bottom elevations for each cell (ncol, nrow, nlay)
+    integer(I4B), dimension(:, :, :), pointer :: idomain => null()               ! idomain (ncol, nrow, nlay)
   contains
     procedure :: dis_df => dis3d_df
     procedure :: dis_da => dis3d_da
@@ -1282,7 +1282,7 @@ module GwfDisModule
     integer(I4B), intent(inout)                        :: istop
     integer(I4B), intent(in)                           :: in
     integer(I4B), intent(in)                           :: iout
-    integer(I4B), dimension(:), pointer, intent(inout) :: iarray
+    integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: iarray
     character(len=*), intent(in)                       :: aname
     ! -- local
     integer(I4B) :: ival
@@ -1292,7 +1292,7 @@ module GwfDisModule
     integer(I4B) :: ncol
     integer(I4B) :: nval
     integer(I4B) :: nodeu, noder
-    integer(I4B), dimension(:), pointer :: itemp
+    integer(I4B), dimension(:), pointer, contiguous :: itemp
 ! ------------------------------------------------------------------------------
     !
     ! -- Point the temporary pointer array, which is passed to the reading
@@ -1357,7 +1357,7 @@ module GwfDisModule
     integer(I4B), intent(inout)                    :: istop
     integer(I4B), intent(in)                       :: in
     integer(I4B), intent(in)                       :: iout
-    real(DP), dimension(:), pointer, intent(inout) :: darray
+    real(DP), dimension(:), pointer, contiguous, intent(inout) :: darray
     character(len=*), intent(in)                   :: aname
     ! -- local
     integer(I4B) :: ival
@@ -1367,7 +1367,7 @@ module GwfDisModule
     integer(I4B) :: ncol
     integer(I4B) :: nval
     integer(I4B) :: nodeu, noder
-    real(DP), dimension(:), pointer :: dtemp
+    real(DP), dimension(:), pointer, contiguous :: dtemp
 ! ------------------------------------------------------------------------------
     !
     ! -- Point the temporary pointer array, which is passed to the reading
@@ -1524,7 +1524,7 @@ module GwfDisModule
     ! -- modules
     ! -- dummy
     class(GwfDisType), intent(inout)               :: this
-    real(DP), dimension(:), pointer, intent(inout) :: darray
+    real(DP), dimension(:), pointer, contiguous, intent(inout) :: darray
     integer(I4B), intent(in)                       :: iout
     integer(I4B), intent(in)                       :: iprint
     integer(I4B), intent(in)                       :: idataun
@@ -1542,7 +1542,7 @@ module GwfDisModule
     integer(I4B) :: nval
     integer(I4B) :: nodeu, noder
     integer(I4B) :: istart, istop
-    real(DP), dimension(:), pointer :: dtemp
+    real(DP), dimension(:), pointer, contiguous :: dtemp
     ! -- formats
     character(len=*),parameter :: fmthsv = &
       "(1X,/1X,a,' WILL BE SAVED ON UNIT ',I4, &
