@@ -1,0 +1,20 @@
+Input to the Variations in Hydraulic Conductivity with Depth (VKD) Package is read from the file of type ``VKD6''.  The VKD Package is activated by specifying an option in the NPF options block.  Only one VKD Package can be specified for a GWF model.
+
+\vspace{5mm}
+\subsubsection{Structure of Blocks}
+\vspace{5mm}
+
+\noindent \textit{FOR EACH SIMULATION}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-vkd-options.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-vkd-dimensions.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-vkd-packagedata.dat}
+
+\vspace{5mm}
+\subsubsection{Explanation of Variables}
+\begin{description}
+\input{./mf6ivar/tex/gwf-vkd-desc.tex}
+\end{description}
+
+\vspace{5mm}
+\subsubsection{Example Input File}
+\lstinputlisting[style=inputfile]{./mf6ivar/examples/gwf-vkd-example.dat}

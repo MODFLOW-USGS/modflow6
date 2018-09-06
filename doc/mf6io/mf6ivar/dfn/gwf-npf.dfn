@@ -135,6 +135,49 @@ optional true
 longname keyword to save specific discharge
 description keyword to indicate that x, y, and z components of specific discharge will be calculated at cell centers and written to the cell-by-cell flow file, which is specified with ``BUDGET SAVE FILE'' in Output Control.
 
+block options
+name vkd_filerecord
+type record vkd6 filein vkd6_filename
+shape
+reader urword
+tagged true
+optional true
+longname
+description
+
+block options
+name vkd6
+type keyword
+shape
+in_record true
+reader urword
+tagged true
+optional false
+longname vkd keyword
+description keyword to specify that record corresponds to a vkd file.
+
+block options
+name filein
+type keyword
+shape
+in_record true
+reader urword
+tagged true
+optional false
+longname file keyword
+description keyword to specify that an input filename is expected next.
+
+block options
+name vkd6_filename
+type string
+preserve_case true
+in_record true
+tagged false
+reader urword
+optional false
+longname vkd6 input filename
+description is the file name of the VKD input file. This option should not be used unless the Variations in Hydraulic Conductivity with Depth (VKD) Package is needed for the simulation.
+
 
 # --------------------- gwf npf griddata ---------------------
 
