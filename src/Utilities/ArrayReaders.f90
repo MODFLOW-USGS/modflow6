@@ -195,8 +195,8 @@ contains
     else
       ! -- Read data as binary
       locat = -locat
+      call read_binary_header(locat, iout, aname, nval)
       do i=1,ii
-        call read_binary_header(locat, iout, aname, nval)
         read(locat,iostat=istat,iomsg=ermsgr) (iarr(j,i),j=1,jj)
         if (istat /= 0) then
           arrname = adjustl(aname)
@@ -453,8 +453,8 @@ contains
     else
       ! -- Read data as binary
       locat = -locat
+      call read_binary_header(locat, iout, aname, nval)
       do i = 1, ii
-        call read_binary_header(locat, iout, aname, nval)
         read(locat,iostat=istat,iomsg=ermsgr) (darr(j,i), j = 1, jj)
         if (istat /= 0) then
           arrname = adjustl(aname)
