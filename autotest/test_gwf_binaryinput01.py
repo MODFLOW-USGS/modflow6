@@ -75,6 +75,26 @@ def get_model(idx, dir):
     sim.register_ims_package(ims, [gwf.name])
 
     # discretization
+    # write top to a binary file
+    text = 'TOP'
+    fname = 'top.bin'
+    pth = os.path.join(exdirs[idx], fname)
+    f = open(pth, 'wb')
+    header = flopy.utils.BinaryHeader.create(bintype='HEAD',
+                                             precision='double',
+                                             text=text,
+                                             nrow=nrow,
+                                             ncol=ncol,
+                                             ilay=1, pertim=1.0,
+                                             totim=1.0, kstp=1,
+                                             kper=1)
+    flopy.utils.Util2d.write_bin((nrow, ncol), f,
+                                 np.zeros((nrow, ncol), dtype=np.float64),
+                                 header_data=header)
+    f.close()
+    top = {'factor': 1., 'filename': fname, 'data': None, 'binary': True,
+           'iprn': 1}
+
     # write botarr to binary file
     if idx == 0:
         botarr = []
@@ -162,7 +182,7 @@ def get_model(idx, dir):
 
     dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
                                   delr=delr, delc=delc,
-                                  top=0., botm=botarr,
+                                  top=top, botm=botarr,
                                   idomain=idomain,
                                   fname='{}.dis'.format(name))
 
