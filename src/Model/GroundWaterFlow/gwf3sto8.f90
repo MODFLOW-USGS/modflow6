@@ -241,6 +241,9 @@ module GwfStoModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- modules
+    use SimModule, only: ustop, store_error
+    use ConstantsModule, only: LINELENGTH
     use TdisModule, only: delt
     ! -- dummy
     class(GwfStoType) :: this
@@ -260,10 +263,22 @@ module GwfStoModule
     real(DP) :: snold, snnew
     real(DP) :: ss0, ss1, ssh0, ssh1
     real(DP) :: rhsterm
+    character(len=LINELENGTH) :: errmsg
+    ! -- formats
+    character(len=*), parameter :: fmtsperror =                                &
+      &"('DETECTED TIME STEP LENGTH OF ZERO.  GWF STORAGE PACKAGE CANNOT BE ', &
+      &'USED UNLESS DELT IS NON-ZERO.')"
 ! ------------------------------------------------------------------------------
     !
     ! -- test if steady-state stress period
     if (this%iss /= 0) return
+    !
+    ! -- Ensure time step length is not zero
+    if (delt == DZERO) then
+      write(errmsg, fmtsperror)
+      call store_error(errmsg)
+      call ustop()
+    endif
     !
     ! -- set variables
     tled = DONE / delt
