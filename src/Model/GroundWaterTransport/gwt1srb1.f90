@@ -1,4 +1,4 @@
-module GwtStoModule
+module GwtSrbModule
   
   use KindModule,             only: DP, I4B
   use ConstantsModule,        only: DONE, DZERO
@@ -7,41 +7,48 @@ module GwtStoModule
   use GwtFmiModule,           only: GwtFmiType
   
   implicit none
-  public :: GwtStoType
-  public :: sto_cr
+  public :: GwtSrbType
+  public :: srb_cr
 
-  type, extends(NumericalPackageType) :: GwtStoType
+  type, extends(NumericalPackageType) :: GwtSrbType
     
-    real(DP), dimension(:), pointer, contiguous      :: porosity => null()      ! porosity
-    real(DP), dimension(:), pointer, contiguous      :: strg => null()          ! rate of mass storage
+    real(DP), dimension(:), pointer, contiguous      :: porosity => null()      ! pointer to storage package porosity
+    real(DP), dimension(:), pointer, contiguous      :: strg => null()          ! rate of sorbed mass storage
     integer(I4B), dimension(:), pointer, contiguous  :: ibound => null()        ! pointer to model ibound
     type(GwtFmiType), pointer                        :: fmi => null()           ! pointer to fmi object
+    
+    real(DP), dimension(:), pointer, contiguous      :: rhob => null()          ! bulk density
+    real(DP), dimension(:), pointer, contiguous      :: srconc => null()        ! initial sorbed concentration
+    real(DP), dimension(:), pointer, contiguous      :: distcoef => null()      ! distribution coefficient
+    real(DP), dimension(:), pointer, contiguous      :: csrbnew => null()       ! new sorbed concentration
+    real(DP), dimension(:), pointer, contiguous      :: csrbold => null()       ! old sorbed concentration
+    
 
   contains
   
-    procedure :: sto_ar
-    procedure :: sto_fc
-    procedure :: sto_bdcalc
-    procedure :: sto_bdsav
-    procedure :: sto_da
+    procedure :: srb_ar
+    procedure :: srb_fc
+    procedure :: srb_bdcalc
+    procedure :: srb_bdsav
+    procedure :: srb_da
     procedure :: allocate_scalars
     procedure, private :: allocate_arrays
     procedure, private :: read_options
     procedure, private :: read_data
   
-  end type GwtStoType
+  end type GwtSrbType
   
   contains
   
-  subroutine sto_cr(stoobj, name_model, inunit, iout, fmi)
+  subroutine srb_cr(srbobj, name_model, inunit, iout, fmi)
 ! ******************************************************************************
-! sto_cr -- Create a new STO object
+! srb_cr -- Create a new SRB object
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    type(GwtStoType), pointer :: stoobj
+    type(GwtSrbType), pointer :: srbobj
     character(len=*), intent(in) :: name_model
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
@@ -49,29 +56,29 @@ module GwtStoModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Create the object
-    allocate(stoobj)
+    allocate(srbobj)
     !
     ! -- create name and origin
-    call stoobj%set_names(1, name_model, 'STO', 'STO')
+    call srbobj%set_names(1, name_model, 'SRB', 'SRB')
     !
     ! -- Allocate scalars
-    call stoobj%allocate_scalars()
+    call srbobj%allocate_scalars()
     !
     ! -- Set variables
-    stoobj%inunit = inunit
-    stoobj%iout = iout
-    stoobj%fmi => fmi
+    srbobj%inunit = inunit
+    srbobj%iout = iout
+    srbobj%fmi => fmi
     !
     ! -- Initialize block parser
-    call stoobj%parser%Initialize(stoobj%inunit, stoobj%iout)
+    call srbobj%parser%Initialize(srbobj%inunit, srbobj%iout)
     !
     ! -- Return
     return
-  end subroutine sto_cr
+  end subroutine srb_cr
 
-  subroutine sto_ar(this, dis, ibound)
+  subroutine srb_ar(this, dis, ibound, porosity)
 ! ******************************************************************************
-! sto_ar -- Allocate and Read
+! srb_ar -- Allocate and Read
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -79,39 +86,48 @@ module GwtStoModule
     ! -- modules
     use MemoryManagerModule, only: mem_setptr
     ! -- dummy
-    class(GwtStoType) :: this
+    class(GwtSrbType) :: this
     class(DisBaseType), pointer, intent(in) :: dis
     integer(I4B), dimension(:), pointer, contiguous :: ibound
+    real(DP), dimension(:), pointer, contiguous :: porosity
     ! -- local
+    integer(I4B) :: i
     ! -- formats
-    character(len=*), parameter :: fmtsto =                                    &
-      "(1x,/1x,'STO -- STORAGE PACKAGE, VERSION 1, 8/24/2017',                 &
+    character(len=*), parameter :: fmtsrb =                                    &
+      "(1x,/1x,'SRB -- SORPTION PACKAGE, VERSION 1, 10/01/2018',               &
       &' INPUT READ FROM UNIT ', i0, //)"
 ! ------------------------------------------------------------------------------
     !
-    ! --print a message identifying the storage package.
-    write(this%iout, fmtsto) this%inunit
+    ! --print a message identifying the sorption package.
+    write(this%iout, fmtsrb) this%inunit
     !
     ! -- store pointers to arguments that were passed in
-    this%dis     => dis
-    this%ibound  => ibound
+    this%dis => dis
+    this%ibound => ibound
+    this%porosity => porosity
     !
     ! -- Allocate arrays
     call this%allocate_arrays(dis%nodes)
     !
-    ! -- Read storage options
+    ! -- Read sorption options
     call this%read_options()
     !
     ! -- read the data block
     call this%read_data()
     !
+    ! -- Set new and old sorbed concentrations equal to the intial sorbed conc
+    do i = 1, this%dis%nodes
+      this%csrbnew(i) = this%srconc(i)
+      this%csrbold(i) = this%srconc(i)
+    enddo
+    !
     ! -- Return
     return
-  end subroutine sto_ar
+  end subroutine srb_ar
 
-  subroutine sto_fc(this, nodes, cold, nja, njasln, amatsln, idxglo, rhs)
+  subroutine srb_fc(this, nodes, cold, nja, njasln, amatsln, idxglo, rhs)
 ! ******************************************************************************
-! sto_fc -- Calculate coefficients and fill amat and rhs
+! srb_fc -- Calculate coefficients and fill amat and rhs
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -119,7 +135,7 @@ module GwtStoModule
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy
-    class(GwtStoType) :: this
+    class(GwtSrbType) :: this
     integer, intent(in) :: nodes
     real(DP), intent(in), dimension(nodes) :: cold
     integer(I4B), intent(in) :: nja
@@ -132,27 +148,32 @@ module GwtStoModule
     real(DP) :: tled
     real(DP) :: hhcof, rrhs
     real(DP) :: vnew, vold
+    real(DP) :: vcell
+    real(DP) :: gwfsatold
+    real(DP) :: cfact
 ! ------------------------------------------------------------------------------
     !
     ! -- set variables
     tled = DONE / delt
     !
-    ! -- loop through and calculate storage contribution to hcof and rhs
+    ! -- loop through and calculate sorption contribution to hcof and rhs
     do n = 1, this%dis%nodes
       !
       ! -- skip if transport inactive
       if(this%ibound(n) <= 0) cycle
       !
       ! -- calculate new and old water volumes
-      vnew = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n)) * &
-             this%fmi%gwfsat(n) * this%porosity(n)
+      vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
+      vnew = vcell * this%fmi%gwfsat(n) * this%porosity(n)
       vold = vnew
       if (this%fmi%igwfstrgss /= 0) vold = vold + this%fmi%gwfstrgss(n) * delt
       if (this%fmi%igwfstrgsy /= 0) vold = vold + this%fmi%gwfstrgsy(n) * delt
+      gwfsatold = vold / vcell / this%porosity(n)
       !
       ! -- add terms to diagonal and rhs accumulators
-      hhcof = -vnew * tled
-      rrhs = -vold * tled * cold(n)
+      cfact = this%distcoef(n)
+      hhcof = this%rhob(n) * vcell * tled * cfact * this%fmi%gwfsat(n)
+      rrhs = this%rhob(n) * vcell * tled * cfact * gwfsatold * cold(n)
       idiag = this%dis%con%ia(n)
       amatsln(idxglo(idiag)) = amatsln(idxglo(idiag)) + hhcof
       rhs(n) = rhs(n) + rrhs
@@ -160,11 +181,11 @@ module GwtStoModule
     !
     ! -- Return
     return
-  end subroutine sto_fc
+  end subroutine srb_fc
   
-  subroutine sto_bdcalc(this, nodes, cnew, cold, isuppress_output, model_budget)
+  subroutine srb_bdcalc(this, nodes, cnew, cold, isuppress_output, model_budget)
 ! ******************************************************************************
-! sto_bdcalc -- Calculate budget terms
+! srb_bdcalc -- Calculate budget terms
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -173,7 +194,7 @@ module GwtStoModule
     use TdisModule,        only: delt
     use BudgetModule, only: BudgetType
     ! -- dummy
-    class(GwtStoType) :: this
+    class(GwtSrbType) :: this
     integer(I4B), intent(in) :: nodes
     real(DP), intent(in), dimension(nodes) :: cnew
     real(DP), intent(in), dimension(nodes) :: cold
@@ -186,6 +207,9 @@ module GwtStoModule
     real(DP) :: rin, rout
     real(DP) :: vnew, vold
     real(DP) :: hhcof, rrhs
+    real(DP) :: vcell
+    real(DP) :: gwfsatold
+    real(DP) :: cfact
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize 
@@ -193,7 +217,7 @@ module GwtStoModule
     rout = DZERO
     tled = DONE / delt
     !
-    ! -- Calculate storage change
+    ! -- Calculate sorption change
     do n = 1, nodes
       this%strg(n) = DZERO
       !
@@ -201,15 +225,17 @@ module GwtStoModule
       if(this%ibound(n) <= 0) cycle
       !
       ! -- calculate new and old water volumes
-      vnew = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n)) * &
-             this%fmi%gwfsat(n) * this%porosity(n)
+      vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
+      vnew = vcell * this%fmi%gwfsat(n) * this%porosity(n)
       vold = vnew
       if (this%fmi%igwfstrgss /= 0) vold = vold + this%fmi%gwfstrgss(n) * delt
       if (this%fmi%igwfstrgsy /= 0) vold = vold + this%fmi%gwfstrgsy(n) * delt
+      gwfsatold = vold / vcell / this%porosity(n)
       !
       ! -- calculate rate
-      hhcof = -vnew * tled
-      rrhs = -vold * tled * cold(n)
+      cfact = this%distcoef(n)
+      hhcof = this%rhob(n) * vcell * tled * cfact * this%fmi%gwfsat(n)
+      rrhs = this%rhob(n) * vcell * tled * cfact * gwfsatold * cold(n)
       rate = hhcof * cnew(n) - rrhs
       this%strg(n) = rate
       if(rate < DZERO) then
@@ -220,22 +246,22 @@ module GwtStoModule
     enddo
     !
     ! -- Add contributions to model budget
-    call model_budget%addentry(rin, rout, delt, '         STORAGE',            &
+    call model_budget%addentry(rin, rout, delt, '        SORPTION',            &
                                isuppress_output)
     !
     ! -- Return
     return
-  end subroutine sto_bdcalc
+  end subroutine srb_bdcalc
 
-  subroutine sto_bdsav(this, icbcfl, icbcun)
+  subroutine srb_bdsav(this, icbcfl, icbcun)
 ! ******************************************************************************
-! sto_bdsav -- Save budget terms
+! srb_bdsav -- Save budget terms
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwtStoType) :: this
+    class(GwtSrbType) :: this
     integer(I4B), intent(in) :: icbcfl
     integer(I4B), intent(in) :: icbcun
     ! -- local
@@ -256,24 +282,24 @@ module GwtStoModule
     endif
     if(icbcfl == 0) ibinun = 0
     !
-    ! -- Record the storage rates if requested
+    ! -- Record the sorption rates if requested
     if(ibinun /= 0) then
       iprint = 0
       dinact = DZERO
       !
-      ! -- storage
+      ! -- sorption
       call this%dis%record_array(this%strg, this%iout, iprint, -ibinun,        &
-                                 '         STORAGE', cdatafmp, nvaluesp,       &
+                                 '        SORPTION', cdatafmp, nvaluesp,       &
                                  nwidthp, editdesc, dinact)
     endif
     !
     ! -- Return
     return
-  end subroutine sto_bdsav
+  end subroutine srb_bdsav
 
-  subroutine sto_da(this)
+  subroutine srb_da(this)
 ! ******************************************************************************
-! sto_da -- Deallocate variables
+! srb_da -- Deallocate variables
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -281,7 +307,7 @@ module GwtStoModule
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
-    class(GwtStoType) :: this
+    class(GwtSrbType) :: this
 ! ------------------------------------------------------------------------------
     !
     ! -- Deallocate arrays if package was active
@@ -298,7 +324,7 @@ module GwtStoModule
     !
     ! -- Return
     return
-  end subroutine sto_da
+  end subroutine srb_da
 
   subroutine allocate_scalars(this)
 ! ******************************************************************************
@@ -310,7 +336,7 @@ module GwtStoModule
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr
     ! -- dummy
-    class(GwtStoType) :: this
+    class(GwtSrbType) :: this
     ! -- local
 ! ------------------------------------------------------------------------------
     !
@@ -336,20 +362,24 @@ module GwtStoModule
     !modules
     use ConstantsModule, only: DZERO
     ! -- dummy
-    class(GwtStoType) :: this
+    class(GwtSrbType) :: this
     integer(I4B), intent(in) :: nodes
     ! -- local
     integer(I4B) :: n
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate
-    call mem_allocate(this%porosity, nodes, 'POROSITY', this%origin)
     call mem_allocate(this%strg, nodes, 'STRG', this%origin)
+    call mem_allocate(this%rhob, nodes, 'RHOB', this%origin)
+    call mem_allocate(this%srconc, nodes, 'SRCONC', this%origin)
+    call mem_allocate(this%distcoef, nodes, 'DISTCOEF', this%origin)
     !
     ! -- Initialize
     do n = 1, nodes
-      this%porosity(n) = DZERO
       this%strg(n) = DZERO
+      this%rhob(n) = DZERO
+      this%srconc(n) = DZERO
+      this%distcoef(n) = DZERO
     enddo
     !
     ! -- Return
@@ -367,7 +397,7 @@ module GwtStoModule
     use ConstantsModule,   only: LINELENGTH
     use SimModule,         only: ustop, store_error
     ! -- dummy
-    class(GwtStoType) :: this
+    class(GwtSrbType) :: this
     ! -- local
     character(len=LINELENGTH) :: errmsg, keyword
     integer(I4B) :: ierr
@@ -383,7 +413,7 @@ module GwtStoModule
     !
     ! -- parse options block if detected
     if (isfound) then
-      write(this%iout,'(1x,a)')'PROCESSING STORAGE OPTIONS'
+      write(this%iout,'(1x,a)')'PROCESSING SORPTION OPTIONS'
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
@@ -393,13 +423,13 @@ module GwtStoModule
             this%ipakcb = -1
             write(this%iout, fmtisvflow)
           case default
-            write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN STO OPTION: ',         &
+            write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN SRB OPTION: ',         &
                                      trim(keyword)
             call store_error(errmsg)
             call ustop()
         end select
       end do
-      write(this%iout,'(1x,a)')'END OF STORAGE OPTIONS'
+      write(this%iout,'(1x,a)')'END OF SORPTION OPTIONS'
     end if
     !
     ! -- Return
@@ -408,7 +438,7 @@ module GwtStoModule
 
   subroutine read_data(this)
 ! ******************************************************************************
-! read_data -- read the storage data (griddata) block
+! read_data -- read the sorption data (griddata) block
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -416,21 +446,24 @@ module GwtStoModule
     use ConstantsModule,   only: LINELENGTH
     use SimModule,         only: ustop, store_error, count_errors
     ! -- dummy
-    class(GwtStotype) :: this
+    class(GwtSrbType) :: this
     ! -- local
     character(len=LINELENGTH) :: line, errmsg, keyword
     integer(I4B) :: istart, istop, lloc, ierr
+    integer(I4B) :: i
     logical :: isfound, endOfBlock
-    character(len=24), dimension(1) :: aname
-    logical :: read_porosity
+    logical, dimension(3) :: lname
+    character(len=24), dimension(3) :: aname
     ! -- formats
     ! -- data
-    data aname(1) /'                POROSITY'/
+    data aname(1) /'            BULK DENSITY'/
+    data aname(2) /'     INITIAL SORBED CONC'/
+    data aname(3) /'DISTRIBUTION COEFFICIENT'/
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize
     isfound = .false.
-    read_porosity = .false.
+    lname(:) = .false.
     !
     ! -- get griddata block
     call this%parser%GetBlock('GRIDDATA', isfound, ierr)
@@ -443,11 +476,21 @@ module GwtStoModule
         call this%parser%GetRemainingLine(line)
         lloc = 1
         select case (keyword)
-          case ('POROSITY')
+          case ('RHOB')
             call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,&
-                                         this%parser%iuactive, this%porosity,  &
+                                         this%parser%iuactive, this%rhob,      &
                                          aname(1))
-            read_porosity = .true.
+            lname(1) = .true.
+          case ('SRCONC')
+            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,&
+                                         this%parser%iuactive, this%srconc,    &
+                                         aname(2))
+            lname(2) = .true.
+          case ('DISTCOEF')
+            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,&
+                                         this%parser%iuactive, this%distcoef,  &
+                                         aname(3))
+            lname(3) = .true.
           case default
             write(errmsg,'(4x,a,a)')'ERROR. UNKNOWN GRIDDATA TAG: ',            &
                                      trim(keyword)
@@ -464,12 +507,14 @@ module GwtStoModule
       call ustop()
     end if
     !
-    ! -- Check for POROSITY
-    if(.not. read_porosity) then
-      write(errmsg, '(a, a, a)') 'Error in GRIDDATA block: ',                   &
-                                 trim(adjustl(aname(1))), ' not found.'
-      call store_error(errmsg)
-    end if
+    ! -- Check for required variables
+    do i = 1, 3
+      if(.not. lname(i)) then
+        write(errmsg, '(a, a, a)') 'Error in GRIDDATA block: ',                   &
+                                   trim(adjustl(aname(i))), ' not found.'
+        call store_error(errmsg)
+      end if
+    end do
     !
     ! -- terminate if errors
     if(count_errors() > 0) then
@@ -483,4 +528,4 @@ module GwtStoModule
 
   
   
-end module GwtStoModule
+end module GwtSrbModule
