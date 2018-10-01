@@ -85,3 +85,5 @@ Thumbs.db
 *.blg
 
 *.bat
+
+msvs/My Advisor Results*
