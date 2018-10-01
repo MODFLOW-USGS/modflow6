@@ -45,6 +45,7 @@ name elevation
 type double precision
 shape (ncol*nrow*nlay; ncpl*nlay)
 reader readarray
+layered true
 optional true
 longname elevation array
 description cell center elevation for each cell in the grid.  This may be useful for constructing two-dimensional cross section models using an areal grid.
@@ -54,6 +55,7 @@ name dense
 type double precision
 shape (ncol*nrow*nlay; ncpl*nlay)
 reader readarray
+layered true
 optional true
 longname fluid density array
 description user-specified fluid density array.  If this array is specified, then these density values remain constant at the user-specified values.

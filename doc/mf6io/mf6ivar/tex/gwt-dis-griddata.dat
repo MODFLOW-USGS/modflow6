@@ -1,9 +1,9 @@
 BEGIN GRIDDATA
-  DELR [LAYERED]
+  DELR
     <delr(ncol)> -- READARRAY
-  DELC [LAYERED]
+  DELC
     <delc(nrow)> -- READARRAY
-  TOP [LAYERED]
+  TOP
     <top(ncol, nrow)> -- READARRAY
   BOTM [LAYERED]
     <botm(ncol, nrow, nlay)> -- READARRAY

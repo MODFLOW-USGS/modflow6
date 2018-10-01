@@ -8,8 +8,12 @@ BEGIN PACKAGES
   STO6       transport.sto
   ADV6       transport.adv
   DSP6       transport.dsp
-  CNC6       transport.cnc
   SSM6       transport.ssm
+  CNC6       transport01.cnc LEFT
+  CNC6       transport02.cnc RIGHT
+  SRC6       transport01.src LAY1
+  SRC6       transport02.src LAY2
+  SRC6       transport03.src LAY3
   OC6        transport.oc
 END PACKAGES
 

@@ -113,6 +113,7 @@
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1ic1.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1obs1.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1oc1.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1src1.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1ssm1.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1sto1.f90"/></Filter>
 		<Filter Name="ModelUtilities">

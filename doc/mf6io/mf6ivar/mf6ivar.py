@@ -482,6 +482,7 @@ if __name__ == '__main__':
                   'gwt-nam',
                   'gwt-oc',
                   'gwt-ssm',
+                  'gwt-src',
                   'gwt-sto',
                   'utl-lak-tab', # dfn completed  tex updated
                   'utl-obs',

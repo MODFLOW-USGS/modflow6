@@ -80,7 +80,7 @@ module GwtModule
   character(len=LENFTYPE), dimension(NIUNIT) :: cunit
   data cunit/   'DIS6 ', 'DISV6', 'DISU6', 'IC6  ', 'STO6 ', & !  5
                 'ADV6 ', 'DSP6 ', 'SSM6 ', 'RCT6 ', 'CNC6 ', & ! 10
-                'OC6  ', 'OBS6 ', 'FMI6 ', '     ', '     ', & ! 15
+                'OC6  ', 'OBS6 ', 'FMI6 ', 'SRC6 ', '     ', & ! 15
                 85 * '     '/
   
   contains
@@ -982,6 +982,7 @@ module GwtModule
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error, ustop
     use GwtCncModule, only: cnc_create
+    use GwtSrcModule, only: src_create
     ! -- dummy
     class(GwtModelType) :: this
     character(len=*),intent(in) :: filtyp
@@ -1002,6 +1003,8 @@ module GwtModule
     select case(filtyp)
     case('CNC6')
       call cnc_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
+    case('SRC6')
+      call src_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
     case default
       write(errmsg, *) 'Invalid package type: ', filtyp
       call store_error(errmsg)
