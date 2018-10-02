@@ -13,17 +13,16 @@ module GwtSrbModule
   type, extends(NumericalPackageType) :: GwtSrbType
     
     real(DP), dimension(:), pointer, contiguous      :: porosity => null()      ! pointer to storage package porosity
-    real(DP), dimension(:), pointer, contiguous      :: strg => null()          ! rate of sorbed mass storage
     integer(I4B), dimension(:), pointer, contiguous  :: ibound => null()        ! pointer to model ibound
     type(GwtFmiType), pointer                        :: fmi => null()           ! pointer to fmi object
     
+    real(DP), dimension(:), pointer, contiguous      :: strg => null()          ! rate of sorbed mass storage
     real(DP), dimension(:), pointer, contiguous      :: rhob => null()          ! bulk density
     real(DP), dimension(:), pointer, contiguous      :: srconc => null()        ! initial sorbed concentration
     real(DP), dimension(:), pointer, contiguous      :: distcoef => null()      ! distribution coefficient
     real(DP), dimension(:), pointer, contiguous      :: csrbnew => null()       ! new sorbed concentration
     real(DP), dimension(:), pointer, contiguous      :: csrbold => null()       ! old sorbed concentration
     
-
   contains
   
     procedure :: srb_ar
@@ -150,7 +149,8 @@ module GwtSrbModule
     real(DP) :: vnew, vold
     real(DP) :: vcell
     real(DP) :: gwfsatold
-    real(DP) :: cfact
+    real(DP) :: eqfact
+    real(DP) :: ctosrb
 ! ------------------------------------------------------------------------------
     !
     ! -- set variables
@@ -171,9 +171,10 @@ module GwtSrbModule
       gwfsatold = vold / vcell / this%porosity(n)
       !
       ! -- add terms to diagonal and rhs accumulators
-      cfact = this%distcoef(n)
-      hhcof = this%rhob(n) * vcell * tled * cfact * this%fmi%gwfsat(n)
-      rrhs = this%rhob(n) * vcell * tled * cfact * gwfsatold * cold(n)
+      eqfact = -this%rhob(n) * vcell * tled
+      ctosrb = this%distcoef(n)
+      hhcof =  eqfact * ctosrb * this%fmi%gwfsat(n)
+      rrhs = eqfact * ctosrb * gwfsatold * cold(n)
       idiag = this%dis%con%ia(n)
       amatsln(idxglo(idiag)) = amatsln(idxglo(idiag)) + hhcof
       rhs(n) = rhs(n) + rrhs
@@ -209,7 +210,8 @@ module GwtSrbModule
     real(DP) :: hhcof, rrhs
     real(DP) :: vcell
     real(DP) :: gwfsatold
-    real(DP) :: cfact
+    real(DP) :: eqfact
+    real(DP) :: ctosrb
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize 
@@ -233,9 +235,10 @@ module GwtSrbModule
       gwfsatold = vold / vcell / this%porosity(n)
       !
       ! -- calculate rate
-      cfact = this%distcoef(n)
-      hhcof = this%rhob(n) * vcell * tled * cfact * this%fmi%gwfsat(n)
-      rrhs = this%rhob(n) * vcell * tled * cfact * gwfsatold * cold(n)
+      eqfact = -this%rhob(n) * vcell * tled
+      ctosrb = this%distcoef(n)
+      hhcof =  eqfact * ctosrb * this%fmi%gwfsat(n)
+      rrhs = eqfact * ctosrb * gwfsatold * cold(n)
       rate = hhcof * cnew(n) - rrhs
       this%strg(n) = rate
       if(rate < DZERO) then
@@ -312,9 +315,15 @@ module GwtSrbModule
     !
     ! -- Deallocate arrays if package was active
     if(this%inunit > 0) then
-      call mem_deallocate(this%porosity)
       call mem_deallocate(this%strg)
+      call mem_deallocate(this%rhob)
+      call mem_deallocate(this%srconc)
+      call mem_deallocate(this%distcoef)
+      call mem_deallocate(this%csrbnew)
+      call mem_deallocate(this%csrbold)
       this%ibound => null()
+      this%porosity => null()
+      this%fmi => null()
     endif
     !
     ! -- Scalars
@@ -373,6 +382,8 @@ module GwtSrbModule
     call mem_allocate(this%rhob, nodes, 'RHOB', this%origin)
     call mem_allocate(this%srconc, nodes, 'SRCONC', this%origin)
     call mem_allocate(this%distcoef, nodes, 'DISTCOEF', this%origin)
+    call mem_allocate(this%csrbnew, nodes, 'CSRBNEW', this%origin)
+    call mem_allocate(this%csrbold, nodes, 'CSRBOLD', this%origin)
     !
     ! -- Initialize
     do n = 1, nodes
@@ -380,6 +391,8 @@ module GwtSrbModule
       this%rhob(n) = DZERO
       this%srconc(n) = DZERO
       this%distcoef(n) = DZERO
+      this%csrbnew(n) = DZERO
+      this%csrbold(n) = DZERO
     enddo
     !
     ! -- Return

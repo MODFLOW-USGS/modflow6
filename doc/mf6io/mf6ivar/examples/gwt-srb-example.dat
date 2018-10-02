@@ -1,0 +1,10 @@
+BEGIN options
+END options
+
+BEGIN griddata
+  rhob
+    CONSTANT       1.00000000
+  distcoef
+    CONSTANT       1.00000000
+END griddata
+
