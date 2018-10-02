@@ -226,10 +226,8 @@ def eval_transport(sim):
         assert False, 'could not load data from "{}"'.format(fpth)
 
     # Check concentrations
-    assert np.allclose(ts, tsanswers[idx]), ('simulated concentrations do not match '
-                                       'with known solution.')
-    assert False
-
+    assert np.allclose(ts, tsanswers[idx]), ('simulated concentrations do not '
+                                             'match with known solution.')
     return
 
 
