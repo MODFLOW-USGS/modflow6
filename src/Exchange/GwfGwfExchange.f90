@@ -2461,8 +2461,8 @@ contains
     type(GwfModelType), intent(in) :: gwf1
     type(GwfModelType), intent(in) :: gwf2
     ! -- local
-    integer(I4B), pointer, dimension(:) :: ibound
-    real(DP), pointer, dimension(:) :: x
+    integer(I4B), pointer, dimension(:), contiguous :: ibound
+    real(DP), pointer, dimension(:), contiguous :: x
 ! ------------------------------------------------------------------------------
     !
     ! -- set NPF pointers
