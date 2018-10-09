@@ -7,7 +7,7 @@
 
 ## Automated Testing Status on Travis-CI
 
-### Version 6.0.2 gwfexg-refactor &mdash; build 43
+### Version 6.0.2 gwfexg-refactor &mdash; build 94
 [![Build Status](https://travis-ci.org/MODFLOW-USGS/modflow6.svg?branch=gwfexg-refactor)](https://travis-ci.org/MODFLOW-USGS/modflow6)
 
 ## Introduction
