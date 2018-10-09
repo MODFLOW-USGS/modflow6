@@ -16,17 +16,17 @@ module GwfStoModule
       ['          STO-SS', '          STO-SY']
 
   type, extends(NumericalPackageType) :: GwfStoType
-    integer(I4B), pointer                            :: isfac => null()         !indicates if ss is read as storativity
-    integer(I4B), pointer                            :: isseg => null()         !indicates if ss is 0 below the top of a layer
-    integer(I4B), pointer                            :: iss => null()           !steady state flag
-    integer(I4B), pointer                            :: iusesy => null()        !flag set if any cell is convertible (0, 1)
-    integer(I4B), dimension(:), pointer              :: iconvert => null()      !confined (0) or convertible (1)
-    real(DP),dimension(:), pointer                   :: sc1 => null()           !primary storage capacity (when cell is fully saturated)
-    real(DP),dimension(:), pointer                   :: sc2 => null()           !secondary storage capacity (when cell is partially saturated)
-    real(DP), dimension(:), pointer                  :: strgss => null()        !vector of specific storage rates
-    real(DP), dimension(:), pointer                  :: strgsy => null()        !vector of specific yield rates
-    integer(I4B), dimension(:), pointer              :: ibound => null()        !pointer to model ibound
-    real(DP), pointer                                :: satomega => null()      !newton-raphson saturation omega
+    integer(I4B), pointer                            :: isfac => null()          !indicates if ss is read as storativity
+    integer(I4B), pointer                            :: isseg => null()          !indicates if ss is 0 below the top of a layer
+    integer(I4B), pointer                            :: iss => null()            !steady state flag
+    integer(I4B), pointer                            :: iusesy => null()         !flag set if any cell is convertible (0, 1)
+    integer(I4B), dimension(:), pointer, contiguous  :: iconvert => null()       !confined (0) or convertible (1)
+    real(DP),dimension(:), pointer, contiguous       :: sc1 => null()            !primary storage capacity (when cell is fully saturated)
+    real(DP),dimension(:), pointer, contiguous       :: sc2 => null()            !secondary storage capacity (when cell is partially saturated)
+    real(DP), dimension(:), pointer, contiguous      :: strgss => null()         !vector of specific storage rates
+    real(DP), dimension(:), pointer, contiguous      :: strgsy => null()         !vector of specific yield rates
+    integer(I4B), dimension(:), pointer, contiguous  :: ibound => null()         !pointer to model ibound
+    real(DP), pointer                                :: satomega => null()       !newton-raphson saturation omega
   contains
     procedure :: sto_ar
     procedure :: sto_rp
@@ -90,7 +90,7 @@ module GwfStoModule
     ! -- dummy
     class(GwfStoType)                       :: this
     class(DisBaseType), pointer, intent(in) :: dis
-    integer(I4B), dimension(:), pointer          :: ibound
+    integer(I4B), dimension(:), pointer, contiguous          :: ibound
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtsto =                                    &
@@ -241,6 +241,9 @@ module GwfStoModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- modules
+    use SimModule, only: ustop, store_error
+    use ConstantsModule, only: LINELENGTH
     use TdisModule, only: delt
     ! -- dummy
     class(GwfStoType) :: this
@@ -260,10 +263,22 @@ module GwfStoModule
     real(DP) :: snold, snnew
     real(DP) :: ss0, ss1, ssh0, ssh1
     real(DP) :: rhsterm
+    character(len=LINELENGTH) :: errmsg
+    ! -- formats
+    character(len=*), parameter :: fmtsperror =                                &
+      &"('DETECTED TIME STEP LENGTH OF ZERO.  GWF STORAGE PACKAGE CANNOT BE ', &
+      &'USED UNLESS DELT IS NON-ZERO.')"
 ! ------------------------------------------------------------------------------
     !
     ! -- test if steady-state stress period
     if (this%iss /= 0) return
+    !
+    ! -- Ensure time step length is not zero
+    if (delt == DZERO) then
+      write(errmsg, fmtsperror)
+      call store_error(errmsg)
+      call ustop()
+    endif
     !
     ! -- set variables
     tled = DONE / delt

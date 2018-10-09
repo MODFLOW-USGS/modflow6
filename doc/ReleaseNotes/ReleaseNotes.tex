@@ -106,7 +106,7 @@ https://water.usgs.gov/ogw/
 
 % -------------------------------------------------
 \section{Introduction}
-This document describes MODFLOW 6 Version \modflowversion.  This distribution is packaged for personal computers using the Microsoft Windows 7 operating system, although it may run on other versions of Windows.  The executable file was compiled for 64-bit Windows operating systems and should run on most personal computers.
+This document describes MODFLOW 6 Version \modflowversion.  This distribution is packaged for personal computers using the Microsoft Windows 7 and 10 operating systems, although it may run on other versions of Windows.  The executable file was compiled for 64-bit Windows operating systems and should run on most personal computers.
 
 Version numbers for MODFLOW 6 will follow a major.minor.revision format.  The major number will be increased when there are substantial new changes that may break backward compatibility.  The minor number will be increased when important, but relatively minor new functionality is added.  The revision number will be added when errors are corrected in either the program or input files.
 
@@ -118,11 +118,56 @@ This section describes changes introduced into MODFLOW 6 with each release.  The
 
 \item \currentmodflowversion
 
+\underline{BASIC FUNCTIONALITY}
+\begin{itemize}
+\item Addressed issue with pointing contiguous pointer vectors/arrays to non-contiguous pointer vectors/arrays that caused code compilation failure with gfortran-8. A consequence of addressing this issue is that all pointer vectors/arrays that are allocated or pointed to using the memory manager must be defined to be contiguous.
+\item Corrected a problem with the reading of grid data from a binary file, in which the program was reading a binary header for each row of data.
+\item Added a new error check for very small time steps.  If the value of startime plus the time step length is equal to endtime, then the time step is too small to be differentiated by the program based on the precision of floating point numbers.  The program will terminate with an error in this case.  The program will also terminate if the storage package and a transient stress period has a time step length of zero.
+\end{itemize}
+
+\underline{STRESS PACKAGES}
+\begin{itemize}
+\item -
+\item -
+\item - 
+\end{itemize}
+
+\underline{ADVANCED STRESS PACKAGES}
+\begin{itemize}
+\item -
+\item -
+\item - 
+\end{itemize}
+
+\underline{SOLUTION}
+\begin{itemize}
+\item -
+\item -
+\item - 
+\end{itemize}
+
+\item Version mf6.0.3--Aug. 9, 2018
+
+\underline{BASIC FUNCTIONALITY}
+\begin{itemize}
+\item Fixed issues with observations specified using boundnames that are enclosed in quotes. Previously, the closing quote was retained on a boundname enclosed in quotes and resulted in an error (the erroneous observation boundname could not be found in the package).
+\end{itemize}
+
 \underline{STRESS PACKAGES}
 \begin{itemize}
 \item If the AUXMULTNAME keyword was used in combination with time series, then the multiplier was erroneously applied to all time series, and not just the time series in the column to be scaled.  
 \item For the array-based recharge and evapotranspiration packages, the IRCH and IEVT variables (if specified) must be specified as the first variable listed in the PERIOD block.  A check was added so that the program will terminate with an error if IRCH or IEVT is not the first variable listed in the PERIOD block.
+\item For the standard boundary packages, the ``to mover'' term (such as DRN-TO-MVR) written to the GWF Model budget was incorrect.  The budget terms were incorrect because the accumulator variables were not initialized to zero. 
+\item For regular MODFLOW grids, the recharge and evapotranspiration arrays of size (NCOL, NROW) were being echoed to the listing file (if requested by the user) of size (NCOL * NROW). 
+\end{itemize}
+
+\underline{ADVANCED STRESS PACKAGES}
+\begin{itemize}
 \item Fixed spelling of the THIEM keyword in the source code and in the input instructions of the MAW Package.
+\item Fixed an issue with the SFR package when the specified evaporation exceeds the sum of specified and calculated reach inflows, rainfall, and specified runoff. In this case, evaporation is set equal to the sum of specified and calculated reach inflows, rainfall, and specified runoff. Also if a negative runoff is specified and this value exceeds specified and calculated reach inflows, and rainfall then runoff is set to the sum of reach inflows and evaporation is set to zero.
+\item Fixed an issue in the MAW package budget information written to the listing file and MAW cell-by-cell budget file when a previously active well is inactivated. The ratesim variable was not being reset to zero for these wells and the simulated rate from the last stress period when the well was active was being reported.
+\item Program now terminates with an error if the OUTLETS block is present in the LAK package file and NOUTLETS is not specified or specified to be zero in the DIMENSIONS block.  Previously, this did not cause an error condition in the LAK package but would result in a segmentation fault error in the MVR package if LAK package OUTLETS are specified as providers.
+\item Program now terminates with an error when a DIVERSION block is present in a SFR package file but no diversions (all ndiv values are 0) are specified in the PACKAGEDATA block. 
 \end{itemize}
 
 \underline{SOLUTION}
@@ -135,7 +180,7 @@ This section describes changes introduced into MODFLOW 6 with each release.  The
 
 \underline{BASIC FUNCTIONALITY}
 \begin{itemize}
-\item Added a new option, called SAVE\_SPECIFIC\_DISCHARGE to the Node Property Flow Package.  When invoked, $x$, $y$, and $z$ specific storage components are calculated for the center of each model cell and written to the binary budget file.
+\item Added a new option, called SAVE\_SPECIFIC\_DISCHARGE to the Node Property Flow Package.  When invoked, $x$, $y$, and $z$ specific discharge components are calculated for the center of each model cell and written to the binary budget file.
 \item For binary input of grid data, such as initial heads, the array reading utility was not reading a header record consisting of KSTP, KPER, PERTIM, TOTIM, TEXT, NLAY, NROW, NCOL.  This meant that a binary head file written by MODFLOW could not be used as input for a subsequent simulation.  For binary input, the array reading utility now reads a header record before reading the array values.
 \item The NOGRB option in the discretization packages was not working.  This option will now prevent the binary grid file from being written.
 \item Removed the PRIVATE attribute for two methods of the discretization packages so that the program works as intended with the latest Intel Fortran release.

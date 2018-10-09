@@ -15,7 +15,7 @@ module TimeSeriesFileListModule
 
   type :: TimeSeriesFileListType
     ! -- Public members
-    integer(I4B),   public :: numtsfiles = 0
+    integer(I4B), public :: numtsfiles = 0
     type(ListType), public :: tsfileList
   contains
     ! -- Public procedures

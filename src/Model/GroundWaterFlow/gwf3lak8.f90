@@ -37,17 +37,17 @@ module LakModule
   character(len=LENPACKAGENAME) :: text  = '             LAK'
   !
   type LakTabType
-    real(DP), pointer, dimension(:)  :: tabstage => null()
-    real(DP), pointer, dimension(:)  :: tabvolume => null()
-    real(DP), pointer, dimension(:)  :: tabsarea => null()
-    real(DP), pointer, dimension(:)  :: tabwarea => null()
+    real(DP), dimension(:), pointer, contiguous  :: tabstage => null()
+    real(DP), dimension(:), pointer, contiguous  :: tabvolume => null()
+    real(DP), dimension(:), pointer, contiguous  :: tabsarea => null()
+    real(DP), dimension(:), pointer, contiguous  :: tabwarea => null()
   end type LakTabType
   !
   type, extends(BndType) :: LakType
     ! -- scalars
     ! -- characters
-    character(len=16), dimension(:), pointer :: clakbudget => NULL()
-    character(len=16), dimension(:), pointer :: cauxcbc => NULL()
+    character(len=16), dimension(:), pointer, contiguous :: clakbudget => NULL()
+    character(len=16), dimension(:), pointer, contiguous :: cauxcbc => NULL()
     ! -- integers
     integer(I4B), pointer :: iprhed => null()
     integer(I4B), pointer :: istageout => null()
@@ -70,86 +70,90 @@ module LakModule
     integer(I4B), pointer :: bditems => NULL()
     ! -- vectors
     ! -- lake data
-    integer(I4B), pointer, dimension(:) :: nlakeconn => null()
-    integer(I4B), pointer, dimension(:) :: idxlakeconn => null()
-    integer(I4B), pointer, dimension(:) :: ntabrow => null()
-    real(DP), pointer, dimension(:)  :: strt => null()
-    real(DP), pointer, dimension(:)  :: laketop => null()
-    real(DP), pointer, dimension(:)  :: lakebot => null()
-    real(DP), pointer, dimension(:)  :: sareamax => null()
-    character(len=LENBOUNDNAME), pointer, dimension(:) :: lakename => null()
-    character (len=8), pointer, dimension(:) :: status => null()
-    real(DP), pointer, dimension(:)  :: avail => null()
-    real(DP), pointer, dimension(:)  :: lkgwsink => null()
+    integer(I4B), dimension(:), pointer, contiguous :: nlakeconn => null()
+    integer(I4B), dimension(:), pointer, contiguous :: idxlakeconn => null()
+    integer(I4B), dimension(:), pointer, contiguous :: ntabrow => null()
+    real(DP), dimension(:), pointer, contiguous  :: strt => null()
+    real(DP), dimension(:), pointer, contiguous  :: laketop => null()
+    real(DP), dimension(:), pointer, contiguous  :: lakebot => null()
+    real(DP), dimension(:), pointer, contiguous  :: sareamax => null()
+    character(len=LENBOUNDNAME), dimension(:), pointer,                         &
+                                 contiguous :: lakename => null()
+    character (len=8), dimension(:), pointer, contiguous :: status => null()
+    real(DP), dimension(:), pointer, contiguous  :: avail => null()
+    real(DP), dimension(:), pointer, contiguous  :: lkgwsink => null()
     ! -- time series aware data
-    type (MemoryTSType), pointer, dimension(:) :: stage => null()
-    type (MemoryTSType), pointer, dimension(:) :: rainfall => null()
-    type (MemoryTSType), pointer, dimension(:) :: evaporation => null()
-    type (MemoryTSType), pointer, dimension(:) :: runoff => null()
-    type (MemoryTSType), pointer, dimension(:) :: inflow => null()
-    type (MemoryTSType), pointer, dimension(:) :: withdrawal => null()
-    type (MemoryTSType), pointer, dimension(:) :: lauxvar => null()
+    type (MemoryTSType), dimension(:), pointer, contiguous :: stage => null()
+    type (MemoryTSType), dimension(:), pointer, contiguous :: rainfall => null()
+    type (MemoryTSType), dimension(:), pointer,                                 &
+                         contiguous :: evaporation => null()
+    type (MemoryTSType), dimension(:), pointer, contiguous :: runoff => null()
+    type (MemoryTSType), dimension(:), pointer, contiguous :: inflow => null()
+    type (MemoryTSType), dimension(:), pointer,                                 &
+                         contiguous :: withdrawal => null()
+    type (MemoryTSType), dimension(:), pointer, contiguous :: lauxvar => null()
     !
     ! -- table data
-    type (LakTabType), pointer, dimension(:) :: laketables => null()
+    type (LakTabType), dimension(:), pointer, contiguous :: laketables => null()
     !
     ! -- lake solution data
-    integer(I4B), pointer, dimension(:) :: ncncvr => null()
-    real(DP), pointer, dimension(:)  :: surfin => null()
-    real(DP), pointer, dimension(:)  :: surfout => null()
-    real(DP), pointer, dimension(:)  :: surfout1 => null()
-    real(DP), pointer, dimension(:)  :: precip => null()
-    real(DP), pointer, dimension(:)  :: precip1 => null()
-    real(DP), pointer, dimension(:)  :: evap => null()
-    real(DP), pointer, dimension(:)  :: evap1 => null()
-    real(DP), pointer, dimension(:)  :: evapo => null()
-    real(DP), pointer, dimension(:)  :: withr => null()
-    real(DP), pointer, dimension(:)  :: withr1 => null()
-    real(DP), pointer, dimension(:)  :: flwin => null()
-    real(DP), pointer, dimension(:)  :: flwiter => null()
-    real(DP), pointer, dimension(:)  :: flwiter1 => null()
-    real(DP), pointer, dimension(:)  :: seep => null()
-    real(DP), pointer, dimension(:)  :: seep1 => null()
-    real(DP), pointer, dimension(:)  :: seep0 => null()
-    real(DP), pointer, dimension(:)  :: stageiter => null()
-    real(DP), pointer, dimension(:)  :: chterm => null()
+    integer(I4B), dimension(:), pointer, contiguous :: ncncvr => null()
+    real(DP), dimension(:), pointer, contiguous  :: surfin => null()
+    real(DP), dimension(:), pointer, contiguous  :: surfout => null()
+    real(DP), dimension(:), pointer, contiguous  :: surfout1 => null()
+    real(DP), dimension(:), pointer, contiguous  :: precip => null()
+    real(DP), dimension(:), pointer, contiguous  :: precip1 => null()
+    real(DP), dimension(:), pointer, contiguous  :: evap => null()
+    real(DP), dimension(:), pointer, contiguous  :: evap1 => null()
+    real(DP), dimension(:), pointer, contiguous  :: evapo => null()
+    real(DP), dimension(:), pointer, contiguous  :: withr => null()
+    real(DP), dimension(:), pointer, contiguous  :: withr1 => null()
+    real(DP), dimension(:), pointer, contiguous  :: flwin => null()
+    real(DP), dimension(:), pointer, contiguous  :: flwiter => null()
+    real(DP), dimension(:), pointer, contiguous  :: flwiter1 => null()
+    real(DP), dimension(:), pointer, contiguous  :: seep => null()
+    real(DP), dimension(:), pointer, contiguous  :: seep1 => null()
+    real(DP), dimension(:), pointer, contiguous  :: seep0 => null()
+    real(DP), dimension(:), pointer, contiguous  :: stageiter => null()
+    real(DP), dimension(:), pointer, contiguous  :: chterm => null()
     !
     ! -- lake convergence
-    integer(I4B), pointer, dimension(:) :: iseepc => null()
-    integer(I4B), pointer, dimension(:) :: idhc => null()
-    real(DP), pointer, dimension(:) :: en1 => null()
-    real(DP), pointer, dimension(:) :: en2 => null()
-    real(DP), pointer, dimension(:) :: r1 => null()
-    real(DP), pointer, dimension(:) :: r2 => null()
-    real(DP), pointer, dimension(:) :: dh0 => null()
-    real(DP), pointer, dimension(:) :: s0 => null()
+    integer(I4B), dimension(:), pointer, contiguous :: iseepc => null()
+    integer(I4B), dimension(:), pointer, contiguous :: idhc => null()
+    real(DP), dimension(:), pointer, contiguous :: en1 => null()
+    real(DP), dimension(:), pointer, contiguous :: en2 => null()
+    real(DP), dimension(:), pointer, contiguous :: r1 => null()
+    real(DP), dimension(:), pointer, contiguous :: r2 => null()
+    real(DP), dimension(:), pointer, contiguous :: dh0 => null()
+    real(DP), dimension(:), pointer, contiguous :: s0 => null()
     !
     ! -- lake connection data
-    integer(I4B), pointer, dimension(:) :: imap => null()
-    integer(I4B), pointer, dimension(:) :: cellid => null()
-    integer(I4B), pointer, dimension(:) :: nodesontop => null()
-    integer(I4B), pointer, dimension(:) :: ictype => null()
-    real(DP), pointer, dimension(:)  :: bedleak => null()
-    real(DP), pointer, dimension(:)  :: belev => null()
-    real(DP), pointer, dimension(:)  :: telev => null()
-    real(DP), pointer, dimension(:)  :: connlength => null()
-    real(DP), pointer, dimension(:)  :: connwidth => null()
-    real(DP), pointer, dimension(:)  :: sarea => null()
-    real(DP), pointer, dimension(:)  :: warea => null()
-    real(DP), pointer, dimension(:)  :: satcond => null()
-    real(DP), pointer, dimension(:)  :: simcond => null()
-    real(DP), pointer, dimension(:)  :: simlakgw => null()
+    integer(I4B), dimension(:), pointer, contiguous :: imap => null()
+    integer(I4B), dimension(:), pointer, contiguous :: cellid => null()
+    integer(I4B), dimension(:), pointer, contiguous :: nodesontop => null()
+    integer(I4B), dimension(:), pointer, contiguous :: ictype => null()
+    real(DP), dimension(:), pointer, contiguous  :: bedleak => null()
+    real(DP), dimension(:), pointer, contiguous  :: belev => null()
+    real(DP), dimension(:), pointer, contiguous  :: telev => null()
+    real(DP), dimension(:), pointer, contiguous  :: connlength => null()
+    real(DP), dimension(:), pointer, contiguous  :: connwidth => null()
+    real(DP), dimension(:), pointer, contiguous  :: sarea => null()
+    real(DP), dimension(:), pointer, contiguous  :: warea => null()
+    real(DP), dimension(:), pointer, contiguous  :: satcond => null()
+    real(DP), dimension(:), pointer, contiguous  :: simcond => null()
+    real(DP), dimension(:), pointer, contiguous  :: simlakgw => null()
     !
     ! -- lake outlet data
-    integer(I4B), pointer, dimension(:) :: lakein => null()
-    integer(I4B), pointer, dimension(:) :: lakeout => null()
-    integer(I4B), pointer, dimension(:) :: iouttype => null()
-    type (MemoryTSType), pointer, dimension(:) :: outrate => null()
-    type (MemoryTSType), pointer, dimension(:) :: outinvert => null()
-    type (MemoryTSType), pointer, dimension(:) :: outwidth => null()
-    type (MemoryTSType), pointer, dimension(:) :: outrough => null()
-    type (MemoryTSType), pointer, dimension(:) :: outslope => null()
-    real(DP), pointer, dimension(:)  :: simoutrate => null()
+    integer(I4B), dimension(:), pointer, contiguous :: lakein => null()
+    integer(I4B), dimension(:), pointer, contiguous :: lakeout => null()
+    integer(I4B), dimension(:), pointer, contiguous :: iouttype => null()
+    type (MemoryTSType), dimension(:), pointer, contiguous :: outrate => null()
+    type (MemoryTSType), dimension(:), pointer,                                 &
+                         contiguous :: outinvert => null()
+    type (MemoryTSType), dimension(:), pointer, contiguous :: outwidth => null()
+    type (MemoryTSType), dimension(:), pointer, contiguous :: outrough => null()
+    type (MemoryTSType), dimension(:), pointer, contiguous :: outslope => null()
+    real(DP), dimension(:), pointer, contiguous  :: simoutrate => null()
     !
     ! -- lake output data
     real(DP), dimension(:), pointer, contiguous :: qauxcbc => null()
@@ -161,15 +165,15 @@ module LakModule
     type(BudgetType), pointer :: budget => NULL()
     ! -- pointer to gwf iss and gwf hk
     integer(I4B), pointer :: gwfiss => NULL()
-    real(DP), dimension(:), pointer :: gwfk11 => NULL()
-    real(DP), dimension(:), pointer :: gwfk33 => NULL()
-    real(DP), dimension(:), pointer :: gwfsat => NULL()
+    real(DP), dimension(:), pointer, contiguous :: gwfk11 => NULL()
+    real(DP), dimension(:), pointer, contiguous :: gwfk33 => NULL()
+    real(DP), dimension(:), pointer, contiguous :: gwfsat => NULL()
     integer(I4B), pointer :: gwfik33 => NULL()
     !
     ! -- package x, xold, and ibound
-    integer(I4B), pointer, dimension(:) :: iboundpak     => null() !package ibound
-    real(DP), pointer, dimension(:)     :: xnewpak       => null() !package x vector
-    real(DP), pointer, dimension(:)     :: xoldpak       => null() !package xold vector
+    integer(I4B), dimension(:), pointer, contiguous :: iboundpak => null()       !package ibound
+    real(DP), dimension(:), pointer, contiguous :: xnewpak => null()             !package x vector
+    real(DP), dimension(:), pointer, contiguous :: xoldpak => null()             !package xold vector
     !
     ! -- type bound procedures
     contains
@@ -434,7 +438,7 @@ contains
     integer(I4B) :: itmp
     integer(I4B) :: nlak
     integer(I4B) :: nconn
-    integer(I4B), dimension(:), pointer :: nboundchk
+    integer(I4B), dimension(:), pointer, contiguous :: nboundchk
     ! -- format
     !
     ! -- code
@@ -671,7 +675,7 @@ contains
     integer(I4B) :: ipos, ipos0
     integer(I4B) :: icellid, icellid0
     real(DP) :: top, bot
-    integer(I4B), dimension(:), pointer :: nboundchk
+    integer(I4B), dimension(:), pointer, contiguous :: nboundchk
 
     ! -- format
     !
@@ -970,7 +974,7 @@ contains
     logical :: isfound, endOfBlock
     integer(I4B) :: n
     integer(I4B) :: ntabs
-    integer(I4B), dimension(:), pointer :: nboundchk
+    integer(I4B), dimension(:), pointer, contiguous :: nboundchk
 ! ------------------------------------------------------------------------------
 
     ! -- format
@@ -1337,161 +1341,178 @@ contains
     !integer(I4B) :: ii, jj, kk, nn
     integer(I4B) :: jj
     real(DP) :: endtim
-    integer(I4B), dimension(:), pointer :: nboundchk
-! ------------------------------------------------------------------------------
-
+    integer(I4B), dimension(:), pointer, contiguous :: nboundchk
+    !
     ! -- format
     !
     ! -- code
-    !
-    ! -- skip if no outlets
-    if (this%noutlets < 1) return
-    !
-    ! -- allocate and initialize local variables
-    allocate(nboundchk(this%noutlets))
-    do n = 1, this%noutlets
-      nboundchk(n) = 0
-    end do
+! ------------------------------------------------------------------------------
     !
     ! -- get well_connections block
-    call this%parser%GetBlock('OUTLETS', isfound, ierr, supportOpenClose=.true.)
+    call this%parser%GetBlock('OUTLETS', isfound, ierr,                         &
+                              supportOpenClose=.true., blockRequired=.false.)
     !
     ! -- parse outlets block if detected
     if (isfound) then
-
-      ! -- allocate outlet data using memory manager
-      call mem_allocate(this%lakein, this%NOUTLETS, 'LAKEIN', this%origin)
-      call mem_allocate(this%lakeout, this%NOUTLETS, 'LAKEOUT', this%origin)
-      call mem_allocate(this%iouttype, this%NOUTLETS, 'IOUTTYPE', this%origin)
-      call mem_allocate(this%outrate, this%NOUTLETS, 'OUTRATE', this%origin)
-      call mem_allocate(this%outinvert, this%NOUTLETS, 'OUTINVERT', this%origin)
-      call mem_allocate(this%outwidth, this%NOUTLETS, 'OUTWIDTH', this%origin)
-      call mem_allocate(this%outrough, this%NOUTLETS, 'OUTROUGH', this%origin)
-      call mem_allocate(this%outslope, this%NOUTLETS, 'OUTSLOPE', this%origin)
-      call mem_allocate(this%simoutrate, this%NOUTLETS, 'SIMOUTRATE', this%origin)
-
-      ! -- process the lake connection data
-      write(this%iout,'(/1x,a)')'PROCESSING '//trim(adjustl(this%text))// &
-        ' OUTLETS'
-      readoutlet: do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        n = this%parser%GetInteger()
-
-        if (n < 1 .or. n > this%noutlets) then
-          write(errmsg,'(4x,a,1x,i6)') &
-            '****ERROR. outletno MUST BE > 0 and <= ', this%noutlets
-          call store_error(errmsg)
-          cycle readoutlet
-        end if
+      if (this%noutlets > 0) then
         !
-        ! -- increment nboundchk
-        nboundchk(n) = nboundchk(n) + 1
+        ! -- allocate and initialize local variables
+        allocate(nboundchk(this%noutlets))
+        do n = 1, this%noutlets
+          nboundchk(n) = 0
+        end do
         !
-        ! -- read outlet lakein
-        ival = this%parser%GetInteger()
-        if (ival <1 .or. ival > this%noutlets) then
-          write(errmsg,'(4x,a,1x,i4,1x,a,1x,i6)') &
-            '****ERROR. lakein FOR OUTLET ', n, 'MUST BE > 0 and <= ', this%noutlets
-          call store_error(errmsg)
-          cycle readoutlet
-        end if
-        this%lakein(n) = ival
+        ! -- allocate outlet data using memory manager
+        call mem_allocate(this%lakein, this%NOUTLETS, 'LAKEIN', this%origin)
+        call mem_allocate(this%lakeout, this%NOUTLETS, 'LAKEOUT', this%origin)
+        call mem_allocate(this%iouttype, this%NOUTLETS, 'IOUTTYPE', this%origin)
+        call mem_allocate(this%outrate, this%NOUTLETS, 'OUTRATE', this%origin)
+        call mem_allocate(this%outinvert, this%NOUTLETS, 'OUTINVERT',           &
+                          this%origin)
+        call mem_allocate(this%outwidth, this%NOUTLETS, 'OUTWIDTH', this%origin)
+        call mem_allocate(this%outrough, this%NOUTLETS, 'OUTROUGH', this%origin)
+        call mem_allocate(this%outslope, this%NOUTLETS, 'OUTSLOPE', this%origin)
+        call mem_allocate(this%simoutrate, this%NOUTLETS, 'SIMOUTRATE',         &
+                          this%origin)
 
-        ! -- read outlet lakeout
-        ival = this%parser%GetInteger()
-        if (ival <0 .or. ival > this%nlakes) then
-          write(errmsg,'(4x,a,1x,i4,1x,a,1x,i6)') &
-            '****ERROR. lakeout FOR OUTLET ', n, 'MUST BE >= 0 and <= ', this%noutlets
-          call store_error(errmsg)
-          cycle readoutlet
-        end if
-        this%lakeout(n) = ival
+        ! -- process the lake connection data
+        write(this%iout,'(/1x,a)')'PROCESSING '//trim(adjustl(this%text))//     &
+          ' OUTLETS'
+        readoutlet: do
+          call this%parser%GetNextLine(endOfBlock)
+          if (endOfBlock) exit
+          n = this%parser%GetInteger()
 
-        ! -- read ictype
-        call this%parser%GetStringCaps(keyword)
-        select case (keyword)
-          case ('SPECIFIED')
-            this%iouttype(n) = 0
-          case ('MANNING')
-            this%iouttype(n) = 1
-          case ('WEIR')
-            this%iouttype(n) = 2
-          case default
-            write(errmsg,'(4x,a,1x,i4,1x,a,a,a)') &
-              '****ERROR. UNKNOWN couttype FOR OUTLET ', n, &
-              '(', trim(keyword), ')'
+          if (n < 1 .or. n > this%noutlets) then
+            write(errmsg,'(4x,a,1x,i6)') &
+              '****ERROR. outletno MUST BE > 0 and <= ', this%noutlets
             call store_error(errmsg)
             cycle readoutlet
-          end select
+          end if
+          !
+          ! -- increment nboundchk
+          nboundchk(n) = nboundchk(n) + 1
+          !
+          ! -- read outlet lakein
+          ival = this%parser%GetInteger()
+          if (ival <1 .or. ival > this%noutlets) then
+            write(errmsg,'(4x,a,1x,i4,1x,a,1x,i6)') &
+              '****ERROR. lakein FOR OUTLET ', n, 'MUST BE > 0 and <= ',        &
+              this%noutlets
+            call store_error(errmsg)
+            cycle readoutlet
+          end if
+          this%lakein(n) = ival
 
-        ! -- build bndname for outlet
-        write (citem,'(i9.9)') n
-        bndName = 'OUTLET' // citem
+          ! -- read outlet lakeout
+          ival = this%parser%GetInteger()
+          if (ival <0 .or. ival > this%nlakes) then
+            write(errmsg,'(4x,a,1x,i4,1x,a,1x,i6)') &
+              '****ERROR. lakeout FOR OUTLET ', n, 'MUST BE >= 0 and <= ',      &
+              this%noutlets
+            call store_error(errmsg)
+            cycle readoutlet
+          end if
+          this%lakeout(n) = ival
 
-        ! -- set a few variables for timeseries aware variables
-        endtim = DZERO
-        jj = 1
+          ! -- read ictype
+          call this%parser%GetStringCaps(keyword)
+          select case (keyword)
+            case ('SPECIFIED')
+              this%iouttype(n) = 0
+            case ('MANNING')
+              this%iouttype(n) = 1
+            case ('WEIR')
+              this%iouttype(n) = 2
+            case default
+              write(errmsg,'(4x,a,1x,i4,1x,a,a,a)') &
+                '****ERROR. UNKNOWN couttype FOR OUTLET ', n,                   &
+                '(', trim(keyword), ')'
+              call store_error(errmsg)
+              cycle readoutlet
+            end select
 
-        ! -- outlet invert
-        call this%parser%GetString(text)
-        call read_single_value_or_time_series(text, &
-                                              this%outinvert(n)%value, &
-                                              this%outinvert(n)%name, &
-                                              endtim,  &
-                                              this%name, 'BND', this%TsManager, &
-                                              this%iprpak, n, jj, 'INVERT', &
-                                              bndName, this%parser%iuactive)
+          ! -- build bndname for outlet
+          write (citem,'(i9.9)') n
+          bndName = 'OUTLET' // citem
 
-        ! -- outlet width
-        call this%parser%GetString(text)
-        call read_single_value_or_time_series(text, &
-                                              this%outwidth(n)%value, &
-                                              this%outwidth(n)%name, &
-                                              endtim,  &
-                                              this%name, 'BND', this%TsManager, &
-                                              this%iprpak, n, jj, 'WIDTH', &
-                                              bndName, this%parser%iuactive)
+          ! -- set a few variables for timeseries aware variables
+          endtim = DZERO
+          jj = 1
 
-        ! -- outlet roughness
-        call this%parser%GetString(text)
-        call read_single_value_or_time_series(text, &
-                                              this%outrough(n)%value, &
-                                              this%outrough(n)%name, &
-                                              endtim,  &
-                                              this%name, 'BND', this%TsManager, &
-                                              this%iprpak, n, jj, 'ROUGH', &
-                                              bndName, this%parser%iuactive)
+          ! -- outlet invert
+          call this%parser%GetString(text)
+          call read_single_value_or_time_series(text,                           &
+                                                this%outinvert(n)%value,        &
+                                                this%outinvert(n)%name,         &
+                                                endtim,                         &
+                                                this%name, 'BND',               &
+                                                this%TsManager,                 &
+                                                this%iprpak, n, jj, 'INVERT',   &
+                                                bndName, this%parser%iuactive)
 
-        ! -- outlet slope
-        call this%parser%GetString(text)
-        call read_single_value_or_time_series(text, &
-                                              this%outslope(n)%value, &
-                                              this%outslope(n)%name, &
-                                              endtim,  &
-                                              this%name, 'BND', this%TsManager, &
-                                              this%iprpak, n, jj, 'SLOPE', &
-                                              bndName, this%parser%iuactive)
+          ! -- outlet width
+          call this%parser%GetString(text)
+          call read_single_value_or_time_series(text,                           &
+                                                this%outwidth(n)%value,         &
+                                                this%outwidth(n)%name,          &
+                                                endtim,                         &
+                                                this%name, 'BND',               &
+                                                this%TsManager,                 &
+                                                this%iprpak, n, jj, 'WIDTH',    &
+                                                bndName, this%parser%iuactive)
+
+          ! -- outlet roughness
+          call this%parser%GetString(text)
+          call read_single_value_or_time_series(text,                           &
+                                                this%outrough(n)%value,         &
+                                                this%outrough(n)%name,          &
+                                                endtim,                         &
+                                                this%name, 'BND',               &
+                                                this%TsManager,                 &
+                                                this%iprpak, n, jj, 'ROUGH',    &
+                                                bndName, this%parser%iuactive)
+
+          ! -- outlet slope
+          call this%parser%GetString(text)
+          call read_single_value_or_time_series(text, &
+                                                this%outslope(n)%value,         &
+                                                this%outslope(n)%name,          &
+                                                endtim,                         &
+                                                this%name, 'BND',               &
+                                                this%TsManager,                 &
+                                                this%iprpak, n, jj, 'SLOPE',    &
+                                                bndName, this%parser%iuactive)
 
 
-      end do readoutlet
-      write(this%iout,'(1x,a)')'END OF '//trim(adjustl(this%text))//' OUTLETS'
-      
-      !
-      ! -- check for duplicate or missing outlets
-      do n = 1, this%noutlets
-        if (nboundchk(n) == 0) then
-          write(errmsg,'(a,1x,i0)')  'ERROR.  NO DATA SPECIFIED FOR OUTLET', n
+        end do readoutlet
+        write(this%iout,'(1x,a)') 'END OF ' // trim(adjustl(this%text)) //      &
+                                   ' OUTLETS'
+        !
+        ! -- check for duplicate or missing outlets
+        do n = 1, this%noutlets
+          if (nboundchk(n) == 0) then
+            write(errmsg,'(a,1x,i0)') 'ERROR.  NO DATA SPECIFIED FOR OUTLET', n
+            call store_error(errmsg)
+          else if (nboundchk(n) > 1) then
+            write(errmsg,'(a,1x,i0,1x,a,1x,i0,1x,a)')                           &
+              'ERROR.  DATA FOR OUTLET', n, 'SPECIFIED', nboundchk(n), 'TIMES'
+            call store_error(errmsg)
+          end if
+        end do
+        !
+        ! -- deallocate local storage
+        deallocate(nboundchk)
+      else
+        write(errmsg,'(a,1x,a)') 'ERROR.  AN OUTLETS BLOCK SHOULD NOT BE',      &
+          'SPECIFIED IF NOUTLETS IS NOT SPECIFIED OR IS SPECIFIED TO BE 0.'
           call store_error(errmsg)
-        else if (nboundchk(n) > 1) then
-          write(errmsg,'(a,1x,i0,1x,a,1x,i0,1x,a)')                             &
-            'ERROR.  DATA FOR OUTLET', n, 'SPECIFIED', nboundchk(n), 'TIMES'
-          call store_error(errmsg)
-        end if
-      end do
+      end if
       
     else
-      call store_error('ERROR.  REQUIRED OUTLETS BLOCK NOT FOUND.')
+      if (this%noutlets > 0) then
+        call store_error('ERROR.  REQUIRED OUTLETS BLOCK NOT FOUND.')
+      end if
     end if
     !
     ! -- write summary of lake_connection error messages
@@ -1500,9 +1521,6 @@ contains
       call this%parser%StoreErrorUnit()
       call ustop()
     end if
-    !
-    ! -- deallocate local storage
-    deallocate(nboundchk)
     !
     ! -- return
     return
@@ -4883,10 +4901,10 @@ contains
 ! ------------------------------------------------------------------------------
     class(LakType) :: this
     integer(I4B), pointer :: neq
-    integer(I4B), dimension(:), pointer :: ibound
-    real(DP), dimension(:), pointer :: xnew
-    real(DP), dimension(:), pointer :: xold
-    real(DP), dimension(:), pointer :: flowja
+    integer(I4B), dimension(:), pointer, contiguous :: ibound
+    real(DP), dimension(:), pointer, contiguous :: xnew
+    real(DP), dimension(:), pointer, contiguous :: xold
+    real(DP), dimension(:), pointer, contiguous :: flowja
     ! -- local
 ! ------------------------------------------------------------------------------
     !

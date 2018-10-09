@@ -29,51 +29,53 @@ module BndModule
 
   type, extends(NumericalPackageType) :: BndType
     ! -- characters
-    character(len=500)                                  :: listlabel   = ''      !title of table written for RP
-    character(len=LENPACKAGENAME)                       :: text = ''
-    character(len=LENAUXNAME), allocatable, dimension(:):: auxname               !name for each auxiliary variable
-    character(len=LENBOUNDNAME), pointer, dimension(:)  :: boundname   => null() !vector of boundnames
+    character(len=500) :: listlabel   = ''                                       !title of table written for RP
+    character(len=LENPACKAGENAME) :: text = ''
+    character(len=LENAUXNAME), allocatable, dimension(:) :: auxname              !name for each auxiliary variable
+    character(len=LENBOUNDNAME), dimension(:), pointer,                         &
+                                 contiguous :: boundname => null()               !vector of boundnames
+    !
     ! -- scalars
-    integer(I4B), pointer                               :: ibcnum      => null() !consecutive package number for this boundary condition
-    integer(I4B), pointer                               :: maxbound    => null() !max number of boundaries
-    integer(I4B), pointer                               :: nbound      => null() !number of boundaries for current stress period
-    integer(I4B), pointer                               :: ncolbnd     => null() !number of columns of the bound array
-    integer(I4B), pointer                               :: iscloc      => null() !bound column to scale with SFAC
-    integer(I4B), pointer                               :: naux        => null() !number of auxiliary variables
-    integer(I4B), pointer                               :: inamedbound => null() !flag to read boundnames
-    integer(I4B), pointer                               :: iauxmultcol => null() !column to use as multiplier for column iscloc
-    integer(I4B), pointer                               :: npakeq      => null() !number of equations in this package (normally 0 unless package adds rows to matrix)
-    integer(I4B), pointer                               :: ioffset     => null() !offset of this package in the model
+    integer(I4B), pointer :: ibcnum      => null()                               !consecutive package number for this boundary condition
+    integer(I4B), pointer :: maxbound    => null()                               !max number of boundaries
+    integer(I4B), pointer :: nbound      => null()                               !number of boundaries for current stress period
+    integer(I4B), pointer :: ncolbnd     => null()                               !number of columns of the bound array
+    integer(I4B), pointer :: iscloc      => null()                               !bound column to scale with SFAC
+    integer(I4B), pointer :: naux        => null()                               !number of auxiliary variables
+    integer(I4B), pointer :: inamedbound => null()                               !flag to read boundnames
+    integer(I4B), pointer :: iauxmultcol => null()                               !column to use as multiplier for column iscloc
+    integer(I4B), pointer :: npakeq      => null()                               !number of equations in this package (normally 0 unless package adds rows to matrix)
+    integer(I4B), pointer :: ioffset     => null()                               !offset of this package in the model
     ! -- arrays
-    integer(I4B), pointer, dimension(:)                 :: nodelist    => null() !vector of reduced node numbers
-    real(DP), pointer, dimension(:,:)                   :: bound       => null() !array of package specific boundary numbers
-    real(DP), pointer, dimension(:)                     :: hcof        => null() !diagonal contribution
-    real(DP), pointer, dimension(:)                     :: rhs         => null() !right-hand side contribution
-    real(DP), pointer, dimension(:,:)                   :: auxvar      => null() !auxiliary variable array
-    real(DP), pointer, dimension(:)                     :: simvals     => null() !simulated values
-    real(DP), pointer, dimension(:)                     :: simtomvr    => null() !simulated values
+    integer(I4B), dimension(:), pointer, contiguous :: nodelist => null()        !vector of reduced node numbers
+    real(DP), dimension(:,:), pointer, contiguous :: bound => null()             !array of package specific boundary numbers
+    real(DP), dimension(:), pointer, contiguous :: hcof => null()                !diagonal contribution
+    real(DP), dimension(:), pointer, contiguous :: rhs => null()                 !right-hand side contribution
+    real(DP), dimension(:,:), pointer, contiguous :: auxvar => null()            !auxiliary variable array
+    real(DP), dimension(:), pointer, contiguous :: simvals => null()             !simulated values
+    real(DP), dimension(:), pointer, contiguous  :: simtomvr => null()           !simulated values
     !
     ! -- water mover flag and object
-    integer(I4B), pointer                               :: imover      => null()
-    type(PackageMoverType), pointer                     :: pakmvrobj   => null()
+    integer(I4B), pointer :: imover => null()
+    type(PackageMoverType), pointer :: pakmvrobj => null()
     !
     ! -- timeseries
-    type(TimeSeriesManagerType), pointer                :: TsManager   => null()! time series manager
-    type(TimeArraySeriesManagerType), pointer           :: TasManager  => null()! time array series manager
-    integer(I4B)                                        :: indxconvertflux = 0  ! indxconvertflux is column of bound to multiply by area to convert flux to rate
+    type(TimeSeriesManagerType), pointer :: TsManager => null()                  ! time series manager
+    type(TimeArraySeriesManagerType), pointer :: TasManager => null()            ! time array series manager
+    integer(I4B) :: indxconvertflux = 0                                          ! indxconvertflux is column of bound to multiply by area to convert flux to rate
     logical :: AllowTimeArraySeries = .false.
     !
     ! -- pointers for observations
-    integer(I4B), pointer                               :: inobspkg    => null()! unit number for obs package
-    type(ObsType), pointer                              :: obs         => null()! observation package
+    integer(I4B), pointer :: inobspkg => null()                                  ! unit number for obs package
+    type(ObsType), pointer :: obs => null()                                      ! observation package
     !
     ! -- pointers to model/solution variables
-    integer(I4B), pointer                               :: neq                   !number of equations for model
-    integer(I4B), dimension(:), pointer                 :: ibound      => null() !ibound array
-    real(DP), dimension(:), pointer                     :: xnew        => null() !dependent variable (head) for this time step
-    real(DP), dimension(:), pointer                     :: xold        => null() !dependent variable for last time step
-    real(DP), dimension(:), pointer                     :: flowja      => null() !intercell flows
-    integer(I4B), dimension(:), pointer                 :: icelltype   => null() !pointer to icelltype array in NPF
+    integer(I4B), pointer :: neq                                                 !number of equations for model
+    integer(I4B), dimension(:), pointer, contiguous :: ibound => null()          !ibound array
+    real(DP), dimension(:), pointer, contiguous :: xnew => null()                !dependent variable (head) for this time step
+    real(DP), dimension(:), pointer, contiguous :: xold => null()                !dependent variable for last time step
+    real(DP), dimension(:), pointer, contiguous :: flowja => null()              !intercell flows
+    integer(I4B), dimension(:), pointer, contiguous :: icelltype => null()       !pointer to icelltype array in NPF
 
   contains
     procedure :: bnd_df
@@ -671,7 +673,11 @@ module BndModule
     call model_budget%addentry(ratin, ratout, delt, this%text,                 &
                                isuppress_output, this%name)
     if (imover == 1) then
-      text = adjustr(trim(adjustl(this%text)) // '-TO-MVR')
+      ratin = DZERO
+      ratout = DZERO
+      ibdlbl = 0
+      text = trim(adjustl(this%text)) // '-TO-MVR'
+      text = adjustr(text)
       !
       ! -- If cell-by-cell flows will be saved as a list, write header.
       if(ibinun /= 0) then
@@ -930,8 +936,8 @@ module BndModule
     use MemoryManagerModule, only: mem_allocate, mem_setptr
     ! -- dummy
     class(BndType) :: this
-    integer(I4B), dimension(:), pointer, optional :: nodelist
-    real(DP), dimension(:, :), pointer, optional :: auxvar
+    integer(I4B), dimension(:), pointer, contiguous, optional :: nodelist
+    real(DP), dimension(:, :), pointer, contiguous, optional :: auxvar
     ! -- local
     integer(I4B) :: i
     integer(I4B) :: j
@@ -1031,10 +1037,10 @@ module BndModule
 ! ------------------------------------------------------------------------------
     class(BndType) :: this
     integer(I4B), pointer :: neq
-    integer(I4B), dimension(:), pointer :: ibound
-    real(DP), dimension(:), pointer :: xnew
-    real(DP), dimension(:), pointer :: xold
-    real(DP), dimension(:), pointer :: flowja
+    integer(I4B), dimension(:), pointer, contiguous :: ibound
+    real(DP), dimension(:), pointer, contiguous :: xnew
+    real(DP), dimension(:), pointer, contiguous :: xold
+    real(DP), dimension(:), pointer, contiguous :: flowja
 ! ------------------------------------------------------------------------------
     !
     ! -- Set the pointers

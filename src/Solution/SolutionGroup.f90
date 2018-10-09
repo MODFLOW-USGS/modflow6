@@ -12,10 +12,10 @@ module SolutionGroupModule
   private :: CastAsSolutionGroupClass
 
   type :: SolutionGroupType
-    integer(I4B), pointer        :: id
-    integer(I4B), pointer        :: mxiter
-    integer(I4B), pointer        :: nsolutions
-    integer(I4B), dimension(:), allocatable :: idsolutions                      !array of solution ids in basesolutionlist
+    integer(I4B), pointer                                :: id
+    integer(I4B), pointer                                :: mxiter
+    integer(I4B), pointer                                :: nsolutions
+    integer(I4B), dimension(:), allocatable              :: idsolutions          !array of solution ids in basesolutionlist
   contains
     procedure          :: sgp_ca
     procedure          :: sgp_da

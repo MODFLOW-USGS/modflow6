@@ -9,32 +9,33 @@ module ListReaderModule
   public ListReaderType
   
   type :: ListReaderType
-    integer(I4B)                                                :: in            ! unit number of file containing control record
-    integer(I4B)                                                :: inlist        ! unit number of file from which list will be read
-    integer(I4B)                                                :: iout          ! unit number to output messages
-    integer(I4B)                                                :: inamedbound   ! flag indicating boundary names are to be read
-    integer(I4B)                                                :: ierr          ! error flag
-    integer(I4B)                                                :: nlist         ! number of entries in list.  -1 indicates number will be automatically determined
-    integer(I4B)                                                :: ibinary       ! flag indicating to read binary list
-    integer(I4B)                                                :: istart        ! string starting location
-    integer(I4B)                                                :: istop         ! string ending location
-    integer(I4B)                                                :: lloc          ! entry number in line
-    integer(I4B)                                                :: iclose        ! flag indicating whether or not to close file
-    integer(I4B)                                                :: ndim          ! number of dimensions in model
-    integer(I4B)                                                :: ntxtrlist     ! number of text entries found in rlist
-    integer(I4B)                                                :: ntxtauxvar    ! number of text entries found in auxvar
-    character(len=LINELENGTH)                                   :: label         ! label for printing list
-    character(len=LINELENGTH)                                   :: line          ! line string for reading file
-    integer(I4B), dimension(:), pointer                         :: mshape        ! pointer to model shape
-    integer(I4B), dimension(:), pointer                         :: nodelist      ! pointer to nodelist
-    real(DP), dimension(:, :), pointer                          :: rlist         ! pointer to rlist
-    real(DP), dimension(:, :), pointer                          :: auxvar        ! pointer to auxvar
-    character(len=16), dimension(:), pointer                    :: auxname       ! pointer to aux names
-    character(len=LENBOUNDNAME), pointer, dimension(:)          :: boundname     ! pointer to boundname
-    integer(I4B), dimension(:), allocatable                     :: idxtxtrow     ! row locations of text in rlist
-    integer(I4B), dimension(:), allocatable                     :: idxtxtcol     ! col locations of text in rlist
-    integer(I4B), dimension(:), allocatable                     :: idxtxtauxrow  ! row locations of text in auxvar
-    integer(I4B), dimension(:), allocatable                     :: idxtxtauxcol  ! col locations of text in auxvar
+    integer(I4B) :: in                                                           ! unit number of file containing control record
+    integer(I4B) :: inlist                                                       ! unit number of file from which list will be read
+    integer(I4B) :: iout                                                         ! unit number to output messages
+    integer(I4B) :: inamedbound                                                  ! flag indicating boundary names are to be read
+    integer(I4B) :: ierr                                                         ! error flag
+    integer(I4B) :: nlist                                                        ! number of entries in list.  -1 indicates number will be automatically determined
+    integer(I4B) :: ibinary                                                      ! flag indicating to read binary list
+    integer(I4B) :: istart                                                       ! string starting location
+    integer(I4B) :: istop                                                        ! string ending location
+    integer(I4B) :: lloc                                                         ! entry number in line
+    integer(I4B) :: iclose                                                       ! flag indicating whether or not to close file
+    integer(I4B) :: ndim                                                         ! number of dimensions in model
+    integer(I4B) :: ntxtrlist                                                    ! number of text entries found in rlist
+    integer(I4B) :: ntxtauxvar                                                   ! number of text entries found in auxvar
+    character(len=LINELENGTH) :: label                                           ! label for printing list
+    character(len=LINELENGTH) :: line                                            ! line string for reading file
+    integer(I4B), dimension(:), pointer, contiguous :: mshape => null()          ! pointer to model shape
+    integer(I4B), dimension(:), pointer, contiguous :: nodelist => null()        ! pointer to nodelist
+    real(DP), dimension(:, :), pointer, contiguous :: rlist => null()            ! pointer to rlist
+    real(DP), dimension(:, :), pointer, contiguous :: auxvar  => null()          ! pointer to auxvar
+    character(len=16), dimension(:), pointer :: auxname => null()                ! pointer to aux names
+    character(len=LENBOUNDNAME), dimension(:), pointer,                         &
+                                 contiguous :: boundname => null()               ! pointer to boundname
+    integer(I4B), dimension(:), allocatable :: idxtxtrow                         ! row locations of text in rlist
+    integer(I4B), dimension(:), allocatable :: idxtxtcol                         ! col locations of text in rlist
+    integer(I4B), dimension(:), allocatable :: idxtxtauxrow                      ! row locations of text in auxvar
+    integer(I4B), dimension(:), allocatable :: idxtxtauxcol                      ! col locations of text in auxvar
     character(len=LENTIMESERIESNAME), dimension(:), allocatable :: txtrlist      ! text found in rlist
     character(len=LENTIMESERIESNAME), dimension(:), allocatable :: txtauxvar     ! text found in auxvar
   contains
@@ -65,12 +66,12 @@ module ListReaderModule
     integer(I4B), intent(in) :: iout
     integer(I4B), intent(inout) :: nlist
     integer(I4B), intent(in) :: inamedbound
-    integer(I4B), dimension(:), intent(in), pointer :: mshape
-    integer(I4B), dimension(:), intent(inout), pointer :: nodelist
-    real(DP), dimension(:, :), intent(inout), pointer :: rlist
-    real(DP), dimension(:, :), intent(inout), pointer :: auxvar
+    integer(I4B), dimension(:), intent(in), contiguous, pointer :: mshape
+    integer(I4B), dimension(:), intent(inout), contiguous, pointer :: nodelist
+    real(DP), dimension(:, :), intent(inout), contiguous, pointer :: rlist
+    real(DP), dimension(:, :), intent(inout), contiguous, pointer :: auxvar
     character(len=16), dimension(:), intent(inout), target :: auxname
-    character(len=LENBOUNDNAME), pointer, dimension(:), intent(inout) :: boundname
+    character(len=LENBOUNDNAME), dimension(:), pointer, contiguous, intent(inout) :: boundname
     character(len=500), intent(in) :: label
     ! -- local
 ! ------------------------------------------------------------------------------

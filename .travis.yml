@@ -91,9 +91,32 @@ matrix:
             - tex-common
             - latex-xcolor
             - unzip
+
+    - env: CVER=gfortran8
+      language: c
+      addons:
+        apt:
+          sources: 
+            - ubuntu-toolchain-r-test
+          packages: 
+            - gfortran-8
+            - texlive-base
+            - texlive-latex-base
+            - texlive-latex-extra
+            - texlive-latex-recommended
+            - texlive-science
+            - texlive-fonts-recommended
+            - texlive-fonts-extra
+            - dpkg
+            - tex-common
+            - latex-xcolor
+            - unzip
      
-  allow_failures:
-    - env: CVER=gfortran7
+  # allowed failures - uncomment lines below to allow failure
+  #                    of specific gfortran compilers
+  #allow_failures:
+  #  - env: CVER=gfortran7
+  #  - env: CVER=gfortran8
      
 
 
@@ -123,6 +146,11 @@ install:
         gfortran --version;
         ls -l /usr/bin/gfortran-7;
       fi
+    - if [[ $CVER == "gfortran8" ]]; then
+        ln -fs /usr/bin/gfortran-8 "$HOME/.local/bin/gfortran";
+        gfortran --version;
+        ls -l /usr/bin/gfortran-8;
+      fi
     # install anaconda
     - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
         wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
@@ -136,7 +164,7 @@ install:
     - conda info -a
     - conda install nose
     - python --version
-    - pip install -r requirements.travis.txt
+    - pip install numpy
     - pip install https://github.com/modflowpy/flopy/zipball/develop
     - pip install https://github.com/modflowpy/pymake/zipball/master
     - pip install nose-timer
@@ -150,6 +178,7 @@ script:
     - ls ../
     - which python
     - python --version
+    - python -c "import numpy as np; print('numpy version {}'.format(np.__version__))"
     - python -c "import flopy; flopypth = flopy.__path__[0]; print('flopy is installed in {}'.format(flopypth))"
     - python -c "import flopy; dir(flopy.mf6)"
     - cd ./autotest

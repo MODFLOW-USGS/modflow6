@@ -15,9 +15,9 @@ module GwfObsModule
 
   type, extends(ObsType) :: GwfObsType
     ! -- Private members
-    type(GwfIcType), pointer, private                :: ic => null()     ! initial conditions
-    real(DP), pointer, dimension(:), private         :: x => null()      ! head
-    real(DP), dimension(:), pointer, private         :: flowja => null() ! intercell flows
+    type(GwfIcType), pointer, private                    :: ic => null()         ! initial conditions
+    real(DP), dimension(:), pointer, contiguous, private :: x => null()          ! head
+    real(DP), dimension(:), pointer, contiguous, private :: flowja => null()     ! intercell flows
   contains
     ! -- Public procedures
     procedure, public :: gwf_obs_ar
@@ -59,8 +59,8 @@ contains
     ! -- dummy
     class(GwfObsType),                    intent(inout) :: this
     type(GwfIcType),  pointer,               intent(in) :: ic
-    real(DP), pointer, dimension(:), intent(in) :: x
-    real(DP), pointer, dimension(:), intent(in) :: flowja
+    real(DP), dimension(:), pointer, contiguous, intent(in) :: x
+    real(DP), dimension(:), pointer, contiguous, intent(in) :: flowja
     !
     ! Call ar method of parent class
     call this%obs_ar()
@@ -181,8 +181,8 @@ contains
     ! -- dummy
     class(GwfObsType),                    intent(inout) :: this
     type(GwfIcType),  pointer,               intent(in) :: ic
-    real(DP), pointer, dimension(:), intent(in) :: x
-    real(DP), pointer, dimension(:), intent(in) :: flowja
+    real(DP), dimension(:), pointer, contiguous, intent(in) :: x
+    real(DP), dimension(:), pointer, contiguous, intent(in) :: flowja
     !
     this%ic => ic
     this%x => x

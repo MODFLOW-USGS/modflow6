@@ -16,23 +16,23 @@ module TimeSeriesLinkModule
 
   type :: TimeSeriesLinkType
     ! -- Public members
-    integer(I4B), public :: IRow = 0  ! row index (2nd dim) in bound or auxval array
-    integer(I4B), public :: JCol = 0  ! column index (1st dim) in bound or auxval array
+    integer(I4B), public :: IRow = 0                                             ! row index (2nd dim) in bound or auxval array
+    integer(I4B), public :: JCol = 0                                             ! column index (1st dim) in bound or auxval array
     integer(I4B), public :: Iprpak = 1
     ! BndElement can point to an element in either the bound or auxval
     ! array of BndType, or any other double precision variable or array
     ! element that contains a value that could be controlled by a time series.
-    real(DP),        pointer, public :: BndElement => null()
-    real(DP),        pointer, public :: RMultiplier => null()
-    real(DP),                 public :: CellArea = DZERO
-    character(len=LENPACKAGENAME),    public :: PackageName = ''
-    character(len=3),                 public :: AuxOrBnd = ''
+    real(DP), pointer, public :: BndElement => null()
+    real(DP), pointer, public :: RMultiplier => null()
+    real(DP), public :: CellArea = DZERO
+    character(len=LENPACKAGENAME), public :: PackageName = ''
+    character(len=3), public :: AuxOrBnd = ''
     character(len=LENTIMESERIESTEXT), public :: Text = ''
-    character(len=LENBOUNDNAME),      public :: BndName = ''
-    logical,                          public :: Active = .true.
-    logical,                          public :: UseDefaultProc = .true.
-    logical,                          public :: ConvertFlux = .false.
-    type(TimeSeriesType),    pointer, public :: TimeSeries => null()
+    character(len=LENBOUNDNAME), public :: BndName = ''
+    logical, public :: Active = .true.
+    logical, public :: UseDefaultProc = .true.
+    logical, public :: ConvertFlux = .false.
+    type(TimeSeriesType), pointer, public :: TimeSeries => null()
   end type TimeSeriesLinkType
 
 contains

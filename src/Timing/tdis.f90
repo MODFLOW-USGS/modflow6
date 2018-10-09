@@ -19,25 +19,25 @@
   public :: tdis_ot
   public :: tdis_da
   !
-  integer(I4B),          public, pointer       :: nper                          !number of stress period
-  integer(I4B),          public, pointer       :: itmuni                        !flag indicating time units
-  integer(I4B),          public, pointer       :: kper                          !current stress period number
-  integer(I4B),          public, pointer       :: kstp                          !current time step number
-  logical,          public, pointer            :: readnewdata                   !flag indicating time to read new data
-  logical,          public, pointer            :: endofperiod             !flag indicating end of stress period
-  logical,          public, pointer            :: endofsimulation               !flag indicating end of simulation
-  real(DP), public, pointer                    :: delt                          !length of the current time step
-  real(DP), public, pointer                    :: pertim                        !time relative to start of stress period
-  real(DP), public, pointer                    :: totim                         !time relative to start of simulation
-  real(DP), public, pointer                    :: totimc                        !simulation time at start of time step
-  real(DP), public, pointer                    :: deltsav                       !saved value for delt, used for subtiming
-  real(DP), public, pointer                    :: totimsav                      !saved value for totim, used for subtiming
-  real(DP), public, pointer                    :: pertimsav                     !saved value for pertim, used for subtiming
-  real(DP), public, pointer                    :: totalsimtime                  !time at end of simulation
-  real(DP), public, dimension(:), pointer      :: perlen                        !length of each stress period
-  integer(I4B), public, dimension(:), pointer  :: nstp                          !number of time steps in each stress period
-  real(DP), public, dimension(:), pointer      :: tsmult                        !time step multiplier for each stress period
-  character(len=LENDATETIME), pointer          :: datetime0                     !starting date and time for the simulation
+  integer(I4B), public, pointer                            :: nper               !number of stress period
+  integer(I4B), public, pointer                            :: itmuni             !flag indicating time units
+  integer(I4B), public, pointer                            :: kper               !current stress period number
+  integer(I4B), public, pointer                            :: kstp               !current time step number
+  logical, public, pointer                                 :: readnewdata        !flag indicating time to read new data
+  logical, public, pointer                                 :: endofperiod        !flag indicating end of stress period
+  logical, public, pointer                                 :: endofsimulation    !flag indicating end of simulation
+  real(DP), public, pointer                                :: delt               !length of the current time step
+  real(DP), public, pointer                                :: pertim             !time relative to start of stress period
+  real(DP), public, pointer                                :: totim              !time relative to start of simulation
+  real(DP), public, pointer                                :: totimc             !simulation time at start of time step
+  real(DP), public, pointer                                :: deltsav            !saved value for delt, used for subtiming
+  real(DP), public, pointer                                :: totimsav           !saved value for totim, used for subtiming
+  real(DP), public, pointer                                :: pertimsav          !saved value for pertim, used for subtiming
+  real(DP), public, pointer                                :: totalsimtime       !time at end of simulation
+  real(DP), public, dimension(:), pointer, contiguous      :: perlen             !length of each stress period
+  integer(I4B), public, dimension(:), pointer, contiguous  :: nstp               !number of time steps in each stress period
+  real(DP), public, dimension(:), pointer, contiguous      :: tsmult             !time step multiplier for each stress period
+  character(len=LENDATETIME), pointer                      :: datetime0          !starting date and time for the simulation
   !
   type(BlockParserType), private :: parser
 
@@ -535,10 +535,6 @@
        &'     MULTIPLIER FOR DELT',/1X,76('-'))"
     character(len=*), parameter :: fmtrow =                                    &
       "(1X,I8,1PG21.7,I7,0PF25.3)"
-    character(len=*), parameter :: fmtpwarn =                                  &
-      "(1X,/1X,                                                                &
-        &'WARNING: PERLEN MUST NOT BE 0.0 FOR TRANSIENT STRESS PERIODS')"
-    !data
 ! ------------------------------------------------------------------------------
     !
     ! -- get PERIODDATA block
@@ -554,26 +550,11 @@
         nstp(n) = parser%GetInteger()
         tsmult(n) = parser%GetDouble()
         write (iout, fmtrow) n, perlen(n), nstp(n), tsmult(n)
-        !
-        !-----stop if nstp le 0, perlen eq 0 for transient stress periods,
-        !-----tsmult le 0, or perlen lt 0..
-        if(nstp(n) <= 0) then
-           call store_error( &
-             'THERE MUST BE AT LEAST ONE TIME STEP IN EVERY STRESS PERIOD')
-        end if
-        if(perlen(n) == dzero) then
-           write(iout, fmtpwarn)
-        end if
-        if(tsmult(n) <= dzero) then
-           call store_error( &
-            'TSMULT MUST BE GREATER THAN 0.0')
-        end if
-        if(perlen(n).lt.dzero) then
-           call store_error( &
-            'PERLEN CANNOT BE LESS THAN 0.0 FOR ANY STRESS PERIOD')
-        end if
         totalsimtime = totalsimtime + perlen(n)
       enddo
+      !
+      ! -- Check timing information
+      call check_tdis_timing(nper, perlen, nstp, tsmult)
       call parser%terminateblock()
       !
       ! -- Check for errors
@@ -592,6 +573,100 @@
     ! -- Return
     return
   end subroutine tdis_read_timing
+  
+  subroutine check_tdis_timing(nper, perlen, nstp, tsmult)
+! ******************************************************************************
+! check_tdis_timing -- Check the tdis timing information.  Return back to 
+!   tdis_read_timing if an error condition is found and let the ustop
+!   routine be called there instead so the StoreErrorUnit routine can be
+!   called to assign the correct file name.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule, only: LINELENGTH, DZERO, DONE
+    use SimModule, only: ustop, store_error, count_errors
+    ! -- dummy
+    integer(I4B), intent(in) :: nper
+    real(DP), dimension(:), contiguous, intent(in) :: perlen
+    integer(I4B), dimension(:), contiguous, intent(in) :: nstp
+    real(DP), dimension(:), contiguous, intent(in) :: tsmult
+    ! -- local
+    integer(I4B) :: kper, kstp
+    real(DP) :: tstart, tend, dt
+    character(len=LINELENGTH) :: errmsg
+    ! -- formats
+    character(len=*), parameter :: fmtpwarn =                                   &
+      &"(1X,/1X,'PERLEN IS ZERO FOR STRESS PERIOD ', I0,                        &
+      &'. PERLEN MUST NOT BE ZERO FOR TRANSIENT PERIODS.')"
+    character(len=*), parameter :: fmtsperror =                                 &
+      &"(A,' FOR STRESS PERIOD ', I0)"
+    character(len=*), parameter :: fmtdterror =                                 &
+      &"('TIME STEP LENGTH OF ', G0, ' IS TOO SMALL IN PERIOD ', I0,            &
+      &' AND TIME STEP ', I0)"
+! ------------------------------------------------------------------------------
+    !
+    ! -- Initialize
+    tstart = DZERO
+    !
+    ! -- Go through and check each stress period
+    do kper = 1, nper
+      !
+      ! -- Error if nstp less than or equal to zero
+      if(nstp(kper) <= 0) then
+        write(errmsg, fmtsperror) 'NUMBER OF TIME STEPS LESS THAN ONE ', kper
+        call store_error(errmsg)
+        return
+      end if
+      !
+      ! -- Warn if perlen is zero
+      if(perlen(kper) == DZERO) then
+         write(iout, fmtpwarn) kper
+         return
+      end if
+      !
+      ! -- Error if tsmult is less than zero
+      if(tsmult(kper) <= DZERO) then
+        write(errmsg, fmtsperror) 'TSMULT MUST BE GREATER THAN 0.0 ', kper
+        call store_error(errmsg)
+        return
+      end if
+      !
+      ! -- Error if negative period length
+      if(perlen(kper) < DZERO) then
+        write(errmsg, fmtsperror) 'PERLEN CANNOT BE LESS THAN 0.0 ', kper
+        call store_error(errmsg)
+        return
+      end if
+      !
+      ! -- Go through all time step lengths and make sure they are valid
+      do kstp = 1, nstp(kper)
+        if (kstp == 1) then
+          dt = perlen(kper) / float(nstp(kper))
+          if(tsmult(kper) /= DONE)                                              &
+              dt = perlen(kper) * (DONE-tsmult(kper)) /                         &
+                  (DONE - tsmult(kper) ** nstp(kper))
+        else
+          dt = dt * tsmult(kper)
+        endif
+        tend = tstart + dt
+        !
+        ! -- Error condition if tstart == tend
+        if (tstart == tend) then
+          write(errmsg, fmtdterror) dt, kper, kstp
+          call store_error(errmsg)
+          return
+        endif
+      enddo
+      !
+      ! -- reset tstart = tend
+      tstart = tend
+      !
+    enddo
+    ! -- Return
+    return
+  end subroutine check_tdis_timing
 
   subroutine subtiming_begin(isubtime, nsubtimes, idsolution)
 ! ******************************************************************************

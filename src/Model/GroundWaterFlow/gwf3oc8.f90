@@ -57,13 +57,13 @@ module GwfOcModule
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwfOcType) :: this
-    real(DP), dimension(:), pointer, intent(in) :: head
+    real(DP), dimension(:), pointer, contiguous, intent(in) :: head
     class(DisBaseType), pointer, intent(in) :: dis
     real(DP), intent(in) :: dnodata
     ! -- local
     integer(I4B) :: i, nocdobj, inodata
     type(OutputControlDataType), pointer   :: ocdobjptr
-    real(DP), dimension(:), pointer :: nullvec => null()
+    real(DP), dimension(:), pointer, contiguous :: nullvec => null()
 ! ------------------------------------------------------------------------------
     !
     ! -- Initialize variables

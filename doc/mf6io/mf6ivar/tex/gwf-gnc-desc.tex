@@ -27,7 +27,7 @@
 
 \item \texttt{cellidsj}---is the array of CELLIDS for the contributing j cells, which contribute to the interpolated head value at the ghost node. This item contains one CELLID for each of the contributing cells of the ghost node. Note that if the number of actual contributing cells needed by the user is less than NUMALPHAJ for any ghost node, then a dummy CELLID of zero(s) should be inserted with an associated contributing factor of zero. For a structured grid that uses the DIS input file, CELLID is the layer, row, and column numbers of the cell.   For a grid that uses the DISV input file, CELLID is the layer number and cell2d number for the two cells.  If the model uses the unstructured discretization (DISU) input file, then CELLID is the node number for the cell.
 
-\item \texttt{alphasj}---is the contributing factors for each contributing node in CELLIDSJ. Note that if the number of actual contributing cells is less than NUMALPHAJ for any ghost node, then dummy CELLIDS should be inserted with an associated contributing factor of zero.
+\item \texttt{alphasj}---is the contributing factors for each contributing node in CELLIDSJ. Note that if the number of actual contributing cells is less than NUMALPHAJ for any ghost node, then dummy CELLIDS should be inserted with an associated contributing factor of zero.  The sum of ALPHASJ should be less than one.  This is because one minus the sum of ALPHASJ is equal to the alpha term (alpha n in equation 4-61 of the GWF Model report) that is multiplied by the head in cell n.
 
 \end{description}
 
