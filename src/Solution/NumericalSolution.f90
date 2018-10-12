@@ -1853,9 +1853,9 @@ contains
     integer(I4B), intent(inout) :: iptc
     real(DP), intent(in) :: ptcf
     ! -- local
+    logical :: lsame
     integer(I4B) :: n
     integer(I4B) :: itestmat, i, i1, i2
-    integer(I4B) :: isame
     integer(I4B) :: iptct
     real(DP) :: adiag, diagval
     real(DP) :: l2norm
@@ -1905,8 +1905,8 @@ contains
           end if
         end if
       else
-        isame = IS_SAME(l2norm, this%l2norm0) 
-        if (isame /= 0) then
+        lsame = IS_SAME(l2norm, this%l2norm0) 
+        if (lsame) then
           iptc = 0
         end if
       end if
