@@ -2,4 +2,5 @@ BEGIN OPTIONS
   [PRINT_OPTION <print_option>]
   [COMPLEXITY <complexity>]
   [CSV_OUTPUT FILEOUT <csvfile>]
+  [NO_PTC]
 END OPTIONS

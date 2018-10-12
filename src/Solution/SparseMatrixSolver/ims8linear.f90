@@ -5,6 +5,7 @@
                              IZERO, DZERO, DPREC, DSAME,                       &
                              DEM8, DEM6, DEM5, DEM4, DEM3, DEM2, DEM1,         &
                              DHALF, DONE, DTWO
+  use GenericUtilities, only: IS_SAME
   use IMSReorderingModule, only: ims_genrcm, ims_odrv, ims_dperm, ims_vperm
   use BlockParserModule, only: BlockParserType
 
@@ -1646,7 +1647,8 @@
           IF (rcnvg ==  DZERO) ICNVG = 1 
           IF (ICNVG.NE.0) EXIT INNER 
 !-----------CHECK THAT CURRENT AND PREVIOUS rho ARE DIFFERENT           
-          isame = IMSLINEARSUB_SAME(rho, rho0) 
+          !isame = IMSLINEARSUB_SAME(rho, rho0) 
+          isame = IS_SAME(rho, rho0) 
           IF (isame.NE.0) THEN 
             EXIT INNER 
           END IF 
@@ -1921,15 +1923,18 @@
           IF (ICNVG.NE.0) EXIT INNER
 !-----------CHECK THAT CURRENT AND PREVIOUS rho, alpha, AND omega ARE 
 !           DIFFERENT
-          isame = IMSLINEARSUB_SAME(rho, rho0) 
+          !isame = IMSLINEARSUB_SAME(rho, rho0) 
+          isame = IS_SAME(rho, rho0) 
           IF (isame.NE.0) THEN 
             EXIT INNER 
           END IF 
-          isame = IMSLINEARSUB_SAME(alpha, alpha0) 
+          !isame = IMSLINEARSUB_SAME(alpha, alpha0) 
+          isame = IS_SAME(alpha, alpha0) 
           IF (isame.NE.0) THEN 
             EXIT INNER 
           END IF 
-          isame = IMSLINEARSUB_SAME(omega, omega0) 
+          !isame = IMSLINEARSUB_SAME(omega, omega0) 
+          isame = IS_SAME(omega, omega0) 
           IF (isame.NE.0) THEN 
             EXIT INNER 
           END IF 
@@ -2280,40 +2285,6 @@
       !---------return
       return
     END FUNCTION IMSLINEARSUB_RNRM2
-
-    FUNCTION IMSLINEARSUB_SAME(a, b) RESULT(ivalue)
-!     + + + return
-      integer(I4B) :: ivalue
-!     + + + dummy arguments + + +
-      real(DP), intent(in)   :: a
-      real(DP), intent(in)   :: b
-!     + + + local definitions + + +
-      real(DP) :: denom
-      real(DP) :: rdiff
-!     + + + parameters + + +
-!     + + + functions + + +
-!     + + + code + + +
-      ivalue = 0
-      if (a == b) then
-        ivalue = 1
-      else
-        if (abs(b) > abs(a)) then
-          denom = b
-        else
-          denom = a
-          if (abs(denom) == DZERO) then
-            denom = DPREC
-          end if
-        end if
-        rdiff = abs( (a - b) / denom )
-        !if (rdiff <= DEM5) then
-        if (rdiff <= DSAME) then
-          ivalue = 1
-        end if
-      end if
-      !---------return
-      return
-    END FUNCTION IMSLINEARSUB_SAME
 !
 !    
 !-------BEGINNING OF SUBROUTINES FROM OTHER LIBRARIES                   
@@ -2322,7 +2293,7 @@
       !
       !  SPARSKIT VERSION 2 SUBROUTINES INCLUDED INCLUDE:
       !
-      !    1 - ilut
+      !    1 - IMSLINEARSUB_PCMILUT
       !    2 - IMSLINEARSUB_PCMILUT_LUSOL
       !    3 - IMSLINEARSUB_PCMILUT_QSPLIT
       !
