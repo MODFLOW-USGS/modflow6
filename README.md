@@ -7,7 +7,7 @@
 
 ## Automated Testing Status on Travis-CI
 
-### Version 6.0.3 fix-47 &mdash; build 27
+### Version 6.0.3 fix-47 &mdash; build 28
 [![Build Status](https://travis-ci.org/MODFLOW-USGS/modflow6.svg?branch=fix-47)](https://travis-ci.org/MODFLOW-USGS/modflow6)
 
 ## Introduction
