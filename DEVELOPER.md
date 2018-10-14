@@ -81,7 +81,7 @@ To run tests:
 
 ```shell
 # Go to the autotest directory
-cd modflow6/autotests
+cd modflow6/autotest
 
 # Run all modflow6 tests (including building executables and the mfio documentation - requires installation of LaTeX
 nosetests -v                 
