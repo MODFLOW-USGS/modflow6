@@ -1522,10 +1522,10 @@
         real(DP), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVDRMAX
 !       + + + LOCAL DEFINITIONS + + + 
         LOGICAL :: LORTH
+        logical :: lsame 
         character(len=31) :: cval
         integer(I4B) :: n 
         integer(I4B) :: iiter 
-        integer(I4B) :: isame 
         integer(I4B) :: xloc, rloc
         integer(I4B) :: im, im0, im1
         real(DP) :: tv 
@@ -1647,9 +1647,8 @@
           IF (rcnvg ==  DZERO) ICNVG = 1 
           IF (ICNVG.NE.0) EXIT INNER 
 !-----------CHECK THAT CURRENT AND PREVIOUS rho ARE DIFFERENT           
-          !isame = IMSLINEARSUB_SAME(rho, rho0) 
-          isame = IS_SAME(rho, rho0) 
-          IF (isame.NE.0) THEN 
+          lsame = IS_SAME(rho, rho0) 
+          IF (lsame) THEN 
             EXIT INNER 
           END IF 
 !-----------RECALCULATE THE RESIDUAL
@@ -1735,10 +1734,10 @@
         real(DP), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVDRMAX
 !       + + + LOCAL DEFINITIONS + + +  
         LOGICAL :: LORTH
+        logical :: lsame 
         character(len=15) :: cval1, cval2
         integer(I4B) :: n 
         integer(I4B) :: iiter 
-        integer(I4B) :: isame 
         integer(I4B) :: xloc, rloc
         integer(I4B) :: im, im0, im1
         real(DP) :: tv 
@@ -1923,19 +1922,16 @@
           IF (ICNVG.NE.0) EXIT INNER
 !-----------CHECK THAT CURRENT AND PREVIOUS rho, alpha, AND omega ARE 
 !           DIFFERENT
-          !isame = IMSLINEARSUB_SAME(rho, rho0) 
-          isame = IS_SAME(rho, rho0) 
-          IF (isame.NE.0) THEN 
+          lsame = IS_SAME(rho, rho0) 
+          IF (lsame) THEN 
             EXIT INNER 
           END IF 
-          !isame = IMSLINEARSUB_SAME(alpha, alpha0) 
-          isame = IS_SAME(alpha, alpha0) 
-          IF (isame.NE.0) THEN 
+          lsame = IS_SAME(alpha, alpha0) 
+          IF (lsame) THEN 
             EXIT INNER 
           END IF 
-          !isame = IMSLINEARSUB_SAME(omega, omega0) 
-          isame = IS_SAME(omega, omega0) 
-          IF (isame.NE.0) THEN 
+          lsame = IS_SAME(omega, omega0) 
+          IF (lsame) THEN 
             EXIT INNER 
           END IF 
 !-----------RECALCULATE THE RESIDUAL

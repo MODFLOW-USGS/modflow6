@@ -9,21 +9,28 @@ module GenericUtilities
 
   contains
   
-  function is_same(a, b) result(ivalue)
+  function is_same(a, b, eps) result(lvalue)
     ! -- return
-    integer(I4B) :: ivalue
+    logical :: lvalue
     ! -- dummy arguments
     real(DP), intent(in)   :: a
     real(DP), intent(in)   :: b
+    real(DP), intent(in), optional :: eps
     ! -- local definitions 
+    real(DP) :: epsloc
     real(DP) :: denom
     real(DP) :: rdiff
     ! -- parameters
     ! -- functions
     ! -- code
-    ivalue = 0
+    if (present(eps)) then
+      epsloc = eps
+    else
+      epsloc = DSAME
+    endif
+    lvalue = .FALSE.
     if (a == b) then
-      ivalue = 1
+      lvalue = .TRUE.
     else
       if (abs(b) > abs(a)) then
         denom = b
@@ -34,8 +41,8 @@ module GenericUtilities
         end if
       end if
       rdiff = abs( (a - b) / denom )
-      if (rdiff <= DSAME) then
-        ivalue = 1
+      if (rdiff <= epsloc) then
+        lvalue = .TRUE.
       end if
     end if
     ! -- return
