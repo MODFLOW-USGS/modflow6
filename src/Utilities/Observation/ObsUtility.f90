@@ -38,22 +38,27 @@ contains
     real(DP),                         intent(in)    :: value
     ! -- local
     integer(I4B)                       :: indx
+    integer(I4B)                       :: nunit
     character(len=50)                  :: cval
-    character(len=LENBIGLINE), pointer :: linout => null()
+    character(len=LENOBSNAME), pointer :: linout => null()
     type(ObsOutputType),       pointer :: ObsOutput => null()
     !---------------------------------------------------------------------------
     ! -- format
 10  format(G20.13)
+    ! -- output unit
+    nunit = obsrv%UnitNumber
     !
     indx = obsrv%indxObsOutput
     ObsOutput => obsOutputList%Get(indx)
     linout => obsOutput%lineout
     if (linout == '') then
-      write(linout,10)totim
+      write(linout,10) totim
+      write(cval,10) totim
+      write(nunit, '(a)', advance='NO') trim(adjustl(cval))
     endif
     ! -- append value to output line
     write(cval,fmtc)value
-    linout = trim(linout) // ',' // cval
+    write(nunit, '(a,a)', advance='NO') ',', trim(adjustl(cval))
     return
   end subroutine write_fmtd_cont
 
@@ -74,20 +79,20 @@ contains
     use iso_fortran_env, only: real32, real64
     implicit none
     ! -- dummy
-    type(ObserveType),                intent(inout) :: obsrv
-    integer(I4B),                          intent(in)    :: iprec
+    type(ObserveType), intent(inout) :: obsrv
+    integer(I4B), intent(in) :: iprec
     type(ObsOutputListType), pointer, intent(inout) :: obsOutputList
-    real(DP),                 intent(in)    :: value
+    real(DP), intent(in) :: value
     ! -- local
     integer(I4B)                       :: indx, nunit
-    character(len=LENBIGLINE), pointer :: linout => null()
+    character(len=LENOBSNAME), pointer :: linout => null()
     real(real32)                       :: totimsngl, valsngl
     real(real64)                       :: totimdbl, valdbl
     type(ObsOutputType), pointer       :: obsOutput => null()
     !---------------------------------------------------------------------------
     ! -- formats
 10  format(G20.13)
-    !
+    ! -- output unit
     nunit = obsrv%UnitNumber
     ! -- continuous observation
     indx = obsrv%indxObsOutput
