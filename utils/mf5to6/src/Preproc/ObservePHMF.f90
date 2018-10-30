@@ -15,7 +15,7 @@ module ObserveModule
   use ConstantsModule,   only: DONE, DZERO, LENOBSNAME,  &
                                LENOBSTYPE, MAXCHARLEN
   use ConstantsPHMFModule, only: LENOBSNAMENEW, HUGEDBL, HDRYDEFAULT
-  use InputOutputModule, only: dclosetest
+  use GenericUtilities, only: IS_SAME
   use ListModule,        only: ListType
   use SimModule,         only: store_warning, store_error, &
                                store_error_unit, ustop
@@ -206,7 +206,7 @@ contains
       sumweights = DZERO
       k = 0
       do i=1,nsrc
-        if (dclosetest(this%srcvals(itime, i), this%hdry)) then
+        if (IS_SAME(this%srcvals(itime, i), this%hdry)) then
           k = k + 1
           weights(i) = DZERO
         else

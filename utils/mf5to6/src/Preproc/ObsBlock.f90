@@ -3,11 +3,11 @@ module ObsBlockModule
   use BlockParserModule,         only: BlockParserType
   use ConstantsModule,           only: DONE, DZERO, &
                                        LINELENGTH, MAXCHARLEN 
+  use GenericUtilities, only: IS_SAME
   use ConstantsPHMFModule,       only: CONTINUOUS, SINGLE, LENOBSNAMENEW
   use DnmDis3dModule,            only: Dis3dType
   use GlobalVariablesPHMFModule, only: verbose
-  use InputOutputModule,         only: dclosetest, UPCASE, URWORD, &
-                                       uterminate_block
+  use InputOutputModule,         only: UPCASE, URWORD, uterminate_block
   use ListModule,                only: ListType
   use ObserveModule,             only: ObserveType, AddObserveToList, &
                                        GetObserveFromList, ConstructObservation
@@ -184,7 +184,7 @@ contains
         iadjrow = 0
         jadjcol = 0
         !
-        if (.not. dclosetest(xoff, DZERO)) then
+        if (.not. IS_SAME(xoff, DZERO)) then
           if (xoff > DZERO) then
             if (jcol < ncol) then
               if (dis3d%idomain(jcol+1, irow, layer) == 1) then
@@ -202,7 +202,7 @@ contains
           endif
         endif
         !
-        if (.not. dclosetest(yoff, DZERO)) then
+        if (.not. IS_SAME(yoff, DZERO)) then
           if (yoff > DZERO) then
             if (irow > 1) then
               if (dis3d%idomain(jcol, irow-1, layer) == 1) then

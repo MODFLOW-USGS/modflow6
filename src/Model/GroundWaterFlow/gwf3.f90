@@ -2,7 +2,7 @@ module GwfModule
 
   use KindModule,                  only: DP, I4B
   use InputOutputModule,           only: ParseLine, upcase
-  use ConstantsModule,             only: LENFTYPE, DZERO, DTEN, DEP20
+  use ConstantsModule,             only: LENFTYPE, DZERO, DEM1, DTEN, DEP20
   use NumericalModelModule,        only: NumericalModelType
   use BaseDisModule,               only: DisBaseType
   use BndModule,                   only: BndType, AddBndToList, GetBndFromList
@@ -708,17 +708,14 @@ module GwfModule
     integer(I4B), intent(inout) :: iptc
 ! ------------------------------------------------------------------------------
     ! -- determine if pseudo-transient continuation should be applied to this 
-    !    model - pseudo-transient continuation only appled to problems without 
-    !    storage
+    !    model - pseudo-transient continuation only applied to problems that
+    !    use the Newton-Raphson formulation during steady-state stress periods
     iptc = 0
     if (this%iss > 0) then
-      if (this%insto == 0) then
-        ! -- and problems using Newton-Raphson
-        if (this%inewton > 0) then
-          iptc = this%inewton
-        else
-          iptc = this%npf%inewton
-        end if
+      if (this%inewton > 0) then
+        iptc = this%inewton
+      else
+        iptc = this%npf%inewton
       end if
     end if
     !
@@ -760,25 +757,25 @@ module GwfModule
     real(DP) :: diag
     real(DP) :: diagcnt
     real(DP) :: diagmin
+    real(DP) :: diagmax
 ! ------------------------------------------------------------------------------
     ! -- set temporary flag indicating if pseudo-transient continuation should
     !    be used for this model and time step
     iptct = 0
-    ! -- only apply pseudo-transient continuation for problems without storage
+    ! -- only apply pseudo-transient continuation to problems using the 
+    !    Newton-Raphson formulations for steady-state stress periods
     if (this%iss > 0) then
-      if (this%insto == 0) then
-        ! -- and problems using Newton-Raphson
-        if (this%inewton > 0) then
-          iptct = this%inewton
-        else
-          iptct = this%npf%inewton
-        end if
+      if (this%inewton > 0) then
+        iptct = this%inewton
+      else
+        iptct = this%npf%inewton
       end if
     end if
     !
     ! -- calculate pseudo-transient continuation factor for model
     if (iptct > 0) then
       diagmin = DEP20
+      diagmax = DZERO
       diagcnt = DZERO
       do n = 1, this%dis%nodes
         if (this%npf%ibound(n) < 1) cycle
@@ -801,10 +798,12 @@ module GwfModule
         diagcnt = diagcnt + DONE
         if (diag > DZERO) then
           if (diag < diagmin) diagmin = diag
+          if (diag > diagmax) diagmax = diag
         end if
       end do
       if (diagcnt > DZERO) then
         if (ptcf < diagmin) ptcf = diagmin
+        if (ptcf > diagmax) ptcf = diagmin
       end if
     end if
 
