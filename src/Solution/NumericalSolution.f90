@@ -1924,7 +1924,9 @@ contains
           this%ptcdel = this%ptcdel0
         else
           if (this%iptcopt == 0) then
-            this%ptcdel = done / ptcf
+            !
+            ! -- ptcf is the reciprocal of the pseudo-time step
+            this%ptcdel = DONE / ptcf
           else
             bnorm = DZERO
             do n = 1, this%neq
@@ -1944,9 +1946,9 @@ contains
         end if
       end if
       if (this%ptcdel > DZERO) then
-        ptcval = done / this%ptcdel
+        ptcval = DONE / this%ptcdel
       else
-        ptcval = done
+        ptcval = DONE
       end if
       diagmin = DEP20
       bnorm = DZERO
