@@ -1,3 +1,13 @@
+"""
+MODFLOW 6 Autotest
+Test the specific discharge calculation for an LGR-like simulation that has
+a parent model and a child model.  The child model is inset into the parent
+model, but they both have the same resolution, so it is essentially a simple
+3D grid.  The child qx velocity should be the same as the qx velocity in
+the parent grid.  The heads are also compared.
+
+"""
+
 import os
 import sys
 import numpy as np
