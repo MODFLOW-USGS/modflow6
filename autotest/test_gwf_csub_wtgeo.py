@@ -426,7 +426,6 @@ def get_model(idx, dir):
                                     head_based=head_based,
                                     update_material_properties=ump[idx],
                                     time_weight=tw[idx],
-                                    geo_stress_offset=True,
                                     delay_saturation_scaling=dss,
                                     save_flows=True,
                                     ninterbeds=maxcsub,
@@ -436,8 +435,7 @@ def get_model(idx, dir):
                                     sk_theta=theta,
                                     ske_cr=ske_cr,
                                     beta=beta,
-                                    packagedata=sub6,
-                                    sig0={0: [0., 0., 0.]})
+                                    packagedata=sub6)
     obspos = [(0, 4, 4), (1, 4, 4), (2, 4, 4)]
     obstype = ['compaction-cell', 'gstress-cell', 'estress-cell',
                'ske-cell', 'sk-cell', 'csub-cell']

@@ -1,4 +1,19 @@
 # --------------------- gwf csub options ---------------------
+block options
+name print_input
+type keyword
+reader urword
+optional true
+longname print input to listing file
+description REPLACE print_input {'{#1}': 'well'}
+
+block options
+name save_flows
+type keyword
+reader urword
+optional true
+longname keyword to save CSUB flows
+description keyword to indicate that cell-by-cell flow terms will be written to the file specified with ``BUDGET SAVE FILE'' in Output Control.
 
 block options
 name strainib_filerecord
@@ -75,14 +90,6 @@ optional false
 longname file keyword
 description name of the comma-separated-values output file to write final skeletal strain information.
 
-##
-block options
-name save_flows
-type keyword
-reader urword
-optional true
-longname keyword to save CSUB flows
-description keyword to indicate that cell-by-cell flow terms will be written to the file specified with ``BUDGET SAVE FILE'' in Output Control.
 
 block options
 name gammaw
@@ -166,14 +173,6 @@ reader urword
 optional true
 longname keyword to indicate that absolute initial delay bed heads will be specified
 description keyword to indicate that absolute initial delay bed head will be specified for interbeds defined in the PACKAGEDATA block. If SPECIFIED\_INITIAL\_DELAY\_HEAD and SPECIFIED\_INITIAL\_INTERBED\_STATE are not specified then delay bead head values specified in the PACKAGEDATA block are relative to simulated values if the first stress period is steady-state or initial GWF heads if the first stress period is transient.
-
-block options
-name geo_stress_offset
-type keyword
-reader urword
-optional true
-longname keyword to indicate that a geostatic stress offset will be specified for each cell
-description keyword to indicate that a geostatic stress offset will be specified in the PERIOD block.
 
 block options
 name compression_indices
@@ -485,6 +484,14 @@ optional false
 longname number of CSUB interbed systems
 description is the number of CSUB interbed systems.  More than 1 CSUB interbed systems can be assigned to a GWF cell; however, only 1 GWF cell can be assigned to a single CSUB interbed system.
 
+block dimensions
+name maxsig0
+type integer
+reader urword
+optional true
+longname maximum number of stress offset cells
+description is the maximum number of cells that can have a specified stress offset.  More than 1 stress offset can be assigned to a GWF cell. By default, MAXSIG0 is 0. 
+
 
 # --------------------- gwf csub griddata ---------------------
 
@@ -676,11 +683,30 @@ longname stress period number
 description REPLACE iper {}
 
 block period
+name stress_period_data
+type recarray cellid sig0
+shape (maxsig0)
+reader urword
+longname
+description
+
+block period
+name cellid
+type integer
+shape (ncelldim)
+tagged false
+in_record true
+reader urword
+longname cell identifier
+description REPLACE cellid {}
+
+block period
 name sig0
 type double precision
-shape (nodes)
-valid
-reader readarray
-optional true
-longname stress offset
-description is the stress offset for the cell. SIG0 is added to the calculated geostatic stress for the cell. SIG0 is specified only if GEO\_STRESS\_OFFSET is specified in the OPTIONS block.
+shape
+tagged false
+in_record true
+reader urword
+time_series true
+longname well stress offset
+description is the stress offset for the cell. SIG0 is added to the calculated geostatic stress for the cell. SIG0 is specified only if MAXSIG0 is specified to be greater than 0 in the DIMENSIONS block.

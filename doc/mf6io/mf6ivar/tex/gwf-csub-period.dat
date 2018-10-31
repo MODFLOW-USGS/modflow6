@@ -1,4 +1,5 @@
 BEGIN PERIOD <iper>
-  [SIG0
-    <sig0(nodes)> -- READARRAY]
+  <cellid(ncelldim)> <@sig0@>
+  <cellid(ncelldim)> <@sig0@>
+  ...
 END PERIOD
