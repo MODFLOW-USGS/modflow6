@@ -686,7 +686,7 @@ module GwfModule
   
   subroutine gwf_ptcchk(this, iptc)
 ! ******************************************************************************
-! gwf_ptc -- check if pseudo-transient continuation factor should be used
+! gwf_ptcchk -- check if pseudo-transient continuation factor should be used
 ! Subroutine: (1) Check if pseudo-transient continuation factor should be used
 ! ******************************************************************************
 !
@@ -743,7 +743,8 @@ module GwfModule
     integer(I4B) :: jcol
     integer(I4B) :: j, jj
     real(DP) :: v
-    real(DP) :: q
+    real(DP) :: resid
+    real(DP) :: ptcdelem1
     real(DP) :: diag
     real(DP) :: diagcnt
     real(DP) :: diagmin
@@ -770,19 +771,28 @@ module GwfModule
       do n = 1, this%dis%nodes
         if (this%npf%ibound(n) < 1) cycle
         jcol = n + this%moffset
-        v = this%dis%get_cell_volume(n, x(jcol))
-        if (v > DZERO) then
-          q = DZERO
-          do j = ia(jcol), ia(jcol+1)-1
-            jj = ja(j)
-            q = q + amatsln(j) * x(jcol)
-          end do
-          q = q - rhs(jcol)
-        else
-          cycle
-        end if
-        q = q / v
-        if (abs(q) > ptcf) ptcf = abs(q)
+        !
+        ! get the maximum volume of the cell (head at top of cell)        
+        v = this%dis%get_cell_volume(n, this%dis%top(n))
+        !
+        ! -- calculate the residual for the cell
+        resid = DZERO
+        do j = ia(jcol), ia(jcol+1)-1
+          jj = ja(j)
+          resid = resid + amatsln(j) * x(jcol)
+        end do
+        resid = resid - rhs(jcol)
+        !
+        ! -- calculate the reciprocal of the pseudo-time step
+        !    resid [L3/T] / volume [L3] = [1/T]
+        ptcdelem1 = abs(resid) / v
+        !
+        ! -- set ptcf if the reciprocal of the pseudo-time step
+        !    exceeds the current value (equivalent to using the 
+        !    smallest pseudo-time step) 
+        if (ptcdelem1 > ptcf) ptcf = ptcdelem1
+        !
+        ! -- determine minimum and maximum diagonal entries
         j = ia(jcol)
         diag = abs(amatsln(j))
         diagcnt = diagcnt + DONE
@@ -791,9 +801,16 @@ module GwfModule
           if (diag > diagmax) diagmax = diag
         end if
       end do
+      !
+      ! -- set the reciprocal of the pseudo-time step
+      !    to a fraction of the minimum or maximum
+      !    diagonal entry to prevent excessively small
+      !    or large values
       if (diagcnt > DZERO) then
+        diagmin = diagmin * DEM1
+        diagmax = diagmax * DEM1
         if (ptcf < diagmin) ptcf = diagmin
-        if (ptcf > diagmax) ptcf = diagmin
+        if (ptcf > diagmax) ptcf = diagmax
       end if
     end if
 
