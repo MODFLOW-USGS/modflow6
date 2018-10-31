@@ -5,7 +5,7 @@ module DnmDis3dModule
   use ConstantsPHMFModule,       only: PI
   use DnmDisBaseModule,          only: DisBaseType
   use GlobalVariablesPHMFModule, only: verbose
-  use InputOutputModule,         only: get_ijk, get_node, URWORD, dclosetest
+  use InputOutputModule,         only: get_ijk, get_node, URWORD
   use SimModule,                 only: count_errors, store_error, &
                                        store_error_unit, ustop
   implicit none

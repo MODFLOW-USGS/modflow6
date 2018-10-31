@@ -217,7 +217,7 @@ type double precision
 reader urword
 optional true
 longname SFR Newton-Raphson iterations
-description value that defines an maximum number of Streamflow Routing Newton-Raphson iterations allowed for a reach. By default, MAXSFRIT is equal to 100.
+description value that defines the maximum number of Streamflow Routing Newton-Raphson iterations allowed for a reach. By default, MAXSFRIT is equal to 100.
 
 block options
 name maximum_depth_change

@@ -164,7 +164,7 @@ install:
     - conda info -a
     - conda install nose
     - python --version
-    - pip install -r requirements.travis.txt
+    - pip install numpy
     - pip install https://github.com/modflowpy/flopy/zipball/develop
     - pip install https://github.com/modflowpy/pymake/zipball/master
     - pip install nose-timer
@@ -178,6 +178,7 @@ script:
     - ls ../
     - which python
     - python --version
+    - python -c "import numpy as np; print('numpy version {}'.format(np.__version__))"
     - python -c "import flopy; flopypth = flopy.__path__[0]; print('flopy is installed in {}'.format(flopypth))"
     - python -c "import flopy; dir(flopy.mf6)"
     - cd ./autotest
