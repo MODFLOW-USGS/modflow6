@@ -199,7 +199,6 @@ def get_model(idx, dir):
                                     strainib_filerecord=ibcsv,
                                     strainsk_filerecord=skcsv,
                                     time_weight=0.,
-                                    delay_saturation_scaling=True,
                                     # compression_indices=True,
                                     obs_filerecord=opth,
                                     ninterbeds=1,
