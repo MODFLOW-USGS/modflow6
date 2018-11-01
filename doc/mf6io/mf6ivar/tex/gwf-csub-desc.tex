@@ -3,6 +3,10 @@
 \item \textbf{Block: OPTIONS}
 
 \begin{description}
+\item \texttt{PRINT\_INPUT}---keyword to indicate that the list of well information will be written to the listing file immediately after it is read.
+
+\item \texttt{SAVE\_FLOWS}---keyword to indicate that cell-by-cell flow terms will be written to the file specified with ``BUDGET SAVE FILE'' in Output Control.
+
 \item \texttt{STRAIN\_CSV\_INTERBED}---keyword to specify the record that corresponds to final interbed strain output.
 
 \item \texttt{FILEOUT}---keyword to specify that an output filename is expected next.
@@ -12,8 +16,6 @@
 \item \texttt{STRAIN\_CSV\_SKELETAL}---keyword to specify the record that corresponds to final skeletal strain output.
 
 \item \texttt{skeletalstrain\_filename}---name of the comma-separated-values output file to write final skeletal strain information.
-
-\item \texttt{SAVE\_FLOWS}---keyword to indicate that cell-by-cell flow terms will be written to the file specified with ``BUDGET SAVE FILE'' in Output Control.
 
 \item \texttt{gammaw}---specific gravity of water. For freshwater, GAMMAW is 9806.65 Newtons/cubic meters or 62.48 lb/cubic foot in SI and English units, respectively. By default, GAMMAW is 9806.65.
 
@@ -34,8 +36,6 @@
 \item \texttt{SPECIFIED\_INITIAL\_PRECONSOLIDATION\_STRESS}---keyword to indicate that absolute preconsolidation stresses (heads) will be specified for interbeds defined in the PACKAGEDATA block. If SPECIFIED\_INITIAL\_PRECONSOLITATION\_STRESS and SPECIFIED\_INITIAL\_INTERBED\_STATE are not specified then preconsolidation stress (head) values specified in the PACKAGEDATA block are relative to simulated values if the first stress period is steady-state or initial stresses (heads) if the first stress period is transient.
 
 \item \texttt{SPECIFIED\_INITIAL\_DELAY\_HEAD}---keyword to indicate that absolute initial delay bed head will be specified for interbeds defined in the PACKAGEDATA block. If SPECIFIED\_INITIAL\_DELAY\_HEAD and SPECIFIED\_INITIAL\_INTERBED\_STATE are not specified then delay bead head values specified in the PACKAGEDATA block are relative to simulated values if the first stress period is steady-state or initial GWF heads if the first stress period is transient.
-
-\item \texttt{GEO\_STRESS\_OFFSET}---keyword to indicate that a geostatic stress offset will be specified in the PERIOD block.
 
 \item \texttt{COMPRESSION\_INDICES}---keyword to indicate that the the recompression (CR) and compresion (CC) indices are specified instead of the elastic skeletal specific storage (SSE) and inelastic skeletal specific storage (SSV) coefficients.
 
@@ -83,6 +83,8 @@
 \begin{description}
 \item \texttt{ninterbeds}---is the number of CSUB interbed systems.  More than 1 CSUB interbed systems can be assigned to a GWF cell; however, only 1 GWF cell can be assigned to a single CSUB interbed system.
 
+\item \texttt{maxsig0}---is the maximum number of cells that can have a specified stress offset.  More than 1 stress offset can be assigned to a GWF cell. By default, MAXSIG0 is 0.
+
 \end{description}
 \item \textbf{Block: GRIDDATA}
 
@@ -129,7 +131,9 @@
 \begin{description}
 \item \texttt{iper}---integer value specifying the starting stress period number for which the data specified in the PERIOD block apply.  IPER must be less than or equal to NPER in the TDIS Package and greater than zero.  The IPER value assigned to a stress period block must be greater than the IPER value assigned for the previous PERIOD block.  The information specified in the PERIOD block will continue to apply for all subsequent stress periods, unless the program encounters another PERIOD block.
 
-\item \texttt{sig0}---is the stress offset for the cell. SIG0 is added to the calculated geostatic stress for the cell. SIG0 is specified only if GEO\_STRESS\_OFFSET is specified in the OPTIONS block.
+\item \texttt{cellid}---is the cell identifier, and depends on the type of grid that is used for the simulation.  For a structured grid that uses the DIS input file, CELLID is the layer, row, and column.   For a grid that uses the DISV input file, CELLID is the layer and CELL2D number.  If the model uses the unstructured discretization (DISU) input file, CELLID is the node number for the cell.
+
+\item \textcolor{blue}{\texttt{sig0}---is the stress offset for the cell. SIG0 is added to the calculated geostatic stress for the cell. SIG0 is specified only if MAXSIG0 is specified to be greater than 0 in the DIMENSIONS block.}
 
 \end{description}
 

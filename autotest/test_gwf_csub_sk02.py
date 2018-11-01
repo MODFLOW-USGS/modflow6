@@ -239,7 +239,6 @@ def get_model(idx, dir):
     csub = flopy.mf6.ModflowGwfcsub(gwf,
                                     update_material_properties=ump[idx],
                                     time_weight=tw[idx],
-                                    geo_stress_offset=True,
                                     save_flows=True,
                                     ninterbeds=0,
                                     compression_indices=compression_indices,
@@ -249,8 +248,7 @@ def get_model(idx, dir):
                                     sk_theta=theta,
                                     ske_cr=sc,
                                     beta=beta,
-                                    packagedata=None,
-                                    sig0={0: [0., 0., 0.]})
+                                    packagedata=None)
     orecarray = {}
     orecarray['csub_obs.csv'] = [('tcomp1', 'compaction-cell', (0, 4, 4)),
                                  ('tcomp2', 'compaction-cell', (1, 4, 4)),

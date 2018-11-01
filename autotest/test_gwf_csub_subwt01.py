@@ -192,12 +192,15 @@ def get_model(idx, dir):
                                                    save_flows=False)
 
     # csub files
-    sig0 = {0: [gs0[idx] for k in range(nlay)]}
+    gg = []
+    for i in range(nrow):
+        for j in range(ncol):
+            gg.append([(0, i, j), gs0[idx]])
+    sig0 = {0: gg}
     opth = '{}.csub.obs'.format(name)
     csub = flopy.mf6.ModflowGwfcsub(gwf,
                                     #interbed_stress_offset=True,
                                     compression_indices=True,
-                                    geo_stress_offset=True,
                                     update_material_properties=ump[idx],
                                     time_weight=0.,
                                     ninterbeds=len(swt6),
@@ -208,7 +211,8 @@ def get_model(idx, dir):
                                     ske_cr=0.,
                                     sk_theta=theta,
                                     packagedata=swt6,
-                                    sig0=sig0)
+                                    maxsig0=len(gg),
+                                    stress_period_data=sig0)
     orecarray = {}
     orecarray['csub_obs.csv'] = [('w1l1', 'interbed-compaction', (0, 0, 1)),
                                  ('w1l1t', 'csub-cell', (0, 0, 1))]

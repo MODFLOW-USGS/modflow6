@@ -20,6 +20,10 @@ module GwfCsubModule
   use ArrayHandlersModule, only: ExpandArray
   use SortModule, only: qsort, selectn
   !
+  use TimeSeriesLinkModule,         only: TimeSeriesLinkType
+  use TimeSeriesManagerModule,      only: TimeSeriesManagerType, tsmanager_cr
+  use ListModule,                   only: ListType
+  !
   implicit none
   !
   private
@@ -40,7 +44,10 @@ module GwfCsubModule
   !
   ! CSUB type
   type, extends(NumericalPackageType) :: GwfCsubType
-    character(len=LENBOUNDNAME), pointer, dimension(:) :: boundname => null()    !vector of boundnames
+    character(len=LENBOUNDNAME), dimension(:),                                  &
+                                 pointer, contiguous :: boundname => null()      !vector of boundnames
+    character(len=LENBOUNDNAME), dimension(:) ,                                 &
+                                 pointer, contiguous :: sig0bname => null()      !vector of sig0bnames
     character(len=LENAUXNAME), allocatable, dimension(:) :: auxname              !name for each auxiliary variable
     character(len=500) :: listlabel   = ''                                       !title of table written for RP
     character(len=LENORIGIN) :: stoname
@@ -60,10 +67,14 @@ module GwfCsubModule
     integer(I4B), pointer :: ibedstressoff => null()
     integer(I4B), pointer :: ispecified_pcs => null()
     integer(I4B), pointer :: ispecified_dbh => null()
-    integer(I4B), pointer :: igeostressoff => null()
     integer(I4B), pointer :: inamedbound => null()                               !flag to read boundnames
     integer(I4B), pointer :: naux => null()                                      !number of auxiliary variables
     integer(I4B), pointer :: ninterbeds => null()
+    integer(I4B), pointer :: maxsig0 => null()
+    integer(I4B), pointer :: nbound => null()                                    !number of boundaries for current stress period
+    integer(I4B), pointer :: ncolbnd => null()                                   !number of columns of the bound array
+    integer(I4B), pointer :: iscloc => null()                               !bound column to scale with SFAC
+    integer(I4B), pointer :: iauxmultcol => null()                               !column to use as multiplier for column iscloc
     integer(I4B), pointer :: ndelaycells => null()
     integer(I4B), pointer :: ndelaybeds => null()
     integer(I4B), pointer :: initialized => null()
@@ -91,7 +102,6 @@ module GwfCsubModule
     ! -- skeletal storage variables
     real(DP), dimension(:), pointer, contiguous :: sgm => null()                 !specific gravity moist sediments
     real(DP), dimension(:), pointer, contiguous :: sgs => null()                 !specific gravity saturated sediments
-    real(DP), dimension(:), pointer, contiguous :: sig0  => null()               !geostatic offset
     real(DP), dimension(:), pointer, contiguous :: ske_cr => null()              !skeletal specified storage
     real(DP), dimension(:), pointer, contiguous :: sk_theta => null()            !current skeletal (aquifer) porosity
     real(DP), dimension(:), pointer, contiguous :: sk_thick => null()            !current skeletal (aquifer) thickness
@@ -126,12 +136,12 @@ module GwfCsubModule
     real(DP), dimension(:), pointer, contiguous :: tcomp => null()               !total interbed compaction
     real(DP), dimension(:), pointer, contiguous :: tcompi => null()              !total inelastic interbed compaction
     real(DP), dimension(:), pointer, contiguous :: tcompe => null()              !total elastic interbed compaction
-    real(DP), dimension(:,:), pointer, contiguous :: auxvar => null()            !auxiliary variable array
     real(DP), dimension(:), pointer, contiguous :: storagee => null()            !elastic storage
     real(DP), dimension(:), pointer, contiguous :: storagei => null()            !inelastic storage
     real(DP), dimension(:), pointer, contiguous :: ske => null()                 !elastic storage coefficient
     real(DP), dimension(:), pointer, contiguous :: sk => null()                  !first storage coefficient
     real(DP), dimension(:), pointer, contiguous :: thickini => null()            !initial interbed thickness
+    real(DP), dimension(:,:), pointer, contiguous :: auxvar => null()            !auxiliary variable array
     !
     ! -- delay interbed arrays
     real(DP), dimension(:), pointer, contiguous   :: dbdz => null()              !delay bed dz
@@ -153,6 +163,14 @@ module GwfCsubModule
     real(DP), dimension(:), pointer, contiguous :: dbrhs => null()               !delay bed right hand side
     real(DP), dimension(:), pointer, contiguous :: dbdh => null()                !delay bed dh
     real(DP), dimension(:), pointer, contiguous :: dbaw => null()                !delay bed work vector
+    !
+    ! -- period data
+    integer(I4B), dimension(:), pointer, contiguous :: nodelistsig0 => null()    !vector of reduced node numbers
+    real(DP), dimension(:,:), pointer, contiguous :: bound => null()             !array of package specific boundary numbers
+    real(DP), dimension(:,:), pointer, contiguous :: auxvarsig0 => null()        !auxiliary variable array
+    !
+    ! -- timeseries
+    type(TimeSeriesManagerType), pointer :: TsManager => null()                  ! time series manager
     !
     ! -- observation data
     integer(I4B), pointer :: inobspkg => null()                                  !unit number for obs package
@@ -225,7 +243,7 @@ module GwfCsubModule
     procedure, private :: csub_bd_obs
     !
     ! -- method for time series
-    !procedure, public :: bnd_rp_ts => csub_rp_ts
+    procedure, private :: csub_rp_ts
   end type GwfCsubType
 
 contains
@@ -291,6 +309,11 @@ contains
     call mem_allocate(this%istounit, 'ISTOUNIT', this%origin)
     call mem_allocate(this%inobspkg, 'INOBSPKG', this%origin)
     call mem_allocate(this%ninterbeds, 'NINTERBEDS', this%origin)
+    call mem_allocate(this%maxsig0, 'MAXSIG0', this%origin)
+    call mem_allocate(this%nbound, 'NBOUND', this%origin)
+    call mem_allocate(this%ncolbnd, 'NCOLBND', this%origin)
+    call mem_allocate(this%iscloc, 'ISCLOC', this%origin)
+    call mem_allocate(this%iauxmultcol, 'IAUXMULTCOL', this%origin)
     call mem_allocate(this%ndelaycells, 'NDELAYCELLS', this%origin)
     call mem_allocate(this%ndelaybeds, 'NDELAYBEDS', this%origin)
     call mem_allocate(this%initialized, 'INITIALIZED', this%origin)
@@ -299,7 +322,6 @@ contains
     call mem_allocate(this%ibedstressoff, 'IBEDSTRESSOFF', this%origin)
     call mem_allocate(this%ispecified_pcs, 'ISPECIFIED_PCS', this%origin)
     call mem_allocate(this%ispecified_dbh, 'ISPECIFIED_DBH', this%origin)
-    call mem_allocate(this%igeostressoff, 'IGEOSTRESSOFF', this%origin)
     call mem_allocate(this%inamedbound, 'INAMEDBOUND', this%origin)
     call mem_allocate(this%naux, 'NAUX', this%origin)
     call mem_allocate(this%istoragec, 'ISTORAGEC', this%origin)
@@ -322,8 +344,10 @@ contains
     call mem_allocate(this%dbfacti, 'DBFACTI', this%origin)
     call mem_allocate(this%satomega, 'SATOMEGA', this%origin)
     call mem_allocate(this%icellf, 'ICELLF', this%origin)
-    call mem_allocate(this%ninterbeds, 'NIBCCELLS', this%origin)
     call mem_allocate(this%gwfiss0, 'GWFISS0', this%origin)
+    !
+    ! -- allocate TS object
+    allocate(this%TsManager)
     !
     ! -- Allocate text strings
     allocate(this%auxname(0))
@@ -332,6 +356,11 @@ contains
     this%istounit = 0
     this%inobspkg = 0
     this%ninterbeds = 0
+    this%maxsig0 = 0
+    this%nbound = 0
+    this%ncolbnd = 1
+    this%iscloc = 0
+    this%iauxmultcol = 0
     this%ndelaycells = 19
     this%ndelaybeds = 0
     this%initialized = 0
@@ -340,7 +369,6 @@ contains
     this%ibedstressoff = 0
     this%ispecified_pcs = 0
     this%ispecified_dbh = 0
-    this%igeostressoff = 0
     this%inamedbound = 0
     this%naux = 0
     this%istoragec = 1
@@ -1567,8 +1595,8 @@ contains
     !  call store_error('ERROR.  REQUIRED PACKAGEDATA BLOCK NOT FOUND.')
     endif
     !
-    ! -- Check to make sure that every reach is specified and that no reach
-    !    is specified more than once.
+    ! -- Check to make sure that every interbed is specified and that no 
+    !    interbed is specified more than once.
     do ib = 1, this%ninterbeds
       if (nboundchk(ib) == 0) then
         write(errmsg, '(a, i0, a)') 'ERROR: INFORMATION FOR INTERBED ', ib,     &
@@ -1715,6 +1743,8 @@ contains
     integer(I4B) :: ibrg
     real(DP) :: time_weight
     ! -- formats
+    character(len=*), parameter :: fmtts = &
+      "(4x, 'TIME-SERIES DATA WILL BE READ FROM FILE: ', a)"
     character(len=*),parameter :: fmtflow = &
       "(4x, 'FLOWS WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I7)"
     character(len=*),parameter :: fmtflow2 = &
@@ -1768,6 +1798,18 @@ contains
             this%inamedbound = 1
             write(this%iout,'(4x,a)') trim(adjustl(this%name))// &
               ' BOUNDARIES HAVE NAMES IN LAST COLUMN.'          ! user specified number of delay cells used in each system of delay intebeds
+          case ('TS6')
+            call this%parser%GetStringCaps(keyword)
+            if(trim(adjustl(keyword)) /= 'FILEIN') then
+              errmsg = 'TS6 keyword must be followed by "FILEIN" ' //          &
+                       'then by filename.'
+              call store_error(errmsg)
+              call this%parser%StoreErrorUnit()
+              call ustop()
+            endif
+            call this%parser%GetString(fname)
+            write(this%iout,fmtts)trim(fname)
+            call this%TsManager%add_tsfile(fname, this%inunit)
           case ('OBS6')
             call this%parser%GetStringCaps(keyword)
             if(trim(adjustl(keyword)) /= 'FILEIN') then
@@ -1835,12 +1877,6 @@ contains
             this%ibedstressoff = 1
             write(this%iout, fmtopt) &
               'OFFSET WILL BE APPLIED TO INITIAL INTERBED EFFECTIVE STRESS'
-          !
-          ! -- an offset will be applied to geostatic stress
-          case ('GEO_STRESS_OFFSET')
-            this%igeostressoff = 1
-            write(this%iout, fmtopt) &
-              'A USER-DEFINED OFFSET WILL BE APPLIED TO GEOSTATIC STRESS'
           !
           ! -- compression indicies (CR amd CC) will be specified instead of 
           !    storage coefficients (SSE and SSV) 
@@ -2046,6 +2082,7 @@ contains
     integer(I4B) :: j
     integer(I4B) :: n
     integer(I4B) :: iblen
+    integer(I4B) :: ilen
     integer(I4B) :: naux
 
     ! -- grid based data
@@ -2090,11 +2127,7 @@ contains
     call mem_allocate(this%sk_ske, this%dis%nodes, 'sk_ske', trim(this%origin))
     call mem_allocate(this%sk_sk, this%dis%nodes, 'sk_sk', trim(this%origin))
     call mem_allocate(this%sk_thickini, this%dis%nodes, 'sk_thickini', trim(this%origin))
-    if (this%igeostressoff == 1) then
-      call mem_allocate(this%sig0, this%dis%nodes, 'sig0', trim(this%origin))
-    else
-      call mem_allocate(this%sig0, 1, 'sig0', trim(this%origin))
-    end if
+    !
     ! -- interbed data
     iblen = 1
     if (this%ninterbeds > 0) then
@@ -2163,6 +2196,22 @@ contains
     ! -- allocate boundname
     allocate(this%boundname(this%ninterbeds))
     !
+    ! -- allocate the nodelist and bound arrays
+    if (this%maxsig0 > 0) then
+      ilen = this%maxsig0
+    else
+      ilen = 1
+    end if
+    call mem_allocate(this%nodelistsig0, ilen, 'NODELISTSIG0', this%origin)
+    this%nodelistsig0 = 0
+    call mem_allocate(this%bound, this%ncolbnd, ilen, 'BOUND',                  &
+                      this%origin)
+    call mem_allocate(this%auxvarsig0, this%naux, ilen, 'AUXVARSIG0',           &
+                      this%origin)
+    !
+    ! -- Allocate sig0boundname
+    allocate(this%sig0bname(ilen))
+    !
     ! -- set pointers to gwf variables
     call mem_setptr(this%gwfiss, 'ISS', trim(this%name_model))
     !
@@ -2178,9 +2227,6 @@ contains
       this%sk_comp(n) = DZERO
       this%sk_tcomp(n) = DZERO
       this%sk_wcstor(n) = DZERO
-      if (this%igeostressoff == 1) then
-        this%sig0(n) = DZERO
-      end if
     end do
     do n = 1, this%ninterbeds
       this%theta(n) = DZERO
@@ -2229,7 +2275,6 @@ contains
       end if
       call mem_deallocate(this%sk_theta)
       call mem_deallocate(this%sk_thick)
-      call mem_deallocate(this%sig0)
       call mem_deallocate(this%sk_gs)
       call mem_deallocate(this%sk_es)
       call mem_deallocate(this%sk_es0)
@@ -2243,6 +2288,7 @@ contains
       !
       ! -- interbed storage
       deallocate(this%boundname)
+      deallocate(this%sig0bname)
       deallocate(this%auxname)
       call mem_deallocate(this%auxvar)
       call mem_deallocate(this%ci)
@@ -2291,6 +2337,11 @@ contains
       call mem_deallocate(this%dbdh)
       call mem_deallocate(this%dbaw)
       !
+      ! -- period data
+      call mem_deallocate(this%nodelistsig0)
+      call mem_deallocate(this%bound)
+      call mem_deallocate(this%auxvarsig0)
+      !
       ! -- pointers to gwf variables
       nullify(this%gwfiss)
       !
@@ -2303,13 +2354,17 @@ contains
     call mem_deallocate(this%istounit)
     call mem_deallocate(this%inobspkg)
     call mem_deallocate(this%ninterbeds)
+    call mem_deallocate(this%maxsig0)
+    call mem_deallocate(this%nbound)
+    call mem_deallocate(this%ncolbnd)
+    call mem_deallocate(this%iscloc)
+    call mem_deallocate(this%iauxmultcol)
     call mem_deallocate(this%ndelaycells)
     call mem_deallocate(this%ndelaybeds)
     call mem_deallocate(this%initialized)
     call mem_deallocate(this%ibedstressoff)
     call mem_deallocate(this%ispecified_pcs)
     call mem_deallocate(this%ispecified_dbh)
-    call mem_deallocate(this%igeostressoff)
     call mem_deallocate(this%inamedbound)
     call mem_deallocate(this%naux)
     call mem_deallocate(this%istoragec)
@@ -2333,6 +2388,19 @@ contains
     call mem_deallocate(this%satomega)
     call mem_deallocate(this%icellf)
     call mem_deallocate(this%gwfiss0)
+    !
+    ! -- deallocate methods on objects
+    if(this%inunit > 0) then
+      call this%obs%obs_da()
+      call this%TsManager%da()
+      !
+      ! -- deallocate objects
+      deallocate(this%obs)
+      deallocate(this%TsManager)
+    end if
+    !
+    ! -- nullify TsManager
+    nullify(this%TsManager)
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
@@ -2377,9 +2445,12 @@ contains
         if (endOfBlock) exit
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
-          case ('NIBCCELLS')
+          case ('NINTERBEDS')
             this%ninterbeds = this%parser%GetInteger()
-            write(this%iout,'(4x,a,i7)')'NIBCCELLS = ', this%ninterbeds
+            write(this%iout,'(4x,a,i7)')'NINTERBEDS = ', this%ninterbeds
+          case ('MAXSIG0')
+            this%maxsig0 = this%parser%GetInteger()
+            write(this%iout,'(4x,a,i7)')'MAXSIG0 = ', this%maxsig0
           case default
             write(errmsg,'(4x,a,a)') &
               '****ERROR. UNKNOWN '//trim(this%name)//' DIMENSION: ', &
@@ -2398,7 +2469,7 @@ contains
     ! -- verify dimensions were set correctly
     if (this%ninterbeds < 0) then
       write(errmsg, '(1x,a)') &
-        'ERROR:  nibccells WAS NOT SPECIFIED OR WAS SPECIFIED INCORRECTLY.'
+        'ERROR:  ninterbeds WAS NOT SPECIFIED OR WAS SPECIFIED INCORRECTLY.'
       call store_error(errmsg)
     end if
     !
@@ -2470,38 +2541,48 @@ contains
     this%dis     => dis
     this%ibound  => ibound
     !
+    ! -- Create time series managers
+    call tsmanager_cr(this%TsManager, this%iout)
+    !
     ! -- create obs package
     call obs_cr(this%obs, this%inobspkg)
     !
     ! -- Read csub options
     call this%read_options()
     !
+    ! -- Now that time series will have been read, need to call the df
+    !    routine to define the manager
+    call this%tsmanager%tsmanager_df()
+    !
+    ! -- Read the csub dimensions
+    call this%read_dimensions()
+    !
     ! - observation data
     call this%obs%obs_ar()
-    !
-    ! -- read dimensions
-    call this%parser%GetBlock('DIMENSIONS', isfound, ierr)
-    if (isfound) then
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        call this%parser%GetStringCaps(keyword)
-        call this%parser%GetRemainingLine(line)
-        lloc = 1
-        select case (keyword)
-          case ('NINTERBEDS')
-              this%ninterbeds =  this%parser%GetInteger()
-              write(this%iout, '(4x,a,1x,i0)') 'NUMBER OF INTERBED SYSTEMS =',  &
-                                                this%ninterbeds
-          case default
-              write(errmsg,'(4x,a,a)')'ERROR. UNKNOWN DIMENSIONS TAG: ',        &
-                                       trim(keyword)
-              call store_error(errmsg)
-        end select
-      end do
-    else
-      call store_error('ERROR.  REQUIRED DIMENSIONS BLOCK NOT FOUND.')
-    end if
+    !!
+    !! -- read dimensions
+    !call this%parser%GetBlock('DIMENSIONS', isfound, ierr)
+    !if (isfound) then
+    !  do
+    !    call this%parser%GetNextLine(endOfBlock)
+    !    if (endOfBlock) exit
+    !    call this%parser%GetStringCaps(keyword)
+    !    call this%parser%GetRemainingLine(line)
+    !    lloc = 1
+    !    select case (keyword)
+    !      case ('NINTERBEDS')
+    !          this%ninterbeds =  this%parser%GetInteger()
+    !          write(this%iout, '(4x,a,1x,i0)') 'NUMBER OF INTERBED SYSTEMS =',  &
+    !                                            this%ninterbeds
+    !      case default
+    !          write(errmsg,'(4x,a,a)')'ERROR. UNKNOWN DIMENSIONS TAG: ',        &
+    !                                   trim(keyword)
+    !          call store_error(errmsg)
+    !    end select
+    !  end do
+    !else
+    !  call store_error('ERROR.  REQUIRED DIMENSIONS BLOCK NOT FOUND.')
+    !end if
     !
     ! -- terminate if errors dimensions block data
     if (count_errors() > 0) then
@@ -2737,6 +2818,7 @@ contains
     ! -- local
     integer(I4B) :: node
     integer(I4B) :: ii
+    integer(I4B) :: nn
     integer(I4B) :: m
     integer(I4B) :: iis
     real(DP) :: gs
@@ -2774,13 +2856,21 @@ contains
             gs = ((top - hcell) * this%sgm(node)) +                             &
                  ((hcell - bot) * this%sgs(node))
         end if
-        !
-        ! -- add user-specified overlying geostatic stress
-        sadd = DZERO
-        if (this%igeostressoff /= 0) then
-          sadd = this%sig0(node)
-        end if
-        this%sk_gs(node) = gs + sadd
+        !!
+        !! -- add user-specified overlying geostatic stress
+        !sadd = DZERO
+        !if (this%igeostressoff /= 0) then
+        !  sadd = this%sig0(node)
+        !end if
+        !this%sk_gs(node) = gs + sadd
+        this%sk_gs(node) = gs
+      end do
+      !
+      ! -- add user specified overlying geostatic stress
+      do nn = 1, this%nbound
+        node = this%nodelistsig0(nn)
+        sadd = this%bound(1, nn)
+        this%sk_gs(node) = this%sk_gs(node) + sadd
       end do
       !
       ! -- calculate geostatic stress above cell
@@ -3059,7 +3149,11 @@ contains
     class(GwfCsubType),intent(inout) :: this
     ! -- local
     character(len=LINELENGTH) :: line, errmsg, keyword
-    integer(I4B) :: istart, istop, lloc, ierr
+    integer(I4B) :: istart
+    integer(I4B) :: istop
+    integer(I4B) :: lloc
+    integer(I4B) :: ierr
+    integer(I4B) :: nlist
     logical :: isfound, endOfBlock
     ! -- formats
     character(len=*),parameter :: fmtblkerr =                                  &
@@ -3070,16 +3164,13 @@ contains
     !
     if(this%inunit == 0) return
     !
-    ! -- Set ionper to the stress period number for which a new block of data
-    !    will be read.
+    ! -- get stress period data
     if (this%ionper < kper) then
       !
       ! -- get period block
-      ! When reading a list, OPEN/CLOSE is handled by list reader,
-      ! so supportOpenClose needs to be false in call the GetBlock.
-      ! When reading as arrays, set supportOpenClose as desired.
-      call this%parser%GetBlock('PERIOD', isfound, ierr)
-      if(isfound) then
+      call this%parser%GetBlock('PERIOD', isfound, ierr, &
+                                supportOpenClose=.true.)
+      if (isfound) then
         !
         ! -- read ionper and check for increasing period numbers
         call this%read_check_ionper()
@@ -3094,41 +3185,39 @@ contains
           call this%parser%GetCurrentLine(line)
           write(errmsg, fmtblkerr) adjustl(trim(line))
           call store_error(errmsg)
+          call this%parser%StoreErrorUnit()
+          call ustop()
         end if
       endif
     end if
     !
-    ! -- Read data if ionper == kper
+    ! -- read data if ionper == kper
     if(this%ionper == kper) then
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        call this%parser%GetStringCaps(keyword)
-        call this%parser%GetRemainingLine(line)
-        lloc = 1
-        !
-        ! -- Parse the keywords
-        select case (keyword)
-        case ('SIG0')
-          if (this%igeostressoff == 1) then
-            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                          this%parser%iuactive, this%sig0, 'SIG0')
-          else
-            write (errmsg, '(a)') &
-              '****ERROR. SIG0 SPECIFIED BUT GEO_STRESS_OFFSET NOT SPECIFIED IN OPTIONS BLOCK'
-            call store_error(trim(errmsg))
-            call this%parser%StoreErrorUnit()
-          end if
-        case default
-          call store_error('****ERROR. LOOKING FOR VALID VARIABLE NAME.  FOUND: ')
-          call store_error(trim(line))
-          call this%parser%StoreErrorUnit()
-        end select
-      end do
-    !
+      nlist = -1
+      ! -- Remove all time-series and time-array-series links associated with
+      !    this package.
+      call this%TsManager%Reset(this%name)
+      !
+      ! -- Read data as a list
+      call this%dis%read_list(this%parser%iuactive, this%iout,                 &
+                               this%iprpak, nlist, this%inamedbound,           &
+                               this%iauxmultcol, this%nodelistsig0,            &
+                               this%bound, this%auxvarsig0, this%auxname,      &
+                               this%sig0bname, this%listlabel,                 &
+                               this%name, this%tsManager, this%iscloc)
+      this%nbound = nlist
+      !
+      ! Define the tsLink%Text value(s) appropriately.
+      ! E.g. for CSUB package, entry 1, assign tsLink%Text = 'SIG0'
+      call this%csub_rp_ts()
+      !
+      ! -- Terminate the block
+      call this%parser%terminateblock()
+      !
     else
       write(this%iout,fmtlsp) trim(this%filtyp)
     endif
+
     !
     ! -- terminate if errors encountered in reach block
     if (count_errors() > 0) then
@@ -3286,6 +3375,9 @@ contains
     ! -- set gwfiss0
     this%gwfiss0 = this%gwfiss
     !
+    ! -- Advance the time series managers
+    call this%TsManager%ad()
+    !
     ! -- For each observation, push simulated value and corresponding
     !    simulation time from "current" to "preceding" and reset
     !    "current" value.
@@ -3375,13 +3467,6 @@ contains
       pcs = this%pcs(ib)
       pcs0 = pcs
       if (this%igeocalc == 0) then
-        !if (this%ibedstressoff == 1) then
-        !  pcs = this%sk_es(node) + pcs0
-        !else
-        !  if (pcs > this%sk_es(node)) then
-        !    pcs = this%sk_es(node)
-        !  end if
-        !end if
         if (this%ispecified_pcs == 0) then
           pcs = this%sk_es(node) + pcs0
         else
@@ -3390,15 +3475,6 @@ contains
           end if
         end if
       else
-        !
-        ! -- transfer initial preconsolidation stress (and apply offset if needed)
-        !if (this%ibedstressoff == 1) then
-        !    pcs = this%sk_es(node) + pcs0
-        !else
-        !  if (pcs < this%sk_es(node)) then
-        !    pcs = this%sk_es(node)
-        !  end if
-        !end if
         if (this%ispecified_pcs == 0) then
             pcs = this%sk_es(node) + pcs0
         else
@@ -3417,11 +3493,6 @@ contains
         !    heads need to be filled first since used to calculate 
         !    the effective stress for each delay bed
         do n = 1, this%ndelaycells
-          !if (this%ibedstressoff == 1) then
-          !  this%dbh(n, idelay) = hcell + this%dbh(n, idelay)
-          !else
-          !  this%dbh(n, idelay) = hcell
-          !end if
           if (this%ispecified_dbh == 0) then
             this%dbh(n, idelay) = hcell + this%dbh(n, idelay)
           else
@@ -3898,17 +3969,7 @@ contains
     else
       write(this%listlabel, '(a, a7)') trim(this%listlabel), 'NODE'
     endif
-    write(this%listlabel, '(a, a16)') trim(this%listlabel), 'INITIAL_STRESS'
-    write(this%listlabel, '(a, a16)') trim(this%listlabel), 'FRAC'
-    if (this%istoragec == 1) then
-        write(this%listlabel, '(a, a16)') trim(this%listlabel), 'SSE'
-        write(this%listlabel, '(a, a16)') trim(this%listlabel), 'SSV'
-    else
-        write(this%listlabel, '(a, a16)') trim(this%listlabel), 'RCI'
-        write(this%listlabel, '(a, a16)') trim(this%listlabel), 'CI'
-    endif
-        write(this%listlabel, '(a, a16)') trim(this%listlabel), 'THETA'
-        write(this%listlabel, '(a, a16)') trim(this%listlabel), 'IDELAY'
+    write(this%listlabel, '(a, a16)') trim(this%listlabel), 'SIG0'
     if(this%inamedbound == 1) then
       write(this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
     endif
@@ -5547,6 +5608,32 @@ contains
     !
     return
   end subroutine csub_process_obsID
+
+  !
+  ! -- Procedure related to time series
+  subroutine csub_rp_ts(this)
+    ! -- Assign tsLink%Text appropriately for
+    !    all time series in use by package.
+    !    In the CSUB package only the SIG0 variable
+    !    can be controlled by time series.
+    ! -- dummy
+    class(GwfCsubType), intent(inout) :: this
+    ! -- local
+    integer(I4B) :: i, nlinks
+    type(TimeSeriesLinkType), pointer :: tslink => null()
+    !
+    nlinks = this%TsManager%boundtslinks%Count()
+    do i=1,nlinks
+      tslink => GetTimeSeriesLinkFromList(this%TsManager%boundtslinks, i)
+      if (associated(tslink)) then
+        if (tslink%JCol==1) then
+          tslink%Text = 'SIG0'
+        endif
+      endif
+    enddo
+    !
+    return
+  end subroutine csub_rp_ts
 
 
 end module GwfCsubModule
