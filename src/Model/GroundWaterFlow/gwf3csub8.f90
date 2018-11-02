@@ -63,7 +63,6 @@ module GwfCsubModule
     integer(I4B), pointer :: iupdatematprop => null()
     integer(I4B), pointer :: istoragec => null()
     integer(I4B), pointer :: icellf => null()
-    integer(I4B), pointer :: idbsatscaling => null()
     integer(I4B), pointer :: ibedstressoff => null()
     integer(I4B), pointer :: ispecified_pcs => null()
     integer(I4B), pointer :: ispecified_dbh => null()
@@ -231,6 +230,7 @@ module GwfCsubModule
     procedure, private :: csub_delay_calc_ssksske
     procedure, private :: csub_delay_calc_comp
     procedure, private :: csub_delay_calc_dstor
+    procedure, private :: csub_interbed_calc_sat
     procedure, private :: csub_delay_fc
     procedure, private :: csub_delay_sln
     procedure, private :: csub_delay_assemble
@@ -318,7 +318,6 @@ contains
     call mem_allocate(this%ndelaybeds, 'NDELAYBEDS', this%origin)
     call mem_allocate(this%initialized, 'INITIALIZED', this%origin)
     call mem_allocate(this%igeocalc, 'IGEOCALC', this%origin)
-    call mem_allocate(this%idbsatscaling, 'IDBSATSCALING', this%origin)
     call mem_allocate(this%ibedstressoff, 'IBEDSTRESSOFF', this%origin)
     call mem_allocate(this%ispecified_pcs, 'ISPECIFIED_PCS', this%origin)
     call mem_allocate(this%ispecified_dbh, 'ISPECIFIED_DBH', this%origin)
@@ -365,7 +364,6 @@ contains
     this%ndelaybeds = 0
     this%initialized = 0
     this%igeocalc = 1
-    this%idbsatscaling = 0
     this%ibedstressoff = 0
     this%ispecified_pcs = 0
     this%ispecified_dbh = 0
@@ -425,6 +423,7 @@ contains
     integer(I4B) :: idelay
     real(DP) :: area
     real(DP) :: hcell
+    real(DP) :: snnew
     real(DP) :: err
     real(DP) :: stoe
     real(DP) :: stoi
@@ -454,24 +453,30 @@ contains
         area = this%dis%get_area(node)
         hcell = hnew(node)
         !
-        ! --
+        ! -- calculate cell saturation
+        call this%csub_interbed_calc_sat(ib, hcell, snnew)
+        !
+        ! -- calculate delay cell error
         call this%csub_delay_calc_err(ib, hcell, err)
         !
-        ! --
+        ! -- calculate the change in storage
         call this%csub_delay_calc_dstor(ib, stoe, stoi)
-        v1 = (stoe + stoi) * area * this%rnb(ib) * tled
+        v1 = (stoe + stoi) * area * this%rnb(ib) * snnew * tled
         !
+        ! -- calculate the flow between the interbed and the cell
+        call this%csub_delay_fc(ib, hcell, hcof, rhs)
+        v2 = (-hcof * hcell - rhs) * area * this%rnb(ib) * snnew
         !
-        call this%csub_delay_fc(ib, hcof, rhs)
-        v2 = (-hcof * hcell - rhs) * area * this%rnb(ib)
-
+        ! -- calculate the difference between the interbed change in
+        !    storage and the flow between the interbed and the cell
         df = v2 - v1
         avgf = DHALF * (v1 + v2)
         pd = DZERO
         if (avgf > DZERO) then
           pd = DHUNDRED * df / avgf
         end if
-        
+        !
+        ! -- evaluate the percent difference
         if (ABS(pd) > DEM1) then
           icnvg = 0
           ! write convergence check information if this is the last outer iteration
@@ -498,8 +503,7 @@ contains
     return
   end subroutine csub_cc
 
-
-   subroutine csub_bdcalc(this, nodes, hnew, hold, isuppress_output,            &
+  subroutine csub_bdcalc(this, nodes, hnew, hold, isuppress_output,             &
                           model_budget)
 ! ******************************************************************************
 ! csub_bd -- calculate budget for skeletal storage, interbeds, and water
@@ -537,6 +541,7 @@ contains
     real(DP) :: compe
     real(DP) :: area
     real(DP) :: h
+    real(DP) :: snnew
     real(DP) :: hcof
     real(DP) :: rhs
     real(DP) :: stoe
@@ -704,20 +709,20 @@ contains
           ! -- delay interbeds
         else
           h = hnew(node)
+          !
+          ! -- calculate cell saturation
+          call this%csub_interbed_calc_sat(ib, h, snnew)
+          !
+          ! -- calculate inelastic and elastic storage contributions
           call this%csub_delay_calc_dstor(ib, stoe, stoi)
-          this%storagee(ib) = stoe * area * this%rnb(ib) * tledm
-          this%storagei(ib) = stoi * area * this%rnb(ib) * tledm
-          !
-          !
-          call this%csub_delay_fc(ib, hcof, rhs)
-          err = -hcof * h - rhs
-          err = err / tledm
+          this%storagee(ib) = stoe * area * this%rnb(ib) * snnew * tledm
+          this%storagei(ib) = stoi * area * this%rnb(ib) * snnew * tledm
           !
           ! -- update states if required
           if (isuppress_output == 0) then
             !
             ! -- calculate sum of compaction in delay interbed
-            call this%csub_delay_calc_comp(ib)
+            call this%csub_delay_calc_comp(ib, h)
           end if
         end if
         !
@@ -787,7 +792,7 @@ contains
     ! -- return
     return
 
-   end subroutine csub_bdcalc
+  end subroutine csub_bdcalc
 
   subroutine csub_bdsav(this, idvfl, icbcfl, icbcun)
 ! ******************************************************************************
@@ -1616,28 +1621,6 @@ contains
     ! -- process delay interbeds
     if (ndelaybeds > 0) then
       !
-      ! -- check that delay interbeds are not specified in convertible cells
-      !    unless DELAY_SATURATION_SCALING option is specified
-      ierr = 0
-      if (this%idbsatscaling == 0) then
-        do ib = 1, this%ninterbeds
-          idelay = this%idelay(ib)
-          if (idelay == 0) then
-            cycle
-          end if
-          node = this%nodelist(ib)
-          call this%dis%noder_to_string(node, cellid)
-          if (this%stoiconv(node) /= 0) then
-            write(errmsg, '(a,i0,a,1x,a,1x,a)') &
-              'ERROR: DELAY INTERBED (', ib,                                    &
-              ') SPECIFIED IN CONVERTIBLE CELL', trim(adjustl(cellid)),         &
-              'USE THE DELAY_SATURATION_SCALING OPTION TO ALLOW ' //            &
-              'DELAY BEDS IN CONVERTIBLE CELLS'
-            call store_error(errmsg)
-          end if
-        end do
-      end if
-      !
       ! -- reallocate and initialize delay interbed arrays
       if (ierr == 0) then
         !
@@ -1849,10 +1832,6 @@ contains
           case ('NDELAYCELLS')
             this%ndelaycells =  this%parser%GetInteger()
             write(this%iout, fmtopti) 'NUMBER OF DELAY CELLS =', this%ndelaycells
-          case ('DELAY_SATURATION_SCALING')
-            this%idbsatscaling = 1
-            write(this%iout, fmtopt) &
-              'DELAY-INTERBEDS WILL BE ALLOWED IN CONVERTIBLE CELLS'
           case ('SPECIFIED_INITIAL_INTERBED_STATE')
             this%ispecified_pcs = 1
             this%ispecified_dbh = 1
@@ -2362,6 +2341,7 @@ contains
     call mem_deallocate(this%ndelaycells)
     call mem_deallocate(this%ndelaybeds)
     call mem_deallocate(this%initialized)
+    call mem_deallocate(this%igeocalc)
     call mem_deallocate(this%ibedstressoff)
     call mem_deallocate(this%ispecified_pcs)
     call mem_deallocate(this%ispecified_dbh)
@@ -3673,14 +3653,12 @@ contains
       end if
     end if    
     !
-    ! -- terminate if errors encountered when updating material properties
-    if (this%iupdatematprop /= 0) then
-      if (this%time_alpha > DZERO) then
-        if (count_errors() > 0) then
-          call this%parser%StoreErrorUnit()
-          call ustop()
-        end if
-      end if
+    ! -- terminate if the head in the cell is below the top of the cell for
+    !    non-convertible cells or top of the interbed for delay beds or if
+    !    errors encountered when updating material properties
+    if (count_errors() > 0) then
+      call this%parser%StoreErrorUnit()
+      call ustop()
     end if
     !
     ! -- return
@@ -3880,6 +3858,38 @@ contains
     return
   end subroutine csub_sk_fn
 
+  subroutine csub_interbed_calc_sat(this, ib, hcell, snnew)
+! ******************************************************************************
+! csub_interbed_calc_sat -- Calculate cell saturation for a cell with a 
+!                           delay interbed.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    class(GwfCsubType), intent(inout) :: this
+    integer(I4B), intent(in) :: ib
+    real(DP), intent(in) :: hcell
+    real(DP), intent(inout) :: snnew
+    ! -- local variables
+    integer(I4B) :: node
+    real(DP) :: top
+    real(DP) :: bot
+! ------------------------------------------------------------------------------
+    !
+    ! -- initialize variables
+    snnew = DONE
+    node = this%nodelist(ib)
+    !
+    ! -- calculate on cell saturation if cell storage is convertible
+    if (this%stoiconv(node) /= 0) then
+      top = this%dis%top(node)
+      bot = this%dis%bot(node)
+      snnew = sQuadraticSaturation(top, bot, hcell, this%satomega)
+    end if
+    !
+    ! -- return
+    return
+  end subroutine csub_interbed_calc_sat  
   
   subroutine csub_interbed_fc(this, ib, node, area, hcell, hcellold, hcof, rhs)
 ! ******************************************************************************
@@ -3900,10 +3910,15 @@ contains
     real(DP), intent(inout) :: hcof
     real(DP), intent(inout) :: rhs
     ! locals
+    character(len=20) :: cellid
+    character (len=LINELENGTH) :: errmsg
+    integer(I4B) :: idelaycalc
+    real(DP) :: snnew
     real(DP) :: comp
     real(DP) :: rho1
     real(DP) :: rho2
     real(DP) :: f
+    real(DP) :: top
 ! ------------------------------------------------------------------------------
 !
 ! -- initialize variables
@@ -3933,10 +3948,41 @@ contains
         f = area
       else
         !
+        ! -- calculate cell saturation
+        call this%csub_interbed_calc_sat(ib, hcell, snnew)
+        !
+        ! -- check that the delay bed should be evaluated
+        idelaycalc = 0
+        if (this%stoiconv(node) /= 0) then
+          top = this%dis%bot(node) + this%thick(ib)
+        else
+          top = this%dis%top(node)
+        end if
+        if (hcell >= top) then
+          idelaycalc = 1
+        end if
+        !
         ! -- calculate delay interbed hcof and rhs
-        call this%csub_delay_sln(ib, hcell)
-        call this%csub_delay_fc(ib, hcof, rhs)
-        f = area * this%rnb(ib)
+        if (idelaycalc /= 0) then
+          call this%csub_delay_sln(ib, hcell)
+          call this%csub_delay_fc(ib, hcell, hcof, rhs)
+        ! -- create error message
+        else
+          call this%dis%noder_to_string(node, cellid)
+          if (this%stoiconv(node) /= 0) then
+            write(errmsg,'(4x,a,1x,g0,1x,a,1x,a,1x,a,1x,g0,1x,a,1x,i0)')         &
+              '****ERROR. HEAD (', hcell, ') IN CONVERTIBLE CELL (',             &
+              trim(adjustl(cellid)), ') DROPPED BELOW THE TOP OF THE INTERBED (',&
+              top, ') FOR DELAY INTERBED ', ib
+          else
+            write(errmsg,'(4x,a,1x,g0,1x,a,1x,a,1x,a,1x,g0,1x,a,1x,i0)')         &
+              '****ERROR. HEAD (', hcell, ') IN NON-CONVERTIBLE CELL (',         &
+              trim(adjustl(cellid)), ') DROPPED BELOW THE TOP OF THE CELL (',    &
+              top, ') FOR DELAY INTERBED ', ib
+          end if
+          call store_error(errmsg)
+        end if
+        f = area * this%rnb(ib) * snnew
       end if
       rhs = rhs * f
       hcof = -hcof * f
@@ -4265,14 +4311,10 @@ contains
     ! -- aquifer elevations and thickness
     top = this%dis%top(node)
     bot = this%dis%bot(node)
-    ! -- aquifer saturation
-    if (this%stoiconv(node) /= 0) then
-      snold = sQuadraticSaturation(top, bot, hcellold, this%satomega)
-      snnew = sQuadraticSaturation(top, bot, hcell, this%satomega)
-    else
-      snold = DONE
-      snnew = DONE
-    end if
+    !
+    ! -- calculate cell saturation
+    call this%csub_interbed_calc_sat(ib, hcell, snnew)
+    call this%csub_interbed_calc_sat(ib, hcellold, snold)
     if (this%time_alpha == DZERO) then
       snold = snnew
     end if
@@ -4286,6 +4328,11 @@ contains
       hcof = -wc2 * snnew
       rhs = -wc1 * snold * hcellold
     else
+      !
+      ! -- calculate cell saturation
+      call this%csub_interbed_calc_sat(ib, hcell, snnew)
+      !
+      ! -- calculate contribution for each delay interbed cell
       if (this%thick(ib) > DZERO) then
         dz = this%dbfact * this%dbdz(idelay)
         do n = 1, this%ndelaycells
@@ -4302,11 +4349,7 @@ contains
           rhs = rhs - (wc1 * snold * this%dbh0(n, idelay) -                     &
                        wc2 * snnew * this%dbh(n, idelay))
         end do
-        rhs = rhs * this%rnb(ib)
-        !fmult = this%dbfact * this%thick(ib) * this%dbtheta(1, idelay)
-        !wc2 = fmult * f
-        !wc1 = wc2
-        !rhs = -this%rnb(ib) * (wc1 * snold * hcellold - wc2 * snnew * hcell)
+        rhs = rhs * this%rnb(ib) * snnew
       end if
     end if
     !
@@ -4869,15 +4912,18 @@ contains
     !
     do n = 1, this%ndelaycells
       !
+      ! -- current and previous delay cell states
+      z = this%dbz(n, idelay)
+      ztop = z + dzhalf
+      zbot = z - dzhalf
+      h = this%dbh(n, idelay)
+      !
       ! -- calculate  ssk and sske
       call this%csub_delay_calc_ssksske(ib, n, ssk, sske)
       !
       ! -- diagonal and right hand side
       aii = -ssk * fmult
-      z = this%dbz(n, idelay)
-      ztop = z + dzhalf
-      zbot = z - dzhalf
-      h = this%dbh(n, idelay)
+      
       if (this%igeocalc == 0) then
         r = -fmult * &
              (ssk * (this%dbpcs(n, idelay)) + &
@@ -4959,7 +5005,6 @@ contains
     ! -- return
     return
   end subroutine csub_delay_solve
-  
   
   subroutine csub_delay_calc_err(this, ib, hcell, err)
 ! ******************************************************************************
@@ -5077,7 +5122,7 @@ contains
     return
   end subroutine csub_delay_calc_dstor
 
-  subroutine csub_delay_calc_comp(this, ib)
+  subroutine csub_delay_calc_comp(this, ib, hcell)
 ! ******************************************************************************
 ! csub_delay_calc_comp -- Calculate compaction in a delay interbed.
 ! ******************************************************************************
@@ -5086,12 +5131,14 @@ contains
 ! ------------------------------------------------------------------------------
     class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: ib
+    real(DP), intent(in) :: hcell
     ! -- local variables
     integer(I4B) :: idelay
     integer(I4B) :: n
     real(DP) :: comp
     real(DP) :: compi
     real(DP) :: compe
+    real(DP) :: snnew
     real(DP) :: sske
     real(DP) :: ssk
     real(DP) :: fmult
@@ -5105,6 +5152,9 @@ contains
     comp = DZERO
     compi = DZERO
     compe = DZERO
+    !
+    ! -- calculate cell saturation
+    call this%csub_interbed_calc_sat(ib, hcell, snnew)
     !
     !
     if (this%thick(ib) > DZERO) then
@@ -5132,16 +5182,16 @@ contains
     end if
     !
     ! -- fill compaction
-    this%comp(ib) = comp
-    this%tcomp(ib) = this%tcomp(ib) + comp * this%rnb(ib)
-    this%tcompi(ib) = this%tcompi(ib) + compi * this%rnb(ib)
-    this%tcompe(ib) = this%tcompe(ib) + compe * this%rnb(ib)
+    this%comp(ib) = comp * snnew
+    this%tcomp(ib) = this%tcomp(ib) + comp * this%rnb(ib) * snnew
+    this%tcompi(ib) = this%tcompi(ib) + compi * this%rnb(ib) * snnew
+    this%tcompe(ib) = this%tcompe(ib) + compe * this%rnb(ib) * snnew
     !
     ! -- return
     return
   end subroutine csub_delay_calc_comp
 
-  subroutine csub_delay_fc(this, ib, hcof, rhs)
+  subroutine csub_delay_fc(this, ib, hcell, hcof, rhs)
 ! ******************************************************************************
 ! csub_delay_fc -- Calculate hcof and rhs for delay interbed contribution to
 !                  GWF cell.
@@ -5151,12 +5201,16 @@ contains
 ! ------------------------------------------------------------------------------
     class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: ib
+    real(DP), intent(in) :: hcell
     real(DP), intent(inout) :: hcof
     real(DP), intent(inout) :: rhs
     ! -- local variables
     integer(I4B) :: idelay
+    integer(I4B) :: node
     real(DP) :: c1
     real(DP) :: c2
+    real(DP) :: top
+    real(DP) :: bot
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize variables

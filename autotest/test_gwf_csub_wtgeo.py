@@ -210,13 +210,8 @@ def get_model(idx, dir):
 
     if top == 0:
         laytyp = [0, 0, 0]
-        dss = None
     else:
         laytyp = [1, 0, 0]
-        if delay[idx]:
-            dss = True
-        else:
-            dss = None
 
     # calculate sk, ndb, and db factors
     # facndb = [0.15, 1., 0.15]
@@ -426,7 +421,6 @@ def get_model(idx, dir):
                                     head_based=head_based,
                                     update_material_properties=ump[idx],
                                     time_weight=tw[idx],
-                                    delay_saturation_scaling=dss,
                                     save_flows=True,
                                     ninterbeds=maxcsub,
                                     obs_filerecord=opth,
