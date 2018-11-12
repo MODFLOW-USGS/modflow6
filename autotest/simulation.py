@@ -66,6 +66,7 @@ class Simulation(object):
         self.simpath = None
         self.inpt = None
         self.outp = None
+        self.coutp = None
 
         # set htol for comparisons
         if htol is None:
@@ -95,13 +96,16 @@ class Simulation(object):
 
         self.simpath = pth
 
-        # get MNODFLOW6 output file names
+        # get MODFLOW 6 output file names
         fpth = os.path.join(pth, 'mfsim.nam')
         mf6inp, mf6outp = pymake.get_mf6_files(fpth)
         self.outp = mf6outp
 
         # determine comparison model
         self.action = pymake.get_mf6_comparison(pth)
+        if self.action is not None:
+            if 'mf6' in self.action:
+                cinp, self.coutp = pymake.get_mf6_files(fpth)
 
     def setup(self, src, dst):
         msg = sfmt.format('Setup test', self.name)
@@ -169,8 +173,11 @@ class Simulation(object):
                     cpth = os.path.join(self.simpath, self.action)
                     key = self.action.lower().replace('.cmp', '')
                     exe = os.path.abspath(targets.target_dict[key])
-                    npth = pymake.get_namefiles(cpth)[0]
-                    nam = os.path.basename(npth)
+                    if 'mf6' in key:
+                        nam = None
+                    else:
+                        npth = pymake.get_namefiles(cpth)[0]
+                        nam = os.path.basename(npth)
                     self.nam_cmp = nam
                     try:
                         success_cmp, buff = flopy.run_model(exe, nam,
@@ -249,7 +256,17 @@ class Simulation(object):
                                 os.path.basename(pth))
                             print(txt)
                     else:
-                        files2.append(None)
+                        if self.coutp is not None:
+                            for file2 in self.coutp:
+                                ext = os.path.splitext(file2)[1][1:]
+
+                                if ext.lower() in ['hds', 'hed', 'bhd', 'ahd']:
+                                    # simulation file
+                                    pth = os.path.join(cpth, file2)
+                                    files2.append(pth)
+
+                        else:
+                            files2.append(None)
 
             if self.nam_cmp is None:
                 pth = None

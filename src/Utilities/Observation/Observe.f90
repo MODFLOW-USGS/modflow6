@@ -15,7 +15,7 @@ module ObserveModule
   use BaseDisModule,     only: DisBaseType
   use ConstantsModule,   only: LENBOUNDNAME, LENOBSNAME, LENOBSTYPE, &
                                MAXOBSTYPES, DNODATA, DZERO
-  use InputOutputModule, only: dclosetest, urword
+  use InputOutputModule, only: urword
   use ListModule,        only: ListType
   use SimModule,         only: store_warning, store_error, &
                                store_error_unit, ustop

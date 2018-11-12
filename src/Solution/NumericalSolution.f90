@@ -4,9 +4,10 @@ module NumericalSolutionModule
   use KindModule,              only: DP, I4B
   use TimerModule,             only: code_timer
   use ConstantsModule,         only: LINELENGTH, LENSOLUTIONNAME,              &
-                                     DPREC, DZERO, DEM20, DEM15, DEM6, DEM4,   &
-                                     DEM3, DEM2, DEM1, DHALF,                  &
+                                     DPREC, DZERO, DEM20, DEM15, DEM6,         &
+                                     DEM4, DEM3, DEM2, DEM1, DHALF,            &
                                      DONE, DTHREE, DEP6, DEP20
+  use GenericUtilities,        only: IS_SAME
   use VersionModule,           only: IDEVELOPMODE
   use BaseModelModule,         only: BaseModelType
   use BaseSolutionModule,      only: BaseSolutionType, AddBaseSolutionToList
@@ -530,6 +531,10 @@ contains
               'KEYWORD MUST BE FOLLOWED BY FILEOUT'
             call store_error(errmsg)
           end if
+        case ('NO_PTC')
+          call this%parser%DevOpt()
+          this%iallowptc = 0
+          write(IOUT,'(1x,A)') 'PSEUDO-TRANSIENT CONTINUATION DISABLED'
         !
         ! -- right now these are options that are only available in the
         !    development version and are not included in the documentation.
@@ -539,10 +544,6 @@ contains
           call this%parser%DevOpt()
           this%iallowptc = 1
           write(IOUT,'(1x,A)') 'PSEUDO-TRANSIENT CONTINUATION ENABLED'
-        case ('DEV_NO_PTC')
-          call this%parser%DevOpt()
-          this%iallowptc = 0
-          write(IOUT,'(1x,A)') 'PSEUDO-TRANSIENT CONTINUATION DISABLED'
         case('DEV_PTC_OUTPUT')
           call this%parser%DevOpt()
           this%iallowptc = 1
@@ -1852,8 +1853,9 @@ contains
     integer(I4B), intent(inout) :: iptc
     real(DP), intent(in) :: ptcf
     ! -- local
+    logical :: lsame
     integer(I4B) :: n
-    integer(I4B) :: itestmat,i,i1,i2
+    integer(I4B) :: itestmat, i, i1, i2
     integer(I4B) :: iptct
     real(DP) :: adiag, diagval
     real(DP) :: l2norm
@@ -1902,6 +1904,11 @@ contains
             iptc = 0
           end if
         end if
+      else
+        lsame = IS_SAME(l2norm, this%l2norm0) 
+        if (lsame) then
+          iptc = 0
+        end if
       end if
     end if
     iptct = iptc * this%iallowptc
@@ -1917,7 +1924,9 @@ contains
           this%ptcdel = this%ptcdel0
         else
           if (this%iptcopt == 0) then
-            this%ptcdel = done / ptcf
+            !
+            ! -- ptcf is the reciprocal of the pseudo-time step
+            this%ptcdel = DONE / ptcf
           else
             bnorm = DZERO
             do n = 1, this%neq
@@ -1937,9 +1946,9 @@ contains
         end if
       end if
       if (this%ptcdel > DZERO) then
-        ptcval = done / this%ptcdel
+        ptcval = DONE / this%ptcdel
       else
-        ptcval = done
+        ptcval = DONE
       end if
       diagmin = DEP20
       bnorm = DZERO

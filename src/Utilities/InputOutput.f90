@@ -7,8 +7,9 @@ module InputOutputModule
                        store_error_filename
   use ConstantsModule, only: LINELENGTH, LENBIGLINE, LENBOUNDNAME,             &
                              NAMEDBOUNDFLAG, LINELENGTH, MAXCHARLEN
+  use GenericUtilities, only: IS_SAME
   private
-  public :: dclosetest, GetUnit, u8rdcom, uget_block,                          &
+  public :: GetUnit, u8rdcom, uget_block,                                      &
             uterminate_block, UPCASE, URWORD, ULSTLB, UBDSV4,                  &
             ubdsv06, UBDSVB, UCOLNO, ULAPRW,                                   &
             ULASAV, ubdsv1, ubdsvc, ubdsvd, UWWORD,                            &
@@ -21,41 +22,6 @@ module InputOutputModule
             BuildFloatFormat, BuildIntFormat
 
   contains
-
-  logical function dclosetest(a,b,eps)
-! ******************************************************************************
-! Check and see if two doubles are close enough to be considered equal
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    implicit none
-    ! -- dummy
-    real(DP), intent(in) :: a
-    real(DP), intent(in) :: b
-    real(DP), intent(in), optional :: eps
-    ! -- local
-    real(DP) :: epslocal, absval
-! ------------------------------------------------------------------------------
-    !
-    if (present(eps)) then
-      epslocal = eps
-    else
-      epslocal = 1.2d-7
-    endif
-    dclosetest=.true.
-    if(a.gt.b) then
-      absval = abs(a)
-      if((a-b) .le. absval*epslocal) return
-    else
-      absval = abs(b)
-      if((b-a) .le. absval*epslocal) return
-    end if
-    dclosetest=.false.
-    !
-    ! -- Return
-    return
-  end function dclosetest
 
   subroutine openfile(iu, iout, fname, ftype, fmtarg_opt, accarg_opt,          &
                       filstat_opt)
@@ -1652,7 +1618,7 @@ module InputOutputModule
     character(len=100) :: msg
     !
     ! -- don't get bitten by rounding errors or divide-by-zero
-    if (dclosetest(t0, t1) .or. dclosetest(t, t1)) then
+    if (IS_SAME(t0, t1) .or. IS_SAME(t, t1)) then
       y = y1
     elseif (t == t0) then
       y = y0

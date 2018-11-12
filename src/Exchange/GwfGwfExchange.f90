@@ -905,7 +905,7 @@ contains
         distance = dltot * this%cl2(i) / (this%cl1(i) + this%cl2(i))
         if (ihc /= 0) rrate = -rrate
         call this%gwfmodel2%npf%set_edge_properties(n2, ihc, rrate, area,     &
-                                                    nx, ny, distance)
+                                                    -nx, -ny, distance)
       endif
       !
     enddo
