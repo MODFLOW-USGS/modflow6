@@ -846,8 +846,7 @@ contains
     ! -- local
     integer(I4B) :: i, ii, idx, indx, iu, num, nunit
     integer(int32) :: nobs
-    character(len=LENBIGLINE)          :: oldheader, newheader
-    character(len=LENBIGLINE), pointer :: headr => null()
+    character(len=LENOBSNAME), pointer :: headr => null()
     character(len=LENOBSNAME)          :: nam
     character(len=4)                   :: clenobsname
     type(ObserveType),         pointer :: obsrv => null()
@@ -866,13 +865,10 @@ contains
         if (headr == '') then
           headr = 'time'
         endif
-        oldheader = headr
         nam = obsrv%Name
         call ExpandArray(obsOutput%obsnames)
         idx = size(obsOutput%obsnames)
         obsOutput%obsnames(idx) = nam
-        newheader = trim(oldheader) // ',' // trim(nam)
-        headr = newheader
       enddo
     endif
     !
@@ -885,8 +881,13 @@ contains
         ! -- write header to formatted file
         headr => obsOutput%header
         if (headr /= '') then
+          nobs = obsOutput%nobs
           iu = obsOutput%nunit
-          write(iu,'(a)')trim(headr)
+          write(iu, '(a)', advance='NO') 'time'
+          do ii = 1,nobs
+            write(iu, '(a,a)', advance='NO') ',', trim(obsOutput%obsnames(ii))
+          enddo
+          write(iu, '(a)', advance='YES') ''
         endif
       else
         ! -- write header to unformatted file
