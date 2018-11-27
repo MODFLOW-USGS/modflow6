@@ -77,7 +77,7 @@ description activates model rewetting.  Rewetting is off by default.
 
 block options
 name wetfct
-type double
+type double precision
 in_record true
 reader urword
 optional false
