@@ -3,7 +3,7 @@ module VersionModule
   public
   ! -- modflow 6 version
   integer(I4B), parameter :: IDEVELOPMODE = 1
-  character(len=40), parameter :: VERSION = '6.0.2.199 11/01/2018'
+  character(len=40), parameter :: VERSION = '6.0.2.203 12/03/2018'
   character(len=10), parameter :: MFVNAM = ' 6'
   character(len=*), parameter  :: MFTITLE =                                     &
     'U.S. GEOLOGICAL SURVEY MODULAR HYDROLOGIC MODEL'
