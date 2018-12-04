@@ -1,11 +1,12 @@
 module GwfCsubModule
   use KindModule, only: I4B, DP
-  use ConstantsModule, only: DPREC, DZERO, DEM6, DHALF, DEM1,                   &
+  use ConstantsModule, only: DPREC, DZERO, DEM10, DEM7, DEM6, DHALF, DEM1,      &
                              DONE, DTWO, DTHREE,                                &
                              DGRAVITY, DTEN, DHUNDRED, DNODATA, DHNOFLO,        &
                              LENFTYPE, LENPACKAGENAME,                          &
                              LINELENGTH, LENBOUNDNAME, NAMEDBOUNDFLAG,          &
                              LENBUDTXT, LENAUXNAME, LENORIGIN
+  use GenericUtilities, only: is_same
   use SmoothingModule,        only: sQuadraticSaturation,                       &
                                     sQuadraticSaturationDerivative
   use NumericalPackageModule, only: NumericalPackageType
@@ -80,6 +81,7 @@ module GwfCsubModule
     integer(I4B), pointer :: igeocalc => null()
     integer(I4B), pointer :: idbhalfcell => null()
     integer(I4B), pointer :: idbfullcell => null()
+    real(DP), pointer :: cc_crit => null()                                       !convergence criteria for csub-gwf convergence check
     real(DP), pointer :: time_alpha => null()                                    !time factor to apply to the current and previous effective stress
     real(DP), pointer :: gammaw => null()                                        !product of fluid density, and gravity
     real(DP), pointer :: beta => null()                                          !water compressibility
@@ -234,7 +236,6 @@ module GwfCsubModule
     procedure, private :: csub_delay_fc
     procedure, private :: csub_delay_sln
     procedure, private :: csub_delay_assemble
-    procedure, private :: csub_delay_calc_err
     !
     ! -- methods for observations
     procedure, public :: csub_obs_supported
@@ -335,6 +336,7 @@ contains
     call mem_allocate(this%iupdatematprop, 'IUPDATEMATPROP', this%origin)
     call mem_allocate(this%idbhalfcell, 'IDBHALFCELL', this%origin)
     call mem_allocate(this%idbfullcell, 'IDBFULLCELL', this%origin)
+    call mem_allocate(this%cc_crit, 'CC_CRIT', this%origin)
     call mem_allocate(this%time_alpha, 'TIME_ALPHA', this%origin)
     call mem_allocate(this%gammaw, 'GAMMAW', this%origin)
     call mem_allocate(this%beta, 'BETA', this%origin)
@@ -381,6 +383,7 @@ contains
     this%iupdatematprop = 0
     this%idbhalfcell = 0
     this%idbfullcell = 0
+    this%cc_crit = DEM7
     this%time_alpha = DONE
     this%gammaw = DGRAVITY * 1000._DP
     this%beta = 4.6512e-10_DP
@@ -424,7 +427,6 @@ contains
     real(DP) :: area
     real(DP) :: hcell
     real(DP) :: snnew
-    real(DP) :: err
     real(DP) :: stoe
     real(DP) :: stoi
     real(DP) :: tled
@@ -435,16 +437,22 @@ contains
     real(DP) :: df
     real(DP) :: avgf
     real(DP) :: pd
+    real(DP) :: pow
+    real(DP) :: scale
+    real(DP) :: s1
+    real(DP) :: s2
+    real(DP) :: sdf
+    real(DP) :: savgf
+    real(DP) :: spd
     ! format
 02000 format(4x,'CSUB PACKAGE FAILED CONVERGENCE CRITERIA',//,                  &
-             4x,a10,2(1x,a15),/,4x,42('-'))
-02010 format(4x,i10,2(1x,G15.7))
-02020 format(4x,42('-'))
+             4x,a10,3(1x,a15),/,4x,58('-'))
+02010 format(4x,i10,3(1x,G15.7))
+02020 format(4x,58('-'))
 02030 format('CONVERGENCE FAILED AS A RESULT OF CSUB PACKAGE',1x,a)
 ! --------------------------------------------------------------------------
     ifirst = 1
     tled = DONE / DELT
-    !if (this%iconvchk /= 0) then
     if (this%gwfiss == 0) then
       final_check: do ib = 1, this%ninterbeds
         idelay = this%idelay(ib)
@@ -455,9 +463,6 @@ contains
         !
         ! -- calculate cell saturation
         call this%csub_interbed_calc_sat(ib, hcell, snnew)
-        !
-        ! -- calculate delay cell error
-        call this%csub_delay_calc_err(ib, hcell, err)
         !
         ! -- calculate the change in storage
         call this%csub_delay_calc_dstor(ib, stoe, stoi)
@@ -470,14 +475,42 @@ contains
         ! -- calculate the difference between the interbed change in
         !    storage and the flow between the interbed and the cell
         df = v2 - v1
+        !
+        ! -- calculate the averageflow
         avgf = DHALF * (v1 + v2)
+        !
+        ! -- Normalize v1 and v2 to be in range (-10.0,10.0)
+        pow = DHALF * (abs(v1) + abs(v2))
+        pow = floor(log10(pow))
+        scale = 10**pow
+        if (scale == DZERO) then
+          s1 = DZERO
+          s2 = DZERO
+          savgf = DZERO
+        else
+          s1 = v1 / scale
+          s2 = v2 / scale
+          savgf = avgf / scale
+        end if
+        sdf = v2 - v1
+        !
+        ! -- calculate the percent difference in storage and interbed 
+        !    flow to or from the cell
         pd = DZERO
-        if (avgf > DZERO) then
+        if (abs(avgf) > DZERO) then
           pd = DHUNDRED * df / avgf
         end if
         !
-        ! -- evaluate the percent difference
-        if (ABS(pd) > DEM1) then
+        ! -- calculate the scaled percent difference in storage and  
+        !    interbed flow to or from the cell
+        spd = DZERO
+        if (abs(savgf) * this%cc_crit > DZERO) then
+          spd = DHUNDRED * sdf / savgf
+        end if
+        !
+        ! -- evaluate the difference in the scaled numbers relative to the 
+        !    defined convergence check criteria
+        if (ABS(sdf) >= this%cc_crit) then
           icnvg = 0
           ! write convergence check information if this is the last outer iteration
           if (iend == 1) then
@@ -485,10 +518,11 @@ contains
               ifirst = 0
               write(*,2030) this%name
               write(this%iout, 2000) '   INTEBED',                                 &
-                '      PCT DIFF.', 'PCT DIFF. CRIT.'
+                '      PCT DIFF.',                                                 &
+                '   SCALED DIFF.', '   SCALED CRIT.'
             end if
-            write(*,2010) ib, pd, DEM1
-            write(this%iout,2010) ib, pd, DEM1
+            write(*,2010) ib, pd, sdf, this%cc_crit
+            write(this%iout,2010) ib, pd, sdf, this%cc_crit
           else
             exit final_check
           end if
@@ -2359,6 +2393,7 @@ contains
     call mem_deallocate(this%iupdatematprop)
     call mem_deallocate(this%idbfullcell)
     call mem_deallocate(this%idbhalfcell)
+    call mem_deallocate(this%cc_crit)
     call mem_deallocate(this%time_alpha)
     call mem_deallocate(this%gammaw)
     call mem_deallocate(this%beta)
@@ -5005,48 +5040,6 @@ contains
     ! -- return
     return
   end subroutine csub_delay_solve
-  
-  subroutine csub_delay_calc_err(this, ib, hcell, err)
-! ******************************************************************************
-! csub_delay_calc_err -- Calculate error in a delay interbed.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(GwfCsubType), intent(inout) :: this
-    integer(I4B), intent(in) :: ib
-    real(DP), intent(in) :: hcell
-    real(DP), intent(inout) :: err
-    ! -- local variables
-    integer(I4B) :: idelay
-    integer(I4B) :: n
-    real(DP) :: v
-! ------------------------------------------------------------------------------
-    !
-    ! -- initialize variables
-    idelay = this%idelay(ib)
-    err = DZERO
-    !
-    !
-    if (this%thick(ib) > DZERO) then
-      call this%csub_delay_assemble(ib, hcell)
-      do n = 1, this%ndelaycells
-        v = this%dbad(n) * this%dbh(n, idelay)
-        if (n > 1) then
-          v = v + this%dbal(n) * this%dbh(n-1, idelay)
-        end if
-        if (n < this%ndelaycells) then
-          v = v + this%dbau(n) * this%dbh(n+1, idelay)
-        end if
-        v = v - this%dbrhs(n)
-        err = err + v
-      end do
-    end if
-    !
-    ! -- return
-    return
-  end subroutine csub_delay_calc_err
-
  
   subroutine csub_delay_calc_dstor(this, ib, stoe, stoi)
 ! ******************************************************************************
