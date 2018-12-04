@@ -681,7 +681,7 @@ module GwfModule
     return
   end subroutine gwf_fc
 
-  subroutine gwf_cc(this, kiter, iend, icnvg)
+  subroutine gwf_cc(this, kiter, iend, icnvg, icnvgopt, hclose, rclose)
 ! ******************************************************************************
 ! gwf_cc -- GroundWater Flow Model Final Convergence Check for Boundary Packages
 ! Subroutine: (1) calls package cc routines
@@ -694,6 +694,9 @@ module GwfModule
     integer(I4B),intent(in) :: kiter
     integer(I4B),intent(in) :: iend
     integer(I4B),intent(inout) :: icnvg
+    integer(I4B),intent(inout) :: icnvgopt
+    real(DP), intent(in) :: hclose
+    real(DP), intent(in) :: rclose
     ! -- local
     class(BndType), pointer :: packobj
     integer(I4B) :: ip
@@ -705,7 +708,8 @@ module GwfModule
     !
     ! -- csub convergence check
     if (this%incsub > 0) then
-      call this%csub%csub_cc(iend, icnvg, this%dis%nodes, this%x)
+      call this%csub%csub_cc(iend, icnvg, this%dis%nodes, this%x,             &
+                             icnvgopt, hclose, rclose)
     end if
     !
     ! -- Call package cc routines

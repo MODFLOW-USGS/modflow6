@@ -150,11 +150,14 @@ module NumericalModelModule
     integer(I4B), intent(in) :: inwtflag
   end subroutine model_nr
 
-  subroutine model_cc(this, kiter, iend, icnvg)
+  subroutine model_cc(this, kiter, iend, icnvg, icnvgopt, hclose, rclose)
     class(NumericalModelType) :: this
     integer(I4B),intent(in) :: kiter
     integer(I4B),intent(in) :: iend
     integer(I4B),intent(inout) :: icnvg
+    integer(I4B),intent(inout) :: icnvgopt
+    real(DP), intent(in) :: hclose
+    real(DP), intent(in) :: rclose
   end subroutine model_cc
 
   subroutine model_nur(this, neqmod, x, xtemp, dx, inewtonur)

@@ -146,6 +146,7 @@ module GwfCsubModule
     !
     ! -- delay interbed arrays
     real(DP), dimension(:), pointer, contiguous   :: dbdz => null()              !delay bed dz
+    real(DP), dimension(:), pointer, contiguous   :: dbdhmax => null()           !delay bed maximum head change
     real(DP), dimension(:,:), pointer, contiguous :: dbz => null()               !delay bed cell z
     real(DP), dimension(:,:), pointer, contiguous :: dbh => null()               !delay bed cell h
     real(DP), dimension(:,:), pointer, contiguous :: dbh0 => null()              !delay bed cell previous h
@@ -405,7 +406,8 @@ contains
     return
    end subroutine csub_allocate_scalars
 
-  subroutine csub_cc(this, iend, icnvg, nodes, hnew)
+  subroutine csub_cc(this, iend, icnvg, nodes, hnew,                          &
+                     icnvgopt, hclose, rclose)
 ! **************************************************************************
 ! csub_cc -- Final convergence check for package
 ! **************************************************************************
@@ -419,11 +421,20 @@ contains
     integer(I4B), intent(inout) :: icnvg
     integer(I4B), intent(in) :: nodes
     real(DP), dimension(nodes), intent(in) :: hnew
+    integer(I4B), intent(in) :: icnvgopt
+    real(DP), intent(in) :: hclose
+    real(DP), intent(in) :: rclose
     ! -- local
     integer(I4B) :: ifirst
     integer(I4B) :: ib
     integer(I4B) :: node
     integer(I4B) :: idelay
+    integer(I4B) :: ihmax
+    integer(I4B) :: irmax
+    real(DP) :: rrclose
+    real(DP) :: hmax
+    real(DP) :: rmax
+    real(DP) :: dh
     real(DP) :: area
     real(DP) :: hcell
     real(DP) :: snnew
@@ -435,28 +446,60 @@ contains
     real(DP) :: v1
     real(DP) :: v2
     real(DP) :: df
-    real(DP) :: avgf
-    real(DP) :: pd
-    real(DP) :: pow
-    real(DP) :: scale
-    real(DP) :: s1
-    real(DP) :: s2
-    real(DP) :: sdf
-    real(DP) :: savgf
-    real(DP) :: spd
+    !real(DP) :: avgf
+    !real(DP) :: pd
+    !real(DP) :: pow
+    !real(DP) :: scale
+    !real(DP) :: s1
+    !real(DP) :: s2
+    !real(DP) :: sdf
+    !real(DP) :: savgf
+    !real(DP) :: spd
     ! format
+!02000 format(4x,'CSUB PACKAGE FAILED CONVERGENCE CRITERIA',//,                  &
+!             4x,a10,3(1x,a15),/,4x,58('-'))
+!02010 format(4x,i10,3(1x,G15.7))
+!02020 format(4x,58('-'))
+!02030 format('CONVERGENCE FAILED AS A RESULT OF CSUB PACKAGE',1x,a)
 02000 format(4x,'CSUB PACKAGE FAILED CONVERGENCE CRITERIA',//,                  &
-             4x,a10,3(1x,a15),/,4x,58('-'))
-02010 format(4x,i10,3(1x,G15.7))
-02020 format(4x,58('-'))
+             4x,'INTERBED MAX. HEAD CHANGE ',1x,'INTERBED MAX. FLOW DIFF',/,    &                           
+             4x,2(a10,1x,a15,1x),/,4x,53('-'))
+02010 format(4x,2(i10,1x,G15.7,1x))
+02020 format(4x,53('-'))
 02030 format('CONVERGENCE FAILED AS A RESULT OF CSUB PACKAGE',1x,a)
 ! --------------------------------------------------------------------------
     ifirst = 1
+    if (icnvgopt < 2) then
+      rrclose = rclose
+    else if (icnvgopt == 2 .or. icnvgopt == 4) then
+      rrclose = rclose / real(nodes, KIND(DZERO))
+    else if (icnvgopt == 3) then
+      rrclose = DEM6
+    else
+      rrclose = DEM6
+    end if
     tled = DONE / DELT
     if (this%gwfiss == 0) then
+      ihmax = 0
+      irmax = 0
+      hmax = DZERO
+      rmax = DZERO
       final_check: do ib = 1, this%ninterbeds
         idelay = this%idelay(ib)
+        !
+        ! -- skip nodelay interbeds
         if (idelay == 0) cycle
+        !
+        ! -- evaluate the maximum head change in the interbed
+        dh = this%dbdhmax(idelay)
+        if (abs(dh) > abs(hmax)) then
+          ihmax = ib
+          hmax = dh
+        end if
+        !
+        ! -- evaluate difference between storage changes
+        !    in the interbed and exchange between the interbed
+        !    and the gwf cell
         node = this%nodelist(ib)
         area = this%dis%get_area(node)
         hcell = hnew(node)
@@ -476,61 +519,79 @@ contains
         !    storage and the flow between the interbed and the cell
         df = v2 - v1
         !
-        ! -- calculate the averageflow
-        avgf = DHALF * (v1 + v2)
-        !
-        ! -- Normalize v1 and v2 to be in range (-10.0,10.0)
-        pow = DHALF * (abs(v1) + abs(v2))
-        pow = floor(log10(pow))
-        scale = 10**pow
-        if (scale == DZERO) then
-          s1 = DZERO
-          s2 = DZERO
-          savgf = DZERO
-        else
-          s1 = v1 / scale
-          s2 = v2 / scale
-          savgf = avgf / scale
+        ! -- evaluate difference relative to rrmax
+        if (abs(df) > abs(rmax)) then
+          irmax = ib
+          rmax = df
         end if
-        sdf = v2 - v1
-        !
-        ! -- calculate the percent difference in storage and interbed 
-        !    flow to or from the cell
-        pd = DZERO
-        if (abs(avgf) > DZERO) then
-          pd = DHUNDRED * df / avgf
-        end if
-        !
-        ! -- calculate the scaled percent difference in storage and  
-        !    interbed flow to or from the cell
-        spd = DZERO
-        if (abs(savgf) * this%cc_crit > DZERO) then
-          spd = DHUNDRED * sdf / savgf
-        end if
-        !
-        ! -- evaluate the difference in the scaled numbers relative to the 
-        !    defined convergence check criteria
-        if (ABS(sdf) >= this%cc_crit) then
-          icnvg = 0
-          ! write convergence check information if this is the last outer iteration
-          if (iend == 1) then
-            if (ifirst == 1) then
-              ifirst = 0
-              write(*,2030) this%name
-              write(this%iout, 2000) '   INTEBED',                                 &
-                '      PCT DIFF.',                                                 &
-                '   SCALED DIFF.', '   SCALED CRIT.'
-            end if
-            write(*,2010) ib, pd, sdf, this%cc_crit
-            write(this%iout,2010) ib, pd, sdf, this%cc_crit
-          else
-            exit final_check
-          end if
-        end if
+        !!
+        !! -- calculate the averageflow
+        !avgf = DHALF * (v1 + v2)
+        !!
+        !! -- Normalize v1 and v2 to be in range (-10.0,10.0)
+        !pow = DHALF * (abs(v1) + abs(v2))
+        !pow = floor(log10(pow))
+        !scale = 10**pow
+        !if (scale == DZERO) then
+        !  s1 = DZERO
+        !  s2 = DZERO
+        !  savgf = DZERO
+        !else
+        !  s1 = v1 / scale
+        !  s2 = v2 / scale
+        !  savgf = avgf / scale
+        !end if
+        !sdf = s2 - s1
+        !!
+        !! -- calculate the percent difference in storage and interbed 
+        !!    flow to or from the cell
+        !pd = DZERO
+        !if (abs(avgf) > DZERO) then
+        !  pd = DHUNDRED * df / avgf
+        !end if
+        !!
+        !! -- calculate the scaled percent difference in storage and  
+        !!    interbed flow to or from the cell
+        !spd = DZERO
+        !if (abs(savgf) * this%cc_crit > DZERO) then
+        !  spd = DHUNDRED * sdf / savgf
+        !end if
+        !!
+        !! -- evaluate the difference in the scaled numbers relative to the 
+        !!    defined convergence check criteria
+        !if (ABS(sdf) >= this%cc_crit) then
+        !  icnvg = 0
+        !  ! write convergence check information if this is the last outer iteration
+        !  if (iend == 1) then
+        !    if (ifirst == 1) then
+        !      ifirst = 0
+        !      write(*,2030) this%name
+        !      write(this%iout, 2000) '   INTEBED',                                 &
+        !        '      PCT DIFF.',                                                 &
+        !        '   SCALED DIFF.', '   SCALED CRIT.'
+        !    end if
+        !    write(*,2010) ib, pd, sdf, this%cc_crit
+        !    write(this%iout,2010) ib, pd, sdf, this%cc_crit
+        !  else
+        !    exit final_check
+        !  end if
+        !end if
       end do final_check
-      if (ifirst == 0) then
-        write(this%iout,2020)
+      if (hmax > hclose .or. rmax > rrclose) then
+        icnvg = 0
+        ! write convergence check information if this is the last outer iteration
+        if (iend == 1) then
+          write(*,2030) this%name
+          write(this%iout, 2000)                                              &
+            '  LOCATION', '    HEAD CHANGE',                                  &
+            '  LOCATION', 'FLOW DIFFERENCE'
+          write(*,2010) ihmax, hmax, irmax, rmax
+          write(this%iout,2010) ihmax, hmax, irmax, rmax
+        end if
       end if
+      !if (ifirst == 0) then
+      !  write(this%iout,2020)
+      !end if
     end if
     !
     ! -- return
@@ -1660,6 +1721,7 @@ contains
         !
         ! -- reallocate delay bed arrays
         call mem_reallocate(this%dbdz, ndelaybeds, 'dbdz', trim(this%origin))
+        call mem_reallocate(this%dbdhmax, ndelaybeds, 'dbdhmax', trim(this%origin))
         call mem_reallocate(this%dbz, this%ndelaycells, ndelaybeds, 'dbz', trim(this%origin))
         call mem_reallocate(this%dbh, this%ndelaycells, ndelaybeds, 'dbh', trim(this%origin))
         call mem_reallocate(this%dbh0, this%ndelaycells, ndelaybeds, 'dbh0', trim(this%origin))
@@ -2187,6 +2249,7 @@ contains
     !
     ! -- delay bed storage
     call mem_allocate(this%dbdz, 0, 'dbdz', trim(this%origin))
+    call mem_allocate(this%dbdhmax, 0, 'dbdhmax', trim(this%origin))
     call mem_allocate(this%dbz, 0, 0, 'dbz', trim(this%origin))
     call mem_allocate(this%dbh, 0, 0, 'dbh', trim(this%origin))
     call mem_allocate(this%dbh0, 0, 0, 'dbh0', trim(this%origin))
@@ -2331,6 +2394,7 @@ contains
       !
       ! -- delay bed storage
       call mem_deallocate(this%dbdz)
+      call mem_deallocate(this%dbdhmax)
       call mem_deallocate(this%dbz)
       call mem_deallocate(this%dbh)
       call mem_deallocate(this%dbh0)
@@ -4603,6 +4667,7 @@ contains
           dh = this%dbdh(n) - this%dbh(n, idelay) 
           if (abs(dh) > abs(dhmax)) then
             dhmax = dh !this%dbdh(n)
+            this%dbdhmax(idelay) = dhmax
           end if
           ! update delay bed heads
           this%dbh(n, idelay) = this%dbdh(n)
