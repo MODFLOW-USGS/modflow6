@@ -7,7 +7,7 @@
 
 ## Automated Testing Status on Travis-CI
 
-### Version 6.0.2 csub-ccfix2 &mdash; build 201
+### Version 6.0.2 csub-ccfix2 &mdash; build 202
 [![Build Status](https://travis-ci.org/MODFLOW-USGS/modflow6.svg?branch=csub-ccfix2)](https://travis-ci.org/MODFLOW-USGS/modflow6)
 
 ## Introduction
@@ -31,7 +31,7 @@ MODFLOW 6 is the latest core version of MODFLOW. It synthesizes many of the capa
 
 #### ***Software/Code citation for MODFLOW 6:***
 
-[Langevin, C.D., Hughes, J.D., Banta, E.R., Provost, A.M., Niswonger, R.G., and Panday, Sorab, 2018, MODFLOW 6 Modular Hydrologic Model version 6.0.2 &mdash; csub-ccfix2: U.S. Geological Survey Software Release, 04 December 2018, https://doi.org/10.5066/F76Q1VQV](https://doi.org/10.5066/F76Q1VQV)
+[Langevin, C.D., Hughes, J.D., Banta, E.R., Provost, A.M., Niswonger, R.G., and Panday, Sorab, 2018, MODFLOW 6 Modular Hydrologic Model version 6.0.2 &mdash; csub-ccfix2: U.S. Geological Survey Software Release, 06 December 2018, https://doi.org/10.5066/F76Q1VQV](https://doi.org/10.5066/F76Q1VQV)
 
 
 ## Instructions for building definition files for new packages

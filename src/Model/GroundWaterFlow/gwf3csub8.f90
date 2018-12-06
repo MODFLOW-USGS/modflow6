@@ -446,21 +446,7 @@ contains
     real(DP) :: v1
     real(DP) :: v2
     real(DP) :: df
-    !real(DP) :: avgf
-    !real(DP) :: pd
-    !real(DP) :: pow
-    !real(DP) :: scale
-    !real(DP) :: s1
-    !real(DP) :: s2
-    !real(DP) :: sdf
-    !real(DP) :: savgf
-    !real(DP) :: spd
     ! format
-!02000 format(4x,'CSUB PACKAGE FAILED CONVERGENCE CRITERIA',//,                  &
-!             4x,a10,3(1x,a15),/,4x,58('-'))
-!02010 format(4x,i10,3(1x,G15.7))
-!02020 format(4x,58('-'))
-!02030 format('CONVERGENCE FAILED AS A RESULT OF CSUB PACKAGE',1x,a)
 02000 format(4x,'CSUB PACKAGE FAILED CONVERGENCE CRITERIA',//,                  &
              4x,'INTERBED MAX. HEAD CHANGE ',1x,'INTERBED MAX. FLOW DIFF',/,    &                           
              4x,2(a10,1x,a15,1x),/,4x,53('-'))
@@ -524,58 +510,6 @@ contains
           irmax = ib
           rmax = df
         end if
-        !!
-        !! -- calculate the averageflow
-        !avgf = DHALF * (v1 + v2)
-        !!
-        !! -- Normalize v1 and v2 to be in range (-10.0,10.0)
-        !pow = DHALF * (abs(v1) + abs(v2))
-        !pow = floor(log10(pow))
-        !scale = 10**pow
-        !if (scale == DZERO) then
-        !  s1 = DZERO
-        !  s2 = DZERO
-        !  savgf = DZERO
-        !else
-        !  s1 = v1 / scale
-        !  s2 = v2 / scale
-        !  savgf = avgf / scale
-        !end if
-        !sdf = s2 - s1
-        !!
-        !! -- calculate the percent difference in storage and interbed 
-        !!    flow to or from the cell
-        !pd = DZERO
-        !if (abs(avgf) > DZERO) then
-        !  pd = DHUNDRED * df / avgf
-        !end if
-        !!
-        !! -- calculate the scaled percent difference in storage and  
-        !!    interbed flow to or from the cell
-        !spd = DZERO
-        !if (abs(savgf) * this%cc_crit > DZERO) then
-        !  spd = DHUNDRED * sdf / savgf
-        !end if
-        !!
-        !! -- evaluate the difference in the scaled numbers relative to the 
-        !!    defined convergence check criteria
-        !if (ABS(sdf) >= this%cc_crit) then
-        !  icnvg = 0
-        !  ! write convergence check information if this is the last outer iteration
-        !  if (iend == 1) then
-        !    if (ifirst == 1) then
-        !      ifirst = 0
-        !      write(*,2030) this%name
-        !      write(this%iout, 2000) '   INTEBED',                                 &
-        !        '      PCT DIFF.',                                                 &
-        !        '   SCALED DIFF.', '   SCALED CRIT.'
-        !    end if
-        !    write(*,2010) ib, pd, sdf, this%cc_crit
-        !    write(this%iout,2010) ib, pd, sdf, this%cc_crit
-        !  else
-        !    exit final_check
-        !  end if
-        !end if
       end do final_check
       if (hmax > hclose .or. rmax > rrclose) then
         icnvg = 0
@@ -589,9 +523,6 @@ contains
           write(this%iout,2010) ihmax, hmax, irmax, rmax
         end if
       end if
-      !if (ifirst == 0) then
-      !  write(this%iout,2020)
-      !end if
     end if
     !
     ! -- return
