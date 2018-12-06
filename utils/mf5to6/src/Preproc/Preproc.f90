@@ -16,7 +16,7 @@ module PreprocModule
   use GlobalVariablesPHMFModule, only: prognamPHMF, verbose, vnam
   use InputOutputModule,         only: GetUnit, uget_block, urword, &
                                        uterminate_block, GetUnit, openfile, &
-                                       uget_any_block, dclosetest
+                                       uget_any_block
   use ListModule,                only: ListType
   use ObsBlockModule,            only: ObsBlockType, ConstructObsBlockType, &
                                        AddObsBlockToList, GetObsBlockFromList

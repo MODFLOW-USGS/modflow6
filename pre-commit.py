@@ -6,6 +6,7 @@ import os
 import sys
 import datetime
 import json
+from collections import OrderedDict
 
 from hook_files import paths, files
 
@@ -343,10 +344,10 @@ def update_readme_markdown(vmajor, vminor, vmicro, vbuild):
     f.close()
     
     # load and modify json file
-    jsonFile = open(files[4], 'r') # Open the JSON file for reading
-    data = json.load(jsonFile) # Read the JSON into the buffer
-    jsonFile.close() # Close the JSON file
-    
+    json_fname = files[4]
+    with open(json_fname, 'r') as f:
+        data = json.load(f, object_pairs_hook=OrderedDict)
+
     # modify the json file data
     now = datetime.datetime.now()
     sdate = now.strftime('%Y-%m-%d')
@@ -359,9 +360,10 @@ def update_readme_markdown(vmajor, vminor, vmicro, vbuild):
         data[0]['status'] = 'Release Candidate'
     
     # rewrite the json file
-    with open(files[4], 'w') as f:
-        json.dump(data, f, indent=4)  
-          
+    with open(json_fname, 'w') as f:
+        json.dump(data, f, indent=4)
+        f.write('\n')
+
     return
 
 

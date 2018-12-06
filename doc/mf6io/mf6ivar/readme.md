@@ -11,6 +11,7 @@ A MODFLOW 6 variable, and its place within a block and on a line is defined usin
 * block -- this is the name of the block that contains the variable.  Required.
 * name -- this is the name of the variable.  Required.
 * type -- this is the type of variable.  Valid values are: keyword, string, integer, double precision, recarray, record, recordrepeating, keystring.  Required.
+* valid -- list of valid values or keywords
 * shape -- this is the size of the array.  Only required for arrays.  Optional.
 * tagged -- if set to false, then a keyword is not required prior to value itself.  tagged is set to true if not specified.  Optional.
 * in_record -- if true, then this means that the variable is part of a record, and so it should not be listed on its own line.  in_record is False if not specified.  Optional.
