@@ -287,7 +287,7 @@
               else if (keyword == 'RELATIVE_RCLOSE') then
                 THIS%ICNVGOPT = 3
               else if (keyword == 'L2NORM_RELATIVE_RCLOSE') then
-                THIS%ICNVGOPT = 3
+                THIS%ICNVGOPT = 4
               end if
             case ('INNER_MAXIMUM')
               i = parser%GetInteger()

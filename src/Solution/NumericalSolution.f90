@@ -1289,7 +1289,8 @@ contains
           end if
           do im=1,this%modellist%Count()
             mp => GetNumericalModelFromList(this%modellist, im)
-            call mp%model_cc(kiter, iend, this%icnvg)
+            call mp%model_cc(kiter, iend, this%icnvg, this%imslinear%icnvgopt,&
+                             this%imslinear%hclose, this%imslinear%rclose)
           enddo
         end if
         !
