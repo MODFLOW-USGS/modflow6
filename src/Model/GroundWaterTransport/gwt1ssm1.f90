@@ -105,11 +105,14 @@ module GwtSsmModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_setptr
+    use SimModule,           only: ustop, store_error
+    use ConstantsModule,   only: LINELENGTH
     ! -- dummy
     class(GwtSsmType) :: this
     class(DisBaseType), pointer, intent(in) :: dis
     integer(I4B), dimension(:), pointer, contiguous :: ibound
     ! -- local
+    character(len=LINELENGTH) :: errmsg
     ! -- formats
     character(len=*), parameter :: fmtssm =                                    &
       "(1x,/1x,'SSM -- SOURCE-SINK MIXING PACKAGE, VERSION 1, 8/25/2017',      &
@@ -122,6 +125,15 @@ module GwtSsmModule
     ! -- store pointers to arguments that were passed in
     this%dis     => dis
     this%ibound  => ibound
+    !
+    ! -- Check to make sure that gwfbndlist is not null
+    if (.not. associated(this%fmi%gwfbndlist)) then
+        write(errmsg, '(a)') '****ERROR. SSM PACKAGE DOES NOT HAVE &
+                             &BOUNDARY FLOWS.  ACTIVATE GWF-GWT EXCHANGE.'
+        call store_error(errmsg)
+        call this%parser%StoreErrorUnit()
+        call ustop()
+    endif
     !
     ! -- Allocate arrays
     call this%allocate_arrays()
@@ -529,7 +541,7 @@ module GwtSsmModule
     ! -- local
     integer(I4B) :: ngwfpak
 ! ------------------------------------------------------------------------------
-    !
+    !    
     ! -- Allocate
     ngwfpak = this%fmi%gwfbndlist%Count()
     call mem_allocate(this%iauxpakcomp, this%ncomp, ngwfpak, 'IAUXPAKCOMP',    &
@@ -588,6 +600,7 @@ module GwtSsmModule
             write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN SSM OPTION: ',         &
                                      trim(keyword)
             call store_error(errmsg)
+            call this%parser%StoreErrorUnit()
             call ustop()
         end select
       end do
