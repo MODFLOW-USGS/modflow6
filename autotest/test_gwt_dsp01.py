@@ -174,9 +174,8 @@ def get_model(idx, dir):
                                 fname='{}.sto'.format(gwtname))
 
     # sources
-    #sourcerecarray = [('WEL-1', 1, 'CONCENTRATION')]
-    #ssm = flopy.mf6.ModflowGwtssm(gwt, sources=sourcerecarray,
-    #                            fname='{}.ssm'.format(gwtname))
+    ssm = flopy.mf6.ModflowGwtssm(gwt, sources=[[]],
+                                  fname='{}.ssm'.format(gwtname))
 
     # output control
     oc = flopy.mf6.ModflowGwtoc(gwt,

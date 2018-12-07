@@ -177,8 +177,8 @@ def build_models():
         sto = flopy.mf6.ModflowGwtsto(gwt, porosity=sy,
                                      fname='{}.sto'.format(gwtname))
 
-        # storage
-        srb = flopy.mf6.ModflowGwtsrb(gwt, rhob=1., srconc=0.,
+        # sorbtion
+        srb = flopy.mf6.ModflowGwtsrb(gwt, sorbtion=True, rhob=1., srconc=0.,
                                       distcoef=distcoef[idx],
                                       fname='{}.srb'.format(gwtname))
 
@@ -187,6 +187,10 @@ def build_models():
         cnc = flopy.mf6.ModflowGwtsrc(gwt, stress_period_data=srcdict,
                                       save_flows=False,
                                       pname='SRC-1')
+
+        # sources
+        ssm = flopy.mf6.ModflowGwtssm(gwt, sources=[[]],
+                                      fname='{}.ssm'.format(gwtname))
 
         # output control
         oc = flopy.mf6.ModflowGwtoc(gwt,

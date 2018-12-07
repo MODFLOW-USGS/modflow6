@@ -259,6 +259,10 @@ def get_model(idx, dir):
                                   save_flows=False,
                                   pname='CNC-1')
 
+    # sources
+    ssm = flopy.mf6.ModflowGwtssm(gwt, sources=[[]],
+                                  fname='{}.ssm'.format(gwtname))
+
     # output control
     oc = flopy.mf6.ModflowGwtoc(gwt,
                                 budget_filerecord='{}.cbc'.format(gwtname),

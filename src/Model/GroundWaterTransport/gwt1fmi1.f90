@@ -86,7 +86,7 @@ module GwtFmiModule
     return
   end subroutine fmi_cr
 
-  subroutine fmi_ar(this, dis, ibound)
+  subroutine fmi_ar(this, dis, ibound, inssm)
 ! ******************************************************************************
 ! fmi_ar -- Allocate and Read
 ! ******************************************************************************
@@ -95,10 +95,12 @@ module GwtFmiModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_setptr
+    use SimModule,           only: ustop, store_error
     ! -- dummy
     class(GwtFmiType) :: this
     class(DisBaseType), pointer, intent(in) :: dis
     integer(I4B), dimension(:), pointer, contiguous :: ibound
+    integer(I4B), intent(in) :: inssm
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtfmi =                                    &
@@ -115,6 +117,15 @@ module GwtFmiModule
     !
     ! -- Allocate arrays
     call this%allocate_arrays(dis%nodes)
+    !
+    ! -- Make sure that ssm is on if there are any boundary packages
+    if (inssm == 0) then
+      if (this%gwfbndlist%Count() > 0) then
+        call store_error('ERROR: FLOW MODEL HAS BOUNDARY PACKAGES, BUT THERE &
+          &IS NO SSM PACAKGE.  THE SSM PACKAGE MUST BE ACTIVATED.')
+        call ustop()
+      endif
+    endif
     !
     ! -- Read storage options
     !call this%read_options()

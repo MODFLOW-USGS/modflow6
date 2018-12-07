@@ -16,10 +16,15 @@ module GwtSrbModule
     integer(I4B), dimension(:), pointer, contiguous  :: ibound => null()        ! pointer to model ibound
     type(GwtFmiType), pointer                        :: fmi => null()           ! pointer to fmi object
     
+    integer(I4B), pointer                            :: irorder                 ! order of reaction rate (0:none, 1:first, 2:zero)
+    integer(I4B), pointer                            :: isrb                    ! sorbtion active flag (0:off, 1:on)
+    integer(I4B), pointer                            :: idd                     ! dual domain active flag (0:off, 1:on)
     real(DP), dimension(:), pointer, contiguous      :: strg => null()          ! rate of sorbed mass storage
     real(DP), dimension(:), pointer, contiguous      :: rhob => null()          ! bulk density
     real(DP), dimension(:), pointer, contiguous      :: srconc => null()        ! initial sorbed concentration
     real(DP), dimension(:), pointer, contiguous      :: distcoef => null()      ! distribution coefficient
+    real(DP), dimension(:), pointer, contiguous      :: rc1 => null()           ! first or zero order rate constant for liquid
+    real(DP), dimension(:), pointer, contiguous      :: rc2 => null()           ! first or zero order rate constant for sorbed mass
     real(DP), dimension(:), pointer, contiguous      :: csrbnew => null()       ! new sorbed concentration
     real(DP), dimension(:), pointer, contiguous      :: csrbold => null()       ! old sorbed concentration
     
@@ -106,7 +111,7 @@ module GwtSrbModule
     this%porosity => porosity
     !
     ! -- Allocate arrays
-    call this%allocate_arrays(dis%nodes)
+    call this%allocate_arrays()
     !
     ! -- Read sorption options
     call this%read_options()
@@ -115,10 +120,12 @@ module GwtSrbModule
     call this%read_data()
     !
     ! -- Set new and old sorbed concentrations equal to the intial sorbed conc
-    do i = 1, this%dis%nodes
-      this%csrbnew(i) = this%srconc(i)
-      this%csrbold(i) = this%srconc(i)
-    enddo
+    if (this%isrb > 0) then
+      !do i = 1, this%dis%nodes
+      !  this%csrbnew(i) = this%srconc(i)
+      !  this%csrbold(i) = this%srconc(i)
+      !enddo
+    endif
     !
     ! -- Return
     return
@@ -169,15 +176,35 @@ module GwtSrbModule
       if (this%fmi%igwfstrgss /= 0) vold = vold + this%fmi%gwfstrgss(n) * delt
       if (this%fmi%igwfstrgsy /= 0) vold = vold + this%fmi%gwfstrgsy(n) * delt
       gwfsatold = vold / vcell / this%porosity(n)
-      !
-      ! -- add terms to diagonal and rhs accumulators
-      eqfact = -this%rhob(n) * vcell * tled
-      ctosrb = this%distcoef(n)
-      hhcof =  eqfact * ctosrb * this%fmi%gwfsat(n)
-      rrhs = eqfact * ctosrb * gwfsatold * cold(n)
       idiag = this%dis%con%ia(n)
-      amatsln(idxglo(idiag)) = amatsln(idxglo(idiag)) + hhcof
-      rhs(n) = rhs(n) + rrhs
+      !
+      ! -- add sorbtion terms to diagonal and rhs accumulators
+      if (this%isrb == 1) then
+        eqfact = -this%rhob(n) * vcell * tled
+        ctosrb = this%distcoef(n)
+        hhcof =  eqfact * ctosrb * this%fmi%gwfsat(n)
+        rrhs = eqfact * ctosrb * gwfsatold * cold(n)
+        amatsln(idxglo(idiag)) = amatsln(idxglo(idiag)) + hhcof
+        rhs(n) = rhs(n) + rrhs
+      endif
+      !
+      ! -- add reaction rate terms to accumulators
+      if (this%irorder == 1) then
+        !
+        ! -- first order reaction rate is a function of concentration, so add
+        !    to left hand side
+        hhcof = -this%rc1(n) * vnew
+        if (this%isrb == 1) hhcof = hhcof - this%rc2(n) * vcell * this%rhob(n) * ctosrb
+        amatsln(idxglo(idiag)) = amatsln(idxglo(idiag)) + hhcof
+      elseif (this%irorder == 2) then
+        !
+        ! -- zero-order reaction rate is not a function of concentration, so add
+        !    to right hand side
+        rrhs = this%rc1(n) * vnew
+        if (this%isrb == 1) rrhs = rrhs + this%rc2(n) * ctosrb * vcell
+        rhs(n) = rhs(n) + rrhs
+      endif
+      !
     enddo
     !
     ! -- Return
@@ -205,7 +232,8 @@ module GwtSrbModule
     integer(I4B) :: n
     real(DP) :: rate
     real(DP) :: tled
-    real(DP) :: rin, rout
+    real(DP) :: rsrbin, rsrbout
+    real(DP) :: rrctin, rrctout
     real(DP) :: vnew, vold
     real(DP) :: hhcof, rrhs
     real(DP) :: vcell
@@ -215,13 +243,14 @@ module GwtSrbModule
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize 
-    rin = DZERO
-    rout = DZERO
+    rsrbin = DZERO
+    rsrbout = DZERO
+    rrctin = DZERO
+    rrctout = DZERO
     tled = DONE / delt
     !
     ! -- Calculate sorption change
     do n = 1, nodes
-      this%strg(n) = DZERO
       !
       ! -- skip if transport inactive
       if(this%ibound(n) <= 0) cycle
@@ -234,23 +263,53 @@ module GwtSrbModule
       if (this%fmi%igwfstrgsy /= 0) vold = vold + this%fmi%gwfstrgsy(n) * delt
       gwfsatold = vold / vcell / this%porosity(n)
       !
-      ! -- calculate rate
-      eqfact = -this%rhob(n) * vcell * tled
-      ctosrb = this%distcoef(n)
-      hhcof =  eqfact * ctosrb * this%fmi%gwfsat(n)
-      rrhs = eqfact * ctosrb * gwfsatold * cold(n)
-      rate = hhcof * cnew(n) - rrhs
-      this%strg(n) = rate
-      if(rate < DZERO) then
-        rout = rout - rate
-      else
-        rin = rin + rate
+      ! -- calculate sorbtion rate
+      if (this%isrb == 1) then
+        this%strg(n) = DZERO
+        eqfact = -this%rhob(n) * vcell * tled
+        ctosrb = this%distcoef(n)
+        hhcof =  eqfact * ctosrb * this%fmi%gwfsat(n)
+        rrhs = eqfact * ctosrb * gwfsatold * cold(n)
+        rate = hhcof * cnew(n) - rrhs
+        this%strg(n) = rate
+        if (rate < DZERO) then
+          rsrbout = rsrbout - rate
+        else
+          rsrbin = rsrbin + rate
+        endif
       endif
+      !
+      ! -- calculate reaction gains and losses
+      rate = DZERO
+      hhcof = DZERO
+      rrhs = DZERO
+      if (this%irorder == 1) then
+        hhcof = -this%rc1(n) * vnew
+        if (this%isrb == 1) hhcof = hhcof - this%rc2(n) * vcell * this%rhob(n) * ctosrb
+      elseif (this%irorder == 2) then
+        rrhs = this%rc1(n) * vnew
+        if (this%isrb == 1) rrhs = rrhs + this%rc2(n) * ctosrb * vcell
+      endif
+      rate = hhcof * cnew(n) - rrhs
+      if (rate < DZERO) then
+        rrctout = rrctout - rate
+      else
+        rrctin = rrctin + rate
+      endif
+      !
     enddo
     !
-    ! -- Add contributions to model budget
-    call model_budget%addentry(rin, rout, delt, '        SORPTION',            &
-                               isuppress_output)
+    ! -- Add sorbtion contributions to model budget
+    if (this%isrb == 1) then
+      call model_budget%addentry(rsrbin, rsrbout, delt, '        SORBTION',    &
+                                 isuppress_output)
+    endif
+    !
+    ! -- Add reaction contributions to model budget
+    if (this%irorder > 0) then
+      call model_budget%addentry(rrctin, rrctout, delt, '       REACTIONS',   &
+                                 isuppress_output)
+    endif
     !
     ! -- Return
     return
@@ -321,6 +380,11 @@ module GwtSrbModule
       call mem_deallocate(this%distcoef)
       call mem_deallocate(this%csrbnew)
       call mem_deallocate(this%csrbold)
+      call mem_deallocate(this%rc1)
+      call mem_deallocate(this%rc2)
+      call mem_deallocate(this%isrb)
+      call mem_deallocate(this%irorder)
+      call mem_deallocate(this%idd)
       this%ibound => null()
       this%porosity => null()
       this%fmi => null()
@@ -353,14 +417,20 @@ module GwtSrbModule
     call this%NumericalPackageType%allocate_scalars()
     !
     ! -- Allocate
+    call mem_allocate(this%isrb, 'ISRB', this%origin)
+    call mem_allocate(this%irorder, 'IRORDER', this%origin)
+    call mem_allocate(this%idd, 'IDD', this%origin)
     !
     ! -- Initialize
+    this%isrb = 0
+    this%irorder = 0
+    this%idd = 0
     !
     ! -- Return
     return
   end subroutine allocate_scalars
 
-  subroutine allocate_arrays(this, nodes)
+  subroutine allocate_arrays(this)
 ! ******************************************************************************
 ! allocate_arrays
 ! ******************************************************************************
@@ -372,28 +442,20 @@ module GwtSrbModule
     use ConstantsModule, only: DZERO
     ! -- dummy
     class(GwtSrbType) :: this
-    integer(I4B), intent(in) :: nodes
     ! -- local
-    integer(I4B) :: n
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate
-    call mem_allocate(this%strg, nodes, 'STRG', this%origin)
-    call mem_allocate(this%rhob, nodes, 'RHOB', this%origin)
-    call mem_allocate(this%srconc, nodes, 'SRCONC', this%origin)
-    call mem_allocate(this%distcoef, nodes, 'DISTCOEF', this%origin)
-    call mem_allocate(this%csrbnew, nodes, 'CSRBNEW', this%origin)
-    call mem_allocate(this%csrbold, nodes, 'CSRBOLD', this%origin)
+    call mem_allocate(this%strg, 1, 'STRG', this%origin)
+    call mem_allocate(this%rhob, 1, 'RHOB', this%origin)
+    call mem_allocate(this%srconc, 1, 'SRCONC', this%origin)
+    call mem_allocate(this%distcoef,  1, 'DISTCOEF', this%origin)
+    call mem_allocate(this%csrbnew, 1, 'CSRBNEW', this%origin)
+    call mem_allocate(this%csrbold, 1, 'CSRBOLD', this%origin)
+    call mem_allocate(this%rc1, 1, 'RC1', this%origin)
+    call mem_allocate(this%rc2, 1, 'RC2', this%origin)
     !
     ! -- Initialize
-    do n = 1, nodes
-      this%strg(n) = DZERO
-      this%rhob(n) = DZERO
-      this%srconc(n) = DZERO
-      this%distcoef(n) = DZERO
-      this%csrbnew(n) = DZERO
-      this%csrbold(n) = DZERO
-    enddo
     !
     ! -- Return
     return
@@ -412,13 +474,21 @@ module GwtSrbModule
     ! -- dummy
     class(GwtSrbType) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg, keyword
+    character(len=LINELENGTH) :: errmsg, keyword, keyword2
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     ! -- formats
     character(len=*), parameter :: fmtisvflow =                                &
       "(4x,'CELL-BY-CELL FLOW INFORMATION WILL BE SAVED TO BINARY FILE " //    &
       "WHENEVER ICBCFL IS NOT ZERO.')"
+    character(len=*), parameter :: fmtisrb =                                   &
+      "(4x,'LINEAR SORBTION IS SELECTED. ')"
+    character(len=*), parameter :: fmtirorder1 =                               &
+      "(4x,'FIRST ORDER REACTION IS ACTIVE. ')"
+    character(len=*), parameter :: fmtirorder2 =                               &
+      "(4x,'ZERO ORDER REACTION IS ACTIVE. ')"
+    character(len=*), parameter :: fmtidd =                                    &
+      "(4x,'DUAL DOMAIN TRANSPORT IS ACTIVE. ')"
 ! ------------------------------------------------------------------------------
     !
     ! -- get options block
@@ -435,10 +505,34 @@ module GwtSrbModule
           case ('SAVE_FLOWS')
             this%ipakcb = -1
             write(this%iout, fmtisvflow)
+          case ('SORBTION')
+            this%isrb = 1
+            write(this%iout, fmtisrb)
+          case ('RATEORDER')
+            this%isrb = 1
+            call this%parser%GetStringCaps(keyword2)
+            select case(keyword2)
+              case('ONE')
+                this%irorder = 1
+                write(this%iout, fmtirorder1)
+              case('ZERO')
+                this%irorder = 2
+                write(this%iout, fmtirorder2)
+              case default
+                write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN RATEORDER OPTION: ',         &
+                                         trim(keyword2)
+                call store_error(errmsg)
+                call this%parser%StoreErrorUnit()
+                call ustop()
+            end select
+          case ('DUALDOMAIN')
+            this%idd = 1
+            write(this%iout, fmtidd)
           case default
             write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN SRB OPTION: ',         &
                                      trim(keyword)
             call store_error(errmsg)
+            call this%parser%StoreErrorUnit()
             call ustop()
         end select
       end do
@@ -458,20 +552,22 @@ module GwtSrbModule
 ! ------------------------------------------------------------------------------
     use ConstantsModule,   only: LINELENGTH
     use SimModule,         only: ustop, store_error, count_errors
+    use MemoryManagerModule, only: mem_reallocate
     ! -- dummy
     class(GwtSrbType) :: this
     ! -- local
     character(len=LINELENGTH) :: line, errmsg, keyword
     integer(I4B) :: istart, istop, lloc, ierr
-    integer(I4B) :: i
     logical :: isfound, endOfBlock
-    logical, dimension(3) :: lname
-    character(len=24), dimension(3) :: aname
+    logical, dimension(5) :: lname
+    character(len=24), dimension(5) :: aname
     ! -- formats
     ! -- data
     data aname(1) /'            BULK DENSITY'/
-    data aname(2) /'     INITIAL SORBED CONC'/
-    data aname(3) /'DISTRIBUTION COEFFICIENT'/
+    data aname(2) /'DISTRIBUTION COEFFICIENT'/
+    data aname(3) /'  FIRST RATE COEFFICIENT'/
+    data aname(4) /' SECOND RATE COEFFICIENT'/
+    data aname(5) /'     INITIAL SORBED CONC'/
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize
@@ -490,20 +586,40 @@ module GwtSrbModule
         lloc = 1
         select case (keyword)
           case ('RHOB')
+            call mem_reallocate(this%rhob, this%dis%nodes, 'RHOB',             &
+                              trim(this%origin))
             call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,&
                                          this%parser%iuactive, this%rhob,      &
                                          aname(1))
             lname(1) = .true.
-          case ('SRCONC')
-            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,&
-                                         this%parser%iuactive, this%srconc,    &
-                                         aname(2))
-            lname(2) = .true.
           case ('DISTCOEF')
+            call mem_reallocate(this%distcoef, this%dis%nodes, 'DISTCOEF',     &
+                              trim(this%origin))
             call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,&
                                          this%parser%iuactive, this%distcoef,  &
+                                         aname(2))
+            lname(2) = .true.
+          case ('RC1')
+            call mem_reallocate(this%rc1, this%dis%nodes, 'RC1',               &
+                              trim(this%origin))
+            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,&
+                                         this%parser%iuactive, this%rc1,       &
                                          aname(3))
             lname(3) = .true.
+          case ('RC2')
+            call mem_reallocate(this%rc2, this%dis%nodes, 'RC2',               &
+                              trim(this%origin))
+            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,&
+                                         this%parser%iuactive, this%rc2,       &
+                                         aname(4))
+            lname(4) = .true.
+          case ('SRCONC')
+            call mem_reallocate(this%srconc, this%dis%nodes, 'SRCONC',         &
+                              trim(this%origin))
+            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,&
+                                         this%parser%iuactive, this%srconc,    &
+                                         aname(5))
+            lname(5) = .true.
           case default
             write(errmsg,'(4x,a,a)')'ERROR. UNKNOWN GRIDDATA TAG: ',            &
                                      trim(keyword)
@@ -520,19 +636,68 @@ module GwtSrbModule
       call ustop()
     end if
     !
-    ! -- Check for required variables
-    do i = 1, 3
-      if(.not. lname(i)) then
-        write(errmsg, '(a, a, a)') 'Error in GRIDDATA block: ',                   &
-                                   trim(adjustl(aname(i))), ' not found.'
+    ! -- Check for required sorption variables
+    if (this%isrb > 0) then
+      if (.not. lname(1)) then
+        write(errmsg, '(1x,a)') 'ERROR.  SORPTION IS ACTIVE BUT RHOB NOT &
+          &SPECIFIED.  RHOB MUST BE SPECIFIED IN GRIDDATA BLOCK.'
         call store_error(errmsg)
-      end if
-    end do
+      endif
+      if (.not. lname(2)) then
+        write(errmsg, '(1x,a)') 'ERROR.  SORPTION IS ACTIVE BUT DISTRIBUTION &
+          &COEFFICIENT NOT SPECIFIED.  DISTCOEF MUST BE SPECIFIED IN &
+          &GRIDDATA BLOCK.'
+        call store_error(errmsg)
+      endif
+    else
+      if (lname(1)) then
+        write(this%iout, '(1x,a)') 'WARNING.  SORPTION IS NOT ACTIVE BUT RHOB &
+          &WAS SPECIFIED.  RHOB WILL HAVE NO AFFECT ON SIMULATION RESULTS.'
+      endif
+      if (lname(2)) then
+        write(this%iout, '(1x,a)') 'WARNING.  SORPTION IS NOT ACTIVE BUT &
+          &DISTRIBUTION COEFFICIENT WAS SPECIFIED.  DISTCOEF WILL HAVE &
+          &NO AFFECT ON SIMULATION RESULTS.'
+      endif
+    endif
+    !
+    ! -- Check for required rate coefficients
+    if (this%irorder > 0) then
+      if (.not. lname(3)) then
+        write(errmsg, '(1x,a)') 'ERROR.  FIRST OR ZERO ORDER REACTIONS ARE &
+          &ACTIVE BUT THE FIRST RATE COEFFICIENT IS NOT SPECIFIED.  RC1 MUST &
+          &BE SPECIFIED IN GRIDDATA BLOCK.'
+        call store_error(errmsg)
+      endif
+      if (.not. lname(4)) then
+        write(errmsg, '(1x,a)') 'ERROR.  FIRST OR ZERO ORDER REACTIONS ARE &
+          &ACTIVE BUT THE SECOND RATE COEFFICIENT IS NOT SPECIFIED.  RC2 MUST &
+          &BE SPECIFIED IN GRIDDATA BLOCK.'
+        call store_error(errmsg)
+      endif
+    else
+      if (lname(3)) then
+        write(this%iout, '(1x,a)') 'WARNING.  FIRST OR ZERO ORER REACTIONS &
+          &ARE NOT ACTIVE BUT RC1 WAS SPECIFIED.  RC1 WILL HAVE NO AFFECT &
+          &ON SIMULATION RESULTS.'
+      endif
+      if (lname(4)) then
+        write(this%iout, '(1x,a)') 'WARNING.  FIRST OR ZERO ORER REACTIONS &
+          &ARE NOT ACTIVE BUT RC2 WAS SPECIFIED.  RC2 WILL HAVE NO AFFECT &
+          &ON SIMULATION RESULTS.'
+      endif
+    endif
     !
     ! -- terminate if errors
     if(count_errors() > 0) then
       call this%parser%StoreErrorUnit()
       call ustop()
+    endif
+    !
+    ! -- Resize arrays, if necessary
+    if (this%isrb == 1) then
+      call mem_reallocate(this%strg, this%dis%nodes, 'STRG',                   &
+                          trim(this%origin))      
     endif
     !
     ! -- Return
