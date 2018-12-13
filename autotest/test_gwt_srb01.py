@@ -178,7 +178,7 @@ def build_models():
                                      fname='{}.sto'.format(gwtname))
 
         # sorbtion
-        srb = flopy.mf6.ModflowGwtsrb(gwt, sorbtion=True, rhob=1., srconc=0.,
+        srb = flopy.mf6.ModflowGwtsrb(gwt, sorbtion=True, rhob=1.,
                                       distcoef=distcoef[idx],
                                       fname='{}.srb'.format(gwtname))
 

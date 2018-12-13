@@ -21,12 +21,12 @@ module GwtSrbModule
     integer(I4B), pointer                            :: idd                     ! dual domain active flag (0:off, 1:on)
     real(DP), dimension(:), pointer, contiguous      :: strg => null()          ! rate of sorbed mass storage
     real(DP), dimension(:), pointer, contiguous      :: rhob => null()          ! bulk density
-    real(DP), dimension(:), pointer, contiguous      :: srconc => null()        ! initial sorbed concentration
     real(DP), dimension(:), pointer, contiguous      :: distcoef => null()      ! distribution coefficient
     real(DP), dimension(:), pointer, contiguous      :: rc1 => null()           ! first or zero order rate constant for liquid
     real(DP), dimension(:), pointer, contiguous      :: rc2 => null()           ! first or zero order rate constant for sorbed mass
-    real(DP), dimension(:), pointer, contiguous      :: csrbnew => null()       ! new sorbed concentration
-    real(DP), dimension(:), pointer, contiguous      :: csrbold => null()       ! old sorbed concentration
+    real(DP), dimension(:), pointer, contiguous      :: cim => null()           ! concentration for immobile domain
+    real(DP), dimension(:), pointer, contiguous      :: zetaim => null()        ! mass transfer rate to immobile domain
+    real(DP), dimension(:), pointer, contiguous      :: thetaim => null()       ! porosity of the immobile domain
     
   contains
   
@@ -95,7 +95,6 @@ module GwtSrbModule
     integer(I4B), dimension(:), pointer, contiguous :: ibound
     real(DP), dimension(:), pointer, contiguous :: porosity
     ! -- local
-    integer(I4B) :: i
     ! -- formats
     character(len=*), parameter :: fmtsrb =                                    &
       "(1x,/1x,'SRB -- SORPTION PACKAGE, VERSION 1, 10/01/2018',               &
@@ -118,14 +117,6 @@ module GwtSrbModule
     !
     ! -- read the data block
     call this%read_data()
-    !
-    ! -- Set new and old sorbed concentrations equal to the intial sorbed conc
-    if (this%isrb > 0) then
-      !do i = 1, this%dis%nodes
-      !  this%csrbnew(i) = this%srconc(i)
-      !  this%csrbold(i) = this%srconc(i)
-      !enddo
-    endif
     !
     ! -- Return
     return
@@ -376,10 +367,10 @@ module GwtSrbModule
     if(this%inunit > 0) then
       call mem_deallocate(this%strg)
       call mem_deallocate(this%rhob)
-      call mem_deallocate(this%srconc)
+      call mem_deallocate(this%cim)
+      call mem_deallocate(this%zetaim)
+      call mem_deallocate(this%thetaim)
       call mem_deallocate(this%distcoef)
-      call mem_deallocate(this%csrbnew)
-      call mem_deallocate(this%csrbold)
       call mem_deallocate(this%rc1)
       call mem_deallocate(this%rc2)
       call mem_deallocate(this%isrb)
@@ -448,10 +439,10 @@ module GwtSrbModule
     ! -- Allocate
     call mem_allocate(this%strg, 1, 'STRG', this%origin)
     call mem_allocate(this%rhob, 1, 'RHOB', this%origin)
-    call mem_allocate(this%srconc, 1, 'SRCONC', this%origin)
+    call mem_allocate(this%cim, 1, 'CIM', this%origin)
+    call mem_allocate(this%zetaim, 1, 'ZETAIM', this%origin)
+    call mem_allocate(this%thetaim, 1, 'THETAIM', this%origin)
     call mem_allocate(this%distcoef,  1, 'DISTCOEF', this%origin)
-    call mem_allocate(this%csrbnew, 1, 'CSRBNEW', this%origin)
-    call mem_allocate(this%csrbold, 1, 'CSRBOLD', this%origin)
     call mem_allocate(this%rc1, 1, 'RC1', this%origin)
     call mem_allocate(this%rc2, 1, 'RC2', this%origin)
     !
@@ -508,7 +499,7 @@ module GwtSrbModule
           case ('SORBTION')
             this%isrb = 1
             write(this%iout, fmtisrb)
-          case ('RATEORDER')
+          case ('DECAYORDER')
             this%isrb = 1
             call this%parser%GetStringCaps(keyword2)
             select case(keyword2)
@@ -519,8 +510,10 @@ module GwtSrbModule
                 this%irorder = 2
                 write(this%iout, fmtirorder2)
               case default
-                write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN RATEORDER OPTION: ',         &
+                write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN DECAYORDER OPTION: ',         &
                                          trim(keyword2)
+                call store_error(errmsg)
+                write(errmsg,'(4x,a)')'VALID OPTIONS FOR DECAYORDER ARE "ZERO" AND "ONE"'
                 call store_error(errmsg)
                 call this%parser%StoreErrorUnit()
                 call ustop()
@@ -557,17 +550,19 @@ module GwtSrbModule
     class(GwtSrbType) :: this
     ! -- local
     character(len=LINELENGTH) :: line, errmsg, keyword
-    integer(I4B) :: istart, istop, lloc, ierr
+    integer(I4B) :: i, istart, istop, lloc, ierr
     logical :: isfound, endOfBlock
-    logical, dimension(5) :: lname
-    character(len=24), dimension(5) :: aname
+    logical, dimension(7) :: lname
+    character(len=24), dimension(7) :: aname
     ! -- formats
     ! -- data
     data aname(1) /'            BULK DENSITY'/
     data aname(2) /'DISTRIBUTION COEFFICIENT'/
     data aname(3) /'  FIRST RATE COEFFICIENT'/
     data aname(4) /' SECOND RATE COEFFICIENT'/
-    data aname(5) /'     INITIAL SORBED CONC'/
+    data aname(5) /'   INITIAL IMMOBILE CONC'/
+    data aname(6) /'  DUAL DOMAIN TRANS RATE'/
+    data aname(7) /'IMMOBILE DOMAIN POROSITY'/
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize
@@ -613,13 +608,27 @@ module GwtSrbModule
                                          this%parser%iuactive, this%rc2,       &
                                          aname(4))
             lname(4) = .true.
-          case ('SRCONC')
-            call mem_reallocate(this%srconc, this%dis%nodes, 'SRCONC',         &
+          case ('CIM')
+            call mem_reallocate(this%cim, this%dis%nodes, 'CIM',         &
                               trim(this%origin))
             call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,&
-                                         this%parser%iuactive, this%srconc,    &
+                                         this%parser%iuactive, this%cim,    &
                                          aname(5))
             lname(5) = .true.
+          case ('ZETAIM')
+            call mem_reallocate(this%zetaim, this%dis%nodes, 'ZETAIM',         &
+                              trim(this%origin))
+            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,&
+                                         this%parser%iuactive, this%zetaim,    &
+                                         aname(6))
+            lname(6) = .true.
+          case ('THETAIM')
+            call mem_reallocate(this%thetaim, this%dis%nodes, 'THETAIM',         &
+                              trim(this%origin))
+            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,&
+                                         this%parser%iuactive, this%thetaim,    &
+                                         aname(7))
+            lname(7) = .true.
           case default
             write(errmsg,'(4x,a,a)')'ERROR. UNKNOWN GRIDDATA TAG: ',            &
                                      trim(keyword)
@@ -661,7 +670,7 @@ module GwtSrbModule
       endif
     endif
     !
-    ! -- Check for required rate coefficients
+    ! -- Check for required decay/production rate coefficients
     if (this%irorder > 0) then
       if (.not. lname(3)) then
         write(errmsg, '(1x,a)') 'ERROR.  FIRST OR ZERO ORDER REACTIONS ARE &
@@ -685,6 +694,49 @@ module GwtSrbModule
         write(this%iout, '(1x,a)') 'WARNING.  FIRST OR ZERO ORER REACTIONS &
           &ARE NOT ACTIVE BUT RC2 WAS SPECIFIED.  RC2 WILL HAVE NO AFFECT &
           &ON SIMULATION RESULTS.'
+      endif
+    endif
+    !
+    ! -- Check for required dual domain arrays or warn if they are specified
+    !    but won't be used.
+    if (this%idd > 0) then
+      if (.not. lname(5)) then
+        write(this%iout, '(1x,a)') 'WARNING.  DUAL DOMAIN IS SPECIFIED BUT &
+          &INITIAL IMMOBILE DOMAIN CONCENTRATION WAS NOT SPECIFIED.  &
+          &SETTING CIM TO ZERO.'
+          call mem_reallocate(this%cim, this%dis%nodes, 'CIM',                 &
+                              trim(this%origin))
+          do i = 1, size(this%cim)
+            this%cim(i) = DZERO
+          enddo
+      endif
+      if (.not. lname(6)) then
+        write(errmsg, '(1x,a)') 'ERROR.  DUAL DOMAIN IS SPECIFIED BUT DUAL &
+          &DOMAIN MASS TRANSFER RATE (ZETA) WAS NOT SPECIFIED.  ZETA MUST &
+          &BE SPECIFIED IN GRIDDATA BLOCK.'
+        call store_error(errmsg)
+      endif
+      if (.not. lname(7)) then
+        write(errmsg, '(1x,a)') 'ERROR.  DUAL DOMAIN IS SPECIFIED BUT &
+          &IMMOBILE DOMAIN POROSITY (THETAIM) WAS NOT SPECIFIED.  THETAIM &
+          &MUST BE SPECIFIED IN GRIDDATA BLOCK.'
+        call store_error(errmsg)
+      endif
+    else
+      if (lname(5)) then
+        write(this%iout, '(1x,a)') 'WARNING.  DUAL DOMAIN IS NOT ACTIVE &
+          &BUT CIM WAS SPECIFIED.  CIM WILL HAVE NO AFFECT ON SIMULATION &
+          &RESULTS.'
+      endif
+      if (lname(6)) then
+        write(this%iout, '(1x,a)') 'WARNING.  DUAL DOMAIN IS NOT ACTIVE &
+          &BUT ZETAIM WAS SPECIFIED.  ZETAIM WILL HAVE NO AFFECT ON SIMULATION &
+          &RESULTS.'
+      endif
+      if (lname(7)) then
+        write(this%iout, '(1x,a)') 'WARNING.  DUAL DOMAIN IS NOT ACTIVE &
+          &BUT THETAIM WAS SPECIFIED.  THETAIM WILL HAVE NO AFFECT ON &
+          &SIMULATION RESULTS.'
       endif
     endif
     !

@@ -17,13 +17,13 @@ longname sorbtion keyword
 description keyword to active sorbtion
 
 block options
-name rateorder
+name decayorder
 type string
 valid one zero
 reader urword
 optional true
-longname order of reaction rate
-description is a text keyword to indicate that first or zero-order reactions will occur.  The text value for RATEORDER can be ``ONE'' or ``ZERO''.
+longname order of the decay rate
+description is a text keyword to indicate that first or zero-order decay will occur.  The text value for DECAYORDER can be ``ONE'' or ``ZERO''.
 
 
 
