@@ -162,11 +162,11 @@ module GwtSrbModule
       !
       ! -- calculate new and old water volumes
       vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
-      vnew = vcell * this%fmi%gwfsat(n) * this%porosity(n)
+      vnew = vcell * this%fmi%gwfsat(n)
       vold = vnew
       if (this%fmi%igwfstrgss /= 0) vold = vold + this%fmi%gwfstrgss(n) * delt
       if (this%fmi%igwfstrgsy /= 0) vold = vold + this%fmi%gwfstrgsy(n) * delt
-      gwfsatold = vold / vcell / this%porosity(n)
+      gwfsatold = vold / vcell
       idiag = this%dis%con%ia(n)
       !
       ! -- add sorbtion terms to diagonal and rhs accumulators
@@ -184,7 +184,7 @@ module GwtSrbModule
         !
         ! -- first order reaction rate is a function of concentration, so add
         !    to left hand side
-        hhcof = -this%rc1(n) * vnew
+        hhcof = -this%rc1(n) * vnew * this%porosity(n)
         if (this%isrb == 1) hhcof = hhcof - this%rc2(n) * vcell * this%rhob(n) * ctosrb
         amatsln(idxglo(idiag)) = amatsln(idxglo(idiag)) + hhcof
       elseif (this%irorder == 2) then
@@ -248,11 +248,11 @@ module GwtSrbModule
       !
       ! -- calculate new and old water volumes
       vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
-      vnew = vcell * this%fmi%gwfsat(n) * this%porosity(n)
+      vnew = vcell * this%fmi%gwfsat(n)
       vold = vnew
       if (this%fmi%igwfstrgss /= 0) vold = vold + this%fmi%gwfstrgss(n) * delt
       if (this%fmi%igwfstrgsy /= 0) vold = vold + this%fmi%gwfstrgsy(n) * delt
-      gwfsatold = vold / vcell / this%porosity(n)
+      gwfsatold = vold / vcell
       !
       ! -- calculate sorbtion rate
       if (this%isrb == 1) then
@@ -275,7 +275,7 @@ module GwtSrbModule
       hhcof = DZERO
       rrhs = DZERO
       if (this%irorder == 1) then
-        hhcof = -this%rc1(n) * vnew
+        hhcof = -this%rc1(n) * vnew * this%porosity(n)
         if (this%isrb == 1) hhcof = hhcof - this%rc2(n) * vcell * this%rhob(n) * ctosrb
       elseif (this%irorder == 2) then
         rrhs = this%rc1(n) * vnew
