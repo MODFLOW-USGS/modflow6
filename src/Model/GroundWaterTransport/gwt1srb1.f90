@@ -18,7 +18,7 @@ module GwtSrbModule
     
     integer(I4B), pointer                            :: irorder                 ! order of reaction rate (0:none, 1:first, 2:zero)
     integer(I4B), pointer                            :: isrb                    ! sorbtion active flag (0:off, 1:on)
-    integer(I4B), pointer                            :: idd                     ! dual domain active flag (0:off, 1:on)
+    integer(I4B), pointer                            :: idd                     ! dual domain active flag (0:off, 1:on, 2:w/sorbtion)
     real(DP), dimension(:), pointer, contiguous      :: strg => null()          ! rate of sorbed mass storage
     real(DP), dimension(:), pointer, contiguous      :: rhob => null()          ! bulk density
     real(DP), dimension(:), pointer, contiguous      :: distcoef => null()      ! distribution coefficient
@@ -31,6 +31,7 @@ module GwtSrbModule
   contains
   
     procedure :: srb_ar
+    procedure :: srb_ad
     procedure :: srb_fc
     procedure :: srb_bdcalc
     procedure :: srb_bdsav
@@ -121,6 +122,65 @@ module GwtSrbModule
     ! -- Return
     return
   end subroutine srb_ar
+  
+  subroutine srb_ad(this, cnew)
+! ******************************************************************************
+! srb_ad -- if dual domain mass transfer, then calculate immobile domain
+!   concentration using cnew (concentration solution for last time step)
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use TdisModule, only: delt
+    ! -- dummy
+    class(GwtSrbType) :: this
+    real(DP), dimension(:), intent(in) :: cnew
+    ! -- local
+    integer(I4B) :: n
+    real(DP) :: vcell
+    real(DP) :: swt
+    real(DP) :: swtpdt
+    real(DP) :: thetamfrac
+    real(DP) :: kd
+    real(DP) :: lambda1im
+    real(DP) :: lambda2im
+    real(DP) :: gamma1im
+    real(DP) :: gamma2im
+    real(DP) :: cimt
+! ------------------------------------------------------------------------------
+    !
+    ! -- Calculate cimt
+    if (this%idd > 0) then
+      do n = 1, this%dis%nodes
+        if(this%ibound(n) <= 0) cycle
+        vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
+        swt = this%fmi%gwfsatold(n, delt)
+        swtpdt = this%fmi%gwfsat(n)
+        thetamfrac = this%porosity(n) / (this%thetaim(n) + this%porosity(n))
+        kd = DZERO
+        lambda1im = DZERO
+        lambda2im = DZERO
+        gamma1im = DZERO
+        gamma2im = DZERO
+        if (this%isrb > 0) kd = this%distcoef(n)
+        if (this%irorder == 1) lambda1im = this%rc1(n)
+        if (this%irorder == 2) gamma1im = this%rc1(n)
+        if (this%idd == 2) then
+          if (this%irorder == 1) lambda2im = this%rc2(n)
+          if (this%irorder == 2) gamma2im = this%rc2(n)
+        endif
+        cimt = calcddconc(this%thetaim(n), vcell, delt, swtpdt, swt,           &
+                          thetamfrac, this%rhob(n), kd,                        &
+                          lambda1im, lambda2im, gamma1im, gamma2im,            &
+                          this%zetaim(n), this%cim(n), cnew(n))
+        this%cim(n) = cimt
+      enddo
+    end if
+    !
+    ! -- Return
+    return
+  end subroutine srb_ad
 
   subroutine srb_fc(this, nodes, cold, nja, njasln, amatsln, idxglo, rhs)
 ! ******************************************************************************
@@ -144,11 +204,16 @@ module GwtSrbModule
     integer(I4B) :: n, idiag
     real(DP) :: tled
     real(DP) :: hhcof, rrhs
-    real(DP) :: vnew, vold
+    real(DP) :: swt, swtpdt
     real(DP) :: vcell
-    real(DP) :: gwfsatold
     real(DP) :: eqfact
     real(DP) :: ctosrb
+    real(DP) :: thetamfrac
+    real(DP) :: kd
+    real(DP) :: lambda1im
+    real(DP) :: lambda2im
+    real(DP) :: gamma1im
+    real(DP) :: gamma2im
 ! ------------------------------------------------------------------------------
     !
     ! -- set variables
@@ -162,19 +227,23 @@ module GwtSrbModule
       !
       ! -- calculate new and old water volumes
       vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
-      vnew = vcell * this%fmi%gwfsat(n)
-      vold = vnew
-      if (this%fmi%igwfstrgss /= 0) vold = vold + this%fmi%gwfstrgss(n) * delt
-      if (this%fmi%igwfstrgsy /= 0) vold = vold + this%fmi%gwfstrgsy(n) * delt
-      gwfsatold = vold / vcell
+      swtpdt = this%fmi%gwfsat(n)
+      swt = this%fmi%gwfsatold(n, delt)
       idiag = this%dis%con%ia(n)
+      !
+      ! -- Set thetamfrac
+      if (this%idd == 0) then
+        thetamfrac = DONE
+      else
+        thetamfrac = this%porosity(n) / (this%thetaim(n) + this%porosity(n))
+      endif
       !
       ! -- add sorbtion terms to diagonal and rhs accumulators
       if (this%isrb == 1) then
         eqfact = -this%rhob(n) * vcell * tled
         ctosrb = this%distcoef(n)
-        hhcof =  eqfact * ctosrb * this%fmi%gwfsat(n)
-        rrhs = eqfact * ctosrb * gwfsatold * cold(n)
+        hhcof =  thetamfrac * eqfact * ctosrb * swtpdt
+        rrhs = thetamfrac * eqfact * ctosrb * swt * cold(n)
         amatsln(idxglo(idiag)) = amatsln(idxglo(idiag)) + hhcof
         rhs(n) = rhs(n) + rrhs
       endif
@@ -184,15 +253,37 @@ module GwtSrbModule
         !
         ! -- first order reaction rate is a function of concentration, so add
         !    to left hand side
-        hhcof = -this%rc1(n) * vnew * this%porosity(n)
+        hhcof = -this%rc1(n) * vcell * swtpdt * this%porosity(n)
         if (this%isrb == 1) hhcof = hhcof - this%rc2(n) * vcell * this%rhob(n) * ctosrb
         amatsln(idxglo(idiag)) = amatsln(idxglo(idiag)) + hhcof
       elseif (this%irorder == 2) then
         !
         ! -- zero-order reaction rate is not a function of concentration, so add
         !    to right hand side
-        rrhs = this%rc1(n) * vnew
+        rrhs = this%rc1(n) * vcell * swtpdt
         if (this%isrb == 1) rrhs = rrhs + this%rc2(n) * ctosrb * vcell
+        rhs(n) = rhs(n) + rrhs
+      endif
+      !
+      ! -- Add dual domain mass transfer contributions to rhs and hcof
+      if (this%idd > 0) then
+        kd = DZERO
+        lambda1im = DZERO
+        lambda2im = DZERO
+        gamma1im = DZERO
+        gamma2im = DZERO
+        if (this%isrb > 0) kd = this%distcoef(n)
+        if (this%irorder == 1) lambda1im = this%rc1(n)
+        if (this%irorder == 2) gamma1im = this%rc1(n)
+        if (this%idd == 2) then
+          if (this%irorder == 1) lambda2im = this%rc2(n)
+          if (this%irorder == 2) gamma2im = this%rc2(n)
+        endif
+        call calcddhcofrhs(this%thetaim(n), vcell, delt, swtpdt, swt,          &
+                            thetamfrac, this%rhob(n), kd,                      &
+                            lambda1im, lambda2im, gamma1im, gamma2im,          &
+                            this%zetaim(n), this%cim(n), hhcof, rrhs)
+        amatsln(idxglo(idiag)) = amatsln(idxglo(idiag)) + hhcof
         rhs(n) = rhs(n) + rrhs
       endif
       !
@@ -480,6 +571,8 @@ module GwtSrbModule
       "(4x,'ZERO ORDER REACTION IS ACTIVE. ')"
     character(len=*), parameter :: fmtidd =                                    &
       "(4x,'DUAL DOMAIN TRANSPORT IS ACTIVE. ')"
+    character(len=*), parameter :: fmtidd2 =                                   &
+      "(4x,'SORPTION IS ACTIVE FOR THE IMMOBILE DOMAIN. ')"
 ! ------------------------------------------------------------------------------
     !
     ! -- get options block
@@ -521,6 +614,15 @@ module GwtSrbModule
           case ('DUALDOMAIN')
             this%idd = 1
             write(this%iout, fmtidd)
+            call this%parser%GetStringCaps(keyword2)                
+            if (keyword2 == 'IMMOBILEDOMAINSORBTION') then
+              this%idd = 2
+              write(this%iout, fmtidd2)
+            elseif(keyword2 /= '') then
+              write(this%iout,'(4x,a,a)')'****WARNING. UNKNOWN DUALDOMAIN OPTION: ', &
+                                        trim(keyword2)
+              write(this%iout,'(4x,a)')'VALID OPTION FOR DUALDOMAIN IS "IMMOBILEDOMAINSORBTION"'
+            endif
           case default
             write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN SRB OPTION: ',         &
                                      trim(keyword)
@@ -712,7 +814,7 @@ module GwtSrbModule
       endif
       if (.not. lname(6)) then
         write(errmsg, '(1x,a)') 'ERROR.  DUAL DOMAIN IS SPECIFIED BUT DUAL &
-          &DOMAIN MASS TRANSFER RATE (ZETA) WAS NOT SPECIFIED.  ZETA MUST &
+          &DOMAIN MASS TRANSFER RATE (ZETAIM) WAS NOT SPECIFIED.  ZETA MUST &
           &BE SPECIFIED IN GRIDDATA BLOCK.'
         call store_error(errmsg)
       endif
@@ -755,7 +857,146 @@ module GwtSrbModule
     ! -- Return
     return
   end subroutine read_data
-
+  
+  function calcddconc(thetaim, vcell, delt, swtpdt, swt, thetamfrac, rhob, kd, &
+                      lambda1im, lambda2im, gamma1im, gamma2im,                &
+                      zetaim, cimt, ctpdt) result (ddconc)
+! ******************************************************************************
+! calcddconc -- return the concentration of the immobile domain
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    real(DP), intent(in) :: thetaim
+    real(DP), intent(in) :: vcell
+    real(DP), intent(in) :: delt
+    real(DP), intent(in) :: swtpdt
+    real(DP), intent(in) :: swt
+    real(DP), intent(in) :: thetamfrac
+    real(DP), intent(in) :: rhob
+    real(DP), intent(in) :: kd
+    real(DP), intent(in) :: lambda1im
+    real(DP), intent(in) :: lambda2im
+    real(DP), intent(in) :: gamma1im
+    real(DP), intent(in) :: gamma2im
+    real(DP), intent(in) :: zetaim
+    real(DP), intent(in) :: cimt
+    real(DP), intent(in) :: ctpdt
+    ! -- result
+    real(DP) :: ddconc
+    ! -- local
+    real(DP) :: tled
+    real(DP) :: t1
+    real(DP) :: t2
+    real(DP) :: t3
+    real(DP) :: t4
+    real(DP) :: t5
+    real(DP) :: t6
+    real(DP) :: t7
+    real(DP) :: t8
+    real(DP) :: t9
+    real(DP) :: f
+! ------------------------------------------------------------------------------
+    !
+    ! -- initialize
+    ddconc = DZERO
+    tled = DONE / delt
+    !
+    ! -- calculate terms
+    t1 = thetaim * vcell * tled * swtpdt
+    t2 = thetaim * vcell * tled * swt
+    t3 = (DONE - thetamfrac) * rhob * vcell * kd * swtpdt * tled
+    t4 = (DONE - thetamfrac) * rhob * vcell * kd * swt * tled
+    t5 = thetaim * lambda1im * vcell * swtpdt
+    t6 = (DONE - thetamfrac) * lambda2im * rhob * kd * vcell
+    t7 = thetaim * gamma1im * vcell * swtpdt
+    t8 = (DONE - thetamfrac) * gamma2im * rhob * vcell
+    t9 = vcell * swtpdt * zetaim
+    !
+    ! -- calculate denometer term, f
+    f = t1 + t3 + t5 + t6 + t9
+    if (f > 0) f = DONE / f
+    !
+    ! -- calculate ddconc
+    ddconc = (t2 + t4) * cimt + t9 * ctpdt - t7 - t8
+    ddconc = ddconc / f
+    !
+    ! -- Return
+    return
+  end function calcddconc
+  
+  subroutine calcddhcofrhs(thetaim, vcell, delt, swtpdt, swt, thetamfrac,      &
+                           rhob, kd, lambda1im, lambda2im, gamma1im, gamma2im, &
+                           zetaim, cimt, hcof, rhs)
+! ******************************************************************************
+! calcddhcofrhs -- calculate the hcof and rhs contributions for dual domain
+!   mass transfer
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    real(DP), intent(in) :: thetaim
+    real(DP), intent(in) :: vcell
+    real(DP), intent(in) :: delt
+    real(DP), intent(in) :: swtpdt
+    real(DP), intent(in) :: swt
+    real(DP), intent(in) :: thetamfrac
+    real(DP), intent(in) :: rhob
+    real(DP), intent(in) :: kd
+    real(DP), intent(in) :: lambda1im
+    real(DP), intent(in) :: lambda2im
+    real(DP), intent(in) :: gamma1im
+    real(DP), intent(in) :: gamma2im
+    real(DP), intent(in) :: zetaim
+    real(DP), intent(in) :: cimt
+    real(DP), intent(inout) :: hcof
+    real(DP), intent(inout) :: rhs    
+    ! -- local
+    real(DP) :: tled
+    real(DP) :: t1
+    real(DP) :: t2
+    real(DP) :: t3
+    real(DP) :: t4
+    real(DP) :: t5
+    real(DP) :: t6
+    real(DP) :: t7
+    real(DP) :: t8
+    real(DP) :: t9
+    real(DP) :: f
+! ------------------------------------------------------------------------------
+    !
+    ! -- initialize
+    tled = DONE / delt
+    !
+    ! -- calculate terms
+    t1 = thetaim * vcell * tled * swtpdt
+    t2 = thetaim * vcell * tled * swt
+    t3 = (DONE - thetamfrac) * rhob * vcell * kd * swtpdt * tled
+    t4 = (DONE - thetamfrac) * rhob * vcell * kd * swt * tled
+    t5 = thetaim * lambda1im * vcell * swtpdt
+    t6 = (DONE - thetamfrac) * lambda2im * rhob * kd * vcell
+    t7 = thetaim * gamma1im * vcell * swtpdt
+    t8 = (DONE - thetamfrac) * gamma2im * rhob * vcell
+    t9 = vcell * swtpdt * zetaim
+    !
+    ! -- calculate denometer term, f
+    f = t1 + t3 + t5 + t6 + t9
+    if (f > 0) f = DONE / f
+    !
+    ! -- calculate hcof
+    hcof = t9 * (DONE - t9 / f)
+    !
+    ! -- calculte rhs, and switch the sign because this term needs to
+    !    be moved to the left hand side
+    rhs = -t9 * (t2 + t4) / f * cimt + t9 * t7 / f + t9 * t8 / f
+    rhs = -rhs
+    !
+    ! -- Return
+    return
+  end subroutine calcddhcofrhs
+  
   
   
 end module GwtSrbModule

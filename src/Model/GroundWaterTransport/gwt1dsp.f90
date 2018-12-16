@@ -568,6 +568,7 @@ module GwtDspModule
     logical :: isfound, endOfBlock
     logical, dimension(6)           :: lname
     character(len=24), dimension(6) :: aname
+    integer(I4B) :: n
     ! -- formats
     ! -- data
     data aname(1) /'   DIFFUSION COEFFICIENT'/
@@ -679,18 +680,24 @@ module GwtDspModule
         call mem_copyptr(this%alv, 'ALH', trim(this%name_model)//' DSP')
       endif
       !
-      ! -- If ath2 not specified then point it to ath1
+      ! -- If ath2 not specified then assign it to ath1
       if (.not. lname(5)) then
         call mem_reallocate(this%ath2, this%dis%nodes, 'ATH2',                 &
                             trim(this%origin))
-        call mem_copyptr(this%ath2, 'ATH1', trim(this%name_model)//' DSP')
+        !call mem_copyptr(this%ath2, 'ATH1', trim(this%name_model)//' DSP')
+        do n = 1, size(this%ath2)
+          this%ath2(n) = this%ath1(n)
+        enddo
       endif
       !
-      ! -- If atv not specified then point it to ath2
+      ! -- If atv not specified then assign it to ath2
       if (.not. lname(6)) then
         call mem_reallocate(this%atv, this%dis%nodes, 'ATV',                   &
                             trim(this%origin))
-        call mem_copyptr(this%atv, 'ATH2', trim(this%name_model)//' DSP')
+        !call mem_copyptr(this%atv, 'ATH2', trim(this%name_model)//' DSP')
+        do n = 1, size(this%atv)
+          this%atv(n) = this%ath2(n)
+        enddo
       endif
     endif
     !

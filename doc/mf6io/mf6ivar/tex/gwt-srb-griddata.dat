@@ -1,8 +1,16 @@
 BEGIN GRIDDATA
   RHOB [LAYERED]
     <rhob(nodes)> -- READARRAY
-  SRCONC [LAYERED]
-    <srconc(nodes)> -- READARRAY
   DISTCOEF [LAYERED]
     <distcoef(nodes)> -- READARRAY
+  RC1 [LAYERED]
+    <rc1(nodes)> -- READARRAY
+  RC2 [LAYERED]
+    <rc2(nodes)> -- READARRAY
+  CIM [LAYERED]
+    <cim(nodes)> -- READARRAY
+  THETAIM [LAYERED]
+    <thetaim(nodes)> -- READARRAY
+  ZETAIM [LAYERED]
+    <zetaim(nodes)> -- READARRAY
 END GRIDDATA

@@ -43,6 +43,7 @@ module GwtFmiModule
     procedure :: fmi_da
     procedure :: allocate_scalars
     procedure :: allocate_arrays
+    procedure :: gwfsatold
   
   end type GwtFmiType
 
@@ -433,5 +434,37 @@ module GwtFmiModule
     ! -- Return
     return
   end subroutine allocate_arrays
-
+  
+  function gwfsatold(this, n, delt) result(satold)
+! ******************************************************************************
+! gwfsatold -- calculate the groundwater cell head saturation for the end of
+!   the last time step
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwtFmiType) :: this
+    integer(I4B), intent(in) :: n
+    real(DP), intent(in) :: delt
+    ! -- result
+    real(DP) :: satold
+    ! -- local
+    real(DP) :: vcell
+    real(DP) :: vnew
+    real(DP) :: vold
+! ------------------------------------------------------------------------------
+    !
+    ! -- calculate the value
+    vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
+    vnew = vcell * this%gwfsat(n)
+    vold = vnew
+    if (this%igwfstrgss /= 0) vold = vold + this%gwfstrgss(n) * delt
+    if (this%igwfstrgsy /= 0) vold = vold + this%gwfstrgsy(n) * delt
+    satold = vold / vcell
+    !
+    ! -- Return
+    return
+  end function gwfsatold
 end module GwtFmiModule

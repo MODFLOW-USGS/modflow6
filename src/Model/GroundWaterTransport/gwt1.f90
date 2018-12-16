@@ -508,6 +508,7 @@ module GwtModule
     !if(this%insto > 0) call this%sto%sto_ad()
     if(this%indsp > 0) call this%dsp%dsp_ad()
     if(this%inssm > 0) call this%ssm%ssm_ad()
+    if(this%insrb > 0) call this%srb%srb_ad(this%x)
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_ad()
