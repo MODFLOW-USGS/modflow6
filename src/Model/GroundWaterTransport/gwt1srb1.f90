@@ -40,6 +40,7 @@ module GwtSrbModule
     procedure, private :: allocate_arrays
     procedure, private :: read_options
     procedure, private :: read_data
+    procedure, private :: calccim
   
   end type GwtSrbType
   
@@ -123,65 +124,26 @@ module GwtSrbModule
     return
   end subroutine srb_ar
   
-  subroutine srb_ad(this, cnew)
+  subroutine srb_ad(this)
 ! ******************************************************************************
-! srb_ad -- if dual domain mass transfer, then calculate immobile domain
-!   concentration using cnew (concentration solution for last time step)
+! srb_ad -- advance
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule, only: delt
     ! -- dummy
     class(GwtSrbType) :: this
-    real(DP), dimension(:), intent(in) :: cnew
     ! -- local
-    integer(I4B) :: n
-    real(DP) :: vcell
-    real(DP) :: swt
-    real(DP) :: swtpdt
-    real(DP) :: thetamfrac
-    real(DP) :: kd
-    real(DP) :: lambda1im
-    real(DP) :: lambda2im
-    real(DP) :: gamma1im
-    real(DP) :: gamma2im
-    real(DP) :: cimt
+    ! -- formats
 ! ------------------------------------------------------------------------------
     !
-    ! -- Calculate cimt
-    if (this%idd > 0) then
-      do n = 1, this%dis%nodes
-        if(this%ibound(n) <= 0) cycle
-        vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
-        swt = this%fmi%gwfsatold(n, delt)
-        swtpdt = this%fmi%gwfsat(n)
-        thetamfrac = this%porosity(n) / (this%thetaim(n) + this%porosity(n))
-        kd = DZERO
-        lambda1im = DZERO
-        lambda2im = DZERO
-        gamma1im = DZERO
-        gamma2im = DZERO
-        if (this%isrb > 0) kd = this%distcoef(n)
-        if (this%irorder == 1) lambda1im = this%rc1(n)
-        if (this%irorder == 2) gamma1im = this%rc1(n)
-        if (this%idd == 2) then
-          if (this%irorder == 1) lambda2im = this%rc2(n)
-          if (this%irorder == 2) gamma2im = this%rc2(n)
-        endif
-        cimt = calcddconc(this%thetaim(n), vcell, delt, swtpdt, swt,           &
-                          thetamfrac, this%rhob(n), kd,                        &
-                          lambda1im, lambda2im, gamma1im, gamma2im,            &
-                          this%zetaim(n), this%cim(n), cnew(n))
-        this%cim(n) = cimt
-      enddo
-    end if
+    ! -- Nothing to do 
     !
     ! -- Return
     return
   end subroutine srb_ad
-
+  
   subroutine srb_fc(this, nodes, cold, nja, njasln, amatsln, idxglo, rhs)
 ! ******************************************************************************
 ! srb_fc -- Calculate coefficients and fill amat and rhs
@@ -312,16 +274,23 @@ module GwtSrbModule
     type(BudgetType), intent(inout) :: model_budget
     ! -- local
     integer(I4B) :: n
+    integer(I4B) :: idiag
     real(DP) :: rate
     real(DP) :: tled
+    real(DP) :: swt, swtpdt
     real(DP) :: rsrbin, rsrbout
     real(DP) :: rrctin, rrctout
-    real(DP) :: vnew, vold
+    real(DP) :: rddmin, rddmout
     real(DP) :: hhcof, rrhs
     real(DP) :: vcell
-    real(DP) :: gwfsatold
     real(DP) :: eqfact
     real(DP) :: ctosrb
+    real(DP) :: thetamfrac
+    real(DP) :: kd
+    real(DP) :: lambda1im
+    real(DP) :: lambda2im
+    real(DP) :: gamma1im
+    real(DP) :: gamma2im
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize 
@@ -329,6 +298,8 @@ module GwtSrbModule
     rsrbout = DZERO
     rrctin = DZERO
     rrctout = DZERO
+    rddmin = DZERO
+    rddmout = DZERO
     tled = DONE / delt
     !
     ! -- Calculate sorption change
@@ -339,19 +310,24 @@ module GwtSrbModule
       !
       ! -- calculate new and old water volumes
       vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
-      vnew = vcell * this%fmi%gwfsat(n)
-      vold = vnew
-      if (this%fmi%igwfstrgss /= 0) vold = vold + this%fmi%gwfstrgss(n) * delt
-      if (this%fmi%igwfstrgsy /= 0) vold = vold + this%fmi%gwfstrgsy(n) * delt
-      gwfsatold = vold / vcell
+      swtpdt = this%fmi%gwfsat(n)
+      swt = this%fmi%gwfsatold(n, delt)
+      idiag = this%dis%con%ia(n)
+      !
+      ! -- Set thetamfrac
+      if (this%idd == 0) then
+        thetamfrac = DONE
+      else
+        thetamfrac = this%porosity(n) / (this%thetaim(n) + this%porosity(n))
+      endif
       !
       ! -- calculate sorbtion rate
       if (this%isrb == 1) then
         this%strg(n) = DZERO
         eqfact = -this%rhob(n) * vcell * tled
         ctosrb = this%distcoef(n)
-        hhcof =  eqfact * ctosrb * this%fmi%gwfsat(n)
-        rrhs = eqfact * ctosrb * gwfsatold * cold(n)
+        hhcof =  thetamfrac * eqfact * ctosrb * swtpdt
+        rrhs = thetamfrac * eqfact * ctosrb * swt * cold(n)
         rate = hhcof * cnew(n) - rrhs
         this%strg(n) = rate
         if (rate < DZERO) then
@@ -366,10 +342,10 @@ module GwtSrbModule
       hhcof = DZERO
       rrhs = DZERO
       if (this%irorder == 1) then
-        hhcof = -this%rc1(n) * vnew * this%porosity(n)
+        hhcof = -this%rc1(n) * vcell * swtpdt * this%porosity(n)
         if (this%isrb == 1) hhcof = hhcof - this%rc2(n) * vcell * this%rhob(n) * ctosrb
       elseif (this%irorder == 2) then
-        rrhs = this%rc1(n) * vnew
+        rrhs = this%rc1(n) * vcell * swtpdt
         if (this%isrb == 1) rrhs = rrhs + this%rc2(n) * ctosrb * vcell
       endif
       rate = hhcof * cnew(n) - rrhs
@@ -377,6 +353,35 @@ module GwtSrbModule
         rrctout = rrctout - rate
       else
         rrctin = rrctin + rate
+      endif
+      !
+      ! -- Calculate exchange with immobile domain
+      if (this%idd > 0) then
+        rate = DZERO
+        hhcof = DZERO
+        rrhs = DZERO
+        kd = DZERO
+        lambda1im = DZERO
+        lambda2im = DZERO
+        gamma1im = DZERO
+        gamma2im = DZERO
+        if (this%isrb > 0) kd = this%distcoef(n)
+        if (this%irorder == 1) lambda1im = this%rc1(n)
+        if (this%irorder == 2) gamma1im = this%rc1(n)
+        if (this%idd == 2) then
+          if (this%irorder == 1) lambda2im = this%rc2(n)
+          if (this%irorder == 2) gamma2im = this%rc2(n)
+        endif
+        call calcddhcofrhs(this%thetaim(n), vcell, delt, swtpdt, swt,          &
+                            thetamfrac, this%rhob(n), kd,                      &
+                            lambda1im, lambda2im, gamma1im, gamma2im,          &
+                            this%zetaim(n), this%cim(n), hhcof, rrhs)
+        rate = hhcof * cnew(n) - rrhs
+        if (rate < DZERO) then
+          rddmout = rddmout - rate
+        else
+          rddmin = rddmin + rate
+        endif
       endif
       !
     enddo
@@ -391,6 +396,17 @@ module GwtSrbModule
     if (this%irorder > 0) then
       call model_budget%addentry(rrctin, rrctout, delt, '       REACTIONS',   &
                                  isuppress_output)
+    endif
+    !
+    ! -- Add mass transfer to immobile domain to model budget
+    if (this%idd > 0) then
+      call model_budget%addentry(rddmin, rddmout, delt, ' IMMOBILE DOMAIN',   &
+                                 isuppress_output)
+    endif
+    !
+    ! -- update cim
+    if (this%idd > 0) then
+      call this%calccim(this%cim, cnew)
     endif
     !
     ! -- Return
@@ -858,6 +874,67 @@ module GwtSrbModule
     return
   end subroutine read_data
   
+  subroutine calccim(this, cim, cnew)
+! ******************************************************************************
+! calccimt -- if dual domain mass transfer, then calculate immobile domain
+!   concentration using cnew (concentration solution for last time step)
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use TdisModule, only: delt
+    ! -- dummy
+    class(GwtSrbType) :: this
+    real(DP), dimension(:), intent(inout) :: cim
+    real(DP), dimension(:), intent(in) :: cnew
+    ! -- local
+    integer(I4B) :: n
+    real(DP) :: vcell
+    real(DP) :: swt
+    real(DP) :: swtpdt
+    real(DP) :: thetamfrac
+    real(DP) :: kd
+    real(DP) :: lambda1im
+    real(DP) :: lambda2im
+    real(DP) :: gamma1im
+    real(DP) :: gamma2im
+    real(DP) :: ctmp
+! ------------------------------------------------------------------------------
+    !
+    ! -- Calculate cim
+    if (this%idd > 0) then
+      do n = 1, this%dis%nodes
+        if(this%ibound(n) <= 0) cycle
+        vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
+        swt = this%fmi%gwfsatold(n, delt)
+        swtpdt = this%fmi%gwfsat(n)
+        thetamfrac = this%porosity(n) / (this%thetaim(n) + this%porosity(n))
+        kd = DZERO
+        lambda1im = DZERO
+        lambda2im = DZERO
+        gamma1im = DZERO
+        gamma2im = DZERO
+        if (this%isrb > 0) kd = this%distcoef(n)
+        if (this%irorder == 1) lambda1im = this%rc1(n)
+        if (this%irorder == 2) gamma1im = this%rc1(n)
+        if (this%idd == 2) then
+          if (this%irorder == 1) lambda2im = this%rc2(n)
+          if (this%irorder == 2) gamma2im = this%rc2(n)
+        endif
+        ctmp = this%cim(n)
+        ctmp = calcddconc(this%thetaim(n), vcell, delt, swtpdt, swt,           &
+                          thetamfrac, this%rhob(n), kd,                        &
+                          lambda1im, lambda2im, gamma1im, gamma2im,            &
+                          this%zetaim(n), ctmp, cnew(n))
+        cim(n) = ctmp
+      enddo
+    end if
+    !
+    ! -- Return
+    return
+  end subroutine calccim
+
   function calcddconc(thetaim, vcell, delt, swtpdt, swt, thetamfrac, rhob, kd, &
                       lambda1im, lambda2im, gamma1im, gamma2im,                &
                       zetaim, cimt, ctpdt) result (ddconc)
@@ -916,7 +993,6 @@ module GwtSrbModule
     !
     ! -- calculate denometer term, f
     f = t1 + t3 + t5 + t6 + t9
-    if (f > 0) f = DONE / f
     !
     ! -- calculate ddconc
     ddconc = (t2 + t4) * cimt + t9 * ctpdt - t7 - t8
@@ -983,20 +1059,17 @@ module GwtSrbModule
     !
     ! -- calculate denometer term, f
     f = t1 + t3 + t5 + t6 + t9
-    if (f > 0) f = DONE / f
     !
     ! -- calculate hcof
-    hcof = t9 * (DONE - t9 / f)
+    hcof = t9 ** 2 / f - t9
     !
-    ! -- calculte rhs, and switch the sign because this term needs to
+    ! -- calculate rhs, and switch the sign because this term needs to
     !    be moved to the left hand side
-    rhs = -t9 * (t2 + t4) / f * cimt + t9 * t7 / f + t9 * t8 / f
+    rhs = t9 * (t2 + t4) / f * cimt - t9 * t7 / f - t9 * t8 / f
     rhs = -rhs
     !
     ! -- Return
     return
   end subroutine calcddhcofrhs
-  
-  
   
 end module GwtSrbModule
