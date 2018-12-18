@@ -16,17 +16,7 @@ module GwfDisModule
   public dis_cr, GwfDisType
 
   type, extends(DisBaseType) :: GwfDisType
-<<<<<<< HEAD
-    integer(I4B), pointer                     :: nlay         => null()         ! number of layers
-    integer(I4B), pointer                     :: nrow         => null()         ! number of rows
-    integer(I4B), pointer                     :: ncol         => null()         ! number of columns
-    integer(I4B), dimension(:), pointer, contiguous       :: nodereduced  => null()         ! (size:nodesuser)contains reduced nodenumber (size 0 if not reduced); -1 means vertical pass through, 0 is idomain = 0
-    integer(I4B), dimension(:), pointer, contiguous       :: nodeuser     => null()         ! (size:nodes) given a reduced nodenumber, provide the user nodenumber (size 0 if not reduced)
-    real(DP), dimension(:), pointer, contiguous           :: delr         => null()         ! spacing along a row
-    real(DP), dimension(:), pointer, contiguous           :: delc         => null()         ! spacing along a column
-    real(DP), dimension(:, :, :), pointer, contiguous     :: botm         => null()         ! top and bottom elevations for each cell (ncol, nrow, nlay)
-    integer(I4B), dimension(:, :, :), pointer, contiguous :: idomain      => null()         ! idomain (ncol, nrow, nlay)
-=======
+
     integer(I4B), pointer :: nlay => null()                                      ! number of layers
     integer(I4B), pointer :: nrow => null()                                      ! number of rows
     integer(I4B), pointer :: ncol => null()                                      ! number of columns
@@ -36,7 +26,7 @@ module GwfDisModule
     real(DP), dimension(:), pointer, contiguous :: delc => null()                ! spacing along a column
     real(DP), dimension(:, :, :), pointer :: botm => null()                      ! top and bottom elevations for each cell (ncol, nrow, nlay)
     integer(I4B), dimension(:, :, :), pointer :: idomain => null()               ! idomain (ncol, nrow, nlay)
->>>>>>> upstream_usgs/develop
+
   contains
     procedure :: dis_df => dis3d_df
     procedure :: dis_da => dis3d_da

@@ -18,31 +18,6 @@ module BaseDisModule
   public :: DisBaseType
 
   type :: DisBaseType
-<<<<<<< HEAD
-    character(len=LENORIGIN), pointer       :: origin     => null()             !origin name for mem allocation
-    character(len=LENMODELNAME), pointer    :: name_model => null()             !name of the model
-    integer(I4B), pointer                   :: inunit     => null()             !unit number for input file
-    integer(I4B), pointer                   :: iout       => null()             !unit number for output file
-    integer(I4B), pointer                   :: nodes      => null()             !number of nodes in solution
-    integer(I4B), pointer                   :: nodesuser  => null()             !number of user nodes (same as nodes for disu grid)
-    integer(I4B), pointer                   :: nja        => null()             !number of connections plus number of nodes
-    integer(I4B), pointer                   :: njas       => null()             !(nja-nodes)/2
-    integer(I4B), pointer                   :: lenuni     => null()             !length unit
-    integer(I4B), pointer                   :: ndim       => null()             !number of spatial model dimensions (1 for disu grid)
-    integer(I4B), pointer                   :: icondir    => null()             !flag indicating if grid has enough info to calculate connection vectors
-    logical, pointer                        :: writegrb   => null()             !write binary grid file
-    real(DP), pointer                       :: yorigin    => null()             ! y-position of the lower-left grid corner (default is 0.)
-    real(DP), pointer                       :: xorigin    => null()             ! x-position of the lower-left grid corner (default is 0.)
-    real(DP), pointer                       :: angrot     => null()             ! counter-clockwise rotation angle of the lower-left corner (default is 0.0)
-    integer(I4B), pointer, contiguous, dimension(:)     :: mshape     => null()             !shape of the model; (nodes) for DisBaseType
-    real(DP), dimension(:), pointer, contiguous         :: top        => null()             !(size:nodes) cell top elevation
-    real(DP), dimension(:), pointer, contiguous         :: bot        => null()             !(size:nodes) cell bottom elevation
-    real(DP), dimension(:), pointer, contiguous         :: area       => null()             !(size:nodes) cell area, in plan view
-    type(ConnectionsType), pointer          :: con        => null()             !connections object
-    type(BlockParserType)                   :: parser                           !object to read blocks
-    real(DP), dimension(:), pointer, contiguous         :: dbuff  => null()
-    integer(I4B), dimension(:), pointer, contiguous     :: ibuff  => null()
-=======
     character(len=LENORIGIN), pointer               :: origin     => null()      !origin name for mem allocation
     character(len=LENMODELNAME), pointer            :: name_model => null()      !name of the model
     integer(I4B), pointer                           :: inunit     => null()      !unit number for input file
@@ -66,7 +41,6 @@ module BaseDisModule
     type(BlockParserType)                           :: parser                    !object to read blocks
     real(DP), dimension(:), pointer, contiguous     :: dbuff      => null()
     integer(I4B), dimension(:), pointer, contiguous :: ibuff      => null()
->>>>>>> upstream_usgs/develop
   contains
     procedure :: dis_df
     procedure :: dis_ac

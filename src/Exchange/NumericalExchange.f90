@@ -15,26 +15,6 @@ module NumericalExchangeModule
             AddNumericalExchangeToList, GetNumericalExchangeFromList
 
   type, extends(BaseExchangeType) :: NumericalExchangeType
-<<<<<<< HEAD
-    character(len=LINELENGTH), pointer           :: filename                    !name of the input file
-    character(len=7), pointer                    :: typename                    !name of the type (e.g., 'NM-NM')
-    logical, pointer                             :: implicit                    !logical flag to indicate implicit or explict exchange
-    integer(I4B), pointer                        :: iprpak                      !print input flag
-    integer(I4B), pointer                        :: iprflow                     !print flag for cell by cell flows
-    integer(I4B), pointer                        :: ipakcb                      !save flag for cell by cell flows
-    integer(I4B), pointer                        :: nexg                        !number of exchanges
-    integer(I4B), dimension(:), pointer, contiguous          :: nodem1                      !node numbers in model 1
-    integer(I4B), dimension(:), pointer, contiguous          :: nodem2                      !node numbers in model 2
-    real(DP), pointer, contiguous, dimension(:)              :: cond                        !conductance
-    integer(I4B), dimension(:), pointer, contiguous          :: idxglo                      !pointer to solution amat for each connection
-    integer(I4B), dimension(:), pointer, contiguous          :: idxsymglo                   !pointer to symmetric amat position for each connection
-    class(NumericalModelType), pointer           :: m1                          !pointer to model 1
-    class(NumericalModelType), pointer           :: m2                          !pointer to model 2
-    integer(I4B), pointer                        :: naux                        !number of auxiliary variables
-    character(len=16), allocatable, dimension(:) :: auxname                     !array of auxiliary variable names
-    real(DP), pointer, contiguous, dimension(:, :)           :: auxvar                      !array of auxiliary variable values
-    type(BlockParserType)                        :: parser                      !block parser
-=======
     character(len=LINELENGTH), pointer              :: filename  => null()       !name of the input file
     character(len=7), pointer                       :: typename  => null()       !name of the type (e.g., 'NM-NM')
     logical, pointer                                :: implicit  => null()       !logical flag to indicate implicit or explict exchange
@@ -53,7 +33,6 @@ module NumericalExchangeModule
     character(len=16), allocatable, dimension(:)    :: auxname                   !array of auxiliary variable names
     real(DP), dimension(:, :), pointer, contiguous  :: auxvar    => null()       !array of auxiliary variable values
     type(BlockParserType)                           :: parser                    !block parser
->>>>>>> upstream_usgs/develop
   contains
     procedure :: exg_df
     procedure :: exg_ac

@@ -43,13 +43,8 @@ ${SOURCEDIR14}
 
 # Define the Fortran compile flags
 FC = gfortran
-<<<<<<< HEAD
-FFLAGS = -O2 -fbacktrace
-F90FLAGS= -march=native -mtune=native -O2 -fwhole-program -fstack-arrays -flto -fopenmp -fopt-info -mavx
-#FFLAGS = -g -ggdb -fbacktrace -ffpe-summary=overflow -ffpe-trap=overflow,zero,invalid 
-=======
+
 FFLAGS = -O2 -fbacktrace -ffpe-summary=overflow -ffpe-trap=overflow,zero,invalid 
->>>>>>> upstream_usgs/develop
 
 # Define the C compile flags
 CC = gcc
@@ -121,14 +116,7 @@ $(OBJDIR)/gwf3dis8.o \
 $(OBJDIR)/NumericalPackage.o \
 $(OBJDIR)/gwf3mvr8.o \
 $(OBJDIR)/gwf3ic8.o \
-<<<<<<< HEAD
-$(OBJDIR)/gwf3dis8.o \
-$(OBJDIR)/gwf3disu8.o \
-$(OBJDIR)/gwf3disv8.o \
-$(OBJDIR)/gwf3sto8.o \
 $(OBJDIR)/VKDProcess.o \
-=======
->>>>>>> upstream_usgs/develop
 $(OBJDIR)/TimeArraySeries.o \
 $(OBJDIR)/OutputControlData.o \
 $(OBJDIR)/gwf3sto8.o \

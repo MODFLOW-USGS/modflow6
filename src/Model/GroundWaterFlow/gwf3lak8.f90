@@ -37,17 +37,10 @@ module LakModule
   character(len=LENPACKAGENAME) :: text  = '             LAK'
   !
   type LakTabType
-<<<<<<< HEAD
-    real(DP), pointer, contiguous, dimension(:)  :: tabstage => null()
-    real(DP), pointer, contiguous, dimension(:)  :: tabvolume => null()
-    real(DP), pointer, contiguous, dimension(:)  :: tabsarea => null()
-    real(DP), pointer, contiguous, dimension(:)  :: tabwarea => null()
-=======
     real(DP), dimension(:), pointer, contiguous  :: tabstage => null()
     real(DP), dimension(:), pointer, contiguous  :: tabvolume => null()
     real(DP), dimension(:), pointer, contiguous  :: tabsarea => null()
     real(DP), dimension(:), pointer, contiguous  :: tabwarea => null()
->>>>>>> upstream_usgs/develop
   end type LakTabType
   !
   type, extends(BndType) :: LakType
@@ -77,88 +70,6 @@ module LakModule
     integer(I4B), pointer :: bditems => NULL()
     ! -- vectors
     ! -- lake data
-<<<<<<< HEAD
-    integer(I4B), pointer, contiguous, dimension(:) :: nlakeconn => null()
-    integer(I4B), pointer, contiguous, dimension(:) :: idxlakeconn => null()
-    integer(I4B), pointer, contiguous, dimension(:) :: ntabrow => null()
-    real(DP), pointer, contiguous, dimension(:)  :: strt => null()
-    real(DP), pointer, contiguous, dimension(:)  :: laketop => null()
-    real(DP), pointer, contiguous, dimension(:)  :: lakebot => null()
-    real(DP), pointer, contiguous, dimension(:)  :: sareamax => null()
-    character(len=LENBOUNDNAME), pointer, contiguous, dimension(:) :: lakename => null()
-    character (len=8), pointer, contiguous, dimension(:) :: status => null()
-    real(DP), pointer, contiguous, dimension(:)  :: avail => null()
-    real(DP), pointer, contiguous, dimension(:)  :: lkgwsink => null()
-    ! -- time series aware data
-    type (MemoryTSType), pointer, contiguous, dimension(:) :: stage => null()
-    type (MemoryTSType), pointer, contiguous, dimension(:) :: rainfall => null()
-    type (MemoryTSType), pointer, contiguous, dimension(:) :: evaporation => null()
-    type (MemoryTSType), pointer, contiguous, dimension(:) :: runoff => null()
-    type (MemoryTSType), pointer, contiguous, dimension(:) :: inflow => null()
-    type (MemoryTSType), pointer, contiguous, dimension(:) :: withdrawal => null()
-    type (MemoryTSType), pointer, contiguous, dimension(:) :: lauxvar => null()
-    !
-    ! -- table data
-    type (LakTabType), pointer, contiguous, dimension(:) :: laketables => null()
-    !
-    ! -- lake solution data
-    integer(I4B), pointer, contiguous, dimension(:) :: ncncvr => null()
-    real(DP), pointer, contiguous, dimension(:)  :: surfin => null()
-    real(DP), pointer, contiguous, dimension(:)  :: surfout => null()
-    real(DP), pointer, contiguous, dimension(:)  :: surfout1 => null()
-    real(DP), pointer, contiguous, dimension(:)  :: precip => null()
-    real(DP), pointer, contiguous, dimension(:)  :: precip1 => null()
-    real(DP), pointer, contiguous, dimension(:)  :: evap => null()
-    real(DP), pointer, contiguous, dimension(:)  :: evap1 => null()
-    real(DP), pointer, contiguous, dimension(:)  :: evapo => null()
-    real(DP), pointer, contiguous, dimension(:)  :: withr => null()
-    real(DP), pointer, contiguous, dimension(:)  :: withr1 => null()
-    real(DP), pointer, contiguous, dimension(:)  :: flwin => null()
-    real(DP), pointer, contiguous, dimension(:)  :: flwiter => null()
-    real(DP), pointer, contiguous, dimension(:)  :: flwiter1 => null()
-    real(DP), pointer, contiguous, dimension(:)  :: seep => null()
-    real(DP), pointer, contiguous, dimension(:)  :: seep1 => null()
-    real(DP), pointer, contiguous, dimension(:)  :: seep0 => null()
-    real(DP), pointer, contiguous, dimension(:)  :: stageiter => null()
-    real(DP), pointer, contiguous, dimension(:)  :: chterm => null()
-    !
-    ! -- lake convergence
-    integer(I4B), pointer, contiguous, dimension(:) :: iseepc => null()
-    integer(I4B), pointer, contiguous, dimension(:) :: idhc => null()
-    real(DP), pointer, contiguous, dimension(:) :: en1 => null()
-    real(DP), pointer, contiguous, dimension(:) :: en2 => null()
-    real(DP), pointer, contiguous, dimension(:) :: r1 => null()
-    real(DP), pointer, contiguous, dimension(:) :: r2 => null()
-    real(DP), pointer, contiguous, dimension(:) :: dh0 => null()
-    real(DP), pointer, contiguous, dimension(:) :: s0 => null()
-    !
-    ! -- lake connection data
-    integer(I4B), pointer, contiguous, dimension(:) :: imap => null()
-    integer(I4B), pointer, contiguous, dimension(:) :: cellid => null()
-    integer(I4B), pointer, contiguous, dimension(:) :: nodesontop => null()
-    integer(I4B), pointer, contiguous, dimension(:) :: ictype => null()
-    real(DP), pointer, contiguous, dimension(:)  :: bedleak => null()
-    real(DP), pointer, contiguous, dimension(:)  :: belev => null()
-    real(DP), pointer, contiguous, dimension(:)  :: telev => null()
-    real(DP), pointer, contiguous, dimension(:)  :: connlength => null()
-    real(DP), pointer, contiguous, dimension(:)  :: connwidth => null()
-    real(DP), pointer, contiguous, dimension(:)  :: sarea => null()
-    real(DP), pointer, contiguous, dimension(:)  :: warea => null()
-    real(DP), pointer, contiguous, dimension(:)  :: satcond => null()
-    real(DP), pointer, contiguous, dimension(:)  :: simcond => null()
-    real(DP), pointer, contiguous, dimension(:)  :: simlakgw => null()
-    !
-    ! -- lake outlet data
-    integer(I4B), pointer, contiguous, dimension(:) :: lakein => null()
-    integer(I4B), pointer, contiguous, dimension(:) :: lakeout => null()
-    integer(I4B), pointer, contiguous, dimension(:) :: iouttype => null()
-    type (MemoryTSType), pointer, contiguous, dimension(:) :: outrate => null()
-    type (MemoryTSType), pointer, contiguous, dimension(:) :: outinvert => null()
-    type (MemoryTSType), pointer, contiguous, dimension(:) :: outwidth => null()
-    type (MemoryTSType), pointer, contiguous, dimension(:) :: outrough => null()
-    type (MemoryTSType), pointer, contiguous, dimension(:) :: outslope => null()
-    real(DP), pointer, contiguous, dimension(:)  :: simoutrate => null()
-=======
     integer(I4B), dimension(:), pointer, contiguous :: nlakeconn => null()
     integer(I4B), dimension(:), pointer, contiguous :: idxlakeconn => null()
     integer(I4B), dimension(:), pointer, contiguous :: ntabrow => null()
@@ -243,7 +154,6 @@ module LakModule
     type (MemoryTSType), dimension(:), pointer, contiguous :: outrough => null()
     type (MemoryTSType), dimension(:), pointer, contiguous :: outslope => null()
     real(DP), dimension(:), pointer, contiguous  :: simoutrate => null()
->>>>>>> upstream_usgs/develop
     !
     ! -- lake output data
     real(DP), dimension(:), pointer, contiguous :: qauxcbc => null()
@@ -261,15 +171,9 @@ module LakModule
     integer(I4B), pointer :: gwfik33 => NULL()
     !
     ! -- package x, xold, and ibound
-<<<<<<< HEAD
-    integer(I4B), pointer, contiguous, dimension(:) :: iboundpak     => null() !package ibound
-    real(DP), pointer, contiguous, dimension(:)     :: xnewpak       => null() !package x vector
-    real(DP), pointer, contiguous, dimension(:)     :: xoldpak       => null() !package xold vector
-=======
     integer(I4B), dimension(:), pointer, contiguous :: iboundpak => null()       !package ibound
     real(DP), dimension(:), pointer, contiguous :: xnewpak => null()             !package x vector
     real(DP), dimension(:), pointer, contiguous :: xoldpak => null()             !package xold vector
->>>>>>> upstream_usgs/develop
     !
     ! -- type bound procedures
     contains

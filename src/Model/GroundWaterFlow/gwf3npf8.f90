@@ -23,66 +23,14 @@ module GwfNpfModule
   public :: thksatnm
 
   type, extends(NumericalPackageType) :: GwfNpfType
-
-<<<<<<< HEAD
-    type(GwfIcType), pointer                        :: ic           => null()   ! initial conditions object
-    type(Xt3dType), pointer                         :: xt3d         => null()   ! xt3d pointer
-    type(VKDType), pointer                          :: vkd          => null()   ! vkd pointer
-    integer(I4B), dimension(:), pointer             :: ibound       => null()   ! pointer to model ibound
-    real(DP), dimension(:), pointer                 :: hnew         => null()   ! pointer to model xnew
-    integer(I4B), pointer                           :: ixt3d        => null()   ! xt3d flag (0 is off, 1 is lhs, 2 is rhs)
-    integer(I4B), pointer                           :: ivkd         => null()   ! vkd flag (0 is off, 1 is on)
-    integer(I4B), pointer                           :: inUnitVkd    => null()   ! vkd input file unit number
-    integer(I4B), pointer                           :: iperched     => null()   ! vertical flow corrections if 1
-    integer(I4B), pointer                           :: ivarcv       => null()   ! CV is function of water table
-    integer(I4B), pointer                           :: idewatcv     => null()   ! CV may be a discontinuous function of water table
-    integer(I4B), pointer                           :: ithickstrt   => null()   ! thickstrt option flag
-    integer(I4B), pointer                           :: igwfnewtonur => null()   ! newton head dampening using node bottom option flag
-    integer(I4B), pointer                           :: iusgnrhc     => null()   ! MODFLOW-USG saturation calculation option flag
-    integer(I4B), pointer                           :: icalcspdis   => null()   ! Calculate specific discharge at cell centers
-    integer(I4B), pointer                           :: isavspdis    => null()   ! Save specific discharge at cell centers
-    real(DP), pointer                               :: hnoflo       => null()   ! default is 1.e30
-    real(DP), pointer                               :: satomega     => null()   ! newton-raphson saturation omega
-    integer(I4B),pointer                            :: irewet       => null()   ! rewetting (0:off, 1:on)
-    integer(I4B),pointer                            :: iwetit       => null()   ! wetting interval (default is 1)
-    integer(I4B),pointer                            :: ihdwet       => null()   ! (0 or not 0)
-    integer(I4B), pointer                           :: icellavg     => null()   ! harmonic(0), logarithmic(1), or arithmetic thick-log K (2)
-    real(DP), pointer                               :: wetfct       => null()   ! wetting factor
-    real(DP), pointer                               :: hdry         => null()   ! default is -1.d30
-    integer(I4B), dimension(:), pointer, contiguous             :: icelltype    => null()   ! confined (0), convertible (1)
-    integer(I4B), dimension(:), pointer, contiguous :: ibvkd        => null()   ! VKD ibound array
-    !
-    ! K properties
-    real(DP), dimension(:), pointer, contiguous                 :: k11          => null()   ! hydraulic conductivity; if anisotropic, then this is Kx prior to rotation
-    real(DP), dimension(:), pointer, contiguous                 :: k22          => null()   ! hydraulic conductivity; if specified then this is Ky prior to rotation
-    real(DP), dimension(:), pointer, contiguous                 :: k33          => null()   ! hydraulic conductivity; if specified then this is Kz prior to rotation
-    integer(I4B), pointer                           :: ik22         => null()   ! flag that k22 is specified
-    integer(I4B), pointer                           :: ik33         => null()   ! flag that k33 is specified
-    integer(I4B), pointer                           :: iangle1      => null()   ! flag to indicate angle1 was read
-    integer(I4B), pointer                           :: iangle2      => null()   ! flag to indicate angle2 was read
-    integer(I4B), pointer                           :: iangle3      => null()   ! flag to indicate angle3 was read
-    real(DP), dimension(:), pointer, contiguous                 :: angle1       => null()   ! k ellipse rotation in xy plane around z axis (yaw)
-    real(DP), dimension(:), pointer, contiguous                 :: angle2       => null()   ! k ellipse rotation up from xy plane around y axis (pitch)
-    real(DP), dimension(:), pointer, contiguous                 :: angle3       => null()   ! k tensor rotation around x axis (roll)
-    !
-    real(DP), dimension(:), pointer, contiguous                 :: wetdry       => null()   ! wetdry array
-    real(DP), dimension(:), pointer, contiguous                 :: sat          => null()   ! saturation (0. to 1.) for each cell
-    real(DP), dimension(:), pointer, contiguous                 :: condsat      => null()   ! saturated conductance (symmetric array)
-    real(DP), pointer                               :: min_satthk   => null()   ! minimum saturated thickness
-    integer(I4B), dimension(:), pointer, contiguous             :: ibotnode     => null()   ! bottom node used if igwfnewtonur /= 0
-    !
-    real(DP), dimension(:, :), pointer, contiguous              :: spdis        => null()   ! specific discharge : qx, qy, qz (nodes, 3) 
-    integer(I4B), pointer                           :: nedges       => null()   ! number of cell edges
-    integer(I4B), pointer                           :: lastedge     => null()   ! last edge number
-    integer(I4B), dimension(:), pointer, contiguous             :: nodedge      => null()   ! array of node numbers that have edges
-    integer(I4B), dimension(:), pointer, contiguous             :: ihcedge      => null()   ! edge type (horizontal or vertical)
-    real(DP), dimension(:, :), pointer, contiguous              :: propsedge    => null()   ! edge properties (Q, area, nx, ny, distance) 
-=======
     type(GwfIcType), pointer                        :: ic           => null()    ! initial conditions object
     type(Xt3dType), pointer                         :: xt3d         => null()    ! xt3d pointer
+    type(VKDType), pointer                          :: vkd          => null()    ! vkd pointer
     integer(I4B), dimension(:), pointer, contiguous :: ibound       => null()    ! pointer to model ibound
     real(DP), dimension(:), pointer, contiguous     :: hnew         => null()    ! pointer to model xnew
     integer(I4B), pointer                           :: ixt3d        => null()    ! xt3d flag (0 is off, 1 is lhs, 2 is rhs)
+    integer(I4B), pointer                           :: ivkd         => null()   ! vkd flag (0 is off, 1 is on)
+    integer(I4B), pointer                           :: inUnitVkd    => null()   ! vkd input file unit number
     integer(I4B), pointer                           :: iperched     => null()    ! vertical flow corrections if 1
     integer(I4B), pointer                           :: ivarcv       => null()    ! CV is function of water table
     integer(I4B), pointer                           :: idewatcv     => null()    ! CV may be a discontinuous function of water table
@@ -101,6 +49,7 @@ module GwfNpfModule
     real(DP), pointer                               :: wetfct       => null()    ! wetting factor
     real(DP), pointer                               :: hdry         => null()    ! default is -1.d30
     integer(I4B), dimension(:), pointer, contiguous :: icelltype    => null()    ! confined (0) or convertible (1)
+    integer(I4B), dimension(:), pointer, contiguous :: ibvkd        => null()   ! VKD ibound array
     !
     ! K properties
     real(DP), dimension(:), pointer, contiguous     :: k11          => null()    ! hydraulic conductivity; if anisotropic, then this is Kx prior to rotation
@@ -127,7 +76,6 @@ module GwfNpfModule
     integer(I4B), dimension(:), pointer, contiguous :: nodedge      => null()    ! array of node numbers that have edges
     integer(I4B), dimension(:), pointer, contiguous :: ihcedge      => null()    ! edge type (horizontal or vertical)
     real(DP), dimension(:, :), pointer, contiguous  :: propsedge    => null()    ! edge properties (Q, area, nx, ny, distance) 
->>>>>>> upstream_usgs/develop
     !
   contains
     procedure                               :: npf_df
@@ -353,7 +301,7 @@ module GwfNpfModule
     ! -- vkd
     if(this%ivkd > 0) then
       call this%vkd%vkd_ar(dis, ibound, this%k11, this%ik33,          &
-      this%k33, this%sat, this%ik22, this%k22, this%inewton, this%min_satthk,  &
+      this%k33, this%sat, this%ik22, this%k22, this%inewton, this%satmin,  &
       this%icelltype, this%satomega)
       this%ibvkd = this%vkd%ibvkd    
     endif
@@ -363,7 +311,7 @@ module GwfNpfModule
     !
     ! -- xt3d
     if(this%ixt3d > 0) call this%xt3d%xt3d_ar(dis, ibound, this%k11, this%ik33, &
-      this%k33, this%sat, this%ik22, this%k22, this%inewton, this%min_satthk,  &
+      this%k33, this%sat, this%ik22, this%k22, this%inewton, this%satmin,  &
       this%icelltype, this%iangle1, this%iangle2, this%iangle3,                &
       this%angle1, this%angle2, this%angle3)
     !
@@ -446,7 +394,6 @@ module GwfNpfModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: DONE
-    !
     ! -- dummy
     class(GwfNpfType) :: this
     integer(I4B) :: kiter
@@ -519,27 +466,19 @@ module GwfNpfModule
         else
           !
           ! -- Horizontal conductance
-          ! 
-          if ((this%ibvkd(n) > 0) .and. (this%ibvkd(m) > 0)) then
-            ! call hcond_vkd
-            cond = this%vkd%vkd_hcond(n, m, this%dis%con%cl1(this%dis%con%jas(ii)), &
-                this%dis%con%cl2(this%dis%con%jas(ii)), this%dis%con%hwva(this%dis%con%jas(ii)), &
-                this%condsat(this%dis%con%jas(ii)), hnew(n), hnew(m), this%inewton)
-          else
-            cond = hcond(this%ibound(n), this%ibound(m),                       &
-                this%icelltype(n), this%icelltype(m),                 &
-                this%inewton, this%inewton,                           &
-                this%dis%con%ihc(this%dis%con%jas(ii)),               &
-                this%icellavg, this%iusgnrhc,                         &
-                this%condsat(this%dis%con%jas(ii)),                   &
-                hnew(n), hnew(m), this%sat(n), this%sat(m), hyn, hym, &
-                this%dis%top(n), this%dis%top(m),                     &
-                this%dis%bot(n), this%dis%bot(m),                     &
-                this%dis%con%cl1(this%dis%con%jas(ii)),               &
-                this%dis%con%cl2(this%dis%con%jas(ii)),               &
-                this%dis%con%hwva(this%dis%con%jas(ii)),              &
-                this%satomega )
-          endif
+          cond = hcond(this%ibound(n), this%ibound(m),                       &
+                       this%icelltype(n), this%icelltype(m),                 &
+                       this%inewton, this%inewton,                           &
+                       this%dis%con%ihc(this%dis%con%jas(ii)),               &
+                       this%icellavg, this%iusgnrhc, this%inwtupw,           &
+                       this%condsat(this%dis%con%jas(ii)),                   &
+                       hnew(n), hnew(m), this%sat(n), this%sat(m), hyn, hym, &
+                       this%dis%top(n), this%dis%top(m),                     &
+                       this%dis%bot(n), this%dis%bot(m),                     &
+                       this%dis%con%cl1(this%dis%con%jas(ii)),               &
+                       this%dis%con%cl2(this%dis%con%jas(ii)),               &
+                       this%dis%con%hwva(this%dis%con%jas(ii)),              &
+                       this%satomega, this%satmin)
         endif
         !
         ! -- Fill row n
@@ -560,6 +499,7 @@ module GwfNpfModule
     ! -- Return
     return
   end subroutine npf_fc
+
 
 
   subroutine npf_fn(this, kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew)
@@ -796,7 +736,7 @@ module GwfNpfModule
     if(this%inewton /= 0) then
       thksat = sQuadraticSaturation(this%dis%top(n), this%dis%bot(n), hn,      &
           this%satomega)
-      if (thksat < this%min_satthk) thksat = this%min_satthk
+      if (thksat < this%satmin) thksat = this%satmin
     endif
     !
     ! -- VKD Formulation both cases
@@ -828,10 +768,6 @@ module GwfNpfModule
     real(DP) :: condnm
     real(DP) :: hntemp, hmtemp
     integer(I4B) :: ihc
-    ! wittw
-    REAL(8) :: t1, t2, width, cl1, cl2, sn, sm, tsn, tsm !, DPCHIA
-    REAL(8), ALLOCATABLE :: D(:)
-    LOGICAL :: SKP = .FALSE.
 ! ------------------------------------------------------------------------------
     !
     ! -- Initialize
@@ -851,28 +787,19 @@ module GwfNpfModule
                       this%dis%bot(n), this%dis%bot(m),                        &
                       this%dis%con%hwva(this%dis%con%jas(icon)))
     else
-      !
-      if(this%ibvkd(n) == 0) then
-        condnm = hcond(this%ibound(n), this%ibound(m),                           &
-            this%icelltype(n), this%icelltype(m),                     &
-            this%inewton, this%inewton,                               &
-            this%dis%con%ihc(this%dis%con%jas(icon)),                 &
-            this%icellavg, this%iusgnrhc,                             &
-            this%condsat(this%dis%con%jas(icon)),                     &
-            hn, hm, this%sat(n), this%sat(m), hyn, hym,               &
-            this%dis%top(n), this%dis%top(m),                         &
-            this%dis%bot(n), this%dis%bot(m),                         &
-            this%dis%con%cl1(this%dis%con%jas(icon)),                 &
-            this%dis%con%cl2(this%dis%con%jas(icon)),                 &
-            this%dis%con%hwva(this%dis%con%jas(icon)),                &
-            this%satomega)
-      else
-        
-        ! vkd
-        condnm = this%vkd%vkd_hcond(n, m, this%dis%con%cl1(this%dis%con%jas(icon)), &
-            this%dis%con%cl2(this%dis%con%jas(icon)), this%dis%con%hwva(this%dis%con%jas(icon)), &
-            this%condsat(this%dis%con%jas(icon)), hn, hm, this%inewton)
-      endif
+      condnm = hcond(this%ibound(n), this%ibound(m),                           &
+                     this%icelltype(n), this%icelltype(m),                     &
+                     this%inewton, this%inewton,                               &
+                     this%dis%con%ihc(this%dis%con%jas(icon)),                 &
+                     this%icellavg, this%iusgnrhc, this%inwtupw,               &
+                     this%condsat(this%dis%con%jas(icon)),                     &
+                     hn, hm, this%sat(n), this%sat(m), hyn, hym,               &
+                     this%dis%top(n), this%dis%top(m),                         &
+                     this%dis%bot(n), this%dis%bot(m),                         &
+                     this%dis%con%cl1(this%dis%con%jas(icon)),                 &
+                     this%dis%con%cl2(this%dis%con%jas(icon)),                 &
+                     this%dis%con%hwva(this%dis%con%jas(icon)),                &
+                     this%satomega, this%satmin)
     endif
     !
     ! -- Initialize hntemp and hmtemp
@@ -900,7 +827,7 @@ module GwfNpfModule
     ! -- Return
     return
   end subroutine sgwf_npf_qcalc
-
+  
   subroutine npf_bdadj(this, nja, flowja, icbcfl, icbcun)
 ! ******************************************************************************
 ! npf_bdadj -- Calculate intercell flows
@@ -1028,7 +955,7 @@ module GwfNpfModule
     call mem_deallocate(this%wetfct)
     call mem_deallocate(this%iwetit)
     call mem_deallocate(this%ihdwet)
-    call mem_deallocate(this%min_satthk)
+    call mem_deallocate(this%satmin)
     call mem_deallocate(this%ibotnode)
     call mem_deallocate(this%iangle1)
     call mem_deallocate(this%iangle2)
@@ -1096,7 +1023,7 @@ module GwfNpfModule
     call mem_allocate(this%wetfct, 'WETFCT', this%origin)
     call mem_allocate(this%iwetit, 'IWETIT', this%origin)
     call mem_allocate(this%ihdwet, 'IHDWET', this%origin)
-    call mem_allocate(this%min_satthk, 'MIN_SATTHK', this%origin)
+    call mem_allocate(this%satmin, 'SATMIN', this%origin)
     call mem_allocate(this%iangle1, 'IANGLE1', this%origin)
     call mem_allocate(this%iangle2, 'IANGLE2', this%origin)
     call mem_allocate(this%iangle3, 'IANGLE3', this%origin)
@@ -1130,7 +1057,7 @@ module GwfNpfModule
     this%wetfct = DONE
     this%iwetit = 1
     this%ihdwet = 0
-    this%min_satthk = DZERO ! DEM7
+    this%satmin = DZERO ! DEM7
     this%iangle1 = 0
     this%iangle2 = 0
     this%iangle3 = 0
@@ -1332,10 +1259,10 @@ module GwfNpfModule
               'MODFLOW-USG saturation calculation method will be used '
           case ('DEV_MINIMUM_SATURATED_THICKNESS')
             call this%parser%DevOpt()
-            this%min_satthk = this%parser%GetDouble()
+            this%satmin = this%parser%GetDouble()
             write(this%iout, '(4x,a,1pg15.6)')                                 &
                              'MINIMUM SATURATED THICKNESS HAS BEEN SET TO: ',  &
-                             this%min_satthk
+                             this%satmin
 
           case default
             write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN NPF OPTION: ',         &
@@ -1832,17 +1759,13 @@ module GwfNpfModule
     ! -- format
     character(len=*),parameter :: fmtcnv = &
     "(1X,'CELL ', A, &
-    ' ELIMINATED BECAUSE ALL HYDRAULIC CONDUCTIVITIES TO NODE ARE 0.')"
+     &' ELIMINATED BECAUSE ALL HYDRAULIC CONDUCTIVITIES TO NODE ARE 0.')"
     character(len=*),parameter :: fmtnct = &
-        "(1X,'Negative cell thickness at cell ', A)"
+    "(1X,'Negative cell thickness at cell ', A)"
     character(len=*),parameter :: fmtihbe = &
-        "(1X,'Initial head, bottom elevation:',1P,2G13.5)"
+    "(1X,'Initial head, bottom elevation:',1P,2G13.5)"
     character(len=*),parameter :: fmttebe = &
-        "(1X,'Top elevation, bottom elevation:',1P,2G13.5)"
-    ! wittw
-    REAL(8) :: t1, t2, cl1, cl2 !, DPCHIA
-    REAL(8), ALLOCATABLE :: D(:)    
-    LOGICAL :: SKP = .FALSE.
+    "(1X,'Top elevation, bottom elevation:',1P,2G13.5)"
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate temporary storage to handle thickstart option
@@ -2005,25 +1928,16 @@ module GwfNpfModule
           !
           ! -- Horizontal conductance for fully saturated conditions
           fawidth = this%dis%con%hwva(this%dis%con%jas(ii))
-          if (this%ibvkd(n) == 0) then
-            csat = hcond(1, 1, 1, 1, this%inewton, 0,                            &
-                this%dis%con%ihc(this%dis%con%jas(ii)),                 &
-                this%icellavg, this%iusgnrhc,                           &
-                DONE,                                                   &
-                hn, hm, this%sat(n), this%sat(m), hyn, hym,             &
-                topn, topm,                                             &
-                this%dis%bot(n), this%dis%bot(m),                       &
-                this%dis%con%cl1(this%dis%con%jas(ii)),                 &
-                this%dis%con%cl2(this%dis%con%jas(ii)),                 &
-                fawidth, this%satomega)
-          else
-            !wittw overwrite calls to hcond and condmean
-            csat = this%vkd%vkd_hcond(n, m, this%dis%con%cl1(this%dis%con%jas(ii)), &
-                this%dis%con%cl2(this%dis%con%jas(ii)), &
-                this%dis%con%hwva(this%dis%con%jas(ii)), &
-                this%condsat(this%dis%con%jas(ii)), this%dis%top(n), this%dis%top(m), 0)
-          endif
-          ! end wittw
+          csat = hcond(1, 1, 1, 1, this%inewton, 0,                            &
+                       this%dis%con%ihc(this%dis%con%jas(ii)),                 &
+                       this%icellavg, this%iusgnrhc, this%inwtupw,             &
+                       DONE,                                                   &
+                       hn, hm, this%sat(n), this%sat(m), hyn, hym,             &
+                       topn, topm,                                             &
+                       this%dis%bot(n), this%dis%bot(m),                       &
+                       this%dis%con%cl1(this%dis%con%jas(ii)),                 &
+                       this%dis%con%cl2(this%dis%con%jas(ii)),                 &
+                       fawidth, this%satomega, this%satmin)
         end if
         this%condsat(this%dis%con%jas(ii)) = csat
       enddo
@@ -2410,8 +2324,9 @@ module GwfNpfModule
   end function hy_eff
 
   function hcond(ibdn, ibdm, ictn, ictm, inewton, inwtup, ihc, icellavg, iusg, &
-                 condsat, hn, hm, satn, satm, hkn, hkm, topn, topm,            &
-                 botn, botm, cln, clm, fawidth, satomega) result(condnm)
+                 iupw, condsat, hn, hm, satn, satm, hkn, hkm, topn, topm,      &
+                 botn, botm, cln, clm, fawidth, satomega, satminopt)           &
+                 result(condnm)
 ! ******************************************************************************
 ! hcond -- Horizontal conductance between two cells
 !   inwtup: if 1, then upstream-weight condsat, otherwise recalculate
@@ -2436,6 +2351,7 @@ module GwfNpfModule
     integer(I4B), intent(in) :: ihc
     integer(I4B), intent(in) :: icellavg
     integer(I4B), intent(in) :: iusg
+    integer(I4B), intent(in) :: iupw
     real(DP), intent(in) :: condsat
     real(DP), intent(in) :: hn
     real(DP), intent(in) :: hm
@@ -2451,12 +2367,10 @@ module GwfNpfModule
     real(DP), intent(in) :: clm
     real(DP), intent(in) :: fawidth
     real(DP), intent(in) :: satomega
-<<<<<<< HEAD
-=======
     real(DP), optional, intent(in) :: satminopt
->>>>>>> upstream_usgs/develop
     ! -- local
     integer(I4B) :: indk
+    real(DP) :: satmin
     real(DP) :: sn
     real(DP) :: sm
     real(DP) :: thksatn
@@ -2465,15 +2379,13 @@ module GwfNpfModule
     real(DP) :: tpn, tpm
     real(DP) :: top, bot
     real(DP) :: athk
-! ------------------------------------------------------------------------------
-<<<<<<< HEAD
-=======
+    real(DP) :: afac
+
     if (present(satminopt)) then
       satmin = satminopt
     else
       satmin = DZERO
     end if
->>>>>>> upstream_usgs/develop
     !
     ! -- If either n or m is inactive then conductance is zero
     if(ibdn == 0 .or. ibdm == 0) then
@@ -3215,8 +3127,8 @@ module GwfNpfModule
   end subroutine set_edge_properties
 
   function thksatnm(ibdn, ibdm, ictn, ictm, inwtup, ihc, iusg,                 &
-                    hn, hm, satn, satm, topn, topm, botn, botm, satomega)      &
-                    result(res)
+                    hn, hm, satn, satm, topn, topm, botn, botm,                &
+                    satomega, satminopt) result(res)
 ! ******************************************************************************
 ! thksatnm -- calculate saturated thickness at interface between two cells
 ! ******************************************************************************
@@ -3243,8 +3155,10 @@ module GwfNpfModule
     real(DP), intent(in) :: botn
     real(DP), intent(in) :: botm
     real(DP), intent(in) :: satomega
+    real(DP), optional, intent(in) :: satminopt
     ! -- local
     integer(I4B) :: indk
+    real(DP) :: satmin
     real(DP) :: sn
     real(DP) :: sm
     real(DP) :: thksatn
@@ -3252,15 +3166,13 @@ module GwfNpfModule
     real(DP) :: sill_top, sill_bot
     real(DP) :: tpn, tpm
     real(DP) :: top, bot
+!
 ! ------------------------------------------------------------------------------
-<<<<<<< HEAD
-=======
     if (present(satminopt)) then
       satmin = satminopt
     else
       satmin = DZERO
     end if
->>>>>>> upstream_usgs/develop
     !
     ! -- If either n or m is inactive then saturated thickness is zero
     if(ibdn == 0 .or. ibdm == 0) then

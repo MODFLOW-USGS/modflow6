@@ -47,15 +47,6 @@ module BndModule
     integer(I4B), pointer :: npakeq      => null()                               !number of equations in this package (normally 0 unless package adds rows to matrix)
     integer(I4B), pointer :: ioffset     => null()                               !offset of this package in the model
     ! -- arrays
-<<<<<<< HEAD
-    integer(I4B), pointer, contiguous, dimension(:)                 :: nodelist    => null() !vector of reduced node numbers
-    real(DP), pointer, contiguous, dimension(:,:)                   :: bound       => null() !array of package specific boundary numbers
-    real(DP), pointer, contiguous, dimension(:)                     :: hcof        => null() !diagonal contribution
-    real(DP), pointer, contiguous, dimension(:)                     :: rhs         => null() !right-hand side contribution
-    real(DP), pointer, contiguous, dimension(:,:)                   :: auxvar      => null() !auxiliary variable array
-    real(DP), pointer, contiguous, dimension(:)                     :: simvals     => null() !simulated values
-    real(DP), pointer, contiguous, dimension(:)                     :: simtomvr    => null() !simulated values
-=======
     integer(I4B), dimension(:), pointer, contiguous :: nodelist => null()        !vector of reduced node numbers
     real(DP), dimension(:,:), pointer, contiguous :: bound => null()             !array of package specific boundary numbers
     real(DP), dimension(:), pointer, contiguous :: hcof => null()                !diagonal contribution
@@ -63,7 +54,6 @@ module BndModule
     real(DP), dimension(:,:), pointer, contiguous :: auxvar => null()            !auxiliary variable array
     real(DP), dimension(:), pointer, contiguous :: simvals => null()             !simulated values
     real(DP), dimension(:), pointer, contiguous  :: simtomvr => null()           !simulated values
->>>>>>> upstream_usgs/develop
     !
     ! -- water mover flag and object
     integer(I4B), pointer :: imover => null()

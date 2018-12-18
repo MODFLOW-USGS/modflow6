@@ -71,16 +71,6 @@ module NumericalSolutionModule
     integer(I4B), pointer                                :: numtrack => NULL()
     integer(I4B), pointer                                :: iprims => NULL()
     integer(I4B), pointer                                :: ibflag => NULL()
-<<<<<<< HEAD
-    integer(I4B), dimension(:,:), pointer, contiguous                :: lrch => NULL()
-    real(DP), dimension(:), pointer, contiguous                      :: hncg => NULL()
-    real(DP), dimension(:), pointer, contiguous                      :: dxold => NULL()
-    real(DP), dimension(:), pointer, contiguous                      :: deold => NULL()
-    real(DP), dimension(:), pointer, contiguous                      :: wsave => NULL()
-    real(DP), dimension(:), pointer, contiguous                      :: hchold => NULL()
-    ! summary
-    character(len=31), pointer, dimension(:)             :: caccel => NULL()
-=======
     integer(I4B), dimension(:,:), pointer, contiguous    :: lrch => NULL()
     real(DP), dimension(:), pointer, contiguous          :: hncg => NULL()
     real(DP), dimension(:), pointer, contiguous          :: dxold => NULL()
@@ -90,7 +80,6 @@ module NumericalSolutionModule
     !
     ! -- convergence summary information
     character(len=31), dimension(:), pointer, contiguous :: caccel => NULL()
->>>>>>> upstream_usgs/develop
     integer(I4B), pointer                                :: icsvout => NULL()
     integer(I4B), pointer                                :: nitermax => NULL()
     integer(I4B), pointer                                :: nitercnt => NULL()

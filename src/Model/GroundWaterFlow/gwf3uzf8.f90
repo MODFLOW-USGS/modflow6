@@ -92,16 +92,6 @@ module UzfModule
     integer(I4B), dimension(:), pointer, contiguous :: ja => null()
     !
     ! -- timeseries aware variables
-<<<<<<< HEAD
-    type (MemoryTSType), pointer, contiguous, dimension(:) :: sinf => null()
-    type (MemoryTSType), pointer, contiguous, dimension(:) :: pet => null()
-    type (MemoryTSType), pointer, contiguous, dimension(:) :: extdp => null()
-    type (MemoryTSType), pointer, contiguous, dimension(:) :: extwc => null()
-    type (MemoryTSType), pointer, contiguous, dimension(:) :: ha => null()
-    type (MemoryTSType), pointer, contiguous, dimension(:) :: hroot => null()
-    type (MemoryTSType), pointer, contiguous, dimension(:) :: rootact => null()
-    type (MemoryTSType), pointer, contiguous, dimension(:) :: lauxvar => null()
-=======
     type (MemoryTSType), dimension(:), pointer, contiguous :: sinf => null()
     type (MemoryTSType), dimension(:), pointer, contiguous :: pet => null()
     type (MemoryTSType), dimension(:), pointer, contiguous :: extdp => null()
@@ -110,7 +100,6 @@ module UzfModule
     type (MemoryTSType), dimension(:), pointer, contiguous :: hroot => null()
     type (MemoryTSType), dimension(:), pointer, contiguous :: rootact => null()
     type (MemoryTSType), dimension(:), pointer, contiguous :: lauxvar => null()
->>>>>>> upstream_usgs/develop
     !
     ! -- convergence check
     integer(I4B), pointer  :: iconvchk    => null()

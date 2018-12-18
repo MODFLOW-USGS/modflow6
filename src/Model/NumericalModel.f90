@@ -14,22 +14,6 @@ module NumericalModelModule
             GetNumericalModelFromList
 
   type, extends(BaseModelType) :: NumericalModelType
-<<<<<<< HEAD
-    character(len=LINELENGTH), pointer      :: filename   => null()             !input file name
-    integer(I4B), pointer                   :: neq        => null()             !number of equations
-    integer(I4B), pointer                   :: nja        => null()             !number of connections
-    integer(I4B), pointer                   :: moffset    => null()             !offset of this model in the solution
-    integer(I4B), pointer                   :: icnvg      => null()             !convergence flag
-    integer(I4B), dimension(:), pointer     :: ia         => null()             !csr row pointer
-    integer(I4B), dimension(:), pointer     :: ja         => null()             !csr columns
-    real(DP), dimension(:), pointer         :: x          => null()             !dependent variable (head, conc, etc)
-    real(DP), dimension(:), pointer         :: rhs        => null()             !right-hand side vector
-    real(DP), dimension(:), pointer         :: cond       => null()             !conductance matrix
-    integer(I4B), dimension(:), pointer, contiguous     :: idxglo     => null()             !pointer to position in solution matrix
-    real(DP), dimension(:), pointer, contiguous         :: xold       => null()             !dependent variable for previous timestep
-    real(DP), dimension(:), pointer, contiguous         :: flowja     => null()             !intercell flows
-    integer(I4B), dimension(:), pointer     :: ibound     => null()             !ibound array
-=======
     character(len=LINELENGTH), pointer              :: filename => null()        !input file name
     integer(I4B), pointer                           :: neq      => null()        !number of equations
     integer(I4B), pointer                           :: nja      => null()        !number of connections
@@ -44,7 +28,6 @@ module NumericalModelModule
     real(DP), dimension(:), pointer, contiguous     :: xold     => null()        !dependent variable for previous timestep
     real(DP), dimension(:), pointer, contiguous     :: flowja   => null()        !intercell flows
     integer(I4B), dimension(:), pointer, contiguous :: ibound   => null()        !ibound array
->>>>>>> upstream_usgs/develop
     !
     ! -- Derived types
     type(ListType), pointer                         :: bndlist  => null()        !array of boundary packages for this model

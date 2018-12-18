@@ -14,29 +14,6 @@ module GwfHfbModule
   public :: hfb_cr
 
   type, extends(NumericalPackageType) :: GwfHfbType
-<<<<<<< HEAD
-    integer(I4B), pointer                        :: maxhfb     => null()   !max number of hfb's
-    integer(I4B), pointer                        :: nhfb       => null()   !number of hfb's
-    integer(I4B), dimension(:), pointer, contiguous          :: noden      => null()   !first cell
-    integer(I4B), dimension(:), pointer, contiguous          :: nodem      => null()   !second cell
-    integer(I4B), dimension(:), pointer, contiguous          :: idxloc     => null()   !position in model ja
-    real(DP), dimension(:), pointer, contiguous              :: hydchr     => null()   !hydraulic characteristic of the barrier
-    real(DP), dimension(:), pointer, contiguous              :: csatsav    => null()   !value of condsat prior to hfb modification
-    real(DP), dimension(:), pointer, contiguous              :: condsav    => null()   !saved conductance of combined npf and hfb
-    type(Xt3dType), pointer                      :: xt3d       => null()   !pointer to xt3d object
-    !
-    integer(I4B), pointer, dimension(:)          :: ibound     => null()   !pointer to model ibound
-    integer(I4B), pointer, dimension(:)          :: icelltype  => null()   !pointer to model icelltype
-    integer(I4B), pointer, dimension(:)          :: ihc        => null()   !pointer to model ihc
-    integer(I4B), pointer, dimension(:)          :: ia         => null()   !pointer to model ia
-    integer(I4B), pointer, dimension(:)          :: ja         => null()   !pointer to model ja
-    integer(I4B), pointer, dimension(:)          :: jas        => null()   !pointer to model jas
-    integer(I4B), pointer, dimension(:)          :: isym       => null()   !pointer to model isym
-    real(DP), pointer, dimension(:)              :: condsat    => null()   !pointer to model condsat
-    real(DP), pointer, dimension(:)              :: top        => null()   !pointer to model top
-    real(DP), pointer, dimension(:)              :: bot        => null()   !pointer to model bot
-    real(DP), pointer, dimension(:)              :: hwva       => null()   !pointer to model hwva
-=======
     integer(I4B), pointer :: maxhfb => null()                                    !max number of hfb's
     integer(I4B), pointer :: nhfb => null()                                      !number of hfb's
     integer(I4B), dimension(:), pointer, contiguous :: noden => null()           !first cell
@@ -58,7 +35,6 @@ module GwfHfbModule
     real(DP), dimension(:), pointer, contiguous :: top => null()                 !pointer to model top
     real(DP), dimension(:), pointer, contiguous :: bot => null()                 !pointer to model bot
     real(DP), dimension(:), pointer, contiguous :: hwva => null()                !pointer to model hwva
->>>>>>> upstream_usgs/develop
   contains
     procedure :: hfb_ar
     procedure :: hfb_rp
