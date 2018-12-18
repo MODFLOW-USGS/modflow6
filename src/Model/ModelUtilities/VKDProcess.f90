@@ -360,6 +360,13 @@ contains
           enddo
         endif
         !
+        ! multiply kip (factor) by npf k to get absolute k
+        if(.true.) then
+          do i = 1, this%numelevs
+            this%cells(n)%kk(i) = this%cells(n)%kk(i) * this%k11(this%cells(n)%igwfnode)
+          enddo
+        endif
+        !
         if (this%iprpak /= 0) then
           write (this%iout,'(A8,20F10.3)') cellid, this%cells(n)%ek(:), this%cells(n)%kk(:)
         end if
@@ -417,17 +424,17 @@ contains
       posm = this%ibvkd(m)
       !
       allocate(d(this%numelevs))
-      call sPChip_set_derivatives (this%numelevs, this%cells(posn)%ek, this%cells(posn)%kk, d)
-      t1 = sPChip_integrate (this%numelevs, this%cells(posn)%ek, this%cells(posn)%kk, d, this%dis%bot(n), hn)
-      tsn = sPChip_integrate (this%numelevs, this%cells(posn)%ek, this%cells(posn)%kk, d, this%dis%bot(n), this%dis%top(n))
+      call sPChip_set_derivatives(this%numelevs, this%cells(posn)%ek, this%cells(posn)%kk, d)
+      t1 = sPChip_integrate(this%numelevs, this%cells(posn)%ek, this%cells(posn)%kk, d, this%dis%bot(n), hn)
+      tsn = sPChip_integrate(this%numelevs, this%cells(posn)%ek, this%cells(posn)%kk, d, this%dis%bot(n), this%dis%top(n))
       deallocate(d)
 
       allocate(d(this%numelevs))
-      call sPChip_set_derivatives (this%numelevs, this%cells(posm)%ek, this%cells(posm)%kk, d)
-      t2 = sPChip_integrate (this%numelevs, this%cells(posm)%ek, this%cells(posm)%kk, d, this%dis%bot(m), hm)
-      tsm = sPChip_integrate (this%numelevs, this%cells(posm)%ek, this%cells(posm)%kk, d, this%dis%bot(m), this%dis%top(m))              
+      call sPChip_set_derivatives(this%numelevs, this%cells(posm)%ek, this%cells(posm)%kk, d)
+      t2 = sPChip_integrate(this%numelevs, this%cells(posm)%ek, this%cells(posm)%kk, d, this%dis%bot(m), hm)
+      tsm = sPChip_integrate(this%numelevs, this%cells(posm)%ek, this%cells(posm)%kk, d, this%dis%bot(m), this%dis%top(m))              
       deallocate(d)
-      
+!!!! condmean only harmonic as present      
       if (t1*t2 > DZERO) then
         sn = sQuadraticSaturation(tsn, DZERO, t1, this%satomega)
         sm = sQuadraticSaturation(tsm, DZERO, t2, this%satomega)
