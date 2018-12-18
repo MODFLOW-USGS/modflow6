@@ -14,8 +14,8 @@ module ObserveModule
   use KindModule, only: DP, I4B
   use BaseDisModule,     only: DisBaseType
   use ConstantsModule,   only: LENBOUNDNAME, LENOBSNAME, LENOBSTYPE, &
-                               MAXOBSTYPES, DNODATA
-  use InputOutputModule, only: dclosetest, urword
+                               MAXOBSTYPES, DNODATA, DZERO
+  use InputOutputModule, only: urword
   use ListModule,        only: ListType
   use SimModule,         only: store_warning, store_error, &
                                store_error_unit, ustop
@@ -29,31 +29,38 @@ module ObserveModule
 
   type :: ObserveType
     ! -- Public members
+    !
     ! -- For all observations
-    integer(I4B),                     public :: NodeNumber = 0
-    integer(I4B),                     public :: UnitNumber = 0
-    character(len=LENOBSNAME),        public :: Name = ''
-    character(len=LENOBSTYPE),        public :: ObsTypeId = ''
-    character(len=200),               public :: IDstring = ''
-    character(len=LENBOUNDNAME),      public :: FeatureName = ''
-    character(len=LENBOUNDNAME),      public :: FeatureName2 = ''
+    integer(I4B), public :: NodeNumber = 0
+    integer(I4B), public :: UnitNumber = 0
+    character(len=LENOBSNAME), public :: Name = ''
+    character(len=LENOBSTYPE), public :: ObsTypeId = ''
+    character(len=200), public :: IDstring = ''
+    character(len=LENBOUNDNAME), public :: FeatureName = ''
+    character(len=LENBOUNDNAME), public :: FeatureName2 = ''
+    !
     ! -- members specific to NPF intercell-flow observations
-    integer(I4B),                     public :: NodeNumber2 = 0
-    integer(I4B),                     public :: JaIndex = -2
+    integer(I4B), public :: NodeNumber2 = 0
+    integer(I4B), public :: JaIndex = -2
+    !
     ! -- members that can be used as needed by packages or models
-    integer(I4B),                     public :: intPak1 = 0
-    real(DP),                         public :: Obsdepth = 0.0d0
-    real(DP),                         public :: dblPak1 = 0.0d0
+    integer(I4B), public :: intPak1 = 0
+    real(DP), public :: Obsdepth = DZERO
+    real(DP), public :: dblPak1 = DZERO
+    !
     ! -- indxbnds is intended to hold indices of position(s) in bound
     !    array of boundaries included in the observation.
     integer(I4B), allocatable, dimension(:), public :: indxbnds
-    ! Set FormattedOutput false if output unit is opened for unformatted i/o
-    logical,                     public :: FormattedOutput = .true.
-    logical,                     public :: BndFound = .false.
-    real(DP),                    public :: CurrentTimeStepEndValue = 0.0d0
-    real(DP),                    public :: CurrentTimeStepEndTime = 0.0d0
+    !
+    ! -- Set FormattedOutput false if output unit is opened for unformatted i/o
+    logical, public :: FormattedOutput = .true.
+    logical, public :: BndFound = .false.
+    real(DP), public :: CurrentTimeStepEndValue = DZERO
+    real(DP), public :: CurrentTimeStepEndTime = DZERO
+    !
     ! -- Members specific to continuous observations
-    integer(I4B),                     public :: indxObsOutput = -1
+    integer(I4B), public :: indxObsOutput = -1
+    !
     ! -- Private members
     type(ObsDataType), pointer, private :: obsDatum => null()
   contains
@@ -64,8 +71,8 @@ module ObserveModule
 
   type :: ObsDataType
     ! -- Public members
-    character(len=LENOBSTYPE),                public :: ObsTypeID = ''
-    logical,                                  public :: Cumulative = .false.
+    character(len=LENOBSTYPE), public :: ObsTypeID = ''
+    logical, public :: Cumulative = .false.
     procedure(ProcessIdSub), nopass, pointer, public :: ProcessIdPtr => null()
   end type ObsDataType
 
@@ -106,7 +113,7 @@ contains
     class(ObserveType), intent(inout) :: this
     !
     ! -- Reset current value to zero.
-    this%CurrentTimeStepEndValue = 0.0d0
+    this%CurrentTimeStepEndValue = DZERO
     return
   end subroutine ResetCurrent
 
@@ -186,6 +193,13 @@ contains
     ! -- Remaining text is ID [and ID2]; store it
     ltrim = len_trim(defLine)
     call urword(defLine,icol,istart,istop,1,n,r,iout,inunit)
+    !
+    ! -- Test for quote at end of substring
+    if (istop < ltrim) then
+      if (defLine(istop+1:istop+1) == '''') then
+        ltrim = istop
+      end if
+    end if
     newObservation%IDstring = (defLine(istart:ltrim))
     !
     ! Store UnitNumber, FormattedOutput, and IndxObsOutput

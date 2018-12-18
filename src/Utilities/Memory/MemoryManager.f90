@@ -522,7 +522,7 @@ contains
   end subroutine setptr_int
   
   subroutine setptr_int1d(aint, name, origin)
-    integer(I4B), dimension(:), pointer, intent(inout) :: aint
+    integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: aint
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
     class(MemoryType), pointer :: mt
@@ -538,7 +538,7 @@ contains
   end subroutine setptr_int1d
   
   subroutine setptr_int2d(aint, name, origin)
-    integer(I4B), dimension(:, :), pointer, intent(inout) :: aint
+    integer(I4B), dimension(:, :), pointer, contiguous, intent(inout) :: aint
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
     class(MemoryType), pointer :: mt
@@ -570,7 +570,7 @@ contains
   end subroutine setptr_dbl
   
   subroutine setptr_dbl1d(adbl, name, origin)
-    real(DP), dimension(:), pointer, intent(inout) :: adbl
+    real(DP), dimension(:), pointer, contiguous, intent(inout) :: adbl
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
     class(MemoryType), pointer :: mt
@@ -586,7 +586,7 @@ contains
   end subroutine setptr_dbl1d
   
   subroutine setptr_dbl2d(adbl, name, origin)
-    real(DP), dimension(:, :), pointer, intent(inout) :: adbl
+    real(DP), dimension(:, :), pointer, contiguous, intent(inout) :: adbl
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
     class(MemoryType), pointer :: mt
@@ -787,7 +787,7 @@ contains
   end subroutine deallocate_dbl
   
   subroutine deallocate_int1d(aint1d)
-    integer(I4B), dimension(:), pointer, intent(inout) :: aint1d
+    integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: aint1d
     class(MemoryType), pointer :: mt
     integer(I4B) :: ipos
     logical :: found
@@ -809,7 +809,7 @@ contains
   end subroutine deallocate_int1d
   
   subroutine deallocate_int2d(aint2d)
-    integer(I4B), dimension(:, :), pointer, intent(inout) :: aint2d
+    integer(I4B), dimension(:, :), pointer, contiguous, intent(inout) :: aint2d
     class(MemoryType), pointer :: mt
     integer(I4B) :: ipos
     logical :: found
@@ -831,7 +831,7 @@ contains
   end subroutine deallocate_int2d
   
   subroutine deallocate_dbl1d(adbl1d)
-    real(DP), dimension(:), pointer, intent(inout) :: adbl1d
+    real(DP), dimension(:), pointer, contiguous, intent(inout) :: adbl1d
     class(MemoryType), pointer :: mt
     integer(I4B) :: ipos
     logical :: found
@@ -853,7 +853,7 @@ contains
   end subroutine deallocate_dbl1d
   
   subroutine deallocate_dbl2d(adbl2d)
-    real(DP), dimension(:, :), pointer, intent(inout) :: adbl2d
+    real(DP), dimension(:, :), pointer, contiguous, intent(inout) :: adbl2d
     class(MemoryType), pointer :: mt
     integer(I4B) :: ipos
     logical :: found
@@ -875,7 +875,7 @@ contains
   end subroutine deallocate_dbl2d
   
   subroutine deallocate_ts1d(ats1d)
-    type (MemoryTSType), dimension(:), pointer, intent(inout) :: ats1d
+    type (MemoryTSType), dimension(:), pointer, contiguous, intent(inout) :: ats1d
     class(MemoryType), pointer :: mt
     integer(I4B) :: ipos
     integer(I4B) :: i

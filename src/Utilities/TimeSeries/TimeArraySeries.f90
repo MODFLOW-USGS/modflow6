@@ -2,9 +2,10 @@ module TimeArraySeriesModule
 
   use ArrayReadersModule, only: ReadArray
   use BlockParserModule,  only: BlockParserType
-  use ConstantsModule,    only: LINELENGTH, UNDEFINED, STEPWISE, LINEAR, &
-                                LENTIMESERIESNAME, LENBIGLINE
-  use InputOutputModule,  only: dclosetest, GetUnit, openfile
+  use ConstantsModule,    only: LINELENGTH, UNDEFINED, STEPWISE, LINEAR,        &
+                                LENTIMESERIESNAME, LENBIGLINE, DZERO, DONE
+  use GenericUtilities,   only: IS_SAME
+  use InputOutputModule,  only: GetUnit, openfile
   use KindModule,         only: DP, I4B
   use ListModule,         only: ListType, ListNodeType
   use SimModule,          only: count_errors, store_error, store_error_unit, &
@@ -19,23 +20,20 @@ module TimeArraySeriesModule
   private
   public  :: TimeArraySeriesType, ConstructTimeArraySeries, &
              CastAsTimeArraySeriesType, GetTimeArraySeriesFromList
-  private :: epsil
-
-  real(DP), parameter :: epsil = 1.0d-10
 
   type TimeArraySeriesType
     ! -- Public members
     character(len=LENTIMESERIESNAME), public :: Name = ''
     ! -- Private members
-    integer(I4B),               private :: inunit = 0
-    integer(I4B),               private :: iout = 0
-    integer(I4B),               private :: iMethod = UNDEFINED
-    real(DP),                   private :: sfac = 1.0d0
-    character(len=LINELENGTH),  private :: dataFile = ''
-    logical,                    private :: autoDeallocate = .true.
-    type(ListType),    pointer, private :: list => null()
+    integer(I4B), private :: inunit = 0
+    integer(I4B), private :: iout = 0
+    integer(I4B), private :: iMethod = UNDEFINED
+    real(DP), private :: sfac = DONE
+    character(len=LINELENGTH), private :: dataFile = ''
+    logical, private :: autoDeallocate = .true.
+    type(ListType), pointer, private :: list => null()
     class(DisBaseType), pointer, private :: dis => null()
-    type(BlockParserType),      private :: parser
+    type(BlockParserType), private :: parser
   contains
     ! -- Public procedures
     procedure, public :: tas_init
@@ -501,7 +499,7 @@ contains
           ierr = 1
         endif
       else
-        if (dclosetest(taEarlier%taTime, time, epsil)) then
+        if (IS_SAME(taEarlier%taTime, time)) then
           values = taEarlier%taArray
         else
           ! -- Only earlier time is available, and it is not time of interest;
@@ -515,7 +513,7 @@ contains
       endif
     else
       if (associated(taLater)) then
-        if (dclosetest(taLater%taTime, time, epsil)) then
+        if (IS_SAME(taLater%taTime, time)) then
           values = taLater%taArray
         else
           ! -- only later time is available, and it is not time of interest
@@ -556,7 +554,7 @@ contains
     integer(I4B) :: i
     real(DP) :: area, currTime, nextTime, ratio0, ratio1, t0, &
                         t01, t1, timediff, value, value0, value1, valuediff
-    logical :: done
+    logical :: ldone
     character(len=LINELENGTH) :: ermsg
     type(ListNodeType), pointer :: precNode => null()
     type(ListNodeType), pointer :: currNode => null(), nextNode => null()
@@ -568,14 +566,14 @@ contains
         g12.5,' to ',g12.5)
 ! ------------------------------------------------------------------------------
     !
-    values = 0.0d0
-    value = 0.0d0
-    done = .false.
-    t1 = -1.0d0
+    values = DZERO
+    value = DZERO
+    ldone = .false.
+    t1 = -DONE
     call this%get_latest_preceding_node(time0, precNode)
     if (associated(precNode)) then
       currNode => precNode
-      do while (.not. done)
+      do while (.not. ldone)
         currObj => currNode%GetItem()
         currRecord => CastAsTimeArrayType(currObj)
         currTime = currRecord%taTime
@@ -640,12 +638,12 @@ contains
           endif
         else
           ! Current node time = time1 so should be done
-          done = .true.
+          ldone = .true.
         endif
         !
         ! -- Are we done yet?
         if (t1 >= time1) then
-          done = .true.
+          ldone = .true.
         else
           if (.not. associated(currNode%nextNode)) then
             ! -- try to read the next array
@@ -760,7 +758,7 @@ contains
         if (associated(currNode%nextNode)) then
           obj => currNode%nextNode%GetItem()
           ta => CastAsTimeArrayType(obj)
-          if (ta%taTime < time  .or. dclosetest(ta%taTime, time, epsil)) then
+          if (ta%taTime < time  .or. IS_SAME(ta%taTime, time)) then
             currNode => currNode%nextNode
           else
             exit

@@ -21,13 +21,13 @@ module ObsOutputModule
   type :: ObsOutputType
     ! -- Public members
     ! kind specified to ensure consistent binary output
-    integer(kind=4), public           :: nobs = 0
-    integer(I4B), public              :: nunit = 0
-    character(len=500), public        :: filename = ''
+    integer(kind=4), public :: nobs = 0
+    integer(I4B), public :: nunit = 0
+    character(len=500), public :: filename = ''
     character(len=LENOBSNAME), allocatable, dimension(:), public :: obsnames
-    character(len=LENBIGLINE), public :: header = ''
-    character(len=LENBIGLINE), public :: lineout = ''
-    logical, public                   :: FormattedOutput = .true.
+    character(len=LENOBSNAME), public :: header = ''
+    character(len=LENOBSNAME), public :: lineout = ''
+    logical, public :: FormattedOutput = .true.
   contains
     ! -- Public procedures
     procedure, public :: ClearLineout
@@ -64,8 +64,9 @@ contains
     implicit none
     ! -- dummy
     class(ObsOutputType), intent(inout) :: this
-    !
-    write(this%nunit,'(a)')trim(this%lineout)
+    ! -- write a line return to end of observation output line 
+    !    for this totim
+    write(this%nunit,'(a)', advance='YES') ''
     !
     return
   end subroutine WriteLineout

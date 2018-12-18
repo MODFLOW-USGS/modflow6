@@ -220,8 +220,9 @@ def block_entry(varname, block, vardict, prefix='  '):
         shape = v['shape']
         reader = v['reader'].upper()
         layered = ''
-        if reader == 'READARRAY':
-            layered = ' [LAYERED]'
+        if 'layered' in v:
+            if v['layered'] == 'true':
+                layered = ' [LAYERED]'
         s = '{}{}\n{}{}<{}{}> -- {}'.format(s, layered, prefix, prefix, varname,
                                           shape, reader)
 

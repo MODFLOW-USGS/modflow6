@@ -11,9 +11,11 @@ A MODFLOW 6 variable, and its place within a block and on a line is defined usin
 * block -- this is the name of the block that contains the variable.  Required.
 * name -- this is the name of the variable.  Required.
 * type -- this is the type of variable.  Valid values are: keyword, string, integer, double precision, recarray, record, recordrepeating, keystring.  Required.
+* valid -- list of valid values or keywords
 * shape -- this is the size of the array.  Only required for arrays.  Optional.
 * tagged -- if set to false, then a keyword is not required prior to value itself.  tagged is set to true if not specified.  Optional.
 * in_record -- if true, then this means that the variable is part of a record, and so it should not be listed on its own line.  in_record is False if not specified.  Optional.
+* layered -- if true, then the LAYERED keyword will be written to the input instructions.  Default is false.
 * reader -- this is the MODFLOW 6 subroutine or method that reads the data.  Valid values are: urword, u1ddbl, u2ddbl, readarray.
 * optional -- this is a logical keyword.  When true, the variable is an optional variable for MODFLOW 6.  Optional.
 * longname -- this is a long name for the variable.  Required.
@@ -581,6 +583,7 @@ type integer
 shape (nodes)
 valid
 reader readarray
+layered true
 optional
 longname confined or convertible indicator
 description flag for each cell that specifies how saturated thickness is treated.  0 means saturated thickness is held constant;  $>$0 means saturated thickness varies with computed head when head is below the cell top; $<$0 means saturated thickness varies with computed head unless the THICKSTRT option is in effect.  When THICKSTRT is in effect, a negative value of icelltype indicates that saturated thickness will be computed as STRT-BOT and held constant.

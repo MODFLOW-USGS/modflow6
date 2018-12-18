@@ -11,6 +11,7 @@ module DnmDisBaseModule
   public :: dis_cr
 
   type :: DisBaseType
+<<<<<<< HEAD
     character(len=LENORIGIN), pointer       :: origin     => null()  !origin name for mem allocation
     character(len=LENMODELNAME), pointer    :: name_model => null()  !name of the model
     integer, pointer                        :: inunit     => null()  !unit number for input file
@@ -23,6 +24,20 @@ module DnmDisBaseModule
     integer, pointer                        :: njas       => null()  !(nja-nodes)/2
     integer, pointer                        :: lenuni     => null()  !length unit
     integer, pointer                        :: idsymrd    => null()  !indicates how symmetric arrays are read
+=======
+    character(len=LENORIGIN), pointer                   :: origin     => null()  !origin name for mem allocation
+    character(len=LENMODELNAME), pointer                :: name_model => null()  !name of the model
+    integer, pointer                                    :: inunit     => null()  !unit number for input file
+    integer, pointer                                    :: iout       => null()  !unit number for output file
+    integer, pointer                                    :: nodes      => null()  !number of nodes in solution
+    integer, pointer                                    :: nodesuser  => null()  !number of user nodes (same as nodes for unstructured model)
+    integer, pointer                                    :: ndim       => null()  !number of spatial model dimensions (1 for unstructured)
+    integer, pointer, dimension(:), contiguous          :: mshape     => null()  !shape of the model; (nodes) for DisBaseType
+    integer, pointer                                    :: nja        => null()  !number of connections plus number of nodes
+    integer, pointer                                    :: njas       => null()  !(nja-nodes)/2
+    integer, pointer                                    :: lenuni     => null()  !length unit
+    integer, pointer                                    :: idsymrd    => null()  !indicates how symmetric arrays are read
+>>>>>>> upstream_usgs/develop
     double precision, dimension(:), pointer, contiguous :: top        => null()  !(size:nodes) cell top elevation
     double precision, dimension(:), pointer, contiguous :: bot        => null()  !(size:nodes) cell bottom elevation
     double precision, dimension(:), pointer, contiguous :: area       => null()  !(size:nodes) cell area, in plan view

@@ -22,18 +22,18 @@ module BudgetModule
   public BudgetType, budget_cr
 
   type BudgetType
-    integer(I4B), pointer                            :: msum => null()
-    integer(I4B), pointer                            :: maxsize => null()
-    real(DP), pointer                                :: budperc => null()
-    logical, pointer                                 :: written_once => null()
-    real(DP), dimension(:,:), pointer                :: vbvl => null()
-    character(len=LENBUDTXT), dimension(:), pointer  :: vbnm => null()
-    character(len=20), pointer                       :: bdtype => null()
-    character(len=5), pointer                        :: bddim => null()
-    character(len=LENPACKAGENAME), dimension(:), pointer  :: rowlabel => null()
-    character(len=16), pointer                       :: labeltitle => null()
-    character(len=20), pointer                       :: bdzone => null()
-    logical, pointer                                 :: labeled => null()
+    integer(I4B), pointer :: msum => null()
+    integer(I4B), pointer :: maxsize => null()
+    real(DP), pointer :: budperc => null()
+    logical, pointer :: written_once => null()
+    real(DP), dimension(:,:), pointer :: vbvl => null()
+    character(len=LENBUDTXT), dimension(:), pointer, contiguous :: vbnm => null()
+    character(len=20), pointer :: bdtype => null()
+    character(len=5), pointer :: bddim => null()
+    character(len=LENPACKAGENAME), dimension(:), pointer, contiguous :: rowlabel => null()
+    character(len=16), pointer :: labeltitle => null()
+    character(len=20), pointer :: bdzone => null()
+    logical, pointer :: labeled => null()
   contains
     procedure :: budget_df
     procedure :: budget_ot

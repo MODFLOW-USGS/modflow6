@@ -186,11 +186,11 @@ contains
   subroutine extend_double(array, increment)
     implicit none
     ! -- dummy
-    real(DP), pointer, dimension(:), intent(inout) :: array
+    real(DP), dimension(:), pointer, contiguous, intent(inout) :: array
     integer(I4B), optional, intent(in) :: increment
     ! -- local
     integer(I4B) :: i, inclocal, isize, istat, newsize
-    real(DP), pointer, dimension(:) :: array_temp => null()
+    real(DP), dimension(:), pointer, contiguous :: array_temp => null()
     character(len=100) :: ermsg
     !
     ! -- initialize
@@ -234,11 +234,11 @@ contains
   subroutine extend_integer(array, increment)
     implicit none
     ! -- dummy
-    integer(I4B), pointer, dimension(:), intent(inout) :: array
+    integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: array
     integer(I4B), optional, intent(in) :: increment
     ! -- local
     integer(I4B) :: i, inclocal, isize, istat, newsize
-    integer(I4B), pointer, dimension(:) :: array_temp => null()
+    integer(I4B), dimension(:), pointer, contiguous :: array_temp => null()
     character(len=100) :: ermsg
     !
     ! -- initialize

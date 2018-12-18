@@ -58,16 +58,16 @@ module mawmodule
     real(DP), pointer :: shutoffdq => null()
     real(DP), pointer :: shutoffqold => null()
     ! -- vectors
-    integer(I4B), pointer, dimension(:), contiguous :: gwfnodes => NULL()
-    real(DP), pointer, dimension(:), contiguous :: sradius => NULL()
-    real(DP), pointer, dimension(:), contiguous :: hk => NULL()
-    real(DP), pointer, dimension(:), contiguous :: satcond => NULL()
-    real(DP), pointer, dimension(:), contiguous :: simcond => NULL()
-    real(DP), pointer, dimension(:), contiguous :: topscrn => NULL()
-    real(DP), pointer, dimension(:), contiguous :: botscrn => NULL()
+    integer(I4B), dimension(:), pointer, contiguous :: gwfnodes => NULL()
+    real(DP), dimension(:), pointer, contiguous :: sradius => NULL()
+    real(DP), dimension(:), pointer, contiguous :: hk => NULL()
+    real(DP), dimension(:), pointer, contiguous :: satcond => NULL()
+    real(DP), dimension(:), pointer, contiguous :: simcond => NULL()
+    real(DP), dimension(:), pointer, contiguous :: topscrn => NULL()
+    real(DP), dimension(:), pointer, contiguous :: botscrn => NULL()
     ! -- time-series aware data
     ! -- aux data
-    type (MawWellTSType), pointer, dimension(:) :: auxvar => null()
+    type (MawWellTSType), dimension(:), pointer, contiguous :: auxvar => null()
     ! -- pumping rate
     type(MawWellTSType), pointer :: rate => null()
     ! -- well head
@@ -78,10 +78,14 @@ module mawmodule
   public :: maw_create
   !
   type, extends(BndType) :: MawType
+    !
     ! -- scalars
     ! -- characters
-    character(len=16), dimension(:), pointer :: cmawbudget => NULL()
-    character(len=LENAUXNAME), dimension(:), pointer :: cauxcbc => NULL()
+    !
+    character(len=16), dimension(:), pointer, contiguous :: cmawbudget => NULL()
+    character(len=LENAUXNAME), dimension(:), pointer,                           &
+                               contiguous :: cauxcbc => NULL()
+    !
     ! -- integers
     integer(I4B), pointer :: iprhed => null()
     integer(I4B), pointer :: iheadout => null()
@@ -95,35 +99,50 @@ module mawmodule
     integer(I4B), pointer :: ishutoffcnt => NULL()
     integer(I4B), pointer :: ieffradopt => NULL()
     real(DP), pointer :: satomega => null()
+    !
     ! -- for budgets
     integer(I4B), pointer :: bditems => NULL()
+    !
     ! -- for underrelaxation of estimated well q if using shutoff
     real(DP), pointer :: theta => NULL()
     real(DP), pointer :: kappa => NULL()
+    !
     ! -- derived types
     type(BudgetType), pointer :: budget => NULL()
-    type(MawWellType), pointer, dimension(:) :: mawwells => NULL()
+    type(MawWellType), dimension(:), pointer, contiguous :: mawwells => NULL()
+    !
     ! -- pointer to gwf iss and gwf hk
     integer(I4B), pointer :: gwfiss => NULL()
-    real(DP), dimension(:), pointer :: gwfk11 => NULL()
-    real(DP), dimension(:), pointer :: gwfk22 => NULL()
+    real(DP), dimension(:), pointer, contiguous :: gwfk11 => NULL()
+    real(DP), dimension(:), pointer, contiguous :: gwfk22 => NULL()
     integer(I4B), pointer :: gwfik22 => NULL()
-    real(DP), dimension(:), pointer :: gwfsat => NULL()
+    real(DP), dimension(:), pointer, contiguous :: gwfsat => NULL()
+    !
     ! -- arrays for handling the rows added to the solution matrix
-    integer(I4B), pointer, dimension(:)           :: idxlocnode    => null() !map position in global rhs and x array of pack entry
-    integer(I4B), pointer, dimension(:)           :: idxdglo       => null() !map position in global array of package diagonal row entries
-    integer(I4B), pointer, dimension(:)           :: idxoffdglo    => null() !map position in global array of package off diagonal row entries
-    integer(I4B), pointer, dimension(:)           :: idxsymdglo    => null() !map position in global array of package diagonal entries to model rows
-    integer(I4B), pointer, dimension(:)           :: idxsymoffdglo => null() !map position in global array of package off diagonal entries to model rows
-    integer(I4B), pointer, dimension(:)           :: iboundpak     => null() !package ibound
-    real(DP), pointer, dimension(:)  :: xnewpak       => null() !package x vector
-    real(DP), pointer, dimension(:)  :: xoldpak       => null() !package xold vector
-    real(DP), pointer, dimension(:)  :: cterm         => null() !package c vector
+    integer(I4B), dimension(:), pointer, contiguous :: idxlocnode => null()      !map position in global rhs and x array of pack entry
+    integer(I4B), dimension(:), pointer, contiguous :: idxdglo => null()         !map position in global array of package diagonal row entries
+    integer(I4B), dimension(:), pointer, contiguous :: idxoffdglo => null()      !map position in global array of package off diagonal row entries
+    integer(I4B), dimension(:), pointer, contiguous :: idxsymdglo => null()      !map position in global array of package diagonal entries to model rows
+    integer(I4B), dimension(:), pointer, contiguous :: idxsymoffdglo => null()   !map position in global array of package off diagonal entries to model rows
+    integer(I4B), dimension(:), pointer, contiguous :: iboundpak => null()       !package ibound
+    real(DP), dimension(:), pointer, contiguous  :: xnewpak => null()            !package x vector
+    real(DP), dimension(:), pointer, contiguous  :: xoldpak => null()            !package xold vector
+    real(DP), dimension(:), pointer, contiguous  :: cterm => null()              !package c vector
+    !
     ! -- vector data (start of flattening for future removal of MawWellType)
+<<<<<<< HEAD
     character (len=LENBOUNDNAME), dimension(:), pointer :: cmawname => null()
     integer(I4B), pointer, contiguous, dimension(:) :: idxmawconn => null()
     ! -- imap vector
     integer(I4B), pointer, contiguous, dimension(:) :: imap       => null()
+=======
+    character (len=LENBOUNDNAME), dimension(:), pointer,                        &
+                                  contiguous :: cmawname => null()
+    integer(I4B), dimension(:), pointer, contiguous :: idxmawconn => null()
+    !
+    ! -- imap vector
+    integer(I4B), dimension(:), pointer, contiguous :: imap       => null()
+>>>>>>> upstream_usgs/develop
     !
     ! -- maw output data
     real(DP), dimension(:), pointer, contiguous :: qauxcbc => null()
@@ -390,7 +409,7 @@ contains
     integer(I4B) :: itmp
     integer(I4B) :: ierr
     real(DP) :: endtim
-    integer(I4B), dimension(:), pointer :: nboundchk
+    integer(I4B), dimension(:), pointer, contiguous :: nboundchk
     ! -- format
     character(len=*),parameter :: fmthdbot = &
       "('well head (',G0,') must be >= BOTTOM_ELEVATION (',G0',).')"
@@ -621,8 +640,8 @@ contains
     integer(I4B) :: n
     integer(I4B) :: nn
     integer(I4B) :: nn2
-    integer(I4B), dimension(:), pointer :: nboundchk
-    integer(I4B), dimension(:), pointer :: iachk
+    integer(I4B), dimension(:), pointer, contiguous :: nboundchk
+    integer(I4B), dimension(:), pointer, contiguous :: iachk
     
 ! ------------------------------------------------------------------------------
     ! -- format
@@ -1963,7 +1982,9 @@ contains
       end if
       hmaw = this%xnewpak(n)
       ! -- add pumping rate to active or constant maw well
-      if (this%iboundpak(n) /= 0) then
+      if (this%iboundpak(n) == 0) then
+        this%mawwells(n)%ratesim = DZERO
+      else
         call this%maw_calculate_wellq(n, hmaw, rate)
         this%mawwells(n)%ratesim = rate
         !write (1999,'(i5,5(g15.7))') this%ishutoffcnt, hmaw, rate, this%mawwells(n)%shutoffqold, &
@@ -3177,10 +3198,10 @@ contains
 ! ------------------------------------------------------------------------------
     class(MawType) :: this
     integer(I4B), pointer :: neq
-    integer(I4B), dimension(:), pointer :: ibound
-    real(DP), dimension(:), pointer :: xnew
-    real(DP), dimension(:), pointer :: xold
-    real(DP), dimension(:), pointer :: flowja
+    integer(I4B), dimension(:), pointer, contiguous :: ibound
+    real(DP), dimension(:), pointer, contiguous :: xnew
+    real(DP), dimension(:), pointer, contiguous :: xold
+    real(DP), dimension(:), pointer, contiguous :: flowja
     ! -- local
     integer(I4B) :: n
     integer(I4B) :: istart, iend

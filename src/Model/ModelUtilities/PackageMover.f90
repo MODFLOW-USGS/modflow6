@@ -11,6 +11,7 @@ module PackageMoverModule
   
   type PackageMoverType
     
+<<<<<<< HEAD
     character(len=LENORIGIN)         :: origin
     integer, pointer                 :: nproviders
     integer, pointer                 :: nreceivers
@@ -18,6 +19,15 @@ module PackageMoverModule
     real(DP), pointer,contiguous, dimension(:)  :: qformvr       => null()
     real(DP), pointer,contiguous, dimension(:)  :: qtomvr        => null()
     real(DP), pointer,contiguous, dimension(:)  :: qfrommvr      => null()
+=======
+    character(len=LENORIGIN)                     :: origin
+    integer, pointer                             :: nproviders
+    integer, pointer                             :: nreceivers
+    real(DP), dimension(:), pointer, contiguous  :: qtformvr      => null()
+    real(DP), dimension(:), pointer, contiguous  :: qformvr       => null()
+    real(DP), dimension(:), pointer, contiguous  :: qtomvr        => null()
+    real(DP), dimension(:), pointer, contiguous  :: qfrommvr      => null()
+>>>>>>> upstream_usgs/develop
 
   contains
     procedure :: ar

@@ -38,22 +38,24 @@ module UzfModule
     integer(I4B), pointer :: iwcontout => null()
     integer(I4B), pointer :: ibudgetout => null()
     !
-    type(BudgetType), pointer                          :: budget      => null() !budget object
-    integer(I4B), pointer                              :: bditems     => null() !number of budget items
-    integer(I4B), pointer                              :: nbdtxt      => null() !number of budget text items
-    character(len=LENBUDTXT), dimension(:), pointer    :: bdtxt       => null() !budget items written to cbc file
-    type(UzfKinematicType), pointer                    :: uzfobj      => null() !uzf kinematic object
-    type(UzfKinematicType), pointer                    :: uzfobjwork  => null() !uzf kinematic work object
-    type(UzfKinematicType), pointer                    :: uzfobjbelow => null() !uzf kinematic object of underlying cell
-    type(UzfKinematicType), pointer, dimension(:)      :: elements    => null() !array of all the kinematic uzf objects
-    character(len=72), pointer                         :: nameuzf     => null() !cdl--(not sure.  Delete?)
+    type(BudgetType), pointer                          :: budget      => null()  !budget object
+    integer(I4B), pointer                              :: bditems     => null()  !number of budget items
+    integer(I4B), pointer                              :: nbdtxt      => null()  !number of budget text items
+    character(len=LENBUDTXT), dimension(:), pointer,                            &
+                              contiguous               :: bdtxt       => null()  !budget items written to cbc file
+    type(UzfKinematicType), pointer                    :: uzfobj      => null()  !uzf kinematic object
+    type(UzfKinematicType), pointer                    :: uzfobjwork  => null()  !uzf kinematic work object
+    type(UzfKinematicType), pointer                    :: uzfobjbelow => null()  !uzf kinematic object of underlying cell
+    type(UzfKinematicType), dimension(:), pointer,                              &
+                            contiguous                 :: elements    => null()  !array of all the kinematic uzf objects
+    character(len=72), pointer                         :: nameuzf     => null()  !cdl--(not sure.  Delete?)
     !
     ! -- pointer to gwf variables
     integer(I4B), pointer                      :: gwfiss      => null()
-    real(DP), dimension(:), pointer            :: gwftop      => null()
-    real(DP), dimension(:), pointer            :: gwfbot      => null()
-    real(DP), dimension(:), pointer            :: gwfarea     => null()
-    real(DP), dimension(:), pointer            :: gwfhcond    => null()
+    real(DP), dimension(:), pointer, contiguous            :: gwftop      => null()
+    real(DP), dimension(:), pointer, contiguous            :: gwfbot      => null()
+    real(DP), dimension(:), pointer, contiguous            :: gwfarea     => null()
+    real(DP), dimension(:), pointer, contiguous            :: gwfhcond    => null()
     !
     ! -- uzf data
     integer(I4B), pointer                       :: ntrail       => null()
@@ -90,6 +92,7 @@ module UzfModule
     integer(I4B), dimension(:), pointer, contiguous :: ja => null()
     !
     ! -- timeseries aware variables
+<<<<<<< HEAD
     type (MemoryTSType), pointer, contiguous, dimension(:) :: sinf => null()
     type (MemoryTSType), pointer, contiguous, dimension(:) :: pet => null()
     type (MemoryTSType), pointer, contiguous, dimension(:) :: extdp => null()
@@ -98,6 +101,16 @@ module UzfModule
     type (MemoryTSType), pointer, contiguous, dimension(:) :: hroot => null()
     type (MemoryTSType), pointer, contiguous, dimension(:) :: rootact => null()
     type (MemoryTSType), pointer, contiguous, dimension(:) :: lauxvar => null()
+=======
+    type (MemoryTSType), dimension(:), pointer, contiguous :: sinf => null()
+    type (MemoryTSType), dimension(:), pointer, contiguous :: pet => null()
+    type (MemoryTSType), dimension(:), pointer, contiguous :: extdp => null()
+    type (MemoryTSType), dimension(:), pointer, contiguous :: extwc => null()
+    type (MemoryTSType), dimension(:), pointer, contiguous :: ha => null()
+    type (MemoryTSType), dimension(:), pointer, contiguous :: hroot => null()
+    type (MemoryTSType), dimension(:), pointer, contiguous :: rootact => null()
+    type (MemoryTSType), dimension(:), pointer, contiguous :: lauxvar => null()
+>>>>>>> upstream_usgs/develop
     !
     ! -- convergence check
     integer(I4B), pointer  :: iconvchk    => null()
@@ -119,7 +132,7 @@ module UzfModule
     !
     ! -- uzf cbc budget items
     integer(I4B), pointer :: cbcauxitems => NULL()
-    character(len=16), dimension(:), pointer :: cauxcbc => NULL()
+    character(len=16), dimension(:), pointer, contiguous :: cauxcbc => NULL()
     real(DP), dimension(:), pointer, contiguous :: qauxcbc => null()
     !
     ! -- observations

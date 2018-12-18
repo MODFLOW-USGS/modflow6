@@ -7,7 +7,7 @@ module SimVariablesModule
   private
   public :: ModelPacks, SimMovers, iout
 
-  type(ListType), pointer :: SimMovers
+  type(ListType), pointer :: SimMovers => null()
   type(ListType) :: ModelPacks
 
 end module SimVariablesModule

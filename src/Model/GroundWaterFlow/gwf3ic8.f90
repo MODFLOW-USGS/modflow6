@@ -11,7 +11,11 @@ module GwfIcModule
   public :: ic_cr
 
   type, extends(NumericalPackageType) :: GwfIcType
+<<<<<<< HEAD
     real(DP), dimension(:), pointer, contiguous :: strt       => null()  ! starting head
+=======
+    real(DP), dimension(:), pointer, contiguous :: strt => null()                ! starting head
+>>>>>>> upstream_usgs/develop
   contains
     procedure          :: ic_ar
     procedure          :: ic_da

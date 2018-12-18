@@ -12,8 +12,8 @@ module HashTableModule
 
   type HashTableNodeType
     ! -- Private members
-    integer(I4B),                          private :: indx
-    character(len=:), allocatable,    private :: key
+    integer(I4B), private :: indx
+    character(len=:), allocatable, private :: key
     type(HashTableNodeType), pointer, private :: NextNode => null()
   contains
     ! -- Private procedures
