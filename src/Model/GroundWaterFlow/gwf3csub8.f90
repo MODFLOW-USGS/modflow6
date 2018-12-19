@@ -114,10 +114,13 @@ module GwfCsubModule
     real(DP), dimension(:), pointer, contiguous :: sk_comp => null()             !skeletal (aquifer) incremental compaction
     real(DP), dimension(:), pointer, contiguous :: sk_tcomp => null()            !skeletal (aquifer) total compaction
     real(DP), dimension(:), pointer, contiguous :: sk_stor => null()             !skeletal (aquifer) storage
-    real(DP), dimension(:), pointer, contiguous :: sk_wcstor => null()           !skeletal (aquifer) water compressibility storage
     real(DP), dimension(:), pointer, contiguous :: sk_ske => null()              !skeletal (aquifer) elastic storage coefficient
     real(DP), dimension(:), pointer, contiguous :: sk_sk => null()               !skeletal (aquifer) first storage coefficient
     real(DP), dimension(:), pointer, contiguous :: sk_thickini => null()         !initial skeletal (aquifer) thickness
+    !
+    ! -- cell storage variables
+    real(DP), dimension(:), pointer, contiguous :: cell_wcstor => null()         !cell water compressibility storage
+    real(DP), dimension(:), pointer, contiguous :: cell_thick => null()          !cell compressible material thickness
     !
     ! -- interbed variables
     integer(I4B), dimension(:), pointer, contiguous :: idelay => null()          !0 = nodelay, > 0 = delay
@@ -145,8 +148,8 @@ module GwfCsubModule
     real(DP), dimension(:,:), pointer, contiguous :: auxvar => null()            !auxiliary variable array
     !
     ! -- delay interbed arrays
-    real(DP), dimension(:), pointer, contiguous   :: dbdz => null()              !delay bed dz
-    real(DP), dimension(:), pointer, contiguous   :: dbdhmax => null()           !delay bed maximum head change
+    real(DP), dimension(:), pointer, contiguous :: dbdz => null()                !delay bed dz
+    real(DP), dimension(:), pointer, contiguous :: dbdhmax => null()             !delay bed maximum head change
     real(DP), dimension(:,:), pointer, contiguous :: dbz => null()               !delay bed cell z
     real(DP), dimension(:,:), pointer, contiguous :: dbh => null()               !delay bed cell h
     real(DP), dimension(:,:), pointer, contiguous :: dbh0 => null()              !delay bed cell previous h
@@ -157,6 +160,8 @@ module GwfCsubModule
     real(DP), dimension(:,:), pointer, contiguous :: dbes => null()              !delay bed cell effective stress
     real(DP), dimension(:,:), pointer, contiguous :: dbes0 => null()             !delay bed cell previous effective stress
     real(DP), dimension(:,:), pointer, contiguous :: dbpcs => null()             !delay bed cell preconsolidation stress
+    real(DP), dimension(:), pointer, contiguous :: dbflowtop => null()           !delay bed flow through interbed top
+    real(DP), dimension(:), pointer, contiguous :: dbflowbot => null()           !delay bed flow through interbed bottom
     !
     ! -- delay interbed solution arrays
     real(DP), dimension(:), pointer, contiguous :: dbal => null()                !delay bed lower diagonal
@@ -202,6 +207,8 @@ module GwfCsubModule
     procedure, private :: csub_calc_znode
     procedure, private :: csub_calc_sfacts
     procedure, private :: csub_adj_matprop
+    procedure, private :: csub_calc_interbed_thickness
+    procedure, private :: csub_calc_delay_flow
     !
     ! -- stress methods
     !procedure, private :: csub_sk_calc_znode
@@ -551,7 +558,9 @@ contains
     type(BudgetType), intent(inout) :: model_budget
     ! -- local
     integer(I4B) :: ib
+    integer(I4B) :: idelay
     integer(I4B) :: node
+    integer(I4B) :: nn
     real(DP) :: es
     real(DP) :: pcs
     real(DP) :: rho1
@@ -573,6 +582,8 @@ contains
     real(DP) :: stoe
     real(DP) :: stoi
     real(DP) :: err
+    real(DP) :: b
+    real(DP) :: q
     real(DP) :: rateskin
     real(DP) :: rateskout
     real(DP) :: rateibein
@@ -639,7 +650,8 @@ contains
       ! -- update coarse-grained skeletal storage and water
       !    compresion variables
       this%sk_stor(node) = rrate
-      this%sk_wcstor(node) = rratewc
+      this%cell_wcstor(node) = rratewc
+      this%cell_thick(node) = this%sk_thick(node)
       !
       ! -- update incremental compaction
       !comp = rrate * DELT / area
@@ -670,6 +682,7 @@ contains
     tledm = DONE / DELT
     do ib = 1, this%ninterbeds
       rratewc = DZERO
+      idelay = this%idelay(ib)
       if (this%gwfiss == 0) then
         node = this%nodelist(ib)
         area = this%dis%get_area(node)
@@ -678,7 +691,8 @@ contains
         if (this%ibound(node) < 1) cycle
         !
         ! -- no delay interbeds
-        if (this%idelay(ib) == 0) then
+        if (idelay == 0) then
+          b = this%thick(ib)
           stoi = DZERO
           !
           ! -- calculate compaction
@@ -734,6 +748,7 @@ contains
           !
           ! -- delay interbeds
         else
+          b = this%thick(ib) * this%rnb(ib) * this%dbfact
           h = hnew(node)
           !
           ! -- calculate cell saturation
@@ -743,6 +758,17 @@ contains
           call this%csub_delay_calc_dstor(ib, stoe, stoi)
           this%storagee(ib) = stoe * area * this%rnb(ib) * snnew * tledm
           this%storagei(ib) = stoi * area * this%rnb(ib) * snnew * tledm
+          !
+          ! -- calculate flow across the top and bottom of the delay interbed
+          q = this%csub_calc_delay_flow(ib, 1, h) * area * this%rnb(ib)
+          this%dbflowtop(idelay) = q
+          if (this%idbhalfcell == 0) then
+            nn = this%ndelaycells
+          else
+            nn = 1
+          end if
+          q = this%csub_calc_delay_flow(ib, nn, h) * area * this%rnb(ib)
+          this%dbflowbot(idelay) = q
           !
           ! -- update states if required
           if (isuppress_output == 0) then
@@ -768,7 +794,8 @@ contains
         call this%csub_interbed_wcomp_fc(ib, node, tledm, area,                 &
                                          hnew(node), hold(node), hcof, rhs)
         rratewc = hcof * hnew(node) - rhs
-        this%sk_wcstor(node) = this%sk_wcstor(node) + rratewc
+        this%cell_wcstor(node) = this%cell_wcstor(node) + rratewc
+        this%cell_thick(node) = this%cell_thick(node) + b
         !
         ! -- water compressibility budget terms
         if (rratewc < DZERO) then
@@ -779,6 +806,10 @@ contains
       else
         this%storagee(ib) = DZERO
         this%storagei(ib) = DZERO
+        if (idelay /= 0) then
+          this%dbflowtop(idelay) = DZERO
+          this%dbflowbot(idelay) = DZERO
+        end if
       end if
     end do
     !
@@ -898,8 +929,8 @@ contains
       end if
       !
       ! -- water compressibility
-      call this%dis%record_array(this%sk_wcstor, this%iout, iprint, -ibinun,  &
-                                 budtxt(4), cdatafmp, nvaluesp,               &
+      call this%dis%record_array(this%cell_wcstor, this%iout, iprint, -ibinun,  &
+                                 budtxt(4), cdatafmp, nvaluesp,                 &
                                  nwidthp, editdesc, dinact)
     end if
     !
@@ -1132,6 +1163,8 @@ contains
     integer(I4B), parameter :: ncells = 20
     integer(I4B) :: nlen
     real(DP) :: rval
+    real(DP) :: b0
+    real(DP) :: b1
     real(DP) :: strain
     real(DP) :: pctcomp
     integer(I4B), dimension(:), allocatable :: imap_sel
@@ -1145,7 +1178,9 @@ contains
       allocate(pctcomp_arr(this%ninterbeds))
       iexceed = 0
       do ib = 1, this%ninterbeds
-        strain = this%tcomp(ib) / this%thickini(ib)
+        idelay = this%idelay(ib)
+        b0 = this%thickini(ib)
+        strain = this%tcomp(ib) / b0
         pctcomp = DHUNDRED * strain
         pctcomp_arr(ib) = pctcomp
         if (pctcomp >= DONE) then
@@ -1201,12 +1236,14 @@ contains
         do i = 1, nlen
           ib = imap_sel(i)
           idelay = this%idelay(ib)
+          b0 = this%thickini(ib)
+          b1 = this%csub_calc_interbed_thickness(ib)
           if (idelay == 0) then
             ctype = 'no-delay'
           else
             ctype = 'delay'
           end if
-          strain = this%tcomp(ib) / this%thickini(ib)
+          strain = this%tcomp(ib) / b0
           pctcomp = DHUNDRED * strain
           if (pctcomp >= 5.0_DP) then
             cflag = '**>=5%'
@@ -1222,8 +1259,8 @@ contains
           call UWWORD(line, iloc, 10, 2, text, ib, rval)
           call UWWORD(line, iloc, 10, 1, ctype, n, rval)
           call UWWORD(line, iloc, 20, 1, cellid, n, rval, CENTER=.TRUE.)
-          call UWWORD(line, iloc, 16, 3, text, n, this%thickini(ib))
-          call UWWORD(line, iloc, 16, 3, text, n, this%thick(ib))
+          call UWWORD(line, iloc, 16, 3, text, n, b0)
+          call UWWORD(line, iloc, 16, 3, text, n, b1)
           call UWWORD(line, iloc, 16, 3, text, n, this%tcomp(ib))
           call UWWORD(line, iloc, 16, 3, text, n, strain)
           call UWWORD(line, iloc, 16, 3, text, n, pctcomp)
@@ -1257,12 +1294,14 @@ contains
         ! -- write data
         do ib = 1, this%ninterbeds
           idelay = this%idelay(ib)
+          b0 = this%thickini(ib)
+          b1 = this%csub_calc_interbed_thickness(ib)
           if (idelay == 0) then
             ctype = 'no-delay'
           else
             ctype = 'delay'
           end if
-          strain = this%tcomp(ib) / this%thickini(ib)
+          strain = this%tcomp(ib) / b0
           pctcomp = DHUNDRED * strain
           node = this%nodelist(ib)
           call this%dis%noder_to_string(node, cellid)
@@ -1272,8 +1311,8 @@ contains
           call UWWORD(line, iloc, 20, 1, ctype, n, rval, SEP=',')
           call UWWORD(line, iloc, 22, 1, '"'//trim(adjustl(cellid))//'"',       &
                       n, rval, SEP=',')
-          call UWWORD(line, iloc, 20, 3, text, n, this%thickini(ib), SEP=',')
-          call UWWORD(line, iloc, 20, 3, text, n, this%thick(ib), SEP=',')
+          call UWWORD(line, iloc, 20, 3, text, n, b0, SEP=',')
+          call UWWORD(line, iloc, 20, 3, text, n, b1, SEP=',')
           call UWWORD(line, iloc, 20, 3, text, n, this%tcomp(ib), SEP=',')
           call UWWORD(line, iloc, 20, 3, text, n, strain, SEP=',')
           call UWWORD(line, iloc, 20, 3, text, n, pctcomp)
@@ -1569,6 +1608,11 @@ contains
           rval = DONE
         end if
         this%rnb(itmp) = rval
+        !
+        ! -- update thickini for delay beds
+        if (idelay > 0) then
+          this%thickini(itmp) = this%thickini(itmp) * this%rnb(itmp)
+        end if
 
         ! -- get skv or ci
         rval =  this%parser%GetDouble()
@@ -1663,6 +1707,8 @@ contains
         call mem_reallocate(this%dbes, this%ndelaycells, ndelaybeds, 'dbes', trim(this%origin))
         call mem_reallocate(this%dbes0, this%ndelaycells, ndelaybeds, 'dbes0', trim(this%origin))
         call mem_reallocate(this%dbpcs, this%ndelaycells, ndelaybeds, 'dbpcs', trim(this%origin))
+        call mem_reallocate(this%dbflowtop, ndelaybeds, 'dbflowtop', trim(this%origin))
+        call mem_reallocate(this%dbflowbot, ndelaybeds, 'dbflowbot', trim(this%origin))
         !
         ! -- reallocate delay interbed solution arrays
         call mem_reallocate(this%dbal, this%ndelaycells, 'dbal', trim(this%origin))
@@ -2129,10 +2175,13 @@ contains
     call mem_allocate(this%sk_comp, this%dis%nodes, 'sk_comp', trim(this%origin))
     call mem_allocate(this%sk_tcomp, this%dis%nodes, 'sk_tcomp', trim(this%origin))
     call mem_allocate(this%sk_stor, this%dis%nodes, 'sk_stor', trim(this%origin))
-    call mem_allocate(this%sk_wcstor, this%dis%nodes, 'sk_wcstor', trim(this%origin))
     call mem_allocate(this%sk_ske, this%dis%nodes, 'sk_ske', trim(this%origin))
     call mem_allocate(this%sk_sk, this%dis%nodes, 'sk_sk', trim(this%origin))
     call mem_allocate(this%sk_thickini, this%dis%nodes, 'sk_thickini', trim(this%origin))
+    !
+    ! -- cell storage data
+    call mem_allocate(this%cell_wcstor, this%dis%nodes, 'cell_wcstor', trim(this%origin))
+    call mem_allocate(this%cell_thick, this%dis%nodes, 'cell_thick', trim(this%origin))
     !
     ! -- interbed data
     iblen = 1
@@ -2191,6 +2240,8 @@ contains
     call mem_allocate(this%dbes, 0, 0, 'dbes', trim(this%origin))
     call mem_allocate(this%dbes0, 0, 0, 'dbes0', trim(this%origin))
     call mem_allocate(this%dbpcs, 0, 0, 'dbpcs', trim(this%origin))
+    call mem_allocate(this%dbflowtop, 0, 'dbflowtop', trim(this%origin))
+    call mem_allocate(this%dbflowbot, 0, 'dbflowbot', trim(this%origin))
     !
     ! -- delay interbed solution arrays
     call mem_allocate(this%dbal, 0, 'dbal', trim(this%origin))
@@ -2233,7 +2284,7 @@ contains
       this%sk_es(n) = DZERO
       this%sk_comp(n) = DZERO
       this%sk_tcomp(n) = DZERO
-      this%sk_wcstor(n) = DZERO
+      this%cell_wcstor(n) = DZERO
     end do
     do n = 1, this%ninterbeds
       this%theta(n) = DZERO
@@ -2288,10 +2339,13 @@ contains
       call mem_deallocate(this%sk_comp)
       call mem_deallocate(this%sk_tcomp)
       call mem_deallocate(this%sk_stor)
-      call mem_deallocate(this%sk_wcstor)
       call mem_deallocate(this%sk_ske)
       call mem_deallocate(this%sk_sk)
       call mem_deallocate(this%sk_thickini)
+      !
+      ! -- cell storage
+      call mem_deallocate(this%cell_wcstor)
+      call mem_deallocate(this%cell_thick)
       !
       ! -- interbed storage
       deallocate(this%boundname)
@@ -2336,6 +2390,8 @@ contains
       call mem_deallocate(this%dbes)
       call mem_deallocate(this%dbes0)
       call mem_deallocate(this%dbpcs)
+      call mem_deallocate(this%dbflowtop)
+      call mem_deallocate(this%dbflowbot)
       !
       ! -- delay interbed solution arrays
       call mem_deallocate(this%dbal)
@@ -4428,6 +4484,31 @@ contains
   end function csub_calc_theta
   
   
+  function csub_calc_interbed_thickness(this, ib) result(thick)
+! ******************************************************************************
+! csub_calc_interbed_thickness -- Calculate interbed thickness
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    class(GwfCsubType), intent(inout) :: this
+    ! -- dummy
+    integer(I4B), intent(in) :: ib
+    ! -- local variables
+    integer(I4B) :: idelay
+    real(DP) :: thick
+! ------------------------------------------------------------------------------
+    idelay = this%idelay(ib)
+    thick = this%thick(ib)
+    if (idelay /= 0) then
+      thick = thick * this%rnb(ib) * this%dbfact
+    end if
+    !
+    ! -- return
+    return
+  end function csub_calc_interbed_thickness
+  
+  
   function csub_calc_znode(this, node, hcell) result(znode)
 ! ******************************************************************************
 ! csub_calc_znode -- Calculate elevation of the center of the saturated 
@@ -5223,6 +5304,33 @@ contains
     return
   end subroutine csub_delay_fc
   
+  function csub_calc_delay_flow(this, ib, n, hcell) result(q)
+! ******************************************************************************
+! csub_calc_delay_flow -- Calculate flow across top or bottom of delay interbed
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    class(GwfCsubType), intent(inout) :: this
+    ! -- dummy
+    integer(I4B), intent(in) :: ib
+    integer(I4B), intent(in) :: n
+    real(DP), intent(in) :: hcell
+    ! -- local variables
+    integer(I4B) :: idelay
+    integer(I4B) :: j
+    integer(I4B) :: node
+    real(DP) :: q
+    real(DP) :: c
+! ------------------------------------------------------------------------------
+    idelay = this%idelay(ib)
+    c = DTWO * this%kv(ib) / this%dbdz(idelay)
+    q = c * (hcell - this%dbh(n, idelay))
+    !
+    ! -- return
+    return
+  end function csub_calc_delay_flow
+  
   
   !
   ! -- Procedures related to observations (type-bound)
@@ -5282,6 +5390,11 @@ contains
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
+    !    for watercomp-csub observation type.
+    call this%obs%StoreObsType('watercomp-csub', .false., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
     !    for interbed ske observation type.
     call this%obs%StoreObsType('ske', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
@@ -5337,8 +5450,33 @@ contains
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
-    !    for total-compaction observation type.
+    !    for interbed thickness observation type.
     call this%obs%StoreObsType('thickness', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for skeletal-thickness observation type.
+    call this%obs%StoreObsType('skeletal-thickness', .false., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for thickness-cell observation type.
+    call this%obs%StoreObsType('thickness-cell', .false., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for interbed theta observation type.
+    call this%obs%StoreObsType('theta', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for skeletal-theta observation type.
+    call this%obs%StoreObsType('skeletal-theta', .false., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for theta-cell observation type.
+    call this%obs%StoreObsType('theta-cell', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
@@ -5354,6 +5492,16 @@ contains
     ! -- Store obs type and assign procedure pointer
     !    for delay-head observation type.
     call this%obs%StoreObsType('delay-head', .false., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for delay-flowtop observation type.
+    call this%obs%StoreObsType('delay-flowtop', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for delay-flowbot observation type.
+    call this%obs%StoreObsType('delay-flowbot', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     return
@@ -5378,8 +5526,10 @@ contains
     integer(I4B) :: nn
     integer(I4B) :: idelay
     integer(I4B) :: ncol
+    integer(I4B) :: node
     real(DP) :: v
     real(DP) :: r
+    real(DP) :: f
     character(len=100) :: msg
     type(ObserveType), pointer :: obsrv => null()
     !---------------------------------------------------------------------------
@@ -5402,6 +5552,8 @@ contains
               v = this%storagee(n)
             case ('SKELETAL-CSUB')
               v = this%sk_stor(n)
+            case ('WATERCOMP-CSUB')
+              v = this%cell_wcstor(n)
             case ('CSUB-CELL')
               ! -- add the skeletal component
               if (j == 1) then
@@ -5427,6 +5579,20 @@ contains
               else
                 v = this%sk(n)
               end if
+            case ('THETA')
+              v = this%theta(n)
+            case ('SKELETAL-THETA')
+              v = this%sk_theta(n)
+            case ('THETA-CELL')
+              ! -- add the skeletal component
+              if (j == 1) then
+                f = this%sk_thick(n) / this%cell_thick(n)
+                v = f * this%sk_theta(n)
+              else
+                node = this%nodelist(n) 
+                f = this%csub_calc_interbed_thickness(n) / this%cell_thick(node)
+                v = f * this%theta(n)
+              end if
             case ('GSTRESS-CELL')
               v = this%sk_gs(n)
             case ('ESTRESS-CELL')
@@ -5447,17 +5613,15 @@ contains
                 v = this%tcomp(n)
               end if
             case ('THICKNESS')
+              idelay = this%idelay(n)
               v = this%thick(n)
-            !case ('PRECONSTRESS')
-            !   if (n > this%ndelaycells) then
-            !    r = real(n, DP) / real(this%ndelaycells, DP)
-            !    idelay = int(floor(r)) + 1
-            !    ncol = mod(n, this%ndelaycells)
-            !  else
-            !    idelay = 1
-            !    ncol = n
-            !  end if
-            !  v = this%dbpcs(ncol, idelay)
+              if (idelay /= 0) then
+                v = v * this%rnb(n) * this%dbfact
+              end if
+            case ('SKELETAL-THICKNESS')
+              v = this%sk_thick(n)
+            case ('THICKNESS-CELL')
+              v = this%cell_thick(n)
             case ('DELAY-HEAD', 'PRECONSTRESS')
               if (n > this%ndelaycells) then
                 r = real(n, DP) / real(this%ndelaycells, DP)
@@ -5475,6 +5639,12 @@ contains
               end select
             case ('PRECONSTRESS-CELL')
               v = this%pcs(n)
+            case ('DELAY-FLOWTOP')
+              idelay = this%idelay(n)
+              v = this%dbflowtop(idelay)
+            case ('DELAY-FLOWBOT')
+              idelay = this%idelay(n)
+              v = this%dbflowbot(idelay)
             case default
               msg = 'Error: Unrecognized observation type: ' // trim(obsrv%ObsTypeId)
               call store_error(msg)
@@ -5525,7 +5695,7 @@ contains
         !    Iterate through all boundaries to identify and store
         !    corresponding index(indices) in bound array.
         jfound = .false.
-        do j=1,this%ninterbeds
+        do j = 1, this%ninterbeds
           if (this%boundname(j) == bname) then
             jfound = .true.
             obsrv%BndFound = .true.
@@ -5533,19 +5703,25 @@ contains
             call ExpandArray(obsrv%indxbnds)
             n = size(obsrv%indxbnds)
             obsrv%indxbnds(n) = j
-          endif
-        enddo
+          end if
+        end do
+      ! -- one value per cell
       else if (obsrv%ObsTypeId == 'GSTRESS-CELL' .or.                           &
                obsrv%ObsTypeId == 'ESTRESS-CELL' .or.                           &
+               obsrv%ObsTypeId == 'THICKNESS-CELL' .or.                         &
                obsrv%ObsTypeId == 'SKELETAL-CSUB' .or.                          &
-               obsrv%ObsTypeId == 'SKELETAL-COMPACTION') then
+               obsrv%ObsTypeId == 'WATERCOMP-CSUB' .or.                         &
+               obsrv%ObsTypeId == 'SKELETAL-COMPACTION' .or.                    &
+               obsrv%ObsTypeId == 'SKELETAL-THETA' .or.                         &
+               obsrv%ObsTypeId == 'SKELETAL-THICKNESS') then
         jfound = .true.
         obsrv%BndFound = .true.
         obsrv%CurrentTimeStepEndValue = DZERO
         call ExpandArray(obsrv%indxbnds)
         n = size(obsrv%indxbnds)
         obsrv%indxbnds(n) = obsrv%NodeNumber
-      else if (obsrv%ObsTypeId == 'PRECONSTRESS') then
+      else if (obsrv%ObsTypeId == 'PRECONSTRESS' .or.                           &
+               obsrv%ObsTypeId == 'DELAY-HEAD') then
         n = obsrv%NodeNumber
         idelay = this%idelay(n)
         j = (idelay - 1) * this%ndelaycells + 1
@@ -5561,13 +5737,59 @@ contains
         end if
         call ExpandArray(obsrv%indxbnds)
         obsrv%indxbnds(1) = j
+      ! -- interbed value
+      else if (obsrv%ObsTypeId == 'CSUB' .or.                                   &
+               obsrv%ObsTypeId == 'SK' .or.                                     &
+               obsrv%ObsTypeId == 'SKE' .or.                                    &
+               obsrv%ObsTypeId == 'THICKNESS' .or.                              &
+               obsrv%ObsTypeId == 'THETA') then
+        j = obsrv%NodeNumber
+        idelay = this%idelay(j)
+        if (j < 1 .or. j > this%ninterbeds) then
+          write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
+            'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
+            ' interbed cell must be > 0 and <=', this%ninterbeds, &
+            '(specified value is ', j, ')'
+          call store_error(ermsg)
+        else
+          obsrv%BndFound = .true.
+          obsrv%CurrentTimeStepEndValue = DZERO
+          call ExpandArray(obsrv%indxbnds)
+          n = size(obsrv%indxbnds)
+          obsrv%indxbnds(n) = j
+        end if
+      else if (obsrv%ObsTypeId == 'DELAY-FLOWTOP' .or.                          &
+               obsrv%ObsTypeId == 'DELAY-FLOWBOT') then
+        j = obsrv%NodeNumber
+        if (j < 1 .or. j > this%ninterbeds) then
+          write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
+            'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
+            ' interbed cell must be > 0 and <=', this%ninterbeds, &
+            '(specified value is ', j, ')'
+          call store_error(ermsg)
+        end if
+        idelay = this%idelay(j)
+        if (idelay == 0) then
+          write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a)') &
+            'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
+            ' interbed', j, 'must be a delay interbed'
+          call store_error(ermsg)
+        else
+          obsrv%BndFound = .true.
+          obsrv%CurrentTimeStepEndValue = DZERO
+          call ExpandArray(obsrv%indxbnds)
+          n = size(obsrv%indxbnds)
+          obsrv%indxbnds(n) = j
+        end if
       else
+        ! -- Accumulate values in a single cell
         ! -- Observation location is a single node number
         jfound = .false.
         ! -- save node number in first position
         if (obsrv%ObsTypeId == 'CSUB-CELL' .or.                                 &
             obsrv%ObsTypeId == 'SKE-CELL' .or.                                  &
             obsrv%ObsTypeId == 'SK-CELL' .or.                                   &
+            obsrv%ObsTypeId == 'THETA-CELL' .or.                                &
             obsrv%ObsTypeId == 'COMPACTION-CELL') then 
           if (.NOT. obsrv%BndFound) then
             jfound = .true.
@@ -5623,9 +5845,16 @@ contains
     !    If 1st item is not an integer(I4B), it should be a
     !    boundary name--deal with it.
     icol = 1
-    ! -- get reach number or boundary name
-    if (obsrv%ObsTypeId=='DELAY-HEAD' .or. & 
-        obsrv%ObsTypeId=='PRECONSTRESS') then
+    ! -- get icsubno number or boundary name
+    if (obsrv%ObsTypeId=='CSUB' .or.                                            &
+        obsrv%ObsTypeId=='SK' .or.                                              &
+        obsrv%ObsTypeId=='SKE' .or.                                             &
+        obsrv%ObsTypeId=='THETA' .or.                                           &
+        obsrv%ObsTypeId=='THICKNESS' .or.                                       &
+        obsrv%ObsTypeId=='DELAY-HEAD' .or.                                      & 
+        obsrv%ObsTypeId=='PRECONSTRESS' .or.                                    &
+        obsrv%ObsTypeId=='DELAY-FLOWTOP' .or.                                   &
+        obsrv%ObsTypeId=='DELAY-FLOWBOT') then
       call extract_idnum_or_bndname(strng, icol, istart, istop, nn1, bndname)
     else
       nn1 = dis%noder_from_string(icol, istart, istop, inunitobs, &
