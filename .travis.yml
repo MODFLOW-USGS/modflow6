@@ -1,6 +1,6 @@
 language: c
 os: linux
-dist: xenial
+dist: cosmic
 sudo: required
 compiler: gcc
 cache:
