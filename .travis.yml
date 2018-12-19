@@ -1,6 +1,6 @@
 language: c
 os: linux
-dist: bionic
+dist: xenial
 sudo: required
 compiler: gcc
 cache:
@@ -147,7 +147,6 @@ install:
         ls -l /usr/bin/gfortran-7;
       fi
     - if [[ $CVER == "gfortran8" ]]; then
-        gfortran-8 --version;
         ln -fs /usr/bin/gfortran-8 "$HOME/.local/bin/gfortran";
         gfortran --version;
         ls -l /usr/bin/gfortran-8;
