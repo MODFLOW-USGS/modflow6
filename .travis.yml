@@ -147,6 +147,7 @@ install:
         ls -l /usr/bin/gfortran-7;
       fi
     - if [[ $CVER == "gfortran8" ]]; then
+        gfortran --version;
         ln -fs /usr/bin/gfortran-8 "$HOME/.local/bin/gfortran";
         gfortran --version;
         ls -l /usr/bin/gfortran-8;
