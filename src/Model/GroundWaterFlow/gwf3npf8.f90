@@ -1,9 +1,10 @@
 module GwfNpfModule
   use KindModule,                 only: DP, I4B
   use ConstantsModule,            only: DZERO, DEM9, DEM8, DEM7, DEM6, DEM2,    &
-                                        DHALF, DP9, DONE, DLNLOW, DLNHIGH,      &
+                                        DHALF, DP9, DONE, DTWO,                 &
+                                        DLNLOW, DLNHIGH,                        &
                                         DHNOFLO, DHDRY, DEM10
-  use SmoothingModule,            only: sQuadraticSaturation, sPChip_set_derivatives, sPChip_integrate, &
+  use SmoothingModule,            only: sQuadraticSaturation,                   &
                                         sQuadraticSaturationDerivative
   use NumericalPackageModule,     only: NumericalPackageType
   use BaseDisModule,              only: DisBaseType
@@ -21,8 +22,10 @@ module GwfNpfModule
   public :: vcond
   public :: condmean
   public :: thksatnm
+  public :: hyeff_calc
 
   type, extends(NumericalPackageType) :: GwfNpfType
+
     type(GwfIcType), pointer                        :: ic           => null()    ! initial conditions object
     type(Xt3dType), pointer                         :: xt3d         => null()    ! xt3d pointer
     type(VKDType), pointer                          :: vkd          => null()    ! vkd pointer
@@ -163,7 +166,7 @@ module GwfNpfModule
     ! -- formats
     character(len=*), parameter :: fmtheader =                                 &
       "(1x, /1x, 'NPF -- NODE PROPERTY FLOW PACKAGE, VERSION 1, 3/30/2015',    &
-        ' INPUT READ FROM UNIT ', i0, //)"
+       &' INPUT READ FROM UNIT ', i0, //)"
     ! -- data
 ! ------------------------------------------------------------------------------
     !
@@ -310,7 +313,7 @@ module GwfNpfModule
     call this%prepcheck()
     !
     ! -- xt3d
-    if(this%ixt3d > 0) call this%xt3d%xt3d_ar(dis, ibound, this%k11, this%ik33, &
+    if(this%ixt3d > 0) call this%xt3d%xt3d_ar(dis, ibound, this%k11, this%ik33,&
       this%k33, this%sat, this%ik22, this%k22, this%inewton, this%satmin,  &
       this%icelltype, this%iangle1, this%iangle2, this%iangle3,                &
       this%angle1, this%angle2, this%angle3)
@@ -501,7 +504,6 @@ module GwfNpfModule
   end subroutine npf_fc
 
 
-
   subroutine npf_fn(this, kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew)
 ! ******************************************************************************
 ! npf_fn -- Fill newton terms
@@ -524,14 +526,18 @@ module GwfNpfModule
     integer(I4B) :: isymcon, idiagm
     integer(I4B) :: iups
     integer(I4B) :: idn
+    real(DP) :: athk
     real(DP) :: cond
     real(DP) :: consterm
     real(DP) :: filledterm
     real(DP) :: derv
     real(DP) :: hds
     real(DP) :: term
+    real(DP) :: afac
     real(DP) :: topup
     real(DP) :: botup
+    real(DP) :: topdn
+    real(DP) :: botdn
 ! ------------------------------------------------------------------------------
     !
     ! -- add newton terms to solution matrix
@@ -572,11 +578,22 @@ module GwfNpfModule
           !
           ! get saturated conductivity for derivative
           cond = this%condsat(this%dis%con%jas(ii))
+          !
+          ! -- if using MODFLOW-NWT upstream weighting option apply
+          !    factor to remove average thickness
+          if (this%inwtupw /= 0) then
+            topdn = this%dis%top(idn)
+            botdn = this%dis%bot(idn)
+            afac = DTWO / (DONE + (topdn - botdn) / (topup - botup))
+            cond = cond * afac
+          end if
+          !
           ! compute additional term
           consterm = -cond * (hnew(iups) - hnew(idn)) !needs to use hwadi instead of hnew(idn)
           !filledterm = cond
           filledterm = amat(idxglo(ii))
-          derv = sQuadraticSaturationDerivative(topup, botup, hnew(iups), this%satomega)
+          derv = sQuadraticSaturationDerivative(topup, botup, hnew(iups),       &
+                                                this%satomega, this%satmin)
           idiagm = this%dis%con%ia(m)
           ! fill jacobian for n being the upstream node
           if (iups == n) then
@@ -827,7 +844,7 @@ module GwfNpfModule
     ! -- Return
     return
   end subroutine sgwf_npf_qcalc
-  
+
   subroutine npf_bdadj(this, nja, flowja, icbcfl, icbcun)
 ! ******************************************************************************
 ! npf_bdadj -- Calculate intercell flows
@@ -949,6 +966,7 @@ module GwfNpfModule
     call mem_deallocate(this%idewatcv)
     call mem_deallocate(this%ithickstrt)
     call mem_deallocate(this%iusgnrhc)
+    call mem_deallocate(this%inwtupw)
     call mem_deallocate(this%isavspdis)
     call mem_deallocate(this%icalcspdis)
     call mem_deallocate(this%irewet)
@@ -1017,6 +1035,7 @@ module GwfNpfModule
     call mem_allocate(this%idewatcv, 'IDEWATCV', this%origin)
     call mem_allocate(this%ithickstrt, 'ITHICKSTRT', this%origin)
     call mem_allocate(this%iusgnrhc, 'IUSGNRHC', this%origin)
+    call mem_allocate(this%inwtupw, 'INWTUPW', this%origin)
     call mem_allocate(this%icalcspdis, 'ICALCSPDIS', this%origin)
     call mem_allocate(this%isavspdis, 'ISAVSPDIS', this%origin)
     call mem_allocate(this%irewet, 'IREWET', this%origin)
@@ -1044,13 +1063,12 @@ module GwfNpfModule
     this%icellavg = 0
     this%ik22 = 0
     this%ik33 = 0
-!!$    this%ikk = 0 !wittw
-!!$    this%iek = 0 !wittw
     this%iperched = 0
     this%ivarcv = 0
     this%idewatcv = 0
     this%ithickstrt = 0
     this%iusgnrhc = 0
+    this%inwtupw = 0
     this%icalcspdis = 0
     this%isavspdis = 0
     this%irewet = 0
@@ -1128,7 +1146,7 @@ module GwfNpfModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule,   only: LINELENGTH
-    use SimModule, only: ustop, store_error
+    use SimModule, only: ustop, store_error, count_errors
     use VKDModule,                  only: vkd_cr
     implicit none
     ! -- dummy
@@ -1257,12 +1275,22 @@ module GwfNpfModule
             this%iusgnrhc = 1
             write(this%iout, '(4x,a)')                                         &
               'MODFLOW-USG saturation calculation method will be used '
+          case ('DEV_MODFLOWNWT_UPSTREAM_WEIGHTING')
+            call this%parser%DevOpt()
+            this%inwtupw = 1
+            write(this%iout, '(4x,a)')                                         &
+              'MODFLOW-NWT upstream weighting method will be used '
           case ('DEV_MINIMUM_SATURATED_THICKNESS')
             call this%parser%DevOpt()
             this%satmin = this%parser%GetDouble()
             write(this%iout, '(4x,a,1pg15.6)')                                 &
                              'MINIMUM SATURATED THICKNESS HAS BEEN SET TO: ',  &
                              this%satmin
+          case ('DEV_OMEGA')
+            call this%parser%DevOpt()
+            this%satomega = this%parser%GetDouble()
+            write(this%iout, '(4x,a,1pg15.6)')                                 &
+                             'SATURATION OMEGA: ', this%satomega
 
           case default
             write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN NPF OPTION: ',         &
@@ -1278,14 +1306,52 @@ module GwfNpfModule
     !    the Newton-Raphson formulation
     if (this%iusgnrhc > 0 .and. this%inewton == 0) then
       this%iusgnrhc = 0
-      write(this%iout, '(4x,a,1x,a)')                                          &
-        'MODFLOW-USG saturation calculation not needed for a model',           &
-        'that is using the standard conductance formulation.'
+      write(this%iout, '(4x,a,3(1x,a))')                                        &
+        '****WARNING. MODFLOW-USG saturation calculation not needed',           &
+        'for a model that is using the standard conductance formulation.',      &
+        'Resetting DEV_MODFLOWUSG_UPSTREAM_WEIGHTED_SATURATION OPTION from',    &
+        '1 to 0.'
+    end if
+    !
+    ! -- check that the this%inwtupw option is not specified for non-newton
+    !    models
+    if (this%inwtupw /= 0 .and. this%inewton == 0) then
+      this%inwtupw = 0
+      write(this%iout,'(4x,a,3(1x,a))')                                         &
+        '****WARNING. The DEV_MODFLOWNWT_UPSTREAM_WEIGHTING option has',        &
+        'been specified for a model that is using the standard conductance',    &
+        'formulation. Resetting DEV_MODFLOWNWT_UPSTREAM_WEIGHTING OPTION from', &
+        '1 to 0.'
+    end if
+    !
+    ! -- check that the transmissivity weighting functions are not specified with
+    !    with the this%inwtupw option
+    if (this%inwtupw /= 0 .and. this%icellavg < 2) then
+      write(errmsg,'(4x,a,2(1x,a))')                                            &
+        '****ERROR. THE DEV_MODFLOWNWT_UPSTREAM_WEIGHTING OPTION CAN',          &
+        'ONLY BE SPECIFIED WITH THE AMT-LMK AND AMT-HMK',                       &
+        'ALTERNATIVE_CELL_AVERAGING OPTIONS IN THE NPF PACKAGE.'
+      call store_error(errmsg)
+    end if
+    !
+    ! -- check that this%iusgnrhc and this%inwtupw have not both been enabled
+    if (this%iusgnrhc /= 0 .and. this%inwtupw /= 0) then
+      write(errmsg,'(4x,a,2(1x,a))')                                            &
+        '****ERROR. THE DEV_MODFLOWUSG_UPSTREAM_WEIGHTED_SATURATION',           &
+        'AND DEV_MODFLOWNWT_UPSTREAM_WEIGHTING OPTIONS CANNOT BE',              &
+        'SPECIFIED IN THE SAME NPF PACKAGE.'
+      call store_error(errmsg)
     end if
     !
     ! -- set omega value used for saturation calculations
     if (this%inewton > 0) then
       this%satomega = DEM6
+    end if
+    !
+    ! -- terminate if errors encountered in options block
+    if (count_errors() > 0) then
+      call this%parser%StoreErrorUnit()
+      call ustop()
     end if
     !
     ! -- Return
@@ -1473,10 +1539,8 @@ module GwfNpfModule
     character(len=LINELENGTH) :: line, errmsg, cellstr, keyword
     integer(I4B) :: n, istart, istop, lloc, ierr, nerr
     logical :: isfound, endOfBlock
-    logical, dimension(10)           :: lname
-    character(len=24), dimension(10) :: aname
-!!$    real(DP), dimension(this%dis%nodes), pointer  :: array           => null()   ! tmp pointer
-    integer(I4B), pointer                         :: index           => null()   ! tmp pointer
+    logical, dimension(8)           :: lname
+    character(len=24), dimension(8) :: aname
     ! -- formats
     character(len=*), parameter :: fmtiprflow =                                &
       "(4x,'CELL-BY-CELL FLOW INFORMATION WILL BE PRINTED TO LISTING FILE " // &
@@ -1499,12 +1563,10 @@ module GwfNpfModule
     data aname(6) /'                  ANGLE1'/
     data aname(7) /'                  ANGLE2'/
     data aname(8) /'                  ANGLE3'/
-!
 ! ------------------------------------------------------------------------------
     !
     ! -- Initialize
     lname(:) = .false.
-    allocate(index)
     !
     ! -- get npfdata block
     call this%parser%GetBlock('GRIDDATA', isfound, ierr)
@@ -1516,7 +1578,6 @@ module GwfNpfModule
         call this%parser%GetStringCaps(keyword)
         call this%parser%GetRemainingLine(line)
         lloc = 1
-        !
         select case (keyword)
           case ('ICELLTYPE')
             call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
@@ -2020,7 +2081,7 @@ module GwfNpfModule
     ! -- formats
     character(len=*),parameter :: fmtnct =                                     &
       "(1X,/1X,'Negative cell thickness at (layer,row,col)',                   &
-       I4,',',I5,',',I5)"
+       &I4,',',I5,',',I5)"
     character(len=*),parameter :: fmttopbot =                                  &
       "(1X,'Top elevation, bottom elevation:',1P,2G13.5)"
     character(len=*),parameter :: fmttopbotthk =                               &
@@ -2201,7 +2262,7 @@ module GwfNpfModule
     ! -- formats
     character(len=*),parameter :: fmtcnvtn =                                   &
       "(1X,/1X,'CELL CONVERSIONS FOR ITER.=',I0,                               &
-       '  STEP=',I0,'  PERIOD=',I0,'   (NODE or LRC)')"
+       &'  STEP=',I0,'  PERIOD=',I0,'   (NODE or LRC)')"
     character(len=*),parameter :: fmtnode = "(1X,3X,5(A4, A20))"
 ! ------------------------------------------------------------------------------
     ! -- Keep track of cell conversions
@@ -2380,7 +2441,7 @@ module GwfNpfModule
     real(DP) :: top, bot
     real(DP) :: athk
     real(DP) :: afac
-
+! ------------------------------------------------------------------------------
     if (present(satminopt)) then
       satmin = satminopt
     else
@@ -2393,7 +2454,16 @@ module GwfNpfModule
     !
     ! -- if both cells are non-convertible then use condsat
     elseif(ictn == 0 .and. ictm == 0) then
-      condnm = condsat
+      if (icellavg /= 4) then
+        condnm = condsat
+      else
+        if (hn > hm) then
+          condnm = satn * (topn - botn)
+        else
+          condnm = satm * (topm - botm)
+        end if
+        condnm = condnm * condsat
+      end if
     !
     ! -- At least one of the cells is convertible, so calculate average saturated
     !    thickness and multiply with saturated conductance
@@ -2413,11 +2483,11 @@ module GwfNpfModule
             top = topn
             bot = botn
           end if
-          sn = sQuadraticSaturation(top, bot, hn, satomega)
-          sm = sQuadraticSaturation(top, bot, hm, satomega)
+          sn = sQuadraticSaturation(top, bot, hn, satomega, satmin)
+          sm = sQuadraticSaturation(top, bot, hm, satomega, satmin)
         else
-          sn = sQuadraticSaturation(topn, botn, hn, satomega)
-          sm = sQuadraticSaturation(topm, botm, hm, satomega)
+          sn = sQuadraticSaturation(topn, botn, hn, satomega, satmin)
+          sm = sQuadraticSaturation(topm, botm, hm, satomega, satmin)
         end if
 
         if (hn > hm) then
@@ -2425,6 +2495,20 @@ module GwfNpfModule
         else
           condnm = sm
         end if
+        !
+        ! -- if using MODFLOW-NWT upstream weighting option apply
+        !    factor to remove average thickness
+        if (iupw /= 0) then
+          if (hn > hm) then
+            afac = DTWO / (DONE + (topm - botm) / (topn - botn))
+            condnm = condnm * afac
+          else
+            afac = DTWO / (DONE + (topn - botn) / (topm - botm))
+            condnm = condnm * afac
+          end if
+        end if
+        !
+        ! -- multiply condsat by condnm factor
         condnm = condnm * condsat
       else
         ! not nwt
@@ -2737,8 +2821,12 @@ module GwfNpfModule
     ve3 = r(1, 3) * vg1 + r(2, 3) * vg2 + r(3, 3) * vg3
     !
     ! -- Effective hydraulic conductivity
-    hyeff = ve1 ** 2 / k11 + ve2 ** 2 / k22 + ve3 ** 2 / k33
-    hyeff = DONE / hyeff
+    !hyeff = ve1 ** 2 / k11 + ve2 ** 2 / k22 + ve3 ** 2 / k33
+    hyeff = DZERO
+    if (k11 /= DZERO) hyeff = hyeff + ve1 ** 2 / k11
+    if (k22 /= DZERO) hyeff = hyeff + ve2 ** 2 / k22
+    if (k33 /= DZERO) hyeff = hyeff + ve3 ** 2 / k33
+    if (hyeff /= DZERO) hyeff = DONE / hyeff
     !
     ! -- Return
     return
@@ -2883,7 +2971,7 @@ module GwfNpfModule
                         this%inewton, ihc, this%iusgnrhc,  &
                         this%hnew(n), this%hnew(m), this%sat(n), this%sat(m), &
                         this%dis%top(n), this%dis%top(m), this%dis%bot(n), &
-                        this%dis%bot(m), this%satomega)
+                        this%dis%bot(m), this%satomega, this%satmin)
           area = area * dz
           call this%dis%connection_normal(n, m, ihc, xn, yn, zn, ipos)
           call this%dis%connection_vector(n, m, nozee, this%sat(n), this%sat(m), &
@@ -3000,7 +3088,13 @@ module GwfNpfModule
         ayx = ayx + biy(ic) * nix(ic)
       enddo
       !
-      ! -- calculate specific discharge
+      ! -- Calculate specific discharge.  The divide by zero checking below
+      !    is problematic for cells with only one flow, such as can happen
+      !    with triangular cells in corners.  In this case, the resulting
+      !    cell velocity will be calculated as zero.  The method should be
+      !    improved so that edge flows of zero are included in these
+      !    calculations.  But this needs to be done with consideration for LGR
+      !    cases in which flows are submitted from an exchange.
       vx = DZERO
       vy = DZERO
       do ic = 1, nc
@@ -3008,8 +3102,10 @@ module GwfNpfModule
         vy = vy + (biy(ic) - ayx * bix(ic)) * vi(ic)
       enddo
       denom = DONE - axy * ayx
-      vx = vx / denom
-      vy = vy / denom
+      if (denom /= DZERO) then
+        vx = vx / denom
+        vy = vy / denom
+      endif
       !
       this%spdis(1, n) = vx
       this%spdis(2, n) = vy
@@ -3166,7 +3262,6 @@ module GwfNpfModule
     real(DP) :: sill_top, sill_bot
     real(DP) :: tpn, tpm
     real(DP) :: top, bot
-!
 ! ------------------------------------------------------------------------------
     if (present(satminopt)) then
       satmin = satminopt
@@ -3200,11 +3295,11 @@ module GwfNpfModule
             top = topn
             bot = botn
           end if
-          sn = sQuadraticSaturation(top, bot, hn, satomega)
-          sm = sQuadraticSaturation(top, bot, hm, satomega)
+          sn = sQuadraticSaturation(top, bot, hn, satomega, satmin)
+          sm = sQuadraticSaturation(top, bot, hm, satomega, satmin)
         else
-          sn = sQuadraticSaturation(topn, botn, hn, satomega)
-          sm = sQuadraticSaturation(topm, botm, hm, satomega)
+          sn = sQuadraticSaturation(topn, botn, hn, satomega, satmin)
+          sm = sQuadraticSaturation(topm, botm, hm, satomega, satmin)
         end if
         !
         ! -- upstream weight the thickness
