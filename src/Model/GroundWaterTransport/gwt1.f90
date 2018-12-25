@@ -84,7 +84,8 @@ module GwtModule
   data cunit/   'DIS6 ', 'DISV6', 'DISU6', 'IC6  ', 'STO6 ', & !  5
                 'ADV6 ', 'DSP6 ', 'SSM6 ', 'RCT6 ', 'CNC6 ', & ! 10
                 'OC6  ', 'OBS6 ', 'FMI6 ', 'SRC6 ', 'SRB6 ', & ! 15
-                85 * '     '/
+                'IMD6 ', '     ', '     ', '     ', '     ', & ! 20
+                80 * '     '/
   
   contains
   
@@ -254,12 +255,6 @@ module GwtModule
     call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi)
     call oc_cr(this%oc, this%name, this%inoc, this%iout)
     call gwt_obs_cr(this%obs, this%inobs)
-
-    !call npf_cr(this%npf, this%name, this%innpf, this%iout)
-    !call xt3d_cr(this%xt3d, this%name, this%innpf, this%iout)
-    !call gnc_cr(this%gnc, this%name, this%ingnc, this%iout)
-    !call hfb_cr(this%hfb, this%name, this%inhfb, this%iout)
-    !call mvr_cr(this%mvr, this%name, this%inmvr, this%iout)
     !
     ! -- Create stress packages
     ipakid = 1
@@ -414,7 +409,7 @@ module GwtModule
     if(this%inic  > 0) call this%ic%ic_ar(this%x)
     if(this%infmi > 0) call this%fmi%fmi_ar(this%dis, this%ibound,this%inssm)
     if(this%insto > 0) call this%sto%sto_ar(this%dis, this%ibound)
-    if(this%insrb > 0) call this%srb%srb_ar(this%dis, this%ibound,             &
+    if(this%insrb > 0) call this%srb%srb_ar(this%dis, this%sto, this%ibound,   &
                                             this%sto%porosity)
     if(this%inadv > 0) call this%adv%adv_ar(this%dis, this%ibound)
     if(this%indsp > 0) call this%dsp%dsp_ar(this%dis, this%ibound,             &
@@ -1008,6 +1003,7 @@ module GwtModule
     use SimModule, only: store_error, ustop
     use GwtCncModule, only: cnc_create
     use GwtSrcModule, only: src_create
+    use GwtImdModule, only: imd_create
     ! -- dummy
     class(GwtModelType) :: this
     character(len=*),intent(in) :: filtyp
@@ -1030,6 +1026,9 @@ module GwtModule
       call cnc_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
     case('SRC6')
       call src_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
+    case('IMD6')
+      call imd_create(packobj, ipakid, ipaknum, inunit, iout, this%name,       &
+                      pakname, this%fmi, this%sto)
     case default
       write(errmsg, *) 'Invalid package type: ', filtyp
       call store_error(errmsg)
@@ -1074,17 +1073,21 @@ module GwtModule
     integer(I4B) :: i, iu
     character(len=LENFTYPE), dimension(11) :: nodupftype =                     &
       (/'DIS6 ', 'DISU6', 'DISV6', 'IC6  ', 'STO6 ', 'ADV6 ', 'DSP6 ',         &
-        'SSM6 ', 'RCT6 ', 'OC6  ', 'OBS6 '/)
+        'SSM6 ', 'SRB6 ', 'OC6  ', 'OBS6 '/)
 ! ------------------------------------------------------------------------------
     !
-    ! -- Check for IC6, DIS(u), and NPF. Stop if not present.
-    if(this%inic==0) then
+    ! -- Check for IC6, DIS(u), and STO. Stop if not present.
+    if(this%inic == 0) then
       write(errmsg, '(1x,a)') 'ERROR. INITIAL CONDITIONS (IC6) PACKAGE NOT SPECIFIED.'
       call store_error(errmsg)
     endif
-    if(indis==0) then
+    if(indis == 0) then
       write(errmsg, '(1x,a)') &
         'ERROR. DISCRETIZATION (DIS6 or DISU6) PACKAGE NOT SPECIFIED.'
+      call store_error(errmsg)
+    endif
+    if(this%insto == 0) then
+      write(errmsg, '(1x,a)') 'ERROR. STORAGE (STO6) PACKAGE NOT SPECIFIED.'
       call store_error(errmsg)
     endif
     if(count_errors() > 0) then

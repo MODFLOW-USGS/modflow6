@@ -111,6 +111,7 @@
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1dsp.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1fmi1.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1ic1.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1imd1.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1obs1.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1oc1.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1srb1.f90"/>
@@ -174,9 +175,9 @@
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration></File>
 		<File RelativePath="..\src\Utilities\Constants.f90"/>
+		<File RelativePath="..\src\Utilities\genericutils.f90"/>
 		<File RelativePath="..\src\Utilities\HashTable.f90"/>
 		<File RelativePath="..\src\Utilities\InputOutput.f90"/>
-		<File RelativePath="..\src\Utilities\genericutils.f90"/>
 		<File RelativePath="..\src\Utilities\Iunit.f90"/>
 		<File RelativePath="..\src\Utilities\kind.f90"/>
 		<File RelativePath="..\src\Utilities\List.f90"/>

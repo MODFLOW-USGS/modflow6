@@ -13,6 +13,7 @@ module GwtStoModule
   type, extends(NumericalPackageType) :: GwtStoType
     
     real(DP), dimension(:), pointer, contiguous      :: porosity => null()      ! porosity
+    real(DP), dimension(:), pointer, contiguous      :: prsity2 => null()       ! sum of immobile porosity
     real(DP), dimension(:), pointer, contiguous      :: strg => null()          ! rate of mass storage
     integer(I4B), dimension(:), pointer, contiguous  :: ibound => null()        ! pointer to model ibound
     type(GwtFmiType), pointer                        :: fmi => null()           ! pointer to fmi object
@@ -25,6 +26,9 @@ module GwtStoModule
     procedure :: sto_bdsav
     procedure :: sto_da
     procedure :: allocate_scalars
+    procedure :: addto_prsity2
+    procedure :: get_thetamfrac
+    procedure :: get_thetaimfrac
     procedure, private :: allocate_arrays
     procedure, private :: read_options
     procedure, private :: read_data
@@ -344,11 +348,13 @@ module GwtStoModule
     !
     ! -- Allocate
     call mem_allocate(this%porosity, nodes, 'POROSITY', this%origin)
+    call mem_allocate(this%prsity2, nodes, 'PRSITY2', this%origin)
     call mem_allocate(this%strg, nodes, 'STRG', this%origin)
     !
     ! -- Initialize
     do n = 1, nodes
       this%porosity(n) = DZERO
+      this%prsity2(n) = DZERO
       this%strg(n) = DZERO
     enddo
     !
@@ -481,6 +487,74 @@ module GwtStoModule
     return
   end subroutine read_data
 
+  subroutine addto_prsity2(this, thetaim)
+! ******************************************************************************
+! add immobile porosity to prsity2
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwtStoType) :: this
+    real(DP), dimension(:), intent(in) :: thetaim
+    ! -- local
+    integer(I4B) :: n
+! ------------------------------------------------------------------------------
+    !
+    ! -- Add to prsity2
+    do n = 1, this%dis%nodes
+      if (this%ibound(n) == 0) cycle
+      this%prsity2(n) = this%prsity2(n) + thetaim(n)
+    end do
+    !
+    ! -- Return
+    return
+  end subroutine addto_prsity2
+
+  function get_thetamfrac(this, node) result(thetamfrac)
+! ******************************************************************************
+! Calculate and return the fraction of the total porosity that is mobile
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwtStoType) :: this
+    integer(I4B), intent(in) :: node
+    ! -- return
+    real(DP) :: thetamfrac
+! ------------------------------------------------------------------------------
+    !
+    thetamfrac = this%porosity(node) / &
+                 (this%porosity(node) + this%prsity2(node))
+    !
+    ! -- Return
+    return
+  end function get_thetamfrac
   
+  function get_thetaimfrac(this, node, thetaim) result(thetaimfrac)
+! ******************************************************************************
+! Calculate and return the fraction of the total porosity that is immobile
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwtStoType) :: this
+    integer(I4B), intent(in) :: node
+    real(DP), intent(in) :: thetaim
+    ! -- return
+    real(DP) :: thetaimfrac
+! ------------------------------------------------------------------------------
+    !
+    thetaimfrac = thetaim / &
+                 (this%porosity(node) + this%prsity2(node))
+    !
+    ! -- Return
+    return
+  end function get_thetaimfrac
   
 end module GwtStoModule

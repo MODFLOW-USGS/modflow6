@@ -5,6 +5,8 @@ module GwtSrbModule
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule,          only: DisBaseType
   use GwtFmiModule,           only: GwtFmiType
+  use GwtStoModule,           only: GwtStoType
+  use BudgetModule,           only : BudgetType
   
   implicit none
   public :: GwtSrbType
@@ -15,10 +17,12 @@ module GwtSrbModule
     real(DP), dimension(:), pointer, contiguous      :: porosity => null()      ! pointer to storage package porosity
     integer(I4B), dimension(:), pointer, contiguous  :: ibound => null()        ! pointer to model ibound
     type(GwtFmiType), pointer                        :: fmi => null()           ! pointer to fmi object
+    type(GwtStoType), pointer                        :: sto => null()           ! pointer to sto object
     
-    integer(I4B), pointer                            :: irorder                 ! order of reaction rate (0:none, 1:first, 2:zero)
-    integer(I4B), pointer                            :: isrb                    ! sorbtion active flag (0:off, 1:on)
-    integer(I4B), pointer                            :: idd                     ! dual domain active flag (0:off, 1:on, 2:w/sorbtion)
+    integer(I4B), pointer                            :: irorder => null()       ! order of reaction rate (0:none, 1:first, 2:zero)
+    integer(I4B), pointer                            :: isrb => null()          ! sorbtion active flag (0:off, 1:on)
+    integer(I4B), pointer                            :: idd => null()           ! dual domain active flag (0:off, 1:on, 2:w/sorbtion)
+    integer(I4B), pointer                            :: bditemsim => nULL()     ! number of immobile budget items
     real(DP), dimension(:), pointer, contiguous      :: strg => null()          ! rate of sorbed mass storage
     real(DP), dimension(:), pointer, contiguous      :: rhob => null()          ! bulk density
     real(DP), dimension(:), pointer, contiguous      :: distcoef => null()      ! distribution coefficient
@@ -27,6 +31,8 @@ module GwtSrbModule
     real(DP), dimension(:), pointer, contiguous      :: cim => null()           ! concentration for immobile domain
     real(DP), dimension(:), pointer, contiguous      :: zetaim => null()        ! mass transfer rate to immobile domain
     real(DP), dimension(:), pointer, contiguous      :: thetaim => null()       ! porosity of the immobile domain
+    
+    type(BudgetType), pointer                        :: budgetim => nULL()      ! budget object for immobile domain
     
   contains
   
@@ -41,6 +47,8 @@ module GwtSrbModule
     procedure, private :: read_options
     procedure, private :: read_data
     procedure, private :: calccim
+    procedure, private :: dd_ar
+    procedure, private :: dd_bdcalc
   
   end type GwtSrbType
   
@@ -82,7 +90,7 @@ module GwtSrbModule
     return
   end subroutine srb_cr
 
-  subroutine srb_ar(this, dis, ibound, porosity)
+  subroutine srb_ar(this, dis, sto, ibound, porosity)
 ! ******************************************************************************
 ! srb_ar -- Allocate and Read
 ! ******************************************************************************
@@ -90,10 +98,10 @@ module GwtSrbModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use MemoryManagerModule, only: mem_setptr
     ! -- dummy
     class(GwtSrbType) :: this
     class(DisBaseType), pointer, intent(in) :: dis
+    type(GwtStoType), pointer, intent(in) :: sto
     integer(I4B), dimension(:), pointer, contiguous :: ibound
     real(DP), dimension(:), pointer, contiguous :: porosity
     ! -- local
@@ -108,6 +116,7 @@ module GwtSrbModule
     !
     ! -- store pointers to arguments that were passed in
     this%dis => dis
+    this%sto => sto
     this%ibound => ibound
     this%porosity => porosity
     !
@@ -119,6 +128,11 @@ module GwtSrbModule
     !
     ! -- read the data block
     call this%read_data()
+    !
+    ! -- setup the immobile domain budget
+    if (this%idd /= 0) then
+      call this%dd_ar()
+    endif
     !
     ! -- Return
     return
@@ -194,11 +208,8 @@ module GwtSrbModule
       idiag = this%dis%con%ia(n)
       !
       ! -- Set thetamfrac
-      if (this%idd == 0) then
-        thetamfrac = DONE
-      else
-        thetamfrac = this%porosity(n) / (this%thetaim(n) + this%porosity(n))
-      endif
+      !thetamfrac = this%porosity(n) / (this%thetaim(n) + this%porosity(n))
+      thetamfrac = this%sto%get_thetamfrac(n)
       !
       ! -- add sorbtion terms to diagonal and rhs accumulators
       if (this%isrb == 1) then
@@ -315,11 +326,7 @@ module GwtSrbModule
       idiag = this%dis%con%ia(n)
       !
       ! -- Set thetamfrac
-      if (this%idd == 0) then
-        thetamfrac = DONE
-      else
-        thetamfrac = this%porosity(n) / (this%thetaim(n) + this%porosity(n))
-      endif
+      thetamfrac = this%sto%get_thetamfrac(n)
       !
       ! -- calculate sorbtion rate
       if (this%isrb == 1) then
@@ -406,6 +413,7 @@ module GwtSrbModule
     !
     ! -- update cim
     if (this%idd > 0) then
+      call this%dd_bdcalc(cnew)
       call this%calccim(this%cim, cnew)
     endif
     !
@@ -518,11 +526,13 @@ module GwtSrbModule
     call mem_allocate(this%isrb, 'ISRB', this%origin)
     call mem_allocate(this%irorder, 'IRORDER', this%origin)
     call mem_allocate(this%idd, 'IDD', this%origin)
+    call mem_allocate(this%bditemsim, 'BDITEMSIM', this%origin)
     !
     ! -- Initialize
     this%isrb = 0
     this%irorder = 0
     this%idd = 0
+    this%bditemsim = 0
     !
     ! -- Return
     return
@@ -566,7 +576,7 @@ module GwtSrbModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    !modules
+    ! -- modules
     use ConstantsModule,   only: LINELENGTH
     use SimModule,         only: ustop, store_error
     ! -- dummy
@@ -909,7 +919,8 @@ module GwtSrbModule
         vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
         swt = this%fmi%gwfsatold(n, delt)
         swtpdt = this%fmi%gwfsat(n)
-        thetamfrac = this%porosity(n) / (this%thetaim(n) + this%porosity(n))
+        !thetamfrac = this%porosity(n) / (this%thetaim(n) + this%porosity(n))
+        thetamfrac = this%sto%get_thetamfrac(n)
         kd = DZERO
         lambda1im = DZERO
         lambda2im = DZERO
@@ -1071,5 +1082,85 @@ module GwtSrbModule
     ! -- Return
     return
   end subroutine calcddhcofrhs
+
+  subroutine dd_ar(this)
+! ******************************************************************************
+! dd_ar -- allocate and read dual domain
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use BudgetModule, only: budget_cr
+    ! -- dummy
+    class(GwtSrbType) :: this
+    ! -- local
+    character(len=16) :: name = 'IMM. DOMAN'
+    integer(I4B) :: nbd
+! ------------------------------------------------------------------------------
+    !
+    call budget_cr(this%budgetim, this%origin)
+    !
+    ! -- Calculate number of immobile domain budget items
+    ! -- storage and transfer to mobile domain +2
+    ! -- sorbtion +1
+    ! -- decay/production +1
+    ! -- decay/production of sorbed mass +1
+    nbd = 2
+    if (this%isrb > 0) nbd = nbd + 1
+    if (this%irorder > 0) nbd = nbd + 1
+    if (this%irorder > 0 .and. this%isrb > 0) nbd = nbd + 1
+    this%bditemsim = nbd
+    !
+    ! -- set up the immobile domain budget object
+    call this%budgetim%budget_df(nbd, name, 'M')
+    !
+    ! -- add immobile porosity to prsity2
+    call this%sto%addto_prsity2(this%thetaim)
+    !
+    ! -- Return
+  end subroutine dd_ar
+  
+  subroutine dd_bdcalc(this, cnew)
+! ******************************************************************************
+! dd_bdcalc -- calculate budget for immobile domain
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwtSrbType) :: this
+    real(DP), dimension(:), intent(in) :: cnew
+    ! -- local
+    integer(I4B) :: n, nodes
+! ------------------------------------------------------------------------------
+    !
+    !
+    ! -- Calculate sorption change
+    nodes = size(cnew)
+    do n = 1, nodes
+      !
+      ! -- skip if transport inactive
+      if(this%ibound(n) <= 0) cycle
+
+    enddo
+    ! -- storage
+    
+    ! -- sorbtion
+    
+    ! -- first order decay, liquid phase
+    
+    ! -- first order decay, sorbed phase
+    
+    ! -- zero order decay, liquid phase
+    
+    ! -- zero order decay, sorbed phase
+    
+    ! -- mobile domain transfer
+    
+    !
+    ! -- Return
+  end subroutine dd_bdcalc
   
 end module GwtSrbModule
