@@ -49,9 +49,10 @@ module GwtImdModule
     procedure :: bnd_ot => imd_ot
     procedure :: allocate_scalars
     procedure :: read_dimensions => imd_read_dimensions
-    procedure, private :: imd_allocate_arrays
     procedure :: read_options
+    procedure, private :: imd_allocate_arrays
     procedure, private :: read_data
+    procedure, private :: calcddbud
     procedure, private :: calccim
     
   end type GwtImdType
@@ -147,7 +148,7 @@ module GwtImdModule
     !
     ! -- setup the immobile domain budget
     call budget_cr(this%budget, this%origin)
-    call this%budget%budget_df(NBDITEMS, this%name, 'M')
+    call this%budget%budget_df(NBDITEMS, 'MASS', 'M', bdzone=this%name)
     !
     ! -- Return
     return
@@ -370,10 +371,9 @@ module GwtImdModule
     call model_budget%addentry(ratin, ratout, delt, this%text,                 &
                                isuppress_output, this%name)
     !
-    ! -- Store the rates for the individual package budget
+    ! -- Calculate and store the rates for the immobile domain
     budterm(:, :) = DZERO
-    budterm(1, 7) = ratout
-    budterm(2, 7) = ratin
+    call this%calcddbud(budterm, x)
     call this%budget%addentry(budterm, delt, budtxt, isuppress_output)
     !
     ! -- Save the simulated values to the ObserveType objects
@@ -793,47 +793,157 @@ module GwtImdModule
     real(DP), intent(inout) :: hcof
     real(DP), intent(inout) :: rhs    
     ! -- local
-    real(DP) :: tled
-    real(DP) :: t1
-    real(DP) :: t2
-    real(DP) :: t3
-    real(DP) :: t4
-    real(DP) :: t5
-    real(DP) :: t6
-    real(DP) :: t7
-    real(DP) :: t8
-    real(DP) :: t9
+    real(DP), dimension(9) :: ddterm
     real(DP) :: f
 ! ------------------------------------------------------------------------------
     !
-    ! -- initialize
-    tled = DONE / delt
-    !
-    ! -- calculate terms
-    t1 = thetaim * vcell * tled * swtpdt
-    t2 = thetaim * vcell * tled * swt
-    t3 = thetaimfrac * rhob * vcell * kd * swtpdt * tled
-    t4 = thetaimfrac * rhob * vcell * kd * swt * tled
-    t5 = thetaim * lambda1im * vcell * swtpdt
-    t6 = thetaimfrac * lambda2im * rhob * kd * vcell
-    t7 = thetaim * gamma1im * vcell * swtpdt
-    t8 = thetaimfrac * gamma2im * rhob * vcell
-    t9 = vcell * swtpdt * zetaim
-    !
-    ! -- calculate denometer term, f
-    f = t1 + t3 + t5 + t6 + t9
+    ! -- calculate the ddterms
+    call calcddterms(thetaim, vcell, delt, swtpdt, swt, thetamfrac,            &
+                     thetaimfrac, rhob, kd, lambda1im, lambda2im,              &
+                     gamma1im, gamma2im, zetaim, cimt, ddterm, f)
     !
     ! -- calculate hcof
-    hcof = t9 ** 2 / f - t9
+    hcof = ddterm(9) ** 2 / f - ddterm(9)
     !
     ! -- calculate rhs, and switch the sign because this term needs to
     !    be moved to the left hand side
-    rhs = t9 * (t2 + t4) / f * cimt - t9 * t7 / f - t9 * t8 / f
+    rhs = ddterm(9) * (ddterm(2) + ddterm(4)) / f * cimt - ddterm(9)           &
+          * ddterm(7) / f - ddterm(9) * ddterm(8) / f
     rhs = -rhs
     !
     ! -- Return
     return
   end subroutine calcddhcofrhs
+
+  subroutine calcddbud(this, budterm, cnew)
+! ******************************************************************************
+! calcddbud -- calculate the individual budget terms for the immobile domain
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use TdisModule, only: delt
+    ! -- dummy
+    class(GwtImdType) :: this
+    real(DP), dimension(:, :), intent(inout) :: budterm
+    real(DP), dimension(:), intent(in) :: cnew
+    ! -- local
+    integer(I4B) :: n, i
+    real(DP) :: vcell
+    real(DP) :: swt
+    real(DP) :: swtpdt
+    real(DP) :: thetamfrac
+    real(DP) :: thetaimfrac
+    real(DP) :: kd
+    real(DP) :: lambda1im
+    real(DP) :: lambda2im
+    real(DP) :: gamma1im
+    real(DP) :: gamma2im
+    real(DP) :: ddterm(9)
+    real(DP) :: f
+    real(DP) :: cimt
+    real(DP) :: cimtpdt
+    real(DP) :: rate
+! ------------------------------------------------------------------------------
+    !
+    ! -- Calculate cim
+    do n = 1, this%dis%nodes
+      if (this%ibound(n) <= 0) cycle
+      vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
+      swt = this%fmi%gwfsatold(n, delt)
+      swtpdt = this%fmi%gwfsat(n)
+      thetamfrac = this%sto%get_thetamfrac(n)
+      thetaimfrac = this%sto%get_thetaimfrac(n, this%thetaim(n))
+      kd = DZERO
+      lambda1im = DZERO
+      lambda2im = DZERO
+      gamma1im = DZERO
+      gamma2im = DZERO
+      if (this%isrb > 0) kd = this%distcoef(n)
+      if (this%irorder == 1) lambda1im = this%rc1(n)
+      if (this%irorder == 2) gamma1im = this%rc1(n)
+      if (this%irorder == 1) lambda2im = this%rc2(n)
+      if (this%irorder == 2) gamma2im = this%rc2(n)
+      !
+      ! -- calculate the ddterms
+      cimt = this%cim(n)
+      call calcddterms(this%thetaim(n), vcell, delt, swtpdt, swt, thetamfrac,  &
+                       thetaimfrac, this%rhob(n), kd, lambda1im, lambda2im,    &
+                       gamma1im, gamma2im, this%zetaim(n), cimt, ddterm, f)
+      cimtpdt = calcddconc(this%thetaim(n), vcell, delt, swtpdt, swt,          &
+                           thetamfrac, thetaimfrac, this%rhob(n), kd,          &
+                           lambda1im, lambda2im, gamma1im, gamma2im,           &
+                           this%zetaim(n), this%cim(n), cnew(n))
+      !
+      ! -- calculate STORAGE-LIQUID
+      i = 1
+      rate = - ddterm(1) * cimtpdt + ddterm(2) * cimt
+      if (rate > DZERO) then
+        budterm(1, i) = budterm(1, i) + rate
+      else
+        budterm(2, i) = budterm(2, i) - rate
+      endif
+      !
+      ! -- calculate STORAGE-SORBED
+      i = 2
+      rate = - ddterm(3) * cimtpdt + ddterm(4) * cimt
+      if (rate > DZERO) then
+        budterm(1, i) = budterm(1, i) + rate
+      else
+        budterm(2, i) = budterm(2, i) - rate
+      endif
+      !
+      ! -- calculate 1ST-DECAY-LIQUID
+      i = 3
+      rate = - ddterm(5) * cimtpdt
+      if (rate > DZERO) then
+        budterm(1, i) = budterm(1, i) + rate
+      else
+        budterm(2, i) = budterm(2, i) - rate
+      endif
+      !
+      ! -- calculate 1ST-DECAY-SORBED
+      i = 4
+      rate = - ddterm(6) * cimtpdt
+      if (rate > DZERO) then
+        budterm(1, i) = budterm(1, i) + rate
+      else
+        budterm(2, i) = budterm(2, i) - rate
+      endif
+      !
+      ! -- calculate 0TH-DECAY-LIQUID
+      i = 5
+      rate = - ddterm(7)
+      if (rate > DZERO) then
+        budterm(1, i) = budterm(1, i) + rate
+      else
+        budterm(2, i) = budterm(2, i) - rate
+      endif
+      !
+      ! -- calculate 0TH-DECAY-SORBED
+      i = 6
+      rate = - ddterm(8)
+      if (rate > DZERO) then
+        budterm(1, i) = budterm(1, i) + rate
+      else
+        budterm(2, i) = budterm(2, i) - rate
+      endif
+      !
+      ! -- calculate MOBILE-DOMAIN
+      i = 7
+      rate = ddterm(9) * cnew(n) - ddterm(9) * cimtpdt
+      if (rate > DZERO) then
+        budterm(1, i) = budterm(1, i) + rate
+      else
+        budterm(2, i) = budterm(2, i) - rate
+      endif
+      !
+    enddo
+    !
+    ! -- Return
+    return
+  end subroutine calcddbud
 
   subroutine calccim(this, cim, cnew)
 ! ******************************************************************************
@@ -898,7 +1008,8 @@ module GwtImdModule
                       thetaimfrac, rhob, kd, lambda1im, lambda2im, gamma1im,   &
                       gamma2im, zetaim, cimt, ctpdt) result (ddconc)
 ! ******************************************************************************
-! calcddconc -- return the concentration of the immobile domain
+! calcddconc -- Calculate and return the concentration of the immobile domain
+!   for a single cell.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -923,44 +1034,78 @@ module GwtImdModule
     ! -- result
     real(DP) :: ddconc
     ! -- local
-    real(DP) :: tled
-    real(DP) :: t1
-    real(DP) :: t2
-    real(DP) :: t3
-    real(DP) :: t4
-    real(DP) :: t5
-    real(DP) :: t6
-    real(DP) :: t7
-    real(DP) :: t8
-    real(DP) :: t9
+    real(DP), dimension(9) :: ddterm
     real(DP) :: f
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize
     ddconc = DZERO
-    tled = DONE / delt
     !
-    ! -- calculate terms
-    t1 = thetaim * vcell * tled * swtpdt
-    t2 = thetaim * vcell * tled * swt
-    t3 = thetaimfrac * rhob * vcell * kd * swtpdt * tled
-    t4 = thetaimfrac * rhob * vcell * kd * swt * tled
-    t5 = thetaim * lambda1im * vcell * swtpdt
-    t6 = thetaimfrac * lambda2im * rhob * kd * vcell
-    t7 = thetaim * gamma1im * vcell * swtpdt
-    t8 = thetaimfrac * gamma2im * rhob * vcell
-    t9 = vcell * swtpdt * zetaim
-    !
-    ! -- calculate denometer term, f
-    f = t1 + t3 + t5 + t6 + t9
+    ! -- calculate the ddterms
+    call calcddterms(thetaim, vcell, delt, swtpdt, swt, thetamfrac,            &
+                     thetaimfrac, rhob, kd, lambda1im, lambda2im,              &
+                     gamma1im, gamma2im, zetaim, cimt, ddterm, f)
     !
     ! -- calculate ddconc
-    ddconc = (t2 + t4) * cimt + t9 * ctpdt - t7 - t8
+    ddconc = (ddterm(2) + ddterm(4)) * cimt + ddterm(9) * ctpdt - ddterm(7)    &
+             - ddterm(8)
     ddconc = ddconc / f
     !
     ! -- Return
     return
   end function calcddconc
-  
-  
+                      
+  subroutine calcddterms(thetaim, vcell, delt, swtpdt, swt, thetamfrac,        &
+                         thetaimfrac, rhob, kd, lambda1im, lambda2im,          &
+                         gamma1im, gamma2im, zetaim, cimt, ddterm, f)
+! ******************************************************************************
+! calcddterms -- Calculate the terms for the immobile domain mass balance
+!   equation.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    real(DP), intent(in) :: thetaim
+    real(DP), intent(in) :: vcell
+    real(DP), intent(in) :: delt
+    real(DP), intent(in) :: swtpdt
+    real(DP), intent(in) :: swt
+    real(DP), intent(in) :: thetamfrac
+    real(DP), intent(in) :: thetaimfrac
+    real(DP), intent(in) :: rhob
+    real(DP), intent(in) :: kd
+    real(DP), intent(in) :: lambda1im
+    real(DP), intent(in) :: lambda2im
+    real(DP), intent(in) :: gamma1im
+    real(DP), intent(in) :: gamma2im
+    real(DP), intent(in) :: zetaim
+    real(DP), intent(in) :: cimt
+    real(DP), dimension(:), intent(inout) :: ddterm
+    real(DP), intent(inout) :: f
+    ! -- local
+    real(DP) :: tled
+! ------------------------------------------------------------------------------
+    !
+    ! -- initialize
+    tled = DONE / delt
+    !
+    ! -- calculate terms
+    ddterm(1) = thetaim * vcell * tled * swtpdt
+    ddterm(2) = thetaim * vcell * tled * swt
+    ddterm(3) = thetaimfrac * rhob * vcell * kd * swtpdt * tled
+    ddterm(4) = thetaimfrac * rhob * vcell * kd * swt * tled
+    ddterm(5) = thetaim * lambda1im * vcell * swtpdt
+    ddterm(6) = thetaimfrac * lambda2im * rhob * kd * vcell
+    ddterm(7) = thetaim * gamma1im * vcell * swtpdt
+    ddterm(8) = thetaimfrac * gamma2im * rhob * vcell
+    ddterm(9) = vcell * swtpdt * zetaim
+    !
+    ! -- calculate denometer term, f
+    f = ddterm(1) + ddterm(3) + ddterm(5) + ddterm(6) + ddterm(9)
+    !
+    ! -- Return
+    return
+  end subroutine calcddterms
+
 end module GwtImdModule
