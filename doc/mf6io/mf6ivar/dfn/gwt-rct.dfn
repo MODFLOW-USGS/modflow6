@@ -1,4 +1,4 @@
-# --------------------- gwt srb options ---------------------
+# --------------------- gwt rct options ---------------------
 
 block options
 name save_flows
@@ -6,7 +6,7 @@ type keyword
 reader urword
 optional true
 longname save calculated flows to budget file
-description REPLACE save_flows {'{#1}': 'SRB'}
+description REPLACE save_flows {'{#1}': 'RCT'}
 
 block options
 name sorbtion
@@ -25,34 +25,7 @@ optional true
 longname order of the decay rate
 description is a text keyword to indicate that first or zero-order decay will occur.  The text value for DECAYORDER can be ``ONE'' or ``ZERO''.
 
-block options
-name dualdomainoption
-type record dualdomain immobiledomainsorption
-reader urword
-optional true
-longname activate dual domain
-description none
-
-block options
-name dualdomain
-in_record true
-type keyword
-reader urword
-longname keyword to activate dual domain mass transfer
-description keyword to indicate that dual domain mass transfer will be simulated.  If the initial concentrations for the immobile domain are not specified as CIM, then they will be assumbed to be zero.  The mass transfer rate ZETAIM and the immobile domain porosity THETAIM must be specified if DUALDOMAIN is on.
-
-block options
-name immobiledomainsorption
-in_record true
-type keyword
-reader urword
-optional true
-longname keyword to activate sorption in the immobile domain
-description If the IMMOBILEDOMAINSORPTION keyword is specified, then sorption will be represented in the immobile domain.
-
-
-
-# --------------------- gwt srb griddata ---------------------
+# --------------------- gwt rct griddata ---------------------
 
 block griddata
 name rhob
@@ -89,32 +62,3 @@ reader readarray
 layered true
 longname second rate coefficient
 description is the rate coefficient for first or zero-order reactions for the sorbed phase.  The dimensions of rc2 for a first-order reaction is one over time.  The dimensions of rc2 for a zero-order reaction is mass of solute per mass of aquifer per time.  rc2 will have no affect on simulation results unless the SORPTION and RATEORDER keywords are specified in the options block.
-
-block griddata
-name cim
-type double precision
-shape (nodes)
-reader readarray
-layered true
-longname initial concentration of the immobile domain
-description initial concentration of the immobile domain in mass per length cubed.  If the DUALDOMAIN option is not specified, then values for CIM are ignored.
-
-block griddata
-name thetaim
-type double precision
-shape (nodes)
-reader readarray
-layered true
-longname porosity of the immobile domain
-description porosity of the immobile domain (dimensionless).  If the DUALDOMAIN option is not specified, then values for THETAIM are ignored.
-
-block griddata
-name zetaim
-type double precision
-shape (nodes)
-reader readarray
-layered true
-longname mass transfer rate coefficient between the mobile and immobile domains
-description mass transfer rate coefficient between the mobile and immobile domains, in dimenions of per time.  If the DUALDOMAIN option is not specified, then values for ZETAIM are ignored.
-
-

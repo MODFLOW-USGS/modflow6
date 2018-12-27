@@ -19,7 +19,7 @@ module GwtModule
   use GwtDspModule,                only: GwtDspType
   use GwtSsmModule,                only: GwtSsmType
   use GwtStoModule,                only: GwtStoType
-  use GwtSrbModule,                only: GwtSrbType
+  use GwtRctModule,                only: GwtRctType
   use GwtOcModule,                 only: GwtOcType
   use GwtObsModule,                only: GwtObsType, gwt_obs_cr
   use BudgetModule,                only: BudgetType
@@ -35,7 +35,7 @@ module GwtModule
     type(GwtIcType),                pointer :: ic      => null()                ! initial conditions package
     type(GwtFmiType),               pointer :: fmi     => null()                ! flow model interface
     type(GwtStoType),               pointer :: sto     => null()                ! storage package
-    type(GwtSrbType),               pointer :: srb     => null()                ! sorption package
+    type(GwtRctType),               pointer :: rct     => null()                ! sorption package
     type(GwtAdvType),               pointer :: adv     => null()                ! advection package
     type(GwtDspType),               pointer :: dsp     => null()                ! dispersion package
     type(GwtSsmType),               pointer :: ssm     => null()                ! source sink mixing package
@@ -45,7 +45,6 @@ module GwtModule
     integer(I4B),                   pointer :: inic    => null()                ! unit number IC
     integer(I4B),                   pointer :: infmi   => null()                ! unit number FMI
     integer(I4B),                   pointer :: insto   => null()                ! unit number STO
-    integer(I4B),                   pointer :: insrb   => null()                ! unit number SRB
     integer(I4B),                   pointer :: inadv   => null()                ! unit number ADV
     integer(I4B),                   pointer :: indsp   => null()                ! unit number DSP
     integer(I4B),                   pointer :: inssm   => null()                ! unit number SSM
@@ -83,8 +82,8 @@ module GwtModule
   character(len=LENFTYPE), dimension(NIUNIT) :: cunit
   data cunit/   'DIS6 ', 'DISV6', 'DISU6', 'IC6  ', 'STO6 ', & !  5
                 'ADV6 ', 'DSP6 ', 'SSM6 ', 'RCT6 ', 'CNC6 ', & ! 10
-                'OC6  ', 'OBS6 ', 'FMI6 ', 'SRC6 ', 'SRB6 ', & ! 15
-                'IMD6 ', '     ', '     ', '     ', '     ', & ! 20
+                'OC6  ', 'OBS6 ', 'FMI6 ', 'SRC6 ', 'IMD6 ', & ! 15
+                '     ', '     ', '     ', '     ', '     ', & ! 20
                 80 * '     '/
   
   contains
@@ -112,7 +111,7 @@ module GwtModule
     use GwtIcModule,                only: ic_cr
     use GwtFmiModule,               only: fmi_cr
     use GwtStoModule,               only: sto_cr
-    use GwtSrbModule,               only: srb_cr
+    use GwtRctModule,               only: rct_cr
     use GwtAdvModule,               only: adv_cr
     use GwtDspModule,               only: dsp_cr
     use GwtSsmModule,               only: ssm_cr
@@ -222,7 +221,6 @@ module GwtModule
     call namefile_obj%get_unitnumber('IC6',  this%inic, 1)
     call namefile_obj%get_unitnumber('FMI6', this%infmi, 1)
     call namefile_obj%get_unitnumber('STO6', this%insto, 1)
-    call namefile_obj%get_unitnumber('SRB6', this%insrb, 1)
     call namefile_obj%get_unitnumber('ADV6', this%inadv, 1)
     call namefile_obj%get_unitnumber('DSP6', this%indsp, 1)
     call namefile_obj%get_unitnumber('SSM6', this%inssm, 1)
@@ -249,10 +247,10 @@ module GwtModule
     call ic_cr(this%ic, this%name, this%inic, this%iout, this%dis)
     call fmi_cr(this%fmi, this%name, this%infmi, this%iout)
     call sto_cr(this%sto, this%name, this%insto, this%iout, this%fmi)
-    call srb_cr(this%srb, this%name, this%insrb, this%iout, this%fmi)
     call adv_cr(this%adv, this%name, this%inadv, this%iout, this%fmi)
     call dsp_cr(this%dsp, this%name, this%indsp, this%iout, this%fmi)
     call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi)
+    call rct_cr(this%rct, this%name, this%inrct, this%iout, this%fmi)
     call oc_cr(this%oc, this%name, this%inoc, this%iout)
     call gwt_obs_cr(this%obs, this%inobs)
     !
@@ -409,7 +407,7 @@ module GwtModule
     if(this%inic  > 0) call this%ic%ic_ar(this%x)
     if(this%infmi > 0) call this%fmi%fmi_ar(this%dis, this%ibound,this%inssm)
     if(this%insto > 0) call this%sto%sto_ar(this%dis, this%ibound)
-    if(this%insrb > 0) call this%srb%srb_ar(this%dis, this%sto, this%ibound,   &
+    if(this%inrct > 0) call this%rct%rct_ar(this%dis, this%sto, this%ibound,   &
                                             this%sto%porosity)
     if(this%inadv > 0) call this%adv%adv_ar(this%dis, this%ibound)
     if(this%indsp > 0) call this%dsp%dsp_ar(this%dis, this%ibound,             &
@@ -503,7 +501,7 @@ module GwtModule
     !if(this%insto > 0) call this%sto%sto_ad()
     if(this%indsp > 0) call this%dsp%dsp_ad()
     if(this%inssm > 0) call this%ssm%ssm_ad()
-    if(this%insrb > 0) call this%srb%srb_ad()
+    if(this%inrct > 0) call this%rct%rct_ad()
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_ad()
@@ -579,8 +577,8 @@ module GwtModule
       call this%sto%sto_fc(this%dis%nodes, this%xold, this%nja, njasln,        &
                            amatsln, this%idxglo, this%rhs)
     endif
-    if(this%insrb > 0) then
-      call this%srb%srb_fc(this%dis%nodes, this%xold, this%nja, njasln,        &
+    if(this%inrct > 0) then
+      call this%rct%rct_fc(this%dis%nodes, this%xold, this%nja, njasln,        &
                            amatsln, this%idxglo, this%rhs)
     endif
     if(this%inadv > 0) then
@@ -691,10 +689,10 @@ module GwtModule
     endif
     !
     ! -- Sorption budgets
-    if(this%insrb > 0) then
-      call this%srb%srb_bdcalc(this%dis%nodes, this%x, this%xold,              &
+    if(this%inrct > 0) then
+      call this%rct%rct_bdcalc(this%dis%nodes, this%x, this%xold,              &
                                isuppress_output, this%budget)
-      call this%srb%srb_bdsav(icbcfl, icbcun)
+      call this%rct%rct_bdsav(icbcfl, icbcun)
     endif
     !
     ! -- Advection and dispersion flowja
@@ -876,7 +874,7 @@ module GwtModule
     call this%ic%ic_da()
     call this%fmi%fmi_da()
     call this%sto%sto_da()
-    call this%srb%srb_da()
+    call this%rct%rct_da()
     call this%budget%budget_da()
     call this%oc%oc_da()
     call this%obs%obs_da()
@@ -885,7 +883,7 @@ module GwtModule
     deallocate(this%dis)
     deallocate(this%ic)
     deallocate(this%sto)
-    deallocate(this%srb)
+    deallocate(this%rct)
     deallocate(this%budget)
     deallocate(this%obs)
     deallocate(this%oc)
@@ -901,7 +899,7 @@ module GwtModule
     call mem_deallocate(this%inic)
     call mem_deallocate(this%infmi)
     call mem_deallocate(this%insto)
-    call mem_deallocate(this%insrb)
+    call mem_deallocate(this%inrct)
     call mem_deallocate(this%inadv)
     call mem_deallocate(this%indsp)
     call mem_deallocate(this%inssm)
@@ -963,7 +961,7 @@ module GwtModule
     call mem_allocate(this%inic , 'INIC',  modelname)
     call mem_allocate(this%infmi, 'INFMI', modelname)
     call mem_allocate(this%insto, 'INSTO', modelname)
-    call mem_allocate(this%insrb, 'INSRB', modelname)
+    call mem_allocate(this%inrct, 'INRCT', modelname)
     call mem_allocate(this%inadv, 'INADV', modelname)
     call mem_allocate(this%indsp, 'INDSP', modelname)
     call mem_allocate(this%inssm, 'INSSM', modelname)
@@ -975,7 +973,7 @@ module GwtModule
     this%inic  = 0
     this%infmi = 0
     this%insto = 0
-    this%insrb = 0
+    this%inrct = 0
     this%inadv = 0
     this%indsp = 0
     this%inssm = 0
@@ -1073,7 +1071,7 @@ module GwtModule
     integer(I4B) :: i, iu
     character(len=LENFTYPE), dimension(11) :: nodupftype =                     &
       (/'DIS6 ', 'DISU6', 'DISV6', 'IC6  ', 'STO6 ', 'ADV6 ', 'DSP6 ',         &
-        'SSM6 ', 'SRB6 ', 'OC6  ', 'OBS6 '/)
+        'SSM6 ', 'RCT6 ', 'OC6  ', 'OBS6 '/)
 ! ------------------------------------------------------------------------------
     !
     ! -- Check for IC6, DIS(u), and STO. Stop if not present.

@@ -3,15 +3,11 @@
 \item \textbf{Block: OPTIONS}
 
 \begin{description}
-\item \texttt{SAVE\_FLOWS}---keyword to indicate that SRB flow terms will be written to the file specified with ``BUDGET FILEOUT'' in Output Control.
+\item \texttt{SAVE\_FLOWS}---keyword to indicate that RCT flow terms will be written to the file specified with ``BUDGET FILEOUT'' in Output Control.
 
 \item \texttt{SORBTION}---keyword to active sorbtion
 
 \item \texttt{decayorder}---is a text keyword to indicate that first or zero-order decay will occur.  The text value for DECAYORDER can be ``ONE'' or ``ZERO''.
-
-\item \texttt{DUALDOMAIN}---keyword to indicate that dual domain mass transfer will be simulated.  If the initial concentrations for the immobile domain are not specified as CIM, then they will be assumbed to be zero.  The mass transfer rate ZETAIM and the immobile domain porosity THETAIM must be specified if DUALDOMAIN is on.
-
-\item \texttt{IMMOBILEDOMAINSORPTION}---If the IMMOBILEDOMAINSORPTION keyword is specified, then sorption will be represented in the immobile domain.
 
 \end{description}
 \item \textbf{Block: GRIDDATA}
@@ -24,12 +20,6 @@
 \item \texttt{rc1}---is the rate coefficient for first or zero-order reactions for the aqueous phase.  The dimensions of rc1 for a first-order reaction is one over time.  The dimensions of rc1 for a zero-order reaction is mass per length cubed per time.  rc1 will have no affect on simulation results unless the RATEORDER keyword is specified in the options block.
 
 \item \texttt{rc2}---is the rate coefficient for first or zero-order reactions for the sorbed phase.  The dimensions of rc2 for a first-order reaction is one over time.  The dimensions of rc2 for a zero-order reaction is mass of solute per mass of aquifer per time.  rc2 will have no affect on simulation results unless the SORPTION and RATEORDER keywords are specified in the options block.
-
-\item \texttt{cim}---initial concentration of the immobile domain in mass per length cubed.  If the DUALDOMAIN option is not specified, then values for CIM are ignored.
-
-\item \texttt{thetaim}---porosity of the immobile domain (dimensionless).  If the DUALDOMAIN option is not specified, then values for THETAIM are ignored.
-
-\item \texttt{zetaim}---mass transfer rate coefficient between the mobile and immobile domains, in dimenions of per time.  If the DUALDOMAIN option is not specified, then values for ZETAIM are ignored.
 
 \end{description}
 

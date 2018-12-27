@@ -15,11 +15,10 @@ module GwtImdModule
   !
   character(len=LENFTYPE)       :: ftype = 'IMD'
   character(len=LENPACKAGENAME) :: text  = ' IMMOBILE DOMAIN'
-  integer(I4B), parameter :: NBDITEMS = 7
+  integer(I4B), parameter :: NBDITEMS = 5
   character(len=LENBUDTXT), dimension(NBDITEMS) :: budtxt
-  data budtxt / '  STORAGE-LIQUID', '  STORAGE-SORBED', &
-                '1ST-DECAY-LIQUID', '1ST-DECAY-SORBED', &
-                '0TH-DECAY-LIQUID', '0TH-DECAY-SORBED', &
+  data budtxt / ' STORAGE-AQUEOUS', '  STORAGE-SORBED', &
+                '   DECAY-AQUEOUS', '    DECAY-SORBED', &
                 '   MOBILE-DOMAIN' /
   !
   type, extends(BndType) :: GwtImdType
@@ -367,7 +366,8 @@ module GwtImdModule
       !
     enddo
     !
-    ! -- Store the rates for the GWT model budget
+    ! -- Store the rates for the GWT model budget, which is the transfer
+    !    from the immobile domain to the mobile domain.
     call model_budget%addentry(ratin, ratout, delt, this%text,                 &
                                isuppress_output, this%name)
     !
@@ -876,7 +876,7 @@ module GwtImdModule
                            lambda1im, lambda2im, gamma1im, gamma2im,           &
                            this%zetaim(n), this%cim(n), cnew(n))
       !
-      ! -- calculate STORAGE-LIQUID
+      ! -- calculate STORAGE-AQUEOUS
       i = 1
       rate = - ddterm(1) * cimtpdt + ddterm(2) * cimt
       if (rate > DZERO) then
@@ -894,36 +894,31 @@ module GwtImdModule
         budterm(2, i) = budterm(2, i) - rate
       endif
       !
-      ! -- calculate 1ST-DECAY-LIQUID
+      ! -- calculate DECAY-AQUEOUS
       i = 3
-      rate = - ddterm(5) * cimtpdt
+      rate = DZERO
+      if (this%irorder == 1) then
+        rate = - ddterm(5) * cimtpdt
+      else if (this%irorder == 2) then
+        rate = - ddterm(7)
+      else
+        rate = DZERO
+      endif
       if (rate > DZERO) then
         budterm(1, i) = budterm(1, i) + rate
       else
         budterm(2, i) = budterm(2, i) - rate
       endif
       !
-      ! -- calculate 1ST-DECAY-SORBED
+      ! -- calculate DECAY-SORBED
       i = 4
-      rate = - ddterm(6) * cimtpdt
-      if (rate > DZERO) then
-        budterm(1, i) = budterm(1, i) + rate
+      if (this%irorder == 1) then
+        rate = - ddterm(6) * cimtpdt
+      else if (this%irorder == 2) then
+        rate = - ddterm(8)
       else
-        budterm(2, i) = budterm(2, i) - rate
+        rate = DZERO
       endif
-      !
-      ! -- calculate 0TH-DECAY-LIQUID
-      i = 5
-      rate = - ddterm(7)
-      if (rate > DZERO) then
-        budterm(1, i) = budterm(1, i) + rate
-      else
-        budterm(2, i) = budterm(2, i) - rate
-      endif
-      !
-      ! -- calculate 0TH-DECAY-SORBED
-      i = 6
-      rate = - ddterm(8)
       if (rate > DZERO) then
         budterm(1, i) = budterm(1, i) + rate
       else
@@ -931,7 +926,7 @@ module GwtImdModule
       endif
       !
       ! -- calculate MOBILE-DOMAIN
-      i = 7
+      i = 5
       rate = ddterm(9) * cnew(n) - ddterm(9) * cimtpdt
       if (rate > DZERO) then
         budterm(1, i) = budterm(1, i) + rate
