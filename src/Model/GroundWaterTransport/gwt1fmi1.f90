@@ -43,6 +43,7 @@ module GwtFmiModule
     procedure :: fmi_da
     procedure :: allocate_scalars
     procedure :: allocate_arrays
+    procedure :: gwfsatold
   
   end type GwtFmiType
 
@@ -86,7 +87,7 @@ module GwtFmiModule
     return
   end subroutine fmi_cr
 
-  subroutine fmi_ar(this, dis, ibound)
+  subroutine fmi_ar(this, dis, ibound, inssm)
 ! ******************************************************************************
 ! fmi_ar -- Allocate and Read
 ! ******************************************************************************
@@ -95,10 +96,12 @@ module GwtFmiModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_setptr
+    use SimModule,           only: ustop, store_error
     ! -- dummy
     class(GwtFmiType) :: this
     class(DisBaseType), pointer, intent(in) :: dis
     integer(I4B), dimension(:), pointer, contiguous :: ibound
+    integer(I4B), intent(in) :: inssm
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtfmi =                                    &
@@ -115,6 +118,15 @@ module GwtFmiModule
     !
     ! -- Allocate arrays
     call this%allocate_arrays(dis%nodes)
+    !
+    ! -- Make sure that ssm is on if there are any boundary packages
+    if (inssm == 0) then
+      if (this%gwfbndlist%Count() > 0) then
+        call store_error('ERROR: FLOW MODEL HAS BOUNDARY PACKAGES, BUT THERE &
+          &IS NO SSM PACAKGE.  THE SSM PACKAGE MUST BE ACTIVATED.')
+        call ustop()
+      endif
+    endif
     !
     ! -- Read storage options
     !call this%read_options()
@@ -422,5 +434,37 @@ module GwtFmiModule
     ! -- Return
     return
   end subroutine allocate_arrays
-
+  
+  function gwfsatold(this, n, delt) result(satold)
+! ******************************************************************************
+! gwfsatold -- calculate the groundwater cell head saturation for the end of
+!   the last time step
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwtFmiType) :: this
+    integer(I4B), intent(in) :: n
+    real(DP), intent(in) :: delt
+    ! -- result
+    real(DP) :: satold
+    ! -- local
+    real(DP) :: vcell
+    real(DP) :: vnew
+    real(DP) :: vold
+! ------------------------------------------------------------------------------
+    !
+    ! -- calculate the value
+    vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
+    vnew = vcell * this%gwfsat(n)
+    vold = vnew
+    if (this%igwfstrgss /= 0) vold = vold + this%gwfstrgss(n) * delt
+    if (this%igwfstrgsy /= 0) vold = vold + this%gwfstrgsy(n) * delt
+    satold = vold / vcell
+    !
+    ! -- Return
+    return
+  end function gwfsatold
 end module GwtFmiModule

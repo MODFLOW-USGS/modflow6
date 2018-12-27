@@ -1,7 +1,8 @@
 module GwtSsmModule
   
   use KindModule,             only: DP, I4B
-  use ConstantsModule,        only: DONE, DZERO, LENAUXNAME
+  use ConstantsModule,        only: DONE, DZERO, LENAUXNAME, LENFTYPE,         &
+                                    LENPACKAGENAME
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule,          only: DisBaseType
   use GwtFmiModule,           only: GwtFmiType
@@ -10,6 +11,9 @@ module GwtSsmModule
   implicit none
   public :: GwtSsmType
   public :: ssm_cr
+
+  character(len=LENFTYPE)       :: ftype = 'SSM'
+  character(len=LENPACKAGENAME) :: text  = ' SOURCE-SINK MIX'
 
   type, extends(NumericalPackageType) :: GwtSsmType
     
@@ -314,8 +318,7 @@ module GwtSsmModule
     enddo
     !
     ! -- Add contributions to model budget
-    call model_budget%addentry(rin, rout, delt, ' SOURCE-SINK MIX',            &
-                               isuppress_output)
+    call model_budget%addentry(rin, rout, delt, text, isuppress_output)
     !
     ! -- Return
     return
@@ -345,7 +348,6 @@ module GwtSsmModule
     integer(I4B), dimension(:), optional, intent(in) :: imap
     ! -- local
     class(BndType), pointer :: packobj
-    character (len=LENPACKAGENAME) :: text
     integer(I4B) :: ip
     integer(I4B) :: n
     integer(I4B) :: iauxpos
@@ -366,7 +368,6 @@ module GwtSsmModule
     !
     ! -- Initialize
     ibdlbl = 0
-    text = 'SSM'
     !
     ! -- Set unit number for binary output
     if (this%ipakcb < 0) then
@@ -518,8 +519,8 @@ module GwtSsmModule
     call this%NumericalPackageType%allocate_scalars()
     !
     ! -- Allocate
-    call mem_allocate(this%ncomp, 'NCOMP', this%name)
-    call mem_allocate(this%nbound, 'NBOUND', this%name)
+    call mem_allocate(this%ncomp, 'NCOMP', this%origin)
+    call mem_allocate(this%nbound, 'NBOUND', this%origin)
     !
     ! -- Initialize
     !

@@ -1,5 +1,5 @@
 """
-Test the GWT Sorption (SRB) Package by running a ...
+Test the GWT Sorption (RCT) Package by running a ...
 
 """
 import os
@@ -25,7 +25,7 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['srb01', 'srb02']
+ex = ['rct01', 'rct02']
 distcoef = [0., 1.]
 exdirs = []
 for s in ex:
@@ -177,16 +177,20 @@ def build_models():
         sto = flopy.mf6.ModflowGwtsto(gwt, porosity=sy,
                                      fname='{}.sto'.format(gwtname))
 
-        # storage
-        srb = flopy.mf6.ModflowGwtsrb(gwt, rhob=1., srconc=0.,
+        # sorbtion
+        rct = flopy.mf6.ModflowGwtrct(gwt, sorbtion=True, rhob=1.,
                                       distcoef=distcoef[idx],
-                                      fname='{}.srb'.format(gwtname))
+                                      fname='{}.rct'.format(gwtname))
 
         # mass loading source
         srcdict = {0: [[(0, 0, 0), 1.0]]}
         cnc = flopy.mf6.ModflowGwtsrc(gwt, stress_period_data=srcdict,
                                       save_flows=False,
                                       pname='SRC-1')
+
+        # sources
+        ssm = flopy.mf6.ModflowGwtssm(gwt, sources=[[]],
+                                      fname='{}.ssm'.format(gwtname))
 
         # output control
         oc = flopy.mf6.ModflowGwtoc(gwt,

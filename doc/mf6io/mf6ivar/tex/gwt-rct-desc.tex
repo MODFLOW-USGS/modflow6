@@ -1,0 +1,25 @@
+% DO NOT MODIFY THIS FILE DIRECTLY.  IT IS CREATED BY mf6ivar.py 
+
+\item \textbf{Block: OPTIONS}
+
+\begin{description}
+\item \texttt{SAVE\_FLOWS}---keyword to indicate that RCT flow terms will be written to the file specified with ``BUDGET FILEOUT'' in Output Control.
+
+\item \texttt{SORBTION}---keyword to active sorbtion
+
+\item \texttt{decayorder}---is a text keyword to indicate that first or zero-order decay will occur.  The text value for DECAYORDER can be ``ONE'' or ``ZERO''.
+
+\end{description}
+\item \textbf{Block: GRIDDATA}
+
+\begin{description}
+\item \texttt{rhob}---is the bulk density of the aquifer in mass per length cubed.  rhob will have no affect on simulation results unless the SORBTION keyword is specified in the options block.
+
+\item \texttt{distcoef}---is the distribution coefficient for the equilibrium-controlled linear sorption isotherm in dimensions of length cubed per mass.  distcoef will have no affect on simulation results unless the SORBTION keyword is specified in the options block.
+
+\item \texttt{rc1}---is the rate coefficient for first or zero-order reactions for the aqueous phase.  The dimensions of rc1 for a first-order reaction is one over time.  The dimensions of rc1 for a zero-order reaction is mass per length cubed per time.  rc1 will have no affect on simulation results unless the RATEORDER keyword is specified in the options block.
+
+\item \texttt{rc2}---is the rate coefficient for first or zero-order reactions for the sorbed phase.  The dimensions of rc2 for a first-order reaction is one over time.  The dimensions of rc2 for a zero-order reaction is mass of solute per mass of aquifer per time.  rc2 will have no affect on simulation results unless the SORPTION and RATEORDER keywords are specified in the options block.
+
+\end{description}
+

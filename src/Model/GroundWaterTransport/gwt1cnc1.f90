@@ -313,7 +313,7 @@ contains
           else
             chout = chout + q
           end if
-                  end do
+        end do
         !
         ! -- For cnc, store total flow in rhs so it is available for other 
         !    calculations
