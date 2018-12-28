@@ -1,5 +1,5 @@
 # MODFLOW 6 version file automatically created using...pre-commit.py
-# created on...December 28, 2018 12:47:06
+# created on...December 28, 2018 12:55:30
 
 # add some comments on how this version file
 # should be manually updated and used
