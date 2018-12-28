@@ -213,7 +213,7 @@ description REPLACE mover {'{#1}': 'SFR'}
 
 block options
 name maximum_iterations
-type double precision
+type integer
 reader urword
 optional true
 longname SFR Newton-Raphson iterations
