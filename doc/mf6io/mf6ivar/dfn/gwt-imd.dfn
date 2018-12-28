@@ -25,6 +25,125 @@ optional true
 longname order of the decay rate
 description is a text keyword to indicate that first or zero-order decay will occur.  The text value for DECAYORDER can be ``ONE'' or ``ZERO''.
 
+block options
+name cim_filerecord
+type record cim fileout cimfile
+shape
+reader urword
+tagged true
+optional true
+longname
+description
+
+block options
+name cim
+type keyword
+shape
+in_record true
+reader urword
+tagged true
+optional false
+longname cim keyword
+description keyword to specify that record corresponds to immobile concentration.
+
+block options
+name fileout
+type keyword
+shape
+in_record true
+reader urword
+tagged true
+optional false
+longname file keyword
+description keyword to specify that an output filename is expected next.
+
+block options
+name cimfile
+type string
+preserve_case true
+shape
+in_record true
+reader urword
+tagged false
+optional false
+longname file keyword
+description name of the output file to write immobile concentrations.
+
+block options
+name cimprintrecord
+type record cim print_format formatrecord
+shape
+reader urword
+optional true
+longname
+description
+
+block options
+name print_format
+type keyword
+shape
+in_record true
+reader urword
+tagged true
+optional false
+longname keyword to indicate that a print format follows
+description keyword to specify format for printing to the listing file.
+
+block options
+name formatrecord
+type record columns width digits format
+shape
+in_record true
+reader urword
+tagged
+optional false
+longname
+description
+
+block options
+name columns
+type integer
+shape
+in_record true
+reader urword
+tagged true
+optional
+longname number of columns
+description number of columns for writing data.
+
+block options
+name width
+type integer
+shape
+in_record true
+reader urword
+tagged true
+optional
+longname width for each number
+description width for writing each number.
+
+block options
+name digits
+type integer
+shape
+in_record true
+reader urword
+tagged true
+optional
+longname number of digits
+description number of digits to use for writing a number.
+
+block options
+name format
+type string
+shape
+in_record true
+reader urword
+tagged false
+optional false
+longname write format
+description write format can be EXPONENTIAL, FIXED, GENERAL, or SCIENTIFIC.
+
 # --------------------- gwt imd griddata ---------------------
 
 block griddata
