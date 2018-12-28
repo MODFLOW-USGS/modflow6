@@ -2,11 +2,12 @@ module GwtImdModule
 
   use KindModule,             only: DP, I4B
   use ConstantsModule,        only: DONE, DZERO, LENFTYPE, LENPACKAGENAME,     &
-                                    LENBUDTXT
+                                    LENBUDTXT, DHNOFLO
   use BndModule,              only: BndType
   use BudgetModule,           only: BudgetType
   use GwtFmiModule,           only: GwtFmiType
   use GwtStoModule,           only: GwtStoType
+  use OutputControlData,      only: OutputControlDataType
   !
   implicit none
   !
@@ -26,6 +27,7 @@ module GwtImdModule
     type(GwtFmiType), pointer                        :: fmi => null()           ! pointer to fmi object
     type(GwtStoType), pointer                        :: sto => null()           ! pointer to sto object
     
+    integer(I4B), pointer                            :: icimout => null()       ! unit number for binary cim output
     integer(I4B), pointer                            :: irorder => null()       ! order of reaction rate (0:none, 1:first, 2:zero)
     integer(I4B), pointer                            :: isrb => null()          ! sorbtion active flag (0:off, 1:on)
     real(DP), dimension(:), pointer, contiguous      :: cim => null()           ! concentration for immobile domain
@@ -38,6 +40,7 @@ module GwtImdModule
     real(DP), dimension(:), pointer, contiguous      :: strg => null()          ! mass transfer rate
     
     type(BudgetType), pointer                        :: budget => null()        ! budget object
+    type(OutputControlDataType), pointer             :: ocd => null()           ! output control object for cim
     
   contains
   
@@ -272,7 +275,7 @@ module GwtImdModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule, only: delt
+    use TdisModule, only: kstp, kper, nstp, delt
     use ConstantsModule, only: LENBOUNDNAME, DZERO
     use BudgetModule, only: BudgetType
     ! -- dummy
@@ -288,7 +291,7 @@ module GwtImdModule
     integer(I4B), dimension(:), optional, intent(in) :: imap
     integer(I4B), optional, intent(in) :: iadv
     ! -- local
-    integer(I4B) :: ibinun
+    integer(I4B) :: ibinun, ipflg
     real(DP) :: ratin, ratout
     integer(I4B) :: n
     real(DP) :: rate
@@ -384,6 +387,18 @@ module GwtImdModule
     ! -- update cim
     call this%calccim(this%cim, x)
     !
+    ! -- Save cim to a binary file. ibinun is a flag where 1 indicates that
+    !    cim should be written to a binary file if a binary file is open
+    !    for it.
+    ipflg = 0
+    ibinun = 1
+    if(idvfl == 0) ibinun = 0
+    if (isuppress_output /= 0) ibinun = 0
+    if (ibinun /= 0) then
+      call this%ocd%ocd_ot(ipflg, kstp, nstp(kper), this%iout,                 &
+                           iprint_opt=0, isav_opt=ibinun)
+    endif
+    !
     ! -- return
     return
   end subroutine imd_bd
@@ -395,15 +410,28 @@ module GwtImdModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- modules
+    use TdisModule, only: nstp
     ! -- dummy
     class(GwtImdType) :: this
-    integer(I4B),intent(in) :: kstp
-    integer(I4B),intent(in) :: kper
-    integer(I4B),intent(in) :: iout
-    integer(I4B),intent(in) :: ihedfl
-    integer(I4B),intent(in) :: ibudfl
+    integer(I4B), intent(in) :: kstp
+    integer(I4B), intent(in) :: kper
+    integer(I4B), intent(in) :: iout
+    integer(I4B), intent(in) :: ihedfl
+    integer(I4B), intent(in) :: ibudfl
+    ! -- local
+    integer(I4B) :: ipflg
     ! -- format
 ! ------------------------------------------------------------------------------
+    !
+    ! -- initialize
+    ipflg = 0
+    !
+    ! -- Print immobile domain concetrations to listing file
+    if (ihedfl /= 0) then
+      call this%ocd%ocd_ot(ipflg, kstp, nstp(kper), iout,                      &
+                           iprint_opt=ihedfl, isav_opt=0)
+    endif
     !
     ! -- Write budget to list file
     call this%budget%budget_ot(kstp, kper, iout)
@@ -421,6 +449,7 @@ module GwtImdModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr
+    use OutputControlData, only: ocd_cr
     ! -- dummy
     class(GwtImdType) :: this
     ! -- local
@@ -430,16 +459,21 @@ module GwtImdModule
     call this%BndType%allocate_scalars()
     !
     ! -- Allocate
+    call mem_allocate(this%icimout, 'ICIMOUT', this%origin)
     call mem_allocate(this%isrb, 'ISRB', this%origin)
     call mem_allocate(this%irorder, 'IRORDER', this%origin)
-    !call mem_allocate(this%bditems, 'BDITEMS', this%origin)
-    !call mem_allocate(this%nbdtxt, 'NBDTXT', this%origin)
     !
     ! -- Initialize
+    this%icimout = 0
     this%isrb = 0
     this%irorder = 0
-    !this%bditems = 5
-    !this%nbdtxt = 7
+    !
+    ! -- Create the ocd object, which is used to manage printing and saving
+    !    of the immobile domain concentrations
+    call ocd_cr(this%ocd)
+    call this%ocd%init_dbl('CIM', this%cim, this%dis, 'PRINT LAST ',           &
+                           'COLUMNS 10 WIDTH 11 DIGITS 4 GENERAL ',            &
+                            this%iout, DHNOFLO)
     !
     ! -- Return
     return
@@ -485,15 +519,9 @@ module GwtImdModule
       this%rc2(n) = DZERO
     enddo
     !
-    ! -- allocate and initialize character array for budget text
-    !allocate(this%bdtxt(this%nbdtxt))
-    !this%bdtxt(1) = '  STORAGE-LIQUID'
-    !this%bdtxt(2) = '  STORAGE-SORBED'
-    !this%bdtxt(3) = '1ST-DECAY-LIQUID'
-    !this%bdtxt(4) = '1ST-DECAY-SORBED'
-    !this%bdtxt(5) = '0TH-DECAY-LIQUID'
-    !this%bdtxt(6) = '0TH-DECAY-SORBED'
-    !this%bdtxt(7) = '   MOBILE-DOMAIN'
+    ! -- Now that cim is allocated, then set a pointer to it from ocd
+    this%ocd%dblvec => this%cim
+    this%ocd%dis => this%dis
     !
     ! -- return
     return
@@ -541,6 +569,9 @@ module GwtImdModule
           case ('SAVE_FLOWS')
             this%ipakcb = -1
             write(this%iout, fmtisvflow)
+          case('CIM')
+            call this%parser%GetRemainingLine(keyword2)
+            call this%ocd%set_option(keyword2, this%inunit, this%iout)
           case ('SORBTION')
             this%isrb = 1
             write(this%iout, fmtisrb)

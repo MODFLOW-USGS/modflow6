@@ -428,7 +428,7 @@
 | GWF | SFR | OPTIONS | OBS6 | KEYWORD | keyword to specify that record corresponds to an observations file. |
 | GWF | SFR | OPTIONS | OBS6_FILENAME | STRING | name of input file to define observations for the SFR package. See the ``Observation utility'' section for instructions for preparing observation input files. Table \ref{table:obstype} lists observation type(s) supported by the SFR package. |
 | GWF | SFR | OPTIONS | MOVER | KEYWORD | keyword to indicate that this instance of the SFR Package can be used with the Water Mover (MVR) Package.  When the MOVER option is specified, additional memory is allocated within the package to store the available, provided, and received water. |
-| GWF | SFR | OPTIONS | MAXIMUM_ITERATIONS | DOUBLE PRECISION | value that defines the maximum number of Streamflow Routing Newton-Raphson iterations allowed for a reach. By default, MAXSFRIT is equal to 100. |
+| GWF | SFR | OPTIONS | MAXIMUM_ITERATIONS | INTEGER | value that defines the maximum number of Streamflow Routing Newton-Raphson iterations allowed for a reach. By default, MAXSFRIT is equal to 100. |
 | GWF | SFR | OPTIONS | MAXIMUM_DEPTH_CHANGE | DOUBLE PRECISION | value that defines the depth closure tolerance. By default, DMAXCHG is equal to $1 \times 10^{-5}$. |
 | GWF | SFR | OPTIONS | UNIT_CONVERSION | DOUBLE PRECISION | value (or conversion factor) that is used in calculating stream depth for stream reach. A constant of 1.486 is used for flow units of cubic feet per second, and a constant of 1.0 is used for units of cubic meters per second. The constant must be multiplied by 86,400 when using time units of days in the simulation. |
 | GWF | SFR | DIMENSIONS | NREACHES | INTEGER | integer value specifying the number of stream reaches.  There must be NREACHES entries in the PACKAGEDATA block. |
@@ -750,6 +750,14 @@
 | GWT | IMD | OPTIONS | SAVE_FLOWS | KEYWORD | keyword to indicate that IMD flow terms will be written to the file specified with ``BUDGET FILEOUT'' in Output Control. |
 | GWT | IMD | OPTIONS | SORBTION | KEYWORD | keyword to active sorbtion |
 | GWT | IMD | OPTIONS | DECAYORDER | STRING | is a text keyword to indicate that first or zero-order decay will occur.  The text value for DECAYORDER can be ``ONE'' or ``ZERO''. |
+| GWT | IMD | OPTIONS | CIM | KEYWORD | keyword to specify that record corresponds to immobile concentration. |
+| GWT | IMD | OPTIONS | FILEOUT | KEYWORD | keyword to specify that an output filename is expected next. |
+| GWT | IMD | OPTIONS | CIMFILE | STRING | name of the output file to write immobile concentrations. |
+| GWT | IMD | OPTIONS | PRINT_FORMAT | KEYWORD | keyword to specify format for printing to the listing file. |
+| GWT | IMD | OPTIONS | COLUMNS | INTEGER | number of columns for writing data. |
+| GWT | IMD | OPTIONS | WIDTH | INTEGER | width for writing each number. |
+| GWT | IMD | OPTIONS | DIGITS | INTEGER | number of digits to use for writing a number. |
+| GWT | IMD | OPTIONS | FORMAT | STRING | write format can be EXPONENTIAL, FIXED, GENERAL, or SCIENTIFIC. |
 | GWT | IMD | GRIDDATA | CIM | DOUBLE PRECISION (NODES) | initial concentration of the immobile domain in mass per length cubed.  If CIM is not specified, then it is assumed to be zero. |
 | GWT | IMD | GRIDDATA | THETAIM | DOUBLE PRECISION (NODES) | porosity of the immobile domain (dimensionless). |
 | GWT | IMD | GRIDDATA | ZETAIM | DOUBLE PRECISION (NODES) | mass transfer rate coefficient between the mobile and immobile domains, in dimenions of per time. |

@@ -18,9 +18,9 @@
             "email": "langevin@usgs.gov"
         }, 
         "vcs": "git", 
-        "version": "6.0.3.149", 
+        "version": "6.0.3.156", 
         "date": {
-            "metadataLastUpdated": "2018-12-27"
+            "metadataLastUpdated": "2018-12-28"
         }, 
         "organization": "U.S. Geological Survey", 
         "permissions": {

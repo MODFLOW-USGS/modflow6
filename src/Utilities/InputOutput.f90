@@ -1868,6 +1868,9 @@ module InputOutputModule
     if (nwords < 1) then
       ermsg = 'Could not build PRINT_FORMAT from line' // trim(line)
       call store_error(trim(ermsg))
+      ermsg = 'Syntax is: COLUMNS <columns> WIDTH <width> DIGITS &
+              &<digits> <format>'
+      call store_error(trim(ermsg))
       call store_error_unit(inunit)
       call ustop()
     endif
@@ -1877,7 +1880,9 @@ module InputOutputModule
       if (.not. same_word(words(1), 'COLUMNS')) ierr = 1
       if (.not. same_word(words(3), 'WIDTH')) ierr = 1
       ! -- Read nvalues and nwidth
-      read(words(2), *, iostat=ierr) nvaluesp
+      if (ierr == 0) then
+        read(words(2), *, iostat=ierr) nvaluesp
+      endif
       if (ierr == 0) then
         read(words(4), *, iostat=ierr) nwidthp
       endif
@@ -1887,6 +1892,9 @@ module InputOutputModule
     if (ierr /= 0) then
       call store_error(ermsg)
       call store_error(line)
+      ermsg = 'Syntax is: COLUMNS <columns> WIDTH <width> &
+              &DIGITS <digits> <format>'
+      call store_error(trim(ermsg))
       call store_error_unit(inunit)
       call ustop()
     endif
@@ -1924,7 +1932,9 @@ module InputOutputModule
           editdesc = 'S'
           if (isint) ierr = 1
         case default
-          ermsg = 'Error in Output Control: Unrecognized option: ' // words(i)
+          ermsg = 'Error in format specification. Unrecognized option: ' // words(i)
+          call store_error(ermsg)
+          ermsg = 'Valid values are EXPONENTIAL, FIXED, GENERAL, or SCIENTIFIC.'
           call store_error(ermsg)
           call store_error_unit(inunit)
           call ustop()

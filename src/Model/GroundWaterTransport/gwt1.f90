@@ -688,7 +688,7 @@ module GwtModule
       call this%sto%sto_bdsav(icbcfl, icbcun)
     endif
     !
-    ! -- Sorption budgets
+    ! -- Reaction budgets
     if(this%inrct > 0) then
       call this%rct%rct_bdcalc(this%dis%nodes, this%x, this%xold,              &
                                isuppress_output, this%budget)
@@ -777,7 +777,7 @@ module GwtModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule,only:kstp, kper, endofperiod, tdis_ot
+    use TdisModule, only:kstp, kper, endofperiod, tdis_ot
     ! -- dummy
     class(GwtModelType) :: this
     ! -- local
@@ -823,7 +823,7 @@ module GwtModule
     call this%oc%oc_ot(ipflg)
     !
     ! -- Write Budget and Head if these conditions are met
-    if (ibudfl /= 0 .or. ihedfl /=0) then
+    if (ibudfl /= 0 .or. ihedfl /= 0) then
       ipflg = 1
       !
       ! -- Package budget output
