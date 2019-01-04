@@ -1,9 +1,32 @@
 ! todo
-  ! transient flow case
-  ! newton-raphson (head below bottom)
-  ! transport for SFR, LAK, MAW, UZF, MVR
+  ! velocity is incorrect for a triangular corner cell if two edges are on model perimeter
+  ! newton-raphson (head below bottom); more testing
+  ! transport when cells are dry (IBOUND=0)
+  ! sub timing; what to do about output control
+  ! systematic approach to testing
+  ! verify that idomain is working (can transport have a different idomain?)
+  ! check that discretization is the same between both models 
+  ! now that immobile domain is separate package, should sorbtion and decay be split?
+  ! move the fmi flow error term into the ssm package?
+  ! Add internal flows to the diagonal postion of the flowja array
+  ! gwt obs
+  ! adv obs
+  ! dsp obs
+  ! sto obs
+  ! rct obs
+  ! imd obs
+  ! ssm obs
+  ! src obs
+  ! cnc obs
+  ! variable density flow package
+  ! heat transport input
+  ! memory deallocation
+  ! code profiling
   ! GWF-GWF exchange transport
-  ! transport using saved flow budget files
+  ! transient flow case; verify that its working properly
+  ! transport-only (using saved flow budget files)
+  ! transport for SFR, LAK, MAW, UZF
+  ! What to do about MVR?  Should go into SSM.
   
 module GwtModule
 
@@ -21,7 +44,7 @@ module GwtModule
   use GwtStoModule,                only: GwtStoType
   use GwtRctModule,                only: GwtRctType
   use GwtOcModule,                 only: GwtOcType
-  use GwtObsModule,                only: GwtObsType, gwt_obs_cr
+  use GwtObsModule,                only: GwtObsType
   use BudgetModule,                only: BudgetType
   
   implicit none
@@ -51,7 +74,7 @@ module GwtModule
     integer(I4B),                   pointer :: inrct   => null()                ! unit number RCT
     integer(I4B),                   pointer :: inoc    => null()                ! unit number OC
     integer(I4B),                   pointer :: inobs   => null()                ! unit number OBS
-    integer,                        pointer :: ncomp => null()                  ! number of components
+    integer,                        pointer :: ncomp => null()                  ! number of components (always 1)
     
   contains
   
@@ -116,6 +139,7 @@ module GwtModule
     use GwtDspModule,               only: dsp_cr
     use GwtSsmModule,               only: ssm_cr
     use GwtOcModule,                only: oc_cr
+    use GwtObsModule,               only: obs_cr
     use BudgetModule,               only: budget_cr
     use NameFileModule,             only: NameFileType
     ! -- dummy
@@ -252,7 +276,7 @@ module GwtModule
     call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi)
     call rct_cr(this%rct, this%name, this%inrct, this%iout, this%fmi)
     call oc_cr(this%oc, this%name, this%inoc, this%iout)
-    call gwt_obs_cr(this%obs, this%inobs)
+    call obs_cr(this%obs, this%inobs)
     !
     ! -- Create stress packages
     ipakid = 1

@@ -11,12 +11,12 @@ module GwtObsModule
   implicit none
 
   private
-  public :: GwtObsType, gwt_obs_cr
+  public :: GwtObsType, obs_cr
 
   type, extends(ObsType) :: GwtObsType
     ! -- Private members
     type(GwtIcType), pointer, private                :: ic => null()            ! initial conditions
-    real(DP), pointer, dimension(:), private         :: x => null()             ! head
+    real(DP), pointer, dimension(:), private         :: x => null()             ! concentration
     real(DP), dimension(:), pointer, private         :: flowja => null()        ! intercell flows
   contains
     ! -- Public procedures
@@ -31,9 +31,9 @@ module GwtObsModule
 
 contains
 
-  subroutine gwt_obs_cr(obs, inobs)
+  subroutine obs_cr(obs, inobs)
 ! ******************************************************************************
-! gwt_obs_cr -- Create a new GwtObsType object
+! obs_cr -- Create a new GwtObsType object
 ! Subroutine: (1) creates object
 !             (2) allocates pointers
 !             (3) initializes values
@@ -53,7 +53,7 @@ contains
     obs%inUnitObs => inobs
     !
     return
-  end subroutine gwt_obs_cr
+  end subroutine obs_cr
 
   subroutine gwt_obs_ar(this, ic, x, flowja)
 ! ******************************************************************************
