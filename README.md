@@ -33,7 +33,6 @@ MODFLOW 6 is the latest core version of MODFLOW. It synthesizes many of the capa
 
 [Langevin, C.D., Hughes, J.D., Banta, E.R., Provost, A.M., Niswonger, R.G., and Panday, Sorab, 2019, MODFLOW 6 Modular Hydrologic Model version 6.0.3 &mdash; develop: U.S. Geological Survey Software Release, 07 January 2019, https://doi.org/10.5066/F76Q1VQV](https://doi.org/10.5066/F76Q1VQV)
 
-
 ## Instructions for building definition files for new packages
 
 Instructions for building definition files for new packages are summarized in [doc/mf6io/mf6ivar/readme.md](doc/mf6io/mf6ivar/readme.md).
