@@ -11,6 +11,7 @@ from collections import OrderedDict
 from hook_files import paths, files
 
 prod = 'MODFLOW 6'
+repo = 'MODFLOW-USGS/modflow6.git'
 
 approved = '''Disclaimer
 ----------
@@ -102,6 +103,14 @@ def get_disclaimerfmt(branch):
     
 
 def update_version():
+    """
+    Update the version number
+
+    Returns
+    -------
+    None
+
+    """
     try:
         vmajor = 0
         vminor = 0
@@ -218,19 +227,90 @@ def add_updated_files():
         print('Could not add updated files')
         sys.exit(1)
 
-def get_branch():
+def is_fork():
+    """
+    Determine if repository is a fork of the main repository
+
+    Returns
+    -------
+    fork : bool
+        Boolean indicating if repository is a fork of the main repository. If
+        remote named 'origin' is does not contain the main repository path then
+        it is assumed that the repository is a fork of the main repository.
+
+
+    """
+    fork = True
     try:
         # determine current buildstat branch
-        b = subprocess.Popen(("git", "status"),
+        b = subprocess.Popen(("git", "remote", "--verbose"),
                              stdout=subprocess.PIPE,
                              stderr=subprocess.STDOUT).communicate()[0]
         if isinstance(b, bytes):
             b = b.decode('utf-8')
 
-        # determine current buildstat branch
+        # determine if repository origin is the main repository
         for line in b.splitlines():
-            if 'On branch' in line:
-                branch = line.replace('On branch ', '').rstrip()
+            if 'origin' in line.lower():
+                if repo in line:
+                    fork = False
+    except:
+        pass
+
+    return fork
+
+def readme_lines():
+    """
+    Read all lines in README.md
+
+    Returns
+    -------
+    lines : list of strings
+        List containing all lines in README.md with line termination character
+        removed.
+
+    """
+    with open(files[2], 'r') as file:
+        lines = [line.rstrip() for line in file]
+    return lines
+
+def get_branch():
+    """
+    Get the branch name
+
+    Returns
+    -------
+    branch : str
+        Branch name. branch is None if README.md cannot be parsed, if a fork of
+        the main repository, or if git status does not return a string that can
+        be parsed.
+
+    """
+    fork = is_fork()
+    try:
+        if fork:
+            # read README.md into memory
+            lines = readme_lines()
+
+            # ### Version 6.0.3 develop &mdash;
+            for line in lines:
+                if '### Version' in line and ' &mdash;' in line:
+                    line = line.replace('### Version ', '')
+                    line = line.replace(' &mdash;', '')
+                    t = line.split()
+                    branch = t[1]
+        else:
+            # determine current buildstat branch
+            b = subprocess.Popen(("git", "status"),
+                                 stdout=subprocess.PIPE,
+                                 stderr=subprocess.STDOUT).communicate()[0]
+            if isinstance(b, bytes):
+                b = b.decode('utf-8')
+
+            # determine current buildstat branch
+            for line in b.splitlines():
+                if 'On branch' in line:
+                    branch = line.replace('On branch ', '').rstrip()
     except:
         branch = None
     
@@ -240,7 +320,9 @@ def get_branch():
 def update_mf6_version(vmajor, vminor, vmicro, vbuild):
     branch = get_branch()
     if branch is None:
-        print('Cannot update MODFLOW 6 version - could not determine current branch')
+        msg = 'Cannot update MODFLOW 6 version - ' + \
+              'could not determine current branch'
+        print(msg)
         return
         
     # create version
@@ -300,8 +382,7 @@ def update_readme_markdown(vmajor, vminor, vmicro, vbuild):
     disclaimer = get_disclaimer(branch)
 
     # read README.md into memory
-    with open(files[2], 'r') as file:
-        lines = [line.rstrip() for line in file]
+    lines = readme_lines()
 
     # rewrite README.md
     terminate = False
