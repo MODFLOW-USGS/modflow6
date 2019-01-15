@@ -77,7 +77,7 @@ module GwtSsmModule
     return
   end subroutine ssm_cr
 
-  subroutine ssm_df(this, ncomp)
+  subroutine ssm_df(this)
 ! ******************************************************************************
 ! ssm_df -- Allocate and Read
 ! ******************************************************************************
@@ -88,13 +88,12 @@ module GwtSsmModule
     use MemoryManagerModule, only: mem_setptr
     ! -- dummy
     class(GwtSsmType) :: this
-    integer, intent(in) :: ncomp
     ! -- local
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
     ! -- assign ncomp
-    this%ncomp = ncomp
+    this%ncomp = 1
     !
     ! -- Return
     return
@@ -132,11 +131,11 @@ module GwtSsmModule
     !
     ! -- Check to make sure that gwfbndlist is not null
     if (.not. associated(this%fmi%gwfbndlist)) then
-        write(errmsg, '(a)') '****ERROR. SSM PACKAGE DOES NOT HAVE &
-                             &BOUNDARY FLOWS.  ACTIVATE GWF-GWT EXCHANGE.'
-        call store_error(errmsg)
-        call this%parser%StoreErrorUnit()
-        call ustop()
+      write(errmsg, '(a)') '****ERROR. SSM PACKAGE DOES NOT HAVE &
+                            &BOUNDARY FLOWS.  ACTIVATE GWF-GWT EXCHANGE.'
+      call store_error(errmsg)
+      call this%parser%StoreErrorUnit()
+      call ustop()
     endif
     !
     ! -- Allocate arrays

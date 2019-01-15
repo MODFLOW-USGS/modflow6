@@ -8,7 +8,8 @@
   ! check that discretization is the same between both models 
   ! now that immobile domain is separate package, should sorbtion and decay be split?
   ! move the fmi flow error term into the ssm package?
-  ! Add internal flows to the diagonal postion of the flowja array
+  ! Add internal GWF flows to the diagonal postion of the flowja array
+  ! Write CQ transport routine and add internal GWT flows to flowja array
   ! gwt obs
   ! adv obs
   ! dsp obs
@@ -23,10 +24,11 @@
   ! memory deallocation
   ! code profiling
   ! GWF-GWF exchange transport
-  ! transient flow case; verify that its working properly
+  ! transient flow case; verify that its working properly, test with goode 1990
   ! transport-only (using saved flow budget files)
   ! transport for SFR, LAK, MAW, UZF
   ! What to do about MVR?  Should go into SSM.
+  ! implement steady-state transport (affects STO, RCT, IMD)
   
 module GwtModule
 
@@ -42,6 +44,7 @@ module GwtModule
   use GwtDspModule,                only: GwtDspType
   use GwtSsmModule,                only: GwtSsmType
   use GwtStoModule,                only: GwtStoType
+  use GwtDcyModule,                only: GwtDcyType
   use GwtRctModule,                only: GwtRctType
   use GwtOcModule,                 only: GwtOcType
   use GwtObsModule,                only: GwtObsType
@@ -58,7 +61,8 @@ module GwtModule
     type(GwtIcType),                pointer :: ic      => null()                ! initial conditions package
     type(GwtFmiType),               pointer :: fmi     => null()                ! flow model interface
     type(GwtStoType),               pointer :: sto     => null()                ! storage package
-    type(GwtRctType),               pointer :: rct     => null()                ! sorption package
+    type(GwtDcyType),               pointer :: dcy     => null()                ! decay package
+    type(GwtRctType),               pointer :: rct     => null()                ! reactions package
     type(GwtAdvType),               pointer :: adv     => null()                ! advection package
     type(GwtDspType),               pointer :: dsp     => null()                ! dispersion package
     type(GwtSsmType),               pointer :: ssm     => null()                ! source sink mixing package
@@ -71,10 +75,10 @@ module GwtModule
     integer(I4B),                   pointer :: inadv   => null()                ! unit number ADV
     integer(I4B),                   pointer :: indsp   => null()                ! unit number DSP
     integer(I4B),                   pointer :: inssm   => null()                ! unit number SSM
+    integer(I4B),                   pointer :: indcy   => null()                ! unit number DCY
     integer(I4B),                   pointer :: inrct   => null()                ! unit number RCT
     integer(I4B),                   pointer :: inoc    => null()                ! unit number OC
     integer(I4B),                   pointer :: inobs   => null()                ! unit number OBS
-    integer,                        pointer :: ncomp => null()                  ! number of components (always 1)
     
   contains
   
@@ -106,7 +110,7 @@ module GwtModule
   data cunit/   'DIS6 ', 'DISV6', 'DISU6', 'IC6  ', 'STO6 ', & !  5
                 'ADV6 ', 'DSP6 ', 'SSM6 ', 'RCT6 ', 'CNC6 ', & ! 10
                 'OC6  ', 'OBS6 ', 'FMI6 ', 'SRC6 ', 'IMD6 ', & ! 15
-                '     ', '     ', '     ', '     ', '     ', & ! 20
+                '     ', 'DCY6 ', '     ', '     ', '     ', & ! 20
                 80 * '     '/
   
   contains
@@ -134,6 +138,7 @@ module GwtModule
     use GwtIcModule,                only: ic_cr
     use GwtFmiModule,               only: fmi_cr
     use GwtStoModule,               only: sto_cr
+    use GwtDcyModule,               only: dcy_cr
     use GwtRctModule,               only: rct_cr
     use GwtAdvModule,               only: adv_cr
     use GwtDspModule,               only: dsp_cr
@@ -248,6 +253,7 @@ module GwtModule
     call namefile_obj%get_unitnumber('ADV6', this%inadv, 1)
     call namefile_obj%get_unitnumber('DSP6', this%indsp, 1)
     call namefile_obj%get_unitnumber('SSM6', this%inssm, 1)
+    call namefile_obj%get_unitnumber('DCY6', this%indcy, 1)
     call namefile_obj%get_unitnumber('RCT6', this%inrct, 1)
     call namefile_obj%get_unitnumber('OC6',  this%inoc, 1)
     call namefile_obj%get_unitnumber('OBS6', this%inobs, 1)
@@ -274,6 +280,7 @@ module GwtModule
     call adv_cr(this%adv, this%name, this%inadv, this%iout, this%fmi)
     call dsp_cr(this%dsp, this%name, this%indsp, this%iout, this%fmi)
     call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi)
+    call dcy_cr(this%dcy, this%name, this%indcy, this%iout, this%fmi)
     call rct_cr(this%rct, this%name, this%inrct, this%iout, this%fmi)
     call oc_cr(this%oc, this%name, this%inoc, this%iout)
     call obs_cr(this%obs, this%inobs)
@@ -316,7 +323,7 @@ module GwtModule
     ! -- Define packages and utility objects
     call this%dis%dis_df()
     if (this%indsp > 0) call this%dsp%dsp_df()
-    call this%ssm%ssm_df(this%ncomp)
+    call this%ssm%ssm_df()
     call this%oc%oc_df()
     call this%budget%budget_df(niunit, 'MASS', 'M')
     !
@@ -431,8 +438,8 @@ module GwtModule
     if(this%inic  > 0) call this%ic%ic_ar(this%x)
     if(this%infmi > 0) call this%fmi%fmi_ar(this%dis, this%ibound,this%inssm)
     if(this%insto > 0) call this%sto%sto_ar(this%dis, this%ibound)
-    if(this%inrct > 0) call this%rct%rct_ar(this%dis, this%sto, this%ibound,   &
-                                            this%sto%porosity)
+    if(this%indcy > 0) call this%dcy%dcy_ar(this%dis, this%sto, this%ibound)
+    if(this%inrct > 0) call this%rct%rct_ar(this%dis, this%sto, this%ibound)
     if(this%inadv > 0) call this%adv%adv_ar(this%dis, this%ibound)
     if(this%indsp > 0) call this%dsp%dsp_ar(this%dis, this%ibound,             &
                                             this%sto%porosity)
@@ -525,6 +532,7 @@ module GwtModule
     !if(this%insto > 0) call this%sto%sto_ad()
     if(this%indsp > 0) call this%dsp%dsp_ad()
     if(this%inssm > 0) call this%ssm%ssm_ad()
+    if(this%indcy > 0) call this%dcy%dcy_ad()
     if(this%inrct > 0) call this%rct%rct_ad()
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
@@ -599,6 +607,10 @@ module GwtModule
     endif
     if(this%insto > 0) then
       call this%sto%sto_fc(this%dis%nodes, this%xold, this%nja, njasln,        &
+                           amatsln, this%idxglo, this%rhs)
+    endif
+    if(this%indcy > 0) then
+      call this%dcy%dcy_fc(this%dis%nodes, this%xold, this%nja, njasln,        &
                            amatsln, this%idxglo, this%rhs)
     endif
     if(this%inrct > 0) then
@@ -710,6 +722,13 @@ module GwtModule
       call this%sto%sto_bdcalc(this%dis%nodes, this%x, this%xold,              &
                                isuppress_output, this%budget)
       call this%sto%sto_bdsav(icbcfl, icbcun)
+    endif
+    !
+    ! -- Decay budget
+    if(this%indcy > 0) then
+      call this%dcy%dcy_bdcalc(this%dis%nodes, this%x, this%xold,              &
+                               isuppress_output, this%budget)
+      call this%dcy%dcy_bdsav(icbcfl, icbcun)
     endif
     !
     ! -- Reaction budgets
@@ -898,6 +917,7 @@ module GwtModule
     call this%ic%ic_da()
     call this%fmi%fmi_da()
     call this%sto%sto_da()
+    call this%dcy%dcy_da()
     call this%rct%rct_da()
     call this%budget%budget_da()
     call this%oc%oc_da()
@@ -907,6 +927,7 @@ module GwtModule
     deallocate(this%dis)
     deallocate(this%ic)
     deallocate(this%sto)
+    deallocate(this%dcy)
     deallocate(this%rct)
     deallocate(this%budget)
     deallocate(this%obs)
@@ -923,14 +944,13 @@ module GwtModule
     call mem_deallocate(this%inic)
     call mem_deallocate(this%infmi)
     call mem_deallocate(this%insto)
-    call mem_deallocate(this%inrct)
     call mem_deallocate(this%inadv)
     call mem_deallocate(this%indsp)
     call mem_deallocate(this%inssm)
+    call mem_deallocate(this%indcy)
     call mem_deallocate(this%inrct)
     call mem_deallocate(this%inoc)
     call mem_deallocate(this%inobs)
-    call mem_deallocate(this%ncomp)
     !
     ! -- NumericalModelType
     call this%NumericalModelType%model_da()
@@ -985,26 +1005,24 @@ module GwtModule
     call mem_allocate(this%inic , 'INIC',  modelname)
     call mem_allocate(this%infmi, 'INFMI', modelname)
     call mem_allocate(this%insto, 'INSTO', modelname)
+    call mem_allocate(this%indcy, 'INDCY', modelname)
     call mem_allocate(this%inrct, 'INRCT', modelname)
     call mem_allocate(this%inadv, 'INADV', modelname)
     call mem_allocate(this%indsp, 'INDSP', modelname)
     call mem_allocate(this%inssm, 'INSSM', modelname)
-    call mem_allocate(this%inrct, 'INRCT', modelname)
     call mem_allocate(this%inoc,  'INOC ', modelname)
     call mem_allocate(this%inobs, 'INOBS', modelname)
-    call mem_allocate(this%ncomp, 'NCOMP', modelname)
     !
     this%inic  = 0
     this%infmi = 0
     this%insto = 0
-    this%inrct = 0
     this%inadv = 0
     this%indsp = 0
     this%inssm = 0
+    this%indcy = 0
     this%inrct = 0
     this%inoc  = 0
     this%inobs = 0
-    this%ncomp = 1
     !
     ! -- return
     return
@@ -1093,9 +1111,9 @@ module GwtModule
     ! -- local
     character(len=LINELENGTH) :: errmsg
     integer(I4B) :: i, iu
-    character(len=LENFTYPE), dimension(11) :: nodupftype =                     &
+    character(len=LENFTYPE), dimension(12) :: nodupftype =                     &
       (/'DIS6 ', 'DISU6', 'DISV6', 'IC6  ', 'STO6 ', 'ADV6 ', 'DSP6 ',         &
-        'SSM6 ', 'RCT6 ', 'OC6  ', 'OBS6 '/)
+        'SSM6 ', 'DCY6 ', 'RCT6 ', 'OC6  ', 'OBS6 '/)
 ! ------------------------------------------------------------------------------
     !
     ! -- Check for IC6, DIS(u), and STO. Stop if not present.
@@ -1149,6 +1167,5 @@ module GwtModule
     return
   end function get_nsubtimes
 
-  
   
 end module GwtModule
