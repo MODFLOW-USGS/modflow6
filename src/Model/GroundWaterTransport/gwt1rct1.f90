@@ -6,7 +6,7 @@ module GwtRctModule
   use BaseDisModule,          only: DisBaseType
   use GwtFmiModule,           only: GwtFmiType
   use GwtStoModule,           only: GwtStoType
-  use BudgetModule,           only : BudgetType
+  use BudgetModule,           only: BudgetType
   
   implicit none
   public :: GwtRctType
@@ -90,7 +90,7 @@ module GwtRctModule
     return
   end subroutine rct_cr
 
-  subroutine rct_ar(this, dis, sto, ibound, porosity)
+  subroutine rct_ar(this, dis, sto, ibound)
 ! ******************************************************************************
 ! rct_ar -- Allocate and Read
 ! ******************************************************************************
@@ -103,11 +103,10 @@ module GwtRctModule
     class(DisBaseType), pointer, intent(in) :: dis
     type(GwtStoType), pointer, intent(in) :: sto
     integer(I4B), dimension(:), pointer, contiguous :: ibound
-    real(DP), dimension(:), pointer, contiguous :: porosity
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtsrb =                                    &
-      "(1x,/1x,'SRB -- SORPTION PACKAGE, VERSION 1, 10/01/2018',               &
+      "(1x,/1x,'SRB -- SORBTION PACKAGE, VERSION 1, 10/01/2018',               &
       &' INPUT READ FROM UNIT ', i0, //)"
 ! ------------------------------------------------------------------------------
     !
@@ -118,7 +117,7 @@ module GwtRctModule
     this%dis => dis
     this%sto => sto
     this%ibound => ibound
-    this%porosity => porosity
+    this%porosity => sto%porosity
     !
     ! -- Allocate arrays
     call this%allocate_arrays()

@@ -108,6 +108,7 @@
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1adv1.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1cnc1.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1dcy1.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1dsp.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1fmi1.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1ic1.f90"/>

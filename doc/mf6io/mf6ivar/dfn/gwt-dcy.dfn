@@ -1,0 +1,30 @@
+# --------------------- gwt dcy options ---------------------
+
+block options
+name save_flows
+type keyword
+reader urword
+optional true
+longname save calculated flows to budget file
+description REPLACE save_flows {'{#1}': 'DCY'}
+
+block options
+name zero_order
+type string
+valid one zero
+reader urword
+optional true
+longname activate zero order decay
+description is a text keyword to indicate that zero-order decay will occur.  If not specified first-order decay will be active.
+
+# --------------------- gwt dcy griddata ---------------------
+
+block griddata
+name rc
+type double precision
+shape (nodes)
+reader readarray
+layered true
+longname decay rate coefficient
+description is the rate coefficient for first or zero-order reactions for the aqueous phase.  The dimensions of rc for a first-order reaction is one over time.  The dimensions of rc for a zero-order reaction (if ZERO_ORDER keyword option is used) is mass per length cubed per time.
+
