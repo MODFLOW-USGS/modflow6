@@ -286,13 +286,13 @@ def p01mf6(model_ws, al, retardation, lambda1, mixelm,
 
     dcy = flopy.mf6.ModflowGwtdcy(gwt, rc=lambda1)
 
-    rct = flopy.mf6.ModflowGwtrct(gwt, sorbtion=True, decayorder='one',
-                                  rhob=rhob, distcoef=kd,
-                                  rc1=0., rc2=lambda1,
-                                  fname='{}.rct'.format(gwtname))
+    srb = flopy.mf6.ModflowGwtsrb(gwt, rhob=rhob, distcoef=kd,
+                                  first_order_decay=True, rc=lambda1,
+                                  fname='{}.srb'.format(gwtname))
 
     if zeta is not None:
-        imd = flopy.mf6.ModflowGwtimd(gwt, sorbtion=True, decayorder='one',
+        imd = flopy.mf6.ModflowGwtimd(gwt, sorbtion=True,
+                                      first_order_decay=True,
                                       rhob=rhob, distcoef=kd,
                                       rc1=lambda1, rc2=lambda1,
                                       zetaim=zeta, thetaim=prsity2,

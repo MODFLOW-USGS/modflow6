@@ -6,6 +6,7 @@ BEGIN PACKAGES
   DIS6       transport.dis
   IC6        transport.ic
   STO6       transport.sto
+  DCY6       transport.dcy
   SRB6       transport.srb
   ADV6       transport.adv
   DSP6       transport.dsp
@@ -15,6 +16,8 @@ BEGIN PACKAGES
   SRC6       transport01.src LAY1
   SRC6       transport02.src LAY2
   SRC6       transport03.src LAY3
+  IMD6       transport01.imd CLAY
+  IMD6       transport01.imd SILT
   OC6        transport.oc
 END PACKAGES
 

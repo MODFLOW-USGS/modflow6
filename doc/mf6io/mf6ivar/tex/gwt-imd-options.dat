@@ -1,7 +1,8 @@
 BEGIN OPTIONS
   [SAVE_FLOWS]
   [SORBTION]
-  [DECAYORDER <decayorder>]
+  [FIRST_ORDER_DECAY]
+  [ZERO_ORDER_DECAY]
   [CIM FILEOUT <cimfile>]
   [CIM PRINT_FORMAT COLUMNS <columns> WIDTH <width> DIGITS <digits> <format>]
 END OPTIONS

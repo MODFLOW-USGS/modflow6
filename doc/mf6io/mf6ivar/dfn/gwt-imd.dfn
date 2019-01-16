@@ -17,13 +17,20 @@ longname sorbtion keyword
 description keyword to active sorbtion
 
 block options
-name decayorder
-type string
-valid one zero
+name first_order_decay
+type keyword
 reader urword
 optional true
-longname order of the decay rate
-description is a text keyword to indicate that first or zero-order decay will occur.  The text value for DECAYORDER can be ``ONE'' or ``ZERO''.
+longname activate first-order decay
+description is a text keyword to indicate that first-order decay will occur for dissolved and sorbed solute mass in the immobile domain.  If first-order decay is specified, then the RC1 and RC2 variables must be specified in the GRIDDATA block.
+
+block options
+name zero_order_decay
+type keyword
+reader urword
+optional true
+longname activate zero-order decay
+description is a text keyword to indicate that zero-order decay will occur for dissolved and sorbed solute mass in the immobile domain. If zero-order decay is specified, then the RC1 and RC2 variables must be specified in the GRIDDATA block.
 
 block options
 name cim_filerecord
@@ -199,7 +206,7 @@ shape (nodes)
 reader readarray
 layered true
 longname first rate coefficient
-description is the rate coefficient for first or zero-order decay for the aqueous phase.  A negative value indicates solute production.  The dimensions of rc1 for a first-order reaction is one over time.  The dimensions of rc1 for a zero-order reaction is mass per length cubed per time.  rc1 will have no affect on simulation results unless the DECAYORDER keyword is specified in the options block.
+description is the rate coefficient for first or zero-order decay for the aqueous phase of the immobile domain.  A negative value indicates solute production.  The dimensions of rc1 for first-order decay is one over time.  The dimensions of rc1 for zero-order decay is mass per length cubed per time.  rc1 will have no affect on simulation results unless either first- or zero-order decay is specified in the options block.
 
 block griddata
 name rc2
@@ -208,4 +215,4 @@ shape (nodes)
 reader readarray
 layered true
 longname second rate coefficient
-description is the rate coefficient for first or zero-order decay for the sorbed phase.  A negative value indicates solute production.  The dimensions of rc2 for a first-order reaction is one over time.  The dimensions of rc2 for a zero-order reaction is mass of solute per mass of aquifer per time.  rc2 will have no affect on simulation results unless the SORPTION and DECAYORDER keywords are specified in the options block.
+description is the rate coefficient for first or zero-order decay for the sorbed phase of the immobile domain.  A negative value indicates solute production.  The dimensions of rc2 for first-order decay is one over time.  The dimensions of rc2 for zero-order decay is mass of solute per mass of aquifer per time.  rc2 will have no affect on simulation results unless the SORPTION keyword and either first- or zero-order decay are specified in the options block.

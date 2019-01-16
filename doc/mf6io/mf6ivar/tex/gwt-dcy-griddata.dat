@@ -1,0 +1,4 @@
+BEGIN GRIDDATA
+  RC [LAYERED]
+    <rc(nodes)> -- READARRAY
+END GRIDDATA

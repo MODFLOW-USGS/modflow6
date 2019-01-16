@@ -1,3 +1,4 @@
 BEGIN SOURCES
-  WEL-1, 1, CONCENTRATION
+# pname component       auxname
+  WEL-1         1 CONCENTRATION
 END SOURCES
