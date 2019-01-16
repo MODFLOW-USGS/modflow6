@@ -1,0 +1,54 @@
+# --------------------- gwt srb options ---------------------
+
+block options
+name save_flows
+type keyword
+reader urword
+optional true
+longname save calculated flows to budget file
+description REPLACE save_flows {'{#1}': 'SRB'}
+
+block options
+name first_order_decay
+type keyword
+reader urword
+optional true
+longname activate first-order decay
+description is a text keyword to indicate that first-order decay will occur for sorbed solute mass.  If FIRST_ORDER_DECAY is specified, then the RC variable must be specified in the GRIDDATA block.
+
+block options
+name zero_order_decay
+type keyword
+reader urword
+optional true
+longname activate zero-order decay
+description is a text keyword to indicate that zero-order decay will occur for sorbed solute mass. If ZERO_ORDER_DECAY is specified, then the RC variable must be specified in the GRIDDATA block.
+
+# --------------------- gwt srb griddata ---------------------
+
+block griddata
+name rhob
+type double precision
+shape (nodes)
+reader readarray
+layered true
+longname bulk density
+description is the bulk density of the aquifer in mass per length cubed.
+
+block griddata
+name distcoef
+type double precision
+shape (nodes)
+reader readarray
+layered true
+longname distribution coefficient
+description is the distribution coefficient for the equilibrium-controlled linear sorption isotherm in dimensions of length cubed per mass.
+
+block griddata
+name rc
+type double precision
+shape (nodes)
+reader readarray
+layered true
+longname decay rate coefficient
+description is the rate coefficient for first or zero-order decay for the sorbed phase.  The dimensions of rc for first-order decay is one over time.  The dimensions of rc for zero-order decay is mass of solute per mass of aquifer per time.

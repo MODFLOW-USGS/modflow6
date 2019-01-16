@@ -28,7 +28,7 @@ module GwtImdModule
     type(GwtStoType), pointer                        :: sto => null()           ! pointer to sto object
     
     integer(I4B), pointer                            :: icimout => null()       ! unit number for binary cim output
-    integer(I4B), pointer                            :: irorder => null()       ! order of reaction rate (0:none, 1:first, 2:zero)
+    integer(I4B), pointer                            :: irorder => null()       ! order of decay rate (0:none, 1:first, 2:zero)
     integer(I4B), pointer                            :: isrb => null()          ! sorbtion active flag (0:off, 1:on)
     real(DP), dimension(:), pointer, contiguous      :: cim => null()           ! concentration for immobile domain
     real(DP), dimension(:), pointer, contiguous      :: zetaim => null()        ! mass transfer rate to immobile domain
@@ -223,7 +223,7 @@ module GwtImdModule
     ! -- set variables
     tled = DONE / delt
     !
-    ! -- loop through and calculate sorption contribution to hcof and rhs
+    ! -- loop through and calculate immobile domain contribution to hcof and rhs
     do n = 1, this%dis%nodes
       !
       ! -- skip if transport inactive
@@ -327,7 +327,7 @@ module GwtImdModule
     ! -- Reset budget object for this immobile domain package
     call this%budget%reset()
     !
-    ! -- Calculate sorption change
+    ! -- Calculate immobile domain rhs and hcof
     do n = 1, this%dis%nodes
       !
       ! -- skip if transport inactive
@@ -502,10 +502,20 @@ module GwtImdModule
     call mem_allocate(this%cim, this%dis%nodes, 'CIM', this%origin)
     call mem_allocate(this%zetaim, this%dis%nodes, 'ZETAIM', this%origin)
     call mem_allocate(this%thetaim, this%dis%nodes, 'THETAIM', this%origin)
-    call mem_allocate(this%rhob, this%dis%nodes, 'RHOB', this%origin)
-    call mem_allocate(this%distcoef,  this%dis%nodes, 'DISTCOEF', this%origin)
-    call mem_allocate(this%rc1, this%dis%nodes, 'RC1', this%origin)
-    call mem_allocate(this%rc2, this%dis%nodes, 'RC2', this%origin)
+    if (this%isrb == 0) then
+      call mem_allocate(this%rhob, 1, 'RHOB', this%origin)
+      call mem_allocate(this%distcoef,  1, 'DISTCOEF', this%origin)
+    else
+      call mem_allocate(this%rhob, this%dis%nodes, 'RHOB', this%origin)
+      call mem_allocate(this%distcoef,  this%dis%nodes, 'DISTCOEF', this%origin)
+    endif
+    if (this%irorder == 0) then
+      call mem_allocate(this%rc1, 1, 'RC1', this%origin)
+      call mem_allocate(this%rc2, 1, 'RC2', this%origin)
+    else
+      call mem_allocate(this%rc1, this%dis%nodes, 'RC1', this%origin)
+      call mem_allocate(this%rc2, this%dis%nodes, 'RC2', this%origin)
+    endif
     !
     ! -- initialize
     do n = 1, this%dis%nodes
@@ -513,10 +523,6 @@ module GwtImdModule
       this%cim(n) = DZERO
       this%zetaim(n) = DZERO
       this%thetaim(n) = DZERO
-      this%rhob(n) = DZERO
-      this%distcoef(n) = DZERO
-      this%rc1(n) = DZERO
-      this%rc2(n) = DZERO
     enddo
     !
     ! -- Now that cim is allocated, then set a pointer to it from ocd
@@ -550,9 +556,9 @@ module GwtImdModule
     character(len=*), parameter :: fmtisrb =                                   &
       "(4x,'LINEAR SORBTION IS SELECTED. ')"
     character(len=*), parameter :: fmtirorder1 =                               &
-      "(4x,'FIRST ORDER REACTION IS ACTIVE. ')"
+      "(4x,'FIRST-ORDER DECAY IS ACTIVE. ')"
     character(len=*), parameter :: fmtirorder2 =                               &
-      "(4x,'ZERO ORDER REACTION IS ACTIVE. ')"
+      "(4x,'ZERO-ORDER DECAY IS ACTIVE. ')"
 ! ------------------------------------------------------------------------------
     !
     ! -- get options block
@@ -575,25 +581,12 @@ module GwtImdModule
           case ('SORBTION')
             this%isrb = 1
             write(this%iout, fmtisrb)
-          case ('DECAYORDER')
-            this%isrb = 1
-            call this%parser%GetStringCaps(keyword2)
-            select case(keyword2)
-              case('ONE')
-                this%irorder = 1
-                write(this%iout, fmtirorder1)
-              case('ZERO')
-                this%irorder = 2
-                write(this%iout, fmtirorder2)
-              case default
-                write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN DECAYORDER OPTION: ',         &
-                                         trim(keyword2)
-                call store_error(errmsg)
-                write(errmsg,'(4x,a)')'VALID OPTIONS FOR DECAYORDER ARE "ZERO" AND "ONE"'
-                call store_error(errmsg)
-                call this%parser%StoreErrorUnit()
-                call ustop()
-            end select
+          case ('FIRST_ORDER_DECAY')
+            this%irorder = 1
+            write(this%iout, fmtirorder1)
+          case ('ZERO_ORDER_DECAY')
+            this%irorder = 2
+            write(this%iout, fmtirorder2)
           case default
             write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN IMD OPTION: ',         &
                                      trim(keyword)
@@ -655,29 +648,33 @@ module GwtImdModule
         lloc = 1
         select case (keyword)
           case ('RHOB')
-            !call mem_reallocate(this%rhob, this%dis%nodes, 'RHOB',             &
-            !                  trim(this%origin))
+            if (this%isrb == 0) &
+              call mem_reallocate(this%rhob, this%dis%nodes, 'RHOB',           &
+                                trim(this%origin))
             call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,&
                                          this%parser%iuactive, this%rhob,      &
                                          aname(1))
             lname(1) = .true.
           case ('DISTCOEF')
-            !call mem_reallocate(this%distcoef, this%dis%nodes, 'DISTCOEF',     &
-            !                  trim(this%origin))
+            if (this%isrb == 0) &
+              call mem_reallocate(this%distcoef, this%dis%nodes, 'DISTCOEF',   &
+                                trim(this%origin))
             call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,&
                                          this%parser%iuactive, this%distcoef,  &
                                          aname(2))
             lname(2) = .true.
           case ('RC1')
-            !call mem_reallocate(this%rc1, this%dis%nodes, 'RC1',               &
-            !                  trim(this%origin))
+            if (this%irorder == 0) &
+              call mem_reallocate(this%rc1, this%dis%nodes, 'RC1',             &
+                                trim(this%origin))
             call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,&
                                          this%parser%iuactive, this%rc1,       &
                                          aname(3))
             lname(3) = .true.
           case ('RC2')
-            !call mem_reallocate(this%rc2, this%dis%nodes, 'RC2',               &
-            !                  trim(this%origin))
+            if (this%irorder == 0) &
+              call mem_reallocate(this%rc2, this%dis%nodes, 'RC2',             &
+                                trim(this%origin))
             call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,&
                                          this%parser%iuactive, this%rc2,       &
                                          aname(4))
@@ -713,26 +710,26 @@ module GwtImdModule
       call ustop()
     end if
     !
-    ! -- Check for required sorption variables
+    ! -- Check for required sorbtion variables
     if (this%isrb > 0) then
       if (.not. lname(1)) then
-        write(errmsg, '(1x,a)') 'ERROR.  SORPTION IS ACTIVE BUT RHOB NOT &
+        write(errmsg, '(1x,a)') 'ERROR.  SORBTION IS ACTIVE BUT RHOB NOT &
           &SPECIFIED.  RHOB MUST BE SPECIFIED IN GRIDDATA BLOCK.'
         call store_error(errmsg)
       endif
       if (.not. lname(2)) then
-        write(errmsg, '(1x,a)') 'ERROR.  SORPTION IS ACTIVE BUT DISTRIBUTION &
+        write(errmsg, '(1x,a)') 'ERROR.  SORBTION IS ACTIVE BUT DISTRIBUTION &
           &COEFFICIENT NOT SPECIFIED.  DISTCOEF MUST BE SPECIFIED IN &
           &GRIDDATA BLOCK.'
         call store_error(errmsg)
       endif
     else
       if (lname(1)) then
-        write(this%iout, '(1x,a)') 'WARNING.  SORPTION IS NOT ACTIVE BUT RHOB &
+        write(this%iout, '(1x,a)') 'WARNING.  SORBTION IS NOT ACTIVE BUT RHOB &
           &WAS SPECIFIED.  RHOB WILL HAVE NO AFFECT ON SIMULATION RESULTS.'
       endif
       if (lname(2)) then
-        write(this%iout, '(1x,a)') 'WARNING.  SORPTION IS NOT ACTIVE BUT &
+        write(this%iout, '(1x,a)') 'WARNING.  SORBTION IS NOT ACTIVE BUT &
           &DISTRIBUTION COEFFICIENT WAS SPECIFIED.  DISTCOEF WILL HAVE &
           &NO AFFECT ON SIMULATION RESULTS.'
       endif
@@ -741,26 +738,26 @@ module GwtImdModule
     ! -- Check for required decay/production rate coefficients
     if (this%irorder > 0) then
       if (.not. lname(3)) then
-        write(errmsg, '(1x,a)') 'ERROR.  FIRST OR ZERO ORDER REACTIONS ARE &
+        write(errmsg, '(1x,a)') 'ERROR.  FIRST OR ZERO ORDER DECAY IS &
           &ACTIVE BUT THE FIRST RATE COEFFICIENT IS NOT SPECIFIED.  RC1 MUST &
           &BE SPECIFIED IN GRIDDATA BLOCK.'
         call store_error(errmsg)
       endif
       if (.not. lname(4)) then
-        write(errmsg, '(1x,a)') 'ERROR.  FIRST OR ZERO ORDER REACTIONS ARE &
+        write(errmsg, '(1x,a)') 'ERROR.  FIRST OR ZERO ORDER DECAY ARE &
           &ACTIVE BUT THE SECOND RATE COEFFICIENT IS NOT SPECIFIED.  RC2 MUST &
           &BE SPECIFIED IN GRIDDATA BLOCK.'
         call store_error(errmsg)
       endif
     else
       if (lname(3)) then
-        write(this%iout, '(1x,a)') 'WARNING.  FIRST OR ZERO ORER REACTIONS &
-          &ARE NOT ACTIVE BUT RC1 WAS SPECIFIED.  RC1 WILL HAVE NO AFFECT &
+        write(this%iout, '(1x,a)') 'WARNING.  FIRST OR ZERO ORER DECAY &
+          &IS NOT ACTIVE BUT RC1 WAS SPECIFIED.  RC1 WILL HAVE NO AFFECT &
           &ON SIMULATION RESULTS.'
       endif
       if (lname(4)) then
-        write(this%iout, '(1x,a)') 'WARNING.  FIRST OR ZERO ORER REACTIONS &
-          &ARE NOT ACTIVE BUT RC2 WAS SPECIFIED.  RC2 WILL HAVE NO AFFECT &
+        write(this%iout, '(1x,a)') 'WARNING.  FIRST OR ZERO ORER DECAY &
+          &IS NOT ACTIVE BUT RC2 WAS SPECIFIED.  RC2 WILL HAVE NO AFFECT &
           &ON SIMULATION RESULTS.'
       endif
     endif

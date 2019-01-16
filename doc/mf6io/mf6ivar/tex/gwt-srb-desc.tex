@@ -1,0 +1,23 @@
+% DO NOT MODIFY THIS FILE DIRECTLY.  IT IS CREATED BY mf6ivar.py 
+
+\item \textbf{Block: OPTIONS}
+
+\begin{description}
+\item \texttt{SAVE\_FLOWS}---keyword to indicate that SRB flow terms will be written to the file specified with ``BUDGET FILEOUT'' in Output Control.
+
+\item \texttt{FIRST\_ORDER\_DECAY}---is a text keyword to indicate that first-order decay will occur for sorbed solute mass.  If FIRST_ORDER_DECAY is specified, then the RC variable must be specified in the GRIDDATA block.
+
+\item \texttt{ZERO\_ORDER\_DECAY}---is a text keyword to indicate that zero-order decay will occur for sorbed solute mass. If ZERO_ORDER_DECAY is specified, then the RC variable must be specified in the GRIDDATA block.
+
+\end{description}
+\item \textbf{Block: GRIDDATA}
+
+\begin{description}
+\item \texttt{rhob}---is the bulk density of the aquifer in mass per length cubed.
+
+\item \texttt{distcoef}---is the distribution coefficient for the equilibrium-controlled linear sorption isotherm in dimensions of length cubed per mass.
+
+\item \texttt{rc}---is the rate coefficient for first or zero-order decay for the sorbed phase.  The dimensions of rc for first-order decay is one over time.  The dimensions of rc for zero-order decay is mass of solute per mass of aquifer per time.
+
+\end{description}
+
