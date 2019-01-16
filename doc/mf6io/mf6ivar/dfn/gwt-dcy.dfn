@@ -9,13 +9,12 @@ longname save calculated flows to budget file
 description REPLACE save_flows {'{#1}': 'DCY'}
 
 block options
-name zero_order
-type string
-valid one zero
+name zero_order_decay
+type keyword
 reader urword
 optional true
-longname activate zero order decay
-description is a text keyword to indicate that zero-order decay will occur.  If not specified first-order decay will be active.
+longname activate zero-order decay
+description is a text keyword to indicate that zero-order decay will occur.  If not specified the solute decay rate will be of first order.
 
 # --------------------- gwt dcy griddata ---------------------
 
@@ -26,5 +25,5 @@ shape (nodes)
 reader readarray
 layered true
 longname decay rate coefficient
-description is the rate coefficient for first or zero-order reactions for the aqueous phase.  The dimensions of rc for a first-order reaction is one over time.  The dimensions of rc for a zero-order reaction (if ZERO_ORDER keyword option is used) is mass per length cubed per time.
+description is the rate coefficient for first or zero-order decay for the aqueous phase of the mobile domain.  A negative value indicates solute production.  The dimensions of rc for a first-order reaction is one over time.  The dimensions of rc for a zero-order reaction is mass per length cubed per time.
 

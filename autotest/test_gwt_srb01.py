@@ -178,9 +178,9 @@ def build_models():
                                      fname='{}.sto'.format(gwtname))
 
         # sorbtion
-        rct = flopy.mf6.ModflowGwtrct(gwt, sorbtion=True, rhob=1.,
+        srb = flopy.mf6.ModflowGwtsrb(gwt, rhob=1.,
                                       distcoef=distcoef[idx],
-                                      fname='{}.rct'.format(gwtname))
+                                      fname='{}.srb'.format(gwtname))
 
         # mass loading source
         srcdict = {0: [[(0, 0, 0), 1.0]]}

@@ -14,7 +14,7 @@
   ! adv obs
   ! dsp obs
   ! sto obs
-  ! rct obs
+  ! srb obs
   ! imd obs
   ! ssm obs
   ! src obs
@@ -28,7 +28,8 @@
   ! transport-only (using saved flow budget files)
   ! transport for SFR, LAK, MAW, UZF
   ! What to do about MVR?  Should go into SSM.
-  ! implement steady-state transport (affects STO, RCT, IMD)
+  ! implement steady-state transport (affects STO, SRB, IMD)
+  ! update user guide to reflect changes to DCY, SRB, and IMD
   
 module GwtModule
 
@@ -45,7 +46,7 @@ module GwtModule
   use GwtSsmModule,                only: GwtSsmType
   use GwtStoModule,                only: GwtStoType
   use GwtDcyModule,                only: GwtDcyType
-  use GwtRctModule,                only: GwtRctType
+  use GwtSrbModule,                only: GwtSrbType
   use GwtOcModule,                 only: GwtOcType
   use GwtObsModule,                only: GwtObsType
   use BudgetModule,                only: BudgetType
@@ -62,7 +63,7 @@ module GwtModule
     type(GwtFmiType),               pointer :: fmi     => null()                ! flow model interface
     type(GwtStoType),               pointer :: sto     => null()                ! storage package
     type(GwtDcyType),               pointer :: dcy     => null()                ! decay package
-    type(GwtRctType),               pointer :: rct     => null()                ! reactions package
+    type(GwtSrbType),               pointer :: srb     => null()                ! sorbtion package
     type(GwtAdvType),               pointer :: adv     => null()                ! advection package
     type(GwtDspType),               pointer :: dsp     => null()                ! dispersion package
     type(GwtSsmType),               pointer :: ssm     => null()                ! source sink mixing package
@@ -76,7 +77,7 @@ module GwtModule
     integer(I4B),                   pointer :: indsp   => null()                ! unit number DSP
     integer(I4B),                   pointer :: inssm   => null()                ! unit number SSM
     integer(I4B),                   pointer :: indcy   => null()                ! unit number DCY
-    integer(I4B),                   pointer :: inrct   => null()                ! unit number RCT
+    integer(I4B),                   pointer :: insrb   => null()                ! unit number SRB
     integer(I4B),                   pointer :: inoc    => null()                ! unit number OC
     integer(I4B),                   pointer :: inobs   => null()                ! unit number OBS
     
@@ -108,9 +109,9 @@ module GwtModule
   integer(I4B), parameter :: NIUNIT=100
   character(len=LENFTYPE), dimension(NIUNIT) :: cunit
   data cunit/   'DIS6 ', 'DISV6', 'DISU6', 'IC6  ', 'STO6 ', & !  5
-                'ADV6 ', 'DSP6 ', 'SSM6 ', 'RCT6 ', 'CNC6 ', & ! 10
+                'ADV6 ', 'DSP6 ', 'SSM6 ', 'SRB6 ', 'CNC6 ', & ! 10
                 'OC6  ', 'OBS6 ', 'FMI6 ', 'SRC6 ', 'IMD6 ', & ! 15
-                '     ', 'DCY6 ', '     ', '     ', '     ', & ! 20
+                'DCY6 ', '     ', '     ', '     ', '     ', & ! 20
                 80 * '     '/
   
   contains
@@ -139,7 +140,7 @@ module GwtModule
     use GwtFmiModule,               only: fmi_cr
     use GwtStoModule,               only: sto_cr
     use GwtDcyModule,               only: dcy_cr
-    use GwtRctModule,               only: rct_cr
+    use GwtSrbModule,               only: srb_cr
     use GwtAdvModule,               only: adv_cr
     use GwtDspModule,               only: dsp_cr
     use GwtSsmModule,               only: ssm_cr
@@ -254,7 +255,7 @@ module GwtModule
     call namefile_obj%get_unitnumber('DSP6', this%indsp, 1)
     call namefile_obj%get_unitnumber('SSM6', this%inssm, 1)
     call namefile_obj%get_unitnumber('DCY6', this%indcy, 1)
-    call namefile_obj%get_unitnumber('RCT6', this%inrct, 1)
+    call namefile_obj%get_unitnumber('SRB6', this%insrb, 1)
     call namefile_obj%get_unitnumber('OC6',  this%inoc, 1)
     call namefile_obj%get_unitnumber('OBS6', this%inobs, 1)
     !
@@ -281,7 +282,7 @@ module GwtModule
     call dsp_cr(this%dsp, this%name, this%indsp, this%iout, this%fmi)
     call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi)
     call dcy_cr(this%dcy, this%name, this%indcy, this%iout, this%fmi)
-    call rct_cr(this%rct, this%name, this%inrct, this%iout, this%fmi)
+    call srb_cr(this%srb, this%name, this%insrb, this%iout, this%fmi)
     call oc_cr(this%oc, this%name, this%inoc, this%iout)
     call obs_cr(this%obs, this%inobs)
     !
@@ -439,7 +440,7 @@ module GwtModule
     if(this%infmi > 0) call this%fmi%fmi_ar(this%dis, this%ibound,this%inssm)
     if(this%insto > 0) call this%sto%sto_ar(this%dis, this%ibound)
     if(this%indcy > 0) call this%dcy%dcy_ar(this%dis, this%sto, this%ibound)
-    if(this%inrct > 0) call this%rct%rct_ar(this%dis, this%sto, this%ibound)
+    if(this%insrb > 0) call this%srb%srb_ar(this%dis, this%sto, this%ibound)
     if(this%inadv > 0) call this%adv%adv_ar(this%dis, this%ibound)
     if(this%indsp > 0) call this%dsp%dsp_ar(this%dis, this%ibound,             &
                                             this%sto%porosity)
@@ -533,7 +534,7 @@ module GwtModule
     if(this%indsp > 0) call this%dsp%dsp_ad()
     if(this%inssm > 0) call this%ssm%ssm_ad()
     if(this%indcy > 0) call this%dcy%dcy_ad()
-    if(this%inrct > 0) call this%rct%rct_ad()
+    if(this%insrb > 0) call this%srb%srb_ad()
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_ad()
@@ -613,8 +614,8 @@ module GwtModule
       call this%dcy%dcy_fc(this%dis%nodes, this%xold, this%nja, njasln,        &
                            amatsln, this%idxglo, this%rhs)
     endif
-    if(this%inrct > 0) then
-      call this%rct%rct_fc(this%dis%nodes, this%xold, this%nja, njasln,        &
+    if(this%insrb > 0) then
+      call this%srb%srb_fc(this%dis%nodes, this%xold, this%nja, njasln,        &
                            amatsln, this%idxglo, this%rhs)
     endif
     if(this%inadv > 0) then
@@ -731,11 +732,11 @@ module GwtModule
       call this%dcy%dcy_bdsav(icbcfl, icbcun)
     endif
     !
-    ! -- Reaction budgets
-    if(this%inrct > 0) then
-      call this%rct%rct_bdcalc(this%dis%nodes, this%x, this%xold,              &
+    ! -- Sorbtion budgets
+    if(this%insrb > 0) then
+      call this%srb%srb_bdcalc(this%dis%nodes, this%x, this%xold,              &
                                isuppress_output, this%budget)
-      call this%rct%rct_bdsav(icbcfl, icbcun)
+      call this%srb%srb_bdsav(icbcfl, icbcun)
     endif
     !
     ! -- Advection and dispersion flowja
@@ -918,7 +919,7 @@ module GwtModule
     call this%fmi%fmi_da()
     call this%sto%sto_da()
     call this%dcy%dcy_da()
-    call this%rct%rct_da()
+    call this%srb%srb_da()
     call this%budget%budget_da()
     call this%oc%oc_da()
     call this%obs%obs_da()
@@ -928,7 +929,7 @@ module GwtModule
     deallocate(this%ic)
     deallocate(this%sto)
     deallocate(this%dcy)
-    deallocate(this%rct)
+    deallocate(this%srb)
     deallocate(this%budget)
     deallocate(this%obs)
     deallocate(this%oc)
@@ -948,7 +949,7 @@ module GwtModule
     call mem_deallocate(this%indsp)
     call mem_deallocate(this%inssm)
     call mem_deallocate(this%indcy)
-    call mem_deallocate(this%inrct)
+    call mem_deallocate(this%insrb)
     call mem_deallocate(this%inoc)
     call mem_deallocate(this%inobs)
     !
@@ -1006,7 +1007,7 @@ module GwtModule
     call mem_allocate(this%infmi, 'INFMI', modelname)
     call mem_allocate(this%insto, 'INSTO', modelname)
     call mem_allocate(this%indcy, 'INDCY', modelname)
-    call mem_allocate(this%inrct, 'INRCT', modelname)
+    call mem_allocate(this%insrb, 'INSRB', modelname)
     call mem_allocate(this%inadv, 'INADV', modelname)
     call mem_allocate(this%indsp, 'INDSP', modelname)
     call mem_allocate(this%inssm, 'INSSM', modelname)
@@ -1020,7 +1021,7 @@ module GwtModule
     this%indsp = 0
     this%inssm = 0
     this%indcy = 0
-    this%inrct = 0
+    this%insrb = 0
     this%inoc  = 0
     this%inobs = 0
     !
@@ -1113,7 +1114,7 @@ module GwtModule
     integer(I4B) :: i, iu
     character(len=LENFTYPE), dimension(12) :: nodupftype =                     &
       (/'DIS6 ', 'DISU6', 'DISV6', 'IC6  ', 'STO6 ', 'ADV6 ', 'DSP6 ',         &
-        'SSM6 ', 'DCY6 ', 'RCT6 ', 'OC6  ', 'OBS6 '/)
+        'SSM6 ', 'DCY6 ', 'SRB6 ', 'OC6  ', 'OBS6 '/)
 ! ------------------------------------------------------------------------------
     !
     ! -- Check for IC6, DIS(u), and STO. Stop if not present.
