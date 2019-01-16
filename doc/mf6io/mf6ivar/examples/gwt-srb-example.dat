@@ -1,10 +1,13 @@
-BEGIN options
-END options
+BEGIN OPTIONS
+  FIRST_ORDER_DECAY
+END OPTIONS
 
-BEGIN griddata
-  rhob
+BEGIN GRIDDATA
+  RHOB
     CONSTANT       1.00000000
-  distcoef
+  DISTCOEF
     CONSTANT       1.00000000
-END griddata
+  RC
+    CONSTANT       0.002
+END GRIDDATA
 
