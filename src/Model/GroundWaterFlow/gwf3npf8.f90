@@ -5,7 +5,9 @@ module GwfNpfModule
                                         DLNLOW, DLNHIGH,                        &
                                         DHNOFLO, DHDRY, DEM10
   use SmoothingModule,            only: sQuadraticSaturation,                   &
-                                        sQuadraticSaturationDerivative
+                                        sQuadraticSaturationDerivative,         &
+                                        sPChip_set_derivatives,                 &
+                                        sPChip_integrate
   use NumericalPackageModule,     only: NumericalPackageType
   use BaseDisModule,              only: DisBaseType
   use GwfIcModule,                only: GwfIcType
@@ -305,7 +307,7 @@ module GwfNpfModule
     if(this%ivkd > 0) then
       call this%vkd%vkd_ar(dis, ibound, this%k11, this%ik33,          &
       this%k33, this%sat, this%ik22, this%k22, this%inewton, this%satmin,  &
-      this%icelltype, this%satomega)
+      this%icelltype, this%satomega) !, this%hy_eff)
       this%ibvkd = this%vkd%ibvkd    
     endif
     !
@@ -469,19 +471,28 @@ module GwfNpfModule
         else
           !
           ! -- Horizontal conductance
-          cond = hcond(this%ibound(n), this%ibound(m),                       &
-                       this%icelltype(n), this%icelltype(m),                 &
-                       this%inewton, this%inewton,                           &
-                       this%dis%con%ihc(this%dis%con%jas(ii)),               &
-                       this%icellavg, this%iusgnrhc, this%inwtupw,           &
-                       this%condsat(this%dis%con%jas(ii)),                   &
-                       hnew(n), hnew(m), this%sat(n), this%sat(m), hyn, hym, &
-                       this%dis%top(n), this%dis%top(m),                     &
-                       this%dis%bot(n), this%dis%bot(m),                     &
-                       this%dis%con%cl1(this%dis%con%jas(ii)),               &
-                       this%dis%con%cl2(this%dis%con%jas(ii)),               &
-                       this%dis%con%hwva(this%dis%con%jas(ii)),              &
-                       this%satomega, this%satmin)
+          if ((this%ibvkd(n) > 0) .and. (this%ibvkd(m) > 0)) then
+            ! call hcond_vkd
+            cond = this%vkd%vkd_hcond(n, m, this%dis%con%cl1(this%dis%con%jas(ii)), &
+                this%dis%con%cl2(this%dis%con%jas(ii)),                             &
+                this%dis%con%hwva(this%dis%con%jas(ii)),                            &
+                this%condsat(this%dis%con%jas(ii)), hnew(n), hnew(m), this%inewton, &
+                ii, this%icellavg, hyn, hym)
+          else
+            cond = hcond(this%ibound(n), this%ibound(m),                       &
+                this%icelltype(n), this%icelltype(m),                 &
+                this%inewton, this%inewton,                           &
+                this%dis%con%ihc(this%dis%con%jas(ii)),               &
+                this%icellavg, this%iusgnrhc, this%inwtupw,           &
+                this%condsat(this%dis%con%jas(ii)),                   &
+                hnew(n), hnew(m), this%sat(n), this%sat(m), hyn, hym, &
+                this%dis%top(n), this%dis%top(m),                     &
+                this%dis%bot(n), this%dis%bot(m),                     &
+                this%dis%con%cl1(this%dis%con%jas(ii)),               &
+                this%dis%con%cl2(this%dis%con%jas(ii)),               &
+                this%dis%con%hwva(this%dis%con%jas(ii)),              &
+                this%satomega, this%satmin)
+            endif
         endif
         !
         ! -- Fill row n
@@ -804,19 +815,29 @@ module GwfNpfModule
                       this%dis%bot(n), this%dis%bot(m),                        &
                       this%dis%con%hwva(this%dis%con%jas(icon)))
     else
-      condnm = hcond(this%ibound(n), this%ibound(m),                           &
-                     this%icelltype(n), this%icelltype(m),                     &
-                     this%inewton, this%inewton,                               &
-                     this%dis%con%ihc(this%dis%con%jas(icon)),                 &
-                     this%icellavg, this%iusgnrhc, this%inwtupw,               &
-                     this%condsat(this%dis%con%jas(icon)),                     &
-                     hn, hm, this%sat(n), this%sat(m), hyn, hym,               &
-                     this%dis%top(n), this%dis%top(m),                         &
-                     this%dis%bot(n), this%dis%bot(m),                         &
-                     this%dis%con%cl1(this%dis%con%jas(icon)),                 &
-                     this%dis%con%cl2(this%dis%con%jas(icon)),                 &
-                     this%dis%con%hwva(this%dis%con%jas(icon)),                &
-                     this%satomega, this%satmin)
+      if ((this%ibvkd(n) == 0) .or. (this%ibvkd(m) == 0)) then
+        condnm = hcond(this%ibound(n), this%ibound(m),                          &
+                      this%icelltype(n), this%icelltype(m),                     &
+                      this%inewton, this%inewton,                               &
+                      this%dis%con%ihc(this%dis%con%jas(icon)),                 &
+                      this%icellavg, this%iusgnrhc, this%inwtupw,               &
+                      this%condsat(this%dis%con%jas(icon)),                     &
+                      hn, hm, this%sat(n), this%sat(m), hyn, hym,               &
+                      this%dis%top(n), this%dis%top(m),                         &
+                      this%dis%bot(n), this%dis%bot(m),                         &
+                      this%dis%con%cl1(this%dis%con%jas(icon)),                 &
+                      this%dis%con%cl2(this%dis%con%jas(icon)),                 &
+                      this%dis%con%hwva(this%dis%con%jas(icon)),                &
+                      this%satomega, this%satmin)
+      else
+        ! vkd
+        condnm = this%vkd%vkd_hcond(n, m, this%dis%con%cl1(this%dis%con%jas(icon)), &
+                                    this%dis%con%cl2(this%dis%con%jas(icon)),       &
+                                    this%dis%con%hwva(this%dis%con%jas(icon)),      &
+                                    this%condsat(this%dis%con%jas(icon)),           &
+                                    hn, hm, this%inewton, icon, this%icellavg, hyn, &
+                                    hym)
+      endif
     endif
     !
     ! -- Initialize hntemp and hmtemp
@@ -1989,16 +2010,26 @@ module GwfNpfModule
           !
           ! -- Horizontal conductance for fully saturated conditions
           fawidth = this%dis%con%hwva(this%dis%con%jas(ii))
-          csat = hcond(1, 1, 1, 1, this%inewton, 0,                            &
-                       this%dis%con%ihc(this%dis%con%jas(ii)),                 &
-                       this%icellavg, this%iusgnrhc, this%inwtupw,             &
-                       DONE,                                                   &
-                       hn, hm, this%sat(n), this%sat(m), hyn, hym,             &
-                       topn, topm,                                             &
-                       this%dis%bot(n), this%dis%bot(m),                       &
-                       this%dis%con%cl1(this%dis%con%jas(ii)),                 &
-                       this%dis%con%cl2(this%dis%con%jas(ii)),                 &
-                       fawidth, this%satomega, this%satmin)
+          if ((this%ibvkd(n) == 0) .or. (this%ibvkd(m) == 0)) then
+            csat = hcond(1, 1, 1, 1, this%inewton, 0,                            &
+                         this%dis%con%ihc(this%dis%con%jas(ii)),                 &
+                         this%icellavg, this%iusgnrhc, this%inwtupw,             &
+                         DONE,                                                   &
+                         hn, hm, this%sat(n), this%sat(m), hyn, hym,             &
+                         topn, topm,                                             &
+                         this%dis%bot(n), this%dis%bot(m),                       &
+                         this%dis%con%cl1(this%dis%con%jas(ii)),                 &
+                         this%dis%con%cl2(this%dis%con%jas(ii)),                 &
+                         fawidth, this%satomega, this%satmin)
+          else
+            !wittw overwrite calls to hcond and condmean
+            csat = this%vkd%vkd_hcond(n, m, this%dis%con%cl1(this%dis%con%jas(ii)), &
+                                      this%dis%con%cl2(this%dis%con%jas(ii)),       &
+                                      this%dis%con%hwva(this%dis%con%jas(ii)),      &
+                                      this%condsat(this%dis%con%jas(ii)),           &
+                                      this%dis%top(n), this%dis%top(m), 0, ii,      &
+                                      this%icellavg, hyn, hym)
+          endif
         end if
         this%condsat(this%dis%con%jas(ii)) = csat
       enddo

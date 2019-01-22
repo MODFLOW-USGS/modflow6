@@ -52,7 +52,7 @@ CFLAGS = -O3 -D_UF
 #CFLAGS = -g -ggdb -D_UF 
 
 # Define the libraries
-SYSLIBS = -lc 
+SYSLIBS = -lc -lslatec
 
 OBJECTS = \
 $(OBJDIR)/OpenSpec.o \

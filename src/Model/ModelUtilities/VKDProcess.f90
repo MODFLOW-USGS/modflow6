@@ -39,6 +39,7 @@ module VKDModule
     real(DP), pointer                       :: satomega => null()
     integer(I4B), dimension(:), pointer     :: icelltype  => null()   !cell type (confined or unconfined)
     type (VKDCellType), dimension(:), pointer, contiguous :: cells => null()                    ! VKD cell data
+
   contains
     procedure :: vkd_ar
     procedure :: vkd_hcond
@@ -55,7 +56,9 @@ module VKDModule
     real(DP), dimension(:), pointer, contiguous :: ek => null()
     real(DP), dimension(:), pointer, contiguous :: kk => null()
   end type VKDCellType
-  
+
+
+
 !
 ! -- Mathematical core of the VKD method.
 !
@@ -92,7 +95,7 @@ contains
     end subroutine vkd_cr
 
   subroutine vkd_ar(this, dis, ibound, k11, ik33, k33, sat, ik22, k22,        &
-    inewton, min_satthk, icelltype, satomega)
+    inewton, min_satthk, icelltype, satomega) !, hy_eff)
 ! ******************************************************************************
 ! vkd_ar -- Allocate and Read
 ! ******************************************************************************
@@ -104,6 +107,7 @@ contains
     ! -- dummy
     class(VKDType) :: this
     class(DisBaseType),pointer,intent(inout) :: dis
+    !class(GwfNpfType), pointer, intent(inout) :: npf
     integer(I4B), pointer, dimension(:), intent(inout) :: ibound
     real(DP), dimension(:), intent(in), pointer :: k11
     integer(I4B), intent(in), pointer :: ik33
@@ -115,7 +119,6 @@ contains
     real(DP), intent(in), pointer :: min_satthk
     integer(I4B), dimension(:), intent(in), pointer :: icelltype
     real(DP), intent(in), pointer              :: satomega
-    
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtheader =                                 &
@@ -129,6 +132,7 @@ contains
     !
     ! -- Store pointers to arguments that were passed in
     this%dis     => dis
+    !this%hy_eff     => hy_eff
     this%ibound  => ibound
     this%k11 => k11
     this%ik33 => ik33
@@ -363,7 +367,7 @@ contains
         ! multiply kip (factor) by npf k to get absolute k
         if(.true.) then
           do i = 1, this%numelevs
-            this%cells(n)%kk(i) = this%cells(n)%kk(i) * this%k11(this%cells(n)%igwfnode)
+            this%cells(n)%kk(i) = this%cells(n)%kk(i) !* this%k11(this%cells(n)%igwfnode)
           enddo
         endif
         !
@@ -388,7 +392,8 @@ contains
   end subroutine read_data
 
     
-  function vkd_hcond(this, n, m, cl1, cl2, width, csat, hn, hm, inwtup) result(cond)
+  function vkd_hcond(this, n, m, cl1, cl2, width, csat, hn, hm, inwtup, icon, &
+                     icellavg, hyn, hym) result(cond)
 ! ******************************************************************************
 ! hcond -- Horizontal conductance between two cells
 !   inwtup: if 1, then upstream-weight condsat, otherwise recalculate
@@ -402,57 +407,84 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SmoothingModule, only: sPChip_set_derivatives, sPChip_integrate, sQuadraticSaturation
+    use SmoothingModule, only: sPChip_set_derivatives, sPChip_integrate, &
+                               sQuadraticSaturation, sPChip_eval_fn
     use ConstantsModule, only: DONE, DZERO
+    !use GwfNpfModule, only: condmean
     ! -- return
     real(DP) :: cond
     ! -- dummy
     class(VKDType), intent(inout) :: this
-    integer(I4B), intent(in) :: n, m, inwtup
-    real(DP), intent(in) :: width, cl1, cl2, csat, hn, hm
+    integer(I4B), intent(in) :: n, m, inwtup, icon, icellavg !, iupw
+    real(DP), intent(in) :: width, cl1, cl2, csat, hn, hm, hyn, hym
     ! -- local
     real(DP) :: t1, t2, sn, sm, tsn, tsm
-    real(DP), allocatable :: d(:)
+    real(DP), allocatable :: d(:), kk(:)
     integer(I4B) :: posn, posm ! position of node in vkd%cells
-    !
-    ! anisotropy hyeff ***************
+    real(DP) :: kn, km, kfacn, kfacm
+
+
     if(this%ibound(n) == 0 .or. this%ibound(m) == 0) then
       cond = DZERO
     else
 
       posn = this%ibvkd(n)
       posm = this%ibvkd(m)
-      !
-      allocate(d(this%numelevs))
-      call sPChip_set_derivatives(this%numelevs, this%cells(posn)%ek, this%cells(posn)%kk, d)
-      t1 = sPChip_integrate(this%numelevs, this%cells(posn)%ek, this%cells(posn)%kk, d, this%dis%bot(n), hn)
-      tsn = sPChip_integrate(this%numelevs, this%cells(posn)%ek, this%cells(posn)%kk, d, this%dis%bot(n), this%dis%top(n))
-      deallocate(d)
 
-      allocate(d(this%numelevs))
-      call sPChip_set_derivatives(this%numelevs, this%cells(posm)%ek, this%cells(posm)%kk, d)
-      t2 = sPChip_integrate(this%numelevs, this%cells(posm)%ek, this%cells(posm)%kk, d, this%dis%bot(m), hm)
-      tsm = sPChip_integrate(this%numelevs, this%cells(posm)%ek, this%cells(posm)%kk, d, this%dis%bot(m), this%dis%top(m))              
-      deallocate(d)
-!!!! condmean only harmonic as present      
+      if(posn > 0) then
+        allocate(d(this%numelevs), kk(this%numelevs))
+        ! get factored k profile from k base and vkd factors
+        kk = this%cells(posn)%kk * this%k11(this%cells(posn)%igwfnode)
+        call sPChip_set_derivatives(this%numelevs, this%cells(posn)%ek, kk, d)
+        ! get t at head node n
+        t1 = sPChip_integrate(this%numelevs, this%cells(posn)%ek, kk, d, this%dis%bot(n), hn)
+        ! get saturated t at head n
+        tsn = sPChip_integrate(this%numelevs, this%cells(posn)%ek, kk, d, this%dis%bot(n), this%dis%top(n))
+        ! get k factor at head n
+        kfacn = sPChip_eval_fn(this%numelevs, this%cells(posn)%ek, this%cells(posn)%kk,d,1,1,[hn])
+        ! get absolute k at head n
+        kn = kfacn * hyn
+        deallocate(d, kk)
+      endif
+
+
+      if(posm > 0) then
+        allocate(d(this%numelevs), kk(this%numelevs))
+        ! get factored k profile from k base and vkd factors
+        kk = this%cells(posm)%kk * this%k11(this%cells(posm)%igwfnode)
+        call sPChip_set_derivatives(this%numelevs, this%cells(posm)%ek, this%cells(posm)%kk, d)
+        ! get t at head node m
+        t2 = sPChip_integrate(this%numelevs, this%cells(posm)%ek, kk, d, this%dis%bot(m), hm)
+        tsm = sPChip_integrate(this%numelevs, this%cells(posm)%ek, kk, d, this%dis%bot(m), this%dis%top(m))
+        ! get k factor at head m
+        kfacm = sPChip_eval_fn(this%numelevs, this%cells(posm)%ek, this%cells(posm)%kk,d,1,1,[hm])
+        ! get absolute k at head m
+        km = kfacm * hym
+        deallocate(d, kk)
+      endif
+
+
       if (t1*t2 > DZERO) then
         sn = sQuadraticSaturation(tsn, DZERO, t1, this%satomega)
         sm = sQuadraticSaturation(tsm, DZERO, t2, this%satomega)
+
         if (hn > hm) then
           cond = sn
         else
           cond = sm
         end if
+
         if(inwtup == 1) then
           cond = cond * csat
         else
-          cond = width * t1 * t2 / (t1 * cl2 + t2 * cl1)
+          ! call condmean here - the fuction itself will move
+          cond = condmean(kn, km, t1/kn, t2/km, cl1, cl2, width, icellavg)
         endif
+
       else
         cond = DZERO
       end if
     endif
-
 
   end function vkd_hcond
 
@@ -555,5 +587,127 @@ contains
     ! -- Return
     return
   end subroutine allocate_arrays
+
+!  88888888888   TEMP COPY FROM NPF 8888888888888888888888888888888888888888888
+
+  function condmean(k1, k2, thick1, thick2, cl1, cl2, width, iavgmeth)
+! ******************************************************************************
+! condmean -- Calculate the conductance between two cells
+!
+!   k1 is hydraulic conductivity for cell 1 (in the direction of cell2)
+!   k2 is hydraulic conductivity for cell 2 (in the direction of cell1)
+!   thick1 is the saturated thickness for cell 1
+!   thick2 is the saturated thickness for cell 2
+!   cl1 is the distance from the center of cell1 to the shared face with cell2
+!   cl2 is the distance from the center of cell2 to the shared face with cell1
+!   h1 is the head for cell1
+!   h2 is the head for cell2
+!   width is the width perpendicular to flow
+!   iavgmeth is the averaging method:
+!     0 is harmonic averaging
+!     1 is logarithmic averaging
+!     2 is arithmetic averaging of sat thickness and logarithmic averaging of
+!       hydraulic conductivity
+!     3 is arithmetic averaging of sat thickness and harmonic averaging of
+!       hydraulic conductivity
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- return
+    real(DP) :: condmean
+    ! -- dummy
+    real(DP), intent(in) :: k1
+    real(DP), intent(in) :: k2
+    real(DP), intent(in) :: thick1
+    real(DP), intent(in) :: thick2
+    real(DP), intent(in) :: cl1
+    real(DP), intent(in) :: cl2
+    real(DP), intent(in) :: width
+    integer(I4B), intent(in) :: iavgmeth
+    ! -- local
+    real(DP) :: t1
+    real(DP) :: t2
+    real(DP) :: tmean, kmean, denom
+! ------------------------------------------------------------------------------
+    !
+    ! -- Initialize
+    t1 = k1 * thick1
+    t2 = k2 * thick2
+    !
+    ! -- Averaging
+    select case (iavgmeth)
+    !
+    ! -- Harmonic-mean method
+    case(0)
+      !
+      if (t1*t2 > DZERO) then
+        condmean = width * t1 * t2 / (t1 * cl2 + t2 * cl1)
+      else
+        condmean = DZERO
+      end if
+    !
+    ! -- Logarithmic-mean method
+    case(1)
+      if (t1*t2 > DZERO) then
+        tmean = logmean(t1, t2)
+      else
+        tmean = DZERO
+      endif
+      condmean = tmean * width / (cl1 + cl2)
+    !
+    ! -- Arithmetic-mean thickness and logarithmic-mean hydraulic conductivity
+    case(2)
+      if (k1*k2 > DZERO) then
+        kmean = logmean(k1, k2)
+      else
+        kmean = DZERO
+      endif
+      condmean = kmean * DHALF * (thick1 + thick2) * width / (cl1 + cl2)
+    !
+    ! -- Arithmetic-mean thickness and harmonic-mean hydraulic conductivity
+    case(3)
+      denom = (k1 * cl2 + k2 * cl1)
+      if (denom > DZERO) then
+        kmean = k1 * k2 / denom
+      else
+        kmean = DZERO
+      end if
+      condmean = kmean * DHALF * (thick1 + thick2) * width
+    end select
+    !
+    ! -- Return
+    return
+  end function condmean
+
+  function logmean(d1, d2)
+! ******************************************************************************
+! logmean -- Calculate the the logarithmic mean of two double precision
+!            numbers.  Use an approximation if the ratio is near 1.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- return
+    real(DP) :: logmean
+    ! -- dummy
+    real(DP), intent(in) :: d1
+    real(DP), intent(in) :: d2
+    ! -- local
+    real(DP) :: drat
+! ------------------------------------------------------------------------------
+    !
+    drat = d2 / d1
+    if(drat <= DLNLOW .or. drat >= DLNHIGH) then
+      logmean = (d2 - d1) / log(drat)
+    else
+      logmean = DHALF * (d1 + d2)
+    endif
+    !
+    ! -- Return
+    return
+  end function logmean
+
+
 
 end module VKDModule

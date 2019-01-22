@@ -579,7 +579,7 @@ end subroutine sChSmooth
     ! -- check points increasing
     do i = 2, num_points
       if ( x(i) .le. x(i-1) )  then
-        stop 'PChip x values not strictly increasing'
+        stop 'SmoothingModule - PChip x values not strictly increasing'
       endif
     enddo
 
@@ -858,7 +858,114 @@ end subroutine sChSmooth
       endif
 
     end function sPChip_eval_ext
-      
+
+
+    subroutine sPChip_eval_fn_points(x1, x2, f1, f2, d1, d2, ne, xe, fe, next)
+! ******************************************************************************
+! sPChip_eval_ext -- Evaluate function at array of points
+! ******************************************************************************
+! DCHFEV called in SUBROUTINE DPCHFE
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+      ! -- dummy
+      integer(I4B), intent(in) :: ne
+      integer(I4B), intent(inout) :: next(2)
+      real(DP), intent(in) :: x1, x2, f1, f2, d1, d2, xe(*)
+      real(DP), intent(out) :: fe(*)
+      ! -- local
+      integer(I4B) :: i
+      real(DP) :: c2, c3, del1, del2, delta, h, x, xmi, xma
+
+
+      h = x2 - x1
+      next(1) = 0
+      next(2) = 0
+      xmi = min(DZERO, h)
+      xma = max(DZERO, h)
+!
+!  compute cubic coefficients (expanded about x1).
+!
+      delta = (f2 - f1)/h
+      del1 = (d1 - delta)/h
+      del2 = (d2 - delta)/h
+
+      c2 = -(del1+del1 + del2)
+      c3 = (del1 + del2)/h
+!
+      do i = 1, ne
+         x = xe(i) - x1
+         fe(i) = f1 + x*(d1 + x*(c2 + x*c3))
+!          count extrapolation points.
+         if (x .lt. xmi)  next(1) = next(1) + 1
+         if (x .gt. xma)  next(2) = next(2) + 1
+      enddo
+
+     end subroutine sPChip_eval_fn_points
+
+
+     real(DP) function sPChip_eval_fn(n, x, f, d, incfd, ne, xe)
+!  DPCHFE
+! Evaluate a piecewise cubic Hermite function at an array of points
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+       ! -- dummy
+       integer(I4B), intent(in) :: n, incfd, ne
+       real(DP), intent(in) :: x(*), f(incfd,*), d(incfd,*), xe(*)
+       ! -- local
+       integer(I4B) :: i, ierc, ir, j, jfirst, next(2), nj
+       real(DP) :: fe(ne)
+       LOGICAL  SKIP, found_first
+!
+       !  loop over intervals.
+       jfirst = 1
+       ir = 2
+       do while (ir .le. n)
+!
+         !     skip out of loop if have processed all evaluation points.
+!
+         do j = jfirst, ne
+           found_first = (xe(j) .ge. x(ir))
+           if (found_first) exit
+         enddo
+
+         if (found_first) then
+           if (ir .eq. n)  j = ne + 1
+         else
+           j = ne + 1
+         endif
+
+         nj = j - jfirst
+
+         !      skip evaluation if no points in interval.
+
+         if (nj .ne. 0) then
+
+           !       evaluate cubic at xe(i),  i = jfirst (1) J-1 .
+!
+           CALL sPChip_eval_fn_points (x(ir-1),x(ir), f(1,ir-1),f(1,ir), d(1,ir-1), &
+               d(1,ir), nj, xe(jfirst), fe(jfirst), next)
+
+           do i = jfirst, j-1
+             if (xe(i) .lt. x(ir-1)) exit
+           enddo
+
+           j = i
+
+           do i = 1, ir-1
+             if (xe(j) .lt. x(i)) exit
+           enddo
+
+           ir = max(1, i-1)
+           jfirst = j
+         endif
+         ir = ir + 1
+       enddo
+
+     sPChip_eval_fn = fe(1)
+     end function sPChip_eval_fn
+
 end module SmoothingModule
     
     
