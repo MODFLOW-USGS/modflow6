@@ -48,11 +48,10 @@ FFLAGS = -O2 -fbacktrace -ffpe-summary=overflow -ffpe-trap=overflow,zero,invalid
 
 # Define the C compile flags
 CC = gcc
-CFLAGS = -O3 -D_UF 
-#CFLAGS = -g -ggdb -D_UF 
+CFLAGS = -O3 -D_UF
 
 # Define the libraries
-SYSLIBS = -lc -lslatec
+SYSLIBS = -lc
 
 OBJECTS = \
 $(OBJDIR)/OpenSpec.o \
