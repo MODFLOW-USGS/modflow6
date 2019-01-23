@@ -597,8 +597,8 @@ contains
     integer(I4B), intent(in) :: ncells, numvkd
 ! ------------------------------------------------------------------------------
     allocate(this%cells(numvkd))
-    call mem_allocate(this%ibvkd, ncells, 'IBVKD', trim(this%origin))
-    this%ibvkd = 0
+    !call mem_allocate(this%ibvkd, ncells, 'IBVKD', trim(this%origin))
+    !this%ibvkd = 0
     !
     ! -- Return
     return
@@ -620,7 +620,7 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- Deallocate arrays
-    if(size(this%ibvkd) > 0) deallocate(this%ibvkd)
+    !if(size(this%ibvkd) > 0) deallocate(this%ibvkd)
 
     if (size(this%cells) > 0) then
       do i = 1, this%numvkd

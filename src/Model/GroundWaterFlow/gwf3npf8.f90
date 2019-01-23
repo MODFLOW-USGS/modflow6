@@ -294,7 +294,7 @@ module GwfNpfModule
       call this%vkd%vkd_ar(dis, ibound, this%k11, this%ik33,               &
       this%k33, this%sat, this%ik22, this%k22, this%inewton, this%satmin,  &
       this%icelltype, this%satomega)
-      this%ibvkd => this%vkd%ibvkd
+      !this%ibvkd => this%vkd%ibvkd
     endif
     !
     ! -- Initialize and check data
@@ -966,7 +966,6 @@ module GwfNpfModule
     !
     ! -- Scalars
     call mem_deallocate(this%ixt3d)
-    call mem_deallocate(this%ivkd)
     call mem_deallocate(this%satomega)
     call mem_deallocate(this%hnoflo)
     call mem_deallocate(this%hdry)
@@ -1009,11 +1008,17 @@ module GwfNpfModule
     call mem_deallocate(this%ihcedge)
     call mem_deallocate(this%propsedge)
     call mem_deallocate(this%spdis)
+    call mem_deallocate(this%ibvkd)
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
-    call this%vkd%vkd_da()
-    deallocate(this%vkd)
+    !
+    ! -- vkd
+    if(this%ivkd > 0) then
+      call this%vkd%vkd_da()
+      deallocate(this%vkd)
+    endif
+    call mem_deallocate(this%ivkd)
     !
     ! -- Return
     return
@@ -1132,7 +1137,7 @@ module GwfNpfModule
     call mem_allocate(this%k33, 0, 'K33', trim(this%origin))
     call mem_allocate(this%wetdry, 0, 'WETDRY', trim(this%origin))
     call mem_allocate(this%ibotnode, 0, 'IBOTNODE', trim(this%origin))
-    !call mem_allocate(this%ibvkd, ncells, 'IBVKD', trim(this%origin))
+    call mem_allocate(this%ibvkd, ncells, 'IBVKD', trim(this%origin))
     !
     ! -- Specific discharge
     if (this%icalcspdis == 1) then
@@ -1147,6 +1152,9 @@ module GwfNpfModule
       call mem_allocate(this%ihcedge, 0, 'IHCEDGE', trim(this%origin))
       call mem_allocate(this%propsedge, 0, 0, 'PROPSEDGE', trim(this%origin))
     endif
+    !
+    ! -- initialise
+    this%ibvkd = 0
     !
     ! -- Return
     return
