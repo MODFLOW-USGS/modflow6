@@ -20,7 +20,6 @@ module VKDModule
 
   type, extends(NumericalPackageType) :: VKDType
     integer(I4B), pointer, dimension(:)             :: ibound       => null()   !pointer to model ibound
-    integer(I4B), pointer, contiguous, dimension(:) :: ibvkd        => null()   !pointer to model vkd ibound
     integer(I4B), pointer                           :: ivkd         => null()   ! vkd flag (0 is off, 1 is on)
     integer(I4B), pointer                           :: implicit     => null()   ! exclude implicit nodes for testing
     integer(I4B), pointer                           :: numvkd       => null()   ! number of cells with VKD active
@@ -42,6 +41,8 @@ module VKDModule
     real(DP), pointer                       :: min_satthk => null()   !min saturated thickness
     real(DP), pointer                       :: satomega => null()
     integer(I4B), dimension(:), pointer     :: icelltype  => null()   !cell type (confined or unconfined)
+    integer(I4B), pointer, dimension(:)     :: ibvkd        => null()   !pointer to model vkd ibound
+
     type (VKDCellType), dimension(:), pointer, contiguous :: cells => null()                    ! VKD cell data
 
   contains
@@ -104,7 +105,7 @@ contains
     end subroutine vkd_cr
 
   subroutine vkd_ar(this, dis, ibound, k11, ik33, k33, sat, ik22, k22,        &
-                    inewton, min_satthk, icelltype, satomega)
+                    inewton, min_satthk, icelltype, satomega, ibvkd)
 ! ******************************************************************************
 ! vkd_ar -- Allocate and Read
 ! ******************************************************************************
@@ -128,6 +129,7 @@ contains
     real(DP), intent(in), pointer :: min_satthk
     integer(I4B), dimension(:), intent(in), pointer :: icelltype
     real(DP), intent(in), pointer              :: satomega
+    integer(I4B), pointer, dimension(:), intent(in) :: ibvkd
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtheader =                                 &
@@ -152,8 +154,8 @@ contains
     this%min_satthk => min_satthk
     this%icelltype => icelltype
     this%satomega => satomega
-    
-    ! hmmm
+    this%ibvkd => ibvkd
+
     ! -- Initialize block parser
     call this%parser%Initialize(this%inunit, this%iout)
     !
@@ -303,7 +305,6 @@ contains
     logical :: isfound, endOfBlock
     logical, dimension(10)           :: lname
     character(len=24), dimension(10) :: aname
-    integer(I4B), pointer                         :: index           => null()   ! tmp pointer
     ! -- formats
     ! -- formats
     character(len=*), parameter :: fmtiprflow =                                &
@@ -323,9 +324,7 @@ contains
     !
     ! -- Initialize
     lname(:) = .false.
-
     n = 1
-    allocate(index)
     !
     ! -- get npfdata block
     call this%parser%GetBlock('PACKAGEDATA', isfound, ierr)
