@@ -9,7 +9,7 @@ module GwfModule
   use GwfIcModule,                 only: GwfIcType
   use GwfNpfModule,                only: GwfNpfType
   use Xt3dModule,                  only: Xt3dType
-  use VKDModule,                   only: VKDType, vkd_cr
+  use VKDModule,                   only: VKDType !, vkd_cr
   use GwfHfbModule,                only: GwfHfbType
   use GwfStoModule,                only: GwfStoType
   use GwfMvrModule,                only: GwfMvrType
@@ -32,7 +32,7 @@ module GwfModule
     type(GwfIcType),                pointer :: ic      => null()                ! initial conditions package
     type(GwfNpfType),               pointer :: npf     => null()                ! node property flow package
     type(Xt3dType),                 pointer :: xt3d    => null()                ! xt3d option for npf
-    type(VKDType),                  pointer :: vkd    => null()                ! VKD option for npf
+    !type(VKDType),                  pointer :: vkd    => null()                ! VKD option for npf
     type(GwfStoType),               pointer :: sto     => null()                ! storage package
     type(GwfOcType),                pointer :: oc      => null()                ! output control package
     type(GhostNodeType),            pointer :: gnc     => null()                ! ghost node correction package
@@ -90,7 +90,23 @@ module GwfModule
                 '     ', 'MAW6 ', 'SFR6 ', 'LAK6 ', 'UZF6 ', & ! 25
                 'DISV6', 'MVR6 ', '     ', '     ', '     ', & ! 30
                 70 * '     '/
-
+!!$  interface
+!!$  subroutine vkd_cr(vkdobj, name_model, inunit, iout)
+!!$! ******************************************************************************
+!!$! vkd_cr -- Create a new vkd object
+!!$! ******************************************************************************
+!!$!
+!!$!    SPECIFICATIONS:
+!!$! ------------------------------------------------------------------------------
+!!$    ! -- dummy
+!!$    !type(VKDType), pointer :: pt_vkd
+!!$    type(VKDType), pointer :: vkdobj
+!!$    character(len=*), intent(in) :: name_model
+!!$    integer(I4B), intent(in) :: inunit
+!!$    integer(I4B), intent(in) :: iout
+!!$! ------------------------------------------------------------------------------
+!!$  end subroutine vkd_cr
+!!$  end interface
   contains
 
   subroutine gwf_cr(filename, id, modelname, smr)
@@ -117,7 +133,7 @@ module GwfModule
     use GwfDisuModule,              only: disu_cr
     use GwfNpfModule,               only: npf_cr
     use Xt3dModule,                 only: xt3d_cr
-!!!!    use VKDModule,                  only: vkd_cr
+    use VKDModule,                  only: vkd_cr
     use GwfStoModule,               only: sto_cr
     use GwfMvrModule,               only: mvr_cr
     use GwfHfbModule,               only: hfb_cr
@@ -273,7 +289,6 @@ module GwfModule
     ! -- Create packages that are tied directly to model
     call npf_cr(this%npf, this%name, this%innpf, this%iout)
     call xt3d_cr(this%xt3d, this%name, this%innpf, this%iout)
-!!$    call vkd_cr(this%vkd, this%name, this%innpf, this%iout)
     call gnc_cr(this%gnc, this%name, this%ingnc, this%iout)
     call hfb_cr(this%hfb, this%name, this%inhfb, this%iout)
     call sto_cr(this%sto, this%name, this%insto, this%iout)
@@ -319,8 +334,7 @@ module GwfModule
     !
     ! -- Define packages and utility objects
     call this%dis%dis_df()
-    call this%npf%npf_df(this%xt3d, this%vkd, this%ingnc)
-    call vkd_cr(this%vkd, this%name, this%innpf, this%iout)
+    call this%npf%npf_df(this%xt3d, this%ingnc)
     call this%oc%oc_df()
     call this%budget%budget_df(niunit, 'VOLUME', 'L**3')
     if(this%ingnc > 0) call this%gnc%gnc_df(this)
@@ -611,6 +625,7 @@ module GwfModule
                             this%x, this%nja, njasln,                          &
                             amatsln, this%idxglo, this%rhs)
     end if
+    !
     if(this%inmvr > 0) call this%mvr%mvr_fc()
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
@@ -1130,6 +1145,7 @@ module GwfModule
     ! -- Internal package objects
     deallocate(this%dis)
     deallocate(this%ic)
+!    deallocate(this%npf%vkd)
     deallocate(this%npf)
     deallocate(this%xt3d)
     deallocate(this%gnc)

@@ -4,7 +4,9 @@ module VKDModule
                                         DHALF, DP9, DONE, DLNLOW, DLNHIGH,      &
                                         DHNOFLO, DHDRY, DEM10, LENORIGIN,       &
                                         LINELENGTH
-  use SmoothingModule,            only: sQuadraticSaturation, sPChip_set_derivatives, sPChip_integrate, &
+  use SmoothingModule,            only: sQuadraticSaturation,                   &
+                                        sPChip_set_derivatives,                 &
+                                        sPChip_integrate,                       &
                                         sQuadraticSaturationDerivative
   use BaseDisModule,              only: DisBaseType
   use NumericalPackageModule,     only: NumericalPackageType
@@ -12,7 +14,9 @@ module VKDModule
 
   implicit none
 
+  private
   public :: VKDType
+  public :: vkd_cr
 
   type, extends(NumericalPackageType) :: VKDType
     integer(I4B), pointer, dimension(:)             :: ibound       => null()   !pointer to model ibound
@@ -22,9 +26,9 @@ module VKDModule
     integer(I4B), pointer                           :: numvkd       => null()   ! number of cells with VKD active
     integer(I4B), pointer                           :: numelevs     => null()   ! number of VKD knots
     integer(I4B), pointer                           :: inUnitVkd    => null()   ! vkd input file unit number
-    real(DP), dimension(:,:), pointer, contiguous               :: kk           => null()   ! k knots
-    real(DP), dimension(:,:), pointer, contiguous               :: ek           => null()   ! elevation knots
-    real(DP), dimension(:), pointer, contiguous                 :: pt           => null()   ! tmp pointer
+    real(DP), dimension(:,:), pointer, contiguous   :: kk           => null()   ! k knots
+    real(DP), dimension(:,:), pointer, contiguous   :: ek           => null()   ! elevation knots
+    real(DP), dimension(:), pointer, contiguous     :: pt           => null()   ! tmp pointer
     integer(I4B), pointer                           :: ikk          => null()   ! flag that kk is specified
     integer(I4B), pointer                           :: iek          => null()   ! flag that ek is specified
     
@@ -41,6 +45,7 @@ module VKDModule
     type (VKDCellType), dimension(:), pointer, contiguous :: cells => null()                    ! VKD cell data
 
   contains
+    !final :: vkd_da
     procedure :: vkd_ar
     procedure :: vkd_hcond
     procedure :: read_data
@@ -49,15 +54,15 @@ module VKDModule
     procedure, private :: allocate_arrays
     procedure, private :: read_dimensions
     procedure, private :: read_options
+    procedure :: vkd_da
   end type VKDType
 
   type :: VKDCellType
     integer(I4B), pointer :: igwfnode => null()
     real(DP), dimension(:), pointer, contiguous :: ek => null()
     real(DP), dimension(:), pointer, contiguous :: kk => null()
+    contains
   end type VKDCellType
-
-
 
 !
 ! -- Mathematical core of the VKD method.
@@ -65,7 +70,8 @@ module VKDModule
 contains
 !
 
-    subroutine vkd_cr(vkdobj, name_model, inunit, iout)
+!  subroutine vkd_cr(pt_vkd, name_model, inunit, iout)
+  subroutine vkd_cr(vkdobj, name_model, inunit, iout)
 ! ******************************************************************************
 ! vkd_cr -- Create a new vkd object
 ! ******************************************************************************
@@ -73,7 +79,9 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
+    !type(VKDType), pointer :: pt_vkd
     type(VKDType), pointer :: vkdobj
+    !type(GwfNpfType), pointer :: npfobj
     character(len=*), intent(in) :: name_model
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
@@ -81,6 +89,7 @@ contains
     !
     ! -- Create the object
     allocate(vkdobj)
+    !vkdobj => vkd
     !
     ! -- Allocate scalars
     call vkdobj%allocate_scalars()
@@ -95,7 +104,7 @@ contains
     end subroutine vkd_cr
 
   subroutine vkd_ar(this, dis, ibound, k11, ik33, k33, sat, ik22, k22,        &
-    inewton, min_satthk, icelltype, satomega) !, hy_eff)
+                    inewton, min_satthk, icelltype, satomega)
 ! ******************************************************************************
 ! vkd_ar -- Allocate and Read
 ! ******************************************************************************
@@ -132,7 +141,6 @@ contains
     !
     ! -- Store pointers to arguments that were passed in
     this%dis     => dis
-    !this%hy_eff     => hy_eff
     this%ibound  => ibound
     this%k11 => k11
     this%ik33 => ik33
@@ -156,11 +164,8 @@ contains
     call this%read_dimensions()
     !
     ! -- allocate arrays
-    call this%allocate_arrays(this%dis%nodes)
+    call this%allocate_arrays(this%dis%nodes, this%numvkd)
     !
-    ! -- allocate space for vkd cell data
-    !
-    allocate(this%cells(this%numvkd))
     ! -- put new read in here
     call this%read_data()
     !
@@ -393,7 +398,8 @@ contains
 
     
   function vkd_hcond(this, n, m, cl1, cl2, width, csat, hn, hm, inwtup, icon, &
-                     icellavg, hyn, hym) result(cond)
+                     icellavg, hyn, hym, topn, topm, botn, botm, satn, satm)  &
+                     result(cond)
 ! ******************************************************************************
 ! hcond -- Horizontal conductance between two cells
 !   inwtup: if 1, then upstream-weight condsat, otherwise recalculate
@@ -417,12 +423,13 @@ contains
     class(VKDType), intent(inout) :: this
     integer(I4B), intent(in) :: n, m, inwtup, icon, icellavg !, iupw
     real(DP), intent(in) :: width, cl1, cl2, csat, hn, hm, hyn, hym
+    real(DP), intent(in) :: topn, topm, botn, botm, satn, satm
+
     ! -- local
     real(DP) :: t1, t2, sn, sm, tsn, tsm
     real(DP), allocatable :: d(:), kk(:)
     integer(I4B) :: posn, posm ! position of node in vkd%cells
-    real(DP) :: kn, km, kfacn, kfacm
-
+    real(DP) :: kn, km, kfacn, kfacm, thksatn, thksatm
 
     if(this%ibound(n) == 0 .or. this%ibound(m) == 0) then
       cond = DZERO
@@ -434,7 +441,7 @@ contains
       if(posn > 0) then
         allocate(d(this%numelevs), kk(this%numelevs))
         ! get factored k profile from k base and vkd factors
-        kk = this%cells(posn)%kk * this%k11(this%cells(posn)%igwfnode)
+        kk = this%cells(posn)%kk * hyn !this%k11(this%cells(posn)%igwfnode)
         call sPChip_set_derivatives(this%numelevs, this%cells(posn)%ek, kk, d)
         ! get t at head node n
         t1 = sPChip_integrate(this%numelevs, this%cells(posn)%ek, kk, d, this%dis%bot(n), hn)
@@ -445,13 +452,19 @@ contains
         ! get absolute k at head n
         kn = kfacn * hyn
         deallocate(d, kk)
+        sn = sQuadraticSaturation(tsn, DZERO, t1, this%satomega)
+        thksatn = t1/kn
+      else
+        sn = sQuadraticSaturation(topn, botn, hn, this%satomega)
+        thksatn = satn * (topn - botn)
+        kn = hyn
       endif
 
 
       if(posm > 0) then
         allocate(d(this%numelevs), kk(this%numelevs))
         ! get factored k profile from k base and vkd factors
-        kk = this%cells(posm)%kk * this%k11(this%cells(posm)%igwfnode)
+        kk = this%cells(posm)%kk * hym !this%k11(this%cells(posm)%igwfnode)
         call sPChip_set_derivatives(this%numelevs, this%cells(posm)%ek, this%cells(posm)%kk, d)
         ! get t at head node m
         t2 = sPChip_integrate(this%numelevs, this%cells(posm)%ek, kk, d, this%dis%bot(m), hm)
@@ -461,13 +474,15 @@ contains
         ! get absolute k at head m
         km = kfacm * hym
         deallocate(d, kk)
+        sm = sQuadraticSaturation(tsm, DZERO, t2, this%satomega)
+        thksatm = t2/km
+      else
+        sm = sQuadraticSaturation(topm, botm, hm, this%satomega)
+        thksatm = satm * (topm - botm)
+        km = hym
       endif
 
-
-      if (t1*t2 > DZERO) then
-        sn = sQuadraticSaturation(tsn, DZERO, t1, this%satomega)
-        sm = sQuadraticSaturation(tsm, DZERO, t2, this%satomega)
-
+      if (thksatn*thksatm > DZERO) then
         if (hn > hm) then
           cond = sn
         else
@@ -477,8 +492,8 @@ contains
         if(inwtup == 1) then
           cond = cond * csat
         else
-          ! call condmean here - the fuction itself will move
-          cond = condmean(kn, km, t1/kn, t2/km, cl1, cl2, width, icellavg)
+          ! call condmean here - the function itself will move
+          cond = condmean(kn, km, thksatn, thksatm, cl1, cl2, width, icellavg)
         endif
 
       else
@@ -531,7 +546,7 @@ contains
     
   end function vkd_satThk
 
-  subroutine allocate_scalars(this)  
+  subroutine allocate_scalars(this)
 ! ******************************************************************************
 ! allocate_scalars -- Allocate scalar pointer variables
 ! ******************************************************************************
@@ -545,7 +560,7 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- Assign origin
-    this%origin = 'VKD'
+    this%origin = ' VKD'
     !
     ! -- Allocate scalars
 
@@ -568,7 +583,7 @@ contains
     return
   end subroutine allocate_scalars
 
-  subroutine allocate_arrays(this, ncells)
+  subroutine allocate_arrays(this, ncells, numvkd)
 ! ******************************************************************************
 ! allocate_scalars -- Allocate npf arrays
 ! ******************************************************************************
@@ -579,14 +594,59 @@ contains
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(VKDtype) :: this
-    integer(I4B), intent(in) :: ncells
+    integer(I4B), intent(in) :: ncells, numvkd
 ! ------------------------------------------------------------------------------
-    allocate(this%cells(this%numvkd))
-    call mem_allocate(this%ibvkd, ncells, 'IBVKD', trim(this%origin))  
+    allocate(this%cells(numvkd))
+    call mem_allocate(this%ibvkd, ncells, 'IBVKD', trim(this%origin))
+    this%ibvkd = 0
     !
     ! -- Return
     return
   end subroutine allocate_arrays
+
+  subroutine vkd_da(this)
+! ******************************************************************************
+! vkd_da -- Deallocate variables
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use MemoryManagerModule, only: mem_deallocate
+    ! -- dummy
+    class(VKDtype) :: this
+    ! -- local
+    integer(I4B) :: i
+! ------------------------------------------------------------------------------
+    !
+    ! -- Deallocate arrays
+    if(size(this%ibvkd) > 0) deallocate(this%ibvkd)
+
+    if (size(this%cells) > 0) then
+      do i = 1, this%numvkd
+        deallocate(this%cells(i)%ek)
+        deallocate(this%cells(i)%kk)
+        deallocate(this%cells(i)%igwfnode)
+      enddo
+      deallocate(this%cells)
+    endif
+    !
+    ! -- Scalars
+    call mem_deallocate(this%ivkd)
+    call mem_deallocate(this%inUnitVkd)
+    call mem_deallocate(this%numvkd)
+    call mem_deallocate(this%numelevs)
+    call mem_deallocate(this%ikk)
+    call mem_deallocate(this%iek)
+    call mem_deallocate(this%inunit)
+    call mem_deallocate(this%iout)
+    call mem_deallocate(this%iprpak)
+    call mem_deallocate(this%implicit)
+    !
+    ! -- Return
+    return
+  end subroutine vkd_da
+
 
 !  88888888888   TEMP COPY FROM NPF 8888888888888888888888888888888888888888888
 

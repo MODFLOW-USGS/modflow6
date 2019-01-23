@@ -134,6 +134,7 @@ module GwfNpfModule
     !
     ! -- Create the object
     allocate(npfobj)
+!    allocate(npfobj%vkd)
     !
     ! -- create name and origin
     call npfobj%set_names(1, name_model, 'NPF', 'NPF')
@@ -149,7 +150,8 @@ module GwfNpfModule
     return
   end subroutine npf_cr
 
-  subroutine npf_df(this, xt3d, vkd, ingnc)
+
+  subroutine npf_df(this, xt3d, ingnc)
 ! ******************************************************************************
 ! npf_df -- Define
 ! ******************************************************************************
@@ -157,12 +159,12 @@ module GwfNpfModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: ustop, store_error
+    use SimModule,  only: ustop, store_error
     use Xt3dModule, only: xt3d_cr
+    use VKDModule,  only: vkd_cr
     ! -- dummy
     class(GwfNpftype) :: this
     type(Xt3dType), pointer :: xt3d
-    type(VKDType), pointer :: vkd
     integer(I4B), intent(in) :: ingnc
     ! -- local
     ! -- formats
@@ -178,9 +180,6 @@ module GwfNpfModule
     ! -- Initialize block parser
     call this%parser%Initialize(this%inunit, this%iout)
     !
-    ! -- Save pointer to vkd object
-    this%vkd => vkd
-    !
     ! -- set, read, and check options
     call this%read_options()
     call this%check_options()
@@ -189,31 +188,19 @@ module GwfNpfModule
     this%xt3d => xt3d
     if (this%ixt3d > 0) xt3d%ixt3d = this%ixt3d    
     !
-    ! -- Ensure GNC and VKD are not both on at the same time
-    !     implement this later
-    if (this%ivkd > 0 .and. ingnc > 0) then
-      call store_error('Error in model ' // trim(this%name_model) // &
-        '.  The VKD option cannot be used with the GNC Package.')
-      call ustop()
-    endif
-    
-    !
     ! -- Ensure GNC and XT3D are not both on at the same time
     if (this%ixt3d > 0 .and. ingnc > 0) then
       call store_error('Error in model ' // trim(this%name_model) // &
         '.  The XT3D option cannot be used with the GNC Package.')
       call ustop()
     endif
-
     !
     ! -- Ensure VKD and XT3D are not both on at the same time
     if (this%ixt3d > 0 .and. this%ivkd > 0) then
-      write(*,*) this%ivkd
       call store_error('Error in model ' // trim(this%name_model) // &
         '.  The XT3D option cannot be used with the VKD Package.')
       call ustop()
     endif
-    
     !
     ! -- Return
     return
@@ -302,13 +289,12 @@ module GwfNpfModule
     call this%read_data()
     !
     ! -- initialise vkd ib array
-    this%ibvkd = 0
     ! -- vkd
     if(this%ivkd > 0) then
-      call this%vkd%vkd_ar(dis, ibound, this%k11, this%ik33,          &
+      call this%vkd%vkd_ar(dis, ibound, this%k11, this%ik33,               &
       this%k33, this%sat, this%ik22, this%k22, this%inewton, this%satmin,  &
-      this%icelltype, this%satomega) !, this%hy_eff)
-      this%ibvkd = this%vkd%ibvkd    
+      this%icelltype, this%satomega)
+      this%ibvkd => this%vkd%ibvkd
     endif
     !
     ! -- Initialize and check data
@@ -471,15 +457,17 @@ module GwfNpfModule
         else
           !
           ! -- Horizontal conductance
-          if ((this%ibvkd(n) > 0) .and. (this%ibvkd(m) > 0)) then
-            ! call hcond_vkd
+          if ((this%ibvkd(n) > 0) .or. (this%ibvkd(m) > 0)) then
             cond = this%vkd%vkd_hcond(n, m, this%dis%con%cl1(this%dis%con%jas(ii)), &
                 this%dis%con%cl2(this%dis%con%jas(ii)),                             &
                 this%dis%con%hwva(this%dis%con%jas(ii)),                            &
                 this%condsat(this%dis%con%jas(ii)), hnew(n), hnew(m), this%inewton, &
-                ii, this%icellavg, hyn, hym)
+                ii, this%icellavg, hyn, hym,                                        &
+                this%dis%top(n), this%dis%top(m),                                   &
+                this%dis%bot(n), this%dis%bot(m),                                   &
+                this%sat(n), this%sat(m))
           else
-            cond = hcond(this%ibound(n), this%ibound(m),                       &
+            cond = hcond(this%ibound(n), this%ibound(m),              &
                 this%icelltype(n), this%icelltype(m),                 &
                 this%inewton, this%inewton,                           &
                 this%dis%con%ihc(this%dis%con%jas(ii)),               &
@@ -492,7 +480,8 @@ module GwfNpfModule
                 this%dis%con%cl2(this%dis%con%jas(ii)),               &
                 this%dis%con%hwva(this%dis%con%jas(ii)),              &
                 this%satomega, this%satmin)
-            endif
+          endif
+
         endif
         !
         ! -- Fill row n
@@ -649,7 +638,7 @@ module GwfNpfModule
       enddo
     end do
     !
-    end if
+  end if
     !
     ! -- Return
     return
@@ -815,7 +804,7 @@ module GwfNpfModule
                       this%dis%bot(n), this%dis%bot(m),                        &
                       this%dis%con%hwva(this%dis%con%jas(icon)))
     else
-      if ((this%ibvkd(n) == 0) .or. (this%ibvkd(m) == 0)) then
+      if ((this%ibvkd(n) == 0) .and. (this%ibvkd(m) == 0)) then
         condnm = hcond(this%ibound(n), this%ibound(m),                          &
                       this%icelltype(n), this%icelltype(m),                     &
                       this%inewton, this%inewton,                               &
@@ -836,7 +825,9 @@ module GwfNpfModule
                                     this%dis%con%hwva(this%dis%con%jas(icon)),      &
                                     this%condsat(this%dis%con%jas(icon)),           &
                                     hn, hm, this%inewton, icon, this%icellavg, hyn, &
-                                    hym)
+                                    hym, this%dis%top(n), this%dis%top(m),          &
+                                    this%dis%bot(n), this%dis%bot(m),               &
+                                    this%sat(n), this%sat(m))
       endif
     endif
     !
@@ -1001,6 +992,7 @@ module GwfNpfModule
     call mem_deallocate(this%iangle3)
     call mem_deallocate(this%nedges)
     call mem_deallocate(this%lastedge)
+    call mem_deallocate(this%inUnitVkd)
     !
     ! -- Deallocate arrays
     call mem_deallocate(this%icelltype)
@@ -1020,6 +1012,8 @@ module GwfNpfModule
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
+    call this%vkd%vkd_da()
+    deallocate(this%vkd)
     !
     ! -- Return
     return
@@ -1138,7 +1132,7 @@ module GwfNpfModule
     call mem_allocate(this%k33, 0, 'K33', trim(this%origin))
     call mem_allocate(this%wetdry, 0, 'WETDRY', trim(this%origin))
     call mem_allocate(this%ibotnode, 0, 'IBOTNODE', trim(this%origin))
-    call mem_allocate(this%ibvkd, ncells, 'IBVKD', trim(this%origin))
+    !call mem_allocate(this%ibvkd, ncells, 'IBVKD', trim(this%origin))
     !
     ! -- Specific discharge
     if (this%icalcspdis == 1) then
@@ -2010,7 +2004,7 @@ module GwfNpfModule
           !
           ! -- Horizontal conductance for fully saturated conditions
           fawidth = this%dis%con%hwva(this%dis%con%jas(ii))
-          if ((this%ibvkd(n) == 0) .or. (this%ibvkd(m) == 0)) then
+          if ((this%ibvkd(n) == 0) .and. (this%ibvkd(m) == 0)) then
             csat = hcond(1, 1, 1, 1, this%inewton, 0,                            &
                          this%dis%con%ihc(this%dis%con%jas(ii)),                 &
                          this%icellavg, this%iusgnrhc, this%inwtupw,             &
@@ -2026,9 +2020,11 @@ module GwfNpfModule
             csat = this%vkd%vkd_hcond(n, m, this%dis%con%cl1(this%dis%con%jas(ii)), &
                                       this%dis%con%cl2(this%dis%con%jas(ii)),       &
                                       this%dis%con%hwva(this%dis%con%jas(ii)),      &
-                                      this%condsat(this%dis%con%jas(ii)),           &
+                                      DONE,           &
                                       this%dis%top(n), this%dis%top(m), 0, ii,      &
-                                      this%icellavg, hyn, hym)
+                                      this%icellavg, hyn, hym,topn, topm,           &
+                                      this%dis%bot(n), this%dis%bot(m),             &
+                                      this%sat(n), this%sat(m))
           endif
         end if
         this%condsat(this%dis%con%jas(ii)) = csat
