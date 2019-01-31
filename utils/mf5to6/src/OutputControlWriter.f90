@@ -151,7 +151,7 @@ contains
       call this%process_options(Mf6FileList)
       ! Write the Options block
       call this%write_options()
-      ! Generate stress-period input
+      ! Generate stress period input
       call this%ProcessStressLoop(igrid)
     else
       ! Ned todo: There probably should be something in an OC file
@@ -494,7 +494,7 @@ contains
   end subroutine process_stress_loop
 
   subroutine WriteStressPeriodListData(this, lineList)
-    ! Write stress-period data for MF6 Output Control
+    ! Write stress period data for MF6 Output Control
     implicit none
     ! dummy
     class(OutputControlWriterType) :: this

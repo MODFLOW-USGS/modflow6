@@ -557,7 +557,7 @@ contains
 
         if (ival < 0) then
           write(errmsg,'(4x,a,1x,i6)') &
-            '****ERROR. nlakecon MUST BE >= 0 for lake ', n
+            '****ERROR. nlakeconn MUST BE >= 0 for lake ', n
           call store_error(errmsg)
         end if
 
