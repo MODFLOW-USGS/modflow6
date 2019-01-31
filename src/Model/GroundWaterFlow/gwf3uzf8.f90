@@ -1419,7 +1419,7 @@ contains
                               qgwformvr,sumaet,ierr)
       if ( ierr > 0 ) then
         if ( ierr == 1 ) &
-          msg = 'Error: UZF variable NWAVSETS needs to be increased.'
+          msg = 'Error: UZF variable NWAVESETS needs to be increased.'
         call store_error(msg)
         call ustop()
       end if
@@ -2305,7 +2305,7 @@ contains
                                     qfrommvr,qformvr,ierr,sumaet,ivertflag)
         if ( ierr > 0 ) then
             if ( ierr == 1 ) &
-              msg = 'Error: UZF variable NWAVSETS needs to be increased '
+              msg = 'Error: UZF variable NWAVESETS needs to be increased '
             call store_error(msg)
             call ustop()
         end if
