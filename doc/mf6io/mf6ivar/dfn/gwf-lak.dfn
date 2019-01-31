@@ -333,7 +333,7 @@ description REPLACE boundname {'{#1}': 'lake'}
 block connectiondata
 name connectiondata
 type recarray lakeno iconn cellid claktype bedleak belev telev connlen connwidth
-shape (sum(nlakecon))
+shape (sum(nlakeconn))
 reader urword
 longname
 description

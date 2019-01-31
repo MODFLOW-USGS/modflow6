@@ -249,9 +249,9 @@ BEGIN OPTIONS
 END OPTIONS
 \end{lstlisting}
 
-A time-array series is linked to an array in one or more stress-period blocks used to define package input. To indicate that an array is to be controlled by a time-array series, the array property word is followed by the keyword TIMEARRAYSERIES and the time-array series name. When the TIMEARRAYSERIES keyword is found (and the array to be populated supports time-array series), the array reader is not invoked. Consequently, the array-control record and any associated input are omitted. The syntax to define the link is:
+A time-array series is linked to an array in one or more stress period blocks used to define package input. To indicate that an array is to be controlled by a time-array series, the array property word is followed by the keyword TIMEARRAYSERIES and the time-array series name. When the TIMEARRAYSERIES keyword is found (and the array to be populated supports time-array series), the array reader is not invoked. Consequently, the array-control record and any associated input are omitted. The syntax to define the link is:
 
-% Syntax for stress-period block
+% Syntax for stress period block
 \begin{lstlisting}[style=blockdefinition]
 BEGIN PERIOD kper
   property-name TIMEARRAYSERIES time-array-series-name
