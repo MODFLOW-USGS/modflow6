@@ -36,10 +36,10 @@ nlay, nrow, ncol = 1, 1, 3
 shape3d = (nlay, nrow, ncol)
 size3d = nlay * nrow * ncol
 nper = 5
-perlen = [1. for n in range(nper)]
-nstp = [1 for n in range(nper)]
-tsmult = [1. for n in range(nper)]
-steady = [True for n in range(nper)]
+perlen = nper * [1.]
+nstp = nper * [1]
+tsmult = nper * [1.]
+steady = nper * [True]
 lenx = 300.
 delr = delc = lenx / float(nrow)
 botm = [0.]
