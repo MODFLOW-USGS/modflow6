@@ -1,5 +1,4 @@
 BEGIN OPTIONS
-  [PRECISION <precision>]
   [DIGITS <digits>]
   [PRINT_INPUT]
 END OPTIONS
