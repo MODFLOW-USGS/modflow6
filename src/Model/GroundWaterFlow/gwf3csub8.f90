@@ -5391,7 +5391,7 @@ contains
     !
     ! -- Store obs type and assign procedure pointer
     !    for watercomp-csub observation type.
-    call this%obs%StoreObsType('watercomp-csub', .false., indx)
+    call this%obs%StoreObsType('wcomp-csub-cell', .false., indx)
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
@@ -5552,7 +5552,7 @@ contains
               v = this%storagee(n)
             case ('SKELETAL-CSUB')
               v = this%sk_stor(n)
-            case ('WATERCOMP-CSUB')
+            case ('WCOMP-CSUB-CELL')
               v = this%cell_wcstor(n)
             case ('CSUB-CELL')
               ! -- add the skeletal component
@@ -5710,7 +5710,7 @@ contains
                obsrv%ObsTypeId == 'ESTRESS-CELL' .or.                           &
                obsrv%ObsTypeId == 'THICKNESS-CELL' .or.                         &
                obsrv%ObsTypeId == 'SKELETAL-CSUB' .or.                          &
-               obsrv%ObsTypeId == 'WATERCOMP-CSUB' .or.                         &
+               obsrv%ObsTypeId == 'WCOMP-CSUB-CELL' .or.                        &
                obsrv%ObsTypeId == 'SKELETAL-COMPACTION' .or.                    &
                obsrv%ObsTypeId == 'SKELETAL-THETA' .or.                         &
                obsrv%ObsTypeId == 'SKELETAL-THICKNESS') then
@@ -5739,10 +5739,16 @@ contains
         obsrv%indxbnds(1) = j
       ! -- interbed value
       else if (obsrv%ObsTypeId == 'CSUB' .or.                                   &
+               obsrv%ObsTypeId == 'INELASTIC-CSUB' .or.                         &
+               obsrv%ObsTypeId == 'ELASTIC-CSUB' .or.                           &
+               obsrv%ObsTypeId == 'SK' .or.                                     &
                obsrv%ObsTypeId == 'SK' .or.                                     &
                obsrv%ObsTypeId == 'SKE' .or.                                    &
                obsrv%ObsTypeId == 'THICKNESS' .or.                              &
-               obsrv%ObsTypeId == 'THETA') then
+               obsrv%ObsTypeId == 'THETA' .or.                                  &
+               obsrv%ObsTypeId == 'INTERBED-COMPACTION' .or.                    &
+               obsrv%ObsTypeId == 'INELASTIC-COMPACTION' .or.                   &
+               obsrv%ObsTypeId == 'ELASTIC-COMPACTION') then
         j = obsrv%NodeNumber
         idelay = this%idelay(j)
         if (j < 1 .or. j > this%ninterbeds) then
@@ -5847,10 +5853,15 @@ contains
     icol = 1
     ! -- get icsubno number or boundary name
     if (obsrv%ObsTypeId=='CSUB' .or.                                            &
+        obsrv%ObsTypeId == 'INELASTIC-CSUB' .or.                                &
+        obsrv%ObsTypeId == 'ELASTIC-CSUB' .or.                                  &
         obsrv%ObsTypeId=='SK' .or.                                              &
         obsrv%ObsTypeId=='SKE' .or.                                             &
         obsrv%ObsTypeId=='THETA' .or.                                           &
         obsrv%ObsTypeId=='THICKNESS' .or.                                       &
+        obsrv%ObsTypeId == 'INTERBED-COMPACTION' .or.                           &
+        obsrv%ObsTypeId == 'INELASTIC-COMPACTION' .or.                          &
+        obsrv%ObsTypeId == 'ELASTIC-COMPACTION' .or.                            &
         obsrv%ObsTypeId=='DELAY-HEAD' .or.                                      & 
         obsrv%ObsTypeId=='PRECONSTRESS' .or.                                    &
         obsrv%ObsTypeId=='DELAY-FLOWTOP' .or.                                   &

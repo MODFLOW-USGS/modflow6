@@ -300,9 +300,9 @@ def get_model(idx, dir):
                                     beta=0., ske_cr=ss,
                                     packagedata=sub6)
     orecarray = {}
-    orecarray['csub_obs.csv'] = [('tcomp1', 'interbed-compaction', (0, 4, 4)),
-                                 ('tcomp2', 'interbed-compaction', (1, 4, 4)),
-                                 ('tcomp3', 'interbed-compaction', (2, 4, 4))]
+    orecarray['csub_obs.csv'] = [('tcomp1', 'compaction-cell', (0, 4, 4)),
+                                 ('tcomp2', 'compaction-cell', (1, 4, 4)),
+                                 ('tcomp3', 'compaction-cell', (2, 4, 4))]
     csub_obs_package = flopy.mf6.ModflowUtlobs(gwf,
                                                fname=opth,
                                                parent_file=csub, digits=10,
