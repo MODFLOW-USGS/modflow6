@@ -48,6 +48,7 @@ module NumericalSolutionModule
     type(BlockParserType) :: parser
     !
     ! -- sparse matrix data
+    real(DP), pointer                                    :: rclosebnd => NULL()
     real(DP), pointer                                    :: theta => NULL()
     real(DP), pointer                                    :: akappa => NULL()
     real(DP), pointer                                    :: gamma => NULL()
@@ -237,6 +238,7 @@ contains
     call mem_allocate (this%linmeth, 'LINMETH', solutionname)
     call mem_allocate (this%nonmeth, 'NONMETH', solutionname)
     call mem_allocate (this%iprims, 'IPRIMS', solutionname)
+    call mem_allocate (this%rclosebnd, 'RCLOSEBND', solutionname)
     call mem_allocate (this%theta, 'THETA', solutionname)
     call mem_allocate (this%akappa, 'AKAPPA', solutionname)
     call mem_allocate (this%gamma, 'GAMMA', solutionname)
@@ -281,6 +283,7 @@ contains
     this%linmeth = 1
     this%nonmeth = 0
     this%iprims = 0
+    this%rclosebnd = DZERO
     this%theta = DZERO
     this%akappa = DZERO
     this%gamma = DZERO
@@ -457,6 +460,7 @@ contains
     logical :: isfound, endOfBlock
     integer(I4B) :: ival
     real(DP) :: rval
+    real(DP) :: rclose
     character(len=*),parameter :: fmtcsvout = &
       "(4x, 'CSV OUTPUT WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I7)"
     character(len=*),parameter :: fmtptcout = &
@@ -642,6 +646,8 @@ contains
           this%hclose  = this%parser%GetDouble()
         case ('OUTER_MAXIMUM')
           this%mxiter  = this%parser%GetInteger()
+        case ('OUTER_RCLOSEBND')
+          this%rclosebnd  = this%parser%GetDouble()
         case ('UNDER_RELAXATION')
           call this%parser%GetStringCaps(keyword)
           ival = 0
@@ -700,48 +706,32 @@ contains
       end if
     end if
     !
-    IF ( THIS%THETA.LT.DEM3 ) this%theta = DEM3
+    IF ( THIS%THETA < DEM3 ) this%theta = DEM3
     !
     ! -- backtracking should only be used if this%nonmeth > 0
     if (this%nonmeth < 1) then
       this%ibflag = 0
     end if
     !
-    !-------ECHO INPUT OF NONLINEAR ITERATION PARAMETERS AND LINEAR SOLVER INDEX
-    WRITE(IOUT,9002) this%hclose,this%mxiter,this%iprims,this%nonmeth,this%linmeth
-    !
-9002 FORMAT(1X,'OUTER ITERATION CONVERGENCE CRITERION     (HCLOSE) = ', E15.6, &
-    &      /1X,'MAXIMUM NUMBER OF OUTER ITERATIONS        (MXITER) = ', I9,    &
-    &      /1X,'SOLVER PRINTOUT INDEX                     (IPRIMS) = ',I9,     &
-    &      /1X,'NONLINEAR ITERATION METHOD            (NONLINMETH) = ',I9,     &
-    &      /1X,'LINEAR SOLUTION METHOD                   (LINMETH) = ',I9)
-    !
-    IF(THIS%NONMETH.NE.0)THEN
-      WRITE(IOUT,9003) this%theta, this%akappa, this%gamma, this%amomentum,    &
-                       this%numtrack
-      IF(THIS%NUMTRACK.NE.0) WRITE(IOUT,9004) this%btol,this%breduc,this%res_lim
-    ENDIF
-
-9003 FORMAT(1X,'UNDER-RELAXATION WEIGHT REDUCTION FACTOR   (THETA) = ', E15.6, &
-    &      /1X,'UNDER-RELAXATION WEIGHT INCREASE INCREMENT (KAPPA) = ', E15.6, &
-    &      /1X,'UNDER-RELAXATION PREVIOUS HISTORY FACTOR   (GAMMA) = ', E15.6, &
-    &      /1X,'UNDER-RELAXATIONMOMENTUM TERM          (AMOMENTUM) = ', E15.6, &
-    &      /1X,'   MAXIMUM NUMBER OF BACKTRACKS         (NUMTRACK) = ',I9)
-9004 FORMAT(1X,'BACKTRACKING TOLERANCE FACTOR               (BTOL) = ', E15.6, &
-    &      /1X,'BACKTRACKING REDUCTION FACTOR             (BREDUC) = ', E15.6, &
-    &      /1X,'BACKTRACKING RESIDUAL LIMIT              (RES_LIM) = ', E15.6)
-
-    if(this%mxiter.le.0) then
+    ! -- check that MXITER is greater than zero
+    if (this%mxiter <= 0) then
       write (errmsg,'(a)') 'IMS sln_ar: OUTER ITERATION NUMBER MUST BE > 0.'
       call store_error(errmsg)
     END IF
-
+    !
+    ! -- check that RCLOSEBND is greater than zero
+    IF (this%rclosebnd <=  DZERO) THEN
+      WRITE( errmsg,'(A)' ) 'SLN_AR: OUTER_RCLOSEBND MUST > 0.0. '
+      call store_error(errmsg)
+    END IF
+    !
+    !
     isymflg = 1
-    if ( this%nonmeth.gt.0 )then
+    if ( this%nonmeth > 0 )then
       WRITE(IOUT,*) '**UNDER-RELAXATION WILL BE USED***'
       WRITE(IOUT,*)
       isymflg = 0
-    elseif ( this%nonmeth.eq.0 )then
+    elseif ( this%nonmeth == 0 )then
       WRITE(IOUT,*) '***UNDER-RELAXATION WILL NOT BE USED***'
       WRITE(IOUT,*)
     ELSE
@@ -751,7 +741,7 @@ contains
     END IF
     ! call secondary subroutine to initialize and read linear solver parameters
     ! IMSLINEAR solver
-    if ( this%linmeth==1 )then
+    if ( this%linmeth == 1 )then
       allocate(this%imslinear)
       WRITE(IOUT,*) '***IMS LINEAR SOLVER WILL BE USED***'
       call this%imslinear%imslinear_allocate(this%name, this%iu, IOUT,         &
@@ -769,7 +759,6 @@ contains
         &                'METHOD SPECIFIED. CHECK INPUT.***'
       call store_error(errmsg)
     END IF
-
     !
     ! -- If CG, then go through each model and each exchange and check
     !    for asymmetry
@@ -794,7 +783,42 @@ contains
       enddo
       !
     endif
-
+    !
+    ! -- write solver data to output file
+    !
+    ! -- non-linear solver data
+    WRITE(IOUT,9002) this%hclose, this%rclosebnd, this%mxiter,                 &
+                     this%iprims, this%nonmeth, this%linmeth
+    !
+    ! -- standard outer iteration formats
+9002 FORMAT(1X,'OUTER ITERATION CONVERGENCE CRITERION     (HCLOSE) = ', E15.6, &
+    &      /1X,'OUTER ITERATION BOUNDARY FLOW RESIDUAL (RCLOSEBND) = ', E15.6, &
+    &      /1X,'MAXIMUM NUMBER OF OUTER ITERATIONS        (MXITER) = ', I9,    &
+    &      /1X,'SOLVER PRINTOUT INDEX                     (IPRIMS) = ', I9,    &
+    &      /1X,'NONLINEAR ITERATION METHOD            (NONLINMETH) = ', I9,    &
+    &      /1X,'LINEAR SOLUTION METHOD                   (LINMETH) = ', I9)
+    !
+    IF(this%nonmeth /= 0)THEN
+      WRITE(IOUT,9003) this%theta, this%akappa, this%gamma, this%amomentum,    &
+                       this%numtrack
+      IF(this%numtrack /= 0) WRITE(IOUT,9004) this%btol,this%breduc,this%res_lim
+    END IF
+    !
+    ! -- under-relacation formats
+9003 FORMAT(1X,'UNDER-RELAXATION WEIGHT REDUCTION FACTOR   (THETA) = ', E15.6, &
+    &      /1X,'UNDER-RELAXATION WEIGHT INCREASE INCREMENT (KAPPA) = ', E15.6, &
+    &      /1X,'UNDER-RELAXATION PREVIOUS HISTORY FACTOR   (GAMMA) = ', E15.6, &
+    &      /1X,'UNDER-RELAXATIONMOMENTUM TERM          (AMOMENTUM) = ', E15.6, &
+    &      /1X,'   MAXIMUM NUMBER OF BACKTRACKS         (NUMTRACK) = ',I9)
+    ! 
+    ! -- backtracking formats
+9004 FORMAT(1X,'BACKTRACKING TOLERANCE FACTOR               (BTOL) = ', E15.6, &
+    &      /1X,'BACKTRACKING REDUCTION FACTOR             (BREDUC) = ', E15.6, &
+    &      /1X,'BACKTRACKING RESIDUAL LIMIT              (RES_LIM) = ', E15.6)
+    !
+    ! -- linear solver data
+    call this%imslinear%imslinear_summary(this%mxiter)
+    
     ! -- write summary of solver error messages
     ierr = count_errors()
     if (ierr>0) then
@@ -994,6 +1018,7 @@ contains
     call mem_deallocate(this%linmeth)
     call mem_deallocate(this%nonmeth)
     call mem_deallocate(this%iprims)
+    call mem_deallocate(this%rclosebnd)
     call mem_deallocate(this%theta)
     call mem_deallocate(this%akappa)
     call mem_deallocate(this%gamma)
@@ -1289,7 +1314,7 @@ contains
           end if
           do im=1,this%modellist%Count()
             mp => GetNumericalModelFromList(this%modellist, im)
-            call mp%model_cc(kiter, iend, this%icnvg)
+            call mp%model_cc(kiter, iend, this%icnvg, this%hclose, this%rclosebnd)
           enddo
         end if
         !
@@ -2034,6 +2059,7 @@ contains
       this%hclose = dem3
       this%mxiter = 25
       this%nonmeth = 0
+      this%rclosebnd = DEM1
       this%theta = 1.0
       this%akappa = DZERO
       this%gamma = DZERO
@@ -2048,6 +2074,7 @@ contains
       this%hclose = dem2
       this%mxiter = 50
       this%nonmeth = 3
+      this%rclosebnd = DEM1
       this%theta = 0.9d0
       this%akappa = 0.0001d0
       this%gamma = DZERO
@@ -2062,6 +2089,7 @@ contains
       this%hclose = dem1
       this%mxiter = 100
       this%nonmeth = 3
+      this%rclosebnd = DEM1
       this%theta = 0.8d0
       this%akappa = 0.0001d0
       this%gamma = DZERO
