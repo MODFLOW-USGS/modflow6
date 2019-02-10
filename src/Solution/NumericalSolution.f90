@@ -804,13 +804,13 @@ contains
       IF(this%numtrack /= 0) WRITE(IOUT,9004) this%btol,this%breduc,this%res_lim
     END IF
     !
-    ! -- under-relacation formats
+    ! -- under-relaxation formats
 9003 FORMAT(1X,'UNDER-RELAXATION WEIGHT REDUCTION FACTOR   (THETA) = ', E15.6, &
     &      /1X,'UNDER-RELAXATION WEIGHT INCREASE INCREMENT (KAPPA) = ', E15.6, &
     &      /1X,'UNDER-RELAXATION PREVIOUS HISTORY FACTOR   (GAMMA) = ', E15.6, &
     &      /1X,'UNDER-RELAXATIONMOMENTUM TERM          (AMOMENTUM) = ', E15.6, &
     &      /1X,'   MAXIMUM NUMBER OF BACKTRACKS         (NUMTRACK) = ',I9)
-    ! 
+    !
     ! -- backtracking formats
 9004 FORMAT(1X,'BACKTRACKING TOLERANCE FACTOR               (BTOL) = ', E15.6, &
     &      /1X,'BACKTRACKING REDUCTION FACTOR             (BREDUC) = ', E15.6, &
@@ -818,7 +818,7 @@ contains
     !
     ! -- linear solver data
     call this%imslinear%imslinear_summary(this%mxiter)
-    
+
     ! -- write summary of solver error messages
     ierr = count_errors()
     if (ierr>0) then
@@ -1185,7 +1185,7 @@ contains
             trim(adjustl(mp%name)), '") DURING THIS TIME STEP'
         end if
       enddo
-      
+
       !
       ! -- Nonlinear iteration loop for this solution
       this%icnvg = 0
@@ -1333,7 +1333,7 @@ contains
         end if
         !
         ! -- dampening
-        if (this%icnvg /= 1) then 
+        if (this%icnvg /= 1) then
           if (this%nonmeth > 0) then
             call this%sln_underrelax(kiter, this%hncg(kiter), this%neq,        &
                                      this%active, this%x, this%xtemp)
@@ -1930,7 +1930,7 @@ contains
           end if
         end if
       else
-        lsame = IS_SAME(l2norm, this%l2norm0) 
+        lsame = IS_SAME(l2norm, this%l2norm0)
         if (lsame) then
           iptc = 0
         end if
@@ -2327,7 +2327,7 @@ contains
     ! -- return
     return
   end subroutine sln_l2norm
-  
+
   subroutine sln_maxval(this, neq, v, vnorm)
 ! ******************************************************************************
 ! sln_l2norm
@@ -2345,7 +2345,7 @@ contains
     real(DP) :: d
     real(DP) :: denom
     real(DP) :: dnorm
-! ------------------------------------------------------------------------------ 
+! ------------------------------------------------------------------------------
     vnorm = v(1)
     do n = 2, neq
       d = v(n)
@@ -2364,7 +2364,7 @@ contains
     ! -- return
     return
   end subroutine sln_maxval
-  
+
   subroutine sln_calcdx(this, neq, active, x, xtemp, dx)
 ! ******************************************************************************
 ! sln_l2norm
@@ -2381,7 +2381,7 @@ contains
     real(DP), dimension(neq), intent(inout) :: dx
     ! -- local
     integer(I4B) :: n
-! ------------------------------------------------------------------------------ 
+! ------------------------------------------------------------------------------
     do n = 1, neq
       ! -- skip inactive nodes
       if (active(n) < 1) then
@@ -2394,7 +2394,7 @@ contains
     ! -- return
     return
   end subroutine sln_calcdx
-  
+
 
   subroutine sln_underrelax(this, kiter, bigch, neq, active, x, xtemp)
 ! ******************************************************************************
@@ -2635,6 +2635,3 @@ contains
   end subroutine sln_get_nodeu
 
 end module NumericalSolutionModule
-
-
-
