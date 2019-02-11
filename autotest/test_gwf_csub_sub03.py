@@ -291,7 +291,8 @@ def get_model(idx, dir):
     ibcsv = '{}.ib.strain.csv'.format(name)
     skcsv = '{}.sk.strain.csv'.format(name)
     copth = '{}.compaction.bin'.format(name)
-    csub = flopy.mf6.ModflowGwfcsub(gwf, boundnames=True,
+    csub = flopy.mf6.ModflowGwfcsub(gwf, 
+                                    boundnames=True,
                                     head_based=True,
                                     time_weight=0.,
                                     save_flows=True,
