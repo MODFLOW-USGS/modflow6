@@ -1,9 +1,9 @@
-!Water Mover Module
+!GWF Water Mover Module
 !This module contains a derived type, called GwfMvrType, that
 !is attached to the GWF model.  The water mover can be used to move water
-!between packages.  The mover requires that mover-aware packages have access to
-!three arrays: qformvr, qtomvr, and qfrommvr.  These arrays are store and
-!managed by a separate object PackageMoverType.  qformvr is a
+!between packages.  The mover requires that mover-aware packages have access
+!to four arrays: qtformvr, qformvr, qtomvr, and qfrommvr.  These arrays are 
+!stored and managed by a separate PackageMoverType object.  qformvr is a
 !vector of volumetric flow rates available for the mover.  The package
 !must fill the vector (dimensioned by number of reaches) with the available
 !water.  qtomvr is a vector containing how much water was actually moved
@@ -21,7 +21,8 @@
 !
 !      type(GwfMvrType),               pointer :: mvr     => null()
 !
-!      Mover aware packages define the following members:
+!      Mover aware packages have access to the following vectors of mover
+!      information, which are stored in the PackageMoverType object:
 !
 !      integer(I4B), pointer            :: imover        => null()
 !      real(DP), dimension(:), pointer, contiguous  :: qtformvr      => null()
@@ -35,23 +36,24 @@
 !      water, but this value decreases as the mover object consumes water from
 !      it.
 !
-!  2.  Create the mover package by calling the cr subroutine:
+!  2.  In gwf_cr create the mover package by calling the CR subroutine:
 !
 !      call mvr_cr(this%mvr, this%name, this%inmvr, this%iout)
 !
-!  3.  The AR method for the mover is called:
+!  3.  In gwf_ar call the AR method for the mover:
 !
 !      if(this%inmvr > 0) call this%mvr%mvr_ar()
 !
-!      Mover aware packages allocate the three vectors (typically to size
-!      maxbound)
+!      Mover aware packages allocate the four vectors.  The first three 
+!      (qtformvr, qformvr, qtomvr) are allocated to the number of providers
+!      and the last one (qfrommvr) is allocated to the number of receivers.
 !
-!  4.  The RP method for the mover is called.  This reads the movers active
-!      for the current period.
+!  4.  In gwf_rp call the RP method for the mover.  This reads the 
+!      movers active for the current period.
 !
 !      if(this%inmvr > 0) call this%mvr%mvr_rp()
 !
-!  5.  The AD method for the mover is called.  This saves qtomvr from the
+!  5.  In gwf_ad call the AD method for the mover.  This saves qtomvr from the
 !      the last time step.
 !
 !      if(this%inmvr > 0) call this%mvr%mvr_ad()
@@ -60,7 +62,7 @@
 !        qtomvr(:) = 0.
 !        qformvr(:) = 0.
 !
-!  6.  In the CF routine, Mover aware packages set:
+!  6.  In gwf_cf call the CF routine. Mover aware packages set:
 !        qtformvr(:) = qformvr(:)
 !        qfrommvr(:) = 0.
 !        qtomvr(:) = 0.
@@ -71,10 +73,12 @@
 !      qfrommvr vectors inside the packages.  This is done by the mover package
 !      using pointers to the appropriate reach locations in qtomvr and qfrommvr.
 !
-!      if(this%inmvr > 0) call this%mvr%mvr_fc()  ! called from gwf%fc()
+!      if(this%inmvr > 0) call this%mvr%mvr_fc()  ! called from gwf%gwf_fc()
 !
 !      a. Mover aware packages first set qformvr(:) = 0.
-!      b. Mover aware packages add qfrommvr terms as a source of water
+!      b. Mover aware packages that are receivers (MAW, SFR, LAK, UZF) add 
+!         qfrommvr terms to their individual control volume equations as a 
+!         source of water.
 !      c. Mover aware packages calculate qformvr as amount of water available
 !         to be moved (these qformvr terms are used in the next iteration
 !         by this%mvr%mvr_fc() to calculate how much water is actually moved)
