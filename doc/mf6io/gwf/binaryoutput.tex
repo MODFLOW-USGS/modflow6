@@ -580,7 +580,7 @@ When the BINARY option is used to open an observation output file (see section `
 
 \begin{description} \itemsep0pt \parskip0pt \parsep0pt
 \item \texttt{TYPE} (bytes 1--4 of Record 1) is ``cont `` ---  ``cont'' indicates the file contains continuous observations ;
-\item \texttt{PRECISION} (bytes 6--11 of Record 1) is either ``single'' or ``double'' --- ``single'' indicates that floating-point values are written in single precision (4 bytes), and ``double'' indicates double precision (8 bytes);
+\item \texttt{PRECISION} (bytes 6--11 of Record 1) will always be ``double'' to indicate that floating-point values are written in double precision (8 bytes);
 \item \texttt{LENOBSNAME} (bytes 12--15 of Record 1) is an integer indicating the number of characters used to store each observation name in following records (in the initial release of MODFLOW~6, LENOBSNAME equals 40);
 \item \texttt{NOBS} (4-byte integer) is the number of observations recorded in the file;
 \item \texttt{OBSNAME} (LENOBSNAME bytes) is an observation name;

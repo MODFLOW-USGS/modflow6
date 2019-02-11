@@ -122,7 +122,7 @@ This section describes changes introduced into MODFLOW 6 with each release.  The
 \begin{itemize}
 \item Addressed issue with pointing contiguous pointer vectors/arrays to non-contiguous pointer vectors/arrays that caused code compilation failure with gfortran-8. A consequence of addressing this issue is that all pointer vectors/arrays that are allocated or pointed to using the memory manager must be defined to be contiguous.
 \item Corrected a problem with the reading of grid data from a binary file, in which the program was reading a binary header for each row of data.
-\item Added a new error check for very small time steps.  If the value of starttime plus the time step length is equal to endtime, then the time step is too small to be differentiated by the program based on the precision of floating point numbers.  The program will terminate with an error in this case.  The program will also terminate if the storage package and a transient stress period has a time step length of zero.
+\item Added a new error check for very small time steps.  If the value of the starting time is equal to the ending time (starting time plus the time step length), then the time step is too small to be differentiated by the program based on the precision of floating point numbers.  The program will terminate with an error in this case.  The program will also terminate if the storage package with a transient stress period has a time step length of zero.
 \item The observation package was modified to use non-advancing output instead of fixed length strings when writing ascii output. The previous use of fixed length strings resulted in truncation of ascii observation output when the product of user-specified \texttt{digits} + 7 and the number of observations exceeded 5000.
 \item Corrected an error in the GWF-GWF Exchange module that caused the specific discharge values in the child model to be calculated incorrectly.  The calculation was incorrect because the face normal for the child model was pointing toward the center of the cell instead of outward.
 \end{itemize}
@@ -136,8 +136,11 @@ This section describes changes introduced into MODFLOW 6 with each release.  The
 
 \underline{ADVANCED STRESS PACKAGES}
 \begin{itemize}
-\item -
-\item -
+\item Modified the Multi-Aquifer Well (MAW) Package so that the HEAD\_LIMIT and RATE\_SCALING options work for injection wells.  Prior to this change, these options only worked for extraction wells.  These options can be used to reduce or even shut off well injection as the head in the well rises above user-specified levels.
+\item Added stage and residual convergence checks to the SFR package to make sure that stage and upstream flow changes between successive outer iterations are less than OUTER\_HCLOSE and OUTER\_RCLOSEBND, respectively. This addition is expected to be useful for steady-state simulations with complicated networks and simple reaches.
+\item Modified the final convergence check for the LAK package to use OUTER\_HCLOSE when evaluating lake stage changes between successive outer iterations.
+\item Modified the final convergence check for the UZF package to use OUTER\_RCLOSEBND when evaluating rejected infiltration, groundwater recharge, and groundwater seepage changes between successive outer iterations.
+\item - 
 \item - 
 \end{itemize}
 
@@ -146,6 +149,8 @@ This section describes changes introduced into MODFLOW 6 with each release.  The
 \item Modified pseudo-transient continuation (PTC) approach to use PTC for steady-state stress period for models using the Newton-Raphson formulation for problems with and without the storage (STO) package. Previously, PTC was only used with problems that did not include the STO package (this was not the intended behavior of PTC).
 \item Added NO\_PTC option to disable PTC for problems where PTC degrades/prevents model convergence. Option only applies to steady-state stress periods for models using the Newton-Raphson formulation. For many problems, PTC can significantly improve convergence behavior for steady-state simulations, and for this reason it is active by default.  In some cases, however, PTC can worsen the convergence behavior, especially when the initial conditions are similar to the solution.  When the initial conditions are similar to, or exactly the same as, the solution and convergence is slow, then this NO\_PTC option should be used to deactivate PTC.  This NO\_PTC option should also be used in order to compare convergence behavior with other MODFLOW versions, as PTC is only available in MODFLOW 6. 
 \item Small improvements to PTC to reduce the initial PTCDEL value loaded on the diagonal. This reduces the number of iterations required to achieve convergence for steady-state stress periods for most problems.
+\item Added OUTER\_RCLOSEBND variable that is used when performing final convergence checks on model packages that solve a separate equation not solved by the IMS linear solver. This value represents the maximum allowable residual at any single model package element between successive outer iterations. An example of a model package that would use OUTER\_RCLOSEBND to evaluate convergence is the SFR package which solves a continuity equation for each reach.
+\item - 
 \end{itemize}
 
 \item Version mf6.0.3--Aug. 9, 2018
@@ -300,7 +305,7 @@ Version mf6beta0.9.03---June 23, 2017
 \item Added functionality to pass SFR leakage to the aquifer to the highest active layer.
 \item Converted SFR Manning's to a time-varying, time series aware variable.  
 \item Updated LAK package so that conductance calculations correctly account for THICKSTRT in the NPF package for layers that use THICKSTRT (and are confined). Also updated EMBEDDEDH and EMBEDDEDV so that the conductance for these connection types are constant for confined layers.
-\item Converted UZF stress-period data to time series aware data.
+\item Converted UZF stress period data to time series aware data.
 \item Added time-series aware AUXILIARY variables to UZF package.
 \item Implemented AUXMULTNAME in options block for UZF package (AUXILIARY variables have to be specified). AUXMULTNAME is applied to the GWF cell area and is used to simulated more than one UZF cell per GWF cell. This could be used to simulate different land use classifications (i.e., agricultural and natural land use types) in the same GWF cell.
 \end{itemize}
@@ -463,4 +468,4 @@ Notices related to this software are as follows:
 \clearpage
 \pagestyle{backofreport}
 \makebackcover
-\end{document}  
+\end{document}
