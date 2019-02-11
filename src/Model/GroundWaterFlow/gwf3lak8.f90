@@ -2350,8 +2350,8 @@ contains
 
   subroutine lak_calculate_storagechange(this, ilak, stage, stage0, delt, dvr)
 ! ******************************************************************************
-! lak_calculate_storagechange -- Calculate the inflow terms to a lake at a
-!                         provided stage.
+! lak_calculate_storagechange -- Calculate the storage change in a lake based on
+!                         provided stages and a passed delt.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -3786,22 +3786,27 @@ contains
     return
   end subroutine lak_fn
 
-  subroutine lak_cc(this, iend, icnvg)
+  subroutine lak_cc(this, iend, icnvg, hclose, rclose)
 ! **************************************************************************
 ! lak_cc -- Final convergence check for package
 ! **************************************************************************
 !
 !    SPECIFICATIONS:
 ! --------------------------------------------------------------------------
+    use TdisModule, only: delt
     ! -- dummy
     class(LakType), intent(inout) :: this
     integer(I4B), intent(in) :: iend
     integer(I4B), intent(inout) :: icnvg
+    real(DP), intent(in) :: hclose
+    real(DP), intent(in) :: rclose
     ! -- local
     integer(I4B) :: n
     integer(I4B) :: ifirst
     real(DP) :: dh
+    real(DP) :: residb0
     real(DP) :: residb
+    real(DP) :: dr
     real(DP) :: inf
     real(DP) :: outf
     real(DP) :: avgf
@@ -3821,8 +3826,10 @@ contains
     if (this%iconvchk /= 0) then
       final_check: do n = 1, this%nlakes
         if (this%iboundpak(n) < 1) cycle
-        dh = ABS(this%s0(n) - this%xnewpak(n))
+        dh = this%s0(n) - this%xnewpak(n)
+        call this%lak_calculate_residual(n, this%s0(n), residb0)
         call this%lak_calculate_residual(n, this%xnewpak(n), residb)
+        dr = residb0 - residb
         call this%lak_calculate_available(n, this%xnewpak(n), inf, &
                                           ra, ro, qinf, ex)
         outf = inf - residb
@@ -3834,7 +3841,7 @@ contains
           end if
         end if
         !write(*,'(1x,i4,6(1x,g10.4))') n, this%s0(n), this%xnewpak(n), residb, outf, inf, pd
-        if (dh > this%delh .or. ABS(pd) > this%pdmax) then
+        if (ABS(dh) > hclose .or. ABS(pd) > this%pdmax) then
           icnvg = 0
           ! write convergence check information if this is the last outer iteration
           if (iend == 1) then
@@ -3842,10 +3849,11 @@ contains
               ifirst = 0
               write(*,2030) this%name
               write(this%iout, 2000) '      LAKE',                                 &
-                '        MAX. DH', '    DH CRITERIA',                              &
-                '      PCT DIFF.', 'PCT DIFF. CRIT.'
+                '             DH', '    DH CRITERIA',                              &
+                '        PCTDIFF', ' PCTDIFF CRITER'
             end if
-            write(this%iout,2010) n, dh, this%delh, pd, this%pdmax
+            !write(this%iout,2010) n, dh, this%delh, pd, this%pdmax
+            write(this%iout,2010) n, dh, hclose, pd, this%pdmax
           else
             exit final_check
           end if
@@ -6020,29 +6028,6 @@ contains
     ! -- calculate the available water
     call this%lak_calculate_available(n, hlak, avail, &
                                       ra, ro, qinf, ex, hp)
-    !!
-    !! -- calculate the aquifer sources to the lake
-    !do j = this%idxlakeconn(n), this%idxlakeconn(n+1)-1
-    !  igwfnode = this%cellid(j)
-    !  head = this%xnew(igwfnode) + hp
-    !  call this%lak_estimate_conn_exchange(1, n, j, idry, hlak, head, qlakgw, clak, avail)
-    !end do
-    !!
-    !! -- add rainfall
-    !call this%lak_calculate_rainfall(n, hlak, ra)
-    !avail = avail + ra
-    !!
-    !! -- calculate runoff
-    !call this%lak_calculate_runoff(n, ro)
-    !avail = avail + ro
-    !!
-    !! -- calculate inflow
-    !call this%lak_calculate_inflow(n, qinf)
-    !avail = avail + qinf
-    !!
-    !! -- calculate external flow terms
-    !call this%lak_calculate_external(n, ex)
-    !avail = avail + ex
     !
     ! -- calculate groundwater seepage
     do j = this%idxlakeconn(n), this%idxlakeconn(n+1)-1

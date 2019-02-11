@@ -137,7 +137,10 @@ This section describes changes introduced into MODFLOW 6 with each release.  The
 \underline{ADVANCED STRESS PACKAGES}
 \begin{itemize}
 \item Modified the Multi-Aquifer Well (MAW) Package so that the HEAD\_LIMIT and RATE\_SCALING options work for injection wells.  Prior to this change, these options only worked for extraction wells.  These options can be used to reduce or even shut off well injection as the head in the well rises above user-specified levels.
-\item -
+\item Added stage and residual convergence checks to the SFR package to make sure that stage and upstream flow changes between successive outer iterations are less than OUTER\_HCLOSE and OUTER\_RCLOSEBND, respectively. This addition is expected to be useful for steady-state simulations with complicated networks and simple reaches.
+\item Modified the final convergence check for the LAK package to use OUTER\_HCLOSE when evaluating lake stage changes between successive outer iterations.
+\item Modified the final convergence check for the UZF package to use OUTER\_RCLOSEBND when evaluating rejected infiltration, groundwater recharge, and groundwater seepage changes between successive outer iterations.
+\item - 
 \item - 
 \end{itemize}
 
@@ -146,6 +149,8 @@ This section describes changes introduced into MODFLOW 6 with each release.  The
 \item Modified pseudo-transient continuation (PTC) approach to use PTC for steady-state stress period for models using the Newton-Raphson formulation for problems with and without the storage (STO) package. Previously, PTC was only used with problems that did not include the STO package (this was not the intended behavior of PTC).
 \item Added NO\_PTC option to disable PTC for problems where PTC degrades/prevents model convergence. Option only applies to steady-state stress periods for models using the Newton-Raphson formulation. For many problems, PTC can significantly improve convergence behavior for steady-state simulations, and for this reason it is active by default.  In some cases, however, PTC can worsen the convergence behavior, especially when the initial conditions are similar to the solution.  When the initial conditions are similar to, or exactly the same as, the solution and convergence is slow, then this NO\_PTC option should be used to deactivate PTC.  This NO\_PTC option should also be used in order to compare convergence behavior with other MODFLOW versions, as PTC is only available in MODFLOW 6. 
 \item Small improvements to PTC to reduce the initial PTCDEL value loaded on the diagonal. This reduces the number of iterations required to achieve convergence for steady-state stress periods for most problems.
+\item Added OUTER\_RCLOSEBND variable that is used when performing final convergence checks on model packages that solve a separate equation not solved by the IMS linear solver. This value represents the maximum allowable residual at any single model package element between successive outer iterations. An example of a model package that would use OUTER\_RCLOSEBND to evaluate convergence is the SFR package which solves a continuity equation for each reach.
+\item - 
 \end{itemize}
 
 \item Version mf6.0.3--Aug. 9, 2018
