@@ -413,8 +413,7 @@ contains
     return
    end subroutine csub_allocate_scalars
 
-  subroutine csub_cc(this, iend, icnvg, nodes, hnew,                          &
-                     icnvgopt, hclose, rclose)
+  subroutine csub_cc(this, iend, icnvg, nodes, hnew, hclose, rclose)
 ! **************************************************************************
 ! csub_cc -- Final convergence check for package
 ! **************************************************************************
@@ -428,7 +427,6 @@ contains
     integer(I4B), intent(inout) :: icnvg
     integer(I4B), intent(in) :: nodes
     real(DP), dimension(nodes), intent(in) :: hnew
-    integer(I4B), intent(in) :: icnvgopt
     real(DP), intent(in) :: hclose
     real(DP), intent(in) :: rclose
     ! -- local
@@ -438,7 +436,6 @@ contains
     integer(I4B) :: idelay
     integer(I4B) :: ihmax
     integer(I4B) :: irmax
-    real(DP) :: rrclose
     real(DP) :: hmax
     real(DP) :: rmax
     real(DP) :: dh
@@ -462,15 +459,6 @@ contains
 02030 format('CONVERGENCE FAILED AS A RESULT OF CSUB PACKAGE',1x,a)
 ! --------------------------------------------------------------------------
     ifirst = 1
-    if (icnvgopt < 2) then
-      rrclose = rclose
-    else if (icnvgopt == 2 .or. icnvgopt == 4) then
-      rrclose = rclose / real(nodes, KIND(DZERO))
-    else if (icnvgopt == 3) then
-      rrclose = DEM6
-    else
-      rrclose = DEM6
-    end if
     tled = DONE / DELT
     if (this%gwfiss == 0) then
       ihmax = 0
@@ -518,7 +506,7 @@ contains
           rmax = df
         end if
       end do final_check
-      if (hmax > hclose .or. rmax > rrclose) then
+      if (hmax > hclose .or. rmax > rclose) then
         icnvg = 0
         ! write convergence check information if this is the last outer iteration
         if (iend == 1) then
