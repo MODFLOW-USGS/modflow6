@@ -224,10 +224,11 @@ for k in range(nlay):
             if i == 19 and (j == 7 or j == 8):
                 iactive = 0
             if iactive > 0:
+                tag = '{:02d}_{:02d}_{:02d}'.format(k+1, i+1, j+1)
                 ibcno += 1
                 d = [ibcno, (k, i, j), 'nodelay', ini_stress, thick[k],
                      1., cc, cr, theta,
-                     kv, 999.]
+                     kv, 999., tag]
                 swt6.append(d)
 ds16 = [0, 0, 0, 2052, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -307,6 +308,7 @@ def get_model(idx, dir):
     opth = '{}.csub.obs'.format(name)
     csub = flopy.mf6.ModflowGwfcsub(gwf,
                                     #interbed_stress_offset=True,
+                                    boundnames=True,
                                     compression_indices=True,
                                     update_material_properties=ump[idx],
                                     time_weight=0.,
@@ -321,14 +323,14 @@ def get_model(idx, dir):
                                     maxsig0=len(gg),
                                     stress_period_data=sig0)
     orecarray = {}
-    orecarray['csub_obs.csv'] = [('w1l1', 'interbed-compaction', (0, 8, 9)),
-                                 ('w1l2', 'interbed-compaction', (1, 8, 9)),
-                                 ('w1l3', 'interbed-compaction', (2, 8, 9)),
-                                 ('w1l4', 'interbed-compaction', (3, 8, 9)),
-                                 ('w2l1', 'interbed-compaction', (0, 11, 6)),
-                                 ('w2l2', 'interbed-compaction', (1, 11, 6)),
-                                 ('w2l3', 'interbed-compaction', (2, 11, 6)),
-                                 ('w2l4', 'interbed-compaction', (3, 11, 6)),
+    orecarray['csub_obs.csv'] = [('w1l1', 'interbed-compaction', '01_09_10'),
+                                 ('w1l2', 'interbed-compaction', '02_09_10'),
+                                 ('w1l3', 'interbed-compaction', '03_09_10'),
+                                 ('w1l4', 'interbed-compaction', '04_09_10'),
+                                 ('w2l1', 'interbed-compaction', '01_12_07'),
+                                 ('w2l2', 'interbed-compaction', '02_12_07'),
+                                 ('w2l3', 'interbed-compaction', '03_12_07'),
+                                 ('w2l4', 'interbed-compaction', '04_12_07'),
                                  ('w2l4q', 'csub-cell', (3, 11, 6))]
     csub_obs_package = flopy.mf6.ModflowUtlobs(gwf,
                                                fname=opth,

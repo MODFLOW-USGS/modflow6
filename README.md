@@ -7,7 +7,7 @@
 
 ## Automated Testing Status on Travis-CI
 
-### Version 6.0.2 fix-csub-bud &mdash; build 220
+### Version 6.0.2 fix-csub-bud &mdash; build 221
 [![Build Status](https://travis-ci.org/MODFLOW-USGS/modflow6.svg?branch=fix-csub-bud)](https://travis-ci.org/MODFLOW-USGS/modflow6)
 
 ## Introduction

@@ -1,11 +1,21 @@
 # --------------------- gwf csub options ---------------------
+
+block options
+name boundnames
+type keyword
+shape
+reader urword
+optional true
+longname
+description REPLACE boundnames {'{#1}': 'CSUB'}
+
 block options
 name print_input
 type keyword
 reader urword
 optional true
 longname print input to listing file
-description REPLACE print_input {'{#1}': 'well'}
+description REPLACE print_input {'{#1}': 'CSUB'}
 
 block options
 name save_flows
@@ -657,7 +667,7 @@ in_record true
 reader urword
 optional true
 longname well name
-description REPLACE boundname {'{#1}': 'CSUB cell'}
+description REPLACE boundname {'{#1}': 'CSUB'}
 
 # --------------------- gwf csub period ---------------------
 
