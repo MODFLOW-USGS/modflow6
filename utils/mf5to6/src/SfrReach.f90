@@ -28,7 +28,7 @@ module SfrReachModule
     real, public    :: ustrf  ! upstream flow fraction
     real, public    :: stage = -9999.  ! specified stage at center of reach
     !
-    ! Stress-period input for SFR6
+    ! Stress period input for SFR6
     real, public    :: inflow
     real, public    :: rainfall
     real, public    :: evap

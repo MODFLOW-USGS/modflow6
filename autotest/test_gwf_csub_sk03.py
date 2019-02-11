@@ -52,7 +52,7 @@ bud_lst = ['CSUB-AQELASTIC_IN', 'CSUB-AQELASTIC_OUT',
 nper = 2
 sec2day = 86400.
 day2sec = 1. / sec2day
-nsec = 30 * 60
+nsec = 33 * 60
 perlen = np.array([1., nsec])
 totim = perlen.sum() - perlen[0]
 nstp = [1, nsec * 2]
@@ -71,7 +71,7 @@ botm = np.array([-40, -70., -100.], dtype=np.float) * ft2m
 zthick = [top - botm[0],
           botm[0] - botm[1],
           botm[1] - botm[2]]
-strt = -35 * ft2m
+strt = -35. * ft2m
 hnoflo = 1e30
 hdry = -1e30
 
@@ -96,7 +96,7 @@ for idx in range(nper):
 ib = 1
 
 # chd data
-finish = strt - totim * 0.02 / (60. * 60. * 3.28081)
+finish = strt - totim * 0.026 / (60. * 60. * 3.28081)
 c = []
 c6 = []
 ccol = [ncol-1]
@@ -268,7 +268,9 @@ def get_model(idx, dir):
                                     ('w3_1_1', 'HEAD', (2, 10, jj)),
                         ('ICF1_1_1', 'FLOW-JA-FACE', (0, 10, 0), (0, 10, 1)),
                         ('ICF2_1_1', 'FLOW-JA-FACE', (1, 10, 0), (1, 10, 1)),
-                        ('ICF3_1_1', 'FLOW-JA-FACE', (2, 10, 0), (2, 10, 1))]}
+                        ('ICF3_1_1', 'FLOW-JA-FACE', (2, 10, 0), (2, 10, 1))],
+                    'gwf_calib_obs.csv': [('w3_1_1', 'HEAD', (2, 10, jj))]
+                    }
     obs_package = flopy.mf6.ModflowUtlobs(gwf, pname='head_obs',
                                           fname='{}.obs'.format(name),
                                           digits=10, print_input=True,

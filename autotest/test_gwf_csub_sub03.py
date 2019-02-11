@@ -183,12 +183,14 @@ def get_model(idx, dir):
                     # skip constant head cells
                     if k == 0 and i == nrow - 1 and j in ccol:
                         continue
+                    tag = '{:02d}_{:02d}_{:02d}'.format(k+1, i+1, j+1)
                     # create nodelay entry
                     # no delay beds
                     ibcno += 1
                     b = thicknd0[kdx]
                     d = [ibcno, (k, i, j), cdelays, hc[idx],
-                         b, 1., ccnd0[kdx], crnd0[kdx], theta, 999., -999.]
+                         b, 1., ccnd0[kdx], crnd0[kdx], theta,
+                         999., -999., tag]
                     sub6.append(d)
 
     # create delay bed packagedata entries and skeletal storage
@@ -202,10 +204,12 @@ def get_model(idx, dir):
                     # skip constant head cells
                     if k == 0 and i == nrow - 1 and j in ccol:
                         continue
+                    tag = '{:02d}_{:02d}_{:02d}'.format(k+1, i+1, j+1)
                     # create nodelay entry
                     ibcno += 1
                     d = [ibcno, (k, i, j), cdelays, dhc[kdx], dz[kdx],
-                         rnb[kdx], cc, cr, theta, kv, dstart[kdx][i, j]]
+                         rnb[kdx], cc, cr, theta, kv, dstart[kdx][i, j],
+                         tag]
                     sub6.append(d)
         # create S for aquifer, delay beds, and no-delay beds
         for k in range(nlay):
@@ -287,7 +291,9 @@ def get_model(idx, dir):
     ibcsv = '{}.ib.strain.csv'.format(name)
     skcsv = '{}.sk.strain.csv'.format(name)
     copth = '{}.compaction.bin'.format(name)
-    csub = flopy.mf6.ModflowGwfcsub(gwf, head_based=True,
+    csub = flopy.mf6.ModflowGwfcsub(gwf, 
+                                    boundnames=True,
+                                    head_based=True,
                                     time_weight=0.,
                                     save_flows=True,
                                     strainib_filerecord=ibcsv,
@@ -300,9 +306,9 @@ def get_model(idx, dir):
                                     beta=0., ske_cr=ss,
                                     packagedata=sub6)
     orecarray = {}
-    orecarray['csub_obs.csv'] = [('tcomp1', 'interbed-compaction', (0, 4, 4)),
-                                 ('tcomp2', 'interbed-compaction', (1, 4, 4)),
-                                 ('tcomp3', 'interbed-compaction', (2, 4, 4))]
+    orecarray['csub_obs.csv'] = [('tcomp1', 'interbed-compaction', '01_05_05'),
+                                 ('tcomp2', 'interbed-compaction', '02_05_05'),
+                                 ('tcomp3', 'interbed-compaction', '03_05_05')]
     csub_obs_package = flopy.mf6.ModflowUtlobs(gwf,
                                                fname=opth,
                                                parent_file=csub, digits=10,

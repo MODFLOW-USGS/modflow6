@@ -1,6 +1,6 @@
 BEGIN CONTINUOUS FILEOUT  my_model.csub.csv
-  tcomp3        interbed_compaction    1 1 7
-  ibcensystm0   elastic_compaction     nsystm0
-  ibcinsystm0   inelastic_compaction   nsystm0
+  tcomp3        compaction-cell        1 1 7
+  ibcensystm0   elastic-compaction     nsystm0
+  ibcinsystm0   inelastic-compaction   nsystm0
 END CONTINUOUS 
 

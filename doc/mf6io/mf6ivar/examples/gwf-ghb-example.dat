@@ -10,7 +10,7 @@ BEGIN DIMENSIONS
   MAXBOUND 15
 END DIMENSIONS
 
-# Stress-period block(s)
+# Stress period block(s)
 BEGIN PERIOD 1
 #Lay Row  Col  Bhead Cond    boundname
   2   1   10   tides   15.0    Estuary-L2

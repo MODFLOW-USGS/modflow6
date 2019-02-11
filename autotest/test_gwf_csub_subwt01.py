@@ -125,10 +125,11 @@ for k in range(len(thick)):
             if j == 1:
                 iactive = 1
             if iactive > 0:
+                tag = '{:02d}_{:02d}_{:02d}'.format(1, i + 1, j + 1)
                 ibcno += 1
                 d = [ibcno, (0, i, j), 'nodelay', ini_stress, thick[k],
                      1., cc, cr, theta,
-                     kv, 999.]
+                     kv, 999., tag]
                 swt6.append(d)
 ds16 = [0, 0, 0, 2052, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -200,6 +201,7 @@ def get_model(idx, dir):
     opth = '{}.csub.obs'.format(name)
     csub = flopy.mf6.ModflowGwfcsub(gwf,
                                     #interbed_stress_offset=True,
+                                    boundnames=True,
                                     compression_indices=True,
                                     update_material_properties=ump[idx],
                                     time_weight=0.,
@@ -214,7 +216,7 @@ def get_model(idx, dir):
                                     maxsig0=len(gg),
                                     stress_period_data=sig0)
     orecarray = {}
-    orecarray['csub_obs.csv'] = [('w1l1', 'interbed-compaction', (0, 0, 1)),
+    orecarray['csub_obs.csv'] = [('w1l1', 'interbed-compaction', '01_01_02'),
                                  ('w1l1t', 'csub-cell', (0, 0, 1))]
     csub_obs_package = flopy.mf6.ModflowUtlobs(gwf,
                                                fname=opth,

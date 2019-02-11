@@ -179,12 +179,14 @@ if nndb > 0:
                 # skip constant head cells
                 if idomain[k, i, j] == 0:
                     continue
+                tag = '{:02d}_{:02d}_{:02d}'.format(k + 1, i + 1, j + 1)
                 # create nodelay entry
                 # no delay beds
                 ibcno += 1
                 b = thicknd0[kdx]
                 d = [ibcno, (k, i, j), cdelays, hc,
-                     b, 1., ccnd0[kdx], crnd0[kdx], theta, 999., -999.]
+                     b, 1., ccnd0[kdx], crnd0[kdx], theta,
+                     999., -999., tag]
                 sub6.append(d)
 
 # create delay bed packagedata entries and skeletal storage
@@ -265,7 +267,9 @@ def get_model(idx, dir):
     skcsv = '{}.sk.strain.csv'.format(name)
     copth = '{}.compaction.bin'.format(name)
     zopth = '{}.zdisplacement.bin'.format(name)
-    csub = flopy.mf6.ModflowGwfcsub(gwf, head_based=True,
+    csub = flopy.mf6.ModflowGwfcsub(gwf,
+                                    boundnames=True,
+                                    head_based=True,
                                     time_weight=0.,
                                     save_flows=True,
                                     strainib_filerecord=ibcsv,
@@ -277,10 +281,12 @@ def get_model(idx, dir):
                                     beta=0., ske_cr=ss,
                                     packagedata=sub6)
     orecarray = {}
-    orecarray['csub_obs.csv'] = [('tcomp3', 'interbed-compaction', (2, wrp[0], wcp[0])),
-                                 ('sk-tcomp3', 'skeletal-compaction', (2, wrp[0], wcp[0])),
-                                 ('ibi-tcomp3', 'inelastic-compaction', (2, wrp[0], wcp[0])),
-                                 ('ibe-tcomp3', 'elastic-compaction', (2, wrp[0], wcp[0]))]
+    tag = '{:02d}_{:02d}_{:02d}'.format(3, wrp[0] + 1, wcp[0] + 1)
+    oloc =  (2, wrp[0], wcp[0])
+    orecarray['csub_obs.csv'] = [('tcomp3', 'interbed-compaction', tag),
+                                 ('sk-tcomp3', 'skeletal-compaction', oloc),
+                                 ('ibi-tcomp3', 'inelastic-compaction', tag),
+                                 ('ibe-tcomp3', 'elastic-compaction', tag)]
     csub_obs_package = flopy.mf6.ModflowUtlobs(gwf,
                                                fname=opth,
                                                parent_file=csub, digits=10,
