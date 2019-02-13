@@ -20,7 +20,17 @@ except:
 
 from simulation import Simulation
 
-exdir = os.path.join('..', '..', 'modflow6-largetests')
+# find path to modflow6-largetests directory
+home = os.path.expanduser('~')
+#exdir = os.path.join('..', '..', 'modflow6-largetests')
+exdir = None
+for root, dirs, files in os.walk(home):
+    for d in dirs:
+        if d == 'modflow6-largetests':
+            exdir = os.path.join(root, d, 'modflow6-largetests')
+            break
+    if exdir is not None:
+        break
 testpaths = os.path.join('..', exdir)
 
 
