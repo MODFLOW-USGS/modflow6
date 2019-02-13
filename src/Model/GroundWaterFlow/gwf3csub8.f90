@@ -73,7 +73,7 @@ module GwfCsubModule
     integer(I4B), pointer :: maxsig0 => null()
     integer(I4B), pointer :: nbound => null()                                    !number of boundaries for current stress period
     integer(I4B), pointer :: ncolbnd => null()                                   !number of columns of the bound array
-    integer(I4B), pointer :: iscloc => null()                               !bound column to scale with SFAC
+    integer(I4B), pointer :: iscloc => null()                                    !bound column to scale with SFAC
     integer(I4B), pointer :: iauxmultcol => null()                               !column to use as multiplier for column iscloc
     integer(I4B), pointer :: ndelaycells => null()
     integer(I4B), pointer :: ndelaybeds => null()
@@ -506,7 +506,7 @@ contains
           rmax = df
         end if
       end do final_check
-      if (hmax > hclose .or. rmax > rclose) then
+      if (abs(hmax) > hclose .or. abs(rmax) > rclose) then
         icnvg = 0
         ! write convergence check information if this is the last outer iteration
         if (iend == 1) then
@@ -569,7 +569,6 @@ contains
     real(DP) :: rhs
     real(DP) :: stoe
     real(DP) :: stoi
-    real(DP) :: err
     real(DP) :: b
     real(DP) :: q
     real(DP) :: rateskin
@@ -1472,19 +1471,15 @@ contains
     character(len=LENBOUNDNAME) :: bndName, bndNameTemp
     character(len=7) :: cdelay
     character(len=9) :: cno
-    character(len=50), dimension(:), allocatable :: caux
     integer(I4B) :: ival
     logical :: isfound, endOfBlock
     integer(I4B) :: n
     integer(I4B) :: nn
     integer(I4B) :: ib
-    !integer(I4B) :: j
-    integer(I4B) :: iaux
     integer(I4B) :: itmp
     integer(I4B) :: ierr
     integer(I4B) :: ndelaybeds
     integer(I4B) :: idelay
-    integer(I4B) :: node
     real(DP) :: rval
     real(DP) :: top
     real(DP) :: bot
@@ -2887,7 +2882,6 @@ contains
     real(DP) :: hs
     real(DP) :: hwva
     real(DP) :: sadd
-    character(len=LINELENGTH) :: errmsg
 
 ! ------------------------------------------------------------------------------
     !
@@ -3202,13 +3196,10 @@ contains
     ! -- dummy
     class(GwfCsubType),intent(inout) :: this
     ! -- local
-    character(len=LINELENGTH) :: line, errmsg, keyword
-    integer(I4B) :: istart
-    integer(I4B) :: istop
-    integer(I4B) :: lloc
+    character(len=LINELENGTH) :: line, errmsg
     integer(I4B) :: ierr
     integer(I4B) :: nlist
-    logical :: isfound, endOfBlock
+    logical :: isfound
     ! -- formats
     character(len=*),parameter :: fmtblkerr =                                  &
       "('Error.  Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
@@ -5264,11 +5255,8 @@ contains
     real(DP), intent(inout) :: rhs
     ! -- local variables
     integer(I4B) :: idelay
-    integer(I4B) :: node
     real(DP) :: c1
     real(DP) :: c2
-    real(DP) :: top
-    real(DP) :: bot
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
@@ -5306,8 +5294,6 @@ contains
     real(DP), intent(in) :: hcell
     ! -- local variables
     integer(I4B) :: idelay
-    integer(I4B) :: j
-    integer(I4B) :: node
     real(DP) :: q
     real(DP) :: c
 ! ------------------------------------------------------------------------------
