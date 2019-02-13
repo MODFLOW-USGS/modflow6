@@ -22,16 +22,19 @@ from simulation import Simulation
 
 # find path to modflow6-largetests directory
 home = os.path.expanduser('~')
-#exdir = os.path.join('..', '..', 'modflow6-largetests')
+fdir = 'modflow6-largetests'
 exdir = None
 for root, dirs, files in os.walk(home):
     for d in dirs:
-        if d == 'modflow6-largetests':
-            exdir = os.path.join(root, d, 'modflow6-largetests')
+        if d == fdir:
+            exdir = os.path.join(root, d)
             break
     if exdir is not None:
         break
-testpaths = os.path.join('..', exdir)
+if exdir is not None:
+    testpaths = os.path.join('..', exdir)
+else:
+    testpaths = None
 
 
 def get_mf6_models():
@@ -43,14 +46,15 @@ def get_mf6_models():
                'test018_NAC',
                'test051_uzf1d_a')
 
-
     # build list of directories with valid example files
     exclude = list(exclude)
-    dirs = [d for d in os.listdir(exdir)
-            if 'test' in d and d not in exclude]
-    # sort in numerical order for case sensitive os
-    dirs = sorted(dirs, key=lambda v: (v.upper(), v[0].islower()))
-
+    if exdir is not None:
+        dirs = [d for d in os.listdir(exdir)
+                if 'test' in d and d not in exclude]
+        # sort in numerical order for case sensitive os
+        dirs = sorted(dirs, key=lambda v: (v.upper(), v[0].islower()))
+    else:
+        dirs = []
 
     # determine if only a selection of models should be run
     select_dirs = None
@@ -103,7 +107,6 @@ def get_mf6_models():
             msg += ']'
             print(msg)
 
-
     return dirs
 
 
@@ -127,7 +130,7 @@ def test_mf6model():
     dirtest = dir_avail()
     if not dirtest:
         return
-    
+
     # get a list of test models to run
     dirs = get_mf6_models()
 
@@ -139,13 +142,16 @@ def test_mf6model():
 
 
 def dir_avail():
-    avail = os.path.isdir(exdir)
+    avail = False
+    if exdir is not None:
+        avail = os.path.isdir(exdir)
     if not avail:
         print('"{}" does not exist'.format(exdir))
         print('no need to run {}'.format(os.path.basename(__file__)))
     if os.getenv('TRAVIS'):
         avail = False
     return avail
+
 
 def main():
     # write message
@@ -182,4 +188,3 @@ if __name__ == "__main__":
 
     # run main routine
     main()
-

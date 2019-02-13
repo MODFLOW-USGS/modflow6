@@ -26,11 +26,11 @@ from targets import target_dict as target_dict
 
 # find path to modflow6-examples directory
 home = os.path.expanduser('~')
-#exdir = os.path.join('..', '..', 'modflow6-examples', 'mf5to6')
+fdir = 'modflow6-examples'
 exdir = None
 for root, dirs, files in os.walk(home):
     for d in dirs:
-        if d == 'modflow6-examples':
+        if d == fdir:
             exdir = os.path.join(root, d, 'mf5to6')
             break
     if exdir is not None:
@@ -117,7 +117,6 @@ def get_mf5to6_models():
                     msg += ', '
             msg += ']'
             print(msg)
-
 
     return dirs
 
@@ -255,7 +254,9 @@ def test_model():
 
 
 def dir_avail():
-    avail = os.path.isdir(exdir)
+    avail = False
+    if exdir is not None:
+        avail = os.path.isdir(exdir)
     if not avail:
         print('"{}" does not exist'.format(exdir))
         print('no need to run {}'.format(os.path.basename(__file__)))
