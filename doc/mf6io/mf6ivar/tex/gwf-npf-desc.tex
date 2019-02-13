@@ -27,7 +27,7 @@
 
 \item \texttt{RHS}---If the RHS keyword is also included, then the XT3D additional terms will be added to the right-hand side.  If the RHS keyword is excluded, then the XT3D terms will be put into the coefficient matrix.
 
-\item \texttt{SAVE\_SPECIFIC\_DISCHARGE}---keyword to indicate that x, y, and z components of specific discharge will be calculated at cell centers and written to the cell-by-cell flow file, which is specified with ``BUDGET SAVE FILE'' in Output Control.
+\item \texttt{SAVE\_SPECIFIC\_DISCHARGE}---keyword to indicate that x, y, and z components of specific discharge will be calculated at cell centers and written to the cell-by-cell flow file, which is specified with ``BUDGET SAVE FILE'' in Output Control.  If this option is activated, then additional information may be required in the discretization packages and the GWF Exchange package (if GWF models are coupled).  Specifically, ANGLDEGX must be specified in the CONNECTIONDATA block of the DISU Package; ANGLDEGX must also be specified for the GWF Exchange as an auxiliary variable.
 
 \end{description}
 \item \textbf{Block: GRIDDATA}
