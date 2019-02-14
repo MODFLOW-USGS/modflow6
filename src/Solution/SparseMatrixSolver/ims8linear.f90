@@ -84,6 +84,7 @@
     ! PROCEDURES (METHODS)
     CONTAINS
       PROCEDURE :: IMSLINEAR_ALLOCATE => IMSLINEAR_AR
+      procedure :: imslinear_summary
       PROCEDURE :: IMSLINEAR_APPLY => IMSLINEAR_AP
       procedure :: IMSLINEAR_DA
       procedure, private :: allocate_scalars
@@ -106,7 +107,7 @@
 !     ------------------------------------------------------------------
       use MemoryManagerModule, only: mem_allocate
       use SimModule, only: ustop, store_error, count_errors
-      IMPLICIT NONE
+      !IMPLICIT NONE
 !     + + + DUMMY VARIABLES + + +
       CLASS(IMSLINEAR_DATA), INTENT(INOUT) :: THIS
       CHARACTER (LEN=LENSOLUTIONNAME), INTENT(IN) :: NAME
@@ -128,13 +129,13 @@
 !     + + + LOCAL VARIABLES + + +
       LOGICAL :: lreaddata
       character(len=LINELENGTH) :: errmsg, keyword
-      CHARACTER (LEN= 10) :: clin(0:2)
-      CHARACTER (LEN= 31) :: clintit(0:2)
-      CHARACTER (LEN= 20) :: cipc(0:4)
-      CHARACTER (LEN= 20) :: cscale(0:2)
-      CHARACTER (LEN= 25) :: corder(0:2)
-      CHARACTER (LEN= 16), DIMENSION(0:4) :: ccnvgopt
-      CHARACTER (LEN= 15) :: clevel, cdroptol 
+      !CHARACTER (LEN= 10) :: clin(0:2)
+      !CHARACTER (LEN= 31) :: clintit(0:2)
+      !CHARACTER (LEN= 20) :: cipc(0:4)
+      !CHARACTER (LEN= 20) :: cscale(0:2)
+      !CHARACTER (LEN= 25) :: corder(0:2)
+      !CHARACTER (LEN= 16), DIMENSION(0:4) :: ccnvgopt
+      !CHARACTER (LEN= 15) :: clevel, cdroptol 
       integer(I4B) :: i, n
       integer(I4B) :: i0
       integer(I4B) :: iscllen, iolen
@@ -146,54 +147,7 @@
       integer(I4B) :: iwlu
       integer(I4B) :: iwk
 !     + + + PARAMETERS + + +
-!       DATA
-      DATA clin  /'UNKNOWN   ', &
-                  'CG        ', &
-     &            'BCGS      '/
-      DATA clintit  /'             UNKNOWN           ', &
-                     '       CONJUGATE-GRADIENT      ', &
-     &               'BICONJUGATE-GRADIENT STABILIZED'/
-      DATA cipc  /'UNKNOWN             ', &
-     &            'INCOMPLETE LU       ', &
-     &            'MOD. INCOMPLETE LU  ', &
-     &            'INCOMPLETE LUT      ', &
-     &            'MOD. INCOMPLETE LUT '/
-      DATA cscale/'NO SCALING          ', &
-     &            'SYMMETRIC SCALING   ', &
-     &            'L2 NORM SCALING     '/
-      DATA corder/'ORIGINAL ORDERING        ', &
-     &            'RCM ORDERING             ', &
-     &            'MINIMUM DEGREE ORDERING  '/
-      DATA ccnvgopt  /'INFINITY NORM   ', &
-     &                'INFINITY NORM S ', &
-     &                'L2 NORM         ', &
-     &                'RELATIVE L2NORM ', &
-                      'L2 NORM W. REL. '/
-!       OUTPUT FORMATS
-02010 FORMAT (1X,/,7X,'SOLUTION BY THE',1X,A31,1X,'METHOD', &
-     &        /,1X,66('-'),/, &
-     &        ' MAXIMUM OF ',I6,' CALLS OF SOLUTION ROUTINE',/, &
-     &        ' MAXIMUM OF ',I6, &
-     &        ' INTERNAL ITERATIONS PER CALL TO SOLUTION ROUTINE',/, &
-     &        ' LINEAR ACCELERATION METHOD            =',1X,A,/, &
-     &        ' MATRIX PRECONDITIONING TYPE           =',1X,A,/, &
-     &        ' MATRIX SCALING APPROACH               =',1X,A,/, &
-     &        ' MATRIX REORDERING APPROACH            =',1X,A,/, &
-     &        ' NUMBER OF ORTHOGONALIZATIONS          =',I9,/, &
-     &        ' HEAD CHANGE CRITERION FOR CLOSURE     =',E15.5,/, &
-     &        ' RESIDUAL CHANGE CRITERION FOR CLOSURE =',E15.5,/, &
-     &        ' RESIDUAL CONVERGENCE OPTION           =',I9,/, &
-     &        ' RESIDUAL CONVERGENCE NORM             =',1X,A,/, &
-     &        ' RELAXATION FACTOR                     =',E15.5)
-02015 FORMAT (' NUMBER OF LEVELS                      =',A15,/, &
-     &        ' DROP TOLERANCE                        =',A15,//)
-02020 FORMAT (///,1X,'IMSLINEAR DATA INPUT ERROR:', &
-     &          /,2X,'SCALING MUST BE USED (ISCL.GT.0) IF USING', &
-     &          /,2X,'THE ILU0 OR MILU0 PRECONDITIONERS (IPC.EQ.2 OR', &
-     &          /,2X,'IPC.EQ.3) WITH MATRIX REORDERING (IORD.GT.0)')
-2030  FORMAT(1X,A20,1X,6(I6,1X))
-2040  FORMAT(1X,20('-'),1X,6(6('-'),1X))
-2050  FORMAT(1X,62('-'),/)
+!     + + + OUTPUT FORMATS + + +
 !------------------------------------------------------------------
 !
 !-------SET LREADDATA
@@ -231,8 +185,8 @@
       THIS%IPC = 0
       THIS%LEVEL = 0
       
-      clevel = ''
-      cdroptol = ''
+      !clevel = ''
+      !cdroptol = ''
 !
 !-------TRANSFER COMMON VARIABLES FROM IMS TO IMSLINEAR
       THIS%ILINMETH = 0
@@ -287,7 +241,7 @@
               else if (keyword == 'RELATIVE_RCLOSE') then
                 THIS%ICNVGOPT = 3
               else if (keyword == 'L2NORM_RELATIVE_RCLOSE') then
-                THIS%ICNVGOPT = 3
+                THIS%ICNVGOPT = 4
               end if
             case ('INNER_MAXIMUM')
               i = parser%GetInteger()
@@ -353,7 +307,7 @@
      &            'MUST BE GREATER THAN OR EQUAL TO ZERO'
                 call store_error(errmsg)
               end if
-              write (clevel, '(i15)') i
+              !write (clevel, '(i15)') i
             case ('PRECONDITIONER_DROP_TOLERANCE')
               r = parser%GetDouble()
               THIS%DROPTOL = r
@@ -363,7 +317,7 @@
      &            'MUST BE GREATER THAN OR EQUAL TO ZERO'
                 call store_error(errmsg)
               end if
-              write (cdroptol, '(e15.5)') r
+              !write (cdroptol, '(e15.5)') r
             case default
               write(errmsg,'(4x,a,a)') &
      &          '****WARNING. UNKNOWN IMSLINEAR KEYWORD: ', &
@@ -425,20 +379,6 @@
         call parser%StoreErrorUnit()
         call ustop()
       endif
-!
-!-------PRINT MXITER,ITER1,IPC,ISCL,IORD,HCLOSE,RCLOSE
-      WRITE (IOUT,2010) clintit(THIS%ILINMETH), MXITER, THIS%ITER1, &
-     &                  clin(THIS%ILINMETH), cipc(THIS%IPC),        &
-     &                  cscale(THIS%ISCL), corder(THIS%IORD),       &
-     &                  THIS%NORTH, THIS%HCLOSE, THIS%RCLOSE,       &
-     &                  THIS%ICNVGOPT, ccnvgopt(THIS%ICNVGOPT),    &
-     &                  THIS%RELAX
-      IF (THIS%LEVEL > 0 .OR. THIS%DROPTOL > DZERO) THEN
-        WRITE (IOUT,2015) trim(adjustl(clevel)), &
-     &                    trim(adjustl(cdroptol))
-      ELSE
-         WRITE (IOUT,'(//)')
-      END IF
 !
 !-------INITIALIZE IMSLINEAR VARIABLES
       THIS%NITERC = 0
@@ -572,7 +512,7 @@
 !
 !-------REVERSE CUTHILL MCKEE AND MINIMUM DEGREE ORDERING
       IF (THIS%IORD.NE.0) THEN
-        CALL IMSLINEARSUB_CALC_ORDER(IOUT,THIS%IPRIMS, THIS%IORD,THIS%NEQ,      &
+        CALL IMSLINEARSUB_CALC_ORDER(IOUT, THIS%IPRIMS, THIS%IORD,THIS%NEQ,     &
                                      THIS%NJA,THIS%IA,THIS%JA,                  &
                                      THIS%LORDER,THIS%IORDER)
       END IF
@@ -584,6 +524,112 @@
       RETURN
     END SUBROUTINE IMSLINEAR_AR
 
+    subroutine imslinear_summary(this, mxiter)
+      class(IMSLINEAR_DATA), intent(inout) :: this
+      integer(I4B), intent(in) :: mxiter
+!     + + + LOCAL VARIABLES + + +
+      CHARACTER (LEN= 10) :: clin(0:2)
+      CHARACTER (LEN= 31) :: clintit(0:2)
+      CHARACTER (LEN= 20) :: cipc(0:4)
+      CHARACTER (LEN= 20) :: cscale(0:2)
+      CHARACTER (LEN= 25) :: corder(0:2)
+      CHARACTER (LEN= 16), DIMENSION(0:4) :: ccnvgopt
+      CHARACTER (LEN= 15) :: clevel
+      CHARACTER (LEN= 15) :: cdroptol 
+      integer(I4B) :: i, j, n
+!     + + + PARAMETERS + + +
+!       DATA
+      DATA clin  /'UNKNOWN   ', &
+                  'CG        ', &
+     &            'BCGS      '/
+      DATA clintit  /'             UNKNOWN           ', &
+                     '       CONJUGATE-GRADIENT      ', &
+     &               'BICONJUGATE-GRADIENT STABILIZED'/
+      DATA cipc  /'UNKNOWN             ', &
+     &            'INCOMPLETE LU       ', &
+     &            'MOD. INCOMPLETE LU  ', &
+     &            'INCOMPLETE LUT      ', &
+     &            'MOD. INCOMPLETE LUT '/
+      DATA cscale/'NO SCALING          ', &
+     &            'SYMMETRIC SCALING   ', &
+     &            'L2 NORM SCALING     '/
+      DATA corder/'ORIGINAL ORDERING        ', &
+     &            'RCM ORDERING             ', &
+     &            'MINIMUM DEGREE ORDERING  '/
+      DATA ccnvgopt  /'INFINITY NORM   ', &
+     &                'INFINITY NORM S ', &
+     &                'L2 NORM         ', &
+     &                'RELATIVE L2NORM ', &
+                      'L2 NORM W. REL. '/
+!       OUTPUT FORMATS
+02010 FORMAT (1X,/,7X,'SOLUTION BY THE',1X,A31,1X,'METHOD', &
+     &        /,1X,66('-'),/, &
+     &        ' MAXIMUM OF ',I6,' CALLS OF SOLUTION ROUTINE',/, &
+     &        ' MAXIMUM OF ',I6, &
+     &        ' INTERNAL ITERATIONS PER CALL TO SOLUTION ROUTINE',/, &
+     &        ' LINEAR ACCELERATION METHOD            =',1X,A,/, &
+     &        ' MATRIX PRECONDITIONING TYPE           =',1X,A,/, &
+     &        ' MATRIX SCALING APPROACH               =',1X,A,/, &
+     &        ' MATRIX REORDERING APPROACH            =',1X,A,/, &
+     &        ' NUMBER OF ORTHOGONALIZATIONS          =',I9,/, &
+     &        ' HEAD CHANGE CRITERION FOR CLOSURE     =',E15.5,/, &
+     &        ' RESIDUAL CHANGE CRITERION FOR CLOSURE =',E15.5,/, &
+     &        ' RESIDUAL CONVERGENCE OPTION           =',I9,/, &
+     &        ' RESIDUAL CONVERGENCE NORM             =',1X,A,/, &
+     &        ' RELAXATION FACTOR                     =',E15.5)
+02015 FORMAT (' NUMBER OF LEVELS                      =',A15,/, &
+     &        ' DROP TOLERANCE                        =',A15,//)
+2030  FORMAT(1X,A20,1X,6(I6,1X))
+2040  FORMAT(1X,20('-'),1X,6(6('-'),1X))
+2050  FORMAT(1X,62('-'),/)      !
+!------------------------------------------------------------------
+      !
+      ! -- initialize clevel and cdroptol
+      clevel = ''
+      cdroptol = ''
+      !
+      ! -- PRINT MXITER,ITER1,IPC,ISCL,IORD,HCLOSE,RCLOSE
+      write (this%iout,2010)                                        &
+                        clintit(THIS%ILINMETH), MXITER, THIS%ITER1, &
+                        clin(THIS%ILINMETH), cipc(THIS%IPC),        &
+                        cscale(THIS%ISCL), corder(THIS%IORD),       &
+                        THIS%NORTH, THIS%HCLOSE, THIS%RCLOSE,       &
+                        THIS%ICNVGOPT, ccnvgopt(THIS%ICNVGOPT),     &
+                        THIS%RELAX
+      if (this%level > 0) then
+        write (clevel, '(i15)') this%level
+      end if
+      if (this%droptol > DZERO) then
+        write (cdroptol, '(e15.5)') this%droptol
+      end if
+      IF (this%level > 0 .or. this%droptol > DZERO) THEN
+        write (this%iout,2015) trim(adjustl(clevel)),               &
+                               trim(adjustl(cdroptol))
+      ELSE
+         WRITE (this%iout,'(//)')
+      END IF
+      
+      if (this%iord /= 0) then
+        !                                                                       
+        ! -- WRITE SUMMARY OF REORDERING INFORMATION TO LIST FILE                                                  
+        if (this%iprims ==  2) then 
+          DO i = 1, this%neq, 6 
+            WRITE (this%iout,2030) 'ORIGINAL NODE      :',                      &
+                              (j,j=i,MIN(i+5,this%neq))                      
+            WRITE (this%iout,2040) 
+            WRITE (this%iout,2030) 'REORDERED INDEX    :',                      &
+                              (this%lorder(j),j=i,MIN(i+5,this%neq))              
+            WRITE (this%iout,2030) 'REORDERED NODE     :',                      &
+                              (this%iorder(j),j=i,MIN(i+5,this%neq))              
+            WRITE (this%iout,2050) 
+          END DO 
+        END IF 
+      end if
+      !
+      ! -- return
+    return
+    end subroutine imslinear_summary 
+    
     subroutine allocate_scalars(this)
       use MemoryManagerModule, only: mem_allocate
       class(IMSLINEAR_DATA), intent(inout) :: this
@@ -688,7 +734,6 @@
       call mem_deallocate(this%niapc)
       call mem_deallocate(this%njapc)
       call mem_deallocate(this%hclose)
-      call mem_deallocate(this%rclose)
       call mem_deallocate(this%relax)
       call mem_deallocate(this%epfact)
       call mem_deallocate(this%l2norm0)
@@ -967,9 +1012,6 @@
 !       + + + PARAMETERS + + +                                            
 !       + + + FUNCTIONS + + +                                             
 !       + + + FORMATS + + +                                               
- 2030 FORMAT(1X,A20,1X,6(I6,1X)) 
- 2040 FORMAT(1X,20('-'),1X,6(6('-'),1X)) 
- 2050 FORMAT(1X,62('-'),/) 
 !       + + + CODE + + +                                                  
         DO n = 1, NEQ 
           LORDER(n) = IZERO 
@@ -998,21 +1040,7 @@
         DO n = 1, NEQ 
           IORDER( LORDER(n) ) = n 
         END DO 
-!                                                                       
-!         WRITE SUMMARY OF REORDERING INFORMATION                       
-!         TO LIST FILE                                                  
-        IF (IPRIMS ==  2) THEN 
-          DO i = 1, NEQ, 6 
-            WRITE (IOUT,2030) 'ORIGINAL NODE      :',                   &
-     &                        (j,j=i,MIN(i+5,NEQ))                      
-            WRITE (IOUT,2040) 
-            WRITE (IOUT,2030) 'REORDERED INDEX    :',                   &
-     &                        (LORDER(j),j=i,MIN(i+5,NEQ))              
-            WRITE (IOUT,2030) 'REORDERED NODE     :',                   &
-     &                        (IORDER(j),j=i,MIN(i+5,NEQ))              
-            WRITE (IOUT,2050) 
-         END DO 
-         END IF 
+!
 !         DEALLOCATE TEMPORARY STORAGE                                  
         DEALLOCATE ( iwork0, iwork1 ) 
 !

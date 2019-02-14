@@ -422,7 +422,7 @@ contains
     ! format
     10 format(a,' boundary removed at (',i0,',',i0,',',i0,')')
     !
-    ! Write stress-period data for MF6
+    ! Write stress period data for MF6
     ! Loop through rows and columns to generate list of EVT input
     rowloop: do i=1,NROW
       colloop: do j=1,NCOL

@@ -2,7 +2,7 @@ module MvrModule
   
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LENMODELNAME, LENPACKAGENAME, LINELENGTH,         &
-                             LENBUDTXT, LENAUXNAME, DZERO, DONE
+                             LENBUDTXT, LENAUXNAME, LENBOUNDNAME, DZERO, DONE
   
   implicit none
   private
@@ -16,7 +16,7 @@ module MvrModule
     character(len=LENMODELNAME+LENPACKAGENAME+1) :: pname2 = ''                  !receiver package name
     integer(I4B)                                 :: irch1 = 0                    !provider reach number
     integer(I4B)                                 :: irch2 = 0                    !receiver reach number
-    character(len=20)                            :: mvrtype = ''                 !FACTOR, THRESHOLD, UPTO, EXCESS
+    integer(I4B)                                 :: imvrtype = 0                 !mover type (1, 2, 3, 4) corresponds to mvrtypes
     real(DP)                                     :: value = DZERO                !factor or rate depending on mvrtype
     real(DP)                                     :: qpold = DZERO                !provider rate from last time step
     real(DP)                                     :: qpnew = DZERO                !new provider rate
@@ -24,7 +24,7 @@ module MvrModule
     real(DP)                                     :: qanew = DZERO                !rate available at time of providing
     real(DP)                                     :: qaold = DZERO                !rate available fromtime step
     real(DP), pointer                            :: qtformvr_ptr => null()       !pointer to total available flow (qtformvr)
-    real(DP), pointer                            :: qformvr_ptr => null()        !pointer to available flow after being consumed (qformvr)
+    real(DP), pointer                            :: qformvr_ptr => null()        !pointer to available flow after consumed (qformvr)
     real(DP), pointer                            :: qtomvr_ptr => null()         !pointer to provider flow rate (qtomvr)
     real(DP), pointer                            :: qfrommvr_ptr => null()       !pointer to receiver flow rate (qfrommvr)
   contains
@@ -48,7 +48,7 @@ module MvrModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use InputOutputModule, only: urword
+    use InputOutputModule, only: urword, extract_idnum_or_bndname
     use SimModule, only: ustop, store_error, store_error_unit
     use MemoryManagerModule, only: mem_setptr
     ! -- dummy
@@ -59,11 +59,11 @@ module MvrModule
     character(len=LENMODELNAME), intent(in) :: mname
     ! -- local
     character(len=LENMODELNAME+LENPACKAGENAME+1) :: origin
-    integer(I4B) :: lloc, istart, istop, ival, i
+    integer(I4B) :: lloc, istart, istop, ival
     real(DP) :: rval
     real(DP), dimension(:), pointer, contiguous :: temp_ptr => null()
-    logical :: valid
     character(len=LINELENGTH) :: errmsg
+    character(len=LENBOUNDNAME) :: bndname
     logical :: mnamel
 ! ------------------------------------------------------------------------------
     !
@@ -88,7 +88,7 @@ module MvrModule
     this%pname1 = trim(this%pname1) // ' ' // line(istart:istop)
     !
     ! -- Read id for the provider
-    call urword(line, lloc, istart, istop, 2, ival, rval, iout, inunit)
+    call extract_idnum_or_bndname(line, lloc, istart, istop, ival, bndname)
     this%irch1 = ival
     !
     ! -- Construct receiver name, which is modelname followed by packagename
@@ -102,28 +102,29 @@ module MvrModule
     this%pname2 = trim(this%pname2) // ' ' // line(istart:istop)
     !
     ! -- Read id for the receiver
-    call urword(line, lloc, istart, istop, 2, ival, rval, iout, inunit)
+    call extract_idnum_or_bndname(line, lloc, istart, istop, ival, bndname)
     this%irch2 = ival
     !
-    ! -- Read type and value
+    ! -- Read mover type
     call urword(line, lloc, istart, istop, 1, ival, rval, iout, inunit)
-    this%mvrtype = line(istart:istop)
+    select case(line(istart:istop))
+      case('FACTOR')
+        this%imvrtype = 1
+      case('EXCESS')
+        this%imvrtype = 2
+      case('THRESHOLD')
+        this%imvrtype = 3
+      case('UPTO')
+        this%imvrtype = 4
+      case default
+        call store_error('ERROR. INVALID MOVER TYPE: '//trim(line(istart:istop)) )
+        call store_error_unit(inunit)
+        call ustop()
+    end select
+    !
+    ! -- Read mover value
     call urword(line, lloc, istart, istop, 3, ival, rval, iout, inunit)
     this%value = rval
-    !
-    ! -- Ensure mvrtype is valid
-    valid = .false.
-    do i = 1, size(mvrtypes)
-      if(this%mvrtype == mvrtypes(i)) then
-        valid = .true.
-        exit
-      endif
-    enddo
-    if(.not. valid) then
-      call store_error('ERROR. INVALID MOVER TYPE: '//trim(this%mvrtype) )
-      call store_error_unit(inunit)
-      call ustop()
-    endif
     !
     ! -- initialize values to zero
     call this%set_qpold(DZERO)
@@ -237,8 +238,8 @@ module MvrModule
       ' FROM ID: ', this%irch1
     write(iout, '(4x, a, a, a, i0)') 'TO PACKAGE: ', trim(this%pname2),        &
       ' TO ID: ', this%irch2
-    write(iout, '(4x, a, a, a, 1pg15.6,/)') 'MOVER TYPE: ', trim(this%mvrtype),&
-      ' ', this%value
+    write(iout, '(4x, a, a, a, 1pg15.6,/)') 'MOVER TYPE: ',                    &
+      trim(mvrtypes(this%imvrtype)), ' ', this%value
     !
     ! -- return
     return
@@ -330,25 +331,28 @@ module MvrModule
     !    go to the receiver.
     qr = DZERO
     ! -- Calculate qr
-    select case (this%mvrtype)
-    case('FACTOR')
+    select case (this%imvrtype)
+      case(1)
         ! -- FACTOR uses total available to make calculation, and then
         !    limits qr by consumed available
         if(qta > DZERO) qr = qta * this%value
         qr = min(qr, qa)
-      case('EXCESS')
+      case(2)
+        ! -- EXCESS
         if(qa > this%value) then
           qr = qa - this%value
         else
           qr = DZERO
         endif
-      case('THRESHOLD')
+      case(3)
+        ! -- THRESHOLD
         if(this%value > qa) then
           qr = DZERO
         else
           qr = this%value
         endif
-      case('UPTO')
+      case(4)
+        ! -- UPTO
         if(qa > this%value) then
           qr = this%value
         else

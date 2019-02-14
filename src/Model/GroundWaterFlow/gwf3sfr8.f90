@@ -79,6 +79,8 @@ module SfrModule
     real(DP), pointer :: gwflow => null()
     real(DP), pointer :: simevap => null()
     real(DP), pointer :: simrunoff => null()
+    real(DP), pointer :: stage0 => null()
+    real(DP), pointer :: usflow0 => null()
     ! -- arrays of data for reach
     integer(I4B), dimension(:), pointer, contiguous :: iconn => null()
     integer(I4B), dimension(:), pointer, contiguous :: idir => null()
@@ -106,6 +108,7 @@ module SfrModule
     integer(I4B), pointer :: bditems => NULL()
     integer(I4B), pointer :: cbcauxitems => NULL()
     integer(I4B), pointer :: icheck => NULL()
+    integer(I4B), pointer :: iconvchk => NULL()
     integer(I4B), pointer :: gwfiss => NULL()
     ! -- double precision
     real(DP), pointer :: unitconv => NULL()
@@ -138,6 +141,7 @@ module SfrModule
     procedure :: bnd_cf => sfr_cf
     procedure :: bnd_fc => sfr_fc
     procedure :: bnd_fn => sfr_fn
+    procedure :: bnd_cc => sfr_cc
     procedure :: bnd_bd => sfr_bd
     procedure :: bnd_ot => sfr_ot
     procedure :: bnd_da => sfr_da
@@ -246,6 +250,7 @@ contains
     call mem_allocate(this%deps, 'DEPS', this%origin)
     call mem_allocate(this%nconn, 'NCONN', this%origin)
     call mem_allocate(this%icheck, 'ICHECK', this%origin)
+    call mem_allocate(this%iconvchk, 'ICONVCHK', this%origin)
     !
     ! -- set pointer to gwf iss
     call mem_setptr(this%gwfiss, 'ISS', trim(this%name_model))
@@ -264,6 +269,7 @@ contains
     !this%imover = 0
     this%nconn = 0
     this%icheck = 1
+    this%iconvchk = 1
     !
     ! -- return
     return
@@ -498,6 +504,13 @@ contains
                                    'RELATIVE TO MODEL GRID AND ' //           &
                                    'REASONABLE PARAMETERS WILL NOT ' //       &
                                    'BE PERFORMED.'
+        found = .true.
+      case('DEV_NO_FINAL_CHECK')
+        call this%parser%DevOpt()
+        this%iconvchk = 0
+        write(this%iout, '(4x,a)')                                             &
+     &    'A FINAL CONVERGENCE CHECK OF THE CHANGE IN STREAM FLOW ROUTING ' // &
+     &    'STAGES AND FLOWS WILL NOT BE MADE'
         found = .true.
       !
       ! -- no valid options found
@@ -1298,6 +1311,12 @@ contains
       else
         hgwf = DEP20
       end if
+      !
+      ! -- save previous stage and upstream flow
+      this%reaches(n)%stage0 = this%reaches(n)%stage
+      this%reaches(n)%usflow0 = this%reaches(n)%usflow
+      !
+      ! -- solve for flow in swr
       if (this%reaches(n)%iboundpak /= 0) then
         call this%sfr_solve(n, hgwf, hhcof, rrhs)
       else
@@ -1378,6 +1397,74 @@ contains
     ! -- return
     return
   end subroutine sfr_fn
+
+  subroutine sfr_cc(this, iend, icnvg, hclose, rclose)
+! **************************************************************************
+! sfr_cc -- Final convergence check for package
+! **************************************************************************
+!
+!    SPECIFICATIONS:
+! --------------------------------------------------------------------------
+    ! -- dummy
+    class(SfrType), intent(inout) :: this
+    integer(I4B), intent(in) :: iend
+    integer(I4B), intent(inout) :: icnvg
+    real(DP), intent(in) :: hclose
+    real(DP), intent(in) :: rclose
+    ! -- local
+    character(len=15) :: cdhmax
+    character(len=15) :: crmax
+    integer(I4B) :: n
+    integer(I4B) :: ifirst
+    real(DP) :: dh
+    real(DP) :: r
+    ! format
+02000 format(4x,'STREAMFLOW ROUTING PACKAGE FAILED CONVERGENCE CRITERIA',//,    &
+             4x,a10,2(1x,a15),/,4x,74('-'))
+02010 format(4x,i10,2(1x,G15.7))
+02020 format(4x,74('-'))
+02030 format('CONVERGENCE FAILED AS A RESULT OF STREAMFLOW ROUTING PACKAGE',    &
+             1x,a)
+! --------------------------------------------------------------------------
+    ifirst = 1
+    if (this%iconvchk /= 0) then
+      final_check: do n = 1, this%maxbound
+        if (this%reaches(n)%iboundpak == 0) cycle
+        dh = this%reaches(n)%stage0 - this%reaches(n)%stage
+        r = this%reaches(n)%usflow0 - this%reaches(n)%usflow
+        if (ABS(dh) > hclose .or. ABS(r) > rclose) then
+          icnvg = 0
+          ! write convergence check information if this is the last outer iteration
+          if (iend == 1) then
+            if (ifirst == 1) then
+              ifirst = 0
+              write(*,2030) this%name
+              write(this%iout, 2000) '     REACH',                              &
+                 '        MAX. DH', '  MAX. RESIDUAL'
+            end if
+            cdhmax = '               '
+            crmax = '               '
+            if (ABS(dh) > hclose) then
+              write(cdhmax, '(G15.7)') dh
+            end if
+            if (ABS(r) > rclose) then
+              write(crmax, '(G15.7)') r
+            end if
+            write(this%iout,2010) n, cdhmax, crmax
+          ! terminate check since no need to find more than one non-convergence
+          else
+            exit final_check
+          end if
+        end if
+      end do final_check
+      if (ifirst == 0) then
+        write(this%iout,2020)
+      end if
+    end if
+    !
+    ! -- return
+    return
+  end subroutine sfr_cc
 
 
   subroutine sfr_bd(this, x, idvfl, icbcfl, ibudfl, icbcun, iprobs,         &
@@ -2199,6 +2286,7 @@ contains
     call mem_deallocate(this%deps)
     call mem_deallocate(this%nconn)
     call mem_deallocate(this%icheck)
+    call mem_deallocate(this%iconvchk)
     nullify(this%gwfiss)
     !
     ! -- call BndType deallocate
@@ -2884,6 +2972,8 @@ contains
     allocate(this%reaches(n)%gwflow)
     allocate(this%reaches(n)%simevap)
     allocate(this%reaches(n)%simrunoff)
+    allocate(this%reaches(n)%stage0)
+    allocate(this%reaches(n)%usflow0)
     !
     ! -- initialize a few items
     this%reaches(n)%status = 'ACTIVE'
@@ -2910,6 +3000,8 @@ contains
     this%reaches(n)%gwflow = DZERO
     this%reaches(n)%simevap = DZERO
     this%reaches(n)%simrunoff = DZERO
+    this%reaches(n)%stage0 = DZERO
+    this%reaches(n)%usflow0 = DZERO
     !
     ! -- return
     return
@@ -2985,6 +3077,8 @@ contains
     deallocate(this%reaches(n)%gwflow)
     deallocate(this%reaches(n)%simevap)
     deallocate(this%reaches(n)%simrunoff)
+    deallocate(this%reaches(n)%stage0)
+    deallocate(this%reaches(n)%usflow0)
     !
     ! -- return
     return
@@ -3438,6 +3532,10 @@ contains
 
     ! -- update stored values
     if (lupdate) then
+      !!
+      !! -- save previous stage and upstream flow
+      !this%reaches(n)%stage0 = this%reaches(n)%stage
+      !this%reaches(n)%usflow0 = this%reaches(n)%usflow
       !
       ! -- save depth and calculate stage
       this%reaches(n)%depth = d1
