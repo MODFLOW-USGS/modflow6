@@ -50,9 +50,8 @@ module MemoryManagerModule
   end interface mem_copyptr
 
   interface mem_reassignptr
-    module procedure reassignptr_dbl1d
-                     !reassignptr_int1d, reassignptr_int2d, &
-                     !reassignptr_dbl1d, reassignptr_dbl2d
+    module procedure reassignptr_int1d, reassignptr_int2d, &
+                     reassignptr_dbl1d, reassignptr_dbl2d
   end interface mem_reassignptr
 
   interface mem_deallocate
@@ -334,6 +333,7 @@ module MemoryManagerModule
     mt%aint1d => aint
     mt%isize = isize
     mt%nrealloc = mt%nrealloc + 1
+    mt%master = .true.
     nvalues_aint = nvalues_aint + isize - isizeold
     !
     ! -- return
@@ -373,6 +373,7 @@ module MemoryManagerModule
     mt%aint2d => aint
     mt%isize = isize
     mt%nrealloc = mt%nrealloc + 1
+    mt%master = .true.
     nvalues_aint = nvalues_aint + isize - isizeold
     write(mt%memtype, "(a,' (',i0,',',i0,')')") 'INTEGER', ncol, nrow
     !
@@ -407,6 +408,7 @@ module MemoryManagerModule
     mt%adbl1d => adbl
     mt%isize = isize
     mt%nrealloc = mt%nrealloc + 1
+    mt%master = .true.
     nvalues_adbl = nvalues_adbl + isize - isizeold
     write(mt%memtype, "(a,' (',i0,')')") 'DOUBLE', isize
     !
@@ -447,6 +449,7 @@ module MemoryManagerModule
     mt%adbl2d => adbl
     mt%isize = isize
     mt%nrealloc = mt%nrealloc + 1
+    mt%master = .true.
     nvalues_adbl = nvalues_adbl + isize - isizeold
     write(mt%memtype, "(a,' (',i0,',',i0,')')") 'DOUBLE', ncol, nrow
     !
@@ -622,8 +625,8 @@ module MemoryManagerModule
     end do
   end subroutine copyptr_dbl2d
   
-  subroutine reassignptr_dbl1d(adbl, name, origin, name2, origin2)
-    real(DP), dimension(:), pointer, contiguous, intent(inout) :: adbl
+  subroutine reassignptr_int1d(aint1d, name, origin, name2, origin2)
+    integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: aint1d
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
     character(len=*), intent(in) :: name2
@@ -632,17 +635,89 @@ module MemoryManagerModule
     logical :: found
     call get_from_memorylist(name, origin, mt, found)
     call get_from_memorylist(name2, origin2, mt2, found)
-    if (size(adbl) > 0) then
-      nvalues_adbl = nvalues_adbl - size(adbl)
-      deallocate(adbl)
+    if (size(aint1d) > 0) then
+      nvalues_aint = nvalues_aint - size(aint1d)
+      deallocate(aint1d)
     end if
-    adbl => mt2%adbl1d
-    mt%adbl1d => adbl
-    mt%isize = size(adbl)
+    aint1d => mt2%aint1d
+    mt%aint1d => aint1d
+    mt%isize = size(aint1d)
+    write(mt%memtype, "(a,' (',i0,')')") 'INTEGER', mt%isize
+    mt%master = .false.
+    return
+  end subroutine reassignptr_int1d
+
+  subroutine reassignptr_int2d(aint2d, name, origin, name2, origin2)
+    integer(I4B), dimension(:,:), pointer, contiguous, intent(inout) :: aint2d
+    character(len=*), intent(in) :: name
+    character(len=*), intent(in) :: origin
+    character(len=*), intent(in) :: name2
+    character(len=*), intent(in) :: origin2
+    integer(I4B) :: ncol, nrow
+    type(MemoryType), pointer :: mt, mt2
+    logical :: found
+    call get_from_memorylist(name, origin, mt, found)
+    call get_from_memorylist(name2, origin2, mt2, found)
+    if (size(aint2d) > 0) then
+      nvalues_aint = nvalues_aint - size(aint2d)
+      deallocate(aint2d)
+    end if
+    aint2d => mt2%aint2d
+    mt%aint2d => aint2d
+    mt%isize = size(aint2d)
+    ncol = size(aint2d, dim=1)
+    nrow = size(aint2d, dim=2)
+    write(mt%memtype, "(a,' (',i0,',',i0,')')") 'INTEGER', ncol, nrow
+    mt%master = .false.
+    return
+  end subroutine reassignptr_int2d
+
+  subroutine reassignptr_dbl1d(adbl1d, name, origin, name2, origin2)
+    real(DP), dimension(:), pointer, contiguous, intent(inout) :: adbl1d
+    character(len=*), intent(in) :: name
+    character(len=*), intent(in) :: origin
+    character(len=*), intent(in) :: name2
+    character(len=*), intent(in) :: origin2
+    type(MemoryType), pointer :: mt, mt2
+    logical :: found
+    call get_from_memorylist(name, origin, mt, found)
+    call get_from_memorylist(name2, origin2, mt2, found)
+    if (size(adbl1d) > 0) then
+      nvalues_adbl = nvalues_adbl - size(adbl1d)
+      deallocate(adbl1d)
+    end if
+    adbl1d => mt2%adbl1d
+    mt%adbl1d => adbl1d
+    mt%isize = size(adbl1d)
     write(mt%memtype, "(a,' (',i0,')')") 'DOUBLE', mt%isize
     mt%master = .false.
     return
   end subroutine reassignptr_dbl1d
+
+  subroutine reassignptr_dbl2d(adbl2d, name, origin, name2, origin2)
+    real(DP), dimension(:,:), pointer, contiguous, intent(inout) :: adbl2d
+    character(len=*), intent(in) :: name
+    character(len=*), intent(in) :: origin
+    character(len=*), intent(in) :: name2
+    character(len=*), intent(in) :: origin2
+    integer(I4B) :: ncol, nrow
+    type(MemoryType), pointer :: mt, mt2
+    logical :: found
+    call get_from_memorylist(name, origin, mt, found)
+    call get_from_memorylist(name2, origin2, mt2, found)
+    if (size(adbl2d) > 0) then
+      nvalues_adbl = nvalues_adbl - size(adbl2d)
+      deallocate(adbl2d)
+    end if
+    adbl2d => mt2%adbl2d
+    mt%adbl2d => adbl2d
+    mt%isize = size(adbl2d)
+    ncol = size(adbl2d, dim=1)
+    nrow = size(adbl2d, dim=2)
+    write(mt%memtype, "(a,' (',i0,',',i0,')')") 'DOUBLE', ncol, nrow
+    mt%master = .false.
+    return
+  end subroutine reassignptr_dbl2d
 
   subroutine deallocate_logical(logicalsclr)
     logical, pointer, intent(inout) :: logicalsclr
