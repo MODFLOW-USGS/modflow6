@@ -734,6 +734,7 @@
       call mem_deallocate(this%niapc)
       call mem_deallocate(this%njapc)
       call mem_deallocate(this%hclose)
+      call mem_deallocate(this%rclose)
       call mem_deallocate(this%relax)
       call mem_deallocate(this%epfact)
       call mem_deallocate(this%l2norm0)
