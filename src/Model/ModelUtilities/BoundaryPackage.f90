@@ -1004,11 +1004,11 @@ module BndModule
     end do
 
     do i = 1, this%maxbound
-    this%hcof(i) = DZERO
-    this%rhs(i) = DZERO
-    if(this%inamedbound==1) then
-      this%boundname(i) = ''
-    end if
+      this%hcof(i) = DZERO
+      this%rhs(i) = DZERO
+      if(this%inamedbound==1) then
+        this%boundname(i) = ''
+      end if
     end do
     if(this%inamedbound /= 1) this%boundname(1) = ''
     !

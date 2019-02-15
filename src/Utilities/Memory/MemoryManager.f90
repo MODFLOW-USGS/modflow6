@@ -797,20 +797,27 @@ module MemoryManagerModule
     endif
   end subroutine deallocate_dbl
   
-  subroutine deallocate_int1d(aint1d)
+  subroutine deallocate_int1d(aint1d, name, origin)
     integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: aint1d
-    class(MemoryType), pointer :: mt
+    character(len=*), optional :: name
+    character(len=*), optional :: origin
+    type(MemoryType), pointer :: mt
     integer(I4B) :: ipos
     logical :: found
-    found = .false.
-    do ipos = 1, memorylist%count()
-      mt => memorylist%Get(ipos)
-      if(associated(mt%aint1d, aint1d)) then
-        nullify(mt%aint1d)
-        found = .true.
-        exit
-      endif
-    enddo
+    if (present(name) .and. present(origin)) then
+      call get_from_memorylist(name, origin, mt, found)
+      nullify(mt%aint1d)
+    else
+      found = .false.
+      do ipos = 1, memorylist%count()
+        mt => memorylist%Get(ipos)
+        if(associated(mt%aint1d, aint1d)) then
+          nullify(mt%aint1d)
+          found = .true.
+          exit
+        endif
+      enddo
+    end if
     if (.not. found .and. size(aint1d) > 0 ) then
       call store_error('programming error in deallocate_int1d')
       call ustop()
@@ -823,20 +830,27 @@ module MemoryManagerModule
     endif
   end subroutine deallocate_int1d
   
-  subroutine deallocate_int2d(aint2d)
+  subroutine deallocate_int2d(aint2d, name, origin)
     integer(I4B), dimension(:, :), pointer, contiguous, intent(inout) :: aint2d
-    class(MemoryType), pointer :: mt
+    character(len=*), optional :: name
+    character(len=*), optional :: origin
+    type(MemoryType), pointer :: mt
     integer(I4B) :: ipos
     logical :: found
-    found = .false.
-    do ipos = 1, memorylist%count()
-      mt => memorylist%Get(ipos)
-      if(associated(mt%aint2d, aint2d)) then
-        nullify(mt%aint2d)
-        found = .true.
-        exit
-      endif
-    enddo
+    if (present(name) .and. present(origin)) then
+      call get_from_memorylist(name, origin, mt, found)
+      nullify(mt%aint2d)
+    else
+      found = .false.
+      do ipos = 1, memorylist%count()
+        mt => memorylist%Get(ipos)
+        if(associated(mt%aint2d, aint2d)) then
+          nullify(mt%aint2d)
+          found = .true.
+          exit
+        endif
+      enddo
+    end if
     if (.not. found .and. size(aint2d) > 0 ) then
       call store_error('programming error in deallocate_int2d')
       call ustop()
@@ -882,20 +896,27 @@ module MemoryManagerModule
     endif
   end subroutine deallocate_dbl1d
   
-  subroutine deallocate_dbl2d(adbl2d)
+  subroutine deallocate_dbl2d(adbl2d, name, origin)
     real(DP), dimension(:, :), pointer, contiguous, intent(inout) :: adbl2d
-    class(MemoryType), pointer :: mt
+    character(len=*), optional :: name
+    character(len=*), optional :: origin
+    type(MemoryType), pointer :: mt
     integer(I4B) :: ipos
     logical :: found
-    found = .false.
-    do ipos = 1, memorylist%count()
-      mt => memorylist%Get(ipos)
-      if(associated(mt%adbl2d, adbl2d)) then
-        nullify(mt%adbl2d)
-        found = .true.
-        exit
-      endif
-    enddo
+    if (present(name) .and. present(origin)) then
+      call get_from_memorylist(name, origin, mt, found)
+      nullify(mt%adbl2d)
+    else
+      found = .false.
+      do ipos = 1, memorylist%count()
+        mt => memorylist%Get(ipos)
+        if(associated(mt%adbl2d, adbl2d)) then
+          nullify(mt%adbl2d)
+          found = .true.
+          exit
+        endif
+      enddo
+    end if
     if (.not. found .and. size(adbl2d) > 0 ) then
       call store_error('programming error in deallocate_dbl2d')
       call ustop()
