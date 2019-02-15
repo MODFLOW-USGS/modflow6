@@ -4,6 +4,8 @@ The shape and position of each cell can be defined using vertices.  This informa
 
 The DISU Package does not support the concept of layers, which is different from the DISU implementation in MODFLOW-USG.  In \mf~all grid input and output for models that use the DISU Package is entered or written as a one-dimensional array of size nodes.
 
+The DISU VERTICES and CELL2D blocks are not required for all simulations.  These blocks are required if the XT3D or the SAVE\_SPECIFIC\_DISCHARGE options are specified in the NPF Package.  In general, it is recommended to include the VERTICES and CELL2D blocks. 
+
 \vspace{5mm}
 \subsubsection{Structure of Blocks}
 \lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-disu-options.dat}
