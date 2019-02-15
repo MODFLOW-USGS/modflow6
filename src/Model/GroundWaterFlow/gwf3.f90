@@ -1332,7 +1332,6 @@ module GwfModule
     integer(I4B) :: ip
 ! ------------------------------------------------------------------------------
     !
-    ! -- Now supporting new-style WEL and GHB packages.
     ! -- This part creates the package object
     select case(filtyp)
     case('CHD6')
@@ -1363,18 +1362,17 @@ module GwfModule
       call ustop()
     end select
     !
-    ! -- Packages is the bndlist that is associated with the parent model
-    ! -- The following statement puts a pointer to this package in the ipakid
-    ! -- position of packages.
-      do ip = 1, this%bndlist%Count()
-        packobj2 => GetBndFromList(this%bndlist, ip)
-        if(packobj2%name == pakname) then
-          write(errmsg, '(a,a)') 'Cannot create package.  Package name  ' //   &
-            'already exists: ', trim(pakname)
-          call store_error(errmsg)
-          call ustop()
-        endif
-      enddo
+    ! -- Check to make sure that the package name is unique, then store a
+    !    pointer to the package in the model bndlist
+    do ip = 1, this%bndlist%Count()
+      packobj2 => GetBndFromList(this%bndlist, ip)
+      if(packobj2%name == pakname) then
+        write(errmsg, '(a,a)') 'Cannot create package.  Package name  ' //   &
+          'already exists: ', trim(pakname)
+        call store_error(errmsg)
+        call ustop()
+      endif
+    enddo
     call AddBndToList(this%bndlist, packobj)
     !
     ! -- return
