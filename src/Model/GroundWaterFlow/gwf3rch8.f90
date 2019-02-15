@@ -86,6 +86,7 @@ module RchModule
     packobj%ibcnum = ibcnum
     packobj%ncolbnd = 1
     packobj%iscloc = 1   ! sfac applies to recharge rate
+    packobj%ictorigin = 'NPF'
     ! indxconvertflux is Column index of bound that will be multiplied by
     ! cell area to convert flux rates to flow rates
     packobj%indxconvertflux = 1

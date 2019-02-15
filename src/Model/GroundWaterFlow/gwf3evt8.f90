@@ -105,6 +105,7 @@ module EvtModule
     packobj%ibcnum = ibcnum
     packobj%ncolbnd = 3 ! Assumes NSEG = 1
     packobj%iscloc = 2  ! sfac applies to max. ET rate
+    packobj%ictorigin = 'NPF'
     ! indxconvertflux is Column index of bound that will be multiplied by
     ! cell area to convert flux rates to flow rates
     packobj%indxconvertflux = 2
