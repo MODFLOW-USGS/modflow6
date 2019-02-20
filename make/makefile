@@ -45,6 +45,7 @@ ${SOURCEDIR14}
 FC = gfortran
 
 FFLAGS = -O2 -fbacktrace -ffpe-summary=overflow -ffpe-trap=overflow,zero,invalid 
+FFLAGS = -O0 -fbacktrace -ffpe-summary=overflow -ffpe-trap=overflow,zero,invalid -g -gdb
 
 # Define the C compile flags
 CC = gcc
