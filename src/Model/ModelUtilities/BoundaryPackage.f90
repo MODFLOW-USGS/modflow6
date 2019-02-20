@@ -76,7 +76,7 @@ module BndModule
     real(DP), dimension(:), pointer, contiguous :: xold => null()                !dependent variable for last time step
     real(DP), dimension(:), pointer, contiguous :: flowja => null()              !intercell flows
     integer(I4B), dimension(:), pointer, contiguous :: icelltype => null()       !pointer to icelltype array in NPF
-
+    character(len=10) :: ictorigin  = ''                                         !package name for icelltype (NPF for GWF)
   contains
     procedure :: bnd_df
     procedure :: bnd_ac
@@ -496,7 +496,7 @@ module BndModule
     return
   end subroutine bnd_nur
 
-  subroutine bnd_cc(this, iend, icnvg)
+  subroutine bnd_cc(this, iend, icnvg, hclose, rclose)
 ! ******************************************************************************
 ! bnd_cc -- additional convergence check for advanced packages
 ! ******************************************************************************
@@ -507,6 +507,8 @@ module BndModule
     class(BndType), intent(inout) :: this
     integer(I4B), intent(in) :: iend
     integer(I4B), intent(inout) :: icnvg
+    real(DP), intent(in) :: hclose
+    real(DP), intent(in) :: rclose
     ! -- local
 ! ------------------------------------------------------------------------------
 
@@ -990,9 +992,13 @@ module BndModule
       allocate(this%boundname(1))
     endif
     !
-    ! -- Set pointer to ICELLTYPE
-    call mem_setptr(this%icelltype, 'ICELLTYPE',                               &
-                    trim(adjustl(this%name_model))//' NPF')
+    ! -- Set pointer to ICELLTYPE. For GWF boundary packages, 
+    !    this%ictorigin will be 'NPF'.  If boundary packages do not set
+    !    this%ictorigin, then icelltype will remain as null()
+    if (this%ictorigin /= '')                                                  &
+      call mem_setptr(this%icelltype, 'ICELLTYPE',                             &
+                      trim(adjustl(this%name_model)) // ' ' //                 &
+                      trim(adjustl(this%ictorigin)))
     !
     ! -- Initialize values
     do j = 1, this%maxbound
@@ -1000,13 +1006,12 @@ module BndModule
         this%bound(i, j) = DZERO
       end do
     end do
-
     do i = 1, this%maxbound
-    this%hcof(i) = DZERO
-    this%rhs(i) = DZERO
-    if(this%inamedbound==1) then
-      this%boundname(i) = ''
-    end if
+      this%hcof(i) = DZERO
+      this%rhs(i) = DZERO
+      if(this%inamedbound==1) then
+        this%boundname(i) = ''
+      end if
     end do
     if(this%inamedbound /= 1) this%boundname(1) = ''
     !

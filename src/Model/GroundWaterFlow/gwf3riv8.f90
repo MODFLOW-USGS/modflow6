@@ -72,6 +72,7 @@ contains
     packobj%ibcnum = ibcnum
     packobj%ncolbnd=3  ! stage, conductance, rbot
     packobj%iscloc=2   !sfac applies to conductance
+    packobj%ictorigin = 'NPF'
     !
     ! -- return
     return

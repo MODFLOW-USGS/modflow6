@@ -526,7 +526,6 @@ module GwfNpfModule
     integer(I4B) :: isymcon, idiagm
     integer(I4B) :: iups
     integer(I4B) :: idn
-    real(DP) :: athk
     real(DP) :: cond
     real(DP) :: consterm
     real(DP) :: filledterm
@@ -996,8 +995,8 @@ module GwfNpfModule
     ! -- Deallocate arrays
     call mem_deallocate(this%icelltype)
     call mem_deallocate(this%k11)
-    call mem_deallocate(this%k22)
-    call mem_deallocate(this%k33)
+    call mem_deallocate(this%k22, 'K22', this%origin)
+    call mem_deallocate(this%k33, 'K33', this%origin)
     call mem_deallocate(this%sat)
     call mem_deallocate(this%condsat)
     call mem_deallocate(this%wetdry)
@@ -1554,7 +1553,7 @@ module GwfNpfModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule,   only: LINELENGTH, DONE, DPIO180
-    use MemoryManagerModule, only: mem_reallocate
+    use MemoryManagerModule, only: mem_reallocate, mem_reassignptr
     use SimModule,         only: ustop, store_error, count_errors
     ! -- dummy
     class(GwfNpftype) :: this
@@ -1697,6 +1696,8 @@ module GwfNpfModule
     ! -- Check for K33
     if(.not. lname(3)) then
       write(this%iout, '(1x, a)') 'K33 not provided.  Assuming K33 = K.'
+      call mem_reassignptr(this%k33, 'K33', trim(this%origin),                 &
+                                     'K11', trim(this%origin))
     else
       nerr = 0
       do n = 1, size(this%k33)
@@ -1719,6 +1720,8 @@ module GwfNpfModule
     ! -- Check for K22
     if(.not. lname(4)) then
       write(this%iout, '(1x, a)') 'K22 not provided.  Assuming K22 = K.'
+      call mem_reassignptr(this%k22, 'K22', trim(this%origin),                 &
+                                     'K11', trim(this%origin))
     else
       ! -- Check to make sure that angles are available
       if(this%dis%con%ianglex == 0) then

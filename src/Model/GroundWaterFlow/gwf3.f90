@@ -672,7 +672,7 @@ module GwfModule
     return
   end subroutine gwf_fc
 
-  subroutine gwf_cc(this, kiter, iend, icnvg)
+  subroutine gwf_cc(this, kiter, iend, icnvg, hclose, rclose)
 ! ******************************************************************************
 ! gwf_cc -- GroundWater Flow Model Final Convergence Check for Boundary Packages
 ! Subroutine: (1) calls package cc routines
@@ -685,6 +685,8 @@ module GwfModule
     integer(I4B),intent(in) :: kiter
     integer(I4B),intent(in) :: iend
     integer(I4B),intent(inout) :: icnvg
+    real(DP), intent(in) :: hclose
+    real(DP), intent(in) :: rclose
     ! -- local
     class(BndType), pointer :: packobj
     integer(I4B) :: ip
@@ -697,7 +699,7 @@ module GwfModule
     ! -- Call package cc routines
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
-      call packobj%bnd_cc(iend, icnvg)
+      call packobj%bnd_cc(iend, icnvg, hclose, rclose)
     enddo
     !
     ! -- return
@@ -1351,7 +1353,6 @@ module GwfModule
     integer(I4B) :: ip
 ! ------------------------------------------------------------------------------
     !
-    ! -- Now supporting new-style WEL and GHB packages.
     ! -- This part creates the package object
     select case(filtyp)
     case('CHD6')
@@ -1382,18 +1383,17 @@ module GwfModule
       call ustop()
     end select
     !
-    ! -- Packages is the bndlist that is associated with the parent model
-    ! -- The following statement puts a pointer to this package in the ipakid
-    ! -- position of packages.
-      do ip = 1, this%bndlist%Count()
-        packobj2 => GetBndFromList(this%bndlist, ip)
-        if(packobj2%name == pakname) then
-          write(errmsg, '(a,a)') 'Cannot create package.  Package name  ' //   &
-            'already exists: ', trim(pakname)
-          call store_error(errmsg)
-          call ustop()
-        endif
-      enddo
+    ! -- Check to make sure that the package name is unique, then store a
+    !    pointer to the package in the model bndlist
+    do ip = 1, this%bndlist%Count()
+      packobj2 => GetBndFromList(this%bndlist, ip)
+      if(packobj2%name == pakname) then
+        write(errmsg, '(a,a)') 'Cannot create package.  Package name  ' //   &
+          'already exists: ', trim(pakname)
+        call store_error(errmsg)
+        call ustop()
+      endif
+    enddo
     call AddBndToList(this%bndlist, packobj)
     !
     ! -- return
