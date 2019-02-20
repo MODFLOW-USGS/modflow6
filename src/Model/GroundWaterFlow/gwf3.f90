@@ -1442,7 +1442,7 @@ module GwfModule
     endif
     if(indis==0) then
       write(errmsg, '(1x,a)') &
-        'ERROR. DISCRETIZATION (DIS6 or DISU6) PACKAGE NOT SPECIFIED.'
+        'ERROR. DISCRETIZATION (DIS6, DISV6, or DISU6) PACKAGE NOT SPECIFIED.'
       call store_error(errmsg)
     endif
     if(this%innpf==0) then
