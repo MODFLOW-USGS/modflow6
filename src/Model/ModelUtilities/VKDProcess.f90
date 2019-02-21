@@ -140,7 +140,7 @@ contains
     !
     ! -- Print a message identifying the VKD module.
     !
-    this%iout => iout
+    this%iout = iout
     write(this%iout, fmtheader)
     !
     ! -- Store pointers to arguments that were passed in
