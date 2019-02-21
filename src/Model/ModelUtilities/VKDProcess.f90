@@ -84,8 +84,8 @@ contains
     type(VKDType), pointer :: vkdobj
     !type(GwfNpfType), pointer :: npfobj
     character(len=*), intent(in) :: name_model
-    integer(I4B), intent(in) :: inunit
-    integer(I4B), intent(in) :: iout
+    integer(I4B), intent(in), pointer :: inunit
+    integer(I4B), intent(in), pointer :: iout
 ! ------------------------------------------------------------------------------
     !
     ! -- Create the object
@@ -96,8 +96,8 @@ contains
     call vkdobj%allocate_scalars()
     !
     ! -- Set variables
-    vkdobj%inunit = inunit
-    vkdobj%iout   = iout
+    vkdobj%inunit => inunit
+    vkdobj%iout   => iout
     vkdobj%implicit = 0
     !
     ! -- Return
