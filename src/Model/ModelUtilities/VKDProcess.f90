@@ -97,7 +97,7 @@ contains
     !
     ! -- Set variables
     vkdobj%inunit = inunit
-    !vkdobj%iout   = iout
+    vkdobj%iout   = iout
     vkdobj%implicit = 0
     !
     ! -- Return
@@ -105,7 +105,7 @@ contains
     end subroutine vkd_cr
 
   subroutine vkd_ar(this, dis, ibound, k11, ik33, k33, sat, ik22, k22,        &
-                    inewton, min_satthk, icelltype, satomega, ibvkd, iout)
+                    inewton, min_satthk, icelltype, satomega, ibvkd)
 ! ******************************************************************************
 ! vkd_ar -- Allocate and Read
 ! ******************************************************************************
@@ -130,7 +130,7 @@ contains
     integer(I4B), dimension(:), intent(in), pointer :: icelltype
     real(DP), intent(in), pointer              :: satomega
     integer(I4B), pointer, dimension(:), intent(in) :: ibvkd
-    integer(I4B), pointer, intent(in) :: iout
+    !integer(I4B), pointer, intent(in) :: iout
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtheader =                                 &
@@ -140,7 +140,7 @@ contains
     !
     ! -- Print a message identifying the VKD module.
     !
-    this%iout = iout
+    !this%iout = iout
     write(this%iout, fmtheader)
     !
     ! -- Store pointers to arguments that were passed in
