@@ -1076,6 +1076,7 @@ module GwfNpfModule
     !
     ! -- Initialize value
     this%ixt3d = 0
+    this%ivkd = 0
     this%satomega = DZERO
     this%hnoflo = DHNOFLO !1.d30
     this%hdry = DHDRY !-1.d30
