@@ -178,7 +178,7 @@ module ListReaderModule
     character(len=LINELENGTH) :: errmsg
     ! -- formats
     character(len=*), parameter :: fmtocne = &
-      "('Specified OPEN/CLOSE file ',(A),' does not exit')"
+      "('Specified OPEN/CLOSE file ',(A),' does not exist')"
     character(len=*), parameter :: fmtobf = &
       "(1X,/1X,'OPENING BINARY FILE ON UNIT ',I0,':',/1X,A)"
     character(len=*), parameter :: fmtobfnlist = &
@@ -199,7 +199,7 @@ module ListReaderModule
     if (.not. exists) then
       write(errmsg, fmtocne) this%line(this%istart:this%istop)
       call store_error(errmsg)
-      call store_error('Specified OPEN/CLOSE file does not exit')
+      call store_error('Specified OPEN/CLOSE file does not exist')
       call store_error_unit(this%in)
       call ustop()
     endif
