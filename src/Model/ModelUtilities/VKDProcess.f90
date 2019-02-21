@@ -84,8 +84,8 @@ contains
     type(VKDType), pointer :: vkdobj
     !type(GwfNpfType), pointer :: npfobj
     character(len=*), intent(in) :: name_model
-    integer(I4B), intent(in), pointer :: inunit
-    integer(I4B), intent(in), pointer :: iout
+    integer(I4B), intent(in) :: inunit
+    integer(I4B), intent(in) :: iout
 ! ------------------------------------------------------------------------------
     !
     ! -- Create the object
@@ -96,8 +96,8 @@ contains
     call vkdobj%allocate_scalars()
     !
     ! -- Set variables
-    vkdobj%inunit => inunit
-    vkdobj%iout   => iout
+    vkdobj%inunit = inunit
+    !vkdobj%iout   = iout
     vkdobj%implicit = 0
     !
     ! -- Return
@@ -105,7 +105,7 @@ contains
     end subroutine vkd_cr
 
   subroutine vkd_ar(this, dis, ibound, k11, ik33, k33, sat, ik22, k22,        &
-                    inewton, min_satthk, icelltype, satomega, ibvkd)
+                    inewton, min_satthk, icelltype, satomega, ibvkd, iout)
 ! ******************************************************************************
 ! vkd_ar -- Allocate and Read
 ! ******************************************************************************
@@ -130,6 +130,7 @@ contains
     integer(I4B), dimension(:), intent(in), pointer :: icelltype
     real(DP), intent(in), pointer              :: satomega
     integer(I4B), pointer, dimension(:), intent(in) :: ibvkd
+    integer(I4B), pointer, intent(in) :: iout
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtheader =                                 &
@@ -139,6 +140,7 @@ contains
     !
     ! -- Print a message identifying the VKD module.
     !
+    this%iout => iout
     write(this%iout, fmtheader)
     !
     ! -- Store pointers to arguments that were passed in
@@ -569,8 +571,8 @@ contains
     call mem_allocate(this%numelevs, 'NUMELEVS', this%origin)
     call mem_allocate(this%ikk, 'IKK', this%origin) !wittw
     call mem_allocate(this%iek, 'IEK', this%origin) !wittw
-    call mem_allocate(this%inunit, 'INUNIT', this%origin)
-    call mem_allocate(this%iout, 'IOUT', this%origin)
+!!$    call mem_allocate(this%inunit, 'INUNIT', this%origin)
+!!$    call mem_allocate(this%iout, 'IOUT', this%origin)
     call mem_allocate(this%iprpak, 'IPRPAK', this%origin)
     call mem_allocate(this%implicit, 'IMPLICIT', this%origin)
     !  
