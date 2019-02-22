@@ -24,7 +24,8 @@ module VKDModule
     integer(I4B), pointer                           :: implicit     => null()   ! exclude implicit nodes for testing
     integer(I4B), pointer                           :: numvkd       => null()   ! number of cells with VKD active
     integer(I4B), pointer                           :: numelevs     => null()   ! number of VKD knots
-    integer(I4B), pointer                           :: inUnitVkd    => null()   ! vkd input file unit number
+    !integer(I4B), pointer                           :: inUnitVkd    => null()   ! vkd input file unit number
+    !integer(I4B), pointer                           :: inunit       => null()   ! vkd input file unit number
     real(DP), dimension(:,:), pointer, contiguous   :: kk           => null()   ! k knots
     real(DP), dimension(:,:), pointer, contiguous   :: ek           => null()   ! elevation knots
     real(DP), dimension(:), pointer, contiguous     :: pt           => null()   ! tmp pointer
@@ -96,8 +97,8 @@ contains
     call vkdobj%allocate_scalars()
     !
     ! -- Set variables
-    vkdobj%inunit = inunit
     vkdobj%iout   = iout
+    vkdobj%inunit = inunit
     vkdobj%implicit = 0
     !
     ! -- Return
@@ -566,13 +567,13 @@ contains
     ! -- Allocate scalars
 
     call mem_allocate(this%ivkd, 'IVKD', this%origin)
-    call mem_allocate(this%inUnitVkd, 'INUNITVKD', this%origin)
+    !call mem_allocate(this%inunit, 'INUNITVKD', this%origin)
     call mem_allocate(this%numvkd, 'NUMVKD', this%origin)
     call mem_allocate(this%numelevs, 'NUMELEVS', this%origin)
     call mem_allocate(this%ikk, 'IKK', this%origin) !wittw
     call mem_allocate(this%iek, 'IEK', this%origin) !wittw
-!!$    call mem_allocate(this%inunit, 'INUNIT', this%origin)
-!!$    call mem_allocate(this%iout, 'IOUT', this%origin)
+    call mem_allocate(this%inunit, 'INUNIT', this%origin)
+    call mem_allocate(this%iout, 'IOUT', this%origin)
     call mem_allocate(this%iprpak, 'IPRPAK', this%origin)
     call mem_allocate(this%implicit, 'IMPLICIT', this%origin)
     !  
@@ -634,7 +635,7 @@ contains
     !
     ! -- Scalars
     call mem_deallocate(this%ivkd)
-    call mem_deallocate(this%inUnitVkd)
+    !call mem_deallocate(this%inUnitVkd)
     call mem_deallocate(this%numvkd)
     call mem_deallocate(this%numelevs)
     call mem_deallocate(this%ikk)
