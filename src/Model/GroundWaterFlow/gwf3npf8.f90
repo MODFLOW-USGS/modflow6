@@ -1261,7 +1261,7 @@ module GwfNpfModule
             if(keyword == 'RHS') then
               this%ixt3d = 2
             endif
-          case ('VKD')
+          case ('VKD6')
             this%ivkd = 1
             write(this%iout, '(4x,a)')                                         &
                 'VKD FORMULATION IS SELECTED.'
