@@ -5,11 +5,13 @@ pymake package.
 
 To make a distribution:
   1.  Create a release branch
-  2.  Run the pre-commit.py script, which will create the proper dist name
-  3.  Run this script
-  4.  Post the distribution zip file
+  2.  Update version.txt with the correct minor and micro numbers
+  3.  Run the pre-commit.py script, which will create the proper dist name
+  4.  Run this mkdist.py script
+  5.  Post the distribution zip file
   5.  Merge the release changes into the master branch
   6.  Tag the master branch with the correct version
+  7.  Merge master into develop
 
 """
 
