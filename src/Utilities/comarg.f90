@@ -33,6 +33,7 @@ module CommandArguments
     character(len=17) :: ctyp
     logical :: ltyp
     logical :: lexist
+    integer(I4B) :: ipos
     integer(I4B) :: iarg
     integer(I4B) :: iterm
     
@@ -43,6 +44,17 @@ module CommandArguments
     icountcmd = command_argument_count()
     call get_command_argument(0, cexe)
     cexe = adjustl(cexe)
+    !
+    ! -- find the program basename, not including the path (this should be 
+    !    mf6.exe, mf6d.exe, etc.)
+    ipos = index(cexe, '/', back=.TRUE.)
+    if (ipos == 0) then
+      ipos = index(cexe, '\', back=.TRUE.)
+    end if
+    if (ipos /= 0) then
+      ipos = ipos + 1
+    end if
+    cexe = cexe(ipos:)
     !
     ! -- write header
     call get_compile_date(cdate)
