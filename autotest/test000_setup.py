@@ -302,7 +302,12 @@ def test_build_modflow6():
     target += eext
     srcdir2 = None
 
-    build(srcdir, srcdir2, target, 'MODFLOW 6')
+    fflags = None
+    fct, cct = set_compiler()
+    if fct == 'gfortran':
+        fflags = 'Werror Wtabs Wline-truncation Wcharacter-truncation'
+
+    build(srcdir, srcdir2, target, 'MODFLOW 6', fflags=fflags)
 
     msg = '{} does not exist.'.format(os.path.relpath(target))
     assert os.path.isfile(target), msg
@@ -366,12 +371,11 @@ def rebuild_exe(target, starget):
     return rebuild
 
 
-def build(srcdir, srcdir2, target, starget, extrafiles=None):
+def build(srcdir, srcdir2, target, starget, extrafiles=None, fflags=None):
     """
     Build a specified target
     """
     debug = False
-    fflags = None
 
     fct, cct = set_compiler()
 
@@ -385,6 +389,10 @@ def build(srcdir, srcdir2, target, starget, extrafiles=None):
                    '{} will be built with debug flags.'.format(starget)
         elif arg.lower() == '--fflags':
             if len(sys.argv) > idx + 1:
+                if fflags is None:
+                    fflags = ''
+                else:
+                    fflags += ' '
                 t = sys.argv[idx + 1:]
                 fflags = ''
                 for tt in t:

@@ -239,7 +239,7 @@ module NameFileModule
     ! -- local
     character(len=20) :: ftype, accarg, fmtarg, filstat
     integer(I4B) :: i, inunit, nwords
-    character(len=LINELENGTH), allocatable, dimension(:) :: words
+    character(len=20), allocatable, dimension(:) :: words
     ! -- formats
 ! ------------------------------------------------------------------------------
     !

@@ -4,7 +4,7 @@ module BndModule
   use ConstantsModule,              only: LENAUXNAME, LENBOUNDNAME, LENFTYPE,  &
                                           DZERO, LENMODELNAME, LENPACKAGENAME, &
                                           LENORIGIN, MAXCHARLEN, LINELENGTH,   &
-                                          DNODATA
+                                          DNODATA, LENLISTLABEL
   use SimModule,                    only: count_errors, store_error, ustop,    &
                                           store_error_unit
   use NumericalPackageModule,       only: NumericalPackageType
@@ -29,7 +29,7 @@ module BndModule
 
   type, extends(NumericalPackageType) :: BndType
     ! -- characters
-    character(len=500) :: listlabel   = ''                                       !title of table written for RP
+    character(len=LENLISTLABEL) :: listlabel   = ''                              !title of table written for RP
     character(len=LENPACKAGENAME) :: text = ''
     character(len=LENAUXNAME), allocatable, dimension(:) :: auxname              !name for each auxiliary variable
     character(len=LENBOUNDNAME), dimension(:), pointer,                         &
