@@ -11,8 +11,8 @@ mf2005dir = 'MF2005.1_12u'
 mf2005url = "https://water.usgs.gov/ogw/modflow/MODFLOW-2005_v1.12.00/{}.zip".format(mf2005dir)
 mfnwtdir = 'MODFLOW-NWT_1.1.3'
 mfnwturl = "https://water.usgs.gov/ogw/modflow-nwt/{0}.zip".format(mfnwtdir)
-mfusgdir = 'mfusg.1_4'
-mfusgurl = 'https://water.usgs.gov/ogw/mfusg/{0}.zip'.format(mfusgdir)
+mfusgdir = 'mfusg1_5'
+mfusgurl = 'https://water.usgs.gov/water-resources/software/MODFLOW-USG/{0}.zip'.format(mfusgdir)
 mflgrdir = 'mflgr.2_0'
 mflgrurl = 'https://water.usgs.gov/ogw/modflow-lgr/modflow-lgr-v2.0.0/mflgrv2_0_00.zip'
 
@@ -394,7 +394,6 @@ def build(srcdir, srcdir2, target, starget, extrafiles=None, fflags=None):
                 else:
                     fflags += ' '
                 t = sys.argv[idx + 1:]
-                fflags = ''
                 for tt in t:
                     fflags += tt + ' '
                 break
