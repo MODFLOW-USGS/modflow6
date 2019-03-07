@@ -403,9 +403,8 @@ module RchModule
     integer(I4B) :: ipos
     integer(I4B) :: jcol, jauxcol, lpos, ivarsread
     character(len=LENTIMESERIESNAME) :: tasName
-    character(len=24) ::  atemp
     character(len=24), dimension(2) :: aname
-    character(len=LINELENGTH) :: keyword
+    character(len=LINELENGTH) :: keyword, atemp
     logical :: found, endOfBlock
     logical :: convertFlux
     !

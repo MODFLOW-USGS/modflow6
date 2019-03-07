@@ -96,7 +96,7 @@ module OutputControlModule
     logical :: isfound, found, endOfBlock
     character(len=LINELENGTH) :: line
     character(len=LINELENGTH) :: ermsg, keyword1, keyword2
-    character(len=5) :: printsave
+    character(len=LINELENGTH) :: printsave
     class(OutputControlDataType), pointer :: ocdobjptr
     ! -- formats
     character(len=*), parameter :: fmtboc =                                    &

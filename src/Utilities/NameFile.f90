@@ -249,7 +249,7 @@ module NameFileModule
       ! -- Parse the line and set defaults
       call ParseLine(this%input_files(i), nwords, words)
       call upcase(words(1))
-      ftype = words(1)
+      ftype = words(1)(1:20)
       accarg = 'SEQUENTIAL'
       fmtarg = 'FORMATTED'
       filstat = 'OLD'

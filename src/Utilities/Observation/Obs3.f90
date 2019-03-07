@@ -169,7 +169,7 @@ module ObsModule
     integer(I4B), private :: iprecision = 2                                      ! 2=double; 1=single
     integer(I4B), private :: idigits = 5
     character(len=LINELENGTH), private :: outputFilename = ''
-    character(len=20), private :: blockTypeFound = ''
+    character(len=LINELENGTH), private :: blockTypeFound = ''
     character(len=20), private:: obsfmtcont = ''
     logical, private :: echo = .false.
     logical, private :: more
