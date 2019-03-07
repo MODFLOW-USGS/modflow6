@@ -305,7 +305,8 @@ def test_build_modflow6():
     fflags = None
     fct, cct = set_compiler()
     if fct == 'gfortran':
-        fflags = 'Werror Wtabs Wline-truncation Wcharacter-truncation'
+        # some flags to check for errors in the code
+        fflags = 'Werror Wtabs Wline-truncation'
 
     build(srcdir, srcdir2, target, 'MODFLOW 6', fflags=fflags)
 
