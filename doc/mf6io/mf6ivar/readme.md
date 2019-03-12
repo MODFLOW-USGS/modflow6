@@ -23,6 +23,9 @@ A MODFLOW 6 variable, and its place within a block and on a line is defined usin
 * preserve_case -- default is false, but should be set to true for file names
 * default_value -- default value for the variable.  Should be executable with Python
 * numeric_index -- default is false.  if true, then this is an index variable.  Is useful for Flopy to treat as zero-based.
+* construct_package -- this is the package abbreviation (obs, ts, tas) of the child package that this variable refers to. Flopy uses this to determine the type of child packages to create. Optional
+* construct_data -- this is the name of a data variable. the data variable must be in the child package referenced by construct_package. the data variable specified here is accepted by Flopy as a parameter in Flopy's package init and used to construct a child package. Optional
+* parameter_name -- this is the parameter name used for Flopy's interface. Flopy by default uses the "name" field, though when parameter_name is present it overrides that name. Optional
 
 # Definition Files
 
