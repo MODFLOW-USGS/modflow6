@@ -285,8 +285,9 @@ module ConnectionsModule
       if(aname(n) == aname(6)) cycle
       if(.not. lname(n)) then
         write(ermsg,'(1x,a,a)') &
-          'ERROR.  REQUIRED INPUT WAS NOT SPECIFIED: ', aname(n)
-      call this%parser%StoreErrorUnit()
+          'ERROR.  REQUIRED CONNECTIONDATA INPUT WAS NOT SPECIFIED: ', &
+          adjustl(trim(aname(n)))
+        call store_error(ermsg)
       endif
     enddo
     if (count_errors() > 0) then

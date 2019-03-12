@@ -2,7 +2,8 @@
 module ListReaderModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: LINELENGTH, LENBOUNDNAME, LENTIMESERIESNAME, DONE
+  use ConstantsModule, only: LINELENGTH, LENBOUNDNAME, LENTIMESERIESNAME, &
+                             LENLISTLABEL, DONE
   use SimModule,       only: store_error_unit
   implicit none
   private
@@ -23,7 +24,7 @@ module ListReaderModule
     integer(I4B) :: ndim                                                         ! number of dimensions in model
     integer(I4B) :: ntxtrlist                                                    ! number of text entries found in rlist
     integer(I4B) :: ntxtauxvar                                                   ! number of text entries found in auxvar
-    character(len=LINELENGTH) :: label                                           ! label for printing list
+    character(len=LENLISTLABEL) :: label                                         ! label for printing list
     character(len=LINELENGTH) :: line                                            ! line string for reading file
     integer(I4B), dimension(:), pointer, contiguous :: mshape => null()          ! pointer to model shape
     integer(I4B), dimension(:), pointer, contiguous :: nodelist => null()        ! pointer to nodelist
@@ -178,7 +179,7 @@ module ListReaderModule
     character(len=LINELENGTH) :: errmsg
     ! -- formats
     character(len=*), parameter :: fmtocne = &
-      "('Specified OPEN/CLOSE file ',(A),' does not exit')"
+      "('Specified OPEN/CLOSE file ',(A),' does not exist')"
     character(len=*), parameter :: fmtobf = &
       "(1X,/1X,'OPENING BINARY FILE ON UNIT ',I0,':',/1X,A)"
     character(len=*), parameter :: fmtobfnlist = &
@@ -199,7 +200,7 @@ module ListReaderModule
     if (.not. exists) then
       write(errmsg, fmtocne) this%line(this%istart:this%istop)
       call store_error(errmsg)
-      call store_error('Specified OPEN/CLOSE file does not exit')
+      call store_error('Specified OPEN/CLOSE file does not exist')
       call store_error_unit(this%in)
       call ustop()
     endif

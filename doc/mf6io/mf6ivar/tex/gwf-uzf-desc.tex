@@ -33,7 +33,7 @@
 
 \item \texttt{MOVER}---keyword to indicate that this instance of the UZF Package can be used with the Water Mover (MVR) Package.  When the MOVER option is specified, additional memory is allocated within the package to store the available, provided, and received water.
 
-\item \texttt{SIMULATE\_ET}---keyword specifying that ET in the unsaturated (UZF) and saturated zones (GWF) will be simulated. ET can be simulated in the UZF cell and not the GWF cell by emitting keywords LINEAR\_GWET and SQUARE\_GWET.
+\item \texttt{SIMULATE\_ET}---keyword specifying that ET in the unsaturated (UZF) and saturated zones (GWF) will be simulated. ET can be simulated in the UZF cell and not the GWF cell by omitting keywords LINEAR\_GWET and SQUARE\_GWET.
 
 \item \texttt{LINEAR\_GWET}---keyword specifying that groundwater ET will be simulated using the original ET formulation of MODFLOW-2005.
 
@@ -49,7 +49,7 @@
 \item \textbf{Block: DIMENSIONS}
 
 \begin{description}
-\item \texttt{nuzfcells}---is the number of UZF cells.  More than 1 UZF cell can be assigned to a GWF cell; however, only 1 GWF cell can be assigned to a single UZF cell. If the MULTILAYER option is used then UZF cells can be assigned to GWF cells below (in deeper layers than) the upper most active GWF cells.
+\item \texttt{nuzfcells}---is the number of UZF cells.  More than one UZF cell can be assigned to a GWF cell; however, only one GWF cell can be assigned to a single UZF cell. If more than one UZF cell is assigned to a GWF cell, then an auxiliary variable should be used to reduce the surface area of the UZF cell with the AUXMULTNAME option.
 
 \item \texttt{ntrailwaves}---is the number of trailing waves.  NTRAILWAVES has a default value of 7 and can be increased to lower mass balance error in the unsaturated zone.
 
@@ -65,7 +65,7 @@
 
 \item \texttt{landflag}---integer value set to one for land surface cells indicating that boundary conditions can be applied and data can be specified in the PERIOD block. A value of 0 specifies a non-land surface cell.
 
-\item \texttt{ivertcon}---integer value set to specify underlying UZF cell that receives water flowing to bottom of cell. If unsaturated zone flow reaches water table before the cell bottom then water is added to GWF cell instead of flowing to underlying UZF cell. A value of 0 indicates the UZF cell is not connected to an underlying UZF cell.
+\item \texttt{ivertcon}---integer value set to specify underlying UZF cell that receives water flowing to bottom of cell. If unsaturated zone flow reaches the water table before the cell bottom, then water is added to the GWF cell instead of flowing to the underlying UZF cell. A value of 0 indicates the UZF cell is not connected to an underlying UZF cell.
 
 \item \texttt{surfdep}---is the surface depression depth of the UZF cell.
 

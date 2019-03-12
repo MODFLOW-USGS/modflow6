@@ -72,6 +72,7 @@ contains
     packobj%ibcnum = ibcnum
     packobj%ncolbnd=2
     packobj%iscloc=2
+    packobj%ictorigin = 'NPF'
     !
     ! -- return
     return

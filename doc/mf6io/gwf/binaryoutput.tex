@@ -6,7 +6,7 @@ The file formats for the binary files are described in the following sections. T
 
 \newpage
 \subsection{Binary Grid File}
-\mf~ writes a binary grid file that can be used for post processing model results.  The file name is assigned automatically by the program by adding ``.grb'' to the end of the discretization input file name.  The structure of the binary grid file depends on the type of discretization package that is used.  The following subsections summarize the binary grid file for the different grid types.  The red text in is not written to the binary grid file.
+\mf~writes a binary grid file that can be used for post processing model results.  The file structure was designed to be self-documenting so that it can evolve if necessary.  The file name is assigned automatically by the program by adding ``.grb'' to the end of the discretization input file name.  The structure of the binary grid file depends on the type of discretization package that is used.  The following subsections summarize the binary grid file for the different grid types.  The red text is not written to the binary grid file, but is shown here to explain the file content.
 
 \newpage
 \subsubsection{DIS Grids}
@@ -137,7 +137,7 @@ The content of the DISV binary grid file is as follows.
 \newpage
 \subsubsection{DISU Grids}
 
-The binary grid file for DISU grids may contain information on the vertices and which vertices comprise a cell, but this depends on whether or not the user provided the information in the DISU Package.  This information is not required unless the XT3D option is used.  If provided, the x, y coordinates for each vertex are stored in the VERTICES array.  The list of vertices that comprise all of the cells is stored in the JAVERT array.  The list of vertices for any cell can be found using the IAVERT array.  Pseudocode for looping through cells in the grid is listed above in the section on the binary grid file for the DISV Package.  As for the DISV binary grid file, the list of vertices is ``closed'' for each cell in that the first listed vertex is equal to the last listed vertex.
+The binary grid file for DISU grids may contain information on the vertices and which vertices comprise a cell, but this depends on whether or not the user provided the information in the DISU Package.  This information is not required unless the XT3D or SAVE\_SPECIFIC\_DISCHARGE options are specified in the NPF Package.  If provided, the x, y coordinates for each vertex are stored in the VERTICES array.  The list of vertices that comprise all of the cells is stored in the JAVERT array.  The list of vertices for any cell can be found using the IAVERT array.  Pseudocode for looping through cells in the grid is listed above in the section on the binary grid file for the DISV Package.  As for the DISV binary grid file, the list of vertices is ``closed'' for each cell in that the first listed vertex is equal to the last listed vertex.
 
 \vspace{5mm}
 \noindent Header 1: \texttt{`GRID DISU'}  {\color{red} \footnotesize{CHARACTER(LEN=50)}} \\
@@ -580,7 +580,7 @@ When the BINARY option is used to open an observation output file (see section `
 
 \begin{description} \itemsep0pt \parskip0pt \parsep0pt
 \item \texttt{TYPE} (bytes 1--4 of Record 1) is ``cont `` ---  ``cont'' indicates the file contains continuous observations ;
-\item \texttt{PRECISION} (bytes 6--11 of Record 1) is either ``single'' or ``double'' --- ``single'' indicates that floating-point values are written in single precision (4 bytes), and ``double'' indicates double precision (8 bytes);
+\item \texttt{PRECISION} (bytes 6--11 of Record 1) will always be ``double'' to indicate that floating-point values are written in double precision (8 bytes);
 \item \texttt{LENOBSNAME} (bytes 12--15 of Record 1) is an integer indicating the number of characters used to store each observation name in following records (in the initial release of MODFLOW~6, LENOBSNAME equals 40);
 \item \texttt{NOBS} (4-byte integer) is the number of observations recorded in the file;
 \item \texttt{OBSNAME} (LENOBSNAME bytes) is an observation name;
