@@ -19,6 +19,7 @@ module MemoryTypeModule
     integer(I4B)                                           :: id                     !id, not used
     integer(I4B)                                           :: nrealloc = 0           !number of times reallocated
     integer(I4B)                                           :: isize                  !size of the array
+    logical                                                :: master = .true.        !master copy, others point to this one
     logical, pointer                                       :: logicalsclr => null()  !pointer to the logical
     integer(I4B), pointer                                  :: intsclr     => null()  !pointer to the integer
     real(DP), pointer                                      :: dblsclr     => null()  !pointer to the double
@@ -37,14 +38,18 @@ module MemoryTypeModule
   subroutine table_entry(this, msg)
     class(MemoryType) :: this
     character(len=*), intent(inout) :: msg
-    character(len=*), parameter :: fmt = "(1x, a40, a20, a20, i10, i10, a2)"
+    character(len=*), parameter ::                                             &
+      fmt = "(1x, a40, a20, a20, i10, i10, a10, a2)"
+    character(len=1) :: cptr
     character(len=1) :: dastr
     !
     ! -- Create the msg table entry
+    cptr = ''
+    if (.not. this%master) cptr = 'T'
     dastr = ''
     if (this%mt_associated() .and. this%isize > 0) dastr='*'
     write(msg, fmt) this%origin, this%name, this%memtype, this%isize,          &
-                    this%nrealloc, dastr
+                    this%nrealloc, cptr, dastr
   end subroutine table_entry
 
   function mt_associated(this) result(al)

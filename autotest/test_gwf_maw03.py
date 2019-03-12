@@ -1,3 +1,11 @@
+"""
+MODFLOW 6 Autotest
+Test the MAW HEAD_LIMIT and RATE_SCALING options for injection wells.  These
+options were not originally supported in MODFLOW 6.  They were added for
+version 6.0.4.
+
+"""
+
 import os
 import sys
 import numpy as np
@@ -21,31 +29,32 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['maw01', 'maw01nwt', 'maw01nwtur']
-newtonoptions = [None, [''], ['NEWTON', 'UNDER_RELAXATION']]
+ex = ['maw03a', 'maw03b', 'maw03c']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
-ddir = 'data'
 
+# maw settings for runs a, b, and c
+mawsetting_a = [(0, 'rate', 2000.), ]
+mawsetting_b = [(0, 'rate', 2000.), (0, 'head_limit', 0.4)]
+mawsetting_c = [(0, 'rate', 2000.), (0, 'rate_scaling', 0.0, 1.0)]
+mawsettings = [mawsetting_a, mawsetting_b, mawsetting_c]
 
 def get_model(idx, dir):
 
-    nlay, nrow, ncol = 1, 1, 3
-    nper = 3
-    perlen = [1., 1., 1.]
-    nstp = [1, 1, 1]
-    tsmult = [1., 1., 1.]
-    lenx = 300.
-    delr = delc = lenx / float(nrow)
-    strt = 100.
-    hnoflo = 1e30
-    hdry = -1e30
-    hk = 1.
+    nlay, nrow, ncol = 1, 101, 101
+    nper = 1
+    perlen = [1000.]
+    nstp = [50]
+    tsmult = [1.2]
+    delr = delc = 142.
+    top = 0.
+    botm = [-1000.]
+    strt = 0.
+    hk = 10.
 
-    nouter, ninner = 100, 300
-    hclose, rclose, relax = 1e-9, 1e-3, 1.
-    krylov = ['CG', 'BICGSTAB', 'BICGSTAB']
+    nouter, ninner = 100, 100
+    hclose, rclose, relax = 1e-6, 1e-6, 1.
 
     tdis_rc = []
     for i in range(nper):
@@ -55,9 +64,8 @@ def get_model(idx, dir):
 
     # build MODFLOW 6 files
     ws = dir
-    sim = flopy.mf6.MFSimulation(sim_name=name, version='mf6',
-                                 exe_name='mf6',
-                                 sim_ws=ws)
+    sim = flopy.mf6.MFSimulation(sim_name=name, sim_ws=ws)
+
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(sim, time_units='DAYS',
                                  nper=nper, perioddata=tdis_rc)
@@ -65,7 +73,6 @@ def get_model(idx, dir):
     # create gwf model
     gwf = flopy.mf6.MFModel(sim, model_type='gwf6', modelname=name,
                             model_nam_file='{}.nam'.format(name))
-    gwf.name_file.newtonoptions = newtonoptions[idx]
 
     # create iterative model solution and register the gwf model with it
     ims = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
@@ -74,7 +81,7 @@ def get_model(idx, dir):
                                under_relaxation='NONE',
                                inner_maximum=ninner,
                                inner_hclose=hclose, rcloserecord=rclose,
-                               linear_acceleration=krylov[idx],
+                               linear_acceleration='CG',
                                scaling_method='NONE',
                                reordering_method='NONE',
                                relaxation_factor=relax)
@@ -82,7 +89,7 @@ def get_model(idx, dir):
 
     dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
                                   delr=delr, delc=delc,
-                                  top=100., botm=0.,
+                                  top=top, botm=botm,
                                   idomain=1,
                                   fname='{}.dis'.format(name))
 
@@ -96,40 +103,21 @@ def get_model(idx, dir):
                                   k=hk,
                                   k33=hk,
                                   fname='{}.npf'.format(name))
+
     # storage
     sto = flopy.mf6.ModflowGwfsto(gwf, save_flows=True,
-                                  iconvert=1,
-                                  ss=0., sy=0.1,
-                                  steady_state={0: True},
-                                  # transient={1: False},
+                                  iconvert=0,
+                                  ss=1.e-5, sy=0.1,
+                                  steady_state={0: False},
+                                  transient={0: True},
                                   fname='{}.sto'.format(name))
 
-    # chd files
-    chdlist0 = []
-    chdlist0.append([(0, 0, 0), 100.])
-    chdlist0.append([(0, 0, 2), 100.])
-
-    chdlist1 = []
-    chdlist1.append([(0, 0, 0), 25.])
-    chdlist1.append([(0, 0, 2), 25.])
-
-    chdspdict = {0: chdlist0, 1: chdlist1, 2: chdlist0}
-    chd = flopy.mf6.ModflowGwfchd(gwf,
-                                  stress_period_data=chdspdict,
-                                  save_flows=False,
-                                  fname='{}.chd'.format(name))
-
-    # wel files
-    #wel = flopy.mf6.ModflowGwfwel(gwf, print_input=True, print_flows=True,
-    #                              maxbound=len(ws),
-    #                              periodrecarray=wd6,
-    #                              save_flows=False)
     # MAW
     opth = '{}.maw.obs'.format(name)
-    wellbottom = 50.
-    wellrecarray = [[0, 0.1, wellbottom, 100., 'THIEM', 1]]
-    wellconnectionsrecarray = [[0, 0, (0, 0, 1), 100., wellbottom, 1., 0.1]]
-    wellperiodrecarray = [[0, 'rate', 0.]]
+    wellbottom = -1000
+    wellrecarray = [[0, 0.15, wellbottom, 0., 'THIEM', 1]]
+    wellconnectionsrecarray = [[0, 0, (0, 50, 50), 0., wellbottom, 0., 0.0]]
+    wellperiodrecarray = mawsettings[idx]
     maw = flopy.mf6.ModflowGwfmaw(gwf, fname='{}.maw'.format(name),
                                   print_input=True, print_head=True,
                                   print_flows=True, save_flows=True,
@@ -138,10 +126,11 @@ def get_model(idx, dir):
                                   connectiondata=wellconnectionsrecarray,
                                   perioddata=wellperiodrecarray)
     mawo_dict = {}
-    mawo_dict['maw_obs.csv'] = [('mh1', 'head', 1)]
+    mawo_dict['{}.maw.obs.csv'.format(name)] = [('m1head', 'head', (0,)),
+                                                ('m1rate', 'rate', (0,))]       #is this index one-based? Not if in a tuple
     maw_obs = flopy.mf6.ModflowUtlobs(gwf,
                                       fname=opth,
-                                      parent_file=maw, digits=20,
+                                      parent_file=maw, digits=15,
                                       print_input=True,
                                       continuous=mawo_dict)
 
@@ -150,12 +139,21 @@ def get_model(idx, dir):
                                 budget_filerecord='{}.cbc'.format(name),
                                 head_filerecord='{}.hds'.format(name),
                                 headprintrecord=[
-                                    ('COLUMNS', 10, 'WIDTH', 15,
+                                    ('COLUMNS', ncol, 'WIDTH', 15,
                                      'DIGITS', 6, 'GENERAL')],
                                 saverecord=[('HEAD', 'ALL')],
                                 printrecord=[('HEAD', 'ALL'),
                                              ('BUDGET', 'ALL')],
                                 fname='{}.oc'.format(name))
+
+    # head observations
+    obs_data0 = [('head_well_cell', 'HEAD', (0, 0, 0))]
+    obs_recarray = {'{}.obs.csv'.format(name): obs_data0}
+    obs = flopy.mf6.ModflowUtlobs(gwf, pname='head_obs',
+                                  fname='{}.obs'.format(name),
+                                  digits=15, print_input=True,
+                                  continuous=obs_recarray)
+
 
     return sim
 
@@ -171,30 +169,44 @@ def eval_maw(sim):
     print('evaluating MAW heads...')
 
     # MODFLOW 6 maw results
-    fpth = os.path.join(sim.simpath, 'maw_obs.csv')
+    idx = sim.idxsim
+    name = ex[idx]
+    fpth = os.path.join(sim.simpath, '{}.maw.obs.csv'.format(name))
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=',')
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
 
-    # create known results array
-    tc0 = np.array([100., 25., 100.])
 
-    # calculate maximum absolute error
-    diff = tc['MH1'] - tc0
-    diffmax = np.abs(diff).max()
-    dtol = 1e-9
-    msg = 'maximum absolute maw head difference ({}) '.format(diffmax)
+    if idx == 0:
 
-    if diffmax > dtol:
-        sim.success = False
-        msg += 'exceeds {}'.format(dtol)
-        assert diffmax < dtol, msg
+        # M1RATE should be 2000.
+        msg = 'The injection rate should be 2000. for all times'
+        assert tc['M1RATE'].min() == tc['M1RATE'].max() == 2000, msg
+
+    elif idx == 1:
+
+        # M1RATE should have a minimum value less than 200 and
+        # M1HEAD should not exceed 0.400001
+        msg = ('Injection rate should fall below 200 and the head should not'
+              'exceed 0.4')
+        assert tc['M1RATE'].min() < 200., msg
+        assert tc['M1HEAD'].max() < 0.400001, msg
+
+    elif idx == 2:
+
+        # M1RATE should have a minimum value less than 800
+        # M1HEAD should not exceed 1.0.
+        msg = ('Min injection rate should be less than 800 and well '
+               'head should not exceed 1.0')
+        assert tc['M1RATE'].min() < 800. and tc['M1HEAD'].max() < 1., msg
+
     else:
-        sim.success = True
-        print('    ' + msg)
+
+        assert False, 'Test error.  idx {} not being tested.'.format(idx)
 
     return
+
 
 # - No need to change any code below
 def test_mf6model():

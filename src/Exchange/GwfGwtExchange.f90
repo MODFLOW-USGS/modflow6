@@ -151,9 +151,10 @@ module GwfGwtExchangeModule
       if (gwfmodel%insto > 0) then
         gwtmodel%fmi%gwfstrgss => gwfmodel%sto%strgss
         gwtmodel%fmi%igwfstrgss = 1
-        if (gwfmodel%sto%iusesy == 1) &
+        if (gwfmodel%sto%iusesy == 1) then
           gwtmodel%fmi%gwfstrgsy => gwfmodel%sto%strgsy
           gwtmodel%fmi%igwfstrgsy = 1
+        endif
       endif
     endif
     !

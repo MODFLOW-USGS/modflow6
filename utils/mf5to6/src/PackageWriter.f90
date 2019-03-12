@@ -311,7 +311,7 @@ contains
     endif
     !
     if (needToWrite) then
-      ! write block of stress-period input for MF6
+      ! write block of stress period input for MF6
       iu = this%fileobj%IUnit
       write(iu,5)
       if (present(option)) then
@@ -341,7 +341,7 @@ contains
     ! format
     10 format(a,' boundary removed at (',i0,',',i0,',',i0,')')
     !
-    ! Write stress-period data for MF6
+    ! Write stress period data for MF6
     do ii=1,this%NBndPeriod
       kold = nint(this%rlist(1,ii))
       k = this%Layptr(kold)

@@ -73,6 +73,7 @@ contains
     packobj%ibcnum = ibcnum
     packobj%ncolbnd=2  ! drnelev, conductance
     packobj%iscloc=2   !sfac applies to conductance
+    packobj%ictorigin = 'NPF'
     !
     ! -- return
     return
