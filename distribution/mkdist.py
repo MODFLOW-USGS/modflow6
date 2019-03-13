@@ -9,9 +9,10 @@ To make a distribution:
   3.  Run the pre-commit.py script, which will create the proper dist name
   4.  Run this mkdist.py script
   5.  Post the distribution zip file
-  5.  Merge the release changes into the master branch
-  6.  Tag the master branch with the correct version
-  7.  Merge master into develop
+  6.  Commit the release changes, but no need to push
+  7.  Merge the release changes into the master branch
+  8.  Tag the master branch with the correct version
+  9.  Merge master into develop
 
 """
 
