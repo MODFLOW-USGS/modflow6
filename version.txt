@@ -9,4 +9,3 @@ minor = 0
 micro = 3
 build = 215
 commit = 316
-
