@@ -99,8 +99,6 @@ def get_model(idx, dir):
 
     # wel files
     wellist1 = []
-    #wellist1.append([(0, 2, 2), -.5])
-    #wellist1.append([(0, 2, 2), -.5])
     wellist1.append([(0, 2, 2), 'ts01'])
     wellist1.append([(0, 2, 2), 'ts02'])
     wel = flopy.mf6.ModflowGwfwel(gwf, pname='wel', print_input=True,
@@ -115,6 +113,7 @@ def get_model(idx, dir):
                    (41272., 3.e30, 3.e30),
                    (15000., 0., 0.),
                    ]
+    wel.ts.filename = name + '.wel.ts'
     wel.ts.timeseries = ts_recarray
     wel.ts.time_series_namerecord = [('ts01', 'ts02')]
     wel.ts.interpolation_methodrecord = [('linear', 'linear')]
