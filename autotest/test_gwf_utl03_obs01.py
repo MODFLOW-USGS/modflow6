@@ -98,11 +98,11 @@ def build_mf6(idx, ws, binaryobs=True):
                             delr=delr, delc=delc,
                             top=top, botm=botm,
                             idomain=1,
-                            fname='{}.dis'.format(name))
+                            filename='{}.dis'.format(name))
 
     # initial conditions
     flopy.mf6.ModflowGwfic(gwf, strt=strt,
-                           fname='{}.ic'.format(name))
+                           filename='{}.ic'.format(name))
 
     # node property flow
     flopy.mf6.ModflowGwfnpf(gwf, icelltype=1, k=hk)
@@ -116,7 +116,7 @@ def build_mf6(idx, ws, binaryobs=True):
                         'head1.obs.csv': obs_data1}
 
     o = flopy.mf6.ModflowUtlobs(gwf, pname='head_obs',
-                                fname='{}.obs'.format(name),
+                                filename='{}.obs'.format(name),
                                 digits=10, print_input=True,
                                 continuous=obs_recarray)
 
