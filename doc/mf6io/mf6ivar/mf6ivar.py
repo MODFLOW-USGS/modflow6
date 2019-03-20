@@ -478,6 +478,7 @@ if __name__ == '__main__':
                   'gwt-cnc',
                   'gwt-dis',
                   'gwt-disv',
+                  'gwt-disu',
                   'gwt-ic',
                   'gwt-nam',
                   'gwt-oc',
