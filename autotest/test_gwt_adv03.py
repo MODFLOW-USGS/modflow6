@@ -128,7 +128,7 @@ def get_model(idx, dir):
                                   scaling_method='NONE',
                                   reordering_method='NONE',
                                   relaxation_factor=relax,
-                                  fname='{}.ims'.format(gwfname))
+                                  filename='{}.ims'.format(gwfname))
     sim.register_ims_package(imsgwf, [gwf.name])
 
     itri = np.zeros((nrow, ncol), dtype=np.int)
@@ -168,17 +168,17 @@ def get_model(idx, dir):
     disv = flopy.mf6.ModflowGwfdisv(gwf, nlay=nlay, ncpl=ncpl, nvert=nvert,
                                     top=top, botm=botm, vertices=vertices,
                                     cell2d=cell2d,
-                                    fname='{}.disv'.format(gwfname))
+                                    filename='{}.disv'.format(gwfname))
 
     #dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
     #                              delr=delr, delc=delc,
     #                              top=top, botm=botm,
     #                              idomain=np.ones((nlay, nrow, ncol), dtype=np.int),
-    #                              fname='{}.dis'.format(gwfname))
+    #                              filename='{}.dis'.format(gwfname))
 
     # initial conditions
     ic = flopy.mf6.ModflowGwfic(gwf, strt=strt,
-                                fname='{}.ic'.format(gwfname))
+                                filename='{}.ic'.format(gwfname))
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False,
@@ -230,30 +230,30 @@ def get_model(idx, dir):
                                   scaling_method='NONE',
                                   reordering_method='NONE',
                                   relaxation_factor=relax,
-                                  fname='{}.ims'.format(gwtname))
+                                  filename='{}.ims'.format(gwtname))
     sim.register_ims_package(imsgwt, [gwt.name])
 
     disv = flopy.mf6.ModflowGwtdisv(gwt, nlay=nlay, ncpl=ncpl, nvert=nvert,
                                     top=top, botm=botm, vertices=vertices,
                                     cell2d=cell2d,
-                                    fname='{}.disv'.format(gwtname))
+                                    filename='{}.disv'.format(gwtname))
 
     # initial conditions
     ic = flopy.mf6.ModflowGwtic(gwt, strt=0.,
-                                fname='{}.ic'.format(gwtname))
+                                filename='{}.ic'.format(gwtname))
 
     # advection
     adv = flopy.mf6.ModflowGwtadv(gwt, scheme=scheme[idx],
-                                fname='{}.adv'.format(gwtname))
+                                filename='{}.adv'.format(gwtname))
 
     # storage
     sto = flopy.mf6.ModflowGwtsto(gwt, porosity=porosity,
-                                fname='{}.sto'.format(gwtname))
+                                filename='{}.sto'.format(gwtname))
 
     # sources
     sourcerecarray = [('WEL-1', 1, 'CONCENTRATION')]
     ssm = flopy.mf6.ModflowGwtssm(gwt, sources=sourcerecarray,
-                                fname='{}.ssm'.format(gwtname))
+                                filename='{}.ssm'.format(gwtname))
 
     # output control
     oc = flopy.mf6.ModflowGwtoc(gwt,
@@ -277,14 +277,14 @@ def get_model(idx, dir):
                 ]}
 
     obs_package = flopy.mf6.ModflowUtlobs(gwt, pname='conc_obs',
-                                          fname='{}.obs'.format(gwtname),
+                                          filename='{}.obs'.format(gwtname),
                                           digits=10, print_input=True,
                                           continuous=obs_data)
 
     # GWF GWT exchange
     gwfgwt = flopy.mf6.ModflowGwfgwt(sim, exgtype='GWF6-GWT6',
                                      exgmnamea=gwfname, exgmnameb=gwtname,
-                                     fname='{}.gwfgwt'.format(name))
+                                     filename='{}.gwfgwt'.format(name))
 
     return sim
 

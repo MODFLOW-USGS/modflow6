@@ -30,7 +30,7 @@ def test_delete_dfn():
     pth = os.path.join(flopypth, 'mf6', 'data', 'dfn')
     files = [entry for entry in os.listdir(pth) if
              os.path.isfile(os.path.join(pth, entry))]
-    delete_files(files, pth)
+    delete_files(files, pth, exclude='flopy.dfn')
 
 
 def test_copy_dfn():

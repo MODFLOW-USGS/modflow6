@@ -78,7 +78,7 @@ def get_model(idx, dir):
                                   scaling_method='NONE',
                                   reordering_method='NONE',
                                   relaxation_factor=relax,
-                                  fname='{}.ims'.format(gwfname))
+                                  filename='{}.ims'.format(gwfname))
     if single_matrix:
         sim.register_ims_package(imsgwf, [gwfname, gwtname])
     else:
@@ -116,7 +116,7 @@ def get_model(idx, dir):
                                    save_flows=False,
                                    pname='CHD-1',
                                    auxiliary='CONCENTRATION',
-                                   fname='{}.chd'.format(gwfname))
+                                   filename='{}.chd'.format(gwfname))
 
     wellist1 = []
     qwell = 5.7024 / nlay
@@ -129,7 +129,7 @@ def get_model(idx, dir):
                                    save_flows=False,
                                    pname='WEL-1',
                                    auxiliary='CONCENTRATION',
-                                   fname='{}.wel'.format(gwfname))
+                                   filename='{}.wel'.format(gwfname))
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(gwf,
@@ -158,7 +158,7 @@ def get_model(idx, dir):
                                       scaling_method='NONE',
                                       reordering_method='NONE',
                                       relaxation_factor=relax,
-                                      fname='{}.ims'.format(gwtname))
+                                      filename='{}.ims'.format(gwtname))
         sim.register_ims_package(imsgwt, [gwt.name])
 
     dis = flopy.mf6.ModflowGwtdis(gwt, nlay=nlay, nrow=nrow, ncol=ncol,
@@ -167,28 +167,28 @@ def get_model(idx, dir):
 
     # initial conditions
     ic = flopy.mf6.ModflowGwtic(gwt, strt=35.,
-                                fname='{}.ic'.format(gwtname))
+                                filename='{}.ic'.format(gwtname))
 
     # advection
     adv = flopy.mf6.ModflowGwtadv(gwt, scheme='UPSTREAM',
-                                  fname='{}.adv'.format(gwtname))
+                                  filename='{}.adv'.format(gwtname))
 
     # dispersion
     diffc = 0.57024
     dsp = flopy.mf6.ModflowGwtdsp(gwt, xt3d=False, diffc=diffc,
                                   # alh=0., alv=0., ath=0., atv=0.,
-                                  fname='{}.dsp'.format(gwtname))
+                                  filename='{}.dsp'.format(gwtname))
 
     # storage
     porosity = 0.35
     sto = flopy.mf6.ModflowGwtsto(gwt, porosity=porosity,
-                                  fname='{}.sto'.format(gwtname))
+                                  filename='{}.sto'.format(gwtname))
 
     # sources
     sourcerecarray = [('CHD-1', 1, 'CONCENTRATION'),
                       ('WEL-1', 1, 'CONCENTRATION')]
     ssm = flopy.mf6.ModflowGwtssm(gwt, sources=sourcerecarray,
-                                  fname='{}.ssm'.format(gwtname))
+                                  filename='{}.ssm'.format(gwtname))
 
     # output control
     oc = flopy.mf6.ModflowGwtoc(gwt,
@@ -205,7 +205,7 @@ def get_model(idx, dir):
     # GWF GWT exchange
     gwfgwt = flopy.mf6.ModflowGwfgwt(sim, exgtype='GWF6-GWT6',
                                      exgmnamea=gwfname, exgmnameb=gwtname,
-                                     fname='{}.gwfgwt'.format(name))
+                                     filename='{}.gwfgwt'.format(name))
 
     return sim
 

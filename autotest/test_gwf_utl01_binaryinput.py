@@ -184,7 +184,7 @@ def get_model(idx, dir):
                                   delr=delr, delc=delc,
                                   top=top, botm=botarr,
                                   idomain=idomain,
-                                  fname='{}.dis'.format(name))
+                                  filename='{}.dis'.format(name))
 
     # initial conditions
     # write initial heads to binary file
@@ -229,7 +229,7 @@ def get_model(idx, dir):
                 'data': None, 'binary': True, 'iprn': 1}
 
     ic = flopy.mf6.ModflowGwfic(gwf, strt=strt,
-                                fname='{}.ic'.format(name))
+                                filename='{}.ic'.format(name))
 
     # node property flow
     # write icelltype to binary file
@@ -280,7 +280,7 @@ def get_model(idx, dir):
                                   icelltype=icelltype,
                                   k=hk,
                                   k33=hk,
-                                  fname='{}.npf'.format(name))
+                                  filename='{}.npf'.format(name))
 
     # chd files
     chdlist0 = []
@@ -291,7 +291,7 @@ def get_model(idx, dir):
     chd = flopy.mf6.ModflowGwfchd(gwf,
                                   stress_period_data=chdspdict,
                                   save_flows=False,
-                                  fname='{}.chd'.format(name))
+                                  filename='{}.chd'.format(name))
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(gwf,
@@ -303,7 +303,7 @@ def get_model(idx, dir):
                                 saverecord=[('HEAD', 'ALL')],
                                 printrecord=[('HEAD', 'ALL'),
                                              ('BUDGET', 'ALL')],
-                                fname='{}.oc'.format(name))
+                                filename='{}.oc'.format(name))
 
     return sim
 
