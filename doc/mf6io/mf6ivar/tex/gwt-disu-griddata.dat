@@ -1,0 +1,8 @@
+BEGIN GRIDDATA
+  TOP
+    <top(nodes)> -- READARRAY
+  BOT
+    <bot(nodes)> -- READARRAY
+  AREA
+    <area(nodes)> -- READARRAY
+END GRIDDATA
