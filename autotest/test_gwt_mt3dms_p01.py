@@ -183,7 +183,7 @@ def p01mf6(model_ws, al, retardation, lambda1, mixelm,
                                   scaling_method='NONE',
                                   reordering_method='NONE',
                                   relaxation_factor=relax,
-                                  fname='{}.ims'.format(gwfname))
+                                  filename='{}.ims'.format(gwfname))
     sim.register_ims_package(imsgwf, [gwf.name])
 
     dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
@@ -191,14 +191,14 @@ def p01mf6(model_ws, al, retardation, lambda1, mixelm,
                                   top=top, botm=botm,
                                   idomain=np.ones((nlay, nrow, ncol),
                                                   dtype=np.int),
-                                  fname='{}.dis'.format(gwfname))
+                                  filename='{}.dis'.format(gwfname))
 
     # initial conditions
     strt = np.zeros((nlay, nrow, ncol), dtype=np.float)
     h1 = q * Lx
     strt[0, 0, 0] = h1
     ic = flopy.mf6.ModflowGwfic(gwf, strt=strt,
-                                fname='{}.ic'.format(gwfname))
+                                filename='{}.ic'.format(gwfname))
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False,
@@ -243,18 +243,18 @@ def p01mf6(model_ws, al, retardation, lambda1, mixelm,
                                   scaling_method='NONE',
                                   reordering_method='NONE',
                                   relaxation_factor=relax,
-                                  fname='{}.ims'.format(gwtname))
+                                  filename='{}.ims'.format(gwtname))
     sim.register_ims_package(imsgwt, [gwt.name])
 
     dis = flopy.mf6.ModflowGwtdis(gwt, nlay=nlay, nrow=nrow, ncol=ncol,
                                   delr=delr, delc=delc,
                                   top=top, botm=botm,
                                   idomain=1,
-                                  fname='{}.dis'.format(gwtname))
+                                  filename='{}.dis'.format(gwtname))
 
     # initial conditions
     ic = flopy.mf6.ModflowGwtic(gwt, strt=0.,
-                                fname='{}.ic'.format(gwtname))
+                                filename='{}.ic'.format(gwtname))
 
     # advection
     if mixelm == 0:
@@ -264,14 +264,14 @@ def p01mf6(model_ws, al, retardation, lambda1, mixelm,
     else:
         raise Exception()
     adv = flopy.mf6.ModflowGwtadv(gwt, scheme=scheme,
-                                  fname='{}.adv'.format(gwtname))
+                                  filename='{}.adv'.format(gwtname))
 
     # dispersion
     dsp = flopy.mf6.ModflowGwtdsp(gwt, alh=al, ath1=0.1)
 
     # storage
     sto = flopy.mf6.ModflowGwtsto(gwt, porosity=prsity,
-                                  fname='{}.sto'.format(gwtname))
+                                  filename='{}.sto'.format(gwtname))
 
     # constant concentration
     c0 = 1.
@@ -282,13 +282,13 @@ def p01mf6(model_ws, al, retardation, lambda1, mixelm,
                                   pname='CNC-1')
 
     ssm = flopy.mf6.ModflowGwtssm(gwt, sources=[[]],
-                                  fname='{}.ssm'.format(gwtname))
+                                  filename='{}.ssm'.format(gwtname))
 
     dcy = flopy.mf6.ModflowGwtdcy(gwt, rc=lambda1)
 
     srb = flopy.mf6.ModflowGwtsrb(gwt, rhob=rhob, distcoef=kd,
                                   first_order_decay=True, rc=lambda1,
-                                  fname='{}.srb'.format(gwtname))
+                                  filename='{}.srb'.format(gwtname))
 
     if zeta is not None:
         imd = flopy.mf6.ModflowGwtimd(gwt, sorbtion=True,
@@ -296,7 +296,7 @@ def p01mf6(model_ws, al, retardation, lambda1, mixelm,
                                       rhob=rhob, distcoef=kd,
                                       rc1=lambda1, rc2=lambda1,
                                       zetaim=zeta, thetaim=prsity2,
-                                      fname='{}.imd'.format(gwtname))
+                                      filename='{}.imd'.format(gwtname))
 
     # output control
     oc = flopy.mf6.ModflowGwtoc(gwt,
@@ -314,7 +314,7 @@ def p01mf6(model_ws, al, retardation, lambda1, mixelm,
     # GWF GWT exchange
     gwfgwt = flopy.mf6.ModflowGwfgwt(sim, exgtype='GWF6-GWT6',
                                      exgmnamea=gwfname, exgmnameb=gwtname,
-                                     fname='{}.gwfgwt'.format(name))
+                                     filename='{}.gwfgwt'.format(name))
 
     sim.write_simulation()
     fname = os.path.join(model_ws, gwtname + '.ucn')
