@@ -7,7 +7,7 @@
 
 ## Automated Testing Status on Travis-CI
 
-### Version 6.0.4 develop &mdash; build 140
+### Version 6.0.4 develop &mdash; build 142
 [![Build Status](https://travis-ci.org/MODFLOW-USGS/modflow6.svg?branch=develop)](https://travis-ci.org/MODFLOW-USGS/modflow6)
 
 ## Introduction
