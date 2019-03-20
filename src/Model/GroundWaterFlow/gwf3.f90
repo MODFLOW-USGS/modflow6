@@ -1414,18 +1414,17 @@ module GwfModule
       call ustop()
     end select
     !
-    ! -- Packages is the bndlist that is associated with the parent model
-    ! -- The following statement puts a pointer to this package in the ipakid
-    ! -- position of packages.
-      do ip = 1, this%bndlist%Count()
-        packobj2 => GetBndFromList(this%bndlist, ip)
-        if(packobj2%name == pakname) then
-          write(errmsg, '(a,a)') 'Cannot create package.  Package name  ' //   &
-            'already exists: ', trim(pakname)
-          call store_error(errmsg)
-          call ustop()
-        endif
-      enddo
+    ! -- Check to make sure that the package name is unique, then store a
+    !    pointer to the package in the model bndlist
+    do ip = 1, this%bndlist%Count()
+      packobj2 => GetBndFromList(this%bndlist, ip)
+      if(packobj2%name == pakname) then
+        write(errmsg, '(a,a)') 'Cannot create package.  Package name  ' //   &
+          'already exists: ', trim(pakname)
+        call store_error(errmsg)
+        call ustop()
+      endif
+    enddo
     call AddBndToList(this%bndlist, packobj)
     !
     ! -- return
@@ -1495,7 +1494,7 @@ module GwfModule
     endif
     if(indis==0) then
       write(errmsg, '(1x,a)') &
-        'ERROR. DISCRETIZATION (DIS6 or DISU6) PACKAGE NOT SPECIFIED.'
+        'ERROR. DISCRETIZATION (DIS6, DISV6, or DISU6) PACKAGE NOT SPECIFIED.'
       call store_error(errmsg)
     endif
     if(this%innpf==0) then

@@ -227,6 +227,7 @@ contains
     packobj%ibcnum = ibcnum
     packobj%ncolbnd = 4
     packobj%iscloc = 0  ! not supported
+    packobj%ictorigin = 'NPF'
     !
     ! -- return
     return
@@ -1144,7 +1145,7 @@ contains
       case ('STATUS')
         call urword(line, lloc, istart, istop, 1, ival, rval, this%iout, this%inunit)
         text = line(istart:istop)
-        this%mawwells(imaw)%status = text
+        this%mawwells(imaw)%status = text(1:8)
         if (text == 'CONSTANT') then
           this%iboundpak(imaw) = -1
         else if (text == 'INACTIVE') then

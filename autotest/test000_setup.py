@@ -11,8 +11,8 @@ mf2005dir = 'MF2005.1_12u'
 mf2005url = "https://water.usgs.gov/ogw/modflow/MODFLOW-2005_v1.12.00/{}.zip".format(mf2005dir)
 mfnwtdir = 'MODFLOW-NWT_1.1.3'
 mfnwturl = "https://water.usgs.gov/ogw/modflow-nwt/{0}.zip".format(mfnwtdir)
-mfusgdir = 'mfusg.1_4'
-mfusgurl = 'https://water.usgs.gov/ogw/mfusg/{0}.zip'.format(mfusgdir)
+mfusgdir = 'mfusg1_5'
+mfusgurl = 'https://water.usgs.gov/water-resources/software/MODFLOW-USG/{0}.zip'.format(mfusgdir)
 mflgrdir = 'mflgr.2_0'
 mflgrurl = 'https://water.usgs.gov/ogw/modflow-lgr/modflow-lgr-v2.0.0/mflgrv2_0_00.zip'
 
@@ -302,7 +302,15 @@ def test_build_modflow6():
     target += eext
     srcdir2 = None
 
-    build(srcdir, srcdir2, target, 'MODFLOW 6')
+    fflags = None
+    fct, cct = set_compiler()
+    if fct == 'gfortran':
+        # some flags to check for errors in the code
+        # but they are not working yet, so had to deactivate
+        fflags = 'Werror Wtabs Wline-truncation'
+        fflags = None
+
+    build(srcdir, srcdir2, target, 'MODFLOW 6', fflags=fflags)
 
     msg = '{} does not exist.'.format(os.path.relpath(target))
     assert os.path.isfile(target), msg
@@ -366,12 +374,11 @@ def rebuild_exe(target, starget):
     return rebuild
 
 
-def build(srcdir, srcdir2, target, starget, extrafiles=None):
+def build(srcdir, srcdir2, target, starget, extrafiles=None, fflags=None):
     """
     Build a specified target
     """
     debug = False
-    fflags = None
 
     fct, cct = set_compiler()
 
@@ -385,8 +392,11 @@ def build(srcdir, srcdir2, target, starget, extrafiles=None):
                    '{} will be built with debug flags.'.format(starget)
         elif arg.lower() == '--fflags':
             if len(sys.argv) > idx + 1:
+                if fflags is None:
+                    fflags = ''
+                else:
+                    fflags += ' '
                 t = sys.argv[idx + 1:]
-                fflags = ''
                 for tt in t:
                     fflags += tt + ' '
                 break

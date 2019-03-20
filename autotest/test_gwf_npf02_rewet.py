@@ -146,11 +146,11 @@ def get_model(idx, dir):
                                       ncol=ncolst[jdx],
                                       delr=delr, delc=delc,
                                       top=top, botm=botm,
-                                      fname='{}.dis'.format(mname))
+                                      filename='{}.dis'.format(mname))
 
         # initial conditions
         ic = flopy.mf6.ModflowGwfic(gwf, strt=strt,
-                                    fname='{}.ic'.format(mname))
+                                    filename='{}.ic'.format(mname))
 
         # node property flow
         npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False,
@@ -163,14 +163,14 @@ def get_model(idx, dir):
             chd1 = flopy.mf6.modflow.ModflowGwfchd(gwf,
                                                    stress_period_data=cd6left,
                                                    save_flows=False,
-                                                   fname=fn, pname='chd1',
+                                                   filename=fn, pname='chd1',
                                                    print_input=True)
         if jdx == nmodels - 1:
             fn = '{}.chd2.chd'.format(mname)
             chd2 = flopy.mf6.modflow.ModflowGwfchd(gwf,
                                                    stress_period_data=cd6right,
                                                    save_flows=False,
-                                                   fname=fn, pname='chd2',
+                                                   filename=fn, pname='chd2',
                                                    print_input=True)
 
         # output control

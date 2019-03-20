@@ -186,7 +186,7 @@ tagged true
 reader urword
 optional true
 longname
-description keyword specifying that ET in the unsaturated (UZF) and saturated zones (GWF) will be simulated. ET can be simulated in the UZF cell and not the GWF cell by emitting keywords LINEAR\_GWET and SQUARE\_GWET.
+description keyword specifying that ET in the unsaturated (UZF) and saturated zones (GWF) will be simulated. ET can be simulated in the UZF cell and not the GWF cell by omitting keywords LINEAR\_GWET and SQUARE\_GWET.
 
 block options
 name linear_gwet

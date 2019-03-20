@@ -91,18 +91,18 @@ def get_model(idx, dir):
                                   delr=delr, delc=delc,
                                   top=top, botm=botm,
                                   idomain=1,
-                                  fname='{}.dis'.format(name))
+                                  filename='{}.dis'.format(name))
 
     # initial conditions
     ic = flopy.mf6.ModflowGwfic(gwf, strt=strt,
-                                fname='{}.ic'.format(name))
+                                filename='{}.ic'.format(name))
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=True,
                                   icelltype=1,
                                   k=hk,
                                   k33=hk,
-                                  fname='{}.npf'.format(name))
+                                  filename='{}.npf'.format(name))
 
     # storage
     sto = flopy.mf6.ModflowGwfsto(gwf, save_flows=True,
@@ -110,7 +110,7 @@ def get_model(idx, dir):
                                   ss=1.e-5, sy=0.1,
                                   steady_state={0: False},
                                   transient={0: True},
-                                  fname='{}.sto'.format(name))
+                                  filename='{}.sto'.format(name))
 
     # MAW
     opth = '{}.maw.obs'.format(name)
@@ -118,21 +118,16 @@ def get_model(idx, dir):
     wellrecarray = [[0, 0.15, wellbottom, 0., 'THIEM', 1]]
     wellconnectionsrecarray = [[0, 0, (0, 50, 50), 0., wellbottom, 0., 0.0]]
     wellperiodrecarray = mawsettings[idx]
-    maw = flopy.mf6.ModflowGwfmaw(gwf, fname='{}.maw'.format(name),
-                                  print_input=True, print_head=True,
-                                  print_flows=True, save_flows=True,
-                                  obs_filerecord=opth,
-                                  packagedata=wellrecarray,
-                                  connectiondata=wellconnectionsrecarray,
-                                  perioddata=wellperiodrecarray)
     mawo_dict = {}
     mawo_dict['{}.maw.obs.csv'.format(name)] = [('m1head', 'head', (0,)),
                                                 ('m1rate', 'rate', (0,))]       #is this index one-based? Not if in a tuple
-    maw_obs = flopy.mf6.ModflowUtlobs(gwf,
-                                      fname=opth,
-                                      parent_file=maw, digits=15,
-                                      print_input=True,
-                                      continuous=mawo_dict)
+    maw = flopy.mf6.ModflowGwfmaw(gwf, filename='{}.maw'.format(name),
+                                  print_input=True, print_head=True,
+                                  print_flows=True, save_flows=True,
+                                  observations=mawo_dict,
+                                  packagedata=wellrecarray,
+                                  connectiondata=wellconnectionsrecarray,
+                                  perioddata=wellperiodrecarray)
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(gwf,
@@ -144,13 +139,13 @@ def get_model(idx, dir):
                                 saverecord=[('HEAD', 'ALL')],
                                 printrecord=[('HEAD', 'ALL'),
                                              ('BUDGET', 'ALL')],
-                                fname='{}.oc'.format(name))
+                                filename='{}.oc'.format(name))
 
     # head observations
     obs_data0 = [('head_well_cell', 'HEAD', (0, 0, 0))]
     obs_recarray = {'{}.obs.csv'.format(name): obs_data0}
     obs = flopy.mf6.ModflowUtlobs(gwf, pname='head_obs',
-                                  fname='{}.obs'.format(name),
+                                  filename='{}.obs'.format(name),
                                   digits=15, print_input=True,
                                   continuous=obs_recarray)
 

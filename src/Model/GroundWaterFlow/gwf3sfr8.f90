@@ -217,6 +217,7 @@ contains
     packobj%ibcnum = ibcnum
     packobj%ncolbnd = 4
     packobj%iscloc = 0  ! not supported
+    packobj%ictorigin = 'NPF'
     !
     ! -- return
     return
@@ -2743,7 +2744,7 @@ contains
         ichkustrm = 1
         call urword(line, lloc, istart, istop, 1, ival, rval, this%iout, this%inunit)
         text = line(istart:istop)
-        this%reaches(n)%status = text
+        this%reaches(n)%status = text(1:8)
         if (text == 'INACTIVE') then
           this%reaches(n)%iboundpak = 0
         else if (text == 'ACTIVE') then
