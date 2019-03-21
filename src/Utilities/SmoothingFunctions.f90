@@ -914,14 +914,17 @@ end subroutine sChSmooth
        integer(I4B), intent(in) :: n, incfd, ne
        real(DP), intent(in) :: x(*), f(incfd,*), d(incfd,*), xe(*)
        ! -- local
-       integer(I4B) :: i, ierc, ir, j, jfirst, next(2), nj
+       integer(I4B) :: i, ierc, ir, j, jfirst, next(2), nj, ierr
        real(DP) :: fe(ne)
        LOGICAL  SKIP, found_first
 !
        !  loop over intervals.
        jfirst = 1
        ir = 2
+       ierr = 0
        do while (ir .le. n)
+         !write(*,*)jfirst, ne
+         IF (jfirst .gt. ne) exit
 !
          !     skip out of loop if have processed all evaluation points.
 !
@@ -943,21 +946,31 @@ end subroutine sChSmooth
          if (nj .ne. 0) then
 
            !       evaluate cubic at xe(i),  i = jfirst (1) J-1 .
-!
+           !
+           !write(*,*) 'doing', ir, n
            CALL sPChip_eval_fn_points (x(ir-1),x(ir), f(1,ir-1),f(1,ir), d(1,ir-1), &
                d(1,ir), nj, xe(jfirst), fe(jfirst), next)
+           !write(*,*) 'done'
+           if ((next(2) .ne. 0) .and. (ir .ge. n)) then
+             ierr = ierr + next(2)
+           endif
 
-           do i = jfirst, j-1
-             if (xe(i) .lt. x(ir-1)) exit
-           enddo
+           if (ir .le. 2) then
+             ierr = ierr + next(1)
+           else
 
-           j = i
+             do i = jfirst, j-1
+               if (xe(i) .lt. x(ir-1)) exit
+             enddo
 
-           do i = 1, ir-1
-             if (xe(j) .lt. x(i)) exit
-           enddo
+             j = i
 
-           ir = max(1, i-1)
+             do i = 1, ir-1
+               if (xe(j) .lt. x(i)) exit
+             enddo
+
+             ir = max(1, i-1)
+           endif
            jfirst = j
          endif
          ir = ir + 1
