@@ -2,7 +2,8 @@
 module ListReaderModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: LINELENGTH, LENBOUNDNAME, LENTIMESERIESNAME, DONE
+  use ConstantsModule, only: LINELENGTH, LENBOUNDNAME, LENTIMESERIESNAME, &
+                             LENLISTLABEL, DONE
   use SimModule,       only: store_error_unit
   implicit none
   private
@@ -23,7 +24,7 @@ module ListReaderModule
     integer(I4B) :: ndim                                                         ! number of dimensions in model
     integer(I4B) :: ntxtrlist                                                    ! number of text entries found in rlist
     integer(I4B) :: ntxtauxvar                                                   ! number of text entries found in auxvar
-    character(len=LINELENGTH) :: label                                           ! label for printing list
+    character(len=LENLISTLABEL) :: label                                         ! label for printing list
     character(len=LINELENGTH) :: line                                            ! line string for reading file
     integer(I4B), dimension(:), pointer, contiguous :: mshape => null()          ! pointer to model shape
     integer(I4B), dimension(:), pointer, contiguous :: nodelist => null()        ! pointer to nodelist

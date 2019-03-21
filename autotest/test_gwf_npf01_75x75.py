@@ -97,11 +97,11 @@ def get_model(idx, dir):
                                   delr=delr, delc=delc,
                                   top=top[idx], botm=botm,
                                   idomain=1,
-                                  fname='{}.dis'.format(name))
+                                  filename='{}.dis'.format(name))
 
     # initial conditions
     ic = flopy.mf6.ModflowGwfic(gwf, strt=strt,
-                                fname='{}.ic'.format(name))
+                                filename='{}.ic'.format(name))
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False,

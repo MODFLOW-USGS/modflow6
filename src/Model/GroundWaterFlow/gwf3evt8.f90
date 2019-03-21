@@ -720,9 +720,8 @@ module EvtModule
     integer(I4B) :: indx, ipos
     integer(I4B) :: jcol, jauxcol, lpos, ivarsread
     character(len=LENTIMESERIESNAME) :: tasName
-    character(len=24) ::  atemp
     character(len=24), dimension(6) :: aname
-    character(len=100) :: ermsg, keyword
+    character(len=100) :: ermsg, keyword, atemp
     logical :: found, endOfBlock
     logical :: convertFlux
     !

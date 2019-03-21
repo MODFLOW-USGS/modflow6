@@ -1,12 +1,12 @@
 # MODFLOW 6 version file automatically created using...pre-commit.py
-# created on...February 21, 2019 17:19:56
+# created on...March 20, 2019 13:00:43
 
 # add some comments on how this version file
 # should be manually updated and used
 
 major = 6
 minor = 0
-micro = 3
-build = 78
-commit = 179
+micro = 4
+build = 6
+commit = 204
 

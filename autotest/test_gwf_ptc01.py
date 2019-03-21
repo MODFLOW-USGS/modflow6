@@ -97,11 +97,11 @@ def build_mf6(idx, ws, storage=True):
                             delr=delr, delc=delc,
                             top=top, botm=botm,
                             idomain=1,
-                            fname='{}.dis'.format(name))
+                            filename='{}.dis'.format(name))
 
     # initial conditions
     flopy.mf6.ModflowGwfic(gwf, strt=strt,
-                           fname='{}.ic'.format(name))
+                           filename='{}.ic'.format(name))
 
     # node property flow
     flopy.mf6.ModflowGwfnpf(gwf, icelltype=1, k=hk)

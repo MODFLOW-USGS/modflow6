@@ -287,6 +287,7 @@ def get_branch():
 
     """
     fork = is_fork()
+    branch = None
     try:
         if fork:
             # read README.md into memory
@@ -312,7 +313,7 @@ def get_branch():
                 if 'On branch' in line:
                     branch = line.replace('On branch ', '').rstrip()
     except:
-        branch = None
+        pass
     
     return branch
 

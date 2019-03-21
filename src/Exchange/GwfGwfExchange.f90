@@ -829,7 +829,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule, only: DZERO, LENBUDTXT, LENMODELNAME
+    use ConstantsModule, only: DZERO, LENBUDTXT, LENPACKAGENAME
     use TdisModule, only: kstp, kper
     ! -- dummy
     class(GwfExchangeType) :: this
@@ -838,8 +838,8 @@ contains
     integer(I4B), intent(in) :: isolnid
     ! -- local
     character(len=LENBOUNDNAME) :: bname
-    character(len=LENMODELNAME) :: packname1
-    character(len=LENMODELNAME) :: packname2
+    character(len=LENPACKAGENAME+4) :: packname1
+    character(len=LENPACKAGENAME+4) :: packname2
     character(len=LENBUDTXT), dimension(1) :: budtxt
     real(DP), dimension(2, 1) :: budterm
     integer(I4B) :: i, n1, n2, n1u, n2u
@@ -1664,7 +1664,7 @@ contains
     ! -- Return
     return
   end subroutine condcalc
-  
+
   subroutine allocate_scalars(this)
 ! ******************************************************************************
 ! allocate_scalars
