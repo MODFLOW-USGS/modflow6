@@ -55,9 +55,15 @@ def get_mf5to6_models():
                'testTwrip',
                'test028_sfr_simple')
 
+    # write a summary of the files to exclude
+    print('list of tests to exclude:')
+    for idx, ex in enumerate(exclude):
+        print('    {}: {}'.format(idx + 1, ex))
+
     # build list of directories with valid example files
     dirs = [d for d in os.listdir(exdir)
             if 'test' in d and d not in exclude]
+
     # sort in numerical order for case sensitive os
     dirs = sorted(dirs, key=lambda v: (v.upper(), v[0].islower()))
 
