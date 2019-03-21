@@ -116,6 +116,7 @@ $(OBJDIR)/TimeArraySeries.o \
 $(OBJDIR)/gwf3ic8.o \
 $(OBJDIR)/gwf3sto8.o \
 $(OBJDIR)/Xt3dInterface.o \
+$(OBJDIR)/VKDProcess.o \
 $(OBJDIR)/gwf3disv8.o \
 $(OBJDIR)/Observe.o \
 $(OBJDIR)/gwf3hfb8.o \
