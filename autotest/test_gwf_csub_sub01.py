@@ -140,11 +140,11 @@ def get_model(idx, dir):
     dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
                                   delr=delr, delc=delc,
                                   top=top, botm=botm,
-                                  fname='{}.dis'.format(name))
+                                  filename='{}.dis'.format(name))
 
     # initial conditions
     ic = flopy.mf6.ModflowGwfic(gwf, strt=strt,
-                                fname='{}.ic'.format(name))
+                                filename='{}.ic'.format(name))
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False,
@@ -163,26 +163,23 @@ def get_model(idx, dir):
                                                    stress_period_data=cd6,
                                                    save_flows=False)
 
-    # ibc files
-    opth = '{}.ibc.obs'.format(name)
-    ibc = flopy.mf6.ModflowGwfcsub(gwf, head_based=True,
+    # csub files
+    opth = '{}.csub.obs'.format(name)
+    csub = flopy.mf6.ModflowGwfcsub(gwf, head_based=True,
                                    save_flows=True,
                                    #interbed_stress_offset=True,
                                    time_weight=0.,
                                    ndelaycells=ndcell[idx],
                                    delay_full_cell=fullcell[idx],
-                                   obs_filerecord=opth,
                                    ninterbeds=1,
                                    beta=0., ske_cr=ss,
                                    packagedata=sub6)
     orecarray = {}
     orecarray['csub_obs.csv'] = [('tcomp', 'compaction-cell', (0, 0, 1)),
                                  ('sk', 'sk', (0, 0, 1))]
-    ibc_obs_package = flopy.mf6.ModflowUtlobs(gwf,
-                                              fname=opth,
-                                              parent_file=ibc, digits=10,
-                                              print_input=True,
-                                              continuous=orecarray)
+    csub_obs_package = csub.obs.initialize(filename=opth, digits=10,
+                                           print_input=True,
+                                           continuous=orecarray)
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(gwf,

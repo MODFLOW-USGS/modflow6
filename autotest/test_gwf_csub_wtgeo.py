@@ -380,11 +380,11 @@ def get_model(idx, dir):
     dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
                                   delr=delr, delc=delc,
                                   top=top, botm=botm,
-                                  fname='{}.dis'.format(name))
+                                  filename='{}.dis'.format(name))
 
     # initial conditions
     ic = flopy.mf6.ModflowGwfic(gwf, strt=strt,
-                                fname='{}.ic'.format(name))
+                                filename='{}.ic'.format(name))
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False,
@@ -423,7 +423,6 @@ def get_model(idx, dir):
                                     time_weight=tw[idx],
                                     save_flows=True,
                                     ninterbeds=maxcsub,
-                                    obs_filerecord=opth,
                                     sgm=sgmt,
                                     sgs=sgst,
                                     sk_theta=theta,
@@ -442,11 +441,9 @@ def get_model(idx, dir):
 
     orecarray = {}
     orecarray['csub_obs.csv'] = obsarr
-    csub_obs_package = flopy.mf6.ModflowUtlobs(gwf,
-                                               fname=opth,
-                                               parent_file=csub, digits=10,
-                                               print_input=True,
-                                               continuous=orecarray)
+    csub_obs_package = csub.obs.initialize(filename=opth, digits=10,
+                                           print_input=True,
+                                           continuous=orecarray)
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(gwf,

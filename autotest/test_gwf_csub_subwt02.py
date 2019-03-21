@@ -208,7 +208,7 @@ zthick = [top - botm[0],
           botm[2] - botm[3]]
 
 beta = 0.
-#beta = 4.65120000e-10
+# beta = 4.65120000e-10
 gammaw = 9806.65000000
 sw = beta * gammaw * theta
 ss = [sw for k in range(nlay)]
@@ -224,7 +224,7 @@ for k in range(nlay):
             if i == 19 and (j == 7 or j == 8):
                 iactive = 0
             if iactive > 0:
-                tag = '{:02d}_{:02d}_{:02d}'.format(k+1, i+1, j+1)
+                tag = '{:02d}_{:02d}_{:02d}'.format(k + 1, i + 1, j + 1)
                 ibcno += 1
                 d = [ibcno, (k, i, j), 'nodelay', ini_stress, thick[k],
                      1., cc, cr, theta,
@@ -269,11 +269,11 @@ def get_model(idx, dir):
                                   delr=delr, delc=delc,
                                   top=top, botm=botm,
                                   idomain=ib,
-                                  fname='{}.dis'.format(name))
+                                  filename='{}.dis'.format(name))
 
     # initial conditions
     ic = flopy.mf6.ModflowGwfic(gwf, strt=strt,
-                                fname='{}.ic'.format(name))
+                                filename='{}.ic'.format(name))
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False,
@@ -307,13 +307,12 @@ def get_model(idx, dir):
     sig0 = {0: gg}
     opth = '{}.csub.obs'.format(name)
     csub = flopy.mf6.ModflowGwfcsub(gwf,
-                                    #interbed_stress_offset=True,
+                                    # interbed_stress_offset=True,
                                     boundnames=True,
                                     compression_indices=True,
                                     update_material_properties=ump[idx],
                                     time_weight=0.,
                                     ninterbeds=len(swt6),
-                                    obs_filerecord=opth,
                                     sgs=sgs, sgm=sgm,
                                     beta=beta,
                                     gammaw=gammaw,
@@ -332,11 +331,9 @@ def get_model(idx, dir):
                                  ('w2l3', 'interbed-compaction', '03_12_07'),
                                  ('w2l4', 'interbed-compaction', '04_12_07'),
                                  ('w2l4q', 'csub-cell', (3, 11, 6))]
-    csub_obs_package = flopy.mf6.ModflowUtlobs(gwf,
-                                               fname=opth,
-                                               parent_file=csub, digits=10,
-                                               print_input=True,
-                                               continuous=orecarray)
+    csub_obs_package = csub.obs.initialize(filename=opth, digits=10,
+                                           print_input=True,
+                                           continuous=orecarray)
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(gwf,
@@ -388,7 +385,6 @@ def get_model(idx, dir):
 
 
 def eval_comp(sim):
-
     print('evaluating compaction...')
     # MODFLOW 6 total compaction results
     fpth = os.path.join(sim.simpath, 'csub_obs.csv')

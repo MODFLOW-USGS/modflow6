@@ -151,11 +151,11 @@ def get_model(idx, dir):
     dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
                                   delr=delr, delc=delc,
                                   top=top, botm=botm,
-                                  fname='{}.dis'.format(name))
+                                  filename='{}.dis'.format(name))
 
     # initial conditions
     ic = flopy.mf6.ModflowGwfic(gwf, strt=strt,
-                                fname='{}.ic'.format(name))
+                                filename='{}.ic'.format(name))
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False,
@@ -174,13 +174,13 @@ def get_model(idx, dir):
                                   stress_period_data=wd6,
                                   save_flows=False)
 
-    # ibc files
-    ibc = flopy.mf6.ModflowGwfcsub(gwf, head_based=True,
-                                   ndelaycells=ndelaycells[idx],
-                                   delay_full_cell=full_cell[idx],
-                                   ninterbeds=1,
-                                   beta=0., ske_cr=sk_ske,
-                                   packagedata=sub6)
+    # csub files
+    csub = flopy.mf6.ModflowGwfcsub(gwf, head_based=True,
+                                    ndelaycells=ndelaycells[idx],
+                                    delay_full_cell=full_cell[idx],
+                                    ninterbeds=1,
+                                    beta=0., ske_cr=sk_ske,
+                                    packagedata=sub6)
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(gwf,
