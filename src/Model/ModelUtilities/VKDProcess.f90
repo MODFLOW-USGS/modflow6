@@ -63,6 +63,8 @@ module VKDModule
     integer(I4B), pointer :: igwfnode => null()
     real(DP), dimension(:), pointer, contiguous :: ek => null()
     real(DP), dimension(:), pointer, contiguous :: kk => null()
+    real(DP), dimension(:), pointer, contiguous :: d => null()
+    real(DP), pointer :: ts => null()
     contains
   end type VKDCellType
 
@@ -300,6 +302,8 @@ contains
     use ConstantsModule,   only: LINELENGTH, DONE, DPIO180
     use MemoryManagerModule, only: mem_reallocate
     use SimModule,         only: ustop, store_error, count_errors
+    use SmoothingModule, only: sPChip_set_derivatives, sPChip_integrate, &
+        sQuadraticSaturation, sPChip_eval_fn
     ! -- dummy
     class(VKDType) :: this
     ! -- local
@@ -308,6 +312,7 @@ contains
     logical :: isfound, endOfBlock
     logical, dimension(10)           :: lname
     character(len=24), dimension(10) :: aname
+    real(DP), allocatable :: kk(:)
     ! -- formats
     ! -- formats
     character(len=*), parameter :: fmtiprflow =                                &
@@ -328,6 +333,7 @@ contains
     ! -- Initialize
     lname(:) = .false.
     n = 1
+    allocate(kk(this%numelevs))
     !
     ! -- get npfdata block
     call this%parser%GetBlock('PACKAGEDATA', isfound, ierr)
@@ -346,6 +352,8 @@ contains
         this%ibvkd(this%cells(n)%igwfnode) = n
         allocate(this%cells(n)%kk(this%numelevs))
         allocate(this%cells(n)%ek(this%numelevs))
+        allocate(this%cells(n)%d(this%numelevs))
+        allocate(this%cells(n)%ts)
         !
         ! -- get ek & kk
         if(this%implicit .eq. 0) then
@@ -381,6 +389,12 @@ contains
         if (this%iprpak /= 0) then
           write (this%iout,'(A8,20F10.3)') cellid, this%cells(n)%ek(:), this%cells(n)%kk(:)
         end if
+
+        ! set derivative for node
+        !kk = this%cells(n)%kk * this%k11(this%cells(n)%igwfnode)
+        !call sPChip_set_derivatives(this%numelevs, this%cells(n)%ek, kk, this%cells(n)%d)
+        ! get saturated t at node n
+        !this%cells(n)%ts = sPChip_integrate(this%numelevs, this%cells(n)%ek, kk, this%cells(n)%d, this%dis%bot(n), this%dis%top(n))
         ! increment cell counter
         n = n + 1
       end do
@@ -390,6 +404,7 @@ contains
       call this%parser%StoreErrorUnit()
       call ustop()
     end if
+    deallocate(kk)
     !
     ! -- Final NPFDATA message
     write(this%iout,'(1x,a)')'END PROCESSING GRIDDATA'
@@ -439,16 +454,20 @@ contains
 
       posn = this%ibvkd(n)
       posm = this%ibvkd(m)
+      !write(*,*)posn, posm, n, m
 
       if(posn > 0) then
         allocate(d(this%numelevs), kk(this%numelevs))
         ! get factored k profile from k base and vkd factors
         kk = this%cells(posn)%kk * hyn !this%k11(this%cells(posn)%igwfnode)
         call sPChip_set_derivatives(this%numelevs, this%cells(posn)%ek, kk, d)
+        !d = this%cells(posn)%d
         ! get t at head node n
         t1 = sPChip_integrate(this%numelevs, this%cells(posn)%ek, kk, d, this%dis%bot(n), hn)
-        ! get saturated t at head n
+        ! get saturated t at node n
         tsn = sPChip_integrate(this%numelevs, this%cells(posn)%ek, kk, d, this%dis%bot(n), this%dis%top(n))
+        !write(*,*)tsn, satn, csat
+        !tsn = this%cells(posn)%ts
         ! get k factor at head n
         kfacn = sPChip_eval_fn(this%numelevs, this%cells(posn)%ek, this%cells(posn)%kk,d,1,1,[hn])
         ! get absolute k at head n
@@ -467,10 +486,13 @@ contains
         allocate(d(this%numelevs), kk(this%numelevs))
         ! get factored k profile from k base and vkd factors
         kk = this%cells(posm)%kk * hym !this%k11(this%cells(posm)%igwfnode)
-        call sPChip_set_derivatives(this%numelevs, this%cells(posm)%ek, this%cells(posm)%kk, d)
+        !d = this%cells(posm)%d
+        call sPChip_set_derivatives(this%numelevs, this%cells(posm)%ek, kk, d)
         ! get t at head node m
         t2 = sPChip_integrate(this%numelevs, this%cells(posm)%ek, kk, d, this%dis%bot(m), hm)
         tsm = sPChip_integrate(this%numelevs, this%cells(posm)%ek, kk, d, this%dis%bot(m), this%dis%top(m))
+        !tsm = this%cells(posm)%ts
+        !write(*,*)tsm, satm, csat
         ! get k factor at head m
         kfacm = sPChip_eval_fn(this%numelevs, this%cells(posm)%ek, this%cells(posm)%kk,d,1,1,[hm])
         ! get absolute k at head m
@@ -483,6 +505,17 @@ contains
         thksatm = satm * (topm - botm)
         km = hym
       endif
+!      if (m .eq. 2) then
+!        write(*,*)'node',m,'head',hm,'kfac',kfacm,'km',km
+!        write(*,*) 't',t2,t1
+!!$        allocate(d(this%numelevs), kk(this%numelevs))
+!!$        ! get factored k profile from k base and vkd factors
+!!$        kk = this%cells(posm)%kk * hym !this%k11(this%cells(posm)%igwfnode)
+!!$       call sPChip_set_derivatives(this%numelevs, this%cells(posm)%ek, this%cells(posm)%kk, d)
+!!$        write(*,*)sPChip_eval_fn(this%numelevs, this%cells(posm)%ek, this%cells(posm)%kk,d,1,1,[DZERO])
+!!$        !write(*,*) 'kk', kk, hym
+!!$        !write(*,*)'ek',this%cells(posm)%ek
+!      endif
 
       if (thksatn*thksatm > DZERO) then
         if (hn > hm) then
@@ -492,17 +525,99 @@ contains
         end if
 
         if(inwtup == 1) then
+!!$          if (n .eq. 172187) then
+!!$            write(*,*) "inwtup", tsn, t1 !, sn, sm !inwtup, cond, csat
+!!$          endif
           cond = cond * csat
         else
           ! call condmean here - the function itself will move
           cond = condmean(kn, km, thksatn, thksatm, cl1, cl2, width, icellavg)
         endif
-
-      else
+     else
         cond = DZERO
       end if
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!$!!!! condmean only harmonic as present
+!!$      if (t1*t2 > DZERO) then
+!!$        sn = sQuadraticSaturation(tsn, DZERO, t1, this%satomega)
+!!$        sm = sQuadraticSaturation(tsm, DZERO, t2, this%satomega)
+!!$        if (hn > hm) then
+!!$          cond = sn
+!!$        else
+!!$          cond = sm
+!!$        end if
+!!$        if(inwtup == 1) then
+!!$          cond = cond * csat
+!!$        else
+!!$          cond = width * t1 * t2 / (t1 * cl2 + t2 * cl1)
+!!$        endif
+!!$      else
+!!$        cond = DZERO
+!!$      end if
+
+
+
+
+
+
+
+
+ 
     endif
 
+!!$    if (m .eq. 2) then
+!!$      write(*,*)'cond', cond, kn * thksatn, km * thksatm, t2 !km, thksatm
+!!$      write(*,*) 'precalc d', this%cells(posn)%d
+!!$    endif
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!$        ! anisotropy hyeff ***************
+!!$    if(this%ibound(n) == 0 .or. this%ibound(m) == 0) then
+!!$      cond = DZERO
+!!$    else
+!!$
+!!$      posn = this%ibvkd(n)
+!!$      posm = this%ibvkd(m)
+!!$      !
+!!$      allocate(d(this%numelevs))
+!!$      call sPChip_set_derivatives(this%numelevs, this%cells(posn)%ek, this%cells(posn)%kk * hyn, d)
+!!$      t1 = sPChip_integrate(this%numelevs, this%cells(posn)%ek, this%cells(posn)%kk * hyn, d, this%dis%bot(n), hn)
+!!$      tsn = sPChip_integrate(this%numelevs, this%cells(posn)%ek, this%cells(posn)%kk * hyn, d, this%dis%bot(n), this%dis%top(n))
+!!$      deallocate(d)
+!!$
+!!$      allocate(d(this%numelevs))
+!!$      call sPChip_set_derivatives(this%numelevs, this%cells(posm)%ek, this%cells(posm)%kk * hym, d)
+!!$      t2 = sPChip_integrate(this%numelevs, this%cells(posm)%ek, this%cells(posm)%kk * hym, d, this%dis%bot(m), hm)
+!!$      tsm = sPChip_integrate(this%numelevs, this%cells(posm)%ek, this%cells(posm)%kk * hym, d, this%dis%bot(m), this%dis%top(m))
+!!$      deallocate(d)
+!!$!!!! condmean only harmonic as present
+!!$      if (t1*t2 > DZERO) then
+!!$        sn = sQuadraticSaturation(tsn, DZERO, t1, this%satomega)
+!!$        sm = sQuadraticSaturation(tsm, DZERO, t2, this%satomega)
+!!$        if (hn > hm) then
+!!$          cond = sn
+!!$        else
+!!$          cond = sm
+!!$        end if
+!!$        if(inwtup == 1) then
+!!$          cond = cond * csat
+!!$        else
+!!$          cond = width * t1 * t2 / (t1 * cl2 + t2 * cl1)
+!!$        endif
+!!$      else
+!!$        cond = DZERO
+!!$      end if
+!!$endif
+!!$    if (m .eq. 2) then
+!!$        write(*,*)'cond2', cond, t1, t2
+!!$    endif
+    
+!!$    if (n .eq. 172187) then
+!!$      !write(*,*) '---- ', cond, kn, km, hn, topn
+!!$      !write(*,*) "++++", satn, thksatn
+!!$      !write(*,*) "inwtup", inwtup, csat
+!!$    endif
   end function vkd_hcond
 
   function vkd_satThk(this, n, hn) result(satThk)
