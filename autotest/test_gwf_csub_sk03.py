@@ -64,7 +64,7 @@ ft2m = 1. / 3.28081
 nlay, nrow, ncol = 3, 21, 20
 delr = np.ones(ncol, dtype=np.float) * 0.5
 for idx in range(1, ncol):
-    delr[idx] = min(delr[idx-1] * 1.2, 15.)
+    delr[idx] = min(delr[idx - 1] * 1.2, 15.)
 delc = 50.
 top = 0.
 botm = np.array([-40, -70., -100.], dtype=np.float) * ft2m
@@ -99,8 +99,8 @@ ib = 1
 finish = strt - totim * 0.026 / (60. * 60. * 3.28081)
 c = []
 c6 = []
-ccol = [ncol-1]
-for k in [0, nlay-1]:
+ccol = [ncol - 1]
+for k in [0, nlay - 1]:
     for i in range(nrow):
         for j in ccol:
             c.append([k, i, j, strt, strt])
@@ -131,19 +131,20 @@ sig0[0, 0, jj] = 1.86
 tsnames = []
 sig0 = []
 for i in range(nrow):
-    tsname = 'TLR{:02d}'.format(i+1)
+    tsname = 'TLR{:02d}'.format(i + 1)
     tsnames.append(tsname)
     sig0.append([(0, i, 0), tsname])
 tsname = 'FR'
 tsnames.append(tsname)
 sig0.append([(0, 9, 0), tsname])
 
-datestart = datetime.datetime.strptime('03/21/1938 00:00:00', "%m/%d/%Y %H:%M:%S")
-train1 = 2.9635 #3.9009
+datestart = datetime.datetime.strptime('03/21/1938 00:00:00',
+                                       "%m/%d/%Y %H:%M:%S")
+train1 = 2.9635  # 3.9009
 train2 = 2.8274
 fcar1 = 0.8165
 fcar2 = 1.63293447
-fcar3 = 2.8274 #2.9635 #2.4494
+fcar3 = 2.8274  # 2.9635 #2.4494
 icnt = np.zeros((nrow), dtype=np.int)
 v = []
 tstime = []
@@ -151,14 +152,14 @@ i0 = 0
 dt = 15.
 t = []
 ton = 6. * 60.
-for i in range(nrow+1):
+for i in range(nrow + 1):
     vv = 0.
     t.append(vv)
 tstime.append(ton)
 v.append(t)
 ton += 1.
 train = train1
-fend = train1 #fcar3
+fend = train1  # fcar3
 fremain = 0.
 while True:
     if i0 < nrow:
@@ -172,7 +173,7 @@ while True:
             elif i == i0 - 5:
                 vv = fend
             else:
-                vv = train #fcar3
+                vv = train  # fcar3
         t.append(vv)
     t.append(fremain)
     ton += dt
@@ -184,16 +185,15 @@ while True:
         v.append(t)
     if icnt[9] >= 6:
         train = train2
-        fend = train2 #fcar2
+        fend = train2  # fcar2
         fremain = fcar1
     icnt[icnt > 0] += 1
     i0 += 1
-    if icnt[nrow-1] == 7:
+    if icnt[nrow - 1] == 7:
         break
 tsv = np.array(v)
 
-
-#sig0 = [[(0, 0, 0), tsname]]
+# sig0 = [[(0, 0, 0), tsname]]
 
 # subwt output data
 ds16 = [0, 0, 0, 2052, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -244,12 +244,11 @@ def get_model(idx, dir):
 
     dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
                                   delr=delr, delc=delc,
-                                  top=top, botm=botm,
-                                  fname='{}.dis'.format(name))
+                                  top=top, botm=botm)
 
     # initial conditions
     ic = flopy.mf6.ModflowGwfic(gwf, strt=strt,
-                                fname='{}.ic'.format(name))
+                                filename='{}.ic'.format(name))
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=True,
@@ -266,13 +265,15 @@ def get_model(idx, dir):
                                     ('w1_1_1', 'HEAD', (0, 10, jj)),
                                     ('w2_1_1', 'HEAD', (1, 10, jj)),
                                     ('w3_1_1', 'HEAD', (2, 10, jj)),
-                        ('ICF1_1_1', 'FLOW-JA-FACE', (0, 10, 0), (0, 10, 1)),
-                        ('ICF2_1_1', 'FLOW-JA-FACE', (1, 10, 0), (1, 10, 1)),
-                        ('ICF3_1_1', 'FLOW-JA-FACE', (2, 10, 0), (2, 10, 1))],
+                                    ('ICF1_1_1', 'FLOW-JA-FACE', (0, 10, 0),
+                                     (0, 10, 1)),
+                                    ('ICF2_1_1', 'FLOW-JA-FACE', (1, 10, 0),
+                                     (1, 10, 1)),
+                                    ('ICF3_1_1', 'FLOW-JA-FACE', (2, 10, 0),
+                                     (2, 10, 1))],
                     'gwf_calib_obs.csv': [('w3_1_1', 'HEAD', (2, 10, jj))]
                     }
     obs_package = flopy.mf6.ModflowUtlobs(gwf, pname='head_obs',
-                                          fname='{}.obs'.format(name),
                                           digits=10, print_input=True,
                                           continuous=obs_recarray)
     # storage
@@ -282,128 +283,112 @@ def get_model(idx, dir):
                                   steady_state={0: True},
                                   transient={1: True})
 
-    # write chd time series
-    # write time series file with load
+    # create chd time series
     chnam = '{}.ch.ts'.format(name)
-    chpth = os.path.join(ws, chnam)
-    f = open(chpth, 'w')
-    f.write('BEGIN ATTRIBUTES\n')
-    line = ' NAMES CHD'
-    f.write('{}\n'.format(line))
-    line = ' METHODS linear'
-    f.write('{}\n'.format(line))
-    f.write('END ATTRIBUTES\n\n')
-    f.write('BEGIN TIMESERIES\n')
-    line = ' {:12.6e} {:6.4f}'.format(0., strt)
-    f.write('{}\n'.format(line))
-    ton = 1.
-    line = ' {:12.6e} {:6.4f}'.format(ton, strt)
-    f.write('{}\n'.format(line))
-    ton = perlen.sum()
-    line = ' {:12.6e} {:6.4f}'.format(ton, finish)
-    f.write('{}\n'.format(line))
-    f.write('END TIMESERIES\n\n')
-    f.close()
+    chd_ts = [(0., strt), (1., strt), (perlen.sum(), finish)]
 
     # chd files
     chd = flopy.mf6.modflow.mfgwfchd.ModflowGwfchd(gwf,
                                                    maxbound=maxchd,
-                                                   ts_filerecord=chnam,
                                                    stress_period_data=cd6,
                                                    save_flows=False)
-    # write time series file with load
-    tspth = os.path.join(ws, '{}.load.ts'.format(name))
+    # initialize time series
+    chd.ts.initialize(filename=chnam, timeseries=chd_ts,
+                      time_series_namerecord=['CHD'],
+                      interpolation_methodrecord=['linear'])
+
+    # create load time series file with load
+    csub_ts = []
+    csubnam = '{}.load.ts'.format(name)
+
     fopth = os.path.join(ws, 'ts.csv')
-    f = open(tspth, 'w')
     fo = open(fopth, 'w')
-    f.write('BEGIN ATTRIBUTES\n')
-    line = ' NAMES'
+
     line2 = 'TIME'
     for tsname in tsnames:
-        line += ' {}'.format(tsname)
         line2 += ',{}'.format(tsname)
-    f.write('{}\n'.format(line))
     fo.write('{}\n'.format(line2))
-    line = ' METHODS'
-    for tsname in tsnames:
-        line += ' linear'
-    f.write('{}\n'.format(line))
-    f.write('END ATTRIBUTES\n\n')
-    f.write('BEGIN TIMESERIES\n')
+
+    d = [0.]
     line = ' {:12.6e}'.format(0.)
     dateon = datestart + datetime.timedelta(seconds=0)
     datestr = dateon.strftime("%m/%d/%Y %H:%M:%S")
     line2 = '{}'.format(datestr)
     for tsname in tsnames:
-        line += ' 0.0000'
+        d.append(0.)
         line2 += ',0.0000'
-    f.write('{}\n'.format(line))
+    csub_ts.append(tuple(d))
     fo.write('{}\n'.format(line2))
+
     ton = 1.
-    line = ' {:12.6e}'.format(ton)
+    d = [ton]
     dateon = datestart + datetime.timedelta(seconds=ton)
     datestr = dateon.strftime("%m/%d/%Y %H:%M:%S")
     line2 = '{}'.format(datestr)
     for tsname in tsnames:
-        line += ' 0.0000'
+        d.append(0.)
         line2 += ',0.0000'
-    f.write('{}\n'.format(line))
+    csub_ts.append(tuple(d))
     fo.write('{}\n'.format(line2))
+
     for i in range(tsv.shape[0]):
         ton = tstime[i]
-        line = ' {:12.6e}'.format(ton)
+        d = [ton]
         dateon = datestart + datetime.timedelta(seconds=ton)
         datestr = dateon.strftime("%m/%d/%Y %H:%M:%S")
         line2 = '{}'.format(datestr)
         for j in range(tsv.shape[1]):
-            line += ' {:6.4f}'.format(tsv[i, j])
+            d.append(tsv[i, j])
             line2 += ',{:6.4f}'.format(tsv[i, j])
-        f.write('{}\n'.format(line))
+        csub_ts.append(tuple(d))
         fo.write('{}\n'.format(line2))
+
     ton += 1
-    line = ' {:12.6e}'.format(ton)
+    d = [ton]
     dateon = datestart + datetime.timedelta(seconds=ton)
     datestr = dateon.strftime("%m/%d/%Y %H:%M:%S")
     line2 = '{}'.format(datestr)
     for tsname in tsnames:
         if tsname == 'FR':
-            line += ' {:6.4f}'.format(fcar1)
+            d.append(fcar1)
             line2 += ',{:6.4f}'.format(fcar1)
         else:
-            line += ' 0.0000'
+            d.append(0.)
             line2 += ',0.0000'
-    f.write('{}\n'.format(line))
+    csub_ts.append(tuple(d))
     fo.write('{}\n'.format(line2))
+
     ton += (i + 1.) * 86400.
-    line = ' {:12.6e}'.format(ton)
+    d = [ton]
     dateon = datestart + datetime.timedelta(minutes=29)
     datestr = dateon.strftime("%m/%d/%Y %H:%M:%S")
     line2 = '{}'.format(datestr)
     for tsname in tsnames:
         if tsname == 'FR':
-            line += ' {:6.4f}'.format(fcar1)
+            d.append(fcar1)
             line2 += ',{:6.4f}'.format(fcar1)
         else:
-            line += ' 0.0000'
+            d.append(0.)
             line2 += ',0.0000'
-    f.write('{}\n'.format(line))
+    csub_ts.append(tuple(d))
     fo.write('{}\n'.format(line2))
+
     ton = 100. * sec2day
-    line = ' {:12.6e}'.format(ton)
+    d = [ton]
     dateon = datestart + datetime.timedelta(minutes=30)
     datestr = dateon.strftime("%m/%d/%Y %H:%M:%S")
     line2 = '{}'.format(datestr)
     for tsname in tsnames:
         if tsname == 'FR':
-            line += ' {:6.4f}'.format(fcar1)
+            d.append(fcar1)
             line2 += ',{:6.4f}'.format(fcar1)
         else:
+            d.append(fcar1)
             line2 += ',0.0000'
-            line += ' 0.0000'
-    f.write('{}\n'.format(line))
+    csub_ts.append(tuple(d))
     fo.write('{}\n'.format(line2))
-    f.write('END TIMESERIES\n\n')
-    f.close()
+
+    # close ts,csv
     fo.close()
 
     # csub files
@@ -416,8 +401,6 @@ def get_model(idx, dir):
                                     ninterbeds=0,
                                     maxsig0=len(sig0),
                                     compression_indices=compression_indices,
-                                    obs_filerecord=opth,
-                                    ts_filerecord=os.path.basename(tspth),
                                     sgm=sgm,
                                     sgs=sgs,
                                     sk_theta=theta,
@@ -425,6 +408,12 @@ def get_model(idx, dir):
                                     beta=beta,
                                     packagedata=None,
                                     stress_period_data={0: sig0})
+    # initialize time series
+    csub.ts.initialize(filename=csubnam, timeseries=csub_ts,
+                       time_series_namerecord=tsnames,
+                       interpolation_methodrecord=['linear' for t in tsnames])
+
+    # add observations
     orecarray = {}
     jj = 10
     orecarray['csub_obs.csv'] = [('tc1', 'compaction-cell', (0, 10, 0)),
@@ -433,15 +422,13 @@ def get_model(idx, dir):
                                  ('wc1', 'compaction-cell', (0, 10, jj)),
                                  ('wc2', 'compaction-cell', (1, 10, jj)),
                                  ('wc3', 'compaction-cell', (2, 10, jj)),
-                                 ('tes3', 'estress-cell',  (2, 10, 0)),
-                                 ('fes3', 'estress-cell',  (2, 9, 0)),
+                                 ('tes3', 'estress-cell', (2, 10, 0)),
+                                 ('fes3', 'estress-cell', (2, 9, 0)),
                                  ('tgs3', 'gstress-cell', (2, 10, 0)),
                                  ('fgs3', 'gstress-cell', (2, 9, 0))]
-    csub_obs_package = flopy.mf6.ModflowUtlobs(gwf,
-                                               fname=opth,
-                                               parent_file=csub, digits=10,
-                                               print_input=True,
-                                               continuous=orecarray)
+    csub_obs_package = csub.obs.initialize(filename=opth, digits=10,
+                                           print_input=True,
+                                           continuous=orecarray)
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(gwf,
@@ -454,66 +441,6 @@ def get_model(idx, dir):
                                             ('BUDGET', 'ALL')],
                                 printrecord=[('HEAD', 'ALL'),
                                              ('BUDGET', 'ALL')])
-
-    # # build MODFLOW-2005 files
-    # cpth = cmppths[idx]
-    # ws = os.path.join(dir, cpth)
-    # mc = flopy.modflow.Modflow(name, model_ws=ws, version=cpth)
-    # dis = flopy.modflow.ModflowDis(mc, nlay=nlay, nrow=nrow, ncol=ncol,
-    #                                nper=nper, perlen=perlen, nstp=nstp,
-    #                                tsmult=tsmult, steady=steady, delr=delr,
-    #                                delc=delc, top=top, botm=botm)
-    # bas = flopy.modflow.ModflowBas(mc, ibound=ib, strt=strt, hnoflo=hnoflo,
-    #                                stoper=0.01)
-    # if newton:
-    #     if cpth == 'mfnwt':
-    #         upw = flopy.modflow.ModflowUpw(mc, laytyp=laytyp,
-    #                                        hk=hk, vka=vka,
-    #                                        ss=wc, sy=sy,
-    #                                        hdry=hdry)
-    #     else:
-    #         lpf = flopy.modflow.ModflowLpf(mc, laytyp=laytypu,
-    #                                        hk=hk, vka=vka,
-    #                                        ss=wc, sy=sy,
-    #                                        hdry=hdry, constantcv=True)
-    # else:
-    #     lpf = flopy.modflow.ModflowLpf(mc, laytyp=laytyp, hk=hk, vka=vka,
-    #                                    ss=sw, sy=sy,
-    #                                    constantcv=constantcv[idx],
-    #                                    storagecoefficient=False,
-    #                                    hdry=hdry)
-    # chd = flopy.modflow.ModflowChd(mc, stress_period_data=cd)
-    # swt = flopy.modflow.ModflowSwt(mc, iswtoc=1, nsystm=3,
-    #                                ithk=1, ivoid=0,
-    #                                icrcc=icrcc[idx],
-    #                                istpcs=1, lnwt=lnd,
-    #                                cc=sc, cr=sc,
-    #                                sse=sc, ssv=sc,
-    #                                thick=thicknd0,
-    #                                void=void, pcsoff=ini_stress, sgs=sgs,
-    #                                gl0=gl0, ids16=ds16, ids17=ds17)
-    # oc = flopy.modflow.ModflowOc(mc, stress_period_data=None)
-    # if newton:
-    #     if cpth == 'mfnwt':
-    #         fluxtol = (float(nlay * nrow * ncol) - 4.) * rclose
-    #         nwt = flopy.modflow.ModflowNwt(mc,
-    #                                        headtol=hclose, fluxtol=fluxtol,
-    #                                        maxiterout=nouter, linmeth=2,
-    #                                        maxitinner=ninner,
-    #                                        unitnumber=132,
-    #                                        options='SPECIFIED',
-    #                                        backflag=0, idroptol=0)
-    #     else:
-    #         sms = flopy.modflow.ModflowSms(mc, hclose=hclose,
-    #                                        hiclose=hclose,
-    #                                        mxiter=nouter, iter1=ninner,
-    #                                        rclosepcgu=rclose,
-    #                                        relaxpcgu=relax,
-    #                                        unitnumber=132)
-    # else:
-    #     pcg = flopy.modflow.ModflowPcg(mc, mxiter=nouter, iter1=ninner,
-    #                                    hclose=hclose, rclose=rclose,
-    #                                    relax=relax)
     mc = None
 
     return sim, mc
@@ -528,42 +455,6 @@ def eval_comp(sim):
         tc = np.genfromtxt(fpth, names=True, delimiter=',')
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
-
-    # # MODFLOW-2005 total compaction results
-    # cpth = cmppths[sim.idxsim]
-    # fn = '{}.swt_total_comp.hds'.format(os.path.basename(sim.name))
-    # fpth = os.path.join(sim.simpath, cpth, fn)
-    # try:
-    #     sobj = flopy.utils.HeadFile(fpth, text='LAYER COMPACTION')
-    #     jj = 0
-    #     tc0 = sobj.get_ts((2, 0, jj))
-    # except:
-    #     assert False, 'could not load data from "{}"'.format(fpth)
-    #
-    # # calculate maximum absolute error
-    # diff = tc['TCOMP3'] - tc0[:, 1]
-    # diffmax = np.abs(diff).max()
-    # msg = 'maximum absolute total-compaction difference ({}) '.format(diffmax)
-    #
-    # # write summary
-    # fpth = os.path.join(sim.simpath,
-    #                     '{}.comp.cmp.out'.format(os.path.basename(sim.name)))
-    # f = open(fpth, 'w')
-    # for i in range(diff.shape[0]):
-    #     line = '{:10.2g}'.format(tc0[i, 0])
-    #     line += '{:10.2g}'.format(tc['TCOMP3'][i])
-    #     line += '{:10.2g}'.format(tc0[i, 1])
-    #     line += '{:10.2g}'.format(diff[i])
-    #     f.write(line + '\n')
-    # f.close()
-    #
-    # if diffmax > dtol:
-    #     sim.success = False
-    #     msg += 'exceeds {}'.format(dtol)
-    #     assert diffmax < dtol, msg
-    # else:
-    #     sim.success = True
-    #     print('    ' + msg)
 
     # get results from listing file
     fpth = os.path.join(sim.simpath,

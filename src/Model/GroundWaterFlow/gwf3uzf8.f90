@@ -208,6 +208,7 @@ contains
     packobj%ibcnum = ibcnum
     packobj%ncolbnd = 1
     packobj%iscloc = 0  ! not supported
+    packobj%ictorigin = 'NPF'
     !
     ! -- return
     return

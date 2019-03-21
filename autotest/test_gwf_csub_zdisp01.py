@@ -27,14 +27,13 @@ for s in ex:
 
 cmppth = 'mfnwt'
 
-
 ddir = 'data'
 
 ## run all examples on Travis
 travis = [True for idx in range(len(exdirs))]
 
 # set replace_exe to None to use default executable
-#replace_exe = {'mf2005': 'mf2005devdbl'}
+# replace_exe = {'mf2005': 'mf2005devdbl'}
 replace_exe = None
 
 htol = [None for idx in range(len(exdirs))]
@@ -54,7 +53,7 @@ nper = 31
 perlen = [1.] + [365.2500000 for i in range(nper - 1)]
 nstp = [1] + [6 for i in range(nper - 1)]
 tsmult = [1.0] + [1.3 for i in range(nper - 1)]
-#tsmult = [1.0] + [1.0 for i in range(nper - 1)]
+# tsmult = [1.0] + [1.0 for i in range(nper - 1)]
 steady = [True] + [False for i in range(nper - 1)]
 tdis_rc = []
 for idx in range(nper):
@@ -85,11 +84,11 @@ iex[idomain == 0] = 1
 
 # calculate hk
 hk1fact = 1. / 50.
-hk1 =  0.5 * hk1fact
-#hk1[0, :] = 1000. * hk1fact
-#hk1[-1, :] = 1000. * hk1fact
-#hk1[:, 0] = 1000. * hk1fact
-#hk1[:, -1] = 1000. * hk1fact
+hk1 = 0.5 * hk1fact
+# hk1[0, :] = 1000. * hk1fact
+# hk1[-1, :] = 1000. * hk1fact
+# hk1[:, 0] = 1000. * hk1fact
+# hk1[:, -1] = 1000. * hk1fact
 hk = [20., hk1, 5.]
 
 # calculate vka
@@ -142,8 +141,8 @@ maxwel = len(wd[1])
 maxwel = len(wd[1])
 
 # storage and compaction data
-#ske = [6e-4, 3e-4, 6e-4]
-#ss = [3e-6, 0., 3e-6]
+# ske = [6e-4, 3e-4, 6e-4]
+# ss = [3e-6, 0., 3e-6]
 ss = [0., 0., 0.]
 void = 0.82
 theta = void / (1. + void)
@@ -243,11 +242,11 @@ def get_model(idx, dir):
                                   delr=delr, delc=delc,
                                   top=top, botm=botm,
                                   idomain=idomain,
-                                  fname='{}.dis'.format(name))
+                                  filename='{}.dis'.format(name))
 
     # initial conditions
     ic = flopy.mf6.ModflowGwfic(gwf, strt=strt,
-                                fname='{}.ic'.format(name))
+                                filename='{}.ic'.format(name))
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False,
@@ -277,24 +276,22 @@ def get_model(idx, dir):
                                     compaction_filerecord=copth,
                                     zdisplacement_filerecord=zopth,
                                     ninterbeds=maxcsub,
-                                    obs_filerecord=opth,
                                     beta=0., ske_cr=ss,
                                     packagedata=sub6)
     orecarray = {}
     tag = '{:02d}_{:02d}_{:02d}'.format(3, wrp[0] + 1, wcp[0] + 1)
-    oloc =  (2, wrp[0], wcp[0])
+    oloc = (2, wrp[0], wcp[0])
     orecarray['csub_obs.csv'] = [('tcomp3', 'interbed-compaction', tag),
                                  ('sk-tcomp3', 'skeletal-compaction', oloc),
                                  ('ibi-tcomp3', 'inelastic-compaction', tag),
                                  ('ibe-tcomp3', 'elastic-compaction', tag)]
-    csub_obs_package = flopy.mf6.ModflowUtlobs(gwf,
-                                               fname=opth,
-                                               parent_file=csub, digits=10,
-                                               print_input=True,
-                                               continuous=orecarray)
+    csub_obs_package = csub.obs.initialize(filename=opth, digits=10,
+                                           print_input=True,
+                                           continuous=orecarray)
 
     # drain
-    drn = flopy.mf6.ModflowGwfdrn(gwf, maxbound=maxdrd, stress_period_data=drd6)
+    drn = flopy.mf6.ModflowGwfdrn(gwf, maxbound=maxdrd,
+                                  stress_period_data=drd6)
 
     # wel file
     wel = flopy.mf6.ModflowGwfwel(gwf, print_input=True, print_flows=True,
@@ -327,7 +324,8 @@ def get_model(idx, dir):
                                    nper=nper, perlen=perlen, nstp=nstp,
                                    tsmult=tsmult, steady=steady, delr=delr,
                                    delc=delc, top=top, botm=botm)
-    bas = flopy.modflow.ModflowBas(mc, ibound=idomain, strt=strt, hnoflo=hnoflo,
+    bas = flopy.modflow.ModflowBas(mc, ibound=idomain, strt=strt,
+                                   hnoflo=hnoflo,
                                    stoper=0.01)
     upw = flopy.modflow.ModflowUpw(mc, laytyp=laytyp, ipakcb=1001,
                                    hk=hk, vka=vka,
@@ -342,7 +340,8 @@ def get_model(idx, dir):
     wel = flopy.modflow.ModflowWel(mc, stress_period_data=wd)
     oc = flopy.modflow.ModflowOc(mc, stress_period_data=None,
                                  save_every=1,
-                                 save_types=['print head', 'save head', 'save budget'])
+                                 save_types=['print head', 'save head',
+                                             'save budget'])
     fluxtol = (float(nlay * nrow * ncol) - 4.) * rclose
     nwt = flopy.modflow.ModflowNwt(mc,
                                    headtol=hclose, fluxtol=fluxtol,
@@ -363,7 +362,6 @@ def build_models():
 
 
 def eval_zdisplacement(sim):
-
     print('evaluating z-displacement...')
 
     # MODFLOW 6 total compaction results
@@ -424,7 +422,7 @@ def eval_zdisplacement(sim):
             if isinstance(v, np.recarray):
                 vt = np.zeros(size3d, dtype=np.float)
                 for jdx, node in enumerate(v['node']):
-                    vt[node-1] += v['q'][jdx]
+                    vt[node - 1] += v['q'][jdx]
                 v = vt.reshape(shape3d)
             for kk in range(v.shape[0]):
                 for ii in range(v.shape[1]):
@@ -456,8 +454,8 @@ def eval_zdisplacement(sim):
         if i == 0:
             line = '{:>10s}'.format('TIME')
             for idx, key in enumerate(bud_lst):
-                line += '{:>25s}'.format(key+'_LST')
-                line += '{:>25s}'.format(key+'_CBC')
+                line += '{:>25s}'.format(key + '_LST')
+                line += '{:>25s}'.format(key + '_CBC')
                 line += '{:>25s}'.format(key + '_DIF')
             f.write(line + '\n')
         line = '{:10g}'.format(d['totim'][i])
@@ -478,12 +476,14 @@ def eval_zdisplacement(sim):
 
     # compare z-displacement data
     fpth1 = os.path.join(sim.simpath,
-                        '{}.zdisplacement.bin'.format(os.path.basename(sim.name)))
+                         '{}.zdisplacement.bin'.format(
+                             os.path.basename(sim.name)))
     fpth2 = os.path.join(sim.simpath, cmppth, 'csub_zdisp01.vert_disp.hds')
     text1 = 'CSUB-ZDISPLACE'
     text2 = 'Z DISPLACEMENT'
     fout = os.path.join(sim.simpath,
-                        '{}.z-displacement.bin.out'.format(os.path.basename(sim.name)))
+                        '{}.z-displacement.bin.out'.format(
+                            os.path.basename(sim.name)))
     success_tst = pymake.compare_heads(None, None,
                                        text=text1, text2=text2,
                                        outfile=fout,
@@ -505,7 +505,6 @@ def eval_zdisplacement(sim):
 
 # - No need to change any code below
 def test_mf6model():
-
     # determine if running on Travis
     is_travis = 'TRAVIS' in os.environ
     r_exe = None

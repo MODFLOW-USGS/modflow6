@@ -536,7 +536,6 @@ contains
             call store_error(errmsg)
           end if
         case ('NO_PTC')
-          call this%parser%DevOpt()
           this%iallowptc = 0
           write(IOUT,'(1x,A)') 'PSEUDO-TRANSIENT CONTINUATION DISABLED'
         !

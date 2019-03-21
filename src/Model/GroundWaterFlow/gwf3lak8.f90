@@ -283,6 +283,7 @@ contains
     packobj%ibcnum = ibcnum
     packobj%ncolbnd = 3
     packobj%iscloc = 0  ! not supported
+    packobj%ictorigin = 'NPF'
     !
     ! -- return
     return
@@ -2997,7 +2998,7 @@ contains
         !bndName = this%boundname(itemno)
         call urword(line, lloc, istart, istop, 1, ival, rval, this%iout, this%inunit)
         text = line(istart:istop)
-        this%status(itmp) = text
+        this%status(itmp) = text(1:8)
         if (text == 'CONSTANT') then
           this%iboundpak(itmp) = -1
         else if (text == 'INACTIVE') then

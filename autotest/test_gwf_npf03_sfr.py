@@ -164,7 +164,7 @@ def get_model(idx, dir):
                                     maxpackages=len(packages),
                                     packages=packages,
                                     perioddata={0: mvrpd},
-                                    fname=fnmvr,
+                                    filename=fnmvr,
                                     pname=pmvr)
 
     # create gwf model
@@ -183,11 +183,11 @@ def get_model(idx, dir):
                                       ncol=ncolst[jdx],
                                       delr=delr, delc=delc,
                                       top=top, botm=bot,
-                                      fname='{}.dis'.format(mname))
+                                      filename='{}.dis'.format(mname))
 
         # initial conditions
         ic = flopy.mf6.ModflowGwfic(gwf, strt=strt,
-                                    fname='{}.ic'.format(mname))
+                                    filename='{}.ic'.format(mname))
 
         # node property flow
         npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False,
@@ -199,14 +199,14 @@ def get_model(idx, dir):
             chd1 = flopy.mf6.modflow.ModflowGwfchd(gwf,
                                                    stress_period_data=cd6left,
                                                    save_flows=False,
-                                                   fname=fn, pname='chd1',
+                                                   filename=fn, pname='chd1',
                                                    print_input=True)
         if jdx == nmodels - 1:
             fn = '{}.chd2.chd'.format(mname)
             chd2 = flopy.mf6.modflow.ModflowGwfchd(gwf,
                                                    stress_period_data=cd6right,
                                                    save_flows=False,
-                                                   fname=fn, pname='chd2',
+                                                   filename=fn, pname='chd2',
                                                    print_input=True)
 
         # sfr models
@@ -242,7 +242,7 @@ def get_model(idx, dir):
                                       packagedata=rchd,
                                       connectiondata=connd,
                                       perioddata=perioddata,
-                                      fname=fn, pname=pname,
+                                      filename=fn, pname=pname,
                                       print_input=True)
 
         # maw files
@@ -258,7 +258,7 @@ def get_model(idx, dir):
                                           perioddata=perioddata,
                                           pname='maw', mover=True)
             if nmodels == 1:
-                packages = [pname, 'maw']
+                packages = [(pname,), ('maw',)]
                 mpd = [('maw', 0, pname, sfrdst, 'FACTOR', 1.)]
                 fn = '{}.mvr'.format(mname)
                 # create mvr package
@@ -267,7 +267,7 @@ def get_model(idx, dir):
                                               maxpackages=len(packages),
                                               packages=packages,
                                               perioddata={0: mpd},
-                                              fname=fn)
+                                              filename=fn)
 
         # output control
         oc = flopy.mf6.ModflowGwfoc(gwf,

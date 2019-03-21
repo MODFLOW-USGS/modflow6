@@ -193,11 +193,11 @@ def get_model(idx, dir):
     dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
                                   delr=delr, delc=delc,
                                   top=tops[idx], botm=botm,
-                                  fname='{}.dis'.format(name))
+                                  filename='{}.dis'.format(name))
 
     # initial conditions
     ic = flopy.mf6.ModflowGwfic(gwf, strt=strt,
-                                fname='{}.ic'.format(name))
+                                filename='{}.ic'.format(name))
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False,
@@ -227,12 +227,11 @@ def get_model(idx, dir):
                                                    maxbound=maxchd,
                                                    stress_period_data=cd6,
                                                    save_flows=False)
-    # ibc files
+    # csub files
     opth = '{}.csub.obs'.format(name)
     csub = flopy.mf6.ModflowGwfcsub(gwf, head_based=True,
                                     save_flows=True,
                                     ninterbeds=0,
-                                    obs_filerecord=opth,
                                     sk_theta=theta,
                                     ske_cr=crnd0,
                                     packagedata=None)
@@ -247,11 +246,10 @@ def get_model(idx, dir):
 
     orecarray = {}
     orecarray['csub_obs.csv'] = obsarr
-    csub_obs_package = flopy.mf6.ModflowUtlobs(gwf,
-                                               fname=opth,
-                                               parent_file=csub, digits=10,
-                                               print_input=True,
-                                               continuous=orecarray)
+
+    csub_obs_package = csub.obs.initialize(filename=opth, digits=10,
+                                           print_input=True,
+                                           continuous=orecarray)
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(gwf,

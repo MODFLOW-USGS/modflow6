@@ -8,7 +8,6 @@ cache:
   pip: true
   directories:
     - $HOME/.cache/pip
-    - $HOME/.local
       
 matrix:
   include:
