@@ -258,7 +258,7 @@ def get_model(idx, dir):
                                           perioddata=perioddata,
                                           pname='maw', mover=True)
             if nmodels == 1:
-                packages = [pname, 'maw']
+                packages = [(pname,), ('maw',)]
                 mpd = [('maw', 0, pname, sfrdst, 'FACTOR', 1.)]
                 fn = '{}.mvr'.format(mname)
                 # create mvr package

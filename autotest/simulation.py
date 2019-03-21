@@ -303,7 +303,7 @@ class Simulation(object):
                                                    files1=file1,
                                                    files2=file2,
                                                    htol=self.htol,
-                                                   difftol=False,
+                                                   difftol=True,
                                                    # Change to true to have list of all nodes exceeding htol
                                                    verbose=True,
                                                    exfile=exfile)

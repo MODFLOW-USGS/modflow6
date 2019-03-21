@@ -1,0 +1,10 @@
+BEGIN GRIDDATA
+  SKE_CR
+    <ske_cr(nodes)> -- READARRAY
+  SK_THETA
+    <sk_theta(nodes)> -- READARRAY
+  [SGM
+    <sgm(nodes)> -- READARRAY]
+  [SGS
+    <sgs(nodes)> -- READARRAY]
+END GRIDDATA

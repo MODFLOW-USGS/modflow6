@@ -1,6 +1,5 @@
 import os
 import sys
-import nose
 
 try:
     import pymake
@@ -20,52 +19,29 @@ except:
 
 from simulation import Simulation
 
-# find path to modflow6-largetests directory
-home = os.path.expanduser('~')
-fdir = 'modflow6-largetests'
-exdir = None
-for root, dirs, files in os.walk(home):
-    for d in dirs:
-        if d == fdir:
-            exdir = os.path.join(root, d)
-            break
-    if exdir is not None:
-        break
-if exdir is not None:
-    testpaths = os.path.join('..', exdir)
-else:
-    testpaths = None
+exdir = os.path.join('..', 'tmp_simulations')
+testpaths = os.path.join('..', exdir)
 
 
 def get_mf6_models():
     """
         Get a list of test models
     """
-    # determine if running on travis
-    is_travis = 'TRAVIS' in os.environ
-
     # tuple of example files to exclude
-    exclude = (None,)
+    exclude = ('test006_03models',
+               'test018_NAC',
+               'test051_uzf1d_a')
 
-    # update exclude
-    if is_travis:
-        exclude_travis = (None, )
-        exclude = exclude + exclude_travis
-    exclude = list(exclude)
-
-    # write a summary of the files to exclude
-    print('list of tests to exclude:')
-    for idx, ex in enumerate(exclude):
-        print('    {}: {}'.format(idx + 1, ex))
+    exclude_travis = ('test006_gwf3_transport',
+                      'test006_Gwf1-Lnf1')
 
     # build list of directories with valid example files
-    if exdir is not None:
-        dirs = [d for d in os.listdir(exdir)
-                if 'test' in d and d not in exclude]
-        # sort in numerical order for case sensitive os
-        dirs = sorted(dirs, key=lambda v: (v.upper(), v[0].islower()))
-    else:
-        dirs = []
+    exclude = list(exclude + exclude_travis)
+    dirs = [d for d in os.listdir(exdir)
+            if 'test' in d and d not in exclude]
+    # sort in numerical order for case sensitive os
+    dirs = sorted(dirs, key=lambda v: (v.upper(), v[0].islower()))
+
 
     # determine if only a selection of models should be run
     select_dirs = None
@@ -118,6 +94,7 @@ def get_mf6_models():
             msg += ']'
             print(msg)
 
+
     return dirs
 
 
@@ -137,7 +114,7 @@ def run_mf6(sim):
 
 
 def test_mf6model():
-    # determine if largetest directory exists
+    # determine if test directory exists
     dirtest = dir_avail()
     if not dirtest:
         return
@@ -153,14 +130,10 @@ def test_mf6model():
 
 
 def dir_avail():
-    avail = False
-    if exdir is not None:
-        avail = os.path.isdir(exdir)
+    avail = os.path.isdir(exdir)
     if not avail:
         print('"{}" does not exist'.format(exdir))
         print('no need to run {}'.format(os.path.basename(__file__)))
-    if os.getenv('TRAVIS'):
-        avail = False
     return avail
 
 
@@ -170,7 +143,7 @@ def main():
     msg = 'Running {} test'.format(tnam)
     print(msg)
 
-    # determine if largetest directory exists
+    # determine if test directory exists
     dirtest = dir_avail()
     if not dirtest:
         return
@@ -199,3 +172,4 @@ if __name__ == "__main__":
 
     # run main routine
     main()
+

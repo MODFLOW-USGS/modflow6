@@ -1,0 +1,60 @@
+Input to the Skeletal Storage, Compaction, and Subsidance (CSUB) Package is read from the file that has type ``CSUB6'' in the Name File.  If the CSUB Package is not included for a model, then storage changes resulting from compaction will not be calculated.  Only one CSUB Package can be specified for a GWF model.
+
+\vspace{5mm}
+\subsubsection{Structure of Blocks}
+
+\vspace{5mm}
+\noindent \textit{FOR EACH SIMULATION}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-csub-options.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-csub-dimensions.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-csub-griddata.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-csub-packagedata.dat}
+\vspace{5mm}
+\noindent \textit{FOR ANY STRESS PERIOD}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-csub-period.dat}
+\packageperioddescription
+
+\vspace{5mm}
+\subsubsection{Explanation of Variables}
+\begin{description}
+\input{./mf6ivar/tex/gwf-csub-desc.tex}
+\end{description}
+
+\vspace{5mm}
+\subsubsection{Example Input File}
+\lstinputlisting[style=inputfile]{./mf6ivar/examples/gwf-csub-example.dat}
+
+
+\vspace{5mm}
+\subsubsection{Available observation types}
+Subsidence Package observations include all of the terms that contribute to the continuity equation for each GWF cell. The data required for each CSUB Package observation type is defined in table~\ref{table:gwf-csubobstype}. Negative and positive values for \texttt{CSUB} observations represent a loss from and gain to the GWF model, respectively.
+
+
+\begin{longtable}{p{2cm} p{2.75cm} p{2cm} p{1.25cm} p{7cm}}
+\caption{Available CSUB Package observation types} \tabularnewline
+
+\hline
+\hline
+\textbf{Stress Package} & \textbf{Observation type} & \textbf{ID} & \textbf{ID2} & \textbf{Description} \\
+\hline
+\endfirsthead
+
+\captionsetup{textformat=simple}
+\caption*{\textbf{Table \arabic{table}.}{\quad}Available CSUB Package observation types.---Continued} \\
+
+\hline
+\hline
+\textbf{Stress Package} & \textbf{Observation type} & \textbf{ID} & \textbf{ID2} & \textbf{Description} \\
+\hline
+\endhead
+
+\hline
+\endfoot
+
+\input{../Common/gwf-csubobs.tex}
+\label{table:gwf-csubobstype}
+\end{longtable}
+
+\vspace{5mm}
+\subsubsection{Example Observation Input File}
+\lstinputlisting[style=inputfile]{./mf6ivar/examples/gwf-csub-example-obs.dat}

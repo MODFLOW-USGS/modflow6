@@ -1,0 +1,6 @@
+version.txt merge=ours
+README.md merge=ours
+DISCLAIMER.md merge=ours
+code.json merge=ours
+doc/version.tex merge=ours
+src/Utilities/version.f90 merge=ours

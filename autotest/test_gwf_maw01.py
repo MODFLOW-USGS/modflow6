@@ -1,5 +1,4 @@
 import os
-import sys
 import numpy as np
 
 try:
@@ -139,6 +138,9 @@ def get_model(idx, dir):
                                   packagedata=wellrecarray,
                                   connectiondata=wellconnectionsrecarray,
                                   perioddata=wellperiodrecarray)
+    maw.obs.initialize(filename=opth, digits=20,
+                       print_input=True,
+                       continuous=mawo_dict)
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(gwf,
