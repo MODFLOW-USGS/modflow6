@@ -41,6 +41,9 @@ def get_mf6_models():
     """
         Get a list of test models
     """
+    # determine if running on travis
+    is_travis = 'TRAVIS' in os.environ
+
     # tuple of example files to exclude
     exclude = (None,)
 
