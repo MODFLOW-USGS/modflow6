@@ -1,7 +1,7 @@
 module MemoryManagerModule
 
   use KindModule,             only: DP, I4B, I8B
-  use ConstantsModule,        only: DZERO, LENORIGIN, LENVARNAME
+  use ConstantsModule,        only: DZERO, LENORIGIN, LENVARNAME, LINELENGTH
   use SimModule,              only: store_error, ustop
   use MemoryTypeModule,       only: MemoryTSType, MemoryType
   use MemoryListModule,       only: MemoryListType
@@ -71,7 +71,7 @@ module MemoryManagerModule
     logical, intent(in), optional :: check
     integer(I4B) :: ipos
     logical check_opt
-    character(len=100) :: ermsg
+    character(len=LINELENGTH) :: ermsg
     mt => null()
     found = .false.
     do ipos = 1, memorylist%count()
@@ -117,7 +117,7 @@ module MemoryManagerModule
   
   subroutine check_varname(name)
     character(len=*), intent(in) :: name
-    character(len=100) :: ermsg
+    character(len=LINELENGTH) :: ermsg
     if(len(name) > LENVARNAME) then
       write(ermsg, '(*(G0))')                                                  &
         'Programming error in Memory Manager. Variable ', name, ' must be ',   &
