@@ -1,5 +1,6 @@
 import os
-from nose.tools import *
+import subprocess
+from nose.tools import raises
 
 try:
     import flopy
@@ -9,20 +10,35 @@ except:
     msg += ' pip install flopy'
     raise Exception(msg)
 
-from framework import testing_framework
 import targets
 
+mf6_exe = os.path.abspath(targets.target_dict['mf6'])
+name = 'csub_idomain01'
+ws = os.path.join('temp', name)
 
-def get_model():
-    name = 'csub_idomain01'
-    mf6_exe = os.path.abspath(targets.target_dict['mf6'])
 
+def run_mf6(argv, ws):
+    buff = []
+    proc = subprocess.Popen(argv,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
+                            cwd=ws)
+    result, error = proc.communicate()
+    if result is not None:
+        c = result.decode('utf-8')
+        c = c.rstrip('\r\n')
+        print('{}'.format(c))
+        buff.append(c)
+
+    return proc.returncode, buff
+
+
+@raises(RuntimeError)
+def idomain_runtime_error():
     # static model data
     # temporal discretization
     nper = 1
-    tdis_rc = []
-    for idx in range(nper):
-        tdis_rc.append((1., 1, 1.0))
+    tdis_rc = [(1., 1, 1.0)]
 
     # spatial discretization data
     nlay, nrow, ncol = 1, 10, 10
@@ -49,7 +65,6 @@ def get_model():
     maxchd = len(cd6[0])
 
     # build MODFLOW 6 files
-    ws = os.path.join('temp', name)
     sim = flopy.mf6.MFSimulation(sim_name=name, version='mf6',
                                  exe_name=mf6_exe,
                                  sim_ws=ws)
@@ -105,30 +120,82 @@ def get_model():
                                 printrecord=[('HEAD', 'LAST'),
                                              ('BUDGET', 'ALL')])
 
-    return sim
+    # write the input files
+    sim.write_simulation()
 
-
-@raises(AssertionError)
-def run_mf6():
-    sim = get_model()
-    success, buff = sim.run_simulation()
+    # run the simulation
+    returncode, buff = run_mf6([mf6_exe], ws)
     msg = 'could not run {}'.format(sim.name)
-    if not success:
-        raise AssertionError(msg)
+    if returncode != 0:
+        err_str = 'IDOMAIN ARRAY HAS SOME VALUES GREATER THAN ZERO'
+        err = any(err_str in s for s in buff)
+        if err:
+            raise RuntimeError(msg)
+        else:
+            msg += ' but IDOMAIN ARRAY ERROR not returned'
+            raise ValueError(msg)
     return
 
 
-def test_mf6model():
+def test_mf6_idomain_error():
     # run the test models
-    yield run_mf6
+    yield idomain_runtime_error
 
     return
 
 
-def main():
-    run_mf6()
+@raises(RuntimeError)
+def test_unknown_keyword_error():
+    returncode, buff = run_mf6([mf6_exe, 'unknown_keyword'], ws)
+    msg = 'could not run {}'.format('unknown_keyword')
+    if returncode != 0:
+        err_str = 'mf6: illegal option'
+        err = any(err_str in s for s in buff)
+        if err:
+            raise RuntimeError(msg)
+        else:
+            msg += ' but {} not returned'.format(err_str)
+            raise ValueError(msg)
 
-    return
+
+def run_argv(arg, return_str):
+    returncode, buff = run_mf6([mf6_exe, arg], ws)
+    if returncode == 0:
+        found_str = any(return_str in s for s in buff)
+        if not found_str:
+            msg = '{} keyword did not return {}'.format(arg, return_str)
+            raise ValueError(msg)
+    else:
+        msg = 'could not run with command line argument {}'.format(arg)
+        raise RuntimeError(msg)
+
+
+def test_help_argv():
+    argv = ['-h', '--help', '-?']
+    return_str = 'mf6 [options]     retrieve program information'
+    for arg in argv:
+        yield run_argv, arg, return_str
+
+
+def test_version_argv():
+    argv = ['-v', '--version']
+    return_str = 'mf6: 6'
+    for arg in argv:
+        yield run_argv, arg, return_str
+
+
+def test_develop_argv():
+    argv = ['-dev', '--develop']
+    return_str = 'mf6: develop version'
+    for arg in argv:
+        yield run_argv, arg, return_str
+
+
+def test_compiler_argv():
+    argv = ['-c', '--compiler']
+    return_str = 'mf6: MODFLOW 6 compiled'
+    for arg in argv:
+        yield run_argv, arg, return_str
 
 
 # use python testmf6_csub_sub03.py --mf2005 mf2005devdbl
@@ -136,5 +203,5 @@ if __name__ == "__main__":
     # print message
     print('standalone run of {}'.format(os.path.basename(__file__)))
 
-    # run main routine
-    main()
+    idomain_runtime_error()
+    test_unknown_keyword_error()
