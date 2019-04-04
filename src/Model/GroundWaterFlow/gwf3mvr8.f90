@@ -138,6 +138,7 @@ module GwfMvrModule
     procedure :: check_options
     procedure :: read_dimensions
     procedure :: read_packages
+    procedure :: check_packages
     procedure :: allocate_scalars
     procedure :: allocate_arrays
   end type GwfMvrType
@@ -216,8 +217,9 @@ module GwfMvrModule
     ! -- Allocate arrays
     call this%allocate_arrays()
     !
-    ! -- Read package names
+    ! -- Read and check package names
     call this%read_packages()
+    call this%check_packages()
     !
     ! -- Define the budget object to be the size of package names
     call this%budget%budget_df(this%maxpackages, 'WATER MOVER')
@@ -315,7 +317,8 @@ module GwfMvrModule
         endif
         !
         ! -- Process the water mover line (mname = '' if this is an exchange)
-        call this%mvr(i)%set(line, this%parser%iuactive, this%iout, mname)
+        call this%mvr(i)%set(line, this%parser%iuactive, this%iout, mname,     &
+                             this%pakorigins)
         !
         ! -- Echo input
         if(this%iprpak == 1) call this%mvr(i)%echo(this%iout)
@@ -944,6 +947,49 @@ module GwfMvrModule
     ! -- return
     return
   end subroutine read_packages
+
+  subroutine check_packages(this)
+! ******************************************************************************
+! check_packages -- check to make sure packages have mover activated
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule, only: LINELENGTH
+    use MemoryManagerModule, only: mem_setptr
+    use SimModule, only: ustop, store_error, count_errors, store_error_unit
+    ! -- dummy
+    class(GwfMvrType),intent(inout) :: this
+    ! -- local
+    character (len=LINELENGTH) :: errmsg
+    integer(I4B) :: i
+    integer(I4B), pointer :: imover_ptr
+    ! -- format
+! ------------------------------------------------------------------------------
+    !
+    ! -- Check to make sure mover is activated for each package
+    do i = 1, size(this%pakorigins)
+      imover_ptr => null()
+      call mem_setptr(imover_ptr, 'IMOVER', trim(this%pakorigins(i)))
+      if (imover_ptr == 0) then
+        write(errmsg, '(a, a, a)') &
+                          'ERROR.  MODEL AND PACKAGE "', &
+                          trim(this%pakorigins(i)), &
+                          '" DOES NOT HAVE MOVER SPECIFIED IN OPTIONS BLOCK.'
+        call store_error(errmsg)
+      end if
+    end do
+    !
+    ! -- Terminate if errors detected.
+    if (count_errors() > 0) then
+      call this%parser%StoreErrorUnit()
+      call ustop()
+    endif
+    !
+    ! -- return
+    return
+  end subroutine check_packages
 
   subroutine allocate_scalars(this)
 ! ******************************************************************************

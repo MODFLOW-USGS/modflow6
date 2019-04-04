@@ -2,7 +2,8 @@ module MvrModule
   
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LENMODELNAME, LENPACKAGENAME, LINELENGTH,         &
-                             LENBUDTXT, LENAUXNAME, LENBOUNDNAME, DZERO, DONE
+                             LENBUDTXT, LENAUXNAME, LENBOUNDNAME, DZERO, DONE, &
+                             LENORIGIN
   
   implicit none
   private
@@ -39,17 +40,20 @@ module MvrModule
   
   contains
   
-  subroutine set(this, line, inunit, iout, mname)
+  subroutine set(this, line, inunit, iout, mname, pakorigins)
 ! ******************************************************************************
 ! set -- Setup mvr object
-!        If mname == '', then read mname out of line
+!        If mname == '', then read mname out of line. pakorigins is an array
+!        of strings, which are model names and package names.  The mover
+!        entries must be in pakorigins, or this routine will terminate with
+!        an error.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
     use InputOutputModule, only: urword, extract_idnum_or_bndname
-    use SimModule, only: ustop, store_error, store_error_unit
+    use SimModule, only: ustop, store_error, store_error_unit, count_errors
     use MemoryManagerModule, only: mem_setptr
     ! -- dummy
     class(MvrType) :: this
@@ -57,6 +61,8 @@ module MvrModule
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
     character(len=LENMODELNAME), intent(in) :: mname
+    character(len=LENORIGIN+1),                                                &
+      dimension(:), pointer, contiguous              :: pakorigins
     ! -- local
     character(len=LENMODELNAME+LENPACKAGENAME+1) :: origin
     integer(I4B) :: lloc, istart, istop, ival
@@ -64,7 +70,8 @@ module MvrModule
     real(DP), dimension(:), pointer, contiguous :: temp_ptr => null()
     character(len=LINELENGTH) :: errmsg
     character(len=LENBOUNDNAME) :: bndname
-    logical :: mnamel
+    logical :: mnamel, found
+    integer(I4B) :: i
 ! ------------------------------------------------------------------------------
     !
     ! -- Check for valid mname and set logical mnamel flag
@@ -131,26 +138,43 @@ module MvrModule
     !
     ! -- Check to make sure provider and receiver are not the same
     if(this%pname1 == this%pname2 .and. this%irch1 == this%irch2) then
-      call store_error('ERROR. PROVIDER AND RECEIVER AND THE SAME: '//         &
+      call store_error('ERROR. PROVIDER AND RECEIVER ARE THE SAME: '//         &
         trim(line))
       call store_error_unit(inunit)
       call ustop()
     endif
     !
+    ! -- Check to make sure pname1 and pname2 are both listed in pakorigins
+    found = .false.
+    do i = 1, size(pakorigins)
+      if (this%pname1 == pakorigins(i)) then
+        found = .true.
+        exit
+      endif
+    end do
+    if (.not. found) then
+      call store_error('MOVER CAPABILITY NOT ACTIVATED IN '//this%pname1)
+      call store_error('ADD "MOVER" KEYWORD TO PACKAGE OPTIONS BLOCK.')
+    end if
+    found = .false.
+    do i = 1, size(pakorigins)
+      if (this%pname2 == pakorigins(i)) then
+        found = .true.
+        exit
+      endif
+    end do
+    if (.not. found) then
+      call store_error('MOVER CAPABILITY NOT ACTIVATED IN '//this%pname2)
+      call store_error('ADD "MOVER" KEYWORD TO PACKAGE OPTIONS BLOCK.')
+    end if
+    if (count_errors() > 0) then
+      call store_error_unit(inunit)
+      call ustop()
+    end if
+    !
     ! -- Set pointer to provider position in array
     origin = trim(this%pname1)
     call mem_setptr(temp_ptr, 'QTOMVR', origin)
-    if(.not. associated(temp_ptr)) then
-      call store_error('VALID PROVIDER COULD NOT BE FOUND: '//origin)
-      call store_error_unit(inunit)
-      call ustop()
-    endif
-    if(size(temp_ptr) == 0) then
-      call store_error('MOVER CAPABILITY NOT ACTIVATED IN '//origin)
-      call store_error('ADD "MOVER" KEYWORD TO PACKAGE OPTIONS BLOCK.')
-      call store_error_unit(inunit)
-      call ustop()
-    endif
     if(this%irch1 < 1 .or. this%irch1 > size(temp_ptr)) then
       call store_error('ERROR. PROVIDER ID < 1 OR GREATER THAN PACKAGE SIZE ')
       write(errmsg, '(4x,a,i0,a,i0)') 'PROVIDER ID = ', this%irch1,            &
@@ -175,17 +199,6 @@ module MvrModule
     temp_ptr => null()
     origin = trim(this%pname2)
     call mem_setptr(temp_ptr, 'QFROMMVR', origin)
-    if(.not. associated(temp_ptr)) then
-      call store_error('VALID RECEIVER COULD NOT BE FOUND: '//origin)
-      call store_error_unit(inunit)
-      call ustop()
-    endif
-    if(size(temp_ptr) == 0) then
-      call store_error('MOVER CAPABILITY NOT ACTIVATED IN '//origin)
-      call store_error('ADD "MOVER" KEYWORD TO PACKAGE OPTIONS BLOCK.')
-      call store_error_unit(inunit)
-      call ustop()
-    endif
     if(this%irch2 < 1 .or. this%irch2 > size(temp_ptr)) then
       call store_error('ERROR. PROVIDER ID < 1 OR GREATER THAN PACKAGE SIZE ')
       write(errmsg, '(4x,a,i0,a,i0)') 'RECEIVER ID = ', this%irch2,            &
