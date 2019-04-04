@@ -4,6 +4,7 @@ module MvrModule
   use ConstantsModule, only: LENMODELNAME, LENPACKAGENAME, LINELENGTH,         &
                              LENBUDTXT, LENAUXNAME, LENBOUNDNAME, DZERO, DONE, &
                              LENORIGIN
+  use PackageMoverModule, only: PackageMoverType
   
   implicit none
   private
@@ -40,7 +41,7 @@ module MvrModule
   
   contains
   
-  subroutine set(this, line, inunit, iout, mname, pakorigins)
+  subroutine set(this, line, inunit, iout, mname, pakorigins, pakmovers)
 ! ******************************************************************************
 ! set -- Setup mvr object
 !        If mname == '', then read mname out of line. pakorigins is an array
@@ -54,7 +55,7 @@ module MvrModule
     ! -- modules
     use InputOutputModule, only: urword, extract_idnum_or_bndname
     use SimModule, only: ustop, store_error, store_error_unit, count_errors
-    use MemoryManagerModule, only: mem_setptr
+    !use MemoryManagerModule, only: mem_setptr
     ! -- dummy
     class(MvrType) :: this
     character(len=*), intent(inout) :: line
@@ -63,8 +64,9 @@ module MvrModule
     character(len=LENMODELNAME), intent(in) :: mname
     character(len=LENORIGIN+1),                                                &
       dimension(:), pointer, contiguous              :: pakorigins
+    type(PackageMoverType), dimension(:), pointer, contiguous    :: pakmovers
     ! -- local
-    character(len=LENMODELNAME+LENPACKAGENAME+1) :: origin
+    !character(len=LENMODELNAME+LENPACKAGENAME+1) :: origin
     integer(I4B) :: lloc, istart, istop, ival
     real(DP) :: rval
     real(DP), dimension(:), pointer, contiguous :: temp_ptr => null()
@@ -72,6 +74,7 @@ module MvrModule
     character(len=LENBOUNDNAME) :: bndname
     logical :: mnamel, found
     integer(I4B) :: i
+    integer(I4B) :: ipakloc1, ipakloc2
 ! ------------------------------------------------------------------------------
     !
     ! -- Check for valid mname and set logical mnamel flag
@@ -149,6 +152,7 @@ module MvrModule
     do i = 1, size(pakorigins)
       if (this%pname1 == pakorigins(i)) then
         found = .true.
+        ipakloc1 = i
         exit
       endif
     end do
@@ -160,6 +164,7 @@ module MvrModule
     do i = 1, size(pakorigins)
       if (this%pname2 == pakorigins(i)) then
         found = .true.
+        ipakloc2 = i
         exit
       endif
     end do
@@ -173,8 +178,9 @@ module MvrModule
     end if
     !
     ! -- Set pointer to provider position in array
-    origin = trim(this%pname1)
-    call mem_setptr(temp_ptr, 'QTOMVR', origin)
+    !origin = trim(this%pname1)
+    !call mem_setptr(temp_ptr, 'QTOMVR', origin)
+    temp_ptr => pakmovers(ipakloc1)%qtomvr
     if(this%irch1 < 1 .or. this%irch1 > size(temp_ptr)) then
       call store_error('ERROR. PROVIDER ID < 1 OR GREATER THAN PACKAGE SIZE ')
       write(errmsg, '(4x,a,i0,a,i0)') 'PROVIDER ID = ', this%irch1,            &
@@ -183,22 +189,26 @@ module MvrModule
       call store_error_unit(inunit)
       call ustop()
     endif
-    this%qtomvr_ptr => temp_ptr(this%irch1)
+    !this%qtomvr_ptr => temp_ptr(this%irch1)
+    this%qtomvr_ptr => pakmovers(ipakloc1)%qtomvr(this%irch1)
     !
     ! -- Set pointer to available position in array
-    temp_ptr => null()
-    call mem_setptr(temp_ptr, 'QFORMVR', origin)
-    this%qformvr_ptr => temp_ptr(this%irch1)
+    !temp_ptr => null()
+    !call mem_setptr(temp_ptr, 'QFORMVR', origin)
+    !this%qformvr_ptr => temp_ptr(this%irch1)
+    this%qformvr_ptr => pakmovers(ipakloc1)%qformvr(this%irch1)
     !
     ! -- Set pointer to total available position in array
-    temp_ptr => null()
-    call mem_setptr(temp_ptr, 'QTFORMVR', origin)
-    this%qtformvr_ptr => temp_ptr(this%irch1)
+    !temp_ptr => null()
+    !call mem_setptr(temp_ptr, 'QTFORMVR', origin)
+    !this%qtformvr_ptr => temp_ptr(this%irch1)
+    this%qtformvr_ptr => pakmovers(ipakloc1)%qtformvr(this%irch1)
     !
     ! -- Set pointer to receiver position in array
-    temp_ptr => null()
-    origin = trim(this%pname2)
-    call mem_setptr(temp_ptr, 'QFROMMVR', origin)
+    !temp_ptr => null()
+    !origin = trim(this%pname2)
+    !call mem_setptr(temp_ptr, 'QFROMMVR', origin)
+    temp_ptr => pakmovers(ipakloc2)%qfrommvr
     if(this%irch2 < 1 .or. this%irch2 > size(temp_ptr)) then
       call store_error('ERROR. PROVIDER ID < 1 OR GREATER THAN PACKAGE SIZE ')
       write(errmsg, '(4x,a,i0,a,i0)') 'RECEIVER ID = ', this%irch2,            &
@@ -207,7 +217,8 @@ module MvrModule
       call store_error_unit(inunit)
       call ustop()
     endif
-    this%qfrommvr_ptr => temp_ptr(this%irch2)
+    !this%qfrommvr_ptr => temp_ptr(this%irch2)
+    this%qfrommvr_ptr => pakmovers(ipakloc2)%qfrommvr(this%irch2)
     !
     ! -- return
     return
