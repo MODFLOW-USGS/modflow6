@@ -55,7 +55,6 @@ module MvrModule
     ! -- modules
     use InputOutputModule, only: urword, extract_idnum_or_bndname
     use SimModule, only: ustop, store_error, store_error_unit, count_errors
-    !use MemoryManagerModule, only: mem_setptr
     ! -- dummy
     class(MvrType) :: this
     character(len=*), intent(inout) :: line
@@ -66,7 +65,6 @@ module MvrModule
       dimension(:), pointer, contiguous              :: pakorigins
     type(PackageMoverType), dimension(:), pointer, contiguous    :: pakmovers
     ! -- local
-    !character(len=LENMODELNAME+LENPACKAGENAME+1) :: origin
     integer(I4B) :: lloc, istart, istop, ival
     real(DP) :: rval
     real(DP), dimension(:), pointer, contiguous :: temp_ptr => null()
@@ -148,7 +146,9 @@ module MvrModule
     endif
     !
     ! -- Check to make sure pname1 and pname2 are both listed in pakorigins
+    !    pname1 is the provider package; pname2 is the receiver package
     found = .false.
+    ipakloc1 = 0
     do i = 1, size(pakorigins)
       if (this%pname1 == pakorigins(i)) then
         found = .true.
@@ -161,6 +161,7 @@ module MvrModule
       call store_error('ADD "MOVER" KEYWORD TO PACKAGE OPTIONS BLOCK.')
     end if
     found = .false.
+    ipakloc2 = 0
     do i = 1, size(pakorigins)
       if (this%pname2 == pakorigins(i)) then
         found = .true.
@@ -177,9 +178,7 @@ module MvrModule
       call ustop()
     end if
     !
-    ! -- Set pointer to provider position in array
-    !origin = trim(this%pname1)
-    !call mem_setptr(temp_ptr, 'QTOMVR', origin)
+    ! -- Set pointer to QTOMVR array in the provider boundary package
     temp_ptr => pakmovers(ipakloc1)%qtomvr
     if(this%irch1 < 1 .or. this%irch1 > size(temp_ptr)) then
       call store_error('ERROR. PROVIDER ID < 1 OR GREATER THAN PACKAGE SIZE ')
@@ -189,25 +188,17 @@ module MvrModule
       call store_error_unit(inunit)
       call ustop()
     endif
-    !this%qtomvr_ptr => temp_ptr(this%irch1)
-    this%qtomvr_ptr => pakmovers(ipakloc1)%qtomvr(this%irch1)
+    this%qtomvr_ptr => temp_ptr(this%irch1)
     !
-    ! -- Set pointer to available position in array
-    !temp_ptr => null()
-    !call mem_setptr(temp_ptr, 'QFORMVR', origin)
-    !this%qformvr_ptr => temp_ptr(this%irch1)
-    this%qformvr_ptr => pakmovers(ipakloc1)%qformvr(this%irch1)
+    ! -- Set pointer to QFORMVR array in the provider boundary package
+    temp_ptr => pakmovers(ipakloc1)%qformvr
+    this%qformvr_ptr => temp_ptr(this%irch1)
     !
-    ! -- Set pointer to total available position in array
-    !temp_ptr => null()
-    !call mem_setptr(temp_ptr, 'QTFORMVR', origin)
-    !this%qtformvr_ptr => temp_ptr(this%irch1)
-    this%qtformvr_ptr => pakmovers(ipakloc1)%qtformvr(this%irch1)
+    ! -- Set pointer to QTFORMVR array in the provider boundary package
+    temp_ptr => pakmovers(ipakloc1)%qtformvr
+    this%qtformvr_ptr => temp_ptr(this%irch1)
     !
-    ! -- Set pointer to receiver position in array
-    !temp_ptr => null()
-    !origin = trim(this%pname2)
-    !call mem_setptr(temp_ptr, 'QFROMMVR', origin)
+    ! -- Set pointer to QFROMMVR array in the receiver boundary package
     temp_ptr => pakmovers(ipakloc2)%qfrommvr
     if(this%irch2 < 1 .or. this%irch2 > size(temp_ptr)) then
       call store_error('ERROR. PROVIDER ID < 1 OR GREATER THAN PACKAGE SIZE ')
@@ -217,8 +208,7 @@ module MvrModule
       call store_error_unit(inunit)
       call ustop()
     endif
-    !this%qfrommvr_ptr => temp_ptr(this%irch2)
-    this%qfrommvr_ptr => pakmovers(ipakloc2)%qfrommvr(this%irch2)
+    this%qfrommvr_ptr => temp_ptr(this%irch2)
     !
     ! -- return
     return
