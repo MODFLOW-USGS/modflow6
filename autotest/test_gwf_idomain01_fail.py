@@ -111,6 +111,7 @@ def get_model():
 @raises(AssertionError)
 def run_mf6():
     sim = get_model()
+    sim.write_simulation()
     success, buff = sim.run_simulation()
     msg = 'could not run {}'.format(sim.name)
     if not success:
