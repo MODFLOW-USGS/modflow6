@@ -26,6 +26,14 @@ download_version = '2.0'
 mfexe_pth = 'temp/mfexes'
 
 
+def relpath_fallback(pth):
+    try:
+        # throws ValueError on Windows if pth is on a different drive
+        return os.path.relpath(pth)
+    except ValueError:
+        return os.path.abspath(pth)
+
+
 def create_dir(pth):
     # remove pth directory if it exists
     if os.path.exists(pth):
@@ -173,7 +181,7 @@ def test_build_modflow6():
     pymake.main(srcdir, target, fc=fc, cc=cc, include_subdirs=True,
                 fflags=fflags)
 
-    msg = '{} does not exist.'.format(os.path.relpath(target))
+    msg = '{} does not exist.'.format(relpath_fallback(target))
     assert os.path.isfile(target), msg
 
 
@@ -197,7 +205,7 @@ def test_build_mf5to6():
     pymake.main(srcdir, target, fc=fc, cc=cc, include_subdirs=True,
                 extrafiles=extrafiles)
 
-    msg = '{} does not exist.'.format(os.path.relpath(target))
+    msg = '{} does not exist.'.format(relpath_fallback(target))
     assert os.path.isfile(target), msg
 
 
@@ -219,7 +227,7 @@ def test_build_zonebudget():
 
     pymake.main(srcdir, target, fc=fc, cc=cc, extrafiles=extrafiles)
 
-    msg = '{} does not exist.'.format(os.path.relpath(target))
+    msg = '{} does not exist.'.format(relpath_fallback(target))
     assert os.path.isfile(target), msg
 
 

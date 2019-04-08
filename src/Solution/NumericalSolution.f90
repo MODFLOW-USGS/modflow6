@@ -455,6 +455,7 @@ contains
     integer(I4B) :: ifdparam, mxvl, npp
     integer(I4B) :: imslinear
     character(len=linelength) :: errmsg, keyword, fname
+    character(len=linelength) :: msg
     integer(I4B) :: isymflg=1
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
@@ -536,8 +537,21 @@ contains
             call store_error(errmsg)
           end if
         case ('NO_PTC')
-          this%iallowptc = 0
-          write(IOUT,'(1x,A)') 'PSEUDO-TRANSIENT CONTINUATION DISABLED'
+          call this%parser%GetStringCaps(keyword)
+          select case(keyword)
+            case ('ALL')
+              ival = 0
+              msg = 'ALL'
+            case ('FIRST')
+              ival = -1
+              msg = 'THE FIRST'
+            case default
+              ival = 0
+              msg = 'ALL'
+          end select
+          this%iallowptc = ival
+          write(IOUT,'(1x,A)') 'PSEUDO-TRANSIENT CONTINUATION DISABLED FOR' // &
+            ' ' // trim(adjustl(msg)) // ' STRESS-PERIOD(S)'
         !
         ! -- right now these are options that are only available in the
         !    development version and are not included in the documentation.
@@ -1079,6 +1093,7 @@ contains
     integer(I4B) :: i0, i1
     integer(I4B) :: iend
     integer(I4B) :: iptc
+    integer(I4B) :: iallowptc
     integer(I4B) :: nodeu
     real(DP) :: ptcf
     real(DP) :: dt
@@ -1173,7 +1188,20 @@ contains
       do im = 1, this%modellist%Count()
         mp => GetNumericalModelFromList(this%modellist, im)
         call mp%model_ptcchk(iptc)
-        iptc = iptc * this%iallowptc
+        !
+        ! -- set iallowptc
+        ! -- no_ptc_option is FIRST
+        if (this%iallowptc < 0) then
+          if (kper > 1) then
+            iallowptc = 1
+          else
+            iallowptc = 0
+          end if
+        ! -- no_ptc_option is ALL (0) or using PTC (1)
+        else
+          iallowptc = this%iallowptc
+        end if
+        iptc = iptc * iallowptc
         if (iptc /= 0) then
           if (n == 1) then
             write (iout, '(//)')
@@ -1264,7 +1292,7 @@ contains
         !
         ! -- linear solve
         call code_timer(0, ttsoln, this%ttsoln)
-        CALL this%sln_ls(kiter,kstp,kper,iter,itertot,iptc,ptcf)
+        CALL this%sln_ls(kiter, kstp, kper, iter, itertot, iptc, ptcf)
         call code_timer(1, ttsoln, this%ttsoln)
         !
         !-------------------------------------------------------
@@ -1881,6 +1909,7 @@ contains
     integer(I4B) :: n
     integer(I4B) :: itestmat, i, i1, i2
     integer(I4B) :: iptct
+    integer(I4B) :: iallowptc
     real(DP) :: adiag, diagval
     real(DP) :: l2norm
     real(DP) :: ptcval
@@ -1915,7 +1944,20 @@ contains
       endif
     end do
     ! -- pseudo transient continuation
-    iptct = iptc * this%iallowptc
+    !
+    ! -- set iallowptc
+    ! -- no_ptc_option is FIRST
+    if (this%iallowptc < 0) then
+      if (kper > 1) then
+        iallowptc = 1
+      else
+        iallowptc = 0
+      end if
+    ! -- no_ptc_option is ALL (0) or using PTC (1)
+    else
+      iallowptc = this%iallowptc
+    end if
+    iptct = iptc * iallowptc
     if (iptct /= 0) then
       call this%sln_l2norm(this%neq, this%nja,                                 &
                            this%ia, this%ja, this%active,                      &
@@ -1935,7 +1977,7 @@ contains
         end if
       end if
     end if
-    iptct = iptc * this%iallowptc
+    iptct = iptc * iallowptc
     if (iptct /= 0) then
       if (kiter == 1) then
         if (this%iptcout > 0) then
