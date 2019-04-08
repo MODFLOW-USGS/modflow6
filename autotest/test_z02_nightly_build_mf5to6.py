@@ -31,7 +31,7 @@ exdir = None
 for root, dirs, files in os.walk(home):
     for d in dirs:
         if d.startswith(fdir):
-            exdir = os.path.join(root, d, 'mf6')
+            exdir = os.path.join(root, d, 'mf5to6')
             break
     if exdir is not None:
         break
