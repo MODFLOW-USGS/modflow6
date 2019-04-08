@@ -113,10 +113,13 @@ def get_model(idx, dir):
                    (41272., 3.e30, 3.e30),
                    (15000., 0., 0.),
                    ]
-    wel.ts.initialize(filename= name + '.wel.ts',
-                      timeseries=ts_recarray,
-                      time_series_namerecord = ['ts01', 'ts02'],
-                      interpolation_methodrecord = ['linear', 'linear'])
+
+    filename = name + '.wel.ts'
+    time_series_namerecord = [('ts01', 'ts02')]
+    interpolation_methodrecord = [('linear', 'linear')]
+    wel.ts.initialize(filename=filename, timeseries=ts_recarray,
+                      time_series_namerecord=time_series_namerecord,
+                      interpolation_methodrecord=interpolation_methodrecord)
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(gwf,

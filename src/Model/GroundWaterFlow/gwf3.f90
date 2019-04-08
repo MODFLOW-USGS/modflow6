@@ -88,7 +88,7 @@ module GwfModule
                 'STO6 ', 'HFB6 ', 'WEL6 ', 'DRN6 ', 'RIV6 ', & ! 10
                 'GHB6 ', 'RCH6 ', 'EVT6 ', 'OBS6 ', 'GNC6 ', & ! 15
                 '     ', 'CHD6 ', '     ', '     ', '     ', & ! 20
-                'IBC6 ', 'MAW6 ', 'SFR6 ', 'LAK6 ', 'UZF6 ', & ! 25
+                '     ', 'MAW6 ', 'SFR6 ', 'LAK6 ', 'UZF6 ', & ! 25
                 'DISV6', 'MVR6 ', 'CSUB6', '     ', '     ', & ! 30
                 70 * '     '/
 
@@ -1383,7 +1383,6 @@ module GwfModule
     integer(I4B) :: ip
 ! ------------------------------------------------------------------------------
     !
-    ! -- Now supporting new-style WEL and GHB packages.
     ! -- This part creates the package object
     select case(filtyp)
     case('CHD6')

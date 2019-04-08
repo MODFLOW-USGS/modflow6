@@ -459,6 +459,15 @@ module GwfDisvModule
       enddo
     endif
     !
+    ! -- Check to make sure nodes is a valid number
+    if (this%nodes == 0) then
+      call store_error('ERROR.  MODEL DOES NOT HAVE ANY ACTIVE NODES.')
+      call store_error('MAKE SURE IDOMAIN ARRAY HAS SOME VALUES GREATER &
+        &THAN ZERO.')
+      call this%parser%StoreErrorUnit()
+      call ustop()
+    end if
+    !
     ! -- Check cell thicknesses
     do k = 1, this%nlay
       do j = 1, this%ncpl
