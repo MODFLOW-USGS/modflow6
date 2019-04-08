@@ -1383,7 +1383,6 @@ module GwfModule
     integer(I4B) :: ip
 ! ------------------------------------------------------------------------------
     !
-    ! -- Now supporting new-style WEL and GHB packages.
     ! -- This part creates the package object
     select case(filtyp)
     case('CHD6')

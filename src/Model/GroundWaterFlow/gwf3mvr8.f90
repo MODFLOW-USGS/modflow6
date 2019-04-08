@@ -104,6 +104,7 @@ module GwfMvrModule
   use BudgetModule,           only: BudgetType, budget_cr
   use NumericalPackageModule, only: NumericalPackageType
   use BlockParserModule,      only: BlockParserType
+  use PackageMoverModule,     only: PackageMoverType
 
   implicit none
   private
@@ -122,9 +123,11 @@ module GwfMvrModule
     character(len=LENORIGIN+1),                                                &
       dimension(:), pointer, contiguous              :: pakorigins               !array of model//package names
     character(len=LENPACKAGENAME),                                             &
-      dimension(:), pointer, contiguous              :: paknames                 !array of package names
+      dimension(:), pointer, contiguous              :: paknames => null()       !array of package names
     type(MvrType), dimension(:), pointer, contiguous :: mvr => null()            !array of movers
     type(BudgetType), pointer                        :: budget => null()         !mover budget object
+    type(PackageMoverType),                                                    &
+      dimension(:), pointer, contiguous    :: pakmovers => null()                !pointer to package mover objects
   contains
     procedure :: mvr_ar
     procedure :: mvr_rp
@@ -138,6 +141,8 @@ module GwfMvrModule
     procedure :: check_options
     procedure :: read_dimensions
     procedure :: read_packages
+    procedure :: check_packages
+    procedure :: assign_packagemovers
     procedure :: allocate_scalars
     procedure :: allocate_arrays
   end type GwfMvrType
@@ -216,8 +221,9 @@ module GwfMvrModule
     ! -- Allocate arrays
     call this%allocate_arrays()
     !
-    ! -- Read package names
+    ! -- Read and check package names
     call this%read_packages()
+    call this%check_packages()
     !
     ! -- Define the budget object to be the size of package names
     call this%budget%budget_df(this%maxpackages, 'WATER MOVER')
@@ -300,6 +306,12 @@ module GwfMvrModule
       else
         mname = ''
       endif
+      !
+      ! -- Assign a pointer to the package mover object.  The pointer assignment
+      !    will happen only the first time
+      call this%assign_packagemovers()
+      !
+      ! -- Read each mover entry
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
@@ -315,7 +327,8 @@ module GwfMvrModule
         endif
         !
         ! -- Process the water mover line (mname = '' if this is an exchange)
-        call this%mvr(i)%set(line, this%parser%iuactive, this%iout, mname)
+        call this%mvr(i)%set(line, this%parser%iuactive, this%iout, mname,     &
+                             this%pakorigins, this%pakmovers)
         !
         ! -- Echo input
         if(this%iprpak == 1) call this%mvr(i)%echo(this%iout)
@@ -644,6 +657,7 @@ module GwfMvrModule
       deallocate(this%mvr)
       deallocate(this%pakorigins)
       deallocate(this%paknames)
+      deallocate(this%pakmovers)
       call this%budget%budget_da()
       deallocate(this%budget)
     endif
@@ -945,6 +959,77 @@ module GwfMvrModule
     return
   end subroutine read_packages
 
+  subroutine check_packages(this)
+! ******************************************************************************
+! check_packages -- check to make sure packages have mover activated
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule, only: LINELENGTH
+    use MemoryManagerModule, only: mem_setptr
+    use SimModule, only: ustop, store_error, count_errors, store_error_unit
+    ! -- dummy
+    class(GwfMvrType),intent(inout) :: this
+    ! -- local
+    character (len=LINELENGTH) :: errmsg
+    integer(I4B) :: i
+    integer(I4B), pointer :: imover_ptr
+    ! -- format
+! ------------------------------------------------------------------------------
+    !
+    ! -- Check to make sure mover is activated for each package
+    do i = 1, size(this%pakorigins)
+      imover_ptr => null()
+      call mem_setptr(imover_ptr, 'IMOVER', trim(this%pakorigins(i)))
+      if (imover_ptr == 0) then
+        write(errmsg, '(a, a, a)') &
+                          'ERROR.  MODEL AND PACKAGE "', &
+                          trim(this%pakorigins(i)), &
+                          '" DOES NOT HAVE MOVER SPECIFIED IN OPTIONS BLOCK.'
+        call store_error(errmsg)
+      end if
+    end do
+    !
+    ! -- Terminate if errors detected.
+    if (count_errors() > 0) then
+      call this%parser%StoreErrorUnit()
+      call ustop()
+    endif
+    !
+    ! -- return
+    return
+  end subroutine check_packages
+
+  subroutine assign_packagemovers(this)
+! ******************************************************************************
+! assign_packagemovers -- assign pointer to each package's packagemover object
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use PackageMoverModule, only: set_packagemover_pointer
+    ! -- dummy
+    class(GwfMvrType),intent(inout) :: this
+    ! -- local
+    integer(I4B) :: i
+    ! -- format
+! ------------------------------------------------------------------------------
+    !
+    ! -- Assign the package mover pointer if it hasn't been assigned yet
+    do i = 1, size(this%pakorigins)
+      if (this%pakmovers(i)%origin == '') then
+        call set_packagemover_pointer(this%pakmovers(i), &
+                                      trim(this%pakorigins(i)))
+      end if
+    end do
+    !
+    ! -- return
+    return
+  end subroutine assign_packagemovers
+
   subroutine allocate_scalars(this)
 ! ******************************************************************************
 ! allocate_scalars
@@ -997,15 +1082,23 @@ module GwfMvrModule
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     use ConstantsModule, only: DZERO
+    use PackageMoverModule, only: nulllify_packagemover_pointer
     ! -- dummy
     class(GwfMvrType) :: this
     ! -- local
+    integer(I4B) :: i
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate
     allocate(this%mvr(this%maxmvr))
     allocate(this%pakorigins(this%maxpackages))
     allocate(this%paknames(this%maxpackages))
+    allocate(this%pakmovers(this%maxpackages))
+    !
+    ! -- nullify the pakmovers
+    do i = 1, this%maxpackages
+      call nulllify_packagemover_pointer(this%pakmovers(i))
+    end do
     !
     ! -- allocate the object and assign values to object variables
     call mem_allocate(this%ientries, this%maxcomb, 'IENTRIES', this%origin)

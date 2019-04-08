@@ -486,15 +486,16 @@ subroutine ustop(stopmess,ioutlocal)
   close(iout)
   !
   ! -- return appropriate error codes when terminating the program
-  if (ireturnerr == 0) then
-    stop
-  elseif (ireturnerr == 1) then
-    stop 1
-  elseif (ireturnerr == 2) then
-    stop 2
-  else
-    stop 999
-  end if
+  select case (ireturnerr)
+    case (0)
+      stop
+    case (1)
+      stop 1
+    case (2)
+      stop 2
+    case default
+      stop 999
+  end select
 end subroutine ustop
 
   subroutine converge_reset()

@@ -20,18 +20,19 @@ except:
 
 from simulation import Simulation
 
-# find path to modflow6-examples directory
+# find path to modflow6-examples or modflow6-examples.git directory
 home = os.path.expanduser('~')
 fdir = 'modflow6-examples'
 exdir = None
 for root, dirs, files in os.walk(home):
     for d in dirs:
-        if d == fdir:
+        if d.startswith(fdir):
             exdir = os.path.join(root, d, 'mf6')
             break
     if exdir is not None:
         break
 testpaths = os.path.join('..', exdir)
+assert os.path.isdir(testpaths)
 
 
 def get_branch():
