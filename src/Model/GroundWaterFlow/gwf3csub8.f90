@@ -1703,10 +1703,9 @@ contains
         call UWWORD(line, iloc, 10, 3, text, n, this%kv(ib), center=.TRUE.)
         call UWWORD(line, iloc, 10, 3, text, n, this%h0(ib), center=.TRUE.)
       end if
-      
       write(this%iout, '(1X,A)') line(1:iloc)
     end do
-    write(this%iout, '(//)')   
+    write(this%iout, '(/)')   
     !
     ! -- Check to make sure that every interbed is specified and that no 
     !    interbed is specified more than once.
@@ -3665,7 +3664,7 @@ contains
                                                    this%ci(ib) * fact,&
                                                    this%rci(ib) * fact
         end do
-        write(this%iout, '(//)')
+        write(this%iout, '(/)')
       end if
     end if
     !
