@@ -15,7 +15,7 @@ module GwfCsubModule
   use BlockParserModule,      only: BlockParserType
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
                                   GetTimeSeriesLinkFromList
-  use InputOutputModule, only: get_node, extract_idnum_or_bndname
+  use InputOutputModule, only: get_node, extract_idnum_or_bndname, UWWORD
   use BaseDisModule, only: DisBaseType
   use SimModule, only: count_errors, store_error, store_error_unit, ustop
   use ArrayHandlersModule, only: ExpandArray
@@ -1468,6 +1468,10 @@ contains
     ! -- local
     character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: cellid
+    character(len=20) :: scellid
+    character(len=10) :: text
+    character(len=LINELENGTH) :: line
+    character(len=LINELENGTH) :: linesep
     character(len=LENBOUNDNAME) :: bndName, bndNameTemp
     character(len=7) :: cdelay
     character(len=9) :: cno
@@ -1480,10 +1484,12 @@ contains
     integer(I4B) :: ierr
     integer(I4B) :: ndelaybeds
     integer(I4B) :: idelay
+    integer(I4B) :: iloc
     real(DP) :: rval
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: baq
+    real(DP) :: q
     integer, allocatable, dimension(:) :: nboundchk
     !
     ! -- initialize temporary variables
@@ -1652,6 +1658,55 @@ contains
     !else
     !  call store_error('ERROR.  REQUIRED PACKAGEDATA BLOCK NOT FOUND.')
     endif
+    !
+    ! -- write summary of interbed data
+    write(this%iout, '(//1X,A)') 'INTERBED DATA'
+    iloc = 1
+    line = ''
+    call UWWORD(line, iloc, 10, 1, 'INTERBED', n, q, left=.TRUE.)
+    call UWWORD(line, iloc, 20, 1, 'CELLID', n, q, CENTER=.TRUE.)
+    call UWWORD(line, iloc, 10, 1, 'CDELAY', n, q, CENTER=.TRUE.)
+    call UWWORD(line, iloc, 10, 1, 'PCS', n, q, CENTER=.TRUE.)
+    call UWWORD(line, iloc, 10, 1, 'THICK_FRAC', n, q, CENTER=.TRUE.)
+    call UWWORD(line, iloc, 10, 1, 'RNB', n, q, CENTER=.TRUE.)
+    call UWWORD(line, iloc, 10, 1, 'SSV_CC', n, q, CENTER=.TRUE.)
+    call UWWORD(line, iloc, 10, 1, 'SSE_CR', n, q, CENTER=.TRUE.)
+    call UWWORD(line, iloc, 10, 1, 'THETA', n, q, CENTER=.TRUE.)
+    call UWWORD(line, iloc, 10, 1, 'KV', n, q, CENTER=.TRUE.)
+    call UWWORD(line, iloc, 10, 1, 'H0', n, q, CENTER=.TRUE.)
+    linesep = repeat('-', iloc)
+    write(this%iout, '(1X,A)') line(1:iloc)
+    write(this%iout, '(1X,A)') linesep(1:iloc)
+    do ib = 1, this%ninterbeds
+      iloc = 1
+      line = ''
+      call UWWORD(line, iloc, 10, 2, text, ib, q, left=.TRUE.)
+      call this%dis%noder_to_string(this%nodelist(ib), scellid)
+      call UWWORD(line, iloc, 20, 1, scellid, n, q, center=.TRUE.)
+      if (this%idelay(ib) == 0) then
+        text = 'NODELAY'
+      else
+        text = 'DELAY'
+      end if
+      call UWWORD(line, iloc, 10, 1, text, n, q, center=.TRUE.)
+      call UWWORD(line, iloc, 10, 3, text, n, this%pcs(ib), center=.TRUE.)
+      call UWWORD(line, iloc, 10, 3, text, n, this%thick(ib), center=.TRUE.)
+      call UWWORD(line, iloc, 10, 3, text, n, this%rnb(ib), center=.TRUE.)
+      call UWWORD(line, iloc, 10, 3, text, n, this%ci(ib), center=.TRUE.)
+      call UWWORD(line, iloc, 10, 3, text, n, this%rci(ib), center=.TRUE.)
+      call UWWORD(line, iloc, 10, 3, text, n, this%theta(ib), center=.TRUE.)
+      if (this%idelay(ib) == 0) then
+        text = '-'
+        call UWWORD(line, iloc, 10, 1, text, n, q, center=.TRUE.)
+        call UWWORD(line, iloc, 10, 1, text, n, q, center=.TRUE.)
+      else
+        call UWWORD(line, iloc, 10, 3, text, n, this%kv(ib), center=.TRUE.)
+        call UWWORD(line, iloc, 10, 3, text, n, this%h0(ib), center=.TRUE.)
+      end if
+      
+      write(this%iout, '(1X,A)') line(1:iloc)
+    end do
+    write(this%iout, '(//)')   
     !
     ! -- Check to make sure that every interbed is specified and that no 
     !    interbed is specified more than once.
@@ -3442,10 +3497,12 @@ contains
     class(GwfCsubType) :: this
     integer(I4B), intent(in) :: nodes
     real(DP), dimension(nodes), intent(in) :: hnew
+    character(len=LINELENGTH) :: line, linesep
     integer(I4B) :: ib
     integer(I4B) :: node
     integer(I4B) :: n
     integer(I4B) :: idelay
+    integer(I4B) :: iloc
     real(DP) :: pcs0
     real(DP) :: pcs
     real(DP) :: fact
@@ -3458,6 +3515,7 @@ contains
     real(DP) :: zbot
     real(DP) :: sadd
     real(DP) :: dbpcs
+    real(DP) :: q
 ! ------------------------------------------------------------------------------
     !
     ! -- update geostatic load calculation
@@ -3588,6 +3646,30 @@ contains
       this%ci(ib) = this%ci(ib) * fact
       this%rci(ib) = this%rci(ib) * fact
     end do
+    !
+    ! -- write calculated compression indices
+    if (this%istoragec == 1) then
+      if (this%igeocalc /= 0) then
+        write(this%iout, '(//1X,A)') 'CALCULATED COMPRESSION INDICES'
+        iloc = 1
+        line = ''
+        call UWWORD(line, iloc, 10, 1, 'INTERBED', n, q, left=.TRUE.)
+        call UWWORD(line, iloc, 16, 1, 'CC', n, q, CENTER=.TRUE.)
+        call UWWORD(line, iloc, 16, 1, 'CR', n, q, CENTER=.TRUE.)
+        linesep = repeat('-', iloc)
+        write(this%iout, '(1X,A)') line(1:iloc)
+        write(this%iout, '(1X,A)') linesep(1:iloc)
+        do ib = 1, this%ninterbeds
+          fact = DONE / dlog10es
+          write(this%iout, '(1x,i10,2(1x,g15.7))') ib,                &
+                                                   this%ci(ib) * fact,&
+                                                   this%rci(ib) * fact
+        end do
+        write(this%iout, '(//)')
+      end if
+    end if
+    !
+    ! -- set initialized
     this%initialized = 1
     !
     ! -- return
