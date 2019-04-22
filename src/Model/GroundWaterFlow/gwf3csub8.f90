@@ -15,7 +15,7 @@ module GwfCsubModule
   use BlockParserModule,      only: BlockParserType
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
                                   GetTimeSeriesLinkFromList
-  use InputOutputModule, only: get_node, extract_idnum_or_bndname
+  use InputOutputModule, only: get_node, extract_idnum_or_bndname, UWWORD
   use BaseDisModule, only: DisBaseType
   use SimModule, only: count_errors, store_error, store_error_unit, ustop
   use ArrayHandlersModule, only: ExpandArray
@@ -64,7 +64,6 @@ module GwfCsubModule
     integer(I4B), pointer :: iupdatematprop => null()
     integer(I4B), pointer :: istoragec => null()
     integer(I4B), pointer :: icellf => null()
-    integer(I4B), pointer :: ibedstressoff => null()
     integer(I4B), pointer :: ispecified_pcs => null()
     integer(I4B), pointer :: ispecified_dbh => null()
     integer(I4B), pointer :: inamedbound => null()                               !flag to read boundnames
@@ -327,7 +326,6 @@ contains
     call mem_allocate(this%ndelaybeds, 'NDELAYBEDS', this%origin)
     call mem_allocate(this%initialized, 'INITIALIZED', this%origin)
     call mem_allocate(this%igeocalc, 'IGEOCALC', this%origin)
-    call mem_allocate(this%ibedstressoff, 'IBEDSTRESSOFF', this%origin)
     call mem_allocate(this%ispecified_pcs, 'ISPECIFIED_PCS', this%origin)
     call mem_allocate(this%ispecified_dbh, 'ISPECIFIED_DBH', this%origin)
     call mem_allocate(this%inamedbound, 'INAMEDBOUND', this%origin)
@@ -374,7 +372,6 @@ contains
     this%ndelaybeds = 0
     this%initialized = 0
     this%igeocalc = 1
-    this%ibedstressoff = 0
     this%ispecified_pcs = 0
     this%ispecified_dbh = 0
     this%inamedbound = 0
@@ -1468,6 +1465,10 @@ contains
     ! -- local
     character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: cellid
+    character(len=20) :: scellid
+    character(len=10) :: text
+    character(len=LINELENGTH) :: line
+    character(len=LINELENGTH) :: linesep
     character(len=LENBOUNDNAME) :: bndName, bndNameTemp
     character(len=7) :: cdelay
     character(len=9) :: cno
@@ -1480,10 +1481,13 @@ contains
     integer(I4B) :: ierr
     integer(I4B) :: ndelaybeds
     integer(I4B) :: idelay
+    integer(I4B) :: iloc
+    integer(I4B) :: isep
     real(DP) :: rval
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: baq
+    real(DP) :: q
     integer, allocatable, dimension(:) :: nboundchk
     !
     ! -- initialize temporary variables
@@ -1642,16 +1646,91 @@ contains
         ! -- get bound names
         write (cno,'(i9.9)') nn
           bndName = 'nsystem' // cno
-        call this%parser%GetStringCaps(bndNameTemp)
-        if (bndNameTemp /= '') then
-        bndName = bndNameTemp(1:16)
-        endif
+        if (this%inamedbound /= 0) then
+          call this%parser%GetStringCaps(bndNameTemp)
+          if (bndNameTemp /= '') then
+            bndName = bndNameTemp(1:16)
+          else
+             write(errmsg,'(4x,2(a,1x),i4)')                          &
+               '****ERROR. BOUNDNAME MUST BE SPECIFIED FOR ',         &
+               'PACKAGEDATA ENTRY', itmp
+             call store_error(errmsg)
+          end if
+        end if
         this%boundname(itmp) = bndName
       end do
       write(this%iout,'(1x,a)')'END OF '//trim(adjustl(this%name))//' PACKAGEDATA'
     !else
     !  call store_error('ERROR.  REQUIRED PACKAGEDATA BLOCK NOT FOUND.')
     endif
+    !
+    ! -- write summary of interbed data
+    if (this%iprpak == 1) then
+      write(this%iout, '(//1X,A)') 'INTERBED DATA'
+      iloc = 1
+      line = ''
+      call UWWORD(line, iloc, 10, 1, 'INTERBED', n, q, left=.TRUE.)
+      call UWWORD(line, iloc, 20, 1, 'CELLID', n, q, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 10, 1, 'CDELAY', n, q, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 10, 1, 'PCS', n, q, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 10, 1,                                  & 
+                  'THICK_FRAC', n, q, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 10, 1, 'RNB', n, q, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 10, 1, 'SSV_CC', n, q, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 10, 1, 'SSE_CR', n, q, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 10, 1, 'THETA', n, q, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 10, 1, 'KV', n, q, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 10, 1, 'H0', n, q, CENTER=.TRUE.)
+      if (this%inamedbound /= 0) then
+        call UWWORD(line, iloc, LENBOUNDNAME, 1,                      &
+                    'BOUNDNAME', n, q, LEFT=.TRUE.)
+      end if
+      linesep = repeat('-', iloc)
+      isep = iloc
+      write(this%iout, '(1X,A)') line(1:iloc)
+      write(this%iout, '(1X,A)') linesep(1:iloc)
+      do ib = 1, this%ninterbeds
+        iloc = 1
+        line = ''
+        call UWWORD(line, iloc, 10, 2, text, ib, q, left=.TRUE.)
+        call this%dis%noder_to_string(this%nodelist(ib), scellid)
+        call UWWORD(line, iloc, 20, 1, scellid, n, q, center=.TRUE.)
+        if (this%idelay(ib) == 0) then
+          text = 'NODELAY'
+        else
+          text = 'DELAY'
+        end if
+        call UWWORD(line, iloc, 10, 1, text, n, q, center=.TRUE.)
+        call UWWORD(line, iloc, 10, 3,                                &
+                    text, n, this%pcs(ib), center=.TRUE.)
+        call UWWORD(line, iloc, 10, 3,                                &
+                    text, n, this%thick(ib), center=.TRUE.)
+        call UWWORD(line, iloc, 10, 3,                                &
+                    text, n, this%rnb(ib), center=.TRUE.)
+        call UWWORD(line, iloc, 10, 3,                                &
+                    text, n, this%ci(ib), center=.TRUE.)
+        call UWWORD(line, iloc, 10, 3,                                &
+                    text, n, this%rci(ib), center=.TRUE.)
+        call UWWORD(line, iloc, 10, 3,                                &
+                    text, n, this%theta(ib), center=.TRUE.)
+        if (this%idelay(ib) == 0) then
+          text = '-'
+          call UWWORD(line, iloc, 10, 1, text, n, q, center=.TRUE.)
+          call UWWORD(line, iloc, 10, 1, text, n, q, center=.TRUE.)
+        else
+          call UWWORD(line, iloc, 10, 3,                              &
+                      text, n, this%kv(ib), center=.TRUE.)
+          call UWWORD(line, iloc, 10, 3,                              &
+                      text, n, this%h0(ib), center=.TRUE.)
+        end if
+        if (this%inamedbound /= 0) then
+          call UWWORD(line, iloc, LENBOUNDNAME, 1,                    &
+                      this%boundname(ib), n, q, left=.TRUE.)
+        end if
+        write(this%iout, '(1X,A)') line(1:iloc)
+      end do
+      write(this%iout, '(1X,A/)') linesep(1:isep)  
+    end if
     !
     ! -- Check to make sure that every interbed is specified and that no 
     !    interbed is specified more than once.
@@ -1836,7 +1915,7 @@ contains
           case ('BOUNDNAMES')
             this%inamedbound = 1
             write(this%iout,'(4x,a)') trim(adjustl(this%name))// &
-              ' BOUNDARIES HAVE NAMES IN LAST COLUMN.'          ! user specified number of delay cells used in each system of delay intebeds
+              ' BOUNDARIES HAVE NAMES IN LAST COLUMN.'          ! user specified boundnames
           case ('TS6')
             call this%parser%GetStringCaps(keyword)
             if(trim(adjustl(keyword)) /= 'FILEIN') then
@@ -1876,50 +1955,26 @@ contains
             time_weight = this%parser%GetDouble()
           case ('GAMMAW')
             this%gammaw =  this%parser%GetDouble()
-            write(this%iout, fmtoptr) 'GAMMAW =', this%gammaw
             ibrg = 1
           case ('BETA')
             this%beta =  this%parser%GetDouble()
-            write(this%iout, fmtoptr) 'BETA =', this%beta
             ibrg = 1
           case ('HEAD_BASED')
             this%igeocalc = 0
-            write(this%iout, fmtopt) 'HEAD-BASED FORMULATION WILL BE USED'
           case ('NDELAYCELLS')
             this%ndelaycells =  this%parser%GetInteger()
-            write(this%iout, fmtopti) 'NUMBER OF DELAY CELLS =', this%ndelaycells
           case ('SPECIFIED_INITIAL_INTERBED_STATE')
             this%ispecified_pcs = 1
             this%ispecified_dbh = 1
-            write(this%iout, fmtopt) &
-              'PRECONSOLIDATION STRESS AND DELAY INTERBED HEADS WILL BE ' //    &
-              'SPECIFIED AS ABSOLUTE VALUES INSTEAD OF RELATIVE TO ' //         &
-              'INITIAL STRESS CONDITIONS AND GWF HEADS'
           case ('SPECIFIED_INITIAL_PRECONSOLIDATION_STRESS')
             this%ispecified_pcs = 1
-            write(this%iout, fmtopt) &
-              'PRECONSOLIDATION STRESS WILL BE SPECIFIED AS ABSOLUTE VALUES ' //&
-              'INSTEAD OF RELATIVE TO INITIAL STRESS CONDITIONS'
           case ('SPECIFIED_INITIAL_DELAY_HEAD')
             this%ispecified_dbh = 1
-            write(this%iout, fmtopt) &
-              'DELAY INTERBED HEADS WILL BE SPECIFIED AS ABSOLUTE VALUES ' //   &
-              'INSTEAD OF RELATIVE TO INITIAL GWF HEADS'
-          !
-          ! -- initial effective stress will be calculated as an offset from 
-          !    calculated initial stress
-          case ('INTERBED_STRESS_OFFSET')
-            this%ibedstressoff = 1
-            write(this%iout, fmtopt) &
-              'OFFSET WILL BE APPLIED TO INITIAL INTERBED EFFECTIVE STRESS'
           !
           ! -- compression indicies (CR amd CC) will be specified instead of 
           !    storage coefficients (SSE and SSV) 
           case ('COMPRESSION_INDICES')
             this%istoragec = 0
-            write(this%iout, fmtopt) &
-              'COMPRESSION INDICES WILL BE SPECIFIED INSTEAD OF ' //            &
-              'ELASTIC AND INELASTIC SPECIFIC COEFFICIENTS'
           ! -- strain table options
           case ('STRAIN_CSV_INTERBED')
             call this%parser%GetStringCaps(keyword)
@@ -2058,13 +2113,53 @@ contains
           !
           ! default case
           case default
-            write(errmsg,'(4x,a,3(1x,a))') '****ERROR. UNKNOWN ',               &
-                                           trim(adjustl(this%name)),                &
+            write(errmsg,'(4x,a,3(1x,a))') '****ERROR. UNKNOWN ',     &
+                                           trim(adjustl(this%name)),  &
                                            'OPTION: ', trim(keyword)
             call store_error(errmsg)
         end select
       end do
-      write(this%iout,'(1x,a)') 'END OF ' // trim(adjustl(this%name)) // ' OPTIONS'
+      write(this%iout,'(1x,a)') 'END OF ' //                          &
+                                trim(adjustl(this%name)) // ' OPTIONS'
+    end if
+    !
+    ! -- write messages for options
+    write(this%iout, '(//2(1X,A))') trim(adjustl(this%name)),         &
+                                    'PACKAGE SETTINGS'
+    write(this%iout, fmtopti) 'NUMBER OF DELAY CELLS =',              &
+                              this%ndelaycells
+    if (this%igeocalc == 0) then
+      write(this%iout, fmtopt) 'HEAD-BASED FORMULATION WILL BE USED'
+    else
+      write(this%iout, fmtopt) 'EFFECTIVE STRESS-BASED ' //           &
+                               'FORMULATION WILL BE USED'
+    end if
+    if (this%igeocalc /= 0 .and. this%istoragec == 0) then
+      write(this%iout, fmtopt) &
+        'COMPRESSION INDICES WILL BE SPECIFIED INSTEAD OF ' //        &
+        'ELASTIC AND INELASTIC SPECIFIC COEFFICIENTS'
+    else
+      write(this%iout, fmtopt) &
+        'ELASTIC AND INELASTIC SPECIFIC COEFFICIENTS ' //             &
+        'WILL BE SPECIFIED'
+    end if
+    if (this%ispecified_pcs /= 1) then
+      write(this%iout, fmtopt) &
+        'PRECONSOLIDATION STRESS WILL BE SPECIFIED RELATIVE TO ' //   &
+        'INITIAL STRESS CONDITIONS'
+    else
+      write(this%iout, fmtopt) &
+        'PRECONSOLIDATION STRESS WILL BE SPECIFIED AS ABSOLUTE ' //   &
+        'VALUES INSTEAD OF RELATIVE TO INITIAL STRESS CONDITIONS'
+    end if
+    if (this%ispecified_dbh /= 1) then
+      write(this%iout, fmtopt) &
+        'DELAY INTERBED HEADS WILL BE SPECIFIED RELATIVE TO ' //      &
+        'INITIAL GWF HEADS'
+    else
+      write(this%iout, fmtopt) &
+        'DELAY INTERBED HEADS WILL BE SPECIFIED AS ABSOLUTE ' //      &
+        'VALUES INSTEAD OF RELATIVE TO INITIAL GWF HEADS'
     end if
     !
     ! -- process itime_weight, if effective stress formulation
@@ -2079,16 +2174,21 @@ contains
           errmsg = 'TIME_WEIGHT MUST BE 0 or 1.'
           call store_error(errmsg)
         end if
-        write(this%iout, fmtoptr) 'TIME_WEIGHT =', time_weight
-        write(this%iout, fmtoptr) 'TIME_ALPHA =', this%time_alpha
+        write(this%iout, fmtoptr) 'TIME_WEIGHT   =', time_weight
+        write(this%iout, fmtoptr) 'TIME_ALPHA    =', this%time_alpha
       end if
     end if
     !
-    ! -- recalculate BRG if necessary
-    if (ibrg /= 0) then
-      this%brg = this%gammaw * this%beta
+    ! -- recalculate BRG if necessary and output 
+    !    water compressibility values
+    if (this%igeocalc /= 0) then
+      if (ibrg /= 0) then
+        this%brg = this%gammaw * this%beta
+      end if
+      write(this%iout, fmtoptr) 'GAMMAW        =', this%gammaw
+      write(this%iout, fmtoptr) 'BETA          =', this%beta
+      write(this%iout, fmtoptr) 'GAMMAW * BETA =', this%brg
     end if
-    write(this%iout, fmtoptr) 'GAMMAW * BETA =', this%brg
     !
     ! -- terminate if errors encountered in reach block
     if (count_errors() > 0) then
@@ -2410,7 +2510,6 @@ contains
     call mem_deallocate(this%ndelaybeds)
     call mem_deallocate(this%initialized)
     call mem_deallocate(this%igeocalc)
-    call mem_deallocate(this%ibedstressoff)
     call mem_deallocate(this%ispecified_pcs)
     call mem_deallocate(this%ispecified_dbh)
     call mem_deallocate(this%inamedbound)
@@ -3442,10 +3541,14 @@ contains
     class(GwfCsubType) :: this
     integer(I4B), intent(in) :: nodes
     real(DP), dimension(nodes), intent(in) :: hnew
+    character(len=LINELENGTH) :: line, linesep
+    character(len=16) :: text
     integer(I4B) :: ib
     integer(I4B) :: node
     integer(I4B) :: n
     integer(I4B) :: idelay
+    integer(I4B) :: iloc
+    integer(I4B) :: isep
     real(DP) :: pcs0
     real(DP) :: pcs
     real(DP) :: fact
@@ -3458,6 +3561,7 @@ contains
     real(DP) :: zbot
     real(DP) :: sadd
     real(DP) :: dbpcs
+    real(DP) :: q
 ! ------------------------------------------------------------------------------
     !
     ! -- update geostatic load calculation
@@ -3588,6 +3692,132 @@ contains
       this%ci(ib) = this%ci(ib) * fact
       this%rci(ib) = this%rci(ib) * fact
     end do
+    !
+    ! -- write current stress and initial preconsolidation stress
+    if (this%iprpak == 1) then
+      if (this%igeocalc == 0) then
+        write(this%iout, '(//1X,A)')                                  &
+          'CALCULATED INITIAL INTERBED PRECONSOLIDATION HEAD'
+      else
+        write(this%iout, '(//1X,A,/1X,A)')                            &
+          'CALCULATED INITIAL INTERBED EFFECTIVE STRESS',             &
+          'AND PRECONSOLIDATION STRESS'
+      end if
+      iloc = 1
+      line = ''
+      call UWWORD(line, iloc, 10, 1, 'INTERBED', n, q, left=.TRUE.)
+      if (this%igeocalc == 0) then
+        call UWWORD(line, iloc, 16, 1,                                &
+                    'PRECON. HEAD', n, q, CENTER=.TRUE.)
+      else
+        call UWWORD(line, iloc, 16, 1,                                & 
+                    'EFFECTIVE STRESS', n, q, CENTER=.TRUE.)
+        call UWWORD(line, iloc, 16, 1,                                & 
+                    'PRECON. STRESS', n, q, CENTER=.TRUE.)
+      end if
+      linesep = repeat('-', iloc)
+      isep = iloc
+      write(this%iout, '(1X,A)') linesep(1:iloc)
+      write(this%iout, '(1X,A)') line(1:iloc)
+      write(this%iout, '(1X,A)') linesep(1:iloc)
+      do ib = 1, this%ninterbeds
+        iloc = 1
+        line = ''
+        call UWWORD(line, iloc, 10, 2, text, ib, q, left=.TRUE.)
+        if (this%igeocalc /= 0) then
+          node = this%nodelist(ib)
+          call UWWORD(line, iloc, 16, 3,                              &
+                      text, n, this%sk_es(node), center=.TRUE.)
+        end if
+        call UWWORD(line, iloc, 16, 3,                                & 
+                    text, n, this%pcs(ib), CENTER=.TRUE.)
+        write(this%iout, '(1X,A)') line(1:iloc)
+      end do
+      write(this%iout, '(1X,A,/)') linesep(1:isep)
+      !
+      ! -- write effective stress and preconsolidation stress 
+      !    for delay beds
+      do ib = 1, this%ninterbeds
+        idelay = this%idelay(ib)
+        if (idelay /= 0) then
+          if (this%igeocalc == 0) then
+            write(this%iout, '(/1X,A,1X,I0)')                         &
+              'CALCULATED INITIAL INTERBED PRECONSOLIDATION ' //      &
+              'HEAD FOR INTERBED', ib
+          else
+            write(this%iout, '(//1X,A,/1X,A,1X,I0)')                  &
+              'CALCULATED INITIAL INTERBED EFFECTIVE STRESS',         &
+              'AND PRECONSOLIDATION STRESS FOR INTERBED', ib
+          end if
+          iloc = 1
+          line = ''
+          call UWWORD(line, iloc, 10, 1, 'CELL', n, q, left=.TRUE.)
+          if (this%igeocalc == 0) then
+            call UWWORD(line, iloc, 16, 1,                            &
+                        'PRECON. HEAD', n, q, CENTER=.TRUE.)
+          else
+            call UWWORD(line, iloc, 16, 1,                            &
+                        'EFFECTIVE STRESS', n, q, CENTER=.TRUE.)
+            call UWWORD(line, iloc, 16, 1,                            &
+                        'PRECON. STRESS', n, q, CENTER=.TRUE.)
+          end if
+          linesep = repeat('-', iloc)
+          isep = iloc
+          write(this%iout, '(1X,A)') linesep(1:iloc)
+          write(this%iout, '(1X,A)') line(1:iloc)
+          write(this%iout, '(1X,A)') linesep(1:iloc)
+          do n = 1, this%ndelaycells
+            iloc = 1
+            line = ''
+            call UWWORD(line, iloc, 10, 2, text, n, q, left=.TRUE.)
+            if (this%igeocalc /= 0) then
+              call UWWORD(line, iloc, 16, 3,                          &
+                          text, n, this%dbes(n, idelay),              &
+                          center=.TRUE.)
+            end if
+            call UWWORD(line, iloc, 16, 3,                            &
+                        text, n, this%dbpcs(n, idelay), center=.TRUE.)
+            write(this%iout, '(1X,A)') line(1:iloc)
+          end do
+          write(this%iout, '(1X,A,/)') linesep(1:isep)
+        end if
+      end do
+    
+      !
+      ! -- write calculated compression indices
+      if (this%istoragec == 1) then
+        if (this%igeocalc /= 0) then
+          write(this%iout, '(//1X,A)')                                &
+            'CALCULATED COMPRESSION INDICES'
+          iloc = 1
+          line = ''
+          call UWWORD(line, iloc, 10, 1,                              &
+                      'INTERBED', n, q, left=.TRUE.)
+          call UWWORD(line, iloc, 16, 1, 'CC', n, q, CENTER=.TRUE.)
+          call UWWORD(line, iloc, 16, 1, 'CR', n, q, CENTER=.TRUE.)
+          linesep = repeat('-', iloc)
+          isep = iloc
+          write(this%iout, '(1X,A)') linesep(1:iloc)
+          write(this%iout, '(1X,A)') line(1:iloc)
+          write(this%iout, '(1X,A)') linesep(1:iloc)
+          do ib = 1, this%ninterbeds
+            fact = DONE / dlog10es
+            iloc = 1
+            line = ''
+            call UWWORD(line, iloc, 10, 2,                            &
+                        text, ib, q, left=.TRUE.)
+            call UWWORD(line, iloc, 16, 3,                            & 
+                        text, n, this%ci(ib) * fact, CENTER=.TRUE.)
+            call UWWORD(line, iloc, 16, 3,                            & 
+                        text, n, this%rci(ib) * fact, CENTER=.TRUE.)
+            write(this%iout, '(1X,A)') line(1:iloc)
+          end do
+          write(this%iout, '(1X,A,/)') linesep(1:isep)
+        end if
+      end if
+    end if
+    !
+    ! -- set initialized
     this%initialized = 1
     !
     ! -- return
