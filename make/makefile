@@ -110,6 +110,7 @@ $(OBJDIR)/NumericalPackage.o \
 $(OBJDIR)/TimeArray.o \
 $(OBJDIR)/gwf3disu8.o \
 $(OBJDIR)/BaseExchange.o \
+$(OBJDIR)/Averaging.o \
 $(OBJDIR)/VKDProcess.o \
 $(OBJDIR)/Observe.o \
 $(OBJDIR)/Xt3dInterface.o \
