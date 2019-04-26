@@ -275,10 +275,10 @@ def get_model(idx, dir):
                     continue
                 # create nodelay entry
                 # no delay beds
-                ibcno += 1
                 d = [ibcno, (k, i, j), cdelays, pcs[k],
                      b, 1., skv[k], ske[k], theta, 999., -999.]
                 sub6.append(d)
+                ibcno += 1
 
     if delay[idx]:
         cdelays = 'delay'
@@ -329,10 +329,11 @@ def get_model(idx, dir):
                     continue
                 # create nodelay entry
                 # no delay beds
-                ibcno += 1
                 d = [ibcno, (k, i, j), cdelays, pcs[k],
                      bb, rnbt, skv[k], ske[k], theta, kv, hib]
                 sub6.append(d)
+                ibcno += 1
+
 
     # add skeletal component
     for k in range(nlay):

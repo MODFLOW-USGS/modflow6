@@ -3700,32 +3700,56 @@ contains
           'CALCULATED INITIAL INTERBED PRECONSOLIDATION HEAD'
       else
         write(this%iout, '(//1X,A,/1X,A)')                            &
-          'CALCULATED INITIAL INTERBED EFFECTIVE STRESS',             &
+          'CALCULATED INITIAL INTERBED GEOSTATIC, EFFECTIVE,',        &
           'AND PRECONSOLIDATION STRESS'
       end if
+      !
+      ! -- first header line
       iloc = 1
       line = ''
       call UWWORD(line, iloc, 10, 1, 'INTERBED', n, q, left=.TRUE.)
       if (this%igeocalc == 0) then
         call UWWORD(line, iloc, 16, 1,                                &
-                    'PRECON. HEAD', n, q, CENTER=.TRUE.)
+                    'PRECONSOLIDATION', n, q, CENTER=.TRUE.)
       else
         call UWWORD(line, iloc, 16, 1,                                & 
-                    'EFFECTIVE STRESS', n, q, CENTER=.TRUE.)
+                    'GEOSTATIC', n, q, CENTER=.TRUE.)
         call UWWORD(line, iloc, 16, 1,                                & 
-                    'PRECON. STRESS', n, q, CENTER=.TRUE.)
+                    'EFFECTIVE', n, q, CENTER=.TRUE.)
+        call UWWORD(line, iloc, 16, 1,                                & 
+                    'PRECONSOLIDATION', n, q, CENTER=.TRUE.)
       end if
       linesep = repeat('-', iloc)
       isep = iloc
       write(this%iout, '(1X,A)') linesep(1:iloc)
       write(this%iout, '(1X,A)') line(1:iloc)
+      !
+      ! -- second header line
+      iloc = 1
+      line = ''
+      call UWWORD(line, iloc, 10, 1, 'NUMBER', n, q, left=.TRUE.)
+      if (this%igeocalc == 0) then
+        call UWWORD(line, iloc, 16, 1,                                &
+                    'HEAD', n, q, CENTER=.TRUE.)
+      else
+        call UWWORD(line, iloc, 16, 1,                                & 
+                    'STRESS', n, q, CENTER=.TRUE.)
+        call UWWORD(line, iloc, 16, 1,                                & 
+                    'STRESS', n, q, CENTER=.TRUE.)
+        call UWWORD(line, iloc, 16, 1,                                & 
+                    'STRESS', n, q, CENTER=.TRUE.)
+      end if
+      write(this%iout, '(1X,A)') line(1:iloc)
       write(this%iout, '(1X,A)') linesep(1:iloc)
+
       do ib = 1, this%ninterbeds
         iloc = 1
         line = ''
         call UWWORD(line, iloc, 10, 2, text, ib, q, left=.TRUE.)
         if (this%igeocalc /= 0) then
           node = this%nodelist(ib)
+          call UWWORD(line, iloc, 16, 3,                              &
+                      text, n, this%sk_gs(node), center=.TRUE.)
           call UWWORD(line, iloc, 16, 3,                              &
                       text, n, this%sk_es(node), center=.TRUE.)
         end if
@@ -3746,31 +3770,56 @@ contains
               'HEAD FOR INTERBED', ib
           else
             write(this%iout, '(//1X,A,/1X,A,1X,I0)')                  &
-              'CALCULATED INITIAL INTERBED EFFECTIVE STRESS',         &
+              'CALCULATED INITIAL INTERBED GEOSTATIC, EFFECTIVE,',    &
               'AND PRECONSOLIDATION STRESS FOR INTERBED', ib
           end if
+          !
+          ! -- first header line
           iloc = 1
           line = ''
-          call UWWORD(line, iloc, 10, 1, 'CELL', n, q, left=.TRUE.)
+          call UWWORD(line, iloc, 10, 1, 'DELAY', n, q, left=.TRUE.)
           if (this%igeocalc == 0) then
             call UWWORD(line, iloc, 16, 1,                            &
-                        'PRECON. HEAD', n, q, CENTER=.TRUE.)
+                        'PRECONSOLIDATION', n, q, CENTER=.TRUE.)
           else
             call UWWORD(line, iloc, 16, 1,                            &
-                        'EFFECTIVE STRESS', n, q, CENTER=.TRUE.)
+                        'GEOSTATIC', n, q, CENTER=.TRUE.)
             call UWWORD(line, iloc, 16, 1,                            &
-                        'PRECON. STRESS', n, q, CENTER=.TRUE.)
+                        'EFFECTIVE', n, q, CENTER=.TRUE.)
+            call UWWORD(line, iloc, 16, 1,                            &
+                        'PRECONSOLIDATION', n, q, CENTER=.TRUE.)
           end if
           linesep = repeat('-', iloc)
           isep = iloc
           write(this%iout, '(1X,A)') linesep(1:iloc)
           write(this%iout, '(1X,A)') line(1:iloc)
+          !
+          ! -- second header line
+          iloc = 1
+          line = ''
+          call UWWORD(line, iloc, 10, 1, 'CELL', n, q, left=.TRUE.)
+          if (this%igeocalc == 0) then
+            call UWWORD(line, iloc, 16, 1,                            &
+                        'HEAD', n, q, CENTER=.TRUE.)
+          else
+            call UWWORD(line, iloc, 16, 1,                            &
+                        'STRESS', n, q, CENTER=.TRUE.)
+            call UWWORD(line, iloc, 16, 1,                            &
+                        'STRESS', n, q, CENTER=.TRUE.)
+            call UWWORD(line, iloc, 16, 1,                            &
+                        'STRESS', n, q, CENTER=.TRUE.)
+          end if
+          write(this%iout, '(1X,A)') line(1:iloc)
           write(this%iout, '(1X,A)') linesep(1:iloc)
+
           do n = 1, this%ndelaycells
             iloc = 1
             line = ''
             call UWWORD(line, iloc, 10, 2, text, n, q, left=.TRUE.)
             if (this%igeocalc /= 0) then
+              call UWWORD(line, iloc, 16, 3,                          &
+                          text, n, this%dbgeo(n, idelay),             &
+                          center=.TRUE.)
               call UWWORD(line, iloc, 16, 3,                          &
                           text, n, this%dbes(n, idelay),              &
                           center=.TRUE.)
@@ -5689,13 +5738,23 @@ contains
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
-    !    for preconstress observation type.
-    call this%obs%StoreObsType('preconstress', .false., indx)
+    !    for delay-preconstress observation type.
+    call this%obs%StoreObsType('delay-preconstress', .false., indx)
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for delay-head observation type.
     call this%obs%StoreObsType('delay-head', .false., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for delay-gstress observation type.
+    call this%obs%StoreObsType('delay-gstress', .false., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for delay-estress observation type.
+    call this%obs%StoreObsType('delay-estress', .false., indx)
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
@@ -5826,7 +5885,8 @@ contains
               v = this%sk_thick(n)
             case ('THICKNESS-CELL')
               v = this%cell_thick(n)
-            case ('DELAY-HEAD', 'PRECONSTRESS')
+            case ('DELAY-HEAD', 'DELAY-PRECONSTRESS',                           &
+                  'DELAY-GSTRESS', 'DELAY-ESTRESS')
               if (n > this%ndelaycells) then
                 r = real(n, DP) / real(this%ndelaycells, DP)
                 idelay = int(floor(r)) + 1
@@ -5836,10 +5896,14 @@ contains
                 ncol = n
               end if
               select case(obsrv%ObsTypeId)
-                case ('PRECONSTRESS')
+                case ('DELAY-PRECONSTRESS')
                   v = this%dbpcs(ncol, idelay)
                 case ('DELAY-HEAD')
                   v = this%dbh(ncol, idelay)
+                case ('DELAY-GSTRESS')
+                  v = this%dbgeo(ncol, idelay)
+                case ('DELAY-ESTRESS')
+                  v = this%dbes(ncol, idelay)
               end select
             case ('PRECONSTRESS-CELL')
               v = this%pcs(n)
@@ -5924,8 +5988,10 @@ contains
         call ExpandArray(obsrv%indxbnds)
         n = size(obsrv%indxbnds)
         obsrv%indxbnds(n) = obsrv%NodeNumber
-      else if (obsrv%ObsTypeId == 'PRECONSTRESS' .or.                           &
-               obsrv%ObsTypeId == 'DELAY-HEAD') then
+      else if (obsrv%ObsTypeId == 'DELAY-PRECONSTRESS' .or.                     &
+               obsrv%ObsTypeId == 'DELAY-HEAD' .or.                             &
+               obsrv%ObsTypeId == 'DELAY-GSTRESS' .or.                          &
+               obsrv%ObsTypeId == 'DELAY-ESTRESS') then
         n = obsrv%NodeNumber
         idelay = this%idelay(n)
         j = (idelay - 1) * this%ndelaycells + 1
@@ -6067,7 +6133,9 @@ contains
         obsrv%ObsTypeId == 'INELASTIC-COMPACTION' .or.                          &
         obsrv%ObsTypeId == 'ELASTIC-COMPACTION' .or.                            &
         obsrv%ObsTypeId=='DELAY-HEAD' .or.                                      & 
-        obsrv%ObsTypeId=='PRECONSTRESS' .or.                                    &
+        obsrv%ObsTypeId=='DELAY-GSTRESS' .or.                                   & 
+        obsrv%ObsTypeId=='DELAY-ESTRESS' .or.                                   & 
+        obsrv%ObsTypeId=='DELAY-PRECONSTRESS' .or.                              &
         obsrv%ObsTypeId=='DELAY-FLOWTOP' .or.                                   &
         obsrv%ObsTypeId=='DELAY-FLOWBOT') then
       call extract_idnum_or_bndname(strng, icol, istart, istop, nn1, bndname)
@@ -6078,8 +6146,10 @@ contains
     if (nn1 == NAMEDBOUNDFLAG) then
       obsrv%FeatureName = bndname
     else
-      if (obsrv%ObsTypeId=='DELAY-HEAD' .or. &
-          obsrv%ObsTypeId=='PRECONSTRESS') then
+      if (obsrv%ObsTypeId=='DELAY-HEAD' .or.                                    &
+          obsrv%ObsTypeId=='DELAY-GSTRESS' .or.                                 &
+          obsrv%ObsTypeId=='DELAY-ESTRESS' .or.                                 &
+          obsrv%ObsTypeId=='DELAY-PRECONSTRESS') then
         call extract_idnum_or_bndname(strng, icol, istart, istop, nn2, bndname)
         if (nn2 == NAMEDBOUNDFLAG) then
           obsrv%FeatureName = bndname

@@ -119,7 +119,7 @@ def get_model(idx, dir):
         ndb = 0
         cdelays = 'nodelay'
 
-    sub6 = [[1, (0, 0, 0), cdelays, ini_stress, thick[0],
+    sub6 = [[0, (0, 0, 0), cdelays, ini_stress, thick[0],
              1., cc, cr, theta, kv, 0.]]
 
     # build MODFLOW 6 files

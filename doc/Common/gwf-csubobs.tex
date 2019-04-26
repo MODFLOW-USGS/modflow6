@@ -27,10 +27,13 @@ CSUB & theta & icsubno & -- & porosity of a interbed . \\
 CSUB & skeletal-theta & cellid  & -- & porosity of coarse skeletal materials in a GWF cell. \\
 CSUB & theta-cell & cellid  & -- & thickness-weighted porosity of coarse skeletal materials and all interbeds in a GWF cell. \\
 
-CSUB & delay-head & icsubno  & idcellno & head in interbed delay cell idcellno (1 $<=$ idcellno $<=$ NDELAYCELLS). \\
-CSUB & preconstress & icsubno  & idcellno & preconsolidation stress in interbed delay cell idcellno (1 $<=$ idcellno $<=$ NDELAYCELLS). \\
-CSUB & preconstress-cell & cellid  & -- & preconsolidation stress in a GWF cell containing at least one interbed. \\
-
 CSUB & delay-flowtop & icsubno  & -- & Flow between the groundwater system and a delay interbed across the top of the interbed. \\
 CSUB & delay-flowbot & icsubno  & -- & Flow between the groundwater system and a delay interbed across the bottom of the interbed. \\
+
+CSUB & delay-head & icsubno  & idcellno & head in interbed delay cell idcellno (1 $<=$ idcellno $<=$ NDELAYCELLS). \\
+CSUB & delay-gstress & icsubno  & idcellno & geostatic stress in interbed delay cell idcellno (1 $<=$ idcellno $<=$ NDELAYCELLS). \\
+CSUB & delay-estress & icsubno  & idcellno & effective stress in interbed delay cell idcellno (1 $<=$ idcellno $<=$ NDELAYCELLS). \\
+CSUB & delay-preconstress & icsubno  & idcellno & preconsolidation stress in interbed delay cell idcellno (1 $<=$ idcellno $<=$ NDELAYCELLS). \\
+
+CSUB & preconstress-cell & cellid  & -- & preconsolidation stress in a GWF cell containing at least one interbed. \\
 

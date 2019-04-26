@@ -556,6 +556,7 @@ in_record true
 reader urword
 longname CSUB id number for this entry
 description integer value that defines the CSUB interbed number associated with the specified PACKAGEDATA data on the line. CSUBNO must be greater than zero and less than or equal to NCSUBCELLS.  CSUB information must be specified for every CSUB cell or the program will terminate with an error.  The program will also terminate with an error if information for a CSUB intebed number is specified more than once.
+numeric_index true
 
 block packagedata
 name cellid
