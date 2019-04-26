@@ -150,6 +150,7 @@ module GwfCsubModule
     real(DP), dimension(:), pointer, contiguous :: dbdz => null()                !delay bed dz
     real(DP), dimension(:), pointer, contiguous :: dbdhmax => null()             !delay bed maximum head change
     real(DP), dimension(:,:), pointer, contiguous :: dbz => null()               !delay bed cell z
+    real(DP), dimension(:,:), pointer, contiguous :: dbrelz => null()            !delay bed cell z relative to znode
     real(DP), dimension(:,:), pointer, contiguous :: dbh => null()               !delay bed cell h
     real(DP), dimension(:,:), pointer, contiguous :: dbh0 => null()              !delay bed cell previous h
     real(DP), dimension(:,:), pointer, contiguous :: dbtheta => null()           !delay bed cell porosity
@@ -1760,6 +1761,7 @@ contains
         call mem_reallocate(this%dbdz, ndelaybeds, 'dbdz', trim(this%origin))
         call mem_reallocate(this%dbdhmax, ndelaybeds, 'dbdhmax', trim(this%origin))
         call mem_reallocate(this%dbz, this%ndelaycells, ndelaybeds, 'dbz', trim(this%origin))
+        call mem_reallocate(this%dbrelz, this%ndelaycells, ndelaybeds, 'dbrelz', trim(this%origin))
         call mem_reallocate(this%dbh, this%ndelaycells, ndelaybeds, 'dbh', trim(this%origin))
         call mem_reallocate(this%dbh0, this%ndelaycells, ndelaybeds, 'dbh0', trim(this%origin))
         call mem_reallocate(this%dbtheta, this%ndelaycells, ndelaybeds, 'dbtheta', trim(this%origin))
@@ -1827,7 +1829,19 @@ contains
       end if
     end if
     !
-    ! TODO - check the total frac for each nbound node to make sure < 1.0
+    ! -- check that ndelaycells is odd when using
+    !    the effective stress formulation
+    if (this%igeocalc /= 0) then
+      if (ndelaybeds > 0) then
+        q = MOD(real(this%ndelaycells, DP), DTWO)
+        if (q == DZERO) then
+          write(errmsg, '(a,1x,i0,2(1x,a))')                          &
+            'ERROR: NDELAYCELLS (', this%ndelaycells, ') MUST BE AN', &
+            'ODD NUMBER WHEN USING THE EFFECTIVE STRESS FORMULATION.'
+          call store_error(errmsg)
+        end if
+      end if
+    end if
     !
     ! -- return
     return
@@ -2314,6 +2328,7 @@ contains
     call mem_allocate(this%dbdz, 0, 'dbdz', trim(this%origin))
     call mem_allocate(this%dbdhmax, 0, 'dbdhmax', trim(this%origin))
     call mem_allocate(this%dbz, 0, 0, 'dbz', trim(this%origin))
+    call mem_allocate(this%dbrelz, 0, 0, 'dbrelz', trim(this%origin))
     call mem_allocate(this%dbh, 0, 0, 'dbh', trim(this%origin))
     call mem_allocate(this%dbh0, 0, 0, 'dbh0', trim(this%origin))
     call mem_allocate(this%dbtheta, 0, 0, 'dbtheta', trim(this%origin))
@@ -2464,6 +2479,7 @@ contains
       call mem_deallocate(this%dbdz)
       call mem_deallocate(this%dbdhmax)
       call mem_deallocate(this%dbz)
+      call mem_deallocate(this%dbrelz)
       call mem_deallocate(this%dbh)
       call mem_deallocate(this%dbh0)
       call mem_deallocate(this%dbtheta)
@@ -3680,7 +3696,8 @@ contains
           if (idelay == 0) then
             ztop = hcell
           else
-            ztop = this%dbz(1, idelay) + dzhalf
+            !ztop = this%dbz(1, idelay) + dzhalf
+            ztop = hcell
           end if
           znode = this%csub_calc_znode(node, ztop)
           fact = this%sk_es(node) - (znode - bot) * (this%sgs(node) - DONE)
@@ -4984,6 +5001,7 @@ contains
     real(DP) :: znode
     real(DP) :: dzz
     real(DP) :: z
+    real(DP) :: zr
     real(DP) :: b
     real(DP) :: dz
 ! ------------------------------------------------------------------------------
@@ -5006,14 +5024,25 @@ contains
     if (this%idbhalfcell == 0) then
         dzz = DHALF * b
         z = znode + dzz
+        zr = dzz
     else
         z = znode + dz 
+        zr = dz
     end if
-    ! -- calculate z for each delay interbed node
+    ! -- calculate z and z relative to znode for each delay 
+    !    interbed node
     do n = 1, this%ndelaycells
+      ! z of node relative to bottom of cell
       z = z - dz
       this%dbz(n, idelay) = z
       z = z - dz
+      ! z relative to znode
+      zr = zr - dz
+      if (ABS(zr) < dz) then
+        zr = DZERO
+      end if
+      this%dbrelz(n, idelay) = zr
+      zr = zr - dz
     end do
     !
     ! -- return
@@ -5191,6 +5220,8 @@ contains
     else
       node = this%nodelist(ib)
       void = this%csub_calc_void(this%dbtheta(n, idelay))
+      !
+      ! -- replace below with csub_calc_sfacts
       !
       ! -- get elevation of delay node and calculate the bottom 
       !    of the delay node
