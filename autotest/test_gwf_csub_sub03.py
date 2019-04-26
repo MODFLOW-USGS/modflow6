@@ -186,12 +186,12 @@ def get_model(idx, dir):
                     tag = '{:02d}_{:02d}_{:02d}'.format(k+1, i+1, j+1)
                     # create nodelay entry
                     # no delay beds
-                    ibcno += 1
                     b = thicknd0[kdx]
                     d = [ibcno, (k, i, j), cdelays, hc[idx],
                          b, 1., ccnd0[kdx], crnd0[kdx], theta,
                          999., -999., tag]
                     sub6.append(d)
+                    ibcno += 1
 
     # create delay bed packagedata entries and skeletal storage
     S = []
@@ -206,11 +206,12 @@ def get_model(idx, dir):
                         continue
                     tag = '{:02d}_{:02d}_{:02d}'.format(k+1, i+1, j+1)
                     # create nodelay entry
-                    ibcno += 1
                     d = [ibcno, (k, i, j), cdelays, dhc[kdx], dz[kdx],
                          rnb[kdx], cc, cr, theta, kv, dstart[kdx][i, j],
                          tag]
                     sub6.append(d)
+                    ibcno += 1
+
         # create S for aquifer, delay beds, and no-delay beds
         for k in range(nlay):
             sst = (1. - ffrac[k]) * zthick[k] * ss[k]

@@ -181,12 +181,12 @@ if nndb > 0:
                 tag = '{:02d}_{:02d}_{:02d}'.format(k + 1, i + 1, j + 1)
                 # create nodelay entry
                 # no delay beds
-                ibcno += 1
                 b = thicknd0[kdx]
                 d = [ibcno, (k, i, j), cdelays, hc,
                      b, 1., ccnd0[kdx], crnd0[kdx], theta,
                      999., -999., tag]
                 sub6.append(d)
+                ibcno += 1
 
 # create delay bed packagedata entries and skeletal storage
 ske_scaled = []

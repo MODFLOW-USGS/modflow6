@@ -135,7 +135,7 @@ def get_model(idx, dir):
     cd6 = {0: c6}
 
     geo, es = calc_stress(sgm, sgs, strt[idx], botm)
-    sub6 = [[1, (0, 0, 1), 'delay', -1., thick[0],
+    sub6 = [[0, (0, 0, 1), 'delay', -1., thick[0],
              1., cc, cr, theta, kv, 1.]]
 
     name = ex[idx]

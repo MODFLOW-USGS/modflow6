@@ -225,11 +225,12 @@ for k in range(nlay):
                 iactive = 0
             if iactive > 0:
                 tag = '{:02d}_{:02d}_{:02d}'.format(k + 1, i + 1, j + 1)
-                ibcno += 1
                 d = [ibcno, (k, i, j), 'nodelay', ini_stress, thick[k],
                      1., cc, cr, theta,
                      kv, 999., tag]
                 swt6.append(d)
+                ibcno += 1
+
 ds16 = [0, 0, 0, 2052, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 ds17 = [0, 10000, 0, 10000, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,

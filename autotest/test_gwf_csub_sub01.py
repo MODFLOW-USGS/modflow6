@@ -105,7 +105,7 @@ ss = S / (100. - thick[0])
 ds15 = [0, 0, 0, 2052, 0, 0, 0, 0, 0, 0, 0, 0]
 ds16 = [0, 0, 0, 100, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1]
 
-sub6 = [[1, (0, 0, 1), 'delay', ini_stress, thick[0],
+sub6 = [[0, (0, 0, 1), 'delay', ini_stress, thick[0],
          1., cc, cr, theta, kv, ini_stress]]
 
 
