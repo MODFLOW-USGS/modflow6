@@ -488,7 +488,7 @@ contains
         call this%csub_interbed_calc_sat(ib, hcell, snnew)
         !
         ! -- calculate the change in storage
-        call this%csub_delay_calc_dstor(ib, stoe, stoi)
+        call this%csub_delay_calc_dstor(ib, hcell, stoe, stoi)
         v1 = (stoe + stoi) * area * this%rnb(ib) * snnew * tled
         !
         ! -- calculate the flow between the interbed and the cell
@@ -741,7 +741,7 @@ contains
           call this%csub_interbed_calc_sat(ib, h, snnew)
           !
           ! -- calculate inelastic and elastic storage contributions
-          call this%csub_delay_calc_dstor(ib, stoe, stoi)
+          call this%csub_delay_calc_dstor(ib, h, stoe, stoi)
           this%storagee(ib) = stoe * area * this%rnb(ib) * snnew * tledm
           this%storagei(ib) = stoi * area * this%rnb(ib) * snnew * tledm
           !
@@ -3597,7 +3597,8 @@ contains
         else
           void = this%csub_calc_void(this%sk_theta(node))
           znode = this%csub_calc_znode(top, bot, hnew(node))
-          fact = this%sk_es(node) - (znode - bot) * (this%sgs(node) - DONE)
+          !fact = this%sk_es(node) - (znode - bot) * (this%sgs(node) - DONE)
+          fact = this%csub_calc_adjes(node, this%sk_es(node), bot, znode)
           fact = fact * (DONE + void)
         end if
       else
@@ -3681,7 +3682,8 @@ contains
           else
             zbot = this%dbz(n, idelay) - dzhalf
             sadd = this%sgs(node) * (zbot - bot)
-            dbpcs = pcs - (zbot - bot) * (this%sgs(node) - DONE)
+            !dbpcs = pcs - (zbot - bot) * (this%sgs(node) - DONE)
+            dbpcs = this%csub_calc_adjes(node, pcs, bot, zbot)
             !if (this%dbes(n, idelay) > dbpcs) then
             !  dbpcs = this%dbes(n, idelay)
             !end if
@@ -3704,8 +3706,8 @@ contains
             !ztop = hcell
           end if
           znode = this%csub_calc_znode(top, bot, ztop)
-          fact = this%csub_calc_adjes(node, znode)
-          fact = this%sk_es(node) - (znode - bot) * (this%sgs(node) - DONE)
+          !fact = this%sk_es(node) - (znode - bot) * (this%sgs(node) - DONE)
+          fact = this%csub_calc_adjes(node, this%sk_es(node), bot, znode)
           fact = fact * (DONE + void)
         end if
       else
@@ -4791,39 +4793,44 @@ contains
   end function csub_calc_interbed_thickness
   
   
-  function csub_calc_znode(this, top, bot, hcell) result(znode)
+  function csub_calc_znode(this, z1, z0, z) result(znode)
 ! ******************************************************************************
-! csub_calc_znode -- Calculate elevation of the center of the saturated 
-!                    cell thickness
+! csub_calc_znode -- Calculate elevation of the node between the specified 
+!                    elevation z and the bottom elevation z0. If z is greater 
+!                    the top elevation z1, the node elevation is halfway between
+!                    the top (z1) and bottom (z0) elevations. if z is less than
+!                    the bottom elevation (z0) the node elevation is set to z0.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     class(GwfCsubType), intent(inout) :: this
     ! -- dummy
-    real(DP), intent(in) :: top
-    real(DP), intent(in) :: bot
-    real(DP), intent(in) :: hcell
+    real(DP), intent(in) :: z1
+    real(DP), intent(in) :: z0
+    real(DP), intent(in) :: z
     ! -- local variables
     real(DP) :: znode
     real(DP) :: v
 ! ------------------------------------------------------------------------------
-    if (hcell > top) then
-      v = top
-    else if (hcell < bot) then
-      v = bot
+    if (z > z1) then
+      v = z1
+    else if (z < z0) then
+      v = z0
     else
-      v = hcell
+      v = z
     end if
-    znode = (v + bot) * DHALF
+    znode = (v + z0) * DHALF
     !
     ! -- return
     return
   end function csub_calc_znode
   
-  function csub_calc_adjes(this, node, znode) result(es)
+  function csub_calc_adjes(this, node, es0, z0, z) result(es)
 ! ******************************************************************************
-! csub_calc_adjes -- Calculate the effective stress at specified elevation
+! csub_calc_adjes -- Calculate the effective stress at specified elevation z
+!                    using the provided effective stress (es0) calculated at 
+!                    elevation z0 (which is <= z)  
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -4831,13 +4838,13 @@ contains
     class(GwfCsubType), intent(inout) :: this
     ! -- dummy
     integer(I4B), intent(in) :: node
-    real(DP), intent(in) :: znode
+    real(DP), intent(in) :: es0
+    real(DP), intent(in) :: z0
+    real(DP), intent(in) :: z
     ! -- local variables
     real(DP) :: es
-    real(DP) :: bot
 ! ------------------------------------------------------------------------------
-    bot = this%dis%bot(node)
-    es = this%sk_es(node) - (znode - bot) * (this%sgs(node) - DONE)
+    es = es0 - (z - z0) * (this%sgs(node) - DONE)
     !
     ! -- return
     return
@@ -4878,13 +4885,17 @@ contains
     esv = this%time_alpha * es +                                             &
           (DONE - this%time_alpha) * es0
     void = this%csub_calc_void(theta)
-    denom = (DONE + void) * (esv - (znode - bot) * (this%sgs(node) - DONE))
+    denom = this%csub_calc_adjes(node, esv, bot, znode)
+    denom = denom * (DONE + void)
+    !denom = (DONE + void) * (esv - (znode - bot) * (this%sgs(node) - DONE))
     if (denom /= DZERO) then
       fact = DONE / denom
     end if
     esv = es0
     void = this%csub_calc_void(theta0)
-    denom = (DONE + void) * (esv - (znode0 - bot) * (this%sgs(node) - DONE))
+    denom = this%csub_calc_adjes(node, esv, bot, znode0)
+    denom = denom * (DONE + void)
+    !denom = (DONE + void) * (esv - (znode0 - bot) * (this%sgs(node) - DONE))
     if (denom /= DZERO) then
       fact0 = DONE / denom
     end if
@@ -5198,7 +5209,7 @@ contains
     return
   end subroutine csub_delay_calc_stress
 
-  subroutine csub_delay_calc_ssksske(this, ib, n, ssk, sske)
+  subroutine csub_delay_calc_ssksske(this, ib, n, hcell, ssk, sske)
 ! ******************************************************************************
 ! csub_delay_calc_ssksske -- Calculate ssk and sske for a node in a delay
 !                            interbed cell.
@@ -5209,11 +5220,15 @@ contains
     class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: ib
     integer(I4B), intent(in) :: n
+    real(DP), intent(in) :: hcell
     real(DP), intent(inout) :: ssk
     real(DP), intent(inout) :: sske
     ! -- local variables
     integer(I4B) :: idelay
     integer(I4B) :: node
+    real(DP) :: z1
+    real(DP) :: z0
+    real(DP) :: zcell
     real(DP) :: znode
     real(DP) :: zbot
     real(DP) :: es
@@ -5246,6 +5261,19 @@ contains
     else
       node = this%nodelist(ib)
       void = this%csub_calc_void(this%dbtheta(n, idelay))
+
+      z1 = this%dis%top(node)
+      z0 = this%dis%bot(node)
+      zcell = this%csub_calc_znode(z1, z0, hcell)
+      
+      !zbot = this%dbz(n, idelay) - DHALF * this%dbdz(idelay)
+      !znode = zcell + this%dbrelz(n, idelay)
+      !es = this%dbes(n, idelay)
+      !denom = this%csub_calc_adjes(node, es, zbot, znode)
+      !denom = denom * (DONE + void)
+      !es0 = this%dbes0(n, idelay)
+      !denom0 = this%csub_calc_adjes(node, es0, zbot, znode)
+      !denom0 = denom0 * (DONE + void)
       !
       ! -- replace below with csub_calc_sfacts
       !
@@ -5261,8 +5289,12 @@ contains
       !
       ! -- denom and denom0 are calculate at the center of the node and
       !    result in a mean sske and ssk for the delay cell
-      denom = (DONE + void) * (es - (znode - zbot) * (this%sgs(node) - DONE))
-      denom0 = (DONE + void) * (es0 - (znode - zbot) * (this%sgs(node) - DONE))
+      !denom = (DONE + void) * (es - (znode - zbot) * (this%sgs(node) - DONE))
+      denom = this%csub_calc_adjes(node, es, zbot, znode)
+      denom = denom * (DONE + void)
+      !denom0 = (DONE + void) * (es0 - (znode - zbot) * (this%sgs(node) - DONE))
+      denom0 = this%csub_calc_adjes(node, es0, zbot, znode)
+      denom0 = denom0 * (DONE + void)
       if (denom /= DZERO) then
         f = DONE / denom
       else
@@ -5346,7 +5378,7 @@ contains
       h = this%dbh(n, idelay)
       !
       ! -- calculate  ssk and sske
-      call this%csub_delay_calc_ssksske(ib, n, ssk, sske)
+      call this%csub_delay_calc_ssksske(ib, n, hcell, ssk, sske)
       !
       ! -- diagonal and right hand side
       aii = -ssk * fmult
@@ -5433,7 +5465,7 @@ contains
     return
   end subroutine csub_delay_solve
  
-  subroutine csub_delay_calc_dstor(this, ib, stoe, stoi)
+  subroutine csub_delay_calc_dstor(this, ib, hcell, stoe, stoi)
 ! ******************************************************************************
 ! csub_delay_calc_dstor -- Calculate change in storage in a delay interbed.
 ! ******************************************************************************
@@ -5443,6 +5475,7 @@ contains
     ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: ib
+    real(DP), intent(inout) :: hcell
     real(DP), intent(inout) :: stoe
     real(DP), intent(inout) :: stoi
     ! -- local variables
@@ -5472,7 +5505,7 @@ contains
       fmult = this%dbfact * this%dbdz(idelay)
       dzhalf = DHALF * this%dbdz(idelay)
       do n = 1, this%ndelaycells
-        call this%csub_delay_calc_ssksske(ib, n, ssk, sske)
+        call this%csub_delay_calc_ssksske(ib, n, hcell, ssk, sske)
         if (this%igeocalc == 0) then
           v1 = ssk * (this%dbpcs(n, idelay) - this%dbh(n, idelay))
           v2 = sske * (this%dbh0(n, idelay) - this%dbpcs(n, idelay))
@@ -5545,7 +5578,7 @@ contains
     if (this%thick(ib) > DZERO) then
       fmult = this%dbdz(idelay) * this%dbfact
       do n = 1, this%ndelaycells
-        call this%csub_delay_calc_ssksske(ib, n, ssk, sske)
+        call this%csub_delay_calc_ssksske(ib, n, hcell, ssk, sske)
         if (this%igeocalc == 0) then
           v1 = ssk * (this%dbpcs(n, idelay) - this%dbh(n, idelay))
           v2 = sske * (this%dbh0(n, idelay) - this%dbpcs(n, idelay))
