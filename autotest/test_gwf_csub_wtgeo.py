@@ -36,6 +36,7 @@ ump = [None, None, True, None, True, None, True]
 iump = [0, 0, 1, 0, 1, 0, 1]
 tw = [0. for idx in range(len(exdirs))]
 headformulation = [True, False, False, True, True, False, False]
+ndc = [10, 19, 19, 10, 10, 19, 19]
 delay = [False, False, False, True, True, True, True]
 
 ddir = 'data'
@@ -418,7 +419,7 @@ def get_model(idx, dir):
     opth = '{}.csub.obs'.format(name)
     csub = flopy.mf6.ModflowGwfcsub(gwf,
                                     specified_initial_interbed_state=True,
-                                    ndelaycells=10,
+                                    ndelaycells=ndc[idx],
                                     head_based=head_based,
                                     update_material_properties=ump[idx],
                                     time_weight=tw[idx],

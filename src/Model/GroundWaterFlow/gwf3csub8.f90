@@ -205,6 +205,7 @@ module GwfCsubModule
     procedure, private :: csub_calc_void
     procedure, private :: csub_calc_theta
     procedure, private :: csub_calc_znode
+    procedure, private :: csub_calc_adjes
     procedure, private :: csub_calc_sfacts
     procedure, private :: csub_adj_matprop
     procedure, private :: csub_calc_interbed_thickness
@@ -3205,8 +3206,8 @@ contains
       f = DONE
       f0 = DONE
     else
-      znode = this%csub_calc_znode(node, hcell)
-      znode0 = this%csub_calc_znode(node, hcellold)
+      znode = this%csub_calc_znode(top, bot, hcell)
+      znode0 = this%csub_calc_znode(top, bot, hcellold)
       if (this%time_alpha == DZERO) then
         znode0 = znode
       end if
@@ -3568,6 +3569,7 @@ contains
     real(DP) :: pcs0
     real(DP) :: pcs
     real(DP) :: fact
+    real(DP) :: top
     real(DP) :: bot
     real(DP) :: void
     real(DP) :: znode
@@ -3587,13 +3589,14 @@ contains
     ! -- coarse-grained materials
     do node = 1, nodes
       ! scale cr and cc
+      top = this%dis%top(node)
       bot = this%dis%bot(node)
       if (this%istoragec == 1) then
         if (this%igeocalc == 0) then
           fact = DONE
         else
           void = this%csub_calc_void(this%sk_theta(node))
-          znode = this%csub_calc_znode(node, hnew(node))
+          znode = this%csub_calc_znode(top, bot, hnew(node))
           fact = this%sk_es(node) - (znode - bot) * (this%sgs(node) - DONE)
           fact = fact * (DONE + void)
         end if
@@ -3627,6 +3630,7 @@ contains
     do ib = 1, this%ninterbeds
       idelay = this%idelay(ib)
       node = this%nodelist(ib)
+      top = this%dis%top(node)
       bot = this%dis%bot(node)
       hcell = hnew(node)
       pcs = this%pcs(ib)
@@ -3696,10 +3700,11 @@ contains
           if (idelay == 0) then
             ztop = hcell
           else
-            !ztop = this%dbz(1, idelay) + dzhalf
-            ztop = hcell
+            ztop = this%dbz(1, idelay) + dzhalf
+            !ztop = hcell
           end if
-          znode = this%csub_calc_znode(node, ztop)
+          znode = this%csub_calc_znode(top, bot, ztop)
+          fact = this%csub_calc_adjes(node, znode)
           fact = this%sk_es(node) - (znode - bot) * (this%sgs(node) - DONE)
           fact = fact * (DONE + void)
         end if
@@ -4399,6 +4404,7 @@ contains
     real(DP), intent(in) :: hcell
     real(DP), intent(in) :: hcellold
     ! -- local variables
+    real(DP) :: top
     real(DP) :: bot
     real(DP) :: znode
     real(DP) :: znode0
@@ -4421,9 +4427,10 @@ contains
     !
     ! -- calculate factor for the effective stress case
     else
+      top = this%dis%top(n)
       bot = this%dis%bot(n)
-      znode = this%csub_calc_znode(n, hcell)
-      znode0 = this%csub_calc_znode(n, hcellold)
+      znode = this%csub_calc_znode(top, bot, hcell)
+      znode0 = this%csub_calc_znode(top, bot, hcellold)
       if (this%time_alpha == DZERO) then
         znode0 = znode
       end if
@@ -4784,7 +4791,7 @@ contains
   end function csub_calc_interbed_thickness
   
   
-  function csub_calc_znode(this, node, hcell) result(znode)
+  function csub_calc_znode(this, top, bot, hcell) result(znode)
 ! ******************************************************************************
 ! csub_calc_znode -- Calculate elevation of the center of the saturated 
 !                    cell thickness
@@ -4794,16 +4801,13 @@ contains
 ! ------------------------------------------------------------------------------
     class(GwfCsubType), intent(inout) :: this
     ! -- dummy
-    integer(I4B), intent(in) :: node
+    real(DP), intent(in) :: top
+    real(DP), intent(in) :: bot
     real(DP), intent(in) :: hcell
     ! -- local variables
     real(DP) :: znode
     real(DP) :: v
-    real(DP) :: top
-    real(DP) :: bot
 ! ------------------------------------------------------------------------------
-    top = this%dis%top(node)
-    bot = this%dis%bot(node)
     if (hcell > top) then
       v = top
     else if (hcell < bot) then
@@ -4816,6 +4820,28 @@ contains
     ! -- return
     return
   end function csub_calc_znode
+  
+  function csub_calc_adjes(this, node, znode) result(es)
+! ******************************************************************************
+! csub_calc_adjes -- Calculate the effective stress at specified elevation
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    class(GwfCsubType), intent(inout) :: this
+    ! -- dummy
+    integer(I4B), intent(in) :: node
+    real(DP), intent(in) :: znode
+    ! -- local variables
+    real(DP) :: es
+    real(DP) :: bot
+! ------------------------------------------------------------------------------
+    bot = this%dis%bot(node)
+    es = this%sk_es(node) - (znode - bot) * (this%sgs(node) - DONE)
+    !
+    ! -- return
+    return
+  end function csub_calc_adjes
 
   
   subroutine csub_calc_sfacts(this, node, bot, znode, znode0, theta, theta0,    &
@@ -5019,7 +5045,7 @@ contains
     !
     ! -- calculate znode based on assumption that the delay bed bottom 
     !    is equal to the cell bottom
-    znode = this%csub_calc_znode(node, top)
+    znode = this%csub_calc_znode(top, bot, top)
     dz = DHALF * this%dbdz(idelay)
     if (this%idbhalfcell == 0) then
         dzz = DHALF * b

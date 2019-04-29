@@ -207,7 +207,7 @@ def get_model(idx, dir):
     orecarray['csub_obs.csv'] = [('tcomp', 'interbed-compaction', (0, 0, 1)),
                                  ('gs', 'gstress-cell', (0, 0, 1)),
                                  ('es', 'estress-cell', (0, 0, 1)),
-                                 ('pcs', 'preconstress', (0, 0)),
+                                 ('pcs', 'delay-preconstress', (0, 0)),
                                  ('sk', 'sk', (0, 0, 1))]
     csub_obs_package = csub.obs.initialize(filename=opth, digits=10,
                                            print_input=True,
