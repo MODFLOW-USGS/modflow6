@@ -21,9 +21,13 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['moc3d01a', 'moc3d01b', 'moc3d01c', 'moc3d01d']
-diffc = [0., 0.01, 0., 0.1]
-alphal = [0.1, 0., 1., 0.]
+ex = ['moc3d01a', 'moc3d01b', 'moc3d01c', 'moc3d01d',
+      'moc3d01e', 'moc3d01f', 'moc3d01g', 'moc3d01h']
+diffc = [0., 0.01, 0., 0.1, 0., 0., 0., 0]
+alphal = [0.1, 0., 1., 0., .1, .1, .1, .1]
+retardation = [None, None, None, None, 40., 4., 2., None]
+perlens = 4 * [120.] + 3 * [240.] + [120.]
+decay = 7 * [None] + [0.01]
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
@@ -33,7 +37,8 @@ ddir = 'data'
 def get_model(idx, dir):
     nlay, nrow, ncol = 1, 122, 1
     nper = 1
-    perlen = [120.]
+    perlen = perlens[idx] # [120.]
+    perlen = [perlen]
     nstp = [240]
     tsmult = [1.]
     steady = [True]
@@ -186,8 +191,19 @@ def get_model(idx, dir):
     #                              pname='CNC-1')
 
     # storage
-    sto = flopy.mf6.ModflowGwtsto(gwt, porosity=0.1,
+    porosity = 0.1
+    sto = flopy.mf6.ModflowGwtsto(gwt, porosity=porosity,
                                 filename='{}.sto'.format(gwtname))
+
+    rtd = retardation[idx]
+    if rtd is not None:
+        rhob = 1.
+        kd = (rtd - 1.) * porosity / rhob
+        srb = flopy.mf6.ModflowGwtsrb(gwt, rhob=1., distcoef=kd)
+
+    decay_rate = decay[idx]
+    if decay_rate is not None:
+        dcy = flopy.mf6.ModflowGwtdcy(gwt, rc=decay_rate)
 
     # sources
     sourcerecarray = [('WEL-1', 1, 'CONCENTRATION')]
@@ -304,9 +320,10 @@ def eval_transport(sim):
     tsresab = np.array(tsresab)
     tsrescd = np.array(tsrescd)
 
-    tsreslist = [tsresab, tsresab, tsrescd, tsrescd]
+    tsreslist = [tsresab, tsresab, tsrescd, tsrescd, None, None, None, None]
     tsres = tsreslist[sim.idxsim]
-    assert np.allclose(tsres, tssim), 'simulated concentrations do not match with known solution.'
+    if tsres is not None:
+        assert np.allclose(tsres, tssim), 'simulated concentrations do not match with known solution.'
 
     return
 

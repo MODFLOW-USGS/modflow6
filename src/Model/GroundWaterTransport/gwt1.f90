@@ -30,6 +30,8 @@
   ! What to do about MVR?  Should go into SSM.
   ! implement steady-state transport (affects STO, SRB, IMD)
   ! update user guide to reflect changes to DCY, SRB, and IMD
+  ! refactor code to use the MST and IST packages to replace STO, SRB, DCY, and IMD
+  
   
 module GwtModule
 
