@@ -1847,13 +1847,22 @@ contains
     class(MawType) :: this
     ! -- local
     integer(I4B) :: n
+    integer(I4B) :: j, iaux
 ! ------------------------------------------------------------------------------
-    !
-    !! -- call base advance functionality
-    !call this%BndType%bnd_ad()
     !
     ! -- Advance the time series
     call this%TsManager%ad()
+    !
+    ! -- update auxiliary variables by copying from the derived-type time
+    !    series variable into the bndpackage auxvar variable so that this
+    !    information is properly written to the GWF budget file
+    if (this%naux > 0) then
+      do n = 1, this%maxbound
+        do iaux = 1, this%naux
+          this%auxvar(iaux, n) = this%mawwells(n)%auxvar(iaux)%value
+        end do
+      end do
+    end if
     !
     ! -- copy xnew into xold
     do n = 1, this%nmawwells
@@ -2781,10 +2790,6 @@ contains
                      this%nmawwells, this%iout, delt, pertim, totim)
         do n = 1, this%nmawwells
           q = DZERO
-          ! fill auxvar
-          do i = 1, naux
-            this%auxvar(i,n) = this%mawwells(n)%auxvar(i)%value
-          end do
           call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,       &
                                                   this%auxvar(:,n),            &
                                                   olconv=.FALSE.,              &

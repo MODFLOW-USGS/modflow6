@@ -3542,10 +3542,25 @@ contains
     class(LakType) :: this
     ! -- local
     integer(I4B) :: n
+    integer(I4B) :: j, iaux, ii
 ! ------------------------------------------------------------------------------
     !
     ! -- Advance the time series
     call this%TsManager%ad()
+    !
+    ! -- update auxiliary variables by copying from the derived-type time
+    !    series variable into the bndpackage auxvar variable so that this
+    !    information is properly written to the GWF budget file
+    if (this%naux > 0) then
+      do n = 1, this%nlakes
+        do j = this%idxlakeconn(n), this%idxlakeconn(n + 1) - 1
+          do iaux = 1, this%naux
+            ii = (n - 1) * this%naux + iaux
+            this%auxvar(iaux, j) = this%lauxvar(ii)%value
+          end do
+        end do
+      end do
+    end if
     !
     ! -- copy xnew into xold and set xnewpak to stage%value for
     !    constant stage lakes
@@ -3914,6 +3929,7 @@ contains
     real(DP) :: mvrratin
     real(DP) :: qtomvr
     integer(I4B) :: naux
+    real(DP), dimension(:), allocatable :: auxvartmp
     ! -- for budget
     integer(I4B) :: i, j, n, n2
     integer(I4B) :: ii
@@ -4415,18 +4431,20 @@ contains
                      this%name_model, this%name,                                &
                      ibinun, naux, this%auxname, this%nlakes, 1, 1,             &
                      this%nlakes, this%iout, delt, pertim, totim)
+        allocate(auxvartmp(naux))
         do n = 1, this%nlakes
           q = DZERO
           ! fill auxvar
           do i = 1, naux
             ii = (n-1) * naux + i
-            this%auxvar(i,n) = this%lauxvar(ii)%value
+            auxvartmp(i) = this%lauxvar(ii)%value
           end do
-          call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,       &
-                                                  this%auxvar(:,n),            &
-                                                  olconv=.FALSE.,              &
-                                                  olconv2=.FALSE.)
+          call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,           &
+                                              auxvartmp(:),                    &
+                                              olconv=.FALSE.,                  &
+                                              olconv2=.FALSE.)
         end do
+        deallocate(auxvartmp)
       end if
     end if
     ! -- return

@@ -131,7 +131,7 @@ This section describes changes introduced into MODFLOW 6 with each release.  The
 
 \underline{ADVANCED STRESS PACKAGES}
 \begin{itemize}
-\item --
+\item Corrected the way auxiliary variables are handled for the advanced packages.  In some cases, values for auxiliary variables were not being correctly written to the GWF Model budget file or to the advanced package budget file.  A consistent approach for updating and saving auxiliary variables was implemented for the MAW, SFR, LAK, and UZF Packages.
 \item --
 \end{itemize}
 
