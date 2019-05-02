@@ -1847,7 +1847,7 @@ contains
     class(MawType) :: this
     ! -- local
     integer(I4B) :: n
-    integer(I4B) :: j, iaux
+    integer(I4B) :: j, iaux, ibnd
 ! ------------------------------------------------------------------------------
     !
     ! -- Advance the time series
@@ -1857,9 +1857,13 @@ contains
     !    series variable into the bndpackage auxvar variable so that this
     !    information is properly written to the GWF budget file
     if (this%naux > 0) then
+      ibnd = 1
       do n = 1, this%nmawwells
-        do iaux = 1, this%naux
-          this%auxvar(iaux, n) = this%mawwells(n)%auxvar(iaux)%value
+        do j = 1, this%mawwells(n)%ngwfnodes
+          do iaux = 1, this%naux
+            this%auxvar(iaux, ibnd) = this%mawwells(n)%auxvar(iaux)%value
+          end do
+          ibnd = ibnd + 1
         end do
       end do
     end if
