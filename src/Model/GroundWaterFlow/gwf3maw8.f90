@@ -1857,7 +1857,7 @@ contains
     !    series variable into the bndpackage auxvar variable so that this
     !    information is properly written to the GWF budget file
     if (this%naux > 0) then
-      do n = 1, this%maxbound
+      do n = 1, this%nmawwells
         do iaux = 1, this%naux
           this%auxvar(iaux, n) = this%mawwells(n)%auxvar(iaux)%value
         end do
