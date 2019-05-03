@@ -4168,31 +4168,41 @@ contains
       ! -- calculate rhs term
       rhs = hcof * hcell
     else
-      ! calculate saturation
+      ! calculate cell saturation
       call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
       !
       ! -- storage coefficients
       call this%csub_sk_calc_sske(node, sske, sske0, hcell, hcellold)
       rho1 = sske0 * area * tthk0 * tled
       rho2 = sske * area * tthk * tled
+      !
+      ! -- update hcof and rhs
       hcof = rho2 * snnew
       rhs = snnew * rho2 * hcell
+      !
+      ! -- calculate skeletal q
       q = snnew * rho2 * (this%sk_gs(node) - hcell + bot) -                      &
           snold * rho1 * this%sk_es0(node)
       !
       ! -- perturb the head
       hp = hcell + DEM4
       !
-      ! calculate saturation
+      ! calculate the perturbed cell saturation
       call this%csub_calc_sat(node, hp, hcellold, snnew, snold)
       !
       ! -- storage coefficients
       call this%csub_sk_calc_sske(node, sske, sske0, hp, hcellold)
       rho1 = sske0 * area * tthk0 * tled
       rho2 = sske * area * tthk * tled
+      !
+      ! -- calculate perturbed skeletal q
       qp = snnew * rho2 * (this%sk_gs(node) - hp + bot) -                        &
            snold * rho1 * this%sk_es0(node)
+      !
+      ! -- calculate the derivative
       derv = (qp - q) / DEM4
+      !
+      ! -- update hcof and rhs
       hcof = hcof + derv
       rhs = rhs + derv * hcell
     end if
