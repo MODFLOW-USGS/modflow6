@@ -1,6 +1,6 @@
 module GwfCsubModule
   use KindModule, only: I4B, DP
-  use ConstantsModule, only: DPREC, DZERO, DEM10, DEM7, DEM6, DHALF, DEM1,      &
+  use ConstantsModule, only: DPREC, DZERO, DEM10, DEM7, DEM6, DEM4, DHALF, DEM1,&
                              DONE, DTWO, DTHREE,                                &
                              DGRAVITY, DTEN, DHUNDRED, DNODATA, DHNOFLO,        &
                              LENFTYPE, LENPACKAGENAME,                          &
@@ -4133,7 +4133,11 @@ contains
     real(DP) :: derv
     real(DP) :: sske
     real(DP) :: sske0
+    real(DP) :: rho1
     real(DP) :: rho2
+    real(DP) :: snnew
+    real(DP) :: snold
+    real(DP) :: hp
     real(DP) :: q
     real(DP) :: qp
 ! ------------------------------------------------------------------------------
@@ -4148,11 +4152,11 @@ contains
     tthk = this%sk_thick(node)
     tthk0 = this%sk_thick0(node)
     !
-    ! -- calculate saturation derivitive
-    derv = sQuadraticSaturationDerivative(top, bot, hcell)    
-    !
     ! 
     if (this%igeocalc == 0) then
+      !
+      ! -- calculate saturation derivitive
+      derv = sQuadraticSaturationDerivative(top, bot, hcell)    
       !
       ! -- storage coefficients
       call this%csub_sk_calc_sske(node, sske, sske0, hcell, hcell)
@@ -4164,10 +4168,33 @@ contains
       ! -- calculate rhs term
       rhs = hcof * hcell
     else
+      ! calculate saturation
+      call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
       !
       ! -- storage coefficients
       call this%csub_sk_calc_sske(node, sske, sske0, hcell, hcellold)
-      
+      rho1 = sske0 * area * tthk0 * tled
+      rho2 = sske * area * tthk * tled
+      hcof = rho2 * snnew
+      rhs = snnew * rho2 * hcell
+      q = snnew * rho2 * (this%sk_gs(node) - hcell + bot) -                      &
+          snold * rho1 * this%sk_es0(node)
+      !
+      ! -- perturb the head
+      hp = hcell + DEM4
+      !
+      ! calculate saturation
+      call this%csub_calc_sat(node, hp, hcellold, snnew, snold)
+      !
+      ! -- storage coefficients
+      call this%csub_sk_calc_sske(node, sske, sske0, hp, hcellold)
+      rho1 = sske0 * area * tthk0 * tled
+      rho2 = sske * area * tthk * tled
+      qp = snnew * rho2 * (this%sk_gs(node) - hp + bot) -                        &
+           snold * rho1 * this%sk_es0(node)
+      derv = (qp - q) / DEM4
+      hcof = hcof + derv
+      rhs = rhs + derv * hcell
     end if
     !
     ! -- return
