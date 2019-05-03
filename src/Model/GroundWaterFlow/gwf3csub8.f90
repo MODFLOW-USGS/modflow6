@@ -3152,16 +3152,7 @@ contains
     bot = this%dis%bot(node)
     top = this%dis%top(node)
     ! -- aquifer saturation
-    if (this%stoiconv(node) /= 0) then
-      snold = sQuadraticSaturation(top, bot, hcellold, this%satomega)
-      snnew = sQuadraticSaturation(top, bot, hcell, this%satomega)
-    else
-      snold = DONE
-      snnew = DONE
-    end if
-    if (this%time_alpha == DZERO) then
-      snold = snnew
-    end if
+    call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
     if (this%igeocalc == 0) then
       f = DONE
       f0 = DONE
@@ -4093,16 +4084,6 @@ contains
     tthk0 = this%sk_thick0(node)
     ! -- aquifer saturation
     call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
-    !if (this%stoiconv(node) /= 0) then
-    !  snold = sQuadraticSaturation(top, bot, hcellold, this%satomega)
-    !  snnew = sQuadraticSaturation(top, bot, hcell, this%satomega)
-    !else
-    !  snold = DONE
-    !  snnew = DONE
-    !end if
-    !if (this%time_alpha == DZERO) then
-    !  snold = snnew
-    !end if
     !
     ! -- storage coefficients
     call this%csub_sk_calc_sske(node, sske, sske0, hcell, hcellold)
@@ -4500,16 +4481,6 @@ contains
     tthk0 = this%sk_thick0(node)
     ! -- aquifer saturation
     call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
-    !if (this%stoiconv(node) /= 0) then
-    !  snold = sQuadraticSaturation(top, bot, hcellold, this%satomega)
-    !  snnew = sQuadraticSaturation(top, bot, hcell, this%satomega)
-    !else
-    !  snold = DONE
-    !  snnew = DONE
-    !end if
-    !if (this%time_alpha == DZERO) then
-    !  snold = snnew
-    !end if
     !
     ! -- storage coefficients
     wc1 = this%gammaw * this%beta * area * tthk0 * this%sk_theta0(node) * tled
