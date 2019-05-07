@@ -129,13 +129,6 @@
 !     + + + LOCAL VARIABLES + + +
       LOGICAL :: lreaddata
       character(len=LINELENGTH) :: errmsg, keyword
-      !CHARACTER (LEN= 10) :: clin(0:2)
-      !CHARACTER (LEN= 31) :: clintit(0:2)
-      !CHARACTER (LEN= 20) :: cipc(0:4)
-      !CHARACTER (LEN= 20) :: cscale(0:2)
-      !CHARACTER (LEN= 25) :: corder(0:2)
-      !CHARACTER (LEN= 16), DIMENSION(0:4) :: ccnvgopt
-      !CHARACTER (LEN= 15) :: clevel, cdroptol 
       integer(I4B) :: i, n
       integer(I4B) :: i0
       integer(I4B) :: iscllen, iolen
@@ -214,7 +207,7 @@
 !
 ! -- get IMSLINEAR block
       if (lreaddata) then
-        call parser%GetBlock('LINEAR', isfound, ierr)
+        call parser%GetBlock('LINEAR', isfound, ierr, blockRequired=.FALSE.)
       else
         isfound = .FALSE.
       end if
