@@ -1207,10 +1207,22 @@ contains
     class(SfrType) :: this
     ! -- local
     integer(I4B) :: n
+    integer(I4B) :: j, iaux
 ! ------------------------------------------------------------------------------
     !
     ! -- Advance the time series manager
     call this%TsManager%ad()
+    !
+    ! -- update auxiliary variables by copying from the derived-type time
+    !    series variable into the bndpackage auxvar variable so that this
+    !    information is properly written to the GWF budget file
+    if (this%naux > 0) then
+      do n = 1, this%maxbound
+        do iaux = 1, this%naux
+          this%auxvar(iaux, n) = this%reaches(n)%auxvar(iaux)%value
+        end do
+      end do
+    end if
     !
     ! -- reset upstream flow to zero and set specified stage
     do n = 1, this%maxbound
@@ -1219,7 +1231,6 @@ contains
         this%reaches(n)%stage = this%reaches(n)%sstage%value
       end if
     end do
-    !
     !
     ! -- pakmvrobj ad
     if(this%imover == 1) then
@@ -1916,10 +1927,6 @@ contains
                      this%maxbound, this%iout, delt, pertim, totim)
         do n = 1, this%maxbound
           q = DZERO
-          ! fill auxvar
-          do i = 1, naux
-            this%auxvar(i,n) = this%reaches(n)%auxvar(i)%value
-          end do
           call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,       &
                                                   this%auxvar(:,n),            &
                                                   olconv=.FALSE.,              &
