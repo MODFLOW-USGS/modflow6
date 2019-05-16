@@ -707,7 +707,7 @@ module GwfModule
     !
     ! -- csub convergence check
     if (this%incsub > 0) then
-      call this%csub%csub_cc(iend, icnvg, this%dis%nodes, this%x,             &
+      call this%csub%csub_cc(iend, icnvg, this%dis%nodes, this%x, this%xold,     &
                              hclose, rclose)
     end if
     !

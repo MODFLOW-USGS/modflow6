@@ -1,6 +1,6 @@
 module GwfCsubModule
   use KindModule, only: I4B, DP
-  use ConstantsModule, only: DPREC, DZERO, DEM10, DEM7, DEM6, DHALF, DEM1,      &
+  use ConstantsModule, only: DPREC, DZERO, DEM10, DEM7, DEM6, DEM4, DHALF, DEM1,&
                              DONE, DTWO, DTHREE,                                &
                              DGRAVITY, DTEN, DHUNDRED, DNODATA, DHNOFLO,        &
                              LENFTYPE, LENPACKAGENAME,                          &
@@ -150,6 +150,7 @@ module GwfCsubModule
     real(DP), dimension(:), pointer, contiguous :: dbdz => null()                !delay bed dz
     real(DP), dimension(:), pointer, contiguous :: dbdhmax => null()             !delay bed maximum head change
     real(DP), dimension(:,:), pointer, contiguous :: dbz => null()               !delay bed cell z
+    real(DP), dimension(:,:), pointer, contiguous :: dbrelz => null()            !delay bed cell z relative to znode
     real(DP), dimension(:,:), pointer, contiguous :: dbh => null()               !delay bed cell h
     real(DP), dimension(:,:), pointer, contiguous :: dbh0 => null()              !delay bed cell previous h
     real(DP), dimension(:,:), pointer, contiguous :: dbtheta => null()           !delay bed cell porosity
@@ -204,6 +205,8 @@ module GwfCsubModule
     procedure, private :: csub_calc_void
     procedure, private :: csub_calc_theta
     procedure, private :: csub_calc_znode
+    procedure, private :: csub_calc_adjes
+    procedure, private :: csub_calc_sat
     procedure, private :: csub_calc_sfacts
     procedure, private :: csub_adj_matprop
     procedure, private :: csub_calc_interbed_thickness
@@ -239,7 +242,6 @@ module GwfCsubModule
     procedure, private :: csub_delay_calc_ssksske
     procedure, private :: csub_delay_calc_comp
     procedure, private :: csub_delay_calc_dstor
-    procedure, private :: csub_interbed_calc_sat
     procedure, private :: csub_delay_fc
     procedure, private :: csub_delay_sln
     procedure, private :: csub_delay_assemble
@@ -410,7 +412,7 @@ contains
     return
    end subroutine csub_allocate_scalars
 
-  subroutine csub_cc(this, iend, icnvg, nodes, hnew, hclose, rclose)
+  subroutine csub_cc(this, iend, icnvg, nodes, hnew, hold, hclose, rclose)
 ! **************************************************************************
 ! csub_cc -- Final convergence check for package
 ! **************************************************************************
@@ -424,6 +426,7 @@ contains
     integer(I4B), intent(inout) :: icnvg
     integer(I4B), intent(in) :: nodes
     real(DP), dimension(nodes), intent(in) :: hnew
+    real(DP), dimension(nodes), intent(in) :: hold
     real(DP), intent(in) :: hclose
     real(DP), intent(in) :: rclose
     ! -- local
@@ -438,7 +441,9 @@ contains
     real(DP) :: dh
     real(DP) :: area
     real(DP) :: hcell
+    real(DP) :: hcellold
     real(DP) :: snnew
+    real(DP) :: snold
     real(DP) :: stoe
     real(DP) :: stoi
     real(DP) :: tled
@@ -481,12 +486,13 @@ contains
         node = this%nodelist(ib)
         area = this%dis%get_area(node)
         hcell = hnew(node)
+        hcellold = hold(node)
         !
         ! -- calculate cell saturation
-        call this%csub_interbed_calc_sat(ib, hcell, snnew)
+        call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
         !
         ! -- calculate the change in storage
-        call this%csub_delay_calc_dstor(ib, stoe, stoi)
+        call this%csub_delay_calc_dstor(ib, hcell, hcellold, stoe, stoi)
         v1 = (stoe + stoi) * area * this%rnb(ib) * snnew * tled
         !
         ! -- calculate the flow between the interbed and the cell
@@ -561,7 +567,9 @@ contains
     real(DP) :: compe
     real(DP) :: area
     real(DP) :: h
+    real(DP) :: h0
     real(DP) :: snnew
+    real(DP) :: snold
     real(DP) :: hcof
     real(DP) :: rhs
     real(DP) :: stoe
@@ -734,12 +742,13 @@ contains
         else
           b = this%thick(ib) * this%rnb(ib) * this%dbfact
           h = hnew(node)
+          h0 = hold(node)
           !
           ! -- calculate cell saturation
-          call this%csub_interbed_calc_sat(ib, h, snnew)
+          call this%csub_calc_sat(node, h, h0, snnew, snold)
           !
           ! -- calculate inelastic and elastic storage contributions
-          call this%csub_delay_calc_dstor(ib, stoe, stoi)
+          call this%csub_delay_calc_dstor(ib, h, h0, stoe, stoi)
           this%storagee(ib) = stoe * area * this%rnb(ib) * snnew * tledm
           this%storagei(ib) = stoi * area * this%rnb(ib) * snnew * tledm
           !
@@ -758,7 +767,7 @@ contains
           if (isuppress_output == 0) then
             !
             ! -- calculate sum of compaction in delay interbed
-            call this%csub_delay_calc_comp(ib, h)
+            call this%csub_delay_calc_comp(ib, h, h0)
           end if
         end if
         !
@@ -1760,6 +1769,7 @@ contains
         call mem_reallocate(this%dbdz, ndelaybeds, 'dbdz', trim(this%origin))
         call mem_reallocate(this%dbdhmax, ndelaybeds, 'dbdhmax', trim(this%origin))
         call mem_reallocate(this%dbz, this%ndelaycells, ndelaybeds, 'dbz', trim(this%origin))
+        call mem_reallocate(this%dbrelz, this%ndelaycells, ndelaybeds, 'dbrelz', trim(this%origin))
         call mem_reallocate(this%dbh, this%ndelaycells, ndelaybeds, 'dbh', trim(this%origin))
         call mem_reallocate(this%dbh0, this%ndelaycells, ndelaybeds, 'dbh0', trim(this%origin))
         call mem_reallocate(this%dbtheta, this%ndelaycells, ndelaybeds, 'dbtheta', trim(this%origin))
@@ -1827,7 +1837,19 @@ contains
       end if
     end if
     !
-    ! TODO - check the total frac for each nbound node to make sure < 1.0
+    ! -- check that ndelaycells is odd when using
+    !    the effective stress formulation
+    if (this%igeocalc /= 0) then
+      if (ndelaybeds > 0) then
+        q = MOD(real(this%ndelaycells, DP), DTWO)
+        if (q == DZERO) then
+          write(errmsg, '(a,1x,i0,2(1x,a))')                          &
+            'ERROR: NDELAYCELLS (', this%ndelaycells, ') MUST BE AN', &
+            'ODD NUMBER WHEN USING THE EFFECTIVE STRESS FORMULATION.'
+          call store_error(errmsg)
+        end if
+      end if
+    end if
     !
     ! -- return
     return
@@ -2237,11 +2259,9 @@ contains
     if (this%igeocalc == 0) then
       call mem_allocate(this%sgm, 1, 'sgm', trim(this%origin))
       call mem_allocate(this%sgs, 1, 'sgs', trim(this%origin))
-      !call mem_allocate(this%sk_znode, 1, 'sk_znode', trim(this%origin))
     else
       call mem_allocate(this%sgm, this%dis%nodes, 'sgm', trim(this%origin))
       call mem_allocate(this%sgs, this%dis%nodes, 'sgs', trim(this%origin))
-      !call mem_allocate(this%sk_znode, this%dis%nodes, 'sk_znode', trim(this%origin))
     end if
     call mem_allocate(this%ske_cr, this%dis%nodes, 'ske_cr', trim(this%origin))
     call mem_allocate(this%sk_theta, this%dis%nodes, 'sk_theta', trim(this%origin))
@@ -2314,6 +2334,7 @@ contains
     call mem_allocate(this%dbdz, 0, 'dbdz', trim(this%origin))
     call mem_allocate(this%dbdhmax, 0, 'dbdhmax', trim(this%origin))
     call mem_allocate(this%dbz, 0, 0, 'dbz', trim(this%origin))
+    call mem_allocate(this%dbrelz, 0, 0, 'dbrelz', trim(this%origin))
     call mem_allocate(this%dbh, 0, 0, 'dbh', trim(this%origin))
     call mem_allocate(this%dbh0, 0, 0, 'dbh0', trim(this%origin))
     call mem_allocate(this%dbtheta, 0, 0, 'dbtheta', trim(this%origin))
@@ -2464,6 +2485,7 @@ contains
       call mem_deallocate(this%dbdz)
       call mem_deallocate(this%dbdhmax)
       call mem_deallocate(this%dbz)
+      call mem_deallocate(this%dbrelz)
       call mem_deallocate(this%dbh)
       call mem_deallocate(this%dbh0)
       call mem_deallocate(this%dbtheta)
@@ -2913,44 +2935,6 @@ contains
   end subroutine csub_ar
 
 
-!  subroutine csub_sk_calc_znode(this, nodes, hnew)
-!! ******************************************************************************
-!! csub_sk_calc_znode -- calculate the z of the gwf node using current (xnew) 
-!!                       water levels
-!! ******************************************************************************
-!!
-!!    SPECIFICATIONS:
-!! ------------------------------------------------------------------------------
-!    implicit none
-!    class(GwfCsubType) :: this
-!    integer(I4B), intent(in) :: nodes
-!    real(DP), dimension(nodes), intent(in) :: hnew
-!    ! local
-!    integer(I4B) :: n
-!    real(DP) :: top
-!    real(DP) :: bot
-!    real(DP) :: hcell
-!
-!! ------------------------------------------------------------------------------
-!
-!    if (this%igeocalc /= 0) then
-!      do n = 1, nodes
-!        bot = this%dis%bot(n)
-!        top = this%dis%top(n)
-!        hcell = hnew(n)
-!        if (hcell > top .or. hcell < bot) then
-!            this%sk_znode(n) = (top + bot) * DHALF
-!        else
-!            this%sk_znode(n) = (hcell + bot) * DHALF
-!        end if
-!      end do
-!    end if
-!    !
-!    ! -- return
-!    return
-!  end subroutine csub_sk_calc_znode
-
-
   subroutine csub_sk_calc_stress(this, nodes, hnew)
 ! ******************************************************************************
 ! csub_sk_calc_stress -- calculate the geostatic stress for every gwf node 
@@ -3003,13 +2987,6 @@ contains
             gs = ((top - hcell) * this%sgm(node)) +                             &
                  ((hcell - bot) * this%sgs(node))
         end if
-        !!
-        !! -- add user-specified overlying geostatic stress
-        !sadd = DZERO
-        !if (this%igeostressoff /= 0) then
-        !  sadd = this%sig0(node)
-        !end if
-        !this%sk_gs(node) = gs + sadd
         this%sk_gs(node) = gs
       end do
       !
@@ -3175,25 +3152,13 @@ contains
     bot = this%dis%bot(node)
     top = this%dis%top(node)
     ! -- aquifer saturation
-    if (this%stoiconv(node) /= 0) then
-      snold = sQuadraticSaturation(top, bot, hcellold, this%satomega)
-      snnew = sQuadraticSaturation(top, bot, hcell, this%satomega)
-    else
-      snold = DONE
-      snnew = DONE
-    end if
-    if (this%time_alpha == DZERO) then
-      snold = snnew
-    end if
+    call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
     if (this%igeocalc == 0) then
       f = DONE
       f0 = DONE
     else
-      znode = this%csub_calc_znode(node, hcell)
-      znode0 = this%csub_calc_znode(node, hcellold)
-      if (this%time_alpha == DZERO) then
-        znode0 = znode
-      end if
+      znode = this%csub_calc_znode(top, bot, hcell)
+      znode0 = this%csub_calc_znode(top, bot, hcellold)
       es = this%sk_es(node)
       es0 = this%sk_es0(node)
       theta = this%theta(ib)
@@ -3552,6 +3517,7 @@ contains
     real(DP) :: pcs0
     real(DP) :: pcs
     real(DP) :: fact
+    real(DP) :: top
     real(DP) :: bot
     real(DP) :: void
     real(DP) :: znode
@@ -3571,14 +3537,15 @@ contains
     ! -- coarse-grained materials
     do node = 1, nodes
       ! scale cr and cc
+      top = this%dis%top(node)
       bot = this%dis%bot(node)
       if (this%istoragec == 1) then
         if (this%igeocalc == 0) then
           fact = DONE
         else
           void = this%csub_calc_void(this%sk_theta(node))
-          znode = this%csub_calc_znode(node, hnew(node))
-          fact = this%sk_es(node) - (znode - bot) * (this%sgs(node) - DONE)
+          znode = this%csub_calc_znode(top, bot, hnew(node))
+          fact = this%csub_calc_adjes(node, this%sk_es(node), bot, znode)
           fact = fact * (DONE + void)
         end if
       else
@@ -3611,6 +3578,7 @@ contains
     do ib = 1, this%ninterbeds
       idelay = this%idelay(ib)
       node = this%nodelist(ib)
+      top = this%dis%top(node)
       bot = this%dis%bot(node)
       hcell = hnew(node)
       pcs = this%pcs(ib)
@@ -3661,10 +3629,7 @@ contains
           else
             zbot = this%dbz(n, idelay) - dzhalf
             sadd = this%sgs(node) * (zbot - bot)
-            dbpcs = pcs - (zbot - bot) * (this%sgs(node) - DONE)
-            !if (this%dbes(n, idelay) > dbpcs) then
-            !  dbpcs = this%dbes(n, idelay)
-            !end if
+            dbpcs = this%csub_calc_adjes(node, pcs, bot, zbot)
             this%dbpcs(n, idelay) = dbpcs
           end if
           this%dbes0(n, idelay) = this%dbes(n, idelay)
@@ -3680,10 +3645,11 @@ contains
           if (idelay == 0) then
             ztop = hcell
           else
-            ztop = this%dbz(1, idelay) + dzhalf
+            !ztop = this%dbz(1, idelay) + dzhalf
+            ztop = hcell
           end if
-          znode = this%csub_calc_znode(node, ztop)
-          fact = this%sk_es(node) - (znode - bot) * (this%sgs(node) - DONE)
+          znode = this%csub_calc_znode(top, bot, ztop)
+          fact = this%csub_calc_adjes(node, this%sk_es(node), bot, znode)
           fact = fact * (DONE + void)
         end if
       else
@@ -4055,7 +4021,8 @@ contains
         if (this%stoiconv(node) == 0) cycle
         !
         ! -- calculate coarse-grained skeletal storage newton terms
-        call this%csub_sk_fn(node, tled, area, hnew(node), hcof, rhsterm)
+        call this%csub_sk_fn(node, tled, area,                                   &
+                             hnew(node), hold(node), hcof, rhsterm)
         !
         ! -- add skeletal storage newton terms to amat and rhs for 
         !   skeletal storage
@@ -4116,16 +4083,7 @@ contains
     tthk = this%sk_thick(node)
     tthk0 = this%sk_thick0(node)
     ! -- aquifer saturation
-    if (this%stoiconv(node) /= 0) then
-      snold = sQuadraticSaturation(top, bot, hcellold, this%satomega)
-      snnew = sQuadraticSaturation(top, bot, hcell, this%satomega)
-    else
-      snold = DONE
-      snnew = DONE
-    end if
-    if (this%time_alpha == DZERO) then
-      snold = snnew
-    end if
+    call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
     !
     ! -- storage coefficients
     call this%csub_sk_calc_sske(node, sske, sske0, hcell, hcellold)
@@ -4151,7 +4109,7 @@ contains
     return
   end subroutine csub_sk_fc
   
-  subroutine csub_sk_fn(this, node, tled, area, hcell, hcof, rhs)
+  subroutine csub_sk_fn(this, node, tled, area, hcell, hcellold, hcof, rhs)
 ! ******************************************************************************
 ! csub_sk_fn -- Formulate skeletal storage newton terms
 ! ******************************************************************************
@@ -4164,16 +4122,24 @@ contains
     real(DP), intent(in) :: tled
     real(DP), intent(in) :: area
     real(DP), intent(in) :: hcell
+    real(DP), intent(in) :: hcellold
     real(DP), intent(inout) :: hcof
     real(DP), intent(inout) :: rhs
     ! locals
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: tthk
+    real(DP) :: tthk0
     real(DP) :: derv
     real(DP) :: sske
     real(DP) :: sske0
+    real(DP) :: rho1
     real(DP) :: rho2
+    real(DP) :: snnew
+    real(DP) :: snold
+    real(DP) :: hp
+    real(DP) :: q
+    real(DP) :: qp
 ! ------------------------------------------------------------------------------
 !
 ! -- initialize variables
@@ -4184,56 +4150,66 @@ contains
     top = this%dis%top(node)
     bot = this%dis%bot(node)
     tthk = this%sk_thick(node)
+    tthk0 = this%sk_thick0(node)
     !
-    ! -- calculate saturation derivitive
-    derv = sQuadraticSaturationDerivative(top, bot, hcell)    
-    !
-    ! -- storage coefficients
-    call this%csub_sk_calc_sske(node, sske, sske0, hcell, hcell)
-    rho2 = sske * area * tthk * tled
-    !
-    ! -- calculate hcof term
-    hcof = -rho2 * derv * hcell
-    !
-    ! -- calculate rhs term
-    rhs = hcof * hcell
-    !
-    ! -- return
-    return
-  end subroutine csub_sk_fn
-
-  subroutine csub_interbed_calc_sat(this, ib, hcell, snnew)
-! ******************************************************************************
-! csub_interbed_calc_sat -- Calculate cell saturation for a cell with a 
-!                           delay interbed.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(GwfCsubType), intent(inout) :: this
-    integer(I4B), intent(in) :: ib
-    real(DP), intent(in) :: hcell
-    real(DP), intent(inout) :: snnew
-    ! -- local variables
-    integer(I4B) :: node
-    real(DP) :: top
-    real(DP) :: bot
-! ------------------------------------------------------------------------------
-    !
-    ! -- initialize variables
-    snnew = DONE
-    node = this%nodelist(ib)
-    !
-    ! -- calculate on cell saturation if cell storage is convertible
-    if (this%stoiconv(node) /= 0) then
-      top = this%dis%top(node)
-      bot = this%dis%bot(node)
-      snnew = sQuadraticSaturation(top, bot, hcell, this%satomega)
+    ! 
+    if (this%igeocalc == 0) then
+      !
+      ! -- calculate saturation derivitive
+      derv = sQuadraticSaturationDerivative(top, bot, hcell)    
+      !
+      ! -- storage coefficients
+      call this%csub_sk_calc_sske(node, sske, sske0, hcell, hcell)
+      rho2 = sske * area * tthk * tled
+      !
+      ! -- calculate hcof term
+      hcof = -rho2 * derv * hcell
+      !
+      ! -- calculate rhs term
+      rhs = hcof * hcell
+    else
+      ! calculate cell saturation
+      call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
+      !
+      ! -- storage coefficients
+      call this%csub_sk_calc_sske(node, sske, sske0, hcell, hcellold)
+      rho1 = sske0 * area * tthk0 * tled
+      rho2 = sske * area * tthk * tled
+      !
+      ! -- update hcof and rhs
+      hcof = rho2 * snnew
+      rhs = snnew * rho2 * hcell
+      !
+      ! -- calculate skeletal q
+      q = snnew * rho2 * (this%sk_gs(node) - hcell + bot) -                      &
+          snold * rho1 * this%sk_es0(node)
+      !
+      ! -- perturb the head
+      hp = hcell + DEM4
+      !
+      ! calculate the perturbed cell saturation
+      call this%csub_calc_sat(node, hp, hcellold, snnew, snold)
+      !
+      ! -- storage coefficients
+      call this%csub_sk_calc_sske(node, sske, sske0, hp, hcellold)
+      rho1 = sske0 * area * tthk0 * tled
+      rho2 = sske * area * tthk * tled
+      !
+      ! -- calculate perturbed skeletal q
+      qp = snnew * rho2 * (this%sk_gs(node) - hp + bot) -                        &
+           snold * rho1 * this%sk_es0(node)
+      !
+      ! -- calculate the derivative
+      derv = (qp - q) / DEM4
+      !
+      ! -- update hcof and rhs
+      hcof = hcof + derv
+      rhs = rhs + derv * hcell
     end if
     !
     ! -- return
     return
-  end subroutine csub_interbed_calc_sat  
+  end subroutine csub_sk_fn
   
   subroutine csub_interbed_fc(this, ib, node, area, hcell, hcellold, hcof, rhs)
 ! ******************************************************************************
@@ -4258,6 +4234,7 @@ contains
     character (len=LINELENGTH) :: errmsg
     integer(I4B) :: idelaycalc
     real(DP) :: snnew
+    real(DP) :: snold
     real(DP) :: comp
     real(DP) :: rho1
     real(DP) :: rho2
@@ -4293,7 +4270,7 @@ contains
       else
         !
         ! -- calculate cell saturation
-        call this%csub_interbed_calc_sat(ib, hcell, snnew)
+        call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
         !
         ! -- check that the delay bed should be evaluated
         idelaycalc = 0
@@ -4308,7 +4285,7 @@ contains
         !
         ! -- calculate delay interbed hcof and rhs
         if (idelaycalc /= 0) then
-          call this%csub_delay_sln(ib, hcell)
+          call this%csub_delay_sln(ib, hcell, hcellold)
           call this%csub_delay_fc(ib, hcell, hcof, rhs)
         ! -- create error message
         else
@@ -4382,6 +4359,7 @@ contains
     real(DP), intent(in) :: hcell
     real(DP), intent(in) :: hcellold
     ! -- local variables
+    real(DP) :: top
     real(DP) :: bot
     real(DP) :: znode
     real(DP) :: znode0
@@ -4404,12 +4382,10 @@ contains
     !
     ! -- calculate factor for the effective stress case
     else
+      top = this%dis%top(n)
       bot = this%dis%bot(n)
-      znode = this%csub_calc_znode(n, hcell)
-      znode0 = this%csub_calc_znode(n, hcellold)
-      if (this%time_alpha == DZERO) then
-        znode0 = znode
-      end if
+      znode = this%csub_calc_znode(top, bot, hcell)
+      znode0 = this%csub_calc_znode(top, bot, hcellold)
       es = this%sk_es(n)
       es0 = this%sk_es0(n)
       theta = this%sk_theta(n)
@@ -4541,16 +4517,7 @@ contains
     tthk = this%sk_thick(node)
     tthk0 = this%sk_thick0(node)
     ! -- aquifer saturation
-    if (this%stoiconv(node) /= 0) then
-      snold = sQuadraticSaturation(top, bot, hcellold, this%satomega)
-      snnew = sQuadraticSaturation(top, bot, hcell, this%satomega)
-    else
-      snold = DONE
-      snnew = DONE
-    end if
-    if (this%time_alpha == DZERO) then
-      snold = snnew
-    end if
+    call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
     !
     ! -- storage coefficients
     wc1 = this%gammaw * this%beta * area * tthk0 * this%sk_theta0(node) * tled
@@ -4657,11 +4624,7 @@ contains
     bot = this%dis%bot(node)
     !
     ! -- calculate cell saturation
-    call this%csub_interbed_calc_sat(ib, hcell, snnew)
-    call this%csub_interbed_calc_sat(ib, hcellold, snold)
-    if (this%time_alpha == DZERO) then
-      snold = snnew
-    end if
+    call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
     !
     !
     idelay = this%idelay(ib)
@@ -4674,7 +4637,7 @@ contains
     else
       !
       ! -- calculate cell saturation
-      call this%csub_interbed_calc_sat(ib, hcell, snnew)
+      call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
       !
       ! -- calculate contribution for each delay interbed cell
       if (this%thick(ib) > DZERO) then
@@ -4767,10 +4730,44 @@ contains
   end function csub_calc_interbed_thickness
   
   
-  function csub_calc_znode(this, node, hcell) result(znode)
+  function csub_calc_znode(this, z1, z0, z) result(znode)
 ! ******************************************************************************
-! csub_calc_znode -- Calculate elevation of the center of the saturated 
-!                    cell thickness
+! csub_calc_znode -- Calculate elevation of the node between the specified 
+!                    elevation z and the bottom elevation z0. If z is greater 
+!                    the top elevation z1, the node elevation is halfway between
+!                    the top (z1) and bottom (z0) elevations. if z is less than
+!                    the bottom elevation (z0) the node elevation is set to z0.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    class(GwfCsubType), intent(inout) :: this
+    ! -- dummy
+    real(DP), intent(in) :: z1
+    real(DP), intent(in) :: z0
+    real(DP), intent(in) :: z
+    ! -- local variables
+    real(DP) :: znode
+    real(DP) :: v
+! ------------------------------------------------------------------------------
+    if (z > z1) then
+      v = z1
+    else if (z < z0) then
+      v = z0
+    else
+      v = z
+    end if
+    znode = (v + z0) * DHALF
+    !
+    ! -- return
+    return
+  end function csub_calc_znode
+  
+  function csub_calc_adjes(this, node, es0, z0, z) result(es)
+! ******************************************************************************
+! csub_calc_adjes -- Calculate the effective stress at specified elevation z
+!                    using the provided effective stress (es0) calculated at 
+!                    elevation z0 (which is <= z)  
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -4778,28 +4775,51 @@ contains
     class(GwfCsubType), intent(inout) :: this
     ! -- dummy
     integer(I4B), intent(in) :: node
-    real(DP), intent(in) :: hcell
+    real(DP), intent(in) :: es0
+    real(DP), intent(in) :: z0
+    real(DP), intent(in) :: z
     ! -- local variables
-    real(DP) :: znode
-    real(DP) :: v
-    real(DP) :: top
-    real(DP) :: bot
+    real(DP) :: es
 ! ------------------------------------------------------------------------------
-    top = this%dis%top(node)
-    bot = this%dis%bot(node)
-    if (hcell > top) then
-      v = top
-    else if (hcell < bot) then
-      v = bot
-    else
-      v = hcell
-    end if
-    znode = (v + bot) * DHALF
+    es = es0 - (z - z0) * (this%sgs(node) - DONE)
     !
     ! -- return
     return
-  end function csub_calc_znode
-
+  end function csub_calc_adjes
+   
+  subroutine csub_calc_sat(this, node, hcell, hcellold, snnew, snold)
+! ******************************************************************************
+! csub_calc_sat -- Calculate current and previous cell saturation for a cell.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    class(GwfCsubType), intent(inout) :: this
+    integer(I4B), intent(in) :: node
+    real(DP), intent(in) :: hcell
+    real(DP), intent(in) :: hcellold
+    real(DP), intent(inout) :: snnew
+    real(DP), intent(inout) :: snold
+    ! -- local variables
+    real(DP) :: top
+    real(DP) :: bot
+! ------------------------------------------------------------------------------
+    if (this%stoiconv(node) /= 0) then
+      top = this%dis%top(node)
+      bot = this%dis%bot(node)
+      snnew = sQuadraticSaturation(top, bot, hcell, this%satomega)
+      snold = sQuadraticSaturation(top, bot, hcellold, this%satomega)
+    else
+      snnew = DONE
+      snold = DONE
+    end if
+    if (this%time_alpha == DZERO) then
+      snold = snnew
+    end if
+    !
+    ! -- return
+    return
+  end subroutine csub_calc_sat  
   
   subroutine csub_calc_sfacts(this, node, bot, znode, znode0, theta, theta0,    &
                               es, es0, fact, fact0)
@@ -4822,6 +4842,7 @@ contains
     real(DP), intent(inout) :: fact
     real(DP), intent(inout) :: fact0
     ! -- local variables
+    real(DP) :: zn0
     real(DP) :: esv
     real(DP) :: void
     real(DP) :: denom
@@ -4830,18 +4851,24 @@ contains
     ! -- initialize variables
     fact = DZERO
     fact0 = DZERO
+    zn0 = znode0
+    if (this%time_alpha == DZERO) then
+      zn0 = znode
+    end if
     !
     ! -- calculate factor for the effective stress case
     esv = this%time_alpha * es +                                             &
           (DONE - this%time_alpha) * es0
     void = this%csub_calc_void(theta)
-    denom = (DONE + void) * (esv - (znode - bot) * (this%sgs(node) - DONE))
+    denom = this%csub_calc_adjes(node, esv, bot, znode)
+    denom = denom * (DONE + void)
     if (denom /= DZERO) then
       fact = DONE / denom
     end if
     esv = es0
     void = this%csub_calc_void(theta0)
-    denom = (DONE + void) * (esv - (znode0 - bot) * (this%sgs(node) - DONE))
+    denom = this%csub_calc_adjes(node, esv, bot, zn0)
+    denom = denom * (DONE + void)
     if (denom /= DZERO) then
       fact0 = DONE / denom
     end if
@@ -4883,7 +4910,7 @@ contains
     return
   end subroutine csub_adj_matprop   
 
-  subroutine csub_delay_sln(this, ib, hcell)
+  subroutine csub_delay_sln(this, ib, hcell, hcellold)
 ! ******************************************************************************
 ! csub_delay_sln -- Calculate flow in delay interbeds.
 ! ******************************************************************************
@@ -4893,6 +4920,7 @@ contains
     class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: ib
     real(DP), intent(in) :: hcell
+    real(DP), intent(in) :: hcellold
     ! -- local variables
     integer(I4B) :: n
     integer(I4B) :: icnvg
@@ -4924,7 +4952,7 @@ contains
         iter = iter + 1
         !
         ! -- assemble coefficients
-        call this%csub_delay_assemble(ib, hcell)
+        call this%csub_delay_assemble(ib, hcell, hcellold)
         !
         ! -- solve for head change in delay interbed cells
         call csub_delay_solve(this%ndelaycells,                                 & 
@@ -4984,6 +5012,7 @@ contains
     real(DP) :: znode
     real(DP) :: dzz
     real(DP) :: z
+    real(DP) :: zr
     real(DP) :: b
     real(DP) :: dz
 ! ------------------------------------------------------------------------------
@@ -5001,19 +5030,30 @@ contains
     !
     ! -- calculate znode based on assumption that the delay bed bottom 
     !    is equal to the cell bottom
-    znode = this%csub_calc_znode(node, top)
+    znode = this%csub_calc_znode(top, bot, top)
     dz = DHALF * this%dbdz(idelay)
     if (this%idbhalfcell == 0) then
         dzz = DHALF * b
         z = znode + dzz
+        zr = dzz
     else
         z = znode + dz 
+        zr = dz
     end if
-    ! -- calculate z for each delay interbed node
+    ! -- calculate z and z relative to znode for each delay 
+    !    interbed node
     do n = 1, this%ndelaycells
+      ! z of node relative to bottom of cell
       z = z - dz
       this%dbz(n, idelay) = z
       z = z - dz
+      ! z relative to znode
+      zr = zr - dz
+      if (ABS(zr) < dz) then
+        zr = DZERO
+      end if
+      this%dbrelz(n, idelay) = zr
+      zr = zr - dz
     end do
     !
     ! -- return
@@ -5143,7 +5183,7 @@ contains
     return
   end subroutine csub_delay_calc_stress
 
-  subroutine csub_delay_calc_ssksske(this, ib, n, ssk, sske)
+  subroutine csub_delay_calc_ssksske(this, ib, n, hcell, hcellold, ssk, sske)
 ! ******************************************************************************
 ! csub_delay_calc_ssksske -- Calculate ssk and sske for a node in a delay
 !                            interbed cell.
@@ -5154,15 +5194,22 @@ contains
     class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: ib
     integer(I4B), intent(in) :: n
+    real(DP), intent(in) :: hcell
+    real(DP), intent(in) :: hcellold
     real(DP), intent(inout) :: ssk
     real(DP), intent(inout) :: sske
     ! -- local variables
     integer(I4B) :: idelay
     integer(I4B) :: node
+    real(DP) :: z1
+    real(DP) :: z0
+    real(DP) :: zcell
     real(DP) :: znode
+    real(DP) :: znode0
     real(DP) :: zbot
     real(DP) :: es
     real(DP) :: es0
+    real(DP) :: theta
     real(DP) :: void
     real(DP) :: denom
     real(DP) :: denom0
@@ -5190,32 +5237,34 @@ contains
     ! -- calculate factor for the effective stress case
     else
       node = this%nodelist(ib)
-      void = this%csub_calc_void(this%dbtheta(n, idelay))
+      theta = this%dbtheta(n, idelay)
+      void = this%csub_calc_void(theta)
       !
-      ! -- get elevation of delay node and calculate the bottom 
-      !    of the delay node
-      znode = this%dbz(n, idelay)
-      zbot = znode - DHALF * this%dbdz(idelay)
+      ! -- set top and bottom of layer and elevation of
+      !    node relative to the bottom of the cell
+      z1 = this%dis%top(node)
+      z0 = this%dis%bot(node)
+      zbot = this%dbz(n, idelay) - DHALF * this%dbdz(idelay)
       !
-      ! -- set the appropriate current and previous effective stress
+      ! -- set location of delay node relative to the center
+      !    of the cell based on current head
+      zcell = this%csub_calc_znode(z1, z0, hcell)
+      znode = zcell + this%dbrelz(n, idelay)
+      !
+      ! -- set location of delay node relative to the center
+      !    of the cell based on previous head
+      zcell = this%csub_calc_znode(z1, z0, hcellold)
+      znode0 = zcell + this%dbrelz(n, idelay)
+      !
+      ! -- set the effective stress
       es = this%dbes(n, idelay)
       es0 = this%dbes0(n, idelay)
-      es = this%time_alpha * es + (DONE - this%time_alpha) * es0
       !
-      ! -- denom and denom0 are calculate at the center of the node and
-      !    result in a mean sske and ssk for the delay cell
-      denom = (DONE + void) * (es - (znode - zbot) * (this%sgs(node) - DONE))
-      denom0 = (DONE + void) * (es0 - (znode - zbot) * (this%sgs(node) - DONE))
-      if (denom /= DZERO) then
-        f = DONE / denom
-      else
-        f = DZERO
-      end if
-      if (denom0 /= DZERO) then
-        f0 = DONE / denom0
-      else
-        f0 = DZERO
-      end if
+      ! -- calculate the compression index factors for the delay 
+      !    node relative to the center of the cell based on the 
+      !    current and previous head
+      call this%csub_calc_sfacts(node, zbot, znode, znode0, theta, theta,       &
+                                 es, es0, f, f0)
     end if
     sske = f0 * this%rci(ib)
     if (this%igeocalc == 0) then
@@ -5237,7 +5286,7 @@ contains
   end subroutine csub_delay_calc_ssksske
 
 
-  subroutine csub_delay_assemble(this, ib, hcell)
+  subroutine csub_delay_assemble(this, ib, hcell, hcellold)
 ! ******************************************************************************
 ! csub_delay_assemble -- Assemble coefficients for delay interbeds cells.
 ! ******************************************************************************
@@ -5249,6 +5298,7 @@ contains
     class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: ib
     real(DP), intent(in) :: hcell
+    real(DP), intent(in) :: hcellold
     ! -- local variables
     integer(I4B) :: n
     integer(I4B) :: node
@@ -5289,7 +5339,7 @@ contains
       h = this%dbh(n, idelay)
       !
       ! -- calculate  ssk and sske
-      call this%csub_delay_calc_ssksske(ib, n, ssk, sske)
+      call this%csub_delay_calc_ssksske(ib, n, hcell, hcellold, ssk, sske)
       !
       ! -- diagonal and right hand side
       aii = -ssk * fmult
@@ -5376,7 +5426,7 @@ contains
     return
   end subroutine csub_delay_solve
  
-  subroutine csub_delay_calc_dstor(this, ib, stoe, stoi)
+  subroutine csub_delay_calc_dstor(this, ib, hcell, hcellold, stoe, stoi)
 ! ******************************************************************************
 ! csub_delay_calc_dstor -- Calculate change in storage in a delay interbed.
 ! ******************************************************************************
@@ -5386,6 +5436,8 @@ contains
     ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: ib
+    real(DP), intent(inout) :: hcell
+    real(DP), intent(inout) :: hcellold
     real(DP), intent(inout) :: stoe
     real(DP), intent(inout) :: stoi
     ! -- local variables
@@ -5415,7 +5467,7 @@ contains
       fmult = this%dbfact * this%dbdz(idelay)
       dzhalf = DHALF * this%dbdz(idelay)
       do n = 1, this%ndelaycells
-        call this%csub_delay_calc_ssksske(ib, n, ssk, sske)
+        call this%csub_delay_calc_ssksske(ib, n, hcell, hcellold, ssk, sske)
         if (this%igeocalc == 0) then
           v1 = ssk * (this%dbpcs(n, idelay) - this%dbh(n, idelay))
           v2 = sske * (this%dbh0(n, idelay) - this%dbpcs(n, idelay))
@@ -5450,7 +5502,7 @@ contains
     return
   end subroutine csub_delay_calc_dstor
 
-  subroutine csub_delay_calc_comp(this, ib, hcell)
+  subroutine csub_delay_calc_comp(this, ib, hcell, hcellold)
 ! ******************************************************************************
 ! csub_delay_calc_comp -- Calculate compaction in a delay interbed.
 ! ******************************************************************************
@@ -5460,13 +5512,16 @@ contains
     class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: ib
     real(DP), intent(in) :: hcell
+    real(DP), intent(in) :: hcellold
     ! -- local variables
     integer(I4B) :: idelay
+    integer(I4B) :: node
     integer(I4B) :: n
     real(DP) :: comp
     real(DP) :: compi
     real(DP) :: compe
     real(DP) :: snnew
+    real(DP) :: snold
     real(DP) :: sske
     real(DP) :: ssk
     real(DP) :: fmult
@@ -5477,18 +5532,19 @@ contains
     !
     ! -- initialize variables
     idelay = this%idelay(ib)
+    node = this%nodelist(ib)
     comp = DZERO
     compi = DZERO
     compe = DZERO
     !
     ! -- calculate cell saturation
-    call this%csub_interbed_calc_sat(ib, hcell, snnew)
+    call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
     !
     !
     if (this%thick(ib) > DZERO) then
       fmult = this%dbdz(idelay) * this%dbfact
       do n = 1, this%ndelaycells
-        call this%csub_delay_calc_ssksske(ib, n, ssk, sske)
+        call this%csub_delay_calc_ssksske(ib, n, hcell, hcellold, ssk, sske)
         if (this%igeocalc == 0) then
           v1 = ssk * (this%dbpcs(n, idelay) - this%dbh(n, idelay))
           v2 = sske * (this%dbh0(n, idelay) - this%dbpcs(n, idelay))
