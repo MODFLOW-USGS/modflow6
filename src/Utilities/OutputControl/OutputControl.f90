@@ -356,7 +356,7 @@ module OutputControlModule
         enddo
         if (.not. found) then
           write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN OC OPTION: ',       &
-                                 keyword
+                                 trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
           call ustop()
