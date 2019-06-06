@@ -37,20 +37,20 @@ ${SOURCEDIR10} \
 ${SOURCEDIR11} \
 ${SOURCEDIR12} \
 ${SOURCEDIR13} \
-${SOURCEDIR14} 
+${SOURCEDIR14}
 
 .SUFFIXES: .c .cpp .f .f90 .F90 .fpp .o
 
 # Define the Fortran compile flags
 FC = gfortran
-FFLAGS = -O2 -fbacktrace 
+FFLAGS = -O2 -fbacktrace
 
 # Define the C compile flags
 CC = gcc
-CFLAGS = -O3 -D_UF 
+CFLAGS = -O3 -D_UF
 
 # Define the libraries
-SYSLIBS = 
+SYSLIBS =
 
 OBJECTS = \
 $(OBJDIR)/kind.o \
@@ -148,7 +148,7 @@ $(OBJDIR)/NumericalSolution.o \
 $(OBJDIR)/gwf3.o \
 $(OBJDIR)/GwfGwfExchange.o \
 $(OBJDIR)/SimulationCreate.o \
-$(OBJDIR)/mf6.o 
+$(OBJDIR)/mf6.o
 
 # Define task functions
 
@@ -161,23 +161,23 @@ makebin :
 
 # Define the objects that make up the program
 $(PROGRAM) : $(OBJECTS)
-	-$(FC) $(FFLAGS) -o $@ $(OBJECTS) $(SYSLIBS) -I$(OBJDIR) -J$(OBJDIR) 
+	-$(FC) $(FFLAGS) -o $@ $(OBJECTS) $(SYSLIBS) -I$(OBJDIR) -J$(OBJDIR)
 
 $(OBJDIR)/%.o : %.f
 	@mkdir -p $(@D)
-	$(FC) $(FFLAGS) -c $< -o $@ -I$(OBJDIR) -J$(OBJDIR) 
+	$(FC) $(FFLAGS) -c $< -o $@ -I$(OBJDIR) -J$(OBJDIR)
 
 $(OBJDIR)/%.o : %.f90
 	@mkdir -p $(@D)
-	$(FC) $(FFLAGS) -c $< -o $@ -I$(OBJDIR) -J$(OBJDIR) 
+	$(FC) $(FFLAGS) -c $< -o $@ -I$(OBJDIR) -J$(OBJDIR)
 
 $(OBJDIR)/%.o : %.F90
 	@mkdir -p $(@D)
-	$(FC) $(FFLAGS) -c $< -o $@ -I$(OBJDIR) -J$(OBJDIR) 
+	$(FC) $(FFLAGS) -c $< -o $@ -I$(OBJDIR) -J$(OBJDIR)
 
 $(OBJDIR)/%.o : %.fpp
 	@mkdir -p $(@D)
-	$(FC) $(FFLAGS) -c $< -o $@ -I$(OBJDIR) -J$(OBJDIR) 
+	$(FC) $(FFLAGS) -c $< -o $@ -I$(OBJDIR) -J$(OBJDIR)
 
 $(OBJDIR)/%.o : %.c
 	@mkdir -p $(@D)
@@ -189,12 +189,11 @@ $(OBJDIR)/%.o : %.cpp
 
 # Clean the object and module files and the executable
 .PHONY : clean
-clean : 
+clean :
 	-rm -rf $(OBJDIR)
 	-rm -rf $(PROGRAM)
 
 # Clean the object and module files
 .PHONY : cleanobj
-cleanobj : 
+cleanobj :
 	-rm -rf $(OBJDIR)
-
