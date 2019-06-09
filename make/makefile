@@ -148,6 +148,8 @@ $(OBJDIR)/NumericalSolution.o \
 $(OBJDIR)/gwf3.o \
 $(OBJDIR)/GwfGwfExchange.o \
 $(OBJDIR)/SimulationCreate.o \
+$(OBJDIR)/cbackmod.o \
+$(OBJDIR)/mf6sub.o \
 $(OBJDIR)/mf6.o
 
 # Define task functions

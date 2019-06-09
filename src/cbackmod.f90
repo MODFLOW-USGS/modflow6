@@ -1,7 +1,8 @@
 module cbackmod
 
 contains
+
   subroutine cback()
-    write(*, *) 'Hello'
+  !empty
   end subroutine
 end module
