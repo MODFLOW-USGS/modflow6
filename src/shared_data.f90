@@ -10,10 +10,12 @@ module shared_data
     ! Keep these values over the whole program run.
     save
 
-    integer(I4B), pointer:: int_pointer
-    real(8), pointer:: float_pointer
-    integer(I4B), target:: anint = 10
-    real(8), target:: afloat = 60.0D0
+    integer(I4B), pointer :: int_pointer
+    real(8), pointer :: float_pointer
+    integer(I4B), target :: anint = 10
+    real(8), target :: afloat = 60.0D0
+    integer(I4B), allocatable, dimension(:), target :: int_1d
+    real(8), allocatable, dimension(:), target :: float_1d
 
     contains
 
@@ -22,5 +24,7 @@ module shared_data
         int_pointer => anint
         float_pointer => afloat
     end subroutine
+
+
 
 end module shared_data
