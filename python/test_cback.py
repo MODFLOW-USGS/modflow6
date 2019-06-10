@@ -31,23 +31,22 @@ class Func:
     def __init__(self, val):
         self.val = val
         self.counter = 0
-        mf6.shared_data.init_data()
 
     def __call__(self):
         self.counter += 1
         print(f'>>> Python: Called {self.counter} time')
         print(f'>>> Python: Value {self.val}')
-        print('int before', mf6.shared_data.anint)
+        print('int before', mf6.shared_data.int_scalar)
         #input('..')
 
 
         mf6.access_memory.get_int('NPER', 'TDIS')
 
-        print('int after', mf6.shared_data.anint)
-        print('float before', mf6.shared_data.afloat)
+        print('int after', mf6.shared_data.int_scalar)
+        print('float before', mf6.shared_data.float_scalar)
         #input('..')
         mf6.access_memory.get_float('DELT', 'TDIS')
-        print('float after', mf6.shared_data.afloat)
+        print('float after', mf6.shared_data.float_scalar)
         mf6.access_memory.get_int_2d('LRCH', 'SLN_1', ncol=3, nrow=500)
         lrch = mf6.shared_data.int_2d
         print('LRCH', lrch.shape)

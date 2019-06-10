@@ -15,7 +15,7 @@ use shared_data
         integer(I4B), pointer :: ipointer => NULL()
 
         call mem_setptr(ipointer, name, origin)
-        int_pointer = ipointer
+        int_scalar = ipointer
     end subroutine get_int
 
     subroutine set_int(name, origin, value)
@@ -33,7 +33,7 @@ use shared_data
         real(DP), pointer :: fpointer => NULL()
 
         call mem_setptr(fpointer, name, origin)
-        afloat = fpointer + 0.0
+        float_scalar = fpointer
     end subroutine get_float
 
     subroutine set_float(name, origin, value)
@@ -42,7 +42,7 @@ use shared_data
         real(8), target:: value
         real(DP), pointer :: fpointer => NULL()
         call mem_setptr(fpointer, name, origin)
-        fpointer = value + 0.0
+        fpointer = value
     end subroutine set_float
 
     subroutine get_int_1d(name, origin, dim)
