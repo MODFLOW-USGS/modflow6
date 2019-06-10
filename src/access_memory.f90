@@ -97,4 +97,62 @@ use shared_data
         fvalue = value
     end subroutine set_float_1d
 
+    subroutine get_int_2d(name, origin, ncol, nrow)
+        character(len=*), intent(in) :: name
+        character(len=*), intent(in) :: origin
+        integer(I4B):: ncol
+        integer(I4B):: nrow
+        integer(I4B), dimension(:, :), pointer, contiguous:: ivalue => NULL()
+        if (allocated(int_2d) .and.                                            &
+            ((size(int_2d, dim=1) /= ncol) .and.                               &
+             (size(int_2d, dim=2) /= nrow)))                                   &
+        then
+            deallocate(int_2d)
+        endif
+        if (.not. allocated(int_2d)) then
+           allocate (int_2d(ncol, nrow))
+        endif
+
+        call mem_setptr(ivalue, name, origin)
+        int_2d = ivalue
+    end subroutine get_int_2d
+
+    subroutine set_int_2d(name, origin, value)
+        character(len=*), intent(in) :: name
+        character(len=*), intent(in) :: origin
+        integer(4), dimension(:, :), target:: value
+        integer(I4B), dimension(:, :), pointer, contiguous:: ivalue => NULL()
+        call mem_setptr(ivalue, name, origin)
+        ivalue = value
+    end subroutine set_int_2d
+
+    subroutine get_float_2d(name, origin, ncol, nrow)
+        character(len=*), intent(in) :: name
+        character(len=*), intent(in) :: origin
+        integer(I4B):: ncol
+        integer(I4B):: nrow
+        real(DP), dimension(:, :), pointer, contiguous:: fvalue => NULL()
+        if (allocated(float_2d) .and.                                          &
+            ((size(float_2d, dim=1) /= ncol) .and.                             &
+             (size(float_2d, dim=2) /= nrow)))                                 &
+        then
+            deallocate(int_2d)
+        endif
+        if (.not. allocated(int_2d)) then
+           allocate (int_2d(ncol, nrow))
+        endif
+
+        call mem_setptr(fvalue, name, origin)
+        float_2d = fvalue
+    end subroutine get_float_2d
+
+    subroutine set_float_2d(name, origin, value)
+        character(len=*), intent(in) :: name
+        character(len=*), intent(in) :: origin
+        real(8), dimension(:, :), target:: value
+        real(DP), dimension(:, :), pointer, contiguous:: fvalue => NULL()
+        call mem_setptr(fvalue, name, origin)
+        fvalue = value
+    end subroutine set_float_2d
+
 end module access_memory

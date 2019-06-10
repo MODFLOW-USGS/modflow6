@@ -48,13 +48,29 @@ class Func:
         #input('..')
         mf6.access_memory.get_float('DELT', 'TDIS')
         print('float after', mf6.shared_data.afloat)
+        mf6.access_memory.get_int_2d('LRCH', 'SLN_1', ncol=3, nrow=500)
+        lrch = mf6.shared_data.int_2d
+        print('LRCH', lrch.shape)
+        print(lrch[0,:20])
+        lrch[0, 4:10] = 22
+        mf6.access_memory.set_int_2d('LRCH', 'SLN_1', lrch)
+        mf6.access_memory.get_int_2d('LRCH', 'SLN_1', ncol=3, nrow=500)
+        print(mf6.shared_data.int_2d[0,:20])
+
+        mf6.access_memory.get_float_2d('AUXVAR', 'GWF_1 WEL', ncol=3, nrow=5)
+        auxvar = mf6.shared_data.float_2d
+        print('AUXVAR', auxvar)
+        auxvar[1, 1] = 17.8
+        auxvar[2, 2] = 7.9
+        mf6.access_memory.set_float_2d('AUXVAR', 'GWF_1 WEL', auxvar)
+
         if self.counter > 3:
             mf6.access_memory.get_int_1d('NSTP', 'TDIS', 4)
             print('NSTP', mf6.shared_data.int_1d)
             #input('...')
             mf6.access_memory.get_float_1d('PERLEN', 'TDIS', 4)
             print('PERLEN', mf6.shared_data.float_1d)
-            input('...')
+            #input('...')
             #mf6.access_memory.set_int('NPER', 'TDIS', 5)
             mf6.access_memory.set_float('DELT', 'TDIS', 0.05)
         if self.counter > 5:

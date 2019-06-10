@@ -16,6 +16,8 @@ module shared_data
     real(8), target :: afloat = 60.0D0
     integer(I4B), allocatable, dimension(:), target :: int_1d
     real(8), allocatable, dimension(:), target :: float_1d
+    integer(I4B), allocatable, dimension(:, :), target :: int_2d
+    real(8), allocatable, dimension(:, :), target :: float_2d
 
     contains
 
