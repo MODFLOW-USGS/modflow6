@@ -112,7 +112,10 @@ ORDER = [
 def compile_ext(src=SRC, cmd=CMD, order=tuple(ORDER)):
     """Compile with `f2py`
     """
-    pyf_cmd = [cmd, '--overwrite-signature', '../src/mf6sub.f90', '-m', 'mf6',
+    pyf_cmd = [cmd, '--overwrite-signature', '../src/mf6sub.f90',
+               '../src/Utilities/Constants.f90',
+               '../src/Model/Geometry/BaseGeometry.f90',
+               '-m', 'mf6',
                '-h', 'mf6.pyf']
     compile_cmd = [cmd, '--f90flags=-O2 -fbacktrace', '-c', 'mf6.pyf']
 
