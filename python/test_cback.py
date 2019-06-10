@@ -8,7 +8,7 @@ import sys
 
 import numpy as np
 
-from fortran_io import get_value
+from fortran_io import get_value, set_value
 import mf6
 
 
@@ -41,24 +41,28 @@ class Func:
             lrch = get_value('LRCH', 'SLN_1')
             print('LRCH', lrch.shape)
             print(lrch[0, :20])
-            # input('...')
             lrch[0, 4:10] = 22
-            mf6.access_memory.set_int_2d('LRCH', 'SLN_1', lrch)
+            set_value('LRCH', 'SLN_1', lrch)
             print(get_value('LRCH', 'SLN_1')[0, :20])
             auxvar = get_value('AUXVAR', 'GWF_1 WEL')
             print('AUXVAR', auxvar)
             auxvar[1, 1] = 17.8
             auxvar[2, 2] = 7.9
-            mf6.access_memory.set_float_2d('AUXVAR', 'GWF_1 WEL', auxvar)
+            set_value('AUXVAR', 'GWF_1 WEL', auxvar)
             print('NSTP', get_value('NSTP', 'TDIS'))
             print('PERLEN', get_value('PERLEN', 'TDIS'))
-            # input('...')
-            # mf6.access_memory.set_int('NPER', 'TDIS', 5)
-            mf6.access_memory.set_float('DELT', 'TDIS', 0.05)
+            # Uncommenting the next line leads to the error:
+            #
+            # Unexpected end of file reached.
+            # ERROR OCCURRED WHILE READING FILE:
+            # AdvGW_tidal.oc
+            # --> IT WORKS!
+            # set_value('NPER', 'TDIS', 5)
+            set_value('DELT', 'TDIS', 0.05)
         if self.counter > 5:
-            mf6.access_memory.set_int_1d('NSTP', 'TDIS', [2, 110, 111, 112])
+            set_value('NSTP', 'TDIS', [2, 110, 111, 112])
             data = np.array([1.2, 9.8, 11.7, 10.8])
-            mf6.access_memory.set_float_1d('PERLEN', 'TDIS', data)
+            set_value('PERLEN', 'TDIS', data)
 
 
 if __name__ == '__main__':

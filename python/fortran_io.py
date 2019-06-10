@@ -76,6 +76,16 @@ READING_FUNCTIONS = {
     }
 
 
+WRITING_FUNCTIONS = {
+    'int_scalar': mf6.access_memory.set_int,
+    'float_scalar': mf6.access_memory.set_float,
+    'int_1d': mf6.access_memory.set_int_1d,
+    'float_1d': mf6.access_memory.set_float_1d,
+    'int_2d': mf6.access_memory.set_int_2d,
+    'float_2d': mf6.access_memory.set_float_2d,
+    }
+
+
 def get_value(name, origin):
     """Get the value for any dimension and data type.
     """
@@ -101,3 +111,12 @@ def get_value(name, origin):
         return func(name, origin, ncol, nrow)
     else:
         raise TypeError(f'Data type {data_type} not supported.')
+
+
+def set_value(name, origin, value):
+    """Set the value of any dimension and data type.
+    """
+    entry = MF6_DATA_TYPE_TABLE[(name, origin)]
+    data_type = entry['data_type']
+    func = WRITING_FUNCTIONS[data_type]
+    func(name, origin, value)
