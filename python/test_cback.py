@@ -8,11 +8,11 @@ import sys
 
 import numpy as np
 
+from fortran_io import get_value
 import mf6
 
 
 sys.path.insert(0, os.getcwd())
-
 
 
 class Func:
@@ -35,52 +35,30 @@ class Func:
     def __call__(self):
         self.counter += 1
         print(f'>>> Python: Called {self.counter} time')
-        print(f'>>> Python: Value {self.val}')
-        print('int before', mf6.shared_data.int_scalar)
-        #input('..')
-
-
-        mf6.access_memory.get_int('NPER', 'TDIS')
-
-        print('int after', mf6.shared_data.int_scalar)
-        print('float before', mf6.shared_data.float_scalar)
-        #input('..')
-        mf6.access_memory.get_float('DELT', 'TDIS')
-        print('float after', mf6.shared_data.float_scalar)
-        mf6.access_memory.get_int_2d('LRCH', 'SLN_1', ncol=3, nrow=500)
-        lrch = mf6.shared_data.int_2d
-        print('LRCH', lrch.shape)
-        print(lrch[0,:20])
-        lrch[0, 4:10] = 22
-        mf6.access_memory.set_int_2d('LRCH', 'SLN_1', lrch)
-        mf6.access_memory.get_int_2d('LRCH', 'SLN_1', ncol=3, nrow=500)
-        print(mf6.shared_data.int_2d[0,:20])
-
-        mf6.access_memory.get_float_2d('AUXVAR', 'GWF_1 WEL', ncol=3, nrow=5)
-        auxvar = mf6.shared_data.float_2d
-        print('AUXVAR', auxvar)
-        auxvar[1, 1] = 17.8
-        auxvar[2, 2] = 7.9
-        mf6.access_memory.set_float_2d('AUXVAR', 'GWF_1 WEL', auxvar)
-
         if self.counter > 3:
-            mf6.access_memory.get_int_1d('NSTP', 'TDIS', 4)
-            print('NSTP', mf6.shared_data.int_1d)
-            #input('...')
-            mf6.access_memory.get_float_1d('PERLEN', 'TDIS', 4)
-            print('PERLEN', mf6.shared_data.float_1d)
-            #input('...')
-            #mf6.access_memory.set_int('NPER', 'TDIS', 5)
+            print('int', get_value('NPER', 'TDIS'))
+            print('float', get_value('DELT', 'TDIS'))
+            lrch = get_value('LRCH', 'SLN_1')
+            print('LRCH', lrch.shape)
+            print(lrch[0, :20])
+            # input('...')
+            lrch[0, 4:10] = 22
+            mf6.access_memory.set_int_2d('LRCH', 'SLN_1', lrch)
+            print(get_value('LRCH', 'SLN_1')[0, :20])
+            auxvar = get_value('AUXVAR', 'GWF_1 WEL')
+            print('AUXVAR', auxvar)
+            auxvar[1, 1] = 17.8
+            auxvar[2, 2] = 7.9
+            mf6.access_memory.set_float_2d('AUXVAR', 'GWF_1 WEL', auxvar)
+            print('NSTP', get_value('NSTP', 'TDIS'))
+            print('PERLEN', get_value('PERLEN', 'TDIS'))
+            # input('...')
+            # mf6.access_memory.set_int('NPER', 'TDIS', 5)
             mf6.access_memory.set_float('DELT', 'TDIS', 0.05)
         if self.counter > 5:
             mf6.access_memory.set_int_1d('NSTP', 'TDIS', [2, 110, 111, 112])
-            mf6.access_memory.set_float_1d('PERLEN', 'TDIS',
-                np.array([1.2, 9.8, 11.7, 10.8]))
-
-        #print('maxobstypes', mf6.constantsmodule.maxobstypes)
-        #print('basegeometrymodule', mf6.basegeometrymodule.area_sat)
-
-
+            data = np.array([1.2, 9.8, 11.7, 10.8])
+            mf6.access_memory.set_float_1d('PERLEN', 'TDIS', data)
 
 
 if __name__ == '__main__':
