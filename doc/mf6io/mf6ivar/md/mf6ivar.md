@@ -94,8 +94,8 @@
 | GWF | DIS | DIMENSIONS | NLAY | INTEGER | is the number of layers in the model grid. |
 | GWF | DIS | DIMENSIONS | NROW | INTEGER | is the number of rows in the model grid. |
 | GWF | DIS | DIMENSIONS | NCOL | INTEGER | is the number of columns in the model grid. |
-| GWF | DIS | GRIDDATA | DELR | DOUBLE PRECISION (NCOL) | is the is the column spacing in the row direction. |
-| GWF | DIS | GRIDDATA | DELC | DOUBLE PRECISION (NROW) | is the is the row spacing in the column direction. |
+| GWF | DIS | GRIDDATA | DELR | DOUBLE PRECISION (NCOL) | is the column spacing in the row direction. |
+| GWF | DIS | GRIDDATA | DELC | DOUBLE PRECISION (NROW) | is the row spacing in the column direction. |
 | GWF | DIS | GRIDDATA | TOP | DOUBLE PRECISION (NCOL, NROW) | is the top elevation for each cell in the top model layer. |
 | GWF | DIS | GRIDDATA | BOTM | DOUBLE PRECISION (NCOL, NROW, NLAY) | is the bottom elevation for each cell. |
 | GWF | DIS | GRIDDATA | IDOMAIN | INTEGER (NCOL, NROW, NLAY) | is an optional array that characterizes the existence status of a cell.  If the IDOMAIN array is not specified, then all model cells exist within the solution.  If the IDOMAIN value for a cell is 0, the cell does not exist in the simulation.  Input and output values will be read and written for the cell, but internal to the program, the cell is excluded from the solution.  If the IDOMAIN value for a cell is 1, the cell exists in the simulation.  If the IDOMAIN value for a cell is -1, the cell does not exist in the simulation.  Furthermore, the first existing cell above will be connected to the first existing cell below.  This type of cell is referred to as a ``vertical pass through'' cell. |
