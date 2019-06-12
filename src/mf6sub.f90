@@ -1,3 +1,11 @@
+subroutine mf6_sub_outer()
+
+  use :: KindModule, only: cback
+
+  call mf6_sub(cback)
+
+end subroutine mf6_sub_outer
+
 subroutine mf6_sub(cback)
 ! ******************************************************************************
 ! Main MODFLOW Version 6 program.

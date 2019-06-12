@@ -1,11 +1,6 @@
 !
 program mf6
 
-  call mf6_sub(cback)
+  call mf6_sub_outer()
 
 end program mf6
-
-subroutine cback()
-!empty
-
-end subroutine cback
