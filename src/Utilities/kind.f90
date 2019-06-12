@@ -1,15 +1,15 @@
 module KindModule
-  
+
   implicit none
 
   public
-  
+
   integer, parameter :: DP = KIND(1.0D0)                                         ! Precision of all real variables
   integer, parameter :: I4B = SELECTED_INT_KIND(8)                               ! Integer kind
   integer, parameter :: I8B = SELECTED_INT_KIND(18)                              ! Long integer kind
 
   contains
-  
+
   subroutine write_kindinfo(iout)
 ! ******************************************************************************
 ! write_kindinfo -- write out information about the kind variables
@@ -35,5 +35,10 @@ module KindModule
     ! -- Return
     return
   end subroutine write_kindinfo
-  
+
+  subroutine cback()
+  !empty
+
+  end subroutine cback
+
 end module KindModule

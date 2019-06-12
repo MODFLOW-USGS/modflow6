@@ -1,7 +1,7 @@
 !
 program mf6
 
-  use :: cbackmod
+  use :: KindModule, only: cback
 
   call mf6_sub(cback)
 
