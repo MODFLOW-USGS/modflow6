@@ -36,9 +36,4 @@ module KindModule
     return
   end subroutine write_kindinfo
 
-  subroutine cback()
-  !empty
-
-  end subroutine cback
-
 end module KindModule
