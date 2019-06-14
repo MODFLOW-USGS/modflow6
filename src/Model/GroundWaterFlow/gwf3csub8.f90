@@ -228,7 +228,9 @@ module GwfCsubModule
     ! -- interbed methods
     procedure, private :: csub_interbed_set_initial
     procedure, private :: csub_interbed_fc
+    procedure, private :: csub_interbed_fn
     procedure, private :: csub_interbed_wcomp_fc
+    procedure, private :: csub_interbed_wcomp_fn
     !
     ! -- no-delay interbed methods
     procedure, private :: csub_nodelay_update
@@ -3978,7 +3980,7 @@ contains
   subroutine csub_fn(this, kiter, nodes, hold, hnew, nja, njasln, amat, &
                      idxglo, rhs)
 ! ******************************************************************************
-! sto_fn -- Fill the solution amat and rhs with storage contribution newton
+! csub_fn -- Fill the solution amat and rhs with csub contribution newton
 !               term
 ! ******************************************************************************
 !
@@ -3999,6 +4001,7 @@ contains
     ! -- local
     integer(I4B) :: node
     integer(I4B) :: idiag
+    integer(I4B) :: ib
     real(DP) :: tled
     real(DP) :: area
     real(DP) :: hcof
@@ -4017,12 +4020,11 @@ contains
         ! -- skip inactive cells
         if (this%ibound(node) < 1) cycle
         !
-        ! -- skip non-convertible cells
-        if (this%stoiconv(node) == 0) cycle
-        !
         ! -- calculate coarse-grained skeletal storage newton terms
-        call this%csub_sk_fn(node, tled, area,                                   &
-                             hnew(node), hold(node), hcof, rhsterm)
+        !if (this%stoiconv(node) /= 0) then
+          call this%csub_sk_fn(node, tled, area,                                &
+                               hnew(node), hold(node), hcof, rhsterm)
+        !end if
         !
         ! -- add skeletal storage newton terms to amat and rhs for 
         !   skeletal storage
@@ -4031,13 +4033,51 @@ contains
         !
         ! -- calculate coarse-grained skeletal water compressibility storage 
         !    newton terms
-        call this%csub_sk_wcomp_fn(node, tled, area, hnew(node), hcof, rhsterm)
-        !
-        ! -- add water compression storage newton terms to amat and rhs for 
-        !    skeletal storage
-        amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
-        rhs(node) = rhs(node) + rhsterm
+        if (this%gammaw * this%beta /= DZERO) then
+          call this%csub_sk_wcomp_fn(node, tled, area, hnew(node), hcof, rhsterm)
+          !
+          ! -- add water compression storage newton terms to amat and rhs for 
+          !    skeletal storage
+          amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
+          rhs(node) = rhs(node) + rhsterm
+        end if
       end do
+      !
+      ! -- interbed storage
+      if (this%ninterbeds /= 0) then
+        !
+        ! -- calculate the interbed newton terms for the 
+        !    groundwater flow equation
+        do ib = 1, this%ninterbeds
+          node = this%nodelist(ib)
+          !
+          ! -- skip inactive cells
+          if (this%ibound(node) < 1) cycle
+          !
+          ! -- calculate interbed newton terms
+          !if (this%stoiconv(node) /= 0) then
+            idiag = this%dis%con%ia(node)
+            area = this%dis%get_area(node)
+            !call this%csub_interbed_fn(ib, node, area, hnew(node), hold(node),  &
+            !                           hcof, rhsterm)
+            !!
+            !! -- add interbed newton terms to amat and rhs
+            !amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
+            !rhs(node) = rhs(node) + rhsterm
+          !end if
+          !
+          ! -- calculate interbed water compressibility terms
+          if (this%gammaw * this%beta /= DZERO) then
+            !call this%csub_interbed_wcomp_fn(ib, node, tled, area,              &
+            !                                 hnew(node), hold(node),            &
+            !!                                 hcof, rhsterm)
+            !!
+            !! -- add interbed water compression newton terms to amat and rhs
+            !amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
+            !rhs(node) = rhs(node) + rhsterm
+          end if
+        end do
+      end if
     end if    
     !
     ! -- return
@@ -4153,7 +4193,7 @@ contains
     tthk0 = this%sk_thick0(node)
     !
     ! 
-    if (this%igeocalc == 0) then
+    if (this%igeocalc == 0 .and. this%iupdatematprop == 0) then
       !
       ! -- calculate saturation derivitive
       derv = sQuadraticSaturationDerivative(top, bot, hcell)    
@@ -4168,21 +4208,6 @@ contains
       ! -- calculate rhs term
       rhs = hcof * hcell
     else
-      ! calculate cell saturation
-      call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
-      !
-      ! -- storage coefficients
-      call this%csub_sk_calc_sske(node, sske, sske0, hcell, hcellold)
-      rho1 = sske0 * area * tthk0 * tled
-      rho2 = sske * area * tthk * tled
-      !
-      ! -- update hcof and rhs
-      hcof = rho2 * snnew
-      rhs = snnew * rho2 * hcell
-      !
-      ! -- calculate skeletal q
-      q = snnew * rho2 * (this%sk_gs(node) - hcell + bot) -                      &
-          snold * rho1 * this%sk_es0(node)
       !
       ! -- perturb the head
       hp = hcell + DEM4
@@ -4196,15 +4221,35 @@ contains
       rho2 = sske * area * tthk * tled
       !
       ! -- calculate perturbed skeletal q
-      qp = snnew * rho2 * (this%sk_gs(node) - hp + bot) -                        &
-           snold * rho1 * this%sk_es0(node)
+      if (this%igeocalc == 0) then
+        qp = snnew * rho2 * hp - snold * rho1 * hcellold
+      else
+        qp = snnew * rho2 * (this%sk_gs(node) - hp + bot) -                      &
+             snold * rho1 * this%sk_es0(node)
+      end if
+      !
+      ! calculate cell saturation
+      call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
+      !
+      ! -- storage coefficients
+      call this%csub_sk_calc_sske(node, sske, sske0, hcell, hcellold)
+      rho1 = sske0 * area * tthk0 * tled
+      rho2 = sske * area * tthk * tled
+      !
+      ! -- calculate skeletal q
+      if (this%igeocalc == 0) then
+        q = snnew * rho2 * hcell - snold * rho1 * hcellold
+      else
+        q = snnew * rho2 * (this%sk_gs(node) - hcell + bot) -                    &
+            snold * rho1 * this%sk_es0(node)
+      end if
       !
       ! -- calculate the derivative
       derv = (qp - q) / DEM4
       !
       ! -- update hcof and rhs
-      hcof = hcof + derv
-      rhs = rhs + derv * hcell
+      hcof = rho2 * snnew + derv
+      rhs = snnew * rho2 * hcell + derv * hcell
     end if
     !
     ! -- return
@@ -4273,14 +4318,26 @@ contains
         call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
         !
         ! -- check that the delay bed should be evaluated
-        idelaycalc = 0
-        if (this%stoiconv(node) /= 0) then
-          top = this%dis%bot(node) + this%thick(ib)
-        else
+        !idelaycalc = 0
+        !if (this%stoiconv(node) /= 0) then
+        !  top = this%dis%bot(node) + this%thick(ib)
+        !else
+        !  top = this%dis%top(node)
+        !end if
+        !if (hcell >= top) then
+        !  idelaycalc = 1
+        !end if
+        idelaycalc = 1
+        if (this%stoiconv(node) == 0) then
           top = this%dis%top(node)
-        end if
-        if (hcell >= top) then
-          idelaycalc = 1
+          if (hcell < top) then
+            idelaycalc = 0
+          end if
+        else
+          top = this%dis%bot(node) + this%thick(ib)
+          if (hcell < top) then
+            idelaycalc = 0
+          end if
         end if
         !
         ! -- calculate delay interbed hcof and rhs
@@ -4290,18 +4347,25 @@ contains
         ! -- create error message
         else
           call this%dis%noder_to_string(node, cellid)
-          if (this%stoiconv(node) /= 0) then
-            write(errmsg,'(4x,a,1x,g0,1x,a,1x,a,1x,a,1x,g0,1x,a,1x,i0)')         &
-              '****ERROR. HEAD (', hcell, ') IN CONVERTIBLE CELL (',             &
-              trim(adjustl(cellid)), ') DROPPED BELOW THE TOP OF THE INTERBED (',&
-              top, ') FOR DELAY INTERBED ', ib
-          else
+          !if (this%stoiconv(node) /= 0) then
+          !  write(errmsg,'(4x,a,1x,g0,1x,a,1x,a,1x,a,1x,g0,1x,a,1x,i0)')         &
+          !    '****ERROR. HEAD (', hcell, ') IN CONVERTIBLE CELL (',             &
+          !    trim(adjustl(cellid)), ') DROPPED BELOW THE TOP OF THE INTERBED (',&
+          !    top, ') FOR DELAY INTERBED ', ib
+          !else
+          !  write(errmsg,'(4x,a,1x,g0,1x,a,1x,a,1x,a,1x,g0,1x,a,1x,i0)')         &
+          !    '****ERROR. HEAD (', hcell, ') IN NON-CONVERTIBLE CELL (',         &
+          !    trim(adjustl(cellid)), ') DROPPED BELOW THE TOP OF THE CELL (',    &
+          !    top, ') FOR DELAY INTERBED ', ib
+          !end if
+          !call store_error(errmsg)
+          if (this%stoiconv(node) == 0) then
             write(errmsg,'(4x,a,1x,g0,1x,a,1x,a,1x,a,1x,g0,1x,a,1x,i0)')         &
               '****ERROR. HEAD (', hcell, ') IN NON-CONVERTIBLE CELL (',         &
               trim(adjustl(cellid)), ') DROPPED BELOW THE TOP OF THE CELL (',    &
               top, ') FOR DELAY INTERBED ', ib
+            call store_error(errmsg)
           end if
-          call store_error(errmsg)
         end if
         f = area * this%rnb(ib) * snnew
       end if
@@ -4312,6 +4376,145 @@ contains
     ! -- return
     return
   end subroutine csub_interbed_fc
+  
+  subroutine csub_interbed_fn(this, ib, node, area, hcell, hcellold, hcof, rhs)
+! ******************************************************************************
+! csub_interbed_fn -- Formulate interbed newton terms
+! Subroutine: (1) skip if no interbeds
+!             (2) calculate hcof and rhs
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    implicit none
+    class(GwfCsubType) :: this
+    integer(I4B),intent(in) :: ib
+    integer(I4B),intent(in) :: node
+    real(DP), intent(in) :: area
+    real(DP), intent(in) :: hcell
+    real(DP), intent(in) :: hcellold
+    real(DP), intent(inout) :: hcof
+    real(DP), intent(inout) :: rhs
+    ! locals
+    character(len=20) :: cellid
+    character (len=LINELENGTH) :: errmsg
+    integer(I4B) :: idelaycalc
+    real(DP) :: hcofn
+    real(DP) :: rhsn
+    real(DP) :: f
+    real(DP) :: hcellp
+    real(DP) :: q
+    real(DP) :: qp
+    real(DP) :: derv
+    real(DP) :: snnew
+    real(DP) :: snold
+    real(DP) :: comp
+    real(DP) :: rho1
+    real(DP) :: rho2
+    real(DP) :: top
+! ------------------------------------------------------------------------------
+!
+! -- initialize variables
+    rhs = DZERO
+    hcof = DZERO
+    !
+    ! -- skip inactive and constant head cells
+    if (this%ibound(node) > 0) then
+      !
+      ! -- perturb the gwf head
+      hcellp = hcell + DEM4
+      if (this%idelay(ib) == 0) then
+        f = area
+        !
+        ! -- head-based formulation with fixed material properties
+        if (this%igeocalc == 0 .and. this%iupdatematprop == 0) then
+        !
+        ! -- effective-stress formulation or head-based formulation
+        !    with variable material properties
+        else
+          !
+          ! -- calculate no-delay interbed rho1 and rho2
+          call this%csub_nodelay_fc(ib, hcellp, hcellold, rho1, hcofn, rhsn)
+          !
+          ! -- calculate no-delay interbed q
+          qp = hcofn * hcellp - rhsn
+          !
+          ! -- calculate no-delay interbed rho1 and rho2
+          call this%csub_nodelay_fc(ib, hcell, hcellold, rho1, hcofn, rhsn)
+          !
+          ! -- calculate no-delay interbed q
+          q = hcofn * hcell - rhsn
+          !
+          ! -- calculate the derivative
+          derv = f * (qp - q) / DEM4
+          !
+          ! -- update hcod and rhs
+          hcof = f * hcofn + derv
+          rhs = f * hcofn * hcell + derv * hcell
+        end if
+      else
+        !
+        ! -- calculate cell saturation
+        call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
+        !
+        ! -- calculate factor
+        f = area * this%rnb(ib) * snnew
+        !
+        ! -- check that the delay bed should be evaluated
+        idelaycalc = 1
+        if (this%stoiconv(node) == 0) then
+          top = this%dis%top(node)
+          if (hcell < top) then
+            idelaycalc = 0
+          end if
+        else
+          top = this%dis%bot(node) + this%thick(ib)
+          if (hcell < top) then
+            idelaycalc = 0
+          end if
+        end if
+        !
+        ! -- calculate newton terms if delay bed is not stranded
+        if (idelaycalc /= 0) then
+          !
+          ! -- head-based formulation with fixed material properties
+          if (this%igeocalc == 0 .and. this%iupdatematprop == 0) then
+          !
+          ! -- effective-stress formulation or head-based formulation
+          !    with variable material properties
+          else
+            !!
+            !! -- calculate delay interbed hcof and rhs
+            !call this%csub_delay_sln(ib, hcellp, hcellold)
+            !call this%csub_delay_fc(ib, hcellp, hcofn, rhsn)
+            !!
+            !! -- calculate no-delay interbed q
+            !qp = hcofn * hcellp - rhsn
+            !!
+            !! -- calculate cell saturation
+            !call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
+            !!
+            !! -- calculate delay interbed hcof and rhs
+            !call this%csub_delay_sln(ib, hcell, hcellold)
+            !call this%csub_delay_fc(ib, hcell, hcofn, rhsn)
+            !!
+            !! -- calculate no-delay interbed q
+            !q = hcofn * hcell - rhsn
+            !!
+            !! -- calculate the derivative
+            !derv = f * (qp - q) / DEM4
+            !!
+            !! -- update hcod and rhs
+            !hcof = f * hcofn + derv
+            !rhs = f * hcofn * hcell + derv * hcell
+          end if
+        end if
+      end if
+    end if
+    !
+    ! -- return
+    return
+  end subroutine csub_interbed_fn
 
   subroutine define_listlabel(this)
 ! ******************************************************************************
@@ -4663,7 +4866,88 @@ contains
     ! -- return
     return
   end subroutine csub_interbed_wcomp_fc
+
   
+  subroutine csub_interbed_wcomp_fn(this, ib, node, tled, area,                 &
+                                      hcell, hcellold, hcof, rhs)
+! ******************************************************************************
+! csub_interbed_wcomp_fn -- Calculate water compressibility term for an 
+!                           interbed.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    class(GwfCsubType), intent(inout) :: this
+    integer(I4B),intent(in) :: ib
+    integer(I4B),intent(in) :: node
+    real(DP), intent(in) :: tled
+    real(DP), intent(in) :: area
+    real(DP), intent(in) :: hcell
+    real(DP), intent(in) :: hcellold
+    real(DP), intent(inout) :: hcof
+    real(DP), intent(inout) :: rhs
+    ! locals
+    integer(I4B) :: n
+    integer(I4B) :: idelay
+    real(DP) :: top
+    real(DP) :: bot
+    real(DP) :: snold
+    real(DP) :: snnew
+    real(DP) :: f
+    real(DP) :: fmult
+    real(DP) :: dz
+    real(DP) :: wc1
+    real(DP) :: wc2
+! ------------------------------------------------------------------------------
+!
+! -- initialize variables
+    rhs = DZERO
+    hcof = DZERO
+    !
+    ! -- aquifer elevations and thickness
+    top = this%dis%top(node)
+    bot = this%dis%bot(node)
+    !
+    ! -- calculate cell saturation
+    call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
+    !
+    !
+    idelay = this%idelay(ib)
+    f = this%gammaw * this%beta * area * tled
+    if (idelay == 0) then
+      wc1 = f * this%theta0(ib) * this%thick0(ib)
+      wc2 = f * this%theta(ib) * this%thick(ib)
+      hcof = -wc2 * snnew
+      rhs = -wc1 * snold * hcellold
+    else
+      !
+      ! -- calculate cell saturation
+      call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
+      !
+      ! -- calculate contribution for each delay interbed cell
+      if (this%thick(ib) > DZERO) then
+        dz = this%dbfact * this%dbdz(idelay)
+        do n = 1, this%ndelaycells
+          fmult = DONE
+          !
+          ! -- scale factor for half-cell problem
+          if (this%idbhalfcell /= 0) then
+            if (n == 1) then
+              fmult = DHALF
+            end if
+          end if
+          wc2 = fmult * f * dz * this%dbtheta(n, idelay)
+          wc1 = wc2
+          rhs = rhs - (wc1 * snold * this%dbh0(n, idelay) -                     &
+                       wc2 * snnew * this%dbh(n, idelay))
+        end do
+        rhs = rhs * this%rnb(ib) * snnew
+      end if
+    end if
+    !
+    ! -- return
+    return
+  end subroutine csub_interbed_wcomp_fn  
   
   function csub_calc_void(this, theta) result(void)
 ! ******************************************************************************
