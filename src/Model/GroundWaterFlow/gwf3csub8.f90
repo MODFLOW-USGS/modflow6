@@ -4058,12 +4058,12 @@ contains
           !if (this%stoiconv(node) /= 0) then
             idiag = this%dis%con%ia(node)
             area = this%dis%get_area(node)
-            !call this%csub_interbed_fn(ib, node, area, hnew(node), hold(node),  &
-            !                           hcof, rhsterm)
-            !!
-            !! -- add interbed newton terms to amat and rhs
-            !amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
-            !rhs(node) = rhs(node) + rhsterm
+            call this%csub_interbed_fn(ib, node, area, hnew(node), hold(node),  &
+                                       hcof, rhsterm)
+            !
+            ! -- add interbed newton terms to amat and rhs
+            amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
+            rhs(node) = rhs(node) + rhsterm
           !end if
           !
           ! -- calculate interbed water compressibility terms
@@ -4417,6 +4417,9 @@ contains
 ! -- initialize variables
     rhs = DZERO
     hcof = DZERO
+    rhsn = DZERO
+    hcofn = DZERO
+    derv = DZERO
     !
     ! -- skip inactive and constant head cells
     if (this%ibound(node) > 0) then
@@ -4436,21 +4439,17 @@ contains
           ! -- calculate no-delay interbed rho1 and rho2
           call this%csub_nodelay_fc(ib, hcellp, hcellold, rho1, hcofn, rhsn)
           !
-          ! -- calculate no-delay interbed q
-          qp = hcofn * hcellp - rhsn
+          ! -- calculate perturbed no-delay interbed q
+          qp = rhsn - hcofn * hcellp 
           !
           ! -- calculate no-delay interbed rho1 and rho2
           call this%csub_nodelay_fc(ib, hcell, hcellold, rho1, hcofn, rhsn)
           !
           ! -- calculate no-delay interbed q
-          q = hcofn * hcell - rhsn
+          q = rhsn - hcofn * hcell
           !
           ! -- calculate the derivative
-          derv = f * (qp - q) / DEM4
-          !
-          ! -- update hcod and rhs
-          hcof = f * hcofn + derv
-          rhs = f * hcofn * hcell + derv * hcell
+          derv = (qp - q) / DEM4
         end if
       else
         !
@@ -4483,32 +4482,29 @@ contains
           ! -- effective-stress formulation or head-based formulation
           !    with variable material properties
           else
-            !!
-            !! -- calculate delay interbed hcof and rhs
-            !call this%csub_delay_sln(ib, hcellp, hcellold)
-            !call this%csub_delay_fc(ib, hcellp, hcofn, rhsn)
-            !!
-            !! -- calculate no-delay interbed q
-            !qp = hcofn * hcellp - rhsn
-            !!
-            !! -- calculate cell saturation
-            !call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
-            !!
-            !! -- calculate delay interbed hcof and rhs
-            !call this%csub_delay_sln(ib, hcell, hcellold)
-            !call this%csub_delay_fc(ib, hcell, hcofn, rhsn)
-            !!
-            !! -- calculate no-delay interbed q
-            !q = hcofn * hcell - rhsn
-            !!
-            !! -- calculate the derivative
-            !derv = f * (qp - q) / DEM4
-            !!
-            !! -- update hcod and rhs
-            !hcof = f * hcofn + derv
-            !rhs = f * hcofn * hcell + derv * hcell
+            !
+            ! -- calculate delay interbed hcof and rhs
+            call this%csub_delay_sln(ib, hcellp, hcellold, .false.)
+            call this%csub_delay_fc(ib, hcellp, hcofn, rhsn)
+            !
+            ! -- calculate perturbed delay interbed q
+            qp = rhsn - hcofn * hcellp
+            !
+            ! -- calculate delay interbed hcof and rhs
+            call this%csub_delay_sln(ib, hcell, hcellold, .false.)
+            call this%csub_delay_fc(ib, hcell, hcofn, rhsn)
+            !
+            ! -- calculate delay interbed q
+            q = rhsn - hcofn * hcell
+            !
+            ! -- calculate the derivative
+            derv = (qp - q) / DEM4
           end if
         end if
+        !
+        ! -- update hcof and rhs
+        hcof = f * (hcofn + derv)
+        rhs = f * hcell * (hcofn + derv)
       end if
     end if
     !
@@ -5194,7 +5190,7 @@ contains
     return
   end subroutine csub_adj_matprop   
 
-  subroutine csub_delay_sln(this, ib, hcell, hcellold)
+  subroutine csub_delay_sln(this, ib, hcell, hcellold, update)
 ! ******************************************************************************
 ! csub_delay_sln -- Calculate flow in delay interbeds.
 ! ******************************************************************************
@@ -5205,7 +5201,9 @@ contains
     integer(I4B), intent(in) :: ib
     real(DP), intent(in) :: hcell
     real(DP), intent(in) :: hcellold
+    logical, intent(in), optional :: update
     ! -- local variables
+    logical :: lupdate
     integer(I4B) :: n
     integer(I4B) :: icnvg
     integer(I4B) :: iter
@@ -5217,6 +5215,11 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
+    if (present(update)) then
+      lupdate = update
+    else
+      lupdate = .true.
+    end if
     !
     ! -- calculate geostatic and effective stress for each delay bed cell
     call this%csub_delay_calc_stress(ib, hcell)
@@ -5244,16 +5247,18 @@ contains
                               this%dbrhs, this%dbdh, this%dbaw)
         !
         ! -- calculate maximum head change and update delay bed heads 
-        dhmax = DZERO
-        do n = 1, this%ndelaycells
-          dh = this%dbdh(n) - this%dbh(n, idelay) 
-          if (abs(dh) > abs(dhmax)) then
-            dhmax = dh !this%dbdh(n)
-            this%dbdhmax(idelay) = dhmax
-          end if
-          ! update delay bed heads
-          this%dbh(n, idelay) = this%dbdh(n)
-        end do
+        if (lupdate) then
+          dhmax = DZERO
+          do n = 1, this%ndelaycells
+            dh = this%dbdh(n) - this%dbh(n, idelay) 
+            if (abs(dh) > abs(dhmax)) then
+              dhmax = dh !this%dbdh(n)
+              this%dbdhmax(idelay) = dhmax
+            end if
+            ! update delay bed heads
+            this%dbh(n, idelay) = this%dbdh(n)
+          end do
+        end if
         !
         ! -- update delay bed stresses
         call this%csub_delay_calc_stress(ib, hcell)
