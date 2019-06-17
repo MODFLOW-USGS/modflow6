@@ -644,7 +644,7 @@ contains
     call this%sln_setouter(ifdparam)
     !
     ! -- get NONLINEAR block
-    call this%parser%GetBlock('NONLINEAR', isfound, ierr)
+    call this%parser%GetBlock('NONLINEAR', isfound, ierr, blockRequired=.FALSE.)
     !
     ! -- parse NONLINEAR block if detected
     if (isfound) then

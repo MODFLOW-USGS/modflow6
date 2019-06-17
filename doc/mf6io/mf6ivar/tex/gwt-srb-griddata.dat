@@ -1,8 +1,0 @@
-BEGIN GRIDDATA
-  RHOB [LAYERED]
-    <rhob(nodes)> -- READARRAY
-  DISTCOEF [LAYERED]
-    <distcoef(nodes)> -- READARRAY
-  RC [LAYERED]
-    <rc(nodes)> -- READARRAY
-END GRIDDATA

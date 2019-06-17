@@ -1,4 +1,4 @@
-module GwtImdModule
+module GwtIstModule
 
   use KindModule,             only: DP, I4B
   use ConstantsModule,        only: DONE, DZERO, LENFTYPE, LENPACKAGENAME,     &
@@ -6,15 +6,15 @@ module GwtImdModule
   use BndModule,              only: BndType
   use BudgetModule,           only: BudgetType
   use GwtFmiModule,           only: GwtFmiType
-  use GwtStoModule,           only: GwtStoType
+  use GwtMstModule,           only: GwtMstType
   use OutputControlData,      only: OutputControlDataType
   !
   implicit none
   !
   private
-  public :: imd_create
+  public :: ist_create
   !
-  character(len=LENFTYPE)       :: ftype = 'IMD'
+  character(len=LENFTYPE)       :: ftype = 'IST'
   character(len=LENPACKAGENAME) :: text  = ' IMMOBILE DOMAIN'
   integer(I4B), parameter :: NBDITEMS = 5
   character(len=LENBUDTXT), dimension(NBDITEMS) :: budtxt
@@ -22,21 +22,21 @@ module GwtImdModule
                 '   DECAY-AQUEOUS', '    DECAY-SORBED', &
                 '   MOBILE-DOMAIN' /
   !
-  type, extends(BndType) :: GwtImdType
+  type, extends(BndType) :: GwtIstType
     
     type(GwtFmiType), pointer                        :: fmi => null()           ! pointer to fmi object
-    type(GwtStoType), pointer                        :: sto => null()           ! pointer to sto object
+    type(GwtMstType), pointer                        :: mst => null()           ! pointer to mst object
     
     integer(I4B), pointer                            :: icimout => null()       ! unit number for binary cim output
-    integer(I4B), pointer                            :: irorder => null()       ! order of decay rate (0:none, 1:first, 2:zero)
+    integer(I4B), pointer                            :: idcy => null()          ! order of decay rate (0:none, 1:first, 2:zero)
     integer(I4B), pointer                            :: isrb => null()          ! sorbtion active flag (0:off, 1:on)
     real(DP), dimension(:), pointer, contiguous      :: cim => null()           ! concentration for immobile domain
     real(DP), dimension(:), pointer, contiguous      :: zetaim => null()        ! mass transfer rate to immobile domain
     real(DP), dimension(:), pointer, contiguous      :: thetaim => null()       ! porosity of the immobile domain
-    real(DP), dimension(:), pointer, contiguous      :: rhob => null()          ! bulk density
+    real(DP), dimension(:), pointer, contiguous      :: bulk_density => null()  ! bulk density
     real(DP), dimension(:), pointer, contiguous      :: distcoef => null()      ! distribution coefficient
-    real(DP), dimension(:), pointer, contiguous      :: rc1 => null()           ! first or zero order rate constant for liquid
-    real(DP), dimension(:), pointer, contiguous      :: rc2 => null()           ! first or zero order rate constant for sorbed mass
+    real(DP), dimension(:), pointer, contiguous      :: decay => null()         ! first or zero order rate constant for liquid
+    real(DP), dimension(:), pointer, contiguous      :: decay_sorbed => null()  ! first or zero order rate constant for sorbed mass
     real(DP), dimension(:), pointer, contiguous      :: strg => null()          ! mass transfer rate
     
     type(BudgetType), pointer                        :: budget => null()        ! budget object
@@ -44,27 +44,28 @@ module GwtImdModule
     
   contains
   
-    procedure :: bnd_ar => imd_ar
-    procedure :: bnd_rp => imd_rp
-    procedure :: bnd_fc => imd_fc
-    procedure :: bnd_bd => imd_bd
-    procedure :: bnd_ot => imd_ot
+    procedure :: bnd_ar => ist_ar
+    procedure :: bnd_rp => ist_rp
+    procedure :: bnd_fc => ist_fc
+    procedure :: bnd_bd => ist_bd
+    procedure :: bnd_ot => ist_ot
+    procedure :: bnd_da => ist_da
     procedure :: allocate_scalars
-    procedure :: read_dimensions => imd_read_dimensions
+    procedure :: read_dimensions => ist_read_dimensions
     procedure :: read_options
-    procedure, private :: imd_allocate_arrays
+    procedure, private :: ist_allocate_arrays
     procedure, private :: read_data
     procedure, private :: calcddbud
     procedure, private :: calccim
     
-  end type GwtImdType
+  end type GwtIstType
   
   contains
   
-  subroutine imd_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
-                        fmi, sto)
+  subroutine ist_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
+                        fmi, mst)
 ! ******************************************************************************
-! imd_create -- Create a New Immobile Domain Package
+! ist_create -- Create a New Immobile Domain Package
 ! Subroutine: (1) create new-style package
 !             (2) point packobj to the new package
 ! ******************************************************************************
@@ -80,14 +81,14 @@ module GwtImdModule
     character(len=*), intent(in) :: namemodel
     character(len=*), intent(in) :: pakname
     ! -- local
-    type(GwtImdType), pointer :: imdobj
+    type(GwtIstType), pointer :: istobj
     type(GwtFmiType), pointer :: fmi
-    type(GwtStoType), pointer :: sto
+    type(GwtMstType), pointer :: mst
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate the object and assign values to object variables
-    allocate(imdobj)
-    packobj => imdobj
+    allocate(istobj)
+    packobj => istobj
     !
     ! -- create name and origin
     call packobj%set_names(ibcnum, namemodel, pakname, ftype)
@@ -107,92 +108,108 @@ module GwtImdModule
     packobj%ncolbnd = 1
     packobj%iscloc = 1
     !
-    ! -- Point IMD specific variables
-    imdobj%fmi => fmi
-    imdobj%sto => sto
+    ! -- Point IST specific variables
+    istobj%fmi => fmi
+    istobj%mst => mst
     !
     ! -- return
     return
-  end subroutine imd_create
+  end subroutine ist_create
 
-  subroutine imd_ar(this)
+  subroutine ist_ar(this)
 ! ******************************************************************************
-! imd_ar -- Allocate and Read
+! ist_ar -- Allocate and Read
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    use SimModule, only: ustop, store_error, count_errors
     use BudgetModule, only: budget_cr
     ! -- dummy
-    class(GwtImdType), intent(inout) :: this
+    class(GwtIstType), intent(inout) :: this
     ! -- local
     ! -- formats
-    character(len=*), parameter :: fmtimd =                                    &
-      "(1x,/1x,'IMD -- IMMODBILE DOMAIN PACKAGE, VERSION 1, 12/24/2018',       &
-      &' INPUT READ FROM UNIT ', i0, //)"
+    character(len=*), parameter :: fmtist =                                    &
+      "(1x,/1x,'IST -- IMMOBILE DOMAIN STORAGE AND TRANSFER PACKAGE, ',        &
+      &'VERSION 1, 12/24/2018 INPUT READ FROM UNIT ', i0, //)"
 ! ------------------------------------------------------------------------------
     !
     ! --print a message identifying the immobile domain package.
-    write(this%iout, fmtimd) this%inunit
+    write(this%iout, fmtist) this%inunit
     !
     ! -- Read immobile domain options
     call this%read_options()
     !
     ! -- Allocate arrays
-    call this%imd_allocate_arrays()
+    call this%ist_allocate_arrays()
     !
     ! -- read the data block
     call this%read_data()
     !
-    ! -- add thetaim to the prsity2 accumulator in sto package
-    call this%sto%addto_prsity2(this%thetaim)
+    ! -- add thetaim to the prsity2 accumulator in mst package
+    call this%mst%addto_prsity2(this%thetaim)
     !
     ! -- setup the immobile domain budget
     call budget_cr(this%budget, this%origin)
     call this%budget%budget_df(NBDITEMS, 'MASS', 'M', bdzone=this%name)
     !
+    ! -- Perform a check to ensure that sorbtion and decay are set 
+    !    consistently between the MST and IST packages.
+    if (this%idcy /= this%mst%idcy) then
+      call store_error('DECAY MUST BE ACTIVATED CONSISTENTLY BETWEEN THE &
+        &MST AND IST PACKAGES.  TURN DECAY ON OR OFF FOR BOTH PACKAGES.')
+    endif
+    if (this%isrb /= this%mst%isrb) then
+      call store_error('SORBTION MUST BE ACTIVATED CONSISTENTLY BETWEEN THE &
+        &MST AND IST PACKAGES.  TURN SORBTION ON OR OFF FOR BOTH PACKAGES.')
+    endif
+    if (count_errors() > 0) then
+      call this%parser%StoreErrorUnit()
+      call ustop()
+    end if
+    !
     ! -- Return
     return
-  end subroutine imd_ar
+  end subroutine ist_ar
   
-  subroutine imd_read_dimensions(this)
+  subroutine ist_read_dimensions(this)
 ! ******************************************************************************
-! imd_read_dimensions -- override in order to skip dimensions
+! ist_read_dimensions -- override in order to skip dimensions
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwtImdType),intent(inout) :: this
+    class(GwtIstType),intent(inout) :: this
     ! -- local
     ! -- format
 ! ------------------------------------------------------------------------------
     !
     ! -- return
     return
-  end subroutine imd_read_dimensions
+  end subroutine ist_read_dimensions
 
-  subroutine imd_rp(this)
+  subroutine ist_rp(this)
 ! ******************************************************************************
-! imd_rp -- override in order to skip reading for imd package
+! ist_rp -- override in order to skip reading for ist package
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwtImdType),intent(inout) :: this
+    class(GwtIstType),intent(inout) :: this
     ! -- local
     ! -- format
 ! ------------------------------------------------------------------------------
     !
     ! -- return
     return
-  end subroutine imd_rp
+  end subroutine ist_rp
 
-  subroutine imd_fc(this, rhs, ia, idxglo, amatsln)
+  subroutine ist_fc(this, rhs, ia, idxglo, amatsln)
 ! ******************************************************************************
-! imd_fc -- Calculate coefficients and fill amat and rhs
+! ist_fc -- Calculate coefficients and fill amat and rhs
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -200,7 +217,7 @@ module GwtImdModule
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy
-    class(GwtImdType) :: this
+    class(GwtIstType) :: this
     real(DP), dimension(:), intent(inout) :: rhs
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
@@ -236,8 +253,8 @@ module GwtImdModule
       idiag = ia(n)
       !
       ! -- Set thetamfrac and thetaimfrac
-      thetamfrac = this%sto%get_thetamfrac(n)
-      thetaimfrac = this%sto%get_thetaimfrac(n, this%thetaim(n))
+      thetamfrac = this%mst%get_thetamfrac(n)
+      thetaimfrac = this%mst%get_thetaimfrac(n, this%thetaim(n))
       !
       ! -- Add dual domain mass transfer contributions to rhs and hcof
       kd = DZERO
@@ -246,12 +263,12 @@ module GwtImdModule
       gamma1im = DZERO
       gamma2im = DZERO
       if (this%isrb > 0) kd = this%distcoef(n)
-      if (this%irorder == 1) lambda1im = this%rc1(n)
-      if (this%irorder == 2) gamma1im = this%rc1(n)
-      if (this%irorder == 1) lambda2im = this%rc2(n)
-      if (this%irorder == 2) gamma2im = this%rc2(n)
+      if (this%idcy == 1) lambda1im = this%decay(n)
+      if (this%idcy == 2) gamma1im = this%decay(n)
+      if (this%idcy == 1) lambda2im = this%decay_sorbed(n)
+      if (this%idcy == 2) gamma2im = this%decay_sorbed(n)
       call calcddhcofrhs(this%thetaim(n), vcell, delt, swtpdt, swt,          &
-                          thetamfrac, thetaimfrac, this%rhob(n), kd,         &
+                          thetamfrac, thetaimfrac, this%bulk_density(n), kd, &
                           lambda1im, lambda2im, gamma1im, gamma2im,          &
                           this%zetaim(n), this%cim(n), hhcof, rrhs)
       amatsln(idxglo(idiag)) = amatsln(idxglo(idiag)) + hhcof
@@ -261,12 +278,12 @@ module GwtImdModule
     !
     ! -- Return
     return
-  end subroutine imd_fc
+  end subroutine ist_fc
   
-  subroutine imd_bd(this, x, idvfl, icbcfl, ibudfl, icbcun, iprobs,            &
+  subroutine ist_bd(this, x, idvfl, icbcfl, ibudfl, icbcun, iprobs,            &
                     isuppress_output, model_budget, imap, iadv)
 ! ******************************************************************************
-! imd_bd -- Calculate Budget
+! ist_bd -- Calculate Budget
 ! Note that the compact budget will always be used.
 ! Subroutine: (1) Process each package entry
 !             (2) Write output
@@ -279,7 +296,7 @@ module GwtImdModule
     use ConstantsModule, only: LENBOUNDNAME, DZERO
     use BudgetModule, only: BudgetType
     ! -- dummy
-    class(GwtImdType) :: this
+    class(GwtIstType) :: this
     real(DP),dimension(:),intent(in) :: x
     integer(I4B), intent(in) :: idvfl
     integer(I4B), intent(in) :: icbcfl
@@ -339,8 +356,8 @@ module GwtImdModule
       swt = this%fmi%gwfsatold(n, delt)
       !
       ! -- Set thetamfrac and thetaimfrac
-      thetamfrac = this%sto%get_thetamfrac(n)
-      thetaimfrac = this%sto%get_thetaimfrac(n, this%thetaim(n))
+      thetamfrac = this%mst%get_thetamfrac(n)
+      thetaimfrac = this%mst%get_thetaimfrac(n, this%thetaim(n))
       !
       ! -- Calculate exchange with immobile domain
       rate = DZERO
@@ -352,12 +369,12 @@ module GwtImdModule
       gamma1im = DZERO
       gamma2im = DZERO
       if (this%isrb > 0) kd = this%distcoef(n)
-      if (this%irorder == 1) lambda1im = this%rc1(n)
-      if (this%irorder == 2) gamma1im = this%rc1(n)
-      if (this%irorder == 1) lambda2im = this%rc2(n)
-      if (this%irorder == 2) gamma2im = this%rc2(n)
+      if (this%idcy == 1) lambda1im = this%decay(n)
+      if (this%idcy == 2) gamma1im = this%decay(n)
+      if (this%idcy == 1) lambda2im = this%decay_sorbed(n)
+      if (this%idcy == 2) gamma2im = this%decay_sorbed(n)
       call calcddhcofrhs(this%thetaim(n), vcell, delt, swtpdt, swt,          &
-                          thetamfrac, thetaimfrac, this%rhob(n), kd,         &
+                          thetamfrac, thetaimfrac, this%bulk_density(n), kd, &
                           lambda1im, lambda2im, gamma1im, gamma2im,          &
                           this%zetaim(n), this%cim(n), hhcof, rrhs)
       rate = hhcof * x(n) - rrhs
@@ -401,11 +418,11 @@ module GwtImdModule
     !
     ! -- return
     return
-  end subroutine imd_bd
+  end subroutine ist_bd
 
-  subroutine imd_ot(this, kstp, kper, iout, ihedfl, ibudfl)
+  subroutine ist_ot(this, kstp, kper, iout, ihedfl, ibudfl)
 ! ******************************************************************************
-! imd_ot -- Output package budget
+! ist_ot -- Output package budget
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -413,7 +430,7 @@ module GwtImdModule
     ! -- modules
     use TdisModule, only: nstp
     ! -- dummy
-    class(GwtImdType) :: this
+    class(GwtIstType) :: this
     integer(I4B), intent(in) :: kstp
     integer(I4B), intent(in) :: kper
     integer(I4B), intent(in) :: iout
@@ -438,7 +455,52 @@ module GwtImdModule
     !
     ! -- return
     return
-  end subroutine imd_ot
+  end subroutine ist_ot
+
+  subroutine ist_da(this)
+! ******************************************************************************
+! mst_da -- Deallocate variables
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use MemoryManagerModule, only: mem_deallocate
+    ! -- dummy
+    class(GwtIstType) :: this
+! ------------------------------------------------------------------------------
+    !
+    ! -- Deallocate arrays if package was active
+    if(this%inunit > 0) then
+      call mem_deallocate(this%icimout)
+      call mem_deallocate(this%idcy)
+      call mem_deallocate(this%isrb)
+      call mem_deallocate(this%cim)
+      call mem_deallocate(this%zetaim)
+      call mem_deallocate(this%thetaim)
+      call mem_deallocate(this%bulk_density)
+      call mem_deallocate(this%distcoef)
+      call mem_deallocate(this%decay)
+      call mem_deallocate(this%decay_sorbed)
+      call mem_deallocate(this%strg)
+      this%fmi => null()
+      this%mst => null()
+    endif
+    !
+    ! -- Scalars
+    !
+    ! -- Objects
+    call this%budget%budget_da()
+    deallocate(this%budget)
+    call this%ocd%ocd_da()
+    deallocate(this%ocd)
+    !
+    ! -- deallocate parent
+    call this%BndType%da()
+    !
+    ! -- Return
+    return
+  end subroutine ist_da
 
   subroutine allocate_scalars(this)
 ! ******************************************************************************
@@ -451,7 +513,7 @@ module GwtImdModule
     use MemoryManagerModule, only: mem_allocate, mem_setptr
     use OutputControlData, only: ocd_cr
     ! -- dummy
-    class(GwtImdType) :: this
+    class(GwtIstType) :: this
     ! -- local
 ! ------------------------------------------------------------------------------
     !
@@ -461,12 +523,12 @@ module GwtImdModule
     ! -- Allocate
     call mem_allocate(this%icimout, 'ICIMOUT', this%origin)
     call mem_allocate(this%isrb, 'ISRB', this%origin)
-    call mem_allocate(this%irorder, 'IRORDER', this%origin)
+    call mem_allocate(this%idcy, 'IDCY', this%origin)
     !
     ! -- Initialize
     this%icimout = 0
     this%isrb = 0
-    this%irorder = 0
+    this%idcy = 0
     !
     ! -- Create the ocd object, which is used to manage printing and saving
     !    of the immobile domain concentrations
@@ -479,9 +541,9 @@ module GwtImdModule
     return
   end subroutine allocate_scalars
 
-  subroutine imd_allocate_arrays(this)
+  subroutine ist_allocate_arrays(this)
 ! ******************************************************************************
-! imd_allocate_arrays -- allocate arraya
+! ist_allocate_arrays -- allocate arraya
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -489,7 +551,7 @@ module GwtImdModule
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
-    class(GwtImdType),   intent(inout) :: this
+    class(GwtIstType),   intent(inout) :: this
     ! -- local
     integer(I4B) :: n
 ! ------------------------------------------------------------------------------
@@ -497,24 +559,26 @@ module GwtImdModule
     ! -- call standard BndType allocate scalars
     call this%BndType%allocate_arrays()
     !
-    ! -- allocate imd arrays of size nodes
+    ! -- allocate ist arrays of size nodes
     call mem_allocate(this%strg, this%dis%nodes, 'STRG', this%origin)
     call mem_allocate(this%cim, this%dis%nodes, 'CIM', this%origin)
     call mem_allocate(this%zetaim, this%dis%nodes, 'ZETAIM', this%origin)
     call mem_allocate(this%thetaim, this%dis%nodes, 'THETAIM', this%origin)
     if (this%isrb == 0) then
-      call mem_allocate(this%rhob, 1, 'RHOB', this%origin)
+      call mem_allocate(this%bulk_density, 1, 'BULK_DENSITY', this%origin)
       call mem_allocate(this%distcoef,  1, 'DISTCOEF', this%origin)
     else
-      call mem_allocate(this%rhob, this%dis%nodes, 'RHOB', this%origin)
+      call mem_allocate(this%bulk_density, this%dis%nodes, 'BULK_DENSITY',     &
+                        this%origin)
       call mem_allocate(this%distcoef,  this%dis%nodes, 'DISTCOEF', this%origin)
     endif
-    if (this%irorder == 0) then
-      call mem_allocate(this%rc1, 1, 'RC1', this%origin)
-      call mem_allocate(this%rc2, 1, 'RC2', this%origin)
+    if (this%idcy == 0) then
+      call mem_allocate(this%decay, 1, 'DECAY', this%origin)
+      call mem_allocate(this%decay_sorbed, 1, 'DECAY_SORBED', this%origin)
     else
-      call mem_allocate(this%rc1, this%dis%nodes, 'RC1', this%origin)
-      call mem_allocate(this%rc2, this%dis%nodes, 'RC2', this%origin)
+      call mem_allocate(this%decay, this%dis%nodes, 'DECAY', this%origin)
+      call mem_allocate(this%decay_sorbed, this%dis%nodes,                     &
+                        'DECAY_SORBED', this%origin)
     endif
     !
     ! -- initialize
@@ -531,7 +595,7 @@ module GwtImdModule
     !
     ! -- return
     return
-  end subroutine imd_allocate_arrays
+  end subroutine ist_allocate_arrays
 
   subroutine read_options(this)
 ! ******************************************************************************
@@ -544,7 +608,7 @@ module GwtImdModule
     use ConstantsModule,   only: LINELENGTH
     use SimModule,         only: ustop, store_error
     ! -- dummy
-    class(GwtImdType), intent(inout) :: this
+    class(GwtIstType), intent(inout) :: this
     ! -- local
     character(len=LINELENGTH) :: errmsg, keyword, keyword2
     integer(I4B) :: ierr
@@ -555,9 +619,9 @@ module GwtImdModule
       "WHENEVER ICBCFL IS NOT ZERO.')"
     character(len=*), parameter :: fmtisrb =                                   &
       "(4x,'LINEAR SORBTION IS SELECTED. ')"
-    character(len=*), parameter :: fmtirorder1 =                               &
+    character(len=*), parameter :: fmtidcy1 =                               &
       "(4x,'FIRST-ORDER DECAY IS ACTIVE. ')"
-    character(len=*), parameter :: fmtirorder2 =                               &
+    character(len=*), parameter :: fmtidcy2 =                               &
       "(4x,'ZERO-ORDER DECAY IS ACTIVE. ')"
 ! ------------------------------------------------------------------------------
     !
@@ -566,7 +630,8 @@ module GwtImdModule
     !
     ! -- parse options block if detected
     if (isfound) then
-      write(this%iout,'(1x,a)')'PROCESSING IMMODBILE DOMAIN OPTIONS'
+      write(this%iout,'(1x,a)') 'PROCESSING IMMOBILE STORAGE AND TRANSFER &
+                                &OPTIONS'
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
@@ -582,20 +647,21 @@ module GwtImdModule
             this%isrb = 1
             write(this%iout, fmtisrb)
           case ('FIRST_ORDER_DECAY')
-            this%irorder = 1
-            write(this%iout, fmtirorder1)
+            this%idcy = 1
+            write(this%iout, fmtidcy1)
           case ('ZERO_ORDER_DECAY')
-            this%irorder = 2
-            write(this%iout, fmtirorder2)
+            this%idcy = 2
+            write(this%iout, fmtidcy2)
           case default
-            write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN IMD OPTION: ',         &
+            write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN IST OPTION: ',         &
                                      trim(keyword)
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
             call ustop()
         end select
       end do
-      write(this%iout,'(1x,a)')'END OF IMMOBILE DOMAIN OPTIONS'
+      write(this%iout,'(1x,a)') 'END OF IMMOBILE STORAGE AND TRANSFER &
+                                &OPTIONS'
     end if
     !
     ! -- Return
@@ -614,7 +680,7 @@ module GwtImdModule
     use SimModule,         only: ustop, store_error, count_errors
     use MemoryManagerModule, only: mem_reallocate
     ! -- dummy
-    class(GwtImdType) :: this
+    class(GwtIstType) :: this
     ! -- local
     character(len=LINELENGTH) :: line, errmsg, keyword
     integer(I4B) :: istart, istop, lloc, ierr
@@ -647,13 +713,13 @@ module GwtImdModule
         call this%parser%GetRemainingLine(line)
         lloc = 1
         select case (keyword)
-          case ('RHOB')
+          case ('BULK_DENSITY')
             if (this%isrb == 0) &
-              call mem_reallocate(this%rhob, this%dis%nodes, 'RHOB',           &
-                                trim(this%origin))
+              call mem_reallocate(this%bulk_density, this%dis%nodes,           &
+                                  'BULK_DENSITY', trim(this%origin))
             call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,&
-                                         this%parser%iuactive, this%rhob,      &
-                                         aname(1))
+                                         this%parser%iuactive,                 &
+                                         this%bulk_density, aname(1))
             lname(1) = .true.
           case ('DISTCOEF')
             if (this%isrb == 0) &
@@ -663,21 +729,21 @@ module GwtImdModule
                                          this%parser%iuactive, this%distcoef,  &
                                          aname(2))
             lname(2) = .true.
-          case ('RC1')
-            if (this%irorder == 0) &
-              call mem_reallocate(this%rc1, this%dis%nodes, 'RC1',             &
-                                trim(this%origin))
+          case ('DECAY')
+            if (this%idcy == 0) &
+              call mem_reallocate(this%decay, this%dis%nodes, 'DECAY',         &
+                                  trim(this%origin))
             call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,&
-                                         this%parser%iuactive, this%rc1,       &
+                                         this%parser%iuactive, this%decay,     &
                                          aname(3))
             lname(3) = .true.
-          case ('RC2')
-            if (this%irorder == 0) &
-              call mem_reallocate(this%rc2, this%dis%nodes, 'RC2',             &
-                                trim(this%origin))
+          case ('DECAY_SORBED')
+            if (this%idcy == 0) &
+              call mem_reallocate(this%decay_sorbed, this%dis%nodes,           &
+                                  'DECAY_SORBED', trim(this%origin))
             call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,&
-                                         this%parser%iuactive, this%rc2,       &
-                                         aname(4))
+                                         this%parser%iuactive,                 &
+                                         this%decay_sorbed, aname(4))
             lname(4) = .true.
           case ('CIM')
             call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,&
@@ -713,8 +779,8 @@ module GwtImdModule
     ! -- Check for required sorbtion variables
     if (this%isrb > 0) then
       if (.not. lname(1)) then
-        write(errmsg, '(1x,a)') 'ERROR.  SORBTION IS ACTIVE BUT RHOB NOT &
-          &SPECIFIED.  RHOB MUST BE SPECIFIED IN GRIDDATA BLOCK.'
+        write(errmsg, '(1x,a)') 'ERROR.  SORBTION IS ACTIVE BUT BULK_DENSITY &
+          &NOT SPECIFIED.  BULK_DENSITY MUST BE SPECIFIED IN GRIDDATA BLOCK.'
         call store_error(errmsg)
       endif
       if (.not. lname(2)) then
@@ -725,8 +791,9 @@ module GwtImdModule
       endif
     else
       if (lname(1)) then
-        write(this%iout, '(1x,a)') 'WARNING.  SORBTION IS NOT ACTIVE BUT RHOB &
-          &WAS SPECIFIED.  RHOB WILL HAVE NO AFFECT ON SIMULATION RESULTS.'
+        write(this%iout, '(1x,a)') 'WARNING.  SORBTION IS NOT ACTIVE BUT &
+          &BULK_DENSITY WAS SPECIFIED.  BULK_DENSITY WILL HAVE NO AFFECT ON &
+          &SIMULATION RESULTS.'
       endif
       if (lname(2)) then
         write(this%iout, '(1x,a)') 'WARNING.  SORBTION IS NOT ACTIVE BUT &
@@ -736,29 +803,30 @@ module GwtImdModule
     endif
     !
     ! -- Check for required decay/production rate coefficients
-    if (this%irorder > 0) then
+    if (this%idcy > 0) then
       if (.not. lname(3)) then
         write(errmsg, '(1x,a)') 'ERROR.  FIRST OR ZERO ORDER DECAY IS &
-          &ACTIVE BUT THE FIRST RATE COEFFICIENT IS NOT SPECIFIED.  RC1 MUST &
-          &BE SPECIFIED IN GRIDDATA BLOCK.'
+          &ACTIVE BUT THE FIRST RATE COEFFICIENT IS NOT SPECIFIED.  &
+          &DECAY MUST BE SPECIFIED IN GRIDDATA BLOCK.'
         call store_error(errmsg)
       endif
       if (.not. lname(4)) then
         write(errmsg, '(1x,a)') 'ERROR.  FIRST OR ZERO ORDER DECAY ARE &
-          &ACTIVE BUT THE SECOND RATE COEFFICIENT IS NOT SPECIFIED.  RC2 MUST &
-          &BE SPECIFIED IN GRIDDATA BLOCK.'
+          &ACTIVE BUT THE SECOND RATE COEFFICIENT IS NOT SPECIFIED.  &
+          &DECAY_SORBED MUST BE SPECIFIED IN GRIDDATA BLOCK.'
         call store_error(errmsg)
       endif
     else
       if (lname(3)) then
         write(this%iout, '(1x,a)') 'WARNING.  FIRST OR ZERO ORER DECAY &
-          &IS NOT ACTIVE BUT RC1 WAS SPECIFIED.  RC1 WILL HAVE NO AFFECT &
-          &ON SIMULATION RESULTS.'
+          &IS NOT ACTIVE BUT DECAY WAS SPECIFIED.  DECAY WILL &
+          &HAVE NO AFFECT ON SIMULATION RESULTS.'
       endif
       if (lname(4)) then
         write(this%iout, '(1x,a)') 'WARNING.  FIRST OR ZERO ORER DECAY &
-          &IS NOT ACTIVE BUT RC2 WAS SPECIFIED.  RC2 WILL HAVE NO AFFECT &
-          &ON SIMULATION RESULTS.'
+          &IS NOT ACTIVE BUT DECAY_SORBED MUST  WAS SPECIFIED.  &
+          &DECAY_SORBED MUST  WILL HAVE NO AFFECT ON SIMULATION &
+          &RESULTS.'
       endif
     endif
     !
@@ -853,7 +921,7 @@ module GwtImdModule
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy
-    class(GwtImdType) :: this
+    class(GwtIstType) :: this
     real(DP), dimension(:, :), intent(inout) :: budterm
     real(DP), dimension(:), intent(in) :: cnew
     ! -- local
@@ -881,26 +949,27 @@ module GwtImdModule
       vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
       swt = this%fmi%gwfsatold(n, delt)
       swtpdt = this%fmi%gwfsat(n)
-      thetamfrac = this%sto%get_thetamfrac(n)
-      thetaimfrac = this%sto%get_thetaimfrac(n, this%thetaim(n))
+      thetamfrac = this%mst%get_thetamfrac(n)
+      thetaimfrac = this%mst%get_thetaimfrac(n, this%thetaim(n))
       kd = DZERO
       lambda1im = DZERO
       lambda2im = DZERO
       gamma1im = DZERO
       gamma2im = DZERO
       if (this%isrb > 0) kd = this%distcoef(n)
-      if (this%irorder == 1) lambda1im = this%rc1(n)
-      if (this%irorder == 2) gamma1im = this%rc1(n)
-      if (this%irorder == 1) lambda2im = this%rc2(n)
-      if (this%irorder == 2) gamma2im = this%rc2(n)
+      if (this%idcy == 1) lambda1im = this%decay(n)
+      if (this%idcy == 2) gamma1im = this%decay(n)
+      if (this%idcy == 1) lambda2im = this%decay_sorbed(n)
+      if (this%idcy == 2) gamma2im = this%decay_sorbed(n)
       !
       ! -- calculate the ddterms
       cimt = this%cim(n)
       call calcddterms(this%thetaim(n), vcell, delt, swtpdt, swt, thetamfrac,  &
-                       thetaimfrac, this%rhob(n), kd, lambda1im, lambda2im,    &
-                       gamma1im, gamma2im, this%zetaim(n), cimt, ddterm, f)
+                       thetaimfrac, this%bulk_density(n), kd, lambda1im,       &
+                       lambda2im, gamma1im, gamma2im, this%zetaim(n), cimt,    &
+                       ddterm, f)
       cimtpdt = calcddconc(this%thetaim(n), vcell, delt, swtpdt, swt,          &
-                           thetamfrac, thetaimfrac, this%rhob(n), kd,          &
+                           thetamfrac, thetaimfrac, this%bulk_density(n), kd,  &
                            lambda1im, lambda2im, gamma1im, gamma2im,           &
                            this%zetaim(n), this%cim(n), cnew(n))
       !
@@ -925,9 +994,9 @@ module GwtImdModule
       ! -- calculate DECAY-AQUEOUS
       i = 3
       rate = DZERO
-      if (this%irorder == 1) then
+      if (this%idcy == 1) then
         rate = - ddterm(5) * cimtpdt
-      else if (this%irorder == 2) then
+      else if (this%idcy == 2) then
         rate = - ddterm(7)
       else
         rate = DZERO
@@ -940,9 +1009,9 @@ module GwtImdModule
       !
       ! -- calculate DECAY-SORBED
       i = 4
-      if (this%irorder == 1) then
+      if (this%idcy == 1) then
         rate = - ddterm(6) * cimtpdt
-      else if (this%irorder == 2) then
+      else if (this%idcy == 2) then
         rate = - ddterm(8)
       else
         rate = DZERO
@@ -979,7 +1048,7 @@ module GwtImdModule
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy
-    class(GwtImdType) :: this
+    class(GwtIstType) :: this
     real(DP), dimension(:), intent(inout) :: cim
     real(DP), dimension(:), intent(in) :: cnew
     ! -- local
@@ -1003,21 +1072,21 @@ module GwtImdModule
       vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
       swt = this%fmi%gwfsatold(n, delt)
       swtpdt = this%fmi%gwfsat(n)
-      thetamfrac = this%sto%get_thetamfrac(n)
-      thetaimfrac = this%sto%get_thetaimfrac(n, this%thetaim(n))
+      thetamfrac = this%mst%get_thetamfrac(n)
+      thetaimfrac = this%mst%get_thetaimfrac(n, this%thetaim(n))
       kd = DZERO
       lambda1im = DZERO
       lambda2im = DZERO
       gamma1im = DZERO
       gamma2im = DZERO
       if (this%isrb > 0) kd = this%distcoef(n)
-      if (this%irorder == 1) lambda1im = this%rc1(n)
-      if (this%irorder == 2) gamma1im = this%rc1(n)
-      if (this%irorder == 1) lambda2im = this%rc2(n)
-      if (this%irorder == 2) gamma2im = this%rc2(n)
+      if (this%idcy == 1) lambda1im = this%decay(n)
+      if (this%idcy == 2) gamma1im = this%decay(n)
+      if (this%idcy == 1) lambda2im = this%decay_sorbed(n)
+      if (this%idcy == 2) gamma2im = this%decay_sorbed(n)
       ctmp = this%cim(n)
       ctmp = calcddconc(this%thetaim(n), vcell, delt, swtpdt, swt,           &
-                        thetamfrac, thetaimfrac, this%rhob(n), kd,           &
+                        thetamfrac, thetaimfrac, this%bulk_density(n), kd,   &
                         lambda1im, lambda2im, gamma1im, gamma2im,            &
                         this%zetaim(n), ctmp, cnew(n))
       cim(n) = ctmp
@@ -1131,4 +1200,4 @@ module GwtImdModule
     return
   end subroutine calcddterms
 
-end module GwtImdModule
+end module GwtIstModule

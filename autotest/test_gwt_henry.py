@@ -179,9 +179,9 @@ def get_model(idx, dir):
                                   # alh=0., alv=0., ath=0., atv=0.,
                                   filename='{}.dsp'.format(gwtname))
 
-    # storage
+    # mass storage and transfer
     porosity = 0.35
-    sto = flopy.mf6.ModflowGwtsto(gwt, porosity=porosity,
+    mst = flopy.mf6.ModflowGwtmst(gwt, porosity=porosity,
                                   filename='{}.sto'.format(gwtname))
 
     # sources

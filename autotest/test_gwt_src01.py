@@ -184,9 +184,8 @@ def get_model(idx, dir):
                                   save_flows=False,
                                   pname='SRC-1')
 
-    ## storage
-    sto = flopy.mf6.ModflowGwtsto(gwt, porosity=0.1,
-                                  filename='{}.sto'.format(gwtname))
+    # mobile storage and transfer
+    mst = flopy.mf6.ModflowGwtmst(gwt, porosity=0.1)
 
     # sources
     ssm = flopy.mf6.ModflowGwtssm(gwt, sources=[[]],

@@ -188,9 +188,8 @@ def get_model(idx, dir):
                                   ath1=alphath, ath2=alphatv,
                                   filename='{}.dsp'.format(gwtname))
 
-    # storage
-    sto = flopy.mf6.ModflowGwtsto(gwt, porosity=porosity,
-                                filename='{}.sto'.format(gwtname))
+    # mass storage and transfer
+    mst = flopy.mf6.ModflowGwtmst(gwt, porosity=porosity)
 
     # sources
     sourcerecarray = [('WEL-1', 1, 'CONCENTRATION')]
