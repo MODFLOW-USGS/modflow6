@@ -3912,13 +3912,15 @@ contains
         !
         ! -- calculate coarse-grained skeletal water compressibility 
         !    storage terms
-        call this%csub_sk_wcomp_fc(node, tled, area, hnew(node), hold(node),    &
-                                   hcof, rhsterm)
-        !
-        ! -- add water compression storage terms to amat and rhs for 
-        !   skeletal storage
-        amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
-        rhs(node) = rhs(node) + rhsterm
+        if (this%gammaw * this%beta /= DZERO) then
+          call this%csub_sk_wcomp_fc(node, tled, area, hnew(node), hold(node),  &
+                                     hcof, rhsterm)
+          !
+          ! -- add water compression storage terms to amat and rhs for 
+          !   skeletal storage
+          amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
+          rhs(node) = rhs(node) + rhsterm
+        end if
       end do
       !
       ! -- interbed storage
@@ -3954,13 +3956,15 @@ contains
           rhs(node) = rhs(node) + rhsterm
           !
           ! -- calculate interbed water compressibility terms
-          call this%csub_interbed_wcomp_fc(ib, node, tled, area,                &
-                                           hnew(node), hold(node),              &
-                                           hcof, rhsterm)
-          !
-          ! -- add water compression storage terms to amat and rhs for interbed
-          amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
-          rhs(node) = rhs(node) + rhsterm
+          if (this%gammaw * this%beta /= DZERO) then
+            call this%csub_interbed_wcomp_fc(ib, node, tled, area,              &
+                                             hnew(node), hold(node),            &
+                                             hcof, rhsterm)
+            !
+            ! -- add water compression storage terms to amat and rhs for interbed
+            amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
+            rhs(node) = rhs(node) + rhsterm
+          end if
         end do
       end if
     end if    
@@ -4068,13 +4072,13 @@ contains
           !
           ! -- calculate interbed water compressibility terms
           if (this%gammaw * this%beta /= DZERO) then
-            !call this%csub_interbed_wcomp_fn(ib, node, tled, area,              &
-            !                                 hnew(node), hold(node),            &
-            !!                                 hcof, rhsterm)
-            !!
-            !! -- add interbed water compression newton terms to amat and rhs
-            !amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
-            !rhs(node) = rhs(node) + rhsterm
+            call this%csub_interbed_wcomp_fn(ib, node, tled, area,              &
+                                             hnew(node), hold(node),            &
+                                             hcof, rhsterm)
+            !
+            ! -- add interbed water compression newton terms to amat and rhs
+            amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
+            rhs(node) = rhs(node) + rhsterm
           end if
         end do
       end if
@@ -4735,8 +4739,8 @@ contains
   
   subroutine csub_sk_wcomp_fn(this, node, tled, area, hcell, hcof, rhs)
 ! ******************************************************************************
-! csub_sk_wcomp_fc -- Calculate water compressibility newton terms for a 
-!                       gwf cell.
+! csub_sk_wcomp_fn -- Calculate water compressibility newton-rephson terms for 
+!                     a gwf cell.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -4865,10 +4869,10 @@ contains
 
   
   subroutine csub_interbed_wcomp_fn(this, ib, node, tled, area,                 &
-                                      hcell, hcellold, hcof, rhs)
+                                    hcell, hcellold, hcof, rhs)
 ! ******************************************************************************
-! csub_interbed_wcomp_fn -- Calculate water compressibility term for an 
-!                           interbed.
+! csub_interbed_wcomp_fn -- Calculate water compressibility newton-raphson 
+!                           terms for an interbed.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -4894,6 +4898,7 @@ contains
     real(DP) :: dz
     real(DP) :: wc1
     real(DP) :: wc2
+    real(DP) :: derv
 ! ------------------------------------------------------------------------------
 !
 ! -- initialize variables
@@ -4903,42 +4908,46 @@ contains
     ! -- aquifer elevations and thickness
     top = this%dis%top(node)
     bot = this%dis%bot(node)
-    !
-    ! -- calculate cell saturation
-    call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
+    !!
+    !! -- calculate cell saturation
+    !call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
     !
     !
     idelay = this%idelay(ib)
     f = this%gammaw * this%beta * area * tled
     if (idelay == 0) then
-      wc1 = f * this%theta0(ib) * this%thick0(ib)
+      !
+      ! -- calculate saturation derivitive
+      derv = sQuadraticSaturationDerivative(top, bot, hcell)   
+      !
+      !
       wc2 = f * this%theta(ib) * this%thick(ib)
-      hcof = -wc2 * snnew
-      rhs = -wc1 * snold * hcellold
+      hcof = -wc2 * derv * hcell
+      rhs = hcof * hcell
     else
-      !
-      ! -- calculate cell saturation
-      call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
-      !
-      ! -- calculate contribution for each delay interbed cell
-      if (this%thick(ib) > DZERO) then
-        dz = this%dbfact * this%dbdz(idelay)
-        do n = 1, this%ndelaycells
-          fmult = DONE
-          !
-          ! -- scale factor for half-cell problem
-          if (this%idbhalfcell /= 0) then
-            if (n == 1) then
-              fmult = DHALF
-            end if
-          end if
-          wc2 = fmult * f * dz * this%dbtheta(n, idelay)
-          wc1 = wc2
-          rhs = rhs - (wc1 * snold * this%dbh0(n, idelay) -                     &
-                       wc2 * snnew * this%dbh(n, idelay))
-        end do
-        rhs = rhs * this%rnb(ib) * snnew
-      end if
+      !!
+      !! -- calculate cell saturation
+      !call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
+      !!
+      !! -- calculate contribution for each delay interbed cell
+      !if (this%thick(ib) > DZERO) then
+      !  dz = this%dbfact * this%dbdz(idelay)
+      !  do n = 1, this%ndelaycells
+      !    fmult = DONE
+      !    !
+      !    ! -- scale factor for half-cell problem
+      !    if (this%idbhalfcell /= 0) then
+      !      if (n == 1) then
+      !        fmult = DHALF
+      !      end if
+      !    end if
+      !    wc2 = fmult * f * dz * this%dbtheta(n, idelay)
+      !    wc1 = wc2
+      !    rhs = rhs - (wc1 * snold * this%dbh0(n, idelay) -                     &
+      !                 wc2 * snnew * this%dbh(n, idelay))
+      !  end do
+      !  rhs = rhs * this%rnb(ib) * snnew
+      !end if
     end if
     !
     ! -- return
