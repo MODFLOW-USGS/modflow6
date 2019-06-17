@@ -170,7 +170,7 @@ shape (nodes)
 reader readarray
 layered true
 longname porosity of the immobile domain
-description porosity of the immobile domain (dimensionless).
+description porosity of the immobile domain specified as the volume of immobile pore space per total volume (dimensionless).
 
 block griddata
 name zetaim
