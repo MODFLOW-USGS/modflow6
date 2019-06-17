@@ -147,7 +147,7 @@ module GwfGwtExchangeModule
     !
     ! -- setup pointers to the flow storage rates. GWF strg arrays are
     !    available after the gwf_ar routine is called.
-    if(gwtmodel%insto > 0) then
+    if(gwtmodel%inmst > 0) then
       if (gwfmodel%insto > 0) then
         gwtmodel%fmi%gwfstrgss => gwfmodel%sto%strgss
         gwtmodel%fmi%igwfstrgss = 1

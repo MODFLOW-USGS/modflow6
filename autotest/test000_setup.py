@@ -107,7 +107,7 @@ def getmfexes(pth='.', version='', pltfrm=None):
     assets = {p: url + p for p in ['mac.zip', 'linux.zip',
                                    'win32.zip', 'win64.zip']}
     download_url = assets[zipname]
-    pymake.download_and_unzip(download_url, pth)
+    pymake.download_and_unzip(download_url, pth, verify=False)
 
     return
 
@@ -232,12 +232,12 @@ def test_build_zonebudget():
 
 
 if __name__ == "__main__":
-    test_create_dirs()
-    test_getmfexes()
-    test_build_modflow()
-    test_build_mfnwt()
-    test_build_usg()
-    test_build_lgr()
+    #test_create_dirs()
+    #getmfexes(pth=mfexe_pth, version=download_version)
+    #test_build_modflow()
+    #test_build_mfnwt()
+    #test_build_usg()
+    #test_build_lgr()
     test_build_modflow6()
-    test_build_mf5to6()
-    test_build_zonebudget()
+    #test_build_mf5to6()
+    #test_build_zonebudget()

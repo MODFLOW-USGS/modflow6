@@ -162,6 +162,7 @@ def p01mf6(model_ws, al, retardation, lambda1, mixelm,
                                  sim_ws=ws)
     from flopy.mf6.mfbase import VerbosityLevel
     sim.simulation_data.verbosity_level = VerbosityLevel.quiet
+    sim.name_file.memory_print_option = 'all'
 
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(sim, time_units='DAYS',
@@ -269,9 +270,11 @@ def p01mf6(model_ws, al, retardation, lambda1, mixelm,
     # dispersion
     dsp = flopy.mf6.ModflowGwtdsp(gwt, alh=al, ath1=0.1)
 
-    # storage
-    sto = flopy.mf6.ModflowGwtsto(gwt, porosity=prsity,
-                                  filename='{}.sto'.format(gwtname))
+    # mass storage and transfer
+    mst = flopy.mf6.ModflowGwtmst(gwt, porosity=prsity,
+                                  first_order_decay=True,
+                                  decay=lambda1, decay_sorbed=lambda1,
+                                  sorbtion=True, bulk_density=rhob, distcoef=kd)
 
     # constant concentration
     c0 = 1.
@@ -284,19 +287,15 @@ def p01mf6(model_ws, al, retardation, lambda1, mixelm,
     ssm = flopy.mf6.ModflowGwtssm(gwt, sources=[[]],
                                   filename='{}.ssm'.format(gwtname))
 
-    dcy = flopy.mf6.ModflowGwtdcy(gwt, rc=lambda1)
-
-    srb = flopy.mf6.ModflowGwtsrb(gwt, rhob=rhob, distcoef=kd,
-                                  first_order_decay=True, rc=lambda1,
-                                  filename='{}.srb'.format(gwtname))
 
     if zeta is not None:
-        imd = flopy.mf6.ModflowGwtimd(gwt, sorbtion=True,
+        ist = flopy.mf6.ModflowGwtist(gwt, sorbtion=True,
                                       first_order_decay=True,
-                                      rhob=rhob, distcoef=kd,
-                                      rc1=lambda1, rc2=lambda1,
+                                      bulk_density=rhob, distcoef=kd,
+                                      decay=lambda1,
+                                      decay_sorbed=lambda1,
                                       zetaim=zeta, thetaim=prsity2,
-                                      filename='{}.imd'.format(gwtname))
+                                      filename='{}.ist'.format(gwtname))
 
     # output control
     oc = flopy.mf6.ModflowGwtoc(gwt,

@@ -173,9 +173,8 @@ def get_model(idx, dir):
                                   save_flows=False,
                                   pname='CNC-1')
 
-    # storage
-    sto = flopy.mf6.ModflowGwtsto(gwt, porosity=0.1,
-                                filename='{}.sto'.format(gwtname))
+    # mass storage and transfer
+    mst = flopy.mf6.ModflowGwtmst(gwt, porosity=0.1)
 
     # sources
     ssm = flopy.mf6.ModflowGwtssm(gwt, sources=[[]],

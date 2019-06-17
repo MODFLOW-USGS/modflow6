@@ -21,7 +21,7 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['sto01']
+ex = ['mst01']
 laytyp = [1]
 ss = [0.]
 sy = [0.1]
@@ -163,9 +163,9 @@ def build_models():
         adv = flopy.mf6.ModflowGwtadv(gwt, scheme='UPSTREAM',
                                     filename='{}.adv'.format(gwtname))
 
-        # storage
-        sto = flopy.mf6.ModflowGwtsto(gwt, porosity=sy[idx],
-                                    filename='{}.sto'.format(gwtname))
+        # mass storage and transfer
+        mst = flopy.mf6.ModflowGwtmst(gwt, porosity=sy[idx],
+                                    filename='{}.mst'.format(gwtname))
 
         # sources
         sourcerecarray = [('WEL-1', 1, 'CONCENTRATION')]

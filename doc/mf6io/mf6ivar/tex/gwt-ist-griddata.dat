@@ -5,12 +5,12 @@ BEGIN GRIDDATA
     <thetaim(nodes)> -- READARRAY
   ZETAIM [LAYERED]
     <zetaim(nodes)> -- READARRAY
-  RHOB [LAYERED]
-    <rhob(nodes)> -- READARRAY
+  BULK_DENSITY [LAYERED]
+    <bulk_density(nodes)> -- READARRAY
   DISTCOEF [LAYERED]
     <distcoef(nodes)> -- READARRAY
-  RC1 [LAYERED]
-    <rc1(nodes)> -- READARRAY
-  RC2 [LAYERED]
-    <rc2(nodes)> -- READARRAY
+  DECAY [LAYERED]
+    <decay(nodes)> -- READARRAY
+  DECAY_SORBED [LAYERED]
+    <decay_sorbed(nodes)> -- READARRAY
 END GRIDDATA

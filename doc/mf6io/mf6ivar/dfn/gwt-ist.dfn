@@ -1,4 +1,4 @@
-# --------------------- gwt imd options ---------------------
+# --------------------- gwt ist options ---------------------
 
 block options
 name save_flows
@@ -6,7 +6,7 @@ type keyword
 reader urword
 optional true
 longname save calculated flows to budget file
-description REPLACE save_flows {'{#1}': 'IMD'}
+description REPLACE save_flows {'{#1}': 'IST'}
 
 block options
 name sorbtion
@@ -151,7 +151,7 @@ optional false
 longname write format
 description write format can be EXPONENTIAL, FIXED, GENERAL, or SCIENTIFIC.
 
-# --------------------- gwt imd griddata ---------------------
+# --------------------- gwt ist griddata ---------------------
 
 block griddata
 name cim
@@ -182,13 +182,13 @@ longname mass transfer rate coefficient between the mobile and immobile domains
 description mass transfer rate coefficient between the mobile and immobile domains, in dimenions of per time.
 
 block griddata
-name rhob
+name bulk_density
 type double precision
 shape (nodes)
 reader readarray
 layered true
 longname bulk density
-description is the bulk density of the aquifer in mass per length cubed.  rhob will have no affect on simulation results unless the SORBTION keyword is specified in the options block.
+description is the bulk density of the aquifer in mass per length cubed.  bulk\_density will have no affect on simulation results unless the SORBTION keyword is specified in the options block.
 
 block griddata
 name distcoef
@@ -200,19 +200,19 @@ longname distribution coefficient
 description is the distribution coefficient for the equilibrium-controlled linear sorption isotherm in dimensions of length cubed per mass.  distcoef will have no affect on simulation results unless the SORBTION keyword is specified in the options block.
 
 block griddata
-name rc1
+name decay
 type double precision
 shape (nodes)
 reader readarray
 layered true
 longname first rate coefficient
-description is the rate coefficient for first or zero-order decay for the aqueous phase of the immobile domain.  A negative value indicates solute production.  The dimensions of rc1 for first-order decay is one over time.  The dimensions of rc1 for zero-order decay is mass per length cubed per time.  rc1 will have no affect on simulation results unless either first- or zero-order decay is specified in the options block.
+description is the rate coefficient for first or zero-order decay for the aqueous phase of the immobile domain.  A negative value indicates solute production.  The dimensions of decay for first-order decay is one over time.  The dimensions of decay for zero-order decay is mass per length cubed per time.  decay will have no affect on simulation results unless either first- or zero-order decay is specified in the options block.
 
 block griddata
-name rc2
+name decay_sorbed
 type double precision
 shape (nodes)
 reader readarray
 layered true
 longname second rate coefficient
-description is the rate coefficient for first or zero-order decay for the sorbed phase of the immobile domain.  A negative value indicates solute production.  The dimensions of rc2 for first-order decay is one over time.  The dimensions of rc2 for zero-order decay is mass of solute per mass of aquifer per time.  rc2 will have no affect on simulation results unless the SORPTION keyword and either first- or zero-order decay are specified in the options block.
+description is the rate coefficient for first or zero-order decay for the sorbed phase of the immobile domain.  A negative value indicates solute production.  The dimensions of decay\_sorbed for first-order decay is one over time.  The dimensions of decay\_sorbed for zero-order decay is mass of solute per mass of aquifer per time.  decay\_sorbed will have no affect on simulation results unless the SORPTION keyword and either first- or zero-order decay are specified in the options block.

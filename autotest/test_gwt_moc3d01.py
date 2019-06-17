@@ -192,23 +192,32 @@ def get_model(idx, dir):
 
     # storage
     porosity = 0.1
-    sto = flopy.mf6.ModflowGwtsto(gwt, porosity=porosity,
-                                filename='{}.sto'.format(gwtname))
 
     rtd = retardation[idx]
+    sorbtion = False
+    kd = None
     if rtd is not None:
         rhob = 1.
         kd = (rtd - 1.) * porosity / rhob
-        srb = flopy.mf6.ModflowGwtsrb(gwt, rhob=1., distcoef=kd)
 
     decay_rate = decay[idx]
+    first_order_decay = False
     if decay_rate is not None:
-        dcy = flopy.mf6.ModflowGwtdcy(gwt, rc=decay_rate)
+        first_order_decay = True
+
+    # mass storage and transfer
+    mst = flopy.mf6.ModflowGwtmst(gwt, porosity=porosity,
+                                  first_order_decay=first_order_decay,
+                                  decay=decay_rate,
+                                  decay_sorbed=decay_rate,
+                                  sorbtion=sorbtion, distcoef=kd)
+
 
     # sources
     sourcerecarray = [('WEL-1', 1, 'CONCENTRATION')]
     ssm = flopy.mf6.ModflowGwtssm(gwt, sources=sourcerecarray,
                                 filename='{}.ssm'.format(gwtname))
+
 
     # output control
     oc = flopy.mf6.ModflowGwtoc(gwt,

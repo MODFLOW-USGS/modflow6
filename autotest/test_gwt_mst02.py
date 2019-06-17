@@ -25,7 +25,7 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['rct01', 'rct02']
+ex = ['mst02a', 'mst02b']
 distcoef = [0., 1.]
 exdirs = []
 for s in ex:
@@ -173,14 +173,9 @@ def build_models():
         ic = flopy.mf6.ModflowGwtic(gwt, strt=0.,
                                     filename='{}.ic'.format(gwtname))
 
-        # storage
-        sto = flopy.mf6.ModflowGwtsto(gwt, porosity=sy,
-                                     filename='{}.sto'.format(gwtname))
-
-        # sorbtion
-        srb = flopy.mf6.ModflowGwtsrb(gwt, rhob=1.,
-                                      distcoef=distcoef[idx],
-                                      filename='{}.srb'.format(gwtname))
+        # mass storage and transfer
+        mst = flopy.mf6.ModflowGwtmst(gwt, porosity=sy, sorbtion=True,
+                                      bulk_density=1., distcoef=distcoef[idx])
 
         # mass loading source
         srcdict = {0: [[(0, 0, 0), 1.0]]}

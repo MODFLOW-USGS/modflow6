@@ -207,9 +207,8 @@ def get_model(idx, dir):
                                   alh=0., alv=0., ath1=0., atv=0.,
                                   filename='{}.dsp'.format(gwtname))
 
-    # storage
-    sto = flopy.mf6.ModflowGwtsto(gwt, porosity=0.1,
-                                filename='{}.sto'.format(gwtname))
+    # mass storage and transfer
+    mst = flopy.mf6.ModflowGwtmst(gwt, porosity=0.1)
 
     # constant concentration
     cncs = {0: [[(0, 0), 1.0]]}

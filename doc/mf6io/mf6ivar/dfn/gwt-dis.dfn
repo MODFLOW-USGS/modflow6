@@ -75,7 +75,7 @@ type double precision
 shape (ncol)
 reader readarray
 longname spacing along a row
-description is the is the column spacing in the row direction.
+description is the column spacing in the row direction.
 
 block griddata
 name delc
@@ -83,7 +83,7 @@ type double precision
 shape (nrow)
 reader readarray
 longname spacing along a column
-description is the is the row spacing in the column direction.
+description is the row spacing in the column direction.
 
 block griddata
 name top
