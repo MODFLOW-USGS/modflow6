@@ -806,17 +806,19 @@ module GwtMstModule
     ! -- dcy
     if (this%idcy == 0) then
       call mem_allocate(this%ratedcy, 1, 'RATEDCY', this%origin)
-      call mem_allocate(this%ratedcys, 1, 'RATEDCYS', this%origin)
       call mem_allocate(this%decay, 1, 'DECAY', this%origin)
-      call mem_allocate(this%decay_sorbed, 1, 'DECAY_SORBED',                  &
-                        this%origin)
     else
       call mem_allocate(this%ratedcy, this%dis%nodes, 'RATEDCY', this%origin)
-      call mem_allocate(this%ratedcys, this%dis%nodes, 'RATEDCYS', this%origin)
       call mem_allocate(this%decay, nodes, 'DECAY', this%origin)
-      call mem_allocate(this%decay_sorbed, nodes, 'DECAY_SORBED',              &
-                        this%origin)
     end if
+    if (this%idcy /= 0 .and. this%isrb /= 0) then
+        call mem_allocate(this%ratedcys, this%dis%nodes, 'RATEDCYS',           &
+                          this%origin)
+    else
+        call mem_allocate(this%ratedcys, 1, 'RATEDCYS', this%origin)
+    endif
+    call mem_allocate(this%decay_sorbed, 1, 'DECAY_SORBED',                    &
+                      this%origin)
     !
     ! -- srb
     if (this%isrb == 0) then
@@ -837,9 +839,7 @@ module GwtMstModule
     enddo
     do n = 1, size(this%decay)
       this%decay(n) = DZERO
-      this%decay_sorbed(n) = DZERO
       this%ratedcy(n) = DZERO
-      this%ratedcys(n) = DZERO
     end do
     do n = 1, size(this%bulk_density)
       this%bulk_density(n) = DZERO
@@ -927,7 +927,7 @@ module GwtMstModule
     ! -- modules
     use ConstantsModule,   only: LINELENGTH
     use SimModule,         only: ustop, store_error, count_errors
-    use MemoryManagerModule, only: mem_reallocate
+    use MemoryManagerModule, only: mem_reallocate, mem_reassignptr
     ! -- dummy
     class(GwtMstType) :: this
     ! -- local
@@ -990,15 +990,14 @@ module GwtMstModule
                                          aname(4))
             lname(4) = .true.
           case ('DECAY_SORBED')
-            if (this%idcy == 0) &
-              call mem_reallocate(this%decay_sorbed, this%dis%nodes,      &
-                                  'DECAY_SORBED', trim(this%origin))
+            call mem_reallocate(this%decay_sorbed, this%dis%nodes,             &
+                                'DECAY_SORBED', trim(this%origin))
             call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,&
                                          this%parser%iuactive,                 &
                                          this%decay_sorbed, aname(5))
             lname(5) = .true.
           case default
-            write(errmsg,'(4x,a,a)')'ERROR. UNKNOWN GRIDDATA TAG: ',            &
+            write(errmsg,'(4x,a,a)')'ERROR. UNKNOWN GRIDDATA TAG: ',           &
                                      trim(keyword)
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
@@ -1050,15 +1049,20 @@ module GwtMstModule
     if (this%idcy > 0) then
       if (.not. lname(4)) then
         write(errmsg, '(1x,a)') 'ERROR.  FIRST OR ZERO ORDER DECAY IS &
-          &ACTIVE BUT THE FIRST RATE COEFFICIENT IS NOT SPECIFIED.  RC1 MUST &
-          &BE SPECIFIED IN GRIDDATA BLOCK.'
+          &ACTIVE BUT THE FIRST RATE COEFFICIENT IS NOT SPECIFIED.  DECAY &
+          &MUST BE SPECIFIED IN GRIDDATA BLOCK.'
         call store_error(errmsg)
       endif
       if (.not. lname(5)) then
-        write(errmsg, '(1x,a)') 'ERROR.  FIRST OR ZERO ORDER DECAY ARE &
-          &ACTIVE BUT THE SECOND RATE COEFFICIENT IS NOT SPECIFIED.  RC2 MUST &
-          &BE SPECIFIED IN GRIDDATA BLOCK.'
-        call store_error(errmsg)
+        !
+        ! -- If DECAY_SORBED not specified and sorbtion is active, then set
+        !    decay_sorbed equal to decay
+        if (this%isrb > 0) then
+          write(this%iout, '(1x, a)') 'DECAY_SORBED not provided in GRIDDATA &
+            &block. Assuming DECAY_SORBED=DECAY'
+          call mem_reassignptr(this%decay_sorbed, 'DECAY_SORBED',              &
+                               trim(this%origin), 'DECAY', trim(this%origin))
+        endif
       endif
     else
       if (lname(4)) then

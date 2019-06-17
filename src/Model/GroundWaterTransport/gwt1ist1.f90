@@ -574,12 +574,10 @@ module GwtIstModule
     endif
     if (this%idcy == 0) then
       call mem_allocate(this%decay, 1, 'DECAY', this%origin)
-      call mem_allocate(this%decay_sorbed, 1, 'DECAY_SORBED', this%origin)
     else
       call mem_allocate(this%decay, this%dis%nodes, 'DECAY', this%origin)
-      call mem_allocate(this%decay_sorbed, this%dis%nodes,                     &
-                        'DECAY_SORBED', this%origin)
     endif
+    call mem_allocate(this%decay_sorbed, 1, 'DECAY_SORBED', this%origin)
     !
     ! -- initialize
     do n = 1, this%dis%nodes
@@ -587,6 +585,9 @@ module GwtIstModule
       this%cim(n) = DZERO
       this%zetaim(n) = DZERO
       this%thetaim(n) = DZERO
+    enddo
+    do n = 1, size(this%decay)
+      this%decay(n) = DZERO
     enddo
     !
     ! -- Now that cim is allocated, then set a pointer to it from ocd
@@ -678,7 +679,7 @@ module GwtIstModule
     ! -- modules
     use ConstantsModule,   only: LINELENGTH
     use SimModule,         only: ustop, store_error, count_errors
-    use MemoryManagerModule, only: mem_reallocate
+    use MemoryManagerModule, only: mem_reallocate, mem_reassignptr
     ! -- dummy
     class(GwtIstType) :: this
     ! -- local
@@ -738,9 +739,8 @@ module GwtIstModule
                                          aname(3))
             lname(3) = .true.
           case ('DECAY_SORBED')
-            if (this%idcy == 0) &
-              call mem_reallocate(this%decay_sorbed, this%dis%nodes,           &
-                                  'DECAY_SORBED', trim(this%origin))
+            call mem_reallocate(this%decay_sorbed, this%dis%nodes,             &
+                                'DECAY_SORBED', trim(this%origin))
             call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,&
                                          this%parser%iuactive,                 &
                                          this%decay_sorbed, aname(4))
@@ -811,10 +811,15 @@ module GwtIstModule
         call store_error(errmsg)
       endif
       if (.not. lname(4)) then
-        write(errmsg, '(1x,a)') 'ERROR.  FIRST OR ZERO ORDER DECAY ARE &
-          &ACTIVE BUT THE SECOND RATE COEFFICIENT IS NOT SPECIFIED.  &
-          &DECAY_SORBED MUST BE SPECIFIED IN GRIDDATA BLOCK.'
-        call store_error(errmsg)
+        !
+        ! -- If DECAY_SORBED not specified and sorbtion is active, then set
+        !    decay_sorbed equal to decay
+        if (this%isrb > 0) then
+          write(this%iout, '(1x, a)') 'DECAY_SORBED not provided in GRIDDATA &
+            &block. Assuming DECAY_SORBED=DECAY'
+          call mem_reassignptr(this%decay_sorbed, 'DECAY_SORBED',              &
+                               trim(this%origin), 'DECAY', trim(this%origin))
+        endif
       endif
     else
       if (lname(3)) then
