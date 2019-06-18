@@ -5,11 +5,11 @@
 \begin{description}
 \item \texttt{SAVE\_FLOWS}---keyword to indicate that IST flow terms will be written to the file specified with ``BUDGET FILEOUT'' in Output Control.
 
-\item \texttt{SORBTION}---keyword to active sorbtion
+\item \texttt{SORBTION}---is a text keyword to indicate that sorbtion will be activated.  Use of this keyword requires that BULK\_DENSITY and DISTCOEF are specified in the GRIDDATA block.
 
-\item \texttt{FIRST\_ORDER\_DECAY}---is a text keyword to indicate that first-order decay will occur for dissolved and sorbed solute mass in the immobile domain.  If first-order decay is specified, then the RC1 and RC2 variables must be specified in the GRIDDATA block.
+\item \texttt{FIRST\_ORDER\_DECAY}---is a text keyword to indicate that first-order decay will occur.  Use of this keyword requires that DECAY and DECAY\_SORBED (if sorbtion is active) are specified in the GRIDDATA block.
 
-\item \texttt{ZERO\_ORDER\_DECAY}---is a text keyword to indicate that zero-order decay will occur for dissolved and sorbed solute mass in the immobile domain. If zero-order decay is specified, then the RC1 and RC2 variables must be specified in the GRIDDATA block.
+\item \texttt{ZERO\_ORDER\_DECAY}---is a text keyword to indicate that zero-order decay will occur.  Use of this keyword requires that DECAY and DECAY\_SORBED (if sorbtion is active) are specified in the GRIDDATA block.
 
 \item \texttt{CIM}---keyword to specify that record corresponds to immobile concentration.
 
@@ -33,17 +33,17 @@
 \begin{description}
 \item \texttt{cim}---initial concentration of the immobile domain in mass per length cubed.  If CIM is not specified, then it is assumed to be zero.
 
-\item \texttt{thetaim}---porosity of the immobile domain (dimensionless).
+\item \texttt{thetaim}---porosity of the immobile domain specified as the volume of immobile pore space per total volume (dimensionless).
 
 \item \texttt{zetaim}---mass transfer rate coefficient between the mobile and immobile domains, in dimenions of per time.
+
+\item \texttt{decay}---is the rate coefficient for first or zero-order decay for the aqueous phase of the immobile domain.  A negative value indicates solute production.  The dimensions of decay for first-order decay is one over time.  The dimensions of decay for zero-order decay is mass per length cubed per time.  decay will have no affect on simulation results unless either first- or zero-order decay is specified in the options block.
+
+\item \texttt{decay\_sorbed}---is the rate coefficient for first or zero-order decay for the sorbed phase of the immobile domain.  A negative value indicates solute production.  The dimensions of decay\_sorbed for first-order decay is one over time.  The dimensions of decay\_sorbed for zero-order decay is mass of solute per mass of aquifer per time.  If decay\_sorbed is not specified and both decay and sorbtion are active, then the sorbed decay rate will be set equal to the aqueous decay rate.  decay\_sorbed will have no affect on simulation results unless the SORPTION keyword and either first- or zero-order decay are specified in the options block.
 
 \item \texttt{bulk\_density}---is the bulk density of the aquifer in mass per length cubed.  bulk\_density will have no affect on simulation results unless the SORBTION keyword is specified in the options block.
 
 \item \texttt{distcoef}---is the distribution coefficient for the equilibrium-controlled linear sorption isotherm in dimensions of length cubed per mass.  distcoef will have no affect on simulation results unless the SORBTION keyword is specified in the options block.
-
-\item \texttt{decay}---is the rate coefficient for first or zero-order decay for the aqueous phase of the immobile domain.  A negative value indicates solute production.  The dimensions of decay for first-order decay is one over time.  The dimensions of decay for zero-order decay is mass per length cubed per time.  decay will have no affect on simulation results unless either first- or zero-order decay is specified in the options block.
-
-\item \texttt{decay\_sorbed}---is the rate coefficient for first or zero-order decay for the sorbed phase of the immobile domain.  A negative value indicates solute production.  The dimensions of decay\_sorbed for first-order decay is one over time.  The dimensions of decay\_sorbed for zero-order decay is mass of solute per mass of aquifer per time.  decay\_sorbed will have no affect on simulation results unless the SORPTION keyword and either first- or zero-order decay are specified in the options block.
 
 \end{description}
 
