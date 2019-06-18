@@ -552,8 +552,8 @@ module EvtModule
         ! -- If head in cell is greater than or equal to SURFACE, ET is constant
         if (h >= s) then
           if (this%surfratespecified) then
-            ! -- Subtract -PETM0 from RHS
-            this%rhs(i) = this%rhs(i) + petm0
+            ! -- Subtract -PETM0 * max rate from RHS
+            this%rhs(i) = this%rhs(i) + petm0 * c
           else
             ! -- Subtract -RATE from RHS
             this%rhs(i) = this%rhs(i) + c
@@ -588,7 +588,7 @@ module EvtModule
               idxrate = 2 + this%nseg
               ! -- Iterate through segments to find segment that contains
               !    current depth of head below ET surface.
-              segloop: do iseg=1,this%nseg
+              segloop: do iseg = 1, this%nseg
                 ! -- Set proportions corresponding to lower end of
                 !    segment
                 if (iseg < this%nseg) then
@@ -613,13 +613,13 @@ module EvtModule
               enddo segloop
               ! -- Calculate terms to add to RHS and HCOF based on
               !    segment that applies at head elevation
-              thcof = -(abs(petm1-petm2))*c/((pxdp2-pxdp1)*x)
-              trhs = thcof*(s-pxdp1*x) + petm1*c
+              thcof = - (petm1 - petm2) * c / ((pxdp2 - pxdp1) * x)
+              trhs = thcof * (s - pxdp1 * x) + petm1 * c
             else
               ! -- Calculate terms to add to RHS and HCOF based on simple
               !    linear relation of ET vs. head for single segment
-              trhs = c - c*s/x
-              thcof = -c/x
+              trhs = c - c * s / x
+              thcof = -c / x
             endif
             this%rhs(i) = this%rhs(i) + trhs
             this%hcof(i) = this%hcof(i) + thcof
