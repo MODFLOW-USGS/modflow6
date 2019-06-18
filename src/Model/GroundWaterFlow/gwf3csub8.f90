@@ -211,6 +211,7 @@ module GwfCsubModule
     procedure, private :: csub_adj_matprop
     procedure, private :: csub_calc_interbed_thickness
     procedure, private :: csub_calc_delay_flow
+    procedure, private :: csub_delay_eval
     !
     ! -- stress methods
     !procedure, private :: csub_sk_calc_znode
@@ -3381,9 +3382,6 @@ contains
         end if
       end if
     end if
-!    !
-!    ! -- Advance the time series manager
-!    call this%TsManager%ad()
     !
     ! -- set initial conditions
     if (this%initialized == 0) then
@@ -4323,48 +4321,16 @@ contains
         call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
         !
         ! -- check that the delay bed should be evaluated
-        !idelaycalc = 0
-        !if (this%stoiconv(node) /= 0) then
-        !  top = this%dis%bot(node) + this%thick(ib)
-        !else
-        !  top = this%dis%top(node)
-        !end if
-        !if (hcell >= top) then
-        !  idelaycalc = 1
-        !end if
-        idelaycalc = 1
-        if (this%stoiconv(node) == 0) then
-          top = this%dis%top(node)
-          if (hcell < top) then
-            idelaycalc = 0
-          end if
-        else
-          top = this%dis%bot(node) + this%thick(ib)
-          if (hcell < top) then
-            idelaycalc = 0
-          end if
-        end if
+        idelaycalc = this%csub_delay_eval(ib, node, hcell)
         !
         ! -- calculate delay interbed hcof and rhs
-        if (idelaycalc /= 0) then
+        if (idelaycalc > 0) then
           call this%csub_delay_sln(ib, hcell, hcellold)
           call this%csub_delay_fc(ib, hcell, hcof, rhs)
         ! -- create error message
         else
-          call this%dis%noder_to_string(node, cellid)
-          !if (this%stoiconv(node) /= 0) then
-          !  write(errmsg,'(4x,a,1x,g0,1x,a,1x,a,1x,a,1x,g0,1x,a,1x,i0)')         &
-          !    '****ERROR. HEAD (', hcell, ') IN CONVERTIBLE CELL (',             &
-          !    trim(adjustl(cellid)), ') DROPPED BELOW THE TOP OF THE INTERBED (',&
-          !    top, ') FOR DELAY INTERBED ', ib
-          !else
-          !  write(errmsg,'(4x,a,1x,g0,1x,a,1x,a,1x,a,1x,g0,1x,a,1x,i0)')         &
-          !    '****ERROR. HEAD (', hcell, ') IN NON-CONVERTIBLE CELL (',         &
-          !    trim(adjustl(cellid)), ') DROPPED BELOW THE TOP OF THE CELL (',    &
-          !    top, ') FOR DELAY INTERBED ', ib
-          !end if
-          !call store_error(errmsg)
-          if (this%stoiconv(node) == 0) then
+          if (idelaycalc < 0) then
+            call this%dis%noder_to_string(node, cellid)
             write(errmsg,'(4x,a,1x,g0,1x,a,1x,a,1x,a,1x,g0,1x,a,1x,i0)')         &
               '****ERROR. HEAD (', hcell, ') IN NON-CONVERTIBLE CELL (',         &
               trim(adjustl(cellid)), ') DROPPED BELOW THE TOP OF THE CELL (',    &
@@ -4417,6 +4383,7 @@ contains
     real(DP) :: rho1
     real(DP) :: rho2
     real(DP) :: top
+    real(DP) :: bot
 ! ------------------------------------------------------------------------------
 !
 ! -- initialize variables
@@ -4431,11 +4398,27 @@ contains
       !
       ! -- perturb the gwf head
       hcellp = hcell + DEM4
+      !
+      ! -- no-delay interbeds
       if (this%idelay(ib) == 0) then
         f = area
         !
         ! -- head-based formulation with fixed material properties
         if (this%igeocalc == 0 .and. this%iupdatematprop == 0) then
+          !
+          ! -- calculate the saturation derivative
+          top = this%dis%top(node)
+          bot = this%dis%bot(node)
+          derv = sQuadraticSaturationDerivative(top, bot, hcell)
+          !
+          ! -- calculate storage coefficient
+          call this%csub_nodelay_fc(ib, hcell, hcellold, rho1, hcofn, rhsn)
+          !
+          ! -- calculate hcof term
+          hcofn = -hcofn * derv * hcell
+          !
+          ! -- reset derv
+          derv = DZERO
         !
         ! -- effective-stress formulation or head-based formulation
         !    with variable material properties
@@ -4456,6 +4439,8 @@ contains
           ! -- calculate the derivative
           derv = (qp - q) / DEM4
         end if
+      !
+      ! -- delay interbeds
       else
         !
         ! -- calculate cell saturation
@@ -4465,21 +4450,10 @@ contains
         f = area * this%rnb(ib) * snnew
         !
         ! -- check that the delay bed should be evaluated
-        idelaycalc = 1
-        if (this%stoiconv(node) == 0) then
-          top = this%dis%top(node)
-          if (hcell < top) then
-            idelaycalc = 0
-          end if
-        else
-          top = this%dis%bot(node) + this%thick(ib)
-          if (hcell < top) then
-            idelaycalc = 0
-          end if
-        end if
+        idelaycalc = this%csub_delay_eval(ib, node, hcell)
         !
         ! -- calculate newton terms if delay bed is not stranded
-        if (idelaycalc /= 0) then
+        if (idelaycalc > 0) then
           !
           ! -- head-based formulation with fixed material properties
           if (this%igeocalc == 0 .and. this%iupdatematprop == 0) then
@@ -4720,6 +4694,7 @@ contains
     bot = this%dis%bot(node)
     tthk = this%sk_thick(node)
     tthk0 = this%sk_thick0(node)
+    !
     ! -- aquifer saturation
     call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
     !
@@ -4773,7 +4748,7 @@ contains
     ! -- calculate saturation derivitive
     derv = sQuadraticSaturationDerivative(top, bot, hcell)    
     !
-    ! -- storage coefficients
+    ! -- storage coefficient
     wc2 = this%brg * area * tthk * this%sk_theta(node) * tled
     !
     ! -- calculate hcof term
@@ -4833,11 +4808,15 @@ contains
     !
     idelay = this%idelay(ib)
     f = this%brg * area * tled
+    !
+    ! -- no-delay interbeds
     if (idelay == 0) then
       wc1 = f * this%theta0(ib) * this%thick0(ib)
       wc2 = f * this%theta(ib) * this%thick(ib)
       hcof = -wc2 * snnew
       rhs = -wc1 * snold * hcellold
+    !
+    ! -- delay interbeds
     else
       !
       ! -- calculate cell saturation
@@ -4888,16 +4867,10 @@ contains
     real(DP), intent(inout) :: hcof
     real(DP), intent(inout) :: rhs
     ! locals
-    integer(I4B) :: n
     integer(I4B) :: idelay
     real(DP) :: top
     real(DP) :: bot
-    real(DP) :: snold
-    real(DP) :: snnew
     real(DP) :: f
-    real(DP) :: fmult
-    real(DP) :: dz
-    real(DP) :: wc1
     real(DP) :: wc2
     real(DP) :: derv
 ! ------------------------------------------------------------------------------
@@ -4909,13 +4882,12 @@ contains
     ! -- aquifer elevations and thickness
     top = this%dis%top(node)
     bot = this%dis%bot(node)
-    !!
-    !! -- calculate cell saturation
-    !call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
     !
     !
     idelay = this%idelay(ib)
     f = this%brg * area * tled
+    !
+    ! -- no-delay interbeds
     if (idelay == 0) then
       !
       ! -- calculate saturation derivitive
@@ -4925,30 +4897,10 @@ contains
       wc2 = f * this%theta(ib) * this%thick(ib)
       hcof = -wc2 * derv * hcell
       rhs = hcof * hcell
+    !
+    ! -- delay interbeds
     else
-      !!
-      !! -- calculate cell saturation
-      !call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
-      !!
-      !! -- calculate contribution for each delay interbed cell
-      !if (this%thick(ib) > DZERO) then
-      !  dz = this%dbfact * this%dbdz(idelay)
-      !  do n = 1, this%ndelaycells
-      !    fmult = DONE
-      !    !
-      !    ! -- scale factor for half-cell problem
-      !    if (this%idbhalfcell /= 0) then
-      !      if (n == 1) then
-      !        fmult = DHALF
-      !      end if
-      !    end if
-      !    wc2 = fmult * f * dz * this%dbtheta(n, idelay)
-      !    wc1 = wc2
-      !    rhs = rhs - (wc1 * snold * this%dbh0(n, idelay) -                     &
-      !                 wc2 * snnew * this%dbh(n, idelay))
-      !  end do
-      !  rhs = rhs * this%rnb(ib) * snnew
-      !end if
+      ! -- delay beds are not head dependent
     end if
     !
     ! -- return
@@ -5076,6 +5028,48 @@ contains
     ! -- return
     return
   end function csub_calc_adjes
+  
+  function csub_delay_eval(this, ib, node, hcell) result(idelaycalc)
+! ******************************************************************************
+! csub_delay_eval -- Determine if the delay interbed should be solved,
+!                    is stranded, or is a run-time error 
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    class(GwfCsubType), intent(inout) :: this
+    ! -- dummy
+    integer(I4B), intent(in) :: ib
+    integer(I4B), intent(in) :: node
+    real(DP), intent(in) :: hcell
+    ! -- local variables
+    integer(I4B) :: idelaycalc
+    real(DP) :: top
+! ------------------------------------------------------------------------------
+    idelaycalc = 1
+    !
+    ! -- non-convertible cell
+    if (this%stoiconv(node) == 0) then
+      top = this%dis%top(node)
+      ! -- run-time error
+      if (hcell < top) then
+        idelaycalc = -999
+      end if
+    !
+    ! -- convertible cell
+    else
+      top = this%dis%bot(node) + this%thick(ib)
+      !
+      ! -- stranded cell
+      if (hcell < top) then
+        idelaycalc = 0
+      end if
+    end if
+    !
+    ! -- return
+    return
+  end function csub_delay_eval
+  
    
   subroutine csub_calc_sat(this, node, hcell, hcellold, snnew, snold)
 ! ******************************************************************************
