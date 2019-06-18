@@ -1515,7 +1515,7 @@ contains
     !
     ! -- parse locations block if detected
     if (isfound) then
-      write(this%iout,'(/1x,a)')'PROCESSING '//trim(adjustl(this%name))// &
+      write(this%iout,'(/1x,a)')'PROCESSING '//trim(adjustl(this%name))//        &
         ' PACKAGEDATA'
       do
         call this%parser%GetNextLine(endOfBlock)
@@ -1524,8 +1524,9 @@ contains
         itmp = this%parser%GetInteger()
 
         if (itmp < 1 .or. itmp > this%ninterbeds) then
-          write(errmsg,'(4x,a,1x,i0,1x,a,1x,i0)') &
-            '****ERROR. INTERBED NUMBER (', itmp, ') MUST BE > 0 and <= ', this%ninterbeds
+          write(errmsg,'(4x,a,1x,i0,1x,a,1x,i0)')                                &
+            '****ERROR. INTERBED NUMBER (', itmp, ') MUST BE > 0 and <= ',       &
+            this%ninterbeds
           call store_error(errmsg)
           cycle
         end if
@@ -1535,24 +1536,25 @@ contains
 
         ! -- read cellid
         call this%parser%GetCellid(this%dis%ndim, cellid)
-        nn = this%dis%noder_from_cellid(cellid, &
-                                      this%parser%iuactive, this%iout)
-        n = this%dis%nodeu_from_cellid(cellid, &
-                                      this%parser%iuactive, this%iout)
+        nn = this%dis%noder_from_cellid(cellid,                                  &
+                                        this%parser%iuactive, this%iout)
+        n = this%dis%nodeu_from_cellid(cellid,                                   &
+                                       this%parser%iuactive, this%iout)
         top = this%dis%top(nn)
         bot = this%dis%bot(nn)
         baq = top - bot
         ! -- determine if a valid cell location was provided
-          if (nn < 1) then
-            write(errmsg,'(4x,a,1x,i4,1x)') &
-              '****ERROR. INVALID cellid FOR PACKAGEDATA ENTRY', itmp
-            call store_error(errmsg)
-          end if
-        !todo error trapping here...
+        if (nn < 1) then
+          write(errmsg,'(4x,a,1x,i4,1x)')                                        &
+            '****ERROR. INVALID cellid FOR PACKAGEDATA ENTRY', itmp
+          call store_error(errmsg)
+        end if
+        
+        ! -- set nodelist and unodelist
         this%nodelist(itmp) = nn
         this%unodelist(itmp) = n
 
-        ! cdelay
+        ! -- get cdelay
         call this%parser%GetStringCaps(cdelay)
         select case (cdelay)
           case ('NODELAY')
@@ -1570,22 +1572,23 @@ contains
         idelay = ival
         this%idelay(itmp) = ival
 
-        ! get initial preconsolidation stress
+        ! -- get initial preconsolidation stress
         this%pcs(itmp) = this%parser%GetDouble()
 
         ! -- get thickness or cell fraction
         rval = this%parser%GetDouble()
         if (this%icellf == 0) then
-          if (rval <= 0.0 .or. rval > baq) then
+          if (rval < DZERO .or. rval > baq) then
               write(errmsg,'(4x,a,1x,g0,1x,a,1x,g0,1x,a,1x,i0)') &
-                '****ERROR. thick (', rval,') MUST BE > 0 AND LESS THAN ', baq, &
+                '****ERROR. thick (', rval,') MUST BE >= 0 AND <= ', baq,        &
                 'FOR PACKAGEDATA ENTRY', itmp
               call store_error(errmsg)
           end if
         else
-          if (rval <= DZERO .or. rval > DONE) then
+          if (rval < DZERO .or. rval > DONE) then
               write(errmsg,'(4x,a,1x,i0)') &
-                '****ERROR. frac MUST BE > 0 AND < 1 FOR PACKAGEDATA ENTRY', itmp
+                '****ERROR. frac MUST BE >= 0 AND <= 1 FOR PACKAGEDATA ENTRY',   &
+                itmp
               call store_error(errmsg)
           end if
           rval = rval * baq
@@ -1614,7 +1617,7 @@ contains
 
         ! -- get skv or ci
         rval =  this%parser%GetDouble()
-        if (rval <= 0.0) then
+        if (rval < 0.0) then
             write(errmsg,'(4x,a,1x,i4,1x)') &
               '****ERROR. INVALID (ci,ssv) FOR PACKAGEDATA ENTRY', itmp
             call store_error(errmsg)
@@ -1623,7 +1626,7 @@ contains
 
         ! -- get ske or rci
         rval =  this%parser%GetDouble()
-        if (rval <= 0.0) then
+        if (rval < 0.0) then
             write(errmsg,'(4x,a,1x,i4,1x)') &
               '****ERROR. INVALID (rci,sse) FOR PACKAGEDATA ENTRY', itmp
             call store_error(errmsg)
@@ -2205,14 +2208,12 @@ contains
     !
     ! -- recalculate BRG if necessary and output 
     !    water compressibility values
-    if (this%igeocalc /= 0) then
-      if (ibrg /= 0) then
-        this%brg = this%gammaw * this%beta
-      end if
-      write(this%iout, fmtoptr) 'GAMMAW        =', this%gammaw
-      write(this%iout, fmtoptr) 'BETA          =', this%beta
-      write(this%iout, fmtoptr) 'GAMMAW * BETA =', this%brg
+    if (ibrg /= 0) then
+      this%brg = this%gammaw * this%beta
     end if
+    write(this%iout, fmtoptr) 'GAMMAW        =', this%gammaw
+    write(this%iout, fmtoptr) 'BETA          =', this%beta
+    write(this%iout, fmtoptr) 'GAMMAW * BETA =', this%brg
     !
     ! -- terminate if errors encountered in reach block
     if (count_errors() > 0) then
@@ -3849,7 +3850,7 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use TdisModule, only: delt
+    use TdisModule, only: delt, kper
     ! -- dummy
     class(GwfCsubType) :: this
     integer(I4B),intent(in) :: kiter
@@ -3912,7 +3913,7 @@ contains
         !
         ! -- calculate coarse-grained skeletal water compressibility 
         !    storage terms
-        if (this%gammaw * this%beta /= DZERO) then
+        if (this%brg /= DZERO) then
           call this%csub_sk_wcomp_fc(node, tled, area, hnew(node), hold(node),  &
                                      hcof, rhsterm)
           !
@@ -3956,7 +3957,7 @@ contains
           rhs(node) = rhs(node) + rhsterm
           !
           ! -- calculate interbed water compressibility terms
-          if (this%gammaw * this%beta /= DZERO) then
+          if (this%brg /= DZERO) then
             call this%csub_interbed_wcomp_fc(ib, node, tled, area,              &
                                              hnew(node), hold(node),            &
                                              hcof, rhsterm)
@@ -4037,7 +4038,7 @@ contains
         !
         ! -- calculate coarse-grained skeletal water compressibility storage 
         !    newton terms
-        if (this%gammaw * this%beta /= DZERO) then
+        if (this%brg /= DZERO) then
           call this%csub_sk_wcomp_fn(node, tled, area, hnew(node), hcof, rhsterm)
           !
           ! -- add water compression storage newton terms to amat and rhs for 
@@ -4071,7 +4072,7 @@ contains
           !end if
           !
           ! -- calculate interbed water compressibility terms
-          if (this%gammaw * this%beta /= DZERO) then
+          if (this%brg /= DZERO) then
             call this%csub_interbed_wcomp_fn(ib, node, tled, area,              &
                                              hnew(node), hold(node),            &
                                              hcof, rhsterm)
@@ -4723,8 +4724,8 @@ contains
     call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
     !
     ! -- storage coefficients
-    wc1 = this%gammaw * this%beta * area * tthk0 * this%sk_theta0(node) * tled
-    wc2 = this%gammaw * this%beta * area * tthk * this%sk_theta(node) * tled
+    wc1 = this%brg * area * tthk0 * this%sk_theta0(node) * tled
+    wc2 = this%brg * area * tthk * this%sk_theta(node) * tled
     !
     ! -- calculate hcof term
     hcof = -wc2 * snnew
@@ -4773,7 +4774,7 @@ contains
     derv = sQuadraticSaturationDerivative(top, bot, hcell)    
     !
     ! -- storage coefficients
-    wc2 = this%gammaw * this%beta * area * tthk * this%sk_theta(node) * tled
+    wc2 = this%brg * area * tthk * this%sk_theta(node) * tled
     !
     ! -- calculate hcof term
     hcof = -wc2 * derv * hcell
@@ -4831,7 +4832,7 @@ contains
     !
     !
     idelay = this%idelay(ib)
-    f = this%gammaw * this%beta * area * tled
+    f = this%brg * area * tled
     if (idelay == 0) then
       wc1 = f * this%theta0(ib) * this%thick0(ib)
       wc2 = f * this%theta(ib) * this%thick(ib)
@@ -4914,7 +4915,7 @@ contains
     !
     !
     idelay = this%idelay(ib)
-    f = this%gammaw * this%beta * area * tled
+    f = this%brg * area * tled
     if (idelay == 0) then
       !
       ! -- calculate saturation derivitive
