@@ -123,6 +123,8 @@ module GwfCsubModule
     !
     ! -- interbed variables
     integer(I4B), dimension(:), pointer, contiguous :: idelay => null()          !0 = nodelay, > 0 = delay
+    integer(I4B), dimension(:), pointer, contiguous :: ielastic => null()        !0 = inelastic and elastic, > 0 = elastic
+    integer(I4B), dimension(:), pointer, contiguous :: iconvert => null()        !0 = elastic, > 0 = inelastic
     real(DP), dimension(:), pointer, contiguous :: ci => null()                  !compression index
     real(DP), dimension(:), pointer, contiguous :: rci => null()                 !recompression index
     real(DP), dimension(:), pointer, contiguous :: es => null()                  !effective stress
@@ -553,6 +555,8 @@ contains
     ! -- local
     integer(I4B) :: ib
     integer(I4B) :: idelay
+    integer(I4B) :: ielastic
+    integer(I4B) :: iconvert
     integer(I4B) :: node
     integer(I4B) :: nn
     real(DP) :: es
@@ -678,6 +682,8 @@ contains
     do ib = 1, this%ninterbeds
       rratewc = DZERO
       idelay = this%idelay(ib)
+      ielastic = this%ielastic(ib)
+      iconvert = this%iconvert(ib)
       if (this%gwfiss == 0) then
         node = this%nodelist(ib)
         area = this%dis%get_area(node)
@@ -702,19 +708,31 @@ contains
           ! -- calculate inelastic and elastic compaction
           if (this%igeocalc == 0) then
             h = hnew(node)
-            if (rho2 /= rho1) then
+            if (ielastic > 0 .or. iconvert == 0) then
+              stoe = comp
+            else
               stoi = rho2 * (pcs - h)
               stoe = rho1 * (es0 - pcs)
-            else
-              stoe = comp
             end if
+            !if (rho2 /= rho1) then
+            !  stoi = rho2 * (pcs - h)
+            !  stoe = rho1 * (es0 - pcs)
+            !else
+            !  stoe = comp
+            !end if
           else
-            if (rho2 /= rho1) then
+            if (ielastic > 0 .or. iconvert == 0) then
+              stoe = comp
+            else
               stoi = -pcs * rho2 + (rho2 * es)
               stoe = pcs * rho1 - (rho1 * es0)
-            else
-              stoe = comp
             end if
+            !if (rho2 /= rho1) then
+            !  stoi = -pcs * rho2 + (rho2 * es)
+            !  stoe = pcs * rho1 - (rho1 * es0)
+            !else
+            !  stoe = comp
+            !end if
           end if
           compe = stoe
           compi = stoi
@@ -1633,6 +1651,13 @@ contains
             call store_error(errmsg)
         end if
         this%rci(itmp) = rval
+        
+        ! -- set ielastic
+        if (this%ci(itmp) == this%rci(itmp)) then
+          this%ielastic(itmp) = 1
+        else
+          this%ielastic(itmp) = 0
+        end if
 
         ! -- get porosity
         rval =  this%parser%GetDouble()
@@ -2324,6 +2349,8 @@ contains
     call mem_allocate(this%ci, iblen, 'ci', trim(this%origin))
     call mem_allocate(this%rci, iblen, 'rci', trim(this%origin))
     call mem_allocate(this%idelay, iblen, 'idelay', trim(this%origin))
+    call mem_allocate(this%ielastic, iblen, 'ielastic', trim(this%origin))
+    call mem_allocate(this%iconvert, iblen, 'iconvert', trim(this%origin))
     call mem_allocate(this%comp, iblen, 'comp', trim(this%origin))
     call mem_allocate(this%tcomp, iblen, 'tcomp', trim(this%origin))
     call mem_allocate(this%tcompi, iblen, 'tcompi', trim(this%origin))
@@ -2425,6 +2452,8 @@ contains
       call mem_deallocate(this%unodelist)
       call mem_deallocate(this%nodelist)
       call mem_deallocate(this%idelay)
+      call mem_deallocate(this%ielastic)
+      call mem_deallocate(this%iconvert)
       !
       ! -- grid-based storage data
       call mem_deallocate(this%buff)
@@ -2899,6 +2928,7 @@ contains
       else
         v = this%dbfact * this%rnb(ib) * this%thick(ib)
       end if
+      thick = this%sk_thick(node) - v
       this%sk_thick(node) = this%sk_thick(node) - v
     end do
     !
@@ -3155,6 +3185,10 @@ contains
     area = this%dis%get_area(node)
     bot = this%dis%bot(node)
     top = this%dis%top(node)
+    !
+    ! -- set iconvert
+    this%iconvert(ib) = 0
+    !
     ! -- aquifer saturation
     call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
     if (this%igeocalc == 0) then
@@ -3178,15 +3212,27 @@ contains
     rho2 = this%rci(ib) * sto_fac
     if (this%igeocalc == 0) then
       if (hcell < this%pcs(ib)) then
+        this%iconvert(ib) = 1
         rho2 = this%ci(ib) * sto_fac
       end if
-      rhs = -(rho2 * this%pcs(ib) + rho1 * (this%sk_es0(node) - this%pcs(ib)))
+      if (this%ielastic(ib) /= 0) then
+        rhs = -rho1 * this%sk_es0(node)
+      else
+        rhs = -(rho2 * this%pcs(ib) + rho1 * (this%sk_es0(node) - this%pcs(ib)))
+      end if
     else
       if (this%sk_es(node) > this%pcs(ib)) then
-          rho2 = this%ci(ib) * sto_fac
+        this%iconvert(ib) = 1
+        rho2 = this%ci(ib) * sto_fac
       end if
-      rhs = -rho2 * (this%sk_gs(node) + bot) + (this%pcs(ib) * (rho2 - rho1)) + &
-             (rho1 * this%sk_es0(node))
+      if (this%ielastic(ib) /= 0) then
+        rhs = rho1 * this%sk_es0(node) -                                         &
+              rho2 * (this%sk_gs(node) + bot)
+      else
+        rhs = -rho2 * (this%sk_gs(node) + bot) +                                 &
+              (this%pcs(ib) * (rho2 - rho1)) +                                   &
+              (rho1 * this%sk_es0(node))
+      end if
     end if
     !
     ! -- save ske and sk
@@ -3236,10 +3282,18 @@ contains
     call this%csub_nodelay_fc(ib, hcell, hcellold, rho1, rho2, rhs, tled)
     !
     ! -- calculate no-delay interbed compaction
-    if (this%igeocalc == 0) then
-      comp = rho2 * (pcs - hcell) + rho1 * (es0 - pcs)
+    if (this%ielastic(ib) /= 0) then
+      if (this%igeocalc == 0) then
+        comp = rho1 * es0 - rho2 * hcell
+      else
+        comp = rho2 * es - rho1 * es0
+      end if
     else
-      comp = -pcs * (rho2 - rho1) - (rho1 * es0) + (rho2 * es)
+      if (this%igeocalc == 0) then
+        comp = rho2 * (pcs - hcell) + rho1 * (es0 - pcs)
+      else
+        comp = -pcs * (rho2 - rho1) - (rho1 * es0) + (rho2 * es)
+      end if
     end if
     !
     ! -- return
@@ -4125,7 +4179,8 @@ contains
     bot = this%dis%bot(node)
     tthk = this%sk_thick(node)
     tthk0 = this%sk_thick0(node)
-    ! -- aquifer saturation
+    !
+    ! -- calculate aquifer saturation
     call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
     !
     ! -- storage coefficients
@@ -5141,8 +5196,9 @@ contains
     end if
     !
     ! -- calculate factor for the effective stress case
-    esv = this%time_alpha * es +                                             &
+    esv = this%time_alpha * es +                                                 &
           (DONE - this%time_alpha) * es0
+    !if (node == 1) write(*,*) esv
     void = this%csub_calc_void(theta)
     denom = this%csub_calc_adjes(node, esv, bot, znode)
     denom = denom * (DONE + void)
