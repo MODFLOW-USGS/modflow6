@@ -80,6 +80,7 @@ module GwfCsubModule
     integer(I4B), pointer :: igeocalc => null()
     integer(I4B), pointer :: idbhalfcell => null()
     integer(I4B), pointer :: idbfullcell => null()
+    integer(I4B), pointer :: kiter => null()
     real(DP), pointer :: cc_crit => null()                                       !convergence criteria for csub-gwf convergence check
     real(DP), pointer :: time_alpha => null()                                    !time factor to apply to the current and previous effective stress
     real(DP), pointer :: gammaw => null()                                        !product of fluid density, and gravity
@@ -110,6 +111,7 @@ module GwfCsubModule
     real(DP), dimension(:), pointer, contiguous :: sk_gs => null()               !geostatic stress for a cell
     real(DP), dimension(:), pointer, contiguous :: sk_es => null()               !skeletal (aquifer) effective stress
     real(DP), dimension(:), pointer, contiguous :: sk_es0 => null()              !skeletal (aquifer) effective stress for the previous time step
+    real(DP), dimension(:), pointer, contiguous :: sk_esi => null()              !skeletal (aquifer) effective stress for the previous outer iteration
     real(DP), dimension(:), pointer, contiguous :: sk_comp => null()             !skeletal (aquifer) incremental compaction
     real(DP), dimension(:), pointer, contiguous :: sk_tcomp => null()            !skeletal (aquifer) total compaction
     real(DP), dimension(:), pointer, contiguous :: sk_stor => null()             !skeletal (aquifer) storage
@@ -149,6 +151,7 @@ module GwfCsubModule
     real(DP), dimension(:,:), pointer, contiguous :: auxvar => null()            !auxiliary variable array
     !
     ! -- delay interbed arrays
+    integer(I4B), dimension(:,:), pointer, contiguous :: idbconvert => null()    !0 = elastic, > 0 = inelastic
     real(DP), dimension(:), pointer, contiguous :: dbdz => null()                !delay bed dz
     real(DP), dimension(:), pointer, contiguous :: dbdhmax => null()             !delay bed maximum head change
     real(DP), dimension(:,:), pointer, contiguous :: dbz => null()               !delay bed cell z
@@ -160,6 +163,7 @@ module GwfCsubModule
     real(DP), dimension(:,:), pointer, contiguous :: dbgeo => null()             !delay bed cell geostatic stress
     real(DP), dimension(:,:), pointer, contiguous :: dbgeo0 => null()            !delay bed cell previous geostatic stress
     real(DP), dimension(:,:), pointer, contiguous :: dbes => null()              !delay bed cell effective stress
+    real(DP), dimension(:,:), pointer, contiguous :: dbesi => null()             !delay bed cell effective stress for the previous iteration
     real(DP), dimension(:,:), pointer, contiguous :: dbes0 => null()             !delay bed cell previous effective stress
     real(DP), dimension(:,:), pointer, contiguous :: dbpcs => null()             !delay bed cell preconsolidation stress
     real(DP), dimension(:), pointer, contiguous :: dbflowtop => null()           !delay bed flow through interbed top
@@ -349,6 +353,7 @@ contains
     call mem_allocate(this%iupdatematprop, 'IUPDATEMATPROP', this%origin)
     call mem_allocate(this%idbhalfcell, 'IDBHALFCELL', this%origin)
     call mem_allocate(this%idbfullcell, 'IDBFULLCELL', this%origin)
+    call mem_allocate(this%kiter, 'KITER', this%origin)
     call mem_allocate(this%cc_crit, 'CC_CRIT', this%origin)
     call mem_allocate(this%time_alpha, 'TIME_ALPHA', this%origin)
     call mem_allocate(this%gammaw, 'GAMMAW', this%origin)
@@ -395,6 +400,7 @@ contains
     this%iupdatematprop = 0
     this%idbhalfcell = 0
     this%idbfullcell = 0
+    this%kiter = 0
     this%cc_crit = DEM7
     this%time_alpha = DONE
     this%gammaw = DGRAVITY * 1000._DP
@@ -683,7 +689,6 @@ contains
       rratewc = DZERO
       idelay = this%idelay(ib)
       ielastic = this%ielastic(ib)
-      iconvert = this%iconvert(ib)
       if (this%gwfiss == 0) then
         node = this%nodelist(ib)
         area = this%dis%get_area(node)
@@ -693,6 +698,7 @@ contains
         !
         ! -- no delay interbeds
         if (idelay == 0) then
+          iconvert = this%iconvert(ib)
           b = this%thick(ib)
           stoi = DZERO
           !
@@ -714,12 +720,6 @@ contains
               stoi = rho2 * (pcs - h)
               stoe = rho1 * (es0 - pcs)
             end if
-            !if (rho2 /= rho1) then
-            !  stoi = rho2 * (pcs - h)
-            !  stoe = rho1 * (es0 - pcs)
-            !else
-            !  stoe = comp
-            !end if
           else
             if (ielastic > 0 .or. iconvert == 0) then
               stoe = comp
@@ -727,12 +727,6 @@ contains
               stoi = -pcs * rho2 + (rho2 * es)
               stoe = pcs * rho1 - (rho1 * es0)
             end if
-            !if (rho2 /= rho1) then
-            !  stoi = -pcs * rho2 + (rho2 * es)
-            !  stoe = pcs * rho1 - (rho1 * es0)
-            !else
-            !  stoe = comp
-            !end if
           end if
           compe = stoe
           compi = stoi
@@ -1797,6 +1791,7 @@ contains
       if (ierr == 0) then
         !
         ! -- reallocate delay bed arrays
+        call mem_reallocate(this%idbconvert, this%ndelaycells, ndelaybeds, 'idbconvert', trim(this%origin))
         call mem_reallocate(this%dbdz, ndelaybeds, 'dbdz', trim(this%origin))
         call mem_reallocate(this%dbdhmax, ndelaybeds, 'dbdhmax', trim(this%origin))
         call mem_reallocate(this%dbz, this%ndelaycells, ndelaybeds, 'dbz', trim(this%origin))
@@ -1808,6 +1803,7 @@ contains
         call mem_reallocate(this%dbgeo, this%ndelaycells, ndelaybeds, 'dbgeo', trim(this%origin))
         call mem_reallocate(this%dbgeo0, this%ndelaycells, ndelaybeds, 'dbgeo0', trim(this%origin))
         call mem_reallocate(this%dbes, this%ndelaycells, ndelaybeds, 'dbes', trim(this%origin))
+        call mem_reallocate(this%dbesi, this%ndelaycells, ndelaybeds, 'dbesi', trim(this%origin))
         call mem_reallocate(this%dbes0, this%ndelaycells, ndelaybeds, 'dbes0', trim(this%origin))
         call mem_reallocate(this%dbpcs, this%ndelaycells, ndelaybeds, 'dbpcs', trim(this%origin))
         call mem_reallocate(this%dbflowtop, ndelaybeds, 'dbflowtop', trim(this%origin))
@@ -1847,6 +1843,7 @@ contains
             this%dbgeo(n, idelay) = DZERO
             this%dbgeo0(n, idelay) = DZERO
             this%dbes(n, idelay) = DZERO
+            this%dbesi(n, idelay) = DZERO
             this%dbes0(n, idelay) = DZERO
             this%dbpcs(n, idelay) = this%pcs(ib)
           end do
@@ -2304,6 +2301,7 @@ contains
     end if
     call mem_allocate(this%sk_es, this%dis%nodes, 'sk_es', trim(this%origin))
     call mem_allocate(this%sk_es0, this%dis%nodes, 'sk_es0', trim(this%origin))
+    call mem_allocate(this%sk_esi, this%dis%nodes, 'sk_esi', trim(this%origin))
     call mem_allocate(this%sk_comp, this%dis%nodes, 'sk_comp', trim(this%origin))
     call mem_allocate(this%sk_tcomp, this%dis%nodes, 'sk_tcomp', trim(this%origin))
     call mem_allocate(this%sk_stor, this%dis%nodes, 'sk_stor', trim(this%origin))
@@ -2362,6 +2360,7 @@ contains
     call mem_allocate(this%thickini, iblen, 'thickini', trim(this%origin))
     !
     ! -- delay bed storage
+    call mem_allocate(this%idbconvert, 0, 0, 'idbconvert', trim(this%origin))
     call mem_allocate(this%dbdz, 0, 'dbdz', trim(this%origin))
     call mem_allocate(this%dbdhmax, 0, 'dbdhmax', trim(this%origin))
     call mem_allocate(this%dbz, 0, 0, 'dbz', trim(this%origin))
@@ -2373,6 +2372,7 @@ contains
     call mem_allocate(this%dbgeo, 0, 0, 'dbgeo', trim(this%origin))
     call mem_allocate(this%dbgeo0, 0, 0, 'dbgeo0', trim(this%origin))
     call mem_allocate(this%dbes, 0, 0, 'dbes', trim(this%origin))
+    call mem_allocate(this%dbesi, 0, 0, 'dbesi', trim(this%origin))
     call mem_allocate(this%dbes0, 0, 0, 'dbes0', trim(this%origin))
     call mem_allocate(this%dbpcs, 0, 0, 'dbpcs', trim(this%origin))
     call mem_allocate(this%dbflowtop, 0, 'dbflowtop', trim(this%origin))
@@ -2473,6 +2473,7 @@ contains
       call mem_deallocate(this%sk_gs)
       call mem_deallocate(this%sk_es)
       call mem_deallocate(this%sk_es0)
+      call mem_deallocate(this%sk_esi)
       call mem_deallocate(this%sk_comp)
       call mem_deallocate(this%sk_tcomp)
       call mem_deallocate(this%sk_stor)
@@ -2515,6 +2516,7 @@ contains
       call mem_deallocate(this%thickini)
       !
       ! -- delay bed storage
+      call mem_deallocate(this%idbconvert)
       call mem_deallocate(this%dbdz)
       call mem_deallocate(this%dbdhmax)
       call mem_deallocate(this%dbz)
@@ -2526,6 +2528,7 @@ contains
       call mem_deallocate(this%dbgeo)
       call mem_deallocate(this%dbgeo0)
       call mem_deallocate(this%dbes)
+      call mem_deallocate(this%dbesi)
       call mem_deallocate(this%dbes0)
       call mem_deallocate(this%dbpcs)
       call mem_deallocate(this%dbflowtop)
@@ -2581,6 +2584,7 @@ contains
     call mem_deallocate(this%iupdatematprop)
     call mem_deallocate(this%idbfullcell)
     call mem_deallocate(this%idbhalfcell)
+    call mem_deallocate(this%kiter)
     call mem_deallocate(this%cc_crit)
     call mem_deallocate(this%time_alpha)
     call mem_deallocate(this%gammaw)
@@ -2982,6 +2986,9 @@ contains
     integer(I4B), intent(in) :: nodes
     real(DP), dimension(nodes), intent(in) :: hnew
     ! -- local
+    character(len=LINELENGTH) :: errmsg
+    character(len=20) :: cellid
+    integer(I4B) :: ierr
     integer(I4B) :: node
     integer(I4B) :: ii
     integer(I4B) :: nn
@@ -3002,6 +3009,9 @@ contains
 
 ! ------------------------------------------------------------------------------
     !
+    ! -- initialize variables
+    ierr = 0
+    !
     ! -- calculate geostatic stress if necessary
     if (this%igeocalc /= 0) then
       do node = 1, this%dis%nodes
@@ -3011,7 +3021,11 @@ contains
         !    for the cell
         top = this%dis%top(node)
         bot = this%dis%bot(node)
-        hcell = hnew(node)
+        if (this%ibound(node) /= 0) then
+          hcell = hnew(node)
+        else
+          hcell = bot
+        end if
         gs = DZERO
         if (hcell >= top) then
             gs = (top - bot) * this%sgs(node)
@@ -3077,21 +3091,51 @@ contains
         this%sk_gs(node) = gs
       end do
       !
-      ! -- calculate effective stress for a cell
+      ! -- save effective stress from the last iteration and
+      !    calculate the new effective stress for a cell
       do node = 1, this%dis%nodes
+        this%sk_esi(node) = this%sk_es(node)
+        top = this%dis%top(node)
         bot = this%dis%bot(node)
-        hcell = hnew(node)
-        hs = DZERO
-        if (hcell > bot) then
-          hs = hcell - bot
+        if (this%ibound(node) /= 0) then
+          hcell = hnew(node)
+          if (hcell < bot) then
+            hcell = bot
+          end if
+        else
+          hcell = bot
         end if
+        hs = hcell - bot
         es = this%sk_gs(node) - hs
+        if (es < DEM6) then
+          ierr = ierr + 1
+          call this%dis%noder_to_string(node, cellid)
+          write(errmsg, '(a,g0.7,a,1x,a,1x,a)')                                  &
+            'ERROR: SMALL TO NEGATIVE EFFECTIVE STRESS (', es, ') IN CELL',      &
+            trim(adjustl(cellid)), '.'
+          call store_error(errmsg)
+          write(errmsg, '(4x,a,1x,g0.7,3(1x,a,1x,g0.7),1x,a)')                   &
+            '(', es, '=', this%sk_gs(node), '- (', hcell, '-', bot, ')'
+          call store_error(errmsg)
+        end if
         this%sk_es(node) = es
       end do
-   end if
-   !
-   ! -- return
-   return
+    end if
+    !
+    ! -- write a summary error message
+    if (ierr > 0) then
+        write(errmsg, '(a,3(1x,a))')                                           &
+          'ERROR SOLUTION: SMALL TO NEGATIVE EFFECTIVE STRESS VALUES CAN BE',  &
+          'ELIMINATED BY INCREASING STORAGE VALUES AND/OR ADDING/MODIFYING',   &
+          'STRESS BOUNDARIES TO PREVENT WATER-LEVELS FROM EXCEEDING',          &
+          'THE TOP OF THE MODEL' 
+        call store_error(errmsg)
+        call this%parser%StoreErrorUnit()
+        call ustop()
+    end if
+    !
+    ! -- return
+    return
 
   end subroutine csub_sk_calc_stress
   
@@ -3172,6 +3216,7 @@ contains
     real(DP) :: theta
     real(DP) :: theta0
     real(DP) :: es
+    real(DP) :: esi
     real(DP) :: es0
     real(DP) :: f
     real(DP) :: f0
@@ -3198,11 +3243,12 @@ contains
       znode = this%csub_calc_znode(top, bot, hcell)
       znode0 = this%csub_calc_znode(top, bot, hcellold)
       es = this%sk_es(node)
+      esi = this%sk_esi(node)
       es0 = this%sk_es0(node)
       theta = this%theta(ib)
       theta0 = this%theta0(ib)
       call this%csub_calc_sfacts(node, bot, znode, znode0, theta, theta0,          &
-                                 es, es0, f, f0)
+                                 es, esi, es0, f, f0)
     end if
     sto_fac = tled * snnew * this%thick(ib) * f
     sto_fac0 = tled * snold * this%thick0(ib) * f0
@@ -3586,7 +3632,6 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- update geostatic load calculation
-    !call this%csub_sk_calc_znode(nodes, hnew)
     call this%csub_sk_calc_stress(nodes, hnew)
     !
     ! -- coarse-grained materials
@@ -3926,6 +3971,9 @@ contains
     real(DP) :: rhsterm
     real(DP) :: comp
 ! ------------------------------------------------------------------------------
+    !
+    ! -- set kiter that is used to under-relax effective stress
+    this%kiter = kiter
     !
     ! -- update geostatic load calculation
     call this%csub_sk_calc_stress(nodes, hnew)
@@ -4597,6 +4645,7 @@ contains
     real(DP) :: znode
     real(DP) :: znode0
     real(DP) :: es
+    real(DP) :: esi
     real(DP) :: es0
     real(DP) :: theta
     real(DP) :: theta0
@@ -4620,11 +4669,12 @@ contains
       znode = this%csub_calc_znode(top, bot, hcell)
       znode0 = this%csub_calc_znode(top, bot, hcellold)
       es = this%sk_es(n)
+      esi = this%sk_esi(n)
       es0 = this%sk_es0(n)
       theta = this%sk_theta(n)
       theta0 = this%sk_theta0(n)
       call this%csub_calc_sfacts(n, bot, znode, znode0, theta, theta0,          &
-                                 es, es0, f, f0)
+                                 es, esi, es0, f, f0)
     end if
     sske = f * this%ske_cr(n)
     sske0 = f0 * this%ske_cr(n)
@@ -5161,7 +5211,7 @@ contains
   end subroutine csub_calc_sat  
   
   subroutine csub_calc_sfacts(this, node, bot, znode, znode0, theta, theta0,    &
-                              es, es0, fact, fact0)
+                              es, esi, es0, fact, fact0)
 ! ******************************************************************************
 ! csub_calc_sfacts -- Calculate sske and sske0 factor for a gwf cell or 
 !                     interbed.
@@ -5177,6 +5227,7 @@ contains
     real(DP), intent(in) :: theta
     real(DP), intent(in) :: theta0
     real(DP), intent(in) :: es
+    real(DP), intent(in) :: esi
     real(DP), intent(in) :: es0
     real(DP), intent(inout) :: fact
     real(DP), intent(inout) :: fact0
@@ -5196,9 +5247,15 @@ contains
     end if
     !
     ! -- calculate factor for the effective stress case
-    esv = this%time_alpha * es +                                                 &
-          (DONE - this%time_alpha) * es0
-    !if (node == 1) write(*,*) esv
+    !esv = this%time_alpha * es +                                                 &
+    !      (DONE - this%time_alpha) * es0
+    if (this%time_alpha /= DZERO) then
+      !esv = 0.9_DP * esi + 0.1_DP * es
+      esv = es
+    else
+      esv = es0
+    end if
+    !if (node == 1) write(*,'(i0,3(1x,g15.7))') this%kiter, esv, esi, es
     void = this%csub_calc_void(theta)
     denom = this%csub_calc_adjes(node, esv, bot, znode)
     denom = denom * (DONE + void)
@@ -5503,8 +5560,10 @@ contains
       sigma = sigma - sadd
     end if
     !
-    ! -- calculate geostatic and effective stress for each interbed node
+    ! -- set effective stress for the previous iteration and 
+    !    calculate geostatic and effective stress for each interbed node
     do n = 1, this%ndelaycells
+      this%dbesi(n, idelay) = this%dbes(n, idelay)
       h = this%dbh(n, idelay)
       if (this%igeocalc == 0) then
         this%dbes(n, idelay) = h
@@ -5557,6 +5616,7 @@ contains
     real(DP) :: znode0
     real(DP) :: zbot
     real(DP) :: es
+    real(DP) :: esi
     real(DP) :: es0
     real(DP) :: theta
     real(DP) :: void
@@ -5607,23 +5667,27 @@ contains
       !
       ! -- set the effective stress
       es = this%dbes(n, idelay)
+      esi = this%dbesi(n, idelay)
       es0 = this%dbes0(n, idelay)
       !
       ! -- calculate the compression index factors for the delay 
       !    node relative to the center of the cell based on the 
       !    current and previous head
       call this%csub_calc_sfacts(node, zbot, znode, znode0, theta, theta,       &
-                                 es, es0, f, f0)
+                                 es, esi, es0, f, f0)
     end if
+    this%idbconvert(n, idelay) = 0
     sske = f0 * this%rci(ib)
     if (this%igeocalc == 0) then
       if (this%dbh(n, idelay) < this%dbpcs(n, idelay)) then
+        this%idbconvert(n, idelay) = 1
         ssk = f * this%ci(ib)
       else
         ssk = f * this%rci(ib)
       end if
     else
       if (this%dbes(n, idelay) > this%dbpcs(n, idelay)) then
+        this%idbconvert(n, idelay) = 1
         ssk = f * this%ci(ib)
       else
         ssk = f * this%rci(ib)
@@ -5652,6 +5716,7 @@ contains
     integer(I4B) :: n
     integer(I4B) :: node
     integer(I4B) :: idelay
+    integer(I4B) :: ielastic
     real(DP) :: dz
     real(DP) :: dzhalf
     real(DP) :: c
@@ -5670,6 +5735,7 @@ contains
     !
     ! -- initialize variables
     idelay = this%idelay(ib)
+    ielastic = this%ielastic(ib)
     node = this%nodelist(ib)
     dz = this%dbdz(idelay)
     dzhalf = DHALF * dz
@@ -5694,13 +5760,23 @@ contains
       aii = -ssk * fmult
       
       if (this%igeocalc == 0) then
-        r = -fmult * &
-             (ssk * (this%dbpcs(n, idelay)) + &
-              sske * (this%dbh0(n, idelay) - this%dbpcs(n, idelay)))
+        if (ielastic /= 0) then
+          r = -fmult * sske * this%dbh0(n, idelay)
+        else
+          r = -fmult * &
+               (ssk * (this%dbpcs(n, idelay)) + &
+                sske * (this%dbh0(n, idelay) - this%dbpcs(n, idelay)))
+        end if
       else
-        r = -fmult * &
-             (ssk * (this%dbgeo(n, idelay) + zbot - this%dbpcs(n, idelay)) +    &
-              sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay)))
+        if (ielastic /= 0) then
+          r = -fmult *                                                           &
+               (ssk * (this%dbgeo(n, idelay) + zbot) -                           &
+                sske * this%dbes0(n, idelay))
+        else
+          r = -fmult * &
+               (ssk * (this%dbgeo(n, idelay) + zbot - this%dbpcs(n, idelay)) +   &
+                sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay)))
+        end if
       end if
       !
       ! -- add connection to the gwf cell
@@ -5791,6 +5867,7 @@ contains
     real(DP), intent(inout) :: stoi
     ! -- local variables
     integer(I4B) :: idelay
+    integer(I4B) :: ielastic
     integer(I4B) :: n
     real(DP) :: sske
     real(DP) :: ssk
@@ -5806,6 +5883,7 @@ contains
     !
     ! -- initialize variables
     idelay = this%idelay(ib)
+    ielastic = this%ielastic(ib)
     stoe = DZERO
     stoi = DZERO
     ske = DZERO
@@ -5818,19 +5896,27 @@ contains
       do n = 1, this%ndelaycells
         call this%csub_delay_calc_ssksske(ib, n, hcell, hcellold, ssk, sske)
         if (this%igeocalc == 0) then
-          v1 = ssk * (this%dbpcs(n, idelay) - this%dbh(n, idelay))
-          v2 = sske * (this%dbh0(n, idelay) - this%dbpcs(n, idelay))
+          if (ielastic > 0) then
+            v1 = sske * this%dbh0(n, idelay) - ssk * this%dbh(n, idelay)
+          else
+            v1 = ssk * (this%dbpcs(n, idelay) - this%dbh(n, idelay))
+            v2 = sske * (this%dbh0(n, idelay) - this%dbpcs(n, idelay))
+          end if
         else
-          !v1 = ssk * (this%dbes(n, idelay) - this%dbpcs(n, idelay))
           z = this%dbz(n, idelay)
           zbot = z - dzhalf
-          v1 = ssk * (this%dbgeo(n, idelay) - this%dbh(n, idelay) + zbot - &
-                      this%dbpcs(n, idelay))
-          v2 = sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay))
+          if (ielastic > 0) then
+            v1 = ssk * (this%dbgeo(n, idelay) - this%dbh(n, idelay) + zbot) -    &
+                 sske * this%dbes0(n, idelay)
+          else
+            v1 = ssk * (this%dbgeo(n, idelay) - this%dbh(n, idelay) + zbot -     &
+                        this%dbpcs(n, idelay))
+            v2 = sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay))
+          end if
         end if
         !
         ! -- calculate inelastic and elastic storage components
-        if (ssk /= sske) then
+        if (this%idbconvert(n, idelay) /= 0) then
           stoi = stoi + v1 * fmult
           stoe = stoe + v2 * fmult
         else
@@ -5905,7 +5991,7 @@ contains
         comp = comp + v
         !
         ! -- calculate inelastic and elastic storage components
-        if (ssk /= sske) then
+        if (this%idbconvert(n, idelay) /= 0) then
           compi = compi + v1 * fmult
           compe = compe + v2 * fmult
         else

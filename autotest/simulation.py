@@ -27,7 +27,7 @@ sfmt = '{:25s} - {}'
 
 class Simulation(object):
     def __init__(self, name, exfunc=None, exe_dict=None, htol=None,
-                 idxsim=None):
+                 idxsim=None, cmp_verbose=True):
         delFiles = True
         for idx, arg in enumerate(sys.argv):
             if arg.lower() == '--keep':
@@ -75,6 +75,9 @@ class Simulation(object):
 
         # set index for multi-simulation comparisons
         self.idxsim = idxsim
+
+        # set compare verbosity
+        self.cmp_verbose = cmp_verbose
 
         sysinfo = platform.system()
         self.delFiles = delFiles
@@ -305,7 +308,7 @@ class Simulation(object):
                                                    htol=self.htol,
                                                    difftol=True,
                                                    # Change to true to have list of all nodes exceeding htol
-                                                   verbose=True,
+                                                   verbose=self.cmp_verbose,
                                                    exfile=exfile)
                 msg = sfmt.format('{} comparison {}'.format(extdict[ext],
                                                             ipos + 1),
