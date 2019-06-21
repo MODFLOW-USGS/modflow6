@@ -4556,32 +4556,26 @@ contains
         idelaycalc = this%csub_delay_eval(ib, node, hcell)
         !
         ! -- calculate newton terms if delay bed is not stranded
+        !    newton terms are calculated the same if using the 
+        !    head-based and effective-stress formulations
         if (idelaycalc > 0) then
           !
-          ! -- head-based formulation with fixed material properties
-          if (this%igeocalc == 0 .and. this%iupdatematprop == 0) then
+          ! -- calculate delay interbed hcof and rhs
+          call this%csub_delay_sln(ib, hcellp, hcellold, .false.)
+          call this%csub_delay_fc(ib, hcellp, hcofn, rhsn)
           !
-          ! -- effective-stress formulation or head-based formulation
-          !    with variable material properties
-          else
-            !
-            ! -- calculate delay interbed hcof and rhs
-            call this%csub_delay_sln(ib, hcellp, hcellold, .false.)
-            call this%csub_delay_fc(ib, hcellp, hcofn, rhsn)
-            !
-            ! -- calculate perturbed delay interbed q
-            qp = rhsn - hcofn * hcellp
-            !
-            ! -- calculate delay interbed hcof and rhs
-            call this%csub_delay_sln(ib, hcell, hcellold, .false.)
-            call this%csub_delay_fc(ib, hcell, hcofn, rhsn)
-            !
-            ! -- calculate delay interbed q
-            q = rhsn - hcofn * hcell
-            !
-            ! -- calculate the derivative
-            derv = (qp - q) / DEM4
-          end if
+          ! -- calculate perturbed delay interbed q
+          qp = rhsn - hcofn * hcellp
+          !
+          ! -- calculate delay interbed hcof and rhs
+          call this%csub_delay_sln(ib, hcell, hcellold, .false.)
+          call this%csub_delay_fc(ib, hcell, hcofn, rhsn)
+          !
+          ! -- calculate delay interbed q
+          q = rhsn - hcofn * hcell
+          !
+          ! -- calculate the derivative
+          derv = (qp - q) / DEM4
         end if
         !
         ! -- update hcof and rhs
@@ -5364,18 +5358,18 @@ contains
                               this%dbrhs, this%dbdh, this%dbaw)
         !
         ! -- calculate maximum head change and update delay bed heads 
-        if (lupdate) then
-          dhmax = DZERO
-          do n = 1, this%ndelaycells
-            dh = this%dbdh(n) - this%dbh(n, idelay) 
-            if (abs(dh) > abs(dhmax)) then
-              dhmax = dh !this%dbdh(n)
+        dhmax = DZERO
+        do n = 1, this%ndelaycells
+          dh = this%dbdh(n) - this%dbh(n, idelay) 
+          if (abs(dh) > abs(dhmax)) then
+            dhmax = dh 
+            if (lupdate) then
               this%dbdhmax(idelay) = dhmax
             end if
-            ! update delay bed heads
-            this%dbh(n, idelay) = this%dbdh(n)
-          end do
-        end if
+          end if
+          ! -- update delay bed heads
+          this%dbh(n, idelay) = this%dbdh(n)
+        end do
         !
         ! -- update delay bed stresses
         call this%csub_delay_calc_stress(ib, hcell)
@@ -5608,6 +5602,7 @@ contains
     real(DP), intent(inout) :: sske
     ! -- local variables
     integer(I4B) :: idelay
+    integer(I4B) :: ielastic
     integer(I4B) :: node
     real(DP) :: z1
     real(DP) :: z0
@@ -5630,6 +5625,7 @@ contains
     sske = DZERO
     ssk = DZERO
     idelay = this%idelay(ib)
+    ielastic = this%ielastic(ib)
     !
     ! -- calculate factor for the head-based case
     if (this%igeocalc == 0) then
@@ -5678,19 +5674,18 @@ contains
     end if
     this%idbconvert(n, idelay) = 0
     sske = f0 * this%rci(ib)
-    if (this%igeocalc == 0) then
-      if (this%dbh(n, idelay) < this%dbpcs(n, idelay)) then
-        this%idbconvert(n, idelay) = 1
-        ssk = f * this%ci(ib)
+    ssk = f * this%rci(ib)
+    if (ielastic == 0) then
+      if (this%igeocalc == 0) then
+        if (this%dbh(n, idelay) < this%dbpcs(n, idelay)) then
+          this%idbconvert(n, idelay) = 1
+          ssk = f * this%ci(ib)
+        end if
       else
-        ssk = f * this%rci(ib)
-      end if
-    else
-      if (this%dbes(n, idelay) > this%dbpcs(n, idelay)) then
-        this%idbconvert(n, idelay) = 1
-        ssk = f * this%ci(ib)
-      else
-        ssk = f * this%rci(ib)
+        if (this%dbes(n, idelay) > this%dbpcs(n, idelay)) then
+          this%idbconvert(n, idelay) = 1
+          ssk = f * this%ci(ib)
+        end if
       end if
     end if
     !
@@ -5896,8 +5891,9 @@ contains
       do n = 1, this%ndelaycells
         call this%csub_delay_calc_ssksske(ib, n, hcell, hcellold, ssk, sske)
         if (this%igeocalc == 0) then
-          if (ielastic > 0) then
+          if (ielastic /= 0) then
             v1 = sske * this%dbh0(n, idelay) - ssk * this%dbh(n, idelay)
+            v2 = DZERO
           else
             v1 = ssk * (this%dbpcs(n, idelay) - this%dbh(n, idelay))
             v2 = sske * (this%dbh0(n, idelay) - this%dbpcs(n, idelay))
@@ -5905,9 +5901,10 @@ contains
         else
           z = this%dbz(n, idelay)
           zbot = z - dzhalf
-          if (ielastic > 0) then
+          if (ielastic /= 0) then
             v1 = ssk * (this%dbgeo(n, idelay) - this%dbh(n, idelay) + zbot) -    &
                  sske * this%dbes0(n, idelay)
+            v2 = DZERO
           else
             v1 = ssk * (this%dbgeo(n, idelay) - this%dbh(n, idelay) + zbot -     &
                         this%dbpcs(n, idelay))
@@ -5950,6 +5947,7 @@ contains
     real(DP), intent(in) :: hcellold
     ! -- local variables
     integer(I4B) :: idelay
+    integer(I4B) :: ielastic
     integer(I4B) :: node
     integer(I4B) :: n
     real(DP) :: comp
@@ -5967,6 +5965,7 @@ contains
     !
     ! -- initialize variables
     idelay = this%idelay(ib)
+    ielastic = this%ielastic(ib)
     node = this%nodelist(ib)
     comp = DZERO
     compi = DZERO
@@ -5980,12 +5979,22 @@ contains
       fmult = this%dbdz(idelay) * this%dbfact
       do n = 1, this%ndelaycells
         call this%csub_delay_calc_ssksske(ib, n, hcell, hcellold, ssk, sske)
-        if (this%igeocalc == 0) then
-          v1 = ssk * (this%dbpcs(n, idelay) - this%dbh(n, idelay))
-          v2 = sske * (this%dbh0(n, idelay) - this%dbpcs(n, idelay))
+        if (ielastic /= 0) then
+          if (this%igeocalc == 0) then
+            v1 = sske * this%dbh0(n, idelay) - ssk * this%dbh(n, idelay)
+            v2 = DZERO
+          else
+            v1 = ssk * this%dbes(n, idelay) - sske * this%dbes0(n, idelay)
+            v2 = DZERO
+          end if
         else
-          v1 = ssk * (this%dbes(n, idelay) - this%dbpcs(n, idelay))
-          v2 = sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay))
+          if (this%igeocalc == 0) then
+            v1 = ssk * (this%dbpcs(n, idelay) - this%dbh(n, idelay))
+            v2 = sske * (this%dbh0(n, idelay) - this%dbpcs(n, idelay))
+          else
+            v1 = ssk * (this%dbes(n, idelay) - this%dbpcs(n, idelay))
+            v2 = sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay))
+          end if
         end if
         v = (v1 + v2) * fmult
         comp = comp + v
