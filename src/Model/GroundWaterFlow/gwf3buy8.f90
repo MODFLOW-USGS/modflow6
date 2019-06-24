@@ -14,7 +14,7 @@ module GwfBuyModule
 
   type, extends(NumericalPackageType) :: GwfBuyType
     type(GwfNpfType), pointer                   :: npf        => null()         ! npf object
-    integer(I4B), pointer                       :: iform      => null()         ! formulation: 0 equivalent freshwater, 1 hydraulic head
+    integer(I4B), pointer                       :: iform      => null()         ! formulation: 0 freshwater head, 1 hydraulic head, 2 hh rhs
     integer(I4B), pointer                       :: ireadelev  => null()         ! if 1 then elev has been allocated and filled
     integer(I4B), pointer                       :: ireaddense => null()         ! if 1 then dense has been read from input file
     real(DP), pointer                           :: denseref   => null()         ! reference fluid density
@@ -193,10 +193,11 @@ module GwfBuyModule
     real(DP), intent(inout), dimension(:) :: hnew
     ! -- local
     integer(I4B) :: n, m, ipos, idiag
-    real(DP) :: rhsterm, amatterm
+    real(DP) :: rhsterm, amatnn, amatnm
 ! ------------------------------------------------------------------------------
     ! -- initialize
-    amatterm = DZERO
+    amatnn = DZERO
+    amatnm = DZERO
     call this%buy_calcdens()
     !
     ! -- fill buoyancy flow term
@@ -210,13 +211,13 @@ module GwfBuyModule
           call this%calcbuy(n, m, ipos, hnew(n), hnew(m), rhsterm)
         else
           call this%calchhterms(n, m, ipos, hnew(n), hnew(m), rhsterm,         &
-                                amatterm)
+                                amatnn, amatnm)
         endif 
         !
         ! -- Add terms to rhs, diagonal, and off diagonal
         rhs(n) = rhs(n) - rhsterm
-        amat(idxglo(idiag)) = amat(idxglo(idiag)) - amatterm
-        amat(idxglo(ipos)) = amat(idxglo(ipos)) + amatterm
+        amat(idxglo(idiag)) = amat(idxglo(idiag)) - amatnn
+        amat(idxglo(ipos)) = amat(idxglo(ipos)) + amatnm
       enddo
     enddo
     !
@@ -237,7 +238,7 @@ module GwfBuyModule
     real(DP),intent(inout),dimension(:) :: flowja
     integer(I4B) :: n, m, ipos
     real(DP) :: deltaQ
-    real(DP) :: rhsterm, amatterm
+    real(DP) :: rhsterm, amatnn, amatnm
 ! ------------------------------------------------------------------------------
     !
     ! -- Calculate the flow across each cell face and store in flowja
@@ -251,8 +252,8 @@ module GwfBuyModule
         else
           ! -- hydraulic head formulation
           call this%calchhterms(n, m, ipos, hnew(n), hnew(m), rhsterm,         &
-                                amatterm)
-          deltaQ = amatterm * (hnew(m) - hnew(n)) + rhsterm
+                                amatnn, amatnm)
+          deltaQ = amatnm * hnew(m) - amatnn * hnew(n) + rhsterm
         endif
         flowja(ipos) = flowja(ipos) + deltaQ
         flowja(this%dis%con%isym(ipos)) = flowja(this%dis%con%isym(ipos)) -    &
@@ -386,7 +387,7 @@ module GwfBuyModule
   end subroutine calcbuy
 
 
-  subroutine calchhterms(this, n, m, icon, hn, hm, rhsterm, amatterm)
+  subroutine calchhterms(this, n, m, icon, hn, hm, rhsterm, amatnn, amatnm)
 ! ******************************************************************************
 ! calchhterms -- Calculate hydraulic head term for this connection
 ! ******************************************************************************
@@ -403,7 +404,8 @@ module GwfBuyModule
     real(DP), intent(in) :: hn
     real(DP), intent(in) :: hm
     real(DP), intent(inout) :: rhsterm
-    real(DP), intent(inout) :: amatterm
+    real(DP), intent(inout) :: amatnn
+    real(DP), intent(inout) :: amatnm
     ! -- local
     integer(I4B) :: ihc
     real(DP) :: densen, densem, cl1, cl2, avgdense, wt, elevn, elevm,  &
@@ -436,6 +438,7 @@ module GwfBuyModule
       elevn = this%elev(n)
       elevm = this%elev(m)
     endif
+    elevnm = (DONE - wt) * elevn + wt * elevm
     !
     ihc = this%dis%con%ihc(this%dis%con%jas(icon))
     hyn = this%npf%hy_eff(n, m, ihc, ipos=icon)
@@ -471,13 +474,21 @@ module GwfBuyModule
     endif
     !
     ! -- Calculate terms
-    elevnm = (elevn + elevm) * DHALF
-    hphi = (hn + hm) * DHALF
     rhonormn = densen / this%denseref
     rhonormm = densem / this%denseref
-    rhsterm = -cond * (hphi - elevnm) * (rhonormn - rhonormm)    
-    rhoterm = (rhonormn + rhonormm) * DHALF
-    amatterm = cond * (rhoterm - DONE)
+    rhoterm = wt * rhonormn + (DONE - wt) * rhonormm
+    amatnn = cond * (rhoterm - DONE)
+    amatnm = amatnn
+    rhsterm = -cond * (rhonormm - rhonormn) * elevnm
+    if (this%iform == 1) then
+      ! -- rhs (lag the h terms and keep matrix symmetric)
+      hphi = (DONE - wt) * hn + wt * hm
+      rhsterm = rhsterm + cond * hphi * (rhonormm - rhonormn)
+    else
+      ! -- lhs, results in asymmetric matrix due to weight term
+      amatnn = amatnn - cond * (DONE - wt) * (rhonormm - rhonormn)
+      amatnm = amatnm + cond * wt * (rhonormm - rhonormn)
+    endif
     !
     ! -- Return
     return
@@ -609,6 +620,12 @@ module GwfBuyModule
           case ('HHFORMULATION')
             this%iform = 1
             write(this%iout,'(4x,a)') 'FORMULATION SET TO HYDRAULIC HEAD'
+            call this%parser%GetStringCaps(keyword)
+            if(keyword == 'LHS') then
+              this%iform = 2
+              this%iasym = 1
+              write(this%iout,'(4x,a)') 'HHFORMULATION LEFT-HAND SIDE'
+            endif
           case ('DENSEREF')
             this%denseref = this%parser%GetDouble()
             write(this%iout, '(4x,a,1pg15.6)')                                 &
