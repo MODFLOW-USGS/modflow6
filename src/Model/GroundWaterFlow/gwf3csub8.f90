@@ -83,7 +83,6 @@ module GwfCsubModule
     integer(I4B), pointer :: idbfullcell => null()
     integer(I4B), pointer :: kiter => null()
     real(DP), pointer :: cc_crit => null()                                       !convergence criteria for csub-gwf convergence check
-    !real(DP), pointer :: time_alpha => null()                                    !time factor to apply to the current and previous effective stress
     real(DP), pointer :: gammaw => null()                                        !product of fluid density, and gravity
     real(DP), pointer :: beta => null()                                          !water compressibility
     real(DP), pointer :: brg => null()                                           !product of gammaw and water compressibility
@@ -357,7 +356,6 @@ contains
     call mem_allocate(this%idbfullcell, 'IDBFULLCELL', this%origin)
     call mem_allocate(this%kiter, 'KITER', this%origin)
     call mem_allocate(this%cc_crit, 'CC_CRIT', this%origin)
-    !call mem_allocate(this%time_alpha, 'TIME_ALPHA', this%origin)
     call mem_allocate(this%gammaw, 'GAMMAW', this%origin)
     call mem_allocate(this%beta, 'BETA', this%origin)
     call mem_allocate(this%brg, 'BRG', this%origin)
@@ -405,7 +403,6 @@ contains
     this%idbfullcell = 0
     this%kiter = 0
     this%cc_crit = DEM7
-    !this%time_alpha = DONE
     this%gammaw = DGRAVITY * 1000._DP
     this%beta = 4.6512e-10_DP
     this%brg = this%gammaw * this%beta
@@ -662,7 +659,6 @@ contains
       this%cell_thick(node) = this%sk_thick(node)
       !
       ! -- update incremental compaction
-      !comp = rrate * DELT / area
       this%sk_comp(node) = comp
       ! 
       !
@@ -670,7 +666,6 @@ contains
       if (isuppress_output == 0) then
         !
         ! -- update total compaction
-        !comp = rrate * DELT / area
         this%sk_tcomp(node) = this%sk_tcomp(node) + comp
         !
         ! - calculate strain and change in skeletal void ratio and thickness
@@ -848,14 +843,6 @@ contains
     end if
     !
     ! -- terminate if errors encountered when updating material properties
-    !if (this%iupdatematprop /= 0) then
-    !  if (this%time_alpha > DZERO) then
-    !    if (count_errors() > 0) then
-    !      call this%parser%StoreErrorUnit()
-    !      call ustop()
-    !    end if
-    !  end if
-    !end if
     if (this%iupdatematprop /= 0) then
       if (count_errors() > 0) then
         call this%parser%StoreErrorUnit()
@@ -2605,7 +2592,6 @@ contains
     call mem_deallocate(this%idbhalfcell)
     call mem_deallocate(this%kiter)
     call mem_deallocate(this%cc_crit)
-    !call mem_deallocate(this%time_alpha)
     call mem_deallocate(this%gammaw)
     call mem_deallocate(this%beta)
     call mem_deallocate(this%brg)
@@ -4011,22 +3997,15 @@ contains
         !
         ! -- update skeletal material properties
         if (this%iupdatematprop /= 0) then
-          !if (this%time_alpha > DZERO) then
-          !  !
-          !  ! -- calculate compaction
-          !  call this%csub_sk_calc_comp(node, hnew(node), hold(node), comp)
-          !  this%sk_comp(node) = comp
-          !  !
-          !  ! -- update skeletal thickness and void ratio
-          !  call this%csub_sk_update(node)
-          !end if
-          !
-          ! -- calculate compaction
-          call this%csub_sk_calc_comp(node, hnew(node), hold(node), comp)
-          this%sk_comp(node) = comp
-          !
-          ! -- update skeletal thickness and void ratio
-          call this%csub_sk_update(node)
+          if (this%ieslag == 0) then
+            !
+            ! -- calculate compaction
+            call this%csub_sk_calc_comp(node, hnew(node), hold(node), comp)
+            this%sk_comp(node) = comp
+            !
+            ! -- update skeletal thickness and void ratio
+            call this%csub_sk_update(node)
+          end if
         end if
         !
         ! -- calculate coarse-grained skeletal storage terms
@@ -4429,24 +4408,16 @@ contains
         !
         ! -- update material properties
         if (this%iupdatematprop /= 0) then
-          !if (this%time_alpha > DZERO) then
-          !  !
-          !  ! -- calculate compaction
-          !  call this%csub_nodelay_calc_comp(ib, hcell, hcellold, comp,         &
-          !                                   rho1, rho2)
-          !  this%comp(ib) = comp
-          !  !
-          !  ! -- update thickness and void ratio
-          !  call this%csub_nodelay_update(ib)
-          !end if
-          !
-          ! -- calculate compaction
-          call this%csub_nodelay_calc_comp(ib, hcell, hcellold, comp,         &
-                                            rho1, rho2)
-          this%comp(ib) = comp
-          !
-          ! -- update thickness and void ratio
-          call this%csub_nodelay_update(ib)
+          if (this%ieslag == 0) then
+            !
+            ! -- calculate compaction
+            call this%csub_nodelay_calc_comp(ib, hcell, hcellold, comp,         &
+                                             rho1, rho2)
+            this%comp(ib) = comp
+            !
+            ! -- update thickness and void ratio
+            call this%csub_nodelay_update(ib)
+          end if
         end if
         !
         ! -- calculate no-delay interbed rho1 and rho2
@@ -5230,9 +5201,6 @@ contains
       snnew = DONE
       snold = DONE
     end if
-    !if (this%time_alpha == DZERO) then
-    !  snold = snnew
-    !end if
     if (this%ieslag /= 0) then
       snold = snnew
     end if
@@ -5273,15 +5241,11 @@ contains
     fact = DZERO
     fact0 = DZERO
     zn0 = znode0
-    !if (this%time_alpha == DZERO) then
     if (this%ieslag /= 0) then
       zn0 = znode
     end if
     !
     ! -- calculate factor for the effective stress case
-    !esv = this%time_alpha * es +                                                 &
-    !      (DONE - this%time_alpha) * es0
-    !if (this%time_alpha /= DZERO) then
     if (this%ieslag == 0) then
       !esv = 0.9_DP * esi + 0.1_DP * es
       esv = es
