@@ -223,7 +223,7 @@ def get_model(idx, dir):
             S.append(sst)
 
     maxibc = len(sub6)
-    
+
 
     # build MODFLOW 6 files
     ws = dir
@@ -292,10 +292,10 @@ def get_model(idx, dir):
     ibcsv = '{}.ib.strain.csv'.format(name)
     skcsv = '{}.sk.strain.csv'.format(name)
     copth = '{}.compaction.bin'.format(name)
-    csub = flopy.mf6.ModflowGwfcsub(gwf, 
+    csub = flopy.mf6.ModflowGwfcsub(gwf,
                                     boundnames=True,
                                     head_based=True,
-                                    time_weight=0.,
+                                    effective_stress_lag=True,
                                     save_flows=True,
                                     strainib_filerecord=ibcsv,
                                     strainsk_filerecord=skcsv,

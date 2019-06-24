@@ -269,7 +269,7 @@ def get_model(idx, dir):
     csub = flopy.mf6.ModflowGwfcsub(gwf,
                                     boundnames=True,
                                     head_based=True,
-                                    time_weight=0.,
+                                    effective_stress_lag=True,
                                     save_flows=True,
                                     strainib_filerecord=ibcsv,
                                     strainsk_filerecord=skcsv,

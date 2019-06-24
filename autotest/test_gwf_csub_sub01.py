@@ -167,8 +167,7 @@ def get_model(idx, dir):
     opth = '{}.csub.obs'.format(name)
     csub = flopy.mf6.ModflowGwfcsub(gwf, head_based=True,
                                    save_flows=True,
-                                   #interbed_stress_offset=True,
-                                   time_weight=0.,
+                                   effective_stress_lag=True,
                                    ndelaycells=ndcell[idx],
                                    delay_full_cell=fullcell[idx],
                                    ninterbeds=1,

@@ -6,7 +6,7 @@ BEGIN OPTIONS
   [STRAIN_CSV_SKELETAL FILEOUT <skeletalstrain_filename>]
   [GAMMAW <gammaw>]
   [BETA <beta>]
-  [TIME_WEIGHT <time_weight>]
+  [EFFECTIVE_STRESS_LAG]
   [HEAD_BASED]
   [DELAY_FULL_CELL]
   [NDELAYCELLS <ndelaycells>]

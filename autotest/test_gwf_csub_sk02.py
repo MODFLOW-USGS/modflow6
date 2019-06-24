@@ -31,7 +31,7 @@ tops = [150. for idx in range(len(exdirs))]
 newtons = [True for idx in range(len(exdirs))]
 ump = [None, None, True, True]
 iump = [0, 0, 1, 1]
-tw = [0. for idx in range(len(exdirs))]
+eslag = [True for idx in range(len(exdirs))]
 icrcc = [0, 1, 0, 1]
 
 ddir = 'data'
@@ -238,7 +238,7 @@ def get_model(idx, dir):
     opth = '{}.csub.obs'.format(name)
     csub = flopy.mf6.ModflowGwfcsub(gwf,
                                     update_material_properties=ump[idx],
-                                    time_weight=tw[idx],
+                                    effective_stress_lag=eslag[idx],
                                     save_flows=True,
                                     ninterbeds=0,
                                     compression_indices=compression_indices,

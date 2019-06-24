@@ -151,14 +151,13 @@ def build_mf6(idx, ws, newton=None):
     # csub files
     opth = '{}.csub.obs'.format(name)
     csub = flopy.mf6.ModflowGwfcsub(gwf, head_based=True,
-                                   save_flows=True,
-                                   #interbed_stress_offset=True,
-                                   time_weight=0.,
-                                   ndelaycells=ndcell[idx],
-                                   delay_full_cell=fullcell[idx],
-                                   ninterbeds=1,
-                                   beta=0., ske_cr=0.,
-                                   packagedata=sub6)
+                                    save_flows=True,
+                                    effective_stress_lag=True,
+                                    ndelaycells=ndcell[idx],
+                                    delay_full_cell=fullcell[idx],
+                                    ninterbeds=1,
+                                    beta=0., ske_cr=0.,
+                                    packagedata=sub6)
     orecarray = {}
     orecarray['csub_obs.csv'] = [('tcomp', 'compaction-cell', (0, 0, 1))]
     csub_obs_package = csub.obs.initialize(filename=opth, digits=10,

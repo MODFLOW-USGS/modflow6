@@ -205,7 +205,7 @@ def get_model(idx, dir):
                                     ndelaycells=ndcell[idx],
                                     strainib_filerecord=ibcsv,
                                     strainsk_filerecord=skcsv,
-                                    time_weight=0.,
+                                    effective_stress_lag=True,
                                     # compression_indices=True,
                                     ninterbeds=1,
                                     sgs=sgs, sgm=sgm, packagedata=sub6,

@@ -78,11 +78,12 @@ module GwfCsubModule
     integer(I4B), pointer :: ndelaybeds => null()
     integer(I4B), pointer :: initialized => null()
     integer(I4B), pointer :: igeocalc => null()
+    integer(I4B), pointer :: ieslag => null()
     integer(I4B), pointer :: idbhalfcell => null()
     integer(I4B), pointer :: idbfullcell => null()
     integer(I4B), pointer :: kiter => null()
     real(DP), pointer :: cc_crit => null()                                       !convergence criteria for csub-gwf convergence check
-    real(DP), pointer :: time_alpha => null()                                    !time factor to apply to the current and previous effective stress
+    !real(DP), pointer :: time_alpha => null()                                    !time factor to apply to the current and previous effective stress
     real(DP), pointer :: gammaw => null()                                        !product of fluid density, and gravity
     real(DP), pointer :: beta => null()                                          !water compressibility
     real(DP), pointer :: brg => null()                                           !product of gammaw and water compressibility
@@ -337,6 +338,7 @@ contains
     call mem_allocate(this%ndelaybeds, 'NDELAYBEDS', this%origin)
     call mem_allocate(this%initialized, 'INITIALIZED', this%origin)
     call mem_allocate(this%igeocalc, 'IGEOCALC', this%origin)
+    call mem_allocate(this%ieslag, 'IESLAG', this%origin)
     call mem_allocate(this%ispecified_pcs, 'ISPECIFIED_PCS', this%origin)
     call mem_allocate(this%ispecified_dbh, 'ISPECIFIED_DBH', this%origin)
     call mem_allocate(this%inamedbound, 'INAMEDBOUND', this%origin)
@@ -355,7 +357,7 @@ contains
     call mem_allocate(this%idbfullcell, 'IDBFULLCELL', this%origin)
     call mem_allocate(this%kiter, 'KITER', this%origin)
     call mem_allocate(this%cc_crit, 'CC_CRIT', this%origin)
-    call mem_allocate(this%time_alpha, 'TIME_ALPHA', this%origin)
+    !call mem_allocate(this%time_alpha, 'TIME_ALPHA', this%origin)
     call mem_allocate(this%gammaw, 'GAMMAW', this%origin)
     call mem_allocate(this%beta, 'BETA', this%origin)
     call mem_allocate(this%brg, 'BRG', this%origin)
@@ -384,6 +386,7 @@ contains
     this%ndelaybeds = 0
     this%initialized = 0
     this%igeocalc = 1
+    this%ieslag = 0
     this%ispecified_pcs = 0
     this%ispecified_dbh = 0
     this%inamedbound = 0
@@ -402,7 +405,7 @@ contains
     this%idbfullcell = 0
     this%kiter = 0
     this%cc_crit = DEM7
-    this%time_alpha = DONE
+    !this%time_alpha = DONE
     this%gammaw = DGRAVITY * 1000._DP
     this%beta = 4.6512e-10_DP
     this%brg = this%gammaw * this%beta
@@ -845,12 +848,18 @@ contains
     end if
     !
     ! -- terminate if errors encountered when updating material properties
+    !if (this%iupdatematprop /= 0) then
+    !  if (this%time_alpha > DZERO) then
+    !    if (count_errors() > 0) then
+    !      call this%parser%StoreErrorUnit()
+    !      call ustop()
+    !    end if
+    !  end if
+    !end if
     if (this%iupdatematprop /= 0) then
-      if (this%time_alpha > DZERO) then
-        if (count_errors() > 0) then
-          call this%parser%StoreErrorUnit()
-          call ustop()
-        end if
+      if (count_errors() > 0) then
+        call this%parser%StoreErrorUnit()
+        call ustop()
       end if
     end if
     !
@@ -1909,7 +1918,7 @@ contains
     integer(I4B) :: ierr
     integer(I4B) :: inobs
     integer(I4B) :: ibrg
-    real(DP) :: time_weight
+    integer(I4B) :: ieslag
     ! -- formats
     character(len=*), parameter :: fmtts = &
       "(4x, 'TIME-SERIES DATA WILL BE READ FROM FILE: ', a)"
@@ -1933,7 +1942,7 @@ contains
     !
     ! -- initialize variables
     ibrg = 0
-    time_weight = DNODATA
+    ieslag = 0
     !
     ! -- get options block
     call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false.)
@@ -2001,8 +2010,8 @@ contains
             call this%csub_df_obs()
           !
           ! -- CSUB specific options
-          case ('TIME_WEIGHT')
-            time_weight = this%parser%GetDouble()
+          case ('EFFECTIVE_STRESS_LAG')
+            ieslag = 1
           case ('GAMMAW')
             this%gammaw =  this%parser%GetDouble()
             ibrg = 1
@@ -2212,22 +2221,31 @@ contains
         'VALUES INSTEAD OF RELATIVE TO INITIAL GWF HEADS'
     end if
     !
-    ! -- process itime_weight, if effective stress formulation
+    ! -- process effective_stress_lag, if effective stress formulation
     if (this%igeocalc /= 0) then
-      if (time_weight /= DNODATA) then
-        if (time_weight == DZERO) then
-          this%time_alpha = time_weight
-        else if (time_weight == DONE) then
-          this%time_alpha = time_weight
-        else
-          this%time_alpha = DNODATA
-          errmsg = 'TIME_WEIGHT MUST BE 0 or 1.'
-          call store_error(errmsg)
-        end if
-        write(this%iout, fmtoptr) 'TIME_WEIGHT   =', time_weight
-        write(this%iout, fmtoptr) 'TIME_ALPHA    =', this%time_alpha
+      if (ieslag /= 0) then
+        write(this%iout, fmtopt) &
+          'SPECIFIC STORAGE VALUES WILL BE CALCULATED USING THE EFFECTIVE '
+        write(this%iout, fmtopt) &
+          '  STRESS FROM THE PREVIOUS TIME STEP'
+      else
+        write(this%iout, fmtopt) &
+          'SPECIFIC STORAGE VALUES WILL BE CALCULATED USING THE CURRENT ' 
+        write(this%iout, fmtopt) &
+          '  EFFECTIVE STRESS'
+      end if
+    else
+      if (ieslag /= 0) then
+        ieslag = 0
+        write(this%iout, fmtopt) &
+          'EFFECTIVE_STRESS_LAG HAS BEEN SPECIFIED BUT HAS NO EFFECT WHEN '
+        write(this%iout, fmtopt) &
+          '  USING THE HEAD-BASED FORMULATION (HEAD_BASED HAS BEEN SPECIFIED '
+        write(this%iout, fmtopt) &
+          '  IN THE OPTIONS BLOCK)'
       end if
     end if
+    this%ieslag = ieslag 
     !
     ! -- recalculate BRG if necessary and output 
     !    water compressibility values
@@ -2568,6 +2586,7 @@ contains
     call mem_deallocate(this%ndelaybeds)
     call mem_deallocate(this%initialized)
     call mem_deallocate(this%igeocalc)
+    call mem_deallocate(this%ieslag)
     call mem_deallocate(this%ispecified_pcs)
     call mem_deallocate(this%ispecified_dbh)
     call mem_deallocate(this%inamedbound)
@@ -2586,7 +2605,7 @@ contains
     call mem_deallocate(this%idbhalfcell)
     call mem_deallocate(this%kiter)
     call mem_deallocate(this%cc_crit)
-    call mem_deallocate(this%time_alpha)
+    !call mem_deallocate(this%time_alpha)
     call mem_deallocate(this%gammaw)
     call mem_deallocate(this%beta)
     call mem_deallocate(this%brg)
@@ -3992,15 +4011,22 @@ contains
         !
         ! -- update skeletal material properties
         if (this%iupdatematprop /= 0) then
-          if (this%time_alpha > DZERO) then
-            !
-            ! -- calculate compaction
-            call this%csub_sk_calc_comp(node, hnew(node), hold(node), comp)
-            this%sk_comp(node) = comp
-            !
-            ! -- update skeletal thickness and void ratio
-            call this%csub_sk_update(node)
-          end if
+          !if (this%time_alpha > DZERO) then
+          !  !
+          !  ! -- calculate compaction
+          !  call this%csub_sk_calc_comp(node, hnew(node), hold(node), comp)
+          !  this%sk_comp(node) = comp
+          !  !
+          !  ! -- update skeletal thickness and void ratio
+          !  call this%csub_sk_update(node)
+          !end if
+          !
+          ! -- calculate compaction
+          call this%csub_sk_calc_comp(node, hnew(node), hold(node), comp)
+          this%sk_comp(node) = comp
+          !
+          ! -- update skeletal thickness and void ratio
+          call this%csub_sk_update(node)
         end if
         !
         ! -- calculate coarse-grained skeletal storage terms
@@ -4403,16 +4429,24 @@ contains
         !
         ! -- update material properties
         if (this%iupdatematprop /= 0) then
-          if (this%time_alpha > DZERO) then
-            !
-            ! -- calculate compaction
-            call this%csub_nodelay_calc_comp(ib, hcell, hcellold, comp,         &
-                                             rho1, rho2)
-            this%comp(ib) = comp
-            !
-            ! -- update thickness and void ratio
-            call this%csub_nodelay_update(ib)
-          end if
+          !if (this%time_alpha > DZERO) then
+          !  !
+          !  ! -- calculate compaction
+          !  call this%csub_nodelay_calc_comp(ib, hcell, hcellold, comp,         &
+          !                                   rho1, rho2)
+          !  this%comp(ib) = comp
+          !  !
+          !  ! -- update thickness and void ratio
+          !  call this%csub_nodelay_update(ib)
+          !end if
+          !
+          ! -- calculate compaction
+          call this%csub_nodelay_calc_comp(ib, hcell, hcellold, comp,         &
+                                            rho1, rho2)
+          this%comp(ib) = comp
+          !
+          ! -- update thickness and void ratio
+          call this%csub_nodelay_update(ib)
         end if
         !
         ! -- calculate no-delay interbed rho1 and rho2
@@ -5196,7 +5230,10 @@ contains
       snnew = DONE
       snold = DONE
     end if
-    if (this%time_alpha == DZERO) then
+    !if (this%time_alpha == DZERO) then
+    !  snold = snnew
+    !end if
+    if (this%ieslag /= 0) then
       snold = snnew
     end if
     !
@@ -5236,14 +5273,16 @@ contains
     fact = DZERO
     fact0 = DZERO
     zn0 = znode0
-    if (this%time_alpha == DZERO) then
+    !if (this%time_alpha == DZERO) then
+    if (this%ieslag /= 0) then
       zn0 = znode
     end if
     !
     ! -- calculate factor for the effective stress case
     !esv = this%time_alpha * es +                                                 &
     !      (DONE - this%time_alpha) * es0
-    if (this%time_alpha /= DZERO) then
+    !if (this%time_alpha /= DZERO) then
+    if (this%ieslag == 0) then
       !esv = 0.9_DP * esi + 0.1_DP * es
       esv = es
     else

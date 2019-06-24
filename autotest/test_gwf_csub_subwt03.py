@@ -296,14 +296,14 @@ def build_mf6(idx, ws, interbed=False):
         sswt6 = None
         ninterbeds = 0
     if headbased[idx]:
-        tw = 1
+        eslag = True
         ci = None
         hb = True
         ssgs = None
         ssgm = None
         ske_cr = get_ske()
     else:
-        tw = 1 #0
+        eslag = True
         ci = True
         hb = None
         ssgs = sgs
@@ -314,7 +314,7 @@ def build_mf6(idx, ws, interbed=False):
     opth = '{}.csub.obs'.format(name)
     csub = flopy.mf6.ModflowGwfcsub(gwf,
                                     print_input=True,
-                                    time_weight=tw,
+                                    effective_stress_lag=eslag,
                                     head_based=hb,
                                     boundnames=True,
                                     compression_indices=ci,

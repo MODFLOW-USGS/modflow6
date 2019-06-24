@@ -120,13 +120,12 @@ description compressibility of water. Typical values of BETA are 4.6512e-10 1/Pa
 default_value 4.6512e-10
 
 block options
-name time_weight
-type double precision
+name effective_stress_lag
+type keyword
 reader urword
 optional true
-longname effective stress time weight
-description effective stress time weight used to calculate the storage parameters. A TIME\_WEIGHT value of 1 results in the use of the current estimate of the effective stress to calculate storage parameters. A TIME\_WEIGHT value of 0 results in the use of the effective stress from the previous time step to calculate storage parameters. Any TIME\_FACTOR value can be specified if HEAD\_BASED is specified in the OPTIONS block.  TIME\_WEIGHT must be either 0 or 1 if HEAD\_BASED is not specified in the OPTIONS block. By default, TIME\_FACTOR is 1.
-default_value 1.
+longname keyword to indicate that specific storage will be calculate using the effective stress from the previous time step
+description keyword to indicate the effective stress from the previous time step will be used to calculate specific storage values. This option is only used if the effective-stress formulation is being used. By default, current effective stress values are used to calculate specific storage values.
 
 block options
 name head_based
