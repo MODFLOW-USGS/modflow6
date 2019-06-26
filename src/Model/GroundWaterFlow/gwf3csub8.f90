@@ -1,7 +1,7 @@
 module GwfCsubModule
   use KindModule, only: I4B, DP
-  use ConstantsModule, only: DPREC, DZERO, DEM10, DEM7, DEM6, DEM4, DHALF, DEM1,&
-                             DONE, DTWO, DTHREE,                                &
+  use ConstantsModule, only: DPREC, DZERO, DEM20, DEM10, DEM7, DEM6, DEM4,      &
+                             DHALF, DEM1, DONE, DTWO, DTHREE,                   &
                              DGRAVITY, DTEN, DHUNDRED, DNODATA, DHNOFLO,        &
                              LENFTYPE, LENPACKAGENAME,                          &
                              LINELENGTH, LENBOUNDNAME, NAMEDBOUNDFLAG,          &
@@ -79,6 +79,8 @@ module GwfCsubModule
     integer(I4B), pointer :: initialized => null()
     integer(I4B), pointer :: igeocalc => null()
     integer(I4B), pointer :: ieslag => null()
+    integer(I4B), pointer :: iunderrelax => null()
+    integer(I4B), pointer :: iurflag => null()
     integer(I4B), pointer :: idbhalfcell => null()
     integer(I4B), pointer :: idbfullcell => null()
     integer(I4B), pointer :: kiter => null()
@@ -118,6 +120,9 @@ module GwfCsubModule
     real(DP), dimension(:), pointer, contiguous :: sk_ske => null()              !skeletal (aquifer) elastic storage coefficient
     real(DP), dimension(:), pointer, contiguous :: sk_sk => null()               !skeletal (aquifer) first storage coefficient
     real(DP), dimension(:), pointer, contiguous :: sk_thickini => null()         !initial skeletal (aquifer) thickness
+    real(DP), dimension(:), pointer, contiguous :: sk_w0 => null()               !skeletal under-relaxation weight
+    real(DP), dimension(:), pointer, contiguous :: sk_hch0 => null()             !skeletal under-relaxation weighted change
+    real(DP), dimension(:), pointer, contiguous :: sk_des0 => null()             !skeletal under-relaxation effective stress change
     !
     ! -- cell storage variables
     real(DP), dimension(:), pointer, contiguous :: cell_wcstor => null()         !cell water compressibility storage
@@ -149,6 +154,9 @@ module GwfCsubModule
     real(DP), dimension(:), pointer, contiguous :: sk => null()                  !first storage coefficient
     real(DP), dimension(:), pointer, contiguous :: thickini => null()            !initial interbed thickness
     real(DP), dimension(:,:), pointer, contiguous :: auxvar => null()            !auxiliary variable array
+    real(DP), dimension(:), pointer, contiguous :: w0 => null()                  !under-relaxation weight
+    real(DP), dimension(:), pointer, contiguous :: hch0 => null()                !under-relaxation weighted change
+    real(DP), dimension(:), pointer, contiguous :: des0 => null()                !under-relaxation effective stress change
     !
     ! -- delay interbed arrays
     integer(I4B), dimension(:,:), pointer, contiguous :: idbconvert => null()    !0 = elastic, > 0 = inelastic
@@ -166,6 +174,9 @@ module GwfCsubModule
     real(DP), dimension(:,:), pointer, contiguous :: dbesi => null()             !delay bed cell effective stress for the previous iteration
     real(DP), dimension(:,:), pointer, contiguous :: dbes0 => null()             !delay bed cell previous effective stress
     real(DP), dimension(:,:), pointer, contiguous :: dbpcs => null()             !delay bed cell preconsolidation stress
+    real(DP), dimension(:,:), pointer, contiguous :: dbw0 => null()              !delay bed cell under-relaxation weight
+    real(DP), dimension(:,:), pointer, contiguous :: dbhch0 => null()            !delay bed cell under-relaxation weighted change
+    real(DP), dimension(:,:), pointer, contiguous :: dbdes0 => null()            !delay bed cell under-relaxation effective stress change
     real(DP), dimension(:), pointer, contiguous :: dbflowtop => null()           !delay bed flow through interbed top
     real(DP), dimension(:), pointer, contiguous :: dbflowbot => null()           !delay bed flow through interbed bottom
     !
@@ -214,6 +225,7 @@ module GwfCsubModule
     procedure, private :: csub_calc_adjes
     procedure, private :: csub_calc_sat
     procedure, private :: csub_calc_sfacts
+    procedure, private :: csub_under_relaxation
     procedure, private :: csub_adj_matprop
     procedure, private :: csub_calc_interbed_thickness
     procedure, private :: csub_calc_delay_flow
@@ -222,6 +234,7 @@ module GwfCsubModule
     ! -- stress methods
     !procedure, private :: csub_sk_calc_znode
     procedure, private :: csub_sk_calc_stress
+    procedure, private :: csub_sk_chk_stress
     !
     ! -- coarse-grained skeletal methods
     procedure, private :: csub_sk_update
@@ -338,6 +351,8 @@ contains
     call mem_allocate(this%initialized, 'INITIALIZED', this%origin)
     call mem_allocate(this%igeocalc, 'IGEOCALC', this%origin)
     call mem_allocate(this%ieslag, 'IESLAG', this%origin)
+    call mem_allocate(this%iunderrelax, 'IUNDERRELAX', this%origin)
+    call mem_allocate(this%iurflag, 'IURFLAG', this%origin)
     call mem_allocate(this%ispecified_pcs, 'ISPECIFIED_PCS', this%origin)
     call mem_allocate(this%ispecified_dbh, 'ISPECIFIED_DBH', this%origin)
     call mem_allocate(this%inamedbound, 'INAMEDBOUND', this%origin)
@@ -385,6 +400,8 @@ contains
     this%initialized = 0
     this%igeocalc = 1
     this%ieslag = 0
+    this%iunderrelax = 0
+    this%iurflag = 0
     this%ispecified_pcs = 0
     this%ispecified_dbh = 0
     this%inamedbound = 0
@@ -1132,6 +1149,12 @@ contains
       call this%obs%obs_ot()
     end if
     !
+    ! -- check that final effective stress values for the time step
+    !    are greater than zero
+    if (this%gwfiss == 0) then
+      call this%csub_sk_chk_stress()
+    end if
+    !
     ! -- Return
     return
   end subroutine csub_bdsav
@@ -1802,6 +1825,11 @@ contains
         call mem_reallocate(this%dbesi, this%ndelaycells, ndelaybeds, 'dbesi', trim(this%origin))
         call mem_reallocate(this%dbes0, this%ndelaycells, ndelaybeds, 'dbes0', trim(this%origin))
         call mem_reallocate(this%dbpcs, this%ndelaycells, ndelaybeds, 'dbpcs', trim(this%origin))
+        if (this%iunderrelax /= 0) then
+          call mem_reallocate(this%dbw0, this%ndelaycells, ndelaybeds, 'dbw0', trim(this%origin))
+          call mem_reallocate(this%dbhch0, this%ndelaycells, ndelaybeds, 'dbhch0', trim(this%origin))
+          call mem_reallocate(this%dbdes0, this%ndelaycells, ndelaybeds, 'dbdes0', trim(this%origin))
+        end if
         call mem_reallocate(this%dbflowtop, ndelaybeds, 'dbflowtop', trim(this%origin))
         call mem_reallocate(this%dbflowbot, ndelaybeds, 'dbflowbot', trim(this%origin))
         !
@@ -1906,6 +1934,7 @@ contains
     integer(I4B) :: inobs
     integer(I4B) :: ibrg
     integer(I4B) :: ieslag
+    integer(I4B) :: iunderrelax
     ! -- formats
     character(len=*), parameter :: fmtts = &
       "(4x, 'TIME-SERIES DATA WILL BE READ FROM FILE: ', a)"
@@ -1930,6 +1959,7 @@ contains
     ! -- initialize variables
     ibrg = 0
     ieslag = 0
+    iunderrelax = 0
     !
     ! -- get options block
     call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false.)
@@ -1999,6 +2029,8 @@ contains
           ! -- CSUB specific options
           case ('EFFECTIVE_STRESS_LAG')
             ieslag = 1
+          case ('UNDER_RELAXATION')
+            iunderrelax = 1
           case ('GAMMAW')
             this%gammaw =  this%parser%GetDouble()
             ibrg = 1
@@ -2211,28 +2243,49 @@ contains
     ! -- process effective_stress_lag, if effective stress formulation
     if (this%igeocalc /= 0) then
       if (ieslag /= 0) then
-        write(this%iout, fmtopt) &
-          'SPECIFIC STORAGE VALUES WILL BE CALCULATED USING THE EFFECTIVE '
-        write(this%iout, fmtopt) &
-          '  STRESS FROM THE PREVIOUS TIME STEP'
+        write(this%iout, '(4x,a,1(/,6x,a))') &
+          'SPECIFIC STORAGE VALUES WILL BE CALCULATED USING THE EFFECTIVE',      &
+          'STRESS FROM THE PREVIOUS TIME STEP'
       else
-        write(this%iout, fmtopt) &
-          'SPECIFIC STORAGE VALUES WILL BE CALCULATED USING THE CURRENT ' 
-        write(this%iout, fmtopt) &
-          '  EFFECTIVE STRESS'
+        write(this%iout, '(4x,a,1(/,6x,a))') &
+          'SPECIFIC STORAGE VALUES WILL BE CALCULATED USING THE CURRENT',        & 
+          'EFFECTIVE STRESS'
       end if
     else
       if (ieslag /= 0) then
         ieslag = 0
-        write(this%iout, fmtopt) &
-          'EFFECTIVE_STRESS_LAG HAS BEEN SPECIFIED BUT HAS NO EFFECT WHEN '
-        write(this%iout, fmtopt) &
-          '  USING THE HEAD-BASED FORMULATION (HEAD_BASED HAS BEEN SPECIFIED '
-        write(this%iout, fmtopt) &
-          '  IN THE OPTIONS BLOCK)'
+        write(this%iout, '(4x,a,2(/,6x,a))') &
+          'EFFECTIVE_STRESS_LAG HAS BEEN SPECIFIED BUT HAS NO EFFECT WHEN',      &
+          'USING THE HEAD-BASED FORMULATION (HEAD_BASED HAS BEEN SPECIFIED',     &
+          'IN THE OPTIONS BLOCK)'
       end if
     end if
     this%ieslag = ieslag 
+    !
+    ! -- evaluate underrelaxation
+    if (iunderrelax /= 0) then
+      if (this%igeocalc /= 0) then
+        if (this%ieslag /= 0) then
+          iunderrelax = 0
+          write(this%iout, '(4x,a,3(/,6x,a))') &
+            'UNDER-RELAXATION HAS BEEN SPECIFIED BUT HAS NO EFFECT WHEN USING',  &
+            'EFFECTIVE_STRESS_LAG HAS BEEN SPECIFIED IN THE OPTIONS BLOCK AND',  &
+            'SPECIFIC STORAGE VALUES ARE CALCULATED USING EFFECTIVE STRESS',     &
+            'VALUES FROM THE PREVIOUS TIME STEP'
+        else
+          write(this%iout, '(4x,a,/,6x,a)') &
+            'UNDER-RELAXATION WILL BE APPLIED TO EFFECTIVE STRESS VALUES USED ', &
+            'TO CALCULATE SPECIFIC STORAGE VALUES'
+        end if
+      else
+        iunderrelax = 0
+        write(this%iout, '(4x,a,2(/,6x,a))') &
+          'UNDER-RELAXATION HAS BEEN SPECIFIED BUT HAS NO EFFECT WHEN USING',    &
+          'USING THE HEAD-BASED FORMULATION (HEAD_BASED HAS BEEN SPECIFIED',     &
+          'IN THE OPTIONS BLOCK)'
+      end if
+    end if
+    this%iunderrelax = iunderrelax
     !
     ! -- recalculate BRG if necessary and output 
     !    water compressibility values
@@ -2313,6 +2366,14 @@ contains
     call mem_allocate(this%sk_ske, this%dis%nodes, 'sk_ske', trim(this%origin))
     call mem_allocate(this%sk_sk, this%dis%nodes, 'sk_sk', trim(this%origin))
     call mem_allocate(this%sk_thickini, this%dis%nodes, 'sk_thickini', trim(this%origin))
+    if (this%iunderrelax /= 0) then
+      ilen = this%dis%nodes
+    else
+      ilen = 1
+    end if
+    call mem_allocate(this%sk_w0, ilen, 'sk_w0', trim(this%origin))
+    call mem_allocate(this%sk_hch0, ilen, 'sk_hch0', trim(this%origin))
+    call mem_allocate(this%sk_des0, ilen, 'sk_des0', trim(this%origin))
     !
     ! -- cell storage data
     call mem_allocate(this%cell_wcstor, this%dis%nodes, 'cell_wcstor', trim(this%origin))
@@ -2363,6 +2424,14 @@ contains
     call mem_allocate(this%ske, iblen, 'ske', trim(this%origin))
     call mem_allocate(this%sk, iblen, 'sk', trim(this%origin))
     call mem_allocate(this%thickini, iblen, 'thickini', trim(this%origin))
+    if (this%iunderrelax /= 0) then
+      ilen = iblen
+    else
+      ilen = 1
+    end if
+    call mem_allocate(this%w0, ilen, 'w0', trim(this%origin))
+    call mem_allocate(this%hch0, ilen, 'hch0', trim(this%origin))
+    call mem_allocate(this%des0, ilen, 'des0', trim(this%origin))
     !
     ! -- delay bed storage
     call mem_allocate(this%idbconvert, 0, 0, 'idbconvert', trim(this%origin))
@@ -2380,6 +2449,9 @@ contains
     call mem_allocate(this%dbesi, 0, 0, 'dbesi', trim(this%origin))
     call mem_allocate(this%dbes0, 0, 0, 'dbes0', trim(this%origin))
     call mem_allocate(this%dbpcs, 0, 0, 'dbpcs', trim(this%origin))
+    call mem_allocate(this%dbw0, 0, 0, 'dbw0', trim(this%origin))
+    call mem_allocate(this%dbhch0, 0, 0, 'dbhch0', trim(this%origin))
+    call mem_allocate(this%dbdes0, 0, 0, 'dbdes0', trim(this%origin))
     call mem_allocate(this%dbflowtop, 0, 'dbflowtop', trim(this%origin))
     call mem_allocate(this%dbflowbot, 0, 'dbflowbot', trim(this%origin))
     !
@@ -2485,6 +2557,9 @@ contains
       call mem_deallocate(this%sk_ske)
       call mem_deallocate(this%sk_sk)
       call mem_deallocate(this%sk_thickini)
+      call mem_deallocate(this%sk_w0)
+      call mem_deallocate(this%sk_hch0)
+      call mem_deallocate(this%sk_des0)
       !
       ! -- cell storage
       call mem_deallocate(this%cell_wcstor)
@@ -2519,6 +2594,9 @@ contains
       call mem_deallocate(this%ske)
       call mem_deallocate(this%sk)
       call mem_deallocate(this%thickini)
+      call mem_deallocate(this%w0)
+      call mem_deallocate(this%hch0)
+      call mem_deallocate(this%des0)
       !
       ! -- delay bed storage
       call mem_deallocate(this%idbconvert)
@@ -2536,6 +2614,9 @@ contains
       call mem_deallocate(this%dbesi)
       call mem_deallocate(this%dbes0)
       call mem_deallocate(this%dbpcs)
+      call mem_deallocate(this%dbw0)
+      call mem_deallocate(this%dbhch0)
+      call mem_deallocate(this%dbdes0)
       call mem_deallocate(this%dbflowtop)
       call mem_deallocate(this%dbflowbot)
       !
@@ -2574,6 +2655,8 @@ contains
     call mem_deallocate(this%initialized)
     call mem_deallocate(this%igeocalc)
     call mem_deallocate(this%ieslag)
+    call mem_deallocate(this%iunderrelax)
+    call mem_deallocate(this%iurflag)
     call mem_deallocate(this%ispecified_pcs)
     call mem_deallocate(this%ispecified_dbh)
     call mem_deallocate(this%inamedbound)
@@ -2991,9 +3074,6 @@ contains
     integer(I4B), intent(in) :: nodes
     real(DP), dimension(nodes), intent(in) :: hnew
     ! -- local
-    character(len=LINELENGTH) :: errmsg
-    character(len=20) :: cellid
-    integer(I4B) :: ierr
     integer(I4B) :: node
     integer(I4B) :: ii
     integer(I4B) :: nn
@@ -3013,9 +3093,6 @@ contains
     real(DP) :: sadd
 
 ! ------------------------------------------------------------------------------
-    !
-    ! -- initialize variables
-    ierr = 0
     !
     ! -- calculate geostatic stress if necessary
     if (this%igeocalc /= 0) then
@@ -3112,28 +3189,81 @@ contains
         end if
         hs = hcell - bot
         es = this%sk_gs(node) - hs
-        if (es < DEM6) then
-          ierr = ierr + 1
-          call this%dis%noder_to_string(node, cellid)
-          write(errmsg, '(a,g0.7,a,1x,a,1x,a)')                                  &
-            'ERROR: SMALL TO NEGATIVE EFFECTIVE STRESS (', es, ') IN CELL',      &
-            trim(adjustl(cellid)), '.'
-          call store_error(errmsg)
-          write(errmsg, '(4x,a,1x,g0.7,3(1x,a,1x,g0.7),1x,a)')                   &
-            '(', es, '=', this%sk_gs(node), '- (', hcell, '-', bot, ')'
-          call store_error(errmsg)
+        if (this%iunderrelax /= 0) then
+          es = max(es, DONE)
         end if
         this%sk_es(node) = es
       end do
     end if
     !
+    ! -- return
+    return
+
+  end subroutine csub_sk_calc_stress
+
+
+  subroutine csub_sk_chk_stress(this)
+! ******************************************************************************
+! csub_sk_chk_stress -- check that the effective stress for every gwf node 
+!                       in the model is a positive value
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    implicit none
+    class(GwfCsubType) :: this
+    ! -- local
+    character(len=LINELENGTH) :: errmsg
+    character(len=20) :: cellid
+    integer(I4B) :: ierr
+    integer(I4B) :: node
+    real(DP) :: gs
+    real(DP) :: bot
+    real(DP) :: hcell
+    real(DP) :: es
+    real(DP) :: u
+
+! ------------------------------------------------------------------------------
+    !
+    ! -- initialize variables
+    ierr = 0
+    !
+    ! -- calculate geostatic stress if necessary
+    if (this%igeocalc /= 0) then
+      !
+      ! -- save effective stress from the last iteration and
+      !    calculate the new effective stress for a cell
+      do node = 1, this%dis%nodes
+        if (this%ibound(node) < 1) cycle
+        bot = this%dis%bot(node)
+        gs = this%sk_gs(node)
+        es = this%sk_es(node)
+        u = DZERO
+        if (this%ibound(node) /= 0) then
+          u = gs - es
+        end if
+        hcell = u + bot
+        if (es < DEM6) then
+          ierr = ierr + 1
+          call this%dis%noder_to_string(node, cellid)
+          write(errmsg, '(a,g0.7,a,1x,a)')                                       &
+            'ERROR: SMALL TO NEGATIVE EFFECTIVE STRESS (', es, ') IN CELL',      &
+            trim(adjustl(cellid))
+          call store_error(errmsg)
+          write(errmsg, '(4x,a,1x,g0.7,3(1x,a,1x,g0.7),1x,a)')                   &
+            '(', es, '=', this%sk_gs(node), '- (', hcell, '-', bot, ')'
+          call store_error(errmsg)
+        end if
+      end do
+    end if
+    !
     ! -- write a summary error message
     if (ierr > 0) then
-        write(errmsg, '(a,3(1x,a))')                                           &
-          'ERROR SOLUTION: SMALL TO NEGATIVE EFFECTIVE STRESS VALUES CAN BE',  &
-          'ELIMINATED BY INCREASING STORAGE VALUES AND/OR ADDING/MODIFYING',   &
-          'STRESS BOUNDARIES TO PREVENT WATER-LEVELS FROM EXCEEDING',          &
-          'THE TOP OF THE MODEL' 
+        write(errmsg, '(a,1x,i0,3(1x,a))')                                     &
+          'ERROR SOLUTION: SMALL TO NEGATIVE EFFECTIVE STRESS VALUES IN', ierr,&
+          'CELLS CAN BE ELIMINATED BY INCREASING STORAGE VALUES AND/OR ',      &
+          'ADDING/MODIFYINGSTRESS BOUNDARIES TO PREVENT WATER-LEVELS FROM',    &
+          'EXCEEDING THE TOP OF THE MODEL' 
         call store_error(errmsg)
         call this%parser%StoreErrorUnit()
         call ustop()
@@ -3142,7 +3272,7 @@ contains
     ! -- return
     return
 
-  end subroutine csub_sk_calc_stress
+  end subroutine csub_sk_chk_stress
   
   
   subroutine csub_nodelay_update(this, i)
@@ -3207,6 +3337,7 @@ contains
     real(DP), intent(inout) :: rhs
     real(DP), intent(in), optional :: argtled
     ! -- local variables
+    integer(I4B) :: iupdate
     integer(I4B) :: node
     real(DP) :: tled
     real(DP) :: top
@@ -3252,7 +3383,11 @@ contains
       es0 = this%sk_es0(node)
       theta = this%theta(ib)
       theta0 = this%theta0(ib)
-      call this%csub_calc_sfacts(node, bot, znode, znode0, theta, theta0,          &
+      if (this%iurflag /= 0) then
+        call this%csub_under_relaxation(this%kiter, es, esi, this%w0(ib),        &
+                                        this%hch0(ib), this%des0(ib))
+      end if
+      call this%csub_calc_sfacts(node, bot, znode, znode0, theta, theta0,        &
                                  es, esi, es0, f, f0)
     end if
     sto_fac = tled * snnew * this%thick(ib) * f
@@ -3612,8 +3747,11 @@ contains
     class(GwfCsubType) :: this
     integer(I4B), intent(in) :: nodes
     real(DP), dimension(nodes), intent(in) :: hnew
-    character(len=LINELENGTH) :: line, linesep
+    character(len=LINELENGTH) :: line
+    character(len=LINELENGTH) :: linesep
     character(len=16) :: text
+    character(len=20) :: cellid
+    character (len=LINELENGTH) :: errmsg
     integer(I4B) :: ib
     integer(I4B) :: node
     integer(I4B) :: n
@@ -3626,6 +3764,7 @@ contains
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: void
+    real(DP) :: es
     real(DP) :: znode
     real(DP) :: hcell
     real(DP) :: dzhalf
@@ -3649,8 +3788,13 @@ contains
           fact = DONE
         else
           void = this%csub_calc_void(this%sk_theta(node))
-          znode = this%csub_calc_znode(top, bot, hnew(node))
-          fact = this%csub_calc_adjes(node, this%sk_es(node), bot, znode)
+          es = this%sk_es(node)
+          if (this%iunderrelax /= 0) then
+            es = max(es, DONE)
+          end if
+          hcell = hnew(node)
+          znode = this%csub_calc_znode(top, bot, hcell)
+          fact = this%csub_calc_adjes(node, es, bot, znode)
           fact = fact * (DONE + void)
         end if
       else
@@ -3659,6 +3803,15 @@ contains
       this%ske_cr(node) = this%ske_cr(node) * fact
       ! -- initialize previous initial stress
       this%sk_es0(node) = this%sk_es(node)
+      !
+      ! -- write error message if negative compression indices
+      if (fact <= DZERO) then
+        call this%dis%noder_to_string(node, cellid)
+        write(errmsg,'(4x,a,1x,a)')                                              &
+          '****ERROR. NEGATIVE RECOMPRESSION INDICE CALCULATED FOR CELL',        &
+          trim(adjustl(cellid))
+        call store_error(errmsg)
+      end if
     end do
     !
     ! -- check that aquifer head is greater than or equal to the
@@ -3672,12 +3825,12 @@ contains
       hcell = hnew(node)
       call this%csub_delay_chk(ib, hcell)
     end do
-    !
-    ! -- terminate if the aquifer head is below the top of delay interbeds
-    if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
-      call ustop()
-    end if
+    !!
+    !! -- terminate if the aquifer head is below the top of delay interbeds
+    !if (count_errors() > 0) then
+    !  call this%parser%StoreErrorUnit()
+    !  call ustop()
+    !end if
     !
     ! -- interbeds
     do ib = 1, this%ninterbeds
@@ -3753,8 +3906,12 @@ contains
             !ztop = this%dbz(1, idelay) + dzhalf
             ztop = hcell
           end if
+          es = this%sk_es(node)
+          if (this%iunderrelax /= 0) then
+            es = max(es, DONE)
+          end if
           znode = this%csub_calc_znode(top, bot, ztop)
-          fact = this%csub_calc_adjes(node, this%sk_es(node), bot, znode)
+          fact = this%csub_calc_adjes(node, es, bot, znode)
           fact = fact * (DONE + void)
         end if
       else
@@ -3762,7 +3919,19 @@ contains
       end if
       this%ci(ib) = this%ci(ib) * fact
       this%rci(ib) = this%rci(ib) * fact
+      if (fact <= DZERO) then
+        call this%dis%noder_to_string(node, cellid)
+        write(errmsg,'(4x,a,1x,i0,2(1x,a))')                                     &
+          '****ERROR. NEGATIVE COMPRESSION INDICES CALCULATED FOR INTERBED',     &
+          ib, 'IN CELL', trim(adjustl(cellid))
+        call store_error(errmsg)
+      end if
     end do
+    !
+    ! -- scale ci and cr
+    !
+    ! -- recalculate effective stress with
+    !if (this%istoragec == 1 .and. this%igeocalc) then
     !
     ! -- write current stress and initial preconsolidation stress
     if (this%iprpak == 1) then
@@ -3937,6 +4106,12 @@ contains
       end if
     end if
     !
+    ! -- terminate if any initialization errors have been detected
+    if (count_errors() > 0) then
+      call this%parser%StoreErrorUnit()
+      call ustop()
+    end if
+    !
     ! -- set initialized
     this%initialized = 1
     !
@@ -3979,6 +4154,9 @@ contains
     !
     ! -- set kiter that is used to under-relax effective stress
     this%kiter = kiter
+    if (this%iunderrelax /= 0) then
+      this%iurflag = 1
+    end if
     !
     ! -- update geostatic load calculation
     call this%csub_sk_calc_stress(nodes, hnew)
@@ -4082,6 +4260,10 @@ contains
       call this%parser%StoreErrorUnit()
       call ustop()
     end if
+    !
+    ! -- reset iurflag so under-relaxation is not applied in 
+    !    newton-raphson or budget routines
+    this%iurflag = 0
     !
     ! -- return
     return
@@ -4672,6 +4854,10 @@ contains
       es0 = this%sk_es0(n)
       theta = this%sk_theta(n)
       theta0 = this%sk_theta0(n)
+      if (this%iurflag /= 0) then
+        call this%csub_under_relaxation(this%kiter, es, esi, this%sk_w0(n),     &
+                                        this%sk_hch0(n), this%sk_des0(n))
+      end if
       call this%csub_calc_sfacts(n, bot, znode, znode0, theta, theta0,          &
                                  es, esi, es0, f, f0)
     end if
@@ -5271,6 +5457,102 @@ contains
     return
   end subroutine csub_calc_sfacts  
 
+  subroutine csub_under_relaxation(this, kiter, es, esi, w0, hch0, des0)
+! ******************************************************************************
+! csub_under_relaxation -- Under-relaxation of the current effective stress
+!                          using delta-bar-delta algorithm.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    class(GwfCsubType), intent(inout) :: this
+    integer(I4B), intent(in) :: kiter
+    real(DP), intent(inout) :: es
+    real(DP), intent(in) :: esi
+    real(DP), intent(inout) :: w0
+    real(DP), intent(inout) :: hch0
+    real(DP), intent(inout) :: des0
+    ! -- local variables
+    real(DP) :: esa
+    real(DP) :: es0
+    real(DP) :: des
+    real(DP) :: ww
+    real(DP) :: amon
+    real(DP) :: urtheta
+    real(DP) :: urkappa
+    real(DP) :: urgamma
+    real(DP) :: urmomentum
+! ------------------------------------------------------------------------------
+    !
+    ! -- initialize variables
+    urtheta = 0.8_DP
+    urkappa = 0.0001_DP
+    urgamma = DZERO
+    urmomentum = 0.1_DP
+    es0 = max(esi, DONE)
+    esa = max(0.9_DP * es0, DONE)
+    !
+    ! -- use a fraction of the previous effective stress if current
+    !    effective stress is small or negative
+    if (es < DONE) then
+      es = esa
+    end if
+    !
+    ! -- calculate the change in effective stress
+    des = es - es0
+    !
+    ! -- initialize d-b-d values on the first iteration
+    if (kiter == 1) then
+      w0 = DONE
+      hch0 = DEM20
+      des0 = DZERO
+    end if
+    !
+    ! -- compute the new relaxation term using delta-bar-delta
+    ww = w0
+    !
+    ! -- decrease factor if desold and des have different signs
+    if (des0 * des < DZERO) then
+      ww = urtheta * ww
+    ! -- increase factor if desold and des have the same sign
+    else
+      ww = ww + urkappa
+    end if
+    if (ww > DONE) ww = DONE
+    w0 = ww
+    !
+    ! -- compute the exponential average of past changes in hchold
+    if (kiter == 1) then
+      hch0 = des
+    else
+      hch0 = (DONE - urgamma) * des + urgamma * hch0
+    end if
+    !
+    ! -- store slope (change) term for next iteration
+    des0 = des
+    !
+    ! -- compute the accepted slope size
+    amon = DZERO
+    if (kiter > 4) amon = urmomentum
+    des = des * ww + amon * hch0
+    !
+    ! -- update the effective stress
+    es = es0 + des
+    !
+    ! -- reset the calculated effective stress to the previous 
+    !    effective stress if the calculated value is close to zero
+    !    reset the d-b-d values as well
+    if (es < DONE) then
+      w0 = DONE
+      hch0 = DEM20
+      des0 = DZERO
+      es = esa
+    end if
+    !
+    ! -- return
+    return
+  end subroutine csub_under_relaxation 
+
   
   subroutine csub_adj_matprop(this, comp, thick, theta)
 ! ******************************************************************************
@@ -5668,6 +5950,12 @@ contains
       es = this%dbes(n, idelay)
       esi = this%dbesi(n, idelay)
       es0 = this%dbes0(n, idelay)
+      if (this%iurflag /= 0) then
+        call this%csub_under_relaxation(this%kiter, es, esi,                     &
+                                        this%dbw0(n, idelay),                    &
+                                        this%dbhch0(n, idelay),                  &
+                                        this%dbdes0(n, idelay))
+      end if
       !
       ! -- calculate the compression index factors for the delay 
       !    node relative to the center of the cell based on the 
