@@ -1,7 +1,7 @@
 module GwfCsubModule
   use KindModule, only: I4B, DP
   use ConstantsModule, only: DPREC, DZERO, DEM20, DEM10, DEM7, DEM6, DEM4,      &
-                             DHALF, DEM1, DONE, DTWO, DTHREE,                   &
+                             DP9, DHALF, DEM1, DONE, DTWO, DTHREE,              &
                              DGRAVITY, DTEN, DHUNDRED, DNODATA, DHNOFLO,        &
                              LENFTYPE, LENPACKAGENAME,                          &
                              LINELENGTH, LENBOUNDNAME, NAMEDBOUNDFLAG,          &
@@ -84,6 +84,7 @@ module GwfCsubModule
     integer(I4B), pointer :: idbhalfcell => null()
     integer(I4B), pointer :: idbfullcell => null()
     integer(I4B), pointer :: kiter => null()
+    integer(I4B), pointer :: kiterdb => null()
     real(DP), pointer :: cc_crit => null()                                       !convergence criteria for csub-gwf convergence check
     real(DP), pointer :: gammaw => null()                                        !product of fluid density, and gravity
     real(DP), pointer :: beta => null()                                          !water compressibility
@@ -91,6 +92,12 @@ module GwfCsubModule
     real(DP), pointer :: dbfact => null()
     real(DP), pointer :: dbfacti => null()
     real(DP), pointer :: satomega => null()                                      !newton-raphson saturation omega
+    !
+    ! -- under-relaxation variables
+    real(DP), pointer :: urtheta
+    real(DP), pointer :: urkappa
+    real(DP), pointer :: urgamma
+    real(DP), pointer :: urmomentum
 
     integer(I4B), pointer :: gwfiss => NULL()                                    !pointer to model iss flag
     integer(I4B), pointer :: gwfiss0 => NULL()                                   !iss flag for last stress period
@@ -154,9 +161,6 @@ module GwfCsubModule
     real(DP), dimension(:), pointer, contiguous :: sk => null()                  !first storage coefficient
     real(DP), dimension(:), pointer, contiguous :: thickini => null()            !initial interbed thickness
     real(DP), dimension(:,:), pointer, contiguous :: auxvar => null()            !auxiliary variable array
-    real(DP), dimension(:), pointer, contiguous :: w0 => null()                  !under-relaxation weight
-    real(DP), dimension(:), pointer, contiguous :: hch0 => null()                !under-relaxation weighted change
-    real(DP), dimension(:), pointer, contiguous :: des0 => null()                !under-relaxation effective stress change
     !
     ! -- delay interbed arrays
     integer(I4B), dimension(:,:), pointer, contiguous :: idbconvert => null()    !0 = elastic, > 0 = inelastic
@@ -225,7 +229,8 @@ module GwfCsubModule
     procedure, private :: csub_calc_adjes
     procedure, private :: csub_calc_sat
     procedure, private :: csub_calc_sfacts
-    procedure, private :: csub_under_relaxation
+    procedure, private :: csub_calc_under_relaxation
+    procedure, private :: csub_apply_under_relaxation
     procedure, private :: csub_adj_matprop
     procedure, private :: csub_calc_interbed_thickness
     procedure, private :: csub_calc_delay_flow
@@ -235,6 +240,9 @@ module GwfCsubModule
     !procedure, private :: csub_sk_calc_znode
     procedure, private :: csub_sk_calc_stress
     procedure, private :: csub_sk_chk_stress
+    !
+    ! -- initial states
+    procedure, private :: csub_set_initial_state
     !
     ! -- coarse-grained skeletal methods
     procedure, private :: csub_sk_update
@@ -246,7 +254,6 @@ module GwfCsubModule
     procedure, private :: csub_sk_wcomp_fn
     !
     ! -- interbed methods
-    procedure, private :: csub_interbed_set_initial
     procedure, private :: csub_interbed_fc
     procedure, private :: csub_interbed_fn
     procedure, private :: csub_interbed_wcomp_fc
@@ -370,6 +377,7 @@ contains
     call mem_allocate(this%idbhalfcell, 'IDBHALFCELL', this%origin)
     call mem_allocate(this%idbfullcell, 'IDBFULLCELL', this%origin)
     call mem_allocate(this%kiter, 'KITER', this%origin)
+    call mem_allocate(this%kiterdb, 'KITERDB', this%origin)
     call mem_allocate(this%cc_crit, 'CC_CRIT', this%origin)
     call mem_allocate(this%gammaw, 'GAMMAW', this%origin)
     call mem_allocate(this%beta, 'BETA', this%origin)
@@ -377,6 +385,10 @@ contains
     call mem_allocate(this%dbfact, 'DBFACT', this%origin)
     call mem_allocate(this%dbfacti, 'DBFACTI', this%origin)
     call mem_allocate(this%satomega, 'SATOMEGA', this%origin)
+    call mem_allocate(this%urtheta, 'URTHETA', this%origin)
+    call mem_allocate(this%urkappa, 'URKAPPA', this%origin)
+    call mem_allocate(this%urgamma, 'URGAMMA', this%origin)
+    call mem_allocate(this%urmomentum, 'URMOMENTUM', this%origin)
     call mem_allocate(this%icellf, 'ICELLF', this%origin)
     call mem_allocate(this%gwfiss0, 'GWFISS0', this%origin)
     !
@@ -419,6 +431,7 @@ contains
     this%idbhalfcell = 0
     this%idbfullcell = 0
     this%kiter = 0
+    this%kiterdb = 0
     this%cc_crit = DEM7
     this%gammaw = DGRAVITY * 1000._DP
     this%beta = 4.6512e-10_DP
@@ -435,6 +448,12 @@ contains
     this%icellf = 0
     this%ninterbeds = 0
     this%gwfiss0 = 0
+    !
+    ! -- set underrelaxation variables
+    this%urtheta = 0.8_DP
+    this%urkappa = DEM4
+    this%urgamma = DZERO
+    this%urmomentum = DEM1
     !
     ! -- return
     return
@@ -1923,8 +1942,10 @@ contains
     ! -- local
     character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: keyword
+    character(len=LINELENGTH) :: cvalue
     character(len=LINELENGTH) :: line
     character(len=MAXCHARLEN) :: fname
+    character(len=15) :: cur(0:2)
     logical :: isfound
     logical :: endOfBlock
     integer(I4B) :: lloc
@@ -1935,6 +1956,10 @@ contains
     integer(I4B) :: ibrg
     integer(I4B) :: ieslag
     integer(I4B) :: iunderrelax
+    ! -- parameters
+    data cur  /'NONE           ', &
+               'SIMPLE         ', &
+               'DELTA-BAR-DELTA'/
     ! -- formats
     character(len=*), parameter :: fmtts = &
       "(4x, 'TIME-SERIES DATA WILL BE READ FROM FILE: ', a)"
@@ -2030,7 +2055,39 @@ contains
           case ('EFFECTIVE_STRESS_LAG')
             ieslag = 1
           case ('UNDER_RELAXATION')
-            iunderrelax = 1
+            call this%parser%GetStringCaps(keyword)
+            if (keyword == 'SIMPLE') then
+              iunderrelax = 1
+              call this%parser%GetStringCaps(cvalue)
+              if (len_trim(cvalue) > 0) then
+                read(cvalue,*) this%urgamma
+              else
+                this%urgamma = DP9
+              end if
+            else if (keyword == 'DBD') then
+              iunderrelax = 2
+              call this%parser%GetStringCaps(cvalue)
+              if (len_trim(cvalue) > 0) then
+                read(cvalue,*) this%urtheta
+                if (len_trim(cvalue) > 0) then
+                  call this%parser%GetStringCaps(cvalue)
+                  if (len_trim(cvalue) > 0) then
+                    read(cvalue,*) this%urkappa
+                    call this%parser%GetStringCaps(cvalue)
+                    if (len_trim(cvalue) > 0) then
+                      read(cvalue,*) this%urgamma
+                      call this%parser%GetStringCaps(cvalue)
+                      if (len_trim(cvalue) > 0) then
+                        read(cvalue,*) this%urmomentum
+                      end if
+                    end if
+                  end if
+                end if
+              end if
+            else
+              iunderrelax = 1
+              this%urgamma = DP9
+            end if
           case ('GAMMAW')
             this%gammaw =  this%parser%GetDouble()
             ibrg = 1
@@ -2273,9 +2330,18 @@ contains
             'SPECIFIC STORAGE VALUES ARE CALCULATED USING EFFECTIVE STRESS',     &
             'VALUES FROM THE PREVIOUS TIME STEP'
         else
-          write(this%iout, '(4x,a,/,6x,a)') &
-            'UNDER-RELAXATION WILL BE APPLIED TO EFFECTIVE STRESS VALUES USED ', &
-            'TO CALCULATE SPECIFIC STORAGE VALUES'
+          write(this%iout, '(4x,a,1x,a,/,6x,a)') &
+            trim(adjustl(cur(iunderrelax))),                                     &
+            'UNDER-RELAXATION WILL BE APPLIED TO EFFECTIVE', &
+            'STRESS VALUES USED TO CALCULATE SPECIFIC STORAGE VALUES'
+          if (iunderrelax == 1) then
+            write(this%iout, '(4x,a,1x,g0)') 'URGAMMA    =', this%urgamma
+          else if (iunderrelax == 2) then
+            write(this%iout, '(4x,a,1x,g0)') 'URTHETA    =', this%urtheta
+            write(this%iout, '(4x,a,1x,g0)') 'URKAPPA    =', this%urkappa
+            write(this%iout, '(4x,a,1x,g0)') 'URGAMMA    =', this%urgamma
+            write(this%iout, '(4x,a,1x,g0)') 'URMOMENTUM =', this%urmomentum
+          end if
         end if
       else
         iunderrelax = 0
@@ -2424,14 +2490,6 @@ contains
     call mem_allocate(this%ske, iblen, 'ske', trim(this%origin))
     call mem_allocate(this%sk, iblen, 'sk', trim(this%origin))
     call mem_allocate(this%thickini, iblen, 'thickini', trim(this%origin))
-    if (this%iunderrelax /= 0) then
-      ilen = iblen
-    else
-      ilen = 1
-    end if
-    call mem_allocate(this%w0, ilen, 'w0', trim(this%origin))
-    call mem_allocate(this%hch0, ilen, 'hch0', trim(this%origin))
-    call mem_allocate(this%des0, ilen, 'des0', trim(this%origin))
     !
     ! -- delay bed storage
     call mem_allocate(this%idbconvert, 0, 0, 'idbconvert', trim(this%origin))
@@ -2594,9 +2652,6 @@ contains
       call mem_deallocate(this%ske)
       call mem_deallocate(this%sk)
       call mem_deallocate(this%thickini)
-      call mem_deallocate(this%w0)
-      call mem_deallocate(this%hch0)
-      call mem_deallocate(this%des0)
       !
       ! -- delay bed storage
       call mem_deallocate(this%idbconvert)
@@ -2674,6 +2729,7 @@ contains
     call mem_deallocate(this%idbfullcell)
     call mem_deallocate(this%idbhalfcell)
     call mem_deallocate(this%kiter)
+    call mem_deallocate(this%kiterdb)
     call mem_deallocate(this%cc_crit)
     call mem_deallocate(this%gammaw)
     call mem_deallocate(this%beta)
@@ -3380,12 +3436,21 @@ contains
       es0 = this%sk_es0(node)
       theta = this%theta(ib)
       theta0 = this%theta0(ib)
-      !if (this%iurflag /= 0) then
-      !  call this%csub_under_relaxation(this%kiter, es, esi, this%w0(ib),        &
-      !                                  this%hch0(ib), this%des0(ib))
-      !end if
+      if (this%iunderrelax /= 0) then
+        !
+        ! -- only need to apply under-relaxation since it has already been
+        !    calculated for the coarse-grained materials
+        call this%csub_apply_under_relaxation(this%kiter, es, esi,               &
+                                              this%sk_w0(node),                  &
+                                              this%sk_hch0(node),                &
+                                              this%sk_des0(node))
+      end if
+      !
+      ! -- calculate the compression index factors for the delay 
+      !    node relative to the center of the cell based on the 
+      !    current and previous head
       call this%csub_calc_sfacts(node, bot, znode, znode0, theta, theta0,        &
-                                 es, esi, es0, f, f0)
+                                 es, es0, f, f0)
     end if
     sto_fac = tled * snnew * this%thick(ib) * f
     sto_fac0 = tled * snold * this%thick0(ib) * f0
@@ -3620,10 +3685,10 @@ contains
       end if
     end if
     !
-    ! -- set initial conditions
+    ! -- set initial states
     if (this%initialized == 0) then
       if (this%gwfiss == 0) then
-        call this%csub_interbed_set_initial(nodes, hnew)
+        call this%csub_set_initial_state(nodes, hnew)
       end if
     end if
     !
@@ -3734,9 +3799,10 @@ contains
     return
   end subroutine csub_ad
 
-  subroutine csub_interbed_set_initial(this, nodes, hnew)
+  subroutine csub_set_initial_state(this, nodes, hnew)
 ! ******************************************************************************
-! csub_interbed_set_initial -- Set initial state for interbeds
+! csub_set_initial_state -- Set initial state for coarse-grained materials 
+!                           and interbeds
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -3770,48 +3836,16 @@ contains
     real(DP) :: sadd
     real(DP) :: dbpcs
     real(DP) :: q
-    real(DP), dimension(:), allocatable :: hci
 ! ------------------------------------------------------------------------------
     !
     ! -- update geostatic load calculation
     call this%csub_sk_calc_stress(nodes, hnew)
     !
-    ! -- coarse-grained materials
+    ! -- initialize coarse-grained material effective stress 
+    !    for the previous time step and the previous iteration
     do node = 1, nodes
-      !! scale cr and cc
-      !top = this%dis%top(node)
-      !bot = this%dis%bot(node)
-      !if (this%istoragec == 1) then
-      !  if (this%igeocalc == 0) then
-      !    fact = DONE
-      !  else
-      !    void = this%csub_calc_void(this%sk_theta(node))
-      !    es = this%sk_es(node)
-      !    if (this%iunderrelax /= 0) then
-      !      es = max(es, DONE)
-      !    end if
-      !    hcell = hnew(node)
-      !    znode = this%csub_calc_znode(top, bot, hcell)
-      !    fact = this%csub_calc_adjes(node, es, bot, znode)
-      !    fact = fact * (DONE + void)
-      !  end if
-      !else
-      !    fact = dlog10es
-      !end if
-      !this%ske_cr(node) = this%ske_cr(node) * fact
-      ! -- initialize effective stress for previous time step
-      !    and the previous iteration
       this%sk_es0(node) = this%sk_es(node)
       this%sk_esi(node) = this%sk_es(node)
-      !!
-      !! -- write error message if negative compression indices
-      !if (fact <= DZERO) then
-      !  call this%dis%noder_to_string(node, cellid)
-      !  write(errmsg,'(4x,a,1x,a)')                                              &
-      !    '****ERROR. NEGATIVE RECOMPRESSION INDICE CALCULATED FOR CELL',        &
-      !    trim(adjustl(cellid))
-      !  call store_error(errmsg)
-      !end if
     end do
     !
     ! -- check that aquifer head is greater than or equal to the
@@ -3825,14 +3859,8 @@ contains
       hcell = hnew(node)
       call this%csub_delay_chk(ib, hcell)
     end do
-    !!
-    !! -- terminate if the aquifer head is below the top of delay interbeds
-    !if (count_errors() > 0) then
-    !  call this%parser%StoreErrorUnit()
-    !  call ustop()
-    !end if
     !
-    ! -- interbeds initial states
+    ! -- initialize interbed initial states
     do ib = 1, this%ninterbeds
       idelay = this%idelay(ib)
       node = this%nodelist(ib)
@@ -3897,61 +3925,7 @@ contains
           this%dbesi(n, idelay) = this%dbes(n, idelay)
         end do 
       end if
-      !!    
-      !! scale cr and cc
-      !if (this%istoragec == 1) then
-      !  if (this%igeocalc == 0) then
-      !    fact = DONE
-      !  else
-      !    void = this%csub_calc_void(this%theta(ib))
-      !    if (idelay == 0) then
-      !      ztop = hcell
-      !    else
-      !      !ztop = this%dbz(1, idelay) + dzhalf
-      !      ztop = hcell
-      !    end if
-      !    es = this%sk_es(node)
-      !    if (this%iunderrelax /= 0) then
-      !      es = max(es, DONE)
-      !    end if
-      !    znode = this%csub_calc_znode(top, bot, ztop)
-      !    fact = this%csub_calc_adjes(node, es, bot, znode)
-      !    fact = fact * (DONE + void)
-      !  end if
-      !else
-      !    fact = dlog10es
-      !end if
-      !this%ci(ib) = this%ci(ib) * fact
-      !this%rci(ib) = this%rci(ib) * fact
-      !if (fact <= DZERO) then
-      !  call this%dis%noder_to_string(node, cellid)
-      !  write(errmsg,'(4x,a,1x,i0,2(1x,a))')                                     &
-      !    '****ERROR. NEGATIVE COMPRESSION INDICES CALCULATED FOR INTERBED',     &
-      !    ib, 'IN CELL', trim(adjustl(cellid))
-      !  call store_error(errmsg)
-      !end if
     end do
-    !
-    ! -- scale ci and cr
-    !!
-    !! -- recalculate effective stress using the top of each cell
-    !if (this%istoragec /= 0 .and. this%igeocalc /= 0) then
-    !  allocate(hci(nodes))
-    !  do node = 1, nodes
-    !    top = this%dis%top(node)
-    !    if (this%ibound(node) > 0) then
-    !      bot = this%dis%bot(node)
-    !      hcell = min(hnew(node), top)
-    !      if (hcell <= bot) then
-    !        hcell = top
-    !      end if
-    !    else
-    !      hcell = top
-    !    end if
-    !    hci(node) = hcell
-    !  end do
-    !  call this%csub_sk_calc_stress(nodes, hci)
-    !end if
     !
     ! -- scale coarse-grained materials cr
     do node = 1, nodes
@@ -4015,12 +3989,6 @@ contains
         call store_error(errmsg)
       end if
     end do
-    !!
-    !! -- reset effective stress using the simulated heads
-    !if (this%istoragec /= 0 .and. this%igeocalc /= 0) then
-    !  call this%csub_sk_calc_stress(nodes, hnew)
-    !  deallocate(hci)
-    !end if
     !
     ! -- write current stress and initial preconsolidation stress
     if (this%iprpak == 1) then
@@ -4206,7 +4174,7 @@ contains
     !
     ! -- return
     return
-  end subroutine csub_interbed_set_initial
+  end subroutine csub_set_initial_state
 
   subroutine csub_fc(this, kiter, nodes, hold, hnew, nja, njasln, amat, &
                      idxglo, rhs)
@@ -4265,16 +4233,6 @@ contains
         !
         ! -- skip inactive cells
         if (this%ibound(node) < 1) cycle
-        !
-        ! -- under-relax the effective stress
-        if (this%iurflag /= 0) then
-            es = this%sk_es(node)
-            esi = this%sk_esi(node)
-            call this%csub_under_relaxation(this%kiter, es, esi,                 &
-                                            this%sk_w0(node),                    &
-                                            this%sk_hch0(node),                  & 
-                                            this%sk_des0(node))
-        end if
         !
         ! -- update skeletal material properties
         if (this%iupdatematprop /= 0) then
@@ -4957,12 +4915,25 @@ contains
       es0 = this%sk_es0(n)
       theta = this%sk_theta(n)
       theta0 = this%sk_theta0(n)
-      !if (this%iurflag /= 0) then
-      !  call this%csub_under_relaxation(this%kiter, es, esi, this%sk_w0(n),     &
-      !                                  this%sk_hch0(n), this%sk_des0(n))
-      !end if
+      if (this%iunderrelax /= 0) then
+        if (this%iurflag /= 0) then
+          call this%csub_calc_under_relaxation(this%kiter, es, esi,              &
+                                               this%sk_w0(n),                    &
+                                               this%sk_hch0(n),                  & 
+                                               this%sk_des0(n))
+        else
+          call this%csub_apply_under_relaxation(this%kiter, es, esi,             &
+                                                this%sk_w0(n),                   &
+                                                this%sk_hch0(n),                 & 
+                                                this%sk_des0(n))
+        end if
+      end if
+      !
+      ! -- calculate the compression index factors for the delay 
+      !    node relative to the center of the cell based on the 
+      !    current and previous head
       call this%csub_calc_sfacts(n, bot, znode, znode0, theta, theta0,          &
-                                 es, esi, es0, f, f0)
+                                 es, es0, f, f0)
     end if
     sske = f * this%ske_cr(n)
     sske0 = f0 * this%ske_cr(n)
@@ -5499,7 +5470,7 @@ contains
   end subroutine csub_calc_sat  
   
   subroutine csub_calc_sfacts(this, node, bot, znode, znode0, theta, theta0,    &
-                              es, esi, es0, fact, fact0)
+                              es, es0, fact, fact0)
 ! ******************************************************************************
 ! csub_calc_sfacts -- Calculate sske and sske0 factor for a gwf cell or 
 !                     interbed.
@@ -5515,7 +5486,6 @@ contains
     real(DP), intent(in) :: theta
     real(DP), intent(in) :: theta0
     real(DP), intent(in) :: es
-    real(DP), intent(in) :: esi
     real(DP), intent(in) :: es0
     real(DP), intent(inout) :: fact
     real(DP), intent(inout) :: fact0
@@ -5559,10 +5529,10 @@ contains
     return
   end subroutine csub_calc_sfacts  
 
-  subroutine csub_under_relaxation(this, kiter, es, esi, w0, hch0, des0)
+  subroutine csub_calc_under_relaxation(this, kiter, es, esi, w0, hch0, des0)
 ! ******************************************************************************
-! csub_under_relaxation -- Under-relaxation of the current effective stress
-!                          using delta-bar-delta algorithm.
+! csub_calc_under_relaxation -- Under-relaxation of the current effective stress
+!                               using simple or delta-bar-delta algorithm.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -5578,63 +5548,115 @@ contains
     real(DP) :: des
     real(DP) :: ww
     real(DP) :: amon
-    real(DP) :: urtheta
-    real(DP) :: urkappa
-    real(DP) :: urgamma
-    real(DP) :: urmomentum
 ! ------------------------------------------------------------------------------
     !
-    ! -- initialize variables
-    urtheta = 0.8_DP
-    urkappa = 0.0001_DP
-    urgamma = DZERO
-    urmomentum = 0.1_DP
-    !
-    ! -- calculate the change in effective stress
+    ! -- calculate the effective stress step size
     des = es - esi
     !
-    ! -- initialize d-b-d values on the first iteration
-    if (kiter == 1) then
-      w0 = DONE
-      hch0 = DEM20
-      des0 = DZERO
-    end if
-    !
-    ! -- compute the new relaxation term using delta-bar-delta
-    ww = w0
-    !
-    ! -- decrease factor if desold and des have different signs
-    if (des0 * des < DZERO) then
-      ww = urtheta * ww
-    ! -- increase factor if desold and des have the same sign
-    else
-      ww = ww + urkappa
-    end if
-    if (ww > DONE) ww = DONE
-    w0 = ww
-    !
-    ! -- compute the exponential average of past changes in hchold
-    if (kiter == 1) then
-      hch0 = des
-    else
-      hch0 = (DONE - urgamma) * des + urgamma * hch0
-    end if
-    !
-    ! -- store slope (change) term for next iteration
-    des0 = des
-    !
-    ! -- compute the accepted slope size
-    amon = DZERO
-    if (kiter > 4) amon = urmomentum
-    des = des * ww + amon * hch0
-    !
-    ! -- update the effective stress
-    es = esi + des
+    ! -- perform under-relaxation
+    select case(this%iunderrelax)
+      ! -- simple under-relaxation
+      case(1)
+        !
+        ! -- dampen the effective stress
+        es = esi + this%urgamma * des
+        
+        if (es < DEM1) then
+          es = DEM1
+          des = es - esi
+        end if
+        !
+        ! -- store slope (change) term for next iteration
+        des0 = des
+      !
+      ! -- delta-bar-delta
+      case(2)
+        !
+        ! -- initialize d-b-d values on the first iteration
+        if (kiter == 1) then
+          w0 = DONE
+          hch0 = DEM20
+          des0 = DZERO
+        end if
+        !
+        ! -- compute the new relaxation term using delta-bar-delta
+        ww = w0
+        !
+        ! -- decrease factor if desold and des have different signs
+        if (des0 * des < DZERO) then
+          ww = this%urtheta * ww
+        ! -- increase factor if desold and des have the same sign
+        else
+          ww = ww + this%urkappa
+        end if
+        if (ww > DONE) ww = DONE
+        w0 = ww
+        !
+        ! -- compute the exponential average of past changes in hchold
+        if (kiter == 1) then
+          hch0 = des
+        else
+          hch0 = (DONE - this%urgamma) * des + this%urgamma * hch0
+        end if
+        !
+        ! -- store slope (change) term for next iteration
+        des0 = des
+        !
+        ! -- compute the accepted slope size
+        amon = DZERO
+        if (kiter > 4) amon = this%urmomentum
+        des = des * ww + amon * hch0
+        !
+        ! -- update the effective stress
+        es = esi + des
+    end select
     !
     ! -- return
     return
-  end subroutine csub_under_relaxation 
-
+  end subroutine csub_calc_under_relaxation 
+  
+  subroutine csub_apply_under_relaxation(this, kiter, es, esi, w0, hch0, des0)
+! ******************************************************************************
+! csub_apply_under_relaxation -- Apply under-relaxation to the current effective
+!                                stress using simple or delta-bar-delta 
+!                                algorithm.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    class(GwfCsubType), intent(inout) :: this
+    integer(I4B), intent(in) :: kiter
+    real(DP), intent(inout) :: es
+    real(DP), intent(in) :: esi
+    real(DP), intent(inout) :: w0
+    real(DP), intent(inout) :: hch0
+    real(DP), intent(inout) :: des0
+    ! -- local variables
+    real(DP) :: des
+    real(DP) :: amon
+! ------------------------------------------------------------------------------
+    !
+    ! -- apply under-relaxation
+    select case(this%iunderrelax)
+      ! -- simple under-relaxation
+      case(1)
+        es = esi + des0
+      !
+      ! -- delta-bar-delta
+      case(2)
+        !
+        ! -- compute the accepted slope size
+        amon = DZERO
+        if (kiter > 4) amon = this%urmomentum
+        des = des0 * w0 + amon * hch0
+        !
+        ! -- update the effective stress
+        es = esi + des
+    end select
+    !
+    ! -- return
+    return
+  end subroutine csub_apply_under_relaxation 
   
   subroutine csub_adj_matprop(this, comp, thick, theta)
 ! ******************************************************************************
@@ -5718,17 +5740,8 @@ contains
       do
         iter = iter + 1
         !
-        ! -- under-relax delay bed effective stress
-        if (this%iurflag /= 0) then
-          do n = 1, this%ndelaycells
-            es = this%dbes(n, idelay)
-            esi = this%dbesi(n, idelay)
-            call this%csub_under_relaxation(iter, es, esi,                         &
-                                            this%dbw0(n, idelay),                  &
-                                            this%dbhch0(n, idelay),                &
-                                            this%dbdes0(n, idelay))
-          end do
-        end if
+        ! -- set kiterdb that is used to under-relax effective stress
+        this%kiterdb = iter
         !
         ! -- assemble coefficients
         call this%csub_delay_assemble(ib, hcell, hcellold)
@@ -6046,18 +6059,25 @@ contains
       es = this%dbes(n, idelay)
       esi = this%dbesi(n, idelay)
       es0 = this%dbes0(n, idelay)
-      !if (this%iurflag /= 0) then
-      !  call this%csub_under_relaxation(this%kiter, es, esi,                     &
-      !                                  this%dbw0(n, idelay),                    &
-      !                                  this%dbhch0(n, idelay),                  &
-      !                                  this%dbdes0(n, idelay))
-      !end if
+      if (this%iunderrelax /= 0) then
+        if (this%iurflag /= 0) then
+          call this%csub_calc_under_relaxation(this%kiterdb, es, esi,            &
+                                               this%dbw0(n, idelay),             &
+                                               this%dbhch0(n, idelay),           &
+                                               this%dbdes0(n, idelay))
+        else
+          call this%csub_apply_under_relaxation(this%kiterdb, es, esi,           &
+                                                this%dbw0(n, idelay),            &
+                                                this%dbhch0(n, idelay),          &
+                                                this%dbdes0(n, idelay))
+        end if
+      end if
       !
       ! -- calculate the compression index factors for the delay 
       !    node relative to the center of the cell based on the 
       !    current and previous head
       call this%csub_calc_sfacts(node, zbot, znode, znode0, theta, theta,       &
-                                 es, esi, es0, f, f0)
+                                 es, es0, f, f0)
     end if
     this%idbconvert(n, idelay) = 0
     sske = f0 * this%rci(ib)
