@@ -5499,18 +5499,15 @@ contains
     ! -- initialize variables
     fact = DZERO
     fact0 = DZERO
-    zn0 = znode0
     if (this%ieslag /= 0) then
       zn0 = znode
+      esv = es0
+    else
+      esv = es
+      zn0 = znode0
     end if
     !
-    ! -- calculate factor for the effective stress case
-    if (this%ieslag == 0) then
-      esv = es
-    else
-      esv = es0
-    end if
-    !if (node == 1) write(*,'(i0,3(1x,g15.7))') this%kiter, esv, esi, es
+    ! -- calculate storage factors for the effective stress case
     void = this%csub_calc_void(theta)
     denom = this%csub_calc_adjes(node, esv, bot, znode)
     denom = denom * (DONE + void)
