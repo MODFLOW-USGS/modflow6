@@ -3189,9 +3189,6 @@ contains
         end if
         hs = hcell - bot
         es = this%sk_gs(node) - hs
-        if (this%iunderrelax /= 0) then
-          es = max(es, DONE)
-        end if
         this%sk_es(node) = es
       end do
     end if
@@ -3383,10 +3380,10 @@ contains
       es0 = this%sk_es0(node)
       theta = this%theta(ib)
       theta0 = this%theta0(ib)
-      if (this%iurflag /= 0) then
-        call this%csub_under_relaxation(this%kiter, es, esi, this%w0(ib),        &
-                                        this%hch0(ib), this%des0(ib))
-      end if
+      !if (this%iurflag /= 0) then
+      !  call this%csub_under_relaxation(this%kiter, es, esi, this%w0(ib),        &
+      !                                  this%hch0(ib), this%des0(ib))
+      !end if
       call this%csub_calc_sfacts(node, bot, znode, znode0, theta, theta0,        &
                                  es, esi, es0, f, f0)
     end if
@@ -3773,6 +3770,7 @@ contains
     real(DP) :: sadd
     real(DP) :: dbpcs
     real(DP) :: q
+    real(DP), dimension(:), allocatable :: hci
 ! ------------------------------------------------------------------------------
     !
     ! -- update geostatic load calculation
@@ -3780,38 +3778,40 @@ contains
     !
     ! -- coarse-grained materials
     do node = 1, nodes
-      ! scale cr and cc
-      top = this%dis%top(node)
-      bot = this%dis%bot(node)
-      if (this%istoragec == 1) then
-        if (this%igeocalc == 0) then
-          fact = DONE
-        else
-          void = this%csub_calc_void(this%sk_theta(node))
-          es = this%sk_es(node)
-          if (this%iunderrelax /= 0) then
-            es = max(es, DONE)
-          end if
-          hcell = hnew(node)
-          znode = this%csub_calc_znode(top, bot, hcell)
-          fact = this%csub_calc_adjes(node, es, bot, znode)
-          fact = fact * (DONE + void)
-        end if
-      else
-          fact = dlog10es
-      end if
-      this%ske_cr(node) = this%ske_cr(node) * fact
-      ! -- initialize previous initial stress
+      !! scale cr and cc
+      !top = this%dis%top(node)
+      !bot = this%dis%bot(node)
+      !if (this%istoragec == 1) then
+      !  if (this%igeocalc == 0) then
+      !    fact = DONE
+      !  else
+      !    void = this%csub_calc_void(this%sk_theta(node))
+      !    es = this%sk_es(node)
+      !    if (this%iunderrelax /= 0) then
+      !      es = max(es, DONE)
+      !    end if
+      !    hcell = hnew(node)
+      !    znode = this%csub_calc_znode(top, bot, hcell)
+      !    fact = this%csub_calc_adjes(node, es, bot, znode)
+      !    fact = fact * (DONE + void)
+      !  end if
+      !else
+      !    fact = dlog10es
+      !end if
+      !this%ske_cr(node) = this%ske_cr(node) * fact
+      ! -- initialize effective stress for previous time step
+      !    and the previous iteration
       this%sk_es0(node) = this%sk_es(node)
-      !
-      ! -- write error message if negative compression indices
-      if (fact <= DZERO) then
-        call this%dis%noder_to_string(node, cellid)
-        write(errmsg,'(4x,a,1x,a)')                                              &
-          '****ERROR. NEGATIVE RECOMPRESSION INDICE CALCULATED FOR CELL',        &
-          trim(adjustl(cellid))
-        call store_error(errmsg)
-      end if
+      this%sk_esi(node) = this%sk_es(node)
+      !!
+      !! -- write error message if negative compression indices
+      !if (fact <= DZERO) then
+      !  call this%dis%noder_to_string(node, cellid)
+      !  write(errmsg,'(4x,a,1x,a)')                                              &
+      !    '****ERROR. NEGATIVE RECOMPRESSION INDICE CALCULATED FOR CELL',        &
+      !    trim(adjustl(cellid))
+      !  call store_error(errmsg)
+      !end if
     end do
     !
     ! -- check that aquifer head is greater than or equal to the
@@ -3832,7 +3832,7 @@ contains
     !  call ustop()
     !end if
     !
-    ! -- interbeds
+    ! -- interbeds initial states
     do ib = 1, this%ninterbeds
       idelay = this%idelay(ib)
       node = this%nodelist(ib)
@@ -3860,7 +3860,7 @@ contains
       end if
       this%pcs(ib) = pcs
       !
-      ! -- delay bed          
+      ! -- delay bed initial states         
       if (idelay /= 0) then
         dzhalf = DHALF * this%dbdz(idelay)
         !
@@ -3890,27 +3890,113 @@ contains
             dbpcs = this%csub_calc_adjes(node, pcs, bot, zbot)
             this%dbpcs(n, idelay) = dbpcs
           end if
+          !
+          ! -- initialize effective stress for previous time step
+          !    and the previous iteration
           this%dbes0(n, idelay) = this%dbes(n, idelay)
+          this%dbesi(n, idelay) = this%dbes(n, idelay)
         end do 
       end if
-      !    
-      ! scale cr and cc
+      !!    
+      !! scale cr and cc
+      !if (this%istoragec == 1) then
+      !  if (this%igeocalc == 0) then
+      !    fact = DONE
+      !  else
+      !    void = this%csub_calc_void(this%theta(ib))
+      !    if (idelay == 0) then
+      !      ztop = hcell
+      !    else
+      !      !ztop = this%dbz(1, idelay) + dzhalf
+      !      ztop = hcell
+      !    end if
+      !    es = this%sk_es(node)
+      !    if (this%iunderrelax /= 0) then
+      !      es = max(es, DONE)
+      !    end if
+      !    znode = this%csub_calc_znode(top, bot, ztop)
+      !    fact = this%csub_calc_adjes(node, es, bot, znode)
+      !    fact = fact * (DONE + void)
+      !  end if
+      !else
+      !    fact = dlog10es
+      !end if
+      !this%ci(ib) = this%ci(ib) * fact
+      !this%rci(ib) = this%rci(ib) * fact
+      !if (fact <= DZERO) then
+      !  call this%dis%noder_to_string(node, cellid)
+      !  write(errmsg,'(4x,a,1x,i0,2(1x,a))')                                     &
+      !    '****ERROR. NEGATIVE COMPRESSION INDICES CALCULATED FOR INTERBED',     &
+      !    ib, 'IN CELL', trim(adjustl(cellid))
+      !  call store_error(errmsg)
+      !end if
+    end do
+    !
+    ! -- scale ci and cr
+    !!
+    !! -- recalculate effective stress using the top of each cell
+    !if (this%istoragec /= 0 .and. this%igeocalc /= 0) then
+    !  allocate(hci(nodes))
+    !  do node = 1, nodes
+    !    top = this%dis%top(node)
+    !    if (this%ibound(node) > 0) then
+    !      bot = this%dis%bot(node)
+    !      hcell = min(hnew(node), top)
+    !      if (hcell <= bot) then
+    !        hcell = top
+    !      end if
+    !    else
+    !      hcell = top
+    !    end if
+    !    hci(node) = hcell
+    !  end do
+    !  call this%csub_sk_calc_stress(nodes, hci)
+    !end if
+    !
+    ! -- scale coarse-grained materials cr
+    do node = 1, nodes
+      top = this%dis%top(node)
+      bot = this%dis%bot(node)
+      if (this%istoragec == 1) then
+        if (this%igeocalc == 0) then
+          fact = DONE
+        else
+          void = this%csub_calc_void(this%sk_theta(node))
+          es = this%sk_es(node)
+          hcell = hnew(node) !hci(node)
+          znode = this%csub_calc_znode(top, bot, hcell)
+          fact = this%csub_calc_adjes(node, es, bot, znode)
+          fact = fact * (DONE + void)
+        end if
+      else
+          fact = dlog10es
+      end if
+      this%ske_cr(node) = this%ske_cr(node) * fact
+      !
+      ! -- write error message if negative compression indices
+      if (fact <= DZERO) then
+        call this%dis%noder_to_string(node, cellid)
+        write(errmsg,'(4x,a,1x,a)')                                              &
+          '****ERROR. NEGATIVE RECOMPRESSION INDEX CALCULATED FOR CELL',         &
+          trim(adjustl(cellid))
+        call store_error(errmsg)
+      end if
+    end do
+    !
+    ! -- scale interbed cc and cr
+    do ib = 1, this%ninterbeds
+      idelay = this%idelay(ib)
+      node = this%nodelist(ib)
+      top = this%dis%top(node)
+      bot = this%dis%bot(node)
       if (this%istoragec == 1) then
         if (this%igeocalc == 0) then
           fact = DONE
         else
           void = this%csub_calc_void(this%theta(ib))
-          if (idelay == 0) then
-            ztop = hcell
-          else
-            !ztop = this%dbz(1, idelay) + dzhalf
-            ztop = hcell
-          end if
           es = this%sk_es(node)
-          if (this%iunderrelax /= 0) then
-            es = max(es, DONE)
-          end if
-          znode = this%csub_calc_znode(top, bot, ztop)
+          hcell = hnew(node) !hci(node)
+          znode = this%csub_calc_znode(top, bot, hcell)
           fact = this%csub_calc_adjes(node, es, bot, znode)
           fact = fact * (DONE + void)
         end if
@@ -3919,6 +4005,8 @@ contains
       end if
       this%ci(ib) = this%ci(ib) * fact
       this%rci(ib) = this%rci(ib) * fact
+      !
+      ! -- write error message if negative compression indices 
       if (fact <= DZERO) then
         call this%dis%noder_to_string(node, cellid)
         write(errmsg,'(4x,a,1x,i0,2(1x,a))')                                     &
@@ -3927,11 +4015,12 @@ contains
         call store_error(errmsg)
       end if
     end do
-    !
-    ! -- scale ci and cr
-    !
-    ! -- recalculate effective stress with
-    !if (this%istoragec == 1 .and. this%igeocalc) then
+    !!
+    !! -- reset effective stress using the simulated heads
+    !if (this%istoragec /= 0 .and. this%igeocalc /= 0) then
+    !  call this%csub_sk_calc_stress(nodes, hnew)
+    !  deallocate(hci)
+    !end if
     !
     ! -- write current stress and initial preconsolidation stress
     if (this%iprpak == 1) then
@@ -4144,6 +4233,8 @@ contains
     integer(I4B) :: node
     integer(I4B) :: idiag
     integer(I4B) :: idelay
+    real(DP) :: es
+    real(DP) :: esi
     real(DP) :: tled
     real(DP) :: area
     real(DP) :: hcell
@@ -4163,6 +4254,8 @@ contains
     !
     ! -- formulate csub terms
     if (this%gwfiss == 0) then
+      !
+      ! -- initialize tled
       tled = DONE / delt
       !
       ! -- coarse-grained skeletal storage
@@ -4172,6 +4265,16 @@ contains
         !
         ! -- skip inactive cells
         if (this%ibound(node) < 1) cycle
+        !
+        ! -- under-relax the effective stress
+        if (this%iurflag /= 0) then
+            es = this%sk_es(node)
+            esi = this%sk_esi(node)
+            call this%csub_under_relaxation(this%kiter, es, esi,                 &
+                                            this%sk_w0(node),                    &
+                                            this%sk_hch0(node),                  & 
+                                            this%sk_des0(node))
+        end if
         !
         ! -- update skeletal material properties
         if (this%iupdatematprop /= 0) then
@@ -4854,10 +4957,10 @@ contains
       es0 = this%sk_es0(n)
       theta = this%sk_theta(n)
       theta0 = this%sk_theta0(n)
-      if (this%iurflag /= 0) then
-        call this%csub_under_relaxation(this%kiter, es, esi, this%sk_w0(n),     &
-                                        this%sk_hch0(n), this%sk_des0(n))
-      end if
+      !if (this%iurflag /= 0) then
+      !  call this%csub_under_relaxation(this%kiter, es, esi, this%sk_w0(n),     &
+      !                                  this%sk_hch0(n), this%sk_des0(n))
+      !end if
       call this%csub_calc_sfacts(n, bot, znode, znode0, theta, theta0,          &
                                  es, esi, es0, f, f0)
     end if
@@ -5433,7 +5536,6 @@ contains
     !
     ! -- calculate factor for the effective stress case
     if (this%ieslag == 0) then
-      !esv = 0.9_DP * esi + 0.1_DP * es
       esv = es
     else
       esv = es0
@@ -5473,8 +5575,6 @@ contains
     real(DP), intent(inout) :: hch0
     real(DP), intent(inout) :: des0
     ! -- local variables
-    real(DP) :: esa
-    real(DP) :: es0
     real(DP) :: des
     real(DP) :: ww
     real(DP) :: amon
@@ -5489,17 +5589,9 @@ contains
     urkappa = 0.0001_DP
     urgamma = DZERO
     urmomentum = 0.1_DP
-    es0 = max(esi, DONE)
-    esa = max(0.9_DP * es0, DONE)
-    !
-    ! -- use a fraction of the previous effective stress if current
-    !    effective stress is small or negative
-    if (es < DONE) then
-      es = esa
-    end if
     !
     ! -- calculate the change in effective stress
-    des = es - es0
+    des = es - esi
     !
     ! -- initialize d-b-d values on the first iteration
     if (kiter == 1) then
@@ -5537,17 +5629,7 @@ contains
     des = des * ww + amon * hch0
     !
     ! -- update the effective stress
-    es = es0 + des
-    !
-    ! -- reset the calculated effective stress to the previous 
-    !    effective stress if the calculated value is close to zero
-    !    reset the d-b-d values as well
-    if (es < DONE) then
-      w0 = DONE
-      hch0 = DEM20
-      des0 = DZERO
-      es = esa
-    end if
+    es = esi + des
     !
     ! -- return
     return
@@ -5604,6 +5686,8 @@ contains
     integer(I4B) :: icnvg
     integer(I4B) :: iter
     integer(I4B) :: idelay
+    real(DP) :: es
+    real(DP) :: esi
     real(DP) :: dh
     real(DP) :: dhmax
     real(DP) :: dhmax0
@@ -5633,6 +5717,18 @@ contains
       idelay = this%idelay(ib)
       do
         iter = iter + 1
+        !
+        ! -- under-relax delay bed effective stress
+        if (this%iurflag /= 0) then
+          do n = 1, this%ndelaycells
+            es = this%dbes(n, idelay)
+            esi = this%dbesi(n, idelay)
+            call this%csub_under_relaxation(iter, es, esi,                         &
+                                            this%dbw0(n, idelay),                  &
+                                            this%dbhch0(n, idelay),                &
+                                            this%dbdes0(n, idelay))
+          end do
+        end if
         !
         ! -- assemble coefficients
         call this%csub_delay_assemble(ib, hcell, hcellold)
@@ -5950,12 +6046,12 @@ contains
       es = this%dbes(n, idelay)
       esi = this%dbesi(n, idelay)
       es0 = this%dbes0(n, idelay)
-      if (this%iurflag /= 0) then
-        call this%csub_under_relaxation(this%kiter, es, esi,                     &
-                                        this%dbw0(n, idelay),                    &
-                                        this%dbhch0(n, idelay),                  &
-                                        this%dbdes0(n, idelay))
-      end if
+      !if (this%iurflag /= 0) then
+      !  call this%csub_under_relaxation(this%kiter, es, esi,                     &
+      !                                  this%dbw0(n, idelay),                    &
+      !                                  this%dbhch0(n, idelay),                  &
+      !                                  this%dbdes0(n, idelay))
+      !end if
       !
       ! -- calculate the compression index factors for the delay 
       !    node relative to the center of the cell based on the 
