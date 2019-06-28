@@ -34,7 +34,7 @@ compare = [True, True, True, True, False, False, False]
 tops = [0., 0., 150., 0., 0., 150., 150.]
 ump = [None, None, True, None, True, None, True]
 iump = [0, 0, 1, 0, 1, 0, 1]
-tw = [0. for idx in range(len(exdirs))]
+eslag = [True for idx in range(len(exdirs))]
 headformulation = [True, False, False, True, True, False, False]
 ndc = [10, 19, 19, 10, 10, 19, 19]
 delay = [False, False, False, True, True, True, True]
@@ -422,7 +422,7 @@ def get_model(idx, dir):
                                     ndelaycells=ndc[idx],
                                     head_based=head_based,
                                     update_material_properties=ump[idx],
-                                    time_weight=tw[idx],
+                                    effective_stress_lag=eslag[idx],
                                     save_flows=True,
                                     ninterbeds=maxcsub,
                                     sgm=sgmt,

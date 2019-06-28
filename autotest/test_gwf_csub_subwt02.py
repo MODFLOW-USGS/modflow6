@@ -312,7 +312,7 @@ def get_model(idx, dir):
                                     boundnames=True,
                                     compression_indices=True,
                                     update_material_properties=ump[idx],
-                                    time_weight=0.,
+                                    effective_stress_lag=True,
                                     ninterbeds=len(swt6),
                                     sgs=sgs, sgm=sgm,
                                     beta=beta,

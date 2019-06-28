@@ -111,7 +111,6 @@ maxchd = len(cd[0])
 
 # static csub and subwt data
 ump = True
-csubweight = 0
 sgm = 1.7
 sgs = 2.0
 ini_stress = 15.0
@@ -396,7 +395,7 @@ def get_model(idx, dir):
     csub = flopy.mf6.ModflowGwfcsub(gwf,
                                     print_input=True,
                                     update_material_properties=ump,
-                                    time_weight=csubweight,
+                                    effective_stress_lag=True,
                                     save_flows=True,
                                     ninterbeds=0,
                                     maxsig0=len(sig0),

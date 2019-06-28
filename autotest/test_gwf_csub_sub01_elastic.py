@@ -1,5 +1,4 @@
 import os
-import sys
 import numpy as np
 
 try:
@@ -21,128 +20,93 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['csub_subwt01a', 'csub_subwt01b', 'csub_subwt01c', 'csub_subwt01d']
+cmppth = 'mf6'
+
+paktest = 'csub'
+dtol = 1e-3
+budtol = 1e-2
+
+ex = ['csub_sub01_elasa', 'csub_sub01_elasb']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
 ddir = 'data'
-cmppth = 'mf2005'
 
-htol = [None for n in ex]
-dtol = 1e-3
-budtol = 1e-2
+fullcell = [None, True]
+ndcell = [10, 19]
 
-paktest = 'csub'
-
-ump = [None, True, None, True]
-ivoid = [0, 1, 0, 1]
-gs0 = [0., 0., 1700., 1700.]
-
-# set travis to True when version 1.13.0 is released
-travis = [True for n in ex]
+# run all examples on Travis
+travis = [True for idx in range(len(exdirs))]
 
 # set replace_exe to None to use default executable
 replace_exe = None
 
-# temporal discretization
-nper = 3
-perlen = [1., 21915., 21915.]
-nstp = [1, 60, 60]
-tsmult = [1., 1., 1.]
-steady = [True, False, False]
-
+# static model data
 # spatial discretization
 nlay, nrow, ncol = 1, 1, 3
 shape3d = (nlay, nrow, ncol)
 size3d = nlay * nrow * ncol
+delr, delc = 1., 1.
+top = 0.
+botm = [-100.]
 
-delr, delc = 2000., 2000.
-top = 150.
-botm = [-350.]
-strt = 100.
-
-hnoflo = 1e30
-hdry = -1e30
-
-# upw data
-laytyp = [1]
-hk = [4.]
-sy = [0.3]
-
-hstart = [100., 50.]
-
-chd0 = [(0, 0, 0, hstart[0]+1, hstart[0]+1),
-        (0, 0, 2, hstart[0], hstart[0])]
-chd1 = [(0, 0, 0, hstart[1]+1, hstart[1]+1),
-        (0, 0, 2, hstart[1], hstart[1])]
-cd = {0: chd0, 1: chd1, 2: chd0}
-
-chd6_0 = [((0, 0, 0), hstart[0]+1),
-          ((0, 0, 2), hstart[0])]
-chd6_1 = [((0, 0, 0), hstart[1]+1),
-          ((0, 0, 2), hstart[1])]
-cd6 = {0: chd6_0, 1: chd6_1, 2: chd6_0}
-
-nouter, ninner = 100, 300
-hclose, rclose, relax = 1e-6, 0.01, 0.97
-fluxtol = rclose
-
+# temporal discretization
+nper = 1
+perlen = [1000. for i in range(nper)]
+nstp = [100 for i in range(nper)]
+tsmult = [1.05 for i in range(nper)]
+steady = [False for i in range(nper)]
 tdis_rc = []
 for idx in range(nper):
     tdis_rc.append((perlen[idx], nstp[idx], tsmult[idx]))
 
-# this used to work
-# ib = np.zeros((nlay, nrow, ncol), dtype=np.int)
-# for k in range(nlay):
-ib = [1]
+strt = 0.
+strt6 = 1.
+hnoflo = 1e30
+hdry = -1e30
+hk = 1e6
+laytyp = [0]
+S = 1e-4
+sy = 0.
 
-# subwt data
-cc = 0.25
-cr = 0.01
+nouter, ninner = 1000, 300
+hclose, rclose, relax = 1e-6, 1e-6, 0.97
+
+ib = 1
+
+c = []
+c6 = []
+for j in range(0, ncol, 2):
+    c.append([0, 0, j, strt, strt])
+    c6.append([(0, 0, j), strt])
+cd = {0: c}
+cd6 = {0: c6}
+
+# sub data
+ndb = 1
+nndb = 0
+cc = 100.
+cr = 100.
 void = 0.82
 theta = void / (1. + void)
-kv = 999.
-sgm = 1.7
-sgs = 2.0
-ini_stress = 0. #15.0
-delay_flag = 0
-thick = [45., 70., 50., 90.]
+kv = 0.025
+sgm = 0.
+sgs = 0.
+ini_stress = 1.0
+thick = [1.]
+sfe = cr * thick[0]
+sfv = cc * thick[0]
+lnd = [0]
+ldnd = [0]
+dp = [[kv, cr, cc]]
 
-zthick = [top - botm[0]]
+sub6 = [[0, (0, 0, 1), 'delay', ini_stress, thick[0],
+         1., cc, cr, theta, kv, ini_stress]]
 
-beta = 0.
-#beta = 4.65120000e-10
-gammaw = 9806.65000000
-sw = beta * gammaw * theta
-ss = [sw for k in range(nlay)]
-
-swt6 = []
-ibcno = 0
-for k in range(len(thick)):
-    for i in range(nrow):
-        for j in range(ncol):
-            iactive = 0
-            if j == 1:
-                iactive = 1
-            if iactive > 0:
-                tag = '{:02d}_{:02d}_{:02d}'.format(1, i + 1, j + 1)
-                d = [ibcno, (0, i, j), 'nodelay', ini_stress, thick[k],
-                     1., cc, cr, theta,
-                     kv, 999., tag]
-                swt6.append(d)
-                ibcno += 1
-
-ds16 = [0, 0, 0, 2052, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-ds17 = [0, 10000, 0, 10000, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-
-
-def get_model(idx, dir):
+def build_mf6(idx, ws, newton=None):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
     sim = flopy.mf6.MFSimulation(sim_name=name, version='mf6',
                                  exe_name='mf6',
                                  sim_ws=ws)
@@ -151,25 +115,16 @@ def get_model(idx, dir):
                                  nper=nper, perioddata=tdis_rc)
 
     # create gwf model
-    gwf = flopy.mf6.ModflowGwf(sim, modelname=name, save_flows=True)
+    gwf = flopy.mf6.ModflowGwf(sim, modelname=name, newtonoptions=newton)
 
     # create iterative model solution and register the gwf model with it
     ims = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
-                               outer_hclose=hclose,
-                               outer_maximum=nouter,
-                               under_relaxation='NONE',
-                               inner_maximum=ninner,
-                               inner_hclose=hclose, rcloserecord=rclose,
-                               linear_acceleration='BICGSTAB',
-                               scaling_method='NONE',
-                               reordering_method='NONE',
-                               relaxation_factor=relax)
+                               complexity='complex')
     sim.register_ims_package(ims, [gwf.name])
 
     dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
                                   delr=delr, delc=delc,
                                   top=top, botm=botm,
-                                  idomain=ib,
                                   filename='{}.dis'.format(name))
 
     # initial conditions
@@ -184,40 +139,27 @@ def get_model(idx, dir):
     # storage
     sto = flopy.mf6.ModflowGwfsto(gwf, save_flows=False, iconvert=laytyp,
                                   ss=0., sy=sy,
-                                  steady_state={0: True},
-                                  transient={1: True})
+                                  storagecoefficient=True,
+                                  transient={0: True})
 
     # chd files
     chd = flopy.mf6.modflow.mfgwfchd.ModflowGwfchd(gwf,
-                                                   maxbound=len(chd6_0),
+                                                   maxbound=len(c6),
                                                    stress_period_data=cd6,
                                                    save_flows=False)
 
     # csub files
-    gg = []
-    for i in range(nrow):
-        for j in range(ncol):
-            gg.append([(0, i, j), gs0[idx]])
-    sig0 = {0: gg}
     opth = '{}.csub.obs'.format(name)
-    csub = flopy.mf6.ModflowGwfcsub(gwf,
-                                    #interbed_stress_offset=True,
-                                    boundnames=True,
-                                    compression_indices=True,
-                                    update_material_properties=ump[idx],
+    csub = flopy.mf6.ModflowGwfcsub(gwf, head_based=True,
+                                    save_flows=True,
                                     effective_stress_lag=True,
-                                    ninterbeds=len(swt6),
-                                    sgs=sgs, sgm=sgm,
-                                    beta=beta,
-                                    gammaw=gammaw,
-                                    ske_cr=0.,
-                                    sk_theta=theta,
-                                    packagedata=swt6,
-                                    maxsig0=len(gg),
-                                    stress_period_data=sig0)
+                                    ndelaycells=ndcell[idx],
+                                    delay_full_cell=fullcell[idx],
+                                    ninterbeds=1,
+                                    beta=0., ske_cr=0.,
+                                    packagedata=sub6)
     orecarray = {}
-    orecarray['csub_obs.csv'] = [('w1l1', 'interbed-compaction', '01_01_02'),
-                                 ('w1l1t', 'csub-cell', (0, 0, 1))]
+    orecarray['csub_obs.csv'] = [('tcomp', 'compaction-cell', (0, 0, 1))]
     csub_obs_package = csub.obs.initialize(filename=opth, digits=10,
                                            print_input=True,
                                            continuous=orecarray)
@@ -231,56 +173,23 @@ def get_model(idx, dir):
                                      'DIGITS', 6, 'GENERAL')],
                                 saverecord=[('HEAD', 'ALL'),
                                             ('BUDGET', 'ALL')],
-                                printrecord=[('HEAD', 'LAST'),
+                                printrecord=[('HEAD', 'ALL'),
                                              ('BUDGET', 'ALL')])
+    return sim
 
-    # build MODFLOW-2005 files
-    ws = os.path.join(dir, cmppth)
-    mc = flopy.modflow.Modflow(name, model_ws=ws, version=cmppth)
-    dis = flopy.modflow.ModflowDis(mc, nlay=nlay, nrow=nrow, ncol=ncol,
-                                   nper=nper, perlen=perlen, nstp=nstp,
-                                   tsmult=tsmult, steady=steady, delr=delr,
-                                   delc=delc, top=top, botm=botm)
-    bas = flopy.modflow.ModflowBas(mc, ibound=ib, strt=strt, hnoflo=hnoflo)
-    lpf = flopy.modflow.ModflowLpf(mc, laytyp=laytyp,
-                                   hk=hk, vka=hk,
-                                   ss=ss, sy=sy,
-                                   hdry=hdry)
-    # upw = flopy.modflow.ModflowUpw(mc, laytyp=laytyp,
-    #                                hk=hk, vka=hk,
-    #                                ss=ss, sy=sy,
-    #                                hdry=hdry)
-    chd = flopy.modflow.ModflowChd(mc, stress_period_data=cd)
-    swt = flopy.modflow.ModflowSwt(mc, ipakcb=1001,
-                                   iswtoc=1, nsystm=4,
-                                   ithk=1,
-                                   ivoid=ivoid[idx],
-                                   istpcs=1, lnwt=[0, 0, 0, 0],
-                                   cc=cc, cr=cr, thick=thick,
-                                   void=void, pcsoff=ini_stress, sgs=sgs,
-                                   gl0=gs0[idx], ids16=ds16, ids17=ds17)
-    oc = flopy.modflow.ModflowOc(mc, stress_period_data=None,
-                                 save_every=1,
-                                 save_types=['save head', 'save budget',
-                                             'print budget'])
-    pcg = flopy.modflow.ModflowPcg(mc, mxiter=nouter, iter1=ninner,
-                                   hclose=hclose, rclose=rclose,
-                                   relax=relax, ihcofadd=1)
-    # nwt = flopy.modflow.ModflowNwt(mc,
-    #                                headtol=hclose, fluxtol=fluxtol,
-    #                                maxiterout=nouter, linmeth=2,
-    #                                unitnumber=132,
-    #                                options='SPECIFIED',
-    #                                backflag=0, idroptol=0,
-    #                                hclosexmd=hclose, mxiterxmd=ninner,
-    #                                ibotav=1)
+def get_model(idx, dir):
+    ws = dir
+    sim = build_mf6(idx, ws)
+
+    ws = os.path.join(ws, cmppth)
+    mc = build_mf6(idx, ws, newton='')
 
     return sim, mc
 
 
-def eval_comp(sim):
+def eval_sub(sim):
+    print('evaluating subsidence...')
 
-    print('evaluating compaction...')
     # MODFLOW 6 total compaction results
     fpth = os.path.join(sim.simpath, 'csub_obs.csv')
     try:
@@ -288,36 +197,41 @@ def eval_comp(sim):
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
 
-    # MODFLOW-NWT total compaction results
-    cpth = cmppth
-    fn = '{}.swt_total_comp.hds'.format(os.path.basename(sim.name))
-    fpth = os.path.join(sim.simpath, cpth, fn)
+    # MODFLOW 6 with newton-raphson
+    fpth = os.path.join(sim.simpath, cmppth, 'csub_obs.csv')
     try:
-        sobj = flopy.utils.HeadFile(fpth, text='LAYER COMPACTION')
-        tc0 = sobj.get_ts((0, 0, 1))
+        tci = np.genfromtxt(fpth, names=True, delimiter=',')
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
 
-    # calculate maximum absolute error
-    loctag = 'W1L1'
-    diff = tc[loctag] - tc0[:, 1]
-    diffmax = np.abs(diff).max()
-    msg = 'maximum absolute total-compaction difference ({}) '.format(diffmax)
+    diffmax = -1e20
+    tagmax = None
+    for tag in tc.dtype.names[1:]:
+        diff = tc[tag] - tci[tag]
+        diffmaxt = np.abs(diff).max()
+        if diffmaxt > diffmax:
+            diffmax = diffmaxt
+            tagmax = tag
+
+    msg = 'maximum compaction difference ' + \
+          '({}) in tag: {}'.format(diffmax, tagmax)
 
     # write summary
     fpth = os.path.join(sim.simpath,
                         '{}.comp.cmp.out'.format(os.path.basename(sim.name)))
     f = open(fpth, 'w')
     line = '{:>15s}'.format('TOTIM')
-    line += ' {:>15s}'.format('CSUB')
-    line += ' {:>15s}'.format('MF')
-    line += ' {:>15s}'.format('DIFF')
+    for tag in tc.dtype.names[1:]:
+        line += ' {:>15s}'.format('{}_SK'.format(tag))
+        line += ' {:>15s}'.format('{}_SKIB'.format(tag))
+        line += ' {:>15s}'.format('{}_DIFF'.format(tag))
     f.write(line + '\n')
     for i in range(diff.shape[0]):
-        line = '{:15g}'.format(tc0[i, 0])
-        line += ' {:15g}'.format(tc[loctag][i])
-        line += ' {:15g}'.format(tc0[i, 1])
-        line += ' {:15g}'.format(diff[i])
+        line = '{:15g}'.format(tc['time'][i])
+        for tag in tc.dtype.names[1:]:
+            line += ' {:15g}'.format(tc[tag][i])
+            line += ' {:15g}'.format(tci[tag][i])
+            line += ' {:15g}'.format(tc[tag][i]-tci[tag][i])
         f.write(line + '\n')
     f.close()
 
@@ -337,7 +251,6 @@ def eval_comp(sim):
 
 # compare cbc and lst budgets
 def cbc_compare(sim):
-    print('evaluating cbc and budget...')
     # open cbc file
     fpth = os.path.join(sim.simpath,
                         '{}.cbc'.format(os.path.basename(sim.name)))
@@ -367,6 +280,7 @@ def cbc_compare(sim):
     d = np.recarray(nbud, dtype=dtype)
     for key in bud_lst:
         d[key] = 0.
+
 
     # get data from cbc dile
     kk = cobj.get_kstpkper()
@@ -440,7 +354,7 @@ def build_models():
         sim, mc = get_model(idx, dir)
         sim.write_simulation()
         if mc is not None:
-            mc.write_input()
+            mc.write_simulation()
     return
 
 
@@ -462,9 +376,7 @@ def test_mf6model():
     for idx, dir in enumerate(exdirs):
         if is_travis and not travis[idx]:
             continue
-        yield test.run_mf6, Simulation(dir, exe_dict=r_exe,
-                                       exfunc=eval_comp,
-                                       htol=htol[idx])
+        yield test.run_mf6, Simulation(dir, exfunc=eval_sub, idxsim=idx)
 
     return
 
@@ -477,16 +389,13 @@ def main():
     build_models()
 
     # run the test models
-    for dir in exdirs:
-        sim = Simulation(dir, exe_dict=replace_exe,
-                         exfunc=eval_comp,
-                         htol=htol[idx])
+    for idx, dir in enumerate(exdirs):
+        sim = Simulation(dir, exfunc=eval_sub, idxsim=idx)
         test.run_mf6(sim)
-
     return
 
 
-# use python testmf6_csub_sub02.py --mf2005 mf2005devdbl
+# use python testmf6_csub_sub01.py --mf2005 mf2005devdbl
 if __name__ == "__main__":
     # print message
     print('standalone run of {}'.format(os.path.basename(__file__)))
