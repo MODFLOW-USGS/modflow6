@@ -1665,47 +1665,48 @@ contains
         if (idelay > 0) then
           this%thickini(itmp) = this%thickini(itmp) * this%rnb(itmp)
         end if
-
+        !
         ! -- get skv or ci
         rval =  this%parser%GetDouble()
-        if (rval < 0.0) then
-            write(errmsg,'(4x,a,1x,i4,1x)') &
-              '****ERROR. INVALID (ci,ssv) FOR PACKAGEDATA ENTRY', itmp
+        if (rval < DZERO) then
+            write(errmsg,'(4x,a,1x,i0)') &
+              '****ERROR. (skv,ci) MUST BE > 0 FOR PACKAGEDATA ENTRY', itmp
             call store_error(errmsg)
         end if
         this%ci(itmp) = rval
-
+        !
         ! -- get ske or rci
         rval =  this%parser%GetDouble()
-        if (rval < 0.0) then
-            write(errmsg,'(4x,a,1x,i4,1x)') &
-              '****ERROR. INVALID (rci,sse) FOR PACKAGEDATA ENTRY', itmp
+        if (rval < DZERO) then
+            write(errmsg,'(4x,a,1x,i0)') &
+              '****ERROR. (ske,rci) MUST BE > 0 FOR PACKAGEDATA ENTRY', itmp
             call store_error(errmsg)
         end if
         this%rci(itmp) = rval
-        
+        !       
         ! -- set ielastic
         if (this%ci(itmp) == this%rci(itmp)) then
           this%ielastic(itmp) = 1
         else
           this%ielastic(itmp) = 0
         end if
-
+        !
         ! -- get porosity
         rval =  this%parser%GetDouble()
         this%theta(itmp) = rval
         if (rval <= DZERO .or. rval > DONE) then
-            write(errmsg,'(4x,a,1x,i4,1x)') &
-              '****ERROR. INVALID porosity FOR PACKAGEDATA ENTRY', itmp
+            write(errmsg,'(4x,a,1x,a,1x,i0)') &
+              '****ERROR. theta MUST BE > 0 and <= 1 FOR PACKAGEDATA ENTRY',     &
+              'ENTRY', itmp
             call store_error(errmsg)
         end if
-
+        !
         ! -- get kv
         rval =  this%parser%GetDouble()
         if (idelay > 0) then
           if (rval <= 0.0) then
-             write(errmsg,'(4x,a,1x,i4,1x)') &
-               '****ERROR. kv MUST BE GREATER THAN ZERO FOR PACKAGEDATA ENTRY', itmp
+             write(errmsg,'(4x,a,1x,i0,1x)') &
+               '****ERROR. kv MUST BE > 0 FOR PACKAGEDATA ENTRY', itmp
              call store_error(errmsg)
           end if
         end if
@@ -1956,6 +1957,7 @@ contains
     integer(I4B) :: ibrg
     integer(I4B) :: ieslag
     integer(I4B) :: iunderrelax
+    integer(I4B) :: isetgamma
     ! -- parameters
     data cur  /'NONE           ', &
                'SIMPLE         ', &
@@ -1985,6 +1987,7 @@ contains
     ibrg = 0
     ieslag = 0
     iunderrelax = 0
+    isetgamma = 0
     !
     ! -- get options block
     call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false.)
@@ -2052,42 +2055,6 @@ contains
             call this%csub_df_obs()
           !
           ! -- CSUB specific options
-          case ('EFFECTIVE_STRESS_LAG')
-            ieslag = 1
-          case ('UNDER_RELAXATION')
-            call this%parser%GetStringCaps(keyword)
-            if (keyword == 'SIMPLE') then
-              iunderrelax = 1
-              call this%parser%GetStringCaps(cvalue)
-              if (len_trim(cvalue) > 0) then
-                read(cvalue,*) this%urgamma
-              else
-                this%urgamma = DP9
-              end if
-            else if (keyword == 'DBD') then
-              iunderrelax = 2
-              call this%parser%GetStringCaps(cvalue)
-              if (len_trim(cvalue) > 0) then
-                read(cvalue,*) this%urtheta
-                if (len_trim(cvalue) > 0) then
-                  call this%parser%GetStringCaps(cvalue)
-                  if (len_trim(cvalue) > 0) then
-                    read(cvalue,*) this%urkappa
-                    call this%parser%GetStringCaps(cvalue)
-                    if (len_trim(cvalue) > 0) then
-                      read(cvalue,*) this%urgamma
-                      call this%parser%GetStringCaps(cvalue)
-                      if (len_trim(cvalue) > 0) then
-                        read(cvalue,*) this%urmomentum
-                      end if
-                    end if
-                  end if
-                end if
-              end if
-            else
-              iunderrelax = 1
-              this%urgamma = DP9
-            end if
           case ('GAMMAW')
             this%gammaw =  this%parser%GetDouble()
             ibrg = 1
@@ -2098,18 +2065,61 @@ contains
             this%igeocalc = 0
           case ('NDELAYCELLS')
             this%ndelaycells =  this%parser%GetInteger()
-          case ('SPECIFIED_INITIAL_INTERBED_STATE')
-            this%ispecified_pcs = 1
-            this%ispecified_dbh = 1
-          case ('SPECIFIED_INITIAL_PRECONSOLIDATION_STRESS')
-            this%ispecified_pcs = 1
-          case ('SPECIFIED_INITIAL_DELAY_HEAD')
-            this%ispecified_dbh = 1
           !
           ! -- compression indicies (CR amd CC) will be specified instead of 
           !    storage coefficients (SSE and SSV) 
           case ('COMPRESSION_INDICES')
             this%istoragec = 0
+          !
+          ! -- variable thickness and void ratio
+          case ('UPDATE_MATERIAL_PROPERTIES')
+            this%iupdatematprop = 1
+          !
+          ! -- cell fraction will be specified instead of interbed thickness
+          case ('CELL_FRACTION')
+            this%icellf = 1
+          !
+          ! -- half cell formulation for delay interbed
+          case ('DELAY_FULL_CELL')
+            this%idbfullcell = 1
+          !
+          ! -- specified initial pcs and delay bed heads
+          case ('SPECIFIED_INITIAL_INTERBED_STATE')
+            this%ispecified_pcs = 1
+            this%ispecified_dbh = 1
+          !
+          ! -- specified initial pcs
+          case ('SPECIFIED_INITIAL_PRECONSOLIDATION_STRESS')
+            this%ispecified_pcs = 1
+          !
+          ! -- specified initial delay bed heads
+          case ('SPECIFIED_INITIAL_DELAY_HEAD')
+            this%ispecified_dbh = 1
+          !
+          ! -- lag the effective stress used to calculate storage properties
+          case ('EFFECTIVE_STRESS_LAG')
+            ieslag = 1
+          !
+          ! -- under-relaxation flag and parameters
+          case ('UNDER_RELAXATION')
+            call this%parser%GetStringCaps(keyword)
+            if (keyword == 'SIMPLE') then
+              iunderrelax = 1
+            else if (keyword == 'DBD') then
+              iunderrelax = 2
+            else
+              iunderrelax = 1
+            end if
+          case ('UNDER_RELAXATION_THETA')
+            this%urtheta = this%parser%GetDouble()
+          case ('UNDER_RELAXATION_KAPPA')
+            this%urkappa = this%parser%GetDouble()
+          case ('UNDER_RELAXATION_GAMMA')
+            isetgamma = 1
+            this%urgamma = this%parser%GetDouble()
+          case ('UNDER_RELAXATION_MOMENTUM')
+            this%urmomentum = this%parser%GetDouble()
+          !
           ! -- strain table options
           case ('STRAIN_CSV_INTERBED')
             call this%parser%GetStringCaps(keyword)
@@ -2139,6 +2149,7 @@ contains
                        'FOLLOWED BY FILEOUT'
               call store_error(errmsg)
             end if
+          !
           ! -- compaction output
           case ('COMPACTION')
             call this%parser%GetStringCaps(keyword)
@@ -2210,6 +2221,8 @@ contains
                        'FOLLOWED BY FILEOUT'
               call store_error(errmsg)
             end if
+          !
+          ! -- zdisplacement output
           case ('ZDISPLACEMENT')
             call this%parser%GetStringCaps(keyword)
             if (keyword == 'FILEOUT') then
@@ -2224,21 +2237,6 @@ contains
                        'FOLLOWED BY FILEOUT'
               call store_error(errmsg)
             end if
-          ! variable thickness and void ratio
-          case ('UPDATE_MATERIAL_PROPERTIES')
-            this%iupdatematprop = 1
-            write(this%iout, fmtopt) 'THICKNESS AND VOID RATIO WILL BE ' //     &
-                                     'ADJUSTED DURING THE SIMULATION'
-          ! cell fraction will be specified instead of interbed thickness
-          case ('CELL_FRACTION')
-            this%icellf = 1
-            write(this%iout, fmtopt) 'INTERBED THICKNESS WILL BE SPECIFIED ' //  &
-                                     'AS A CELL FRACTION'
-          ! half cell formulation for delay interbed
-          case ('DELAY_FULL_CELL')
-            this%idbfullcell = 1
-            write(this%iout, fmtopt) 'HEAD-BASED DELAY INTERBEDS WILL BE ' //  &
-                                     'SIMULATED USING A FULL-CELL FORMULATION'
           !
           ! -- right now these are options that are only available in the
           !    development version and are not included in the documentation.
@@ -2248,53 +2246,91 @@ contains
           !
           ! default case
           case default
-            write(errmsg,'(4x,a,3(1x,a))') '****ERROR. UNKNOWN ',     &
-                                           trim(adjustl(this%name)),  &
+            write(errmsg,'(4x,a,3(1x,a))') '****ERROR. UNKNOWN ',                &
+                                           trim(adjustl(this%name)),             &
                                            'OPTION: ', trim(keyword)
             call store_error(errmsg)
         end select
       end do
-      write(this%iout,'(1x,a)') 'END OF ' //                          &
+      write(this%iout,'(1x,a)') 'END OF ' //                                     &
                                 trim(adjustl(this%name)) // ' OPTIONS'
     end if
     !
     ! -- write messages for options
-    write(this%iout, '(//2(1X,A))') trim(adjustl(this%name)),         &
+    write(this%iout, '(//2(1X,A))') trim(adjustl(this%name)),                    &
                                     'PACKAGE SETTINGS'
-    write(this%iout, fmtopti) 'NUMBER OF DELAY CELLS =',              &
+    write(this%iout, fmtopti) 'NUMBER OF DELAY CELLS =',                         &
                               this%ndelaycells
-    if (this%igeocalc == 0) then
-      write(this%iout, fmtopt) 'HEAD-BASED FORMULATION WILL BE USED'
+    if (this%igeocalc /= 1) then
+      write(this%iout, '(4x,a)') &
+        'HEAD-BASED FORMULATION'
     else
-      write(this%iout, fmtopt) 'EFFECTIVE STRESS-BASED ' //           &
-                               'FORMULATION WILL BE USED'
+      write(this%iout, '(4x,a)') &
+        'EFFECTIVE-STRESS FORMULATION'
     end if
     if (this%igeocalc /= 0 .and. this%istoragec == 0) then
-      write(this%iout, fmtopt) &
-        'COMPRESSION INDICES WILL BE SPECIFIED INSTEAD OF ' //        &
-        'ELASTIC AND INELASTIC SPECIFIC COEFFICIENTS'
+      write(this%iout, '(4x,a,1(/,6x,a))') &
+        'COMPRESSION INDICES WILL BE SPECIFIED INSTEAD OF ELASTIC AND',          &
+        'INELASTIC SPECIFIC STORAGE COEFFICIENTS'
     else
-      write(this%iout, fmtopt) &
-        'ELASTIC AND INELASTIC SPECIFIC COEFFICIENTS ' //             &
-        'WILL BE SPECIFIED'
+      write(this%iout, '(4x,a,1(/,6x,a))') &
+        'ELASTIC AND INELASTIC SPECIFIC STORAGE COEFFICIENTS WILL BE ',          &
+        'SPECIFIED'
+    end if
+    if (this%iupdatematprop /= 1) then
+      write(this%iout, '(4x,a,1(/,6x,a))') &
+        'THICKNESS AND VOID RATIO WILL NOT BE ADJUSTED DURING THE',              &
+        'SIMULATION'
+    else
+      write(this%iout, '(4x,a)') &
+        'THICKNESS AND VOID RATIO WILL BE ADJUSTED DURING THE SIMULATION'
+    end if
+    if (this%icellf /= 1) then
+      write(this%iout, '(4x,a)') &
+        'INTERBED THICKNESS WILL BE SPECIFIED AS A THICKNESS'
+    else
+      write(this%iout,'(4x,a,1(/,6x,a))') &
+        'INTERBED THICKNESS WILL BE SPECIFIED AS A AS A CELL FRACTION'
+    end if
+    if (this%igeocalc /= 1) then
+      if (this%idbfullcell /= 1) then
+        write(this%iout, '(4x,a,1(/,6x,a))') &
+          'HEAD-BASED DELAY INTERBEDS WILL BE SIMULATED USING A HALF-CELL',      &
+          'FORMULATION'
+      else
+        write(this%iout, '(4x,a,1(/,6x,a))') &
+          'HEAD-BASED DELAY INTERBEDS WILL BE SIMULATED USING A FULL-CELL',      &
+          'FORMULATION'
+      end if
+    else
+      if (this%idbfullcell /= 0) then
+        this%idbfullcell = 0
+        write(this%iout, '(4x,a,1(/,6x,a))') &
+          'DELAY_FULL_CELL OPTION SPECIFIED BUT DOES NOT APPLY TO SIMULATIONS',  &
+          'USING THE EFFECTIVE-STRESS FORMULATION'
+      else
+        write(this%iout, '(4x,a,1(/,6x,a))') &
+          'EFFECTIVE STRESS BASED DELAY INTERBEDS WILL BE SIMULATED USING A',    &
+          'FULL-CELL FORMULATION'
+      end if
     end if
     if (this%ispecified_pcs /= 1) then
-      write(this%iout, fmtopt) &
-        'PRECONSOLIDATION STRESS WILL BE SPECIFIED RELATIVE TO ' //   &
-        'INITIAL STRESS CONDITIONS'
+      write(this%iout, '(4x,a,1(/,6x,a))') &
+        'PRECONSOLIDATION STRESS WILL BE SPECIFIED RELATIVE TO INITIAL',  &
+        'STRESS CONDITIONS'
     else
-      write(this%iout, fmtopt) &
-        'PRECONSOLIDATION STRESS WILL BE SPECIFIED AS ABSOLUTE ' //   &
-        'VALUES INSTEAD OF RELATIVE TO INITIAL STRESS CONDITIONS'
+      write(this%iout, '(4x,a,1(/,6x,a))') &
+        'PRECONSOLIDATION STRESS WILL BE SPECIFIED AS ABSOLUTE VALUES',          &
+        'INSTEAD OF RELATIVE TO INITIAL STRESS CONDITIONS'
     end if
     if (this%ispecified_dbh /= 1) then
-      write(this%iout, fmtopt) &
-        'DELAY INTERBED HEADS WILL BE SPECIFIED RELATIVE TO ' //      &
-        'INITIAL GWF HEADS'
+      write(this%iout, '(4x,a,1(/,6x,a))') &
+        'DELAY INTERBED HEADS WILL BE SPECIFIED RELATIVE TO INITIAL ',           &
+        'GWF HEADS'
     else
-      write(this%iout, fmtopt) &
-        'DELAY INTERBED HEADS WILL BE SPECIFIED AS ABSOLUTE ' //      &
-        'VALUES INSTEAD OF RELATIVE TO INITIAL GWF HEADS'
+      write(this%iout, '(4x,a,1(/,6x,a))') &
+        'DELAY INTERBED HEADS WILL BE SPECIFIED AS ABSOLUTE VALUES INSTEAD',      &
+        'OF RELATIVE TO INITIAL GWF HEADS'
     end if
     !
     ! -- process effective_stress_lag, if effective stress formulation
@@ -2312,9 +2348,9 @@ contains
       if (ieslag /= 0) then
         ieslag = 0
         write(this%iout, '(4x,a,2(/,6x,a))') &
-          'EFFECTIVE_STRESS_LAG HAS BEEN SPECIFIED BUT HAS NO EFFECT WHEN',      &
-          'USING THE HEAD-BASED FORMULATION (HEAD_BASED HAS BEEN SPECIFIED',     &
-          'IN THE OPTIONS BLOCK)'
+          'EFFECTIVE_STRESS_LAG HAS BEEN SPECIFIED BUT HAS NO EFFECT WHEN USING',&
+          'THE HEAD-BASED FORMULATION (HEAD_BASED HAS BEEN SPECIFIED IN THE',    &
+          'OPTIONS BLOCK)'
       end if
     end if
     this%ieslag = ieslag 
@@ -2332,23 +2368,28 @@ contains
         else
           write(this%iout, '(4x,a,1x,a,/,6x,a)') &
             trim(adjustl(cur(iunderrelax))),                                     &
-            'UNDER-RELAXATION WILL BE APPLIED TO EFFECTIVE', &
-            'STRESS VALUES USED TO CALCULATE SPECIFIC STORAGE VALUES'
+            'UNDER-RELAXATION WILL BE APPLIED TO EFFECTIVE STRESS',              &
+            'VALUES USED TO CALCULATE SPECIFIC STORAGE VALUES'
           if (iunderrelax == 1) then
-            write(this%iout, '(4x,a,1x,g0)') 'URGAMMA    =', this%urgamma
+            !
+            ! -- set default urgamma if not set in options
+            if (isetgamma /= 1) then
+              this%urgamma = DP9
+            end if
+            write(this%iout, '(4x,a,1x,g0)') 'URGAMMA       =', this%urgamma
           else if (iunderrelax == 2) then
-            write(this%iout, '(4x,a,1x,g0)') 'URTHETA    =', this%urtheta
-            write(this%iout, '(4x,a,1x,g0)') 'URKAPPA    =', this%urkappa
-            write(this%iout, '(4x,a,1x,g0)') 'URGAMMA    =', this%urgamma
-            write(this%iout, '(4x,a,1x,g0)') 'URMOMENTUM =', this%urmomentum
+            write(this%iout, '(4x,a,1x,g0)') 'URTHETA       =', this%urtheta
+            write(this%iout, '(4x,a,1x,g0)') 'URKAPPA       =', this%urkappa
+            write(this%iout, '(4x,a,1x,g0)') 'URGAMMA       =', this%urgamma
+            write(this%iout, '(4x,a,1x,g0)') 'URMOMENTUM    =', this%urmomentum
           end if
         end if
       else
         iunderrelax = 0
         write(this%iout, '(4x,a,2(/,6x,a))') &
           'UNDER-RELAXATION HAS BEEN SPECIFIED BUT HAS NO EFFECT WHEN USING',    &
-          'USING THE HEAD-BASED FORMULATION (HEAD_BASED HAS BEEN SPECIFIED',     &
-          'IN THE OPTIONS BLOCK)'
+          'THE HEAD-BASED FORMULATION (HEAD_BASED HAS BEEN SPECIFIED IN THE',    &
+          'OPTIONS BLOCK)'
       end if
     end if
     this%iunderrelax = iunderrelax
@@ -2874,9 +2915,11 @@ contains
     integer(I4B) :: istop
     integer(I4B) :: ib
     integer(I4B) :: node
+    integer(I4B) :: istoerr
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: thick
+    real(DP) :: ske_cr
     real(DP) :: theta
     real(DP) :: v
     ! -- format
@@ -2910,30 +2953,6 @@ contains
     !
     ! - observation data
     call this%obs%obs_ar()
-    !!
-    !! -- read dimensions
-    !call this%parser%GetBlock('DIMENSIONS', isfound, ierr)
-    !if (isfound) then
-    !  do
-    !    call this%parser%GetNextLine(endOfBlock)
-    !    if (endOfBlock) exit
-    !    call this%parser%GetStringCaps(keyword)
-    !    call this%parser%GetRemainingLine(line)
-    !    lloc = 1
-    !    select case (keyword)
-    !      case ('NINTERBEDS')
-    !          this%ninterbeds =  this%parser%GetInteger()
-    !          write(this%iout, '(4x,a,1x,i0)') 'NUMBER OF INTERBED SYSTEMS =',  &
-    !                                            this%ninterbeds
-    !      case default
-    !          write(errmsg,'(4x,a,a)')'ERROR. UNKNOWN DIMENSIONS TAG: ',        &
-    !                                   trim(keyword)
-    !          call store_error(errmsg)
-    !    end select
-    !  end do
-    !else
-    !  call store_error('ERROR.  REQUIRED DIMENSIONS BLOCK NOT FOUND.')
-    !end if
     !
     ! -- terminate if errors dimensions block data
     if (count_errors() > 0) then
@@ -3030,7 +3049,46 @@ contains
       end if
     end if
     !
-    ! -- set idbhalfcell
+    ! -- evaluate the coarse-grained material properties and if 
+    !    non-zero specific storage values are specified in the 
+    !    STO package
+    istoerr = 0
+    do node = 1, this%dis%nodes
+      call this%dis%noder_to_string(node, cellid)
+      ske_cr = this%ske_cr(node)
+      theta = this%sk_theta(node)
+      !
+      ! -- coarse-grained storage error condition
+      if (ske_cr < DZERO) then
+        write(errmsg,'(4x,a,g0,a,1x,a,1x,a)') &
+          'ERROR. COARSE-GRAINED MATERIAL SKE_CR (', ske_cr, ') IS LESS',        &
+          'THAN ZERO IN CELL', trim(adjustl(cellid))
+      end if
+      !
+      ! -- storage (STO) package error condition
+      if (this%stosc1(node) /= DZERO) then
+        istoerr = 1
+      end if
+      !
+      ! -- porosity error condition
+      if (theta > DONE .or. theta < DZERO) then
+        write(errmsg,'(4x,a,g0,a,1x,a,1x,a)') &
+          'ERROR. COARSE-GRAINED MATERIAL THETA (', theta, ') IS LESS',          &
+          'THAN ZERO OR GREATER THAN 1 IN CELL', trim(adjustl(cellid))
+      end if
+    end do
+    !
+    ! -- write single message if storage (STO) package has non-zero specific
+    !    storage values
+    if (istoerr /= 0) then
+      write(errmsg,'(4x,a,3(1x,a))') &
+        'ERROR. SPECIFIC STORAGE VALUES IN THE STORAGE (STO) PACKAGE MUST',      &
+        'BE ZERO IN ALL ACTIVE CELLS WHEN USING THE', trim(adjustl(this%name)),  &
+        'PACKAGE'
+      call store_error(errmsg)
+    end if
+    !
+    ! -- set flags that determine if delay beds will be simulated using a half cell
     if (this%igeocalc == 0) then
       if (this%idbfullcell == 0) then
         ! -- use half cell for head-based delay bed if delay_full_cell option not specified
@@ -3043,6 +3101,7 @@ contains
       end if
     else
       this%idbfullcell = 1
+      this%idbhalfcell = 0
     end if
     !
     ! -- read interbed data
@@ -3050,18 +3109,8 @@ contains
       call this%csub_read_packagedata()
     end if
     !
-    ! -- calculate the aquifer void ratio and thickness without the interbeds
+    ! -- calculate the coarse-grained material thickness without the interbeds
     do node = 1, this%dis%nodes
-      if (this%igeocalc /= 0) then
-        theta = this%sk_theta(node)
-        if (theta > DONE .or. theta < DZERO) then
-          ! add error message
-          write(errmsg,'(4x,a,1x,a,g0,a,1x,a,1x,a)') &
-                                       'ERROR. AQUIFER POROSITY IS LESS THAN', &
-                                       '0 OR GREATER THAN 1 (', theta, ')',    &
-                                       'in cell', ''
-        end if
-      end if
       top = this%dis%top(node)
       bot = this%dis%bot(node)
       this%sk_thick(node) = top - bot
@@ -3093,18 +3142,6 @@ contains
       end if
       this%sk_thickini(node) = thick
     end do
-    !
-    ! -- evaluate if non-zero specific storage values are specified in the 
-    !    STO package
-    do node = 1, this%dis%nodes
-      if (this%stosc1(node) /= DZERO) then
-        write(errmsg,'(4x,a,3(1x,a))')                                          &
-          'ERROR. SPECIFIC STORAGE VALUES IN THE STORAGE (STO) PACKAGE MUST',   &
-          'BE 0 WHEN USING THE', trim(adjustl(this%name)), 'PACKAGE'
-        call store_error(errmsg)
-        exit
-      end if
-    end do    
     !
     ! -- terminate if errors griddata, packagedata blocks, TDIS, or STO data
     if (count_errors() > 0) then
