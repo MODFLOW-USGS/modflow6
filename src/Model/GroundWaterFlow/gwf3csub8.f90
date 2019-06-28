@@ -2103,7 +2103,9 @@ contains
           ! -- under-relaxation flag and parameters
           case ('UNDER_RELAXATION')
             call this%parser%GetStringCaps(keyword)
-            if (keyword == 'SIMPLE') then
+            if (keyword == 'NONE') then
+              iunderrelax = 0
+            else if (keyword == 'SIMPLE') then
               iunderrelax = 1
             else if (keyword == 'DBD') then
               iunderrelax = 2

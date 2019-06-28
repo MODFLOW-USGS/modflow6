@@ -25,6 +25,167 @@ optional true
 longname keyword to save CSUB flows
 description keyword to indicate that cell-by-cell flow terms will be written to the file specified with ``BUDGET SAVE FILE'' in Output Control.
 
+# csub options
+block options
+name gammaw
+type double precision
+reader urword
+optional true
+longname specific gravity of water
+description specific gravity of water. For freshwater, GAMMAW is 9806.65 Newtons/cubic meters or 62.48 lb/cubic foot in SI and English units, respectively. By default, GAMMAW is 9806.65.
+default_value 9806.65
+
+block options
+name beta
+type double precision
+reader urword
+optional true
+longname compressibility of water
+description compressibility of water. Typical values of BETA are 4.6512e-10 1/Pa or 2.2270e-8 lb/square foot in SI and English units, respectively. By default, BETA is 4.6512e-10.
+default_value 4.6512e-10
+
+block options
+name head_based
+type keyword
+reader urword
+optional true
+longname keyword to indicate the head-based formulation will be used
+description keyword to indicate the head-based formulation will be used to simulate coarse-grained aquifer materials and no-delay and delay interbeds.
+
+block options
+name ndelaycells
+type integer
+reader urword
+optional true
+longname number of interbed cell nodes
+description number of nodes used to discretize the delay interbed. If not specified, then a default value of 19 is assigned.
+
+block options
+name compression_indices
+type keyword
+reader urword
+optional true
+longname keyword to indicate CR and CC are read instead of SSE and SSV
+description keyword to indicate that the the recompression (CR) and compresion (CC) indices are specified instead of the elastic skeletal specific storage (SSE) and inelastic skeletal specific storage (SSV) coefficients. If not specified, then elastic skeletal specific storage (SSE) and inelastic skeletal specific storage (SSV) coefficients must be specified.
+
+block options
+name update_material_properties
+type keyword
+reader urword
+optional true
+longname keyword to indicate material properties can change during the simulations
+description keyword to indicate that the thickness and void ratio of skeletal and no delay interbed sediments will vary during the simulation. If not specified, the thickness and void ratio of skeletal and no delay interbed sediments will not vary during the simulation.
+
+block options
+name cell_fraction
+type keyword
+reader urword
+optional true
+longname keyword to indicate cell fraction interbed thickness
+description keyword to indicate that the thickness of interbeds will be specified in terms of the fraction of cell thickness. If not specified, interbed thicknness must be specified. 
+
+block options
+name delay_full_cell
+type keyword
+reader urword
+optional true
+longname keyword to simulate head-based delay interbeds using full-cell approach
+description keyword to indicate that head-based delay interbeds will be simulated using a full-cell approach. This option is only used if HEAD\_BASED is specified in the OPTIONS block.
+
+block options
+name specified_initial_interbed_state
+type keyword
+reader urword
+optional true
+longname keyword to indicate that absolute initial states will be specified
+description keyword to indicate that absolute preconsolidation stresses (heads) and delay bed heads will be specified for interbeds defined in the PACKAGEDATA block. The SPECIFIED\_INITIAL\_INTERBED\_STATE option is equivalent to specifying the SPECIFIED\_INITIAL\_PRECONSOLITATION\_STRESS and SPECIFIED\_INITIAL\_DELAY\_HEAD. If SPECIFIED\_INITIAL\_INTERBED\_STATE is not specified then preconsolidation stress (head) and delay bed head values specified in the PACKAGEDATA block are relative to simulated values if the first stress period is steady-state or initial stresses and GWF heads if the first stress period is transient.
+
+block options
+name specified_initial_preconsolidation_stress
+type keyword
+reader urword
+optional true
+longname keyword to indicate that absolute initial preconsolidation stresses (head) will be specified
+description keyword to indicate that absolute preconsolidation stresses (heads) will be specified for interbeds defined in the PACKAGEDATA block. If SPECIFIED\_INITIAL\_PRECONSOLITATION\_STRESS and SPECIFIED\_INITIAL\_INTERBED\_STATE are not specified then preconsolidation stress (head) values specified in the PACKAGEDATA block are relative to simulated values if the first stress period is steady-state or initial stresses (heads) if the first stress period is transient.
+
+block options
+name specified_initial_delay_head
+type keyword
+reader urword
+optional true
+longname keyword to indicate that absolute initial delay bed heads will be specified
+description keyword to indicate that absolute initial delay bed head will be specified for interbeds defined in the PACKAGEDATA block. If SPECIFIED\_INITIAL\_DELAY\_HEAD and SPECIFIED\_INITIAL\_INTERBED\_STATE are not specified then delay bead head values specified in the PACKAGEDATA block are relative to simulated values if the first stress period is steady-state or initial GWF heads if the first stress period is transient.
+
+block options
+name effective_stress_lag
+type keyword
+reader urword
+optional true
+longname keyword to indicate that specific storage will be calculate using the effective stress from the previous time step
+description keyword to indicate the effective stress from the previous time step will be used to calculate specific storage values. This option can 1) help with convergence in models with thin cells and water table elevations close to land surface; 2) is identical to the approach used in the SUBWT package for MODFLOW-2005; and 3) is only used if the effective-stress formulation is being used. By default, current effective stress values are used to calculate specific storage values.
+
+block options
+name underrelaxation_record
+type record under_relaxation under_relaxation_option
+shape
+reader urword
+optional true
+longname
+description
+
+block options
+name under_relaxation
+type keyword
+in_record true
+tagged true
+reader urword
+optional false
+longname under relaxation scheme
+description is an optional keyword that defines that the effective-stress values used to calculate storage coefficients will be under-relaxed. This option is only used if using the effective-stress formulation and the EFFECTIVE\_STRESS\_LAG option is not specified in the OPTIONS block. By default under-relaxation is not used.  Note that the under-relaxation should only be used in models that have difficult converging and/or terminate with negative effective stresses.
+
+block options
+name under_relaxation_option
+type string
+in_record true
+tagged false
+reader urword
+optional true
+longname under relaxation scheme
+description is an optional keyword that defines the under-relaxation schemes used.  NONE - under-relaxation is not used. SIMPLE - Simple under-relaxation scheme with a fixed relaxation factor is used.  DBD - delta-bar-delta under-relaxation is used.
+
+block options
+name under_relaxation_theta
+type double precision
+reader urword
+optional true
+longname under relaxation reduction factor
+description real value defining the reduction factor for the learning rate (under-relaxation term) of the delta-bar-delta algorithm. The value of UNDER\_RELAXATION\_THETA is between zero and one. If the change in the variable (head) is of opposite sign to that of the previous iteration, the under-relaxation term is reduced by a factor of UNDER\_RELAXATION\_THETA. The value usually ranges from 0.3 to 0.9; a value of 0.7 works well for most problems. UNDER\_RELAXATION\_THETA only needs to be specified if UNDER\_RELAXATION is DBD.
+
+block options
+name under_relaxation_kappa
+type double precision
+reader urword
+optional true
+longname under relaxation increment for the learning rate
+description real value defining the increment for the learning rate (under-relaxation term) of the delta-bar-delta algorithm. The value of UNDER\_RELAXATION\_kappa is between zero and one. If the change in the variable (head) is of the same sign to that of the previous iteration, the under-relaxation term is increased by an increment of UNDER\_RELAXATION\_KAPPA. The value usually ranges from 0.03 to 0.3; a value of 0.1 works well for most problems. UNDER\_RELAXATION\_KAPPA only needs to be specified if UNDER\_RELAXATION is DBD.
+
+block options
+name under_relaxation_gamma
+type double precision
+reader urword
+optional true
+longname history or memory term factor of the delta-bar-delta algorithm
+description real value defining the under-relaxation factor of the simple algorithm or the history or memory term factor of the delta-bar-delta algorithm. UNDER\_RELAXATION\_GAMMA is between zero and 1. When using delta-bar-delta and UNDER\_RELAXATION\_GAMMA is zero, only the most recent history (previous iteration value) is maintained; as UNDER\_RELAXATION\_GAMMA is increased, past history of iteration changes has greater influence on the memory term. The memory term is maintained as an exponential average of past changes. Retaining some past history can overcome granular behavior in the calculated function surface and therefore helps to overcome cyclic patterns of non-convergence. When using simple algorithm, the value usually ranges from 0.7 to 0.95. When using the delta-bar-delta algorithm, the value usually ranges from 0.1 to 0.3; a value of 0.2 works well for most problems.
+
+block options
+name under_relaxation_momentum
+type double precision
+reader urword
+optional true
+longname fraction of past history changes that is added as a momentum term
+description real value defining the fraction of past history changes that is added as a momentum term to the step change for a nonlinear iteration. The value of UNDER\_RELAXATION\_MOMENTUM is between zero and one. A large momentum term should only be used when small learning rates are expected. Small amounts of the momentum term help convergence. The value usually ranges from 0.0001 to 0.1; a value of 0.001 works well for most problems. UNDER\_RELAXATION\_MOMENTUM only needs to be specified if UNDER\_RELAXATION is DBD.
+
+# csub csv strain output
 block options
 name strainib_filerecord
 type record strain_csv_interbed fileout interbedstrain_filename
@@ -100,105 +261,7 @@ optional false
 longname file keyword
 description name of the comma-separated-values output file to write final skeletal strain information.
 
-
-block options
-name gammaw
-type double precision
-reader urword
-optional true
-longname specific gravity of water
-description specific gravity of water. For freshwater, GAMMAW is 9806.65 Newtons/cubic meters or 62.48 lb/cubic foot in SI and English units, respectively. By default, GAMMAW is 9806.65.
-default_value 9806.65
-
-block options
-name beta
-type double precision
-reader urword
-optional true
-longname compressibility of water
-description compressibility of water. Typical values of BETA are 4.6512e-10 1/Pa or 2.2270e-8 lb/square foot in SI and English units, respectively. By default, BETA is 4.6512e-10.
-default_value 4.6512e-10
-
-block options
-name effective_stress_lag
-type keyword
-reader urword
-optional true
-longname keyword to indicate that specific storage will be calculate using the effective stress from the previous time step
-description keyword to indicate the effective stress from the previous time step will be used to calculate specific storage values. This option is only used if the effective-stress formulation is being used. By default, current effective stress values are used to calculate specific storage values.
-
-block options
-name head_based
-type keyword
-reader urword
-optional true
-longname keyword to indicate the head-based formulation will be used
-description keyword to indicate the head-based formulation will be used to simulate coarse-grained aquifer materials and no-delay and delay interbeds.
-
-block options
-name delay_full_cell
-type keyword
-reader urword
-optional true
-longname keyword to simulate head-based delay interbeds using full-cell approach
-description keyword to indicate that head-based delay interbeds will be simulated using a full-cell approach.
-
-block options
-name ndelaycells
-type integer
-reader urword
-optional true
-longname number of interbed cell nodes
-description number of nodes used to discretize the delay interbed. If not specified, then a default value of 19 is assigned.
-
-block options
-name specified_initial_interbed_state
-type keyword
-reader urword
-optional true
-longname keyword to indicate that absolute initial states will be specified
-description keyword to indicate that absolute preconsolidation stresses (heads) and delay bed heads will be specified for interbeds defined in the PACKAGEDATA block. The SPECIFIED\_INITIAL\_INTERBED\_STATE option is equivalent to specifying the SPECIFIED\_INITIAL\_PRECONSOLITATION\_STRESS and SPECIFIED\_INITIAL\_DELAY\_HEAD. If SPECIFIED\_INITIAL\_INTERBED\_STATE is not specified then preconsolidation stress (head) and delay bed head values specified in the PACKAGEDATA block are relative to simulated values if the first stress period is steady-state or initial stresses and GWF heads if the first stress period is transient.
-
-block options
-name specified_initial_preconsolidation_stress
-type keyword
-reader urword
-optional true
-longname keyword to indicate that absolute initial preconsolidation stresses (head) will be specified
-description keyword to indicate that absolute preconsolidation stresses (heads) will be specified for interbeds defined in the PACKAGEDATA block. If SPECIFIED\_INITIAL\_PRECONSOLITATION\_STRESS and SPECIFIED\_INITIAL\_INTERBED\_STATE are not specified then preconsolidation stress (head) values specified in the PACKAGEDATA block are relative to simulated values if the first stress period is steady-state or initial stresses (heads) if the first stress period is transient.
-
-block options
-name specified_initial_delay_head
-type keyword
-reader urword
-optional true
-longname keyword to indicate that absolute initial delay bed heads will be specified
-description keyword to indicate that absolute initial delay bed head will be specified for interbeds defined in the PACKAGEDATA block. If SPECIFIED\_INITIAL\_DELAY\_HEAD and SPECIFIED\_INITIAL\_INTERBED\_STATE are not specified then delay bead head values specified in the PACKAGEDATA block are relative to simulated values if the first stress period is steady-state or initial GWF heads if the first stress period is transient.
-
-block options
-name compression_indices
-type keyword
-reader urword
-optional true
-longname keyword to indicate CR and CC are read instead of SSE and SSV
-description keyword to indicate that the the recompression (CR) and compresion (CC) indices are specified instead of the elastic skeletal specific storage (SSE) and inelastic skeletal specific storage (SSV) coefficients.
-
-block options
-name update_material_properties
-type keyword
-reader urword
-optional true
-longname keyword to indicate constant material properties
-description keyword to indicate that the thickness and void ratio of skeletal and no delay interbed sediments will not vary during the simulation.
-
-block options
-name cell_fraction
-type keyword
-reader urword
-optional true
-longname keyword to indicate cell fraction interbed thickness
-description keyword to indicate that the thickness of interbeds will be specified in terms of the fraction of cell thickness.
-
+# binary compaction output
 block options
 name compaction_filerecord
 type record compaction fileout compaction_filename
