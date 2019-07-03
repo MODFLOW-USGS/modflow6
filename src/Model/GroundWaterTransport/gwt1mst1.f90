@@ -115,7 +115,7 @@ module GwtMstModule
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtmst =                                    &
-      "(1x,/1x,'IMD -- MOBILE STORAGE AND TRANSFER PACKAGE, VERSION 1, &
+      "(1x,/1x,'MST -- MOBILE STORAGE AND TRANSFER PACKAGE, VERSION 1, &
       &6/12/2019 INPUT READ FROM UNIT ', i0, //)"
 ! ------------------------------------------------------------------------------
     !

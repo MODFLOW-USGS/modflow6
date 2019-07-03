@@ -33,6 +33,7 @@
   ! refactor code to use the MST and IST packages to replace STO, SRB, DCY, and IMD
   ! pore space discrepancy between flow and transport (porosity vs specific yield)
   ! add separate heat transport model?
+  ! xt3d dispersion areas need to be consistent with non-xt3d case
   
   
 module GwtModule

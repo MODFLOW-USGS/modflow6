@@ -198,6 +198,8 @@ module GwfBuyModule
     ! -- initialize
     amatnn = DZERO
     amatnm = DZERO
+    !
+    ! -- update density using the last concentration
     call this%buy_calcdens()
     !
     ! -- fill buoyancy flow term

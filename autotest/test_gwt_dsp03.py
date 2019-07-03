@@ -306,7 +306,7 @@ def eval_transport(sim):
         assert False, 'could not load data from "{}"'.format(fpth)
 
     # This is the answer to this problem.  These concentrations are for
-    # the time eqaul to 1/5 of perlen.
+    # the time equal to 1/5 of perlen.
     cres1 = [1.        , 0.94926607, 0.9290872 , 0.88120143, 0.85752405,
        0.80606293, 0.78075725, 0.72828023, 0.70262037, 0.65094507,
        0.62582375, 0.5762093 , 0.5522329 , 0.50552886, 0.48309497,

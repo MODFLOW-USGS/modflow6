@@ -837,23 +837,14 @@ module GwtDspModule
     class(GwtDspType) :: this
     ! -- local
     integer(I4B) :: nodes, n, m, idiag, ipos
-    real(DP) :: clnm, clmn, anm, dn, dm
+    real(DP) :: clnm, clmn, dn, dm
     real(DP) :: vg1, vg2, vg3
-    integer(I4B) :: ihc, ibdn, ibdm, ictn, ictm, inwtup, iusg, isympos
-    real(DP) :: hn, hm, satn, satm, topn, topm, botn, botm, satomega
-    integer(I4B) :: ivarcv, idewatcv, icellavg, inwtupw
-    real(DP) :: hwva, cond, satmin
+    integer(I4B) :: ihc, ibdn, ibdm, ictn, ictm, isympos
+    real(DP) :: satn, satm, topn, topm, botn, botm
+    real(DP) :: hwva, cond, cn, cm, denom
+    real(DP) :: anm, amn, thksatn, thksatm, sill_top, sill_bot, tpn, tpm
 ! ------------------------------------------------------------------------------
     !
-    ! -- todo: get ivarcv and idewatcv from flow model
-    ivarcv = 1
-    idewatcv = 0
-    icellavg = 0
-    inwtup = this%fmi%igwfinwtup
-    iusg = this%fmi%igwfiusgnrhc
-    satomega = this%fmi%gwfsatomega
-    inwtupw = this%fmi%igwfinwtupw
-    satmin = this%fmi%gwfsatmin
     nodes = size(this%d11)
     do n = 1, nodes
       if(this%ibound(n) == 0) cycle
@@ -878,16 +869,12 @@ module GwtDspModule
         ibdm = this%fmi%gwfibound(m)
         ictn = this%fmi%gwficelltype(n)
         ictm = this%fmi%gwficelltype(m)
-        hn = this%fmi%gwfhead(n)
-        hm = this%fmi%gwfhead(m)
         satn = this%fmi%gwfsat(n)
         satm = this%fmi%gwfsat(m)
         topn = this%dis%top(n)
         topm = this%dis%top(m)
         botn = this%dis%bot(n)
         botm = this%dis%bot(m)
-        anm = thksatnm(ibdn, ibdm, ictn, ictm, inwtup, ihc, iusg,              &
-                        hn, hm, satn, satm, topn, topm, botn, botm, satomega)
         !
         ! -- Calculate dispersion coefficient for cell n in the direction
         !    normal to the shared n-m face and for cell m in the direction
@@ -903,34 +890,84 @@ module GwtDspModule
         ! -- Calculate dispersion conductance based on NPF subroutines and the
         !    effective dispersion coefficients dn and dm.
         if(ihc == 0) then
+          clnm = satn * (topn - botn) * DHALF
+          clmn = satm * (topm - botm) * DHALF
+          anm = hwva
           !
-          ! -- Calculate vertical conductance
-          cond = vcond(ibdn, ibdm,                                             &
-                       1, 1,                                                   &
-                       inwtup,                                                 &
-                       ivarcv, idewatcv,                                       &
-                       1.d30, -1.d30, -1.d30,                                  &
-                       dn, dm,                                                 &
-                       satn, satm,                                             &
-                       topn, topm,                                             &
-                       botn, botm,                                             &
-                       hwva)
+          ! -- n is convertible and unsaturated
+          if (ictn /= 0) then
+            if (satn == DZERO) then
+              anm = DZERO
+            else if (n > m .and. satn < DONE) then
+              anm = DZERO
+            endif
+          end if
+          !
+          ! -- m is convertible and unsaturated
+          if (ictm /= 0) then
+            if (satm == DZERO) then
+              anm = DZERO
+            else if (m > n .and. satm < DONE) then
+              anm = DZERO
+            endif
+          end if
+          !
+          ! -- amn is the same as anm for vertical flow
+          amn = anm
+        !
         else
           !
-          ! -- Horizontal conductance
-          cond = hcond(ibdn, ibdm,                                             &
-                       1, 1,                                                   &
-                       inwtup, inwtup,                                         &
-                       ihc,                                                    &
-                       icellavg, iusg, inwtupw,                                &
-                       1.d30, hn, hm,                                          &
-                       satn, satm,                                             &
-                       dn, dm,                                                 &
-                       topn, topm,                                             &
-                       botn, botm,                                             &
-                       clnm, clmn,                                             &
-                       hwva, satomega, satmin)
-        endif
+          ! -- horizontal conductance
+          thksatn = topn - botn
+          if (ictn /= 0) thksatn = thksatn * satn
+          thksatm = topm - botm
+          if (ictm /= 0) thksatm = thksatm * satm
+          !
+          ! -- handle vertically staggered case
+          if (ihc == 2) then
+            sill_top = min(topn, topm)
+            sill_bot = max(botn, botm)
+            tpn = botn + thksatn
+            tpm = botm + thksatm
+            thksatn = max(min(tpn, sill_top) - sill_bot, DZERO)
+            thksatm = max(min(tpm, sill_top) - sill_bot, DZERO)
+          end if
+          !
+          ! -- calculate the saturated area term
+          anm = thksatn * hwva
+          amn = thksatm * hwva
+          !
+          ! -- n is convertible and unsaturated
+          if (ictn /= 0) then
+            if (satn == DZERO) then
+              anm = DZERO
+              amn = DZERO
+            endif
+          end if
+          !
+          ! -- m is convertible and unsaturated
+          if (ictm /= 0) then
+            if (satm == DZERO) then
+              anm = DZERO
+              amn = DZERO
+            endif
+          end if
+          !
+        end if
+        !
+        ! -- calculate conductance using the two half cell conductances
+        cn = DZERO
+        if (clnm > DZERO) cn = dn * anm / clnm
+        cm = DZERO
+        if (clmn > DZERO) cm = dm * amn / clmn
+        denom = cn + cm
+        if (denom > DZERO) then
+          cond = cn * cm / denom
+        else
+          cond = DZERO
+        end if
+        !
+        ! -- Assign the calculated dispersion conductance
         this%dispcoef(isympos) = cond
         !
       enddo
@@ -939,6 +976,5 @@ module GwtDspModule
     ! -- Return
     return
   end subroutine calcdispcoef
-  
   
 end module GwtDspModule
