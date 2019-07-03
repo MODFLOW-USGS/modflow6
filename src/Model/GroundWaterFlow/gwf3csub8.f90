@@ -121,6 +121,7 @@ module GwfCsubModule
     real(DP), dimension(:), pointer, contiguous :: sk_es => null()               !skeletal (aquifer) effective stress
     real(DP), dimension(:), pointer, contiguous :: sk_es0 => null()              !skeletal (aquifer) effective stress for the previous time step
     real(DP), dimension(:), pointer, contiguous :: sk_esi => null()              !skeletal (aquifer) effective stress for the previous outer iteration
+    real(DP), dimension(:), pointer, contiguous :: sk_pcs => null()              !skeletal (aquifer) preconsolidation stress
     real(DP), dimension(:), pointer, contiguous :: sk_comp => null()             !skeletal (aquifer) incremental compaction
     real(DP), dimension(:), pointer, contiguous :: sk_tcomp => null()            !skeletal (aquifer) total compaction
     real(DP), dimension(:), pointer, contiguous :: sk_stor => null()             !skeletal (aquifer) storage
@@ -508,12 +509,16 @@ contains
 02030 format('CONVERGENCE FAILED AS A RESULT OF CSUB PACKAGE',1x,a)
 ! --------------------------------------------------------------------------
     ifirst = 1
-    tled = DONE / DELT
     if (this%gwfiss == 0) then
       ihmax = 0
       irmax = 0
       hmax = DZERO
       rmax = DZERO
+      if (DELT > DZERO) then
+        tled = DONE / DELT
+      else
+        tled = DZERO
+      end if
       final_check: do ib = 1, this%ninterbeds
         idelay = this%idelay(ib)
         !
@@ -650,13 +655,17 @@ contains
     ! -- coarse-grained skeletal storage
     rateskin = DZERO
     rateskout= DZERO
-    tled = DONE / DELT
     do node = 1, this%dis%nodes
       area = this%dis%get_area(node)
       comp = DZERO
       rrate = DZERO
       rratewc = DZERO
       if (this%gwfiss == 0) then
+        if (DELT > DZERO) then
+          tled = DONE / DELT
+        else
+          tled = DZERO
+        end if
         if (this%ibound(node) > 0) then
           !
           ! -- calculate coarse-grained skeletal storage terms
@@ -718,12 +727,16 @@ contains
     rateibiout = DZERO
 
     tled = DONE
-    tledm = DONE / DELT
     do ib = 1, this%ninterbeds
       rratewc = DZERO
       idelay = this%idelay(ib)
       ielastic = this%ielastic(ib)
       if (this%gwfiss == 0) then
+        if (DELT > DZERO) then
+          tledm = DONE / DELT
+        else
+          tledm = DZERO
+        end if
         node = this%nodelist(ib)
         area = this%dis%get_area(node)
         !
@@ -2469,6 +2482,7 @@ contains
     call mem_allocate(this%sk_es, this%dis%nodes, 'sk_es', trim(this%origin))
     call mem_allocate(this%sk_es0, this%dis%nodes, 'sk_es0', trim(this%origin))
     call mem_allocate(this%sk_esi, this%dis%nodes, 'sk_esi', trim(this%origin))
+    call mem_allocate(this%sk_pcs, this%dis%nodes, 'sk_pcs', trim(this%origin))
     call mem_allocate(this%sk_comp, this%dis%nodes, 'sk_comp', trim(this%origin))
     call mem_allocate(this%sk_tcomp, this%dis%nodes, 'sk_tcomp', trim(this%origin))
     call mem_allocate(this%sk_stor, this%dis%nodes, 'sk_stor', trim(this%origin))
@@ -2652,6 +2666,7 @@ contains
       call mem_deallocate(this%sk_es)
       call mem_deallocate(this%sk_es0)
       call mem_deallocate(this%sk_esi)
+      call mem_deallocate(this%sk_pcs)
       call mem_deallocate(this%sk_comp)
       call mem_deallocate(this%sk_tcomp)
       call mem_deallocate(this%sk_stor)
@@ -4526,16 +4541,30 @@ contains
     ! -- update sk and ske
     this%sk_ske(node) = sske0 * tthk0 * snold
     this%sk_sk(node) = sske * tthk * snnew
-    !
-    ! -- calculate hcof term
-    hcof = -rho2 * snnew
+    !!
+    !! -- calculate hcof term
+    !hcof = -rho2 * snnew
     !
     ! -- calculate rhs term
     if (this%igeocalc == 0) then
+      hcof = -rho2 * snnew
       rhs = -rho1 * snold * hcellold
     else
-      rhs = rho1 * snold * this%sk_es0(node) -                                  &
+      hcof = -rho2 * snnew
+      rhs = rho1 * snold * this%sk_es0(node) -                                 &
             rho2 * snnew * (this%sk_gs(node) + bot) 
+      !!if (this%ieslag /= 0) then
+      !!  hcof = -rho2 * snnew
+      !!  rhs = rho1 * snold * this%sk_es0(node) -                                 &
+      !!        rho2 * snnew * (this%sk_gs(node) + bot) 
+      !!else
+      !!  hcof = rho2 * snnew
+      !!  rhs = rho2 * snnew * (this%sk_gs(node) + bot) -                          &
+      !!        rho1 * snold * this%sk_es0(node) 
+      !!end if
+      !hcof = -rho2 * snnew
+      !rhs = -rho1 * snold * (DZERO - this%sk_es0(node)) -                        &
+      !      rho2 * snnew * (this%sk_gs(node) + bot - DZERO) 
     end if
     !
     ! -- return
@@ -5553,13 +5582,14 @@ contains
     if (denom /= DZERO) then
       fact = DONE / denom
     end if
-    esv = es0
-    void = this%csub_calc_void(theta0)
-    denom = this%csub_calc_adjes(node, esv, bot, zn0)
-    denom = denom * (DONE + void)
-    if (denom /= DZERO) then
-      fact0 = DONE / denom
-    end if
+    !esv = es0
+    !void = this%csub_calc_void(theta0)
+    !denom = this%csub_calc_adjes(node, esv, bot, zn0)
+    !denom = denom * (DONE + void)
+    !if (denom /= DZERO) then
+    !  fact0 = DONE / denom
+    !end if
+    fact0 = fact
     !
     ! -- return
     return
