@@ -1,12 +1,30 @@
 # --------------------- gwf buy options ---------------------
 
 block options
+name hhoptions
+type record hhformulation lhs
+reader urword
+optional true
+longname newton keyword and options
+description none
+
+block options
 name hhformulation
+in_record true
 type keyword
 reader urword
 optional true
 longname use hydraulic head formulation
 description use the variable-density hydraulic head formulation instead of the equivalent freshwater head formulation.
+
+block options
+name lhs
+in_record true
+type keyword
+reader urword
+optional true
+longname hh formulation on left-hand side
+description use the variable-density hydraulic head formulation and put add the terms to the left-hand and right-hand sides.
 
 block options
 name denseref
