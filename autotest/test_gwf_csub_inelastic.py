@@ -152,7 +152,9 @@ def build_mf6(idx, ws, update=None):
     orecarray['csub_obs.csv'] = [('es', 'estress-cell', (1, 0, 1)),
                                  ('theta', 'theta', (0,)),
                                  ('comp', 'interbed-compaction', (0,)),
-                                 ('pcs', 'preconstress-cell', (1, 0, 1))]
+                                 ('pcs', 'preconstress-cell', (1, 0, 1)),
+                                 ('sk', 'sk', (0,)),
+                                 ('ske', 'ske', (0,)),]
     csub_obs_package = csub.obs.initialize(filename=opth, digits=10,
                                            print_input=True,
                                            continuous=orecarray)

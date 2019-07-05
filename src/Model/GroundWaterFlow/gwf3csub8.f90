@@ -128,6 +128,7 @@ module GwfCsubModule
     real(DP), dimension(:), pointer, contiguous :: sk_ske => null()              !skeletal (aquifer) elastic storage coefficient
     real(DP), dimension(:), pointer, contiguous :: sk_sk => null()               !skeletal (aquifer) first storage coefficient
     real(DP), dimension(:), pointer, contiguous :: sk_thickini => null()         !initial skeletal (aquifer) thickness
+    real(DP), dimension(:), pointer, contiguous :: sk_thetaini => null()         !initial skeletal (aquifer) porosity
     real(DP), dimension(:), pointer, contiguous :: sk_w0 => null()               !skeletal under-relaxation weight
     real(DP), dimension(:), pointer, contiguous :: sk_hch0 => null()             !skeletal under-relaxation weighted change
     real(DP), dimension(:), pointer, contiguous :: sk_des0 => null()             !skeletal under-relaxation effective stress change
@@ -161,6 +162,7 @@ module GwfCsubModule
     real(DP), dimension(:), pointer, contiguous :: ske => null()                 !elastic storage coefficient
     real(DP), dimension(:), pointer, contiguous :: sk => null()                  !first storage coefficient
     real(DP), dimension(:), pointer, contiguous :: thickini => null()            !initial interbed thickness
+    real(DP), dimension(:), pointer, contiguous :: thetaini => null()            !initial interbed theta
     real(DP), dimension(:,:), pointer, contiguous :: auxvar => null()            !auxiliary variable array
     !
     ! -- delay interbed arrays
@@ -710,13 +712,13 @@ contains
       ! -- update states if required
       if (isuppress_output == 0) then
         !
-        ! -- update total compaction
-        this%sk_tcomp(node) = this%sk_tcomp(node) + comp
-        !
         ! - calculate strain and change in skeletal void ratio and thickness
         if (this%iupdatematprop /= 0) then
           call this%csub_sk_update(node)
         end if
+        !
+        ! -- update total compaction
+        this%sk_tcomp(node) = this%sk_tcomp(node) + comp
       end if
     end do
     !
@@ -788,16 +790,15 @@ contains
           ! -- update states if required
           if (isuppress_output == 0) then
             !
-            ! -- update total compaction
-            this%tcomp(ib) = this%tcomp(ib) + comp
-            this%tcompe(ib) = this%tcompe(ib) + compe
-            this%tcompi(ib) = this%tcompi(ib) + compi
-            
-            !
             ! - calculate strain and change in interbed void ratio and thickness
             if (this%iupdatematprop /= 0) then
               call this%csub_nodelay_update(ib)
             end if
+            !
+            ! -- update total compaction
+            this%tcomp(ib) = this%tcomp(ib) + comp
+            this%tcompe(ib) = this%tcompe(ib) + compe
+            this%tcompi(ib) = this%tcompi(ib) + compi
           end if
           !
           ! -- delay interbeds
@@ -1707,6 +1708,7 @@ contains
         ! -- get porosity
         rval =  this%parser%GetDouble()
         this%theta(itmp) = rval
+        this%thetaini(itmp) = rval
         if (rval <= DZERO .or. rval > DONE) then
             write(errmsg,'(4x,a,1x,a,1x,i0)') &
               '****ERROR. theta MUST BE > 0 and <= 1 FOR PACKAGEDATA ENTRY',     &
@@ -2489,6 +2491,7 @@ contains
     call mem_allocate(this%sk_ske, this%dis%nodes, 'sk_ske', trim(this%origin))
     call mem_allocate(this%sk_sk, this%dis%nodes, 'sk_sk', trim(this%origin))
     call mem_allocate(this%sk_thickini, this%dis%nodes, 'sk_thickini', trim(this%origin))
+    call mem_allocate(this%sk_thetaini, this%dis%nodes, 'sk_thetaini', trim(this%origin))
     if (this%iunderrelax /= 0) then
       ilen = this%dis%nodes
     else
@@ -2547,6 +2550,7 @@ contains
     call mem_allocate(this%ske, iblen, 'ske', trim(this%origin))
     call mem_allocate(this%sk, iblen, 'sk', trim(this%origin))
     call mem_allocate(this%thickini, iblen, 'thickini', trim(this%origin))
+    call mem_allocate(this%thetaini, iblen, 'thetaini', trim(this%origin))
     !
     ! -- delay bed storage
     call mem_allocate(this%idbconvert, 0, 0, 'idbconvert', trim(this%origin))
@@ -2673,6 +2677,7 @@ contains
       call mem_deallocate(this%sk_ske)
       call mem_deallocate(this%sk_sk)
       call mem_deallocate(this%sk_thickini)
+      call mem_deallocate(this%sk_thetaini)
       call mem_deallocate(this%sk_w0)
       call mem_deallocate(this%sk_hch0)
       call mem_deallocate(this%sk_des0)
@@ -2710,6 +2715,7 @@ contains
       call mem_deallocate(this%ske)
       call mem_deallocate(this%sk)
       call mem_deallocate(this%thickini)
+      call mem_deallocate(this%thetaini)
       !
       ! -- delay bed storage
       call mem_deallocate(this%idbconvert)
@@ -3147,7 +3153,6 @@ contains
     end do
     !
     ! -- evaluate if any sk_thick values are less than 0
-    !    also set initial skeletal thickness (sk_thickini)
     do node = 1, this%dis%nodes
       thick = this%sk_thick(node)
       if (thick < DZERO) then
@@ -3157,7 +3162,6 @@ contains
            thick, ')', 'in cell', trim(adjustl(cellid))
         call store_error(errmsg)
       end if
-      this%sk_thickini(node) = thick
     end do
     !
     ! -- terminate if errors griddata, packagedata blocks, TDIS, or STO data
@@ -3165,6 +3169,15 @@ contains
       call this%parser%StoreErrorUnit()
       call ustop()
     end if
+    !
+    ! -- set initial skeletal thickness (sk_thickini) and
+    !    initial skeletal porosity (sk_thetaini)
+    do node = 1, this%dis%nodes
+      thick = this%sk_thick(node)
+      theta = this%sk_theta(node)
+      this%sk_thickini(node) = thick
+      this%sk_thetaini(node) = theta
+    end do
     !
     ! -- return
     return
@@ -3399,10 +3412,13 @@ contains
 ! ------------------------------------------------------------------------------
 !
 ! -- update thickness and theta
-    comp = this%comp(i)
+    !comp = this%comp(i)
+    comp = this%tcomp(i) + this%comp(i)
     if (ABS(comp) > DZERO) then
-      thick = this%thick0(i)
-      theta = this%theta0(i)
+      !thick = this%thick0(i)
+      !theta = this%theta0(i)
+      thick = this%thickini(i)
+      theta = this%thetaini(i)
       call this%csub_adj_matprop(comp, thick, theta)
       if (thick <= DZERO) then
         write(errmsg,'(4x,2a,1x,i0,1x,a,1x,g0,1x,a)')                           &
@@ -5063,11 +5079,14 @@ contains
 ! ------------------------------------------------------------------------------
 !
 ! -- update thickness and theta
-    comp = this%sk_comp(node)
+    !comp = this%sk_comp(node)
+    comp = this%sk_tcomp(node) + this%sk_comp(node)
     call this%dis%noder_to_string(node, cellid)
     if (ABS(comp) > DZERO) then
-      thick = this%sk_thick0(node)
-      theta = this%sk_theta0(node)
+      !thick = this%sk_thick0(node)
+      !theta = this%sk_theta0(node)
+      thick = this%sk_thickini(node)
+      theta = this%sk_thetaini(node)
       call this%csub_adj_matprop(comp, thick, theta)
       if (thick <= DZERO) then
         write(errmsg,'(4x,a,1x,a,1x,a,1x,g0,1x,a)')                             &
