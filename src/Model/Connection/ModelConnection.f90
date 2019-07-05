@@ -23,8 +23,8 @@ module ModelConnectionModule
   
   contains
     
-    procedure (defineConnectionIFace), deferred, pass(this) :: mc_df
-        
+    procedure (defineConnectionIFace), deferred, pass(this)       :: mc_df
+    procedure (addConnectionsToMatrixIFace), deferred, pass(this) :: mc_ac  
     ! derived types should decide for themselves how the overall connection is 
     ! altered when another model is connected
     procedure (addExchangeIFace), deferred, pass(this) :: addExchange
@@ -38,6 +38,11 @@ module ModelConnectionModule
       class(ModelConnectionType), intent(inout) :: this
     end subroutine defineConnectionIFace
   
+    subroutine addConnectionsToMatrixIFace(this)
+      import :: ModelConnectionType
+      class(ModelConnectionType), intent(inout) :: this
+    end subroutine
+    
     subroutine addExchangeIFace(this, exchange)
       import :: ModelConnectionType, NumericalExchangeType
       class(ModelConnectionType), intent(inout) :: this

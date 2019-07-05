@@ -115,12 +115,11 @@ module SimulationCreateModule
   end subroutine connections_cr
   
   subroutine assignConnectionsToSolution()
-    use ListsModule, only: connectionlist, basesolutionlist
+    use ListsModule, only: basesolutionlist
     use BaseSolutionModule, only: GetBaseSolutionFromList
     ! local
     class(BaseSolutionType), pointer :: sol => null()
-    class(BaseModelType), pointer :: mod => null()
-    integer(I4B) :: isol, imod
+    integer(I4B) :: isol
     
     do isol = 1, basesolutionlist%Count()
       sol => GetBaseSolutionFromList(basesolutionlist, isol)

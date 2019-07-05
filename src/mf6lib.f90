@@ -26,7 +26,7 @@ subroutine runmf6
   use SolutionGroupModule,    only: SolutionGroupType, GetSolutionGroupFromList
   use ListsModule,            only: basesolutionlist, solutiongrouplist,       &
                                     basemodellist, baseexchangelist,           &
-                                    connectionlist, lists_da
+                                    baseconnectionlist, lists_da
   use SimVariablesModule,     only: iout 
   use SimModule,              only: converge_reset, converge_check,            &
                                     final_message
@@ -87,8 +87,8 @@ subroutine runmf6
   enddo
   !
   ! -- Define each connection
-  do ic = 1, connectionlist%Count()
-    mc => GetConnectionFromList(connectionlist, ic)
+  do ic = 1, baseconnectionlist%Count()
+    mc => GetConnectionFromList(baseconnectionlist, ic)
     call mc%mc_df()
   enddo
   !

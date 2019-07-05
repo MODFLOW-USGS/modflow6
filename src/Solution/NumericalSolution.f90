@@ -19,6 +19,7 @@ module NumericalSolutionModule
   use NumericalExchangeModule, only: NumericalExchangeType,                    &
                                      AddNumericalExchangeToList,               &
                                      GetNumericalExchangeFromList
+  use ModelConnectionModule,   only: ModelConnectionType, GetConnectionFromList
   use SparseModule,            only: sparsematrix
   use SimVariablesModule,      only: iout
   use BlockParserModule,       only: BlockParserType
@@ -1931,7 +1932,31 @@ contains
   end subroutine slnassignexchanges
 
   subroutine assignModelConnections(this)
+    use ListsModule, only: baseconnectionlist
+    use ModelConnectionModule, only: ModelConnectionType, GetConnectionFromList
     class(NumericalSolutionType) :: this
+    ! local    
+    class(ModelConnectionType), pointer :: connection
+    class(*), pointer :: objPtr
+    class(NumericalModelType), pointer :: model
+    integer(I4B) :: ic, im
+    
+    ! search thru connections
+    do ic=1,baseconnectionlist%Count()
+      connection => GetConnectionFromList(baseconnectionlist, ic)    
+      ! check if connection's model matches this solution, if so, 
+      ! add pointer to internal list
+      do im = 1, this%modellist%Count()
+        model => GetNumericalModelFromList(this%modellist, im)
+        if (associated(model,connection%owner)) then
+          ! match
+          objPtr => connection
+          call this%connectionlist%Add(objPtr)
+        end if
+      end do
+      
+    end do
+    
   end subroutine
   
   subroutine sln_connect(this)
@@ -1954,6 +1979,7 @@ contains
     ! -- local
     class(NumericalModelType), pointer :: mp
     class(NumericalExchangeType), pointer :: cp
+    class(ModelConnectionType), pointer :: mc
     integer(I4B) :: im, ic, ierror
 ! ------------------------------------------------------------------------------
     !
@@ -1971,7 +1997,11 @@ contains
     !
     ! -- Add terms from model connections to sparse
     ! TODO_MJR: the above should be removed once this is ready
-
+    do ic=1, this%connectionlist%Count()
+        ! TODO_MJR: probably we should never have the abstract base in the NumericalSolutionType??
+        mc => GetConnectionFromList(this%connectionlist, ic)
+        call mc%mc_ac()
+    end do
     
     ! -- The number of non-zero array values are now known so
     ! -- ia and ja can be created from sparse. then destroy sparse
