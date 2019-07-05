@@ -9,14 +9,15 @@ module ConnectionBuilderModule
   
   type, public :: ConnectionBuilderType
   contains
-    ! TODO: better name? it either creates a connection, or extends it for the given exchange
-    procedure, pass(this) :: buildConnectionImpl
-	  generic, public :: buildConnection => buildConnectionImpl
+    ! TODO: better name? 
+    ! This procedure either creates a connection, or extends it for the given exchange.
+    procedure, pass(this) :: processExchangeImpl
+	  generic, public :: processExchange => processExchangeImpl
   end type ConnectionBuilderType  
   
-contains
+  contains
 
-  subroutine buildConnectionImpl(this, exchange)
+  subroutine processExchangeImpl(this, exchange)
     use ListsModule, only: connectionlist
   
     class(ConnectionBuilderType) :: this
@@ -51,7 +52,7 @@ contains
     ! add exchange to connection
     call modelConnection%addExchange(exchange)
           
-  end subroutine buildConnectionImpl
+  end subroutine processExchangeImpl
   
   function createModelConnection(model, connectionType) result(connection)
     use SimModule, only: ustop

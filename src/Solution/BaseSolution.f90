@@ -27,6 +27,7 @@ module BaseSolutionModule
     procedure (slnaddmodel), deferred :: add_model
     procedure (slnaddexchange), deferred :: add_exchange
     procedure (slngetmodels), deferred :: get_models
+    procedure (assignConnectionsIFace), deferred :: assignModelConnections
   end type BaseSolutionType
 
   abstract interface
@@ -43,6 +44,11 @@ module BaseSolutionModule
       class(BaseExchangeType), pointer, intent(in) :: exchange
     end subroutine
 
+    subroutine assignConnectionsIFace(this)
+      import BaseSolutionType
+      class(BaseSolutionType) :: this
+    end subroutine
+    
     subroutine sln_ar(this)
       import BaseSolutionType
       class(BaseSolutionType) :: this

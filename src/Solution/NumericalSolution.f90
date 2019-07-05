@@ -42,6 +42,7 @@ module NumericalSolutionModule
     character(len=LINELENGTH)                            :: fname                          !< input file name
     type(ListType), pointer                              :: modellist                      !< list of models in solution
     type(ListType), pointer                              :: exchangelist                   !< list of exchanges in solution
+    type(ListType)                                       :: connectionlist
     integer(I4B), pointer                                :: id                             !< solution number
     integer(I4B), pointer                                :: iu                             !< input file unit
     real(DP), pointer                                    :: ttform                         !< timer - total formulation time
@@ -141,6 +142,7 @@ module NumericalSolutionModule
     procedure :: add_model
     procedure :: add_exchange
     procedure :: get_models
+    procedure :: assignModelConnections
     procedure :: save
 
     procedure, private :: sln_connect
@@ -2198,6 +2200,10 @@ subroutine solution_create(filename, id)
     return
   end subroutine add_exchange
 
+  subroutine assignModelConnections(this)
+    class(NumericalSolutionType) :: this
+  end subroutine
+  
   !> @ brief Assign solution connections
   !!
   !!  Assign solution connections. This is the main workhorse method for a 
@@ -2231,6 +2237,10 @@ subroutine solution_create(filename, id)
       call cp%exg_ac(this%sparse)
     enddo
     !
+    ! -- Add terms from model connections to sparse
+    ! TODO_MJR: the above should be removed once this is ready
+
+    
     ! -- The number of non-zero array values are now known so
     ! -- ia and ja can be created from sparse. then destroy sparse
     this%nja=this%sparse%nnz
