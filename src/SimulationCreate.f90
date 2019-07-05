@@ -24,6 +24,7 @@ module SimulationCreateModule
   private
   public :: simulation_cr
   public :: simulation_da
+  public :: connections_cr
 
   integer(I4B) :: inunit = 0
   character(len=LENMODELNAME), allocatable, dimension(:) :: modelname
@@ -59,6 +60,55 @@ module SimulationCreateModule
     return
   end subroutine simulation_cr
 
+  subroutine connections_cr()
+  ! ******************************************************************************
+  ! Create the Model Connections from the exchanges:
+  ! 
+  ! - GWF-GWF => GwfGwfConnection
+  ! - GWT-GWT => GwtGwtConecction
+  ! - GWT-GWF => GwtGwfConnection
+  ! - ...etc...
+  !
+  ! ******************************************************************************
+    use ListsModule, only: baseexchangelist
+    use BaseExchangeModule,       only: GetBaseExchangeFromList
+    use NumericalExchangeModule,  only: NumericalExchangeType
+    use ConnectionBuilderModule
+    
+    integer(I4B) :: ic
+    
+    type(ConnectionBuilderType) :: connectionBuilder
+    
+    class(BaseExchangeType), pointer :: ep => null()    
+    class(NumericalExchangeType), pointer :: numExchange => null()
+    
+    if (baseexchangelist%Count() == 0) then
+      ! very possible, silently return
+      return
+    end if
+        
+    write(*,'(1x,a)') 'Create model connections from exchanges'
+    
+    do ic = 1, baseexchangelist%Count()
+      ep => GetBaseExchangeFromList(baseexchangelist, ic)
+      
+      ! we assume that we have model-based exchanges, otherwise a model
+      ! connection doesn't make sense. Hence we need NumericalExchanges
+      ! and derived classes
+      select type (ep)
+        class is (NumericalExchangeType)      
+          ! now create connections for this exchange, or extend existing connection
+          numExchange => ep
+          call connectionBuilder%buildConnection(numExchange)
+        class default
+          ! unsupported exchange, do nothing here
+          write(*,'(4x,a)') 'Error (which should never happen): unsupported exchangetype for creating model connection'
+      end select 
+      
+    enddo
+    
+  end subroutine connections_cr
+  
   !> @brief Deallocate simulation variables
   !<
   subroutine simulation_da()

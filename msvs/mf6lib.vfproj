@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VisualStudioProject ProjectType="typeStaticLibrary" ProjectCreator="Intel Fortran" Keyword="Static Library" Version="11.0" ProjectIdGuid="{44B7D693-FE26-479C-9E80-2DFF99EFF1C5}">
+	<Platforms>
+		<Platform Name="Win32"/>
+		<Platform Name="x64"/></Platforms>
+	<Configurations>
+		<Configuration Name="Debug|Win32" ConfigurationType="typeStaticLibrary">
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" WarnInterfaces="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebugDLL"/>
+				<Tool Name="VFLibrarianTool"/>
+				<Tool Name="VFResourceCompilerTool"/>
+				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
+				<Tool Name="VFCustomBuildTool"/>
+				<Tool Name="VFPreLinkEventTool"/>
+				<Tool Name="VFPreBuildEventTool"/>
+				<Tool Name="VFPostBuildEventTool"/></Configuration>
+		<Configuration Name="Release|Win32" ConfigurationType="typeStaticLibrary">
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" RuntimeLibrary="rtMultiThreadedDLL"/>
+				<Tool Name="VFLibrarianTool"/>
+				<Tool Name="VFResourceCompilerTool"/>
+				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
+				<Tool Name="VFCustomBuildTool"/>
+				<Tool Name="VFPreLinkEventTool"/>
+				<Tool Name="VFPreBuildEventTool"/>
+				<Tool Name="VFPostBuildEventTool"/></Configuration>
+		<Configuration Name="Debug|x64" ConfigurationType="typeStaticLibrary">
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" WarnInterfaces="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebugDLL"/>
+				<Tool Name="VFLinkerTool" SuppressStartupBanner="true"/>
+				<Tool Name="VFLibrarianTool"/>
+				<Tool Name="VFResourceCompilerTool"/>
+				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+				<Tool Name="VFCustomBuildTool"/>
+				<Tool Name="VFPreLinkEventTool"/>
+				<Tool Name="VFPreBuildEventTool"/>
+				<Tool Name="VFPostBuildEventTool"/>
+				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
+		<Configuration Name="Release|x64" ConfigurationType="typeStaticLibrary">
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true"/>
+				<Tool Name="VFLibrarianTool"/>
+				<Tool Name="VFResourceCompilerTool"/>
+				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+				<Tool Name="VFCustomBuildTool"/>
+				<Tool Name="VFPreLinkEventTool"/>
+				<Tool Name="VFPreBuildEventTool"/>
+				<Tool Name="VFPostBuildEventTool"/></Configuration></Configurations>
+	<Files>
+		<Filter Name="Header Files" Filter="fi;fd"/>
+		<Filter Name="Resource Files" Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"/>
+		<Filter Name="Source Files">
+		<Filter Name="Exchange">
+		<File RelativePath="..\src\Exchange\BaseExchange.f90"/>
+		<File RelativePath="..\src\Exchange\GhostNode.f90"/>
+		<File RelativePath="..\src\Exchange\GwfGwfExchange.f90"/>
+		<File RelativePath="..\src\Exchange\NumericalExchange.f90"/></Filter>
+		<Filter Name="Model">
+		<Filter Name="Connection">
+		<File RelativePath="..\src\Model\Connection\ConnectionBuilder.f90"/>
+		<File RelativePath="..\src\Model\Connection\MeshConnection.f90"/>
+		<File RelativePath="..\src\Model\Connection\GwfGwfConnection.f90"/>
+		<File RelativePath="..\src\Model\Connection\ModelConnection.f90"/>
+		<File RelativePath="..\src\Model\Connection\SpatialModelConnection.f90"/></Filter>
+		<Filter Name="Geometry">
+		<File RelativePath="..\src\Model\Geometry\BaseGeometry.f90"/>
+		<File RelativePath="..\src\Model\Geometry\CircularGeometry.f90"/>
+		<File RelativePath="..\src\Model\Geometry\RectangularChGeometry.f90"/>
+		<File RelativePath="..\src\Model\Geometry\RectangularGeometry.f90"/></Filter>
+		<Filter Name="GroundWaterFlow">
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3chd8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3dis8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3disu8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3disv8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3drn8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3evt8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3ghb8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3hfb8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3ic8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3lak8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3maw8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3mvr8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3npf8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3obs8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3oc8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3rch8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3riv8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3sfr8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3sto8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3uzf8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3wel8.f90"/></Filter>
+		<Filter Name="ModelUtilities">
+		<File RelativePath="..\src\Model\ModelUtilities\BndUzfKinematic.f90"/>
+		<File RelativePath="..\src\Model\ModelUtilities\BoundaryPackage.f90"/>
+		<File RelativePath="..\src\Model\ModelUtilities\Connections.f90"/>
+		<File RelativePath="..\src\Model\ModelUtilities\DiscretizationBase.f90"/>
+		<File RelativePath="..\src\Model\ModelUtilities\DisvGeom.f90"/>
+		<File RelativePath="..\src\Model\ModelUtilities\Mover.f90"/>
+		<File RelativePath="..\src\Model\ModelUtilities\PackageMover.f90"/>
+		<File RelativePath="..\src\Model\ModelUtilities\Xt3dAlgorithm.f90"/>
+		<File RelativePath="..\src\Model\ModelUtilities\Xt3dInterface.f90"/></Filter>
+		<File RelativePath="..\src\Model\BaseModel.f90"/>
+		<File RelativePath="..\src\Model\NumericalModel.f90"/>
+		<File RelativePath="..\src\Model\NumericalPackage.f90"/></Filter>
+		<Filter Name="Solution">
+		<Filter Name="IMS">
+		<File RelativePath="..\src\Solution\SparseMatrixSolver\ims8linear.f90"/>
+		<File RelativePath="..\src\Solution\SparseMatrixSolver\ims8reordering.f90"/></Filter>
+		<File RelativePath="..\src\Solution\BaseSolution.f90"/>
+		<File RelativePath="..\src\Solution\NumericalSolution.f90"/>
+		<File RelativePath="..\src\Solution\SolutionGroup.f90"/></Filter>
+		<Filter Name="Timing">
+		<File RelativePath="..\src\Timing\tdis.f90"/></Filter>
+		<Filter Name="Utilities">
+		<Filter Name="Memory">
+		<File RelativePath="..\src\Utilities\Memory\Memory.f90"/>
+		<File RelativePath="..\src\Utilities\Memory\MemoryList.f90"/>
+		<File RelativePath="..\src\Utilities\Memory\MemoryManager.f90"/></Filter>
+		<Filter Name="Observation">
+		<File RelativePath="..\src\Utilities\Observation\Obs3.f90"/>
+		<File RelativePath="..\src\Utilities\Observation\ObsContainer.f90"/>
+		<File RelativePath="..\src\Utilities\Observation\Observe.f90"/>
+		<File RelativePath="..\src\Utilities\Observation\ObsOutput.f90"/>
+		<File RelativePath="..\src\Utilities\Observation\ObsOutputList.f90"/>
+		<File RelativePath="..\src\Utilities\Observation\ObsUtility.f90"/></Filter>
+		<Filter Name="OutputControl">
+		<File RelativePath="..\src\Utilities\OutputControl\OutputControl.f90"/>
+		<File RelativePath="..\src\Utilities\OutputControl\OutputControlData.f90"/>
+		<File RelativePath="..\src\Utilities\OutputControl\PrintSaveManager.f90"/></Filter>
+		<Filter Name="TimeSeries">
+		<File RelativePath="..\src\Utilities\TimeSeries\TimeArray.f90"/>
+		<File RelativePath="..\src\Utilities\TimeSeries\TimeArraySeries.f90"/>
+		<File RelativePath="..\src\Utilities\TimeSeries\TimeArraySeriesLink.f90"/>
+		<File RelativePath="..\src\Utilities\TimeSeries\TimeArraySeriesManager.f90"/>
+		<File RelativePath="..\src\Utilities\TimeSeries\TimeSeries.f90"/>
+		<File RelativePath="..\src\Utilities\TimeSeries\TimeSeriesFileList.f90"/>
+		<File RelativePath="..\src\Utilities\TimeSeries\TimeSeriesLink.f90"/>
+		<File RelativePath="..\src\Utilities\TimeSeries\TimeSeriesManager.f90"/>
+		<File RelativePath="..\src\Utilities\TimeSeries\TimeSeriesRecord.f90"/></Filter>
+		<File RelativePath="..\src\Utilities\ArrayHandlers.f90"/>
+		<File RelativePath="..\src\Utilities\ArrayReaders.f90"/>
+		<File RelativePath="..\src\Utilities\BlockParser.f90"/>
+		<File RelativePath="..\src\Utilities\Budget.f90"/>
+		<File RelativePath="..\src\Utilities\comarg.f90"/>
+		<File RelativePath="..\src\Utilities\compilerversion.fpp"/>
+		<File RelativePath="..\src\Utilities\Constants.f90"/>
+		<File RelativePath="..\src\Utilities\genericutils.f90"/>
+		<File RelativePath="..\src\Utilities\HashTable.f90"/>
+		<File RelativePath="..\src\Utilities\InputOutput.f90"/>
+		<File RelativePath="..\src\Utilities\Iunit.f90"/>
+		<File RelativePath="..\src\Utilities\kind.f90"/>
+		<File RelativePath="..\src\Utilities\List.f90"/>
+		<File RelativePath="..\src\Utilities\ListReader.f90"/>
+		<File RelativePath="..\src\Utilities\NameFile.f90"/>
+		<File RelativePath="..\src\Utilities\OpenSpec.f90"/>
+		<File RelativePath="..\src\Utilities\Sim.f90"/>
+		<File RelativePath="..\src\Utilities\SimVariables.f90"/>
+		<File RelativePath="..\src\Utilities\SmoothingFunctions.f90"/>
+		<File RelativePath="..\src\Utilities\sort.f90"/>
+		<File RelativePath="..\src\Utilities\Sparse.f90"/>
+		<File RelativePath="..\src\Utilities\StringList.f90"/>
+		<File RelativePath="..\src\Utilities\Timer.f90"/>
+		<File RelativePath="..\src\Utilities\version.f90"/></Filter>
+		<File RelativePath="..\src\mf6lib.f90"/>
+		<File RelativePath="..\src\mf6lists.f90"/>
+		<File RelativePath="..\src\SimulationCreate.f90"/></Filter></Files>
+	<Globals/></VisualStudioProject>
