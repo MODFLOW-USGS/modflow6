@@ -18,7 +18,7 @@ module ConnectionBuilderModule
   contains
 
   subroutine processExchangeImpl(this, exchange)
-    use ListsModule, only: connectionlist
+    use ListsModule, only: baseconnectionlist
   
     class(ConnectionBuilderType) :: this
     class(NumericalExchangeType), pointer :: exchange
@@ -33,7 +33,7 @@ module ConnectionBuilderModule
       ! create new model connection
       newConnection => createModelConnection(exchange%m1, exchange%typename)      
       ! add to global list
-      call connectionList%Add(newConnection)
+      call baseconnectionlist%Add(newConnection)
       modelConnection => CastAsModelConnectionClass(newConnection)
     end if
       
@@ -45,7 +45,7 @@ module ConnectionBuilderModule
     if (.not. associated(modelConnection)) then
       ! create new model connection
       newConnection => createModelConnection(exchange%m2, exchange%typename)
-      call connectionList%Add(newConnection)
+      call baseconnectionlist%Add(newConnection)
       modelConnection => CastAsModelConnectionClass(newConnection)
     end if
       
@@ -89,7 +89,7 @@ module ConnectionBuilderModule
   ! function gets an existing connection for the model, based on the
   ! type of exchange. Return null() when not found
   function lookupConnection(model, exchangeType) result(connection)
-    use ListsModule, only: connectionlist
+    use ListsModule, only: baseconnectionlist
     
     class(NumericalModelType), pointer  :: model
     character(len=*)                    :: exchangeType
@@ -101,16 +101,15 @@ module ConnectionBuilderModule
     
     connection => null()
     
-    call connectionlist%Reset()
-    do i = 1, connectionlist%Count()
-      candidate => GetConnectionFromList(connectionlist,i)      
+    call baseconnectionlist%Reset()
+    do i = 1, baseconnectionlist%Count()      
+      candidate => GetConnectionFromList(baseconnectionlist,i)      
       if (candidate%connectionType == exchangeType) then
         if (associated(candidate%owner, model)) then
           connection => candidate
           return
         end if
-      end if
-      
+      end if      
     end do
     
   end function lookupConnection

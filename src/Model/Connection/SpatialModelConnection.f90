@@ -22,8 +22,9 @@ module SpatialModelConnectionModule
   contains
     procedure, pass(this) :: spatialConnection_ctor
     generic, public :: construct => spatialConnection_ctor
-    procedure,pass(this)  :: addExchange => addExchangeToSpatialConnection
+    procedure, pass(this) :: addExchange => addExchangeToSpatialConnection
     procedure, pass(this) :: mc_df => defineSpatialConnection 
+    procedure, pass(this) :: mc_ac => addConnectionsToMatrix
     procedure, private, pass(this) :: getNrOfConnections
   end type SpatialModelConnectionType
 
@@ -60,7 +61,7 @@ contains ! module procedures
   subroutine defineSpatialConnection(this)
     class(SpatialModelConnectionType), intent(inout) :: this
     ! local
-    integer(I4B) :: iex
+    integer(I4B) :: iex, iconn
     type(NumericalExchangeType), pointer :: numEx
     
     numEx => null()
@@ -70,13 +71,25 @@ contains ! module procedures
     call this%meshConnection%construct(this%nrOfConnections, this%name)
     
     ! fill primary links: n <=> m
-    do iex = 1, this%exchangeList%Count()
+    do iex=1, this%exchangeList%Count()
       numEx => GetNumericalExchangeFromList(this%exchangeList, iex)
-      
+      do iconn=1, numEx%nexg 
+        call this%meshConnection%addConnection(iconn, numEx%nodem1(iconn), numEx%nodem2(iconn))
+      end do
     end do
     
   end subroutine defineSpatialConnection
-   
+  
+  subroutine addConnectionsToMatrix(this)
+    class(SpatialModelConnectionType), intent(inout) :: this
+    integer :: dummy
+    
+    do dummy=1, this%meshConnection%nrOfConnections
+      write(*,*) dummy,': ', this%meshConnection%localNodes(dummy), this%meshConnection%connectedNodes(dummy)
+    end do
+    
+  end subroutine
+  
   ! count total nr. of connection between cells, from the exchanges
   function getNrOfConnections(this) result(nrConns)
     class(SpatialModelConnectionType), intent(inout) :: this

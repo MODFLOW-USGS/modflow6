@@ -7,7 +7,7 @@ module MeshConnectionModule
   
   type, public :: MeshConnectionType
     character(len=LENORIGIN) :: memOrigin
-    integer(I4B), pointer :: nrOfConnections => null()
+    integer(I4B), pointer :: nrOfConnections => null() ! TODO_MJR: probably we should call them 'links' or so, less confusing
     integer(I4B), dimension(:), pointer, contiguous :: localNodes => null()
     integer(I4B), dimension(:), pointer, contiguous :: connectedNodes => null()
   contains
@@ -29,19 +29,18 @@ contains ! module procedures
     call this%allocateArrays(nConnections) 
     
     this%nrOfConnections = nConnections    
-    
+    this%localNodes = -1
+    this%connectedNodes = -1
+     
   end subroutine
   
   ! add connection between node n and m (global ids)
-  subroutine addConnection(this, n, m)
+  subroutine addConnection(this, idx, n, m)
     class(MeshConnectionType), intent(in) :: this
-    integer(I4B) :: n, m
+    integer(I4B) :: n, m, idx
     
-    integer(I4B) :: lastIdx
-    
-    lastIdx = size(this%localNodes)
-    this%localNodes(lastIdx + 1) = n
-    this%connectedNodes(lastIdx + 1) = m
+    this%localNodes(idx) = n
+    this%connectedNodes(idx) = m
     
   end subroutine addConnection
   
