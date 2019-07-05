@@ -13,8 +13,7 @@ module GwfGwfConnectionModule
     
   contains 
     procedure, pass(this) :: gwfGwfConnection_ctor
-	  generic, public :: construct => gwfGwfConnection_ctor    
-    procedure, pass(this) :: mc_df => defineGwfGwfConnection 
+	  generic, public :: construct => gwfGwfConnection_ctor
   end type GwfGwfConnectionType
 
 contains
@@ -25,7 +24,7 @@ contains
     class(NumericalModelType), pointer          :: model ! note: this must be a GwfModelType
     
     ! first call base constructor
-    call this%construct(model, 'CONN_GWF_GWF_'//model%name)
+    call this%construct(model, 'GWF_GWF_CONN_'//model%name)
     
     ! construct GWF part here
     select type(model)
@@ -34,11 +33,5 @@ contains
     end select
       
   end subroutine gwfGwfConnection_ctor
-
-  subroutine defineGwfGwfConnection(this)
-    class(GwfGwfConnectionType), intent(inout) :: this
-  end subroutine defineGwfGwfConnection
-  
-  
-  
+    
 end module GwfGwfConnectionModule

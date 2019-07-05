@@ -38,6 +38,7 @@ module NumericalSolutionModule
     character(len=LINELENGTH)                            :: fname
     type(ListType)                                       :: modellist
     type(ListType)                                       :: exchangelist
+    type(ListType)                                       :: connectionlist
     integer(I4B), pointer                                :: id
     integer(I4B), pointer                                :: iu
     real(DP), pointer                                    :: ttform
@@ -132,6 +133,7 @@ module NumericalSolutionModule
     procedure :: addmodel
     procedure :: addexchange
     procedure :: slnassignexchanges
+    procedure :: assignModelConnections
     procedure :: save
 
     procedure, private :: sln_connect
@@ -1928,6 +1930,10 @@ contains
     return
   end subroutine slnassignexchanges
 
+  subroutine assignModelConnections(this)
+    class(NumericalSolutionType) :: this
+  end subroutine
+  
   subroutine sln_connect(this)
 ! ******************************************************************************
 ! sln_connect -- Assign Connections
@@ -1963,6 +1969,10 @@ contains
       call cp%exg_ac(this%sparse)
     enddo
     !
+    ! -- Add terms from model connections to sparse
+    ! TODO_MJR: the above should be removed once this is ready
+
+    
     ! -- The number of non-zero array values are now known so
     ! -- ia and ja can be created from sparse. then destroy sparse
     this%nja=this%sparse%nnz

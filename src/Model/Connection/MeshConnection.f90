@@ -1,51 +1,66 @@
 module MeshConnectionModule
   use KindModule, only: I4B
+  use ConstantsModule, only: LENORIGIN
   
   implicit none
   private
   
-  type, public :: MeshConnection
+  type, public :: MeshConnectionType
+    character(len=LENORIGIN) :: memOrigin
+    integer(I4B), pointer :: nrOfConnections => null()
     integer(I4B), dimension(:), pointer, contiguous :: localNodes => null()
     integer(I4B), dimension(:), pointer, contiguous :: connectedNodes => null()
   contains
     procedure, pass(this) :: construct
+    procedure, private, pass(this) :: allocateScalars, allocateArrays
     procedure, pass(this) :: addConnection
-    procedure, pass(this) :: getLocalNodes
-    procedure, pass(this) :: getConnectedNodes
   end type
   
 contains ! module procedures
 
-  subroutine construct(this, nrOfConnections)
-    class(MeshConnection), intent(in) :: this
-    integer(I4B) :: nrOfConnections
+  ! note: constructing object allocates data structures
+  subroutine construct(this, nConnections, connectionName)   
+    class(MeshConnectionType), intent(inout) :: this
+    integer(I4B) :: nConnections
+    character(len=*) :: connectionName
+        
+    this%memOrigin = trim(connectionName)//'_MC'
+    call this%allocateScalars()
+    call this%allocateArrays(nConnections) 
     
-    ! TODO_MJR
+    this%nrOfConnections = nConnections    
     
   end subroutine
   
+  ! add connection between node n and m (global ids)
   subroutine addConnection(this, n, m)
-    class(MeshConnection), intent(in) :: this
+    class(MeshConnectionType), intent(in) :: this
     integer(I4B) :: n, m
     
-    ! TODO_MJR
+    integer(I4B) :: lastIdx
+    
+    lastIdx = size(this%localNodes)
+    this%localNodes(lastIdx + 1) = n
+    this%connectedNodes(lastIdx + 1) = m
     
   end subroutine addConnection
+  
+  subroutine allocateScalars(this)
+    use MemoryManagerModule, only: mem_allocate
+    class(MeshConnectionType), intent(in) :: this
+      
+    call mem_allocate(this%nrOfConnections, 'NRCONN', this%memOrigin)
     
-  function getLocalNodes(this) result(nds)
-    class(MeshConnection), intent(in) :: this
-    integer(I4B), dimension(:), pointer :: nds
+  end subroutine allocateScalars
+  
+  subroutine allocateArrays(this, nConns)
+    use MemoryManagerModule, only: mem_allocate
+    class(MeshConnectionType), intent(in) :: this
+    integer(I4B) :: nConns
     
-    ! TODO_MJR
+    call mem_allocate(this%localNodes, nConns, 'LNODES', this%memOrigin)
+    call mem_allocate(this%connectedNodes, nConns, 'CNODES', this%memOrigin)
     
-  end function getLocalNodes
-    
-  function getConnectedNodes(this) result(connNds)
-    class(MeshConnection), intent(in) :: this
-    integer(I4B), dimension(:), pointer :: connNds
-    
-    ! TODO_MJR
-    
-  end function getConnectedNodes
+  end subroutine allocateArrays
   
 end module MeshConnectionModule

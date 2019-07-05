@@ -24,6 +24,7 @@ module BaseSolutionModule
     procedure (slnsave), deferred :: save
     procedure (slnaddmodel), deferred :: addmodel
     procedure (slnassignexchanges), deferred :: slnassignexchanges
+    procedure (assignConnectionsIFace), deferred :: assignModelConnections
   end type BaseSolutionType
 
   abstract interface
@@ -38,6 +39,11 @@ module BaseSolutionModule
       class(BaseSolutionType) :: this
     end subroutine
 
+    subroutine assignConnectionsIFace(this)
+      import BaseSolutionType
+      class(BaseSolutionType) :: this
+    end subroutine
+    
     subroutine sln_ar(this)
       import BaseSolutionType
       class(BaseSolutionType) :: this

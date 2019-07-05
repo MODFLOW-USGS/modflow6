@@ -101,7 +101,7 @@ module SimulationCreateModule
         class is (NumericalExchangeType)      
           ! now create connections for this exchange, or extend existing connection
           numExchange => ep
-          call connectionBuilder%buildConnection(numExchange)
+          call connectionBuilder%processExchange(numExchange)
         class default
           ! unsupported exchange, do nothing here
           write(*,'(4x,a)') 'Error (which should never happen): unsupported exchangetype for creating model connection'
@@ -109,7 +109,25 @@ module SimulationCreateModule
       
     enddo
     
+    ! TODO_MJR: this should not be here, but analogous to models for now...
+    call assignConnectionsToSolution()
+    
   end subroutine connections_cr
+  
+  subroutine assignConnectionsToSolution()
+    use ListsModule, only: connectionlist, basesolutionlist
+    use BaseSolutionModule, only: GetBaseSolutionFromList
+    ! local
+    class(BaseSolutionType), pointer :: sol => null()
+    class(BaseModelType), pointer :: mod => null()
+    integer(I4B) :: isol, imod
+    
+    do isol = 1, basesolutionlist%Count()
+      sol => GetBaseSolutionFromList(basesolutionlist, isol)
+      call sol%assignModelConnections()
+    enddo
+    
+  end subroutine
   
   subroutine simulation_da()
 ! ******************************************************************************
