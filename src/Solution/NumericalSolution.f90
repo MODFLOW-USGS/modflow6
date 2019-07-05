@@ -2831,7 +2831,30 @@ contains
     !
     return
   end function GetNumericalSolutionFromList
-  
-  
-  
+
+
+  ! print sparse matrix (crs) to file, with zero-based indices
+  subroutine save_matrix(filename, nrows, ia, ja, M) !MJR
+    use InputOutputModule, only:getunit
+    
+    character(len=*), intent(in)              :: filename
+    integer(I4B), intent(in)                  :: nrows
+    integer(I4B), dimension(:), intent(in)    :: ia, ja
+    real(DP), dimension(:), intent(in)        :: M    
+    
+    integer(I4B) :: inunit
+    integer(I4B) :: i,j
+    
+    inunit = getunit()
+    open(inunit, file=filename)    
+    do i=1,nrows
+      do j=ia(i),ia(i+1)-1        
+        write(inunit, *) i-1, ja(j)-1, M(j) ! NB: zero-based
+      enddo
+    enddo
+    close(inunit)
+    
+  end subroutine  
+
+
 end module NumericalSolutionModule
