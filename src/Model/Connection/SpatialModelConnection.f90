@@ -59,38 +59,55 @@ contains ! module procedures
   end subroutine addExchangeToSpatialConnection
   
   subroutine defineSpatialConnection(this)
-    class(SpatialModelConnectionType), intent(inout) :: this
-    ! local
-    integer(I4B) :: iex, iconn
-    type(NumericalExchangeType), pointer :: numEx
-    
-    numEx => null()
+    class(SpatialModelConnectionType), intent(inout) :: this    
     
     ! create the mesh connection data structure
     this%nrOfConnections = this%getNrOfConnections()
     call this%meshConnection%construct(this%nrOfConnections, this%name)
     
-    ! fill primary links: n <=> m
+  end subroutine defineSpatialConnection
+  
+  ! add connections to global matrix, does not fill in symmetric elements: i.e.,
+  ! it needs to be called twice for two connected cells (elements m-n and n-m)
+  subroutine addConnectionsToMatrix(this, sparse)
+    use SparseModule, only:sparsematrix
+    class(SpatialModelConnectionType), intent(inout) :: this
+    type(sparsematrix), intent(inout) :: sparse 
+    ! local
+    integer(I4B) :: ic
+    integer(I4B) :: iglo, jglo        ! global row (i) and column (j) numbers
+    integer(I4B) :: offset, nbrOffset ! model offset in global solution matrix, for owner and neighbour
+    integer(I4B) :: iex, iconn
+    type(NumericalExchangeType), pointer :: numEx
+    
+    numEx => null()
+    
+    ! fill primary links, with global numbering: n => m or m <= n, but not both
     do iex=1, this%exchangeList%Count()
       numEx => GetNumericalExchangeFromList(this%exchangeList, iex)
       do iconn=1, numEx%nexg
         if (associated(numEx%m1, this%owner)) then
-          call this%meshConnection%addConnection(iconn, numEx%nodem1(iconn), numEx%nodem2(iconn))
+          iglo = numEx%nodem1(iconn) + this%owner%moffset
+          jglo = numEx%nodem2(iconn) + numEx%m2%moffset
         else
-          call this%meshConnection%addConnection(iconn, numEx%nodem2(iconn), numEx%nodem1(iconn))
-        end if        
+          iglo = numEx%nodem2(iconn) + this%owner%moffset
+          jglo = numEx%nodem1(iconn) + numEx%m1%moffset
+        end if
+        
+        ! local admin
+        call this%meshConnection%addConnection(iconn, iglo, jglo)
+        
+        ! add to sparse
+        call sparse%addconnection(iglo, jglo, 1)
+        
       end do
     end do
     
-  end subroutine defineSpatialConnection
-  
-  subroutine addConnectionsToMatrix(this)
-    class(SpatialModelConnectionType), intent(inout) :: this
-    integer :: dummy
-    
-    do dummy=1, this%meshConnection%nrOfConnections
-      write(*,*) dummy,': ', this%meshConnection%localNodes(dummy), this%meshConnection%connectedNodes(dummy)
+    offset = this%owner%moffset
+    do ic=1, this%meshConnection%nrOfConnections     
+      write(*,*) ic, ': ', this%meshConnection%localNodes(ic), this%meshConnection%connectedNodes(ic)
     end do
+    
     
   end subroutine
   

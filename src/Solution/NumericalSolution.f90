@@ -154,6 +154,7 @@ module NumericalSolutionModule
     procedure, private :: allocate_arrays
     procedure, private :: convergence_summary
     procedure, private :: csv_convergence_summary
+    procedure, private :: sln_buildsystem
 
     ! for BMI refactoring:
     procedure, public :: prepareIteration
@@ -1634,6 +1635,48 @@ contains
     
   end subroutine finalizeIteration
   
+  ! helper routine to calculate coefficients and setup the solution matrix
+  subroutine sln_buildsystem(this, kiter, inewton)
+    class(NumericalSolutionType) :: this
+    integer(I4B), intent(in) :: kiter
+    integer(I4B), intent(in) :: inewton
+    
+    ! local
+    integer(I4B) :: im, ic
+    class(NumericalModelType), pointer :: mp
+    class(NumericalExchangeType), pointer :: cp
+    
+    !
+    ! -- Set amat and rhs to zero
+    call this%sln_reset()
+    
+    !
+    ! -- Calculate the matrix terms for each exchange
+    do ic=1,this%exchangelist%Count()
+      cp => GetNumericalExchangeFromList(this%exchangelist, ic)
+      call cp%exg_cf(kiter)
+    enddo
+    !
+    ! -- Calculate the matrix terms for each model
+    do im=1,this%modellist%Count()
+      mp => GetNumericalModelFromList(this%modellist, im)
+      call mp%model_cf(kiter)
+    enddo
+    !
+    ! -- Add exchange coefficients to the solution
+    do ic=1,this%exchangelist%Count()
+      cp => GetNumericalExchangeFromList(this%exchangelist, ic)
+      call cp%exg_fc(kiter, this%ia, this%amat, inewton)
+    enddo
+    !
+    ! -- Add model coefficients to the solution
+    do im=1,this%modellist%Count()
+      mp => GetNumericalModelFromList(this%modellist, im)
+      call mp%model_fc(kiter, this%amat, this%nja, inewton)
+    enddo
+    
+  end subroutine sln_buildsystem
+  
   subroutine convergence_summary(this, iu, im, itertot)
 ! ******************************************************************************
 ! convergence_summary -- Save convergence summary to a File
@@ -2000,7 +2043,7 @@ contains
     do ic=1, this%connectionlist%Count()
         ! TODO_MJR: probably we should never have the abstract base in the NumericalSolutionType??
         mc => GetConnectionFromList(this%connectionlist, ic)
-        call mc%mc_ac()
+        !call mc%mc_ac(this%sparse)
     end do
     
     ! -- The number of non-zero array values are now known so
@@ -2335,34 +2378,11 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ibflag = 0
+    
     !
     ! -- refill amat and rhs with standard conductance
-    ! -- Set amat and rhs to zero
-    call this%sln_reset()
-    !
-    ! -- Calculate matrix coefficients (CF) for each exchange
-    do ic=1,this%exchangelist%Count()
-      cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-      call cp%exg_cf(kiter)
-    end do
-    !
-    ! -- Calculate matrix coefficients (CF) for each model
-    do im=1,this%modellist%Count()
-      mp => GetNumericalModelFromList(this%modellist, im)
-      call mp%model_cf(kiter)
-    end do
-    !
-    ! -- Fill coefficients (FC) for each exchange
-    do ic=1,this%exchangelist%Count()
-      cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-      call cp%exg_fc(kiter, this%ia, this%amat, 0)
-    end do
-    !
-    ! -- Fill coefficients (FC) for each model
-    do im=1,this%modellist%Count()
-      mp => GetNumericalModelFromList(this%modellist, im)
-      call mp%model_fc(kiter, this%amat, this%nja, 0)
-    end do
+    call this%sln_buildsystem(kiter, inewton=0)
+       
     !
     ! -- calculate initial l2 norm
     if (kiter == 1) then
@@ -2392,33 +2412,10 @@ contains
           end if
           !
           ibtcnt = nb
-          !
-          ! -- Set amat and rhs to zero
-          call this%sln_reset()
-          !
-          ! -- Calculate matrix coefficients (CF) for each exchange
-          do ic=1,this%exchangelist%Count()
-            cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-            call cp%exg_cf(kiter)
-          end do
-          !
-          ! -- Calculate matrix coefficients (CF) for each model
-          do im=1,this%modellist%Count()
-            mp => GetNumericalModelFromList(this%modellist, im)
-            call mp%model_cf(kiter)
-          end do
-          !
-          ! -- Fill coefficients (FC) for each exchange
-          do ic=1,this%exchangelist%Count()
-            cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-            call cp%exg_fc(kiter, this%ia, this%amat, 0)
-          end do
-          !
-          ! -- Fill coefficients (FC) for each model
-          do im=1,this%modellist%Count()
-            mp => GetNumericalModelFromList(this%modellist, im)
-            call mp%model_fc(kiter, this%amat, this%nja, 0)
-          end do
+          
+          ! recalculate linear system (amat and rhs)
+          call this%sln_buildsystem(kiter, inewton=0)
+                    
           !
           ! -- calculate updated l2norm
           call this%sln_l2norm(this%neq, this%nja,                             &

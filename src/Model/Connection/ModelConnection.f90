@@ -2,6 +2,7 @@
 module ModelConnectionModule
   use KindModule, only: I4B
   use ConstantsModule, only: LENPACKAGENAME
+  use SparseModule, only:sparsematrix
   use ListModule
   use NumericalModelModule, only: NumericalModelType
   use NumericalExchangeModule, only: NumericalExchangeType 
@@ -25,6 +26,8 @@ module ModelConnectionModule
     
     procedure (defineConnectionIFace), deferred, pass(this)       :: mc_df
     procedure (addConnectionsToMatrixIFace), deferred, pass(this) :: mc_ac  
+    procedure (calculateCoefficientsIFace), deferred, pass(this)  :: mc_cf
+    
     ! derived types should decide for themselves how the overall connection is 
     ! altered when another model is connected
     procedure (addExchangeIFace), deferred, pass(this) :: addExchange
@@ -38,10 +41,17 @@ module ModelConnectionModule
       class(ModelConnectionType), intent(inout) :: this
     end subroutine defineConnectionIFace
   
-    subroutine addConnectionsToMatrixIFace(this)
-      import :: ModelConnectionType
+    subroutine addConnectionsToMatrixIFace(this, sparse)
+      import :: ModelConnectionType, sparsematrix
       class(ModelConnectionType), intent(inout) :: this
+      type(sparsematrix), intent(inout) :: sparse
     end subroutine
+    
+    subroutine calculateCoefficientsIFace(this, kiter)
+      import :: ModelConnectionType, sparsematrix, I4B
+      class(ModelConnectionType), intent(inout) :: this
+      integer(I4B), intent(in) :: kiter
+    end subroutine calculateCoefficientsIFace
     
     subroutine addExchangeIFace(this, exchange)
       import :: ModelConnectionType, NumericalExchangeType
