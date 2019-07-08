@@ -73,8 +73,12 @@ contains ! module procedures
     ! fill primary links: n <=> m
     do iex=1, this%exchangeList%Count()
       numEx => GetNumericalExchangeFromList(this%exchangeList, iex)
-      do iconn=1, numEx%nexg 
-        call this%meshConnection%addConnection(iconn, numEx%nodem1(iconn), numEx%nodem2(iconn))
+      do iconn=1, numEx%nexg
+        if (associated(numEx%m1, this%owner)) then
+          call this%meshConnection%addConnection(iconn, numEx%nodem1(iconn), numEx%nodem2(iconn))
+        else
+          call this%meshConnection%addConnection(iconn, numEx%nodem2(iconn), numEx%nodem1(iconn))
+        end if        
       end do
     end do
     

@@ -35,6 +35,7 @@ contains ! module procedures
   end subroutine
   
   ! add connection between node n and m (global ids)
+  ! NB: total nr of connections should match ctor's args
   subroutine addConnection(this, idx, n, m)
     class(MeshConnectionType), intent(in) :: this
     integer(I4B) :: n, m, idx
