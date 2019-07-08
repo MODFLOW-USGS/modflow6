@@ -1,5 +1,6 @@
 ! TODO: module description
 module GwfGwfConnectionModule
+  use KindModule, only: I4B
   use SpatialModelConnectionModule
   use GwfModule, only: GwfModelType
   
@@ -14,6 +15,8 @@ module GwfGwfConnectionModule
   contains 
     procedure, pass(this) :: gwfGwfConnection_ctor
 	  generic, public :: construct => gwfGwfConnection_ctor
+    
+    procedure, pass(this) :: mc_cf => calculateCoefficients
   end type GwfGwfConnectionType
 
 contains
@@ -34,4 +37,12 @@ contains
       
   end subroutine gwfGwfConnection_ctor
     
+  ! calculate or adjust matrix coefficients which are a result
+  ! of connected GWF models
+  subroutine calculateCoefficients(this, kiter)
+    class(GwfGwfConnectionType), intent(inout)  :: this
+    integer(I4B), intent(in) :: kiter
+    
+  end subroutine calculateCoefficients
+  
 end module GwfGwfConnectionModule
