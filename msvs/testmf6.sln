@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.25420.1
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{6989167D-11E4-40FE-8C1A-2192A86A7E90}") = "mf6lib", "mf6lib.vfproj", "{44B7D693-FE26-479C-9E80-2DFF99EFF1C5}"
+EndProject
+Project("{6989167D-11E4-40FE-8C1A-2192A86A7E90}") = "testmf6", "testmf6.vfproj", "{0E1D3469-835F-40A1-BAA5-F32788DEA8D8}"
+	ProjectSection(ProjectDependencies) = postProject
+		{44B7D693-FE26-479C-9E80-2DFF99EFF1C5} = {44B7D693-FE26-479C-9E80-2DFF99EFF1C5}
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{44B7D693-FE26-479C-9E80-2DFF99EFF1C5}.Debug|x64.ActiveCfg = Debug|x64
+		{44B7D693-FE26-479C-9E80-2DFF99EFF1C5}.Debug|x64.Build.0 = Debug|x64
+		{44B7D693-FE26-479C-9E80-2DFF99EFF1C5}.Release|x64.ActiveCfg = Release|x64
+		{44B7D693-FE26-479C-9E80-2DFF99EFF1C5}.Release|x64.Build.0 = Release|x64
+		{0E1D3469-835F-40A1-BAA5-F32788DEA8D8}.Debug|x64.ActiveCfg = Debug|x64
+		{0E1D3469-835F-40A1-BAA5-F32788DEA8D8}.Debug|x64.Build.0 = Debug|x64
+		{0E1D3469-835F-40A1-BAA5-F32788DEA8D8}.Release|x64.ActiveCfg = Release|x64
+		{0E1D3469-835F-40A1-BAA5-F32788DEA8D8}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
