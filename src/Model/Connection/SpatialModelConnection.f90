@@ -4,7 +4,7 @@ module SpatialModelConnectionModule
 	use ModelConnectionModule
 	use NumericalModelModule, only: NumericalModelType
   use NumericalExchangeModule, only: NumericalExchangeType, GetNumericalExchangeFromList
-  use MeshConnectionModule, only: MeshConnectionType
+  use GridConnectionModule, only: GridConnectionType
   use ListModule, only: ListType
   
 	implicit none
@@ -14,10 +14,13 @@ module SpatialModelConnectionModule
 	! Spatial connection here means that the model domains (spatial discretization) are adjacent
 	! and connected.
 	type, public, abstract, extends(ModelConnectionType) :: SpatialModelConnectionType
-    
-    integer(I4B) :: nrOfConnections ! TODO_MJR: do we need this one?
+        
+    ! aggregation:
     type(ListType), pointer :: exchangeList => null()
-    type(MeshConnectionType), pointer :: meshConnection => null()
+    
+    ! TODO_MJR: mem mgt of these guys:
+    integer(I4B) :: nrOfConnections ! TODO_MJR: do we need this one?
+    type(GridConnectionType), pointer :: gridConnection => null()
 
   contains
     procedure, pass(this) :: spatialConnection_ctor
@@ -35,13 +38,15 @@ contains ! module procedures
     class(NumericalModelType), intent(in), pointer :: model
     character(len=*), intent(in) :: name
     
+    ! base props:
     this%name = name
+    this%memoryOrigin = trim(this%name)
     this%owner => model
+    
     this%nrOfConnections = 0
     
     allocate(this%exchangeList)
-    allocate(this%meshConnection)
-    
+    allocate(this%gridConnection)    
     
   end subroutine spatialConnection_ctor
   
@@ -61,9 +66,9 @@ contains ! module procedures
   subroutine defineSpatialConnection(this)
     class(SpatialModelConnectionType), intent(inout) :: this    
     
-    ! create the mesh connection data structure
+    ! create the grid connection data structure
     this%nrOfConnections = this%getNrOfConnections()
-    call this%meshConnection%construct(this%nrOfConnections, this%name)
+    call this%gridConnection%construct(this%nrOfConnections, this%name)
     
   end subroutine defineSpatialConnection
   
@@ -76,36 +81,42 @@ contains ! module procedures
     ! local
     integer(I4B) :: ic
     integer(I4B) :: iglo, jglo        ! global row (i) and column (j) numbers
-    integer(I4B) :: offset, nbrOffset ! model offset in global solution matrix, for owner and neighbour
     integer(I4B) :: iex, iconn
     type(NumericalExchangeType), pointer :: numEx
     
     numEx => null()
     
-    ! fill primary links, with global numbering: n => m or m <= n, but not both
+    ! fill primary links, with local numbering: n => m or m <= n, 
+    ! and calculate global numbers for sparse
     do iex=1, this%exchangeList%Count()
       numEx => GetNumericalExchangeFromList(this%exchangeList, iex)
       do iconn=1, numEx%nexg
-        if (associated(numEx%m1, this%owner)) then
+        if (associated(numEx%m1, this%owner)) then          
+          call this%gridConnection%addLink( numEx%nodem1(iconn),  &
+                                            numEx%nodem2(iconn),  &
+                                            numEx%cl1(iconn),     &
+                                            numEx%cl2(iconn),     &
+                                            numEx%hwva(iconn),    &
+                                            numEx%ihc(iconn),     &
+                                            numEx%m2)          
           iglo = numEx%nodem1(iconn) + this%owner%moffset
-          jglo = numEx%nodem2(iconn) + numEx%m2%moffset
-        else
+          jglo = numEx%nodem2(iconn) + numEx%m2%moffset          
+        else  
+          ! then with nodes, lenghts, models reversed:
+          call this%gridConnection%addLink( numEx%nodem2(iconn),  &
+                                            numEx%nodem1(iconn),  &
+                                            numEx%cl2(iconn),     &
+                                            numEx%cl1(iconn),     &
+                                            numEx%hwva(iconn),    &
+                                            numEx%ihc(iconn),     &
+                                            numEx%m1)
           iglo = numEx%nodem2(iconn) + this%owner%moffset
-          jglo = numEx%nodem1(iconn) + numEx%m1%moffset
-        end if
-        
-        ! local admin
-        call this%meshConnection%addConnection(iconn, iglo, jglo)
-        
-        ! add to sparse
-        call sparse%addconnection(iglo, jglo, 1)
-        
+          jglo = numEx%nodem1(iconn) + numEx%m1%moffset          
+        end if      
+                
+        ! add global numbers to sparse TODO_MJR: enable this
+        ! call sparse%addconnection(iglo, jglo, 1)        
       end do
-    end do
-    
-    offset = this%owner%moffset
-    do ic=1, this%meshConnection%nrOfConnections     
-      write(*,*) ic, ': ', this%meshConnection%localNodes(ic), this%meshConnection%connectedNodes(ic)
     end do
     
     

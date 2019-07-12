@@ -2043,7 +2043,7 @@ contains
     do ic=1, this%connectionlist%Count()
         ! TODO_MJR: probably we should never have the abstract base in the NumericalSolutionType??
         mc => GetConnectionFromList(this%connectionlist, ic)
-        !call mc%mc_ac(this%sparse)
+        call mc%mc_ac(this%sparse)
     end do
     
     ! -- The number of non-zero array values are now known so

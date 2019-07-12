@@ -1,7 +1,7 @@
 ! TODO: module description
 module ModelConnectionModule
   use KindModule, only: I4B
-  use ConstantsModule, only: LENPACKAGENAME
+  use ConstantsModule, only: LENPACKAGENAME, LENORIGIN
   use SparseModule, only:sparsematrix
   use ListModule
   use NumericalModelModule, only: NumericalModelType
@@ -18,13 +18,17 @@ module ModelConnectionModule
 	! GWTModel, and also the (heterogeneous) interfacing between models of type
 	! GWT and GWF.
   type, abstract, public :: ModelConnectionType		
-    class(NumericalModelType), pointer  :: owner => null() ! the model whose connection this is  
+    class(NumericalModelType), pointer  :: owner => null()  ! the model whose connection this is  
     character(len=7)                    :: connectionType
     character(len=LENPACKAGENAME)       :: name
+    character(len=LENORIGIN)            :: memoryOrigin
+    
+    integer(I4B)                        :: inewton          ! == 1 for newton-raphson, 0 otherwise
   
   contains
     
     procedure (defineConnectionIFace), deferred, pass(this)       :: mc_df
+    procedure (allocateReadIFace), deferred, pass(this)           :: mc_ar
     procedure (addConnectionsToMatrixIFace), deferred, pass(this) :: mc_ac  
     procedure (calculateCoefficientsIFace), deferred, pass(this)  :: mc_cf
     
@@ -41,6 +45,11 @@ module ModelConnectionModule
       class(ModelConnectionType), intent(inout) :: this
     end subroutine defineConnectionIFace
   
+    subroutine allocateReadIFace(this)
+      import :: ModelConnectionType
+      class(ModelConnectionType), intent(inout) :: this
+    end subroutine allocateReadIFace
+    
     subroutine addConnectionsToMatrixIFace(this, sparse)
       import :: ModelConnectionType, sparsematrix
       class(ModelConnectionType), intent(inout) :: this

@@ -24,6 +24,10 @@ module NumericalExchangeModule
     integer(I4B), pointer                           :: nexg      => null()       !number of exchanges
     integer(I4B), dimension(:), pointer, contiguous :: nodem1    => null()       !node numbers in model 1
     integer(I4B), dimension(:), pointer, contiguous :: nodem2    => null()       !node numbers in model 2
+    integer(I4B), dimension(:), pointer, contiguous :: ihc         => null()    ! horizontal connection indicator array
+    real(DP), dimension(:), pointer, contiguous     :: cl1         => null()    ! connection length 1
+    real(DP), dimension(:), pointer, contiguous     :: cl2         => null()    ! connection length 2
+    real(DP), dimension(:), pointer, contiguous     :: hwva        => null()    ! horizontal widths, vertical flow areas
     real(DP), dimension(:), pointer, contiguous     :: cond      => null()       !conductance
     integer(I4B), dimension(:), pointer, contiguous :: idxglo    => null()       !pointer to solution amat for each connection
     integer(I4B), dimension(:), pointer, contiguous :: idxsymglo => null()       !pointer to symmetric amat position for each connection
@@ -440,6 +444,10 @@ contains
     !
     call mem_allocate(this%nodem1, this%nexg, 'NODEM1', origin)
     call mem_allocate(this%nodem2, this%nexg, 'NODEM2', origin)
+    call mem_allocate(this%ihc, this%nexg, 'IHC', origin)
+    call mem_allocate(this%cl1, this%nexg, 'CL1', origin)
+    call mem_allocate(this%cl2, this%nexg, 'CL2', origin)
+    call mem_allocate(this%hwva, this%nexg, 'HWVA', origin)
     call mem_allocate(this%cond, this%nexg, 'COND', origin)
     call mem_allocate(this%idxglo, this%nexg, 'IDXGLO', origin)
     call mem_allocate(this%idxsymglo, this%nexg, 'IDXSYMGLO', origin)
@@ -478,6 +486,10 @@ contains
     ! -- arrays
     call mem_deallocate(this%nodem1)
     call mem_deallocate(this%nodem2)
+    call mem_deallocate(this%ihc)
+    call mem_deallocate(this%cl1)
+    call mem_deallocate(this%cl2)
+    call mem_deallocate(this%hwva)
     call mem_deallocate(this%cond)
     call mem_deallocate(this%idxglo)
     call mem_deallocate(this%idxsymglo)
