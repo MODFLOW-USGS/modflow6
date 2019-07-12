@@ -112,6 +112,12 @@ subroutine runmf6
     call ep%exg_ar()
   enddo
   !
+  ! -- Allocate and read all model connections
+  do ic = 1, baseconnectionlist%Count()
+    mc => GetConnectionFromList(baseconnectionlist, ic)
+    call mc%mc_ar()
+  enddo
+  !
   ! -- Allocate and read each solution
   do is=1,basesolutionlist%Count()
     sp => GetBaseSolutionFromList(basesolutionlist, is)
