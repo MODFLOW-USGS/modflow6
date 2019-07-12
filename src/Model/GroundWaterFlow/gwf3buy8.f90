@@ -27,6 +27,8 @@ module GwfBuyModule
   contains    
     procedure :: buy_ar
     procedure :: buy_rp
+    procedure :: buy_cf
+    procedure :: buy_cf_bnd
     procedure :: buy_fc
     procedure :: buy_flowja
     procedure :: buy_da
@@ -176,6 +178,116 @@ module GwfBuyModule
     return
   end subroutine buy_rp
 
+  subroutine buy_cf(this, kiter, hnew)
+! ******************************************************************************
+! buy_cf -- Fill coefficients
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(GwfBuyType) :: this
+    integer(I4B) :: kiter
+    real(DP), intent(inout), dimension(:) :: hnew
+    ! -- local
+    integer(I4B) :: n, nodes
+    real(DP) :: hn, tp
+! ------------------------------------------------------------------------------
+    !
+    ! -- Calculate the elev array
+    nodes = size(hnew)
+    if (this%ireadelev == 0) then
+      do n = 1, nodes
+        tp = this%dis%top(n)
+        if (this%ibound(n) == 0) then
+          hn = tp
+        else
+          hn = hnew(n)
+        end if
+        if(this%npf%icelltype(n) /= 0) tp = min(tp, hn)
+        this%elev(n) = this%dis%bot(n) + DHALF * (tp - this%dis%bot(n))
+      end do
+    end if
+    !
+    ! -- Return
+    return
+  end subroutine buy_cf
+  
+  subroutine buy_cf_bnd(this, packobj) !, hcof, rhs, auxnam, auxvar)
+! ******************************************************************************
+! buy_cf_bnd -- Fill coefficients
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use BndModule, only: BndType
+    ! -- dummy
+    class(GwfBuyType) :: this
+    class(BndType), pointer :: packobj
+    ! -- local
+    integer(I4B) :: n, node
+    integer(I4B) :: locdense, locelev
+    integer(I4B) :: iheaddep
+    real(DP) :: cond, hbnd
+    real(DP) :: elevbnd
+    real(DP) :: densebnd, avgdense, avgelev, t1, t2, term
+! ------------------------------------------------------------------------------
+    !
+    ! -- Return if freshwater head formulation
+    if (this%iform == 0) return
+    !
+    ! -- Return if not a head-dependent boundary
+    iheaddep = 0
+    if (packobj%filtyp == 'GHB') iheaddep = 1
+    if (packobj%filtyp == 'RIV') iheaddep = 1
+    if (packobj%filtyp == 'DRN') iheaddep = 1
+    if (iheaddep == 0) return
+    !
+    ! -- Add buoyancy terms for head-dependent boundaries
+    locdense = 0
+    locelev = 0
+    do n = 1, packobj%naux
+      if (packobj%auxname(n) == 'DENSITY') then
+        locdense = n
+      else if (packobj%auxname(n) == 'ELEVATION') then
+        locelev = n
+      end if
+    end do
+    !
+    ! Go through each stress boundary and add density term
+    do n = 1, packobj%nbound
+      node = packobj%nodelist(n)
+      if (this%ibound(node) <= 0) cycle
+      !
+      ! -- density
+      densebnd = this%denseref
+      if (locdense > 0) densebnd = packobj%auxvar(locdense, n)
+      avgdense = DHALF * densebnd + DHALF * this%dense(node)
+      !
+      ! -- elevation
+      elevbnd = this%elev(node)
+      if (locelev > 0) elevbnd = packobj%auxvar(locelev, n)
+      avgelev = DHALF * elevbnd + DHALF * this%elev(node)
+      !
+      ! -- boundary head and conductance
+      hbnd = packobj%bound(1, n)
+      cond = packobj%bound(2, n)
+      !
+      ! -- calculate terms and add to hcof and rhs
+      t1 = avgdense / this%denseref - DONE
+      t2 = (densebnd - this%dense(node)) / this%denseref
+      term = cond * (-t1 + DHALF * t2)
+      packobj%hcof(n) = packobj%hcof(n) + term
+      term = t1 * hbnd + DHALF * t2 * hbnd - t2 * avgelev
+      term = term * cond
+      packobj%rhs(n) = packobj%rhs(n) - term
+    end do
+    !
+    ! -- Return
+    return
+  end subroutine buy_cf_bnd
+  
   subroutine buy_fc(this, kiter, njasln, amat, idxglo, rhs, hnew)
 ! ******************************************************************************
 ! buy_fc -- Fill coefficients
@@ -410,8 +522,7 @@ module GwfBuyModule
     real(DP), intent(inout) :: amatnm
     ! -- local
     integer(I4B) :: ihc
-    real(DP) :: densen, densem, cl1, cl2, avgdense, wt, elevn, elevm,  &
-                     cond, tp
+    real(DP) :: densen, densem, cl1, cl2, avgdense, wt, elevn, elevm, cond
     real(DP) :: rhonormn, rhonormm
     real(DP) :: rhoterm
     real(DP) :: elevnm
@@ -429,17 +540,8 @@ module GwfBuyModule
     avgdense = wt * densen + (1.0 - wt) * densem
     !
     ! -- Elevations
-    if(this%ireadelev == 0) then
-      tp = this%dis%top(n)
-      if(this%npf%icelltype(n) /= 0) tp = min(tp, hn)
-      elevn = this%dis%bot(n) + DHALF * (tp - this%dis%bot(n))
-      tp = this%dis%top(m)
-      if(this%npf%icelltype(m) /= 0) tp = min(tp, hm)
-      elevm = this%dis%bot(m) + DHALF * (tp - this%dis%bot(m))
-    else
-      elevn = this%elev(n)
-      elevm = this%elev(m)
-    endif
+    elevn = this%elev(n)
+    elevm = this%elev(m)
     elevnm = (DONE - wt) * elevn + wt * elevm
     !
     ihc = this%dis%con%ihc(this%dis%con%jas(icon))
@@ -578,11 +680,12 @@ module GwfBuyModule
     !
     ! -- Allocate
     call mem_allocate(this%dense, nodes, 'DENSE', this%origin)
-    call mem_allocate(this%elev, 1, 'ELEV', this%origin)
+    call mem_allocate(this%elev, nodes, 'ELEV', this%origin)
     !
     ! -- Initialize
     do i = 1, nodes
       this%dense(i) = this%denseref
+      this%elev(i) = DZERO
     enddo
     ! -- Return
     return
@@ -663,7 +766,6 @@ module GwfBuyModule
     ! -- modules
     use ConstantsModule,   only: LINELENGTH
     use SimModule,         only: ustop, store_error
-    use MemoryManagerModule, only: mem_reallocate
     ! -- dummy
     class(GwfBuyType) :: this
     ! -- local
@@ -686,8 +788,6 @@ module GwfBuyModule
       ! -- Parse the keywords
       select case (keyword)
       case ('ELEVATION')
-        call mem_reallocate(this%elev, this%dis%nodes, 'ELEV',                 &
-                           trim(this%origin))
         this%ireadelev = 1
         call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,    &
                                       this%parser%iuactive, this%elev,         &
