@@ -1,7 +1,7 @@
 module GwfCsubModule
   use KindModule, only: I4B, DP
-  use ConstantsModule, only: DPREC, DZERO, DEM20, DEM10, DEM7, DEM6, DEM4,      &
-                             DP9, DHALF, DEM1, DONE, DTWO, DTHREE,              &
+  use ConstantsModule, only: DPREC, DZERO, DEM20, DEM15, DEM10, DEM7, DEM6,     &
+                             DEM4, DP9, DHALF, DEM1, DONE, DTWO, DTHREE,        &
                              DGRAVITY, DTEN, DHUNDRED, DNODATA, DHNOFLO,        &
                              LENFTYPE, LENPACKAGENAME,                          &
                              LINELENGTH, LENBOUNDNAME, NAMEDBOUNDFLAG,          &
@@ -3465,6 +3465,8 @@ contains
     real(DP) :: tled
     real(DP) :: top
     real(DP) :: bot
+    real(DP) :: thick
+    real(DP) :: thick0
     real(DP) :: znode
     real(DP) :: znode0
     real(DP) :: snold
@@ -3489,6 +3491,10 @@ contains
     area = this%dis%get_area(node)
     bot = this%dis%bot(node)
     top = this%dis%top(node)
+    !thick = this%thick(ib)
+    !thick0 = this%thick0(ib)
+    thick = this%thickini(ib)
+    thick0 = this%thickini(ib)
     !
     ! -- set iconvert
     this%iconvert(ib) = 0
@@ -3504,8 +3510,10 @@ contains
       es = this%sk_es(node)
       esi = this%sk_esi(node)
       es0 = this%sk_es0(node)
-      theta = this%theta(ib)
-      theta0 = this%theta0(ib)
+      !theta = this%theta(ib)
+      !theta0 = this%theta0(ib)
+      theta = this%thetaini(ib)
+      theta0 = this%thetaini(ib)
       if (this%iunderrelax /= 0) then
         !
         ! -- only need to apply under-relaxation since it has already been
@@ -3522,8 +3530,8 @@ contains
       call this%csub_calc_sfacts(node, bot, znode, znode0, theta, theta0,        &
                                  es, es0, f, f0)
     end if
-    sto_fac = tled * snnew * this%thick(ib) * f
-    sto_fac0 = tled * snold * this%thick0(ib) * f0
+    sto_fac = tled * snnew * thick * f
+    sto_fac0 = tled * snold * thick0 * f0
     !
     ! -- calculate rho1 and rho2
     rho1 = this%rci(ib) * sto_fac0
@@ -4543,8 +4551,10 @@ contains
     ! -- aquifer elevations and thickness
     top = this%dis%top(node)
     bot = this%dis%bot(node)
-    tthk = this%sk_thick(node)
-    tthk0 = this%sk_thick0(node)
+    !tthk = this%sk_thick(node)
+    !tthk0 = this%sk_thick0(node)
+    tthk = this%sk_thickini(node)
+    tthk0 = this%sk_thickini(node)
     !
     ! -- calculate aquifer saturation
     call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
@@ -4627,8 +4637,10 @@ contains
     ! -- aquifer elevations and thickness
     top = this%dis%top(node)
     bot = this%dis%bot(node)
-    tthk = this%sk_thick(node)
-    tthk0 = this%sk_thick0(node)
+    !tthk = this%sk_thick(node)
+    !tthk0 = this%sk_thick0(node)
+    tthk = this%sk_thickini(node)
+    tthk0 = this%sk_thickini(node)
     !
     ! 
     if (this%igeocalc == 0 .and. this%iupdatematprop == 0) then
@@ -4997,8 +5009,10 @@ contains
       es = this%sk_es(n)
       esi = this%sk_esi(n)
       es0 = this%sk_es0(n)
-      theta = this%sk_theta(n)
-      theta0 = this%sk_theta0(n)
+      !theta = this%sk_theta(n)
+      !theta0 = this%sk_theta0(n)
+      theta = this%sk_thetaini(n)
+      theta0 = this%sk_thetaini(n)
       if (this%iunderrelax /= 0) then
         if (this%iurflag /= 0) then
           call this%csub_calc_under_relaxation(this%kiter, es, esi,              &

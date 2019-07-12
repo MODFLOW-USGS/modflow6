@@ -72,6 +72,7 @@ hdry = -1e30
 # upw data
 laytyp = [1, 0, 0, 0]
 hk = [4., 4., 1e-2, 4.]
+k33 = [.4, .4, 1e-2, .4]
 sy = [0.3, 0., 0., 0.]
 
 w1 = [(0, 0, 7, 2.2000000E+03),
@@ -114,45 +115,31 @@ w2 = [(0, 0, 7, 2.2000000E+03),
       (3, 11, 6, -7.2000000E+04)]
 wd = {0: w1, 1: w2, 2: w1}
 
-ws1 = [((0, 0, 7), 2.2000000E+03),
-       ((0, 1, 4), 2.2000000E+03),
-       ((0, 1, 7), 2.2000000E+03),
-       ((0, 1, 11), 2.2000000E+03),
-       ((0, 2, 3), 2.2000000E+03),
-       ((0, 3, 11), 2.2000000E+03),
-       ((0, 4, 2), 2.2000000E+03),
-       ((0, 4, 12), 2.2000000E+03),
-       ((0, 5, 13), 2.2000000E+03),
-       ((0, 6, 1), 2.2000000E+03),
-       ((0, 13, 1), 2.2000000E+03),
-       ((0, 13, 13), 2.2000000E+03),
-       ((0, 15, 2), 2.2000000E+03),
-       ((0, 15, 12), 2.2000000E+03),
-       ((0, 16, 12), 2.2000000E+03),
-       ((0, 17, 3), 2.2000000E+03),
-       ((0, 17, 11), 2.2000000E+03),
-       ((0, 18, 6), 2.2000000E+03)]
-ws2 = [((0, 0, 7), 2.2000000E+03),
-       ((0, 1, 4), 2.2000000E+03),
-       ((0, 1, 7), 2.2000000E+03),
-       ((0, 1, 11), 2.2000000E+03),
-       ((0, 2, 3), 2.2000000E+03),
-       ((0, 3, 11), 2.2000000E+03),
-       ((0, 4, 2), 2.2000000E+03),
-       ((0, 4, 12), 2.2000000E+03),
-       ((0, 5, 13), 2.2000000E+03),
-       ((0, 6, 1), 2.2000000E+03),
-       ((0, 13, 1), 2.2000000E+03),
-       ((0, 13, 13), 2.2000000E+03),
-       ((0, 15, 2), 2.2000000E+03),
-       ((0, 15, 12), 2.2000000E+03),
-       ((0, 16, 12), 2.2000000E+03),
-       ((0, 17, 3), 2.2000000E+03),
-       ((0, 17, 11), 2.2000000E+03),
-       ((0, 18, 6), 2.2000000E+03),
-       ((1, 8, 9), -7.2000000E+04),
+ws2 = [((1, 8, 9), -7.2000000E+04),
        ((3, 11, 6), -7.2000000E+04)]
-wd6 = {0: ws1, 1: ws2, 2: ws1}
+ws3 = [((1, 8, 9), 0),
+       ((3, 11, 6), 0)]
+wd6 = {1: ws2, 2: ws3}
+
+rch0 = [((0, 0, 7), 0.00055),
+        ((0, 1, 4), 0.00055),
+        ((0, 1, 7), 0.00055),
+        ((0, 1, 11), 0.00055),
+        ((0, 2, 3), 0.00055),
+        ((0, 3, 11), 0.00055),
+        ((0, 4, 2), 0.00055),
+        ((0, 4, 12), 0.00055),
+        ((0, 5, 13), 0.00055),
+        ((0, 6, 1), 0.00055),
+        ((0, 13, 1), 0.00055),
+        ((0, 13, 13), 0.00055),
+        ((0, 15, 2), 0.00055),
+        ((0, 15, 12), 0.00055),
+        ((0, 16, 12), 0.00055),
+        ((0, 17, 3), 0.00055),
+        ((0, 17, 11), 0.00055),
+        ((0, 18, 6), 0.00055)]
+rch6 = {0: rch0}
 
 chd1 = [(0, 19, 7, 100.00000, 100.00000),
         (0, 19, 8, 100.00000, 100.00000),
@@ -280,7 +267,7 @@ def get_model(idx, dir):
     npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False,
                                   icelltype=laytyp,
                                   k=hk,
-                                  k33=hk)
+                                  k33=k33)
     # storage
     sto = flopy.mf6.ModflowGwfsto(gwf, save_flows=False, iconvert=laytyp,
                                   ss=0., sy=sy,
@@ -298,6 +285,11 @@ def get_model(idx, dir):
                                   maxbound=len(ws2),
                                   stress_period_data=wd6,
                                   save_flows=False)
+    # recharge file
+    flopy.mf6.ModflowGwfrch(gwf, print_input=True, print_flows=True,
+                            maxbound=len(rch0),
+                            stress_period_data=rch6,
+                            save_flows=False)
 
     # csub files
     gg = []
@@ -322,16 +314,50 @@ def get_model(idx, dir):
                                     packagedata=swt6,
                                     maxsig0=len(gg),
                                     stress_period_data=sig0)
-    orecarray = {}
-    orecarray['csub_obs.csv'] = [('w1l1', 'interbed-compaction', '01_09_10'),
-                                 ('w1l2', 'interbed-compaction', '02_09_10'),
-                                 ('w1l3', 'interbed-compaction', '03_09_10'),
-                                 ('w1l4', 'interbed-compaction', '04_09_10'),
-                                 ('w2l1', 'interbed-compaction', '01_12_07'),
-                                 ('w2l2', 'interbed-compaction', '02_12_07'),
-                                 ('w2l3', 'interbed-compaction', '03_12_07'),
-                                 ('w2l4', 'interbed-compaction', '04_12_07'),
-                                 ('w2l4q', 'csub-cell', (3, 11, 6))]
+
+    cobs = [('w1l1', 'interbed-compaction', '01_09_10'),
+            ('w1l2', 'interbed-compaction', '02_09_10'),
+            ('w1l3', 'interbed-compaction', '03_09_10'),
+            ('w1l4', 'interbed-compaction', '04_09_10'),
+            ('w2l1', 'interbed-compaction', '01_12_07'),
+            ('w2l2', 'interbed-compaction', '02_12_07'),
+            ('w2l3', 'interbed-compaction', '03_12_07'),
+            ('w2l4', 'interbed-compaction', '04_12_07'),
+            ('s1l1', 'skeletal-compaction', (0, 8, 9)),
+            ('s1l2', 'skeletal-compaction', (1, 8, 9)),
+            ('s1l3', 'skeletal-compaction', (2, 8, 9)),
+            ('s1l4', 'skeletal-compaction', (3, 8, 9)),
+            ('s2l1', 'skeletal-compaction', (0, 11, 6)),
+            ('s2l2', 'skeletal-compaction', (1, 11, 6)),
+            ('s2l3', 'skeletal-compaction', (2, 11, 6)),
+            ('s2l4', 'skeletal-compaction', (3, 11, 6)),
+            ('c1l1', 'compaction-cell', (0, 8, 9)),
+            ('c1l2', 'compaction-cell', (1, 8, 9)),
+            ('c1l3', 'compaction-cell', (2, 8, 9)),
+            ('c1l4', 'compaction-cell', (3, 8, 9)),
+            ('c2l1', 'compaction-cell', (0, 11, 6)),
+            ('c2l2', 'compaction-cell', (1, 11, 6)),
+            ('c2l3', 'compaction-cell', (2, 11, 6)),
+            ('c2l4', 'compaction-cell', (3, 11, 6)),
+            ('w2l4q', 'csub-cell', (3, 11, 6)),
+            ('gs1', 'gstress-cell', (0, 8, 9)),
+            ('es1', 'estress-cell', (0, 8, 9)),
+            ('pc1', 'preconstress-cell', (0, 8, 9)),
+            ('gs2', 'gstress-cell', (1, 8, 9)),
+            ('es2', 'estress-cell', (1, 8, 9)),
+            ('pc2', 'preconstress-cell', (1, 8, 9)),
+            ('gs3', 'gstress-cell', (2, 8, 9)),
+            ('es3', 'estress-cell', (2, 8, 9)),
+            ('pc3', 'preconstress-cell', (2, 8, 9)),
+            ('gs4', 'gstress-cell', (3, 8, 9)),
+            ('es4', 'estress-cell', (3, 8, 9)),
+            ('pc4', 'preconstress-cell', (3, 8, 9)),
+            ('sk1l2', 'ske-cell', (1, 8, 9)),
+            ('sk2l4', 'ske-cell', (3, 11, 6)),
+            ('t1l2', 'theta', '02_09_10')]
+
+
+    orecarray = {'csub_obs.csv': cobs}
     csub_obs_package = csub.obs.initialize(filename=opth, digits=10,
                                            print_input=True,
                                            continuous=orecarray)
@@ -357,7 +383,7 @@ def get_model(idx, dir):
                                    delc=delc, top=top, botm=botm)
     bas = flopy.modflow.ModflowBas(mc, ibound=ib, strt=strt, hnoflo=hnoflo)
     upw = flopy.modflow.ModflowUpw(mc, laytyp=laytyp,
-                                   hk=hk, vka=hk,
+                                   hk=hk, vka=k33,
                                    ss=ss, sy=sy,
                                    hdry=hdry)
     chd = flopy.modflow.ModflowChd(mc, stress_period_data=cd)
