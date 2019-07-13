@@ -34,6 +34,7 @@
   ! pore space discrepancy between flow and transport (porosity vs specific yield)
   ! add separate heat transport model?
   ! xt3d dispersion areas need to be consistent with non-xt3d case
+  ! the gwf_fc routines need updating for the mover calculation to hcof and rhs
   
   
 module GwtModule
