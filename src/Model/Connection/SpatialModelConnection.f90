@@ -21,12 +21,14 @@ module SpatialModelConnectionModule
     ! TODO_MJR: mem mgt of these guys:
     integer(I4B) :: nrOfConnections ! TODO_MJR: do we need this one?
     type(GridConnectionType), pointer :: gridConnection => null()
-
+    integer(I4B), dimension(:), pointer, contiguous :: globalIdxMap => null()
+    
   contains
     procedure, pass(this) :: spatialConnection_ctor
     generic, public :: construct => spatialConnection_ctor
     procedure, pass(this) :: addExchange => addExchangeToSpatialConnection
     procedure, pass(this) :: mc_df => defineSpatialConnection 
+    procedure, pass(this) :: mc_mc => mapCoefficients
     procedure, pass(this) :: mc_ac => addConnectionsToMatrix
     procedure, private, pass(this) :: getNrOfConnections
   end type SpatialModelConnectionType
@@ -69,8 +71,38 @@ contains ! module procedures
     ! create the grid connection data structure
     this%nrOfConnections = this%getNrOfConnections()
     call this%gridConnection%construct(this%nrOfConnections, this%name)
+     
+    ! TODO_MJR: move this?
+    allocate(this%globalIdxMap(this%nrOfConnections))
     
   end subroutine defineSpatialConnection
+  
+  subroutine mapCoefficients(this, iasln, jasln)
+    use GridConnectionModule
+    class(SpatialModelConnectionType), intent(inout) :: this
+    integer(I4B), dimension(:), intent(in) :: iasln
+    integer(I4B), dimension(:), intent(in) :: jasln
+    ! local
+    integer(I4B) :: i, nLinks
+    integer(I4B) :: iglo, jglo ! global (solution matrix) indices
+    type(LinkedNodeType), dimension(:), pointer :: links => null()
+    integer(I4B) :: csrIndex
+    
+    links => this%gridConnection%linkedNodes    
+    nLinks = this%gridConnection%nrOfLinks
+       
+    do i=1, nLinks
+      iglo = links(i)%ownIndex + this%owner%moffset
+      jglo = links(i)%linkedIndex + links(i)%connectedModel%moffset
+      csrIndex = getCSRIndex(iglo, jglo, iasln, jasln)
+      if (csrIndex == -1) then
+        ! TODO_MJR: what do we do here?
+        cycle      
+      end if
+      this%globalIdxMap(i) = csrIndex
+    end do
+    
+  end subroutine mapCoefficients
   
   ! add connections to global matrix, does not fill in symmetric elements: i.e.,
   ! it needs to be called twice for two connected cells (elements m-n and n-m)
@@ -138,6 +170,26 @@ contains ! module procedures
     end do
     
   end function getNrOfConnections
+  
+  ! TODO_MJR: move this to generic place?
+  ! return index for element i,j in CSR storage, and -1 when not there
+  function getCSRIndex(i, j, ia, ja) result(csrIndex)
+    integer(I4B) :: i, j                          ! the element to get the index for
+    integer(I4B), dimension(:), intent(in) :: ia  ! csr ia
+    integer(I4B), dimension(:), intent(in) :: ja  ! csr ja
+    integer(I4B) :: csrIndex                 ! the resulting index
+    ! local
+    integer(I4B) :: idx
+    
+    csrIndex = -1
+    do idx = ia(i), ia(i+1)-1
+      if (ja(idx) == j) then
+        csrIndex = idx
+        return
+      end if
+    end do
+    
+  end function
   
 end module SpatialModelConnectionModule
 
