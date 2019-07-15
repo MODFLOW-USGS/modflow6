@@ -7,7 +7,7 @@ module GridConnectionModule
   private
   
   ! link with node in other model
-  type, private :: LinkedNodeType   
+  type, public :: LinkedNodeType   
     integer(I4B)  :: ownIndex
     integer(I4B)  :: linkedIndex    ! linked node, local numbering
     integer(I4B)  :: connectionType ! 0 = vertical, 1 = horizontal, 2 = vertically staggered

@@ -1,6 +1,6 @@
 ! TODO: module description
 module ModelConnectionModule
-  use KindModule, only: I4B
+  use KindModule, only: I4B, DP
   use ConstantsModule, only: LENPACKAGENAME, LENORIGIN
   use SparseModule, only:sparsematrix
   use ListModule
@@ -31,6 +31,8 @@ module ModelConnectionModule
     procedure (allocateReadIFace), deferred, pass(this)           :: mc_ar
     procedure (addConnectionsToMatrixIFace), deferred, pass(this) :: mc_ac  
     procedure (calculateCoefficientsIFace), deferred, pass(this)  :: mc_cf
+    procedure (mapCoefficientsIFace), deferred, pass(this)       :: mc_mc
+    procedure (fillCoefficientsIFace), deferred, pass(this)       :: mc_fc
     
     ! derived types should decide for themselves how the overall connection is 
     ! altered when another model is connected
@@ -57,11 +59,27 @@ module ModelConnectionModule
     end subroutine
     
     subroutine calculateCoefficientsIFace(this, kiter)
-      import :: ModelConnectionType, sparsematrix, I4B
+      import :: ModelConnectionType, I4B
       class(ModelConnectionType), intent(inout) :: this
       integer(I4B), intent(in) :: kiter
     end subroutine calculateCoefficientsIFace
     
+    subroutine mapCoefficientsIFace(this, iasln, jasln)
+      import :: ModelConnectionType, I4B
+      class(ModelConnectionType), intent(inout) :: this
+      integer(I4B), dimension(:), intent(in) :: iasln
+      integer(I4B), dimension(:), intent(in) :: jasln
+    end subroutine mapCoefficientsIFace
+    
+    subroutine fillCoefficientsIFace(this, kiter, iasln, amatsln, inwtflag)
+      import :: ModelConnectionType, I4B, DP
+      class(ModelConnectionType), intent(inout) :: this
+      integer(I4B), intent(in) :: kiter
+      integer(I4B), dimension(:), intent(in) :: iasln
+      real(DP), dimension(:), intent(inout) :: amatsln
+      integer(I4B), intent(in) :: inwtflag
+    end subroutine fillCoefficientsIFace
+     
     subroutine addExchangeIFace(this, exchange)
       import :: ModelConnectionType, NumericalExchangeType
       class(ModelConnectionType), intent(inout) :: this
