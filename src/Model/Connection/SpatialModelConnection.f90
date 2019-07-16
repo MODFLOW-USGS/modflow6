@@ -21,7 +21,8 @@ module SpatialModelConnectionModule
     ! TODO_MJR: mem mgt of these guys:
     integer(I4B) :: nrOfConnections ! TODO_MJR: do we need this one?
     type(GridConnectionType), pointer :: gridConnection => null()
-    integer(I4B), dimension(:), pointer, contiguous :: globalIdxMap => null()
+    
+    integer(I4B), dimension(:), pointer, contiguous :: globalOffdiagIdx => null()
     
   contains
     procedure, pass(this) :: spatialConnection_ctor
@@ -73,11 +74,12 @@ contains ! module procedures
     call this%gridConnection%construct(this%nrOfConnections, this%name)
      
     ! TODO_MJR: move this?
-    allocate(this%globalIdxMap(this%nrOfConnections))
+    allocate(this%globalOffdiagIdx(this%nrOfConnections))
     
   end subroutine defineSpatialConnection
   
   subroutine mapCoefficients(this, iasln, jasln)
+    use SimModule, only: ustop
     use GridConnectionModule
     class(SpatialModelConnectionType), intent(inout) :: this
     integer(I4B), dimension(:), intent(in) :: iasln
@@ -96,10 +98,11 @@ contains ! module procedures
       jglo = links(i)%linkedIndex + links(i)%connectedModel%moffset
       csrIndex = getCSRIndex(iglo, jglo, iasln, jasln)
       if (csrIndex == -1) then
-        ! TODO_MJR: what do we do here?
-        cycle      
+        ! this should not be possible
+        write(*,*) 'Error: cannot find cell connection in global system'
+        call ustop()
       end if
-      this%globalIdxMap(i) = csrIndex
+      this%globalOffdiagIdx(i) = csrIndex
     end do
     
   end subroutine mapCoefficients

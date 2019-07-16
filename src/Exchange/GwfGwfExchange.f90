@@ -533,7 +533,8 @@ contains
     endif
     !
     ! -- Call fill method of parent to put this%cond into amatsln
-    call this%NumericalExchangeType%exg_fc(kiter, iasln, amatsln)
+    ! TODO_MJR: this is now done in ModelConnection
+    !call this%NumericalExchangeType%exg_fc(kiter, iasln, amatsln)
     !
     ! -- Fill the gnc terms in the solution matrix
     if(this%ingnc > 0) then

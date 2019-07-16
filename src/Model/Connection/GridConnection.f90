@@ -7,6 +7,7 @@ module GridConnectionModule
   private
   
   ! link with node in other model
+  ! TODO_MJR: not linkednode, but nodelink... rename
   type, public :: LinkedNodeType   
     integer(I4B)  :: ownIndex
     integer(I4B)  :: linkedIndex    ! linked node, local numbering
