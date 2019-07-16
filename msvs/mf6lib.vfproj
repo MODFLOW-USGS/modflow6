@@ -34,7 +34,7 @@
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
 		<Configuration Name="Release|x64" ConfigurationType="typeStaticLibrary">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true"/>
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" FloatingPointExceptionHandling="fpe0"/>
 				<Tool Name="VFLibrarianTool"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
@@ -54,8 +54,8 @@
 		<Filter Name="Model">
 		<Filter Name="Connection">
 		<File RelativePath="..\src\Model\Connection\ConnectionBuilder.f90"/>
-		<File RelativePath="..\src\Model\Connection\GwfGwfConnection.f90"/>
 		<File RelativePath="..\src\Model\Connection\GridConnection.f90"/>
+		<File RelativePath="..\src\Model\Connection\GwfGwfConnection.f90"/>
 		<File RelativePath="..\src\Model\Connection\ModelConnection.f90"/>
 		<File RelativePath="..\src\Model\Connection\SpatialModelConnection.f90"/></Filter>
 		<Filter Name="Geometry">

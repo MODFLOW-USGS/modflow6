@@ -115,15 +115,13 @@ contains
     integer(I4B), intent(in) :: inwtflag
     
     ! local
-    integer(I4B) :: i, nLinks
+    integer(I4B) :: i, nLinks, rowIdx
     
-    ! TEST: exchange coefficients were already added
     nLinks = this%gridConnection%nrOfLinks
-    do i=1, nLinks   
-      if (this%conductance(i) == amatsln(this%globalIdxMap(i))) then
-        cycle
-      end if 
-      write(*,*) "error: ", i, this%globalIdxMap(i), this%conductance(i), amatsln(this%globalIdxMap(i))
+    do i=1, nLinks 
+      rowIdx = this%gridConnection%linkedNodes(i)%ownIndex + this%owner%moffset
+      amatsln(this%globalOffdiagIdx(i)) = this%conductance(i)
+      amatsln(iasln(rowIdx)) = amatsln(iasln(rowIdx)) - this%conductance(i)
     end do
     
   end subroutine fillCoefficients 
