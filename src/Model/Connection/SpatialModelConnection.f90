@@ -31,6 +31,8 @@ module SpatialModelConnectionModule
     procedure, pass(this) :: mc_df => defineSpatialConnection 
     procedure, pass(this) :: mc_mc => mapCoefficients
     procedure, pass(this) :: mc_ac => addConnectionsToMatrix
+    
+    procedure, private, pass(this) :: addLinksToGridConnection
     procedure, private, pass(this) :: getNrOfConnections
   end type SpatialModelConnectionType
 
@@ -59,8 +61,6 @@ contains ! module procedures
     ! local
     class(*), pointer :: exg
     
-    ! assign exchange to unlim. polymorphic pointer 
-    ! to able to add it to the list
     exg => exchange
     call this%exchangeList%Add(exg)
     
@@ -72,7 +72,8 @@ contains ! module procedures
     ! create the grid connection data structure
     this%nrOfConnections = this%getNrOfConnections()
     call this%gridConnection%construct(this%nrOfConnections, this%name)
-     
+    call this%addLinksToGridConnection()
+    
     ! TODO_MJR: move this?
     allocate(this%globalOffdiagIdx(this%nrOfConnections))
     
@@ -87,15 +88,15 @@ contains ! module procedures
     ! local
     integer(I4B) :: i, nLinks
     integer(I4B) :: iglo, jglo ! global (solution matrix) indices
-    type(LinkedNodeType), dimension(:), pointer :: links => null()
+    type(NodeLinkType), dimension(:), pointer :: links => null()
     integer(I4B) :: csrIndex
     
-    links => this%gridConnection%linkedNodes    
+    links => this%gridConnection%primaryLinks    
     nLinks = this%gridConnection%nrOfLinks
        
     do i=1, nLinks
-      iglo = links(i)%ownIndex + this%owner%moffset
-      jglo = links(i)%linkedIndex + links(i)%connectedModel%moffset
+      iglo = this%gridConnection%ownIndices(i) + this%owner%moffset
+      jglo = links(i)%linkedIndex + links(i)%linkedModel%moffset
       csrIndex = getCSRIndex(iglo, jglo, iasln, jasln)
       if (csrIndex == -1) then
         ! this should not be possible
@@ -107,22 +108,41 @@ contains ! module procedures
     
   end subroutine mapCoefficients
   
-  ! add connections to global matrix, does not fill in symmetric elements: i.e.,
-  ! it needs to be called twice for two connected cells (elements m-n and n-m)
+  ! add connections to global matrix, does not fill in symmetric elements  
   subroutine addConnectionsToMatrix(this, sparse)
     use SparseModule, only:sparsematrix
+    use GridConnectionModule
     class(SpatialModelConnectionType), intent(inout) :: this
     type(sparsematrix), intent(inout) :: sparse 
+    
     ! local
-    integer(I4B) :: ic
-    integer(I4B) :: iglo, jglo        ! global row (i) and column (j) numbers
+    integer(I4B) :: i, nLinks
+    integer(I4B) :: iglo, jglo ! global (solution matrix) indices
+    type(NodeLinkType), dimension(:), pointer :: links => null()
+        
+    links => this%gridConnection%primaryLinks    
+    nLinks = this%gridConnection%nrOfLinks
+       
+    do i=1, nLinks
+      iglo = this%gridConnection%ownIndices(i) + this%owner%moffset
+      jglo = links(i)%linkedIndex + links(i)%linkedModel%moffset
+     
+      ! add global numbers to sparse
+      call sparse%addconnection(iglo, jglo, 1) 
+    end do
+    
+  end subroutine
+  
+  subroutine addLinksToGridConnection(this)
+    class(SpatialModelConnectionType), intent(inout) :: this
+    
+    ! local
     integer(I4B) :: iex, iconn
     type(NumericalExchangeType), pointer :: numEx
     
     numEx => null()
     
-    ! fill primary links, with local numbering: n => m or m <= n, 
-    ! and calculate global numbers for sparse
+    ! fill primary links, with local numbering: n => m or m <= n
     do iex=1, this%exchangeList%Count()
       numEx => GetNumericalExchangeFromList(this%exchangeList, iex)
       do iconn=1, numEx%nexg
@@ -133,9 +153,7 @@ contains ! module procedures
                                             numEx%cl2(iconn),     &
                                             numEx%hwva(iconn),    &
                                             numEx%ihc(iconn),     &
-                                            numEx%m2)          
-          iglo = numEx%nodem1(iconn) + this%owner%moffset
-          jglo = numEx%nodem2(iconn) + numEx%m2%moffset          
+                                            numEx%m2) 
         else  
           ! then with nodes, lenghts, models reversed:
           call this%gridConnection%addLink( numEx%nodem2(iconn),  &
@@ -144,18 +162,12 @@ contains ! module procedures
                                             numEx%cl1(iconn),     &
                                             numEx%hwva(iconn),    &
                                             numEx%ihc(iconn),     &
-                                            numEx%m1)
-          iglo = numEx%nodem2(iconn) + this%owner%moffset
-          jglo = numEx%nodem1(iconn) + numEx%m1%moffset          
-        end if      
-                
-        ! add global numbers to sparse TODO_MJR: enable this
-        ! call sparse%addconnection(iglo, jglo, 1)        
+                                            numEx%m1)       
+        end if              
       end do
     end do
     
-    
-  end subroutine
+  end subroutine addLinksToGridConnection
   
   ! count total nr. of connection between cells, from the exchanges
   function getNrOfConnections(this) result(nrConns)

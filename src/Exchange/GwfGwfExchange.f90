@@ -244,7 +244,8 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- call parent model to add exchange connections
-    call this%NumericalExchangeType%exg_ac(sparse)
+    ! TODO_MJR: remove this when ready
+    !call this%NumericalExchangeType%exg_ac(sparse)
     !
     ! -- add gnc connections
     if(this%ingnc > 0) then
