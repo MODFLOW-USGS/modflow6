@@ -6,23 +6,26 @@ module GridConnectionModule
   implicit none
   private
   
-  ! link with node in other model
-  ! TODO_MJR: not linkednode, but nodelink... rename
-  type, public :: LinkedNodeType   
-    integer(I4B)  :: ownIndex
-    integer(I4B)  :: linkedIndex    ! linked node, local numbering
+  type, public :: LinkGeometryType
     integer(I4B)  :: connectionType ! 0 = vertical, 1 = horizontal, 2 = vertically staggered
     real(DP)      :: length1        ! connection length from n to face between n and m
     real(DP)      :: length2        ! connection length from m to face between n and m
     real(DP)      :: hwva           ! horizontal width (when connectionType == 1), or vertical area (when connectionType == 0)
-    class(NumericalModelType), pointer :: connectedModel
-    ! TODO_MJR: extend with nbrs-of-nbrs
   end type
+  
+  type, public :: NodeLinkType
+    integer(I4B) :: linkedIndex
+    class(NumericalModelType), pointer :: linkedModel => null()
+    integer(I4B) :: nrOfNbrs
+    type(NodeLinkType), dimension(:), pointer :: neighbours => null() 
+  end type  
   
   type, public :: GridConnectionType
     character(len=LENORIGIN) :: memOrigin
     integer(I4B), pointer :: nrOfLinks => null()
-    type(LinkedNodeType), dimension(:), pointer, contiguous :: linkedNodes => null()  
+    integer(I4B), dimension(:), pointer :: ownIndices => null()
+    type(NodeLinkType), dimension(:), pointer :: primaryLinks => null()
+    type(LinkGeometryType), dimension(:), pointer :: linkGeometries => null()
   contains
     procedure, pass(this) :: construct
     procedure, private, pass(this) :: allocateScalars, allocateArrays
@@ -42,7 +45,9 @@ module GridConnectionModule
     call this%allocateArrays(nLinks)
     
     ! TODO_MJR: to memorymanager?
-    allocate(this%linkedNodes(nLinks))   
+    allocate(this%ownIndices(nLinks))
+    allocate(this%primaryLinks(nLinks))
+    allocate(this%linkGeometries(nLinks))  
     
     this%nrOfLinks = 0
     
@@ -56,15 +61,20 @@ module GridConnectionModule
     integer(I4B) :: own, linked, connType                         ! node ids, connection type
     real(DP) :: cl1, cl2, hwva                                    ! connection lengths, hor. width or vert. area
             
-    this%nrOfLinks = this%nrOfLinks + 1
+    this%nrOfLinks = this%nrOfLinks + 1    
     
-    this%linkedNodes(this%nrOfLinks)%ownIndex = own   
-    this%linkedNodes(this%nrOfLinks)%linkedIndex = linked
-    this%linkedNodes(this%nrOfLinks)%length1 = cl1
-    this%linkedNodes(this%nrOfLinks)%length2 = cl2
-    this%linkedNodes(this%nrOfLinks)%hwva = hwva
-    this%linkedNodes(this%nrOfLinks)%connectionType = connType
-    this%linkedNodes(this%nrOfLinks)%connectedModel => nbrModel
+    this%ownIndices(this%nrOfLinks) = own
+    
+    ! linked node (without neighbours)
+    this%primaryLinks(this%nrOfLinks)%linkedIndex = linked
+    this%primaryLinks(this%nrOfLinks)%linkedModel => nbrModel
+    this%primaryLinks(this%nrOfLinks)%nrOfNbrs = 0
+    
+    ! construct link geometry
+    this%linkGeometries(this%nrOfLinks)%connectionType = connType
+    this%linkGeometries(this%nrOfLinks)%length1 = cl1
+    this%linkGeometries(this%nrOfLinks)%length2 = cl2
+    this%linkGeometries(this%nrOfLinks)%hwva = hwva
     
   end subroutine addLink
   

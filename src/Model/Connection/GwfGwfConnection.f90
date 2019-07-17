@@ -106,7 +106,8 @@ contains
     call this%calculateConductance()
     
   end subroutine calculateCoefficients
-  
+    
+  ! write the calculated conductances into the global system matrix
   subroutine fillCoefficients(this, kiter, iasln, amatsln, inwtflag)
     class(GwfGwfConnectionType), intent(inout) :: this
     integer(I4B), intent(in) :: kiter
@@ -119,8 +120,11 @@ contains
     
     nLinks = this%gridConnection%nrOfLinks
     do i=1, nLinks 
-      rowIdx = this%gridConnection%linkedNodes(i)%ownIndex + this%owner%moffset
-      amatsln(this%globalOffdiagIdx(i)) = this%conductance(i)
+      rowIdx = this%gridConnection%ownIndices(i) + this%owner%moffset
+      
+      ! TODO_MJR: we have addition here for off-diagonals as well (temporarily though) 
+      ! because GNC is already added to the matrix in GwfGwfExchange
+      amatsln(this%globalOffdiagIdx(i)) = amatsln(this%globalOffdiagIdx(i)) + this%conductance(i)
       amatsln(iasln(rowIdx)) = amatsln(iasln(rowIdx)) - this%conductance(i)
     end do
     
@@ -153,13 +157,13 @@ contains
     call mem_allocate(this%conductance, nLinks, 'COND', this%memoryOrigin) 
     
     do i=1, nLinks
-      n = this%gridConnection%linkedNodes(i)%ownIndex
-      m = this%gridConnection%linkedNodes(i)%linkedIndex
-      ihc = this%gridConnection%linkedNodes(i)%connectionType
+      n = this%gridConnection%ownIndices(i)
+      m = this%gridConnection%primaryLinks(i)%linkedIndex
+      ihc = this%gridConnection%linkGeometries(i)%connectionType
       
       ! We know this is a gwf model:
       ! (TODO_MJR: maybe replace model pointer by index in model list?)
-      model2 => CastToGwfModel(this%gridConnection%linkedNodes(i)%connectedModel)      
+      model2 => CastToGwfModel(this%gridConnection%primaryLinks(i)%linkedModel)      
       
       ! properties owner, through gwfModel pointer
       topn = this%gwfModel%dis%top(n)
@@ -178,7 +182,7 @@ contains
         vg(3) = DONE
         hyn = this%gwfModel%npf%hy_eff(n, 0, ihc, vg=vg)
         hym = model2%npf%hy_eff(m, 0, ihc, vg=vg)        
-        vArea = this%gridConnection%linkedNodes(i)%hwva
+        vArea = this%gridConnection%linkGeometries(i)%hwva
         
         ! vertical conductance calculation       
         this%satConductance(i) = vcond(1, 1, 1, 1, 0, 1, 1, DONE,        &
@@ -193,9 +197,9 @@ contains
         
         k11n = this%gwfModel%npf%k11(n)
         k11m = model2%npf%k11(m)
-        hWidth = this%gridConnection%linkedNodes(i)%hwva
-        cl1 = this%gridConnection%linkedNodes(i)%length1
-        cl2 = this%gridConnection%linkedNodes(i)%length2
+        hWidth = this%gridConnection%linkGeometries(i)%hwva
+        cl1 = this%gridConnection%linkGeometries(i)%length1
+        cl2 = this%gridConnection%linkGeometries(i)%length2
         
         ! TODO_MJR: check here for anisotropy and if, recalculate k11n,k11m
         
@@ -239,13 +243,13 @@ contains
     nLinks = this%gridConnection%nrOfLinks    
     do i=1, nLinks  
       
-      n = this%gridConnection%linkedNodes(i)%ownIndex
-      m = this%gridConnection%linkedNodes(i)%linkedIndex
-      ihc = this%gridConnection%linkedNodes(i)%connectionType
+      n = this%gridConnection%ownIndices(i)
+      m = this%gridConnection%primaryLinks(i)%linkedIndex
+      ihc = this%gridConnection%linkGeometries(i)%connectionType
       
       ! We know this is a gwf model:
       ! (TODO_MJR: maybe replace model pointer by index in model list?)
-      model2 => CastToGwfModel(this%gridConnection%linkedNodes(i)%connectedModel)  
+      model2 => CastToGwfModel(this%gridConnection%primaryLinks(i)%linkedModel)  
     
       ibdn = this%gwfModel%ibound(n)
       ictn = this%gwfModel%npf%icelltype(n)
@@ -272,7 +276,7 @@ contains
         hyn = this%gwfModel%npf%hy_eff(n, 0, ihc, vg=vg)
         hym = model2%npf%hy_eff(m, 0, ihc, vg=vg)
         
-        vArea = this%gridConnection%linkedNodes(i)%hwva
+        vArea = this%gridConnection%linkGeometries(i)%hwva
         this%conductance = vcond(ibdn, ibdm, ictn, ictm, this%inewton, this%iVarCV,   &
                             this%iDewatCV, this%satConductance(i), hn, hm, hyn, hym,  &
                             satn, satm, topn, topm, botn, botm, vArea)
@@ -280,9 +284,9 @@ contains
         ! -- Horizontal Connection
         k11n = this%gwfModel%npf%k11(n)
         k11m = model2%npf%k11(m)
-        hWidth = this%gridConnection%linkedNodes(i)%hwva
-        cl1 = this%gridConnection%linkedNodes(i)%length1
-        cl2 = this%gridConnection%linkedNodes(i)%length2
+        hWidth = this%gridConnection%linkGeometries(i)%hwva
+        cl1 = this%gridConnection%linkGeometries(i)%length1
+        cl2 = this%gridConnection%linkGeometries(i)%length2
         
         ! TODO_MJR: -- Check for anisotropy in models, and recalculate hyn and hym
         ! if(this%ianglex > 0) then

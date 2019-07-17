@@ -1936,7 +1936,7 @@ subroutine solution_create(filename, id)
     !
     ! -- Add connection coefficients to the solution
     do ic=1,this%connectionlist%Count()
-    mc => GetConnectionFromList(this%connectionlist, ic)
+      mc => GetConnectionFromList(this%connectionlist, ic)
       call mc%mc_fc(kiter, this%ia, this%amat, inewton)
     enddo
     !
