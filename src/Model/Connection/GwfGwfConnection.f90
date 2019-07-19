@@ -120,7 +120,7 @@ contains
     
     nLinks = this%gridConnection%nrOfLinks
     do i=1, nLinks 
-      rowIdx = this%gridConnection%ownIndices(i) + this%owner%moffset
+      rowIdx = this%gridConnection%localCells(i)%cell%index + this%owner%moffset
       
       ! TODO_MJR: we have addition here for off-diagonals as well (temporarily though) 
       ! because GNC is already added to the matrix in GwfGwfExchange
@@ -157,13 +157,13 @@ contains
     call mem_allocate(this%conductance, nLinks, 'COND', this%memoryOrigin) 
     
     do i=1, nLinks
-      n = this%gridConnection%ownIndices(i)
-      m = this%gridConnection%primaryLinks(i)%linkedIndex
+      n = this%gridConnection%localCells(i)%cell%index
+      m = this%gridConnection%connectedCells(i)%cell%index
       ihc = this%gridConnection%linkGeometries(i)%connectionType
       
       ! We know this is a gwf model:
       ! (TODO_MJR: maybe replace model pointer by index in model list?)
-      model2 => CastToGwfModel(this%gridConnection%primaryLinks(i)%linkedModel)      
+      model2 => CastToGwfModel(this%gridConnection%connectedCells(i)%cell%model)      
       
       ! properties owner, through gwfModel pointer
       topn = this%gwfModel%dis%top(n)
@@ -243,13 +243,13 @@ contains
     nLinks = this%gridConnection%nrOfLinks    
     do i=1, nLinks  
       
-      n = this%gridConnection%ownIndices(i)
-      m = this%gridConnection%primaryLinks(i)%linkedIndex
+      n = this%gridConnection%localCells(i)%cell%index
+      m = this%gridConnection%connectedCells(i)%cell%index
       ihc = this%gridConnection%linkGeometries(i)%connectionType
       
       ! We know this is a gwf model:
       ! (TODO_MJR: maybe replace model pointer by index in model list?)
-      model2 => CastToGwfModel(this%gridConnection%primaryLinks(i)%linkedModel)  
+      model2 => CastToGwfModel(this%gridConnection%connectedCells(i)%cell%model)  
     
       ibdn = this%gwfModel%ibound(n)
       ictn = this%gwfModel%npf%icelltype(n)

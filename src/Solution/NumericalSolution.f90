@@ -2357,7 +2357,28 @@ subroutine solution_create(filename, id)
     ! -- return
     return
   end subroutine sln_connect
-
+  
+  ! fill list with exchanges from this solution, of equal type
+  subroutine getExchanges(this, exchanges, connectionType)
+    class(NumericalSolutionType), intent(inout) :: this
+    type(ListType), intent(inout) :: exchanges
+    character(len=7), intent(in) :: connectionType
+    
+    ! local
+    integer(I4B) :: ic
+    class(NumericalExchangeType), pointer :: numEx
+    class(*), pointer :: exPtr
+    
+    do ic=1,this%exchangelist%Count()
+      numEx => GetNumericalExchangeFromList(this%exchangelist, ic)
+      if (connectionType == numEx%typename) then
+        exPtr => numEx
+        call exchanges%Add(exPtr)  
+      end if
+    enddo
+    
+  end subroutine
+  
   !> @ brief Reset the solution
   !!
   !!  Reset the solution by setting the coefficient matrix and right-hand side 

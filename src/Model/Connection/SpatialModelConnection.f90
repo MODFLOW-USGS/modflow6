@@ -15,7 +15,7 @@ module SpatialModelConnectionModule
 	! and connected.
 	type, public, abstract, extends(ModelConnectionType) :: SpatialModelConnectionType
         
-    ! aggregation:
+    ! aggregation, all exchanges which connect with our model
     type(ListType), pointer :: exchangeList => null()
     
     ! TODO_MJR: mem mgt of these guys:
@@ -33,6 +33,7 @@ module SpatialModelConnectionModule
     procedure, pass(this) :: mc_ac => addConnectionsToMatrix
     
     procedure, private, pass(this) :: addLinksToGridConnection
+    procedure, private, pass(this) :: setGlobalNeighbours
     procedure, private, pass(this) :: getNrOfConnections
   end type SpatialModelConnectionType
 
@@ -71,7 +72,7 @@ contains ! module procedures
     
     ! create the grid connection data structure
     this%nrOfConnections = this%getNrOfConnections()
-    call this%gridConnection%construct(this%nrOfConnections, this%name)
+    call this%gridConnection%construct(this%owner, this%nrOfConnections, this%name)
     call this%addLinksToGridConnection()
     
     ! TODO_MJR: move this?
@@ -87,16 +88,20 @@ contains ! module procedures
     integer(I4B), dimension(:), intent(in) :: jasln
     ! local
     integer(I4B) :: i, nLinks
-    integer(I4B) :: iglo, jglo ! global (solution matrix) indices
-    type(NodeLinkType), dimension(:), pointer :: links => null()
+    integer(I4B) :: iglo, jglo ! global (solution matrix) indices    
     integer(I4B) :: csrIndex
     
-    links => this%gridConnection%primaryLinks    
+    type(GlobalCellType), dimension(:), pointer :: localCells => null()
+    type(GlobalCellType), dimension(:), pointer :: connectedCells => null()
+    
+    localCells => this%gridConnection%localCells(:)%cell
+    connectedCells => this%gridConnection%connectedCells(:)%cell
+    
     nLinks = this%gridConnection%nrOfLinks
        
     do i=1, nLinks
-      iglo = this%gridConnection%ownIndices(i) + this%owner%moffset
-      jglo = links(i)%linkedIndex + links(i)%linkedModel%moffset
+      iglo = localCells(i)%index + localCells(i)%model%moffset
+      jglo = connectedCells(i)%index + connectedCells(i)%model%moffset      
       csrIndex = getCSRIndex(iglo, jglo, iasln, jasln)
       if (csrIndex == -1) then
         ! this should not be possible
@@ -118,17 +123,20 @@ contains ! module procedures
     ! local
     integer(I4B) :: i, nLinks
     integer(I4B) :: iglo, jglo ! global (solution matrix) indices
-    type(NodeLinkType), dimension(:), pointer :: links => null()
+    
+    type(GlobalCellType), dimension(:), pointer :: localCells => null()
+    type(GlobalCellType), dimension(:), pointer :: connectedCells => null()
+    
+    localCells => this%gridConnection%localCells(:)%cell
+    connectedCells => this%gridConnection%connectedCells(:)%cell
         
-    links => this%gridConnection%primaryLinks    
-    nLinks = this%gridConnection%nrOfLinks
-       
+    nLinks = this%gridConnection%nrOfLinks     
     do i=1, nLinks
-      iglo = this%gridConnection%ownIndices(i) + this%owner%moffset
-      jglo = links(i)%linkedIndex + links(i)%linkedModel%moffset
+      iglo = localCells(i)%index + localCells(i)%model%moffset
+      jglo = connectedCells(i)%index + connectedCells(i)%model%moffset
      
       ! add global numbers to sparse
-      call sparse%addconnection(iglo, jglo, 1) 
+      call sparse%addconnection(iglo, jglo, 1)
     end do
     
   end subroutine
@@ -167,7 +175,27 @@ contains ! module procedures
       end do
     end do
     
+    ! here we scan for nbr-of-nbrs
+    call this%gridConnection%extendConnection()
+    
   end subroutine addLinksToGridConnection
+  
+  ! subroutine uses the global exchanges from ModelConnection base,
+  ! to set global neighbour information in GridConnection
+  subroutine setGlobalNeighbours(this)
+      class(SpatialModelConnectionType), intent(inout) :: this
+      ! local   
+      integer(I4B) :: i
+      class(NumericalExchangeType), pointer :: numEx
+      
+      ! loop over all exchanges in solution with same conn. type
+      do i=1, this%globalExchanges%Count()
+          numEx => GetNumericalExchangeFromList(this%exchangelist, i)
+          ! add connection between models
+          call this%gridConnection%connectModels(numEx%m1, numEx%m2)
+      end do     
+      
+   end subroutine
   
   ! count total nr. of connection between cells, from the exchanges
   function getNrOfConnections(this) result(nrConns)
