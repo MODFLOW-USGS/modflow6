@@ -55,7 +55,7 @@
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
 		<Configuration Name="Profile|x64">
-				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/debug:inline-debug-info" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" DebugParameter="debugParameterAll" FloatingPointExceptionHandling="fpe0" Traceback="true"/>
+				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/debug:inline-debug-info" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" DebugParameter="debugParameterAll" Traceback="true"/>
 				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateManifest="false" ManifestFile="$(IntDir)\$(TargetName)p$(TargetExt).intermediate.manifest" GenerateDebugInformation="true" ProgramDatabaseFile="$(IntDir)\$(TargetName).pdb" SubSystem="subSystemConsole"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>

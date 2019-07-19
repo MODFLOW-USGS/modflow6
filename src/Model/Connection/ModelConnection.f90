@@ -16,8 +16,8 @@ module ModelConnectionModule
 	! Abstract base class for a model's connection with other models. It will enable e.g.
 	! the interfacing between a GWFModel and its GWF-neigbours, similarly for a
 	! GWTModel, and also the (heterogeneous) interfacing between models of type
-	! GWT and GWF.
-  type, abstract, public :: ModelConnectionType		
+	! GWT and GWF. It is built from NumericalExchangeType objects.
+  type, abstract, public :: ModelConnectionType
     class(NumericalModelType), pointer  :: owner => null()  ! the model whose connection this is  
     character(len=7)                    :: connectionType
     character(len=LENPACKAGENAME)       :: name
@@ -25,6 +25,9 @@ module ModelConnectionModule
     
     integer(I4B)                        :: inewton          ! == 1 for newton-raphson, 0 otherwise
   
+    ! all numerical exchanges in the same solution with our connectiontype (aggregation)
+    type(ListType)                      :: globalExchanges
+       
   contains
     
     procedure (defineConnectionIFace), deferred, pass(this)       :: mc_df
@@ -37,7 +40,7 @@ module ModelConnectionModule
     ! derived types should decide for themselves how the overall connection is 
     ! altered when another model is connected
     procedure (addExchangeIFace), deferred, pass(this) :: addExchange
-       
+    
   end type ModelConnectionType
     
   abstract interface
