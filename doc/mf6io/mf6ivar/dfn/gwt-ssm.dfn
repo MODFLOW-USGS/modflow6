@@ -21,7 +21,7 @@ description REPLACE save_flows {'{#1}': 'SSM'}
 
 block sources
 name sources
-type recarray pname component auxname
+type recarray pname srctype auxname
 reader urword
 optional false
 longname package list
@@ -37,13 +37,14 @@ longname package name
 description name of the package for which an auxiliary variable contains a source concentration.
 
 block sources
-name component
+name srctype
 in_record true
-type integer
+type string
 tagged false
+optional false
 reader urword
-longname species component number
-description species number.
+longname source type
+description type of the source.  Must be AUX or LKT
 
 block sources
 name auxname
@@ -53,5 +54,5 @@ tagged false
 reader urword
 optional false
 longname auxiliary variable name
-description name of the auxiliary variable in the package PNAME that contains the source concentration for the COMPONENT species.
+description name of the auxiliary variable in the package PNAME that contains the source concentration.
 

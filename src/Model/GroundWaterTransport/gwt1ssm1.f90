@@ -17,12 +17,12 @@ module GwtSsmModule
 
   type, extends(NumericalPackageType) :: GwtSsmType
     
-    integer, pointer                                   :: ncomp                 ! number of components
-    integer, pointer                                   :: nbound                ! number of flow boundaries in this time step
-    integer(I4B), dimension(:, :), pointer, contiguous :: iauxpakcomp => null() ! aux col for component concentration
+    integer(I4B), pointer                              :: nbound                ! number of flow boundaries in this time step
+    integer(I4B), dimension(:), pointer, contiguous    :: iauxpak => null()     ! aux col for concentration
     integer(I4B), dimension(:), pointer, contiguous    :: ibound => null()      ! pointer to model ibound
+    real(DP), dimension(:), pointer, contiguous        :: cnew => null()        ! pointer to gwt%x
     type(GwtFmiType), pointer                          :: fmi => null()         ! pointer to fmi object
-
+    
   contains
   
     procedure :: ssm_df
@@ -92,14 +92,11 @@ module GwtSsmModule
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
-    ! -- assign ncomp
-    this%ncomp = 1
-    !
     ! -- Return
     return
   end subroutine ssm_df
 
-  subroutine ssm_ar(this, dis, ibound)
+  subroutine ssm_ar(this, dis, ibound, cnew)
 ! ******************************************************************************
 ! ssm_ar -- Allocate and Read
 ! ******************************************************************************
@@ -114,6 +111,7 @@ module GwtSsmModule
     class(GwtSsmType) :: this
     class(DisBaseType), pointer, intent(in) :: dis
     integer(I4B), dimension(:), pointer, contiguous :: ibound
+    real(DP), dimension(:), pointer, contiguous :: cnew
     ! -- local
     character(len=LINELENGTH) :: errmsg
     ! -- formats
@@ -128,6 +126,7 @@ module GwtSsmModule
     ! -- store pointers to arguments that were passed in
     this%dis     => dis
     this%ibound  => ibound
+    this%cnew    => cnew
     !
     ! -- Check to make sure that gwfbndlist is not null
     if (.not. associated(this%fmi%gwfbndlist)) then
@@ -170,6 +169,7 @@ module GwtSsmModule
     this%nbound = 0
     do ip = 1, this%fmi%gwfbndlist%Count()
       packobj => GetBndFromList(this%fmi%gwfbndlist, ip)
+      if (this%fmi%iatp(ip) /= 0) cycle 
       this%nbound = this%nbound + packobj%nbound
     end do
     !
@@ -177,7 +177,7 @@ module GwtSsmModule
     return
   end subroutine ssm_ad
   
-  subroutine ssm_fc(this, icomp, amatsln, idxglo, rhs)
+  subroutine ssm_fc(this, amatsln, idxglo, rhs)
 ! ******************************************************************************
 ! ssm_fc -- Calculate coefficients and fill amat and rhs
 ! ******************************************************************************
@@ -187,7 +187,6 @@ module GwtSsmModule
     ! -- modules
     ! -- dummy
     class(GwtSsmType) :: this
-    integer, intent(in) :: icomp
     real(DP), dimension(:), intent(inout) :: amatsln
     integer(I4B), intent(in), dimension(:) :: idxglo
     real(DP), intent(inout), dimension(:) :: rhs
@@ -203,6 +202,7 @@ module GwtSsmModule
     ! -- do for each flow package
     do ip = 1, this%fmi%gwfbndlist%Count()
       packobj => GetBndFromList(this%fmi%gwfbndlist, ip)
+      if (this%fmi%iatp(ip) /= 0) cycle
       !
       ! -- do for each boundary
       do i = 1, packobj%nbound
@@ -217,7 +217,7 @@ module GwtSsmModule
         qbnd = packobj%hcof(i) * packobj%xnew(n) - packobj%rhs(i)
         !
         ! -- get the first auxiliary variable
-        iauxpos = this%iauxpakcomp(icomp, ip)
+        iauxpos = this%iauxpak(ip)
         if(iauxpos > 0) then
           ctmp = packobj%auxvar(iauxpos, i)
         else
@@ -240,7 +240,7 @@ module GwtSsmModule
     return
   end subroutine ssm_fc
   
-  subroutine ssm_bdcalc(this, icomp, cnew, isuppress_output, model_budget)
+  subroutine ssm_bdcalc(this, isuppress_output, model_budget)
 ! ******************************************************************************
 ! ssm_bdcalc -- Calculate budget terms
 ! ******************************************************************************
@@ -248,12 +248,10 @@ module GwtSsmModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule,        only: delt
+    use TdisModule, only: delt
     use BudgetModule, only: BudgetType
     ! -- dummy
     class(GwtSsmType) :: this
-    integer, intent(in) :: icomp
-    real(DP), intent(in), dimension(:) :: cnew
     integer(I4B), intent(in) :: isuppress_output
     type(BudgetType), intent(inout) :: model_budget
     ! -- local
@@ -276,6 +274,7 @@ module GwtSsmModule
     ! -- do for each flow package
     do ip = 1, this%fmi%gwfbndlist%Count()
       packobj => GetBndFromList(this%fmi%gwfbndlist, ip)
+      if (this%fmi%iatp(ip) /= 0) cycle
       !
       ! -- do for each boundary
       do i = 1, packobj%nbound
@@ -290,7 +289,7 @@ module GwtSsmModule
         qbnd = packobj%hcof(i) * packobj%xnew(n) - packobj%rhs(i)
         !
         ! -- get the first auxiliary variable
-        iauxpos = this%iauxpakcomp(icomp, ip)
+        iauxpos = this%iauxpak(ip)
         if(iauxpos > 0) then
           cbnd = packobj%auxvar(iauxpos, i)
         else
@@ -299,7 +298,7 @@ module GwtSsmModule
         !
         ! -- Add terms based on qbnd sign
         if(qbnd <= DZERO) then
-          ctmp = cnew(n)
+          ctmp = this%cnew(n)
         else
           ctmp = cbnd
         endif
@@ -323,7 +322,7 @@ module GwtSsmModule
     return
   end subroutine ssm_bdcalc
 
-  subroutine ssm_bdsav(this, icomp, cnew, icbcfl, ibudfl, icbcun, iprobs,         &
+  subroutine ssm_bdsav(this, icbcfl, ibudfl, icbcun, iprobs,                   &
                        isuppress_output, imap)
 ! ******************************************************************************
 ! ssm_bdsav -- Calculate SSM Budget
@@ -337,8 +336,6 @@ module GwtSsmModule
     use BudgetModule, only: BudgetType
     ! -- dummy
     class(GwtSsmType) :: this
-    integer, intent(in) :: icomp
-    real(DP), intent(in), dimension(:) :: cnew
     integer(I4B), intent(in) :: icbcfl
     integer(I4B), intent(in) :: ibudfl
     integer(I4B), intent(in) :: icbcun
@@ -393,6 +390,7 @@ module GwtSsmModule
       ! -- Loop through each boundary calculating flow.
       do ip = 1, this%fmi%gwfbndlist%Count()
         packobj => GetBndFromList(this%fmi%gwfbndlist, ip)
+        if (this%fmi%iatp(ip) /= 0) cycle
         !
         ! -- do for each boundary
         do i = 1, packobj%nbound
@@ -408,7 +406,7 @@ module GwtSsmModule
           qbnd = packobj%hcof(i) * packobj%xnew(n) - packobj%rhs(i)
           !
           ! -- get the first auxiliary variable
-          iauxpos = this%iauxpakcomp(icomp, ip)
+          iauxpos = this%iauxpak(ip)
           if(iauxpos > 0) then
             cbnd = packobj%auxvar(iauxpos, i)
           else
@@ -417,7 +415,7 @@ module GwtSsmModule
           !
           ! -- Add terms based on qbnd sign
           if(qbnd <= DZERO) then
-            ctmp = cnew(n)
+            ctmp = this%cnew(n)
           else
             ctmp = cbnd
           endif
@@ -484,13 +482,12 @@ module GwtSsmModule
     !
     ! -- Deallocate arrays if package was active
     if(this%inunit > 0) then
-      call mem_deallocate(this%iauxpakcomp)
+      call mem_deallocate(this%iauxpak)
       this%ibound => null()
       this%fmi => null()
     endif
     !
     ! -- Scalars
-    call mem_deallocate(this%ncomp)
     call mem_deallocate(this%nbound)
     !
     ! -- deallocate parent
@@ -518,10 +515,10 @@ module GwtSsmModule
     call this%NumericalPackageType%allocate_scalars()
     !
     ! -- Allocate
-    call mem_allocate(this%ncomp, 'NCOMP', this%origin)
     call mem_allocate(this%nbound, 'NBOUND', this%origin)
     !
     ! -- Initialize
+    this%nbound = 0
     !
     ! -- Return
     return
@@ -544,11 +541,11 @@ module GwtSsmModule
     !    
     ! -- Allocate
     ngwfpak = this%fmi%gwfbndlist%Count()
-    call mem_allocate(this%iauxpakcomp, this%ncomp, ngwfpak, 'IAUXPAKCOMP',    &
+    call mem_allocate(this%iauxpak, ngwfpak, 'IAUXPAK',                        &
                       this%name)
     !
     ! -- Initialize
-    this%iauxpakcomp(:, :) = 0
+    this%iauxpak(:) = 0
     !
     ! -- Return
     return
@@ -626,10 +623,11 @@ module GwtSsmModule
     class(BndType), pointer :: packobj
     character(len=LINELENGTH) :: errmsg, keyword
     character(len=LENAUXNAME) :: auxname
+    character(len=3) :: srctype
     integer(I4B) :: ierr
-    integer(I4B) :: icomp
     integer(I4B) :: ip
     integer(I4B) :: iaux
+    integer(I4B) :: ngwfpack
     logical :: isfound, endOfBlock
     logical :: pakfound
     ! -- formats
@@ -638,6 +636,7 @@ module GwtSsmModule
     !
     ! -- initialize
     isfound = .false.
+    ngwfpack = this%fmi%gwfbndlist%Count()
     !
     ! -- get sources block
     call this%parser%GetBlock('SOURCES', isfound, ierr)
@@ -650,7 +649,7 @@ module GwtSsmModule
         ! -- read package name and make sure it can be found
         call this%parser%GetStringCaps(keyword)
         pakfound = .false.
-        do ip = 1, this%fmi%gwfbndlist%Count()
+        do ip = 1, ngwfpack
           packobj => GetBndFromList(this%fmi%gwfbndlist, ip)
           if (trim(packobj%name) == keyword) then
             pakfound = .true.
@@ -665,15 +664,18 @@ module GwtSsmModule
           call ustop()
         endif
         !
-        ! -- read component number
-        icomp = this%parser%GetInteger()
-        if (icomp < 1 .or. icomp > this%ncomp) then
+        ! -- read the source type
+        call this%parser%GetStringCaps(srctype)
+        select case(srctype)
+        case('AUX')
+          write(this%iout,'(1x,a)') 'AUX SOURCE DETECTED.'
+        case default
           write(errmsg,'(1x, a, i0)')                                          &
-            'ERROR.  ICOMP must be > 0  and < NCOMP: ', icomp
+            'ERROR.  SRCTYPE MUST BE AUX OR LKT ', srctype
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
           call ustop()
-        endif
+        end select
         !
         ! -- read name of auxiliary column
         call this%parser%GetStringCaps(auxname)
@@ -692,18 +694,18 @@ module GwtSsmModule
           call ustop()
         endif
         !
-        ! -- Set the column position in iauxpakcomp
-        if (this%iauxpakcomp(icomp, ip) /= 0) then
+        ! -- Set the column position in iauxpak
+        if (this%iauxpak(ip) /= 0) then
           write(errmsg,'(1x, a, a, i0, a)')                                    &
-            'ERROR.  PACKAGE, COMPONENT, and AUXNAME ALREADY SPECIFIED: ',     &
-            trim(keyword), icomp, trim(auxname)
+            'ERROR.  PACKAGE and AUXNAME ALREADY SPECIFIED: ',                 &
+            trim(keyword), trim(auxname)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
           call ustop()
         endif
-        this%iauxpakcomp(icomp, ip) = iaux
-        write(this%iout, '(4x, a, i0, a, i0, a, a)') 'USING AUX COLUMN ',      &
-          iaux, ' FOR COMPONENT ', icomp, ' IN PACKAGE ', trim(keyword)
+        this%iauxpak(ip) = iaux
+        write(this%iout, '(4x, a, i0, a, a)') 'USING AUX COLUMN ',      &
+          iaux, ' IN PACKAGE ', trim(keyword)
         !
       end do
       write(this%iout,'(1x,a)')'END PROCESSING SOURCES'

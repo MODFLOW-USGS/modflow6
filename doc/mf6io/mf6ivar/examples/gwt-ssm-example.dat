@@ -1,4 +1,5 @@
 BEGIN SOURCES
-# pname component       auxname
-  WEL-1         1 CONCENTRATION
+# pname srctype        auxname
+  WEL-1     AUX  CONCENTRATION
+  LAK-1     AUX  CONCENTRATION
 END SOURCES
