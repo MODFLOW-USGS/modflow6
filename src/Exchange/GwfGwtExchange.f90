@@ -161,6 +161,9 @@ module GwfGwtExchangeModule
     ! -- Set a pointer to conc
     if (gwfmodel%inbuy > 0) then
       call gwfmodel%buy%set_concentration_pointer(gwtmodel%x, gwtmodel%ibound)
+      if (gwtmodel%inssm /= 0) then
+        call gwfmodel%buy%set_iauxpak_pointer(gwtmodel%ssm%iauxpak)
+      end if
     endif
     !
     ! -- return

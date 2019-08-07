@@ -112,7 +112,7 @@ module GwtModule
   data cunit/   'DIS6 ', 'DISV6', 'DISU6', 'IC6  ', 'MST6 ', & !  5
                 'ADV6 ', 'DSP6 ', 'SSM6 ', '     ', 'CNC6 ', & ! 10
                 'OC6  ', 'OBS6 ', 'FMI6 ', 'SRC6 ', 'IST6 ', & ! 15
-                '     ', '     ', '     ', '     ', '     ', & ! 20
+                'LKT6 ', '     ', '     ', '     ', '     ', & ! 20
                 80 * '     '/
   
   contains
@@ -437,7 +437,7 @@ module GwtModule
     if(this%inadv > 0) call this%adv%adv_ar(this%dis, this%ibound)
     if(this%indsp > 0) call this%dsp%dsp_ar(this%dis, this%ibound,             &
                                             this%mst%porosity)
-    if(this%inssm > 0) call this%ssm%ssm_ar(this%dis, this%ibound)
+    if(this%inssm > 0) call this%ssm%ssm_ar(this%dis, this%ibound, this%x)
     if(this%inobs > 0) call this%obs%gwt_obs_ar(this%ic, this%x, this%flowja)
     !
     ! -- Call dis_ar to write binary grid file
@@ -588,11 +588,9 @@ module GwtModule
     ! -- local
     class(BndType), pointer :: packobj
     integer(I4B) :: ip
-    integer(I4B) :: icomp
 ! ------------------------------------------------------------------------------
     !
     ! -- call fc routines
-    icomp = 1
     if(this%infmi > 0) then
       call this%fmi%fmi_fc(this%dis%nodes, this%xold, this%nja, njasln,        &
                            amatsln, this%idxglo, this%rhs)
@@ -610,7 +608,7 @@ module GwtModule
                            this%idxglo, this%rhs, this%x)
     endif
     if(this%inssm > 0) then
-      call this%ssm%ssm_fc(icomp, amatsln, this%idxglo, this%rhs)
+      call this%ssm%ssm_fc(amatsln, this%idxglo, this%rhs)
     endif
     !
     ! -- packages
@@ -671,11 +669,7 @@ module GwtModule
     integer(I4B) :: icbcfl, ibudfl, icbcun, iprobs, idvfl
     integer(I4B) :: ip
     class(BndType),pointer :: packobj
-    integer(I4B) :: icomp
 ! ------------------------------------------------------------------------------
-    !
-    ! -- Hardwire icomp for now
-    icomp = 1
     !
     ! -- Save the solution convergence flag
     this%icnvg = icnvg
@@ -713,14 +707,13 @@ module GwtModule
     !
     ! -- SSM
     if(this%inssm > 0) then
-      call this%ssm%ssm_bdcalc(icomp, this%x, isuppress_output, this%budget)
-      call this%ssm%ssm_bdsav(icomp, this%x, icbcfl, ibudfl, icbcun, iprobs,   &
-                              isuppress_output)
+      call this%ssm%ssm_bdcalc(isuppress_output, this%budget)
+      call this%ssm%ssm_bdsav(icbcfl, ibudfl, icbcun, iprobs, isuppress_output)
     endif
     !
     ! - FMI
     if(this%infmi > 0) then
-      call this%fmi%fmi_bdcalc(icomp, this%x, isuppress_output, this%budget)
+      call this%fmi%fmi_bdcalc(this%x, isuppress_output, this%budget)
     endif
     !
     ! -- Clear obs
@@ -1004,6 +997,7 @@ module GwtModule
     use GwtCncModule, only: cnc_create
     use GwtSrcModule, only: src_create
     use GwtIstModule, only: ist_create
+    use GwtLktModule, only: lkt_create
     ! -- dummy
     class(GwtModelType) :: this
     character(len=*),intent(in) :: filtyp
@@ -1019,13 +1013,15 @@ module GwtModule
     integer(I4B) :: ip
 ! ------------------------------------------------------------------------------
     !
-    ! -- Now supporting new-style WEL and GHB packages.
     ! -- This part creates the package object
     select case(filtyp)
     case('CNC6')
       call cnc_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
     case('SRC6')
       call src_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
+    case('LKT6')
+      call lkt_create(packobj, ipakid, ipaknum, inunit, iout, this%name,       &
+                      pakname, this%fmi)
     case('IST6')
       call ist_create(packobj, ipakid, ipaknum, inunit, iout, this%name,       &
                       pakname, this%fmi, this%mst)

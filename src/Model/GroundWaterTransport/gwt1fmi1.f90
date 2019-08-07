@@ -13,6 +13,7 @@ module GwtFmiModule
 
   type, extends(NumericalPackageType) :: GwtFmiType
     
+    integer(I4B), dimension(:), pointer, contiguous :: iatp => null()           ! advanced transport package applied to gwfbndlist
     type(ListType), pointer                         :: gwfbndlist => null()     ! list of gwf stress packages
     integer(I4B), pointer                           :: iflowerr => null()       ! add the flow error correction
     real(DP), dimension(:), pointer, contiguous     :: flowerr => null()        ! residual error of the flow solution
@@ -123,7 +124,7 @@ module GwtFmiModule
     if (inssm == 0) then
       if (this%gwfbndlist%Count() > 0) then
         call store_error('ERROR: FLOW MODEL HAS BOUNDARY PACKAGES, BUT THERE &
-          &IS NO SSM PACAKGE.  THE SSM PACKAGE MUST BE ACTIVATED.')
+          &IS NO SSM PACKAGE.  THE SSM PACKAGE MUST BE ACTIVATED.')
         call ustop()
       endif
     endif
@@ -154,18 +155,14 @@ module GwtFmiModule
     integer(I4B) :: n
     integer(I4B) :: m
     integer(I4B) :: ipos
-    integer(I4B) :: icomp
     real(DP) :: crewet, tflow, flownm
     character (len=15) :: nodestr
     character(len=*), parameter :: fmtdry = &
      &"(/1X,'WARNING: DRY CELL ENCOUNTERED AT ',a,';  RESET AS INACTIVE')"
     character(len=*), parameter :: fmtrewet = &
      &"(/1X,'DRY CELL REACTIVATED AT ', a,&
-     &' FOR SPECIES ',i0,' WITH STARTING CONCENTRATION =',G13.5)"
+     &' WITH STARTING CONCENTRATION =',G13.5)"
 ! ------------------------------------------------------------------------------
-    !
-    ! -- initialize
-    icomp = 1
     !
     ! -- if flow cell is dry, then set gwt%ibound = 0 and conc to dry
     do n = 1, size(this%ibound)
@@ -208,7 +205,7 @@ module GwtFmiModule
           this%ibound(n) = 1
           cnew(n) = crewet
           call this%dis%noder_to_string(n, nodestr)
-          write(this%iout, fmtrewet) trim(nodestr), icomp, crewet
+          write(this%iout, fmtrewet) trim(nodestr), crewet
         endif
       endif
     enddo
@@ -280,7 +277,7 @@ module GwtFmiModule
     return
   end subroutine fmi_fc
   
-  subroutine fmi_bdcalc(this, icomp, cnew, isuppress_output, model_budget)
+  subroutine fmi_bdcalc(this, cnew, isuppress_output, model_budget)
 ! ******************************************************************************
 ! fmi_fc -- Calculate coefficients and fill amat and rhs
 ! ******************************************************************************
@@ -292,7 +289,6 @@ module GwtFmiModule
     use BudgetModule, only: BudgetType
     ! -- dummy
     class(GwtFmiType) :: this
-    integer, intent(in) :: icomp
     real(DP), intent(in), dimension(:) :: cnew
     integer(I4B), intent(in) :: isuppress_output
     type(BudgetType), intent(inout) :: model_budget
@@ -418,18 +414,25 @@ module GwtFmiModule
     class(GwtFmiType) :: this
     integer(I4B), intent(in) :: nodes
     ! -- local
-    integer(I4B) :: n
+    integer(I4B) :: n, nflowpack
 ! ------------------------------------------------------------------------------
+    !
+    ! -- Initialize
+    nflowpack = this%gwfbndlist%Count()
     !
     ! -- Allocate
     call mem_allocate(this%gwfthksat, nodes, 'THKSAT', this%origin)
     call mem_allocate(this%flowerr, nodes, 'FLOWERR', this%origin)
+    call mem_allocate(this%iatp, nflowpack, 'IATP', this%origin)
     !
     ! -- Initialize
     do n = 1, nodes
       this%gwfthksat(n) = DZERO
       this%flowerr(n) = DZERO
     enddo
+    do n = 1, nflowpack
+      this%iatp(n) = 0
+    end do
     !
     ! -- Return
     return

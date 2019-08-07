@@ -17,6 +17,7 @@ module GwfBuyModule
     integer(I4B), pointer                       :: iform      => null()         ! formulation: 0 freshwater head, 1 hydraulic head, 2 hh rhs
     integer(I4B), pointer                       :: ireadelev  => null()         ! if 1 then elev has been allocated and filled
     integer(I4B), pointer                       :: ireaddense => null()         ! if 1 then dense has been read from input file
+    integer(I4B), pointer                       :: iconcset   => null()         ! if 1 then conc is pointed to a gwt model%x
     real(DP), pointer                           :: denseref   => null()         ! reference fluid density
     real(DP), pointer                           :: drhodc     => null()         ! change in density with change in concentration
     real(DP), dimension(:), pointer, contiguous :: dense      => null()         ! density
@@ -24,6 +25,7 @@ module GwfBuyModule
     integer(I4B), dimension(:), pointer         :: ibound     => null()         ! store pointer to ibound
     real(DP), dimension(:), pointer             :: conc       => null()         ! pointer to concentration array
     integer(I4B), dimension(:), pointer         :: icbund     => null()         ! store pointer to gwt ibound array
+    integer(I4B), dimension(:), pointer, contiguous :: iauxpak => null() ! aux col for component concentration
   contains    
     procedure :: buy_ar
     procedure :: buy_rp
@@ -40,10 +42,33 @@ module GwfBuyModule
     procedure, private :: read_options
     procedure, private :: read_data
     procedure :: set_concentration_pointer
+    procedure :: set_iauxpak_pointer
   end type GwfBuyType
   
   contains
   
+  function calcdens(denseref, drhodc, conc) result(dense)
+! ******************************************************************************
+! calcdens -- generic function to calculate fluid density from concentration
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    real(DP), intent(in) :: denseref
+    real(DP), intent(in) :: drhodc
+    real(DP), intent(in) :: conc
+    ! -- return
+    real(DP) :: dense
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    dense = denseref + drhodc * conc
+    !
+    ! -- return
+    return
+  end function calcdens
+
   subroutine buy_cr(buyobj, name_model, inunit, iout)
 ! ******************************************************************************
 ! buy_cr -- Create a new BUY object
@@ -174,6 +199,18 @@ module GwfBuyModule
       write(this%iout,fmtlsp) 'BUY'
     endif
     !
+    ! -- Check to make sure that dense is available from being read or 
+    !    from being set as a pointer
+    if (this%ireaddense == 0 .and. this%iconcset == 0) then
+      write(errmsg, '(a)') '****ERROR. DENSITY NOT SET FOR BUY &
+                            &PACKAGE.  A GWF-GWT EXCHANGE MUST BE &
+                            &SPECIFIED OR DENSITY MUST BE SPECIFIED &
+                            &IN THE BUY PERIOD BLOCK.'
+      call store_error(errmsg)
+      call this%parser%StoreErrorUnit()
+      call ustop()
+    end if
+    !
     ! -- return
     return
   end subroutine buy_rp
@@ -193,6 +230,9 @@ module GwfBuyModule
     integer(I4B) :: n, nodes
     real(DP) :: hn, tp
 ! ------------------------------------------------------------------------------
+    !
+    ! -- update density using the last concentration
+    call this%buy_calcdens()
     !
     ! -- Calculate the elev array
     nodes = size(hnew)
@@ -242,6 +282,7 @@ module GwfBuyModule
     if (packobj%filtyp == 'GHB') iheaddep = 1
     if (packobj%filtyp == 'RIV') iheaddep = 1
     if (packobj%filtyp == 'DRN') iheaddep = 1
+    if (packobj%filtyp == 'LAK') iheaddep = 1
     if (iheaddep == 0) return
     !
     ! -- Add buoyancy terms for head-dependent boundaries
@@ -310,9 +351,6 @@ module GwfBuyModule
     ! -- initialize
     amatnn = DZERO
     amatnm = DZERO
-    !
-    ! -- update density using the last concentration
-    call this%buy_calcdens()
     !
     ! -- fill buoyancy flow term
     do n = 1, this%dis%nodes
@@ -617,7 +655,7 @@ module GwfBuyModule
         if(this%icbund(n) == 0) then
           this%dense(n) = this%conc(n)  !set to cinact
         else
-          this%dense(n) = this%denseref + this%drhodc * this%conc(n)
+          this%dense(n) = calcdens(this%denseref, this%drhodc, this%conc(n))
         endif
       enddo
     endif
@@ -625,7 +663,7 @@ module GwfBuyModule
     ! -- Return
     return
   end subroutine buy_calcdens
-
+  
   subroutine allocate_scalars(this)
 ! ******************************************************************************
 ! allocate_scalars
@@ -648,12 +686,14 @@ module GwfBuyModule
     call mem_allocate(this%iform, 'IFORM', this%origin)
     call mem_allocate(this%ireadelev, 'IREADELEV', this%origin)
     call mem_allocate(this%ireaddense, 'IREADDENSE', this%origin)
+    call mem_allocate(this%iconcset, 'ICONCSET', this%origin)
     call mem_allocate(this%denseref, 'DENSEREF', this%origin)
     call mem_allocate(this%drhodc, 'DRHODC', this%origin)
     !
     ! -- Initialize
     this%iform = 0
     this%ireadelev = 0
+    this%iconcset = 0
     this%ireaddense = 0
     this%denseref = 1000.d0
     this%drhodc = 0.7d0
@@ -819,11 +859,32 @@ module GwfBuyModule
     ! -- local
 ! ------------------------------------------------------------------------------
     !
+    this%iconcset = 1
     this%conc => conc
     this%icbund => icbund
     !
     ! -- Return
     return
   end subroutine set_concentration_pointer
+  
+  subroutine set_iauxpak_pointer(this, iauxpak)
+! ******************************************************************************
+! set_concentration_pointer
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwfBuyType) :: this
+    integer(I4B), dimension(:), pointer, contiguous :: iauxpak
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    this%iauxpak => iauxpak
+    !
+    ! -- Return
+    return
+  end subroutine set_iauxpak_pointer
   
 end module GwfBuyModule

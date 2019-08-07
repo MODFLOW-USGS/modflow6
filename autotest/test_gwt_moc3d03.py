@@ -189,7 +189,7 @@ def build_models():
         mst = flopy.mf6.ModflowGwtmst(gwt, porosity=porosity)
 
         # sources
-        sourcerecarray = [('WEL-1', 1, 'CONCENTRATION')]
+        sourcerecarray = [('WEL-1', 'AUX', 'CONCENTRATION')]
         ssm = flopy.mf6.ModflowGwtssm(gwt, sources=sourcerecarray,
                                     filename='{}.ssm'.format(gwtname))
 

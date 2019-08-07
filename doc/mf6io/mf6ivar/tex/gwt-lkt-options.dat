@@ -1,0 +1,12 @@
+BEGIN OPTIONS
+  [AUXILIARY <auxiliary(naux)>]
+  [BOUNDNAMES]
+  [PRINT_INPUT]
+  [PRINT_CONCENTRATION]
+  [PRINT_FLOWS]
+  [SAVE_FLOWS]
+  [CONCENTRATION FILEOUT <concfile>]
+  [BUDGET FILEOUT <budgetfile>]
+  [TS6 FILEIN <ts6_filename>]
+  [OBS6 FILEIN <obs6_filename>]
+END OPTIONS
