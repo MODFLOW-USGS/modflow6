@@ -1,7 +1,7 @@
 module GwfCsubModule
   use KindModule, only: I4B, DP
-  use ConstantsModule, only: DPREC, DZERO, DEM20, DEM10, DEM7, DEM6, DEM4,      &
-                             DP9, DHALF, DEM1, DONE, DTWO, DTHREE,              &
+  use ConstantsModule, only: DPREC, DZERO, DEM20, DEM15, DEM10, DEM7, DEM6,     &
+                             DEM4, DP9, DHALF, DEM1, DONE, DTWO, DTHREE,        &
                              DGRAVITY, DTEN, DHUNDRED, DNODATA, DHNOFLO,        &
                              LENFTYPE, LENPACKAGENAME,                          &
                              LINELENGTH, LENBOUNDNAME, NAMEDBOUNDFLAG,          &
@@ -121,12 +121,14 @@ module GwfCsubModule
     real(DP), dimension(:), pointer, contiguous :: sk_es => null()               !skeletal (aquifer) effective stress
     real(DP), dimension(:), pointer, contiguous :: sk_es0 => null()              !skeletal (aquifer) effective stress for the previous time step
     real(DP), dimension(:), pointer, contiguous :: sk_esi => null()              !skeletal (aquifer) effective stress for the previous outer iteration
+    real(DP), dimension(:), pointer, contiguous :: sk_pcs => null()              !skeletal (aquifer) preconsolidation stress
     real(DP), dimension(:), pointer, contiguous :: sk_comp => null()             !skeletal (aquifer) incremental compaction
     real(DP), dimension(:), pointer, contiguous :: sk_tcomp => null()            !skeletal (aquifer) total compaction
     real(DP), dimension(:), pointer, contiguous :: sk_stor => null()             !skeletal (aquifer) storage
     real(DP), dimension(:), pointer, contiguous :: sk_ske => null()              !skeletal (aquifer) elastic storage coefficient
     real(DP), dimension(:), pointer, contiguous :: sk_sk => null()               !skeletal (aquifer) first storage coefficient
     real(DP), dimension(:), pointer, contiguous :: sk_thickini => null()         !initial skeletal (aquifer) thickness
+    real(DP), dimension(:), pointer, contiguous :: sk_thetaini => null()         !initial skeletal (aquifer) porosity
     real(DP), dimension(:), pointer, contiguous :: sk_w0 => null()               !skeletal under-relaxation weight
     real(DP), dimension(:), pointer, contiguous :: sk_hch0 => null()             !skeletal under-relaxation weighted change
     real(DP), dimension(:), pointer, contiguous :: sk_des0 => null()             !skeletal under-relaxation effective stress change
@@ -160,6 +162,7 @@ module GwfCsubModule
     real(DP), dimension(:), pointer, contiguous :: ske => null()                 !elastic storage coefficient
     real(DP), dimension(:), pointer, contiguous :: sk => null()                  !first storage coefficient
     real(DP), dimension(:), pointer, contiguous :: thickini => null()            !initial interbed thickness
+    real(DP), dimension(:), pointer, contiguous :: thetaini => null()            !initial interbed theta
     real(DP), dimension(:,:), pointer, contiguous :: auxvar => null()            !auxiliary variable array
     !
     ! -- delay interbed arrays
@@ -508,12 +511,16 @@ contains
 02030 format('CONVERGENCE FAILED AS A RESULT OF CSUB PACKAGE',1x,a)
 ! --------------------------------------------------------------------------
     ifirst = 1
-    tled = DONE / DELT
     if (this%gwfiss == 0) then
       ihmax = 0
       irmax = 0
       hmax = DZERO
       rmax = DZERO
+      if (DELT > DZERO) then
+        tled = DONE / DELT
+      else
+        tled = DZERO
+      end if
       final_check: do ib = 1, this%ninterbeds
         idelay = this%idelay(ib)
         !
@@ -650,13 +657,17 @@ contains
     ! -- coarse-grained skeletal storage
     rateskin = DZERO
     rateskout= DZERO
-    tled = DONE / DELT
     do node = 1, this%dis%nodes
       area = this%dis%get_area(node)
       comp = DZERO
       rrate = DZERO
       rratewc = DZERO
       if (this%gwfiss == 0) then
+        if (DELT > DZERO) then
+          tled = DONE / DELT
+        else
+          tled = DZERO
+        end if
         if (this%ibound(node) > 0) then
           !
           ! -- calculate coarse-grained skeletal storage terms
@@ -701,13 +712,13 @@ contains
       ! -- update states if required
       if (isuppress_output == 0) then
         !
-        ! -- update total compaction
-        this%sk_tcomp(node) = this%sk_tcomp(node) + comp
-        !
         ! - calculate strain and change in skeletal void ratio and thickness
         if (this%iupdatematprop /= 0) then
           call this%csub_sk_update(node)
         end if
+        !
+        ! -- update total compaction
+        this%sk_tcomp(node) = this%sk_tcomp(node) + comp
       end if
     end do
     !
@@ -718,12 +729,16 @@ contains
     rateibiout = DZERO
 
     tled = DONE
-    tledm = DONE / DELT
     do ib = 1, this%ninterbeds
       rratewc = DZERO
       idelay = this%idelay(ib)
       ielastic = this%ielastic(ib)
       if (this%gwfiss == 0) then
+        if (DELT > DZERO) then
+          tledm = DONE / DELT
+        else
+          tledm = DZERO
+        end if
         node = this%nodelist(ib)
         area = this%dis%get_area(node)
         !
@@ -775,16 +790,15 @@ contains
           ! -- update states if required
           if (isuppress_output == 0) then
             !
-            ! -- update total compaction
-            this%tcomp(ib) = this%tcomp(ib) + comp
-            this%tcompe(ib) = this%tcompe(ib) + compe
-            this%tcompi(ib) = this%tcompi(ib) + compi
-            
-            !
             ! - calculate strain and change in interbed void ratio and thickness
             if (this%iupdatematprop /= 0) then
               call this%csub_nodelay_update(ib)
             end if
+            !
+            ! -- update total compaction
+            this%tcomp(ib) = this%tcomp(ib) + comp
+            this%tcompe(ib) = this%tcompe(ib) + compe
+            this%tcompi(ib) = this%tcompi(ib) + compi
           end if
           !
           ! -- delay interbeds
@@ -1694,6 +1708,7 @@ contains
         ! -- get porosity
         rval =  this%parser%GetDouble()
         this%theta(itmp) = rval
+        this%thetaini(itmp) = rval
         if (rval <= DZERO .or. rval > DONE) then
             write(errmsg,'(4x,a,1x,a,1x,i0)') &
               '****ERROR. theta MUST BE > 0 and <= 1 FOR PACKAGEDATA ENTRY',     &
@@ -2469,12 +2484,14 @@ contains
     call mem_allocate(this%sk_es, this%dis%nodes, 'sk_es', trim(this%origin))
     call mem_allocate(this%sk_es0, this%dis%nodes, 'sk_es0', trim(this%origin))
     call mem_allocate(this%sk_esi, this%dis%nodes, 'sk_esi', trim(this%origin))
+    call mem_allocate(this%sk_pcs, this%dis%nodes, 'sk_pcs', trim(this%origin))
     call mem_allocate(this%sk_comp, this%dis%nodes, 'sk_comp', trim(this%origin))
     call mem_allocate(this%sk_tcomp, this%dis%nodes, 'sk_tcomp', trim(this%origin))
     call mem_allocate(this%sk_stor, this%dis%nodes, 'sk_stor', trim(this%origin))
     call mem_allocate(this%sk_ske, this%dis%nodes, 'sk_ske', trim(this%origin))
     call mem_allocate(this%sk_sk, this%dis%nodes, 'sk_sk', trim(this%origin))
     call mem_allocate(this%sk_thickini, this%dis%nodes, 'sk_thickini', trim(this%origin))
+    call mem_allocate(this%sk_thetaini, this%dis%nodes, 'sk_thetaini', trim(this%origin))
     if (this%iunderrelax /= 0) then
       ilen = this%dis%nodes
     else
@@ -2533,6 +2550,7 @@ contains
     call mem_allocate(this%ske, iblen, 'ske', trim(this%origin))
     call mem_allocate(this%sk, iblen, 'sk', trim(this%origin))
     call mem_allocate(this%thickini, iblen, 'thickini', trim(this%origin))
+    call mem_allocate(this%thetaini, iblen, 'thetaini', trim(this%origin))
     !
     ! -- delay bed storage
     call mem_allocate(this%idbconvert, 0, 0, 'idbconvert', trim(this%origin))
@@ -2652,12 +2670,14 @@ contains
       call mem_deallocate(this%sk_es)
       call mem_deallocate(this%sk_es0)
       call mem_deallocate(this%sk_esi)
+      call mem_deallocate(this%sk_pcs)
       call mem_deallocate(this%sk_comp)
       call mem_deallocate(this%sk_tcomp)
       call mem_deallocate(this%sk_stor)
       call mem_deallocate(this%sk_ske)
       call mem_deallocate(this%sk_sk)
       call mem_deallocate(this%sk_thickini)
+      call mem_deallocate(this%sk_thetaini)
       call mem_deallocate(this%sk_w0)
       call mem_deallocate(this%sk_hch0)
       call mem_deallocate(this%sk_des0)
@@ -2695,6 +2715,7 @@ contains
       call mem_deallocate(this%ske)
       call mem_deallocate(this%sk)
       call mem_deallocate(this%thickini)
+      call mem_deallocate(this%thetaini)
       !
       ! -- delay bed storage
       call mem_deallocate(this%idbconvert)
@@ -3132,7 +3153,6 @@ contains
     end do
     !
     ! -- evaluate if any sk_thick values are less than 0
-    !    also set initial skeletal thickness (sk_thickini)
     do node = 1, this%dis%nodes
       thick = this%sk_thick(node)
       if (thick < DZERO) then
@@ -3142,7 +3162,6 @@ contains
            thick, ')', 'in cell', trim(adjustl(cellid))
         call store_error(errmsg)
       end if
-      this%sk_thickini(node) = thick
     end do
     !
     ! -- terminate if errors griddata, packagedata blocks, TDIS, or STO data
@@ -3150,6 +3169,15 @@ contains
       call this%parser%StoreErrorUnit()
       call ustop()
     end if
+    !
+    ! -- set initial skeletal thickness (sk_thickini) and
+    !    initial skeletal porosity (sk_thetaini)
+    do node = 1, this%dis%nodes
+      thick = this%sk_thick(node)
+      theta = this%sk_theta(node)
+      this%sk_thickini(node) = thick
+      this%sk_thetaini(node) = theta
+    end do
     !
     ! -- return
     return
@@ -3384,10 +3412,10 @@ contains
 ! ------------------------------------------------------------------------------
 !
 ! -- update thickness and theta
-    comp = this%comp(i)
+    comp = this%tcomp(i) + this%comp(i)
     if (ABS(comp) > DZERO) then
-      thick = this%thick0(i)
-      theta = this%theta0(i)
+      thick = this%thickini(i)
+      theta = this%thetaini(i)
       call this%csub_adj_matprop(comp, thick, theta)
       if (thick <= DZERO) then
         write(errmsg,'(4x,2a,1x,i0,1x,a,1x,g0,1x,a)')                           &
@@ -3434,6 +3462,8 @@ contains
     real(DP) :: tled
     real(DP) :: top
     real(DP) :: bot
+    real(DP) :: thick
+    real(DP) :: thick0
     real(DP) :: znode
     real(DP) :: znode0
     real(DP) :: snold
@@ -3458,6 +3488,8 @@ contains
     area = this%dis%get_area(node)
     bot = this%dis%bot(node)
     top = this%dis%top(node)
+    thick = this%thickini(ib)
+    thick0 = this%thickini(ib)
     !
     ! -- set iconvert
     this%iconvert(ib) = 0
@@ -3473,8 +3505,8 @@ contains
       es = this%sk_es(node)
       esi = this%sk_esi(node)
       es0 = this%sk_es0(node)
-      theta = this%theta(ib)
-      theta0 = this%theta0(ib)
+      theta = this%thetaini(ib)
+      theta0 = this%thetaini(ib)
       if (this%iunderrelax /= 0) then
         !
         ! -- only need to apply under-relaxation since it has already been
@@ -3491,8 +3523,8 @@ contains
       call this%csub_calc_sfacts(node, bot, znode, znode0, theta, theta0,        &
                                  es, es0, f, f0)
     end if
-    sto_fac = tled * snnew * this%thick(ib) * f
-    sto_fac0 = tled * snold * this%thick0(ib) * f0
+    sto_fac = tled * snnew * thick * f
+    sto_fac0 = tled * snold * thick0 * f0
     !
     ! -- calculate rho1 and rho2
     rho1 = this%rci(ib) * sto_fac0
@@ -4512,8 +4544,8 @@ contains
     ! -- aquifer elevations and thickness
     top = this%dis%top(node)
     bot = this%dis%bot(node)
-    tthk = this%sk_thick(node)
-    tthk0 = this%sk_thick0(node)
+    tthk = this%sk_thickini(node)
+    tthk0 = this%sk_thickini(node)
     !
     ! -- calculate aquifer saturation
     call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
@@ -4527,14 +4559,13 @@ contains
     this%sk_ske(node) = sske0 * tthk0 * snold
     this%sk_sk(node) = sske * tthk * snnew
     !
-    ! -- calculate hcof term
-    hcof = -rho2 * snnew
-    !
     ! -- calculate rhs term
     if (this%igeocalc == 0) then
+      hcof = -rho2 * snnew
       rhs = -rho1 * snold * hcellold
     else
-      rhs = rho1 * snold * this%sk_es0(node) -                                  &
+      hcof = -rho2 * snnew
+      rhs = rho1 * snold * this%sk_es0(node) -                                 &
             rho2 * snnew * (this%sk_gs(node) + bot) 
     end if
     !
@@ -4582,8 +4613,8 @@ contains
     ! -- aquifer elevations and thickness
     top = this%dis%top(node)
     bot = this%dis%bot(node)
-    tthk = this%sk_thick(node)
-    tthk0 = this%sk_thick0(node)
+    tthk = this%sk_thickini(node)
+    tthk0 = this%sk_thickini(node)
     !
     ! 
     if (this%igeocalc == 0 .and. this%iupdatematprop == 0) then
@@ -4952,8 +4983,8 @@ contains
       es = this%sk_es(n)
       esi = this%sk_esi(n)
       es0 = this%sk_es0(n)
-      theta = this%sk_theta(n)
-      theta0 = this%sk_theta0(n)
+      theta = this%sk_thetaini(n)
+      theta0 = this%sk_thetaini(n)
       if (this%iunderrelax /= 0) then
         if (this%iurflag /= 0) then
           call this%csub_calc_under_relaxation(this%kiter, es, esi,              &
@@ -5034,11 +5065,11 @@ contains
 ! ------------------------------------------------------------------------------
 !
 ! -- update thickness and theta
-    comp = this%sk_comp(node)
+    comp = this%sk_tcomp(node) + this%sk_comp(node)
     call this%dis%noder_to_string(node, cellid)
     if (ABS(comp) > DZERO) then
-      thick = this%sk_thick0(node)
-      theta = this%sk_theta0(node)
+      thick = this%sk_thickini(node)
+      theta = this%sk_thetaini(node)
       call this%csub_adj_matprop(comp, thick, theta)
       if (thick <= DZERO) then
         write(errmsg,'(4x,a,1x,a,1x,a,1x,g0,1x,a)')                             &
@@ -5553,13 +5584,14 @@ contains
     if (denom /= DZERO) then
       fact = DONE / denom
     end if
-    esv = es0
-    void = this%csub_calc_void(theta0)
-    denom = this%csub_calc_adjes(node, esv, bot, zn0)
-    denom = denom * (DONE + void)
-    if (denom /= DZERO) then
-      fact0 = DONE / denom
-    end if
+    !esv = es0
+    !void = this%csub_calc_void(theta0)
+    !denom = this%csub_calc_adjes(node, esv, bot, zn0)
+    !denom = denom * (DONE + void)
+    !if (denom /= DZERO) then
+    !  fact0 = DONE / denom
+    !end if
+    fact0 = fact
     !
     ! -- return
     return

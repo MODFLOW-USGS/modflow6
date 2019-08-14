@@ -543,14 +543,20 @@ def update_latex_releaseinfo():
 
     cmd = ['python', 'mk_example_items.py']
     buff, ierr = run_command(cmd, pth)
+    msg = '\nERROR {}: could not run {} on {}'.format(ierr, cmd[0],
+                                                      cmd[1])
     assert ierr == 0, buff + msg
 
     cmd = ['python', 'mk_example_table.py']
     buff, ierr = run_command(cmd, pth)
+    msg = '\nERROR {}: could not run {} on {}'.format(ierr, cmd[0],
+                                                      cmd[1])
     assert ierr == 0, buff + msg
 
     cmd = ['python', 'mk_folder_struct.py']
     buff, ierr = run_command(cmd, pth)
+    msg = '\nERROR {}: could not run {} on {}'.format(ierr, cmd[0],
+                                                      cmd[1])
     assert ierr == 0, buff + msg
 
     for f in files:
