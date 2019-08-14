@@ -3412,11 +3412,8 @@ contains
 ! ------------------------------------------------------------------------------
 !
 ! -- update thickness and theta
-    !comp = this%comp(i)
     comp = this%tcomp(i) + this%comp(i)
     if (ABS(comp) > DZERO) then
-      !thick = this%thick0(i)
-      !theta = this%theta0(i)
       thick = this%thickini(i)
       theta = this%thetaini(i)
       call this%csub_adj_matprop(comp, thick, theta)
@@ -3491,8 +3488,6 @@ contains
     area = this%dis%get_area(node)
     bot = this%dis%bot(node)
     top = this%dis%top(node)
-    !thick = this%thick(ib)
-    !thick0 = this%thick0(ib)
     thick = this%thickini(ib)
     thick0 = this%thickini(ib)
     !
@@ -3510,8 +3505,6 @@ contains
       es = this%sk_es(node)
       esi = this%sk_esi(node)
       es0 = this%sk_es0(node)
-      !theta = this%theta(ib)
-      !theta0 = this%theta0(ib)
       theta = this%thetaini(ib)
       theta0 = this%thetaini(ib)
       if (this%iunderrelax /= 0) then
@@ -4990,8 +4983,6 @@ contains
       es = this%sk_es(n)
       esi = this%sk_esi(n)
       es0 = this%sk_es0(n)
-      !theta = this%sk_theta(n)
-      !theta0 = this%sk_theta0(n)
       theta = this%sk_thetaini(n)
       theta0 = this%sk_thetaini(n)
       if (this%iunderrelax /= 0) then
@@ -5074,12 +5065,9 @@ contains
 ! ------------------------------------------------------------------------------
 !
 ! -- update thickness and theta
-    !comp = this%sk_comp(node)
     comp = this%sk_tcomp(node) + this%sk_comp(node)
     call this%dis%noder_to_string(node, cellid)
     if (ABS(comp) > DZERO) then
-      !thick = this%sk_thick0(node)
-      !theta = this%sk_theta0(node)
       thick = this%sk_thickini(node)
       theta = this%sk_thetaini(node)
       call this%csub_adj_matprop(comp, thick, theta)
