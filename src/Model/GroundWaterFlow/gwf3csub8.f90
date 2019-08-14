@@ -4551,8 +4551,6 @@ contains
     ! -- aquifer elevations and thickness
     top = this%dis%top(node)
     bot = this%dis%bot(node)
-    !tthk = this%sk_thick(node)
-    !tthk0 = this%sk_thick0(node)
     tthk = this%sk_thickini(node)
     tthk0 = this%sk_thickini(node)
     !
@@ -4567,9 +4565,6 @@ contains
     ! -- update sk and ske
     this%sk_ske(node) = sske0 * tthk0 * snold
     this%sk_sk(node) = sske * tthk * snnew
-    !!
-    !! -- calculate hcof term
-    !hcof = -rho2 * snnew
     !
     ! -- calculate rhs term
     if (this%igeocalc == 0) then
@@ -4579,18 +4574,6 @@ contains
       hcof = -rho2 * snnew
       rhs = rho1 * snold * this%sk_es0(node) -                                 &
             rho2 * snnew * (this%sk_gs(node) + bot) 
-      !!if (this%ieslag /= 0) then
-      !!  hcof = -rho2 * snnew
-      !!  rhs = rho1 * snold * this%sk_es0(node) -                                 &
-      !!        rho2 * snnew * (this%sk_gs(node) + bot) 
-      !!else
-      !!  hcof = rho2 * snnew
-      !!  rhs = rho2 * snnew * (this%sk_gs(node) + bot) -                          &
-      !!        rho1 * snold * this%sk_es0(node) 
-      !!end if
-      !hcof = -rho2 * snnew
-      !rhs = -rho1 * snold * (DZERO - this%sk_es0(node)) -                        &
-      !      rho2 * snnew * (this%sk_gs(node) + bot - DZERO) 
     end if
     !
     ! -- return
@@ -4637,8 +4620,6 @@ contains
     ! -- aquifer elevations and thickness
     top = this%dis%top(node)
     bot = this%dis%bot(node)
-    !tthk = this%sk_thick(node)
-    !tthk0 = this%sk_thick0(node)
     tthk = this%sk_thickini(node)
     tthk0 = this%sk_thickini(node)
     !
