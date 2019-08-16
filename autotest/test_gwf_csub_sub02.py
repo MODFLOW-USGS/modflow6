@@ -207,7 +207,7 @@ def get_model(idx, dir):
                                    storagecoefficient=storagecoeff[idx],
                                    hdry=hdry)
     wel = flopy.modflow.ModflowWel(mc, stress_period_data=wd)
-    sub = flopy.modflow.ModflowSub(mc, ndb=ndb, nndb=nndb, nn=10,
+    sub = flopy.modflow.ModflowSub(mc, ndb=ndb, nndb=nndb, nn=10, idbit=1,
                                    isuboc=1, ln=lnd, ldn=ldnd, rnb=[1.],
                                    dp=dp, dz=thick,
                                    dhc=ini_stress, dstart=ini_stress,
@@ -269,7 +269,7 @@ def main():
     return
 
 
-# use python testmf6_csub_sub02.py --mf2005 mf2005devdbl
+# use python test_gwf_csub_sub02.py --mf2005 mf2005devdbl
 if __name__ == "__main__":
     # print message
     print('standalone run of {}'.format(os.path.basename(__file__)))

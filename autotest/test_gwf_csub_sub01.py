@@ -206,7 +206,7 @@ def get_model(idx, dir):
                                    storagecoefficient=True,
                                    hdry=hdry)
     chd = flopy.modflow.ModflowChd(mc, stress_period_data=cd)
-    sub = flopy.modflow.ModflowSub(mc, ndb=ndb, nndb=nndb, nn=10,
+    sub = flopy.modflow.ModflowSub(mc, ndb=ndb, nndb=nndb, nn=10, idbit=1,
                                    isuboc=1, ln=lnd, ldn=ldnd, rnb=[1.],
                                    dp=dp, dz=thick,
                                    dhc=ini_stress, dstart=ini_stress,
