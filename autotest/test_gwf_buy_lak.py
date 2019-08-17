@@ -1,3 +1,7 @@
+# Simple one-layer model with a lak.  Purpose is to calculate transport
+# through the lake.  Need a better test of the actual concentration values.
+# Buoyancy terms for lak-gwf connections not implemented yet.
+
 import os
 import sys
 import numpy as np
@@ -115,7 +119,7 @@ def get_model(idx, dir):
 
     # wel pck for vertical connection cells
     wellist1 = []
-    wellist1.append([(0, 0, 0), 1., 1.])
+    wellist1.append([(0, 0, 0), 1., 35.])
 
     wel = flopy.mf6.ModflowGwfwel(gwf,
                                   stress_period_data=wellist1,
@@ -229,7 +233,6 @@ def get_model(idx, dir):
                                           print_concentration=True,
                                           concentration_filerecord=gwtname + '.lkt.bin',
                                           budget_filerecord='gwtlak1.bud',
-                                          nlakes=1,
                                           packagedata=lktpackagedata,
                                           pname='LAK-1',
                                           auxiliary=['aux1', 'aux2'])
@@ -278,6 +281,7 @@ def eval_results(sim):
     assert clak.shape == (100,)
 
     # todo: add a better check of the lake concentrations
+    # assert False
 
     return
 

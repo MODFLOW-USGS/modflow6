@@ -21,6 +21,7 @@ module GwfGwtExchangeModule
     procedure :: exg_df
     procedure :: exg_ar
     procedure :: exg_da
+    procedure, private :: set_model_pointers
     procedure, private :: allocate_scalars
     
   end type GwfGwtExchangeType
@@ -61,13 +62,16 @@ module GwfGwtExchangeModule
     exchange%m1id = m1id
     exchange%m2id = m2id
     !
+    ! -- set model pointers
+    call exchange%set_model_pointers()
+    !
     ! -- return
     return
   end subroutine gwfgwt_cr
   
-  subroutine exg_df(this)
+  subroutine set_model_pointers(this)
 ! ******************************************************************************
-! exg_df -- allocate and read
+! set_model_pointers -- allocate and read
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -96,8 +100,45 @@ module GwfGwtExchangeModule
     end select
     !
     ! -- setup pointer to gwf variables that were allocated in gwf_df
-    gwtmodel%fmi%gwfflowja => gwfmodel%flowja
     gwtmodel%fmi%gwfbndlist => gwfmodel%bndlist
+    !
+    ! -- return
+    return
+  end subroutine set_model_pointers
+  
+  subroutine exg_df(this)
+! ******************************************************************************
+! exg_df -- define
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwfGwtExchangeType) :: this
+    ! -- local
+    class(BaseModelType), pointer :: mb => null()
+    type(GwfModelType), pointer :: gwfmodel => null()
+    type(GwtModelType), pointer :: gwtmodel => null()
+! ------------------------------------------------------------------------------
+    !
+    !
+    ! -- set gwfmodel
+    mb => GetBaseModelFromList(basemodellist, this%m1id)
+    select type (mb)
+    type is (GwfModelType)
+      gwfmodel => mb
+    end select
+    !
+    ! -- set gwtmodel
+    mb => GetBaseModelFromList(basemodellist, this%m2id)
+    select type (mb)
+    type is (GwtModelType)
+      gwtmodel => mb
+    end select
+    !
+    ! -- set pointers
+    gwtmodel%fmi%gwfflowja => gwfmodel%flowja
     !
     ! -- return
     return
