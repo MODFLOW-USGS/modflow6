@@ -165,7 +165,7 @@ module GwtFmiModule
 ! ------------------------------------------------------------------------------
     !
     ! -- if flow cell is dry, then set gwt%ibound = 0 and conc to dry
-    do n = 1, size(this%ibound)
+    do n = 1, this%dis%nodes
       !
       ! -- Check if active transport cell is inactive for flow
       if (this%ibound(n) > 0) then
@@ -303,7 +303,7 @@ module GwtFmiModule
     ! -- initialize 
     rin = DZERO
     rout = DZERO
-    nodes = size(cnew)
+    nodes = this%dis%nodes
     !
     ! -- Accumulate the flow error term
     do n = 1, nodes

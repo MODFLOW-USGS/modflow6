@@ -203,17 +203,6 @@ longname obs6 input filename
 description REPLACE obs6_filename {'{#1}': 'LAK'}
 
 
-# --------------------- gwt lkt dimensions ---------------------
-
-block dimensions
-name nlakes
-type integer
-reader urword
-optional false
-longname number of lakes
-description value specifying the number of lakes that will be simulated for all stress periods.  The number of lakes specified here must be exactly the same as the number of lakes specified in the corresponding GWF LAK Package.
-
-
 # --------------------- gwt lkt packagedata ---------------------
 
 block packagedata

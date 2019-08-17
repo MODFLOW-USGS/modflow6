@@ -7,10 +7,6 @@ BEGIN OPTIONS
   BUDGET FILEOUT gwt-lak-1.cbc
 END OPTIONS
 
-BEGIN DIMENSIONS
-  NLAKES 1
-END DIMENSIONS
-
 BEGIN PACKAGEDATA
 # lakeno    strt   boundname
        1   35.00      LAKE_1

@@ -277,7 +277,7 @@ module GwtAdvModule
     !
     ! -- Calculate advection and add to flowja. qnm is the volumetric flow
     !    rate and has dimensions of L^/T.
-    nodes = size(cnew)
+    nodes = this%dis%nodes
     do n = 1, nodes
       if(this%ibound(n) == 0) cycle
       idiag = this%dis%con%ia(n)
@@ -315,7 +315,7 @@ module GwtAdvModule
     integer(I4B) :: nodes, n, m, ipos
 ! ------------------------------------------------------------------------------
     !
-    nodes = size(cnew)
+    nodes = this%dis%nodes
     do n = 1, nodes
       if(this%ibound(n) == 0) cycle
       do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
