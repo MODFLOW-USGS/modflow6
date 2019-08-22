@@ -175,8 +175,8 @@ contains ! module procedures
       end do
     end do
     
-    ! here we scan for nbr-of-nbrs
-    call this%gridConnection%extendConnection()
+    ! here we scan for nbr-of-nbrs and create final data structures
+    call this%gridConnection%extendConnection(0, 0)
     
   end subroutine addLinksToGridConnection
   

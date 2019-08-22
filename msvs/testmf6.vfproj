@@ -27,6 +27,8 @@
 		<Filter Name="Header Files" Filter="fi;fd;h;inc"/>
 		<Filter Name="Resource Files" Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"/>
 		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl">
-		<File RelativePath="..\test\src\TestMeshConnection.f90"/>
+		<File RelativePath="..\test\src\TestDisu.f90"/>
+		<File RelativePath="..\test\src\TestGridConnection.f90"/>
+		<File RelativePath="..\test\src\TestGwfInterfaceModel.f90"/>
 		<File RelativePath="..\test\src\TestMF6Lib.f90"/></Filter></Files>
 	<Globals/></VisualStudioProject>

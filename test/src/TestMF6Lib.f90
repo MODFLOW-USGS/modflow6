@@ -2,7 +2,9 @@ program test_mf6lib
   use ftnunit
   
   ! use modules with tests:
-  use TestMeshConnectionModule
+  use TestGridConnectionModule
+  use TestDisuModule
+  use TestGwfInterfaceModelModule
   
   implicit none
   
@@ -11,10 +13,12 @@ program test_mf6lib
   call runtests_init()
   
   ! call all tests
-  call testMeshConnection()
+  call testAllGridConnection()
+  call testAllDisu()
+  call testAllGwfInterfaceModel()
   
   ! show results in browser 
-  ! call showResult()
+  call showResult()
   call runtests_final()
   
   
@@ -26,6 +30,9 @@ contains ! program procedures
 
       integer  :: lun   !< LU-number
 
+      ! cleanup
+      call system( 'del ftnunit.html' )
+      
       open( newunit=lun, file = 'ftnunit.run' )
       write( lun, '(a)' ) 'ALL'
       close( lun )
