@@ -20,7 +20,7 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['csub_sub03a', 'csub_sub03b', 'csub_sub03c']
+ex = ['csub_sub03a', 'csub_sub03b'] #, 'csub_sub03c']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
@@ -29,7 +29,7 @@ constantcv = [True, True, True]
 ndelaybeds = [0, 2, 2]
 halfcell = [None, None, True]
 fullcell = [None, True, None]
-ndelaycells = [None, 39, 20]
+ndelaycells = [None, 39, 39]
 
 ddir = 'data'
 
@@ -296,6 +296,7 @@ def get_model(idx, dir):
                                     boundnames=True,
                                     head_based=True,
                                     effective_stress_lag=True,
+                                    specified_initial_interbed_state=True,
                                     save_flows=True,
                                     strainib_filerecord=ibcsv,
                                     strainsk_filerecord=skcsv,

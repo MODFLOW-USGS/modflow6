@@ -23,14 +23,14 @@ from simulation import Simulation
 paktest = 'csub'
 budtol = 1e-2
 
-ex = ['csub_sub01a', 'csub_sub01b']
+ex = ['csub_sub01a'] #, 'csub_sub01b']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
 ddir = 'data'
 
 fullcell = [None, True]
-ndcell = [10, 19]
+ndcell = [19, 19]
 
 # run all examples on Travis
 # travis = [True for idx in range(len(exdirs))]

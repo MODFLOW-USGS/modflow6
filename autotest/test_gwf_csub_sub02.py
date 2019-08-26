@@ -32,7 +32,7 @@ storagecoeff = [True, True, False, False, True]
 cdelay = [False, True, False, True, True]
 half_cell = [None, None, None, None, True]
 full_cell = [None, True, None, True, None]
-ndelaycells = [None, 19, None, 19, 10]
+ndelaycells = [None, 19, None, 19, 19]
 
 # run all examples on Travis
 # travis = [True for idx in range(len(exdirs))]

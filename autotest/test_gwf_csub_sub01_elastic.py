@@ -26,14 +26,14 @@ paktest = 'csub'
 dtol = 1e-3
 budtol = 1e-2
 
-ex = ['csub_sub01_elasa', 'csub_sub01_elasb']
+ex = ['csub_sub01_elasa'] #, 'csub_sub01_elasb']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
 ddir = 'data'
 
 fullcell = [None, True]
-ndcell = [10, 19]
+ndcell = [19, 19]
 
 # run all examples on Travis
 travis = [True for idx in range(len(exdirs))]
