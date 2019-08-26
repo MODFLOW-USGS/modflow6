@@ -52,9 +52,9 @@ module GridConnectionModule
     type(CellWithNbrsType), dimension(:), pointer :: localCells => null()
     type(CellWithNbrsType), dimension(:), pointer :: connectedCells => null()
     
-    integer(I4B), pointer :: nrOfCells => null()                ! the total number of cells which are connected
-    integer(I4B), dimension(:,:), pointer :: indexMap => null() ! a map from local to global coordinates
-    type(sparsematrix), pointer :: connectivity => null()       ! sparse matrix with the connections
+    integer(I4B), pointer :: nrOfCells => null()                            ! the total number of cells which are connected
+    type(GlobalCellType), dimension(:), pointer :: idxToGlobal => null()    ! a map from local to global coordinates
+    type(sparsematrix), pointer :: connectivity => null()                   ! sparse matrix with the connections
     
     ! TODO_MJR: not sure yet about this
     integer(I4B), pointer :: nrOfConnectedModels => null()
@@ -102,7 +102,7 @@ module GridConnectionModule
   subroutine addLink(this, own, linked, cl1, cl2, hwva, connType, nbrModel)
     class(GridConnectionType), intent(in)           :: this
     class(NumericalModelType), pointer, intent(in)  :: nbrModel   ! the neighbor
-    integer(I4B) :: own, linked, connType                         ! node ids, connection type
+    integer(I4B) :: own, linked, connType                         ! node ids, connection type (0=vert,1=hor,2=vert.stagg.)
     real(DP) :: cl1, cl2, hwva                                    ! connection lengths, hor. width or vert. area
             
     this%nrOfLinks = this%nrOfLinks + 1    
@@ -218,10 +218,11 @@ module GridConnectionModule
     
     ! local
     integer(I4B) :: ncells
-    integer(I4B) :: n, iglo, jglo, offset
+    integer(I4B) :: n, m, offset
     integer(I4B), dimension(:), allocatable :: nnz
     
-    allocate(this%connectivity)
+    allocate(this%idxToGlobal(this%nrOfCells))
+    allocate(this%connectivity)    
     
     ncells = this%getNrOfCells()
     allocate(nnz(ncells))
@@ -238,14 +239,14 @@ module GridConnectionModule
     ! exchanges
     offset = this%nrOfLinks
     do n = 1, this%nrOfLinks
-      ! global indices
-      iglo = this%localCells(n)%cell%index + this%localCells(n)%cell%model%moffset
-      jglo = this%connectedCells(n)%cell%index + this%connectedCells(n)%cell%model%moffset
       
       ! fill with local indices
-      call this%connectivity%addConnection(n, n + offset, 1)
+      m = n + offset
+      call this%connectivity%addConnection(n, m, 1)
       
-      ! TODO_MJR: create mapping here
+      ! store mapping here
+      this%idxToGlobal(n) = this%localCells(n)%cell
+      this%idxToGlobal(m) = this%connectedCells(n)%cell
       
     end do
     
@@ -271,6 +272,6 @@ module GridConnectionModule
     class(GridConnectionType), intent(in) :: this
     integer(I4B) :: nConns
     
-  end subroutine allocateArrays
+  end subroutine allocateArrays  
   
 end module GridConnectionModule
