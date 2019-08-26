@@ -618,7 +618,6 @@ def main():
     return
 
 
-# use python testmf6_csub_sub02.py --mf2005 mf2005devdbl
 if __name__ == "__main__":
     # print message
     print('standalone run of {}'.format(os.path.basename(__file__)))

@@ -39,7 +39,6 @@ ddir = 'data'
 travis = [True, True, True]
 
 # set replace_exe to None to use default executable
-# replace_exe = {'mf2005': 'mf2005devdbl'}
 replace_exe = None
 
 htol = [None, 0.3, None]
@@ -500,7 +499,6 @@ def main():
     return
 
 
-# use python testmf6_csub_sub03.py --mf2005 mf2005devdbl
 if __name__ == "__main__":
     # print message
     print('standalone run of {}'.format(os.path.basename(__file__)))

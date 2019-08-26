@@ -343,7 +343,7 @@ def get_model(idx, dir):
     rch = flopy.modflow.ModflowRch(mc, rech=rech)
     wel = flopy.modflow.ModflowWel(mc, stress_period_data=wd)
     sub = flopy.modflow.ModflowSub(mc, ndb=ndb, nndb=nndb, nmz=nmz, nn=20,
-                                   ac2=omega,
+                                   idbit=1, ac2=omega,
                                    isuboc=1, ln=lnd, ldn=ldnd, rnb=rnb,
                                    dp=dp, dz=dz, nz=nz,
                                    dhc=dhc, dstart=dstart,
@@ -497,7 +497,7 @@ def main():
     return
 
 
-# use python testmf6_csub_sub03.py --mf2005 mf2005devdbl
+# use python test_gwf_csub_sub03.py --mf2005 mf2005devdbl
 if __name__ == "__main__":
     # print message
     print('standalone run of {}'.format(os.path.basename(__file__)))
