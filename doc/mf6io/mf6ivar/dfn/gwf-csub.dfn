@@ -31,8 +31,8 @@ name gammaw
 type double precision
 reader urword
 optional true
-longname specific gravity of water
-description specific gravity of water. For freshwater, GAMMAW is 9806.65 Newtons/cubic meters or 62.48 lb/cubic foot in SI and English units, respectively. By default, GAMMAW is 9806.65.
+longname unit weight of water
+description unit weight of water. For freshwater, GAMMAW is 9806.65 Newtons/cubic meters or 62.48 lb/cubic foot in SI and English units, respectively. By default, GAMMAW is 9806.65 Newtons/cubic meters.
 default_value 9806.65
 
 block options
@@ -41,7 +41,7 @@ type double precision
 reader urword
 optional true
 longname compressibility of water
-description compressibility of water. Typical values of BETA are 4.6512e-10 1/Pa or 2.2270e-8 lb/square foot in SI and English units, respectively. By default, BETA is 4.6512e-10.
+description compressibility of water. Typical values of BETA are 4.6512e-10 1/Pa or 2.2270e-8 lb/square foot in SI and English units, respectively. By default, BETA is 4.6512e-10 1/Pa.
 default_value 4.6512e-10
 
 block options
@@ -66,7 +66,7 @@ type keyword
 reader urword
 optional true
 longname keyword to indicate CR and CC are read instead of SSE and SSV
-description keyword to indicate that the the recompression (CR) and compresion (CC) indices are specified instead of the elastic skeletal specific storage (SSE) and inelastic skeletal specific storage (SSV) coefficients. If not specified, then elastic skeletal specific storage (SSE) and inelastic skeletal specific storage (SSV) coefficients must be specified.
+description keyword to indicate that the the recompression (CR) and compression (CC) indices are specified instead of the elastic skeletal specific storage (SSE) and inelastic skeletal specific storage (SSV) coefficients. If not specified, then elastic skeletal specific storage (SSE) and inelastic skeletal specific storage (SSV) coefficients must be specified.
 
 block options
 name update_material_properties
@@ -558,7 +558,7 @@ shape (nodes)
 valid
 reader readarray
 longname elastic skeletal specific storage
-description is elastic skeletal specific storage.
+description is the initial elastic skeletal specific storage or recompression index. The recompression index is specified if COMPRESSION\_INDICES is specified in the OPTIONS block.  Specified or calculated elastic skeletal specific storage values are not adjusted from initial values if HEAD\_BASED is specified in the OPTIONS block.
 default_value 1e-5
 
 block griddata
@@ -579,7 +579,7 @@ valid
 reader readarray
 optional true
 longname specific gravity of moist sediments
-description is specific gravity of moist or unsaturated sediments.  If not specified, then a default value of 1.7 is assigned.
+description is the specific gravity of moist or unsaturated sediments.  If not specified, then a default value of 1.7 is assigned.
 
 block griddata
 name sgs
@@ -589,7 +589,7 @@ valid
 reader readarray
 optional true
 longname specific gravity of saturated sediments
-description is specific gravity of saturated sediments. If not specified, then a default value of 2.0 is assigned.
+description is the specific gravity of saturated sediments. If not specified, then a default value of 2.0 is assigned.
 
 # --------------------- gwf csub packagedata ---------------------
 
@@ -609,7 +609,7 @@ tagged false
 in_record true
 reader urword
 longname CSUB id number for this entry
-description integer value that defines the CSUB interbed number associated with the specified PACKAGEDATA data on the line. CSUBNO must be greater than zero and less than or equal to NCSUBCELLS.  CSUB information must be specified for every CSUB cell or the program will terminate with an error.  The program will also terminate with an error if information for a CSUB intebed number is specified more than once.
+description integer value that defines the CSUB interbed number associated with the specified PACKAGEDATA data on the line. CSUBNO must be greater than zero and less than or equal to NCSUBCELLS.  CSUB information must be specified for every CSUB cell or the program will terminate with an error.  The program will also terminate with an error if information for a CSUB interbed number is specified more than once.
 numeric_index true
 
 block packagedata
@@ -630,7 +630,7 @@ tagged false
 in_record true
 reader urword
 longname initial water content
-description character string that defines the subsidence delay type for the CSUB cell. Possible subsidence package CDELAY strings include: NODELAY--character keyword to indicate that delay will not be simulated in the CSUB cell.  DELAY--character keyword to indicate that delay will be simulated in the CSUB cell.
+description character string that defines the subsidence delay type for the interbed. Possible subsidence package CDELAY strings include: NODELAY--character keyword to indicate that delay will not be simulated in the interbed.  DELAY--character keyword to indicate that delay will be simulated in the interbed.
 
 block packagedata
 name pcs0
@@ -640,7 +640,7 @@ tagged false
 in_record true
 reader urword
 longname initial stress
-description is the initial offset from the calculated initial effective stress or initial preconsolidation stress in the CSUB interbed, in units of height of a column of water. PCS0 is the initial preconsolidation stress if SPECIFIED\_INITIAL\_INTERBED\_STATE or SPECIFIED\_INITIAL\_PRECONSOLIDATION\_STRESS are specified in the OPTIONS block.
+description is the initial offset from the calculated initial effective stress or initial preconsolidation stress in the interbed, in units of height of a column of water. PCS0 is the initial preconsolidation stress if SPECIFIED\_INITIAL\_INTERBED\_STATE or SPECIFIED\_INITIAL\_PRECONSOLIDATION\_STRESS are specified in the OPTIONS block. If HEAD\_BASED is specified in the OPTIONS block, PCS0 is the initial offset from the calculated initial head or initial preconsolidation head in the CSUB interbed and the initial preconsolidation stress is calculated from the calculated initial effective stress or calculated initial geostatic stress, respectively.
 
 block packagedata
 name thick_frac
@@ -650,7 +650,7 @@ tagged false
 in_record true
 reader urword
 longname interbed thickness or cell fraction 
-description is the interbed thickness or cell fraction of the CSUB interbed. Interbed thickness is specified as a fraction of the cell thickness if CELL\_FRACTION is specified in the OPTIONS block.
+description is the interbed thickness or cell fraction of the interbed. Interbed thickness is specified as a fraction of the cell thickness if CELL\_FRACTION is specified in the OPTIONS block.
 
 block packagedata
 name rnb
@@ -660,7 +660,7 @@ tagged false
 in_record true
 reader urword
 longname delay interbed material factor 
-description is the interbed material factor equivalent number of interbeds for the system of delay interbeds for interbed CSUBNO. RNB must be greater than or equal to 1 if CDELAY is DELAY. Otherwise, RNB can be any value.
+description is the interbed material factor equivalent number of interbeds in the interbed system represented by the interbed. RNB must be greater than or equal to 1 if CDELAY is DELAY. Otherwise, RNB can be any value.
 
 block packagedata
 name ssv_cc
@@ -669,8 +669,8 @@ shape
 tagged false
 in_record true
 reader urword
-longname initial inelastic skeletal specific storage
-description is the initial inelastic skeletal specific storage or compression index in the CSUB interbed. The initial inelastic skeletal specific storage is specified if STORAGE\_COEFFICIENT is specified in the OPTIONS block.
+longname initial interbed inelastic specific storage
+description is the initial inelastic specific storage or compression index of the interbed. The compression index is specified if COMPRESSION\_INDICES is specified in the OPTIONS block. Specified or calculated interbed inelastic specific storage values are not adjusted from initial values if HEAD\_BASED is specified in the OPTIONS block.
 
 block packagedata
 name sse_cr 
@@ -679,8 +679,8 @@ shape
 tagged false
 in_record true
 reader urword
-longname elastic skeletal specific storage
-description is the initial elastic skeletal specific storage or recompression index in the CSUB interbed. The initial elastic skeletal specific storage is specified if STORAGE\_COEFFICIENT is specified in the OPTIONS block.
+longname initial elastic interbed specific storage
+description is the initial elastic skeletal specific storage or recompression index of the interbed. The recompression index is specified if COMPRESSION\_INDICES is specified in the OPTIONS block. Specified or calculated interbed elastic specific storage values are not adjusted from initial values if HEAD\_BASED is specified in the OPTIONS block.
 
 block packagedata
 name theta 
@@ -690,7 +690,7 @@ tagged false
 in_record true
 reader urword
 longname initial interbed porosity
-description is the initial porosity of the CSUB interbed.
+description is the initial porosity of the interbed.
 default_value 0.2
 
 block packagedata
@@ -700,8 +700,8 @@ shape
 tagged false
 in_record true
 reader urword
-longname interbed vertical hydraulic conductivity
-description is the vertical hydraulic conductivity of the CSUB interbed. KV must be greater than 0 if CDELAY is DELAY. Otherwise, KV can be any value.
+longname delay interbed vertical hydraulic conductivity
+description is the vertical hydraulic conductivity of the delay interbed. KV must be greater than 0 if CDELAY is DELAY. Otherwise, KV can be any value.
 
 block packagedata
 name h0 
@@ -710,8 +710,8 @@ shape
 tagged false
 in_record true
 reader urword
-longname initial interbed head
-description is the initial offset from the head in cell cellid or the initial head in the CSUB interbed. H0 can be any value if CDELAY is NODELAY. H0 is the initial head in the delay bed if SPECIFIED\_INITIAL\_INTERBED\_STATE or SPECIFIED\_INITIAL\_DELAY\_HEAD are specified in the OPTIONS block.
+longname initial delay interbed head
+description is the initial offset from the head in cell cellid or the initial head in the delay interbed. H0 is the initial head in the delay bed if SPECIFIED\_INITIAL\_INTERBED\_STATE or SPECIFIED\_INITIAL\_DELAY\_HEAD are specified in the OPTIONS block. H0 can be any value if CDELAY is NODELAY.
 
 block packagedata
 name boundname
