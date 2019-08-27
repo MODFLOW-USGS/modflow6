@@ -77,7 +77,7 @@ module GwfCsubModule
     integer(I4B), pointer :: ndelaycells => null()
     integer(I4B), pointer :: ndelaybeds => null()
     integer(I4B), pointer :: initialized => null()
-    integer(I4B), pointer :: igeocalc => null()
+    !integer(I4B), pointer :: igeocalc => null()
     integer(I4B), pointer :: ieslag => null()
     integer(I4B), pointer :: iunderrelax => null()
     integer(I4B), pointer :: iurflag => null()
@@ -362,7 +362,7 @@ contains
     call mem_allocate(this%ndelaycells, 'NDELAYCELLS', this%origin)
     call mem_allocate(this%ndelaybeds, 'NDELAYBEDS', this%origin)
     call mem_allocate(this%initialized, 'INITIALIZED', this%origin)
-    call mem_allocate(this%igeocalc, 'IGEOCALC', this%origin)
+    !call mem_allocate(this%igeocalc, 'IGEOCALC', this%origin)
     call mem_allocate(this%ieslag, 'IESLAG', this%origin)
     call mem_allocate(this%iunderrelax, 'IUNDERRELAX', this%origin)
     call mem_allocate(this%iurflag, 'IURFLAG', this%origin)
@@ -419,7 +419,7 @@ contains
     this%ndelaycells = 19
     this%ndelaybeds = 0
     this%initialized = 0
-    this%igeocalc = 1
+    !this%igeocalc = 1
     this%ieslag = 0
     this%iunderrelax = 0
     this%iurflag = 0
@@ -770,21 +770,27 @@ contains
           es0 = this%sk_es0(node)
           !
           ! -- calculate inelastic and elastic compaction
-          if (this%igeocalc == 0) then
-            h = hnew(node)
-            if (ielastic > 0 .or. iconvert == 0) then
-              stoe = comp
-            else
-              stoi = rho2 * (pcs - h)
-              stoe = rho1 * (es0 - pcs)
-            end if
+          !if (this%igeocalc == 0) then
+          !  h = hnew(node)
+          !  if (ielastic > 0 .or. iconvert == 0) then
+          !    stoe = comp
+          !  else
+          !    stoi = rho2 * (pcs - h)
+          !    stoe = rho1 * (es0 - pcs)
+          !  end if
+          !else
+          !  if (ielastic > 0 .or. iconvert == 0) then
+          !    stoe = comp
+          !  else
+          !    stoi = -pcs * rho2 + (rho2 * es)
+          !    stoe = pcs * rho1 - (rho1 * es0)
+          !  end if
+          !end if
+          if (ielastic > 0 .or. iconvert == 0) then
+            stoe = comp
           else
-            if (ielastic > 0 .or. iconvert == 0) then
-              stoe = comp
-            else
-              stoi = -pcs * rho2 + (rho2 * es)
-              stoe = pcs * rho1 - (rho1 * es0)
-            end if
+            stoi = -pcs * rho2 + (rho2 * es)
+            stoe = pcs * rho1 - (rho1 * es0)
           end if
           compe = stoe
           compi = stoi
@@ -1935,15 +1941,24 @@ contains
     !
     ! -- check that ndelaycells is odd when using
     !    the effective stress formulation
-    if (this%igeocalc /= 0) then
-      if (ndelaybeds > 0) then
-        q = MOD(real(this%ndelaycells, DP), DTWO)
-        if (q == DZERO) then
-          write(errmsg, '(a,1x,i0,2(1x,a))')                          &
-            'ERROR: NDELAYCELLS (', this%ndelaycells, ') MUST BE AN', &
-            'ODD NUMBER WHEN USING THE EFFECTIVE STRESS FORMULATION.'
-          call store_error(errmsg)
-        end if
+    !if (this%igeocalc /= 0) then
+    !  if (ndelaybeds > 0) then
+    !    q = MOD(real(this%ndelaycells, DP), DTWO)
+    !    if (q == DZERO) then
+    !      write(errmsg, '(a,1x,i0,2(1x,a))')                          &
+    !        'ERROR: NDELAYCELLS (', this%ndelaycells, ') MUST BE AN', &
+    !        'ODD NUMBER WHEN USING THE EFFECTIVE STRESS FORMULATION.'
+    !      call store_error(errmsg)
+    !    end if
+    !  end if
+    !end if
+    if (ndelaybeds > 0) then
+      q = MOD(real(this%ndelaycells, DP), DTWO)
+      if (q == DZERO) then
+        write(errmsg, '(a,1x,i0,2(1x,a))')                          &
+          'ERROR: NDELAYCELLS (', this%ndelaycells, ') MUST BE AN', &
+          'ODD NUMBER WHEN USING THE EFFECTIVE STRESS FORMULATION.'
+        call store_error(errmsg)
       end if
     end if
     !
@@ -2289,14 +2304,16 @@ contains
                                     'PACKAGE SETTINGS'
     write(this%iout, fmtopti) 'NUMBER OF DELAY CELLS =',                         &
                               this%ndelaycells
-    if (this%igeocalc /= 1) then
+    !if (this%igeocalc /= 1) then
+    if (this%ifixedstress /= 0) then
       write(this%iout, '(4x,a)') &
         'HEAD-BASED FORMULATION'
     else
       write(this%iout, '(4x,a)') &
         'EFFECTIVE-STRESS FORMULATION'
     end if
-    if (this%igeocalc /= 0 .and. this%istoragec == 0) then
+    !if (this%igeocalc /= 0 .and. this%istoragec == 0) then
+    if (this%istoragec == 0) then
       write(this%iout, '(4x,a,1(/,6x,a))') &
         'COMPRESSION INDICES WILL BE SPECIFIED INSTEAD OF ELASTIC AND',          &
         'INELASTIC SPECIFIC STORAGE COEFFICIENTS'
@@ -2320,28 +2337,28 @@ contains
       write(this%iout,'(4x,a,1(/,6x,a))') &
         'INTERBED THICKNESS WILL BE SPECIFIED AS A AS A CELL FRACTION'
     end if
-    if (this%igeocalc /= 1) then
-      if (this%idbfullcell /= 1) then
-        write(this%iout, '(4x,a,1(/,6x,a))') &
-          'HEAD-BASED DELAY INTERBEDS WILL BE SIMULATED USING A HALF-CELL',      &
-          'FORMULATION'
-      else
-        write(this%iout, '(4x,a,1(/,6x,a))') &
-          'HEAD-BASED DELAY INTERBEDS WILL BE SIMULATED USING A FULL-CELL',      &
-          'FORMULATION'
-      end if
-    else
-      if (this%idbfullcell /= 0) then
-        this%idbfullcell = 0
-        write(this%iout, '(4x,a,1(/,6x,a))') &
-          'DELAY_FULL_CELL OPTION SPECIFIED BUT DOES NOT APPLY TO SIMULATIONS',  &
-          'USING THE EFFECTIVE-STRESS FORMULATION'
-      else
-        write(this%iout, '(4x,a,1(/,6x,a))') &
-          'EFFECTIVE STRESS BASED DELAY INTERBEDS WILL BE SIMULATED USING A',    &
-          'FULL-CELL FORMULATION'
-      end if
-    end if
+    !if (this%igeocalc /= 1) then
+    !  if (this%idbfullcell /= 1) then
+    !    write(this%iout, '(4x,a,1(/,6x,a))') &
+    !      'HEAD-BASED DELAY INTERBEDS WILL BE SIMULATED USING A HALF-CELL',      &
+    !      'FORMULATION'
+    !  else
+    !    write(this%iout, '(4x,a,1(/,6x,a))') &
+    !      'HEAD-BASED DELAY INTERBEDS WILL BE SIMULATED USING A FULL-CELL',      &
+    !      'FORMULATION'
+    !  end if
+    !else
+    !  if (this%idbfullcell /= 0) then
+    !    this%idbfullcell = 0
+    !    write(this%iout, '(4x,a,1(/,6x,a))') &
+    !      'DELAY_FULL_CELL OPTION SPECIFIED BUT DOES NOT APPLY TO SIMULATIONS',  &
+    !      'USING THE EFFECTIVE-STRESS FORMULATION'
+    !  else
+    !    write(this%iout, '(4x,a,1(/,6x,a))') &
+    !      'EFFECTIVE STRESS BASED DELAY INTERBEDS WILL BE SIMULATED USING A',    &
+    !      'FULL-CELL FORMULATION'
+    !  end if
+    !end if
     if (this%ispecified_pcs /= 1) then
       write(this%iout, '(4x,a,1(/,6x,a))') &
         'PRECONSOLIDATION STRESS WILL BE SPECIFIED RELATIVE TO INITIAL',  &
@@ -2362,7 +2379,8 @@ contains
     end if
     !
     ! -- process effective_stress_lag, if effective stress formulation
-    if (this%igeocalc /= 0) then
+    !if (this%igeocalc /= 0) then
+    if (this%ifixedstress == 0) then
       if (ieslag /= 0) then
         write(this%iout, '(4x,a,1(/,6x,a))') &
           'SPECIFIC STORAGE VALUES WILL BE CALCULATED USING THE EFFECTIVE',      &
@@ -2385,7 +2403,8 @@ contains
     !
     ! -- evaluate underrelaxation
     if (iunderrelax /= 0) then
-      if (this%igeocalc /= 0) then
+      !if (this%igeocalc /= 0) then
+      if (this%ifixedstress == 0) then
         if (this%ieslag /= 0) then
           iunderrelax = 0
           write(this%iout, '(4x,a,3(/,6x,a))') &
@@ -2475,13 +2494,15 @@ contains
       call mem_allocate(this%buffusr, this%dis%nodesuser, 'buffusr',            &
                         trim(this%origin))
     end if
-    if (this%igeocalc == 0) then
-      call mem_allocate(this%sgm, 1, 'sgm', trim(this%origin))
-      call mem_allocate(this%sgs, 1, 'sgs', trim(this%origin))
-    else
-      call mem_allocate(this%sgm, this%dis%nodes, 'sgm', trim(this%origin))
-      call mem_allocate(this%sgs, this%dis%nodes, 'sgs', trim(this%origin))
-    end if
+    !if (this%igeocalc == 0) then
+    !  call mem_allocate(this%sgm, 1, 'sgm', trim(this%origin))
+    !  call mem_allocate(this%sgs, 1, 'sgs', trim(this%origin))
+    !else
+    !  call mem_allocate(this%sgm, this%dis%nodes, 'sgm', trim(this%origin))
+    !  call mem_allocate(this%sgs, this%dis%nodes, 'sgs', trim(this%origin))
+    !end if
+    call mem_allocate(this%sgm, this%dis%nodes, 'sgm', trim(this%origin))
+    call mem_allocate(this%sgs, this%dis%nodes, 'sgs', trim(this%origin))
     call mem_allocate(this%ske_cr, this%dis%nodes, 'ske_cr', trim(this%origin))
     call mem_allocate(this%sk_theta, this%dis%nodes, 'sk_theta', trim(this%origin))
     call mem_allocate(this%sk_thick, this%dis%nodes, 'sk_thick', trim(this%origin))
@@ -2783,7 +2804,7 @@ contains
     call mem_deallocate(this%ndelaycells)
     call mem_deallocate(this%ndelaybeds)
     call mem_deallocate(this%initialized)
-    call mem_deallocate(this%igeocalc)
+    !call mem_deallocate(this%igeocalc)
     call mem_deallocate(this%ieslag)
     call mem_deallocate(this%iunderrelax)
     call mem_deallocate(this%iurflag)
@@ -3027,29 +3048,37 @@ contains
                                         this%sk_theta, 'SK_THETA')
           istheta = 1
         case ('SGM')
-            if (this%igeocalc == 1) then
-              call this%dis%read_grid_array(line, lloc, istart, istop,          &
-                                            this%iout, this%parser%iuactive,    &
-                                            this%sgm, 'SGM')
-              isgm = 1
-            else
-              write(errmsg,'(4x,a,2(1x,a))') 'ERROR. SGM GRIDDATA CANNOT BE ',  &
-                                             'SPECIFIED IF USING THE HEAD-',    &
-                                             'BASED FORMULATION'
-              call store_error(errmsg)
-            end if
+            !if (this%igeocalc == 1) then
+            !  call this%dis%read_grid_array(line, lloc, istart, istop,          &
+            !                                this%iout, this%parser%iuactive,    &
+            !                                this%sgm, 'SGM')
+            !  isgm = 1
+            !else
+            !  write(errmsg,'(4x,a,2(1x,a))') 'ERROR. SGM GRIDDATA CANNOT BE ',  &
+            !                                 'SPECIFIED IF USING THE HEAD-',    &
+            !                                 'BASED FORMULATION'
+            !  call store_error(errmsg)
+            !end if
+            call this%dis%read_grid_array(line, lloc, istart, istop,          &
+                                          this%iout, this%parser%iuactive,    &
+                                          this%sgm, 'SGM')
+            isgm = 1
         case ('SGS')
-            if (this%igeocalc == 1) then
-              call this%dis%read_grid_array(line, lloc, istart, istop,          &
-                                            this%iout, this%parser%iuactive,    &
-                                            this%sgs, 'SGS')
-              isgs = 1
-            else
-              write(errmsg,'(4x,a,2(1x,a))') 'ERROR. SGS GRIDDATA CANNOT BE ',  &
-                                             'SPECIFIED IF USING THE HEAD-',    &
-                                             'BASED FORMULATION'
-              call store_error(errmsg)
-            end if
+            !if (this%igeocalc == 1) then
+            !  call this%dis%read_grid_array(line, lloc, istart, istop,          &
+            !                                this%iout, this%parser%iuactive,    &
+            !                                this%sgs, 'SGS')
+            !  isgs = 1
+            !else
+            !  write(errmsg,'(4x,a,2(1x,a))') 'ERROR. SGS GRIDDATA CANNOT BE ',  &
+            !                                 'SPECIFIED IF USING THE HEAD-',    &
+            !                                 'BASED FORMULATION'
+            !  call store_error(errmsg)
+            !end if
+            call this%dis%read_grid_array(line, lloc, istart, istop,          &
+                                          this%iout, this%parser%iuactive,    &
+                                          this%sgs, 'SGS')
+            isgs = 1
         case default
             write(errmsg,'(4x,a,a)')'ERROR. UNKNOWN GRIDDATA TAG: ',            &
                                      trim(keyword)
@@ -3071,25 +3100,35 @@ contains
     end if
     !
     ! -- determine if sgm and sgs have been specified, if effective stress formulation
-    if (this%igeocalc > 0) then
-      if (isgm == 0) then
-        do node = 1, this%dis%nodes
-          this%sgm(node) = 1.7D0
-        end do
-        !write(errmsg,'(4x,a,2(1x,a))') 'ERROR. SGM GRIDDATA MUST BE SPECIFIED', &
-        !                               'IF USING THE EFFECTIVE-STRESS',         &
-        !                               'FORMULATION'
-        !call store_error(errmsg)
-      end if
-      if (isgs == 0) then
-        do node = 1, this%dis%nodes
-          this%sgs(node) = 2.0D0
-        end do
-        !write(errmsg,'(4x,a,2(1x,a))') 'ERROR. SGS GRIDDATA MUST BE SPECIFIED', &
-        !                               'SPECIFIED IF USING THE EFFECTIVE-',     &
-        !                               'STRESS FORMULATION'
-        !call store_error(errmsg)
-      end if
+    !if (this%igeocalc > 0) then
+    !  if (isgm == 0) then
+    !    do node = 1, this%dis%nodes
+    !      this%sgm(node) = 1.7D0
+    !    end do
+    !    !write(errmsg,'(4x,a,2(1x,a))') 'ERROR. SGM GRIDDATA MUST BE SPECIFIED', &
+    !    !                               'IF USING THE EFFECTIVE-STRESS',         &
+    !    !                               'FORMULATION'
+    !    !call store_error(errmsg)
+    !  end if
+    !  if (isgs == 0) then
+    !    do node = 1, this%dis%nodes
+    !      this%sgs(node) = 2.0D0
+    !    end do
+    !    !write(errmsg,'(4x,a,2(1x,a))') 'ERROR. SGS GRIDDATA MUST BE SPECIFIED', &
+    !    !                               'SPECIFIED IF USING THE EFFECTIVE-',     &
+    !    !                               'STRESS FORMULATION'
+    !    !call store_error(errmsg)
+    !  end if
+    !end if
+    if (isgm == 0) then
+      do node = 1, this%dis%nodes
+        this%sgm(node) = 1.7D0
+      end do
+    end if
+    if (isgs == 0) then
+      do node = 1, this%dis%nodes
+        this%sgs(node) = 2.0D0
+      end do
     end if
     !
     ! -- evaluate the coarse-grained material properties and if 
@@ -3132,20 +3171,22 @@ contains
     end if
     !
     ! -- set flags that determine if delay beds will be simulated using a half cell
-    if (this%igeocalc == 0) then
-      if (this%idbfullcell == 0) then
-        ! -- use half cell for head-based delay bed if delay_full_cell option not specified
-        this%idbhalfcell = 1
-        this%dbfact = DTWO
-        this%dbfacti = DHALF
-      ! -- use full cell for head-based delay bed if delay_full_cell option specified
-      else
-        this%idbhalfcell = 0
-      end if
-    else
-      this%idbfullcell = 1
-      this%idbhalfcell = 0
-    end if
+    !if (this%igeocalc == 0) then
+    !  if (this%idbfullcell == 0) then
+    !    ! -- use half cell for head-based delay bed if delay_full_cell option not specified
+    !    this%idbhalfcell = 1
+    !    this%dbfact = DTWO
+    !    this%dbfacti = DHALF
+    !  ! -- use full cell for head-based delay bed if delay_full_cell option specified
+    !  else
+    !    this%idbhalfcell = 0
+    !  end if
+    !else
+    !  this%idbfullcell = 1
+    !  this%idbhalfcell = 0
+    !end if
+    this%idbfullcell = 1
+    this%idbhalfcell = 0
     !
     ! -- read interbed data
     if (this%ninterbeds > 0) then
@@ -3238,105 +3279,105 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- calculate geostatic stress if necessary
-    if (this%igeocalc /= 0) then
-      if (this%iupdatestress /= 0) then
-        do node = 1, this%dis%nodes
-          !
-          ! -- calculate geostatic stress for this node
-          !    this represents the geostatic stress component 
-          !    for the cell
-          top = this%dis%top(node)
-          bot = this%dis%bot(node)
-          if (this%ibound(node) /= 0) then
-            hcell = hnew(node)
-          else
-            hcell = bot
-          end if
-          gs = DZERO
-          if (hcell >= top) then
-              gs = (top - bot) * this%sgs(node)
-          else if (hcell <= bot) then
-              gs = (top - bot) * this%sgm(node)
-          else
-              gs = ((top - hcell) * this%sgm(node)) +                             &
-                   ((hcell - bot) * this%sgs(node))
-          end if
-          this%sk_gs(node) = gs
-        end do
-        !
-        ! -- add user specified overlying geostatic stress
-        do nn = 1, this%nbound
-          node = this%nodelistsig0(nn)
-          sadd = this%bound(1, nn)
-          this%sk_gs(node) = this%sk_gs(node) + sadd
-        end do
-        !
-        ! -- calculate geostatic stress above cell
-        do node = 1, this%dis%nodes
-          !
-          ! -- area of cell 
-          area_node = this%dis%get_area(node)
-          !
-          ! -- geostatic stress of cell
-          gs = this%sk_gs(node)
-          !
-          ! -- Add geostatic stress of overlying cells (ihc=0)
-          !    m < node = m is vertically above node
-          do ii = this%dis%con%ia(node) + 1, this%dis%con%ia(node + 1) - 1
-            !
-            ! -- Set the m cell number
-            m = this%dis%con%ja(ii)
-            iis = this%dis%con%jas(ii)
-            !
-            ! -- vertical connection
-            if (this%dis%con%ihc(iis) == 0) then
-              !
-              ! -- node has an overlying cell
-              if (m < node) then
-                !
-                ! -- dis and disv discretization
-                if (this%dis%ndim /= 1) then
-                  gs = gs + this%sk_gs(m)
-                !
-                ! -- disu discretization
-                !    *** this needs to be checked ***
-                else
-                  area_conn = this%dis%get_area(m)
-                  hwva = this%dis%con%hwva(iis)
-                  va_scale = this%dis%con%hwva(iis) / this%dis%get_area(m)
-                  gs_conn = this%sk_gs(m)
-                  gs = gs + (gs_conn * va_scale)
-                end if
-
-              end if
-            end if
-          end do
-          !
-          ! -- geostatic stress for cell with geostatic stress 
-          !    of overlying cells
-          this%sk_gs(node) = gs
-        end do
-      end if
-      !
-      ! -- save effective stress from the last iteration and
-      !    calculate the new effective stress for a cell
+    !if (this%igeocalc /= 0) then
+    if (this%iupdatestress /= 0) then
       do node = 1, this%dis%nodes
-        this%sk_esi(node) = this%sk_es(node)
+        !
+        ! -- calculate geostatic stress for this node
+        !    this represents the geostatic stress component 
+        !    for the cell
         top = this%dis%top(node)
         bot = this%dis%bot(node)
         if (this%ibound(node) /= 0) then
           hcell = hnew(node)
-          if (hcell < bot) then
-            hcell = bot
-          end if
         else
           hcell = bot
         end if
-        hs = hcell - bot
-        es = this%sk_gs(node) - hs
-        this%sk_es(node) = es
+        gs = DZERO
+        if (hcell >= top) then
+            gs = (top - bot) * this%sgs(node)
+        else if (hcell <= bot) then
+            gs = (top - bot) * this%sgm(node)
+        else
+            gs = ((top - hcell) * this%sgm(node)) +                             &
+                  ((hcell - bot) * this%sgs(node))
+        end if
+        this%sk_gs(node) = gs
+      end do
+      !
+      ! -- add user specified overlying geostatic stress
+      do nn = 1, this%nbound
+        node = this%nodelistsig0(nn)
+        sadd = this%bound(1, nn)
+        this%sk_gs(node) = this%sk_gs(node) + sadd
+      end do
+      !
+      ! -- calculate geostatic stress above cell
+      do node = 1, this%dis%nodes
+        !
+        ! -- area of cell 
+        area_node = this%dis%get_area(node)
+        !
+        ! -- geostatic stress of cell
+        gs = this%sk_gs(node)
+        !
+        ! -- Add geostatic stress of overlying cells (ihc=0)
+        !    m < node = m is vertically above node
+        do ii = this%dis%con%ia(node) + 1, this%dis%con%ia(node + 1) - 1
+          !
+          ! -- Set the m cell number
+          m = this%dis%con%ja(ii)
+          iis = this%dis%con%jas(ii)
+          !
+          ! -- vertical connection
+          if (this%dis%con%ihc(iis) == 0) then
+            !
+            ! -- node has an overlying cell
+            if (m < node) then
+              !
+              ! -- dis and disv discretization
+              if (this%dis%ndim /= 1) then
+                gs = gs + this%sk_gs(m)
+              !
+              ! -- disu discretization
+              !    *** this needs to be checked ***
+              else
+                area_conn = this%dis%get_area(m)
+                hwva = this%dis%con%hwva(iis)
+                va_scale = this%dis%con%hwva(iis) / this%dis%get_area(m)
+                gs_conn = this%sk_gs(m)
+                gs = gs + (gs_conn * va_scale)
+              end if
+
+            end if
+          end if
+        end do
+        !
+        ! -- geostatic stress for cell with geostatic stress 
+        !    of overlying cells
+        this%sk_gs(node) = gs
       end do
     end if
+    !
+    ! -- save effective stress from the last iteration and
+    !    calculate the new effective stress for a cell
+    do node = 1, this%dis%nodes
+      this%sk_esi(node) = this%sk_es(node)
+      top = this%dis%top(node)
+      bot = this%dis%bot(node)
+      if (this%ibound(node) /= 0) then
+        hcell = hnew(node)
+        if (hcell < bot) then
+          hcell = bot
+        end if
+      else
+        hcell = bot
+      end if
+      hs = hcell - bot
+      es = this%sk_gs(node) - hs
+      this%sk_es(node) = es
+    end do
+    !end if
     !
     ! -- return
     return
@@ -3370,36 +3411,36 @@ contains
     ! -- initialize variables
     ierr = 0
     !
-    ! -- calculate geostatic stress if necessary
-    if (this%igeocalc /= 0) then
-      !
-      ! -- save effective stress from the last iteration and
-      !    calculate the new effective stress for a cell
-      do node = 1, this%dis%nodes
-        if (this%ibound(node) < 1) cycle
-        bot = this%dis%bot(node)
-        gs = this%sk_gs(node)
-        es = this%sk_es(node)
-        u = DZERO
-        if (this%ibound(node) /= 0) then
-          u = gs - es
+    ! -- check geostatic stress if necessary
+    !if (this%igeocalc /= 0) then
+    !
+    ! -- save effective stress from the last iteration and
+    !    calculate the new effective stress for a cell
+    do node = 1, this%dis%nodes
+      if (this%ibound(node) < 1) cycle
+      bot = this%dis%bot(node)
+      gs = this%sk_gs(node)
+      es = this%sk_es(node)
+      u = DZERO
+      if (this%ibound(node) /= 0) then
+        u = gs - es
+      end if
+      hcell = u + bot
+      if (this%ifixedstress == 0) then
+        if (es < DEM6) then
+          ierr = ierr + 1
+          call this%dis%noder_to_string(node, cellid)
+          write(errmsg, '(a,g0.7,a,1x,a)')                                     &
+            'ERROR: SMALL TO NEGATIVE EFFECTIVE STRESS (', es, ') IN CELL',    &
+            trim(adjustl(cellid))
+          call store_error(errmsg)
+          write(errmsg, '(4x,a,1x,g0.7,3(1x,a,1x,g0.7),1x,a)')                 &
+            '(', es, '=', this%sk_gs(node), '- (', hcell, '-', bot, ')'
+          call store_error(errmsg)
         end if
-        hcell = u + bot
-        if (this%ifixedstress == 0) then
-          if (es < DEM6) then
-            ierr = ierr + 1
-            call this%dis%noder_to_string(node, cellid)
-            write(errmsg, '(a,g0.7,a,1x,a)')                                     &
-              'ERROR: SMALL TO NEGATIVE EFFECTIVE STRESS (', es, ') IN CELL',    &
-              trim(adjustl(cellid))
-            call store_error(errmsg)
-            write(errmsg, '(4x,a,1x,g0.7,3(1x,a,1x,g0.7),1x,a)')                 &
-              '(', es, '=', this%sk_gs(node), '- (', hcell, '-', bot, ')'
-            call store_error(errmsg)
-          end if
-        end if
-      end do
-    end if
+      end if
+    end do
+    !end if
     !
     ! -- write a summary error message
     if (ierr > 0) then
@@ -3520,8 +3561,9 @@ contains
     !
     ! -- aquifer saturation
     call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
-    !if (this%igeocalc == 0) then
-    if (this%igeocalc == 0 .or. this%ifixedstress /= 0) then
+    !!if (this%igeocalc == 0) then
+    !if (this%igeocalc == 0 .or. this%ifixedstress /= 0) then
+    if (this%ifixedstress /= 0) then
       f = DONE
       f0 = DONE
     else
@@ -3553,29 +3595,41 @@ contains
     ! -- calculate rho1 and rho2
     rho1 = this%rci(ib) * sto_fac0
     rho2 = this%rci(ib) * sto_fac
-    if (this%igeocalc == 0) then
-      if (hcell < this%pcs(ib)) then
-        this%iconvert(ib) = 1
-        rho2 = this%ci(ib) * sto_fac
-      end if
-      if (this%ielastic(ib) /= 0) then
-        rhs = -rho1 * this%sk_es0(node)
-      else
-        rhs = -(rho2 * this%pcs(ib) + rho1 * (this%sk_es0(node) - this%pcs(ib)))
-      end if
+    !if (this%igeocalc == 0) then
+    !  if (hcell < this%pcs(ib)) then
+    !    this%iconvert(ib) = 1
+    !    rho2 = this%ci(ib) * sto_fac
+    !  end if
+    !  if (this%ielastic(ib) /= 0) then
+    !    rhs = -rho1 * this%sk_es0(node)
+    !  else
+    !    rhs = -(rho2 * this%pcs(ib) + rho1 * (this%sk_es0(node) - this%pcs(ib)))
+    !  end if
+    !else
+    !  if (this%sk_es(node) > this%pcs(ib)) then
+    !    this%iconvert(ib) = 1
+    !    rho2 = this%ci(ib) * sto_fac
+    !  end if
+    !  if (this%ielastic(ib) /= 0) then
+    !    rhs = rho1 * this%sk_es0(node) -                                         &
+    !          rho2 * (this%sk_gs(node) + bot)
+    !  else
+    !    rhs = -rho2 * (this%sk_gs(node) + bot) +                                 &
+    !          (this%pcs(ib) * (rho2 - rho1)) +                                   &
+    !          (rho1 * this%sk_es0(node))
+    !  end if
+    !end if
+    if (this%sk_es(node) > this%pcs(ib)) then
+      this%iconvert(ib) = 1
+      rho2 = this%ci(ib) * sto_fac
+    end if
+    if (this%ielastic(ib) /= 0) then
+      rhs = rho1 * this%sk_es0(node) -                                         &
+            rho2 * (this%sk_gs(node) + bot)
     else
-      if (this%sk_es(node) > this%pcs(ib)) then
-        this%iconvert(ib) = 1
-        rho2 = this%ci(ib) * sto_fac
-      end if
-      if (this%ielastic(ib) /= 0) then
-        rhs = rho1 * this%sk_es0(node) -                                         &
-              rho2 * (this%sk_gs(node) + bot)
-      else
-        rhs = -rho2 * (this%sk_gs(node) + bot) +                                 &
-              (this%pcs(ib) * (rho2 - rho1)) +                                   &
-              (rho1 * this%sk_es0(node))
-      end if
+      rhs = -rho2 * (this%sk_gs(node) + bot) +                                 &
+            (this%pcs(ib) * (rho2 - rho1)) +                                   &
+            (rho1 * this%sk_es0(node))
     end if
     !
     ! -- save ske and sk
@@ -3626,17 +3680,19 @@ contains
     !
     ! -- calculate no-delay interbed compaction
     if (this%ielastic(ib) /= 0) then
-      if (this%igeocalc == 0) then
-        comp = rho1 * es0 - rho2 * hcell
-      else
-        comp = rho2 * es - rho1 * es0
-      end if
+      !if (this%igeocalc == 0) then
+      !  comp = rho1 * es0 - rho2 * hcell
+      !else
+      !  comp = rho2 * es - rho1 * es0
+      !end if
+      comp = rho2 * es - rho1 * es0
     else
-      if (this%igeocalc == 0) then
-        comp = rho2 * (pcs - hcell) + rho1 * (es0 - pcs)
-      else
-        comp = -pcs * (rho2 - rho1) - (rho1 * es0) + (rho2 * es)
-      end if
+      !if (this%igeocalc == 0) then
+      !  comp = rho2 * (pcs - hcell) + rho1 * (es0 - pcs)
+      !else
+      !  comp = -pcs * (rho2 - rho1) - (rho1 * es0) + (rho2 * es)
+      !end if
+      comp = -pcs * (rho2 - rho1) - (rho1 * es0) + (rho2 * es)
     end if
     !
     ! -- return
@@ -3792,11 +3848,12 @@ contains
     ! -- coarse-grained materials
     do node = 1, nodes
       this%sk_comp(node) = DZERO
-      if (this%igeocalc == 0) then
-        this%sk_es0(node)= hnew(node)
-      else
-        this%sk_es0(node) = this%sk_es(node)
-      end if
+      !if (this%igeocalc == 0) then
+      !  this%sk_es0(node)= hnew(node)
+      !else
+      !  this%sk_es0(node) = this%sk_es(node)
+      !end if
+      this%sk_es0(node) = this%sk_es(node)
       if (this%iupdatematprop /= 0) then
         this%sk_theta0(node) = this%sk_theta(node)
         this%sk_thick0(node) = this%sk_thick(node)
@@ -3815,27 +3872,30 @@ contains
           this%theta0(ib) = this%theta(ib)
           this%thick0(ib) = this%thick(ib)
         end if
-        if (kper == 1 .and. kstp == 1) then
-          if (this%igeocalc == 0) then
-            h = hnew(node)
-            pcs = this%pcs(ib)
-            if (pcs > h) then
-              this%pcs(ib) = h
-            end if
-          end if
-        end if
+        !if (kper == 1 .and. kstp == 1) then
+        !  if (this%igeocalc == 0) then
+        !    h = hnew(node)
+        !    pcs = this%pcs(ib)
+        !    if (pcs > h) then
+        !      this%pcs(ib) = h
+        !    end if
+        !  end if
+        !end if
         if (this%initialized /= 0) then
           es = this%sk_es(node)
           pcs = this%pcs(ib)
-          if (this%igeocalc == 0) then
-            h = hnew(node)
-            if (h < pcs) then
-              this%pcs(ib) = h
-            end if
-          else
-            if (es > pcs) then
-              this%pcs(ib) = es
-            end if
+          !if (this%igeocalc == 0) then
+          !  h = hnew(node)
+          !  if (h < pcs) then
+          !    this%pcs(ib) = h
+          !  end if
+          !else
+          !  if (es > pcs) then
+          !    this%pcs(ib) = es
+          !  end if
+          !end if
+          if (es > pcs) then
+            this%pcs(ib) = es
           end if
         end if
       !
@@ -3848,11 +3908,12 @@ contains
             node = this%nodelist(ib)
             h = hnew(node)
             do n = 1, this%ndelaycells
-              if (this%igeocalc == 0) then
-                this%dbh(n, idelay) = h
-              else
-                this%dbh(n, idelay) = h
-              end if
+              !if (this%igeocalc == 0) then
+              !  this%dbh(n, idelay) = h
+              !else
+              !  this%dbh(n, idelay) = h
+              !end if
+              this%dbh(n, idelay) = h
             end do
           end if
         end if
@@ -3861,15 +3922,18 @@ contains
         do n = 1, this%ndelaycells
           ! update preconsolidation stress
           if (this%initialized /= 0) then
-            if (this%igeocalc == 0) then
-              if (this%dbh(n, idelay) < this%dbpcs(n, idelay)) then
-                this%dbpcs(n, idelay) = this%dbh(n, idelay)
-              end if
-              this%dbes(n, idelay) = this%dbh(n, idelay)
-            else
-              if (this%dbes(n, idelay) > this%dbpcs(n, idelay)) then
-                this%dbpcs(n, idelay) = this%dbes(n, idelay)
-              end if
+            !if (this%igeocalc == 0) then
+            !  if (this%dbh(n, idelay) < this%dbpcs(n, idelay)) then
+            !    this%dbpcs(n, idelay) = this%dbh(n, idelay)
+            !  end if
+            !  this%dbes(n, idelay) = this%dbh(n, idelay)
+            !else
+            !  if (this%dbes(n, idelay) > this%dbpcs(n, idelay)) then
+            !    this%dbpcs(n, idelay) = this%dbes(n, idelay)
+            !  end if
+            !end if
+            if (this%dbes(n, idelay) > this%dbpcs(n, idelay)) then
+              this%dbpcs(n, idelay) = this%dbes(n, idelay)
             end if
           end if
           this%dbh0(n, idelay) = this%dbh(n, idelay)
@@ -3964,30 +4028,46 @@ contains
       hcell = hnew(node)
       pcs = this%pcs(ib)
       pcs0 = pcs
-      if (this%igeocalc == 0) then
-        if (this%ispecified_pcs == 0) then
-          pcs = this%sk_es(node) + pcs0
+      !if (this%igeocalc == 0) then
+      !  if (this%ispecified_pcs == 0) then
+      !    pcs = this%sk_es(node) + pcs0
+      !  else
+      !    if (pcs > this%sk_es(node)) then
+      !      pcs = this%sk_es(node)
+      !    end if
+      !  end if
+      !else
+      !  if (this%ispecified_pcs == 0) then
+      !    ! relative pcs...subtract head (u) from sigma'
+      !    if (this%ipch /= 0) then
+      !      pcs = this%sk_es(node) - pcs0
+      !    else
+      !      pcs = this%sk_es(node) + pcs0
+      !    end if
+      !  else
+      !    ! specified pcs...substract head (u) from sigma
+      !    if (this%ipch /= 0) then
+      !      pcs = this%sk_gs(node) - (pcs0 - bot)
+      !    end if
+      !    if (pcs < this%sk_es(node)) then
+      !      pcs = this%sk_es(node)
+      !    end if
+      !  end if
+      !end if
+      if (this%ispecified_pcs == 0) then
+        ! relative pcs...subtract head (u) from sigma'
+        if (this%ipch /= 0) then
+          pcs = this%sk_es(node) - pcs0
         else
-          if (pcs > this%sk_es(node)) then
-            pcs = this%sk_es(node)
-          end if
+          pcs = this%sk_es(node) + pcs0
         end if
       else
-        if (this%ispecified_pcs == 0) then
-          ! relative pcs...subtract head (u) from sigma'
-          if (this%ipch /= 0) then
-            pcs = this%sk_es(node) - pcs0
-          else
-            pcs = this%sk_es(node) + pcs0
-          end if
-        else
-          ! specified pcs...substract head (u) from sigma
-          if (this%ipch /= 0) then
-            pcs = this%sk_gs(node) - (pcs0 - bot)
-          end if
-          if (pcs < this%sk_es(node)) then
-            pcs = this%sk_es(node)
-          end if
+        ! specified pcs...substract head (u) from sigma
+        if (this%ipch /= 0) then
+          pcs = this%sk_gs(node) - (pcs0 - bot)
+        end if
+        if (pcs < this%sk_es(node)) then
+          pcs = this%sk_es(node)
         end if
       end if
       this%pcs(ib) = pcs
@@ -4014,14 +4094,18 @@ contains
         ! -- fill delay bed pcs          
         pcs = this%pcs(ib)
         do n = 1, this%ndelaycells
-          if (this%igeocalc == 0) then
-            this%dbpcs(n, idelay) = pcs
-          else
-            zbot = this%dbz(n, idelay) - dzhalf
-            sadd = this%sgs(node) * (zbot - bot)
-            dbpcs = this%csub_calc_adjes(node, pcs, bot, zbot)
-            this%dbpcs(n, idelay) = dbpcs
-          end if
+          !if (this%igeocalc == 0) then
+          !  this%dbpcs(n, idelay) = pcs
+          !else
+          !  zbot = this%dbz(n, idelay) - dzhalf
+          !  sadd = this%sgs(node) * (zbot - bot)
+          !  dbpcs = this%csub_calc_adjes(node, pcs, bot, zbot)
+          !  this%dbpcs(n, idelay) = dbpcs
+          !end if
+          zbot = this%dbz(n, idelay) - dzhalf
+          sadd = this%sgs(node) * (zbot - bot)
+          dbpcs = this%csub_calc_adjes(node, pcs, bot, zbot)
+          this%dbpcs(n, idelay) = dbpcs
           !
           ! -- initialize effective stress for previous time step
           !    and the previous iteration
@@ -4036,8 +4120,9 @@ contains
       top = this%dis%top(node)
       bot = this%dis%bot(node)
       if (this%istoragec == 1) then
-        !if (this%igeocalc == 0) then
-        if (this%igeocalc == 0 .or. this%ifixedstress /= 0) then
+        !!if (this%igeocalc == 0) then
+        !if (this%igeocalc == 0 .or. this%ifixedstress /= 0) then
+        if (this%ifixedstress /= 0) then
           fact = DONE
         else
           void = this%csub_calc_void(this%sk_theta(node))
@@ -4069,8 +4154,9 @@ contains
       top = this%dis%top(node)
       bot = this%dis%bot(node)
       if (this%istoragec == 1) then
-        !if (this%igeocalc == 0) then
-        if (this%igeocalc == 0 .or. this%ifixedstress /= 0) then
+        !!if (this%igeocalc == 0) then
+        !if (this%igeocalc == 0 .or. this%ifixedstress /= 0) then
+        if (this%ifixedstress /= 0) then
           fact = DONE
         else
           void = this%csub_calc_void(this%theta(ib))
@@ -4098,30 +4184,39 @@ contains
     !
     ! -- write current stress and initial preconsolidation stress
     if (this%iprpak == 1) then
-      if (this%igeocalc == 0) then
-        write(this%iout, '(//1X,A)')                                  &
-          'CALCULATED INITIAL INTERBED PRECONSOLIDATION HEAD'
-      else
-        write(this%iout, '(//1X,A,/1X,A)')                            &
-          'CALCULATED INITIAL INTERBED GEOSTATIC, EFFECTIVE,',        &
-          'AND PRECONSOLIDATION STRESS'
-      end if
+      !if (this%igeocalc == 0) then
+      !  write(this%iout, '(//1X,A)')                                  &
+      !    'CALCULATED INITIAL INTERBED PRECONSOLIDATION HEAD'
+      !else
+      !  write(this%iout, '(//1X,A,/1X,A)')                            &
+      !    'CALCULATED INITIAL INTERBED GEOSTATIC, EFFECTIVE,',        &
+      !    'AND PRECONSOLIDATION STRESS'
+      !end if
+      write(this%iout, '(//1X,A,/1X,A)')                            &
+        'CALCULATED INITIAL INTERBED GEOSTATIC, EFFECTIVE,',        &
+        'AND PRECONSOLIDATION STRESS'
       !
       ! -- first header line
       iloc = 1
       line = ''
       call UWWORD(line, iloc, 10, 1, 'INTERBED', n, q, left=.TRUE.)
-      if (this%igeocalc == 0) then
-        call UWWORD(line, iloc, 16, 1,                                &
-                    'PRECONSOLIDATION', n, q, CENTER=.TRUE.)
-      else
-        call UWWORD(line, iloc, 16, 1,                                & 
-                    'GEOSTATIC', n, q, CENTER=.TRUE.)
-        call UWWORD(line, iloc, 16, 1,                                & 
-                    'EFFECTIVE', n, q, CENTER=.TRUE.)
-        call UWWORD(line, iloc, 16, 1,                                & 
-                    'PRECONSOLIDATION', n, q, CENTER=.TRUE.)
-      end if
+      !if (this%igeocalc == 0) then
+      !  call UWWORD(line, iloc, 16, 1,                                &
+      !              'PRECONSOLIDATION', n, q, CENTER=.TRUE.)
+      !else
+      !  call UWWORD(line, iloc, 16, 1,                                & 
+      !              'GEOSTATIC', n, q, CENTER=.TRUE.)
+      !  call UWWORD(line, iloc, 16, 1,                                & 
+      !              'EFFECTIVE', n, q, CENTER=.TRUE.)
+      !  call UWWORD(line, iloc, 16, 1,                                & 
+      !              'PRECONSOLIDATION', n, q, CENTER=.TRUE.)
+      !end if
+      call UWWORD(line, iloc, 16, 1,                                & 
+                  'GEOSTATIC', n, q, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 16, 1,                                & 
+                  'EFFECTIVE', n, q, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 16, 1,                                & 
+                  'PRECONSOLIDATION', n, q, CENTER=.TRUE.)
       linesep = repeat('-', iloc)
       isep = iloc
       write(this%iout, '(1X,A)') linesep(1:iloc)
@@ -4131,17 +4226,23 @@ contains
       iloc = 1
       line = ''
       call UWWORD(line, iloc, 10, 1, 'NUMBER', n, q, left=.TRUE.)
-      if (this%igeocalc == 0) then
-        call UWWORD(line, iloc, 16, 1,                                &
-                    'HEAD', n, q, CENTER=.TRUE.)
-      else
-        call UWWORD(line, iloc, 16, 1,                                & 
-                    'STRESS', n, q, CENTER=.TRUE.)
-        call UWWORD(line, iloc, 16, 1,                                & 
-                    'STRESS', n, q, CENTER=.TRUE.)
-        call UWWORD(line, iloc, 16, 1,                                & 
-                    'STRESS', n, q, CENTER=.TRUE.)
-      end if
+      !if (this%igeocalc == 0) then
+      !  call UWWORD(line, iloc, 16, 1,                                &
+      !              'HEAD', n, q, CENTER=.TRUE.)
+      !else
+      !  call UWWORD(line, iloc, 16, 1,                                & 
+      !              'STRESS', n, q, CENTER=.TRUE.)
+      !  call UWWORD(line, iloc, 16, 1,                                & 
+      !              'STRESS', n, q, CENTER=.TRUE.)
+      !  call UWWORD(line, iloc, 16, 1,                                & 
+      !              'STRESS', n, q, CENTER=.TRUE.)
+      !end if
+      call UWWORD(line, iloc, 16, 1,                                & 
+                  'STRESS', n, q, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 16, 1,                                & 
+                  'STRESS', n, q, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 16, 1,                                & 
+                  'STRESS', n, q, CENTER=.TRUE.)
       write(this%iout, '(1X,A)') line(1:iloc)
       write(this%iout, '(1X,A)') linesep(1:iloc)
 
@@ -4149,13 +4250,18 @@ contains
         iloc = 1
         line = ''
         call UWWORD(line, iloc, 10, 2, text, ib, q, left=.TRUE.)
-        if (this%igeocalc /= 0) then
-          node = this%nodelist(ib)
-          call UWWORD(line, iloc, 16, 3,                              &
-                      text, n, this%sk_gs(node), center=.TRUE.)
-          call UWWORD(line, iloc, 16, 3,                              &
-                      text, n, this%sk_es(node), center=.TRUE.)
-        end if
+        !if (this%igeocalc /= 0) then
+        !  node = this%nodelist(ib)
+        !  call UWWORD(line, iloc, 16, 3,                              &
+        !              text, n, this%sk_gs(node), center=.TRUE.)
+        !  call UWWORD(line, iloc, 16, 3,                              &
+        !              text, n, this%sk_es(node), center=.TRUE.)
+        !end if
+        node = this%nodelist(ib)
+        call UWWORD(line, iloc, 16, 3,                              &
+                    text, n, this%sk_gs(node), center=.TRUE.)
+        call UWWORD(line, iloc, 16, 3,                              &
+                    text, n, this%sk_es(node), center=.TRUE.)
         call UWWORD(line, iloc, 16, 3,                                & 
                     text, n, this%pcs(ib), CENTER=.TRUE.)
         write(this%iout, '(1X,A)') line(1:iloc)
@@ -4167,31 +4273,40 @@ contains
       do ib = 1, this%ninterbeds
         idelay = this%idelay(ib)
         if (idelay /= 0) then
-          if (this%igeocalc == 0) then
-            write(this%iout, '(/1X,A,1X,I0)')                         &
-              'CALCULATED INITIAL INTERBED PRECONSOLIDATION ' //      &
-              'HEAD FOR INTERBED', ib
-          else
-            write(this%iout, '(//1X,A,/1X,A,1X,I0)')                  &
-              'CALCULATED INITIAL INTERBED GEOSTATIC, EFFECTIVE,',    &
-              'AND PRECONSOLIDATION STRESS FOR INTERBED', ib
-          end if
+          !if (this%igeocalc == 0) then
+          !  write(this%iout, '(/1X,A,1X,I0)')                         &
+          !    'CALCULATED INITIAL INTERBED PRECONSOLIDATION ' //      &
+          !    'HEAD FOR INTERBED', ib
+          !else
+          !  write(this%iout, '(//1X,A,/1X,A,1X,I0)')                  &
+          !    'CALCULATED INITIAL INTERBED GEOSTATIC, EFFECTIVE,',    &
+          !    'AND PRECONSOLIDATION STRESS FOR INTERBED', ib
+          !end if
+          write(this%iout, '(//1X,A,/1X,A,1X,I0)')                  &
+            'CALCULATED INITIAL INTERBED GEOSTATIC, EFFECTIVE,',    &
+            'AND PRECONSOLIDATION STRESS FOR INTERBED', ib
           !
           ! -- first header line
           iloc = 1
           line = ''
           call UWWORD(line, iloc, 10, 1, 'DELAY', n, q, left=.TRUE.)
-          if (this%igeocalc == 0) then
-            call UWWORD(line, iloc, 16, 1,                            &
-                        'PRECONSOLIDATION', n, q, CENTER=.TRUE.)
-          else
-            call UWWORD(line, iloc, 16, 1,                            &
-                        'GEOSTATIC', n, q, CENTER=.TRUE.)
-            call UWWORD(line, iloc, 16, 1,                            &
-                        'EFFECTIVE', n, q, CENTER=.TRUE.)
-            call UWWORD(line, iloc, 16, 1,                            &
-                        'PRECONSOLIDATION', n, q, CENTER=.TRUE.)
-          end if
+          !if (this%igeocalc == 0) then
+          !  call UWWORD(line, iloc, 16, 1,                            &
+          !              'PRECONSOLIDATION', n, q, CENTER=.TRUE.)
+          !else
+          !  call UWWORD(line, iloc, 16, 1,                            &
+          !              'GEOSTATIC', n, q, CENTER=.TRUE.)
+          !  call UWWORD(line, iloc, 16, 1,                            &
+          !              'EFFECTIVE', n, q, CENTER=.TRUE.)
+          !  call UWWORD(line, iloc, 16, 1,                            &
+          !              'PRECONSOLIDATION', n, q, CENTER=.TRUE.)
+          !end if
+          call UWWORD(line, iloc, 16, 1,                            &
+                      'GEOSTATIC', n, q, CENTER=.TRUE.)
+          call UWWORD(line, iloc, 16, 1,                            &
+                      'EFFECTIVE', n, q, CENTER=.TRUE.)
+          call UWWORD(line, iloc, 16, 1,                            &
+                      'PRECONSOLIDATION', n, q, CENTER=.TRUE.)
           linesep = repeat('-', iloc)
           isep = iloc
           write(this%iout, '(1X,A)') linesep(1:iloc)
@@ -4201,17 +4316,23 @@ contains
           iloc = 1
           line = ''
           call UWWORD(line, iloc, 10, 1, 'CELL', n, q, left=.TRUE.)
-          if (this%igeocalc == 0) then
-            call UWWORD(line, iloc, 16, 1,                            &
-                        'HEAD', n, q, CENTER=.TRUE.)
-          else
-            call UWWORD(line, iloc, 16, 1,                            &
-                        'STRESS', n, q, CENTER=.TRUE.)
-            call UWWORD(line, iloc, 16, 1,                            &
-                        'STRESS', n, q, CENTER=.TRUE.)
-            call UWWORD(line, iloc, 16, 1,                            &
-                        'STRESS', n, q, CENTER=.TRUE.)
-          end if
+          !if (this%igeocalc == 0) then
+          !  call UWWORD(line, iloc, 16, 1,                            &
+          !              'HEAD', n, q, CENTER=.TRUE.)
+          !else
+          !  call UWWORD(line, iloc, 16, 1,                            &
+          !              'STRESS', n, q, CENTER=.TRUE.)
+          !  call UWWORD(line, iloc, 16, 1,                            &
+          !              'STRESS', n, q, CENTER=.TRUE.)
+          !  call UWWORD(line, iloc, 16, 1,                            &
+          !              'STRESS', n, q, CENTER=.TRUE.)
+          !end if
+          call UWWORD(line, iloc, 16, 1,                            &
+                      'STRESS', n, q, CENTER=.TRUE.)
+          call UWWORD(line, iloc, 16, 1,                            &
+                      'STRESS', n, q, CENTER=.TRUE.)
+          call UWWORD(line, iloc, 16, 1,                            &
+                      'STRESS', n, q, CENTER=.TRUE.)
           write(this%iout, '(1X,A)') line(1:iloc)
           write(this%iout, '(1X,A)') linesep(1:iloc)
 
@@ -4219,14 +4340,20 @@ contains
             iloc = 1
             line = ''
             call UWWORD(line, iloc, 10, 2, text, n, q, left=.TRUE.)
-            if (this%igeocalc /= 0) then
-              call UWWORD(line, iloc, 16, 3,                          &
-                          text, n, this%dbgeo(n, idelay),             &
-                          center=.TRUE.)
-              call UWWORD(line, iloc, 16, 3,                          &
-                          text, n, this%dbes(n, idelay),              &
-                          center=.TRUE.)
-            end if
+            !if (this%igeocalc /= 0) then
+            !  call UWWORD(line, iloc, 16, 3,                          &
+            !              text, n, this%dbgeo(n, idelay),             &
+            !              center=.TRUE.)
+            !  call UWWORD(line, iloc, 16, 3,                          &
+            !              text, n, this%dbes(n, idelay),              &
+            !              center=.TRUE.)
+            !end if
+            call UWWORD(line, iloc, 16, 3,                          &
+                        text, n, this%dbgeo(n, idelay),             &
+                        center=.TRUE.)
+            call UWWORD(line, iloc, 16, 3,                          &
+                        text, n, this%dbes(n, idelay),              &
+                        center=.TRUE.)
             call UWWORD(line, iloc, 16, 3,                            &
                         text, n, this%dbpcs(n, idelay), center=.TRUE.)
             write(this%iout, '(1X,A)') line(1:iloc)
@@ -4238,7 +4365,8 @@ contains
       !
       ! -- write calculated compression indices
       if (this%istoragec == 1) then
-        if (this%igeocalc /= 0) then
+        !if (this%igeocalc /= 0) then
+        if (this%ifixedstress == 0) then
           write(this%iout, '(//1X,A)')                                &
             'CALCULATED COMPRESSION INDICES'
           iloc = 1
@@ -4599,15 +4727,18 @@ contains
     this%sk_ske(node) = sske0 * tthk0 * snold
     this%sk_sk(node) = sske * tthk * snnew
     !
-    ! -- calculate rhs term
-    if (this%igeocalc == 0) then
-      hcof = -rho2 * snnew
-      rhs = -rho1 * snold * hcellold
-    else
-      hcof = -rho2 * snnew
-      rhs = rho1 * snold * this%sk_es0(node) -                                 &
-            rho2 * snnew * (this%sk_gs(node) + bot) 
-    end if
+    ! -- calculate hcof and rhs term
+    !if (this%igeocalc == 0) then
+    !  hcof = -rho2 * snnew
+    !  rhs = -rho1 * snold * hcellold
+    !else
+    !  hcof = -rho2 * snnew
+    !  rhs = rho1 * snold * this%sk_es0(node) -                                 &
+    !        rho2 * snnew * (this%sk_gs(node) + bot) 
+    !end if
+    hcof = -rho2 * snnew
+    rhs = rho1 * snold * this%sk_es0(node) -                                 &
+          rho2 * snnew * (this%sk_gs(node) + bot) 
     !
     ! -- return
     return
@@ -4657,64 +4788,98 @@ contains
     tthk0 = this%sk_thickini(node)
     !
     ! 
-    if (this%igeocalc == 0 .and. this%iupdatematprop == 0) then
-      !
-      ! -- calculate saturation derivitive
-      derv = sQuadraticSaturationDerivative(top, bot, hcell)    
-      !
-      ! -- storage coefficients
-      call this%csub_sk_calc_sske(node, sske, sske0, hcell, hcell)
-      rho2 = sske * area * tthk * tled
-      !
-      ! -- calculate hcof term
-      hcof = -rho2 * derv * hcell
-      !
-      ! -- calculate rhs term
-      rhs = hcof * hcell
-    else
-      !
-      ! -- perturb the head
-      hp = hcell + DEM4
-      !
-      ! calculate the perturbed cell saturation
-      call this%csub_calc_sat(node, hp, hcellold, snnew, snold)
-      !
-      ! -- storage coefficients
-      call this%csub_sk_calc_sske(node, sske, sske0, hp, hcellold)
-      rho1 = sske0 * area * tthk0 * tled
-      rho2 = sske * area * tthk * tled
-      !
-      ! -- calculate perturbed skeletal q
-      if (this%igeocalc == 0) then
-        qp = snnew * rho2 * hp - snold * rho1 * hcellold
-      else
-        qp = snnew * rho2 * (this%sk_gs(node) - hp + bot) -                      &
-             snold * rho1 * this%sk_es0(node)
-      end if
-      !
-      ! calculate cell saturation
-      call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
-      !
-      ! -- storage coefficients
-      call this%csub_sk_calc_sske(node, sske, sske0, hcell, hcellold)
-      rho1 = sske0 * area * tthk0 * tled
-      rho2 = sske * area * tthk * tled
-      !
-      ! -- calculate skeletal q
-      if (this%igeocalc == 0) then
-        q = snnew * rho2 * hcell - snold * rho1 * hcellold
-      else
-        q = snnew * rho2 * (this%sk_gs(node) - hcell + bot) -                    &
-            snold * rho1 * this%sk_es0(node)
-      end if
-      !
-      ! -- calculate the derivative
-      derv = (qp - q) / DEM4
-      !
-      ! -- update hcof and rhs
-      hcof = rho2 * snnew + derv
-      rhs = snnew * rho2 * hcell + derv * hcell
-    end if
+    !if (this%igeocalc == 0 .and. this%iupdatematprop == 0) then
+    !  !
+    !  ! -- calculate saturation derivitive
+    !  derv = sQuadraticSaturationDerivative(top, bot, hcell)    
+    !  !
+    !  ! -- storage coefficients
+    !  call this%csub_sk_calc_sske(node, sske, sske0, hcell, hcell)
+    !  rho2 = sske * area * tthk * tled
+    !  !
+    !  ! -- calculate hcof term
+    !  hcof = -rho2 * derv * hcell
+    !  !
+    !  ! -- calculate rhs term
+    !  rhs = hcof * hcell
+    !else
+    !  !
+    !  ! -- perturb the head
+    !  hp = hcell + DEM4
+    !  !
+    !  ! calculate the perturbed cell saturation
+    !  call this%csub_calc_sat(node, hp, hcellold, snnew, snold)
+    !  !
+    !  ! -- storage coefficients
+    !  call this%csub_sk_calc_sske(node, sske, sske0, hp, hcellold)
+    !  rho1 = sske0 * area * tthk0 * tled
+    !  rho2 = sske * area * tthk * tled
+    !  !
+    !  ! -- calculate perturbed skeletal q
+    !  if (this%igeocalc == 0) then
+    !    qp = snnew * rho2 * hp - snold * rho1 * hcellold
+    !  else
+    !    qp = snnew * rho2 * (this%sk_gs(node) - hp + bot) -                      &
+    !         snold * rho1 * this%sk_es0(node)
+    !  end if
+    !  !
+    !  ! calculate cell saturation
+    !  call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
+    !  !
+    !  ! -- storage coefficients
+    !  call this%csub_sk_calc_sske(node, sske, sske0, hcell, hcellold)
+    !  rho1 = sske0 * area * tthk0 * tled
+    !  rho2 = sske * area * tthk * tled
+    !  !
+    !  ! -- calculate skeletal q
+    !  if (this%igeocalc == 0) then
+    !    q = snnew * rho2 * hcell - snold * rho1 * hcellold
+    !  else
+    !    q = snnew * rho2 * (this%sk_gs(node) - hcell + bot) -                    &
+    !        snold * rho1 * this%sk_es0(node)
+    !  end if
+    !  !
+    !  ! -- calculate the derivative
+    !  derv = (qp - q) / DEM4
+    !  !
+    !  ! -- update hcof and rhs
+    !  hcof = rho2 * snnew + derv
+    !  rhs = snnew * rho2 * hcell + derv * hcell
+    !end if
+    !
+    ! -- perturb the head
+    hp = hcell + DEM4
+    !
+    ! calculate the perturbed cell saturation
+    call this%csub_calc_sat(node, hp, hcellold, snnew, snold)
+    !
+    ! -- storage coefficients
+    call this%csub_sk_calc_sske(node, sske, sske0, hp, hcellold)
+    rho1 = sske0 * area * tthk0 * tled
+    rho2 = sske * area * tthk * tled
+    !
+    ! -- calculate perturbed skeletal q
+    qp = snnew * rho2 * (this%sk_gs(node) - hp + bot) -                      &
+          snold * rho1 * this%sk_es0(node)
+    !
+    ! calculate cell saturation
+    call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
+    !
+    ! -- storage coefficients
+    call this%csub_sk_calc_sske(node, sske, sske0, hcell, hcellold)
+    rho1 = sske0 * area * tthk0 * tled
+    rho2 = sske * area * tthk * tled
+    !
+    ! -- calculate skeletal q
+    q = snnew * rho2 * (this%sk_gs(node) - hcell + bot) -                    &
+        snold * rho1 * this%sk_es0(node)
+    !
+    ! -- calculate the derivative
+    derv = (qp - q) / DEM4
+    !
+    ! -- update hcof and rhs
+    hcof = rho2 * snnew + derv
+    rhs = snnew * rho2 * hcell + derv * hcell
     !
     ! -- return
     return
@@ -4863,43 +5028,58 @@ contains
       ! -- no-delay interbeds
       if (this%idelay(ib) == 0) then
         f = area
+        !!
+        !! -- head-based formulation with fixed material properties
+        !if (this%igeocalc == 0 .and. this%iupdatematprop == 0) then
+        !  !
+        !  ! -- calculate the saturation derivative
+        !  top = this%dis%top(node)
+        !  bot = this%dis%bot(node)
+        !  derv = sQuadraticSaturationDerivative(top, bot, hcell)
+        !  !
+        !  ! -- calculate storage coefficient
+        !  call this%csub_nodelay_fc(ib, hcell, hcellold, rho1, hcofn, rhsn)
+        !  !
+        !  ! -- calculate hcof term
+        !  hcofn = -hcofn * derv * hcell
+        !  !
+        !  ! -- reset derv
+        !  derv = DZERO
+        !!
+        !! -- effective-stress formulation or head-based formulation
+        !!    with variable material properties
+        !else
+        !  !
+        !  ! -- calculate no-delay interbed rho1 and rho2
+        !  call this%csub_nodelay_fc(ib, hcellp, hcellold, rho1, hcofn, rhsn)
+        !  !
+        !  ! -- calculate perturbed no-delay interbed q
+        !  qp = rhsn - hcofn * hcellp 
+        !  !
+        !  ! -- calculate no-delay interbed rho1 and rho2
+        !  call this%csub_nodelay_fc(ib, hcell, hcellold, rho1, hcofn, rhsn)
+        !  !
+        !  ! -- calculate no-delay interbed q
+        !  q = rhsn - hcofn * hcell
+        !  !
+        !  ! -- calculate the derivative
+        !  derv = (qp - q) / DEM4
+        !end if
         !
-        ! -- head-based formulation with fixed material properties
-        if (this%igeocalc == 0 .and. this%iupdatematprop == 0) then
-          !
-          ! -- calculate the saturation derivative
-          top = this%dis%top(node)
-          bot = this%dis%bot(node)
-          derv = sQuadraticSaturationDerivative(top, bot, hcell)
-          !
-          ! -- calculate storage coefficient
-          call this%csub_nodelay_fc(ib, hcell, hcellold, rho1, hcofn, rhsn)
-          !
-          ! -- calculate hcof term
-          hcofn = -hcofn * derv * hcell
-          !
-          ! -- reset derv
-          derv = DZERO
+        ! -- calculate no-delay interbed rho1 and rho2
+        call this%csub_nodelay_fc(ib, hcellp, hcellold, rho1, hcofn, rhsn)
         !
-        ! -- effective-stress formulation or head-based formulation
-        !    with variable material properties
-        else
-          !
-          ! -- calculate no-delay interbed rho1 and rho2
-          call this%csub_nodelay_fc(ib, hcellp, hcellold, rho1, hcofn, rhsn)
-          !
-          ! -- calculate perturbed no-delay interbed q
-          qp = rhsn - hcofn * hcellp 
-          !
-          ! -- calculate no-delay interbed rho1 and rho2
-          call this%csub_nodelay_fc(ib, hcell, hcellold, rho1, hcofn, rhsn)
-          !
-          ! -- calculate no-delay interbed q
-          q = rhsn - hcofn * hcell
-          !
-          ! -- calculate the derivative
-          derv = (qp - q) / DEM4
-        end if
+        ! -- calculate perturbed no-delay interbed q
+        qp = rhsn - hcofn * hcellp 
+        !
+        ! -- calculate no-delay interbed rho1 and rho2
+        call this%csub_nodelay_fc(ib, hcell, hcellold, rho1, hcofn, rhsn)
+        !
+        ! -- calculate no-delay interbed q
+        q = rhsn - hcofn * hcell
+        !
+        ! -- calculate the derivative
+        derv = (qp - q) / DEM4
       !
       ! -- delay interbeds
       else
@@ -5010,8 +5190,9 @@ contains
     sske0 = DZERO
     !
     ! -- calculate factor for the head-based case
-    !if (this%igeocalc == 0) then
-    if (this%igeocalc == 0 .or. this%ifixedstress /= 0) then
+    !!if (this%igeocalc == 0) then
+    !if (this%igeocalc == 0 .or. this%ifixedstress /= 0) then
+    if (this%ifixedstress /= 0) then
       f = DONE
       f0 = DONE
     !
@@ -6027,44 +6208,70 @@ contains
     top = this%dbz(1, idelay) + dzhalf
     !
     ! -- calculate the geostatic load in the cell at the top of the interbed
-    if (this%igeocalc > 0) then
-      sgm = this%sgm(node)
-      sgs = this%sgs(node)
-      if (hcell > top) then
-        sadd = (top - botaq) * sgs
-      else if (hcell < botaq) then
-        sadd = (top - botaq) * sgm
-      else
-        sadd = ((top - hcell) * sgm) + ((hcell - botaq) * sgs)
-      end if
-      sigma = sigma - sadd
+    !if (this%igeocalc > 0) then
+    !  sgm = this%sgm(node)
+    !  sgs = this%sgs(node)
+    !  if (hcell > top) then
+    !    sadd = (top - botaq) * sgs
+    !  else if (hcell < botaq) then
+    !    sadd = (top - botaq) * sgm
+    !  else
+    !    sadd = ((top - hcell) * sgm) + ((hcell - botaq) * sgs)
+    !  end if
+    !  sigma = sigma - sadd
+    !end if
+    sgm = this%sgm(node)
+    sgs = this%sgs(node)
+    if (hcell > top) then
+      sadd = (top - botaq) * sgs
+    else if (hcell < botaq) then
+      sadd = (top - botaq) * sgm
+    else
+      sadd = ((top - hcell) * sgm) + ((hcell - botaq) * sgs)
     end if
+    sigma = sigma - sadd
     !
     ! -- set effective stress for the previous iteration and 
     !    calculate geostatic and effective stress for each interbed node
     do n = 1, this%ndelaycells
       this%dbesi(n, idelay) = this%dbes(n, idelay)
       h = this%dbh(n, idelay)
-      if (this%igeocalc == 0) then
-        this%dbes(n, idelay) = h
+      !if (this%igeocalc == 0) then
+      !  this%dbes(n, idelay) = h
+      !else
+      !  !
+      !  ! -- geostatic calculated at the bottom of the delay cell
+      !  z = this%dbz(n, idelay)
+      !  top = z + dzhalf
+      !  bot = z - dzhalf
+      !  u = h - bot
+      !  if (h > top) then
+      !      sadd = (top - bot) * sgs
+      !  else if (h < bot) then
+      !      sadd = (top - bot) * sgm
+      !  else
+      !      sadd = ((top - h) * sgm) + ((h - bot) * sgs)
+      !  end if
+      !  sigma = sigma + sadd
+      !  this%dbgeo(n, idelay) = sigma
+      !  this%dbes(n, idelay) = sigma - u
+      !end if
+      !
+      ! -- geostatic calculated at the bottom of the delay cell
+      z = this%dbz(n, idelay)
+      top = z + dzhalf
+      bot = z - dzhalf
+      u = h - bot
+      if (h > top) then
+          sadd = (top - bot) * sgs
+      else if (h < bot) then
+          sadd = (top - bot) * sgm
       else
-        !
-        ! -- geostatic calculated at the bottom of the delay cell
-        z = this%dbz(n, idelay)
-        top = z + dzhalf
-        bot = z - dzhalf
-        u = h - bot
-        if (h > top) then
-            sadd = (top - bot) * sgs
-        else if (h < bot) then
-            sadd = (top - bot) * sgm
-        else
-            sadd = ((top - h) * sgm) + ((h - bot) * sgs)
-        end if
-        sigma = sigma + sadd
-        this%dbgeo(n, idelay) = sigma
-        this%dbes(n, idelay) = sigma - u
+          sadd = ((top - h) * sgm) + ((h - bot) * sgs)
       end if
+      sigma = sigma + sadd
+      this%dbgeo(n, idelay) = sigma
+      this%dbes(n, idelay) = sigma - u
     end do
     !
     ! -- return
@@ -6114,8 +6321,9 @@ contains
     ielastic = this%ielastic(ib)
     !
     ! -- calculate factor for the head-based case
-    !if (this%igeocalc == 0) then
-    if (this%igeocalc == 0 .or. this%ifixedstress /= 0) then
+    !!if (this%igeocalc == 0) then
+    !if (this%igeocalc == 0 .or. this%ifixedstress /= 0) then
+    if (this%ifixedstress /= 0) then
       f = DONE
       !
       ! -- scale factor for half-cell problem
@@ -6175,16 +6383,20 @@ contains
     sske = f * this%rci(ib)
     ssk = f * this%rci(ib)
     if (ielastic == 0) then
-      if (this%igeocalc == 0) then
-        if (this%dbh(n, idelay) < this%dbpcs(n, idelay)) then
-          this%idbconvert(n, idelay) = 1
-          ssk = f * this%ci(ib)
-        end if
-      else
-        if (this%dbes(n, idelay) > this%dbpcs(n, idelay)) then
-          this%idbconvert(n, idelay) = 1
-          ssk = f * this%ci(ib)
-        end if
+      !if (this%igeocalc == 0) then
+      !  if (this%dbh(n, idelay) < this%dbpcs(n, idelay)) then
+      !    this%idbconvert(n, idelay) = 1
+      !    ssk = f * this%ci(ib)
+      !  end if
+      !else
+      !  if (this%dbes(n, idelay) > this%dbpcs(n, idelay)) then
+      !    this%idbconvert(n, idelay) = 1
+      !    ssk = f * this%ci(ib)
+      !  end if
+      !end if
+      if (this%dbes(n, idelay) > this%dbpcs(n, idelay)) then
+        this%idbconvert(n, idelay) = 1
+        ssk = f * this%ci(ib)
       end if
     end if
     !
@@ -6250,27 +6462,37 @@ contains
       ! -- calculate  ssk and sske
       call this%csub_delay_calc_ssksske(ib, n, hcell, hcellold, ssk, sske)
       !
-      ! -- diagonal and right hand side
+      ! -- calculate diagonal
       aii = -ssk * fmult
-      
-      if (this%igeocalc == 0) then
-        if (ielastic /= 0) then
-          r = -fmult * sske * this%dbh0(n, idelay)
-        else
-          r = -fmult * &
-               (ssk * (this%dbpcs(n, idelay)) + &
-                sske * (this%dbh0(n, idelay) - this%dbpcs(n, idelay)))
-        end if
+      !
+      ! -- calculate right hand side
+      !if (this%igeocalc == 0) then
+      !  if (ielastic /= 0) then
+      !    r = -fmult * sske * this%dbh0(n, idelay)
+      !  else
+      !    r = -fmult * &
+      !         (ssk * (this%dbpcs(n, idelay)) + &
+      !          sske * (this%dbh0(n, idelay) - this%dbpcs(n, idelay)))
+      !  end if
+      !else
+      !  if (ielastic /= 0) then
+      !    r = -fmult *                                                           &
+      !         (ssk * (this%dbgeo(n, idelay) + zbot) -                           &
+      !          sske * this%dbes0(n, idelay))
+      !  else
+      !    r = -fmult * &
+      !         (ssk * (this%dbgeo(n, idelay) + zbot - this%dbpcs(n, idelay)) +   &
+      !          sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay)))
+      !  end if
+      !end if
+      if (ielastic /= 0) then
+        r = -fmult *                                                           &
+              (ssk * (this%dbgeo(n, idelay) + zbot) -                           &
+              sske * this%dbes0(n, idelay))
       else
-        if (ielastic /= 0) then
-          r = -fmult *                                                           &
-               (ssk * (this%dbgeo(n, idelay) + zbot) -                           &
-                sske * this%dbes0(n, idelay))
-        else
-          r = -fmult * &
-               (ssk * (this%dbgeo(n, idelay) + zbot - this%dbpcs(n, idelay)) +   &
-                sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay)))
-        end if
+        r = -fmult * &
+              (ssk * (this%dbgeo(n, idelay) + zbot - this%dbpcs(n, idelay)) +   &
+              sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay)))
       end if
       !
       ! -- add connection to the gwf cell
@@ -6389,26 +6611,37 @@ contains
       dzhalf = DHALF * this%dbdz(idelay)
       do n = 1, this%ndelaycells
         call this%csub_delay_calc_ssksske(ib, n, hcell, hcellold, ssk, sske)
-        if (this%igeocalc == 0) then
-          if (ielastic /= 0) then
-            v1 = sske * this%dbh0(n, idelay) - ssk * this%dbh(n, idelay)
-            v2 = DZERO
-          else
-            v1 = ssk * (this%dbpcs(n, idelay) - this%dbh(n, idelay))
-            v2 = sske * (this%dbh0(n, idelay) - this%dbpcs(n, idelay))
-          end if
+        !if (this%igeocalc == 0) then
+        !  if (ielastic /= 0) then
+        !    v1 = sske * this%dbh0(n, idelay) - ssk * this%dbh(n, idelay)
+        !    v2 = DZERO
+        !  else
+        !    v1 = ssk * (this%dbpcs(n, idelay) - this%dbh(n, idelay))
+        !    v2 = sske * (this%dbh0(n, idelay) - this%dbpcs(n, idelay))
+        !  end if
+        !else
+        !  z = this%dbz(n, idelay)
+        !  zbot = z - dzhalf
+        !  if (ielastic /= 0) then
+        !    v1 = ssk * (this%dbgeo(n, idelay) - this%dbh(n, idelay) + zbot) -    &
+        !         sske * this%dbes0(n, idelay)
+        !    v2 = DZERO
+        !  else
+        !    v1 = ssk * (this%dbgeo(n, idelay) - this%dbh(n, idelay) + zbot -     &
+        !                this%dbpcs(n, idelay))
+        !    v2 = sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay))
+        !  end if
+        !end if
+        z = this%dbz(n, idelay)
+        zbot = z - dzhalf
+        if (ielastic /= 0) then
+          v1 = ssk * (this%dbgeo(n, idelay) - this%dbh(n, idelay) + zbot) -    &
+                sske * this%dbes0(n, idelay)
+          v2 = DZERO
         else
-          z = this%dbz(n, idelay)
-          zbot = z - dzhalf
-          if (ielastic /= 0) then
-            v1 = ssk * (this%dbgeo(n, idelay) - this%dbh(n, idelay) + zbot) -    &
-                 sske * this%dbes0(n, idelay)
-            v2 = DZERO
-          else
-            v1 = ssk * (this%dbgeo(n, idelay) - this%dbh(n, idelay) + zbot -     &
-                        this%dbpcs(n, idelay))
-            v2 = sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay))
-          end if
+          v1 = ssk * (this%dbgeo(n, idelay) - this%dbh(n, idelay) + zbot -     &
+                      this%dbpcs(n, idelay))
+          v2 = sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay))
         end if
         !
         ! -- calculate inelastic and elastic storage components
@@ -6479,21 +6712,25 @@ contains
       do n = 1, this%ndelaycells
         call this%csub_delay_calc_ssksske(ib, n, hcell, hcellold, ssk, sske)
         if (ielastic /= 0) then
-          if (this%igeocalc == 0) then
-            v1 = sske * this%dbh0(n, idelay) - ssk * this%dbh(n, idelay)
-            v2 = DZERO
-          else
-            v1 = ssk * this%dbes(n, idelay) - sske * this%dbes0(n, idelay)
-            v2 = DZERO
-          end if
+          !if (this%igeocalc == 0) then
+          !  v1 = sske * this%dbh0(n, idelay) - ssk * this%dbh(n, idelay)
+          !  v2 = DZERO
+          !else
+          !  v1 = ssk * this%dbes(n, idelay) - sske * this%dbes0(n, idelay)
+          !  v2 = DZERO
+          !end if
+          v1 = ssk * this%dbes(n, idelay) - sske * this%dbes0(n, idelay)
+          v2 = DZERO
         else
-          if (this%igeocalc == 0) then
-            v1 = ssk * (this%dbpcs(n, idelay) - this%dbh(n, idelay))
-            v2 = sske * (this%dbh0(n, idelay) - this%dbpcs(n, idelay))
-          else
-            v1 = ssk * (this%dbes(n, idelay) - this%dbpcs(n, idelay))
-            v2 = sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay))
-          end if
+          !if (this%igeocalc == 0) then
+          !  v1 = ssk * (this%dbpcs(n, idelay) - this%dbh(n, idelay))
+          !  v2 = sske * (this%dbh0(n, idelay) - this%dbpcs(n, idelay))
+          !else
+          !  v1 = ssk * (this%dbes(n, idelay) - this%dbpcs(n, idelay))
+          !  v2 = sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay))
+          !end if
+          v1 = ssk * (this%dbes(n, idelay) - this%dbpcs(n, idelay))
+          v2 = sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay))
         end if
         v = (v1 + v2) * fmult
         comp = comp + v
