@@ -30,7 +30,6 @@ sk_S = sk_ske * (500. - 20.)
 ss = [sk_S, sk_S, sk_ske, sk_ske, sk_S]
 storagecoeff = [True, True, False, False, True]
 cdelay = [False, True, False, True, True]
-full_cell = [None, True, None, True, True]
 ndelaycells = [None, 19, None, 19, 19]
 
 # run all examples on Travis
@@ -176,7 +175,6 @@ def get_model(idx, dir):
     # csub files
     csub = flopy.mf6.ModflowGwfcsub(gwf, head_based=True,
                                     ndelaycells=ndelaycells[idx],
-                                    delay_full_cell=full_cell[idx],
                                     ninterbeds=1,
                                     beta=0., ske_cr=sk_ske,
                                     packagedata=sub6)

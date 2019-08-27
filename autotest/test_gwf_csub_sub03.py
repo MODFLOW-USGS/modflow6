@@ -27,7 +27,6 @@ for s in ex:
 cvopt = [None, None, None]
 constantcv = [True, True]
 ndelaybeds = [0, 2]
-fullcell = [None, True]
 ndelaycells = [None, 39]
 
 ddir = 'data'
@@ -301,7 +300,6 @@ def get_model(idx, dir):
                                     strainsk_filerecord=skcsv,
                                     compaction_filerecord=copth,
                                     ndelaycells=ndelaycells[idx],
-                                    delay_full_cell=fullcell[idx],
                                     ninterbeds=maxibc,
                                     beta=0., ske_cr=ss,
                                     packagedata=sub6)

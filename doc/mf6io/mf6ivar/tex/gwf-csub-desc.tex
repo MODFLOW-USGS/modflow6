@@ -23,8 +23,6 @@
 
 \item \texttt{CELL\_FRACTION}---keyword to indicate that the thickness of interbeds will be specified in terms of the fraction of cell thickness. If not specified, interbed thicknness must be specified.
 
-\item \texttt{DELAY\_FULL\_CELL}---keyword to indicate that head-based delay interbeds will be simulated using a full-cell approach. This option is only used if HEAD\_BASED is specified in the OPTIONS block.
-
 \item \texttt{SPECIFIED\_INITIAL\_INTERBED\_STATE}---keyword to indicate that absolute preconsolidation stresses (heads) and delay bed heads will be specified for interbeds defined in the PACKAGEDATA block. The SPECIFIED\_INITIAL\_INTERBED\_STATE option is equivalent to specifying the SPECIFIED\_INITIAL\_PRECONSOLITATION\_STRESS and SPECIFIED\_INITIAL\_DELAY\_HEAD. If SPECIFIED\_INITIAL\_INTERBED\_STATE is not specified then preconsolidation stress (head) and delay bed head values specified in the PACKAGEDATA block are relative to simulated values if the first stress period is steady-state or initial stresses and GWF heads if the first stress period is transient.
 
 \item \texttt{SPECIFIED\_INITIAL\_PRECONSOLIDATION\_STRESS}---keyword to indicate that absolute preconsolidation stresses (heads) will be specified for interbeds defined in the PACKAGEDATA block. If SPECIFIED\_INITIAL\_PRECONSOLITATION\_STRESS and SPECIFIED\_INITIAL\_INTERBED\_STATE are not specified then preconsolidation stress (head) values specified in the PACKAGEDATA block are relative to simulated values if the first stress period is steady-state or initial stresses (heads) if the first stress period is transient.
@@ -105,9 +103,9 @@
 
 \item \texttt{sk\_theta}---is the initial porosity of the aquifer.
 
-\item \texttt{sgm}---is specific gravity of moist or unsaturated sediments.
+\item \texttt{sgm}---is specific gravity of moist or unsaturated sediments.  If not specified, then a default value of 1.7 is assigned.
 
-\item \texttt{sgs}---is specific gravity of saturated sediments.
+\item \texttt{sgs}---is specific gravity of saturated sediments. If not specified, then a default value of 2.0 is assigned.
 
 \end{description}
 \item \textbf{Block: PACKAGEDATA}

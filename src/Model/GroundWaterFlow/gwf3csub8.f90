@@ -83,8 +83,8 @@ module GwfCsubModule
     integer(I4B), pointer :: ipch => null()
     logical, pointer :: lhead_based => null()
     integer(I4B), pointer :: iupdatestress => null()
-    integer(I4B), pointer :: idbhalfcell => null()
-    integer(I4B), pointer :: idbfullcell => null()
+    !integer(I4B), pointer :: idbhalfcell => null()
+    !integer(I4B), pointer :: idbfullcell => null()
     integer(I4B), pointer :: kiter => null()
     integer(I4B), pointer :: kiterdb => null()
     real(DP), pointer :: cc_crit => null()                                       !convergence criteria for csub-gwf convergence check
@@ -381,8 +381,8 @@ contains
     call mem_allocate(this%ioutcomps, 'IOUTCOMPS', this%origin)
     call mem_allocate(this%ioutzdisp, 'IOUTZDISP', this%origin)
     call mem_allocate(this%iupdatematprop, 'IUPDATEMATPROP', this%origin)
-    call mem_allocate(this%idbhalfcell, 'IDBHALFCELL', this%origin)
-    call mem_allocate(this%idbfullcell, 'IDBFULLCELL', this%origin)
+    !call mem_allocate(this%idbhalfcell, 'IDBHALFCELL', this%origin)
+    !call mem_allocate(this%idbfullcell, 'IDBFULLCELL', this%origin)
     call mem_allocate(this%kiter, 'KITER', this%origin)
     call mem_allocate(this%kiterdb, 'KITERDB', this%origin)
     call mem_allocate(this%cc_crit, 'CC_CRIT', this%origin)
@@ -437,8 +437,8 @@ contains
     this%ioutcomps = 0
     this%ioutzdisp = 0
     this%iupdatematprop = 0
-    this%idbhalfcell = 0
-    this%idbfullcell = 0
+    !this%idbhalfcell = 0
+    !this%idbfullcell = 0
     this%kiter = 0
     this%kiterdb = 0
     this%cc_crit = DEM7
@@ -814,11 +814,12 @@ contains
           ! -- calculate flow across the top and bottom of the delay interbed
           q = this%csub_calc_delay_flow(ib, 1, h) * area * this%rnb(ib)
           this%dbflowtop(idelay) = q
-          if (this%idbhalfcell == 0) then
-            nn = this%ndelaycells
-          else
-            nn = 1
-          end if
+          !if (this%idbhalfcell == 0) then
+          !  nn = this%ndelaycells
+          !else
+          !  nn = 1
+          !end if
+          nn = this%ndelaycells
           q = this%csub_calc_delay_flow(ib, nn, h) * area * this%rnb(ib)
           this%dbflowbot(idelay) = q
           !
@@ -1883,11 +1884,12 @@ contains
           this%thick(ib) = this%dbfacti * this%thick(ib)
           !
           ! -- calculate delay bed cell thickness
-          if (this%idbhalfcell == 0) then
-            this%dbdz(idelay) = this%thick(ib) / real(this%ndelaycells, DP)
-          else
-            this%dbdz(idelay) = this%thick(ib) / (real(this%ndelaycells, DP) - DHALF)
-          end if
+          !if (this%idbhalfcell == 0) then
+          !  this%dbdz(idelay) = this%thick(ib) / real(this%ndelaycells, DP)
+          !else
+          !  this%dbdz(idelay) = this%thick(ib) / (real(this%ndelaycells, DP) - DHALF)
+          !end if
+          this%dbdz(idelay) = this%thick(ib) / real(this%ndelaycells, DP)
           !
           ! -- initialize delay interbed variables
           do n = 1, this%ndelaycells
@@ -2088,10 +2090,10 @@ contains
           ! -- cell fraction will be specified instead of interbed thickness
           case ('CELL_FRACTION')
             this%icellf = 1
-          !
-          ! -- half cell formulation for delay interbed
-          case ('DELAY_FULL_CELL')
-            this%idbfullcell = 1
+          !!
+          !! -- half cell formulation for delay interbed
+          !case ('DELAY_FULL_CELL')
+          !  this%idbfullcell = 1
           !
           ! -- specified initial pcs and delay bed heads
           case ('SPECIFIED_INITIAL_INTERBED_STATE')
@@ -2760,8 +2762,8 @@ contains
     call mem_deallocate(this%ioutcomps)
     call mem_deallocate(this%ioutzdisp)
     call mem_deallocate(this%iupdatematprop)
-    call mem_deallocate(this%idbfullcell)
-    call mem_deallocate(this%idbhalfcell)
+    !call mem_deallocate(this%idbfullcell)
+    !call mem_deallocate(this%idbhalfcell)
     call mem_deallocate(this%kiter)
     call mem_deallocate(this%kiterdb)
     call mem_deallocate(this%cc_crit)
@@ -3062,10 +3064,10 @@ contains
         'PACKAGE'
       call store_error(errmsg)
     end if
-    !
-    ! -- set flags that determine if delay beds will be simulated using a half cell
-    this%idbfullcell = 1
-    this%idbhalfcell = 0
+    !!
+    !! -- set flags that determine if delay beds will be simulated using a half cell
+    !this%idbfullcell = 1
+    !this%idbhalfcell = 0
     !
     ! -- read interbed data
     if (this%ninterbeds > 0) then
@@ -5061,13 +5063,13 @@ contains
         dz = this%dbfact * this%dbdz(idelay)
         do n = 1, this%ndelaycells
           fmult = DONE
-          !
-          ! -- scale factor for half-cell problem
-          if (this%idbhalfcell /= 0) then
-            if (n == 1) then
-              fmult = DHALF
-            end if
-          end if
+          !!
+          !! -- scale factor for half-cell problem
+          !if (this%idbhalfcell /= 0) then
+          !  if (n == 1) then
+          !    fmult = DHALF
+          !  end if
+          !end if
           wc2 = fmult * f * dz * this%dbtheta(n, idelay)
           wc1 = wc2
           rhs = rhs - (wc1 * snold * this%dbh0(n, idelay) -                     &
@@ -5668,24 +5670,29 @@ contains
     node = this%nodelist(ib)
     b = this%thick(ib)
     bot = this%dis%bot(node)
-    if (this%idbhalfcell == 0) then
-      top = bot + b
-    else
-      top = bot + DTWO * b
-    end if
+    !if (this%idbhalfcell == 0) then
+    !  top = bot + b
+    !else
+    !  top = bot + DTWO * b
+    !end if
+    top = bot + b
     !
     ! -- calculate znode based on assumption that the delay bed bottom 
     !    is equal to the cell bottom
     znode = this%csub_calc_znode(top, bot, top)
     dz = DHALF * this%dbdz(idelay)
-    if (this%idbhalfcell == 0) then
-        dzz = DHALF * b
-        z = znode + dzz
-        zr = dzz
-    else
-        z = znode + dz 
-        zr = dz
-    end if
+    !if (this%idbhalfcell == 0) then
+    !    dzz = DHALF * b
+    !    z = znode + dzz
+    !    zr = dzz
+    !else
+    !    z = znode + dz 
+    !    zr = dz
+    !end if
+    dzz = DHALF * b
+    z = znode + dzz
+    zr = dzz
+    !
     ! -- calculate z and z relative to znode for each delay 
     !    interbed node
     do n = 1, this%ndelaycells
@@ -5870,13 +5877,13 @@ contains
     ! -- calculate factor for the head-based case
     if (this%lhead_based .EQV. .TRUE.) then
       f = DONE
-      !
-      ! -- scale factor for half-cell problem
-      if (this%idbhalfcell /= 0) then
-        if (n == 1) then
-          f = DHALF
-        end if
-      end if
+      !!
+      !! -- scale factor for half-cell problem
+      !if (this%idbhalfcell /= 0) then
+      !  if (n == 1) then
+      !    f = DHALF
+      !  end if
+      !end if
       f0 = f
     !
     ! -- calculate factor for the effective stress case
@@ -6014,12 +6021,14 @@ contains
       if (n == 1 .or. n == this%ndelaycells) then
         !
         ! -- gwf cell is connected to n=ndelaycell for half cell connection 
-        if (this%idbhalfcell == 0 .or. n == this%ndelaycells) then
-            aii = aii - c3
-            r = r - c2 * hcell
-        else
-            aii = aii - c
-        end if
+        !if (this%idbhalfcell == 0 .or. n == this%ndelaycells) then
+        !    aii = aii - c3
+        !    r = r - c2 * hcell
+        !else
+        !    aii = aii - c
+        !end if
+        aii = aii - c3
+        r = r - c2 * hcell
       else
         aii = aii - c2
       end if
@@ -6260,12 +6269,14 @@ contains
     rhs = DZERO
     if (this%thick(ib) > DZERO) then
       ! -- calculate terms for gwf matrix
-      if (this%idbhalfcell == 0) then
-        c1 = DTWO * this%kv(ib) / this%dbdz(idelay)
-        rhs = -c1 * this%dbh(1, idelay)
-      else
-        c1 = DZERO
-      end if
+      !if (this%idbhalfcell == 0) then
+      !  c1 = DTWO * this%kv(ib) / this%dbdz(idelay)
+      !  rhs = -c1 * this%dbh(1, idelay)
+      !else
+      !  c1 = DZERO
+      !end if
+      c1 = DTWO * this%kv(ib) / this%dbdz(idelay)
+      rhs = -c1 * this%dbh(1, idelay)
       c2 = this%dbfact * DTWO * this%kv(ib) / this%dbdz(idelay)
       rhs = rhs - c2 * this%dbh(this%ndelaycells, idelay)
       hcof = c1 + c2

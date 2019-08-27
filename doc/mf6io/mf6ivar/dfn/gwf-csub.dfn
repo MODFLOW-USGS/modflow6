@@ -85,14 +85,6 @@ longname keyword to indicate cell fraction interbed thickness
 description keyword to indicate that the thickness of interbeds will be specified in terms of the fraction of cell thickness. If not specified, interbed thicknness must be specified. 
 
 block options
-name delay_full_cell
-type keyword
-reader urword
-optional true
-longname keyword to simulate head-based delay interbeds using full-cell approach
-description keyword to indicate that head-based delay interbeds will be simulated using a full-cell approach. This option is only used if HEAD\_BASED is specified in the OPTIONS block.
-
-block options
 name specified_initial_interbed_state
 type keyword
 reader urword
@@ -587,7 +579,7 @@ valid
 reader readarray
 optional true
 longname specific gravity of moist sediments
-description is specific gravity of moist or unsaturated sediments.
+description is specific gravity of moist or unsaturated sediments.  If not specified, then a default value of 1.7 is assigned.
 
 block griddata
 name sgs
@@ -597,7 +589,7 @@ valid
 reader readarray
 optional true
 longname specific gravity of saturated sediments
-description is specific gravity of saturated sediments.
+description is specific gravity of saturated sediments. If not specified, then a default value of 2.0 is assigned.
 
 # --------------------- gwf csub packagedata ---------------------
 
