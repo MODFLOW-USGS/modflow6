@@ -26,14 +26,13 @@ paktest = 'csub'
 dtol = 1e-3
 budtol = 1e-2
 
-ex = ['csub_sub01_elasa', 'csub_sub01_elasb']
+ex = ['csub_sub01_elasa']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
 ddir = 'data'
 
-fullcell = [None, True]
-ndcell = [10, 19]
+ndcell = [19]
 
 # run all examples on Travis
 travis = [True for idx in range(len(exdirs))]
@@ -154,7 +153,6 @@ def build_mf6(idx, ws, newton=None):
                                     save_flows=True,
                                     effective_stress_lag=True,
                                     ndelaycells=ndcell[idx],
-                                    delay_full_cell=fullcell[idx],
                                     ninterbeds=1,
                                     beta=0., ske_cr=0.,
                                     packagedata=sub6)
@@ -395,7 +393,6 @@ def main():
     return
 
 
-# use python testmf6_csub_sub01.py
 if __name__ == "__main__":
     # print message
     print('standalone run of {}'.format(os.path.basename(__file__)))

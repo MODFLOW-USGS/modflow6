@@ -20,22 +20,20 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['csub_sub03a', 'csub_sub03b', 'csub_sub03c']
+ex = ['csub_sub03a', 'csub_sub03b']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
 cvopt = [None, None, None]
-constantcv = [True, True, True]
-ndelaybeds = [0, 2, 2]
-halfcell = [None, None, True]
-fullcell = [None, True, None]
-ndelaycells = [None, 39, 20]
+constantcv = [True, True]
+ndelaybeds = [0, 2]
+ndelaycells = [None, 39]
 
 ddir = 'data'
 
 ## run all examples on Travis
 # travis = [False for idx in range(len(exdirs))]
-travis = [True, False, False]
+travis = [True, False]
 
 # set replace_exe to None to use default executable
 replace_exe = {'mf2005': 'mf2005devdbl'}
@@ -296,12 +294,12 @@ def get_model(idx, dir):
                                     boundnames=True,
                                     head_based=True,
                                     effective_stress_lag=True,
+                                    specified_initial_interbed_state=True,
                                     save_flows=True,
                                     strainib_filerecord=ibcsv,
                                     strainsk_filerecord=skcsv,
                                     compaction_filerecord=copth,
                                     ndelaycells=ndelaycells[idx],
-                                    delay_full_cell=fullcell[idx],
                                     ninterbeds=maxibc,
                                     beta=0., ske_cr=ss,
                                     packagedata=sub6)
