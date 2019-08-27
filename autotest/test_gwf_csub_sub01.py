@@ -23,14 +23,13 @@ from simulation import Simulation
 paktest = 'csub'
 budtol = 1e-2
 
-ex = ['csub_sub01a'] #, 'csub_sub01b']
+ex = ['csub_sub01a']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
 ddir = 'data'
 
-fullcell = [None, True]
-ndcell = [19, 19]
+ndcell = [19]
 
 # run all examples on Travis
 # travis = [True for idx in range(len(exdirs))]
@@ -169,7 +168,6 @@ def get_model(idx, dir):
                                    save_flows=True,
                                    effective_stress_lag=True,
                                    ndelaycells=ndcell[idx],
-                                   delay_full_cell=fullcell[idx],
                                    ninterbeds=1,
                                    beta=0., ske_cr=ss,
                                    packagedata=sub6)

@@ -30,8 +30,7 @@ sk_S = sk_ske * (500. - 20.)
 ss = [sk_S, sk_S, sk_ske, sk_ske, sk_S]
 storagecoeff = [True, True, False, False, True]
 cdelay = [False, True, False, True, True]
-half_cell = [None, None, None, None, True]
-full_cell = [None, True, None, True, None]
+full_cell = [None, True, None, True, True]
 ndelaycells = [None, 19, None, 19, 19]
 
 # run all examples on Travis

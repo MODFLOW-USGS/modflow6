@@ -20,22 +20,21 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['csub_sub03a', 'csub_sub03b'] #, 'csub_sub03c']
+ex = ['csub_sub03a', 'csub_sub03b']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
 cvopt = [None, None, None]
-constantcv = [True, True, True]
-ndelaybeds = [0, 2, 2]
-halfcell = [None, None, True]
-fullcell = [None, True, None]
-ndelaycells = [None, 39, 39]
+constantcv = [True, True]
+ndelaybeds = [0, 2]
+fullcell = [None, True]
+ndelaycells = [None, 39]
 
 ddir = 'data'
 
 ## run all examples on Travis
 # travis = [False for idx in range(len(exdirs))]
-travis = [True, False, False]
+travis = [True, False]
 
 # set replace_exe to None to use default executable
 replace_exe = {'mf2005': 'mf2005devdbl'}

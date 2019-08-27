@@ -36,7 +36,7 @@ ump = [None, None, True, None, True, None, True]
 iump = [0, 0, 1, 0, 1, 0, 1]
 eslag = [True for idx in range(len(exdirs))]
 headformulation = [True, False, False, True, True, False, False]
-ndc = [10, 19, 19, 10, 10, 19, 19]
+ndc = [None, None, None, 19, 19, 19, 19]
 delay = [False, False, False, True, True, True, True]
 
 ddir = 'data'
