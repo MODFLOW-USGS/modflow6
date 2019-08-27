@@ -1,5 +1,6 @@
 module TestGridConnectionModule
   use ftnunit
+  use TestData
   
   use KindModule, only: I4B, DP
   use SparseModule, only: sparsematrix
@@ -68,16 +69,19 @@ contains ! module procedures
     nbrModel%moffset = 100
     call disu_cr(nbrModel%dis, nbrModel%name, -1, -1)
     
-    call gridConnection%addLink(1, 1, 10.0_DP, 10.0_DP, 20.0_DP, 1, nbrModel) ! horizontal links
-    call gridConnection%addLink(2, 2, 10.0_DP, 10.0_DP, 20.0_DP, 1, nbrModel)
-    call gridConnection%addLink(3, 3, 10.0_DP, 10.0_DP, 20.0_DP, 1, nbrModel)
+    call gridConnection%addLink(1, 1, 10.0_DP, 20.0_DP, 30.0_DP, 1, nbrModel) ! horizontal links
+    call gridConnection%addLink(2, 2, 11.0_DP, 21.0_DP, 31.0_DP, 1, nbrModel)
+    call gridConnection%addLink(3, 3, 12.0_DP, 22.0_DP, 32.0_DP, 1, nbrModel)
     
     ! build connectivity, among other things
     call gridConnection%extendConnection(0, 0)
     
-    call assert_equal(gridConnection%connectivity%nrow, 6, "nr. of rows wrong")
-    call assert_equal(gridConnection%connectivity%ncol, 6, "nr. of columns wrong")
-    call assert_equal(gridConnection%connectivity%nnz, 9, "nr. of nonzeros wrong")
+    call assert_equal(gridConnection%connections%nodes, 6, "nr. of nodes wrong")
+    call assert_equal(gridConnection%connections%njas, 3, "nr. of (sym) connections wrong")
+    
+    call assert_comparable_realdp(gridConnection%connections%cl1(1), 10.0_DP, 0.0_DP, "conn. length wrong")
+    call assert_comparable_realdp(gridConnection%connections%cl2(3), 22.0_DP, 0.0_DP, "conn. length wrong")
+    call assert_comparable_realdp(gridConnection%connections%hwva(2), 31.0_DP, 0.0_DP, "hwva area wrong")
     
   end subroutine
   

@@ -2,6 +2,7 @@ module GridConnectionModule
   use KindModule, only: I4B, DP
   use ConstantsModule, only: LENORIGIN
   use NumericalModelModule, only: NumericalModelType
+  use ConnectionsModule
   use SparseModule, only: sparsematrix
   implicit none
   private
@@ -54,7 +55,7 @@ module GridConnectionModule
     
     integer(I4B), pointer :: nrOfCells => null()                            ! the total number of cells which are connected
     type(GlobalCellType), dimension(:), pointer :: idxToGlobal => null()    ! a map from local to global coordinates
-    type(sparsematrix), pointer :: connectivity => null()                   ! sparse matrix with the connections
+    type(ConnectionsType), pointer :: connections => null()                   ! sparse matrix with the connections
     
     ! TODO_MJR: not sure yet about this
     integer(I4B), pointer :: nrOfConnectedModels => null()
@@ -68,7 +69,7 @@ module GridConnectionModule
     procedure, pass(this) :: connectModels
     
     procedure, private, pass(this) :: getNrOfCells
-    procedure, private, pass(this) :: buildConnectivityMatrix
+    procedure, private, pass(this) :: buildConnections
   end type
   
   contains ! module procedures
@@ -147,7 +148,7 @@ module GridConnectionModule
     ! local
     integer(I4B) :: iLink, ipos
     integer(I4B) :: idx, nbrIdx, nbrCnt
-    type(ConnectionsType), pointer :: connections => null()    
+    type(ConnectionsType), pointer :: connections => null()   
     type(NumericalModelType), pointer :: connectedModel => null()
         
     ! for all LOCAL cells    
@@ -197,7 +198,7 @@ module GridConnectionModule
     
     ! now finalize the data structures
     this%nrOfCells = this%getNrOfCells()
-    call this%buildConnectivityMatrix()
+    call this%buildConnections()
     
   end subroutine extendConnection
  
@@ -213,25 +214,30 @@ module GridConnectionModule
   
   ! builds a sparse matrix holding all cell connections,
   ! with new indices, and stores the mapping to the global ids
-  subroutine buildConnectivityMatrix(this)
-    class(GridConnectionType), intent(in) :: this
-    
+  subroutine buildConnections(this)
+    use SimModule, only: ustop
+    class(GridConnectionType), intent(in) :: this       
     ! local
     integer(I4B) :: ncells
     integer(I4B) :: n, m, offset
+    integer(I4B) :: isym, j
+    integer(I4B) :: ierror
     integer(I4B), dimension(:), allocatable :: nnz
+    type(SparseMatrix), pointer :: sparse 
+    type(ConnectionsType), pointer :: conn
+    
     
     allocate(this%idxToGlobal(this%nrOfCells))
-    allocate(this%connectivity)    
+    allocate(sparse)    
     
     ncells = this%getNrOfCells()
     allocate(nnz(ncells))
     nnz = MaxNeighbors+1
-    call this%connectivity%init(ncells, ncells, nnz)
+    call sparse%init(ncells, ncells, nnz)
     
     ! diagonals
     do n = 1, ncells
-      call this%connectivity%addconnection(n, n, 1)
+      call sparse%addconnection(n, n, 1)
     end do    
     
     ! internals TODO_MJR: do we need them at lowest order, why???
@@ -242,13 +248,52 @@ module GridConnectionModule
       
       ! fill with local indices
       m = n + offset
-      call this%connectivity%addConnection(n, m, 1)
+      call sparse%addConnection(n, m, 1)
+      call sparse%addConnection(m, n, 1)
       
       ! store mapping here
       this%idxToGlobal(n) = this%localCells(n)%cell
       this%idxToGlobal(m) = this%connectedCells(n)%cell
       
     end do
+    
+    ! create connections from sparse
+    allocate(this%connections)
+    conn => this%connections
+    call conn%allocate_scalars(this%memorigin)
+    conn%nodes = ncells
+    conn%nja = sparse%nnz
+    conn%njas = (conn%nja -  conn%nodes) / 2
+    call conn%allocate_arrays()
+    
+    call sparse%filliaja(conn%ia, conn%ja, ierror)  
+    if (ierror /= 0) then
+      write(*,*) 'Error filling ia/ja connections in GridConnection: terminating...'
+      call ustop()
+    end if
+    
+    call fillisym(conn%nodes, conn%nja, conn%ia, conn%ja, conn%isym)
+    call filljas(conn%nodes, conn%nja, conn%ia, conn%ja, conn%isym, conn%jas)
+    
+    ! done with it
+    call sparse%destroy()
+    
+    ! fill ihc, cl1, cl2, hwva, anglex (with size=njas) for all connections
+    do n=1, conn%nodes
+      do j=conn%ia(n)+1, conn%ia(n+1)-1
+        m = conn%ja(j) 
+        isym = conn%jas(j)
+        if (m > n) then
+          conn%cl1(isym) = this%linkGeometries(isym)%length1
+        else
+          conn%cl2(isym) = this%linkGeometries(isym)%length2
+        end if
+        conn%hwva(isym) = this%linkGeometries(isym)%hwva
+        conn%ihc(isym) = this%linkGeometries(isym)%connectionType
+        conn%anglex(isym) = 0.0 ! TODO_MJR: implement
+      end do
+    end do
+   
     
   end subroutine
   
