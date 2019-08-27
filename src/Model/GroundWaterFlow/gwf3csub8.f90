@@ -81,7 +81,7 @@ module GwfCsubModule
     integer(I4B), pointer :: iunderrelax => null()
     integer(I4B), pointer :: iurflag => null()
     integer(I4B), pointer :: ipch => null()
-    integer(I4B), pointer :: ifixedstress => null()
+    logical, pointer :: lhead_based => null()
     integer(I4B), pointer :: iupdatestress => null()
     integer(I4B), pointer :: idbhalfcell => null()
     integer(I4B), pointer :: idbfullcell => null()
@@ -365,7 +365,7 @@ contains
     call mem_allocate(this%iunderrelax, 'IUNDERRELAX', this%origin)
     call mem_allocate(this%iurflag, 'IURFLAG', this%origin)
     call mem_allocate(this%ipch, 'IPCH', this%origin)
-    call mem_allocate(this%ifixedstress, 'IFIXEDSTRESS', this%origin)
+    call mem_allocate(this%lhead_based, 'LHEAD_BASED', this%origin)
     call mem_allocate(this%iupdatestress, 'IUPDATESTRESS', this%origin)
     call mem_allocate(this%ispecified_pcs, 'ISPECIFIED_PCS', this%origin)
     call mem_allocate(this%ispecified_dbh, 'ISPECIFIED_DBH', this%origin)
@@ -421,7 +421,7 @@ contains
     this%iunderrelax = 0
     this%iurflag = 0
     this%ipch = 0
-    this%ifixedstress = 0
+    this%lhead_based = .FALSE.
     this%iupdatestress = 1
     this%ispecified_pcs = 0
     this%ispecified_dbh = 0
@@ -2072,7 +2072,7 @@ contains
             ibrg = 1
           case ('HEAD_BASED')
             this%ipch = 1
-            this%ifixedstress = 1
+            this%lhead_based = .TRUE.
           case ('NDELAYCELLS')
             this%ndelaycells =  this%parser%GetInteger()
           !
@@ -2273,7 +2273,7 @@ contains
                                     'PACKAGE SETTINGS'
     write(this%iout, fmtopti) 'NUMBER OF DELAY CELLS =',                         &
                               this%ndelaycells
-    if (this%ifixedstress /= 0) then
+    if (this%lhead_based .EQV. .TRUE.) then
       write(this%iout, '(4x,a)') &
         'HEAD-BASED FORMULATION'
     else
@@ -2324,7 +2324,7 @@ contains
     end if
     !
     ! -- process effective_stress_lag, if effective stress formulation
-    if (this%ifixedstress == 0) then
+    if (this%lhead_based .EQV. .FALSE.) then
       if (ieslag /= 0) then
         write(this%iout, '(4x,a,1(/,6x,a))') &
           'SPECIFIC STORAGE VALUES WILL BE CALCULATED USING THE EFFECTIVE',      &
@@ -2347,7 +2347,7 @@ contains
     !
     ! -- evaluate underrelaxation
     if (iunderrelax /= 0) then
-      if (this%ifixedstress == 0) then
+      if (this%lhead_based .EQV. .FALSE.) then
         if (this%ieslag /= 0) then
           iunderrelax = 0
           write(this%iout, '(4x,a,3(/,6x,a))') &
@@ -2744,7 +2744,7 @@ contains
     call mem_deallocate(this%iunderrelax)
     call mem_deallocate(this%iurflag)
     call mem_deallocate(this%ipch)
-    call mem_deallocate(this%ifixedstress)
+    call mem_deallocate(this%lhead_based)
     call mem_deallocate(this%iupdatestress)
     call mem_deallocate(this%ispecified_pcs)
     call mem_deallocate(this%ispecified_dbh)
@@ -3303,7 +3303,7 @@ contains
         u = gs - es
       end if
       hcell = u + bot
-      if (this%ifixedstress == 0) then
+      if (this%lhead_based .EQV. .FALSE.) then
         if (es < DEM6) then
           ierr = ierr + 1
           call this%dis%noder_to_string(node, cellid)
@@ -3437,7 +3437,7 @@ contains
     !
     ! -- aquifer saturation
     call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
-    if (this%ifixedstress /= 0) then
+    if (this%lhead_based .EQV. .TRUE.) then
       f = DONE
       f0 = DONE
     else
@@ -3887,7 +3887,7 @@ contains
       top = this%dis%top(node)
       bot = this%dis%bot(node)
       if (this%istoragec == 1) then
-        if (this%ifixedstress /= 0) then
+        if (this%lhead_based .EQV. .TRUE.) then
           fact = DONE
         else
           void = this%csub_calc_void(this%sk_theta(node))
@@ -3919,7 +3919,7 @@ contains
       top = this%dis%top(node)
       bot = this%dis%bot(node)
       if (this%istoragec == 1) then
-        if (this%ifixedstress /= 0) then
+        if (this%lhead_based .EQV. .TRUE.) then
           fact = DONE
         else
           void = this%csub_calc_void(this%theta(ib))
@@ -4052,7 +4052,7 @@ contains
       !
       ! -- write calculated compression indices
       if (this%istoragec == 1) then
-        if (this%ifixedstress == 0) then
+        if (this%lhead_based .EQV. .FALSE.) then
           write(this%iout, '(//1X,A)')                                &
             'CALCULATED COMPRESSION INDICES'
           iloc = 1
@@ -4093,7 +4093,7 @@ contains
     this%initialized = 1
     !
     ! -- set flag to retain initial stresses for entire simulation
-    if (this%ifixedstress /= 0) then
+    if (this%lhead_based .EQV. .TRUE.) then
       this%iupdatestress = 0
     end if
     !
@@ -4771,7 +4771,7 @@ contains
     sske0 = DZERO
     !
     ! -- calculate factor for the head-based case
-    if (this%ifixedstress /= 0) then
+    if (this%lhead_based .EQV. .TRUE.) then
       f = DONE
       f0 = DONE
     !
@@ -5868,7 +5868,7 @@ contains
     ielastic = this%ielastic(ib)
     !
     ! -- calculate factor for the head-based case
-    if (this%ifixedstress /= 0) then
+    if (this%lhead_based .EQV. .TRUE.) then
       f = DONE
       !
       ! -- scale factor for half-cell problem
