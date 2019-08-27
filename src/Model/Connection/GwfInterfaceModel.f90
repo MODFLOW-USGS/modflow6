@@ -33,26 +33,30 @@ contains
     
   end subroutine
    
-  subroutine buildDiscretization(this, gridConnection)    
+  subroutine buildDiscretization(this, gridConnection)  
+    use ConnectionsModule 
     use SparseModule, only: sparsematrix
     class(GwfInterfaceModelType), intent(inout) :: this
     class(GridConnectionType), intent(in) :: gridConnection
     ! local
     integer(I4B) :: icell, nrOfCells, idx
+    integer(I4B) :: ierror
     type(NumericalModelType), pointer :: model
+    type(ConnectionsType), pointer :: connections
     
     ! create disu
     call disu_cr(this%dis, this%name, -1, -1)
     
-    ! nodes, nja, nvert
+    ! the following is similar to dis_df, we should refactor this
+    ! set nodes, nvertices skipped for as long as possible
     nrOfCells = gridConnection%nrOfCells    
     this%dis%nodes = nrOfCells
     this%dis%nodesuser = nrOfCells
-    
     call this%dis%allocate_arrays()
     
     ! fill data
     do icell = 1, nrOfCells
+      
       idx = gridConnection%idxToGlobal(icell)%index
       model => gridConnection%idxToGlobal(icell)%model
       
@@ -61,7 +65,12 @@ contains
       this%dis%area(icell) = model%dis%area(idx)
       
     end do
-    
+     
+    ! grid connections follow from GridConnection:
+    this%dis%con => gridConnection%connections
+    this%dis%njas =  this%dis%con%njas
+  
+    ! TODO_MJR: add vertices, cell2d here?
     
   end subroutine
   

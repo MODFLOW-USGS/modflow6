@@ -21,7 +21,7 @@ contains ! module procedures
   
      call test(testConstruct, "GwfInterfaceModel, test creation of minimal interface model")
      call test(testBuildDiscretization, "GwfInterfaceModel, test building discretization")
-      
+     call test(testInterfaceModelHasCorrectArraySizes, "GwfInterfaceModel arrays should be allocated correctly")
   end subroutine
   
   subroutine testConstruct
@@ -48,6 +48,10 @@ contains ! module procedures
     ! call assert_equal(ifModel%dis%con%njas, 2, "Expected nr. of symmetric connections (njas)")
     ! continue here with test on cl, area, etc.
     
+  end subroutine
+  
+  subroutine testInterfaceModelHasCorrectArraySizes()
+    call assert_true(.false., "continue here!")
   end subroutine
   
   ! create connection between two models
@@ -90,8 +94,9 @@ contains ! module procedures
     
     call assert_true(gc%nrOfLinks == 2, "Nr of links in GC should be 2")  
     call assert_equal(size(gc%idxToGlobal), 4, "We need index mapping for interface cells")
-    call assert_equal(gc%connectivity%nnz, 6, "Expecting 4 (diag) + 2 (conn) nozeros in matrix")
+    call assert_equal(gc%connections%nja, 8, "Expecting 4 (diag) + 2*2 (conn) nozeros in matrix")
     
   end function
+  
   
 end module TestGwfInterfaceModelModule
