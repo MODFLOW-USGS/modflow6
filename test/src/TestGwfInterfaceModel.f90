@@ -21,42 +21,75 @@ contains ! module procedures
   
      call test(testConstruct, "GwfInterfaceModel, test creation of minimal interface model")
      call test(testBuildDiscretization, "GwfInterfaceModel, test building discretization")
-     call test(testInterfaceModelHasCorrectArraySizes, "GwfInterfaceModel arrays should be allocated correctly")
+     call test(testModelMatrixCoefficientsNpf, "GwfInterfaceModel has correct conductivity coeffs")
+     call test(testModelMatrixCoefficientsXt3d, "GwfInterfaceModel has correct conductivity coeffs for XT3D")
+     
   end subroutine
   
   subroutine testConstruct
-    type(GwfInterfaceModelType) :: model
-        
+    type(GwfInterfaceModelType) :: model        
     call model%construct("mname19")     
     call assert_equal(model%name, "mname19", "model name should match")    
   end subroutine
   
   subroutine testBuildDiscretization
-    type(GwfInterfaceModelType) :: ifModel
-    type(GridConnectionType) :: gc
+    type(GwfInterfaceModelType), pointer :: ifModel
     
-    gc = createGridConnectionBetween2by3with2by5grid("mname19")    
-    call ifModel%construct("mname19")
+    ifModel => getSimpleInterfaceModel("testBuildDiscretization")     
     
-    call ifModel%buildDiscretization(gc)
     call assert_true(associated(ifModel%dis),"DIS not created")
     call assert_comparable_real(real(ifModel%dis%top(1)), 0.0, 0.0, "DIS TOP values are incorrect")
     call assert_comparable_real(real(ifModel%dis%bot(4)), -2.5, 0.0, "DIS BOT values are incorrect")
-    call assert_comparable_real(real(ifModel%dis%area(2)), 10000.0, 0.0, "DIS AREA values are incorrect")
-    
+    call assert_comparable_real(real(ifModel%dis%area(2)), 10000.0, 0.0, "DIS AREA values are incorrect")    
     call assert_true(associated(ifModel%dis%con), "Connectivity need to be defined")
-    ! call assert_equal(ifModel%dis%con%njas, 2, "Expected nr. of symmetric connections (njas)")
-    ! continue here with test on cl, area, etc.
+    call assert_equal(ifModel%dis%con%njas, 2, "Expected nr. of symmetric connections (njas)")
+        
+  end subroutine
+  
+  subroutine testModelMatrixCoefficientsNpf
+    class(GwfInterfaceModelType), pointer :: ifModel
+    integer(I4B) :: kiter, inwtflag, nja
+    real(DP), dimension(:), allocatable :: amat
+    
+    ifModel => getSimpleInterfaceModel("ifmodel_01")    
+    
+    kiter = 1
+    inwtflag = 0
+    nja = ifModel%dis%con%nja
+    allocate(amat(nja))
+    
+    ! continue here:
+    ! call ifModel%model_fc(kiter, amat, nja, inwtflag)
+    
+    ! test on amat here:
+    call assert_true(.false., "Interface model should calculate npf conductivity")
     
   end subroutine
   
-  subroutine testInterfaceModelHasCorrectArraySizes()
-    call assert_true(.false., "continue here!")
+  subroutine testModelMatrixCoefficientsXt3d
+    call assert_true(.false., "Interface model should calculate xt3d conductivity")
   end subroutine
+  
+  ! get simple interface model from dis_A.dis and dis_B.dis
+  function getSimpleInterfaceModel(name) result(ifmodel)
+    character(len=*), intent(in)  :: name
+    class(GwfInterfaceModelType), pointer :: ifmodel
+    type(GridConnectionType) :: gc
+    
+    allocate(ifmodel)
+    
+    ! set up if model
+    gc = createGridConnectionBetween2by3with2by5grid("ifmodel_02")    
+    call ifmodel%construct("ifmodel_02")    
+    call ifModel%createModel(gc)
+    
+    ! call ifModel%model_ar()
+    
+  end function
   
   ! create connection between two models
   function createGridConnectionBetween2by3with2by5grid(name) result(gc)
-     character(len=*), intent(in)  :: name
+    character(len=*), intent(in)  :: name
     type(GridConnectionType) :: gc
     class(GwfModelType), pointer :: gwfModelA, gwfModelB
     class(NumericalModelType), pointer :: numModel
