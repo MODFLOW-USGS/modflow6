@@ -29,9 +29,9 @@ module GwfGwfConnectionModule
 	  generic, public :: construct => gwfGwfConnection_ctor
     
     ! implement (abstract) virtual
-    procedure, pass(this) :: mc_ar => allocateRead
-    procedure, pass(this) :: mc_cf => calculateCoefficients
-    procedure, pass(this) :: mc_fc => fillCoefficients
+    procedure, pass(this) :: mc_ar => gwfgwfcon_ar
+    procedure, pass(this) :: mc_cf => gwfgwfcon_cf
+    procedure, pass(this) :: mc_fc => gwfgwfcon_fc
     
     ! local stuff
     procedure, pass(this), private :: allocateScalars
@@ -85,7 +85,7 @@ contains
     
   end subroutine allocateArrays
   
-  subroutine allocateRead(this)
+  subroutine gwfgwfcon_ar(this)
     class(GwfGwfConnectionType), intent(inout)  :: this
     
     ! TODO_MJR: ar mover
@@ -95,20 +95,22 @@ contains
     
     ! TODO_MJR: ar observation    
     
-  end subroutine allocateRead
+  end subroutine gwfgwfcon_ar
   
   ! calculate or adjust matrix coefficients which are affected
   ! by the connection of GWF models
-  subroutine calculateCoefficients(this, kiter)
+  subroutine gwfgwfcon_cf(this, kiter)
     class(GwfGwfConnectionType), intent(inout)  :: this
     integer(I4B), intent(in) :: kiter
     
+    
+    
     call this%calculateConductance()
     
-  end subroutine calculateCoefficients
+  end subroutine gwfgwfcon_cf
     
   ! write the calculated conductances into the global system matrix
-  subroutine fillCoefficients(this, kiter, iasln, amatsln, inwtflag)
+  subroutine gwfgwfcon_fc(this, kiter, iasln, amatsln, inwtflag)
     class(GwfGwfConnectionType), intent(inout) :: this
     integer(I4B), intent(in) :: kiter
     integer(I4B), dimension(:), intent(in) :: iasln
@@ -128,7 +130,7 @@ contains
       amatsln(iasln(rowIdx)) = amatsln(iasln(rowIdx)) - this%conductance(i)
     end do
     
-  end subroutine fillCoefficients 
+  end subroutine gwfgwfcon_fc 
   
   
   ! calculate conductance for saturated conditions

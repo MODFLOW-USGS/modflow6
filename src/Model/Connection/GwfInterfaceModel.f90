@@ -2,9 +2,11 @@ module GwfInterfaceModelModule
   use KindModule, only: I4B, DP
   use NumericalModelModule, only: NumericalModelType
   use GwfModule, only: GwfModelType
+  use GwfNpfModule ,only: npf_cr
   use GridConnectionModule
   use GwfDisuModule
-  
+  use GwfNpfModule
+  use GwfOcModule
   implicit none
   private
   
@@ -16,7 +18,9 @@ module GwfInterfaceModelModule
     
   contains    
     procedure, pass(this) :: construct
-    procedure, pass(this) :: buildDiscretization
+    procedure, pass(this) :: createModel
+    ! private stuff
+    procedure, private, pass(this) :: buildDiscretization    
   end type
  
 contains
@@ -25,14 +29,36 @@ contains
   subroutine construct(this, name)
     class(GwfInterfaceModelType), intent(inout) :: this
     character(len=*), intent(in)  :: name
-    
+        
     call this%allocate_scalars(name)
+    this%name = name
     
     ! set default model options
     this%inewton = 0
     
+    ! we need this dummy value
+    this%innpf = 999
+    
   end subroutine
    
+  ! set up the interface model, analogously to what happens in gwf_cr
+  subroutine createModel(this, gridConnection)
+    class(GwfInterfaceModelType), intent(inout) :: this
+    class(GridConnectionType), intent(in) :: gridConnection
+    
+    ! create discretization
+    call this%buildDiscretization(gridConnection)
+    
+    ! create packages
+    ! TODO_MJR: this really depends on how we want to merge
+    ! a heteregeneous composition of connected models...
+    call npf_cr(this%npf, this%name, this%innpf, this%iout)    
+    ! call xt3d_cr..., etc.
+    call oc_cr(this%oc, this%name, this%inoc, this%iout)
+    
+  end subroutine
+  
+  ! note: this should become private
   subroutine buildDiscretization(this, gridConnection)  
     use ConnectionsModule 
     use SparseModule, only: sparsematrix
@@ -72,6 +98,13 @@ contains
   
     ! TODO_MJR: add vertices, cell2d here?
     
+  end subroutine
+  
+  subroutine setNpfData(npf, this)
+    class(GwfInterfaceModelType), intent(inout) :: this
+    class(GwfNpftype) :: npf
+    
+        
   end subroutine
   
 end module GwfInterfaceModelModule
