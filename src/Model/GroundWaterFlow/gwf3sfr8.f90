@@ -15,13 +15,13 @@ module SfrModule
   use BndModule, only: BndType
   use BudgetModule, only : BudgetType
 
-  use ObserveModule,        only: ObserveType
+  use ObserveModule, only: ObserveType
   use ObsModule, only: ObsType
   use InputOutputModule, only: get_node, URWORD, extract_idnum_or_bndname
   use BaseDisModule, only: DisBaseType
-  use SimModule,        only: count_errors, store_error, store_error_unit, ustop
+  use SimModule, only: count_errors, store_error, store_error_unit, ustop
   use SparseModule, only: sparsematrix
-  use RectangularChGeometryModule,       only: RectangularChGeometryType
+  use RectangularChGeometryModule, only: RectangularChGeometryType
   use ArrayHandlersModule, only: ExpandArray
   use BlockParserModule,   only: BlockParserType
   !
@@ -45,18 +45,6 @@ module SfrModule
   !
   ! -- Streamflow Routing derived data type
   type :: SfrDataType
-    character (len=8), pointer :: status => null()
-    integer(I4B), pointer :: iboundpak => null()
-    integer(I4B), pointer :: reach => null()
-    integer(I4B), pointer :: igwfnode => null()
-    integer(I4B), pointer :: igwftopnode => null()
-    real(DP), pointer :: length => null()
-    real(DP), pointer :: width => null()
-    real(DP), pointer :: strtop => null()
-    real(DP), pointer :: bthick => null()
-    real(DP), pointer :: hk => null()
-    real(DP), pointer :: slope => null()
-    integer(I4B), pointer :: nconn => null()
     real(DP), pointer :: ustrf => null()
     real(DP), pointer :: ftotnd => null()
     ! -- diversion data
@@ -128,6 +116,18 @@ module SfrModule
     type(sparsematrix), pointer :: sparse => null()
     type(RectangularChGeometryType), dimension(:), pointer,                     &
                                      contiguous :: geo => null()
+    ! -- moved from SfrDataType
+    integer(I4B), dimension(:), pointer, contiguous :: iboundpak => null()
+    integer(I4B), dimension(:), pointer, contiguous :: igwfnode => null()
+    integer(I4B), dimension(:), pointer, contiguous :: igwftopnode => null()
+    real(DP), dimension(:), pointer, contiguous :: length => null()
+    real(DP), dimension(:), pointer, contiguous :: width => null()
+    real(DP), dimension(:), pointer, contiguous :: strtop => null()
+    real(DP), dimension(:), pointer, contiguous :: bthick => null()
+    real(DP), dimension(:), pointer, contiguous :: hk => null()
+    real(DP), dimension(:), pointer, contiguous :: slope => null()
+    integer(I4B), dimension(:), pointer, contiguous :: nconnreach => null()
+    
     ! -- type bound procedures
     contains
     procedure :: sfr_allocate_scalars
@@ -296,6 +296,31 @@ contains
     !
     ! -- allocate character array for budget text
     allocate(this%csfrbudget(this%bditems))
+    !
+    ! -- variables originally in SfrDataType
+    call mem_allocate(this%iboundpak, this%maxbound, 'IBOUNDPAK', this%origin)
+    call mem_allocate(this%igwfnode, this%maxbound, 'IGWFNODE', this%origin)
+    call mem_allocate(this%igwftopnode, this%maxbound, 'IGWFTOPNODE', this%origin)
+    call mem_allocate(this%length, this%maxbound, 'LENGTH', this%origin)
+    call mem_allocate(this%width, this%maxbound, 'WIDTH', this%origin)
+    call mem_allocate(this%strtop, this%maxbound, 'STRTOP', this%origin)
+    call mem_allocate(this%bthick, this%maxbound, 'BTHICK', this%origin)
+    call mem_allocate(this%hk, this%maxbound, 'HK', this%origin)
+    call mem_allocate(this%slope, this%maxbound, 'SLOPE', this%origin)
+    call mem_allocate(this%nconnreach, this%maxbound, 'NCONNREACH', this%origin)
+    do i = 1, this%maxbound
+      this%iboundpak(i) = 1
+      this%igwfnode(i) = 0
+      this%igwftopnode(i) = 0
+      this%length(i) = DZERO
+      this%width(i) = DZERO
+      this%strtop(i) = DZERO
+      this%bthick(i) = DZERO
+      this%hk(i) = DZERO
+      this%slope(i) = DZERO
+      this%nconnreach(i) = 0
+    end do
+    
     !
     !
     !-- fill csfrbudget
@@ -612,17 +637,15 @@ contains
         nboundchk(n) = nboundchk(n) + 1
 
         ! -- allocate data for this reach
-        call this%allocate_reach(n)
-        ! -- set reach number
-        this%reaches(n)%reach = n
+        call this%allocate_reach(n, nboundchk(n))
         ! -- get model node number
         call this%parser%GetCellid(this%dis%ndim, cellid, flag_string=.true.)
-        this%reaches(n)%igwfnode = this%dis%noder_from_cellid(cellid, &
-                                   this%inunit, this%iout, flag_string=.true.)
-        this%reaches(n)%igwftopnode = this%reaches(n)%igwfnode
-        this%nodelist(n) = this%reaches(n)%igwfnode
+        this%igwfnode(n) = this%dis%noder_from_cellid(cellid, &
+                           this%inunit, this%iout, flag_string=.true.)
+        this%igwftopnode(n) = this%igwfnode(n)
+        this%nodelist(n) = this%igwfnode(n)
         ! -- read the cellid string and determine if 'none' is specified
-        if (this%reaches(n)%igwfnode < 1) then
+        if (this%igwfnode(n) < 1) then
           call this%parser%GetStringCaps(keyword)
           if (keyword .ne. 'NONE') then
             write (cnum, '(i0)') n
@@ -632,23 +655,23 @@ contains
           end if
         end if
         ! -- get reach length
-        this%reaches(n)%length = this%parser%GetDouble()
+        this%length(n) = this%parser%GetDouble()
         ! -- get reach width
-        this%reaches(n)%width = this%parser%GetDouble()
+        this%width(n) = this%parser%GetDouble()
         ! -- get reach slope
-        this%reaches(n)%slope = this%parser%GetDouble()
+        this%slope(n) = this%parser%GetDouble()
         ! -- get reach stream bottom
-        this%reaches(n)%strtop = this%parser%GetDouble()
+        this%strtop(n) = this%parser%GetDouble()
         ! -- get reach bed thickness
-        this%reaches(n)%bthick = this%parser%GetDouble()
+        this%bthick(n) = this%parser%GetDouble()
         ! -- get reach bed hk
-        this%reaches(n)%hk = this%parser%GetDouble()
+        this%hk(n) = this%parser%GetDouble()
         ! -- get reach roughness
         !this%reaches(n)%rough = this%parser%GetDouble()
         call this%parser%GetStringCaps(manningname)
         ! -- get number of connections for reach
         ival = this%parser%GetInteger()
-        this%reaches(n)%nconn = ival
+        this%nconnreach(n) = ival
         this%nconn = this%nconn + ival
         if (ival > 0) then
           allocate(this%reaches(n)%iconn(ival))
@@ -678,7 +701,7 @@ contains
         end do
 
             ! -- set default bndName
-        write (cnum,'(i10.10)') this%reaches(n)%reach
+        write (cnum,'(i10.10)') n
         bndName = 'Reach' // cnum
 
         ! -- get reach name
@@ -722,7 +745,7 @@ contains
         !    on kper = 1 and kstp = 1 if a stage is not specified
         !    on the status line for the reach
         this%reaches(n)%sstage%name = ''
-        this%reaches(n)%sstage%value = this%reaches(n)%strtop
+        this%reaches(n)%sstage%value = this%strtop(n)
 
       end do
       write(this%iout,'(1x,a)')'END OF '//trim(adjustl(this%text))//' PACKAGEDATA'
@@ -792,7 +815,7 @@ contains
         endif
         !
         ! -- increment nboundchk
-        if (this%reaches(n)%nconn > 0) then
+        if (this%nconnreach(n) > 0) then
           nboundchk(n) = nboundchk(n) + 1
         end if
         !
@@ -800,7 +823,7 @@ contains
         call this%sparse%addconnection(n, n, 1)
         !
         ! -- fill off diagonals
-        do i = 1, this%reaches(n)%nconn
+        do i = 1, this%nconnreach(n)
           ival = this%parser%GetInteger()
           if (ival < 0) then
             this%reaches(n)%idir(i) = -1
@@ -824,7 +847,7 @@ contains
       write(this%iout,'(1x,a)')'END OF '//trim(adjustl(this%text))//' CONNECTIONDATA'
       
       do n = 1, this%maxbound
-        if (this%reaches(n)%nconn > 0) then
+        if (this%nconnreach(n) > 0) then
           !
           ! -- check for missing or duplicate sfr connections
           if (nboundchk(n) == 0) then
@@ -1045,12 +1068,12 @@ contains
       if(this%inamedbound==1) then
         bndName = this%boundname(n)
       else
-        write (cnum,'(i10.0)') this%reaches(n)%reach
+        write (cnum,'(i10.0)') n
         bndName = 'Reach ' // trim(adjustl(cnum))
       end if
       call this%geo(n)%init(n, bndName, &
-                            this%reaches(n)%width, &
-                            this%reaches(n)%length)
+                            this%width(n), &
+                            this%length(n))
       if (this%iprpak /= 0) then
         call this%geo(n)%print_attributes(this%iout)
       end if
@@ -1227,7 +1250,7 @@ contains
     ! -- reset upstream flow to zero and set specified stage
     do n = 1, this%maxbound
       this%reaches(n)%usflow = DZERO
-      if (this%reaches(n)%iboundpak < 0) then
+      if (this%iboundpak(n) < 0) then
         this%reaches(n)%stage = this%reaches(n)%sstage%value
       end if
     end do
@@ -1268,13 +1291,13 @@ contains
     !
     ! -- find highest active cell
     do n = 1, this%nbound
-      igwfnode = this%reaches(n)%igwftopnode
+      igwfnode = this%igwftopnode(n)
       if (igwfnode > 0) then
         if (this%ibound(igwfnode) == 0) then
           call this%dis%highest_active(igwfnode, this%ibound)
         end if
       end if
-      this%reaches(n)%igwfnode = igwfnode
+      this%igwfnode(n) = igwfnode
       this%nodelist(n) = igwfnode
     end do
     !
@@ -1317,7 +1340,7 @@ contains
     !
     ! -- solve for each sfr reach
     do n = 1, this%nbound
-      node = this%reaches(n)%igwfnode
+      node = this%igwfnode(n)
       if (node > 0) then
         hgwf = this%xnew(node)
       else
@@ -1329,11 +1352,11 @@ contains
       this%reaches(n)%usflow0 = this%reaches(n)%usflow
       !
       ! -- solve for flow in swr
-      if (this%reaches(n)%iboundpak /= 0) then
+      if (this%iboundpak(n) /= 0) then
         call this%sfr_solve(n, hgwf, hhcof, rrhs)
       else
         this%reaches(n)%depth = DZERO
-        this%reaches(n)%stage = this%reaches(n)%strtop
+        this%reaches(n)%stage = this%strtop(n)
         v = DZERO
         call this%sfr_update_flows(n, v, v)
         hhcof = DZERO
@@ -1381,7 +1404,7 @@ contains
     ! -- Copy package rhs and hcof into solution rhs and amat
     do i = 1, this%nbound
       ! -- skip inactive reaches
-      if (this%reaches(i)%iboundpak < 1) cycle
+      if (this%iboundpak(i) < 1) cycle
       ! -- skip if reach is not connected to gwf
       n = this%nodelist(i)
       if (n < 1) cycle
@@ -1441,7 +1464,7 @@ contains
     ifirst = 1
     if (this%iconvchk /= 0) then
       final_check: do n = 1, this%maxbound
-        if (this%reaches(n)%iboundpak == 0) cycle
+        if (this%iboundpak(n) == 0) cycle
         dh = this%reaches(n)%stage0 - this%reaches(n)%stage
         r = this%reaches(n)%usflow0 - this%reaches(n)%usflow
         if (ABS(dh) > hclose .or. ABS(r) > rclose) then
@@ -1598,7 +1621,7 @@ contains
       if (qext > DZERO) then
         qext = -qext
       end if
-      do i = 1, this%reaches(n)%nconn
+      do i = 1, this%nconnreach(n)
         if (this%reaches(n)%idir(i) > 0) cycle
         qext = DZERO
         exit
@@ -1736,7 +1759,7 @@ contains
       do n = 1, this%maxbound
         d = this%reaches(n)%depth
         v = this%reaches(n)%stage
-        if (this%reaches(n)%iboundpak < 1) then
+        if (this%iboundpak(n) < 1) then
           v = DHNOFLO
         else if (d == DZERO) then
           v = DHDRY
@@ -1764,7 +1787,7 @@ contains
                    ibinun, naux, this%cauxcbc, this%nconn, 1, 1, this%nconn,   &
                    this%iout, delt, pertim, totim)
       do n = 1, this%maxbound
-        do i = 1, this%reaches(n)%nconn
+        do i = 1, this%nconnreach(n)
           n2 = this%reaches(n)%iconn(i)
           ! flow to downstream reaches
           if (this%reaches(n)%idir(i) < 0) then
@@ -1773,7 +1796,7 @@ contains
           ! flow from upstream reaches
           else
             qt = this%reaches(n)%usflow
-            do ii = 1, this%reaches(n2)%nconn
+            do ii = 1, this%nconnreach(n2)
               if (this%reaches(n2)%idir(ii) > 0) cycle
               if (this%reaches(n2)%iconn(ii) /= n) cycle
               q = this%reaches(n2)%qconn(ii)
@@ -1782,7 +1805,7 @@ contains
           end if
           ! calculate flow area
           call this%sfr_rectch_depth(n, qt, d)
-          this%qauxcbc(1) = d * this%reaches(n)%width
+          this%qauxcbc(1) = d * this%width(n)
           call this%dis%record_mf6_list_entry(ibinun, n, n2, q, naux,      &
                                                   this%qauxcbc,                &
                                                   olconv=.FALSE.,              &
@@ -1798,9 +1821,9 @@ contains
       do n = 1, this%maxbound
         ! -- fill qauxcbc
         ! -- reach volume
-        this%qauxcbc(1) = this%reaches(n)%width * this%reaches(n)%length
+        this%qauxcbc(1) = this%width(n) * this%length(n)
         ! -- get leakage
-        n2 = this%reaches(n)%igwfnode
+        n2 = this%igwfnode(n)
         q = -this%reaches(n)%gwflow
         call this%dis%record_mf6_list_entry(ibinun, n, n2, q, naux,        &
                                                 this%qauxcbc,                  &
@@ -1871,7 +1894,7 @@ contains
       do n = 1, this%maxbound
         q = this%reaches(n)%dsflow
         if (q > DZERO) q = -q
-        do i = 1, this%reaches(n)%nconn
+        do i = 1, this%nconnreach(n)
           if (this%reaches(n)%idir(i) > 0) cycle
           q = DZERO
           exit
@@ -2026,7 +2049,7 @@ contains
       write(iout,'(1X,A)') linesep(1:iloc)
       ! -- write data
       do n = 1, this%maxbound
-        node = this%reaches(n)%igwfnode
+        node = this%igwfnode(n)
         if (node > 0) then
           call this%dis%noder_to_string(node, cellid)
           hgwf = this%xnew(node)
@@ -2048,13 +2071,13 @@ contains
         call UWWORD(line, iloc, 11, 3, text, n, w)
         call this%sfr_calc_cond(n, depth, cond)
         if (node > 0) then
-          sbot = this%reaches(n)%strtop - this%reaches(n)%bthick
+          sbot = this%strtop(n) - this%bthick(n)
           if (hgwf < sbot) then
             grad = stage - sbot
           else
             grad = stage - hgwf
           end if
-          grad = grad / this%reaches(n)%bthick
+          grad = grad / this%bthick(n)
           call UWWORD(line, iloc, 11, 3, text, n, hgwf, sep=' ')
           call UWWORD(line, iloc, 11, 3, text, n, cond, sep=' ')
           call UWWORD(line, iloc, 11, 3, text, n, grad)
@@ -2129,7 +2152,7 @@ contains
        do n = 1, this%maxbound
          depth = this%reaches(n)%depth
          stage = this%reaches(n)%stage
-         node = this%reaches(n)%igwfnode
+         node = this%igwfnode(n)
          if (node > 0) then
            call this%dis%noder_to_string(node, cellid)
          else
@@ -2153,7 +2176,7 @@ contains
          end if
          qext = this%reaches(n)%dsflow
          qd = DZERO
-         do i = 1, this%reaches(n)%nconn
+         do i = 1, this%nconnreach(n)
            if (this%reaches(n)%idir(i) > 0) cycle
            qd = qext
            qext = DZERO
@@ -2258,6 +2281,15 @@ contains
     call mem_deallocate(this%dbuff)
     deallocate(this%cauxcbc)
     call mem_deallocate(this%qauxcbc)
+    call mem_deallocate(this%iboundpak)
+    call mem_deallocate(this%igwfnode)
+    call mem_deallocate(this%igwftopnode)
+    call mem_deallocate(this%length)
+    call mem_deallocate(this%width)
+    call mem_deallocate(this%strtop)
+    call mem_deallocate(this%bthick)
+    call mem_deallocate(this%hk)
+    call mem_deallocate(this%slope)
     !
     ! -- deallocation diversions
     do n = 1, this%maxbound
@@ -2271,6 +2303,7 @@ contains
       call this%deallocate_reach(n)
     enddo
     deallocate(this%reaches)
+    call mem_deallocate(this%nconnreach)
     !
     ! -- ia ja
     deallocate(this%ia)
@@ -2751,13 +2784,12 @@ contains
         ichkustrm = 1
         call urword(line, lloc, istart, istop, 1, ival, rval, this%iout, this%inunit)
         text = line(istart:istop)
-        this%reaches(n)%status = text(1:8)
         if (text == 'INACTIVE') then
-          this%reaches(n)%iboundpak = 0
+          this%iboundpak(n) = 0
         else if (text == 'ACTIVE') then
-          this%reaches(n)%iboundpak = 1
+          this%iboundpak(n) = 1
         else if (text == 'SIMPLE') then
-          this%reaches(n)%iboundpak = -1
+          this%iboundpak(n) = -1
         else
           write(errmsg,'(4x,a,a)') &
             '****ERROR. UNKNOWN '//trim(this%text)//' SFR STATUS KEYWORD: ', &
@@ -2848,7 +2880,7 @@ contains
           write (cnum, '(i0)') n
           errmsg = 'ERROR: reach  ' // trim(cnum)
           write (cnum, '(i0)') this%reaches(n)%ndiv
-          errmsg = errmsg // ' diversion number should be between 1 and ' // trim(cnum) // '.'
+          errmsg = trim(errmsg) // ' diversion number should be between 1 and ' // trim(cnum) // '.'
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
           call ustop()
@@ -2909,7 +2941,7 @@ contains
     return
   end subroutine sfr_set_stressperiod
 
-  subroutine allocate_reach(this, n)
+  subroutine allocate_reach(this, n, nboundchk)
 ! ******************************************************************************
 ! allocate_reach -- Allocate pointers for reach(n).
 ! ******************************************************************************
@@ -2918,6 +2950,7 @@ contains
 ! ------------------------------------------------------------------------------
     class(SfrType) :: this
     integer(I4B), intent(in) :: n
+    integer(I4B), intent(in) :: nboundchk
     ! -- local
     character(len=LINELENGTH) :: ermsg
     character(len=10) :: crch
@@ -2925,7 +2958,7 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- make sure reach has not been allocated
-    if (associated(this%reaches(n)%reach)) then
+    if (nboundchk > 1) then
       write (crch, '(i10)') n
       ermsg = 'reach ' // trim(crch) // ' is already allocated'
       call store_error(ermsg)
@@ -2933,18 +2966,6 @@ contains
       call ustop()
     end if
     ! -- allocate pointers
-    allocate(this%reaches(n)%status)
-    allocate(this%reaches(n)%iboundpak)
-    allocate(this%reaches(n)%reach)
-    allocate(this%reaches(n)%igwfnode)
-    allocate(this%reaches(n)%igwftopnode)
-    allocate(this%reaches(n)%length)
-    allocate(this%reaches(n)%width)
-    allocate(this%reaches(n)%strtop)
-    allocate(this%reaches(n)%bthick)
-    allocate(this%reaches(n)%hk)
-    allocate(this%reaches(n)%slope)
-    allocate(this%reaches(n)%nconn)
     allocate(this%reaches(n)%ustrf)
     allocate(this%reaches(n)%ftotnd)
     allocate(this%reaches(n)%ndiv)
@@ -2984,8 +3005,6 @@ contains
     allocate(this%reaches(n)%usflow0)
     !
     ! -- initialize a few items
-    this%reaches(n)%status = 'ACTIVE'
-    this%reaches(n)%iboundpak = 1
     this%reaches(n)%rough%name = ''
     this%reaches(n)%rain%name = ''
     this%reaches(n)%evap%name = ''
@@ -3030,7 +3049,7 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- connections
-    if (this%reaches(n)%nconn > 0) then
+    if (this%nconnreach(n) > 0) then
       deallocate(this%reaches(n)%iconn)
       deallocate(this%reaches(n)%idir)
       deallocate(this%reaches(n)%idiv)
@@ -3038,18 +3057,6 @@ contains
     endif
     !
     ! -- deallocate pointers
-    deallocate(this%reaches(n)%status)
-    deallocate(this%reaches(n)%iboundpak)
-    deallocate(this%reaches(n)%reach)
-    deallocate(this%reaches(n)%igwfnode)
-    deallocate(this%reaches(n)%igwftopnode)
-    deallocate(this%reaches(n)%length)
-    deallocate(this%reaches(n)%width)
-    deallocate(this%reaches(n)%strtop)
-    deallocate(this%reaches(n)%bthick)
-    deallocate(this%reaches(n)%hk)
-    deallocate(this%reaches(n)%slope)
-    deallocate(this%reaches(n)%nconn)
     deallocate(this%reaches(n)%ustrf)
     deallocate(this%reaches(n)%ftotnd)
     deallocate(this%reaches(n)%ndiv)
@@ -3238,10 +3245,10 @@ contains
     !    groundwater leakage
     ! -- calculate upstream flow
     qu = DZERO
-    do i = 1, this%reaches(n)%nconn
+    do i = 1, this%nconnreach(n)
       if (this%reaches(n)%idir(i) < 0) cycle
       n2 = this%reaches(n)%iconn(i)
-      do ii = 1, this%reaches(n2)%nconn
+      do ii = 1, this%nconnreach(n2)
         if (this%reaches(n2)%idir(ii) > 0) cycle
         if (this%reaches(n2)%iconn(ii) /= n) cycle
         qu = qu + this%reaches(n2)%qconn(ii)
@@ -3251,8 +3258,8 @@ contains
     this%reaches(n)%usflow = qu
     ! -- calculate remaining terms
     qi = this%reaches(n)%inflow%value
-    qr = this%reaches(n)%rain%value * this%reaches(n)%width * this%reaches(n)%length
-    qe = this%reaches(n)%evap%value * this%reaches(n)%width * this%reaches(n)%length
+    qr = this%reaches(n)%rain%value * this%width(n) * this%length(n)
+    qe = this%reaches(n)%evap%value * this%width(n) * this%length(n)
     qro = this%reaches(n)%runoff%value
     !
     ! -- Water mover term; assume that it goes in at the upstream end of the reach
@@ -3291,19 +3298,19 @@ contains
     qmpsrc = qmp
     !
     ! -- calculate stream depth at the midpoint
-    if (this%reaches(n)%iboundpak > 0) then
+    if (this%iboundpak(n) > 0) then
       call this%sfr_rectch_depth(n, qmp, d1)
     else
       this%reaches(n)%stage = this%reaches(n)%sstage%value
-      d1 = max(DZERO, this%reaches(n)%stage - this%reaches(n)%strtop)
+      d1 = max(DZERO, this%reaches(n)%stage - this%strtop(n))
     end if
     !
     ! -- calculate sources/sinks for reach excluding groundwater leakage
     call this%sfr_calc_qsource(n, d1, qsrc)
     !
     ! -- calculate initial reach stage, downstream flow, and groundwater leakage
-    tp = this%reaches(n)%strtop
-    bt = tp - this%reaches(n)%bthick
+    tp = this%strtop(n)
+    bt = tp - this%bthick(n)
     hsfr = d1 + tp
     qd = MAX(qsrc, DZERO)
     qgwf = DZERO
@@ -3317,7 +3324,7 @@ contains
     if (hsfr <= tp .and. hgwf <= tp) isolve = 0
     if (hgwf <= tp .and. qc < DEM30) isolve = 0
     if (cstr < DEM30) isolve = 0
-    if (this%reaches(n)%iboundpak < 0) isolve = 0
+    if (this%iboundpak(n) < 0) isolve = 0
     !
     ! -- iterate to achieve solution
     itersol: if (isolve /= 0) then
@@ -3517,7 +3524,6 @@ contains
     end if itersol
 
     ! -- simple routing option or where depth = 0 and hgwf < bt
-    !if (this%reaches(n)%iboundpak < 0) then
     if (isolve == 0) then
       call sChSmooth(d1, sat, derv)
       if (hgwf > bt) then
@@ -3625,7 +3631,7 @@ contains
     if (qd > DZERO) then
       !
       ! -- route water to diversions
-      do i = 1, this%reaches(n)%nconn
+      do i = 1, this%nconnreach(n)
         if (this%reaches(n)%idir(i) > 0) cycle
         if (this%reaches(n)%idiv(i) == 0) cycle
         call this%sfr_calc_div(n, this%reaches(n)%idiv(i), qd, q2)
@@ -3641,7 +3647,7 @@ contains
       endif
       !
       ! -- route remaining water to downstream reaches
-      do i = 1, this%reaches(n)%nconn
+      do i = 1, this%nconnreach(n)
         if (this%reaches(n)%idir(i) > 0) cycle
         if (this%reaches(n)%idiv(i) > 0) cycle
         n2 = this%reaches(n)%iconn(i)
@@ -3649,7 +3655,7 @@ contains
         this%reaches(n)%qconn(i) = qd * f
       end do
     else
-      do i = 1, this%reaches(n)%nconn
+      do i = 1, this%nconnreach(n)
         if (this%reaches(n)%idir(i) > 0) cycle
         this%reaches(n)%qconn(i) = DZERO
       end do
@@ -3783,7 +3789,7 @@ contains
     !
     ! -- calculate terms for Manning's equation
     call sChSmooth(depth, sat, derv)
-    s = this%reaches(n)%slope
+    s = this%slope(n)
     r = this%reaches(n)%rough%value
     aw = this%geo(n)%area_wet(depth)
     wp = this%geo(n)%perimeter_wet(depth)
@@ -3827,7 +3833,7 @@ contains
     qgwf = DZERO
     !
     ! -- skip sfr-aquifer exchange in external cells
-    node = this%reaches(n)%igwfnode
+    node = this%igwfnode(n)
     if (node < 1) return
     !
     ! -- skip sfr-aquifer exchange in inactive cells
@@ -3840,8 +3846,8 @@ contains
     call this%sfr_calc_cond(n, depth, cond)
     !
     ! -- calculate groundwater leakage
-    tp = this%reaches(n)%strtop
-    bt = tp - this%reaches(n)%bthick
+    tp = this%strtop(n)
+    bt = tp - this%bthick(n)
     hsfr = tp + depth
     htmp = hgwf
     if (htmp < bt) then
@@ -3871,11 +3877,11 @@ contains
     !
     ! -- initialize a few variables
     cond = DZERO
-    node = this%reaches(n)%igwfnode
+    node = this%igwfnode(n)
     if (node > 0) then
-      if (this%ibound(this%reaches(n)%igwfnode) > 0) then
+      if (this%ibound(node) > 0) then
         wp = this%geo(n)%perimeter_wet(depth)
-        cond = this%reaches(n)%hk * this%reaches(n)%length * wp / this%reaches(n)%bthick
+        cond = this%hk(n) * this%length(n) * wp / this%bthick(n)
       end if
     end if
     !
@@ -3959,8 +3965,8 @@ contains
     real(DP) :: qconst
     ! -- code
     ! -- calculate stream depth at the midpoint
-    w = this%reaches(n)%width
-    s = this%reaches(n)%slope
+    w = this%width(n)
+    s = this%slope(n)
     r = this%reaches(n)%rough%value
     qconst = this%unitconv * w * sqrt(s) / r
     d1 = (q1 / qconst)**DP6
@@ -3993,7 +3999,7 @@ contains
     ! -- check the reach data for simple errors
     do n = 1, this%maxbound
       write (crch, '(i5)') n
-      nn = this%reaches(n)%igwfnode
+      nn = this%igwfnode(n)
       if (nn > 0) then
         btgwf = this%dis%bot(nn)
         call this%dis%noder_to_string(nn, nodestr)
@@ -4001,23 +4007,23 @@ contains
         nodestr = 'none'
       end if
       ! -- check reach length
-      if (this%reaches(n)%length <= DZERO) then
+      if (this%length(n) <= DZERO) then
         ermsg = 'ERROR: Reach ' // crch // ' length must be > 0.0'
         call store_error(ermsg)
       end if
       ! -- check reach width
-      if (this%reaches(n)%width <= DZERO) then
+      if (this%width(n) <= DZERO) then
         ermsg = 'ERROR: Reach ' // crch // ' width must be > 0.0'
         call store_error(ermsg)
       end if
       ! -- check reach slope
-      if (this%reaches(n)%slope <= DZERO) then
+      if (this%slope(n) <= DZERO) then
         ermsg = 'ERROR: Reach ' // crch // ' slope must be > 0.0'
         call store_error(ermsg)
       end if
       ! -- check bed thickness and bed hk for reaches connected to GWF
       if (nn > 0) then
-        bt = this%reaches(n)%strtop - this%reaches(n)%bthick
+        bt = this%strtop(n) - this%bthick(n)
         if (bt <= btgwf .and. this%icheck /= 0) then
           write (cval,'(f10.4)') bt
           ermsg = 'ERROR: Reach ' // crch // ' bed bottom (rtp-rbth =' // cval
@@ -4026,7 +4032,7 @@ contains
           ermsg = trim(adjustl(ermsg)) // '=' // cval // ').'
           call store_error(ermsg)
         end if
-        if (this%reaches(n)%hk < DZERO) then
+        if (this%hk(n) < DZERO) then
           ermsg = 'ERROR: Reach ' // crch // ' hk must be >= 0.0'
           call store_error(ermsg)
         end if
@@ -4045,9 +4051,9 @@ contains
       if (this%iprpak /= 0) then
         write (this%iout,'(i10,1x,a30,2(f10.4,1x),g10.3,1x,2(f10.4,1x),2(g10.3,1x),f10.4)') &
                n, nodestr,                                                      &
-               this%reaches(n)%length, this%reaches(n)%width,                   &
-               this%reaches(n)%slope, this%reaches(n)%strtop,                   &
-               this%reaches(n)%bthick, this%reaches(n)%hk,                      &
+               this%length(n), this%width(n),                                   &
+               this%slope(n), this%strtop(n),                                   &
+               this%bthick(n), this%hk(n),                                      &
                this%reaches(n)%rough%value, this%reaches(n)%ustrf
       end if
     end do
@@ -4091,12 +4097,12 @@ contains
     do n = 1, this%maxbound
       write (crch, '(i5)') n
       line = crch
-      eachconn: do i = 1, this%reaches(n)%nconn
+      eachconn: do i = 1, this%nconnreach(n)
         nn = this%reaches(n)%iconn(i)
         write (crch2, '(i5)') nn
         line = trim(line) // crch2
         ifound = 0
-        connreach: do ii = 1, this%reaches(nn)%nconn
+        connreach: do ii = 1, this%nconnreach(nn)
           nc = this%reaches(nn)%iconn(ii)
           if (nc == n) then
             !if (this%reaches(n)%idir(i) /= this%reaches(nn)%idir(ii)) then
@@ -4129,12 +4135,12 @@ contains
     ierr = 0
     do n = 1, this%maxbound
       write (crch, '(i5)') n
-      eachconnv: do i = 1, this%reaches(n)%nconn
+      eachconnv: do i = 1, this%nconnreach(n)
         ! -- skip downstream connections
         if (this%reaches(n)%idir(i) < 0) cycle eachconnv
         nn = this%reaches(n)%iconn(i)
         write (crch2, '(i5)') nn
-        connreachv: do ii = 1, this%reaches(nn)%nconn
+        connreachv: do ii = 1, this%nconnreach(nn)
           ! -- skip downstream connections
           if (this%reaches(nn)%idir(ii) < 0) cycle connreachv
           nc = this%reaches(nn)%iconn(ii)
@@ -4175,13 +4181,13 @@ contains
     do n = 1, this%maxbound
       write (crch, '(i5)') n
       line = crch
-      eachconnds: do i = 1, this%reaches(n)%nconn
+      eachconnds: do i = 1, this%nconnreach(n)
         nn = this%reaches(n)%iconn(i)
         if (this%reaches(n)%idir(i) > 0) cycle eachconnds
         write (crch2, '(i5)') nn
         line = trim(line) // crch2
         ifound = 0
-        connreachds: do ii = 1, this%reaches(nn)%nconn
+        connreachds: do ii = 1, this%nconnreach(nn)
           nc = this%reaches(nn)%iconn(ii)
           if (nc == n) then
             if (this%reaches(n)%idir(i) /= this%reaches(nn)%idir(ii)) then
@@ -4222,7 +4228,7 @@ contains
     do n = 1, this%maxbound
       write (crch, '(i5)') n
       line = crch
-      eachconnus: do i = 1, this%reaches(n)%nconn
+      eachconnus: do i = 1, this%nconnreach(n)
         nn = this%reaches(n)%iconn(i)
         if (this%reaches(n)%idir(i) < 0) cycle eachconnus
         write (crch2, '(i5)') nn
@@ -4286,7 +4292,7 @@ contains
           call this%parser%StoreErrorUnit()
           call ustop()
         endif
-        connreach: do ii = 1, this%reaches(nn)%nconn
+        connreach: do ii = 1, this%nconnreach(nn)
           nc = this%reaches(nn)%iconn(ii)
           if (nc == n) then
             if (this%reaches(nn)%idir(ii) > 0) then
@@ -4359,14 +4365,14 @@ contains
       f = DZERO
       write (crch, '(i5)') n
       line = crch
-      eachconn: do i = 1, this%reaches(n)%nconn
+      eachconn: do i = 1, this%nconnreach(n)
         ! -- initialize downstream connection q
         this%reaches(n)%qconn(i) = DZERO
         ! -- skip upstream connections
         if (this%reaches(n)%idir(i) > 0) cycle eachconn
         n2 = this%reaches(n)%iconn(i)
         ! -- skip inactive downstream reaches
-        if (this%reaches(n2)%iboundpak == 0) cycle eachconn
+        if (this%iboundpak(n2) == 0) cycle eachconn
         write (crch2, '(i5)') n2
         ids = ids + 1
         ladd = .true.
