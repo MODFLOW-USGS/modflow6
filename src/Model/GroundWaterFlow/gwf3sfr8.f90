@@ -58,8 +58,7 @@ module SfrModule
     type (SfrTSType), pointer :: runoff => null()
     type (SfrTSType), pointer :: sstage => null()
     ! -- dependent variables
-    !real(DP), pointer :: usflow => null()
-    real(DP), pointer :: dsflow => null()
+    !real(DP), pointer :: dsflow => null()
     real(DP), pointer :: depth => null()
     real(DP), pointer :: stage => null()
     real(DP), pointer :: gwflow => null()
@@ -128,6 +127,7 @@ module SfrModule
     real(DP), dimension(:), pointer, contiguous :: ustrf => null()
     real(DP), dimension(:), pointer, contiguous :: ftotnd => null()
     real(DP), dimension(:), pointer, contiguous :: usflow => null()
+    real(DP), dimension(:), pointer, contiguous :: dsflow => null()
     
     ! -- type bound procedures
     contains
@@ -312,6 +312,7 @@ contains
     call mem_allocate(this%ustrf, this%maxbound, 'USTRF', this%origin)
     call mem_allocate(this%ftotnd, this%maxbound, 'FTOTND', this%origin)
     call mem_allocate(this%usflow, this%maxbound, 'USFLOW', this%origin)
+    call mem_allocate(this%dsflow, this%maxbound, 'DSFLOW', this%origin)
     do i = 1, this%maxbound
       this%iboundpak(i) = 1
       this%igwfnode(i) = 0
@@ -326,6 +327,7 @@ contains
       this%ustrf(i) = DZERO
       this%ftotnd(i) = DZERO
       this%usflow(i) = DZERO
+      this%dsflow(i) = DZERO
     end do
     
     !
@@ -1623,7 +1625,7 @@ contains
       qgwf = -this%reaches(n)%gwflow
       !
       ! -- external downstream stream flow
-      qext = this%reaches(n)%dsflow
+      qext = this%dsflow(n)
       qoutflow = DZERO
       if (qext > DZERO) then
         qext = -qext
@@ -1640,7 +1642,7 @@ contains
           qext = qext - qtomvr
         end if
       else
-        qoutflow = this%reaches(n)%dsflow
+        qoutflow = this%dsflow(n)
         if (qoutflow > DZERO) then
           qoutflow = -qoutflow
         end if
@@ -1798,7 +1800,7 @@ contains
           n2 = this%reaches(n)%iconn(i)
           ! flow to downstream reaches
           if (this%reaches(n)%idir(i) < 0) then
-            qt = this%reaches(n)%dsflow
+            qt = this%dsflow(n)
             q = -this%reaches(n)%qconn(i)
           ! flow from upstream reaches
           else
@@ -1899,7 +1901,7 @@ contains
                    ibinun, naux, this%auxname, this%maxbound, 1, 1,            &
                    this%maxbound, this%iout, delt, pertim, totim)
       do n = 1, this%maxbound
-        q = this%reaches(n)%dsflow
+        q = this%dsflow(n)
         if (q > DZERO) q = -q
         do i = 1, this%nconnreach(n)
           if (this%reaches(n)%idir(i) > 0) cycle
@@ -2181,7 +2183,7 @@ contains
          if (qgwf /= DZERO) then
            qgwf = -qgwf
          end if
-         qext = this%reaches(n)%dsflow
+         qext = this%dsflow(n)
          qd = DZERO
          do i = 1, this%nconnreach(n)
            if (this%reaches(n)%idir(i) > 0) cycle
@@ -2300,6 +2302,7 @@ contains
     call mem_deallocate(this%ustrf)
     call mem_deallocate(this%ftotnd)
     call mem_deallocate(this%usflow)
+    call mem_deallocate(this%dsflow)
     !
     ! -- deallocation diversions
     do n = 1, this%maxbound
@@ -2571,7 +2574,7 @@ contains
                 v = v + this%pakmvrobj%get_qfrommvr(n)
               end if
             case ('DOWNSTREAM-FLOW')
-              v = this%reaches(n)%dsflow
+              v = this%dsflow(n)
               if (v > DZERO) then
                 v = -v
               end if
@@ -3002,7 +3005,6 @@ contains
         allocate(this%reaches(n)%auxvar(iaux)%value)
       end do
     end if
-    allocate(this%reaches(n)%dsflow)
     allocate(this%reaches(n)%depth)
     allocate(this%reaches(n)%stage)
     allocate(this%reaches(n)%gwflow)
@@ -3027,7 +3029,6 @@ contains
     do iaux = 1, this%naux
       this%reaches(n)%auxvar(iaux)%value = DZERO
     end do
-    this%reaches(n)%dsflow = DZERO
     this%reaches(n)%depth = DZERO
     this%reaches(n)%stage = DZERO
     this%reaches(n)%gwflow = DZERO
@@ -3089,7 +3090,6 @@ contains
       end do
       deallocate(this%reaches(n)%auxvar)
     end if
-    deallocate(this%reaches(n)%dsflow)
     deallocate(this%reaches(n)%depth)
     deallocate(this%reaches(n)%stage)
     deallocate(this%reaches(n)%gwflow)
@@ -3620,7 +3620,7 @@ contains
     ! -- update reach terms
     !
     ! -- save final downstream stream flow
-    this%reaches(n)%dsflow = qd
+    this%dsflow(n) = qd
     !
     ! -- save groundwater leakage
     this%reaches(n)%gwflow = qgwf
