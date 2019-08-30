@@ -46,7 +46,6 @@ module SfrModule
   ! -- Streamflow Routing derived data type
   type :: SfrDataType
     ! -- diversion data
-    integer(I4B), pointer :: ndiv => null()
     type (SfrDivType), dimension(:), pointer, contiguous :: diversion => null()
     ! -- aux data
     type (SfrTSType), dimension(:), pointer, contiguous :: auxvar => null()
@@ -117,6 +116,7 @@ module SfrModule
     integer(I4B), dimension(:), pointer, contiguous :: nconnreach => null()
     real(DP), dimension(:), pointer, contiguous :: ustrf => null()
     real(DP), dimension(:), pointer, contiguous :: ftotnd => null()
+    integer(I4B), dimension(:), pointer, contiguous :: ndiv => null()
     real(DP), dimension(:), pointer, contiguous :: usflow => null()
     real(DP), dimension(:), pointer, contiguous :: dsflow => null()
     real(DP), dimension(:), pointer, contiguous :: depth => null()
@@ -309,6 +309,7 @@ contains
     call mem_allocate(this%nconnreach, this%maxbound, 'NCONNREACH', this%origin)
     call mem_allocate(this%ustrf, this%maxbound, 'USTRF', this%origin)
     call mem_allocate(this%ftotnd, this%maxbound, 'FTOTND', this%origin)
+    call mem_allocate(this%ndiv, this%maxbound, 'NDIV', this%origin)
     call mem_allocate(this%usflow, this%maxbound, 'USFLOW', this%origin)
     call mem_allocate(this%dsflow, this%maxbound, 'DSFLOW', this%origin)
     call mem_allocate(this%depth, this%maxbound, 'DEPTH', this%origin)
@@ -331,6 +332,7 @@ contains
       this%nconnreach(i) = 0
       this%ustrf(i) = DZERO
       this%ftotnd(i) = DZERO
+      this%ndiv(i) = 0
       this%usflow(i) = DZERO
       this%dsflow(i) = DZERO
       this%depth(i) = DZERO
@@ -708,7 +710,7 @@ contains
         this%ustrf(n) = this%parser%GetDouble()
         ! -- get number of diversions for reach
         ival = this%parser%GetInteger()
-        this%reaches(n)%ndiv = ival
+        this%ndiv(n) = ival
         if (ival > 0) then
           this%idiversions = 1
           call this%allocate_diversion(n, ival)
@@ -925,13 +927,13 @@ contains
         ! -- allocate and initialize local variables for diversions
         ndiv = 0
         do n = 1, this%maxbound
-          ndiv = ndiv + this%reaches(n)%ndiv
+          ndiv = ndiv + this%ndiv(n)
         end do
         allocate(iachk(this%maxbound+1))
         allocate(nboundchk(ndiv))
         iachk(1) = 1
         do n = 1, this%maxbound
-          iachk(n+1) = iachk(n) + this%reaches(n)%ndiv
+          iachk(n+1) = iachk(n) + this%ndiv(n)
         end do
         do n = 1, ndiv
           nboundchk(n) = 0
@@ -953,7 +955,7 @@ contains
           end if
           !
           ! -- make sure reach has at least one diversion
-          if (this%reaches(n)%ndiv < 1) then
+          if (this%ndiv(n) < 1) then
             write (cnum, '(i0)') n
             errmsg = 'ERROR: diversions cannot be specified ' //                &
                      'for reach ' // trim(cnum)
@@ -963,10 +965,10 @@ contains
           !
           ! -- read diversion number
           ival = this%parser%GetInteger()
-          if (ival < 1 .or. ival > this%reaches(n)%ndiv) then
+          if (ival < 1 .or. ival > this%ndiv(n)) then
             write (cnum, '(i0)') n
             errmsg = 'ERROR: reach  ' // trim(cnum)
-            write (cnum, '(i0)') this%reaches(n)%ndiv
+            write (cnum, '(i0)') this%ndiv(n)
             errmsg = trim(errmsg) // ' diversion number should be between ' //  &
                      '1 and ' // trim(cnum) // '.'
             call store_error(errmsg)
@@ -1015,7 +1017,7 @@ contains
                                   ' DIVERSIONS'
         
         do n = 1, this%maxbound
-          do j = 1, this%reaches(n)%ndiv
+          do j = 1, this%ndiv(n)
             ipos = iachk(n) + j - 1
             !
             ! -- check for missing or duplicate reach diversions
@@ -2320,10 +2322,11 @@ contains
     !
     ! -- deallocation diversions
     do n = 1, this%maxbound
-      if (this%reaches(n)%ndiv > 0) then
+      if (this%ndiv(n) > 0) then
         call this%deallocate_diversion(n)
       endif
     enddo
+    call mem_deallocate(this%ndiv)
     !
     ! -- deallocate reaches
     do n = 1, this%maxbound
@@ -2891,7 +2894,7 @@ contains
       case ('DIVERSION')
         !
         ! -- make sure reach has at least one diversion
-        if (this%reaches(n)%ndiv < 1) then
+        if (this%ndiv(n) < 1) then
           write (cnum, '(i0)') n
           errmsg = 'ERROR: diversions cannot be specified for reach ' // trim(cnum)
           call store_error(errmsg)
@@ -2901,10 +2904,10 @@ contains
         !
         ! -- read diversion number
         call urword(line, lloc, istart, istop, 2, ival, rval, this%iout, this%inunit)
-        if (ival < 1 .or. ival > this%reaches(n)%ndiv) then
+        if (ival < 1 .or. ival > this%ndiv(n)) then
           write (cnum, '(i0)') n
           errmsg = 'ERROR: reach  ' // trim(cnum)
-          write (cnum, '(i0)') this%reaches(n)%ndiv
+          write (cnum, '(i0)') this%ndiv(n)
           errmsg = trim(errmsg) // ' diversion number should be between 1 and ' // trim(cnum) // '.'
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
@@ -2991,7 +2994,6 @@ contains
       call ustop()
     end if
     ! -- allocate pointers
-    allocate(this%reaches(n)%ndiv)
     allocate(this%reaches(n)%rough)
     allocate(this%reaches(n)%rough%name)
     allocate(this%reaches(n)%rough%value)
@@ -3062,7 +3064,6 @@ contains
     endif
     !
     ! -- deallocate pointers
-    deallocate(this%reaches(n)%ndiv)
     deallocate(this%reaches(n)%rough%name)
     deallocate(this%reaches(n)%rough%value)
     deallocate(this%reaches(n)%rough)
@@ -3154,7 +3155,7 @@ contains
     !
     ! -- make sure reach has not been allocated
     ! -- allocate pointers
-    do j = 1, this%reaches(n)%ndiv
+    do j = 1, this%ndiv(n)
       deallocate(this%reaches(n)%diversion(j)%reach)
       deallocate(this%reaches(n)%diversion(j)%cprior)
       deallocate(this%reaches(n)%diversion(j)%iprior)
@@ -4263,10 +4264,10 @@ contains
     !
     ! -- check that diversion data are correct
     do n = 1, this%maxbound
-      if (this%reaches(n)%ndiv < 1) cycle
+      if (this%ndiv(n) < 1) cycle
       write (crch, '(i5)') n
       line = '     ' // crch
-      do idiv = 1, this%reaches(n)%ndiv
+      do idiv = 1, this%ndiv(n)
         write (cdiv, '(i5)') idiv
         line = trim(line) // '     ' // cdiv
         !
@@ -4368,7 +4369,7 @@ contains
         f = f + this%ustrf(n2)
         write (cval, '(f10.4)') this%ustrf(n2)
         line = trim(line) // crch2 // cval
-        eachdiv: do idiv = 1, this%reaches(n)%ndiv
+        eachdiv: do idiv = 1, this%ndiv(n)
           if (this%reaches(n)%diversion(idiv)%reach == n2) then
             this%reaches(n)%idiv(i) = idiv
             ladd = .false.
