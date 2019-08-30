@@ -45,7 +45,7 @@ module SfrModule
   !
   ! -- Streamflow Routing derived data type
   type :: SfrDataType
-    real(DP), pointer :: ustrf => null()
+    !real(DP), pointer :: ustrf => null()
     real(DP), pointer :: ftotnd => null()
     ! -- diversion data
     integer(I4B), pointer :: ndiv => null()
@@ -127,6 +127,7 @@ module SfrModule
     real(DP), dimension(:), pointer, contiguous :: hk => null()
     real(DP), dimension(:), pointer, contiguous :: slope => null()
     integer(I4B), dimension(:), pointer, contiguous :: nconnreach => null()
+    real(DP), dimension(:), pointer, contiguous :: ustrf => null()
     
     ! -- type bound procedures
     contains
@@ -308,6 +309,7 @@ contains
     call mem_allocate(this%hk, this%maxbound, 'HK', this%origin)
     call mem_allocate(this%slope, this%maxbound, 'SLOPE', this%origin)
     call mem_allocate(this%nconnreach, this%maxbound, 'NCONNREACH', this%origin)
+    call mem_allocate(this%ustrf, this%maxbound, 'USTRF', this%origin)
     do i = 1, this%maxbound
       this%iboundpak(i) = 1
       this%igwfnode(i) = 0
@@ -319,6 +321,7 @@ contains
       this%hk(i) = DZERO
       this%slope(i) = DZERO
       this%nconnreach(i) = 0
+      this%ustrf(i) = DZERO
     end do
     
     !
@@ -684,7 +687,7 @@ contains
         rowmaxnnz(n) = ival + 1
         nja = nja + ival + 1 !add the connections and the sfr reach
         ! -- get upstream fraction for reach
-        this%reaches(n)%ustrf = this%parser%GetDouble()
+        this%ustrf(n) = this%parser%GetDouble()
         ! -- get number of diversions for reach
         ival = this%parser%GetInteger()
         this%reaches(n)%ndiv = ival
@@ -2290,6 +2293,7 @@ contains
     call mem_deallocate(this%bthick)
     call mem_deallocate(this%hk)
     call mem_deallocate(this%slope)
+    call mem_deallocate(this%ustrf)
     !
     ! -- deallocation diversions
     do n = 1, this%maxbound
@@ -2902,7 +2906,7 @@ contains
       case ('UPSTREAM_FRACTION')
         ichkustrm = 1
         call urword(line, lloc, istart, istop, 3, ival, rval, this%iout, this%inunit)
-        this%reaches(n)%ustrf = rval
+        this%ustrf(n) = rval
 
       case ('AUXILIARY')
         call urword(line, lloc, istart, istop, 1, ival, rval, this%iout, this%inunit)
@@ -2966,7 +2970,6 @@ contains
       call ustop()
     end if
     ! -- allocate pointers
-    allocate(this%reaches(n)%ustrf)
     allocate(this%reaches(n)%ftotnd)
     allocate(this%reaches(n)%ndiv)
     allocate(this%reaches(n)%rough)
@@ -3057,7 +3060,6 @@ contains
     endif
     !
     ! -- deallocate pointers
-    deallocate(this%reaches(n)%ustrf)
     deallocate(this%reaches(n)%ftotnd)
     deallocate(this%reaches(n)%ndiv)
     deallocate(this%reaches(n)%rough%name)
@@ -3651,7 +3653,7 @@ contains
         if (this%reaches(n)%idir(i) > 0) cycle
         if (this%reaches(n)%idiv(i) > 0) cycle
         n2 = this%reaches(n)%iconn(i)
-        f = this%reaches(n2)%ustrf / this%reaches(n)%ftotnd
+        f = this%ustrf(n2) / this%reaches(n)%ftotnd
         this%reaches(n)%qconn(i) = qd * f
       end do
     else
@@ -4043,7 +4045,7 @@ contains
         call store_error(ermsg)
       end if
       ! -- check reach upstream fraction
-      if (this%reaches(n)%ustrf < DZERO) then
+      if (this%ustrf(n) < DZERO) then
         ermsg = 'ERROR: Reach ' // crch // " upstream fraction must be >= 0.0"
         call store_error(ermsg)
       end if
@@ -4054,7 +4056,7 @@ contains
                this%length(n), this%width(n),                                   &
                this%slope(n), this%strtop(n),                                   &
                this%bthick(n), this%hk(n),                                      &
-               this%reaches(n)%rough%value, this%reaches(n)%ustrf
+               this%reaches(n)%rough%value, this%ustrf(n)
       end if
     end do
     if (this%iprpak /= 0) then
@@ -4376,8 +4378,8 @@ contains
         write (crch2, '(i5)') n2
         ids = ids + 1
         ladd = .true.
-        f = f + this%reaches(n2)%ustrf
-        write (cval, '(f10.4)') this%reaches(n2)%ustrf
+        f = f + this%ustrf(n2)
+        write (cval, '(f10.4)') this%ustrf(n2)
         line = trim(line) // crch2 // cval
         eachdiv: do idiv = 1, this%reaches(n)%ndiv
           if (this%reaches(n)%diversion(idiv)%reach == n2) then
@@ -4387,7 +4389,7 @@ contains
           end if
         end do eachdiv
         if (ladd) then
-          rval = rval + this%reaches(n2)%ustrf
+          rval = rval + this%ustrf(n2)
         end if
       end do eachconn
       this%reaches(n)%ftotnd = rval
