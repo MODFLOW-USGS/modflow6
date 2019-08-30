@@ -58,8 +58,7 @@ module SfrModule
     type (SfrTSType), pointer :: runoff => null()
     type (SfrTSType), pointer :: sstage => null()
     ! -- dependent variables
-    !real(DP), pointer :: dsflow => null()
-    real(DP), pointer :: depth => null()
+    !real(DP), pointer :: depth => null()
     real(DP), pointer :: stage => null()
     real(DP), pointer :: gwflow => null()
     real(DP), pointer :: simevap => null()
@@ -128,6 +127,7 @@ module SfrModule
     real(DP), dimension(:), pointer, contiguous :: ftotnd => null()
     real(DP), dimension(:), pointer, contiguous :: usflow => null()
     real(DP), dimension(:), pointer, contiguous :: dsflow => null()
+    real(DP), dimension(:), pointer, contiguous :: depth => null()
     
     ! -- type bound procedures
     contains
@@ -313,6 +313,7 @@ contains
     call mem_allocate(this%ftotnd, this%maxbound, 'FTOTND', this%origin)
     call mem_allocate(this%usflow, this%maxbound, 'USFLOW', this%origin)
     call mem_allocate(this%dsflow, this%maxbound, 'DSFLOW', this%origin)
+    call mem_allocate(this%depth, this%maxbound, 'DEPTH', this%origin)
     do i = 1, this%maxbound
       this%iboundpak(i) = 1
       this%igwfnode(i) = 0
@@ -328,6 +329,7 @@ contains
       this%ftotnd(i) = DZERO
       this%usflow(i) = DZERO
       this%dsflow(i) = DZERO
+      this%depth(i) = DZERO
     end do
     
     !
@@ -1364,7 +1366,7 @@ contains
       if (this%iboundpak(n) /= 0) then
         call this%sfr_solve(n, hgwf, hhcof, rrhs)
       else
-        this%reaches(n)%depth = DZERO
+        this%depth(n) = DZERO
         this%reaches(n)%stage = this%strtop(n)
         v = DZERO
         call this%sfr_update_flows(n, v, v)
@@ -1599,7 +1601,7 @@ contains
     do n = 1, this%maxbound
       !
       ! -- rainfall and evaporation
-      depth = this%reaches(n)%depth
+      depth = this%depth(n)
       a = this%geo(n)%surface_area()
       ae = this%geo(n)%surface_area_wet(depth)
       qr = this%reaches(n)%rain%value * a
@@ -1766,7 +1768,7 @@ contains
     ! -- write sfr binary output
     if (ibinun > 0) then
       do n = 1, this%maxbound
-        d = this%reaches(n)%depth
+        d = this%depth(n)
         v = this%reaches(n)%stage
         if (this%iboundpak(n) < 1) then
           v = DHNOFLO
@@ -2072,7 +2074,7 @@ contains
         end if
         call UWWORD(line, iloc, 6, 2, text, n, q, sep=' ')
         call UWWORD(line, iloc, 20, 1, cellid, n, q, left=.TRUE.)
-        depth = this%reaches(n)%depth
+        depth = this%depth(n)
         stage = this%reaches(n)%stage
         w = this%geo(n)%top_width_wet(depth)
         call UWWORD(line, iloc, 11, 3, text, n, stage)
@@ -2159,7 +2161,7 @@ contains
        write(iout,'(1X,A)') linesep(1:iloc)
        ! -- write data
        do n = 1, this%maxbound
-         depth = this%reaches(n)%depth
+         depth = this%depth(n)
          stage = this%reaches(n)%stage
          node = this%igwfnode(n)
          if (node > 0) then
@@ -2303,6 +2305,7 @@ contains
     call mem_deallocate(this%ftotnd)
     call mem_deallocate(this%usflow)
     call mem_deallocate(this%dsflow)
+    call mem_deallocate(this%depth)
     !
     ! -- deallocation diversions
     do n = 1, this%maxbound
@@ -3005,7 +3008,6 @@ contains
         allocate(this%reaches(n)%auxvar(iaux)%value)
       end do
     end if
-    allocate(this%reaches(n)%depth)
     allocate(this%reaches(n)%stage)
     allocate(this%reaches(n)%gwflow)
     allocate(this%reaches(n)%simevap)
@@ -3029,7 +3031,6 @@ contains
     do iaux = 1, this%naux
       this%reaches(n)%auxvar(iaux)%value = DZERO
     end do
-    this%reaches(n)%depth = DZERO
     this%reaches(n)%stage = DZERO
     this%reaches(n)%gwflow = DZERO
     this%reaches(n)%simevap = DZERO
@@ -3090,7 +3091,6 @@ contains
       end do
       deallocate(this%reaches(n)%auxvar)
     end if
-    deallocate(this%reaches(n)%depth)
     deallocate(this%reaches(n)%stage)
     deallocate(this%reaches(n)%gwflow)
     deallocate(this%reaches(n)%simevap)
@@ -3550,7 +3550,7 @@ contains
     if (lupdate) then
       !
       ! -- save depth and calculate stage
-      this%reaches(n)%depth = d1
+      this%depth(n) = d1
       this%reaches(n)%stage = hsfr
       !
       call this%sfr_update_flows(n, qd, qgwf)
