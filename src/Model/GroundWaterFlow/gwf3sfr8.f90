@@ -57,9 +57,6 @@ module SfrModule
     type (SfrTSType), pointer :: inflow => null()
     type (SfrTSType), pointer :: runoff => null()
     type (SfrTSType), pointer :: sstage => null()
-    ! -- dependent variables
-    !real(DP), pointer :: stage0 => null()
-    real(DP), pointer :: usflow0 => null()
     ! -- arrays of data for reach
     integer(I4B), dimension(:), pointer, contiguous :: iconn => null()
     integer(I4B), dimension(:), pointer, contiguous :: idir => null()
@@ -128,6 +125,7 @@ module SfrModule
     real(DP), dimension(:), pointer, contiguous :: simevap => null()
     real(DP), dimension(:), pointer, contiguous :: simrunoff => null()
     real(DP), dimension(:), pointer, contiguous :: stage0 => null()
+    real(DP), dimension(:), pointer, contiguous :: usflow0 => null()
     
     ! -- type bound procedures
     contains
@@ -319,6 +317,7 @@ contains
     call mem_allocate(this%simevap, this%maxbound, 'SIMEVAP', this%origin)
     call mem_allocate(this%simrunoff, this%maxbound, 'SIMRUNOFF', this%origin)
     call mem_allocate(this%stage0, this%maxbound, 'STAGE0', this%origin)
+    call mem_allocate(this%usflow0, this%maxbound, 'USFLOW0', this%origin)
     do i = 1, this%maxbound
       this%iboundpak(i) = 1
       this%igwfnode(i) = 0
@@ -340,6 +339,7 @@ contains
       this%simevap(i) = DZERO
       this%simrunoff(i) = DZERO
       this%stage0(i) = DZERO
+      this%usflow0(i) = DZERO
     end do
     
     !
@@ -1370,7 +1370,7 @@ contains
       !
       ! -- save previous stage and upstream flow
       this%stage0(n) = this%stage(n)
-      this%reaches(n)%usflow0 = this%usflow(n)
+      this%usflow0(n) = this%usflow(n)
       !
       ! -- solve for flow in swr
       if (this%iboundpak(n) /= 0) then
@@ -1487,7 +1487,7 @@ contains
       final_check: do n = 1, this%maxbound
         if (this%iboundpak(n) == 0) cycle
         dh = this%stage0(n) - this%stage(n)
-        r = this%reaches(n)%usflow0 - this%usflow(n)
+        r = this%usflow0(n) - this%usflow(n)
         if (ABS(dh) > hclose .or. ABS(r) > rclose) then
           icnvg = 0
           ! write convergence check information if this is the last outer iteration
@@ -2316,6 +2316,7 @@ contains
     call mem_deallocate(this%simevap)
     call mem_deallocate(this%simrunoff)
     call mem_deallocate(this%stage0)
+    call mem_deallocate(this%usflow0)
     !
     ! -- deallocation diversions
     do n = 1, this%maxbound
@@ -3016,7 +3017,6 @@ contains
         allocate(this%reaches(n)%auxvar(iaux)%value)
       end do
     end if
-    allocate(this%reaches(n)%usflow0)
     !
     ! -- initialize a few items
     this%reaches(n)%rough%name = ''
@@ -3034,7 +3034,6 @@ contains
     do iaux = 1, this%naux
       this%reaches(n)%auxvar(iaux)%value = DZERO
     end do
-    this%reaches(n)%usflow0 = DZERO
     !
     ! -- return
     return
@@ -3089,7 +3088,6 @@ contains
       end do
       deallocate(this%reaches(n)%auxvar)
     end if
-    deallocate(this%reaches(n)%usflow0)
     !
     ! -- return
     return
