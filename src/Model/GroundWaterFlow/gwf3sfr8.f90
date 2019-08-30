@@ -45,7 +45,6 @@ module SfrModule
   !
   ! -- Streamflow Routing derived data type
   type :: SfrDataType
-    !real(DP), pointer :: ftotnd => null()
     ! -- diversion data
     integer(I4B), pointer :: ndiv => null()
     type (SfrDivType), dimension(:), pointer, contiguous :: diversion => null()
@@ -59,7 +58,7 @@ module SfrModule
     type (SfrTSType), pointer :: runoff => null()
     type (SfrTSType), pointer :: sstage => null()
     ! -- dependent variables
-    real(DP), pointer :: usflow => null()
+    !real(DP), pointer :: usflow => null()
     real(DP), pointer :: dsflow => null()
     real(DP), pointer :: depth => null()
     real(DP), pointer :: stage => null()
@@ -128,6 +127,7 @@ module SfrModule
     integer(I4B), dimension(:), pointer, contiguous :: nconnreach => null()
     real(DP), dimension(:), pointer, contiguous :: ustrf => null()
     real(DP), dimension(:), pointer, contiguous :: ftotnd => null()
+    real(DP), dimension(:), pointer, contiguous :: usflow => null()
     
     ! -- type bound procedures
     contains
@@ -311,6 +311,7 @@ contains
     call mem_allocate(this%nconnreach, this%maxbound, 'NCONNREACH', this%origin)
     call mem_allocate(this%ustrf, this%maxbound, 'USTRF', this%origin)
     call mem_allocate(this%ftotnd, this%maxbound, 'FTOTND', this%origin)
+    call mem_allocate(this%usflow, this%maxbound, 'USFLOW', this%origin)
     do i = 1, this%maxbound
       this%iboundpak(i) = 1
       this%igwfnode(i) = 0
@@ -324,6 +325,7 @@ contains
       this%nconnreach(i) = 0
       this%ustrf(i) = DZERO
       this%ftotnd(i) = DZERO
+      this%usflow(i) = DZERO
     end do
     
     !
@@ -1254,7 +1256,7 @@ contains
     !
     ! -- reset upstream flow to zero and set specified stage
     do n = 1, this%maxbound
-      this%reaches(n)%usflow = DZERO
+      this%usflow(n) = DZERO
       if (this%iboundpak(n) < 0) then
         this%reaches(n)%stage = this%reaches(n)%sstage%value
       end if
@@ -1354,7 +1356,7 @@ contains
       !
       ! -- save previous stage and upstream flow
       this%reaches(n)%stage0 = this%reaches(n)%stage
-      this%reaches(n)%usflow0 = this%reaches(n)%usflow
+      this%reaches(n)%usflow0 = this%usflow(n)
       !
       ! -- solve for flow in swr
       if (this%iboundpak(n) /= 0) then
@@ -1471,7 +1473,7 @@ contains
       final_check: do n = 1, this%maxbound
         if (this%iboundpak(n) == 0) cycle
         dh = this%reaches(n)%stage0 - this%reaches(n)%stage
-        r = this%reaches(n)%usflow0 - this%reaches(n)%usflow
+        r = this%reaches(n)%usflow0 - this%usflow(n)
         if (ABS(dh) > hclose .or. ABS(r) > rclose) then
           icnvg = 0
           ! write convergence check information if this is the last outer iteration
@@ -1800,7 +1802,7 @@ contains
             q = -this%reaches(n)%qconn(i)
           ! flow from upstream reaches
           else
-            qt = this%reaches(n)%usflow
+            qt = this%usflow(n)
             do ii = 1, this%nconnreach(n2)
               if (this%reaches(n2)%idir(ii) > 0) cycle
               if (this%reaches(n2)%iconn(ii) /= n) cycle
@@ -2165,7 +2167,7 @@ contains
          end if
          a = this%geo(n)%surface_area()
          ae = this%geo(n)%surface_area_wet(depth)
-         qu = this%reaches(n)%usflow
+         qu = this%usflow(n)
          qr = this%reaches(n)%rain%value * a
          qi =  this%reaches(n)%inflow%value
          !qro = this%reaches(n)%runoff%value
@@ -2297,6 +2299,7 @@ contains
     call mem_deallocate(this%slope)
     call mem_deallocate(this%ustrf)
     call mem_deallocate(this%ftotnd)
+    call mem_deallocate(this%usflow)
     !
     ! -- deallocation diversions
     do n = 1, this%maxbound
@@ -2547,7 +2550,7 @@ contains
             case ('EXT-INFLOW')
               v = this%reaches(n)%inflow%value
             case ('INFLOW')
-              v = this%reaches(n)%usflow
+              v = this%usflow(n)
             case ('OUTFLOW')
               v = this%qoutflow(n)
             case ('EXT-OUTFLOW')
@@ -2563,7 +2566,7 @@ contains
             case ('SFR')
               v = this%reaches(n)%gwflow
             case ('UPSTREAM-FLOW')
-              v = this%reaches(n)%usflow
+              v = this%usflow(n)
               if (this%imover == 1) then
                 v = v + this%pakmvrobj%get_qfrommvr(n)
               end if
@@ -2999,7 +3002,6 @@ contains
         allocate(this%reaches(n)%auxvar(iaux)%value)
       end do
     end if
-    allocate(this%reaches(n)%usflow)
     allocate(this%reaches(n)%dsflow)
     allocate(this%reaches(n)%depth)
     allocate(this%reaches(n)%stage)
@@ -3025,7 +3027,6 @@ contains
     do iaux = 1, this%naux
       this%reaches(n)%auxvar(iaux)%value = DZERO
     end do
-    this%reaches(n)%usflow = DZERO
     this%reaches(n)%dsflow = DZERO
     this%reaches(n)%depth = DZERO
     this%reaches(n)%stage = DZERO
@@ -3088,7 +3089,6 @@ contains
       end do
       deallocate(this%reaches(n)%auxvar)
     end if
-    deallocate(this%reaches(n)%usflow)
     deallocate(this%reaches(n)%dsflow)
     deallocate(this%reaches(n)%depth)
     deallocate(this%reaches(n)%stage)
@@ -3257,8 +3257,7 @@ contains
         qu = qu + this%reaches(n2)%qconn(ii)
       end do
     end do
-    !qu = this%reaches(n)%usflow
-    this%reaches(n)%usflow = qu
+    this%usflow(n) = qu
     ! -- calculate remaining terms
     qi = this%reaches(n)%inflow%value
     qr = this%reaches(n)%rain%value * this%width(n) * this%length(n)
@@ -3549,10 +3548,6 @@ contains
 
     ! -- update stored values
     if (lupdate) then
-      !!
-      !! -- save previous stage and upstream flow
-      !this%reaches(n)%stage0 = this%reaches(n)%stage
-      !this%reaches(n)%usflow0 = this%reaches(n)%usflow
       !
       ! -- save depth and calculate stage
       this%reaches(n)%depth = d1
@@ -3727,7 +3722,7 @@ contains
     qsrc = DZERO
     !
     ! -- calculate flow terms
-    qu = this%reaches(n)%usflow
+    qu = this%usflow(n)
     qi = this%reaches(n)%inflow%value
     qro = this%reaches(n)%runoff%value
     !
