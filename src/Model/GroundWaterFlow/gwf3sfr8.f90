@@ -58,9 +58,7 @@ module SfrModule
     type (SfrTSType), pointer :: runoff => null()
     type (SfrTSType), pointer :: sstage => null()
     ! -- dependent variables
-    !real(DP), pointer :: depth => null()
-    real(DP), pointer :: stage => null()
-    real(DP), pointer :: gwflow => null()
+    !real(DP), pointer :: gwflow => null()
     real(DP), pointer :: simevap => null()
     real(DP), pointer :: simrunoff => null()
     real(DP), pointer :: stage0 => null()
@@ -128,6 +126,8 @@ module SfrModule
     real(DP), dimension(:), pointer, contiguous :: usflow => null()
     real(DP), dimension(:), pointer, contiguous :: dsflow => null()
     real(DP), dimension(:), pointer, contiguous :: depth => null()
+    real(DP), dimension(:), pointer, contiguous :: stage => null()
+    real(DP), dimension(:), pointer, contiguous :: gwflow => null()
     
     ! -- type bound procedures
     contains
@@ -314,6 +314,8 @@ contains
     call mem_allocate(this%usflow, this%maxbound, 'USFLOW', this%origin)
     call mem_allocate(this%dsflow, this%maxbound, 'DSFLOW', this%origin)
     call mem_allocate(this%depth, this%maxbound, 'DEPTH', this%origin)
+    call mem_allocate(this%stage, this%maxbound, 'STAGE', this%origin)
+    call mem_allocate(this%gwflow, this%maxbound, 'GWFLOW', this%origin)
     do i = 1, this%maxbound
       this%iboundpak(i) = 1
       this%igwfnode(i) = 0
@@ -330,6 +332,8 @@ contains
       this%usflow(i) = DZERO
       this%dsflow(i) = DZERO
       this%depth(i) = DZERO
+      this%stage(i) = DZERO
+      this%gwflow(i) = DZERO
     end do
     
     !
@@ -1262,7 +1266,7 @@ contains
     do n = 1, this%maxbound
       this%usflow(n) = DZERO
       if (this%iboundpak(n) < 0) then
-        this%reaches(n)%stage = this%reaches(n)%sstage%value
+        this%stage(n) = this%reaches(n)%sstage%value
       end if
     end do
     !
@@ -1359,7 +1363,7 @@ contains
       end if
       !
       ! -- save previous stage and upstream flow
-      this%reaches(n)%stage0 = this%reaches(n)%stage
+      this%reaches(n)%stage0 = this%stage(n)
       this%reaches(n)%usflow0 = this%usflow(n)
       !
       ! -- solve for flow in swr
@@ -1367,7 +1371,7 @@ contains
         call this%sfr_solve(n, hgwf, hhcof, rrhs)
       else
         this%depth(n) = DZERO
-        this%reaches(n)%stage = this%strtop(n)
+        this%stage(n) = this%strtop(n)
         v = DZERO
         call this%sfr_update_flows(n, v, v)
         hhcof = DZERO
@@ -1476,7 +1480,7 @@ contains
     if (this%iconvchk /= 0) then
       final_check: do n = 1, this%maxbound
         if (this%iboundpak(n) == 0) cycle
-        dh = this%reaches(n)%stage0 - this%reaches(n)%stage
+        dh = this%reaches(n)%stage0 - this%stage(n)
         r = this%reaches(n)%usflow0 - this%usflow(n)
         if (ABS(dh) > hclose .or. ABS(r) > rclose) then
           icnvg = 0
@@ -1624,7 +1628,7 @@ contains
       endif
       !
       ! -- groundwater leakage
-      qgwf = -this%reaches(n)%gwflow
+      qgwf = -this%gwflow(n)
       !
       ! -- external downstream stream flow
       qext = this%dsflow(n)
@@ -1769,7 +1773,7 @@ contains
     if (ibinun > 0) then
       do n = 1, this%maxbound
         d = this%depth(n)
-        v = this%reaches(n)%stage
+        v = this%stage(n)
         if (this%iboundpak(n) < 1) then
           v = DHNOFLO
         else if (d == DZERO) then
@@ -1835,7 +1839,7 @@ contains
         this%qauxcbc(1) = this%width(n) * this%length(n)
         ! -- get leakage
         n2 = this%igwfnode(n)
-        q = -this%reaches(n)%gwflow
+        q = -this%gwflow(n)
         call this%dis%record_mf6_list_entry(ibinun, n, n2, q, naux,        &
                                                 this%qauxcbc,                  &
                                                 olconv=.FALSE.)
@@ -2075,7 +2079,7 @@ contains
         call UWWORD(line, iloc, 6, 2, text, n, q, sep=' ')
         call UWWORD(line, iloc, 20, 1, cellid, n, q, left=.TRUE.)
         depth = this%depth(n)
-        stage = this%reaches(n)%stage
+        stage = this%stage(n)
         w = this%geo(n)%top_width_wet(depth)
         call UWWORD(line, iloc, 11, 3, text, n, stage)
         call UWWORD(line, iloc, 11, 3, text, n, depth)
@@ -2162,7 +2166,7 @@ contains
        ! -- write data
        do n = 1, this%maxbound
          depth = this%depth(n)
-         stage = this%reaches(n)%stage
+         stage = this%stage(n)
          node = this%igwfnode(n)
          if (node > 0) then
            call this%dis%noder_to_string(node, cellid)
@@ -2181,7 +2185,7 @@ contains
          if (qe > DZERO) then
            qe = -qe
          end if
-         qgwf = this%reaches(n)%gwflow
+         qgwf = this%gwflow(n)
          if (qgwf /= DZERO) then
            qgwf = -qgwf
          end if
@@ -2306,6 +2310,8 @@ contains
     call mem_deallocate(this%usflow)
     call mem_deallocate(this%dsflow)
     call mem_deallocate(this%depth)
+    call mem_deallocate(this%stage)
+    call mem_deallocate(this%gwflow)
     !
     ! -- deallocation diversions
     do n = 1, this%maxbound
@@ -2539,7 +2545,7 @@ contains
           v = DZERO
           select case (obsrv%ObsTypeId)
             case ('STAGE')
-              v = this%reaches(n)%stage
+              v = this%stage(n)
             case ('TO-MVR')
               v = DNODATA
               if (this%imover == 1) then
@@ -2570,7 +2576,7 @@ contains
               !v = this%reaches(n)%evap%value
               v = this%reaches(n)%simevap
             case ('SFR')
-              v = this%reaches(n)%gwflow
+              v = this%gwflow(n)
             case ('UPSTREAM-FLOW')
               v = this%usflow(n)
               if (this%imover == 1) then
@@ -3008,8 +3014,6 @@ contains
         allocate(this%reaches(n)%auxvar(iaux)%value)
       end do
     end if
-    allocate(this%reaches(n)%stage)
-    allocate(this%reaches(n)%gwflow)
     allocate(this%reaches(n)%simevap)
     allocate(this%reaches(n)%simrunoff)
     allocate(this%reaches(n)%stage0)
@@ -3031,8 +3035,6 @@ contains
     do iaux = 1, this%naux
       this%reaches(n)%auxvar(iaux)%value = DZERO
     end do
-    this%reaches(n)%stage = DZERO
-    this%reaches(n)%gwflow = DZERO
     this%reaches(n)%simevap = DZERO
     this%reaches(n)%simrunoff = DZERO
     this%reaches(n)%stage0 = DZERO
@@ -3091,8 +3093,6 @@ contains
       end do
       deallocate(this%reaches(n)%auxvar)
     end if
-    deallocate(this%reaches(n)%stage)
-    deallocate(this%reaches(n)%gwflow)
     deallocate(this%reaches(n)%simevap)
     deallocate(this%reaches(n)%simrunoff)
     deallocate(this%reaches(n)%stage0)
@@ -3303,8 +3303,8 @@ contains
     if (this%iboundpak(n) > 0) then
       call this%sfr_rectch_depth(n, qmp, d1)
     else
-      this%reaches(n)%stage = this%reaches(n)%sstage%value
-      d1 = max(DZERO, this%reaches(n)%stage - this%strtop(n))
+      this%stage(n) = this%reaches(n)%sstage%value
+      d1 = max(DZERO, this%stage(n) - this%strtop(n))
     end if
     !
     ! -- calculate sources/sinks for reach excluding groundwater leakage
@@ -3551,7 +3551,7 @@ contains
       !
       ! -- save depth and calculate stage
       this%depth(n) = d1
-      this%reaches(n)%stage = hsfr
+      this%stage(n) = hsfr
       !
       call this%sfr_update_flows(n, qd, qgwf)
     end if
@@ -3623,7 +3623,7 @@ contains
     this%dsflow(n) = qd
     !
     ! -- save groundwater leakage
-    this%reaches(n)%gwflow = qgwf
+    this%gwflow(n) = qgwf
     !
     ! -- route downstream flow
     if (qd > DZERO) then
