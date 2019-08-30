@@ -58,8 +58,7 @@ module SfrModule
     type (SfrTSType), pointer :: runoff => null()
     type (SfrTSType), pointer :: sstage => null()
     ! -- dependent variables
-    !real(DP), pointer :: simrunoff => null()
-    real(DP), pointer :: stage0 => null()
+    !real(DP), pointer :: stage0 => null()
     real(DP), pointer :: usflow0 => null()
     ! -- arrays of data for reach
     integer(I4B), dimension(:), pointer, contiguous :: iconn => null()
@@ -128,6 +127,7 @@ module SfrModule
     real(DP), dimension(:), pointer, contiguous :: gwflow => null()
     real(DP), dimension(:), pointer, contiguous :: simevap => null()
     real(DP), dimension(:), pointer, contiguous :: simrunoff => null()
+    real(DP), dimension(:), pointer, contiguous :: stage0 => null()
     
     ! -- type bound procedures
     contains
@@ -318,6 +318,7 @@ contains
     call mem_allocate(this%gwflow, this%maxbound, 'GWFLOW', this%origin)
     call mem_allocate(this%simevap, this%maxbound, 'SIMEVAP', this%origin)
     call mem_allocate(this%simrunoff, this%maxbound, 'SIMRUNOFF', this%origin)
+    call mem_allocate(this%stage0, this%maxbound, 'STAGE0', this%origin)
     do i = 1, this%maxbound
       this%iboundpak(i) = 1
       this%igwfnode(i) = 0
@@ -338,6 +339,7 @@ contains
       this%gwflow(i) = DZERO
       this%simevap(i) = DZERO
       this%simrunoff(i) = DZERO
+      this%stage0(i) = DZERO
     end do
     
     !
@@ -1367,7 +1369,7 @@ contains
       end if
       !
       ! -- save previous stage and upstream flow
-      this%reaches(n)%stage0 = this%stage(n)
+      this%stage0(n) = this%stage(n)
       this%reaches(n)%usflow0 = this%usflow(n)
       !
       ! -- solve for flow in swr
@@ -1484,7 +1486,7 @@ contains
     if (this%iconvchk /= 0) then
       final_check: do n = 1, this%maxbound
         if (this%iboundpak(n) == 0) cycle
-        dh = this%reaches(n)%stage0 - this%stage(n)
+        dh = this%stage0(n) - this%stage(n)
         r = this%reaches(n)%usflow0 - this%usflow(n)
         if (ABS(dh) > hclose .or. ABS(r) > rclose) then
           icnvg = 0
@@ -2313,6 +2315,7 @@ contains
     call mem_deallocate(this%gwflow)
     call mem_deallocate(this%simevap)
     call mem_deallocate(this%simrunoff)
+    call mem_deallocate(this%stage0)
     !
     ! -- deallocation diversions
     do n = 1, this%maxbound
@@ -3013,7 +3016,6 @@ contains
         allocate(this%reaches(n)%auxvar(iaux)%value)
       end do
     end if
-    allocate(this%reaches(n)%stage0)
     allocate(this%reaches(n)%usflow0)
     !
     ! -- initialize a few items
@@ -3032,7 +3034,6 @@ contains
     do iaux = 1, this%naux
       this%reaches(n)%auxvar(iaux)%value = DZERO
     end do
-    this%reaches(n)%stage0 = DZERO
     this%reaches(n)%usflow0 = DZERO
     !
     ! -- return
@@ -3088,7 +3089,6 @@ contains
       end do
       deallocate(this%reaches(n)%auxvar)
     end if
-    deallocate(this%reaches(n)%stage0)
     deallocate(this%reaches(n)%usflow0)
     !
     ! -- return
