@@ -695,6 +695,7 @@ contains
     ! -- Initialize value
     !
     this%ivkd = 0
+    this%iprpak = 0
     !
     ! -- Return
     return
