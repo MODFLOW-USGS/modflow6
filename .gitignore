@@ -60,6 +60,7 @@ bin/mf5to6
 bin/zbud6
 
 make/makefile
+make/*.gcno
 
 tmp_simulations/
 autotest/temp/
