@@ -58,8 +58,7 @@ module SfrModule
     type (SfrTSType), pointer :: runoff => null()
     type (SfrTSType), pointer :: sstage => null()
     ! -- dependent variables
-    !real(DP), pointer :: simevap => null()
-    real(DP), pointer :: simrunoff => null()
+    !real(DP), pointer :: simrunoff => null()
     real(DP), pointer :: stage0 => null()
     real(DP), pointer :: usflow0 => null()
     ! -- arrays of data for reach
@@ -128,6 +127,7 @@ module SfrModule
     real(DP), dimension(:), pointer, contiguous :: stage => null()
     real(DP), dimension(:), pointer, contiguous :: gwflow => null()
     real(DP), dimension(:), pointer, contiguous :: simevap => null()
+    real(DP), dimension(:), pointer, contiguous :: simrunoff => null()
     
     ! -- type bound procedures
     contains
@@ -317,6 +317,7 @@ contains
     call mem_allocate(this%stage, this%maxbound, 'STAGE', this%origin)
     call mem_allocate(this%gwflow, this%maxbound, 'GWFLOW', this%origin)
     call mem_allocate(this%simevap, this%maxbound, 'SIMEVAP', this%origin)
+    call mem_allocate(this%simrunoff, this%maxbound, 'SIMRUNOFF', this%origin)
     do i = 1, this%maxbound
       this%iboundpak(i) = 1
       this%igwfnode(i) = 0
@@ -336,6 +337,7 @@ contains
       this%stage(i) = DZERO
       this%gwflow(i) = DZERO
       this%simevap(i) = DZERO
+      this%simrunoff(i) = DZERO
     end do
     
     !
@@ -1879,8 +1881,7 @@ contains
                    ibinun, naux, this%auxname, this%maxbound, 1, 1,            &
                    this%maxbound, this%iout, delt, pertim, totim)
       do n = 1, this%maxbound
-        !q = this%reaches(n)%runoff%value
-        q = this%reaches(n)%simrunoff
+        q = this%simrunoff(n)
         call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,         &
                                                 this%auxvar(:,n),              &
                                                 olconv=.FALSE.,                &
@@ -2178,7 +2179,7 @@ contains
          qu = this%usflow(n)
          qr = this%reaches(n)%rain%value * a
          qi =  this%reaches(n)%inflow%value
-         qro = this%reaches(n)%simrunoff
+         qro = this%simrunoff(n)
          qe = this%simevap(n)
          if (qe > DZERO) then
            qe = -qe
@@ -2311,6 +2312,7 @@ contains
     call mem_deallocate(this%stage)
     call mem_deallocate(this%gwflow)
     call mem_deallocate(this%simevap)
+    call mem_deallocate(this%simrunoff)
     !
     ! -- deallocation diversions
     do n = 1, this%maxbound
@@ -2569,8 +2571,7 @@ contains
             case ('RAINFALL')
               v = this%reaches(n)%rain%value
             case ('RUNOFF')
-              !v = this%reaches(n)%runoff%value
-              v = this%reaches(n)%simrunoff
+              v = this%simrunoff(n)
             case ('EVAPORATION')
               v = this%simevap(n)
             case ('SFR')
@@ -3012,7 +3013,6 @@ contains
         allocate(this%reaches(n)%auxvar(iaux)%value)
       end do
     end if
-    allocate(this%reaches(n)%simrunoff)
     allocate(this%reaches(n)%stage0)
     allocate(this%reaches(n)%usflow0)
     !
@@ -3032,7 +3032,6 @@ contains
     do iaux = 1, this%naux
       this%reaches(n)%auxvar(iaux)%value = DZERO
     end do
-    this%reaches(n)%simrunoff = DZERO
     this%reaches(n)%stage0 = DZERO
     this%reaches(n)%usflow0 = DZERO
     !
@@ -3089,7 +3088,6 @@ contains
       end do
       deallocate(this%reaches(n)%auxvar)
     end if
-    deallocate(this%reaches(n)%simrunoff)
     deallocate(this%reaches(n)%stage0)
     deallocate(this%reaches(n)%usflow0)
     !
@@ -3288,7 +3286,7 @@ contains
     !
     ! -- set simulated evaporation and runoff
     this%simevap(n) = qe
-    this%reaches(n)%simrunoff = qro
+    this%simrunoff(n) = qro
     !
     ! -- calculate flow at the middle of the reach and excluding groundwater leakage
     qmp = qu + qi + qfrommvr + DHALF * (qr - qe + qro)
