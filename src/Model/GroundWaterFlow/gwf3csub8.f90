@@ -3123,6 +3123,10 @@ contains
     real(DP) :: gs
     real(DP) :: top
     real(DP) :: bot
+    real(DP) :: thick
+    real(DP) :: snnew
+    real(DP) :: dmn
+    real(DP) :: dsn
     real(DP) :: va_scale
     real(DP) :: hcell
     real(DP) :: gs_conn
@@ -3144,20 +3148,23 @@ contains
         !    for the cell
         top = this%dis%top(node)
         bot = this%dis%bot(node)
+        thick = top - bot
         if (this%ibound(node) /= 0) then
           hcell = hnew(node)
         else
           hcell = bot
         end if
-        gs = DZERO
-        if (hcell >= top) then
-            gs = (top - bot) * this%sgs(node)
-        else if (hcell <= bot) then
-            gs = (top - bot) * this%sgm(node)
-        else
-            gs = ((top - hcell) * this%sgm(node)) +                             &
-                  ((hcell - bot) * this%sgs(node))
-        end if
+        !
+        ! -- calculate cell saturation
+        snnew = sQuadraticSaturation(top, bot, hcell, this%satomega)
+        !
+        ! -- calulate thickness of moist/unsaturated sediments
+        !    and saturated sediments
+        dsn = snnew * thick
+        dmn = (DONE - snnew) * thick
+        !
+        ! -- calculate the cell contribution to geostatic stress
+        gs = dsn * this%sgs(node) + dmn * this%sgm(node)
         this%sk_gs(node) = gs
       end do
       !
