@@ -45,8 +45,7 @@ module SfrModule
   !
   ! -- Streamflow Routing derived data type
   type :: SfrDataType
-    !real(DP), pointer :: ustrf => null()
-    real(DP), pointer :: ftotnd => null()
+    !real(DP), pointer :: ftotnd => null()
     ! -- diversion data
     integer(I4B), pointer :: ndiv => null()
     type (SfrDivType), dimension(:), pointer, contiguous :: diversion => null()
@@ -128,6 +127,7 @@ module SfrModule
     real(DP), dimension(:), pointer, contiguous :: slope => null()
     integer(I4B), dimension(:), pointer, contiguous :: nconnreach => null()
     real(DP), dimension(:), pointer, contiguous :: ustrf => null()
+    real(DP), dimension(:), pointer, contiguous :: ftotnd => null()
     
     ! -- type bound procedures
     contains
@@ -310,6 +310,7 @@ contains
     call mem_allocate(this%slope, this%maxbound, 'SLOPE', this%origin)
     call mem_allocate(this%nconnreach, this%maxbound, 'NCONNREACH', this%origin)
     call mem_allocate(this%ustrf, this%maxbound, 'USTRF', this%origin)
+    call mem_allocate(this%ftotnd, this%maxbound, 'FTOTND', this%origin)
     do i = 1, this%maxbound
       this%iboundpak(i) = 1
       this%igwfnode(i) = 0
@@ -322,6 +323,7 @@ contains
       this%slope(i) = DZERO
       this%nconnreach(i) = 0
       this%ustrf(i) = DZERO
+      this%ftotnd(i) = DZERO
     end do
     
     !
@@ -2294,6 +2296,7 @@ contains
     call mem_deallocate(this%hk)
     call mem_deallocate(this%slope)
     call mem_deallocate(this%ustrf)
+    call mem_deallocate(this%ftotnd)
     !
     ! -- deallocation diversions
     do n = 1, this%maxbound
@@ -2970,7 +2973,6 @@ contains
       call ustop()
     end if
     ! -- allocate pointers
-    allocate(this%reaches(n)%ftotnd)
     allocate(this%reaches(n)%ndiv)
     allocate(this%reaches(n)%rough)
     allocate(this%reaches(n)%rough%name)
@@ -3060,7 +3062,6 @@ contains
     endif
     !
     ! -- deallocate pointers
-    deallocate(this%reaches(n)%ftotnd)
     deallocate(this%reaches(n)%ndiv)
     deallocate(this%reaches(n)%rough%name)
     deallocate(this%reaches(n)%rough%value)
@@ -3653,7 +3654,7 @@ contains
         if (this%reaches(n)%idir(i) > 0) cycle
         if (this%reaches(n)%idiv(i) > 0) cycle
         n2 = this%reaches(n)%iconn(i)
-        f = this%ustrf(n2) / this%reaches(n)%ftotnd
+        f = this%ustrf(n2) / this%ftotnd(n)
         this%reaches(n)%qconn(i) = qd * f
       end do
     else
@@ -4392,7 +4393,7 @@ contains
           rval = rval + this%ustrf(n2)
         end if
       end do eachconn
-      this%reaches(n)%ftotnd = rval
+      this%ftotnd(n) = rval
       !
       ! -- write upstream fractions
       if (this%iprpak /= 0) then
