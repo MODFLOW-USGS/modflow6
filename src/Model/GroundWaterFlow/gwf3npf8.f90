@@ -81,6 +81,9 @@ module GwfNpfModule
     integer(I4B), dimension(:), pointer, contiguous :: ihcedge      => null()    ! edge type (horizontal or vertical)
     real(DP), dimension(:, :), pointer, contiguous  :: propsedge    => null()    ! edge properties (Q, area, nx, ny, distance) 
     !
+    class(*), pointer                           :: func_caller => null()
+    procedure(set_data_iface), nopass, pointer  :: set_data_func => null()    
+    !
   contains
     procedure                               :: npf_df
     procedure                               :: npf_ac
@@ -105,7 +108,7 @@ module GwfNpfModule
     procedure, private                      :: read_options
     procedure, private                      :: rewet_options
     procedure, private                      :: check_options
-    procedure, private                      :: read_data
+    procedure, private                      :: read_data 
     procedure, private                      :: prepcheck
     procedure, public                       :: rewet_check
     procedure, public                       :: hy_eff
@@ -116,8 +119,16 @@ module GwfNpfModule
     procedure, public                       :: set_edge_properties
   endtype
 
-  contains
+  abstract interface     
+    subroutine set_data_iface(callingObject, npf)
+      import GwfNpftype
+      class(*), pointer :: callingObject
+      class(GwfNpftype) :: npf
+    end subroutine
+  end interface
 
+contains  
+  
   subroutine npf_cr(npfobj, name_model, inunit, iout)
 ! ******************************************************************************
 ! npf_cr -- Create a new NPF object. Pass a inunit value of 0 if npf data will
@@ -350,17 +361,16 @@ module GwfNpfModule
     this%ibound  => ibound
     this%hnew    => hnew
     !
-    ! -- read data from files
-    if (this%inunit /= 0)  then
-      !
-      ! -- allocate arrays
-      call this%allocate_arrays(this%dis%nodes, this%dis%njas)
-      !
+    call this%allocate_arrays(this%dis%nodes, this%dis%njas)
+    ! -- read or set the data block
+    if (associated(this%set_data_func)) then
+      call this%set_data_func(this%func_caller, this)
+    else if(this%inunit /= 0) then
       ! -- read the data block
       call this%read_data()
     end if
     !
-    ! -- Initialize and check data
+    ! -- Initialize and check data    
     call this%prepcheck()
     !
     ! -- xt3d
@@ -375,7 +385,7 @@ module GwfNpfModule
     ! -- Return
     return
   end subroutine npf_ar
-
+  
   subroutine npf_ad(this, nodes, hold)
 ! ******************************************************************************
 ! npf_ad -- Advance
