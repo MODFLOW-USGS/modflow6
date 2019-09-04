@@ -53,12 +53,7 @@ contains
     call this%allocateScalars()
     call this%allocateArrays()
     
-    ! construct GWF part here
-    select type(model)
-      type is(GwfModelType)
-        this%gwfModel => model
-      end select
-    
+    this%gwfModel => CastToGwfModel(model)
     
     this%iVarCV = 0
     this%iDewatCV = 0

@@ -45,7 +45,7 @@ module GridConnectionModule
   !
   type, public :: GridConnectionType
     character(len=LENORIGIN) :: memOrigin
-    type(NumericalModelType), pointer :: model => null()
+    class(NumericalModelType), pointer :: model => null()
     
     integer(I4B), pointer :: nrOfLinks => null()  
     integer(I4B), pointer :: linkCapacity => null()
