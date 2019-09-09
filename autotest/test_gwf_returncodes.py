@@ -198,7 +198,6 @@ def test_compiler_argv():
         yield run_argv, arg, return_str
 
 
-# use python testmf6_csub_sub03.py
 if __name__ == "__main__":
     # print message
     print('standalone run of {}'.format(os.path.basename(__file__)))
