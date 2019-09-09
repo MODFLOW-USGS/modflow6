@@ -40,8 +40,9 @@ module GwfCsubModule
        '  CSUB-INTERBED', '  CSUB-SKELETAL', ' CSUB-ZDISPLACE']
   
   !
-  ! -- local paramter - derivative of the log of effective stress
+  ! -- local parameter - derivative of the log of effective stress
   real(DP), parameter :: dlog10es = 0.4342942_DP
+  real(DP), parameter :: hplus = DEM4
   !
   ! CSUB type
   type, extends(NumericalPackageType) :: GwfCsubType
@@ -230,6 +231,7 @@ module GwfCsubModule
     procedure, private :: csub_calc_theta
     procedure, private :: csub_calc_znode
     procedure, private :: csub_calc_adjes
+    procedure, private :: csub_calc_esadd
     procedure, private :: csub_calc_sat
     procedure, private :: csub_calc_sfacts
     procedure, private :: csub_calc_under_relaxation
@@ -3121,6 +3123,10 @@ contains
     real(DP) :: gs
     real(DP) :: top
     real(DP) :: bot
+    real(DP) :: thick
+    real(DP) :: snnew
+    real(DP) :: dmn
+    real(DP) :: dsn
     real(DP) :: va_scale
     real(DP) :: hcell
     real(DP) :: gs_conn
@@ -3142,20 +3148,23 @@ contains
         !    for the cell
         top = this%dis%top(node)
         bot = this%dis%bot(node)
+        thick = top - bot
         if (this%ibound(node) /= 0) then
           hcell = hnew(node)
         else
           hcell = bot
         end if
-        gs = DZERO
-        if (hcell >= top) then
-            gs = (top - bot) * this%sgs(node)
-        else if (hcell <= bot) then
-            gs = (top - bot) * this%sgm(node)
-        else
-            gs = ((top - hcell) * this%sgm(node)) +                             &
-                  ((hcell - bot) * this%sgs(node))
-        end if
+        !
+        ! -- calculate cell saturation
+        snnew = sQuadraticSaturation(top, bot, hcell, this%satomega)
+        !
+        ! -- calulate thickness of moist/unsaturated sediments
+        !    and saturated sediments
+        dsn = snnew * thick
+        dmn = (DONE - snnew) * thick
+        !
+        ! -- calculate the cell contribution to geostatic stress
+        gs = dsn * this%sgs(node) + dmn * this%sgm(node)
         this%sk_gs(node) = gs
       end do
       !
@@ -3355,7 +3364,8 @@ contains
   end subroutine csub_nodelay_update
 
   
-  subroutine csub_nodelay_fc(this, ib, hcell, hcellold, rho1, rho2, rhs, argtled)
+  subroutine csub_nodelay_fc(this, ib, hcell, hcellold, rho1, rho2, rhs,         &
+                             argtled, esadd)
 ! ******************************************************************************
 ! csub_nodelay_fc -- Calculate rho1, rho2, and rhs for no-delay interbeds
 ! ******************************************************************************
@@ -3373,23 +3383,22 @@ contains
     real(DP), intent(inout) :: rho2
     real(DP), intent(inout) :: rhs
     real(DP), intent(in), optional :: argtled
+    real(DP), intent(in), optional :: esadd
     ! -- local variables
     integer(I4B) :: iupdate
     integer(I4B) :: node
     real(DP) :: tled
+    real(DP) :: esa
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: thick
-    real(DP) :: thick0
     real(DP) :: znode
-    real(DP) :: znode0
     real(DP) :: snold
     real(DP) :: snnew
     real(DP) :: sto_fac
     real(DP) :: sto_fac0
     real(DP) :: area
     real(DP) :: theta
-    real(DP) :: theta0
     real(DP) :: es
     real(DP) :: esi
     real(DP) :: es0
@@ -3401,12 +3410,16 @@ contains
     else
       tled = DONE / delt
     endif
+    if (present(esadd)) then
+      esa = esadd
+    else
+      esa = DZERO
+    endif
     node = this%nodelist(ib)
     area = this%dis%get_area(node)
     bot = this%dis%bot(node)
     top = this%dis%top(node)
     thick = this%thickini(ib)
-    thick0 = this%thickini(ib)
     !
     ! -- set iconvert
     this%iconvert(ib) = 0
@@ -3418,12 +3431,10 @@ contains
       f0 = DONE
     else
       znode = this%csub_calc_znode(top, bot, hcell)
-      znode0 = this%csub_calc_znode(top, bot, hcellold)
-      es = this%sk_es(node)
+      es = this%sk_es(node) + esa
       esi = this%sk_esi(node)
       es0 = this%sk_es0(node)
       theta = this%thetaini(ib)
-      theta0 = this%thetaini(ib)
       if (this%iunderrelax /= 0) then
         !
         ! -- only need to apply under-relaxation since it has already been
@@ -3440,7 +3451,7 @@ contains
       call this%csub_calc_sfacts(node, bot, znode, theta, es, es0, f)
     end if
     sto_fac = tled * snnew * thick * f
-    sto_fac0 = tled * snold * thick0 * f
+    sto_fac0 = tled * snold * thick * f
     !
     ! -- calculate rho1 and rho2
     rho1 = this%rci(ib) * sto_fac0
@@ -3502,7 +3513,7 @@ contains
     pcs = this%pcs(ib)
     !
     ! -- calculate no-delay interbed rho1 and rho2
-    call this%csub_nodelay_fc(ib, hcell, hcellold, rho1, rho2, rhs, tled)
+    call this%csub_nodelay_fc(ib, hcell, hcellold, rho1, rho2, rhs, argtled=tled)
     !
     ! -- calculate no-delay interbed compaction
     if (this%ielastic(ib) /= 0) then
@@ -4429,6 +4440,7 @@ contains
     real(DP) :: hp
     real(DP) :: q
     real(DP) :: qp
+    real(DP) :: esadd
 ! ------------------------------------------------------------------------------
 !
 ! -- initialize variables
@@ -4442,13 +4454,16 @@ contains
     tthk0 = this%sk_thickini(node)
     !
     ! -- perturb the head
-    hp = hcell + DEM4
+    hp = hcell + hplus
     !
-    ! calculate the perturbed cell saturation
+    ! -- calculate the perturbed cell saturation
     call this%csub_calc_sat(node, hp, hcellold, snnew, snold)
     !
+    ! -- calculate the effective stress perturbation
+    esadd = this%csub_calc_esadd(node, snnew)
+    !
     ! -- storage coefficients
-    call this%csub_sk_calc_sske(node, sske, sske0, hp, hcellold)
+    call this%csub_sk_calc_sske(node, sske, sske0, hp, hcellold, esadd)
     rho1 = sske0 * area * tthk0 * tled
     rho2 = sske * area * tthk * tled
     !
@@ -4469,7 +4484,7 @@ contains
         snold * rho1 * this%sk_es0(node)
     !
     ! -- calculate the derivative
-    derv = (qp - q) / DEM4
+    derv = (qp - q) / hplus
     !
     ! -- update hcof and rhs
     hcof = rho2 * snnew + derv
@@ -4594,6 +4609,7 @@ contains
     real(DP) :: rhsn
     real(DP) :: f
     real(DP) :: hcellp
+    real(DP) :: esadd
     real(DP) :: q
     real(DP) :: qp
     real(DP) :: derv
@@ -4617,14 +4633,21 @@ contains
     if (this%ibound(node) > 0) then
       !
       ! -- perturb the gwf head
-      hcellp = hcell + DEM4
+      hcellp = hcell + hplus
       !
       ! -- no-delay interbeds
       if (this%idelay(ib) == 0) then
         f = area
         !
+        ! -- calculate cell saturation
+        call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
+        !
+        ! -- calculate the effective stress perturbation
+        esadd = this%csub_calc_esadd(node, snnew)
+        !
         ! -- calculate no-delay interbed rho1 and rho2
-        call this%csub_nodelay_fc(ib, hcellp, hcellold, rho1, hcofn, rhsn)
+        call this%csub_nodelay_fc(ib, hcellp, hcellold, rho1, hcofn, rhsn,       &
+                                  esadd=esadd)
         !
         ! -- calculate perturbed no-delay interbed q
         qp = rhsn - hcofn * hcellp 
@@ -4636,7 +4659,7 @@ contains
         q = rhsn - hcofn * hcell
         !
         ! -- calculate the derivative
-        derv = (qp - q) / DEM4
+        derv = (qp - q) / hplus
       !
       ! -- delay interbeds
       else
@@ -4670,7 +4693,7 @@ contains
           q = rhsn - hcofn * hcell
           !
           ! -- calculate the derivative
-          derv = (qp - q) / DEM4
+          derv = (qp - q) / hplus
         end if
         !
         ! -- update hcof and rhs
@@ -4715,7 +4738,7 @@ contains
     return
   end subroutine define_listlabel
 
-  subroutine csub_sk_calc_sske(this, n, sske, sske0, hcell, hcellold)
+  subroutine csub_sk_calc_sske(this, n, sske, sske0, hcell, hcellold, esadd)
 ! ******************************************************************************
 ! csub_sk_calc_sske -- Calculate sske for a gwf cell.
 ! ******************************************************************************
@@ -4728,16 +4751,16 @@ contains
     real(DP), intent(inout) :: sske0
     real(DP), intent(in) :: hcell
     real(DP), intent(in) :: hcellold
+    real(DP), intent(in), optional :: esadd
     ! -- local variables
+    real(DP) :: esa
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: znode
-    real(DP) :: znode0
     real(DP) :: es
     real(DP) :: esi
     real(DP) :: es0
     real(DP) :: theta
-    real(DP) :: theta0
     real(DP) :: f
     real(DP) :: f0
 ! ------------------------------------------------------------------------------
@@ -4745,6 +4768,11 @@ contains
     ! -- initialize variables
     sske = DZERO
     sske0 = DZERO
+    if (present(esadd)) then
+      esa = esadd
+    else
+      esa = DZERO
+    end if
     !
     ! -- calculate factor for the head-based case
     if (this%lhead_based .EQV. .TRUE.) then
@@ -4756,12 +4784,10 @@ contains
       top = this%dis%top(n)
       bot = this%dis%bot(n)
       znode = this%csub_calc_znode(top, bot, hcell)
-      znode0 = this%csub_calc_znode(top, bot, hcellold)
-      es = this%sk_es(n)
+      es = this%sk_es(n) + esa
       esi = this%sk_esi(n)
       es0 = this%sk_es0(n)
       theta = this%sk_thetaini(n)
-      theta0 = this%sk_thetaini(n)
       if (this%iunderrelax /= 0) then
         if (this%iurflag /= 0) then
           call this%csub_calc_under_relaxation(this%kiter, es, esi,              &
@@ -5231,6 +5257,34 @@ contains
     ! -- return
     return
   end function csub_calc_adjes
+
+  function csub_calc_esadd(this, node, sn) result(esadd)
+! ******************************************************************************
+! csub_calc_esadd -- Calculate the effective stress change at the bottom of
+!                    a cell resulting from a hplus head pertubation. Used to
+!                    formulate numerical derivatives.  
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    class(GwfCsubType), intent(inout) :: this
+    ! -- dummy
+    integer(I4B), intent(in) :: node
+    real(DP), intent(in) :: sn
+    ! -- local variables
+    real(DP) :: esadd
+! ------------------------------------------------------------------------------
+    if (sn <= DZERO) then
+      esadd = DZERO
+    else if (sn <= DONE) then
+      esadd = hplus * (this%sgs(node) - this%sgm(node) - DONE)
+    else
+      esadd = -hplus
+    end if
+    !
+    ! -- return
+    return
+  end function csub_calc_esadd
   
   function csub_delay_eval(this, ib, node, hcell) result(idelaycalc)
 ! ******************************************************************************
@@ -5809,7 +5863,6 @@ contains
     real(DP) :: z0
     real(DP) :: zcell
     real(DP) :: znode
-    real(DP) :: znode0
     real(DP) :: zbot
     real(DP) :: es
     real(DP) :: esi
@@ -5849,11 +5902,6 @@ contains
       !    of the cell based on current head
       zcell = this%csub_calc_znode(z1, z0, hcell)
       znode = zcell + this%dbrelz(n, idelay)
-      !
-      ! -- set location of delay node relative to the center
-      !    of the cell based on previous head
-      zcell = this%csub_calc_znode(z1, z0, hcellold)
-      znode0 = zcell + this%dbrelz(n, idelay)
       !
       ! -- set the effective stress
       es = this%dbes(n, idelay)
