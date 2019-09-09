@@ -670,7 +670,7 @@ module GwtSsmModule
         case('AUX')
           write(this%iout,'(1x,a)') 'AUX SOURCE DETECTED.'
         case default
-          write(errmsg,'(1x, a, i0)')                                          &
+          write(errmsg,'(1x, a, a)')                                          &
             'ERROR.  SRCTYPE MUST BE AUX OR LKT ', srctype
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
