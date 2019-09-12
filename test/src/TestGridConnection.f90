@@ -7,6 +7,7 @@ module TestGridConnectionModule
   use GridConnectionModule
   use NumericalModelModule, only: NumericalModelType
   use GwfDisuModule
+  use GwfDisModule
   
   implicit none
   private
@@ -19,7 +20,7 @@ contains ! module procedures
     call test(testConstructor, "GridConnection, test constructor")
     call test(testAddSomeLinks, "GridConnection, test adding some links")
     call test(testBasicConnectivity, "GridConnection, test creating a basic connectivity matrix")
-    call test(testXT3DConnectivity, "GridConnection, test creating a connectivity matrix for XT3D")
+    call test(testNbrOfNbrConnectivity, "GridConnection, test creating a connectivity matrix for XT3D")
     call test(testTVDConnectivity, "GridConnection, test creating a connectivity matrix for TVD")
     
   end subroutine
@@ -27,12 +28,12 @@ contains ! module procedures
   subroutine testConstructor()
     type(GridConnectionType) :: gridConnection
     
-    gridConnection = getSimpleGridConnectionWithModel()        
+    gridConnection = getSimpleGridConnectionWithModel("dummy")        
     
-    call assert_true(gridConnection%linkCapacity == 3, "space reserved should be equal to 10")    
-    call assert_true(size(gridConnection%localCells) == 3, "local nodes array not properly allocated")
-    call assert_true(size(gridConnection%connectedCells) == 3, "connected nodes array not properly allocated")    
-    call assert_true(size(gridConnection%linkGeometries) == 3, "link geometries array not properly allocated")   
+    call assert_true(gridConnection%linkCapacity == 2, "space reserved should be equal to 10")    
+    call assert_true(size(gridConnection%localCells) == 2, "local nodes array not properly allocated")
+    call assert_true(size(gridConnection%connectedCells) == 2, "connected nodes array not properly allocated")    
+    call assert_true(size(gridConnection%linkGeometries) == 2, "link geometries array not properly allocated")   
     
   end subroutine
   
@@ -40,7 +41,7 @@ contains ! module procedures
     type(GridConnectionType) :: gridConnection    
     class(NumericalModelType), pointer :: nbrModel
     
-    gridConnection = getSimpleGridConnectionWithModel()   
+    gridConnection = getSimpleGridConnectionWithModel("dummy2")   
     
     allocate(nbrModel)
     call nbrModel%allocate_scalars("neighbor")
@@ -48,12 +49,11 @@ contains ! module procedures
     
     call gridConnection%addLink(1, 4, 10.0_DP, 10.0_DP, 20.0_DP, 1, nbrModel) ! horizontal links
     call gridConnection%addLink(2, 5, 10.0_DP, 10.0_DP, 20.0_DP, 1, nbrModel)
-    call gridConnection%addLink(3, 6, 10.0_DP, 10.0_DP, 20.0_DP, 1, nbrModel)
     
-    call assert_true(gridConnection%nrOfLinks == 3, "nr of links should have been 3")
+    call assert_true(gridConnection%nrOfLinks == 2, "nr of links should have been 2")
     
     call gridConnection%addLink(999, 999, 10.0_DP, 10.0_DP, 20.0_DP, 1, nbrModel)
-    call assert_true(gridConnection%nrOfLinks == 3, "cannot add beyond capacity, should have been 3")
+    call assert_true(gridConnection%nrOfLinks == 2, "cannot add beyond capacity, should have been 2")
     
   end subroutine
   
@@ -63,30 +63,59 @@ contains ! module procedures
     type(sparsematrix) :: connectivity
     
     ! setup connection
-    gridConnection = getSimpleGridConnectionWithModel()    
+    gridConnection = getSimpleGridConnectionWithModel("someModel")    
     allocate(nbrModel)
     call nbrModel%allocate_scalars("someNeighbor")
     nbrModel%moffset = 100
-    call disu_cr(nbrModel%dis, nbrModel%name, -1, -1)
+    open(unit=1980, file=TESTDATADIR//"dis_2x3.dis", status='old', action='read')
+    call dis_cr(nbrModel%dis, nbrModel%name, 1980, -1)
+    call nbrModel%dis%dis_df()    
+    close(1980)
     
     call gridConnection%addLink(1, 1, 10.0_DP, 20.0_DP, 30.0_DP, 1, nbrModel) ! horizontal links
     call gridConnection%addLink(2, 2, 11.0_DP, 21.0_DP, 31.0_DP, 1, nbrModel)
-    call gridConnection%addLink(3, 3, 12.0_DP, 22.0_DP, 32.0_DP, 1, nbrModel)
     
     ! build connectivity, among other things
     call gridConnection%extendConnection(0, 0)
     
-    call assert_equal(gridConnection%connections%nodes, 6, "nr. of nodes wrong")
-    call assert_equal(gridConnection%connections%njas, 3, "nr. of (sym) connections wrong")
+    call assert_equal(gridConnection%connections%nodes, 4, "nr. of nodes wrong")
+    call assert_equal(gridConnection%connections%njas, 2, "nr. of (sym) connections wrong")
     
     call assert_comparable_realdp(gridConnection%connections%cl1(1), 10.0_DP, 0.0_DP, "conn. length wrong")
-    call assert_comparable_realdp(gridConnection%connections%cl2(3), 22.0_DP, 0.0_DP, "conn. length wrong")
+    call assert_comparable_realdp(gridConnection%connections%cl2(2), 21.0_DP, 0.0_DP, "conn. length wrong")
     call assert_comparable_realdp(gridConnection%connections%hwva(2), 31.0_DP, 0.0_DP, "hwva area wrong")
     
   end subroutine
   
-  subroutine testXT3DConnectivity
-    call assert_true(.false., "not implemented")
+  subroutine testNbrOfNbrConnectivity
+    type(GridConnectionType) :: gridConnection    
+    class(NumericalModelType), pointer :: nbrModel  
+    type(sparsematrix) :: connectivity
+    
+    ! setup connection
+    gridConnection = getSimpleGridConnectionWithModel("someModel2")    
+    
+    ! get nbr model
+    allocate(nbrModel)
+    call nbrModel%allocate_scalars("someNeighbor2")
+    nbrModel%moffset = 12    
+    open(unit=1980, file=TESTDATADIR//"dis_2x3.dis", status='old', action='read')
+    call dis_cr(nbrModel%dis, nbrModel%name, 1980, -1)
+    call nbrModel%dis%dis_df()    
+    close(1980)
+    
+    call gridConnection%addLink(6, 1, 10.0_DP, 10.0_DP, 20.0_DP, 1, nbrModel) ! horizontal links
+    call gridConnection%addLink(12, 4, 10.0_DP, 10.0_DP, 20.0_DP, 1, nbrModel)
+    
+    call gridConnection%extendConnection(2, 1)
+    
+    call assert_equal(gridConnection%localCells(1)%nrOfNbrs, 2, "Nr. of nbrs for local cell 1")  
+    call assert_equal(gridConnection%localCells(1)%neighbors(1)%nrOfNbrs, 2, "Nr. of nbrs for nbr 1 of local cell 1, should be 2")
+    
+    call assert_equal(gridConnection%connectedCells(1)%nrOfNbrs, 2, "Nr. of nbrs for remote cell 1")
+    call assert_equal(gridConnection%connectedCells(2)%nrOfNbrs, 2, "Nr. of nbrs for remote cell 2")
+    call assert_equal(gridConnection%connectedCells(2)%neighbors(2)%nrOfNbrs, 0, "nrOfNbrs for nbr 2 for remote cell 2 should be zero")
+    
   end subroutine
   
   subroutine testTVDConnectivity
@@ -94,16 +123,20 @@ contains ! module procedures
   end subroutine
   
   ! helper function to setup basic gridconn
-  function getSimpleGridConnectionWithModel() result(gc)
-    type(GridConnectionType) :: gc    
+  function getSimpleGridConnectionWithModel(name) result(gc)
+    type(GridConnectionType) :: gc  
+    character(len=*) :: name
     class(NumericalModelType), pointer :: numericalModel
     
     allocate(numericalModel)    
-    call numericalModel%allocate_scalars("someModel")
+    call numericalModel%allocate_scalars(name)
     numericalModel%moffset = 0
-    call disu_cr(numericalModel%dis, numericalModel%name, -1, -1)
+    open(unit=1980, file=TESTDATADIR//"dis_2x6.dis", status='old', action='read')
+    call dis_cr(numericalModel%dis, numericalModel%name, 1980, -1)
+    call numericalModel%dis%dis_df()    
+    close(1980)
     
-    call gc%construct(numericalModel, 3, "gridConnName") 
+    call gc%construct(numericalModel, 2, "gridConnName") 
     
   end function
   

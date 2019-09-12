@@ -18,6 +18,8 @@ module SpatialModelConnectionModule
     ! aggregation, all exchanges which connect with our model
     type(ListType), pointer :: exchangeList => null()
     
+    integer(I4B) :: stencilType ! default = 0, xt3d = 1, ...
+    
     ! TODO_MJR: mem mgt of these guys:
     integer(I4B) :: nrOfConnections ! TODO_MJR: do we need this one?
     class(GridConnectionType), pointer :: gridConnection => null()    
@@ -47,6 +49,7 @@ contains ! module procedures
     this%name = name
     this%memoryOrigin = trim(this%name)
     this%owner => model
+    this%stencilType = 1
     
     this%nrOfConnections = 0
     
@@ -174,7 +177,15 @@ contains ! module procedures
     end do
     
     ! here we scan for nbr-of-nbrs and create final data structures
-    call this%gridConnection%extendConnection(0, 0)
+    select case(this%stencilType)
+      case(0) 
+        call this%gridConnection%extendConnection(0, 0)
+      case(1)
+        call this%gridConnection%extendConnection(2, 1)
+      case default
+        write(*,*) 'Error: invalid stencil type set: using default connection'
+        call this%gridConnection%extendConnection(0, 0)        
+    end select
     
   end subroutine addLinksToGridConnection
   

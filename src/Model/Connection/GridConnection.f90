@@ -27,13 +27,13 @@ module GridConnectionModule
   type, public :: CellWithNbrsType
     type(GlobalCellType) :: cell
     integer(I4B) :: nrOfNbrs
-    type(GlobalCellType), dimension(MaxNeighbors) :: neighbors
+    type(CellWithNbrsType), dimension(:), allocatable :: neighbors
   end type
   
   type, private :: ModelWithNbrsType
       class(NumericalModelType), pointer :: model => null()
       integer(I4B) :: nrOfNbrs
-      class(NumericalModelType), dimension(:), pointer :: neighbors => null()
+      class(NumericalModelType), dimension(:), allocatable :: neighbors
   end type
   
   ! this class works with these steps:
@@ -70,6 +70,8 @@ module GridConnectionModule
     
     procedure, private, pass(this) :: getNrOfCells
     procedure, private, pass(this) :: buildConnections
+    procedure, private, pass(this) :: addNeighbors
+    procedure, private, pass(this) :: addNeighborCell
   end type
   
   contains ! module procedures
@@ -140,61 +142,17 @@ module GridConnectionModule
   end subroutine
   
   ! build the connection topology to deal with neighbors-of-neighbors
-  subroutine extendConnection(this, localDepth, remoteDepth)
-    use ConnectionsModule, only: ConnectionsType
+  subroutine extendConnection(this, localDepth, remoteDepth)    
     class(GridConnectionType), intent(in) :: this  
     integer(I4B) :: localDepth, remoteDepth ! to determine to which 
-    
     ! local
-    integer(I4B) :: iLink, ipos
-    integer(I4B) :: idx, nbrIdx, nbrCnt
-    type(ConnectionsType), pointer :: connections => null()   
-    type(NumericalModelType), pointer :: connectedModel => null()
-        
-    ! for all LOCAL cells    
-    if (localDepth > 0) then
-      do iLink=1, this%nrOfLinks       
-        ! find all local neighbors 
-        nbrCnt = 0 
-        connections => this%model%dis%con
-        idx = this%localCells(iLink)%cell%index
-        do ipos=connections%ia(idx) + 1, connections%ia(idx+1) - 1        
-          nbrIdx = connections%ja(ipos)
-          this%localCells(iLink)%neighbors(nbrCnt+1)%index = nbrIdx
-          this%localCells(iLink)%neighbors(nbrCnt+1)%model => this%model        
-          nbrCnt = nbrCnt + 1        
-        end do
-        this%localCells(iLink)%nrOfNbrs = nbrCnt
-    
-        ! find all foreign neighbors
-        ! TODO_MJR      
-      end do
-    end if
-    
-    ! for all CONNECTED cells
-    if (remoteDepth > 0) then
-      do iLink=1, this%nrOfLinks
-    
-        idx = this%connectedCells(iLink)%cell%index
-        connectedModel => this%connectedCells(iLink)%cell%model
-      
-        ! find all local neighbors
-        nbrCnt = 0
-        connections => connectedModel%dis%con
-        do ipos=connections%ia(idx) + 1, connections%ia(idx+1) - 1        
-          nbrIdx = connections%ja(ipos)
-          this%connectedCells(iLink)%neighbors(nbrCnt+1)%index = nbrIdx
-          this%connectedCells(iLink)%neighbors(nbrCnt+1)%model => connectedModel        
-          nbrCnt = nbrCnt + 1        
-        end do
-        this%connectedCells(iLink)%nrOfNbrs = nbrCnt
-            
-        ! find all foreign neighbors
-        ! TODO_MJR      
-      end do
-    end if
-    
-    connections => null()
+    integer(I4B) :: i
+     
+    ! add neighbors
+    do i = 1, this%nrOfLinks 
+      call this%addNeighbors(this%localCells(i), localDepth, this%connectedCells(i)%cell)
+      call this%addNeighbors(this%connectedCells(i), remoteDepth, this%localCells(i)%cell)
+    end do
     
     ! now finalize the data structures
     this%nrOfCells = this%getNrOfCells()
@@ -211,6 +169,71 @@ module GridConnectionModule
     !TODO_MJR: also for larger stencils
     ncells = size(this%localCells) + size(this%connectedCells)   
   end function
+    
+  ! routine for finding neighbors-of-neighbors, recursively
+  recursive subroutine addNeighbors(this, cellNbrs, maxlvl, mask)
+    use SimModule, only: ustop
+    class(GridConnectionType), intent(in) :: this
+    type(CellWithNbrsType), intent(inout) :: cellNbrs    
+    integer(I4B), intent(inout)           :: maxlvl
+    type(GlobalCellType), intent(in)      :: mask
+    ! local
+    integer(I4B) :: idx, nbrIdx, ipos, inbr
+    type(ConnectionsType), pointer :: conn
+    integer(I4B) :: level
+    
+    if (maxLvl < 1) then
+      return
+    end if
+    level = maxLvl - 1
+    
+    conn => cellNbrs%cell%model%dis%con
+    
+    ! find neighbors local to this cell by looping through grid connections
+    do ipos=conn%ia(cellNbrs%cell%index) + 1, conn%ia(cellNbrs%cell%index+1) - 1        
+      nbrIdx = conn%ja(ipos)
+      
+      ! apply mask
+      if (nbrIdx == mask%index .and. associated(cellNbrs%cell%model, mask%model)) then
+        cycle
+      end if
+      
+      call this%addNeighborCell(cellNbrs, nbrIdx, cellNbrs%cell%model)      
+    end do
+        
+    ! TODO_MJR: find remote nbr
+    
+    ! now find nbr-of-nbr    
+    do inbr=1, cellNbrs%nrOfNbrs
+      call this%addNeighbors(cellNbrs%neighbors(inbr), level, cellNbrs%cell)
+    end do
+    
+  end subroutine addNeighbors
+  
+  subroutine addNeighborCell(this, cellNbrs, newNbrIdx, nbrModel)
+    use SimModule, only: ustop
+    class(GridConnectionType), intent(in) :: this
+    type(CellWithNbrsType), intent(inout) :: cellNbrs 
+    integer(I4B), intent(in)              :: newNbrIdx
+    class(NumericalModelType), pointer    :: nbrModel
+    ! local
+    integer(I4B) :: nbrCnt
+    
+    ! TODO_MJR: dynamic memory
+    if (.not. allocated(cellNbrs%neighbors)) then
+      allocate(cellNbrs%neighbors(MaxNeighbors))  
+    end if
+    
+    nbrCnt = cellNbrs%nrOfNbrs
+    if (nbrCnt + 1 > MaxNeighbors) then
+       write(*,*) 'Error extending connections in GridConnection, max. nr. of neighbors exceeded: terminating...'
+       call ustop()  
+    end if
+        
+    cellNbrs%neighbors(nbrCnt + 1)%cell%index = newNbrIdx
+    cellNbrs%neighbors(nbrCnt + 1)%cell%model => nbrModel  
+    cellNbrs%nrOfNbrs = nbrCnt + 1
+  end subroutine
   
   ! builds a sparse matrix holding all cell connections,
   ! with new indices, and stores the mapping to the global ids
@@ -218,7 +241,6 @@ module GridConnectionModule
     use SimModule, only: ustop
     class(GridConnectionType), intent(in) :: this       
     ! local
-    integer(I4B) :: ncells
     integer(I4B) :: n, m, offset
     integer(I4B) :: isym, j
     integer(I4B) :: ierror
@@ -230,13 +252,12 @@ module GridConnectionModule
     allocate(this%idxToGlobal(this%nrOfCells))
     allocate(sparse)    
     
-    ncells = this%getNrOfCells()
-    allocate(nnz(ncells))
+    allocate(nnz(this%nrOfCells))
     nnz = MaxNeighbors+1
-    call sparse%init(ncells, ncells, nnz)
+    call sparse%init(this%nrOfCells, this%nrOfCells, nnz)
     
     ! diagonals
-    do n = 1, ncells
+    do n = 1, this%nrOfCells
       call sparse%addconnection(n, n, 1)
     end do    
     
@@ -261,7 +282,7 @@ module GridConnectionModule
     allocate(this%connections)
     conn => this%connections
     call conn%allocate_scalars(this%memorigin)
-    conn%nodes = ncells
+    conn%nodes = this%nrOfCells
     conn%nja = sparse%nnz
     conn%njas = (conn%nja -  conn%nodes) / 2
     call conn%allocate_arrays()
@@ -293,13 +314,8 @@ module GridConnectionModule
         conn%anglex(isym) = 0.0 ! TODO_MJR: implement
       end do
     end do
-   
     
-  end subroutine
-  
-  subroutine findNeighbors()
-  
-  end subroutine
+  end subroutine buildConnections
   
   subroutine allocateScalars(this)
     use MemoryManagerModule, only: mem_allocate
