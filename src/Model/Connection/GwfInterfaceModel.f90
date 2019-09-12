@@ -18,6 +18,7 @@ module GwfInterfaceModelModule
   contains    
     procedure, pass(this) :: construct
     procedure, pass(this) :: createModel
+    procedure, pass(this) :: syncModelData
     ! private stuff
     procedure, private, pass(this) :: buildDiscretization
   end type
@@ -38,7 +39,7 @@ contains
     ! we need this dummy value
     this%innpf = 999
     
-  end subroutine
+  end subroutine construct
    
   ! set up the interface model, analogously to what happens in gwf_cr
   subroutine createModel(this, gridConn)
@@ -68,10 +69,14 @@ contains
     this%ja  => this%dis%con%ja
     
     call this%allocate_arrays()    
+    
     ! these arrays come from the solution, but not for this type of model...
     call mem_allocate(this%ibound, this%neq, 'IBOUND', this%name)
     call mem_allocate(this%x, this%neq, 'X', this%name)
     call mem_allocate(this%rhs, this%neq, 'RHS', this%name)
+    ! and fill/init them...
+    call this%syncModelData()
+    this%rhs = 0
     
     ! map connections
     call this%model_mc(this%ia, this%ja)
@@ -84,9 +89,8 @@ contains
     ! default is active
     this%ibound = 1
     
-  end subroutine
+  end subroutine createModel
   
-  ! note: this should become private
   subroutine buildDiscretization(this)  
     use ConnectionsModule 
     use SparseModule, only: sparsematrix
@@ -126,10 +130,10 @@ contains
     
     ! TODO_MJR: add vertices, cell2d here?
     
-  end subroutine
+  end subroutine buildDiscretization
   
   subroutine setNpfData(ifaceModelObj, npf)
-    use MemoryManagerModule, only: mem_reallocate
+    use MemoryManagerModule, only: mem_allocate
     class(GwfNpftype) :: npf
     class(*), pointer :: ifaceModelObj
     ! local
@@ -161,7 +165,8 @@ contains
         gwfModel => numModel        
       end select
       
-      ! copy K11
+      ! copy celltype, K11
+      npf%icelltype(icell) = gwfModel%npf%icelltype(idx) 
       npf%k11(icell) = gwfModel%npf%k11(idx) 
       
       ! do 'OR' on the K properties
@@ -173,21 +178,21 @@ contains
       
     end do
     
-    ! allocate and fill
+    ! allocate when active
     if (npf%ik22 > 0) then
-      call mem_reallocate(npf%k22, nrOfCells, 'K22', trim(npf%origin))  
+      call mem_allocate(npf%k22, nrOfCells, 'K22', trim(npf%origin))  
     end if
     if (npf%ik33 > 0) then
-      call mem_reallocate(npf%k33, nrOfCells, 'K33', trim(npf%origin))  
+      call mem_allocate(npf%k33, nrOfCells, 'K33', trim(npf%origin))  
     end if
     if (npf%iangle1 > 0) then
-      call mem_reallocate(npf%angle1, nrOfCells, 'ANGLE1', trim(npf%origin))  
+      call mem_allocate(npf%angle1, nrOfCells, 'ANGLE1', trim(npf%origin))  
     end if
     if (npf%iangle2 > 0) then
-      call mem_reallocate(npf%angle2, nrOfCells, 'ANGLE2', trim(npf%origin))  
+      call mem_allocate(npf%angle2, nrOfCells, 'ANGLE2', trim(npf%origin))  
     end if
     if (npf%iangle3 > 0) then
-      call mem_reallocate(npf%angle3, nrOfCells, 'ANGLE3', trim(npf%origin))  
+      call mem_allocate(npf%angle3, nrOfCells, 'ANGLE3', trim(npf%origin))  
     end if
     
     ! and copy the remaining arrays
@@ -203,6 +208,26 @@ contains
       
     end do
     
-  end subroutine
-   
+  end subroutine setNpfData
+  
+  ! copies individual model data (head, ibound) into the interface model
+  subroutine syncModelData(this)
+    class(GwfInterFaceModelType), intent(inout) :: this
+    integer(I4B) :: icell, idx
+    class(NumericalModelType), pointer :: model
+    
+    
+    ! copy head/ibound
+    do icell = 1, this%gridConnection%nrOfCells
+      
+      idx = this%gridConnection%idxToGlobal(icell)%index
+      model => this%gridConnection%idxToGlobal(icell)%model
+      
+      this%x(icell) = model%x(idx)
+      this%ibound(icell) = model%ibound(idx)
+      
+    end do
+    
+  end subroutine syncModelData
+  
 end module GwfInterfaceModelModule

@@ -4,6 +4,8 @@ module GwfGwfConnectionModule
   use ConstantsModule, only: DZERO, DONE, DEM6
   use MemoryManagerModule, only: mem_allocate
   use SpatialModelConnectionModule  
+  use GwfInterfaceModelModule
+  use NumericalModelModule
   use GwfModule, only: GwfModelType
   use GwfNpfModule, only: hcond, vcond
   
@@ -13,16 +15,22 @@ module GwfGwfConnectionModule
   ! Connecting two groundwaterflow models in space
   type, public, extends(SpatialModelConnectionType) :: GwfGwfConnectionType
     
-    ! aggregation:
+    ! aggregation, the model with the connection:
     type(GwfModelType), pointer :: gwfModel => null()
+    
+    ! composition, the interface model
+    type(GwfInterfaceModelType), pointer  :: interfaceModel => null()   
+    
+    ! the interface model doesn't live in a solution, so we need these
+    ! TODO_MJR: probably move to parent class
+    real(DP), dimension(:), pointer       :: amat
+    integer(I4B)                          :: nja
     
     ! memory managed data:
     integer(I4B), pointer             :: iVarCV => null()   ! == 1: vertical conductance varies with water table
     integer(I4B), pointer             :: iDewatCV => null() ! == 1: vertical conductance accounts for dewatered portion of underlying cell
     real(DP), pointer                 :: satOmega => null() !
     integer(I4B), pointer             :: iCellAvg => null() ! TODO_MJR: discuss this, iCellAvg same value per connection, user can now specify per exchange?
-    real(DP), dimension(:), pointer, contiguous   :: satConductance => null()
-    real(DP), dimension(:), pointer, contiguous   :: conductance => null()
     
   contains 
     procedure, pass(this) :: gwfGwfConnection_ctor
@@ -36,8 +44,6 @@ module GwfGwfConnectionModule
     ! local stuff
     procedure, pass(this), private :: allocateScalars
     procedure, pass(this), private :: allocateArrays
-    procedure, pass(this), private :: calculateSaturatedConductance
-    procedure, pass(this), private :: calculateConductance
   end type GwfGwfConnectionType
 
 contains
@@ -48,7 +54,7 @@ contains
     class(NumericalModelType), pointer          :: model ! note: this must be a GwfModelType
     
     ! first call base constructor
-    call this%construct(model, model%name//'_GWFGWF_CONN') ! 
+    call this%construct(model, trim(model%name)//'_GWF2CONN') ! 
     
     call this%allocateScalars()
     call this%allocateArrays()
@@ -59,6 +65,8 @@ contains
     this%iDewatCV = 0
     this%satOmega = DEM6  
     this%iCellAvg = 0
+    
+    allocate(this%interfaceModel)
     
   end subroutine gwfGwfConnection_ctor
   
@@ -83,12 +91,18 @@ contains
   subroutine gwfgwfcon_ar(this)
     class(GwfGwfConnectionType), intent(inout)  :: this
     
+    ! construct the interface model here after *_df has been finished
+    call this%interfaceModel%construct(this%name)    
+    ! following is create, define, and allocate/read
+    call this%interfaceModel%createModel(this%gridConnection)
+    
     ! TODO_MJR: ar mover
-    ! TODO_MJR: angledx checks
-    
-    call this%calculateSaturatedConductance()
-    
+    ! TODO_MJR: angledx checks    
     ! TODO_MJR: ar observation    
+    
+    ! create amat for interface
+    this%nja = this%interfaceModel%dis%con%nja
+    allocate(this%amat(this%nja))    
     
   end subroutine gwfgwfcon_ar
   
@@ -97,209 +111,50 @@ contains
   subroutine gwfgwfcon_cf(this, kiter)
     class(GwfGwfConnectionType), intent(inout)  :: this
     integer(I4B), intent(in) :: kiter
+    ! local
+     
+    ! copy model data into interface model
+    call this%interfaceModel%syncModelData()
     
-    
-    
-    call this%calculateConductance()
+    ! calculate
+    call this%interfaceModel%model_cf(kiter)
     
   end subroutine gwfgwfcon_cf
     
   ! write the calculated conductances into the global system matrix
-  subroutine gwfgwfcon_fc(this, kiter, iasln, amatsln, inwtflag)
+  subroutine gwfgwfcon_fc(this, kiter, amatsln, njasln, inwtflag)
+    use ConnectionsModule, only: ConnectionsType
     class(GwfGwfConnectionType), intent(inout) :: this
     integer(I4B), intent(in) :: kiter
-    integer(I4B), dimension(:), intent(in) :: iasln
     real(DP), dimension(:), intent(inout) :: amatsln
+    integer(I4B),intent(in) :: njasln
     integer(I4B), intent(in) :: inwtflag
-    
     ! local
-    integer(I4B) :: i, nLinks, rowIdx
+    type(ConnectionsType), pointer :: conn => null()
+    integer(I4B) :: mloc, nloc, j
+    integer(I4B) :: mglob, nglob
+    real(DP) :: conductance
     
-    nLinks = this%gridConnection%nrOfLinks
-    do i=1, nLinks 
-      rowIdx = this%gridConnection%localCells(i)%cell%index + this%owner%moffset
-      
-      ! TODO_MJR: we have addition here for off-diagonals as well (temporarily though) 
-      ! because GNC is already added to the matrix in GwfGwfExchange
-      amatsln(this%globalOffdiagIdx(i)) = amatsln(this%globalOffdiagIdx(i)) + this%conductance(i)
-      amatsln(iasln(rowIdx)) = amatsln(iasln(rowIdx)) - this%conductance(i)
-    end do
+    ! we iterate, so this should be reset (c.f. sln_reset())
+    this%amat = 0
     
-  end subroutine gwfgwfcon_fc 
-  
-  
-  ! calculate conductance for saturated conditions
-  subroutine calculateSaturatedConductance(this)
-    class(GwfGwfConnectionType), intent(inout)  :: this
-    ! local
-    type(GwfModelType), pointer :: model2
-    integer(I4B) :: i, nLinks
+    ! fill (and add to...) coefficients for interface
+    call this%interfaceModel%model_fc(kiter, this%amat, this%nja, inwtflag)
     
-    integer(I4B) :: n, m
-    real(DP) :: topn, topm, botn, botm, satn, satm
-    integer(I4B) :: ihc                             ! == 1 for horizontally connected, == 0 for vertical
-    real(DP) :: hWidth, vArea
-    real(DP) :: cl1, cl2 ! connection lengths 
-    
-    real(DP) :: hyn, hym
-    real(DP) :: k11n, k11m
-    real(DP), dimension(3) :: vg
-    
-    ! loop over connected nodes
-    ! TODO_MJR: consider performance
-    nLinks = this%gridConnection%nrOfLinks
-    
-    ! TODO_MJR: we didn't know size by construction yet, so we allocate here for now.
-    call mem_allocate(this%satConductance, nLinks, 'CONDSAT', this%memoryOrigin) 
-    call mem_allocate(this%conductance, nLinks, 'COND', this%memoryOrigin) 
-    
-    do i=1, nLinks
-      n = this%gridConnection%localCells(i)%cell%index
-      m = this%gridConnection%connectedCells(i)%cell%index
-      ihc = this%gridConnection%linkGeometries(i)%connectionType
-      
-      ! We know this is a gwf model:
-      ! (TODO_MJR: maybe replace model pointer by index in model list?)
-      model2 => CastToGwfModel(this%gridConnection%connectedCells(i)%cell%model)      
-      
-      ! properties owner, through gwfModel pointer
-      topn = this%gwfModel%dis%top(n)
-      botn = this%gwfModel%dis%bot(n)
-      satn = this%gwfModel%npf%sat(n)
-      
-      ! properties connected model    
-      topm = model2%dis%top(m)      
-      botm = model2%dis%bot(m)      
-      satm = model2%npf%sat(m)
-      
-      if (ihc == 0) then ! vertical connection
-        ! calculate effective hyd. cond.
-        vg(1) = DZERO
-        vg(2) = DZERO
-        vg(3) = DONE
-        hyn = this%gwfModel%npf%hy_eff(n, 0, ihc, vg=vg)
-        hym = model2%npf%hy_eff(m, 0, ihc, vg=vg)        
-        vArea = this%gridConnection%linkGeometries(i)%hwva
-        
-        ! vertical conductance calculation       
-        this%satConductance(i) = vcond(1, 1, 1, 1, 0, 1, 1, DONE,        &
-                        botn, botm,                                      &
-                        hyn, hym,                                        &
-                        satn, satm,                                      &
-                        topn, topm,                                      &
-                        botn, botm,                                      &
-                        vArea)
-      
-      else ! horizontal connection TODO_MJR: how about ihc == 2??    
-        
-        k11n = this%gwfModel%npf%k11(n)
-        k11m = model2%npf%k11(m)
-        hWidth = this%gridConnection%linkGeometries(i)%hwva
-        cl1 = this%gridConnection%linkGeometries(i)%length1
-        cl2 = this%gridConnection%linkGeometries(i)%length2
-        
-        ! TODO_MJR: check here for anisotropy and if, recalculate k11n,k11m
-        
-        ! horizontal conductance calculation
-        this%satConductance(i) = hcond(1, 1, 1, 1, this%inewton, 0, ihc,        &
-                        this%icellavg, 0, 0, DONE,                              &
-                        topn, topm, satn, satm, k11n, k11m,                     &
-                        topn, topm,                                             &
-                        botn, botm,                                             &
-                        cl1, cl2,                                               &
-                        hWidth, this%satOmega)
-        
+    ! map back to solution matrix
+    conn => this%interfaceModel%dis%con
+    do mloc=1, conn%nodes
+      if (.not. associated(this%gridConnection%idxToGlobal(mloc)%model, this%gwfModel)) then
+        ! only write coefficients for own model to global matrix, cycle otherwise
+        cycle
       end if
-      
-    end do
-    
-    
-  end subroutine calculateSaturatedConductance
-  
-  ! TODO_MJR: how can we reduce the duplication between this and saturated conductance calculation?
-  subroutine calculateConductance(this)
-    class(GwfGwfConnectionType), intent(inout)  :: this
-    ! local
-    integer(I4B) :: i
-    integer(I4B) :: nLinks
-    type(GwfModelType), pointer :: model2
-    
-    integer(I4B) :: ihc                             ! == 1 for horizontally connected, == 0 for vertical
-    integer(I4B) :: n, m, ibdn, ibdm, ictn, ictm    
-    real(DP) :: topn, topm, botn, botm, satn, satm, hn, hm
-    real(DP) :: hWidth, vArea
-    real(DP) :: cl1, cl2 ! connection lengths 
-    real(DP) :: hyn, hym
-    real(DP) :: k11n, k11m
-    real(DP), dimension(3) :: vg
-    
-    real(DP) :: cond
-    
-    ! loop over connected nodes
-    ! TODO_MJR: consider performance
-    nLinks = this%gridConnection%nrOfLinks    
-    do i=1, nLinks  
-      
-      n = this%gridConnection%localCells(i)%cell%index
-      m = this%gridConnection%connectedCells(i)%cell%index
-      ihc = this%gridConnection%linkGeometries(i)%connectionType
-      
-      ! We know this is a gwf model:
-      ! (TODO_MJR: maybe replace model pointer by index in model list?)
-      model2 => CastToGwfModel(this%gridConnection%connectedCells(i)%cell%model)  
-    
-      ibdn = this%gwfModel%ibound(n)
-      ictn = this%gwfModel%npf%icelltype(n)
-      topn = this%gwfModel%dis%top(n)
-      botn = this%gwfModel%dis%bot(n)
-      satn = this%gwfModel%npf%sat(n)
-      hn = this%gwfModel%x(n)
-    
-      ! connected model
-      ibdm = model2%ibound(m)
-      ictm = model2%npf%icelltype(m)
-      topm = model2%dis%top(m)      
-      botm = model2%dis%bot(m)      
-      satm = model2%npf%sat(m)
-      hm = model2%x(m)
-    
-      ! -- Calculate conductance depending on connection orientation
-      if(ihc == 0) then        
-        ! -- Vertical connection
-        vg(1) = DZERO
-        vg(2) = DZERO
-        vg(3) = DONE
-      
-        hyn = this%gwfModel%npf%hy_eff(n, 0, ihc, vg=vg)
-        hym = model2%npf%hy_eff(m, 0, ihc, vg=vg)
+      ! copy into global matrix
+      do j=conn%ia(mloc), conn%ia(mloc+1)-1
+        amatsln(this%mapIdxToSln(j)) = amatsln(this%mapIdxToSln(j)) + this%amat(j)
+      end do
+    end do      
         
-        vArea = this%gridConnection%linkGeometries(i)%hwva
-        this%conductance = vcond(ibdn, ibdm, ictn, ictm, this%inewton, this%iVarCV,   &
-                            this%iDewatCV, this%satConductance(i), hn, hm, hyn, hym,  &
-                            satn, satm, topn, topm, botn, botm, vArea)
-      else        
-        ! -- Horizontal Connection
-        k11n = this%gwfModel%npf%k11(n)
-        k11m = model2%npf%k11(m)
-        hWidth = this%gridConnection%linkGeometries(i)%hwva
-        cl1 = this%gridConnection%linkGeometries(i)%length1
-        cl2 = this%gridConnection%linkGeometries(i)%length2
-        
-        ! TODO_MJR: -- Check for anisotropy in models, and recalculate hyn and hym
-        ! if(this%ianglex > 0) then
-        !  ...
-        ! endif     
-        
-        this%conductance = hcond(ibdn, ibdm, ictn, ictm, this%inewton, this%inewton, &
-                            ihc, this%icellavg, 0, 0, this%satConductance(i),        &
-                            hn, hm, satn, satm, k11n, k11m, topn, topm, botn, botm,  &
-                            cl1, cl2, hWidth, this%satOmega)
-      endif
-    
-    end do ! loop over links
-    
-    
-  end subroutine calculateConductance
+  end subroutine gwfgwfcon_fc 
   
   ! unsafe routine, you have to know what you're doing with this
   function CastToGwfModel(obj) result(gwfmodel)
