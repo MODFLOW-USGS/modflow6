@@ -108,26 +108,38 @@ contains ! module procedures
     ! 2x3
     allocate(gwfModelA)
     call gwfModelA%allocate_scalars("TestModelA")
+    allocate(gwfModelA%x(6))
+    allocate(gwfModelA%ibound(6))
+    gwfModelA%x = 0.0_DP
+    gwfModelA%ibound = 1
     gwfModelA%name = "TestModelA"
-    open(unit=901, file=TESTDATADIR//"dis_A.dis", status='old', action='read')
-    call dis_cr(gwfModelA%dis, gwfModelA%name, 901, -1)
+    open(unit=1980, file=TESTDATADIR//"dis_2x3.dis", status='old', action='read')
+    call dis_cr(gwfModelA%dis, gwfModelA%name, 1980, -1)
     call gwfModelA%dis%dis_df()    
-    close(901)
+    close(1980)
     call npf_cr(gwfModelA%npf, gwfModelA%name, -1, -1)
     allocate(gwfModelA%npf%k11(gwfModelA%dis%nodes))
+    allocate(gwfModelA%npf%icelltype(gwfModelA%dis%nodes))
     gwfModelA%npf%k11 = 1.0_DP
+    gwfModelA%npf%icelltype = 1
     
     ! 2x6
     allocate(gwfModelB)
     call gwfModelB%allocate_scalars("TestModelB")
+    allocate(gwfModelB%x(12))
+    allocate(gwfModelB%ibound(12))
+    gwfModelB%x = 0.0_DP
+    gwfModelB%ibound = 1
     gwfModelB%name = "TestModelB"
-    open(unit=902, file=TESTDATADIR//"dis_B.dis", status='old', action='read')
-    call dis_cr(gwfModelB%dis, gwfModelB%name, 902, -1)
+    open(unit=1980, file=TESTDATADIR//"dis_2x6.dis", status='old', action='read')
+    call dis_cr(gwfModelB%dis, gwfModelB%name, 1980, -1)
     call gwfModelB%dis%dis_df()
-    close(902)
+    close(1980)
     call npf_cr(gwfModelB%npf, gwfModelB%name, -1, -1)
     allocate(gwfModelB%npf%k11(gwfModelB%dis%nodes))
+    allocate(gwfModelB%npf%icelltype(gwfModelB%dis%nodes))
     gwfModelB%npf%k11 = 2.0_DP
+    gwfModelB%npf%icelltype = 1
     
     ! cast up and construct grid connection
     allocate(gc)
