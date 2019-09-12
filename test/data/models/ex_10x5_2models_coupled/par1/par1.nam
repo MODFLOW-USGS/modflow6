@@ -1,0 +1,10 @@
+BEGIN OPTIONS
+END OPTIONS
+
+BEGIN PACKAGES
+  DIS6 .\par1\par1.dis
+  IC6 .\par1\par1.ic
+  NPF6 .\par1\par1.npf
+  OC6 .\par1\par1.oc
+  CHD6 .\par1\par1.chd
+END PACKAGES

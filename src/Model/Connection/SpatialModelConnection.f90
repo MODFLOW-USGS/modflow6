@@ -20,9 +20,8 @@ module SpatialModelConnectionModule
     
     ! TODO_MJR: mem mgt of these guys:
     integer(I4B) :: nrOfConnections ! TODO_MJR: do we need this one?
-    type(GridConnectionType), pointer :: gridConnection => null()
-    
-    integer(I4B), dimension(:), pointer, contiguous :: globalOffdiagIdx => null()
+    class(GridConnectionType), pointer :: gridConnection => null()    
+    integer(I4B), dimension(:), pointer :: mapIdxToSln => null() ! maps local matrix (amat) to the global solution matrix
     
   contains
     procedure, pass(this) :: spatialConnection_ctor
@@ -75,40 +74,39 @@ contains ! module procedures
     call this%gridConnection%construct(this%owner, this%nrOfConnections, this%name)
     call this%addLinksToGridConnection()
     
-    ! TODO_MJR: move this?
-    allocate(this%globalOffdiagIdx(this%nrOfConnections))
-    
   end subroutine defineSpatialConnection
   
+  ! create the mapping from local system matrix to global
   subroutine mapCoefficients(this, iasln, jasln)
     use SimModule, only: ustop
     use GridConnectionModule
+    use ConnectionsModule, only: ConnectionsType
     class(SpatialModelConnectionType), intent(inout) :: this
     integer(I4B), dimension(:), intent(in) :: iasln
     integer(I4B), dimension(:), intent(in) :: jasln
     ! local
-    integer(I4B) :: i, nLinks
-    integer(I4B) :: iglo, jglo ! global (solution matrix) indices    
-    integer(I4B) :: csrIndex
+    integer(I4B) :: mloc, nloc, mglob, nglob, j, csrIdx
+    type(ConnectionsType), pointer :: conn => null()
     
-    type(GlobalCellType), dimension(:), pointer :: localCells => null()
-    type(GlobalCellType), dimension(:), pointer :: connectedCells => null()
+    conn => this%gridConnection%connections
     
-    localCells => this%gridConnection%localCells(:)%cell
-    connectedCells => this%gridConnection%connectedCells(:)%cell
+    allocate(this%mapIdxToSln(conn%nja))
     
-    nLinks = this%gridConnection%nrOfLinks
-       
-    do i=1, nLinks
-      iglo = localCells(i)%index + localCells(i)%model%moffset
-      jglo = connectedCells(i)%index + connectedCells(i)%model%moffset      
-      csrIndex = getCSRIndex(iglo, jglo, iasln, jasln)
-      if (csrIndex == -1) then
-        ! this should not be possible
-        write(*,*) 'Error: cannot find cell connection in global system'
-        call ustop()
-      end if
-      this%globalOffdiagIdx(i) = csrIndex
+    do mloc=1, conn%nodes
+      do j=conn%ia(mloc), conn%ia(mloc+1)-1
+        nloc = conn%ja(j) 
+        
+        mglob = this%gridConnection%idxToGlobal(mloc)%index + this%gridConnection%idxToGlobal(mloc)%model%moffset
+        nglob = this%gridConnection%idxToGlobal(nloc)%index + this%gridConnection%idxToGlobal(nloc)%model%moffset 
+        csrIdx = getCSRIndex(mglob, nglob, iasln, jasln)
+        if (csrIdx == -1) then
+          ! this should not be possible
+          write(*,*) 'Error: cannot find cell connection in global system'
+          call ustop()
+        end if
+        
+        this%mapIdxToSln(j) = csrIdx       
+      end do
     end do
     
   end subroutine mapCoefficients

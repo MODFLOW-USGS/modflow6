@@ -55,7 +55,7 @@ module GridConnectionModule
     
     integer(I4B), pointer :: nrOfCells => null()                            ! the total number of cells which are connected
     type(GlobalCellType), dimension(:), pointer :: idxToGlobal => null()    ! a map from local to global coordinates
-    type(ConnectionsType), pointer :: connections => null()                   ! sparse matrix with the connections
+    type(ConnectionsType), pointer :: connections => null()                 ! sparse matrix with the connections
     
     ! TODO_MJR: not sure yet about this
     integer(I4B), pointer :: nrOfConnectedModels => null()

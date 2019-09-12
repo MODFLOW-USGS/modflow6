@@ -74,12 +74,12 @@ module ModelConnectionModule
       integer(I4B), dimension(:), intent(in) :: jasln
     end subroutine mapCoefficientsIFace
     
-    subroutine fillCoefficientsIFace(this, kiter, iasln, amatsln, inwtflag)
+    subroutine fillCoefficientsIFace(this, kiter, amatsln, njasln, inwtflag)
       import :: ModelConnectionType, I4B, DP
       class(ModelConnectionType), intent(inout) :: this
       integer(I4B), intent(in) :: kiter
-      integer(I4B), dimension(:), intent(in) :: iasln
       real(DP), dimension(:), intent(inout) :: amatsln
+      integer(I4B),intent(in) :: njasln
       integer(I4B), intent(in) :: inwtflag
     end subroutine fillCoefficientsIFace
      
