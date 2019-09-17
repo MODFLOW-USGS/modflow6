@@ -1,7 +1,8 @@
 module GridConnectionModule
   use KindModule, only: I4B, DP
   use ConstantsModule, only: LENORIGIN
-  use NumericalModelModule, only: NumericalModelType
+  use ListModule, only: ListType
+  use NumericalModelModule
   use ConnectionsModule
   use SparseModule, only: sparsematrix
   implicit none
@@ -33,7 +34,7 @@ module GridConnectionModule
   type, private :: ModelWithNbrsType
       class(NumericalModelType), pointer :: model => null()
       integer(I4B) :: nrOfNbrs
-      class(NumericalModelType), dimension(:), allocatable :: neighbors
+      class(ModelWithNbrsType), dimension(:), allocatable :: neighbors
   end type
   
   ! this class works with these steps:
@@ -55,23 +56,37 @@ module GridConnectionModule
     
     integer(I4B), pointer :: nrOfCells => null()                            ! the total number of cells which are connected
     type(GlobalCellType), dimension(:), pointer :: idxToGlobal => null()    ! a map from local to global coordinates
+    
+    type(ModelWithNbrsType), pointer :: modelWithNbrs => null() 
+    
+    ! We have a global index, which is the row in the solution matrix,
+    ! a regional index, which runs over all the models involved in this gridconnection,
+    ! a local index, which is just local to each model,
+    ! and finally, something called the interface index, which numbers the
+    ! cells in the interface discretization.
+    !
+    ! The following data structure defines a map from the regional index to the interface index:
+    integer(I4B), dimension(:), pointer               :: regionalToInterfaceIdxMap => null()
+    type(ListType)                                    :: regionalModels                   ! the models that make up the interface
+    integer(I4B), dimension(:), pointer               :: regionalModelOffset => null()    ! the new offset to compactify the range of indices 
+    
+    
     type(ConnectionsType), pointer :: connections => null()                 ! sparse matrix with the connections
     
-    ! TODO_MJR: not sure yet about this
-    integer(I4B), pointer :: nrOfConnectedModels => null()
-    type(ModelWithNbrsType), dimension(:), pointer :: connectedModels => null()
     
   contains
     procedure, pass(this) :: construct
     procedure, private, pass(this) :: allocateScalars, allocateArrays
     procedure, pass(this) :: addLink
+    procedure, pass(this) :: addModelLink    
     procedure, pass(this) :: extendConnection
-    procedure, pass(this) :: connectModels
     
     procedure, private, pass(this) :: getNrOfCells
     procedure, private, pass(this) :: buildConnections
     procedure, private, pass(this) :: addNeighbors
     procedure, private, pass(this) :: addNeighborCell
+    procedure, private, pass(this) :: connectModels
+    procedure, private, pass(this) :: addToRegionalModels
   end type
   
   contains ! module procedures
@@ -93,6 +108,9 @@ module GridConnectionModule
     allocate(this%linkGeometries(nCapacity))
     allocate(this%localCells(nCapacity))
     allocate(this%connectedCells(nCapacity))
+    allocate(this%modelWithNbrs)
+    
+    this%modelWithNbrs%model => model
     
     this%linkCapacity = nCapacity
     this%nrOfLinks = 0
@@ -132,15 +150,83 @@ module GridConnectionModule
     
   end subroutine addLink
   
-  ! defines that two models of same type are connected through an
+  ! this is called for two models of same type that are connected through an
   ! exchange, need this for global topology
-  subroutine connectModels(this, model1, model2)
-    class(GridConnectionType), intent(in) :: this
+  ! NOTE: assumption here is only 1 exchange exists between any two models,
+  ! can we do that??
+  subroutine addModelLink(this, model1, model2)
+    class(GridConnectionType), intent(inout) :: this
     class(NumericalModelType), pointer :: model1, model2
-    
+    ! local
         
-  end subroutine
+    call this%connectModels(this%modelWithNbrs, model1, model2, 2)
+    
+  end subroutine addModelLink
   
+  recursive subroutine connectModels(this, modelNbrs, model1, model2, depth)
+    class(GridConnectionType), intent(inout)   :: this
+    class(ModelWithNbrsType), intent(inout) :: modelNbrs
+    class(NumericalModelType), pointer      :: model1, model2
+    integer(I4B)                            :: depth
+    ! local
+    integer(I4B) :: inbr, newDepth
+    class(NumericalModelType), pointer      :: neighborModel
+    
+    if (depth < 1) then
+      return
+    end if
+    
+    neighborModel => null()    
+    
+    ! is it a direct neighbor:
+    if (associated(modelNbrs%model, model1)) then
+      neighborModel => model2
+    else if (associated(modelNbrs%model, model2)) then
+      neighborModel => model1
+    end if
+    
+    ! and/or maybe its connected to one of the neighbors:
+    newDepth = depth - 1
+    do inbr = 1, modelNbrs%nrOfNbrs
+      call this%connectModels(modelNbrs%neighbors(inbr), model1, model2, newDepth)
+    end do
+    
+    ! do not add until here, after the recursion, to prevent 
+    ! back-and-forth connecting of models...
+    if (associated(neighborModel)) then           
+      if (.not. allocated(modelNbrs%neighbors)) then
+        allocate(modelNbrs%neighbors(MaxNeighbors))
+        modelNbrs%nrOfNbrs = 0
+      end if
+      modelNbrs%neighbors(modelNbrs%nrOfNbrs + 1)%model => neighborModel
+      modelNbrs%nrOfNbrs = modelNbrs%nrOfNbrs + 1
+      
+      ! add to array of all neighbors
+      call this%addToRegionalModels(neighborModel)
+    end if
+    
+  end subroutine connectModels
+  
+  subroutine addToRegionalModels(this, modelToAdd)
+    class(GridConnectionType), intent(inout) :: this  
+    class(NumericalModelType), pointer    :: modelToAdd
+    ! local
+    integer(I4B) :: im
+    class(NumericalModelType), pointer    :: modelInList
+    
+    ! do we have it in there already?
+    do im = 1, this%regionalModels%Count()
+      modelInList => GetNumericalModelFromList(this%regionalModels, im)
+      if (associated(modelToAdd, modelInList)) then
+        return
+      end if
+    end do
+    
+    ! no? then add...
+    call AddNumericalModelToList(this%regionalModels, modelToAdd)
+    
+  end subroutine addToRegionalModels
+
   ! build the connection topology to deal with neighbors-of-neighbors
   subroutine extendConnection(this, localDepth, remoteDepth)    
     class(GridConnectionType), intent(in) :: this  
@@ -166,7 +252,7 @@ module GridConnectionModule
     class(GridConnectionType), intent(in) :: this
     integer(I4B) :: ncells
     
-    !TODO_MJR: also for larger stencils
+    !TODO_MJR: also for larger stencils and this doesn't take care of duplicates!!!
     ncells = size(this%localCells) + size(this%connectedCells)   
   end function
     
@@ -324,7 +410,6 @@ module GridConnectionModule
     call mem_allocate(this%nrOfLinks, 'NRLINKS', this%memOrigin)
     call mem_allocate(this%nrOfCells, 'NRCELLS', this%memOrigin)
     call mem_allocate(this%linkCapacity, 'LINKCAP', this%memOrigin)
-    call mem_allocate(this%nrOfConnectedModels, 'NRCONMODELS', this%memorigin)
     
   end subroutine allocateScalars
   

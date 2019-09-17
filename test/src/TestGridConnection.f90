@@ -22,6 +22,7 @@ contains ! module procedures
     call test(testBasicConnectivity, "GridConnection, test creating a basic connectivity matrix")
     call test(testNbrOfNbrConnectivity, "GridConnection, test creating a connectivity matrix for XT3D")
     call test(testTVDConnectivity, "GridConnection, test creating a connectivity matrix for TVD")
+    call test(testModelConnectivity, "GridConnection, test connecting models up to nbrs-of-nbrs")
     
   end subroutine
   
@@ -120,6 +121,39 @@ contains ! module procedures
   
   subroutine testTVDConnectivity
     call assert_true(.false., "not implemented")
+  end subroutine
+  
+  subroutine testModelConnectivity
+    type(GridConnectionType) :: gc  
+    class(NumericalModelType), pointer :: numericalModel
+    class(NumericalModelType), pointer :: nbr1, nbr2, nbr3, nnbr11, nnbr12, nnbr21, nnbr31
+    integer(I4B) :: nrNbrsOfNbrs
+    
+    
+    !
+    ! nnbr21 -- nbr2 -- model -- nbr1 -- nnbr11
+    !                     |       |
+    !         nnbr31 -- nbr3    nnbr12
+    !
+    allocate(numericalModel)
+    call gc%construct(numericalModel, 10, "someGridConn") 
+    
+    allocate(nbr1, nbr2, nbr3, nnbr11, nnbr12, nnbr21, nnbr31)
+    
+    ! add links
+    call gc%addModelLink(numericalModel, nbr1)
+    call gc%addModelLink(nbr2, numericalModel)
+    call gc%addModelLink(numericalModel, nbr3)
+    call gc%addModelLink(nbr1, nnbr11)
+    call gc%addModelLink(nbr1, nnbr12)
+    call gc%addModelLink(nbr2, nnbr21)
+    call gc%addModelLink(nbr3, nnbr31)
+    
+    call assert_true(associated(gc%modelWithNbrs), "Model with nbrs should be allocated")
+    call assert_equal(gc%modelWithNbrs%nrOfNbrs, 3, "Number of neighbors should match")
+    call assert_true(associated(gc%modelWithNbrs%neighbors(1)%model, nbr1), "Neighboring model should be assigned")
+    call assert_equal(gc%modelWithNbrs%neighbors(1)%nrofNbrs, 2, "Nr of neighbors of neighbors should equal 2")
+    
   end subroutine
   
   ! helper function to setup basic gridconn
