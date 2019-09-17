@@ -34,7 +34,7 @@ module SpatialModelConnectionModule
     procedure, pass(this) :: mc_ac => addConnectionsToMatrix
     
     procedure, private, pass(this) :: addLinksToGridConnection
-    procedure, private, pass(this) :: setGlobalNeighbours
+    procedure, private, pass(this) :: findModelNeighbors
     procedure, private, pass(this) :: getNrOfConnections
   end type SpatialModelConnectionType
 
@@ -176,6 +176,9 @@ contains ! module procedures
       end do
     end do
     
+    ! create model topology
+    call this%findModelNeighbors()
+    
     ! here we scan for nbr-of-nbrs and create final data structures
     select case(this%stencilType)
       case(0) 
@@ -189,9 +192,7 @@ contains ! module procedures
     
   end subroutine addLinksToGridConnection
   
-  ! subroutine uses the global exchanges from ModelConnection base,
-  ! to set global neighbour information in GridConnection
-  subroutine setGlobalNeighbours(this)
+  subroutine findModelNeighbors(this)
       class(SpatialModelConnectionType), intent(inout) :: this
       ! local   
       integer(I4B) :: i
@@ -199,12 +200,12 @@ contains ! module procedures
       
       ! loop over all exchanges in solution with same conn. type
       do i=1, this%globalExchanges%Count()
-          numEx => GetNumericalExchangeFromList(this%exchangelist, i)
-          ! add connection between models
-          call this%gridConnection%connectModels(numEx%m1, numEx%m2)
-      end do     
+          numEx => GetNumericalExchangeFromList(this%globalExchanges, i)
+          ! (possibly) add connection between models
+          call this%gridConnection%addModelLink(numEx%m1, numEx%m2)
+      end do
       
-   end subroutine
+   end subroutine findModelNeighbors
   
   ! count total nr. of connection between cells, from the exchanges
   function getNrOfConnections(this) result(nrConns)
