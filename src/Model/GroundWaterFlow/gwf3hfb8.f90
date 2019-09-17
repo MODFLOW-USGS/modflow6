@@ -323,7 +323,7 @@ module GwfHfbModule
             !lsm amat(idxglo(idiag)) = amat(idxglo(idiag)) + aterm - cond
             call amat_lsm%add_to_matrix(idxglo(idiag), aterm - cond)
             !lsm amat(idxglo(ipos)) = cond
-            call amat_lsm%add_to_matrix(idxglo(ipos), cond)
+            call amat_lsm%replace_in_matrix(idxglo(ipos), cond)
             !
             ! -- Fill row m diag and off diag
             isymcon = this%isym(ipos)
@@ -331,7 +331,7 @@ module GwfHfbModule
             !lsm amat(idxglo(idiag)) = amat(idxglo(idiag)) + aterm - cond
             call amat_lsm%add_to_matrix(idxglo(idiag), aterm - cond)
             !amat(idxglo(isymcon)) = cond
-            call amat_lsm%add_to_matrix(idxglo(isymcon), cond)
+            call amat_lsm%replace_in_matrix(idxglo(isymcon), cond)
             !
           endif
         enddo

@@ -16,6 +16,7 @@ module LinearSystemMatrixModule
     
     procedure :: set_matrix_pointer
     procedure :: add_to_matrix
+    procedure :: replace_in_matrix
     procedure :: get_term
     
   end type LinearSystemMatrixType
@@ -34,6 +35,13 @@ module LinearSystemMatrixModule
       real(DP), intent(in) :: value
       this%amat(ipos) = this%amat(ipos) + value
     end subroutine add_to_matrix
+    
+    subroutine replace_in_matrix(this, ipos, value)
+      class(LinearSystemMatrixType) :: this
+      integer(I4B), intent(in) :: ipos
+      real(DP), intent(in) :: value
+      this%amat(ipos) = value
+    end subroutine replace_in_matrix
     
     function get_term(this, ipos) result(value)
       class(LinearSystemMatrixType) :: this
