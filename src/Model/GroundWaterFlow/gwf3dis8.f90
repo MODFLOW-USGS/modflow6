@@ -23,8 +23,8 @@ module GwfDisModule
     integer(I4B), dimension(:), pointer, contiguous :: nodeuser => null()        ! (size:nodes) given a reduced nodenumber, provide the user nodenumber (size 0 if not reduced)
     real(DP), dimension(:), pointer, contiguous :: delr => null()                ! spacing along a row
     real(DP), dimension(:), pointer, contiguous :: delc => null()                ! spacing along a column
-    real(DP), dimension(:, :, :), pointer :: botm => null()                      ! top and bottom elevations for each cell (ncol, nrow, nlay)
-    integer(I4B), dimension(:, :, :), pointer :: idomain => null()               ! idomain (ncol, nrow, nlay)
+    real(DP), dimension(:, :, :), pointer, contiguous :: botm => null()          ! top and bottom elevations for each cell (ncol, nrow, nlay)
+    integer(I4B), dimension(:, :, :), pointer, contiguous :: idomain => null()   ! idomain (ncol, nrow, nlay)
   contains
     procedure :: dis_df => dis3d_df
     procedure :: dis_da => dis3d_da
@@ -143,8 +143,8 @@ module GwfDisModule
     ! -- Deallocate Arrays
     call mem_deallocate(this%nodereduced)
     call mem_deallocate(this%nodeuser)
-    deallocate(this%botm)
-    deallocate(this%idomain)
+    call mem_deallocate(this%botm)
+    call mem_deallocate(this%idomain)
     !
     ! -- Return
     return
@@ -352,8 +352,10 @@ module GwfDisModule
     ! -- Allocate arrays used in this subroutine
     call mem_allocate(this%delr, this%ncol, 'DELR', this%origin)
     call mem_allocate(this%delc, this%nrow, 'DELC', this%origin)
-    allocate(this%idomain(this%ncol, this%nrow, this%nlay))
-    allocate(this%botm(this%ncol, this%nrow, 0:this%nlay))
+    call mem_allocate(this%idomain, this%ncol, this%nrow, this%nlay, 'IDOMAIN',  &
+                      this%origin)
+    call mem_allocate(this%botm, this%ncol, this%nrow, this%nlay + 1, 'BOTM',    &
+                      this%origin)
     !
     ! --Read GRIDDATA block
     call this%parser%GetBlock('GRIDDATA', isfound, ierr)
@@ -374,18 +376,18 @@ module GwfDisModule
                             this%ndim, this%nrow, this%iout, 0)
             lname(2) = .true.
           case ('TOP')
-            call ReadArray(this%parser%iuactive, this%botm(:,:,0), aname(3), &
+            call ReadArray(this%parser%iuactive, this%botm(:,:,1), aname(3), &
                             this%ndim, this%ncol, this%nrow, this%iout, 0)
             lname(3) = .true.
           case ('BOTM')
             call this%parser%GetStringCaps(keyword)
             if (keyword .EQ. 'LAYERED') then
-              call ReadArray(this%parser%iuactive, this%botm(:,:,1:this%nlay), &
+              call ReadArray(this%parser%iuactive, this%botm(:,:,2:this%nlay+1), &
                               aname(4), this%ndim, this%ncol, this%nrow, &
                               this%nlay, this%iout, 1, this%nlay)
             else
               nvals = this%ncol * this%nrow * this%nlay
-              call ReadArray(this%parser%iuactive, this%botm(:,:,1:this%nlay), &
+              call ReadArray(this%parser%iuactive, this%botm(:,:,2:this%nlay+1), &
                               aname(4), this%ndim, nvals, this%iout)
             end if
             lname(4) = .true.
@@ -465,11 +467,11 @@ module GwfDisModule
       do i = 1, this%nrow
         do j = 1, this%ncol
           if (this%idomain(j, i, k) < 1) cycle
-          dz = this%botm(j, i, k - 1) - this%botm(j, i, k)
+          dz = this%botm(j, i, k) - this%botm(j, i, k + 1)
           if (dz <= DZERO) then
             n = n + 1
-            write(ermsg, fmt=fmtdz) k, i, j, this%botm(j, i, k - 1),         &
-                                    this%botm(j, i, k)
+            write(ermsg, fmt=fmtdz) k, i, j, this%botm(j, i, k),                 &
+                                    this%botm(j, i, k + 1)
             call store_error(ermsg)
           endif
         enddo
@@ -538,8 +540,8 @@ module GwfDisModule
           noder = node
           if(this%nodes < this%nodesuser) noder = this%nodereduced(node)
           if(noder <= 0) cycle
-          this%top(noder) = this%botm(j, i, k - 1)
-          this%bot(noder) = this%botm(j, i, k)
+          this%top(noder) = this%botm(j, i, k)
+          this%bot(noder) = this%botm(j, i, k + 1)
           this%area(noder) = this%delr(j) * this%delc(i)
         enddo
       enddo
@@ -673,8 +675,8 @@ module GwfDisModule
     write(iunit) this%angrot                                                    ! angrot
     write(iunit) this%delr                                                      ! delr
     write(iunit) this%delc                                                      ! delc
-    write(iunit) this%botm(:, :, 0)                                             ! top
-    write(iunit) this%botm(:, :, 1:)                                            ! botm
+    write(iunit) this%botm(:, :, 1)                                             ! top
+    write(iunit) this%botm(:, :, 2:)                                            ! botm
     write(iunit) this%con%iausr                                                 ! iausr
     write(iunit) this%con%jausr                                                 ! jausr
     write(iunit) this%idomain                                                   ! idomain

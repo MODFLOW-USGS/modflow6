@@ -26,8 +26,8 @@ module GwfDisvModule
     real(DP), dimension(:,:), pointer, contiguous :: cellxy => null()            ! cell center stored as 2d array of x and y
     integer(I4B), dimension(:), pointer, contiguous :: iavert => null()          ! cell vertex pointer ia array
     integer(I4B), dimension(:), pointer, contiguous :: javert => null()          ! cell vertex pointer ja array
-    real(DP), dimension(:, :, :), pointer :: botm => null()                      ! top and bottom elevations for each cell (ncpl, 1, 0:nlay)
-    integer(I4B), dimension(:, :, :), pointer :: idomain  => null()              ! idomain (ncpl, 1, nlay)
+    real(DP), dimension(:, :, :), pointer, contiguous :: botm => null()          ! top and bottom elevations for each cell (ncpl, 1, 0:nlay)
+    integer(I4B), dimension(:, :, :), pointer, contiguous :: idomain  => null()  ! idomain (ncpl, 1, nlay)
     type(DisvGeomType) :: cell1                                                  ! cell object used to calculate geometric properties
     type(DisvGeomType)  :: cell2                                                 ! cell object used to calculate geometric properties
   contains
@@ -169,8 +169,8 @@ module GwfDisvModule
     call mem_deallocate(this%cellxy)
     call mem_deallocate(this%iavert)
     call mem_deallocate(this%javert)
-    deallocate(this%botm)
-    deallocate(this%idomain)
+    call mem_deallocate(this%botm)
+    call mem_deallocate(this%idomain)
     !
     ! -- Return
     return
@@ -372,8 +372,10 @@ module GwfDisvModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate botm here (cannot use mem manager because starts at 0)
-    allocate(this%botm(this%ncpl, 1, 0:this%nlay))
-    allocate(this%idomain(this%ncpl, 1, this%nlay))
+    call mem_allocate(this%idomain, this%ncpl, 1, this%nlay, 'IDOMAIN',          &
+                      this%origin)
+    call mem_allocate(this%botm, this%ncpl, 1, this%nlay + 1, 'BOTM',            &
+                      this%origin)
     !
     ! --Read DISDATA block
     call this%parser%GetBlock('GRIDDATA', isfound, ierr)
@@ -386,18 +388,18 @@ module GwfDisvModule
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
           case ('TOP')
-            call ReadArray(this%parser%iuactive, this%botm(:, :, 0),          &
+            call ReadArray(this%parser%iuactive, this%botm(:, :, 1),          &
                             aname(1), this%ndim, this%ncpl, 1, this%iout, 0)
             lname(1) = .true.
           case ('BOTM')
             call this%parser%GetStringCaps(keyword)
             if (keyword.EQ.'LAYERED') then
               call ReadArray(this%parser%iuactive,                            &
-                              this%botm(:,:,1:this%nlay), aname(2), this%ndim, &
+                              this%botm(:,:,2:this%nlay), aname(2), this%ndim, &
                               this%ncpl, 1, this%nlay, this%iout, 1, this%nlay)
             else
               call ReadArray(this%parser%iuactive,                            &
-                              this%botm(:, :, 1:this%nlay), aname(2),          &
+                              this%botm(:, :, 2:this%nlay), aname(2),          &
                               this%ndim, this%nodesuser, 1, 1, this%iout, 0, 0)
             end if
             lname(2) = .true.
@@ -473,10 +475,10 @@ module GwfDisvModule
       do j = 1, this%ncpl
         if (this%idomain(j, 1, k) == 0) cycle
         if (this%idomain(j, 1, k) > 0) then
-          dz = this%botm(j, 1, k - 1) - this%botm(j, 1, k)
+          dz = this%botm(j, 1, k) - this%botm(j, 1, k + 1)
           if (dz <= DZERO) then
-            write(ermsg, fmt=fmtdz) k, j, this%botm(j, 1, k - 1),              &
-                                    this%botm(j, 1, k)
+            write(ermsg, fmt=fmtdz) k, j, this%botm(j, 1, k),                    &
+                                    this%botm(j, 1, k + 1)
             call store_error(ermsg)
           endif
         endif
@@ -540,8 +542,8 @@ module GwfDisvModule
         noder = node
         if(this%nodes < this%nodesuser) noder = this%nodereduced(node)
         if(noder <= 0) cycle
-        this%top(noder) = this%botm(j, 1, k - 1)
-        this%bot(noder) = this%botm(j, 1, k)
+        this%top(noder) = this%botm(j, 1, k)
+        this%bot(noder) = this%botm(j, 1, k + 1)
       enddo
     enddo
     !
@@ -951,8 +953,8 @@ module GwfDisvModule
     write(iunit) this%xorigin                                                   ! xorigin
     write(iunit) this%yorigin                                                   ! yorigin
     write(iunit) this%angrot                                                    ! angrot
-    write(iunit) this%botm(:, :, 0)                                             ! top
-    write(iunit) this%botm(:, :, 1:)                                            ! botm
+    write(iunit) this%botm(:, :, 1)                                             ! top
+    write(iunit) this%botm(:, :, 2:)                                            ! botm
     write(iunit) this%vertices                                                  ! vertices
     write(iunit) (this%cellxy(1, i), i = 1, this%ncpl)                          ! cellx
     write(iunit) (this%cellxy(2, i), i = 1, this%ncpl)                          ! celly
