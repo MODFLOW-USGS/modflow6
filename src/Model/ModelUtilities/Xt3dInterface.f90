@@ -3,6 +3,7 @@ module Xt3dModule
   use KindModule,              only: DP, I4B
   use ConstantsModule,         only: DZERO, DHALF, DONE, LENORIGIN
   use BaseDisModule,           only: DisBaseType
+  use LinearSystemMatrixModule, only: LinearSystemMatrixType
   
   implicit none
 
@@ -350,7 +351,8 @@ module Xt3dModule
     return
   end subroutine xt3d_ar
 
-  subroutine xt3d_fc(this, kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew)
+  subroutine xt3d_fc(this, kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew, &
+                     amat_lsm)
 ! ******************************************************************************
 ! xt3d_fc -- Formulate
 ! ******************************************************************************
@@ -369,6 +371,7 @@ module Xt3dModule
     integer(I4B),intent(in),dimension(nja) :: idxglo
     real(DP),intent(inout),dimension(nodes) :: rhs
     real(DP),intent(inout),dimension(nodes) :: hnew
+    type(LinearSystemMatrixType), intent(in) :: amat_lsm
     ! -- local
     integer(I4B) :: n, m
     !
@@ -391,10 +394,12 @@ module Xt3dModule
     !
     if (this%lamatsaved) then
       do i = 1, nja
-        amat(idxglo(i)) = amat(idxglo(i)) + this%amatpc(i)
+        !lsm amat(idxglo(i)) = amat(idxglo(i)) + this%amatpc(i)
+        call amat_lsm%add_to_matrix(idxglo(i), this%amatpc(i))
       end do
       do i = 1, this%numextnbrs
-        amat(this%idxglox(i)) = amat(this%idxglox(i)) + this%amatpcx(i)
+        !lsm amat(this%idxglox(i)) = amat(this%idxglox(i)) + this%amatpcx(i)
+        call amat_lsm%add_to_matrix(this%idxglox(i), this%amatpcx(i))
       end do
     end if
     !
@@ -460,19 +465,23 @@ module Xt3dModule
           chat1j = chat1j*ar01
         end if
         ! -- Contribute to rows for cells 0 and 1.
-        amat(idxglo(ii00)) = amat(idxglo(ii00)) - chat01
-        amat(idxglo(ii01)) = amat(idxglo(ii01)) + chat01
-        amat(idxglo(ii11)) = amat(idxglo(ii11)) - chat01
-        amat(idxglo(ii10)) = amat(idxglo(ii10)) + chat01
+        !lsm amat(idxglo(ii00)) = amat(idxglo(ii00)) - chat01
+        !lsm amat(idxglo(ii01)) = amat(idxglo(ii01)) + chat01
+        !lsm amat(idxglo(ii11)) = amat(idxglo(ii11)) - chat01
+        !lsm amat(idxglo(ii10)) = amat(idxglo(ii10)) + chat01
+        call amat_lsm%add_to_matrix(idxglo(ii00), - chat01)
+        call amat_lsm%add_to_matrix(idxglo(ii01), chat01)
+        call amat_lsm%add_to_matrix(idxglo(ii11), - chat01)
+        call amat_lsm%add_to_matrix(idxglo(ii10), chat01)
         if (this%ixt3d == 1) then
            call this%xt3d_amat_nbrs(nodes, n, ii00, nnbr0, nja, njasln,        &
-             inbr0, amat, idxglo, chati0)
+             inbr0, amat, idxglo, chati0, amat_lsm)
            call this%xt3d_amat_nbrnbrs(nodes, n, m, ii01, nnbr1, nja, njasln,  &
-             inbr1, amat, idxglo, chat1j)
+             inbr1, amat, idxglo, chat1j, amat_lsm)
            call this%xt3d_amat_nbrs(nodes, m, ii11, nnbr1, nja, njasln,        &
-             inbr1, amat, idxglo, chat1j)
+             inbr1, amat, idxglo, chat1j, amat_lsm)
            call this%xt3d_amat_nbrnbrs(nodes, m, n, ii10, nnbr0, nja, njasln,  &
-             inbr0, amat, idxglo, chati0)
+             inbr0, amat, idxglo, chati0, amat_lsm)
         else
            call this%xt3d_rhs(nodes, n, m, nnbr0, inbr0, chati0, hnew, rhs)
            call this%xt3d_rhs(nodes, m, n, nnbr1, inbr1, chat1j, hnew, rhs)
@@ -559,7 +568,7 @@ module Xt3dModule
   end subroutine xt3d_fcpc
 
   subroutine xt3d_fhfb(this, kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew, &
-    n, m, condhfb)
+                       n, m, condhfb, amat_lsm)
 ! ******************************************************************************
 ! xt3d_fhfb -- Formulate HFB correction
 ! ******************************************************************************
@@ -580,6 +589,7 @@ module Xt3dModule
     real(DP),intent(inout),dimension(nodes) :: rhs
     real(DP),intent(inout),dimension(nodes) :: hnew
     real(DP) :: condhfb
+    type(LinearSystemMatrixType), intent(in) :: amat_lsm
     ! -- local
     !
     logical :: allhc0, allhc1
@@ -664,19 +674,23 @@ module Xt3dModule
       chat1j = chat1j*ar01
     end if
     ! -- Contribute to rows for cells 0 and 1.
-    amat(idxglo(ii00)) = amat(idxglo(ii00)) - chat01
-    amat(idxglo(ii01)) = amat(idxglo(ii01)) + chat01
-    amat(idxglo(ii11)) = amat(idxglo(ii11)) - chat01
-    amat(idxglo(ii10)) = amat(idxglo(ii10)) + chat01
+    !lsm amat(idxglo(ii00)) = amat(idxglo(ii00)) - chat01
+    !lsm amat(idxglo(ii01)) = amat(idxglo(ii01)) + chat01
+    !lsm amat(idxglo(ii11)) = amat(idxglo(ii11)) - chat01
+    !lsm amat(idxglo(ii10)) = amat(idxglo(ii10)) + chat01
+    call amat_lsm%add_to_matrix(idxglo(ii00), - chat01)
+    call amat_lsm%add_to_matrix(idxglo(ii01), chat01)
+    call amat_lsm%add_to_matrix(idxglo(ii11), - chat01)
+    call amat_lsm%add_to_matrix(idxglo(ii10), chat01)
     if (this%ixt3d == 1) then
        call this%xt3d_amat_nbrs(nodes, n, ii00, nnbr0, nja, njasln,        &
-         inbr0, amat, idxglo, chati0)
+         inbr0, amat, idxglo, chati0, amat_lsm)
        call this%xt3d_amat_nbrnbrs(nodes, n, m, ii01, nnbr1, nja, njasln,  &
-         inbr1, amat, idxglo, chat1j)
+         inbr1, amat, idxglo, chat1j, amat_lsm)
        call this%xt3d_amat_nbrs(nodes, m, ii11, nnbr1, nja, njasln,        &
-         inbr1, amat, idxglo, chat1j)
+         inbr1, amat, idxglo, chat1j, amat_lsm)
        call this%xt3d_amat_nbrnbrs(nodes, m, n, ii10, nnbr0, nja, njasln,  &
-         inbr0, amat, idxglo, chati0)
+         inbr0, amat, idxglo, chati0, amat_lsm)
     else
        call this%xt3d_rhs(nodes, n, m, nnbr0, inbr0, chati0, hnew, rhs)
        call this%xt3d_rhs(nodes, m, n, nnbr1, inbr1, chat1j, hnew, rhs)
@@ -686,7 +700,8 @@ module Xt3dModule
     return
   end subroutine xt3d_fhfb
 
-  subroutine xt3d_fn(this, kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew)
+  subroutine xt3d_fn(this, kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew, &
+                     amat_lsm)
 ! ******************************************************************************
 ! xt3d_fn -- Fill Newton terms for xt3d
 ! ******************************************************************************
@@ -705,6 +720,7 @@ module Xt3dModule
     integer(I4B),intent(in),dimension(nja) :: idxglo
     real(DP),intent(inout),dimension(nodes) :: rhs
     real(DP),intent(inout),dimension(nodes) :: hnew
+    type(LinearSystemMatrixType), intent(in) :: amat_lsm
     ! -- local
     integer(I4B) :: n, m
     !
@@ -764,18 +780,22 @@ module Xt3dModule
         ! fill Jacobian for n being the upstream node
         if (iups == n) then
           ! fill in row of n
-          amat(idxglo(ii00)) = amat(idxglo(ii00)) + term
+          !lsm amat(idxglo(ii00)) = amat(idxglo(ii00)) + term
+          call amat_lsm%add_to_matrix(idxglo(ii00), term)
           rhs(n) = rhs(n) + termrhs * hnew(n)
           ! fill in row of m
-          amat(idxglo(ii10)) = amat(idxglo(ii10)) - term
+          !lsm amat(idxglo(ii10)) = amat(idxglo(ii10)) - term
+          call amat_lsm%add_to_matrix(idxglo(ii10), -term)
           rhs(m) = rhs(m) - termrhs * hnew(n)
         ! fill Jacobian for m being the upstream node
         else
           ! fill in row of n
-          amat(idxglo(ii01)) = amat(idxglo(ii01)) + term
+          !lsm amat(idxglo(ii01)) = amat(idxglo(ii01)) + term
+          call amat_lsm%add_to_matrix(idxglo(ii01), term)
           rhs(n) = rhs(n) + termrhs * hnew(m)
           ! fill in row of m
-          amat(idxglo(ii11)) = amat(idxglo(ii11)) - term
+          !lsm amat(idxglo(ii11)) = amat(idxglo(ii11)) - term
+          call amat_lsm%add_to_matrix(idxglo(ii11), -term)
           rhs(m) = rhs(m) - termrhs * hnew(m)
         end if
       enddo
@@ -1439,7 +1459,7 @@ module Xt3dModule
   end subroutine xt3d_areas
 
   subroutine xt3d_amat_nbrs(this, nodes, n, idiag, nnbr, nja,          &
-      njasln, inbr, amat, idxglo, chat)
+      njasln, inbr, amat, idxglo, chat, amat_lsm)
 ! ******************************************************************************
 ! xt3d_amat_nbrs -- Add contributions from neighbors to amat.
 ! ******************************************************************************
@@ -1455,6 +1475,7 @@ module Xt3dModule
     integer(I4B),intent(in),dimension(nja) :: idxglo
     real(DP),dimension(njasln),intent(inout) :: amat
     real(DP),dimension(this%nbrmax) :: chat
+    type(LinearSystemMatrixType), intent(in) :: amat_lsm
     ! -- local
     integer(I4B) :: iil, iii
 ! ------------------------------------------------------------------------------
@@ -1462,8 +1483,10 @@ module Xt3dModule
     do iil = 1,nnbr
       if (inbr(iil).ne.0) then
         iii = this%dis%con%ia(n) + iil
-        amat(idxglo(idiag)) = amat(idxglo(idiag)) - chat(iil)
-        amat(idxglo(iii)) = amat(idxglo(iii)) + chat(iil)            
+        !lsm amat(idxglo(idiag)) = amat(idxglo(idiag)) - chat(iil)
+        call amat_lsm%add_to_matrix(idxglo(idiag), - chat(iil))
+        !lsm amat(idxglo(iii)) = amat(idxglo(iii)) + chat(iil)  
+        call amat_lsm%add_to_matrix(idxglo(iii), chat(iil))
       endif
     enddo
     !
@@ -1471,7 +1494,7 @@ module Xt3dModule
   end subroutine xt3d_amat_nbrs
 
   subroutine xt3d_amat_nbrnbrs(this, nodes, n, m, ii01, nnbr, nja,   &
-      njasln, inbr, amat, idxglo, chat)
+      njasln, inbr, amat, idxglo, chat, amat_lsm)
 ! ******************************************************************************
 ! xt3d_amat_nbrnbrs -- Add contributions from neighbors of neighbor to amat.
 ! ******************************************************************************
@@ -1486,6 +1509,7 @@ module Xt3dModule
     integer(I4B),dimension(this%nbrmax) :: inbr
     integer(I4B),intent(in),dimension(nja) :: idxglo
     real(DP),dimension(njasln),intent(inout) :: amat
+    type(LinearSystemMatrixType), intent(in) :: amat_lsm
     real(DP),dimension(this%nbrmax) :: chat
     ! -- local
     integer(I4B) :: iil, iii, jjj, iixjjj, iijjj
@@ -1498,10 +1522,12 @@ module Xt3dModule
         jjj = this%dis%con%ja(iii)
         call this%xt3d_get_iinmx(n, jjj, iixjjj)
         if (iixjjj.ne.0) then
-          amat(this%idxglox(iixjjj)) = amat(this%idxglox(iixjjj)) - chat(iil)
+          !lsm amat(this%idxglox(iixjjj)) = amat(this%idxglox(iixjjj)) - chat(iil)
+          call amat_lsm%add_to_matrix(this%idxglox(iixjjj), - chat(iil))
         else
           call this%xt3d_get_iinm(n, jjj, iijjj)
-          amat(idxglo(iijjj)) = amat(idxglo(iijjj)) - chat(iil)
+          !lsm amat(idxglo(iijjj)) = amat(idxglo(iijjj)) - chat(iil)
+          call amat_lsm%add_to_matrix(idxglo(iijjj), - chat(iil))
         endif
       endif
     enddo

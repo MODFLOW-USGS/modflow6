@@ -23,6 +23,7 @@ module UzfModule
   use SimModule,        only: count_errors, store_error, ustop, &
                               store_error_unit
   use BlockParserModule, only: BlockParserType
+  use LinearSystemMatrixModule, only: LinearSystemMatrixType
 
   implicit none
   !
@@ -1085,7 +1086,7 @@ contains
     return
   end subroutine uzf_cf
 
-  subroutine uzf_fc(this, rhs, ia, idxglo, amatsln)
+  subroutine uzf_fc(this, rhs, ia, idxglo, amatsln, amat_lsm)
 ! ******************************************************************************
 ! uzf_fc -- Copy rhs and hcof into solution rhs and amat
 ! ******************************************************************************
@@ -1098,6 +1099,7 @@ contains
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
     real(DP), dimension(:), intent(inout) :: amatsln
+    type(LinearSystemMatrixType), intent(in) :: amat_lsm
     ! -- local
     integer(I4B) :: i, n, ipos
 ! ------------------------------------------------------------------------------
@@ -1115,14 +1117,15 @@ contains
       n = this%nodelist(i)
       rhs(n) = rhs(n) + this%rhs(i)
       ipos = ia(n)
-      amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + this%hcof(i)
+      !lsm amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + this%hcof(i)
+      call amat_lsm%add_to_matrix(idxglo(ipos), this%hcof(i))
     enddo
     !
     ! -- return
     return
   end subroutine uzf_fc
 !
-  subroutine uzf_fn(this, rhs, ia, idxglo, amatsln)
+  subroutine uzf_fn(this, rhs, ia, idxglo, amatsln, amat_lsm)
 ! **************************************************************************
 ! uzf_fn -- Fill newton terms
 ! **************************************************************************
@@ -1135,6 +1138,7 @@ contains
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
     real(DP), dimension(:), intent(inout) :: amatsln
+    type(LinearSystemMatrixType), intent(in) :: amat_lsm
     ! -- local
     integer(I4B) :: i, n
     integer(I4B) :: ipos
@@ -1144,7 +1148,8 @@ contains
     do i = 1, this%nodes
       n = this%nodelist(i)
       ipos = ia(n)
-      amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + this%deriv(i)
+      !lsm amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + this%deriv(i)
+      call amat_lsm%add_to_matrix(idxglo(ipos), this%deriv(i))
       rhs(n) = rhs(n) + this%deriv(i) * this%xnew(n)
     end do
     !

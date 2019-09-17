@@ -9,6 +9,7 @@ module EvtModule
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
                                   GetTimeSeriesLinkFromList
   use BlockParserModule, only: BlockParserType
+  use LinearSystemMatrixModule, only: LinearSystemMatrixType
   !
   implicit none
   !
@@ -633,7 +634,7 @@ module EvtModule
     return
   end subroutine evt_cf
 
-  subroutine evt_fc(this, rhs, ia, idxglo, amatsln)
+  subroutine evt_fc(this, rhs, ia, idxglo, amatsln, amat_lsm)
 ! **************************************************************************
 ! evt_fc -- Copy rhs and hcof into solution rhs and amat
 ! **************************************************************************
@@ -646,6 +647,7 @@ module EvtModule
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
     real(DP), dimension(:), intent(inout) :: amatsln
+    type(LinearSystemMatrixType), intent(in) :: amat_lsm
     ! -- local
     integer(I4B) :: i, n, ipos
 ! --------------------------------------------------------------------------
@@ -661,7 +663,8 @@ module EvtModule
       end if
       rhs(n) = rhs(n) + this%rhs(i)
       ipos = ia(n)
-      amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + this%hcof(i)
+      !lsm amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + this%hcof(i)
+      call amat_lsm%add_to_matrix(idxglo(ipos), this%hcof(i))
     enddo
     !
     ! -- return

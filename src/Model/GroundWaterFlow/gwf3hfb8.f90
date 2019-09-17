@@ -6,6 +6,7 @@ module GwfHfbModule
   use NumericalPackageModule, only: NumericalPackageType
   use BlockParserModule,      only: BlockParserType
   use BaseDisModule,          only: DisBaseType
+  use LinearSystemMatrixModule, only: LinearSystemMatrixType
 
   implicit none
 
@@ -196,7 +197,8 @@ module GwfHfbModule
     return
   end subroutine hfb_rp
 
-  subroutine hfb_fc(this, kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew)
+  subroutine hfb_fc(this, kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew,  &
+                    amat_lsm)
 ! ******************************************************************************
 ! hfb_fc -- Fill amatsln for the following conditions:
 !   1.  Not Newton, and
@@ -219,6 +221,7 @@ module GwfHfbModule
     integer(I4B),intent(in),dimension(nja) :: idxglo
     real(DP),intent(inout),dimension(nodes) :: rhs
     real(DP),intent(inout),dimension(nodes) :: hnew
+    type(LinearSystemMatrixType), intent(in) :: amat_lsm
     ! -- local
     integer(I4B) :: ihfb, n, m
     integer(I4B) :: ipos
@@ -272,7 +275,7 @@ module GwfHfbModule
         endif
         ! -- Make hfb corrections for xt3d
         call this%xt3d%xt3d_fhfb(kiter, nodes, nja, njasln, amat, idxglo,      &
-          rhs, hnew, n, m, condhfb)
+          rhs, hnew, n, m, condhfb, amat_lsm)
       end do
       !
     else
@@ -281,7 +284,8 @@ module GwfHfbModule
       if(this%inewton == 0) then
         do ihfb = 1, this%nhfb
           ipos = this%idxloc(ihfb)
-          aterm = amat(idxglo(ipos))
+          !lsm aterm = amat(idxglo(ipos))
+          aterm = amat_lsm%get_term(idxglo(ipos))
           n = this%noden(ihfb)
           m = this%nodem(ihfb)
           if(this%ibound(n) == 0 .or. this%ibound(m) == 0) cycle
@@ -316,14 +320,18 @@ module GwfHfbModule
             !
             ! -- Fill row n diag and off diag
             idiag = this%ia(n)
-            amat(idxglo(idiag)) = amat(idxglo(idiag)) + aterm - cond
-            amat(idxglo(ipos)) = cond
+            !lsm amat(idxglo(idiag)) = amat(idxglo(idiag)) + aterm - cond
+            call amat_lsm%add_to_matrix(idxglo(idiag), aterm - cond)
+            !lsm amat(idxglo(ipos)) = cond
+            call amat_lsm%add_to_matrix(idxglo(ipos), cond)
             !
             ! -- Fill row m diag and off diag
             isymcon = this%isym(ipos)
             idiag = this%ia(m)
-            amat(idxglo(idiag)) = amat(idxglo(idiag)) + aterm - cond
-            amat(idxglo(isymcon)) = cond
+            !lsm amat(idxglo(idiag)) = amat(idxglo(idiag)) + aterm - cond
+            call amat_lsm%add_to_matrix(idxglo(idiag), aterm - cond)
+            !amat(idxglo(isymcon)) = cond
+            call amat_lsm%add_to_matrix(idxglo(isymcon), cond)
             !
           endif
         enddo

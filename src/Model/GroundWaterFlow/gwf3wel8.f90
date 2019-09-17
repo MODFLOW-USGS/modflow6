@@ -8,6 +8,7 @@ module WelModule
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
                                   GetTimeSeriesLinkFromList
   use BlockParserModule, only: BlockParserType
+  use LinearSystemMatrixModule, only: LinearSystemMatrixType
   !
   implicit none
   !
@@ -243,7 +244,7 @@ contains
     return
   end subroutine wel_cf
 
-  subroutine wel_fc(this, rhs, ia, idxglo, amatsln)
+  subroutine wel_fc(this, rhs, ia, idxglo, amatsln, amat_lsm)
 ! **************************************************************************
 ! wel_fc -- Copy rhs and hcof into solution rhs and amat
 ! **************************************************************************
@@ -256,6 +257,7 @@ contains
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
     real(DP), dimension(:), intent(inout) :: amatsln
+    type(LinearSystemMatrixType), intent(in) :: amat_lsm
     ! -- local
     integer(I4B) :: i, n, ipos
 ! --------------------------------------------------------------------------
@@ -270,7 +272,8 @@ contains
       n = this%nodelist(i)
       rhs(n) = rhs(n) + this%rhs(i)
       ipos = ia(n)
-      amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + this%hcof(i)
+      !lsm amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + this%hcof(i)
+      call amat_lsm%add_to_matrix(idxglo(ipos), this%hcof(i))
       !
       ! -- If mover is active and this well is discharging,
       !    store available water (as positive value).
@@ -283,7 +286,7 @@ contains
     return
   end subroutine wel_fc
 
-  subroutine wel_fn(this, rhs, ia, idxglo, amatsln)
+  subroutine wel_fn(this, rhs, ia, idxglo, amatsln, amat_lsm)
 ! **************************************************************************
 ! wel_fn -- Fill newton terms
 ! **************************************************************************
@@ -297,6 +300,7 @@ contains
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
     real(DP), dimension(:), intent(inout) :: amatsln
+    type(LinearSystemMatrixType), intent(in) :: amat_lsm
     ! -- local
     integer(I4B) :: i, node, ipos, ict
     real(DP) :: drterm
@@ -330,7 +334,8 @@ contains
           drterm = sQSaturationDerivative(tp, bt, this%xnew(node))
           drterm = drterm * this%bound(1,i)
           !--fill amat and rhs with newton-raphson terms
-          amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + drterm
+          !lsm amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + drterm
+          call amat_lsm%add_to_matrix(idxglo(ipos), drterm)
           rhs(node) = rhs(node) + drterm * this%xnew(node)
         end if
       end if

@@ -27,6 +27,7 @@ module LakModule
   use ArrayHandlersModule, only: ExpandArray
   use BlockParserModule,   only: BlockParserType
   use BaseDisModule,       only: DisBaseType
+  use LinearSystemMatrixModule, only: LinearSystemMatrixType
   !
   implicit none
   !
@@ -3680,7 +3681,7 @@ contains
     return
   end subroutine lak_cf
 
-  subroutine lak_fc(this, rhs, ia, idxglo, amatsln)
+  subroutine lak_fc(this, rhs, ia, idxglo, amatsln, amat_lsm)
   ! **************************************************************************
   ! lak_fc -- Copy rhs and hcof into solution rhs and amat
   ! **************************************************************************
@@ -3693,6 +3694,7 @@ contains
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
     real(DP), dimension(:), intent(inout) :: amatsln
+    type(LinearSystemMatrixType), intent(in) :: amat_lsm
     ! -- local
     integer(I4B) :: j, n
     integer(I4B) :: igwfnode
@@ -3720,7 +3722,8 @@ contains
         igwfnode = this%cellid(j)
         if (this%ibound(igwfnode) < 1) cycle
         ipossymd = idxglo(ia(igwfnode))
-        amatsln(ipossymd) = amatsln(ipossymd) + this%hcof(j)
+        !lsm amatsln(ipossymd) = amatsln(ipossymd) + this%hcof(j)
+        call amat_lsm%add_to_matrix(ipossymd, this%hcof(j))
         rhs(igwfnode) = rhs(igwfnode) + this%rhs(j)
       end do
     end do
@@ -3735,7 +3738,7 @@ contains
     return
   end subroutine lak_fc
 
-  subroutine lak_fn(this, rhs, ia, idxglo, amatsln)
+  subroutine lak_fn(this, rhs, ia, idxglo, amatsln, amat_lsm)
 ! **************************************************************************
 ! lak_fn -- Fill newton terms
 ! **************************************************************************
@@ -3748,6 +3751,7 @@ contains
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
     real(DP), dimension(:), intent(inout) :: amatsln
+    type(LinearSystemMatrixType), intent(in) :: amat_lsm
     ! -- local
     integer(I4B) :: j, n
     integer(I4B) :: ipos
@@ -3790,7 +3794,8 @@ contains
             drterm = (q1 - q) / this%delh
             ! -- add terms to convert conductance formulation into
             !    newton-raphson formulation
-            amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + drterm - this%hcof(j)
+            !lsm amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + drterm - this%hcof(j)
+            call amat_lsm%add_to_matrix(idxglo(ipos), drterm - this%hcof(j))
             rhs(igwfnode) = rhs(igwfnode) - rterm + drterm * head
           end if
         end if

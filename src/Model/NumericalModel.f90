@@ -7,6 +7,7 @@ module NumericalModelModule
   use SparseModule, only: sparsematrix
   use TimeArraySeriesManagerModule, only: TimeArraySeriesManagerType
   use ListModule, only: ListType
+  use LinearSystemMatrixModule, only: LinearSystemMatrixType
 
   implicit none
   private
@@ -113,12 +114,13 @@ module NumericalModelModule
     integer(I4B),intent(in) :: kiter
   end subroutine model_cf
 
-  subroutine model_fc(this, kiter, amatsln, njasln, inwtflag)
+  subroutine model_fc(this, kiter, amatsln, njasln, amat_lsm, inwtflag)
     class(NumericalModelType) :: this
     integer(I4B),intent(in) :: kiter
     real(DP),dimension(njasln),intent(inout) :: amatsln
     integer(I4B),intent(in) :: njasln
     integer(I4B), intent(in) :: inwtflag
+    type(LinearSystemMatrixType), intent(in) :: amat_lsm
   end subroutine model_fc
 
   subroutine model_ptcchk(this, iptc)
@@ -128,7 +130,7 @@ module NumericalModelModule
   end subroutine model_ptcchk
 
   subroutine model_ptc(this, kiter, neqsln, njasln, &
-                       ia, ja, x, rhs, amatsln, iptc, ptcf)
+                       ia, ja, x, rhs, amatsln, iptc, ptcf, amat_lsm)
     class(NumericalModelType) :: this
     integer(I4B),intent(in) :: kiter
     integer(I4B), intent(in) :: neqsln
@@ -140,14 +142,16 @@ module NumericalModelModule
     real(DP),dimension(njasln),intent(in) :: amatsln
     integer(I4B), intent(inout) :: iptc
     real(DP),intent(inout) :: ptcf
+    type(LinearSystemMatrixType), intent(in) :: amat_lsm
   end subroutine model_ptc
 
-  subroutine model_nr(this, kiter, amatsln, njasln, inwtflag)
+  subroutine model_nr(this, kiter, amatsln, njasln, inwtflag, amat_lsm)
     class(NumericalModelType) :: this
     integer(I4B),intent(in) :: kiter
     real(DP),dimension(njasln),intent(inout) :: amatsln
     integer(I4B),intent(in) :: njasln
     integer(I4B), intent(in) :: inwtflag
+    type(LinearSystemMatrixType), intent(in) :: amat_lsm
   end subroutine model_nr
 
   subroutine model_cc(this, kiter, iend, icnvg, hclose, rclose)

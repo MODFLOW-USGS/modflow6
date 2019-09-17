@@ -7,6 +7,7 @@ module NumericalExchangeModule
   use ConstantsModule,       only: LINELENGTH, DZERO
   use ListModule,            only: ListType
   use BlockParserModule,     only: BlockParserType
+  use LinearSystemMatrixModule, only: LinearSystemMatrixType
 
   implicit none
 
@@ -203,7 +204,7 @@ contains
     return
   end subroutine exg_cf
 
-  subroutine exg_fc(this, kiter, iasln, amatsln, inwtflag)
+  subroutine exg_fc(this, kiter, iasln, amatsln, amat_lsm, inwtflag)
 ! ******************************************************************************
 ! exg_fc -- Fill the matrix
 ! ******************************************************************************
@@ -215,6 +216,7 @@ contains
     integer(I4B), intent(in) :: kiter
     integer(I4B), dimension(:), intent(in) :: iasln
     real(DP), dimension(:), intent(inout) :: amatsln
+    type(LinearSystemMatrixType), intent(in) :: amat_lsm
     integer(I4B), optional, intent(in) :: inwtflag
     ! -- local
     integer(I4B) :: i, nodem1sln, nodem2sln, idiagsln
@@ -222,14 +224,18 @@ contains
     !
     if(this%implicit) then
       do i = 1, this%nexg
-        amatsln(this%idxglo(i)) = this%cond(i)
-        amatsln(this%idxsymglo(i)) = this%cond(i)
+        !lsm amatsln(this%idxglo(i)) = this%cond(i)
+        call amat_lsm%add_to_matrix(this%idxglo(i), this%cond(i))
+        !lsm amatsln(this%idxsymglo(i)) = this%cond(i)
+        call amat_lsm%add_to_matrix(this%idxsymglo(i), this%cond(i))
         nodem1sln = this%nodem1(i) + this%m1%moffset
         nodem2sln = this%nodem2(i) + this%m2%moffset
         idiagsln = iasln(nodem1sln)
-        amatsln(idiagsln) = amatsln(idiagsln) - this%cond(i)
+        !lsm amatsln(idiagsln) = amatsln(idiagsln) - this%cond(i)
+        call amat_lsm%add_to_matrix(idiagsln, -this%cond(i))
         idiagsln = iasln(nodem2sln)
-        amatsln(idiagsln) = amatsln(idiagsln) - this%cond(i)
+        !amatsln(idiagsln) = amatsln(idiagsln) - this%cond(i)
+        call amat_lsm%add_to_matrix(idiagsln, -this%cond(i))
       enddo
     else
       ! -- nothing to do here
@@ -239,7 +245,7 @@ contains
     return
   end subroutine exg_fc
 
-  subroutine exg_nr(this, kiter, iasln, amatsln, inwtflag)
+  subroutine exg_nr(this, kiter, iasln, amatsln, amat_lsm, inwtflag)
 ! ******************************************************************************
 ! exg_nr -- Add Newton-Raphson terms to the solution
 ! ******************************************************************************
@@ -251,6 +257,7 @@ contains
     integer(I4B), intent(in) :: kiter
     integer(I4B), dimension(:), intent(in) :: iasln
     real(DP), dimension(:), intent(inout) :: amatsln
+    type(LinearSystemMatrixType), intent(in) :: amat_lsm
     integer(I4B), optional, intent(in) :: inwtflag
     ! -- local
 ! ------------------------------------------------------------------------------

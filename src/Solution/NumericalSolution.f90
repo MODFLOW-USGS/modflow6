@@ -23,6 +23,7 @@ module NumericalSolutionModule
   use SimVariablesModule,      only: iout
   use BlockParserModule,       only: BlockParserType
   use IMSLinearModule
+  use LinearSystemMatrixModule, only: LinearSystemMatrixType
 
   implicit none
   private
@@ -113,6 +114,9 @@ module NumericalSolutionModule
     !
     ! -- sparse object
     type(sparsematrix)                                   :: sparse
+    !
+    ! -- linear system amatrix
+    type(LinearSystemMatrixType), pointer                :: amat_lsm
 
   contains
     procedure :: sln_df
@@ -307,6 +311,9 @@ contains
     this%ptcexp = done
     this%ptcthresh = DEM3
     this%ptcrat = DZERO
+    !
+    ! -- amat_lsm
+    allocate(this%amat_lsm)
     !
     ! -- return
     return
@@ -1056,6 +1063,9 @@ contains
     call mem_deallocate(this%ptcthresh)
     call mem_deallocate(this%ptcrat)
     !
+    ! -- amat_lsm
+    deallocate(this%amat_lsm)
+    !
     ! -- return
     return
   end subroutine sln_da
@@ -1257,19 +1267,19 @@ contains
         ! -- Add exchange coefficients to the solution
         do ic=1,this%exchangelist%Count()
           cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-          call cp%exg_fc(kiter, this%ia, this%amat, 1)
+          call cp%exg_fc(kiter, this%ia, this%amat, this%amat_lsm, 1)
         enddo
         !
         ! -- Add model coefficients to the solution
         do im=1,this%modellist%Count()
           mp => GetNumericalModelFromList(this%modellist, im)
-          call mp%model_fc(kiter, this%amat, this%nja, 1)
+          call mp%model_fc(kiter, this%amat, this%nja, this%amat_lsm, 1)
         enddo
         !
         ! -- Add exchange Newton-Raphson terms to solution
         do ic=1,this%exchangelist%Count()
           cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-          call cp%exg_nr(kiter, this%ia, this%amat)
+          call cp%exg_nr(kiter, this%ia, this%amat, this%amat_lsm)
         enddo
         !
         ! -- Calculate pseudo-transient continuation factor for each model
@@ -1280,13 +1290,13 @@ contains
           call mp%model_ptc(kiter, this%neq, this%nja,                         &
                             this%ia, this%ja, this%x,                          &
                             this%rhs, this%amat,                               &
-                            iptc, ptcf)
+                            iptc, ptcf, this%amat_lsm)
         end do
         !
         ! -- Add model Newton-Raphson terms to solution
         do im=1,this%modellist%Count()
           mp => GetNumericalModelFromList(this%modellist, im)
-          call mp%model_nr(kiter, this%amat, this%nja, 1)
+          call mp%model_nr(kiter, this%amat, this%nja, 1, this%amat_lsm)
         enddo
         call code_timer(1, ttform, this%ttform)
         !
@@ -1843,6 +1853,9 @@ contains
     call this%sparse%filliaja(this%ia,this%ja,ierror)
     call this%sparse%destroy()
     !
+    ! -- set amat_lsm pointer
+    call this%amat_lsm%set_matrix_pointer(this%amat)
+    !
     ! -- Create mapping arrays for each model.  Mapping assumes
     ! -- that each row has the diagonal in the first position,
     ! -- however, rows do not need to be sorted.
@@ -2189,13 +2202,13 @@ contains
     ! -- Fill coefficients (FC) for each exchange
     do ic=1,this%exchangelist%Count()
       cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-      call cp%exg_fc(kiter, this%ia, this%amat, 0)
+      call cp%exg_fc(kiter, this%ia, this%amat, this%amat_lsm, 0)
     end do
     !
     ! -- Fill coefficients (FC) for each model
     do im=1,this%modellist%Count()
       mp => GetNumericalModelFromList(this%modellist, im)
-      call mp%model_fc(kiter, this%amat, this%nja, 0)
+      call mp%model_fc(kiter, this%amat, this%nja, this%amat_lsm, 0)
     end do
     !
     ! -- calculate initial l2 norm
@@ -2245,13 +2258,13 @@ contains
           ! -- Fill coefficients (FC) for each exchange
           do ic=1,this%exchangelist%Count()
             cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-            call cp%exg_fc(kiter, this%ia, this%amat, 0)
+            call cp%exg_fc(kiter, this%ia, this%amat, this%amat_lsm, 0)
           end do
           !
           ! -- Fill coefficients (FC) for each model
           do im=1,this%modellist%Count()
             mp => GetNumericalModelFromList(this%modellist, im)
-            call mp%model_fc(kiter, this%amat, this%nja, 0)
+            call mp%model_fc(kiter, this%amat, this%nja, this%amat_lsm, 0)
           end do
           !
           ! -- calculate updated l2norm

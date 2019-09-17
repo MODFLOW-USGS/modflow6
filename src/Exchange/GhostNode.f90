@@ -5,6 +5,7 @@ module GhostNodeModule
   use NumericalModelModule,   only: NumericalModelType
   use NumericalPackageModule, only: NumericalPackageType
   use BlockParserModule,      only: BlockParserType
+  use LinearSystemMatrixModule, only: LinearSystemMatrixType
 
   implicit none
 
@@ -307,7 +308,7 @@ module GhostNodeModule
     return
   end subroutine gnc_mc
 
-  subroutine gnc_fmsav(this, kiter, iasln, amatsln)
+  subroutine gnc_fmsav(this, kiter, iasln, amatsln, amat_lsm)
 ! ******************************************************************************
 ! gnc_fmsav -- Store the n-m Picard conductance in cond prior to the Newton
 !   terms being added.
@@ -322,6 +323,7 @@ module GhostNodeModule
     integer(I4B), intent(in) :: kiter
     integer(I4B), dimension(:), intent(in) :: iasln
     real(DP), dimension(:), intent(inout) :: amatsln
+    type(LinearSystemMatrixType), intent(in) :: amat_lsm
     ! -- local
     integer(I4B) :: ignc, ipos
     real(DP) :: cond
@@ -332,7 +334,8 @@ module GhostNodeModule
     gncloop: do ignc = 1, this%nexg
       ipos = this%idxglo(ignc)
       if(ipos > 0) then
-        cond = amatsln(ipos)
+        !lsm cond = amatsln(ipos)
+        cond = amat_lsm%get_term(ipos)
       else
         cond = DZERO
       endif
@@ -343,7 +346,7 @@ module GhostNodeModule
     return
   end subroutine gnc_fmsav
 
-  subroutine gnc_fc(this, kiter, iasln, amatsln)
+  subroutine gnc_fc(this, kiter, iasln, amatsln, amat_lsm)
 ! ******************************************************************************
 ! gnc_fc -- Fill matrix terms
 ! Subroutine: (1) Add the GNC terms to the solution amat or model rhs depending
@@ -359,6 +362,7 @@ module GhostNodeModule
     integer(I4B), intent(in) :: kiter
     integer(I4B), dimension(:), intent(in) :: iasln
     real(DP), dimension(:), intent(inout) :: amatsln
+    type(LinearSystemMatrixType), intent(in) :: amat_lsm
     ! -- local
     integer(I4B) :: ignc, j, noden, nodem, ipos, jidx, iposjn, iposjm
     real(DP) :: cond, alpha, aterm, rterm
@@ -366,7 +370,7 @@ module GhostNodeModule
     !
     ! -- If this is a single model gnc (not an exchange across models), then
     !    pull conductances out of amatsln and store them in this%cond
-    if(this%smgnc) call this%gnc_fmsav(kiter, iasln, amatsln)
+    if(this%smgnc) call this%gnc_fmsav(kiter, iasln, amatsln, amat_lsm)
     !
     ! -- Add gnc terms to rhs or to amat depending on whether gnc is implicit
     !    or explicit
@@ -386,10 +390,14 @@ module GhostNodeModule
         if(this%implicit) then
           iposjn = this%jposinrown(jidx, ignc)
           iposjm = this%jposinrowm(jidx, ignc)
-          amatsln(this%idiagn(ignc)) = amatsln(this%idiagn(ignc)) + aterm
-          amatsln(iposjn) = amatsln(iposjn) - aterm
-          amatsln(this%idxsymglo(ignc)) = amatsln(this%idxsymglo(ignc)) - aterm
-          amatsln(iposjm) = amatsln(iposjm) + aterm
+          !lsm amatsln(this%idiagn(ignc)) = amatsln(this%idiagn(ignc)) + aterm
+          call amat_lsm%add_to_matrix(this%idiagn(ignc), aterm)
+          !lsm amatsln(iposjn) = amatsln(iposjn) - aterm
+          call amat_lsm%add_to_matrix(iposjn, -aterm)
+          !lsm amatsln(this%idxsymglo(ignc)) = amatsln(this%idxsymglo(ignc)) - aterm
+          call amat_lsm%add_to_matrix(this%idxsymglo(ignc), -aterm)
+          !lsm amatsln(iposjm) = amatsln(iposjm) + aterm
+          call amat_lsm%add_to_matrix(iposjm, aterm)
         else
           rterm = aterm * (this%m1%x(noden) - this%m1%x(j))
           this%m1%rhs(noden) = this%m1%rhs(noden) - rterm
@@ -402,8 +410,8 @@ module GhostNodeModule
     return
   end subroutine gnc_fc
 
-  subroutine gnc_fn(this, kiter, njasln, amatsln, condsat, ihc_opt,            &
-    ivarcv_opt, ictm1_opt, ictm2_opt)
+  subroutine gnc_fn(this, kiter, njasln, amatsln, condsat, amat_lsm,           &
+                    ihc_opt, ivarcv_opt, ictm1_opt, ictm2_opt)
 ! ******************************************************************************
 ! gnc_fn -- Fill GNC Newton terms
 !
@@ -432,6 +440,7 @@ module GhostNodeModule
     integer(I4B), intent(in) :: njasln
     real(DP), dimension(njasln), intent(inout) :: amatsln
     real(DP), dimension(:), intent(in) :: condsat
+    type(LinearSystemMatrixType), intent(in) :: amat_lsm
     integer(I4B), dimension(:), optional :: ihc_opt
     integer(I4B), optional :: ivarcv_opt
     integer(I4B), dimension(:), optional :: ictm1_opt
@@ -510,17 +519,21 @@ module GhostNodeModule
         derv = sQuadraticSaturationDerivative(topup, botup, xup)
         term = consterm * derv
         if(iups == 0) then
-          amatsln(this%idiagn(ignc)) = amatsln(this%idiagn(ignc)) + term
+          !lsm amatsln(this%idiagn(ignc)) = amatsln(this%idiagn(ignc)) + term
+          call amat_lsm%add_to_matrix(this%idiagn(ignc), term)
           if(this%m2%ibound(nodem) > 0) then
-            amatsln(this%idxsymglo(ignc)) = amatsln(this%idxsymglo(ignc)) -    &
-                                            term
+            !lsm amatsln(this%idxsymglo(ignc)) = amatsln(this%idxsymglo(ignc)) -    &
+            !lsm                                term
+            call amat_lsm%add_to_matrix(this%idxsymglo(ignc), term)
           endif
           this%m1%rhs(noden) = this%m1%rhs(noden) + term * this%m1%x(noden)
           this%m2%rhs(nodem) = this%m2%rhs(nodem) - term * this%m1%x(noden)
         else
-          amatsln(this%idiagm(ignc)) = amatsln(this%idiagm(ignc)) - term
+          !lsm amatsln(this%idiagm(ignc)) = amatsln(this%idiagm(ignc)) - term
+          call amat_lsm%add_to_matrix(this%idiagm(ignc), -term)
           if(this%m1%ibound(noden) > 0) then
-            amatsln(this%idxglo(ignc)) = amatsln(this%idxglo(ignc)) + term
+            !lsm amatsln(this%idxglo(ignc)) = amatsln(this%idxglo(ignc)) + term
+            call amat_lsm%add_to_matrix(this%idxglo(ignc), term)
           endif
           this%m1%rhs(noden) = this%m1%rhs(noden) + term * this%m2%x(nodem)
           this%m2%rhs(nodem) = this%m2%rhs(nodem) - term * this%m2%x(nodem)

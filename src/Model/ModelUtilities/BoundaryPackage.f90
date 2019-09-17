@@ -20,6 +20,7 @@ module BndModule
   use PackageMoverModule,           only: PackageMoverType
   use BaseDisModule,                only: DisBaseType
   use BlockParserModule,            only: BlockParserType
+  use LinearSystemMatrixModule,     only: LinearSystemMatrixType
 
   implicit none
 
@@ -415,7 +416,7 @@ module BndModule
     return
   end subroutine bnd_cf
 
-  subroutine bnd_fc(this, rhs, ia, idxglo, amatsln)
+  subroutine bnd_fc(this, rhs, ia, idxglo, amatsln, amat_lsm)
 ! ******************************************************************************
 ! bnd_fc -- Copy rhs and hcof into solution rhs and amat
 ! ******************************************************************************
@@ -428,6 +429,7 @@ module BndModule
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
     real(DP), dimension(:), intent(inout) :: amatsln
+    type(LinearSystemMatrixType), intent(in) :: amat_lsm
     ! -- local
     integer(I4B) :: i, n, ipos
 ! ------------------------------------------------------------------------------
@@ -437,14 +439,15 @@ module BndModule
       n = this%nodelist(i)
       rhs(n) = rhs(n) + this%rhs(i)
       ipos = ia(n)
-      amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + this%hcof(i)
+      !lsm amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + this%hcof(i)
+      call amat_lsm%add_to_matrix(idxglo(ipos), this%hcof(i))
     enddo
     !
     ! -- return
     return
   end subroutine bnd_fc
 
-  subroutine bnd_fn(this, rhs, ia, idxglo, amatsln)
+  subroutine bnd_fn(this, rhs, ia, idxglo, amatsln, amat_lsm)
 ! ******************************************************************************
 ! bnd_fn -- add additional terms to convert conductance formulation
 !           to Newton-Raphson formulation
@@ -458,6 +461,7 @@ module BndModule
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
     real(DP), dimension(:), intent(inout) :: amatsln
+    type(LinearSystemMatrixType), intent(in) :: amat_lsm
     ! -- local
 ! ------------------------------------------------------------------------------
 

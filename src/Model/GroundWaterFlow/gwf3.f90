@@ -19,6 +19,7 @@ module GwfModule
   use SimModule,                   only: count_errors, store_error,            &
                                          store_error_unit, ustop
   use BaseModelModule,             only: BaseModelType
+  use LinearSystemMatrixModule,    only: LinearSystemMatrixType
 
   implicit none
 
@@ -566,7 +567,7 @@ module GwfModule
     return
   end subroutine gwf_cf
 
-  subroutine gwf_fc(this, kiter, amatsln, njasln, inwtflag)
+  subroutine gwf_fc(this, kiter, amatsln, njasln, amat_lsm, inwtflag)
 ! ******************************************************************************
 ! gwf_fc -- GroundWater Flow Model fill coefficients
 ! ******************************************************************************
@@ -578,6 +579,7 @@ module GwfModule
     integer(I4B), intent(in) :: kiter
     integer(I4B), intent(in) :: njasln
     real(DP), dimension(njasln), intent(inout) :: amatsln
+    type(LinearSystemMatrixType), intent(in) :: amat_lsm
     integer(I4B), intent(in) :: inwtflag
     ! -- local
     class(BndType), pointer :: packobj
@@ -595,28 +597,30 @@ module GwfModule
     !
     ! -- Fill standard conductance terms
     if(this%innpf > 0) call this%npf%npf_fc(kiter, this%dis%nodes,             &
-                                                this%nja, njasln, amatsln,     &
-                                                this%idxglo, this%rhs, this%x)
+                                            this%nja, njasln, amatsln,         &
+                                            this%idxglo, this%rhs, this%x,     &
+                                            amat_lsm)
     if(this%inhfb > 0) call this%hfb%hfb_fc(kiter, this%dis%nodes,             &
-                                                this%nja, njasln, amatsln,     &
-                                                this%idxglo, this%rhs, this%x)
-    if(this%ingnc > 0) call this%gnc%gnc_fc(kiter, this%ia, amatsln)
+                                            this%nja, njasln, amatsln,         &
+                                            this%idxglo, this%rhs, this%x,     &
+                                            amat_lsm)
+    if(this%ingnc > 0) call this%gnc%gnc_fc(kiter, this%ia, amatsln, amat_lsm)
     if(this%insto > 0) then
       call this%sto%sto_fc(kiter, this%dis%nodes, this%xold,                   &
                             this%x, this%nja, njasln,                          &
-                            amatsln, this%idxglo, this%rhs)
+                            amatsln, this%idxglo, this%rhs, amat_lsm)
     end if
     if(this%inmvr > 0) call this%mvr%mvr_fc()
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
-      call packobj%bnd_fc(this%rhs, this%ia, this%idxglo, amatsln)
+      call packobj%bnd_fc(this%rhs, this%ia, this%idxglo, amatsln, amat_lsm)
     enddo
     !
     !--Fill newton terms
     if(this%innpf > 0) then
       if(inwt /= 0) then
         call this%npf%npf_fn(kiter, this%dis%nodes, this%nja, njasln,          &
-                             amatsln, this%idxglo, this%rhs, this%x)
+                             amatsln, this%idxglo, this%rhs, this%x, amat_lsm)
       endif
     endif
     !
@@ -624,9 +628,10 @@ module GwfModule
     if(this%ingnc > 0) then
       if(inwt /= 0) then
         call this%gnc%gnc_fn(kiter, njasln, amatsln, this%npf%condsat,         &
-          ivarcv_opt=this%npf%ivarcv,                                          &
-          ictm1_opt=this%npf%icelltype,                                        &
-          ictm2_opt=this%npf%icelltype)
+                             amat_lsm,                                         &
+                             ivarcv_opt=this%npf%ivarcv,                       &
+                             ictm1_opt=this%npf%icelltype,                     &
+                             ictm2_opt=this%npf%icelltype)
       endif
     endif
     !
@@ -634,7 +639,8 @@ module GwfModule
     if(this%insto > 0) then
       if (inwtsto /= 0) then
         call this%sto%sto_fn(kiter, this%dis%nodes, this%xold, this%x,         &
-                              this%nja, njasln, amatsln, this%idxglo, this%rhs)
+                              this%nja, njasln, amatsln, this%idxglo, this%rhs,&
+                              amat_lsm)
       end if
     end if
     !
@@ -644,7 +650,7 @@ module GwfModule
       inwtpak = inwtflag
       if(inwtflag == 1) inwtpak = packobj%inewton
       if (inwtpak /= 0) then
-        call packobj%bnd_fn(this%rhs, this%ia, this%idxglo, amatsln)
+        call packobj%bnd_fn(this%rhs, this%ia, this%idxglo, amatsln, amat_lsm)
       end if
     enddo
     !
@@ -716,7 +722,7 @@ module GwfModule
   end subroutine gwf_ptcchk
 
   subroutine gwf_ptc(this, kiter, neqsln, njasln, ia, ja,                       &
-                     x, rhs, amatsln, iptc, ptcf)
+                     x, rhs, amatsln, iptc, ptcf, amat_lsm)
 ! ******************************************************************************
 ! gwf_ptc -- calculate maximum pseudo-transient continuation factor
 ! Subroutine: (1) Calculate maximum pseudo-transient continuation factor
@@ -737,6 +743,7 @@ module GwfModule
     real(DP), dimension(neqsln), intent(in) :: x
     real(DP), dimension(neqsln), intent(in) :: rhs
     real(DP),dimension(njasln),intent(in) :: amatsln
+    type(LinearSystemMatrixType), intent(in) :: amat_lsm
     integer(I4B), intent(inout) :: iptc
     real(DP),intent(inout) :: ptcf
     ! -- local

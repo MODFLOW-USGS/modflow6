@@ -24,6 +24,7 @@ module SfrModule
   use RectangularChGeometryModule, only: RectangularChGeometryType
   use ArrayHandlersModule, only: ExpandArray
   use BlockParserModule,   only: BlockParserType
+  use LinearSystemMatrixModule, only: LinearSystemMatrixType
   !
   implicit none
   !
@@ -1333,7 +1334,7 @@ contains
     return
   end subroutine sfr_cf
 
-  subroutine sfr_fc(this, rhs, ia, idxglo, amatsln)
+  subroutine sfr_fc(this, rhs, ia, idxglo, amatsln, amat_lsm)
   ! **************************************************************************
   ! sfr_fc -- Copy rhs and hcof into solution rhs and amat
   ! **************************************************************************
@@ -1346,6 +1347,7 @@ contains
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
     real(DP), dimension(:), intent(inout) :: amatsln
+    type(LinearSystemMatrixType), intent(in) :: amat_lsm
     ! -- local
     integer(I4B) :: i, n
     integer(I4B) :: ipos
@@ -1395,14 +1397,15 @@ contains
       if (n < 1) cycle
       rhs(n) = rhs(n) + this%rhs(i)
       ipos = ia(n)
-      amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + this%hcof(i)
+      !lsm amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + this%hcof(i)
+      call amat_lsm%add_to_matrix(idxglo(ipos), this%hcof(i))
     enddo
     !
     ! -- return
     return
   end subroutine sfr_fc
 
-  subroutine sfr_fn(this, rhs, ia, idxglo, amatsln)
+  subroutine sfr_fn(this, rhs, ia, idxglo, amatsln, amat_lsm)
 ! **************************************************************************
 ! pak1fn -- Fill newton terms
 ! **************************************************************************
@@ -1415,6 +1418,7 @@ contains
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
     real(DP), dimension(:), intent(inout) :: amatsln
+    type(LinearSystemMatrixType), intent(in) :: amat_lsm
     ! -- local
     integer(I4B) :: i, n
     integer(I4B) :: ipos
@@ -1447,8 +1451,8 @@ contains
       drterm = (q2 - q1) / DEM4
       ! -- add terms to convert conductance formulation into
       !    newton-raphson formulation
-      !amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + drterm
-      amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + drterm - this%hcof(i)
+      !lsm amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + drterm - this%hcof(i)
+      call amat_lsm%add_to_matrix(idxglo(ipos), drterm - this%hcof(i))
       rhs(n) = rhs(n) - rterm + drterm * this%xnew(n)
     end do
     !

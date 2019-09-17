@@ -8,6 +8,7 @@ module GwfStoModule
   use BaseDisModule,          only: DisBaseType
   use NumericalPackageModule, only: NumericalPackageType
   use BlockParserModule,      only: BlockParserType
+  use LinearSystemMatrixModule, only: LinearSystemMatrixType
 
   implicit none
   public :: GwfStoType, sto_cr
@@ -233,7 +234,7 @@ module GwfStoModule
   end subroutine sto_ad
 
   subroutine sto_fc(this, kiter, nodes, hold, hnew, nja, njasln, amat, &
-                            idxglo, rhs)
+                    idxglo, rhs, amat_lsm)
 ! ******************************************************************************
 ! sto_fc -- Fill the solution amat and rhs with storage contribution newton
 !               term
@@ -256,6 +257,7 @@ module GwfStoModule
     real(DP), dimension(njasln),intent(inout) :: amat
     integer(I4B), intent(in),dimension(nja) :: idxglo
     real(DP),intent(inout),dimension(nodes) :: rhs
+    type(LinearSystemMatrixType), intent(in) :: amat_lsm
     ! -- local
     integer(I4B) :: n, idiag
     real(DP) :: tled, rho1, rho2
@@ -315,10 +317,12 @@ module GwfStoModule
       ! -- calculate storage coefficients for amat and rhs
       ! -- specific storage
       if (this%iconvert(n) /= 0) then
-        amat(idxglo(idiag)) = amat(idxglo(idiag)) - rho1 * ss1
+        !lsm amat(idxglo(idiag)) = amat(idxglo(idiag)) - rho1 * ss1
+        call amat_lsm%add_to_matrix(idxglo(idiag), -rho1 * ss1)
         rhs(n) = rhs(n) - rho1 * ss0 * ssh0 + rho1 * ssh1
       else
-        amat(idxglo(idiag)) = amat(idxglo(idiag)) - rho1
+        !lsm amat(idxglo(idiag)) = amat(idxglo(idiag)) - rho1
+        call amat_lsm%add_to_matrix(idxglo(idiag), -rho1)
         rhs(n) = rhs(n) - rho1 * hold(n)
       end if
       ! -- specific yield
@@ -327,7 +331,8 @@ module GwfStoModule
         ! -- add specific yield terms to amat at rhs
         if (snnew < DONE) then
           if (snnew > DZERO) then
-            amat(idxglo(idiag)) = amat(idxglo(idiag)) - rho2
+            !lsm amat(idxglo(idiag)) = amat(idxglo(idiag)) - rho2
+            call amat_lsm%add_to_matrix(idxglo(idiag), -rho2)
             rhsterm = rho2 * tthk * snold
             rhsterm = rhsterm + rho2 * bt
           else
@@ -346,7 +351,7 @@ module GwfStoModule
   end subroutine sto_fc
 
   subroutine sto_fn(this, kiter, nodes, hold, hnew, nja, njasln, amat,         &
-                    idxglo, rhs)
+                    idxglo, rhs, amat_lsm)
 ! ******************************************************************************
 ! sto_fn -- Fill the solution amat and rhs with storage contribution
 ! ******************************************************************************
@@ -365,6 +370,7 @@ module GwfStoModule
     real(DP), dimension(njasln),intent(inout) :: amat
     integer(I4B), intent(in),dimension(nja) :: idxglo
     real(DP),intent(inout),dimension(nodes) :: rhs
+    type(LinearSystemMatrixType), intent(in) :: amat_lsm
     ! -- local
     integer(I4B) :: n, idiag
     real(DP) :: tled, rho1, rho2
@@ -408,7 +414,8 @@ module GwfStoModule
         derv = sQuadraticSaturationDerivative(tp, bt, hnew(n))
         if (this%isseg /= 0) derv = DZERO
         drterm = -(rho1 * derv * hnew(n))
-        amat(idxglo(idiag)) = amat(idxglo(idiag)) + drterm
+        !lsm amat(idxglo(idiag)) = amat(idxglo(idiag)) + drterm
+        call amat_lsm%add_to_matrix(idxglo(idiag), drterm)
         rhs(n) = rhs(n) + drterm * hnew(n)
       end if
       ! -- specific yield
@@ -421,7 +428,8 @@ module GwfStoModule
             rterm = - rho2 * tthk * snnew
             derv = sQuadraticSaturationDerivative(tp, bt, hnew(n))
             drterm = -rho2 * tthk * derv
-            amat(idxglo(idiag)) = amat(idxglo(idiag)) + drterm + rho2
+            !lsm amat(idxglo(idiag)) = amat(idxglo(idiag)) + drterm + rho2
+            call amat_lsm%add_to_matrix(idxglo(idiag), drterm + rho2)
             rhs(n) = rhs(n) - rterm + drterm * hnew(n) + rho2 * bt
           end if
         end if

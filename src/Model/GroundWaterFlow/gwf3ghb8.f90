@@ -5,6 +5,7 @@ module ghbmodule
   use ObsModule,                    only: DefaultObsIdProcessor
   use TimeSeriesLinkModule,         only: TimeSeriesLinkType,                  &
                                           GetTimeSeriesLinkFromList
+  use LinearSystemMatrixModule,     only: LinearSystemMatrixType
   !
   implicit none
   !
@@ -190,7 +191,7 @@ contains
     return
   end subroutine ghb_cf
 
-  subroutine ghb_fc(this, rhs, ia, idxglo, amatsln)
+  subroutine ghb_fc(this, rhs, ia, idxglo, amatsln, amat_lsm)
 ! **************************************************************************
 ! ghb_fc -- Copy rhs and hcof into solution rhs and amat
 ! **************************************************************************
@@ -203,6 +204,7 @@ contains
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
     real(DP), dimension(:), intent(inout) :: amatsln
+    type(LinearSystemMatrixType), intent(in) :: amat_lsm
     ! -- local
     integer(I4B) :: i, n, ipos
     real(DP) :: cond, bhead, qghb
@@ -218,7 +220,8 @@ contains
       n = this%nodelist(i)
       rhs(n) = rhs(n) + this%rhs(i)
       ipos = ia(n)
-      amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + this%hcof(i)
+      !lsm amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + this%hcof(i)
+      call amat_lsm%add_to_matrix(idxglo(ipos), this%hcof(i))
       !
       ! -- If mover is active and this boundary is discharging,
       !    store available water (as positive value).

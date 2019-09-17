@@ -16,6 +16,7 @@ module GwfGwfExchangeModule
   use SimModule,               only: count_errors, store_error,                &
                                      store_error_unit, ustop
   use BlockParserModule,       only: BlockParserType
+  use LinearSystemMatrixModule, only: LinearSystemMatrixType
 
   implicit none
 
@@ -496,7 +497,7 @@ contains
     return
   end subroutine gwf_gwf_cf
 
-  subroutine gwf_gwf_fc(this, kiter, iasln, amatsln, inwtflag)
+  subroutine gwf_gwf_fc(this, kiter, iasln, amatsln, amat_lsm, inwtflag)
 ! ******************************************************************************
 ! gwf_gwf_fc -- Fill the matrix
 ! ******************************************************************************
@@ -511,6 +512,7 @@ contains
     integer(I4B), intent(in) :: kiter
     integer(I4B), dimension(:), intent(in) :: iasln
     real(DP), dimension(:), intent(inout) :: amatsln
+    type(LinearSystemMatrixType), intent(in) :: amat_lsm
     integer(I4B), optional, intent(in) :: inwtflag
     ! -- local
     integer(I4B) :: inwt, iexg
@@ -529,11 +531,11 @@ contains
     endif
     !
     ! -- Call fill method of parent to put this%cond into amatsln
-    call this%NumericalExchangeType%exg_fc(kiter, iasln, amatsln)
+    call this%NumericalExchangeType%exg_fc(kiter, iasln, amatsln, amat_lsm)
     !
     ! -- Fill the gnc terms in the solution matrix
     if(this%ingnc > 0) then
-      call this%gnc%gnc_fc(kiter, iasln, amatsln)
+      call this%gnc%gnc_fc(kiter, iasln, amatsln, amat_lsm)
     endif
     !
     ! -- Call mvr fc routine
@@ -545,14 +547,14 @@ contains
       if (inwtflag == 0) inwt = 0
     endif
     if (inwt /= 0) then
-      call this%exg_fn(kiter, iasln, amatsln)
+      call this%exg_fn(kiter, iasln, amatsln, amat_lsm)
     endif
     !
     ! -- Ghost node Newton-Raphson
     if (this%ingnc > 0) then
       if (inwt /= 0) then
         njasln = size(amatsln)
-        call this%gnc%gnc_fn(kiter, njasln, amatsln, this%condsat,             &
+        call this%gnc%gnc_fn(kiter, njasln, amatsln, this%condsat, amat_lsm,   &
           ihc_opt=this%ihc, ivarcv_opt=this%ivarcv,                            &
           ictm1_opt=this%gwfmodel1%npf%icelltype,                              &
           ictm2_opt=this%gwfmodel2%npf%icelltype)
@@ -563,7 +565,7 @@ contains
     return
   end subroutine gwf_gwf_fc
 
-  subroutine gwf_gwf_fn(this, kiter, iasln, amatsln)
+  subroutine gwf_gwf_fn(this, kiter, iasln, amatsln, amat_lsm)
 ! ******************************************************************************
 ! gwf_gwf_fn -- Fill amatsln with Newton terms
 ! ******************************************************************************
@@ -577,6 +579,7 @@ contains
     integer(I4B), intent(in) :: kiter
     integer(I4B), dimension(:), intent(in) :: iasln
     real(DP), dimension(:), intent(inout) :: amatsln
+    type(LinearSystemMatrixType), intent(in) :: amat_lsm
     ! -- local
     logical :: nisup
     integer(I4B) :: iexg
@@ -657,9 +660,11 @@ contains
           term = consterm * derv
           this%gwfmodel1%rhs(n) = this%gwfmodel1%rhs(n) + term * hn
           this%gwfmodel2%rhs(m) = this%gwfmodel2%rhs(m) - term * hn
-          amatsln(idiagnsln) = amatsln(idiagnsln) + term
+          !lsm amatsln(idiagnsln) = amatsln(idiagnsln) + term
+          call amat_lsm%add_to_matrix(idiagnsln, term)
           if(ibdm > 0) then
-            amatsln(this%idxsymglo(iexg)) = amatsln(this%idxsymglo(iexg)) - term
+            !lsm amatsln(this%idxsymglo(iexg)) = amatsln(this%idxsymglo(iexg)) - term
+            call amat_lsm%add_to_matrix(this%idxsymglo(iexg), -term)
           endif
         else
           !
@@ -667,9 +672,11 @@ contains
           term = -consterm * derv
           this%gwfmodel1%rhs(n) = this%gwfmodel1%rhs(n) + term * hm
           this%gwfmodel2%rhs(m) = this%gwfmodel2%rhs(m) - term * hm
-          amatsln(idiagmsln) = amatsln(idiagmsln) - term
+          !lsm amatsln(idiagmsln) = amatsln(idiagmsln) - term
+          call amat_lsm%add_to_matrix(idiagmsln, -term)
           if(ibdn > 0) then
-            amatsln(this%idxglo(iexg)) = amatsln(this%idxglo(iexg)) + term
+            !lsm amatsln(this%idxglo(iexg)) = amatsln(this%idxglo(iexg)) + term
+            call amat_lsm%add_to_matrix(this%idxglo(iexg), term)
           endif
         endif
       endif
