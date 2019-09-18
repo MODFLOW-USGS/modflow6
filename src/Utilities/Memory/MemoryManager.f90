@@ -370,6 +370,7 @@ module MemoryManagerModule
     integer(I4B) :: istat
     type(MemoryType), pointer :: mt
     integer(I4B) :: i, isizeold
+    integer(I4B) :: ifill
     character(len=100) :: ermsg
     logical :: found
     !
@@ -378,9 +379,10 @@ module MemoryManagerModule
     !
     ! -- Allocate aint and then refill
     isizeold = size(mt%aint1d)
+    ifill = min(isizeold, isize)
     allocate(aint(isize), stat=istat, errmsg=ermsg)
     if(istat /= 0) call allocate_error(name, origin, istat, ermsg, isize)
-    do i = 1, isizeold
+    do i = 1, ifill
       aint(i) = mt%aint1d(i)
     enddo
     !
@@ -445,6 +447,7 @@ module MemoryManagerModule
     integer(I4B) :: istat
     type(MemoryType), pointer :: mt
     integer(I4B) :: i, isizeold
+    integer(I4B) :: ifill
     character(len=100) :: ermsg
     logical :: found
     !
@@ -453,9 +456,10 @@ module MemoryManagerModule
     !
     ! -- Allocate adbl and then refill
     isizeold = size(mt%adbl1d)
+    ifill = min(isizeold, isize)
     allocate(adbl(isize), stat=istat, errmsg=ermsg)
     if(istat /= 0) call allocate_error(name, origin, istat, ermsg, isize)
-    do i = 1, isizeold
+    do i = 1, ifill
       adbl(i) = mt%adbl1d(i)
     enddo
     !

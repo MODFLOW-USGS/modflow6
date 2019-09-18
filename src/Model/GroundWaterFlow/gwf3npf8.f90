@@ -997,9 +997,9 @@ module GwfNpfModule
     call mem_allocate(this%iangle1, 'IANGLE1', this%origin)
     call mem_allocate(this%iangle2, 'IANGLE2', this%origin)
     call mem_allocate(this%iangle3, 'IANGLE3', this%origin)
-    call mem_allocate(this%angle1, 1, 'ANGLE1', trim(this%origin))
-    call mem_allocate(this%angle2, 1, 'ANGLE2', trim(this%origin))
-    call mem_allocate(this%angle3, 1, 'ANGLE3', trim(this%origin))
+    !call mem_allocate(this%angle1, 1, 'ANGLE1', trim(this%origin))
+    !call mem_allocate(this%angle2, 1, 'ANGLE2', trim(this%origin))
+    !call mem_allocate(this%angle3, 1, 'ANGLE3', trim(this%origin))
     call mem_allocate(this%nedges, 'NEDGES', this%origin)
     call mem_allocate(this%lastedge, 'LASTEDGE', this%origin)
     !
@@ -1030,9 +1030,9 @@ module GwfNpfModule
     this%iangle1 = 0
     this%iangle2 = 0
     this%iangle3 = 0
-    this%angle1(1) = DZERO
-    this%angle2(1) = DZERO
-    this%angle3(1) = DZERO
+    !this%angle1(1) = DZERO
+    !this%angle2(1) = DZERO
+    !this%angle3(1) = DZERO
     this%nedges = 0
     this%lastedge = 0
     !
@@ -1045,7 +1045,7 @@ module GwfNpfModule
 
   subroutine allocate_arrays(this, ncells, njas)
 ! ******************************************************************************
-! allocate_scalars -- Allocate npf arrays
+! allocate_arrays -- Allocate npf arrays
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -1056,6 +1056,8 @@ module GwfNpfModule
     class(GwfNpftype) :: this
     integer(I4B), intent(in) :: ncells
     integer(I4B), intent(in) :: njas
+    ! -- local
+    integer(I4B) :: n
 ! ------------------------------------------------------------------------------
     !
     call mem_allocate(this%icelltype, ncells, 'ICELLTYPE', trim(this%origin))
@@ -1063,10 +1065,15 @@ module GwfNpfModule
     call mem_allocate(this%sat, ncells, 'SAT', trim(this%origin))
     call mem_allocate(this%condsat, njas, 'CONDSAT', trim(this%origin))
     !
+    ! -- Optional arrays dimensioned to full size initially
+    call mem_allocate(this%k22, ncells, 'K22', trim(this%origin))
+    call mem_allocate(this%k33, ncells, 'K33', trim(this%origin))
+    call mem_allocate(this%wetdry, ncells, 'WETDRY', trim(this%origin))
+    call mem_allocate(this%angle1, ncells, 'ANGLE1', trim(this%origin))
+    call mem_allocate(this%angle2, ncells, 'ANGLE2', trim(this%origin))
+    call mem_allocate(this%angle3, ncells, 'ANGLE3', trim(this%origin))
+    !
     ! -- Optional arrays
-    call mem_allocate(this%k22, 0, 'K22', trim(this%origin))
-    call mem_allocate(this%k33, 0, 'K33', trim(this%origin))
-    call mem_allocate(this%wetdry, 0, 'WETDRY', trim(this%origin))
     call mem_allocate(this%ibotnode, 0, 'IBOTNODE', trim(this%origin))
     !
     ! -- Specific discharge
@@ -1082,6 +1089,15 @@ module GwfNpfModule
       call mem_allocate(this%ihcedge, 0, 'IHCEDGE', trim(this%origin))
       call mem_allocate(this%propsedge, 0, 0, 'PROPSEDGE', trim(this%origin))
     endif
+    !
+    ! -- initialize iangle1, iangle2, iangle3, and wetdry
+    do n = 1, ncells
+      this%angle1(n) = DZERO
+      this%angle2(n) = DZERO
+      this%angle3(n) = DZERO
+      this%wetdry(n) = DZERO
+    end do
+    
     !
     ! -- Return
     return
@@ -1460,7 +1476,8 @@ module GwfNpfModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule,   only: LINELENGTH, DONE, DPIO180
-    use MemoryManagerModule, only: mem_reallocate, mem_reassignptr
+    use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_deallocate, &
+                                   mem_reassignptr
     use SimModule,         only: ustop, store_error, count_errors
     ! -- dummy
     class(GwfNpftype) :: this
@@ -1470,6 +1487,7 @@ module GwfNpfModule
     logical :: isfound, endOfBlock
     logical, dimension(8)           :: lname
     character(len=24), dimension(8) :: aname
+    character(len=24), dimension(8) :: varinames
     ! -- formats
     character(len=*), parameter :: fmtiprflow =                                &
       "(4x,'CELL-BY-CELL FLOW INFORMATION WILL BE PRINTED TO LISTING FILE " // &
@@ -1495,73 +1513,83 @@ module GwfNpfModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Initialize
-    lname(:) = .false.
+    do n = 1, size(aname)
+      varinames(n) = adjustl(aname(n))
+      lname(n) = .false.
+    end do
+    varinames(2) = 'K11                     '
+    !varinames(:) = ['ICELLTYPE               ', 'K11                     ',      &
+    !                'K33                     ', 'K22                     ',      &
+    !                'WETDRY                  ', 'ANGLE1                  ',      &
+    !                'ANGLE2                  ', 'ANGLE3                  '] 
+    !lname(:) = .false.
     !
     ! -- get npfdata block
     call this%parser%GetBlock('GRIDDATA', isfound, ierr)
     if(isfound) then
       write(this%iout,'(1x,a)')'PROCESSING GRIDDATA'
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        call this%parser%GetStringCaps(keyword)
-        call this%parser%GetRemainingLine(line)
-        lloc = 1
-        select case (keyword)
-          case ('ICELLTYPE')
-            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                this%parser%iuactive, this%icelltype, aname(1))
-            lname(1) = .true.
-          case ('K')
-            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                    this%parser%iuactive, this%k11, aname(2))
-            lname(2) = .true.
-          case ('K33')
-            call mem_reallocate(this%k33, this%dis%nodes, 'K33',                &
-                              trim(this%origin))
-            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                    this%parser%iuactive, this%k33, aname(3))
-            this%ik33 = 1
-            lname(3) = .true.
-          case ('K22')
-            call mem_reallocate(this%k22, this%dis%nodes, 'K22',                &
-                              trim(this%origin))
-            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                    this%parser%iuactive, this%k22, aname(4))
-            this%ik22 = 1
-            lname(4) = .true.
-          case ('WETDRY')
-            call mem_reallocate(this%wetdry, this%dis%nodes, 'WETDRY',         &
-                              trim(this%origin))
-            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                    this%parser%iuactive, this%wetdry, aname(5))
-            lname(5) = .true.
-          case ('ANGLE1')
-            call mem_reallocate(this%angle1, this%dis%nodes, 'ANGLE1',         &
-                              trim(this%origin))
-            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                    this%parser%iuactive, this%angle1, aname(6))
-            lname(6) = .true.
-          case ('ANGLE2')
-            call mem_reallocate(this%angle2, this%dis%nodes, 'ANGLE2',         &
-                              trim(this%origin))
-            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                    this%parser%iuactive, this%angle2, aname(7))
-            lname(7) = .true.
-          case ('ANGLE3')
-            call mem_reallocate(this%angle3, this%dis%nodes, 'ANGLE3',         &
-                              trim(this%origin))
-            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                    this%parser%iuactive, this%angle3, aname(8))
-            lname(8) = .true.
-          case default
-            write(errmsg,'(4x,a,a)')'ERROR. UNKNOWN GRIDDATA TAG: ',           &
-                                     trim(keyword)
-            call store_error(errmsg)
-            call this%parser%StoreErrorUnit()
-            call ustop()
-        end select
-      end do
+      call this%get_block_data(aname, lname, endOfBlock, varinames)
+      !do
+      !  call this%parser%GetNextLine(endOfBlock)
+      !  if (endOfBlock) exit
+      !  call this%parser%GetStringCaps(keyword)
+      !  call this%parser%GetRemainingLine(line)
+      !  lloc = 1
+      !  select case (keyword)
+      !    case ('ICELLTYPE')
+      !      call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
+      !                          this%parser%iuactive, this%icelltype, aname(1))
+      !      lname(1) = .true.
+      !    case ('K')
+      !      call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
+      !                              this%parser%iuactive, this%k11, aname(2))
+      !      lname(2) = .true.
+      !    case ('K33')
+      !      call mem_reallocate(this%k33, this%dis%nodes, 'K33',                &
+      !                        trim(this%origin))
+      !      call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
+      !                              this%parser%iuactive, this%k33, aname(3))
+      !      this%ik33 = 1
+      !      lname(3) = .true.
+      !    case ('K22')
+      !      call mem_reallocate(this%k22, this%dis%nodes, 'K22',                &
+      !                        trim(this%origin))
+      !      call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
+      !                              this%parser%iuactive, this%k22, aname(4))
+      !      this%ik22 = 1
+      !      lname(4) = .true.
+      !    case ('WETDRY')
+      !      call mem_reallocate(this%wetdry, this%dis%nodes, 'WETDRY',         &
+      !                        trim(this%origin))
+      !      call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
+      !                              this%parser%iuactive, this%wetdry, aname(5))
+      !      lname(5) = .true.
+      !    case ('ANGLE1')
+      !      call mem_reallocate(this%angle1, this%dis%nodes, 'ANGLE1',         &
+      !                        trim(this%origin))
+      !      call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
+      !                              this%parser%iuactive, this%angle1, aname(6))
+      !      lname(6) = .true.
+      !    case ('ANGLE2')
+      !      call mem_reallocate(this%angle2, this%dis%nodes, 'ANGLE2',         &
+      !                        trim(this%origin))
+      !      call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
+      !                              this%parser%iuactive, this%angle2, aname(7))
+      !      lname(7) = .true.
+      !    case ('ANGLE3')
+      !      call mem_reallocate(this%angle3, this%dis%nodes, 'ANGLE3',         &
+      !                        trim(this%origin))
+      !      call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
+      !                              this%parser%iuactive, this%angle3, aname(8))
+      !      lname(8) = .true.
+      !    case default
+      !      write(errmsg,'(4x,a,a)')'ERROR. UNKNOWN GRIDDATA TAG: ',           &
+      !                               trim(keyword)
+      !      call store_error(errmsg)
+      !      call this%parser%StoreErrorUnit()
+      !      call ustop()
+      !  end select
+      !end do
     else
       write(errmsg,'(1x,a)')'ERROR.  REQUIRED GRIDDATA BLOCK NOT FOUND.'
       call store_error(errmsg)
@@ -1606,6 +1634,11 @@ module GwfNpfModule
       call mem_reassignptr(this%k33, 'K33', trim(this%origin),                 &
                                      'K11', trim(this%origin))
     else
+      !
+      ! -- set ik33 flag
+      this%ik33 = 1
+      !
+      ! -- Check to make sure values are greater than or equal to zero
       nerr = 0
       do n = 1, size(this%k33)
         if(this%k33(n) <= DZERO) then
@@ -1637,6 +1670,9 @@ module GwfNpfModule
         call store_error(errmsg)
       endif
       !
+      ! -- set ik22 flag
+      this%ik22 = 1
+      !
       ! -- Check to make sure values are greater than or equal to zero
       nerr = 0
       do n = 1, size(this%k22)
@@ -1657,10 +1693,17 @@ module GwfNpfModule
     endif
     !
     ! -- Check for WETDRY
-    if(.not. lname(5) .and. this%irewet == 1) then
-      write(errmsg, '(a, a, a)') 'Error in GRIDDATA block: ',                  &
-                                 trim(adjustl(aname(5))), ' not found.'
-      call store_error(errmsg)
+    !if(.not. lname(5) .and. this%irewet == 1) then
+    if(.not. lname(5)) then
+      if(this%irewet == 1) then
+        write(errmsg, '(a, a, a)') 'Error in GRIDDATA block: ',                  &
+                                   trim(adjustl(aname(5))), ' not found.'
+        call store_error(errmsg)
+      else
+        !call mem_deallocate(this%wetdry)
+        !call mem_allocate(this%wetdry, 1, 'WETDRY', trim(this%origin))
+        call mem_reallocate(this%wetdry, 1, 'WETDRY', trim(this%origin))        
+      end if
     endif
     !
     ! -- Check for angle conflicts
@@ -1674,8 +1717,8 @@ module GwfNpfModule
         this%iangle1 = 1
         write(this%iout, '(a)') 'XT3D IN USE, BUT ANGLE1 NOT SPECIFIED. ' //   &
           'SETTING ANGLE1 TO ZERO.'
-        call mem_reallocate(this%angle1, this%dis%nodes, 'ANGLE1',             &
-                              trim(this%origin))
+        !call mem_reallocate(this%angle1, this%dis%nodes, 'ANGLE1',             &
+        !                      trim(this%origin))
         do n = 1, size(this%angle1)
           this%angle1(n) = DZERO
         enddo
