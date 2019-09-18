@@ -1528,7 +1528,7 @@ module GwfNpfModule
     call this%parser%GetBlock('GRIDDATA', isfound, ierr)
     if(isfound) then
       write(this%iout,'(1x,a)')'PROCESSING GRIDDATA'
-      call this%get_block_data(aname, lname, endOfBlock, varinames)
+      call this%get_block_data(aname, lname, varinames)
       !do
       !  call this%parser%GetNextLine(endOfBlock)
       !  if (endOfBlock) exit

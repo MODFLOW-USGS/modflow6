@@ -212,18 +212,18 @@ module NumericalPackageModule
     return
   end subroutine read_check_ionper
 
-  subroutine get_block_data(this, tags, lfound, endOfBlock, varinames)
+  subroutine get_block_data(this, tags, lfound, varinames)
     ! -- modules
     use MemoryManagerModule, only: mem_setptr
     !
     class(NumericalPackageType) :: this
     character(len=24), dimension(:), intent(in)           :: tags
     logical, dimension(:), intent(inout)                  :: lfound
-    logical, intent(inout)                                :: endOfBlock
     character(len=24), dimension(:), intent(in), optional :: varinames
     !
     ! -- 
     logical :: lkeyword
+    logical :: endOfBlock
     integer(I4B) :: nsize
     integer(I4B) :: j
     character(len=LENORIGIN) :: name

@@ -26,7 +26,6 @@ module GwfDisvModule
     real(DP), dimension(:,:), pointer, contiguous :: cellxy => null()            ! cell center stored as 2d array of x and y
     integer(I4B), dimension(:), pointer, contiguous :: iavert => null()          ! cell vertex pointer ia array
     integer(I4B), dimension(:), pointer, contiguous :: javert => null()          ! cell vertex pointer ja array
-    !real(DP), dimension(:, :, :), pointer, contiguous :: botm => null()          ! top and bottom elevations for each cell (ncpl, 1, 0:nlay)
     real(DP), dimension(:, :), pointer, contiguous :: top2d => null()            ! top elevations for each cell at top of model (ncol, nrow)
     real(DP), dimension(:, :, :), pointer, contiguous :: bot3d => null()         ! bottom elevations for each cell (ncol, nrow, nlay)
     integer(I4B), dimension(:, :, :), pointer, contiguous :: idomain  => null()  ! idomain (ncpl, 1, nlay)
@@ -171,7 +170,6 @@ module GwfDisvModule
     call mem_deallocate(this%cellxy)
     call mem_deallocate(this%iavert)
     call mem_deallocate(this%javert)
-    !call mem_deallocate(this%botm)
     call mem_deallocate(this%top2d)
     call mem_deallocate(this%bot3d)
     call mem_deallocate(this%idomain)
@@ -376,11 +374,9 @@ module GwfDisvModule
     data aname(3) /'                 IDOMAIN'/
 ! ------------------------------------------------------------------------------
     !
-    ! -- Allocate botm here (cannot use mem manager because starts at 0)
+    ! -- Allocate non-reduced vectors for disv
     call mem_allocate(this%idomain, this%ncpl, 1, this%nlay, 'IDOMAIN',          &
                       this%origin)
-    !call mem_allocate(this%botm, this%ncpl, 1, this%nlay + 1, 'BOTM',            &
-    !                  this%origin)
     call mem_allocate(this%top2d, this%ncpl, 1, 'TOP2D', this%origin)
     call mem_allocate(this%bot3d, this%ncpl, 1, this%nlay, 'BOT3D', this%origin)
     !
@@ -395,24 +391,16 @@ module GwfDisvModule
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
           case ('TOP')
-            !call ReadArray(this%parser%iuactive, this%botm(:, :, 1),          &
-            !                aname(1), this%ndim, this%ncpl, 1, this%iout, 0)
             call ReadArray(this%parser%iuactive, this%top2d(:, :),               &
                             aname(1), this%ndim, this%ncpl, 1, this%iout, 0)
             lname(1) = .true.
           case ('BOTM')
             call this%parser%GetStringCaps(keyword)
             if (keyword.EQ.'LAYERED') then
-              !call ReadArray(this%parser%iuactive,                            &
-              !                this%botm(:,:,2:this%nlay), aname(2), this%ndim, &
-              !                this%ncpl, 1, this%nlay, this%iout, 1, this%nlay)
               call ReadArray(this%parser%iuactive,                               &
                               this%bot3d(:,:,:), aname(2), this%ndim,            &
                               this%ncpl, 1, this%nlay, this%iout, 1, this%nlay)
             else
-              !call ReadArray(this%parser%iuactive,                            &
-              !                this%botm(:, :, 2:this%nlay), aname(2),          &
-              !                this%ndim, this%nodesuser, 1, 1, this%iout, 0, 0)
               call ReadArray(this%parser%iuactive,                               &
                               this%bot3d(:, :, :), aname(2),                     &
                               this%ndim, this%nodesuser, 1, 1, this%iout, 0, 0)
@@ -495,11 +483,8 @@ module GwfDisvModule
           else
             top = this%top2d(j, 1)
           end if
-          !dz = this%botm(j, 1, k) - this%botm(j, 1, k + 1)
           dz = top - this%bot3d(j, 1, k)
           if (dz <= DZERO) then
-            !write(ermsg, fmt=fmtdz) k, j, this%botm(j, 1, k),                    &
-            !                        this%botm(j, 1, k + 1)
             write(ermsg, fmt=fmtdz) k, j, top, this%bot3d(j, 1, k)
             call store_error(ermsg)
           endif
@@ -556,7 +541,7 @@ module GwfDisvModule
       enddo
     endif
     !
-    ! -- Move botm into top and bot, and calculate area
+    ! -- Move top2d and bot3d into top and bot, and calculate area
     node = 0
     do k = 1, this%nlay
       do j = 1, this%ncpl
@@ -564,8 +549,6 @@ module GwfDisvModule
         noder = node
         if(this%nodes < this%nodesuser) noder = this%nodereduced(node)
         if(noder <= 0) cycle
-        !this%top(noder) = this%botm(j, 1, k)
-        !this%bot(noder) = this%botm(j, 1, k + 1)
         if (k > 1) then
           top = this%bot3d(j, 1, k - 1)
         else
@@ -982,8 +965,6 @@ module GwfDisvModule
     write(iunit) this%xorigin                                                   ! xorigin
     write(iunit) this%yorigin                                                   ! yorigin
     write(iunit) this%angrot                                                    ! angrot
-    !write(iunit) this%botm(:, :, 1)                                             ! top
-    !write(iunit) this%botm(:, :, 2:)                                            ! botm
     write(iunit) this%top2d                                                     ! top
     write(iunit) this%bot3d                                                     ! botm
     write(iunit) this%vertices                                                  ! vertices

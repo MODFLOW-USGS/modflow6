@@ -23,7 +23,6 @@ module GwfDisModule
     integer(I4B), dimension(:), pointer, contiguous :: nodeuser => null()        ! (size:nodes) given a reduced nodenumber, provide the user nodenumber (size 0 if not reduced)
     real(DP), dimension(:), pointer, contiguous :: delr => null()                ! spacing along a row
     real(DP), dimension(:), pointer, contiguous :: delc => null()                ! spacing along a column
-    !real(DP), dimension(:, :, :), pointer, contiguous :: botm => null()          ! top and bottom elevations for each cell (ncol, nrow, nlay)
     real(DP), dimension(:, :), pointer, contiguous :: top2d => null()            ! top elevations for each cell at top of model (ncol, nrow)
     real(DP), dimension(:, :, :), pointer, contiguous :: bot3d => null()         ! bottom elevations for each cell (ncol, nrow, nlay)
     integer(I4B), dimension(:, :, :), pointer, contiguous :: idomain => null()   ! idomain (ncol, nrow, nlay)
@@ -147,7 +146,6 @@ module GwfDisModule
     call mem_deallocate(this%nodeuser)
     call mem_deallocate(this%top2d)
     call mem_deallocate(this%bot3d)
-    !call mem_deallocate(this%botm)
     call mem_deallocate(this%idomain)
     !
     ! -- Return
@@ -337,6 +335,7 @@ module GwfDisModule
     integer(I4B), parameter :: nname = 5
     logical, dimension(nname) :: lname
     character(len=24),dimension(nname) :: aname
+    character(len=24),dimension(nname) :: varinames
     character(len=300) :: ermsg
     ! -- formats
     character(len=*), parameter :: fmtdz = &
@@ -353,14 +352,18 @@ module GwfDisModule
     data aname(4) /'  MODEL LAYER BOTTOM EL.'/
     data aname(5) /'                 IDOMAIN'/
 ! ------------------------------------------------------------------------------
+    do n = 1, size(aname)
+      lname(n) = .false.
+    end do
+    varinames(:) = ['DELR                    ', 'DELC                    ',      &
+                    'TOP2D                   ', 'BOT3D                   ',      &
+                    'IDOMAIN                 '] 
     !
-    ! -- Allocate arrays used in this subroutine
+    ! -- Allocate delr, delc, and non-reduced vectors for dis
     call mem_allocate(this%delr, this%ncol, 'DELR', this%origin)
     call mem_allocate(this%delc, this%nrow, 'DELC', this%origin)
     call mem_allocate(this%idomain, this%ncol, this%nrow, this%nlay, 'IDOMAIN',  &
                       this%origin)
-    !call mem_allocate(this%botm, this%ncol, this%nrow, this%nlay + 1, 'BOTM',    &
-    !                  this%origin)
     call mem_allocate(this%top2d, this%ncol, this%nrow, 'TOP2D', this%origin)
     call mem_allocate(this%bot3d, this%ncol, this%nrow, this%nlay, 'BOT3D',      &
                       this%origin)
@@ -384,24 +387,17 @@ module GwfDisModule
                             this%ndim, this%nrow, this%iout, 0)
             lname(2) = .true.
           case ('TOP')
-            !call ReadArray(this%parser%iuactive, this%botm(:,:,1), aname(3),     &
-            !                this%ndim, this%ncol, this%nrow, this%iout, 0)
             call ReadArray(this%parser%iuactive, this%top2d(:,:), aname(3),      &
                             this%ndim, this%ncol, this%nrow, this%iout, 0)
             lname(3) = .true.
           case ('BOTM')
             call this%parser%GetStringCaps(keyword)
             if (keyword .EQ. 'LAYERED') then
-              !call ReadArray(this%parser%iuactive, this%botm(:,:,2:this%nlay+1), &
-              !                aname(4), this%ndim, this%ncol, this%nrow, &
-              !                this%nlay, this%iout, 1, this%nlay)
               call ReadArray(this%parser%iuactive, this%bot3d(:,:,:),            &
                               aname(4), this%ndim, this%ncol, this%nrow,         &
                               this%nlay, this%iout, 1, this%nlay)
             else
               nvals = this%ncol * this%nrow * this%nlay
-              !call ReadArray(this%parser%iuactive, this%botm(:,:,2:this%nlay+1), &
-              !                aname(4), this%ndim, nvals, this%iout)
               call ReadArray(this%parser%iuactive, this%bot3d(:,:,:),             &
                               aname(4), this%ndim, nvals, this%iout)
             end if
@@ -487,12 +483,9 @@ module GwfDisModule
           else
             top = this%top2d(j, i)
           end if
-          !dz = this%botm(j, i, k) - this%botm(j, i, k + 1)
           dz = top - this%bot3d(j, i, k)
           if (dz <= DZERO) then
             n = n + 1
-            !write(ermsg, fmt=fmtdz) k, i, j, this%botm(j, i, k),                 &
-            !                        this%botm(j, i, k + 1)
             write(ermsg, fmt=fmtdz) k, i, j, top, this%bot3d(j, i, k)
             call store_error(ermsg)
           endif
@@ -553,7 +546,7 @@ module GwfDisModule
       enddo
     endif
     !
-    ! -- Move botm into top and bot, and calculate area
+    ! -- Move top2d and botm3d into top and bot, and calculate area
     node = 0
     do k=1,this%nlay
       do i=1,this%nrow
@@ -562,8 +555,6 @@ module GwfDisModule
           noder = node
           if(this%nodes < this%nodesuser) noder = this%nodereduced(node)
           if(noder <= 0) cycle
-          !this%top(noder) = this%botm(j, i, k)
-          !this%bot(noder) = this%botm(j, i, k + 1)
           if (k > 1) then
             top = this%bot3d(j, i, k - 1)
           else
@@ -704,8 +695,6 @@ module GwfDisModule
     write(iunit) this%angrot                                                    ! angrot
     write(iunit) this%delr                                                      ! delr
     write(iunit) this%delc                                                      ! delc
-    !write(iunit) this%botm(:, :, 1)                                             ! top
-    !write(iunit) this%botm(:, :, 2:)                                            ! botm
     write(iunit) this%top2d                                                     ! top2d
     write(iunit) this%bot3d                                                     ! bot3d
     write(iunit) this%con%iausr                                                 ! iausr
