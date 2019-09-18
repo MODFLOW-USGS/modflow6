@@ -524,7 +524,7 @@ module GhostNodeModule
           if(this%m2%ibound(nodem) > 0) then
             !lsm amatsln(this%idxsymglo(ignc)) = amatsln(this%idxsymglo(ignc)) -    &
             !lsm                                term
-            call amat_lsm%add_to_matrix(this%idxsymglo(ignc), term)
+            call amat_lsm%add_to_matrix(this%idxsymglo(ignc), -term)
           endif
           this%m1%rhs(noden) = this%m1%rhs(noden) + term * this%m1%x(noden)
           this%m2%rhs(nodem) = this%m2%rhs(nodem) - term * this%m1%x(noden)
