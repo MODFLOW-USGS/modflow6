@@ -284,7 +284,6 @@ module GwfHfbModule
       if(this%inewton == 0) then
         do ihfb = 1, this%nhfb
           ipos = this%idxloc(ihfb)
-          !lsm aterm = amat(idxglo(ipos))
           aterm = amat_lsm%get_term(idxglo(ipos))
           n = this%noden(ihfb)
           m = this%nodem(ihfb)
@@ -320,17 +319,13 @@ module GwfHfbModule
             !
             ! -- Fill row n diag and off diag
             idiag = this%ia(n)
-            !lsm amat(idxglo(idiag)) = amat(idxglo(idiag)) + aterm - cond
             call amat_lsm%add_to_matrix(idxglo(idiag), aterm - cond)
-            !lsm amat(idxglo(ipos)) = cond
             call amat_lsm%replace_in_matrix(idxglo(ipos), cond)
             !
             ! -- Fill row m diag and off diag
             isymcon = this%isym(ipos)
             idiag = this%ia(m)
-            !lsm amat(idxglo(idiag)) = amat(idxglo(idiag)) + aterm - cond
             call amat_lsm%add_to_matrix(idxglo(idiag), aterm - cond)
-            !amat(idxglo(isymcon)) = cond
             call amat_lsm%replace_in_matrix(idxglo(isymcon), cond)
             !
           endif

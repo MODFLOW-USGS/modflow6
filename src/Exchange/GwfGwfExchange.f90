@@ -660,10 +660,8 @@ contains
           term = consterm * derv
           this%gwfmodel1%rhs(n) = this%gwfmodel1%rhs(n) + term * hn
           this%gwfmodel2%rhs(m) = this%gwfmodel2%rhs(m) - term * hn
-          !lsm amatsln(idiagnsln) = amatsln(idiagnsln) + term
           call amat_lsm%add_to_matrix(idiagnsln, term)
           if(ibdm > 0) then
-            !lsm amatsln(this%idxsymglo(iexg)) = amatsln(this%idxsymglo(iexg)) - term
             call amat_lsm%add_to_matrix(this%idxsymglo(iexg), -term)
           endif
         else
@@ -672,10 +670,8 @@ contains
           term = -consterm * derv
           this%gwfmodel1%rhs(n) = this%gwfmodel1%rhs(n) + term * hm
           this%gwfmodel2%rhs(m) = this%gwfmodel2%rhs(m) - term * hm
-          !lsm amatsln(idiagmsln) = amatsln(idiagmsln) - term
           call amat_lsm%add_to_matrix(idiagmsln, -term)
           if(ibdn > 0) then
-            !lsm amatsln(this%idxglo(iexg)) = amatsln(this%idxglo(iexg)) + term
             call amat_lsm%add_to_matrix(this%idxglo(iexg), term)
           endif
         endif

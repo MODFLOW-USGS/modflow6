@@ -394,11 +394,9 @@ module Xt3dModule
     !
     if (this%lamatsaved) then
       do i = 1, nja
-        !lsm amat(idxglo(i)) = amat(idxglo(i)) + this%amatpc(i)
         call amat_lsm%add_to_matrix(idxglo(i), this%amatpc(i))
       end do
       do i = 1, this%numextnbrs
-        !lsm amat(this%idxglox(i)) = amat(this%idxglox(i)) + this%amatpcx(i)
         call amat_lsm%add_to_matrix(this%idxglox(i), this%amatpcx(i))
       end do
     end if
@@ -465,10 +463,6 @@ module Xt3dModule
           chat1j = chat1j*ar01
         end if
         ! -- Contribute to rows for cells 0 and 1.
-        !lsm amat(idxglo(ii00)) = amat(idxglo(ii00)) - chat01
-        !lsm amat(idxglo(ii01)) = amat(idxglo(ii01)) + chat01
-        !lsm amat(idxglo(ii11)) = amat(idxglo(ii11)) - chat01
-        !lsm amat(idxglo(ii10)) = amat(idxglo(ii10)) + chat01
         call amat_lsm%add_to_matrix(idxglo(ii00), - chat01)
         call amat_lsm%add_to_matrix(idxglo(ii01), chat01)
         call amat_lsm%add_to_matrix(idxglo(ii11), - chat01)
@@ -674,10 +668,6 @@ module Xt3dModule
       chat1j = chat1j*ar01
     end if
     ! -- Contribute to rows for cells 0 and 1.
-    !lsm amat(idxglo(ii00)) = amat(idxglo(ii00)) - chat01
-    !lsm amat(idxglo(ii01)) = amat(idxglo(ii01)) + chat01
-    !lsm amat(idxglo(ii11)) = amat(idxglo(ii11)) - chat01
-    !lsm amat(idxglo(ii10)) = amat(idxglo(ii10)) + chat01
     call amat_lsm%add_to_matrix(idxglo(ii00), - chat01)
     call amat_lsm%add_to_matrix(idxglo(ii01), chat01)
     call amat_lsm%add_to_matrix(idxglo(ii11), - chat01)
@@ -780,21 +770,17 @@ module Xt3dModule
         ! fill Jacobian for n being the upstream node
         if (iups == n) then
           ! fill in row of n
-          !lsm amat(idxglo(ii00)) = amat(idxglo(ii00)) + term
           call amat_lsm%add_to_matrix(idxglo(ii00), term)
           rhs(n) = rhs(n) + termrhs * hnew(n)
           ! fill in row of m
-          !lsm amat(idxglo(ii10)) = amat(idxglo(ii10)) - term
           call amat_lsm%add_to_matrix(idxglo(ii10), -term)
           rhs(m) = rhs(m) - termrhs * hnew(n)
         ! fill Jacobian for m being the upstream node
         else
           ! fill in row of n
-          !lsm amat(idxglo(ii01)) = amat(idxglo(ii01)) + term
           call amat_lsm%add_to_matrix(idxglo(ii01), term)
           rhs(n) = rhs(n) + termrhs * hnew(m)
           ! fill in row of m
-          !lsm amat(idxglo(ii11)) = amat(idxglo(ii11)) - term
           call amat_lsm%add_to_matrix(idxglo(ii11), -term)
           rhs(m) = rhs(m) - termrhs * hnew(m)
         end if
@@ -1483,9 +1469,7 @@ module Xt3dModule
     do iil = 1,nnbr
       if (inbr(iil).ne.0) then
         iii = this%dis%con%ia(n) + iil
-        !lsm amat(idxglo(idiag)) = amat(idxglo(idiag)) - chat(iil)
         call amat_lsm%add_to_matrix(idxglo(idiag), - chat(iil))
-        !lsm amat(idxglo(iii)) = amat(idxglo(iii)) + chat(iil)  
         call amat_lsm%add_to_matrix(idxglo(iii), chat(iil))
       endif
     enddo
@@ -1522,11 +1506,9 @@ module Xt3dModule
         jjj = this%dis%con%ja(iii)
         call this%xt3d_get_iinmx(n, jjj, iixjjj)
         if (iixjjj.ne.0) then
-          !lsm amat(this%idxglox(iixjjj)) = amat(this%idxglox(iixjjj)) - chat(iil)
           call amat_lsm%add_to_matrix(this%idxglox(iixjjj), - chat(iil))
         else
           call this%xt3d_get_iinm(n, jjj, iijjj)
-          !lsm amat(idxglo(iijjj)) = amat(idxglo(iijjj)) - chat(iil)
           call amat_lsm%add_to_matrix(idxglo(iijjj), - chat(iil))
         endif
       endif

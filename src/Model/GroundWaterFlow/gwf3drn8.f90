@@ -230,7 +230,6 @@ contains
       n = this%nodelist(i)
       rhs(n) = rhs(n) + this%rhs(i)
       ipos = ia(n)
-      !lsm amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + this%hcof(i)
       call amat_lsm%add_to_matrix(idxglo(ipos), this%hcof(i))
       !
       ! -- If mover is active and this drain is discharging,

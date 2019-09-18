@@ -713,7 +713,6 @@ module RchModule
       end if
       rhs(n) = rhs(n) + this%rhs(i)
       ipos = ia(n)
-      !lsm amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + this%hcof(i)
       call amat_lsm%add_to_matrix(idxglo(ipos), this%hcof(i))
     enddo
     !

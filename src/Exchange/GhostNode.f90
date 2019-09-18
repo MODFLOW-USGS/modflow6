@@ -334,7 +334,6 @@ module GhostNodeModule
     gncloop: do ignc = 1, this%nexg
       ipos = this%idxglo(ignc)
       if(ipos > 0) then
-        !lsm cond = amatsln(ipos)
         cond = amat_lsm%get_term(ipos)
       else
         cond = DZERO
@@ -390,13 +389,9 @@ module GhostNodeModule
         if(this%implicit) then
           iposjn = this%jposinrown(jidx, ignc)
           iposjm = this%jposinrowm(jidx, ignc)
-          !lsm amatsln(this%idiagn(ignc)) = amatsln(this%idiagn(ignc)) + aterm
           call amat_lsm%add_to_matrix(this%idiagn(ignc), aterm)
-          !lsm amatsln(iposjn) = amatsln(iposjn) - aterm
           call amat_lsm%add_to_matrix(iposjn, -aterm)
-          !lsm amatsln(this%idxsymglo(ignc)) = amatsln(this%idxsymglo(ignc)) - aterm
           call amat_lsm%add_to_matrix(this%idxsymglo(ignc), -aterm)
-          !lsm amatsln(iposjm) = amatsln(iposjm) + aterm
           call amat_lsm%add_to_matrix(iposjm, aterm)
         else
           rterm = aterm * (this%m1%x(noden) - this%m1%x(j))
@@ -519,20 +514,15 @@ module GhostNodeModule
         derv = sQuadraticSaturationDerivative(topup, botup, xup)
         term = consterm * derv
         if(iups == 0) then
-          !lsm amatsln(this%idiagn(ignc)) = amatsln(this%idiagn(ignc)) + term
           call amat_lsm%add_to_matrix(this%idiagn(ignc), term)
           if(this%m2%ibound(nodem) > 0) then
-            !lsm amatsln(this%idxsymglo(ignc)) = amatsln(this%idxsymglo(ignc)) -    &
-            !lsm                                term
             call amat_lsm%add_to_matrix(this%idxsymglo(ignc), -term)
           endif
           this%m1%rhs(noden) = this%m1%rhs(noden) + term * this%m1%x(noden)
           this%m2%rhs(nodem) = this%m2%rhs(nodem) - term * this%m1%x(noden)
         else
-          !lsm amatsln(this%idiagm(ignc)) = amatsln(this%idiagm(ignc)) - term
           call amat_lsm%add_to_matrix(this%idiagm(ignc), -term)
           if(this%m1%ibound(noden) > 0) then
-            !lsm amatsln(this%idxglo(ignc)) = amatsln(this%idxglo(ignc)) + term
             call amat_lsm%add_to_matrix(this%idxglo(ignc), term)
           endif
           this%m1%rhs(noden) = this%m1%rhs(noden) + term * this%m2%x(nodem)

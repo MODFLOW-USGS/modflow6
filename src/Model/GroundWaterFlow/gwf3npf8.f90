@@ -419,12 +419,10 @@ module GwfNpfModule
                 ! -- Fill row n
                 idiag = this%dis%con%ia(n)
                 rhs(n) = rhs(n) - cond * this%dis%bot(n)
-                !lsm amat(idxglo(idiag)) = amat(idxglo(idiag)) - cond
                 call amat_lsm%add_to_matrix(idxglo(idiag), -cond)
                 !
                 ! -- Fill row m
                 isymcon = this%dis%con%isym(ii)
-                !lsm amat(idxglo(isymcon)) = amat(idxglo(isymcon)) + cond
                 call amat_lsm%add_to_matrix(idxglo(isymcon), cond)
                 rhs(m) = rhs(m) + cond * this%dis%bot(n)
                 !
@@ -454,17 +452,13 @@ module GwfNpfModule
         !
         ! -- Fill row n
         idiag = this%dis%con%ia(n)
-        !lsm amat(idxglo(ii)) = amat(idxglo(ii)) + cond
         call amat_lsm%add_to_matrix(idxglo(ii), cond)
-        !lsm amat(idxglo(idiag)) = amat(idxglo(idiag)) - cond
         call amat_lsm%add_to_matrix(idxglo(idiag), -cond)
         !
         ! -- Fill row m
         isymcon = this%dis%con%isym(ii)
         idiagm = this%dis%con%ia(m)
-        !lsm amat(idxglo(isymcon)) = amat(idxglo(isymcon)) + cond
         call amat_lsm%add_to_matrix(idxglo(isymcon), cond)
-        !lsm amat(idxglo(idiagm)) = amat(idxglo(idiagm)) - cond
         call amat_lsm%add_to_matrix(idxglo(idiagm), -cond)
       enddo
     enddo
@@ -564,7 +558,6 @@ module GwfNpfModule
           !
           ! -- compute additional term
           consterm = -cond * (hnew(iups) - hnew(idn))
-          !lsm filledterm = amat(idxglo(ii))
           filledterm = amat_lsm%get_term(idxglo(ii))
           derv = sQuadraticSaturationDerivative(topup, botup, hnew(iups),       &
                                                 this%satomega, this%satmin)
@@ -576,11 +569,9 @@ module GwfNpfModule
             rhs(n) = rhs(n) + term * hnew(n)
             rhs(m) = rhs(m) - term * hnew(n)
             ! -- fill in row of n
-            !lsm amat(idxglo(idiag)) = amat(idxglo(idiag)) + term
             call amat_lsm%add_to_matrix(idxglo(idiag), term)
             ! fill newton term in off diagonal if active cell
             if (this%ibound(m) > 0) then
-              !lsm amat(idxglo(isymcon)) = amat(idxglo(isymcon)) - term
               call amat_lsm%add_to_matrix(idxglo(isymcon), -term)
             end if
           ! -- fill jacobian for m being the upstream node
@@ -591,11 +582,9 @@ module GwfNpfModule
             rhs(m) = rhs(m) - term * hnew(m)
             ! -- fill newton term in off diagonal if active cell
             if (this%ibound(n) > 0) then
-              !lsm amat(idxglo(ii)) = amat(idxglo(ii)) + term
               call amat_lsm%add_to_matrix(idxglo(ii), term)
             end if
             ! -- fill row of m
-            !lsm amat(idxglo(idiagm)) = amat(idxglo(idiagm)) - term
             call amat_lsm%add_to_matrix(idxglo(idiagm), -term)
           end if
         endif

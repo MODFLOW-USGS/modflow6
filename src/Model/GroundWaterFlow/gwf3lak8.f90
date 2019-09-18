@@ -3722,17 +3722,10 @@ contains
         igwfnode = this%cellid(j)
         if (this%ibound(igwfnode) < 1) cycle
         ipossymd = idxglo(ia(igwfnode))
-        !lsm amatsln(ipossymd) = amatsln(ipossymd) + this%hcof(j)
         call amat_lsm%add_to_matrix(ipossymd, this%hcof(j))
         rhs(igwfnode) = rhs(igwfnode) + this%rhs(j)
       end do
     end do
-    !
-    ! -- write some output to the screen
-    !do n = 1, this%nlakes
-    !!  write(*,'(4x,i4,2(1x,g15.7))') n, this%seep0(n), this%seep(n)
-    !  write(*,'(4x,i4,2(1x,g15.7))') n, this%s0(n), this%xnewpak(n)
-    !end do
     !
     ! -- return
     return
@@ -3794,7 +3787,6 @@ contains
             drterm = (q1 - q) / this%delh
             ! -- add terms to convert conductance formulation into
             !    newton-raphson formulation
-            !lsm amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + drterm - this%hcof(j)
             call amat_lsm%add_to_matrix(idxglo(ipos), drterm - this%hcof(j))
             rhs(igwfnode) = rhs(igwfnode) - rterm + drterm * head
           end if

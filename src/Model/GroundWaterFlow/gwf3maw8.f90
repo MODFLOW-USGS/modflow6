@@ -2009,7 +2009,6 @@ contains
               this%mawwells(n)%xsto = bt
             end if
             this%mawwells(n)%fwcondsim = cfw
-            !lsm amatsln(iposd) = amatsln(iposd) - cfw
             call amat_lsm%add_to_matrix(iposd, -cfw)
             rhs(iloc) = rhs(iloc) - cfw * bt
             ratefw = cfw * (bt - hmaw)
@@ -2018,7 +2017,6 @@ contains
         ! -- add maw storage changes
         if (this%imawiss /= 1) then
           if (this%mawwells(n)%ifwdischarge /= 1) then
-            !lsm amatsln(iposd) = amatsln(iposd) - (this%mawwells(n)%area / delt)
             call amat_lsm%add_to_matrix(iposd, -this%mawwells(n)%area / delt)
             rhs(iloc) = rhs(iloc) - (this%mawwells(n)%area * this%mawwells(n)%xoldsto / delt)
           else
@@ -2053,9 +2051,7 @@ contains
           ! -- add to maw row
           iposd = this%idxdglo(idx)
           iposoffd = this%idxoffdglo(idx)
-          !lsm amatsln(iposd) = amatsln(iposd) - cmaw
           call amat_lsm%add_to_matrix(iposd, -cmaw)
-          !lsm amatsln(iposoffd) = cmaw
           call amat_lsm%add_to_matrix(iposoffd, cmaw)
           ! -- add correction term
           rhs(iloc) = rhs(iloc) + cterm
@@ -2064,9 +2060,7 @@ contains
           isymloc = ia(isymnode)
           ipossymd = this%idxsymdglo(idx)
           ipossymoffd = this%idxsymoffdglo(idx)
-          !lsm amatsln(ipossymd) = amatsln(ipossymd) - cmaw
           call amat_lsm%add_to_matrix(ipossymd, -cmaw)
-          !lsm amatsln(ipossymoffd) = cmaw
           call amat_lsm%add_to_matrix(ipossymoffd, cmaw)
           ! -- add correction term
           rhs(isymnode) = rhs(isymnode) - cterm
@@ -2137,7 +2131,6 @@ contains
         call this%maw_calculate_wellq(n, hmaw+DEM4, rate2)
         drterm = (rate2 - rate) / DEM4
         !--fill amat and rhs with newton-raphson terms
-        !lsm amatsln(iposd) = amatsln(iposd) + drterm
         call amat_lsm%add_to_matrix(iposd, drterm)
         rhs(iloc) = rhs(iloc) + drterm * hmaw
         ! -- add flowing well
@@ -2157,8 +2150,6 @@ contains
               derv = sQSaturationDerivative(tp, bt, hmaw)
               drterm = -(cfw + this%mawwells(n)%fwcond * derv * (hmaw - bt))
               !--fill amat and rhs with newton-raphson terms
-              !lsm amatsln(iposd) = amatsln(iposd) -                                &
-              !lsm                  this%mawwells(n)%fwcond * derv * (hmaw - bt)
               call amat_lsm%add_to_matrix(iposd, -this%mawwells(n)%fwcond * derv * (hmaw - bt))
               rhs(iloc) = rhs(iloc) - rterm + drterm * hmaw
             end if
@@ -2204,10 +2195,8 @@ contains
             term = drterm * this%mawwells(n)%satcond(j) * (hmaw - hgwf)
             rhs(iloc) = rhs(iloc) + term * hmaw
             rhs(isymnode) = rhs(isymnode) - term * hmaw
-            !lsm amatsln(iposd) = amatsln(iposd) + term
             call amat_lsm%add_to_matrix(iposd, term)
             if (this%ibound(igwfnode) > 0) then
-              !lsm amatsln(ipossymoffd) = amatsln(ipossymoffd) - term
               call amat_lsm%add_to_matrix(ipossymoffd, -term)
             end if
           ! -- gwf is upstream
@@ -2216,10 +2205,8 @@ contains
             rhs(iloc) = rhs(iloc) + term * hgwf
             rhs(isymnode) = rhs(isymnode) - term * hgwf
             if (this%iboundpak(n) > 0) then
-              !lsm amatsln(iposoffd) = amatsln(iposoffd) + term
               call amat_lsm%add_to_matrix(iposoffd, term)
             end if
-            !lsm amatsln(ipossymd) = amatsln(ipossymd) - term
             call amat_lsm%add_to_matrix(ipossymd, -term)
           end if
         endif

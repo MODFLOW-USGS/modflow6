@@ -272,7 +272,6 @@ contains
       n = this%nodelist(i)
       rhs(n) = rhs(n) + this%rhs(i)
       ipos = ia(n)
-      !lsm amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + this%hcof(i)
       call amat_lsm%add_to_matrix(idxglo(ipos), this%hcof(i))
       !
       ! -- If mover is active and this well is discharging,
@@ -334,7 +333,6 @@ contains
           drterm = sQSaturationDerivative(tp, bt, this%xnew(node))
           drterm = drterm * this%bound(1,i)
           !--fill amat and rhs with newton-raphson terms
-          !lsm amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + drterm
           call amat_lsm%add_to_matrix(idxglo(ipos), drterm)
           rhs(node) = rhs(node) + drterm * this%xnew(node)
         end if

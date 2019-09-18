@@ -317,11 +317,9 @@ module GwfStoModule
       ! -- calculate storage coefficients for amat and rhs
       ! -- specific storage
       if (this%iconvert(n) /= 0) then
-        !lsm amat(idxglo(idiag)) = amat(idxglo(idiag)) - rho1 * ss1
         call amat_lsm%add_to_matrix(idxglo(idiag), -rho1 * ss1)
         rhs(n) = rhs(n) - rho1 * ss0 * ssh0 + rho1 * ssh1
       else
-        !lsm amat(idxglo(idiag)) = amat(idxglo(idiag)) - rho1
         call amat_lsm%add_to_matrix(idxglo(idiag), -rho1)
         rhs(n) = rhs(n) - rho1 * hold(n)
       end if
@@ -331,7 +329,6 @@ module GwfStoModule
         ! -- add specific yield terms to amat at rhs
         if (snnew < DONE) then
           if (snnew > DZERO) then
-            !lsm amat(idxglo(idiag)) = amat(idxglo(idiag)) - rho2
             call amat_lsm%add_to_matrix(idxglo(idiag), -rho2)
             rhsterm = rho2 * tthk * snold
             rhsterm = rhsterm + rho2 * bt
@@ -414,7 +411,6 @@ module GwfStoModule
         derv = sQuadraticSaturationDerivative(tp, bt, hnew(n))
         if (this%isseg /= 0) derv = DZERO
         drterm = -(rho1 * derv * hnew(n))
-        !lsm amat(idxglo(idiag)) = amat(idxglo(idiag)) + drterm
         call amat_lsm%add_to_matrix(idxglo(idiag), drterm)
         rhs(n) = rhs(n) + drterm * hnew(n)
       end if
@@ -428,7 +424,6 @@ module GwfStoModule
             rterm = - rho2 * tthk * snnew
             derv = sQuadraticSaturationDerivative(tp, bt, hnew(n))
             drterm = -rho2 * tthk * derv
-            !lsm amat(idxglo(idiag)) = amat(idxglo(idiag)) + drterm + rho2
             call amat_lsm%add_to_matrix(idxglo(idiag), drterm + rho2)
             rhs(n) = rhs(n) - rterm + drterm * hnew(n) + rho2 * bt
           end if

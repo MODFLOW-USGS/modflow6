@@ -1397,7 +1397,6 @@ contains
       if (n < 1) cycle
       rhs(n) = rhs(n) + this%rhs(i)
       ipos = ia(n)
-      !lsm amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + this%hcof(i)
       call amat_lsm%add_to_matrix(idxglo(ipos), this%hcof(i))
     enddo
     !
@@ -1451,7 +1450,6 @@ contains
       drterm = (q2 - q1) / DEM4
       ! -- add terms to convert conductance formulation into
       !    newton-raphson formulation
-      !lsm amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + drterm - this%hcof(i)
       call amat_lsm%add_to_matrix(idxglo(ipos), drterm - this%hcof(i))
       rhs(n) = rhs(n) - rterm + drterm * this%xnew(n)
     end do

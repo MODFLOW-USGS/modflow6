@@ -1117,7 +1117,6 @@ contains
       n = this%nodelist(i)
       rhs(n) = rhs(n) + this%rhs(i)
       ipos = ia(n)
-      !lsm amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + this%hcof(i)
       call amat_lsm%add_to_matrix(idxglo(ipos), this%hcof(i))
     enddo
     !
@@ -1148,7 +1147,6 @@ contains
     do i = 1, this%nodes
       n = this%nodelist(i)
       ipos = ia(n)
-      !lsm amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + this%deriv(i)
       call amat_lsm%add_to_matrix(idxglo(ipos), this%deriv(i))
       rhs(n) = rhs(n) + this%deriv(i) * this%xnew(n)
     end do

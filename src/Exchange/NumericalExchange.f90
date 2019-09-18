@@ -224,17 +224,13 @@ contains
     !
     if(this%implicit) then
       do i = 1, this%nexg
-        !lsm amatsln(this%idxglo(i)) = this%cond(i)
         call amat_lsm%add_to_matrix(this%idxglo(i), this%cond(i))
-        !lsm amatsln(this%idxsymglo(i)) = this%cond(i)
         call amat_lsm%add_to_matrix(this%idxsymglo(i), this%cond(i))
         nodem1sln = this%nodem1(i) + this%m1%moffset
         nodem2sln = this%nodem2(i) + this%m2%moffset
         idiagsln = iasln(nodem1sln)
-        !lsm amatsln(idiagsln) = amatsln(idiagsln) - this%cond(i)
         call amat_lsm%add_to_matrix(idiagsln, -this%cond(i))
         idiagsln = iasln(nodem2sln)
-        !amatsln(idiagsln) = amatsln(idiagsln) - this%cond(i)
         call amat_lsm%add_to_matrix(idiagsln, -this%cond(i))
       enddo
     else
