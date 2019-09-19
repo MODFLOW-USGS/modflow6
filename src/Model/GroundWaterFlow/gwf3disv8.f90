@@ -54,7 +54,8 @@ module GwfDisvModule
     procedure :: read_dimensions
     procedure :: read_vertices
     procedure :: read_cell2d
-    procedure :: read_griddata
+    procedure :: read_mf6_griddata
+    procedure :: grid_finalize
     procedure :: connect
     procedure :: write_grb
     procedure :: allocate_scalars
@@ -118,7 +119,10 @@ module GwfDisvModule
     call this%read_dimensions()
     !
     ! -- Read GRIDDATA block
-    call this%read_griddata()
+    call this%read_mf6_griddata()
+    !
+    ! -- Final grid initialization
+    call this%grid_finalize()
     !
     ! -- Read VERTICES block
     call this%read_vertices()
@@ -337,9 +341,9 @@ module GwfDisvModule
     return
   end subroutine read_dimensions
 
-  subroutine read_griddata(this)
+  subroutine read_mf6_griddata(this)
 ! ******************************************************************************
-! read_griddata -- Read cell information (TOP, BOTM, IDOMAIN)
+! read_mf6_griddata -- Read grid data from a MODFLOW 6 ascii file
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -380,7 +384,14 @@ module GwfDisvModule
     call mem_allocate(this%top2d, this%ncpl, 1, 'TOP2D', this%origin)
     call mem_allocate(this%bot3d, this%ncpl, 1, this%nlay, 'BOT3D', this%origin)
     !
-    ! --Read DISDATA block
+    ! -- initialize all cells to be active (idomain = 1)
+    do k = 1, this%nlay
+      do j = 1, this%ncpl
+        this%idomain(j, 1, k) = 1
+      end do
+    end do
+    !
+    ! --Read GRIDDATA block
     call this%parser%GetBlock('GRIDDATA', isfound, ierr)
     lname(:) = .false.
     if(isfound) then
@@ -446,23 +457,47 @@ module GwfDisvModule
       call ustop()
     endif
     !
-    ! -- If IDOMAIN was not read, then set all values to 1, otherwise
-    !    count active cells
-    if(.not. lname(3)) then
-      do k = 1, this%nlay
-        do j = 1, this%ncpl
-          this%idomain(j, 1, k) = 1
-        enddo
+    ! -- Return
+    return
+  end subroutine read_mf6_griddata
+    
+  subroutine grid_finalize(this)
+! ******************************************************************************
+! grid_finalize -- Finalize grid
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use SimModule, only: ustop, count_errors, store_error
+    use ConstantsModule,   only: LINELENGTH, DZERO
+    ! -- dummy
+    class(GwfDisvType) :: this
+    ! -- locals
+    character(len=LINELENGTH) :: keyword
+    integer(I4B) :: n, node, noder, j, k
+    integer(I4B) :: ierr
+    real(DP) :: top
+    real(DP) :: dz
+    character(len=300) :: ermsg
+    ! -- formats
+    character(len=*), parameter :: fmtdz = &
+      "('ERROR. CELL (',i0,',',i0,') THICKNESS <= 0. ', " //             &
+      "'TOP, BOT: ',2(1pg24.15))"
+    character(len=*), parameter :: fmtnr = &
+      "(/1x, 'THE SPECIFIED IDOMAIN RESULTS IN A REDUCED NUMBER OF CELLS.'," // &
+      "/1x, 'NUMBER OF USER NODES: ',I7," // &
+      "/1X, 'NUMBER OF NODES IN SOLUTION: ', I7, //)"
+    ! -- data
+! ------------------------------------------------------------------------------
+    !
+    ! -- count active cells
+    this%nodes = 0
+    do k = 1, this%nlay
+      do j = 1, this%ncpl
+        if(this%idomain(j, 1, k) > 0) this%nodes = this%nodes + 1
       enddo
-      this%nodes = this%nodesuser
-    else
-      this%nodes = 0
-      do k = 1, this%nlay
-        do j = 1, this%ncpl
-          if(this%idomain(j, 1, k) > 0) this%nodes = this%nodes + 1
-        enddo
-      enddo
-    endif
+    enddo
     !
     ! -- Check to make sure nodes is a valid number
     if (this%nodes == 0) then
@@ -561,7 +596,7 @@ module GwfDisvModule
     !
     ! -- Return
     return
-  end subroutine read_griddata
+  end subroutine grid_finalize
 
   subroutine read_vertices(this)
 ! ******************************************************************************
