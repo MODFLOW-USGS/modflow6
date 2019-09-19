@@ -1,19 +1,14 @@
 module GridConnectionModule
   use KindModule, only: I4B, DP
+  use SimModule, only: ustop
   use ConstantsModule, only: LENORIGIN
   use ListModule, only: ListType
   use NumericalModelModule
+  use NumericalExchangeModule
   use ConnectionsModule
   use SparseModule, only: sparsematrix
   implicit none
   private
-  
-  type, public :: LinkGeometryType
-    integer(I4B)  :: connectionType ! 0 = vertical, 1 = horizontal, 2 = vertically staggered
-    real(DP)      :: length1        ! connection length from n to face between n and m
-    real(DP)      :: length2        ! connection length from m to face between n and m
-    real(DP)      :: hwva           ! horizontal width (when connectionType == 1), or vertical area (when connectionType == 0)
-  end type
   
   type, public :: GlobalCellType
     integer(I4B) :: index
@@ -34,7 +29,7 @@ module GridConnectionModule
   type, private :: ModelWithNbrsType
       class(NumericalModelType), pointer :: model => null()
       integer(I4B) :: nrOfNbrs
-      class(ModelWithNbrsType), dimension(:), allocatable :: neighbors
+      type(ModelWithNbrsType), dimension(:), allocatable :: neighbors
   end type
   
   ! this class works with these steps:
@@ -48,16 +43,16 @@ module GridConnectionModule
     character(len=LENORIGIN) :: memOrigin
     class(NumericalModelType), pointer :: model => null()
     
-    integer(I4B), pointer :: nrOfLinks => null()  
     integer(I4B), pointer :: linkCapacity => null()
-    type(LinkGeometryType), dimension(:), pointer :: linkGeometries => null()
-    type(CellWithNbrsType), dimension(:), pointer :: localCells => null()
-    type(CellWithNbrsType), dimension(:), pointer :: connectedCells => null()
+    
+    integer(I4B), pointer :: nrOfBoundaryCells => null()
+    type(CellWithNbrsType), dimension(:), pointer :: boundaryCells => null()
     
     integer(I4B), pointer :: nrOfCells => null()                            ! the total number of cells which are connected
     type(GlobalCellType), dimension(:), pointer :: idxToGlobal => null()    ! a map from local to global coordinates
     
     type(ModelWithNbrsType), pointer :: modelWithNbrs => null() 
+    type(ListType) ::  exchanges ! all relevant exchanges for this connection (up to the specified depth)
     
     ! We have a global index, which is the row in the solution matrix,
     ! a regional index, which runs over all the models involved in this gridconnection,
@@ -69,7 +64,7 @@ module GridConnectionModule
     integer(I4B), dimension(:), pointer               :: regionalToInterfaceIdxMap => null()
     type(ListType)                                    :: regionalModels                   ! the models that make up the interface
     integer(I4B), dimension(:), pointer               :: regionalModelOffset => null()    ! the new offset to compactify the range of indices 
-    
+    integer(I4B), pointer                             :: indexCount => null()             ! counts the number of cells in the interface
     
     type(ConnectionsType), pointer :: connections => null()                 ! sparse matrix with the connections
     
@@ -77,16 +72,21 @@ module GridConnectionModule
   contains
     procedure, pass(this) :: construct
     procedure, private, pass(this) :: allocateScalars, allocateArrays
-    procedure, pass(this) :: addLink
+    procedure, pass(this) :: setBoundaryCell
     procedure, pass(this) :: addModelLink    
     procedure, pass(this) :: extendConnection
     
-    procedure, private, pass(this) :: getNrOfCells
     procedure, private, pass(this) :: buildConnections
     procedure, private, pass(this) :: addNeighbors
     procedure, private, pass(this) :: addNeighborCell
+    procedure, private, pass(this) :: addRemoteNeighbors
     procedure, private, pass(this) :: connectModels
     procedure, private, pass(this) :: addToRegionalModels
+    procedure, private, pass(this) :: getRegionalModelOffset
+    procedure, private, pass(this) :: getModelWithNbrs
+    procedure, private, pass(this) :: getExchangeData
+    procedure, private, pass(this) :: registerInterfaceCells
+    procedure, private, pass(this) :: connectInterfaceCells
   end type
   
   contains ! module procedures
@@ -105,68 +105,50 @@ module GridConnectionModule
     call this%allocateArrays(nCapacity)
     
     ! TODO_MJR: to memorymanager?
-    allocate(this%linkGeometries(nCapacity))
-    allocate(this%localCells(nCapacity))
-    allocate(this%connectedCells(nCapacity))
     allocate(this%modelWithNbrs)
+    allocate(this%boundaryCells(nCapacity))
     
     this%modelWithNbrs%model => model
+    call this%addToRegionalModels(model)
     
     this%linkCapacity = nCapacity
-    this%nrOfLinks = 0
-    this%nrOfCells = 0
-    
+    this%nrOfBoundaryCells = 0
   end subroutine
   
   ! add connection between node n and m (local numbering)
   ! NB: total nr of connections should match reserved space
-  subroutine addLink(this, own, linked, cl1, cl2, hwva, connType, nbrModel)
-    class(GridConnectionType), intent(in)           :: this
-    class(NumericalModelType), pointer, intent(in)  :: nbrModel   ! the neighbor
-    integer(I4B) :: own, linked, connType                         ! node ids, connection type (0=vert,1=hor,2=vert.stagg.)
-    real(DP) :: cl1, cl2, hwva                                    ! connection lengths, hor. width or vert. area
+  subroutine setBoundaryCell(this, boundaryIdx)
+    class(GridConnectionType), intent(in) :: this
+    integer(I4B)                          :: boundaryIdx  ! index of boundary cell
             
-    this%nrOfLinks = this%nrOfLinks + 1    
-    
-    if (this%nrOfLinks > this%linkCapacity) then
-      write(*,*) 'Error: no memory reserved for storing grid connection, skipping...'
-      this%nrOfLinks = this%nrOfLinks - 1
-      return
+    this%nrOfBoundaryCells = this%nrOfBoundaryCells + 1    
+    if (this%nrOfBoundaryCells > this%linkCapacity) then
+      write(*,*) 'Error: not enough memory reserved for storing grid connection, terminating...'
+      call ustop()
     end if
     
-    ! own node
-    this%localCells(this%nrOfLinks)%cell%index = own
-    this%localCells(this%nrOfLinks)%cell%model => this%model
-    
-    ! linked node
-    this%connectedCells(this%nrOfLinks)%cell%index = linked
-    this%connectedCells(this%nrOfLinks)%cell%model => nbrModel
-    
-    ! construct link geometry
-    this%linkGeometries(this%nrOfLinks)%connectionType = connType
-    this%linkGeometries(this%nrOfLinks)%length1 = cl1
-    this%linkGeometries(this%nrOfLinks)%length2 = cl2
-    this%linkGeometries(this%nrOfLinks)%hwva = hwva
-    
-  end subroutine addLink
+    this%boundaryCells(this%nrOfBoundaryCells)%cell%index = boundaryIdx
+    this%boundaryCells(this%nrOfBoundaryCells)%cell%model => this%model
+  end subroutine setBoundaryCell
   
   ! this is called for two models of same type that are connected through an
   ! exchange, need this for global topology
   ! NOTE: assumption here is only 1 exchange exists between any two models,
   ! can we do that??
-  subroutine addModelLink(this, model1, model2)
-    class(GridConnectionType), intent(inout) :: this
-    class(NumericalModelType), pointer :: model1, model2
+  subroutine addModelLink(this, numEx, depth)
+    class(GridConnectionType), intent(inout)  :: this
+    class(NumericalExchangeType), pointer     :: numEx
+    integer(I4B) :: depth
     ! local
         
-    call this%connectModels(this%modelWithNbrs, model1, model2, 2)
+    call this%connectModels(this%modelWithNbrs, numEx, depth)
     
   end subroutine addModelLink
   
-  recursive subroutine connectModels(this, modelNbrs, model1, model2, depth)
+  recursive subroutine connectModels(this, modelNbrs, numEx, depth)
     class(GridConnectionType), intent(inout)   :: this
     class(ModelWithNbrsType), intent(inout) :: modelNbrs
-    class(NumericalModelType), pointer      :: model1, model2
+    class(NumericalExchangeType), pointer     :: numEx
     integer(I4B)                            :: depth
     ! local
     integer(I4B) :: inbr, newDepth
@@ -179,16 +161,16 @@ module GridConnectionModule
     neighborModel => null()    
     
     ! is it a direct neighbor:
-    if (associated(modelNbrs%model, model1)) then
-      neighborModel => model2
-    else if (associated(modelNbrs%model, model2)) then
-      neighborModel => model1
+    if (associated(modelNbrs%model, numEx%m1)) then
+      neighborModel => numEx%m2
+    else if (associated(modelNbrs%model, numEx%m2)) then
+      neighborModel => numEx%m1
     end if
     
     ! and/or maybe its connected to one of the neighbors:
     newDepth = depth - 1
     do inbr = 1, modelNbrs%nrOfNbrs
-      call this%connectModels(modelNbrs%neighbors(inbr), model1, model2, newDepth)
+      call this%connectModels(modelNbrs%neighbors(inbr), numEx, newDepth)
     end do
     
     ! do not add until here, after the recursion, to prevent 
@@ -203,6 +185,10 @@ module GridConnectionModule
       
       ! add to array of all neighbors
       call this%addToRegionalModels(neighborModel)
+      
+      ! add to list of exchanges
+      call AddNumericalExchangeToList(this%exchanges, numEx)
+      
     end if
     
   end subroutine connectModels
@@ -228,50 +214,55 @@ module GridConnectionModule
   end subroutine addToRegionalModels
 
   ! build the connection topology to deal with neighbors-of-neighbors
-  subroutine extendConnection(this, localDepth, remoteDepth)    
-    class(GridConnectionType), intent(in) :: this  
-    integer(I4B) :: localDepth, remoteDepth ! to determine to which 
+  subroutine extendConnection(this, depth)    
+    class(GridConnectionType), intent(inout) :: this  
+    integer(I4B) :: depth ! depth == 1: nbrs, depth == 2: nbr-of-nbrs
     ! local
-    integer(I4B) :: i
-     
+    integer(I4B) :: icell
+    integer(I4B) :: imod, regionSize, offset
+    class(NumericalModelType), pointer :: numModel
+   
     ! add neighbors
-    do i = 1, this%nrOfLinks 
-      call this%addNeighbors(this%localCells(i), localDepth, this%connectedCells(i)%cell)
-      call this%addNeighbors(this%connectedCells(i), remoteDepth, this%localCells(i)%cell)
+    do icell = 1, this%nrOfBoundaryCells
+      call this%addNeighbors(this%boundaryCells(icell), depth)
     end do
     
-    ! now finalize the data structures
-    this%nrOfCells = this%getNrOfCells()
+    ! set up mapping for the region (models participating in interface model grid)
+    allocate(this%regionalModelOffset(this%regionalModels%Count()))
+    regionSize = 0
+    offset = 0
+    do imod = 1, this%regionalModels%Count()
+      numModel => GetNumericalModelFromList(this%regionalModels, imod)      
+      regionSize = regionSize + numModel%dis%nodes 
+      this%regionalModelOffset(imod) = offset     
+      offset = offset + numModel%dis%nodes
+    end do
+    ! init to -1, meaning 'interface index was not assigned yet'
+    allocate(this%regionalToInterfaceIdxMap(regionSize))
+    this%regionalToInterfaceIdxMap = -1
+    
     call this%buildConnections()
     
   end subroutine extendConnection
- 
-  ! returns total number of cells in the interface region,
-  ! this varies with stencil size
-  function getNrOfCells(this) result(ncells)
-    class(GridConnectionType), intent(in) :: this
-    integer(I4B) :: ncells
-    
-    !TODO_MJR: also for larger stencils and this doesn't take care of duplicates!!!
-    ncells = size(this%localCells) + size(this%connectedCells)   
-  end function
     
   ! routine for finding neighbors-of-neighbors, recursively
-  recursive subroutine addNeighbors(this, cellNbrs, maxlvl, mask)
+  recursive subroutine addNeighbors(this, cellNbrs, depth, mask)
     use SimModule, only: ustop
-    class(GridConnectionType), intent(in) :: this
-    type(CellWithNbrsType), intent(inout) :: cellNbrs    
-    integer(I4B), intent(inout)           :: maxlvl
-    type(GlobalCellType), intent(in)      :: mask
+    class(GridConnectionType), intent(inout)  :: this
+    type(CellWithNbrsType), intent(inout)     :: cellNbrs    
+    integer(I4B), intent(inout)               :: depth
+    type(GlobalCellType), optional            :: mask
     ! local
-    integer(I4B) :: idx, nbrIdx, ipos, inbr
-    type(ConnectionsType), pointer :: conn
-    integer(I4B) :: level
+    integer(I4B)                              :: idx, nbrIdx, ipos, inbr, iexg
+    type(ConnectionsType), pointer            :: conn
+    integer(I4B)                              :: newDepth
+
+    type(ModelWithNbrsType), pointer          :: modelWithNbrs
     
-    if (maxLvl < 1) then
+    if (depth < 1) then
       return
     end if
-    level = maxLvl - 1
+    newDepth = depth - 1
     
     conn => cellNbrs%cell%model%dis%con
     
@@ -279,31 +270,122 @@ module GridConnectionModule
     do ipos=conn%ia(cellNbrs%cell%index) + 1, conn%ia(cellNbrs%cell%index+1) - 1        
       nbrIdx = conn%ja(ipos)
       
-      ! apply mask
-      if (nbrIdx == mask%index .and. associated(cellNbrs%cell%model, mask%model)) then
-        cycle
-      end if
-      
-      call this%addNeighborCell(cellNbrs, nbrIdx, cellNbrs%cell%model)      
+      call this%addNeighborCell(cellNbrs, nbrIdx, cellNbrs%cell%model, mask)      
     end do
         
-    ! TODO_MJR: find remote nbr
+    ! find and add remote nbr (from a different model)
+    call this%getModelWithNbrs(cellNbrs%cell%model, modelWithNbrs)
+    call this%addRemoteNeighbors(cellNbrs, modelWithNbrs, mask)
     
     ! now find nbr-of-nbr    
     do inbr=1, cellNbrs%nrOfNbrs
-      call this%addNeighbors(cellNbrs%neighbors(inbr), level, cellNbrs%cell)
+      call this%addNeighbors(cellNbrs%neighbors(inbr), newDepth, cellNbrs%cell)
     end do
     
   end subroutine addNeighbors
   
-  subroutine addNeighborCell(this, cellNbrs, newNbrIdx, nbrModel)
-    use SimModule, only: ustop
+  ! looks whether this models has any neighbors, then finds
+  ! the exchange and from the n-m pairs in there, it adds 
+  ! the neighboring cells
+  subroutine addRemoteNeighbors(this, cellNbrs, modelWithNbrs, mask)
+    class(GridConnectionType), intent(inout)      :: this
+    type(CellWithNbrsType), intent(inout)         :: cellNbrs    
+    type(ModelWithNbrsType), intent(in), pointer  :: modelWithNbrs
+    type(GlobalCellType), optional                :: mask
+    ! local
+    integer(I4B) :: inbr, iexg
+    type(NumericalExchangeType), pointer :: numEx
+    
+    do inbr = 1, modelWithNbrs%nrOfNbrs
+      numEx => this%getExchangeData(cellNbrs%cell%model, modelWithNbrs%neighbors(inbr)%model)
+      if (.not. associated(numEx)) then
+        write(*,*) 'Error finding exchange data for models, should never happen: terminating...'
+        call ustop()  
+      end if
+      
+      ! loop over n-m links in the exchange
+      if (associated(cellNbrs%cell%model, numEx%m1)) then
+        do iexg = 1, numEx%nexg
+          if (numEx%nodem1(iexg) == cellNbrs%cell%index) then
+            ! we have a link, now add foreign neighbor
+            call this%addNeighborCell(cellNbrs, numEx%nodem2(iexg), numEx%m2, mask)
+          end if
+        end do
+      end if
+      ! and the reverse
+      if (associated(cellNbrs%cell%model, numEx%m2)) then
+        do iexg = 1, numEx%nexg
+          if (numEx%nodem2(iexg) == cellNbrs%cell%index) then
+            ! we have a link, now add foreign neighbor
+            call this%addNeighborCell(cellNbrs, numEx%nodem1(iexg), numEx%m1, mask)
+          end if
+        end do
+      end if
+      
+    end do
+    
+  end subroutine addRemoteNeighbors
+  
+  ! returns the numerical exchange data for the pair of models
+  function getExchangeData(this, model1, model2) result(numEx)
+    class(GridConnectionType), intent(inout)        :: this
+    class(NumericalModelType), pointer, intent(in)  :: model1, model2
+    type(NumericalExchangeType), pointer            :: numEx
+    ! local
+    type(NumericalExchangeType), pointer            :: numExLocal    
+    integer(I4B) :: i
+    
+    numEx => null()
+        
+    do i = 1, this%exchanges%Count()
+      numExLocal => GetNumericalExchangeFromList(this%exchanges, i)
+      if (associated(model1, numExLocal%m1) .and. associated(model2, numExLocal%m2)) then
+        numEx => numExLocal
+        exit
+      end if
+      if (associated(model1, numExLocal%m2) .and. associated(model2, numExLocal%m1)) then
+        numEx => numExLocal
+        exit
+      end if
+    end do
+    
+  end function getExchangeData
+  
+  subroutine getModelWithNbrs(this, model, modelWithNbr)
+    class(GridConnectionType), intent(in)           :: this
+    class(NumericalModelType), pointer, intent(in)  :: model
+    type(ModelWithNbrsType), pointer, intent(out)   :: modelWithNbr
+    ! local
+    integer(I4B) :: i
+    
+    ! traverse the tree, currently two deep but this can be made recursive
+    if (associated(model, this%modelWithNbrs%model)) then    
+      modelWithNbr => this%modelWithNbrs
+    else
+      do i = 1, this%modelWithNbrs%nrOfNbrs
+        if (associated(model, this%modelWithNbrs%neighbors(i)%model)) then  
+          modelWithNbr => this%modelWithNbrs%neighbors(i)
+        end if
+      end do
+    end if
+    
+    
+  end subroutine getModelWithNbrs
+  
+  subroutine addNeighborCell(this, cellNbrs, newNbrIdx, nbrModel, mask)    
     class(GridConnectionType), intent(in) :: this
     type(CellWithNbrsType), intent(inout) :: cellNbrs 
     integer(I4B), intent(in)              :: newNbrIdx
     class(NumericalModelType), pointer    :: nbrModel
+    type(GlobalCellType), optional        :: mask
     ! local
     integer(I4B) :: nbrCnt
+    
+    if (present(mask)) then
+      if (newNbrIdx == mask%index .and. associated(nbrModel, mask%model)) then
+        return
+      end if
+    end if
     
     ! TODO_MJR: dynamic memory
     if (.not. allocated(cellNbrs%neighbors)) then
@@ -324,92 +406,111 @@ module GridConnectionModule
   ! builds a sparse matrix holding all cell connections,
   ! with new indices, and stores the mapping to the global ids
   subroutine buildConnections(this)
-    use SimModule, only: ustop
-    class(GridConnectionType), intent(in) :: this       
+    class(GridConnectionType), intent(inout) :: this 
     ! local
-    integer(I4B) :: n, m, offset
-    integer(I4B) :: isym, j
-    integer(I4B) :: ierror
+    integer(I4B) :: icell
     integer(I4B), dimension(:), allocatable :: nnz
     type(SparseMatrix), pointer :: sparse 
-    type(ConnectionsType), pointer :: conn
+    
+    ! generate interface cell index for boundary cells, recursively
+    ! and buildmapping
+    this%indexCount = 0
+    do icell = 1, this%nrOfBoundaryCells
+      call this%registerInterfaceCells(this%boundaryCells(icell))
+    end do
+    this%nrOfCells = this%indexCount
     
     
-    allocate(this%idxToGlobal(this%nrOfCells))
-    allocate(sparse)    
-    
+    allocate(sparse)
     allocate(nnz(this%nrOfCells))
     nnz = MaxNeighbors+1
     call sparse%init(this%nrOfCells, this%nrOfCells, nnz)
     
-    ! diagonals
-    do n = 1, this%nrOfCells
-      call sparse%addconnection(n, n, 1)
-    end do    
-    
-    ! internals TODO_MJR: do we need them at lowest order, why???
-    
-    ! exchanges
-    offset = this%nrOfLinks
-    do n = 1, this%nrOfLinks
-      
-      ! fill with local indices
-      m = n + offset
-      call sparse%addConnection(n, m, 1)
-      call sparse%addConnection(m, n, 1)
-      
-      ! store mapping here
-      this%idxToGlobal(n) = this%localCells(n)%cell
-      this%idxToGlobal(m) = this%connectedCells(n)%cell
-      
-    end do
-    
-    ! create connections from sparse
-    allocate(this%connections)
-    conn => this%connections
-    call conn%allocate_scalars(this%memorigin)
-    conn%nodes = this%nrOfCells
-    conn%nja = sparse%nnz
-    conn%njas = (conn%nja -  conn%nodes) / 2
-    call conn%allocate_arrays()
-    
-    call sparse%filliaja(conn%ia, conn%ja, ierror)  
-    if (ierror /= 0) then
-      write(*,*) 'Error filling ia/ja connections in GridConnection: terminating...'
-      call ustop()
-    end if
-    
-    call fillisym(conn%nodes, conn%nja, conn%ia, conn%ja, conn%isym)
-    call filljas(conn%nodes, conn%nja, conn%ia, conn%ja, conn%isym, conn%jas)
-    
-    ! done with it
-    call sparse%destroy()
-    
-    ! fill ihc, cl1, cl2, hwva, anglex (with size=njas) for all connections
-    do n=1, conn%nodes
-      do j=conn%ia(n)+1, conn%ia(n+1)-1
-        m = conn%ja(j) 
-        isym = conn%jas(j)
-        if (m > n) then
-          conn%cl1(isym) = this%linkGeometries(isym)%length1
-        else
-          conn%cl2(isym) = this%linkGeometries(isym)%length2
-        end if
-        conn%hwva(isym) = this%linkGeometries(isym)%hwva
-        conn%ihc(isym) = this%linkGeometries(isym)%connectionType
-        conn%anglex(isym) = 0.0 ! TODO_MJR: implement
-      end do
+    ! add the connections, recursively
+    do icell = 1, this%nrOfBoundaryCells
+      call this%connectInterfaceCells(this%boundaryCells(icell), sparse)
     end do
     
   end subroutine buildConnections
+  
+  recursive subroutine registerInterfaceCells(this, cell)
+    class(GridConnectionType), intent(inout) :: this
+    type(CellWithNbrsType)                   :: cell
+    ! local
+    integer(I4B) :: offset, inbr
+    integer(I4B) :: regionIdx  ! unique idx in the region (all connected models)
+    integer(I4B) :: ifaceIdx   ! unique idx in the interface grid
+    
+    offset = this%getRegionalModelOffset(cell%cell%model)
+    regionIdx = offset + cell%cell%index
+    ifaceIdx = this%regionalToInterfaceIdxMap(regionIdx)
+    if (ifaceIdx == -1) then
+      this%indexCount = this%indexCount + 1
+      ifaceIdx = this%indexCount
+      this%regionalToInterfaceIdxMap(regionIdx) = ifaceIdx
+    end if   
+    
+    ! and also for its neighbors
+    do inbr = 1, cell%nrOfNbrs
+      call this%registerInterfaceCells(cell%neighbors(inbr))
+    end do
+      
+  end subroutine registerInterfaceCells
+   
+  recursive subroutine connectInterfaceCells(this, cell, sparse)
+    class(GridConnectionType), intent(inout)  :: this
+    type(CellWithNbrsType)                    :: cell
+    type(SparseMatrix), pointer               :: sparse
+    ! local
+    integer(I4B) :: regionIdx, regionIdxNbr  ! unique idx in the region (all connected models)
+    integer(I4B) :: ifaceIdx, ifaceIdxNbr    ! unique idx in the interface grid
+    integer(I4B) :: offset, inbr
+    
+    offset = this%getRegionalModelOffset(cell%cell%model)
+    regionIdx = offset + cell%cell%index
+    ifaceIdx = this%regionalToInterfaceIdxMap(regionIdx)
+    
+    call sparse%addconnection(ifaceIdx, ifaceIdx, 1)
+    
+    do inbr = 1, cell%nrOfNbrs
+      offset = this%getRegionalModelOffset(cell%neighbors(inbr)%cell%model)
+      regionIdxNbr = offset + cell%neighbors(inbr)%cell%index
+      ifaceIdxNbr = this%regionalToInterfaceIdxMap(regionIdxNbr)
+      
+      call sparse%addconnection(ifaceIdx, ifaceIdxNbr, 1)
+      call sparse%addconnection(ifaceIdxNbr, ifaceIdx, 1)
+      
+      ! recurse
+      call this%connectInterfaceCells(cell%neighbors(inbr), sparse)
+    end do
+    
+  end subroutine connectInterfaceCells
+  
+  function getRegionalModelOffset(this, model) result(offset)
+    class(GridConnectionType), intent(inout) :: this
+    class(NumericalModelType), pointer       :: model
+    integer(I4B)                             :: offset
+    ! local
+    integer(I4B) :: im
+    class(NumericalModelType), pointer :: modelInList
+    offset = 0
+    do im = 1, this%regionalModels%Count()
+       modelInList => GetNumericalModelFromList(this%regionalModels, im)
+       if (associated(model, modelInList)) then
+         offset = this%regionalModelOffset(im)
+       end if
+    end do
+    
+  end function getRegionalModelOffset
   
   subroutine allocateScalars(this)
     use MemoryManagerModule, only: mem_allocate
     class(GridConnectionType), intent(in) :: this
       
-    call mem_allocate(this%nrOfLinks, 'NRLINKS', this%memOrigin)
-    call mem_allocate(this%nrOfCells, 'NRCELLS', this%memOrigin)
     call mem_allocate(this%linkCapacity, 'LINKCAP', this%memOrigin)
+    call mem_allocate(this%nrOfBoundaryCells, 'NRBNDCELLS', this%memOrigin)
+    call mem_allocate(this%indexCount, 'IDXCOUNT', this%memOrigin)
+    call mem_allocate(this%nrOfCells, 'NRCELLS', this%memOrigin)
     
   end subroutine allocateScalars
   

@@ -59,6 +59,7 @@ contains
     call this%allocateScalars()
     call this%allocateArrays()
     
+    this%connectionType = 'GWF-GWF'
     this%gwfModel => CastToGwfModel(model)
     
     this%iVarCV = 0

@@ -152,7 +152,7 @@ contains ! module procedures
     call assert_true(associated(gc%modelWithNbrs), "Model with nbrs should be allocated")
     call assert_equal(gc%modelWithNbrs%nrOfNbrs, 3, "Number of neighbors should match")
     call assert_true(associated(gc%modelWithNbrs%neighbors(1)%model, nbr1), "Neighboring model should be assigned")
-    call assert_equal(gc%modelWithNbrs%neighbors(1)%nrofNbrs, 2, "Nr of neighbors of neighbors should equal 2")
+    call assert_equal(gc%modelWithNbrs%neighbors(1)%nrofNbrs, 2, "Nr of neighbors of neighbors should equal 2 here")
     
   end subroutine
   

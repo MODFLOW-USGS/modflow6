@@ -28,6 +28,7 @@ module BaseSolutionModule
     procedure (slnaddexchange), deferred :: add_exchange
     procedure (slngetmodels), deferred :: get_models
     procedure (assignConnectionsIFace), deferred :: assignModelConnections
+    procedure (setExchangesIFace), deferred :: setExchangesToConnections
   end type BaseSolutionType
 
   abstract interface
@@ -45,6 +46,11 @@ module BaseSolutionModule
     end subroutine
 
     subroutine assignConnectionsIFace(this)
+      import BaseSolutionType
+      class(BaseSolutionType) :: this
+    end subroutine
+    
+    subroutine setExchangesIFace(this)
       import BaseSolutionType
       class(BaseSolutionType) :: this
     end subroutine

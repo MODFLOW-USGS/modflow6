@@ -25,8 +25,8 @@ module ModelConnectionModule
     
     integer(I4B)                        :: inewton          ! == 1 for newton-raphson, 0 otherwise
   
-    ! all numerical exchanges in the same solution with our connectiontype (aggregation)
-    type(ListType)                      :: globalExchanges
+    ! all numerical exchanges in the same solution
+    type(ListType)                     :: globalExchanges
        
   contains
     

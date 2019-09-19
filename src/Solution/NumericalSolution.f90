@@ -144,6 +144,7 @@ module NumericalSolutionModule
     procedure :: add_exchange
     procedure :: get_models
     procedure :: assignModelConnections
+    procedure :: setExchangesToConnections
     procedure :: save
 
     procedure, private :: sln_connect
@@ -2283,6 +2284,41 @@ subroutine solution_create(filename, id)
     end do
     
   end subroutine
+  
+  subroutine setExchangesToConnections(this)
+    use ListsModule, only: baseconnectionlist
+    class(NumericalSolutionType) :: this
+    ! local    
+    class(ModelConnectionType), pointer :: connection
+    class(*), pointer :: objPtr
+    class(NumericalModelType), pointer :: model
+    class(NumericalExchangeType), pointer :: numEx
+    integer(I4B) :: ic, im, ie
+    
+    ! search thru connections
+    do ic = 1, baseconnectionlist%Count()
+      connection => GetConnectionFromList(baseconnectionlist, ic)    
+      
+      ! check if connection's model matches this solution, if so, 
+      ! fill its list with exchanges of same type
+      do im = 1, this%modellist%Count()
+        model => GetNumericalModelFromList(this%modellist, im)
+        if (associated(model,connection%owner)) then          
+          ! match, now add all exchanges
+          do ie = 1, this%exchangelist%Count()
+            numEx => GetNumericalExchangeFromList(this%exchangelist, ie)
+            if (connection%connectionType == numEx%typename) then
+              call AddNumericalExchangeToList(connection%globalExchanges, numEx)
+            end if
+          end do 
+          
+          exit ! go to next connection
+        end if
+      end do
+      
+    end do
+    
+  end subroutine setExchangesToConnections
   
   !> @ brief Assign solution connections
   !!

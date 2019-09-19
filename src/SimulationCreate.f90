@@ -109,6 +109,7 @@ module SimulationCreateModule
     
     ! TODO_MJR: this should not be here, but analogous to models for now...
     call assignConnectionsToSolution()
+    call assignExchangesToConnections()
     
   end subroutine connections_cr
   
@@ -124,7 +125,21 @@ module SimulationCreateModule
       call sol%assignModelConnections()
     enddo
     
-  end subroutine
+  end subroutine assignConnectionsToSolution
+  
+  subroutine assignExchangesToConnections()
+     use ListsModule, only: basesolutionlist
+    use BaseSolutionModule, only: GetBaseSolutionFromList
+    ! local
+    class(BaseSolutionType), pointer :: sol => null()
+    integer(I4B) :: isol
+    
+    do isol = 1, basesolutionlist%Count()
+      sol => GetBaseSolutionFromList(basesolutionlist, isol)
+      call sol%setExchangesToConnections()
+    enddo
+    
+  end subroutine assignExchangesToConnections
   
   !> @brief Deallocate simulation variables
   !<
