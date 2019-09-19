@@ -374,6 +374,7 @@ module GwfNpfModule
     integer(I4B) :: isymcon, idiagm
     real(DP) :: hyn, hym
     real(DP) :: cond
+
 ! ------------------------------------------------------------------------------
     !
     ! -- Calculate conductance and put into amat
@@ -382,13 +383,20 @@ module GwfNpfModule
       call this%xt3d%xt3d_fc(kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew)
     else
     !
-    do n = 1, nodes
-      do ii = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
-        m = this%dis%con%ja(ii)
+    ! do n = 1, nodes
+    !  do ii = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
+          !
+    ! -- Prepare the cell connection iterator 
+      call this%dis%iterator%reset_next_offdiagonal(upper_triangle=.true.)
+      do while (this%dis%iterator%next_offdiagonal())
+        n = this%dis%iterator%n
+        m = this%dis%iterator%m
+        ii = this%dis%iterator%japos
+        !m = this%dis%con%ja(ii)
         !
         ! -- Calculate conductance only for upper triangle but insert into
         !    upper and lower parts of amat.
-        if(m < n) cycle
+        !if(m < n) cycle
         ihc = this%dis%con%ihc(this%dis%con%jas(ii))
         hyn = this%hy_eff(n, m, ihc, ipos=ii)
         hym = this%hy_eff(m, n, ihc, ipos=ii)
@@ -456,8 +464,9 @@ module GwfNpfModule
         idiagm = this%dis%con%ia(m)
         amat(idxglo(isymcon)) = amat(idxglo(isymcon)) + cond
         amat(idxglo(idiagm)) = amat(idxglo(idiagm)) - cond
-      enddo
-    enddo
+    !  enddo
+    !enddo
+      end do
     !
     endif
     !
@@ -507,13 +516,19 @@ module GwfNpfModule
       call this%xt3d%xt3d_fn(kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew)
     else
     !
-    do n=1, nodes
-      idiag=this%dis%con%ia(n)
-      do ii=this%dis%con%ia(n)+1,this%dis%con%ia(n+1)-1
-        m=this%dis%con%ja(ii)
+    !do n=1, nodes
+    ! -- Prepare the cell connection iterator 
+      call this%dis%iterator%reset_next_offdiagonal(upper_triangle=.true.)
+      do while (this%dis%iterator%next_offdiagonal())
+        n = this%dis%iterator%n
+        m = this%dis%iterator%m
+        ii = this%dis%iterator%japos
+        idiag=this%dis%con%ia(n)
+    !  do ii=this%dis%con%ia(n)+1,this%dis%con%ia(n+1)-1
+    !    m=this%dis%con%ja(ii)
         isymcon = this%dis%con%isym(ii)
         ! work on upper triangle
-        if(m < n) cycle
+        !if(m < n) cycle
         if(this%dis%con%ihc(this%dis%con%jas(ii))==0 .and.                     &
            this%ivarcv == 0) then
           !call this%vcond(n,m,hnew(n),hnew(m),ii,cond)
@@ -596,7 +611,6 @@ module GwfNpfModule
           end if
         endif
 
-      enddo
     end do
     !
     end if

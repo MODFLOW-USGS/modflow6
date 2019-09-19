@@ -11,6 +11,7 @@ module BaseDisModule
   use MemoryManagerModule,     only: mem_allocate
   use TdisModule,              only: kstp, kper, pertim, totim, delt
   use TimeSeriesManagerModule, only: TimeSeriesManagerType
+  use IteratorModule,          only: CSRIteratorType
 
   implicit none
   
@@ -41,6 +42,7 @@ module BaseDisModule
     type(BlockParserType)                           :: parser                    !object to read blocks
     real(DP), dimension(:), pointer, contiguous     :: dbuff      => null()
     integer(I4B), dimension(:), pointer, contiguous :: ibuff      => null()
+    type(CSRIteratorType)                           :: iterator                  ! model primary connection iterator
   contains
     procedure :: dis_df
     procedure :: dis_ac
@@ -209,6 +211,9 @@ module BaseDisModule
     enddo
     !
     if (this%writegrb) call this%write_grb(ict)
+    !
+    ! -- create a model connection iterator
+    call this%iterator%set_iaja(this%con%ia, this%con%ja)
     !
     ! -- Return
     return
