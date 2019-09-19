@@ -1536,11 +1536,12 @@ module GwfDisModule
     !
     ! -- If reduced model, then need to copy from dtemp(=>dbuff) to darray
     if(this%nodes <  this%nodesuser) then
-      do nodeu = 1, this%nodesuser
-        noder = this%get_nodenumber(nodeu, 0)
-        if(noder <= 0) cycle
-        darray(noder) = dtemp(nodeu)
-      enddo
+      call this%fill_grid_array(dtemp, darray)
+      !do nodeu = 1, this%nodesuser
+      !  noder = this%get_nodenumber(nodeu, 0)
+      !  if(noder <= 0) cycle
+      !  darray(noder) = dtemp(nodeu)
+      !enddo
     endif
     !
     ! -- return

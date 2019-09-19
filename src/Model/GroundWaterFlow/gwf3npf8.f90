@@ -273,14 +273,44 @@ module GwfNpfModule
     !
     ! -- allocate arrays
     call this%allocate_arrays(dis%nodes, dis%njas)
-    
+    !
+    ! -- fill icelltype
+    call dis%fill_grid_array(icelltype, this%icelltype)
+    !
+    ! -- fill k data
+    ! -- k11
+    call dis%fill_grid_array(k11, this%k11)
+    ! -- k22
     if (present(k22)) then
       this%ik22 = 1
+      call dis%fill_grid_array(k22, this%k22)
     end if
+    ! -- k33
     if (present(k33)) then
       this%ik33 = 1
+      call dis%fill_grid_array(k33, this%k33)
     end if
+    !
+    ! -- fill angle data
+    ! -- angle1
+    if (present(angle1)) then
+      this%iangle1 = 1
+      call dis%fill_grid_array(angle1, this%angle1)
+    end if
+    ! -- angle2
+    if (present(angle2)) then
+      this%iangle2 = 1
+      call dis%fill_grid_array(angle2, this%angle2)
+    end if
+    ! -- angle3
+    if (present(angle3)) then
+      this%iangle3 = 1
+      call dis%fill_grid_array(angle3, this%angle3)
+    end if
+    !
+    ! -- fill wetdry data
     if (present(wetdry)) then
+      this%iwetdry = 1
       this%irewet = 1
     end if
     !
