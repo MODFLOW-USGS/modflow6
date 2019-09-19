@@ -18,7 +18,7 @@ module SpatialModelConnectionModule
     ! aggregation, all exchanges which connect with our model
     type(ListType), pointer :: exchangeList => null()
     
-    integer(I4B) :: stencilType ! default = 0, xt3d = 1, ...
+    integer(I4B) :: stencilDepth ! default = 1, xt3d = 2, ...
     
     ! TODO_MJR: mem mgt of these guys:
     integer(I4B) :: nrOfConnections ! TODO_MJR: do we need this one?
@@ -33,7 +33,8 @@ module SpatialModelConnectionModule
     procedure, pass(this) :: mc_mc => mapCoefficients
     procedure, pass(this) :: mc_ac => addConnectionsToMatrix
     
-    procedure, private, pass(this) :: addLinksToGridConnection
+    procedure, private, pass(this) :: setupGridConnection
+    procedure, private, pass(this) :: setBoundaryCells
     procedure, private, pass(this) :: findModelNeighbors
     procedure, private, pass(this) :: getNrOfConnections
   end type SpatialModelConnectionType
@@ -49,7 +50,7 @@ contains ! module procedures
     this%name = name
     this%memoryOrigin = trim(this%name)
     this%owner => model
-    this%stencilType = 1
+    this%stencilDepth = 1
     
     this%nrOfConnections = 0
     
@@ -75,7 +76,7 @@ contains ! module procedures
     ! create the grid connection data structure
     this%nrOfConnections = this%getNrOfConnections()
     call this%gridConnection%construct(this%owner, this%nrOfConnections, this%name)
-    call this%addLinksToGridConnection()
+    call this%setupGridConnection()
     
   end subroutine defineSpatialConnection
   
@@ -91,119 +92,85 @@ contains ! module procedures
     integer(I4B) :: mloc, nloc, mglob, nglob, j, csrIdx
     type(ConnectionsType), pointer :: conn => null()
     
-    conn => this%gridConnection%connections
-    
-    allocate(this%mapIdxToSln(conn%nja))
-    
-    do mloc=1, conn%nodes
-      do j=conn%ia(mloc), conn%ia(mloc+1)-1
-        nloc = conn%ja(j) 
-        
-        mglob = this%gridConnection%idxToGlobal(mloc)%index + this%gridConnection%idxToGlobal(mloc)%model%moffset
-        nglob = this%gridConnection%idxToGlobal(nloc)%index + this%gridConnection%idxToGlobal(nloc)%model%moffset 
-        csrIdx = getCSRIndex(mglob, nglob, iasln, jasln)
-        if (csrIdx == -1) then
-          ! this should not be possible
-          write(*,*) 'Error: cannot find cell connection in global system'
-          call ustop()
-        end if
-        
-        this%mapIdxToSln(j) = csrIdx       
-      end do
-    end do
+    !conn => this%gridConnection%connections
+    !
+    !allocate(this%mapIdxToSln(conn%nja))
+    !
+    !do mloc=1, conn%nodes
+    !  do j=conn%ia(mloc), conn%ia(mloc+1)-1
+    !    nloc = conn%ja(j) 
+    !    
+    !    mglob = this%gridConnection%idxToGlobal(mloc)%index + this%gridConnection%idxToGlobal(mloc)%model%moffset
+    !    nglob = this%gridConnection%idxToGlobal(nloc)%index + this%gridConnection%idxToGlobal(nloc)%model%moffset 
+    !    csrIdx = getCSRIndex(mglob, nglob, iasln, jasln)
+    !    if (csrIdx == -1) then
+    !      ! this should not be possible
+    !      write(*,*) 'Error: cannot find cell connection in global system'
+    !      call ustop()
+    !    end if
+    !    
+    !    this%mapIdxToSln(j) = csrIdx       
+    !  end do
+    !end do
     
   end subroutine mapCoefficients
   
-  ! add connections to global matrix, does not fill in symmetric elements  
+  ! add connections to global matrix, does not fill in transposed (sym) elements  
   subroutine addConnectionsToMatrix(this, sparse)
     use SparseModule, only:sparsematrix
-    use GridConnectionModule
     class(SpatialModelConnectionType), intent(inout) :: this
     type(sparsematrix), intent(inout) :: sparse 
     
-    ! local
-    integer(I4B) :: i, nLinks
-    integer(I4B) :: iglo, jglo ! global (solution matrix) indices
     
-    type(GlobalCellType), dimension(:), pointer :: localCells => null()
-    type(GlobalCellType), dimension(:), pointer :: connectedCells => null()
-    
-    localCells => this%gridConnection%localCells(:)%cell
-    connectedCells => this%gridConnection%connectedCells(:)%cell
-        
-    nLinks = this%gridConnection%nrOfLinks     
-    do i=1, nLinks
-      iglo = localCells(i)%index + localCells(i)%model%moffset
-      jglo = connectedCells(i)%index + connectedCells(i)%model%moffset
-     
-      ! add global numbers to sparse
-      call sparse%addconnection(iglo, jglo, 1)
-    end do
     
   end subroutine
   
-  subroutine addLinksToGridConnection(this)
+  subroutine setupGridConnection(this)
     class(SpatialModelConnectionType), intent(inout) :: this
     
+    ! set boundary cells
+    call this%setBoundaryCells()
+    
+    ! create topology of models
+    call this%findModelNeighbors()
+    
+    ! now scan for nbr-of-nbrs and create final data structures
+    call this%gridConnection%extendConnection(this%stencilDepth)
+    
+  end subroutine setupGridConnection
+  
+  subroutine setBoundaryCells(this)
+    class(SpatialModelConnectionType), intent(inout) :: this
     ! local
     integer(I4B) :: iex, iconn
     type(NumericalExchangeType), pointer :: numEx
     
-    numEx => null()
-    
-    ! fill primary links, with local numbering: n => m or m <= n
+    ! set boundary cells
     do iex=1, this%exchangeList%Count()
       numEx => GetNumericalExchangeFromList(this%exchangeList, iex)
       do iconn=1, numEx%nexg
         if (associated(numEx%m1, this%owner)) then          
-          call this%gridConnection%addLink( numEx%nodem1(iconn),  &
-                                            numEx%nodem2(iconn),  &
-                                            numEx%cl1(iconn),     &
-                                            numEx%cl2(iconn),     &
-                                            numEx%hwva(iconn),    &
-                                            numEx%ihc(iconn),     &
-                                            numEx%m2) 
+          call this%gridConnection%setBoundaryCell(numEx%nodem1(iconn))
         else  
-          ! then with nodes, lenghts, models reversed:
-          call this%gridConnection%addLink( numEx%nodem2(iconn),  &
-                                            numEx%nodem1(iconn),  &
-                                            numEx%cl2(iconn),     &
-                                            numEx%cl1(iconn),     &
-                                            numEx%hwva(iconn),    &
-                                            numEx%ihc(iconn),     &
-                                            numEx%m1)       
+          call this%gridConnection%setBoundaryCell(numEx%nodem2(iconn))
         end if              
       end do
     end do
     
-    ! create model topology
-    call this%findModelNeighbors()
-    
-    ! here we scan for nbr-of-nbrs and create final data structures
-    select case(this%stencilType)
-      case(0) 
-        call this%gridConnection%extendConnection(0, 0)
-      case(1)
-        call this%gridConnection%extendConnection(2, 1)
-      case default
-        write(*,*) 'Error: invalid stencil type set: using default connection'
-        call this%gridConnection%extendConnection(0, 0)        
-    end select
-    
-  end subroutine addLinksToGridConnection
+  end subroutine setBoundaryCells
   
   subroutine findModelNeighbors(this)
-      class(SpatialModelConnectionType), intent(inout) :: this
-      ! local   
-      integer(I4B) :: i
-      class(NumericalExchangeType), pointer :: numEx
+    class(SpatialModelConnectionType), intent(inout) :: this
+    ! local   
+    integer(I4B) :: i, depth
+    class(NumericalExchangeType), pointer :: numEx
       
-      ! loop over all exchanges in solution with same conn. type
-      do i=1, this%globalExchanges%Count()
-          numEx => GetNumericalExchangeFromList(this%globalExchanges, i)
-          ! (possibly) add connection between models
-          call this%gridConnection%addModelLink(numEx%m1, numEx%m2)
-      end do
+    ! loop over all exchanges in solution with same conn. type
+    do i=1, this%globalExchanges%Count()
+        numEx => GetNumericalExchangeFromList(this%globalExchanges, i)
+        ! (possibly) add connection between models
+        call this%gridConnection%addModelLink(numEx, this%stencilDepth)
+    end do
       
    end subroutine findModelNeighbors
   
