@@ -112,7 +112,8 @@ module GwfNpfModule
 
   subroutine npf_cr(npfobj, name_model, inunit, iout)
 ! ******************************************************************************
-! npf_cr -- Create a new NPF object
+! npf_cr -- Create a new NPF object. Pass a inunit value of 0 if npf data will
+!           initialized from memory  
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -121,7 +122,7 @@ module GwfNpfModule
     ! -- dummy
     type(GwfNpftype), pointer :: npfobj
     character(len=*), intent(in) :: name_model
-    integer(I4B), intent(in) :: inunit
+    integer(I4B), intent(in) :: inunit  
     integer(I4B), intent(in) :: iout
 ! ------------------------------------------------------------------------------
     !
@@ -240,6 +241,39 @@ module GwfNpfModule
     ! -- Return
     return
   end subroutine npf_mc
+  
+  subroutine npf_init_mem(this, dis, icelltype, k11, k22, k33, wetdry,           &
+                          angle1, angle2, angle3)
+! ******************************************************************************
+! npf_cr -- Create a new NPF object from memory
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwfNpftype) :: this
+    class(DisBaseType), pointer, intent(inout) :: dis
+    integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: icelltype
+    real(DP), dimension(:), pointer, contiguous, intent(inout) :: k11
+    real(DP), dimension(:), pointer, contiguous, intent(inout), optional :: k22
+    real(DP), dimension(:), pointer, contiguous, intent(inout), optional :: k33
+    real(DP), dimension(:), pointer, contiguous, intent(inout), optional :: wetdry
+    real(DP), dimension(:), pointer, contiguous, intent(inout), optional :: angle1
+    real(DP), dimension(:), pointer, contiguous, intent(inout), optional :: angle2
+    real(DP), dimension(:), pointer, contiguous, intent(inout), optional :: angle3
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    ! -- Store pointers to arguments that were passed in
+    this%dis => dis
+    !
+    ! -- allocate arrays
+    call this%allocate_arrays(dis%nodes, dis%njas)
+    !
+    ! -- Return
+    return
+  end subroutine npf_init_mem
 
   subroutine npf_ar(this, dis, ic, ibound, hnew)
 ! ******************************************************************************
@@ -260,25 +294,34 @@ module GwfNpfModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Store pointers to arguments that were passed in
-    this%dis     => dis
     this%ic      => ic
     this%ibound  => ibound
     this%hnew    => hnew
     !
-    ! -- allocate arrays
-    call this%allocate_arrays(dis%nodes, dis%njas)
-    !
-    ! -- read the data block
-    call this%read_data()
+    ! -- read data from files
+    if (this%inunit /= 0)  then
+      !
+      ! -- store pointer to dis 
+      this%dis => dis
+      !
+      ! -- allocate arrays
+      call this%allocate_arrays(dis%nodes, dis%njas)
+      !
+      ! -- read the data block
+      call this%read_data()
+    end if
     !
     ! -- Initialize and check data
     call this%prepcheck()
     !
     ! -- xt3d
-    if(this%ixt3d > 0) call this%xt3d%xt3d_ar(dis, ibound, this%k11, this%ik33,&
-      this%k33, this%sat, this%ik22, this%k22, this%inewton, this%satmin,  &
-      this%icelltype, this%iangle1, this%iangle2, this%iangle3,                &
-      this%angle1, this%angle2, this%angle3)
+    if (this%ixt3d > 0) then
+      call this%xt3d%xt3d_ar(dis, ibound, this%k11, this%ik33, this%k33,         &
+                             this%sat, this%ik22, this%k22, this%inewton,        &
+                             this%satmin, this%icelltype, this%iangle1,          &
+                             this%iangle2, this%iangle3, this%angle1,            &
+                             this%angle2, this%angle3)
+    end if
     !
     ! -- Return
     return
@@ -1700,8 +1743,6 @@ module GwfNpfModule
                                    trim(adjustl(aname(5))), ' not found.'
         call store_error(errmsg)
       else
-        !call mem_deallocate(this%wetdry)
-        !call mem_allocate(this%wetdry, 1, 'WETDRY', trim(this%origin))
         call mem_reallocate(this%wetdry, 1, 'WETDRY', trim(this%origin))        
       end if
     endif

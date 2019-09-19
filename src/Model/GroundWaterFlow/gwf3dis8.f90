@@ -13,7 +13,7 @@ module GwfDisModule
 
   implicit none
   private
-  public dis_cr, dis_cr_mem, GwfDisType
+  public dis_cr, dis_init_mem, GwfDisType
 
   type, extends(DisBaseType) :: GwfDisType
     integer(I4B), pointer :: nlay => null()                                      ! number of layers
@@ -86,26 +86,26 @@ module GwfDisModule
     return
   end subroutine dis_cr
   
-  subroutine dis_cr_mem(dis, name_model, inunit, iout, nlay, nrow, ncol,       &
-                        delr, delc, top2d, bot3d, idomain)
+  subroutine dis_init_mem(dis, name_model, iout, nlay, nrow, ncol,       &
+                          delr, delc, top2d, bot3d, idomain)
 ! ******************************************************************************
-! dis_cr_mem -- Create a new discretization 3d object from memory
+! dis_init_mem -- Create a new discretization 3d object from memory
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     class(DisBaseType), pointer :: dis
     character(len=*), intent(in) :: name_model
-    integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
     integer(I4B), intent(in) :: nlay
     integer(I4B), intent(in) :: nrow
     integer(I4B), intent(in) :: ncol
-    real(DP), dimension(:), intent(in) :: delr
-    real(DP), dimension(:), intent(in) :: delc
-    real(DP), dimension(:, :), intent(in) :: top2d
-    real(DP), dimension(:, :, :), intent(in) :: bot3d
-    integer(I4B), dimension(:, :, :), intent(in), optional :: idomain
+    real(DP), dimension(:), pointer, contiguous, intent(in) :: delr
+    real(DP), dimension(:), pointer, contiguous, intent(in) :: delc
+    real(DP), dimension(:, :), pointer, contiguous, intent(in) :: top2d
+    real(DP), dimension(:, :, :), pointer, contiguous, intent(in) :: bot3d
+    integer(I4B), dimension(:, :, :), pointer, contiguous, intent(in),           &
+      optional :: idomain
     ! -- local
     type(GwfDisType), pointer :: disext
     integer(I4B) :: i
@@ -117,7 +117,7 @@ module GwfDisModule
     allocate(disext)
     dis => disext
     call disext%allocate_scalars(name_model)
-    dis%inunit = inunit
+    dis%inunit = 0
     dis%iout = iout
     !
     ! -- set dimensions
@@ -158,12 +158,9 @@ module GwfDisModule
       end do
     end do
     !
-    ! -- finalize grid
-    call disext%grid_finalize()
-    !
     ! -- Return
     return
-  end subroutine dis_cr_mem
+  end subroutine dis_init_mem
 
   subroutine dis3d_df(this)
 ! ******************************************************************************
@@ -179,19 +176,23 @@ module GwfDisModule
     ! -- locals
 ! ------------------------------------------------------------------------------
     !
-    ! -- Identify
-    write(this%iout,1) this%inunit
-  1 format(1X,/1X,'DIS -- STRUCTURED GRID DISCRETIZATION PACKAGE,',            &
-                  ' VERSION 2 : 3/27/2014 - INPUT READ FROM UNIT ',I0,//)
-    !
-    ! -- Read options
-    call this%read_options()
-    !
-    ! -- Read dimensions block
-    call this%read_dimensions()
-    !
-    ! -- Read GRIDDATA block
-    call this%read_mf6_griddata()
+    ! -- read data from file
+    if (this%inunit /= 0) then
+      !
+      ! -- Identify
+      write(this%iout,1) this%inunit
+1     format(1X,/1X,'DIS -- STRUCTURED GRID DISCRETIZATION PACKAGE,',            &
+                    ' VERSION 2 : 3/27/2014 - INPUT READ FROM UNIT ',I0,//)
+      !
+      ! -- Read options
+      call this%read_options()
+      !
+      ! -- Read dimensions block
+      call this%read_dimensions()
+      !
+      ! -- Read GRIDDATA block
+      call this%read_mf6_griddata()
+    end if
     !
     ! -- Final grid initialization
     call this%grid_finalize()
