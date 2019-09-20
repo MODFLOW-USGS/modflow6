@@ -1,13 +1,13 @@
 ! Iterator for stepping through each entry position in a compressed
 ! sparse row format.  This was developed so that connections could
-! masked and skipped over in a hidden manner. It can be used in
+! be masked and skipped over in a hidden manner. It can be used in
 ! the following way
 !
 !  type(CSRIteratorType) :: iterator
 !  call iterator%set_iaja(ia, ja)
 !  call iterator%set_masked_array(masked_array)
 !  call iterator%reset_next_offdiagonal(upper_triangle=.true.)
-!  do while (iterator%next_offdiagonal)
+!  do while (iterator%next_offdiagonal())
 !    n = iterator%n
 !    m = iterator%m
 !    ipos = iterator%japos

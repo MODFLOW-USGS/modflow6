@@ -383,8 +383,8 @@ module GwfNpfModule
       call this%xt3d%xt3d_fc(kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew)
     else
     !
-    ! do n = 1, nodes
-    !  do ii = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
+    !cdl  do n = 1, nodes
+    !cdl   do ii = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
           !
     ! -- Prepare the cell connection iterator 
       call this%dis%iterator%reset_next_offdiagonal(upper_triangle=.true.)
@@ -392,11 +392,11 @@ module GwfNpfModule
         n = this%dis%iterator%n
         m = this%dis%iterator%m
         ii = this%dis%iterator%japos
-        !m = this%dis%con%ja(ii)
+        !cdl m = this%dis%con%ja(ii)
         !
         ! -- Calculate conductance only for upper triangle but insert into
         !    upper and lower parts of amat.
-        !if(m < n) cycle
+        !cdl if(m < n) cycle
         ihc = this%dis%con%ihc(this%dis%con%jas(ii))
         hyn = this%hy_eff(n, m, ihc, ipos=ii)
         hym = this%hy_eff(m, n, ihc, ipos=ii)
@@ -464,8 +464,8 @@ module GwfNpfModule
         idiagm = this%dis%con%ia(m)
         amat(idxglo(isymcon)) = amat(idxglo(isymcon)) + cond
         amat(idxglo(idiagm)) = amat(idxglo(idiagm)) - cond
-    !  enddo
-    !enddo
+    !cdl   enddo
+    !cdl enddo
       end do
     !
     endif
