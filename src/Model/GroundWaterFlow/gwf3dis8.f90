@@ -125,6 +125,9 @@ module GwfDisModule
     disext%ncol = ncol
     disext%nlay = nlay
     !
+    ! -- calculate nodesuser
+    disext%nodesuser = disext%nlay * disext%nrow * disext%ncol
+    !
     ! -- Allocate delr, delc, and non-reduced vectors for dis
     call mem_allocate(disext%delr, disext%ncol, 'DELR', disext%origin)
     call mem_allocate(disext%delc, disext%nrow, 'DELC', disext%origin)
@@ -179,7 +182,7 @@ module GwfDisModule
     ! -- read data from file
     if (this%inunit /= 0) then
       !
-      ! -- Identify
+      ! -- Identify package
       write(this%iout,1) this%inunit
 1     format(1X,/1X,'DIS -- STRUCTURED GRID DISCRETIZATION PACKAGE,',            &
                     ' VERSION 2 : 3/27/2014 - INPUT READ FROM UNIT ',I0,//)
@@ -1462,11 +1465,6 @@ module GwfDisModule
     ! -- If reduced model, then need to copy from itemp(=>ibuff) to iarray
     if (this%nodes <  this%nodesuser) then
       call this%fill_grid_array(itemp, iarray)
-      !do nodeu = 1, this%nodesuser
-      !  noder = this%get_nodenumber(nodeu, 0)
-      !  if (noder <= 0) cycle
-      !  iarray(noder) = itemp(nodeu)
-      !enddo
     endif
     !
     ! -- return
@@ -1502,7 +1500,6 @@ module GwfDisModule
     integer(I4B) :: nrow
     integer(I4B) :: ncol
     integer(I4B) :: nval
-    integer(I4B) :: nodeu, noder
     real(DP), dimension(:), pointer, contiguous :: dtemp
 ! ------------------------------------------------------------------------------
     !
@@ -1538,11 +1535,6 @@ module GwfDisModule
     ! -- If reduced model, then need to copy from dtemp(=>dbuff) to darray
     if(this%nodes <  this%nodesuser) then
       call this%fill_grid_array(dtemp, darray)
-      !do nodeu = 1, this%nodesuser
-      !  noder = this%get_nodenumber(nodeu, 0)
-      !  if(noder <= 0) cycle
-      !  darray(noder) = dtemp(nodeu)
-      !enddo
     endif
     !
     ! -- return

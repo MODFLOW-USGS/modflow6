@@ -14,7 +14,7 @@ module GwfDisvModule
 
   implicit none
   private
-  public disv_cr, GwfDisvType
+  public disv_cr, disv_init_mem, GwfDisvType
 
   type, extends(DisBaseType) :: GwfDisvType
     integer(I4B), pointer :: nlay  => null()                                     ! number of layers
@@ -94,6 +94,87 @@ module GwfDisvModule
     ! -- Return
     return
   end subroutine disv_cr
+  
+  subroutine disv_init_mem(dis, name_model, iout, nlay, ncpl,              &
+                           top2d, bot3d, vertices, cellxy, idomain)
+! ******************************************************************************
+! dis_init_mem -- Create a new discretization by vertices object from memory
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    class(DisBaseType), pointer :: dis
+    character(len=*), intent(in) :: name_model
+    integer(I4B), intent(in) :: iout
+    integer(I4B), intent(in) :: nlay
+    integer(I4B), intent(in) :: ncpl
+    real(DP), dimension(:, :), pointer, contiguous, intent(in) :: top2d
+    real(DP), dimension(:, :, :), pointer, contiguous, intent(in) :: bot3d
+    integer(I4B), dimension(:, :), pointer, contiguous, intent(in) :: vertices
+    integer(I4B), dimension(:, :), pointer, contiguous, intent(in) :: cellxy
+    integer(I4B), dimension(:, :, :), pointer, contiguous, intent(in),           &
+      optional :: idomain
+    ! -- local
+    type(GwfDisvType), pointer :: disext
+    integer(I4B) :: n
+    integer(I4B) :: j
+    integer(I4B) :: k
+    integer(I4B) :: ival
+    ! -- local
+! ------------------------------------------------------------------------------
+    allocate(disext)
+    dis => disext
+    call disext%allocate_scalars(name_model)
+    dis%inunit = 0
+    dis%iout = iout
+    !
+    ! -- set dimensions
+    disext%ncpl = ncpl
+    disext%nlay = nlay
+    !
+    ! -- Calculate nodesuser
+    disext%nodesuser = disext%nlay * disext%ncpl
+    !
+    ! -- Allocate non-reduced vectors for disv
+    call mem_allocate(disext%idomain, disext%ncpl, 1, disext%nlay, 'IDOMAIN',    &
+                      disext%origin)
+    call mem_allocate(disext%top2d, disext%ncpl, 1, 'TOP2D', disext%origin)
+    call mem_allocate(disext%bot3d, disext%ncpl, 1, disext%nlay, 'BOT3D',        &
+                      disext%origin)
+    !
+    ! -- Allocate vertices array
+    call mem_allocate(disext%vertices, 2, disext%nvert, 'VERTICES', disext%origin)
+    call mem_allocate(disext%cellxy, 2, disext%ncpl, 'CELLXY', disext%origin)
+    !
+    ! -- fill data
+    do k = 1, disext%nlay
+      do j = 1, disext%ncpl
+        if (k == 1) then
+          disext%top2d(j, 1) = top2d(j, 1)
+        end if
+        disext%bot3d(j, 1, k) = bot3d(j, 1, k)
+        if (present(idomain)) then
+          ival = idomain(j, 1, k)
+        else
+          ival = 1
+        end if
+        disext%idomain(j, 1, k) = ival
+      end do
+    end do
+    do n = 1, disext%nvert
+      do j = 1, 2
+        disext%vertices(j, n) = vertices(j, n)
+      end do
+    end do
+    do n = 1, disext%ncpl
+      do j = 1, 2
+        disext%cellxy(j, n) = cellxy(j, n)
+      end do
+    end do
+    !
+    ! -- Return
+    return
+  end subroutine disv_init_mem
 
   subroutine disv_df(this)
 ! ******************************************************************************
@@ -107,39 +188,43 @@ module GwfDisvModule
     ! -- locals
 ! ------------------------------------------------------------------------------
     !
-    ! -- Identify
-    write(this%iout,1) this%inunit
-  1 format(1X,/1X,'DISV -- VERTEX GRID DISCRETIZATION PACKAGE,',            &
-                  ' VERSION 1 : 12/23/2015 - INPUT READ FROM UNIT ',I0,//)
-    !
-    ! -- Read options
-    call this%read_options()
-    !
-    ! -- Read dimensions block
-    call this%read_dimensions()
-    !
-    ! -- Read GRIDDATA block
-    call this%read_mf6_griddata()
+    ! -- read data from file
+    if (this%inunit /= 0) then
+      !
+      ! -- Identify package
+      write(this%iout,1) this%inunit
+  1   format(1X,/1X,'DISV -- VERTEX GRID DISCRETIZATION PACKAGE,',               &
+                    ' VERSION 1 : 12/23/2015 - INPUT READ FROM UNIT ',I0,//)
+      !
+      ! -- Read options
+      call this%read_options()
+      !
+      ! -- Read dimensions block
+      call this%read_dimensions()
+      !
+      ! -- Read GRIDDATA block
+      call this%read_mf6_griddata()
+      !
+      ! -- Read VERTICES block
+      call this%read_vertices()
+      !
+      ! -- Read CELL2D block
+      call this%read_cell2d()
+    end if
     !
     ! -- Final grid initialization
     call this%grid_finalize()
-    !
-    ! -- Read VERTICES block
-    call this%read_vertices()
-    !
-    ! -- Read CELL2D block
-    call this%read_cell2d()
-    !
-    ! -- Build connections
-    call this%connect()
-    !
-    ! -- Create two cell objects that can be used for geometric processing
-    call this%cell1%init(this%nlay, this%ncpl, this%nodes, this%top, this%bot, &
-                    this%iavert, this%javert, this%vertices, this%cellxy,      &
-                    this%nodereduced, this%nodeuser)
-    call this%cell2%init(this%nlay, this%ncpl, this%nodes, this%top, this%bot, &
-                    this%iavert, this%javert, this%vertices, this%cellxy,      &
-                    this%nodereduced, this%nodeuser)
+    !!
+    !! -- Build connections
+    !call this%connect()
+    !!
+    !! -- Create two cell objects that can be used for geometric processing
+    !call this%cell1%init(this%nlay, this%ncpl, this%nodes, this%top, this%bot, &
+    !                this%iavert, this%javert, this%vertices, this%cellxy,      &
+    !                this%nodereduced, this%nodeuser)
+    !call this%cell2%init(this%nlay, this%ncpl, this%nodes, this%top, this%bot, &
+    !                this%iavert, this%javert, this%vertices, this%cellxy,      &
+    !                this%nodereduced, this%nodeuser)
     !
     ! -- Return
     return
@@ -276,6 +361,8 @@ module GwfDisvModule
     character(len=LINELENGTH) :: errmsg, keyword
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
+    integer(I4B) :: j
+    integer(I4B) :: k
 ! ------------------------------------------------------------------------------
     !
     ! -- get dimensions block
@@ -337,6 +424,23 @@ module GwfDisvModule
     ! -- Calculate nodesuser
     this%nodesuser = this%nlay * this%ncpl
     !
+    ! -- Allocate non-reduced vectors for disv
+    call mem_allocate(this%idomain, this%ncpl, 1, this%nlay, 'IDOMAIN',          &
+                      this%origin)
+    call mem_allocate(this%top2d, this%ncpl, 1, 'TOP2D', this%origin)
+    call mem_allocate(this%bot3d, this%ncpl, 1, this%nlay, 'BOT3D', this%origin)
+    !
+    ! -- Allocate vertices array
+    call mem_allocate(this%vertices, 2, this%nvert, 'VERTICES', this%origin)
+    call mem_allocate(this%cellxy, 2, this%ncpl, 'CELLXY', this%origin)
+    !
+    ! -- initialize all cells to be active (idomain = 1)
+    do k = 1, this%nlay
+      do j = 1, this%ncpl
+        this%idomain(j, 1, k) = 1
+      end do
+    end do
+    !
     ! -- Return
     return
   end subroutine read_dimensions
@@ -377,19 +481,6 @@ module GwfDisvModule
     data aname(2) /'  MODEL LAYER BOTTOM EL.'/
     data aname(3) /'                 IDOMAIN'/
 ! ------------------------------------------------------------------------------
-    !
-    ! -- Allocate non-reduced vectors for disv
-    call mem_allocate(this%idomain, this%ncpl, 1, this%nlay, 'IDOMAIN',          &
-                      this%origin)
-    call mem_allocate(this%top2d, this%ncpl, 1, 'TOP2D', this%origin)
-    call mem_allocate(this%bot3d, this%ncpl, 1, this%nlay, 'BOT3D', this%origin)
-    !
-    ! -- initialize all cells to be active (idomain = 1)
-    do k = 1, this%nlay
-      do j = 1, this%ncpl
-        this%idomain(j, 1, k) = 1
-      end do
-    end do
     !
     ! --Read GRIDDATA block
     call this%parser%GetBlock('GRIDDATA', isfound, ierr)
@@ -593,6 +684,17 @@ module GwfDisvModule
         this%bot(noder) = this%bot3d(j, 1, k)
       enddo
     enddo
+    !
+    ! -- Build connections
+    call this%connect()
+    !
+    ! -- Create two cell objects that can be used for geometric processing
+    call this%cell1%init(this%nlay, this%ncpl, this%nodes, this%top, this%bot, &
+                    this%iavert, this%javert, this%vertices, this%cellxy,      &
+                    this%nodereduced, this%nodeuser)
+    call this%cell2%init(this%nlay, this%ncpl, this%nodes, this%top, this%bot, &
+                    this%iavert, this%javert, this%vertices, this%cellxy,      &
+                    this%nodereduced, this%nodeuser)
     !
     ! -- Return
     return
@@ -1472,10 +1574,10 @@ module GwfDisvModule
       call mem_allocate(this%nodeuser, 1, 'NODEUSER', this%origin)
       call mem_allocate(this%nodereduced, 1, 'NODEREDUCED', this%origin)
     endif
-    !
-    ! -- Allocate vertices array
-    call mem_allocate(this%vertices, 2, this%nvert, 'VERTICES', this%origin)
-    call mem_allocate(this%cellxy, 2, this%ncpl, 'CELLXY', this%origin)
+    !!
+    !! -- Allocate vertices array
+    !call mem_allocate(this%vertices, 2, this%nvert, 'VERTICES', this%origin)
+    !call mem_allocate(this%cellxy, 2, this%ncpl, 'CELLXY', this%origin)
     !
     ! -- Initialize
     this%mshape(1) = this%nlay
@@ -1806,11 +1908,6 @@ module GwfDisvModule
     ! -- If reduced model, then need to copy from itemp(=>ibuff) to iarray
     if(this%nodes <  this%nodesuser) then
       call this%fill_grid_array(itemp, iarray)
-      !do nodeu = 1, this%nodesuser
-      !  noder = this%get_nodenumber(nodeu, 0)
-      !  if(noder <= 0) cycle
-      !  iarray(noder) = itemp(nodeu)
-      !enddo
     endif
     !
     ! -- return
@@ -1882,11 +1979,6 @@ module GwfDisvModule
     ! -- If reduced model, then need to copy from dtemp(=>dbuff) to darray
     if(this%nodes <  this%nodesuser) then
       call this%fill_grid_array(dtemp, darray)
-      !do nodeu = 1, this%nodesuser
-      !  noder = this%get_nodenumber(nodeu, 0)
-      !  if(noder <= 0) cycle
-      !  darray(noder) = dtemp(nodeu)
-      !enddo
     endif
     !
     ! -- return

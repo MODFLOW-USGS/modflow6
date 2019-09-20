@@ -213,15 +213,20 @@ module NumericalPackageModule
   end subroutine read_check_ionper
 
   subroutine get_block_data(this, tags, lfound, varinames)
+! ******************************************************************************
+! get_block_data -- Read griddata block for a package 
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_setptr
-    !
+    ! -- dummy
     class(NumericalPackageType) :: this
     character(len=24), dimension(:), intent(in)           :: tags
     logical, dimension(:), intent(inout)                  :: lfound
     character(len=24), dimension(:), intent(in), optional :: varinames
-    !
-    ! -- 
+    ! -- local
     logical :: lkeyword
     logical :: endOfBlock
     integer(I4B) :: nsize
@@ -231,8 +236,8 @@ module NumericalPackageModule
     integer(I4B) :: istart, istop, lloc
     integer(I4B), dimension(:), pointer, contiguous :: aint
     real(DP), dimension(:), pointer, contiguous     :: adbl
-    !
-    ! -- 
+! ------------------------------------------------------------------------------
+    ! -- initialize nsize
     nsize = size(tags)
     do
       call this%parser%GetNextLine(endOfBlock)
