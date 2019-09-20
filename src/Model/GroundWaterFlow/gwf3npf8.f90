@@ -245,7 +245,7 @@ module GwfNpfModule
     return
   end subroutine npf_mc
   
-  subroutine npf_init_mem(this, dis, icelltype, k11, k22, k33, wetdry,           &
+  subroutine npf_init_mem(this, dis, ixt3d, icelltype, k11, k22, k33, wetdry,    &
                           angle1, angle2, angle3)
 ! ******************************************************************************
 ! npf_cr -- Create a new NPF object from memory
@@ -257,6 +257,7 @@ module GwfNpfModule
     ! -- dummy
     class(GwfNpftype) :: this
     class(DisBaseType), pointer, intent(inout) :: dis
+    integer(I4B), pointer, intent(in) :: ixt3d
     integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: icelltype
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: k11
     real(DP), dimension(:), pointer, contiguous, intent(inout), optional :: k22
@@ -270,6 +271,9 @@ module GwfNpfModule
     !
     ! -- Store pointers to arguments that were passed in
     this%dis => dis
+    !
+    ! -- set ixt3d (1 - HCOF and RHS; 2 - RHS only)
+    this%ixt3d = ixt3d
     !
     ! -- allocate arrays
     call this%allocate_arrays(dis%nodes, dis%njas)

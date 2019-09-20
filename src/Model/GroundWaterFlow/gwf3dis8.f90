@@ -1461,11 +1461,12 @@ module GwfDisModule
     !
     ! -- If reduced model, then need to copy from itemp(=>ibuff) to iarray
     if (this%nodes <  this%nodesuser) then
-      do nodeu = 1, this%nodesuser
-        noder = this%get_nodenumber(nodeu, 0)
-        if (noder <= 0) cycle
-        iarray(noder) = itemp(nodeu)
-      enddo
+      call this%fill_grid_array(itemp, iarray)
+      !do nodeu = 1, this%nodesuser
+      !  noder = this%get_nodenumber(nodeu, 0)
+      !  if (noder <= 0) cycle
+      !  iarray(noder) = itemp(nodeu)
+      !enddo
     endif
     !
     ! -- return
