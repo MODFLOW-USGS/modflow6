@@ -180,10 +180,10 @@ module GwfNpfModule
     !
     ! -- Save pointer to xt3d object
     this%xt3d => xt3d
-    if (this%ixt3d > 0) xt3d%ixt3d = this%ixt3d
+    if (this%ixt3d /= 0) xt3d%ixt3d = this%ixt3d
     !
     ! -- Ensure GNC and XT3D are not both on at the same time
-    if (this%ixt3d > 0 .and. ingnc > 0) then
+    if (this%ixt3d /= 0 .and. ingnc > 0) then
       call store_error('Error in model ' // trim(this%name_model) // &
         '.  The XT3D option cannot be used with the GNC Package.')
       call ustop()
@@ -213,7 +213,7 @@ module GwfNpfModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Add extended neighbors (neighbors of neighbors)
-    if(this%ixt3d > 0) call this%xt3d%xt3d_ac(moffset, sparse, nodes, ia, ja)
+    if(this%ixt3d /= 0) call this%xt3d%xt3d_ac(moffset, sparse, nodes, ia, ja)
     !
     ! -- Return
     return
@@ -238,8 +238,8 @@ module GwfNpfModule
     ! -- local
 ! ------------------------------------------------------------------------------
     !
-    if(this%ixt3d > 0) call this%xt3d%xt3d_mc(moffset, nodes, ia, ja, iasln,   &
-                                              jasln, this%inewton)
+    if(this%ixt3d /= 0) call this%xt3d%xt3d_mc(moffset, nodes, ia, ja, iasln,    &
+                                               jasln, this%inewton)
     !
     ! -- Return
     return
@@ -358,7 +358,7 @@ module GwfNpfModule
     call this%prepcheck()
     !
     ! -- xt3d
-    if (this%ixt3d > 0) then
+    if (this%ixt3d /= 0) then
       call this%xt3d%xt3d_ar(dis, ibound, this%k11, this%ik33, this%k33,         &
                              this%sat, this%ik22, this%k22, this%inewton,        &
                              this%satmin, this%icelltype, this%iangle1,          &
@@ -464,7 +464,7 @@ module GwfNpfModule
     !
     ! -- Calculate conductance and put into amat
     !
-    if(this%ixt3d > 0) then
+    if(this%ixt3d /= 0) then
       call this%xt3d%xt3d_fc(kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew)
     else
     !
@@ -589,7 +589,7 @@ module GwfNpfModule
     !
     ! -- add newton terms to solution matrix
     !
-    if(this%ixt3d > 0) then
+    if(this%ixt3d /= 0) then
       call this%xt3d%xt3d_fn(kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew)
     else
     !
@@ -753,7 +753,7 @@ module GwfNpfModule
     !
     ! -- Calculate the flow across each cell face and store in flowja
     !
-    if(this%ixt3d > 0) then
+    if(this%ixt3d /= 0) then
       call this%xt3d%xt3d_flowja(nodes, nja, hnew, flowja)
     else
     !
@@ -1524,7 +1524,7 @@ module GwfNpfModule
       endif
     endif
     !
-    if (this%ixt3d > 0) then
+    if (this%ixt3d /= 0) then
       if(this%icellavg > 0) then
         write(errmsg, '(a)') 'ERROR IN NPF OPTIONS. ' //                       &
                              'ALTERNATIVE_CELL_AVERAGING OPTION ' //           &
@@ -1631,164 +1631,66 @@ module GwfNpfModule
       call store_error(errmsg)
     endif
     !
-    ! -- Check for K or check K11
+    ! -- Check for K
     if(.not. lname(2)) then
       write(errmsg, '(a, a, a)') 'Error in GRIDDATA block: ',                  &
                                  trim(adjustl(aname(2))), ' not found.'
       call store_error(errmsg)
-    !else
-    !  nerr = 0
-    !  do n = 1, size(this%k11)
-    !    if(this%k11(n) <= DZERO) then
-    !      nerr = nerr + 1
-    !      if(nerr <= 20) then
-    !        call this%dis%noder_to_string(n, cellstr)
-    !        write(errmsg, fmtkerr) trim(adjustl(aname(2))), trim(cellstr),     &
-    !                               this%k11(n)
-    !        call store_error(errmsg)
-    !      endif
-    !    endif
-    !  enddo
-    !  if(nerr > 20) then
-    !    write(errmsg, fmtkerr2) nerr, trim(adjustl(aname(2)))
-    !    call store_error(errmsg)
-    !  endif
     endif
     !
-    ! -- Check for K33
-    if(.not. lname(3)) then
+    ! -- set ik33 flag
+    if(lname(3)) then
+      this%ik33 = 1
+    else
       write(this%iout, '(1x, a)') 'K33 not provided.  Assuming K33 = K.'
       call mem_reassignptr(this%k33, 'K33', trim(this%origin),                 &
                                      'K11', trim(this%origin))
-    else
-      !
-      ! -- set ik33 flag
-      this%ik33 = 1
-      !!
-      !! -- Check to make sure values are greater than or equal to zero
-      !nerr = 0
-      !do n = 1, size(this%k33)
-      !  if(this%k33(n) <= DZERO) then
-      !    nerr = nerr + 1
-      !    if(nerr <= 20) then
-      !      call this%dis%noder_to_string(n, cellstr)
-      !      write(errmsg, fmtkerr) trim(adjustl(aname(3))), trim(cellstr),     &
-      !                             this%k33(n)
-      !      call store_error(errmsg)
-      !    endif
-      !  endif
-      !enddo
-      !if(nerr > 20) then
-      !  write(errmsg, fmtkerr2) nerr, trim(adjustl(aname(3)))
-      !  call store_error(errmsg)
-      !endif
     endif
     !
-    ! -- Check for K22
-    if(.not. lname(4)) then
+    ! -- set ik22 flag
+    if(lname(4)) then
+      this%ik22 = 1
+    else
       write(this%iout, '(1x, a)') 'K22 not provided.  Assuming K22 = K.'
       call mem_reassignptr(this%k22, 'K22', trim(this%origin),                 &
                                      'K11', trim(this%origin))
-    else
-      ! -- set ik22 flag
-      this%ik22 = 1
-      !! -- Check to make sure that angles are available
-      !if(this%dis%con%ianglex == 0) then
-      !  write(errmsg, '(a)') 'Error.  ANGLDEGX not provided in ' //            &
-      !                       'discretization file, but K22 was specified. '
-      !  call store_error(errmsg)
-      !endif
-      !
-      !!
-      !! -- Check to make sure values are greater than or equal to zero
-      !nerr = 0
-      !do n = 1, size(this%k22)
-      !  if(this%k22(n) <= DZERO) then
-      !    nerr = nerr + 1
-      !    if(nerr <= 20) then
-      !      call this%dis%noder_to_string(n, cellstr)
-      !      write(errmsg, fmtkerr) trim(adjustl(aname(4))), trim(cellstr),     &
-      !                             this%k22(n)
-      !      call store_error(errmsg)
-      !    endif
-      !  endif
-      !enddo
-      !if(nerr > 20) then
-      !  write(errmsg, fmtkerr2) nerr, trim(adjustl(aname(4)))
-      !  call store_error(errmsg)
-      !endif
     endif
     !
-    ! -- Check for WETDRY
+    ! -- Set WETDRY
     if (lname(5)) then
       this%iwetdry = 1
+    else
+      call mem_reallocate(this%wetdry, 1, 'WETDRY', trim(this%origin))        
     end if
-    !if(.not. lname(5) .and. this%irewet == 1) then
-    !if(.not. lname(5)) then
-    !  if(this%irewet == 1) then
-    !    write(errmsg, '(a, a, a)') 'Error in GRIDDATA block: ',                  &
-    !                               trim(adjustl(aname(5))), ' not found.'
-    !    call store_error(errmsg)
-    !  else
-    !    call mem_reallocate(this%wetdry, 1, 'WETDRY', trim(this%origin))        
-    !  end if
-    !endif
     !
-    ! -- Check for angle conflicts
+    ! -- set angle flags
     if (lname(6)) then
       this%iangle1 = 1
-      !do n = 1, size(this%angle1)
-      !  this%angle1(n) = this%angle1(n) * DPIO180
-      !enddo
-    !else
-    !  if(this%ixt3d > 0) then
-    !    this%iangle1 = 1
-    !    write(this%iout, '(a)') 'XT3D IN USE, BUT ANGLE1 NOT SPECIFIED. ' //   &
-    !      'SETTING ANGLE1 TO ZERO.'
-    !    !call mem_reallocate(this%angle1, this%dis%nodes, 'ANGLE1',             &
-    !    !                      trim(this%origin))
-    !    do n = 1, size(this%angle1)
-    !      this%angle1(n) = DZERO
-    !    enddo
-    !  endif
+    else
+      if (this%ixt3d == 0) then
+        call mem_reallocate(this%angle1, 1, 'ANGLE1', trim(this%origin))        
+      end if
     endif
     if (lname(7)) then
       this%iangle2 = 1
-      !if (.not. lname(6)) then
-      !  write(errmsg, '(a)') 'ANGLE2 SPECIFIED BUT NOT ANGLE1. ' //            &
-      !                       'ANGLE2 REQUIRES ANGLE1. '
-      !  call store_error(errmsg)
-      !endif
-      !if (.not. lname(8)) then
-      !  write(errmsg, '(a)') 'ANGLE2 SPECIFIED BUT NOT ANGLE3. ' //            &
-      !                       'SPECIFY BOTH OR NEITHER ONE. '
-      !  call store_error(errmsg)
-      !endif
-      !do n = 1, size(this%angle2)
-      !  this%angle2(n) = this%angle2(n) * DPIO180
-      !enddo
+    else
+      if (this%ixt3d == 0) then
+        call mem_reallocate(this%angle2, 1, 'ANGLE2', trim(this%origin))        
+      end if
     endif
     if (lname(8)) then
       this%iangle3 = 1
-      !if (.not. lname(6)) then
-      !  write(errmsg, '(a)') 'ANGLE3 SPECIFIED BUT NOT ANGLE1. ' //            &
-      !                       'ANGLE3 REQUIRES ANGLE1. '
-      !  call store_error(errmsg)
-      !endif
-      !if (.not. lname(7)) then
-      !  write(errmsg, '(a)') 'ANGLE3 SPECIFIED BUT NOT ANGLE2. ' //            &
-      !                       'SPECIFY BOTH OR NEITHER ONE. '
-      !  call store_error(errmsg)
-      !endif
-      !do n = 1, size(this%angle3)
-      !  this%angle3(n) = this%angle3(n) * DPIO180
-      !enddo
+    else
+      if (this%ixt3d == 0) then
+        call mem_reallocate(this%angle3, 1, 'ANGLE3', trim(this%origin))        
+      end if
     endif
-    !!
-    !if(count_errors() > 0) then
-    !  call this%parser%StoreErrorUnit()
-    !  call ustop()
-    !endif
+    !
+    ! -- terminate if read errors encountered
+    if(count_errors() > 0) then
+      call this%parser%StoreErrorUnit()
+      call ustop()
+    endif
     !
     ! -- Final NPFDATA message
     write(this%iout,'(1x,a)')'END PROCESSING GRIDDATA'
@@ -1917,8 +1819,6 @@ module GwfNpfModule
                                     trim(adjustl(aname(5))), ' not found.'
         call store_error(errmsg)
       end if
-    else
-      call mem_reallocate(this%wetdry, 1, 'WETDRY', trim(this%origin))        
     endif
     !
     ! -- Check for angle conflicts
@@ -1927,7 +1827,7 @@ module GwfNpfModule
         this%angle1(n) = this%angle1(n) * DPIO180
       enddo
     else
-      if(this%ixt3d > 0) then
+      if(this%ixt3d /= 0) then
         this%iangle1 = 1
         write(this%iout, '(a)') 'XT3D IN USE, BUT ANGLE1 NOT SPECIFIED. ' //   &
           'SETTING ANGLE1 TO ZERO.'
