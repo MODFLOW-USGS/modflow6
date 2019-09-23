@@ -6,6 +6,7 @@ module TestGwfInterfaceModelModule
   use GwfInterfaceModelModule
   use GridConnectionModule
   use NumericalModelModule
+  use NumericalExchangeModule
   use GwfModule
   
   use GwfDisuModule
@@ -99,10 +100,12 @@ contains ! module procedures
   
   ! create connection between two models
   function createGridConnectionBetween2by3with2by6grid(name) result(gc)
+    use TestNumericalExchangeHelperModule
     character(len=*), intent(in)  :: name
     class(GridConnectionType), pointer :: gc
     class(GwfModelType), pointer :: gwfModelA, gwfModelB
-    class(NumericalModelType), pointer :: numModel
+    class(NumericalModelType), pointer :: numModel, numModel2
+    class(NumericalExchangeType), pointer :: numEx
     
     ! create models
     ! 2x3
@@ -147,15 +150,23 @@ contains ! module procedures
     call gc%construct(numModel, 2, name)
         
     ! add links between models
-    numModel => gwfModelB
-    call gc%addLink(3, 1, 50.0_DP, 50.0_DP, 100.0_DP, 1, numModel)
-    call gc%addLink(6, 7, 50.0_DP, 50.0_DP, 100.0_DP, 1, numModel)
+    numModel2 => gwfModelB
+    call gc%connectCell(3, numModel, 1, numModel2)
+    call gc%connectCell(6, numModel, 7, numModel2)
+    
+    ! create model topology
+    numEx => getNumericalExchange(gc%model, numModel2, 2)
+    numEx%nodem1(1) = 3
+    numEx%nodem1(2) = 1
+    numEx%nodem2(1) = 6
+    numEx%nodem2(2) = 7
+    call gc%addModelLink(numEx, 1)
     
     ! build conn. matrix
-    call gc%extendConnection(0, 0)
+    call gc%extendConnection(1, 1)
     
-    call assert_true(gc%nrOfLinks == 2, "Nr of links in GC should be 2")  
-    call assert_equal(size(gc%idxToGlobal), 4, "We need index mapping for interface cells")
+    call assert_true(gc%nrOfBoundaryCells == 2, "Nr of links in GC should be 2")  
+    call assert_equal(size(gc%idxToGlobal), gc%nrOfCells, "We need index mapping for interface cells")
     call assert_equal(gc%connections%nja, 8, "Expecting 4 (diag) + 2*2 (conn) nozeros in matrix")
     
   end function

@@ -34,7 +34,7 @@ module SpatialModelConnectionModule
     procedure, pass(this) :: mc_ac => addConnectionsToMatrix
     
     procedure, private, pass(this) :: setupGridConnection
-    procedure, private, pass(this) :: setBoundaryCells
+    procedure, private, pass(this) :: setExchangeConnections
     procedure, private, pass(this) :: findModelNeighbors
     procedure, private, pass(this) :: getNrOfConnections
   end type SpatialModelConnectionType
@@ -127,19 +127,24 @@ contains ! module procedures
   
   subroutine setupGridConnection(this)
     class(SpatialModelConnectionType), intent(inout) :: this
+    ! local
+    integer(I4B) :: localDepth, remoteDepth
     
     ! set boundary cells
-    call this%setBoundaryCells()
+    call this%setExchangeConnections()
     
     ! create topology of models
     call this%findModelNeighbors()
     
     ! now scan for nbr-of-nbrs and create final data structures
-    call this%gridConnection%extendConnection(this%stencilDepth)
+    ! we need (stencildepth-1) extra cells for the interior
+    remoteDepth = this%stencilDepth
+    localDepth = 2*this%stencilDepth - 1
+    call this%gridConnection%extendConnection(localDepth, remoteDepth)
     
   end subroutine setupGridConnection
   
-  subroutine setBoundaryCells(this)
+  subroutine setExchangeConnections(this)
     class(SpatialModelConnectionType), intent(inout) :: this
     ! local
     integer(I4B) :: iex, iconn
@@ -148,16 +153,12 @@ contains ! module procedures
     ! set boundary cells
     do iex=1, this%exchangeList%Count()
       numEx => GetNumericalExchangeFromList(this%exchangeList, iex)
-      do iconn=1, numEx%nexg
-        if (associated(numEx%m1, this%owner)) then          
-          call this%gridConnection%setBoundaryCell(numEx%nodem1(iconn))
-        else  
-          call this%gridConnection%setBoundaryCell(numEx%nodem2(iconn))
-        end if              
+      do iconn=1, numEx%nexg          
+        call this%gridConnection%connectCell(numEx%nodem1(iconn), numEx%m1, numEx%nodem2(iconn), numEx%m2)             
       end do
     end do
     
-  end subroutine setBoundaryCells
+  end subroutine setExchangeConnections
   
   subroutine findModelNeighbors(this)
     class(SpatialModelConnectionType), intent(inout) :: this

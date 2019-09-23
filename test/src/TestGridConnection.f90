@@ -5,7 +5,8 @@ module TestGridConnectionModule
   use KindModule, only: I4B, DP
   use SparseModule, only: sparsematrix
   use GridConnectionModule
-  use NumericalModelModule, only: NumericalModelType
+  use NumericalExchangeModule
+  use NumericalModelModule
   use GwfDisuModule
   use GwfDisModule
   
@@ -32,9 +33,8 @@ contains ! module procedures
     gridConnection = getSimpleGridConnectionWithModel("dummy")        
     
     call assert_true(gridConnection%linkCapacity == 2, "space reserved should be equal to 10")    
-    call assert_true(size(gridConnection%localCells) == 2, "local nodes array not properly allocated")
-    call assert_true(size(gridConnection%connectedCells) == 2, "connected nodes array not properly allocated")    
-    call assert_true(size(gridConnection%linkGeometries) == 2, "link geometries array not properly allocated")   
+    call assert_true(size(gridConnection%boundaryCells) == 2, "local nodes array not properly allocated")
+    call assert_true(size(gridConnection%connectedCells) == 2, "connected nodes array not properly allocated") 
     
   end subroutine
   
@@ -48,19 +48,18 @@ contains ! module procedures
     call nbrModel%allocate_scalars("neighbor")
     
     
-    call gridConnection%addLink(1, 4, 10.0_DP, 10.0_DP, 20.0_DP, 1, nbrModel) ! horizontal links
-    call gridConnection%addLink(2, 5, 10.0_DP, 10.0_DP, 20.0_DP, 1, nbrModel)
+    call gridConnection%connectCell(1, gridConnection%model, 4, nbrModel) ! horizontal links
+    call gridConnection%connectCell(2, gridConnection%model, 5, nbrModel)
     
-    call assert_true(gridConnection%nrOfLinks == 2, "nr of links should have been 2")
-    
-    call gridConnection%addLink(999, 999, 10.0_DP, 10.0_DP, 20.0_DP, 1, nbrModel)
-    call assert_true(gridConnection%nrOfLinks == 2, "cannot add beyond capacity, should have been 2")
+    call assert_true(gridConnection%nrOfBoundaryCells == 2, "nr of links should have been 2")    
     
   end subroutine
   
   subroutine testBasicConnectivity
+    use TestNumericalExchangeHelperModule
     type(GridConnectionType) :: gridConnection    
     class(NumericalModelType), pointer :: nbrModel  
+    class(NumericalExchangeType), pointer :: numEx
     type(sparsematrix) :: connectivity
     
     ! setup connection
@@ -73,24 +72,24 @@ contains ! module procedures
     call nbrModel%dis%dis_df()    
     close(1980)
     
-    call gridConnection%addLink(1, 1, 10.0_DP, 20.0_DP, 30.0_DP, 1, nbrModel) ! horizontal links
-    call gridConnection%addLink(2, 2, 11.0_DP, 21.0_DP, 31.0_DP, 1, nbrModel)
+    call gridConnection%connectCell(6, gridConnection%model, 1, nbrModel) ! horizontal links
+    call gridConnection%connectCell(12, gridConnection%model, 4, nbrModel)
     
     ! build connectivity, among other things
-    call gridConnection%extendConnection(0, 0)
+    numEx => getNumericalExchange(gridConnection%model, nbrModel, 2)
+    call gridConnection%addModelLink(numEx, 1)
+    call gridConnection%extendConnection(1, 1)
     
     call assert_equal(gridConnection%connections%nodes, 4, "nr. of nodes wrong")
     call assert_equal(gridConnection%connections%njas, 2, "nr. of (sym) connections wrong")
     
-    call assert_comparable_realdp(gridConnection%connections%cl1(1), 10.0_DP, 0.0_DP, "conn. length wrong")
-    call assert_comparable_realdp(gridConnection%connections%cl2(2), 21.0_DP, 0.0_DP, "conn. length wrong")
-    call assert_comparable_realdp(gridConnection%connections%hwva(2), 31.0_DP, 0.0_DP, "hwva area wrong")
-    
   end subroutine
   
   subroutine testNbrOfNbrConnectivity
+    use TestNumericalExchangeHelperModule
     type(GridConnectionType) :: gridConnection    
     class(NumericalModelType), pointer :: nbrModel  
+    class(NumericalExchangeType), pointer :: numEx
     type(sparsematrix) :: connectivity
     
     ! setup connection
@@ -105,13 +104,16 @@ contains ! module procedures
     call nbrModel%dis%dis_df()    
     close(1980)
     
-    call gridConnection%addLink(6, 1, 10.0_DP, 10.0_DP, 20.0_DP, 1, nbrModel) ! horizontal links
-    call gridConnection%addLink(12, 4, 10.0_DP, 10.0_DP, 20.0_DP, 1, nbrModel)
+    call gridConnection%connectCell(6, gridConnection%model, 1, nbrModel) ! horizontal links
+    call gridConnection%connectCell(12, gridConnection%model, 4, nbrModel)
     
-    call gridConnection%extendConnection(2, 1)
+    numEx => getNumericalExchange(gridConnection%model, nbrModel, 2)    
+    call gridConnection%addModelLink(numEx, 1)
     
-    call assert_equal(gridConnection%localCells(1)%nrOfNbrs, 2, "Nr. of nbrs for local cell 1")  
-    call assert_equal(gridConnection%localCells(1)%neighbors(1)%nrOfNbrs, 2, "Nr. of nbrs for nbr 1 of local cell 1, should be 2")
+    call gridConnection%extendConnection(3, 2)
+    
+    call assert_equal(gridConnection%boundaryCells(1)%nrOfNbrs, 2, "Nr. of nbrs for local cell 1")  
+    call assert_equal(gridConnection%boundaryCells(1)%neighbors(1)%nrOfNbrs, 2, "Nr. of nbrs for nbr 1 of local cell 1, should be 2")
     
     call assert_equal(gridConnection%connectedCells(1)%nrOfNbrs, 2, "Nr. of nbrs for remote cell 1")
     call assert_equal(gridConnection%connectedCells(2)%nrOfNbrs, 2, "Nr. of nbrs for remote cell 2")
@@ -125,35 +127,59 @@ contains ! module procedures
   
   subroutine testModelConnectivity
     type(GridConnectionType) :: gc  
-    class(NumericalModelType), pointer :: numericalModel
-    class(NumericalModelType), pointer :: nbr1, nbr2, nbr3, nnbr11, nnbr12, nnbr21, nnbr31
-    integer(I4B) :: nrNbrsOfNbrs
+    class(NumericalModelType), pointer :: numericalModel, numModTemp
+    class(NumericalModelType), pointer :: nbr1, nbr2, nbr3, nnbr11, nnbr12, nnbr21, nnbr31, nnnbr111
+    class(NumericalExchangeType), pointer :: ex1, ex2, ex3, ex11, ex12, ex21, ex31, ex111
+    integer(I4B) :: nrNbrsOfNbrs, im
     
     
     !
-    ! nnbr21 -- nbr2 -- model -- nbr1 -- nnbr11
+    ! nnbr21 -- nbr2 -- model -- nbr1 -- nnbr11 -- nbr111
     !                     |       |
     !         nnbr31 -- nbr3    nnbr12
     !
     allocate(numericalModel)
-    call gc%construct(numericalModel, 10, "someGridConn") 
+    allocate(nbr1, nbr2, nbr3, nnbr11, nnbr12, nnbr21, nnbr31, nnnbr111)
+    allocate(ex1, ex2, ex3, ex11, ex12, ex21, ex31, ex111)
     
-    allocate(nbr1, nbr2, nbr3, nnbr11, nnbr12, nnbr21, nnbr31)
+    call gc%construct(numericalModel, 10, "someGridConn")
+    
+    ex21%m1 => nnbr21
+    ex21%m2 => nbr2
+    ex2%m1 => nbr2
+    ex2%m2 => numericalModel
+    ex1%m1 => numericalModel
+    ex1%m2 => nbr1
+    ex11%m1 => nbr1
+    ex11%m2 => nnbr11
+    ex12%m1 => nbr1
+    ex12%m2 => nnbr12
+    ex3%m1 => numericalModel
+    ex3%m2 => nbr3
+    ex31%m1 => nnbr31
+    ex31%m2 => nbr3
     
     ! add links
-    call gc%addModelLink(numericalModel, nbr1)
-    call gc%addModelLink(nbr2, numericalModel)
-    call gc%addModelLink(numericalModel, nbr3)
-    call gc%addModelLink(nbr1, nnbr11)
-    call gc%addModelLink(nbr1, nnbr12)
-    call gc%addModelLink(nbr2, nnbr21)
-    call gc%addModelLink(nbr3, nnbr31)
+    call gc%addModelLink(ex1, 2)
+    call gc%addModelLink(ex2, 2)
+    call gc%addModelLink(ex3, 2)
+    call gc%addModelLink(ex11, 2)
+    call gc%addModelLink(ex12, 2)
+    call gc%addModelLink(ex21, 2)
+    call gc%addModelLink(ex31, 2)
+    call gc%addModelLink(ex111, 2) ! this should not be added at depth == 2
     
     call assert_true(associated(gc%modelWithNbrs), "Model with nbrs should be allocated")
     call assert_equal(gc%modelWithNbrs%nrOfNbrs, 3, "Number of neighbors should match")
     call assert_true(associated(gc%modelWithNbrs%neighbors(1)%model, nbr1), "Neighboring model should be assigned")
-    call assert_equal(gc%modelWithNbrs%neighbors(1)%nrofNbrs, 2, "Nr of neighbors of neighbors should equal 2 here")
     
+    do im = 1, gc%regionalModels%Count()
+      numModTemp => GetNumericalModelFromList(gc%regionalModels, im)
+      if (associated(numModTemp, nnnbr111)) then
+        call assert_true(.false., "This model should not have been part of the region")
+      end if
+    end do
+      
   end subroutine
   
   ! helper function to setup basic gridconn
