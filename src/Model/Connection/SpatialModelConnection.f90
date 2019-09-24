@@ -1,10 +1,10 @@
-! TODO: module description
+! Module holding the definition of the SpatialModelConnectionType
 module SpatialModelConnectionModule
   use KindModule, only: I4B
 	use ModelConnectionModule
 	use NumericalModelModule, only: NumericalModelType
   use NumericalExchangeModule, only: NumericalExchangeType, GetNumericalExchangeFromList
-  use GridConnectionModule, only: GridConnectionType
+  use GridConnectionModule, only: GridConnectionType, GlobalCellType
   use ListModule, only: ListType
   
 	implicit none
@@ -12,16 +12,16 @@ module SpatialModelConnectionModule
 
 	! Class to manage spatial connection of a model to one or more models of the same type.
 	! Spatial connection here means that the model domains (spatial discretization) are adjacent
-	! and connected.
+	! and connected via NumericalExchangeType object(s).
 	type, public, abstract, extends(ModelConnectionType) :: SpatialModelConnectionType
         
-    ! aggregation, all exchanges which connect with our model
+    ! aggregation, all exchanges which directly connect with our model
     type(ListType), pointer :: exchangeList => null()
     
     integer(I4B) :: stencilDepth ! default = 1, xt3d = 2, ...
     
     ! TODO_MJR: mem mgt of these guys:
-    integer(I4B) :: nrOfConnections ! TODO_MJR: do we need this one?
+    integer(I4B) :: nrOfConnections
     class(GridConnectionType), pointer :: gridConnection => null()    
     integer(I4B), dimension(:), pointer :: mapIdxToSln => null() ! maps local matrix (amat) to the global solution matrix
     
@@ -32,7 +32,7 @@ module SpatialModelConnectionModule
     procedure, pass(this) :: mc_df => defineSpatialConnection 
     procedure, pass(this) :: mc_mc => mapCoefficients
     procedure, pass(this) :: mc_ac => addConnectionsToMatrix
-    
+    ! private
     procedure, private, pass(this) :: setupGridConnection
     procedure, private, pass(this) :: setExchangeConnections
     procedure, private, pass(this) :: findModelNeighbors
@@ -92,36 +92,49 @@ contains ! module procedures
     integer(I4B) :: mloc, nloc, mglob, nglob, j, csrIdx
     type(ConnectionsType), pointer :: conn => null()
     
-    !conn => this%gridConnection%connections
-    !
-    !allocate(this%mapIdxToSln(conn%nja))
-    !
-    !do mloc=1, conn%nodes
-    !  do j=conn%ia(mloc), conn%ia(mloc+1)-1
-    !    nloc = conn%ja(j) 
-    !    
-    !    mglob = this%gridConnection%idxToGlobal(mloc)%index + this%gridConnection%idxToGlobal(mloc)%model%moffset
-    !    nglob = this%gridConnection%idxToGlobal(nloc)%index + this%gridConnection%idxToGlobal(nloc)%model%moffset 
-    !    csrIdx = getCSRIndex(mglob, nglob, iasln, jasln)
-    !    if (csrIdx == -1) then
-    !      ! this should not be possible
-    !      write(*,*) 'Error: cannot find cell connection in global system'
-    !      call ustop()
-    !    end if
-    !    
-    !    this%mapIdxToSln(j) = csrIdx       
-    !  end do
-    !end do
+    ! for readibility
+    conn => this%gridConnection%connections
+        
+    allocate(this%mapIdxToSln(conn%nja))
+    
+    do mloc=1, conn%nodes
+      do j=conn%ia(mloc), conn%ia(mloc+1)-1
+        nloc = conn%ja(j) 
+        
+        mglob = this%gridConnection%idxToGlobal(mloc)%index + this%gridConnection%idxToGlobal(mloc)%model%moffset
+        nglob = this%gridConnection%idxToGlobal(nloc)%index + this%gridConnection%idxToGlobal(nloc)%model%moffset 
+        csrIdx = getCSRIndex(mglob, nglob, iasln, jasln)
+        if (csrIdx == -1) then
+          ! this should not be possible
+          write(*,*) 'Error: cannot find cell connection in global system'
+          call ustop()
+        end if
+        
+        this%mapIdxToSln(j) = csrIdx       
+      end do
+    end do
     
   end subroutine mapCoefficients
   
-  ! add connections to global matrix, does not fill in transposed (sym) elements  
+  ! add connections to global matrix, c.f. exg_ac in NumericalExchange, 
+  ! but now for all exchanges with this model and skipping over the 
+  ! transposed elements
   subroutine addConnectionsToMatrix(this, sparse)
     use SparseModule, only:sparsematrix
+    
     class(SpatialModelConnectionType), intent(inout) :: this
     type(sparsematrix), intent(inout) :: sparse 
-    
-    
+    ! local
+    integer(I4B) :: icell, iglo, jglo
+    type(GlobalCellType), pointer :: ncell, mcell
+        
+    do icell = 1, this%gridConnection%nrOfBoundaryCells
+      ncell => this%gridConnection%boundaryCells(icell)%cell
+      mcell => this%gridConnection%connectedCells(icell)%cell
+      iglo = ncell%index + ncell%model%moffset
+      jglo = mcell%index + mcell%model%moffset
+      call sparse%addconnection(iglo, jglo, 1)
+    end do    
     
   end subroutine
   
@@ -144,6 +157,7 @@ contains ! module procedures
     
   end subroutine setupGridConnection
   
+  ! set the primary links
   subroutine setExchangeConnections(this)
     class(SpatialModelConnectionType), intent(inout) :: this
     ! local
@@ -154,12 +168,14 @@ contains ! module procedures
     do iex=1, this%exchangeList%Count()
       numEx => GetNumericalExchangeFromList(this%exchangeList, iex)
       do iconn=1, numEx%nexg          
-        call this%gridConnection%connectCell(numEx%nodem1(iconn), numEx%m1, numEx%nodem2(iconn), numEx%m2)             
+        call this%gridConnection%connectCell(numEx%nodem1(iconn), numEx%m1, numEx%nodem2(iconn), numEx%m2)
       end do
     end do
     
   end subroutine setExchangeConnections
   
+  ! extends model topology to deal with cases where
+  ! the stencil covers more than 2 models
   subroutine findModelNeighbors(this)
     class(SpatialModelConnectionType), intent(inout) :: this
     ! local   
@@ -178,8 +194,7 @@ contains ! module procedures
   ! count total nr. of connection between cells, from the exchanges
   function getNrOfConnections(this) result(nrConns)
     class(SpatialModelConnectionType), intent(inout) :: this
-    integer(I4B) :: nrConns
-    
+    integer(I4B) :: nrConns    
     !local
     integer(I4B) :: iex
     type(NumericalExchangeType), pointer :: numEx
