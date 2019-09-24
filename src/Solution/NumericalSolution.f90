@@ -2961,7 +2961,7 @@ contains
     open(inunit, file=filename)    
     do i=1,nrows
       do j=ia(i),ia(i+1)-1        
-        write(inunit, '(I5,I5,F16.3)') i-1, ja(j)-1, M(j) ! NB: zero-based
+        write(inunit, '(I12,I12,F20.3)') i-1, ja(j)-1, M(j) ! NB: zero-based
       enddo
     enddo
     close(inunit)

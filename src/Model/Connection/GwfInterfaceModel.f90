@@ -199,7 +199,12 @@ contains
     do icell=1, nrOfCells
       idx = ifModel%gridConnection%idxToGlobal(icell)%index
       numModel => ifModel%gridConnection%idxToGlobal(icell)%model
-    
+      ! cast for now...
+      select type (numModel)
+      class is (GwfModelType)
+        gwfModel => numModel        
+      end select
+      
       if (npf%ik22 > 0) npf%k22(icell) = gwfModel%npf%k22(idx)
       if (npf%ik33 > 0) npf%k33(icell) = gwfModel%npf%k33(idx)
       if (npf%iangle1 > 0) npf%angle1(icell) = gwfModel%npf%angle1(idx)
