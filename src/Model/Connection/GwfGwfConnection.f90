@@ -153,7 +153,7 @@ contains
       do j=conn%ia(mloc), conn%ia(mloc+1)-1
         amatsln(this%mapIdxToSln(j)) = amatsln(this%mapIdxToSln(j)) + this%amat(j)
       end do
-    end do      
+    end do  
         
   end subroutine gwfgwfcon_fc 
   
