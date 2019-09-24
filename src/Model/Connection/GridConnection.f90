@@ -17,7 +17,7 @@ module GridConnectionModule
   
   ! TODO_MJR: how about exchanges with (many) hanging nodes?
   ! for now stick to local neighbors only
-  integer(I4B), parameter :: MaxNeighbors = 5
+  integer(I4B), parameter :: MaxNeighbors = 4
   
   ! a global cell as composite, we need it for XT3D
   type, public :: CellWithNbrsType
@@ -444,6 +444,7 @@ module GridConnectionModule
   ! builds a sparse matrix holding all cell connections,
   ! with new indices, and stores the mapping to the global ids
   subroutine buildConnections(this)
+    use ArrayHandlersModule, only: ifind
     class(GridConnectionType), intent(inout) :: this 
     ! local
     integer(I4B) :: icell, ifaceIdx        
@@ -455,7 +456,7 @@ module GridConnectionModule
     integer(I4B) :: n, m, ipos, isym, iposOrig, isymOrig
     type(GlobalCellType), pointer :: ncell, mcell
     
-    integer(I4B) :: inx, iexg, im   
+    integer(I4B) :: inx, iexg, im, ivalAngldegx 
     integer(I4B) :: nOffset, mOffset, nIfaceIdx, mIfaceIdx
     class(NumericalExchangeType), pointer :: numEx
     class(NumericalModelType), pointer    :: model
@@ -530,7 +531,7 @@ module GridConnectionModule
           conn%cl2(isym) = connOrig%cl2(isymOrig)
           conn%hwva(isym) = connOrig%hwva(isymOrig)
           conn%ihc(isym) = connOrig%ihc(isymOrig)
-          conn%anglex(isym) = connOrig%anglex(isymOrig)        
+          conn%anglex(isym) = connOrig%anglex(isymOrig)
         end if
       end do
     end do
@@ -540,7 +541,10 @@ module GridConnectionModule
       model => GetNumericalModelFromList(this%regionalModels, im)
       nOffset = this%getRegionalModelOffset(model)
       do inx = 1, this%exchanges%Count()
-        numEx => GetNumericalExchangeFromList(this%exchanges, inx)        
+        numEx => GetNumericalExchangeFromList(this%exchanges, inx) 
+        ! TODO_MJR: this is not good, shouldn't this be outside
+        ! the GWF domain, in NumericalExchange directly?
+        ivalAngldegx = ifind(numEx%auxname, 'ANGLDEGX')        
         if (associated(model, numEx%m1)) then
           mOffset = this%getRegionalModelOffset(numEx%m2)
           do iexg = 1, numEx%nexg
@@ -551,10 +555,13 @@ module GridConnectionModule
             conn%cl1(isym) = numEx%cl1(iexg)
             conn%cl2(isym) = numEx%cl2(iexg)
             conn%hwva(isym) = numEx%hwva(iexg)
-            conn%ihc(isym) = numEx%ihc(iexg)
-            conn%anglex(isym) = 0.0_DP ! TODO_MJR: set this?
-          end do
-        end if      
+            conn%ihc(isym) = numEx%ihc(iexg) 
+            if (ivalAngldegx > 0) then
+                conn%anglex(isym) = numEx%auxvar(ivalAngldegx,iexg)
+            end if
+          end do          
+        end if
+        
       end do
     end do
     

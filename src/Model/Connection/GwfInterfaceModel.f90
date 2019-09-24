@@ -170,14 +170,15 @@ contains
       npf%k11(icell) = gwfModel%npf%k11(idx) 
       
       ! do 'OR' on the K properties
+      ! TODO_MJR: get this out of the loop!
       if (gwfModel%npf%ik22 > 0) npf%ik22 = 1
       if (gwfModel%npf%ik33 > 0) npf%ik33 = 1
       if (gwfModel%npf%iangle1 > 0) npf%iangle1 = 1
       if (gwfModel%npf%iangle2 > 0) npf%iangle2 = 1
       if (gwfModel%npf%iangle3 > 0) npf%iangle3 = 1
-      
+      if (gwfModel%npf%icalcspdis > 0) npf%icalcspdis = 1
     end do
-    
+            
     ! allocate when active
     if (npf%ik22 > 0) then
       call mem_allocate(npf%k22, nrOfCells, 'K22', trim(npf%origin))  
