@@ -72,11 +72,16 @@ contains ! module procedures
     call nbrModel%dis%dis_df()    
     close(1980)
     
+    ! build connectivity, among other things
+    numEx => getNumericalExchange(gridConnection%model, nbrModel, 2)
+    numEx%nodem1(1) = 6
+    numEx%nodem2(1) = 1
+    numEx%nodem1(2) = 12    
+    numEx%nodem2(2) = 4
+    
     call gridConnection%connectCell(6, gridConnection%model, 1, nbrModel) ! horizontal links
     call gridConnection%connectCell(12, gridConnection%model, 4, nbrModel)
     
-    ! build connectivity, among other things
-    numEx => getNumericalExchange(gridConnection%model, nbrModel, 2)
     call gridConnection%addModelLink(numEx, 1)
     call gridConnection%extendConnection(1, 1)
     
@@ -104,10 +109,15 @@ contains ! module procedures
     call nbrModel%dis%dis_df()    
     close(1980)
     
+    numEx => getNumericalExchange(gridConnection%model, nbrModel, 2)
+    numEx%nodem1(1) = 6
+    numEx%nodem2(1) = 1
+    numEx%nodem1(2) = 12
+    numEx%nodem2(2) = 4
     call gridConnection%connectCell(6, gridConnection%model, 1, nbrModel) ! horizontal links
     call gridConnection%connectCell(12, gridConnection%model, 4, nbrModel)
     
-    numEx => getNumericalExchange(gridConnection%model, nbrModel, 2)    
+      
     call gridConnection%addModelLink(numEx, 1)
     
     call gridConnection%extendConnection(3, 2)

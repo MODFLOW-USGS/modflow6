@@ -157,8 +157,8 @@ contains ! module procedures
     ! create model topology
     numEx => getNumericalExchange(gc%model, numModel2, 2)
     numEx%nodem1(1) = 3
-    numEx%nodem1(2) = 1
-    numEx%nodem2(1) = 6
+    numEx%nodem2(1) = 1
+    numEx%nodem1(2) = 6
     numEx%nodem2(2) = 7
     call gc%addModelLink(numEx, 1)
     
