@@ -117,7 +117,7 @@ contains
     ! copy model data into interface model
     call this%interfaceModel%syncModelData()
     
-    ! calculate
+    ! calculate (wetting/drying, saturation)
     call this%interfaceModel%model_cf(kiter)
     
   end subroutine gwfgwfcon_cf
@@ -135,6 +135,7 @@ contains
     integer(I4B) :: mloc, nloc, j
     integer(I4B) :: mglob, nglob
     real(DP) :: conductance
+    integer(I4B) :: targetIdx ! temp
     
     ! we iterate, so this should be reset (c.f. sln_reset())
     this%amat = 0
@@ -151,7 +152,8 @@ contains
       end if
       ! copy into global matrix
       do j=conn%ia(mloc), conn%ia(mloc+1)-1
-        amatsln(this%mapIdxToSln(j)) = amatsln(this%mapIdxToSln(j)) + this%amat(j)
+        targetIdx = this%mapIdxToSln(j)
+        amatsln(targetIdx) = amatsln(targetIdx) + this%amat(j)
       end do
     end do  
         

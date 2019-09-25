@@ -44,6 +44,7 @@ contains
   ! set up the interface model, analogously to what happens in gwf_cr
   subroutine createModel(this, gridConn)
     use MemoryManagerModule, only: mem_allocate
+    !use Xt3dModule, only: xt3d_cr
     class(GwfInterfaceModelType), target, intent(inout) :: this
     class(GridConnectionType), pointer, intent(in) :: gridConn
     ! local
@@ -52,12 +53,15 @@ contains
     
     ! create discretization
     call this%buildDiscretization()
-        
+    
+    
+    
     ! create packages
     ! TODO_MJR: this really depends on how we want to merge
     ! a heteregeneous composition of connected models...
     call npf_cr(this%npf, this%name, this%innpf, this%iout) 
-    ! call xt3d_cr..., etc.
+    !call xt3d_cr(this%xt3d, this%name, this%innpf, this%iout)
+    ! continue as in gwf_cr...
     
     ! define
     ! dis%dis_df 

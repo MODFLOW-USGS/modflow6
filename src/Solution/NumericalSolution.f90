@@ -1914,7 +1914,8 @@ subroutine solution_create(filename, id)
     ! -- Calculate the matrix terms for each exchange
     do ic=1,this%exchangelist%Count()
       cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-      call cp%exg_cf(kiter)
+      ! TODO_MJR: delete this when done
+      !call cp%exg_cf(kiter)
     enddo
     !
     ! -- Calculate the matrix terms for each connection
@@ -1932,7 +1933,8 @@ subroutine solution_create(filename, id)
     ! -- Add exchange coefficients to the solution
     do ic=1,this%exchangelist%Count()
       cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-      call cp%exg_fc(kiter, this%ia, this%amat, inewton)
+      ! TODO_MJR: delete this when done
+      !call cp%exg_fc(kiter, this%ia, this%amat, inewton)
     enddo
     !
     ! -- Add connection coefficients to the solution
@@ -2350,11 +2352,11 @@ subroutine solution_create(filename, id)
     ! -- Add the cross terms to sparse
     do ic=1,this%exchangelist%Count()
       cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-      call cp%exg_ac(this%sparse)
+      ! TODO_MJR: delete this when done
+      !call cp%exg_ac(this%sparse)
     enddo
     !
     ! -- Add terms from model connections to sparse
-    ! TODO_MJR: the above should be removed once this is ready
     do ic=1, this%connectionlist%Count()
         ! TODO_MJR: probably we should never have the abstract base in the NumericalSolutionType??
         mc => GetConnectionFromList(this%connectionlist, ic)
@@ -2381,7 +2383,8 @@ subroutine solution_create(filename, id)
     ! -- Create arrays for mapping exchange connections to global solution
     do ic=1,this%exchangelist%Count()
       cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-      call cp%exg_mc(this%ia, this%ja)
+      ! TODO_MJR: delete this when done
+      !call cp%exg_mc(this%ia, this%ja)
     enddo
     !
     ! -- Create mapping arrays to global solution for model connections
