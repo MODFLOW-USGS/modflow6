@@ -8,7 +8,11 @@ module GwfCsubModule
                              LENBUDTXT, LENAUXNAME, LENORIGIN
   use GenericUtilities, only: is_same
   use SmoothingModule,        only: sQuadraticSaturation,                       &
-                                    sQuadraticSaturationDerivative
+                                    sQuadraticSaturationDerivative,             &
+                                    sSlope,                                     &
+                                    sSlopeDerivative,                           &
+                                    sUSGQuadratic,                              &
+                                    sUSGQuadraticDerivative
   use NumericalPackageModule, only: NumericalPackageType
   use ObserveModule,        only: ObserveType
   use ObsModule,            only: ObsType, obs_cr
@@ -86,6 +90,7 @@ module GwfCsubModule
     integer(I4B), pointer :: iupdatestress => null()
     integer(I4B), pointer :: kiter => null()
     integer(I4B), pointer :: kiterdb => null()
+    real(DP), pointer :: epsilon => null()                                       !epsilon for stress smoothing
     real(DP), pointer :: cc_crit => null()                                       !convergence criteria for csub-gwf convergence check
     real(DP), pointer :: gammaw => null()                                        !product of fluid density, and gravity
     real(DP), pointer :: beta => null()                                          !water compressibility
@@ -383,6 +388,7 @@ contains
     call mem_allocate(this%iupdatematprop, 'IUPDATEMATPROP', this%origin)
     call mem_allocate(this%kiter, 'KITER', this%origin)
     call mem_allocate(this%kiterdb, 'KITERDB', this%origin)
+    call mem_allocate(this%epsilon, 'EPSILON', this%origin)
     call mem_allocate(this%cc_crit, 'CC_CRIT', this%origin)
     call mem_allocate(this%gammaw, 'GAMMAW', this%origin)
     call mem_allocate(this%beta, 'BETA', this%origin)
@@ -437,6 +443,7 @@ contains
     this%iupdatematprop = 0
     this%kiter = 0
     this%kiterdb = 0
+    this%epsilon = DZERO
     this%cc_crit = DEM7
     this%gammaw = DGRAVITY * 1000._DP
     this%beta = 4.6512e-10_DP
@@ -445,8 +452,9 @@ contains
     this%dbfacti = DONE
     !
     ! -- set omega value used for saturation calculations
-    if (this%inewton > 0) then
+    if (this%inewton /= 0) then
       this%satomega = DEM6
+      this%epsilon = DHALF * DEM6
     else
       this%satomega = DZERO
     end if
@@ -2746,6 +2754,7 @@ contains
     call mem_deallocate(this%iupdatematprop)
     call mem_deallocate(this%kiter)
     call mem_deallocate(this%kiterdb)
+    call mem_deallocate(this%epsilon)
     call mem_deallocate(this%cc_crit)
     call mem_deallocate(this%gammaw)
     call mem_deallocate(this%beta)
@@ -3124,11 +3133,16 @@ contains
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: thick
-    real(DP) :: snnew
-    real(DP) :: dmn
-    real(DP) :: dsn
+    !real(DP) :: snnew
+    !real(DP) :: dmn
+    !real(DP) :: dsn
+    real(DP) :: gsi
+    real(DP) :: sm
+    real(DP) :: sp
+    real(DP) :: hsi
     real(DP) :: va_scale
     real(DP) :: hcell
+    real(DP) :: hbar
     real(DP) :: gs_conn
     real(DP) :: area_node
     real(DP) :: area_conn
@@ -3149,22 +3163,63 @@ contains
         top = this%dis%top(node)
         bot = this%dis%bot(node)
         thick = top - bot
-        if (this%ibound(node) /= 0) then
-          hcell = hnew(node)
+        !if (this%ibound(node) /= 0) then
+        !  hcell = hnew(node)
+        !else
+        !  hcell = bot
+        !end if
+        !!
+        !! -- calculate cell saturation
+        !snnew = sQuadraticSaturation(top, bot, hcell, this%satomega)
+        !!
+        !! -- calulate thickness of moist/unsaturated sediments
+        !!    and saturated sediments
+        !dsn = snnew * thick
+        !dmn = (DONE - snnew) * thick
+        !!
+        !! -- calculate the cell contribution to geostatic stress
+        !gs = dsn * this%sgs(node) + dmn * this%sgm(node)
+        !this%sk_gs(node) = gs
+        !
+        ! -- calculate cell contribution to geostatic stress
+        if (this%inewton /= 0) then
+          if (hcell < top - this%epsilon) then
+            hcell = hnew(node)
+            hbar = sUSGQuadratic(hcell, bot)
+            gs = (top - hbar) * this%sgm(node) + (hbar - bot) * this%sgs(node)
+          !if (hcell < bot - this%epsilon) then
+          !  gs = thick * this%sgm(node)
+          !else if (hcell < bot + this%epsilon) then
+          !  gsi = thick * this%sgm(node)
+          !  sm = DZERO
+          !  sp = this%sgm(node) - this%sgs(node) 
+          !  gs = sSlope(hcell, bot, gsi, sm, sp)
+          !else if (hcell < top - this%epsilon) then
+          !  gs = (top - hcell) * this%sgm(node) + (hcell - bot) * this%sgs(node)
+          else if (hcell < top + this%epsilon) then
+            gsi = thick * this%sgs(node)
+            sm = this%sgs(node) - this%sgm(node)
+            sp = DZERO
+            gs = sSlope(hcell, top, gsi, sm, sp)
+          else
+            gs = thick * this%sgs(node)
+          end if
         else
-          hcell = bot
+          if (this%ibound(node) /= 0) then
+            hcell = hnew(node)
+          else
+            hcell = bot
+          end if
+          if (hcell < bot) then
+            gs = thick * this%sgm(node)
+          else if (hcell < top) then
+            gs = (top - hcell) * this%sgm(node) + (hcell - bot) * this%sgs(node)
+          else
+            gs = thick * this%sgs(node)
+          end if
         end if
         !
-        ! -- calculate cell saturation
-        snnew = sQuadraticSaturation(top, bot, hcell, this%satomega)
-        !
-        ! -- calulate thickness of moist/unsaturated sediments
-        !    and saturated sediments
-        dsn = snnew * thick
-        dmn = (DONE - snnew) * thick
-        !
-        ! -- calculate the cell contribution to geostatic stress
-        gs = dsn * this%sgs(node) + dmn * this%sgm(node)
+        ! -- cell contribution to geostatic stress
         this%sk_gs(node) = gs
       end do
       !
@@ -3228,15 +3283,42 @@ contains
       this%sk_esi(node) = this%sk_es(node)
       top = this%dis%top(node)
       bot = this%dis%bot(node)
-      if (this%ibound(node) /= 0) then
+      !if (this%ibound(node) /= 0) then
+      !  hcell = hnew(node)
+      !  if (hcell < bot) then
+      !    hcell = bot
+      !  end if
+      !else
+      !  hcell = bot
+      !end if
+      !hs = hcell - bot
+      if (this%inewton /= 0) then
         hcell = hnew(node)
-        if (hcell < bot) then
+        hbar = sUSGQuadratic(hcell, bot)
+        hs = hbar - bot
+        !if (hcell < bot - this%epsilon) then
+        !  hs = DZERO
+        !else if (hcell < bot + this%epsilon) then
+        !  hsi = DZERO
+        !  sm = DZERO
+        !  sp = DONE
+        !  gs = sSlope(hcell, bot, hsi, sm, sp)
+        !else
+        !  hs = hcell - bot
+        !end if
+      else
+        if (this%ibound(node) /= 0) then
+          hcell = hnew(node)
+          if (hcell < bot) then
+            hcell = bot
+          end if
+        else
           hcell = bot
         end if
-      else
-        hcell = bot
+        hs = hcell - bot
       end if
-      hs = hcell - bot
+      !
+      ! -- calculate effective stress
       es = this%sk_gs(node) - hs
       this%sk_es(node) = es
     end do
