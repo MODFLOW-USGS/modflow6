@@ -2263,6 +2263,7 @@ contains
     return
   end subroutine sgwf_npf_wetdry
 
+  ! TODO_MJR: misleading name, not just check but actual rewetting is in here...
   subroutine rewet_check(this, kiter, node, hm, ibdm, ihc, hnew, irewet)
 ! ******************************************************************************
 ! rewet_check -- Determine if a cell should rewet.  This method can
