@@ -5,6 +5,7 @@ program test_mf6lib
   use TestGridConnectionModule
   use TestDisuModule
   use TestGwfInterfaceModelModule
+  use TestVectorIntModule
   
   implicit none
   
@@ -16,6 +17,7 @@ program test_mf6lib
   call testAllGridConnection()
   call testAllDisu()
   call testAllGwfInterfaceModel()
+  call testAllVectorInt()
   
   ! show results in browser 
   call showResult()
