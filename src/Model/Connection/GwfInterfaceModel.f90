@@ -1,6 +1,6 @@
 module GwfInterfaceModelModule
   use KindModule, only: I4B, DP  
-  use NumericalModelModule, only: NumericalModelType
+  use NumericalModelModule, only: NumericalModelType, GetNumericalModelFromList
   use GwfModule, only: GwfModelType
   use GridConnectionModule
   use GwfDisuModule
@@ -13,8 +13,9 @@ module GwfInterfaceModelModule
   ! region between a GwfModel and its neighbors. Note: this model itself will not be
   ! part of the solution matrix. The DISU discretization is a composition of parts of 
   ! multiple grids, possibly of different type.
-  type, public, extends(GwfModelType) :: GwfInterfaceModelType
-    class(GridConnectionType), pointer :: gridConnection
+  type, public, extends(GwfModelType) :: GwfInterfaceModelType    
+    class(GridConnectionType), pointer    :: gridConnection => null()
+    class(GwfModelType), private, pointer :: gwfModel => null() ! conveniently points to the owning model in gridconnection
   contains    
     procedure, pass(this) :: construct
     procedure, pass(this) :: createModel
@@ -44,28 +45,41 @@ contains
   ! set up the interface model, analogously to what happens in gwf_cr
   subroutine createModel(this, gridConn)
     use MemoryManagerModule, only: mem_allocate
-    !use Xt3dModule, only: xt3d_cr
+    use Xt3dModule, only: xt3d_cr
     class(GwfInterfaceModelType), target, intent(inout) :: this
     class(GridConnectionType), pointer, intent(in) :: gridConn
     ! local
+    integer(I4B) :: im
+    class(NumericalModelType), pointer :: numMod
     
     this%gridConnection => gridConn
-    
+    numMod => this%gridConnection%model
+    select type (numMod)
+      class is (GwfModelType)
+        this%gwfModel => numMod
+    end select
     ! create discretization
     call this%buildDiscretization()
     
-    
-    
+   
     ! create packages
     ! TODO_MJR: this really depends on how we want to merge
     ! a heteregeneous composition of connected models...
     call npf_cr(this%npf, this%name, this%innpf, this%iout) 
-    !call xt3d_cr(this%xt3d, this%name, this%innpf, this%iout)
+    call xt3d_cr(this%xt3d, this%name, this%innpf, this%iout)
     ! continue as in gwf_cr...
     
+    ! set XT3D for the interface when the owning
+    ! model has XT3D enabled
+    this%npf%ixt3d = this%gwfModel%npf%ixt3d
+        
     ! define
     ! dis%dis_df 
-    ! call this%npf%npf_df(this%xt3d, this%ingnc)
+    ! npf%npf_df 
+    ! ... we cannot call these yet, the following
+    ! comes from npf_df:
+    this%npf%xt3d => this%xt3d    
+    this%npf%xt3d%ixt3d = this%npf%ixt3d
         
     this%neq = this%dis%nodes
     this%nja = this%dis%nja
@@ -133,6 +147,7 @@ contains
     this%dis%njas =  this%dis%con%njas
     
     ! TODO_MJR: add vertices, cell2d here?
+    
     
   end subroutine buildDiscretization
   
@@ -225,8 +240,7 @@ contains
     class(GwfInterFaceModelType), intent(inout) :: this
     integer(I4B) :: icell, idx
     class(NumericalModelType), pointer :: model
-    
-    
+        
     ! copy head/ibound
     do icell = 1, this%gridConnection%nrOfCells
       
