@@ -1,7 +1,7 @@
 module GwfCsubModule
   use KindModule, only: I4B, DP
-  use ConstantsModule, only: DPREC, DZERO, DEM20, DEM15, DEM10, DEM7, DEM6,     &
-                             DEM4, DP9, DHALF, DEM1, DONE, DTWO, DTHREE,        &
+  use ConstantsModule, only: DPREC, DZERO, DEM20, DEM15, DEM10, DEM8, DEM7,     &
+                             DEM6, DEM4, DP9, DHALF, DEM1, DONE, DTWO, DTHREE,  &
                              DGRAVITY, DTEN, DHUNDRED, DNODATA, DHNOFLO,        &
                              LENFTYPE, LENPACKAGENAME,                          &
                              LINELENGTH, LENBOUNDNAME, NAMEDBOUNDFLAG,          &
@@ -9,10 +9,10 @@ module GwfCsubModule
   use GenericUtilities, only: is_same
   use SmoothingModule,        only: sQuadraticSaturation,                       &
                                     sQuadraticSaturationDerivative,             &
-                                    sSlope,                                     &
-                                    sSlopeDerivative,                           &
-                                    sUSGQuadratic,                              &
-                                    sUSGQuadraticDerivative
+                                    sQuadratic0sp,                              &
+                                    sQuadratic0spDerivative,                    &
+                                    sQuadraticSlope,                            &
+                                    sQuadraticSlopeDerivative
   use NumericalPackageModule, only: NumericalPackageType
   use ObserveModule,        only: ObserveType
   use ObsModule,            only: ObsType, obs_cr
@@ -46,7 +46,7 @@ module GwfCsubModule
   !
   ! -- local parameter - derivative of the log of effective stress
   real(DP), parameter :: dlog10es = 0.4342942_DP
-  real(DP), parameter :: hplus = DEM4
+  real(DP), parameter :: hplus = DEM8 !DEM4
   !
   ! CSUB type
   type, extends(NumericalPackageType) :: GwfCsubType
@@ -3163,46 +3163,18 @@ contains
         top = this%dis%top(node)
         bot = this%dis%bot(node)
         thick = top - bot
-        !if (this%ibound(node) /= 0) then
-        !  hcell = hnew(node)
-        !else
-        !  hcell = bot
-        !end if
-        !!
-        !! -- calculate cell saturation
-        !snnew = sQuadraticSaturation(top, bot, hcell, this%satomega)
-        !!
-        !! -- calulate thickness of moist/unsaturated sediments
-        !!    and saturated sediments
-        !dsn = snnew * thick
-        !dmn = (DONE - snnew) * thick
-        !!
-        !! -- calculate the cell contribution to geostatic stress
-        !gs = dsn * this%sgs(node) + dmn * this%sgm(node)
-        !this%sk_gs(node) = gs
         !
         ! -- calculate cell contribution to geostatic stress
         if (this%inewton /= 0) then
+          hcell = hnew(node)
           if (hcell < top - this%epsilon) then
-            hcell = hnew(node)
-            hbar = sUSGQuadratic(hcell, bot)
+            hbar = sQuadratic0sp(hcell, bot)
             gs = (top - hbar) * this%sgm(node) + (hbar - bot) * this%sgs(node)
-          !if (hcell < bot - this%epsilon) then
-          !  gs = thick * this%sgm(node)
-          !else if (hcell < bot + this%epsilon) then
-          !  gsi = thick * this%sgm(node)
-          !  sm = DZERO
-          !  sp = this%sgm(node) - this%sgs(node) 
-          !  gs = sSlope(hcell, bot, gsi, sm, sp)
-          !else if (hcell < top - this%epsilon) then
-          !  gs = (top - hcell) * this%sgm(node) + (hcell - bot) * this%sgs(node)
-          else if (hcell < top + this%epsilon) then
+          else
             gsi = thick * this%sgs(node)
             sm = this%sgs(node) - this%sgm(node)
             sp = DZERO
-            gs = sSlope(hcell, top, gsi, sm, sp)
-          else
-            gs = thick * this%sgs(node)
+            gs = sQuadraticSlope(hcell, top, gsi, sm, sp)
           end if
         else
           if (this%ibound(node) /= 0) then
@@ -3283,29 +3255,10 @@ contains
       this%sk_esi(node) = this%sk_es(node)
       top = this%dis%top(node)
       bot = this%dis%bot(node)
-      !if (this%ibound(node) /= 0) then
-      !  hcell = hnew(node)
-      !  if (hcell < bot) then
-      !    hcell = bot
-      !  end if
-      !else
-      !  hcell = bot
-      !end if
-      !hs = hcell - bot
       if (this%inewton /= 0) then
         hcell = hnew(node)
-        hbar = sUSGQuadratic(hcell, bot)
+        hbar = sQuadratic0sp(hcell, bot)
         hs = hbar - bot
-        !if (hcell < bot - this%epsilon) then
-        !  hs = DZERO
-        !else if (hcell < bot + this%epsilon) then
-        !  hsi = DZERO
-        !  sm = DZERO
-        !  sp = DONE
-        !  gs = sSlope(hcell, bot, hsi, sm, sp)
-        !else
-        !  hs = hcell - bot
-        !end if
       else
         if (this%ibound(node) /= 0) then
           hcell = hnew(node)
