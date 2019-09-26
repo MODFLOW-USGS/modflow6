@@ -68,10 +68,10 @@ module GridConnectionModule
     ! cells in the interface discretization.
     !
     ! The following data structure defines a map from the regional index to the interface index:
-    integer(I4B), dimension(:), pointer               :: regionalToInterfaceIdxMap => null()
-    type(ListType)                                    :: regionalModels                   ! the models that make up the interface
-    integer(I4B), dimension(:), pointer               :: regionalModelOffset => null()    ! the new offset to compactify the range of indices 
-    integer(I4B), pointer                             :: indexCount => null()             ! counts the number of cells in the interface
+    integer(I4B), dimension(:), pointer               :: regionalToInterfaceIdxMap => null()  ! sparse mapping from those regional indices that are within the interface domain
+    type(ListType)                                    :: regionalModels                       ! the models (NumericalModelType) that make up the interface
+    integer(I4B), dimension(:), pointer               :: regionalModelOffset => null()        ! the new offset to compactify the range of indices 
+    integer(I4B), pointer                             :: indexCount => null()                 ! counts the number of cells in the interface
     ! --
     
     type(ConnectionsType), pointer :: connections => null()                 ! sparse matrix with the connections
@@ -542,32 +542,34 @@ module GridConnectionModule
       ! TODO_MJR: this is not good, shouldn't this be outside
       ! the GWF domain, in NumericalExchange directly?
       ivalAngldegx = ifind(numEx%auxname, 'ANGLDEGX')
+      if (ivalAngldegx > 0) then
+        conn%ianglex = ivalAngldegx
+      end if
       
-        nOffset = this%getRegionalModelOffset(numEx%m1)
-        mOffset = this%getRegionalModelOffset(numEx%m2)
-        do iexg = 1, numEx%nexg
-          nIfaceIdx = this%regionalToInterfaceIdxMap(noffset + numEx%nodem1(iexg))
-          mIfaceIdx = this%regionalToInterfaceIdxMap(moffset + numEx%nodem2(iexg))
-          ipos = conn%getjaindex(nIfaceIdx, mIfaceIdx)
-          isym = conn%jas(ipos)
+      nOffset = this%getRegionalModelOffset(numEx%m1)
+      mOffset = this%getRegionalModelOffset(numEx%m2)
+      do iexg = 1, numEx%nexg
+        nIfaceIdx = this%regionalToInterfaceIdxMap(noffset + numEx%nodem1(iexg))
+        mIfaceIdx = this%regionalToInterfaceIdxMap(moffset + numEx%nodem2(iexg))
+        ipos = conn%getjaindex(nIfaceIdx, mIfaceIdx)
+        isym = conn%jas(ipos)
           
-          ! note: cl1 equals L_nm: the length from cell n to the shared
-          ! face with cell m (and cl2 analogously for L_mn)
-          if (nIfaceIdx < mIfaceIdx) then
-            conn%cl1(isym) = numEx%cl1(iexg)
-            conn%cl2(isym) = numEx%cl2(iexg)
-          else
-            conn%cl1(isym) = numEx%cl2(iexg)
-            conn%cl2(isym) = numEx%cl1(iexg)
-          end if          
-          conn%hwva(isym) = numEx%hwva(iexg)
-          conn%ihc(isym) = numEx%ihc(iexg) 
-            
-          if (ivalAngldegx > 0) then
-            conn%anglex(isym) = numEx%auxvar(ivalAngldegx,iexg)
-          end if            
-        end do  
+        ! note: cl1 equals L_nm: the length from cell n to the shared
+        ! face with cell m (and cl2 analogously for L_mn)
+        if (nIfaceIdx < mIfaceIdx) then
+          conn%cl1(isym) = numEx%cl1(iexg)
+          conn%cl2(isym) = numEx%cl2(iexg)
+        else
+          conn%cl1(isym) = numEx%cl2(iexg)
+          conn%cl2(isym) = numEx%cl1(iexg)
+        end if          
+        conn%hwva(isym) = numEx%hwva(iexg)
+        conn%ihc(isym) = numEx%ihc(iexg) 
         
+        if (ivalAngldegx > 0) then
+          conn%anglex(isym) = numEx%auxvar(ivalAngldegx,iexg)
+        end if            
+      end do        
     end do
     
   end subroutine buildConnections 
