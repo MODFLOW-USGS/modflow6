@@ -307,7 +307,7 @@ module GhostNodeModule
     return
   end subroutine gnc_mc
 
-  subroutine gnc_fmsav(this, kiter, iasln, amatsln)
+  subroutine gnc_fmsav(this, kiter, amatsln)
 ! ******************************************************************************
 ! gnc_fmsav -- Store the n-m Picard conductance in cond prior to the Newton
 !   terms being added.
@@ -320,7 +320,6 @@ module GhostNodeModule
     ! -- dummy
     class(GhostNodeType) :: this
     integer(I4B), intent(in) :: kiter
-    integer(I4B), dimension(:), intent(in) :: iasln
     real(DP), dimension(:), intent(inout) :: amatsln
     ! -- local
     integer(I4B) :: ignc, ipos
@@ -343,7 +342,7 @@ module GhostNodeModule
     return
   end subroutine gnc_fmsav
 
-  subroutine gnc_fc(this, kiter, iasln, amatsln)
+  subroutine gnc_fc(this, kiter, amatsln)
 ! ******************************************************************************
 ! gnc_fc -- Fill matrix terms
 ! Subroutine: (1) Add the GNC terms to the solution amat or model rhs depending
@@ -357,7 +356,6 @@ module GhostNodeModule
     ! -- dummy
     class(GhostNodeType) :: this
     integer(I4B), intent(in) :: kiter
-    integer(I4B), dimension(:), intent(in) :: iasln
     real(DP), dimension(:), intent(inout) :: amatsln
     ! -- local
     integer(I4B) :: ignc, j, noden, nodem, ipos, jidx, iposjn, iposjm
@@ -366,7 +364,7 @@ module GhostNodeModule
     !
     ! -- If this is a single model gnc (not an exchange across models), then
     !    pull conductances out of amatsln and store them in this%cond
-    if(this%smgnc) call this%gnc_fmsav(kiter, iasln, amatsln)
+    if(this%smgnc) call this%gnc_fmsav(kiter, amatsln)
     !
     ! -- Add gnc terms to rhs or to amat depending on whether gnc is implicit
     !    or explicit

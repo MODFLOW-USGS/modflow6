@@ -600,7 +600,7 @@ module GwfModule
     if(this%inhfb > 0) call this%hfb%hfb_fc(kiter, this%dis%nodes,             &
                                                 this%nja, njasln, amatsln,     &
                                                 this%idxglo, this%rhs, this%x)
-    if(this%ingnc > 0) call this%gnc%gnc_fc(kiter, this%ia, amatsln)
+    if(this%ingnc > 0) call this%gnc%gnc_fc(kiter, amatsln)
     if(this%insto > 0) then
       call this%sto%sto_fc(kiter, this%dis%nodes, this%xold,                   &
                             this%x, this%nja, njasln,                          &
