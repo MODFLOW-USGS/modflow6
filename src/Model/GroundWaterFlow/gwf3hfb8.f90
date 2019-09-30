@@ -196,7 +196,7 @@ module GwfHfbModule
     return
   end subroutine hfb_rp
 
-  subroutine hfb_fc(this, kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew)
+  subroutine hfb_fc(this, kiter, njasln, amat, idxglo, rhs, hnew)
 ! ******************************************************************************
 ! hfb_fc -- Fill amatsln for the following conditions:
 !   1.  Not Newton, and
@@ -212,14 +212,13 @@ module GwfHfbModule
     ! -- dummy
     class(GwfHfbType) :: this
     integer(I4B) :: kiter
-    integer(I4B),intent(in) :: nodes
-    integer(I4B),intent(in) :: nja
     integer(I4B),intent(in) :: njasln
     real(DP),dimension(njasln),intent(inout) :: amat
-    integer(I4B),intent(in),dimension(nja) :: idxglo
-    real(DP),intent(inout),dimension(nodes) :: rhs
-    real(DP),intent(inout),dimension(nodes) :: hnew
+    integer(I4B),intent(in),dimension(:) :: idxglo
+    real(DP),intent(inout),dimension(:) :: rhs
+    real(DP),intent(inout),dimension(:) :: hnew
     ! -- local
+    integer(I4B) ::  nodes, nja
     integer(I4B) :: ihfb, n, m
     integer(I4B) :: ipos
     integer(I4B) :: idiag, isymcon
@@ -229,6 +228,8 @@ module GwfHfbModule
     real(DP) :: topn, topm, botn, botm
 ! ------------------------------------------------------------------------------
     !
+    nodes = this%dis%nodes
+    nja = this%dis%con%nja
     if (associated(this%xt3d%ixt3d)) then
       ixt3d = this%xt3d%ixt3d
     else

@@ -348,7 +348,7 @@ module GwfNpfModule
     return
   end subroutine npf_cf
 
-  subroutine npf_fc(this, kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew)
+  subroutine npf_fc(this, kiter, njasln, amat, idxglo, rhs, hnew)
 ! ******************************************************************************
 ! npf_fc -- Formulate
 ! ******************************************************************************
@@ -360,13 +360,11 @@ module GwfNpfModule
     ! -- dummy
     class(GwfNpfType) :: this
     integer(I4B) :: kiter
-    integer(I4B),intent(in) :: nodes
-    integer(I4B),intent(in) :: nja
     integer(I4B),intent(in) :: njasln
     real(DP),dimension(njasln),intent(inout) :: amat
-    integer(I4B),intent(in),dimension(nja) :: idxglo
-    real(DP),intent(inout),dimension(nodes) :: rhs
-    real(DP),intent(inout),dimension(nodes) :: hnew
+    integer(I4B),intent(in),dimension(:) :: idxglo
+    real(DP),intent(inout),dimension(:) :: rhs
+    real(DP),intent(inout),dimension(:) :: hnew
     ! -- local
     integer(I4B) :: n, m, ii, idiag, ihc
     integer(I4B) :: isymcon, idiagm
@@ -377,10 +375,10 @@ module GwfNpfModule
     ! -- Calculate conductance and put into amat
     !
     if(this%ixt3d > 0) then
-      call this%xt3d%xt3d_fc(kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew)
+      call this%xt3d%xt3d_fc(kiter, njasln, amat, idxglo, rhs, hnew)
     else
     !
-    do n = 1, nodes
+    do n = 1, this%dis%nodes
       do ii = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
         m = this%dis%con%ja(ii)
         !
@@ -464,7 +462,7 @@ module GwfNpfModule
   end subroutine npf_fc
 
 
-  subroutine npf_fn(this, kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew)
+  subroutine npf_fn(this, kiter, njasln, amat, idxglo, rhs, hnew)
 ! ******************************************************************************
 ! npf_fn -- Fill newton terms
 ! ******************************************************************************
@@ -474,14 +472,13 @@ module GwfNpfModule
     ! -- dummy
     class(GwfNpfType) :: this
     integer(I4B) :: kiter
-    integer(I4B),intent(in) :: nodes
-    integer(I4B),intent(in) :: nja
     integer(I4B),intent(in) :: njasln
     real(DP),dimension(njasln),intent(inout) :: amat
-    integer(I4B),intent(in),dimension(nja) :: idxglo
-    real(DP),intent(inout),dimension(nodes) :: rhs
-    real(DP),intent(inout),dimension(nodes) :: hnew
+    integer(I4B),intent(in),dimension(:) :: idxglo
+    real(DP),intent(inout),dimension(:) :: rhs
+    real(DP),intent(inout),dimension(:) :: hnew
     ! -- local
+    integer(I4B) :: nodes, nja
     integer(I4B) :: n,m,ii,idiag
     integer(I4B) :: isymcon, idiagm
     integer(I4B) :: iups
@@ -501,6 +498,8 @@ module GwfNpfModule
     !
     ! -- add newton terms to solution matrix
     !
+    nodes = this%dis%nodes
+    nja = this%dis%con%nja
     if(this%ixt3d > 0) then
       call this%xt3d%xt3d_fn(kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew)
     else
@@ -795,7 +794,7 @@ module GwfNpfModule
     return
   end subroutine sgwf_npf_qcalc
 
-  subroutine npf_bdadj(this, nja, flowja, icbcfl, icbcun)
+  subroutine npf_bdadj(this, flowja, icbcfl, icbcun)
 ! ******************************************************************************
 ! npf_bdadj -- Calculate intercell flows
 ! ******************************************************************************
@@ -804,8 +803,7 @@ module GwfNpfModule
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwfNpfType) :: this
-    integer(I4B),intent(in) :: nja
-    real(DP),dimension(nja),intent(in) :: flowja
+    real(DP),dimension(:),intent(in) :: flowja
     integer(I4B), intent(in) :: icbcfl
     integer(I4B), intent(in) :: icbcun
     ! -- local
@@ -839,7 +837,7 @@ module GwfNpfModule
     return
   end subroutine npf_bdadj
 
-  subroutine npf_ot(this, nja, flowja)
+  subroutine npf_ot(this, flowja)
 ! ******************************************************************************
 ! npf_ot -- Budget
 ! ******************************************************************************
@@ -851,8 +849,7 @@ module GwfNpfModule
     use ConstantsModule, only: LENBIGLINE
     ! -- dummy
     class(GwfNpfType) :: this
-    integer(I4B),intent(in) :: nja
-    real(DP),intent(inout),dimension(nja) :: flowja
+    real(DP),intent(inout),dimension(:) :: flowja
     ! -- local
     character(len=LENBIGLINE) :: line
     character(len=30) :: tempstr

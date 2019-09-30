@@ -363,7 +363,7 @@ module Xt3dModule
     return
   end subroutine xt3d_ar
 
-  subroutine xt3d_fc(this, kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew)
+  subroutine xt3d_fc(this, kiter, njasln, amat, idxglo, rhs, hnew)
 ! ******************************************************************************
 ! xt3d_fc -- Formulate
 ! ******************************************************************************
@@ -375,14 +375,13 @@ module Xt3dModule
     ! -- dummy
     class(Xt3dType) :: this
     integer(I4B) :: kiter
-    integer(I4B),intent(in) :: nodes
-    integer(I4B),intent(in) :: nja
     integer(I4B),intent(in) :: njasln
     real(DP),dimension(njasln),intent(inout) :: amat
-    integer(I4B),intent(in),dimension(nja) :: idxglo
-    real(DP),intent(inout),dimension(nodes) :: rhs
-    real(DP),intent(inout),dimension(nodes) :: hnew
+    integer(I4B),intent(in),dimension(:) :: idxglo
+    real(DP),intent(inout),dimension(:) :: rhs
+    real(DP),intent(inout),dimension(:) :: hnew
     ! -- local
+    integer(I4B) :: nodes, nja
     integer(I4B) :: n, m
     !
     logical :: allhc0, allhc1
@@ -402,8 +401,10 @@ module Xt3dModule
     ! -- Calculate xt3d conductance-like coefficients and put into amat and rhs
     ! -- as appropriate
     !
+    nodes = this%dis%nodes
+    nja = this%dis%con%nja
     if (this%lamatsaved) then
-      do i = 1, nja
+      do i = 1, this%dis%con%nja
         amat(idxglo(i)) = amat(idxglo(i)) + this%amatpc(i)
       end do
       do i = 1, this%numextnbrs
