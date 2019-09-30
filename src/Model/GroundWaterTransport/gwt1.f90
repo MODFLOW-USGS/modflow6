@@ -318,7 +318,7 @@ module GwtModule
     !
     ! -- Define packages and utility objects
     call this%dis%dis_df()
-    if (this%indsp > 0) call this%dsp%dsp_df()
+    if (this%indsp > 0) call this%dsp%dsp_df(this%dis)
     call this%ssm%ssm_df()
     call this%oc%oc_df()
     call this%budget%budget_df(niunit, 'MASS', 'M')
@@ -367,7 +367,7 @@ module GwtModule
     ! -- Add the internal connections of this model to sparse
     call this%dis%dis_ac(this%moffset, sparse)
     if (this%indsp > 0) &
-      call this%dsp%dsp_ac(this%moffset, sparse, this%dis%nodes, this%ia, this%ja)
+      call this%dsp%dsp_ac(this%moffset, sparse)
     !
     ! -- Add any package connections
     do ip = 1, this%bndlist%Count()
@@ -399,8 +399,7 @@ module GwtModule
     ! -- Find the position of each connection in the global ia, ja structure
     !    and store them in idxglo.
     call this%dis%dis_mc(this%moffset, this%idxglo, iasln, jasln)
-    if (this%indsp > 0) call this%dsp%dsp_mc(this%moffset, this%dis%nodes,     &
-      this%ia, this%ja, iasln, jasln)
+    if (this%indsp > 0) call this%dsp%dsp_mc(this%moffset, iasln, jasln)
     !
     ! -- Map any package connections
     do ip=1,this%bndlist%Count()
@@ -435,8 +434,7 @@ module GwtModule
     if(this%infmi > 0) call this%fmi%fmi_ar(this%dis, this%ibound,this%inssm)
     if(this%inmst > 0) call this%mst%mst_ar(this%dis, this%ibound)
     if(this%inadv > 0) call this%adv%adv_ar(this%dis, this%ibound)
-    if(this%indsp > 0) call this%dsp%dsp_ar(this%dis, this%ibound,             &
-                                            this%mst%porosity)
+    if(this%indsp > 0) call this%dsp%dsp_ar(this%ibound, this%mst%porosity)
     if(this%inssm > 0) call this%ssm%ssm_ar(this%dis, this%ibound, this%x)
     if(this%inobs > 0) call this%obs%gwt_obs_ar(this%ic, this%x, this%flowja)
     !
@@ -644,8 +642,7 @@ module GwtModule
       this%flowja(i) = DZERO
     enddo
     if(this%inadv > 0) call this%adv%adv_flowja(this%x, this%flowja)
-    if(this%indsp > 0) call this%dsp%dsp_flowja(this%dis%nodes, this%nja,      &
-                                                this%x, this%flowja)
+    if(this%indsp > 0) call this%dsp%dsp_flowja(this%x, this%flowja)
     !
     ! -- Return
     return

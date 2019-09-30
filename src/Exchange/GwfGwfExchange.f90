@@ -533,7 +533,7 @@ contains
     !
     ! -- Fill the gnc terms in the solution matrix
     if(this%ingnc > 0) then
-      call this%gnc%gnc_fc(kiter, iasln, amatsln)
+      call this%gnc%gnc_fc(kiter, amatsln)
     endif
     !
     ! -- Call mvr fc routine

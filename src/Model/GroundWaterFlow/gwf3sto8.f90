@@ -232,8 +232,7 @@ module GwfStoModule
     return
   end subroutine sto_ad
 
-  subroutine sto_fc(this, kiter, nodes, hold, hnew, nja, njasln, amat, &
-                            idxglo, rhs)
+  subroutine sto_fc(this, kiter, hold, hnew, njasln, amat, idxglo, rhs)
 ! ******************************************************************************
 ! sto_fc -- Fill the solution amat and rhs with storage contribution newton
 !               term
@@ -248,14 +247,12 @@ module GwfStoModule
     ! -- dummy
     class(GwfStoType) :: this
     integer(I4B),intent(in) :: kiter
-    integer(I4B),intent(in) :: nodes
-    real(DP), intent(in), dimension(nodes) :: hold
-    real(DP), intent(in), dimension(nodes) :: hnew
-    integer(I4B),intent(in) :: nja
+    real(DP), intent(in), dimension(:) :: hold
+    real(DP), intent(in), dimension(:) :: hnew
     integer(I4B),intent(in) :: njasln
     real(DP), dimension(njasln),intent(inout) :: amat
-    integer(I4B), intent(in),dimension(nja) :: idxglo
-    real(DP),intent(inout),dimension(nodes) :: rhs
+    integer(I4B), intent(in),dimension(:) :: idxglo
+    real(DP),intent(inout),dimension(:) :: rhs
     ! -- local
     integer(I4B) :: n, idiag
     real(DP) :: tled, rho1, rho2
@@ -345,8 +342,7 @@ module GwfStoModule
     return
   end subroutine sto_fc
 
-  subroutine sto_fn(this, kiter, nodes, hold, hnew, nja, njasln, amat,         &
-                    idxglo, rhs)
+  subroutine sto_fn(this, kiter, hold, hnew, njasln, amat, idxglo, rhs)
 ! ******************************************************************************
 ! sto_fn -- Fill the solution amat and rhs with storage contribution
 ! ******************************************************************************
@@ -357,14 +353,12 @@ module GwfStoModule
     ! -- dummy
     class(GwfStoType) :: this
     integer(I4B),intent(in) :: kiter
-    integer(I4B),intent(in) :: nodes
-    real(DP), intent(in), dimension(nodes) :: hold
-    real(DP), intent(in), dimension(nodes) :: hnew
-    integer(I4B),intent(in) :: nja
+    real(DP), intent(in), dimension(:) :: hold
+    real(DP), intent(in), dimension(:) :: hnew
     integer(I4B),intent(in) :: njasln
     real(DP), dimension(njasln),intent(inout) :: amat
-    integer(I4B), intent(in),dimension(nja) :: idxglo
-    real(DP),intent(inout),dimension(nodes) :: rhs
+    integer(I4B), intent(in),dimension(:) :: idxglo
+    real(DP),intent(inout),dimension(:) :: rhs
     ! -- local
     integer(I4B) :: n, idiag
     real(DP) :: tled, rho1, rho2
