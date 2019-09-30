@@ -114,7 +114,7 @@ module Xt3dModule
 
   subroutine xt3d_df(this, dis)
 ! ******************************************************************************
-! xt3d_ac -- Add connections for extended neighbors to the sparse matrix
+! xt3d_df -- define the xt3d object
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -305,7 +305,6 @@ module Xt3dModule
     write(this%iout, fmtheader)
     !
     ! -- Store pointers to arguments that were passed in
-    !this%dis this needs to be pointed earlier
     this%ibound  => ibound
     this%k11 => k11
     this%ik33 => ik33
