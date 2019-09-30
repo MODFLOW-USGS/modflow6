@@ -98,7 +98,7 @@ module GwtDspModule
     return
   end subroutine dsp_cr
 
-  subroutine dsp_df(this)
+  subroutine dsp_df(this, dis)
 ! ******************************************************************************
 ! dsp_df -- Allocate and Read
 ! ******************************************************************************
@@ -108,12 +108,16 @@ module GwtDspModule
     ! -- modules
     ! -- dummy
     class(GwtDspType) :: this
+    class(DisBaseType), pointer :: dis
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtdsp =                                    &
       "(1x,/1x,'DSP-- DISPERSION PACKAGE, VERSION 1, 1/24/2018',               &
       &' INPUT READ FROM UNIT ', i0, //)"
 ! ------------------------------------------------------------------------------
+    !
+    ! -- Store pointer to dis
+    this%dis => dis
     !
     ! -- Read dispersion options
     call this%read_options()
@@ -123,13 +127,14 @@ module GwtDspModule
       call xt3d_cr(this%xt3d, trim(this%origin), this%inunit, this%iout,       &
                    ldispopt=.true.)
       this%xt3d%ixt3d = this%ixt3d
+      call this%xt3d%xt3d_df(dis)
     endif
     !
     ! -- Return
     return
   end subroutine dsp_df
 
-  subroutine dsp_ac(this, moffset, sparse, nodes, ia, ja)
+  subroutine dsp_ac(this, moffset, sparse)
 ! ******************************************************************************
 ! dsp_ac -- Add connections for extended neighbors to the sparse matrix
 ! ******************************************************************************
@@ -141,21 +146,19 @@ module GwtDspModule
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(GwtDspType) :: this
-    integer(I4B), intent(in) :: moffset, nodes
-    integer(I4B), dimension(:), intent(in) :: ia
-    integer(I4B), dimension(:), intent(in) :: ja
+    integer(I4B), intent(in) :: moffset
     type(sparsematrix), intent(inout) :: sparse
     ! -- local
 ! ------------------------------------------------------------------------------
     !
     ! -- Add extended neighbors (neighbors of neighbors)
-    if(this%ixt3d > 0) call this%xt3d%xt3d_ac(moffset, sparse, nodes, ia, ja)
+    if(this%ixt3d > 0) call this%xt3d%xt3d_ac(moffset, sparse)
     !
     ! -- Return
     return
   end subroutine dsp_ac
 
-  subroutine dsp_mc(this, moffset, nodes, ia, ja, iasln, jasln)
+  subroutine dsp_mc(this, moffset, iasln, jasln)
 ! ******************************************************************************
 ! dsp_mc -- Map connections and construct iax, jax, and idxglox
 ! ******************************************************************************
@@ -166,9 +169,7 @@ module GwtDspModule
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(GwtDspType) :: this
-    integer(I4B), intent(in) :: moffset, nodes
-    integer(I4B), dimension(:), intent(in) :: ia
-    integer(I4B), dimension(:), intent(in) :: ja
+    integer(I4B), intent(in) :: moffset
     integer(I4B), dimension(:), intent(in) :: iasln
     integer(I4B), dimension(:), intent(in) :: jasln
     ! -- local
@@ -177,14 +178,13 @@ module GwtDspModule
     !
     ! TODO: set inewton
     inewton = 0
-    if(this%ixt3d > 0) call this%xt3d%xt3d_mc(moffset, nodes, ia, ja, iasln,   &
-                                              jasln, inewton)
+    if(this%ixt3d > 0) call this%xt3d%xt3d_mc(moffset, iasln, jasln, inewton)
     !
     ! -- Return
     return
   end subroutine dsp_mc
 
-  subroutine dsp_ar(this, dis, ibound, porosity)
+  subroutine dsp_ar(this, ibound, porosity)
 ! ******************************************************************************
 ! dsp_ar -- Allocate and Read
 ! ******************************************************************************
@@ -194,7 +194,6 @@ module GwtDspModule
     ! -- modules
     ! -- dummy
     class(GwtDspType) :: this
-    class(DisBaseType), pointer :: dis
     integer(I4B), dimension(:), pointer, contiguous :: ibound
     real(DP), dimension(:), pointer, contiguous :: porosity
     ! -- local
@@ -205,7 +204,6 @@ module GwtDspModule
 ! ------------------------------------------------------------------------------
     !
     ! -- dsp pointers to arguments that were passed in
-    this%dis     => dis
     this%ibound  => ibound
     this%porosity => porosity
     !
@@ -213,7 +211,7 @@ module GwtDspModule
     write(this%iout, fmtdsp) this%inunit
     !
     ! -- Allocate arrays
-    call this%allocate_arrays(dis%nodes)
+    call this%allocate_arrays(this%dis%nodes)
     !
     ! -- Read dispersion data
     call this%read_data()
@@ -243,7 +241,7 @@ module GwtDspModule
     if (kstp * kper == 1) then
       ! TODO MIN_SATTHK cannot be a local variable here.  it goes out of scope
       min_satthk = DZERO
-      if(this%ixt3d > 0) call this%xt3d%xt3d_ar(this%dis, this%ibound,         &
+      if(this%ixt3d > 0) call this%xt3d%xt3d_ar(this%ibound,                   &
         this%d11, this%id33, this%d33, this%fmi%gwfsat, this%id22, this%d22,   &
         this%fmi%igwfinwtup, min_satthk, this%fmi%gwficelltype,                &
         this%iangle1, this%iangle2, this%iangle3,                              &
@@ -340,8 +338,7 @@ module GwtDspModule
 ! ------------------------------------------------------------------------------
     !
     if(this%ixt3d > 0) then
-      call this%xt3d%xt3d_fc(kiter, nodes, nja, njasln, amatsln, idxglo, rhs,  &
-                             cnew)
+      call this%xt3d%xt3d_fc(kiter, njasln, amatsln, idxglo, rhs, cnew)
     else
       do n = 1, nodes
         if(this%ibound(n) == 0) cycle
@@ -370,7 +367,7 @@ module GwtDspModule
     return
   end subroutine dsp_fc
   
-  subroutine dsp_flowja(this, nodes, nja, cnew, flowja)
+  subroutine dsp_flowja(this, cnew, flowja)
 ! ******************************************************************************
 ! dsp_flowja -- Calculate dispersion contribution to flowja
 ! ******************************************************************************
@@ -381,8 +378,6 @@ module GwtDspModule
     use GwfNpfModule, only: thksatnm
     ! -- dummy
     class(GwtDspType) :: this
-    integer(I4B), intent(inout) :: nodes
-    integer(I4B), intent(inout) :: nja
     real(DP), intent(inout), dimension(:) :: cnew
     real(DP), intent(inout), dimension(:) :: flowja
     ! -- local
@@ -392,9 +387,9 @@ module GwtDspModule
     !
     ! -- Calculate dispersion and add to flowja
     if(this%ixt3d > 0) then
-      call this%xt3d%xt3d_flowja(nodes, nja, cnew, flowja)
+      call this%xt3d%xt3d_flowja(cnew, flowja)
     else
-      do n = 1, nodes
+      do n = 1, this%dis%nodes
         if(this%ibound(n) == 0) cycle
         do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
           m = this%dis%con%ja(ipos)

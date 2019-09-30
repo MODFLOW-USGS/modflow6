@@ -196,7 +196,7 @@ module GwfHfbModule
     return
   end subroutine hfb_rp
 
-  subroutine hfb_fc(this, kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew)
+  subroutine hfb_fc(this, kiter, njasln, amat, idxglo, rhs, hnew)
 ! ******************************************************************************
 ! hfb_fc -- Fill amatsln for the following conditions:
 !   1.  Not Newton, and
@@ -212,14 +212,13 @@ module GwfHfbModule
     ! -- dummy
     class(GwfHfbType) :: this
     integer(I4B) :: kiter
-    integer(I4B),intent(in) :: nodes
-    integer(I4B),intent(in) :: nja
     integer(I4B),intent(in) :: njasln
     real(DP),dimension(njasln),intent(inout) :: amat
-    integer(I4B),intent(in),dimension(nja) :: idxglo
-    real(DP),intent(inout),dimension(nodes) :: rhs
-    real(DP),intent(inout),dimension(nodes) :: hnew
+    integer(I4B),intent(in),dimension(:) :: idxglo
+    real(DP),intent(inout),dimension(:) :: rhs
+    real(DP),intent(inout),dimension(:) :: hnew
     ! -- local
+    integer(I4B) ::  nodes, nja
     integer(I4B) :: ihfb, n, m
     integer(I4B) :: ipos
     integer(I4B) :: idiag, isymcon
@@ -229,6 +228,8 @@ module GwfHfbModule
     real(DP) :: topn, topm, botn, botm
 ! ------------------------------------------------------------------------------
     !
+    nodes = this%dis%nodes
+    nja = this%dis%con%nja
     if (associated(this%xt3d%ixt3d)) then
       ixt3d = this%xt3d%ixt3d
     else
@@ -335,7 +336,7 @@ module GwfHfbModule
     return
   end subroutine hfb_fc
 
-  subroutine hfb_flowja(this, nodes, nja, hnew, flowja)
+  subroutine hfb_flowja(this, hnew, flowja)
 ! ******************************************************************************
 ! hfb_flowja -- flowja will automatically include the effects of the hfb
 !   for confined and newton cases when xt3d is not used.  This method
@@ -348,10 +349,8 @@ module GwfHfbModule
     use ConstantsModule, only: DHALF, DZERO
     ! -- dummy
     class(GwfHfbType) :: this
-    integer(I4B),intent(in) :: nodes
-    integer(I4B),intent(in) :: nja
-    real(DP),intent(inout),dimension(nodes) :: hnew
-    real(DP),intent(inout),dimension(nja) :: flowja
+    real(DP),intent(inout),dimension(:) :: hnew
+    real(DP),intent(inout),dimension(:) :: flowja
     ! -- local
     integer(I4B) :: ihfb, n, m
     integer(I4B) :: ipos
@@ -405,7 +404,7 @@ module GwfHfbModule
           condhfb = this%hydchr(ihfb)
         endif
         ! -- Make hfb corrections for xt3d
-        call this%xt3d%xt3d_flowjahfb(nodes, n, m, nja, hnew, flowja, condhfb)
+        call this%xt3d%xt3d_flowjahfb(n, m, hnew, flowja, condhfb)
       end do
       !
     else
