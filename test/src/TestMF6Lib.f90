@@ -3,6 +3,8 @@ program test_mf6lib
   
   ! use modules with tests:
   use TestGridConnectionModule
+  use TestDisModule
+  use TestDisvModule
   use TestDisuModule
   use TestGwfInterfaceModelModule
   use TestVectorIntModule
@@ -15,6 +17,8 @@ program test_mf6lib
   
   ! call all tests
   call testAllGridConnection()
+  call testAllDis()
+  call testAllDisv()
   call testAllDisu()
   call testAllGwfInterfaceModel()
   call testAllVectorInt()

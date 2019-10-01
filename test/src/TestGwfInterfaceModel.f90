@@ -116,7 +116,7 @@ contains ! module procedures
     gwfModelA%x = 0.0_DP
     gwfModelA%ibound = 1
     gwfModelA%name = "TestModelA"
-    open(unit=1980, file=TESTDATADIR//"dis_2x3.dis", status='old', action='read')
+    open(unit=1980, file=TESTDATADIR//"discretizations/dis_2x3.dis", status='old', action='read')
     call dis_cr(gwfModelA%dis, gwfModelA%name, 1980, -1)
     call gwfModelA%dis%dis_df()    
     close(1980)
@@ -134,7 +134,7 @@ contains ! module procedures
     gwfModelB%x = 0.0_DP
     gwfModelB%ibound = 1
     gwfModelB%name = "TestModelB"
-    open(unit=1980, file=TESTDATADIR//"dis_2x6.dis", status='old', action='read')
+    open(unit=1980, file=TESTDATADIR//"discretizations/dis_2x6.dis", status='old', action='read')
     call dis_cr(gwfModelB%dis, gwfModelB%name, 1980, -1)
     call gwfModelB%dis%dis_df()
     close(1980)
