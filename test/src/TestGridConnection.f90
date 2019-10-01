@@ -67,7 +67,7 @@ contains ! module procedures
     allocate(nbrModel)
     call nbrModel%allocate_scalars("someNeighbor")
     nbrModel%moffset = 100
-    open(unit=1980, file=TESTDATADIR//"dis_2x3.dis", status='old', action='read')
+    open(unit=1980, file=TESTDATADIR//"discretizations/dis_2x3.dis", status='old', action='read')
     call dis_cr(nbrModel%dis, nbrModel%name, 1980, -1)
     call nbrModel%dis%dis_df()    
     close(1980)
@@ -104,7 +104,7 @@ contains ! module procedures
     allocate(nbrModel)
     call nbrModel%allocate_scalars("someNeighbor2")
     nbrModel%moffset = 12    
-    open(unit=1980, file=TESTDATADIR//"dis_2x3.dis", status='old', action='read')
+    open(unit=1980, file=TESTDATADIR//"discretizations/dis_2x3.dis", status='old', action='read')
     call dis_cr(nbrModel%dis, nbrModel%name, 1980, -1)
     call nbrModel%dis%dis_df()    
     close(1980)
@@ -201,7 +201,7 @@ contains ! module procedures
     allocate(numericalModel)    
     call numericalModel%allocate_scalars(name)
     numericalModel%moffset = 0
-    open(unit=1980, file=TESTDATADIR//"dis_2x6.dis", status='old', action='read')
+    open(unit=1980, file=TESTDATADIR//"discretizations/dis_2x6.dis", status='old', action='read')
     call dis_cr(numericalModel%dis, numericalModel%name, 1980, -1)
     call numericalModel%dis%dis_df()    
     close(1980)
