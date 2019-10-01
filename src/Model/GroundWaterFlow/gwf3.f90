@@ -334,18 +334,19 @@ module GwfModule
     !
     ! -- Define packages and utility objects
     call this%dis%dis_df()
-    call this%npf%npf_df(this%xt3d, this%ingnc)
+    call this%npf%npf_df(this%dis, this%xt3d, this%ingnc)
     call this%oc%oc_df()
     call this%budget%budget_df(niunit, 'VOLUME', 'L**3')
     if(this%ingnc > 0) call this%gnc%gnc_df(this)
     !
     ! -- Assign or point model members to dis members
+    !    this%neq will be incremented if packages add additional unknowns
     this%neq = this%dis%nodes
     this%nja = this%dis%nja
     this%ia  => this%dis%con%ia
     this%ja  => this%dis%con%ja
     !
-    ! -- Allocate model arrays, now that neq and nja are assigned
+    ! -- Allocate model arrays, now that neq and nja are known
     call this%allocate_arrays()
     !
     ! -- Define packages and assign iout for time series managers
@@ -378,12 +379,11 @@ module GwfModule
     integer(I4B) :: ip
 ! ------------------------------------------------------------------------------
     !
-    ! -- Add the internal connections of this model to sparse
+    ! -- Add the primary grid connections of this model to sparse
     call this%dis%dis_ac(this%moffset, sparse)
     !
     ! -- Add any additional connections that NPF may need
-    if(this%innpf > 0) call this%npf%npf_ac(this%moffset, sparse,              &
-      this%dis%nodes, this%ia, this%ja)
+    if(this%innpf > 0) call this%npf%npf_ac(this%moffset, sparse)
     !
     ! -- Add any package connections
     do ip = 1, this%bndlist%Count()
@@ -420,8 +420,7 @@ module GwfModule
     call this%dis%dis_mc(this%moffset, this%idxglo, iasln, jasln)
     !
     ! -- Map any additional connections that NPF may need
-    if(this%innpf > 0) call this%npf%npf_mc(this%moffset, this%dis%nodes,      &
-      this%ia, this%ja, iasln, jasln)
+    if(this%innpf > 0) call this%npf%npf_mc(this%moffset, iasln, jasln)
     !
     ! -- Map any package connections
     do ip=1,this%bndlist%Count()
@@ -455,8 +454,7 @@ module GwfModule
     !
     ! -- Allocate and read modules attached to model
     if(this%inic  > 0) call this%ic%ic_ar(this%x)
-    if(this%innpf > 0) call this%npf%npf_ar(this%dis, this%ic,                 &
-                                            this%ibound, this%x)
+    if(this%innpf > 0) call this%npf%npf_ar(this%ic, this%ibound, this%x)
     if(this%inhfb > 0) call this%hfb%hfb_ar(this%ibound, this%xt3d, this%dis)
     if(this%insto > 0) call this%sto%sto_ar(this%dis, this%ibound)
     if(this%inmvr > 0) call this%mvr%mvr_ar()
@@ -613,17 +611,14 @@ module GwfModule
     endif
     !
     ! -- Fill standard conductance terms
-    if(this%innpf > 0) call this%npf%npf_fc(kiter, this%dis%nodes,             &
-                                                this%nja, njasln, amatsln,     &
-                                                this%idxglo, this%rhs, this%x)
-    if(this%inhfb > 0) call this%hfb%hfb_fc(kiter, this%dis%nodes,             &
-                                                this%nja, njasln, amatsln,     &
-                                                this%idxglo, this%rhs, this%x)
-    if(this%ingnc > 0) call this%gnc%gnc_fc(kiter, this%ia, amatsln)
+    if(this%innpf > 0) call this%npf%npf_fc(kiter, njasln, amatsln,            &
+                                            this%idxglo, this%rhs, this%x)
+    if(this%inhfb > 0) call this%hfb%hfb_fc(kiter, njasln, amatsln,            &
+                                            this%idxglo, this%rhs, this%x)
+    if(this%ingnc > 0) call this%gnc%gnc_fc(kiter, amatsln)
     if(this%insto > 0) then
-      call this%sto%sto_fc(kiter, this%dis%nodes, this%xold,                   &
-                            this%x, this%nja, njasln,                          &
-                            amatsln, this%idxglo, this%rhs)
+      call this%sto%sto_fc(kiter, this%xold, this%x, njasln, amatsln,          &
+                           this%idxglo, this%rhs)
     end if
     !
     if(this%inmvr > 0) call this%mvr%mvr_fc()
@@ -635,8 +630,8 @@ module GwfModule
     !--Fill newton terms
     if(this%innpf > 0) then
       if(inwt /= 0) then
-        call this%npf%npf_fn(kiter, this%dis%nodes, this%nja, njasln,          &
-                             amatsln, this%idxglo, this%rhs, this%x)
+        call this%npf%npf_fn(kiter, njasln, amatsln, this%idxglo, this%rhs,    &
+                             this%x)
       endif
     endif
     !
@@ -653,8 +648,8 @@ module GwfModule
     ! -- Fill newton terms for storage
     if(this%insto > 0) then
       if (inwtsto /= 0) then
-        call this%sto%sto_fn(kiter, this%dis%nodes, this%xold, this%x,         &
-                              this%nja, njasln, amatsln, this%idxglo, this%rhs)
+        call this%sto%sto_fn(kiter, this%xold, this%x, njasln, amatsln,        &
+                             this%idxglo, this%rhs)
       end if
     end if
     !
@@ -921,10 +916,8 @@ module GwfModule
     do i = 1, this%nja
       this%flowja(i) = DZERO
     enddo
-    if(this%innpf > 0) call this%npf%npf_flowja(this%neq, this%nja, this%x,    &
-                                                this%flowja)
-    if(this%inhfb > 0) call this%hfb%hfb_flowja(this%neq, this%nja, this%x,    &
-                                                this%flowja)
+    if(this%innpf > 0) call this%npf%npf_flowja(this%x, this%flowja)
+    if(this%inhfb > 0) call this%hfb%hfb_flowja(this%x, this%flowja)
     if(this%ingnc > 0) call this%gnc%flowja(this%flowja)
     !
     ! -- Return
@@ -983,7 +976,7 @@ module GwfModule
     !
     ! -- Node Property Flow
     if(this%innpf > 0) then
-      call this%npf%npf_bdadj(this%nja, this%flowja, icbcfl, icbcun)
+      call this%npf%npf_bdadj(this%flowja, icbcfl, icbcun)
     endif
     !
     ! -- Clear obs
@@ -1048,7 +1041,7 @@ module GwfModule
     if(ibudfl /= 0) then
       !
       ! -- NPF output
-      if(this%innpf > 0) call this%npf%npf_ot(this%neq, this%nja, this%flowja)
+      if(this%innpf > 0) call this%npf%npf_ot(this%flowja)
       !
       ! -- GNC output
       if(this%ingnc > 0) &

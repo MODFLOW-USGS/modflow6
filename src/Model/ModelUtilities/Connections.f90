@@ -33,6 +33,7 @@ module ConnectionsModule
     procedure :: allocate_scalars
     procedure :: allocate_arrays
     procedure :: read_from_block
+    procedure :: con_finalize
     procedure :: read_connectivity_from_block
     procedure :: set_cl1_cl2_from_fleng
     procedure :: disconnections
@@ -172,8 +173,8 @@ module ConnectionsModule
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
     ! -- local
-    character(len=LINELENGTH) :: errmsg, keyword
-    integer(I4B) :: ii,n,m
+    character(len=LINELENGTH) :: keyword
+    integer(I4B) :: n
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     integer(I4B),dimension(:),allocatable :: ihctemp
@@ -185,25 +186,6 @@ module ConnectionsModule
     character(len=24),dimension(nname) :: aname(nname)
     character(len=300) :: ermsg
     ! -- formats
-    character(len=*),parameter :: fmtsymerr =                                  &
-      "('Error in array: ',a,'.',                                              &
-        ' Array is not symmetric in positions: ',i0,' and ',i0,'.',            &
-        ' Values in these positions are: ',1pg15.6,' and ', 1pg15.6,           &
-        ' For node ',i0,' connected to node ',i0)"
-    character(len=*),parameter :: fmtsymerrja =                                &
-      "('Error in array: ',a,'.',                                              &
-        ' Array does not have symmetric counterpart in position ',i0,          &
-        ' for cell ',i0,' connected to cell ',i0)"
-    character(len=*),parameter :: fmtjanmerr =                                 &
-      "('Error in array: ',a,'.',                                              &
-        ' First value for cell : ',i0,' must equal ',i0,'.',                   &
-        ' Found ',i0,' instead.')"
-    character(len=*),parameter :: fmtjasorterr =                               &
-      "('Error in array: ',a,'.',                                              &
-        ' Entries not sorted for row: ',i0,'.',                                &
-        ' Offending entries are: ',i0,' and ',i0)"
-    character(len=*),parameter :: fmtihcerr =                                  &
-      "('IHC must be 0, 1, or 2.  Found: ',i0)"
     ! -- data
     data aname(1) /'                     IAC'/
     data aname(2) /'                      JA'/
@@ -294,6 +276,69 @@ module ConnectionsModule
       call this%parser%StoreErrorUnit()
       call ustop()
     endif
+    !
+    ! -- finalize connection data
+    call this%con_finalize(iout, ihctemp, cl12temp, hwvatemp, angldegx)
+    !
+    ! -- deallocate temp arrays
+    deallocate(ihctemp)
+    deallocate(cl12temp)
+    deallocate(hwvatemp)
+    !
+    ! -- Return
+    return
+  end subroutine read_from_block
+
+  subroutine con_finalize(this, iout, ihctemp, cl12temp, hwvatemp, angldegx)
+! ******************************************************************************
+! con_finalize -- Finalize connection data
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule, only: LINELENGTH, DONE, DHALF, DPIO180, DNODATA
+    use SimModule, only: ustop, store_error, count_errors, store_error_unit
+    ! -- dummy
+    class(ConnectionsType) :: this
+    integer(I4B), intent(in) :: iout
+    integer(I4B), dimension(:), intent(in) :: ihctemp
+    real(DP), dimension(:), intent(in) :: cl12temp
+    real(DP), dimension(:), intent(in) :: hwvatemp
+    real(DP), dimension(:), intent(in) :: angldegx
+    ! -- local
+    character(len=LINELENGTH) :: errmsg
+    integer(I4B) :: ii, n ,m
+    integer(I4B), parameter :: nname = 6
+    character(len=24),dimension(nname) :: aname(nname)
+    ! -- formats
+    character(len=*),parameter :: fmtsymerr =                                  &
+      "('Error in array: ',a,'.',                                              &
+        ' Array is not symmetric in positions: ',i0,' and ',i0,'.',            &
+        ' Values in these positions are: ',1pg15.6,' and ', 1pg15.6,           &
+        ' For node ',i0,' connected to node ',i0)"
+    character(len=*),parameter :: fmtsymerrja =                                &
+      "('Error in array: ',a,'.',                                              &
+        ' Array does not have symmetric counterpart in position ',i0,          &
+        ' for cell ',i0,' connected to cell ',i0)"
+    character(len=*),parameter :: fmtjanmerr =                                 &
+      "('Error in array: ',a,'.',                                              &
+        ' First value for cell : ',i0,' must equal ',i0,'.',                   &
+        ' Found ',i0,' instead.')"
+    character(len=*),parameter :: fmtjasorterr =                               &
+      "('Error in array: ',a,'.',                                              &
+        ' Entries not sorted for row: ',i0,'.',                                &
+        ' Offending entries are: ',i0,' and ',i0)"
+    character(len=*),parameter :: fmtihcerr =                                  &
+      "('IHC must be 0, 1, or 2.  Found: ',i0)"
+    ! -- data
+    data aname(1) /'                     IAC'/
+    data aname(2) /'                      JA'/
+    data aname(3) /'                     IHC'/
+    data aname(4) /'                    CL12'/
+    data aname(5) /'                    HWVA'/
+    data aname(6) /'                ANGLDEGX'/
+! ------------------------------------------------------------------------------
     !
     ! -- Convert iac to ia
     do n = 2, this%nodes + 1
@@ -417,23 +462,17 @@ module ConnectionsModule
           this%anglex(this%jas(ii)) = angldegx(ii) * DPIO180
         enddo
       enddo
-      deallocate(angldegx)
     else
       do n = 1, size(this%anglex)
         this%anglex(n) = DNODATA
       enddo
-      write(iout, '(1x,a)') 'ANGLDEGX NOT FOUND IN CONNECTIONDATA BLOCK. ' //  &
-                            'SOME CAPABILITIES MAY BE LIMITED.'
+      write(iout, '(1x,a)') 'ANGLDEGX NOT FOUND IN CONNECTIONDATA ' //           &
+                            'BLOCK. SOME CAPABILITIES MAY BE LIMITED.'
     endif
-    !
-    ! -- deallocate temp arrays
-    deallocate(ihctemp)
-    deallocate(cl12temp)
-    deallocate(hwvatemp)
     !
     ! -- Return
     return
-  end subroutine read_from_block
+  end subroutine con_finalize
 
   subroutine read_connectivity_from_block(this, name_model, nodes, nja, iout)
 ! ******************************************************************************
