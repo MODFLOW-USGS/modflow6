@@ -25,7 +25,7 @@ type integer
 reader urword
 optional false
 longname number of VKD inflections
-description integer value specifying the number of VKD inflections. There must be NUMELEVS entries for both EIP and KIP for every cell defined in PACKAGEDATA block.
+description integer value specifying the number of VKD inflections. There must be NUMELEVS entries for both EIP and KIP for every cell defined in PACKAGEDATA block. NB 'implicit inflection points' will be placed at the top and bottom elevations of each cell defined in PACKAGEDATA block.
 
 
 # --------------------- gwf vkd packagedata ---------------------
