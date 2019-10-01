@@ -47,7 +47,6 @@ module GwfDisModule
     procedure :: get_ncpl
     procedure :: connection_vector
     procedure :: connection_normal
-    procedure :: get_cellxy
     ! -- private
     procedure :: read_options
     procedure :: read_dimensions
