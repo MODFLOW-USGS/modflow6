@@ -1573,6 +1573,15 @@ module GwfDisuModule
       call mem_allocate(this%nodeuser, 1, 'NODEUSER', this%memoryPath)
       call mem_allocate(this%nodereduced, 1, 'NODEREDUCED', this%memoryPath)
     endif
+    call mem_allocate(this%idomain, this%nodes, 'IDOMAIN', this%origin)
+    call mem_allocate(this%vertices, 2, this%nvert, 'VERTICES', this%origin)
+    call mem_allocate(this%cellxy, 2, this%nodes, 'CELLXY', this%origin)
+    ! TODO_MJR: 
+    !if(this%nvert > 0) then
+    !  call mem_allocate(this%cellxy, 2, this%nodes, 'CELLXY', this%origin)
+    !else
+    !  call mem_allocate(this%cellxy, 2, 0, 'CELLXY', this%origin)
+    !endif
     !
     ! -- Initialize
     this%mshape(1) = this%nodesuser

@@ -3,6 +3,7 @@ module GwfInterfaceModelModule
   use NumericalModelModule, only: NumericalModelType, GetNumericalModelFromList
   use GwfModule, only: GwfModelType
   use GridConnectionModule
+  use BaseDisModule
   use GwfDisuModule
   use GwfNpfModule
   use GwfOcModule
@@ -118,6 +119,9 @@ contains
     integer(I4B) :: ierror
     type(NumericalModelType), pointer :: model
     type(ConnectionsType), pointer :: connections
+    class(DisBaseType), pointer :: disbase
+    class(GwfDisuType), pointer :: disu
+    real(DP) :: x,y
     
     ! create disu
     call disu_cr(this%dis, this%name, -1, -1)
@@ -139,15 +143,29 @@ contains
       this%dis%top(icell) = model%dis%top(idx)
       this%dis%bot(icell) = model%dis%bot(idx)
       this%dis%area(icell) = model%dis%area(idx)
-      
     end do
      
     ! grid connections follow from GridConnection:
     this%dis%con => this%gridConnection%connections
     this%dis%njas =  this%dis%con%njas
     
-    ! TODO_MJR: add vertices, cell2d here?
-    
+    disbase => this%dis
+    select type(disbase)
+    type is(GwfDisuType)
+      disu => disbase
+      
+      ! copy cell x,y
+      do icell = 1, nrOfCells
+        idx = this%gridConnection%idxToGlobal(icell)%index
+        model => this%gridConnection%idxToGlobal(icell)%model
+        call model%dis%get_cellxy(idx, x, y)
+        ! we need to have the origins in here explicitly since
+        ! we are merging grids with possibly different origins
+        ! TODO_MJR: how 'bout rotation?
+        disu%cellxy(1,icell) = x + model%dis%xorigin
+        disu%cellxy(2,icell) = y + model%dis%yorigin
+      end do
+    end select
     
   end subroutine buildDiscretization
   
