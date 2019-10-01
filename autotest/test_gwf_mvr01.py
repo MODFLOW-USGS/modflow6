@@ -1,4 +1,5 @@
 import os
+import shutil
 from nose.tools import *
 
 try:
@@ -12,11 +13,12 @@ except:
 from framework import testing_framework
 import targets
 
+name = 'gwf_mvr01'
+mf6_exe = os.path.abspath(targets.target_dict['mf6'])
+ws = os.path.join('temp', name)
+
 
 def get_model():
-    name = 'gwf_mvr01'
-    mf6_exe = os.path.abspath(targets.target_dict['mf6'])
-
     # static model data
     # temporal discretization
     nper = 1
@@ -41,7 +43,6 @@ def get_model():
     imsla = 'BICGSTAB'
 
     # build MODFLOW 6 files
-    ws = os.path.join('temp', name)
     sim = flopy.mf6.MFSimulation(sim_name=name, version='mf6',
                                  exe_name=mf6_exe,
                                  sim_ws=ws)
@@ -126,8 +127,9 @@ def get_model():
 
     packagedata = [[0, 1.0, -20., 0.0, 'SPECIFIED', 2], ]
     nmawwells = len(packagedata)
-    connectiondata = [[1 - 1, 1 - 1, (1 - 1, 5 - 1, 8 - 1), 0.0, -20, 1.0, 1.1],
-                      [1 - 1, 2 - 1, (2 - 1, 5 - 1, 8 - 1), 0.0, -20, 1.0, 1.1]]
+    connectiondata = [
+        [1 - 1, 1 - 1, (1 - 1, 5 - 1, 8 - 1), 0.0, -20, 1.0, 1.1],
+        [1 - 1, 2 - 1, (2 - 1, 5 - 1, 8 - 1), 0.0, -20, 1.0, 1.1]]
     perioddata = [[0, 'FLOWING_WELL', 0., 0.],
                   [0, 'RATE', 1.e-3]]
     maw = flopy.mf6.ModflowGwfmaw(gwf, mover=True, nmawwells=nmawwells,
@@ -252,6 +254,7 @@ def run_mf6():
     success, buff = sim.run_simulation()
     msg = 'could not run {}'.format(sim.name)
     assert success, msg
+    shutil.rmtree(ws)
     return
 
 
