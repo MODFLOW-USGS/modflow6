@@ -23,6 +23,7 @@ contains ! module procedures
   
      call test(testConstruct, "GwfInterfaceModel, test creation of minimal interface model")
      call test(testBuildDiscretization, "GwfInterfaceModel, test building discretization")
+     call test(testDiscretizationOffset, "GwfInterfaceModel, test if DIS* offset is accounted for")
      call test(testModelMatrixCoefficientsNpf, "GwfInterfaceModel has correct conductivity coeffs")
      call test(testModelMatrixCoefficientsXt3d, "GwfInterfaceModel has correct conductivity coeffs for XT3D")
      
@@ -40,12 +41,25 @@ contains ! module procedures
     ifModel => getSimpleInterfaceModel("testBuildDiscretization")     
     
     call assert_true(associated(ifModel%dis),"DIS not created")
-    call assert_comparable_real(real(ifModel%dis%top(1)), 0.0, 0.0, "DIS TOP values are incorrect")
-    call assert_comparable_real(real(ifModel%dis%bot(4)), -2.5, 0.0, "DIS BOT values are incorrect")
-    call assert_comparable_real(real(ifModel%dis%area(2)), 10000.0, 0.0, "DIS AREA values are incorrect")    
+    call assert_equal_realdp(ifModel%dis%top(1), 0.0_DP, "DIS TOP values are incorrect")
+    call assert_equal_realdp(ifModel%dis%bot(4), -2.5_DP, "DIS BOT values are incorrect")
+    call assert_equal_realdp(ifModel%dis%area(2), 10000.0_DP, "DIS AREA values are incorrect")    
     call assert_true(associated(ifModel%dis%con), "Connectivity need to be defined")
-    call assert_equal(ifModel%dis%con%njas, 2, "Expected nr. of symmetric connections (njas)")
-        
+    call assert_equal(ifModel%dis%con%njas, 2, "Expected nr. of symmetric connections (njas)")    
+    
+  end subroutine
+  
+  subroutine testDiscretizationOffset()
+    type(GwfInterfaceModelType), pointer :: ifModel
+    real(DP) :: x1,x2,y1,y2
+    
+    ifModel => getSimpleInterfaceModel("testBuildDiscretization")  
+    
+    call ifmodel%dis%get_cellxy(1, x1, y1)
+    call ifmodel%dis%get_cellxy(3, x2, y2)
+    call assert_equal_realdp(y2, y1, "offset grid should be accounted for")
+    call assert_equal_realdp(x2 - 100.0_DP, x1, "offset grid should be accounted for")
+    
   end subroutine
   
   subroutine testModelMatrixCoefficientsNpf

@@ -1,6 +1,8 @@
 # discretization
 BEGIN OPTIONS
 	LENGTH_UNITS METERS
+    XORIGIN 1300
+    YORIGIN 500
 END OPTIONS
 
 # The DIMENSIONS block is required
