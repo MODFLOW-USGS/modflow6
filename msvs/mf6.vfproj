@@ -159,9 +159,9 @@
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration></File>
 		<File RelativePath="..\src\Utilities\Constants.f90"/>
+		<File RelativePath="..\src\Utilities\genericutils.f90"/>
 		<File RelativePath="..\src\Utilities\HashTable.f90"/>
 		<File RelativePath="..\src\Utilities\InputOutput.f90"/>
-		<File RelativePath="..\src\Utilities\genericutils.f90"/>
 		<File RelativePath="..\src\Utilities\Iunit.f90"/>
 		<File RelativePath="..\src\Utilities\kind.f90"/>
 		<File RelativePath="..\src\Utilities\List.f90"/>
@@ -177,6 +177,8 @@
 		<File RelativePath="..\src\Utilities\Timer.f90"/>
 		<File RelativePath="..\src\Utilities\version.f90"/></Filter>
 		<File RelativePath="..\src\mf6.f90"/>
+		<File RelativePath="..\src\mf6cback.f90"/>
 		<File RelativePath="..\src\mf6lists.f90"/>
+		<File RelativePath="..\src\mf6sub.f90"/>
 		<File RelativePath="..\src\SimulationCreate.f90"/></Filter></Files>
 	<Globals/></VisualStudioProject>

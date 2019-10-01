@@ -14,6 +14,19 @@ args = pymake.pymake.parser()
 
 args.subdirs = True
 
-pymake.pymake.main(args.srcdir, args.target, args.fc, args.cc, args.makeclean,
-                   args.expedite, args.dryrun, args.double, args.debug, 
-                   args.subdirs, args.fflags, args.arch, args.makefile)
+pymake.pymake.main(args.srcdir, args.target, 
+                   fc=args.fc, 
+                   cc=args.cc, 
+                   makeclean=args.makeclean,
+                   expedite=args.expedite, 
+                   dryrun=args.dryrun, 
+                   double=args.double, 
+                   debug=args.debug,
+                   include_subdirs=args.subdirs, 
+                   fflags=args.fflags, 
+                   cflags=args.cflags, 
+                   syslibs=args.syslibs,
+                   arch=args.arch, 
+                   makefile=args.makefile, 
+                   srcdir2=None, 
+                   extrafiles=None)
