@@ -374,7 +374,7 @@ module GwfNpfModule
     ! -- initialise vkd ib array
     ! -- vkd
     if(this%ivkd > 0) then
-      call this%vkd%vkd_ar(dis, ibound, this%k11, this%ik33,               &
+      call this%vkd%vkd_ar(this%dis, ibound, this%k11, this%ik33,               &
       this%k33, this%sat, this%ik22, this%k22, this%inewton, this%satmin,  &
       this%icelltype, this%satomega, this%ibvkd)
 !      this%vkd%ibvkd => this%ibvkd
