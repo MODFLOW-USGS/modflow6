@@ -1,4 +1,5 @@
 import os
+import shutil
 import subprocess
 from nose.tools import raises
 
@@ -13,7 +14,7 @@ except:
 import targets
 
 mf6_exe = os.path.abspath(targets.target_dict['mf6'])
-name = 'csub_idomain01'
+name = 'gwf_ret_codes01'
 ws = os.path.join('temp', name)
 
 
@@ -197,8 +198,9 @@ def test_compiler_argv():
     for arg in argv:
         yield run_argv, arg, return_str
 
+def test_clean_sim():
+    shutil.rmtree(ws)
 
-# use python testmf6_csub_sub03.py --mf2005 mf2005devdbl
 if __name__ == "__main__":
     # print message
     print('standalone run of {}'.format(os.path.basename(__file__)))

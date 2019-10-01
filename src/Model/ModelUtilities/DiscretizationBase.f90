@@ -79,6 +79,9 @@ module BaseDisModule
     procedure          :: read_dbl_array
     generic, public    :: read_grid_array => read_int_array, read_dbl_array
     procedure, public  :: read_layer_array
+    procedure          :: fill_int_array
+    procedure          :: fill_dbl_array
+    generic, public    :: fill_grid_array => fill_int_array, fill_dbl_array
     procedure, public  :: read_list
     !
     procedure, public  :: record_array
@@ -895,6 +898,56 @@ module BaseDisModule
     ! -- return
     return
   end subroutine read_dbl_array
+
+  subroutine fill_int_array(this, ibuff1, ibuff2)
+! ******************************************************************************
+! fill_dbl_array -- Fill a GWF integer array
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(DisBaseType), intent(inout)                              :: this
+    integer(I4B), dimension(:), pointer, contiguous, intent(in)    :: ibuff1
+    integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: ibuff2
+    ! -- local
+    integer(I4B) :: nodeu
+    integer(I4B) :: noder
+! ------------------------------------------------------------------------------
+    do nodeu = 1, this%nodesuser
+      noder = this%get_nodenumber(nodeu, 0)
+      if(noder <= 0) cycle
+      ibuff2(noder) = ibuff1(nodeu)
+    end do
+    !
+    ! -- return
+    return
+  end subroutine fill_int_array
+
+  subroutine fill_dbl_array(this, buff1, buff2)
+! ******************************************************************************
+! fill_dbl_array -- Fill a GWF double precision array
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(DisBaseType), intent(inout)                          :: this
+    real(DP), dimension(:), pointer, contiguous, intent(in)    :: buff1
+    real(DP), dimension(:), pointer, contiguous, intent(inout) :: buff2
+    ! -- local
+    integer(I4B) :: nodeu
+    integer(I4B) :: noder
+! ------------------------------------------------------------------------------
+    do nodeu = 1, this%nodesuser
+      noder = this%get_nodenumber(nodeu, 0)
+      if(noder <= 0) cycle
+      buff2(noder) = buff1(nodeu)
+    end do
+    !
+    ! -- return
+    return
+  end subroutine fill_dbl_array
                             
   subroutine read_list(this, in, iout, iprpak, nlist, inamedbound,             &
                         iauxmultcol, nodelist,  rlist, auxvar, auxname,        &
