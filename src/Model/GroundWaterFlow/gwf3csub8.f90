@@ -3423,7 +3423,7 @@ contains
     integer(I4B) :: iupdate
     integer(I4B) :: node
     real(DP) :: tled
-    real(DP) :: esa
+    real(DP) :: esp
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: thick
@@ -3446,9 +3446,9 @@ contains
       tled = DONE / delt
     endif
     if (present(esadd)) then
-      esa = esadd
+      esp = esadd
     else
-      esa = DZERO
+      esp = DZERO
     endif
     node = this%nodelist(ib)
     area = this%dis%get_area(node)
@@ -3466,7 +3466,7 @@ contains
       f0 = DONE
     else
       znode = this%csub_calc_znode(top, bot, hcell)
-      es = this%sk_es(node) + esa
+      es = this%sk_es(node) !+ esp
       esi = this%sk_esi(node)
       es0 = this%sk_es0(node)
       theta = this%thetaini(ib)
@@ -3483,7 +3483,7 @@ contains
       ! -- calculate the compression index factors for the delay 
       !    node relative to the center of the cell based on the 
       !    current and previous head
-      call this%csub_calc_sfacts(node, bot, znode, theta, es, es0, f)
+      call this%csub_calc_sfacts(node, bot, znode, theta, es, es0, f, esadd=esp)
     end if
     sto_fac = tled * snnew * thick * f
     sto_fac0 = tled * snold * thick * f
@@ -4475,7 +4475,7 @@ contains
     real(DP) :: hp
     real(DP) :: q
     real(DP) :: qp
-    real(DP) :: esadd
+    real(DP) :: esp
 ! ------------------------------------------------------------------------------
 !
 ! -- initialize variables
@@ -4495,15 +4495,15 @@ contains
     call this%csub_calc_sat(node, hp, hcellold, snnew, snold)
     !
     ! -- calculate the effective stress perturbation
-    esadd = this%csub_calc_esadd(node, snnew)
+    esp = this%csub_calc_esadd(node, hcell)
     !
     ! -- storage coefficients
-    call this%csub_sk_calc_sske(node, sske, sske0, hp, hcellold, esadd)
+    call this%csub_sk_calc_sske(node, sske, sske0, hp, hcellold, esadd=esp)
     rho1 = sske0 * area * tthk0 * tled
     rho2 = sske * area * tthk * tled
     !
     ! -- calculate perturbed skeletal q
-    qp = snnew * rho2 * (this%sk_gs(node) - hp + bot) -                      &
+    qp = snnew * rho2 * (this%sk_gs(node) - hp + bot) -                          &
           snold * rho1 * this%sk_es0(node)
     !
     ! calculate cell saturation
@@ -4644,7 +4644,7 @@ contains
     real(DP) :: rhsn
     real(DP) :: f
     real(DP) :: hcellp
-    real(DP) :: esadd
+    real(DP) :: esp
     real(DP) :: q
     real(DP) :: qp
     real(DP) :: derv
@@ -4673,16 +4673,16 @@ contains
       ! -- no-delay interbeds
       if (this%idelay(ib) == 0) then
         f = area
-        !
-        ! -- calculate cell saturation
-        call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
+        !!
+        !! -- calculate cell saturation
+        !call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
         !
         ! -- calculate the effective stress perturbation
-        esadd = this%csub_calc_esadd(node, snnew)
+        esp = this%csub_calc_esadd(node, hcell)
         !
         ! -- calculate no-delay interbed rho1 and rho2
         call this%csub_nodelay_fc(ib, hcellp, hcellold, rho1, hcofn, rhsn,       &
-                                  esadd=esadd)
+                                  esadd=esp)
         !
         ! -- calculate perturbed no-delay interbed q
         qp = rhsn - hcofn * hcellp 
@@ -4788,7 +4788,7 @@ contains
     real(DP), intent(in) :: hcellold
     real(DP), intent(in), optional :: esadd
     ! -- local variables
-    real(DP) :: esa
+    real(DP) :: esp
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: znode
@@ -4804,9 +4804,9 @@ contains
     sske = DZERO
     sske0 = DZERO
     if (present(esadd)) then
-      esa = esadd
+      esp = esadd
     else
-      esa = DZERO
+      esp = DZERO
     end if
     !
     ! -- calculate factor for the head-based case
@@ -4819,7 +4819,7 @@ contains
       top = this%dis%top(n)
       bot = this%dis%bot(n)
       znode = this%csub_calc_znode(top, bot, hcell)
-      es = this%sk_es(n) + esa
+      es = this%sk_es(n) !+ esp
       esi = this%sk_esi(n)
       es0 = this%sk_es0(n)
       theta = this%sk_thetaini(n)
@@ -4840,7 +4840,7 @@ contains
       ! -- calculate the compression index factors for the delay 
       !    node relative to the center of the cell based on the 
       !    current and previous head
-      call this%csub_calc_sfacts(n, bot, znode, theta, es, es0, f)
+      call this%csub_calc_sfacts(n, bot, znode, theta, es, es0, f, esadd=esp)
     end if
     sske = f * this%ske_cr(n)
     sske0 = f * this%ske_cr(n)
@@ -5293,7 +5293,7 @@ contains
     return
   end function csub_calc_adjes
 
-  function csub_calc_esadd(this, node, sn) result(esadd)
+  function csub_calc_esadd(this, node, hcell) result(esadd)
 ! ******************************************************************************
 ! csub_calc_esadd -- Calculate the effective stress change at the bottom of
 !                    a cell resulting from a hplus head pertubation. Used to
@@ -5305,16 +5305,41 @@ contains
     class(GwfCsubType), intent(inout) :: this
     ! -- dummy
     integer(I4B), intent(in) :: node
-    real(DP), intent(in) :: sn
+    real(DP), intent(in) :: hcell
     ! -- local variables
     real(DP) :: esadd
+    real(DP) :: top
+    real(DP) :: bot
+    real(DP) :: c
 ! ------------------------------------------------------------------------------
-    if (sn <= DZERO) then
-      esadd = DZERO
-    else if (sn <= DONE) then
-      esadd = hplus * (this%sgs(node) - this%sgm(node) - DONE)
+    top = this%dis%top(node)
+    bot = this%dis%bot(node)
+    if (this%inewton /= 0) then
+      if (hcell < bot - this%epsilon) then
+        esadd = DZERO
+      else if (hcell < bot + this%epsilon) then
+        c = (hcell - bot) / this%epsilon
+        esadd = hplus * (DHALF * this%sgs(node) - this%sgm(node) - DHALF) *      &
+                        (DHALF * (c + DONE)) 
+      else if (hcell < top - this%epsilon) then
+        esadd = hplus * (DHALF * this%sgs(node) - this%sgm(node) - DHALF)
+      else if (hcell < top + this%epsilon) then
+        c = (hcell - top) / this%epsilon
+        esadd = -hplus +                                                         &
+                DHALF * ((this%sgm(node) - DHALF * this%sgs(node) - DHALF) * c + &
+                         DHALF * this%sgs(node) - this%sgm(node) + DHALF) * hplus
+      else
+        esadd = -hplus
+      end if
     else
-      esadd = -hplus
+      if (hcell < bot) then
+        esadd = DZERO
+      else if (hcell < top) then
+        !esadd = hplus * (this%sgs(node) - this%sgm(node) - DONE)
+        esadd = hplus * (DHALF * this%sgs(node) - this%sgm(node) - DHALF)
+      else
+        esadd = -hplus
+      end if
     end if
     !
     ! -- return
@@ -5397,7 +5422,8 @@ contains
     return
   end subroutine csub_calc_sat  
   
-  subroutine csub_calc_sfacts(this, node, bot, znode, theta, es, es0, fact)
+  subroutine csub_calc_sfacts(this, node, bot, znode, theta, es, es0, fact,      &
+                              esadd)
 ! ******************************************************************************
 ! csub_calc_sfacts -- Calculate sske and factor for a gwf cell or 
 !                     interbed.
@@ -5413,8 +5439,10 @@ contains
     real(DP), intent(in) :: es
     real(DP), intent(in) :: es0
     real(DP), intent(inout) :: fact
+    real(DP), intent(in), optional :: esadd
     ! -- local variables
     real(DP) :: esv
+    real(DP) :: esp
     real(DP) :: void
     real(DP) :: denom
 ! ------------------------------------------------------------------------------
@@ -5426,10 +5454,15 @@ contains
     else
       esv = es
     end if
+    if (present(esadd)) then
+      esp = esadd
+    else
+      esp = DZERO
+    end if
     !
     ! -- calculate storage factors for the effective stress case
     void = this%csub_calc_void(theta)
-    denom = this%csub_calc_adjes(node, esv, bot, znode)
+    denom = this%csub_calc_adjes(node, esv, bot, znode) + esp
     denom = denom * (DONE + void)
     if (denom /= DZERO) then
       fact = DONE / denom
