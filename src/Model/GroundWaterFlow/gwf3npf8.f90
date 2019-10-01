@@ -146,7 +146,7 @@ module GwfNpfModule
     return
   end subroutine npf_cr
 
-  subroutine npf_df(this, xt3d, ingnc)
+  subroutine npf_df(this, dis, xt3d, ingnc)
 ! ******************************************************************************
 ! npf_df -- Define
 ! ******************************************************************************
@@ -158,6 +158,7 @@ module GwfNpfModule
     use Xt3dModule, only: xt3d_cr
     ! -- dummy
     class(GwfNpftype) :: this
+    class(DisBaseType), pointer, intent(inout) :: dis
     type(Xt3dType), pointer :: xt3d
     integer(I4B), intent(in) :: ingnc
     ! -- local
@@ -171,6 +172,9 @@ module GwfNpfModule
     ! -- Print a message identifying the node property flow package.
     write(this%iout, fmtheader) this%inunit
     !
+    ! -- Set a pointer to dis
+    this%dis => dis
+    !
     ! -- Initialize block parser
     call this%parser%Initialize(this%inunit, this%iout)
     !
@@ -181,6 +185,7 @@ module GwfNpfModule
     ! -- Save pointer to xt3d object
     this%xt3d => xt3d
     if (this%ixt3d /= 0) xt3d%ixt3d = this%ixt3d
+    call this%xt3d%xt3d_df(dis)
     !
     ! -- Ensure GNC and XT3D are not both on at the same time
     if (this%ixt3d /= 0 .and. ingnc > 0) then
@@ -193,7 +198,7 @@ module GwfNpfModule
     return
   end subroutine npf_df
 
-  subroutine npf_ac(this, moffset, sparse, nodes, ia, ja)
+  subroutine npf_ac(this, moffset, sparse)
 ! ******************************************************************************
 ! npf_ac -- Add connections for extended neighbors to the sparse matrix
 ! ******************************************************************************
@@ -205,21 +210,19 @@ module GwfNpfModule
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(GwfNpftype) :: this
-    integer(I4B), intent(in) :: moffset, nodes
-    integer(I4B), dimension(:), intent(in) :: ia
-    integer(I4B), dimension(:), intent(in) :: ja
+    integer(I4B), intent(in) :: moffset
     type(sparsematrix), intent(inout) :: sparse
     ! -- local
 ! ------------------------------------------------------------------------------
     !
     ! -- Add extended neighbors (neighbors of neighbors)
-    if(this%ixt3d /= 0) call this%xt3d%xt3d_ac(moffset, sparse, nodes, ia, ja)
+    if(this%ixt3d /= 0) call this%xt3d%xt3d_ac(moffset, sparse)
     !
     ! -- Return
     return
   end subroutine npf_ac
 
-  subroutine npf_mc(this, moffset, nodes, ia, ja, iasln, jasln)
+  subroutine npf_mc(this, moffset, iasln, jasln)
 ! ******************************************************************************
 ! npf_mc -- Map connections and construct iax, jax, and idxglox
 ! ******************************************************************************
@@ -230,16 +233,14 @@ module GwfNpfModule
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(GwfNpftype) :: this
-    integer(I4B), intent(in) :: moffset, nodes
-    integer(I4B), dimension(:), intent(in) :: ia
-    integer(I4B), dimension(:), intent(in) :: ja
+    integer(I4B), intent(in) :: moffset
     integer(I4B), dimension(:), intent(in) :: iasln
     integer(I4B), dimension(:), intent(in) :: jasln
     ! -- local
 ! ------------------------------------------------------------------------------
     !
-    if(this%ixt3d /= 0) call this%xt3d%xt3d_mc(moffset, nodes, ia, ja, iasln,    &
-                                               jasln, this%inewton)
+    if(this%ixt3d /= 0) call this%xt3d%xt3d_mc(moffset, iasln,   &
+                                              jasln, this%inewton)
     !
     ! -- Return
     return
@@ -322,7 +323,7 @@ module GwfNpfModule
     return
   end subroutine npf_init_mem
 
-  subroutine npf_ar(this, dis, ic, ibound, hnew)
+  subroutine npf_ar(this, ic, ibound, hnew)
 ! ******************************************************************************
 ! npf_ar -- Allocate and Read
 ! ******************************************************************************
@@ -331,7 +332,6 @@ module GwfNpfModule
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwfNpftype) :: this
-    class(DisBaseType), pointer, intent(inout) :: dis
     type(GwfIcType), pointer, intent(in) :: ic
     integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: ibound
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: hnew
@@ -348,11 +348,8 @@ module GwfNpfModule
     ! -- read data from files
     if (this%inunit /= 0)  then
       !
-      ! -- store pointer to dis 
-      this%dis => dis
-      !
       ! -- allocate arrays
-      call this%allocate_arrays(dis%nodes, dis%njas)
+      call this%allocate_arrays(this%dis%nodes, this%dis%njas)
       !
       ! -- read the data block
       call this%read_data()
@@ -363,7 +360,7 @@ module GwfNpfModule
     !
     ! -- xt3d
     if (this%ixt3d /= 0) then
-      call this%xt3d%xt3d_ar(dis, ibound, this%k11, this%ik33, this%k33,         &
+      call this%xt3d%xt3d_ar(ibound, this%k11, this%ik33, this%k33,              &
                              this%sat, this%ik22, this%k22, this%inewton,        &
                              this%satmin, this%icelltype, this%iangle1,          &
                              this%iangle2, this%iangle3, this%angle1,            &
@@ -440,7 +437,7 @@ module GwfNpfModule
     return
   end subroutine npf_cf
 
-  subroutine npf_fc(this, kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew)
+  subroutine npf_fc(this, kiter, njasln, amat, idxglo, rhs, hnew)
 ! ******************************************************************************
 ! npf_fc -- Formulate
 ! ******************************************************************************
@@ -452,13 +449,11 @@ module GwfNpfModule
     ! -- dummy
     class(GwfNpfType) :: this
     integer(I4B) :: kiter
-    integer(I4B),intent(in) :: nodes
-    integer(I4B),intent(in) :: nja
     integer(I4B),intent(in) :: njasln
     real(DP),dimension(njasln),intent(inout) :: amat
-    integer(I4B),intent(in),dimension(nja) :: idxglo
-    real(DP),intent(inout),dimension(nodes) :: rhs
-    real(DP),intent(inout),dimension(nodes) :: hnew
+    integer(I4B),intent(in),dimension(:) :: idxglo
+    real(DP),intent(inout),dimension(:) :: rhs
+    real(DP),intent(inout),dimension(:) :: hnew
     ! -- local
     integer(I4B) :: n, m, ii, idiag, ihc
     integer(I4B) :: isymcon, idiagm
@@ -469,10 +464,10 @@ module GwfNpfModule
     ! -- Calculate conductance and put into amat
     !
     if(this%ixt3d /= 0) then
-      call this%xt3d%xt3d_fc(kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew)
+      call this%xt3d%xt3d_fc(kiter, njasln, amat, idxglo, rhs, hnew)
     else
     !
-    do n = 1, nodes
+    do n = 1, this%dis%nodes
       do ii = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
         m = this%dis%con%ja(ii)
         !
@@ -556,7 +551,7 @@ module GwfNpfModule
   end subroutine npf_fc
 
 
-  subroutine npf_fn(this, kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew)
+  subroutine npf_fn(this, kiter, njasln, amat, idxglo, rhs, hnew)
 ! ******************************************************************************
 ! npf_fn -- Fill newton terms
 ! ******************************************************************************
@@ -566,14 +561,13 @@ module GwfNpfModule
     ! -- dummy
     class(GwfNpfType) :: this
     integer(I4B) :: kiter
-    integer(I4B),intent(in) :: nodes
-    integer(I4B),intent(in) :: nja
     integer(I4B),intent(in) :: njasln
     real(DP),dimension(njasln),intent(inout) :: amat
-    integer(I4B),intent(in),dimension(nja) :: idxglo
-    real(DP),intent(inout),dimension(nodes) :: rhs
-    real(DP),intent(inout),dimension(nodes) :: hnew
+    integer(I4B),intent(in),dimension(:) :: idxglo
+    real(DP),intent(inout),dimension(:) :: rhs
+    real(DP),intent(inout),dimension(:) :: hnew
     ! -- local
+    integer(I4B) :: nodes, nja
     integer(I4B) :: n,m,ii,idiag
     integer(I4B) :: isymcon, idiagm
     integer(I4B) :: iups
@@ -593,6 +587,8 @@ module GwfNpfModule
     !
     ! -- add newton terms to solution matrix
     !
+    nodes = this%dis%nodes
+    nja = this%dis%con%nja
     if(this%ixt3d /= 0) then
       call this%xt3d%xt3d_fn(kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew)
     else
@@ -737,7 +733,7 @@ module GwfNpfModule
     return
   end subroutine npf_nur
 
-  subroutine npf_flowja(this, nodes, nja, hnew, flowja)
+  subroutine npf_flowja(this, hnew, flowja)
 ! ******************************************************************************
 ! npf_flowja -- Budget
 ! ******************************************************************************
@@ -746,10 +742,8 @@ module GwfNpfModule
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwfNpfType) :: this
-    integer(I4B),intent(in) :: nodes
-    integer(I4B),intent(in) :: nja
-    real(DP),intent(inout),dimension(nodes) :: hnew
-    real(DP),intent(inout),dimension(nja) :: flowja
+    real(DP),intent(inout),dimension(:) :: hnew
+    real(DP),intent(inout),dimension(:) :: flowja
     ! -- local
     integer(I4B) :: n, ipos, m
     real(DP) :: qnm
@@ -758,7 +752,7 @@ module GwfNpfModule
     ! -- Calculate the flow across each cell face and store in flowja
     !
     if(this%ixt3d /= 0) then
-      call this%xt3d%xt3d_flowja(nodes, nja, hnew, flowja)
+      call this%xt3d%xt3d_flowja(hnew, flowja)
     else
     !
     do n = 1, this%dis%nodes
@@ -889,7 +883,7 @@ module GwfNpfModule
     return
   end subroutine sgwf_npf_qcalc
 
-  subroutine npf_bdadj(this, nja, flowja, icbcfl, icbcun)
+  subroutine npf_bdadj(this, flowja, icbcfl, icbcun)
 ! ******************************************************************************
 ! npf_bdadj -- Calculate intercell flows
 ! ******************************************************************************
@@ -898,8 +892,7 @@ module GwfNpfModule
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwfNpfType) :: this
-    integer(I4B),intent(in) :: nja
-    real(DP),dimension(nja),intent(in) :: flowja
+    real(DP),dimension(:),intent(in) :: flowja
     integer(I4B), intent(in) :: icbcfl
     integer(I4B), intent(in) :: icbcun
     ! -- local
@@ -933,7 +926,7 @@ module GwfNpfModule
     return
   end subroutine npf_bdadj
 
-  subroutine npf_ot(this, nodes, nja, flowja)
+  subroutine npf_ot(this, flowja)
 ! ******************************************************************************
 ! npf_ot -- Budget
 ! ******************************************************************************
@@ -945,9 +938,7 @@ module GwfNpfModule
     use ConstantsModule, only: LENBIGLINE
     ! -- dummy
     class(GwfNpfType) :: this
-    integer(I4B),intent(in) :: nodes
-    integer(I4B),intent(in) :: nja
-    real(DP),intent(inout),dimension(nja) :: flowja
+    real(DP),intent(inout),dimension(:) :: flowja
     ! -- local
     character(len=LENBIGLINE) :: line
     character(len=30) :: tempstr

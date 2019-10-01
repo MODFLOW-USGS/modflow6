@@ -173,8 +173,8 @@ module ConnectionsModule
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
     ! -- local
-    character(len=LINELENGTH) :: errmsg, keyword
-    integer(I4B) :: ii,n,m
+    character(len=LINELENGTH) :: keyword
+    integer(I4B) :: n
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     integer(I4B),dimension(:),allocatable :: ihctemp
@@ -186,25 +186,6 @@ module ConnectionsModule
     character(len=24),dimension(nname) :: aname(nname)
     character(len=300) :: ermsg
     ! -- formats
-    character(len=*),parameter :: fmtsymerr =                                  &
-      "('Error in array: ',a,'.',                                              &
-        ' Array is not symmetric in positions: ',i0,' and ',i0,'.',            &
-        ' Values in these positions are: ',1pg15.6,' and ', 1pg15.6,           &
-        ' For node ',i0,' connected to node ',i0)"
-    character(len=*),parameter :: fmtsymerrja =                                &
-      "('Error in array: ',a,'.',                                              &
-        ' Array does not have symmetric counterpart in position ',i0,          &
-        ' for cell ',i0,' connected to cell ',i0)"
-    character(len=*),parameter :: fmtjanmerr =                                 &
-      "('Error in array: ',a,'.',                                              &
-        ' First value for cell : ',i0,' must equal ',i0,'.',                   &
-        ' Found ',i0,' instead.')"
-    character(len=*),parameter :: fmtjasorterr =                               &
-      "('Error in array: ',a,'.',                                              &
-        ' Entries not sorted for row: ',i0,'.',                                &
-        ' Offending entries are: ',i0,' and ',i0)"
-    character(len=*),parameter :: fmtihcerr =                                  &
-      "('IHC must be 0, 1, or 2.  Found: ',i0)"
     ! -- data
     data aname(1) /'                     IAC'/
     data aname(2) /'                      JA'/
@@ -298,137 +279,6 @@ module ConnectionsModule
     !
     ! -- finalize connection data
     call this%con_finalize(iout, ihctemp, cl12temp, hwvatemp, angldegx)
-    !!
-    !! -- Convert iac to ia
-    !do n = 2, this%nodes + 1
-    !  this%ia(n) = this%ia(n) + this%ia(n-1)
-    !enddo
-    !do n = this%nodes + 1, 2, -1
-    !  this%ia(n) = this%ia(n - 1) + 1
-    !enddo
-    !this%ia(1) = 1
-    !!
-    !! -- Convert any negative ja numbers to positive
-    !do ii = 1, this%nja
-    !  if(this%ja(ii) < 0) this%ja(ii) = -this%ja(ii)
-    !enddo
-    !!
-    !! -- Ensure ja is sorted with the row column listed first
-    !do n = 1, this%nodes
-    !  m = this%ja(this%ia(n))
-    !  if (n /= m) then
-    !    write(errmsg, fmtjanmerr) trim(adjustl(aname(2))), n, n, m
-    !    call store_error(errmsg)
-    !  endif
-    !  do ii = this%ia(n) + 1, this%ia(n + 1) - 2
-    !    m = this%ja(ii)
-    !    if(m > this%ja(ii+1)) then
-    !      write(errmsg, fmtjasorterr) trim(adjustl(aname(2))), n,              &
-    !                                  m, this%ja(ii+1)
-    !      call store_error(errmsg)
-    !    endif
-    !  enddo
-    !enddo
-    !if(count_errors() > 0) then
-    !  call this%parser%StoreErrorUnit()
-    !  call ustop()
-    !endif
-    !!
-    !! -- fill the isym arrays
-    !call fillisym(this%nodes, this%nja, this%ia, this%ja, this%isym)
-    !!
-    !! -- check for symmetry in ja (isym value of zero indicates there is no
-    !!    symmetric connection
-    !do n = 1, this%nodes
-    !  do ii = this%ia(n), this%ia(n + 1) - 1
-    !    m = this%ja(ii)
-    !    if(this%isym(ii) == 0) then
-    !      write(errmsg, fmtsymerrja) trim(adjustl(aname(2))), ii, n, m
-    !      call store_error(errmsg)
-    !    endif
-    !  enddo
-    !enddo
-    !if(count_errors() > 0) then
-    !  call this%parser%StoreErrorUnit()
-    !  call ustop()
-    !endif
-    !!
-    !! -- Fill the jas array, which maps any connection to upper triangle
-    !call filljas(this%nodes, this%nja, this%ia, this%ja, this%isym, this%jas)
-    !!
-    !! -- Put into symmetric array
-    !do n = 1, this%nodes
-    !  do ii = this%ia(n) + 1, this%ia(n + 1) - 1
-    !    m = this%ja(ii)
-    !    if(ihctemp(ii) /= ihctemp(this%isym(ii))) then
-    !      write(errmsg, fmtsymerr) trim(adjustl(aname(3))), ii, this%isym(ii), &
-    !                         ihctemp(ii), ihctemp(this%isym(ii)), n, m
-    !      call store_error(errmsg)
-    !    else
-    !      this%ihc(this%jas(ii)) = ihctemp(ii)
-    !    endif
-    !  enddo
-    !enddo
-    !if(count_errors() > 0) then
-    !  call this%parser%StoreErrorUnit()
-    !  call ustop()
-    !endif
-    !!
-    !! -- Put cl12 into symmetric arrays cl1 and cl2
-    !do n = 1, this%nodes
-    !  do ii = this%ia(n) + 1, this%ia(n + 1) - 1
-    !    m = this%ja(ii)
-    !    if(m > n) then
-    !      this%cl1(this%jas(ii)) = cl12temp(ii)
-    !    elseif(n > m) then
-    !      this%cl2(this%jas(ii)) = cl12temp(ii)
-    !    endif
-    !  enddo
-    !enddo
-    !!
-    !! -- Put HWVA into symmetric array based on the value of IHC
-    !!    IHC = 0, vertical connection, HWVA is vertical flow area
-    !!    IHC = 1, horizontal connection, HWVA is the width perpendicular to
-    !!             flow
-    !!    IHC = 2, horizontal connection for a vertically staggered grid.
-    !!             HWVA is the width perpendicular to flow.
-    !do n = 1, this%nodes
-    !  do ii = this%ia(n) + 1, this%ia(n + 1) - 1
-    !    m = this%ja(ii)
-    !    if(hwvatemp(ii) /= hwvatemp(this%isym(ii))) then
-    !      write(errmsg, fmtsymerr) trim(adjustl(aname(5))), ii, this%isym(ii), &
-    !                         hwvatemp(ii), hwvatemp(this%isym(ii)), n, m
-    !      call store_error(errmsg)
-    !    endif
-    !    if(ihctemp(ii) < 0 .or. ihctemp(ii) > 2) then
-    !      write(errmsg, fmtihcerr) ihctemp(ii)
-    !      call store_error(errmsg)
-    !    endif
-    !    this%hwva(this%jas(ii)) = hwvatemp(ii)
-    !  enddo
-    !enddo
-    !if(count_errors() > 0) then
-    !  call this%parser%StoreErrorUnit()
-    !  call ustop()
-    !endif
-    !!
-    !! -- Put anglextemp into this%anglex; store only upper triangle
-    !if(this%ianglex /= 0) then
-    !  do n = 1, this%nodes
-    !    do ii = this%ia(n) + 1, this%ia(n + 1) - 1
-    !      m = this%ja(ii)
-    !      if(n > m) cycle
-    !      this%anglex(this%jas(ii)) = angldegx(ii) * DPIO180
-    !    enddo
-    !  enddo
-    !  deallocate(angldegx)
-    !else
-    !  do n = 1, size(this%anglex)
-    !    this%anglex(n) = DNODATA
-    !  enddo
-    !  write(iout, '(1x,a)') 'ANGLDEGX NOT FOUND IN CONNECTIONDATA BLOCK. ' //  &
-    !                        'SOME CAPABILITIES MAY BE LIMITED.'
-    !endif
     !
     ! -- deallocate temp arrays
     deallocate(ihctemp)
@@ -457,14 +307,10 @@ module ConnectionsModule
     real(DP), dimension(:), intent(in) :: hwvatemp
     real(DP), dimension(:), intent(in) :: angldegx
     ! -- local
-    character(len=LINELENGTH) :: errmsg, keyword
-    integer(I4B) :: ii,n,m
-    integer(I4B) :: ierr
-    logical :: isfound, endOfBlock
+    character(len=LINELENGTH) :: errmsg
+    integer(I4B) :: ii, n ,m
     integer(I4B), parameter :: nname = 6
-    logical,dimension(nname) :: lname
     character(len=24),dimension(nname) :: aname(nname)
-    character(len=300) :: ermsg
     ! -- formats
     character(len=*),parameter :: fmtsymerr =                                  &
       "('Error in array: ',a,'.',                                              &
