@@ -1141,6 +1141,17 @@ module GwfDisuModule
     return
   end subroutine connection_vector
 
+  ! return x,y coordinate for a node
+  subroutine get_cellxy(this, node, xcell, ycell)
+    class(GwfDisuType), intent(in)  :: this
+    integer(I4B), intent(in)        :: node         ! the reduced node number
+    real(DP), intent(out)           :: xcell, ycell ! the x,y for the cell
+    
+    xcell = this%cellxy(1, node)
+    ycell = this%cellxy(2, node)
+    
+  end subroutine get_cellxy                             
+
   subroutine allocate_scalars(this, name_model)
 ! ******************************************************************************
 ! allocate_scalars -- Allocate and initialize scalar variables in this class

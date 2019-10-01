@@ -68,6 +68,7 @@ module BaseDisModule
     procedure :: noder_from_cellid
     procedure :: connection_normal
     procedure :: connection_vector
+    procedure :: get_cellxy
     procedure :: supports_layers
     procedure :: allocate_scalars
     procedure :: allocate_arrays
@@ -95,7 +96,7 @@ module BaseDisModule
     procedure, public  :: highest_active
     procedure, public  :: get_area
   end type DisBaseType
-
+  
   contains
 
   subroutine dis_df(this)
@@ -477,7 +478,18 @@ module BaseDisModule
     ! -- return
     return
   end subroutine connection_vector
+                                 
+  ! return x,y coordinate for a node
+  subroutine get_cellxy(this, node, xcell, ycell)
+    class(DisBaseType), intent(in) :: this
+    integer(I4B), intent(in) :: node
+    real(DP), intent(out) :: xcell, ycell
+      
+    call store_error('Program error: getcellxy not implemented.')
+    call ustop()
     
+  end subroutine get_cellxy                             
+                               
   subroutine allocate_scalars(this, name_model)
 ! ******************************************************************************
 ! allocate_scalars -- Allocate and initialize scalar variables in this class
