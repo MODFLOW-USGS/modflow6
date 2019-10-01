@@ -28,6 +28,7 @@ module GwfDisuModule
   contains
     procedure :: dis_df => disu_df
     procedure :: dis_da => disu_da
+    procedure :: get_cellxy => get_cellxy_disu
     procedure :: disu_ck
     procedure :: get_nodenumber_idx1
     procedure :: get_nodeuser
@@ -1142,7 +1143,7 @@ module GwfDisuModule
   end subroutine connection_vector
 
   ! return x,y coordinate for a node
-  subroutine get_cellxy(this, node, xcell, ycell)
+  subroutine get_cellxy_disu(this, node, xcell, ycell)
     class(GwfDisuType), intent(in)  :: this
     integer(I4B), intent(in)        :: node         ! the reduced node number
     real(DP), intent(out)           :: xcell, ycell ! the x,y for the cell
@@ -1150,7 +1151,7 @@ module GwfDisuModule
     xcell = this%cellxy(1, node)
     ycell = this%cellxy(2, node)
     
-  end subroutine get_cellxy                             
+  end subroutine get_cellxy_disu                             
 
   subroutine allocate_scalars(this, name_model)
 ! ******************************************************************************

@@ -481,10 +481,14 @@ module BaseDisModule
                                  
   ! return x,y coordinate for a node
   subroutine get_cellxy(this, node, xcell, ycell)
-    class(DisBaseType), intent(in) :: this
-    integer(I4B), intent(in) :: node
-    real(DP), intent(out) :: xcell, ycell
+    class(DisBaseType), intent(in)  :: this
+    integer(I4B), intent(in)        :: node
+    real(DP), intent(out)           :: xcell, ycell
       
+    ! suppress warning
+    xcell = -999999.0
+    ycell = -999999.0
+    
     call store_error('Program error: getcellxy not implemented.')
     call ustop()
     

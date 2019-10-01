@@ -34,6 +34,7 @@ module GwfDisvModule
   contains
     procedure :: dis_df => disv_df
     procedure :: dis_da => disv_da
+    procedure :: get_cellxy => get_cellxy_disv
     procedure, public :: record_array
     procedure, public :: read_layer_array
     procedure, public :: record_srcdst_list_header
@@ -1518,7 +1519,7 @@ module GwfDisvModule
   end subroutine connection_vector
 
   ! return x,y coordinate for a node
-  subroutine get_cellxy(this, node, xcell, ycell)
+  subroutine get_cellxy_disv(this, node, xcell, ycell)
     use InputOutputModule, only: get_jk
     class(GwfDisvType), intent(in)  :: this
     integer(I4B), intent(in)        :: node         ! the reduced node number
@@ -1532,7 +1533,7 @@ module GwfDisvModule
     xcell = this%cellxy(1, ncell2d)
     ycell = this%cellxy(2, ncell2d)
     
-  end subroutine get_cellxy 
+  end subroutine get_cellxy_disv 
                                
   subroutine allocate_scalars(this, name_model)
 ! ******************************************************************************

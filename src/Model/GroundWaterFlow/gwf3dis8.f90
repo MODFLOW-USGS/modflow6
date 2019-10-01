@@ -32,6 +32,7 @@ module GwfDisModule
   contains
     procedure :: dis_df => dis3d_df
     procedure :: dis_da => dis3d_da
+    procedure :: get_cellxy => get_cellxy_dis3d
     procedure, public :: record_array
     procedure, public :: read_layer_array
     procedure, public :: record_srcdst_list_header
@@ -47,7 +48,6 @@ module GwfDisModule
     procedure :: get_ncpl
     procedure :: connection_vector
     procedure :: connection_normal
-    procedure :: get_cellxy
     ! -- private
     procedure :: read_options
     procedure :: read_dimensions
@@ -683,8 +683,8 @@ module GwfDisModule
     enddo
     !
     ! -- fill x,y coordinate arrays  
-    this%cellx(1) = DHALF*this%delr(1) + this%xorigin
-    this%celly(1) = DHALF*this%delc(1) + this%yorigin
+    this%cellx(1) = DHALF*this%delr(1)
+    this%celly(1) = DHALF*this%delc(1)
     do j = 2, this%ncol
       this%cellx(j) = this%cellx(j-1) + DHALF*this%delr(j-1) + DHALF*this%delr(j)
     enddo
@@ -1418,7 +1418,7 @@ module GwfDisModule
   end subroutine
    
   ! return x,y coordinate for a node
-  subroutine get_cellxy(this, node, xcell, ycell)
+  subroutine get_cellxy_dis3d(this, node, xcell, ycell)
     use InputOutputModule, only: get_ijk
     class(GwfDisType), intent(in) :: this
     integer(I4B), intent(in)      :: node         ! the reduced node number
@@ -1432,7 +1432,7 @@ module GwfDisModule
     xcell = this%cellx(j)
     ycell = this%celly(i)
     
-  end subroutine get_cellxy
+  end subroutine get_cellxy_dis3d
                                
   subroutine read_int_array(this, line, lloc, istart, istop, iout, in, &
                             iarray, aname)
