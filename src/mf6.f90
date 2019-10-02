@@ -116,10 +116,6 @@ subroutine mf6sub(mf6cback)
     ! -- TIME UPDATE (TU)
     call tdis_tu()
     !
-    ! -- MODFLOW 6 callback function allows an external program
-    !    to modify program during execution
-    call mf6cback()
-    !
     !
     ! -- READ AND PREPARE (RP)
     ! -- Read and prepare each model
@@ -139,6 +135,10 @@ subroutine mf6sub(mf6cback)
       sp => GetBaseSolutionFromList(basesolutionlist, is)
       call sp%sln_rp()
     enddo
+    !
+    ! -- MODFLOW 6 callback function allows an external program
+    !    to modify program during execution
+    call mf6cback()
     !
     !
     ! -- CALCULATE (CA)
