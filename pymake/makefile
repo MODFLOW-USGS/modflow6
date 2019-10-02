@@ -43,11 +43,11 @@ ${SOURCEDIR14}
 
 # Define the Fortran compile flags
 FC = gfortran
-FFLAGS = -O2 -ffpe-summary=overflow -ffpe-trap=overflow,zero,invalid -fbacktrace --coverage
+FFLAGS = -O2 -ffpe-summary=overflow -ffpe-trap=overflow,zero,invalid -fbacktrace
 
 # Define the C compile flags
 CC = gcc
-CFLAGS = -O2 -D_UF 
+CFLAGS = -O3 -D_UF
 
 # Define the libraries
 SYSLIBS = -lc 
