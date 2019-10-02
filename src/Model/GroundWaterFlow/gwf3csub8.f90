@@ -259,6 +259,7 @@ module GwfCsubModule
     procedure, private :: csub_sk_update
     procedure, private :: csub_sk_calc_comp
     procedure, private :: csub_sk_calc_sske
+    procedure, private :: csub_sk_calc_sske_derivative
     procedure, private :: csub_sk_fc
     procedure, private :: csub_sk_fn
     procedure, private :: csub_sk_wcomp_fc
@@ -3421,7 +3422,6 @@ contains
     real(DP), intent(in), optional :: argtled
     real(DP), intent(in), optional :: esadd
     ! -- local variables
-    !integer(I4B) :: iupdate
     integer(I4B) :: node
     real(DP) :: tled
     real(DP) :: esp
@@ -3815,7 +3815,6 @@ contains
     real(DP) :: znode
     real(DP) :: hcell
     real(DP) :: dzhalf
-    !real(DP) :: ztop
     real(DP) :: zbot
     real(DP) :: dbpcs
     real(DP) :: q
@@ -4150,7 +4149,6 @@ contains
     integer(I4B) :: node
     integer(I4B) :: idiag
     integer(I4B) :: idelay
-    !real(DP) :: esi
     real(DP) :: tled
     real(DP) :: area
     real(DP) :: hcell
@@ -4405,13 +4403,10 @@ contains
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: tthk
-    real(DP) :: tthk0
     real(DP) :: snold
     real(DP) :: snnew
     real(DP) :: sske
-    real(DP) :: sske0
     real(DP) :: rho1
-    real(DP) :: rho2
 ! ------------------------------------------------------------------------------
 !
 ! -- initialize variables
@@ -4422,24 +4417,22 @@ contains
     top = this%dis%top(node)
     bot = this%dis%bot(node)
     tthk = this%sk_thickini(node)
-    tthk0 = this%sk_thickini(node)
     !
     ! -- calculate aquifer saturation
     call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
     !
     ! -- storage coefficients
-    call this%csub_sk_calc_sske(node, sske, sske0, hcell)
-    rho1 = sske0 * area * tthk0 * tled
-    rho2 = sske * area * tthk * tled
+    call this%csub_sk_calc_sske(node, sske, hcell)
+    rho1 = sske * area * tthk * tled
     !
     ! -- update sk and ske
-    this%sk_ske(node) = sske0 * tthk0 * snold
+    this%sk_ske(node) = sske * tthk * snold
     this%sk_sk(node) = sske * tthk * snnew
     !
     ! -- calculate hcof and rhs term
-    hcof = -rho2 * snnew
+    hcof = -rho1 * snnew
     rhs = rho1 * snold * this%sk_es0(node) -                                     &
-          rho2 * snnew * (this%sk_gs(node) + bot) 
+          rho1 * snnew * (this%sk_gs(node) + bot) 
     !
     ! -- return
     return
@@ -4464,18 +4457,16 @@ contains
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: tthk
-    real(DP) :: tthk0
     real(DP) :: derv
     real(DP) :: sske
-    real(DP) :: sske0
-    !real(DP) :: rho1
-    real(DP) :: rho2
-    !real(DP) :: snnew
-    !real(DP) :: snold
+    real(DP) :: rho1
+    real(DP) :: snnew
+    real(DP) :: snold
     !real(DP) :: hp
     !real(DP) :: q
     !real(DP) :: qp
     !real(DP) :: esp
+    real(DP) :: dsske
     real(DP) :: sderv
 ! ------------------------------------------------------------------------------
 !
@@ -4487,7 +4478,6 @@ contains
     top = this%dis%top(node)
     bot = this%dis%bot(node)
     tthk = this%sk_thickini(node)
-    tthk0 = this%sk_thickini(node)
     !!
     !! -- perturb the head
     !hp = hcell + hplus
@@ -4499,49 +4489,61 @@ contains
     !esp = this%csub_calc_esadd(node, hcell)
     !!
     !! -- storage coefficients
-    !call this%csub_sk_calc_sske(node, sske, sske0, hp, esadd=esp)
-    !rho1 = sske0 * area * tthk0 * tled
-    !rho2 = sske * area * tthk * tled
+    !call this%csub_sk_calc_sske(node, sske, hp, esadd=esp)
+    !rho1 = sske * area * tthk * tled
     !!
     !! -- calculate perturbed skeletal q
-    !qp = snnew * rho2 * (this%sk_gs(node) - hp + bot) -                          &
+    !qp = snnew * rho1 * (this%sk_gs(node) - hp + bot) -                          &
     !      snold * rho1 * this%sk_es0(node)
     !!
     !! calculate cell saturation
     !call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
     !!
     !! -- storage coefficients
-    !call this%csub_sk_calc_sske(node, sske, sske0, hcell)
-    !rho1 = sske0 * area * tthk0 * tled
-    !rho2 = sske * area * tthk * tled
+    !call this%csub_sk_calc_sske(node, sske, hcell)
+    !rho1 = sske0 * area * tthk * tled
     !!
     !! -- calculate skeletal q
-    !q = snnew * rho2 * (this%sk_gs(node) - hcell + bot) -                    &
+    !q = snnew * rho1 * (this%sk_gs(node) - hcell + bot) -                    &
     !    snold * rho1 * this%sk_es0(node)
     !!
     !! -- calculate the derivative
     !derv = (qp - q) / hplus
     !!
     !! -- update hcof and rhs
-    !hcof = rho2 * snnew + derv
-    !rhs = snnew * rho2 * hcell + derv * hcell
+    !hcof = rho1 * snnew + derv
+    !rhs = snnew * rho1 * hcell + derv * hcell
     !
     ! -- calculate saturation derivitive
     derv = sQuadraticSaturationDerivative(top, bot, hcell)    
     !
     ! -- storage coefficients
-    call this%csub_sk_calc_sske(node, sske, sske0, hcell)
-    rho2 = sske * area * tthk * tled
+    call this%csub_sk_calc_sske(node, sske, hcell)
+    rho1 = sske * area * tthk * tled
     !
     ! -- calculate hcof term
-    hcof = -rho2 * derv * hcell
+    hcof = -rho1 * derv * hcell
     !
     ! -- calculate rhs term
     rhs = hcof * hcell
     !
     ! -- add derivative of storage coefficient
-    if (this%ieslag == 0 .and. this%lhead_based .EQV. .FALSE.) then
-      sderv = this%csub_calc_slope_derivative(node, hcell)
+    if (this%ieslag == 0) then
+      !
+      ! -- calculate cell saturation
+      call this%csub_calc_sat(node, hcell, hcell, snnew, snold)
+      !
+      ! -- calculate the derivative of the average sske
+      call this%csub_sk_calc_sske_derivative(node, dsske, hcell)
+      !
+      ! -- calculate the specific storage derivative term
+      sderv = snnew * dsske * area * tthk * tled * hcell
+      !
+      ! -- add the specific storage derivative term to hcof and rhs
+      !    sderv is added since the slope of the specific storage derivative
+      !    is negative and dsske is returned as a negative number      
+      hcof = hcof + sderv
+      rhs = rhs + sderv * hcell
     end if
     !
     ! -- return
@@ -4655,9 +4657,7 @@ contains
     real(DP), intent(in) :: hcellold
     real(DP), intent(inout) :: hcof
     real(DP), intent(inout) :: rhs
-    ! locals
-    !character(len=20) :: cellid
-    !character (len=LINELENGTH) :: errmsg
+    ! -- locals
     integer(I4B) :: idelaycalc
     real(DP) :: hcofn
     real(DP) :: rhsn
@@ -4670,9 +4670,6 @@ contains
     real(DP) :: snnew
     real(DP) :: snold
     real(DP) :: rho1
-    !real(DP) :: rho2
-    !real(DP) :: top
-    !real(DP) :: bot
 ! ------------------------------------------------------------------------------
 !
 ! -- initialize variables
@@ -4788,7 +4785,7 @@ contains
     return
   end subroutine define_listlabel
 
-  subroutine csub_sk_calc_sske(this, n, sske, sske0, hcell, esadd)
+  subroutine csub_sk_calc_sske(this, n, sske, hcell, esadd)
 ! ******************************************************************************
 ! csub_sk_calc_sske -- Calculate sske for a gwf cell.
 ! ******************************************************************************
@@ -4798,7 +4795,6 @@ contains
     class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: n
     real(DP), intent(inout) :: sske
-    real(DP), intent(inout) :: sske0
     real(DP), intent(in) :: hcell
     real(DP), intent(in), optional :: esadd
     ! -- local variables
@@ -4816,7 +4812,6 @@ contains
     !
     ! -- initialize variables
     sske = DZERO
-    sske0 = DZERO
     if (present(esadd)) then
       esp = esadd
     else
@@ -4858,11 +4853,62 @@ contains
                                  esadd=esp)
     end if
     sske = f * this%ske_cr(n)
-    sske0 = f * this%ske_cr(n)
     !
     ! -- return
     return
   end subroutine csub_sk_calc_sske
+
+  subroutine csub_sk_calc_sske_derivative(this, n, dsske, hcell)
+! ******************************************************************************
+! csub_sk_calc_sske_derivitive -- Calculate derivative of sske for a gwf cell.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    class(GwfCsubType), intent(inout) :: this
+    integer(I4B), intent(in) :: n
+    real(DP), intent(inout) :: dsske
+    real(DP), intent(in) :: hcell
+    ! -- local variables
+    real(DP) :: top
+    real(DP) :: bot
+    real(DP) :: znode
+    real(DP) :: es
+    real(DP) :: esi
+    real(DP) :: es0
+    real(DP) :: theta
+    real(DP) :: f
+    real(DP) :: fd
+! ------------------------------------------------------------------------------
+    !
+    ! -- initialize variables
+    dsske = DZERO
+    !
+    ! -- calculate factor for the effective stress case
+    if (this%lhead_based .EQV. .FALSE.) then
+      top = this%dis%top(n)
+      bot = this%dis%bot(n)
+      znode = this%csub_calc_znode(top, bot, hcell)
+      es = this%sk_es(n) 
+      es0 = this%sk_es0(n)
+      theta = this%sk_thetaini(n)
+      !
+      ! -- calculate the compression index factors for the delay 
+      !    node relative to the center of the cell based on the 
+      !    current and previous head
+      call this%csub_calc_sfacts(n, bot, znode, theta, es, es0, hcell, f,       &
+                                 derivative=.TRUE.)
+      !
+      ! -- calculate the slope derivative
+      fd = this%csub_calc_slope_derivative(n, hcell)
+      !
+      ! -- calculate the derivative
+      dsske = f * fd * this%ske_cr(n)
+    end if
+    !
+    ! -- return
+    return
+  end subroutine csub_sk_calc_sske_derivative
   
   subroutine csub_sk_calc_comp(this, node, hcell, hcellold, comp)
 ! ******************************************************************************
@@ -5494,7 +5540,7 @@ contains
   end subroutine csub_calc_sat  
   
   subroutine csub_calc_sfacts(this, node, bot, znode, theta, es, es0, hcell,     &
-                              fact, esadd)
+                              fact, esadd, derivative)
 ! ******************************************************************************
 ! csub_calc_sfacts -- Calculate sske and factor for a gwf cell or 
 !                     interbed.
@@ -5512,6 +5558,7 @@ contains
     real(DP), intent(in) :: hcell
     real(DP), intent(inout) :: fact
     real(DP), intent(in), optional :: esadd
+    logical, intent(in), optional :: derivative
     ! -- local variables
     real(DP) :: esv
     real(DP) :: esp
@@ -5535,6 +5582,11 @@ contains
     ! -- calculate storage factors for the effective stress case
     void = this%csub_calc_void(theta)
     denom = this%csub_calc_adjes(node, esv, bot, znode, hcell) + esp
+    if (present(derivative)) then
+      if (derivative .EQV. .TRUE.) then
+        denom = denom * denom
+      end if
+    end if
     denom = denom * (DONE + void)
     if (denom /= DZERO) then
       fact = DONE / denom
