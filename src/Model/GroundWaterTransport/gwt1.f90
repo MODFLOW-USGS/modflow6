@@ -431,7 +431,7 @@ module GwtModule
     !
     ! -- Allocate and read modules attached to model
     if(this%inic  > 0) call this%ic%ic_ar(this%x)
-    if(this%infmi > 0) call this%fmi%fmi_ar(this%dis, this%ibound,this%inssm)
+    if(this%infmi > 0) call this%fmi%fmi_ar(this%dis, this%ibound, this%inssm)
     if(this%inmst > 0) call this%mst%mst_ar(this%dis, this%ibound)
     if(this%inadv > 0) call this%adv%adv_ar(this%dis, this%ibound)
     if(this%indsp > 0) call this%dsp%dsp_ar(this%ibound, this%mst%porosity)

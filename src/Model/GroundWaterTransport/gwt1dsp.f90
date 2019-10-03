@@ -739,6 +739,10 @@ module GwtDspModule
       if(this%ibound(n) == 0) cycle
       !
       ! -- specific discharge
+      qx = DZERO
+      qy = DZERO
+      qz = DZERO
+      q = DZERO
       qx = this%fmi%gwfspdis(1, n)
       qy = this%fmi%gwfspdis(2, n)
       qz = this%fmi%gwfspdis(3, n)
@@ -834,7 +838,7 @@ module GwtDspModule
     integer(I4B) :: nodes, n, m, idiag, ipos
     real(DP) :: clnm, clmn, dn, dm
     real(DP) :: vg1, vg2, vg3
-    integer(I4B) :: ihc, ibdn, ibdm, ictn, ictm, isympos
+    integer(I4B) :: ihc, ictn, ictm, isympos
     real(DP) :: satn, satm, topn, topm, botn, botm
     real(DP) :: hwva, cond, cn, cm, denom
     real(DP) :: anm, amn, thksatn, thksatm, sill_top, sill_bot, tpn, tpm
@@ -860,16 +864,20 @@ module GwtDspModule
         clnm = this%dis%con%cl1(isympos)
         clmn = this%dis%con%cl2(isympos)
         ihc = this%dis%con%ihc(isympos)
-        ibdn = this%fmi%gwfibound(n)
-        ibdm = this%fmi%gwfibound(m)
-        ictn = this%fmi%gwficelltype(n)
-        ictm = this%fmi%gwficelltype(m)
-        satn = this%fmi%gwfsat(n)
-        satm = this%fmi%gwfsat(m)
         topn = this%dis%top(n)
         topm = this%dis%top(m)
         botn = this%dis%bot(n)
         botm = this%dis%bot(m)
+        !
+        ! -- flow model information
+        ictn = 0
+        ictm = 0
+        satn = DONE
+        satm = DONE
+        ictn = this%fmi%gwficelltype(n)
+        ictm = this%fmi%gwficelltype(m)
+        satn = this%fmi%gwfsat(n)
+        satm = this%fmi%gwfsat(m)
         !
         ! -- Calculate dispersion coefficient for cell n in the direction
         !    normal to the shared n-m face and for cell m in the direction
