@@ -13,6 +13,7 @@ module GwtFmiModule
 
   type, extends(NumericalPackageType) :: GwtFmiType
     
+    logical, pointer                                :: advection => null()      ! if .false., then there is no water flow
     integer(I4B), dimension(:), pointer, contiguous :: iatp => null()           ! advanced transport package applied to gwfbndlist
     type(ListType), pointer                         :: gwfbndlist => null()     ! list of gwf stress packages
     integer(I4B), pointer                           :: iflowerr => null()       ! add the flow error correction
@@ -104,6 +105,7 @@ module GwtFmiModule
     integer(I4B), dimension(:), pointer, contiguous :: ibound
     integer(I4B), intent(in) :: inssm
     ! -- local
+    integer(I4B) :: nflowpack
     ! -- formats
     character(len=*), parameter :: fmtfmi =                                    &
       "(1x,/1x,'FMI -- FLOW MODEL INTERFACE, VERSION 1, 8/29/2017',            &
@@ -122,7 +124,9 @@ module GwtFmiModule
     !
     ! -- Make sure that ssm is on if there are any boundary packages
     if (inssm == 0) then
-      if (this%gwfbndlist%Count() > 0) then
+      nflowpack = 0
+      if (this%advection) nflowpack = this%gwfbndlist%Count()
+      if (nflowpack > 0) then
         call store_error('ERROR: FLOW MODEL HAS BOUNDARY PACKAGES, BUT THERE &
           &IS NO SSM PACKAGE.  THE SSM PACKAGE MUST BE ACTIVATED.')
         call ustop()
@@ -235,7 +239,7 @@ module GwtFmiModule
     ! -- local
     class(BndType), pointer :: packobj
     integer(I4B) :: n, ipos, idiag
-    integer(I4B) :: ip, i
+    integer(I4B) :: ip, i, nflowpack
     real(DP) :: qbnd
 ! ------------------------------------------------------------------------------
     !
@@ -256,7 +260,9 @@ module GwtFmiModule
     enddo
     !
     ! -- Add package flow terms
-    do ip = 1, this%gwfbndlist%Count()
+    nflowpack = 0
+    if (this%advection) nflowpack = this%gwfbndlist%Count()
+    do ip = 1, nflowpack
       packobj => GetBndFromList(this%gwfbndlist, ip)
       do i = 1, packobj%nbound
         n = packobj%nodelist(i)
@@ -387,11 +393,13 @@ module GwtFmiModule
     call this%NumericalPackageType%allocate_scalars()
     !
     ! -- Allocate
+    call mem_allocate(this%advection, 'ADVECTION', this%origin)
     call mem_allocate(this%iflowerr, 'IFLOWERR', this%origin)
     call mem_allocate(this%igwfstrgss, 'IGWFSTRGSS', this%origin)
     call mem_allocate(this%igwfstrgsy, 'IGWFSTRGSY', this%origin)
     !
     ! -- Initialize
+    this%advection = .false.
     this%iflowerr = 1
     this%igwfstrgss = 0
     this%igwfstrgsy = 0
@@ -418,12 +426,33 @@ module GwtFmiModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Initialize
-    nflowpack = this%gwfbndlist%Count()
+    nflowpack = 0
+    if (this%advection) nflowpack = this%gwfbndlist%Count()
     !
     ! -- Allocate
     call mem_allocate(this%gwfthksat, nodes, 'THKSAT', this%origin)
     call mem_allocate(this%flowerr, nodes, 'FLOWERR', this%origin)
     call mem_allocate(this%iatp, nflowpack, 'IATP', this%origin)
+    if (.not. this%advection) then
+      call mem_allocate(this%igwfinwtup, 'IGWFINWTUP', this%origin)
+      call mem_allocate(this%gwfflowja, this%dis%con%nja, 'GWFFLOWJA', this%origin)
+      call mem_allocate(this%gwfsat, nodes, 'GWFSAT', this%origin)
+      call mem_allocate(this%gwfhead, nodes, 'GWFHEAD', this%origin)
+      call mem_allocate(this%gwfspdis, 3, nodes, 'GWFSPDIS', this%origin)
+      call mem_allocate(this%gwfibound, nodes, 'GWFIBOUND', this%origin)
+      call mem_allocate(this%gwficelltype, nodes, 'GWFICELLTYPE', this%origin)
+      this%igwfinwtup = 0
+      do n = 1, nodes
+        this%gwfsat(n) = DONE
+        this%gwfhead(n) = DZERO
+        this%gwfspdis(:, n) = DZERO
+        this%gwfibound(n) = 1
+        this%gwficelltype(n) = 0
+      end do
+      do n = 1, size(this%gwfflowja)
+        this%gwfflowja(n) = DZERO
+      end do
+    end if
     !
     ! -- Initialize
     do n = 1, nodes
