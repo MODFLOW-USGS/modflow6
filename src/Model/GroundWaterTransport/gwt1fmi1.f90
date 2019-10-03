@@ -31,10 +31,6 @@ module GwtFmiModule
     integer(I4B), pointer                           :: igwfstrgsy => null()     ! indicates if gwfstrgsy is available
     integer(I4B), dimension(:), pointer, contiguous :: gwficelltype => null()   ! pointer to the GWF icelltype array
     integer(I4B), pointer                           :: igwfinwtup => null()     ! NR indicator
-    integer(I4B), pointer                           :: igwfiusgnrhc => null()   ! iusg indicator
-    real(DP), pointer                               :: gwfsatomega => null()    ! NR satomega value
-    integer(I4B), pointer                           :: igwfinwtupw => null()    ! inwtupw indicator
-    real(DP), pointer                               :: gwfsatmin => null()      ! NR satmin value
 
   contains
   
@@ -354,10 +350,6 @@ module GwtFmiModule
     this%gwfbndlist => null()
     this%gwficelltype => null()
     this%igwfinwtup => null()
-    this%igwfiusgnrhc => null()
-    this%gwfsatomega => null()
-    this%igwfinwtupw => null()
-    this%gwfsatmin => null()
     !
     ! -- deallocate fmi arrays
     call mem_deallocate(this%gwfthksat)
@@ -429,10 +421,23 @@ module GwtFmiModule
     nflowpack = 0
     if (this%advection) nflowpack = this%gwfbndlist%Count()
     !
-    ! -- Allocate
+    ! -- Allocate variables needed for all cases
     call mem_allocate(this%gwfthksat, nodes, 'THKSAT', this%origin)
     call mem_allocate(this%flowerr, nodes, 'FLOWERR', this%origin)
     call mem_allocate(this%iatp, nflowpack, 'IATP', this%origin)
+    !
+    ! -- Initialize
+    do n = 1, nodes
+      this%gwfthksat(n) = DZERO
+      this%flowerr(n) = DZERO
+    enddo
+    do n = 1, nflowpack
+      this%iatp(n) = 0
+    end do
+    !
+    ! -- Allocate variables needed when there isn't a GWF model running 
+    !    concurrently.  In that case, these variables are pointed directly
+    !    to the corresponding GWF variables.
     if (.not. this%advection) then
       call mem_allocate(this%igwfinwtup, 'IGWFINWTUP', this%origin)
       call mem_allocate(this%gwfflowja, this%dis%con%nja, 'GWFFLOWJA', this%origin)
@@ -453,15 +458,6 @@ module GwtFmiModule
         this%gwfflowja(n) = DZERO
       end do
     end if
-    !
-    ! -- Initialize
-    do n = 1, nodes
-      this%gwfthksat(n) = DZERO
-      this%flowerr(n) = DZERO
-    enddo
-    do n = 1, nflowpack
-      this%iatp(n) = 0
-    end do
     !
     ! -- Return
     return
