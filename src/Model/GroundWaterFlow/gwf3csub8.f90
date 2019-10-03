@@ -3136,13 +3136,9 @@ contains
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: thick
-    !real(DP) :: snnew
-    !real(DP) :: dmn
-    !real(DP) :: dsn
     real(DP) :: gsi
     real(DP) :: sm
     real(DP) :: sp
-    !real(DP) :: hsi
     real(DP) :: va_scale
     real(DP) :: hcell
     real(DP) :: hbar
@@ -3523,7 +3519,6 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use TdisModule, only: delt
     implicit none
     ! -- dummy variables
     class(GwfCsubType) :: this
@@ -4526,10 +4521,6 @@ contains
     real(DP) :: rho1
     real(DP) :: snnew
     real(DP) :: snold
-    !real(DP) :: hp
-    !real(DP) :: q
-    !real(DP) :: qp
-    !real(DP) :: esp
     real(DP) :: dsske
     real(DP) :: sderv
 ! ------------------------------------------------------------------------------
@@ -4542,41 +4533,6 @@ contains
     top = this%dis%top(node)
     bot = this%dis%bot(node)
     tthk = this%sk_thickini(node)
-    !!
-    !! -- perturb the head
-    !hp = hcell + hplus
-    !!
-    !! -- calculate the perturbed cell saturation
-    !call this%csub_calc_sat(node, hp, hcellold, snnew, snold)
-    !!
-    !! -- calculate the effective stress perturbation
-    !esp = this%csub_calc_esadd(node, hcell)
-    !!
-    !! -- storage coefficients
-    !call this%csub_sk_calc_sske(node, sske, hp, esadd=esp)
-    !rho1 = sske * area * tthk * tled
-    !!
-    !! -- calculate perturbed skeletal q
-    !qp = snnew * rho1 * (this%sk_gs(node) - hp + bot) -                          &
-    !      snold * rho1 * this%sk_es0(node)
-    !!
-    !! calculate cell saturation
-    !call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
-    !!
-    !! -- storage coefficients
-    !call this%csub_sk_calc_sske(node, sske, hcell)
-    !rho1 = sske0 * area * tthk * tled
-    !!
-    !! -- calculate skeletal q
-    !q = snnew * rho1 * (this%sk_gs(node) - hcell + bot) -                    &
-    !    snold * rho1 * this%sk_es0(node)
-    !!
-    !! -- calculate the derivative
-    !derv = (qp - q) / hplus
-    !!
-    !! -- update hcof and rhs
-    !hcof = rho1 * snnew + derv
-    !rhs = snnew * rho1 * hcell + derv * hcell
     !
     ! -- calculate saturation derivitive
     derv = sQuadraticSaturationDerivative(top, bot, hcell)    
@@ -4737,7 +4693,6 @@ contains
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: dsske
-    real(DP) :: esp
     real(DP) :: q
     real(DP) :: qp
     real(DP) :: rho1
@@ -4763,28 +4718,10 @@ contains
       !
       ! -- no-delay interbeds
       if (this%idelay(ib) == 0) then
-        !f = area
-        !!
-        !! -- calculate the effective stress perturbation
-        !esp = this%csub_calc_esadd(node, hcell)
-        !!
-        !! -- calculate no-delay interbed rho1
-        !call this%csub_nodelay_fc(ib, hcellp, hcellold, rho1, hcofn, rhsn,       &
-        !                          esadd=esp)
-        !!
-        !! -- calculate perturbed no-delay interbed q
-        !qp = rhsn - hcofn * hcellp 
-        !!
-        !! -- calculate no-delay interbed rho1
-        !call this%csub_nodelay_fc(ib, hcell, hcellold, rho1, hcofn, rhsn)
-        !!
-        !! -- calculate no-delay interbed q
-        !q = rhsn - hcofn * hcell
-        !!
-        !! -- calculate the derivative
-        !derv = (qp - q) / hplus
         !
+        ! -- initialize factor
         f = DONE
+        !
         ! -- calculate the saturation derivative
         top = this%dis%top(node)
         bot = this%dis%bot(node)
@@ -4819,9 +4756,6 @@ contains
       !
       ! -- delay interbeds
       else
-        !!
-        !! -- calculate cell saturation
-        !call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
         !
         ! -- calculate factor
         f = area * this%rnb(ib) * snnew
@@ -4983,7 +4917,6 @@ contains
     real(DP) :: bot
     real(DP) :: znode
     real(DP) :: es
-    real(DP) :: esi
     real(DP) :: es0
     real(DP) :: theta
     real(DP) :: f
@@ -5883,7 +5816,6 @@ contains
     integer(I4B) :: icnvg
     integer(I4B) :: iter
     integer(I4B) :: idelay
-    !real(DP) :: esi
     real(DP) :: dh
     real(DP) :: dhmax
     real(DP) :: dhmax0
@@ -6167,8 +6099,6 @@ contains
     real(DP) :: es0
     real(DP) :: theta
     real(DP) :: void
-    !real(DP) :: denom
-    !real(DP) :: denom0
     real(DP) :: f
     real(DP) :: f0
 ! ------------------------------------------------------------------------------
@@ -6300,13 +6230,13 @@ contains
       !
       ! -- calculate right hand side
       if (ielastic /= 0) then
-        r = -fmult *                                                           &
-              (ssk * (this%dbgeo(n, idelay) + zbot) -                           &
-              sske * this%dbes0(n, idelay))
+        r = -fmult *                                                             &
+            (ssk * (this%dbgeo(n, idelay) + zbot) -                              &
+             sske * this%dbes0(n, idelay))
       else
-        r = -fmult * &
-              (ssk * (this%dbgeo(n, idelay) + zbot - this%dbpcs(n, idelay)) +   &
-              sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay)))
+        r = -fmult *                                                             &
+            (ssk * (this%dbgeo(n, idelay) + zbot - this%dbpcs(n, idelay)) +      &
+             sske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay)))
       end if
       !
       ! -- add connection to the gwf cell
