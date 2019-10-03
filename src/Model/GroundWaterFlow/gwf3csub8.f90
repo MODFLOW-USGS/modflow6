@@ -274,6 +274,7 @@ module GwfCsubModule
     ! -- no-delay interbed methods
     procedure, private :: csub_nodelay_update
     procedure, private :: csub_nodelay_fc
+    procedure, private :: csub_nodelay_sske_derivative
     procedure, private :: csub_nodelay_calc_comp
     !
     ! -- delay interbed methods
@@ -3514,7 +3515,70 @@ contains
     return
 
   end subroutine csub_nodelay_fc
+                             
+  subroutine csub_nodelay_sske_derivative(this, ib, hcell, dsske)
+! ******************************************************************************
+! csub_nodelay_fn -- Calculate rho1, rho2, and rhs for no-delay interbeds
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    use TdisModule, only: delt
+    implicit none
+    ! -- dummy variables
+    class(GwfCsubType) :: this
+    integer(I4B), intent(in) :: ib
+    real(DP), intent(in) :: hcell
+    real(DP), intent(inout) :: dsske
+    ! -- local variables
+    integer(I4B) :: node
+    real(DP) :: top
+    real(DP) :: bot
+    real(DP) :: znode
+    real(DP) :: es
+    real(DP) :: es0
+    real(DP) :: theta
+    real(DP) :: f
+    real(DP) :: rho2
+    real(DP) :: fd
+! ------------------------------------------------------------------------------
+    !
+    ! -- initialize variables
+    dsske = DZERO
+    !
+    !
+    if (this%lhead_based .EQV. .FALSE.) then
+      node = this%nodelist(ib)
+      bot = this%dis%bot(node)
+      top = this%dis%top(node)
+      znode = this%csub_calc_znode(top, bot, hcell)
+      es = this%sk_es(node) 
+      es0 = this%sk_es0(node)
+      theta = this%thetaini(ib)
+      !
+      ! -- calculate the compression index factors for the delay 
+      !    node relative to the center of the cell based on the 
+      !    current and previous head
+      call this%csub_calc_sfacts(node, bot, znode, theta, es, es0, hcell, f,     &
+                                 derivative=.TRUE.)
+      !
+      ! -- calculate rho1 and rho2
+      rho2 = this%rci(ib)
+      if (this%sk_es(node) > this%pcs(ib)) then
+        rho2 = this%ci(ib)
+      end if
+      !
+      ! -- calculate the slope derivative
+      fd = this%csub_calc_slope_derivative(node, hcell)
+      !
+      ! -- calculate the derivative
+      dsske = f * fd * rho2
+    end if
+    !
+    ! -- return
+    return
 
+  end subroutine csub_nodelay_sske_derivative
 
   subroutine csub_nodelay_calc_comp(this, ib, hcell, hcellold, comp, rho1, rho2)
 ! ******************************************************************************
@@ -4648,6 +4712,7 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    use TdisModule, only: delt
     implicit none
     class(GwfCsubType) :: this
     integer(I4B),intent(in) :: ib
@@ -4661,14 +4726,20 @@ contains
     integer(I4B) :: idelaycalc
     real(DP) :: hcofn
     real(DP) :: rhsn
-    real(DP) :: f
+    real(DP) :: snnew
+    real(DP) :: snold
+    real(DP) :: derv
+    real(DP) :: sderv
+    real(DP) :: tled
+    real(DP) :: tthk
     real(DP) :: hcellp
+    real(DP) :: f
+    real(DP) :: top
+    real(DP) :: bot
+    real(DP) :: dsske
     real(DP) :: esp
     real(DP) :: q
     real(DP) :: qp
-    real(DP) :: derv
-    real(DP) :: snnew
-    real(DP) :: snold
     real(DP) :: rho1
 ! ------------------------------------------------------------------------------
 !
@@ -4681,38 +4752,76 @@ contains
     !
     ! -- skip inactive and constant head cells
     if (this%ibound(node) > 0) then
+      tled = DONE / delt
+      tthk = this%thickini(ib)
+      !
+      ! -- calculate cell saturation
+      call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
       !
       ! -- perturb the gwf head
       hcellp = hcell + hplus
       !
       ! -- no-delay interbeds
       if (this%idelay(ib) == 0) then
-        f = area
+        !f = area
+        !!
+        !! -- calculate the effective stress perturbation
+        !esp = this%csub_calc_esadd(node, hcell)
+        !!
+        !! -- calculate no-delay interbed rho1
+        !call this%csub_nodelay_fc(ib, hcellp, hcellold, rho1, hcofn, rhsn,       &
+        !                          esadd=esp)
+        !!
+        !! -- calculate perturbed no-delay interbed q
+        !qp = rhsn - hcofn * hcellp 
+        !!
+        !! -- calculate no-delay interbed rho1
+        !call this%csub_nodelay_fc(ib, hcell, hcellold, rho1, hcofn, rhsn)
+        !!
+        !! -- calculate no-delay interbed q
+        !q = rhsn - hcofn * hcell
+        !!
+        !! -- calculate the derivative
+        !derv = (qp - q) / hplus
         !
-        ! -- calculate the effective stress perturbation
-        esp = this%csub_calc_esadd(node, hcell)
+        f = DONE
+        ! -- calculate the saturation derivative
+        top = this%dis%top(node)
+        bot = this%dis%bot(node)
+        derv = sQuadraticSaturationDerivative(top, bot, hcell)
         !
-        ! -- calculate no-delay interbed rho1
-        call this%csub_nodelay_fc(ib, hcellp, hcellold, rho1, hcofn, rhsn,       &
-                                  esadd=esp)
-        !
-        ! -- calculate perturbed no-delay interbed q
-        qp = rhsn - hcofn * hcellp 
-        !
-        ! -- calculate no-delay interbed rho1
+        ! -- calculate storage coefficient
         call this%csub_nodelay_fc(ib, hcell, hcellold, rho1, hcofn, rhsn)
         !
-        ! -- calculate no-delay interbed q
-        q = rhsn - hcofn * hcell
+        ! -- calculate hcof term
+        hcofn = -hcofn * derv * hcell
         !
-        ! -- calculate the derivative
-        derv = (qp - q) / hplus
+        ! -- add derivative of storage coefficient
+        if (this%ieslag == 0) then
+          !
+          ! -- calculate cell saturation
+          call this%csub_calc_sat(node, hcell, hcell, snnew, snold)
+          !
+          ! -- calculate the derivative of the average sske
+          call this%csub_nodelay_sske_derivative(ib, hcell, dsske)
+          !
+          ! -- calculate the specific storage derivative term
+          sderv = snnew * dsske * area * tthk * tled * hcell
+          !
+          ! -- add the specific storage derivative term to hcofn
+          !    sderv is added since the slope of the specific storage derivative
+          !    is negative and dsske is returned as a negative number      
+          hcofn = hcofn + sderv
+        end if
+        !
+        ! -- reset derv
+        derv = DZERO        
       !
       ! -- delay interbeds
       else
-        !
-        ! -- calculate cell saturation
-        call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
+        !!
+        !! -- calculate cell saturation
+        !call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
         !
         ! -- calculate factor
         f = area * this%rnb(ib) * snnew
