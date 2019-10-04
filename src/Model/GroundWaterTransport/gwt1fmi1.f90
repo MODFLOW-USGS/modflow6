@@ -50,6 +50,8 @@ module GwtFmiModule
     procedure :: initialize_bfr
     procedure :: advance_bfr
     procedure :: finalize_bfr
+    procedure :: advance_hfr
+    procedure :: finalize_hfr
   
   end type GwtFmiType
 
@@ -133,12 +135,12 @@ module GwtFmiModule
     ! -- Add a check to see if GWF-GWT Exchange is on and the FMI 
     !    package is specified by the user.  Program should return with an
     !    error in this case.
-    if (.not. this%flows_from_file .and. this%inunit /= 0) then
-      call store_error('ERROR: A GWF-GWT EXCHANGE IS MAKING GWF FLOWS&
-        & AVAILABLE FOR THIS TRANSPORT MODEL AND AN FMI PACKAGE HAS ALSO&
-        & BEEN SPECIFIED BY THE USER.  REMOVE THE FMI PACKAGE FROM THE&
-        & GWT NAME FILE OR TURN OFF THE GWF-GWT EXCHANGE IN MFSIM.NAM')
-    end if
+    !if (.not. this%flows_from_file .and. this%inunit /= 0) then
+    !  call store_error('ERROR: A GWF-GWT EXCHANGE IS MAKING GWF FLOWS&
+    !    & AVAILABLE FOR THIS TRANSPORT MODEL AND AN FMI PACKAGE HAS ALSO&
+    !    & BEEN SPECIFIED BY THE USER.  REMOVE THE FMI PACKAGE FROM THE&
+    !    & GWT NAME FILE OR TURN OFF THE GWF-GWT EXCHANGE IN MFSIM.NAM')
+    !end if
     !
     ! -- store pointers to arguments that were passed in
     this%dis     => dis
@@ -198,6 +200,11 @@ module GwtFmiModule
     ! -- If reading flows from a budget file, read the next set of records
     if (this%iubud /= 0) then
       call this%advance_bfr()
+    endif
+    !
+    ! -- If reading heads from a head file, read the next set of records
+    if (this%iuhds /= 0) then
+      call this%advance_hfr()
     endif
     !
     ! -- if flow cell is dry, then set gwt%ibound = 0 and conc to dry
@@ -374,8 +381,10 @@ module GwtFmiModule
     ! -- dummy
     class(GwtFmiType) :: this
 ! ------------------------------------------------------------------------------
+    ! -- todo: finalize hfr and bfr either here or in a finalize routine
     !
     ! -- nullify pointers
+    ! -- todo: memdeallocate these if flows_from_file
     this%gwfflowja => null()
     this%gwfspdis  => null()
     this%gwfhead   => null() 
@@ -727,5 +736,74 @@ module GwtFmiModule
     call this%bfr%finalize()
     !
   end subroutine finalize_bfr
+  
+  subroutine advance_hfr(this)
+! ******************************************************************************
+! advance_hfr -- advance the head file reader
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use TdisModule, only: kstp, kper
+    class(GwtFmiType) :: this
+    character(len=LINELENGTH) :: errmsg
+    integer(I4B) :: nu, nr, i
+    integer(I4B) :: kstpfl, kperfl, m1, m2, m3
+    real(DP) :: pertim, totim, val
+    character(len=16) :: text
+    character(len=*), parameter :: fmtkstpkper =                               &
+      "(1x,/1x,'FMI READING HEAD FOR KSTP ', i0, ' KPER ', i0)"
+    character(len=*), parameter :: fmtkstpkpererr =                            &
+      "(1x,/1x,'***ERROR. FMI FOUND KSTP ', i0, ' KPER ', i0)"
+! ------------------------------------------------------------------------------
+    !
+    ! -- write to list file that heads are being read
+    write(this%iout, fmtkstpkper) kstp, kper
+    !
+    ! -- fill the gwfhead array
+    recordloop: do
+      !
+      ! -- read header
+      read(this%iuhds) kstpfl, kperfl, pertim, totim, text, m1, m2, m3
+      !
+      ! -- ensure heads are for correct kstp and kper
+      if (kstp /= kstpfl .or. kper /= kperfl) then
+        write(errmsg, fmtkstpkpererr) kstpfl, kperfl
+        call store_error(errmsg)
+        call store_error_unit(this%iuhds)
+        call ustop()
+      end if
+      !
+      ! -- fill the head array for this layer and
+      !    compress into reduced form
+      do i = 1, m1 * m2
+        read(this%iuhds) val
+        nu = (m3 - 1) * m1 * m2 + i
+        nr = this%dis%get_nodenumber(nu, 0)
+        if (nr > 0) this%gwfhead(nr) = val
+      end do
+      !
+      ! -- exit loop if last head was read for this time step
+      if (nr == this%dis%nodesuser) exit recordloop
+    end do recordloop
+  end subroutine advance_hfr
+  
+  subroutine finalize_hfr(this)
+! ******************************************************************************
+! finalize_hfr -- finalize the head file reader
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    class(GwtFmiType) :: this
+    ! -- dummy
+! ------------------------------------------------------------------------------
+    !
+    ! -- Finalize the head file reader
+    close(this%iuhds)
+    !
+  end subroutine finalize_hfr
   
 end module GwtFmiModule
