@@ -236,7 +236,6 @@ module GwfCsubModule
     procedure, private :: csub_calc_theta
     procedure, private :: csub_calc_znode
     procedure, private :: csub_calc_adjes
-    procedure, private :: csub_calc_esadd
     procedure, private :: csub_calc_slope_derivative
     procedure, private :: csub_calc_sat
     procedure, private :: csub_calc_sfacts
@@ -3400,7 +3399,7 @@ contains
 
   
   subroutine csub_nodelay_fc(this, ib, hcell, hcellold, rho1, rho2, rhs,         &
-                             argtled, esadd)
+                             argtled)
 ! ******************************************************************************
 ! csub_nodelay_fc -- Calculate rho1, rho2, and rhs for no-delay interbeds
 ! ******************************************************************************
@@ -3418,11 +3417,9 @@ contains
     real(DP), intent(inout) :: rho2
     real(DP), intent(inout) :: rhs
     real(DP), intent(in), optional :: argtled
-    real(DP), intent(in), optional :: esadd
     ! -- local variables
     integer(I4B) :: node
     real(DP) :: tled
-    real(DP) :: esp
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: thick
@@ -3443,11 +3440,6 @@ contains
       tled = argtled
     else
       tled = DONE / delt
-    endif
-    if (present(esadd)) then
-      esp = esadd
-    else
-      esp = DZERO
     endif
     node = this%nodelist(ib)
     area = this%dis%get_area(node)
@@ -3482,8 +3474,7 @@ contains
       ! -- calculate the compression index factors for the delay 
       !    node relative to the center of the cell based on the 
       !    current and previous head
-      call this%csub_calc_sfacts(node, bot, znode, theta, es, es0, hcell, f,     &
-                                 esadd=esp)
+      call this%csub_calc_sfacts(node, bot, znode, theta, es, es0, hcell, f)
     end if
     sto_fac = tled * snnew * thick * f
     sto_fac0 = tled * snold * thick * f
@@ -3572,8 +3563,8 @@ contains
       fd = this%csub_calc_slope_derivative(node, hcell)
       !
       ! -- calculate the derivative
-      dssk = f * fd * rho2
-      dsske = f * fd * rho1
+      dssk = -f * fd * rho2
+      dsske = -f * fd * rho1
     end if
     !
     ! -- return
@@ -4706,8 +4697,8 @@ contains
     real(DP) :: h1
     real(DP) :: hn
 ! ------------------------------------------------------------------------------
-!
-! -- initialize variables
+    !
+    ! -- initialize variables
     rhs = DZERO
     hcof = DZERO
     rhsn = DZERO
@@ -4764,9 +4755,6 @@ contains
           ! -- add the specific storage derivative term to hcofn
           hcofn = hcofn + sderv
         end if
-        !!
-        !! -- reset derv
-        !derv = DZERO        
       !
       ! -- delay interbeds
       else
@@ -4838,7 +4826,7 @@ contains
     return
   end subroutine define_listlabel
 
-  subroutine csub_sk_calc_sske(this, n, sske, hcell, esadd)
+  subroutine csub_sk_calc_sske(this, n, sske, hcell)
 ! ******************************************************************************
 ! csub_sk_calc_sske -- Calculate sske for a gwf cell.
 ! ******************************************************************************
@@ -4849,9 +4837,7 @@ contains
     integer(I4B), intent(in) :: n
     real(DP), intent(inout) :: sske
     real(DP), intent(in) :: hcell
-    real(DP), intent(in), optional :: esadd
     ! -- local variables
-    real(DP) :: esp
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: znode
@@ -4865,11 +4851,6 @@ contains
     !
     ! -- initialize variables
     sske = DZERO
-    if (present(esadd)) then
-      esp = esadd
-    else
-      esp = DZERO
-    end if
     !
     ! -- calculate factor for the head-based case
     if (this%lhead_based .EQV. .TRUE.) then
@@ -4902,8 +4883,7 @@ contains
       ! -- calculate the compression index factors for the delay 
       !    node relative to the center of the cell based on the 
       !    current and previous head
-      call this%csub_calc_sfacts(n, bot, znode, theta, es, es0, hcell, f,       &
-                                 esadd=esp)
+      call this%csub_calc_sfacts(n, bot, znode, theta, es, es0, hcell, f)
     end if
     sske = f * this%ske_cr(n)
     !
@@ -4955,7 +4935,7 @@ contains
       fd = this%csub_calc_slope_derivative(n, hcell)
       !
       ! -- calculate the derivative
-      dsske = f * fd * this%ske_cr(n)
+      dsske = -f * fd * this%ske_cr(n)
     end if
     !
     ! -- return
@@ -5427,59 +5407,6 @@ contains
     return
   end function csub_calc_adjes
 
-  function csub_calc_esadd(this, node, hcell) result(esadd)
-! ******************************************************************************
-! csub_calc_esadd -- Calculate the effective stress change at the bottom of
-!                    a cell resulting from a hplus head pertubation. Used to
-!                    formulate numerical derivatives.  
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(GwfCsubType), intent(inout) :: this
-    ! -- dummy
-    integer(I4B), intent(in) :: node
-    real(DP), intent(in) :: hcell
-    ! -- local variables
-    real(DP) :: esadd
-    real(DP) :: top
-    real(DP) :: bot
-    real(DP) :: c
-! ------------------------------------------------------------------------------
-    top = this%dis%top(node)
-    bot = this%dis%bot(node)
-    if (this%inewton /= 0) then
-      if (hcell < bot - this%epsilon) then
-        esadd = DZERO
-      else if (hcell < bot + this%epsilon) then
-        c = (hcell - bot) / this%epsilon
-        esadd = hplus * (DHALF * this%sgs(node) - this%sgm(node) - DHALF) *      &
-                        (DHALF * (c + DONE)) 
-      else if (hcell < top - this%epsilon) then
-        esadd = hplus * (DHALF * this%sgs(node) - this%sgm(node) - DHALF)
-      else if (hcell < top + this%epsilon) then
-        c = (hcell - top) / this%epsilon
-        esadd = -hplus +                                                         &
-                DHALF * ((this%sgm(node) - DHALF * this%sgs(node) - DHALF) * c + &
-                         DHALF * this%sgs(node) - this%sgm(node) + DHALF) * hplus
-      else
-        esadd = -hplus
-      end if
-    else
-      if (hcell < bot) then
-        esadd = DZERO
-      else if (hcell < top) then
-        !esadd = hplus * (this%sgs(node) - this%sgm(node) - DONE)
-        esadd = hplus * (DHALF * this%sgs(node) - this%sgm(node) - DHALF)
-      else
-        esadd = -hplus
-      end if
-    end if
-    !
-    ! -- return
-    return
-  end function csub_calc_esadd
-
   function csub_calc_slope_derivative(this, node, hcell) result(sderv)
 ! ******************************************************************************
 ! csub_calc_slope_derivative -- Calculate the slope derivatives for the specific
@@ -5555,7 +5482,6 @@ contains
     ! -- return
     return
   end function csub_delay_eval
-  
    
   subroutine csub_calc_sat(this, node, hcell, hcellold, snnew, snold)
 ! ******************************************************************************
@@ -5592,7 +5518,7 @@ contains
   end subroutine csub_calc_sat  
   
   subroutine csub_calc_sfacts(this, node, bot, znode, theta, es, es0, hcell,     &
-                              fact, esadd, derivative)
+                              fact, derivative)
 ! ******************************************************************************
 ! csub_calc_sfacts -- Calculate sske and factor for a gwf cell or 
 !                     interbed.
@@ -5609,11 +5535,9 @@ contains
     real(DP), intent(in) :: es0
     real(DP), intent(in) :: hcell
     real(DP), intent(inout) :: fact
-    real(DP), intent(in), optional :: esadd
     logical, intent(in), optional :: derivative
     ! -- local variables
     real(DP) :: esv
-    real(DP) :: esp
     real(DP) :: void
     real(DP) :: denom
 ! ------------------------------------------------------------------------------
@@ -5625,15 +5549,10 @@ contains
     else
       esv = es
     end if
-    if (present(esadd)) then
-      esp = esadd
-    else
-      esp = DZERO
-    end if
     !
     ! -- calculate storage factors for the effective stress case
     void = this%csub_calc_void(theta)
-    denom = this%csub_calc_adjes(node, esv, bot, znode, hcell) + esp
+    denom = this%csub_calc_adjes(node, esv, bot, znode, hcell)
     if (present(derivative)) then
       if (derivative .EQV. .TRUE.) then
         denom = denom * denom
