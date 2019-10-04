@@ -1,0 +1,4 @@
+BEGIN OPTIONS
+  [GWFBUDGET FILEIN <gwfbudgetfile>]
+  [GWFHEAD FILEIN <gwfheadfile>]
+END OPTIONS

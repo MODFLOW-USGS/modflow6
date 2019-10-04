@@ -826,6 +826,11 @@
 | GWT | LKT | PERIOD | AUXILIARY | KEYWORD | keyword for specifying auxiliary variable. |
 | GWT | LKT | PERIOD | AUXNAME | STRING | name for the auxiliary variable to be assigned AUXVAL.  AUXNAME must match one of the auxiliary variable names defined in the OPTIONS block. If AUXNAME does not match one of the auxiliary variable names defined in the OPTIONS block the data are ignored. |
 | GWT | LKT | PERIOD | AUXVAL | DOUBLE PRECISION | value for the auxiliary variable. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value. |
+| GWT | FMI | OPTIONS | GWFBUDGET | KEYWORD | keyword to specify that record corresponds to the gwfbudget input file. |
+| GWT | FMI | OPTIONS | FILEIN | KEYWORD | keyword to specify that an input filename is expected next. |
+| GWT | FMI | OPTIONS | GWFBUDGETFILE | STRING | name of the binary GWF budget file to read as input for the FMI Package |
+| GWT | FMI | OPTIONS | GWFHEAD | KEYWORD | keyword to specify that record corresponds to the gwfhead input file. |
+| GWT | FMI | OPTIONS | GWFHEADFILE | STRING | name of the binary GWF head file to read as input for the FMI Package |
 | UTL | LAK | DIMENSIONS | NROW | INTEGER | integer value specifying the number of rows in the lake table. There must be NROW rows of data in the TABLE block. |
 | UTL | LAK | DIMENSIONS | NCOL | INTEGER | integer value specifying the number of columns in the lake table. There must be NCOL columns of data in the TABLE block. For lakes with HORIZONTAL and/or VERTICAL CTYPE connections, NCOL must be equal to 3. For lakes with EMBEDDEDH or EMBEDDEDV CTYPE connections, NCOL must be equal to 4. |
 | UTL | LAK | TABLE | STAGE | DOUBLE PRECISION | real value that defines the stage corresponding to the remaining data on the line. |

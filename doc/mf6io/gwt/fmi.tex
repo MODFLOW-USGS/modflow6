@@ -1,0 +1,16 @@
+Flow Model Interface (FMI) Package information is read from the file that is specified by ``FMI6'' as the file type.  An FMI Package specified by the user is not required if simulated groundwaters flows are available from a corresponding GWF Model that is running during the simulation.  In this case, flows from the GWF Model are made available to the transport model by the GWF-GWT Exchange.  An FMI Package also is not required if one can safely assume that there is no groundwater flow and a corresponding GWF Model does not exist.  In this case, cells are assumed to be fully saturated with stagnant water, and changes in concentration occur solely through molecular diffusion, sorbtion, and decay.  If the objective is to use the results from a previous GWF Model simulation as input to the transport model, then this FMI Package can be used to specify the GWF budget and head files.  The budget file is read during the simulation and must contain all of intercell flows and package flows for every stress period and time step in the simulation.  The binary head file must also contain heads for every stress period and time step in the simulation.  Only one FMI Package can be specified for a GWT model. 
+
+\vspace{5mm}
+\subsubsection{Structure of Blocks}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwt-fmi-options.dat}
+
+\vspace{5mm}
+\subsubsection{Explanation of Variables}
+\begin{description}
+\input{./mf6ivar/tex/gwt-fmi-desc.tex}
+\end{description}
+
+\vspace{5mm}
+\subsubsection{Example Input File}
+\lstinputlisting[style=inputfile]{./mf6ivar/examples/gwt-fmi-example.dat}
+
