@@ -430,8 +430,8 @@ module GwtModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate and read modules attached to model
+    call this%fmi%fmi_ar(this%dis, this%ibound, this%inssm)
     if(this%inic  > 0) call this%ic%ic_ar(this%x)
-    if(this%infmi > 0) call this%fmi%fmi_ar(this%dis, this%ibound, this%inssm)
     if(this%inmst > 0) call this%mst%mst_ar(this%dis, this%ibound)
     if(this%inadv > 0) call this%adv%adv_ar(this%dis, this%ibound)
     if(this%indsp > 0) call this%dsp%dsp_ar(this%ibound, this%mst%porosity)
@@ -589,10 +589,8 @@ module GwtModule
 ! ------------------------------------------------------------------------------
     !
     ! -- call fc routines
-    if(this%infmi > 0) then
-      call this%fmi%fmi_fc(this%dis%nodes, this%xold, this%nja, njasln,        &
-                           amatsln, this%idxglo, this%rhs)
-    endif
+    call this%fmi%fmi_fc(this%dis%nodes, this%xold, this%nja, njasln,          &
+                         amatsln, this%idxglo, this%rhs)
     if(this%inmst > 0) then
       call this%mst%mst_fc(this%dis%nodes, this%xold, this%nja, njasln,        &
                            amatsln, this%idxglo, this%rhs)
@@ -709,9 +707,7 @@ module GwtModule
     endif
     !
     ! - FMI
-    if(this%infmi > 0) then
-      call this%fmi%fmi_bdcalc(this%x, isuppress_output, this%budget)
-    endif
+    call this%fmi%fmi_bdcalc(this%x, isuppress_output, this%budget)
     !
     ! -- Clear obs
     call this%obs%obs_bd_clear()

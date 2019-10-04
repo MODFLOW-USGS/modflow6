@@ -1,10 +1,12 @@
 module GwtFmiModule
   
   use KindModule,             only: DP, I4B
-  use ConstantsModule,        only: DONE, DZERO, DHALF
+  use ConstantsModule,        only: DONE, DZERO, DHALF, LINELENGTH
+  use SimModule,              only: store_error, store_error_unit, ustop
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule,          only: DisBaseType
   use ListModule,             only: ListType
+  use BudgetFileReaderModule, only: BudgetFileReaderType
 
   implicit none
   private
@@ -13,7 +15,7 @@ module GwtFmiModule
 
   type, extends(NumericalPackageType) :: GwtFmiType
     
-    logical, pointer                                :: advection => null()      ! if .false., then there is no water flow
+    logical, pointer                                :: flows_from_file => null() ! if .false., then there is no water flow
     integer(I4B), dimension(:), pointer, contiguous :: iatp => null()           ! advanced transport package applied to gwfbndlist
     type(ListType), pointer                         :: gwfbndlist => null()     ! list of gwf stress packages
     integer(I4B), pointer                           :: iflowerr => null()       ! add the flow error correction
@@ -31,7 +33,9 @@ module GwtFmiModule
     integer(I4B), pointer                           :: igwfstrgsy => null()     ! indicates if gwfstrgsy is available
     integer(I4B), dimension(:), pointer, contiguous :: gwficelltype => null()   ! pointer to the GWF icelltype array
     integer(I4B), pointer                           :: igwfinwtup => null()     ! NR indicator
-
+    integer(I4B), pointer                           :: iubud => null()          ! unit number GWF budget file
+    integer(I4B), pointer                           :: iuhds => null()          ! unit number GWF head file
+    type(BudgetFileReaderType)                      :: bfr
   contains
   
     procedure :: fmi_ar
@@ -42,6 +46,10 @@ module GwtFmiModule
     procedure :: allocate_scalars
     procedure :: allocate_arrays
     procedure :: gwfsatold
+    procedure :: read_options
+    procedure :: initialize_bfr
+    procedure :: advance_bfr
+    procedure :: finalize_bfr
   
   end type GwtFmiType
 
@@ -72,7 +80,7 @@ module GwtFmiModule
     !
     ! -- if inunit == 0, then there is no file to read, but it still needs
     !    to be active in order to manage pointers to gwf model
-    if (inunit == 0) inunit = 1
+    !if (inunit == 0) inunit = 1
     !
     ! -- Set variables
     fmiobj%inunit = inunit
@@ -93,7 +101,6 @@ module GwtFmiModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use MemoryManagerModule, only: mem_setptr
     use SimModule,           only: ustop, store_error
     ! -- dummy
     class(GwtFmiType) :: this
@@ -106,10 +113,32 @@ module GwtFmiModule
     character(len=*), parameter :: fmtfmi =                                    &
       "(1x,/1x,'FMI -- FLOW MODEL INTERFACE, VERSION 1, 8/29/2017',            &
       &' INPUT READ FROM UNIT ', i0, //)"
+    character(len=*), parameter :: fmtfmi0 =                                   &
+      "(1x,/1x,'FMI -- FLOW MODEL INTERFACE, VERSION 1, 8/29/2017')"
 ! ------------------------------------------------------------------------------
     !
     ! --print a message identifying the FMI package.
-    write(this%iout, fmtfmi) this%inunit
+    if (this%inunit /= 0) then
+      write(this%iout, fmtfmi) this%inunit
+    else
+      write(this%iout, fmtfmi0)
+      if (.not. this%flows_from_file) then
+        write(this%iout, '(a)') '  FLOWS PROVIDED BY A GWF MODEL IN THIS &
+          &SIMULATION'
+      else
+        write(this%iout, '(a)') '  FLOWS ARE ASSUMED TO BE ZERO.'
+      endif 
+    endif
+    !
+    ! -- Add a check to see if GWF-GWT Exchange is on and the FMI 
+    !    package is specified by the user.  Program should return with an
+    !    error in this case.
+    if (.not. this%flows_from_file .and. this%inunit /= 0) then
+      call store_error('ERROR: A GWF-GWT EXCHANGE IS MAKING GWF FLOWS&
+        & AVAILABLE FOR THIS TRANSPORT MODEL AND AN FMI PACKAGE HAS ALSO&
+        & BEEN SPECIFIED BY THE USER.  REMOVE THE FMI PACKAGE FROM THE&
+        & GWT NAME FILE OR TURN OFF THE GWF-GWT EXCHANGE IN MFSIM.NAM')
+    end if
     !
     ! -- store pointers to arguments that were passed in
     this%dis     => dis
@@ -121,7 +150,7 @@ module GwtFmiModule
     ! -- Make sure that ssm is on if there are any boundary packages
     if (inssm == 0) then
       nflowpack = 0
-      if (this%advection) nflowpack = this%gwfbndlist%Count()
+      if (.not. this%flows_from_file) nflowpack = this%gwfbndlist%Count()
       if (nflowpack > 0) then
         call store_error('ERROR: FLOW MODEL HAS BOUNDARY PACKAGES, BUT THERE &
           &IS NO SSM PACKAGE.  THE SSM PACKAGE MUST BE ACTIVATED.')
@@ -129,8 +158,10 @@ module GwtFmiModule
       endif
     endif
     !
-    ! -- Read storage options
-    !call this%read_options()
+    ! -- Read fmi options
+    if (this%inunit /= 0) then
+      call this%read_options()
+    end if
     !
     ! -- read the data block
     !call this%read_data()
@@ -163,6 +194,11 @@ module GwtFmiModule
      &"(/1X,'DRY CELL REACTIVATED AT ', a,&
      &' WITH STARTING CONCENTRATION =',G13.5)"
 ! ------------------------------------------------------------------------------
+    !
+    ! -- If reading flows from a budget file, read the next set of records
+    if (this%iubud /= 0) then
+      call this%advance_bfr()
+    endif
     !
     ! -- if flow cell is dry, then set gwt%ibound = 0 and conc to dry
     do n = 1, this%dis%nodes
@@ -257,7 +293,7 @@ module GwtFmiModule
     !
     ! -- Add package flow terms
     nflowpack = 0
-    if (this%advection) nflowpack = this%gwfbndlist%Count()
+    if (.not. this%flows_from_file) nflowpack = this%gwfbndlist%Count()
     do ip = 1, nflowpack
       packobj => GetBndFromList(this%gwfbndlist, ip)
       do i = 1, packobj%nbound
@@ -385,16 +421,20 @@ module GwtFmiModule
     call this%NumericalPackageType%allocate_scalars()
     !
     ! -- Allocate
-    call mem_allocate(this%advection, 'ADVECTION', this%origin)
+    call mem_allocate(this%flows_from_file, 'FLOWS_FROM_FILE', this%origin)
     call mem_allocate(this%iflowerr, 'IFLOWERR', this%origin)
     call mem_allocate(this%igwfstrgss, 'IGWFSTRGSS', this%origin)
     call mem_allocate(this%igwfstrgsy, 'IGWFSTRGSY', this%origin)
+    call mem_allocate(this%iubud, 'IUBUD', this%origin)
+    call mem_allocate(this%iuhds, 'IUHDS', this%origin)
     !
     ! -- Initialize
-    this%advection = .false.
+    this%flows_from_file = .true.
     this%iflowerr = 1
     this%igwfstrgss = 0
     this%igwfstrgsy = 0
+    this%iubud = 0
+    this%iuhds = 0
     !
     ! -- Return
     return
@@ -419,7 +459,7 @@ module GwtFmiModule
     !
     ! -- Initialize
     nflowpack = 0
-    if (this%advection) nflowpack = this%gwfbndlist%Count()
+    if (.not. this%flows_from_file) nflowpack = this%gwfbndlist%Count()
     !
     ! -- Allocate variables needed for all cases
     call mem_allocate(this%gwfthksat, nodes, 'THKSAT', this%origin)
@@ -438,18 +478,24 @@ module GwtFmiModule
     ! -- Allocate variables needed when there isn't a GWF model running 
     !    concurrently.  In that case, these variables are pointed directly
     !    to the corresponding GWF variables.
-    if (.not. this%advection) then
+    if (this%flows_from_file) then
       call mem_allocate(this%igwfinwtup, 'IGWFINWTUP', this%origin)
       call mem_allocate(this%gwfflowja, this%dis%con%nja, 'GWFFLOWJA', this%origin)
       call mem_allocate(this%gwfsat, nodes, 'GWFSAT', this%origin)
       call mem_allocate(this%gwfhead, nodes, 'GWFHEAD', this%origin)
+      !call mem_allocate(this%gwfstrgss, nodes, 'GWFSTRGSS', this%origin)
+      !call mem_allocate(this%gwfstrgsy, nodes, 'GWFSTRGSY', this%origin)
       call mem_allocate(this%gwfspdis, 3, nodes, 'GWFSPDIS', this%origin)
       call mem_allocate(this%gwfibound, nodes, 'GWFIBOUND', this%origin)
       call mem_allocate(this%gwficelltype, nodes, 'GWFICELLTYPE', this%origin)
       this%igwfinwtup = 0
+      !this%igwfstrgss = 1
+      !this%igwfstrgsy = 1
       do n = 1, nodes
         this%gwfsat(n) = DONE
         this%gwfhead(n) = DZERO
+        !this%gwfstrgss(n) = DZERO
+        !this%gwfstrgsy(n) = DZERO
         this%gwfspdis(:, n) = DZERO
         this%gwfibound(n) = 1
         this%gwficelltype(n) = 0
@@ -458,6 +504,9 @@ module GwtFmiModule
         this%gwfflowja(n) = DZERO
       end do
     end if
+    !
+    ! -- todo: need to handle  allocation of gwfstrgss and gwfstrgsy
+    !    for transient flow when fmi reading from file
     !
     ! -- Return
     return
@@ -495,4 +544,188 @@ module GwtFmiModule
     ! -- Return
     return
   end function gwfsatold
+  
+  subroutine read_options(this)
+! ******************************************************************************
+! read_options -- Read Options
+! Subroutine: (1) read options from input file
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use OpenSpecModule, only: ACCESS, FORM
+    use ConstantsModule, only: LINELENGTH, DEM6
+    use InputOutputModule, only: getunit, openfile, urdaux
+    use SimModule, only: store_error, store_error_unit, ustop
+    ! -- dummy
+    class(GwtFmiType) :: this
+    ! -- local
+    character(len=LINELENGTH) :: errmsg, keyword, fname
+    integer(I4B) :: ierr
+    integer(I4B) :: inunit
+    logical :: isfound, endOfBlock
+! ------------------------------------------------------------------------------
+    !
+    ! -- get options block
+    call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false.)
+    !
+    ! -- parse options block if detected
+    if (isfound) then
+      write(this%iout,'(1x,a)')'PROCESSING FMI OPTIONS'
+      do
+        call this%parser%GetNextLine(endOfBlock)
+        if (endOfBlock) exit
+        call this%parser%GetStringCaps(keyword)
+        select case (keyword)
+          case ('GWFBUDGET')
+            call this%parser%GetStringCaps(keyword)
+            if(keyword /= 'FILEIN') then
+              call store_error('GWFBUDGET KEYWORD MUST BE FOLLOWED BY ' //     &
+                '"FILEIN" then by filename.')
+              call this%parser%StoreErrorUnit()
+              call ustop()
+            endif
+            call this%parser%GetString(fname)
+            inunit = getunit()
+            call openfile(inunit, this%iout, fname, 'DATA(BINARY)', FORM, ACCESS)
+            this%iubud = inunit
+          case ('GWFHEAD')
+            call this%parser%GetStringCaps(keyword)
+            if(keyword /= 'FILEIN') then
+              call store_error('GWFHEAD KEYWORD MUST BE FOLLOWED BY ' //     &
+                '"FILEIN" then by filename.')
+              call this%parser%StoreErrorUnit()
+              call ustop()
+            endif
+            call this%parser%GetString(fname)
+            inunit = getunit()
+            call openfile(inunit, this%iout, fname, 'DATA(BINARY)', FORM, ACCESS)
+            this%iuhds = inunit
+          case default
+            write(errmsg,'(4x,a,a)')'***ERROR. UNKNOWN FMI OPTION: ', &
+                                     trim(keyword)
+            call store_error(errmsg)
+            call this%parser%StoreErrorUnit()
+            call ustop()
+        end select
+      end do
+      write(this%iout,'(1x,a)') 'END OF FMI OPTIONS'
+    end if
+    !
+    ! -- Initialize the budget file reader
+    if (this%iubud /= 0) then
+      call this%initialize_bfr()
+    endif
+    !
+    ! -- return
+    return
+  end subroutine read_options
+
+  subroutine initialize_bfr(this)
+! ******************************************************************************
+! initialize_bfr -- initalize the budget file reader and figure out how many
+!   different terms and packages are contained within the file
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    class(GwtFmiType) :: this
+    ! -- dummy
+    integer(I4B) :: ncrbud
+! ------------------------------------------------------------------------------
+    !
+    ! -- Initialize the budget file reader
+    call this%bfr%initialize(this%iubud, this%iout, ncrbud)
+    !
+    ! -- todo: need to run through the budget terms
+    !    and do some checking and then store some information
+    !    on package names
+  end subroutine initialize_bfr
+  
+  subroutine advance_bfr(this)
+! ******************************************************************************
+! advance_bfr -- advance the budget file reader by reading the next chunk
+!   of information for the current time step and stress period
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use TdisModule, only: kstp, kper
+    ! -- dummy
+    class(GwtFmiType) :: this
+    ! -- local
+    character(len=LINELENGTH) :: errmsg
+    logical :: success
+    integer(I4B) :: n
+    integer(I4B) :: iposu, iposr
+    integer(I4B) :: nu, nr
+    ! -- format
+    character(len=*), parameter :: fmtkstpkper =                               &
+      "(1x,/1x,'FMI READING BUDGET TERMS FOR KSTP ', i0, ' KPER ', i0)"
+! ------------------------------------------------------------------------------
+    !
+    ! -- Write the current time step and stress period
+    write(this%iout, fmtkstpkper) kstp, kper
+    do n = 1, this%bfr%nbudterms
+      call this%bfr%read_record(success, this%iout)
+      if (.not. success) then
+        write(errmsg,'(4x,a)') '***ERROR.  GWF BUDGET READ NOT SUCCESSFUL'
+        call store_error(errmsg)
+        call store_error_unit(this%iubud)
+        call ustop()
+      endif
+      select case(this%bfr%budtxt)
+      case('FLOW-JA-FACE')
+          iposr = 0
+          do iposu = 1, size(this%bfr%flowja)
+            nu = this%dis%con%jausr(iposu)
+            nr = this%dis%get_nodenumber(nu, 0)
+            if (nr <= 0) cycle
+            iposr = iposr + 1
+            this%gwfflowja(iposr) = this%bfr%flowja(iposu)
+          end do
+        case('DATA-SPDIS')
+          do nu = 1, this%dis%nodesuser
+            nr = this%dis%get_nodenumber(nu, 0)
+            if (nr <= 0) cycle
+            this%gwfspdis(1, nr) = this%bfr%flowdata(2, nu)
+            this%gwfspdis(2, nr) = this%bfr%flowdata(3, nu)
+            this%gwfspdis(3, nr) = this%bfr%flowdata(4, nu)
+          end do
+        case('STO-SS')
+          do nu = 1, this%dis%nodesuser
+            nr = this%dis%get_nodenumber(nu, 0)
+            if (nr <= 0) cycle
+            this%gwfstrgss(nr) = this%bfr%flowdata(1, nu)
+          end do
+        case('STO-SY')
+          do nu = 1, this%dis%nodesuser
+            nr = this%dis%get_nodenumber(nu, 0)
+            if (nr <= 0) cycle
+            this%gwfstrgsy(nr) = this%bfr%flowdata(1, nu)
+          end do
+      end select
+    end do
+  end subroutine advance_bfr
+  
+  subroutine finalize_bfr(this)
+! ******************************************************************************
+! finalize_bfr -- finalize the budget file reader
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    class(GwtFmiType) :: this
+    ! -- dummy
+! ------------------------------------------------------------------------------
+    !
+    ! -- Finalize the budget file reader
+    call this%bfr%finalize()
+    !
+  end subroutine finalize_bfr
+  
 end module GwtFmiModule

@@ -137,8 +137,8 @@ module GwfGwtExchangeModule
       gwtmodel => mb
     end select
     !
-    ! -- Tell transport model there is advection and set pointers
-    gwtmodel%fmi%advection = .true.
+    ! -- Tell transport model flows are not read from file and set pointers
+    gwtmodel%fmi%flows_from_file = .false.
     gwtmodel%fmi%gwfflowja => gwfmodel%flowja
     !
     ! -- return
