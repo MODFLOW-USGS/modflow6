@@ -274,7 +274,7 @@ module GwfCsubModule
     ! -- no-delay interbed methods
     procedure, private :: csub_nodelay_update
     procedure, private :: csub_nodelay_fc
-    procedure, private :: csub_nodelay_ssk_derivative
+    procedure, private :: csub_nodelay_ssksske_derivative
     procedure, private :: csub_nodelay_calc_comp
     !
     ! -- delay interbed methods
@@ -3513,10 +3513,10 @@ contains
 
   end subroutine csub_nodelay_fc
                              
-  subroutine csub_nodelay_ssk_derivative(this, ib, hcell, dssk)
+  subroutine csub_nodelay_ssksske_derivative(this, ib, hcell, dssk, dsske)
 ! ******************************************************************************
-! csub_nodelay_ssk_derivative -- Calculate the derivative of ssk for no-delay 
-!                                interbeds
+!  csub_nodelay_ssksske_derivative -- Calculate the derivative of ssk for  
+!                                     no-delay interbeds
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -3527,6 +3527,7 @@ contains
     integer(I4B), intent(in) :: ib
     real(DP), intent(in) :: hcell
     real(DP), intent(inout) :: dssk
+    real(DP), intent(inout) :: dsske
     ! -- local variables
     integer(I4B) :: node
     real(DP) :: top
@@ -3536,6 +3537,7 @@ contains
     real(DP) :: es0
     real(DP) :: theta
     real(DP) :: f
+    real(DP) :: rho1
     real(DP) :: rho2
     real(DP) :: fd
 ! ------------------------------------------------------------------------------
@@ -3560,6 +3562,7 @@ contains
                                  derivative=.TRUE.)
       !
       ! -- calculate rho1 and rho2
+      rho1 = this%rci(ib)
       rho2 = this%rci(ib)
       if (this%sk_es(node) > this%pcs(ib)) then
         rho2 = this%ci(ib)
@@ -3570,12 +3573,13 @@ contains
       !
       ! -- calculate the derivative
       dssk = f * fd * rho2
+      dsske = f * fd * rho1
     end if
     !
     ! -- return
     return
 
-  end subroutine csub_nodelay_ssk_derivative
+  end subroutine csub_nodelay_ssksske_derivative
 
   subroutine csub_nodelay_calc_comp(this, ib, hcell, hcellold, comp, rho1, rho2)
 ! ******************************************************************************
@@ -4544,7 +4548,7 @@ contains
     rho1 = sske * area * tthk * tled
     !
     ! -- calculate hcof term
-    hcof = -rho1 * derv * hcell
+    hcof = rho1 * (this%sk_gs(node) - hcell + bot) * derv
     !
     ! -- calculate rhs term
     rhs = hcof * hcell
@@ -4559,11 +4563,11 @@ contains
       call this%csub_sk_calc_sske_derivative(node, dsske, hcell)
       !
       ! -- calculate the specific storage derivative term
-      sderv = snnew * dsske * area * tthk * tled * hcell
+      sderv = snnew *(this%sk_gs(node) - hcell + bot) 
+      sderv = sderv - snold * this%sk_es0(node)
+      sderv = sderv * dsske * area * tthk * tled
       !
       ! -- add the specific storage derivative term to hcof and rhs
-      !    sderv is added since the slope of the specific storage derivative
-      !    is negative and dsske is returned as a negative number      
       hcof = hcof + sderv
       rhs = rhs + sderv * hcell
     end if
@@ -4681,6 +4685,7 @@ contains
     real(DP), intent(inout) :: hcof
     real(DP), intent(inout) :: rhs
     ! -- locals
+    integer(I4B) :: idelay
     integer(I4B) :: idelaycalc
     real(DP) :: hcofn
     real(DP) :: rhsn
@@ -4690,14 +4695,16 @@ contains
     real(DP) :: sderv
     real(DP) :: tled
     real(DP) :: tthk
-    real(DP) :: hcellp
     real(DP) :: f
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: dssk
-    real(DP) :: q
-    real(DP) :: qp
+    real(DP) :: dsske
     real(DP) :: rho1
+    real(DP) :: dz
+    real(DP) :: c
+    real(DP) :: h1
+    real(DP) :: hn
 ! ------------------------------------------------------------------------------
 !
 ! -- initialize variables
@@ -4707,6 +4714,8 @@ contains
     hcofn = DZERO
     derv = DZERO
     dssk = DZERO
+    top = this%dis%top(node)
+    bot = this%dis%bot(node)
     !
     ! -- skip inactive and constant head cells
     if (this%ibound(node) > 0) then
@@ -4716,9 +4725,6 @@ contains
       ! -- calculate cell saturation
       call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
       !
-      ! -- perturb the gwf head
-      hcellp = hcell + hplus
-      !
       ! -- no-delay interbeds
       if (this%idelay(ib) == 0) then
         !
@@ -4726,15 +4732,13 @@ contains
         f = DONE
         !
         ! -- calculate the saturation derivative
-        top = this%dis%top(node)
-        bot = this%dis%bot(node)
         derv = sQuadraticSaturationDerivative(top, bot, hcell)
         !
         ! -- calculate storage coefficient
         call this%csub_nodelay_fc(ib, hcell, hcellold, rho1, hcofn, rhsn)
         !
-        ! -- calculate hcof term
-        hcofn = -hcofn * derv * hcell
+        ! -- calculate hcnof term
+        hcofn = hcofn * (this%sk_gs(node) - hcell + bot) * derv
         !
         ! -- add derivative of storage coefficient
         if (this%ieslag == 0) then
@@ -4743,25 +4747,32 @@ contains
           call this%csub_calc_sat(node, hcell, hcell, snnew, snold)
           !
           ! -- calculate the derivative of the average ssk
-          call this%csub_nodelay_ssk_derivative(ib, hcell, dssk)
+          call this%csub_nodelay_ssksske_derivative(ib, hcell, dssk, dsske)
           !
           ! -- calculate the specific storage derivative term
-          sderv = snnew * dssk * area * tthk * tled * hcell
+          if (this%ielastic(ib) /= 0) then
+            sderv = (snnew *(this%sk_gs(node) - hcell + bot)) -                  &
+                    (snold * this%sk_es0(node)) 
+            sderv = sderv * dssk * area * tthk * tled
+          else
+            sderv = snnew * (this%sk_gs(node) - hcell + bot - this%pcs(ib))
+            sderv = sderv * dssk
+            sderv = sderv - snold * (this%pcs(ib) - this%sk_es0(node)) * dsske
+            sderv = sderv * area * tthk * tled
+          end if
           !
           ! -- add the specific storage derivative term to hcofn
-          !    sderv is added since the slope of the specific storage derivative
-          !    is negative and dsske is returned as a negative number      
           hcofn = hcofn + sderv
         end if
-        !
-        ! -- reset derv
-        derv = DZERO        
+        !!
+        !! -- reset derv
+        !derv = DZERO        
       !
       ! -- delay interbeds
       else
         !
         ! -- calculate factor
-        f = area * this%rnb(ib) * snnew
+        f = this%rnb(ib)
         !
         ! -- check that the delay bed should be evaluated
         idelaycalc = this%csub_delay_eval(ib, node, hcell)
@@ -4771,27 +4782,23 @@ contains
         !    head-based and effective-stress formulations
         if (idelaycalc > 0) then
           !
-          ! -- calculate delay interbed hcof and rhs
-          call this%csub_delay_sln(ib, hcellp, .false.)
-          call this%csub_delay_fc(ib, hcofn, rhsn)
+          ! calculate delay interbed terms
+          idelay = this%idelay(ib)
+          dz = this%dbdz(idelay)
+          c = DTWO * this%kv(ib) / dz
+          h1 = this%dbh(1, idelay)
+          hn = this%dbh(this%ndelaycells, idelay)
           !
-          ! -- calculate perturbed delay interbed q
-          qp = rhsn - hcofn * hcellp
+          ! -- calculate the saturation derivative
+          derv = sQuadraticSaturationDerivative(top, bot, hcell)
           !
-          ! -- calculate delay interbed hcof and rhs
-          call this%csub_delay_sln(ib, hcell, .false.)
-          call this%csub_delay_fc(ib, hcofn, rhsn)
-          !
-          ! -- calculate delay interbed q
-          q = rhsn - hcofn * hcell
-          !
-          ! -- calculate the derivative
-          derv = (qp - q) / hplus
+          ! -- calculate the saturation derivative term
+          hcofn = -derv * c * area * (hn + h1 - DTWO * hcell) * hcell
         end if
         !
         ! -- update hcof and rhs
-        hcof = f * (hcofn + derv)
-        rhs = f * hcell * (hcofn + derv)
+        hcof = f * hcofn
+        rhs = f * hcofn * hcell
       end if
     end if
     !
