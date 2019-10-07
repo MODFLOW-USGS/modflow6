@@ -29,9 +29,10 @@ module SpatialModelConnectionModule
     procedure, pass(this) :: spatialConnection_ctor
     generic, public :: construct => spatialConnection_ctor
     procedure, pass(this) :: addExchange => addExchangeToSpatialConnection
-    procedure, pass(this) :: mc_df => defineSpatialConnection 
-    procedure, pass(this) :: mc_mc => mapCoefficients
-    procedure, pass(this) :: mc_ac => addConnectionsToMatrix
+    procedure, pass(this) :: mc_df => spatialcon_df 
+    procedure, pass(this) :: mc_mc => spatialcon_mc
+    procedure, pass(this) :: mc_ac => spatialcon_ac
+    procedure, pass(this) :: spatialcon_df
     ! private
     procedure, private, pass(this) :: setupGridConnection
     procedure, private, pass(this) :: setExchangeConnections
@@ -70,7 +71,7 @@ contains ! module procedures
     
   end subroutine addExchangeToSpatialConnection
   
-  subroutine defineSpatialConnection(this)
+  subroutine spatialcon_df(this)
     class(SpatialModelConnectionType), intent(inout) :: this    
     
     ! create the grid connection data structure
@@ -78,10 +79,10 @@ contains ! module procedures
     call this%gridConnection%construct(this%owner, this%nrOfConnections, this%name)
     call this%setupGridConnection()
     
-  end subroutine defineSpatialConnection
+  end subroutine spatialcon_df
   
   ! create the mapping from local system matrix to global
-  subroutine mapCoefficients(this, iasln, jasln)
+  subroutine spatialcon_mc(this, iasln, jasln)
     use SimModule, only: ustop
     use GridConnectionModule
     use ConnectionsModule, only: ConnectionsType
@@ -114,12 +115,12 @@ contains ! module procedures
       end do
     end do
     
-  end subroutine mapCoefficients
+  end subroutine spatialcon_mc
   
   ! add connections to global matrix, c.f. exg_ac in NumericalExchange, 
   ! but now for all exchanges with this model and skipping over the 
   ! transposed elements
-  subroutine addConnectionsToMatrix(this, sparse)
+  subroutine spatialcon_ac(this, sparse)
     use SparseModule, only:sparsematrix
     
     class(SpatialModelConnectionType), intent(inout) :: this
@@ -136,7 +137,7 @@ contains ! module procedures
       call sparse%addconnection(iglo, jglo, 1)
     end do    
     
-  end subroutine
+  end subroutine spatialcon_ac
   
   subroutine setupGridConnection(this)
     class(SpatialModelConnectionType), intent(inout) :: this
