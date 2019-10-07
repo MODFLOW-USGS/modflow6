@@ -17,7 +17,7 @@ module GridConnectionModule
   
   ! TODO_MJR: how about exchanges with (many) hanging nodes?
   ! for now stick to local neighbors only
-  integer(I4B), parameter :: MaxNeighbors = 6
+  integer(I4B), parameter :: MaxNeighbors = 7
   
   ! a global cell as composite, we need it for XT3D
   type, public :: CellWithNbrsType
@@ -177,6 +177,7 @@ module GridConnectionModule
     ! local
     integer(I4B) :: inbr, newDepth
     class(NumericalModelType), pointer      :: neighborModel
+    class(*), pointer :: numExObj
     
     if (depth < 1) then
       return
@@ -211,11 +212,19 @@ module GridConnectionModule
       call this%addToRegionalModels(neighborModel)
       
       ! add to list of exchanges
-      call AddNumericalExchangeToList(this%exchanges, numEx)
-      
+      numExObj => numEx
+      if (.not. this%exchanges%Contains(numExObj, areEqualMethod)) then
+        call AddNumericalExchangeToList(this%exchanges, numEx)
+      end if
     end if
     
   end subroutine connectModels
+  
+  function areEqualMethod(obj1, obj2) result(areIdentical)
+    class(*), pointer :: obj1, obj2
+    logical :: areIdentical
+    areIdentical = associated(obj1, obj2) 
+  end function areEqualMethod
   
   subroutine addToRegionalModels(this, modelToAdd)
     class(GridConnectionType), intent(inout) :: this  
