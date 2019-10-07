@@ -38,6 +38,7 @@ module GwfGwfConnectionModule
     
     ! implement (abstract) virtual
     procedure, pass(this) :: mc_ar => gwfgwfcon_ar
+    procedure, pass(this) :: mc_df => gwfgwfcon_df 
     procedure, pass(this) :: mc_cf => gwfgwfcon_cf
     procedure, pass(this) :: mc_fc => gwfgwfcon_fc
     
@@ -47,7 +48,18 @@ module GwfGwfConnectionModule
   end type GwfGwfConnectionType
 
 contains
-
+  
+  subroutine gwfgwfcon_df(this)
+    class(GwfGwfConnectionType), intent(inout) :: this    
+    
+    if (this%gwfModel%npf%ixt3d > 0) then
+      this%stencilDepth = 2
+    end if
+    ! now call base class
+    call this%spatialcon_df()
+    
+  end subroutine gwfgwfcon_df
+ 
   subroutine gwfGwfConnection_ctor(this, model)
     use NumericalModelModule, only: NumericalModelType
     class(GwfGwfConnectionType), intent(inout)  :: this
