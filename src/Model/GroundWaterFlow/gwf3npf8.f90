@@ -1761,7 +1761,6 @@ module GwfNpfModule
     if (this%ik33 /= 0) then
       !
       ! -- Check to make sure values are greater than or equal to zero
-                                     'K11', trim(this%origin))
       nerr = 0
       do n = 1, size(this%k33)
         if(this%k33(n) <= DZERO) then
@@ -1782,8 +1781,6 @@ module GwfNpfModule
     !
     ! -- check k22
     if (this%ik22 /= 0) then
-      call mem_reassignptr(this%k22, 'K22', trim(this%origin),                 &
-                                     'K11', trim(this%origin))
       ! -- Check to make sure that angles are available
       if(this%dis%con%ianglex == 0) then
         write(errmsg, '(a)') 'Error.  ANGLDEGX not provided in ' //            &
