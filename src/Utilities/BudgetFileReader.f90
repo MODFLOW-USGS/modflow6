@@ -20,6 +20,7 @@ module BudgetFileReaderModule
     integer(I4B) :: kpernext
     logical :: endoffile
     character(len=16) :: budtxt
+    character(len=16), dimension(:), allocatable :: budtxtarray
     integer(I4B) :: nval
     integer(I4B) :: idum1
     integer(I4B) :: idum2
@@ -32,8 +33,6 @@ module BudgetFileReaderModule
     integer(I4B) :: ndat
     character(len=16), dimension(:), allocatable :: auxtxt
     integer(I4B) :: nlist
-    integer(I4B), allocatable, dimension(:) :: ia
-    integer(I4B), allocatable, dimension(:) :: ja
     real(DP), dimension(:), allocatable :: flowja
     integer(I4B), dimension(:), allocatable :: nodesrc
     integer(I4B), dimension(:), allocatable :: nodedst
@@ -64,32 +63,38 @@ module BudgetFileReaderModule
     integer(I4B), intent(in) :: iout
     integer(I4B), intent(out) :: ncrbud
     ! -- local
-    integer(I4B) :: icount, kstp_last, kper_last
+    integer(I4B) :: ibudterm
+    integer(I4B) :: kstp_last, kper_last
     logical :: success
 ! ------------------------------------------------------------------------------
     this%inunit = iu
     this%endoffile = .false.
     this%nbudterms = 0
-    icount = 0
     ncrbud = 0
-    !
-    ! -- Read the first budget data record to set kstp_last, kstp_last
-    call this%read_record(success)
-    kstp_last = this%kstp
-    kper_last = this%kper
-    rewind(this%inunit)
     !
     ! -- Determine number of budget terms within a time step
     if (iout > 0) &
       write(iout, '(a)') &
         'Reading budget file to determine number of terms per time step.'
-    icount = 1
+    !
+    ! -- Read through the first set of data for time step 1 and stress period 1
     do
+      call this%read_record(success)
+      if (.not. success) exit
+      this%nbudterms = this%nbudterms + 1
+      if (this%kstp /= this%kstpnext .or. this%kper /= this%kpernext) &
+        exit
+    end do
+    kstp_last = this%kstp
+    kper_last = this%kper
+    allocate(this%budtxtarray(this%nbudterms))
+    rewind(this%inunit)
+    !
+    ! -- Now read through again and store budget text names
+    do ibudterm = 1, this%nbudterms
       call this%read_record(success, iout)
       if (.not. success) exit
-      if (kstp_last /= this%kstp .or. kper_last /= this%kper) exit
-      icount = icount + 1
-      this%nbudterms = this%nbudterms + 1
+      this%budtxtarray(ibudterm) = this%budtxt
       if (trim(adjustl(this%budtxt)) == 'FLOW-JA-FACE' .and. &
           this%srcmodelname == this%dstmodelname) then
         if(allocated(this%nodesrc)) ncrbud = maxval(this%nodesrc)
@@ -200,7 +205,11 @@ module BudgetFileReaderModule
     ! -- look ahead to next kstp and kper, then backup if read successfully
     if (.not. this%endoffile) then
       read(this%inunit, iostat=iostat) this%kstpnext, this%kpernext
-      if (iostat == 0) call fseek(this%inunit, -2 * I4B, 1)
+      if (iostat == 0) then
+        call fseek(this%inunit, -2 * I4B, 1)
+      else if (iostat < 0) then
+        this%endoffile = .true.
+      end if
     endif
     !
     ! -- return
@@ -218,8 +227,6 @@ module BudgetFileReaderModule
 ! ------------------------------------------------------------------------------
     close(this%inunit)
     if(allocated(this%auxtxt)) deallocate(this%auxtxt)
-    if(allocated(this%ia)) deallocate(this%ia)
-    if(allocated(this%ja)) deallocate(this%ja)
     if(allocated(this%flowja)) deallocate(this%flowja)
     if(allocated(this%nodesrc)) deallocate(this%nodesrc)
     if(allocated(this%nodedst)) deallocate(this%nodedst)

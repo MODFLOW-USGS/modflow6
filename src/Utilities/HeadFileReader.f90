@@ -130,7 +130,11 @@ module HeadFileReaderModule
     ! -- look ahead to next kstp and kper, then backup if read successfully
     if (.not. this%endoffile) then
       read(this%inunit, iostat=iostat) this%kstpnext, this%kpernext
-      if (iostat == 0) call fseek(this%inunit, -2 * I4B, 1)
+      if (iostat == 0) then
+        call fseek(this%inunit, -2 * I4B, 1)
+      else if (iostat < 0) then
+        this%endoffile = .true.
+      endif
     endif
     !
     ! -- return
