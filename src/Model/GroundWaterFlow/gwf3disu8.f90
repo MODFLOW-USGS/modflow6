@@ -16,6 +16,7 @@ module GwfDisuModule
   private
   public :: GwfDisuType
   public :: disu_cr
+  public :: disu_init_mem
 
   type, extends(DisBaseType) :: GwfDisuType
     integer(I4B), pointer :: nvert => null()                                     ! number of x,y vertices
@@ -23,6 +24,7 @@ module GwfDisuModule
     real(DP), dimension(:,:), pointer, contiguous :: cellxy => null()            ! cell center stored as 2d array of x and y
     integer(I4B), dimension(:), pointer, contiguous :: iavert => null()          ! cell vertex pointer ia array
     integer(I4B), dimension(:), pointer, contiguous:: javert => null()           ! cell vertex pointer ja array
+    integer(I4B), dimension(:), pointer, contiguous :: idomain  => null()        ! idomain (nodes)
   contains
     procedure :: dis_df => disu_df
     procedure :: dis_da => disu_da
@@ -44,7 +46,7 @@ module GwfDisuModule
     procedure :: allocate_arrays
     procedure :: read_options
     procedure :: read_dimensions
-    procedure :: read_data
+    procedure :: read_mf6_griddata
     procedure :: read_vertices
     procedure :: read_cell2d
     procedure :: write_grb
@@ -87,6 +89,122 @@ module GwfDisuModule
     ! -- Return
     return
   end subroutine disu_cr
+  
+  subroutine disu_init_mem(dis, name_model, iout, nodes, nja,                    &
+                           top, bot, area, iac, ja, ihc, cl12, hwva, angldegx,   &
+                           nvert, vertices, cellxy, idomain)
+! ******************************************************************************
+! dis_init_mem -- Create a new unstructured discretization object from memory
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    class(DisBaseType), pointer :: dis
+    character(len=*), intent(in) :: name_model
+    integer(I4B), intent(in) :: iout
+    integer(I4B), intent(in) :: nodes
+    integer(I4B), intent(in) :: nja
+    real(DP), dimension(:), pointer, contiguous, intent(in) :: top
+    real(DP), dimension(:), pointer, contiguous, intent(in) :: bot
+    real(DP), dimension(:), pointer, contiguous, intent(in) :: area
+    integer(I4B), dimension(:), pointer, contiguous, intent(in) :: iac
+    integer(I4B), dimension(:), pointer, contiguous, intent(in) :: ja
+    integer(I4B), dimension(:), pointer, contiguous, intent(in) :: ihc
+    real(DP), dimension(:), pointer, contiguous, intent(in) :: cl12
+    real(DP), dimension(:), pointer, contiguous, intent(in) :: hwva
+    real(DP), dimension(:), pointer, contiguous, intent(in), optional :: angldegx
+    integer(I4B), intent(in), optional :: nvert
+    integer(I4B), dimension(:, :), pointer, contiguous, intent(in),              &
+      optional :: vertices
+    integer(I4B), dimension(:, :), pointer, contiguous, intent(in),              &
+      optional :: cellxy
+    integer(I4B), dimension(:), pointer, contiguous, intent(in),                 &
+      optional :: idomain
+    ! -- local
+    type(GwfDisuType), pointer :: disext
+    integer(I4B) :: n
+    integer(I4B) :: j
+    integer(I4B) :: ival
+    real(DP), dimension(:), pointer, contiguous :: atemp
+! ------------------------------------------------------------------------------
+    allocate(disext)
+    dis => disext
+    call disext%allocate_scalars(name_model)
+    dis%inunit = 0
+    dis%iout = iout
+    !
+    ! -- set dimensions
+    disext%nodes = nodes
+    disext%nja = nja
+    if (present(nvert)) then
+      disext%nvert = nvert
+    end if
+    !
+    ! -- Calculate nodesuser
+    disext%nodesuser = disext%nodes
+    !
+    ! -- Allocate vectors for disv
+    call disext%allocate_arrays()
+    !
+    ! -- fill data
+    do n = 1, disext%nodes
+      disext%top(n) = top(n)
+      disext%bot(n) = bot(n)
+      disext%area(n) = area(n)
+      disext%con%ia(n) = iac(n)
+      if (present(idomain)) then
+        ival = idomain(n)
+      else
+        ival = 1
+      end if
+      disext%idomain(n) = ival
+    end do
+    do n = 1, nja
+      disext%con%ja(n) = ja(n)
+    end do
+    if (present(nvert)) then
+      if (present(vertices)) then
+        do n = 1, disext%nvert
+          do j = 1, 2
+            disext%vertices(j, n) = vertices(j, n)
+          end do
+        end do
+      ! -- error
+      else
+      end if
+      if (present(cellxy)) then
+        do n = 1, disext%nodes
+          do j = 1, 2
+            disext%cellxy(j, n) = cellxy(j, n)
+          end do
+        end do
+      ! -- error
+      else
+      end if
+    else
+      ! -- connection direction information cannot be calculated
+      disext%icondir = 0
+    end if
+    !
+    ! -- allocate space for atemp and fill
+    allocate(atemp(nja))
+    if (present(angldegx)) then
+      disext%con%ianglex = 1
+      do n = 1, nja
+        atemp(n) = angldegx(n)
+      end do
+    end if
+    !
+    ! -- finialize connection data
+    call disext%con%con_finalize(iout, ihc, cl12, hwva, atemp)
+    disext%njas = disext%con%njas
+    !
+    ! -- deallocate temp arrays
+    deallocate(atemp)
+    !
+    ! -- Return
+    return
+  end subroutine disu_init_mem
 
   subroutine disu_df(this)
 ! ******************************************************************************
@@ -99,30 +217,34 @@ module GwfDisuModule
     class(GwfDisuType) :: this
 ! ------------------------------------------------------------------------------
     !
-    ! -- Identify
-    write(this%iout,1) this%inunit
-  1 format(1X,/1X,'DISU -- UNSTRUCTURED GRID DISCRETIZATION PACKAGE,',         &
+    ! -- read data from file
+    if (this%inunit /= 0) then
+      !
+      ! -- Identify package
+      write(this%iout,1) this%inunit
+  1   format(1X,/1X,'DISU -- UNSTRUCTURED GRID DISCRETIZATION PACKAGE,',         &
                   ' VERSION 2 : 3/27/2014 - INPUT READ FROM UNIT ',I0,//)
-    !
-    call this%read_options()
-    call this%read_dimensions()
-    call this%allocate_arrays()
-    call this%read_data()
-    !
-    ! -- Create and fill the connections object
-    allocate(this%con)
-    call this%con%read_from_block(this%name_model, this%nodes, this%nja,       &
-                                  this%inunit, this%iout)
-    this%njas = this%con%njas
-    !
-    ! -- If NVERT specified and greater than 0, then read VERTICES and CELL2D
-    if(this%nvert > 0) then
-      call this%read_vertices()
-      call this%read_cell2d()
-    else
-      ! -- connection direction information cannot be calculated
-      this%icondir = 0
-    endif
+      !
+      call this%read_options()
+      call this%read_dimensions()
+      call this%allocate_arrays()
+      call this%read_mf6_griddata()
+      !
+      ! -- Create and fill the connections object
+      !allocate(this%con)
+      call this%con%read_from_block(this%name_model, this%nodes, this%nja,       &
+                                    this%inunit, this%iout)
+      this%njas = this%con%njas
+      !
+      ! -- If NVERT specified and greater than 0, then read VERTICES and CELL2D
+      if(this%nvert > 0) then
+        call this%read_vertices()
+        call this%read_cell2d()
+      else
+        ! -- connection direction information cannot be calculated
+        this%icondir = 0
+      endif
+    end if
     !
     ! -- Return
     return
@@ -351,9 +473,9 @@ module GwfDisuModule
     return
   end subroutine read_dimensions
 
-  subroutine read_data(this)
+  subroutine read_mf6_griddata(this)
 ! ******************************************************************************
-! read_data -- Read discretization data
+! read_mf6_griddata -- Read discretization data
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -453,7 +575,7 @@ module GwfDisuModule
     !
     ! -- Return
     return
-  end subroutine read_data
+  end subroutine read_mf6_griddata
 
   subroutine read_vertices(this)
 ! ******************************************************************************
@@ -1005,12 +1127,15 @@ module GwfDisuModule
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(GwfDisuType) :: this
+    ! -- local
+    integer(I4B) :: n
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate arrays in DisBaseType (mshape, top, bot, area)
     call this%DisBaseType%allocate_arrays()
     !
     ! -- Allocate arrays in DISU
+    call mem_allocate(this%idomain, this%nodes, 'IDOMAIN', this%origin)
     call mem_allocate(this%vertices, 2, this%nvert, 'VERTICES', this%origin)
     if(this%nvert > 0) then
       call mem_allocate(this%cellxy, 2, this%nodes, 'CELLXY', this%origin)
@@ -1018,8 +1143,16 @@ module GwfDisuModule
       call mem_allocate(this%cellxy, 2, 0, 'CELLXY', this%origin)
     endif
     !
+    ! -- allocate connection object
+    allocate(this%con)
+    !
     ! -- Initialize
     this%mshape(1) = this%nodes
+    !
+    ! -- initialize all cells to be active (idomain = 1)
+    do n = 1, this%nodes
+      this%idomain(n) = 1
+    end do
     !
     ! -- Return
     return
@@ -1250,11 +1383,7 @@ module GwfDisuModule
     !
     ! -- If reduced model, then need to copy from itemp(=>ibuff) to iarray
     if(this%nodes <  this%nodesuser) then
-      do nodeu = 1, this%nodesuser
-        noder = this%get_nodenumber(nodeu, 0)
-        if(noder <= 0) cycle
-        iarray(noder) = itemp(nodeu)
-      enddo
+      call this%fill_grid_array(itemp, iarray)
     endif
     !
     ! -- return
@@ -1314,11 +1443,7 @@ module GwfDisuModule
     !
     ! -- If reduced model, then need to copy from dtemp(=>dbuff) to darray
     if(this%nodes <  this%nodesuser) then
-      do nodeu = 1, this%nodesuser
-        noder = this%get_nodenumber(nodeu, 0)
-        if(noder <= 0) cycle
-        darray(noder) = dtemp(nodeu)
-      enddo
+      call this%fill_grid_array(dtemp, darray)
     endif
     !
     ! -- return

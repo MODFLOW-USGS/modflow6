@@ -27,6 +27,8 @@ module GwfNpfModule
 
     type(GwfIcType), pointer                        :: ic           => null()    ! initial conditions object
     type(Xt3dType), pointer                         :: xt3d         => null()    ! xt3d pointer
+    integer(I4B), pointer                           :: iname        => null()    ! length of variable names
+    character(len=24), dimension(:), pointer        :: aname        => null()    ! variable names
     integer(I4B), dimension(:), pointer, contiguous :: ibound       => null()    ! pointer to model ibound
     real(DP), dimension(:), pointer, contiguous     :: hnew         => null()    ! pointer to model xnew
     integer(I4B), pointer                           :: ixt3d        => null()    ! xt3d flag (0 is off, 1 is lhs, 2 is rhs)
@@ -62,6 +64,7 @@ module GwfNpfModule
     real(DP), dimension(:), pointer, contiguous     :: angle2       => null()    ! k ellipse rotation up from xy plane around y axis (pitch)
     real(DP), dimension(:), pointer, contiguous     :: angle3       => null()    ! k tensor rotation around x axis (roll)
     !
+    integer(I4B), pointer                           :: iwetdry      => null()    ! flag to indicate angle1 was read
     real(DP), dimension(:), pointer, contiguous     :: wetdry       => null()    ! wetdry array
     real(DP), dimension(:), pointer, contiguous     :: sat          => null()    ! saturation (0. to 1.) for each cell
     real(DP), dimension(:), pointer, contiguous     :: condsat      => null()    ! saturated conductance (symmetric array)
@@ -112,7 +115,8 @@ module GwfNpfModule
 
   subroutine npf_cr(npfobj, name_model, inunit, iout)
 ! ******************************************************************************
-! npf_cr -- Create a new NPF object
+! npf_cr -- Create a new NPF object. Pass a inunit value of 0 if npf data will
+!           initialized from memory  
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -121,7 +125,7 @@ module GwfNpfModule
     ! -- dummy
     type(GwfNpftype), pointer :: npfobj
     character(len=*), intent(in) :: name_model
-    integer(I4B), intent(in) :: inunit
+    integer(I4B), intent(in) :: inunit  
     integer(I4B), intent(in) :: iout
 ! ------------------------------------------------------------------------------
     !
@@ -142,7 +146,7 @@ module GwfNpfModule
     return
   end subroutine npf_cr
 
-  subroutine npf_df(this, xt3d, ingnc)
+  subroutine npf_df(this, dis, xt3d, ingnc)
 ! ******************************************************************************
 ! npf_df -- Define
 ! ******************************************************************************
@@ -154,6 +158,7 @@ module GwfNpfModule
     use Xt3dModule, only: xt3d_cr
     ! -- dummy
     class(GwfNpftype) :: this
+    class(DisBaseType), pointer, intent(inout) :: dis
     type(Xt3dType), pointer :: xt3d
     integer(I4B), intent(in) :: ingnc
     ! -- local
@@ -167,6 +172,9 @@ module GwfNpfModule
     ! -- Print a message identifying the node property flow package.
     write(this%iout, fmtheader) this%inunit
     !
+    ! -- Set a pointer to dis
+    this%dis => dis
+    !
     ! -- Initialize block parser
     call this%parser%Initialize(this%inunit, this%iout)
     !
@@ -176,10 +184,11 @@ module GwfNpfModule
     !
     ! -- Save pointer to xt3d object
     this%xt3d => xt3d
-    if (this%ixt3d > 0) xt3d%ixt3d = this%ixt3d
+    if (this%ixt3d /= 0) xt3d%ixt3d = this%ixt3d
+    call this%xt3d%xt3d_df(dis)
     !
     ! -- Ensure GNC and XT3D are not both on at the same time
-    if (this%ixt3d > 0 .and. ingnc > 0) then
+    if (this%ixt3d /= 0 .and. ingnc > 0) then
       call store_error('Error in model ' // trim(this%name_model) // &
         '.  The XT3D option cannot be used with the GNC Package.')
       call ustop()
@@ -189,7 +198,7 @@ module GwfNpfModule
     return
   end subroutine npf_df
 
-  subroutine npf_ac(this, moffset, sparse, nodes, ia, ja)
+  subroutine npf_ac(this, moffset, sparse)
 ! ******************************************************************************
 ! npf_ac -- Add connections for extended neighbors to the sparse matrix
 ! ******************************************************************************
@@ -201,21 +210,19 @@ module GwfNpfModule
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(GwfNpftype) :: this
-    integer(I4B), intent(in) :: moffset, nodes
-    integer(I4B), dimension(:), intent(in) :: ia
-    integer(I4B), dimension(:), intent(in) :: ja
+    integer(I4B), intent(in) :: moffset
     type(sparsematrix), intent(inout) :: sparse
     ! -- local
 ! ------------------------------------------------------------------------------
     !
     ! -- Add extended neighbors (neighbors of neighbors)
-    if(this%ixt3d > 0) call this%xt3d%xt3d_ac(moffset, sparse, nodes, ia, ja)
+    if(this%ixt3d /= 0) call this%xt3d%xt3d_ac(moffset, sparse)
     !
     ! -- Return
     return
   end subroutine npf_ac
 
-  subroutine npf_mc(this, moffset, nodes, ia, ja, iasln, jasln)
+  subroutine npf_mc(this, moffset, iasln, jasln)
 ! ******************************************************************************
 ! npf_mc -- Map connections and construct iax, jax, and idxglox
 ! ******************************************************************************
@@ -226,22 +233,97 @@ module GwfNpfModule
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(GwfNpftype) :: this
-    integer(I4B), intent(in) :: moffset, nodes
-    integer(I4B), dimension(:), intent(in) :: ia
-    integer(I4B), dimension(:), intent(in) :: ja
+    integer(I4B), intent(in) :: moffset
     integer(I4B), dimension(:), intent(in) :: iasln
     integer(I4B), dimension(:), intent(in) :: jasln
     ! -- local
 ! ------------------------------------------------------------------------------
     !
-    if(this%ixt3d > 0) call this%xt3d%xt3d_mc(moffset, nodes, ia, ja, iasln,   &
+    if(this%ixt3d /= 0) call this%xt3d%xt3d_mc(moffset, iasln,   &
                                               jasln, this%inewton)
     !
     ! -- Return
     return
   end subroutine npf_mc
+  
+  subroutine npf_init_mem(this, dis, ixt3d, icelltype, k11, k22, k33, wetdry,    &
+                          angle1, angle2, angle3)
+! ******************************************************************************
+! npf_cr -- Create a new NPF object from memory
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwfNpftype) :: this
+    class(DisBaseType), pointer, intent(inout) :: dis
+    integer(I4B), pointer, intent(in) :: ixt3d
+    integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: icelltype
+    real(DP), dimension(:), pointer, contiguous, intent(inout) :: k11
+    real(DP), dimension(:), pointer, contiguous, intent(inout), optional :: k22
+    real(DP), dimension(:), pointer, contiguous, intent(inout), optional :: k33
+    real(DP), dimension(:), pointer, contiguous, intent(inout), optional :: wetdry
+    real(DP), dimension(:), pointer, contiguous, intent(inout), optional :: angle1
+    real(DP), dimension(:), pointer, contiguous, intent(inout), optional :: angle2
+    real(DP), dimension(:), pointer, contiguous, intent(inout), optional :: angle3
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    ! -- Store pointers to arguments that were passed in
+    this%dis => dis
+    !
+    ! -- set ixt3d (1 - HCOF and RHS; 2 - RHS only)
+    this%ixt3d = ixt3d
+    !
+    ! -- allocate arrays
+    call this%allocate_arrays(dis%nodes, dis%njas)
+    !
+    ! -- fill icelltype
+    call dis%fill_grid_array(icelltype, this%icelltype)
+    !
+    ! -- fill k data
+    ! -- k11
+    call dis%fill_grid_array(k11, this%k11)
+    ! -- k22
+    if (present(k22)) then
+      this%ik22 = 1
+      call dis%fill_grid_array(k22, this%k22)
+    end if
+    ! -- k33
+    if (present(k33)) then
+      this%ik33 = 1
+      call dis%fill_grid_array(k33, this%k33)
+    end if
+    !
+    ! -- fill angle data
+    ! -- angle1
+    if (present(angle1)) then
+      this%iangle1 = 1
+      call dis%fill_grid_array(angle1, this%angle1)
+    end if
+    ! -- angle2
+    if (present(angle2)) then
+      this%iangle2 = 1
+      call dis%fill_grid_array(angle2, this%angle2)
+    end if
+    ! -- angle3
+    if (present(angle3)) then
+      this%iangle3 = 1
+      call dis%fill_grid_array(angle3, this%angle3)
+    end if
+    !
+    ! -- fill wetdry data
+    if (present(wetdry)) then
+      this%iwetdry = 1
+      this%irewet = 1
+    end if
+    !
+    ! -- Return
+    return
+  end subroutine npf_init_mem
 
-  subroutine npf_ar(this, dis, ic, ibound, hnew)
+  subroutine npf_ar(this, ic, ibound, hnew)
 ! ******************************************************************************
 ! npf_ar -- Allocate and Read
 ! ******************************************************************************
@@ -250,7 +332,6 @@ module GwfNpfModule
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwfNpftype) :: this
-    class(DisBaseType), pointer, intent(inout) :: dis
     type(GwfIcType), pointer, intent(in) :: ic
     integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: ibound
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: hnew
@@ -260,25 +341,31 @@ module GwfNpfModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Store pointers to arguments that were passed in
-    this%dis     => dis
     this%ic      => ic
     this%ibound  => ibound
     this%hnew    => hnew
     !
-    ! -- allocate arrays
-    call this%allocate_arrays(dis%nodes, dis%njas)
-    !
-    ! -- read the data block
-    call this%read_data()
+    ! -- read data from files
+    if (this%inunit /= 0)  then
+      !
+      ! -- allocate arrays
+      call this%allocate_arrays(this%dis%nodes, this%dis%njas)
+      !
+      ! -- read the data block
+      call this%read_data()
+    end if
     !
     ! -- Initialize and check data
     call this%prepcheck()
     !
     ! -- xt3d
-    if(this%ixt3d > 0) call this%xt3d%xt3d_ar(dis, ibound, this%k11, this%ik33,&
-      this%k33, this%sat, this%ik22, this%k22, this%inewton, this%satmin,  &
-      this%icelltype, this%iangle1, this%iangle2, this%iangle3,                &
-      this%angle1, this%angle2, this%angle3)
+    if (this%ixt3d /= 0) then
+      call this%xt3d%xt3d_ar(ibound, this%k11, this%ik33, this%k33,              &
+                             this%sat, this%ik22, this%k22, this%inewton,        &
+                             this%satmin, this%icelltype, this%iangle1,          &
+                             this%iangle2, this%iangle3, this%angle1,            &
+                             this%angle2, this%angle3)
+    end if
     !
     ! -- Return
     return
@@ -350,7 +437,7 @@ module GwfNpfModule
     return
   end subroutine npf_cf
 
-  subroutine npf_fc(this, kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew)
+  subroutine npf_fc(this, kiter, njasln, amat, idxglo, rhs, hnew)
 ! ******************************************************************************
 ! npf_fc -- Formulate
 ! ******************************************************************************
@@ -362,13 +449,11 @@ module GwfNpfModule
     ! -- dummy
     class(GwfNpfType) :: this
     integer(I4B) :: kiter
-    integer(I4B),intent(in) :: nodes
-    integer(I4B),intent(in) :: nja
     integer(I4B),intent(in) :: njasln
     real(DP),dimension(njasln),intent(inout) :: amat
-    integer(I4B),intent(in),dimension(nja) :: idxglo
-    real(DP),intent(inout),dimension(nodes) :: rhs
-    real(DP),intent(inout),dimension(nodes) :: hnew
+    integer(I4B),intent(in),dimension(:) :: idxglo
+    real(DP),intent(inout),dimension(:) :: rhs
+    real(DP),intent(inout),dimension(:) :: hnew
     ! -- local
     integer(I4B) :: n, m, ii, idiag, ihc
     integer(I4B) :: isymcon, idiagm
@@ -378,11 +463,11 @@ module GwfNpfModule
     !
     ! -- Calculate conductance and put into amat
     !
-    if(this%ixt3d > 0) then
-      call this%xt3d%xt3d_fc(kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew)
+    if(this%ixt3d /= 0) then
+      call this%xt3d%xt3d_fc(kiter, njasln, amat, idxglo, rhs, hnew)
     else
     !
-    do n = 1, nodes
+    do n = 1, this%dis%nodes
       do ii = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
         m = this%dis%con%ja(ii)
         !
@@ -466,7 +551,7 @@ module GwfNpfModule
   end subroutine npf_fc
 
 
-  subroutine npf_fn(this, kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew)
+  subroutine npf_fn(this, kiter, njasln, amat, idxglo, rhs, hnew)
 ! ******************************************************************************
 ! npf_fn -- Fill newton terms
 ! ******************************************************************************
@@ -476,14 +561,13 @@ module GwfNpfModule
     ! -- dummy
     class(GwfNpfType) :: this
     integer(I4B) :: kiter
-    integer(I4B),intent(in) :: nodes
-    integer(I4B),intent(in) :: nja
     integer(I4B),intent(in) :: njasln
     real(DP),dimension(njasln),intent(inout) :: amat
-    integer(I4B),intent(in),dimension(nja) :: idxglo
-    real(DP),intent(inout),dimension(nodes) :: rhs
-    real(DP),intent(inout),dimension(nodes) :: hnew
+    integer(I4B),intent(in),dimension(:) :: idxglo
+    real(DP),intent(inout),dimension(:) :: rhs
+    real(DP),intent(inout),dimension(:) :: hnew
     ! -- local
+    integer(I4B) :: nodes, nja
     integer(I4B) :: n,m,ii,idiag
     integer(I4B) :: isymcon, idiagm
     integer(I4B) :: iups
@@ -503,7 +587,9 @@ module GwfNpfModule
     !
     ! -- add newton terms to solution matrix
     !
-    if(this%ixt3d > 0) then
+    nodes = this%dis%nodes
+    nja = this%dis%con%nja
+    if(this%ixt3d /= 0) then
       call this%xt3d%xt3d_fn(kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew)
     else
     !
@@ -647,7 +733,7 @@ module GwfNpfModule
     return
   end subroutine npf_nur
 
-  subroutine npf_flowja(this, nodes, nja, hnew, flowja)
+  subroutine npf_flowja(this, hnew, flowja)
 ! ******************************************************************************
 ! npf_flowja -- Budget
 ! ******************************************************************************
@@ -656,10 +742,8 @@ module GwfNpfModule
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwfNpfType) :: this
-    integer(I4B),intent(in) :: nodes
-    integer(I4B),intent(in) :: nja
-    real(DP),intent(inout),dimension(nodes) :: hnew
-    real(DP),intent(inout),dimension(nja) :: flowja
+    real(DP),intent(inout),dimension(:) :: hnew
+    real(DP),intent(inout),dimension(:) :: flowja
     ! -- local
     integer(I4B) :: n, ipos, m
     real(DP) :: qnm
@@ -667,8 +751,8 @@ module GwfNpfModule
     !
     ! -- Calculate the flow across each cell face and store in flowja
     !
-    if(this%ixt3d > 0) then
-      call this%xt3d%xt3d_flowja(nodes, nja, hnew, flowja)
+    if(this%ixt3d /= 0) then
+      call this%xt3d%xt3d_flowja(hnew, flowja)
     else
     !
     do n = 1, this%dis%nodes
@@ -799,7 +883,7 @@ module GwfNpfModule
     return
   end subroutine sgwf_npf_qcalc
 
-  subroutine npf_bdadj(this, nja, flowja, icbcfl, icbcun)
+  subroutine npf_bdadj(this, flowja, icbcfl, icbcun)
 ! ******************************************************************************
 ! npf_bdadj -- Calculate intercell flows
 ! ******************************************************************************
@@ -808,8 +892,7 @@ module GwfNpfModule
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwfNpfType) :: this
-    integer(I4B),intent(in) :: nja
-    real(DP),dimension(nja),intent(in) :: flowja
+    real(DP),dimension(:),intent(in) :: flowja
     integer(I4B), intent(in) :: icbcfl
     integer(I4B), intent(in) :: icbcun
     ! -- local
@@ -843,7 +926,7 @@ module GwfNpfModule
     return
   end subroutine npf_bdadj
 
-  subroutine npf_ot(this, nodes, nja, flowja)
+  subroutine npf_ot(this, flowja)
 ! ******************************************************************************
 ! npf_ot -- Budget
 ! ******************************************************************************
@@ -855,9 +938,7 @@ module GwfNpfModule
     use ConstantsModule, only: LENBIGLINE
     ! -- dummy
     class(GwfNpfType) :: this
-    integer(I4B),intent(in) :: nodes
-    integer(I4B),intent(in) :: nja
-    real(DP),intent(inout),dimension(nja) :: flowja
+    real(DP),intent(inout),dimension(:) :: flowja
     ! -- local
     character(len=LENBIGLINE) :: line
     character(len=30) :: tempstr
@@ -928,6 +1009,7 @@ module GwfNpfModule
     call mem_deallocate(this%ihdwet)
     call mem_deallocate(this%satmin)
     call mem_deallocate(this%ibotnode)
+    call mem_deallocate(this%iwetdry)
     call mem_deallocate(this%iangle1)
     call mem_deallocate(this%iangle2)
     call mem_deallocate(this%iangle3)
@@ -974,6 +1056,7 @@ module GwfNpfModule
     call this%NumericalPackageType%allocate_scalars()
     !
     ! -- Allocate scalars
+    call mem_allocate(this%iname, 'INAME', this%origin)
     call mem_allocate(this%ixt3d, 'IXT3D', this%origin)
     call mem_allocate(this%satomega, 'SATOMEGA', this%origin)
     call mem_allocate(this%hnoflo, 'HNOFLO', this%origin)
@@ -997,9 +1080,7 @@ module GwfNpfModule
     call mem_allocate(this%iangle1, 'IANGLE1', this%origin)
     call mem_allocate(this%iangle2, 'IANGLE2', this%origin)
     call mem_allocate(this%iangle3, 'IANGLE3', this%origin)
-    call mem_allocate(this%angle1, 1, 'ANGLE1', trim(this%origin))
-    call mem_allocate(this%angle2, 1, 'ANGLE2', trim(this%origin))
-    call mem_allocate(this%angle3, 1, 'ANGLE3', trim(this%origin))
+    call mem_allocate(this%iwetdry, 'IWETDRY', this%origin)
     call mem_allocate(this%nedges, 'NEDGES', this%origin)
     call mem_allocate(this%lastedge, 'LASTEDGE', this%origin)
     !
@@ -1007,6 +1088,7 @@ module GwfNpfModule
     call mem_setptr(this%igwfnewtonur, 'INEWTONUR', trim(this%name_model))
     !
     ! -- Initialize value
+    this%iname = 8
     this%ixt3d = 0
     this%satomega = DZERO
     this%hnoflo = DHNOFLO !1.d30
@@ -1030,9 +1112,7 @@ module GwfNpfModule
     this%iangle1 = 0
     this%iangle2 = 0
     this%iangle3 = 0
-    this%angle1(1) = DZERO
-    this%angle2(1) = DZERO
-    this%angle3(1) = DZERO
+    this%iwetdry = 0
     this%nedges = 0
     this%lastedge = 0
     !
@@ -1045,7 +1125,7 @@ module GwfNpfModule
 
   subroutine allocate_arrays(this, ncells, njas)
 ! ******************************************************************************
-! allocate_scalars -- Allocate npf arrays
+! allocate_arrays -- Allocate npf arrays
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -1056,6 +1136,8 @@ module GwfNpfModule
     class(GwfNpftype) :: this
     integer(I4B), intent(in) :: ncells
     integer(I4B), intent(in) :: njas
+    ! -- local
+    integer(I4B) :: n
 ! ------------------------------------------------------------------------------
     !
     call mem_allocate(this%icelltype, ncells, 'ICELLTYPE', trim(this%origin))
@@ -1063,10 +1145,15 @@ module GwfNpfModule
     call mem_allocate(this%sat, ncells, 'SAT', trim(this%origin))
     call mem_allocate(this%condsat, njas, 'CONDSAT', trim(this%origin))
     !
+    ! -- Optional arrays dimensioned to full size initially
+    call mem_allocate(this%k22, ncells, 'K22', trim(this%origin))
+    call mem_allocate(this%k33, ncells, 'K33', trim(this%origin))
+    call mem_allocate(this%wetdry, ncells, 'WETDRY', trim(this%origin))
+    call mem_allocate(this%angle1, ncells, 'ANGLE1', trim(this%origin))
+    call mem_allocate(this%angle2, ncells, 'ANGLE2', trim(this%origin))
+    call mem_allocate(this%angle3, ncells, 'ANGLE3', trim(this%origin))
+    !
     ! -- Optional arrays
-    call mem_allocate(this%k22, 0, 'K22', trim(this%origin))
-    call mem_allocate(this%k33, 0, 'K33', trim(this%origin))
-    call mem_allocate(this%wetdry, 0, 'WETDRY', trim(this%origin))
     call mem_allocate(this%ibotnode, 0, 'IBOTNODE', trim(this%origin))
     !
     ! -- Specific discharge
@@ -1083,7 +1170,22 @@ module GwfNpfModule
       call mem_allocate(this%propsedge, 0, 0, 'PROPSEDGE', trim(this%origin))
     endif
     !
-    ! -- Return
+    ! -- initialize iangle1, iangle2, iangle3, and wetdry
+    do n = 1, ncells
+      this%angle1(n) = DZERO
+      this%angle2(n) = DZERO
+      this%angle3(n) = DZERO
+      this%wetdry(n) = DZERO
+    end do
+    !
+    ! -- allocate variable names
+    allocate(this%aname(this%iname))
+    this%aname = ['               ICELLTYPE', '                       K',       &
+                  '                     K33', '                     K22',       &    
+                  '                  WETDRY', '                  ANGLE1',       &
+                  '                  ANGLE2', '                  ANGLE3']
+    !
+    ! -- return
     return
   end subroutine allocate_arrays
 
@@ -1417,7 +1519,7 @@ module GwfNpfModule
       endif
     endif
     !
-    if (this%ixt3d > 0) then
+    if (this%ixt3d /= 0) then
       if(this%icellavg > 0) then
         write(errmsg, '(a)') 'ERROR IN NPF OPTIONS. ' //                       &
                              'ALTERNATIVE_CELL_AVERAGING OPTION ' //           &
@@ -1460,7 +1562,8 @@ module GwfNpfModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule,   only: LINELENGTH, DONE, DPIO180
-    use MemoryManagerModule, only: mem_reallocate, mem_reassignptr
+    use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_deallocate, &
+                                   mem_reassignptr
     use SimModule,         only: ustop, store_error, count_errors
     ! -- dummy
     class(GwfNpftype) :: this
@@ -1469,7 +1572,9 @@ module GwfNpfModule
     integer(I4B) :: n, istart, istop, lloc, ierr, nerr
     logical :: isfound, endOfBlock
     logical, dimension(8)           :: lname
-    character(len=24), dimension(8) :: aname
+    character(len=24), dimension(:), pointer :: aname
+    !character(len=24), dimension(8) :: aname
+    character(len=24), dimension(8) :: varinames
     ! -- formats
     character(len=*), parameter :: fmtiprflow =                                &
       "(4x,'CELL-BY-CELL FLOW INFORMATION WILL BE PRINTED TO LISTING FILE " // &
@@ -1479,89 +1584,34 @@ module GwfNpfModule
       "WHENEVER ICBCFL IS NOT ZERO.')"
     character(len=*), parameter :: fmtnct =                                    &
       "(1x, 'Negative cell thickness at cell: ', a)"
-    character(len=*), parameter :: fmtkerr =                                   &
-      "(1x, 'Hydraulic property ',a,' is <= 0 for cell ',a, ' ', 1pg15.6)"
-    character(len=*), parameter :: fmtkerr2 =                                  &
-      "(1x, '... ', i0,' additional errors not shown for ',a)"
+    !character(len=*), parameter :: fmtkerr =                                   &
+    !  "(1x, 'Hydraulic property ',a,' is <= 0 for cell ',a, ' ', 1pg15.6)"
+    !character(len=*), parameter :: fmtkerr2 =                                  &
+    !  "(1x, '... ', i0,' additional errors not shown for ',a)"
     ! -- data
-    data aname(1) /'               ICELLTYPE'/
-    data aname(2) /'                       K'/
-    data aname(3) /'                     K33'/
-    data aname(4) /'                     K22'/
-    data aname(5) /'                  WETDRY'/
-    data aname(6) /'                  ANGLE1'/
-    data aname(7) /'                  ANGLE2'/
-    data aname(8) /'                  ANGLE3'/
+    !data aname(1) /'               ICELLTYPE'/
+    !data aname(2) /'                       K'/
+    !data aname(3) /'                     K33'/
+    !data aname(4) /'                     K22'/
+    !data aname(5) /'                  WETDRY'/
+    !data aname(6) /'                  ANGLE1'/
+    !data aname(7) /'                  ANGLE2'/
+    !data aname(8) /'                  ANGLE3'/
 ! ------------------------------------------------------------------------------
     !
     ! -- Initialize
-    lname(:) = .false.
+    aname => this%aname
+    do n = 1, size(aname)
+      varinames(n) = adjustl(aname(n))
+      lname(n) = .false.
+    end do
+    varinames(2) = 'K11                     '
     !
     ! -- get npfdata block
     call this%parser%GetBlock('GRIDDATA', isfound, ierr)
     if(isfound) then
       write(this%iout,'(1x,a)')'PROCESSING GRIDDATA'
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        call this%parser%GetStringCaps(keyword)
-        call this%parser%GetRemainingLine(line)
-        lloc = 1
-        select case (keyword)
-          case ('ICELLTYPE')
-            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                this%parser%iuactive, this%icelltype, aname(1))
-            lname(1) = .true.
-          case ('K')
-            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                    this%parser%iuactive, this%k11, aname(2))
-            lname(2) = .true.
-          case ('K33')
-            call mem_reallocate(this%k33, this%dis%nodes, 'K33',                &
-                              trim(this%origin))
-            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                    this%parser%iuactive, this%k33, aname(3))
-            this%ik33 = 1
-            lname(3) = .true.
-          case ('K22')
-            call mem_reallocate(this%k22, this%dis%nodes, 'K22',                &
-                              trim(this%origin))
-            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                    this%parser%iuactive, this%k22, aname(4))
-            this%ik22 = 1
-            lname(4) = .true.
-          case ('WETDRY')
-            call mem_reallocate(this%wetdry, this%dis%nodes, 'WETDRY',         &
-                              trim(this%origin))
-            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                    this%parser%iuactive, this%wetdry, aname(5))
-            lname(5) = .true.
-          case ('ANGLE1')
-            call mem_reallocate(this%angle1, this%dis%nodes, 'ANGLE1',         &
-                              trim(this%origin))
-            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                    this%parser%iuactive, this%angle1, aname(6))
-            lname(6) = .true.
-          case ('ANGLE2')
-            call mem_reallocate(this%angle2, this%dis%nodes, 'ANGLE2',         &
-                              trim(this%origin))
-            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                    this%parser%iuactive, this%angle2, aname(7))
-            lname(7) = .true.
-          case ('ANGLE3')
-            call mem_reallocate(this%angle3, this%dis%nodes, 'ANGLE3',         &
-                              trim(this%origin))
-            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                    this%parser%iuactive, this%angle3, aname(8))
-            lname(8) = .true.
-          case default
-            write(errmsg,'(4x,a,a)')'ERROR. UNKNOWN GRIDDATA TAG: ',           &
-                                     trim(keyword)
-            call store_error(errmsg)
-            call this%parser%StoreErrorUnit()
-            call ustop()
-        end select
-      end do
+      call this%get_block_data(aname, lname, varinames)
     else
       write(errmsg,'(1x,a)')'ERROR.  REQUIRED GRIDDATA BLOCK NOT FOUND.'
       call store_error(errmsg)
@@ -1576,36 +1626,142 @@ module GwfNpfModule
       call store_error(errmsg)
     endif
     !
-    ! -- Check for K or check K11
+    ! -- Check for K
     if(.not. lname(2)) then
       write(errmsg, '(a, a, a)') 'Error in GRIDDATA block: ',                  &
                                  trim(adjustl(aname(2))), ' not found.'
       call store_error(errmsg)
-    else
-      nerr = 0
-      do n = 1, size(this%k11)
-        if(this%k11(n) <= DZERO) then
-          nerr = nerr + 1
-          if(nerr <= 20) then
-            call this%dis%noder_to_string(n, cellstr)
-            write(errmsg, fmtkerr) trim(adjustl(aname(2))), trim(cellstr),     &
-                                   this%k11(n)
-            call store_error(errmsg)
-          endif
-        endif
-      enddo
-      if(nerr > 20) then
-        write(errmsg, fmtkerr2) nerr, trim(adjustl(aname(2)))
-        call store_error(errmsg)
-      endif
     endif
     !
-    ! -- Check for K33
-    if(.not. lname(3)) then
+    ! -- set ik33 flag
+    if(lname(3)) then
+      this%ik33 = 1
+    else
       write(this%iout, '(1x, a)') 'K33 not provided.  Assuming K33 = K.'
       call mem_reassignptr(this%k33, 'K33', trim(this%origin),                 &
                                      'K11', trim(this%origin))
+    endif
+    !
+    ! -- set ik22 flag
+    if(lname(4)) then
+      this%ik22 = 1
     else
+      write(this%iout, '(1x, a)') 'K22 not provided.  Assuming K22 = K.'
+      call mem_reassignptr(this%k22, 'K22', trim(this%origin),                 &
+                                     'K11', trim(this%origin))
+    endif
+    !
+    ! -- Set WETDRY
+    if (lname(5)) then
+      this%iwetdry = 1
+    else
+      call mem_reallocate(this%wetdry, 1, 'WETDRY', trim(this%origin))        
+    end if
+    !
+    ! -- set angle flags
+    if (lname(6)) then
+      this%iangle1 = 1
+    else
+      if (this%ixt3d == 0) then
+        call mem_reallocate(this%angle1, 1, 'ANGLE1', trim(this%origin))        
+      end if
+    endif
+    if (lname(7)) then
+      this%iangle2 = 1
+    else
+      if (this%ixt3d == 0) then
+        call mem_reallocate(this%angle2, 1, 'ANGLE2', trim(this%origin))        
+      end if
+    endif
+    if (lname(8)) then
+      this%iangle3 = 1
+    else
+      if (this%ixt3d == 0) then
+        call mem_reallocate(this%angle3, 1, 'ANGLE3', trim(this%origin))        
+      end if
+    endif
+    !
+    ! -- terminate if read errors encountered
+    if(count_errors() > 0) then
+      call this%parser%StoreErrorUnit()
+      call ustop()
+    endif
+    !
+    ! -- Final NPFDATA message
+    write(this%iout,'(1x,a)')'END PROCESSING GRIDDATA'
+    !
+    ! -- Return
+    return
+  end subroutine read_data
+
+  subroutine prepcheck(this)
+! ******************************************************************************
+! prepcheck -- Initialize and check NPF data
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    use ConstantsModule,   only: LINELENGTH, DONE, DPIO180
+    use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_deallocate
+    use SimModule, only: store_error, ustop, count_errors
+    ! -- dummy
+    class(GwfNpfType) :: this
+    ! -- local
+    logical :: finished
+    character(len=24), dimension(:), pointer :: aname
+    character(len=LINELENGTH) :: cellstr, errmsg
+    integer(I4B) :: nerr
+    real(DP) :: csat
+    real(DP) :: satn, topn, topm, botn
+    real(DP) :: fawidth
+    real(DP) :: hn, hm
+    real(DP) :: hyn, hym
+    integer(I4B) :: n, m, ii, nn, ihc
+    integer(I4B) :: nextn
+    real(DP) :: minbot, botm
+    integer(I4B), dimension(:), pointer, contiguous :: ithickstartflag
+    ! -- format
+    character(len=*), parameter :: fmtkerr =                                   &
+      "(1x, 'Hydraulic property ',a,' is <= 0 for cell ',a, ' ', 1pg15.6)"
+    character(len=*), parameter :: fmtkerr2 =                                  &
+      "(1x, '... ', i0,' additional errors not shown for ',a)"
+    character(len=*),parameter :: fmtcnv = &
+    "(1X,'CELL ', A, &
+     &' ELIMINATED BECAUSE ALL HYDRAULIC CONDUCTIVITIES TO NODE ARE 0.')"
+    character(len=*),parameter :: fmtnct = &
+    "(1X,'Negative cell thickness at cell ', A)"
+    character(len=*),parameter :: fmtihbe = &
+    "(1X,'Initial head, bottom elevation:',1P,2G13.5)"
+    character(len=*),parameter :: fmttebe = &
+    "(1X,'Top elevation, bottom elevation:',1P,2G13.5)"
+! ------------------------------------------------------------------------------
+    !
+    ! -- initialize
+    aname => this%aname
+    !
+    ! -- check k11
+    nerr = 0
+    do n = 1, size(this%k11)
+      if(this%k11(n) <= DZERO) then
+        nerr = nerr + 1
+        if(nerr <= 20) then
+          call this%dis%noder_to_string(n, cellstr)
+          write(errmsg, fmtkerr) trim(adjustl(aname(2))), trim(cellstr),     &
+                                  this%k11(n)
+          call store_error(errmsg)
+        endif
+      endif
+    enddo
+    if(nerr > 20) then
+      write(errmsg, fmtkerr2) nerr, trim(adjustl(aname(2)))
+      call store_error(errmsg)
+    endif
+    !
+    ! -- check k33
+    if (this%ik33 /= 0) then
+      !
+      ! -- Check to make sure values are greater than or equal to zero
+                                     'K11', trim(this%origin))
       nerr = 0
       do n = 1, size(this%k33)
         if(this%k33(n) <= DZERO) then
@@ -1622,14 +1778,12 @@ module GwfNpfModule
         write(errmsg, fmtkerr2) nerr, trim(adjustl(aname(3)))
         call store_error(errmsg)
       endif
-    endif
+    end if
     !
-    ! -- Check for K22
-    if(.not. lname(4)) then
-      write(this%iout, '(1x, a)') 'K22 not provided.  Assuming K22 = K.'
+    ! -- check k22
+    if (this%ik22 /= 0) then
       call mem_reassignptr(this%k22, 'K22', trim(this%origin),                 &
                                      'K11', trim(this%origin))
-    else
       ! -- Check to make sure that angles are available
       if(this%dis%con%ianglex == 0) then
         write(errmsg, '(a)') 'Error.  ANGLDEGX not provided in ' //            &
@@ -1654,41 +1808,39 @@ module GwfNpfModule
         write(errmsg, fmtkerr2) nerr, trim(adjustl(aname(4)))
         call store_error(errmsg)
       endif
-    endif
+    end if
     !
-    ! -- Check for WETDRY
-    if(.not. lname(5) .and. this%irewet == 1) then
-      write(errmsg, '(a, a, a)') 'Error in GRIDDATA block: ',                  &
-                                 trim(adjustl(aname(5))), ' not found.'
-      call store_error(errmsg)
+    ! -- check for wetdry conflicts
+    if(this%irewet == 1) then
+      if(this%iwetdry == 0) then
+        write(errmsg, '(a, a, a)') 'Error in GRIDDATA block: ',                  &
+                                    trim(adjustl(aname(5))), ' not found.'
+        call store_error(errmsg)
+      end if
     endif
     !
     ! -- Check for angle conflicts
-    if (lname(6)) then
-      this%iangle1 = 1
+    if (this%iangle1 /= 0) then
       do n = 1, size(this%angle1)
         this%angle1(n) = this%angle1(n) * DPIO180
       enddo
     else
-      if(this%ixt3d > 0) then
+      if(this%ixt3d /= 0) then
         this%iangle1 = 1
         write(this%iout, '(a)') 'XT3D IN USE, BUT ANGLE1 NOT SPECIFIED. ' //   &
           'SETTING ANGLE1 TO ZERO.'
-        call mem_reallocate(this%angle1, this%dis%nodes, 'ANGLE1',             &
-                              trim(this%origin))
         do n = 1, size(this%angle1)
           this%angle1(n) = DZERO
         enddo
       endif
     endif
-    if (lname(7)) then
-      this%iangle2 = 1
-      if (.not. lname(6)) then
+    if (this%iangle2 /= 0) then
+      if (this%iangle1 == 0) then
         write(errmsg, '(a)') 'ANGLE2 SPECIFIED BUT NOT ANGLE1. ' //            &
                              'ANGLE2 REQUIRES ANGLE1. '
         call store_error(errmsg)
       endif
-      if (.not. lname(8)) then
+      if (this%iangle3 == 0) then
         write(errmsg, '(a)') 'ANGLE2 SPECIFIED BUT NOT ANGLE3. ' //            &
                              'SPECIFY BOTH OR NEITHER ONE. '
         call store_error(errmsg)
@@ -1697,14 +1849,13 @@ module GwfNpfModule
         this%angle2(n) = this%angle2(n) * DPIO180
       enddo
     endif
-    if (lname(8)) then
-      this%iangle3 = 1
-      if (.not. lname(6)) then
+    if (this%iangle3 /= 0) then
+      if (this%iangle1 == 0) then
         write(errmsg, '(a)') 'ANGLE3 SPECIFIED BUT NOT ANGLE1. ' //            &
                              'ANGLE3 REQUIRES ANGLE1. '
         call store_error(errmsg)
       endif
-      if (.not. lname(7)) then
+      if (this%iangle2 == 0) then
         write(errmsg, '(a)') 'ANGLE3 SPECIFIED BUT NOT ANGLE2. ' //            &
                              'SPECIFY BOTH OR NEITHER ONE. '
         call store_error(errmsg)
@@ -1714,53 +1865,11 @@ module GwfNpfModule
       enddo
     endif
     !
+    ! -- terminate if data errors
     if(count_errors() > 0) then
       call this%parser%StoreErrorUnit()
       call ustop()
     endif
-    !
-    ! -- Final NPFDATA message
-    write(this%iout,'(1x,a)')'END PROCESSING GRIDDATA'
-    !
-    ! -- Return
-    return
-  end subroutine read_data
-
-  subroutine prepcheck(this)
-! ******************************************************************************
-! prepcheck -- Initialize and check NPF data
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    use ConstantsModule, only: LINELENGTH
-    use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_deallocate
-    use SimModule, only: store_error, ustop, count_errors
-    ! -- dummy
-    class(GwfNpfType) :: this
-    ! -- local
-    logical :: finished
-    character(len=LINELENGTH) :: cellstr, errmsg
-    real(DP) :: csat
-    real(DP) :: satn, topn, topm, botn
-    real(DP) :: fawidth
-    real(DP) :: hn, hm
-    real(DP) :: hyn, hym
-    integer(I4B) :: n, m, ii, nn, ihc
-    integer(I4B) :: nextn
-    real(DP) :: minbot, botm
-    integer(I4B), dimension(:), pointer, contiguous :: ithickstartflag
-    ! -- format
-    character(len=*),parameter :: fmtcnv = &
-    "(1X,'CELL ', A, &
-     &' ELIMINATED BECAUSE ALL HYDRAULIC CONDUCTIVITIES TO NODE ARE 0.')"
-    character(len=*),parameter :: fmtnct = &
-    "(1X,'Negative cell thickness at cell ', A)"
-    character(len=*),parameter :: fmtihbe = &
-    "(1X,'Initial head, bottom elevation:',1P,2G13.5)"
-    character(len=*),parameter :: fmttebe = &
-    "(1X,'Top elevation, bottom elevation:',1P,2G13.5)"
-! ------------------------------------------------------------------------------
     !
     ! -- allocate temporary storage to handle thickstart option
     call mem_allocate(ithickstartflag, this%dis%nodes, 'ITHICKSTARTFLAG',      &
