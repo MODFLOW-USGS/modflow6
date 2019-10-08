@@ -13,9 +13,12 @@ module BudgetFileReaderModule
     
     logical :: hasimeth1flowja = .false.
     integer(I4B) :: inunit
-    integer(I4B) :: nbudterms = 0
+    integer(I4B) :: nbudterms
     integer(I4B) :: kstp
     integer(I4B) :: kper
+    integer(I4B) :: kstpnext
+    integer(I4B) :: kpernext
+    logical :: endoffile
     character(len=16) :: budtxt
     integer(I4B) :: nval
     integer(I4B) :: idum1
@@ -65,6 +68,8 @@ module BudgetFileReaderModule
     logical :: success
 ! ------------------------------------------------------------------------------
     this%inunit = iu
+    this%endoffile = .false.
+    this%nbudterms = 0
     icount = 0
     ncrbud = 0
     !
@@ -133,10 +138,13 @@ module BudgetFileReaderModule
     this%dstpackagename = ''
      
     success = .true.
+    this%kstpnext = 0
+    this%kpernext = 0
     read(this%inunit, iostat=iostat) this%kstp, this%kper, this%budtxt, &
       this%nval, this%idum1, this%idum2
     if (iostat /= 0) then
       success = .false.
+      if (iostat < 0) this%endoffile = .true.
       return
     endif
     read(this%inunit) this%imeth, this%delt, this%pertim, this%totim
@@ -187,6 +195,12 @@ module BudgetFileReaderModule
     if (iout > 0) then
       write(iout, '(1pg15.6, a, 1x, a)') this%totim, this%budtxt, &
         this%dstpackagename
+    endif
+    !
+    ! -- look ahead to next kstp and kper, then backup if read successfully
+    if (.not. this%endoffile) then
+      read(this%inunit, iostat=iostat) this%kstpnext, this%kpernext
+      if (iostat == 0) call fseek(this%inunit, -2 * I4B, 1)
     endif
     !
     ! -- return

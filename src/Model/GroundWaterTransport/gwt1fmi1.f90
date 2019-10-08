@@ -7,6 +7,7 @@ module GwtFmiModule
   use BaseDisModule,          only: DisBaseType
   use ListModule,             only: ListType
   use BudgetFileReaderModule, only: BudgetFileReaderType
+  use HeadFileReaderModule,   only: HeadFileReaderType
 
   implicit none
   private
@@ -36,6 +37,7 @@ module GwtFmiModule
     integer(I4B), pointer                           :: iubud => null()          ! unit number GWF budget file
     integer(I4B), pointer                           :: iuhds => null()          ! unit number GWF head file
     type(BudgetFileReaderType)                      :: bfr
+    type(HeadFileReaderType)                        :: hfr
   contains
   
     procedure :: fmi_ar
@@ -50,6 +52,7 @@ module GwtFmiModule
     procedure :: initialize_bfr
     procedure :: advance_bfr
     procedure :: finalize_bfr
+    procedure :: initialize_hfr
     procedure :: advance_hfr
     procedure :: finalize_hfr
   
@@ -627,6 +630,11 @@ module GwtFmiModule
       call this%initialize_bfr()
     endif
     !
+    ! -- Initialize the head file reader
+    if (this%iuhds /= 0) then
+      call this%initialize_hfr()
+    endif
+    !
     ! -- return
     return
   end subroutine read_options
@@ -671,53 +679,99 @@ module GwtFmiModule
     integer(I4B) :: n
     integer(I4B) :: iposu, iposr
     integer(I4B) :: nu, nr
+    logical :: readnext
     ! -- format
     character(len=*), parameter :: fmtkstpkper =                               &
       "(1x,/1x,'FMI READING BUDGET TERMS FOR KSTP ', i0, ' KPER ', i0)"
+    character(len=*), parameter :: fmtbudkstpkper = &
+      "(1x,/1x, 'FMI SETTING BUDGET TERMS FOR KSTP ', i0, ' AND KPER ',        &
+      &i0, ' TO BUDGET FILE TERMS FROM KSTP ', i0, ' AND KPER ', i0)"
 ! ------------------------------------------------------------------------------
     !
-    ! -- Write the current time step and stress period
-    write(this%iout, fmtkstpkper) kstp, kper
-    do n = 1, this%bfr%nbudterms
-      call this%bfr%read_record(success, this%iout)
-      if (.not. success) then
-        write(errmsg,'(4x,a)') '***ERROR.  GWF BUDGET READ NOT SUCCESSFUL'
-        call store_error(errmsg)
-        call store_error_unit(this%iubud)
-        call ustop()
+    ! -- Do not read the budget if the budget is at end of file or if the next
+    !    record in the budget file is the first timestep of the next stress
+    !    period.
+    readnext = .true.
+    if (kstp * kper > 1) then
+      if (this%bfr%endoffile) then
+        readnext = .false.
+      else
+        if (this%bfr%kpernext == kper + 1 .and. this%bfr%kstpnext == 1) &
+          readnext = .false.
       endif
-      select case(this%bfr%budtxt)
-      case('FLOW-JA-FACE')
-          iposr = 0
-          do iposu = 1, size(this%bfr%flowja)
-            nu = this%dis%con%jausr(iposu)
-            nr = this%dis%get_nodenumber(nu, 0)
-            if (nr <= 0) cycle
-            iposr = iposr + 1
-            this%gwfflowja(iposr) = this%bfr%flowja(iposu)
-          end do
-        case('DATA-SPDIS')
-          do nu = 1, this%dis%nodesuser
-            nr = this%dis%get_nodenumber(nu, 0)
-            if (nr <= 0) cycle
-            this%gwfspdis(1, nr) = this%bfr%flowdata(2, nu)
-            this%gwfspdis(2, nr) = this%bfr%flowdata(3, nu)
-            this%gwfspdis(3, nr) = this%bfr%flowdata(4, nu)
-          end do
-        case('STO-SS')
-          do nu = 1, this%dis%nodesuser
-            nr = this%dis%get_nodenumber(nu, 0)
-            if (nr <= 0) cycle
-            this%gwfstrgss(nr) = this%bfr%flowdata(1, nu)
-          end do
-        case('STO-SY')
-          do nu = 1, this%dis%nodesuser
-            nr = this%dis%get_nodenumber(nu, 0)
-            if (nr <= 0) cycle
-            this%gwfstrgsy(nr) = this%bfr%flowdata(1, nu)
-          end do
-      end select
-    end do
+    endif
+    !
+    ! -- Read the next record
+    if (readnext) then
+      !
+      ! -- Write the current time step and stress period
+      write(this%iout, fmtkstpkper) kstp, kper
+      !
+      ! -- loop through the budget terms for this stress period
+      do n = 1, this%bfr%nbudterms
+        call this%bfr%read_record(success, this%iout)
+        if (.not. success) then
+          write(errmsg,'(4x,a)') '***ERROR.  GWF BUDGET READ NOT SUCCESSFUL'
+          call store_error(errmsg)
+          call store_error_unit(this%iubud)
+          call ustop()
+        endif
+        !
+        ! -- Ensure kper is same between model and budget file
+        if (kper /= this%bfr%kper) then
+          write(errmsg,'(4x,a)') '***ERROR.  PERIOD NUMBER IN BUDGET FILE &
+            &DOES NOT MATCH PERIOD NUMBER IN TRANSPORT MODEL.'
+          call store_error(errmsg)
+          call store_error_unit(this%iubud)
+          call ustop()
+        endif
+        !
+        ! -- if budget file kstp > 1, then kstp must match
+        if (this%bfr%kstp > 1 .and. (kstp /= this%bfr%kstp)) then
+          write(errmsg,'(4x,a)') '***ERROR.  IF THERE IS MORE THAN ONE TIME &
+            &STEP IN THE BUDGET FILE, THEN BUDGET FILE TIME STEPS MUST MATCH &
+            &GWT MODEL TIME STEPS ONE-FOR-ONE.'
+          call store_error(errmsg)
+          call store_error_unit(this%iubud)
+          call ustop()
+        endif
+        !
+        ! -- parse based on the type of data
+        select case(trim(adjustl(this%bfr%budtxt)))
+        case('FLOW-JA-FACE')
+            iposr = 0
+            do iposu = 1, size(this%bfr%flowja)
+              nu = this%dis%con%jausr(iposu)
+              nr = this%dis%get_nodenumber(nu, 0)
+              if (nr <= 0) cycle
+              iposr = iposr + 1
+              this%gwfflowja(iposr) = this%bfr%flowja(iposu)
+            end do
+          case('DATA-SPDIS')
+            do nu = 1, this%dis%nodesuser
+              nr = this%dis%get_nodenumber(nu, 0)
+              if (nr <= 0) cycle
+              this%gwfspdis(1, nr) = this%bfr%flowdata(2, nu)
+              this%gwfspdis(2, nr) = this%bfr%flowdata(3, nu)
+              this%gwfspdis(3, nr) = this%bfr%flowdata(4, nu)
+            end do
+          case('STO-SS')
+            do nu = 1, this%dis%nodesuser
+              nr = this%dis%get_nodenumber(nu, 0)
+              if (nr <= 0) cycle
+              this%gwfstrgss(nr) = this%bfr%flowdata(1, nu)
+            end do
+          case('STO-SY')
+            do nu = 1, this%dis%nodesuser
+              nr = this%dis%get_nodenumber(nu, 0)
+              if (nr <= 0) cycle
+              this%gwfstrgsy(nr) = this%bfr%flowdata(1, nu)
+            end do
+        end select
+      end do
+    else
+      write(this%iout, fmtbudkstpkper) kstp, kper, this%bfr%kstp, this%bfr%kper
+    endif
   end subroutine advance_bfr
   
   subroutine finalize_bfr(this)
@@ -737,6 +791,25 @@ module GwtFmiModule
     !
   end subroutine finalize_bfr
   
+  subroutine initialize_hfr(this)
+! ******************************************************************************
+! initialize_hfr -- initalize the head file reader
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    class(GwtFmiType) :: this
+    ! -- dummy
+! ------------------------------------------------------------------------------
+    !
+    ! -- Initialize the budget file reader
+    call this%hfr%initialize(this%iuhds, this%iout)
+    !
+    ! -- todo: need to run through the head terms
+    !    and do some checking
+  end subroutine initialize_hfr
+  
   subroutine advance_hfr(this)
 ! ******************************************************************************
 ! advance_hfr -- advance the head file reader
@@ -748,45 +821,81 @@ module GwtFmiModule
     use TdisModule, only: kstp, kper
     class(GwtFmiType) :: this
     character(len=LINELENGTH) :: errmsg
-    integer(I4B) :: nu, nr, i
-    integer(I4B) :: kstpfl, kperfl, m1, m2, m3
-    real(DP) :: pertim, totim, val
-    character(len=16) :: text
+    integer(I4B) :: nu, nr, i, ilay
+    integer(I4B) :: ncpl
+    real(DP) :: val
+    logical :: readnext
+    logical :: success
     character(len=*), parameter :: fmtkstpkper =                               &
       "(1x,/1x,'FMI READING HEAD FOR KSTP ', i0, ' KPER ', i0)"
-    character(len=*), parameter :: fmtkstpkpererr =                            &
-      "(1x,/1x,'***ERROR. FMI FOUND KSTP ', i0, ' KPER ', i0)"
+    character(len=*), parameter :: fmthdskstpkper = &
+      "(1x,/1x, 'FMI SETTING HEAD FOR KSTP ', i0, ' AND KPER ',        &
+      &i0, ' TO BINARY FILE HEADS FROM KSTP ', i0, ' AND KPER ', i0)"
 ! ------------------------------------------------------------------------------
     !
-    ! -- write to list file that heads are being read
-    write(this%iout, fmtkstpkper) kstp, kper
+    ! -- Do not read heads if the head is at end of file or if the next
+    !    record in the head file is the first timestep of the next stress
+    !    period.
+    readnext = .true.
+    if (kstp * kper > 1) then
+      if (this%hfr%endoffile) then
+        readnext = .false.
+      else
+        if (this%hfr%kpernext == kper + 1 .and. this%hfr%kstpnext == 1) &
+          readnext = .false.
+      endif
+    endif
     !
-    ! -- fill the gwfhead array
-    recordloop: do
+    ! -- Read the next record
+    if (readnext) then
       !
-      ! -- read header
-      read(this%iuhds) kstpfl, kperfl, pertim, totim, text, m1, m2, m3
+      ! -- write to list file that heads are being read
+      write(this%iout, fmtkstpkper) kstp, kper
       !
-      ! -- ensure heads are for correct kstp and kper
-      if (kstp /= kstpfl .or. kper /= kperfl) then
-        write(errmsg, fmtkstpkpererr) kstpfl, kperfl
-        call store_error(errmsg)
-        call store_error_unit(this%iuhds)
-        call ustop()
-      end if
-      !
-      ! -- fill the head array for this layer and
-      !    compress into reduced form
-      do i = 1, m1 * m2
-        read(this%iuhds) val
-        nu = (m3 - 1) * m1 * m2 + i
-        nr = this%dis%get_nodenumber(nu, 0)
-        if (nr > 0) this%gwfhead(nr) = val
+      ! -- loop through the layered heads for this time step
+      do ilay = 1, this%hfr%nlay
+        !
+        ! -- read next head chunk
+        call this%hfr%read_record(success, this%iout)
+        if (.not. success) then
+          write(errmsg,'(4x,a)') '***ERROR.  GWF HEAD READ NOT SUCCESSFUL'
+          call store_error(errmsg)
+          call store_error_unit(this%iuhds)
+          call ustop()
+        endif
+        !
+        ! -- Ensure kper is same between model and head file
+        if (kper /= this%hfr%kper) then
+          write(errmsg,'(4x,a)') '***ERROR.  PERIOD NUMBER IN HEAD FILE &
+            &DOES NOT MATCH PERIOD NUMBER IN TRANSPORT MODEL.'
+          call store_error(errmsg)
+          call store_error_unit(this%iuhds)
+          call ustop()
+        endif
+        !
+        ! -- if head file kstp > 1, then kstp must match
+        if (this%hfr%kstp > 1 .and. (kstp /= this%hfr%kstp)) then
+          write(errmsg,'(4x,a)') '***ERROR.  IF THERE IS MORE THAN ONE TIME &
+            &STEP IN THE HEAD FILE, THEN HEAD FILE TIME STEPS MUST MATCH &
+            &GWT MODEL TIME STEPS ONE-FOR-ONE.'
+          call store_error(errmsg)
+          call store_error_unit(this%iuhds)
+          call ustop()
+        endif
+        !
+        ! -- fill the head array for this layer and
+        !    compress into reduced form
+        ncpl = size(this%hfr%head)
+        do i = 1, ncpl
+          nu = (ilay - 1) * ncpl + i
+          nr = this%dis%get_nodenumber(nu, 0)
+          val = this%hfr%head(i)
+          if (nr > 0) this%gwfhead(nr) = val
+        enddo
       end do
-      !
-      ! -- exit loop if last head was read for this time step
-      if (nr == this%dis%nodesuser) exit recordloop
-    end do recordloop
+    else
+      write(this%iout, fmthdskstpkper) kstp, kper, this%hfr%kstp, this%hfr%kper
+    endif
   end subroutine advance_hfr
   
   subroutine finalize_hfr(this)
