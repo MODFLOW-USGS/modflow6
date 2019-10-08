@@ -29,7 +29,9 @@ module MemoryManagerModule
   interface mem_allocate
     module procedure allocate_logical,                                         &
                      allocate_int, allocate_int1d, allocate_int2d,             &
+                     allocate_int3d,                                           &
                      allocate_dbl, allocate_dbl1d, allocate_dbl2d,             &
+                     allocate_dbl3d,                                           &
                      allocate_ts1d
   end interface mem_allocate
   
@@ -57,7 +59,9 @@ module MemoryManagerModule
   interface mem_deallocate
     module procedure deallocate_logical,                                         &
                      deallocate_int, deallocate_int1d, deallocate_int2d,         &
+                     deallocate_int3d,                                           &
                      deallocate_dbl, deallocate_dbl1d, deallocate_dbl2d,         &
+                     deallocate_dbl3d,                                           &
                      deallocate_ts1d
   end interface mem_deallocate
 
@@ -210,7 +214,33 @@ module MemoryManagerModule
     write(mt%memtype, "(a,' (',i0,',',i0,')')") 'INTEGER', ncol, nrow
     call memorylist%add(mt)
   end subroutine allocate_int2d
-  
+    
+  subroutine allocate_int3d(aint, ncol, nrow, nlay, name, origin)
+    integer(I4B), dimension(:, :, :), pointer, contiguous, intent(inout) :: aint
+    integer(I4B), intent(in) :: ncol
+    integer(I4B), intent(in) :: nrow
+    integer(I4B), intent(in) :: nlay
+    character(len=*), intent(in) :: name
+    character(len=*), intent(in) :: origin
+    integer(I4B) :: istat
+    integer(I4B) :: isize
+    type(MemoryType), pointer :: mt
+    character(len=100) :: ermsg
+    call check_varname(name)
+    isize = ncol * nrow * nlay
+    allocate(aint(ncol, nrow, nlay), stat=istat, errmsg=ermsg)
+    if(istat /= 0) call allocate_error(name, origin, istat, ermsg, isize)
+    nvalues_aint = nvalues_aint + isize
+    allocate(mt)
+    mt%aint3d => aint
+    mt%isize = isize
+    mt%name = name
+    mt%origin = origin
+    write(mt%memtype, "(a,' (',i0,',',i0,',',i0,')')") 'INTEGER', ncol,          &
+                                                       nrow, nlay
+    call memorylist%add(mt)
+  end subroutine allocate_int3d
+
   subroutine allocate_dbl(dblsclr, name, origin)
     real(DP), pointer, intent(inout) :: dblsclr
     character(len=*), intent(in) :: name
@@ -275,6 +305,32 @@ module MemoryManagerModule
     write(mt%memtype, "(a,' (',i0,',',i0,')')") 'DOUBLE', ncol, nrow
     call memorylist%add(mt)
   end subroutine allocate_dbl2d
+  
+  subroutine allocate_dbl3d(adbl, ncol, nrow, nlay, name, origin)
+    real(DP), dimension(:, :, :), pointer, contiguous, intent(inout) :: adbl
+    integer(I4B), intent(in) :: ncol
+    integer(I4B), intent(in) :: nrow
+    integer(I4B), intent(in) :: nlay
+    character(len=*), intent(in) :: name
+    character(len=*), intent(in) :: origin
+    integer(I4B) :: istat
+    integer(I4B) :: isize
+    type(MemoryType), pointer :: mt
+    character(len=100) :: ermsg
+    call check_varname(name)
+    isize = ncol * nrow * nlay
+    allocate(adbl(ncol, nrow, nlay), stat=istat, errmsg=ermsg)
+    if(istat /= 0) call allocate_error(name, origin, istat, ermsg, isize)
+    nvalues_adbl = nvalues_adbl + isize
+    allocate(mt)
+    mt%adbl3d => adbl
+    mt%isize = isize
+    mt%name = name
+    mt%origin = origin
+    write(mt%memtype, "(a,' (',i0,',',i0,',',i0,')')") 'DOUBLE', ncol,           &
+                                                       nrow, nlay
+    call memorylist%add(mt)
+  end subroutine allocate_dbl3d
 
   subroutine allocate_ts1d(ats, isize, name, origin)
     type (MemoryTSType), dimension(:), pointer, contiguous, intent(inout) :: ats
@@ -314,6 +370,7 @@ module MemoryManagerModule
     integer(I4B) :: istat
     type(MemoryType), pointer :: mt
     integer(I4B) :: i, isizeold
+    integer(I4B) :: ifill
     character(len=100) :: ermsg
     logical :: found
     !
@@ -322,9 +379,10 @@ module MemoryManagerModule
     !
     ! -- Allocate aint and then refill
     isizeold = size(mt%aint1d)
+    ifill = min(isizeold, isize)
     allocate(aint(isize), stat=istat, errmsg=ermsg)
     if(istat /= 0) call allocate_error(name, origin, istat, ermsg, isize)
-    do i = 1, isizeold
+    do i = 1, ifill
       aint(i) = mt%aint1d(i)
     enddo
     !
@@ -389,6 +447,7 @@ module MemoryManagerModule
     integer(I4B) :: istat
     type(MemoryType), pointer :: mt
     integer(I4B) :: i, isizeold
+    integer(I4B) :: ifill
     character(len=100) :: ermsg
     logical :: found
     !
@@ -397,9 +456,10 @@ module MemoryManagerModule
     !
     ! -- Allocate adbl and then refill
     isizeold = size(mt%adbl1d)
+    ifill = min(isizeold, isize)
     allocate(adbl(isize), stat=istat, errmsg=ermsg)
     if(istat /= 0) call allocate_error(name, origin, istat, ermsg, isize)
-    do i = 1, isizeold
+    do i = 1, ifill
       adbl(i) = mt%adbl1d(i)
     enddo
     !
@@ -863,6 +923,39 @@ module MemoryManagerModule
     endif
   end subroutine deallocate_int2d
   
+  subroutine deallocate_int3d(aint3d, name, origin)
+    integer(I4B), dimension(:, :, :), pointer, contiguous, intent(inout) :: aint3d
+    character(len=*), optional :: name
+    character(len=*), optional :: origin
+    type(MemoryType), pointer :: mt
+    integer(I4B) :: ipos
+    logical :: found
+    if (present(name) .and. present(origin)) then
+      call get_from_memorylist(name, origin, mt, found)
+      nullify(mt%aint3d)
+    else
+      found = .false.
+      do ipos = 1, memorylist%count()
+        mt => memorylist%Get(ipos)
+        if(associated(mt%aint3d, aint3d)) then
+          nullify(mt%aint3d)
+          found = .true.
+          exit
+        endif
+      enddo
+    end if
+    if (.not. found .and. size(aint3d) > 0 ) then
+      call store_error('programming error in deallocate_int3d')
+      call ustop()
+    else
+      if (mt%master) then
+        deallocate(aint3d)
+      else
+        nullify(aint3d)
+      end if
+    endif
+  end subroutine deallocate_int3d
+  
   subroutine deallocate_dbl1d(adbl1d, name, origin)
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: adbl1d
     character(len=*), optional :: name
@@ -928,6 +1021,39 @@ module MemoryManagerModule
       end if
     endif
   end subroutine deallocate_dbl2d
+  
+  subroutine deallocate_dbl3d(adbl3d, name, origin)
+    real(DP), dimension(:, :, :), pointer, contiguous, intent(inout) :: adbl3d
+    character(len=*), optional :: name
+    character(len=*), optional :: origin
+    type(MemoryType), pointer :: mt
+    integer(I4B) :: ipos
+    logical :: found
+    if (present(name) .and. present(origin)) then
+      call get_from_memorylist(name, origin, mt, found)
+      nullify(mt%adbl3d)
+    else
+      found = .false.
+      do ipos = 1, memorylist%count()
+        mt => memorylist%Get(ipos)
+        if(associated(mt%adbl3d, adbl3d)) then
+          nullify(mt%adbl3d)
+          found = .true.
+          exit
+        endif
+      enddo
+    end if
+    if (.not. found .and. size(adbl3d) > 0 ) then
+      call store_error('programming error in deallocate_dbl3d')
+      call ustop()
+    else
+      if (mt%master) then
+        deallocate(adbl3d)
+      else
+        nullify(adbl3d)
+      end if
+    endif
+  end subroutine deallocate_dbl3d
   
   subroutine deallocate_ts1d(ats1d)
     type (MemoryTSType), dimension(:), pointer, contiguous, intent(inout) :: ats1d
