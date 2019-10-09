@@ -1,6 +1,6 @@
 ! Module holding the definition of the SpatialModelConnectionType
 module SpatialModelConnectionModule
-  use KindModule, only: I4B
+  use KindModule, only: I4B, DP
 	use ModelConnectionModule
 	use NumericalModelModule, only: NumericalModelType
   use NumericalExchangeModule, only: NumericalExchangeType, GetNumericalExchangeFromList
@@ -19,7 +19,17 @@ module SpatialModelConnectionModule
     type(ListType), pointer :: exchangeList => null()
     
     integer(I4B) :: stencilDepth ! default = 1, xt3d = 2, ...
-    
+        
+    ! the interface system doesn't live in a solution, so we need these
+    integer(I4B), pointer                               :: neq => NULL()
+    integer(I4B), pointer                               :: nja => NULL()
+    integer(I4B), dimension(:), pointer, contiguous     :: ia => NULL()
+    integer(I4B), dimension(:), pointer, contiguous     :: ja => NULL()
+    real(DP), dimension(:), pointer, contiguous         :: amat => NULL()
+    real(DP), dimension(:), pointer, contiguous         :: rhs => NULL()
+    real(DP), dimension(:), pointer, contiguous         :: x => NULL()
+    integer(I4B), dimension(:), pointer, contiguous     :: iactive => NULL()
+        
     ! TODO_MJR: mem mgt of these guys:
     integer(I4B) :: nrOfConnections
     class(GridConnectionType), pointer :: gridConnection => null()    
@@ -38,6 +48,9 @@ module SpatialModelConnectionModule
     procedure, private, pass(this) :: setExchangeConnections
     procedure, private, pass(this) :: findModelNeighbors
     procedure, private, pass(this) :: getNrOfConnections
+    procedure, private, pass(this) :: allocateScalars
+    procedure, private, pass(this) :: allocateArrays
+    
   end type SpatialModelConnectionType
 
 contains ! module procedures
@@ -57,6 +70,8 @@ contains ! module procedures
     
     allocate(this%exchangeList)
     allocate(this%gridConnection)    
+    
+    call this%allocateScalars()
     
   end subroutine spatialConnection_ctor
   
@@ -79,6 +94,9 @@ contains ! module procedures
     call this%gridConnection%construct(this%owner, this%nrOfConnections, this%name)
     call this%setupGridConnection()
     
+    this%neq = this%gridConnection%nrOfCells
+    call this%allocateArrays()
+    
   end subroutine spatialcon_df
   
   ! create the mapping from local system matrix to global
@@ -93,7 +111,7 @@ contains ! module procedures
     integer(I4B) :: mloc, nloc, mglob, nglob, j, csrIdx
     type(ConnectionsType), pointer :: conn => null()
     
-    ! for readibility
+    ! for readability
     conn => this%gridConnection%connections
         
     allocate(this%mapIdxToSln(conn%nja))
@@ -121,8 +139,7 @@ contains ! module procedures
   ! but now for all exchanges with this model and skipping over the 
   ! transposed elements
   subroutine spatialcon_ac(this, sparse)
-    use SparseModule, only:sparsematrix
-    
+    use SparseModule, only:sparsematrix    
     class(SpatialModelConnectionType), intent(inout) :: this
     type(sparsematrix), intent(inout) :: sparse 
     ! local
@@ -190,7 +207,26 @@ contains ! module procedures
         call this%gridConnection%addModelLink(numEx, this%stencilDepth)
     end do
       
-   end subroutine findModelNeighbors
+  end subroutine findModelNeighbors
+  
+  subroutine allocateScalars(this)
+    use MemoryManagerModule, only: mem_allocate
+    class(SpatialModelConnectionType), intent(inout) :: this
+  
+    call mem_allocate(this%neq, 'NEQ', this%memoryOrigin)
+    call mem_allocate(this%nja, 'NJA', this%memoryOrigin)
+    
+  end subroutine allocateScalars
+  
+  subroutine allocateArrays(this)
+    use MemoryManagerModule, only: mem_allocate
+    class(SpatialModelConnectionType), intent(inout) :: this
+         
+    call mem_allocate(this%x, this%neq, 'X', this%memoryOrigin)
+    call mem_allocate(this%rhs, this%neq, 'RHS', this%memoryOrigin)
+    call mem_allocate(this%iactive, this%neq, 'IACTIVE', this%memoryOrigin)
+    
+  end subroutine allocateArrays
   
   ! count total nr. of connection between cells, from the exchanges
   function getNrOfConnections(this) result(nrConns)

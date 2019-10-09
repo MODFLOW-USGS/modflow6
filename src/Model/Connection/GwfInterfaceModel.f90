@@ -17,9 +17,12 @@ module GwfInterfaceModelModule
   type, public, extends(GwfModelType) :: GwfInterfaceModelType    
     class(GridConnectionType), pointer    :: gridConnection => null()
     class(GwfModelType), private, pointer :: gwfModel => null() ! conveniently points to the owning model in gridconnection
-  contains    
+  contains
     procedure, pass(this) :: construct
     procedure, pass(this) :: createModel
+    procedure, pass(this) :: defineModel
+    procedure, pass(this) :: allocateAndReadModel
+    
     procedure, pass(this) :: syncModelData
     ! private stuff
     procedure, private, pass(this) :: buildDiscretization
@@ -47,7 +50,7 @@ contains
   subroutine createModel(this, gridConn)
     use MemoryManagerModule, only: mem_allocate
     use Xt3dModule, only: xt3d_cr
-    class(GwfInterfaceModelType), target, intent(inout) :: this
+    class(GwfInterfaceModelType), intent(inout) :: this
     class(GridConnectionType), pointer, intent(in) :: gridConn
     ! local
     integer(I4B) :: im
@@ -58,27 +61,24 @@ contains
     select type (numMod)
       class is (GwfModelType)
         this%gwfModel => numMod
-    end select
-    ! create discretization
+      end select
+      
+    ! create discretization and packages
     call this%buildDiscretization()
-    
-   
-    ! create packages
-    ! TODO_MJR: this really depends on how we want to merge
-    ! a heteregeneous composition of connected models...
     call npf_cr(this%npf, this%name, this%innpf, this%iout) 
     call xt3d_cr(this%xt3d, this%name, this%innpf, this%iout)
     ! continue as in gwf_cr...
     
-    ! set XT3D for the interface when the owning
-    ! model has XT3D enabled
+    ! set XT3D when the owning model has XT3D enabled
     this%npf%ixt3d = this%gwfModel%npf%ixt3d
-        
-    ! define
-    ! dis%dis_df 
-    ! npf%npf_df 
-    ! ... we cannot call these yet, the following
-    ! comes from npf_df:
+    
+  end subroutine createModel
+  
+  subroutine defineModel(this)
+    class(GwfInterfaceModelType), intent(inout) :: this
+  
+    ! dis%dis_df, npf%npf_d ... we cannot call these yet, 
+    ! the following comes from npf_df:
     this%npf%xt3d => this%xt3d    
     this%npf%xt3d%ixt3d = this%npf%ixt3d
         
@@ -87,28 +87,23 @@ contains
     this%ia  => this%dis%con%ia
     this%ja  => this%dis%con%ja
     
-    call this%allocate_arrays()    
+    call this%allocate_arrays()
     
-    ! these arrays come from the solution, but not for this type of model...
-    call mem_allocate(this%ibound, this%neq, 'IBOUND', this%name)
-    call mem_allocate(this%x, this%neq, 'X', this%name)
-    call mem_allocate(this%rhs, this%neq, 'RHS', this%name)
-    ! and fill/init them...
+  end subroutine defineModel
+  
+  subroutine allocateAndReadModel(this)
+    class(GwfInterfaceModelType), target, intent(inout) :: this
+    
+    ! fill/init x, rhx, ibound
     call this%syncModelData()
     this%rhs = 0
+    this%ibound = 1
     
-    ! map connections
-    call this%model_mc(this%ia, this%ja)
-    
-    ! allocate and read/set
     this%npf%set_data_func => setNpfData  
     this%npf%func_caller => this
     call this%npf%npf_ar(this%ic, this%ibound, this%x)
     
-    ! default is active
-    this%ibound = 1
-    
-  end subroutine createModel
+  end subroutine allocateAndReadModel
   
   subroutine buildDiscretization(this)  
     use ConnectionsModule 

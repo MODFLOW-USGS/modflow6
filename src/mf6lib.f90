@@ -109,7 +109,7 @@ subroutine runmf6
   ! -- Allocate and read each exchange
   do ic = 1, baseexchangelist%Count()
     ep => GetBaseExchangeFromList(baseexchangelist, ic)
-    call ep%exg_ar()
+    !call ep%exg_ar()
   enddo
   !
   ! -- Allocate and read all model connections

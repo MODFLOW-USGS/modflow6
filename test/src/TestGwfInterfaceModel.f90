@@ -68,7 +68,7 @@ contains ! module procedures
     real(DP), dimension(:), allocatable :: amat
     integer(I4B) :: n, idiag, ioff
     
-    ifModel => getSimpleInterfaceModel("ifmodel_01")    
+    ifModel => getSimpleInterfaceModel("ifmodel_01")
     
     kiter = 1
     inwtflag = 0
@@ -96,6 +96,7 @@ contains ! module procedures
   
   ! get simple interface model from dis_A.dis and dis_B.dis
   function getSimpleInterfaceModel(name) result(ifmodel)
+    use SparseModule
     character(len=*), intent(in)  :: name
     class(GwfInterfaceModelType), pointer :: ifmodel
     class(GridConnectionType), pointer :: gc
@@ -103,12 +104,22 @@ contains ! module procedures
     allocate(ifmodel)
     allocate(gc)
     
-    ! set up if model
+    ! set up if model, following the logic in gwfgwfcon_df
     gc => createGridConnectionBetween2by3with2by6grid("ifmodel_02")    
     call ifmodel%construct("ifmodel_02")    
     call ifModel%createModel(gc)
+    call ifModel%defineModel()
     
-    ! call ifModel%model_ar()
+    ! these normally point to the solution
+    ifModel%moffset = 0
+    allocate(ifModel%x(ifModel%neq))
+    allocate(ifModel%rhs(ifModel%neq))
+    allocate(ifModel%ibound(ifModel%neq))
+    
+    ! iasln == ia, ...
+    call ifModel%model_mc(ifModel%ia, ifModel%ja)
+    
+    call ifModel%allocateAndReadModel()
     
   end function
   

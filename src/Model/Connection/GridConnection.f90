@@ -327,7 +327,7 @@ module GridConnectionModule
     
     ! now find nbr-of-nbr    
     do inbr=1, cellNbrs%nrOfNbrs
-      call this%addNeighbors(cellNbrs%neighbors(inbr), newDepth, cellNbrs%cell)
+      call this%addNeighbors(cellNbrs%neighbors(inbr), newDepth, cellNbrs%cell, local)
     end do
     
   end subroutine addNeighbors
@@ -353,6 +353,9 @@ module GridConnectionModule
       
       ! loop over n-m links in the exchange
       if (associated(cellNbrs%cell%model, numEx%m1)) then
+        ! we were outside, no need to go back into this%model: 
+        ! those cells will be added anyhow
+        if (associated(numEx%m2, this%model)) cycle 
         do iexg = 1, numEx%nexg
           if (numEx%nodem1(iexg) == cellNbrs%cell%index) then
             ! we have a link, now add foreign neighbor
@@ -362,6 +365,9 @@ module GridConnectionModule
       end if
       ! and the reverse
       if (associated(cellNbrs%cell%model, numEx%m2)) then
+        ! we were outside, no need to go back into this%model: 
+        ! those cells will be added anyhow
+        if (associated(numEx%m1, this%model)) cycle
         do iexg = 1, numEx%nexg
           if (numEx%nodem2(iexg) == cellNbrs%cell%index) then
             ! we have a link, now add foreign neighbor
