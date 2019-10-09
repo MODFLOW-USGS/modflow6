@@ -17,11 +17,14 @@
               integer(I4B) :: nnz                                                ! number of nonzero matrix entries
               type(rowtype), allocatable, dimension(:) :: row                    ! one rowtype for each matrix row
               contains
-                procedure :: init => initialize
+                generic :: init => initialize, initializefixed                
                 procedure :: addconnection
                 procedure :: filliaja
                 procedure :: sort
                 procedure :: destroy
+                
+                procedure, private :: initializefixed
+                procedure, private :: initialize
           end type sparsematrix
           
           contains
@@ -55,6 +58,24 @@
               enddo
           end subroutine initialize
 
+          ! overload
+          subroutine initializefixed(this,nrow,ncol,maxnnz)
+              implicit none
+              class(sparsematrix), intent(inout) :: this
+              integer(I4B),intent(in) :: nrow,ncol
+              integer(I4B),intent(in) :: maxnnz
+              ! local
+              integer(I4B), dimension(nrow) :: rowmaxnnz
+              integer(I4B) :: i
+              
+              do i=1,nrow
+                  rowmaxnnz(i) = maxnnz
+              enddo
+              
+              call this%initialize(nrow, ncol, rowmaxnnz)            
+              
+          end subroutine initializefixed
+          
           subroutine filliaja(this,ia,ja,ierror)
               !allocate and fill the ia and ja arrays using information
               !from the sparsematrix.

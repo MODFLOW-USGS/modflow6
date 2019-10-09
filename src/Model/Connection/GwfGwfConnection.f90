@@ -3,6 +3,7 @@ module GwfGwfConnectionModule
   use KindModule, only: I4B, DP
   use ConstantsModule, only: DZERO, DONE, DEM6
   use MemoryManagerModule, only: mem_allocate
+  use SparseModule, only:sparsematrix
   use SpatialModelConnectionModule  
   use GwfInterfaceModelModule
   use NumericalModelModule
@@ -20,12 +21,7 @@ module GwfGwfConnectionModule
     
     ! composition, the interface model
     type(GwfInterfaceModelType), pointer  :: interfaceModel => null()   
-    
-    ! the interface model doesn't live in a solution, so we need these
-    ! TODO_MJR: probably move to parent class
-    real(DP), dimension(:), pointer       :: amat
-    integer(I4B)                          :: nja
-    
+        
     ! memory managed data:
     integer(I4B), pointer             :: iVarCV => null()   ! == 1: vertical conductance varies with water table
     integer(I4B), pointer             :: iDewatCV => null() ! == 1: vertical conductance accounts for dewatered portion of underlying cell
@@ -39,28 +35,17 @@ module GwfGwfConnectionModule
     ! implement (abstract) virtual
     procedure, pass(this) :: mc_ar => gwfgwfcon_ar
     procedure, pass(this) :: mc_df => gwfgwfcon_df 
+    procedure, pass(this) :: mc_ac => gwfgwfcon_ac
     procedure, pass(this) :: mc_cf => gwfgwfcon_cf
     procedure, pass(this) :: mc_fc => gwfgwfcon_fc
     
     ! local stuff
     procedure, pass(this), private :: allocateScalars
-    procedure, pass(this), private :: allocateArrays
   end type GwfGwfConnectionType
 
 contains
   
-  subroutine gwfgwfcon_df(this)
-    class(GwfGwfConnectionType), intent(inout) :: this    
-    
-    if (this%gwfModel%npf%ixt3d > 0) then
-      this%stencilDepth = 2
-    end if
-    ! now call base class
-    call this%spatialcon_df()
-    
-  end subroutine gwfgwfcon_df
- 
-  subroutine gwfGwfConnection_ctor(this, model)
+   subroutine gwfGwfConnection_ctor(this, model)
     use NumericalModelModule, only: NumericalModelType
     class(GwfGwfConnectionType), intent(inout)  :: this
     class(NumericalModelType), pointer          :: model ! note: this must be a GwfModelType
@@ -69,7 +54,6 @@ contains
     call this%construct(model, trim(model%name)//'_GWF2CONN') ! 
     
     call this%allocateScalars()
-    call this%allocateArrays()
     
     this%connectionType = 'GWF-GWF'
     this%gwfModel => CastToGwfModel(model)
@@ -80,45 +64,111 @@ contains
     this%iCellAvg = 0
     
     allocate(this%interfaceModel)
-    
-  end subroutine gwfGwfConnection_ctor
   
+  end subroutine gwfGwfConnection_ctor
+   
+   
+  subroutine gwfgwfcon_df(this)
+    class(GwfGwfConnectionType), intent(inout) :: this    
+    ! local
+    integer(I4B) :: ierror
+    type(sparsematrix) :: sparse
+    
+    if (this%gwfModel%npf%ixt3d > 0) then
+      this%stencilDepth = 2
+    end if
+    ! now call base class
+    call this%spatialcon_df()    
+    
+    ! grid conn is defined, so we can now create the interface model
+    ! and do the define part here, c.f. what happens in sln_df()
+    
+    ! == create ==
+    call this%interfaceModel%construct(this%name)
+    call this%interfaceModel%createModel(this%gridConnection)
+    
+    
+    ! == define ==
+    call this%interfaceModel%defineModel()   
+    
+    ! -- calculate and set offsets 
+    this%interfaceModel%moffset = 0
+    
+    ! -- Allocate and initialize solution arrays in parent class    
+    ! -- Go through each model and point x, ibound, and rhs to solution
+    this%interfaceModel%x => this%x
+    this%interfaceModel%rhs => this%rhs
+    this%interfaceModel%ibound => this%iactive
+    
+    ! -- Create the sparsematrix instance
+    call sparse%init(this%neq, this%neq, 7)
+    
+    ! -- Assign connections, fill ia/ja, map connections (following sln_connect)
+    call this%interfaceModel%model_ac(sparse)
+    
+    ! create amat from sparse (and keep sparse for adding connections to global system)
+    this%nja = sparse%nnz    
+    call mem_allocate(this%ia, this%neq + 1, 'IA', this%memoryOrigin)
+    call mem_allocate(this%ja, this%nja, 'JA', this%memoryOrigin)
+    call mem_allocate(this%amat, this%nja, 'AMAT', this%memoryOrigin)    
+    call sparse%sort()
+    call sparse%filliaja(this%ia, this%ja, ierror)
+    call sparse%destroy()
+    
+    ! map connections
+    call this%interfaceModel%model_mc(this%ia, this%ja)    
+    
+  end subroutine gwfgwfcon_df
+
   subroutine allocateScalars(this)
     use MemoryManagerModule, only: mem_allocate
-    use ConstantsModule, only: LENORIGIN
     class(GwfGwfConnectionType), intent(inout)  :: this
     ! local
 
     call mem_allocate(this%iVarCV, 'IVARCV', this%memoryOrigin)
     call mem_allocate(this%iDewatCV, 'IDEWATCV', this%memoryOrigin)
     call mem_allocate(this%satOmega, 'SATOMEGA', this%memoryOrigin)
-    call mem_allocate(this%iCellAvg, 'ICELLAVG', this%memoryOrigin)
+    call mem_allocate(this%iCellAvg, 'ICELLAVG', this%memoryOrigin)    
     
   end subroutine allocateScalars
   
-  subroutine allocateArrays(this)
-    class(GwfGwfConnectionType), intent(inout)  :: this
-    
-  end subroutine allocateArrays
-  
+  ! We can only call this after the *_df is finished, e.g. it is not until
+  ! GwfGwfExchange%gwf_gwf_df(...) that the exchange data is being read from file
+  ! So, in this routine, we have to do create, define, and allocate&read 
   subroutine gwfgwfcon_ar(this)
     class(GwfGwfConnectionType), intent(inout)  :: this
-    
-    ! construct the interface model here after *_df has been finished
-    call this%interfaceModel%construct(this%name)    
-    ! following is create, define, and allocate/read
-    call this%interfaceModel%createModel(this%gridConnection)
-    
+    ! local    
+   
+    call this%interfaceModel%allocateAndReadModel()    
     ! TODO_MJR: ar mover
     ! TODO_MJR: angledx checks    
-    ! TODO_MJR: ar observation    
-    
-    ! create amat for interface
-    this%nja = this%interfaceModel%dis%con%nja
-    allocate(this%amat(this%nja))    
+    ! TODO_MJR: ar observation
     
   end subroutine gwfgwfcon_ar
-  
+     
+  subroutine gwfgwfcon_ac(this, sparse)        
+    class(GwfGwfConnectionType), intent(inout) :: this
+    type(sparsematrix), intent(inout) :: sparse 
+    ! local
+    integer(I4B) :: n, m, ipos
+    integer(I4B) :: nglo, mglo
+    
+    do n = 1, this%neq
+      if (.not. associated(this%gridConnection%idxToGlobal(n)%model, this%gwfModel)) then
+        ! only add connections for own model to global matrix
+        cycle
+      end if      
+      nglo = this%gridConnection%idxToGlobal(n)%index + this%gridConnection%idxToGlobal(n)%model%moffset
+      do ipos = this%ia(n) + 1, this%ia(n+1) - 1
+        m = this%ja(ipos)
+        mglo = this%gridConnection%idxToGlobal(m)%index + this%gridConnection%idxToGlobal(m)%model%moffset
+        
+        call sparse%addconnection(nglo, mglo, 1)
+      end do
+    end do
+    
+  end subroutine gwfgwfcon_ac
+    
   ! calculate or adjust matrix coefficients which are affected
   ! by the connection of GWF models
   subroutine gwfgwfcon_cf(this, kiter)
@@ -144,30 +194,31 @@ contains
     integer(I4B), intent(in) :: inwtflag
     ! local
     type(ConnectionsType), pointer :: conn => null()
-    integer(I4B) :: mloc, nloc, j
-    integer(I4B) :: mglob, nglob
-    real(DP) :: conductance
-    integer(I4B) :: targetIdx ! temp
+    integer(I4B) :: i, n, ipos
     
     ! we iterate, so this should be reset (c.f. sln_reset())
-    this%amat = 0
+    do i = 1, this%nja
+      this%amat(i) = 0.0_DP
+    end do
+    do i = 1, this%neq
+      this%rhs(i) = 0.0_DP
+    end do
     
     ! fill (and add to...) coefficients for interface
     call this%interfaceModel%model_fc(kiter, this%amat, this%nja, inwtflag)
     
     ! map back to solution matrix
     conn => this%interfaceModel%dis%con
-    do mloc=1, conn%nodes
-      if (.not. associated(this%gridConnection%idxToGlobal(mloc)%model, this%gwfModel)) then
+    do n=1, conn%nodes
+      if (.not. associated(this%gridConnection%idxToGlobal(n)%model, this%gwfModel)) then
         ! only write coefficients for own model to global matrix, cycle otherwise
         cycle
       end if
       ! copy into global matrix
-      do j=conn%ia(mloc), conn%ia(mloc+1)-1
-        targetIdx = this%mapIdxToSln(j)
-        amatsln(targetIdx) = amatsln(targetIdx) + this%amat(j)
+      do ipos=conn%ia(n), conn%ia(n+1)-1
+        amatsln(this%mapIdxToSln(ipos)) = amatsln(this%mapIdxToSln(ipos)) + this%amat(ipos)
       end do
-    end do  
+    end do
         
   end subroutine gwfgwfcon_fc 
   
