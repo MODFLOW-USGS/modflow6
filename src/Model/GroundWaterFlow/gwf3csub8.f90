@@ -236,9 +236,9 @@ module GwfCsubModule
     procedure, private :: csub_calc_theta
     procedure, private :: csub_calc_znode
     procedure, private :: csub_calc_adjes
-    procedure, private :: csub_calc_esadd
     procedure, private :: csub_calc_slope_derivative
     procedure, private :: csub_calc_sat
+    procedure, private :: csub_calc_sat_derivative
     procedure, private :: csub_calc_sfacts
     procedure, private :: csub_calc_under_relaxation
     procedure, private :: csub_apply_under_relaxation
@@ -282,7 +282,7 @@ module GwfCsubModule
     procedure, private :: csub_delay_calc_zcell
     procedure, private :: csub_delay_calc_stress
     procedure, private :: csub_delay_calc_ssksske
-    procedure, private :: csub_delay_calc_ssk_derivative
+    procedure, private :: csub_delay_calc_ssksske_derivative
     procedure, private :: csub_delay_calc_comp
     procedure, private :: csub_delay_calc_dstor
     procedure, private :: csub_delay_fc
@@ -3572,8 +3572,8 @@ contains
       fd = this%csub_calc_slope_derivative(node, hcell)
       !
       ! -- calculate the derivative
-      dssk = f * fd * rho2
-      dsske = f * fd * rho1
+      dssk = -f * fd * rho2
+      dsske = -f * fd * rho1
     end if
     !
     ! -- return
@@ -4385,10 +4385,8 @@ contains
         if (this%ibound(node) < 1) cycle
         !
         ! -- calculate coarse-grained skeletal storage newton terms
-        !if (this%stoiconv(node) /= 0) then
-          call this%csub_sk_fn(node, tled, area,                                &
+        call this%csub_sk_fn(node, tled, area,                                   &
                                hnew(node), hcof, rhsterm)
-        !end if
         !
         ! -- add skeletal storage newton terms to amat and rhs for 
         !   skeletal storage
@@ -4419,16 +4417,14 @@ contains
           if (this%ibound(node) < 1) cycle
           !
           ! -- calculate interbed newton terms
-          !if (this%stoiconv(node) /= 0) then
-            idiag = this%dis%con%ia(node)
-            area = this%dis%get_area(node)
-            call this%csub_interbed_fn(ib, node, area, hnew(node), hold(node),  &
-                                       hcof, rhsterm)
-            !
-            ! -- add interbed newton terms to amat and rhs
-            amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
-            rhs(node) = rhs(node) + rhsterm
-          !end if
+          idiag = this%dis%con%ia(node)
+          area = this%dis%get_area(node)
+          call this%csub_interbed_fn(ib, node, area, hnew(node), hold(node),  &
+                                      hcof, rhsterm)
+          !
+          ! -- add interbed newton terms to amat and rhs
+          amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
+          rhs(node) = rhs(node) + rhsterm
           !
           ! -- calculate interbed water compressibility terms
           if (this%brg /= DZERO) then
@@ -4541,7 +4537,7 @@ contains
     tthk = this%sk_thickini(node)
     !
     ! -- calculate saturation derivitive
-    derv = sQuadraticSaturationDerivative(top, bot, hcell)    
+    derv = this%csub_calc_sat_derivative(node, hcell)    
     !
     ! -- storage coefficients
     call this%csub_sk_calc_sske(node, sske, hcell)
@@ -4691,7 +4687,7 @@ contains
     real(DP) :: rhsn
     real(DP) :: snnew
     real(DP) :: snold
-    real(DP) :: derv
+    real(DP) :: satderv
     real(DP) :: sderv
     real(DP) :: tled
     real(DP) :: tthk
@@ -4712,8 +4708,9 @@ contains
     hcof = DZERO
     rhsn = DZERO
     hcofn = DZERO
-    derv = DZERO
+    satderv = DZERO
     dssk = DZERO
+    idelay = this%idelay(ib)
     top = this%dis%top(node)
     bot = this%dis%bot(node)
     !
@@ -4726,19 +4723,19 @@ contains
       call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
       !
       ! -- no-delay interbeds
-      if (this%idelay(ib) == 0) then
+      if (idelay == 0) then
         !
         ! -- initialize factor
         f = DONE
         !
         ! -- calculate the saturation derivative
-        derv = sQuadraticSaturationDerivative(top, bot, hcell)
+        satderv = this%csub_calc_sat_derivative(node, hcell)    
         !
         ! -- calculate storage coefficient
         call this%csub_nodelay_fc(ib, hcell, hcellold, rho1, hcofn, rhsn)
         !
         ! -- calculate hcnof term
-        hcofn = hcofn * (this%sk_gs(node) - hcell + bot) * derv
+        hcofn = hcofn * (this%sk_gs(node) - hcell + bot) * satderv
         !
         ! -- add derivative of storage coefficient
         if (this%ieslag == 0) then
@@ -4764,9 +4761,6 @@ contains
           ! -- add the specific storage derivative term to hcofn
           hcofn = hcofn + sderv
         end if
-        !!
-        !! -- reset derv
-        !derv = DZERO        
       !
       ! -- delay interbeds
       else
@@ -4783,17 +4777,16 @@ contains
         if (idelaycalc > 0) then
           !
           ! calculate delay interbed terms
-          idelay = this%idelay(ib)
           dz = this%dbdz(idelay)
           c = DTWO * this%kv(ib) / dz
           h1 = this%dbh(1, idelay)
           hn = this%dbh(this%ndelaycells, idelay)
           !
           ! -- calculate the saturation derivative
-          derv = sQuadraticSaturationDerivative(top, bot, hcell)
+          satderv = this%csub_calc_sat_derivative(node, hcell)    
           !
           ! -- calculate the saturation derivative term
-          hcofn = -derv * c * area * (hn + h1 - DTWO * hcell) * hcell
+          hcofn = satderv * c * area * (hn + h1 - DTWO * hcell)
         end if
         !
         ! -- update hcof and rhs
@@ -4955,7 +4948,7 @@ contains
       fd = this%csub_calc_slope_derivative(n, hcell)
       !
       ! -- calculate the derivative
-      dsske = f * fd * this%ske_cr(n)
+      dsske = -f * fd * this%ske_cr(n)
     end if
     !
     ! -- return
@@ -5130,7 +5123,7 @@ contains
     tthk = this%sk_thick(node)
     !
     ! -- calculate saturation derivitive
-    derv = sQuadraticSaturationDerivative(top, bot, hcell)    
+    derv = this%csub_calc_sat_derivative(node, hcell)    
     !
     ! -- storage coefficient
     wc2 = this%brg * area * tthk * this%sk_theta(node) * tled
@@ -5267,7 +5260,7 @@ contains
     if (idelay == 0) then
       !
       ! -- calculate saturation derivitive
-      derv = sQuadraticSaturationDerivative(top, bot, hcell)   
+      derv = this%csub_calc_sat_derivative(node, hcell)    
       !
       !
       wc2 = f * this%theta(ib) * this%thick(ib)
@@ -5427,59 +5420,6 @@ contains
     return
   end function csub_calc_adjes
 
-  function csub_calc_esadd(this, node, hcell) result(esadd)
-! ******************************************************************************
-! csub_calc_esadd -- Calculate the effective stress change at the bottom of
-!                    a cell resulting from a hplus head pertubation. Used to
-!                    formulate numerical derivatives.  
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(GwfCsubType), intent(inout) :: this
-    ! -- dummy
-    integer(I4B), intent(in) :: node
-    real(DP), intent(in) :: hcell
-    ! -- local variables
-    real(DP) :: esadd
-    real(DP) :: top
-    real(DP) :: bot
-    real(DP) :: c
-! ------------------------------------------------------------------------------
-    top = this%dis%top(node)
-    bot = this%dis%bot(node)
-    if (this%inewton /= 0) then
-      if (hcell < bot - this%epsilon) then
-        esadd = DZERO
-      else if (hcell < bot + this%epsilon) then
-        c = (hcell - bot) / this%epsilon
-        esadd = hplus * (DHALF * this%sgs(node) - this%sgm(node) - DHALF) *      &
-                        (DHALF * (c + DONE)) 
-      else if (hcell < top - this%epsilon) then
-        esadd = hplus * (DHALF * this%sgs(node) - this%sgm(node) - DHALF)
-      else if (hcell < top + this%epsilon) then
-        c = (hcell - top) / this%epsilon
-        esadd = -hplus +                                                         &
-                DHALF * ((this%sgm(node) - DHALF * this%sgs(node) - DHALF) * c + &
-                         DHALF * this%sgs(node) - this%sgm(node) + DHALF) * hplus
-      else
-        esadd = -hplus
-      end if
-    else
-      if (hcell < bot) then
-        esadd = DZERO
-      else if (hcell < top) then
-        !esadd = hplus * (this%sgs(node) - this%sgm(node) - DONE)
-        esadd = hplus * (DHALF * this%sgs(node) - this%sgm(node) - DHALF)
-      else
-        esadd = -hplus
-      end if
-    end if
-    !
-    ! -- return
-    return
-  end function csub_calc_esadd
-
   function csub_calc_slope_derivative(this, node, hcell) result(sderv)
 ! ******************************************************************************
 ! csub_calc_slope_derivative -- Calculate the slope derivatives for the specific
@@ -5590,6 +5530,33 @@ contains
     ! -- return
     return
   end subroutine csub_calc_sat  
+  
+  function csub_calc_sat_derivative(this, node, hcell) result(satderv)
+! ******************************************************************************
+! csub_calc_sat_derivative -- Calculate current saturation derivative for a cell.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    class(GwfCsubType), intent(inout) :: this
+    integer(I4B), intent(in) :: node
+    real(DP), intent(in) :: hcell
+    ! -- local variables
+    real(DP) :: satderv
+    real(DP) :: top
+    real(DP) :: bot
+! ------------------------------------------------------------------------------
+    if (this%stoiconv(node) /= 0) then
+      top = this%dis%top(node)
+      bot = this%dis%bot(node)
+      satderv = sQuadraticSaturationDerivative(top, bot, hcell, this%satomega)
+    else
+      satderv = DZERO
+    end if
+    !
+    ! -- return
+    return
+  end function csub_calc_sat_derivative  
   
   subroutine csub_calc_sfacts(this, node, bot, znode, theta, es, es0, hcell,     &
                               fact, esadd, derivative)
@@ -6180,10 +6147,10 @@ contains
     return
   end subroutine csub_delay_calc_ssksske
 
-  subroutine csub_delay_calc_ssk_derivative(this, ib, n, hcell, dssk)
+  subroutine csub_delay_calc_ssksske_derivative(this, ib, n, hcell, dssk, dsske)
 ! ******************************************************************************
-! csub_delay_calc_ssk_derivative -- Calculate derivative of sske for a node in 
-!                                   a delay interbed cell.
+! csub_delay_calc_ssksske_derivative -- Calculate derivative of ssk and sske 
+!                                       for a node in a delay interbed cell.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -6193,6 +6160,7 @@ contains
     integer(I4B), intent(in) :: n
     real(DP), intent(in) :: hcell
     real(DP), intent(inout) :: dssk
+    real(DP), intent(inout) :: dsske
     ! -- local variables
     integer(I4B) :: idelay
     integer(I4B) :: ielastic
@@ -6207,6 +6175,7 @@ contains
     real(DP) :: es
     real(DP) :: es0
     real(DP) :: theta
+    real(DP) :: rho1
     real(DP) :: rho2
     real(DP) :: f
     real(DP) :: fd
@@ -6215,6 +6184,7 @@ contains
     !
     ! -- initialize variables
     dssk = DZERO
+    dsske = DZERO
     idelay = this%idelay(ib)
     ielastic = this%ielastic(ib)
     dz = this%dbdz(idelay)
@@ -6246,10 +6216,11 @@ contains
                                  derivative=.TRUE.)
       !
       ! -- calculate rho2
-      rho2 = this%rci(ib)
+      rho1 = this%rci(ib)
+      rho2 = rho1
       if (ielastic == 0) then
         if (this%dbes(n, idelay) > this%dbpcs(n, idelay)) then
-          rho2 = f * this%ci(ib)
+          rho2 = this%ci(ib)
         end if
       end if
       !
@@ -6268,12 +6239,13 @@ contains
       end if
       !
       ! -- calculate the derivative
-      dssk = f * fd * rho2
+      dssk = -f * fd * rho2
+      dsske = -f * fd * rho1
     end if
     !
     ! -- return
     return
-  end subroutine csub_delay_calc_ssk_derivative
+  end subroutine csub_delay_calc_ssksske_derivative
 
   subroutine csub_delay_assemble(this, ib, hcell)
 ! ******************************************************************************
@@ -6307,6 +6279,7 @@ contains
     real(DP) :: aii
     real(DP) :: r
     real(DP) :: dssk
+    real(DP) :: dsske
     real(DP) :: sderv
 ! ------------------------------------------------------------------------------
     !
@@ -6355,6 +6328,35 @@ contains
         aii = aii - c2
       end if
       !
+      ! -- add newton terms
+      if (this%inewton /= 0 .and. this%lhead_based .EQV. .FALSE.) then
+        !
+        ! -- add derivative of storage coefficient
+        if (this%ieslag == 0) then
+          !
+          ! -- calculate the derivatives of the average ssk and sske
+          call this%csub_delay_calc_ssksske_derivative(ib, n, hcell, dssk, dsske)
+          !
+          ! -- calculate the specific storage derivative term
+          !sderv = dssk * fmult * h
+          if (ielastic /= 0) then
+            sderv = dssk * (this%dbgeo(n, idelay) - h + zbot) -                  &
+                    dsske * this%dbes0(n, idelay)
+          else
+            sderv = dssk *                                                       &
+                    (this%dbgeo(n, idelay) - h + zbot - this%dbpcs(n, idelay)) + &
+                    dsske * (this%dbpcs(n, idelay) - this%dbes0(n, idelay))
+          end if
+          sderv = sderv * fmult
+          !
+          ! -- add the specific storage derivative term to aii and rhs
+          !    sderv is added since the slope of the specific storage derivative
+          !    is negative and dsske is returned as a negative number      
+          aii = aii + sderv
+          r = r + sderv * h
+        end if
+      end if
+      !
       ! -- off diagonals
       ! -- lower
       if (n > 1) then
@@ -6371,26 +6373,6 @@ contains
       !
       ! -- right hand side
       this%dbrhs(n) = r
-      !
-      ! -- add newton terms
-      if (this%inewton /= 0) then
-        !
-        ! -- add derivative of storage coefficient
-        if (this%ieslag == 0) then
-          !
-          ! -- calculate the derivative of the average ssk
-          call this%csub_delay_calc_ssk_derivative(ib, n, hcell, dssk)
-          !
-          ! -- calculate the specific storage derivative term
-          sderv = dssk * fmult * h
-          !
-          ! -- add the specific storage derivative term to dbad and dbrhs
-          !    sderv is added since the slope of the specific storage derivative
-          !    is negative and dsske is returned as a negative number      
-          this%dbad(n) = this%dbad(n) + sderv
-          this%dbrhs(n) = this%dbrhs(n) + sderv * h
-        end if
-      end if
     end do
     !
     ! -- return
