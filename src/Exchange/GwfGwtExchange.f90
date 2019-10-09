@@ -6,6 +6,8 @@ module GwfGwtExchangeModule
   use BaseModelModule,         only: BaseModelType, GetBaseModelFromList
   use GwfModule,               only: GwfModelType
   use GwtModule,               only: GwtModelType
+  use BndModule,               only: BndType, GetBndFromList
+
   
   implicit none
   public :: GwfGwtExchangeType
@@ -23,6 +25,7 @@ module GwfGwtExchangeModule
     procedure :: exg_da
     procedure, private :: set_model_pointers
     procedure, private :: allocate_scalars
+    procedure, private :: gwfbnd2gwtfmi
     
   end type GwfGwtExchangeType
   
@@ -83,6 +86,8 @@ module GwfGwtExchangeModule
     class(BaseModelType), pointer :: mb => null()
     type(GwfModelType), pointer :: gwfmodel => null()
     type(GwtModelType), pointer :: gwtmodel => null()
+    integer(I4B) :: ngwfpack, ip
+    class(BndType), pointer :: packobj => null()
 ! ------------------------------------------------------------------------------
     !
     ! -- set gwfmodel
@@ -101,6 +106,13 @@ module GwfGwtExchangeModule
     !
     ! -- setup pointer to gwf variables that were allocated in gwf_df
     gwtmodel%fmi%gwfbndlist => gwfmodel%bndlist
+    ngwfpack = gwfmodel%bndlist%Count()
+    call gwtmodel%fmi%allocate_gwfpackages(ngwfpack)
+    do ip = 1, ngwfpack
+      packobj => GetBndFromList(gwfmodel%bndlist, ip)
+      call gwtmodel%fmi%gwfpackages(ip)%set_name(packobj%name)
+      !gwtmodel%fmi%gwfpackages(ip)%name = packobj%name
+    end do
     !
     ! -- return
     return
@@ -120,6 +132,8 @@ module GwfGwtExchangeModule
     class(BaseModelType), pointer :: mb => null()
     type(GwfModelType), pointer :: gwfmodel => null()
     type(GwtModelType), pointer :: gwtmodel => null()
+    integer(I4B) :: ngwfpack, ip
+    class(BndType), pointer :: packobj => null()
 ! ------------------------------------------------------------------------------
     !
     !
@@ -140,6 +154,13 @@ module GwfGwtExchangeModule
     ! -- Tell transport model flows are not read from file and set pointers
     gwtmodel%fmi%flows_from_file = .false.
     gwtmodel%fmi%gwfflowja => gwfmodel%flowja
+    !
+    ! -- Set the auxiliary names for gwf flow packages in gwt%fmi
+    ngwfpack = gwfmodel%bndlist%Count()
+    do ip = 1, ngwfpack
+      packobj => GetBndFromList(gwfmodel%bndlist, ip)
+      call gwtmodel%fmi%gwfpackages(ip)%set_auxname(packobj%auxname)
+    end do
     !
     ! -- return
     return
@@ -204,6 +225,9 @@ module GwfGwtExchangeModule
       end if
     endif
     !
+    ! -- transfer the boundary package information from gwf to gwt
+    call this%gwfbnd2gwtfmi()
+    !
     ! -- return
     return
   end subroutine exg_ar
@@ -251,5 +275,57 @@ module GwfGwtExchangeModule
     ! -- return
     return
   end subroutine allocate_scalars
+
+  subroutine gwfbnd2gwtfmi(this)
+! ******************************************************************************
+! gwfbnd2gwtfmi
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwfGwtExchangeType) :: this
+    ! -- local
+    integer(I4B) :: ngwfpack, ip
+    class(BaseModelType), pointer :: mb => null()
+    type(GwfModelType), pointer :: gwfmodel => null()
+    type(GwtModelType), pointer :: gwtmodel => null()
+    class(BndType), pointer :: packobj => null()
+! ------------------------------------------------------------------------------
+    !
+    ! -- set gwfmodel
+    mb => GetBaseModelFromList(basemodellist, this%m1id)
+    select type (mb)
+    type is (GwfModelType)
+      gwfmodel => mb
+    end select
+    !
+    ! -- set gwtmodel
+    mb => GetBaseModelFromList(basemodellist, this%m2id)
+    select type (mb)
+    type is (GwtModelType)
+      gwtmodel => mb
+    end select
+    !
+    ! -- Allocate the gwfpackages in fmi and transfer information
+    ngwfpack = gwfmodel%bndlist%Count()
+    do ip = 1, ngwfpack
+      packobj => GetBndFromList(gwfmodel%bndlist, ip)
+      call gwtmodel%fmi%gwfpackages(ip)%set_pointers( &
+                           packobj%name, &
+                           packobj%auxname, &
+                           packobj%nbound, &
+                           packobj%naux, &
+                           packobj%nodelist, &
+                           packobj%hcof, &
+                           packobj%rhs, &
+                           packobj%auxvar, &
+                           packobj%xnew)
+    end do
+    !
+    ! -- return
+    return
+  end subroutine gwfbnd2gwtfmi
 
 end module GwfGwtExchangeModule

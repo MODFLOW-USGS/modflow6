@@ -25,20 +25,24 @@ module BudgetFileReaderModule
     integer(I4B) :: idum1
     integer(I4B) :: idum2
     integer(I4B) :: imeth
+    integer(I4B), dimension(:), allocatable :: imetharray
     real(DP) :: delt
     real(DP) :: pertim
     real(DP) :: totim
     character(len=16) :: srcmodelname
     character(len=16) :: srcpackagename
     integer(I4B) :: ndat
+    integer(I4B) :: naux
     character(len=16), dimension(:), allocatable :: auxtxt
     integer(I4B) :: nlist
     real(DP), dimension(:), allocatable :: flowja
     integer(I4B), dimension(:), allocatable :: nodesrc
     integer(I4B), dimension(:), allocatable :: nodedst
-    real(DP), dimension(:, :), allocatable :: flowdata
+    real(DP), dimension(:), allocatable :: flow
+    real(DP), dimension(:, :), allocatable :: auxvar
     character(len=16) :: dstmodelname
     character(len=16) :: dstpackagename
+    character(len=16), dimension(:), allocatable :: dstpackagenamearray
   
   contains
   
@@ -88,6 +92,8 @@ module BudgetFileReaderModule
     kstp_last = this%kstp
     kper_last = this%kper
     allocate(this%budtxtarray(this%nbudterms))
+    allocate(this%imetharray(this%nbudterms))
+    allocate(this%dstpackagenamearray(this%nbudterms))
     rewind(this%inunit)
     !
     ! -- Now read through again and store budget text names
@@ -95,6 +101,8 @@ module BudgetFileReaderModule
       call this%read_record(success, iout)
       if (.not. success) exit
       this%budtxtarray(ibudterm) = this%budtxt
+      this%imetharray(ibudterm) = this%imeth
+      this%dstpackagenamearray(ibudterm) = this%dstpackagename
       if (trim(adjustl(this%budtxt)) == 'FLOW-JA-FACE' .and. &
           this%srcmodelname == this%dstmodelname) then
         if(allocated(this%nodesrc)) ncrbud = maxval(this%nodesrc)
@@ -161,11 +169,11 @@ module BudgetFileReaderModule
         this%hasimeth1flowja = .true.
       else
         this%nval = this%nval * this%idum1 * abs(this%idum2)
-        if(allocated(this%flowdata)) deallocate(this%flowdata)
-        allocate(this%flowdata(1, this%nval))
+        if(allocated(this%flow)) deallocate(this%flow)
+        allocate(this%flow(this%nval))
         if(allocated(this%nodesrc)) deallocate(this%nodesrc)
         allocate(this%nodesrc(this%nval))
-        read(this%inunit) this%flowdata
+        read(this%inunit) this%flow
         do i = 1, this%nval
           this%nodesrc(i) = i
         enddo
@@ -177,18 +185,21 @@ module BudgetFileReaderModule
       read(this%inunit) this%dstmodelname
       read(this%inunit) this%dstpackagename
       read(this%inunit) this%ndat
+      this%naux = this%ndat - 1
       if(allocated(this%auxtxt)) deallocate(this%auxtxt)
-      allocate(this%auxtxt(this%ndat-1))
+      allocate(this%auxtxt(this%naux))
       read(this%inunit) this%auxtxt
       read(this%inunit) this%nlist
       if(allocated(this%nodesrc)) deallocate(this%nodesrc)
       allocate(this%nodesrc(this%nlist))
       if(allocated(this%nodedst)) deallocate(this%nodedst)
       allocate(this%nodedst(this%nlist))
-      if(allocated(this%flowdata)) deallocate(this%flowdata)
-      allocate(this%flowdata(this%ndat, this%nlist))
-      read(this%inunit) (this%nodesrc(n), this%nodedst(n), &
-        (this%flowdata(i,n), i = 1, this%ndat), n = 1, this%nlist)
+      if(allocated(this%flow)) deallocate(this%flow)
+      allocate(this%flow(this%nlist))
+      if(allocated(this%auxvar)) deallocate(this%auxvar)
+      allocate(this%auxvar(this%naux, this%nlist))
+      read(this%inunit) (this%nodesrc(n), this%nodedst(n), this%flow(n), &
+        (this%auxvar(i, n), i = 1, this%naux), n = 1, this%nlist)
     else
       write(errmsg, '(a, a)') 'ERROR READING: ', trim(this%budtxt)
       call store_error(errmsg)
@@ -230,7 +241,8 @@ module BudgetFileReaderModule
     if(allocated(this%flowja)) deallocate(this%flowja)
     if(allocated(this%nodesrc)) deallocate(this%nodesrc)
     if(allocated(this%nodedst)) deallocate(this%nodedst)
-    if(allocated(this%flowdata)) deallocate(this%flowdata)
+    if(allocated(this%flow)) deallocate(this%flow)
+    if(allocated(this%auxvar)) deallocate(this%auxvar)
     !
     ! -- return
     return

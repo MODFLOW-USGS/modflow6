@@ -8,6 +8,7 @@ module GwtFmiModule
   use ListModule,             only: ListType
   use BudgetFileReaderModule, only: BudgetFileReaderType
   use HeadFileReaderModule,   only: HeadFileReaderType
+  use PackageBudgetModule,    only: PackageBudgetType
 
   implicit none
   private
@@ -17,7 +18,7 @@ module GwtFmiModule
   type, extends(NumericalPackageType) :: GwtFmiType
     
     logical, pointer                                :: flows_from_file => null() ! if .false., then there is no water flow
-    integer(I4B), dimension(:), pointer, contiguous :: iatp => null()           ! advanced transport package applied to gwfbndlist
+    integer(I4B), dimension(:), pointer, contiguous :: iatp => null()           ! advanced transport package applied to gwfpackages
     type(ListType), pointer                         :: gwfbndlist => null()     ! list of gwf stress packages
     integer(I4B), pointer                           :: iflowerr => null()       ! add the flow error correction
     real(DP), dimension(:), pointer, contiguous     :: flowerr => null()        ! residual error of the flow solution
@@ -36,8 +37,10 @@ module GwtFmiModule
     integer(I4B), pointer                           :: igwfinwtup => null()     ! NR indicator
     integer(I4B), pointer                           :: iubud => null()          ! unit number GWF budget file
     integer(I4B), pointer                           :: iuhds => null()          ! unit number GWF head file
+    integer(I4B), pointer                           :: nflowpack => null()
     type(BudgetFileReaderType)                      :: bfr
     type(HeadFileReaderType)                        :: hfr
+    type(PackageBudgetType), dimension(:), allocatable :: gwfpackages
   contains
   
     procedure :: fmi_ar
@@ -55,6 +58,7 @@ module GwtFmiModule
     procedure :: initialize_hfr
     procedure :: advance_hfr
     procedure :: finalize_hfr
+    procedure :: allocate_gwfpackages
   
   end type GwtFmiType
 
@@ -113,7 +117,6 @@ module GwtFmiModule
     integer(I4B), dimension(:), pointer, contiguous :: ibound
     integer(I4B), intent(in) :: inssm
     ! -- local
-    integer(I4B) :: nflowpack
     ! -- formats
     character(len=*), parameter :: fmtfmi =                                    &
       "(1x,/1x,'FMI -- FLOW MODEL INTERFACE, VERSION 1, 8/29/2017',            &
@@ -152,21 +155,29 @@ module GwtFmiModule
     ! -- Allocate arrays
     call this%allocate_arrays(dis%nodes)
     !
+    ! -- Read fmi options
+    if (this%inunit /= 0) then
+      call this%read_options()
+    end if
+    !
+    ! -- Initialize the budget file reader
+    if (this%iubud /= 0) then
+      call this%initialize_bfr()
+    endif
+    !
+    ! -- Initialize the head file reader
+    if (this%iuhds /= 0) then
+      call this%initialize_hfr()
+    endif
+    !
     ! -- Make sure that ssm is on if there are any boundary packages
     if (inssm == 0) then
-      nflowpack = 0
-      if (.not. this%flows_from_file) nflowpack = this%gwfbndlist%Count()
-      if (nflowpack > 0) then
+      if (this%nflowpack > 0) then
         call store_error('ERROR: FLOW MODEL HAS BOUNDARY PACKAGES, BUT THERE &
           &IS NO SSM PACKAGE.  THE SSM PACKAGE MUST BE ACTIVATED.')
         call ustop()
       endif
     endif
-    !
-    ! -- Read fmi options
-    if (this%inunit /= 0) then
-      call this%read_options()
-    end if
     !
     ! -- read the data block
     !call this%read_data()
@@ -268,7 +279,7 @@ module GwtFmiModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use BndModule,              only: BndType, GetBndFromList
+    !use BndModule,              only: BndType, GetBndFromList
     ! -- dummy
     class(GwtFmiType) :: this
     integer, intent(in) :: nodes
@@ -279,9 +290,9 @@ module GwtFmiModule
     integer(I4B), intent(in), dimension(nja) :: idxglo
     real(DP), intent(inout), dimension(nodes) :: rhs
     ! -- local
-    class(BndType), pointer :: packobj
+    !class(BndType), pointer :: packobj
     integer(I4B) :: n, ipos, idiag
-    integer(I4B) :: ip, i, nflowpack
+    integer(I4B) :: ip, i
     real(DP) :: qbnd
 ! ------------------------------------------------------------------------------
     !
@@ -302,14 +313,11 @@ module GwtFmiModule
     enddo
     !
     ! -- Add package flow terms
-    nflowpack = 0
-    if (.not. this%flows_from_file) nflowpack = this%gwfbndlist%Count()
-    do ip = 1, nflowpack
-      packobj => GetBndFromList(this%gwfbndlist, ip)
-      do i = 1, packobj%nbound
-        n = packobj%nodelist(i)
+    do ip = 1, this%nflowpack
+      do i = 1, this%gwfpackages(ip)%nbound
+        n = this%gwfpackages(ip)%nodelist(i)
         if (this%gwfibound(n) <= 0) cycle
-        qbnd = packobj%hcof(i) * packobj%xnew(n) - packobj%rhs(i)
+        qbnd = this%gwfpackages(ip)%get_flow(i)
         this%flowerr(n) = this%flowerr(n) + qbnd
       enddo
     enddo
@@ -439,6 +447,7 @@ module GwtFmiModule
     call mem_allocate(this%igwfstrgsy, 'IGWFSTRGSY', this%origin)
     call mem_allocate(this%iubud, 'IUBUD', this%origin)
     call mem_allocate(this%iuhds, 'IUHDS', this%origin)
+    call mem_allocate(this%nflowpack, 'NFLOWPACK', this%origin)
     !
     ! -- Initialize
     this%flows_from_file = .true.
@@ -447,6 +456,7 @@ module GwtFmiModule
     this%igwfstrgsy = 0
     this%iubud = 0
     this%iuhds = 0
+    this%nflowpack = 0
     !
     ! -- Return
     return
@@ -466,24 +476,20 @@ module GwtFmiModule
     class(GwtFmiType) :: this
     integer(I4B), intent(in) :: nodes
     ! -- local
-    integer(I4B) :: n, nflowpack
+    integer(I4B) :: n
 ! ------------------------------------------------------------------------------
-    !
-    ! -- Initialize
-    nflowpack = 0
-    if (.not. this%flows_from_file) nflowpack = this%gwfbndlist%Count()
     !
     ! -- Allocate variables needed for all cases
     call mem_allocate(this%gwfthksat, nodes, 'THKSAT', this%origin)
     call mem_allocate(this%flowerr, nodes, 'FLOWERR', this%origin)
-    call mem_allocate(this%iatp, nflowpack, 'IATP', this%origin)
+    call mem_allocate(this%iatp, this%nflowpack, 'IATP', this%origin)
     !
     ! -- Initialize
     do n = 1, nodes
       this%gwfthksat(n) = DZERO
       this%flowerr(n) = DZERO
     enddo
-    do n = 1, nflowpack
+    do n = 1, this%nflowpack
       this%iatp(n) = 0
     end do
     !
@@ -625,16 +631,6 @@ module GwtFmiModule
       write(this%iout,'(1x,a)') 'END OF FMI OPTIONS'
     end if
     !
-    ! -- Initialize the budget file reader
-    if (this%iubud /= 0) then
-      call this%initialize_bfr()
-    endif
-    !
-    ! -- Initialize the head file reader
-    if (this%iuhds /= 0) then
-      call this%initialize_hfr()
-    endif
-    !
     ! -- return
     return
   end subroutine read_options
@@ -651,14 +647,42 @@ module GwtFmiModule
     class(GwtFmiType) :: this
     ! -- dummy
     integer(I4B) :: ncrbud
+    integer(I4B) :: nflowpack
+    integer(I4B) :: i
+    logical :: found_flowja
+    logical :: found_dataspdis
+    logical :: found_stoss
+    logical :: found_stosy
 ! ------------------------------------------------------------------------------
     !
+    ! -- initialize variables
+    found_flowja = .false.
+    found_dataspdis = .false.
+    found_stoss = .false.
+    found_stosy = .false.
     ! -- Initialize the budget file reader
     call this%bfr%initialize(this%iubud, this%iout, ncrbud)
     !
-    ! -- todo: need to run through the budget terms
-    !    and do some checking and then store some information
-    !    on package names
+    ! -- Calculate the number of gwf flow packages
+    nflowpack = 0
+    do i = 1, this%bfr%nbudterms
+      select case(trim(adjustl(this%bfr%budtxtarray(i))))
+      case ('FLOW-JA-FACE')
+        found_flowja = .true.
+      case ('DATA-SPDIS')
+        found_dataspdis = .true.
+      case ('STO-SS')
+        found_stoss = .true.
+      case ('STO-SY')
+        found_stosy = .true.
+      case default
+        nflowpack = nflowpack + 1
+      end select
+    end do
+    call this%allocate_gwfpackages(nflowpack)
+    !
+    ! -- todo: error if flowja and qxqyqz not found
+    
   end subroutine initialize_bfr
   
   subroutine advance_bfr(this)
@@ -679,6 +703,7 @@ module GwtFmiModule
     integer(I4B) :: n
     integer(I4B) :: iposu, iposr
     integer(I4B) :: nu, nr
+    integer(I4B) :: ip, i
     logical :: readnext
     ! -- format
     character(len=*), parameter :: fmtkstpkper =                               &
@@ -708,6 +733,8 @@ module GwtFmiModule
       write(this%iout, fmtkstpkper) kstp, kper
       !
       ! -- loop through the budget terms for this stress period
+      !    i is the counter for gwf flow packages
+      ip = 0
       do n = 1, this%bfr%nbudterms
         call this%bfr%read_record(success, this%iout)
         if (.not. success) then
@@ -736,7 +763,8 @@ module GwtFmiModule
           call ustop()
         endif
         !
-        ! -- parse based on the type of data
+        ! -- parse based on the type of data, and compress all user node
+        !    numbers into reduced node numbers
         select case(trim(adjustl(this%bfr%budtxt)))
         case('FLOW-JA-FACE')
             iposr = 0
@@ -751,22 +779,37 @@ module GwtFmiModule
             do nu = 1, this%dis%nodesuser
               nr = this%dis%get_nodenumber(nu, 0)
               if (nr <= 0) cycle
-              this%gwfspdis(1, nr) = this%bfr%flowdata(2, nu)
-              this%gwfspdis(2, nr) = this%bfr%flowdata(3, nu)
-              this%gwfspdis(3, nr) = this%bfr%flowdata(4, nu)
+              this%gwfspdis(1, nr) = this%bfr%auxvar(1, nu)
+              this%gwfspdis(2, nr) = this%bfr%auxvar(2, nu)
+              this%gwfspdis(3, nr) = this%bfr%auxvar(3, nu)
             end do
           case('STO-SS')
             do nu = 1, this%dis%nodesuser
               nr = this%dis%get_nodenumber(nu, 0)
               if (nr <= 0) cycle
-              this%gwfstrgss(nr) = this%bfr%flowdata(1, nu)
+              this%gwfstrgss(nr) = this%bfr%flow(nu)
             end do
           case('STO-SY')
             do nu = 1, this%dis%nodesuser
               nr = this%dis%get_nodenumber(nu, 0)
               if (nr <= 0) cycle
-              this%gwfstrgsy(nr) = this%bfr%flowdata(1, nu)
+              this%gwfstrgsy(nr) = this%bfr%flow(nu)
             end do
+          case default
+            call this%gwfpackages(ip)%copy_values( &
+                                                 this%bfr%dstpackagename, &
+                                                 this%bfr%auxtxt, &
+                                                 this%bfr%nlist, &
+                                                 this%bfr%naux, &
+                                                 this%bfr%nodesrc, &
+                                                 this%bfr%flow, &
+                                                 this%bfr%auxvar)
+            do i = 1, this%gwfpackages(ip)%nbound
+              nu = this%gwfpackages(ip)%nodelist(i)
+              nr = this%dis%get_nodenumber(nu, 0)
+              this%gwfpackages(ip)%nodelist(i) = nr
+            end do
+            ip = ip + 1
         end select
       end do
     else
@@ -914,5 +957,24 @@ module GwtFmiModule
     close(this%iuhds)
     !
   end subroutine finalize_hfr
+  
+  subroutine allocate_gwfpackages(this, nflowpack)
+! ******************************************************************************
+! allocate_gwfpackages -- allocate the gwfpackages array
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    class(GwtFmiType) :: this
+    integer(I4B), intent(in) :: nflowpack
+    ! -- dummy
+! ------------------------------------------------------------------------------
+    !
+    ! -- allocate
+    allocate(this%gwfpackages(nflowpack))
+    this%nflowpack = nflowpack
+    !
+  end subroutine allocate_gwfpackages
   
 end module GwtFmiModule

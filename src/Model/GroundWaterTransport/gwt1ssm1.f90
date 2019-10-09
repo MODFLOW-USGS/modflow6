@@ -6,7 +6,6 @@ module GwtSsmModule
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule,          only: DisBaseType
   use GwtFmiModule,           only: GwtFmiType
-  use BndModule,              only: BndType, GetBndFromList
   
   implicit none
   public :: GwtSsmType
@@ -128,10 +127,11 @@ module GwtSsmModule
     this%ibound  => ibound
     this%cnew    => cnew
     !
-    ! -- Check to make sure that gwfbndlist is not null
-    if (.not. associated(this%fmi%gwfbndlist)) then
+    ! -- Check to make sure that there are flow packages
+    if (this%fmi%nflowpack == 0) then
       write(errmsg, '(a)') '****ERROR. SSM PACKAGE DOES NOT HAVE &
-                            &BOUNDARY FLOWS.  ACTIVATE GWF-GWT EXCHANGE.'
+                            &BOUNDARY FLOWS.  ACTIVATE GWF-GWT EXCHANGE &
+                            &OR TURN ON FMI AND PROVIDE BUDGET FILE.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
       call ustop()
@@ -161,16 +161,14 @@ module GwtSsmModule
     ! -- dummy
     class(GwtSsmType) :: this
     ! -- local
-    class(BndType), pointer :: packobj
     integer(I4B) :: ip
 ! ------------------------------------------------------------------------------
     !
     ! -- Calculate total number of flow boundaries
     this%nbound = 0
-    do ip = 1, this%fmi%gwfbndlist%Count()
-      packobj => GetBndFromList(this%fmi%gwfbndlist, ip)
+    do ip = 1, this%fmi%nflowpack
       if (this%fmi%iatp(ip) /= 0) cycle 
-      this%nbound = this%nbound + packobj%nbound
+      this%nbound = this%nbound + this%fmi%gwfpackages(ip)%nbound
     end do
     !
     ! -- Return
@@ -191,7 +189,6 @@ module GwtSsmModule
     integer(I4B), intent(in), dimension(:) :: idxglo
     real(DP), intent(inout), dimension(:) :: rhs
     ! -- local
-    class(BndType), pointer :: packobj
     integer(I4B) :: ip
     integer(I4B) :: i, n, idiag
     integer(I4B) :: iauxpos
@@ -200,26 +197,25 @@ module GwtSsmModule
 ! ------------------------------------------------------------------------------
     !
     ! -- do for each flow package
-    do ip = 1, this%fmi%gwfbndlist%Count()
-      packobj => GetBndFromList(this%fmi%gwfbndlist, ip)
+    do ip = 1, this%fmi%nflowpack
       if (this%fmi%iatp(ip) /= 0) cycle
       !
       ! -- do for each boundary
-      do i = 1, packobj%nbound
+      do i = 1, this%fmi%gwfpackages(ip)%nbound
         !
         ! -- set nodenumber
-        n = packobj%nodelist(i)
+        n = this%fmi%gwfpackages(ip)%nodelist(i)
         !
         ! -- skip if transport cell is inactive or constant concentration
         if (this%ibound(n) <= 0) cycle
         !
         ! -- Calculate the volumetric flow rate
-        qbnd = packobj%hcof(i) * packobj%xnew(n) - packobj%rhs(i)
+        qbnd = this%fmi%gwfpackages(ip)%get_flow(i)
         !
         ! -- get the first auxiliary variable
         iauxpos = this%iauxpak(ip)
         if(iauxpos > 0) then
-          ctmp = packobj%auxvar(iauxpos, i)
+          ctmp = this%fmi%gwfpackages(ip)%auxvar(iauxpos, i)
         else
           ctmp = DZERO
         endif
@@ -255,7 +251,6 @@ module GwtSsmModule
     integer(I4B), intent(in) :: isuppress_output
     type(BudgetType), intent(inout) :: model_budget
     ! -- local
-    class(BndType), pointer :: packobj
     integer(I4B) :: ip
     integer(I4B) :: n
     integer(I4B) :: i
@@ -272,26 +267,25 @@ module GwtSsmModule
     rout = DZERO
     !
     ! -- do for each flow package
-    do ip = 1, this%fmi%gwfbndlist%Count()
-      packobj => GetBndFromList(this%fmi%gwfbndlist, ip)
+    do ip = 1, this%fmi%nflowpack
       if (this%fmi%iatp(ip) /= 0) cycle
       !
       ! -- do for each boundary
-      do i = 1, packobj%nbound
+      do i = 1, this%fmi%gwfpackages(ip)%nbound
         !
         ! -- set nodenumber
-        n = packobj%nodelist(i)
+        n = this%fmi%gwfpackages(ip)%nodelist(i)
         !
         ! -- skip if transport cell is inactive or constant concentration
         if (this%ibound(n) <= 0) cycle
         !
         ! -- Calculate the volumetric flow rate
-        qbnd = packobj%hcof(i) * packobj%xnew(n) - packobj%rhs(i)
+        qbnd = this%fmi%gwfpackages(ip)%get_flow(i)
         !
         ! -- get the first auxiliary variable
         iauxpos = this%iauxpak(ip)
         if(iauxpos > 0) then
-          cbnd = packobj%auxvar(iauxpos, i)
+          cbnd = this%fmi%gwfpackages(ip)%auxvar(iauxpos, i)
         else
           cbnd = DZERO
         endif
@@ -343,7 +337,6 @@ module GwtSsmModule
     integer(I4B), intent(in) :: isuppress_output
     integer(I4B), dimension(:), optional, intent(in) :: imap
     ! -- local
-    class(BndType), pointer :: packobj
     integer(I4B) :: ip
     integer(I4B) :: n
     integer(I4B) :: iauxpos
@@ -388,27 +381,26 @@ module GwtSsmModule
     if(this%nbound > 0) then
       !
       ! -- Loop through each boundary calculating flow.
-      do ip = 1, this%fmi%gwfbndlist%Count()
-        packobj => GetBndFromList(this%fmi%gwfbndlist, ip)
+      do ip = 1, this%fmi%nflowpack
         if (this%fmi%iatp(ip) /= 0) cycle
         !
         ! -- do for each boundary
-        do i = 1, packobj%nbound
+        do i = 1, this%fmi%gwfpackages(ip)%nbound
           !
           ! -- set nodenumber and initialize
-          n = packobj%nodelist(i)
+          n = this%fmi%gwfpackages(ip)%nodelist(i)
           rrate = DZERO
           !
           ! -- skip if transport cell is inactive or constant concentration
           if (this%ibound(n) <= 0) cycle
           !
           ! -- Calculate the volumetric flow rate
-          qbnd = packobj%hcof(i) * packobj%xnew(n) - packobj%rhs(i)
+          qbnd = this%fmi%gwfpackages(ip)%get_flow(i)
           !
           ! -- get the first auxiliary variable
           iauxpos = this%iauxpak(ip)
           if(iauxpos > 0) then
-            cbnd = packobj%auxvar(iauxpos, i)
+            cbnd = this%fmi%gwfpackages(ip)%auxvar(iauxpos, i)
           else
             cbnd = DZERO
           endif
@@ -429,7 +421,7 @@ module GwtSsmModule
             if(this%iprflow /= 0) then
               if(ibdlbl == 0) write(this%iout,fmttkk)                        &
                 text // ' (' // trim(this%name) // ')', kper, kstp
-              bname = packobj%name
+              bname = this%fmi%gwfpackages(ip)%name
               call this%dis%print_list_entry(i, n, rrate, this%iout,      &
                       bname)
               ibdlbl=1
@@ -536,12 +528,12 @@ module GwtSsmModule
     ! -- dummy
     class(GwtSsmType) :: this
     ! -- local
-    integer(I4B) :: ngwfpak
+    integer(I4B) :: nflowpack
 ! ------------------------------------------------------------------------------
     !    
     ! -- Allocate
-    ngwfpak = this%fmi%gwfbndlist%Count()
-    call mem_allocate(this%iauxpak, ngwfpak, 'IAUXPAK',                        &
+    nflowpack = this%fmi%nflowpack
+    call mem_allocate(this%iauxpak, nflowpack, 'IAUXPAK',                      &
                       this%name)
     !
     ! -- Initialize
@@ -620,14 +612,13 @@ module GwtSsmModule
     ! -- dummy
     class(GwtSsmtype) :: this
     ! -- local
-    class(BndType), pointer :: packobj
     character(len=LINELENGTH) :: errmsg, keyword
     character(len=LENAUXNAME) :: auxname
     character(len=3) :: srctype
     integer(I4B) :: ierr
     integer(I4B) :: ip
     integer(I4B) :: iaux
-    integer(I4B) :: ngwfpack
+    integer(I4B) :: nflowpack
     logical :: isfound, endOfBlock
     logical :: pakfound
     ! -- formats
@@ -636,7 +627,7 @@ module GwtSsmModule
     !
     ! -- initialize
     isfound = .false.
-    ngwfpack = this%fmi%gwfbndlist%Count()
+    nflowpack = this%fmi%nflowpack
     !
     ! -- get sources block
     call this%parser%GetBlock('SOURCES', isfound, ierr)
@@ -649,9 +640,8 @@ module GwtSsmModule
         ! -- read package name and make sure it can be found
         call this%parser%GetStringCaps(keyword)
         pakfound = .false.
-        do ip = 1, ngwfpack
-          packobj => GetBndFromList(this%fmi%gwfbndlist, ip)
-          if (trim(packobj%name) == keyword) then
+        do ip = 1, nflowpack
+          if (trim(this%fmi%gwfpackages(ip)%name) == keyword) then
             pakfound = .true.
             exit
           endif
@@ -680,8 +670,9 @@ module GwtSsmModule
         ! -- read name of auxiliary column
         call this%parser%GetStringCaps(auxname)
         pakfound = .false.
-        do iaux = 1, packobj%naux
-          if (trim(packobj%auxname(iaux)) == trim(auxname)) then
+        do iaux = 1, this%fmi%gwfpackages(ip)%naux
+          if (trim(this%fmi%gwfpackages(ip)%auxname(iaux)) ==                  &
+              trim(auxname)) then
             pakfound = .true.
             exit
           endif
