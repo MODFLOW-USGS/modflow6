@@ -3400,7 +3400,7 @@ contains
 
   
   subroutine csub_nodelay_fc(this, ib, hcell, hcellold, rho1, rho2, rhs,         &
-                             argtled, esadd)
+                             argtled)
 ! ******************************************************************************
 ! csub_nodelay_fc -- Calculate rho1, rho2, and rhs for no-delay interbeds
 ! ******************************************************************************
@@ -3418,11 +3418,9 @@ contains
     real(DP), intent(inout) :: rho2
     real(DP), intent(inout) :: rhs
     real(DP), intent(in), optional :: argtled
-    real(DP), intent(in), optional :: esadd
     ! -- local variables
     integer(I4B) :: node
     real(DP) :: tled
-    real(DP) :: esp
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: thick
@@ -3444,11 +3442,6 @@ contains
     else
       tled = DONE / delt
     endif
-    if (present(esadd)) then
-      esp = esadd
-    else
-      esp = DZERO
-    endif
     node = this%nodelist(ib)
     area = this%dis%get_area(node)
     bot = this%dis%bot(node)
@@ -3465,7 +3458,7 @@ contains
       f0 = DONE
     else
       znode = this%csub_calc_znode(top, bot, hcell)
-      es = this%sk_es(node) !+ esp
+      es = this%sk_es(node)
       esi = this%sk_esi(node)
       es0 = this%sk_es0(node)
       theta = this%thetaini(ib)
@@ -3482,8 +3475,7 @@ contains
       ! -- calculate the compression index factors for the delay 
       !    node relative to the center of the cell based on the 
       !    current and previous head
-      call this%csub_calc_sfacts(node, bot, znode, theta, es, es0, hcell, f,     &
-                                 esadd=esp)
+      call this%csub_calc_sfacts(node, bot, znode, theta, es, es0, hcell, f)
     end if
     sto_fac = tled * snnew * thick * f
     sto_fac0 = tled * snold * thick * f
@@ -3544,6 +3536,7 @@ contains
     !
     ! -- initialize variables
     dssk = DZERO
+    dsske = DZERO
     !
     !
     if (this%lhead_based .EQV. .FALSE.) then
@@ -4831,7 +4824,7 @@ contains
     return
   end subroutine define_listlabel
 
-  subroutine csub_sk_calc_sske(this, n, sske, hcell, esadd)
+  subroutine csub_sk_calc_sske(this, n, sske, hcell)
 ! ******************************************************************************
 ! csub_sk_calc_sske -- Calculate sske for a gwf cell.
 ! ******************************************************************************
@@ -4842,9 +4835,7 @@ contains
     integer(I4B), intent(in) :: n
     real(DP), intent(inout) :: sske
     real(DP), intent(in) :: hcell
-    real(DP), intent(in), optional :: esadd
     ! -- local variables
-    real(DP) :: esp
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: znode
@@ -4858,11 +4849,6 @@ contains
     !
     ! -- initialize variables
     sske = DZERO
-    if (present(esadd)) then
-      esp = esadd
-    else
-      esp = DZERO
-    end if
     !
     ! -- calculate factor for the head-based case
     if (this%lhead_based .EQV. .TRUE.) then
@@ -4874,7 +4860,7 @@ contains
       top = this%dis%top(n)
       bot = this%dis%bot(n)
       znode = this%csub_calc_znode(top, bot, hcell)
-      es = this%sk_es(n) !+ esp
+      es = this%sk_es(n)
       esi = this%sk_esi(n)
       es0 = this%sk_es0(n)
       theta = this%sk_thetaini(n)
@@ -4895,8 +4881,7 @@ contains
       ! -- calculate the compression index factors for the delay 
       !    node relative to the center of the cell based on the 
       !    current and previous head
-      call this%csub_calc_sfacts(n, bot, znode, theta, es, es0, hcell, f,       &
-                                 esadd=esp)
+      call this%csub_calc_sfacts(n, bot, znode, theta, es, es0, hcell, f)
     end if
     sske = f * this%ske_cr(n)
     !
@@ -5559,7 +5544,7 @@ contains
   end function csub_calc_sat_derivative  
   
   subroutine csub_calc_sfacts(this, node, bot, znode, theta, es, es0, hcell,     &
-                              fact, esadd, derivative)
+                              fact, derivative)
 ! ******************************************************************************
 ! csub_calc_sfacts -- Calculate sske and factor for a gwf cell or 
 !                     interbed.
@@ -5576,11 +5561,9 @@ contains
     real(DP), intent(in) :: es0
     real(DP), intent(in) :: hcell
     real(DP), intent(inout) :: fact
-    real(DP), intent(in), optional :: esadd
     logical, intent(in), optional :: derivative
     ! -- local variables
     real(DP) :: esv
-    real(DP) :: esp
     real(DP) :: void
     real(DP) :: denom
 ! ------------------------------------------------------------------------------
@@ -5592,15 +5575,10 @@ contains
     else
       esv = es
     end if
-    if (present(esadd)) then
-      esp = esadd
-    else
-      esp = DZERO
-    end if
     !
     ! -- calculate storage factors for the effective stress case
     void = this%csub_calc_void(theta)
-    denom = this%csub_calc_adjes(node, esv, bot, znode, hcell) + esp
+    denom = this%csub_calc_adjes(node, esv, bot, znode, hcell)
     if (present(derivative)) then
       if (derivative .EQV. .TRUE.) then
         denom = denom * denom
@@ -6014,14 +5992,15 @@ contains
     !    that delay interbed cells are always saturated.
     sgm = this%sgm(node)
     sgs = this%sgs(node)
-    if (hcell > top) then
-      sadd = (top - botaq) * sgs
-    else if (hcell < botaq) then
-      sadd = (top - botaq) * sgm
-    else
-      sadd = ((top - hcell) * sgm) + ((hcell - botaq) * sgs)
-    end if
-    sigma = sigma - sadd
+    !if (hcell > top) then
+    !  sadd = (top - botaq) * sgs
+    !else if (hcell < botaq) then
+    !  sadd = (top - botaq) * sgm
+    !else
+    !  sadd = ((top - hcell) * sgm) + ((hcell - botaq) * sgs)
+    !end if
+    !sigma = sigma - sadd
+    sigma = sigma - (top - botaq) * sgs
     !
     ! -- set effective stress for the previous iteration and 
     !    calculate geostatic and effective stress for each interbed node.
@@ -6035,15 +6014,17 @@ contains
       z = this%dbz(n, idelay)
       top = z + dzhalf
       bot = z - dzhalf
+      !u = h - bot
+      !if (h > top) then
+      !    sadd = (top - bot) * sgs
+      !else if (h < bot) then
+      !    sadd = (top - bot) * sgm
+      !else
+      !    sadd = ((top - h) * sgm) + ((h - bot) * sgs)
+      !end if
+      !sigma = sigma + sadd
+      sigma = sigma + (top - bot) * sgs
       u = h - bot
-      if (h > top) then
-          sadd = (top - bot) * sgs
-      else if (h < bot) then
-          sadd = (top - bot) * sgm
-      else
-          sadd = ((top - h) * sgm) + ((h - bot) * sgs)
-      end if
-      sigma = sigma + sadd
       this%dbgeo(n, idelay) = sigma
       this%dbes(n, idelay) = sigma - u
     end do
