@@ -33,7 +33,9 @@ module BudgetFileReaderModule
     character(len=16) :: srcpackagename
     integer(I4B) :: ndat
     integer(I4B) :: naux
+    integer(I4B), dimension(:), allocatable :: nauxarray
     character(len=16), dimension(:), allocatable :: auxtxt
+    character(len=16), dimension(:, :), allocatable :: auxtxtarray
     integer(I4B) :: nlist
     real(DP), dimension(:), allocatable :: flowja
     integer(I4B), dimension(:), allocatable :: nodesrc
@@ -69,12 +71,14 @@ module BudgetFileReaderModule
     ! -- local
     integer(I4B) :: ibudterm
     integer(I4B) :: kstp_last, kper_last
+    integer(I4B) :: maxaux
     logical :: success
 ! ------------------------------------------------------------------------------
     this%inunit = iu
     this%endoffile = .false.
     this%nbudterms = 0
     ncrbud = 0
+    maxaux = 0
     !
     ! -- Determine number of budget terms within a time step
     if (iout > 0) &
@@ -86,6 +90,7 @@ module BudgetFileReaderModule
       call this%read_record(success)
       if (.not. success) exit
       this%nbudterms = this%nbudterms + 1
+      if (this%naux > maxaux) maxaux = this%naux
       if (this%kstp /= this%kstpnext .or. this%kper /= this%kpernext) &
         exit
     end do
@@ -94,6 +99,9 @@ module BudgetFileReaderModule
     allocate(this%budtxtarray(this%nbudterms))
     allocate(this%imetharray(this%nbudterms))
     allocate(this%dstpackagenamearray(this%nbudterms))
+    allocate(this%nauxarray(this%nbudterms))
+    allocate(this%auxtxtarray(maxaux, this%nbudterms))
+    this%auxtxtarray(:, :) = ''
     rewind(this%inunit)
     !
     ! -- Now read through again and store budget text names
@@ -103,6 +111,8 @@ module BudgetFileReaderModule
       this%budtxtarray(ibudterm) = this%budtxt
       this%imetharray(ibudterm) = this%imeth
       this%dstpackagenamearray(ibudterm) = this%dstpackagename
+      this%nauxarray(ibudterm) = this%naux
+      this%auxtxtarray(1:this%naux, ibudterm) = this%auxtxt(:)
       if (trim(adjustl(this%budtxt)) == 'FLOW-JA-FACE' .and. &
           this%srcmodelname == this%dstmodelname) then
         if(allocated(this%nodesrc)) ncrbud = maxval(this%nodesrc)

@@ -644,15 +644,18 @@ module GwtFmiModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    class(GwtFmiType) :: this
+    use MemoryManagerModule, only: mem_reallocate
     ! -- dummy
+    class(GwtFmiType) :: this
     integer(I4B) :: ncrbud
     integer(I4B) :: nflowpack
-    integer(I4B) :: i
+    integer(I4B) :: i, ip
+    integer(I4B) :: naux
     logical :: found_flowja
     logical :: found_dataspdis
     logical :: found_stoss
     logical :: found_stosy
+    integer(I4B), dimension(:), allocatable :: imap
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
@@ -660,10 +663,13 @@ module GwtFmiModule
     found_dataspdis = .false.
     found_stoss = .false.
     found_stosy = .false.
+    !
     ! -- Initialize the budget file reader
     call this%bfr%initialize(this%iubud, this%iout, ncrbud)
     !
     ! -- Calculate the number of gwf flow packages
+    allocate(imap(this%bfr%nbudterms))
+    imap(:) = 0
     nflowpack = 0
     do i = 1, this%bfr%nbudterms
       select case(trim(adjustl(this%bfr%budtxtarray(i))))
@@ -677,9 +683,25 @@ module GwtFmiModule
         found_stosy = .true.
       case default
         nflowpack = nflowpack + 1
+        imap(i) = 1
       end select
     end do
+    !
+    ! -- allocate gwfpackages and set the name
     call this%allocate_gwfpackages(nflowpack)
+    ip = 1
+    do i = 1, this%bfr%nbudterms
+      if (imap(i) == 0) cycle
+      call this%gwfpackages(ip)%set_name(this%bfr%dstpackagenamearray(i))
+      naux = this%bfr%nauxarray(i)
+      call this%gwfpackages(ip)%set_auxname(this%bfr%auxtxtarray(1:naux, i))
+      ip = ip + 1
+    end do
+    !
+    ! -- Now that nflowpack is known, need to reallocate the advanced
+    !    package indicator array
+    call mem_reallocate(this%iatp, nflowpack, 'IATP', this%origin)
+    this%iatp(:) = 0
     !
     ! -- todo: error if flowja and qxqyqz not found
     
@@ -734,7 +756,7 @@ module GwtFmiModule
       !
       ! -- loop through the budget terms for this stress period
       !    i is the counter for gwf flow packages
-      ip = 0
+      ip = 1
       do n = 1, this%bfr%nbudterms
         call this%bfr%read_record(success, this%iout)
         if (.not. success) then
@@ -966,9 +988,9 @@ module GwtFmiModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    ! -- dummy
     class(GwtFmiType) :: this
     integer(I4B), intent(in) :: nflowpack
-    ! -- dummy
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate

@@ -192,16 +192,19 @@ module GwtSsmModule
     integer(I4B) :: ip
     integer(I4B) :: i, n, idiag
     integer(I4B) :: iauxpos
+    integer(I4B) :: nflowpack, nbound
     real(DP) :: qbnd
     real(DP) :: ctmp
 ! ------------------------------------------------------------------------------
     !
     ! -- do for each flow package
-    do ip = 1, this%fmi%nflowpack
+    nflowpack = this%fmi%nflowpack
+    do ip = 1, nflowpack
       if (this%fmi%iatp(ip) /= 0) cycle
       !
       ! -- do for each boundary
-      do i = 1, this%fmi%gwfpackages(ip)%nbound
+      nbound = this%fmi%gwfpackages(ip)%nbound
+      do i = 1, nbound
         !
         ! -- set nodenumber
         n = this%fmi%gwfpackages(ip)%nodelist(i)
@@ -641,7 +644,7 @@ module GwtSsmModule
         call this%parser%GetStringCaps(keyword)
         pakfound = .false.
         do ip = 1, nflowpack
-          if (trim(this%fmi%gwfpackages(ip)%name) == keyword) then
+          if (trim(adjustl(this%fmi%gwfpackages(ip)%name)) == keyword) then
             pakfound = .true.
             exit
           endif

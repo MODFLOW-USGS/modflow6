@@ -88,6 +88,7 @@ module PackageBudgetModule
     this%auxname(:) = auxname(:)
     this%naux = naux
     if (.not. associated(this%nbound)) allocate(this%nbound)
+    this%nbound = nbound
     if (associated(this%nodelist)) then
       if (size(this%nodelist) < nbound) then
         deallocate(this%nodelist)
