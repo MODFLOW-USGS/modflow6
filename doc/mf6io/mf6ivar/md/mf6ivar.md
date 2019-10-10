@@ -826,6 +826,7 @@
 | GWT | LKT | PERIOD | AUXILIARY | KEYWORD | keyword for specifying auxiliary variable. |
 | GWT | LKT | PERIOD | AUXNAME | STRING | name for the auxiliary variable to be assigned AUXVAL.  AUXNAME must match one of the auxiliary variable names defined in the OPTIONS block. If AUXNAME does not match one of the auxiliary variable names defined in the OPTIONS block the data are ignored. |
 | GWT | LKT | PERIOD | AUXVAL | DOUBLE PRECISION | value for the auxiliary variable. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value. |
+| GWT | FMI | OPTIONS | FLOW_IMBALANCE_CORRECTION | KEYWORD | correct for an imbalance in flows by assuming that any residual flow error comes in or leaves at the concentration of the cell. |
 | GWT | FMI | OPTIONS | GWFBUDGET | KEYWORD | keyword to specify that record corresponds to the gwfbudget input file. |
 | GWT | FMI | OPTIONS | FILEIN | KEYWORD | keyword to specify that an input filename is expected next. |
 | GWT | FMI | OPTIONS | GWFBUDGETFILE | STRING | name of the binary GWF budget file to read as input for the FMI Package |
