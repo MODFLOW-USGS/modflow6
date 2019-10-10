@@ -20,7 +20,7 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['csub_sk01a', 'csub_sk01b']  # , 'csub_sk01c']
+ex = ['csub_sk01a', 'csub_sk01b', 'csub_sk01c']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
@@ -28,9 +28,9 @@ cvopt = [None, None, None]
 constantcv = [True, True, True]
 ndelaybeds = [0, 0, 0]
 
-cmppths = ['mf2005', 'mfnwt']
-tops = [0., 150.]
-newtons = [False, True]
+cmppths = ['mf2005', 'mfnwt', 'mfnwt']
+tops = [0., 0., 150.]
+newtons = [False, True, True]
 
 ddir = 'data'
 
@@ -41,7 +41,7 @@ travis = [True, True, True]
 # set replace_exe to None to use default executable
 replace_exe = None
 
-htol = [None, 0.3, None]
+htol = [None, None, 0.3]
 dtol = 1e-3
 budtol = 0.01
 

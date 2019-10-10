@@ -4432,6 +4432,11 @@ contains
     ! -- calculate hcof term
     hcof = rho1 * (this%sk_gs(node) - hcell + bot) * derv
     !
+    ! -- Add additional term if using lagged effective stress
+    if (this%ieslag /= 0) then
+      hcof = hcof - rho1 * this%sk_es0(node) * derv
+    end if
+    !
     ! -- calculate rhs term
     rhs = hcof * hcell
     !
@@ -4561,6 +4566,7 @@ contains
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: rho1
+    real(DP) :: rho2
     real(DP) :: dz
     real(DP) :: c
     real(DP) :: h1
@@ -4595,10 +4601,24 @@ contains
         satderv = this%csub_calc_sat_derivative(node, hcell)    
         !
         ! -- calculate storage coefficient
-        call this%csub_nodelay_fc(ib, hcell, hcellold, rho1, hcofn, rhsn)
+        call this%csub_nodelay_fc(ib, hcell, hcellold, rho1, rho2, rhsn)
         !
-        ! -- calculate hcnof term
-        hcofn = hcofn * (this%sk_gs(node) - hcell + bot) * satderv
+        ! -- calculate hcofn term
+        if (this%ielastic(ib) /= 0) then
+          hcofn = rho2 * (this%sk_gs(node) - hcell + bot) * satderv
+        else
+          hcofn = rho2 * (this%sk_gs(node) - hcell + bot - this%pcs(ib)) *       &
+                  satderv
+        end if
+        !
+        ! -- Add additional term if using lagged effective stress
+        if (this%ieslag /= 0) then
+          if (this%ielastic(ib) /= 0) then
+            hcofn = hcofn - rho1 * this%sk_es0(node) * satderv
+          else
+            hcofn = hcofn - rho1 * (this%pcs(ib) - this%sk_es0(node)) * satderv
+          end if
+        end if
       !
       ! -- delay interbeds
       else
