@@ -18,6 +18,7 @@ module ConnectionsModule
     integer(I4B), pointer                           :: ianglex    => null()      !indicates whether or not anglex was read
     integer(I4B), dimension(:), pointer, contiguous :: ia         => null()      !(size:nodes+1) csr index array
     integer(I4B), dimension(:), pointer, contiguous :: ja         => null()      !(size:nja) csr pointer array
+    integer(I4B), dimension(:), pointer, contiguous :: mask       => null()      !(size:nja) to mask certain connections: ==0 means masked 
     real(DP), dimension(:), pointer, contiguous     :: cl1        => null()      !(size:njas) connection length between node n and shared face with node m
     real(DP), dimension(:), pointer, contiguous     :: cl2        => null()      !(size:njas) connection length between node m and shared face with node n
     real(DP), dimension(:), pointer, contiguous     :: hwva       => null()      !(size:njas) horizontal perpendicular width (ihc>0) or vertical flow area (ihc=0)
@@ -82,6 +83,7 @@ module ConnectionsModule
     ! -- Arrays
     call mem_deallocate(this%ia)
     call mem_deallocate(this%ja)
+    call mem_deallocate(this%mask)
     call mem_deallocate(this%isym)
     call mem_deallocate(this%jas)
     call mem_deallocate(this%hwva)
@@ -141,6 +143,7 @@ module ConnectionsModule
     ! -- allocate space for connection arrays
     call mem_allocate(this%ia, this%nodes+1, 'IA', this%cid)
     call mem_allocate(this%ja, this%nja, 'JA', this%cid)
+    call mem_allocate(this%mask, this%nja, 'MASK', this%cid)
     call mem_allocate(this%isym, this%nja, 'ISYM', this%cid)
     call mem_allocate(this%jas, this%nja, 'JAS', this%cid)
     call mem_allocate(this%hwva, this%njas, 'HWVA', this%cid)
@@ -202,6 +205,10 @@ module ConnectionsModule
     this%njas = (this%nja - this%nodes) / 2
     !
     call this%allocate_arrays()
+    ! TODO_MJR: we now have to set the default in 3 places (for dis, disv, disu)
+    do n = 1, this%nja
+      this%mask = 1  
+    end do
     !
     ! -- allocate temporary arrays for reading
     allocate(ihctemp(this%nja))
@@ -670,7 +677,7 @@ module ConnectionsModule
     integer(I4B), dimension(:, :, :), pointer :: nrdcd_ptr => null() !non-contiguous because is a slice
     integer(I4B), dimension(:), allocatable :: rowmaxnnz
     type(sparsematrix) :: sparse
-    integer(I4B) :: i, j, k, kk, ierror, isympos, nodesuser
+    integer(I4B) :: i, j, k, kk, ierror, isympos, nodesuser, n
     integer(I4B) :: nr, mr
 ! ------------------------------------------------------------------------------
     !
@@ -795,6 +802,10 @@ module ConnectionsModule
     !
     ! -- Allocate index arrays of size nja and symmetric arrays
     call this%allocate_arrays()
+    ! TODO_MJR: we now have to set the default in 3 places (for dis, disv, disu)
+    do n = 1, this%nja
+      this%mask = 1  
+    end do
     !
     ! -- Fill the IA and JA arrays from sparse, then destroy sparse
     call sparse%filliaja(this%ia, this%ja, ierror)
@@ -963,6 +974,10 @@ module ConnectionsModule
     !
     ! -- Allocate index arrays of size nja and symmetric arrays
     call this%allocate_arrays()
+    ! TODO_MJR: we now have to set the default in 3 places (for dis, disv, disu)
+    do n = 1, this%nja
+      this%mask = 1  
+    end do
     !
     ! -- Fill the IA and JA arrays from sparse, then destroy sparse
     call sparse%sort()

@@ -83,6 +83,7 @@ module GwfNpfModule
     procedure                               :: npf_ac
     procedure                               :: npf_mc
     procedure                               :: npf_ar
+    procedure                               :: npf_init_mem
     procedure                               :: npf_ad
     procedure                               :: npf_cf
     procedure                               :: npf_fc
@@ -469,6 +470,8 @@ module GwfNpfModule
     !
     do n = 1, this%dis%nodes
       do ii = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
+        if (this%dis%con%mask(ii) == 0) cycle
+        
         m = this%dis%con%ja(ii)
         !
         ! -- Calculate conductance only for upper triangle but insert into
@@ -596,6 +599,8 @@ module GwfNpfModule
     do n=1, nodes
       idiag=this%dis%con%ia(n)
       do ii=this%dis%con%ia(n)+1,this%dis%con%ia(n+1)-1
+        if (this%dis%con%mask(ii) == 0) cycle
+        
         m=this%dis%con%ja(ii)
         isymcon = this%dis%con%isym(ii)
         ! work on upper triangle
