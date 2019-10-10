@@ -4286,7 +4286,8 @@ contains
         ! -- calculate coarse-grained skeletal water compressibility storage 
         !    newton terms
         if (this%brg /= DZERO) then
-          call this%csub_sk_wcomp_fn(node, tled, area, hnew(node), hcof, rhsterm)
+          call this%csub_sk_wcomp_fn(node, tled, area, hnew(node), hold(node),   &
+                                     hcof, rhsterm)
           !
           ! -- add water compression storage newton terms to amat and rhs for 
           !    skeletal storage
@@ -4319,7 +4320,7 @@ contains
           ! -- calculate interbed water compressibility terms
           if (this%brg /= DZERO) then
             call this%csub_interbed_wcomp_fn(ib, node, tled, area,              &
-                                             hnew(node),                        &
+                                             hnew(node), hold(node),            &
                                              hcof, rhsterm)
             !
             ! -- add interbed water compression newton terms to amat and rhs
@@ -4408,7 +4409,7 @@ contains
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: tthk
-    real(DP) :: derv
+    real(DP) :: satderv
     real(DP) :: sske
     real(DP) :: rho1
 ! ------------------------------------------------------------------------------
@@ -4423,18 +4424,18 @@ contains
     tthk = this%sk_thickini(node)
     !
     ! -- calculate saturation derivative
-    derv = this%csub_calc_sat_derivative(node, hcell)    
+    satderv = this%csub_calc_sat_derivative(node, hcell)    
     !
     ! -- storage coefficients
     call this%csub_sk_calc_sske(node, sske, hcell)
     rho1 = sske * area * tthk * tled
     !
     ! -- calculate hcof term
-    hcof = rho1 * (this%sk_gs(node) - hcell + bot) * derv
+    hcof = rho1 * (this%sk_gs(node) - hcell + bot) * satderv
     !
     ! -- Add additional term if using lagged effective stress
     if (this%ieslag /= 0) then
-      hcof = hcof - rho1 * this%sk_es0(node) * derv
+      hcof = hcof - rho1 * this%sk_es0(node) * satderv
     end if
     !
     ! -- calculate rhs term
@@ -4889,7 +4890,7 @@ contains
   end subroutine csub_sk_wcomp_fc
 
   
-  subroutine csub_sk_wcomp_fn(this, node, tled, area, hcell, hcof, rhs)
+  subroutine csub_sk_wcomp_fn(this, node, tled, area, hcell, hcellold, hcof, rhs)
 ! ******************************************************************************
 ! csub_sk_wcomp_fn -- Calculate water compressibility newton-rephson terms for 
 !                     a gwf cell.
@@ -4902,13 +4903,17 @@ contains
     real(DP), intent(in) :: tled
     real(DP), intent(in) :: area
     real(DP), intent(in) :: hcell
+    real(DP), intent(in) :: hcellold
     real(DP), intent(inout) :: hcof
     real(DP), intent(inout) :: rhs
     ! locals
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: tthk
-    real(DP) :: derv
+    real(DP) :: tthk0
+    real(DP) :: satderv
+    real(DP) :: f
+    real(DP) :: wc1
     real(DP) :: wc2
 ! ------------------------------------------------------------------------------
 !
@@ -4922,13 +4927,25 @@ contains
     tthk = this%sk_thick(node)
     !
     ! -- calculate saturation derivitive
-    derv = this%csub_calc_sat_derivative(node, hcell)    
+    satderv = this%csub_calc_sat_derivative(node, hcell)    
     !
-    ! -- storage coefficient
-    wc2 = this%brg * area * tthk * this%sk_theta(node) * tled
+    ! -- calculate water compressibility factor
+    f = this%brg * area * tled
+    !
+    ! -- water compressibility coefficient
+    !wc2 = this%brg * area * tthk * this%sk_theta(node) * tled
+    wc2 = f * tthk * this%sk_theta(node)
     !
     ! -- calculate hcof term
-    hcof = -wc2 * derv * hcell
+    hcof = -wc2 * hcell * satderv
+    !
+    ! -- Add additional term if using lagged effective stress
+    if (this%ieslag /= 0) then
+      tthk0 = this%sk_thick0(node)
+      !wc1 = this%brg * area * tthk0 * this%sk_theta0(node) * tled
+      wc1 = f * tthk0 * this%sk_theta0(node)
+      hcof = hcof + wc1 * hcellold * satderv
+    end if
     !
     ! -- calculate rhs term
     rhs = hcof * hcell
@@ -5018,7 +5035,7 @@ contains
 
   
   subroutine csub_interbed_wcomp_fn(this, ib, node, tled, area,                 &
-                                    hcell, hcof, rhs)
+                                    hcell, hcellold, hcof, rhs)
 ! ******************************************************************************
 ! csub_interbed_wcomp_fn -- Calculate water compressibility newton-raphson 
 !                           terms for an interbed.
@@ -5032,6 +5049,7 @@ contains
     real(DP), intent(in) :: tled
     real(DP), intent(in) :: area
     real(DP), intent(in) :: hcell
+    real(DP), intent(in) :: hcellold
     real(DP), intent(inout) :: hcof
     real(DP), intent(inout) :: rhs
     ! locals
@@ -5039,8 +5057,9 @@ contains
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: f
+    real(DP) :: wc1
     real(DP) :: wc2
-    real(DP) :: derv
+    real(DP) :: satderv
 ! ------------------------------------------------------------------------------
 !
 ! -- initialize variables
@@ -5059,11 +5078,21 @@ contains
     if (idelay == 0) then
       !
       ! -- calculate saturation derivitive
-      derv = this%csub_calc_sat_derivative(node, hcell)    
+      satderv = this%csub_calc_sat_derivative(node, hcell)    
       !
-      !
+      ! -- calculate the current water compressibility factor
       wc2 = f * this%theta(ib) * this%thick(ib)
-      hcof = -wc2 * derv * hcell
+      !
+      ! -- calculate derivative term
+      hcof = -wc2 * hcell * satderv
+      !
+      ! -- Add additional term if using lagged effective stress
+      if (this%ieslag /= 0) then
+        wc1 = f * this%theta0(ib) * this%thick0(ib)
+        hcof = hcof + wc1 * hcellold * satderv
+      end if
+      !
+      ! -- set rhs
       rhs = hcof * hcell
     !
     ! -- delay interbeds
