@@ -2,6 +2,7 @@ program test_mf6lib
   use ftnunit
   
   ! use modules with tests:
+  use TestNpfModule
   use TestGridConnectionModule
   use TestDisModule
   use TestDisvModule
@@ -16,6 +17,7 @@ program test_mf6lib
   call runtests_init()
   
   ! call all tests
+  call testAllNpf()
   call testAllGridConnection()
   call testAllDis()
   call testAllDisv()

@@ -34,6 +34,7 @@
 		<File RelativePath="..\test\src\TestGridConnection.f90"/>
 		<File RelativePath="..\test\src\TestGwfInterfaceModel.f90"/>
 		<File RelativePath="..\test\src\TestMF6Lib.f90"/>
+		<File RelativePath="..\test\src\TestNpf.f90"/>
 		<File RelativePath="..\test\src\TestNumericalExchangeHelper.f90"/>
 		<File RelativePath="..\test\src\TestVectorInt.f90"/></Filter></Files>
 	<Globals/></VisualStudioProject>
