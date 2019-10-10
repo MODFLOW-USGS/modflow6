@@ -1,3 +1,8 @@
+! -- todo: gwfsat is not right for FMI budget flows
+! -- todo: don't have gwficelltype for FMI budget flows
+! -- todo: flowerr correction should be an option in FMI
+! -- todo: lots more error checking
+! -- todo: deallocation
 module GwtFmiModule
   
   use KindModule,             only: DP, I4B
@@ -28,7 +33,6 @@ module GwtFmiModule
     real(DP), dimension(:), pointer, contiguous     :: gwfhead   => null()      ! pointer to the GWF head array
     real(DP), dimension(:), pointer, contiguous     :: gwfsat    => null()      ! pointer to the GWF saturation array
     integer(I4B), dimension(:), pointer, contiguous :: gwfibound => null()      ! pointer to the GWF ibound array
-    real(DP), dimension(:), pointer, contiguous     :: gwfthksat => null()      ! calculated saturated thickness
     real(DP), dimension(:), pointer, contiguous     :: gwfstrgss => null()      ! pointer to flow model QSTOSS
     real(DP), dimension(:), pointer, contiguous     :: gwfstrgsy => null()      ! pointer to flow model QSTOSY
     integer(I4B), pointer                           :: igwfstrgss => null()     ! indicates if gwfstrgss is available
@@ -296,38 +300,39 @@ module GwtFmiModule
     real(DP) :: qbnd
 ! ------------------------------------------------------------------------------
     !
-    ! -- If not adding flow error correction, return
-    if (this%iflowerr == 0) return
-    !
-    ! -- Loop through and calculate flow residual for face flows and storage
-    do n = 1, nodes
-      this%flowerr(n) = DZERO
-      if (this%gwfibound(n) <= 0) cycle
-      do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
-        this%flowerr(n) = this%flowerr(n) + this%gwfflowja(ipos)
-      enddo
-      if (this%igwfstrgss /= 0) &
-        this%flowerr(n) = this%flowerr(n) + this%gwfstrgss(n)
-      if (this%igwfstrgsy /= 0) &
-        this%flowerr(n) = this%flowerr(n) + this%gwfstrgsy(n)
-    enddo
-    !
-    ! -- Add package flow terms
-    do ip = 1, this%nflowpack
-      do i = 1, this%gwfpackages(ip)%nbound
-        n = this%gwfpackages(ip)%nodelist(i)
+    ! -- Calculate the flow imbalance error and make a correction for it
+    if (this%iflowerr /= 0) then
+      !
+      ! -- Loop through and calculate flow residual for face flows and storage
+      do n = 1, nodes
+        this%flowerr(n) = DZERO
         if (this%gwfibound(n) <= 0) cycle
-        qbnd = this%gwfpackages(ip)%get_flow(i)
-        this%flowerr(n) = this%flowerr(n) + qbnd
+        do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
+          this%flowerr(n) = this%flowerr(n) + this%gwfflowja(ipos)
+        enddo
+        if (this%igwfstrgss /= 0) &
+          this%flowerr(n) = this%flowerr(n) + this%gwfstrgss(n)
+        if (this%igwfstrgsy /= 0) &
+          this%flowerr(n) = this%flowerr(n) + this%gwfstrgsy(n)
       enddo
-    enddo
-    !
-    ! -- Correct the transport solution for the flow imbalance by adding
-    !    the flow residual to the diagonal
-    do n = 1, nodes
-      idiag = idxglo(this%dis%con%ia(n))
-      amatsln(idiag) = amatsln(idiag) - this%flowerr(n)
-    enddo
+      !
+      ! -- Add package flow terms
+      do ip = 1, this%nflowpack
+        do i = 1, this%gwfpackages(ip)%nbound
+          n = this%gwfpackages(ip)%nodelist(i)
+          if (this%gwfibound(n) <= 0) cycle
+          qbnd = this%gwfpackages(ip)%get_flow(i)
+          this%flowerr(n) = this%flowerr(n) + qbnd
+        enddo
+      enddo
+      !
+      ! -- Correct the transport solution for the flow imbalance by adding
+      !    the flow residual to the diagonal
+      do n = 1, nodes
+        idiag = idxglo(this%dis%con%ia(n))
+        amatsln(idiag) = amatsln(idiag) - this%flowerr(n)
+      enddo
+    end if
     !
     ! -- Return
     return
@@ -354,27 +359,48 @@ module GwtFmiModule
 ! ------------------------------------------------------------------------------
     !
     ! -- If not adding flow error correction, return
-    if (this%iflowerr == 0) return
-    !
-    ! -- initialize 
-    rin = DZERO
-    rout = DZERO
-    nodes = this%dis%nodes
-    !
-    ! -- Accumulate the flow error term
-    do n = 1, nodes
-      if (this%ibound(n) <= 0) cycle
-      rate = this%flowerr(n) * cnew(n)
-      if (rate < 0) then
-        rout = rout - rate
-      else
-        rin = rin + rate
-      endif
-    enddo
-    !
-    ! -- Add contributions to model budget
-    call model_budget%addentry(rin, rout, delt, '      FLOW-ERROR',            &
-                               isuppress_output)
+    if (this%iflowerr /= 0) then
+      !
+      ! -- initialize 
+      rin = DZERO
+      rout = DZERO
+      nodes = this%dis%nodes
+      !
+      ! -- Accumulate the flow error term
+      do n = 1, nodes
+        if (this%ibound(n) <= 0) cycle
+        rate = this%flowerr(n) * cnew(n)
+        if (rate < 0) then
+          rin = rin - rate
+        else
+          rout = rout + rate
+        endif
+      enddo
+      !
+      ! -- Add contributions to model budget
+      call model_budget%addentry(rin, rout, delt, '      FLOW-ERROR',            &
+                                 isuppress_output)
+      !
+      ! -- initialize 
+      rin = DZERO
+      rout = DZERO
+      nodes = this%dis%nodes
+      !
+      ! -- Accumulate the flow correction term
+      do n = 1, nodes
+        if (this%ibound(n) <= 0) cycle
+        rate = this%flowerr(n) * cnew(n)
+        if (rate < 0) then
+          rout = rout - rate
+        else
+          rin = rin + rate
+        endif
+      enddo
+      !
+      ! -- Add contributions to model budget
+      call model_budget%addentry(rin, rout, delt, ' FLOW-CORRECTION',          &
+                                 isuppress_output)
+    end if
     !
     ! -- Return
     return
@@ -408,7 +434,6 @@ module GwtFmiModule
     this%igwfinwtup => null()
     !
     ! -- deallocate fmi arrays
-    call mem_deallocate(this%gwfthksat)
     call mem_deallocate(this%flowerr)
     !
     ! -- deallocate scalars
@@ -451,7 +476,7 @@ module GwtFmiModule
     !
     ! -- Initialize
     this%flows_from_file = .true.
-    this%iflowerr = 1
+    this%iflowerr = 0
     this%igwfstrgss = 0
     this%igwfstrgsy = 0
     this%iubud = 0
@@ -480,13 +505,11 @@ module GwtFmiModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate variables needed for all cases
-    call mem_allocate(this%gwfthksat, nodes, 'THKSAT', this%origin)
     call mem_allocate(this%flowerr, nodes, 'FLOWERR', this%origin)
     call mem_allocate(this%iatp, this%nflowpack, 'IATP', this%origin)
     !
     ! -- Initialize
     do n = 1, nodes
-      this%gwfthksat(n) = DZERO
       this%flowerr(n) = DZERO
     enddo
     do n = 1, this%nflowpack
@@ -583,6 +606,8 @@ module GwtFmiModule
     integer(I4B) :: ierr
     integer(I4B) :: inunit
     logical :: isfound, endOfBlock
+    character(len=*), parameter :: fmtifc =                                    &
+      "(4x,'MASS WILL BE ADDED OR REMOVED TO COMPENSATE FOR FLOW IMBALANCE.')"
 ! ------------------------------------------------------------------------------
     !
     ! -- get options block
@@ -596,6 +621,9 @@ module GwtFmiModule
         if (endOfBlock) exit
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
+          case ('FLOW_IMBALANCE_CORRECTION')
+            write(this%iout, fmtifc)
+            this%iflowerr = 1
           case ('GWFBUDGET')
             call this%parser%GetStringCaps(keyword)
             if(keyword /= 'FILEIN') then

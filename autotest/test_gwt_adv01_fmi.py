@@ -111,9 +111,6 @@ def get_model(idx, dir):
             write_head(fbin, top * np.ones((nrow, ncol)), kstp=kstp + 1)
 
 
-    chd = {0: [[(0, 0, 99), 0.0000000]]}
-    wel = {0: [[(0, 0, 0), 1.0, 1.0]]}
-
     # create a budget file
     qx = 1.
     qy = 0.
