@@ -79,6 +79,7 @@ contains
   
     ! dis%dis_df, npf%npf_d ... we cannot call these yet, 
     ! the following comes from npf_df:
+    this%npf%dis => this%dis
     this%npf%xt3d => this%xt3d    
     this%npf%xt3d%ixt3d = this%npf%ixt3d
         
