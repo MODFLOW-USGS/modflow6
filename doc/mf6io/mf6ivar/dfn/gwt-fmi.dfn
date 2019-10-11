@@ -1,0 +1,98 @@
+# --------------------- gwt fmi options ---------------------
+
+block options
+name flow_imbalance_correction
+type keyword
+reader urword
+optional true
+longname correct for flow imbalance
+description correct for an imbalance in flows by assuming that any residual flow error comes in or leaves at the concentration of the cell.
+
+block options
+name gwfbudget_filerecord
+type record gwfbudget filein gwfbudgetfile
+shape
+reader urword
+tagged true
+optional true
+longname
+description
+
+block options
+name gwfbudget
+type keyword
+shape
+in_record true
+reader urword
+tagged true
+optional false
+longname gwfbudget keyword
+description keyword to specify that record corresponds to the gwfbudget input file.
+
+block options
+name filein
+type keyword
+shape
+in_record true
+reader urword
+tagged true
+optional false
+longname file keyword
+description keyword to specify that an input filename is expected next.
+
+block options
+name gwfbudgetfile
+type string
+preserve_case true
+shape
+in_record true
+reader urword
+tagged false
+optional false
+longname file keyword
+description name of the binary GWF budget file to read as input for the FMI Package
+
+block options
+name gwfhead_filerecord
+type record gwfhead filein gwfheadfile
+shape
+reader urword
+tagged true
+optional true
+longname
+description
+
+block options
+name gwfhead
+type keyword
+shape
+in_record true
+reader urword
+tagged true
+optional false
+longname gwfhead keyword
+description keyword to specify that record corresponds to the gwfhead input file.
+
+block options
+name filein
+type keyword
+shape
+in_record true
+reader urword
+tagged true
+optional false
+longname file keyword
+description keyword to specify that an input filename is expected next.
+
+block options
+name gwfheadfile
+type string
+preserve_case true
+shape
+in_record true
+reader urword
+tagged false
+optional false
+longname file keyword
+description name of the binary GWF head file to read as input for the FMI Package
+

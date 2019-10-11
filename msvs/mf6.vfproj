@@ -170,6 +170,7 @@
 		<File RelativePath="..\src\Utilities\ArrayReaders.f90"/>
 		<File RelativePath="..\src\Utilities\BlockParser.f90"/>
 		<File RelativePath="..\src\Utilities\Budget.f90"/>
+		<File RelativePath="..\src\Utilities\BudgetFileReader.f90"/>
 		<File RelativePath="..\src\Utilities\comarg.f90"/>
 		<File RelativePath="..\src\Utilities\compilerversion.fpp">
 			<FileConfiguration Name="Debug|Win32">
@@ -177,6 +178,7 @@
 		<File RelativePath="..\src\Utilities\Constants.f90"/>
 		<File RelativePath="..\src\Utilities\genericutils.f90"/>
 		<File RelativePath="..\src\Utilities\HashTable.f90"/>
+		<File RelativePath="..\src\Utilities\HeadFileReader.f90"/>
 		<File RelativePath="..\src\Utilities\InputOutput.f90"/>
 		<File RelativePath="..\src\Utilities\Iunit.f90"/>
 		<File RelativePath="..\src\Utilities\kind.f90"/>
@@ -184,6 +186,7 @@
 		<File RelativePath="..\src\Utilities\ListReader.f90"/>
 		<File RelativePath="..\src\Utilities\NameFile.f90"/>
 		<File RelativePath="..\src\Utilities\OpenSpec.f90"/>
+		<File RelativePath="..\src\Utilities\PackageBudget.f90"/>
 		<File RelativePath="..\src\Utilities\Sim.f90"/>
 		<File RelativePath="..\src\Utilities\SimVariables.f90"/>
 		<File RelativePath="..\src\Utilities\SmoothingFunctions.f90"/>

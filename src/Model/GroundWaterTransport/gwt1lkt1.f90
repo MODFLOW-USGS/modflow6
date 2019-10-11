@@ -879,6 +879,8 @@ module GwtLktModule
     !    LKT package name
     found = .false.
     do ip = 1, this%fmi%gwfbndlist%Count()
+      ! -- todo: need to remove dependence on lak package and replace with
+      !    a generalized budget object
       packobj => GetBndFromList(this%fmi%gwfbndlist, ip)
       if (packobj%name == this%name) then
         found = .true.

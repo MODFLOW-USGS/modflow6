@@ -1,0 +1,4 @@
+BEGIN OPTIONS
+  GWFBUDGET FILEIN mygwfmodel.bud
+  GWFHEAD FILEIN mygwfmodel.hds
+END OPTIONS
