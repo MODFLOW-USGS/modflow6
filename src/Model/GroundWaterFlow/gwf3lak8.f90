@@ -1398,10 +1398,10 @@ contains
           !
           ! -- read outlet lakein
           ival = this%parser%GetInteger()
-          if (ival <1 .or. ival > this%noutlets) then
+          if (ival <1 .or. ival > this%nlakes) then
             write(errmsg,'(4x,a,1x,i4,1x,a,1x,i6)') &
               '****ERROR. lakein FOR OUTLET ', n, 'MUST BE > 0 and <= ',        &
-              this%noutlets
+              this%nlakes
             call store_error(errmsg)
             cycle readoutlet
           end if
@@ -1412,7 +1412,7 @@ contains
           if (ival <0 .or. ival > this%nlakes) then
             write(errmsg,'(4x,a,1x,i4,1x,a,1x,i6)') &
               '****ERROR. lakeout FOR OUTLET ', n, 'MUST BE >= 0 and <= ',      &
-              this%noutlets
+              this%nlakes
             call store_error(errmsg)
             cycle readoutlet
           end if
