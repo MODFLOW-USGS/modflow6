@@ -3256,6 +3256,10 @@ module GwfNpfModule
     this%propsedge(4, lastedge) = ny
     this%propsedge(5, lastedge) = distance
     !
+    ! -- If this is the last edge, then the next call must be starting a new
+    !    edge properties assignment loop, so need to reset lastedge to 0
+    if (this%lastedge == this%nedges) this%lastedge = 0
+    !
     ! -- return
     return
   end subroutine set_edge_properties
