@@ -25,8 +25,10 @@ module MemoryTypeModule
     real(DP), pointer                                      :: dblsclr     => null()  !pointer to the double
     integer(I4B), dimension(:), pointer, contiguous        :: aint1d      => null()  !pointer to 1d integer array
     integer(I4B), dimension(:, :), pointer, contiguous     :: aint2d      => null()  !pointer to 2d integer array
+    integer(I4B), dimension(:, :, :), pointer, contiguous  :: aint3d      => null()  !pointer to 3d integer array
     real(DP), dimension(:), pointer, contiguous            :: adbl1d      => null()  !pointer to 1d double array
     real(DP), dimension(:, :), pointer, contiguous         :: adbl2d      => null()  !pointer to 2d double array
+    real(DP), dimension(:, :, :), pointer, contiguous      :: adbl3d      => null()  !pointer to 3d double array
     type (MemoryTSType), dimension(:), pointer, contiguous :: ats1d       => null()  !pointer to a time series array
   contains
     procedure :: table_entry
@@ -61,8 +63,10 @@ module MemoryTypeModule
     if(associated(this%dblsclr)) al = .true.
     if(associated(this%aint1d)) al = .true.
     if(associated(this%aint2d)) al = .true.
+    if(associated(this%aint3d)) al = .true.
     if(associated(this%adbl1d)) al = .true.
     if(associated(this%adbl2d)) al = .true. 
+    if(associated(this%adbl3d)) al = .true. 
     if(associated(this%ats1d)) al = .true. 
   end function mt_associated
   
