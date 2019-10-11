@@ -33,6 +33,7 @@ module ConnectionsModule
     procedure :: con_da
     procedure :: allocate_scalars
     procedure :: allocate_arrays
+    procedure, private :: init_arrays
     procedure :: read_from_block
     procedure :: con_finalize
     procedure :: read_connectivity_from_block
@@ -157,7 +158,21 @@ module ConnectionsModule
     ! -- Return
     return
   end subroutine allocate_arrays
-
+  
+  subroutine init_arrays(this)  
+  ! ******************************************************************************
+  ! init_arrays -- Sets default array values after allocation
+  ! ******************************************************************************
+    class(ConnectionsType) :: this
+    integer(I4B) :: i
+    
+    ! set default: unmasked
+    do i = 1, this%nja
+      this%mask(i) = 1  
+    end do
+    
+  end subroutine init_arrays
+  
   subroutine read_from_block(this, name_model, nodes, nja, inunit, iout)
 ! ******************************************************************************
 ! read_from_block -- Read connection information from input block
@@ -205,10 +220,7 @@ module ConnectionsModule
     this%njas = (this%nja - this%nodes) / 2
     !
     call this%allocate_arrays()
-    ! TODO_MJR: we now have to set the default in 3 places (for dis, disv, disu)
-    do n = 1, this%nja
-      this%mask = 1  
-    end do
+    call this%init_arrays()    
     !
     ! -- allocate temporary arrays for reading
     allocate(ihctemp(this%nja))
@@ -527,6 +539,7 @@ module ConnectionsModule
     !
     ! -- Allocate space for connection arrays
     call this%allocate_arrays()
+    call this%init_arrays()
     !
     ! -- get connectiondata block
     call this%parser%GetBlock('CONNECTIONDATA', isfound, ierr)
@@ -802,10 +815,7 @@ module ConnectionsModule
     !
     ! -- Allocate index arrays of size nja and symmetric arrays
     call this%allocate_arrays()
-    ! TODO_MJR: we now have to set the default in 3 places (for dis, disv, disu)
-    do n = 1, this%nja
-      this%mask = 1  
-    end do
+    call this%init_arrays()
     !
     ! -- Fill the IA and JA arrays from sparse, then destroy sparse
     call sparse%filliaja(this%ia, this%ja, ierror)
@@ -974,10 +984,7 @@ module ConnectionsModule
     !
     ! -- Allocate index arrays of size nja and symmetric arrays
     call this%allocate_arrays()
-    ! TODO_MJR: we now have to set the default in 3 places (for dis, disv, disu)
-    do n = 1, this%nja
-      this%mask = 1  
-    end do
+    call this%init_arrays()
     !
     ! -- Fill the IA and JA arrays from sparse, then destroy sparse
     call sparse%sort()
