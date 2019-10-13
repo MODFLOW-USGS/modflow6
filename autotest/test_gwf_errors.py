@@ -1,3 +1,11 @@
+"""
+MODFLOW 6 Autotest
+Test to make sure that mf6 is failing with the correct error messages.  This
+test script is set up to be extensible so that simple models can be created
+very easily and tested with different options to succeed or fail correctly.
+
+"""
+
 import os
 import shutil
 import subprocess
@@ -50,20 +58,6 @@ def run_mf6_error(ws, err_str_list):
                 msg += ' but did not print correct error message.'
                 msg += '  Correct message should have been "{}"'.format(err_str)
                 raise ValueError(msg)
-    return
-
-
-@raises(RuntimeError)
-def test_raises_error():
-    msg = 'Raising runtime error'
-    raise RuntimeError(msg)
-    return
-
-
-@raises(RuntimeError)
-def test_empty_folder():
-    err_str = 'mf6: mfsim.nam is not present in working directory.'
-    run_mf6_error(testdir, err_str)
     return
 
 
@@ -121,6 +115,7 @@ def get_minimal_gwf_simulation(ws, name='test',
 
 
 def test_simple_model_success():
+    # test a simple model to make sure it runs and terminates correctly
     ws = os.path.join(testdir, 'sim0')
     sim = get_minimal_gwf_simulation(ws)
     sim.write_simulation()
@@ -134,7 +129,24 @@ def test_simple_model_success():
 
 
 @raises(RuntimeError)
+def test_raises_error():
+    # verify that the @raises decorator is working properly
+    msg = 'Raising runtime error'
+    raise RuntimeError(msg)
+    return
+
+
+@raises(RuntimeError)
+def test_empty_folder():
+    # make sure mf6 fails when there is no simulation name file
+    err_str = 'mf6: mfsim.nam is not present in working directory.'
+    run_mf6_error(testdir, err_str)
+    return
+
+
+@raises(RuntimeError)
 def test_sim_errors():
+    # verify that the correct number of errors are reported
     ws = os.path.join(testdir, 'sim1')
     chdkwargs = {}
     chdkwargs['stress_period_data'] = {0: [[(0, 0, 0), 0.] for i in range(10)]}
@@ -151,6 +163,7 @@ def test_sim_errors():
 
 @raises(RuntimeError)
 def test_sim_maxerrors():
+    # verify that the maxerrors keyword gives the correct error output
     ws = os.path.join(testdir, 'sim2')
     simnamefilekwargs = {}
     simnamefilekwargs['maxerrors'] = 5
