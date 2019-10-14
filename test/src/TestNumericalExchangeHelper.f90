@@ -6,7 +6,7 @@ module TestNumericalExchangeHelperModule
   
 contains
   
-  function getNumericalExchange(model1, model2, nexg) result(numEx)
+  function createNumericalExchange(model1, model2, nexg) result(numEx)
     class(NumericalExchangeType), pointer :: numEx
     class(NumericalModelType), pointer :: model1, model2
     integer(I4B) :: nexg

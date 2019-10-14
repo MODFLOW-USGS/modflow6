@@ -180,7 +180,7 @@ contains ! module procedures
     call gc%connectCell(6, numModel, 7, numModel2)
     
     ! create model topology
-    numEx => getNumericalExchange(gc%model, numModel2, 2)
+    numEx => createNumericalExchange(gc%model, numModel2, 2)
     numEx%nodem1(1) = 3
     numEx%nodem2(1) = 1
     numEx%nodem1(2) = 6
