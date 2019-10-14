@@ -80,6 +80,12 @@ module ConnectionsModule
     else
       call mem_deallocate(this%jausr)
     endif
+    ! -- mask
+    if (associated(this%mask, this%ja)) then
+      nullify(this%mask)
+    else
+      call mem_deallocate(this%mask)
+    end if 
     !
     ! -- Arrays
     call mem_deallocate(this%ia)
@@ -90,13 +96,7 @@ module ConnectionsModule
     call mem_deallocate(this%anglex)
     call mem_deallocate(this%ihc)
     call mem_deallocate(this%cl1)
-    call mem_deallocate(this%cl2)
-    !
-    if (associated(this%mask, this%ja)) then
-      nullify(this%mask)
-    else
-      call mem_deallocate(this%mask)
-    end if  
+    call mem_deallocate(this%cl2)     
     !
     ! -- return
     return
@@ -159,7 +159,7 @@ module ConnectionsModule
     call mem_allocate(this%iausr, 1, 'IAUSR', this%cid)
     call mem_allocate(this%jausr, 1, 'JAUSR', this%cid)
     ! 
-    ! let mask point to nja, which is always nonzero, 
+    ! let mask point to ja, which is always nonzero, 
     ! until someone decides to do a 'set_mask'
     this%mask => this%ja
     !
