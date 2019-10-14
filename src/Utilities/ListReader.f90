@@ -10,22 +10,22 @@ module ListReaderModule
   public ListReaderType
   
   type :: ListReaderType
-    integer(I4B) :: in                                                           ! unit number of file containing control record
-    integer(I4B) :: inlist                                                       ! unit number of file from which list will be read
-    integer(I4B) :: iout                                                         ! unit number to output messages
-    integer(I4B) :: inamedbound                                                  ! flag indicating boundary names are to be read
-    integer(I4B) :: ierr                                                         ! error flag
-    integer(I4B) :: nlist                                                        ! number of entries in list.  -1 indicates number will be automatically determined
-    integer(I4B) :: ibinary                                                      ! flag indicating to read binary list
-    integer(I4B) :: istart                                                       ! string starting location
-    integer(I4B) :: istop                                                        ! string ending location
-    integer(I4B) :: lloc                                                         ! entry number in line
-    integer(I4B) :: iclose                                                       ! flag indicating whether or not to close file
-    integer(I4B) :: ndim                                                         ! number of dimensions in model
-    integer(I4B) :: ntxtrlist                                                    ! number of text entries found in rlist
-    integer(I4B) :: ntxtauxvar                                                   ! number of text entries found in auxvar
-    character(len=LENLISTLABEL) :: label                                         ! label for printing list
-    character(len=LINELENGTH) :: line                                            ! line string for reading file
+    integer(I4B) :: in = 0                                                       ! unit number of file containing control record
+    integer(I4B) :: inlist = 0                                                   ! unit number of file from which list will be read
+    integer(I4B) :: iout = 0                                                     ! unit number to output messages
+    integer(I4B) :: inamedbound = 0                                              ! flag indicating boundary names are to be read
+    integer(I4B) :: ierr = 0                                                     ! error flag
+    integer(I4B) :: nlist = 0                                                    ! number of entries in list.  -1 indicates number will be automatically determined
+    integer(I4B) :: ibinary = 0                                                  ! flag indicating to read binary list
+    integer(I4B) :: istart = 0                                                   ! string starting location
+    integer(I4B) :: istop = 0                                                    ! string ending location
+    integer(I4B) :: lloc = 0                                                     ! entry number in line
+    integer(I4B) :: iclose = 0                                                   ! flag indicating whether or not to close file
+    integer(I4B) :: ndim = 0                                                     ! number of dimensions in model
+    integer(I4B) :: ntxtrlist = 0                                                ! number of text entries found in rlist
+    integer(I4B) :: ntxtauxvar = 0                                               ! number of text entries found in auxvar
+    character(len=LENLISTLABEL) :: label = ''                                    ! label for printing list
+    character(len=LINELENGTH) :: line = ''                                       ! line string for reading file
     integer(I4B), dimension(:), pointer, contiguous :: mshape => null()          ! pointer to model shape
     integer(I4B), dimension(:), pointer, contiguous :: nodelist => null()        ! pointer to nodelist
     real(DP), dimension(:, :), pointer, contiguous :: rlist => null()            ! pointer to rlist

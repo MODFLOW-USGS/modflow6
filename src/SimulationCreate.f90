@@ -4,7 +4,7 @@ module SimulationCreateModule
   use ConstantsModule,        only: LINELENGTH, LENMODELNAME, LENBIGLINE, DZERO
   use SimVariablesModule,     only: simfile, simlstfile, iout
   use SimModule,              only: ustop, store_error, count_errors,          &
-                                    store_error_unit
+                                    store_error_unit, maxerrors
   use InputOutputModule,      only: getunit, urword, openfile
   use ArrayHandlersModule,    only: expandarray, ifind
   use BaseModelModule,        only: BaseModelType
@@ -240,6 +240,10 @@ module SimulationCreateModule
               call parser%StoreErrorUnit()
               call ustop()
             endif
+          case ('MAXERRORS')
+            maxerrors = parser%GetInteger()
+            write(iout, '(4x, a, i0)')                                         &
+                  'MAXIMUM NUMBER OF ERRORS THAT WILL BE STORED IS ', maxerrors
           case default
             write(errmsg, '(4x,a,a)') &
                   '****ERROR. UNKNOWN SIMULATION OPTION: ',                    &
