@@ -77,7 +77,7 @@ contains
     if (this%gwfModel%npf%ixt3d > 0) then
       this%stencilDepth = 2
     end if
-    ! now call base class
+    ! now call base class, this sets up the GridConnection
     call this%spatialcon_df()    
     
     ! grid conn is defined, so we can now create the interface model
