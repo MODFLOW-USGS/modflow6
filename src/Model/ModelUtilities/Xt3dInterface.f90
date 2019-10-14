@@ -381,7 +381,7 @@ module Xt3dModule
     real(DP),intent(inout),dimension(:) :: hnew
     ! -- local
     integer(I4B) :: nodes, nja
-    integer(I4B) :: n, m
+    integer(I4B) :: n, m, ipos
     !
     logical :: allhc0, allhc1
     integer(I4B) :: nnbr0, nnbr1
@@ -425,6 +425,9 @@ module Xt3dModule
       ! -- Loop over active neighbors of cell 0 that have a higher
       ! -- cell number (taking advantage of reciprocity).
       do il0 = 1,nnbr0
+        ipos = this%dis%con%ia(n) + il0
+        if (this%dis%con%mask(ipos) == 0) cycle
+        
         m = inbr0(il0)
         ! -- Skip if neighbor is inactive or has lower cell number.
         if ((m.eq.0).or.(m.lt.n)) cycle
@@ -512,7 +515,7 @@ module Xt3dModule
     class(Xt3dType) :: this
     integer(I4B) :: nodes
     ! -- local
-    integer(I4B) :: n, m
+    integer(I4B) :: n, m, ipos
     !
     logical :: allhc0, allhc1
     integer(I4B) :: nnbr0, nnbr1
@@ -538,6 +541,9 @@ module Xt3dModule
       ! -- Loop over active neighbors of cell 0 that have a higher
       ! -- cell number (taking advantage of reciprocity).
       do il0 = 1,nnbr0
+        ipos = this%dis%con%ia(n) + il0
+        if (this%dis%con%mask(ipos) == 0) cycle
+        
         m = inbr0(il0)
         ! -- Skip if neighbor has lower cell number.
         if (m.lt.n) cycle
@@ -719,7 +725,7 @@ module Xt3dModule
     real(DP),intent(inout),dimension(nodes) :: rhs
     real(DP),intent(inout),dimension(nodes) :: hnew
     ! -- local
-    integer(I4B) :: n, m
+    integer(I4B) :: n, m, ipos
     !
     integer(I4B) :: nnbr0
     integer(I4B) :: il0, ii01, jjs01, il01, il10, ii00, ii11, ii10
@@ -744,6 +750,9 @@ module Xt3dModule
       ! -- Loop over active neighbors of cell 0 that have a higher
       ! -- cell number (taking advantage of reciprocity).
       do il0 = 1,nnbr0
+        ipos = this%dis%con%ia(n) + il0
+        if (this%dis%con%mask(ipos) == 0) cycle
+        
         m = inbr0(il0)
         ! -- Skip if neighbor is inactive or has lower cell number.
         if ((inbr0(il0).eq.0).or.(m.lt.n)) cycle
