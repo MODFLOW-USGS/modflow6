@@ -76,7 +76,7 @@ contains
     integer(I4B) :: kiter, njasln
     integer(I4B), dimension(:), pointer :: idxglo, ibound
     real(DP), dimension(:), pointer :: amat, rhs, hnew
-    
+    integer(I4B), dimension(:), pointer :: newMask
     
     ! need a dummy gwf model because of memory mgr repointering (e.g. INEWTON)
     allocate(gwf)
@@ -104,7 +104,9 @@ contains
     npf%ibound => ibound
     
     ! set the mask for all connections to zero
-    npf%dis%con%mask = 0
+    do i = 1, dis%con%nja
+      call dis%con%set_mask(i, 0)
+    end do
     
     kiter = 1
     njasln = dis%con%nja
@@ -126,7 +128,9 @@ contains
     end do
     
     ! and now without a mask
-    npf%dis%con%mask = 1
+    do i = 1, dis%con%nja
+      call npf%dis%con%set_mask(i, 1)
+    end do
     amat = -999.0_DP 
     call npf%npf_cf(kiter, dis%nodes, hnew)
     call npf%npf_fc(kiter, njasln, amat, idxglo, rhs, hnew)

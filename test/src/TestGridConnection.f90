@@ -22,6 +22,7 @@ contains ! module procedures
     call test(testAddSomeLinks, "GridConnection, test adding some links")
     call test(testBasicConnectivity, "GridConnection, test creating a basic connectivity matrix")
     call test(testNbrOfNbrConnectivity, "GridConnection, test creating a connectivity matrix for XT3D")
+    call test(testConnectionMask, "GridConnection, test the connectivity mask")
     call test(testTVDConnectivity, "GridConnection, test creating a connectivity matrix for TVD")
     call test(testModelConnectivity, "GridConnection, test connecting models up to nbrs-of-nbrs")
     
@@ -30,7 +31,7 @@ contains ! module procedures
   subroutine testConstructor()
     type(GridConnectionType) :: gridConnection
     
-    gridConnection = getSimpleGridConnectionWithModel("dummy")        
+    gridConnection = getSimpleGridConnectionWithModel("dummy", TESTDATADIR//"discretizations/dis_2x6.dis", 2)        
     
     call assert_true(gridConnection%linkCapacity == 2, "space reserved should be equal to 10")    
     call assert_true(size(gridConnection%boundaryCells) == 2, "local nodes array not properly allocated")
@@ -42,7 +43,7 @@ contains ! module procedures
     type(GridConnectionType) :: gridConnection    
     class(NumericalModelType), pointer :: nbrModel
     
-    gridConnection = getSimpleGridConnectionWithModel("dummy2")   
+    gridConnection = getSimpleGridConnectionWithModel("dummy2", TESTDATADIR//"discretizations/dis_2x6.dis", 2)   
     
     allocate(nbrModel)
     call nbrModel%allocate_scalars("neighbor")
@@ -63,7 +64,7 @@ contains ! module procedures
     type(sparsematrix) :: connectivity
     
     ! setup connection
-    gridConnection = getSimpleGridConnectionWithModel("someModel")    
+    gridConnection = getSimpleGridConnectionWithModel("someModel", TESTDATADIR//"discretizations/dis_2x6.dis", 2)    
     allocate(nbrModel)
     call nbrModel%allocate_scalars("someNeighbor")
     nbrModel%moffset = 100
@@ -73,7 +74,7 @@ contains ! module procedures
     close(1980)
     
     ! build connectivity, among other things
-    numEx => getNumericalExchange(gridConnection%model, nbrModel, 2)
+    numEx => createNumericalExchange(gridConnection%model, nbrModel, 2)
     numEx%nodem1(1) = 6
     numEx%nodem2(1) = 1
     numEx%nodem1(2) = 12    
@@ -98,7 +99,7 @@ contains ! module procedures
     type(sparsematrix) :: connectivity
     
     ! setup connection
-    gridConnection = getSimpleGridConnectionWithModel("someModel2")    
+    gridConnection = getSimpleGridConnectionWithModel("someModel2", TESTDATADIR//"discretizations/dis_2x6.dis", 2)    
     
     ! get nbr model
     allocate(nbrModel)
@@ -109,7 +110,7 @@ contains ! module procedures
     call nbrModel%dis%dis_df()    
     close(1980)
     
-    numEx => getNumericalExchange(gridConnection%model, nbrModel, 2)
+    numEx => createNumericalExchange(gridConnection%model, nbrModel, 2)
     numEx%nodem1(1) = 6
     numEx%nodem2(1) = 1
     numEx%nodem1(2) = 12
@@ -133,6 +134,43 @@ contains ! module procedures
   
   subroutine testTVDConnectivity
     call assert_true(.false., "not implemented")
+  end subroutine
+  
+  subroutine testConnectionMask()
+    use TestNumericalExchangeHelperModule
+    type(GridConnectionType) :: gridConnection    
+    class(NumericalModelType), pointer :: nbrModel  
+    class(NumericalExchangeType), pointer :: numEx
+    character(len=16) :: modelname
+    character(len=16) :: nbrname
+    integer(I4B) :: idx, ipos
+    
+    modelname = "testConnectionMask"
+    nbrname = "testConnectionMask2"
+    
+    ! setup connection
+    gridConnection = getSimpleGridConnectionWithModel(modelname, TESTDATADIR//"discretizations/dis_1x3.dis", 1)
+    ! get nbr model
+    allocate(nbrModel)
+    call nbrModel%allocate_scalars(nbrname)
+    nbrModel%moffset = 6    
+    open(unit=1980, file=TESTDATADIR//"discretizations/dis_1x3.dis", status='old', action='read')
+    call dis_cr(nbrModel%dis, nbrModel%name, 1980, -1)
+    call nbrModel%dis%dis_df()    
+    close(1980)
+    
+    numEx => createNumericalExchange(gridConnection%model, nbrModel, 1)
+    numEx%nodem1(1) = 3
+    numEx%nodem2(1) = 1
+    call gridConnection%connectCell(3, gridConnection%model, 1, nbrModel) ! horizontal links
+    call gridConnection%addModelLink(numEx, 1)
+    
+    call gridConnection%extendConnection(3, 2)
+    
+    idx = gridConnection%getInterfaceIndex(gridConnection%boundarycells(1)%cell)
+    ipos = gridConnection%connections%getjaindex(idx, idx)
+    call assert_equal(gridConnection%connections%mask(ipos), -1, "boundary cell has connectivity 1 ")
+    
   end subroutine
   
   subroutine testModelConnectivity
@@ -193,20 +231,22 @@ contains ! module procedures
   end subroutine
   
   ! helper function to setup basic gridconn
-  function getSimpleGridConnectionWithModel(name) result(gc)
+  function getSimpleGridConnectionWithModel(name, gridfile, nexg) result(gc)
     type(GridConnectionType) :: gc  
     character(len=*) :: name
+    character(len=*) :: gridfile
+    integer(I4B) :: nexg
     class(NumericalModelType), pointer :: numericalModel
     
     allocate(numericalModel)    
     call numericalModel%allocate_scalars(name)
     numericalModel%moffset = 0
-    open(unit=1980, file=TESTDATADIR//"discretizations/dis_2x6.dis", status='old', action='read')
+    open(unit=1980, file=gridfile, status='old', action='read')
     call dis_cr(numericalModel%dis, numericalModel%name, 1980, -1)
     call numericalModel%dis%dis_df()    
     close(1980)
     
-    call gc%construct(numericalModel, 2, "gridConnName") 
+    call gc%construct(numericalModel, nexg, "gridConnName") 
     
   end function
   
