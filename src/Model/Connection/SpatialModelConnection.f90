@@ -9,6 +9,7 @@ module SpatialModelConnectionModule
   
 	implicit none
 	private
+  public :: getCSRIndex
 
 	! Class to manage spatial connection of a model to one or more models of the same type.
 	! Spatial connection here means that the model domains (spatial discretization) are adjacent
@@ -54,7 +55,7 @@ module SpatialModelConnectionModule
 
 contains ! module procedures
   
-  subroutine spatialConnection_ctor(this, model, name, stencilDepth)
+  subroutine spatialConnection_ctor(this, model, name)
     class(SpatialModelConnectionType), intent(inout) :: this
     class(NumericalModelType), intent(in), pointer :: model
     character(len=*), intent(in) :: name
@@ -64,15 +65,16 @@ contains ! module procedures
     this%name = name
     this%memoryOrigin = trim(this%name)
     this%owner => model
-    this%stencilDepth = stencilDepth
     
     this%nrOfConnections = 0
     
     allocate(this%exchangeList)
-    allocate(this%gridConnection)    
+    allocate(this%gridConnection)  
     
     call this%allocateScalars()
     
+    this%stencilDepth = 1
+        
   end subroutine spatialConnection_ctor
   
   subroutine addExchangeToSpatialConnection(this, exchange)
@@ -103,33 +105,27 @@ contains ! module procedures
   subroutine spatialcon_mc(this, iasln, jasln)
     use SimModule, only: ustop
     use GridConnectionModule
-    use ConnectionsModule, only: ConnectionsType
     class(SpatialModelConnectionType), intent(inout) :: this
     integer(I4B), dimension(:), intent(in) :: iasln
     integer(I4B), dimension(:), intent(in) :: jasln
     ! local
-    integer(I4B) :: mloc, nloc, mglob, nglob, j, csrIdx
-    type(ConnectionsType), pointer :: conn => null()
+    integer(I4B) :: m, n, mglo, nglo, ipos, csrIdx
     
-    ! for readability
-    conn => this%gridConnection%connections
-        
-    allocate(this%mapIdxToSln(conn%nja))
+    allocate(this%mapIdxToSln(this%nja))
     
-    do mloc=1, conn%nodes
-      do j=conn%ia(mloc), conn%ia(mloc+1)-1
-        nloc = conn%ja(j) 
-        
-        mglob = this%gridConnection%idxToGlobal(mloc)%index + this%gridConnection%idxToGlobal(mloc)%model%moffset
-        nglob = this%gridConnection%idxToGlobal(nloc)%index + this%gridConnection%idxToGlobal(nloc)%model%moffset 
-        csrIdx = getCSRIndex(mglob, nglob, iasln, jasln)
+    do n = 1, this%neq
+      do ipos = this%ia(n), this%ia(n+1)-1
+        m = this%ja(ipos)        
+        nglo = this%gridConnection%idxToGlobal(n)%index + this%gridConnection%idxToGlobal(n)%model%moffset
+        mglo = this%gridConnection%idxToGlobal(m)%index + this%gridConnection%idxToGlobal(m)%model%moffset 
+        csrIdx = getCSRIndex(nglo, mglo, iasln, jasln)
         if (csrIdx == -1) then
           ! this should not be possible
           write(*,*) 'Error: cannot find cell connection in global system'
           call ustop()
         end if
         
-        this%mapIdxToSln(j) = csrIdx       
+        this%mapIdxToSln(ipos) = csrIdx       
       end do
     end do
     
@@ -159,7 +155,6 @@ contains ! module procedures
   subroutine setupGridConnection(this)
     class(SpatialModelConnectionType), intent(inout) :: this
     ! local
-    integer(I4B) :: localDepth, remoteDepth
     
     ! set boundary cells
     call this%setExchangeConnections()

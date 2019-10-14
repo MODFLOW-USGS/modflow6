@@ -9,6 +9,7 @@ module GwfGwfConnectionModule
   use NumericalModelModule
   use GwfModule, only: GwfModelType
   use GwfNpfModule, only: hcond, vcond
+  use ConnectionsModule, only: ConnectionsType
   
   implicit none
   private
@@ -50,17 +51,11 @@ contains
     class(GwfGwfConnectionType), intent(inout)  :: this
     class(NumericalModelType), pointer          :: model ! note: this must be a GwfModelType
     ! local
-    integer(I4B) :: stencilDepth
     
     this%gwfModel => CastToGwfModel(model)
     
-    stencilDepth = 1
-    if (this%gwfModel%npf%ixt3d > 0) then
-      stencilDepth = 2
-    end if
-    
     ! first call base constructor
-    call this%construct(model, trim(model%name)//'_GWF2CONN', stencilDepth)
+    call this%construct(model, trim(model%name)//'_GWF2CONN')
     
     call this%allocateScalars()
     
@@ -76,10 +71,17 @@ contains
    
    
   subroutine gwfgwfcon_df(this)
+    use SpatialModelConnectionModule, only: getCSRIndex ! TODO_MJR: move that function
+    use SimModule, only: ustop
     class(GwfGwfConnectionType), intent(inout) :: this    
     ! local
-    integer(I4B) :: ierror
+    integer(I4B) :: ierror, ipos, n, m, nloc, mloc, csrIdx
     type(sparsematrix) :: sparse
+    type(ConnectionsType), pointer :: conn
+    
+    if (this%gwfModel%npf%ixt3d > 0) then
+      this%stencilDepth = 2
+    end if
     
     ! now call base class, this sets up the GridConnection
     call this%spatialcon_df()    
@@ -93,7 +95,7 @@ contains
     
     
     ! == define ==
-    call this%interfaceModel%defineModel()   
+    call this%interfaceModel%defineModel()
     
     ! -- calculate and set offsets 
     this%interfaceModel%moffset = 0
@@ -107,7 +109,7 @@ contains
     ! -- Create the sparsematrix instance
     call sparse%init(this%neq, this%neq, 7)
     
-    ! -- Assign connections, fill ia/ja, map connections (following sln_connect)
+    ! -- Assign connections, fill ia/ja, map connections (following sln_connect) and mask
     call this%interfaceModel%model_ac(sparse)
     
     ! create amat from sparse (and keep sparse for adding connections to global system)
@@ -122,6 +124,36 @@ contains
     ! map connections
     call this%interfaceModel%model_mc(this%ia, this%ja)    
     
+    ! set the mask on connections that are calculated by the interface model
+    conn => this%interfaceModel%dis%con
+    do n = 1, conn%nodes
+      ! only for connections internal to the owning model
+      if (.not. associated(this%gridConnection%idxToGlobal(n)%model, this%owner)) then
+        cycle
+      end if      
+      nloc = this%gridConnection%idxToGlobal(n)%index
+      
+      do ipos = conn%ia(n) + 1, conn%ia(n + 1) - 1
+        m = conn%ja(ipos)
+        if (.not. associated(this%gridConnection%idxToGlobal(m)%model, this%owner)) then
+            cycle
+        end if
+        mloc = this%gridConnection%idxToGlobal(m)%index
+        
+        if (conn%mask(ipos) > 0) then
+          ! calculated by interface model, set local model's mask to zero
+          csrIdx = getCSRIndex(nloc, mloc, this%owner%ia, this%owner%ja)          
+          if (csrIdx == -1) then
+            ! this should not be possible
+            write(*,*) 'Error: cannot find cell connection in global system'
+            call ustop()
+          end if
+          
+          call this%owner%dis%con%set_mask(csrIdx, 0)          
+        end if
+      end do
+    end do
+      
   end subroutine gwfgwfcon_df
 
   subroutine allocateScalars(this)
@@ -158,10 +190,10 @@ contains
     integer(I4B) :: nglo, mglo
     
     do n = 1, this%neq
-      if (.not. associated(this%gridConnection%idxToGlobal(n)%model, this%gwfModel)) then
+      if (.not. associated(this%gridConnection%idxToGlobal(n)%model, this%owner)) then
         ! only add connections for own model to global matrix
         cycle
-      end if      
+      end if
       nglo = this%gridConnection%idxToGlobal(n)%index + this%gridConnection%idxToGlobal(n)%model%moffset
       do ipos = this%ia(n) + 1, this%ia(n+1) - 1
         m = this%ja(ipos)
@@ -189,16 +221,14 @@ contains
   end subroutine gwfgwfcon_cf
     
   ! write the calculated conductances into the global system matrix
-  subroutine gwfgwfcon_fc(this, kiter, amatsln, njasln, inwtflag)
-    use ConnectionsModule, only: ConnectionsType
+  subroutine gwfgwfcon_fc(this, kiter, amatsln, njasln, inwtflag)    
     class(GwfGwfConnectionType), intent(inout) :: this
     integer(I4B), intent(in) :: kiter
     real(DP), dimension(:), intent(inout) :: amatsln
     integer(I4B),intent(in) :: njasln
     integer(I4B), intent(in) :: inwtflag
     ! local
-    type(ConnectionsType), pointer :: conn => null()
-    integer(I4B) :: i, n, ipos
+    integer(I4B) :: i, n, m, ipos
     
     ! we iterate, so this should be reset (c.f. sln_reset())
     do i = 1, this%nja
@@ -212,19 +242,22 @@ contains
     call this%interfaceModel%model_fc(kiter, this%amat, this%nja, inwtflag)
     
     ! map back to solution matrix
-    conn => this%interfaceModel%dis%con
-    do n=1, conn%nodes
-      if (.not. associated(this%gridConnection%idxToGlobal(n)%model, this%gwfModel)) then
-        ! only write coefficients for own model to global matrix, cycle otherwise
+    do n = 1, this%neq
+      ! we cannot check with the mask here, because cross-terms are not
+      ! necessarily from primary connections. But, we only need the coefficients
+      ! for our own model (i.e. fluxes into cells belonging to this%owner):
+      if (.not. associated(this%gridConnection%idxToGlobal(n)%model, this%owner)) then
+        ! only add connections for own model to global matrix
         cycle
       end if
-      ! copy into global matrix
-      do ipos=conn%ia(n), conn%ia(n+1)-1
+      do ipos = this%ia(n), this%ia(n+1) - 1
+        m = this%ja(ipos)
+        write(*,*) n, ' - ', m, ': ', this%amat(ipos)
         amatsln(this%mapIdxToSln(ipos)) = amatsln(this%mapIdxToSln(ipos)) + this%amat(ipos)
       end do
     end do
-        
-  end subroutine gwfgwfcon_fc 
+    write(*,*)    
+  end subroutine gwfgwfcon_fc
   
   ! unsafe routine, you have to know what you're doing with this
   function CastToGwfModel(obj) result(gwfmodel)

@@ -470,6 +470,7 @@ module GridConnectionModule
   ! builds a sparse matrix holding all cell connections,
   ! with new indices, and stores the mapping to the global ids
   subroutine buildConnections(this)
+    use ConstantsModule, only: DPI
     use ArrayHandlersModule, only: ifind
     class(GridConnectionType), intent(inout) :: this 
     ! local
@@ -556,7 +557,11 @@ module GridConnectionModule
           conn%cl2(isym) = connOrig%cl2(isymOrig)
           conn%hwva(isym) = connOrig%hwva(isymOrig)
           conn%ihc(isym) = connOrig%ihc(isymOrig)
-          conn%anglex(isym) = connOrig%anglex(isymOrig)
+          if (ncell%index < mcell%index) then
+            conn%anglex(isym) = connOrig%anglex(isymOrig)
+          else
+            conn%anglex(isym) = connOrig%anglex(isymOrig) + DPI
+          end if
         end if
       end do
     end do
@@ -585,16 +590,19 @@ module GridConnectionModule
         if (nIfaceIdx < mIfaceIdx) then
           conn%cl1(isym) = numEx%cl1(iexg)
           conn%cl2(isym) = numEx%cl2(iexg)
+          if (ivalAngldegx > 0) then
+            conn%anglex(isym) = numEx%auxvar(ivalAngldegx,iexg)
+          end if
         else
           conn%cl1(isym) = numEx%cl2(iexg)
           conn%cl2(isym) = numEx%cl1(iexg)
+          if (ivalAngldegx > 0) then
+            conn%anglex(isym) = numEx%auxvar(ivalAngldegx,iexg) + DPI
+          end if
         end if          
         conn%hwva(isym) = numEx%hwva(iexg)
         conn%ihc(isym) = numEx%ihc(iexg) 
-        
-        if (ivalAngldegx > 0) then
-          conn%anglex(isym) = numEx%auxvar(ivalAngldegx,iexg)
-        end if            
+                         
       end do        
     end do
     
@@ -707,7 +715,9 @@ module GridConnectionModule
       end do      
     end do
     
-    ! set normalized mask (0 or 1) on links with connectivity <= stencilDepth
+    ! set normalized mask:
+    ! =1 for links with connectivity <= stencilDepth
+    ! =0 otherwise
     do n = 1, this%connections%nodes 
       ! set diagonals to zero
       call this%connections%set_mask(this%connections%ia(n), 0)

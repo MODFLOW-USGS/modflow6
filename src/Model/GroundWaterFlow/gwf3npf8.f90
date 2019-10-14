@@ -368,10 +368,12 @@ contains
     else if(this%inunit /= 0) then
       ! -- read the data block
       call this%read_data()
+      ! -- Initialize and check data    
+      call this%prepcheck()
     end if
     !
     ! -- Initialize and check data    
-    call this%prepcheck()
+    !call this%prepcheck()
     !
     ! -- xt3d
     if (this%ixt3d /= 0) then
