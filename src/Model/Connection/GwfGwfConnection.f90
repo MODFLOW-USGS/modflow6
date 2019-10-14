@@ -49,15 +49,22 @@ contains
     use NumericalModelModule, only: NumericalModelType
     class(GwfGwfConnectionType), intent(inout)  :: this
     class(NumericalModelType), pointer          :: model ! note: this must be a GwfModelType
+    ! local
+    integer(I4B) :: stencilDepth
+    
+    this%gwfModel => CastToGwfModel(model)
+    
+    stencilDepth = 1
+    if (this%gwfModel%npf%ixt3d > 0) then
+      stencilDepth = 2
+    end if
     
     ! first call base constructor
-    call this%construct(model, trim(model%name)//'_GWF2CONN') ! 
+    call this%construct(model, trim(model%name)//'_GWF2CONN', stencilDepth)
     
     call this%allocateScalars()
     
     this%connectionType = 'GWF-GWF'
-    this%gwfModel => CastToGwfModel(model)
-    
     this%iVarCV = 0
     this%iDewatCV = 0
     this%satOmega = DEM6  
@@ -74,9 +81,6 @@ contains
     integer(I4B) :: ierror
     type(sparsematrix) :: sparse
     
-    if (this%gwfModel%npf%ixt3d > 0) then
-      this%stencilDepth = 2
-    end if
     ! now call base class, this sets up the GridConnection
     call this%spatialcon_df()    
     

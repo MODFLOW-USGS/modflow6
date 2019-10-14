@@ -16,9 +16,8 @@ module SpatialModelConnectionModule
 	type, public, abstract, extends(ModelConnectionType) :: SpatialModelConnectionType
         
     ! aggregation, all exchanges which directly connect with our model
-    type(ListType), pointer :: exchangeList => null()
-    
-    integer(I4B) :: stencilDepth ! default = 1, xt3d = 2, ...
+    type(ListType), pointer :: exchangeList => null()    
+    integer(I4B), pointer :: stencilDepth ! default = 1, xt3d = 2, ...
         
     ! the interface system doesn't live in a solution, so we need these
     integer(I4B), pointer                               :: neq => NULL()
@@ -55,16 +54,17 @@ module SpatialModelConnectionModule
 
 contains ! module procedures
   
-  subroutine spatialConnection_ctor(this, model, name)
+  subroutine spatialConnection_ctor(this, model, name, stencilDepth)
     class(SpatialModelConnectionType), intent(inout) :: this
     class(NumericalModelType), intent(in), pointer :: model
     character(len=*), intent(in) :: name
+    integer(I4B) :: stencilDepth
     
     ! base props:
     this%name = name
     this%memoryOrigin = trim(this%name)
     this%owner => model
-    this%stencilDepth = 1
+    this%stencilDepth = stencilDepth
     
     this%nrOfConnections = 0
     
@@ -91,7 +91,7 @@ contains ! module procedures
     
     ! create the grid connection data structure
     this%nrOfConnections = this%getNrOfConnections()
-    call this%gridConnection%construct(this%owner, this%nrOfConnections, this%name)
+    call this%gridConnection%construct(this%owner, this%nrOfConnections, this%stencilDepth, this%name)
     call this%setupGridConnection()
     
     this%neq = this%gridConnection%nrOfCells
@@ -167,11 +167,8 @@ contains ! module procedures
     ! create topology of models
     call this%findModelNeighbors()
     
-    ! now scan for nbr-of-nbrs and create final data structures
-    ! we need (stencildepth-1) extra cells for the interior
-    remoteDepth = this%stencilDepth
-    localDepth = 2*this%stencilDepth - 1
-    call this%gridConnection%extendConnection(localDepth, remoteDepth)
+    ! now scan for nbr-of-nbrs and create final data structures    
+    call this%gridConnection%extendConnection()
     
   end subroutine setupGridConnection
   
@@ -204,7 +201,7 @@ contains ! module procedures
     do i=1, this%globalExchanges%Count()
         numEx => GetNumericalExchangeFromList(this%globalExchanges, i)
         ! (possibly) add connection between models
-        call this%gridConnection%addModelLink(numEx, this%stencilDepth)
+        call this%gridConnection%addModelLink(numEx)
     end do
       
   end subroutine findModelNeighbors
@@ -215,6 +212,7 @@ contains ! module procedures
   
     call mem_allocate(this%neq, 'NEQ', this%memoryOrigin)
     call mem_allocate(this%nja, 'NJA', this%memoryOrigin)
+    call mem_allocate(this%stencilDepth, 'STENCILDEPTH', this%memoryOrigin)
     
   end subroutine allocateScalars
   

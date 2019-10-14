@@ -46,6 +46,7 @@ module GridConnectionModule
     class(NumericalModelType), pointer :: model => null()
     
     integer(I4B), pointer :: linkCapacity => null()
+    integer(I4B), pointer :: stencilDepth => null()
     
     ! --
     ! together with the stencil type, these data contain the
@@ -105,13 +106,15 @@ module GridConnectionModule
   contains ! module procedures
 
   ! note: constructing object allocates data structures
-  subroutine construct(this, model, nCapacity, connectionName)
+  subroutine construct(this, model, nCapacity, stencilDepth, connectionName)
     class(GridConnectionType), intent(inout) :: this
     class(NumericalModelType), pointer, intent(in) :: model        
     integer(I4B) :: nCapacity ! reserves memory
+    integer(I4B), pointer :: stencilDepth ! assuming symmetric stencils for now
     character(len=*) :: connectionName
         
     this%model => model
+    this%stencilDepth => stencilDepth
     
     this%memOrigin = trim(connectionName)//'_MC'
     call this%allocateScalars()
@@ -162,13 +165,12 @@ module GridConnectionModule
   ! exchange, need this for global topology
   ! NOTE: assumption here is only 1 exchange exists between any two models,
   ! can we do that??
-  subroutine addModelLink(this, numEx, depth)
+  subroutine addModelLink(this, numEx)
     class(GridConnectionType), intent(inout)  :: this
     class(NumericalExchangeType), pointer     :: numEx
-    integer(I4B) :: depth
     ! local
         
-    call this%connectModels(this%modelWithNbrs, numEx, depth)
+    call this%connectModels(this%modelWithNbrs, numEx, this%stencilDepth)
     
   end subroutine addModelLink
   
@@ -250,14 +252,18 @@ module GridConnectionModule
   end subroutine addToRegionalModels
 
   ! build the connection topology to deal with neighbors-of-neighbors
-  subroutine extendConnection(this, localDepth, remoteDepth)    
-    class(GridConnectionType), intent(inout) :: this  
-    integer(I4B) :: localDepth, remoteDepth
-    ! local
+  subroutine extendConnection(this)    
+    class(GridConnectionType), intent(inout) :: this 
+    ! local 
+    integer(I4B) :: remoteDepth, localDepth
     integer(I4B) :: icell
     integer(I4B) :: imod, regionSize, offset
     class(NumericalModelType), pointer :: numModel
    
+    ! we need (stencildepth-1) extra cells for the interior
+    remoteDepth = this%stencilDepth
+    localDepth = 2*this%stencilDepth - 1
+    
     ! first add the neighbors for the interior, localOnly because 
     ! connections crossing model boundary will be added anyway
     do icell = 1, this%nrOfBoundaryCells
@@ -674,9 +680,10 @@ module GridConnectionModule
   ! term holds the negated value of their nearest connection
   subroutine createConnectionMask(this)
     class(GridConnectionType), intent(inout) :: this
-    integer(I4B) :: iconn, icell, ipos, inbr
+    ! local
+    integer(I4B) :: iconn, icell, inbr, n, ipos
     integer(I4B) :: ifaceIdx, ifaceIdxNbr
-    integer(I4B) :: level
+    integer(I4B) :: level, newMask
     type(CellWithNbrsType), pointer :: cell, nbrCell
     
     ! set all masks to zero to begin with
@@ -700,8 +707,26 @@ module GridConnectionModule
       end do      
     end do
     
+    ! set normalized mask (0 or 1) on links with connectivity <= stencilDepth
+    do n = 1, this%connections%nodes 
+      ! set diagonals to zero
+      call this%connections%set_mask(this%connections%ia(n), 0)
+      
+      do ipos = this%connections%ia(n) + 1, this%connections%ia(n + 1) - 1
+        newMask = 0
+        if (this%connections%mask(ipos) > 0) then
+          if (this%connections%mask(ipos) < this%stencilDepth + 1) then
+            newMask = 1
+          end if
+        end if        
+        ! set mask on off-diag
+        call this%connections%set_mask(ipos, newMask)
+      end do      
+    end do
+    
   end subroutine createConnectionMask
   
+  ! recursively mask connections, increasing the level as we go
   recursive subroutine maskConnections(this, cell, nbrCell, level)
     class(GridConnectionType), intent(inout) :: this
     type(CellWithNbrsType), intent(inout) :: cell, nbrCell
@@ -709,11 +734,11 @@ module GridConnectionModule
     ! local
     integer(I4B) :: inbr, newLevel
     
-    ! this will unmask both diagonal, and both cross terms
+    ! this will set a mask on both diagonal, and both cross terms
     call this%setMaskOnConnection(cell, nbrCell, level)
     call this%setMaskOnConnection(nbrCell, cell, level)
     
-    ! nbrs-of-nbrs
+    ! recurse on nbrs-of-nbrs
     newLevel = level + 1
     do inbr = 1, nbrCell%nrOfNbrs        
       call this%maskConnections(nbrCell, nbrCell%neighbors(inbr), newLevel)
@@ -737,9 +762,9 @@ module GridConnectionModule
       
     ! diagonal
     iposdiag = this%connections%getjaindex(ifaceIdx, ifaceIdx)
-    currentLevel = -this%connections%mask(iposdiag)
+    currentLevel = this%connections%mask(iposdiag)
     if (currentLevel == 0 .or. level < currentLevel) then
-      call this%connections%set_mask(iposdiag, -level) ! note the '-'
+      call this%connections%set_mask(iposdiag, level)
     end if
     ! cross term
     ipos = this%connections%getjaindex(ifaceIdx, ifaceIdxNbr)

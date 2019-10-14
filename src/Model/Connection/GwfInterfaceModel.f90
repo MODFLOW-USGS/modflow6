@@ -144,7 +144,7 @@ contains
     ! grid connections follow from GridConnection:
     this%dis%con => this%gridConnection%connections
     this%dis%njas =  this%dis%con%njas
-    
+        
     disbase => this%dis
     select type(disbase)
     type is(GwfDisuType)
