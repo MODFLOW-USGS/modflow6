@@ -82,7 +82,8 @@ contains
     this%npf%dis => this%dis
     this%npf%xt3d => this%xt3d    
     this%npf%xt3d%ixt3d = this%npf%ixt3d
-        
+    call this%npf%xt3d%xt3d_df(this%dis)
+     
     this%neq = this%dis%nodes
     this%nja = this%dis%nja
     this%ia  => this%dis%con%ia

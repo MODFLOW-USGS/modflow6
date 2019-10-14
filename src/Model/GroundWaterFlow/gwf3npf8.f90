@@ -328,6 +328,8 @@ contains
     else
       ! -- set the data block
       call this%set_grid_data(grid_data)
+      ! -- Initialize and check data    
+      call this%prepcheck()
     end if
     !
     ! -- preprocess data
