@@ -131,6 +131,7 @@ contains ! module procedures
     class(GwfModelType), pointer :: gwfModelA, gwfModelB
     class(NumericalModelType), pointer :: numModel, numModel2
     class(NumericalExchangeType), pointer :: numEx
+    integer(I4B), pointer :: depth
     
     ! create models
     ! 2x3
@@ -171,8 +172,10 @@ contains ! module procedures
     
     ! cast up and construct grid connection
     allocate(gc)
+    allocate(depth)
+    depth = 1
     numModel => gwfModelA
-    call gc%construct(numModel, 2, name)
+    call gc%construct(numModel, 2, depth, name)
         
     ! add links between models
     numModel2 => gwfModelB
@@ -185,10 +188,10 @@ contains ! module procedures
     numEx%nodem2(1) = 1
     numEx%nodem1(2) = 6
     numEx%nodem2(2) = 7
-    call gc%addModelLink(numEx, 1)
+    call gc%addModelLink(numEx)
     
     ! build conn. matrix
-    call gc%extendConnection(1, 1)
+    call gc%extendConnection()
     
     call assert_true(gc%nrOfBoundaryCells == 2, "Nr of links in GC should be 2")  
     call assert_equal(size(gc%idxToGlobal), gc%nrOfCells, "We need index mapping for interface cells")

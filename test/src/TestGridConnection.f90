@@ -31,11 +31,12 @@ contains ! module procedures
   subroutine testConstructor()
     type(GridConnectionType) :: gridConnection
     
-    gridConnection = getSimpleGridConnectionWithModel("dummy", TESTDATADIR//"discretizations/dis_2x6.dis", 2)        
+    gridConnection = getSimpleGridConnectionWithModel("dummy", TESTDATADIR//"discretizations/dis_2x6.dis", 2, 2)        
     
     call assert_true(gridConnection%linkCapacity == 2, "space reserved should be equal to 10")    
     call assert_true(size(gridConnection%boundaryCells) == 2, "local nodes array not properly allocated")
     call assert_true(size(gridConnection%connectedCells) == 2, "connected nodes array not properly allocated") 
+    call assert_true(gridConnection%stencilDepth == 2, "stencil depth not set")
     
   end subroutine
   
@@ -43,7 +44,7 @@ contains ! module procedures
     type(GridConnectionType) :: gridConnection    
     class(NumericalModelType), pointer :: nbrModel
     
-    gridConnection = getSimpleGridConnectionWithModel("dummy2", TESTDATADIR//"discretizations/dis_2x6.dis", 2)   
+    gridConnection = getSimpleGridConnectionWithModel("dummy2", TESTDATADIR//"discretizations/dis_2x6.dis", 2, 1)   
     
     allocate(nbrModel)
     call nbrModel%allocate_scalars("neighbor")
@@ -64,7 +65,7 @@ contains ! module procedures
     type(sparsematrix) :: connectivity
     
     ! setup connection
-    gridConnection = getSimpleGridConnectionWithModel("someModel", TESTDATADIR//"discretizations/dis_2x6.dis", 2)    
+    gridConnection = getSimpleGridConnectionWithModel("someModel", TESTDATADIR//"discretizations/dis_2x6.dis", 2, 1)    
     allocate(nbrModel)
     call nbrModel%allocate_scalars("someNeighbor")
     nbrModel%moffset = 100
@@ -83,8 +84,8 @@ contains ! module procedures
     call gridConnection%connectCell(6, gridConnection%model, 1, nbrModel) ! horizontal links
     call gridConnection%connectCell(12, gridConnection%model, 4, nbrModel)
     
-    call gridConnection%addModelLink(numEx, 1)
-    call gridConnection%extendConnection(1, 1)
+    call gridConnection%addModelLink(numEx)
+    call gridConnection%extendConnection()
     
     call assert_equal(gridConnection%connections%nodes, 4, "nr. of nodes wrong")
     call assert_equal(gridConnection%connections%njas, 2, "nr. of (sym) connections wrong")
@@ -99,7 +100,7 @@ contains ! module procedures
     type(sparsematrix) :: connectivity
     
     ! setup connection
-    gridConnection = getSimpleGridConnectionWithModel("someModel2", TESTDATADIR//"discretizations/dis_2x6.dis", 2)    
+    gridConnection = getSimpleGridConnectionWithModel("someModel2", TESTDATADIR//"discretizations/dis_2x6.dis", 2, 2)    
     
     ! get nbr model
     allocate(nbrModel)
@@ -119,9 +120,9 @@ contains ! module procedures
     call gridConnection%connectCell(12, gridConnection%model, 4, nbrModel)
     
       
-    call gridConnection%addModelLink(numEx, 1)
+    call gridConnection%addModelLink(numEx)
     
-    call gridConnection%extendConnection(3, 2)
+    call gridConnection%extendConnection()
     
     call assert_equal(gridConnection%boundaryCells(1)%nrOfNbrs, 2, "Nr. of nbrs for local cell 1")  
     call assert_equal(gridConnection%boundaryCells(1)%neighbors(1)%nrOfNbrs, 2, "Nr. of nbrs for nbr 1 of local cell 1, should be 2")
@@ -143,13 +144,13 @@ contains ! module procedures
     class(NumericalExchangeType), pointer :: numEx
     character(len=16) :: modelname
     character(len=16) :: nbrname
-    integer(I4B) :: idx, ipos
+    integer(I4B) :: idx, idxNbr, ipos
     
     modelname = "testConnectionMask"
     nbrname = "testConnectionMask2"
     
     ! setup connection
-    gridConnection = getSimpleGridConnectionWithModel(modelname, TESTDATADIR//"discretizations/dis_1x3.dis", 1)
+    gridConnection = getSimpleGridConnectionWithModel(modelname, TESTDATADIR//"discretizations/dis_1x3.dis", 1, 2)
     ! get nbr model
     allocate(nbrModel)
     call nbrModel%allocate_scalars(nbrname)
@@ -163,13 +164,23 @@ contains ! module procedures
     numEx%nodem1(1) = 3
     numEx%nodem2(1) = 1
     call gridConnection%connectCell(3, gridConnection%model, 1, nbrModel) ! horizontal links
-    call gridConnection%addModelLink(numEx, 1)
+    call gridConnection%addModelLink(numEx)
     
-    call gridConnection%extendConnection(3, 2)
+    call gridConnection%extendConnection()
     
-    idx = gridConnection%getInterfaceIndex(gridConnection%boundarycells(1)%cell)
+    idx = gridConnection%getInterfaceIndex(gridConnection%boundaryCells(1)%cell)
     ipos = gridConnection%connections%getjaindex(idx, idx)
-    call assert_equal(gridConnection%connections%mask(ipos), -1, "boundary cell has connectivity 1 ")
+    call assert_equal(gridConnection%connections%mask(ipos), 0, "diagonal terms should be masked")
+    
+    idxNbr = gridConnection%getInterfaceIndex(gridConnection%connectedCells(1)%cell)
+    ipos = gridConnection%connections%getjaindex(idxNbr, idxNbr)
+    call assert_equal(gridConnection%connections%mask(ipos), 0, "diagonal terms (connected) should be masked")
+        
+    ipos = gridConnection%connections%getjaindex(idx, idxNbr)
+    call assert_equal(gridConnection%connections%mask(ipos), 1, "connection should have connectivity 1")   
+    
+    ipos = gridConnection%connections%getjaindex(idxNbr, idx)
+    call assert_equal(gridConnection%connections%mask(ipos), 0, "reverse connection does not belong to this grid connection")
     
   end subroutine
   
@@ -179,6 +190,7 @@ contains ! module procedures
     class(NumericalModelType), pointer :: nbr1, nbr2, nbr3, nnbr11, nnbr12, nnbr21, nnbr31, nnnbr111
     class(NumericalExchangeType), pointer :: ex1, ex2, ex3, ex11, ex12, ex21, ex31, ex111
     integer(I4B) :: nrNbrsOfNbrs, im
+    integer(I4B), pointer :: stencilDepth
     
     
     !
@@ -189,8 +201,10 @@ contains ! module procedures
     allocate(numericalModel)
     allocate(nbr1, nbr2, nbr3, nnbr11, nnbr12, nnbr21, nnbr31, nnnbr111)
     allocate(ex1, ex2, ex3, ex11, ex12, ex21, ex31, ex111)
+    allocate(stencilDepth)
     
-    call gc%construct(numericalModel, 10, "someGridConn")
+    stencilDepth = 2
+    call gc%construct(numericalModel, 10, stencilDepth, "someGridConn")
     
     ex21%m1 => nnbr21
     ex21%m2 => nbr2
@@ -208,14 +222,14 @@ contains ! module procedures
     ex31%m2 => nbr3
     
     ! add links
-    call gc%addModelLink(ex1, 2)
-    call gc%addModelLink(ex2, 2)
-    call gc%addModelLink(ex3, 2)
-    call gc%addModelLink(ex11, 2)
-    call gc%addModelLink(ex12, 2)
-    call gc%addModelLink(ex21, 2)
-    call gc%addModelLink(ex31, 2)
-    call gc%addModelLink(ex111, 2) ! this should not be added at depth == 2
+    call gc%addModelLink(ex1)
+    call gc%addModelLink(ex2)
+    call gc%addModelLink(ex3)
+    call gc%addModelLink(ex11)
+    call gc%addModelLink(ex12)
+    call gc%addModelLink(ex21)
+    call gc%addModelLink(ex31)
+    call gc%addModelLink(ex111) ! this should not be added at depth == 2
     
     call assert_true(associated(gc%modelWithNbrs), "Model with nbrs should be allocated")
     call assert_equal(gc%modelWithNbrs%nrOfNbrs, 3, "Number of neighbors should match")
@@ -231,13 +245,15 @@ contains ! module procedures
   end subroutine
   
   ! helper function to setup basic gridconn
-  function getSimpleGridConnectionWithModel(name, gridfile, nexg) result(gc)
+  function getSimpleGridConnectionWithModel(name, gridfile, nexg, depth) result(gc)
     type(GridConnectionType) :: gc  
     character(len=*) :: name
     character(len=*) :: gridfile
-    integer(I4B) :: nexg
+    integer(I4B) :: nexg, depth
     class(NumericalModelType), pointer :: numericalModel
+    integer(I4B), pointer :: stencilDepth
     
+    allocate(stencilDepth)
     allocate(numericalModel)    
     call numericalModel%allocate_scalars(name)
     numericalModel%moffset = 0
@@ -246,7 +262,8 @@ contains ! module procedures
     call numericalModel%dis%dis_df()    
     close(1980)
     
-    call gc%construct(numericalModel, nexg, "gridConnName") 
+    stencilDepth = depth
+    call gc%construct(numericalModel, nexg, stencilDepth, "gridConnName") 
     
   end function
   
