@@ -682,7 +682,7 @@ module ConnectionsModule
     integer(I4B), dimension(:, :, :), pointer :: nrdcd_ptr => null() !non-contiguous because is a slice
     integer(I4B), dimension(:), allocatable :: rowmaxnnz
     type(sparsematrix) :: sparse
-    integer(I4B) :: i, j, k, kk, ierror, isympos, nodesuser, n
+    integer(I4B) :: i, j, k, kk, ierror, isympos, nodesuser
     integer(I4B) :: nr, mr
 ! ------------------------------------------------------------------------------
     !
