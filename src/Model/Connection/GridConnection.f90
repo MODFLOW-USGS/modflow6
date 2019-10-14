@@ -74,8 +74,8 @@ module GridConnectionModule
     integer(I4B), pointer                             :: indexCount => null()                 ! counts the number of cells in the interface
     ! --
     
-    type(ConnectionsType), pointer :: connections => null()                 ! sparse matrix with the connections
-    
+    type(ConnectionsType), pointer                    :: connections => null()                ! sparse matrix with the connections
+    integer(I4B), dimension(:), pointer               :: connectionMask => null()             ! to mask out certain connections from the amat coefficient calculation
     
   contains
     procedure, pass(this) :: construct
@@ -83,6 +83,7 @@ module GridConnectionModule
     procedure, pass(this) :: connectCell
     procedure, pass(this) :: addModelLink 
     procedure, pass(this) :: extendConnection
+    procedure, pass(this) :: getInterfaceIndex
     ! private stuff
     procedure, private, pass(this) :: buildConnections
     procedure, private, pass(this) :: addNeighbors
@@ -90,13 +91,15 @@ module GridConnectionModule
     procedure, private, pass(this) :: addRemoteNeighbors
     procedure, private, pass(this) :: connectModels
     procedure, private, pass(this) :: addToRegionalModels
-    procedure, private, pass(this) :: getRegionalModelOffset
-    procedure, private, pass(this) :: getInterfaceIndex
+    procedure, private, pass(this) :: getRegionalModelOffset    
     procedure, private, pass(this) :: getModelWithNbrs
     procedure, private, pass(this) :: getExchangeData
     procedure, private, pass(this) :: registerInterfaceCells
     procedure, private, pass(this) :: makePrimaryConnections
     procedure, private, pass(this) :: connectNeighborCells
+    procedure, private, pass(this) :: createConnectionMask
+    procedure, private, pass(this) :: maskConnections
+    procedure, private, pass(this) :: setMaskOnConnection
   end type
   
   contains ! module procedures
@@ -319,7 +322,8 @@ module GridConnectionModule
       call this%addNeighborCell(cellNbrs, nbrIdx, cellNbrs%cell%model, mask)
     end do
         
-    ! find and add remote nbr (from a different model)
+    ! find and add remote nbr (from a different model, and
+    ! not going back into the main model)
     if (.not. localOnly) then
       call this%getModelWithNbrs(cellNbrs%cell%model, modelWithNbrs)
       call this%addRemoteNeighbors(cellNbrs, modelWithNbrs, mask)
@@ -456,6 +460,7 @@ module GridConnectionModule
     cellNbrs%nrOfNbrs = nbrCnt + 1
   end subroutine
   
+  ! TODO_MJR: refactor, routine is too large
   ! builds a sparse matrix holding all cell connections,
   ! with new indices, and stores the mapping to the global ids
   subroutine buildConnections(this)
@@ -587,8 +592,10 @@ module GridConnectionModule
       end do        
     end do
     
+    call this%createConnectionMask()
+    
   end subroutine buildConnections 
-  
+ 
   recursive subroutine registerInterfaceCells(this, cellWithNbrs)
     class(GridConnectionType), intent(inout) :: this
     type(CellWithNbrsType)                   :: cellWithNbrs
@@ -661,6 +668,87 @@ module GridConnectionModule
     end do
     
   end subroutine connectNeighborCells
+  
+  ! create the connection masks, the level indicates the nr 
+  ! of connections away from the remote neighbor, the diagonal
+  ! term holds the negated value of their nearest connection
+  subroutine createConnectionMask(this)
+    class(GridConnectionType), intent(inout) :: this
+    integer(I4B) :: iconn, icell, ipos, inbr
+    integer(I4B) :: ifaceIdx, ifaceIdxNbr
+    integer(I4B) :: level
+    type(CellWithNbrsType), pointer :: cell, nbrCell
+    
+    ! set all masks to zero to begin with
+    do ipos = 1, this%connections%nja
+      call this%connections%set_mask(ipos, 0)  
+    end do
+    
+    ! remote connections remain masked
+    ! now set mask for exchange connections (level == 1)
+    do icell = 1, this%nrOfBoundaryCells  
+      call this%setMaskOnConnection(this%boundaryCells(icell), this%connectedCells(icell), 1)
+    end do
+    
+    ! now extend mask recursively into the internal domain (level > 1)
+    do icell = 1, this%nrOfBoundaryCells
+      cell => this%boundaryCells(icell)      
+      do inbr = 1, cell%nrOfNbrs
+        nbrCell => this%boundaryCells(icell)%neighbors(inbr)
+        level = 2 ! this is incremented within the recursion
+        call this%maskConnections(this%boundaryCells(icell), this%boundaryCells(icell)%neighbors(inbr), level)
+      end do      
+    end do
+    
+  end subroutine createConnectionMask
+  
+  recursive subroutine maskConnections(this, cell, nbrCell, level)
+    class(GridConnectionType), intent(inout) :: this
+    type(CellWithNbrsType), intent(inout) :: cell, nbrCell
+    integer(I4B), intent(in) :: level
+    ! local
+    integer(I4B) :: inbr, newLevel
+    
+    ! this will unmask both diagonal, and both cross terms
+    call this%setMaskOnConnection(cell, nbrCell, level)
+    call this%setMaskOnConnection(nbrCell, cell, level)
+    
+    ! nbrs-of-nbrs
+    newLevel = level + 1
+    do inbr = 1, nbrCell%nrOfNbrs        
+      call this%maskConnections(nbrCell, nbrCell%neighbors(inbr), newLevel)
+    end do
+    
+  end subroutine maskConnections
+  
+  ! mask the connection from a cell to its neighbor cell,
+  ! (and not the transposed!)
+  subroutine setMaskOnConnection(this, cell, nbrCell, level)
+    class(GridConnectionType), intent(inout) :: this
+    type(CellWithNbrsType), intent(inout) :: cell, nbrCell
+    integer(I4B), intent(in) :: level
+    ! local
+    integer(I4B) :: ifaceIdx, ifaceIdxNbr
+    integer(I4B) :: iposdiag, ipos
+    integer(I4B) :: currentLevel
+    
+    ifaceIdx = this%getInterfaceIndex(cell%cell)
+    ifaceIdxNbr = this%getInterfaceIndex(nbrCell%cell)
+      
+    ! diagonal
+    iposdiag = this%connections%getjaindex(ifaceIdx, ifaceIdx)
+    currentLevel = -this%connections%mask(iposdiag)
+    if (currentLevel == 0 .or. level < currentLevel) then
+      call this%connections%set_mask(iposdiag, -level) ! note the '-'
+    end if
+    ! cross term
+    ipos = this%connections%getjaindex(ifaceIdx, ifaceIdxNbr)
+    currentLevel = this%connections%mask(ipos)
+    if (currentLevel == 0 .or. level < currentLevel) then
+      call this%connections%set_mask(ipos, level)
+    end if
+    
+  end subroutine setMaskOnConnection
   
   ! helper routine to convert global cell to index in interface grid
   function getInterfaceIndex(this, cell) result(ifaceIdx)
