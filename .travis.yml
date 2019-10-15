@@ -5,7 +5,9 @@ sudo: required
 compiler: gcc
 cache:
   apt: true
+  pip: true
   directories:
+  - "$HOME/.cache/pip"
   - "$HOME/.local"
 matrix:
   include:
@@ -123,6 +125,7 @@ install:
 - export PATH="$HOME/miniconda/bin:$PATH"
 - hash -r
 - conda config --set always_yes yes --set changeps1 no
+- conda update -q setuptools
 - conda update -q conda
 - conda info -a
 - conda install nose
