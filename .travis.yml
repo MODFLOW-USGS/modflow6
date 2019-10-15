@@ -125,8 +125,8 @@ install:
 - export PATH="$HOME/miniconda/bin:$PATH"
 - hash -r
 - conda config --set always_yes yes --set changeps1 no
-- pip uninstall setuptools
-- conda install setuptools
+- pip uninstall --yes setuptools
+- conda install --yes setuptools
 - conda update -q conda
 - conda info -a
 - conda install nose
