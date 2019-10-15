@@ -5,6 +5,7 @@
 | SIM | NAM | OPTIONS | CONTINUE | KEYWORD | keyword flag to indicate that the simulation should continue even if one or more solutions do not converge. |
 | SIM | NAM | OPTIONS | NOCHECK | KEYWORD | keyword flag to indicate that the model input check routines should not be called prior to each time step. Checks are performed by default. |
 | SIM | NAM | OPTIONS | MEMORY_PRINT_OPTION | STRING | is a flag that controls printing of detailed memory manager usage to the end of the simulation list file.  NONE means do not print detailed information. SUMMARY means print only the total memory for each simulation component. ALL means print information for each variable stored in the memory manager. NONE is default if MEMORY\_PRINT\_OPTION is not specified. |
+| SIM | NAM | OPTIONS | MAXERRORS | INTEGER | maximum number of errors that will be stored and printed. |
 | SIM | NAM | TIMING | TDIS6 | STRING | is the name of the Temporal Discretization (TDIS) Input File. |
 | SIM | NAM | MODELS | MTYPE | STRING | is the type of model to add to simulation. |
 | SIM | NAM | MODELS | MFNAME | STRING | is the file name of the model name file. |
