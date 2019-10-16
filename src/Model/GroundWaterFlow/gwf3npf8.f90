@@ -1295,8 +1295,11 @@ module GwfNpfModule
           case ('SAVE_SPECIFIC_DISCHARGE')
             this%icalcspdis = 1
             this%isavspdis = 1
+            write(this%iout,'(4x,a)')                                          &
+              'SPECIFIC DISCHARGE WILL BE CALCULATED AT CELL CENTERS ' //      &
+              'AND WRITTEN TO DATA-SPDIS IN BUDGET FILE WHEN REQUESTED.'
           !
-          ! -- right now these are options that are only available in the
+          ! -- The following are options that are only available in the
           !    development version and are not included in the documentation.
           !    These options are only available when IDEVELOPMODE in
           !    constants module is set to 1
