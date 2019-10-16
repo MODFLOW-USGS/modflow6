@@ -9,6 +9,7 @@ very easily and tested with different options to succeed or fail correctly.
 import os
 import shutil
 import subprocess
+import numpy as np
 from nose.tools import raises
 
 try:
@@ -68,6 +69,7 @@ def get_minimal_gwf_simulation(ws, name='test',
                                gwfkwargs=None,
                                imskwargs=None,
                                diskwargs=None,
+                               disukwargs=None,
                                ickwargs=None,
                                npfkwargs=None,
                                chdkwargs=None):
@@ -80,7 +82,7 @@ def get_minimal_gwf_simulation(ws, name='test',
         gwfkwargs['modelname'] = name
     if imskwargs is None:
         imskwargs = {'print_option': 'SUMMARY', }
-    if diskwargs is None:
+    if diskwargs is None and disukwargs is None:
         diskwargs = {}
         diskwargs['nlay'] = 5
         diskwargs['nrow'] = 5
@@ -107,7 +109,10 @@ def get_minimal_gwf_simulation(ws, name='test',
     tdis = flopy.mf6.ModflowTdis(sim, **tdiskwargs)
     gwf = flopy.mf6.ModflowGwf(sim, **gwfkwargs)
     ims = flopy.mf6.ModflowIms(sim, **imskwargs)
-    dis = flopy.mf6.ModflowGwfdis(gwf, **diskwargs)
+    if diskwargs is not None:
+        dis = flopy.mf6.ModflowGwfdis(gwf, **diskwargs)
+    elif disukwargs is not None:
+        disu = flopy.mf6.ModflowGwfdisu(gwf, **disukwargs)
     ic = flopy.mf6.ModflowGwfic(gwf, **ickwargs)
     npf = flopy.mf6.ModflowGwfnpf(gwf, **npfkwargs)
     chd = flopy.mf6.modflow.mfgwfchd.ModflowGwfchd(gwf, **chdkwargs)
@@ -180,8 +185,32 @@ def test_sim_maxerrors():
     return
 
 
+@raises(RuntimeError)
+def test_disu_errors():
+    from disu_util import get_disu_kwargs
+    ws = os.path.join(testdir, 'sim3')
+    disukwargs = get_disu_kwargs(3, 3, 3, np.ones(3), np.ones(3),
+                                 0, [-1, -2, -3])
+    top = disukwargs['top']
+    bot = disukwargs['bot']
+    top[9] = 2.
+    bot[9] = 1.
+    sim = get_minimal_gwf_simulation(ws,
+                                     disukwargs=disukwargs,
+                                     chdkwargs={'stress_period_data': [[]]})
+    sim.write_simulation()
+    err_str = ['Top elevation (    2.00000    ) for cell 10 is above bottom elevation (',
+               '-1.00000    ) for cell 1. Based on node numbering rules cell 10 must be',
+               'below cell 1.',
+               '3 errors detected.',
+               'Stopping due to error(s)']
+    run_mf6_error(ws, err_str)
+    return
+
+
 def test_clean_sim():
     shutil.rmtree(testdir)
+    return
 
 
 if __name__ == "__main__":
@@ -193,4 +222,5 @@ if __name__ == "__main__":
     test_simple_model_success()
     test_sim_errors()
     test_sim_maxerrors()
+    test_disu_errors()
 
