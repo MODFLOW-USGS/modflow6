@@ -121,6 +121,7 @@ This section describes changes introduced into MODFLOW 6 with each release.  The
 \begin{itemize}
 \item Added an error check to the DISU Package that ensures that an underlying cell has a top elevation that is less than or equal to the bottom of an overlying cell.  An underlying cell is one in which the IHC value for the connection is zero and the connecting node number is greater than the cell node number.
 \item NPF Package will now write a message to the GWF Model list file to indicate when the SAVE\_SPECIFIC\_DISCHARGE option is invoked.
+\item In some cases the table writer, such as the one used to write the lake stage table, would allow numbers in adjacent columns to touch.  Made a slight modification to leave an extra space when writing double precision values so that the number does not touch with the number in the preceding column.
 \end{itemize}
 
 \underline{STRESS PACKAGES}

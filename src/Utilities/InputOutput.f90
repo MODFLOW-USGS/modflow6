@@ -637,8 +637,8 @@ module InputOutputModule
           case(2)
             write(cfmt, '(A,I0,A)') '(I', ILEN, ')'
           case(3)
-            i = ILEN - 7
-            write(cfmt, '(A,I0,A,I0,A)') '(1X,G', ILEN - 1, '.', i, ')'
+            i = ILEN - 8
+            write(cfmt, '(A,I0,A,I0,A)') '(G', ILEN, '.', i, ')'
         end select
       end if
 
