@@ -228,7 +228,7 @@ contains
     integer(I4B),intent(in) :: njasln
     integer(I4B), intent(in) :: inwtflag
     ! local
-    integer(I4B) :: i, n, m, ipos
+    integer(I4B) :: i, n, ipos
     
     ! we iterate, so this should be reset (c.f. sln_reset())
     do i = 1, this%nja
@@ -251,12 +251,9 @@ contains
         cycle
       end if
       do ipos = this%ia(n), this%ia(n+1) - 1
-        m = this%ja(ipos)
-        write(*,*) n, ' - ', m, ': ', this%amat(ipos)
         amatsln(this%mapIdxToSln(ipos)) = amatsln(this%mapIdxToSln(ipos)) + this%amat(ipos)
       end do
-    end do
-    write(*,*)    
+    end do    
   end subroutine gwfgwfcon_fc
   
   ! unsafe routine, you have to know what you're doing with this
