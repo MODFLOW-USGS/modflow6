@@ -1,0 +1,10 @@
+BEGIN OPTIONS
+END OPTIONS
+
+BEGIN PACKAGES
+  DIS6 .\modelB\modelB.dis
+  IC6 .\modelB\modelB.ic
+  NPF6 .\modelB\modelB.npf
+  OC6 .\modelB\modelB.oc
+  CHD6 .\modelB\modelB.chd
+END PACKAGES
