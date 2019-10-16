@@ -637,7 +637,7 @@ module InputOutputModule
           case(2)
             write(cfmt, '(A,I0,A)') '(I', ILEN, ')'
           case(3)
-            i = ILEN - 8
+            i = ILEN - 7
             write(cfmt, '(A,I0,A,I0,A)') '(G', ILEN, '.', i, ')'
         end select
       end if
@@ -674,7 +674,7 @@ module InputOutputModule
         end if
       end if
 
-      istop = ICOL + ILEN - 1
+      istop = ICOL + ILEN
 
       select case(NCODE)
         case(0, 1)
@@ -685,7 +685,7 @@ module InputOutputModule
           write(LINE(ICOL:istop), cfmt) R
       end select
 
-      ICOL = istop + 1
+      ICOL = istop
 
       if (present(SEP)) then
         i = len(SEP)

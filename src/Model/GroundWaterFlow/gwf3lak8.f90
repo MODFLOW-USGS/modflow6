@@ -4505,7 +4505,7 @@ contains
       if (this%inamedbound==1) then
         call UWWORD(line, iloc, 16, 1, 'lake', n, q, left=.TRUE.)
       end if
-      call UWWORD(line, iloc, 6, 1, 'lake', n, q, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 6, 1, 'lake', n, q, CENTER=.TRUE., SEP=' ')
       call UWWORD(line, iloc, 11, 1, 'lake', n, q, CENTER=.TRUE.)
       ! -- create line separator
       linesep = repeat('-', iloc)
@@ -4518,7 +4518,7 @@ contains
       if (this%inamedbound==1) then
         call UWWORD(line, iloc, 16, 1, 'name', n, q, left=.TRUE.)
       end if
-      call UWWORD(line, iloc, 6, 1, 'no.', n, q, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 6, 1, 'no.', n, q, CENTER=.TRUE., SEP=' ')
       call UWWORD(line, iloc, 11, 1, 'stage', n, q, CENTER=.TRUE.)
       ! -- write second line
       write(iout,'(1X,A)') line(1:iloc)
@@ -4530,7 +4530,7 @@ contains
         if (this%inamedbound==1) then
           call UWWORD(line, iloc, 16, 1, this%lakename(n), n, q, left=.TRUE.)
         end if
-        call UWWORD(line, iloc, 6, 2, text, n, q)
+        call UWWORD(line, iloc, 6, 2, text, n, q, SEP=' ')
         call UWWORD(line, iloc, 11, 3, text, n, this%xnewpak(n))
         write(iout, '(1X,A)') line(1:iloc)
       end do
