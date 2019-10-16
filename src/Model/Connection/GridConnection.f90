@@ -553,13 +553,15 @@ module GridConnectionModule
           connOrig => ncell%model%dis%con
           iposOrig = connOrig%getjaindex(ncell%index, mcell%index)          
           isymOrig = connOrig%jas(iposOrig)
-          conn%cl1(isym) = connOrig%cl1(isymOrig)
-          conn%cl2(isym) = connOrig%cl2(isymOrig)
           conn%hwva(isym) = connOrig%hwva(isymOrig)
           conn%ihc(isym) = connOrig%ihc(isymOrig)
           if (ncell%index < mcell%index) then
+            conn%cl1(isym) = connOrig%cl1(isymOrig)
+            conn%cl2(isym) = connOrig%cl2(isymOrig)
             conn%anglex(isym) = connOrig%anglex(isymOrig)
           else
+            conn%cl1(isym) = connOrig%cl2(isymOrig)
+            conn%cl2(isym) = connOrig%cl1(isymOrig)
             conn%anglex(isym) = connOrig%anglex(isymOrig) + DPI
           end if
         end if
@@ -597,6 +599,7 @@ module GridConnectionModule
           conn%cl1(isym) = numEx%cl2(iexg)
           conn%cl2(isym) = numEx%cl1(iexg)
           if (ivalAngldegx > 0) then
+            ! TODO_MJR: restrict angle to 0 < x <  2pi?
             conn%anglex(isym) = numEx%auxvar(ivalAngldegx,iexg) + DPI
           end if
         end if          
