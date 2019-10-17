@@ -63,8 +63,8 @@ module VKDModule
     integer(I4B), pointer :: igwfnode => null()
     real(DP), dimension(:), pointer, contiguous :: ek => null()
     real(DP), dimension(:), pointer, contiguous :: kk => null()
-    real(DP), dimension(:), pointer, contiguous :: d => null()
-    real(DP), pointer :: ts => null()
+!!$    real(DP), dimension(:), pointer, contiguous :: d => null()
+!!$    real(DP), pointer :: ts => null()
     contains
   end type VKDCellType
 
@@ -352,8 +352,8 @@ contains
         this%ibvkd(this%cells(n)%igwfnode) = n
         allocate(this%cells(n)%kk(this%numelevs))
         allocate(this%cells(n)%ek(this%numelevs))
-        allocate(this%cells(n)%d(this%numelevs))
-        allocate(this%cells(n)%ts)
+!!$        allocate(this%cells(n)%d(this%numelevs))
+!!$        allocate(this%cells(n)%ts)
         !
         ! -- get ek & kk
         if(this%implicit .eq. 0) then
