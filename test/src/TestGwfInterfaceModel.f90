@@ -67,7 +67,7 @@ contains ! module procedures
     integer(I4B) :: kiter, inwtflag, nja
     real(DP), dimension(:), allocatable :: amat
     integer(I4B) :: n, idiag, ioff
-    
+        
     ifModel => getSimpleInterfaceModel("ifmodel_01")
     
     kiter = 1
@@ -77,6 +77,7 @@ contains ! module procedures
     amat = -1.0_DP
     
     ! continue here:
+    call ifModel%model_cf(kiter)
     call ifModel%model_fc(kiter, amat, nja, inwtflag)
     
     ! test on amat here:
