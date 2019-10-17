@@ -277,6 +277,10 @@ module ConnectionsModule
       call ustop()
     endif
     !
+    if (this%ianglex == 0) then
+      allocate(angldegx(1))
+    endif
+    !
     ! -- finalize connection data
     call this%con_finalize(iout, ihctemp, cl12temp, hwvatemp, angldegx)
     !
@@ -284,6 +288,7 @@ module ConnectionsModule
     deallocate(ihctemp)
     deallocate(cl12temp)
     deallocate(hwvatemp)
+    deallocate(angldegx)
     !
     ! -- Return
     return
