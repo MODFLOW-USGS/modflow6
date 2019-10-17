@@ -26,7 +26,7 @@ fdir = 'modflow6-largetests'
 exdir = None
 for root, dirs, files in os.walk(home):
     for d in dirs:
-        if d == fdir:
+        if d == fdir or d == fdir + '.git':
             exdir = os.path.join(root, d)
             break
     if exdir is not None:

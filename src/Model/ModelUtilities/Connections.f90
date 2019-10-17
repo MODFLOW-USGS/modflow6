@@ -18,6 +18,7 @@ module ConnectionsModule
     integer(I4B), pointer                           :: ianglex    => null()      !indicates whether or not anglex was read
     integer(I4B), dimension(:), pointer, contiguous :: ia         => null()      !(size:nodes+1) csr index array
     integer(I4B), dimension(:), pointer, contiguous :: ja         => null()      !(size:nja) csr pointer array
+    integer(I4B), dimension(:), pointer, contiguous :: mask       => null()      !(size:nja) to mask certain connections: ==0 means masked. Do not set the mask directly, use set_mask instead!    
     real(DP), dimension(:), pointer, contiguous     :: cl1        => null()      !(size:njas) connection length between node n and shared face with node m
     real(DP), dimension(:), pointer, contiguous     :: cl2        => null()      !(size:njas) connection length between node m and shared face with node n
     real(DP), dimension(:), pointer, contiguous     :: hwva       => null()      !(size:njas) horizontal perpendicular width (ihc>0) or vertical flow area (ihc=0)
@@ -40,6 +41,7 @@ module ConnectionsModule
     procedure :: disvconnections
     procedure :: iajausr
     procedure :: getjaindex
+    procedure :: set_mask
   end type ConnectionsType
 
   contains
@@ -78,6 +80,12 @@ module ConnectionsModule
     else
       call mem_deallocate(this%jausr)
     endif
+    ! -- mask
+    if (associated(this%mask, this%ja)) then
+      nullify(this%mask)
+    else
+      call mem_deallocate(this%mask)
+    end if 
     !
     ! -- Arrays
     call mem_deallocate(this%ia)
@@ -150,6 +158,10 @@ module ConnectionsModule
     call mem_allocate(this%cl2, this%njas, 'CL2', this%cid)
     call mem_allocate(this%iausr, 1, 'IAUSR', this%cid)
     call mem_allocate(this%jausr, 1, 'JAUSR', this%cid)
+    !
+    ! let mask point to ja, which is always nonzero, 
+    ! until someone decides to do a 'set_mask'
+    this%mask => this%ja
     !
     ! -- Return
     return
@@ -1294,5 +1306,32 @@ module ConnectionsModule
     return
   end subroutine vertexconnect
   
+  subroutine set_mask(this, ipos, maskval)
+! ******************************************************************************
+! set_mask -- routine to set a value in the mask array 
+! (which has the same shape as this%ja)
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------ 
+  use MemoryManagerModule, only: mem_allocate
+  class(ConnectionsType) :: this
+  integer(I4B), intent(in) :: ipos
+  integer(I4B), intent(in) :: maskval
+  ! local
+  integer(I4B) :: i
+  
+  ! if we still point to this%ja, we first need to allocate space
+  if (associated(this%mask, this%ja)) then
+    call mem_allocate(this%mask, this%nja, 'MASK', this%cid)
+    ! and initialize with unmasked
+    do i = 1, this%nja
+      this%mask(i) = 1 
+    end do
+  end if
+  
+  this%mask(ipos) = maskVal
+  
+  end subroutine set_mask
   
 end module ConnectionsModule
