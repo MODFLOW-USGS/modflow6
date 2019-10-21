@@ -19,13 +19,14 @@ module GridConnectionModule
   ! for now stick to local neighbors only
   integer(I4B), parameter :: MaxNeighbors = 7
   
-  ! a global cell as composite, we need it for XT3D
+  ! a global cell with neighbors
   type, public :: CellWithNbrsType
     type(GlobalCellType) :: cell
     integer(I4B) :: nrOfNbrs
     type(CellWithNbrsType), dimension(:), allocatable :: neighbors
   end type
   
+  ! a model with neighbors
   type, private :: ModelWithNbrsType
       class(NumericalModelType), pointer :: model => null()
       integer(I4B) :: nrOfNbrs
@@ -33,13 +34,22 @@ module GridConnectionModule
   end type
   
   ! --
-  ! this class works as follows:
+  ! This class works as follows:
   !
   ! 1: construct the basic instance to store the primary connections between grids
   ! 2: add those primary connections, typically from exchange file
   ! 3: add model topology with the proper depth (stencil dependent)
   ! 4: extend the connection, creating the full data structure and relations
   ! 5: build the connections object, from which the grid for the interface model can be constructed
+  !
+  ! A note on the different indices:
+  !
+  ! We have a global index, which is the row in the solution matrix,
+  ! a regional index, which runs over all the models involved in this gridconnection,
+  ! a local index, which is just local to each model,
+  ! and finally, something called the interface index, which numbers the
+  ! cells in the interface discretization.
+  !
   ! --
   type, public :: GridConnectionType
     character(len=LENORIGIN) :: memOrigin
@@ -55,25 +65,16 @@ module GridConnectionModule
     type(CellWithNbrsType), dimension(:), pointer :: boundaryCells => null()
     type(CellWithNbrsType), dimension(:), pointer :: connectedCells => null()    
     type(ModelWithNbrsType), pointer :: modelWithNbrs => null() 
-    type(ListType) ::  exchanges                                              ! all relevant exchanges for this connection (up to the specified depth)
+    type(ListType) :: exchanges                                                               ! all relevant exchanges for this connection (up to the specified depth)
     ! --
     
-    integer(I4B), pointer :: nrOfCells => null()                              ! the total number of cells in the interface
-    type(GlobalCellType), dimension(:), pointer :: idxToGlobal => null()      ! a map from interface index to global coordinate    
-        
-    ! --
-    ! We have a global index, which is the row in the solution matrix,
-    ! a regional index, which runs over all the models involved in this gridconnection,
-    ! a local index, which is just local to each model,
-    ! and finally, something called the interface index, which numbers the
-    ! cells in the interface discretization.
-    !
-    ! The following data structure defines a map from the regional index to the interface index:
+    integer(I4B), pointer :: nrOfCells => null()                                              ! the total number of cells in the interface
+    type(GlobalCellType), dimension(:), pointer :: idxToGlobal => null()                      ! a map from interface index to global coordinate    
+     
     integer(I4B), dimension(:), pointer               :: regionalToInterfaceIdxMap => null()  ! sparse mapping from those regional indices that are within the interface domain
     type(ListType)                                    :: regionalModels                       ! the models (NumericalModelType) that make up the interface
     integer(I4B), dimension(:), pointer               :: regionalModelOffset => null()        ! the new offset to compactify the range of indices 
     integer(I4B), pointer                             :: indexCount => null()                 ! counts the number of cells in the interface
-    ! --
     
     type(ConnectionsType), pointer                    :: connections => null()                ! sparse matrix with the connections
     integer(I4B), dimension(:), pointer               :: connectionMask => null()             ! to mask out certain connections from the amat coefficient calculation
@@ -584,7 +585,19 @@ module GridConnectionModule
       do iexg = 1, numEx%nexg
         nIfaceIdx = this%regionalToInterfaceIdxMap(noffset + numEx%nodem1(iexg))
         mIfaceIdx = this%regionalToInterfaceIdxMap(moffset + numEx%nodem2(iexg))
-        ipos = conn%getjaindex(nIfaceIdx, mIfaceIdx)
+        ! not all nodes from the exchanges are part of the interface grid 
+        ! (think of exchanges between neigboring models, and their neighbors)
+        if (nIFaceIdx == -1 .or. mIFaceIdx == -1) then
+          cycle
+        end if
+        
+        ipos = conn%getjaindex(nIfaceIdx, mIfaceIdx)        
+        ! (see prev. remark) sometimes the cells are in the interface grid, 
+        ! but the connection isn't. This can happen for leaf nodes of the grid.
+        if (ipos == 0) then
+          ! no match, safely cycle
+          cycle
+        end if        
         isym = conn%jas(ipos)
           
         ! note: cl1 equals L_nm: the length from cell n to the shared
