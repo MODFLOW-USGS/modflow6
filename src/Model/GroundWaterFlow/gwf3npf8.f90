@@ -328,7 +328,7 @@ contains
     else
       ! -- set the data block
       call this%set_grid_data(grid_data)
-      ! -- Initialize and check data    
+      ! -- check data    
       call this%prepcheck()
     end if
     !
@@ -2155,6 +2155,76 @@ contains
       end if
     end if
     !
+    !
+    ! -- Determine the lower most node
+    if (this%igwfnewtonur /= 0) then
+      call mem_reallocate(this%ibotnode, this%dis%nodes, 'IBOTNODE',            &
+                          trim(this%origin))
+      do n = 1, this%dis%nodes
+        !
+        minbot = this%dis%bot(n)
+        nn = n
+        finished = .false.
+        do while(.not. finished)
+          nextn = 0
+          !
+          ! -- Go through the connecting cells
+          do ii = this%dis%con%ia(nn) + 1, this%dis%con%ia(nn + 1) - 1
+            !
+            ! -- Set the m cell number
+            m = this%dis%con%ja(ii)
+            botm = this%dis%bot(m)
+            !
+            ! -- Calculate conductance depending on whether connection is
+            !    vertical (0), horizontal (1), or staggered horizontal (2)
+            if(this%dis%con%ihc(this%dis%con%jas(ii)) == 0) then
+              if (m > nn .and. botm < minbot) then
+                nextn = m
+                minbot = botm
+              end if
+            end if
+          end do
+          if (nextn > 0) then
+            nn = nextn
+          else
+            finished = .true.
+          end if
+        end do
+        this%ibotnode(n) = nn
+      end do
+    end if
+    !
+    ! -- nullify unneeded gwf pointers
+    this%igwfnewtonur => null()
+    !   
+    ! -- Return
+    return
+  end subroutine prepcheck
+
+  subroutine init_sat(this)
+    use ConstantsModule,   only: LINELENGTH
+    use MemoryManagerModule, only: mem_allocate,mem_deallocate
+    use SimModule, only: store_error, ustop, count_errors
+    class(GwfNpfType) :: this
+    
+    ! local
+    integer(I4B) :: n, m, ii, ipos, ihc
+    real(DP) :: satn, topn, topm, botn
+    real(DP) :: hyn, hym, hn, hm
+    real(DP) :: csat, fawidth
+    integer(I4B), dimension(:), pointer, contiguous :: ithickstartflag
+    character(len=LINELENGTH) :: cellstr, errmsg
+    character(len=*),parameter :: fmtnct = "(1X,'Negative cell thickness at cell ', A)"
+    character(len=*),parameter :: fmtihbe = "(1X,'Initial head, bottom elevation:',1P,2G13.5)"
+    character(len=*),parameter :: fmttebe = "(1X,'Top elevation, bottom elevation:',1P,2G13.5)"
+    
+    ! -- allocate temporary storage to handle thickstart option
+    call mem_allocate(ithickstartflag, this%dis%nodes, 'ITHICKSTARTFLAG',      &
+                      trim(this%origin))
+    do n = 1, this%dis%nodes
+      ithickstartflag(n) = 0
+    end do    
+    
     ! -- Initialize sat to zero for ibound=0 cells, unless the cell can
     !    rewet.  Initialize sat to the saturated fraction based on strt
     !    if icelltype is negative and the THCKSTRT option is in effect.
@@ -2197,7 +2267,7 @@ contains
     if(count_errors() > 0) then
       call this%parser%StoreErrorUnit()
     endif
-    !
+    
     ! -- Calculate condsat, but only if xt3d is not active.  If xt3d is
     !    active, then condsat is allocated to size of zero.
     if (this%ixt3d == 0) then
@@ -2207,8 +2277,7 @@ contains
     !    as a negative value and THCKSTRT option in effect)
     do n = 1, this%dis%nodes
       call this%calc_condsat(n, .true.)
-    enddo
-    !
+      
     endif
     !
     ! -- Determine the lower most node
