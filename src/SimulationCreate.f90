@@ -89,7 +89,7 @@ module SimulationCreateModule
       return
     end if
         
-    write(*,'(1x,a)') 'Create model connections from exchanges'
+    write(iout,'(/1x,a)') 'Create model connections from exchanges'
     
     do ic = 1, baseexchangelist%Count()
       ep => GetBaseExchangeFromList(baseexchangelist, ic)

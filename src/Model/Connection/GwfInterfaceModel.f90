@@ -21,9 +21,7 @@ module GwfInterfaceModelModule
     procedure, pass(this) :: construct
     procedure, pass(this) :: createModel
     procedure, pass(this) :: defineModel
-    procedure, pass(this) :: allocateAndReadModel
-    
-    procedure, pass(this) :: syncModelData
+    procedure, pass(this) :: allocateAndReadModel    
     ! private stuff
     procedure, private, pass(this) :: buildDiscretization
   end type
@@ -62,6 +60,8 @@ contains
       class is (GwfModelType)
         this%gwfModel => numMod
       end select
+    
+    this%inewton = this%gwfModel%inewton
       
     ! create discretization and packages
     call this%buildDiscretization()
@@ -74,10 +74,12 @@ contains
     
   end subroutine createModel
   
-  subroutine defineModel(this)
+  subroutine defineModel(this, satomega)
     class(GwfInterfaceModelType), intent(inout) :: this
+    real(DP) :: satomega
     
     this%moffset = 0
+    this%npf%satomega = satomega
     
     ! dis%dis_df, npf%npf_d ... we cannot call these yet, 
     ! the following comes from npf_df:
@@ -97,11 +99,6 @@ contains
   
   subroutine allocateAndReadModel(this)
     class(GwfInterfaceModelType), target, intent(inout) :: this
-    
-    ! fill/init x, rhx, ibound
-    call this%syncModelData()
-    this%rhs = 0
-    this%ibound = 1
     
     this%npf%set_data_func => setNpfData  
     this%npf%func_caller => this
@@ -251,24 +248,5 @@ contains
     end do
     
   end subroutine setNpfData
-  
-  ! copies individual model data (head, ibound) into the interface model
-  subroutine syncModelData(this)
-    class(GwfInterFaceModelType), intent(inout) :: this
-    integer(I4B) :: icell, idx
-    class(NumericalModelType), pointer :: model
-        
-    ! copy head/ibound
-    do icell = 1, this%gridConnection%nrOfCells
-      
-      idx = this%gridConnection%idxToGlobal(icell)%index
-      model => this%gridConnection%idxToGlobal(icell)%model
-      
-      this%x(icell) = model%x(idx)
-      this%ibound(icell) = model%ibound(idx)
-      
-    end do
-    
-  end subroutine syncModelData
   
 end module GwfInterfaceModelModule

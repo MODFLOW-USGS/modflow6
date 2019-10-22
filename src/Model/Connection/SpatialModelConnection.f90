@@ -64,6 +64,7 @@ contains ! module procedures
     this%name = name
     this%memoryOrigin = trim(this%name)
     this%owner => model
+    this%iNewton = 0
     
     this%nrOfConnections = 0
     
@@ -213,11 +214,20 @@ contains ! module procedures
   
   subroutine allocateArrays(this)
     use MemoryManagerModule, only: mem_allocate
+    use ConstantsModule, only: DZERO
     class(SpatialModelConnectionType), intent(inout) :: this
-         
+    ! local
+    integer(I4B) :: i
+    
     call mem_allocate(this%x, this%neq, 'X', this%memoryOrigin)
     call mem_allocate(this%rhs, this%neq, 'RHS', this%memoryOrigin)
     call mem_allocate(this%iactive, this%neq, 'IACTIVE', this%memoryOrigin)
+    
+    ! c.f. NumericalSolution
+    do i = 1, this%neq
+      this%x(i) = DZERO
+      this%iactive(i) = 1 !default is active
+    enddo
     
   end subroutine allocateArrays
   

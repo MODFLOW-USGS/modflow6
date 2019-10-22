@@ -23,7 +23,7 @@ module ModelConnectionModule
     character(len=LENPACKAGENAME)       :: name
     character(len=LENORIGIN)            :: memoryOrigin
     
-    integer(I4B)                        :: inewton          ! == 1 for newton-raphson, 0 otherwise
+    integer(I4B)                        :: iNewton          ! == 1 for newton-raphson, 0 otherwise
   
     ! all numerical exchanges in the same solution
     type(ListType)                     :: globalExchanges
@@ -74,12 +74,13 @@ module ModelConnectionModule
       integer(I4B), dimension(:), intent(in) :: jasln
     end subroutine mapCoefficientsIFace
     
-    subroutine fillCoefficientsIFace(this, kiter, amatsln, njasln, inwtflag)
+    subroutine fillCoefficientsIFace(this, kiter, amatsln, njasln, rhssln, inwtflag)
       import :: ModelConnectionType, I4B, DP
       class(ModelConnectionType), intent(inout) :: this
       integer(I4B), intent(in) :: kiter
       real(DP), dimension(:), intent(inout) :: amatsln
       integer(I4B),intent(in) :: njasln
+      real(DP), dimension(:), intent(inout) :: rhssln
       integer(I4B), intent(in) :: inwtflag
     end subroutine fillCoefficientsIFace
      
