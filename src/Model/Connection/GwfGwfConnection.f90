@@ -44,6 +44,7 @@ module GwfGwfConnectionModule
     procedure, pass(this), private :: allocateScalars
     procedure, pass(this), private :: createCoefficientMatrix
     procedure, pass(this), private :: maskConnections
+    procedure, pass(this), private :: syncInterfaceModel
     
   end type GwfGwfConnectionType
 
@@ -65,8 +66,9 @@ contains
     this%connectionType = 'GWF-GWF'
     this%iVarCV = 0
     this%iDewatCV = 0
-    this%satOmega = DEM6  
+    this%satOmega = DZERO  
     this%iCellAvg = 0
+    this%iNewton = this%gwfModel%inewton
     
     allocate(this%interfaceModel)
   
@@ -79,7 +81,10 @@ contains
     
     if (this%gwfModel%npf%ixt3d > 0) then
       this%stencilDepth = 2
-    end if
+    end if    
+    
+    this%satOmega = this%gwfModel%npf%satomega
+    
     
     ! now call base class, this sets up the GridConnection
     call this%spatialcon_df()    
@@ -91,7 +96,7 @@ contains
     call this%interfaceModel%createModel(this%gridConnection)
     
     ! define, from here
-    call this%interfaceModel%defineModel()
+    call this%interfaceModel%defineModel(this%satOmega)
      
     ! point x, ibound, and rhs to connection
     this%interfaceModel%x => this%x
@@ -182,7 +187,7 @@ contains
     call mem_allocate(this%iVarCV, 'IVARCV', this%memoryOrigin)
     call mem_allocate(this%iDewatCV, 'IDEWATCV', this%memoryOrigin)
     call mem_allocate(this%satOmega, 'SATOMEGA', this%memoryOrigin)
-    call mem_allocate(this%iCellAvg, 'ICELLAVG', this%memoryOrigin)    
+    call mem_allocate(this%iCellAvg, 'ICELLAVG', this%memoryOrigin)
     
   end subroutine allocateScalars
   
@@ -192,8 +197,21 @@ contains
   subroutine gwfgwfcon_ar(this)
     class(GwfGwfConnectionType), intent(inout)  :: this
     ! local    
-   
-    call this%interfaceModel%allocateAndReadModel()    
+    integer(I4B) :: icell, idx
+    class(NumericalModelType), pointer :: model
+    
+    ! init x and ibound with model data
+    do icell = 1, this%gridConnection%nrOfCells     
+      idx = this%gridConnection%idxToGlobal(icell)%index
+      model => this%gridConnection%idxToGlobal(icell)%model
+      
+      this%interfaceModel%x(icell) = model%x(idx)
+      this%interfaceModel%ibound(icell) = model%ibound(idx)      
+    end do
+    
+    ! *_ar
+    call this%interfaceModel%allocateAndReadModel()  
+    
     ! TODO_MJR: ar mover
     ! TODO_MJR: angledx checks    
     ! TODO_MJR: ar observation
@@ -229,32 +247,49 @@ contains
     class(GwfGwfConnectionType), intent(inout)  :: this
     integer(I4B), intent(in) :: kiter
     ! local
-     
-    ! copy model data into interface model
-    call this%interfaceModel%syncModelData()
+    integer(I4B) :: i
     
-    ! calculate (wetting/drying, saturation)
-    call this%interfaceModel%model_cf(kiter)
-    
-  end subroutine gwfgwfcon_cf
-    
-  ! write the calculated conductances into the global system matrix
-  subroutine gwfgwfcon_fc(this, kiter, amatsln, njasln, inwtflag)    
-    class(GwfGwfConnectionType), intent(inout) :: this
-    integer(I4B), intent(in) :: kiter
-    real(DP), dimension(:), intent(inout) :: amatsln
-    integer(I4B),intent(in) :: njasln
-    integer(I4B), intent(in) :: inwtflag
-    ! local
-    integer(I4B) :: i, n, ipos
-    
-    ! we iterate, so this should be reset (c.f. sln_reset())
+    ! reset interface system
     do i = 1, this%nja
       this%amat(i) = 0.0_DP
     end do
     do i = 1, this%neq
       this%rhs(i) = 0.0_DP
     end do
+    
+    ! copy model data into interface model
+    call this%syncInterfaceModel()
+    
+    ! calculate (wetting/drying, saturation)
+    call this%interfaceModel%model_cf(kiter)
+    
+  end subroutine gwfgwfcon_cf
+  
+  subroutine syncInterfaceModel(this)
+    class(GwfGwfConnectionType), intent(inout) :: this
+    integer(I4B) :: icell, idx
+    class(NumericalModelType), pointer :: model
+    
+    ! copy head values
+    do icell = 1, this%gridConnection%nrOfCells      
+      idx = this%gridConnection%idxToGlobal(icell)%index
+      model => this%gridConnection%idxToGlobal(icell)%model
+      
+      this%x(icell) = model%x(idx)
+    end do
+  
+  end subroutine syncInterfaceModel
+  
+  ! write the calculated conductances into the global system matrix
+  subroutine gwfgwfcon_fc(this, kiter, amatsln, njasln, rhssln, inwtflag)    
+    class(GwfGwfConnectionType), intent(inout) :: this
+    integer(I4B), intent(in) :: kiter
+    real(DP), dimension(:), intent(inout) :: amatsln
+    integer(I4B),intent(in) :: njasln
+    real(DP), dimension(:), intent(inout) ::rhssln
+    integer(I4B), intent(in) :: inwtflag
+    ! local
+    integer(I4B) :: n, ipos, nglo
     
     ! fill (and add to...) coefficients for interface
     call this%interfaceModel%model_fc(kiter, this%amat, this%nja, inwtflag)
@@ -268,6 +303,10 @@ contains
         ! only add connections for own model to global matrix
         cycle
       end if
+      
+      nglo = this%gridConnection%idxToGlobal(n)%index + this%gridConnection%idxToGlobal(n)%model%moffset
+      rhssln(nglo) = rhssln(nglo) + this%rhs(n)
+      
       do ipos = this%ia(n), this%ia(n+1) - 1
         amatsln(this%mapIdxToSln(ipos)) = amatsln(this%mapIdxToSln(ipos)) + this%amat(ipos)
       end do

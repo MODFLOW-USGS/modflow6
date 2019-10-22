@@ -1940,7 +1940,7 @@ subroutine solution_create(filename, id)
     ! -- Add connection coefficients to the solution
     do ic=1,this%connectionlist%Count()
       mc => GetConnectionFromList(this%connectionlist, ic)
-      call mc%mc_fc(kiter, this%amat, this%nja, inewton)
+      call mc%mc_fc(kiter, this%amat, this%nja, this%rhs, inewton)
     enddo
     !
     ! -- Add model coefficients to the solution
@@ -3301,7 +3301,7 @@ subroutine solution_create(filename, id)
     open(inunit, file=filename)    
     do i=1,nrows
       do j=ia(i),ia(i+1)-1        
-        write(inunit, '(I12,I12,F20.3)') i-1, ja(j)-1, M(j) ! NB: zero-based
+        write(inunit, '(I12,I12,F20.10)') i-1, ja(j)-1, M(j) ! NB: zero-based
       enddo
     enddo
     close(inunit)
