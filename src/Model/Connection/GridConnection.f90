@@ -15,8 +15,7 @@ module GridConnectionModule
     class(NumericalModelType), pointer :: model => null()
   end type
   
-  ! TODO_MJR: how about exchanges with (many) hanging nodes?
-  ! for now stick to local neighbors only
+  ! TODO_MJR: this will disappear
   integer(I4B), parameter :: MaxNeighbors = 7
   
   ! a global cell with neighbors
@@ -99,6 +98,8 @@ module GridConnectionModule
     procedure, private, pass(this) :: registerInterfaceCells
     procedure, private, pass(this) :: makePrimaryConnections
     procedure, private, pass(this) :: connectNeighborCells
+    procedure, private, pass(this) :: fillConnectionDataInternal
+    procedure, private, pass(this) :: fillConnectionDataFromExchanges
     procedure, private, pass(this) :: createConnectionMask
     procedure, private, pass(this) :: maskConnections
     procedure, private, pass(this) :: setMaskOnConnection
@@ -467,27 +468,17 @@ module GridConnectionModule
     cellNbrs%nrOfNbrs = nbrCnt + 1
   end subroutine
   
-  ! TODO_MJR: refactor, routine is too large
   ! builds a sparse matrix holding all cell connections,
   ! with new indices, and stores the mapping to the global ids
   subroutine buildConnections(this)
-    use ConstantsModule, only: DPI
-    use ArrayHandlersModule, only: ifind
     class(GridConnectionType), intent(inout) :: this 
     ! local
-    integer(I4B) :: icell, ifaceIdx        
+    integer(I4B) :: icell        
     integer(I4B), dimension(:), allocatable :: nnz
     type(SparseMatrix), pointer :: sparse     
-    integer(I4B) :: ierror
-    
-    type(ConnectionsType), pointer :: conn, connOrig    
-    integer(I4B) :: n, m, ipos, isym, iposOrig, isymOrig
-    type(GlobalCellType), pointer :: ncell, mcell
-    
-    integer(I4B) :: inx, iexg, im, ivalAngldegx
-    integer(I4B) :: nOffset, mOffset, nIfaceIdx, mIfaceIdx
-    class(NumericalExchangeType), pointer :: numEx
-    
+    integer(I4B) :: ierror    
+    type(ConnectionsType), pointer :: conn    
+            
     ! generate interface cell indices, recursively and build mapping. 
     ! Start with boundaryCells, this way the internal interface nodes 
     ! will be numbered contiguously
@@ -538,90 +529,13 @@ module GridConnectionModule
     call fillisym(conn%nodes, conn%nja, conn%ia, conn%ja, conn%isym)
     call filljas(conn%nodes, conn%nja, conn%ia, conn%ja, conn%isym, conn%jas)  
     ! and done with it
-    call sparse%destroy() 
+    call sparse%destroy()
     
-    ! fill ihc, cl1, cl2, hwva, anglex (with size=njas) for all internal connections
-    do n = 1, conn%nodes
-      do ipos=conn%ia(n)+1, conn%ia(n+1)-1
-        m = conn%ja(ipos)
-        if (n > m) cycle
-        
-        isym = conn%jas(ipos)
-        ncell => this%idxToGlobal(n)
-        mcell => this%idxToGlobal(m)
-        if (associated(ncell%model, mcell%model)) then
-          ! within same model, straight copy
-          connOrig => ncell%model%dis%con
-          iposOrig = connOrig%getjaindex(ncell%index, mcell%index)          
-          isymOrig = connOrig%jas(iposOrig)
-          conn%hwva(isym) = connOrig%hwva(isymOrig)
-          conn%ihc(isym) = connOrig%ihc(isymOrig)
-          if (ncell%index < mcell%index) then
-            conn%cl1(isym) = connOrig%cl1(isymOrig)
-            conn%cl2(isym) = connOrig%cl2(isymOrig)
-            conn%anglex(isym) = connOrig%anglex(isymOrig)
-          else
-            conn%cl1(isym) = connOrig%cl2(isymOrig)
-            conn%cl2(isym) = connOrig%cl1(isymOrig)
-            conn%anglex(isym) = connOrig%anglex(isymOrig) + DPI
-          end if
-        end if
-      end do
-    end do
+    ! fill connection data from models and exchanges
+    call this%fillConnectionDataInternal()    
+    call this%fillConnectionDataFromExchanges()
     
-    ! fill values for all exchanges, using symmetry    
-    do inx = 1, this%exchanges%Count()
-      numEx => GetNumericalExchangeFromList(this%exchanges, inx) 
-      
-      ! TODO_MJR: this is not good, shouldn't this be outside
-      ! the GWF domain, in NumericalExchange directly?
-      ivalAngldegx = ifind(numEx%auxname, 'ANGLDEGX')
-      if (ivalAngldegx > 0) then
-        conn%ianglex = ivalAngldegx
-      end if
-      
-      nOffset = this%getRegionalModelOffset(numEx%m1)
-      mOffset = this%getRegionalModelOffset(numEx%m2)
-      do iexg = 1, numEx%nexg
-        nIfaceIdx = this%regionalToInterfaceIdxMap(noffset + numEx%nodem1(iexg))
-        mIfaceIdx = this%regionalToInterfaceIdxMap(moffset + numEx%nodem2(iexg))
-        ! not all nodes from the exchanges are part of the interface grid 
-        ! (think of exchanges between neigboring models, and their neighbors)
-        if (nIFaceIdx == -1 .or. mIFaceIdx == -1) then
-          cycle
-        end if
-        
-        ipos = conn%getjaindex(nIfaceIdx, mIfaceIdx)        
-        ! (see prev. remark) sometimes the cells are in the interface grid, 
-        ! but the connection isn't. This can happen for leaf nodes of the grid.
-        if (ipos == 0) then
-          ! no match, safely cycle
-          cycle
-        end if        
-        isym = conn%jas(ipos)
-          
-        ! note: cl1 equals L_nm: the length from cell n to the shared
-        ! face with cell m (and cl2 analogously for L_mn)
-        if (nIfaceIdx < mIfaceIdx) then
-          conn%cl1(isym) = numEx%cl1(iexg)
-          conn%cl2(isym) = numEx%cl2(iexg)
-          if (ivalAngldegx > 0) then
-            conn%anglex(isym) = numEx%auxvar(ivalAngldegx,iexg)
-          end if
-        else
-          conn%cl1(isym) = numEx%cl2(iexg)
-          conn%cl2(isym) = numEx%cl1(iexg)
-          if (ivalAngldegx > 0) then
-            ! TODO_MJR: restrict angle to 0 < x <  2pi?
-            conn%anglex(isym) = numEx%auxvar(ivalAngldegx,iexg) + DPI
-          end if
-        end if          
-        conn%hwva(isym) = numEx%hwva(iexg)
-        conn%ihc(isym) = numEx%ihc(iexg) 
-                         
-      end do        
-    end do
-    
+    ! set the masks on connections
     call this%createConnectionMask()
     
   end subroutine buildConnections 
@@ -698,6 +612,112 @@ module GridConnectionModule
     end do
     
   end subroutine connectNeighborCells
+  
+  ! fill ihc, cl1, cl2, hwva, anglex (with size=njas) for all internal connections
+  subroutine fillConnectionDataInternal(this)
+    use ConstantsModule, only: DPI, DTWOPI
+    class(GridConnectionType), intent(inout)  :: this
+    ! local
+    type(ConnectionsType), pointer :: conn, connOrig      
+    integer(I4B) :: n, m, ipos, isym, iposOrig, isymOrig
+    type(GlobalCellType), pointer :: ncell, mcell
+    
+    conn => this%connections
+    
+    do n = 1, conn%nodes
+      do ipos=conn%ia(n)+1, conn%ia(n+1)-1
+        m = conn%ja(ipos)
+        if (n > m) cycle
+        
+        isym = conn%jas(ipos)
+        ncell => this%idxToGlobal(n)
+        mcell => this%idxToGlobal(m)
+        if (associated(ncell%model, mcell%model)) then
+          ! within same model, straight copy
+          connOrig => ncell%model%dis%con
+          iposOrig = connOrig%getjaindex(ncell%index, mcell%index)          
+          isymOrig = connOrig%jas(iposOrig)
+          conn%hwva(isym) = connOrig%hwva(isymOrig)
+          conn%ihc(isym) = connOrig%ihc(isymOrig)
+          if (ncell%index < mcell%index) then
+            conn%cl1(isym) = connOrig%cl1(isymOrig)
+            conn%cl2(isym) = connOrig%cl2(isymOrig)
+            conn%anglex(isym) = connOrig%anglex(isymOrig)
+          else
+            conn%cl1(isym) = connOrig%cl2(isymOrig)
+            conn%cl2(isym) = connOrig%cl1(isymOrig)
+            conn%anglex(isym) = mod(connOrig%anglex(isymOrig) + DPI, DTWOPI)
+          end if
+        end if
+      end do
+    end do
+  end subroutine fillConnectionDataInternal
+  
+  ! fill connection data for all exchanges, using symmetry
+  subroutine fillConnectionDataFromExchanges(this)
+    use ConstantsModule, only: DPI, DTWOPI        
+    use ArrayHandlersModule, only: ifind    
+    class(GridConnectionType), intent(inout)  :: this
+    ! local
+    integer(I4B) :: inx, iexg, ivalAngldegx
+    integer(I4B) :: ipos, isym
+    integer(I4B) :: nOffset, mOffset, nIfaceIdx, mIfaceIdx
+    class(NumericalExchangeType), pointer :: numEx
+    type(ConnectionsType), pointer :: conn
+    
+    conn => this%connections
+    
+    do inx = 1, this%exchanges%Count()
+      numEx => GetNumericalExchangeFromList(this%exchanges, inx) 
+      
+      ivalAngldegx = ifind(numEx%auxname, 'ANGLDEGX')
+      if (ivalAngldegx > 0) then
+        conn%ianglex = ivalAngldegx
+      end if
+      
+      nOffset = this%getRegionalModelOffset(numEx%m1)
+      mOffset = this%getRegionalModelOffset(numEx%m2)
+      do iexg = 1, numEx%nexg
+        nIfaceIdx = this%regionalToInterfaceIdxMap(noffset + numEx%nodem1(iexg))
+        mIfaceIdx = this%regionalToInterfaceIdxMap(moffset + numEx%nodem2(iexg))
+        ! not all nodes from the exchanges are part of the interface grid 
+        ! (think of exchanges between neigboring models, and their neighbors)
+        if (nIFaceIdx == -1 .or. mIFaceIdx == -1) then
+          cycle
+        end if
+        
+        ipos = conn%getjaindex(nIfaceIdx, mIfaceIdx)        
+        ! (see prev. remark) sometimes the cells are in the interface grid, 
+        ! but the connection isn't. This can happen for leaf nodes of the grid.
+        if (ipos == 0) then
+          ! no match, safely cycle
+          cycle
+        end if        
+        isym = conn%jas(ipos)
+          
+        ! note: cl1 equals L_nm: the length from cell n to the shared
+        ! face with cell m (and cl2 analogously for L_mn)
+        if (nIfaceIdx < mIfaceIdx) then
+          conn%cl1(isym) = numEx%cl1(iexg)
+          conn%cl2(isym) = numEx%cl2(iexg)
+          if (ivalAngldegx > 0) then
+            conn%anglex(isym) = numEx%auxvar(ivalAngldegx,iexg)
+          end if
+        else
+          conn%cl1(isym) = numEx%cl2(iexg)
+          conn%cl2(isym) = numEx%cl1(iexg)
+          if (ivalAngldegx > 0) then
+            conn%anglex(isym) = mod(numEx%auxvar(ivalAngldegx,iexg) + DPI, DTWOPI)
+          end if
+        end if          
+        conn%hwva(isym) = numEx%hwva(iexg)
+        conn%ihc(isym) = numEx%ihc(iexg) 
+                         
+      end do        
+    end do
+    
+  end subroutine fillConnectionDataFromExchanges
+  
   
   ! create the connection masks, the level indicates the nr 
   ! of connections away from the remote neighbor, the diagonal

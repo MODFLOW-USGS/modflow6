@@ -34,7 +34,7 @@ module ModelConnectionModule
     procedure (allocateReadIFace), deferred, pass(this)           :: mc_ar
     procedure (addConnectionsToMatrixIFace), deferred, pass(this) :: mc_ac  
     procedure (calculateCoefficientsIFace), deferred, pass(this)  :: mc_cf
-    procedure (mapCoefficientsIFace), deferred, pass(this)       :: mc_mc
+    procedure (mapCoefficientsIFace), deferred, pass(this)        :: mc_mc
     procedure (fillCoefficientsIFace), deferred, pass(this)       :: mc_fc
     
     ! derived types should decide for themselves how the overall connection is 

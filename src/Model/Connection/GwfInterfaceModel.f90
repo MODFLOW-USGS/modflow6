@@ -76,7 +76,9 @@ contains
   
   subroutine defineModel(this)
     class(GwfInterfaceModelType), intent(inout) :: this
-  
+    
+    this%moffset = 0
+    
     ! dis%dis_df, npf%npf_d ... we cannot call these yet, 
     ! the following comes from npf_df:
     this%npf%dis => this%dis

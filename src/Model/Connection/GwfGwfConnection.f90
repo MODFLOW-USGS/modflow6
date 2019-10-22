@@ -42,6 +42,7 @@ module GwfGwfConnectionModule
     
     ! local stuff
     procedure, pass(this), private :: allocateScalars
+    procedure, pass(this), private :: createCoefficientMatrix
     procedure, pass(this), private :: maskConnections
     
   end type GwfGwfConnectionType
@@ -75,7 +76,6 @@ contains
     class(GwfGwfConnectionType), intent(inout) :: this    
     ! local
     type(sparsematrix) :: sparse
-    integer(I4B) :: ierror
     
     if (this%gwfModel%npf%ixt3d > 0) then
       this%stencilDepth = 2
@@ -84,39 +84,26 @@ contains
     ! now call base class, this sets up the GridConnection
     call this%spatialcon_df()    
     
-    ! grid conn is defined, so we can now create the interface model
-    ! and do the define part here, c.f. what happens in sln_df()
-    
-    ! == create ==
+    ! grid conn is defined, so we first create the interface model
+    ! here, and the remainder of this routine is define.
+    ! we basically follow the logic that is present in sln_df()
     call this%interfaceModel%construct(this%name)
     call this%interfaceModel%createModel(this%gridConnection)
     
-    
-    ! == define ==
+    ! define, from here
     call this%interfaceModel%defineModel()
-    
-    ! -- calculate and set offsets 
-    this%interfaceModel%moffset = 0
-    
-    ! -- Allocate and initialize solution arrays in parent class    
-    ! -- Go through each model and point x, ibound, and rhs to solution
+     
+    ! point x, ibound, and rhs to connection
     this%interfaceModel%x => this%x
     this%interfaceModel%rhs => this%rhs
-    this%interfaceModel%ibound => this%iactive
+    this%interfaceModel%ibound => this%iactive    
     
-    ! -- Create the sparsematrix instance
+    ! assign connections, fill ia/ja, map connections (following sln_connect) and mask
     call sparse%init(this%neq, this%neq, 7)
-    
-    ! -- Assign connections, fill ia/ja, map connections (following sln_connect) and mask
     call this%interfaceModel%model_ac(sparse)
     
-    ! create amat from sparse (and keep sparse for adding connections to global system)
-    this%nja = sparse%nnz    
-    call mem_allocate(this%ia, this%neq + 1, 'IA', this%memoryOrigin)
-    call mem_allocate(this%ja, this%nja, 'JA', this%memoryOrigin)
-    call mem_allocate(this%amat, this%nja, 'AMAT', this%memoryOrigin)    
-    call sparse%sort()
-    call sparse%filliaja(this%ia, this%ja, ierror)
+    ! create amat from sparse
+    call this%createCoefficientMatrix(sparse)
     call sparse%destroy()
     
     ! map connections
@@ -127,9 +114,29 @@ contains
     
   end subroutine gwfgwfcon_df
   
+  subroutine createCoefficientMatrix(this, sparse)
+    use SimModule, only: ustop
+    class(GwfGwfConnectionType), intent(inout) :: this
+    type(sparsematrix) :: sparse
+    ! local
+    integer(I4B) :: ierror
+        
+    this%nja = sparse%nnz    
+    call mem_allocate(this%ia, this%neq + 1, 'IA', this%memoryOrigin)
+    call mem_allocate(this%ja, this%nja, 'JA', this%memoryOrigin)
+    call mem_allocate(this%amat, this%nja, 'AMAT', this%memoryOrigin)    
+    call sparse%sort()
+    call sparse%filliaja(this%ia, this%ja, ierror)
+    if (ierror /= 0) then
+      write(*,*) 'Error: cannot fill ia/ja for model connection'
+      call ustop()
+    end if
+    
+  end subroutine createCoefficientMatrix
+  
   subroutine maskConnections(this)
     use SimModule, only: ustop
-    use SpatialModelConnectionModule, only: getCSRIndex
+    use CsrUtilsModule, only: getCSRIndex
     class(GwfGwfConnectionType), intent(inout) :: this
     ! local
     integer(I4B) :: ipos, n, m, nloc, mloc, csrIdx

@@ -54,6 +54,7 @@
 		<Filter Name="Model">
 		<Filter Name="Connection">
 		<File RelativePath="..\src\Model\Connection\ConnectionBuilder.f90"/>
+		<File RelativePath="..\src\Model\Connection\CsrUtils.f90"/>
 		<File RelativePath="..\src\Model\Connection\GridConnection.f90"/>
 		<File RelativePath="..\src\Model\Connection\GwfGwfConnection.f90"/>
 		<File RelativePath="..\src\Model\Connection\GwfInterfaceModel.f90"/>

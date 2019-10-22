@@ -9,7 +9,6 @@ module SpatialModelConnectionModule
   
 	implicit none
 	private
-  public :: getCSRIndex
 
 	! Class to manage spatial connection of a model to one or more models of the same type.
 	! Spatial connection here means that the model domains (spatial discretization) are adjacent
@@ -21,14 +20,14 @@ module SpatialModelConnectionModule
     integer(I4B), pointer :: stencilDepth ! default = 1, xt3d = 2, ...
         
     ! the interface system doesn't live in a solution, so we need these
-    integer(I4B), pointer                               :: neq => NULL()
-    integer(I4B), pointer                               :: nja => NULL()
-    integer(I4B), dimension(:), pointer, contiguous     :: ia => NULL()
-    integer(I4B), dimension(:), pointer, contiguous     :: ja => NULL()
-    real(DP), dimension(:), pointer, contiguous         :: amat => NULL()
-    real(DP), dimension(:), pointer, contiguous         :: rhs => NULL()
-    real(DP), dimension(:), pointer, contiguous         :: x => NULL()
-    integer(I4B), dimension(:), pointer, contiguous     :: iactive => NULL()
+    integer(I4B), pointer                               :: neq => null()
+    integer(I4B), pointer                               :: nja => null()
+    integer(I4B), dimension(:), pointer, contiguous     :: ia => null()
+    integer(I4B), dimension(:), pointer, contiguous     :: ja => null()
+    real(DP), dimension(:), pointer, contiguous         :: amat => null()
+    real(DP), dimension(:), pointer, contiguous         :: rhs => null()
+    real(DP), dimension(:), pointer, contiguous         :: x => null()
+    integer(I4B), dimension(:), pointer, contiguous     :: iactive => null()
         
     ! TODO_MJR: mem mgt of these guys:
     integer(I4B) :: nrOfConnections
@@ -104,6 +103,7 @@ contains ! module procedures
   ! create the mapping from local system matrix to global
   subroutine spatialcon_mc(this, iasln, jasln)
     use SimModule, only: ustop
+    use CsrUtilsModule, only: getCSRIndex
     use GridConnectionModule
     class(SpatialModelConnectionType), intent(inout) :: this
     integer(I4B), dimension(:), intent(in) :: iasln
@@ -235,27 +235,7 @@ contains ! module procedures
       nrConns = nrConns + numEx%nexg
     end do
     
-  end function getNrOfConnections
-  
-  ! TODO_MJR: move this to generic place?
-  ! return index for element i,j in CSR storage, and -1 when not there
-  function getCSRIndex(i, j, ia, ja) result(csrIndex)
-    integer(I4B) :: i, j                          ! the element to get the index for
-    integer(I4B), dimension(:), intent(in) :: ia  ! csr ia
-    integer(I4B), dimension(:), intent(in) :: ja  ! csr ja
-    integer(I4B) :: csrIndex                 ! the resulting index
-    ! local
-    integer(I4B) :: idx
-    
-    csrIndex = -1
-    do idx = ia(i), ia(i+1)-1
-      if (ja(idx) == j) then
-        csrIndex = idx
-        return
-      end if
-    end do
-    
-  end function
+  end function getNrOfConnections 
   
 end module SpatialModelConnectionModule
 
