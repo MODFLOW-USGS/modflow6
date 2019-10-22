@@ -42,6 +42,8 @@ module GwfGwfConnectionModule
     
     ! local stuff
     procedure, pass(this), private :: allocateScalars
+    procedure, pass(this), private :: maskConnections
+    
   end type GwfGwfConnectionType
 
 contains
@@ -68,16 +70,12 @@ contains
     allocate(this%interfaceModel)
   
   end subroutine gwfGwfConnection_ctor
-   
-   
+      
   subroutine gwfgwfcon_df(this)
-    use SpatialModelConnectionModule, only: getCSRIndex ! TODO_MJR: move that function
-    use SimModule, only: ustop
     class(GwfGwfConnectionType), intent(inout) :: this    
     ! local
-    integer(I4B) :: ierror, ipos, n, m, nloc, mloc, csrIdx
     type(sparsematrix) :: sparse
-    type(ConnectionsType), pointer :: conn
+    integer(I4B) :: ierror
     
     if (this%gwfModel%npf%ixt3d > 0) then
       this%stencilDepth = 2
@@ -122,7 +120,20 @@ contains
     call sparse%destroy()
     
     ! map connections
-    call this%interfaceModel%model_mc(this%ia, this%ja)    
+    call this%interfaceModel%model_mc(this%ia, this%ja)  
+      
+    ! mask
+    call this%maskConnections()
+    
+  end subroutine gwfgwfcon_df
+  
+  subroutine maskConnections(this)
+    use SimModule, only: ustop
+    use SpatialModelConnectionModule, only: getCSRIndex
+    class(GwfGwfConnectionType), intent(inout) :: this
+    ! local
+    integer(I4B) :: ipos, n, m, nloc, mloc, csrIdx
+    type(ConnectionsType), pointer :: conn
     
     ! set the mask on connections that are calculated by the interface model
     conn => this%interfaceModel%dis%con
@@ -153,9 +164,9 @@ contains
         end if
       end do
     end do
-      
-  end subroutine gwfgwfcon_df
-
+    
+  end subroutine maskConnections
+  
   subroutine allocateScalars(this)
     use MemoryManagerModule, only: mem_allocate
     class(GwfGwfConnectionType), intent(inout)  :: this
