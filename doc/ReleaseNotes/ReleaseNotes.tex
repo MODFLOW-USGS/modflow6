@@ -119,20 +119,22 @@ This section describes changes introduced into MODFLOW 6 with each release.  The
 
 \underline{BASIC FUNCTIONALITY}
 \begin{itemize}
-\item --
-\item --
+\item Added an error check to the DISU Package that ensures that an underlying cell has a top elevation that is less than or equal to the bottom of an overlying cell.  An underlying cell is one in which the IHC value for the connection is zero and the connecting node number is greater than the cell node number.
+\item NPF Package will now write a message to the GWF Model list file to indicate when the SAVE\_SPECIFIC\_DISCHARGE option is invoked.
 \end{itemize}
 
 \underline{STRESS PACKAGES}
 \begin{itemize}
 \item There was an error in the calculation of the segmented evapotranspiration rate for the case where the rate did not decrease with depth.  There was another error in which PETM0 was being used as the evapotranspiration rate at the surface instead of the proportion of the evapotranspiration rate at the surface.
-\item --
+\item Corrected several error messages issued by the SFR Package that were not formatted correctly.  
+\item Fixed a bug in which the lake stage stable would sometimes result in touching numbers.  This only occurred for negative lake stages.
 \end{itemize}
 
 \underline{ADVANCED STRESS PACKAGES}
 \begin{itemize}
 \item Corrected the way auxiliary variables are handled for the advanced packages.  In some cases, values for auxiliary variables were not being correctly written to the GWF Model budget file or to the advanced package budget file.  A consistent approach for updating and saving auxiliary variables was implemented for the MAW, SFR, LAK, and UZF Packages.
-\item --
+\item The user guide was updated to include a missing laksetting that was omitted from the PERIOD block.  The laksetting description now includes an INFLOW option; a description for INFLOW is also now included.
+\item For the advanced stress packages, values assigned to the auxiliary variables were not written correctly to the GWF Model budget file, but the values were correct in the advanced package budget file.  Program was modified so that auxiliary variables written to the GWF Model budget file are correct.
 \end{itemize}
 
 \underline{SOLUTION}

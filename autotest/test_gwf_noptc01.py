@@ -25,6 +25,7 @@ ddir = 'data'
 travis = [True for idx in range(len(exdirs))]
 
 # set replace_exe to None to use default executable
+# replace_exe = {'mf2005': 'mf2005devdbl'}
 replace_exe = None
 
 htol = [None for idx in range(len(exdirs))]
@@ -193,7 +194,7 @@ def main():
     return
 
 
-# use python testmf6_csub_sub03.py
+# use python testmf6_csub_sub03.py --mf2005 mf2005devdbl
 if __name__ == "__main__":
     # print message
     print('standalone run of {}'.format(os.path.basename(__file__)))

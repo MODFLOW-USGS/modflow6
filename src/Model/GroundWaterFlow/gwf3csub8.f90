@@ -3943,8 +3943,7 @@ contains
     return
   end subroutine csub_set_initial_state
 
-  subroutine csub_fc(this, kiter, nodes, hold, hnew, nja, njasln, amat, &
-                     idxglo, rhs)
+  subroutine csub_fc(this, kiter, hold, hnew, njasln, amat, idxglo, rhs)
 ! ******************************************************************************
 ! csub_fc -- Fill the solution amat and rhs with storage contribution terms
 ! ******************************************************************************
@@ -3955,14 +3954,12 @@ contains
     ! -- dummy
     class(GwfCsubType) :: this
     integer(I4B),intent(in) :: kiter
-    integer(I4B),intent(in) :: nodes
-    real(DP), intent(in), dimension(nodes) :: hold
-    real(DP), intent(in), dimension(nodes) :: hnew
-    integer(I4B),intent(in) :: nja
+    real(DP), intent(in), dimension(:) :: hold
+    real(DP), intent(in), dimension(:) :: hnew
     integer(I4B),intent(in) :: njasln
     real(DP), dimension(njasln),intent(inout) :: amat
-    integer(I4B), intent(in),dimension(nja) :: idxglo
-    real(DP),intent(inout),dimension(nodes) :: rhs
+    integer(I4B), intent(in),dimension(:) :: idxglo
+    real(DP),intent(inout),dimension(:) :: rhs
     ! -- local
     integer(I4B) :: ib
     integer(I4B) :: node
@@ -3977,7 +3974,7 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- update geostatic load calculation
-    call this%csub_cg_calc_stress(nodes, hnew)
+    call this%csub_cg_calc_stress(this%dis%nodes, hnew)
     !
     ! -- formulate csub terms
     if (this%gwfiss == 0) then
@@ -4085,8 +4082,7 @@ contains
     return
   end subroutine csub_fc
 
-  subroutine csub_fn(this, kiter, nodes, hold, hnew, nja, njasln, amat, &
-                     idxglo, rhs)
+  subroutine csub_fn(this, kiter, hold, hnew, njasln, amat, idxglo, rhs)
 ! ******************************************************************************
 ! csub_fn -- Fill the solution amat and rhs with csub contribution newton
 !               term
@@ -4098,14 +4094,12 @@ contains
     ! -- dummy
     class(GwfCsubType) :: this
     integer(I4B),intent(in) :: kiter
-    integer(I4B),intent(in) :: nodes
-    real(DP), intent(in), dimension(nodes) :: hold
-    real(DP), intent(in), dimension(nodes) :: hnew
-    integer(I4B),intent(in) :: nja
+    real(DP), intent(in), dimension(:) :: hold
+    real(DP), intent(in), dimension(:) :: hnew
     integer(I4B),intent(in) :: njasln
     real(DP), dimension(njasln),intent(inout) :: amat
-    integer(I4B), intent(in),dimension(nja) :: idxglo
-    real(DP),intent(inout),dimension(nodes) :: rhs
+    integer(I4B), intent(in),dimension(:) :: idxglo
+    real(DP),intent(inout),dimension(:) :: rhs
     ! -- local
     integer(I4B) :: node
     integer(I4B) :: idiag

@@ -1396,10 +1396,10 @@ contains
           !
           ! -- read outlet lakein
           ival = this%parser%GetInteger()
-          if (ival <1 .or. ival > this%noutlets) then
+          if (ival <1 .or. ival > this%nlakes) then
             write(errmsg,'(4x,a,1x,i4,1x,a,1x,i6)') &
               '****ERROR. lakein FOR OUTLET ', n, 'MUST BE > 0 and <= ',        &
-              this%noutlets
+              this%nlakes
             call store_error(errmsg)
             cycle readoutlet
           end if
@@ -1410,7 +1410,7 @@ contains
           if (ival <0 .or. ival > this%nlakes) then
             write(errmsg,'(4x,a,1x,i4,1x,a,1x,i6)') &
               '****ERROR. lakeout FOR OUTLET ', n, 'MUST BE >= 0 and <= ',      &
-              this%noutlets
+              this%nlakes
             call store_error(errmsg)
             cycle readoutlet
           end if
@@ -4505,7 +4505,7 @@ contains
       if (this%inamedbound==1) then
         call UWWORD(line, iloc, 16, 1, 'lake', n, q, left=.TRUE.)
       end if
-      call UWWORD(line, iloc, 6, 1, 'lake', n, q, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 6, 1, 'lake', n, q, CENTER=.TRUE., SEP=' ')
       call UWWORD(line, iloc, 11, 1, 'lake', n, q, CENTER=.TRUE.)
       ! -- create line separator
       linesep = repeat('-', iloc)
@@ -4518,7 +4518,7 @@ contains
       if (this%inamedbound==1) then
         call UWWORD(line, iloc, 16, 1, 'name', n, q, left=.TRUE.)
       end if
-      call UWWORD(line, iloc, 6, 1, 'no.', n, q, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 6, 1, 'no.', n, q, CENTER=.TRUE., SEP=' ')
       call UWWORD(line, iloc, 11, 1, 'stage', n, q, CENTER=.TRUE.)
       ! -- write second line
       write(iout,'(1X,A)') line(1:iloc)
@@ -4530,7 +4530,7 @@ contains
         if (this%inamedbound==1) then
           call UWWORD(line, iloc, 16, 1, this%lakename(n), n, q, left=.TRUE.)
         end if
-        call UWWORD(line, iloc, 6, 2, text, n, q)
+        call UWWORD(line, iloc, 6, 2, text, n, q, SEP=' ')
         call UWWORD(line, iloc, 11, 3, text, n, this%xnewpak(n))
         write(iout, '(1X,A)') line(1:iloc)
       end do

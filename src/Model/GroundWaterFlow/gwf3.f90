@@ -618,9 +618,8 @@ module GwfModule
     end if
     ! -- skeletal storage, compaction, and land subsidence 
     if(this%incsub > 0) then
-      call this%csub%csub_fc(kiter, this%dis%nodes, this%xold,                 &
-                             this%x, this%nja, njasln,                         &
-                             amatsln, this%idxglo, this%rhs)
+      call this%csub%csub_fc(kiter, this%xold, this%x, njasln, amatsln,        &
+                             this%idxglo, this%rhs)
     end if
     if(this%inmvr > 0) call this%mvr%mvr_fc()
     do ip = 1, this%bndlist%Count()
@@ -657,8 +656,8 @@ module GwfModule
     ! -- Fill newton terms for skeletal storage, compaction, and land subsidence 
     if(this%incsub > 0) then
       if (inwtcsub /= 0) then
-        call this%csub%csub_fn(kiter, this%dis%nodes, this%xold, this%x,        &
-                               this%nja, njasln, amatsln, this%idxglo, this%rhs)
+        call this%csub%csub_fn(kiter, this%xold, this%x, njasln, amatsln,      &
+                               this%idxglo, this%rhs)
       end if
     end if
     !
