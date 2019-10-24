@@ -181,10 +181,10 @@ def get_ske():
 def get_interbed(headbased=False, delay=False):
     if headbased:
         ini_stress = strt - 15.
-        ske_cr = get_ske()
+        cg_ske_cr = get_ske()
     else:
         ini_stress = 15.
-        ske_cr = [cr for k in range(nlay)]
+        cg_ske_cr = [cr for k in range(nlay)]
 
     # create csub interbed data
     swt6 = []
@@ -210,7 +210,7 @@ def get_interbed(headbased=False, delay=False):
                 if iactive > 0:
                     tag = '{:02d}_{:02d}_{:02d}'.format(k + 1, i + 1, j + 1)
                     d = [csubno, (k, i, j), cdelay, ini_stress, bib,
-                         rnb, ske_cr[k], ske_cr[k], theta,
+                         rnb, cg_ske_cr[k], cg_ske_cr[k], theta,
                          vk, strt, tag]
                     swt6.append(d)
                     csubno += 1
@@ -301,16 +301,16 @@ def build_mf6(idx, ws, interbed=False):
         hb = True
         ssgs = None
         ssgm = None
-        ske_cr = get_ske()
+        cg_ske_cr = get_ske()
     else:
         eslag = True
         ci = True
         hb = None
         ssgs = sgs
         ssgm = sgm
-        ske_cr = [cr for k in range(nlay)]
+        cg_ske_cr = [cr for k in range(nlay)]
     if interbed:
-        ske_cr[2] = 0
+        cg_ske_cr[2] = 0
     opth = '{}.csub.obs'.format(name)
     csub = flopy.mf6.ModflowGwfcsub(gwf,
                                     print_input=True,
@@ -322,8 +322,8 @@ def build_mf6(idx, ws, interbed=False):
                                     sgs=ssgs, sgm=ssgm,
                                     beta=beta,
                                     gammaw=gammaw,
-                                    ske_cr=ske_cr,
-                                    sk_theta=theta,
+                                    cg_ske_cr=cg_ske_cr,
+                                    cg_theta=theta,
                                     packagedata=sswt6)
     orecarray = {}
     orecarray['csub_obs.csv'] = [('wc01', 'compaction-cell', (1, 5,  8)),

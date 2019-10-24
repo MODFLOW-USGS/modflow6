@@ -210,8 +210,8 @@ def get_model(idx, dir):
                                     sgs=sgs, sgm=sgm,
                                     beta=beta,
                                     gammaw=gammaw,
-                                    ske_cr=0.,
-                                    sk_theta=theta,
+                                    cg_ske_cr=0.,
+                                    cg_theta=theta,
                                     packagedata=swt6,
                                     maxsig0=len(gg),
                                     stress_period_data=sig0)

@@ -25,9 +25,9 @@ exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
 ddir = 'data'
-sk_ske = 1.14e-3 / (500. - 20.)
-sk_S = sk_ske * (500. - 20.)
-ss = [sk_S, sk_S, sk_ske, sk_ske, sk_S]
+cg_ske = 1.14e-3 / (500. - 20.)
+cg_S = cg_ske * (500. - 20.)
+ss = [cg_S, cg_S, cg_ske, cg_ske, cg_S]
 storagecoeff = [True, True, False, False, True]
 cdelay = [False, True, False, True, True]
 ndelaycells = [None, 19, None, 19, 19]
@@ -176,7 +176,7 @@ def get_model(idx, dir):
     csub = flopy.mf6.ModflowGwfcsub(gwf, head_based=True,
                                     ndelaycells=ndelaycells[idx],
                                     ninterbeds=1,
-                                    beta=0., ske_cr=sk_ske,
+                                    beta=0., cg_ske_cr=cg_ske,
                                     packagedata=sub6)
 
     # output control

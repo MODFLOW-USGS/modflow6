@@ -252,8 +252,8 @@ def build_mf6(idx, ws, interbed=False):
                                     sgs=sgs, sgm=sgm,
                                     beta=beta,
                                     gammaw=gammaw,
-                                    ske_cr=0.,
-                                    sk_theta=theta,
+                                    cg_ske_cr=0.,
+                                    cg_theta=theta,
                                     packagedata=sswt6)
     orecarray = {}
     orecarray['csub_obs.csv'] = [('wc01', 'wcomp-csub-cell', (1, 5,  8)),

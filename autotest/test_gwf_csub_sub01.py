@@ -169,7 +169,7 @@ def get_model(idx, dir):
                                    effective_stress_lag=True,
                                    ndelaycells=ndcell[idx],
                                    ninterbeds=1,
-                                   beta=0., ske_cr=ss,
+                                   beta=0., cg_ske_cr=ss,
                                    packagedata=sub6)
     orecarray = {}
     orecarray['csub_obs.csv'] = [('tcomp', 'compaction-cell', (0, 0, 1)),

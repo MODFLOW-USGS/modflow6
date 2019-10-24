@@ -154,7 +154,7 @@ def build_mf6(idx, ws, newton=None):
                                     effective_stress_lag=True,
                                     ndelaycells=ndcell[idx],
                                     ninterbeds=1,
-                                    beta=0., ske_cr=0.,
+                                    beta=0., cg_ske_cr=0.,
                                     packagedata=sub6)
     orecarray = {}
     orecarray['csub_obs.csv'] = [('tcomp', 'compaction-cell', (0, 0, 1))]

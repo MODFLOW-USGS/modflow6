@@ -1,8 +1,8 @@
 BEGIN GRIDDATA
-  SKE_CR
-    <ske_cr(nodes)> -- READARRAY
-  SK_THETA
-    <sk_theta(nodes)> -- READARRAY
+  CG_SKE_CR
+    <cg_ske_cr(nodes)> -- READARRAY
+  CG_THETA
+    <cg_theta(nodes)> -- READARRAY
   [SGM
     <sgm(nodes)> -- READARRAY]
   [SGS

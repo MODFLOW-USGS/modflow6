@@ -66,7 +66,7 @@ type keyword
 reader urword
 optional true
 longname keyword to indicate CR and CC are read instead of SSE and SSV
-description keyword to indicate that the the recompression (CR) and compression (CC) indices are specified instead of the elastic skeletal specific storage (SSE) and inelastic skeletal specific storage (SSV) coefficients. If not specified, then elastic skeletal specific storage (SSE) and inelastic skeletal specific storage (SSV) coefficients must be specified.
+description keyword to indicate that the the recompression (CR) and compression (CC) indices are specified instead of the elastic specific storage (SSE) and inelastic specific storage (SSV) coefficients. If not specified, then elastic specific storage (SSE) and inelastic specific storage (SSV) coefficients must be specified.
 
 block options
 name update_material_properties
@@ -74,7 +74,7 @@ type keyword
 reader urword
 optional true
 longname keyword to indicate material properties can change during the simulations
-description keyword to indicate that the thickness and void ratio of skeletal and no delay interbed sediments will vary during the simulation. If not specified, the thickness and void ratio of skeletal and no delay interbed sediments will not vary during the simulation.
+description keyword to indicate that the thickness and void ratio of coarse-grained and no delay interbed sediments will vary during the simulation. If not specified, the thickness and void ratio of coarse-grained and no delay interbed sediments will not vary during the simulation.
 
 block options
 name cell_fraction
@@ -162,8 +162,8 @@ longname file keyword
 description name of the comma-separated-values output file to write final interbed strain information.
 
 block options
-name strainsk_filerecord
-type record strain_csv_skeletal fileout skeletalstrain_filename
+name straincg_filerecord
+type record strain_csv_coarse fileout coarsestrain_filename
 shape
 reader urword
 tagged true
@@ -172,7 +172,7 @@ longname
 description
 
 block options
-name strain_csv_skeletal
+name strain_csv_coarse
 type keyword
 shape
 in_record true
@@ -180,10 +180,10 @@ reader urword
 tagged true
 optional false
 longname budget keyword
-description keyword to specify the record that corresponds to final skeletal strain output.
+description keyword to specify the record that corresponds to final coarse-grained material strain output.
 
 block options
-name skeletalstrain_filename
+name coarsestrain_filename
 type string
 shape
 in_record true
@@ -191,7 +191,7 @@ reader urword
 tagged false
 optional false
 longname file keyword
-description name of the comma-separated-values output file to write final skeletal strain information.
+description name of the comma-separated-values output file to write final coarse-grained material strain information.
 
 # binary compaction output
 block options
@@ -334,8 +334,8 @@ longname file keyword
 description name of the binary output file to write interbed compaction information.
 
 block options
-name compaction_skeletal_filerecord
-type record compaction_skeletal fileout skeletal_compaction_filename
+name compaction_coarse_filerecord
+type record compaction_coarse fileout coarse_compaction_filename
 shape
 reader urword
 tagged true
@@ -344,18 +344,18 @@ longname
 description
 
 block options
-name compaction_skeletal
+name compaction_coarse
 type keyword
 shape
 in_record true
 reader urword
 tagged true
 optional false
-longname skeletal compaction keyword
-description keyword to specify that record corresponds to the elastic skeletal compaction binary file.
+longname coarse compaction keyword
+description keyword to specify that record corresponds to the elastic coarse-grained material compaction binary file.
 
 block options
-name skeletal_compaction_filename
+name coarse_compaction_filename
 type string
 shape
 in_record true
@@ -363,7 +363,7 @@ reader urword
 tagged false
 optional false
 longname file keyword
-description name of the binary output file to write elastic skeletal compaction information.
+description name of the binary output file to write elastic coarse-grained material compaction information.
 
 block options
 name zdisplacement_filerecord
@@ -492,23 +492,23 @@ description is the maximum number of cells that can have a specified stress offs
 # --------------------- gwf csub griddata ---------------------
 
 block griddata
-name ske_cr
+name cg_ske_cr
 type double precision
 shape (nodes)
 valid
 reader readarray
-longname elastic skeletal specific storage
-description is the initial elastic skeletal specific storage or recompression index. The recompression index is specified if COMPRESSION\_INDICES is specified in the OPTIONS block.  Specified or calculated elastic skeletal specific storage values are not adjusted from initial values if HEAD\_BASED is specified in the OPTIONS block.
+longname elastic coarse specific storage
+description is the initial elastic coarse-grained material specific storage or recompression index. The recompression index is specified if COMPRESSION\_INDICES is specified in the OPTIONS block.  Specified or calculated elastic coarse-grained material specific storage values are not adjusted from initial values if HEAD\_BASED is specified in the OPTIONS block.
 default_value 1e-5
 
 block griddata
-name sk_theta
+name cg_theta
 type double precision
 shape (nodes)
 valid
 reader readarray
-longname initial aquifer porosity
-description is the initial porosity of the aquifer.
+longname initial coarse-grained material porosity
+description is the initial porosity of coarse-grained materials.
 default_value 0.2
 
 block griddata
@@ -620,7 +620,7 @@ tagged false
 in_record true
 reader urword
 longname initial elastic interbed specific storage
-description is the initial elastic skeletal specific storage or recompression index of the interbed. The recompression index is specified if COMPRESSION\_INDICES is specified in the OPTIONS block. Specified or calculated interbed elastic specific storage values are not adjusted from initial values if HEAD\_BASED is specified in the OPTIONS block.
+description is the initial elastic coarse-grained material specific storage or recompression index of the interbed. The recompression index is specified if COMPRESSION\_INDICES is specified in the OPTIONS block. Specified or calculated interbed elastic specific storage values are not adjusted from initial values if HEAD\_BASED is specified in the OPTIONS block.
 
 block packagedata
 name theta

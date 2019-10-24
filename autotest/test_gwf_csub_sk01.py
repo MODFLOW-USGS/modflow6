@@ -231,8 +231,8 @@ def get_model(idx, dir):
     csub = flopy.mf6.ModflowGwfcsub(gwf, head_based=True,
                                     save_flows=True,
                                     ninterbeds=0,
-                                    sk_theta=theta,
-                                    ske_cr=crnd0,
+                                    cg_theta=theta,
+                                    cg_ske_cr=crnd0,
                                     packagedata=None)
     obspos = [(0, 4, 4), (1, 4, 4), (2, 4, 4)]
     obstype = ['compaction-cell', 'csub-cell']
