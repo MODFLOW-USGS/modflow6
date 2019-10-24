@@ -131,8 +131,6 @@ module GwfCsubModule
     integer(I4B), dimension(:), pointer, contiguous :: iconvert => null()        !0 = elastic, > 0 = inelastic
     real(DP), dimension(:), pointer, contiguous :: ci => null()                  !compression index
     real(DP), dimension(:), pointer, contiguous :: rci => null()                 !recompression index
-    real(DP), dimension(:), pointer, contiguous :: es => null()                  !effective stress
-    real(DP), dimension(:), pointer, contiguous :: es0 => null()                 !last effective stress
     real(DP), dimension(:), pointer, contiguous :: pcs => null()                 !preconsolidation stress
     real(DP), dimension(:), pointer, contiguous :: thick => null()               !current interbed thickness
     real(DP), dimension(:), pointer, contiguous :: theta => null()               !current interbed porosity
