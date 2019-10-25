@@ -12,7 +12,7 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['sto_sto01']
+ex = ['gwf_sto01']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
@@ -25,7 +25,7 @@ ddir = 'data'
 ## run all examples on Travis
 travis = [True for idx in range(len(exdirs))]
 
-# set replace_exe to None to use default executable
+# use default executable
 replace_exe = None
 
 htol = [None for idx in range(len(exdirs))]
@@ -370,7 +370,6 @@ def main():
     return
 
 
-# use python testmf6_csub_sub03.py
 if __name__ == "__main__":
     # print message
     print('standalone run of {}'.format(os.path.basename(__file__)))

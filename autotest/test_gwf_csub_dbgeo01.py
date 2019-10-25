@@ -204,12 +204,12 @@ def get_model(idx, dir):
                                     print_input=True,
                                     ndelaycells=ndcell[idx],
                                     strainib_filerecord=ibcsv,
-                                    strainsk_filerecord=skcsv,
+                                    straincg_filerecord=skcsv,
                                     effective_stress_lag=True,
                                     # compression_indices=True,
                                     ninterbeds=1,
                                     sgs=sgs, sgm=sgm, packagedata=sub6,
-                                    beta=0., ske_cr=0.)
+                                    beta=0., cg_ske_cr=0.)
     orecarray = {}
     orecarray['csub_obs.csv'] = [('tcomp', 'interbed-compaction', (0, 0, 1)),
                                  ('gs', 'gstress-cell', (0, 0, 1)),

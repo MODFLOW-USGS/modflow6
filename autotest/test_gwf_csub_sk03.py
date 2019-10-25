@@ -401,8 +401,8 @@ def get_model(idx, dir):
                                     compression_indices=compression_indices,
                                     sgm=sgm,
                                     sgs=sgs,
-                                    sk_theta=theta,
-                                    ske_cr=sc,
+                                    cg_theta=theta,
+                                    cg_ske_cr=sc,
                                     beta=beta,
                                     packagedata=None,
                                     stress_period_data={0: sig0})

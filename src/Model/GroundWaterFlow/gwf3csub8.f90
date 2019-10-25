@@ -37,7 +37,7 @@ module GwfCsubModule
        ' CSUB-WATERCOMP']
   character(len=LENBUDTXT), dimension(6) :: comptxt =                           & !text labels for compaction terms
       ['CSUB-COMPACTION', ' CSUB-INELASTIC', '   CSUB-ELASTIC',                 &
-       '  CSUB-INTERBED', '  CSUB-SKELETAL', ' CSUB-ZDISPLACE']
+       '  CSUB-INTERBED', '    CSUB-COARSE', ' CSUB-ZDISPLACE']
   
   !
   ! -- local parameter - derivative of the log of effective stress
@@ -101,26 +101,25 @@ module GwfCsubModule
     integer, dimension(:), pointer, contiguous :: nodelist => null()             !reduced node that the interbed is attached to
     integer, dimension(:), pointer, contiguous :: unodelist => null()            !user node that the interbed is attached to
     !
-    ! -- skeletal storage variables
+    ! -- coarse-grained storage variables
     real(DP), dimension(:), pointer, contiguous :: sgm => null()                 !specific gravity moist sediments
     real(DP), dimension(:), pointer, contiguous :: sgs => null()                 !specific gravity saturated sediments
-    real(DP), dimension(:), pointer, contiguous :: ske_cr => null()              !skeletal specified storage
-    real(DP), dimension(:), pointer, contiguous :: sk_theta => null()            !current skeletal (aquifer) porosity
-    real(DP), dimension(:), pointer, contiguous :: sk_thick => null()            !current skeletal (aquifer) thickness
-    real(DP), dimension(:), pointer, contiguous :: sk_theta0 => null()           !previous skeletal (aquifer) porosity
-    real(DP), dimension(:), pointer, contiguous :: sk_thick0 => null()           !previous skeletal (aquifer) thickness
-    real(DP), dimension(:), pointer, contiguous :: sk_gs => null()               !geostatic stress for a cell
-    real(DP), dimension(:), pointer, contiguous :: sk_es => null()               !skeletal (aquifer) effective stress
-    real(DP), dimension(:), pointer, contiguous :: sk_es0 => null()              !skeletal (aquifer) effective stress for the previous time step
-    real(DP), dimension(:), pointer, contiguous :: sk_esi => null()              !skeletal (aquifer) effective stress for the previous outer iteration
-    real(DP), dimension(:), pointer, contiguous :: sk_pcs => null()              !skeletal (aquifer) preconsolidation stress
-    real(DP), dimension(:), pointer, contiguous :: sk_comp => null()             !skeletal (aquifer) incremental compaction
-    real(DP), dimension(:), pointer, contiguous :: sk_tcomp => null()            !skeletal (aquifer) total compaction
-    real(DP), dimension(:), pointer, contiguous :: sk_stor => null()             !skeletal (aquifer) storage
-    real(DP), dimension(:), pointer, contiguous :: sk_ske => null()              !skeletal (aquifer) elastic storage coefficient
-    real(DP), dimension(:), pointer, contiguous :: sk_sk => null()               !skeletal (aquifer) first storage coefficient
-    real(DP), dimension(:), pointer, contiguous :: sk_thickini => null()         !initial skeletal (aquifer) thickness
-    real(DP), dimension(:), pointer, contiguous :: sk_thetaini => null()         !initial skeletal (aquifer) porosity
+    real(DP), dimension(:), pointer, contiguous :: cg_ske_cr => null()           !coarse-grained specified storage
+    real(DP), dimension(:), pointer, contiguous :: cg_theta => null()            !current coarse-grained (aquifer) porosity
+    real(DP), dimension(:), pointer, contiguous :: cg_thick => null()            !current coarse-grained (aquifer) thickness
+    real(DP), dimension(:), pointer, contiguous :: cg_theta0 => null()           !previous coarse-grained (aquifer) porosity
+    real(DP), dimension(:), pointer, contiguous :: cg_thick0 => null()           !previous coarse-grained (aquifer) thickness
+    real(DP), dimension(:), pointer, contiguous :: cg_gs => null()               !geostatic stress for a cell
+    real(DP), dimension(:), pointer, contiguous :: cg_es => null()               !coarse-grained (aquifer) effective stress
+    real(DP), dimension(:), pointer, contiguous :: cg_es0 => null()              !coarse-grained (aquifer) effective stress for the previous time step
+    real(DP), dimension(:), pointer, contiguous :: cg_pcs => null()              !coarse-grained (aquifer) preconsolidation stress
+    real(DP), dimension(:), pointer, contiguous :: cg_comp => null()             !coarse-grained (aquifer) incremental compaction
+    real(DP), dimension(:), pointer, contiguous :: cg_tcomp => null()            !coarse-grained (aquifer) total compaction
+    real(DP), dimension(:), pointer, contiguous :: cg_stor => null()             !coarse-grained (aquifer) storage
+    real(DP), dimension(:), pointer, contiguous :: cg_ske => null()              !coarse-grained (aquifer) elastic storage coefficient
+    real(DP), dimension(:), pointer, contiguous :: cg_sk => null()               !coarse-grained (aquifer) first storage coefficient
+    real(DP), dimension(:), pointer, contiguous :: cg_thickini => null()         !initial coarse-grained (aquifer) thickness
+    real(DP), dimension(:), pointer, contiguous :: cg_thetaini => null()         !initial coarse-grained (aquifer) porosity
     !
     ! -- cell storage variables
     real(DP), dimension(:), pointer, contiguous :: cell_wcstor => null()         !cell water compressibility storage
@@ -132,8 +131,6 @@ module GwfCsubModule
     integer(I4B), dimension(:), pointer, contiguous :: iconvert => null()        !0 = elastic, > 0 = inelastic
     real(DP), dimension(:), pointer, contiguous :: ci => null()                  !compression index
     real(DP), dimension(:), pointer, contiguous :: rci => null()                 !recompression index
-    real(DP), dimension(:), pointer, contiguous :: es => null()                  !effective stress
-    real(DP), dimension(:), pointer, contiguous :: es0 => null()                 !last effective stress
     real(DP), dimension(:), pointer, contiguous :: pcs => null()                 !preconsolidation stress
     real(DP), dimension(:), pointer, contiguous :: thick => null()               !current interbed thickness
     real(DP), dimension(:), pointer, contiguous :: theta => null()               !current interbed porosity
@@ -225,20 +222,20 @@ module GwfCsubModule
     procedure, private :: csub_delay_eval
     !
     ! -- stress methods
-    procedure, private :: csub_sk_calc_stress
-    procedure, private :: csub_sk_chk_stress
+    procedure, private :: csub_cg_calc_stress
+    procedure, private :: csub_cg_chk_stress
     !
     ! -- initial states
     procedure, private :: csub_set_initial_state
     !
-    ! -- coarse-grained skeletal methods
-    procedure, private :: csub_sk_update
-    procedure, private :: csub_sk_calc_comp
-    procedure, private :: csub_sk_calc_sske
-    procedure, private :: csub_sk_fc
-    procedure, private :: csub_sk_fn
-    procedure, private :: csub_sk_wcomp_fc
-    procedure, private :: csub_sk_wcomp_fn
+    ! -- coarse-grained coarse-grained methods
+    procedure, private :: csub_cg_update
+    procedure, private :: csub_cg_calc_comp
+    procedure, private :: csub_cg_calc_sske
+    procedure, private :: csub_cg_fc
+    procedure, private :: csub_cg_fn
+    procedure, private :: csub_cg_wcomp_fc
+    procedure, private :: csub_cg_wcomp_fn
     !
     ! -- interbed methods
     procedure, private :: csub_interbed_fc
@@ -553,7 +550,7 @@ contains
   subroutine csub_bdcalc(this, nodes, hnew, hold, isuppress_output,             &
                           model_budget)
 ! ******************************************************************************
-! csub_bd -- calculate budget for skeletal storage, interbeds, and water
+! csub_bd -- calculate budget for coarse-grained storage, interbeds, and water
 !            compression   
 ! ******************************************************************************
 !
@@ -623,7 +620,7 @@ contains
     ratewcin = DZERO
     ratewcout = DZERO
     !
-    ! -- coarse-grained skeletal storage
+    ! -- coarse-grained coarse-grained storage
     rateskin = DZERO
     rateskout= DZERO
     do node = 1, this%dis%nodes
@@ -639,13 +636,13 @@ contains
         end if
         if (this%ibound(node) > 0) then
           !
-          ! -- calculate coarse-grained skeletal storage terms
-          call this%csub_sk_fc(node, tled, area, hnew(node), hold(node),        &
+          ! -- calculate coarse-grained storage terms
+          call this%csub_cg_fc(node, tled, area, hnew(node), hold(node),        &
                                hcof, rhs)
           rrate = hcof * hnew(node) - rhs
           !
           ! -- calculate compaction
-          call this%csub_sk_calc_comp(node, hnew(node), hold(node), comp)
+          call this%csub_cg_calc_comp(node, hnew(node), hold(node), comp)
           !
           ! -- budget terms
           if (rrate < DZERO) then
@@ -654,8 +651,8 @@ contains
             rateskin = rateskin + rrate
           end if
           !
-          ! -- calculate coarse-grained skeletal water compressibility storage terms
-          call this%csub_sk_wcomp_fc(node, tled, area, hnew(node), hold(node),  &
+          ! -- calculate coarse-grained water compressibility storage terms
+          call this%csub_cg_wcomp_fc(node, tled, area, hnew(node), hold(node),  &
                                      hcof, rhs)
           rratewc = hcof * hnew(node) - rhs
           !
@@ -668,26 +665,26 @@ contains
         end if
       end if
       !
-      ! -- update coarse-grained skeletal storage and water
+      ! -- update coarse-grained storage and water
       !    compresion variables
-      this%sk_stor(node) = rrate
+      this%cg_stor(node) = rrate
       this%cell_wcstor(node) = rratewc
-      this%cell_thick(node) = this%sk_thick(node)
+      this%cell_thick(node) = this%cg_thick(node)
       !
       ! -- update incremental compaction
-      this%sk_comp(node) = comp
+      this%cg_comp(node) = comp
       ! 
       !
       ! -- update states if required
       if (isuppress_output == 0) then
         !
-        ! - calculate strain and change in skeletal void ratio and thickness
+        ! - calculate strain and change in coarse-grained void ratio and thickness
         if (this%iupdatematprop /= 0) then
-          call this%csub_sk_update(node)
+          call this%csub_cg_update(node)
         end if
         !
         ! -- update total compaction
-        this%sk_tcomp(node) = this%sk_tcomp(node) + comp
+        this%cg_tcomp(node) = this%cg_tcomp(node) + comp
       end if
     end do
     !
@@ -725,9 +722,9 @@ contains
                                            rho1, rho2)
           !
           ! -- interbed stresses
-          es = this%sk_es(node)
+          es = this%cg_es(node)
           pcs = this%pcs(ib)
-          es0 = this%sk_es0(node)
+          es0 = this%cg_es0(node)
           !
           ! -- calculate inelastic and elastic compaction
           if (ielastic > 0 .or. iconvert == 0) then
@@ -907,8 +904,8 @@ contains
       iprint = 0
       dinact = DZERO
       !
-      ! -- skeletal storage (sske)
-      call this%dis%record_array(this%sk_stor, this%iout, iprint, -ibinun,      &
+      ! -- coarse-grained storage (sske)
+      call this%dis%record_array(this%cg_stor, this%iout, iprint, -ibinun,      &
                                  budtxt(1), cdatafmp, nvaluesp,                 &
                                  nwidthp, editdesc, dinact)
       if (this%ninterbeds > 0) then
@@ -960,7 +957,7 @@ contains
       !
       ! -- fill buff with total compaction
       do node = 1, this%dis%nodes
-        this%buff(node) = this%sk_tcomp(node)
+        this%buff(node) = this%cg_tcomp(node)
       end do
       do ib = 1, this%ninterbeds
         node = this%nodelist(ib)
@@ -1108,7 +1105,7 @@ contains
                                  nwidthp, editdesc, dinact)
     end if
     !
-    ! -- Set unit number for binary skeletal compaction
+    ! -- Set unit number for binary coarse-grained compaction
     if(this%ioutcomps /= 0) then
       ibinun = this%ioutcomps
     else
@@ -1116,17 +1113,17 @@ contains
     endif
     if(idvfl == 0) ibinun = 0
     !
-    ! -- save skeletal compaction results
+    ! -- save coarse-grained compaction results
     if(ibinun /= 0) then
       iprint = 0
       dinact = DHNOFLO
       !
-      ! -- fill buff with skeletal compaction
+      ! -- fill buff with coarse-grained compaction
       do node = 1, this%dis%nodes
-        this%buff(node) = this%sk_tcomp(node)
+        this%buff(node) = this%cg_tcomp(node)
       end do
       !
-      ! -- write skeletal compaction data to binary file
+      ! -- write coarse-grained compaction data to binary file
       call this%dis%record_array(this%buff, this%iout, iprint, ibinun,          &
                                  comptxt(5), cdatafmp, nvaluesp,                &
                                  nwidthp, editdesc, dinact)
@@ -1140,7 +1137,7 @@ contains
     ! -- check that final effective stress values for the time step
     !    are greater than zero
     if (this%gwfiss == 0) then
-      call this%csub_sk_chk_stress()
+      call this%csub_cg_chk_stress()
     end if
     !
     ! -- Return
@@ -1346,8 +1343,8 @@ contains
     iexceed = 0
     do node = 1, this%dis%nodes
       strain = DZERO
-      if (this%sk_thickini(node) > DZERO) then
-        strain = this%sk_tcomp(node) / this%sk_thickini(node)
+      if (this%cg_thickini(node) > DZERO) then
+        strain = this%cg_tcomp(node) / this%cg_thickini(node)
       end if
       pctcomp = DHUNDRED * strain
       pctcomp_arr(node) = pctcomp
@@ -1357,16 +1354,16 @@ contains
     end do
     call selectn(imap_sel, pctcomp_arr, reverse=.TRUE.)
     !
-    ! -- summary skeletal strain table
+    ! -- summary coarse-grained strain table
     i0 = max(1, this%dis%nodes-ncells+1)
     i1 = this%dis%nodes
     msg = ''
     if (iexceed /= 0) then
       write(msg,'(a,1x,i0,1x,a,1x,i0,1x,a)')                                    &
         '-- LARGEST ', (i1 - i0 + 1), 'OF', this%dis%nodes,                     &
-        'CELL SKELETAL VALUES SHOWN'
+        'CELL COARSE-GRAINED VALUES SHOWN'
     end if
-    write (this%iout, 2000) trim(this%name), 'SKELETAL STRAIN SUMMARY',         &
+    write (this%iout, 2000) trim(this%name), 'COARSE-GRAINED STRAIN SUMMARY',   &
       trim(adjustl(msg))
     iloc = 1
     line = ''
@@ -1399,8 +1396,8 @@ contains
     if (iexceed /= 0) then
       do nn = 1, nlen
         node = imap_sel(nn)
-        if (this%sk_thickini(node) > DZERO) then
-          strain = this%sk_tcomp(node) / this%sk_thickini(node)
+        if (this%cg_thickini(node) > DZERO) then
+          strain = this%cg_tcomp(node) / this%cg_thickini(node)
         else
           strain = DZERO
         end if
@@ -1416,21 +1413,21 @@ contains
         iloc = 1
         line = ''
         call UWWORD(line, iloc, 20, 1, cellid, n, rval, CENTER=.TRUE.)
-        call UWWORD(line, iloc, 16, 3, text, n, this%sk_thickini(node))
-        call UWWORD(line, iloc, 16, 3, text, n, this%sk_thick(node))
-        call UWWORD(line, iloc, 16, 3, text, n, this%sk_tcomp(node))
+        call UWWORD(line, iloc, 16, 3, text, n, this%cg_thickini(node))
+        call UWWORD(line, iloc, 16, 3, text, n, this%cg_thick(node))
+        call UWWORD(line, iloc, 16, 3, text, n, this%cg_tcomp(node))
         call UWWORD(line, iloc, 16, 3, text, n, strain)
         call UWWORD(line, iloc, 16, 3, text, n, pctcomp)
         call UWWORD(line, iloc, 10, 1, cflag, ib, rval)
         write(this%iout, '(1X,A)') line(1:iloc)
       end do
       write(this%iout, '(/1X,A,1X,I0,1X,A,1X,I0,1X,A,/1X,A,/1X,A)') &
-        'SKELETAL STORAGE PERCENT COMPACTION IS GREATER THAN OR ' //          &
+        'COARSE-GRAINED STORAGE PERCENT COMPACTION IS GREATER THAN OR ' //    &
         'EQUAL TO 1 PERCENT IN', iexceed, 'OF', this%dis%nodes, 'CELL(S).',   &
-        'USE THE STRAIN_CSV_SKELETAL OPTION TO OUTPUT A CSV ' //              &
+        'USE THE STRAIN_CSV_COARSE OPTION TO OUTPUT A CSV ' //                &
         'FILE WITH PERCENT COMPACTION ', 'VALUES FOR ALL CELLS.'
     else
-      msg = 'SKELETAL STORAGE PERCENT COMPACTION WAS LESS THAN ' //           &
+      msg = 'COARSE-GRAINED STORAGE PERCENT COMPACTION WAS LESS THAN ' //     &
             '1 PERCENT IN ALL CELLS '
       write(this%iout, '(/1X,A)') trim(adjustl(msg))
     end if
@@ -1450,8 +1447,8 @@ contains
       write(this%istrainsk,'(1X,A)') line(1:iloc)
       ! -- write data
       do node = 1, this%dis%nodes
-        if (this%sk_thickini(node) > DZERO) then
-          strain = this%sk_tcomp(node) / this%sk_thickini(node)
+        if (this%cg_thickini(node) > DZERO) then
+          strain = this%cg_tcomp(node) / this%cg_thickini(node)
         else
           strain = DZERO
         end if
@@ -1462,10 +1459,10 @@ contains
         call UWWORD(line, iloc, 20, 2, text, node, rval, SEP=',')
         call UWWORD(line, iloc, 22, 1, '"'//trim(adjustl(cellid))//'"',       &
                     n, rval, SEP=',')
-        call UWWORD(line, iloc, 20, 3, text, n, this%sk_thickini(node),       &
+        call UWWORD(line, iloc, 20, 3, text, n, this%cg_thickini(node),       &
                     SEP=',')
-        call UWWORD(line, iloc, 20, 3, text, n, this%sk_thick(node), SEP=',')
-        call UWWORD(line, iloc, 20, 3, text, n, this%sk_tcomp(node), SEP=',')
+        call UWWORD(line, iloc, 20, 3, text, n, this%cg_thick(node), SEP=',')
+        call UWWORD(line, iloc, 20, 3, text, n, this%cg_tcomp(node), SEP=',')
         call UWWORD(line, iloc, 20, 3, text, n, strain, SEP=',')
         call UWWORD(line, iloc, 20, 3, text, n, pctcomp)
         write(this%istrainsk, '(1X,A)') line(1:iloc)
@@ -2064,7 +2061,7 @@ contains
                        'FOLLOWED BY FILEOUT'
               call store_error(errmsg)
             end if
-          case ('STRAIN_CSV_SKELETAL')
+          case ('STRAIN_CSV_COARSE')
             call this%parser%GetStringCaps(keyword)
             if (keyword == 'FILEOUT') then
               call this%parser%GetString(fname)
@@ -2072,9 +2069,9 @@ contains
               call openfile(this%istrainsk, this%iout, fname, 'CSV_OUTPUT',     &
                             filstat_opt='REPLACE')
               write(this%iout,fmtfileout) &
-                'SKELETAL STRAIN CSV', fname, this%istrainsk
+                'COARSE STRAIN CSV', fname, this%istrainsk
             else
-              errmsg = 'OPTIONAL STRAIN_CSV_SKELETAL KEYWORD MUST BE ' //       &
+              errmsg = 'OPTIONAL STRAIN_CSV_COARSE KEYWORD MUST BE ' //         &
                        'FOLLOWED BY FILEOUT'
               call store_error(errmsg)
             end if
@@ -2136,7 +2133,7 @@ contains
                        'FOLLOWED BY FILEOUT'
               call store_error(errmsg)
             end if
-          case ('COMPACTION_SKELETAL')
+          case ('COMPACTION_COARSE')
             call this%parser%GetStringCaps(keyword)
             if (keyword == 'FILEOUT') then
               call this%parser%GetString(fname)
@@ -2144,9 +2141,9 @@ contains
               call openfile(this%ioutcomps, this%iout, fname,                   &
                             'DATA(BINARY)', form, access, 'REPLACE')
               write(this%iout,fmtfileout) &
-                'COMPACTION_SKELETAL', fname, this%ioutcomps
+                'COMPACTION_COARSE', fname, this%ioutcomps
             else 
-              errmsg = 'OPTIONAL COMPACTION_ELASTIC KEYWORD MUST BE ' //        &
+              errmsg = 'OPTIONAL COMPACTION_COARSE KEYWORD MUST BE ' //         &
                        'FOLLOWED BY FILEOUT'
               call store_error(errmsg)
             end if
@@ -2312,36 +2309,45 @@ contains
     if (this%ioutcomp == 0 .and. this%ioutzdisp == 0) then
       call mem_allocate(this%buffusr, 1, 'buffusr', trim(this%origin))
     else
-      call mem_allocate(this%buffusr, this%dis%nodesuser, 'buffusr',            &
+      call mem_allocate(this%buffusr, this%dis%nodesuser, 'buffusr',             &
                         trim(this%origin))
     end if
     call mem_allocate(this%sgm, this%dis%nodes, 'sgm', trim(this%origin))
     call mem_allocate(this%sgs, this%dis%nodes, 'sgs', trim(this%origin))
-    call mem_allocate(this%ske_cr, this%dis%nodes, 'ske_cr', trim(this%origin))
-    call mem_allocate(this%sk_theta, this%dis%nodes, 'sk_theta', trim(this%origin))
-    call mem_allocate(this%sk_thick, this%dis%nodes, 'sk_thick', trim(this%origin))
+    call mem_allocate(this%cg_ske_cr, this%dis%nodes, 'cg_ske_cr',               &
+                      trim(this%origin))
+    call mem_allocate(this%cg_theta, this%dis%nodes, 'cg_theta',                 &
+                      trim(this%origin))
+    call mem_allocate(this%cg_thick, this%dis%nodes, 'cg_thick',                 &
+                      trim(this%origin))
     if (this%iupdatematprop == 0) then
-      call mem_setptr(this%sk_theta0, 'sk_theta', trim(this%origin))
-      call mem_setptr(this%sk_thick0, 'sk_thick', trim(this%origin))
+      call mem_setptr(this%cg_theta0, 'cg_theta', trim(this%origin))
+      call mem_setptr(this%cg_thick0, 'cg_thick', trim(this%origin))
     else
-      call mem_allocate(this%sk_theta0, this%dis%nodes, 'sk_theta0', trim(this%origin))
-      call mem_allocate(this%sk_thick0, this%dis%nodes, 'sk_thick0', trim(this%origin))
+      call mem_allocate(this%cg_theta0, this%dis%nodes, 'cg_theta0',             &
+                        trim(this%origin))
+      call mem_allocate(this%cg_thick0, this%dis%nodes, 'cg_thick0',             &
+                        trim(this%origin))
     end if
-    call mem_allocate(this%sk_es, this%dis%nodes, 'sk_es', trim(this%origin))
-    call mem_allocate(this%sk_es0, this%dis%nodes, 'sk_es0', trim(this%origin))
-    call mem_allocate(this%sk_esi, this%dis%nodes, 'sk_esi', trim(this%origin))
-    call mem_allocate(this%sk_pcs, this%dis%nodes, 'sk_pcs', trim(this%origin))
-    call mem_allocate(this%sk_comp, this%dis%nodes, 'sk_comp', trim(this%origin))
-    call mem_allocate(this%sk_tcomp, this%dis%nodes, 'sk_tcomp', trim(this%origin))
-    call mem_allocate(this%sk_stor, this%dis%nodes, 'sk_stor', trim(this%origin))
-    call mem_allocate(this%sk_ske, this%dis%nodes, 'sk_ske', trim(this%origin))
-    call mem_allocate(this%sk_sk, this%dis%nodes, 'sk_sk', trim(this%origin))
-    call mem_allocate(this%sk_thickini, this%dis%nodes, 'sk_thickini', trim(this%origin))
-    call mem_allocate(this%sk_thetaini, this%dis%nodes, 'sk_thetaini', trim(this%origin))
+    call mem_allocate(this%cg_es, this%dis%nodes, 'cg_es', trim(this%origin))
+    call mem_allocate(this%cg_es0, this%dis%nodes, 'cg_es0', trim(this%origin))
+    call mem_allocate(this%cg_pcs, this%dis%nodes, 'cg_pcs', trim(this%origin))
+    call mem_allocate(this%cg_comp, this%dis%nodes, 'cg_comp', trim(this%origin))
+    call mem_allocate(this%cg_tcomp, this%dis%nodes, 'cg_tcomp',                 & 
+                      trim(this%origin))
+    call mem_allocate(this%cg_stor, this%dis%nodes, 'cg_stor', trim(this%origin))
+    call mem_allocate(this%cg_ske, this%dis%nodes, 'cg_ske', trim(this%origin))
+    call mem_allocate(this%cg_sk, this%dis%nodes, 'cg_sk', trim(this%origin))
+    call mem_allocate(this%cg_thickini, this%dis%nodes, 'cg_thickini',           & 
+                      trim(this%origin))
+    call mem_allocate(this%cg_thetaini, this%dis%nodes, 'cg_thetaini',           & 
+                      trim(this%origin))
     !
     ! -- cell storage data
-    call mem_allocate(this%cell_wcstor, this%dis%nodes, 'cell_wcstor', trim(this%origin))
-    call mem_allocate(this%cell_thick, this%dis%nodes, 'cell_thick', trim(this%origin))
+    call mem_allocate(this%cell_wcstor, this%dis%nodes, 'cell_wcstor',           &
+                      trim(this%origin))
+    call mem_allocate(this%cell_thick, this%dis%nodes, 'cell_thick',             &
+                      trim(this%origin))
     !
     ! -- interbed data
     iblen = 1
@@ -2360,7 +2366,7 @@ contains
     end do
     call mem_allocate(this%unodelist, iblen, 'unodelist', trim(this%origin))
     call mem_allocate(this%nodelist, iblen, 'nodelist', trim(this%origin))
-    call mem_allocate(this%sk_gs, this%dis%nodes, 'SK_GS', trim(this%origin))
+    call mem_allocate(this%cg_gs, this%dis%nodes, 'cg_gs', trim(this%origin))
     call mem_allocate(this%pcs, iblen, 'pcs', trim(this%origin))
     call mem_allocate(this%thick, iblen, 'thick', trim(this%origin))
     call mem_allocate(this%theta, iblen, 'theta', trim(this%origin))
@@ -2446,10 +2452,10 @@ contains
     !
     ! -- initialize variables that are not specified by user
     do n = 1, this%dis%nodes
-      this%sk_gs(n) = DZERO
-      this%sk_es(n) = DZERO
-      this%sk_comp(n) = DZERO
-      this%sk_tcomp(n) = DZERO
+      this%cg_gs(n) = DZERO
+      this%cg_es(n) = DZERO
+      this%cg_comp(n) = DZERO
+      this%cg_tcomp(n) = DZERO
       this%cell_wcstor(n) = DZERO
     end do
     do n = 1, this%ninterbeds
@@ -2491,28 +2497,27 @@ contains
       call mem_deallocate(this%buffusr)
       call mem_deallocate(this%sgm)
       call mem_deallocate(this%sgs)
-      call mem_deallocate(this%ske_cr)
+      call mem_deallocate(this%cg_ske_cr)
       if (this%iupdatematprop == 0) then
-        nullify(this%sk_theta0)
-        nullify(this%sk_thick0)
+        nullify(this%cg_theta0)
+        nullify(this%cg_thick0)
       else
-        call mem_deallocate(this%sk_theta0)
-        call mem_deallocate(this%sk_thick0)
+        call mem_deallocate(this%cg_theta0)
+        call mem_deallocate(this%cg_thick0)
       end if
-      call mem_deallocate(this%sk_theta)
-      call mem_deallocate(this%sk_thick)
-      call mem_deallocate(this%sk_gs)
-      call mem_deallocate(this%sk_es)
-      call mem_deallocate(this%sk_es0)
-      call mem_deallocate(this%sk_esi)
-      call mem_deallocate(this%sk_pcs)
-      call mem_deallocate(this%sk_comp)
-      call mem_deallocate(this%sk_tcomp)
-      call mem_deallocate(this%sk_stor)
-      call mem_deallocate(this%sk_ske)
-      call mem_deallocate(this%sk_sk)
-      call mem_deallocate(this%sk_thickini)
-      call mem_deallocate(this%sk_thetaini)
+      call mem_deallocate(this%cg_theta)
+      call mem_deallocate(this%cg_thick)
+      call mem_deallocate(this%cg_gs)
+      call mem_deallocate(this%cg_es)
+      call mem_deallocate(this%cg_es0)
+      call mem_deallocate(this%cg_pcs)
+      call mem_deallocate(this%cg_comp)
+      call mem_deallocate(this%cg_tcomp)
+      call mem_deallocate(this%cg_stor)
+      call mem_deallocate(this%cg_ske)
+      call mem_deallocate(this%cg_sk)
+      call mem_deallocate(this%cg_thickini)
+      call mem_deallocate(this%cg_thetaini)
       !
       ! -- cell storage
       call mem_deallocate(this%cell_wcstor)
@@ -2767,7 +2772,7 @@ contains
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: thick
-    real(DP) :: ske_cr
+    real(DP) :: cg_ske_cr
     real(DP) :: theta
     real(DP) :: v
     ! -- format
@@ -2827,15 +2832,15 @@ contains
         call this%parser%GetRemainingLine(line)
         lloc = 1
         select case (keyword)
-        case ('SKE_CR')
+        case ('CG_SKE_CR')
           call this%dis%read_grid_array(line, lloc, istart, istop,              &
                                         this%iout, this%parser%iuactive,        &
-                                        this%ske_cr, 'SKE_CR')
+                                        this%cg_ske_cr, 'CG_SKE_CR')
           iske = 1
-        case ('SK_THETA')
+        case ('CG_THETA')
           call this%dis%read_grid_array(line, lloc, istart, istop,              &
                                         this%iout, this%parser%iuactive,        &
-                                        this%sk_theta, 'SK_THETA')
+                                        this%cg_theta, 'CG_THETA')
           istheta = 1
         case ('SGM')
             call this%dis%read_grid_array(line, lloc, istart, istop,          &
@@ -2857,13 +2862,13 @@ contains
       call store_error('ERROR.  REQUIRED GRIDDATA BLOCK NOT FOUND.')
     end if
     !
-    ! -- detemine if sk_ske and sk_theta have been specified
+    ! -- detemine if cg_ske and cg_theta have been specified
     if (iske == 0) then
-      write(errmsg,'(4x,a)') 'ERROR. SK_SKE GRIDDATA MUST BE SPECIFIED'
+      write(errmsg,'(4x,a)') 'ERROR. cg_SKE GRIDDATA MUST BE SPECIFIED'
       call store_error(errmsg)
     end if
     if (istheta == 0) then
-      write(errmsg,'(4x,a)') 'ERROR. SK_THETA GRIDDATA MUST BE SPECIFIED'
+      write(errmsg,'(4x,a)') 'ERROR. cg_THETA GRIDDATA MUST BE SPECIFIED'
       call store_error(errmsg)
     end if
     !
@@ -2885,13 +2890,13 @@ contains
     istoerr = 0
     do node = 1, this%dis%nodes
       call this%dis%noder_to_string(node, cellid)
-      ske_cr = this%ske_cr(node)
-      theta = this%sk_theta(node)
+      cg_ske_cr = this%cg_ske_cr(node)
+      theta = this%cg_theta(node)
       !
       ! -- coarse-grained storage error condition
-      if (ske_cr < DZERO) then
+      if (cg_ske_cr < DZERO) then
         write(errmsg,'(4x,a,g0,a,1x,a,1x,a)') &
-          'ERROR. COARSE-GRAINED MATERIAL SKE_CR (', ske_cr, ') IS LESS',        &
+          'ERROR. COARSE-GRAINED MATERIAL cg_ske_cr (', cg_ske_cr, ') IS LESS',        &
           'THAN ZERO IN CELL', trim(adjustl(cellid))
       end if
       !
@@ -2927,7 +2932,7 @@ contains
     do node = 1, this%dis%nodes
       top = this%dis%top(node)
       bot = this%dis%bot(node)
-      this%sk_thick(node) = top - bot
+      this%cg_thick(node) = top - bot
     end do
     !
     ! -- subtract the interbed thickness from aquifer thickness
@@ -2939,13 +2944,13 @@ contains
       else
         v = this%dbfact * this%rnb(ib) * this%thick(ib)
       end if
-      thick = this%sk_thick(node) - v
-      this%sk_thick(node) = this%sk_thick(node) - v
+      thick = this%cg_thick(node) - v
+      this%cg_thick(node) = this%cg_thick(node) - v
     end do
     !
-    ! -- evaluate if any sk_thick values are less than 0
+    ! -- evaluate if any cg_thick values are less than 0
     do node = 1, this%dis%nodes
-      thick = this%sk_thick(node)
+      thick = this%cg_thick(node)
       if (thick < DZERO) then
         call this%dis%noder_to_string(node, cellid)
         write(errmsg,'(4x,a,1x,g0,a,1x,a,1x,a)')                                &
@@ -2961,13 +2966,13 @@ contains
       call ustop()
     end if
     !
-    ! -- set initial skeletal thickness (sk_thickini) and
-    !    initial skeletal porosity (sk_thetaini)
+    ! -- set initial coarse-grained thickness (cg_thickini) and
+    !    initial coarse-grained porosity (cg_thetaini)
     do node = 1, this%dis%nodes
-      thick = this%sk_thick(node)
-      theta = this%sk_theta(node)
-      this%sk_thickini(node) = thick
-      this%sk_thetaini(node) = theta
+      thick = this%cg_thick(node)
+      theta = this%cg_theta(node)
+      this%cg_thickini(node) = thick
+      this%cg_thetaini(node) = theta
     end do
     !
     ! -- return
@@ -2975,9 +2980,9 @@ contains
   end subroutine csub_ar
 
 
-  subroutine csub_sk_calc_stress(this, nodes, hnew)
+  subroutine csub_cg_calc_stress(this, nodes, hnew)
 ! ******************************************************************************
-! csub_sk_calc_stress -- calculate the geostatic stress for every gwf node 
+! csub_cg_calc_stress -- calculate the geostatic stress for every gwf node 
 !                           in the model
 ! ******************************************************************************
 !
@@ -3035,14 +3040,14 @@ contains
         end if
         !
         ! -- cell contribution to geostatic stress
-        this%sk_gs(node) = gs
+        this%cg_gs(node) = gs
       end do
       !
       ! -- add user specified overlying geostatic stress
       do nn = 1, this%nbound
         node = this%nodelistsig0(nn)
         sadd = this%bound(1, nn)
-        this%sk_gs(node) = this%sk_gs(node) + sadd
+        this%cg_gs(node) = this%cg_gs(node) + sadd
       end do
       !
       ! -- calculate geostatic stress above cell
@@ -3052,7 +3057,7 @@ contains
         area_node = this%dis%get_area(node)
         !
         ! -- geostatic stress of cell
-        gs = this%sk_gs(node)
+        gs = this%cg_gs(node)
         !
         ! -- Add geostatic stress of overlying cells (ihc=0)
         !    m < node = m is vertically above node
@@ -3070,7 +3075,7 @@ contains
               !
               ! -- dis and disv discretization
               if (this%dis%ndim /= 1) then
-                gs = gs + this%sk_gs(m)
+                gs = gs + this%cg_gs(m)
               !
               ! -- disu discretization
               !    *** this needs to be checked ***
@@ -3078,7 +3083,7 @@ contains
                 area_conn = this%dis%get_area(m)
                 hwva = this%dis%con%hwva(iis)
                 va_scale = this%dis%con%hwva(iis) / this%dis%get_area(m)
-                gs_conn = this%sk_gs(m)
+                gs_conn = this%cg_gs(m)
                 gs = gs + (gs_conn * va_scale)
               end if
 
@@ -3088,14 +3093,13 @@ contains
         !
         ! -- geostatic stress for cell with geostatic stress 
         !    of overlying cells
-        this%sk_gs(node) = gs
+        this%cg_gs(node) = gs
       end do
     end if
     !
     ! -- save effective stress from the last iteration and
     !    calculate the new effective stress for a cell
     do node = 1, this%dis%nodes
-      this%sk_esi(node) = this%sk_es(node)
       top = this%dis%top(node)
       bot = this%dis%bot(node)
       if (this%ibound(node) /= 0) then
@@ -3109,19 +3113,19 @@ contains
       hs = hcell - bot
       !
       ! -- calculate effective stress
-      es = this%sk_gs(node) - hs
-      this%sk_es(node) = es
+      es = this%cg_gs(node) - hs
+      this%cg_es(node) = es
     end do
     !
     ! -- return
     return
 
-  end subroutine csub_sk_calc_stress
+  end subroutine csub_cg_calc_stress
 
 
-  subroutine csub_sk_chk_stress(this)
+  subroutine csub_cg_chk_stress(this)
 ! ******************************************************************************
-! csub_sk_chk_stress -- check that the effective stress for every gwf node 
+! csub_cg_chk_stress -- check that the effective stress for every gwf node 
 !                       in the model is a positive value
 ! ******************************************************************************
 !
@@ -3152,8 +3156,8 @@ contains
     do node = 1, this%dis%nodes
       if (this%ibound(node) < 1) cycle
       bot = this%dis%bot(node)
-      gs = this%sk_gs(node)
-      es = this%sk_es(node)
+      gs = this%cg_gs(node)
+      es = this%cg_es(node)
       u = DZERO
       if (this%ibound(node) /= 0) then
         u = gs - es
@@ -3168,7 +3172,7 @@ contains
             trim(adjustl(cellid))
           call store_error(errmsg)
           write(errmsg, '(4x,a,1x,g0.7,3(1x,a,1x,g0.7),1x,a)')                   &
-            '(', es, '=', this%sk_gs(node), '- (', hcell, '-', bot, ')'
+            '(', es, '=', this%cg_gs(node), '- (', hcell, '-', bot, ')'
           call store_error(errmsg)
         end if
       end if
@@ -3189,7 +3193,7 @@ contains
     ! -- return
     return
 
-  end subroutine csub_sk_chk_stress
+  end subroutine csub_cg_chk_stress
   
   
   subroutine csub_nodelay_update(this, i)
@@ -3293,8 +3297,8 @@ contains
       f0 = DONE
     else
       znode = this%csub_calc_znode(top, bot, hcell)
-      es = this%sk_es(node)
-      es0 = this%sk_es0(node)
+      es = this%cg_es(node)
+      es0 = this%cg_es0(node)
       theta = this%thetaini(ib)
       !
       ! -- calculate the compression index factors for the delay 
@@ -3308,17 +3312,17 @@ contains
     ! -- calculate rho1 and rho2
     rho1 = this%rci(ib) * sto_fac0
     rho2 = this%rci(ib) * sto_fac
-    if (this%sk_es(node) > this%pcs(ib)) then
+    if (this%cg_es(node) > this%pcs(ib)) then
       this%iconvert(ib) = 1
       rho2 = this%ci(ib) * sto_fac
     end if
     if (this%ielastic(ib) /= 0) then
-      rhs = rho1 * this%sk_es0(node) -                                           &
-            rho2 * (this%sk_gs(node) + bot)
+      rhs = rho1 * this%cg_es0(node) -                                           &
+            rho2 * (this%cg_gs(node) + bot)
     else
-      rhs = -rho2 * (this%sk_gs(node) + bot) +                                   &
+      rhs = -rho2 * (this%cg_gs(node) + bot) +                                   &
             (this%pcs(ib) * (rho2 - rho1)) +                                     &
-            (rho1 * this%sk_es0(node))
+            (rho1 * this%cg_es0(node))
     end if
     !
     ! -- save ske and sk
@@ -3359,8 +3363,8 @@ contains
     ! -- initialize variables
     node = this%nodelist(ib)
     tled = DONE
-    es = this%sk_es(node)
-    es0 = this%sk_es0(node)
+    es = this%cg_es(node)
+    es0 = this%cg_es0(node)
     pcs = this%pcs(ib)
     !
     ! -- calculate no-delay interbed rho1 and rho2
@@ -3525,11 +3529,11 @@ contains
     !
     ! -- coarse-grained materials
     do node = 1, nodes
-      this%sk_comp(node) = DZERO
-      this%sk_es0(node) = this%sk_es(node)
+      this%cg_comp(node) = DZERO
+      this%cg_es0(node) = this%cg_es(node)
       if (this%iupdatematprop /= 0) then
-        this%sk_theta0(node) = this%sk_theta(node)
-        this%sk_thick0(node) = this%sk_thick(node)
+        this%cg_theta0(node) = this%cg_theta(node)
+        this%cg_thick0(node) = this%cg_thick(node)
       end if
     end do
     !
@@ -3546,7 +3550,7 @@ contains
           this%thick0(ib) = this%thick(ib)
         end if
         if (this%initialized /= 0) then
-          es = this%sk_es(node)
+          es = this%cg_es(node)
           pcs = this%pcs(ib)
           if (es > pcs) then
             this%pcs(ib) = es
@@ -3635,13 +3639,12 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- update geostatic load calculation
-    call this%csub_sk_calc_stress(nodes, hnew)
+    call this%csub_cg_calc_stress(nodes, hnew)
     !
     ! -- initialize coarse-grained material effective stress 
     !    for the previous time step and the previous iteration
     do node = 1, nodes
-      this%sk_es0(node) = this%sk_es(node)
-      this%sk_esi(node) = this%sk_es(node)
+      this%cg_es0(node) = this%cg_es(node)
     end do
     !
     ! -- check that aquifer head is greater than or equal to the
@@ -3668,17 +3671,17 @@ contains
       if (this%ispecified_pcs == 0) then
         ! relative pcs...subtract head (u) from sigma'
         if (this%ipch /= 0) then
-          pcs = this%sk_es(node) - pcs0
+          pcs = this%cg_es(node) - pcs0
         else
-          pcs = this%sk_es(node) + pcs0
+          pcs = this%cg_es(node) + pcs0
         end if
       else
         ! specified pcs...substract head (u) from sigma
         if (this%ipch /= 0) then
-          pcs = this%sk_gs(node) - (pcs0 - bot)
+          pcs = this%cg_gs(node) - (pcs0 - bot)
         end if
-        if (pcs < this%sk_es(node)) then
-          pcs = this%sk_es(node)
+        if (pcs < this%cg_es(node)) then
+          pcs = this%cg_es(node)
         end if
       end if
       this%pcs(ib) = pcs
@@ -3727,8 +3730,8 @@ contains
         if (this%lhead_based .EQV. .TRUE.) then
           fact = DONE
         else
-          void = this%csub_calc_void(this%sk_theta(node))
-          es = this%sk_es(node)
+          void = this%csub_calc_void(this%cg_theta(node))
+          es = this%cg_es(node)
           hcell = hnew(node) 
           znode = this%csub_calc_znode(top, bot, hcell)
           fact = this%csub_calc_adjes(node, es, bot, znode)
@@ -3737,7 +3740,7 @@ contains
       else
           fact = dlog10es
       end if
-      this%ske_cr(node) = this%ske_cr(node) * fact
+      this%cg_ske_cr(node) = this%cg_ske_cr(node) * fact
       !
       ! -- write error message if negative compression indices
       if (fact <= DZERO) then
@@ -3760,7 +3763,7 @@ contains
           fact = DONE
         else
           void = this%csub_calc_void(this%theta(ib))
-          es = this%sk_es(node)
+          es = this%cg_es(node)
           hcell = hnew(node) !hci(node)
           znode = this%csub_calc_znode(top, bot, hcell)
           fact = this%csub_calc_adjes(node, es, bot, znode)
@@ -3822,9 +3825,9 @@ contains
         call UWWORD(line, iloc, 10, 2, text, ib, q, left=.TRUE.)
         node = this%nodelist(ib)
         call UWWORD(line, iloc, 16, 3,                                           &
-                    text, n, this%sk_gs(node), center=.TRUE.)
+                    text, n, this%cg_gs(node), center=.TRUE.)
         call UWWORD(line, iloc, 16, 3,                                           &
-                    text, n, this%sk_es(node), center=.TRUE.)
+                    text, n, this%cg_es(node), center=.TRUE.)
         call UWWORD(line, iloc, 16, 3,                                           & 
                     text, n, this%pcs(ib), CENTER=.TRUE.)
         write(this%iout, '(1X,A)') line(1:iloc)
@@ -3938,8 +3941,7 @@ contains
     return
   end subroutine csub_set_initial_state
 
-  subroutine csub_fc(this, kiter, nodes, hold, hnew, nja, njasln, amat, &
-                     idxglo, rhs)
+  subroutine csub_fc(this, kiter, hold, hnew, njasln, amat, idxglo, rhs)
 ! ******************************************************************************
 ! csub_fc -- Fill the solution amat and rhs with storage contribution terms
 ! ******************************************************************************
@@ -3950,14 +3952,12 @@ contains
     ! -- dummy
     class(GwfCsubType) :: this
     integer(I4B),intent(in) :: kiter
-    integer(I4B),intent(in) :: nodes
-    real(DP), intent(in), dimension(nodes) :: hold
-    real(DP), intent(in), dimension(nodes) :: hnew
-    integer(I4B),intent(in) :: nja
+    real(DP), intent(in), dimension(:) :: hold
+    real(DP), intent(in), dimension(:) :: hnew
     integer(I4B),intent(in) :: njasln
     real(DP), dimension(njasln),intent(inout) :: amat
-    integer(I4B), intent(in),dimension(nja) :: idxglo
-    real(DP),intent(inout),dimension(nodes) :: rhs
+    integer(I4B), intent(in),dimension(:) :: idxglo
+    real(DP),intent(inout),dimension(:) :: rhs
     ! -- local
     integer(I4B) :: ib
     integer(I4B) :: node
@@ -3972,7 +3972,7 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- update geostatic load calculation
-    call this%csub_sk_calc_stress(nodes, hnew)
+    call this%csub_cg_calc_stress(this%dis%nodes, hnew)
     !
     ! -- formulate csub terms
     if (this%gwfiss == 0) then
@@ -3980,7 +3980,7 @@ contains
       ! -- initialize tled
       tled = DONE / delt
       !
-      ! -- coarse-grained skeletal storage
+      ! -- coarse-grained storage
       do node = 1, this%dis%nodes
         idiag = this%dis%con%ia(node)
         area = this%dis%get_area(node)
@@ -3988,35 +3988,35 @@ contains
         ! -- skip inactive cells
         if (this%ibound(node) < 1) cycle
         !
-        ! -- update skeletal material properties
+        ! -- update coarse-grained material properties
         if (this%iupdatematprop /= 0) then
           if (this%ieslag == 0) then
             !
             ! -- calculate compaction
-            call this%csub_sk_calc_comp(node, hnew(node), hold(node), comp)
-            this%sk_comp(node) = comp
+            call this%csub_cg_calc_comp(node, hnew(node), hold(node), comp)
+            this%cg_comp(node) = comp
             !
-            ! -- update skeletal thickness and void ratio
-            call this%csub_sk_update(node)
+            ! -- update coarse-grained thickness and void ratio
+            call this%csub_cg_update(node)
           end if
         end if
         !
-        ! -- calculate coarse-grained skeletal storage terms
-        call this%csub_sk_fc(node, tled, area, hnew(node), hold(node),          &
+        ! -- calculate coarse-grained storage terms
+        call this%csub_cg_fc(node, tled, area, hnew(node), hold(node),          &
                              hcof, rhsterm)
         !
-        ! -- add skeletal storage terms to amat and rhs for skeletal storage
+        ! -- add coarse-grained storage terms to amat and rhs for coarse-grained storage
         amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
         rhs(node) = rhs(node) + rhsterm
         !
-        ! -- calculate coarse-grained skeletal water compressibility 
+        ! -- calculate coarse-grained water compressibility 
         !    storage terms
         if (this%brg /= DZERO) then
-          call this%csub_sk_wcomp_fc(node, tled, area, hnew(node), hold(node),  &
+          call this%csub_cg_wcomp_fc(node, tled, area, hnew(node), hold(node),  &
                                      hcof, rhsterm)
           !
           ! -- add water compression storage terms to amat and rhs for 
-          !   skeletal storage
+          !   coarse-grained storage
           amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
           rhs(node) = rhs(node) + rhsterm
         end if
@@ -4080,8 +4080,7 @@ contains
     return
   end subroutine csub_fc
 
-  subroutine csub_fn(this, kiter, nodes, hold, hnew, nja, njasln, amat, &
-                     idxglo, rhs)
+  subroutine csub_fn(this, kiter, hold, hnew, njasln, amat, idxglo, rhs)
 ! ******************************************************************************
 ! csub_fn -- Fill the solution amat and rhs with csub contribution newton
 !               term
@@ -4093,14 +4092,12 @@ contains
     ! -- dummy
     class(GwfCsubType) :: this
     integer(I4B),intent(in) :: kiter
-    integer(I4B),intent(in) :: nodes
-    real(DP), intent(in), dimension(nodes) :: hold
-    real(DP), intent(in), dimension(nodes) :: hnew
-    integer(I4B),intent(in) :: nja
+    real(DP), intent(in), dimension(:) :: hold
+    real(DP), intent(in), dimension(:) :: hnew
     integer(I4B),intent(in) :: njasln
     real(DP), dimension(njasln),intent(inout) :: amat
-    integer(I4B), intent(in),dimension(nja) :: idxglo
-    real(DP),intent(inout),dimension(nodes) :: rhs
+    integer(I4B), intent(in),dimension(:) :: idxglo
+    real(DP),intent(inout),dimension(:) :: rhs
     ! -- local
     integer(I4B) :: node
     integer(I4B) :: idiag
@@ -4115,7 +4112,7 @@ contains
     if (this%gwfiss == 0) then
       tled = DONE / delt
       !
-      ! -- coarse-grained skeletal storage
+      ! -- coarse-grained storage
       do node = 1, this%dis%nodes
         idiag = this%dis%con%ia(node)
         area = this%dis%get_area(node)
@@ -4123,23 +4120,23 @@ contains
         ! -- skip inactive cells
         if (this%ibound(node) < 1) cycle
         !
-        ! -- calculate coarse-grained skeletal storage newton terms
-        call this%csub_sk_fn(node, tled, area,                                   &
+        ! -- calculate coarse-grained storage newton terms
+        call this%csub_cg_fn(node, tled, area,                                   &
                                hnew(node), hcof, rhsterm)
         !
-        ! -- add skeletal storage newton terms to amat and rhs for 
-        !   skeletal storage
+        ! -- add coarse-grained storage newton terms to amat and rhs for 
+        !   coarse-grained storage
         amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
         rhs(node) = rhs(node) + rhsterm
         !
-        ! -- calculate coarse-grained skeletal water compressibility storage 
+        ! -- calculate coarse-grained water compressibility storage 
         !    newton terms
         if (this%brg /= DZERO) then
-          call this%csub_sk_wcomp_fn(node, tled, area, hnew(node), hold(node),   &
+          call this%csub_cg_wcomp_fn(node, tled, area, hnew(node), hold(node),   &
                                      hcof, rhsterm)
           !
           ! -- add water compression storage newton terms to amat and rhs for 
-          !    skeletal storage
+          !    coarse-grained storage
           amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
           rhs(node) = rhs(node) + rhsterm
         end if
@@ -4184,9 +4181,9 @@ contains
     return
   end subroutine csub_fn
   
-  subroutine csub_sk_fc(this, node, tled, area, hcell, hcellold, hcof, rhs)
+  subroutine csub_cg_fc(this, node, tled, area, hcell, hcellold, hcof, rhs)
 ! ******************************************************************************
-! csub_sk_fc -- Formulate the HCOF and RHS skeletal storage terms
+! csub_cg_fc -- Formulate the HCOF and RHS coarse-grained storage terms
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -4217,31 +4214,31 @@ contains
     ! -- aquifer elevations and thickness
     top = this%dis%top(node)
     bot = this%dis%bot(node)
-    tthk = this%sk_thickini(node)
+    tthk = this%cg_thickini(node)
     !
     ! -- calculate aquifer saturation
     call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
     !
     ! -- storage coefficients
-    call this%csub_sk_calc_sske(node, sske, hcell)
+    call this%csub_cg_calc_sske(node, sske, hcell)
     rho1 = sske * area * tthk * tled
     !
     ! -- update sk and ske
-    this%sk_ske(node) = sske * tthk * snold
-    this%sk_sk(node) = sske * tthk * snnew
+    this%cg_ske(node) = sske * tthk * snold
+    this%cg_sk(node) = sske * tthk * snnew
     !
     ! -- calculate hcof and rhs term
     hcof = -rho1 * snnew
-    rhs = rho1 * snold * this%sk_es0(node) -                                     &
-          rho1 * snnew * (this%sk_gs(node) + bot) 
+    rhs = rho1 * snold * this%cg_es0(node) -                                     &
+          rho1 * snnew * (this%cg_gs(node) + bot) 
     !
     ! -- return
     return
-  end subroutine csub_sk_fc
+  end subroutine csub_cg_fc
   
-  subroutine csub_sk_fn(this, node, tled, area, hcell, hcof, rhs)
+  subroutine csub_cg_fn(this, node, tled, area, hcell, hcof, rhs)
 ! ******************************************************************************
-! csub_sk_fn -- Formulate skeletal storage newton terms
+! csub_cg_fn -- Formulate coarse-grained storage newton terms
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -4270,21 +4267,21 @@ contains
     ! -- aquifer elevations and thickness
     top = this%dis%top(node)
     bot = this%dis%bot(node)
-    tthk = this%sk_thickini(node)
+    tthk = this%cg_thickini(node)
     !
     ! -- calculate saturation derivative
     satderv = this%csub_calc_sat_derivative(node, hcell)    
     !
     ! -- storage coefficients
-    call this%csub_sk_calc_sske(node, sske, hcell)
+    call this%csub_cg_calc_sske(node, sske, hcell)
     rho1 = sske * area * tthk * tled
     !
     ! -- calculate hcof term
-    hcof = rho1 * (this%sk_gs(node) - hcell + bot) * satderv
+    hcof = rho1 * (this%cg_gs(node) - hcell + bot) * satderv
     !
     ! -- Add additional term if using lagged effective stress
     if (this%ieslag /= 0) then
-      hcof = hcof - rho1 * this%sk_es0(node) * satderv
+      hcof = hcof - rho1 * this%cg_es0(node) * satderv
     end if
     !
     ! -- calculate rhs term
@@ -4292,7 +4289,7 @@ contains
     !
     ! -- return
     return
-  end subroutine csub_sk_fn
+  end subroutine csub_cg_fn
   
   subroutine csub_interbed_fc(this, ib, node, area, hcell, hcellold, hcof, rhs)
 ! ******************************************************************************
@@ -4455,18 +4452,18 @@ contains
         !
         ! -- calculate hcofn term
         if (this%ielastic(ib) /= 0) then
-          hcofn = rho2 * (this%sk_gs(node) - hcell + bot) * satderv
+          hcofn = rho2 * (this%cg_gs(node) - hcell + bot) * satderv
         else
-          hcofn = rho2 * (this%sk_gs(node) - hcell + bot - this%pcs(ib)) *       &
+          hcofn = rho2 * (this%cg_gs(node) - hcell + bot - this%pcs(ib)) *       &
                   satderv
         end if
         !
         ! -- Add additional term if using lagged effective stress
         if (this%ieslag /= 0) then
           if (this%ielastic(ib) /= 0) then
-            hcofn = hcofn - rho1 * this%sk_es0(node) * satderv
+            hcofn = hcofn - rho1 * this%cg_es0(node) * satderv
           else
-            hcofn = hcofn - rho1 * (this%pcs(ib) - this%sk_es0(node)) * satderv
+            hcofn = hcofn - rho1 * (this%pcs(ib) - this%cg_es0(node)) * satderv
           end if
         end if
       !
@@ -4539,9 +4536,9 @@ contains
     return
   end subroutine define_listlabel
 
-  subroutine csub_sk_calc_sske(this, n, sske, hcell)
+  subroutine csub_cg_calc_sske(this, n, sske, hcell)
 ! ******************************************************************************
-! csub_sk_calc_sske -- Calculate sske for a gwf cell.
+! csub_cg_calc_sske -- Calculate sske for a gwf cell.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -4574,24 +4571,24 @@ contains
       top = this%dis%top(n)
       bot = this%dis%bot(n)
       znode = this%csub_calc_znode(top, bot, hcell)
-      es = this%sk_es(n)
-      es0 = this%sk_es0(n)
-      theta = this%sk_thetaini(n)
+      es = this%cg_es(n)
+      es0 = this%cg_es0(n)
+      theta = this%cg_thetaini(n)
       !
       ! -- calculate the compression index factors for the delay 
       !    node relative to the center of the cell based on the 
       !    current and previous head
       call this%csub_calc_sfacts(n, bot, znode, theta, es, es0, f)
     end if
-    sske = f * this%ske_cr(n)
+    sske = f * this%cg_ske_cr(n)
     !
     ! -- return
     return
-  end subroutine csub_sk_calc_sske
+  end subroutine csub_cg_calc_sske
   
-  subroutine csub_sk_calc_comp(this, node, hcell, hcellold, comp)
+  subroutine csub_cg_calc_comp(this, node, hcell, hcellold, comp)
 ! ******************************************************************************
-! csub_sk_calc_comp -- Calculate skeletal compaction
+! csub_cg_calc_comp -- Calculate coarse-grained compaction
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -4614,19 +4611,19 @@ contains
     tled = DONE
     !
     ! -- calculate terms
-    call this%csub_sk_fc(node, tled, area, hcell, hcellold, hcof, rhs)
+    call this%csub_cg_fc(node, tled, area, hcell, hcellold, hcof, rhs)
     !
     ! - calculate compaction
     comp = hcof * hcell - rhs
     !
     ! -- return
     return
-  end subroutine  csub_sk_calc_comp
+  end subroutine  csub_cg_calc_comp
 
   
-  subroutine csub_sk_update(this, node)
+  subroutine csub_cg_update(this, node)
 ! ******************************************************************************
-! csub_sk_update -- Update material properties for coarse grained sediments.
+! csub_cg_update -- Update material properties for coarse grained sediments.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -4642,11 +4639,11 @@ contains
 ! ------------------------------------------------------------------------------
 !
 ! -- update thickness and theta
-    comp = this%sk_tcomp(node) + this%sk_comp(node)
+    comp = this%cg_tcomp(node) + this%cg_comp(node)
     call this%dis%noder_to_string(node, cellid)
     if (ABS(comp) > DZERO) then
-      thick = this%sk_thickini(node)
-      theta = this%sk_thetaini(node)
+      thick = this%cg_thickini(node)
+      theta = this%cg_thetaini(node)
       call this%csub_adj_matprop(comp, thick, theta)
       if (thick <= DZERO) then
         write(errmsg,'(4x,a,1x,a,1x,a,1x,g0,1x,a)')                             &
@@ -4660,19 +4657,19 @@ contains
           'IS <= 0 (', theta, ')'
         call store_error(errmsg)
       end if
-      this%sk_thick(node) = thick
-      this%sk_theta(node) = theta
+      this%cg_thick(node) = thick
+      this%cg_theta(node) = theta
     end if
     !
     ! -- return
     return
-  end subroutine csub_sk_update
+  end subroutine csub_cg_update
 
   
-  subroutine csub_sk_wcomp_fc(this, node, tled, area, hcell, hcellold,          &
+  subroutine csub_cg_wcomp_fc(this, node, tled, area, hcell, hcellold,          &
                               hcof, rhs)
 ! ******************************************************************************
-! csub_sk_wcomp_fc -- Calculate water compressibility term for a gwf cell.
+! csub_cg_wcomp_fc -- Calculate water compressibility term for a gwf cell.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -4703,15 +4700,15 @@ contains
     ! -- aquifer elevations and thickness
     top = this%dis%top(node)
     bot = this%dis%bot(node)
-    tthk = this%sk_thick(node)
-    tthk0 = this%sk_thick0(node)
+    tthk = this%cg_thick(node)
+    tthk0 = this%cg_thick0(node)
     !
     ! -- aquifer saturation
     call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
     !
     ! -- storage coefficients
-    wc1 = this%brg * area * tthk0 * this%sk_theta0(node) * tled
-    wc2 = this%brg * area * tthk * this%sk_theta(node) * tled
+    wc1 = this%brg * area * tthk0 * this%cg_theta0(node) * tled
+    wc2 = this%brg * area * tthk * this%cg_theta(node) * tled
     !
     ! -- calculate hcof term
     hcof = -wc2 * snnew
@@ -4721,12 +4718,12 @@ contains
     !
     ! -- return
     return
-  end subroutine csub_sk_wcomp_fc
+  end subroutine csub_cg_wcomp_fc
 
   
-  subroutine csub_sk_wcomp_fn(this, node, tled, area, hcell, hcellold, hcof, rhs)
+  subroutine csub_cg_wcomp_fn(this, node, tled, area, hcell, hcellold, hcof, rhs)
 ! ******************************************************************************
-! csub_sk_wcomp_fn -- Calculate water compressibility newton-rephson terms for 
+! csub_cg_wcomp_fn -- Calculate water compressibility newton-rephson terms for 
 !                     a gwf cell.
 ! ******************************************************************************
 !
@@ -4758,7 +4755,7 @@ contains
     ! -- aquifer elevations and thickness
     top = this%dis%top(node)
     bot = this%dis%bot(node)
-    tthk = this%sk_thick(node)
+    tthk = this%cg_thick(node)
     !
     ! -- calculate saturation derivitive
     satderv = this%csub_calc_sat_derivative(node, hcell)    
@@ -4767,17 +4764,17 @@ contains
     f = this%brg * area * tled
     !
     ! -- water compressibility coefficient
-    !wc2 = this%brg * area * tthk * this%sk_theta(node) * tled
-    wc2 = f * tthk * this%sk_theta(node)
+    !wc2 = this%brg * area * tthk * this%cg_theta(node) * tled
+    wc2 = f * tthk * this%cg_theta(node)
     !
     ! -- calculate hcof term
     hcof = -wc2 * hcell * satderv
     !
     ! -- Add additional term if using lagged effective stress
     if (this%ieslag /= 0) then
-      tthk0 = this%sk_thick0(node)
-      !wc1 = this%brg * area * tthk0 * this%sk_theta0(node) * tled
-      wc1 = f * tthk0 * this%sk_theta0(node)
+      tthk0 = this%cg_thick0(node)
+      !wc1 = this%brg * area * tthk0 * this%cg_theta0(node) * tled
+      wc1 = f * tthk0 * this%cg_theta0(node)
       hcof = hcof + wc1 * hcellold * satderv
     end if
     !
@@ -4786,7 +4783,7 @@ contains
     !
     ! -- return
     return
-  end subroutine csub_sk_wcomp_fn
+  end subroutine csub_cg_wcomp_fn
 
   
   subroutine csub_interbed_wcomp_fc(this, ib, node, tled, area,                 &
@@ -5463,7 +5460,7 @@ contains
     ! -- initialize variables
     idelay = this%idelay(ib)
     node = this%nodelist(ib)
-    sigma = this%sk_gs(node)
+    sigma = this%cg_gs(node)
     topaq = this%dis%top(node)
     botaq = this%dis%bot(node)
     dzhalf = DHALF * this%dbdz(idelay)
@@ -5989,8 +5986,8 @@ contains
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
-    !    for skeletal-csub observation type.
-    call this%obs%StoreObsType('skeletal-csub', .false., indx)
+    !    for coarse-csub observation type.
+    call this%obs%StoreObsType('coarse-csub', .false., indx)
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
@@ -6049,8 +6046,8 @@ contains
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
-    !    for skeletal-compaction observation type.
-    call this%obs%StoreObsType('skeletal-compaction', .false., indx)
+    !    for coarse-compaction observation type.
+    call this%obs%StoreObsType('coarse-compaction', .false., indx)
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
@@ -6064,8 +6061,8 @@ contains
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
-    !    for skeletal-thickness observation type.
-    call this%obs%StoreObsType('skeletal-thickness', .false., indx)
+    !    for coarse-thickness observation type.
+    call this%obs%StoreObsType('coarse-thickness', .false., indx)
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
@@ -6079,8 +6076,8 @@ contains
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
-    !    for skeletal-theta observation type.
-    call this%obs%StoreObsType('skeletal-theta', .false., indx)
+    !    for coarse-theta observation type.
+    call this%obs%StoreObsType('coarse-theta', .false., indx)
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
@@ -6169,14 +6166,14 @@ contains
               v = this%storagei(n)
             case ('ELASTIC-CSUB')
               v = this%storagee(n)
-            case ('SKELETAL-CSUB')
-              v = this%sk_stor(n)
+            case ('COARSE-CSUB')
+              v = this%cg_stor(n)
             case ('WCOMP-CSUB-CELL')
               v = this%cell_wcstor(n)
             case ('CSUB-CELL')
-              ! -- add the skeletal component
+              ! -- add the coarse component
               if (j == 1) then
-                v = this%sk_stor(n)
+                v = this%cg_stor(n)
               else
                 v = this%storagee(n) + this%storagei(n)
               end if
@@ -6185,49 +6182,49 @@ contains
             case ('SK')
               v = this%sk(n)
             case ('SKE-CELL')
-              ! -- add the skeletal component
+              ! -- add the coarse component
               if (j == 1) then
-                v = this%sk_ske(n)
+                v = this%cg_ske(n)
               else
                 v = this%ske(n)
               end if
             case ('SK-CELL')
-              ! -- add the skeletal component
+              ! -- add the coarse component
               if (j == 1) then
-                v = this%sk_sk(n)
+                v = this%cg_sk(n)
               else
                 v = this%sk(n)
               end if
             case ('THETA')
               v = this%theta(n)
-            case ('SKELETAL-THETA')
-              v = this%sk_theta(n)
+            case ('COARSE-THETA')
+              v = this%cg_theta(n)
             case ('THETA-CELL')
-              ! -- add the skeletal component
+              ! -- add the coarse component
               if (j == 1) then
-                f = this%sk_thick(n) / this%cell_thick(n)
-                v = f * this%sk_theta(n)
+                f = this%cg_thick(n) / this%cell_thick(n)
+                v = f * this%cg_theta(n)
               else
                 node = this%nodelist(n) 
                 f = this%csub_calc_interbed_thickness(n) / this%cell_thick(node)
                 v = f * this%theta(n)
               end if
             case ('GSTRESS-CELL')
-              v = this%sk_gs(n)
+              v = this%cg_gs(n)
             case ('ESTRESS-CELL')
-              v = this%sk_es(n)
+              v = this%cg_es(n)
             case ('INTERBED-COMPACTION')
               v = this%tcomp(n)
             case ('INELASTIC-COMPACTION')
               v = this%tcompi(n)
             case ('ELASTIC-COMPACTION')
               v = this%tcompe(n)
-            case ('SKELETAL-COMPACTION')
-              v = this%sk_tcomp(n)
+            case ('COARSE-COMPACTION')
+              v = this%cg_tcomp(n)
             case ('COMPACTION-CELL')
-              ! -- add the skeletal component
+              ! -- add the coarse component
               if (j == 1) then
-                v = this%sk_tcomp(n)
+                v = this%cg_tcomp(n)
               else
                 v = this%tcomp(n)
               end if
@@ -6237,8 +6234,8 @@ contains
               if (idelay /= 0) then
                 v = v * this%rnb(n) * this%dbfact
               end if
-            case ('SKELETAL-THICKNESS')
-              v = this%sk_thick(n)
+            case ('COARSE-THICKNESS')
+              v = this%cg_thick(n)
             case ('THICKNESS-CELL')
               v = this%cell_thick(n)
             case ('DELAY-HEAD', 'DELAY-PRECONSTRESS',                           &
@@ -6333,11 +6330,11 @@ contains
       else if (obsrv%ObsTypeId == 'GSTRESS-CELL' .or.                           &
                obsrv%ObsTypeId == 'ESTRESS-CELL' .or.                           &
                obsrv%ObsTypeId == 'THICKNESS-CELL' .or.                         &
-               obsrv%ObsTypeId == 'SKELETAL-CSUB' .or.                          &
+               obsrv%ObsTypeId == 'COARSE-CSUB' .or.                            &
                obsrv%ObsTypeId == 'WCOMP-CSUB-CELL' .or.                        &
-               obsrv%ObsTypeId == 'SKELETAL-COMPACTION' .or.                    &
-               obsrv%ObsTypeId == 'SKELETAL-THETA' .or.                         &
-               obsrv%ObsTypeId == 'SKELETAL-THICKNESS') then
+               obsrv%ObsTypeId == 'COARSE-COMPACTION' .or.                      &
+               obsrv%ObsTypeId == 'COARSE-THETA' .or.                           &
+               obsrv%ObsTypeId == 'COARSE-THICKNESS') then
         jfound = .true.
         obsrv%BndFound = .true.
         obsrv%CurrentTimeStepEndValue = DZERO

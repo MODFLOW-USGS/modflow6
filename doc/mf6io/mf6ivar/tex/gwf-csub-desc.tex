@@ -17,9 +17,9 @@
 
 \item \texttt{ndelaycells}---number of nodes used to discretize the delay interbed. If not specified, then a default value of 19 is assigned.
 
-\item \texttt{COMPRESSION\_INDICES}---keyword to indicate that the the recompression (CR) and compression (CC) indices are specified instead of the elastic skeletal specific storage (SSE) and inelastic skeletal specific storage (SSV) coefficients. If not specified, then elastic skeletal specific storage (SSE) and inelastic skeletal specific storage (SSV) coefficients must be specified.
+\item \texttt{COMPRESSION\_INDICES}---keyword to indicate that the the recompression (CR) and compression (CC) indices are specified instead of the elastic specific storage (SSE) and inelastic specific storage (SSV) coefficients. If not specified, then elastic specific storage (SSE) and inelastic specific storage (SSV) coefficients must be specified.
 
-\item \texttt{UPDATE\_MATERIAL\_PROPERTIES}---keyword to indicate that the thickness and void ratio of skeletal and no delay interbed sediments will vary during the simulation. If not specified, the thickness and void ratio of skeletal and no delay interbed sediments will not vary during the simulation.
+\item \texttt{UPDATE\_MATERIAL\_PROPERTIES}---keyword to indicate that the thickness and void ratio of coarse-grained and no delay interbed sediments will vary during the simulation. If not specified, the thickness and void ratio of coarse-grained and no delay interbed sediments will not vary during the simulation.
 
 \item \texttt{CELL\_FRACTION}---keyword to indicate that the thickness of interbeds will be specified in terms of the fraction of cell thickness. If not specified, interbed thicknness must be specified.
 
@@ -37,9 +37,9 @@
 
 \item \texttt{interbedstrain\_filename}---name of the comma-separated-values output file to write final interbed strain information.
 
-\item \texttt{STRAIN\_CSV\_SKELETAL}---keyword to specify the record that corresponds to final skeletal strain output.
+\item \texttt{STRAIN\_CSV\_COARSE}---keyword to specify the record that corresponds to final coarse-grained material strain output.
 
-\item \texttt{skeletalstrain\_filename}---name of the comma-separated-values output file to write final skeletal strain information.
+\item \texttt{coarsestrain\_filename}---name of the comma-separated-values output file to write final coarse-grained material strain information.
 
 \item \texttt{COMPACTION}---keyword to specify that record corresponds to the compaction.
 
@@ -57,9 +57,9 @@
 
 \item \texttt{interbed\_compaction\_filename}---name of the binary output file to write interbed compaction information.
 
-\item \texttt{COMPACTION\_SKELETAL}---keyword to specify that record corresponds to the elastic skeletal compaction binary file.
+\item \texttt{COMPACTION\_COARSE}---keyword to specify that record corresponds to the elastic coarse-grained material compaction binary file.
 
-\item \texttt{skeletal\_compaction\_filename}---name of the binary output file to write elastic skeletal compaction information.
+\item \texttt{coarse\_compaction\_filename}---name of the binary output file to write elastic coarse-grained material compaction information.
 
 \item \texttt{ZDISPLACEMENT}---keyword to specify that record corresponds to the z-displacement binary file.
 
@@ -87,9 +87,9 @@
 \item \textbf{Block: GRIDDATA}
 
 \begin{description}
-\item \texttt{ske\_cr}---is the initial elastic skeletal specific storage or recompression index. The recompression index is specified if COMPRESSION\_INDICES is specified in the OPTIONS block.  Specified or calculated elastic skeletal specific storage values are not adjusted from initial values if HEAD\_BASED is specified in the OPTIONS block.
+\item \texttt{cg\_ske\_cr}---is the initial elastic coarse-grained material specific storage or recompression index. The recompression index is specified if COMPRESSION\_INDICES is specified in the OPTIONS block.  Specified or calculated elastic coarse-grained material specific storage values are not adjusted from initial values if HEAD\_BASED is specified in the OPTIONS block.
 
-\item \texttt{sk\_theta}---is the initial porosity of the aquifer.
+\item \texttt{cg\_theta}---is the initial porosity of coarse-grained materials.
 
 \item \texttt{sgm}---is the specific gravity of moist or unsaturated sediments.  If not specified, then a default value of 1.7 is assigned.
 
@@ -113,7 +113,7 @@
 
 \item \texttt{ssv\_cc}---is the initial inelastic specific storage or compression index of the interbed. The compression index is specified if COMPRESSION\_INDICES is specified in the OPTIONS block. Specified or calculated interbed inelastic specific storage values are not adjusted from initial values if HEAD\_BASED is specified in the OPTIONS block.
 
-\item \texttt{sse\_cr}---is the initial elastic skeletal specific storage or recompression index of the interbed. The recompression index is specified if COMPRESSION\_INDICES is specified in the OPTIONS block. Specified or calculated interbed elastic specific storage values are not adjusted from initial values if HEAD\_BASED is specified in the OPTIONS block.
+\item \texttt{sse\_cr}---is the initial elastic coarse-grained material specific storage or recompression index of the interbed. The recompression index is specified if COMPRESSION\_INDICES is specified in the OPTIONS block. Specified or calculated interbed elastic specific storage values are not adjusted from initial values if HEAD\_BASED is specified in the OPTIONS block.
 
 \item \texttt{theta}---is the initial porosity of the interbed.
 

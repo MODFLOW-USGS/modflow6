@@ -83,6 +83,7 @@ module GwfNpfModule
     procedure                               :: npf_ac
     procedure                               :: npf_mc
     procedure                               :: npf_ar
+    procedure                               :: npf_init_mem
     procedure                               :: npf_ad
     procedure                               :: npf_cf
     procedure                               :: npf_fc
@@ -469,6 +470,8 @@ module GwfNpfModule
     !
     do n = 1, this%dis%nodes
       do ii = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
+        if (this%dis%con%mask(ii) == 0) cycle
+        
         m = this%dis%con%ja(ii)
         !
         ! -- Calculate conductance only for upper triangle but insert into
@@ -596,6 +599,8 @@ module GwfNpfModule
     do n=1, nodes
       idiag=this%dis%con%ia(n)
       do ii=this%dis%con%ia(n)+1,this%dis%con%ia(n+1)-1
+        if (this%dis%con%mask(ii) == 0) cycle
+        
         m=this%dis%con%ja(ii)
         isymcon = this%dis%con%isym(ii)
         ! work on upper triangle
@@ -1290,8 +1295,11 @@ module GwfNpfModule
           case ('SAVE_SPECIFIC_DISCHARGE')
             this%icalcspdis = 1
             this%isavspdis = 1
+            write(this%iout,'(4x,a)')                                          &
+              'SPECIFIC DISCHARGE WILL BE CALCULATED AT CELL CENTERS ' //      &
+              'AND WRITTEN TO DATA-SPDIS IN BUDGET FILE WHEN REQUESTED.'
           !
-          ! -- right now these are options that are only available in the
+          ! -- The following are options that are only available in the
           !    development version and are not included in the documentation.
           !    These options are only available when IDEVELOPMODE in
           !    constants module is set to 1
@@ -3255,6 +3263,10 @@ module GwfNpfModule
     this%propsedge(3, lastedge) = nx
     this%propsedge(4, lastedge) = ny
     this%propsedge(5, lastedge) = distance
+    !
+    ! -- If this is the last edge, then the next call must be starting a new
+    !    edge properties assignment loop, so need to reset lastedge to 0
+    if (this%lastedge == this%nedges) this%lastedge = 0
     !
     ! -- return
     return

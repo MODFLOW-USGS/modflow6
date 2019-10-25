@@ -1,33 +1,57 @@
 module SimModule
+  
   use KindModule,         only: DP, I4B
-  use ConstantsModule,    only: MAXCHARLEN,LINELENGTH, ISTDOUT
+  use ConstantsModule,    only: MAXCHARLEN, LINELENGTH, ISTDOUT
   use SimVariablesModule, only: iout, ireturnerr
+
   implicit none
+
   private
-  public :: count_errors, iverbose, sim_message, store_error, ustop,  &
-            converge_reset, converge_check, final_message, store_warning,      &
-            store_note, count_warnings, count_notes, store_error_unit, &
-            store_error_filename, print_notes
-  integer(I4B) :: iverbose=0 !0: print nothing
-                             !1: print first level subroutine information
+  public :: count_errors
+  public :: iverbose
+  public :: sim_message
+  public :: store_error
+  public :: ustop
+  public :: converge_reset
+  public :: converge_check
+  public :: final_message
+  public :: store_warning
+  public :: store_note
+  public :: count_warnings
+  public :: count_notes
+  public :: store_error_unit
+  public :: store_error_filename
+  public :: print_notes
+  public :: maxerrors
+  
+  integer(I4B) :: iverbose = 0 !0: print nothing
+                               !1: print first level subroutine information
   character(len=MAXCHARLEN), allocatable, dimension(:) :: sim_errors
   character(len=MAXCHARLEN), allocatable, dimension(:) :: sim_warnings
   character(len=MAXCHARLEN), allocatable, dimension(:) :: sim_notes
   integer(I4B) :: nerrors = 0
+  integer(I4B) :: maxerrors = 1000
+  integer(I4B) :: maxerrors_exceeded = 0
   integer(I4B) :: nwarnings = 0
   integer(I4B) :: nnotes = 0
   integer(I4B) :: inc_errors = 100
   integer(I4B) :: inc_warnings = 100
   integer(I4B) :: inc_notes = 100
 
-
 contains
 
 function count_errors()
-  implicit none
+! ******************************************************************************
+! Return error count
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+  ! -- modules
+  ! -- return
   integer(I4B) :: count_errors
+! ------------------------------------------------------------------------------
   if (allocated(sim_errors)) then
-    !count_errors = size(sim_errors)
     count_errors = nerrors
   else
     count_errors = 0
@@ -36,10 +60,17 @@ function count_errors()
 end function count_errors
 
 function count_warnings()
-  implicit none
+! ******************************************************************************
+! Return warning count
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+  ! -- modules
+  ! -- return
   integer(I4B) :: count_warnings
+! ------------------------------------------------------------------------------
   if (allocated(sim_warnings)) then
-    !count_warnings = size(sim_warnings)
     count_warnings = nwarnings
   else
     count_warnings = 0
@@ -48,10 +79,17 @@ function count_warnings()
 end function count_warnings
 
 function count_notes()
-  implicit none
+! ******************************************************************************
+! Return notes count
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+  ! -- modules
+  ! -- return
   integer(I4B) :: count_notes
+! ------------------------------------------------------------------------------
   if (allocated(sim_notes)) then
-    !count_notes = size(sim_notes)
     count_notes = nnotes
   else
     count_notes = 0
@@ -60,49 +98,60 @@ function count_notes()
 end function count_notes
 
 subroutine store_error(errmsg)
-  ! **************************************************************************
-  ! Store an error message for printing at end of simulation
-  ! **************************************************************************
-  !
-  !    SPECIFICATIONS:
-  ! --------------------------------------------------------------------------
+! ******************************************************************************
+! Store an error message for printing at end of simulation
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+  ! -- modules
   use ArrayHandlersModule, only: ExpandArray
-  implicit none
   ! -- dummy
   character(len=*), intent(in) :: errmsg
   ! -- local
   logical :: inc_array
   integer(I4B) :: i
+! ------------------------------------------------------------------------------
   !
+  ! -- determine if the sim_errors should be expanded
   inc_array = .TRUE.
   if (allocated(sim_errors)) then
     if (count_errors() < size(sim_errors)) then
       inc_array = .FALSE.
     end if
   end if
+  !
+  ! -- resize sim_errors
   if (inc_array) then
     call ExpandArray(sim_errors, increment=inc_errors)
     inc_errors = inc_errors * 1.1
   end if
+  !
+  ! -- store this error
   i = count_errors() + 1
-  nerrors = i
-  sim_errors(i) = errmsg
+  if (i <= maxerrors) then
+    nerrors = i
+    sim_errors(i) = errmsg
+  else
+    maxerrors_exceeded = maxerrors_exceeded + 1
+  end if
   !
   return
 end subroutine store_error
 
 subroutine store_error_unit(iunit)
-  ! **************************************************************************
-  ! Convert iunit to file name and indicate error reading from this file
-  ! **************************************************************************
-  !
-  !    SPECIFICATIONS:
-  ! --------------------------------------------------------------------------
-  implicit none
+! ******************************************************************************
+! Convert iunit to file name and indicate error reading from this file
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+  ! -- modules
   ! -- dummy
   integer(I4B), intent(in) :: iunit
   ! -- local
   character(len=LINELENGTH) :: fname
+! ------------------------------------------------------------------------------
   !
   inquire(unit=iunit, name=fname)
   call store_error('ERROR OCCURRED WHILE READING FILE: ')
@@ -112,16 +161,17 @@ subroutine store_error_unit(iunit)
 end subroutine store_error_unit
 
 subroutine store_error_filename(filename)
-  ! **************************************************************************
-  ! Indicate error reading from this file
-  ! **************************************************************************
-  !
-  !    SPECIFICATIONS:
-  ! --------------------------------------------------------------------------
-  implicit none
+! ******************************************************************************
+! Indicate error reading from this file
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+  ! -- modules
   ! -- dummy
   character(len=*), intent(in) :: filename
   ! -- local
+! ------------------------------------------------------------------------------
   !
   call store_error('ERROR OCCURRED WHILE READING FILE: ')
   call store_error(trim(adjustl(filename)))
@@ -130,19 +180,20 @@ subroutine store_error_filename(filename)
 end subroutine store_error_filename
 
 subroutine store_warning(warnmsg)
-  ! **************************************************************************
-  ! Store a warning message for printing at end of simulation
-  ! **************************************************************************
-  !
-  !    SPECIFICATIONS:
-  ! --------------------------------------------------------------------------
+! ******************************************************************************
+! Store a warning message for printing at end of simulation
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+  ! -- modules
   use ArrayHandlersModule, only: ExpandArray
-  implicit none
   ! -- dummy
   character(len=*), intent(in) :: warnmsg
   ! -- local
   logical :: inc_array
   integer(I4B) :: i
+! ------------------------------------------------------------------------------
   !
   inc_array = .TRUE.
   if (allocated(sim_warnings)) then
@@ -162,19 +213,20 @@ subroutine store_warning(warnmsg)
 end subroutine store_warning
 
 subroutine store_note(note)
-  ! **************************************************************************
-  ! Store a note for printing at end of simulation
-  ! **************************************************************************
-  !
-  !    SPECIFICATIONS:
-  ! --------------------------------------------------------------------------
+! ******************************************************************************
+! Store a note for printing at end of simulation
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+  ! -- modules
   use ArrayHandlersModule, only: ExpandArray
-  implicit none
   ! -- dummy
   character(len=*), intent(in) :: note
   ! -- local
   logical :: inc_array
   integer(I4B) :: i
+! ------------------------------------------------------------------------------
   !
   inc_array = .TRUE.
   if (allocated(sim_notes)) then
@@ -194,29 +246,45 @@ subroutine store_note(note)
 end subroutine store_note
 
 logical function print_errors()
-  ! **************************************************************************
-  ! Print all error messages that have been stored
-  ! **************************************************************************
-  !
-  !    SPECIFICATIONS:
-  ! --------------------------------------------------------------------------
-  implicit none
+! ******************************************************************************
+! Print all error messages that have been stored
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+  ! -- modules
   ! -- local
   integer(I4B) :: i, isize
+  character(len=LINELENGTH) :: errmsg
   ! -- formats
 10 format(/,'ERROR REPORT:',/)
+! ------------------------------------------------------------------------------
   !
   print_errors = .false.
   if (allocated(sim_errors)) then
     isize = count_errors()
-    if (isize>0) then
+    if (isize > 0) then
       print_errors = .true.
-      if (iout > 0) write(iout,10)
-      write(*,10)
-      do i=1,isize
+      if (iout > 0) write(iout, 10)
+      write(*, 10)
+      do i = 1, isize
         call write_message(sim_errors(i))
-        if (iout > 0) call write_message(sim_errors(i),iout)
+        if (iout > 0) call write_message(sim_errors(i), iout)
       enddo
+      !
+      ! -- write the number of errors
+      write(errmsg, '(i0, a)') isize,                                          &
+        ' errors detected.'
+      call write_message(trim(errmsg))
+      if (iout > 0) call write_message(trim(errmsg), iout)
+      !
+      ! -- write number of additional errors
+      if (maxerrors_exceeded > 0) then
+        write(errmsg, '(i0, a)') maxerrors_exceeded,                           &
+          ' additional errors detected but not printed.'
+        call write_message(trim(errmsg))
+        if (iout > 0) call write_message(trim(errmsg), iout)
+      end if
     endif
   endif
   !
@@ -224,17 +292,18 @@ logical function print_errors()
 end function print_errors
 
 subroutine print_warnings()
-  ! **************************************************************************
-  ! Print all warning messages that have been stored
-  ! **************************************************************************
-  !
-  !    SPECIFICATIONS:
-  ! --------------------------------------------------------------------------
-  implicit none
+! ******************************************************************************
+! Print all warning messages that have been stored
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+  ! -- modules
   ! -- local
   integer(I4B) :: i, isize
   ! -- formats
 10 format(/,'WARNINGS:',/)
+! ------------------------------------------------------------------------------
   !
   if (allocated(sim_warnings)) then
     isize = count_warnings()
@@ -254,13 +323,13 @@ subroutine print_warnings()
 end subroutine print_warnings
 
 subroutine print_notes(numberlist)
-  ! **************************************************************************
-  ! Print all notes that have been stored
-  ! **************************************************************************
-  !
-  !    SPECIFICATIONS:
-  ! --------------------------------------------------------------------------
-  implicit none
+! ******************************************************************************
+! Print all notes that have been stored
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+  ! -- modules
   ! -- dummy
   logical, intent(in), optional :: numberlist
   ! -- local
@@ -271,6 +340,7 @@ subroutine print_notes(numberlist)
 10 format(/,'NOTES:')
 20 format(i0,'. ',a)
 30 format(a)
+! ------------------------------------------------------------------------------
   !
   if (present(numberlist)) then
     numlist = numberlist
@@ -298,17 +368,21 @@ subroutine print_notes(numberlist)
   return
 end subroutine print_notes
 
-subroutine write_message(message,iunit,error,leadspace,endspace)
-  ! -- Subroutine write_message formats and writes a message.
-  !
-  ! -- Arguments are as follows:
-  !       MESSAGE      : message to be written
-  !       IUNIT        : the unit number to which the message is written
-  !       ERROR        : if true precede message with "Error"
-  !       LEADSPACE    : if true precede message with blank line
-  !       ENDSPACE     : if true follow message by blank line
-  !
-  implicit none
+subroutine write_message(message, iunit, error, leadspace, endspace)
+! ******************************************************************************
+! Subroutine write_message formats and writes a message.
+!
+! -- Arguments are as follows:
+!       MESSAGE      : message to be written
+!       IUNIT        : the unit number to which the message is written
+!       ERROR        : if true precede message with "Error"
+!       LEADSPACE    : if true precede message with blank line
+!       ENDSPACE     : if true follow message by blank line
+!
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
   ! -- dummy
   character (len=*), intent(in) :: message
   integer(I4B),      intent(in), optional :: iunit
@@ -320,6 +394,7 @@ subroutine write_message(message,iunit,error,leadspace,endspace)
   integer(I4B)              :: itake, j
   character(len=20)         :: ablank
   character(len=MAXCHARLEN) :: amessage
+! ------------------------------------------------------------------------------
   !
   amessage = message
   if (amessage==' ') return
@@ -428,28 +503,34 @@ subroutine write_message(message,iunit,error,leadspace,endspace)
   !
 end subroutine write_message
 
-subroutine sim_message(iv,message)
-! -- iv is the verbosity level of this message
-! --  (1) means primary subroutine for simulation, exchange, model,
-! --      solution, package, etc.
-! -- message is a character string message to write
-  implicit none
+subroutine sim_message(iv, message)
+! ******************************************************************************
+! Print all notes that have been stored
+!    iv is the verbosity level of this message
+!     (1) means primary subroutine for simulation, exchange, model,
+!         solution, package, etc.
+!    message is a character string message to write
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+  ! -- modules
   integer(I4B),intent(in) :: iv
   character(len=*),intent(in) :: message
+! ------------------------------------------------------------------------------
   if(iv<=iverbose) then
     write(iout,'(a)') message
   endif
 end subroutine sim_message
 
-subroutine ustop(stopmess,ioutlocal)
-  ! **************************************************************************
-  ! Stop program, with option to print message before stopping.
-  ! **************************************************************************
-  !
-  !    SPECIFICATIONS:
-  ! --------------------------------------------------------------------------
+subroutine ustop(stopmess, ioutlocal)
+! ******************************************************************************
+! Stop program, with option to print message before stopping.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
   ! -- dummy
-  implicit none
   character, optional, intent(in) :: stopmess*(*)
   integer(I4B),   optional, intent(in) :: ioutlocal
   ! -- local
@@ -505,6 +586,7 @@ end subroutine ustop
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- modules
     use SimVariablesModule, only: isimcnvg
 ! ------------------------------------------------------------------------------
     !
@@ -528,7 +610,7 @@ end subroutine ustop
     ! -- format
     character(len=*), parameter :: fmtfail =                                   &
       "(1x, 'Simulation convergence failure.',                                 &
-       ' Simulation will terminate after output and deallocation.')"
+       &' Simulation will terminate after output and deallocation.')"
 ! ------------------------------------------------------------------------------
     !
     ! -- Initialize

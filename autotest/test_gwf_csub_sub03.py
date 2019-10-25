@@ -191,7 +191,7 @@ def get_model(idx, dir):
                     sub6.append(d)
                     ibcno += 1
 
-    # create delay bed packagedata entries and skeletal storage
+    # create delay bed packagedata entries and coarse-grained material storage
     S = []
     ndb = ndelaybeds[idx]
     if ndb > 0:
@@ -297,11 +297,11 @@ def get_model(idx, dir):
                                     specified_initial_interbed_state=True,
                                     save_flows=True,
                                     strainib_filerecord=ibcsv,
-                                    strainsk_filerecord=skcsv,
+                                    straincg_filerecord=skcsv,
                                     compaction_filerecord=copth,
                                     ndelaycells=ndelaycells[idx],
                                     ninterbeds=maxibc,
-                                    beta=0., ske_cr=ss,
+                                    beta=0., cg_ske_cr=ss,
                                     packagedata=sub6)
     orecarray = {}
     orecarray['csub_obs.csv'] = [('tcomp1', 'interbed-compaction', '01_05_05'),

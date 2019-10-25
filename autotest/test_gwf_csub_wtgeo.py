@@ -137,7 +137,7 @@ sw = 4.65120000e-10 * 9806.65000000 * theta
 sy = [0.1, 0., 0.]
 ske = [6e-6, 3e-6, 6e-6]
 skv = [6e-4, 3e-4, 6e-4]
-ske_cr = [ske[0], 0, ske[-1]]
+cg_ske_cr = [ske[0], 0, ske[-1]]
 kv = 1e-6
 
 bdb = [45., 0, 90.]
@@ -335,7 +335,7 @@ def get_model(idx, dir):
                 ibcno += 1
 
 
-    # add skeletal component
+    # add coarse-grained component
     for k in range(nlay):
         b = zthick[k] * facsk[k]
         if b <= 0.:
@@ -426,8 +426,8 @@ def get_model(idx, dir):
                                     ninterbeds=maxcsub,
                                     sgm=sgmt,
                                     sgs=sgst,
-                                    sk_theta=theta,
-                                    ske_cr=ske_cr,
+                                    cg_theta=theta,
+                                    cg_ske_cr=cg_ske_cr,
                                     beta=beta,
                                     packagedata=sub6)
     obspos = [(0, 4, 4), (1, 4, 4), (2, 4, 4)]

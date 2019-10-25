@@ -187,7 +187,7 @@ if nndb > 0:
                 sub6.append(d)
                 ibcno += 1
 
-# create delay bed packagedata entries and skeletal storage
+# create delay bed packagedata entries and coarse-grained materia storage
 ske_scaled = []
 # create S for aquifer and no-delay beds
 for k in range(nlay):
@@ -272,17 +272,17 @@ def get_model(idx, dir):
                                     effective_stress_lag=True,
                                     save_flows=True,
                                     strainib_filerecord=ibcsv,
-                                    strainsk_filerecord=skcsv,
+                                    straincg_filerecord=skcsv,
                                     compaction_filerecord=copth,
                                     zdisplacement_filerecord=zopth,
                                     ninterbeds=maxcsub,
-                                    beta=0., ske_cr=ss,
+                                    beta=0., cg_ske_cr=ss,
                                     packagedata=sub6)
     orecarray = {}
     tag = '{:02d}_{:02d}_{:02d}'.format(3, wrp[0] + 1, wcp[0] + 1)
     oloc = (2, wrp[0], wcp[0])
     orecarray['csub_obs.csv'] = [('tcomp3', 'interbed-compaction', tag),
-                                 ('sk-tcomp3', 'skeletal-compaction', oloc),
+                                 ('sk-tcomp3', 'coarse-compaction', oloc),
                                  ('ibi-tcomp3', 'inelastic-compaction', tag),
                                  ('ibe-tcomp3', 'elastic-compaction', tag)]
     csub_obs_package = csub.obs.initialize(filename=opth, digits=10,
