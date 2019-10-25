@@ -3726,9 +3726,16 @@ contains
     do node = 1, nodes
       top = this%dis%top(node)
       bot = this%dis%bot(node)
+      !
+      ! -- user-specified specific storage
       if (this%istoragec == 1) then
+        !
+        ! -- retain specific storage values since they are constant
         if (this%lhead_based .EQV. .TRUE.) then
           fact = DONE
+        !
+        ! -- convert specific storage values since they are simulated to 
+        !    be a function of the average effective stress
         else
           void = this%csub_calc_void(this%cg_theta(node))
           es = this%cg_es(node)
@@ -3737,6 +3744,8 @@ contains
           fact = this%csub_calc_adjes(node, es, bot, znode)
           fact = fact * (DONE + void)
         end if
+      !
+      ! -- user-specified compression indices - multiply by dlog10es
       else
           fact = dlog10es
       end if
@@ -3758,17 +3767,26 @@ contains
       node = this%nodelist(ib)
       top = this%dis%top(node)
       bot = this%dis%bot(node)
+      !
+      ! -- user-specified specific storage
       if (this%istoragec == 1) then
+        !
+        ! -- retain specific storage values since they are constant
         if (this%lhead_based .EQV. .TRUE.) then
           fact = DONE
+        !
+        ! -- convert specific storage values since they are simulated to 
+        !    be a function of the average effective stress
         else
           void = this%csub_calc_void(this%theta(ib))
           es = this%cg_es(node)
-          hcell = hnew(node) !hci(node)
+          hcell = hnew(node)
           znode = this%csub_calc_znode(top, bot, hcell)
           fact = this%csub_calc_adjes(node, es, bot, znode)
           fact = fact * (DONE + void)
         end if
+      !
+      ! -- user-specified compression indices - multiply by dlog10es
       else
           fact = dlog10es
       end if
@@ -3892,7 +3910,7 @@ contains
       !
       ! -- write calculated compression indices
       if (this%istoragec == 1) then
-        if (this%lhead_based .EQV. .FALSE.) then
+        if (this%lhead_based .EQV. .TRUE.) then
           write(this%iout, '(//1X,A)')                                &
             'CALCULATED COMPRESSION INDICES'
           iloc = 1

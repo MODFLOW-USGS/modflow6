@@ -23,13 +23,15 @@ from simulation import Simulation
 paktest = 'csub'
 budtol = 1e-2
 
-ex = ['csub_sub01a']
+ex = ['csub_sub01a', 'csub_sub01b']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
 ddir = 'data'
 
-ndcell = [19]
+compression_indices = [None, True]
+
+ndcell = [19] * len(ex)
 
 # run all examples on Travis
 # travis = [True for idx in range(len(exdirs))]
@@ -104,9 +106,6 @@ ss = S / (100. - thick[0])
 ds15 = [0, 0, 0, 2052, 0, 0, 0, 0, 0, 0, 0, 0]
 ds16 = [0, 0, 0, 100, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1]
 
-sub6 = [[0, (0, 0, 1), 'delay', ini_stress, thick[0],
-         1., cc, cr, theta, kv, ini_stress]]
-
 
 def get_model(idx, dir):
     name = ex[idx]
@@ -163,14 +162,25 @@ def get_model(idx, dir):
                                                    save_flows=False)
 
     # csub files
+    ci = compression_indices[idx]
+    if ci is None:
+        sub6 = [[0, (0, 0, 1), 'delay', ini_stress, thick[0],
+                 1., cc, cr, theta, kv, ini_stress]]
+    else:
+        sub6 = [[0, (0, 0, 1), 'delay', ini_stress, thick[0],
+                 1., 230.258658761733000, 2.302586587617330,
+                 theta, kv, ini_stress]]
+
     opth = '{}.csub.obs'.format(name)
     csub = flopy.mf6.ModflowGwfcsub(gwf, head_based=True,
-                                   save_flows=True,
-                                   effective_stress_lag=True,
-                                   ndelaycells=ndcell[idx],
-                                   ninterbeds=1,
-                                   beta=0., cg_ske_cr=ss,
-                                   packagedata=sub6)
+                                    compression_indices=ci,
+                                    print_input=True,
+                                    save_flows=True,
+                                    effective_stress_lag=True,
+                                    ndelaycells=ndcell[idx],
+                                    ninterbeds=1,
+                                    beta=0., cg_ske_cr=ss,
+                                    packagedata=sub6)
     orecarray = {}
     orecarray['csub_obs.csv'] = [('tcomp', 'compaction-cell', (0, 0, 1)),
                                  ('sk', 'sk', (0, 0, 1))]
@@ -308,7 +318,6 @@ def cbc_compare(sim):
     d = np.recarray(nbud, dtype=dtype)
     for key in bud_lst:
         d[key] = 0.
-
 
     # get data from cbc dile
     kk = cobj.get_kstpkper()
