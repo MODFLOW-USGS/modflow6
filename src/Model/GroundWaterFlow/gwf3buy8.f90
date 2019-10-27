@@ -480,8 +480,13 @@ module GwfBuyModule
     ! -- Average density
     densen = this%dense(n)
     densem = this%dense(m)
-    cl1 = this%dis%con%cl1(this%dis%con%jas(icon))
-    cl2 = this%dis%con%cl2(this%dis%con%jas(icon))
+    if (m > n) then
+      cl1 = this%dis%con%cl1(this%dis%con%jas(icon))
+      cl2 = this%dis%con%cl2(this%dis%con%jas(icon))
+    else
+      cl1 = this%dis%con%cl2(this%dis%con%jas(icon))
+      cl2 = this%dis%con%cl1(this%dis%con%jas(icon))
+    end if
     wt =  cl1 / (cl1 + cl2)
     avgdense = wt * densen + (1.0 - wt) * densem
     !
@@ -572,8 +577,13 @@ module GwfBuyModule
     ! -- Average density
     densen = this%dense(n)
     densem = this%dense(m)
-    cl1 = this%dis%con%cl1(this%dis%con%jas(icon))
-    cl2 = this%dis%con%cl2(this%dis%con%jas(icon))
+    if (m > n) then
+      cl1 = this%dis%con%cl1(this%dis%con%jas(icon))
+      cl2 = this%dis%con%cl2(this%dis%con%jas(icon))
+    else
+      cl1 = this%dis%con%cl2(this%dis%con%jas(icon))
+      cl2 = this%dis%con%cl1(this%dis%con%jas(icon))
+    end if
     wt =  cl1 / (cl1 + cl2)
     avgdense = wt * densen + (1.0 - wt) * densem
     !
