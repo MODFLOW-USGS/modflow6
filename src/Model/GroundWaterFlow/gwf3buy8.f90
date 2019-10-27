@@ -416,7 +416,7 @@ module GwfBuyModule
     ! -- Return
     return
   end subroutine buy_flowja
-
+ 
   subroutine buy_da(this)
 ! ******************************************************************************
 ! buy_da -- Deallocate
@@ -587,7 +587,7 @@ module GwfBuyModule
     hym = this%npf%hy_eff(m, n, ihc, ipos=icon)
     !
     ! -- Conductance
-    if(this%dis%con%ihc(this%dis%con%jas(icon)) == 0) then
+    if(ihc == 0) then
       cond = vcond(this%ibound(n), this%ibound(m),                             &
                       this%npf%icelltype(n), this%npf%icelltype(m),            &
                       this%npf%inewton,                                        &
