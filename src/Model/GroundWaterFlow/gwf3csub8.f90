@@ -1899,6 +1899,8 @@ contains
             this%dbesi(n, idelay) = DZERO
             this%dbes0(n, idelay) = DZERO
             this%dbpcs(n, idelay) = this%pcs(ib)
+            this%dbcomp(n, idelay) = DZERO
+            this%dbtcomp(n, idelay) = DZERO
             if (this%iupdatematprop /= 0) then
               this%dbdz(n, idelay) = this%dbdzini(n, idelay)
               this%dbdz0(n, idelay) = this%dbdzini(n, idelay)
@@ -4421,6 +4423,9 @@ contains
 ! -- initialize variables
     rhs = DZERO
     hcof = DZERO
+    comp = DZERO
+    compi = DZERO
+    compe = DZERO
     !
     ! -- skip inactive and constant head cells
     if (this%ibound(node) > 0) then
@@ -6018,17 +6023,24 @@ contains
     real(DP) :: comp
     real(DP) :: thick
     real(DP) :: theta
+    real(DP) :: tthick
+    real(DP) :: wtheta
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
     idelay = this%idelay(ib)
     comp = DZERO
+    tthick = DZERO
+    wtheta = DZERO
     !
     !
     do n = 1, this%ndelaycells
       !
       ! initialize compaction for delay cell
       comp = this%dbtcomp(n, idelay) + this%dbcomp(n, idelay)
+      !
+      ! -- scale compaction by rnb
+      comp = comp / this%rnb(ib)
       !
       ! -- update thickness and theta
       if (ABS(comp) > DZERO) then
@@ -6049,8 +6061,21 @@ contains
         end if
         this%dbdz(n, idelay) = thick
         this%dbtheta(n, idelay) = theta
+        tthick = tthick + thick
+        wtheta = wtheta + thick * theta
       end if      
     end do
+    !
+    ! -- calculate thickness weighted theta and save thickness and weighted 
+    !    theta values for delay interbed
+    if (tthick > DZERO) then
+      wtheta = wtheta / tthick
+    else
+      tthick = DZERO
+      wtheta = DZERO
+    end if
+    this%thick(ib) = tthick
+    this%theta(ib) = wtheta
     !
     ! -- return
     return
