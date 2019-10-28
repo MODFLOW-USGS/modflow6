@@ -6036,10 +6036,11 @@ contains
     !
     do n = 1, this%ndelaycells
       !
-      ! initialize compaction for delay cell
+      ! -- initialize compaction for delay cell
       comp = this%dbtcomp(n, idelay) + this%dbcomp(n, idelay)
       !
-      ! -- scale compaction by rnb
+      ! -- scale compaction by rnb to get the compaction for
+      !    the interbed system (as opposed to the full system)
       comp = comp / this%rnb(ib)
       !
       ! -- update thickness and theta
@@ -6061,6 +6062,11 @@ contains
         end if
         this%dbdz(n, idelay) = thick
         this%dbtheta(n, idelay) = theta
+        tthick = tthick + thick
+        wtheta = wtheta + thick * theta
+      else
+        thick = this%dbdz(n, idelay)
+        theta = this%dbtheta(n, idelay)
         tthick = tthick + thick
         wtheta = wtheta + thick * theta
       end if      
