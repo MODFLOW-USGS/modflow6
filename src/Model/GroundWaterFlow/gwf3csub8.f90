@@ -680,7 +680,7 @@ contains
       ! -- update states if required
       if (isuppress_output == 0) then
         !
-        ! - calculate strain and change in coarse-grained void ratio and thickness
+        ! -- calculate strain and change in coarse-grained void ratio and thickness
         if (this%iupdatematprop /= 0) then
           call this%csub_cg_update(node)
         end if
@@ -748,7 +748,7 @@ contains
           ! -- update states if required
           if (isuppress_output == 0) then
             !
-            ! - calculate strain and change in interbed void ratio and thickness
+            ! -- calculate strain and change in interbed void ratio and thickness
             if (this%iupdatematprop /= 0) then
               call this%csub_nodelay_update(ib)
             end if
@@ -1647,14 +1647,6 @@ contains
           rval = DONE
         end if
         this%rnb(itmp) = rval
-        !!
-        !! -- update thickini for delay beds
-        !if (idelay /= 0) then
-        !  this%thickini(itmp) = this%thickini(itmp) * this%rnb(itmp)
-        !  if (this%iupdatematprop /= 0) then
-        !    this%thick(itmp) = this%thickini(itmp)
-        !  end if
-        !end if
         !
         ! -- get skv or ci
         rval =  this%parser%GetDouble()
@@ -2384,10 +2376,6 @@ contains
     call mem_allocate(this%sgs, this%dis%nodes, 'sgs', trim(this%origin))
     call mem_allocate(this%cg_ske_cr, this%dis%nodes, 'cg_ske_cr',               &
                       trim(this%origin))
-    !call mem_allocate(this%cg_theta, this%dis%nodes, 'cg_theta',                 &
-    !                  trim(this%origin))
-    !call mem_allocate(this%cg_thick, this%dis%nodes, 'cg_thick',                 &
-    !                  trim(this%origin))
     call mem_allocate(this%cg_es, this%dis%nodes, 'cg_es', trim(this%origin))
     call mem_allocate(this%cg_es0, this%dis%nodes, 'cg_es0', trim(this%origin))
     call mem_allocate(this%cg_pcs, this%dis%nodes, 'cg_pcs', trim(this%origin))
@@ -2442,8 +2430,6 @@ contains
     call mem_allocate(this%nodelist, iblen, 'nodelist', trim(this%origin))
     call mem_allocate(this%cg_gs, this%dis%nodes, 'cg_gs', trim(this%origin))
     call mem_allocate(this%pcs, iblen, 'pcs', trim(this%origin))
-    !call mem_allocate(this%thick, iblen, 'thick', trim(this%origin))
-    !call mem_allocate(this%theta, iblen, 'theta', trim(this%origin))
     call mem_allocate(this%rnb, iblen, 'rnb', trim(this%origin))
     call mem_allocate(this%kv, iblen, 'kv', trim(this%origin))
     call mem_allocate(this%h0, iblen, 'h0', trim(this%origin))
@@ -3045,7 +3031,6 @@ contains
       else
         v = this%rnb(ib) * this%thickini(ib)
       end if
-      !thick = this%cg_thickini(node) - v
       this%cg_thickini(node) = this%cg_thickini(node) - v
     end do
     !
@@ -3072,10 +3057,8 @@ contains
     !    if updating material properties
     if (this%iupdatematprop /= 0) then
       do node = 1, this%dis%nodes
-        thick = this%cg_thickini(node)
-        theta = this%cg_thetaini(node)
-        this%cg_thick(node) = thick
-        this%cg_theta(node) = theta
+        this%cg_thick(node) = this%cg_thickini(node)
+        this%cg_theta(node) = this%cg_thetaini(node)
       end do
     end if
     !
@@ -3659,27 +3642,8 @@ contains
         this%thick0(ib) = this%thick(ib)
         this%theta0(ib) = this%theta(ib)
       end if
-      !!
-      !! -- no delay interbeds
-      !if (idelay == 0) then
-      !  this%comp(ib) = DZERO
-      !  node = this%nodelist(ib)
-      !  if (this%iupdatematprop /= 0) then
-      !    this%thick0(ib) = this%thick(ib)
-      !    this%theta0(ib) = this%theta(ib)
-      !  end if
-      !  if (this%initialized /= 0) then
-      !    es = this%cg_es(node)
-      !    pcs = this%pcs(ib)
-      !    if (es > pcs) then
-      !      this%pcs(ib) = es
-      !    end if
-      !  end if
-      !!
-      !! -- delay interbeds
-      !else
       !
-      ! -- delay interbeds
+      ! -- update delay interbed terms
       if (idelay /= 0) then
         !
         ! -- update state if previous period was steady state
