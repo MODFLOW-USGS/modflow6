@@ -41,7 +41,7 @@ budtol = 1e-2
 
 bud_lst = ['STO-SS_IN', 'STO-SS_OUT',
            'STO-SY_IN', 'STO-SY_OUT',
-           'CSUB-AQELASTIC_IN', 'CSUB-AQELASTIC_OUT',
+           'CSUB-CGELASTIC_IN', 'CSUB-CGELASTIC_OUT',
            'CSUB-ELASTIC_IN', 'CSUB-ELASTIC_OUT',
            'CSUB-INELASTIC_IN', 'CSUB-INELASTIC_OUT',
            'CSUB-WATERCOMP_IN', 'CSUB-WATERCOMP_OUT']
@@ -404,7 +404,7 @@ def eval_zdisplacement(sim):
 
     # get results from cbc file
     cbc_bud = ['STO-SS', 'STO-SY',
-               'CSUB-AQELASTIC', 'CSUB-ELASTIC',
+               'CSUB-CGELASTIC', 'CSUB-ELASTIC',
                'CSUB-INELASTIC', 'CSUB-WATERCOMP']
     d = np.recarray(nbud, dtype=dtype)
     for key in bud_lst:

@@ -45,7 +45,7 @@ replace_exe = None
 htol = [None for idx in range(len(exdirs))]
 dtol = 1e-3
 
-bud_lst = ['CSUB-AQELASTIC_IN', 'CSUB-AQELASTIC_OUT',
+bud_lst = ['CSUB-CGELASTIC_IN', 'CSUB-CGELASTIC_OUT',
            'CSUB-WATERCOMP_IN', 'CSUB-WATERCOMP_OUT']
 
 # static model data
@@ -387,7 +387,7 @@ def eval_comp(sim):
     nbud = d0.shape[0]
 
     # get results from cbc file
-    cbc_bud = ['CSUB-AQELASTIC', 'CSUB-WATERCOMP']
+    cbc_bud = ['CSUB-CGELASTIC', 'CSUB-WATERCOMP']
     d = np.recarray(nbud, dtype=dtype)
     for key in bud_lst:
         d[key] = 0.

@@ -38,7 +38,7 @@ ndcell = [19] * len(ex)
 # travis = [True for idx in range(len(exdirs))]
 # the delay bed problems only run on the development version of MODFLOW-2005
 # set travis to True when version 1.13.0 is released
-travis = [False for idx in range(len(exdirs))]
+travis = [True for idx in range(len(exdirs))]
 
 # set replace_exe to None to use default executable
 replace_exe = None
@@ -68,8 +68,8 @@ laytyp = [0]
 S = 1e-4
 sy = 0.
 
-nouter, ninner = 1000, 300
-hclose, rclose, relax = 1e-6, 1e-6, 0.97
+nouter, ninner = 1000, 500
+hclose, rclose, relax = 1e-12, 1e-6, 0.97
 
 tdis_rc = []
 for idx in range(nper):
@@ -132,7 +132,8 @@ def build_model(idx, dir, adjustmat=False):
                                outer_maximum=nouter,
                                under_relaxation='NONE',
                                inner_maximum=ninner,
-                               inner_hclose=hclose, rcloserecord=rclose,
+                               inner_hclose=hclose,
+                               rcloserecord=[rclose, 'strict'],
                                linear_acceleration='CG',
                                scaling_method='NONE',
                                reordering_method='NONE',
@@ -277,7 +278,8 @@ def eval_sub(sim):
     for key in calc.dtype.names:
         diff = calc[key] - ovalsi[key]
         diffmax = np.abs(diff).max()
-        msg = 'maximum absolute {} difference ({:15.7g}) '.format(key, diffmax)
+        msg = 'maximum absolute interbed {} '.format(key) + \
+              'difference ({:15.7g}) '.format(diffmax)
         if diffmax > dtol:
             sim.success = False
             msg += 'exceeds {:15.7g}'.format(dtol)
@@ -303,9 +305,8 @@ def eval_sub(sim):
         for key in calc.dtype.names:
             diff = calc[key] - ovals[key]
             diffmax = np.abs(diff).max()
-            msg = 'maximum absolute {} difference ({:15.7g}) '.format(key,
-                                                                    diffmax)
-            msg += ' for cell {:02d} '.format(n+1)
+            msg = 'maximum absolute {}({}) difference '.format(key, n+1) + \
+                  '({:15.7g}) '.format(diffmax)
             if diffmax > dtol:
                 sim.success = False
                 msg += 'exceeds {:15.7g}'.format(dtol)
@@ -321,7 +322,8 @@ def eval_sub(sim):
     for key in calci.dtype.names:
         diff = calci[key] - ovalsi[key]
         diffmax = np.abs(diff).max()
-        msg = 'maximum absolute {} difference ({:15.7g}) '.format(key, diffmax)
+        msg = 'maximum absolute interbed {} difference '.format(key) + \
+              '({:15.7g}) '.format(diffmax)
         msg += 'calculated from individual interbed cell values '
         if diffmax > dtol:
             sim.success = False

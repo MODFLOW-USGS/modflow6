@@ -32,7 +32,7 @@ module GwfCsubModule
   public :: GwfCsubType
   !
   character(len=LENBUDTXT), dimension(4) :: budtxt =                            & !text labels for budget terms
-      [' CSUB-AQELASTIC',                                                       & 
+      [' CSUB-CGELASTIC',                                                       & 
        '   CSUB-ELASTIC', ' CSUB-INELASTIC',                                    &
        ' CSUB-WATERCOMP']
   character(len=LENBUDTXT), dimension(6) :: comptxt =                           & !text labels for compaction terms
@@ -5940,9 +5940,6 @@ contains
     integer(I4B) :: ielastic
     integer(I4B) :: node
     integer(I4B) :: n
-    !real(DP) :: comp
-    !real(DP) :: compi
-    !real(DP) :: compe
     real(DP) :: snnew
     real(DP) :: snold
     real(DP) :: sske
@@ -5981,8 +5978,6 @@ contains
         !
         ! -- save compaction data
         this%dbcomp(n, idelay) = v * snnew
-        !this%dbtcomp(n, idelay) = this%dbtcomp(n, idelay) +                      &
-        !                          v * this%rnb(ib) * snnew
         !
         ! -- calculate inelastic and elastic storage components
         if (this%idbconvert(n, idelay) /= 0) then
@@ -5995,10 +5990,6 @@ contains
     end if
     !
     ! -- fill compaction
-    !this%comp(ib) = comp * snnew
-    !this%tcomp(ib) = this%tcomp(ib) + comp * this%rnb(ib) * snnew
-    !this%tcompi(ib) = this%tcompi(ib) + compi * this%rnb(ib) * snnew
-    !this%tcompe(ib) = this%tcompe(ib) + compe * this%rnb(ib) * snnew
     comp = comp * this%rnb(ib) * snnew
     compi = compi * this%rnb(ib) * snnew
     compe = compe * this%rnb(ib) * snnew
