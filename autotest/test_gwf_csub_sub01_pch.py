@@ -24,13 +24,11 @@ paktest = 'csub'
 budtol = 1e-2
 
 compdir = 'mf6'
-ex = ['csub_sub01_adj']
+ex = ['csub_sub01_pch']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
 ddir = 'data'
-
-compression_indices = [None]
 
 ndcell = [19] * len(ex)
 
@@ -96,22 +94,21 @@ kv = 2.5e-6
 sgm = 0.
 sgs = 0.
 ini_stress = 1.0
+ini_head = 1.0
 thick = [1.]
-sub6 = [[0, (0, 0, 1), 'delay', ini_stress, thick[0],
-         1., cc, cr, theta, kv, ini_stress]]
 
 
 def get_model(idx, dir):
-    sim = build_model(idx, dir, adjustmat=True)
+    sim = build_model(idx, dir, pch=True)
 
     # build MODFLOW-6 with constant material properties
     pth = os.path.join(dir, compdir)
-    mc = build_model(idx, pth, None)
+    mc = build_model(idx, pth)
 
     return sim, mc
 
 
-def build_model(idx, dir, adjustmat=False):
+def build_model(idx, dir, pch=None):
     name = ex[idx]
 
     # build MODFLOW 6 files
@@ -167,9 +164,16 @@ def build_model(idx, dir, adjustmat=False):
                                                    save_flows=False)
 
     # csub files
+    if pch is None:
+        sub6 = [[0, (0, 0, 1), 'delay', -ini_stress, thick[0],
+                 1., cc, cr, theta, kv, ini_head]]
+    else:
+        sub6 = [[0, (0, 0, 1), 'delay', ini_stress, thick[0],
+                 1., cc, cr, theta, kv, ini_head]]
+
     opth = '{}.csub.obs'.format(name)
-    csub = flopy.mf6.ModflowGwfcsub(gwf, head_based=True,
-                                    update_material_properties=adjustmat,
+    csub = flopy.mf6.ModflowGwfcsub(gwf,
+                                    initial_preconsolidation_head=pch,
                                     print_input=True,
                                     save_flows=True,
                                     ndelaycells=ndcell[idx],
@@ -180,13 +184,6 @@ def build_model(idx, dir, adjustmat=False):
            ('thick', 'thickness', (0,)),
            ('theta', 'theta', (0,)),
            ('sk', 'sk', (0, 0, 1))]
-    tags = ['dbcomp', 'dbthick', 'dbporo']
-    for jdx, otype in enumerate(['delay-compaction',
-                                 'delay-thickness',
-                                 'delay-theta']):
-        for n in range(ndcell[idx]):
-            tag = '{}{:02d}'.format(tags[jdx], n + 1)
-            obs.append((tag, otype, (0, n)))
     orecarray = {}
     orecarray['csub_obs.csv'] = obs
 
@@ -208,14 +205,6 @@ def build_model(idx, dir, adjustmat=False):
 
     return sim
 
-def calc_theta_thick(comp, thickini=1.):
-    e0 = void
-    strain = -comp / thickini
-    e = e0 + strain * (1. + e0)
-    poro = e / (1. + e)
-    b = thickini - comp
-    return poro, b
-
 
 def eval_sub(sim):
     print('evaluating subsidence...')
@@ -233,7 +222,6 @@ def eval_sub(sim):
         tcb = np.genfromtxt(fpth, names=True, delimiter=',')
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
-
 
     # calculate maximum absolute error
     diff = tc['TCOMP'] - tcb['TCOMP']
@@ -265,73 +253,6 @@ def eval_sub(sim):
     else:
         sim.success = True
         print('    ' + msg)
-
-    # calculate theta and porosity from total interbed compaction
-    comp = tc['TCOMP']
-    dtype = [('THICK', np.float), ('THETA', np.float)]
-    ovalsi = np.zeros((comp.shape[0]), dtype=dtype)
-    ovalsi['THICK'] = tc['THICK']
-    ovalsi['THETA'] = tc['THETA']
-    calc = np.zeros((comp.shape[0]), dtype=dtype)
-    calc['THETA'], calc['THICK'] = calc_theta_thick(comp)
-
-    for key in calc.dtype.names:
-        diff = calc[key] - ovalsi[key]
-        diffmax = np.abs(diff).max()
-        msg = 'maximum absolute interbed {} '.format(key) + \
-              'difference ({:15.7g}) '.format(diffmax)
-        if diffmax > dtol:
-            sim.success = False
-            msg += 'exceeds {:15.7g}'.format(dtol)
-            assert diffmax < dtol, msg
-        else:
-            sim.success = True
-            print('    ' + msg)
-
-    # calculate theta and porosity from interbed cell compaction
-    calci = np.zeros((comp.shape[0]), dtype=dtype)
-    thickini = 1./ndcell[sim.idxsim]
-    for n in range(ndcell[sim.idxsim]):
-        tagc = 'DBCOMP{:02d}'.format(n+1)
-        tagb = 'DBTHICK{:02d}'.format(n+1)
-        tagp = 'DBPORO{:02d}'.format(n+1)
-        comp = tc[tagc]
-        ovals = np.zeros((comp.shape[0]), dtype=dtype)
-        ovals['THICK'] = tc[tagb]
-        ovals['THETA'] = tc[tagp]
-        calc = np.zeros((comp.shape[0]), dtype=dtype)
-        calc['THETA'], calc['THICK'] = calc_theta_thick(comp,
-                                                        thickini=thickini)
-        for key in calc.dtype.names:
-            diff = calc[key] - ovals[key]
-            diffmax = np.abs(diff).max()
-            msg = 'maximum absolute {}({}) difference '.format(key, n+1) + \
-                  '({:15.7g}) '.format(diffmax)
-            if diffmax > dtol:
-                sim.success = False
-                msg += 'exceeds {:15.7g}'.format(dtol)
-                assert diffmax < dtol, msg
-            else:
-                sim.success = True
-                print('    ' + msg)
-        calci['THICK'] += calc['THICK']
-        calci['THETA'] += calc['THICK'] * calc['THETA']
-
-    # finialize weighted theta and
-    calci['THETA'] /= calci['THICK']
-    for key in calci.dtype.names:
-        diff = calci[key] - ovalsi[key]
-        diffmax = np.abs(diff).max()
-        msg = 'maximum absolute interbed {} difference '.format(key) + \
-              '({:15.7g}) '.format(diffmax)
-        msg += 'calculated from individual interbed cell values '
-        if diffmax > dtol:
-            sim.success = False
-            msg += 'exceeds {:15.7g}'.format(dtol)
-            assert diffmax < dtol, msg
-        else:
-            sim.success = True
-            print('    ' + msg)
 
     # compare budgets
     cbc_compare(sim)
