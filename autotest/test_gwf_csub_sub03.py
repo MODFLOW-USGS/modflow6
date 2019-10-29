@@ -225,7 +225,8 @@ def get_model(idx, dir):
 
     # build MODFLOW 6 files
     ws = dir
-    sim = flopy.mf6.MFSimulation(sim_name=name, version='mf6',
+    sim = flopy.mf6.MFSimulation(sim_name=name,
+                                 version='mf6',
                                  exe_name='mf6',
                                  sim_ws=ws)
     # create tdis package
@@ -291,6 +292,7 @@ def get_model(idx, dir):
     skcsv = '{}.sk.strain.csv'.format(name)
     copth = '{}.compaction.bin'.format(name)
     csub = flopy.mf6.ModflowGwfcsub(gwf,
+                                    print_input=True,
                                     boundnames=True,
                                     head_based=True,
                                     effective_stress_lag=True,
