@@ -58,7 +58,7 @@ type integer
 reader urword
 optional true
 longname number of interbed cell nodes
-description number of nodes used to discretize the delay interbed. If not specified, then a default value of 19 is assigned.
+description number of nodes used to discretize delay interbeds. If not specified, then a default value of 19 is assigned.
 
 block options
 name compression_indices
@@ -74,7 +74,7 @@ type keyword
 reader urword
 optional true
 longname keyword to indicate material properties can change during the simulations
-description keyword to indicate that the thickness and void ratio of coarse-grained and no delay interbed sediments will vary during the simulation. If not specified, the thickness and void ratio of coarse-grained and no delay interbed sediments will not vary during the simulation.
+description keyword to indicate that the thickness and void ratio of coarse-grained and interbed sediments (delay and no-delay) will vary during the simulation. If not specified, the thickness and void ratio of coarse-grained and interbed sediments will not vary during the simulation.
 
 block options
 name cell_fraction
