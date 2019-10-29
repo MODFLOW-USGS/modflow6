@@ -85,6 +85,7 @@ module GridConnectionModule
     procedure, pass(this) :: addModelLink 
     procedure, pass(this) :: extendConnection
     procedure, pass(this) :: getInterfaceIndex
+    procedure, pass(this) :: isPeriodic
     ! private stuff
     procedure, private, pass(this) :: buildConnections
     procedure, private, pass(this) :: addNeighbors
@@ -102,7 +103,7 @@ module GridConnectionModule
     procedure, private, pass(this) :: fillConnectionDataFromExchanges
     procedure, private, pass(this) :: createConnectionMask
     procedure, private, pass(this) :: maskConnections
-    procedure, private, pass(this) :: setMaskOnConnection
+    procedure, private, pass(this) :: setMaskOnConnection    
   end type
   
   contains ! module procedures
@@ -635,7 +636,17 @@ module GridConnectionModule
         if (associated(ncell%model, mcell%model)) then
           ! within same model, straight copy
           connOrig => ncell%model%dis%con
-          iposOrig = connOrig%getjaindex(ncell%index, mcell%index)          
+          iposOrig = connOrig%getjaindex(ncell%index, mcell%index)   
+          if (iposOrig == 0) then
+            ! periodic boundary conditions can add connections between cells in 
+            ! the same model, but they are dealt with through the exchange data
+            if (this%isPeriodic(ncell%index, mcell%index)) cycle
+            
+            ! this should not be possible
+            write(*,*) 'Error: cannot find cell connection in model grid'
+            call ustop() 
+          end if
+          
           isymOrig = connOrig%jas(iposOrig)
           conn%hwva(isym) = connOrig%hwva(isymOrig)
           conn%ihc(isym) = connOrig%ihc(isymOrig)
@@ -869,5 +880,37 @@ module GridConnectionModule
     integer(I4B) :: nConns
     
   end subroutine allocateArrays  
+  
+  ! test if the connection between node n and m, who are both 
+  ! assumed to be part of this%model, is periodic
+  function isPeriodic(this, n, m) result(periodic)
+    class(GridConnectionType), intent(in) :: this
+    integer(I4B) :: n, m
+    logical :: periodic
+    ! local
+    integer(I4B) :: icell
+    
+    periodic = .false.    
+    do icell = 1, this%nrOfCells
+      if (.not. associated(this%boundaryCells(icell)%cell%model, this%connectedCells(icell)%cell%model)) cycle
+      
+      ! one way
+      if (this%boundaryCells(icell)%cell%index == n) then
+        if (this%connectedCells(icell)%cell%index == m) then
+          periodic = .true.
+          return
+        end if
+      end if
+      ! or the other
+      if (this%boundaryCells(icell)%cell%index == m) then
+        if (this%connectedCells(icell)%cell%index == n) then
+          periodic = .true.
+          return
+        end if
+      end if
+      
+    end do
+    
+  end function
   
 end module GridConnectionModule
