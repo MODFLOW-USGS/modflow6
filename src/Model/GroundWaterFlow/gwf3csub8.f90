@@ -104,10 +104,6 @@ module GwfCsubModule
     real(DP), dimension(:), pointer, contiguous :: sgm => null()                 !specific gravity moist sediments
     real(DP), dimension(:), pointer, contiguous :: sgs => null()                 !specific gravity saturated sediments
     real(DP), dimension(:), pointer, contiguous :: cg_ske_cr => null()           !coarse-grained specified storage
-    real(DP), dimension(:), pointer, contiguous :: cg_theta => null()            !current coarse-grained (aquifer) porosity
-    real(DP), dimension(:), pointer, contiguous :: cg_thick => null()            !current coarse-grained (aquifer) thickness
-    real(DP), dimension(:), pointer, contiguous :: cg_theta0 => null()           !previous coarse-grained (aquifer) porosity
-    real(DP), dimension(:), pointer, contiguous :: cg_thick0 => null()           !previous coarse-grained (aquifer) thickness
     real(DP), dimension(:), pointer, contiguous :: cg_gs => null()               !geostatic stress for a cell
     real(DP), dimension(:), pointer, contiguous :: cg_es => null()               !coarse-grained (aquifer) effective stress
     real(DP), dimension(:), pointer, contiguous :: cg_es0 => null()              !coarse-grained (aquifer) effective stress for the previous time step
@@ -119,6 +115,10 @@ module GwfCsubModule
     real(DP), dimension(:), pointer, contiguous :: cg_sk => null()               !coarse-grained (aquifer) first storage coefficient
     real(DP), dimension(:), pointer, contiguous :: cg_thickini => null()         !initial coarse-grained (aquifer) thickness
     real(DP), dimension(:), pointer, contiguous :: cg_thetaini => null()         !initial coarse-grained (aquifer) porosity
+    real(DP), dimension(:), pointer, contiguous :: cg_thick => null()            !current coarse-grained (aquifer) thickness
+    real(DP), dimension(:), pointer, contiguous :: cg_thick0 => null()           !previous coarse-grained (aquifer) thickness
+    real(DP), dimension(:), pointer, contiguous :: cg_theta => null()            !current coarse-grained (aquifer) porosity
+    real(DP), dimension(:), pointer, contiguous :: cg_theta0 => null()           !previous coarse-grained (aquifer) porosity
     !
     ! -- cell storage variables
     real(DP), dimension(:), pointer, contiguous :: cell_wcstor => null()         !cell water compressibility storage
@@ -131,10 +131,6 @@ module GwfCsubModule
     real(DP), dimension(:), pointer, contiguous :: ci => null()                  !compression index
     real(DP), dimension(:), pointer, contiguous :: rci => null()                 !recompression index
     real(DP), dimension(:), pointer, contiguous :: pcs => null()                 !preconsolidation stress
-    real(DP), dimension(:), pointer, contiguous :: thick => null()               !current interbed thickness
-    real(DP), dimension(:), pointer, contiguous :: theta => null()               !current interbed porosity
-    real(DP), dimension(:), pointer, contiguous :: thick0 => null()              !previous interbed thickness
-    real(DP), dimension(:), pointer, contiguous :: theta0 => null()              !previous interbed porosity
     real(DP), dimension(:), pointer, contiguous :: rnb => null()                 !interbed system material factor
     real(DP), dimension(:), pointer, contiguous :: kv => null()                  !vertical hydraulic conductivity of interbed
     real(DP), dimension(:), pointer, contiguous :: h0 => null()                  !initial head in interbed
@@ -148,6 +144,10 @@ module GwfCsubModule
     real(DP), dimension(:), pointer, contiguous :: sk => null()                  !first storage coefficient
     real(DP), dimension(:), pointer, contiguous :: thickini => null()            !initial interbed thickness
     real(DP), dimension(:), pointer, contiguous :: thetaini => null()            !initial interbed theta
+    real(DP), dimension(:), pointer, contiguous :: thick => null()               !current interbed thickness
+    real(DP), dimension(:), pointer, contiguous :: thick0 => null()              !previous interbed thickness
+    real(DP), dimension(:), pointer, contiguous :: theta => null()               !current interbed porosity
+    real(DP), dimension(:), pointer, contiguous :: theta0 => null()              !previous interbed porosity
     real(DP), dimension(:,:), pointer, contiguous :: auxvar => null()            !auxiliary variable array
     !
     ! -- delay interbed arrays
@@ -1271,6 +1271,7 @@ contains
             ctype = 'no-delay'
           else
             ctype = 'delay'
+            b0 = b0 * this%rnb(ib)
           end if
           strain = this%tcomp(ib) / b0
           pctcomp = DHUNDRED * strain
@@ -1329,6 +1330,7 @@ contains
             ctype = 'no-delay'
           else
             ctype = 'delay'
+            b0 = b0 * this%rnb(ib)
           end if
           strain = this%tcomp(ib) / b0
           pctcomp = DHUNDRED * strain
@@ -1627,8 +1629,10 @@ contains
           end if
           rval = rval * baq
         end if
-        this%thick(itmp) = rval
         this%thickini(itmp) = rval
+        if (this%iupdatematprop /= 0) then
+          this%thick(itmp) = rval
+        end if
 
         ! -- get rnb
         rval = this%parser%GetDouble()
@@ -1643,11 +1647,14 @@ contains
           rval = DONE
         end if
         this%rnb(itmp) = rval
-        !
-        ! -- update thickini for delay beds
-        if (idelay > 0) then
-          this%thickini(itmp) = this%thickini(itmp) * this%rnb(itmp)
-        end if
+        !!
+        !! -- update thickini for delay beds
+        !if (idelay /= 0) then
+        !  this%thickini(itmp) = this%thickini(itmp) * this%rnb(itmp)
+        !  if (this%iupdatematprop /= 0) then
+        !    this%thick(itmp) = this%thickini(itmp)
+        !  end if
+        !end if
         !
         ! -- get skv or ci
         rval =  this%parser%GetDouble()
@@ -1676,8 +1683,10 @@ contains
         !
         ! -- get porosity
         rval =  this%parser%GetDouble()
-        this%theta(itmp) = rval
         this%thetaini(itmp) = rval
+        if (this%iupdatematprop /= 0) then
+          this%theta(itmp) = rval
+        end if
         if (rval <= DZERO .or. rval > DONE) then
             write(errmsg,'(4x,a,1x,a,1x,i0)') &
               '****ERROR. theta MUST BE > 0 and <= 1 FOR PACKAGEDATA ENTRY',     &
@@ -1730,8 +1739,7 @@ contains
       call UWWORD(line, iloc, 20, 1, 'CELLID', n, q, CENTER=.TRUE.)
       call UWWORD(line, iloc, 10, 1, 'CDELAY', n, q, CENTER=.TRUE.)
       call UWWORD(line, iloc, 10, 1, 'PCS', n, q, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 10, 1,                                  & 
-                  'THICK_FRAC', n, q, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 10, 1, 'THICK', n, q, CENTER=.TRUE.)
       call UWWORD(line, iloc, 10, 1, 'RNB', n, q, CENTER=.TRUE.)
       call UWWORD(line, iloc, 10, 1, 'SSV_CC', n, q, CENTER=.TRUE.)
       call UWWORD(line, iloc, 10, 1, 'SSE_CR', n, q, CENTER=.TRUE.)
@@ -1761,7 +1769,7 @@ contains
         call UWWORD(line, iloc, 10, 3,                                &
                     text, n, this%pcs(ib), center=.TRUE.)
         call UWWORD(line, iloc, 10, 3,                                &
-                    text, n, this%thick(ib), center=.TRUE.)
+                    text, n, this%thickini(ib), center=.TRUE.)
         call UWWORD(line, iloc, 10, 3,                                &
                     text, n, this%rnb(ib), center=.TRUE.)
         call UWWORD(line, iloc, 10, 3,                                &
@@ -1769,7 +1777,7 @@ contains
         call UWWORD(line, iloc, 10, 3,                                &
                     text, n, this%rci(ib), center=.TRUE.)
         call UWWORD(line, iloc, 10, 3,                                &
-                    text, n, this%theta(ib), center=.TRUE.)
+                    text, n, this%thetaini(ib), center=.TRUE.)
         if (this%idelay(ib) == 0) then
           text = '-'
           call UWWORD(line, iloc, 10, 1, text, n, q, center=.TRUE.)
@@ -1889,10 +1897,11 @@ contains
           !
           ! -- initialize delay interbed variables
           do n = 1, this%ndelaycells
-            this%dbdzini(n, idelay) = this%thick(ib) / real(this%ndelaycells, DP)
+            rval = this%thickini(ib) / real(this%ndelaycells, DP)
+            this%dbdzini(n, idelay) = rval
             this%dbh(n, idelay) = this%h0(ib)
             this%dbh0(n, idelay) = this%h0(ib)
-            this%dbthetaini(n, idelay) = this%theta(ib)
+            this%dbthetaini(n, idelay) = this%thetaini(ib)
             this%dbgeo(n, idelay) = DZERO
             this%dbgeo0(n, idelay) = DZERO
             this%dbes(n, idelay) = DZERO
@@ -2375,19 +2384,10 @@ contains
     call mem_allocate(this%sgs, this%dis%nodes, 'sgs', trim(this%origin))
     call mem_allocate(this%cg_ske_cr, this%dis%nodes, 'cg_ske_cr',               &
                       trim(this%origin))
-    call mem_allocate(this%cg_theta, this%dis%nodes, 'cg_theta',                 &
-                      trim(this%origin))
-    call mem_allocate(this%cg_thick, this%dis%nodes, 'cg_thick',                 &
-                      trim(this%origin))
-    if (this%iupdatematprop == 0) then
-      call mem_setptr(this%cg_theta0, 'cg_theta', trim(this%origin))
-      call mem_setptr(this%cg_thick0, 'cg_thick', trim(this%origin))
-    else
-      call mem_allocate(this%cg_theta0, this%dis%nodes, 'cg_theta0',             &
-                        trim(this%origin))
-      call mem_allocate(this%cg_thick0, this%dis%nodes, 'cg_thick0',             &
-                        trim(this%origin))
-    end if
+    !call mem_allocate(this%cg_theta, this%dis%nodes, 'cg_theta',                 &
+    !                  trim(this%origin))
+    !call mem_allocate(this%cg_thick, this%dis%nodes, 'cg_thick',                 &
+    !                  trim(this%origin))
     call mem_allocate(this%cg_es, this%dis%nodes, 'cg_es', trim(this%origin))
     call mem_allocate(this%cg_es0, this%dis%nodes, 'cg_es0', trim(this%origin))
     call mem_allocate(this%cg_pcs, this%dis%nodes, 'cg_pcs', trim(this%origin))
@@ -2401,6 +2401,21 @@ contains
                       trim(this%origin))
     call mem_allocate(this%cg_thetaini, this%dis%nodes, 'cg_thetaini',           & 
                       trim(this%origin))
+    if (this%iupdatematprop == 0) then
+      call mem_setptr(this%cg_thick, 'cg_thickini', trim(this%origin))
+      call mem_setptr(this%cg_thick0, 'cg_thickini', trim(this%origin))
+      call mem_setptr(this%cg_theta, 'cg_thetaini', trim(this%origin))
+      call mem_setptr(this%cg_theta0, 'cg_thetaini', trim(this%origin))
+    else
+      call mem_allocate(this%cg_thick, this%dis%nodes, 'cg_thick',               &
+                        trim(this%origin))
+      call mem_allocate(this%cg_thick0, this%dis%nodes, 'cg_thick0',             &
+                        trim(this%origin))
+      call mem_allocate(this%cg_theta, this%dis%nodes, 'cg_theta',               &
+                        trim(this%origin))
+      call mem_allocate(this%cg_theta0, this%dis%nodes, 'cg_theta0',             &
+                        trim(this%origin))
+    end if
     !
     ! -- cell storage data
     call mem_allocate(this%cell_wcstor, this%dis%nodes, 'cell_wcstor',           &
@@ -2427,15 +2442,8 @@ contains
     call mem_allocate(this%nodelist, iblen, 'nodelist', trim(this%origin))
     call mem_allocate(this%cg_gs, this%dis%nodes, 'cg_gs', trim(this%origin))
     call mem_allocate(this%pcs, iblen, 'pcs', trim(this%origin))
-    call mem_allocate(this%thick, iblen, 'thick', trim(this%origin))
-    call mem_allocate(this%theta, iblen, 'theta', trim(this%origin))
-    if (this%iupdatematprop == 0) then
-      call mem_setptr(this%theta0, 'theta', trim(this%origin))
-      call mem_setptr(this%thick0, 'thick', trim(this%origin))
-    else
-      call mem_allocate(this%theta0, iblen, 'theta0', trim(this%origin))
-      call mem_allocate(this%thick0, iblen, 'thick0', trim(this%origin))
-    end if
+    !call mem_allocate(this%thick, iblen, 'thick', trim(this%origin))
+    !call mem_allocate(this%theta, iblen, 'theta', trim(this%origin))
     call mem_allocate(this%rnb, iblen, 'rnb', trim(this%origin))
     call mem_allocate(this%kv, iblen, 'kv', trim(this%origin))
     call mem_allocate(this%h0, iblen, 'h0', trim(this%origin))
@@ -2454,6 +2462,17 @@ contains
     call mem_allocate(this%sk, iblen, 'sk', trim(this%origin))
     call mem_allocate(this%thickini, iblen, 'thickini', trim(this%origin))
     call mem_allocate(this%thetaini, iblen, 'thetaini', trim(this%origin))
+    if (this%iupdatematprop == 0) then
+      call mem_setptr(this%thick, 'thickini', trim(this%origin))
+      call mem_setptr(this%thick0, 'thickini', trim(this%origin))
+      call mem_setptr(this%theta, 'thetaini', trim(this%origin))
+      call mem_setptr(this%theta0, 'thetaini', trim(this%origin))
+    else
+      call mem_allocate(this%thick, iblen, 'thick', trim(this%origin))
+      call mem_allocate(this%thick0, iblen, 'thick0', trim(this%origin))
+      call mem_allocate(this%theta, iblen, 'theta', trim(this%origin))
+      call mem_allocate(this%theta0, iblen, 'theta0', trim(this%origin))
+    end if
     !
     ! -- delay bed storage
     call mem_allocate(this%idbconvert, 0, 0, 'idbconvert', trim(this%origin))
@@ -2562,15 +2581,8 @@ contains
       call mem_deallocate(this%sgm)
       call mem_deallocate(this%sgs)
       call mem_deallocate(this%cg_ske_cr)
-      if (this%iupdatematprop == 0) then
-        nullify(this%cg_theta0)
-        nullify(this%cg_thick0)
-      else
-        call mem_deallocate(this%cg_theta0)
-        call mem_deallocate(this%cg_thick0)
-      end if
-      call mem_deallocate(this%cg_theta)
-      call mem_deallocate(this%cg_thick)
+      !call mem_deallocate(this%cg_theta)
+      !call mem_deallocate(this%cg_thick)
       call mem_deallocate(this%cg_gs)
       call mem_deallocate(this%cg_es)
       call mem_deallocate(this%cg_es0)
@@ -2580,6 +2592,17 @@ contains
       call mem_deallocate(this%cg_stor)
       call mem_deallocate(this%cg_ske)
       call mem_deallocate(this%cg_sk)
+      if (this%iupdatematprop == 0) then
+        nullify(this%cg_thick)
+        nullify(this%cg_thick0)
+        nullify(this%cg_theta)
+        nullify(this%cg_theta0)
+      else
+        call mem_deallocate(this%cg_thick)
+        call mem_deallocate(this%cg_thick0)
+        call mem_deallocate(this%cg_theta)
+        call mem_deallocate(this%cg_theta0)
+      end if
       call mem_deallocate(this%cg_thickini)
       call mem_deallocate(this%cg_thetaini)
       !
@@ -2595,15 +2618,8 @@ contains
       call mem_deallocate(this%ci)
       call mem_deallocate(this%rci)
       call mem_deallocate(this%pcs)
-      if (this%iupdatematprop == 0) then
-        nullify(this%theta0)
-        nullify(this%thick0)
-      else
-        call mem_deallocate(this%theta0)
-        call mem_deallocate(this%thick0)
-      end if
-      call mem_deallocate(this%thick)
-      call mem_deallocate(this%theta)
+      !call mem_deallocate(this%thick)
+      !call mem_deallocate(this%theta)
       call mem_deallocate(this%rnb)
       call mem_deallocate(this%kv)
       call mem_deallocate(this%h0)
@@ -2615,6 +2631,17 @@ contains
       call mem_deallocate(this%storagei)
       call mem_deallocate(this%ske)
       call mem_deallocate(this%sk)
+      if (this%iupdatematprop == 0) then
+        nullify(this%thick)
+        nullify(this%thick0)
+        nullify(this%theta)
+        nullify(this%theta0)
+      else
+        call mem_deallocate(this%thick)
+        call mem_deallocate(this%thick0)
+        call mem_deallocate(this%theta)
+        call mem_deallocate(this%theta0)
+      end if
       call mem_deallocate(this%thickini)
       call mem_deallocate(this%thetaini)
       !
@@ -2914,7 +2941,7 @@ contains
         case ('CG_THETA')
           call this%dis%read_grid_array(line, lloc, istart, istop,              &
                                         this%iout, this%parser%iuactive,        &
-                                        this%cg_theta, 'CG_THETA')
+                                        this%cg_thetaini, 'CG_THETA')
           istheta = 1
         case ('SGM')
             call this%dis%read_grid_array(line, lloc, istart, istop,          &
@@ -2965,7 +2992,7 @@ contains
     do node = 1, this%dis%nodes
       call this%dis%noder_to_string(node, cellid)
       cg_ske_cr = this%cg_ske_cr(node)
-      theta = this%cg_theta(node)
+      theta = this%cg_thetaini(node)
       !
       ! -- coarse-grained storage error condition
       if (cg_ske_cr < DZERO) then
@@ -3006,7 +3033,7 @@ contains
     do node = 1, this%dis%nodes
       top = this%dis%top(node)
       bot = this%dis%bot(node)
-      this%cg_thick(node) = top - bot
+      this%cg_thickini(node) = top - bot
     end do
     !
     ! -- subtract the interbed thickness from aquifer thickness
@@ -3014,17 +3041,17 @@ contains
       node = this%nodelist(ib)
       idelay = this%idelay(ib)
       if (idelay == 0) then
-        v = this%thick(ib)
+        v = this%thickini(ib)
       else
-        v = this%rnb(ib) * this%thick(ib)
+        v = this%rnb(ib) * this%thickini(ib)
       end if
-      thick = this%cg_thick(node) - v
-      this%cg_thick(node) = this%cg_thick(node) - v
+      !thick = this%cg_thickini(node) - v
+      this%cg_thickini(node) = this%cg_thickini(node) - v
     end do
     !
     ! -- evaluate if any cg_thick values are less than 0
     do node = 1, this%dis%nodes
-      thick = this%cg_thick(node)
+      thick = this%cg_thickini(node)
       if (thick < DZERO) then
         call this%dis%noder_to_string(node, cellid)
         write(errmsg,'(4x,a,1x,g0,a,1x,a,1x,a)')                                &
@@ -3040,14 +3067,17 @@ contains
       call ustop()
     end if
     !
-    ! -- set initial coarse-grained thickness (cg_thickini) and
-    !    initial coarse-grained porosity (cg_thetaini)
-    do node = 1, this%dis%nodes
-      thick = this%cg_thick(node)
-      theta = this%cg_theta(node)
-      this%cg_thickini(node) = thick
-      this%cg_thetaini(node) = theta
-    end do
+    ! -- set current coarse-grained thickness (cg_thick) and
+    !    current coarse-grained porosity (cg_theta). Only needed
+    !    if updating material properties
+    if (this%iupdatematprop /= 0) then
+      do node = 1, this%dis%nodes
+        thick = this%cg_thickini(node)
+        theta = this%cg_thetaini(node)
+        this%cg_thick(node) = thick
+        this%cg_theta(node) = theta
+      end do
+    end if
     !
     ! -- return
     return
@@ -3606,8 +3636,8 @@ contains
       this%cg_comp(node) = DZERO
       this%cg_es0(node) = this%cg_es(node)
       if (this%iupdatematprop /= 0) then
-        this%cg_theta0(node) = this%cg_theta(node)
         this%cg_thick0(node) = this%cg_thick(node)
+        this%cg_theta0(node) = this%cg_theta(node)
       end if
     end do
     !
@@ -3615,24 +3645,42 @@ contains
     do ib = 1, this%ninterbeds
       idelay = this%idelay(ib)
       !
-      ! -- no delay interbeds
-      if (idelay == 0) then
-        this%comp(ib) = DZERO
-        node = this%nodelist(ib)
-        if (this%iupdatematprop /= 0) then
-          this%theta0(ib) = this%theta(ib)
-          this%thick0(ib) = this%thick(ib)
+      ! -- update common terms for no-delay and delay interbeds
+      this%comp(ib) = DZERO
+      node = this%nodelist(ib)
+      if (this%initialized /= 0) then
+        es = this%cg_es(node)
+        pcs = this%pcs(ib)
+        if (es > pcs) then
+          this%pcs(ib) = es
         end if
-        if (this%initialized /= 0) then
-          es = this%cg_es(node)
-          pcs = this%pcs(ib)
-          if (es > pcs) then
-            this%pcs(ib) = es
-          end if
-        end if
+      end if
+      if (this%iupdatematprop /= 0) then
+        this%thick0(ib) = this%thick(ib)
+        this%theta0(ib) = this%theta(ib)
+      end if
+      !!
+      !! -- no delay interbeds
+      !if (idelay == 0) then
+      !  this%comp(ib) = DZERO
+      !  node = this%nodelist(ib)
+      !  if (this%iupdatematprop /= 0) then
+      !    this%thick0(ib) = this%thick(ib)
+      !    this%theta0(ib) = this%theta(ib)
+      !  end if
+      !  if (this%initialized /= 0) then
+      !    es = this%cg_es(node)
+      !    pcs = this%pcs(ib)
+      !    if (es > pcs) then
+      !      this%pcs(ib) = es
+      !    end if
+      !  end if
+      !!
+      !! -- delay interbeds
+      !else
       !
       ! -- delay interbeds
-      else
+      if (idelay /= 0) then
         !
         ! -- update state if previous period was steady state
         if (kper > 1) then
@@ -5207,7 +5255,7 @@ contains
     !
     ! -- convertible cell
     else
-      top = this%dis%bot(node) + this%thick(ib)
+      top = this%dis%bot(node) + this%thickini(ib)
       !
       ! -- stranded cell
       if (hcell < top) then
@@ -5395,7 +5443,7 @@ contains
     end if
     !
     ! -- solve for delay bed heads
-    if (this%thick(ib) > DZERO) then
+    if (this%thickini(ib) > DZERO) then
       icnvg = 0
       iter = 0
       idelay = this%idelay(ib)
@@ -5473,7 +5521,7 @@ contains
     ! -- initialize variables
     idelay = this%idelay(ib)
     node = this%nodelist(ib)
-    b = this%thick(ib)
+    b = this%thickini(ib)
     bot = this%dis%bot(node)
     top = bot + b
     !
@@ -5882,7 +5930,7 @@ contains
     sk = DZERO
     !
     !
-    if (this%thick(ib) > DZERO) then
+    if (this%thickini(ib) > DZERO) then
       fmult = this%dbdzini(1, idelay)
       dzhalf = DHALF * this%dbdzini(1, idelay)
       do n = 1, this%ndelaycells
@@ -5962,7 +6010,7 @@ contains
     call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
     !
     !
-    if (this%thick(ib) > DZERO) then
+    if (this%thickini(ib) > DZERO) then
       fmult = this%dbdzini(1, idelay)
       do n = 1, this%ndelaycells
         call this%csub_delay_calc_ssksske(ib, n, hcell, ssk, sske)
@@ -6100,7 +6148,7 @@ contains
     idelay = this%idelay(ib)
     hcof = DZERO
     rhs = DZERO
-    if (this%thick(ib) > DZERO) then
+    if (this%thickini(ib) > DZERO) then
       ! -- calculate terms for gwf matrix
       c1 = DTWO * this%kv(ib) / this%dbdzini(1, idelay)
       rhs = -c1 * this%dbh(1, idelay)
