@@ -6322,6 +6322,21 @@ contains
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
+    !    for delay-compaction observation type.
+    call this%obs%StoreObsType('delay-compaction', .false., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for delay-thickness observation type.
+    call this%obs%StoreObsType('delay-thickness', .false., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for delay-theta observation type.
+    call this%obs%StoreObsType('delay-theta', .false., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
     !    for delay-flowtop observation type.
     call this%obs%StoreObsType('delay-flowtop', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
@@ -6450,7 +6465,9 @@ contains
             case ('THICKNESS-CELL')
               v = this%cell_thick(n)
             case ('DELAY-HEAD', 'DELAY-PRECONSTRESS',                           &
-                  'DELAY-GSTRESS', 'DELAY-ESTRESS')
+                  'DELAY-GSTRESS', 'DELAY-ESTRESS',                             &
+                  'DELAY-COMPACTION', 'DELAY-THICKNESS',                        &
+                  'DELAY-THETA')
               if (n > this%ndelaycells) then
                 r = real(n, DP) / real(this%ndelaycells, DP)
                 idelay = int(floor(r)) + 1
@@ -6468,6 +6485,12 @@ contains
                   v = this%dbgeo(ncol, idelay)
                 case ('DELAY-ESTRESS')
                   v = this%dbes(ncol, idelay)
+                case ('DELAY-COMPACTION')
+                  v = this%dbtcomp(ncol, idelay)
+                case ('DELAY-THICKNESS')
+                  v = this%dbdz(ncol, idelay)
+                case ('DELAY-THETA')
+                  v = this%dbtheta(ncol, idelay)
               end select
             case ('PRECONSTRESS-CELL')
               v = this%pcs(n)
@@ -6555,7 +6578,10 @@ contains
       else if (obsrv%ObsTypeId == 'DELAY-PRECONSTRESS' .or.                     &
                obsrv%ObsTypeId == 'DELAY-HEAD' .or.                             &
                obsrv%ObsTypeId == 'DELAY-GSTRESS' .or.                          &
-               obsrv%ObsTypeId == 'DELAY-ESTRESS') then
+               obsrv%ObsTypeId == 'DELAY-ESTRESS' .or.                          &
+               obsrv%ObsTypeId == 'DELAY-COMPACTION' .or.                       &
+               obsrv%ObsTypeId == 'DELAY-THICKNESS' .or.                        &
+               obsrv%ObsTypeId == 'DELAY-THETA') then
         n = obsrv%NodeNumber
         idelay = this%idelay(n)
         j = (idelay - 1) * this%ndelaycells + 1
@@ -6700,6 +6726,9 @@ contains
         obsrv%ObsTypeId=='DELAY-GSTRESS' .or.                                   & 
         obsrv%ObsTypeId=='DELAY-ESTRESS' .or.                                   & 
         obsrv%ObsTypeId=='DELAY-PRECONSTRESS' .or.                              &
+        obsrv%ObsTypeId=='DELAY-COMPACTION' .or.                                &
+        obsrv%ObsTypeId=='DELAY-THICKNESS' .or.                                 &
+        obsrv%ObsTypeId=='DELAY-THETA' .or.                                     &
         obsrv%ObsTypeId=='DELAY-FLOWTOP' .or.                                   &
         obsrv%ObsTypeId=='DELAY-FLOWBOT') then
       call extract_idnum_or_bndname(strng, icol, istart, istop, nn1, bndname)
@@ -6713,7 +6742,10 @@ contains
       if (obsrv%ObsTypeId=='DELAY-HEAD' .or.                                    &
           obsrv%ObsTypeId=='DELAY-GSTRESS' .or.                                 &
           obsrv%ObsTypeId=='DELAY-ESTRESS' .or.                                 &
-          obsrv%ObsTypeId=='DELAY-PRECONSTRESS') then
+          obsrv%ObsTypeId=='DELAY-PRECONSTRESS' .or.                            &
+          obsrv%ObsTypeId=='DELAY-COMPACTION' .or.                              &
+          obsrv%ObsTypeId=='DELAY-THICKNESS' .or.                               &
+          obsrv%ObsTypeId=='DELAY-THETA') then
         call extract_idnum_or_bndname(strng, icol, istart, istop, nn2, bndname)
         if (nn2 == NAMEDBOUNDFLAG) then
           obsrv%FeatureName = bndname
