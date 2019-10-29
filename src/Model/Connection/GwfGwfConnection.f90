@@ -167,7 +167,10 @@ contains
           ! calculated by interface model, set local model's mask to zero
           csrIdx = getCSRIndex(nloc, mloc, this%owner%ia, this%owner%ja)          
           if (csrIdx == -1) then
-            ! this should not be possible
+            ! this can only happen with periodic boundary conditions, 
+            ! then there is no need to set the mask
+            if (this%gridConnection%isPeriodic(nloc, mloc)) cycle
+            
             write(*,*) 'Error: cannot find cell connection in global system'
             call ustop()
           end if
