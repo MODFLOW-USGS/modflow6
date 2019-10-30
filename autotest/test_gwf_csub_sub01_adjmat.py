@@ -119,6 +119,8 @@ def build_model(idx, dir, adjustmat=False):
     sim = flopy.mf6.MFSimulation(sim_name=name, version='mf6',
                                  exe_name='mf6',
                                  sim_ws=ws)
+    sim.name_file.memory_print_option = 'all'
+
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(sim, time_units='DAYS',
                                  nper=nper, perioddata=tdis_rc)
