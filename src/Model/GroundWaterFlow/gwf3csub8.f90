@@ -153,24 +153,22 @@ module GwfCsubModule
     ! -- delay interbed arrays
     integer(I4B), dimension(:,:), pointer, contiguous :: idbconvert => null()    !0 = elastic, > 0 = inelastic
     real(DP), dimension(:), pointer, contiguous :: dbdhmax => null()             !delay bed maximum head change
-    real(DP), dimension(:,:), pointer, contiguous :: dbdz => null()              !delay bed dz
-    real(DP), dimension(:,:), pointer, contiguous :: dbdz0 => null()             !delay bed previous dz
     real(DP), dimension(:,:), pointer, contiguous :: dbz => null()               !delay bed cell z
     real(DP), dimension(:,:), pointer, contiguous :: dbrelz => null()            !delay bed cell z relative to znode
     real(DP), dimension(:,:), pointer, contiguous :: dbh => null()               !delay bed cell h
     real(DP), dimension(:,:), pointer, contiguous :: dbh0 => null()              !delay bed cell previous h
-    real(DP), dimension(:,:), pointer, contiguous :: dbtheta => null()           !delay bed cell porosity
-    real(DP), dimension(:,:), pointer, contiguous :: dbtheta0 => null()          !delay bed cell previous porosity
     real(DP), dimension(:,:), pointer, contiguous :: dbgeo => null()             !delay bed cell geostatic stress
-    real(DP), dimension(:,:), pointer, contiguous :: dbgeo0 => null()            !delay bed cell previous geostatic stress
     real(DP), dimension(:,:), pointer, contiguous :: dbes => null()              !delay bed cell effective stress
-    real(DP), dimension(:,:), pointer, contiguous :: dbesi => null()             !delay bed cell effective stress for the previous iteration
     real(DP), dimension(:,:), pointer, contiguous :: dbes0 => null()             !delay bed cell previous effective stress
     real(DP), dimension(:,:), pointer, contiguous :: dbpcs => null()             !delay bed cell preconsolidation stress
     real(DP), dimension(:), pointer, contiguous :: dbflowtop => null()           !delay bed flow through interbed top
     real(DP), dimension(:), pointer, contiguous :: dbflowbot => null()           !delay bed flow through interbed bottom
     real(DP), dimension(:,:), pointer, contiguous :: dbdzini => null()           !initial delay bed cell thickness
     real(DP), dimension(:,:), pointer, contiguous :: dbthetaini => null()        !initial delay bed cell porosity
+    real(DP), dimension(:,:), pointer, contiguous :: dbdz => null()              !delay bed dz
+    real(DP), dimension(:,:), pointer, contiguous :: dbdz0 => null()             !delay bed previous dz
+    real(DP), dimension(:,:), pointer, contiguous :: dbtheta => null()           !delay bed cell porosity
+    real(DP), dimension(:,:), pointer, contiguous :: dbtheta0 => null()          !delay bed cell previous porosity
     real(DP), dimension(:, :), pointer, contiguous :: dbcomp => null()           !delay bed incremental compaction
     real(DP), dimension(:, :), pointer, contiguous :: dbtcomp => null()          !delay bed total interbed compaction
     !
@@ -600,8 +598,8 @@ contains
     real(DP) :: stoi
     real(DP) :: b
     real(DP) :: q
-    real(DP) :: rateskin
-    real(DP) :: rateskout
+    real(DP) :: ratecgin
+    real(DP) :: ratecgout
     real(DP) :: rateibein
     real(DP) :: rateibeout
     real(DP) :: rateibiin
@@ -623,8 +621,8 @@ contains
     ratewcout = DZERO
     !
     ! -- coarse-grained coarse-grained storage
-    rateskin = DZERO
-    rateskout= DZERO
+    ratecgin = DZERO
+    ratecgout= DZERO
     do node = 1, this%dis%nodes
       area = this%dis%get_area(node)
       comp = DZERO
@@ -636,7 +634,7 @@ contains
         else
           tled = DZERO
         end if
-        if (this%ibound(node) > 0) then
+        if (this%ibound(node) > 0 .and. this%cg_thickini(node) > DZERO) then
           !
           ! -- calculate coarse-grained storage terms
           call this%csub_cg_fc(node, tled, area, hnew(node), hold(node),        &
@@ -648,9 +646,9 @@ contains
           !
           ! -- budget terms
           if (rrate < DZERO) then
-            rateskout = rateskout - rrate
+            ratecgout = ratecgout - rrate
           else
-            rateskin = rateskin + rrate
+            ratecgin = ratecgin + rrate
           end if
           !
           ! -- calculate coarse-grained water compressibility storage terms
@@ -673,7 +671,7 @@ contains
       this%cell_wcstor(node) = rratewc
       this%cell_thick(node) = this%cg_thick(node)
       !
-      ! -- update incremental compaction
+      ! -- update incremental coarse-grained compaction
       this%cg_comp(node) = comp
       ! 
       !
@@ -841,7 +839,7 @@ contains
     ! -- Add contributions to model budget 
     !
     ! -- interbed elastic storage
-    call model_budget%addentry(rateskin, rateskout, delt, budtxt(1),            &
+    call model_budget%addentry(ratecgin, ratecgout, delt, budtxt(1),            &
                                 isuppress_output, '            CSUB')
     if (this%ninterbeds > 0) then
       !
@@ -1504,7 +1502,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
-    use MemoryManagerModule, only: mem_reallocate, mem_setptr
+    use MemoryManagerModule, only: mem_allocate, mem_setptr
 !    use SimModule, only: ustop, store_error, count_errors, store_error_unit
     use TimeSeriesManagerModule, only: read_single_value_or_time_series
     ! -- dummy
@@ -1812,72 +1810,68 @@ contains
       !
       ! -- reallocate and initialize delay interbed arrays
       if (ierr == 0) then
-        call mem_reallocate(this%idbconvert, this%ndelaycells, ndelaybeds,       & 
+        call mem_allocate(this%idbconvert, this%ndelaycells, ndelaybeds,         & 
                             'idbconvert', trim(this%origin))
-        call mem_reallocate(this%dbdhmax, ndelaybeds,                            &
+        call mem_allocate(this%dbdhmax, ndelaybeds,                              &
                             'dbdhmax', trim(this%origin))
-        call mem_reallocate(this%dbz, this%ndelaycells, ndelaybeds,              &  
+        call mem_allocate(this%dbz, this%ndelaycells, ndelaybeds,                &  
                             'dbz', trim(this%origin))
-        call mem_reallocate(this%dbrelz, this%ndelaycells, ndelaybeds,           &
+        call mem_allocate(this%dbrelz, this%ndelaycells, ndelaybeds,             &
                             'dbrelz', trim(this%origin))
-        call mem_reallocate(this%dbh, this%ndelaycells, ndelaybeds,              &
+        call mem_allocate(this%dbh, this%ndelaycells, ndelaybeds,                &
                             'dbh', trim(this%origin))
-        call mem_reallocate(this%dbh0, this%ndelaycells, ndelaybeds,             &
+        call mem_allocate(this%dbh0, this%ndelaycells, ndelaybeds,               &
                             'dbh0', trim(this%origin))
-        call mem_reallocate(this%dbgeo, this%ndelaycells, ndelaybeds,            &  
+        call mem_allocate(this%dbgeo, this%ndelaycells, ndelaybeds,              &  
                             'dbgeo', trim(this%origin))
-        call mem_reallocate(this%dbgeo0, this%ndelaycells, ndelaybeds,           &  
-                            'dbgeo0', trim(this%origin))
-        call mem_reallocate(this%dbes, this%ndelaycells, ndelaybeds,             &
+        call mem_allocate(this%dbes, this%ndelaycells, ndelaybeds,               &
                             'dbes', trim(this%origin))
-        call mem_reallocate(this%dbesi, this%ndelaycells, ndelaybeds,            &
-                            'dbesi', trim(this%origin))
-        call mem_reallocate(this%dbes0, this%ndelaycells, ndelaybeds,            &
+        call mem_allocate(this%dbes0, this%ndelaycells, ndelaybeds,              &
                             'dbes0', trim(this%origin))
-        call mem_reallocate(this%dbpcs, this%ndelaycells, ndelaybeds,            &
+        call mem_allocate(this%dbpcs, this%ndelaycells, ndelaybeds,              &
                             'dbpcs', trim(this%origin))
-        call mem_reallocate(this%dbflowtop, ndelaybeds,                          &
+        call mem_allocate(this%dbflowtop, ndelaybeds,                            &
                             'dbflowtop', trim(this%origin))
-        call mem_reallocate(this%dbflowbot, ndelaybeds,                          &  
+        call mem_allocate(this%dbflowbot, ndelaybeds,                            &  
                             'dbflowbot', trim(this%origin))
-        call mem_reallocate(this%dbdzini, this%ndelaycells, ndelaybeds,          &
+        call mem_allocate(this%dbdzini, this%ndelaycells, ndelaybeds,            &
                             'dbdzini', trim(this%origin))
-        call mem_reallocate(this%dbthetaini, this%ndelaycells, ndelaybeds,       &  
+        call mem_allocate(this%dbthetaini, this%ndelaycells, ndelaybeds,         &  
                             'dbthetaini', trim(this%origin))
-        call mem_reallocate(this%dbcomp, this%ndelaycells, ndelaybeds,           &
+        call mem_allocate(this%dbcomp, this%ndelaycells, ndelaybeds,             &
                             'dbcomp', trim(this%origin))
-        call mem_reallocate(this%dbtcomp, this%ndelaycells, ndelaybeds,          &  
+        call mem_allocate(this%dbtcomp, this%ndelaycells, ndelaybeds,            &  
                             'dbtcomp', trim(this%origin))
         !
-        ! -- reallocate delay bed arrays
+        ! -- allocate delay bed arrays
         if (this%iupdatematprop == 0) then
           call mem_setptr(this%dbdz, 'dbdzini', trim(this%origin))
           call mem_setptr(this%dbdz0, 'dbdzini', trim(this%origin))
           call mem_setptr(this%dbtheta, 'dbthetaini', trim(this%origin))
           call mem_setptr(this%dbtheta0, 'dbthetaini', trim(this%origin))
         else
-          call mem_reallocate(this%dbdz, this%ndelaycells, ndelaybeds,           &
+          call mem_allocate(this%dbdz, this%ndelaycells, ndelaybeds,             &
                               'dbdz', trim(this%origin))
-          call mem_reallocate(this%dbdz0, this%ndelaycells, ndelaybeds,          & 
-                              'dbdz0', trim(this%origin))
-          call mem_reallocate(this%dbtheta, this%ndelaycells, ndelaybeds,        & 
+          call mem_allocate(this%dbdz0, this%ndelaycells, ndelaybeds,            & 
+                              'dbdz0', trim(this%origin))  
+          call mem_allocate(this%dbtheta, this%ndelaycells, ndelaybeds,          & 
                               'dbtheta', trim(this%origin))
-          call mem_reallocate(this%dbtheta0, this%ndelaycells, ndelaybeds,       & 
+          call mem_allocate(this%dbtheta0, this%ndelaycells, ndelaybeds,         & 
                               'dbtheta0', trim(this%origin))
         end if
         !
-        ! -- reallocate delay interbed solution arrays
-        call mem_reallocate(this%dbal, this%ndelaycells,                         &
+        ! -- allocate delay interbed solution arrays
+        call mem_allocate(this%dbal, this%ndelaycells,                           &
                             'dbal', trim(this%origin))
-        call mem_reallocate(this%dbad, this%ndelaycells,                         &
+        call mem_allocate(this%dbad, this%ndelaycells,                           &
                             'dbad', trim(this%origin))
-        call mem_reallocate(this%dbau, this%ndelaycells,                         &
+        call mem_allocate(this%dbau, this%ndelaycells,                           &
                             'dbau', trim(this%origin))
-        call mem_reallocate(this%dbrhs, this%ndelaycells,                        & 
+        call mem_allocate(this%dbrhs, this%ndelaycells,                          & 
                             'dbrhs', trim(this%origin))
-        call mem_reallocate(this%dbdh, this%ndelaycells,                         & 
+        call mem_allocate(this%dbdh, this%ndelaycells,                           & 
                             'dbdh', trim(this%origin))
-        call mem_reallocate(this%dbaw, this%ndelaycells,                         &
+        call mem_allocate(this%dbaw, this%ndelaycells,                           &
                             'dbaw', trim(this%origin))
         !
         ! -- initialize delay bed storage
@@ -1895,9 +1889,7 @@ contains
             this%dbh0(n, idelay) = this%h0(ib)
             this%dbthetaini(n, idelay) = this%thetaini(ib)
             this%dbgeo(n, idelay) = DZERO
-            this%dbgeo0(n, idelay) = DZERO
             this%dbes(n, idelay) = DZERO
-            this%dbesi(n, idelay) = DZERO
             this%dbes0(n, idelay) = DZERO
             this%dbpcs(n, idelay) = this%pcs(ib)
             this%dbcomp(n, idelay) = DZERO
@@ -2474,37 +2466,8 @@ contains
       call mem_allocate(this%theta0, iblen, 'theta0', trim(this%origin))
     end if
     !
-    ! -- delay bed storage
-    call mem_allocate(this%idbconvert, 0, 0, 'idbconvert', trim(this%origin))
-    call mem_allocate(this%dbdz, 0, 0, 'dbdz', trim(this%origin))
-    call mem_allocate(this%dbdz0, 0, 0, 'dbdz0', trim(this%origin))
-    call mem_allocate(this%dbdhmax, 0, 'dbdhmax', trim(this%origin))
-    call mem_allocate(this%dbz, 0, 0, 'dbz', trim(this%origin))
-    call mem_allocate(this%dbrelz, 0, 0, 'dbrelz', trim(this%origin))
-    call mem_allocate(this%dbh, 0, 0, 'dbh', trim(this%origin))
-    call mem_allocate(this%dbh0, 0, 0, 'dbh0', trim(this%origin))
-    call mem_allocate(this%dbtheta, 0, 0, 'dbtheta', trim(this%origin))
-    call mem_allocate(this%dbtheta0, 0, 0, 'dbtheta0', trim(this%origin))
-    call mem_allocate(this%dbgeo, 0, 0, 'dbgeo', trim(this%origin))
-    call mem_allocate(this%dbgeo0, 0, 0, 'dbgeo0', trim(this%origin))
-    call mem_allocate(this%dbes, 0, 0, 'dbes', trim(this%origin))
-    call mem_allocate(this%dbesi, 0, 0, 'dbesi', trim(this%origin))
-    call mem_allocate(this%dbes0, 0, 0, 'dbes0', trim(this%origin))
-    call mem_allocate(this%dbpcs, 0, 0, 'dbpcs', trim(this%origin))
-    call mem_allocate(this%dbflowtop, 0, 'dbflowtop', trim(this%origin))
-    call mem_allocate(this%dbflowbot, 0, 'dbflowbot', trim(this%origin))
-    call mem_allocate(this%dbdzini, 0, 0, 'dbdzini', trim(this%origin))
-    call mem_allocate(this%dbthetaini, 0, 0, 'dbthetaini', trim(this%origin))
-    call mem_allocate(this%dbcomp, 0, 0, 'dbcomp', trim(this%origin))
-    call mem_allocate(this%dbtcomp, 0, 0, 'dbtcomp', trim(this%origin))
-    !
-    ! -- delay interbed solution arrays
-    call mem_allocate(this%dbal, 0, 'dbal', trim(this%origin))
-    call mem_allocate(this%dbad, 0, 'dbad', trim(this%origin))
-    call mem_allocate(this%dbau, 0, 'dbau', trim(this%origin))
-    call mem_allocate(this%dbrhs, 0, 'dbrhs', trim(this%origin))
-    call mem_allocate(this%dbdh, 0, 'dbdh', trim(this%origin))
-    call mem_allocate(this%dbaw, 0, 'dbaw', trim(this%origin))
+    ! -- delay bed storage - allocated in csub_read_packagedata
+    !    after number of delay beds is defined
     !
     ! -- allocate boundname
     allocate(this%boundname(this%ninterbeds))
@@ -2646,43 +2609,43 @@ contains
       call mem_deallocate(this%thetaini)
       !
       ! -- delay bed storage
-      if (this%iupdatematprop == 0) then
-        nullify(this%dbdz)
-        nullify(this%dbdz0)
-        nullify(this%dbtheta)
-        nullify(this%dbtheta0)
-      else
-        call mem_deallocate(this%dbdz)
-        call mem_deallocate(this%dbdz0)
-        call mem_deallocate(this%dbtheta)
-        call mem_deallocate(this%dbtheta0)
+      if (this%ndelaybeds > 0) then
+        if (this%iupdatematprop == 0) then
+          nullify(this%dbdz)
+          nullify(this%dbdz0)
+          nullify(this%dbtheta)
+          nullify(this%dbtheta0)
+        else
+          call mem_deallocate(this%dbdz)
+          call mem_deallocate(this%dbdz0)
+          call mem_deallocate(this%dbtheta)
+          call mem_deallocate(this%dbtheta0)
+        end if
+        call mem_deallocate(this%idbconvert)
+        call mem_deallocate(this%dbdhmax)
+        call mem_deallocate(this%dbz)
+        call mem_deallocate(this%dbrelz)
+        call mem_deallocate(this%dbh)
+        call mem_deallocate(this%dbh0)
+        call mem_deallocate(this%dbgeo)
+        call mem_deallocate(this%dbes)
+        call mem_deallocate(this%dbes0)
+        call mem_deallocate(this%dbpcs)
+        call mem_deallocate(this%dbflowtop)
+        call mem_deallocate(this%dbflowbot)
+        call mem_deallocate(this%dbdzini)
+        call mem_deallocate(this%dbthetaini)
+        call mem_deallocate(this%dbcomp)
+        call mem_deallocate(this%dbtcomp)
+        !
+        ! -- delay interbed solution arrays
+        call mem_deallocate(this%dbal)
+        call mem_deallocate(this%dbad)
+        call mem_deallocate(this%dbau)
+        call mem_deallocate(this%dbrhs)
+        call mem_deallocate(this%dbdh)
+        call mem_deallocate(this%dbaw)
       end if
-      call mem_deallocate(this%idbconvert)
-      call mem_deallocate(this%dbdhmax)
-      call mem_deallocate(this%dbz)
-      call mem_deallocate(this%dbrelz)
-      call mem_deallocate(this%dbh)
-      call mem_deallocate(this%dbh0)
-      call mem_deallocate(this%dbgeo)
-      call mem_deallocate(this%dbgeo0)
-      call mem_deallocate(this%dbes)
-      call mem_deallocate(this%dbesi)
-      call mem_deallocate(this%dbes0)
-      call mem_deallocate(this%dbpcs)
-      call mem_deallocate(this%dbflowtop)
-      call mem_deallocate(this%dbflowbot)
-      call mem_deallocate(this%dbdzini)
-      call mem_deallocate(this%dbthetaini)
-      call mem_deallocate(this%dbcomp)
-      call mem_deallocate(this%dbtcomp)
-      !
-      ! -- delay interbed solution arrays
-      call mem_deallocate(this%dbal)
-      call mem_deallocate(this%dbad)
-      call mem_deallocate(this%dbau)
-      call mem_deallocate(this%dbrhs)
-      call mem_deallocate(this%dbdh)
-      call mem_deallocate(this%dbaw)
       !
       ! -- period data
       call mem_deallocate(this%nodelistsig0)
@@ -3680,7 +3643,6 @@ contains
             end if
           end if
           this%dbh0(n, idelay) = this%dbh(n, idelay)
-          this%dbgeo0(n, idelay) = this%dbgeo(n, idelay)
           this%dbes0(n, idelay) = this%dbes(n, idelay)
           if (this%iupdatematprop /= 0) then
             this%dbdz0(n, idelay) = this%dbdz(n, idelay)
@@ -3819,9 +3781,7 @@ contains
           this%dbpcs(n, idelay) = dbpcs
           !
           ! -- initialize effective stress for previous time step
-          !    and the previous iteration
           this%dbes0(n, idelay) = this%dbes(n, idelay)
-          this%dbesi(n, idelay) = this%dbes(n, idelay)
         end do 
       end if
     end do
@@ -4338,21 +4298,25 @@ contains
     bot = this%dis%bot(node)
     tthk = this%cg_thickini(node)
     !
-    ! -- calculate aquifer saturation
-    call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
-    !
-    ! -- storage coefficients
-    call this%csub_cg_calc_sske(node, sske, hcell)
-    rho1 = sske * area * tthk * tled
-    !
-    ! -- update sk and ske
-    this%cg_ske(node) = sske * tthk * snold
-    this%cg_sk(node) = sske * tthk * snnew
-    !
-    ! -- calculate hcof and rhs term
-    hcof = -rho1 * snnew
-    rhs = rho1 * snold * this%cg_es0(node) -                                     &
-          rho1 * snnew * (this%cg_gs(node) + bot) 
+    ! -- calculate hcof and rhs terms if coarse-grained materials present
+    if (tthk > DZERO) then
+      !
+      ! -- calculate aquifer saturation
+      call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
+      !
+      ! -- storage coefficients
+      call this%csub_cg_calc_sske(node, sske, hcell)
+      rho1 = sske * area * tthk * tled
+      !
+      ! -- update sk and ske
+      this%cg_ske(node) = sske * tthk * snold
+      this%cg_sk(node) = sske * tthk * snnew
+      !
+      ! -- calculate hcof and rhs term
+      hcof = -rho1 * snnew
+      rhs = rho1 * snold * this%cg_es0(node) -                                     &
+            rho1 * snnew * (this%cg_gs(node) + bot) 
+    end if
     !
     ! -- return
     return
@@ -4391,23 +4355,27 @@ contains
     bot = this%dis%bot(node)
     tthk = this%cg_thickini(node)
     !
-    ! -- calculate saturation derivative
-    satderv = this%csub_calc_sat_derivative(node, hcell)    
-    !
-    ! -- storage coefficients
-    call this%csub_cg_calc_sske(node, sske, hcell)
-    rho1 = sske * area * tthk * tled
-    !
-    ! -- calculate hcof term
-    hcof = rho1 * (this%cg_gs(node) - hcell + bot) * satderv
-    !
-    ! -- Add additional term if using lagged effective stress
-    if (this%ieslag /= 0) then
-      hcof = hcof - rho1 * this%cg_es0(node) * satderv
+    ! -- calculate newton terms if coarse-grained materials present
+    if (tthk > DZERO) then
+      !
+      ! -- calculate saturation derivative
+      satderv = this%csub_calc_sat_derivative(node, hcell)    
+      !
+      ! -- storage coefficients
+      call this%csub_cg_calc_sske(node, sske, hcell)
+      rho1 = sske * area * tthk * tled
+      !
+      ! -- calculate hcof term
+      hcof = rho1 * (this%cg_gs(node) - hcell + bot) * satderv
+      !
+      ! -- Add additional term if using lagged effective stress
+      if (this%ieslag /= 0) then
+        hcof = hcof - rho1 * this%cg_es0(node) * satderv
+      end if
+      !
+      ! -- calculate rhs term
+      rhs = hcof * hcell
     end if
-    !
-    ! -- calculate rhs term
-    rhs = hcof * hcell
     !
     ! -- return
     return
@@ -5623,10 +5591,8 @@ contains
     end if
     sigma = sigma - sadd
     !
-    ! -- set effective stress for the previous iteration and 
-    !    calculate geostatic and effective stress for each interbed node.
+    ! -- calculate geostatic and effective stress for each interbed node.
     do n = 1, this%ndelaycells
-      this%dbesi(n, idelay) = this%dbes(n, idelay)
       h = this%dbh(n, idelay)
       !
       ! -- geostatic calculated at the bottom of the delay cell
