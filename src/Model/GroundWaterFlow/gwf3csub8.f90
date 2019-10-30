@@ -2073,6 +2073,8 @@ contains
           case ('HEAD_BASED')
             this%ipch = 1
             this%lhead_based = .TRUE.
+          case ('INITIAL_PRECONSOLIDATION_HEAD')
+            this%ipch = 1
           case ('NDELAYCELLS')
             this%ndelaycells =  this%parser%GetInteger()
           !
@@ -2279,13 +2281,25 @@ contains
         'INTERBED THICKNESS WILL BE SPECIFIED AS A AS A CELL FRACTION'
     end if
     if (this%ispecified_pcs /= 1) then
-      write(this%iout, '(4x,a,1(/,6x,a))') &
-        'PRECONSOLIDATION STRESS WILL BE SPECIFIED RELATIVE TO INITIAL',  &
-        'STRESS CONDITIONS'
+      if (this%ipch /= 0) then
+        write(this%iout, '(4x,a,1(/,6x,a))') &
+          'PRECONSOLIDATION HEAD WILL BE SPECIFIED RELATIVE TO INITIAL',         &
+          'STRESS CONDITIONS'
+      else
+        write(this%iout, '(4x,a,1(/,6x,a))') &
+          'PRECONSOLIDATION STRESS WILL BE SPECIFIED RELATIVE TO INITIAL',       &
+          'STRESS CONDITIONS'
+      end if
     else
-      write(this%iout, '(4x,a,1(/,6x,a))') &
-        'PRECONSOLIDATION STRESS WILL BE SPECIFIED AS ABSOLUTE VALUES',          &
-        'INSTEAD OF RELATIVE TO INITIAL STRESS CONDITIONS'
+      if (this%ipch /= 0) then
+        write(this%iout, '(4x,a,1(/,6x,a))') &
+          'PRECONSOLIDATION HEAD WILL BE SPECIFIED AS ABSOLUTE VALUES',          &
+          'INSTEAD OF RELATIVE TO INITIAL HEAD CONDITIONS'
+      else
+        write(this%iout, '(4x,a,1(/,6x,a))') &
+          'PRECONSOLIDATION STRESS WILL BE SPECIFIED AS ABSOLUTE VALUES',        &
+          'INSTEAD OF RELATIVE TO INITIAL STRESS CONDITIONS'
+      end if
     end if
     if (this%ispecified_dbh /= 1) then
       write(this%iout, '(4x,a,1(/,6x,a))') &
@@ -4000,7 +4014,7 @@ contains
       !
       ! -- write calculated compression indices
       if (this%istoragec == 1) then
-        if (this%lhead_based .EQV. .TRUE.) then
+        if (this%lhead_based .EQV. .FALSE.) then
           write(this%iout, '(//1X,A)')                                &
             'CALCULATED COMPRESSION INDICES'
           iloc = 1

@@ -13,7 +13,9 @@
 
 \item \texttt{beta}---compressibility of water. Typical values of BETA are 4.6512e-10 1/Pa or 2.2270e-8 lb/square foot in SI and English units, respectively. By default, BETA is 4.6512e-10 1/Pa.
 
-\item \texttt{HEAD\_BASED}---keyword to indicate the head-based formulation will be used to simulate coarse-grained aquifer materials and no-delay and delay interbeds.
+\item \texttt{HEAD\_BASED}---keyword to indicate the head-based formulation will be used to simulate coarse-grained aquifer materials and no-delay and delay interbeds. Specifying HEAD\_BASED also specifies the INITIAL\_PRECONSOLIDATION\_HEAD option.
+
+\item \texttt{INITIAL\_PRECONSOLIDATION\_HEAD}---keyword to indicate that preconsolidation heads will be specified for no-delay and delay interbeds in the PACKAGEDATA block. If the SPECIFIED\_INITIAL\_INTERBED\_STATE option is specified in the OPTIONS block, user-specified preconsolidation heads in the PACKAGEDATA block are absolute values. Otherwise, user-specified preconsolidation heads in the PACKAGEDATA block are relative to steady-state or initial heads.
 
 \item \texttt{ndelaycells}---number of nodes used to discretize delay interbeds. If not specified, then a default value of 19 is assigned.
 
