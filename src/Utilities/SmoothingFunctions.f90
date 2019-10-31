@@ -716,7 +716,7 @@ end subroutine sChSmooth
            !
            val = sPChip_eval_ext(x(1), x(2), f(1), f(2), d(1), d(2), a, b)
            !
-         else if (xa .ge. x(num_points-1)) then
+         else if (xa .ge. x(num_points - 1)) then
            ! -- interval is to right of x(num_points-1) so use last cubic.
            !
            val = sPChip_eval_ext(x(num_points-1), x(num_points), f(num_points-1), &
@@ -914,17 +914,17 @@ end subroutine sChSmooth
        integer(I4B), intent(in) :: n, incfd, ne
        real(DP), intent(in) :: x(*), f(incfd,*), d(incfd,*), xe(*)
        ! -- local
-       integer(I4B) :: i, ierc, ir, j, jfirst, next(2), nj, ierr
+       integer(I4B) :: i, ir, j, jfirst, next(2), nj, ierr
        real(DP) :: fe(ne)
-       LOGICAL  SKIP, found_first
+       logical  found_first
 !
        !  loop over intervals.
        jfirst = 1
        ir = 2
        ierr = 0
+
        do while (ir .le. n)
-         !write(*,*)jfirst, ne
-         IF (jfirst .gt. ne) exit
+         if (jfirst .gt. ne) exit
 !
          !     skip out of loop if have processed all evaluation points.
 !
@@ -947,36 +947,37 @@ end subroutine sChSmooth
 
            !       evaluate cubic at xe(i),  i = jfirst (1) J-1 .
            !
-           !write(*,*) 'doing', ir, n
            CALL sPChip_eval_fn_points (x(ir-1),x(ir), f(1,ir-1),f(1,ir), d(1,ir-1), &
                d(1,ir), nj, xe(jfirst), fe(jfirst), next)
-           !write(*,*) 'done'
            if ((next(2) .ne. 0) .and. (ir .ge. n)) then
              ierr = ierr + next(2)
            endif
-
-           if (ir .le. 2) then
-             ierr = ierr + next(1)
-           else
-
-             do i = jfirst, j-1
-               if (xe(i) .lt. x(ir-1)) exit
-             enddo
-
-             j = i
-
-             do i = 1, ir-1
-               if (xe(j) .lt. x(i)) exit
-             enddo
-
-             ir = max(1, i-1)
+           if (next(1) .ne. 0) then
+             if (ir .le. 2) then
+               ierr = ierr + next(1)
+             else
+               do i = jfirst, j-1
+                 if (xe(i) .lt. x(ir-1)) exit
+               enddo
+               j = i
+               do i = 1, ir-1
+                 if (j .gt. ne)  then
+                   stop 'SmoothingModule - something gone wrong'
+                 endif
+                 if (xe(j) .lt. x(i)) then
+                   exit
+                 endif
+               enddo
+               ir = max(1, i-1)
+             endif
            endif
            jfirst = j
          endif
          ir = ir + 1
        enddo
 
-     sPChip_eval_fn = fe(1)
+       sPChip_eval_fn = fe(1)
+
      end function sPChip_eval_fn
 
 end module SmoothingModule
