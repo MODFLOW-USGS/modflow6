@@ -682,14 +682,15 @@ module GwfDisModule
       enddo
     enddo
     !
-    ! -- fill x,y coordinate arrays  
+    ! -- fill x,y coordinate arrays
     this%cellx(1) = DHALF*this%delr(1)
-    this%celly(1) = DHALF*this%delc(1)
+    this%celly(this%nrow) = DHALF*this%delc(this%nrow)
     do j = 2, this%ncol
       this%cellx(j) = this%cellx(j-1) + DHALF*this%delr(j-1) + DHALF*this%delr(j)
     enddo
-    do i = 2, this%nrow
-      this%celly(i) = this%celly(i-1) + DHALF*this%delc(i-1) + DHALF*this%delc(i)
+    ! -- row number increases in negative y direction:
+    do i = this%nrow-1, 1, -1
+      this%celly(i) = this%celly(i+1) + DHALF*this%delc(i+1) + DHALF*this%delc(i)
     enddo
     !
     ! -- create and fill the connections object
