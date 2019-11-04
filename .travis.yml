@@ -139,6 +139,11 @@ script:
 - echo "TRAVIS_BRANCH=$TRAVIS_BRANCH, PR=$PR, BRANCH=$BRANCH"
 - pwd
 - git clone https://github.com/MODFLOW-USGS/modflow6-examples.git ../modflow6-examples
+- cd ../modflow6-examples
+- exists='git show-ref refs/heads/$BRANCH'
+- if [ -n "$exists" ]; then git checkout $BRANCH; echo using examples branch $BRANCH;
+  else echo using master branch for examples;  fi
+- cd ../modflow6
 - ls ../
 - which python
 - python --version
