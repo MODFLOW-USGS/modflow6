@@ -42,7 +42,7 @@ script:
 - pwd
 - git clone https://github.com/MODFLOW-USGS/modflow6-examples.git ../modflow6-examples
 - cd ../modflow6-examples
-- git show-ref refs/heads/$BRANCH
+- git show-ref "refs/heads/$BRANCH"
 - exists="git show-ref refs/heads/$BRANCH"
 - if [ -n "$exists" ]; then git checkout $BRANCH; echo switched to modflow6-examples branch $BRANCH;
   else echo using modflow6-examples branch master;  fi
