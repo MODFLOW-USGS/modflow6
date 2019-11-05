@@ -81,7 +81,7 @@ def write_budget(fbin, data, kstp=1, kper=1, text='    FLOW-JA-FACE',
         # write nlist
         nlist = data.shape[0]
         dt = np.dtype([('nlist', np.int32)])
-        h = np.array((nlist), dtype=dt)
+        h = np.array([(nlist,)], dtype=dt)
         h.tofile(fbin)
 
         # write the data
