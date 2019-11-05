@@ -42,6 +42,7 @@ script:
 - pwd
 - git clone https://github.com/MODFLOW-USGS/modflow6-examples.git ../modflow6-examples
 - cd ../modflow6-examples
+- git show-ref refs/heads/master
 - git show-ref "refs/heads/$BRANCH"
 - exists=$(git show-ref "refs/heads/$BRANCH")
 - echo "BRANCH=$BRANCH, exists=$exists"
