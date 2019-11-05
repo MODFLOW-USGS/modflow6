@@ -1576,9 +1576,9 @@ module GwfNpfModule
     ! -- dummy
     class(GwfNpftype) :: this
     ! -- local
-    character(len=LINELENGTH) :: line, errmsg, cellstr, keyword
-    integer(I4B) :: n, istart, istop, lloc, ierr, nerr
-    logical :: isfound, endOfBlock
+    character(len=LINELENGTH) :: errmsg
+    integer(I4B) :: n, ierr
+    logical :: isfound
     logical, dimension(8)           :: lname
     character(len=24), dimension(:), pointer :: aname
     !character(len=24), dimension(8) :: aname

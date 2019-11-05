@@ -902,7 +902,6 @@ module BaseDisModule
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: darray
     character(len=*), intent(in)                               :: aname
     ! -- local
-    integer(I4B) :: ival
     character(len=LINELENGTH) :: ermsg
 ! ------------------------------------------------------------------------------
     !
@@ -984,7 +983,6 @@ module BaseDisModule
     use ListReaderModule, only: ListReaderType
     use SimModule, only: store_error, store_error_unit, count_errors, ustop
     use InputOutputModule, only: urword
-    use TdisModule, only: totimsav, perlen
     use TimeSeriesLinkModule, only:  TimeSeriesLinkType
     use TimeSeriesManagerModule, only: read_value_or_time_series
     ! -- dummy
@@ -1140,8 +1138,6 @@ module BaseDisModule
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
     ! -- local
-    integer(I4B) :: il, ir, ic, ncol, nrow, nlay, nval, nodeu
-    logical :: found
     character(len=LINELENGTH) :: ermsg
 ! ------------------------------------------------------------------------------
     !

@@ -94,38 +94,6 @@ contains
     return
   end subroutine expand_double
 
-  subroutine expand_real(array, increment)
-    implicit none
-    ! -- dummy
-    real, allocatable, intent(inout) :: array(:)
-    integer(I4B), optional,             intent(in)    :: increment
-    ! -- local
-    integer(I4B) :: inclocal, isize, newsize
-    real, allocatable, dimension(:) :: array_temp
-    !
-    ! -- initialize
-    if (present(increment)) then
-      inclocal = increment
-    else
-      inclocal = 1
-    endif
-    !
-    ! -- increase size of array by inclocal, retaining
-    !    contained data
-    if (allocated(array)) then
-      isize = size(array)
-      newsize = isize + inclocal
-      allocate(array_temp(newsize))
-      array_temp(1:isize) = array
-      deallocate(array)
-      call move_alloc(array_temp, array)
-    else
-      allocate(array(inclocal))
-    endif
-    !
-    return
-  end subroutine expand_real
-
   subroutine expand_character(array, increment)
     implicit none
     ! -- dummy

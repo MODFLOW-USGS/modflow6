@@ -1082,7 +1082,6 @@ module GwfModule
     ! -- dummy
     class(GwfModelType) :: this
     ! -- local
-    class(BndType), pointer :: packobj
 ! ------------------------------------------------------------------------------
     !
     return
