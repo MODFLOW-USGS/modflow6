@@ -39,7 +39,7 @@ program = 'mf6{}'.format(target_ext)
 target = os.path.join(bindir, program)
 
 # add MODFLOW 6 to dictionary of valid executable targets
-target_dict[os.path.basename(target)] = target
+target_dict[os.path.basename(target).split('.')[0]] = target
 
 # add MODFLOW 5 to 6 converter to dictionary of valid executable targets
 tprog = 'mf5to6{}'.format(target_ext)

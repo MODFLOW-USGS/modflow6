@@ -232,7 +232,7 @@ module GwtDspModule
     ! -- dummy
      class(GwtDspType) :: this
     ! -- local
-    real(DP), target :: min_satthk
+    real(DP), pointer :: min_satthk
 ! ------------------------------------------------------------------------------
     !
     ! -- xt3d
