@@ -66,7 +66,7 @@ def write_budget(fbin, data, kstp=1, kper=1, text='    FLOW-JA-FACE',
         colnames = data.dtype.names
         ndat = len(colnames) - 2
         dt = np.dtype([('ndat', np.int32)])
-        h = np.array((ndat), dtype=dt)
+        h = np.array((ndat,), dtype=dt)
         h.tofile(fbin)
 
         # write auxiliary column names
