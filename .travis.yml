@@ -44,7 +44,7 @@ script:
 - cd ../modflow6-examples
 - git show-ref refs/heads/master
 - git show-ref "refs/heads/$BRANCH"
-- exists=$(git show-ref "refs/heads/$BRANCH")
+- exists=$(git show-ref --quiet "refs/heads/$BRANCH")
 - echo "BRANCH=$BRANCH, exists=$exists"
 - if [ -n "$exists" ]; then git checkout $BRANCH; echo switched to modflow6-examples branch $BRANCH;
   else echo using modflow6-examples branch master;  fi
