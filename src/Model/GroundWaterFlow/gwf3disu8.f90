@@ -28,6 +28,8 @@ module GwfDisuModule
   contains
     procedure :: dis_df => disu_df
     procedure :: dis_da => disu_da
+    procedure :: get_cellxy => get_cellxy_disu
+    procedure :: disu_ck
     procedure :: get_nodenumber_idx1
     procedure :: get_nodeuser
     procedure :: nodeu_to_string
@@ -202,6 +204,9 @@ module GwfDisuModule
     ! -- deallocate temp arrays
     deallocate(atemp)
     !
+    ! -- Make some final disu checks
+    call disext%disu_ck()
+    !
     ! -- Return
     return
   end subroutine disu_init_mem
@@ -246,9 +251,59 @@ module GwfDisuModule
       endif
     end if
     !
+    ! -- Make some final disu checks
+    call this%disu_ck()
+    !
     ! -- Return
     return
   end subroutine disu_df
+
+  subroutine disu_ck(this)
+! ******************************************************************************
+! disu_ck -- Check the discretization information
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwfDisuType) :: this
+    ! -- local
+    character(len=LINELENGTH) :: errmsg
+    integer(I4B) :: n, m
+    integer(I4B) :: ipos
+    integer(I4B) :: ihc
+    ! -- formats
+    character(len=*),parameter :: fmterrmsg =                                  &
+      "(' Top elevation (', 1pg15.6, ') for cell ', i0, ' is above bottom &
+      &elevation (', 1pg15.6, ') for cell ', i0, '. Based on node numbering &
+      &rules cell ', i0, ' must be below cell ', i0, '.')"    
+! ------------------------------------------------------------------------------
+    !
+    ! -- For cell n, ensure that underlying cells have tops less than
+    !    or equal to the bottom of cell n
+    do n = 1, this%nodes
+      do ipos = this%con%ia(n) + 1, this%con%ia(n + 1) - 1
+        m = this%con%ja(ipos)
+        ihc = this%con%ihc(this%con%jas(ipos))
+        if (ihc == 0 .and. m > n) then
+          if (this%top(m) > this%bot(n)) then
+            write(errmsg, fmterrmsg) this%top(m), m, this%bot(n), n, m, n
+            call store_error(errmsg)
+          end if
+        end if
+      end do
+    end do
+    !
+    ! -- terminate if errors found
+    if(count_errors() > 0) then
+      if (this%inunit > 0) call store_error_unit(this%inunit)
+      call ustop()
+    endif
+    !
+    ! -- Return
+    return
+  end subroutine disu_ck
 
   subroutine disu_da(this)
 ! ******************************************************************************
@@ -1086,6 +1141,17 @@ module GwfDisuModule
     ! -- return
     return
   end subroutine connection_vector
+
+  ! return x,y coordinate for a node
+  subroutine get_cellxy_disu(this, node, xcell, ycell)
+    class(GwfDisuType), intent(in)  :: this
+    integer(I4B), intent(in)        :: node         ! the reduced node number
+    real(DP), intent(out)           :: xcell, ycell ! the x,y for the cell
+    
+    xcell = this%cellxy(1, node)
+    ycell = this%cellxy(2, node)
+    
+  end subroutine get_cellxy_disu                             
 
   subroutine allocate_scalars(this, name_model)
 ! ******************************************************************************
