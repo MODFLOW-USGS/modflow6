@@ -1,3 +1,19 @@
+"""
+MODFLOW 6 Autotest
+Test to compare MODFLOW 6 groundwater transport simulation results to MT3DMS 
+results.  This test was first documented in Zheng and Wang (1999) (MT3DMS: 
+A Modular Three-Dimensional Multispecies Transport Model for Simulation of 
+Advection, Dispersion, and Chemical Reactions of Contaminants in Groundwater 
+Systems; Documentation and User's Guide) on page 130.  This is a 1D set of 4 
+test problems that apply incrementally varying combinations of advection, 
+dispersion, and reaction (sorption and decay):
+
+* Case 1a: Advection only
+* Case 1b: Advection and dispersion
+* Case 1c: Advection, dispersion, and sorption
+* Case 1d: Advection, dispersion, sorption, and decay
+"""
+
 import os
 import sys
 import numpy as np
