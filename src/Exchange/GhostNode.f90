@@ -208,7 +208,7 @@ module GhostNodeModule
     ! -- formats
     character(len=*),parameter :: fmterr = &
       "('GHOST NODE ERROR.  Cell ', i0, ' in model ', a,                       &
-        ' is not connected to cell ', i0, ' in model ', a)"
+        &' is not connected to cell ', i0, ' in model ', a)"
 ! ------------------------------------------------------------------------------
     !
     ! -- Find the location of Cnm in the global solution and store it in
