@@ -41,7 +41,6 @@ module Xt3dModule
     integer(I4B), pointer                           :: ik33        => null()     !flag indicates K33 was read
     real(DP), dimension(:), pointer, contiguous     :: sat         => null()     !saturation (0. to 1.) for each cell
     integer(I4B), pointer                           :: inewton     => null()     !Newton flag
-    real(DP), pointer                               :: min_satthk  => null()     !min saturated thickness
     integer(I4B), dimension(:), pointer, contiguous :: icelltype   => null()     !cell type (confined or unconfined)
     integer(I4B), pointer                           :: iangle1     => null()     !flag to indicate angle1 was read
     integer(I4B), pointer                           :: iangle2     => null()     !flag to indicate angle2 was read
@@ -265,8 +264,7 @@ module Xt3dModule
   end subroutine xt3d_mc
   
   subroutine xt3d_ar(this, ibound, k11, ik33, k33, sat, ik22, k22,             &
-    inewton, min_satthk, icelltype, iangle1, iangle2, iangle3, angle1, angle2, &
-    angle3)
+    inewton, icelltype, iangle1, iangle2, iangle3, angle1, angle2, angle3)
 ! ******************************************************************************
 ! xt3d_ar -- Allocate and Read
 ! ******************************************************************************
@@ -285,7 +283,6 @@ module Xt3dModule
     integer(I4B), intent(in), pointer :: ik22
     real(DP), dimension(:), intent(in), pointer, contiguous :: k22
     integer(I4B), intent(in), pointer :: inewton
-    real(DP), intent(in), pointer :: min_satthk
     integer(I4B), dimension(:), intent(in), pointer, contiguous :: icelltype
     integer(I4B), intent(in), pointer :: iangle1
     integer(I4B), intent(in), pointer :: iangle2
@@ -313,7 +310,6 @@ module Xt3dModule
     this%ik22 => ik22
     this%k22 => k22
     this%inewton => inewton
-    this%min_satthk => min_satthk
     this%icelltype => icelltype
     this%iangle1 => iangle1
     this%iangle2 => iangle2
