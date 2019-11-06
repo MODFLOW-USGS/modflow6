@@ -174,8 +174,8 @@ def test_build_modflow6():
     fflags = None
     if fc == 'gfortran':
         # some flags to check for errors in the code
-        # but they are not working yet, so had to deactivate
-        fflags = ('-Werror -Wtabs -Wline-truncation -Wunused-label '
+        # add -Werror for compilation to terminate if errors are found
+        fflags = ('-Wtabs -Wline-truncation -Wunused-label '
                   '-Wunused-variable')
         #fflags = None
 
@@ -229,9 +229,10 @@ def test_build_zonebudget():
     fflags = None
     if fc == 'gfortran':
         # some flags to check for errors in the code
-        # but they are not working yet, so had to deactivate
-        fflags = ('-Werror -Wtabs -Wline-truncation -Wunused-label '
+        # add -Werror for compilation to terminate if errors are found
+        fflags = ('-Wtabs -Wline-truncation -Wunused-label '
                   '-Wunused-variable')
+        #fflags = None
 
     pymake.main(srcdir, target, fc=fc, cc=cc, extrafiles=extrafiles,
                 fflags=fflags)
