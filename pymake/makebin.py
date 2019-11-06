@@ -17,6 +17,9 @@ args.subdirs = True
 excludefiles = os.path.join('excludefiles.txt')
 args.excludefiles = excludefiles
 
+app = os.path.basename(args.target)
+args.cmake = os.path.join('..', 'cmake_{}_files.txt'.format(app))
+
 args
 
 pymake.pymake.main(args.srcdir, args.target, fc=args.fc, cc=args.cc,
@@ -26,4 +29,5 @@ pymake.pymake.main(args.srcdir, args.target, fc=args.fc, cc=args.cc,
                    fflags=args.fflags, arch=args.arch,
                    makefile=args.makefile, srcdir2=args.commonsrc,
                    extrafiles=args.extrafiles,
-                   excludefiles=args.excludefiles)
+                   excludefiles=args.excludefiles,
+                   cmake=args.cmake)
