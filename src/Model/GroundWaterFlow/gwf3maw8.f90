@@ -1938,7 +1938,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule,only: delt, kper, kstp
+    use TdisModule,only: delt
     ! -- dummy
     class(MawType) :: this
     real(DP), dimension(:), intent(inout) :: rhs
@@ -2299,7 +2299,7 @@ contains
     real(DP) :: ratsum
     integer(I4B) :: naux
     ! -- for budget
-    integer(I4B) :: i, j, n
+    integer(I4B) :: j, n
     integer(I4B) :: n2
     integer(I4B) :: igwfnode
     integer(I4B) :: ibnd
@@ -3461,9 +3461,6 @@ contains
     ! -- formats
 10  format('Error: Boundary "',a,'" for observation "',a, &
            '" is invalid in package "',a,'"')
-30  format('Error: Boundary name not provided for observation "',a, &
-           '" in package "',a,'"')
-60  format('Error: Invalid node number in OBS input: ',i5)
     !
     !
     do i = 1, this%obs%npakobs

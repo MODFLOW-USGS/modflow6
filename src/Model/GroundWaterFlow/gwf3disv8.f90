@@ -460,11 +460,9 @@ module GwfDisvModule
     class(GwfDisvType) :: this
     ! -- locals
     character(len=LINELENGTH) :: keyword
-    integer(I4B) :: n, node, noder, j, k
+    integer(I4B) :: n
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
-    real(DP) :: top
-    real(DP) :: dz
     integer(I4B), parameter :: nname = 3
     logical, dimension(nname) :: lname
     character(len=24),dimension(nname) :: aname
@@ -566,9 +564,7 @@ module GwfDisvModule
     ! -- dummy
     class(GwfDisvType) :: this
     ! -- locals
-    character(len=LINELENGTH) :: keyword
-    integer(I4B) :: n, node, noder, j, k
-    integer(I4B) :: ierr
+    integer(I4B) :: node, noder, j, k
     real(DP) :: top
     real(DP) :: dz
     character(len=300) :: ermsg
@@ -1890,7 +1886,6 @@ module GwfDisvModule
     integer(I4B) :: nrow
     integer(I4B) :: ncol
     integer(I4B) :: nval
-    integer(I4B) :: nodeu, noder
     integer(I4B), dimension(:), pointer, contiguous :: itemp
 ! ------------------------------------------------------------------------------
     !
@@ -1961,7 +1956,6 @@ module GwfDisvModule
     integer(I4B) :: nrow
     integer(I4B) :: ncol
     integer(I4B) :: nval
-    integer(I4B) :: nodeu, noder
     real(DP), dimension(:), pointer, contiguous :: dtemp
 ! ------------------------------------------------------------------------------
     !

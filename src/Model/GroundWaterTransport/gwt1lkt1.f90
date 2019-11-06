@@ -995,7 +995,6 @@ module GwtLktModule
     class(GwtLktType),intent(inout) :: this
     ! -- local
     character(len=LINELENGTH) :: errmsg
-    character(len=LINELENGTH) :: keyword
     integer(I4B) :: ierr
     ! -- format
 ! ------------------------------------------------------------------------------

@@ -547,7 +547,6 @@ module GwtModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule, only: kstp, kper
     ! -- dummy
     class(GwtModelType) :: this
     integer(I4B),intent(in) :: kiter
@@ -1110,7 +1109,6 @@ module GwtModule
   end subroutine ftype_check
 
   function get_nsubtimes(this) result(nsubtimes)
-    use TdisModule, only: kper
     integer(I4B) :: nsubtimes
     class(GwtModelType) :: this
     nsubtimes = 1

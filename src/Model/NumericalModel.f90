@@ -367,9 +367,6 @@ module NumericalModelModule
     integer(I4B), intent(in) :: node
     integer(I4B), intent(inout) :: nodeu
     ! -- local
-    integer(I4B) :: ip, ipaknode, istart, istop
-    class(BndType), pointer :: packobj
-    
     if(node <= this%dis%nodes) then
       nodeu = this%dis%get_nodeuser(node)
     else

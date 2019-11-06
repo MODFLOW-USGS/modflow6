@@ -224,8 +224,6 @@ contains
     integer(I4B) :: nn1
     integer(I4B) :: icol, istart, istop
     character(len=LINELENGTH) :: ermsg, strng
-    ! formats
- 30 format(i10)
 ! ------------------------------------------------------------------------------
     !
     ! -- Initialize variables
@@ -266,7 +264,6 @@ contains
     integer(I4B) :: icol, istart, istop, jaidx
     character(len=LINELENGTH) :: ermsg, strng
     ! formats
- 30 format(i10)
  70 format('Error: No connection exists between cells identified in text: ',a)
 ! ------------------------------------------------------------------------------
     !

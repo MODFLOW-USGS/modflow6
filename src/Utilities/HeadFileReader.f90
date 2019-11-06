@@ -92,7 +92,6 @@ module HeadFileReaderModule
     ! -- local
     integer(I4B) :: iostat, iout
     integer(I4B) :: ncol, nrow, ilay
-    character(len=LINELENGTH) :: errmsg
 ! ------------------------------------------------------------------------------
     !
     if (present(iout_opt)) then
