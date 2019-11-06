@@ -644,7 +644,6 @@ module GwfDisuModule
     use ConstantsModule,   only: LINELENGTH, DZERO
     ! -- dummy
     class(GwfDisuType) :: this
-    character(len=LINELENGTH) :: line
     integer(I4B) :: i
     integer(I4B) :: ierr, ival
     logical :: isfound, endOfBlock
@@ -732,7 +731,6 @@ module GwfDisuModule
     use SparseModule, only: sparsematrix
     ! -- dummy
     class(GwfDisuType) :: this
-    character(len=LINELENGTH) :: line
     integer(I4B) :: i, j, ivert, ivert1, ncvert
     integer(I4B) :: ierr, ival
     logical :: isfound, endOfBlock
@@ -1423,7 +1421,6 @@ module GwfDisuModule
     integer(I4B) :: nrow
     integer(I4B) :: ncol
     integer(I4B) :: nval
-    integer(I4B) :: nodeu, noder
     integer(I4B), dimension(:), pointer, contiguous :: itemp
 ! ------------------------------------------------------------------------------
     !
@@ -1483,7 +1480,6 @@ module GwfDisuModule
     integer(I4B) :: nrow
     integer(I4B) :: ncol
     integer(I4B) :: nval
-    integer(I4B) :: nodeu, noder
     real(DP), dimension(:), pointer, contiguous :: dtemp
 ! ------------------------------------------------------------------------------
     !

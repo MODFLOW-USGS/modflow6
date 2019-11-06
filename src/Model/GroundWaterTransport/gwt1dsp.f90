@@ -232,18 +232,15 @@ module GwtDspModule
     ! -- dummy
      class(GwtDspType) :: this
     ! -- local
-    real(DP), target :: min_satthk
 ! ------------------------------------------------------------------------------
     !
     ! -- xt3d
     ! TODO: might consider adding a new mf6 level set pointers method, and
     ! doing this stuff there instead of in the time step loop.
     if (kstp * kper == 1) then
-      ! TODO MIN_SATTHK cannot be a local variable here.  it goes out of scope
-      min_satthk = DZERO
       if(this%ixt3d > 0) call this%xt3d%xt3d_ar(this%ibound,                   &
         this%d11, this%id33, this%d33, this%fmi%gwfsat, this%id22, this%d22,   &
-        this%fmi%igwfinwtup, min_satthk, this%fmi%gwficelltype,                &
+        this%fmi%igwfinwtup, this%fmi%gwficelltype,                            &
         this%iangle1, this%iangle2, this%iangle3,                              &
         this%angle1, this%angle2, this%angle3)
     endif

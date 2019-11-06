@@ -426,7 +426,6 @@ contains
     logical,          intent(inout) :: found
     ! -- local
     character(len=MAXCHARLEN) :: fname, keyword
-    real(DP) :: r
     ! -- formats
     character(len=*),parameter :: fmtnotfound= &
       "(4x, 'NO UZF OPTIONS WERE FOUND.')"
@@ -3120,7 +3119,6 @@ contains
     ! --------------------------------------------------------------------------
     ! -- formats
 60  format('Error: Invalid node number in OBS input: ',i5)
-70  format('Error: Invalid depth in OBS input: ',g15.7)
     !
     do i = 1, this%obs%npakobs
       obsrv => this%obs%pakobs(i)%obsrv

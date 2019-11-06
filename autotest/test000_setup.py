@@ -174,9 +174,10 @@ def test_build_modflow6():
     fflags = None
     if fc == 'gfortran':
         # some flags to check for errors in the code
-        # but they are not working yet, so had to deactivate
-        fflags = 'Werror Wtabs Wline-truncation'
-        fflags = None
+        # add -Werror for compilation to terminate if errors are found
+        fflags = ('-Wtabs -Wline-truncation -Wunused-label '
+                  '-Wunused-variable')
+        #fflags = None
 
     pymake.main(srcdir, target, fc=fc, cc=cc, include_subdirs=True,
                 fflags=fflags)
@@ -225,7 +226,16 @@ def test_build_zonebudget():
                               'extrafiles.txt')
     fc, cc = pymake.set_compiler('mf6')
 
-    pymake.main(srcdir, target, fc=fc, cc=cc, extrafiles=extrafiles)
+    fflags = None
+    if fc == 'gfortran':
+        # some flags to check for errors in the code
+        # add -Werror for compilation to terminate if errors are found
+        fflags = ('-Wtabs -Wline-truncation -Wunused-label '
+                  '-Wunused-variable')
+        #fflags = None
+
+    pymake.main(srcdir, target, fc=fc, cc=cc, extrafiles=extrafiles,
+                fflags=fflags)
 
     msg = '{} does not exist.'.format(relpath_fallback(target))
     assert os.path.isfile(target), msg
