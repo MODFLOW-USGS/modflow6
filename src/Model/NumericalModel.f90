@@ -116,8 +116,8 @@ module NumericalModelModule
   subroutine model_fc(this, kiter, amatsln, njasln, inwtflag)
     class(NumericalModelType) :: this
     integer(I4B),intent(in) :: kiter
-    real(DP),dimension(njasln),intent(inout) :: amatsln
     integer(I4B),intent(in) :: njasln
+    real(DP),dimension(njasln),intent(inout) :: amatsln
     integer(I4B), intent(in) :: inwtflag
   end subroutine model_fc
 
@@ -145,8 +145,8 @@ module NumericalModelModule
   subroutine model_nr(this, kiter, amatsln, njasln, inwtflag)
     class(NumericalModelType) :: this
     integer(I4B),intent(in) :: kiter
-    real(DP),dimension(njasln),intent(inout) :: amatsln
     integer(I4B),intent(in) :: njasln
+    real(DP),dimension(njasln),intent(inout) :: amatsln
     integer(I4B), intent(in) :: inwtflag
   end subroutine model_nr
 

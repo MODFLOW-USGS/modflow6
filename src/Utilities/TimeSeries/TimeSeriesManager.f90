@@ -154,9 +154,10 @@ module TimeSeriesManagerModule
     real(DP) :: begintime, endtime
     character(len=LENPACKAGENAME+2) :: pkgID
     ! formats
-    5 format(/,'Time-series controlled values' &
-                ' in stress period ',i0,', time step ',i0,':')
-    10  format(a,' package: Boundary ',i0,', entry ',i0,' value from time series "',a,'" = ',g12.5)
+    character(len=*),parameter :: fmt5 =                                       &
+      &"(/,'Time-series controlled values in stress period: ', i0,             &
+        &', time step ', i0, ':')"
+    10  format(a,' package: Boundary ',i0,', entry ',i0, ' value from time series "',a,'" = ',g12.5)
     15  format(a,' package: Boundary ',i0,', entry ',i0,' value from time series "',a,'" = ',g12.5,' (',a,')')
     20  format(a,' package: Boundary ',i0,', ',a,' value from time series "',a,'" = ',g12.5)
     25  format(a,' package: Boundary ',i0,', ',a,' value from time series "',a,'" = ',g12.5,' (',a,')')
@@ -175,7 +176,7 @@ module TimeSeriesManagerModule
       tsLink => GetTimeSeriesLinkFromList(this%boundTsLinks, i)
       if (i == 1) then
         if (tsLink%Iprpak == 1) then
-          write(this%iout,5)kper,kstp
+          write(this%iout, fmt5) kper, kstp
         endif
       endif
       ! this part needs to be different for MAW because MAW does not use
@@ -233,7 +234,7 @@ module TimeSeriesManagerModule
       timeseries => tsLink%timeSeries
       if (i==1 .and. nlinks==0) then
         if (tsLink%Iprpak == 1) then
-          write(this%iout,5)kper,kstp
+          write(this%iout, fmt5) kper, kstp
         endif
       endif
       tsLink%BndElement = timeseries%GetValue(begintime, endtime)

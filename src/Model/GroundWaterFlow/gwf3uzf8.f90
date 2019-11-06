@@ -431,7 +431,7 @@ contains
       "(4x, 'NO UZF OPTIONS WERE FOUND.')"
     character(len=*),parameter :: fmtet = &
       "(4x, 'ET WILL BE SIMULATED WITHIN UZ AND GW ZONES, WITH LINEAR ',  &
-        'GWET IF OPTION NOT SPECIFIED OTHERWISE.')"
+        &'GWET IF OPTION NOT SPECIFIED OTHERWISE.')"
     character(len=*),parameter :: fmtgwetlin = &
       "(4x, 'GROUNDWATER ET FUNCTION WILL BE LINEAR.')"
     character(len=*),parameter :: fmtgwetsquare = &

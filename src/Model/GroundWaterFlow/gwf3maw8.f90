@@ -406,7 +406,7 @@ contains
     integer(I4B), dimension(:), pointer, contiguous :: nboundchk
     ! -- format
     character(len=*),parameter :: fmthdbot = &
-      "('well head (',G0,') must be >= BOTTOM_ELEVATION (',G0',).')"
+      "('well head (', G0, ') must be >= BOTTOM_ELEVATION (', G0, ').')"
 ! ------------------------------------------------------------------------------
     !
     ! -- code
@@ -1113,7 +1113,7 @@ contains
     character(len=MAXCHARLEN) :: ermsg, ermsgr
     ! -- formats
     character(len=*),parameter :: fmthdbot = &
-      "('well head (',G0,') must be >= BOTTOM_ELEVATION (',G0',).')"
+      "('well head (',G0,') must be >= BOTTOM_ELEVATION (',G0, ').')"
 ! ------------------------------------------------------------------------------
     !
     ! -- Find time interval of current stress period.

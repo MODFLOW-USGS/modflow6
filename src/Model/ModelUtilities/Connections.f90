@@ -325,22 +325,22 @@ module ConnectionsModule
     character(len=24),dimension(nname) :: aname(nname)
     ! -- formats
     character(len=*),parameter :: fmtsymerr =                                  &
-      "('Error in array: ',a,'.',                                              &
-        ' Array is not symmetric in positions: ',i0,' and ',i0,'.',            &
-        ' Values in these positions are: ',1pg15.6,' and ', 1pg15.6,           &
-        ' For node ',i0,' connected to node ',i0)"
+      &"('Error in array: ',a,'.',                                             &
+        &' Array is not symmetric in positions: ',i0,' and ',i0,'.',           &
+        &' Values in these positions are: ',1pg15.6,' and ', 1pg15.6,          &
+        &' For node ',i0,' connected to node ',i0)"
     character(len=*),parameter :: fmtsymerrja =                                &
-      "('Error in array: ',a,'.',                                              &
-        ' Array does not have symmetric counterpart in position ',i0,          &
-        ' for cell ',i0,' connected to cell ',i0)"
+      &"('Error in array: ',a,'.',                                             &
+        &' Array does not have symmetric counterpart in position ',i0,         &
+        &' for cell ',i0,' connected to cell ',i0)"
     character(len=*),parameter :: fmtjanmerr =                                 &
-      "('Error in array: ',a,'.',                                              &
-        ' First value for cell : ',i0,' must equal ',i0,'.',                   &
-        ' Found ',i0,' instead.')"
+      &"('Error in array: ',a,'.',                                             &
+        &' First value for cell : ',i0,' must equal ',i0,'.',                  &
+        &' Found ',i0,' instead.')"
     character(len=*),parameter :: fmtjasorterr =                               &
-      "('Error in array: ',a,'.',                                              &
-        ' Entries not sorted for row: ',i0,'.',                                &
-        ' Offending entries are: ',i0,' and ',i0)"
+      &"('Error in array: ',a,'.',                                             &
+        &' Entries not sorted for row: ',i0,'.',                               &
+        &' Offending entries are: ',i0,' and ',i0)"
     character(len=*),parameter :: fmtihcerr =                                  &
       "('IHC must be 0, 1, or 2.  Found: ',i0)"
     ! -- data
@@ -514,11 +514,11 @@ module ConnectionsModule
     character(len=300) :: ermsg
     ! -- formats
     character(len=*),parameter :: fmtsymerr = &
-      "(/,'Error in array: ',(a),/, &
-          'Array is not symmetric in positions: ',2i9,/, &
-          'Values in these positions are: ', 2(1pg15.6))"
+      &"(/,'Error in array: ',(a),/, &
+          &'Array is not symmetric in positions: ',2i9,/, &
+          &'Values in these positions are: ', 2(1pg15.6))"
     character(len=*),parameter :: fmtihcerr = &
-      "(/,'IHC must be 0, 1, or 2.  Found: ',i0)"
+      &"(/,'IHC must be 0, 1, or 2.  Found: ',i0)"
     ! -- data
     data aname(1) /'                     IAC'/
     data aname(2) /'                      JA'/
