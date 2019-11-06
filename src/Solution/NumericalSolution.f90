@@ -1101,7 +1101,7 @@ contains
     ! -- formats
     character(len=*), parameter :: fmtnocnvg =                                 &
       "(1X,'Solution ', i0, ' did not converge for stress period ', i0,        &
-       ' and time step ', i0)"
+       &' and time step ', i0)"
  11 FORMAT(//1X,'OUTER ITERATION SUMMARY',/,1x,139('-'),/,                     &
         18x,'     OUTER     INNER BACKTRACK BACKTRACK        INCOMING        ',&
            'OUTGOING         MAXIMUM                    MAXIMUM CHANGE',/,     &
@@ -1914,7 +1914,7 @@ contains
     real(DP) :: bnorm
     character(len=50) :: fname
     character(len=*), parameter :: fmtfname = "('mf6mat_', i0, '_', i0, &
-      '_', i0, '_', i0, '.txt')"
+      &'_', i0, '_', i0, '.txt')"
 ! ------------------------------------------------------------------------------
     !
     ! -- take care of loose ends for all nodes before call to solver
