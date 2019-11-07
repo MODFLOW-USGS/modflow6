@@ -57,6 +57,8 @@ module GwfNpfModule
     real(DP), dimension(:), pointer, contiguous     :: k33          => null()    ! hydraulic conductivity; if specified then this is Kz prior to rotation
     integer(I4B), pointer                           :: ik22         => null()    ! flag that k22 is specified
     integer(I4B), pointer                           :: ik33         => null()    ! flag that k33 is specified
+    integer(I4B), pointer                           :: ik22overk    => null()    ! flag that k22 is specified as anisotropy ratio
+    integer(I4B), pointer                           :: ik33overk    => null()    ! flag that k33 is specified as anisotropy ratio
     integer(I4B), pointer                           :: iangle1      => null()    ! flag to indicate angle1 was read
     integer(I4B), pointer                           :: iangle2      => null()    ! flag to indicate angle2 was read
     integer(I4B), pointer                           :: iangle3      => null()    ! flag to indicate angle3 was read
@@ -1069,6 +1071,8 @@ module GwfNpfModule
     call mem_allocate(this%icellavg, 'ICELLAVG', this%origin)
     call mem_allocate(this%ik22, 'IK22', this%origin)
     call mem_allocate(this%ik33, 'IK33', this%origin)
+    call mem_allocate(this%ik22overk, 'IK22OVERK', this%origin)
+    call mem_allocate(this%ik33overk, 'IK33OVERK', this%origin)
     call mem_allocate(this%iperched, 'IPERCHED', this%origin)
     call mem_allocate(this%ivarcv, 'IVARCV', this%origin)
     call mem_allocate(this%idewatcv, 'IDEWATCV', this%origin)
@@ -1101,6 +1105,8 @@ module GwfNpfModule
     this%icellavg = 0
     this%ik22 = 0
     this%ik33 = 0
+    this%ik22overk = 0
+    this%ik33overk = 0
     this%iperched = 0
     this%ivarcv = 0
     this%idewatcv = 0
@@ -1298,6 +1304,16 @@ module GwfNpfModule
             write(this%iout,'(4x,a)')                                          &
               'SPECIFIC DISCHARGE WILL BE CALCULATED AT CELL CENTERS ' //      &
               'AND WRITTEN TO DATA-SPDIS IN BUDGET FILE WHEN REQUESTED.'
+          case ('K22OVERK')
+            this%ik22overk = 1
+            write(this%iout,'(4x,a)')                                          &
+              'VALUES SPECIFIED FOR K22 ARE ANISOTROPY RATIOS AND ' //         &
+              'WILL BE MULTIPLIED BY K BEFORE BEING USED IN CALCULATIONS.'
+          case ('K33OVERK')
+            this%ik33overk = 1
+            write(this%iout,'(4x,a)')                                          &
+              'VALUES SPECIFIED FOR K33 ARE ANISOTROPY RATIOS AND ' //         &
+              'WILL BE MULTIPLIED BY K BEFORE BEING USED IN CALCULATIONS.'
           !
           ! -- The following are options that are only available in the
           !    development version and are not included in the documentation.
@@ -1581,7 +1597,6 @@ module GwfNpfModule
     logical :: isfound
     logical, dimension(8)           :: lname
     character(len=24), dimension(:), pointer :: aname
-    !character(len=24), dimension(8) :: aname
     character(len=24), dimension(8) :: varinames
     ! -- formats
     character(len=*), parameter :: fmtiprflow =                                &
@@ -1592,10 +1607,6 @@ module GwfNpfModule
       "WHENEVER ICBCFL IS NOT ZERO.')"
     character(len=*), parameter :: fmtnct =                                    &
       "(1x, 'Negative cell thickness at cell: ', a)"
-    !character(len=*), parameter :: fmtkerr =                                   &
-    !  "(1x, 'Hydraulic property ',a,' is <= 0 for cell ',a, ' ', 1pg15.6)"
-    !character(len=*), parameter :: fmtkerr2 =                                  &
-    !  "(1x, '... ', i0,' additional errors not shown for ',a)"
     ! -- data
     !data aname(1) /'               ICELLTYPE'/
     !data aname(2) /'                       K'/
@@ -1615,7 +1626,8 @@ module GwfNpfModule
     end do
     varinames(2) = 'K11                     '
     !
-    ! -- get npfdata block
+    ! -- Read all of the arrays in the GRIDDATA block using the get_block_data
+    !    method, which is part of NumericalPackageType
     call this%parser%GetBlock('GRIDDATA', isfound, ierr)
     if(isfound) then
       write(this%iout,'(1x,a)')'PROCESSING GRIDDATA'
@@ -1645,6 +1657,10 @@ module GwfNpfModule
     if(lname(3)) then
       this%ik33 = 1
     else
+      if (this%ik33overk /= 0) then
+        write(errmsg, '(a)') 'K33OVERK option specified but K33 not specified.'
+        call store_error(errmsg)
+      endif
       write(this%iout, '(1x, a)') 'K33 not provided.  Assuming K33 = K.'
       call mem_reassignptr(this%k33, 'K33', trim(this%origin),                 &
                                      'K11', trim(this%origin))
@@ -1654,6 +1670,10 @@ module GwfNpfModule
     if(lname(4)) then
       this%ik22 = 1
     else
+      if (this%ik22overk /= 0) then
+        write(errmsg, '(a)') 'K22OVERK option specified but K22 not specified.'
+        call store_error(errmsg)
+      endif
       write(this%iout, '(1x, a)') 'K22 not provided.  Assuming K22 = K.'
       call mem_reassignptr(this%k22, 'K22', trim(this%origin),                 &
                                      'K11', trim(this%origin))
@@ -1765,12 +1785,13 @@ module GwfNpfModule
       call store_error(errmsg)
     endif
     !
-    ! -- check k33
+    ! -- check k33 because it was read
     if (this%ik33 /= 0) then
       !
       ! -- Check to make sure values are greater than or equal to zero
       nerr = 0
       do n = 1, size(this%k33)
+        if (this%ik33overk /= 0) this%k33(n) = this%k33(n) * this%k11(n)
         if(this%k33(n) <= DZERO) then
           nerr = nerr + 1
           if(nerr <= 20) then
@@ -1787,8 +1808,9 @@ module GwfNpfModule
       endif
     end if
     !
-    ! -- check k22
+    ! -- check k22 because it was read
     if (this%ik22 /= 0) then
+      !
       ! -- Check to make sure that angles are available
       if(this%dis%con%ianglex == 0) then
         write(errmsg, '(a)') 'Error.  ANGLDEGX not provided in ' //            &
@@ -1799,6 +1821,7 @@ module GwfNpfModule
       ! -- Check to make sure values are greater than or equal to zero
       nerr = 0
       do n = 1, size(this%k22)
+        if (this%ik22overk /= 0) this%k22(n) = this%k22(n) * this%k11(n)
         if(this%k22(n) <= DZERO) then
           nerr = nerr + 1
           if(nerr <= 20) then
