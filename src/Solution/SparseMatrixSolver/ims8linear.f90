@@ -529,7 +529,7 @@
       CHARACTER (LEN= 16), DIMENSION(0:4) :: ccnvgopt
       CHARACTER (LEN= 15) :: clevel
       CHARACTER (LEN= 15) :: cdroptol 
-      integer(I4B) :: i, j, n
+      integer(I4B) :: i, j
 !     + + + PARAMETERS + + +
 !       DATA
       DATA clin  /'UNKNOWN   ', &
@@ -1002,7 +1002,6 @@
         integer(I4B) :: nsp 
         integer(I4B), DIMENSION(:), ALLOCATABLE :: iwork0, iwork1 
         integer(I4B) :: iflag 
-        integer(I4B) :: i,j 
 !       + + + PARAMETERS + + +                                            
 !       + + + FUNCTIONS + + +                                             
 !       + + + FORMATS + + +                                               

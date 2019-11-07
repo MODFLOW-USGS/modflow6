@@ -205,7 +205,6 @@ contains
     integer(I4B) :: icol, istart, istop
     character(len=LINELENGTH) :: ermsg, strng
     ! formats
- 30 format(i10)
     !
     ! -- Initialize variables
     strng = obsrv%IDstring
@@ -240,7 +239,6 @@ contains
     integer(I4B) :: icol, istart, istop, jaidx
     character(len=LINELENGTH) :: ermsg, strng
     ! formats
- 30 format(i10)
  70 format('Error: No connection exists between cells identified in text: ',a)
     !
     ! -- Initialize variables
