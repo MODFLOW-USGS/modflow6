@@ -435,7 +435,8 @@ contains
     !
     ! -- read maw well data
     ! -- get wells block
-    call this%parser%GetBlock('PACKAGEDATA', isfound, ierr, supportopenclose=.true.)
+    call this%parser%GetBlock('PACKAGEDATA', isfound, ierr, &
+      supportopenclose=.true.)
     !
     ! -- parse locations block if detected
     if (isfound) then
