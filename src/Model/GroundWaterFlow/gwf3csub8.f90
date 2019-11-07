@@ -541,6 +541,9 @@ contains
         end if
       end if
     end if
+    if (icnvg == 0) then
+      write(this%iout,2020)
+    end if
     !
     ! -- return
     return
@@ -2840,9 +2843,9 @@ contains
     real(DP) :: theta
     real(DP) :: v
     ! -- format
-    character(len=*), parameter :: fmtcsub =                                    &
+    character(len=*), parameter :: fmtcsub =                                   &
       "(1x,/1x,'CSUB -- COMPACTION PACKAGE, VERSION 1, 3/16/2018',             &
-      ' INPUT READ FROM UNIT ', i0, //)"
+     &' INPUT READ FROM UNIT ', i0, //)"
 ! ------------------------------------------------------------------------------
     !
     ! --print a message identifying the csub package.
@@ -6686,8 +6689,7 @@ contains
     character(len=LINELENGTH) :: strng
     character(len=LENBOUNDNAME) :: bndname
     logical :: flag_string
-    ! formats
- 30 format(i10)
+    !--------------------------------------------------------------------------
     !
     strng = obsrv%IDstring
     ! -- Extract reach number from strng and store it.
