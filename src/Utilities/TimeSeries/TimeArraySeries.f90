@@ -133,7 +133,8 @@ contains
     ierr = 0
     !
     ! -- get BEGIN line of ATTRIBUTES block
-    call this%parser%GetBlock('ATTRIBUTES', found, ierr)
+    call this%parser%GetBlock('ATTRIBUTES', found, ierr, &
+      supportOpenClose=.true.)
     if (.not. found) then
       ermsg = 'Error: Attributes block not found in file: ' // &
               trim(fname)
@@ -417,7 +418,8 @@ contains
       call ConstructTimeArray(ta, this%dis)
       ! -- read a time and an array from the input file
       ! -- Get a TIME block and read the time
-      call this%parser%GetBlock('TIME', isFound, ierr, supportOpenClose=.true.)
+      call this%parser%GetBlock('TIME', isFound, ierr, &
+        supportOpenClose=.true.)
       if (isFound) then
         ta%taTime = this%parser%GetDouble()
         ! -- Read the array
