@@ -15,48 +15,138 @@ contains
   !
   !    SPECIFICATIONS:
   ! ------------------------------------------------------------------------------
-    ! -- modules
+    ! -- modules   
+    use TdisModule, only: totim, totalsimtime   
+    logical :: hasConverged
+    !
+    ! initialize simulation
+    call initialize()
+    !
+    ! -- time loop
+    tsloop: do while (totim < totalsimtime)
+      
+      ! perform a time step
+      hasConverged = update()
+      
+      ! if not converged, break
+      if(.not. hasConverged) exit tsloop      
+      
+    enddo tsloop
+    !
+    ! -- finalize simulation
+    call finalize()    
+    
+  end subroutine runmf6
+  
+  subroutine initialize()
     use CommandArguments,       only: GetCommandLineArguments
     use SimulationCreateModule, only: simulation_cr 
-    use TdisModule,             only: tdis_tu    
-    logical :: exitTimeloop
-    !
     ! -- parse any command line arguments
     call GetCommandLineArguments()
     !
     ! -- print banner and info to screen
-    call PrintInfo()
+    call printInfo()
     !
     ! -- create simulation
     call simulation_cr()
     !
     ! -- prepare simulation (_df + _ar)
     call prepareSimulation()   
-    !
-    ! -- time loop
-    tsloop: do
-      !
-      ! -- time update
-      call tdis_tu()
-      !
-      ! -- prepare timestep
-      call prepareTimestep()
-      !
-      ! -- do timestep
-      call doTimestep()      
-      !
-      ! -- after timestep
-      exitTimeloop = finalizeTimestep()
-      !
-      ! -- time step exit conditions
-      if(exitTimeloop) exit tsloop
-      !
-    enddo tsloop
-    !
-    ! -- finalize simulation
-    call finalizeSimulation()    
     
-  end subroutine runmf6
+  end subroutine initialize
+  
+  function update() result(hasConverged)
+    Use TdisModule, only: tdis_tu
+    logical :: hasConverged
+    
+    ! -- time update
+    call tdis_tu()
+    !
+    ! -- prepare timestep
+    call prepareTimestep()
+    !
+    ! -- do timestep
+    call doTimestep()      
+    !
+    ! -- after timestep
+    hasConverged = finalizeTimestep()
+    !
+  end function update
+  
+  subroutine finalize()
+    use ListsModule,            only: lists_da
+    use MemoryManagerModule,    only: mem_usage, mem_da
+    use TimerModule,            only: elapsed_time   
+    use SimVariablesModule,     only: iout
+    use SimulationCreateModule, only: simulation_cr, simulation_da  
+    use TdisModule,             only: tdis_tu, tdis_da
+    use SimModule,              only: final_message
+    integer(I4B) :: im, ic, is, isg
+    class(SolutionGroupType), pointer :: sgp => null()
+    class(BaseSolutionType), pointer :: sp => null()
+    class(BaseModelType), pointer :: mp => null()
+    class(BaseExchangeType), pointer :: ep => null()
+    
+    ! -- FINAL PROCESSING (FP)
+    ! -- Final processing for each model
+    do im = 1, basemodellist%Count()
+      mp => GetBaseModelFromList(basemodellist, im)
+      call mp%model_fp()
+    enddo
+    !
+    ! -- Final processing for each exchange
+    do ic = 1, baseexchangelist%Count()
+      ep => GetBaseExchangeFromList(baseexchangelist, ic)
+      call ep%exg_fp()
+    enddo
+    !
+    ! -- Final processing for each solution
+    do is=1,basesolutionlist%Count()
+      sp => GetBaseSolutionFromList(basesolutionlist, is)
+      call sp%sln_fp()
+    enddo
+    !
+    ! -- DEALLOCATE (DA)
+    ! -- Deallocate tdis
+    call tdis_da()
+    !
+    ! -- Deallocate for each model
+    do im = 1, basemodellist%Count()
+      mp => GetBaseModelFromList(basemodellist, im)
+      call mp%model_da()
+      deallocate(mp)
+    enddo
+    !
+    ! -- Deallocate for each exchange
+    do ic = 1, baseexchangelist%Count()
+      ep => GetBaseExchangeFromList(baseexchangelist, ic)
+      call ep%exg_da()
+      deallocate(ep)
+    enddo
+    !
+    ! -- Deallocate for each solution
+    do is=1,basesolutionlist%Count()
+      sp => GetBaseSolutionFromList(basesolutionlist, is)
+      call sp%sln_da()
+      deallocate(sp)
+    enddo
+    !
+    ! -- Deallocate solution group and simulation variables
+    do isg = 1, solutiongrouplist%Count()
+      sgp => GetSolutionGroupFromList(solutiongrouplist, isg)
+      call sgp%sgp_da()
+      deallocate(sgp)
+    enddo
+    call simulation_da()
+    call lists_da()
+    !
+    ! -- Calculate memory usage, elapsed time and terminate
+    call mem_usage(iout)
+    call mem_da()
+    call elapsed_time(iout, 1)
+    call final_message()
+    !        
+  end subroutine finalize
   
   subroutine printInfo()         
     use CompilerVersion
@@ -87,8 +177,7 @@ contains
   end subroutine printInfo
   
   subroutine prepareSimulation()    
-    integer(I4B) :: im, ic, is, isg
-    class(SolutionGroupType), pointer :: sgp => null()
+    integer(I4B) :: im, ic, is
     class(BaseSolutionType), pointer :: sp => null()
     class(BaseModelType), pointer :: mp => null()
     class(BaseExchangeType), pointer :: ep => null()
@@ -183,7 +272,7 @@ contains
       
   end subroutine doTimestep
   
-  function finalizeTimestep() result(exitTimeloop)
+  function finalizeTimestep() result(hasConverged)
     use KindModule,             only: I4B
     use ListsModule,            only: basesolutionlist, basemodellist, baseexchangelist    
     use BaseModelModule,        only: BaseModelType, GetBaseModelFromList
@@ -191,7 +280,7 @@ contains
     use BaseSolutionModule,     only: BaseSolutionType, GetBaseSolutionFromList
     use TdisModule,             only: endofsimulation
     use SimModule,              only: converge_check
-    logical :: exitTimeloop    
+    logical :: hasConverged    
     integer(I4B) :: im, ic, is
     class(BaseSolutionType), pointer :: sp => null()
     class(BaseModelType), pointer :: mp => null()
@@ -216,84 +305,10 @@ contains
     enddo
     !
     ! -- Check if we're done
-    call converge_check(exitTimeloop)       
-    if(endofsimulation) exitTimeloop = .true.
+    call converge_check(hasConverged)       
+    ! TODO_MJR: delete this
+    !if(endofsimulation) exitTimeloop = .true.
     
   end function finalizeTimestep
-  
-  subroutine finalizeSimulation()
-    use ListsModule,            only: lists_da
-    use MemoryManagerModule,    only: mem_usage, mem_da
-    use TimerModule,            only: elapsed_time   
-    use SimVariablesModule,     only: iout
-    use SimulationCreateModule, only: simulation_cr, simulation_da  
-    use TdisModule,             only: tdis_tu, tdis_da, endofsimulation
-    use SimModule,              only: final_message
-    integer(I4B) :: im, ic, is, isg
-    class(SolutionGroupType), pointer :: sgp => null()
-    class(BaseSolutionType), pointer :: sp => null()
-    class(BaseModelType), pointer :: mp => null()
-    class(BaseExchangeType), pointer :: ep => null()
-    
-    ! -- FINAL PROCESSING (FP)
-    ! -- Final processing for each model
-    do im = 1, basemodellist%Count()
-      mp => GetBaseModelFromList(basemodellist, im)
-      call mp%model_fp()
-    enddo
-    !
-    ! -- Final processing for each exchange
-    do ic = 1, baseexchangelist%Count()
-      ep => GetBaseExchangeFromList(baseexchangelist, ic)
-      call ep%exg_fp()
-    enddo
-    !
-    ! -- Final processing for each solution
-    do is=1,basesolutionlist%Count()
-      sp => GetBaseSolutionFromList(basesolutionlist, is)
-      call sp%sln_fp()
-    enddo
-    !
-    ! -- DEALLOCATE (DA)
-    ! -- Deallocate tdis
-    call tdis_da()
-    !
-    ! -- Deallocate for each model
-    do im = 1, basemodellist%Count()
-      mp => GetBaseModelFromList(basemodellist, im)
-      call mp%model_da()
-      deallocate(mp)
-    enddo
-    !
-    ! -- Deallocate for each exchange
-    do ic = 1, baseexchangelist%Count()
-      ep => GetBaseExchangeFromList(baseexchangelist, ic)
-      call ep%exg_da()
-      deallocate(ep)
-    enddo
-    !
-    ! -- Deallocate for each solution
-    do is=1,basesolutionlist%Count()
-      sp => GetBaseSolutionFromList(basesolutionlist, is)
-      call sp%sln_da()
-      deallocate(sp)
-    enddo
-    !
-    ! -- Deallocate solution group and simulation variables
-    do isg = 1, solutiongrouplist%Count()
-      sgp => GetSolutionGroupFromList(solutiongrouplist, isg)
-      call sgp%sgp_da()
-      deallocate(sgp)
-    enddo
-    call simulation_da()
-    call lists_da()
-    !
-    ! -- Calculate memory usage, elapsed time and terminate
-    call mem_usage(iout)
-    call mem_da()
-    call elapsed_time(iout, 1)
-    call final_message()
-    !        
-  end subroutine finalizeSimulation
   
 end module mf6lib

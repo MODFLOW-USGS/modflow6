@@ -596,7 +596,7 @@ end subroutine ustop
     return
   end subroutine converge_reset
 
-  subroutine converge_check(exit_tsloop)
+  subroutine converge_check(hasConverged)
 ! ******************************************************************************
 ! converge_check
 ! ******************************************************************************
@@ -606,7 +606,7 @@ end subroutine ustop
     ! -- modules
     use SimVariablesModule, only: isimcnvg, numnoconverge, isimcontinue
     ! -- dummy
-    logical, intent(inout) :: exit_tsloop
+    logical, intent(inout) :: hasConverged
     ! -- format
     character(len=*), parameter :: fmtfail =                                   &
       "(1x, 'Simulation convergence failure.',                                 &
@@ -614,7 +614,7 @@ end subroutine ustop
 ! ------------------------------------------------------------------------------
     !
     ! -- Initialize
-    exit_tsloop = .false.
+    hasConverged = .true.
     !
     ! -- Count number of failures
     if(isimcnvg == 0) numnoconverge = numnoconverge + 1
@@ -629,7 +629,7 @@ end subroutine ustop
     ! --
     if(isimcnvg == 0) then
       write(iout, fmtfail)
-      exit_tsloop = .true.
+      hasConverged = .false.
     endif
     !
     ! -- Return
