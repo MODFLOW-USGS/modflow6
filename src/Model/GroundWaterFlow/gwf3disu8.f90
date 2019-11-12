@@ -197,7 +197,7 @@ module GwfDisuModule
       end do
     end if
     !
-    ! -- finialize connection data
+    ! -- finalize connection data
     call disext%con%con_finalize(iout, ihc, cl12, hwva, atemp)
     disext%njas = disext%con%njas
     !
