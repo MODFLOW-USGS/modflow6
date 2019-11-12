@@ -286,6 +286,19 @@ ZONE & various packages & Zone arrays used in MODFLOW-2005 \\
 \normalsize
 \end{table}
 
+
+% -------------------------------------------------
+\section{History}
+This section describes changes introduced into the MODFLOW 6 converter with each official release.  These changes may substantially affect users.
+
+\begin{itemize}
+\item
+\currentmodflowversion
+\begin{itemize}
+  \item Fixed an issue in the conversion of MNW2 wells into the MODFLOW 6 format.  The converter did not produce correct results when multiple MNW wells were present and when the wells spanned multiple model layers.
+\end{itemize}
+\end{itemize}
+
 \REFSECTION
 %\SECTION{References Cited}
 \bibliography{../MODFLOW6References}

@@ -276,7 +276,11 @@ module ConnectionsModule
     !
     ! -- verify all items were read
     do n = 1, nname
+      !
+      ! -- skip angledegx because it is not required
       if(aname(n) == aname(6)) cycle
+      !
+      ! -- error if not read
       if(.not. lname(n)) then
         write(ermsg,'(1x,a,a)') &
           'ERROR.  REQUIRED CONNECTIONDATA INPUT WAS NOT SPECIFIED: ', &
