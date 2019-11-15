@@ -103,8 +103,8 @@ module GwfHfbModule
     class(DisBaseType), pointer, intent(inout) :: dis
     ! -- formats
     character(len=*), parameter :: fmtheader =                                 &
-      "(1x, /1x, 'HFB -- HORIZONTAL FLOW BARRIER PACKAGE, VERSION 8, ',        &
-        '4/24/2015 INPUT READ FROM UNIT ', i4, //)"
+      &"(1x, /1x, 'HFB -- HORIZONTAL FLOW BARRIER PACKAGE, VERSION 8, ',       &
+        &'4/24/2015 INPUT READ FROM UNIT ', i4, //)"
 ! ------------------------------------------------------------------------------
     !
     ! -- Print a message identifying the node property flow package.
@@ -562,7 +562,8 @@ module GwfHfbModule
 ! ------------------------------------------------------------------------------
     !
     ! -- get options block
-    call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false.)
+    call this%parser%GetBlock('OPTIONS', isfound, ierr, &
+      supportOpenClose=.true., blockRequired=.false.)
     !
     ! -- parse options block if detected
     if (isfound) then
@@ -610,7 +611,8 @@ module GwfHfbModule
 ! ------------------------------------------------------------------------------
     !
     ! -- get dimensions block
-    call this%parser%GetBlock('DIMENSIONS', isfound, ierr)
+    call this%parser%GetBlock('DIMENSIONS', isfound, ierr, &
+      supportOpenClose=.true.)
     !
     ! -- parse dimensions block if detected
     if (isfound) then
@@ -755,7 +757,7 @@ module GwfHfbModule
     logical :: found
     ! -- formats
     character(len=*), parameter :: fmterr = "(1x, 'Error.  HFB no. ',i0, &
-      ' is between two unconnected cells: ', a, ' and ', a)"
+      &' is between two unconnected cells: ', a, ' and ', a)"
 ! ------------------------------------------------------------------------------
     !
     do ihfb = 1, this%nhfb

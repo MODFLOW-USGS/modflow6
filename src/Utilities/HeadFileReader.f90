@@ -85,6 +85,8 @@ module HeadFileReaderModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- modules
+    use InputOutputModule, only: fseek_stream
     ! -- dummy
     class(HeadFileReaderType) :: this
     logical, intent(out) :: success
@@ -130,7 +132,7 @@ module HeadFileReaderModule
     if (.not. this%endoffile) then
       read(this%inunit, iostat=iostat) this%kstpnext, this%kpernext
       if (iostat == 0) then
-        call fseek(this%inunit, -2 * I4B, 1)
+        call fseek_stream(this%inunit, -2 * I4B, 1, iostat)
       else if (iostat < 0) then
         this%endoffile = .true.
       endif

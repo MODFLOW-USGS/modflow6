@@ -322,7 +322,8 @@
     undspec = .false.
     !
     ! -- get options block
-    call parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false.)
+    call parser%GetBlock('OPTIONS', isfound, ierr, &
+      supportOpenClose=.true., blockRequired=.false.)
     !
     ! -- parse options block if detected
     if (isfound) then
@@ -481,7 +482,8 @@
 ! ------------------------------------------------------------------------------
     !
     ! -- get DIMENSIONS block
-    call parser%GetBlock('DIMENSIONS', isfound, ierr)
+    call parser%GetBlock('DIMENSIONS', isfound, ierr, &
+      supportOpenClose=.true.)
     !
     ! -- parse block if detected
     if (isfound) then
@@ -538,7 +540,8 @@
 ! ------------------------------------------------------------------------------
     !
     ! -- get PERIODDATA block
-    call parser%GetBlock('PERIODDATA', isfound, ierr)
+    call parser%GetBlock('PERIODDATA', isfound, ierr, &
+      supportOpenClose=.true.)
     !
     ! -- parse block if detected
     if (isfound) then

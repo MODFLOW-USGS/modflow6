@@ -406,7 +406,7 @@ contains
     integer(I4B), dimension(:), pointer, contiguous :: nboundchk
     ! -- format
     character(len=*),parameter :: fmthdbot = &
-      "('well head (',G0,') must be >= BOTTOM_ELEVATION (',G0',).')"
+      "('well head (', G0, ') must be >= BOTTOM_ELEVATION (', G0, ').')"
 ! ------------------------------------------------------------------------------
     !
     ! -- code
@@ -435,7 +435,8 @@ contains
     !
     ! -- read maw well data
     ! -- get wells block
-    call this%parser%GetBlock('PACKAGEDATA', isfound, ierr, supportopenclose=.true.)
+    call this%parser%GetBlock('PACKAGEDATA', isfound, ierr, &
+      supportopenclose=.true.)
     !
     ! -- parse locations block if detected
     if (isfound) then
@@ -1113,7 +1114,7 @@ contains
     character(len=MAXCHARLEN) :: ermsg, ermsgr
     ! -- formats
     character(len=*),parameter :: fmthdbot = &
-      "('well head (',G0,') must be >= BOTTOM_ELEVATION (',G0',).')"
+      "('well head (',G0,') must be >= BOTTOM_ELEVATION (',G0, ').')"
 ! ------------------------------------------------------------------------------
     !
     ! -- Find time interval of current stress period.
