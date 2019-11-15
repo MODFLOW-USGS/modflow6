@@ -215,7 +215,8 @@ module SimulationCreateModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Process OPTIONS block
-    call parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false.)
+    call parser%GetBlock('OPTIONS', isfound, ierr, &
+      supportOpenClose=.true., blockRequired=.false.)
     if (isfound) then
       write(iout,'(/1x,a)')'READING SIMULATION OPTIONS'
       do
@@ -281,7 +282,8 @@ module SimulationCreateModule
     found_tdis = .false.
     !
     ! -- Process TIMING block
-    call parser%GetBlock('TIMING', isfound, ierr)
+    call parser%GetBlock('TIMING', isfound, ierr, &
+      supportOpenClose=.true.)
     if (isfound) then
       write(iout,'(/1x,a)')'READING SIMULATION TIMING'
       do
@@ -343,7 +345,8 @@ module SimulationCreateModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Process MODELS block
-    call parser%GetBlock('MODELS', isfound, ierr)
+    call parser%GetBlock('MODELS', isfound, ierr, &
+      supportOpenClose=.true.)
     if (isfound) then
       write(iout,'(/1x,a)')'READING SIMULATION MODELS'
       im = 0
@@ -405,7 +408,8 @@ module SimulationCreateModule
     character(len=*), parameter :: fmtmerr = "('Error in simulation control ', &
       &'file.  Could not find model: ', a)"
 ! ------------------------------------------------------------------------------
-    call parser%GetBlock('EXCHANGES', isfound, ierr)
+    call parser%GetBlock('EXCHANGES', isfound, ierr, &
+      supportOpenClose=.true.)
     if (isfound) then
       write(iout,'(/1x,a)')'READING SIMULATION EXCHANGES'
       id = 0
@@ -538,7 +542,8 @@ module SimulationCreateModule
     !Read through the simulation name file and process each SOLUTION_GROUP
     sgploop: do
       !
-      call parser%GetBlock('SOLUTIONGROUP', isfound, ierr)
+      call parser%GetBlock('SOLUTIONGROUP', isfound, ierr, &
+        supportOpenClose=.true.)
       if(ierr /= 0) exit sgploop
       if (.not. isfound) exit sgploop
       isgp = isgp + 1

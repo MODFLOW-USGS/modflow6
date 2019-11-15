@@ -176,7 +176,7 @@ def test_build_modflow6():
         # some flags to check for errors in the code
         # add -Werror for compilation to terminate if errors are found
         fflags = ('-Wtabs -Wline-truncation -Wunused-label '
-                  '-Wunused-variable')
+                  '-Wunused-variable -pedantic -std=f2008')
         #fflags = None
 
     pymake.main(srcdir, target, fc=fc, cc=cc, include_subdirs=True,
@@ -231,7 +231,7 @@ def test_build_zonebudget():
         # some flags to check for errors in the code
         # add -Werror for compilation to terminate if errors are found
         fflags = ('-Wtabs -Wline-truncation -Wunused-label '
-                  '-Wunused-variable')
+                  '-Wunused-variable -pedantic -std=f2008')
         #fflags = None
 
     pymake.main(srcdir, target, fc=fc, cc=cc, extrafiles=extrafiles,

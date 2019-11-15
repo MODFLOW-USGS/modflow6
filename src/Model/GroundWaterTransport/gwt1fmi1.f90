@@ -634,7 +634,8 @@ module GwtFmiModule
             endif
             call this%parser%GetString(fname)
             inunit = getunit()
-            call openfile(inunit, this%iout, fname, 'DATA(BINARY)', FORM, ACCESS)
+            call openfile(inunit, this%iout, fname, 'DATA(BINARY)', FORM,      &
+              ACCESS, 'UNKNOWN')
             this%iubud = inunit
           case ('GWFHEAD')
             call this%parser%GetStringCaps(keyword)
@@ -646,7 +647,8 @@ module GwtFmiModule
             endif
             call this%parser%GetString(fname)
             inunit = getunit()
-            call openfile(inunit, this%iout, fname, 'DATA(BINARY)', FORM, ACCESS)
+            call openfile(inunit, this%iout, fname, 'DATA(BINARY)', FORM,      &
+              ACCESS, 'UNKNOWN')
             this%iuhds = inunit
           case default
             write(errmsg,'(4x,a,a)')'***ERROR. UNKNOWN FMI OPTION: ', &
