@@ -31,7 +31,6 @@ reader urword
 optional true
 longname maximum number of errors
 description maximum number of errors that will be stored and printed.
-default_value 1000
 
 
 # --------------------- sim nam timing ---------------------

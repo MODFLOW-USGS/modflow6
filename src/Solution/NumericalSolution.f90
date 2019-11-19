@@ -482,7 +482,8 @@ contains
     mxvl = 0
     !
     ! -- get options block
-    call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false.)
+    call this%parser%GetBlock('OPTIONS', isfound, ierr, &
+      supportOpenClose=.true., blockRequired=.false.)
     !
     ! -- parse options block if detected
     if (isfound) then
@@ -641,7 +642,8 @@ contains
     call this%sln_setouter(ifdparam)
     !
     ! -- get NONLINEAR block
-    call this%parser%GetBlock('NONLINEAR', isfound, ierr, blockRequired=.FALSE.)
+    call this%parser%GetBlock('NONLINEAR', isfound, ierr, &
+      supportOpenClose=.true., blockRequired=.FALSE.)
     !
     ! -- parse NONLINEAR block if detected
     if (isfound) then

@@ -562,7 +562,8 @@ module GwfHfbModule
 ! ------------------------------------------------------------------------------
     !
     ! -- get options block
-    call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false.)
+    call this%parser%GetBlock('OPTIONS', isfound, ierr, &
+      supportOpenClose=.true., blockRequired=.false.)
     !
     ! -- parse options block if detected
     if (isfound) then
@@ -610,7 +611,8 @@ module GwfHfbModule
 ! ------------------------------------------------------------------------------
     !
     ! -- get dimensions block
-    call this%parser%GetBlock('DIMENSIONS', isfound, ierr)
+    call this%parser%GetBlock('DIMENSIONS', isfound, ierr, &
+      supportOpenClose=.true.)
     !
     ! -- parse dimensions block if detected
     if (isfound) then

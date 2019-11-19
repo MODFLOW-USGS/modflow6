@@ -2521,7 +2521,8 @@ contains
     hgwf = DZERO
     !
     ! -- get uzf properties block
-    call this%parser%GetBlock('PACKAGEDATA', isfound, ierr, supportOpenClose=.true.)
+    call this%parser%GetBlock('PACKAGEDATA', isfound, ierr, &
+      supportOpenClose=.true.)
     !
     ! -- parse locations block if detected
     if (isfound) then

@@ -207,7 +207,8 @@
 !
 ! -- get IMSLINEAR block
       if (lreaddata) then
-        call parser%GetBlock('LINEAR', isfound, ierr, blockRequired=.FALSE.)
+        call parser%GetBlock('LINEAR', isfound, ierr, &
+          supportOpenClose=.true., blockRequired=.FALSE.)
       else
         isfound = .FALSE.
       end if
