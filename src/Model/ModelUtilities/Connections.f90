@@ -1146,7 +1146,13 @@ module ConnectionsModule
       deallocate(hwvatemp)
       deallocate(anglextemp)
     end if
-  
+    !
+    ! -- If reduced system, then need to build iausr and jausr, otherwise point
+    !    them to ia and ja.
+    call this%iajausr(nrsize, nodesuser, nodereduced, nodeuser)
+    !
+    ! -- Return
+    return
   end subroutine disuconnections
 
   subroutine iajausr(this, nrsize, nodesuser, nodereduced, nodeuser)

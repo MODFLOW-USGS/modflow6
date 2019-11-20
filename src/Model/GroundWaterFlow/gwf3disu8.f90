@@ -1000,17 +1000,17 @@ module GwfDisuModule
     !    temporarily store the vertex numbers for each cell.  This will
     !    be converted to iavert and javert after all cell vertices have
     !    been read.
-    allocate(maxnnz(this%nodes))
-    do i = 1, this%nodes
+    allocate(maxnnz(this%nodesuser))
+    do i = 1, this%nodesuser
       maxnnz(i) = 5
     enddo
-    call vertspm%init(this%nodes, this%nvert, maxnnz)
+    call vertspm%init(this%nodesuser, this%nvert, maxnnz)
     !
     ! --Read CELL2D block
     call this%parser%GetBlock('CELL2D', isfound, ierr, supportOpenClose=.true.)
     if(isfound) then
       write(this%iout,'(/,1x,a)') 'PROCESSING CELL2D'
-      do i = 1, this%nodes
+      do i = 1, this%nodesuser
         call this%parser%GetNextLine(endOfBlock)
         !
         ! -- cell number
@@ -1074,13 +1074,13 @@ module GwfDisuModule
     end if
     !
     ! -- Convert vertspm into ia/ja form
-    allocate(this%iavert(this%nodes+1))
+    allocate(this%iavert(this%nodesuser + 1))
     allocate(this%javert(vertspm%nnz))
     call vertspm%filliaja(this%iavert, this%javert, ierr)
     call vertspm%destroy()
     !
     ! -- Write information
-    write(this%iout, fmtncpl) this%nodes
+    write(this%iout, fmtncpl) this%nodesuser
     write(this%iout, fmtcoord) 'MINIMUM X', xmin
     write(this%iout, fmtcoord) 'MAXIMUM X', xmax
     write(this%iout, fmtcoord) 'MINIMUM Y', ymin
@@ -1144,7 +1144,7 @@ module GwfDisuModule
     write(iunit) txthdr
     !
     ! -- write variable definitions
-    write(txt, '(3a, i0)') 'NODES ', 'INTEGER ', 'NDIM 0 # ', this%nodes
+    write(txt, '(3a, i0)') 'NODES ', 'INTEGER ', 'NDIM 0 # ', this%nodesuser
     txt(lentxt:lentxt) = new_line('a')
     write(iunit) txt
     write(txt, '(3a, i0)') 'NJA ', 'INTEGER ', 'NDIM 0 # ', this%con%nja
@@ -1159,13 +1159,13 @@ module GwfDisuModule
     write(txt, '(3a, 1pg24.15)') 'ANGROT ', 'DOUBLE ', 'NDIM 0 # ', this%angrot
     txt(lentxt:lentxt) = new_line('a')
     write(iunit) txt
-    write(txt, '(3a, i0)') 'TOP ', 'DOUBLE ', 'NDIM 1 ', this%nodes
+    write(txt, '(3a, i0)') 'TOP ', 'DOUBLE ', 'NDIM 1 ', this%nodesuser
     txt(lentxt:lentxt) = new_line('a')
     write(iunit) txt
-    write(txt, '(3a, i0)') 'BOT ', 'DOUBLE ', 'NDIM 1 ', this%nodes
+    write(txt, '(3a, i0)') 'BOT ', 'DOUBLE ', 'NDIM 1 ', this%nodesuser
     txt(lentxt:lentxt) = new_line('a')
     write(iunit) txt
-    write(txt, '(3a, i0)') 'IA ', 'INTEGER ', 'NDIM 1 ', this%nodes + 1
+    write(txt, '(3a, i0)') 'IA ', 'INTEGER ', 'NDIM 1 ', this%nodesuser + 1
     txt(lentxt:lentxt) = new_line('a')
     write(iunit) txt
     write(txt, '(3a, i0)') 'JA ', 'INTEGER ', 'NDIM 1 ', this%con%nja
@@ -1180,13 +1180,13 @@ module GwfDisuModule
       write(txt, '(3a, i0)') 'VERTICES ', 'DOUBLE ', 'NDIM 2 2 ', this%nvert
       txt(lentxt:lentxt) = new_line('a')
       write(iunit) txt
-      write(txt, '(3a, i0)') 'CELLX ', 'DOUBLE ', 'NDIM 1 ', this%nodes
+      write(txt, '(3a, i0)') 'CELLX ', 'DOUBLE ', 'NDIM 1 ', this%nodesuser
       txt(lentxt:lentxt) = new_line('a')
       write(iunit) txt
-      write(txt, '(3a, i0)') 'CELLY ', 'DOUBLE ', 'NDIM 1 ', this%nodes
+      write(txt, '(3a, i0)') 'CELLY ', 'DOUBLE ', 'NDIM 1 ', this%nodesuser
       txt(lentxt:lentxt) = new_line('a')
       write(iunit) txt
-      write(txt, '(3a, i0)') 'IAVERT ', 'INTEGER ', 'NDIM 1 ', this%nodes + 1
+      write(txt, '(3a, i0)') 'IAVERT ', 'INTEGER ', 'NDIM 1 ', this%nodesuser + 1
       txt(lentxt:lentxt) = new_line('a')
       write(iunit) txt
       write(txt, '(3a, i0)') 'JAVERT ', 'INTEGER ', 'NDIM 1 ', size(this%javert)
@@ -1195,22 +1195,22 @@ module GwfDisuModule
     endif
     !
     ! -- write data
-    write(iunit) this%nodes                                                     ! nodes
+    write(iunit) this%nodesuser                                                 ! nodes
     write(iunit) this%nja                                                       ! nja
     write(iunit) this%xorigin                                                   ! xorigin
     write(iunit) this%yorigin                                                   ! yorigin
     write(iunit) this%angrot                                                    ! angrot
-    write(iunit) this%top                                                       ! top
-    write(iunit) this%bot                                                       ! bot
-    write(iunit) this%con%ia                                                    ! ia
-    write(iunit) this%con%ja                                                    ! ja
+    write(iunit) this%top1d                                                     ! top
+    write(iunit) this%bot1d                                                     ! bot
+    write(iunit) this%con%iausr                                                 ! ia
+    write(iunit) this%con%jausr                                                 ! ja
     write(iunit) icelltype                                                      ! icelltype
     !
     ! -- if vertices have been read then write additional data
     if (this%nvert > 0) then
       write(iunit) this%vertices                                                ! vertices
-      write(iunit) (this%cellxy(1, i), i = 1, this%nodes)                       ! cellx
-      write(iunit) (this%cellxy(2, i), i = 1, this%nodes)                       ! celly
+      write(iunit) (this%cellxy(1, i), i = 1, this%nodesuser)                   ! cellx
+      write(iunit) (this%cellxy(2, i), i = 1, this%nodesuser)                   ! celly
       write(iunit) this%iavert                                                  ! iavert
       write(iunit) this%javert                                                  ! javert
     endif
