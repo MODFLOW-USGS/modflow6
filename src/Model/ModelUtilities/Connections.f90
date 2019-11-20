@@ -39,6 +39,7 @@ module ConnectionsModule
     procedure :: set_cl1_cl2_from_fleng
     procedure :: disconnections
     procedure :: disvconnections
+    procedure :: disuconnections
     procedure :: iajausr
     procedure :: getjaindex
     procedure :: set_mask
@@ -294,7 +295,7 @@ module ConnectionsModule
     endif
     !
     ! -- finalize connection data
-    call this%con_finalize(iout, ihctemp, cl12temp, hwvatemp, angldegx)
+    call this%con_finalize(ihctemp, cl12temp, hwvatemp, angldegx)
     !
     ! -- deallocate temp arrays
     deallocate(ihctemp)
@@ -305,7 +306,7 @@ module ConnectionsModule
     return
   end subroutine read_from_block
 
-  subroutine con_finalize(this, iout, ihctemp, cl12temp, hwvatemp, angldegx)
+  subroutine con_finalize(this, ihctemp, cl12temp, hwvatemp, angldegx)
 ! ******************************************************************************
 ! con_finalize -- Finalize connection data
 ! ******************************************************************************
@@ -317,14 +318,13 @@ module ConnectionsModule
     use SimModule, only: ustop, store_error, count_errors, store_error_unit
     ! -- dummy
     class(ConnectionsType) :: this
-    integer(I4B), intent(in) :: iout
     integer(I4B), dimension(:), intent(in) :: ihctemp
     real(DP), dimension(:), intent(in) :: cl12temp
     real(DP), dimension(:), intent(in) :: hwvatemp
     real(DP), dimension(:), intent(in) :: angldegx
     ! -- local
     character(len=LINELENGTH) :: errmsg
-    integer(I4B) :: ii, n ,m
+    integer(I4B) :: ii, n, m
     integer(I4B), parameter :: nname = 6
     character(len=24),dimension(nname) :: aname(nname)
     ! -- formats
@@ -482,8 +482,6 @@ module ConnectionsModule
       do n = 1, size(this%anglex)
         this%anglex(n) = DNODATA
       enddo
-      write(iout, '(1x,a)') 'ANGLDEGX NOT FOUND IN CONNECTIONDATA ' //           &
-                            'BLOCK. SOME CAPABILITIES MAY BE LIMITED.'
     endif
     !
     ! -- Return
@@ -904,7 +902,7 @@ module ConnectionsModule
   end subroutine disconnections
 
   subroutine disvconnections(this, name_model, nodes, ncpl, nlay, nrsize,      &
-                             nvert, vertex, iavert, javert, cellxy, area,      & 
+                             nvert, vertex, iavert, javert, cellxy,            & 
                              top, bot, nodereduced, nodeuser)
 ! ******************************************************************************
 ! disvconnections -- Construct the connectivity arrays using cell disv
@@ -931,7 +929,6 @@ module ConnectionsModule
     integer(I4B), dimension(:),                   intent(in) :: iavert
     integer(I4B), dimension(:),                   intent(in) :: javert
     real(DP), dimension(2, ncpl),    intent(in) :: cellxy
-    real(DP), dimension(nodes),      intent(in) :: area
     real(DP), dimension(nodes),      intent(in) :: top
     real(DP), dimension(nodes),      intent(in) :: bot
     integer(I4B),          dimension(:),          intent(in) :: nodereduced
@@ -1012,6 +1009,146 @@ module ConnectionsModule
     return
   end subroutine disvconnections
 
+  subroutine disuconnections(this, name_model, nodes, nodesuser, nrsize, &
+                             nodereduced, nodeuser, iausr, jausr, &
+                             ihcusr, cl12usr, hwvausr, anglexusr)
+! ******************************************************************************
+! disuconnections -- Construct the connectivity arrays using disu
+!   information.  Grid may be reduced
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule, only: DHALF, DZERO, DTHREE, DTWO, DPI
+    use SparseModule, only: sparsematrix
+    use MemoryManagerModule, only: mem_reallocate
+    ! -- dummy
+    class(ConnectionsType) :: this
+    character(len=*), intent(in) :: name_model
+    integer(I4B), intent(in) :: nodes
+    integer(I4B), intent(in) :: nodesuser
+    integer(I4B), intent(in) :: nrsize
+    integer(I4B), dimension(:), contiguous, intent(in) :: nodereduced
+    integer(I4B), dimension(:), contiguous, intent(in) :: nodeuser
+    integer(I4B), dimension(:), contiguous, intent(in) :: iausr
+    integer(I4B), dimension(:), contiguous, intent(in) :: jausr
+    integer(I4B), dimension(:), contiguous, intent(in) :: ihcusr
+    real(DP), dimension(:), contiguous, intent(in) :: cl12usr
+    real(DP), dimension(:), contiguous, intent(in) :: hwvausr
+    real(DP), dimension(:), contiguous, intent(in) :: anglexusr
+    ! -- local
+    integer(I4B),dimension(:),allocatable :: ihctemp
+    real(DP),dimension(:),allocatable :: cl12temp
+    real(DP),dimension(:),allocatable :: hwvatemp
+    real(DP),dimension(:),allocatable :: anglextemp
+    integer(I4B) :: nr, nu, mr, mu, icon, ipos, iposr, ierror
+    integer(I4B), dimension(:), allocatable :: rowmaxnnz
+    type(sparsematrix) :: sparse
+! ------------------------------------------------------------------------------
+    !
+    ! -- Allocate scalars
+    call this%allocate_scalars(name_model)
+    !
+    ! -- Set scalars
+    this%nodes = nodes
+    this%ianglex = 1
+    !
+    ! -- If not a reduced grid, then copy and finalize, otherwise more
+    !    processing is required
+    if (nrsize == 0) then
+      this%nodes = nodes
+      this%nja = size(jausr)
+      this%njas = (this%nja - this%nodes) / 2
+      call this%allocate_arrays()
+      do nu = 1, nodes
+        this%ia(nu) = iausr(nu)
+      end do
+      do ipos = 1, this%nja
+        this%ja(ipos) = jausr(ipos)
+      end do
+      !
+      ! -- Call con_finalize to check usr arrays and push larger arrays
+      !    into compressed symmetric arrays
+      call this%con_finalize(ihcusr, cl12usr, hwvausr, anglexusr)
+      !
+    else
+      ! -- reduced system required more work
+      !
+      ! -- Setup the sparse matrix object (iausr is still iac at this point)
+      allocate(rowmaxnnz(this%nodes))
+      do nr = 1, this%nodes
+        nu = nodeuser(nr)
+        rowmaxnnz(nr) = iausr(nu)
+      enddo
+      call sparse%init(this%nodes, this%nodes, rowmaxnnz)
+      !
+      ! -- go through user connectivity and create sparse
+      ipos = 1
+      do nu = 1, nodesuser
+        nr = nodereduced(nu)
+        if (nr > 0) call sparse%addconnection(nr, nr, 1)
+        ipos = ipos + 1
+        do icon = 1, iausr(nu) - 1
+          mu = jausr(ipos)
+          mr = nodereduced(mu)
+          ipos = ipos + 1
+          if (nr < 1) cycle
+          if (mr < 1) cycle
+          call sparse%addconnection(nr, mr, 1)
+        enddo
+      enddo
+      this%nja = sparse%nnz
+      this%njas = (this%nja - this%nodes) / 2
+      !
+      ! -- Allocate index arrays of size nja and symmetric arrays
+      call this%allocate_arrays()
+      !
+      ! -- Fill the IA and JA arrays from sparse, then destroy sparse
+      call sparse%sort()
+      call sparse%filliaja(this%ia, this%ja, ierror)
+      call sparse%destroy()
+      deallocate(rowmaxnnz)
+      !
+      ! -- At this point, need to reduce ihc, cl12, hwva, and anglex
+      allocate(ihctemp(this%nja))
+      allocate(cl12temp(this%nja))
+      allocate(hwvatemp(this%nja))
+      allocate(anglextemp(this%nja))
+      !
+      ! -- Compress user arrays into reduced arrays
+      ipos = 0
+      iposr = 1
+      do nu = 1, nodesuser
+        nr = nodereduced(nu)
+        do icon = 1, iausr(nu)
+          ipos = ipos + 1
+          mu = jausr(ipos)
+          mr = nodereduced(mu)
+          if (nr < 1 .or. mr < 1) cycle
+          ihctemp(iposr) = ihcusr(ipos)
+          cl12temp(iposr) = cl12usr(ipos)
+          hwvatemp(iposr) = hwvausr(ipos)
+          anglextemp(iposr) = anglexusr(ipos)
+          iposr = iposr + 1
+        end do
+      end do
+      !
+      ! -- call finalize after converting this%ia back to this%iac
+      do nr = 1, this%nodes
+        this%ia(nr) = this%ia(nr + 1) - this%ia(nr)
+      enddo
+      call this%con_finalize(ihctemp, cl12temp, hwvatemp, anglextemp)
+      !
+      ! -- deallocate temporary arrays
+      deallocate(ihctemp)
+      deallocate(cl12temp)
+      deallocate(hwvatemp)
+      deallocate(anglextemp)
+    end if
+  
+  end subroutine disuconnections
+
   subroutine iajausr(this, nrsize, nodesuser, nodereduced, nodeuser)
 ! ******************************************************************************
 ! iajausr -- Fill iausr and jausr if reduced grid, otherwise point them
@@ -1063,8 +1200,6 @@ module ConnectionsModule
       call mem_deallocate(this%jausr)
       call mem_setptr(this%iausr, 'IA', this%cid)
       call mem_setptr(this%jausr, 'JA', this%cid)
-      !this%iausr => this%ia
-      !this%jausr => this%ja
     endif
     !
     ! -- Return
