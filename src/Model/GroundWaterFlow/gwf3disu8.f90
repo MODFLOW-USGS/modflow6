@@ -1352,10 +1352,8 @@ module GwfDisuModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Find xy coords
-    xn = this%cellxy(1, noden)
-    yn = this%cellxy(2, noden)
-    xm = this%cellxy(1, nodem)
-    ym = this%cellxy(2, nodem)
+    call this%get_cellxy(noden, xn, yn)
+    call this%get_cellxy(nodem, xm, ym)
     !
     ! -- Set vector components based on ihc
     if(ihc == 0) then
@@ -1384,15 +1382,28 @@ module GwfDisuModule
     return
   end subroutine connection_vector
 
-  ! return x,y coordinate for a node
   subroutine get_cellxy_disu(this, node, xcell, ycell)
+! ******************************************************************************
+! get_cellxy_disu -- assign xcell and ycell
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     class(GwfDisuType), intent(in)  :: this
     integer(I4B), intent(in)        :: node         ! the reduced node number
     real(DP), intent(out)           :: xcell, ycell ! the x,y for the cell
-    
-    xcell = this%cellxy(1, node)
-    ycell = this%cellxy(2, node)
-    
+    ! -- local
+    integer(I4B) :: nu
+! ------------------------------------------------------------------------------
+    !
+    ! -- Convert to user node number (because that's how cell centers are
+    !    stored) and then set xcell and ycell
+    nu = this%get_nodeuser(node)
+    xcell = this%cellxy(1, nu)
+    ycell = this%cellxy(2, nu)
+    !
+    ! -- return
+    return
   end subroutine get_cellxy_disu                             
 
   subroutine allocate_scalars(this, name_model)
