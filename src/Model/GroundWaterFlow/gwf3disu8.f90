@@ -31,7 +31,7 @@ module GwfDisuModule
     integer(I4B), dimension(:), pointer, contiguous :: ihcusr => null()          ! (size:njausr) user ihc array
     real(DP), dimension(:), pointer, contiguous :: cl12usr => null()             ! (size:njausr) user cl12 array
     real(DP), dimension(:), pointer, contiguous :: hwvausr => null()             ! (size:njausr) user hwva array
-    real(DP), dimension(:), pointer, contiguous :: anglexusr => null()           ! (size:njausr) user anglex array
+    real(DP), dimension(:), pointer, contiguous :: angldegxusr => null()         ! (size:njausr) user angldegx array
     integer(I4B), dimension(:), pointer, contiguous :: iavert => null()          ! cell vertex pointer ia array
     integer(I4B), dimension(:), pointer, contiguous:: javert => null()           ! cell vertex pointer ja array
     integer(I4B), dimension(:), pointer, contiguous :: idomain  => null()        ! idomain (nodes)
@@ -361,7 +361,7 @@ module GwfDisuModule
                                   this%nodereduced, this%nodeuser,             &
                                   this%iausr, this%jausr,                      &
                                   this%ihcusr, this%cl12usr,                   &
-                                  this%hwvausr, this%anglexusr)
+                                  this%hwvausr, this%angldegxusr)
     this%nja = this%con%nja
     this%njas = this%con%njas
     !
@@ -661,7 +661,7 @@ module GwfDisuModule
     call mem_allocate(this%ihcusr, this%njausr, 'IHCUSR', this%origin)
     call mem_allocate(this%cl12usr, this%njausr, 'CL12USR', this%origin)
     call mem_allocate(this%hwvausr, this%njausr, 'HWVAUSR', this%origin)
-    call mem_allocate(this%anglexusr, this%njausr, 'ANGLEXUSR', this%origin)
+    call mem_allocate(this%angldegxusr, this%njausr, 'ANGLDEGXUSR', this%origin)
     if(this%nvert > 0) then
       call mem_allocate(this%cellxy, 2, this%nodesuser, 'CELLXY', this%origin)
     else
@@ -827,7 +827,7 @@ module GwfDisuModule
                             this%njausr, this%iout, 0)
             lname(5) = .true.
           case ('ANGLDEGX')
-            call ReadArray(this%parser%iuactive, this%anglexusr, aname(6), 1, &
+            call ReadArray(this%parser%iuactive, this%angldegxusr, aname(6), 1, &
                             this%njausr, this%iout, 0)
             lname(6) = .true.
           case default

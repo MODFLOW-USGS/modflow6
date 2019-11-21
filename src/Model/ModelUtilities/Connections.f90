@@ -1011,7 +1011,7 @@ module ConnectionsModule
 
   subroutine disuconnections(this, name_model, nodes, nodesuser, nrsize, &
                              nodereduced, nodeuser, iausr, jausr, &
-                             ihcusr, cl12usr, hwvausr, anglexusr)
+                             ihcusr, cl12usr, hwvausr, angldegxusr)
 ! ******************************************************************************
 ! disuconnections -- Construct the connectivity arrays using disu
 !   information.  Grid may be reduced
@@ -1036,12 +1036,12 @@ module ConnectionsModule
     integer(I4B), dimension(:), contiguous, intent(in) :: ihcusr
     real(DP), dimension(:), contiguous, intent(in) :: cl12usr
     real(DP), dimension(:), contiguous, intent(in) :: hwvausr
-    real(DP), dimension(:), contiguous, intent(in) :: anglexusr
+    real(DP), dimension(:), contiguous, intent(in) :: angldegxusr
     ! -- local
     integer(I4B),dimension(:),allocatable :: ihctemp
     real(DP),dimension(:),allocatable :: cl12temp
     real(DP),dimension(:),allocatable :: hwvatemp
-    real(DP),dimension(:),allocatable :: anglextemp
+    real(DP),dimension(:),allocatable :: angldegxtemp
     integer(I4B) :: nr, nu, mr, mu, icon, ipos, iposr, ierror
     integer(I4B), dimension(:), allocatable :: rowmaxnnz
     type(sparsematrix) :: sparse
@@ -1070,7 +1070,7 @@ module ConnectionsModule
       !
       ! -- Call con_finalize to check usr arrays and push larger arrays
       !    into compressed symmetric arrays
-      call this%con_finalize(ihcusr, cl12usr, hwvausr, anglexusr)
+      call this%con_finalize(ihcusr, cl12usr, hwvausr, angldegxusr)
       !
     else
       ! -- reduced system required more work
@@ -1110,11 +1110,11 @@ module ConnectionsModule
       call sparse%destroy()
       deallocate(rowmaxnnz)
       !
-      ! -- At this point, need to reduce ihc, cl12, hwva, and anglex
+      ! -- At this point, need to reduce ihc, cl12, hwva, and angldegx
       allocate(ihctemp(this%nja))
       allocate(cl12temp(this%nja))
       allocate(hwvatemp(this%nja))
-      allocate(anglextemp(this%nja))
+      allocate(angldegxtemp(this%nja))
       !
       ! -- Compress user arrays into reduced arrays
       ipos = 0
@@ -1129,7 +1129,7 @@ module ConnectionsModule
           ihctemp(iposr) = ihcusr(ipos)
           cl12temp(iposr) = cl12usr(ipos)
           hwvatemp(iposr) = hwvausr(ipos)
-          anglextemp(iposr) = anglexusr(ipos)
+          angldegxtemp(iposr) = angldegxusr(ipos)
           iposr = iposr + 1
         end do
       end do
@@ -1138,13 +1138,13 @@ module ConnectionsModule
       do nr = 1, this%nodes
         this%ia(nr) = this%ia(nr + 1) - this%ia(nr)
       enddo
-      call this%con_finalize(ihctemp, cl12temp, hwvatemp, anglextemp)
+      call this%con_finalize(ihctemp, cl12temp, hwvatemp, angldegxtemp)
       !
       ! -- deallocate temporary arrays
       deallocate(ihctemp)
       deallocate(cl12temp)
       deallocate(hwvatemp)
-      deallocate(anglextemp)
+      deallocate(angldegxtemp)
     end if
     !
     ! -- If reduced system, then need to build iausr and jausr, otherwise point
