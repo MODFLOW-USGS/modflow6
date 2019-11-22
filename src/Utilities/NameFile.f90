@@ -69,7 +69,8 @@ module NameFileModule
     call this%parser%Initialize(inunit, iout)
     !
     ! -- Read and set the options
-    call this%parser%GetBlock('OPTIONS', isFound, ierr, blockRequired=.false.)
+    call this%parser%GetBlock('OPTIONS', isFound, ierr, &
+      supportOpenClose=.true., blockRequired=.false.)
     if(isFound) then
       !
       ! -- Populate this%opts
@@ -98,7 +99,8 @@ module NameFileModule
     endif
     !
     ! -- Read and set the input_files
-    call this%parser%GetBlock('PACKAGES', isFound, ierr)
+    call this%parser%GetBlock('PACKAGES', isFound, ierr, &
+      supportOpenClose=.true.)
     if(isFound) then
       !
       ! -- Populate this%input_files

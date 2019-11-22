@@ -68,6 +68,7 @@ module BaseDisModule
     procedure :: noder_from_cellid
     procedure :: connection_normal
     procedure :: connection_vector
+    procedure :: get_cellxy
     procedure :: supports_layers
     procedure :: allocate_scalars
     procedure :: allocate_arrays
@@ -95,7 +96,7 @@ module BaseDisModule
     procedure, public  :: highest_active
     procedure, public  :: get_area
   end type DisBaseType
-
+  
   contains
 
   subroutine dis_df(this)
@@ -477,7 +478,22 @@ module BaseDisModule
     ! -- return
     return
   end subroutine connection_vector
+                                 
+  ! return x,y coordinate for a node
+  subroutine get_cellxy(this, node, xcell, ycell)
+    class(DisBaseType), intent(in)  :: this
+    integer(I4B), intent(in)        :: node
+    real(DP), intent(out)           :: xcell, ycell
+      
+    ! suppress warning
+    xcell = -999999.0
+    ycell = -999999.0
     
+    call store_error('Program error: getcellxy not implemented.')
+    call ustop()
+    
+  end subroutine get_cellxy                             
+                               
   subroutine allocate_scalars(this, name_model)
 ! ******************************************************************************
 ! allocate_scalars -- Allocate and initialize scalar variables in this class
@@ -886,7 +902,6 @@ module BaseDisModule
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: darray
     character(len=*), intent(in)                               :: aname
     ! -- local
-    integer(I4B) :: ival
     character(len=LINELENGTH) :: ermsg
 ! ------------------------------------------------------------------------------
     !
@@ -968,7 +983,6 @@ module BaseDisModule
     use ListReaderModule, only: ListReaderType
     use SimModule, only: store_error, store_error_unit, count_errors, ustop
     use InputOutputModule, only: urword
-    use TdisModule, only: totimsav, perlen
     use TimeSeriesLinkModule, only:  TimeSeriesLinkType
     use TimeSeriesManagerModule, only: read_value_or_time_series
     ! -- dummy
@@ -1124,8 +1138,6 @@ module BaseDisModule
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
     ! -- local
-    integer(I4B) :: il, ir, ic, ncol, nrow, nlay, nval, nodeu
-    logical :: found
     character(len=LINELENGTH) :: ermsg
 ! ------------------------------------------------------------------------------
     !

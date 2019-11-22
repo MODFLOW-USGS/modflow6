@@ -36,6 +36,7 @@ module GwfDisvModule
   contains
     procedure :: dis_df => disv_df
     procedure :: dis_da => disv_da
+    procedure :: get_cellxy => get_cellxy_disv
     procedure, public :: record_array
     procedure, public :: read_layer_array
     procedure, public :: record_srcdst_list_header
@@ -286,7 +287,8 @@ module GwfDisvModule
 ! ------------------------------------------------------------------------------
     !
     ! -- get options block
-    call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false.)
+    call this%parser%GetBlock('OPTIONS', isfound, ierr, &
+      supportOpenClose=.true., blockRequired=.false.)
     !
     ! -- set default options
       this%lenuni = 0
@@ -461,11 +463,9 @@ module GwfDisvModule
     class(GwfDisvType) :: this
     ! -- locals
     character(len=LINELENGTH) :: keyword
-    integer(I4B) :: n, node, noder, j, k
+    integer(I4B) :: n
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
-    real(DP) :: top
-    real(DP) :: dz
     integer(I4B), parameter :: nname = 3
     logical, dimension(nname) :: lname
     character(len=24),dimension(nname) :: aname
@@ -567,9 +567,7 @@ module GwfDisvModule
     ! -- dummy
     class(GwfDisvType) :: this
     ! -- locals
-    character(len=LINELENGTH) :: keyword
-    integer(I4B) :: n, node, noder, j, k
-    integer(I4B) :: ierr
+    integer(I4B) :: node, noder, j, k
     real(DP) :: top
     real(DP) :: dz
     character(len=300) :: ermsg
@@ -1519,6 +1517,23 @@ module GwfDisvModule
     return
   end subroutine connection_vector
 
+  ! return x,y coordinate for a node
+  subroutine get_cellxy_disv(this, node, xcell, ycell)
+    use InputOutputModule, only: get_jk
+    class(GwfDisvType), intent(in)  :: this
+    integer(I4B), intent(in)        :: node         ! the reduced node number
+    real(DP), intent(out)           :: xcell, ycell ! the x,y for the cell
+    ! local
+    integer(I4B) :: nodeuser, ncell2d, k
+    
+    nodeuser = this%get_nodeuser(node)
+    call get_jk(nodeuser, this%ncpl, this%nlay, ncell2d, k)
+    
+    xcell = this%cellxy(1, ncell2d)
+    ycell = this%cellxy(2, ncell2d)
+    
+  end subroutine get_cellxy_disv 
+                               
   subroutine allocate_scalars(this, name_model)
 ! ******************************************************************************
 ! allocate_scalars -- Allocate and initialize scalars
@@ -1874,7 +1889,6 @@ module GwfDisvModule
     integer(I4B) :: nrow
     integer(I4B) :: ncol
     integer(I4B) :: nval
-    integer(I4B) :: nodeu, noder
     integer(I4B), dimension(:), pointer, contiguous :: itemp
 ! ------------------------------------------------------------------------------
     !
@@ -1945,7 +1959,6 @@ module GwfDisvModule
     integer(I4B) :: nrow
     integer(I4B) :: ncol
     integer(I4B) :: nval
-    integer(I4B) :: nodeu, noder
     real(DP), dimension(:), pointer, contiguous :: dtemp
 ! ------------------------------------------------------------------------------
     !

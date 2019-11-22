@@ -7,5 +7,6 @@ BEGIN OPTIONS
   [REWET WETFCT <wetfct> IWETIT <iwetit> IHDWET <ihdwet>]
   [XT3D [RHS]]
   [SAVE_SPECIFIC_DISCHARGE]
-  [VKD6 FILEIN <vkd6_filename>]
+  [K22OVERK]
+  [K33OVERK]
 END OPTIONS

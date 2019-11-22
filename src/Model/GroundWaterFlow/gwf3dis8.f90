@@ -2,7 +2,7 @@ module GwfDisModule
 
   use ArrayReadersModule, only: ReadArray
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: LINELENGTH
+  use ConstantsModule, only: LINELENGTH, DHALF
   use BaseDisModule, only: DisBaseType
   use InputOutputModule, only: get_node, URWORD, ulasav, ulaprufw, ubdsv1, &
                                ubdsv06
@@ -27,9 +27,13 @@ module GwfDisModule
     real(DP), dimension(:, :), pointer, contiguous :: top2d => null()            ! top elevations for each cell at top of model (ncol, nrow)
     real(DP), dimension(:, :, :), pointer, contiguous :: bot3d => null()         ! bottom elevations for each cell (ncol, nrow, nlay)
     integer(I4B), dimension(:, :, :), pointer, contiguous :: idomain => null()   ! idomain (ncol, nrow, nlay)
+    real(DP), dimension(:, :, :), pointer :: botm => null()                      ! top and bottom elevations for each cell (ncol, nrow, nlay)
+    real(DP), dimension(:), pointer, contiguous :: cellx => null()               ! cell center x coordinate for column j
+    real(DP), dimension(:), pointer, contiguous :: celly => null()               ! cell center y coordinate for row i
   contains
     procedure :: dis_df => dis3d_df
     procedure :: dis_da => dis3d_da
+    procedure :: get_cellxy => get_cellxy_dis3d
     procedure, public :: record_array
     procedure, public :: read_layer_array
     procedure, public :: record_srcdst_list_header
@@ -228,6 +232,8 @@ module GwfDisModule
     call mem_deallocate(this%ncol)
     call mem_deallocate(this%delr)
     call mem_deallocate(this%delc)
+    call mem_deallocate(this%cellx)
+    call mem_deallocate(this%celly)
     !
     ! -- Deallocate Arrays
     call mem_deallocate(this%nodereduced)
@@ -404,6 +410,8 @@ module GwfDisModule
     call mem_allocate(this%top2d, this%ncol, this%nrow, 'TOP2D', this%origin)
     call mem_allocate(this%bot3d, this%ncol, this%nrow, this%nlay, 'BOT3D',      &
                       this%origin)
+    call mem_allocate(this%cellx, this%ncol, 'CELLX', this%origin)
+    call mem_allocate(this%celly, this%nrow, 'CELLY', this%origin)
     !
     ! -- initialize all cells to be active (idomain = 1)
     do k = 1, this%nlay
@@ -673,6 +681,17 @@ module GwfDisModule
           this%area(noder) = this%delr(j) * this%delc(i)
         enddo
       enddo
+    enddo
+    !
+    ! -- fill x,y coordinate arrays
+    this%cellx(1) = DHALF*this%delr(1)
+    this%celly(this%nrow) = DHALF*this%delc(this%nrow)
+    do j = 2, this%ncol
+      this%cellx(j) = this%cellx(j-1) + DHALF*this%delr(j-1) + DHALF*this%delr(j)
+    enddo
+    ! -- row number increases in negative y direction:
+    do i = this%nrow-1, 1, -1
+      this%celly(i) = this%celly(i+1) + DHALF*this%delc(i+1) + DHALF*this%delc(i)
     enddo
     !
     ! -- create and fill the connections object
@@ -1394,12 +1413,28 @@ module GwfDisModule
         y2 = -ds
       endif
       call line_unit_vector(x1, y1, z1, x2, y2, z2, xcomp, ycomp, zcomp, conlen)
-      !
     endif
     !
     ! -- return
     return
-  end subroutine connection_vector
+  end subroutine
+   
+  ! return x,y coordinate for a node
+  subroutine get_cellxy_dis3d(this, node, xcell, ycell)
+    use InputOutputModule, only: get_ijk
+    class(GwfDisType), intent(in) :: this
+    integer(I4B), intent(in)      :: node         ! the reduced node number
+    real(DP), intent(out)         :: xcell, ycell ! the x,y for the cell
+    ! local
+    integer(I4B) :: nodeuser, i, j, k
+    
+    nodeuser = this%get_nodeuser(node)
+    call get_ijk(nodeuser, this%nrow, this%ncol, this%nlay, i, j, k)
+    
+    xcell = this%cellx(j)
+    ycell = this%celly(i)
+    
+  end subroutine get_cellxy_dis3d
 
   subroutine read_int_array(this, line, lloc, istart, istop, iout, in, &
                             iarray, aname)
@@ -1430,7 +1465,6 @@ module GwfDisModule
     integer(I4B) :: nrow
     integer(I4B) :: ncol
     integer(I4B) :: nval
-    integer(I4B) :: nodeu, noder
     integer(I4B), dimension(:), pointer, contiguous :: itemp
 ! ------------------------------------------------------------------------------
     !

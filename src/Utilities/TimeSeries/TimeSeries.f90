@@ -1228,7 +1228,8 @@ contains
     ierr = 0
     !
     ! -- get BEGIN line of ATTRIBUTES block
-    call this%parser%GetBlock('ATTRIBUTES', found, ierr)
+    call this%parser%GetBlock('ATTRIBUTES', found, ierr, &
+      supportOpenClose=.true.)
     if (ierr /= 0) then
       ! end of file
       ermsg = 'End-of-file encountered while searching for' // &
