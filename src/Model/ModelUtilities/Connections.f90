@@ -8,6 +8,7 @@ module ConnectionsModule
   implicit none
   private
   public :: ConnectionsType
+  public :: iac_to_ia
 
   type ConnectionsType
     character(len=LENMODELNAME), pointer            :: name_model => null()      !name of the model
@@ -33,7 +34,6 @@ module ConnectionsModule
     procedure :: con_da
     procedure :: allocate_scalars
     procedure :: allocate_arrays
-    procedure :: read_from_block
     procedure :: con_finalize
     procedure :: read_connectivity_from_block
     procedure :: set_cl1_cl2_from_fleng
@@ -160,152 +160,14 @@ module ConnectionsModule
     call mem_allocate(this%iausr, 1, 'IAUSR', this%cid)
     call mem_allocate(this%jausr, 1, 'JAUSR', this%cid)
     ! 
-    ! let mask point to ja, which is always nonzero, 
-    ! until someone decides to do a 'set_mask'
+    ! -- let mask point to ja, which is always nonzero, 
+    !    until someone decides to do a 'set_mask'
     this%mask => this%ja
     !
     ! -- Return
     return
   end subroutine allocate_arrays
   
-  subroutine read_from_block(this, name_model, nodes, nja, inunit, iout)
-! ******************************************************************************
-! read_from_block -- Read connection information from input block
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use ConstantsModule, only: LINELENGTH, DONE, DHALF, DPIO180, DNODATA
-    use SimModule, only: ustop, store_error, count_errors, store_error_unit
-    ! -- dummy
-    class(ConnectionsType) :: this
-    character(len=*), intent(in) :: name_model
-    integer(I4B), intent(in) :: nodes
-    integer(I4B), intent(in) :: nja
-    integer(I4B), intent(in) :: inunit
-    integer(I4B), intent(in) :: iout
-    ! -- local
-    character(len=LINELENGTH) :: keyword
-    integer(I4B) :: n
-    integer(I4B) :: ierr
-    logical :: isfound, endOfBlock
-    integer(I4B),dimension(:),allocatable :: ihctemp
-    real(DP),dimension(:),allocatable :: cl12temp
-    real(DP),dimension(:),allocatable :: hwvatemp
-    real(DP),dimension(:),allocatable :: angldegx
-    integer(I4B), parameter :: nname = 6
-    logical,dimension(nname) :: lname
-    character(len=24),dimension(nname) :: aname(nname)
-    character(len=300) :: ermsg
-    ! -- formats
-    ! -- data
-    data aname(1) /'                     IAC'/
-    data aname(2) /'                      JA'/
-    data aname(3) /'                     IHC'/
-    data aname(4) /'                    CL12'/
-    data aname(5) /'                    HWVA'/
-    data aname(6) /'                ANGLDEGX'/
-! ------------------------------------------------------------------------------
-    !
-    ! -- Allocate and initialize dimensions
-    call this%allocate_scalars(name_model)
-    this%nodes = nodes
-    this%nja = nja
-    this%njas = (this%nja - this%nodes) / 2
-    !
-    call this%allocate_arrays()
-    !
-    ! -- allocate temporary arrays for reading
-    allocate(ihctemp(this%nja))
-    allocate(cl12temp(this%nja))
-    allocate(hwvatemp(this%nja))
-    !
-    ! -- Initialize block parser
-    call this%parser%Initialize(inunit, iout)
-    !
-    ! -- get connectiondata block
-    call this%parser%GetBlock('CONNECTIONDATA', isfound, ierr)
-    lname(:) = .false.
-    if(isfound) then
-      write(iout,'(1x,a)')'PROCESSING CONNECTIONDATA'
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        call this%parser%GetStringCaps(keyword)
-        select case (keyword)
-          case ('IAC')
-            call ReadArray(this%parser%iuactive, this%ia, aname(1), 1, &
-                            this%nodes, iout, 0)
-            lname(1) = .true.
-          case ('JA')
-            call ReadArray(this%parser%iuactive, this%ja, aname(2), 1, &
-                            this%nja, iout, 0)
-            lname(2) = .true.
-          case ('IHC')
-            call ReadArray(this%parser%iuactive, ihctemp, aname(3), 1, &
-                            this%nja, iout, 0)
-            lname(3) = .true.
-          case ('CL12')
-            call ReadArray(this%parser%iuactive, cl12temp, aname(4), 1, &
-                            this%nja, iout, 0)
-            lname(4) = .true.
-          case ('HWVA')
-            call ReadArray(this%parser%iuactive, hwvatemp, aname(5), 1, &
-                            this%nja, iout, 0)
-            lname(5) = .true.
-          case ('ANGLDEGX')
-            allocate(angldegx(this%nja))
-            call ReadArray(this%parser%iuactive, angldegx, aname(6), 1, &
-                            this%nja, iout, 0)
-            lname(6) = .true.
-            this%ianglex = 1
-          case default
-            write(ermsg,'(4x,a,a)')'ERROR. UNKNOWN CONNECTIONDATA TAG: ',      &
-                                     trim(keyword)
-            call store_error(ermsg)
-            call this%parser%StoreErrorUnit()
-            call ustop()
-        end select
-      end do
-      write(iout,'(1x,a)')'END PROCESSING CONNECTIONDATA'
-    else
-      call store_error('ERROR.  REQUIRED CONNECTIONDATA BLOCK NOT FOUND.')
-      call this%parser%StoreErrorUnit()
-      call ustop()
-    end if
-    !
-    ! -- verify all items were read
-    do n = 1, nname
-      !
-      ! -- skip angledegx because it is not required
-      if(aname(n) == aname(6)) cycle
-      !
-      ! -- error if not read
-      if(.not. lname(n)) then
-        write(ermsg,'(1x,a,a)') &
-          'ERROR.  REQUIRED CONNECTIONDATA INPUT WAS NOT SPECIFIED: ', &
-          adjustl(trim(aname(n)))
-        call store_error(ermsg)
-      endif
-    enddo
-    if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
-      call ustop()
-    endif
-    !
-    ! -- finalize connection data
-    call this%con_finalize(ihctemp, cl12temp, hwvatemp, angldegx)
-    !
-    ! -- deallocate temp arrays
-    deallocate(ihctemp)
-    deallocate(cl12temp)
-    deallocate(hwvatemp)
-    !
-    ! -- Return
-    return
-  end subroutine read_from_block
-
   subroutine con_finalize(this, ihctemp, cl12temp, hwvatemp, angldegx)
 ! ******************************************************************************
 ! con_finalize -- Finalize connection data
@@ -355,15 +217,6 @@ module ConnectionsModule
     data aname(5) /'                    HWVA'/
     data aname(6) /'                ANGLDEGX'/
 ! ------------------------------------------------------------------------------
-    !
-    ! -- Convert iac to ia
-    do n = 2, this%nodes + 1
-      this%ia(n) = this%ia(n) + this%ia(n-1)
-    enddo
-    do n = this%nodes + 1, 2, -1
-      this%ia(n) = this%ia(n - 1) + 1
-    enddo
-    this%ia(1) = 1
     !
     ! -- Convert any negative ja numbers to positive
     do ii = 1, this%nja
@@ -1042,7 +895,7 @@ module ConnectionsModule
     real(DP),dimension(:),allocatable :: cl12temp
     real(DP),dimension(:),allocatable :: hwvatemp
     real(DP),dimension(:),allocatable :: angldegxtemp
-    integer(I4B) :: nr, nu, mr, mu, icon, ipos, iposr, ierror
+    integer(I4B) :: nr, nu, mr, mu, ipos, iposr, ierror
     integer(I4B), dimension(:), allocatable :: rowmaxnnz
     type(sparsematrix) :: sparse
 ! ------------------------------------------------------------------------------
@@ -1061,7 +914,7 @@ module ConnectionsModule
       this%nja = size(jausr)
       this%njas = (this%nja - this%nodes) / 2
       call this%allocate_arrays()
-      do nu = 1, nodes
+      do nu = 1, nodes + 1
         this%ia(nu) = iausr(nu)
       end do
       do ipos = 1, this%nja
@@ -1073,7 +926,7 @@ module ConnectionsModule
       call this%con_finalize(ihcusr, cl12usr, hwvausr, angldegxusr)
       !
     else
-      ! -- reduced system required more work
+      ! -- reduced system requires more work
       !
       ! -- Setup the sparse matrix object (iausr is still iac at this point)
       allocate(rowmaxnnz(this%nodes))
@@ -1084,15 +937,12 @@ module ConnectionsModule
       call sparse%init(this%nodes, this%nodes, rowmaxnnz)
       !
       ! -- go through user connectivity and create sparse
-      ipos = 1
       do nu = 1, nodesuser
         nr = nodereduced(nu)
         if (nr > 0) call sparse%addconnection(nr, nr, 1)
-        ipos = ipos + 1
-        do icon = 1, iausr(nu) - 1
+        do ipos = iausr(nu) + 1, iausr(nu + 1) - 1
           mu = jausr(ipos)
           mr = nodereduced(mu)
-          ipos = ipos + 1
           if (nr < 1) cycle
           if (mr < 1) cycle
           call sparse%addconnection(nr, mr, 1)
@@ -1117,12 +967,10 @@ module ConnectionsModule
       allocate(angldegxtemp(this%nja))
       !
       ! -- Compress user arrays into reduced arrays
-      ipos = 0
       iposr = 1
       do nu = 1, nodesuser
         nr = nodereduced(nu)
-        do icon = 1, iausr(nu)
-          ipos = ipos + 1
+        do ipos = iausr(nu), iausr(nu + 1) - 1
           mu = jausr(ipos)
           mr = nodereduced(mu)
           if (nr < 1 .or. mr < 1) cycle
@@ -1134,10 +982,7 @@ module ConnectionsModule
         end do
       end do
       !
-      ! -- call finalize after converting this%ia back to this%iac
-      do nr = 1, this%nodes
-        this%ia(nr) = this%ia(nr + 1) - this%ia(nr)
-      enddo
+      ! -- call finalize
       call this%con_finalize(ihctemp, cl12temp, hwvatemp, angldegxtemp)
       !
       ! -- deallocate temporary arrays
@@ -1454,24 +1299,55 @@ module ConnectionsModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------ 
-  use MemoryManagerModule, only: mem_allocate
-  class(ConnectionsType) :: this
-  integer(I4B), intent(in) :: ipos
-  integer(I4B), intent(in) :: maskval
-  ! local
-  integer(I4B) :: i
-  
-  ! if we still point to this%ja, we first need to allocate space
-  if (associated(this%mask, this%ja)) then
-    call mem_allocate(this%mask, this%nja, 'MASK', this%cid)
-    ! and initialize with unmasked
-    do i = 1, this%nja
-      this%mask(i) = 1 
-    end do
-  end if
-  
-  this%mask(ipos) = maskVal
-  
+    use MemoryManagerModule, only: mem_allocate
+    class(ConnectionsType) :: this
+    integer(I4B), intent(in) :: ipos
+    integer(I4B), intent(in) :: maskval
+    ! local
+    integer(I4B) :: i
+! ------------------------------------------------------------------------------ 
+    !
+    ! if we still point to this%ja, we first need to allocate space
+    if (associated(this%mask, this%ja)) then
+      call mem_allocate(this%mask, this%nja, 'MASK', this%cid)
+      ! and initialize with unmasked
+      do i = 1, this%nja
+        this%mask(i) = 1 
+      end do
+    end if
+    !
+    ! -- set the mask value
+    this%mask(ipos) = maskVal
+    !
+    ! -- return
+    return
   end subroutine set_mask
                            
+  subroutine iac_to_ia(ia)
+! ******************************************************************************
+! iac_to_ia -- convert an iac array into an ia array
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------ 
+    ! -- dummy
+    integer(I4B), dimension(:), contiguous, intent(inout) :: ia
+    ! -- local
+    integer(I4B) :: n, nodes
+! ------------------------------------------------------------------------------ 
+    !
+    ! -- Convert iac to ia
+    nodes = size(ia) - 1
+    do n = 2, nodes + 1
+      ia(n) = ia(n) + ia(n-1)
+    enddo
+    do n = nodes + 1, 2, -1
+      ia(n) = ia(n - 1) + 1
+    enddo
+    ia(1) = 1
+    !
+    ! -- return
+    return
+  end subroutine iac_to_ia
+
 end module ConnectionsModule

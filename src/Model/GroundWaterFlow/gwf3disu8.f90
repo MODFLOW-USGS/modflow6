@@ -3,13 +3,13 @@ module GwfDisuModule
   use ArrayReadersModule, only: ReadArray
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LENMODELNAME, LENORIGIN, LINELENGTH
-  use ConnectionsModule, only: ConnectionsType
+  use ConnectionsModule, only: ConnectionsType, iac_to_ia
   use InputOutputModule, only: URWORD, ulasav, ulaprufw, ubdsv1, ubdsv06
   use SimModule, only: count_errors, store_error, store_error_unit, ustop
   use BaseDisModule, only: DisBaseType
   use BlockParserModule, only: BlockParserType
   use MemoryManagerModule, only: mem_allocate
-  use TdisModule,          only: kstp, kper, pertim, totim, delt
+  use TdisModule, only: kstp, kper, pertim, totim, delt
 
   implicit none
 
@@ -170,6 +170,7 @@ module GwfDisuModule
       end if
       disext%idomain(n) = ival
     end do
+    call iac_to_ia(disext%con%ia)
     do n = 1, nja
       disext%con%ja(n) = ja(n)
     end do
@@ -254,8 +255,12 @@ module GwfDisuModule
       endif
     end if
     !
-    ! -- Make some final disu checks
+    ! -- Make some final disu checks on the non-reduced user-provided
+    !    input
     call this%disu_ck()
+    !
+    ! -- Finalize the grid by creating the connection object and reducing the 
+    !    grid using IDOMAIN, if necessary
     call this%grid_finalize()
     !
     ! -- Return
@@ -383,7 +388,7 @@ module GwfDisuModule
     ! -- local
     character(len=LINELENGTH) :: errmsg
     integer(I4B) :: n, m
-    integer(I4B) :: ipos, icon
+    integer(I4B) :: ipos
     integer(I4B) :: ihc
     real(DP) :: dz
     ! -- formats
@@ -416,11 +421,8 @@ module GwfDisuModule
     !
     ! -- For cell n, ensure that underlying cells have tops less than
     !    or equal to the bottom of cell n
-    ipos = 0
     do n = 1, this%nodesuser
-      do icon = 1, this%iausr(n)
-        ipos = ipos + 1
-        if (icon == 1) cycle
+      do ipos = this%iausr(n) + 1, this%iausr(n + 1) - 1
         m = this%jausr(ipos)
         ihc = this%ihcusr(ipos)
         if (ihc == 0 .and. m > n) then
@@ -810,6 +812,9 @@ module GwfDisuModule
             call ReadArray(this%parser%iuactive, this%iausr, aname(1), 1, &
                             this%nodesuser, this%iout, 0)
             lname(1) = .true.
+            !
+            ! -- Convert iac to ia
+            call iac_to_ia(this%iausr)
           case ('JA')
             call ReadArray(this%parser%iuactive, this%jausr, aname(2), 1, &
                             this%njausr, this%iout, 0)
