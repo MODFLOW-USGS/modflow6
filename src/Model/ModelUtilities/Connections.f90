@@ -863,8 +863,8 @@ module ConnectionsModule
   end subroutine disvconnections
 
   subroutine disuconnections(this, name_model, nodes, nodesuser, nrsize, &
-                             nodereduced, nodeuser, iausr, jausr, &
-                             ihcusr, cl12usr, hwvausr, angldegxusr)
+                             nodereduced, nodeuser, iainp, jainp, &
+                             ihcinp, cl12inp, hwvainp, angldegxinp)
 ! ******************************************************************************
 ! disuconnections -- Construct the connectivity arrays using disu
 !   information.  Grid may be reduced
@@ -884,12 +884,12 @@ module ConnectionsModule
     integer(I4B), intent(in) :: nrsize
     integer(I4B), dimension(:), contiguous, intent(in) :: nodereduced
     integer(I4B), dimension(:), contiguous, intent(in) :: nodeuser
-    integer(I4B), dimension(:), contiguous, intent(in) :: iausr
-    integer(I4B), dimension(:), contiguous, intent(in) :: jausr
-    integer(I4B), dimension(:), contiguous, intent(in) :: ihcusr
-    real(DP), dimension(:), contiguous, intent(in) :: cl12usr
-    real(DP), dimension(:), contiguous, intent(in) :: hwvausr
-    real(DP), dimension(:), contiguous, intent(in) :: angldegxusr
+    integer(I4B), dimension(:), contiguous, intent(in) :: iainp
+    integer(I4B), dimension(:), contiguous, intent(in) :: jainp
+    integer(I4B), dimension(:), contiguous, intent(in) :: ihcinp
+    real(DP), dimension(:), contiguous, intent(in) :: cl12inp
+    real(DP), dimension(:), contiguous, intent(in) :: hwvainp
+    real(DP), dimension(:), contiguous, intent(in) :: angldegxinp
     ! -- local
     integer(I4B),dimension(:),allocatable :: ihctemp
     real(DP),dimension(:),allocatable :: cl12temp
@@ -911,28 +911,28 @@ module ConnectionsModule
     !    processing is required
     if (nrsize == 0) then
       this%nodes = nodes
-      this%nja = size(jausr)
+      this%nja = size(jainp)
       this%njas = (this%nja - this%nodes) / 2
       call this%allocate_arrays()
       do nu = 1, nodes + 1
-        this%ia(nu) = iausr(nu)
+        this%ia(nu) = iainp(nu)
       end do
       do ipos = 1, this%nja
-        this%ja(ipos) = jausr(ipos)
+        this%ja(ipos) = jainp(ipos)
       end do
       !
-      ! -- Call con_finalize to check usr arrays and push larger arrays
+      ! -- Call con_finalize to check inp arrays and push larger arrays
       !    into compressed symmetric arrays
-      call this%con_finalize(ihcusr, cl12usr, hwvausr, angldegxusr)
+      call this%con_finalize(ihcinp, cl12inp, hwvainp, angldegxinp)
       !
     else
       ! -- reduced system requires more work
       !
-      ! -- Setup the sparse matrix object (iausr is still iac at this point)
+      ! -- Setup the sparse matrix object
       allocate(rowmaxnnz(this%nodes))
       do nr = 1, this%nodes
         nu = nodeuser(nr)
-        rowmaxnnz(nr) = iausr(nu)
+        rowmaxnnz(nr) = iainp(nu + 1) - iainp(nu)
       enddo
       call sparse%init(this%nodes, this%nodes, rowmaxnnz)
       !
@@ -940,8 +940,8 @@ module ConnectionsModule
       do nu = 1, nodesuser
         nr = nodereduced(nu)
         if (nr > 0) call sparse%addconnection(nr, nr, 1)
-        do ipos = iausr(nu) + 1, iausr(nu + 1) - 1
-          mu = jausr(ipos)
+        do ipos = iainp(nu) + 1, iainp(nu + 1) - 1
+          mu = jainp(ipos)
           mr = nodereduced(mu)
           if (nr < 1) cycle
           if (mr < 1) cycle
@@ -970,14 +970,14 @@ module ConnectionsModule
       iposr = 1
       do nu = 1, nodesuser
         nr = nodereduced(nu)
-        do ipos = iausr(nu), iausr(nu + 1) - 1
-          mu = jausr(ipos)
+        do ipos = iainp(nu), iainp(nu + 1) - 1
+          mu = jainp(ipos)
           mr = nodereduced(mu)
           if (nr < 1 .or. mr < 1) cycle
-          ihctemp(iposr) = ihcusr(ipos)
-          cl12temp(iposr) = cl12usr(ipos)
-          hwvatemp(iposr) = hwvausr(ipos)
-          angldegxtemp(iposr) = angldegxusr(ipos)
+          ihctemp(iposr) = ihcinp(ipos)
+          cl12temp(iposr) = cl12inp(ipos)
+          hwvatemp(iposr) = hwvainp(ipos)
+          angldegxtemp(iposr) = angldegxinp(ipos)
           iposr = iposr + 1
         end do
       end do

@@ -89,15 +89,46 @@ def test_disu_idomain_simple():
     sim = flopy.mf6.MFSimulation(sim_name=name, version='mf6',
                                  exe_name=mf6_exe, sim_ws=ws)
     tdis = flopy.mf6.ModflowTdis(sim)
-    gwf = flopy.mf6.ModflowGwf(sim, modelname=name)
+    gwf = flopy.mf6.ModflowGwf(sim, modelname=name, save_flows=True)
     ims = flopy.mf6.ModflowIms(sim, print_option='SUMMARY')
     disu = flopy.mf6.ModflowGwfdisu(gwf, **disukwargs)
     ic = flopy.mf6.ModflowGwfic(gwf, strt=0.)
     npf = flopy.mf6.ModflowGwfnpf(gwf)
     spd = {0:[[(0, ), 1.], [(nrow * ncol - 1, ), 0.]]}
-    chd = flopy.mf6.modflow.mfgwfchd.ModflowGwfchd(gwf, stress_period_data=spd)
+    chd = flopy.mf6.modflow.ModflowGwfchd(gwf, stress_period_data=spd)
+    oc = flopy.mf6.modflow.ModflowGwfoc(gwf,
+                                        budget_filerecord='{}.bud'.format(name),
+                                        head_filerecord='{}.hds'.format(name),
+                                        saverecord=[('HEAD', 'LAST'),
+                                                    ('BUDGET', 'LAST')],)
     sim.write_simulation()
     sim.run_simulation()
+
+    # check binary grid file
+    fname = os.path.join(ws, name + '.disu.grb')
+    grbobj = flopy.utils.MfGrdFile(fname)
+    nodes = grbobj._datadict['NODES']
+    ia = grbobj._datadict['IA']
+    ja = grbobj._datadict['JA']
+    assert nodes == disukwargs['nodes']
+    assert np.array_equal(ia[0: 4], np.array([1, 4, 4, 7]))
+    assert np.array_equal(ja[:6], np.array([ 1, 4, 10, 3, 6, 12]))
+    assert ia[-1] == 127
+    assert ia.shape[0] == 28, 'ia should have size of 28'
+    assert ja.shape[0] == 126, 'ja should have size of 126'
+
+    # load head array and ensure nodata value in second cell
+    fname = os.path.join(ws, name + '.hds')
+    hdsobj = flopy.utils.HeadFile(fname)
+    head = hdsobj.get_alldata().flatten()
+    assert head[1] == 1.e30
+
+    # load flowja to make sure it is the right size
+    fname = os.path.join(ws, name + '.bud')
+    budobj = flopy.utils.CellBudgetFile(fname, precision='double')
+    flowja = budobj.get_data(text='FLOW-JA-FACE')[0].flatten()
+    assert flowja.shape[0] == 126
+
     return
 
 

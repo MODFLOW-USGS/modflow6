@@ -26,12 +26,12 @@ module GwfDisuModule
     real(DP), dimension(:), pointer, contiguous :: top1d => null()               ! (size:nodesuser) cell top elevation
     real(DP), dimension(:), pointer, contiguous :: bot1d => null()               ! (size:nodesuser) cell bottom elevation
     real(DP), dimension(:), pointer, contiguous :: area1d => null()              ! (size:nodesuser) cell area, in plan view
-    integer(I4B), dimension(:), pointer, contiguous :: iausr => null()           ! (size:nodesuser+1) user iac converted ia
-    integer(I4B), dimension(:), pointer, contiguous :: jausr => null()           ! (size:njausr) user ja array
-    integer(I4B), dimension(:), pointer, contiguous :: ihcusr => null()          ! (size:njausr) user ihc array
-    real(DP), dimension(:), pointer, contiguous :: cl12usr => null()             ! (size:njausr) user cl12 array
-    real(DP), dimension(:), pointer, contiguous :: hwvausr => null()             ! (size:njausr) user hwva array
-    real(DP), dimension(:), pointer, contiguous :: angldegxusr => null()         ! (size:njausr) user angldegx array
+    integer(I4B), dimension(:), pointer, contiguous :: iainp => null()           ! (size:nodesuser+1) user iac converted ia
+    integer(I4B), dimension(:), pointer, contiguous :: jainp => null()           ! (size:njausr) user-input ja array
+    integer(I4B), dimension(:), pointer, contiguous :: ihcinp => null()          ! (size:njausr) user-input ihc array
+    real(DP), dimension(:), pointer, contiguous :: cl12inp => null()             ! (size:njausr) user-input cl12 array
+    real(DP), dimension(:), pointer, contiguous :: hwvainp => null()             ! (size:njausr) user-input hwva array
+    real(DP), dimension(:), pointer, contiguous :: angldegxinp => null()         ! (size:njausr) user-input angldegx array
     integer(I4B), dimension(:), pointer, contiguous :: iavert => null()          ! cell vertex pointer ia array
     integer(I4B), dimension(:), pointer, contiguous:: javert => null()           ! cell vertex pointer ja array
     integer(I4B), dimension(:), pointer, contiguous :: idomain  => null()        ! idomain (nodes)
@@ -321,7 +321,7 @@ module GwfDisuModule
     ! -- Fill the nodereduced array with the reduced nodenumber, or
     !    a negative number to indicate it is a pass-through cell, or
     !    a zero to indicate that the cell is excluded from the
-    !    solution.
+    !    solution. (negative idomain not supported for disu)
     if(this%nodes < this%nodesuser) then
       noder = 1
       do node = 1, this%nodesuser
@@ -336,7 +336,7 @@ module GwfDisuModule
       enddo
     endif
     !
-    ! -- allocate and fill nodeuser if a reduced grid
+    ! -- Fill nodeuser if a reduced grid
     if(this%nodes < this%nodesuser) then
       noder = 1
       do node = 1, this%nodesuser
@@ -364,9 +364,9 @@ module GwfDisuModule
     call this%con%disuconnections(this%name_model, this%nodes,                 &
                                   this%nodesuser, nrsize,                      &
                                   this%nodereduced, this%nodeuser,             &
-                                  this%iausr, this%jausr,                      &
-                                  this%ihcusr, this%cl12usr,                   &
-                                  this%hwvausr, this%angldegxusr)
+                                  this%iainp, this%jainp,                      &
+                                  this%ihcinp, this%cl12inp,                   &
+                                  this%hwvainp, this%angldegxinp)
     this%nja = this%con%nja
     this%njas = this%con%njas
     !
@@ -392,6 +392,8 @@ module GwfDisuModule
     integer(I4B) :: ihc
     real(DP) :: dz
     ! -- formats
+    character(len=*), parameter :: fmtidm = &
+      "('ERROR. INVALID IDOMAIN VALUE ', i0, ' SPECIFIED FOR NODE ', i0)"
     character(len=*), parameter :: fmtdz = &
       "('ERROR. CELL ', i0, ' WITH THICKNESS <= 0. TOP, BOT: ', 2(1pg24.15))"
     character(len=*), parameter :: fmtarea = &
@@ -401,6 +403,14 @@ module GwfDisuModule
       &elevation (', 1pg15.6, ') for cell ', i0, '. Based on node numbering &
       &rules cell ', i0, ' must be below cell ', i0, '.')"    
 ! ------------------------------------------------------------------------------
+    !
+    ! -- Ensure idomain values are valid
+    do n = 1, this%nodesuser
+      if(this%idomain(n) > 1 .or. this%idomain(n) < 0) then
+        write(errmsg, fmtidm) this%idomain(n), n
+        call store_error(errmsg)
+      end if
+    enddo
     !
     ! -- Check for zero and negative thickness and zero or negative areas
     do n = 1, this%nodesuser
@@ -414,17 +424,13 @@ module GwfDisuModule
         call store_error(errmsg)
       endif
     enddo
-    if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
-      call ustop()
-    endif
     !
     ! -- For cell n, ensure that underlying cells have tops less than
     !    or equal to the bottom of cell n
     do n = 1, this%nodesuser
-      do ipos = this%iausr(n) + 1, this%iausr(n + 1) - 1
-        m = this%jausr(ipos)
-        ihc = this%ihcusr(ipos)
+      do ipos = this%iainp(n) + 1, this%iainp(n + 1) - 1
+        m = this%jainp(ipos)
+        ihc = this%ihcinp(ipos)
         if (ihc == 0 .and. m > n) then
           if (this%top1d(m) > this%bot1d(n)) then
             write(errmsg, fmterrmsg) this%top1d(m), m, this%bot1d(n), n, m, n
@@ -658,12 +664,12 @@ module GwfDisuModule
     call mem_allocate(this%area1d, this%nodesuser, 'AREA1D', this%origin)
     call mem_allocate(this%idomain, this%nodesuser, 'IDOMAIN', this%origin)
     call mem_allocate(this%vertices, 2, this%nvert, 'VERTICES', this%origin)
-    call mem_allocate(this%iausr, this%nodesuser + 1, 'IAUSR', this%origin)
-    call mem_allocate(this%jausr, this%njausr, 'JAUSR', this%origin)
-    call mem_allocate(this%ihcusr, this%njausr, 'IHCUSR', this%origin)
-    call mem_allocate(this%cl12usr, this%njausr, 'CL12USR', this%origin)
-    call mem_allocate(this%hwvausr, this%njausr, 'HWVAUSR', this%origin)
-    call mem_allocate(this%angldegxusr, this%njausr, 'ANGLDEGXUSR', this%origin)
+    call mem_allocate(this%iainp, this%nodesuser + 1, 'IAINP', this%origin)
+    call mem_allocate(this%jainp, this%njausr, 'JAINP', this%origin)
+    call mem_allocate(this%ihcinp, this%njausr, 'IHCINP', this%origin)
+    call mem_allocate(this%cl12inp, this%njausr, 'CL12INP', this%origin)
+    call mem_allocate(this%hwvainp, this%njausr, 'HWVAINP', this%origin)
+    call mem_allocate(this%angldegxinp, this%njausr, 'ANGLDEGXINP', this%origin)
     if(this%nvert > 0) then
       call mem_allocate(this%cellxy, 2, this%nodesuser, 'CELLXY', this%origin)
     else
@@ -809,30 +815,30 @@ module GwfDisuModule
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
           case ('IAC')
-            call ReadArray(this%parser%iuactive, this%iausr, aname(1), 1, &
+            call ReadArray(this%parser%iuactive, this%iainp, aname(1), 1, &
                             this%nodesuser, this%iout, 0)
             lname(1) = .true.
             !
             ! -- Convert iac to ia
-            call iac_to_ia(this%iausr)
+            call iac_to_ia(this%iainp)
           case ('JA')
-            call ReadArray(this%parser%iuactive, this%jausr, aname(2), 1, &
+            call ReadArray(this%parser%iuactive, this%jainp, aname(2), 1, &
                             this%njausr, this%iout, 0)
             lname(2) = .true.
           case ('IHC')
-            call ReadArray(this%parser%iuactive, this%ihcusr, aname(3), 1, &
+            call ReadArray(this%parser%iuactive, this%ihcinp, aname(3), 1, &
                             this%njausr, this%iout, 0)
             lname(3) = .true.
           case ('CL12')
-            call ReadArray(this%parser%iuactive, this%cl12usr, aname(4), 1, &
+            call ReadArray(this%parser%iuactive, this%cl12inp, aname(4), 1, &
                             this%njausr, this%iout, 0)
             lname(4) = .true.
           case ('HWVA')
-            call ReadArray(this%parser%iuactive, this%hwvausr, aname(5), 1, &
+            call ReadArray(this%parser%iuactive, this%hwvainp, aname(5), 1, &
                             this%njausr, this%iout, 0)
             lname(5) = .true.
           case ('ANGLDEGX')
-            call ReadArray(this%parser%iuactive, this%angldegxusr, aname(6), 1, &
+            call ReadArray(this%parser%iuactive, this%angldegxinp, aname(6), 1, &
                             this%njausr, this%iout, 0)
             lname(6) = .true.
           case default

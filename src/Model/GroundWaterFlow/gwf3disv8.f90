@@ -212,17 +212,6 @@ module GwfDisvModule
     !
     ! -- Final grid initialization
     call this%grid_finalize()
-    !!
-    !! -- Build connections
-    !call this%connect()
-    !!
-    !! -- Create two cell objects that can be used for geometric processing
-    !call this%cell1%init(this%nlay, this%ncpl, this%nodes, this%top, this%bot, &
-    !                this%iavert, this%javert, this%vertices, this%cellxy,      &
-    !                this%nodereduced, this%nodeuser)
-    !call this%cell2%init(this%nlay, this%ncpl, this%nodes, this%top, this%bot, &
-    !                this%iavert, this%javert, this%vertices, this%cellxy,      &
-    !                this%nodereduced, this%nodeuser)
     !
     ! -- Return
     return
