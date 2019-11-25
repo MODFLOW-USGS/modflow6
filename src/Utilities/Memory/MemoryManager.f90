@@ -17,7 +17,11 @@ module MemoryManagerModule
   public :: mem_usage
   public :: mem_da
   public :: mem_set_print_option
-    
+  ! TODO_MJR:
+  public :: get_var_size
+  public :: get_isize
+  public :: setptr_dbl1d
+  
   type(MemoryListType) :: memorylist
   integer(I8B) :: nvalues_alogical = 0
   integer(I8B) :: nvalues_achr = 0
@@ -66,6 +70,44 @@ module MemoryManagerModule
   end interface mem_deallocate
 
   contains
+  
+  subroutine get_var_size(name, origin, size)
+    character(len=*), intent(in) :: name
+    character(len=*), intent(in) :: origin
+    integer(I4B), intent(out)    :: size
+    ! local
+    type(MemoryType), pointer :: mt
+    logical :: found
+        
+    mt => null()
+    call get_from_memorylist(name, origin, mt, found)
+        
+    size = -1
+    select case(mt%memtype(1:index(mt%memtype,' ')))
+    case ('INTEGER')
+      size = 4
+    case ('DOUBLE')
+      size = 8
+    end select
+    
+  end subroutine get_var_size
+  
+  subroutine get_isize(name, origin, isize)
+    character(len=*), intent(in) :: name
+    character(len=*), intent(in) :: origin
+    integer(I4B), intent(out)    :: isize
+    ! local
+    type(MemoryType), pointer :: mt
+    logical :: found
+        
+    mt => null()
+    call get_from_memorylist(name, origin, mt, found)
+    if (found) then
+      isize = mt%isize
+    else
+      isize = -1
+    end if
+  end subroutine get_isize
   
   subroutine get_from_memorylist(name, origin, mt, found, check)
     character(len=*), intent(in) :: name
@@ -684,6 +726,21 @@ module MemoryManagerModule
       end do
     end do
   end subroutine copyptr_dbl2d
+  
+  subroutine copy_dbl1d(adbl, name, origin)
+    real(DP), dimension(:), intent(inout) :: adbl
+    character(len=*), intent(in) :: name
+    character(len=*), intent(in) :: origin
+    type(MemoryType), pointer :: mt
+    integer(I4B) :: n
+    logical :: found
+    
+    call get_from_memorylist(name, origin, mt, found)
+    do n = 1, size(mt%adbl1d)
+      adbl(n) = mt%adbl1d(n)
+    end do
+    
+  end subroutine copy_dbl1d
   
   subroutine reassignptr_int1d(aint1d, name, origin, name2, origin2)
     integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: aint1d

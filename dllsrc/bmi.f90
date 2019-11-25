@@ -12,56 +12,56 @@ module bmif
 
   type, abstract :: bmi
      contains
-       !procedure (bmif_get_component_name), deferred :: get_component_name
-       !procedure (bmif_get_input_var_names), deferred :: get_input_var_names
-       !procedure (bmif_get_output_var_names), deferred :: get_output_var_names
+       procedure (bmif_get_component_name), deferred :: get_component_name
+       procedure (bmif_get_input_var_names), deferred :: get_input_var_names
+       procedure (bmif_get_output_var_names), deferred :: get_output_var_names
        procedure (bmif_initialize), deferred :: initialize
        procedure (bmif_finalize), deferred :: finalize
        procedure (bmif_get_start_time), deferred :: get_start_time
        procedure (bmif_get_end_time), deferred :: get_end_time
        procedure (bmif_get_current_time), deferred :: get_current_time
-       !procedure (bmif_get_time_step), deferred :: get_time_step
-       !procedure (bmif_get_time_units), deferred :: get_time_units
+       procedure (bmif_get_time_step), deferred :: get_time_step
+       procedure (bmif_get_time_units), deferred :: get_time_units
        procedure (bmif_update), deferred :: update
-       !procedure (bmif_update_frac), deferred :: update_frac
-       !procedure (bmif_update_until), deferred :: update_until
-       !procedure (bmif_get_var_grid), deferred :: get_var_grid
-       !procedure (bmif_get_grid_type), deferred :: get_grid_type
-       !procedure (bmif_get_grid_rank), deferred :: get_grid_rank
-       !procedure (bmif_get_grid_shape), deferred :: get_grid_shape
-       !procedure (bmif_get_grid_size), deferred :: get_grid_size
-       !procedure (bmif_get_grid_spacing), deferred :: get_grid_spacing
-       !procedure (bmif_get_grid_origin), deferred :: get_grid_origin
-       !procedure (bmif_get_grid_x), deferred :: get_grid_x
-       !procedure (bmif_get_grid_y), deferred :: get_grid_y
-       !procedure (bmif_get_grid_z), deferred :: get_grid_z
-       !procedure (bmif_get_grid_connectivity), deferred :: get_grid_connectivity
-       !procedure (bmif_get_grid_offset), deferred :: get_grid_offset
-       !procedure (bmif_get_var_type), deferred :: get_var_type
-       !procedure (bmif_get_var_units), deferred :: get_var_units
-       !procedure (bmif_get_var_itemsize), deferred :: get_var_itemsize
-       !procedure (bmif_get_var_nbytes), deferred :: get_var_nbytes
-       !procedure (bmif_get_value_int), deferred :: get_value_int
-       !procedure (bmif_get_value_float), deferred :: get_value_float
-       !procedure (bmif_get_value_double), deferred :: get_value_double
-       !procedure (bmif_get_value_ptr_int), deferred :: get_value_ptr_int
-       !procedure (bmif_get_value_ptr_float), deferred :: get_value_ptr_float
-       !procedure (bmif_get_value_ptr_double), deferred :: get_value_ptr_double
-       !procedure (bmif_get_value_at_indices_int), deferred :: &
-       !     get_value_at_indices_int
-       !procedure (bmif_get_value_at_indices_float), deferred :: &
-       !     get_value_at_indices_float
-       !procedure (bmif_get_value_at_indices_double), deferred :: &
-       !     get_value_at_indices_double
-       !procedure (bmif_set_value_int), deferred :: set_value_int
-       !procedure (bmif_set_value_float), deferred :: set_value_float
-       !procedure (bmif_set_value_double), deferred :: set_value_double
-       !procedure (bmif_set_value_at_indices_int), deferred :: &
-       !     set_value_at_indices_int
-       !procedure (bmif_set_value_at_indices_float), deferred :: &
-       !     set_value_at_indices_float
-       !procedure (bmif_set_value_at_indices_double), deferred :: &
-       !     set_value_at_indices_double
+       procedure (bmif_update_frac), deferred :: update_frac
+       procedure (bmif_update_until), deferred :: update_until
+       procedure (bmif_get_var_grid), deferred :: get_var_grid
+       procedure (bmif_get_grid_type), deferred :: get_grid_type
+       procedure (bmif_get_grid_rank), deferred :: get_grid_rank
+       procedure (bmif_get_grid_shape), deferred :: get_grid_shape
+       procedure (bmif_get_grid_size), deferred :: get_grid_size
+       procedure (bmif_get_grid_spacing), deferred :: get_grid_spacing
+       procedure (bmif_get_grid_origin), deferred :: get_grid_origin
+       procedure (bmif_get_grid_x), deferred :: get_grid_x
+       procedure (bmif_get_grid_y), deferred :: get_grid_y
+       procedure (bmif_get_grid_z), deferred :: get_grid_z
+       procedure (bmif_get_grid_connectivity), deferred :: get_grid_connectivity
+       procedure (bmif_get_grid_offset), deferred :: get_grid_offset
+       procedure (bmif_get_var_type), deferred :: get_var_type
+       procedure (bmif_get_var_units), deferred :: get_var_units
+       procedure (bmif_get_var_itemsize), deferred :: get_var_itemsize
+       procedure (bmif_get_var_nbytes), deferred :: get_var_nbytes
+       procedure (bmif_get_value_int), deferred :: get_value_int
+       procedure (bmif_get_value_float), deferred :: get_value_float
+       procedure (bmif_get_value_double), deferred :: get_value_double
+       procedure (bmif_get_value_ptr_int), deferred :: get_value_ptr_int
+       procedure (bmif_get_value_ptr_float), deferred :: get_value_ptr_float
+       procedure (bmif_get_value_ptr_double), deferred :: get_value_ptr_double
+       procedure (bmif_get_value_at_indices_int), deferred :: &
+            get_value_at_indices_int
+       procedure (bmif_get_value_at_indices_float), deferred :: &
+            get_value_at_indices_float
+       procedure (bmif_get_value_at_indices_double), deferred :: &
+            get_value_at_indices_double
+       procedure (bmif_set_value_int), deferred :: set_value_int
+       procedure (bmif_set_value_float), deferred :: set_value_float
+       procedure (bmif_set_value_double), deferred :: set_value_double
+       procedure (bmif_set_value_at_indices_int), deferred :: &
+            set_value_at_indices_int
+       procedure (bmif_set_value_at_indices_float), deferred :: &
+            set_value_at_indices_float
+       procedure (bmif_set_value_at_indices_double), deferred :: &
+            set_value_at_indices_double
   end type bmi
 
   abstract interface
@@ -295,7 +295,7 @@ module bmif
        character (len=*), intent(out) :: var_units
        integer :: bmi_status
      end function bmif_get_var_units
-
+     
      ! Get memory use per array element, in bytes.
      function bmif_get_var_itemsize(this, var_name, var_size) result(bmi_status)
        import :: bmi

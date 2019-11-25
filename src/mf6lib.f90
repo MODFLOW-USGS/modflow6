@@ -20,13 +20,13 @@ contains
     logical :: hasConverged
     !
     ! initialize simulation
-    call initialize()
+    call mf6_initialize()
     !
     ! -- time loop
     tsloop: do while (totim < totalsimtime)
       
       ! perform a time step
-      hasConverged = update()
+      hasConverged = mf6_update()
       
       ! if not converged, break
       if(.not. hasConverged) exit tsloop      
@@ -34,11 +34,11 @@ contains
     enddo tsloop
     !
     ! -- finalize simulation
-    call finalize()    
+    call mf6_finalize()    
     
   end subroutine runmf6
   
-  subroutine initialize()
+  subroutine mf6_initialize()
     use CommandArguments,       only: GetCommandLineArguments
     use SimulationCreateModule, only: simulation_cr 
     ! -- parse any command line arguments
@@ -53,9 +53,9 @@ contains
     ! -- prepare simulation (_df + _ar)
     call prepareSimulation()   
     
-  end subroutine initialize
+  end subroutine mf6_initialize
   
-  function update() result(hasConverged)
+  function mf6_update() result(hasConverged)
     Use TdisModule, only: tdis_tu
     logical :: hasConverged
     
@@ -71,9 +71,9 @@ contains
     ! -- after timestep
     hasConverged = finalizeTimestep()
     !
-  end function update
+  end function mf6_update
   
-  subroutine finalize()
+  subroutine mf6_finalize()
     use ListsModule,            only: lists_da
     use MemoryManagerModule,    only: mem_usage, mem_da
     use TimerModule,            only: elapsed_time   
@@ -146,7 +146,7 @@ contains
     call elapsed_time(iout, 1)
     call final_message()
     !        
-  end subroutine finalize
+  end subroutine mf6_finalize
   
   subroutine printInfo()         
     use CompilerVersion
