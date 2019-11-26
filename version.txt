@@ -2,6 +2,6 @@
 # created on...March 31, 2019 23:49:08
 
 major = 6
-minor = 0
-micro = 5
+minor = 1
+micro = 0
 __version__ = '{:d}.{:d}.{:d}'.format(major, minor, micro)
