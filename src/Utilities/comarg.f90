@@ -92,11 +92,10 @@ module CommandArguments
           write(ISTDOUT,'(2a,1x,a)') &
             trim(adjustl(cexe)), ':', trim(adjustl(compiler))
         case default 
-          !call write_usage(trim(adjustl(header)), trim(adjustl(cexe)))
-          !write(errmsg, '(2a,1x,a)') &
-          !  trim(adjustl(cexe)), ': illegal option -', trim(adjustl(line))
-          !call store_error(errmsg)
-          iterm = 0
+          call write_usage(trim(adjustl(header)), trim(adjustl(cexe)))
+          write(errmsg, '(2a,1x,a)') &
+            trim(adjustl(cexe)), ': illegal option -', trim(adjustl(line))
+          call store_error(errmsg)
       end select
     end do
     !
