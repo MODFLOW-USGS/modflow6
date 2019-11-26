@@ -274,10 +274,9 @@ module BndModule
     ! -- dummy
     class(BndType),intent(inout) :: this
     ! -- local
-    integer(I4B) :: i, ierr, nlinks, nlist, node
-    logical :: isfound, endOfBlock
+    integer(I4B) :: ierr, nlist
+    logical :: isfound
     character(len=LINELENGTH) :: line, errmsg
-    type(TimeSeriesLinkType), pointer :: tsLink => null()
     ! -- formats
     character(len=*),parameter :: fmtblkerr = &
       "('Error.  Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"

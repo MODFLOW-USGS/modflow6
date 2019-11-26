@@ -481,8 +481,8 @@ contains
       else
         ! Intervals are specified in MNW2 input
         ! Get first and last interval for this well
-        firstint = nint(mnwnod(12, iw))
-        lastint = nint(mnwnod(13, iw))
+        firstint = nint(mnwnod(12, firstnode))
+        lastint = nint(mnwnod(13, lastnode))
         nintvl = lastint - firstint + 1
         ! loop through intervals
         do ii=firstint,lastint
@@ -510,8 +510,8 @@ contains
           do nn = firstnode,lastnode
             ! Get layer
             il = nint(mnwnod(1, nn))
-            write(iu,30)iw, nn, il, ir, ic, scrn_top, scrn_bot, hk_skin, &
-                        radius_skin
+            write(iu,30) iw, nn - firstnode + 1, il, ir, ic, scrn_top, &
+                         scrn_bot, hk_skin, radius_skin
           enddo
         enddo
       endif

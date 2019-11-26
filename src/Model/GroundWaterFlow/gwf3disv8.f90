@@ -20,14 +20,12 @@ module GwfDisvModule
     integer(I4B), pointer :: nlay  => null()                                     ! number of layers
     integer(I4B), pointer :: ncpl => null()                                      ! number of cells per layer
     integer(I4B), pointer :: nvert => null()                                     ! number of x,y vertices
-    integer(I4B), dimension(:), pointer, contiguous :: nodereduced => null()     ! (size:nodesuser)contains reduced nodenumber (size 0 if not reduced); -1 means vertical pass through, 0 is idomain = 0
-    integer(I4B), dimension(:), pointer, contiguous :: nodeuser => null()        ! (size:nodes) given a reduced nodenumber, provide the user nodenumber (size 0 if not reduced)
     real(DP), dimension(:,:), pointer, contiguous :: vertices => null()          ! cell vertices stored as 2d array of x and y
     real(DP), dimension(:,:), pointer, contiguous :: cellxy => null()            ! cell center stored as 2d array of x and y
     integer(I4B), dimension(:), pointer, contiguous :: iavert => null()          ! cell vertex pointer ia array
     integer(I4B), dimension(:), pointer, contiguous :: javert => null()          ! cell vertex pointer ja array
-    real(DP), dimension(:, :), pointer, contiguous :: top2d => null()            ! top elevations for each cell at top of model (ncol, nrow)
-    real(DP), dimension(:, :, :), pointer, contiguous :: bot3d => null()         ! bottom elevations for each cell (ncol, nrow, nlay)
+    real(DP), dimension(:, :), pointer, contiguous :: top2d => null()            ! top elevations for each cell at top of model (ncpl, 1)
+    real(DP), dimension(:, :, :), pointer, contiguous :: bot3d => null()         ! bottom elevations for each cell (ncpl, 1, nlay)
     integer(I4B), dimension(:, :, :), pointer, contiguous :: idomain  => null()  ! idomain (ncpl, 1, nlay)
     type(DisvGeomType) :: cell1                                                  ! cell object used to calculate geometric properties
     type(DisvGeomType)  :: cell2                                                 ! cell object used to calculate geometric properties
@@ -42,7 +40,6 @@ module GwfDisvModule
     ! -- helper functions
     procedure :: get_nodenumber_idx1
     procedure :: get_nodenumber_idx2
-    procedure :: get_nodeuser
     procedure :: nodeu_to_string
     procedure :: nodeu_from_string
     procedure :: nodeu_from_cellid
@@ -215,17 +212,6 @@ module GwfDisvModule
     !
     ! -- Final grid initialization
     call this%grid_finalize()
-    !!
-    !! -- Build connections
-    !call this%connect()
-    !!
-    !! -- Create two cell objects that can be used for geometric processing
-    !call this%cell1%init(this%nlay, this%ncpl, this%nodes, this%top, this%bot, &
-    !                this%iavert, this%javert, this%vertices, this%cellxy,      &
-    !                this%nodereduced, this%nodeuser)
-    !call this%cell2%init(this%nlay, this%ncpl, this%nodes, this%top, this%bot, &
-    !                this%iavert, this%javert, this%vertices, this%cellxy,      &
-    !                this%nodereduced, this%nodeuser)
     !
     ! -- Return
     return
@@ -285,7 +271,8 @@ module GwfDisvModule
 ! ------------------------------------------------------------------------------
     !
     ! -- get options block
-    call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false.)
+    call this%parser%GetBlock('OPTIONS', isfound, ierr, &
+      supportOpenClose=.true., blockRequired=.false.)
     !
     ! -- set default options
       this%lenuni = 0
@@ -460,11 +447,9 @@ module GwfDisvModule
     class(GwfDisvType) :: this
     ! -- locals
     character(len=LINELENGTH) :: keyword
-    integer(I4B) :: n, node, noder, j, k
+    integer(I4B) :: n
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
-    real(DP) :: top
-    real(DP) :: dz
     integer(I4B), parameter :: nname = 3
     logical, dimension(nname) :: lname
     character(len=24),dimension(nname) :: aname
@@ -475,8 +460,8 @@ module GwfDisvModule
       "'TOP, BOT: ',2(1pg24.15))"
     character(len=*), parameter :: fmtnr = &
       "(/1x, 'THE SPECIFIED IDOMAIN RESULTS IN A REDUCED NUMBER OF CELLS.'," // &
-      "/1x, 'NUMBER OF USER NODES: ',I7," // &
-      "/1X, 'NUMBER OF NODES IN SOLUTION: ', I7, //)"
+      "/1x, 'NUMBER OF USER NODES: ',I0," // &
+      "/1X, 'NUMBER OF NODES IN SOLUTION: ', I0, //)"
     ! -- data
     data aname(1) /'TOP ELEVATION OF LAYER 1'/
     data aname(2) /'  MODEL LAYER BOTTOM EL.'/
@@ -566,9 +551,7 @@ module GwfDisvModule
     ! -- dummy
     class(GwfDisvType) :: this
     ! -- locals
-    character(len=LINELENGTH) :: keyword
-    integer(I4B) :: n, node, noder, j, k
-    integer(I4B) :: ierr
+    integer(I4B) :: node, noder, j, k
     real(DP) :: top
     real(DP) :: dz
     character(len=300) :: ermsg
@@ -970,7 +953,7 @@ module GwfDisvModule
     call this%con%disvconnections(this%name_model, this%nodes,                 &
                                   this%ncpl, this%nlay, nrsize,                &
                                   this%nvert, this%vertices, this%iavert,      &
-                                  this%javert, this%cellxy, this%area,         &
+                                  this%javert, this%cellxy,                    &
                                   this%top, this%bot,                          &
                                   this%nodereduced, this%nodeuser)
     this%nja = this%con%nja
@@ -1248,79 +1231,6 @@ module GwfDisvModule
     return
   end function get_nodenumber_idx2
 
-  function get_nodeuser(this, noder) &
-    result(nodenumber)
-! ******************************************************************************
-! get_nodeuser -- Return the user nodenumber from the reduced node number
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    implicit none
-    ! -- return
-    integer(I4B) :: nodenumber
-    class(GwfDisvType) :: this
-    integer(I4B), intent(in) :: noder
-! ------------------------------------------------------------------------------
-    !
-    if(this%nodes < this%nodesuser) then
-      nodenumber = this%nodeuser(noder)
-    else
-      nodenumber = noder
-    endif
-    !
-    ! -- return
-    return
-    end function get_nodeuser
-
-!  subroutine connection_normal(this, noden, nodem, ihc, xcomp, ycomp, zcomp)
-!! ******************************************************************************
-!! connection_normal -- calculate the normal vector components for reduced
-!!   nodenumber cell (noden) and its shared face with cell nodem.  ihc is the
-!!   horizontal connection flag.
-!! ******************************************************************************
-!!
-!!    SPECIFICATIONS:
-!! ------------------------------------------------------------------------------
-!    ! -- modules
-!    use ConstantsModule, only: DZERO, DONE
-!    ! -- dummy
-!    class(GwfDisvType) :: this
-!    integer(I4B), intent(in) :: noden
-!    integer(I4B), intent(in) :: nodem
-!    integer(I4B), intent(in) :: ihc
-!    real(DP), intent(inout) :: xcomp
-!    real(DP), intent(inout) :: ycomp
-!    real(DP), intent(inout) :: zcomp
-!    ! -- local
-!! ------------------------------------------------------------------------------
-!    !
-!    ! -- Set cell1 and cell2 to nodes nodered and mred
-!    call this%cell1%set_nodered(noden)
-!    call this%cell2%set_nodered(nodem)
-!    !
-!    ! -- Set vector components based on ihc
-!    if(ihc == 0) then
-!      xcomp = DZERO
-!      ycomp = DZERO
-!      if(nodem < noden) then
-!        !
-!        ! -- nodem must be above noden, so upward connection
-!        zcomp = DONE
-!      else
-!        !
-!        ! -- nodem must be below noden, so downward connection
-!        zcomp = -DONE
-!      endif
-!    else
-!      call this%cell1%edge_normal(this%cell2, xcomp, ycomp)
-!      zcomp = DZERO
-!    endif
-!    !
-!    ! -- return
-!    return
-!  end subroutine connection_normal
-
   subroutine connection_normal(this, noden, nodem, ihc, xcomp, ycomp, zcomp,   &
                                ipos)
 ! ******************************************************************************
@@ -1377,71 +1287,6 @@ module GwfDisvModule
     ! -- return
     return
   end subroutine connection_normal
-
-!  subroutine connection_vector(this, noden, nodem, nozee, satn, satm, ihc,   &
-!                               xcomp, ycomp, zcomp, conlen)
-!! ******************************************************************************
-!! connection_vector -- calculate the unit vector components from reduced
-!!   nodenumber cell (noden) to its neighbor cell (nodem).  The saturation for
-!!   for these cells are also required so that the vertical position of the cell
-!!   cell centers can be calculated.  ihc is the horizontal flag.  Also return
-!!   the straight-line connection length.
-!! ******************************************************************************
-!!
-!!    SPECIFICATIONS:
-!! ------------------------------------------------------------------------------
-!    ! -- modules
-!    use ConstantsModule, only: DZERO, DONE, DHALF
-!    ! -- dummy
-!    class(GwfDisvType) :: this
-!    integer(I4B), intent(in) :: noden
-!    integer(I4B), intent(in) :: nodem
-!    logical, intent(in) :: nozee
-!    real(DP), intent(in) :: satn
-!    real(DP), intent(in) :: satm
-!    integer(I4B), intent(in) :: ihc
-!    real(DP), intent(inout) :: xcomp
-!    real(DP), intent(inout) :: ycomp
-!    real(DP), intent(inout) :: zcomp
-!    real(DP), intent(inout) :: conlen
-!    ! -- local
-!    real(DP) :: zn, zm
-!! ------------------------------------------------------------------------------
-!    !
-!    ! -- Set cell1 and cell2 to nodes noden and nodem
-!    call this%cell1%set_nodered(noden)
-!    call this%cell2%set_nodered(nodem)
-!    !
-!    ! -- Set vector components based on ihc
-!    if(ihc == 0) then
-!      !
-!      ! -- vertical connection; set zcomp positive upward
-!      xcomp = DZERO
-!      ycomp = DZERO
-!      if(nodem < noden) then
-!        zcomp = DONE
-!      else
-!        zcomp = -DONE
-!      endif
-!      !
-!      ! -- Cell centers are calculated without consideration for saturation.
-!      !    This routine only used by XT3D at the moment, and so the NPF
-!      !    options for vertical conductance do not need to be supported
-!      !    here.
-!      zn = this%cell1%bot + DHALF * (this%cell1%top - this%cell1%bot)
-!      zm = this%cell2%bot + DHALF * (this%cell2%top - this%cell2%bot)
-!      conlen = abs(zm - zn)
-!    else
-!      !
-!      ! -- horizontal connection, with possible z component due to cell offsets
-!      !    and/or water table conditions
-!      call this%cell1%connection_vector(this%cell2, nozee, satn, satm, xcomp,  &
-!        ycomp, zcomp, conlen)
-!    endif
-!    !
-!    ! -- return
-!    return
-!  end subroutine connection_vector
 
   subroutine connection_vector(this, noden, nodem, nozee, satn, satm, ihc,   &
                                xcomp, ycomp, zcomp, conlen)
@@ -1671,23 +1516,26 @@ module GwfDisvModule
 !   is allowed to be a string (e.g. boundary name). In this case, if a string
 !   is encountered, return value as -2.
 ! ******************************************************************************
-    implicit none
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwfDisvType)                  :: this
-    integer(I4B),           intent(inout) :: lloc
-    integer(I4B),           intent(inout) :: istart
-    integer(I4B),           intent(inout) :: istop
-    integer(I4B),           intent(in)    :: in
-    integer(I4B),           intent(in)    :: iout
-    character(len=*),  intent(inout) :: line
-    logical, optional, intent(in)    :: flag_string
-    logical, optional, intent(in)    :: allow_zero
-    integer(I4B)                     :: nodeu
+    class(GwfDisvType) :: this
+    integer(I4B), intent(inout) :: lloc
+    integer(I4B), intent(inout) :: istart
+    integer(I4B), intent(inout) :: istop
+    integer(I4B), intent(in) :: in
+    integer(I4B), intent(in) :: iout
+    character(len=*), intent(inout) :: line
+    logical, optional, intent(in) :: flag_string
+    logical, optional, intent(in) :: allow_zero
+    integer(I4B) :: nodeu
     ! -- local
     integer(I4B) :: j, k, nlay, nrow, ncpl
     integer(I4B) :: lloclocal, ndum, istat, n
     real(DP) :: r
     character(len=LINELENGTH) :: ermsg, fname
+! ------------------------------------------------------------------------------
     !
     if (present(flag_string)) then
       if (flag_string) then
@@ -1757,29 +1605,32 @@ module GwfDisvModule
 !   result can be zero. If allow_zero is false, a zero in any index causes an
 !   error.
 ! ******************************************************************************
-    implicit none
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- return
     integer(I4B) :: nodeu
     ! -- dummy
-    class(GwfDisvType)               :: this
+    class(GwfDisvType) :: this
     character(len=*),  intent(inout) :: cellid
-    integer(I4B),           intent(in)    :: inunit
-    integer(I4B),           intent(in)    :: iout
-    logical, optional, intent(in)    :: flag_string
-    logical, optional, intent(in)    :: allow_zero
+    integer(I4B), intent(in) :: inunit
+    integer(I4B), intent(in) :: iout
+    logical, optional, intent(in) :: flag_string
+    logical, optional, intent(in) :: allow_zero
     ! -- local
     integer(I4B) :: j, k, nlay, nrow, ncpl
     integer(I4B) :: lloclocal, ndum, istat, n
     integer(I4B) :: istart, istop
     real(DP) :: r
     character(len=LINELENGTH) :: ermsg, fname
+! ------------------------------------------------------------------------------
     !
     if (present(flag_string)) then
       if (flag_string) then
         ! Check to see if first token in cellid can be read as an integer.
         lloclocal = 1
         call urword(cellid, lloclocal, istart, istop, 1, ndum, r, iout, inunit)
-        read(cellid(istart:istop),*,iostat=istat)n
+        read(cellid(istart:istop), *, iostat=istat) n
         if (istat /= 0) then
           ! First token in cellid is not an integer; return flag to this effect.
           nodeu = -2
@@ -1890,7 +1741,6 @@ module GwfDisvModule
     integer(I4B) :: nrow
     integer(I4B) :: ncol
     integer(I4B) :: nval
-    integer(I4B) :: nodeu, noder
     integer(I4B), dimension(:), pointer, contiguous :: itemp
 ! ------------------------------------------------------------------------------
     !
@@ -1961,7 +1811,6 @@ module GwfDisvModule
     integer(I4B) :: nrow
     integer(I4B) :: ncol
     integer(I4B) :: nval
-    integer(I4B) :: nodeu, noder
     real(DP), dimension(:), pointer, contiguous :: dtemp
 ! ------------------------------------------------------------------------------
     !

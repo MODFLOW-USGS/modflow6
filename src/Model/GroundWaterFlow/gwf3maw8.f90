@@ -406,7 +406,7 @@ contains
     integer(I4B), dimension(:), pointer, contiguous :: nboundchk
     ! -- format
     character(len=*),parameter :: fmthdbot = &
-      "('well head (',G0,') must be >= BOTTOM_ELEVATION (',G0',).')"
+      "('well head (', G0, ') must be >= BOTTOM_ELEVATION (', G0, ').')"
 ! ------------------------------------------------------------------------------
     !
     ! -- code
@@ -435,7 +435,8 @@ contains
     !
     ! -- read maw well data
     ! -- get wells block
-    call this%parser%GetBlock('PACKAGEDATA', isfound, ierr, supportopenclose=.true.)
+    call this%parser%GetBlock('PACKAGEDATA', isfound, ierr, &
+      supportopenclose=.true.)
     !
     ! -- parse locations block if detected
     if (isfound) then
@@ -1113,7 +1114,7 @@ contains
     character(len=MAXCHARLEN) :: ermsg, ermsgr
     ! -- formats
     character(len=*),parameter :: fmthdbot = &
-      "('well head (',G0,') must be >= BOTTOM_ELEVATION (',G0',).')"
+      "('well head (',G0,') must be >= BOTTOM_ELEVATION (',G0, ').')"
 ! ------------------------------------------------------------------------------
     !
     ! -- Find time interval of current stress period.
@@ -1938,7 +1939,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule,only: delt, kper, kstp
+    use TdisModule,only: delt
     ! -- dummy
     class(MawType) :: this
     real(DP), dimension(:), intent(inout) :: rhs
@@ -2299,7 +2300,7 @@ contains
     real(DP) :: ratsum
     integer(I4B) :: naux
     ! -- for budget
-    integer(I4B) :: i, j, n
+    integer(I4B) :: j, n
     integer(I4B) :: n2
     integer(I4B) :: igwfnode
     integer(I4B) :: ibnd
@@ -3461,9 +3462,6 @@ contains
     ! -- formats
 10  format('Error: Boundary "',a,'" for observation "',a, &
            '" is invalid in package "',a,'"')
-30  format('Error: Boundary name not provided for observation "',a, &
-           '" in package "',a,'"')
-60  format('Error: Invalid node number in OBS input: ',i5)
     !
     !
     do i = 1, this%obs%npakobs

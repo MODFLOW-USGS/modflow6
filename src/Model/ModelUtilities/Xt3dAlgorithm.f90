@@ -527,7 +527,6 @@ module Xt3dAlgorithmModule
          bd = bd*fatten
       end if
 !
-  999 return
   end subroutine abwts
 !
 end module Xt3dAlgorithmModule

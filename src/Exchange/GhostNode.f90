@@ -208,7 +208,7 @@ module GhostNodeModule
     ! -- formats
     character(len=*),parameter :: fmterr = &
       "('GHOST NODE ERROR.  Cell ', i0, ' in model ', a,                       &
-        ' is not connected to cell ', i0, ' in model ', a)"
+        &' is not connected to cell ', i0, ' in model ', a)"
 ! ------------------------------------------------------------------------------
     !
     ! -- Find the location of Cnm in the global solution and store it in
@@ -784,7 +784,8 @@ module GhostNodeModule
 ! ------------------------------------------------------------------------------
     !
     ! -- get options block
-    call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false.)
+    call this%parser%GetBlock('OPTIONS', isfound, ierr, &
+                              supportOpenClose=.true., blockRequired=.false.)
     !
     ! -- parse options block if detected
     if (isfound) then
@@ -846,7 +847,8 @@ module GhostNodeModule
 ! ------------------------------------------------------------------------------
     !
     ! -- get options block
-    call this%parser%GetBlock('DIMENSIONS', isfound, ierr)
+    call this%parser%GetBlock('DIMENSIONS', isfound, ierr, &
+                              supportOpenClose=.true.)
     !
     ! -- parse options block if detected
     if (isfound) then
@@ -911,7 +913,7 @@ module GhostNodeModule
     allocate(nodesuj(this%numjs))
     !
     ! -- get GNCDATA block
-    call this%parser%GetBlock('GNCDATA', isfound, ierr)
+    call this%parser%GetBlock('GNCDATA', isfound, ierr, supportOpenClose=.true.)
     !
     ! -- process GNC data
     if (isfound) then

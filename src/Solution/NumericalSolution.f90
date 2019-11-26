@@ -461,7 +461,6 @@ contains
     logical :: isfound, endOfBlock
     integer(I4B) :: ival
     real(DP) :: rval
-    real(DP) :: rclose
     character(len=*),parameter :: fmtcsvout = &
       "(4x, 'CSV OUTPUT WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I7)"
     character(len=*),parameter :: fmtptcout = &
@@ -483,7 +482,8 @@ contains
     mxvl = 0
     !
     ! -- get options block
-    call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false.)
+    call this%parser%GetBlock('OPTIONS', isfound, ierr, &
+      supportOpenClose=.true., blockRequired=.false.)
     !
     ! -- parse options block if detected
     if (isfound) then
@@ -630,8 +630,6 @@ contains
       write(iout,'(1x,a)')'NO IMS OPTION BLOCK DETECTED.'
     end if
 
-00020 FORMAT(1X,'SPECIFIED OPTION:',/,                                         &
-    &       1X,'SOLVER INPUT VALUES WILL BE USER-SPECIFIED')
 00021 FORMAT(1X,'SIMPLE OPTION:',/,                                            &
     &       1X,'DEFAULT SOLVER INPUT VALUES FOR FAST SOLUTIONS')
 00023 FORMAT(1X,'MODERATE OPTION:',/,1X,'DEFAULT SOLVER',                      &
@@ -644,7 +642,8 @@ contains
     call this%sln_setouter(ifdparam)
     !
     ! -- get NONLINEAR block
-    call this%parser%GetBlock('NONLINEAR', isfound, ierr, blockRequired=.FALSE.)
+    call this%parser%GetBlock('NONLINEAR', isfound, ierr, &
+      supportOpenClose=.true., blockRequired=.FALSE.)
     !
     ! -- parse NONLINEAR block if detected
     if (isfound) then
@@ -1104,7 +1103,7 @@ contains
     ! -- formats
     character(len=*), parameter :: fmtnocnvg =                                 &
       "(1X,'Solution ', i0, ' did not converge for stress period ', i0,        &
-       ' and time step ', i0)"
+       &' and time step ', i0)"
  11 FORMAT(//1X,'OUTER ITERATION SUMMARY',/,1x,139('-'),/,                     &
         18x,'     OUTER     INNER BACKTRACK BACKTRACK        INCOMING        ',&
            'OUTGOING         MAXIMUM                    MAXIMUM CHANGE',/,     &
@@ -1917,7 +1916,7 @@ contains
     real(DP) :: bnorm
     character(len=50) :: fname
     character(len=*), parameter :: fmtfname = "('mf6mat_', i0, '_', i0, &
-      '_', i0, '_', i0, '.txt')"
+      &'_', i0, '_', i0, '.txt')"
 ! ------------------------------------------------------------------------------
     !
     ! -- take care of loose ends for all nodes before call to solver
@@ -2050,7 +2049,6 @@ contains
           WRITE(99,'(*(G0,:,","))') N, this%RHS(N), (this%ja(i),i=i1,i2), &
                         (this%AMAT(I),I=I1,I2)
         ENDDO
-66      FORMAT(I9,1X,G15.6,2X,100G15.6)
         close(99)
         !stop
       endif
@@ -2158,7 +2156,6 @@ contains
     class(NumericalExchangeType), pointer :: cp
     integer(I4B), intent(in) :: kiter
     ! -- local
-    character (len=16) :: cval
     integer(I4B) :: ic
     integer(I4B) :: im
     integer(I4B) :: nb

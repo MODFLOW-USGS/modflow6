@@ -19,8 +19,6 @@ module GwfDisModule
     integer(I4B), pointer :: nlay => null()                                      ! number of layers
     integer(I4B), pointer :: nrow => null()                                      ! number of rows
     integer(I4B), pointer :: ncol => null()                                      ! number of columns
-    integer(I4B), dimension(:), pointer, contiguous :: nodereduced => null()     ! (size:nodesuser)contains reduced nodenumber (size 0 if not reduced); -1 means vertical pass through, 0 is idomain = 0
-    integer(I4B), dimension(:), pointer, contiguous :: nodeuser => null()        ! (size:nodes) given a reduced nodenumber, provide the user nodenumber (size 0 if not reduced)
     real(DP), dimension(:), pointer, contiguous :: delr => null()                ! spacing along a row
     real(DP), dimension(:), pointer, contiguous :: delc => null()                ! spacing along a column
     real(DP), dimension(:, :), pointer, contiguous :: top2d => null()            ! top elevations for each cell at top of model (ncol, nrow)
@@ -40,7 +38,6 @@ module GwfDisModule
     ! -- helper functions
     procedure :: get_nodenumber_idx1
     procedure :: get_nodenumber_idx3
-    procedure :: get_nodeuser
     procedure :: nodeu_to_string
     procedure :: nodeu_from_string
     procedure :: nodeu_from_cellid
@@ -564,8 +561,8 @@ module GwfDisModule
       "'TOP, BOT: ',2(1pg24.15))"
     character(len=*), parameter :: fmtnr = &
       "(/1x, 'THE SPECIFIED IDOMAIN RESULTS IN A REDUCED NUMBER OF CELLS.'," // &
-      "/1x, 'NUMBER OF USER NODES: ',I7," // &
-      "/1X, 'NUMBER OF NODES IN SOLUTION: ', I7, //)"
+      "/1x, 'NUMBER OF USER NODES: ',I0," // &
+      "/1X, 'NUMBER OF NODES IN SOLUTION: ', I0, //)"
 ! ------------------------------------------------------------------------------
     !
     ! -- count active cells
@@ -682,14 +679,15 @@ module GwfDisModule
       enddo
     enddo
     !
-    ! -- fill x,y coordinate arrays  
+    ! -- fill x,y coordinate arrays
     this%cellx(1) = DHALF*this%delr(1)
-    this%celly(1) = DHALF*this%delc(1)
+    this%celly(this%nrow) = DHALF*this%delc(this%nrow)
     do j = 2, this%ncol
       this%cellx(j) = this%cellx(j-1) + DHALF*this%delr(j-1) + DHALF*this%delr(j)
     enddo
-    do i = 2, this%nrow
-      this%celly(i) = this%celly(i-1) + DHALF*this%delc(i-1) + DHALF*this%delc(i)
+    ! -- row number increases in negative y direction:
+    do i = this%nrow-1, 1, -1
+      this%celly(i) = this%celly(i+1) + DHALF*this%delc(i+1) + DHALF*this%delc(i)
     enddo
     !
     ! -- create and fill the connections object
@@ -963,32 +961,6 @@ module GwfDisModule
     return
   end function get_nodenumber_idx3
 
-  function get_nodeuser(this, noder) &
-    result(nodenumber)
-! ******************************************************************************
-! get_nodeuser -- Return the user nodenumber from the reduced node number
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    implicit none
-    ! -- return
-    integer(I4B) :: nodenumber
-    ! -- dummy
-    class(GwfDisType) :: this
-    integer(I4B), intent(in) :: noder
-! ------------------------------------------------------------------------------
-    !
-    if(this%nodes < this%nodesuser) then
-      nodenumber = this%nodeuser(noder)
-    else
-      nodenumber = noder
-    endif
-    !
-    ! -- return
-    return
-  end function get_nodeuser
-
   subroutine allocate_scalars(this, name_model)
 ! ******************************************************************************
 ! allocate_scalars -- Allocate and initialize scalars
@@ -1064,23 +1036,26 @@ module GwfDisModule
 !   is allowed to be a string (e.g. boundary name). In this case, if a string
 !   is encountered, return value as -2.
 ! ******************************************************************************
-    implicit none
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwfDisType)                 :: this
-    integer(I4B),       intent(inout) :: lloc
-    integer(I4B),       intent(inout) :: istart
-    integer(I4B),       intent(inout) :: istop
-    integer(I4B),       intent(in)    :: in
-    integer(I4B),       intent(in)    :: iout
-    character(len=*),   intent(inout) :: line
-    logical, optional,  intent(in)    :: flag_string
-    logical, optional,  intent(in)    :: allow_zero
-    integer(I4B)                      :: nodeu
+    class(GwfDisType) :: this
+    integer(I4B), intent(inout) :: lloc
+    integer(I4B), intent(inout) :: istart
+    integer(I4B), intent(inout) :: istop
+    integer(I4B), intent(in)    :: in
+    integer(I4B), intent(in)    :: iout
+    character(len=*), intent(inout) :: line
+    logical, optional, intent(in) :: flag_string
+    logical, optional, intent(in) :: allow_zero
+    integer(I4B) :: nodeu
     ! -- local
     integer(I4B) :: k, i, j, nlay, nrow, ncol
     integer(I4B) :: lloclocal, ndum, istat, n
     real(DP) :: r
     character(len=LINELENGTH) :: ermsg, fname
+! ------------------------------------------------------------------------------
     !
     if (present(flag_string)) then
       if (flag_string) then
@@ -1156,7 +1131,9 @@ module GwfDisModule
 !   result can be zero. If allow_zero is false, a zero in any index causes an
 !   error.
 ! ******************************************************************************
-    implicit none
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- return
     integer(I4B) :: nodeu
     ! -- dummy
@@ -1172,13 +1149,14 @@ module GwfDisModule
     integer(I4B) :: istat
     real(DP) :: r
     character(len=LINELENGTH) :: ermsg, fname
+! ------------------------------------------------------------------------------
     !
     if (present(flag_string)) then
       if (flag_string) then
         ! Check to see if first token in cellid can be read as an integer.
         lloclocal = 1
         call urword(cellid, lloclocal, istart, istop, 1, ndum, r, iout, inunit)
-        read(cellid(istart:istop),*,iostat=istat)n
+        read(cellid(istart:istop), *, iostat=istat) n
         if (istat /= 0) then
           ! First token in cellid is not an integer; return flag to this effect.
           nodeu = -2
@@ -1463,7 +1441,6 @@ module GwfDisModule
     integer(I4B) :: nrow
     integer(I4B) :: ncol
     integer(I4B) :: nval
-    integer(I4B) :: nodeu, noder
     integer(I4B), dimension(:), pointer, contiguous :: itemp
 ! ------------------------------------------------------------------------------
     !
@@ -1603,61 +1580,41 @@ module GwfDisModule
 ! ------------------------------------------------------------------------------
     !
     ! -- set variables
-    if(this%ndim == 3) then
-      nlay = this%mshape(1)
-      nrow = this%mshape(2)
-      ncol = this%mshape(3)
-    elseif(this%ndim == 2) then
-      nlay = this%mshape(1)
-      nrow = 1
-      ncol = this%mshape(2)
-    else
-      nlay = 1
-      nrow = 1
-      ncol = this%nodes
-    endif
+    nlay = this%mshape(1)
+    nrow = this%mshape(2)
+    ncol = this%mshape(3)
     !
     ! -- Read the array
-    if(this%ndim > 1) then
-      nval = ncol * nrow
-      call ReadArray(inunit, this%dbuff, aname, this%ndim, ncol, nrow, nlay,   &
-        nval, iout, 0, 0)
-      !
-      ! -- Copy array into bound
-      ipos = 1
-      do ir = 1, nrow
-        columnloop: do ic = 1, ncol
-          !
-          ! -- look down through all layers and see if nodeu == nodelist(ipos)
-          !    cycle if not, because node must be inactive or pass through
-          found = .false.
-          layerloop: do il = 1, nlay
-            nodeu = get_node(il, ir, ic, nlay, nrow, ncol)
-            noder = this%get_nodenumber(nodeu, 0)
-            if(noder == 0) cycle layerloop
-            if(noder == nodelist(ipos)) then
-              found = .true.
-              exit layerloop
-            endif
-          enddo layerloop
-          if(.not. found) cycle columnloop
-          !
-          ! -- Assign the array value to darray
-          nodeu = get_node(1, ir, ic, nlay, nrow, ncol)
-          darray(icolbnd, ipos) = this%dbuff(nodeu)
-          ipos = ipos + 1
-          !
-        enddo columnloop
-      enddo
-      !
-    else
-      !
-      ! -- Read unstructured and then copy into darray
-      call ReadArray(inunit, this%dbuff, aname, this%ndim, maxbnd, iout, 0)
-      do ipos = 1, maxbnd
-        darray(icolbnd, ipos) = this%dbuff(ipos)
-      enddo
-    endif
+    nval = ncol * nrow
+    call ReadArray(inunit, this%dbuff, aname, this%ndim, ncol, nrow, nlay,   &
+      nval, iout, 0, 0)
+    !
+    ! -- Copy array into bound
+    ipos = 1
+    do ir = 1, nrow
+      columnloop: do ic = 1, ncol
+        !
+        ! -- look down through all layers and see if nodeu == nodelist(ipos)
+        !    cycle if not, because node must be inactive or pass through
+        found = .false.
+        layerloop: do il = 1, nlay
+          nodeu = get_node(il, ir, ic, nlay, nrow, ncol)
+          noder = this%get_nodenumber(nodeu, 0)
+          if(noder == 0) cycle layerloop
+          if(noder == nodelist(ipos)) then
+            found = .true.
+            exit layerloop
+          endif
+        enddo layerloop
+        if(.not. found) cycle columnloop
+        !
+        ! -- Assign the array value to darray
+        nodeu = get_node(1, ir, ic, nlay, nrow, ncol)
+        darray(icolbnd, ipos) = this%dbuff(nodeu)
+        ipos = ipos + 1
+        !
+      enddo columnloop
+    enddo
     !
     ! -- return
   end subroutine read_layer_array

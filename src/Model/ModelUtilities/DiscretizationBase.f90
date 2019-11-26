@@ -39,8 +39,10 @@ module BaseDisModule
     real(DP), dimension(:), pointer, contiguous     :: area       => null()      !(size:nodes) cell area, in plan view
     type(ConnectionsType), pointer                  :: con        => null()      !connections object
     type(BlockParserType)                           :: parser                    !object to read blocks
-    real(DP), dimension(:), pointer, contiguous     :: dbuff      => null()
-    integer(I4B), dimension(:), pointer, contiguous :: ibuff      => null()
+    real(DP), dimension(:), pointer, contiguous     :: dbuff      => null()      !helper double array of size nodesuser
+    integer(I4B), dimension(:), pointer, contiguous :: ibuff      => null()      !helper int array of size nodesuser
+    integer(I4B), dimension(:), pointer, contiguous :: nodereduced => null()     ! (size:nodesuser)contains reduced nodenumber (size 0 if not reduced); -1 means vertical pass through, 0 is idomain = 0
+    integer(I4B), dimension(:), pointer, contiguous :: nodeuser => null()        ! (size:nodes) given a reduced nodenumber, provide the user nodenumber (size 0 if not reduced)
   contains
     procedure :: dis_df
     procedure :: dis_ac
@@ -312,8 +314,7 @@ module BaseDisModule
     return
   end subroutine nodeu_to_string
 
-  function get_nodeuser(this, noder) &
-    result(nodenumber)
+  function get_nodeuser(this, noder) result(nodenumber)
 ! ******************************************************************************
 ! get_nodeuser -- Return the user nodenumber from the reduced node number
 ! ******************************************************************************
@@ -327,10 +328,11 @@ module BaseDisModule
     integer(I4B), intent(in) :: noder
 ! ------------------------------------------------------------------------------
     !
-    nodenumber = 0
-    call store_error('Program error: DisBaseType method get_nodeuser not &
-                     &implemented.')
-    call ustop()
+    if(this%nodes < this%nodesuser) then
+      nodenumber = this%nodeuser(noder)
+    else
+      nodenumber = noder
+    endif
     !
     ! -- return
     return
@@ -902,7 +904,6 @@ module BaseDisModule
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: darray
     character(len=*), intent(in)                               :: aname
     ! -- local
-    integer(I4B) :: ival
     character(len=LINELENGTH) :: ermsg
 ! ------------------------------------------------------------------------------
     !
@@ -984,7 +985,6 @@ module BaseDisModule
     use ListReaderModule, only: ListReaderType
     use SimModule, only: store_error, store_error_unit, count_errors, ustop
     use InputOutputModule, only: urword
-    use TdisModule, only: totimsav, perlen
     use TimeSeriesLinkModule, only:  TimeSeriesLinkType
     use TimeSeriesManagerModule, only: read_value_or_time_series
     ! -- dummy
@@ -1140,8 +1140,6 @@ module BaseDisModule
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
     ! -- local
-    integer(I4B) :: il, ir, ic, ncol, nrow, nlay, nval, nodeu
-    logical :: found
     character(len=LINELENGTH) :: ermsg
 ! ------------------------------------------------------------------------------
     !
