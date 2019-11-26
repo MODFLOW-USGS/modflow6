@@ -15,9 +15,14 @@ contains
   !
   !    SPECIFICATIONS:
   ! ------------------------------------------------------------------------------
-    ! -- modules   
+    ! -- modules 
+    
+    use CommandArguments, only: GetCommandLineArguments
     use TdisModule, only: totim, totalsimtime   
     logical :: hasConverged
+    !
+    ! -- parse any command line arguments
+    call GetCommandLineArguments()
     !
     ! initialize simulation
     call mf6_initialize()
@@ -29,20 +34,19 @@ contains
       hasConverged = mf6_update()
       
       ! if not converged, break
-      if(.not. hasConverged) exit tsloop      
+      if(.not. hasConverged) exit tsloop    
       
+      write(*, '(e23.15e3)') totim, totalsimtime
     enddo tsloop
     !
     ! -- finalize simulation
-    call mf6_finalize()    
+    write(*,*) "finalize"
+    call mf6_finalize()
     
   end subroutine runmf6
   
   subroutine mf6_initialize()
-    use CommandArguments,       only: GetCommandLineArguments
-    use SimulationCreateModule, only: simulation_cr 
-    ! -- parse any command line arguments
-    call GetCommandLineArguments()
+    use SimulationCreateModule, only: simulation_cr     
     !
     ! -- print banner and info to screen
     call printInfo()

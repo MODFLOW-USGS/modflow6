@@ -17,10 +17,11 @@ module MemoryManagerModule
   public :: mem_usage
   public :: mem_da
   public :: mem_set_print_option
-  ! TODO_MJR:
+  ! TODO_MJR: do we want to expose these like this?
   public :: get_var_size
   public :: get_isize
   public :: setptr_dbl1d
+  public :: copy_dbl1d
   
   type(MemoryListType) :: memorylist
   integer(I8B) :: nvalues_alogical = 0
