@@ -172,7 +172,10 @@
     !
     ! -- End of stress period and/or simulation?
     if(kstp == nstp(kper)) endofperiod = .true.
-    if(endofperiod .and. kper==nper) endofsimulation = .true.
+    if(endofperiod .and. kper==nper) then
+      endofsimulation = .true.
+      totim = totalsimtime  
+    end if
     !
     ! -- return
     return

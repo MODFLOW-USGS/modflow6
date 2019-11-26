@@ -18,7 +18,8 @@ contains
     ! -- modules 
     
     use CommandArguments, only: GetCommandLineArguments
-    use TdisModule, only: totim, totalsimtime   
+    use TdisModule, only: totim, totalsimtime  
+    use KindModule, only: DP
     logical :: hasConverged
     !
     ! -- parse any command line arguments
@@ -34,13 +35,11 @@ contains
       hasConverged = mf6_update()
       
       ! if not converged, break
-      if(.not. hasConverged) exit tsloop    
+      if(.not. hasConverged) exit tsloop   
       
-      write(*, '(e23.15e3)') totim, totalsimtime
     enddo tsloop
     !
     ! -- finalize simulation
-    write(*,*) "finalize"
     call mf6_finalize()
     
   end subroutine runmf6
