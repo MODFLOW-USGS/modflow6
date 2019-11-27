@@ -253,8 +253,6 @@ contains
     integer(I4B) :: icol, istart, istop
     character(len=LINELENGTH) :: ermsg, strng
     logical :: flag_string
-    ! formats
- 30 format(i10)
     !
     ! -- Initialize variables
     strng = obsrv%IDstring
@@ -662,8 +660,6 @@ contains
     logical :: continueread, found, endOfBlock
     ! -- formats
 10  format('No options block found in OBS input. Defaults will be used.')
-20  format('Error reading begin/end block: ',a)
-30  format('Binary output precision set to: ',a)
 40  format('Text output number of digits of precision set to: ',i2)
 60  format(/,'Processing observation options:',/)
     !
@@ -681,7 +677,8 @@ contains
     ierr = 0
     !
     ! -- get BEGIN line of OPTIONS block
-    call this%parser%GetBlock('OPTIONS', found, ierr, blockRequired=.false.)
+    call this%parser%GetBlock('OPTIONS', found, ierr, &
+      supportOpenClose=.true., blockRequired=.false.)
     if (ierr /= 0) then
       ! end of file
       ermsg = 'End-of-file encountered while searching for' // &
@@ -703,31 +700,6 @@ contains
         if (endOfBlock) exit
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
-!   Remove PRECISION option at least temporarily.
-!   Let precision default to DOUBLE.
-!        case ('PRECISION')
-!          ! -- Specifies SINGLE or DOUBLE precision for writing simulated values
-!          !    to a binary file. Default is DOUBLE.
-!          ! -- get the word following the keyword (the key value)
-!          call this%parser%GetStringCaps(keyvalue)
-!          if (localprecision==0) then
-!            if (keyvalue=='SINGLE') then
-!              localprecision = 1
-!              write(this%iout,30)'SINGLE'
-!            elseif (keyvalue=='DOUBLE') then
-!              localprecision = 2
-!              write(this%iout,30)'DOUBLE'
-!            else
-!              errormessage = 'Error in OBS input: "'//trim(keyvalue)// &
-!                  '" is not a valid option for PRECISION'
-!              call store_error(errormessage)
-!              exit readblockoptions
-!            endif
-!          else
-!            errormessage = 'Error in OBS input: PRECISION has already been defined'
-!            call store_error(errormessage)
-!            exit readblockoptions
-!          endif
         case ('DIGITS')
           ! -- Specifies number of significant digits used writing simulated
           !    values to a text file. Default is 5 digits.
@@ -1051,12 +1023,10 @@ contains
     type(ObserveType),     pointer :: obsrv => null()
     type(ObsOutputType),   pointer :: obsOutput => null()
     ! formats
-    40 format(a)
     50 format(/,'Observations read from file "',a,'":',/, &
          'Name',38x,'Type',29x,'Time',9x,'Location data',/, &
          '----------------------------------------  -------------------------------', &
          '  -----------  --------------------------'  )
-    60 format('(Output to file: ',a,')')
     !
     numspec = -1
     ermsg = ''

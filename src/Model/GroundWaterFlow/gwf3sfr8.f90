@@ -1253,7 +1253,7 @@ contains
     class(SfrType) :: this
     ! -- local
     integer(I4B) :: n
-    integer(I4B) :: j, iaux
+    integer(I4B) :: iaux
 ! ------------------------------------------------------------------------------
     !
     ! -- Advance the time series manager
@@ -2627,7 +2627,6 @@ contains
            '" is invalid in package "',a,'"')
 30  format('Error: Boundary name not provided for observation "',a, &
            '" in package "',a,'"')
-60  format('Error: Invalid node number in OBS input: ',i5)
     do i = 1, this%obs%npakobs
       obsrv => this%obs%pakobs(i)%obsrv
       !
@@ -2734,7 +2733,6 @@ contains
     character(len=LINELENGTH) :: strng
     character(len=LENBOUNDNAME) :: bndname
     ! formats
- 30 format(i10)
     !
     strng = obsrv%IDstring
     ! -- Extract reach number from strng and store it.
