@@ -128,7 +128,7 @@ contains
     
   end function get_var_nbytes
 
-  ! Get a copy of values (flattened!) of the given double variable.
+  ! set the pointer to the array of the given double variable.
   function get_value_ptr_double(c_var_name, x) result(bmi_status) bind(C, name="get_value_ptr_double")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_value_ptr_double
     use MemoryManagerModule, only: setptr_dbl1d
@@ -150,9 +150,34 @@ contains
     
     ! set the C pointer to the internal array
     x = c_loc(adbl)
+    bmi_status = BMI_SUCCESS
     
   end function get_value_ptr_double
 
+  ! Get a copy of values (flattened!) of the given double variable.
+  function get_value_double(c_var_name, x, nx) result(bmi_status) bind(C, name="get_value_double")
+  !DEC$ ATTRIBUTES DLLEXPORT :: get_value_double
+    use MemoryManagerModule, only: copy_dbl1d
+    character (kind=c_char), intent(in) :: c_var_name(*)
+    integer, intent(in) :: nx
+    real(DP), dimension(nx), intent(inout) :: x    
+    integer :: bmi_status
+    ! local
+    integer :: idx, i
+    character(len=LENORIGIN) :: origin, var_name
+    character(len=LENVARNAME) :: var_name_only
+    
+    var_name = char_array_to_string(c_var_name, strlen(c_var_name))
+    
+    idx = index(var_name, '/', back=.true.)
+    origin = var_name(:idx-1)
+    var_name_only = var_name(idx+1:)
+    
+    call copy_dbl1d(x, var_name_only, origin)
+    bmi_status = BMI_SUCCESS
+    
+  end function get_value_double
+  
   integer(c_int) pure function strlen(char_array)
     character(c_char), intent(in) :: char_array(LENORIGIN)
     integer :: inull, i

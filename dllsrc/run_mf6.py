@@ -32,22 +32,30 @@ nsize = int(nbytes.value/elsize.value)
 arraytype = np.ctypeslib.ndpointer(dtype="double", ndim=1, shape=(nsize,), flags='F')
 mf6.get_value_ptr_double.argtypes = [c_char_p, POINTER(arraytype)]
 mf6.get_value_ptr_double.restype = c_int
+mf6.get_value_double.argtypes = [c_char_p, arraytype, POINTER(c_int)]
+mf6.get_value_double.restype = c_int
 
 k11 = arraytype()
 k33 = arraytype()
+
+localArray = np.zeros(nsize, dtype="double", order='F')
 
 # model time loop
 while ct.value < et.value:
     # calculate
     mf6.update()
 
-    # get data
-    mf6.get_value_ptr_double(k11name, byref(k11))    
+    # get data through pointer
+    mf6.get_value_ptr_double(k11name, byref(k11))  
     k11array = k11.contents
     print(k11array)
-    mf6.get_value_ptr_double(k33name, byref(k33))    
+    mf6.get_value_ptr_double(k33name, byref(k33))
     k33array = k33.contents
     print(k33array)
+
+    # get data copied into our own array
+    mf6.get_value_double(k11name, localArray, byref(c_int(nsize)))
+    print(localArray)
 
     # update time
     mf6.get_current_time(byref(ct))
