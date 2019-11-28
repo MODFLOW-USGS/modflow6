@@ -6,6 +6,12 @@ module mf6dll
   use ConstantsModule, only: LENORIGIN, LENVARNAME
   implicit none
   
+  
+  ! Define global constants
+  
+  integer(c_int), BIND(C, name="MAXSTRLEN") :: MAXSTRLEN = 1024
+  !DEC$ ATTRIBUTES DLLEXPORT :: MAXSTRLEN
+  
 contains
     
   
@@ -133,6 +139,7 @@ contains
     
   end function get_var_nbytes
 
+
   ! set the pointer to the array of the given double variable.
   function get_value_ptr_double(c_var_name, x) result(bmi_status) bind(C, name="get_value_ptr_double")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_value_ptr_double
@@ -158,6 +165,76 @@ contains
     bmi_status = BMI_SUCCESS
     
   end function get_value_ptr_double
+  
+  ! Get the grid type as a string.
+  function get_grid_type(grid_id, grid_type) result(bmi_status) bind(C, name="get_grid_type")
+  !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_type
+    integer, intent(in) :: grid_id
+    character(kind=c_char), intent(out) :: grid_type(MAXSTRLEN)
+    integer :: bmi_status
+    ! local
+    character(len=MAXSTRLEN) :: name
+    
+    name = "rectilinear"
+    grid_type = string_to_char_array(trim(name), len(trim(name)))
+    bmi_status = BMI_SUCCESS
+  end function get_grid_type
+  
+  ! Get number of dimensions of the computational grid.
+  function get_grid_rank(grid_id, grid_rank) result(bmi_status) bind(C, name="get_grid_rank")
+  !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_rank
+    integer, intent(in) :: grid_id
+    integer, intent(out) :: grid_rank
+    integer :: bmi_status
+    
+    grid_rank = 2
+    bmi_status = BMI_SUCCESS
+  end function get_grid_rank
+  
+  ! Get the total number of elements in the computational grid.
+  function get_grid_size(grid_id, grid_size) result(bmi_status) bind(C, name="get_grid_size")
+  !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_size
+    integer, intent(in) :: grid_id
+    integer, intent(out) :: grid_size
+    integer :: bmi_status
+    
+    grid_size = 100
+    bmi_status = BMI_SUCCESS
+  end function get_grid_size
+  
+  ! Get the dimensions of the computational grid.
+  function get_grid_shape(grid_id, grid_shape) result(bmi_status) bind(C, name="get_grid_shape")
+  !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_shape
+    integer, intent(in) :: grid_id
+    integer, dimension(:), intent(out) :: grid_shape
+    integer :: bmi_status
+    
+    grid_shape = [10, 10]
+    bmi_status = BMI_SUCCESS
+  end function get_grid_shape
+  
+  ! Provides an array (whose length is the number of rows) that gives the y-coordinate for each row.
+  function get_grid_y(grid_id, grid_y) result(bmi_status) bind(C, name="get_grid_y")
+  !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_shape
+    integer, intent(in) :: grid_id
+    integer, dimension(:), intent(out) :: grid_y
+    integer :: bmi_status
+    
+    grid_y = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
+    bmi_status = BMI_SUCCESS
+  end function get_grid_y
+  
+  ! Provides an array (whose length is the number of rows) that gives the y-coordinate for each row.
+  function get_grid_x(grid_id, grid_x) result(bmi_status) bind(C, name="get_grid_x")
+  !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_shape
+    integer, intent(in) :: grid_id
+    integer, dimension(:), intent(out) :: grid_x
+    integer :: bmi_status
+    
+    grid_x = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    bmi_status = BMI_SUCCESS
+  end function get_grid_x
+  
 
   ! Get a copy of values (flattened!) of the given double variable.
   function get_value_double(c_var_name, x, nx) result(bmi_status) bind(C, name="get_value_double")
@@ -204,5 +281,16 @@ contains
       char_array_to_string(i:i) = char_array(i)
     enddo
   end function char_array_to_string
+  
+  pure function string_to_char_array(string, length)
+   integer(c_int),intent(in) :: length
+   character(len=length), intent(in) :: string
+   character(kind=c_char,len=1) :: string_to_char_array(length+1)
+   integer :: i
+   do i = 1, length
+      string_to_char_array(i) = string(i:i)
+   enddo
+   string_to_char_array(length+1) = C_NULL_CHAR
+  end function string_to_char_array
 
 end module mf6dll
