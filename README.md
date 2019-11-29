@@ -7,7 +7,7 @@
 
 ## Automated Testing Status on Travis-CI
 
-### Version 6.0.5 release candidate
+### Version 6.1.0 release candidate
 [![Build Status](https://travis-ci.org/MODFLOW-USGS/modflow6.svg?branch=develop)](https://travis-ci.org/MODFLOW-USGS/modflow6)
 
 
@@ -32,7 +32,7 @@ MODFLOW 6 is the latest core version of MODFLOW. It synthesizes many of the capa
 
 #### ***Software/Code citation for MODFLOW 6:***
 
-[Langevin, C.D., Hughes, J.D., Banta, E.R., Provost, A.M., Niswonger, R.G., and Panday, Sorab, 2019, MODFLOW 6 Modular Hydrologic Model version 6.0.5 release candidate: U.S. Geological Survey Software Release, 31 March 2019, https://doi.org/10.5066/F76Q1VQV](https://doi.org/10.5066/F76Q1VQV)
+[Langevin, C.D., Hughes, J.D., Banta, E.R., Provost, A.M., Niswonger, R.G., and Panday, Sorab, 2019, MODFLOW 6 Modular Hydrologic Model version 6.1.0 release candidate: U.S. Geological Survey Software Release, 29 November 2019, https://doi.org/10.5066/F76Q1VQV](https://doi.org/10.5066/F76Q1VQV)
 
 ## Instructions for building definition files for new packages
 
