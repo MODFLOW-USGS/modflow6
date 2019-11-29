@@ -417,7 +417,7 @@ module UzfCellGroupModule
         (this%landtop(icell) - this%extdp(icell))
     end if
     if (this%extdpuz(icell) < DZERO) this%extdpuz(icell) = DZERO
-    if (this%extdpuz(icell) > DEM7 .and. this%extdp(icell) < DEM7 ) &
+    if (this%extdpuz(icell) > DEM7 .and. this%extdp(icell) < DEM7) &
       this%extdp(icell) = this%extdpuz(icell)
     !
     ! -- set pet for underlying cell
@@ -595,7 +595,7 @@ module UzfCellGroupModule
     !
     ! -- save wave states for resetting after iteration.
     this%watab(icell) = hgwf
-    call thiswork%wave_shift(this, 1, icell, 0, 1, this%nwavst, 1)
+    call thiswork%wave_shift(this, 1, icell, 0, 1, this%nwavst(icell), 1)
     if (this%watab(icell) > this%celtop(icell)) &
       this%watab(icell) = this%celtop(icell)
     !
@@ -629,9 +629,9 @@ module UzfCellGroupModule
     !
     test = this%watab(icell)
     if (this%watabold(icell) - test < -DEM15) test = this%watabold(icell)
-    if (this%celtop - test > DEM15) then
+    if (this%celtop(icell) - test > DEM15) then
       if (issflag == 0) then
-        call this%routewaves(icell, totfluxtot, delt, ietflag, ipos, ierr)  
+        call this%routewaves(totfluxtot, delt, ietflag, icell, ierr)  
         if (ierr > 0) return
         call this%uz_rise(icell, totfluxtot)
         this%totflux(icell) = totfluxtot
@@ -639,10 +639,10 @@ module UzfCellGroupModule
             this%pet(jbelow) = this%pet(jbelow) - this%etact(icell)
             if (this%pet(jbelow) < DEM15) this%pet(jbelow) = DEM15
         end if
-        if (this%ivertconthis%pet(jbelow) > 0) then
+        if (this%ivertcon(icell) > 0) then
           ! cdl change thisbelow to jbelow
           ! cdl call this%addrech(thisbelow, hgwf, trhsfinf, thcoffinf, derivfinf, delt, 0)
-          call this%addrech(jbelow, hgwf, trhsfinf, thcoffinf, derivfinf, delt, 0)
+          call this%addrech(icell, jbelow, hgwf, trhsfinf, thcoffinf, derivfinf, delt, 0)
         end if
       else
         this%totflux(icell) = this%surflux(icell) * delt
@@ -670,7 +670,7 @@ module UzfCellGroupModule
       if (ietflag > 0) then
         ! cdl change thisbelow to jbelow
         ! cdl call this%setbelowpet(thisbelow, sumaet)
-        call this%setbelowpet(jbelow, sumaet)
+        call this%setbelowpet(icell, jbelow, sumaet)
       end if
     end if
   end subroutine formulate 
@@ -693,7 +693,7 @@ module UzfCellGroupModule
     class(UzfCellGroupType) :: this
     ! cdl changed to jbelow type(UzfCellGroupType) :: thisbelow
     integer(I4B), intent(in) :: jbelow
-    integer(I4B), intent(in) :: ipos
+    integer(I4B), intent(in) :: icell
     integer(I4B), intent(in) :: ietflag
     integer(I4B), intent(in) :: iseepflag
     integer(I4B), intent(in) :: issflag
@@ -744,8 +744,8 @@ module UzfCellGroupModule
     !
     ! -- set pet for gw when there is no UZ. 
     this%gwpet(icell) = this%pet(icell)
-    if (this%ivertcon > 0) then
-      thisbelow%finf(icell) = dzero
+    if (this%ivertcon(icell) > 0) then
+      this%finf(jbelow) = dzero
       if (this%watab(icell) < this%celbot(icell)) &
         this%watab(icell) = this%celbot(icell)
     end if
@@ -776,17 +776,17 @@ module UzfCellGroupModule
     end if
     !
     ! sat. to unsat. zone exchange.
-    !if ( this%landflag == 0 .and. issflag == 0 ) then
+    !if (this%landflag == 0 .and. issflag == 0) then
     !  call this%vertcellflow(ipos,ttrhs,hgwf,hgwfml1,cvv)
     !end if
     !rvflux = rvflux + this%vflow
     !
     ! -- route unsaturated flow, calc. storage change and recharge
     test = this%watab(icell)
-    if (this%watabold - test < -DEM15) test = this%watabold(icell)
+    if (this%watabold(icell) - test < -DEM15) test = this%watabold(icell)
     if (this%celtop(icell) - test > DEM15) then
       if (issflag == 0) then
-        call this%routewaves(totfluxtot, delt, ietflag, ipos, ierr) 
+        call this%routewaves(totfluxtot, delt, ietflag, icell, ierr) 
         if (ierr > 0) return
         call this%uz_rise(icell, totfluxtot)
         this%totflux(icell) = totfluxtot  
@@ -808,7 +808,7 @@ module UzfCellGroupModule
     end if
     rfinf = rfinf + this%sinf(icell) * this%uzfarea(icell)
     rin = rin + this%surflux(icell) * this%uzfarea(icell) - &
-      this%surfluxbelow(icell) * this%uzfarea
+      this%surfluxbelow(icell) * this%uzfarea(icell)
     !
     ! -- add spring flow and rejected infiltration to mover
     qformvr = this%finf_rej(icell) * this%uzfarea(icell)
@@ -821,8 +821,8 @@ module UzfCellGroupModule
         if (this%celtop(icell) - obs_depth(j) > this%watab(icell)) then
           d1 = obs_depth(j) - DEM3
           d2 = obs_depth(j) + DEM3
-          f1 = unsat_stor(this, d1)
-          f2 = unsat_stor(this, d2)
+          f1 = this%unsat_stor(icell, d1)
+          f2 = this%unsat_stor(icell, d2)
           obs_theta(j) = this%thtr(icell) + (f2 - f1) / (d2 - d1)
         else 
           obs_theta(j) = this%thts(icell)
@@ -836,7 +836,7 @@ module UzfCellGroupModule
     sumaet = sumaet + this%etact(icell)
     if (this%ivertcon(icell) > 0) then
       if (ietflag > 0) then
-        call this%setbelowpet(jbelow, sumaet)
+        call this%setbelowpet(icell, jbelow, sumaet)
       end if
     end if
     !
@@ -855,7 +855,7 @@ module UzfCellGroupModule
     ! -- modules
     ! -- dummy
     class(UzfCellGroupType) :: this
-    integer(I4B), intent(in) :: ipos
+    integer(I4B), intent(in) :: icell
     real(DP), intent(in) :: hgwf
     real(DP), intent(in) :: hgwfml1
     real(DP), intent(in) :: cvv
@@ -869,7 +869,7 @@ module UzfCellGroupModule
     h1 = hgwfml1
     h2 = hgwf
     test = this%watab(icell)
-    if (this%watabold(icell) - test < -DEM30 ) test = this%watabold(icell)
+    if (this%watabold(icell) - test < -DEM30) test = this%watabold(icell)
     if (this%celtop(icell) - test > DEM30) then
       !
       ! calc. downward flow using GWF heads and conductance
@@ -924,7 +924,7 @@ module UzfCellGroupModule
     ! -- smoothly reduce flow between cells when head close to cell top 
     x = hgwf - (this%celbot(icell) - range)  
     call sSCurve(x, range, deriv, scale)
-    deriv = this%uzfarea(icell) * deriv * this%totflux / delt
+    deriv = this%uzfarea(icell) * deriv * this%totflux(icell) / delt
     this%finf(jbelow) = (DONE - scale) * this%totflux(icell) / delt 
     fcheck = this%finf(jbelow) - this%vks(jbelow)
     !
@@ -1034,7 +1034,7 @@ module UzfCellGroupModule
     ! -- dummy
     class(UzfCellGroupType) :: this
     integer(I4B), intent(in) :: igwetflag
-    integer(I4B), intent(in) :: ipos
+    integer(I4B), intent(in) :: icell
     real(DP), intent(in) :: hgwf
     real(DP), intent(inout) :: trhs
     real(DP), intent(inout) :: thcof
@@ -1116,7 +1116,7 @@ module UzfCellGroupModule
     !
     ! -- calculate rate
     depth = hgwf - (s - x)
-    thick = this%celtop-this%celbot
+    thick = celtop - celbot
     if (depth > thick) depth = thick
     if (depth < dzero) depth = dzero
     range = DEM4 * x
@@ -1156,7 +1156,7 @@ module UzfCellGroupModule
     trhs = DZERO
     thcof = DZERO
     depth = hgwf - (s - x)
-    if ( depth < DZERO ) depth = DZERO
+    if (depth < DZERO) depth = DZERO
     etgw = c
     range = DEM3 * x
     call sCubic(depth, range, det, scale)
@@ -1187,9 +1187,9 @@ module UzfCellGroupModule
     ! -- additional recharge from a rising water table
     if (this%watab(icell) - this%watabold(icell) > DEM30) then
       d1 = this%celtop(icell) - this%watabold(icell)
-      fm1 = this%unsat_stor(d1)
+      fm1 = this%unsat_stor(icell, d1)
       d1 = this%celtop(icell) - this%watab(icell)
-      fm2 = this%unsat_stor(d1)
+      fm2 = this%unsat_stor(icell, d1)
       totfluxtot = totfluxtot + (fm1 - fm2)
     end if
     !
@@ -1207,7 +1207,7 @@ module UzfCellGroupModule
     ! -- dummy
     class(UzfCellGroupType) :: this
     ! -- local
-    integer(I4B), intent(in) :: ipos
+    integer(I4B), intent(in) :: icell
     real(DP) :: bottom, top
     integer(I4B) :: jk
     real(DP) :: thick
@@ -1307,7 +1307,7 @@ module UzfCellGroupModule
     !
     ! -- set residual pet after uz et    
     this%gwpet(icell) = this%pet(icell) - this%etact(icell) / delt
-    if (this%gwpet(icell) < DZERO ) this%gwpet(icell) = DZERO
+    if (this%gwpet(icell) < DZERO) this%gwpet(icell) = DZERO
     !
     ! -- return
     return
@@ -1340,7 +1340,7 @@ module UzfCellGroupModule
       this%uzflst(j, icell) = this2%uzflst(j + shft, icell2)
       this%uzspst(j, icell) = this2%uzspst(j + shft, icell2)
     end do
-    this1%nwavst = this2%nwavst
+    this%nwavst(icell) = this2%nwavst(icell2)
     !
     ! -- return
     return
@@ -1369,19 +1369,19 @@ module UzfCellGroupModule
     time = DZERO
     this%totflux(icell) = DZERO      
     itrailflg = 0
-    oldsflx = this%uzflst(this%nwavst, icell)
+    oldsflx = this%uzflst(this%nwavst(icell), icell)
     call factors(feps1, feps2)
     !
     ! -- check for falling or rising water table
     if ((thick - thickold) > feps1) then
       thetadif = abs(this%uzthst(1, icell) - this%thtr(icell))
       if (thetadif > DEM6) then
-        call this%wave_shift(this, icell, icell, -1, this%nwavst + 1, 2, -1)
-        if ( this%uzdpst(2, icell) < DEM30) &
-          this%uzdpst(2, icell) = (this%ntrail + DTWO) * DEM6
+        call this%wave_shift(this, icell, icell, -1, this%nwavst(icell) + 1, 2, -1)
+        if (this%uzdpst(2, icell) < DEM30) &
+          this%uzdpst(2, icell) = (this%ntrail(icell) + DTWO) * DEM6
         if (this%uzthst(2, icell) > this%thtr(icell)) then
           this%uzspst(2, icell) = this%uzflst(2, icell) / &
-            (this%uzthst(2, icell) - this%thtr)
+            (this%uzthst(2, icell) - this%thtr(icell))
         else
           this%uzspst(2, icell) = DZERO
         end if
@@ -1424,7 +1424,7 @@ module UzfCellGroupModule
         itrailflg = 1
       end if
       call this%leadwav(time, itester, itrailflg, thetab, fluxb, ffcheck,      &
-                        feps2, delt, ipos)
+                        feps2, delt, icell)
     end if
     if (itester == 1) then
       this%totflux(icell) = this%totflux(icell) + &
@@ -1434,7 +1434,7 @@ module UzfCellGroupModule
     end if
     !
     ! -- simulate et
-    if (ietflag > 0) call this%uzet(delt, ietflag, ierr)
+    if (ietflag > 0) call this%uzet(icell, delt, ietflag, ierr)
     if (ierr > 0) return
     !
     ! -- return
@@ -1450,7 +1450,6 @@ module UzfCellGroupModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class (UzfCellGroupType) :: this
     real(DP), intent(out) :: feps1
     real(DP), intent(out) :: feps2
     real(DP) :: factor1
@@ -1502,7 +1501,7 @@ module UzfCellGroupModule
     ! -- initialize
     eps_m1 = dble(this%eps(icell)) - DONE
     thtsrinv = DONE / (this%thts(icell) - this%thtr(icell))
-    nwavstm1 = this%nwavst - 1
+    nwavstm1 = this%nwavst(icell) - 1
     !
     ! -- initialize trailwaves
     smoist = (((this%surflux(icell) / this%vks(icell)) ** &
@@ -1538,9 +1537,9 @@ module UzfCellGroupModule
         flux2 = this%uzflst(j - 1, icell)
         flux1 = this%uzflst(j, icell)
         theta1 = this%uzthst(j, icell)
-        this%uzspst(j, icell) = this%leadspeed(theta1, theta2, flux1, &
+        this%uzspst(j, icell) = leadspeed(theta1, theta2, flux1, &
           flux2, this%thts(icell), this%thtr(icell), this%eps(icell), &
-          this%vks(icell)
+          this%vks(icell))
         this%uzdpst(j, icell) = DZERO
         if (j == this%nwavst(icell)) then
           this%uzdpst(j, icell) = this%uzdpst(j, icell) + (this%ntrail(icell) + 1) * DEM9
@@ -1560,13 +1559,13 @@ module UzfCellGroupModule
         (((this%uzthst(this%nwavst, icell) - this%thtr(icell)) * &
         thtsrinv) ** this%eps(icell))
       this%uzthst(this%nwavst, icell) = smoist
-      theta2 = this%uzthst(this%nwavst - 1, icell)
-      flux2 = this%uzflst(this%nwavst - 1, icell)
-      flux1 = this%uzflst(this%nwavst, icell)
-      theta1 = this%uzthst(this%nwavst, icell)
-      this%uzspst(this%nwavst, icell) = this%leadspeed(theta1, theta2, flux1, &
+      theta2 = this%uzthst(this%nwavst(icell) - 1, icell)
+      flux2 = this%uzflst(this%nwavst(icell) - 1, icell)
+      flux1 = this%uzflst(this%nwavst(icell), icell)
+      theta1 = this%uzthst(this%nwavst(icell), icell)
+      this%uzspst(this%nwavst(icell), icell) = leadspeed(theta1, theta2, flux1, &
             flux2, this%thts(icell), this%thtr(icell), this%eps(icell), &
-            this%vks(icell)
+            this%vks(icell))
     end if
     !
     ! -- return
@@ -1603,7 +1602,7 @@ module UzfCellGroupModule
     integer(I4B) :: nwavp1, jshort
     integer(I4B), allocatable, dimension(:) :: more
 ! ------------------------------------------------------------------------------
-    allocate(checktime(this%nwavst(icell))
+    allocate(checktime(this%nwavst(icell)))
     allocate(more(this%nwavst(icell)))
     ftest = DZERO
     eps_m1 = dble(this%eps(icell)) - DONE
@@ -1613,19 +1612,19 @@ module UzfCellGroupModule
     if (itrailflg == 0) then
       if (ffcheck > feps2) then
         this%uzflst(this%nwavst, icell) = this%surflux(icell)
-        if (this%uzflst(this%nwavst, icell) < DEM30) &
-             this%uzflst(this%nwavst, icell) = DZERO
-        this%uzthst(this%nwavst, icell) = &
-                   (((this%uzflst(this%nwavst, icell) / this%vks(icell)) **  &
-                   (DONE / this%eps(icell))) * (this%thts(icell) - this%thtr))     &
+        if (this%uzflst(this%nwavst(icell), icell) < DEM30) &
+             this%uzflst(this%nwavst(icell), icell) = DZERO
+        this%uzthst(this%nwavst(icell), icell) = &
+                   (((this%uzflst(this%nwavst(icell), icell) / this%vks(icell)) **  &
+                   (DONE / this%eps(icell))) * (this%thts(icell) - this%thtr(icell)))     &
                     + this%thtr(icell)
         theta2 = this%uzthst(this%nwavst(icell), icell)
         flux2 = this%uzflst(this%nwavst(icell), icell)
         flux1 = this%uzflst(this%nwavst(icell) - 1, icell)
         theta1 = this%uzthst(this%nwavst(icell) - 1, icell)
-        this%uzspst(this%nwavst(icell), icell) = this%leadspeed(theta1, theta2, flux1, &
+        this%uzspst(this%nwavst(icell), icell) = leadspeed(theta1, theta2, flux1, &
             flux2, this%thts(icell), this%thtr(icell), this%eps(icell), &
-            this%vks(icell)  
+            this%vks(icell))
         this%uzdpst(this%nwavst(icell), icell) = DZERO
       end if
     end if
@@ -1663,7 +1662,7 @@ module UzfCellGroupModule
         ! - calc time until wave reaches bottom of cell
         bottomtime = DEP20
         if (this%nwavst(icell) > 1) then
-          if ( this%uzspst(2, icell) > DZERO) then
+          if (this%uzspst(2, icell) > DZERO) then
             bottom = this%uzspst(2, icell)
             if (bottom < DEM15) bottom = DEM15
             bottomtime = (this%uzdpst(1, icell) - this%uzdpst(2, icell)) / bottom
@@ -1720,7 +1719,7 @@ module UzfCellGroupModule
           ! -- combine waves that intercept, remove a wave
           j = 3
           l = j
-          do while (j < this%nwavstthis%uzspst(j, icell) + 1)          
+          do while (j < this%nwavst(icell) + 1)          
             if (more(j) == 1) then
               l = j
               theta2 = this%uzthst(j, icell)
@@ -1732,9 +1731,9 @@ module UzfCellGroupModule
                 flux1 = this%uzflst(j - 2, icell)
                 theta1 = this%uzthst(j - 2, icell)
               end if
-              this%uzspst(j, icell) = this%leadspeed(theta1, theta2, flux1, &
+              this%uzspst(j, icell) = leadspeed(theta1, theta2, flux1, &
                 flux2, this%thts(icell), this%thtr(icell), this%eps(icell), &
-                this%vks(icell)
+                this%vks(icell))
               !
               ! -- update waves
               call this%wave_shift(this, icell, icell, 1, l - 1, this%nwavst(icell) - 1, 1)
@@ -1778,7 +1777,7 @@ module UzfCellGroupModule
     return
   end subroutine leadwav
 
-  function leadspeed(this, theta1, theta2, flux1, flux2, thts, thtr, eps, vks)
+  function leadspeed(theta1, theta2, flux1, flux2, thts, thtr, eps, vks)
 ! ******************************************************************************
 ! leadspeed----calculates waves speed from dflux/dtheta
 ! ******************************************************************************
@@ -1802,8 +1801,7 @@ module UzfCellGroupModule
     real(DP) :: eps_m1, fhold, comp3
 ! ------------------------------------------------------------------------------
     !
-    ! -- todo: dble needed here?
-    eps_m1 = dble(this%eps) - DONE
+    eps_m1 = eps - DONE
     thsrinv = DONE / (thts - thtr)
     epsfksths = eps * vks * thsrinv
     comp1 = theta2 - theta1
@@ -1815,7 +1813,7 @@ module UzfCellGroupModule
       if (fhold < DEM30) fhold = DEM30
       leadspeed = epsfksths * (fhold ** eps_m1)
     else
-      leadspeed = (flux2 - flux1)/(theta2 - theta1) 
+      leadspeed = (flux2 - flux1) / (theta2 - theta1) 
     end if
     if (leadspeed < DEM30) leadspeed = DEM30
     !
@@ -1823,9 +1821,7 @@ module UzfCellGroupModule
     return
   end function leadspeed
 
-!CDL STOPPED HERE IN CONVERSION TO UZFCELLGROUP
-  
-  function unsat_stor(this, d1)
+  function unsat_stor(this, icell, d1)
 ! ******************************************************************************
 ! unsat_stor---- sums up mobile water over depth interval
 ! ******************************************************************************
@@ -1837,254 +1833,260 @@ module UzfCellGroupModule
     real(DP) :: unsat_stor
     ! -- dummy
     class (UzfCellGroupType) :: this
+    integer(I4B), intent(in) :: icell
     real(DP), intent(inout) :: d1
     ! -- local
     real(DP) :: fm
     integer(I4B) :: j, k, nwavm1, jj
 ! ------------------------------------------------------------------------------
     fm = DZERO
-    j = this%nwavst + 1
-    k = this%nwavst
-    nwavm1 = k-1
-    if ( d1 > this%uzdpst(1) ) d1 = this%uzdpst(1)
+    j = this%nwavst(icell) + 1
+    k = this%nwavst(icell)
+    nwavm1 = k - 1
+    if (d1 > this%uzdpst(1, icell)) d1 = this%uzdpst(1, icell)
     !
     ! -- find deepest wave above depth d1, counter held as j
     do while (k > 0)
-      if (this%uzdpst(k) - d1 < -DEM30) j = k
+      if (this%uzdpst(k, icell) - d1 < -DEM30) j = k
         k = k - 1
     end do
-    if (j > this%nwavst) then
-      fm = fm + (this%uzthst(this%nwavst) - this%thtr) * d1
-    elseif (this%nwavst > 1) then
+    if (j > this%nwavst(icell)) then
+      fm = fm + (this%uzthst(this%nwavst(icell), icell) - this%thtr(icell)) * d1
+    elseif (this%nwavst(icell) > 1) then
       if (j > 1) then
-        fm = fm + (this%uzthst(j - 1) - this%thtr)              &
-                   * (d1 - this%uzdpst(j))
+        fm = fm + (this%uzthst(j - 1, icell) - this%thtr(icell)) &
+                   * (d1 - this%uzdpst(j, icell))
       end if
       do jj = j, nwavm1
-        fm = fm + (this%uzthst(jj) - this%thtr)               &
-                   * (this%uzdpst(jj)                        &
-                    - this%uzdpst(jj + 1))
+        fm = fm + (this%uzthst(jj, icell) - this%thtr(icell)) &
+                   * (this%uzdpst(jj, icell) &
+                    - this%uzdpst(jj + 1, icell))
       end do
-      fm = fm + (this%uzthst(this%nwavst) - this%thtr)        &
-                  * (this%uzdpst(this%nwavst))
+      fm = fm + (this%uzthst(this%nwavst(icell), icell) - this%thtr(icell)) &
+                  * (this%uzdpst(this%nwavst(icell), icell))
     else
-      fm = fm + (this%uzthst(1) - this%thtr) * d1
+      fm = fm + (this%uzthst(1, icell) - this%thtr(icell)) * d1
     end if
     unsat_stor = fm
-    end function unsat_stor
-!
-! ----------------------------------------------------------------------
-    
-      subroutine update_wav(this,ipos,delt,rout,rsto,ret,etflg,iss,itest)
-!     ******************************************************************
-!     update_wav---- update to new state of uz at end of time step
-!     ******************************************************************
+  end function unsat_stor
+
+  subroutine update_wav(this, icell, delt, rout, rsto, ret, etflg, iss, itest)
+! ******************************************************************************
+! update_wav -- update to new state of uz at end of time step
+! ******************************************************************************
 !     SPECIFICATIONS:
-! ----------------------------------------------------------------------
-      !modules
-      !arguments
-      class (UzfCellGroupType) :: this
-      integer(I4B), intent(in) :: ipos,etflg,itest,iss
-      real(DP), intent(in) :: delt
-      real(DP), intent(inout) :: rout
-      real(DP), intent(inout) :: rsto
-      real(DP), intent(inout) :: ret
-      ! -- dummy
-      real(DP) :: uzstorhold,bot,fm,depthsave,top
-      real(DP) :: thick,thtsrinv
-      integer(I4B) :: nwavhld, k,j
-! ----------------------------------------------------------------------
 !
-      bot = this%watab
-      top = this%celtop
-      thick = top-bot
-      nwavhld = this%nwavst      
-      if ( itest == 1 ) then
-!        this%uzflst(1) = this%surflux   !rgn 5/25/17
-        this%uzflst(1) = DZERO
-        this%uzthst(1) = this%thtr
-        this%delstor = - this%uzstor
-        this%uzstor = DZERO
-        uzstorhold = DZERO
-        rout = rout + this%totflux*this%uzfarea/delt
-        return
-      end if
-      if ( iss == 1 ) then          
-        if ( this%thts-this%thtr < DEM7 ) then
-          thtsrinv = DONE/DEM7
-        else
-          thtsrinv = DONE/(this%thts-this%thtr) 
-        end if
-        this%totflux = this%surflux*delt
-        this%watabold = this%watab
-        this%uzthst(1) = this%thti
-        this%uzflst(1) = this%vks*(((this%uzthst(1)-this%thtr)          &
-                           *thtsrinv)**this%eps)
-        this%uzdpst(1) = thick
-        this%uzspst(1) = thick
-        this%nwavst = 1
-        this%uzstor = thick*(this%thti-this%thtr)*this%uzfarea
-        this%delstor = DZERO
-        rout = rout + this%totflux*this%uzfarea/delt
-      else
-        !
-        !water table rises through waves      
-        if ( this%watab - this%watabold > DEM30 ) then
-          depthsave = this%uzdpst(1)
-          j = 0
-          k = this%nwavst
-          do while ( k > 0 )
-            if ( this%uzdpst(k) - thick < -DEM30) j = k
-            k = k - 1
-          end do
-          this%uzdpst(1) = thick
-          if ( j > 1 ) then    
-            this%uzspst(1) = dzero
-            this%nwavst = this%nwavst - j + 2
-            this%uzthst(1) = this%uzthst(j-1)
-            this%uzflst(1) = this%uzflst(j-1)
-            if ( j > 2 ) call this%wave_shift(this,j-2,2,nwavhld-(j-2),1)      
-          elseif ( j == 0 ) then
-            this%uzspst(1) = dzero
-            this%uzthst(1) = this%uzthst(this%nwavst)
-            this%uzflst(1) = this%uzflst(this%nwavst) 
-            this%nwavst = 1
-          end if
-        end if    
-        !
-        !calculate new unsat. storage 
-        if ( thick > DZERO ) then
-          fm = this%unsat_stor(thick)
-          uzstorhold = this%uzstor
-          this%uzstor = fm*this%uzfarea
-          this%delstor = this%uzstor - uzstorhold
-        else
-          this%uzspst(1) = DZERO
-          this%nwavst = 1
-          this%uzthst(1) = this%thtr
-          this%uzflst(1) = DZERO
-          this%delstor = - this%uzstor
-          this%uzstor = DZERO
-          uzstorhold = DZERO
-        end if
-        this%watabold = this%watab
-        rout = rout + this%totflux*this%uzfarea/delt
-        rsto = rsto + this%delstor/delt
-        if ( etflg > 0 ) ret = ret + this%etact*this%uzfarea/delt
-      end if
-      end subroutine
-      
-      subroutine uzet(this,delt,ietflag,ierr)
-!     ******************************************************************
-!     uzet---- remove water from uz due to et
-!     ******************************************************************
-!     SPECIFICATIONS:
-! ----------------------------------------------------------------------
-      !modules
-      ! -- dummy
-      class (UzfCellGroupType) :: this
-      real(DP), intent(in) :: delt
-      integer(I4B), intent(in) :: ietflag
-      integer(I4B), intent(inout) :: ierr
-      ! -- local
-      type(UzfCellGroupType), pointer :: uzfktemp
-      real(DP) :: diff,thetaout,fm,st
-      real(DP) :: thtsrinv,epsfksthts,fmp
-      real(DP) :: fktho,theta1,theta2,flux1,flux2
-      real(DP) :: hcap,ha,factor,tho,depth
-      real(DP) :: extwc1,petsub
-      integer(I4B) :: i,j,jhold,jk,kj,kk,numadd,k,nwv,itest
-!     ------------------------------------------------------------------
-    this%etact = DZERO
-    if ( this%extdpuz < DEM7 ) return
-    petsub = this%rootact*this%pet*this%extdpuz/this%extdp
-    thetaout = delt*petsub/this%extdp
-    if ( ietflag==1 ) thetaout = delt*this%pet/this%extdp
-    if ( thetaout < DEM10 ) return
-    depth = this%uzdpst(1)
-    st = this%Unsat_stor(depth)
-    if ( st < DEM4 ) return
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class (UzfCellGroupType) :: this
+    integer(I4B), intent(in) :: icell
+    integer(I4B), intent(in) :: etflg
+    integer(I4B), intent(in) :: itest
+    integer(I4B), intent(in) :: iss
+    real(DP), intent(in) :: delt
+    real(DP), intent(inout) :: rout
+    real(DP), intent(inout) :: rsto
+    real(DP), intent(inout) :: ret
+    ! -- local
+    real(DP) :: uzstorhold, bot, fm, depthsave, top
+    real(DP) :: thick, thtsrinv
+    integer(I4B) :: nwavhld, k, j
+! ------------------------------------------------------------------------------
     !
-    !allocate temporary wave storage.      
-    allocate(uzfktemp)
-    allocate(uzfktemp%uzdpst(this%nwavst))
-    allocate(uzfktemp%uzthst(this%nwavst))
-    allocate(uzfktemp%uzflst(this%nwavst))
-    allocate(uzfktemp%uzspst(this%nwavst))
-    allocate(uzfktemp%nwavst)
-    ha = this%ha
-    nwv = this%nwavst
+    bot = this%watab(icell)
+    top = this%celtop(icell)
+    thick = top - bot
+    nwavhld = this%nwavst(icell)      
+    if (itest == 1) then
+      this%uzflst(1, icell) = DZERO
+      this%uzthst(1, icell) = this%thtr(icell)
+      this%delstor(icell) = - this%uzstor(icell)
+      this%uzstor(icell) = DZERO
+      uzstorhold = DZERO
+      rout = rout + this%totflux(icell) * this%uzfarea(icell) / delt
+      return
+    end if
+    if (iss == 1) then          
+      if (this%thts(icell) - this%thtr(icell) < DEM7) then
+        thtsrinv = DONE / DEM7
+      else
+        thtsrinv = DONE / (this%thts(icell) - this%thtr(icell)) 
+      end if
+      this%totflux(icell) = this%surflux(icell) * delt
+      this%watabold(icell) = this%watab(icell)
+      this%uzthst(1, icell) = this%thti(icell)
+      this%uzflst(1, icell) = this%vks(icell) * (((this%uzthst(1, icell) - this%thtr(icell)) &
+                         * thtsrinv) ** this%eps(icell))
+      this%uzdpst(1, icell) = thick
+      this%uzspst(1, icell) = thick
+      this%nwavst(icell) = 1
+      this%uzstor(icell) = thick * (this%thti(icell) - this%thtr(icell)) * this%uzfarea(icell)
+      this%delstor(icell) = DZERO
+      rout = rout + this%totflux(icell) * this%uzfarea(icell) / delt
+    else
+      !
+      ! -- water table rises through waves      
+      if (this%watab(icell) - this%watabold(icell) > DEM30) then
+        depthsave = this%uzdpst(1, icell)
+        j = 0
+        k = this%nwavst(icell)
+        do while (k > 0)
+          if (this%uzdpst(k, icell) - thick < -DEM30) j = k
+          k = k - 1
+        end do
+        this%uzdpst(1, icell) = thick
+        if (j > 1) then    
+          this%uzspst(1, icell) = DZERO
+          this%nwavst(icell) = this%nwavst(icell) - j + 2
+          this%uzthst(1, icell) = this%uzthst(j - 1, icell)
+          this%uzflst(1, icell) = this%uzflst(j - 1, icell)
+          if (j > 2) call this%wave_shift(this, icell, icell, j-2, 2, nwavhld - (j - 2), 1)      
+        elseif (j == 0) then
+          this%uzspst(1, icell) = DZERO
+          this%uzthst(1, icell) = this%uzthst(this%nwavst(icell), icell)
+          this%uzflst(1, icell) = this%uzflst(this%nwavst(icell), icell) 
+          this%nwavst(icell) = 1
+        end if
+      end if    
+      !
+      ! -- calculate new unsat. storage 
+      if (thick > DZERO) then
+        fm = this%unsat_stor(icell, thick)
+        uzstorhold = this%uzstor(icell)
+        this%uzstor(icell) = fm * this%uzfarea(icell)
+        this%delstor(icell) = this%uzstor(icell) - uzstorhold
+      else
+        this%uzspst(1, icell) = DZERO
+        this%nwavst(icell) = 1
+        this%uzthst(1, icell) = this%thtr(icell)
+        this%uzflst(1, icell) = DZERO
+        this%delstor(icell) = -this%uzstor(icell)
+        this%uzstor(icell) = DZERO
+        uzstorhold = DZERO
+      end if
+      this%watabold(icell) = this%watab(icell)
+      rout = rout + this%totflux(icell) * this%uzfarea(icell) / delt
+      rsto = rsto + this%delstor(icell) / delt
+      if (etflg > 0) ret = ret + this%etact(icell) * this%uzfarea(icell) / delt
+    end if
+  end subroutine update_wav
+      
+  !CDL STOPPED HERE IN CONVERSION TO UZFCELLGROUP
+    
+  subroutine uzet(this, icell, delt, ietflag, ierr)
+! ******************************************************************************
+!     uzet -- remove water from uz due to et
+! ******************************************************************************
+!     SPECIFICATIONS:
+!
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class (UzfCellGroupType) :: this
+    integer(I4B), intent(in) :: icell
+    real(DP), intent(in) :: delt
+    integer(I4B), intent(in) :: ietflag
+    integer(I4B), intent(inout) :: ierr
+    ! -- local
+    type(UzfCellGroupType) :: uzfktemp
+    real(DP) :: diff,thetaout,fm,st
+    real(DP) :: thtsrinv,epsfksthts,fmp
+    real(DP) :: fktho,theta1,theta2,flux1,flux2
+    real(DP) :: hcap,ha,factor,tho,depth
+    real(DP) :: extwc1,petsub
+    integer(I4B) :: i,j,jhold,jk,kj,kk,numadd,k,nwv,itest
+! ------------------------------------------------------------------------------
+    !
+    ! -- initialize
+    this%etact = DZERO
+    if (this%extdpuz(icell) < DEM7) return
+    petsub = this%rootact(icell) * this%pet(icell) * this%extdpuz(icell) / this%extdp(icell)
+    thetaout = delt * petsub / this%extdp(icell)
+    if (ietflag == 1) thetaout = delt * this%pet(icell) / this%extdp(icell)
+    if (thetaout < DEM10) return
+    depth = this%uzdpst(1, icell)
+    st = this%unsat_stor(icell, depth)
+    if (st < DEM4) return
+    !
+    ! -- allocate temporary wave storage.
+    ha = this%ha(icell)
+    nwv = this%nwavst(icell)
     itest = 0
+    call uzfktemp%init(1, nwv)
     !
     ! store original wave characteristics
-    call uzfktemp%wave_shift(this,0,1,Nwv,1)
+    call uzfktemp%wave_shift(this, 1, icell, 0, 1, nwv, 1)
     factor = DONE
     this%etact = DZERO
-    if ( this%thts-this%thtr < DEM7 ) then
-      thtsrinv = 1.0/DEM7
+    if (this%thts(icell) - this%thtr(icell) < DEM7) then
+      thtsrinv = 1.0 / DEM7
     else
-      thtsrinv = DONE/(this%thts-this%thtr) 
+      thtsrinv = DONE / (this%thts(icell) - this%thtr(icell)) 
     end if
-    epsfksthts = this%eps*this%vks*thtsrinv
-    this%Etact = DZERO
+    epsfksthts = this%eps(icell) * this%vks(icell) * thtsrinv
+    this%etact(icell) = DZERO
     fmp = DZERO
-    extwc1 = this%extwc - this%thtr
-    if ( extwc1 < DEM6 ) extwc1 = DEM7
+    extwc1 = this%extwc(icell) - this%thtr(icell)
+    if (extwc1 < DEM6) extwc1 = DEM7
     numadd = 0
     fm = st
     k = 0
-    !loop for reducing aet to pet when et is head dependent
-    do while ( itest == 0 )
+    !
+    ! -- loop for reducing aet to pet when et is head dependent
+    do while (itest == 0)
       k = k + 1
-      if ( k > 1 .AND. ABS(fmp-petsub) > DEM5*petsub) factor = factor/(fm/petsub)
+      if (k > 1 .AND. ABS(fmp - petsub) > DEM5 * petsub) factor = factor / (fm / petsub)
       !
-      !one wave shallower than extdp
-      if ( this%nwavst == 1 .AND. this%uzdpst(1) <= this%extdpuz ) then
-        if ( ietflag == 2 ) then
-          tho = this%uzthst(1)
-          fktho = this%uzflst(1)
-          hcap = this%caph(tho)
-          thetaout = this%rate_et_z(factor,fktho,hcap)
+      ! -- one wave shallower than extdp
+      if (this%nwavst(icell) == 1 .AND. this%uzdpst(1, icell) <= this%extdpuz(icell)) then
+        if (ietflag == 2) then
+          tho = this%uzthst(1, icell)
+          fktho = this%uzflst(1, icell)
+          hcap = this%caph(icell, tho)
+          thetaout = this%rate_et_z(icell, factor, fktho, hcap)
         end if 
-        if ( (this%uzthst(1)-thetaout) > this%thtr+extwc1 ) then
-          this%uzthst(1) = this%uzthst(1) - thetaout
-          this%uzflst(1) = this%vks*(((this%uzthst(1)-this%thtr)*thtsrinv)**this%eps)
-        else if ( this%uzthst(1) > this%thtr+extwc1 ) then
-          this%uzthst(1) = this%thtr + extwc1
-          this%uzflst(1) = this%vks*(((this%uzthst(1)-this%thtr)*thtsrinv)**this%eps)
+        if ((this%uzthst(1, icell) - thetaout) > this%thtr(icell) + extwc1) then
+          this%uzthst(1, icell) = this%uzthst(1, icell) - thetaout
+          this%uzflst(1, icell) = this%vks(icell) * (((this%uzthst(1, icell) - &
+            this%thtr(icell)) * thtsrinv) ** this%eps(icell))
+        else if (this%uzthst(1, icell) > this%thtr(icell) + extwc1) then
+          this%uzthst(1, icell) = this%thtr(icell) + extwc1
+          this%uzflst(1, icell) = this%vks(icell) * (((this%uzthst(1, icell) - &
+            this%thtr(icell)) * thtsrinv) ** this%eps(icell))
         end if
         !
-        !all waves shallower than extinction depth
-      else if ( this%nwavst > 1 .AND. this%uzdpst(this%nwavst) > this%extdpuz) then
-        if ( ietflag == 2 ) then
-          tho = this%uzthst(this%nwavst)
-          fktho = this%uzflst(this%nwavst)
-          hcap = this%caph(tho)
-          thetaout = this%rate_et_z(factor,fktho,hcap)
+        ! -- all waves shallower than extinction depth
+      else if (this%nwavst(icell) > 1 .AND. this%uzdpst(this%nwavst(icell), icell) > this%extdpuz(icell)) then
+        if (ietflag == 2) then
+          tho = this%uzthst(this%nwavst(icell), icell)
+          fktho = this%uzflst(this%nwavst(icell), icell)
+          hcap = this%caph(icell, tho)
+          thetaout = this%rate_et_z(icell, factor, fktho, hcap)
         end if 
-        if ( this%uzthst(this%nwavst)-thetaout > this%thtr+extwc1 ) then
-          this%uzthst(this%nwavst+1) = this%uzthst(this%nwavst) - thetaout
+        if (this%uzthst(this%nwavst(icell), icell) - thetaout > this%thtr(icell) + extwc1) then
+          this%uzthst(this%nwavst(icell) + 1, icell) = this%uzthst(this%nwavst(icell), icell) - thetaout
           numadd = 1
-        else if ( this%uzthst(this%nwavst) > this%thtr+extwc1 ) then
-          this%uzthst(this%nwavst+1) = this%thtr + extwc1
+        else if (this%uzthst(this%nwavst(icell), icell) > this%thtr(icell) + extwc1) then
+          this%uzthst(this%nwavst(icell) + 1, icell) = this%thtr(icell) + extwc1
           numadd = 1
         end if
-        if ( numadd == 1 ) then
-          this%uzflst(this%nwavst+1) = this%vks*                              &
-                              (((this%uzthst(this%nwavst+1)-                  &
-                              this%thtr)*thtsrinv)**this%eps)
-          theta2 = this%uzthst(this%nwavst+1)
-          flux2 = this%uzflst(this%nwavst+1)
-          flux1 = this%uzflst(this%nwavst)
-          theta1 = this%uzthst(this%nwavst)
-          this%uzspst(this%nwavst+1) = this%leadspeed(theta1, theta2, flux1, &
+        if (numadd == 1) then
+          this%uzflst(this%nwavst(icell) + 1, icell) = this%vks(icell) * &
+                              (((this%uzthst(this%nwavst(icell) + 1, icell) - &
+                              this%thtr(icell)) * thtsrinv) ** this%eps(icell))
+          theta2 = this%uzthst(this%nwavst(icell) + 1, icell)
+          flux2 = this%uzflst(this%nwavst(icell) + 1, icell)
+          flux1 = this%uzflst(this%nwavst(icell), icell)
+          theta1 = this%uzthst(this%nwavst(icell), icell)
+          this%uzspst(this%nwavst(icell) + 1, icell) = leadspeed(theta1, theta2, flux1, &
             flux2, this%thts(icell), this%thtr(icell), this%eps(icell), &
             this%vks(icell))  
-          this%uzdpst(this%nwavst+1) = this%extdpuz
-          this%nwavst = this%nwavst + 1
-          if ( this%nwavst > this%nwav ) then
+          this%uzdpst(this%nwavst(icell) + 1, icell) = this%extdpuz(icell)
+          this%nwavst(icell) = this%nwavst(icell) + 1
+          if (this%nwavst(icell) > this%nwav(icell)) then
           !
-          !too many waves error, deallocate temp arrays and return
+          ! -- too many waves error, deallocate temp arrays and return
             ierr = 1
             goto 500
           end if
@@ -2092,51 +2094,52 @@ module UzfCellGroupModule
           numadd = 0
         end if
       !
-      !one wave below extinction depth
-      else if ( this%nwavst == 1 ) then
-        if ( ietflag == 2 ) then
-          tho = this%uzthst(1)
-          fktho = this%uzflst(1)
-          hcap = this%caph(tho)
-          thetaout = this%rate_et_z(factor,fktho,hcap)
+      ! -- one wave below extinction depth
+      else if (this%nwavst(icell) == 1) then
+        if (ietflag == 2) then
+          tho = this%uzthst(1, icell)
+          fktho = this%uzflst(1, icell)
+          hcap = this%caph(icell, tho)
+          thetaout = this%rate_et_z(icell, factor, fktho, hcap)
         end if
-        if ( (this%uzthst(1)-thetaout) > this%thtr+extwc1 ) then
-          if ( thetaout > DEM30 ) then
-            this%uzthst(2) = this%uzthst(1) - thetaout
-            this%uzflst(2) = this%vks*(((this%uzthst(2)-this%thtr)*    &
-                               thtsrinv)**this%eps)
-            this%uzdpst(2) = this%extdpuz            
-            theta2 = this%uzthst(2)
-            flux2 = this%uzflst(2)
-            flux1 = this%uzflst(1)
-            theta1 = this%uzthst(1)
-            this%uzspst(2) = this%leadspeed(theta1, theta2, flux1, &
+        if ((this%uzthst(1, icell) - thetaout) > this%thtr(icell) + extwc1) then
+          if (thetaout > DEM30) then
+            this%uzthst(2, icell) = this%uzthst(1, icell) - thetaout
+            this%uzflst(2, icell) = this%vks(icell) * (((this%uzthst(2, icell) - this%thtr(icell)) *    &
+                               thtsrinv) ** this%eps(icell))
+            this%uzdpst(2, icell) = this%extdpuz(icell)
+            theta2 = this%uzthst(2, icell)
+            flux2 = this%uzflst(2, icell)
+            flux1 = this%uzflst(1, icell)
+            theta1 = this%uzthst(1, icell)
+            this%uzspst(2, icell) = leadspeed(theta1, theta2, flux1, &
               flux2, this%thts(icell), this%thtr(icell), this%eps(icell), &
-              this%vks(icell)               
-            this%nwavst = this%nwavst + 1
-            if ( this%nwavst > this%nwav ) then
+              this%vks(icell))           
+            this%nwavst(icell) = this%nwavst(icell) + 1
+            if (this%nwavst(icell) > this%nwav(icell)) then
               !
-              !too many waves error
+              ! -- too many waves error
               ierr = 1
               goto 500
             end if
           end if
-        else if ( this%uzthst(1) > this%thtr+extwc1 ) then
-          if ( thetaout > DEM30 ) then
-            this%uzthst(2) = this%thtr + extwc1
-            this%uzflst(2) = this%vks*(((this%uzthst(2)-                 &
-                             this%thtr)*thtsrinv)**this%eps)  
-            this%uzdpst(2) = this%extdpuz
-            theta2 = this%uzthst(2)
-            flux2 = this%uzflst(2)
-            flux1 = this%uzflst(1)
-            theta1 = this%uzthst(1)
-            this%uzspst(2) = this%leadspeed(theta1, theta2, flux1, &
+        else if (this%uzthst(1, icell) > this%thtr(icell) + extwc1) then
+          if (thetaout > DEM30) then
+            this%uzthst(2, icell) = this%thtr(icell) + extwc1
+            this%uzflst(2, icell) = this%vks(icell) * (((this%uzthst(2, icell) -                 &
+                             this%thtr(icell)) * thtsrinv) ** this%eps(icell))  
+            this%uzdpst(2, icell) = this%extdpuz(icell)
+            theta2 = this%uzthst(2, icell)
+            flux2 = this%uzflst(2, icell)
+            flux1 = this%uzflst(1, icell)
+            theta1 = this%uzthst(1, icell)
+            this%uzspst(2, icell) = leadspeed(theta1, theta2, flux1, &
               flux2, this%thts(icell), this%thtr(icell), this%eps(icell), &
-              this%vks(icell)                
-            this%nwavst = this%nwavst + 1
-            if ( this%nwavst > this%nwav ) then
-              !too many waves error
+              this%vks(icell))             
+            this%nwavst(icell) = this%nwavst(icell) + 1
+            if (this%nwavst(icell) > this%nwav(icell)) then
+              !
+              ! -- too many waves error
               ierr = 1
               goto 500
             end if
@@ -2144,43 +2147,43 @@ module UzfCellGroupModule
         end if
       else
         !
-        !extinction depth splits waves
-        if ( this%uzdpst(1)-this%extdpuz > DEM7 ) then
+        ! -- extinction depth splits waves
+        if (this%uzdpst(1, icell) - this%extdpuz(icell) > DEM7) then
           j = 2
           jk = 0
           !
-          !locate extinction depth between waves
-          do while ( jk == 0 )
-            diff = this%uzdpst(j) - this%extdpuz
-            if ( diff > dzero ) then
+          ! -- locate extinction depth between waves
+          do while (jk == 0)
+            diff = this%uzdpst(j, icell) - this%extdpuz(icell)
+            if (diff > dzero) then
               j = j + 1
             else
               jk = 1
             end if
           end do
           kk = j
-          if ( this%uzthst(j) > this%thtr+extwc1 ) then
+          if (this%uzthst(j, icell) > this%thtr(icell) + extwc1) then
             !
-            !create a wave at extinction depth
-            if ( abs(diff) > DEM5 ) then
-              call this%wave_shift(this,-1,this%nwavst+1,j,-1)
-              this%uzdpst(j) = this%extdpuz
-              this%nwavst = this%nwavst + 1
-              if ( this%nwavst > this%nwav ) then
+            ! -- create a wave at extinction depth
+            if (abs(diff) > DEM5) then
+              call this%wave_shift(this, icell, icell, -1, this%nwavst(icell) + 1, j, -1)
+              this%uzdpst(j, icell) = this%extdpuz(icell)
+              this%nwavst(icell) = this%nwavst(icell) + 1
+              if (this%nwavst(icell) > this%nwav(icell)) then
                 !
-                !too many waves error
+                ! -- too many waves error
                 ierr = 1
                 goto 500
               end if               
             end if
             kk = j
           else
-            jhold = this%nwavst
+            jhold = this%nwavst(icell)
             i = j + 1
-            do while ( i < this%nwavst )
-              if ( this%uzthst(i) > this%thtr+extwc1 ) then
+            do while (i < this%nwavst(icell))
+              if (this%uzthst(i, icell) > this%thtr(icell) + extwc1) then
                 jhold = i
-                i = this%nwavst + 1
+                i = this%nwavst(icell) + 1
               end if
               i = i + 1
             end do
@@ -2191,126 +2194,128 @@ module UzfCellGroupModule
           kk = 1
         end if
         !
-        !all waves above extinction depth
-        do while ( kk.LE.this%nwavst)
-          if ( ietflag==2 ) then
-            tho = this%uzthst(kk)
-            fktho = this%uzflst(kk)
-            hcap = this%caph(tho)
-            thetaout = this%rate_et_z(factor,fktho,hcap)
+        ! -- all waves above extinction depth
+        do while (kk <= this%nwavst(icell))
+          if (ietflag==2) then
+            tho = this%uzthst(kk, icell)
+            fktho = this%uzflst(kk, icell)
+            hcap = this%caph(icell, tho)
+            thetaout = this%rate_et_z(icell, factor, fktho, hcap)
           end if
-          if ( this%uzthst(kk) > this%thtr+extwc1 ) then
-            if ( this%uzthst(kk)-thetaout > this%thtr+extwc1 ) then
-              this%uzthst(kk) = this%uzthst(kk) - thetaout
-            else if ( this%uzthst(kk) > this%thtr+extwc1 ) then
-              this%uzthst(kk) = this%thtr + extwc1
+          if (this%uzthst(kk, icell) > this%thtr(icell) + extwc1) then
+            if (this%uzthst(kk, icell) - thetaout > this%thtr(icell) + extwc1) then
+              this%uzthst(kk, icell) = this%uzthst(kk, icell) - thetaout
+            else if (this%uzthst(kk, icell) > this%thtr(icell) + extwc1) then
+              this%uzthst(kk, icell) = this%thtr(icell) + extwc1
             end if
-            if ( kk.EQ.1 ) then
-              this%uzflst(kk) = this%vks*(((this%uzthst(kk)-this%thtr)*thtsrinv)**this%eps)
+            if (kk == 1) then
+              this%uzflst(kk, icell) = this%vks(icell) * (((this%uzthst(kk, icell) - &
+                this%thtr(icell)) * thtsrinv) ** this%eps(icell))
             end if
-            if ( kk > 1 ) then
-              flux1 = this%vks*((this%uzthst(kk-1)-this%thtr)*thtsrinv)**this%eps
-              flux2 = this%vks*((this%uzthst(kk)-this%thtr)*thtsrinv)**this%eps
-              this%uzflst(kk) = flux2
-              theta2 = this%uzthst(kk)
-              theta1 = this%uzthst(kk-1)
-              this%uzspst(kk) = this%leadspeed(theta1, theta2, flux1, &
+            if (kk > 1) then
+              flux1 = this%vks(icell) * ((this%uzthst(kk - 1, icell) - &
+                this%thtr(icell)) * thtsrinv) ** this%eps(icell)
+              flux2 = this%vks(icell) * ((this%uzthst(kk, icell) - this%thtr(icell)) * &
+                thtsrinv) ** this%eps(icell)
+              this%uzflst(kk, icell) = flux2
+              theta2 = this%uzthst(kk, icell)
+              theta1 = this%uzthst(kk - 1, icell)
+              this%uzspst(kk, icell) = leadspeed(theta1, theta2, flux1, &
                 flux2, this%thts(icell), this%thtr(icell), this%eps(icell), &
-                this%vks(icell)    
+                this%vks(icell))
             end if
           end if
           kk = kk + 1
         end do
       end if
       !
-      !calculate aet
+      ! -- calculate aet
       kj = 1
-      do while ( kj.LE.this%nwavst-1 )
-        if ( abs(this%uzthst(kj)-this%uzthst(kj+1)) < DEM6 ) then
-          call this%wave_shift(this,1,kj+1,this%nwavst-1,1)
+      do while (kj <= this%nwavst(icell) - 1)
+        if (abs(this%uzthst(kj, icell) - this%uzthst(kj + 1, icell)) < DEM6) then
+          call this%wave_shift(this, icell, icell, 1, kj + 1, this%nwavst(icell) - 1, 1)
           kj = kj - 1
-          this%nwavst = this%nwavst - 1
+          this%nwavst(icell) = this%nwavst(icell) - 1
         end if
         kj = kj + 1
       end do
-      depth = this%uzdpst(1)
-      fm = this%Unsat_stor(depth)
-      this%etact = st - fm
-      fm = this%Etact/delt
-      if ( this%Etact < dzero ) then
-        call this%wave_shift(uzfktemp,0,1,Nwv,1)
-        this%nwavst = Nwv
-        this%Etact = dzero
-      elseif ( petsub-fm < -DEM15 .AND. ietflag==2 ) then
-        ! aet greater than pet, reset and try again
-        call this%wave_shift(uzfktemp,0,1,Nwv,1)
-        this%nwavst = Nwv
-        this%Etact = dzero
+      depth = this%uzdpst(1, icell)
+      fm = this%unsat_stor(icell, depth)
+      this%etact(icell) = st - fm
+      fm = this%etact(icell) / delt
+      if (this%etact(icell) < dzero) then
+        call this%wave_shift(uzfktemp, icell, 1, 0, 1, nwv, 1)
+        this%nwavst(icell) = nwv
+        this%etact(icell) = DZERO
+      elseif (petsub - fm < -DEM15 .AND. ietflag == 2) then
+        !
+        ! -- aet greater than pet, reset and try again
+        call this%wave_shift(uzfktemp, icell, 1, 0, 1, nwv, 1)
+        this%nwavst(icell) = nwv
+        this%etact = DZERO
       else
         itest = 1
       end if
-      !end aet-pet loop for head dependent et
+      !
+      ! -- end aet-pet loop for head dependent et
       fmp = fm
-      if ( k > 100 ) then
+      if (k > 100) then
         itest = 1
-      elseif ( ietflag < 2 ) then
+      elseif (ietflag < 2) then
         fmp = petsub
         itest = 1
       end if
     end do
-500 deallocate(uzfktemp%uzdpst)
-    deallocate(uzfktemp%uzthst)
-    deallocate(uzfktemp%uzflst)
-    deallocate(uzfktemp%uzspst)
-    deallocate(uzfktemp%nwavst)
-    deallocate(uzfktemp)
+500 continue
     return
   end subroutine uzet
-!
-! ----------------------------------------------------------------------
 
-      function caph(this,tho)
-!     ******************************************************************
+  function caph(this, icell, tho)
+! ******************************************************************************
 !     caph---- calculate capillary pressure head from B-C equation
-!     ******************************************************************
+! ******************************************************************************
 !     SPECIFICATIONS:
-! ----------------------------------------------------------------------
-      !modules
-      class (UzfCellGroupType) :: this
-      real(DP), intent(in) :: tho
-      ! -- dummy
-      real(DP) :: caph,lambda,star
-! ----------------------------------------------------------------------
-      caph = -DEM6
-      star = (tho-this%thtr)/(this%thts-this%thtr) 
-      if ( star < DEM15 ) star = DEM15
-      lambda = DTWO/(this%eps-DTHREE)   
-      if ( star > DEM15 ) then
-        if ( tho-this%thts < DEM15 ) then
-          caph = this%ha*star**(-DONE/lambda)
-        else
-          caph = DZERO
-        end if
-      end if
-      end function caph
-      
-      function rate_et_z(this,factor,fktho,h)
-!     ******************************************************************
-!     rate_et_z---- capillary pressure based uz et
-!     ******************************************************************
-!     SPECIFICATIONS:
-! ----------------------------------------------------------------------
-      !modules
-      !arguments
-      class (UzfCellGroupType) :: this
-      real(DP), intent(in) :: factor,fktho,h
-      ! -- dummy
-      real(DP) :: rate_et_z
-! ----------------------------------------------------------------------
-      rate_et_z = factor*fktho*(h-this%hroot)
-      if ( rate_et_z < DZERO ) rate_et_z = DZERO
-      end function rate_et_z
 !
 ! ------------------------------------------------------------------------------
-! end of BndUzfKinematic object
+    ! -- modules
+    ! -- dummy
+    class (UzfCellGroupType) :: this
+    integer(I4B), intent(in) :: icell
+    real(DP), intent(in) :: tho
+    ! -- local
+    real(DP) :: caph,lambda,star
+! ------------------------------------------------------------------------------
+    caph = -DEM6
+    star = (tho - this%thtr(icell)) / (this%thts(icell) - this%thtr(icell)) 
+    if (star < DEM15) star = DEM15
+    lambda = DTWO / (this%eps(icell) - DTHREE)   
+    if (star > DEM15) then
+      if (tho - this%thts(icell) < DEM15) then
+        caph = this%ha(icell) * star ** (-DONE / lambda)
+      else
+        caph = DZERO
+      end if
+    end if
+  end function caph
+      
+  function rate_et_z(this, icell, factor, fktho, h)
+! ******************************************************************************
+!     rate_et_z---- capillary pressure based uz et
+! ******************************************************************************
+!     SPECIFICATIONS:
+!
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- return
+    real(DP) :: rate_et_z
+    ! -- dummy
+    class (UzfCellGroupType) :: this
+    integer(I4B), intent(in) :: icell
+    real(DP), intent(in) :: factor, fktho, h
+    ! -- local
+! ----------------------------------------------------------------------
+    rate_et_z = factor * fktho * (h - this%hroot(icell))
+    if (rate_et_z < DZERO) rate_et_z = DZERO
+  end function rate_et_z
+
 end module UzfCellGroupModule
