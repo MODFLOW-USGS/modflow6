@@ -1,6 +1,6 @@
 ! -- Uzf module
 module UzfModule
-!
+
   use KindModule, only: DP, I4B
   use ArrayHandlersModule, only: ExpandArray
   use ConstantsModule, only: DZERO, DEM6, DEM4, DEM2, DEM1, DHALF,              &
@@ -14,18 +14,17 @@ module UzfModule
                                  mem_deallocate
   use SparseModule, only: sparsematrix
   use BndModule, only: BndType
-  use UzfKinematicModule
-  use BudgetModule,   only: BudgetType
+  use UzfKinematicModule, only: UzfKinematicType
+  use BudgetModule, only: BudgetType
   use BaseDisModule, only: DisBaseType
-  use ObserveModule,        only: ObserveType
+  use ObserveModule, only: ObserveType
   use ObsModule, only: ObsType
   use InputOutputModule, only: URWORD, UWWORD
-  use SimModule,        only: count_errors, store_error, ustop, &
-                              store_error_unit
+  use SimModule, only: count_errors, store_error, ustop, store_error_unit
   use BlockParserModule, only: BlockParserType
 
   implicit none
-  !
+
   character(len=LENFTYPE)       :: ftype = 'UZF'
   character(len=LENPACKAGENAME) :: text  = '       UZF CELLS' 
 
@@ -48,28 +47,27 @@ module UzfModule
     type(UzfKinematicType), pointer                    :: uzfobjbelow => null()  !uzf kinematic object of underlying cell
     type(UzfKinematicType), dimension(:), pointer,                              &
                             contiguous                 :: elements    => null()  !array of all the kinematic uzf objects
-    character(len=72), pointer                         :: nameuzf     => null()  !cdl--(not sure.  Delete?)
     !
     ! -- pointer to gwf variables
-    integer(I4B), pointer                      :: gwfiss      => null()
+    integer(I4B), pointer                                  :: gwfiss      => null()
     real(DP), dimension(:), pointer, contiguous            :: gwftop      => null()
     real(DP), dimension(:), pointer, contiguous            :: gwfbot      => null()
     real(DP), dimension(:), pointer, contiguous            :: gwfarea     => null()
     real(DP), dimension(:), pointer, contiguous            :: gwfhcond    => null()
     !
     ! -- uzf data
-    integer(I4B), pointer                       :: ntrail       => null()
-    integer(I4B), pointer                       :: nsets        => null()
-    integer(I4B), pointer                       :: nwav         => null()
-    integer(I4B), pointer                       :: nodes        => null() !cdl--(this should probably be maxbound)
-    integer(I4B), pointer                       :: nper         => null()
-    integer(I4B), pointer                       :: nstp         => null()
-    integer(I4B), pointer                       :: readflag     => null()
-    integer(I4B), pointer                       :: outunitbud   => null()
-    integer(I4B), pointer                       :: ietflag      => null()
-    integer(I4B), pointer                       :: igwetflag    => null()
-    integer(I4B), pointer                       :: iseepflag    => null()
-    integer(I4B), pointer                       :: imaxcellcnt  => null()
+    integer(I4B), pointer                                   :: ntrail       => null()
+    integer(I4B), pointer                                   :: nsets        => null()
+    integer(I4B), pointer                                   :: nwav         => null()
+    integer(I4B), pointer                                   :: nodes        => null() !cdl--(this should probably be maxbound)
+    integer(I4B), pointer                                   :: nper         => null()
+    integer(I4B), pointer                                   :: nstp         => null()
+    integer(I4B), pointer                                   :: readflag     => null()
+    integer(I4B), pointer                                   :: outunitbud   => null()
+    integer(I4B), pointer                                   :: ietflag      => null()
+    integer(I4B), pointer                                   :: igwetflag    => null()
+    integer(I4B), pointer                                   :: iseepflag    => null()
+    integer(I4B), pointer                                   :: imaxcellcnt  => null()
     integer(I4B), dimension(:), pointer, contiguous         :: mfcellid     => null()
     real(DP), dimension(:), pointer, contiguous             :: appliedinf   => null()
     real(DP), dimension(:), pointer, contiguous             :: rejinf       => null()
@@ -85,7 +83,7 @@ module UzfModule
     real(DP), dimension(:), pointer, contiguous             :: rch          => null()
     real(DP), dimension(:), pointer, contiguous             :: rch0         => null()
     real(DP), dimension(:), pointer, contiguous             :: qsto         => null()
-    integer(I4B), pointer                       :: iuzf2uzf     => null()
+    integer(I4B), pointer                                   :: iuzf2uzf     => null()
     !
     ! -- integer vectors
     integer(I4B), dimension(:), pointer, contiguous :: ia => null()
@@ -103,7 +101,6 @@ module UzfModule
     !
     ! -- convergence check
     integer(I4B), pointer  :: iconvchk    => null()
-    !real(DP), pointer      :: pdmax    => null()
     !
     ! formulate variables
     real(DP), dimension(:), pointer, contiguous            :: deriv       => null()
