@@ -386,7 +386,6 @@ module UzfCellGroupModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    ! -- todo: change call to only jbelow; was also passing in a the underlying uzf object
     class(UzfCellGroupType) :: this
     integer(I4B), intent(in) :: icell
     integer(I4B), intent(in) :: jbelow
@@ -441,7 +440,6 @@ module UzfCellGroupModule
     ! -- modules
     ! -- dummy
     class(UzfCellGroupType) :: this
-    ! -- todo: change call to jbelow -> type(UzfCellGroupType) :: thisbelow
     integer(I4B), intent(in) :: icell
     integer(I4B), intent(in) :: jbelow
     real(DP), intent(in) :: aet
@@ -468,7 +466,6 @@ module UzfCellGroupModule
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(UzfCellGroupType) :: this
-    ! -- todo: remove dummy argument from call -> type(UzfCellGroupType) :: thisbelow
     integer(I4B), intent(in) :: icell
     integer(I4B), intent(in) :: jbelow
     real(DP), intent(in) :: extwc
@@ -662,7 +659,7 @@ module UzfCellGroupModule
     qformvr = this%surfseep(icell) + this%finf_rej(icell) * this%uzfarea(icell)
     !
     ! -- reset waves to previous state for next iteration  
-    call this%wave_shift(thiswork, icell, 1, 0, 1, thiswork%nwavst(icell), 1)  
+    call this%wave_shift(thiswork, icell, 1, 0, 1, thiswork%nwavst(1), 1)  
     !
     ! -- distribute PET to deeper cells
     sumaet = sumaet + this%etact(icell)
