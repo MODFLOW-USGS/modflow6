@@ -19,7 +19,7 @@ contains
   ! file 'mfsim.nam' in the working directory
   function initialize() result(bmi_status) bind(C, name="initialize")
   !DEC$ ATTRIBUTES DLLEXPORT :: initialize
-    integer :: bmi_status
+    integer(kind=c_int) :: bmi_status
       
     call mf6_initialize()
     bmi_status = BMI_SUCCESS
@@ -29,7 +29,7 @@ contains
   ! perform a time step
   function update() result(bmi_status) bind(C, name="update")
   !DEC$ ATTRIBUTES DLLEXPORT :: update
-    integer :: bmi_status
+    integer(kind=c_int) :: bmi_status
     ! local
     logical :: hasConverged
     
@@ -45,7 +45,7 @@ contains
   ! Perform teardown tasks for the model.
   function finalize() result(bmi_status) bind(C, name="finalize")
   !DEC$ ATTRIBUTES DLLEXPORT :: finalize
-    integer :: bmi_status
+    integer(kind=c_int) :: bmi_status
     
     call mf6_finalize()
     bmi_status = BMI_SUCCESS
@@ -56,7 +56,7 @@ contains
   function get_start_time(time) result(bmi_status) bind(C, name="get_start_time")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_start_time
     double precision, intent(out) :: time
-    integer :: bmi_status
+    integer(kind=c_int) :: bmi_status
     
     time = 0.0_DP
     bmi_status = BMI_SUCCESS
@@ -68,7 +68,7 @@ contains
   !DEC$ ATTRIBUTES DLLEXPORT :: get_end_time
     use TdisModule, only: totalsimtime
     double precision, intent(out) :: time
-    integer :: bmi_status
+    integer(kind=c_int) :: bmi_status
     
     time = totalsimtime
     bmi_status = BMI_SUCCESS
@@ -80,7 +80,7 @@ contains
   !DEC$ ATTRIBUTES DLLEXPORT :: get_current_time
     use TdisModule, only: totim
     double precision, intent(out) :: time
-    integer :: bmi_status
+    integer(kind=c_int) :: bmi_status
     
     time = totim
     bmi_status = BMI_SUCCESS    
@@ -93,7 +93,7 @@ contains
     use MemoryManagerModule, only: get_var_size
     character (kind=c_char), intent(in) :: c_var_name(*)
     integer, intent(out) :: var_size
-    integer :: bmi_status
+    integer(kind=c_int) :: bmi_status
     ! local
     integer(I4B) :: idx
     character(len=LENORIGIN) :: origin, var_name
@@ -117,7 +117,7 @@ contains
     use MemoryManagerModule, only: get_var_size, get_isize
     character (kind=c_char), intent(in) :: c_var_name(*)
     integer, intent(out) :: var_nbytes
-    integer :: bmi_status
+    integer(kind=c_int) :: bmi_status
     ! local
     integer :: var_size, isize, idx
     character(len=LENORIGIN) :: origin, var_name
@@ -146,7 +146,7 @@ contains
     use MemoryManagerModule, only: setptr_dbl1d
     character (kind=c_char), intent(in) :: c_var_name(*)    
     type(c_ptr), intent(inout) :: x
-    integer :: bmi_status
+    integer(kind=c_int) :: bmi_status
     ! local
     integer :: idx, i
     character(len=LENORIGIN) :: origin, var_name
@@ -171,7 +171,7 @@ contains
   !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_type
     integer(kind=c_int), intent(in) :: grid_id
     character(kind=c_char), intent(out) :: grid_type(MAXSTRLEN)
-    integer :: bmi_status
+    integer(kind=c_int) :: bmi_status
     ! local
     character(len=MAXSTRLEN) :: name
     
@@ -185,7 +185,7 @@ contains
   !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_rank
     integer(kind=c_int), intent(in) :: grid_id
     integer(kind=c_int), intent(out) :: grid_rank
-    integer :: bmi_status
+    integer(kind=c_int) :: bmi_status
     
     grid_rank = 2
     bmi_status = BMI_SUCCESS
@@ -196,7 +196,7 @@ contains
   !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_size
     integer(kind=c_int), intent(in) :: grid_id
     integer(kind=c_int), intent(out) :: grid_size
-    integer :: bmi_status
+    integer(kind=c_int) :: bmi_status
     
     grid_size = 100
     bmi_status = BMI_SUCCESS
@@ -207,7 +207,7 @@ contains
   !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_shape
     integer(kind=c_int), intent(in) :: grid_id
     type(c_ptr), intent(out) :: grid_shape
-    integer :: bmi_status
+    integer(kind=c_int) :: bmi_status
     ! local
     integer, dimension(:), pointer, contiguous :: array_ptr
     integer, dimension(2), target :: array = [10, 10]
@@ -217,27 +217,36 @@ contains
     bmi_status = BMI_SUCCESS
   end function get_grid_shape
   
+   ! Provides an array (whose length is the number of rows) that gives the y-coordinate for each row.
+  function get_grid_x(grid_id, grid_x) result(bmi_status) bind(C, name="get_grid_x")
+  !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_x
+    integer(kind=c_int), intent(in) :: grid_id
+    type(c_ptr), intent(out) :: grid_x
+    integer(kind=c_int) :: bmi_status
+    ! local
+    integer, dimension(:), pointer, contiguous :: array_ptr
+    integer, dimension(10), target :: array = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    
+    array_ptr => array
+    grid_x = c_loc(array_ptr)
+    bmi_status = BMI_SUCCESS
+  end function get_grid_x
+  
   ! Provides an array (whose length is the number of rows) that gives the y-coordinate for each row.
   function get_grid_y(grid_id, grid_y) result(bmi_status) bind(C, name="get_grid_y")
-  !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_shape
-    integer, intent(in) :: grid_id
-    integer, dimension(:), intent(out) :: grid_y
-    integer :: bmi_status
+  !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_y
+    integer(kind=c_int), intent(in) :: grid_id
+    type(c_ptr), intent(out) :: grid_y
+    integer(kind=c_int) :: bmi_status
+    ! local
+    integer, dimension(:), pointer, contiguous :: array_ptr
+    integer, dimension(10), target :: array = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
     
-    grid_y = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
+    array_ptr => array
+    grid_y = c_loc(array_ptr)
     bmi_status = BMI_SUCCESS
   end function get_grid_y
   
-  ! Provides an array (whose length is the number of rows) that gives the y-coordinate for each row.
-  function get_grid_x(grid_id, grid_x) result(bmi_status) bind(C, name="get_grid_x")
-  !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_shape
-    integer, intent(in) :: grid_id
-    integer, dimension(:), intent(out) :: grid_x
-    integer :: bmi_status
-    
-    grid_x = [1, 2, 3, 4, 5, 6, 7, 8, 9]
-    bmi_status = BMI_SUCCESS
-  end function get_grid_x
   
 
   ! Get a copy of values (flattened!) of the given double variable.
