@@ -169,7 +169,7 @@ contains
   ! Get the grid type as a string.
   function get_grid_type(grid_id, grid_type) result(bmi_status) bind(C, name="get_grid_type")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_type
-    integer, intent(in) :: grid_id
+    integer(kind=c_int), intent(in) :: grid_id
     character(kind=c_char), intent(out) :: grid_type(MAXSTRLEN)
     integer :: bmi_status
     ! local
@@ -183,8 +183,8 @@ contains
   ! Get number of dimensions of the computational grid.
   function get_grid_rank(grid_id, grid_rank) result(bmi_status) bind(C, name="get_grid_rank")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_rank
-    integer, intent(in) :: grid_id
-    integer, intent(out) :: grid_rank
+    integer(kind=c_int), intent(in) :: grid_id
+    integer(kind=c_int), intent(out) :: grid_rank
     integer :: bmi_status
     
     grid_rank = 2
@@ -194,8 +194,8 @@ contains
   ! Get the total number of elements in the computational grid.
   function get_grid_size(grid_id, grid_size) result(bmi_status) bind(C, name="get_grid_size")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_size
-    integer, intent(in) :: grid_id
-    integer, intent(out) :: grid_size
+    integer(kind=c_int), intent(in) :: grid_id
+    integer(kind=c_int), intent(out) :: grid_size
     integer :: bmi_status
     
     grid_size = 100
@@ -205,11 +205,15 @@ contains
   ! Get the dimensions of the computational grid.
   function get_grid_shape(grid_id, grid_shape) result(bmi_status) bind(C, name="get_grid_shape")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_shape
-    integer, intent(in) :: grid_id
-    integer, dimension(:), intent(out) :: grid_shape
+    integer(kind=c_int), intent(in) :: grid_id
+    type(c_ptr), intent(out) :: grid_shape
     integer :: bmi_status
+    ! local
+    integer, dimension(:), pointer, contiguous :: array_ptr
+    integer, dimension(2), target :: array = [10, 10]
     
-    grid_shape = [10, 10]
+    array_ptr => array
+    grid_shape = c_loc(array_ptr)
     bmi_status = BMI_SUCCESS
   end function get_grid_shape
   
