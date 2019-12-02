@@ -198,7 +198,7 @@ contains
     integer(kind=c_int), intent(out) :: grid_size
     integer(kind=c_int) :: bmi_status
     
-    grid_size = 100
+    grid_size = 75 * 75
     bmi_status = BMI_SUCCESS
   end function get_grid_size
   
@@ -210,7 +210,7 @@ contains
     integer(kind=c_int) :: bmi_status
     ! local
     integer, dimension(:), pointer, contiguous :: array_ptr
-    integer, dimension(2), target :: array = [10, 10]
+    integer, dimension(2), target :: array = [75, 75]
     
     array_ptr => array
     grid_shape = c_loc(array_ptr)
@@ -224,8 +224,9 @@ contains
     type(c_ptr), intent(out) :: grid_x
     integer(kind=c_int) :: bmi_status
     ! local
-    integer, dimension(:), pointer, contiguous :: array_ptr
-    integer, dimension(10), target :: array = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    integer :: i
+    real(DP), dimension(:), pointer, contiguous :: array_ptr
+    real(DP), dimension(75), target :: array = [ (264.53 * (i-1), i=1,75) ]
     
     array_ptr => array
     grid_x = c_loc(array_ptr)
@@ -239,8 +240,9 @@ contains
     type(c_ptr), intent(out) :: grid_y
     integer(kind=c_int) :: bmi_status
     ! local
-    integer, dimension(:), pointer, contiguous :: array_ptr
-    integer, dimension(10), target :: array = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
+    integer :: i
+    real(DP), dimension(:), pointer, contiguous :: array_ptr
+    real(DP), dimension(75), target :: array = [  (264.53 * (i-1), i=75,1,-1) ]
     
     array_ptr => array
     grid_y = c_loc(array_ptr)
