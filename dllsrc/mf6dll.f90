@@ -3,7 +3,7 @@ module mf6dll
   use bmif
   use iso_c_binding, only: c_int, c_char, c_double, C_NULL_CHAR, c_loc, c_ptr
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: LENORIGIN, LENVARNAME
+  use ConstantsModule, only: LENORIGIN, LENVARNAME, LENMODELNAME
   implicit none
   
   
@@ -166,7 +166,62 @@ contains
     
   end function get_value_ptr_double
   
+  function get_value_ptr_int(c_var_name, x) result(bmi_status) bind(C, name="get_value_ptr_int")
+  !DEC$ ATTRIBUTES DLLEXPORT :: get_value_ptr_int
+    use MemoryManagerModule, only: setptr_int1d
+    character (kind=c_char), intent(in) :: c_var_name(*)    
+    type(c_ptr), intent(inout) :: x
+    integer(kind=c_int) :: bmi_status
+    ! local
+    integer :: idx, i
+    character(len=LENORIGIN) :: origin, var_name
+    character(len=LENVARNAME) :: var_name_only
+    integer(I4B), dimension(:), pointer, contiguous :: adbl
+    
+    var_name = char_array_to_string(c_var_name, strlen(c_var_name))
+    
+    idx = index(var_name, '/', back=.true.)
+    origin = var_name(:idx-1)
+    var_name_only = var_name(idx+1:)
+    call setptr_int1d(adbl, var_name_only, origin)
+    
+    ! set the C pointer to the internal array
+    x = c_loc(adbl)
+    
+  end function get_value_ptr_int
+  
+  ! Get the grid identifier for the given variable.
+  function get_var_grid(c_var_name, var_grid) result(bmi_status) bind(C, name="get_var_grid")
+  !DEC$ ATTRIBUTES DLLEXPORT :: get_var_grid
+    use ListsModule, only: basemodellist
+    use BaseModelModule, only: BaseModelType, GetBaseModelFromList
+    character (kind=c_char), intent(in) :: c_var_name(*) 
+    integer(kind=c_int), intent(out) :: var_grid
+    integer(kind=c_int) :: bmi_status
+    ! local
+    character(len=LENMODELNAME) :: model_name
+    character(len=LENORIGIN) :: var_name
+    integer :: i
+    class(BaseModelType), pointer :: baseModel
+    
+    var_name = char_array_to_string(c_var_name, strlen(c_var_name))    
+    model_name = get_model_name(var_name)
+    
+    var_grid = 0
+    do i = 1,basemodellist%Count()
+      baseModel => GetBaseModelFromList(basemodellist, i)
+      if (baseModel%name == model_name) then
+        var_grid = baseModel%id
+        bmi_status = BMI_SUCCESS
+        return
+      end if
+    end do
+    
+    bmi_status = BMI_FAILURE
+  end function get_var_grid
+  
   ! Get the grid type as a string.
+  ! TODO_JH: What is the most robust way to determine this?
   function get_grid_type(grid_id, grid_type) result(bmi_status) bind(C, name="get_grid_type")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_type
     integer(kind=c_int), intent(in) :: grid_id
@@ -181,15 +236,24 @@ contains
   end function get_grid_type
   
   ! Get number of dimensions of the computational grid.
+  ! TODO_JH: How to do this?
   function get_grid_rank(grid_id, grid_rank) result(bmi_status) bind(C, name="get_grid_rank")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_rank
+    use ListsModule, only: basemodellist
+    use BaseModelModule, only: BaseModelType, GetBaseModelFromList
     integer(kind=c_int), intent(in) :: grid_id
     integer(kind=c_int), intent(out) :: grid_rank
     integer(kind=c_int) :: bmi_status
+    ! local
+    integer :: i
+    class(BaseModelType), pointer :: baseModel
+    
+    baseModel => GetBaseModelFromList(basemodellist, i)
     
     grid_rank = 2
     bmi_status = BMI_SUCCESS
   end function get_grid_rank
+
   
   ! Get the total number of elements in the computational grid.
   function get_grid_size(grid_id, grid_size) result(bmi_status) bind(C, name="get_grid_size")
@@ -307,5 +371,13 @@ contains
    enddo
    string_to_char_array(length+1) = C_NULL_CHAR
   end function string_to_char_array
+  
+  pure function get_model_name(var_name)
+    character(len=*), intent(in) :: var_name
+    character(len=LENMODELNAME) :: get_model_name
+    integer :: idx
+    idx = index(var_name, ' ')
+    get_model_name = var_name(:idx-1)
+  end function get_model_name
 
 end module mf6dll
