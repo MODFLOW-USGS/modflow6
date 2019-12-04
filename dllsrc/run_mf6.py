@@ -51,11 +51,11 @@ while ct.value < et.value:
     print(k11array)
     mf6.get_value_ptr_double(k33name, byref(k33))
     k33array = k33.contents
-    print(k33array)
+    # print(k33array)
 
     # get data copied into our own array
     mf6.get_value_double(k11name, localArray, byref(c_int(nsize)))
-    print(localArray)
+    # print(localArray)
 
     # update time
     mf6.get_current_time(byref(ct))

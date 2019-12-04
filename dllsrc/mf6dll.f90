@@ -38,6 +38,7 @@ contains
     integer :: bmi_status
     
     call mf6_finalize()
+    bmi_status = BMI_SUCCESS
     
   end function finalize
   
