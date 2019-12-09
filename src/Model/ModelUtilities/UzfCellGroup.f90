@@ -1608,7 +1608,7 @@ module UzfCellGroupModule
     ! -- initialize new wave
     if (itrailflg == 0) then
       if (ffcheck > feps2) then
-        this%uzflst(this%nwavst, icell) = this%surflux(icell)
+        this%uzflst(this%nwavst(icell), icell) = this%surflux(icell)
         if (this%uzflst(this%nwavst(icell), icell) < DEM30) &
              this%uzflst(this%nwavst(icell), icell) = DZERO
         this%uzthst(this%nwavst(icell), icell) = &
