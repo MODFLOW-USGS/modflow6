@@ -231,7 +231,7 @@ contains
     !
     ! -- initialize uzf group object
     allocate(this%uzfobj)
-    call this%uzfobj%init(this%nodes, this%nwav)
+    call this%uzfobj%init(this%nodes, this%nwav, this%origin)
     !
     ! -- Set pointers to GWF model arrays
     call mem_setptr(this%gwftop, 'TOP', trim(this%name_model)//' DIS')
@@ -3152,10 +3152,6 @@ contains
     endif
     !
     return
-    !
-!300 continue
-!    call store_error(ermsg)
-!    call ustop()
   end subroutine uzf_process_obsID
 
   subroutine uzf_allocate_scalars(this)
@@ -3204,7 +3200,6 @@ contains
     call mem_allocate(this%cbcauxitems, 'CBCAUXITEMS', this%origin)
 
     call mem_allocate(this%iconvchk, 'ICONVCHK', this%origin)
-    !call mem_allocate(this%pdmax, 'PDMAX', this%origin)
     !
     ! -- initialize scalars
     this%iprwcont = 0
@@ -3230,7 +3225,6 @@ contains
     !
     ! -- convergence check
     this%iconvchk = 1
-    !this%pdmax = DEM1
     !
     ! -- return
     return
@@ -3292,7 +3286,6 @@ contains
     !
     ! -- convergence check
     call mem_deallocate(this%iconvchk)
-    !call mem_deallocate(this%pdmax)
     !
     ! -- deallocate arrays
     call mem_deallocate(this%mfcellid)

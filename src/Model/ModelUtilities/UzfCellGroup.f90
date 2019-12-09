@@ -94,7 +94,7 @@ module UzfCellGroupModule
 !
 ! ------------------------------------------------------------------------------
    
-  subroutine init(this, ncells, nwav)
+  subroutine init(this, ncells, nwav, origin)
 ! ******************************************************************************
 ! init -- allocate and set uzf object variables
 ! ******************************************************************************
@@ -102,65 +102,115 @@ module UzfCellGroupModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
    ! -- modules
+   use MemoryManagerModule, only: mem_allocate
    ! -- dummy
    class(UzfCellGroupType) :: this
    integer(I4B), intent(in) :: nwav
    integer(I4B), intent(in) :: ncells
+   character(len=*), intent(in), optional :: origin
    ! -- local
    integer(I4B) :: icell
 ! ------------------------------------------------------------------------------
     !
-    ! -- todo: replace all these with mem_allocate
-    allocate(this%uzdpst(nwav, ncells))
-    allocate(this%uzthst(nwav, ncells))
-    allocate(this%uzflst(nwav, ncells))
-    allocate(this%uzspst(nwav, ncells))
-    allocate(this%nwavst(ncells))
-    allocate(this%uzolsflx(ncells))
-    allocate(this%thtr(ncells))
-    allocate(this%thts(ncells))
-    allocate(this%thti(ncells))
-    allocate(this%eps(ncells))
-    allocate(this%ha(ncells))
-    allocate(this%hroot(ncells))
-    allocate(this%rootact(ncells))
-    allocate(this%extwc(ncells))
-    allocate(this%etact(ncells))
-    allocate(this%nwav(ncells))
-    allocate(this%ntrail(ncells))
-    allocate(this%uzstor(ncells))
-    allocate(this%delstor(ncells))
-    allocate(this%totflux(ncells))
-    allocate(this%vflow(ncells))
-    allocate(this%sinf(ncells))
-    allocate(this%finf(ncells))
-    allocate(this%finf_rej(ncells))
-    allocate(this%gwet(ncells))
-    allocate(this%uzfarea(ncells))
-    allocate(this%cellarea(ncells))
-    allocate(this%celtop(ncells))
-    allocate(this%celbot(ncells))
-    allocate(this%landtop(ncells))
-    allocate(this%cvlm1(ncells))
-    allocate(this%watab(ncells))
-    allocate(this%watabold(ncells))
-    allocate(this%surfdep(ncells))
-    allocate(this%vks(ncells))
-    allocate(this%surflux(ncells))
-    allocate(this%surfluxbelow(ncells))
-    allocate(this%surfseep(ncells))
-    allocate(this%gwpet(ncells))
-    allocate(this%pet(ncells))
-    allocate(this%petmax(ncells))
-    allocate(this%extdp(ncells))
-    allocate(this%extdpuz(ncells))
-    allocate(this%landflag(ncells)) 
-    allocate(this%ivertcon(ncells))
+    ! -- Use mem_allocate if origin is passed in, otherwise it's a temp object
+    if (present(origin)) then
+      call mem_allocate(this%uzdpst, nwav, ncells, 'UZDPST', origin)
+      call mem_allocate(this%uzthst, nwav, ncells, 'UZTHST', origin)
+      call mem_allocate(this%uzflst, nwav, ncells, 'UZFLST', origin)
+      call mem_allocate(this%uzspst, nwav, ncells, 'UZSPST', origin)
+      call mem_allocate(this%nwavst, ncells, 'NWAVST', origin)
+      call mem_allocate(this%uzolsflx, ncells, 'UZOLSFLX', origin)
+      call mem_allocate(this%thtr, ncells, 'THTR', origin)
+      call mem_allocate(this%thts, ncells, 'THTS', origin)
+      call mem_allocate(this%thti, ncells, 'THTI', origin)
+      call mem_allocate(this%eps, ncells, 'EPS', origin)
+      call mem_allocate(this%ha, ncells, 'HA', origin)
+      call mem_allocate(this%hroot, ncells, 'HROOT', origin)
+      call mem_allocate(this%rootact, ncells, 'ROOTACT', origin)
+      call mem_allocate(this%extwc, ncells, 'EXTWC', origin)
+      call mem_allocate(this%etact, ncells, 'ETACT', origin)
+      call mem_allocate(this%nwav, ncells, 'NWAV', origin)
+      call mem_allocate(this%ntrail, ncells, 'NTRAIL', origin)
+      call mem_allocate(this%uzstor, ncells, 'UZSTOR', origin)
+      call mem_allocate(this%delstor, ncells, 'DELSTOR', origin)
+      call mem_allocate(this%totflux, ncells, 'TOTFLUX', origin)
+      call mem_allocate(this%vflow, ncells, 'VFLOW', origin)
+      call mem_allocate(this%sinf, ncells, 'SINF', origin)
+      call mem_allocate(this%finf, ncells, 'FINF', origin)
+      call mem_allocate(this%finf_rej, ncells, 'FINF_REJ', origin)
+      call mem_allocate(this%gwet, ncells, 'GWET', origin)
+      call mem_allocate(this%uzfarea, ncells, 'UZFAREA', origin)
+      call mem_allocate(this%cellarea, ncells, 'CELLAREA', origin)
+      call mem_allocate(this%celtop, ncells, 'CELTOP', origin)
+      call mem_allocate(this%celbot, ncells, 'CELBOT', origin)
+      call mem_allocate(this%landtop, ncells, 'LANDTOP', origin)
+      call mem_allocate(this%cvlm1, ncells, 'CVLM1', origin)
+      call mem_allocate(this%watab, ncells, 'WATAB', origin)
+      call mem_allocate(this%watabold, ncells, 'WATABOLD', origin)
+      call mem_allocate(this%surfdep, ncells, 'SURFDEP', origin)
+      call mem_allocate(this%vks, ncells, 'VKS', origin)
+      call mem_allocate(this%surflux, ncells, 'SURFLUX', origin)
+      call mem_allocate(this%surfluxbelow, ncells, 'SURFLUXBELOW', origin)
+      call mem_allocate(this%surfseep, ncells, 'SURFSEEP', origin)
+      call mem_allocate(this%gwpet, ncells, 'GWPET', origin)
+      call mem_allocate(this%pet, ncells, 'PET', origin)
+      call mem_allocate(this%petmax, ncells, 'PETMAX', origin)
+      call mem_allocate(this%extdp, ncells, 'EXTDP', origin)
+      call mem_allocate(this%extdpuz, ncells, 'EXTDPUZ', origin)
+      call mem_allocate(this%landflag, ncells, 'LANDFLAG', origin) 
+      call mem_allocate(this%ivertcon, ncells, 'IVERTCON', origin)
+    else
+      allocate(this%uzdpst(nwav, ncells))
+      allocate(this%uzthst(nwav, ncells))
+      allocate(this%uzflst(nwav, ncells))
+      allocate(this%uzspst(nwav, ncells))
+      allocate(this%nwavst(ncells))
+      allocate(this%uzolsflx(ncells))
+      allocate(this%thtr(ncells))
+      allocate(this%thts(ncells))
+      allocate(this%thti(ncells))
+      allocate(this%eps(ncells))
+      allocate(this%ha(ncells))
+      allocate(this%hroot(ncells))
+      allocate(this%rootact(ncells))
+      allocate(this%extwc(ncells))
+      allocate(this%etact(ncells))
+      allocate(this%nwav(ncells))
+      allocate(this%ntrail(ncells))
+      allocate(this%uzstor(ncells))
+      allocate(this%delstor(ncells))
+      allocate(this%totflux(ncells))
+      allocate(this%vflow(ncells))
+      allocate(this%sinf(ncells))
+      allocate(this%finf(ncells))
+      allocate(this%finf_rej(ncells))
+      allocate(this%gwet(ncells))
+      allocate(this%uzfarea(ncells))
+      allocate(this%cellarea(ncells))
+      allocate(this%celtop(ncells))
+      allocate(this%celbot(ncells))
+      allocate(this%landtop(ncells))
+      allocate(this%cvlm1(ncells))
+      allocate(this%watab(ncells))
+      allocate(this%watabold(ncells))
+      allocate(this%surfdep(ncells))
+      allocate(this%vks(ncells))
+      allocate(this%surflux(ncells))
+      allocate(this%surfluxbelow(ncells))
+      allocate(this%surfseep(ncells))
+      allocate(this%gwpet(ncells))
+      allocate(this%pet(ncells))
+      allocate(this%petmax(ncells))
+      allocate(this%extdp(ncells))
+      allocate(this%extdpuz(ncells))
+      allocate(this%landflag(ncells)) 
+      allocate(this%ivertcon(ncells))
+    end if
     do icell = 1, ncells
-      this%uzdpst(icell, :) = DZERO
-      this%uzthst(icell, :) = DZERO
-      this%uzflst(icell, :) = DZERO
-      this%uzspst(icell, :) = DZERO
+      this%uzdpst(:, icell) = DZERO
+      this%uzthst(:, icell) = DZERO
+      this%uzflst(:, icell) = DZERO
+      this%uzspst(:, icell) = DZERO
       this%nwavst(icell) = 1
       this%uzolsflx(icell) = DZERO
       this%thtr(icell) = DZERO
@@ -221,7 +271,7 @@ module UzfCellGroupModule
    ! -- local
 ! ------------------------------------------------------------------------------
     !
-    ! -- todo: replace all these with mem_deallocate
+    ! -- todo: replace all these with mem_deallocate if that was used
     deallocate(this%uzdpst)
     deallocate(this%uzthst)
     deallocate(this%uzflst)
@@ -1969,8 +2019,6 @@ module UzfCellGroupModule
     end if
   end subroutine update_wav
       
-  !CDL STOPPED HERE IN CONVERSION TO UZFCELLGROUP
-    
   subroutine uzet(this, icell, delt, ietflag, ierr)
 ! ******************************************************************************
 !     uzet -- remove water from uz due to et
