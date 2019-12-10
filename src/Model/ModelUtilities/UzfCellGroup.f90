@@ -32,7 +32,6 @@ module UzfCellGroupModule
     real(DP), pointer, dimension(:), contiguous :: delstor => null()
     real(DP), pointer, dimension(:), contiguous :: totflux => null()
     real(DP), pointer, dimension(:), contiguous :: vflow => null()
-    ! -- todo: nwav and ntrail should not be vectors; they should be scalars
     integer(I4B), pointer, dimension(:), contiguous :: nwav => null()
     integer(I4B), pointer, dimension(:), contiguous :: ntrail => null()
     real(DP), pointer, dimension(:), contiguous :: sinf => null()
@@ -590,7 +589,6 @@ module UzfCellGroupModule
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(UzfCellGroupType) :: this
-    ! -- todo: remove dummy argument from call -> type(UzfCellGroupType) :: thisbelow
     integer(I4B), intent(in) :: icell
     integer(I4B), intent(in) :: jbelow
     real(DP), intent(in) :: ha
@@ -647,7 +645,6 @@ module UzfCellGroupModule
     ! -- dummy
     class(UzfCellGroupType) :: this
     type(UzfCellGroupType) :: thiswork
-    ! -- todo: remove dummy argument from call -> type(UzfCellGroupType) :: thisbelow
     integer(I4B), intent(in) :: jbelow
     integer(I4B), intent(in) :: icell
     integer(I4B), intent(in) :: ietflag
@@ -739,8 +736,6 @@ module UzfCellGroupModule
             if (this%pet(jbelow) < DEM15) this%pet(jbelow) = DEM15
         end if
         if (this%ivertcon(icell) > 0) then
-          ! cdl change thisbelow to jbelow
-          ! cdl call this%addrech(thisbelow, hgwf, trhsfinf, thcoffinf, derivfinf, delt, 0)
           call this%addrech(icell, jbelow, hgwf, trhsfinf, thcoffinf, derivfinf, delt, 0)
         end if
       else
@@ -767,8 +762,6 @@ module UzfCellGroupModule
     sumaet = sumaet + this%etact(icell)
     if(this%ivertcon(icell) > 0) then
       if (ietflag > 0) then
-        ! cdl change thisbelow to jbelow
-        ! cdl call this%setbelowpet(thisbelow, sumaet)
         call this%setbelowpet(icell, jbelow, sumaet)
       end if
     end if
@@ -790,7 +783,6 @@ module UzfCellGroupModule
     use TdisModule, only: delt
     ! -- dummy
     class(UzfCellGroupType) :: this
-    ! cdl changed to jbelow type(UzfCellGroupType) :: thisbelow
     integer(I4B), intent(in) :: jbelow
     integer(I4B), intent(in) :: icell
     integer(I4B), intent(in) :: ietflag

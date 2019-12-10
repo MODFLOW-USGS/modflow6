@@ -55,7 +55,7 @@ module UzfModule
     integer(I4B), pointer                                   :: ntrail       => null()
     integer(I4B), pointer                                   :: nsets        => null()
     integer(I4B), pointer                                   :: nwav         => null()
-    integer(I4B), pointer                                   :: nodes        => null() !cdl--(this should probably be maxbound)
+    integer(I4B), pointer                                   :: nodes        => null()
     integer(I4B), pointer                                   :: nper         => null()
     integer(I4B), pointer                                   :: nstp         => null()
     integer(I4B), pointer                                   :: readflag     => null()
@@ -150,7 +150,6 @@ module UzfModule
     procedure, private :: uzf_solve
     procedure, private :: read_cell_properties
     procedure, private :: print_cell_properties
-    procedure, private :: uzcelloutput
     procedure, private :: findcellabove
     procedure, private :: check_cell_area
 
@@ -1518,13 +1517,6 @@ contains
       rout = rsto
     endif
     call this%budget%addentry(rstoin, rstoout, delt, aname(3), isuppress_output)
-    !if ( isuppress_output == 0 ) call this%budget%budget_ot(kstp, kper, this%iout)
-
-    !call this%uzf_bdsav(icbcfl, icbcun)
-
-  ! output saturation or other variables for each cell
-    ! -- todo: this doesn't appear to do anything
-    call this%uzcelloutput(isuppress_output)
     !
     ! -- Clear accumulators and set flags
     ratin = dzero
@@ -2218,7 +2210,6 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- Initialize
-    ! -- todo: should work object be passed in so it doesn't have to be created each time?
     call uzfobjwork%init(1, this%nwav)
     ierr = 0
     sumaet = DZERO
@@ -2761,22 +2752,6 @@ contains
     ! -- return
     return
   end subroutine check_cell_area
-
-  subroutine uzcelloutput(this, isuppress_output)
-! ******************************************************************************
-! write out cell by cell saturation.
-! region beneath water table is considered 100% saturated.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(UzfType) :: this
-    integer(I4B), intent(in) :: isuppress_output
-! ------------------------------------------------------------------------------
-    !
-    ! -- return
-    return
-  end subroutine uzcelloutput
 
   ! -- Procedures related to observations (type-bound)
   logical function uzf_obs_supported(this)
