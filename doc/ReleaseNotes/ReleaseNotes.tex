@@ -137,12 +137,12 @@ This section describes changes introduced into MODFLOW 6 with each release.  The
 \item For the advanced stress packages, values assigned to the auxiliary variables were not written correctly to the GWF Model budget file, but the values were correct in the advanced package budget file.  Program was modified so that auxiliary variables are correctly written to the GWF Model budget file.
 \item Corrected several error messages issued by the SFR Package that were not formatted correctly.  
 \item Fixed a bug in which the lake stage stable would sometimes result in touching numbers.  This only occurred for negative lake stages.
+\item The UZF Package was built on the UZFKinematicType, which used an array of structures.  A large array like this, can cause memory problems.  The UZFKinematicType was replaced with a new UzfCellGroupType, which is a structure of arrays and is much more memory efficient.  The underlying UZF algorithm did not change.
 \end{itemize}
 
 \underline{SOLUTION}
 \begin{itemize}
 \item Add ALL and FIRST options to optional NO\_PTC optional keyword in OPTIONS block. If NO\_PTC option is FIRST, PTC is disabled for the first stress period but is applied in all subsequent steady-state stress periods. If NO\_PTC option is ALL, PTC is disabled for all steady-state stress periods. If the NO\_PTC options is not defined, PTC is disabled for all steady-state stress periods (this is consistent with the behaviour of the NO\_PTC option in previous versions).
-\item --
 \end{itemize}
 
 \item Version mf6.0.4--Feb. 27, 2019
