@@ -205,7 +205,7 @@ contains
     class(BaseModelType), pointer :: baseModel
     
     var_name = char_array_to_string(c_var_name, strlen(c_var_name))    
-    model_name = get_model_name(var_name)
+    model_name = extract_model_name(var_name)
     
     var_grid = 0
     do i = 1,basemodellist%Count()
@@ -239,17 +239,15 @@ contains
   ! TODO_JH: How to do this?
   function get_grid_rank(grid_id, grid_rank) result(bmi_status) bind(C, name="get_grid_rank")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_rank
-    use ListsModule, only: basemodellist
-    use BaseModelModule, only: BaseModelType, GetBaseModelFromList
-    integer(kind=c_int), intent(in) :: grid_id
+    integer(kind=c_int), intent(in), value :: grid_id
     integer(kind=c_int), intent(out) :: grid_rank
     integer(kind=c_int) :: bmi_status
     ! local
-    integer :: i
-    class(BaseModelType), pointer :: baseModel
+    character(len=LENMODELNAME) :: model_name
     
-    baseModel => GetBaseModelFromList(basemodellist, i)
-    
+    model_name = get_model_name(grid_id)
+    write (*,*) model_name
+    !TODO_JH: Get grid shape with get_value_ptr_int and reduce to 2D if first indices=1
     grid_rank = 2
     bmi_status = BMI_SUCCESS
   end function get_grid_rank
@@ -372,12 +370,33 @@ contains
    string_to_char_array(length+1) = C_NULL_CHAR
   end function string_to_char_array
   
-  pure function get_model_name(var_name)
+  pure function extract_model_name(var_name)
     character(len=*), intent(in) :: var_name
-    character(len=LENMODELNAME) :: get_model_name
+    character(len=LENMODELNAME) :: extract_model_name
     integer :: idx
     idx = index(var_name, ' ')
-    get_model_name = var_name(:idx-1)
+    extract_model_name = var_name(:idx-1)
+  end function extract_model_name
+  
+  function get_model_name(grid_id)
+    use ListsModule, only: basemodellist
+    use BaseModelModule, only: BaseModelType, GetBaseModelFromList
+    integer(kind=c_int), intent(in) :: grid_id
+    character(len=LENMODELNAME) :: get_model_name
+    ! local
+    integer :: i
+    class(BaseModelType), pointer :: baseModel    
+
+    do i = 1,basemodellist%Count()
+      baseModel => GetBaseModelFromList(basemodellist, i)
+      if (baseModel%id == grid_id) then
+        get_model_name = baseModel%name
+        return
+      end if
+    end do
   end function get_model_name
+  
+  
+
 
 end module mf6dll
