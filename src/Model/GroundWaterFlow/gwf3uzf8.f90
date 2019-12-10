@@ -215,7 +215,6 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use UzfKinematicModule, only: UzfKinematicType
     use MemoryManagerModule, only: mem_allocate, mem_setptr, mem_reallocate
     use BudgetModule, only: budget_cr
     ! -- dummy
@@ -636,7 +635,6 @@ contains
     use TimeSeriesManagerModule, only: read_single_value_or_time_series
     use InputOutputModule, only: urword
     use SimModule, only: ustop, store_error, count_errors
-    use UzfKinematicModule, only: UzfKinematicType
     ! -- dummy
     class(UzfType), intent(inout) :: this
     ! -- local
@@ -2350,7 +2348,7 @@ contains
    subroutine read_cell_properties(this)
 ! ******************************************************************************
 ! read_cell_properties -- Read UZF cell properties and set them for 
-!                         UzfKinematic type.
+!                         UzfCellGroup type.
 ! ******************************************************************************
     use InputOutputModule, only: urword
     use SimModule, only: ustop, store_error, count_errors
@@ -2589,7 +2587,7 @@ contains
   subroutine print_cell_properties(this)
 ! ******************************************************************************
 ! print_cell_properties -- Read UZF cell properties and set them for 
-!                          UzfKinematic type.
+!                          UZFCellGroup type.
 ! ******************************************************************************
 ! ------------------------------------------------------------------------------
     ! -- dummy
