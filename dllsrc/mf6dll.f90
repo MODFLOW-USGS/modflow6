@@ -236,46 +236,89 @@ contains
   end function get_grid_type
   
   ! Get number of dimensions of the computational grid.
-  ! TODO_JH: How to do this?
   function get_grid_rank(grid_id, grid_rank) result(bmi_status) bind(C, name="get_grid_rank")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_rank
-    integer(kind=c_int), intent(in), value :: grid_id
+    use MemoryManagerModule, only: setptr_int1d
+    integer(kind=c_int), intent(in) :: grid_id
     integer(kind=c_int), intent(out) :: grid_rank
     integer(kind=c_int) :: bmi_status
     ! local
     character(len=LENMODELNAME) :: model_name
+    integer(I4B), dimension(:), pointer :: grid_shape
+    character(kind=c_char) :: grid_type(MAXSTRLEN)
+    integer :: status
+    
+    status = get_grid_type(grid_id, grid_type)
+    if (char_array_to_string(grid_type, strlen(grid_type)) /= "rectilinear") then
+      bmi_status = BMI_FAILURE
+      return
+    end if
     
     model_name = get_model_name(grid_id)
-    write (*,*) model_name
-    !TODO_JH: Get grid shape with get_value_ptr_int and reduce to 2D if first indices=1
-    grid_rank = 2
+    call setptr_int1d(grid_shape, "MSHAPE", trim(model_name) // " DIS")
+    
+    if (grid_shape(1) == 1) then
+      grid_rank = 2
+    else    
+      grid_rank = 3
+    end if
+    
     bmi_status = BMI_SUCCESS
   end function get_grid_rank
-
   
   ! Get the total number of elements in the computational grid.
   function get_grid_size(grid_id, grid_size) result(bmi_status) bind(C, name="get_grid_size")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_size
+    use MemoryManagerModule, only: setptr_int1d
     integer(kind=c_int), intent(in) :: grid_id
     integer(kind=c_int), intent(out) :: grid_size
     integer(kind=c_int) :: bmi_status
+    ! local
+    character(len=LENMODELNAME) :: model_name
+    integer(I4B), dimension(:), pointer :: grid_shape
+    character(kind=c_char) :: grid_type(MAXSTRLEN)
+    integer :: status
     
-    grid_size = 10 * 10
+    status = get_grid_type(grid_id, grid_type)
+    if (char_array_to_string(grid_type, strlen(grid_type)) /= "rectilinear") then
+      bmi_status = BMI_FAILURE
+      return
+    end if
+    
+    model_name = get_model_name(grid_id)
+    call setptr_int1d(grid_shape, "MSHAPE", trim(model_name) // " DIS")
+    
+    grid_size = grid_shape(1) * grid_shape(2) * grid_shape(3)
     bmi_status = BMI_SUCCESS
   end function get_grid_size
   
   ! Get the dimensions of the computational grid.
   function get_grid_shape(grid_id, grid_shape) result(bmi_status) bind(C, name="get_grid_shape")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_shape
+    use MemoryManagerModule, only: setptr_int1d
     integer(kind=c_int), intent(in) :: grid_id
     type(c_ptr), intent(out) :: grid_shape
     integer(kind=c_int) :: bmi_status
     ! local
-    integer, dimension(:), pointer, contiguous :: array_ptr
-    integer, dimension(2), target, save :: array = [10, 10]
+    integer, dimension(:), pointer :: grid_shape_fortran
+    character(len=LENMODELNAME) :: model_name
+    character(kind=c_char) :: grid_type(MAXSTRLEN)
+    integer :: status
     
-    array_ptr => array
-    grid_shape = c_loc(array_ptr)
+    status = get_grid_type(grid_id, grid_type)
+    if (char_array_to_string(grid_type, strlen(grid_type)) /= "rectilinear") then
+      bmi_status = BMI_FAILURE
+      return
+    end if
+    
+    model_name = get_model_name(grid_id)
+    call setptr_int1d(grid_shape_fortran, "MSHAPE", trim(model_name) // " DIS")
+    
+    if (grid_shape_fortran(1) == 1) then
+      grid_shape_fortran = grid_shape_fortran(2:3)
+    end if
+    
+    grid_shape = c_loc(grid_shape_fortran)
     bmi_status = BMI_SUCCESS
   end function get_grid_shape
   
@@ -289,6 +332,14 @@ contains
     integer :: i
     real(DP), dimension(:), pointer, contiguous :: array_ptr
     real(DP), dimension(10), target, save :: array = [ (i-1, i=1,10) ]
+    character(kind=c_char) :: grid_type(MAXSTRLEN)
+    integer :: status
+    
+    status = get_grid_type(grid_id, grid_type)
+    if (char_array_to_string(grid_type, strlen(grid_type)) /= "rectilinear") then
+      bmi_status = BMI_FAILURE
+      return
+    end if
     
     array_ptr => array
     grid_x = c_loc(array_ptr)
@@ -305,6 +356,14 @@ contains
     integer :: i
     real(DP), dimension(:), pointer, contiguous :: array_ptr
     real(DP), dimension(10), target, save :: array = [  (i-1, i=10,1,-1) ]
+    character(kind=c_char) :: grid_type(MAXSTRLEN)
+    integer :: status
+    
+    status = get_grid_type(grid_id, grid_type)
+    if (char_array_to_string(grid_type, strlen(grid_type)) /= "rectilinear") then
+      bmi_status = BMI_FAILURE
+      return
+    end if
     
     array_ptr => array
     grid_y = c_loc(array_ptr)
