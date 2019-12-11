@@ -1,6 +1,6 @@
 ! -- Uzf module
 module UzfModule
-!
+
   use KindModule, only: DP, I4B
   use ArrayHandlersModule, only: ExpandArray
   use ConstantsModule, only: DZERO, DEM6, DEM4, DEM2, DEM1, DHALF,              &
@@ -14,18 +14,17 @@ module UzfModule
                                  mem_deallocate
   use SparseModule, only: sparsematrix
   use BndModule, only: BndType
-  use UzfKinematicModule
-  use BudgetModule,   only: BudgetType
+  use UzfCellGroupModule, only: UzfCellGroupType
+  use BudgetModule, only: BudgetType
   use BaseDisModule, only: DisBaseType
-  use ObserveModule,        only: ObserveType
+  use ObserveModule, only: ObserveType
   use ObsModule, only: ObsType
   use InputOutputModule, only: URWORD, UWWORD
-  use SimModule,        only: count_errors, store_error, ustop, &
-                              store_error_unit
+  use SimModule, only: count_errors, store_error, ustop, store_error_unit
   use BlockParserModule, only: BlockParserType
 
   implicit none
-  !
+
   character(len=LENFTYPE)       :: ftype = 'UZF'
   character(len=LENPACKAGENAME) :: text  = '       UZF CELLS' 
 
@@ -43,33 +42,28 @@ module UzfModule
     integer(I4B), pointer                              :: nbdtxt      => null()  !number of budget text items
     character(len=LENBUDTXT), dimension(:), pointer,                            &
                               contiguous               :: bdtxt       => null()  !budget items written to cbc file
-    type(UzfKinematicType), pointer                    :: uzfobj      => null()  !uzf kinematic object
-    type(UzfKinematicType), pointer                    :: uzfobjwork  => null()  !uzf kinematic work object
-    type(UzfKinematicType), pointer                    :: uzfobjbelow => null()  !uzf kinematic object of underlying cell
-    type(UzfKinematicType), dimension(:), pointer,                              &
-                            contiguous                 :: elements    => null()  !array of all the kinematic uzf objects
-    character(len=72), pointer                         :: nameuzf     => null()  !cdl--(not sure.  Delete?)
+    type(UzfCellGroupType), pointer                    :: uzfobj      => null()  !uzf kinematic object
     !
     ! -- pointer to gwf variables
-    integer(I4B), pointer                      :: gwfiss      => null()
+    integer(I4B), pointer                                  :: gwfiss      => null()
     real(DP), dimension(:), pointer, contiguous            :: gwftop      => null()
     real(DP), dimension(:), pointer, contiguous            :: gwfbot      => null()
     real(DP), dimension(:), pointer, contiguous            :: gwfarea     => null()
     real(DP), dimension(:), pointer, contiguous            :: gwfhcond    => null()
     !
     ! -- uzf data
-    integer(I4B), pointer                       :: ntrail       => null()
-    integer(I4B), pointer                       :: nsets        => null()
-    integer(I4B), pointer                       :: nwav         => null()
-    integer(I4B), pointer                       :: nodes        => null() !cdl--(this should probably be maxbound)
-    integer(I4B), pointer                       :: nper         => null()
-    integer(I4B), pointer                       :: nstp         => null()
-    integer(I4B), pointer                       :: readflag     => null()
-    integer(I4B), pointer                       :: outunitbud   => null()
-    integer(I4B), pointer                       :: ietflag      => null()
-    integer(I4B), pointer                       :: igwetflag    => null()
-    integer(I4B), pointer                       :: iseepflag    => null()
-    integer(I4B), pointer                       :: imaxcellcnt  => null()
+    integer(I4B), pointer                                   :: ntrail       => null()
+    integer(I4B), pointer                                   :: nsets        => null()
+    integer(I4B), pointer                                   :: nwav         => null()
+    integer(I4B), pointer                                   :: nodes        => null()
+    integer(I4B), pointer                                   :: nper         => null()
+    integer(I4B), pointer                                   :: nstp         => null()
+    integer(I4B), pointer                                   :: readflag     => null()
+    integer(I4B), pointer                                   :: outunitbud   => null()
+    integer(I4B), pointer                                   :: ietflag      => null()
+    integer(I4B), pointer                                   :: igwetflag    => null()
+    integer(I4B), pointer                                   :: iseepflag    => null()
+    integer(I4B), pointer                                   :: imaxcellcnt  => null()
     integer(I4B), dimension(:), pointer, contiguous         :: mfcellid     => null()
     real(DP), dimension(:), pointer, contiguous             :: appliedinf   => null()
     real(DP), dimension(:), pointer, contiguous             :: rejinf       => null()
@@ -85,7 +79,7 @@ module UzfModule
     real(DP), dimension(:), pointer, contiguous             :: rch          => null()
     real(DP), dimension(:), pointer, contiguous             :: rch0         => null()
     real(DP), dimension(:), pointer, contiguous             :: qsto         => null()
-    integer(I4B), pointer                       :: iuzf2uzf     => null()
+    integer(I4B), pointer                                   :: iuzf2uzf     => null()
     !
     ! -- integer vectors
     integer(I4B), dimension(:), pointer, contiguous :: ia => null()
@@ -103,7 +97,6 @@ module UzfModule
     !
     ! -- convergence check
     integer(I4B), pointer  :: iconvchk    => null()
-    !real(DP), pointer      :: pdmax    => null()
     !
     ! formulate variables
     real(DP), dimension(:), pointer, contiguous            :: deriv       => null()
@@ -157,7 +150,6 @@ module UzfModule
     procedure, private :: uzf_solve
     procedure, private :: read_cell_properties
     procedure, private :: print_cell_properties
-    procedure, private :: uzcelloutput
     procedure, private :: findcellabove
     procedure, private :: check_cell_area
 
@@ -222,13 +214,12 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use UzfKinematicModule, only: UzfKinematicType
     use MemoryManagerModule, only: mem_allocate, mem_setptr, mem_reallocate
     use BudgetModule, only: budget_cr
     ! -- dummy
     class(UzfType), intent(inout) :: this
     ! -- local
-    integer(I4B) :: i, n
+    integer(I4B) :: n
 ! ------------------------------------------------------------------------------
     !
     call this%obs%obs_ar()
@@ -236,17 +227,9 @@ contains
     ! -- Allocate arrays in package superclass
     call this%uzf_allocate_arrays()
     !
-    ! -- Allocate UZF objects plus one extra for work array
-    allocate(this%elements(this%nodes+1))
-    do i = 1, this%nodes + 1
-      allocate(this%elements(i))
-    enddo
-    !
-    ! -- Initialize each UZF object
-    do i = 1, this%nodes+1
-        this%uzfobj => this%elements(i)
-        call this%uzfobj%init(i,this%nwav)
-    end do
+    ! -- initialize uzf group object
+    allocate(this%uzfobj)
+    call this%uzfobj%init(this%nodes, this%nwav, this%origin)
     !
     ! -- Set pointers to GWF model arrays
     call mem_setptr(this%gwftop, 'TOP', trim(this%name_model)//' DIS')
@@ -651,7 +634,6 @@ contains
     use TimeSeriesManagerModule, only: read_single_value_or_time_series
     use InputOutputModule, only: urword
     use SimModule, only: ustop, store_error, count_errors
-    use UzfKinematicModule, only: UzfKinematicType
     ! -- dummy
     class(UzfType), intent(inout) :: this
     ! -- local
@@ -661,7 +643,7 @@ contains
     integer (I4B) :: j
     integer (I4B) :: jj
     integer (I4B) :: ipos
-    integer(I4B) :: ierr, ivertflag
+    integer(I4B) :: ierr
     real (DP) :: endtim
     logical :: isfound, endOfBlock
     character(len=LINELENGTH) :: line, errmsg
@@ -778,17 +760,7 @@ contains
           call ustop()
         end if
         !
-        ! -- setup pointers
-        this%uzfobj => this%elements(i)
-        ivertflag = this%uzfobj%ivertcon
-        if ( ivertflag > 0 ) then
-          this%uzfobjbelow => this%elements(ivertflag)
-        else
-          ! -- point to i so not null.  Does not use in this case.
-          this%uzfobjbelow => this%elements(i)
-        end if
-        !
-        !
+        ! -- Setup boundname
         if (this%inamedbound > 0) then
           bndName = this%boundname(i)
         else
@@ -936,15 +908,13 @@ contains
     end if
     !
     ! -- set wave data for first stress period and second that follows SS
-    if ( (this%issflag == 0 .AND. kper == 1) .or.                              &
-      (kper == 2 .AND. this%issflagold == 1) ) then
+    if ((this%issflag == 0 .AND. kper == 1) .or.                              &
+      (kper == 2 .AND. this%issflagold == 1)) then
       do i = 1, this%nodes
-        this%uzfobj => this%elements(i)
         call this%uzfobj%setwaves(i)
       end do
     end if
     this%issflagold = this%issflag
-    !call this%deallocate_vars()
     !
     ! -- return
     return
@@ -984,49 +954,40 @@ contains
     end if
     !
     do i = 1, this%nodes
-        this%uzfobj => this%elements(i)
-        call this%uzfobj%advance()
+        call this%uzfobj%advance(i)
     end do
     !
     ! -- update uzf objects with timeseries aware variables
     do i = 1, this%nodes
       !
-      ! -- setup pointers
-      this%uzfobj => this%elements(i)
-      ivertflag = this%uzfobj%ivertcon
-      if ( ivertflag > 0 ) then
-        this%uzfobjbelow => this%elements(ivertflag)
-      else
-        ! -- point to iuzf so not null.  Does not use in this case.
-        this%uzfobjbelow => this%elements(i)
-      end if
+      ! -- Set ivertflag
+      ivertflag = this%uzfobj%ivertcon(i)
       !
       ! -- recalculate uzfarea
       if (this%iauxmultcol > 0) then
         ipos = (i - 1) * this%naux + this%iauxmultcol
         rval1 = this%lauxvar(ipos)%value
-        call this%uzfobj%setdatauzfarea(rval1)
+        call this%uzfobj%setdatauzfarea(i, rval1)
       end if
       !
       ! -- FINF
       rval1 = this%sinf(i)%value
-      call this%uzfobj%setdatafinf(rval1)
+      call this%uzfobj%setdatafinf(i, rval1)
       !
       ! -- PET, EXTDP
       rval1 = this%pet(i)%value
       rval2 = this%extdp(i)%value
-      call this%uzfobj%setdataet(this%uzfobjbelow, ivertflag, rval1, rval2)
+      call this%uzfobj%setdataet(i, ivertflag, rval1, rval2)
       !
       ! -- ETWC
       rval1 = this%extwc(i)%value
-      call this%uzfobj%setdataetwc(this%uzfobjbelow, ivertflag, rval1)
+      call this%uzfobj%setdataetwc(i, ivertflag, rval1)
       !
       ! -- HA, HROOT, ROOTACT
       rval1 = this%ha(i)%value
       rval2 = this%hroot(i)%value
       rval3 = this%rootact(i)%value
-      call this%uzfobj%setdataetha(this%uzfobjbelow, ivertflag, rval1,       &
-                                    rval2, rval3)
+      call this%uzfobj%setdataetha(i, ivertflag, rval1, rval2, rval3)
     end do
     !
     ! -- check uzfarea
@@ -1389,16 +1350,7 @@ contains
       !
       ! -- Initialize variables
       n = this%nodelist(i)
-      this%uzfobj => this%elements(i)
-      ivertflag = this%uzfobj%ivertcon
-      !
-      ! Create pointer to object below
-      if ( ivertflag > 0 ) then
-        this%uzfobjbelow => this%elements(ivertflag)
-      else
-        ! -- point to i so not null.  Does not use in this case.
-        this%uzfobjbelow => this%elements(i)
-      end if
+      ivertflag = this%uzfobj%ivertcon(i)
       !
       ! -- Skip if cell is not active
       if (this%ibound(n) < 1) cycle
@@ -1428,7 +1380,7 @@ contains
       end do
       !
       ! -- Call budget routine of the uzf kinematic object
-      call this%uzfobj%budget(this%uzfobjbelow,i,this%totfluxtot,              &
+      call this%uzfobj%budget(ivertflag,i,this%totfluxtot,                     &
                               rfinf,rin,rout,rsto,ret,retgw,rgwseep,rvflux,    &
                               this%ietflag,this%iseepflag,this%issflag,hgwf,   &
                               hgwflm1,this%gwfhcond(m),numobs,this%obs_num,    &
@@ -1447,25 +1399,28 @@ contains
         derivgwet = DZERO
         call this%uzfobj%simgwet(this%igwetflag, i, hgwf, trhsgwet, thcofgwet, &
                                  gwet, derivgwet)
-        !retgw = retgw + trhsgwet + (thcofgwet * hgwf)
         retgw = retgw + this%gwet(i)
       end if
       !
       ! -- Calculate flows for cbc output and observations
-      if ( hgwf > this%uzfobj%celbot ) then
-        this%recharge(i) = this%uzfobj%totflux * this%uzfobj%uzfarea / delt
+      if (hgwf > this%uzfobj%celbot(i)) then
+        this%recharge(i) = this%uzfobj%totflux(i) * this%uzfobj%uzfarea(i) / delt
       else
-        this%recharge(i) = this%uzfobjbelow%surflux * this%uzfobj%uzfarea
+        if (ivertflag == 0) then
+          this%recharge(i) = this%uzfobj%surflux(i) * this%uzfobj%uzfarea(i)
+        else
+          this%recharge(i) = this%uzfobj%surflux(ivertflag) * this%uzfobj%uzfarea(i)
+        end if
       end if
 
-      this%rch(i) = this%uzfobj%totflux * this%uzfobj%uzfarea / delt
+      this%rch(i) = this%uzfobj%totflux(i) * this%uzfobj%uzfarea(i) / delt
 
-      this%appliedinf(i) = this%uzfobj%sinf * this%uzfobj%uzfarea
-      this%infiltration(i) = this%uzfobj%surflux * this%uzfobj%uzfarea
+      this%appliedinf(i) = this%uzfobj%sinf(i) * this%uzfobj%uzfarea(i)
+      this%infiltration(i) = this%uzfobj%surflux(i) * this%uzfobj%uzfarea(i)
 
-      this%rejinf(i) = this%uzfobj%finf_rej * this%uzfobj%uzfarea
+      this%rejinf(i) = this%uzfobj%finf_rej(i) * this%uzfobj%uzfarea(i)
 
-      qout = this%rejinf(i) + this%uzfobj%surfseep
+      qout = this%rejinf(i) + this%uzfobj%surfseep(i)
       qtomvr = DZERO
       if (this%imover == 1) then
         qtomvr = this%pakmvrobj%get_qtomvr(i)
@@ -1487,7 +1442,7 @@ contains
       end if
       this%rejinf(i) = q
 
-      this%gwd(i) = this%uzfobj%surfseep
+      this%gwd(i) = this%uzfobj%surfseep(i)
       qfact = DZERO
       if (qout > DZERO) then
         qfact = this%gwd(i) / qout
@@ -1510,9 +1465,9 @@ contains
       qseep = qseep + this%gwd(i)
       qseeptomvr = qseeptomvr + this%gwdtomvr(i)
 
-      this%gwet(i) = this%uzfobj%gwet
-      this%uzet(i) = this%uzfobj%etact*this%uzfobj%uzfarea / delt
-      this%qsto(i) = this%uzfobj%delstor / delt
+      this%gwet(i) = this%uzfobj%gwet(i)
+      this%uzet(i) = this%uzfobj%etact(i) * this%uzfobj%uzfarea(i) / delt
+      this%qsto(i) = this%uzfobj%delstor(i) / delt
 
       ! -- accumulate groundwater et
       qgwet = qgwet + this%gwet(i)
@@ -1562,12 +1517,6 @@ contains
       rout = rsto
     endif
     call this%budget%addentry(rstoin, rstoout, delt, aname(3), isuppress_output)
-    !if ( isuppress_output == 0 ) call this%budget%budget_ot(kstp, kper, this%iout)
-
-    !call this%uzf_bdsav(icbcfl, icbcun)
-
-  ! output saturation or other variables for each cell
-    call this%uzcelloutput(isuppress_output)
     !
     ! -- Clear accumulators and set flags
     ratin = dzero
@@ -1844,8 +1793,7 @@ contains
       do n = 1, this%nodes
         !
         ! -- Initialize variables
-        this%uzfobj => this%elements(n)
-        ivertflag = this%uzfobj%ivertcon
+        ivertflag = this%uzfobj%ivertcon(i)
         if ( ivertflag > 0 ) then
           nlen = nlen + 1
         end if
@@ -1859,10 +1807,9 @@ contains
         do n = 1, this%nodes
           !
           ! -- Initialize variables
-          this%uzfobj => this%elements(n)
-          ivertflag = this%uzfobj%ivertcon
+          ivertflag = this%uzfobj%ivertcon(i)
           if ( ivertflag > 0 ) then
-             q = this%uzfobj%surfluxbelow * this%uzfobj%uzfarea
+             q = this%uzfobj%surfluxbelow(i) * this%uzfobj%uzfarea(i)
              if (q > DZERO) then
                q = -q
              end if
@@ -1872,7 +1819,7 @@ contains
                                                     this%qauxcbc,                 &
                                                     olconv=.FALSE.,               &
                                                     olconv2=.FALSE.)
-             q = this%uzfobj%surfluxbelow * this%uzfobj%uzfarea
+             q = this%uzfobj%surfluxbelow(i) * this%uzfobj%uzfarea(i)
              call this%dis%record_mf6_list_entry(ibinun, n2, n1, q, naux,     &
                                                     this%qauxcbc,                 &
                                                     olconv=.FALSE.,               &
@@ -1891,8 +1838,7 @@ contains
       do n = 1, this%nodes
         !
         ! -- Initialize variables
-        this%uzfobj => this%elements(n)
-        this%qauxcbc(1) = this%uzfobj%uzfarea
+        this%qauxcbc(1) = this%uzfobj%uzfarea(i)
         n2 = this%mfcellid(n)
         q = -this%rch(n)
         call this%dis%record_mf6_list_entry(ibinun, n, n2, q, naux,         &
@@ -2140,8 +2086,7 @@ contains
         ! -- infiltration from cell above
         if (this%iuzf2uzf == 1) then
           q = DZERO
-          this%uzfobj => this%elements(n)
-          if (this%uzfobj%landflag == 0) then
+          if (this%uzfobj%landflag(n) == 0) then
             q = this%infiltration(n)
             qin = qin + q
           end if
@@ -2194,10 +2139,9 @@ contains
         ! -- uzf below
         if (this%iuzf2uzf == 1) then
           q = DZERO
-          this%uzfobj => this%elements(n)
-          ivertflag = this%uzfobj%ivertcon
+          ivertflag = this%uzfobj%ivertcon(n)
           if ( ivertflag > 0 ) then
-              q = this%uzfobj%surfluxbelow * this%uzfobj%uzfarea
+              q = this%uzfobj%surfluxbelow(n) * this%uzfobj%uzfarea(n)
               if (q > DZERO) then
                 qout = qout + q
                 q = -q
@@ -2262,10 +2206,11 @@ contains
     real(DP) :: hgwf, hgwflm1, cvv, uzderiv, gwet, derivgwet
     real(DP) :: qfrommvr, qformvr,sumaet
     character(len=100) :: msg
+    type(UzfCellGroupType) :: uzfobjwork
 ! ------------------------------------------------------------------------------
     !
     ! -- Initialize
-    this%uzfobjwork => this%elements(this%nodes+1)
+    call uzfobjwork%init(1, this%nwav)
     ierr = 0
     sumaet = DZERO
     !
@@ -2278,16 +2223,7 @@ contains
       uzderiv = DZERO
       gwet = DZERO
       derivgwet = DZERO
-      this%uzfobj => this%elements(i)
-      ivertflag = this%uzfobj%ivertcon
-      !
-      ! Create pointer to object below
-      if ( ivertflag > 0 ) then
-        this%uzfobjbelow => this%elements(ivertflag)
-      else
-        ! -- point to i so not null.  Does not use in this case.
-        this%uzfobjbelow => this%elements(i)
-      end if
+      ivertflag = this%uzfobj%ivertcon(i)
       !
       n = this%nodelist(i)
       if ( this%ibound(n) > 0 ) then
@@ -2310,7 +2246,7 @@ contains
         cvv = DZERO
         !
         ! -- solve for current uzf cell
-        call this%uzfobj%formulate(this%uzfobjwork,this%uzfobjbelow,i,         &
+        call this%uzfobj%formulate(uzfobjwork, ivertflag, i,                   &
                                     this%totfluxtot, this%ietflag,             &
                                     this%issflag,this%iseepflag,               &
                                     trhs1,thcof1,hgwf,hgwflm1,cvv,uzderiv,     &
@@ -2328,9 +2264,9 @@ contains
         !
         ! -- save current rejected infiltration, groundwater recharge, and
         !    groundwater discharge
-        this%rejinf(i) = this%uzfobj%finf_rej * this%uzfobj%uzfarea
-        this%rch(i) = this%uzfobj%totflux * this%uzfobj%uzfarea / delt
-        this%gwd(i) = this%uzfobj%surfseep
+        this%rejinf(i) = this%uzfobj%finf_rej(i) * this%uzfobj%uzfarea(i)
+        this%rch(i) = this%uzfobj%totflux(i) * this%uzfobj%uzfarea(i) / delt
+        this%gwd(i) = this%uzfobj%surfseep(i)
         !
         ! -- add to hcof and rhs
         this%hcof(i) = thcof1 + thcof2
@@ -2344,76 +2280,6 @@ contains
       end if
     end do
   end subroutine uzf_solve
-
-!  subroutine uzf_bdsav(this, icbcfl, icbcun)
-!! ******************************************************************************
-!! uzf_bdsav -- Save budget terms
-!! ******************************************************************************
-!!
-!!    SPECIFICATIONS:
-!! ------------------------------------------------------------------------------
-!    ! -- dummy
-!    class(UzfType) :: this
-!    integer(I4B), intent(in) :: icbcfl
-!    integer(I4B), intent(in) :: icbcun
-!    ! -- local
-!    integer(I4B) :: ibinun
-!    character(len=16), dimension(4) :: aname
-!    integer(I4B) :: iprint, nvaluesp, nwidthp
-!    character(len=1) :: cdatafmp=' ', editdesc=' '
-!    real(DP) :: dinact
-!    ! -- data
-!    data aname(1) /'UZF INFILTRATION'/
-!    data aname(2) /'    UZF RECHARGE'/
-!    data aname(3) /' UZF GWDISCHARGE'/
-!    data aname(4) /'        UZF GWET'/
-!! ------------------------------------------------------------------------------
-!    !
-!    ! -- Set unit number for binary output
-!    if(this%ipakcb < 0) then
-!      ibinun = icbcun
-!    elseif(this%ipakcb == 0) then
-!      ibinun = 0
-!    else
-!      ibinun = this%ipakcb
-!    endif
-!    if(icbcfl == 0) ibinun = 0
-!    !
-!    ! -- Record the recharge/discharge rates if requested
-!    ! -- langevin: this doesn't work.  We cannot use recordarray, because
-!    !    it assumes that the array is of size dis%nodes.  In UZF, this%nodes
-!    !    does not equal dis%nodes.  So we need to write each one of these
-!    !    arrays (recharge, discharge, gwet) as a list.  For now, am commenting
-!    !    out this section by hardwiring ibinun = 0.
-!    ibinun = 0
-!    if(ibinun /= 0) then
-!      iprint = 0
-!      dinact = DZERO
-!      !
-!      !! -- infiltration
-!      !call this%dis%record_array(this%infiltration, this%iout, iprint,     &
-!      !                               -ibinun, aname(1), cdatafmp, nvaluesp,    &
-!      !                               nwidthp, editdesc, dinact)
-!      !!
-!      !! -- recharge
-!      !call this%dis%record_array(this%recharge, this%iout, iprint,         &
-!      !                               -ibinun, aname(2), cdatafmp, nvaluesp,    &
-!      !                               nwidthp, editdesc, dinact)
-!      !!
-!      !! -- gw discharge
-!      !call this%dis%record_array(this%rejinf, this%iout, iprint,        &
-!      !                               -ibinun, aname(3), cdatafmp, nvaluesp,    &
-!      !                               nwidthp, editdesc, dinact)
-!      !!
-!      !! -- gw ET
-!      !call this%dis%record_array(this%gwet, this%iout, iprint,             &
-!      !                               -ibinun, aname(4), cdatafmp, nvaluesp,    &
-!      !                               nwidthp, editdesc, dinact)
-!    endif
-!    !
-!    ! -- Return
-!    return
-!  end subroutine uzf_bdsav
 
   subroutine define_listlabel(this)
 ! ******************************************************************************
@@ -2473,7 +2339,7 @@ contains
    subroutine read_cell_properties(this)
 ! ******************************************************************************
 ! read_cell_properties -- Read UZF cell properties and set them for 
-!                         UzfKinematic type.
+!                         UzfCellGroup type.
 ! ******************************************************************************
     use InputOutputModule, only: urword
     use SimModule, only: ustop, store_error, count_errors
@@ -2638,7 +2504,6 @@ contains
         n = this%mfcellid(i)
         this%nodelist(i) = n
         hgwf = this%xnew(n)
-        this%uzfobj => this%elements(i)
         call this%uzfobj%setdata(i,this%gwfarea(n),this%gwftop(n),this%gwfbot(n), &
                                  surfdep,vks,thtr,thts,thti,eps,this%ntrail,      &
                                  landflag,ivertcon,hgwf)
@@ -2670,17 +2535,6 @@ contains
       call this%parser%StoreErrorUnit()
       call ustop()
     end if
-    !
-    ! --Initialize one more uzf object, which is used as a worker
-    i = this%nodes + 1
-    this%uzfobj => this%elements(i)
-    n = this%mfcellid(i-1)
-    hgwf = this%xnew(n)
-    landflag = 0
-    ivertcon = 0
-    call this%uzfobj%setdata(i,this%gwfarea(n),this%gwftop(n),this%gwfbot(n), &
-                             surfdep,vks,thtr,thts,thti,eps,this%ntrail,      &
-                             landflag,ivertcon,hgwf)
     !
     ! -- setup sparse for connectivity used to identify multiple uzf cells per
     !    GWF model cell
@@ -2724,7 +2578,7 @@ contains
   subroutine print_cell_properties(this)
 ! ******************************************************************************
 ! print_cell_properties -- Read UZF cell properties and set them for 
-!                          UzfKinematic type.
+!                          UZFCellGroup type.
 ! ******************************************************************************
 ! ------------------------------------------------------------------------------
     ! -- dummy
@@ -2775,9 +2629,6 @@ contains
     ! -- write data for each cell
     do i = 1, this%nodes
       !
-      ! -- Initialize variables
-      this%uzfobj => this%elements(i)
-      !
       ! -- get cellid
       node = this%mfcellid(i)
       if (node > 0) then
@@ -2794,14 +2645,14 @@ contains
       end if
       call UWWORD(line, iloc, 6, 2, text, i, q, sep=' ')
       call UWWORD(line, iloc, 20, 1, cellid, n, q, left=.TRUE.)
-      call UWWORD(line, iloc, 11, 2, text, this%uzfobj%landflag, q, sep=' ')
-      call UWWORD(line, iloc, 11, 2, text, this%uzfobj%ivertcon, q, sep=' ')
-      call UWWORD(line, iloc, 11, 3, text, i, this%uzfobj%surfdep, sep=' ')
-      call UWWORD(line, iloc, 11, 3, text, i, this%uzfobj%vks, sep=' ')
-      call UWWORD(line, iloc, 11, 3, text, i, this%uzfobj%thtr, sep=' ')
-      call UWWORD(line, iloc, 11, 3, text, i, this%uzfobj%thts, sep=' ')
-      call UWWORD(line, iloc, 11, 3, text, i, this%uzfobj%thti, sep=' ')
-      call UWWORD(line, iloc, 11, 3, text, i, this%uzfobj%eps)
+      call UWWORD(line, iloc, 11, 2, text, this%uzfobj%landflag(i), q, sep=' ')
+      call UWWORD(line, iloc, 11, 2, text, this%uzfobj%ivertcon(i), q, sep=' ')
+      call UWWORD(line, iloc, 11, 3, text, i, this%uzfobj%surfdep(i), sep=' ')
+      call UWWORD(line, iloc, 11, 3, text, i, this%uzfobj%vks(i), sep=' ')
+      call UWWORD(line, iloc, 11, 3, text, i, this%uzfobj%thtr(i), sep=' ')
+      call UWWORD(line, iloc, 11, 3, text, i, this%uzfobj%thts(i), sep=' ')
+      call UWWORD(line, iloc, 11, 3, text, i, this%uzfobj%thti(i), sep=' ')
+      call UWWORD(line, iloc, 11, 3, text, i, this%uzfobj%eps(i))
       ! -- write line
       write(this%iout,'(1X,A)') line(1:iloc)
     end do
@@ -2847,14 +2698,12 @@ contains
     do i = 1, this%nodes
       !
       ! -- Initialize variables
-      this%uzfobj => this%elements(i)
-      i2 = this%uzfobj%ivertcon
-      area = this%uzfobj%uzfarea
+      i2 = this%uzfobj%ivertcon(i)
+      area = this%uzfobj%uzfarea(i)
       !
       ! Create pointer to object below
-      if ( i2 > 0 ) then
-        this%uzfobjbelow => this%elements(i2)
-        area2 = this%uzfobjbelow%uzfarea
+      if (i2 > 0) then
+        area2 = this%uzfobj%uzfarea(i2)
         d = abs(area - area2)
         if (d > DEM6) then
           write(errmsg,'(4x,2(a,1x,g15.7,1x,a,1x,i6,1x))')                    &
@@ -2879,9 +2728,8 @@ contains
         i = this%ja(j)
         write(cuzf,'(i0)') i
         cuzfcells = trim(adjustl(cuzfcells)) // ' ' // trim(adjustl(cuzf))
-        this%uzfobj => this%elements(i)
-        sumarea = sumarea + this%uzfobj%uzfarea
-        cellarea = this%uzfobj%cellarea
+        sumarea = sumarea + this%uzfobj%uzfarea(i)
+        cellarea = this%uzfobj%cellarea(i)
       end do
       ! -- calculate the difference between the sum of UZF areas and GWF cell area
       d = abs(sumarea - cellarea)
@@ -2904,24 +2752,6 @@ contains
     ! -- return
     return
   end subroutine check_cell_area
-
-  subroutine uzcelloutput(this, isuppress_output)
-! ******************************************************************************
-! write out cell by cell saturation.
-! region beneath water table is considered 100% saturated.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(UzfType) :: this
-    type(UzfKinematicType), pointer :: uzfobj
-    integer(I4B), intent(in) :: isuppress_output
-    integer(I4B) :: i
-! ------------------------------------------------------------------------------
-    do i = 1, this%nodes
-        uzfobj => this%elements(i)
-    end do
-  end subroutine uzcelloutput
 
   ! -- Procedures related to observations (type-bound)
   logical function uzf_obs_supported(this)
@@ -3085,7 +2915,6 @@ contains
             case ('STORAGE')
               v = -this%qsto(n)
             case ('NET-INFILTRATION')
-              this%uzfobj => this%elements(n)
               v = this%infiltration(n)
             case ('WATER-CONTENT')
               v = this%obs_theta(i)  ! more than one obs per node
@@ -3202,8 +3031,7 @@ contains
         obsrv%dblPak1 = obsdepth
         !
         ! -- determine maximum cell depth
-        this%uzfobj => this%elements(n)
-        dmax = this%uzfobj%celtop - this%uzfobj%celbot
+        dmax = this%uzfobj%celtop(n) - this%uzfobj%celbot(n)
         ! -- check that obs depth is valid; call store_error if not
         ! -- need to think about a way to put bounds on this depth
         if (obsdepth < DZERO .or. obsdepth > dmax) then
@@ -3297,10 +3125,6 @@ contains
     endif
     !
     return
-    !
-!300 continue
-!    call store_error(ermsg)
-!    call ustop()
   end subroutine uzf_process_obsID
 
   subroutine uzf_allocate_scalars(this)
@@ -3349,7 +3173,6 @@ contains
     call mem_allocate(this%cbcauxitems, 'CBCAUXITEMS', this%origin)
 
     call mem_allocate(this%iconvchk, 'ICONVCHK', this%origin)
-    !call mem_allocate(this%pdmax, 'PDMAX', this%origin)
     !
     ! -- initialize scalars
     this%iprwcont = 0
@@ -3375,7 +3198,6 @@ contains
     !
     ! -- convergence check
     this%iconvchk = 1
-    !this%pdmax = DEM1
     !
     ! -- return
     return
@@ -3392,19 +3214,12 @@ contains
     ! -- dummy
     class(UzfType) :: this
     ! -- locals
-    integer (I4B) :: i
     ! -- format
 ! ------------------------------------------------------------------------------
     !
     ! -- deallocate uzf objects
-    do i = 1, this%nodes+1
-        this%uzfobj => this%elements(i)
-        call this%uzfobj%dealloc()
-    end do
+    call this%uzfobj%dealloc()
     nullify(this%uzfobj)
-    nullify(this%uzfobjwork)
-    nullify(this%uzfobjbelow)
-    deallocate(this%elements)
     !
     ! -- budget object
     call this%budget%budget_da()
@@ -3444,7 +3259,6 @@ contains
     !
     ! -- convergence check
     call mem_deallocate(this%iconvchk)
-    !call mem_deallocate(this%pdmax)
     !
     ! -- deallocate arrays
     call mem_deallocate(this%mfcellid)

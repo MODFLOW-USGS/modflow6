@@ -995,6 +995,7 @@ module GwfNpfModule
     ! -- Strings
     !
     ! -- Scalars
+    call mem_deallocate(this%iname)
     call mem_deallocate(this%ixt3d)
     call mem_deallocate(this%satomega)
     call mem_deallocate(this%hnoflo)
@@ -1022,6 +1023,8 @@ module GwfNpfModule
     call mem_deallocate(this%iangle3)
     call mem_deallocate(this%nedges)
     call mem_deallocate(this%lastedge)
+    call mem_deallocate(this%ik22overk)
+    call mem_deallocate(this%ik33overk)
     !
     ! -- Deallocate arrays
     call mem_deallocate(this%icelltype)

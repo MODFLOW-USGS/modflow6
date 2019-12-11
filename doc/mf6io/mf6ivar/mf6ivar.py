@@ -456,6 +456,7 @@ if __name__ == '__main__':
                   'gwf-npf',     # dfn completed  tex updated
                   'gwf-buy',     # dfn completed  tex updated
                   'gwf-sto',     # dfn completed  tex updated
+                  'gwf-csub',    # dfn completed  tex updated
                   'gwf-hfb',     # dfn completed  tex updated
                   'gwf-chd',     # dfn completed  tex updated
                   'gwf-wel',     # dfn completed  tex updated

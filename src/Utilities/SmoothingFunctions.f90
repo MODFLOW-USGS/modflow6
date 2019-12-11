@@ -1,7 +1,7 @@
 module SmoothingModule
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DZERO, DHALF, DONE, DTWO, DTHREE, DFOUR, &
- &                           DSIX, DPREC, DEM2, DEM4, DEM5, DEM6, DEM14 
+  use ConstantsModule, only: DZERO, DHALF, DONE, DTWO, DTHREE, DFOUR,            &
+ &                           DSIX, DPREC, DEM2, DEM4, DEM5, DEM6, DEM8, DEM14 
   implicit none
   
   contains
@@ -373,7 +373,6 @@ end subroutine sChSmooth
     
     return
   end function sQuadraticSaturation
-
   
   function svanGenuchtenSaturation(top, bot, x, alpha, beta, sr) result(y)
 ! ******************************************************************************
@@ -558,8 +557,308 @@ end subroutine sChSmooth
     return
   end function sQSaturationDerivative
   
+  function sSlope(x, xi, yi, sm, sp, ta) result(y)
+! ******************************************************************************
+! Nonlinear smoothing function returns a smoothed value of y that has the value
+! yi at xi and yi + (sm * dx) for x-values less than xi and yi + (sp * dx) for
+! x-values greater than xi, where dx = x - xi.
+! ******************************************************************************
+! 
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- return
+    real(DP) :: y
+    ! -- dummy variables
+    real(DP), intent(in) :: x
+    real(DP), intent(in) :: xi
+    real(DP), intent(in) :: yi
+    real(DP), intent(in) :: sm
+    real(DP), intent(in) :: sp
+    real(DP), optional, intent(in) :: ta
+    ! -- local
+    real(DP) :: a
+    real(DP) :: b
+    real(DP) :: dx
+    real(DP) :: xm
+    real(DP) :: xp
+    real(DP) :: ym
+    real(DP) :: yp
+! ------------------------------------------------------------------------------
+    !
+    ! -- set smoothing variable a
+    if (present(ta)) then
+      a = a
+    else
+      a = DEM8
+    end if
+    !
+    ! -- calculate b from smoothing variable a
+    b = a / (sqrt(DTWO) - DONE)
+    !
+    ! -- calculate contributions to y
+    dx = x - xi
+    xm = DHALF * (x + xi - sqrt(dx + b**DTWO - a**DTWO))
+    xp = DHALF * (x + xi + sqrt(dx + b**DTWO - a**DTWO))
+    ym = sm * (xm - xi)
+    yp = sp * (xi - xp)
+    !
+    ! -- calculate y from ym and yp contributions
+    y = yi + ym + yp
+    !
+    ! -- return
+    return
+  end function sSlope  
+    
+  function sSlopeDerivative(x, xi, sm, sp, ta) result(y)
+! ******************************************************************************
+! Derivative of nonlinear smoothing function that has the value yi at xi and 
+! yi + (sm * dx) for x-values less than xi and yi + (sp * dx) for x-values 
+! greater than xi, where dx = x - xi.
+! ******************************************************************************
+! 
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- return
+    real(DP) :: y
+    ! -- dummy variables
+    real(DP), intent(in) :: x
+    real(DP), intent(in) :: xi
+    real(DP), intent(in) :: sm
+    real(DP), intent(in) :: sp
+    real(DP), optional, intent(in) :: ta
+    ! -- local
+    real(DP) :: a
+    real(DP) :: b
+    real(DP) :: dx
+    real(DP) :: mu
+    real(DP) :: rho
+! ------------------------------------------------------------------------------
+    !
+    ! -- set smoothing variable a
+    if (present(ta)) then
+      a = a
+    else
+      a = DEM8
+    end if
+    !
+    ! -- calculate b from smoothing variable a
+    b = a / (sqrt(DTWO) - DONE)
+    !
+    ! -- calculate contributions to derivative
+    dx = x - xi
+    mu = sqrt(dx**DTWO + b**DTWO - a**DTWO)
+    rho = dx / mu
+    !
+    ! -- calculate derivative from individual contributions
+    y = DHALF * (sm + sp) - DHALF * rho * (sm - sp)                     
+    !
+    ! -- return
+    return
+  end function sSlopeDerivative  
   
-   
+  function sQuadratic0sp(x, xi, tomega) result(y)
+! ******************************************************************************
+! Nonlinear smoothing function returns a smoothed value of y that uses a 
+! quadratic to smooth x over range of xi - epsilon to xi + epsilon.
+! Simplification of sQuadraticSlope with sm = 0, sp = 1, and yi = 0.
+! From Panday et al. (2013) - eq. 35 - https://dx.doi.org/10.5066/F7R20ZFJ
+! ******************************************************************************
+! 
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- return
+    real(DP) :: y
+    ! -- dummy variables
+    real(DP), intent(in) :: x
+    real(DP), intent(in) :: xi
+    real(DP), optional, intent(in) :: tomega
+    ! -- local
+    real(DP) :: omega
+    real(DP) :: epsilon
+    real(DP) :: dx
+! ------------------------------------------------------------------------------
+    !
+    ! -- set smoothing interval
+    if (present(tomega)) then
+      omega = tomega
+    else
+      omega = DEM6
+    end if
+    !
+    ! -- set smoothing interval
+    epsilon = DHALF * omega
+    !
+    ! -- calculate distance from xi
+    dx = x - xi
+    !
+    ! -- evaluate smoothing function
+    if (dx < -epsilon) then
+      y = xi
+    else if (dx < epsilon) then
+      y = (dx**DTWO / (DFOUR * epsilon)) + DHALF * dx + (epsilon / DFOUR) + xi
+    else
+      y = x
+    end if
+    !
+    ! -- return
+    return
+  end function sQuadratic0sp  
+  
+  function sQuadratic0spDerivative(x, xi, tomega) result(y)
+! ******************************************************************************
+! Derivative of nonlinear smoothing function returns a smoothed value of y  
+! that uses a quadratic to smooth x over range of xi - epsilon to xi + epsilon.
+! Simplification of sQuadraticSlope with sm = 0, sp = 1, and yi = 0.
+! From Panday et al. (2013) - eq. 35 - https://dx.doi.org/10.5066/F7R20ZFJ
+! ******************************************************************************
+! 
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- return
+    real(DP) :: y
+    ! -- dummy variables
+    real(DP), intent(in) :: x
+    real(DP), intent(in) :: xi
+    real(DP), optional, intent(in) :: tomega
+    ! -- local
+    real(DP) :: omega
+    real(DP) :: epsilon
+    real(DP) :: dx
+! ------------------------------------------------------------------------------
+    !
+    ! -- set smoothing interval
+    if (present(tomega)) then
+      omega = tomega
+    else
+      omega = DEM6
+    end if
+    !
+    ! -- set smoothing interval
+    epsilon = DHALF * omega
+    !
+    ! -- calculate distance from xi
+    dx = x - xi
+    !
+    ! -- evaluate smoothing function
+    if (dx < -epsilon) then
+      y = 0
+    else if (dx < epsilon) then
+      y = (dx / omega) + DHALF
+    else
+      y = 1
+    end if
+    !
+    ! -- return
+    return
+  end function sQuadratic0spDerivative  
+  
+  function sQuadraticSlope(x, xi, yi, sm, sp, tomega) result(y)
+! ******************************************************************************
+! Quadratic smoothing function returns a smoothed value of y that has the value
+! yi at xi and yi + (sm * dx) for x-values less than xi and yi + (sp * dx) for
+! x-values greater than xi, where dx = x - xi.
+! ******************************************************************************
+! 
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- return
+    real(DP) :: y
+    ! -- dummy variables
+    real(DP), intent(in) :: x
+    real(DP), intent(in) :: xi
+    real(DP), intent(in) :: yi
+    real(DP), intent(in) :: sm
+    real(DP), intent(in) :: sp
+    real(DP), optional, intent(in) :: tomega
+    ! -- local
+    real(DP) :: omega
+    real(DP) :: epsilon
+    real(DP) :: dx
+    real(DP) :: c
+! ------------------------------------------------------------------------------
+    !
+    ! -- set smoothing interval
+    if (present(tomega)) then
+      omega = tomega
+    else
+      omega = DEM6
+    end if
+    !
+    ! -- set smoothing interval
+    epsilon = DHALF * omega
+    !
+    ! -- calculate distance from xi
+    dx = x - xi
+    !
+    ! -- evaluate smoothing function
+    if (dx < -epsilon) then
+      y = sm * dx
+    else if (dx < epsilon) then
+      c = dx / epsilon
+      y = DHALF * epsilon * (DHALF * (sp - sm) * (DONE + c**DTWO) + (sm + sp) * c)
+    else
+      y = sp * dx
+    end if
+    !
+    ! -- add value at xi
+    y = y + yi
+    !
+    ! -- return
+    return
+  end function sQuadraticSlope  
+  
+  
+  function sQuadraticSlopeDerivative(x, xi, sm, sp, tomega) result(y)
+! ******************************************************************************
+! Derivative of quadratic smoothing function returns a smoothed value of y 
+! that has the value yi at xi and yi + (sm * dx) for x-values less than xi and 
+! yi + (sp * dx) for x-values greater than xi, where dx = x - xi.
+! ******************************************************************************
+! 
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- return
+    real(DP) :: y
+    ! -- dummy variables
+    real(DP), intent(in) :: x
+    real(DP), intent(in) :: xi
+    real(DP), intent(in) :: sm
+    real(DP), intent(in) :: sp
+    real(DP), optional, intent(in) :: tomega
+    ! -- local
+    real(DP) :: omega
+    real(DP) :: epsilon
+    real(DP) :: dx
+    real(DP) :: c
+! ------------------------------------------------------------------------------
+    !
+    ! -- set smoothing interval
+    if (present(tomega)) then
+      omega = tomega
+    else
+      omega = DEM6
+    end if
+    !
+    ! -- set smoothing interval
+    epsilon = DHALF * omega
+    !
+    ! -- calculate distance from xi
+    dx = x - xi
+    !
+    ! -- evaluate smoothing function
+    if (dx < -epsilon) then
+      y = sm
+    else if (dx < epsilon) then
+      c = dx / epsilon
+      y = DHALF * ((sp - sm) * c + (sm + sp))
+    else
+      y = sp
+    end if
+    !
+    ! -- return
+    return
+  end function sQuadraticSlopeDerivative 
+  
 end module SmoothingModule
     
     

@@ -1,0 +1,51 @@
+BEGIN OPTIONS
+  COMPRESSION_INDICES
+  SPECIFIED_INITIAL_INTERBED_STATE
+  BOUNDNAMES
+  SAVE_FLOWS
+END OPTIONS
+
+BEGIN DIMENSIONS
+  NINTERBEDS  4
+  MAXSIG0  1
+END DIMENSIONS
+
+BEGIN GRIDDATA
+  # compression indices of coarse grained aquifer materials
+  cg_ske_cr LAYERED
+    CONSTANT       0.01
+    CONSTANT       0.01
+    CONSTANT       0.01
+    CONSTANT       0.01
+  # porosity of coarse grained aquifer materials
+  cg_theta LAYERED
+    CONSTANT       0.45
+    CONSTANT       0.45
+    CONSTANT       0.45
+    CONSTANT       0.45
+  # specific gravity of saturated sediment
+  SGS LAYERED
+      CONSTANT 2.0
+      CONSTANT 2.0
+      CONSTANT 2.0
+      CONSTANT 2.0
+  # specific gravity of moist sediment
+  SGM LAYERED
+      CONSTANT 1.7
+      CONSTANT 1.7
+      CONSTANT 1.7
+      CONSTANT 1.7
+END GRIDDATA
+
+BEGIN PACKAGEDATA
+# icsubsno cellid cdelay     pcs0  thick_frac rnb ssv_cc sse_cr theta     kv  h0 boundname
+          1 1 1 6   delay    15.0       0.450 1.0   0.25    0.01    0.45 0.1 15. nsystm0
+          2 1 1 7   nodelay 15.0        0.450 1.0   0.25    0.01    0.45 0.0 0.0 nsystm1
+          3 1 1 8   nodelay 15.0        0.450 1.0   0.25    0.01    0.45 0.0 0.0 nsystm1
+          4 1 1 9   delay    15.0       0.450 1.0   0.25    0.01    0.45 0.1 15. nsystm2
+END PACKAGEDATA
+
+BEGIN PERIOD 1
+# stress offset for stress period 1
+  1 1 6    1700.00000000
+END PERIOD
