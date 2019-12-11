@@ -679,6 +679,10 @@ if __name__ == '__main__':
         ['test019_VilhelmsenLGR', 'vilhelmsen-lgr'],
 
         ['test046_periodic_bc', 'periodicbc'],
+        ['test061_csub_jacob', 'csub-jacob'],
+        ['test062_csub_sub01', 'csub-sub01'],
+        ['test063_csub_holly', 'csub-holly'],
+        ['test064_csub_subwt01', 'csub-subwt01'],
     ]
 
     # Create a runall.bat file in examples
@@ -759,7 +763,9 @@ if __name__ == '__main__':
     print('Downloading published reports for inclusion in distribution')
     for url in ['https://pubs.usgs.gov/tm/06/a57/tm6a57.pdf',
                 'https://pubs.usgs.gov/tm/06/a55/tm6a55.pdf',
-                'https://pubs.usgs.gov/tm/06/a56/tm6a56.pdf']:
+                'https://pubs.usgs.gov/tm/06/a56/tm6a56.pdf',
+                'https://github.com/MODFLOW-USGS/modflow6-examples/releases/download/untagged-0ee0f28c4bb6f261a5c9/csubexamples.pdf',
+                ]:
         print('  downloading {}'.format(url))
         download_and_unzip(url, pth=fd['doc'], delete_zip=False)
     print('\n')
