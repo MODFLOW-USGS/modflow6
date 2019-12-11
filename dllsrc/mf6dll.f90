@@ -248,12 +248,14 @@ contains
     character(kind=c_char) :: grid_type(MAXSTRLEN)
     integer :: status
     
+    ! make sure it is only used for rectilinear grids
     status = get_grid_type(grid_id, grid_type)
     if (char_array_to_string(grid_type, strlen(grid_type)) /= "rectilinear") then
       bmi_status = BMI_FAILURE
       return
     end if
     
+    ! get shape array
     model_name = get_model_name(grid_id)
     call setptr_int1d(grid_shape, "MSHAPE", trim(model_name) // " DIS")
     
@@ -279,12 +281,14 @@ contains
     character(kind=c_char) :: grid_type(MAXSTRLEN)
     integer :: status
     
+    ! make sure it is only used for rectilinear grids
     status = get_grid_type(grid_id, grid_type)
     if (char_array_to_string(grid_type, strlen(grid_type)) /= "rectilinear") then
       bmi_status = BMI_FAILURE
       return
     end if
     
+    ! get shape array
     model_name = get_model_name(grid_id)
     call setptr_int1d(grid_shape, "MSHAPE", trim(model_name) // " DIS")
     
@@ -300,46 +304,58 @@ contains
     type(c_ptr), intent(out) :: grid_shape
     integer(kind=c_int) :: bmi_status
     ! local
-    integer, dimension(:), pointer :: grid_shape_fortran
+    integer, dimension(:), pointer :: grid_shape_ptr
     character(len=LENMODELNAME) :: model_name
     character(kind=c_char) :: grid_type(MAXSTRLEN)
     integer :: status
     
+    ! make sure it is only used for rectilinear grids
     status = get_grid_type(grid_id, grid_type)
     if (char_array_to_string(grid_type, strlen(grid_type)) /= "rectilinear") then
       bmi_status = BMI_FAILURE
       return
     end if
     
+    ! get shape array
     model_name = get_model_name(grid_id)
-    call setptr_int1d(grid_shape_fortran, "MSHAPE", trim(model_name) // " DIS")
+    call setptr_int1d(grid_shape_ptr, "MSHAPE", trim(model_name) // " DIS")
     
-    if (grid_shape_fortran(1) == 1) then
-      grid_shape_fortran = grid_shape_fortran(2:3)
+    if (grid_shape_ptr(1) == 1) then
+      grid_shape_ptr = grid_shape_ptr(2:3)
     end if
     
-    grid_shape = c_loc(grid_shape_fortran)
+    grid_shape = c_loc(grid_shape_ptr)
     bmi_status = BMI_SUCCESS
   end function get_grid_shape
   
    ! Provides an array (whose length is the number of rows) that gives the y-coordinate for each row.
   function get_grid_x(grid_id, grid_x) result(bmi_status) bind(C, name="get_grid_x")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_x
+    use MemoryManagerModule, only: setptr_int1d
     integer(kind=c_int), intent(in) :: grid_id
     type(c_ptr), intent(out) :: grid_x
     integer(kind=c_int) :: bmi_status
     ! local
     integer :: i
+    integer(I4B), dimension(:), pointer :: grid_shape
     real(DP), dimension(:), pointer, contiguous :: array_ptr
-    real(DP), dimension(10), target, save :: array = [ (i-1, i=1,10) ]
+    real(DP), dimension(:), target, allocatable :: array
+    character(len=LENMODELNAME) :: model_name
     character(kind=c_char) :: grid_type(MAXSTRLEN)
     integer :: status
     
+    ! make sure it is only used for rectilinear grids
     status = get_grid_type(grid_id, grid_type)
     if (char_array_to_string(grid_type, strlen(grid_type)) /= "rectilinear") then
       bmi_status = BMI_FAILURE
       return
     end if
+    
+    ! get shape array
+    model_name = get_model_name(grid_id)
+    call setptr_int1d(grid_shape, "MSHAPE", trim(model_name) // " DIS")
+    
+    array = [ (i-1, i=1,grid_shape(3)) ]   
     
     array_ptr => array
     grid_x = c_loc(array_ptr)
@@ -349,21 +365,31 @@ contains
   ! Provides an array (whose length is the number of rows) that gives the y-coordinate for each row.
   function get_grid_y(grid_id, grid_y) result(bmi_status) bind(C, name="get_grid_y")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_y
+    use MemoryManagerModule, only: setptr_int1d
     integer(kind=c_int), intent(in) :: grid_id
     type(c_ptr), intent(out) :: grid_y
     integer(kind=c_int) :: bmi_status
     ! local
     integer :: i
+    integer(I4B), dimension(:), pointer :: grid_shape
     real(DP), dimension(:), pointer, contiguous :: array_ptr
-    real(DP), dimension(10), target, save :: array = [  (i-1, i=10,1,-1) ]
+    real(DP), dimension(10), target:: array
+    character(len=LENMODELNAME) :: model_name
     character(kind=c_char) :: grid_type(MAXSTRLEN)
     integer :: status
     
+    ! make sure it is only used for rectilinear grids
     status = get_grid_type(grid_id, grid_type)
     if (char_array_to_string(grid_type, strlen(grid_type)) /= "rectilinear") then
       bmi_status = BMI_FAILURE
       return
     end if
+    
+    ! get shape array
+    model_name = get_model_name(grid_id)
+    call setptr_int1d(grid_shape, "MSHAPE", trim(model_name) // " DIS")
+    
+    array = [ (i-1, i=grid_shape(2),1,-1) ]
     
     array_ptr => array
     grid_y = c_loc(array_ptr)
