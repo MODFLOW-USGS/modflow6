@@ -8,6 +8,9 @@ module mf6dll
   
 contains
     
+  
+  ! initialize the computational core, assuming to have the configuration 
+  ! file 'mfsim.nam' in the working directory
   function initialize() result(bmi_status) bind(C, name="initialize")
   !DEC$ ATTRIBUTES DLLEXPORT :: initialize
     integer :: bmi_status
@@ -16,7 +19,8 @@ contains
     bmi_status = BMI_SUCCESS
     
   end function initialize
-   
+  
+  ! perform a time step
   function update() result(bmi_status) bind(C, name="update")
   !DEC$ ATTRIBUTES DLLEXPORT :: update
     integer :: bmi_status

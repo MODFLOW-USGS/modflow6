@@ -59,11 +59,7 @@ contains
   end subroutine mf6_initialize
   
   function mf6_update() result(hasConverged)
-    Use TdisModule, only: tdis_tu
     logical :: hasConverged
-    
-    ! -- time update
-    call tdis_tu()
     !
     ! -- prepare timestep
     call prepareTimestep()
@@ -228,6 +224,7 @@ contains
   
   subroutine prepareTimestep()
     use KindModule,             only: I4B
+    use TdisModule,             only: tdis_tu
     use ListsModule,            only: basesolutionlist, basemodellist, baseexchangelist
     use BaseModelModule,        only: BaseModelType, GetBaseModelFromList
     use BaseExchangeModule,     only: BaseExchangeType, GetBaseExchangeFromList
@@ -238,6 +235,9 @@ contains
     class(BaseSolutionType), pointer :: sp => null()
     class(BaseModelType), pointer :: mp => null()
     class(BaseExchangeType), pointer :: ep => null()
+    
+    ! -- time update
+    call tdis_tu()
     
     ! -- Read and prepare each model
     do im = 1, basemodellist%Count()

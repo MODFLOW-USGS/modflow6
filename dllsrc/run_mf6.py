@@ -42,6 +42,7 @@ localArray = np.zeros(nsize, dtype="double", order='F')
 
 # model time loop
 while ct.value < et.value:
+    print("time: ", ct.value)
     # calculate
     mf6.update()
 
