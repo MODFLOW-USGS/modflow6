@@ -2,8 +2,8 @@
 # created on...February 22, 2018 10:50:04
 
 major = 6
-minor = 0
-micro = 3
+minor = 1
+micro = 0
 build = 0
 commit = 0
 

@@ -82,6 +82,7 @@
 		<Filter Name="GroundWaterFlow">
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3chd8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3csub8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3dis8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3disu8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3disv8.f90"/>
@@ -103,13 +104,13 @@
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3uzf8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3wel8.f90"/></Filter>
 		<Filter Name="ModelUtilities">
-		<File RelativePath="..\src\Model\ModelUtilities\BndUzfKinematic.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\BoundaryPackage.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\Connections.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\DiscretizationBase.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\DisvGeom.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\Mover.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\PackageMover.f90"/>
+		<File RelativePath="..\src\Model\ModelUtilities\UzfCellGroup.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\Xt3dAlgorithm.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\Xt3dInterface.f90"/></Filter>
 		<File RelativePath="..\src\Model\BaseModel.f90"/>
@@ -159,9 +160,9 @@
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration></File>
 		<File RelativePath="..\src\Utilities\Constants.f90"/>
+		<File RelativePath="..\src\Utilities\genericutils.f90"/>
 		<File RelativePath="..\src\Utilities\HashTable.f90"/>
 		<File RelativePath="..\src\Utilities\InputOutput.f90"/>
-		<File RelativePath="..\src\Utilities\genericutils.f90"/>
 		<File RelativePath="..\src\Utilities\Iunit.f90"/>
 		<File RelativePath="..\src\Utilities\kind.f90"/>
 		<File RelativePath="..\src\Utilities\List.f90"/>
