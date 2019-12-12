@@ -41,13 +41,24 @@ def get_mf6_models():
     """
         Get a list of test models
     """
+    # determine if running on travis
+    is_travis = 'TRAVIS' in os.environ
+
     # tuple of example files to exclude
-    exclude = ('test006_03models',
-               'test018_NAC',
-               'test051_uzf1d_a')
+    exclude = (None,)
+
+    # update exclude
+    if is_travis:
+        exclude_travis = (None, )
+        exclude = exclude + exclude_travis
+    exclude = list(exclude)
+
+    # write a summary of the files to exclude
+    print('list of tests to exclude:')
+    for idx, ex in enumerate(exclude):
+        print('    {}: {}'.format(idx + 1, ex))
 
     # build list of directories with valid example files
-    exclude = list(exclude)
     if exdir is not None:
         dirs = [d for d in os.listdir(exdir)
                 if 'test' in d and d not in exclude]
