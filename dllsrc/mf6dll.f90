@@ -339,7 +339,7 @@ contains
     integer :: i
     integer(I4B), dimension(:), pointer :: grid_shape
     real(DP), dimension(:), pointer, contiguous :: array_ptr
-    real(DP), dimension(:), target, allocatable :: array
+    real(DP), dimension(:), target, allocatable, save :: array
     character(len=LENMODELNAME) :: model_name
     character(kind=c_char) :: grid_type(MAXSTRLEN)
     integer :: status
@@ -373,7 +373,7 @@ contains
     integer :: i
     integer(I4B), dimension(:), pointer :: grid_shape
     real(DP), dimension(:), pointer, contiguous :: array_ptr
-    real(DP), dimension(10), target:: array
+    real(DP), dimension(:), target, allocatable, save :: array
     character(len=LENMODELNAME) :: model_name
     character(kind=c_char) :: grid_type(MAXSTRLEN)
     integer :: status
