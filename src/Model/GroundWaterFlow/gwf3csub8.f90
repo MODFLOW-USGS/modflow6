@@ -2844,7 +2844,7 @@ contains
     real(DP) :: v
     ! -- format
     character(len=*), parameter :: fmtcsub =                                   &
-      "(1x,/1x,'CSUB -- COMPACTION PACKAGE, VERSION 1, 3/16/2018',             &
+      "(1x,/1x,'CSUB -- COMPACTION PACKAGE, VERSION 1, 12/15/2019',            &
      &' INPUT READ FROM UNIT ', i0, //)"
 ! ------------------------------------------------------------------------------
     !
