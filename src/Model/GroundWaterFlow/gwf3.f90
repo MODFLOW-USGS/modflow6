@@ -93,23 +93,7 @@ module GwfModule
                 '     ', 'MAW6 ', 'SFR6 ', 'LAK6 ', 'UZF6 ', & ! 25
                 'DISV6', 'MVR6 ', 'CSUB6', '     ', '     ', & ! 30
                 70 * '     '/
-!!$  interface
-!!$  subroutine vkd_cr(vkdobj, name_model, inunit, iout)
-!!$! ******************************************************************************
-!!$! vkd_cr -- Create a new vkd object
-!!$! ******************************************************************************
-!!$!
-!!$!    SPECIFICATIONS:
-!!$! ------------------------------------------------------------------------------
-!!$    ! -- dummy
-!!$    !type(VKDType), pointer :: pt_vkd
-!!$    type(VKDType), pointer :: vkdobj
-!!$    character(len=*), intent(in) :: name_model
-!!$    integer(I4B), intent(in) :: inunit
-!!$    integer(I4B), intent(in) :: iout
-!!$! ------------------------------------------------------------------------------
-!!$  end subroutine vkd_cr
-!!$  end interface
+
   contains
 
   subroutine gwf_cr(filename, id, modelname, smr)
