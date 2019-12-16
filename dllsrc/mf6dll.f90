@@ -355,7 +355,7 @@ contains
     model_name = get_model_name(grid_id)
     call setptr_int1d(grid_shape, "MSHAPE", trim(model_name) // " DIS")
     
-    array = [ (i-1, i=1,grid_shape(3)) ]   
+    array = [ (i, i=0,grid_shape(3)) ]   
     
     array_ptr => array
     grid_x = c_loc(array_ptr)
@@ -389,7 +389,7 @@ contains
     model_name = get_model_name(grid_id)
     call setptr_int1d(grid_shape, "MSHAPE", trim(model_name) // " DIS")
     
-    array = [ (i-1, i=grid_shape(2),1,-1) ]
+    array = [ (i, i=grid_shape(2),0,-1) ]
     
     array_ptr => array
     grid_y = c_loc(array_ptr)
