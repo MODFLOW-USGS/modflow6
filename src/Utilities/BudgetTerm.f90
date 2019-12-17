@@ -10,13 +10,17 @@ module BudgetTermModule
   
   type :: BudgetTermType
     
-    character(len=LENBUDTXT) :: name
-    integer(I4B) :: nlist
-    integer(I4B) :: naux
-    integer(I4B), dimension(:), pointer :: id1 => null()
-    integer(I4B), dimension(:), pointer :: id2 => null()
-    real(DP), dimension(:), pointer :: flow => null()
-    real(DP), dimension(:, :), pointer :: auxvar => null()
+    character(len=LENBUDTXT) :: name1                        ! model
+    character(len=LENBUDTXT) :: name2                        ! to model
+    character(len=LENBUDTXT) :: textid1                      ! package/model
+    character(len=LENBUDTXT) :: textid2                      ! to package/model
+    integer(I4B) :: maxbound                                 ! allocated size of arrays
+    integer(I4B) :: nbound                                   ! size of arrays for this period
+    integer(I4B) :: naux                                     ! number of auxiliary variables
+    integer(I4B), dimension(:), pointer :: id1 => null()     ! first id (maxbound)
+    integer(I4B), dimension(:), pointer :: id2 => null()     ! second id (maxbound)
+    real(DP), dimension(:), pointer :: flow => null()        ! point this to simvals or simtomvr (maxbound)
+    real(DP), dimension(:, :), pointer :: auxvar => null()   ! auxiliary variables (naux, maxbound)
     character(len=LENBUDTXT), dimension(:), allocatable :: auxtxt
     
   contains

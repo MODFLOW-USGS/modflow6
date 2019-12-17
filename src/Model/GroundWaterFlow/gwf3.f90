@@ -366,6 +366,10 @@ module GwfModule
       print *, 'need number of budget terms for csub'
       stop
     end if
+    if(this%inmvr > 0)  then
+      print *, 'need number of budget terms for mvr'
+      stop
+    end if
     call this%budobj%budgetobject_df(this%dis%nodes, nbudterms, 1, nsto)
     !
     ! -- return
