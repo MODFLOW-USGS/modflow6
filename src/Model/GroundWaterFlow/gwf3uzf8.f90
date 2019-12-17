@@ -145,6 +145,7 @@ module UzfModule
     procedure, public :: bnd_df_obs => uzf_df_obs
     procedure, public :: bnd_rp_obs => uzf_rp_obs
     procedure, private :: uzf_bd_obs
+    procedure, public :: get_nbudterms
     !
     ! -- methods specific for uzf
     procedure, private :: uzf_solve
@@ -3304,5 +3305,27 @@ contains
     ! -- Return
     return
   end subroutine uzf_da
+
+  function get_nbudterms(this) result(nbudterms)
+! ******************************************************************************
+! get_nbudterms -- return the number of budget terms that this package
+!                  adds to the model
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(UzfType) :: this
+    integer(I4B) :: nbudterms
+! ------------------------------------------------------------------------------
+    !
+    nbudterms = 1
+    if (this%iseepflag == 1) then
+      nbudterms = nbudterms + 1
+      if (this%imover == 1) nbudterms = nbudterms + 1
+    end if
+    if (this%ietflag /= 0) nbudterms = nbudterms + 1
+    return
+  end function get_nbudterms
 
 end module UzfModule
