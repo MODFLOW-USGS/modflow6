@@ -1793,7 +1793,7 @@ contains
       do n = 1, this%nodes
         !
         ! -- Initialize variables
-        ivertflag = this%uzfobj%ivertcon(i)
+        ivertflag = this%uzfobj%ivertcon(n)
         if ( ivertflag > 0 ) then
           nlen = nlen + 1
         end if
@@ -1807,9 +1807,9 @@ contains
         do n = 1, this%nodes
           !
           ! -- Initialize variables
-          ivertflag = this%uzfobj%ivertcon(i)
+          ivertflag = this%uzfobj%ivertcon(n)
           if ( ivertflag > 0 ) then
-             q = this%uzfobj%surfluxbelow(i) * this%uzfobj%uzfarea(i)
+             q = this%uzfobj%surfluxbelow(n) * this%uzfobj%uzfarea(n)
              if (q > DZERO) then
                q = -q
              end if
@@ -1819,7 +1819,7 @@ contains
                                                     this%qauxcbc,                 &
                                                     olconv=.FALSE.,               &
                                                     olconv2=.FALSE.)
-             q = this%uzfobj%surfluxbelow(i) * this%uzfobj%uzfarea(i)
+             q = this%uzfobj%surfluxbelow(n) * this%uzfobj%uzfarea(n)
              call this%dis%record_mf6_list_entry(ibinun, n2, n1, q, naux,     &
                                                     this%qauxcbc,                 &
                                                     olconv=.FALSE.,               &
@@ -1838,7 +1838,7 @@ contains
       do n = 1, this%nodes
         !
         ! -- Initialize variables
-        this%qauxcbc(1) = this%uzfobj%uzfarea(i)
+        this%qauxcbc(1) = this%uzfobj%uzfarea(n)
         n2 = this%mfcellid(n)
         q = -this%rch(n)
         call this%dis%record_mf6_list_entry(ibinun, n, n2, q, naux,         &
