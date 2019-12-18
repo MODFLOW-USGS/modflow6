@@ -230,6 +230,7 @@ contains
     ! local
     character(len=MAXSTRLEN) :: name
     
+    ! TODO_JH implement "uniform_rectilinear", "structured_quadrilateral", "unstructured" grid type
     name = "rectilinear"
     grid_type = string_to_char_array(trim(name), len(trim(name)))
     bmi_status = BMI_SUCCESS
