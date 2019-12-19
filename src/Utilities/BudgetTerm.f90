@@ -15,19 +15,21 @@ module BudgetTermModule
     character(len=LENBUDTXT) :: text2id1                           ! to model
     character(len=LENBUDTXT) :: text1id2                           ! package/model
     character(len=LENBUDTXT) :: text2id2                           ! to package/model
+    character(len=LENBUDTXT), dimension(:), pointer :: auxtxt      ! name of auxiliary variables
     integer(I4B) :: maxlist                                        ! allocated size of arrays
-    integer(I4B) :: nlist                                          ! size of arrays for this period
     integer(I4B) :: naux                                           ! number of auxiliary variables
+    integer(I4B) :: nlist                                          ! size of arrays for this period
     integer(I4B), dimension(:), pointer :: id1 => null()           ! first id (maxlist)
     integer(I4B), dimension(:), pointer :: id2 => null()           ! second id (maxlist)
     real(DP), dimension(:), pointer :: flow => null()              ! point this to simvals or simtomvr (maxlist)
     real(DP), dimension(:, :), pointer :: auxvar => null()         ! auxiliary variables (naux, maxlist)
-    character(len=LENBUDTXT), dimension(:), pointer :: auxtxt      ! name of auxiliary variables
-    
+    integer(I4B) :: icounter                                       ! counter variable
   contains
   
     procedure :: initialize
     procedure :: allocate_arrays
+    procedure :: reset
+    procedure :: update_term
     procedure :: accumulate_flow
     procedure :: printme
     
@@ -36,7 +38,7 @@ module BudgetTermModule
   contains
   
   subroutine initialize(this, flowtype, text1id1, text2id1, &
-                        text1id2, text2id2, maxlist, naux)
+                        text1id2, text2id2, maxlist, naux, auxtxt)
     class(BudgetTermType) :: this
     character(len=LENBUDTXT), intent(in) :: flowtype
     character(len=LENBUDTXT), intent(in) :: text1id1
@@ -45,6 +47,7 @@ module BudgetTermModule
     character(len=LENBUDTXT), intent(in) :: text2id2
     integer(I4B), intent(in) :: maxlist
     integer(I4B), intent(in) :: naux
+    character(len=LENBUDTXT), dimension(:), intent(in), optional :: auxtxt
     this%flowtype = flowtype
     this%text1id1 = text1id1
     this%text2id1 = text2id1
@@ -54,6 +57,7 @@ module BudgetTermModule
     this%naux = naux
     this%nlist = maxlist
     call this%allocate_arrays()
+    if (present(auxtxt)) this%auxtxt(:) = auxtxt(1:naux)
   end subroutine initialize
   
   subroutine allocate_arrays(this)
@@ -64,6 +68,26 @@ module BudgetTermModule
     allocate(this%auxvar(this%naux, this%maxlist))
     allocate(this%auxtxt(this%naux))
   end subroutine allocate_arrays
+  
+  subroutine reset(this, nlist)
+    class(BudgetTermType) :: this
+    integer(I4B), intent(in) :: nlist
+    this%nlist = nlist
+    this%icounter = 1
+  end subroutine reset
+  
+  subroutine update_term(this, id1, id2, flow, auxvar)
+    class(BudgetTermType) :: this
+    integer(I4B), intent(in) :: id1
+    integer(I4B), intent(in) :: id2
+    real(DP), intent(in) :: flow
+    real(DP), dimension(:), intent(in), optional :: auxvar
+    this%id1(this%icounter) = id1
+    this%id2(this%icounter) = id2
+    this%flow(this%icounter) = flow
+    if (present(auxvar)) this%auxvar(:, this%icounter) = auxvar(1:this%naux)
+    this%icounter = this%icounter + 1
+  end subroutine update_term
   
   subroutine accumulate_flow(this, ratin, ratout)
     class(BudgetTermType) :: this

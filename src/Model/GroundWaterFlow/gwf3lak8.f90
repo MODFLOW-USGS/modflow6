@@ -4170,7 +4170,8 @@ contains
       end do
 
     end do
-    ! -- add calculated terms
+    !
+    ! -- update budget with accumulators
     call this%budget%addentry(qinfin, qinfout, delt,  &
                               this%clakbudget(5), isuppress_output)
     if (this%imover == 1) then
@@ -4197,6 +4198,7 @@ contains
                               this%clakbudget(8), isuppress_output)
     call this%budget%addentry(chratin, chratout, delt,  &
                               this%clakbudget(9), isuppress_output)
+    !
     ! -- For continuous observations, save simulated values.
     if (this%obs%npakobs > 0 .and. iprobs > 0) then
       call this%lak_bd_obs()
@@ -6113,9 +6115,11 @@ contains
     integer(I4B) :: maxlist, naux
     integer(I4B) :: idx
     character(len=LENBUDTXT) :: text
+    character(len=LENBUDTXT), dimension(1) :: auxtxt
 ! ------------------------------------------------------------------------------
     !
-    ! -- determine the number of budget terms
+    ! -- Determine the number of lake budget terms. These are fixed for 
+    !    the simulation and cannot change
     nbudterm = 9
     nlen = 0
     do n = 1, this%noutlets
@@ -6151,14 +6155,15 @@ contains
     text = '             GWF'
     idx = idx + 1
     maxlist = this%maxbound 
-    naux = 1  ! flow-area
+    naux = 1
+    auxtxt(1) = '       FLOW-AREA'
     call this%budobj%budterm(idx)%initialize(text, &
                                              this%name_model, &
                                              this%name, &
                                              this%name_model, &
                                              this%name_model, &
                                              maxlist, &
-                                             naux)
+                                             naux, auxtxt)
     !
     ! -- 
     text = '        RAINFALL'
@@ -6242,14 +6247,15 @@ contains
     text = '         STORAGE'
     idx = idx + 1
     maxlist = this%nlakes
-    naux = 1  ! volume
+    naux = 1
+    auxtxt(1) = '          VOLUME'
     call this%budobj%budterm(idx)%initialize(text, &
                                              this%name_model, &
                                              this%name, &
                                              this%name_model, &
                                              this%name, &
                                              maxlist, &
-                                             naux)
+                                             naux, auxtxt)
     !
     ! -- 
     text = '        CONSTANT'
@@ -6308,7 +6314,7 @@ contains
                                                this%name_model, &
                                                this%name, &
                                                maxlist, &
-                                               naux)
+                                               naux, this%auxname)
     end if
     !
     ! -- return
@@ -6336,10 +6342,9 @@ contains
     real(DP) :: v, v1
     real(DP) :: q
     ! -- formats
-! ------------------------------------------------------------------------------
+! -----------------------------------------------------------------------------
     !
-    ! -- Push lake budget terms into this%budobj
-    
+    ! -- initialize counter
     idx = 0
 
     
@@ -6350,31 +6355,19 @@ contains
         nlen = nlen + 1
       end if
     end do
-
     if (nlen > 0) then
       idx = idx + 1
-      this%budobj%budterm(idx)%nlist = 2 * nlen
-      i = 0
+      call this%budobj%budterm(idx)%reset(2 * nlen)
       do n = 1, this%noutlets
         n1 = this%lakein(n)
         n2 = this%lakeout(n)
         if (n1 > 0 .and. n2 > 0) then
-        
           q = this%simoutrate(n)
           if (this%imover == 1) then
             q = q + this%pakmvrobj%get_qtomvr(n)
           end if
-
-          i = i + 1
-          this%budobj%budterm(idx)%id1(i) = n1
-          this%budobj%budterm(idx)%id2(i) = n2
-          this%budobj%budterm(idx)%flow(i) = q
-
-          i = i + 1
-          this%budobj%budterm(idx)%id1(i) = n2
-          this%budobj%budterm(idx)%id2(i) = n1
-          this%budobj%budterm(idx)%flow(i) = -q
-
+          call this%budobj%budterm(idx)%update_term(n1, n2, q)
+          call this%budobj%budterm(idx)%update_term(n2, n1, -q)
         end if
       end do
     end if
@@ -6382,13 +6375,7 @@ contains
     
     ! -- GWF (LEAKAGE)
     idx = idx + 1
-    naux = this%cbcauxitems
-    this%cauxcbc(1) = '       FLOW-AREA'
-    this%budobj%budterm(idx)%nlist = this%maxbound
-    this%budobj%budterm(idx)%naux = naux
-    this%budobj%budterm(idx)%auxtxt(:) = this%cauxcbc(:)
-    
-    i = 0
+    call this%budobj%budterm(idx)%reset(this%maxbound)
     do n = 1, this%nlakes
       hlak = this%xnewpak(n)
       do j = this%idxlakeconn(n), this%idxlakeconn(n + 1) - 1
@@ -6396,126 +6383,85 @@ contains
         hgwf = this%xnew(n2)
         call this%lak_calculate_conn_warea(n, j, hlak, hgwf, this%qauxcbc(1))
         q = this%qleak(j)
-
-        i = i + 1
-        this%budobj%budterm(idx)%id1(i) = n
-        this%budobj%budterm(idx)%id2(i) = n2
-        this%budobj%budterm(idx)%flow(i) = q
-        this%budobj%budterm(idx)%auxvar(:, i) = this%qauxcbc(:)
-        
+        call this%budobj%budterm(idx)%update_term(n1, n2, q, this%qauxcbc)
       end do
     end do
 
     
     ! -- RAIN
     idx = idx + 1
-    naux = 0
-    this%budobj%budterm(idx)%nlist = this%nlakes
-    this%budobj%budterm(idx)%naux = naux
+    call this%budobj%budterm(idx)%reset(this%nlakes)
     do n = 1, this%nlakes
       q = this%precip(n)
-      this%budobj%budterm(idx)%id1(n) = n
-      this%budobj%budterm(idx)%id2(n) = n
-      this%budobj%budterm(idx)%flow(n) = q
+      call this%budobj%budterm(idx)%update_term(n, n, q)
     end do
     
     
     ! -- EVAPORATION
     idx = idx + 1
-    naux = 0
-    this%budobj%budterm(idx)%nlist = this%nlakes
-    this%budobj%budterm(idx)%naux = naux
+    call this%budobj%budterm(idx)%reset(this%nlakes)
     do n = 1, this%nlakes
       q = this%evap(n)
-      this%budobj%budterm(idx)%id1(n) = n
-      this%budobj%budterm(idx)%id2(n) = n
-      this%budobj%budterm(idx)%flow(n) = q
+      call this%budobj%budterm(idx)%update_term(n, n, q)
     end do
     
 
     ! -- RUNOFF
     idx = idx + 1
-    naux = 0
-    this%budobj%budterm(idx)%nlist = this%nlakes
-    this%budobj%budterm(idx)%naux = naux
+    call this%budobj%budterm(idx)%reset(this%nlakes)
     do n = 1, this%nlakes
       q = this%runoff(n)%value
-      this%budobj%budterm(idx)%id1(n) = n
-      this%budobj%budterm(idx)%id2(n) = n
-      this%budobj%budterm(idx)%flow(n) = q
+      call this%budobj%budterm(idx)%update_term(n, n, q)
     end do
 
     
     ! -- INFLOW
     idx = idx + 1
-    naux = 0
-    this%budobj%budterm(idx)%nlist = this%nlakes
-    this%budobj%budterm(idx)%naux = naux
+    call this%budobj%budterm(idx)%reset(this%nlakes)
     do n = 1, this%nlakes
       q = this%inflow(n)%value
-      this%budobj%budterm(idx)%id1(n) = n
-      this%budobj%budterm(idx)%id2(n) = n
-      this%budobj%budterm(idx)%flow(n) = q
+      call this%budobj%budterm(idx)%update_term(n, n, q)
     end do
     
     
     ! -- WITHDRAWAL
     idx = idx + 1
-    naux = 0
-    this%budobj%budterm(idx)%nlist = this%nlakes
-    this%budobj%budterm(idx)%naux = naux
+    call this%budobj%budterm(idx)%reset(this%nlakes)
     do n = 1, this%nlakes
       q = this%withr(n)
-      this%budobj%budterm(idx)%id1(n) = n
-      this%budobj%budterm(idx)%id2(n) = n
-      this%budobj%budterm(idx)%flow(n) = q
+      call this%budobj%budterm(idx)%update_term(n, n, q)
     end do
 
     
     ! -- EXTERNAL OUTFLOW
     idx = idx + 1
-    naux = 0
-    this%budobj%budterm(idx)%nlist = this%nlakes
-    this%budobj%budterm(idx)%naux = naux
+    call this%budobj%budterm(idx)%reset(this%nlakes)
     do n = 1, this%nlakes
       call this%lak_get_external_outlet(n, q)
       ! subtract tomover from external outflow
       call this%lak_get_external_mover(n, v)
       q = q + v
-      this%budobj%budterm(idx)%id1(n) = n
-      this%budobj%budterm(idx)%id2(n) = n
-      this%budobj%budterm(idx)%flow(n) = q
+      call this%budobj%budterm(idx)%update_term(n, n, q)
     end do
 
     
     ! -- STORAGE
     idx = idx + 1
-    naux = this%cbcauxitems
-    this%budobj%budterm(idx)%naux = naux
-    this%cauxcbc(1) = '          VOLUME'
-    this%budobj%budterm(idx)%nlist = this%nlakes
-    this%budobj%budterm(idx)%auxtxt(:) = this%cauxcbc(:)
+    call this%budobj%budterm(idx)%reset(this%nlakes)
     do n = 1, this%nlakes
       call this%lak_calculate_vol(n, this%xnewpak(n), v1)
       q = this%qsto(n)
       this%qauxcbc(1) = v1
-      this%budobj%budterm(idx)%id1(n) = n
-      this%budobj%budterm(idx)%id2(n) = n
-      this%budobj%budterm(idx)%flow(n) = q
-      this%budobj%budterm(idx)%auxvar(:, n) = this%qauxcbc(:)
+      call this%budobj%budterm(idx)%update_term(n, n, q, this%qauxcbc)
     end do
     
     
     ! -- CONSTANT FLOW
     idx = idx + 1
-    naux = 0
-    this%budobj%budterm(idx)%nlist = this%nlakes
-    this%budobj%budterm(idx)%naux = naux
+    call this%budobj%budterm(idx)%reset(this%nlakes)
     do n = 1, this%nlakes
       q = this%chterm(n)
-      this%budobj%budterm(idx)%id1(n) = n
-      this%budobj%budterm(idx)%id2(n) = n
-      this%budobj%budterm(idx)%flow(n) = q
+      call this%budobj%budterm(idx)%update_term(n, n, q)
     end do
     
     
@@ -6524,30 +6470,22 @@ contains
       
       ! -- FROM MOVER
       idx = idx + 1
-      naux = 0
-      this%budobj%budterm(idx)%nlist = this%nlakes
-      this%budobj%budterm(idx)%naux = naux
+      call this%budobj%budterm(idx)%reset(this%nlakes)
       do n = 1, this%nlakes
         q = this%pakmvrobj%get_qfrommvr(n)
-        this%budobj%budterm(idx)%id1(n) = n
-        this%budobj%budterm(idx)%id2(n) = n
-        this%budobj%budterm(idx)%flow(n) = q
+        call this%budobj%budterm(idx)%update_term(n, n, q)
       end do
       
       
       ! -- TO MOVER
       idx = idx + 1
-      naux = 0
-      this%budobj%budterm(idx)%nlist = this%nlakes
-      this%budobj%budterm(idx)%naux = naux
+      call this%budobj%budterm(idx)%reset(this%noutlets)
       do n = 1, this%noutlets
         q = this%pakmvrobj%get_qtomvr(n)
         if (q > DZERO) then
           q = -q
         end if
-        this%budobj%budterm(idx)%id1(n) = n
-        this%budobj%budterm(idx)%id2(n) = n
-        this%budobj%budterm(idx)%flow(n) = q
+        call this%budobj%budterm(idx)%update_term(n, n, q)
       end do
       
     end if
@@ -6556,30 +6494,24 @@ contains
     ! -- AUXILIARY VARIABLES
     naux = this%naux
     if (naux > 0) then
-      this%budobj%budterm(idx)%naux = naux
-      this%budobj%budterm(idx)%auxtxt(:) = this%auxname(:)
-      this%budobj%budterm(idx)%nlist = this%nlakes
       allocate(auxvartmp(naux))
+      call this%budobj%budterm(idx)%reset(this%nlakes)
       do n = 1, this%nlakes
         q = DZERO
         do i = 1, naux
           ii = (n - 1) * naux + i
           auxvartmp(i) = this%lauxvar(ii)%value
         end do
-        this%budobj%budterm(idx)%id1(n) = n
-        this%budobj%budterm(idx)%id2(n) = n
-        this%budobj%budterm(idx)%flow(n) = q
-        this%budobj%budterm(idx)%auxvar(:, n) = auxvartmp(:)
+        call this%budobj%budterm(idx)%update_term(n, n, q, auxvartmp)
       end do
       deallocate(auxvartmp)
     end if
     !
-    ! --Terms are filled, now need to accumulate them for this time step
+    ! --Terms are filled, now accumulate them for this time step
     call this%budobj%accumulate_terms()
     !
     ! -- return
     return
   end subroutine lak_fill_budobj
-
 
 end module LakModule

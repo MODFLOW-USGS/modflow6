@@ -14,7 +14,7 @@ module BudgetObjectModule
   
   type :: BudgetObjectType
     !
-    ! -- name and sizes
+    ! -- name, number of control volumes, and number of budget terms
     character(len=LENBUDTXT) :: name
     integer(I4B) :: ncv
     integer(I4B) :: nbudterm
@@ -31,11 +31,12 @@ module BudgetObjectModule
     integer(I4B) :: nsto
     real(DP), dimension(:, :), pointer :: qsto => null()
     !
-    ! -- array of budget terms
+    ! -- array of budget terms, with one separate entry for each term
+    !    such as rainfall, et, leakage, etc.
     integer(I4B) :: iterm
     type(BudgetTermType), dimension(:), allocatable :: budterm
     !
-    ! -- budget table object
+    ! -- budget table object, for writing the typical MODFLOW budget
     type(BudgetType), pointer :: budtable => null()
     
   contains
