@@ -20,7 +20,6 @@ module GwfModule
   use SimModule,                   only: count_errors, store_error,            &
                                          store_error_unit, ustop
   use BaseModelModule,             only: BaseModelType
-  use BudgetObjectModule,          only: BudgetObjectType
 
   implicit none
 
@@ -41,7 +40,6 @@ module GwfModule
     type(GwfMvrType),               pointer :: mvr     => null()                ! water mover package
     type(GwfObsType),               pointer :: obs     => null()                ! observation package
     type(BudgetType),               pointer :: budget  => null()                ! budget object
-    type(BudgetObjectType),         pointer :: budobj  => null()                ! comprehensive budget object
     integer(I4B),                   pointer :: inic    => null()                ! unit number IC
     integer(I4B),                   pointer :: inoc    => null()                ! unit number OC
     integer(I4B),                   pointer :: innpf   => null()                ! unit number NPF
@@ -127,7 +125,6 @@ module GwfModule
     use GwfIcModule,                only: ic_cr
     use GwfOcModule,                only: oc_cr
     use BudgetModule,               only: budget_cr
-    use BudgetObjectModule,         only: budgetobject_cr
     use NameFileModule,             only: NameFileType
     ! -- dummy
     character(len=*), intent(in)  :: filename
@@ -274,7 +271,6 @@ module GwfModule
     !
     ! -- Create utility objects
     call budget_cr(this%budget, this%name)
-    call budgetobject_cr(this%budobj, this%name)
     !
     ! -- Create packages that are tied directly to model
     call npf_cr(this%npf, this%name, this%innpf, this%iout)
@@ -321,7 +317,6 @@ module GwfModule
     class(GwfModelType) :: this
     ! -- local
     integer(I4B) :: ip
-    integer(I4B) :: nbudterms, ibudterms, nsto
     class(BndType), pointer :: packobj
 ! ------------------------------------------------------------------------------
     !
@@ -351,26 +346,6 @@ module GwfModule
     !
     ! -- Store information needed for observations
     call this%obs%obs_df(this%iout, this%name, 'GWF', this%dis)
-    !
-    ! -- Determine the number of budget terms and define the
-    !    budget object
-    nbudterms = 0
-    do ip = 1, this%bndlist%Count()
-      packobj => GetBndFromList(this%bndlist, ip)
-      ibudterms = packobj%get_nbudterms()
-      nbudterms = nbudterms + ibudterms
-    enddo
-    nsto = 0
-    if (this%insto > 0) nsto = 2
-    if(this%incsub > 0) then
-      print *, 'need number of budget terms for csub'
-      stop
-    end if
-    if(this%inmvr > 0)  then
-      print *, 'need number of budget terms for mvr'
-      stop
-    end if
-    call this%budobj%budgetobject_df(this%dis%nodes, nbudterms, 1, nsto)
     !
     ! -- return
     return
@@ -482,7 +457,7 @@ module GwfModule
     call this%oc%oc_ar(this%x, this%dis, this%npf%hnoflo)
     !
     ! -- Package input files now open, so allocate and read
-    do ip=1,this%bndlist%Count()
+    do ip = 1,this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%set_pointers(this%dis%nodes, this%ibound, this%x,           &
                                 this%xold, this%flowja)

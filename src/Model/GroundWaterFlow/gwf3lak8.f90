@@ -17,6 +17,7 @@ module LakModule
                               sQSaturationDerivative
   use BndModule, only: BndType
   use BudgetModule, only : BudgetType
+  use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr
 
   use ObserveModule,        only: ObserveType
   use ObsModule, only: ObsType
@@ -175,6 +176,9 @@ module LakModule
     real(DP), dimension(:), pointer, contiguous :: xnewpak => null()             !package x vector
     real(DP), dimension(:), pointer, contiguous :: xoldpak => null()             !package xold vector
     !
+    ! -- lake budget object
+    type(BudgetObjectType), pointer :: budobj => null()
+    !
     ! -- type bound procedures
     contains
     procedure :: lak_allocate_scalars
@@ -240,6 +244,9 @@ module LakModule
     procedure, private :: lak_calculate_available
     procedure, private :: lak_calculate_residual
     procedure, private :: lak_linear_interpolation
+    
+    procedure, private :: lak_setup_budobj
+    procedure, private :: lak_fill_budobj
   end type LakType
 
 contains
@@ -411,7 +418,7 @@ contains
     ! -- return
     return
   end subroutine lak_allocate_arrays
-
+  
   subroutine lak_read_lakes(this)
 ! ******************************************************************************
 ! pak1read_dimensions -- Read the dimensions for this package
@@ -1664,7 +1671,7 @@ contains
     data ctype(3) /'EMBEDDEDV '/
     ! -- format
 ! ------------------------------------------------------------------------------
-
+    !
     ! -- setup the lake budget
     call budget_cr(this%budget, this%origin)
     ival = this%bditems
@@ -3405,6 +3412,9 @@ contains
       call this%pakmvrobj%ar(this%noutlets, this%nlakes, this%origin)
     endif
     !
+    ! -- setup the budget object
+    call this%lak_setup_budobj()
+    !
     ! -- return
     return
   end subroutine lak_ar
@@ -3883,7 +3893,6 @@ contains
     ! -- return
     return
   end subroutine lak_cc
-
 
   subroutine lak_bd(this, x, idvfl, icbcfl, ibudfl, icbcun, iprobs,            &
                     isuppress_output, model_budget, imap, iadv)
@@ -4447,6 +4456,10 @@ contains
         deallocate(auxvartmp)
       end if
     end if
+    !
+    ! -- fill the budget object
+    call this%lak_fill_budobj()
+    !
     ! -- return
     return
   end subroutine lak_bd
@@ -4722,6 +4735,7 @@ contains
     !
     ! -- Output lake budget
     call this%budget%budget_ot(kstp, kper, iout)
+    call this%budobj%write_budtable(kstp, kper, iout)
     !
     ! -- return
     return
@@ -6080,6 +6094,492 @@ contains
     ! -- return
     return
   end subroutine lak_calculate_residual
+
+  subroutine lak_setup_budobj(this)
+! ******************************************************************************
+! lak_setup_budobj -- Set up the budget object that stores all the lake flows
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule, only: LENBUDTXT
+    ! -- dummy
+    class(LakType) :: this
+    ! -- local
+    integer(I4B) :: nbudterm
+    integer(I4B) :: nlen
+    integer(I4B) :: n
+    integer(I4B) :: maxlist, naux
+    integer(I4B) :: idx
+    character(len=LENBUDTXT) :: text
+! ------------------------------------------------------------------------------
+    !
+    ! -- determine the number of budget terms
+    nbudterm = 9
+    nlen = 0
+    do n = 1, this%noutlets
+      if (this%lakein(n) > 0 .and. this%lakeout(n) > 0) then
+        nlen = nlen + 1
+      end if
+    end do
+    if (nlen > 0) nbudterm = nbudterm + 1
+    if (this%imover == 1) nbudterm = nbudterm + 2
+    if (this%naux > 0) nbudterm = nbudterm + 1
+    !
+    ! -- set up budobj
+    call budgetobject_cr(this%budobj, this%name)
+    call this%budobj%budgetobject_df(this%nlakes, nbudterm, 0, 0)
+    idx = 0
+    !
+    ! -- Go through and set up each budget term
+    if (nlen > 0) then
+      text = '    FLOW-JA-FACE'
+      idx = idx + 1
+      maxlist = 2 * this%noutlets
+      naux = 0
+      call this%budobj%budterm(idx)%initialize(text, &
+                                               this%name_model, &
+                                               this%name, &
+                                               this%name_model, &
+                                               this%name, &
+                                               maxlist, &
+                                               naux)
+    end if
+    !
+    ! -- 
+    text = '             GWF'
+    idx = idx + 1
+    maxlist = this%maxbound 
+    naux = 1  ! flow-area
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name_model, &
+                                             maxlist, &
+                                             naux)
+    !
+    ! -- 
+    text = '        RAINFALL'
+    idx = idx + 1
+    maxlist = this%nlakes
+    naux = 0
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name, &
+                                             maxlist, &
+                                             naux)
+    !
+    ! -- 
+    text = '     EVAPORATION'
+    idx = idx + 1
+    maxlist = this%nlakes
+    naux = 0
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name, &
+                                             maxlist, &
+                                             naux)
+    !
+    ! -- 
+    text = '          RUNOFF'
+    idx = idx + 1
+    maxlist = this%nlakes
+    naux = 0
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name, &
+                                             maxlist, &
+                                             naux)
+    !
+    ! -- 
+    text = '      EXT-INFLOW'
+    idx = idx + 1
+    maxlist = this%nlakes
+    naux = 0
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name, &
+                                             maxlist, &
+                                             naux)
+    !
+    ! -- 
+    text = '      WITHDRAWAL'
+    idx = idx + 1
+    maxlist = this%nlakes
+    naux = 0
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name, &
+                                             maxlist, &
+                                             naux)
+    !
+    ! -- 
+    text = '     EXT-OUTFLOW'
+    idx = idx + 1
+    maxlist = this%nlakes
+    naux = 0
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name, &
+                                             maxlist, &
+                                             naux)
+    !
+    ! -- 
+    text = '         STORAGE'
+    idx = idx + 1
+    maxlist = this%nlakes
+    naux = 1  ! volume
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name, &
+                                             maxlist, &
+                                             naux)
+    !
+    ! -- 
+    text = '        CONSTANT'
+    idx = idx + 1
+    maxlist = this%nlakes
+    naux = 0
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name, &
+                                             maxlist, &
+                                             naux)
+    !
+    ! -- 
+    if (this%imover == 1) then
+      !
+      ! -- 
+      text = '        FROM-MVR'
+      idx = idx + 1
+      maxlist = this%nlakes
+      naux = 0
+      call this%budobj%budterm(idx)%initialize(text, &
+                                               this%name_model, &
+                                               this%name, &
+                                               this%name_model, &
+                                               this%name, &
+                                               maxlist, &
+                                               naux)
+      !
+      ! -- 
+      text = '          TO-MVR'
+      idx = idx + 1
+      maxlist = this%noutlets
+      naux = 0
+      call this%budobj%budterm(idx)%initialize(text, &
+                                               this%name_model, &
+                                               this%name, &
+                                               this%name_model, &
+                                               this%name, &
+                                               maxlist, &
+                                               naux)
+    end if
+    !
+    ! -- 
+    naux = this%naux
+    if (naux > 0) then
+      !
+      ! -- 
+      text = '       AUXILIARY'
+      idx = idx + 1
+      maxlist = this%nlakes
+      call this%budobj%budterm(idx)%initialize(text, &
+                                               this%name_model, &
+                                               this%name, &
+                                               this%name_model, &
+                                               this%name, &
+                                               maxlist, &
+                                               naux)
+    end if
+    !
+    ! -- return
+    return
+  end subroutine lak_setup_budobj
+
+  subroutine lak_fill_budobj(this)
+! ******************************************************************************
+! lak_fill_budobj -- copy flow terms into this%budobj
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(LakType) :: this
+    ! -- local
+    integer(I4B) :: naux
+    real(DP), dimension(:), allocatable :: auxvartmp
+    integer(I4B) :: i, j, n, n1, n2
+    integer(I4B) :: ii
+    integer(I4B) :: idx
+    integer(I4B) :: nlen
+    real(DP) :: hlak, hgwf
+    real(DP) :: v, v1
+    real(DP) :: q
+    ! -- formats
+! ------------------------------------------------------------------------------
+    !
+    ! -- Push lake budget terms into this%budobj
+    
+    idx = 0
+
+    
+    ! -- FLOW JA FACE
+    nlen = 0
+    do n = 1, this%noutlets
+      if (this%lakein(n) > 0 .and. this%lakeout(n) > 0) then
+        nlen = nlen + 1
+      end if
+    end do
+
+    if (nlen > 0) then
+      idx = idx + 1
+      this%budobj%budterm(idx)%nlist = 2 * nlen
+      i = 0
+      do n = 1, this%noutlets
+        n1 = this%lakein(n)
+        n2 = this%lakeout(n)
+        if (n1 > 0 .and. n2 > 0) then
+        
+          q = this%simoutrate(n)
+          if (this%imover == 1) then
+            q = q + this%pakmvrobj%get_qtomvr(n)
+          end if
+
+          i = i + 1
+          this%budobj%budterm(idx)%id1(i) = n1
+          this%budobj%budterm(idx)%id2(i) = n2
+          this%budobj%budterm(idx)%flow(i) = q
+
+          i = i + 1
+          this%budobj%budterm(idx)%id1(i) = n2
+          this%budobj%budterm(idx)%id2(i) = n1
+          this%budobj%budterm(idx)%flow(i) = -q
+
+        end if
+      end do
+    end if
+
+    
+    ! -- GWF (LEAKAGE)
+    idx = idx + 1
+    naux = this%cbcauxitems
+    this%cauxcbc(1) = '       FLOW-AREA'
+    this%budobj%budterm(idx)%nlist = this%maxbound
+    this%budobj%budterm(idx)%naux = naux
+    this%budobj%budterm(idx)%auxtxt(:) = this%cauxcbc(:)
+    
+    i = 0
+    do n = 1, this%nlakes
+      hlak = this%xnewpak(n)
+      do j = this%idxlakeconn(n), this%idxlakeconn(n + 1) - 1
+        n2 = this%cellid(j)
+        hgwf = this%xnew(n2)
+        call this%lak_calculate_conn_warea(n, j, hlak, hgwf, this%qauxcbc(1))
+        q = this%qleak(j)
+
+        i = i + 1
+        this%budobj%budterm(idx)%id1(i) = n
+        this%budobj%budterm(idx)%id2(i) = n2
+        this%budobj%budterm(idx)%flow(i) = q
+        this%budobj%budterm(idx)%auxvar(:, i) = this%qauxcbc(:)
+        
+      end do
+    end do
+
+    
+    ! -- RAIN
+    idx = idx + 1
+    naux = 0
+    this%budobj%budterm(idx)%nlist = this%nlakes
+    this%budobj%budterm(idx)%naux = naux
+    do n = 1, this%nlakes
+      q = this%precip(n)
+      this%budobj%budterm(idx)%id1(n) = n
+      this%budobj%budterm(idx)%id2(n) = n
+      this%budobj%budterm(idx)%flow(n) = q
+    end do
+    
+    
+    ! -- EVAPORATION
+    idx = idx + 1
+    naux = 0
+    this%budobj%budterm(idx)%nlist = this%nlakes
+    this%budobj%budterm(idx)%naux = naux
+    do n = 1, this%nlakes
+      q = this%evap(n)
+      this%budobj%budterm(idx)%id1(n) = n
+      this%budobj%budterm(idx)%id2(n) = n
+      this%budobj%budterm(idx)%flow(n) = q
+    end do
+    
+
+    ! -- RUNOFF
+    idx = idx + 1
+    naux = 0
+    this%budobj%budterm(idx)%nlist = this%nlakes
+    this%budobj%budterm(idx)%naux = naux
+    do n = 1, this%nlakes
+      q = this%runoff(n)%value
+      this%budobj%budterm(idx)%id1(n) = n
+      this%budobj%budterm(idx)%id2(n) = n
+      this%budobj%budterm(idx)%flow(n) = q
+    end do
+
+    
+    ! -- INFLOW
+    idx = idx + 1
+    naux = 0
+    this%budobj%budterm(idx)%nlist = this%nlakes
+    this%budobj%budterm(idx)%naux = naux
+    do n = 1, this%nlakes
+      q = this%inflow(n)%value
+      this%budobj%budterm(idx)%id1(n) = n
+      this%budobj%budterm(idx)%id2(n) = n
+      this%budobj%budterm(idx)%flow(n) = q
+    end do
+    
+    
+    ! -- WITHDRAWAL
+    idx = idx + 1
+    naux = 0
+    this%budobj%budterm(idx)%nlist = this%nlakes
+    this%budobj%budterm(idx)%naux = naux
+    do n = 1, this%nlakes
+      q = this%withr(n)
+      this%budobj%budterm(idx)%id1(n) = n
+      this%budobj%budterm(idx)%id2(n) = n
+      this%budobj%budterm(idx)%flow(n) = q
+    end do
+
+    
+    ! -- EXTERNAL OUTFLOW
+    idx = idx + 1
+    naux = 0
+    this%budobj%budterm(idx)%nlist = this%nlakes
+    this%budobj%budterm(idx)%naux = naux
+    do n = 1, this%nlakes
+      call this%lak_get_external_outlet(n, q)
+      ! subtract tomover from external outflow
+      call this%lak_get_external_mover(n, v)
+      q = q + v
+      this%budobj%budterm(idx)%id1(n) = n
+      this%budobj%budterm(idx)%id2(n) = n
+      this%budobj%budterm(idx)%flow(n) = q
+    end do
+
+    
+    ! -- STORAGE
+    idx = idx + 1
+    naux = this%cbcauxitems
+    this%budobj%budterm(idx)%naux = naux
+    this%cauxcbc(1) = '          VOLUME'
+    this%budobj%budterm(idx)%nlist = this%nlakes
+    this%budobj%budterm(idx)%auxtxt(:) = this%cauxcbc(:)
+    do n = 1, this%nlakes
+      call this%lak_calculate_vol(n, this%xnewpak(n), v1)
+      q = this%qsto(n)
+      this%qauxcbc(1) = v1
+      this%budobj%budterm(idx)%id1(n) = n
+      this%budobj%budterm(idx)%id2(n) = n
+      this%budobj%budterm(idx)%flow(n) = q
+      this%budobj%budterm(idx)%auxvar(:, n) = this%qauxcbc(:)
+    end do
+    
+    
+    ! -- CONSTANT FLOW
+    idx = idx + 1
+    naux = 0
+    this%budobj%budterm(idx)%nlist = this%nlakes
+    this%budobj%budterm(idx)%naux = naux
+    do n = 1, this%nlakes
+      q = this%chterm(n)
+      this%budobj%budterm(idx)%id1(n) = n
+      this%budobj%budterm(idx)%id2(n) = n
+      this%budobj%budterm(idx)%flow(n) = q
+    end do
+    
+    
+    ! -- MOVER
+    if (this%imover == 1) then
+      
+      ! -- FROM MOVER
+      idx = idx + 1
+      naux = 0
+      this%budobj%budterm(idx)%nlist = this%nlakes
+      this%budobj%budterm(idx)%naux = naux
+      do n = 1, this%nlakes
+        q = this%pakmvrobj%get_qfrommvr(n)
+        this%budobj%budterm(idx)%id1(n) = n
+        this%budobj%budterm(idx)%id2(n) = n
+        this%budobj%budterm(idx)%flow(n) = q
+      end do
+      
+      
+      ! -- TO MOVER
+      idx = idx + 1
+      naux = 0
+      this%budobj%budterm(idx)%nlist = this%nlakes
+      this%budobj%budterm(idx)%naux = naux
+      do n = 1, this%noutlets
+        q = this%pakmvrobj%get_qtomvr(n)
+        if (q > DZERO) then
+          q = -q
+        end if
+        this%budobj%budterm(idx)%id1(n) = n
+        this%budobj%budterm(idx)%id2(n) = n
+        this%budobj%budterm(idx)%flow(n) = q
+      end do
+      
+    end if
+    
+    
+    ! -- AUXILIARY VARIABLES
+    naux = this%naux
+    if (naux > 0) then
+      this%budobj%budterm(idx)%naux = naux
+      this%budobj%budterm(idx)%auxtxt(:) = this%auxname(:)
+      this%budobj%budterm(idx)%nlist = this%nlakes
+      allocate(auxvartmp(naux))
+      do n = 1, this%nlakes
+        q = DZERO
+        do i = 1, naux
+          ii = (n - 1) * naux + i
+          auxvartmp(i) = this%lauxvar(ii)%value
+        end do
+        this%budobj%budterm(idx)%id1(n) = n
+        this%budobj%budterm(idx)%id2(n) = n
+        this%budobj%budterm(idx)%flow(n) = q
+        this%budobj%budterm(idx)%auxvar(:, n) = auxvartmp(:)
+      end do
+      deallocate(auxvartmp)
+    end if
+    !
+    ! --Terms are filled, now need to accumulate them for this time step
+    call this%budobj%accumulate_terms()
+    !
+    ! -- return
+    return
+  end subroutine lak_fill_budobj
 
 
 end module LakModule

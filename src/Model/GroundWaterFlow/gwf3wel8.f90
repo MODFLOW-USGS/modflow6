@@ -33,7 +33,6 @@ module WelModule
     procedure, public :: bnd_df_obs => wel_df_obs
     ! -- methods for time series
     procedure, public :: bnd_rp_ts => wel_rp_ts
-    procedure, public :: get_nbudterms
   end type weltype
 
 contains
@@ -443,23 +442,5 @@ contains
     !
     return
   end subroutine wel_rp_ts
-
-  function get_nbudterms(this) result(nbudterms)
-! ******************************************************************************
-! get_nbudterms -- return the number of budget terms that this package
-!                  adds to the model
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    class(WelType) :: this
-    integer(I4B) :: nbudterms
-! ------------------------------------------------------------------------------
-    !
-    nbudterms = 1
-    if (this%imover == 1) nbudterms = 2
-    return
-  end function get_nbudterms
 
 end module WelModule

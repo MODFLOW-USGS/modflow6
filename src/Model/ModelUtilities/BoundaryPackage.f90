@@ -114,8 +114,6 @@ module BndModule
     ! -- procedure to support time series
     procedure, public :: bnd_rp_ts
     !
-    ! -- procedure to return the number of budget items
-    procedure, public :: get_nbudterms
   end type BndType
 
   contains
@@ -1544,24 +1542,7 @@ module BndModule
     return
   end subroutine bnd_rp_ts
 
-  ! -- Procedures related to budget terms
-
-  function get_nbudterms(this) result(nbudterms)
-! ******************************************************************************
-! get_nbudterms -- return the number of budget terms that this package
-!                  adds to the model
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    class(BndType) :: this
-    integer(I4B) :: nbudterms
-! ------------------------------------------------------------------------------
-    !
-    nbudterms = 1
-    return
-  end function get_nbudterms
+  ! -- Procedures related to casting
 
   function CastAsBndClass(obj) result(res)
     implicit none

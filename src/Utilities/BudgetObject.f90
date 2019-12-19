@@ -4,6 +4,7 @@ module BudgetObjectModule
   
   use KindModule, only: I4B, DP
   use ConstantsModule, only: LENBUDTXT
+  use BudgetModule, only : BudgetType, budget_cr
   use BudgetTermModule, only: BudgetTermType
   
   implicit none
@@ -31,17 +32,23 @@ module BudgetObjectModule
     real(DP), dimension(:, :), pointer :: qsto => null()
     !
     ! -- array of budget terms
+    integer(I4B) :: iterm
     type(BudgetTermType), dimension(:), allocatable :: budterm
+    !
+    ! -- budget table object
+    type(BudgetType), pointer :: budtable => null()
     
   contains
   
     procedure :: budgetobject_df
+    procedure :: accumulate_terms
+    procedure :: write_budtable
     
   end type BudgetObjectType
   
   contains
 
-  subroutine budgetobject_cr(this, name_model)
+  subroutine budgetobject_cr(this, name)
 ! ******************************************************************************
 ! budgetobject_cr -- Create a new budget object
 ! ******************************************************************************
@@ -51,18 +58,22 @@ module BudgetObjectModule
     ! -- modules
     ! -- dummy
     type(BudgetObjectType), pointer :: this
-    character(len=*), intent(in) :: name_model
+    character(len=*), intent(in) :: name
 ! ------------------------------------------------------------------------------
     !
     ! -- Create the object
     allocate(this)
     !
     ! -- initialize variables
-    this%name = name_model
+    this%name = name
     this%ncv = 0
     this%nbudterm = 0
     this%iflowja = 0
     this%nsto = 0
+    this%iterm = 0
+    !
+    ! -- initialize budget table
+    call budget_cr(this%budtable, name)
     !
     ! -- Return
     return
@@ -93,10 +104,75 @@ module BudgetObjectModule
     ! -- allocate space for budterm
     allocate(this%budterm(nbudterm))
     !
+    ! -- setup the budget table object
+    ! -- TODO: GET DIMENSIONS IN HERE
+    call this%budtable%budget_df(nbudterm, this%name)
+    !
     ! -- Return
     return
   end subroutine budgetobject_df
-
   
+  subroutine accumulate_terms(this)
+! ******************************************************************************
+! accumulate_terms -- add up accumulators and submit to budget table
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use TdisModule, only: delt
+    ! -- dummy
+    class(BudgetObjectType) :: this
+    ! -- dummy
+    character(len=LENBUDTXT) :: flowtype    
+    integer(I4B) :: i
+    real(DP) :: ratin, ratout
+! ------------------------------------------------------------------------------
+    !
+    ! -- reset the budget table
+    call this%budtable%reset()
+    !
+    ! -- calculate the budget table terms
+    do i = 1, this%nbudterm
+      !
+      ! -- accumulate positive and negative flows for each budget term
+      flowtype = this%budterm(i)%flowtype
+      select case (trim(flowtype))
+      case ('FLOW-JA-FACE')
+        ! skip
+      case default
+        call this%budterm(i)%accumulate_flow(ratin, ratout)
+      end select
+      !
+      ! -- pass accumulators into the budget table
+      call this%budtable%addentry(ratin, ratout, delt, flowtype)
+    end do
+    !
+    ! -- return
+    return
+  end subroutine accumulate_terms
+
+  subroutine write_budtable(this, kstp, kper, iout)
+! ******************************************************************************
+! write_budtable -- Write the budget table
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(BudgetObjectType) :: this
+    integer(I4B),intent(in) :: kstp
+    integer(I4B),intent(in) :: kper
+    integer(I4B),intent(in) :: iout
+    ! -- dummy
+! ------------------------------------------------------------------------------
+    !
+    ! -- write the table
+    call this%budtable%budget_ot(kstp, kper, iout)
+    !
+    ! -- return
+    return
+  end subroutine write_budtable
   
 end module BudgetObjectModule

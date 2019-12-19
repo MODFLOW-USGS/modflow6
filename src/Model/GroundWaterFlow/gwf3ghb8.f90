@@ -27,7 +27,6 @@ module ghbmodule
     procedure, public :: bnd_df_obs => ghb_df_obs
     ! -- method for time series
     procedure, public :: bnd_rp_ts => ghb_rp_ts
-    procedure, public :: get_nbudterms
   end type GhbType
 
 contains
@@ -341,23 +340,5 @@ contains
     !
     return
   end subroutine ghb_rp_ts
-
-  function get_nbudterms(this) result(nbudterms)
-! ******************************************************************************
-! get_nbudterms -- return the number of budget terms that this package
-!                  adds to the model
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    class(GhbType) :: this
-    integer(I4B) :: nbudterms
-! ------------------------------------------------------------------------------
-    !
-    nbudterms = 1
-    if (this%imover == 1) nbudterms = 2
-    return
-  end function get_nbudterms
 
 end module ghbmodule
