@@ -6099,6 +6099,7 @@ contains
     ! -- AUXILIARY VARIABLES
     naux = this%naux
     if (naux > 0) then
+      idx = idx + 1
       allocate(auxvartmp(naux))
       call this%budobj%budterm(idx)%reset(this%nlakes)
       do n = 1, this%nlakes

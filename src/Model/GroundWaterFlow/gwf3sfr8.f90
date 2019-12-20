@@ -4415,6 +4415,7 @@ contains
     ! -- AUXILIARY VARIABLES
     naux = this%naux
     if (naux > 0) then
+      idx = idx + 1
       call this%budobj%budterm(idx)%reset(this%maxbound)
       do n = 1, this%maxbound
         q = DZERO
