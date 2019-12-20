@@ -140,15 +140,17 @@ module BudgetObjectModule
       !
       ! -- accumulate positive and negative flows for each budget term
       flowtype = this%budterm(i)%flowtype
-      select case (trim(flowtype))
+      select case (trim(adjustl(flowtype)))
       case ('FLOW-JA-FACE')
         ! skip
       case default
+        !
+        ! -- calculate sum of positive and negative flows
         call this%budterm(i)%accumulate_flow(ratin, ratout)
+        !
+        ! -- pass accumulators into the budget table
+        call this%budtable%addentry(ratin, ratout, delt, flowtype)
       end select
-      !
-      ! -- pass accumulators into the budget table
-      call this%budtable%addentry(ratin, ratout, delt, flowtype)
     end do
     !
     ! -- return

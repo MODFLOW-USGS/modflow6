@@ -17,8 +17,7 @@ module LakModule
                               sQSaturationDerivative
   use BndModule, only: BndType
   use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr
-
-  use ObserveModule,        only: ObserveType
+  use ObserveModule, only: ObserveType
   use ObsModule, only: ObsType
   use InputOutputModule, only: get_node, URWORD, extract_idnum_or_bndname
   use BaseDisModule, only: DisBaseType
@@ -241,7 +240,6 @@ module LakModule
     procedure, private :: lak_calculate_available
     procedure, private :: lak_calculate_residual
     procedure, private :: lak_linear_interpolation
-    
     procedure, private :: lak_setup_budobj
     procedure, private :: lak_fill_budobj
   end type LakType
