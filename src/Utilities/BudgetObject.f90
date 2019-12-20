@@ -6,6 +6,7 @@ module BudgetObjectModule
   use ConstantsModule, only: LENBUDTXT
   use BudgetModule, only : BudgetType, budget_cr
   use BudgetTermModule, only: BudgetTermType
+  use BaseDisModule, only: DisBaseType
   
   implicit none
   
@@ -23,7 +24,7 @@ module BudgetObjectModule
     real(DP), dimension(:), pointer :: xnew => null()
     real(DP), dimension(:), pointer :: xold => null()
     !
-    ! -- csr flows
+    ! -- csr intercell flows
     integer(I4B) :: iflowja
     real(DP), dimension(:), pointer :: flowja => null()
     !
@@ -44,6 +45,7 @@ module BudgetObjectModule
     procedure :: budgetobject_df
     procedure :: accumulate_terms
     procedure :: write_budtable
+    procedure :: save_flows
     
   end type BudgetObjectType
   
@@ -175,5 +177,38 @@ module BudgetObjectModule
     ! -- return
     return
   end subroutine write_budtable
+  
+  subroutine save_flows(this, dis, ibinun, kstp, kper, delt, &
+                        pertim, totim, iout)
+! ******************************************************************************
+! write_budtable -- Write the budget table
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(BudgetObjectType) :: this
+    class(DisBaseType), intent(in) :: dis
+    integer(I4B), intent(in) :: ibinun
+    integer(I4B), intent(in) :: kstp
+    integer(I4B), intent(in) :: kper
+    real(DP), intent(in) :: delt
+    real(DP), intent(in) :: pertim
+    real(DP), intent(in) :: totim
+    integer(I4B), intent(in) :: iout
+    ! -- dummy
+    integer(I4B) :: i
+! ------------------------------------------------------------------------------
+    !
+    ! -- save flows for each budget term
+    do i = 1, this%nbudterm
+      call this%budterm(i)%save_flows(dis, ibinun, kstp, kper, delt, &
+                                      pertim, totim, iout)
+    end do
+    !
+    ! -- return
+    return
+  end subroutine save_flows
   
 end module BudgetObjectModule

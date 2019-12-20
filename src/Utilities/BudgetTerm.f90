@@ -3,6 +3,8 @@ module BudgetTermModule
 
   use KindModule, only: I4B, DP
   use ConstantsModule, only: LENBUDTXT, DZERO
+  use BaseDisModule, only: DisBaseType
+  use InputOutputModule, only: ubdsv06
 
   implicit none
 
@@ -19,6 +21,8 @@ module BudgetTermModule
     integer(I4B) :: maxlist                                        ! allocated size of arrays
     integer(I4B) :: naux                                           ! number of auxiliary variables
     integer(I4B) :: nlist                                          ! size of arrays for this period
+    logical :: olconv1                                             ! convert id1 to user node upon output
+    logical :: olconv2                                             ! convert id2 to user node upon output
     integer(I4B), dimension(:), pointer :: id1 => null()           ! first id (maxlist)
     integer(I4B), dimension(:), pointer :: id2 => null()           ! second id (maxlist)
     real(DP), dimension(:), pointer :: flow => null()              ! point this to simvals or simtomvr (maxlist)
@@ -31,6 +35,7 @@ module BudgetTermModule
     procedure :: reset
     procedure :: update_term
     procedure :: accumulate_flow
+    procedure :: save_flows
     procedure :: printme
     
   end type BudgetTermType
@@ -38,7 +43,8 @@ module BudgetTermModule
   contains
   
   subroutine initialize(this, flowtype, text1id1, text2id1, &
-                        text1id2, text2id2, maxlist, naux, auxtxt)
+                        text1id2, text2id2, maxlist, olconv1, olconv2, &
+                        naux, auxtxt)
     class(BudgetTermType) :: this
     character(len=LENBUDTXT), intent(in) :: flowtype
     character(len=LENBUDTXT), intent(in) :: text1id1
@@ -46,6 +52,8 @@ module BudgetTermModule
     character(len=LENBUDTXT), intent(in) :: text1id2
     character(len=LENBUDTXT), intent(in) :: text2id2
     integer(I4B), intent(in) :: maxlist
+    logical, intent(in) :: olconv1
+    logical, intent(in) :: olconv2
     integer(I4B), intent(in) :: naux
     character(len=LENBUDTXT), dimension(:), intent(in), optional :: auxtxt
     this%flowtype = flowtype
@@ -54,6 +62,8 @@ module BudgetTermModule
     this%text1id2 = text1id2
     this%text2id2 = text2id2
     this%maxlist = maxlist
+    this%olconv1 = olconv1
+    this%olconv2 = olconv2
     this%naux = naux
     this%nlist = maxlist
     call this%allocate_arrays()
@@ -106,6 +116,39 @@ module BudgetTermModule
       end if
     end do
   end subroutine accumulate_flow
+  
+  subroutine save_flows(this, dis, ibinun, kstp, kper, delt, pertim, totim, iout)
+    class(BudgetTermType) :: this
+    class(DisBaseType), intent(in) :: dis
+    integer(I4B), intent(in) :: ibinun
+    integer(I4B), intent(in) :: kstp
+    integer(I4B), intent(in) :: kper
+    real(DP), intent(in) :: delt
+    real(DP), intent(in) :: pertim
+    real(DP), intent(in) :: totim
+    integer(I4B), intent(in) :: iout
+    integer(I4B) :: i
+    integer(I4B) :: n1
+    integer(I4B) :: n2
+    real(DP) :: q
+    call ubdsv06(kstp, kper, this%flowtype, &
+                 this%text1id1, this%text2id1, &
+                 this%text1id2, this%text2id2, &
+                 ibinun, this%naux, this%auxtxt, &
+                 this%nlist, 1, 1, this%nlist, &
+                 iout, delt, pertim, totim)
+    do i = 1, this%nlist
+      q = this%flow(i)
+      n1 = this%id1(i)
+      n2 = this%id2(i)
+      call dis%record_mf6_list_entry(ibinun, n1, n2, q, &
+                                     this%naux, this%auxvar(:, i), &
+                                     olconv=this%olconv1, &
+                                     olconv2=this%olconv2)
+    end do
+    
+    
+  end subroutine save_flows
   
   subroutine printme(this)
     class(BudgetTermType) :: this
