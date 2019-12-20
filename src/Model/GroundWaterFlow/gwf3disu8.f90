@@ -39,6 +39,7 @@ module GwfDisuModule
     procedure :: dis_df => disu_df
     procedure :: dis_da => disu_da
     procedure :: get_cellxy => get_cellxy_disu
+    procedure :: get_dis_type => get_dis_type
     procedure :: disu_ck
     procedure :: grid_finalize
     procedure :: get_nodenumber_idx1
@@ -1430,7 +1431,16 @@ module GwfDisuModule
     !
     ! -- return
     return
-  end subroutine get_cellxy_disu                             
+  end subroutine get_cellxy_disu
+  
+  ! return discretization type
+  subroutine get_dis_type(this, dis_type)
+    class(GwfDisuType), intent(in)  :: this
+    character(len=*), intent(out)  :: dis_type
+      
+    dis_type = "DISU"
+    
+  end subroutine get_dis_type
 
   subroutine allocate_scalars(this, name_model)
 ! ******************************************************************************
