@@ -221,18 +221,36 @@ contains
   end function get_var_grid
   
   ! Get the grid type as a string.
-  ! TODO_JH: What is the most robust way to determine this?
   function get_grid_type(grid_id, grid_type) result(bmi_status) bind(C, name="get_grid_type")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_type
+    use ListsModule, only: basemodellist
+    use NumericalModelModule, only: NumericalModelType, GetNumericalModelFromList
     integer(kind=c_int), intent(in) :: grid_id
     character(kind=c_char), intent(out) :: grid_type(MAXSTRLEN)
     integer(kind=c_int) :: bmi_status
     ! local
-    character(len=MAXSTRLEN) :: name
+    character(len=MAXSTRLEN) :: grid_type_f
+    character(len=LENMODELNAME) :: model_name
+    character(len=LENORIGIN) :: var_name
+    integer :: i
+    class(NumericalModelType), pointer :: numericalModel
     
-    ! TODO_JH implement "uniform_rectilinear", "structured_quadrilateral", "unstructured" grid type
-    name = "rectilinear"
-    grid_type = string_to_char_array(trim(name), len(trim(name)))
+    model_name = get_model_name(grid_id) 
+    
+    do i = 1,basemodellist%Count()
+      numericalModel => GetNumericalModelFromList(basemodellist, i)
+      if (numericalModel%name == model_name) then
+        call numericalModel%dis%get_dis_type(grid_type_f)
+      end if
+    end do
+    
+    if (grid_type_f == "DIS") then
+      grid_type_f = "rectilinear"
+    else if ((grid_type_f == "DISV") .or. (grid_type_f == "DISU")) then
+      grid_type_f = "unstructured"
+    end if
+
+    grid_type = string_to_char_array(trim(grid_type_f), len(trim(grid_type_f)))
     bmi_status = BMI_SUCCESS
   end function get_grid_type
   
