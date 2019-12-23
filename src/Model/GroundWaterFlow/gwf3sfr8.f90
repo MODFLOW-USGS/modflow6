@@ -171,6 +171,7 @@ module SfrModule
     procedure, private :: sfr_check_connections
     procedure, private :: sfr_check_diversions
     procedure, private :: sfr_check_ustrf
+    ! -- budget
     procedure, private :: sfr_setup_budobj
     procedure, private :: sfr_fill_budobj
   end type SfrType
@@ -1662,7 +1663,7 @@ contains
     if (isuppress_output /= 0) ibinun = 0
     if (ibinun > 0) then
       call this%budobj%save_flows(this%dis, ibinun, kstp, kper, delt, &
-                        pertim, totim, this%iout)
+                                  pertim, totim, this%iout)
     end if
     !
     !
@@ -4281,8 +4282,6 @@ contains
     real(DP) :: qt
     real(DP) :: d
     real(DP) :: a
-    real(DP) :: ae
-    real(DP) :: depth
     ! -- formats
 ! -----------------------------------------------------------------------------
     !
@@ -4333,8 +4332,8 @@ contains
     idx = idx + 1
     call this%budobj%budterm(idx)%reset(this%maxbound)
     do n = 1, this%maxbound
-        a = this%geo(n)%surface_area()
-        q = this%reaches(n)%rain%value * a
+      a = this%geo(n)%surface_area()
+      q = this%reaches(n)%rain%value * a
       call this%budobj%budterm(idx)%update_term(n, n, q)
     end do
     
@@ -4343,9 +4342,7 @@ contains
     idx = idx + 1
     call this%budobj%budterm(idx)%reset(this%maxbound)
     do n = 1, this%maxbound
-      ! -- todo: check depth variable?
-        ae = this%geo(n)%surface_area_wet(depth)
-        q = -this%simevap(n)
+      q = -this%simevap(n)
       call this%budobj%budterm(idx)%update_term(n, n, q)
     end do
     

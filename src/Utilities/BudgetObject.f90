@@ -108,7 +108,7 @@ module BudgetObjectModule
     allocate(this%budterm(nbudterm))
     !
     ! -- setup the budget table object
-    ! -- TODO: GET DIMENSIONS IN HERE
+    ! -- TODO: GET DIMENSIONS (e.g. L**3) IN HERE
     call this%budtable%budget_df(nbudterm, this%name)
     !
     ! -- Return
