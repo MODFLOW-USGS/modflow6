@@ -1275,12 +1275,13 @@ contains
     integer(I4B), optional, intent(in) :: iadv
     ! -- local
     integer(I4B) :: i, node, ibinun
-    integer(I4B) :: n, m, ivertflag, ierr
+    integer(I4B) :: n, n2, m, ivertflag, ierr
     real(DP) :: rfinf
     real(DP) :: rin, rout, rsto, ret, retgw, rgwseep, rvflux
     real(DP) :: hgwf, hgwflm1, rrate, rrech
     real(DP) :: trhsgwet, thcofgwet, gwet, derivgwet
     real(DP) :: qfrommvr, qformvr, qgwformvr, sumaet
+    real(DP) :: ratin, ratout
     real(DP) :: qout
     real(DP) :: qfact
     real(DP) :: qtomvr
@@ -1448,14 +1449,29 @@ contains
     this%delstorsum = rsto * delt
     this%uzetsum = ret * delt
     this%vfluxsum = rvflux
-
+    !
+    ! -- Set unit number for binary output
+    if(this%ipakcb < 0) then
+      ibinun = icbcun
+    elseif(this%ipakcb == 0) then
+      ibinun = 0
+    else
+      ibinun = this%ipakcb
+    endif
+    if(icbcfl == 0) ibinun = 0
+    if (isuppress_output /= 0) ibinun = 0
     !
     ! -- If cell-by-cell flows will be saved as a list, write header.
-    if (ibudfl /= 0) then
+    if (ibinun /= 0 .or. ibudfl /= 0) then
       naux = this%naux
       !
       ! -- uzf-gwrch
       ibdlbl = 0
+      if (ibinun /= 0) then
+        call this%dis%record_srcdst_list_header(this%bdtxt(2), this%name_model, &
+                    this%name_model, this%name_model, this%name, naux,          &
+                    this%auxname, ibinun, this%nodes, this%iout)
+      end if
       !
       ! -- Loop through each boundary calculating flow.
       do i = 1, this%nodes
@@ -1472,6 +1488,7 @@ contains
         if (this%ibound(node) > 0) then
           !
           ! -- Calculate the flow rate into the cell.
+          !rrate = this%hcof(i) * x(node) - this%rhs(i)
           rrate = this%rch(i)
           !
           ! -- Print the individual rates if requested(this%iprflow<0)
@@ -1485,11 +1502,25 @@ contains
             end if
           end if
         end if
+        !
+        ! -- If saving cell-by-cell flows in list, write flow
+        if (ibinun /= 0) then
+          n2 = i
+          call this%dis%record_mf6_list_entry(ibinun, node, n2, rrate,         &
+                                                  naux, this%auxvar(:,i),      &
+                                                  olconv2=.FALSE.)
+        end if
       end do
       !
       ! -- uzf-gwd
       if (this%iseepflag == 1) then
         ibdlbl = 0
+        if (ibinun /= 0) then
+          call this%dis%record_srcdst_list_header(this%bdtxt(3),               &
+                      this%name_model,                                         &
+                      this%name_model, this%name_model, this%name, naux,       &
+                      this%auxname, ibinun, this%nodes, this%iout)
+        end if
         !
         ! -- Loop through each boundary calculating flow.
         do i = 1, this%nodes
@@ -1519,11 +1550,25 @@ contains
               end if
             end if
           end if
+          !
+          ! -- If saving cell-by-cell flows in list, write flow
+          if (ibinun /= 0) then
+            n2 = i
+            call this%dis%record_mf6_list_entry(ibinun, node, n2, rrate,    &
+                                                    naux, this%auxvar(:,i),     &
+                                                    olconv2=.FALSE.)
+          end if
         end do
         !
         ! -- uzf-gwd to mover
         if (this%imover == 1) then
           ibdlbl = 0
+          if (ibinun /= 0) then
+            call this%dis%record_srcdst_list_header(this%bdtxt(5),              &
+                        this%name_model, this%name_model,                       &
+                        this%name_model, this%name, naux,                       &
+                        this%auxname, ibinun, this%nodes, this%iout)
+          end if
           !
           ! -- Loop through each boundary calculating flow.
           do i = 1, this%nodes
@@ -1553,12 +1598,25 @@ contains
                 end if
               end if
             end if
+            !
+            ! -- If saving cell-by-cell flows in list, write flow
+            if (ibinun /= 0) then
+              n2 = i
+              call this%dis%record_mf6_list_entry(ibinun, node, n2, rrate,  &
+                                                      naux, this%auxvar(:,i),   &
+                                                      olconv2=.FALSE.)
+            end if
           end do
         end if
-      !
+      end if
       ! -- uzf-evt
       if (this%ietflag /= 0) then
         ibdlbl = 0
+        if (ibinun /= 0) then
+          call this%dis%record_srcdst_list_header(this%bdtxt(4), this%name_model,&
+                      this%name_model, this%name_model, this%name, naux,        &
+                      this%auxname, ibinun, this%nodes, this%iout)
+        end if
         !
         ! -- Loop through each boundary calculating flow.
         do i = 1, this%nodes
@@ -1588,9 +1646,48 @@ contains
               end if
             end if
           end if
+          !
+          ! -- If saving cell-by-cell flows in list, write flow
+          if (ibinun /= 0) then
+            n2 = i
+            call this%dis%record_mf6_list_entry(ibinun, node, n2, rrate,    &
+                                                    naux, this%auxvar(:,i),     &
+                                                    olconv2=.FALSE.)
+          end if
         end do
       end if
     end if
+    !
+    ! -- Add the UZF rates to the model budget
+    !uzf recharge
+    ratin = rrech
+    ratout = DZERO
+    call model_budget%addentry(ratin, ratout, delt, this%bdtxt(2),                   &
+                               isuppress_output, this%name)
+    !groundwater discharge
+    if (this%iseepflag == 1) then
+      ratin = DZERO
+      ratout = qseep !rgwseep
+      call model_budget%addentry(ratin, ratout, delt, this%bdtxt(3),                 &
+                                 isuppress_output, this%name)
+      !groundwater discharge to mover
+      if (this%imover == 1) then
+        ratin = DZERO
+        ratout = qseeptomvr
+        call model_budget%addentry(ratin, ratout, delt, this%bdtxt(5),               &
+                                   isuppress_output, this%name)
+      end if
+    end if
+    !groundwater et
+    if (this%igwetflag /= 0) then
+      ratin = DZERO
+      ratout = qgwet !retgw
+      !ratout = DZERO
+      !if (retgw > DZERO) then
+      !  ratout = -retgw
+      !end if
+      call model_budget%addentry(ratin, ratout, delt, this%bdtxt(4),                 &
+                                 isuppress_output, this%name)
     end if
     !
     ! -- set unit number for binary dependent variable output
