@@ -15,7 +15,6 @@ module UzfModule
   use SparseModule, only: sparsematrix
   use BndModule, only: BndType
   use UzfCellGroupModule, only: UzfCellGroupType
-  use BudgetModule, only: BudgetType
   use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr
   use BaseDisModule, only: DisBaseType
   use ObserveModule, only: ObserveType
@@ -39,7 +38,6 @@ module UzfModule
     integer(I4B), pointer :: ibudgetout => null()
     !
     type(BudgetObjectType), pointer                    :: budobj      => null()
-    type(BudgetType), pointer                          :: budget      => null()  !budget object
     integer(I4B), pointer                              :: bditems     => null()  !number of budget items
     integer(I4B), pointer                              :: nbdtxt      => null()  !number of budget text items
     character(len=LENBUDTXT), dimension(:), pointer,                            &
@@ -221,7 +219,6 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr, mem_reallocate
-    use BudgetModule, only: budget_cr
     ! -- dummy
     class(UzfType), intent(inout) :: this
     ! -- local
@@ -259,10 +256,6 @@ contains
       call mem_reallocate(this%obs_depth, n, 'OBS_DEPTH', this%origin)
       call mem_reallocate(this%obs_num, n, 'OBS_NUM', this%origin)
     end if
-    !
-    ! -- setup the budget
-    call budget_cr(this%budget, this%origin)
-    call this%budget%budget_df(this%bditems, this%name, 'L**3')
     !
     ! -- setup pakmvrobj
     if (this%imover /= 0) then
@@ -1283,24 +1276,16 @@ contains
     ! -- local
     integer(I4B) :: i, node, ibinun
     integer(I4B) :: n, m, ivertflag, ierr
-    integer(I4B) :: n1, n2
-    integer(I4B) :: nlen
     real(DP) :: rfinf
-    real(DP) :: rin,rout,rsto,ret,retgw,rgwseep,rvflux
-    real(DP) :: rstoin
-    real(DP) :: rstoout
-    real(DP) :: hgwf,hgwflm1,ratin,ratout,rrate,rrech
-    real(DP) :: trhsgwet,thcofgwet,gwet,derivgwet
+    real(DP) :: rin, rout, rsto, ret, retgw, rgwseep, rvflux
+    real(DP) :: hgwf, hgwflm1, rrate, rrech
+    real(DP) :: trhsgwet, thcofgwet, gwet, derivgwet
     real(DP) :: qfrommvr, qformvr, qgwformvr, sumaet
-    real(DP) :: qfinf
-    real(DP) :: qrejinf
-    real(DP) :: qrejinftomvr
     real(DP) :: qout
     real(DP) :: qfact
     real(DP) :: qtomvr
     real(DP) :: sqtomvr
     real(DP) :: q
-    real(DP) :: rfrommvr
     real(DP) :: qseep
     real(DP) :: qseeptomvr
     real(DP) :: qgwet
@@ -1312,18 +1297,6 @@ contains
     ! -- formats
     character(len=*), parameter :: fmttkk = &
       "(1X,/1X,A,'   PERIOD ',I0,'   STEP ',I0)"
-    character(len=LENBUDTXT) :: aname(10)
-    ! -- for table
-    data aname(1)  /'    INFILTRATION'/
-    data aname(2)  /'             GWF'/
-    data aname(3)  /'         STORAGE'/
-    data aname(4)  /'            UZET'/
-    data aname(5)  /'        UZF-GWET'/
-    data aname(6)  /'         UZF-GWD'/
-    data aname(7)  /'SAT.-UNSAT. EXCH'/
-    data aname(8)  /'         REJ-INF'/
-    data aname(9)  /'  REJ-INF-TO-MVR'/
-    data aname(10) /'        FROM-MVR'/
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize accumulators
@@ -1333,26 +1306,17 @@ contains
     rout = DZERO
     rrech = DZERO
     rsto = DZERO
-    rstoin = DZERO
-    rstoout = DZERO
     ret = DZERO
     retgw = DZERO
     rgwseep = DZERO
     rvflux = DZERO
     sumaet = DZERO
-    qfinf = DZERO
     qfrommvr = DZERO
     qtomvr = DZERO
-    qrejinf = DZERO
-    qrejinftomvr = DZERO
     sqtomvr = DZERO
-    rfrommvr = DZERO
     qseep = DZERO
     qseeptomvr = DZERO
     qgwet = DZERO
-    !
-    ! -- Budget for each UZF model (start by resetting)
-    call this%budget%reset()
     !
     ! -- Go through and process each UZF cell
     do i = 1, this%nodes
@@ -1369,7 +1333,6 @@ contains
       qformvr = DZERO
       if(this%imover == 1) then
         qfrommvr = this%pakmvrobj%get_qfrommvr(i)
-        rfrommvr = rfrommvr + qfrommvr
       endif
       !
       hgwf = this%xnew(n)
@@ -1421,21 +1384,18 @@ contains
           this%recharge(i) = this%uzfobj%surflux(ivertflag) * this%uzfobj%uzfarea(i)
         end if
       end if
-
+      !
+      ! -- calculate results
       this%rch(i) = this%uzfobj%totflux(i) * this%uzfobj%uzfarea(i) / delt
-
       this%appliedinf(i) = this%uzfobj%sinf(i) * this%uzfobj%uzfarea(i)
       this%infiltration(i) = this%uzfobj%surflux(i) * this%uzfobj%uzfarea(i)
-
       this%rejinf(i) = this%uzfobj%finf_rej(i) * this%uzfobj%uzfarea(i)
-
       qout = this%rejinf(i) + this%uzfobj%surfseep(i)
       qtomvr = DZERO
       if (this%imover == 1) then
         qtomvr = this%pakmvrobj%get_qtomvr(i)
         sqtomvr = sqtomvr + qtomvr
       end if
-
       qfact = DZERO
       if (qout > DZERO) then
         qfact = this%rejinf(i) / qout
@@ -1465,27 +1425,12 @@ contains
       if (q < DZERO) then
         q = DZERO
       end if
+      !
+      ! -- store results
       this%gwd(i) = q
-
-      qfinf = qfinf + this%appliedinf(i)
-      qrejinf = qrejinf + this%rejinf(i)
-      qrejinftomvr = qrejinftomvr + this%rejinftomvr(i)
-
-      qseep = qseep + this%gwd(i)
-      qseeptomvr = qseeptomvr + this%gwdtomvr(i)
-
       this%gwet(i) = this%uzfobj%gwet(i)
       this%uzet(i) = this%uzfobj%etact(i) * this%uzfobj%uzfarea(i) / delt
       this%qsto(i) = this%uzfobj%delstor(i) / delt
-
-      ! -- accumulate groundwater et
-      qgwet = qgwet + this%gwet(i)
-
-      if (this%qsto(i) < DZERO) then
-        rstoin = rstoin - this%qsto(i)
-      else
-        rstoout = rstoout + this%qsto(i)
-      end if
       !
       ! -- End of UZF cell loop
       !
@@ -1493,7 +1438,7 @@ contains
     !
     ! -- For continuous observations, save simulated values.
     if (this%obs%npakobs > 0 .and. iprobs > 0) then
-      call this%uzf_bd_obs
+      call this%uzf_bd_obs()
     endif
     !
     ! add cumulative flows to UZF budget
@@ -1504,57 +1449,13 @@ contains
     this%uzetsum = ret * delt
     this%vfluxsum = rvflux
 
-    call this%budget%addentry(qfinf, DZERO, delt, aname(1), isuppress_output)
-    if (this%imover == 1) then
-      call this%budget%addentry(rfrommvr, DZERO, delt, aname(10), isuppress_output)
-    end if
-    call this%budget%addentry(DZERO, qrejinf, delt, aname(8), isuppress_output)
-    if (this%imover == 1) then
-      call this%budget%addentry(DZERO, qrejinftomvr, delt, aname(9), isuppress_output)
-    end if
-    call this%budget%addentry(DZERO, rout, delt, aname(2), isuppress_output)
-    if (this%ietflag /= 0) then
-      call this%budget%addentry(DZERO, ret, delt, aname(4), isuppress_output)
-    end if
-    !
-    !
-    rin = DZERO
-    rout = DZERO
-    if(rsto < DZERO) then
-      rin = -rsto
-    else
-      rout = rsto
-    endif
-    call this%budget%addentry(rstoin, rstoout, delt, aname(3), isuppress_output)
-    !
-    ! -- Clear accumulators and set flags
-    ratin = dzero
-    ratout = dzero
-    rrate = dzero
-    !iauxsv = 1  !always used compact budget
-    !
-    ! -- Set unit number for binary output
-    if(this%ipakcb < 0) then
-      ibinun = icbcun
-    elseif(this%ipakcb == 0) then
-      ibinun = 0
-    else
-      ibinun = this%ipakcb
-    endif
-    if(icbcfl == 0) ibinun = 0
-    if (isuppress_output /= 0) ibinun = 0
     !
     ! -- If cell-by-cell flows will be saved as a list, write header.
-    if (ibinun /= 0 .or. ibudfl /= 0) then
+    if (ibudfl /= 0) then
       naux = this%naux
       !
       ! -- uzf-gwrch
       ibdlbl = 0
-      if (ibinun /= 0) then
-        call this%dis%record_srcdst_list_header(this%bdtxt(2), this%name_model, &
-                    this%name_model, this%name_model, this%name, naux,          &
-                    this%auxname, ibinun, this%nodes, this%iout)
-      end if
       !
       ! -- Loop through each boundary calculating flow.
       do i = 1, this%nodes
@@ -1571,7 +1472,6 @@ contains
         if (this%ibound(node) > 0) then
           !
           ! -- Calculate the flow rate into the cell.
-          !rrate = this%hcof(i) * x(node) - this%rhs(i)
           rrate = this%rch(i)
           !
           ! -- Print the individual rates if requested(this%iprflow<0)
@@ -1585,25 +1485,11 @@ contains
             end if
           end if
         end if
-        !
-        ! -- If saving cell-by-cell flows in list, write flow
-        if (ibinun /= 0) then
-          n2 = i
-          call this%dis%record_mf6_list_entry(ibinun, node, n2, rrate,         &
-                                                  naux, this%auxvar(:,i),      &
-                                                  olconv2=.FALSE.)
-        end if
       end do
       !
       ! -- uzf-gwd
       if (this%iseepflag == 1) then
         ibdlbl = 0
-        if (ibinun /= 0) then
-          call this%dis%record_srcdst_list_header(this%bdtxt(3),               &
-                      this%name_model,                                         &
-                      this%name_model, this%name_model, this%name, naux,       &
-                      this%auxname, ibinun, this%nodes, this%iout)
-        end if
         !
         ! -- Loop through each boundary calculating flow.
         do i = 1, this%nodes
@@ -1633,25 +1519,11 @@ contains
               end if
             end if
           end if
-          !
-          ! -- If saving cell-by-cell flows in list, write flow
-          if (ibinun /= 0) then
-            n2 = i
-            call this%dis%record_mf6_list_entry(ibinun, node, n2, rrate,    &
-                                                    naux, this%auxvar(:,i),     &
-                                                    olconv2=.FALSE.)
-          end if
         end do
         !
         ! -- uzf-gwd to mover
         if (this%imover == 1) then
           ibdlbl = 0
-          if (ibinun /= 0) then
-            call this%dis%record_srcdst_list_header(this%bdtxt(5),              &
-                        this%name_model, this%name_model,                       &
-                        this%name_model, this%name, naux,                       &
-                        this%auxname, ibinun, this%nodes, this%iout)
-          end if
           !
           ! -- Loop through each boundary calculating flow.
           do i = 1, this%nodes
@@ -1681,25 +1553,12 @@ contains
                 end if
               end if
             end if
-            !
-            ! -- If saving cell-by-cell flows in list, write flow
-            if (ibinun /= 0) then
-              n2 = i
-              call this%dis%record_mf6_list_entry(ibinun, node, n2, rrate,  &
-                                                      naux, this%auxvar(:,i),   &
-                                                      olconv2=.FALSE.)
-            end if
           end do
         end if
-      end if
+      !
       ! -- uzf-evt
       if (this%ietflag /= 0) then
         ibdlbl = 0
-        if (ibinun /= 0) then
-          call this%dis%record_srcdst_list_header(this%bdtxt(4), this%name_model,&
-                      this%name_model, this%name_model, this%name, naux,        &
-                      this%auxname, ibinun, this%nodes, this%iout)
-        end if
         !
         ! -- Loop through each boundary calculating flow.
         do i = 1, this%nodes
@@ -1729,48 +1588,9 @@ contains
               end if
             end if
           end if
-          !
-          ! -- If saving cell-by-cell flows in list, write flow
-          if (ibinun /= 0) then
-            n2 = i
-            call this%dis%record_mf6_list_entry(ibinun, node, n2, rrate,    &
-                                                    naux, this%auxvar(:,i),     &
-                                                    olconv2=.FALSE.)
-          end if
         end do
       end if
     end if
-    !
-    ! -- Add the UZF rates to the model budget
-    !uzf recharge
-    ratin = rrech
-    ratout = DZERO
-    call model_budget%addentry(ratin, ratout, delt, this%bdtxt(2),                   &
-                               isuppress_output, this%name)
-    !groundwater discharge
-    if (this%iseepflag == 1) then
-      ratin = DZERO
-      ratout = qseep !rgwseep
-      call model_budget%addentry(ratin, ratout, delt, this%bdtxt(3),                 &
-                                 isuppress_output, this%name)
-      !groundwater discharge to mover
-      if (this%imover == 1) then
-        ratin = DZERO
-        ratout = qseeptomvr
-        call model_budget%addentry(ratin, ratout, delt, this%bdtxt(5),               &
-                                   isuppress_output, this%name)
-      end if
-    end if
-    !groundwater et
-    if (this%igwetflag /= 0) then
-      ratin = DZERO
-      ratout = qgwet !retgw
-      !ratout = DZERO
-      !if (retgw > DZERO) then
-      !  ratout = -retgw
-      !end if
-      call model_budget%addentry(ratin, ratout, delt, this%bdtxt(4),                 &
-                                 isuppress_output, this%name)
     end if
     !
     ! -- set unit number for binary dependent variable output
@@ -1785,184 +1605,6 @@ contains
     if (ibinun > 0) then
       ! here is where you add the code to write the simulated moisture content
       ! may want to write a cell-by-cell file with imeth=6 (see sfr and lake)
-    end if
-    !
-    ! -- Set unit number for binary budget output
-    ibinun = 0
-    if(this%ibudgetout /= 0) then
-      ibinun = this%ibudgetout
-    end if
-    if(icbcfl == 0) ibinun = 0
-    if (isuppress_output /= 0) ibinun = 0
-    !
-    ! -- write uzf binary budget output
-    if (ibinun > 0) then
-      ! FLOW JA FACE - uzf to uzf connections using outlets
-      nlen = 0
-      do n = 1, this%nodes
-        !
-        ! -- Initialize variables
-        ivertflag = this%uzfobj%ivertcon(n)
-        if ( ivertflag > 0 ) then
-          nlen = nlen + 1
-        end if
-      end do
-      if (nlen > 0) then
-        naux = 0
-        call ubdsv06(kstp, kper, '    FLOW-JA-FACE', this%name_model, this%name, &
-                     this%name_model, this%name,                                 &
-                     ibinun, naux, this%cauxcbc, nlen*2, 1, 1,                   &
-                     nlen*2, this%iout, delt, pertim, totim)
-        do n = 1, this%nodes
-          !
-          ! -- Initialize variables
-          ivertflag = this%uzfobj%ivertcon(n)
-          if ( ivertflag > 0 ) then
-             q = this%uzfobj%surfluxbelow(n) * this%uzfobj%uzfarea(n)
-             if (q > DZERO) then
-               q = -q
-             end if
-             n1 = n
-             n2 = ivertflag
-             call this%dis%record_mf6_list_entry(ibinun, n1, n2, q, naux,     &
-                                                    this%qauxcbc,                 &
-                                                    olconv=.FALSE.,               &
-                                                    olconv2=.FALSE.)
-             q = this%uzfobj%surfluxbelow(n) * this%uzfobj%uzfarea(n)
-             call this%dis%record_mf6_list_entry(ibinun, n2, n1, q, naux,     &
-                                                    this%qauxcbc,                 &
-                                                    olconv=.FALSE.,               &
-                                                    olconv2=.FALSE.)
-
-          end if
-        end do
-      end if
-      ! GWF
-      naux = this%cbcauxitems
-      this%cauxcbc(1) = '       FLOW-AREA'
-      call ubdsv06(kstp, kper, aname(2), this%name_model, this%name,            &
-                   this%name_model, this%name_model,                            &
-                   ibinun, naux, this%cauxcbc, this%nodes, 1, 1,                &
-                   this%nodes, this%iout, delt, pertim, totim)
-      do n = 1, this%nodes
-        !
-        ! -- Initialize variables
-        this%qauxcbc(1) = this%uzfobj%uzfarea(n)
-        n2 = this%mfcellid(n)
-        q = -this%rch(n)
-        call this%dis%record_mf6_list_entry(ibinun, n, n2, q, naux,         &
-                                                this%qauxcbc,                   &
-                                                olconv=.FALSE.)
-      end do
-      ! SPECIFIED INFILTRATION
-      naux = 0
-      call ubdsv06(kstp, kper, aname(1), this%name_model, this%name,            &
-                   this%name_model, this%name,                                  &
-                   ibinun, naux, this%cauxcbc, this%nodes, 1, 1,                &
-                   this%nodes, this%iout, delt, pertim, totim)
-      do n = 1, this%nodes
-        q = this%appliedinf(n)
-        call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,          &
-                                                this%auxvar(:,n),               &
-                                                olconv=.FALSE.,                 &
-                                                olconv2=.FALSE.)
-      end do
-      ! REJECTED INFILTRATION
-      naux = 0
-      call ubdsv06(kstp, kper, aname(8), this%name_model, this%name,            &
-                   this%name_model, this%name,                                  &
-                   ibinun, naux, this%cauxcbc, this%nodes, 1, 1,                &
-                   this%nodes, this%iout, delt, pertim, totim)
-      do n = 1, this%nodes
-        q = this%rejinf(n)
-        if (q > DZERO) then
-          q = -q
-        end if
-        call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,         &
-                                                this%auxvar(:,n),              &
-                                                olconv=.FALSE.,                &
-                                                olconv2=.FALSE.)
-      end do
-      ! UNSATURATED EVT
-      if (this%ietflag /= 0) then
-        naux = 0
-        call ubdsv06(kstp, kper, aname(4), this%name_model, this%name,          &
-                     this%name_model, this%name,                                &
-                     ibinun, naux, this%cauxcbc, this%nodes, 1, 1,              &
-                     this%nodes, this%iout, delt, pertim, totim)
-        do n = 1, this%nodes
-          q = this%uzet(n)
-          if (q > DZERO) then
-            q = -q
-          end if
-          call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,        &
-                                                  this%auxvar(:,n),             &
-                                                  olconv=.FALSE.,               &
-                                                  olconv2=.FALSE.)
-        end do
-      end if
-      ! STORAGE
-      naux = 0
-      call ubdsv06(kstp, kper, aname(3), this%name_model, this%name,            &
-                   this%name_model, this%name,                                  &
-                   ibinun, naux, this%cauxcbc, this%nodes, 1, 1,                &
-                   this%nodes, this%iout, delt, pertim, totim)
-      do n = 1, this%nodes
-        q = -this%qsto(n)
-        call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,          &
-                                                this%auxvar(:,n),               &
-                                                olconv=.FALSE.,                 &
-                                                olconv2=.FALSE.)
-      end do
-      ! MOVER
-      if (this%imover == 1) then
-        ! FROM MOVER
-        naux = 0
-        call ubdsv06(kstp, kper, aname(10), this%name_model,                    &
-                     this%name, this%name_model, this%name,                     &
-                     ibinun, naux, this%cauxcbc,                                &
-                     this%nodes, 1, 1,                                          &
-                     this%nodes, this%iout, delt, pertim, totim)
-        do n = 1, this%nodes
-          q = this%pakmvrobj%get_qfrommvr(n)
-          call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,        &
-                                                  this%auxvar(:,n),             &
-                                                  olconv=.FALSE.,               &
-                                                  olconv2=.FALSE.)
-        end do
-        ! TO MOVER
-        naux = 0
-        call ubdsv06(kstp, kper, aname(9), this%name_model,                     &
-                     this%name, this%name_model, this%name,                     &
-                     ibinun, naux, this%cauxcbc,                                &
-                     this%nodes, 1, 1,                                          &
-                     this%nodes, this%iout, delt, pertim, totim)
-        do n = 1, this%nodes
-          q = this%rejinftomvr(n)
-          if (q > DZERO) then
-            q = -q
-          end if
-          call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,        &
-                                                  this%auxvar(:,n),             &
-                                                  olconv=.FALSE.,               &
-                                                  olconv2=.FALSE.)
-        end do
-      end if
-      ! AUXILIARY VARIABLES
-      naux = this%naux
-      if (naux > 0) then
-        call ubdsv06(kstp, kper, '       AUXILIARY', this%name_model, this%name,&
-                     this%name_model, this%name,                                &
-                     ibinun, naux, this%auxname, this%nodes, 1, 1,              &
-                     this%nodes, this%iout, delt, pertim, totim)
-        do n = 1, this%nodes
-          q = DZERO
-          call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,       &
-                                                  this%auxvar(:,n),            &
-                                                  olconv=.FALSE.,              &
-                                                  olconv2=.FALSE.)
-        end do
-      end if
     end if
     !
     ! -- fill the budget object
@@ -2204,9 +1846,6 @@ contains
         write(iout, '(1X,A)') line(1:iloc)
       end do
     end if
-    !
-    ! -- Output uzf budget
-    call this%budget%budget_ot(kstp, kper, iout)
     !
     ! -- Output uzf budget
     call this%budobj%write_budtable(kstp, kper, iout)
@@ -3247,10 +2886,6 @@ contains
     ! -- deallocate uzf objects
     call this%uzfobj%dealloc()
     nullify(this%uzfobj)
-    !
-    ! -- budget object
-    call this%budget%budget_da()
-    deallocate(this%budget)
     !
     ! -- character arrays
     deallocate(this%bdtxt)
