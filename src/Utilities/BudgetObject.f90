@@ -1,5 +1,6 @@
 ! Comprehensive budget object that stores all of the 
-! intercell flows, and the inflows and the outflows for a model
+! intercell flows, and the inflows and the outflows for 
+! an advanced package
 module BudgetObjectModule
   
   use KindModule, only: I4B, DP

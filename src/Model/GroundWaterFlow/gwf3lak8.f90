@@ -1637,7 +1637,6 @@ contains
     integer(I4B) :: j, jj, n
     integer(I4B) :: nn
     integer(I4B) :: idx
-    integer(I4B) :: ival
     real(DP) :: endtim
     real(DP) :: top
     real(DP) :: bot

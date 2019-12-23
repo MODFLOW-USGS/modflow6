@@ -905,7 +905,6 @@ contains
     integer(I4B) :: nn
     integer(I4B) :: inode
     integer(I4B) :: idx
-    integer(I4B) :: ival
     real(DP) :: k11, k22
     character (len=10), dimension(0:4) :: ccond
     character (len=30) :: nodestr
