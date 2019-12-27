@@ -281,7 +281,7 @@ def eval_model(sim):
     a = np.array([(1, 3, -0.00545875), (2, 3, -0.00468419)], dtype=adt)
     assert np.allclose(records[3]['node'], a['node'])
     assert np.allclose(records[3]['node2'], a['node2'])
-    assert np.allclose(records[3]['q'], a['q']), '{}\n{}'.format(records[3]['q'], a['q'])
+    assert np.allclose(records[3]['q'], a['q'], atol=0.001), '{}\n{}'.format(records[3]['q'], a['q'])
 
     assert records[4].shape == (0,)
     assert records[5].shape == (0,)
@@ -311,7 +311,7 @@ def eval_model(sim):
                   (7, 1, -1.e-04), (8, 1, -1.e-04), (9, 1, -1.e-04)], dtype=adt)
     assert np.allclose(records[23]['node'], a['node'])
     assert np.allclose(records[23]['node2'], a['node2'])
-    assert np.allclose(records[23]['q'], a['q']), '{}\n{}'.format(records[23]['q'], a['q'])
+    assert np.allclose(records[23]['q'], a['q'], atol=0.001), '{}\n{}'.format(records[23]['q'], a['q'])
 
     assert records[24].shape == (0,)
     return
