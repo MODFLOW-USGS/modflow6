@@ -1275,18 +1275,25 @@ contains
     integer(I4B), optional, intent(in) :: iadv
     ! -- local
     integer(I4B) :: i, node, ibinun
-    integer(I4B) :: n, n2, m, ivertflag, ierr
+    integer(I4B) :: n, m, ivertflag, ierr
+    integer(I4B) :: n1, n2
+    integer(I4B) :: nlen
     real(DP) :: rfinf
-    real(DP) :: rin, rout, rsto, ret, retgw, rgwseep, rvflux
-    real(DP) :: hgwf, hgwflm1, rrate, rrech
-    real(DP) :: trhsgwet, thcofgwet, gwet, derivgwet
+    real(DP) :: rin,rout,rsto,ret,retgw,rgwseep,rvflux
+    real(DP) :: rstoin
+    real(DP) :: rstoout
+    real(DP) :: hgwf,hgwflm1,ratin,ratout,rrate,rrech
+    real(DP) :: trhsgwet,thcofgwet,gwet,derivgwet
     real(DP) :: qfrommvr, qformvr, qgwformvr, sumaet
-    real(DP) :: ratin, ratout
+    real(DP) :: qfinf
+    real(DP) :: qrejinf
+    real(DP) :: qrejinftomvr
     real(DP) :: qout
     real(DP) :: qfact
     real(DP) :: qtomvr
     real(DP) :: sqtomvr
     real(DP) :: q
+    real(DP) :: rfrommvr
     real(DP) :: qseep
     real(DP) :: qseeptomvr
     real(DP) :: qgwet
@@ -1298,6 +1305,18 @@ contains
     ! -- formats
     character(len=*), parameter :: fmttkk = &
       "(1X,/1X,A,'   PERIOD ',I0,'   STEP ',I0)"
+    character(len=LENBUDTXT) :: aname(10)
+    ! -- for table
+    data aname(1)  /'    INFILTRATION'/
+    data aname(2)  /'             GWF'/
+    data aname(3)  /'         STORAGE'/
+    data aname(4)  /'            UZET'/
+    data aname(5)  /'        UZF-GWET'/
+    data aname(6)  /'         UZF-GWD'/
+    data aname(7)  /'SAT.-UNSAT. EXCH'/
+    data aname(8)  /'         REJ-INF'/
+    data aname(9)  /'  REJ-INF-TO-MVR'/
+    data aname(10) /'        FROM-MVR'/
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize accumulators
@@ -1307,14 +1326,20 @@ contains
     rout = DZERO
     rrech = DZERO
     rsto = DZERO
+    rstoin = DZERO
+    rstoout = DZERO
     ret = DZERO
     retgw = DZERO
     rgwseep = DZERO
     rvflux = DZERO
     sumaet = DZERO
+    qfinf = DZERO
     qfrommvr = DZERO
     qtomvr = DZERO
+    qrejinf = DZERO
+    qrejinftomvr = DZERO
     sqtomvr = DZERO
+    rfrommvr = DZERO
     qseep = DZERO
     qseeptomvr = DZERO
     qgwet = DZERO
@@ -1334,6 +1359,7 @@ contains
       qformvr = DZERO
       if(this%imover == 1) then
         qfrommvr = this%pakmvrobj%get_qfrommvr(i)
+        rfrommvr = rfrommvr + qfrommvr
       endif
       !
       hgwf = this%xnew(n)
@@ -1385,18 +1411,21 @@ contains
           this%recharge(i) = this%uzfobj%surflux(ivertflag) * this%uzfobj%uzfarea(i)
         end if
       end if
-      !
-      ! -- calculate results
+
       this%rch(i) = this%uzfobj%totflux(i) * this%uzfobj%uzfarea(i) / delt
+
       this%appliedinf(i) = this%uzfobj%sinf(i) * this%uzfobj%uzfarea(i)
       this%infiltration(i) = this%uzfobj%surflux(i) * this%uzfobj%uzfarea(i)
+
       this%rejinf(i) = this%uzfobj%finf_rej(i) * this%uzfobj%uzfarea(i)
+
       qout = this%rejinf(i) + this%uzfobj%surfseep(i)
       qtomvr = DZERO
       if (this%imover == 1) then
         qtomvr = this%pakmvrobj%get_qtomvr(i)
         sqtomvr = sqtomvr + qtomvr
       end if
+
       qfact = DZERO
       if (qout > DZERO) then
         qfact = this%rejinf(i) / qout
@@ -1426,12 +1455,27 @@ contains
       if (q < DZERO) then
         q = DZERO
       end if
-      !
-      ! -- store results
       this%gwd(i) = q
+
+      qfinf = qfinf + this%appliedinf(i)
+      qrejinf = qrejinf + this%rejinf(i)
+      qrejinftomvr = qrejinftomvr + this%rejinftomvr(i)
+
+      qseep = qseep + this%gwd(i)
+      qseeptomvr = qseeptomvr + this%gwdtomvr(i)
+
       this%gwet(i) = this%uzfobj%gwet(i)
       this%uzet(i) = this%uzfobj%etact(i) * this%uzfobj%uzfarea(i) / delt
       this%qsto(i) = this%uzfobj%delstor(i) / delt
+
+      ! -- accumulate groundwater et
+      qgwet = qgwet + this%gwet(i)
+
+      if (this%qsto(i) < DZERO) then
+        rstoin = rstoin - this%qsto(i)
+      else
+        rstoout = rstoout + this%qsto(i)
+      end if
       !
       ! -- End of UZF cell loop
       !
@@ -1449,6 +1493,21 @@ contains
     this%delstorsum = rsto * delt
     this%uzetsum = ret * delt
     this%vfluxsum = rvflux
+    !
+    !
+    rin = DZERO
+    rout = DZERO
+    if(rsto < DZERO) then
+      rin = -rsto
+    else
+      rout = rsto
+    endif
+    !
+    ! -- Clear accumulators and set flags
+    ratin = dzero
+    ratout = dzero
+    rrate = dzero
+    !iauxsv = 1  !always used compact budget
     !
     ! -- Set unit number for binary output
     if(this%ipakcb < 0) then
