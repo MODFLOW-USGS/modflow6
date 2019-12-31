@@ -1276,8 +1276,7 @@ contains
     ! -- local
     integer(I4B) :: i, node, ibinun
     integer(I4B) :: n, m, ivertflag, ierr
-    integer(I4B) :: n1, n2
-    integer(I4B) :: nlen
+    integer(I4B) :: n2
     real(DP) :: rfinf
     real(DP) :: rin,rout,rsto,ret,retgw,rgwseep,rvflux
     real(DP) :: rstoin
@@ -1305,18 +1304,18 @@ contains
     ! -- formats
     character(len=*), parameter :: fmttkk = &
       "(1X,/1X,A,'   PERIOD ',I0,'   STEP ',I0)"
-    character(len=LENBUDTXT) :: aname(10)
     ! -- for table
-    data aname(1)  /'    INFILTRATION'/
-    data aname(2)  /'             GWF'/
-    data aname(3)  /'         STORAGE'/
-    data aname(4)  /'            UZET'/
-    data aname(5)  /'        UZF-GWET'/
-    data aname(6)  /'         UZF-GWD'/
-    data aname(7)  /'SAT.-UNSAT. EXCH'/
-    data aname(8)  /'         REJ-INF'/
-    data aname(9)  /'  REJ-INF-TO-MVR'/
-    data aname(10) /'        FROM-MVR'/
+    !character(len=LENBUDTXT) :: aname(10)
+    !data aname(1)  /'    INFILTRATION'/
+    !data aname(2)  /'             GWF'/
+    !data aname(3)  /'         STORAGE'/
+    !data aname(4)  /'            UZET'/
+    !data aname(5)  /'        UZF-GWET'/
+    !data aname(6)  /'         UZF-GWD'/
+    !data aname(7)  /'SAT.-UNSAT. EXCH'/
+    !data aname(8)  /'         REJ-INF'/
+    !data aname(9)  /'  REJ-INF-TO-MVR'/
+    !data aname(10) /'        FROM-MVR'/
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize accumulators
@@ -3042,6 +3041,9 @@ contains
     ! -- deallocate uzf objects
     call this%uzfobj%dealloc()
     nullify(this%uzfobj)
+    call this%budobj%budgetobject_da()
+    deallocate(this%budobj)
+    nullify(this%budobj)
     !
     ! -- character arrays
     deallocate(this%bdtxt)

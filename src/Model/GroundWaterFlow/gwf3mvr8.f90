@@ -128,8 +128,8 @@ module GwfMvrModule
     character(len=LENPACKAGENAME),                                             &
       dimension(:), pointer, contiguous              :: paknames => null()       !array of package names
     type(MvrType), dimension(:), pointer, contiguous :: mvr => null()            !array of movers
-    type(BudgetType), pointer                        :: budget => null()         !mover budget object
-    type(BudgetObjectType), pointer                  :: budobj => null()         !new budget container
+    type(BudgetType), pointer                        :: budget => null()         !mover budget object (used to write table)
+    type(BudgetObjectType), pointer                  :: budobj => null()         !new budget container (used to write binary file)
     type(PackageMoverType),                                                    &
       dimension(:), pointer, contiguous    :: pakmovers => null()                !pointer to package mover objects
   contains
@@ -613,8 +613,15 @@ module GwfMvrModule
       deallocate(this%pakorigins)
       deallocate(this%paknames)
       deallocate(this%pakmovers)
+      !
+      ! -- budget object
       call this%budget%budget_da()
       deallocate(this%budget)
+      !
+      ! -- budobj
+      call this%budobj%budgetobject_da()
+      deallocate(this%budobj)
+      nullify(this%budobj)
     endif
     !
     ! -- Scalars

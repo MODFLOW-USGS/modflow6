@@ -37,6 +37,7 @@ module BudgetTermModule
     procedure :: accumulate_flow
     procedure :: save_flows
     procedure :: printme
+    procedure :: deallocate_arrays
     
   end type BudgetTermType
 
@@ -78,6 +79,15 @@ module BudgetTermModule
     allocate(this%auxvar(this%naux, this%maxlist))
     allocate(this%auxtxt(this%naux))
   end subroutine allocate_arrays
+  
+  subroutine deallocate_arrays(this)
+    class(BudgetTermType) :: this
+    deallocate(this%id1)
+    deallocate(this%id2)
+    deallocate(this%flow)
+    deallocate(this%auxvar)
+    deallocate(this%auxtxt)
+  end subroutine deallocate_arrays
   
   subroutine reset(this, nlist)
     class(BudgetTermType) :: this

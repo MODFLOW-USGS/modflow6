@@ -2028,6 +2028,11 @@ contains
     ! -- objects
     deallocate(this%geo)
     !
+    ! -- budobj
+    call this%budobj%budgetobject_da()
+    deallocate(this%budobj)
+    nullify(this%budobj)
+    !
     ! -- scalars
     call mem_deallocate(this%iprhed)
     call mem_deallocate(this%istageout)

@@ -4391,8 +4391,10 @@ contains
       deallocate(this%laketables)
     end if
     !
-    ! -- Lake objects
-    ! -- todo: deallocate budobj
+    ! -- budobj
+    call this%budobj%budgetobject_da()
+    deallocate(this%budobj)
+    nullify(this%budobj)
     !
     ! -- outlets
     if (this%noutlets > 0) then

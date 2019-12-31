@@ -2727,6 +2727,11 @@ contains
     enddo
     deallocate(this%mawwells)
     !
+    ! -- budobj
+    call this%budobj%budgetobject_da()
+    deallocate(this%budobj)
+    nullify(this%budobj)
+    !
     ! -- arrays
     deallocate(this%cmawname)
     deallocate(this%cmawbudget)

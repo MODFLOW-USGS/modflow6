@@ -47,6 +47,7 @@ module BudgetObjectModule
     procedure :: accumulate_terms
     procedure :: write_budtable
     procedure :: save_flows
+    procedure :: budgetobject_da
     
   end type BudgetObjectType
   
@@ -213,5 +214,28 @@ module BudgetObjectModule
     ! -- return
     return
   end subroutine save_flows
+  
+  subroutine budgetobject_da(this)
+! ******************************************************************************
+! budgetobject_da -- deallocate
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(BudgetObjectType) :: this
+    ! -- dummy
+    integer(I4B) :: i
+! ------------------------------------------------------------------------------
+    !
+    ! -- save flows for each budget term
+    do i = 1, this%nbudterm
+      call this%budterm(i)%deallocate_arrays()
+    end do
+    !
+    ! -- Return
+    return
+  end subroutine budgetobject_da
   
 end module BudgetObjectModule
