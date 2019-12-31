@@ -3911,9 +3911,9 @@ contains
 
   subroutine maw_setup_budobj(this)
 ! ******************************************************************************
-! maw_setup_budobj -- Set up the budget object that stores all the sfr flows
+! maw_setup_budobj -- Set up the budget object that stores all the maw flows
 !   The terms listed here must correspond in number and order to the ones 
-!   listed in the sfr_fill_budobj routine.
+!   listed in the maw_fill_budobj routine.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -4091,6 +4091,8 @@ contains
   subroutine maw_fill_budobj(this)
 ! ******************************************************************************
 ! maw_fill_budobj -- copy flow terms into this%budobj
+!
+! gwf rate [flowing_well] [storage] constant_flow [frommvr tomvr [tomvrfw]] [aux]
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -4117,8 +4119,6 @@ contains
     ! -- initialize counter
     idx = 0
 
-    ! gwf rate [flowing_well] [storage] constant_flow [frommvr tomvr [tomvrfw]] [aux]
-    ! -- FINISHED HERE!  NEED TO MODIFY BELOW CODE FOR MAW
     
     ! -- GWF (LEAKAGE) and connection surface area (aux)
     idx = idx + 1

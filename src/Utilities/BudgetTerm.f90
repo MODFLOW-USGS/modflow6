@@ -1,4 +1,7 @@
-
+! A budget term is the information needed to describe flow.
+! The budget object contains an array of budget terms.  
+! For an advanced package.  The budget object describes all of 
+! the flows.
 module BudgetTermModule
 
   use KindModule, only: I4B, DP
@@ -28,6 +31,7 @@ module BudgetTermModule
     real(DP), dimension(:), pointer :: flow => null()              ! point this to simvals or simtomvr (maxlist)
     real(DP), dimension(:, :), pointer :: auxvar => null()         ! auxiliary variables (naux, maxlist)
     integer(I4B) :: icounter                                       ! counter variable
+  
   contains
   
     procedure :: initialize
@@ -36,7 +40,6 @@ module BudgetTermModule
     procedure :: update_term
     procedure :: accumulate_flow
     procedure :: save_flows
-    procedure :: printme
     procedure :: deallocate_arrays
     
   end type BudgetTermType
@@ -46,6 +49,14 @@ module BudgetTermModule
   subroutine initialize(this, flowtype, text1id1, text2id1, &
                         text1id2, text2id2, maxlist, olconv1, olconv2, &
                         naux, auxtxt)
+! ******************************************************************************
+! initialize -- initialize the budget term
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
     class(BudgetTermType) :: this
     character(len=LENBUDTXT), intent(in) :: flowtype
     character(len=LENBUDTXT), intent(in) :: text1id1
@@ -57,6 +68,8 @@ module BudgetTermModule
     logical, intent(in) :: olconv2
     integer(I4B), intent(in) :: naux
     character(len=LENBUDTXT), dimension(:), intent(in), optional :: auxtxt
+    ! -- local
+! ------------------------------------------------------------------------------
     this%flowtype = flowtype
     this%text1id1 = text1id1
     this%text2id1 = text2id1
@@ -72,7 +85,16 @@ module BudgetTermModule
   end subroutine initialize
   
   subroutine allocate_arrays(this)
+! ******************************************************************************
+! allocate_arrays -- allocate budget term arrays
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
     class(BudgetTermType) :: this
+! ------------------------------------------------------------------------------
     allocate(this%id1(this%maxlist))
     allocate(this%id2(this%maxlist))
     allocate(this%flow(this%maxlist))
@@ -81,7 +103,16 @@ module BudgetTermModule
   end subroutine allocate_arrays
   
   subroutine deallocate_arrays(this)
+! ******************************************************************************
+! deallocate_arrays -- deallocate budget term arrays
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
     class(BudgetTermType) :: this
+! ------------------------------------------------------------------------------
     deallocate(this%id1)
     deallocate(this%id2)
     deallocate(this%flow)
@@ -90,18 +121,37 @@ module BudgetTermModule
   end subroutine deallocate_arrays
   
   subroutine reset(this, nlist)
+! ******************************************************************************
+! reset -- reset the budget term and counter so terms can be updated
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
     class(BudgetTermType) :: this
     integer(I4B), intent(in) :: nlist
+! ------------------------------------------------------------------------------
     this%nlist = nlist
     this%icounter = 1
   end subroutine reset
   
   subroutine update_term(this, id1, id2, flow, auxvar)
+! ******************************************************************************
+! update_term -- replace the terms in position this%icounter 
+!   for id1, id2, flow, and aux
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
     class(BudgetTermType) :: this
     integer(I4B), intent(in) :: id1
     integer(I4B), intent(in) :: id2
     real(DP), intent(in) :: flow
     real(DP), dimension(:), intent(in), optional :: auxvar
+! ------------------------------------------------------------------------------
     this%id1(this%icounter) = id1
     this%id2(this%icounter) = id2
     this%flow(this%icounter) = flow
@@ -110,11 +160,21 @@ module BudgetTermModule
   end subroutine update_term
   
   subroutine accumulate_flow(this, ratin, ratout)
+! ******************************************************************************
+! accumulate_flow -- calculate ratin and ratout for all the flow terms
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
     class(BudgetTermType) :: this
     real(DP), intent(inout) :: ratin
     real(DP), intent(inout) :: ratout
+    ! -- local
     integer(I4B) :: i
     real(DP) :: q
+! ------------------------------------------------------------------------------
     ratin = DZERO
     ratout = DZERO
     do i = 1, this%nlist
@@ -127,7 +187,16 @@ module BudgetTermModule
     end do
   end subroutine accumulate_flow
   
-  subroutine save_flows(this, dis, ibinun, kstp, kper, delt, pertim, totim, iout)
+  subroutine save_flows(this, dis, ibinun, kstp, kper, delt, pertim, totim, &
+                        iout)
+! ******************************************************************************
+! save_flows -- write flows to a binary file
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
     class(BudgetTermType) :: this
     class(DisBaseType), intent(in) :: dis
     integer(I4B), intent(in) :: ibinun
@@ -137,10 +206,12 @@ module BudgetTermModule
     real(DP), intent(in) :: pertim
     real(DP), intent(in) :: totim
     integer(I4B), intent(in) :: iout
+    ! -- local
     integer(I4B) :: i
     integer(I4B) :: n1
     integer(I4B) :: n2
     real(DP) :: q
+! ------------------------------------------------------------------------------
     call ubdsv06(kstp, kper, this%flowtype, &
                  this%text1id1, this%text2id1, &
                  this%text1id2, this%text2id2, &
@@ -156,17 +227,6 @@ module BudgetTermModule
                                      olconv=this%olconv1, &
                                      olconv2=this%olconv2)
     end do
-    
-    
   end subroutine save_flows
-  
-  subroutine printme(this)
-    class(BudgetTermType) :: this
-    integer(I4B) :: i
-    print *, this%flowtype
-    do i = 1, this%nlist
-      print *, i, this%id1(i), this%id2(i), this%flow(i)
-    end do
-  end subroutine printme
   
 end module BudgetTermModule
