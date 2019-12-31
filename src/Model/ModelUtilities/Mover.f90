@@ -21,7 +21,6 @@ module MvrModule
     integer(I4B)                                 :: imvrtype = 0                 !mover type (1, 2, 3, 4) corresponds to mvrtypes
     real(DP)                                     :: value = DZERO                !factor or rate depending on mvrtype
     real(DP)                                     :: qpold = DZERO                !provider rate from last time step
-    real(DP)                                     :: qpnew = DZERO                !new provider rate
     real(DP)                                     :: qpactual = DZERO             !rate provided to the receiver
     real(DP)                                     :: qanew = DZERO                !rate available at time of providing
     real(DP)                                     :: qaold = DZERO                !rate available fromtime step
