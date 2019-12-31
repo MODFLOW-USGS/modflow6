@@ -22,7 +22,7 @@ sysinfo = platform.system()
 if sysinfo.lower() == 'windows':
     eext = '.exe'
 
-download_version = '2.0'
+download_version = '3.0'
 mfexe_pth = 'temp/mfexes'
 
 

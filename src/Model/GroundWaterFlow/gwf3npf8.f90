@@ -742,7 +742,7 @@ module GwfNpfModule
 
   subroutine npf_flowja(this, hnew, flowja)
 ! ******************************************************************************
-! npf_flowja -- Budget
+! npf_flowja -- Calculate flowja
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -892,7 +892,7 @@ module GwfNpfModule
 
   subroutine npf_bdadj(this, flowja, icbcfl, icbcun)
 ! ******************************************************************************
-! npf_bdadj -- Calculate intercell flows
+! npf_bdadj -- Record flowja and calculate specific discharge if requested
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
