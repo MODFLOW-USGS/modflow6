@@ -1184,13 +1184,24 @@ module MemoryManagerModule
   end subroutine mem_usage
   
   subroutine mem_da()
+    use SimModule, only: store_error, ustop, count_errors
+    use VersionModule, only: IDEVELOPMODE
     class(MemoryType), pointer :: mt
     integer(I4B) :: ipos
+    character(len=LINELENGTH) :: errmsg
     do ipos = 1, memorylist%count()
       mt => memorylist%Get(ipos)
+      if (IDEVELOPMODE == 1) then
+        if (mt%mt_associated() .and. mt%isize > 0) then
+          errmsg = trim(adjustl(mt%origin)) // ' ' // &
+                   trim(adjustl(mt%name)) // ' not deallocated'
+          call store_error(trim(errmsg))
+        end if
+      end if
       deallocate(mt)
     enddo
     call memorylist%clear()
+    if (count_errors() > 0) call ustop()
   end subroutine mem_da
   
   subroutine mem_unique_origins(cunique)

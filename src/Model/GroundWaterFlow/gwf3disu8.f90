@@ -472,6 +472,16 @@ module GwfDisuModule
     call mem_deallocate(this%bot1d)
     call mem_deallocate(this%area1d)
     call mem_deallocate(this%idomain)
+    call mem_deallocate(this%vertices)
+    call mem_deallocate(this%iainp)
+    call mem_deallocate(this%jainp)
+    call mem_deallocate(this%ihcinp)
+    call mem_deallocate(this%cl12inp)
+    call mem_deallocate(this%hwvainp)
+    call mem_deallocate(this%angldegxinp)
+    call mem_deallocate(this%cellxy)
+    call mem_deallocate(this%nodeuser)
+    call mem_deallocate(this%nodereduced)
     !
     ! -- DisBaseType deallocate
     call this%DisBaseType%dis_da()
