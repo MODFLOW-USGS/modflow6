@@ -51,6 +51,7 @@ module GwtDspModule
     procedure :: dsp_cf
     procedure :: dsp_fc
     procedure :: dsp_flowja
+    procedure :: dsp_da
     procedure :: allocate_scalars
     procedure :: allocate_arrays
     procedure, private :: read_options
@@ -494,6 +495,56 @@ module GwtDspModule
     return
   end subroutine allocate_arrays
 
+  subroutine dsp_da(this)
+! ******************************************************************************
+! dsp_da
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use MemoryManagerModule, only: mem_deallocate
+    ! -- dummy
+    class(GwtDspType) :: this
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    ! -- deallocate arrays
+    if (this%inunit /= 0) then
+      call mem_deallocate(this%alh)
+      call mem_deallocate(this%alv, 'ALV', trim(this%origin))
+      call mem_deallocate(this%ath1)
+      call mem_deallocate(this%ath2, 'ATH2', trim(this%origin))
+      call mem_deallocate(this%atv, 'ATV', trim(this%origin))
+      call mem_deallocate(this%diffc)
+      call mem_deallocate(this%d11)
+      call mem_deallocate(this%d22)
+      call mem_deallocate(this%d33)
+      call mem_deallocate(this%angle1)
+      call mem_deallocate(this%angle2)
+      call mem_deallocate(this%angle3)
+      call mem_deallocate(this%gwfflowjaold)
+      call mem_deallocate(this%dispcoef)
+      if(this%ixt3d > 0) call this%xt3d%xt3d_da()
+    end if
+    !
+    ! -- deallocate scalars
+    call mem_deallocate(this%idiffc)
+    call mem_deallocate(this%idisp)
+    call mem_deallocate(this%ixt3d)
+    call mem_deallocate(this%id22)
+    call mem_deallocate(this%id33)
+    call mem_deallocate(this%iangle1)
+    call mem_deallocate(this%iangle2)
+    call mem_deallocate(this%iangle3)
+    !
+    ! -- deallocate variables in NumericalPackageType
+    call this%NumericalPackageType%da()
+    !
+    ! -- Return
+    return
+  end subroutine dsp_da
+
   subroutine read_options(this)
 ! ******************************************************************************
 ! read_options -- Allocate and Read
@@ -551,7 +602,7 @@ module GwtDspModule
 ! ------------------------------------------------------------------------------
     use ConstantsModule,   only: LINELENGTH
     use SimModule,         only: ustop, store_error, count_errors
-    use MemoryManagerModule, only: mem_reallocate, mem_copyptr
+    use MemoryManagerModule, only: mem_reallocate, mem_copyptr, mem_reassignptr
     ! -- dummy
     class(GwtDsptype) :: this
     ! -- local
@@ -667,29 +718,33 @@ module GwtDspModule
       !
       ! -- If alv not specified then point it to alh
       if(.not. lname(3)) then
-        call mem_reallocate(this%alv, this%dis%nodes, 'ALV',                   &
-                            trim(this%origin))
-        call mem_copyptr(this%alv, 'ALH', trim(this%name_model)//' DSP')
+        !call mem_reallocate(this%alv, this%dis%nodes, 'ALV',                   &
+        !                    trim(this%origin))
+        !call mem_copyptr(this%alv, 'ALH', trim(this%name_model)//' DSP')
+        call mem_reassignptr(this%alv, 'ALV', trim(this%origin),                 &
+                                       'ALH', trim(this%origin))
       endif
       !
       ! -- If ath2 not specified then assign it to ath1
       if (.not. lname(5)) then
-        call mem_reallocate(this%ath2, this%dis%nodes, 'ATH2',                 &
-                            trim(this%origin))
-        !call mem_copyptr(this%ath2, 'ATH1', trim(this%name_model)//' DSP')
-        do n = 1, size(this%ath2)
-          this%ath2(n) = this%ath1(n)
-        enddo
+        !call mem_reallocate(this%ath2, this%dis%nodes, 'ATH2',                 &
+        !                    trim(this%origin))
+        !do n = 1, size(this%ath2)
+        !  this%ath2(n) = this%ath1(n)
+        !enddo
+        call mem_reassignptr(this%ath2, 'ATH2', trim(this%origin),                 &
+                                        'ATH1', trim(this%origin))
       endif
       !
       ! -- If atv not specified then assign it to ath2
       if (.not. lname(6)) then
-        call mem_reallocate(this%atv, this%dis%nodes, 'ATV',                   &
-                            trim(this%origin))
-        !call mem_copyptr(this%atv, 'ATH2', trim(this%name_model)//' DSP')
-        do n = 1, size(this%atv)
-          this%atv(n) = this%ath2(n)
-        enddo
+        !call mem_reallocate(this%atv, this%dis%nodes, 'ATV',                   &
+        !                    trim(this%origin))
+        !do n = 1, size(this%atv)
+        !  this%atv(n) = this%ath2(n)
+        !enddo
+        call mem_reassignptr(this%atv, 'ATV', trim(this%origin),                 &
+                                       'ATH2', trim(this%origin))
       endif
     endif
     !
