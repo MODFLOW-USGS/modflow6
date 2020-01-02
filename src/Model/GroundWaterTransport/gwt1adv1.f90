@@ -22,6 +22,7 @@ module GwtAdvModule
     procedure :: adv_ar
     procedure :: adv_fc
     procedure :: adv_flowja
+    procedure :: adv_da
     
     procedure :: allocate_scalars
     procedure, private :: read_options
@@ -347,11 +348,13 @@ module GwtAdvModule
     !
     ! -- Deallocate arrays if package was active
     if(this%inunit > 0) then
-      call mem_deallocate(this%iadvwt)
-      this%ibound => null()
     endif
     !
+    ! -- nullify pointers
+    this%ibound => null()
+    !
     ! -- Scalars
+    call mem_deallocate(this%iadvwt)
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()

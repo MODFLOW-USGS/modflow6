@@ -65,6 +65,7 @@ module GwtLktModule
     procedure, private :: lkt_cfupdate
     procedure :: bnd_bd => lkt_bd
     procedure :: bnd_ot => lkt_ot
+    procedure :: bnd_da => lkt_da
     procedure :: allocate_scalars
     procedure :: lkt_allocate_arrays
     procedure :: find_lak_package
@@ -857,6 +858,50 @@ module GwtLktModule
     return
   end subroutine lkt_allocate_arrays
   
+  subroutine lkt_da(this)
+! ******************************************************************************
+! lkt_da
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use MemoryManagerModule, only: mem_deallocate
+    ! -- dummy
+    class(GwtLktType) :: this
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    ! -- deallocate arrays
+    call mem_deallocate(this%dbuff)
+    call mem_deallocate(this%qsto)
+    call mem_deallocate(this%strt)
+    call mem_deallocate(this%lauxvar)
+    call mem_deallocate(this%xoldpak)
+    if (this%imatrows == 0) then
+      call mem_deallocate(this%iboundpak)
+      call mem_deallocate(this%xnewpak)
+    end if
+    deallocate(this%clktbudget)
+    deallocate(this%status)
+    deallocate(this%lakename)
+    !
+    ! -- deallocate scalars
+    call mem_deallocate(this%imatrows)
+    call mem_deallocate(this%iprconc)
+    call mem_deallocate(this%iconcout)
+    call mem_deallocate(this%ibudgetout)
+    call mem_deallocate(this%igwflakpak)
+    call mem_deallocate(this%nlakes)
+    call mem_deallocate(this%bditems)
+    !
+    ! -- deallocate scalars in NumericalPackageType
+    call this%BndType%bnd_da()
+    !
+    ! -- Return
+    return
+  end subroutine lkt_da
+
   subroutine find_lak_package(this)
 ! ******************************************************************************
 ! find corresponding lak package
