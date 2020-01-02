@@ -537,7 +537,7 @@ module GwtSsmModule
     ! -- Allocate
     nflowpack = this%fmi%nflowpack
     call mem_allocate(this%iauxpak, nflowpack, 'IAUXPAK',                      &
-                      this%name)
+                      this%origin)
     !
     ! -- Initialize
     this%iauxpak(:) = 0

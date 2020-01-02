@@ -16,9 +16,8 @@ module LakModule
                               sQuadraticSaturationDerivative,                  &
                               sQSaturationDerivative
   use BndModule, only: BndType
-  use BudgetModule, only : BudgetType
-
-  use ObserveModule,        only: ObserveType
+  use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr
+  use ObserveModule, only: ObserveType
   use ObsModule, only: ObsType
   use InputOutputModule, only: get_node, URWORD, extract_idnum_or_bndname
   use BaseDisModule, only: DisBaseType
@@ -162,8 +161,6 @@ module LakModule
     real(DP), dimension(:), pointer, contiguous :: qleak => null()
     real(DP), dimension(:), pointer, contiguous :: qsto => null()
     !
-    ! -- derived types
-    type(BudgetType), pointer :: budget => NULL()
     ! -- pointer to gwf iss and gwf hk
     integer(I4B), pointer :: gwfiss => NULL()
     real(DP), dimension(:), pointer, contiguous :: gwfk11 => NULL()
@@ -175,6 +172,9 @@ module LakModule
     integer(I4B), dimension(:), pointer, contiguous :: iboundpak => null()       !package ibound
     real(DP), dimension(:), pointer, contiguous :: xnewpak => null()             !package x vector
     real(DP), dimension(:), pointer, contiguous :: xoldpak => null()             !package xold vector
+    !
+    ! -- lake budget object
+    type(BudgetObjectType), pointer :: budobj => null()
     !
     ! -- type bound procedures
     contains
@@ -242,6 +242,8 @@ module LakModule
     procedure, private :: lak_calculate_available
     procedure, private :: lak_calculate_residual
     procedure, private :: lak_linear_interpolation
+    procedure, private :: lak_setup_budobj
+    procedure, private :: lak_fill_budobj
   end type LakType
 
 contains
@@ -413,7 +415,7 @@ contains
     ! -- return
     return
   end subroutine lak_allocate_arrays
-
+  
   subroutine lak_read_lakes(this)
 ! ******************************************************************************
 ! pak1read_dimensions -- Read the dimensions for this package
@@ -1629,7 +1631,6 @@ contains
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: ustop, store_error, count_errors
-    use BudgetModule, only: budget_cr
     use TimeSeriesManagerModule, only: read_single_value_or_time_series
     ! -- dummy
     class(LakType),intent(inout) :: this
@@ -1638,7 +1639,6 @@ contains
     integer(I4B) :: j, jj, n
     integer(I4B) :: nn
     integer(I4B) :: idx
-    integer(I4B) :: ival
     real(DP) :: endtim
     real(DP) :: top
     real(DP) :: bot
@@ -1666,11 +1666,6 @@ contains
     data ctype(3) /'EMBEDDEDV '/
     ! -- format
 ! ------------------------------------------------------------------------------
-
-    ! -- setup the lake budget
-    call budget_cr(this%budget, this%origin)
-    ival = this%bditems
-    call this%budget%budget_df(ival, this%name, 'L**3')
     !
     ! -- initialize xnewpak and set stage
     do n = 1, this%nlakes
@@ -3407,6 +3402,9 @@ contains
       call this%pakmvrobj%ar(this%noutlets, this%nlakes, this%origin)
     endif
     !
+    ! -- setup the budget object
+    call this%lak_setup_budobj()
+    !
     ! -- return
     return
   end subroutine lak_ar
@@ -3890,7 +3888,6 @@ contains
     return
   end subroutine lak_cc
 
-
   subroutine lak_bd(this, x, idvfl, icbcfl, ibudfl, icbcun, iprobs,            &
                     isuppress_output, model_budget, imap, iadv)
 ! ******************************************************************************
@@ -3922,33 +3919,16 @@ contains
     ! -- local
     integer(I4B) :: ibinun
     real(DP) :: rrate
-    real(DP) :: gwfratin, gwfratout
-    real(DP) :: rainin, rainout
-    real(DP) :: evapin, evapout
-    real(DP) :: within, without
-    real(DP) :: roin, roout
-    real(DP) :: qinfin, qinfout
-    real(DP) :: extin, extout
-    real(DP) :: storatin, storatout
-    real(DP) :: ratin, ratout
     real(DP) :: chratin, chratout
-    real(DP) :: mvrratin
-    real(DP) :: qtomvr
-    integer(I4B) :: naux
-    real(DP), dimension(:), allocatable :: auxvartmp
     ! -- for budget
-    integer(I4B) :: i, j, n, n2
-    integer(I4B) :: ii
+    integer(I4B) :: j, n
     integer(I4B) :: igwfnode
-    integer(I4B) :: nlen, n1
     real(DP) :: hlak, hgwf
     real(DP) :: v0, v1
     real(DP) :: blak
     real(DP) :: s
     real(DP) :: d
     real(DP) :: v
-    real(DP) :: q
-    real(DP) :: q2
     ! -- for observations
     integer(I4B) :: iprobslocal
     ! -- formats
@@ -3964,38 +3944,13 @@ contains
     ! -- Suppress saving of simulated values; they
     !    will be saved at end of this procedure.
     iprobslocal = 0
+    !
     ! -- call base functionality in bnd_bd
     call this%BndType%bnd_bd(x, idvfl, icbcfl, ibudfl, icbcun, iprobslocal,    &
                              isuppress_output, model_budget, this%imap,        &
                              iadv=1)
     !
-    ! -- lak budget routines (start by resetting)
-    call this%budget%reset()
-    !
-    ! -- add to lake budget terms
-    ! -- gwf flow
-    gwfratin = DZERO
-    gwfratout = DZERO
-    rainin = DZERO
-    rainout = DZERO
-    evapin = DZERO
-    evapout = DZERO
-    within = DZERO
-    without = DZERO
-    roin = DZERO
-    roout = DZERO
-    qinfin = DZERO
-    qinfout = DZERO
-    extin = DZERO
-    extout = DZERO
-    storatin = DZERO
-    storatout = DZERO
-    ratin = DZERO
-    ratout = DZERO
-    chratin = DZERO
-    chratout = DZERO
-    mvrratin = DZERO
-    qtomvr = DZERO
+    ! -- calculate several budget terms
     do n = 1, this%nlakes
       this%chterm(n) = DZERO
       if (this%iboundpak(n) == 0) cycle
@@ -4003,76 +3958,26 @@ contains
       call this%lak_calculate_vol(n, hlak, v1)
       ! -- add budget terms for active lakes
       if (this%iboundpak(n) /= 0) then
+        !
         ! -- rainfall
         rrate = this%precip(n)
         call this%lak_accumulate_chterm(n, rrate, chratin, chratout)
         !
-        ! -- See if flow is into lake or out of lake.
-        if (rrate < DZERO) then
-          !
-          ! -- Flow is out of lake subtract rate from ratout.
-          rainout = rainout - rrate
-        else
-          !
-          ! -- Flow is into lake; add rate to ratin.
-          rainin = rainin + rrate
-        end if
         ! -- evaporation
         rrate = this%evap(n)
         call this%lak_accumulate_chterm(n, rrate, chratin, chratout)
         !
-        ! -- See if flow is into lake or out of lake.
-        if (rrate < DZERO) then
-          !
-          ! -- Flow is out of lake subtract rate from ratout.
-          evapout = evapout - rrate
-        else
-          !
-          ! -- Flow is into lake; add rate to ratin.
-          evapin = evapin + rrate
-        end if
         ! -- runoff
         rrate = this%runoff(n)%value
         call this%lak_accumulate_chterm(n, rrate, chratin, chratout)
         !
-        ! -- See if flow is into lake or out of lake.
-        if (rrate < DZERO) then
-          !
-          ! -- Flow is out of lake subtract rate from ratout.
-          roout = roout - rrate
-        else
-          !
-          ! -- Flow is into lake; add rate to ratin.
-          roin = roin + rrate
-        end if
         ! -- inflow
         rrate = this%inflow(n)%value
         call this%lak_accumulate_chterm(n, rrate, chratin, chratout)
         !
-        ! -- See if flow is into lake or out of lake.
-        if (rrate < DZERO) then
-          !
-          ! -- Flow is out of lake subtract rate from ratout.
-          qinfout = qinfout - rrate
-        else
-          !
-          ! -- Flow is into lake; add rate to ratin.
-          qinfin = qinfin + rrate
-        end if
         ! -- withdrawals
         rrate = this%withr(n)
         call this%lak_accumulate_chterm(n, rrate, chratin, chratout)
-        !
-        ! -- See if flow is into lake or out of lake.
-        if (rrate < DZERO) then
-          !
-          ! -- Flow is out of lake subtract rate from ratout.
-          without = without - rrate
-        else
-          !
-          ! -- Flow is into lake; add rate to ratin.
-          within = within + rrate
-        end if
         !
         ! -- add lake storage changes
         rrate = DZERO
@@ -4081,43 +3986,13 @@ contains
             call this%lak_calculate_vol(n, this%xoldpak(n), v0)
             rrate = -(v1 - v0) / delt
             call this%lak_accumulate_chterm(n, rrate, chratin, chratout)
-          !else
-          !  rrate = -v1 / delt
           end if
         end if
         this%qsto(n) = rrate
         !
-        ! -- See if storage flow is into maw or out of maw.
-        if(rrate < DZERO) then
-          !
-          ! -- Flow is out of lake subtract rate from ratout.
-          storatout = storatout - rrate
-        else
-          !
-          ! -- Flow is into lake; add rate to ratin.
-          storatin = storatin + rrate
-        endif
-        !
         ! -- add external outlets
         call this%lak_get_external_outlet(n, rrate)
         call this%lak_accumulate_chterm(n, rrate, chratin, chratout)
-        if (this%imover == 1) then
-          call this%lak_get_external_mover(n, q)
-          rrate = rrate + q
-          call this%lak_get_outlet_tomover(n, q2)
-          qtomvr = qtomvr + q2
-        end if
-        !
-        ! -- See if flow is into lake or out of lake.
-        if (rrate < DZERO) then
-          !
-          ! -- Flow is out of lake subtract rate from ratout.
-          extout = extout - rrate
-        else
-          !
-          ! -- Flow is into lake; add rate to ratin.
-          extin = extin + rrate
-        end if
         !
         ! -- add mover terms
         if (this%imover == 1) then
@@ -4127,7 +4002,6 @@ contains
             rrate = DZERO
           end if
           call this%lak_accumulate_chterm(n, rrate, chratin, chratout)
-          mvrratin = mvrratin + rrate
         endif
       end if
     end do
@@ -4153,47 +4027,9 @@ contains
         end if
         this%qleak(j) = rrate
         call this%lak_accumulate_chterm(n, rrate, chratin, chratout)
-        !
-        ! -- See if flow is into lake or out of lake.
-        if(rrate < DZERO) then
-          !
-          ! -- Flow is out of lake subtract rate from ratout.
-          gwfratout = gwfratout - rrate
-        else
-          !
-          ! -- Flow is into lake; add rate to ratin.
-          gwfratin = gwfratin + rrate
-        endif
       end do
-
     end do
-    ! -- add calculated terms
-    call this%budget%addentry(qinfin, qinfout, delt,  &
-                              this%clakbudget(5), isuppress_output)
-    if (this%imover == 1) then
-      call this%budget%addentry(mvrratin, DZERO, delt,  &
-                                this%clakbudget(10), isuppress_output)
-    end if
-    call this%budget%addentry(rainin, rainout, delt,  &
-                              this%clakbudget(2), isuppress_output)
-    call this%budget%addentry(roin, roout, delt,  &
-                              this%clakbudget(4), isuppress_output)
-    call this%budget%addentry(gwfratin, gwfratout, delt,  &
-                              this%clakbudget(1), isuppress_output)
-    call this%budget%addentry(evapin, evapout, delt,  &
-                              this%clakbudget(3), isuppress_output)
-    call this%budget%addentry(within, without, delt,  &
-                              this%clakbudget(6), isuppress_output)
-    call this%budget%addentry(extin, extout, delt,  &
-                              this%clakbudget(7), isuppress_output)
-    if (this%imover == 1) then
-      call this%budget%addentry(DZERO, qtomvr, delt,  &
-                                this%clakbudget(11), isuppress_output)
-    end if
-    call this%budget%addentry(storatin, storatout, delt,  &
-                              this%clakbudget(8), isuppress_output)
-    call this%budget%addentry(chratin, chratout, delt,  &
-                              this%clakbudget(9), isuppress_output)
+    !
     ! -- For continuous observations, save simulated values.
     if (this%obs%npakobs > 0 .and. iprobs > 0) then
       call this%lak_bd_obs()
@@ -4223,236 +4059,21 @@ contains
                   this%nlakes, 1, 1, ibinun)
     end if
     !
-    ! -- Set unit number for binary budget output
+    ! -- fill the budget object
+    call this%lak_fill_budobj()
+    !
+    ! -- write the flows from the budobj
     ibinun = 0
     if(this%ibudgetout /= 0) then
       ibinun = this%ibudgetout
     end if
     if(icbcfl == 0) ibinun = 0
     if (isuppress_output /= 0) ibinun = 0
-    !
-    ! -- write lake binary budget output
     if (ibinun > 0) then
-      ! FLOW JA FACE - lake to lake connections using outlets
-      nlen = 0
-      do n = 1, this%noutlets
-        if (this%lakein(n) > 0 .and. this%lakeout(n) > 0) then
-          nlen = nlen + 1
-        end if
-      end do
-      if (nlen > 0) then
-        naux = 0
-        call ubdsv06(kstp, kper, '    FLOW-JA-FACE', this%name_model, this%name, &
-                     this%name_model, this%name,                                 &
-                     ibinun, naux, this%cauxcbc, nlen*2, 1, 1,                   &
-                     nlen*2, this%iout, delt, pertim, totim)
-        do n = 1, this%noutlets
-          if (this%lakein(n) > 0 .and. this%lakeout(n) > 0) then
-             q = this%simoutrate(n)
-             if (this%imover == 1) then
-               q = q + this%pakmvrobj%get_qtomvr(n)
-             end if
-             n1 = this%lakein(n)
-             n2 = this%lakeout(n)
-             call this%dis%record_mf6_list_entry(ibinun, n1, n2, q, naux,     &
-                                                    this%qauxcbc,                 &
-                                                    olconv=.FALSE.,               &
-                                                    olconv2=.FALSE.)
-             call this%dis%record_mf6_list_entry(ibinun, n2, n1, -q, naux,    &
-                                                    this%qauxcbc,                 &
-                                                    olconv=.FALSE.,               &
-                                                    olconv2=.FALSE.)
-
-          end if
-        end do
-      end if
-      ! LEAKAGE
-      naux = this%cbcauxitems
-      this%cauxcbc(1) = '       FLOW-AREA'
-      call ubdsv06(kstp, kper, this%clakbudget(1), this%name_model, this%name, &
-                   this%name_model, this%name_model,                           &
-                   ibinun, naux, this%cauxcbc, this%maxbound, 1, 1,            &
-                   this%maxbound, this%iout, delt, pertim, totim)
-      do n = 1, this%nlakes
-        hlak = this%xnewpak(n)
-        do j = this%idxlakeconn(n), this%idxlakeconn(n+1)-1
-          n2 = this%cellid(j)
-          hgwf = this%xnew(n2)
-          call this%lak_calculate_conn_warea(n, j, hlak, hgwf, this%qauxcbc(1))
-          q = this%qleak(j)
-          call this%dis%record_mf6_list_entry(ibinun, n, n2, q, naux,        &
-                                                  this%qauxcbc,                  &
-                                                  olconv=.FALSE.)
-
-        end do
-      end do
-      ! INFLOW
-      naux = 0
-      call ubdsv06(kstp, kper, this%clakbudget(5), this%name_model, this%name, &
-                   this%name_model, this%name,                                 &
-                   ibinun, naux, this%auxname, this%nlakes, 1, 1,              &
-                   this%nlakes, this%iout, delt, pertim, totim)
-      do n = 1, this%nlakes
-        q = this%inflow(n)%value
-        call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,         &
-                                                this%auxvar(:,n),              &
-                                                olconv=.FALSE.,                &
-                                                olconv2=.FALSE.)
-      end do
-      ! RUNOFF
-      naux = 0
-      call ubdsv06(kstp, kper, this%clakbudget(4), this%name_model, this%name, &
-                   this%name_model, this%name,                                 &
-                   ibinun, naux, this%auxname, this%nlakes, 1, 1,              &
-                   this%nlakes, this%iout, delt, pertim, totim)
-      do n = 1, this%nlakes
-        q = this%runoff(n)%value
-        call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,         &
-                                                this%auxvar(:,n),              &
-                                                olconv=.FALSE.,                &
-                                                olconv2=.FALSE.)
-      end do
-      ! RAIN
-      naux = 0
-      call ubdsv06(kstp, kper, this%clakbudget(2), this%name_model, this%name, &
-                   this%name_model, this%name,                                 &
-                   ibinun, naux, this%auxname, this%nlakes, 1, 1,              &
-                   this%nlakes, this%iout, delt, pertim, totim)
-      do n = 1, this%nlakes
-        q = this%precip(n)
-        call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,         &
-                                                this%auxvar(:,n),              &
-                                                olconv=.FALSE.,                &
-                                                olconv2=.FALSE.)
-      end do
-      ! EVAPORATION
-      naux = 0
-      call ubdsv06(kstp, kper, this%clakbudget(3), this%name_model, this%name, &
-                   this%name_model, this%name,                                 &
-                   ibinun, naux, this%auxname, this%nlakes, 1, 1,              &
-                   this%nlakes, this%iout, delt, pertim, totim)
-      do n = 1, this%nlakes
-        q = this%evap(n)
-        call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,         &
-                                                this%auxvar(:,n),              &
-                                                olconv=.FALSE.,                &
-                                                olconv2=.FALSE.)
-      end do
-      ! WITHDRAWAL
-      naux = 0
-      call ubdsv06(kstp, kper, this%clakbudget(6), this%name_model, this%name, &
-                   this%name_model, this%name,                                 &
-                   ibinun, naux, this%auxname, this%nlakes, 1, 1,              &
-                   this%nlakes, this%iout, delt, pertim, totim)
-      do n = 1, this%nlakes
-        q = this%withr(n)
-        call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,         &
-                                                this%auxvar(:,n),              &
-                                                olconv=.FALSE.,                &
-                                                olconv2=.FALSE.)
-      end do
-      ! EXTERNAL OUTFLOW
-      naux = 0
-      call ubdsv06(kstp, kper, this%clakbudget(7), this%name_model, this%name, &
-                   this%name_model, this%name,                                 &
-                   ibinun, naux, this%auxname, this%nlakes, 1, 1,              &
-                   this%nlakes, this%iout, delt, pertim, totim)
-      do n = 1, this%nlakes
-        call this%lak_get_external_outlet(n, q)
-        ! subtract tomover from external outflow
-        call this%lak_get_external_mover(n, v)
-        q = q + v
-        call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,         &
-                                                this%auxvar(:,n),              &
-                                                olconv=.FALSE.,                &
-                                                olconv2=.FALSE.)
-      end do
-      ! STORAGE
-      naux = this%cbcauxitems
-      this%cauxcbc(1) = '          VOLUME'
-      call ubdsv06(kstp, kper, this%clakbudget(8), this%name_model, this%name, &
-                   this%name_model, this%name,                                 &
-                   ibinun, naux, this%cauxcbc, this%nlakes, 1, 1,              &
-                   this%nlakes, this%iout, delt, pertim, totim)
-      do n = 1, this%nlakes
-        call this%lak_calculate_vol(n, this%xnewpak(n), v1)
-        q = this%qsto(n)
-        this%qauxcbc(1) = v1
-        call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,         &
-                                                this%qauxcbc,                  &
-                                                olconv=.FALSE.,                &
-                                                olconv2=.FALSE.)
-      end do
-      ! CONSTANT FLOW
-      naux = 0
-      call ubdsv06(kstp, kper, this%clakbudget(9), this%name_model, this%name, &
-                   this%name_model, this%name,                                 &
-                   ibinun, naux, this%auxname, this%nlakes, 1, 1,              &
-                   this%nlakes, this%iout, delt, pertim, totim)
-      do n = 1, this%nlakes
-        q = this%chterm(n)
-        call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,         &
-                                                this%auxvar(:,n),              &
-                                                olconv=.FALSE.,                &
-                                                olconv2=.FALSE.)
-      end do
-      ! MOVER
-      if (this%imover == 1) then
-        ! FROM MOVER
-        naux = 0
-        call ubdsv06(kstp, kper, this%clakbudget(10), this%name_model,         &
-                     this%name, this%name_model, this%name,                    &
-                     ibinun, naux, this%auxname,                               &
-                     this%nlakes, 1, 1,                                        &
-                     this%nlakes, this%iout, delt, pertim, totim)
-        do n = 1, this%nlakes
-          q = this%pakmvrobj%get_qfrommvr(n)
-          call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,       &
-                                                  this%auxvar(:,n),            &
-                                                  olconv=.FALSE.,              &
-                                                  olconv2=.FALSE.)
-        end do
-        ! TO MOVER
-        naux = 0
-        call ubdsv06(kstp, kper, this%clakbudget(11), this%name_model,         &
-                     this%name, this%name_model, this%name,                    &
-                     ibinun, naux, this%auxname,                               &
-                     this%noutlets, 1, 1,                                      &
-                     this%noutlets, this%iout, delt, pertim, totim)
-        do n = 1, this%noutlets
-          q = this%pakmvrobj%get_qtomvr(n)
-          if (q > DZERO) then
-            q = -q
-          end if
-          call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,       &
-                                                  this%auxvar(:,n),            &
-                                                  olconv=.FALSE.,              &
-                                                  olconv2=.FALSE.)
-        end do
-      end if
-      ! AUXILIARY VARIABLES
-      naux = this%naux
-      if (naux > 0) then
-        call ubdsv06(kstp, kper, '       AUXILIARY', this%name_model, this%name,&
-                     this%name_model, this%name,                                &
-                     ibinun, naux, this%auxname, this%nlakes, 1, 1,             &
-                     this%nlakes, this%iout, delt, pertim, totim)
-        allocate(auxvartmp(naux))
-        do n = 1, this%nlakes
-          q = DZERO
-          ! fill auxvar
-          do i = 1, naux
-            ii = (n-1) * naux + i
-            auxvartmp(i) = this%lauxvar(ii)%value
-          end do
-          call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,           &
-                                              auxvartmp(:),                    &
-                                              olconv=.FALSE.,                  &
-                                              olconv2=.FALSE.)
-        end do
-        deallocate(auxvartmp)
-      end if
+      call this%budobj%save_flows(this%dis, ibinun, kstp, kper, delt, &
+                        pertim, totim, this%iout)
     end if
+    !
     ! -- return
     return
   end subroutine lak_bd
@@ -4727,7 +4348,7 @@ contains
     end if
     !
     ! -- Output lake budget
-    call this%budget%budget_ot(kstp, kper, iout)
+    call this%budobj%write_budtable(kstp, kper, iout)
     !
     ! -- return
     return
@@ -4776,9 +4397,10 @@ contains
       deallocate(this%laketables)
     end if
     !
-    ! -- Lake objects
-    call this%budget%budget_da()
-    deallocate(this%budget)
+    ! -- budobj
+    call this%budobj%budgetobject_da()
+    deallocate(this%budobj)
+    nullify(this%budobj)
     !
     ! -- outlets
     if (this%noutlets > 0) then
@@ -6119,5 +5741,422 @@ contains
     return
   end subroutine lak_calculate_residual
 
+  subroutine lak_setup_budobj(this)
+! ******************************************************************************
+! lak_setup_budobj -- Set up the budget object that stores all the lake flows
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule, only: LENBUDTXT
+    ! -- dummy
+    class(LakType) :: this
+    ! -- local
+    integer(I4B) :: nbudterm
+    integer(I4B) :: nlen
+    integer(I4B) :: n
+    integer(I4B) :: maxlist, naux
+    integer(I4B) :: idx
+    character(len=LENBUDTXT) :: text
+    character(len=LENBUDTXT), dimension(1) :: auxtxt
+! ------------------------------------------------------------------------------
+    !
+    ! -- Determine the number of lake budget terms. These are fixed for 
+    !    the simulation and cannot change
+    nbudterm = 9
+    nlen = 0
+    do n = 1, this%noutlets
+      if (this%lakein(n) > 0 .and. this%lakeout(n) > 0) then
+        nlen = nlen + 1
+      end if
+    end do
+    if (nlen > 0) nbudterm = nbudterm + 1
+    if (this%imover == 1) nbudterm = nbudterm + 2
+    if (this%naux > 0) nbudterm = nbudterm + 1
+    !
+    ! -- set up budobj
+    call budgetobject_cr(this%budobj, this%name)
+    call this%budobj%budgetobject_df(this%nlakes, nbudterm, 0, 0)
+    idx = 0
+    !
+    ! -- Go through and set up each budget term
+    if (nlen > 0) then
+      text = '    FLOW-JA-FACE'
+      idx = idx + 1
+      maxlist = 2 * this%noutlets
+      naux = 0
+      call this%budobj%budterm(idx)%initialize(text, &
+                                               this%name_model, &
+                                               this%name, &
+                                               this%name_model, &
+                                               this%name, &
+                                               maxlist, .false., .false., &
+                                               naux)
+    end if
+    !
+    ! -- 
+    text = '             GWF'
+    idx = idx + 1
+    maxlist = this%maxbound 
+    naux = 1
+    auxtxt(1) = '       FLOW-AREA'
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name_model, &
+                                             maxlist, .false., .true., &
+                                             naux, auxtxt)
+    !
+    ! -- 
+    text = '        RAINFALL'
+    idx = idx + 1
+    maxlist = this%nlakes
+    naux = 0
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name, &
+                                             maxlist, .false., .false., &
+                                             naux)
+    !
+    ! -- 
+    text = '     EVAPORATION'
+    idx = idx + 1
+    maxlist = this%nlakes
+    naux = 0
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name, &
+                                             maxlist, .false., .false., &
+                                             naux)
+    !
+    ! -- 
+    text = '          RUNOFF'
+    idx = idx + 1
+    maxlist = this%nlakes
+    naux = 0
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name, &
+                                             maxlist, .false., .false., &
+                                             naux)
+    !
+    ! -- 
+    text = '      EXT-INFLOW'
+    idx = idx + 1
+    maxlist = this%nlakes
+    naux = 0
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name, &
+                                             maxlist, .false., .false., &
+                                             naux)
+    !
+    ! -- 
+    text = '      WITHDRAWAL'
+    idx = idx + 1
+    maxlist = this%nlakes
+    naux = 0
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name, &
+                                             maxlist, .false., .false., &
+                                             naux)
+    !
+    ! -- 
+    text = '     EXT-OUTFLOW'
+    idx = idx + 1
+    maxlist = this%nlakes
+    naux = 0
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name, &
+                                             maxlist, .false., .false., &
+                                             naux)
+    !
+    ! -- 
+    text = '         STORAGE'
+    idx = idx + 1
+    maxlist = this%nlakes
+    naux = 1
+    auxtxt(1) = '          VOLUME'
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name, &
+                                             maxlist, .false., .false., &
+                                             naux, auxtxt)
+    !
+    ! -- 
+    text = '        CONSTANT'
+    idx = idx + 1
+    maxlist = this%nlakes
+    naux = 0
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name, &
+                                             maxlist, .false., .false., &
+                                             naux)
+    !
+    ! -- 
+    if (this%imover == 1) then
+      !
+      ! -- 
+      text = '        FROM-MVR'
+      idx = idx + 1
+      maxlist = this%nlakes
+      naux = 0
+      call this%budobj%budterm(idx)%initialize(text, &
+                                               this%name_model, &
+                                               this%name, &
+                                               this%name_model, &
+                                               this%name, &
+                                               maxlist, .false., .false., &
+                                               naux)
+      !
+      ! -- 
+      text = '          TO-MVR'
+      idx = idx + 1
+      maxlist = this%noutlets
+      naux = 0
+      call this%budobj%budterm(idx)%initialize(text, &
+                                               this%name_model, &
+                                               this%name, &
+                                               this%name_model, &
+                                               this%name, &
+                                               maxlist, .false., .false., &
+                                               naux)
+    end if
+    !
+    ! -- 
+    naux = this%naux
+    if (naux > 0) then
+      !
+      ! -- 
+      text = '       AUXILIARY'
+      idx = idx + 1
+      maxlist = this%nlakes
+      call this%budobj%budterm(idx)%initialize(text, &
+                                               this%name_model, &
+                                               this%name, &
+                                               this%name_model, &
+                                               this%name, &
+                                               maxlist, .false., .false., &
+                                               naux, this%auxname)
+    end if
+    !
+    ! -- return
+    return
+  end subroutine lak_setup_budobj
+
+  subroutine lak_fill_budobj(this)
+! ******************************************************************************
+! lak_fill_budobj -- copy flow terms into this%budobj
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(LakType) :: this
+    ! -- local
+    integer(I4B) :: naux
+    real(DP), dimension(:), allocatable :: auxvartmp
+    integer(I4B) :: i, j, n, n1, n2
+    integer(I4B) :: ii
+    integer(I4B) :: idx
+    integer(I4B) :: nlen
+    real(DP) :: hlak, hgwf
+    real(DP) :: v, v1
+    real(DP) :: q
+    ! -- formats
+! -----------------------------------------------------------------------------
+    !
+    ! -- initialize counter
+    idx = 0
+
+    
+    ! -- FLOW JA FACE
+    nlen = 0
+    do n = 1, this%noutlets
+      if (this%lakein(n) > 0 .and. this%lakeout(n) > 0) then
+        nlen = nlen + 1
+      end if
+    end do
+    if (nlen > 0) then
+      idx = idx + 1
+      call this%budobj%budterm(idx)%reset(2 * nlen)
+      do n = 1, this%noutlets
+        n1 = this%lakein(n)
+        n2 = this%lakeout(n)
+        if (n1 > 0 .and. n2 > 0) then
+          q = this%simoutrate(n)
+          if (this%imover == 1) then
+            q = q + this%pakmvrobj%get_qtomvr(n)
+          end if
+          call this%budobj%budterm(idx)%update_term(n1, n2, q)
+          call this%budobj%budterm(idx)%update_term(n2, n1, -q)
+        end if
+      end do
+    end if
+
+    
+    ! -- GWF (LEAKAGE)
+    idx = idx + 1
+    call this%budobj%budterm(idx)%reset(this%maxbound)
+    do n = 1, this%nlakes
+      hlak = this%xnewpak(n)
+      do j = this%idxlakeconn(n), this%idxlakeconn(n + 1) - 1
+        n2 = this%cellid(j)
+        hgwf = this%xnew(n2)
+        call this%lak_calculate_conn_warea(n, j, hlak, hgwf, this%qauxcbc(1))
+        q = this%qleak(j)
+        call this%budobj%budterm(idx)%update_term(n1, n2, q, this%qauxcbc)
+      end do
+    end do
+
+    
+    ! -- RAIN
+    idx = idx + 1
+    call this%budobj%budterm(idx)%reset(this%nlakes)
+    do n = 1, this%nlakes
+      q = this%precip(n)
+      call this%budobj%budterm(idx)%update_term(n, n, q)
+    end do
+    
+    
+    ! -- EVAPORATION
+    idx = idx + 1
+    call this%budobj%budterm(idx)%reset(this%nlakes)
+    do n = 1, this%nlakes
+      q = this%evap(n)
+      call this%budobj%budterm(idx)%update_term(n, n, q)
+    end do
+    
+
+    ! -- RUNOFF
+    idx = idx + 1
+    call this%budobj%budterm(idx)%reset(this%nlakes)
+    do n = 1, this%nlakes
+      q = this%runoff(n)%value
+      call this%budobj%budterm(idx)%update_term(n, n, q)
+    end do
+
+    
+    ! -- INFLOW
+    idx = idx + 1
+    call this%budobj%budterm(idx)%reset(this%nlakes)
+    do n = 1, this%nlakes
+      q = this%inflow(n)%value
+      call this%budobj%budterm(idx)%update_term(n, n, q)
+    end do
+    
+    
+    ! -- WITHDRAWAL
+    idx = idx + 1
+    call this%budobj%budterm(idx)%reset(this%nlakes)
+    do n = 1, this%nlakes
+      q = this%withr(n)
+      call this%budobj%budterm(idx)%update_term(n, n, q)
+    end do
+
+    
+    ! -- EXTERNAL OUTFLOW
+    idx = idx + 1
+    call this%budobj%budterm(idx)%reset(this%nlakes)
+    do n = 1, this%nlakes
+      call this%lak_get_external_outlet(n, q)
+      ! subtract tomover from external outflow
+      call this%lak_get_external_mover(n, v)
+      q = q + v
+      call this%budobj%budterm(idx)%update_term(n, n, q)
+    end do
+
+    
+    ! -- STORAGE
+    idx = idx + 1
+    call this%budobj%budterm(idx)%reset(this%nlakes)
+    do n = 1, this%nlakes
+      call this%lak_calculate_vol(n, this%xnewpak(n), v1)
+      q = this%qsto(n)
+      this%qauxcbc(1) = v1
+      call this%budobj%budterm(idx)%update_term(n, n, q, this%qauxcbc)
+    end do
+    
+    
+    ! -- CONSTANT FLOW
+    idx = idx + 1
+    call this%budobj%budterm(idx)%reset(this%nlakes)
+    do n = 1, this%nlakes
+      q = this%chterm(n)
+      call this%budobj%budterm(idx)%update_term(n, n, q)
+    end do
+    
+    
+    ! -- MOVER
+    if (this%imover == 1) then
+      
+      ! -- FROM MOVER
+      idx = idx + 1
+      call this%budobj%budterm(idx)%reset(this%nlakes)
+      do n = 1, this%nlakes
+        q = this%pakmvrobj%get_qfrommvr(n)
+        call this%budobj%budterm(idx)%update_term(n, n, q)
+      end do
+      
+      
+      ! -- TO MOVER
+      idx = idx + 1
+      call this%budobj%budterm(idx)%reset(this%noutlets)
+      do n = 1, this%noutlets
+        q = this%pakmvrobj%get_qtomvr(n)
+        if (q > DZERO) then
+          q = -q
+        end if
+        call this%budobj%budterm(idx)%update_term(n, n, q)
+      end do
+      
+    end if
+    
+    
+    ! -- AUXILIARY VARIABLES
+    naux = this%naux
+    if (naux > 0) then
+      idx = idx + 1
+      allocate(auxvartmp(naux))
+      call this%budobj%budterm(idx)%reset(this%nlakes)
+      do n = 1, this%nlakes
+        q = DZERO
+        do i = 1, naux
+          ii = (n - 1) * naux + i
+          auxvartmp(i) = this%lauxvar(ii)%value
+        end do
+        call this%budobj%budterm(idx)%update_term(n, n, q, auxvartmp)
+      end do
+      deallocate(auxvartmp)
+    end if
+    !
+    ! --Terms are filled, now accumulate them for this time step
+    call this%budobj%accumulate_terms()
+    !
+    ! -- return
+    return
+  end subroutine lak_fill_budobj
 
 end module LakModule

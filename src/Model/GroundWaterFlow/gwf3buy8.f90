@@ -442,6 +442,7 @@ module GwfBuyModule
     call mem_deallocate(this%iform)
     call mem_deallocate(this%ireadelev)
     call mem_deallocate(this%ireaddense)
+    call mem_deallocate(this%iconcset)
     call mem_deallocate(this%denseref)
     call mem_deallocate(this%drhodc)
     !

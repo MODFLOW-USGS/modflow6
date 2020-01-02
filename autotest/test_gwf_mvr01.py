@@ -1,4 +1,5 @@
 import os
+import numpy as np
 import shutil
 from nose.tools import *
 
@@ -11,14 +12,14 @@ except:
     raise Exception(msg)
 
 from framework import testing_framework
-import targets
+from simulation import Simulation
 
 name = 'gwf_mvr01'
-mf6_exe = os.path.abspath(targets.target_dict['mf6'])
 ws = os.path.join('temp', name)
+exdirs = [ws]
 
 
-def get_model():
+def get_model(idx, dir):
     # static model data
     # temporal discretization
     nper = 1
@@ -44,7 +45,7 @@ def get_model():
 
     # build MODFLOW 6 files
     sim = flopy.mf6.MFSimulation(sim_name=name, version='mf6',
-                                 exe_name=mf6_exe,
+                                 exe_name='mf6',
                                  sim_ws=ws)
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(sim, time_units='DAYS',
@@ -228,6 +229,7 @@ def get_model():
         ('uzf-1', 7, 'sfr-1', 0, 'factor', 1.),
         ('uzf-1', 8, 'sfr-1', 0, 'factor', 1.)]
     mvr = flopy.mf6.ModflowGwfmvr(gwf, maxmvr=len(perioddata),
+                                  budget_filerecord='{}.mvr.bud'.format(name),
                                   maxpackages=len(packages),
                                   print_flows=True,
                                   packages=packages,
@@ -248,29 +250,106 @@ def get_model():
     return sim
 
 
-def run_mf6():
-    sim = get_model()
-    sim.write_simulation()
-    success, buff = sim.run_simulation()
-    msg = 'could not run {}'.format(sim.name)
-    assert success, msg
-    shutil.rmtree(ws)
+def build_models():
+    for idx, dir in enumerate(exdirs):
+        sim = get_model(idx, dir)
+        sim.write_simulation()
     return
 
 
+def eval_model(sim):
+    print('evaluating model...')
+
+    # mvr budget terms
+    fpth = os.path.join(sim.simpath, 'gwf_mvr01.mvr.bud')
+    bobj = flopy.utils.CellBudgetFile(fpth, precision='double')
+    times = bobj.get_times()
+    records = bobj.get_data(totim=times[-1])
+    adt = [('node', '<i4'), ('node2', '<i4'), ('q', '<f8')]
+    assert len(records) == 25
+    assert records[0].shape == (0,)
+
+    assert records[1].shape == (2,)
+    a = np.array([(1, 2, -0.), (2, 2, -0.)], dtype=adt)
+    assert np.array_equal(records[1], a)
+
+    assert records[2].shape == (2,)
+    a = np.array([(1, 1, -0.), (2, 1, -0.)], dtype=adt)
+    assert np.array_equal(records[2], a)
+
+    assert records[3].shape == (2,)
+    a = np.array([(1, 3, -0.00545875), (2, 3, -0.00468419)], dtype=adt)
+    assert np.allclose(records[3]['node'], a['node'])
+    assert np.allclose(records[3]['node2'], a['node2'])
+    assert np.allclose(records[3]['q'], a['q'], atol=0.001), '{}\n{}'.format(records[3]['q'], a['q'])
+
+    assert records[4].shape == (0,)
+    assert records[5].shape == (0,)
+    assert records[6].shape == (0,)
+    assert records[7].shape == (0,)
+    assert records[8].shape == (1,)
+    a = np.array([(1, 1, -0.)], dtype=adt)
+    assert np.array_equal(records[8], a)
+
+    assert records[9].shape == (0,)
+    assert records[10].shape == (0,)
+    assert records[11].shape == (0,)
+    assert records[12].shape == (0,)
+    assert records[13].shape == (0,)
+    assert records[14].shape == (0,)
+    assert records[15].shape == (0,)
+    assert records[16].shape == (0,)
+    assert records[17].shape == (0,)
+    assert records[18].shape == (0,)
+    assert records[19].shape == (0,)
+    assert records[20].shape == (0,)
+    assert records[21].shape == (0,)
+    assert records[22].shape == (0,)
+    assert records[23].shape == (9,)
+    a = np.array([(1, 1, -1.e-04), (2, 1, -1.e-04), (3, 1, -1.e-04),
+                  (4, 1, -1.e-04), (5, 1, -1.e-04), (6, 1, -1.e-04),
+                  (7, 1, -1.e-04), (8, 1, -1.e-04), (9, 1, -1.e-04)], dtype=adt)
+    assert np.allclose(records[23]['node'], a['node'])
+    assert np.allclose(records[23]['node2'], a['node2'])
+    assert np.allclose(records[23]['q'], a['q'], atol=0.001), '{}\n{}'.format(records[23]['q'], a['q'])
+
+    assert records[24].shape == (0,)
+    return
+
+
+# - No need to change any code below
 def test_mf6model():
+    # initialize testing framework
+    test = testing_framework()
+
+    # build the models
+    build_models()
+
     # run the test models
-    yield run_mf6
+    for idx, dir in enumerate(exdirs):
+        yield test.run_mf6, Simulation(dir, exfunc=eval_model, idxsim=idx)
 
     return
 
 
 def main():
-    run_mf6()
+    # initialize testing framework
+    test = testing_framework()
+
+    # build the models
+    build_models()
+
+    # run the test models
+    for idx, dir in enumerate(exdirs):
+        sim = Simulation(dir, exfunc=eval_model, idxsim=idx)
+        test.run_mf6(sim)
 
     return
 
 
 if __name__ == "__main__":
+    # print message
     print('standalone run of {}'.format(os.path.basename(__file__)))
+
+    # run main routine
     main()

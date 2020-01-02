@@ -113,6 +113,7 @@ module BndModule
     !
     ! -- procedure to support time series
     procedure, public :: bnd_rp_ts
+    !
   end type BndType
 
   contains
@@ -1540,6 +1541,8 @@ module BndModule
     !
     return
   end subroutine bnd_rp_ts
+
+  ! -- Procedures related to casting
 
   function CastAsBndClass(obj) result(res)
     implicit none

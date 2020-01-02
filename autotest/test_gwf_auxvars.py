@@ -225,7 +225,7 @@ def eval_model(sim):
         assert np.allclose(r['AUX1'], auxvar1)
         assert np.allclose(r['AUX2'], auxvar2)
 
-    # lak budget aux variables
+    # uzf budget aux variables
     fpth = os.path.join(sim.simpath, 'aux01.uzf.bud')
     bobj = flopy.utils.CellBudgetFile(fpth, precision='double')
     records = bobj.get_data(text='auxiliary')

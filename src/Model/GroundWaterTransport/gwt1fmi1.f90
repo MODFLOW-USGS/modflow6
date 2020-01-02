@@ -420,26 +420,30 @@ module GwtFmiModule
 ! ------------------------------------------------------------------------------
     ! -- todo: finalize hfr and bfr either here or in a finalize routine
     !
-    ! -- nullify pointers
-    ! -- todo: memdeallocate these if flows_from_file
-    this%gwfflowja => null()
-    this%gwfspdis  => null()
-    this%gwfhead   => null() 
-    this%gwfsat    => null() 
-    this%gwfibound => null() 
-    this%gwfstrgss => null()    
-    this%gwfstrgsy => null()    
-    this%gwfbndlist => null()
-    this%gwficelltype => null()
-    this%igwfinwtup => null()
-    !
     ! -- deallocate fmi arrays
     call mem_deallocate(this%flowerr)
+    call mem_deallocate(this%iatp)
+    if (this%flows_from_file) then
+      call mem_deallocate(this%igwfinwtup)
+      call mem_deallocate(this%gwfflowja)
+      call mem_deallocate(this%gwfsat)
+      call mem_deallocate(this%gwfhead)
+      !call mem_deallocate(this%gwfstrgss)
+      !call mem_deallocate(this%gwfstrgsy)
+      call mem_deallocate(this%gwfspdis)
+      call mem_deallocate(this%gwfibound)
+      call mem_deallocate(this%gwficelltype)
+    end if
     !
     ! -- deallocate scalars
+    call mem_deallocate(this%flows_from_file)
     call mem_deallocate(this%iflowerr)
     call mem_deallocate(this%igwfstrgss)
     call mem_deallocate(this%igwfstrgsy)
+    call mem_deallocate(this%iubud)
+    call mem_deallocate(this%iuhds)
+    call mem_deallocate(this%nflowpack)
+    
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()

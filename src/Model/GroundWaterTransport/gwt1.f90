@@ -319,7 +319,7 @@ module GwtModule
     ! -- Define packages and utility objects
     call this%dis%dis_df()
     if (this%indsp > 0) call this%dsp%dsp_df(this%dis)
-    call this%ssm%ssm_df()
+    if (this%inssm > 0) call this%ssm%ssm_df()
     call this%oc%oc_df()
     call this%budget%budget_df(niunit, 'MASS', 'M')
     !
@@ -871,6 +871,9 @@ module GwtModule
     call this%dis%dis_da()
     call this%ic%ic_da()
     call this%fmi%fmi_da()
+    call this%adv%adv_da()
+    call this%dsp%dsp_da()
+    call this%ssm%ssm_da()
     call this%mst%mst_da()
     call this%budget%budget_da()
     call this%oc%oc_da()
