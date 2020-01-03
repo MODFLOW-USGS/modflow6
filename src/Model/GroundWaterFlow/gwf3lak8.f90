@@ -1615,6 +1615,9 @@ contains
     !    when PRINT_INPUT option is used.
     call this%define_listlabel()
     !
+    ! -- setup the budget object
+    call this%lak_setup_budobj()
+    !
     ! -- return
     return
   end subroutine lak_read_dimensions
@@ -3399,9 +3402,6 @@ contains
       allocate(this%pakmvrobj)
       call this%pakmvrobj%ar(this%noutlets, this%nlakes, this%origin)
     endif
-    !
-    ! -- setup the budget object
-    call this%lak_setup_budobj()
     !
     ! -- return
     return
@@ -5717,9 +5717,10 @@ contains
     ! -- local
     integer(I4B) :: nbudterm
     integer(I4B) :: nlen
-    integer(I4B) :: n
+    integer(I4B) :: j, n, n1, n2
     integer(I4B) :: maxlist, naux
     integer(I4B) :: idx
+    real(DP) :: q
     character(len=LENBUDTXT) :: text
     character(len=LENBUDTXT), dimension(1) :: auxtxt
 ! ------------------------------------------------------------------------------
@@ -5755,6 +5756,18 @@ contains
                                                this%name, &
                                                maxlist, .false., .false., &
                                                naux)
+      !
+      ! -- store connectivity
+      call this%budobj%budterm(idx)%reset(2 * nlen)
+      q = DZERO
+      do n = 1, this%noutlets
+        n1 = this%lakein(n)
+        n2 = this%lakeout(n)
+        if (n1 > 0 .and. n2 > 0) then
+          call this%budobj%budterm(idx)%update_term(n1, n2, q)
+          call this%budobj%budterm(idx)%update_term(n2, n1, -q)
+        end if
+      end do
     end if
     !
     ! -- 
@@ -5770,6 +5783,14 @@ contains
                                              this%name_model, &
                                              maxlist, .false., .true., &
                                              naux, auxtxt)
+    call this%budobj%budterm(idx)%reset(this%maxbound)
+    q = DZERO
+    do n = 1, this%nlakes
+      do j = this%idxlakeconn(n), this%idxlakeconn(n + 1) - 1
+        n2 = this%cellid(j)
+        call this%budobj%budterm(idx)%update_term(n, n2, q)
+      end do
+    end do
     !
     ! -- 
     text = '        RAINFALL'
@@ -5989,7 +6010,7 @@ contains
         hgwf = this%xnew(n2)
         call this%lak_calculate_conn_warea(n, j, hlak, hgwf, this%qauxcbc(1))
         q = this%qleak(j)
-        call this%budobj%budterm(idx)%update_term(n1, n2, q, this%qauxcbc)
+        call this%budobj%budterm(idx)%update_term(n, n2, q, this%qauxcbc)
       end do
     end do
 
