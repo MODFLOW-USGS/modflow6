@@ -42,6 +42,8 @@ module UzfModule
     integer(I4B), pointer                              :: nbdtxt      => null()  !number of budget text items
     character(len=LENBUDTXT), dimension(:), pointer,                            &
                               contiguous               :: bdtxt       => null()  !budget items written to cbc file
+    character(len=LENBOUNDNAME), dimension(:), pointer,                         &
+                                 contiguous :: uzfname => null()
     type(UzfCellGroupType), pointer                    :: uzfobj      => null()  !uzf kinematic object
     !
     ! -- pointer to gwf variables
@@ -222,32 +224,33 @@ contains
     ! -- dummy
     class(UzfType), intent(inout) :: this
     ! -- local
-    integer(I4B) :: n
+    integer(I4B) :: n, i
+    real(DP) :: hgwf
 ! ------------------------------------------------------------------------------
     !
     call this%obs%obs_ar()
     !
-    ! -- Allocate arrays in package superclass
-    call this%uzf_allocate_arrays()
+    ! -- call standard BndType allocate scalars
+    call this%BndType%allocate_arrays()
     !
-    ! -- initialize uzf group object
-    allocate(this%uzfobj)
-    call this%uzfobj%init(this%nodes, this%nwav, this%origin)
-    !
-    ! -- Set pointers to GWF model arrays
-    call mem_setptr(this%gwftop, 'TOP', trim(this%name_model)//' DIS')
-    call mem_setptr(this%gwfbot, 'BOT', trim(this%name_model)//' DIS')
-    call mem_setptr(this%gwfarea, 'AREA', trim(this%name_model)//' DIS')
+    ! -- set pointers now that data is available
     call mem_setptr(this%gwfhcond, 'CONDSAT', trim(this%name_model)//' NPF')
     call mem_setptr(this%gwfiss, 'ISS', trim(this%name_model))
-!
-!   --Read uzf cell properties and set values
-    call this%read_cell_properties()
     !
-    ! -- print cell data
-    if (this%iprpak /= 0) then
-      call this%print_cell_properties()
-    end if
+    ! -- set boundname for each connection
+    if (this%inamedbound /= 0) then
+      do n = 1, this%nodes
+        this%boundname(n) = this%uzfname(n)
+      end do
+    endif
+    !
+    ! -- copy mfcellid into nodelist and set water table
+    do i = 1, this%nodes
+      this%nodelist(i) = this%mfcellid(i)
+      n = this%mfcellid(i)
+      hgwf = this%xnew(n)
+      call this%uzfobj%sethead(i, hgwf)
+    end do
     !
     ! allocate space to store moisture content observations
     n = this%obs%npakobs
@@ -263,22 +266,18 @@ contains
       call this%pakmvrobj%ar(this%maxbound, this%maxbound, this%origin)
     endif
     !
-    ! -- setup the budget object
-    call this%uzf_setup_budobj()
-    !
     ! -- return
     return
   end subroutine uzf_ar
 
   subroutine uzf_allocate_arrays(this)
 ! ******************************************************************************
-! allocate_arrays -- allocate arrays used for mover
+! allocate_arrays -- allocate arrays used for uzf
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    !use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(UzfType),   intent(inout) :: this
     ! -- local
@@ -287,8 +286,8 @@ contains
     integer (I4B) :: ipos
 ! ------------------------------------------------------------------------------
     !
-    ! -- call standard BndType allocate scalars
-    call this%BndType%allocate_arrays()
+    ! -- call standard BndType allocate scalars (now done from AR)
+    !call this%BndType%allocate_arrays()
     !
     ! -- allocate uzf specific arrays
     call mem_allocate(this%mfcellid, this%nodes, 'MFCELLID', this%origin)
@@ -322,7 +321,7 @@ contains
     call mem_allocate(this%rootact, this%nodes, 'ROOTACT', this%origin)
     call mem_allocate(this%lauxvar, this%naux*this%nodes, 'LAUXVAR', this%origin)
 
-
+    ! -- initialize
     do i = 1, this%nodes
       this%appliedinf(i) = DZERO
       this%recharge(i) = DZERO
@@ -374,6 +373,7 @@ contains
     !
     ! -- allocate character array for aux budget text
     allocate(this%cauxcbc(this%cbcauxitems))
+    allocate(this%uzfname(this%nodes))
     !
     ! -- allocate and initialize qauxcbc
     call mem_allocate(this%qauxcbc, this%cbcauxitems, 'QAUXCBC', this%origin)
@@ -582,6 +582,7 @@ contains
       call this%parser%StoreErrorUnit()
       call ustop()
     end if
+    !
     ! -- increment maxbound
     this%maxbound = this%maxbound + this%nodes
     !
@@ -611,14 +612,36 @@ contains
     endif
     !
     this%nwav = this%ntrail*this%nsets
-
-  !! allocate variables
-  !   call this%allocate_vars()
     !
     ! -- Call define_listlabel to construct the list label that is written
     !    when PRINT_INPUT option is used.
     call this%define_listlabel()
-!
+    !
+    ! -- Allocate arrays in package superclass
+    call this%uzf_allocate_arrays()
+    !
+    ! -- initialize uzf group object
+    allocate(this%uzfobj)
+    call this%uzfobj%init(this%nodes, this%nwav, this%origin)
+    !
+    ! -- Set pointers to GWF model arrays
+    call mem_setptr(this%gwftop, 'TOP', trim(this%name_model)//' DIS')
+    call mem_setptr(this%gwfbot, 'BOT', trim(this%name_model)//' DIS')
+    call mem_setptr(this%gwfarea, 'AREA', trim(this%name_model)//' DIS')
+    !
+    !--Read uzf cell properties and set values
+    call this%read_cell_properties()
+    !
+    ! -- print cell data
+    if (this%iprpak /= 0) then
+      call this%print_cell_properties()
+    end if
+    !
+    ! -- setup the budget object
+    call this%uzf_setup_budobj()
+    !
+    ! -- return
+    return
   end subroutine uzf_readdimensions
 
   subroutine uzf_rp(this)
@@ -2320,14 +2343,13 @@ contains
         !
         ! -- boundname
         if (this%inamedbound == 1) then
-          call this%parser%GetStringCaps(this%boundname(i))
+          call this%parser%GetStringCaps(this%uzfname(i))
         endif
         n = this%mfcellid(i)
-        this%nodelist(i) = n
-        hgwf = this%xnew(n)
+        !cdl hgwf = this%xnew(n)
         call this%uzfobj%setdata(i,this%gwfarea(n),this%gwftop(n),this%gwfbot(n), &
                                  surfdep,vks,thtr,thts,thti,eps,this%ntrail,      &
-                                 landflag,ivertcon,hgwf)
+                                 landflag,ivertcon) !,hgwf)
         if (ivertcon > 0) then
           this%iuzf2uzf = 1
         end if
@@ -2462,7 +2484,7 @@ contains
       iloc = 1
       line = ''
       if(this%inamedbound==1) then
-        call UWWORD(line, iloc, 16, 1, this%boundname(i), n, q, left=.TRUE.)
+        call UWWORD(line, iloc, 16, 1, this%uzfname(i), n, q, left=.TRUE.)
       end if
       call UWWORD(line, iloc, 6, 2, text, i, q, sep=' ')
       call UWWORD(line, iloc, 20, 1, cellid, n, q, left=.TRUE.)
@@ -3048,6 +3070,7 @@ contains
     ! -- character arrays
     deallocate(this%bdtxt)
     deallocate(this%cauxcbc)
+    deallocate(this%uzfname)
     !
     ! -- deallocate scalars
     call mem_deallocate(this%iprwcont)

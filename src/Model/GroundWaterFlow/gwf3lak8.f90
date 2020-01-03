@@ -1615,6 +1615,9 @@ contains
     !    when PRINT_INPUT option is used.
     call this%define_listlabel()
     !
+    ! -- setup the budget object
+    call this%lak_setup_budobj()
+    !
     ! -- return
     return
   end subroutine lak_read_dimensions
@@ -3399,9 +3402,6 @@ contains
       allocate(this%pakmvrobj)
       call this%pakmvrobj%ar(this%noutlets, this%nlakes, this%origin)
     endif
-    !
-    ! -- setup the budget object
-    call this%lak_setup_budobj()
     !
     ! -- return
     return
@@ -5989,7 +5989,7 @@ contains
         hgwf = this%xnew(n2)
         call this%lak_calculate_conn_warea(n, j, hlak, hgwf, this%qauxcbc(1))
         q = this%qleak(j)
-        call this%budobj%budterm(idx)%update_term(n1, n2, q, this%qauxcbc)
+        call this%budobj%budterm(idx)%update_term(n, n2, q, this%qauxcbc)
       end do
     end do
 

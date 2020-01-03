@@ -61,6 +61,7 @@ module UzfCellGroupModule
   contains
       procedure :: init
       procedure :: setdata
+      procedure :: sethead
       procedure :: setdatauzfarea
       procedure :: setdatafinf
       procedure :: setdataet
@@ -374,7 +375,7 @@ module UzfCellGroupModule
   end subroutine dealloc
 
   subroutine setdata(this, icell, area, top, bot, surfdep, vks, thtr, thts,     &
-                     thti, eps, ntrail, landflag, ivertcon, hgwf)
+                     thti, eps, ntrail, landflag, ivertcon)
 ! ******************************************************************************
 ! setdata -- set uzf object material properties
 ! ******************************************************************************
@@ -397,7 +398,6 @@ module UzfCellGroupModule
     integer(I4B), intent(in) :: ntrail
     integer(I4B), intent(in) :: landflag
     integer(I4B), intent(in) :: ivertcon
-    real(DP), intent(in) :: hgwf 
 ! ------------------------------------------------------------------------------
     !
     ! -- set the values for uzf cell icell
@@ -413,10 +413,6 @@ module UzfCellGroupModule
     end if
     this%celbot(icell) = bot
     this%vks(icell) = vks
-    this%watab(icell) = this%celbot(icell)
-    if (hgwf > this%celbot(icell)) this%watab(icell) = hgwf
-    if (this%watab(icell) > this%celtop(icell)) this%watab(icell) = this%celtop(icell)
-    this%watabold(icell) = this%watab(icell)
     this%thtr(icell) = thtr
     this%thts(icell) = thts
     this%thti(icell) = thti
@@ -428,6 +424,28 @@ module UzfCellGroupModule
     this%ha(icell) = DZERO
     this%hroot(icell) = DZERO
   end subroutine setdata
+                     
+  subroutine sethead(this, icell, hgwf)
+! ******************************************************************************
+! sethead -- set uzf object material properties
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(UzfCellGroupType) :: this
+    integer(I4B), intent(in) :: icell
+    real(DP), intent(in) :: hgwf 
+! ------------------------------------------------------------------------------
+    !
+    ! -- set initial head
+    this%watab(icell) = this%celbot(icell)
+    if (hgwf > this%celbot(icell)) this%watab(icell) = hgwf
+    if (this%watab(icell) > this%celtop(icell)) &
+      this%watab(icell) = this%celtop(icell)
+    this%watabold(icell) = this%watab(icell)
+  end subroutine sethead
                      
   subroutine setdatafinf(this, icell, finf)
 ! ******************************************************************************

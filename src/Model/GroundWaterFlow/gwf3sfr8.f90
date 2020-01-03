@@ -72,6 +72,8 @@ module SfrModule
     ! -- characters
     character(len=16), dimension(:), pointer, contiguous :: csfrbudget => NULL()
     character(len=16), dimension(:), pointer, contiguous :: cauxcbc => NULL()
+    character(len=LENBOUNDNAME), dimension(:), pointer,                         &
+                                 contiguous :: sfrname => null()
     ! -- integers
     integer(I4B), pointer :: iprhed => null()
     integer(I4B), pointer :: istageout => null()
@@ -126,7 +128,6 @@ module SfrModule
     real(DP), dimension(:), pointer, contiguous :: simrunoff => null()
     real(DP), dimension(:), pointer, contiguous :: stage0 => null()
     real(DP), dimension(:), pointer, contiguous :: usflow0 => null()
-    
     ! -- type bound procedures
     contains
     procedure :: sfr_allocate_scalars
@@ -164,6 +165,10 @@ module SfrModule
     procedure, private :: sfr_calc_qd
     procedure, private :: sfr_calc_qsource
     procedure, private :: sfr_calc_div
+    ! -- reading
+    procedure, private :: sfr_read_packagedata
+    procedure, private :: sfr_read_connectiondata
+    procedure, private :: sfr_read_diversions
     ! -- calculations
     procedure, private :: sfr_rectch_depth
     ! -- error checking
@@ -294,10 +299,11 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- call standard BndType allocate scalars
-    call this%BndType%allocate_arrays()
+    !call this%BndType%allocate_arrays()
     !
     ! -- allocate character array for budget text
     allocate(this%csfrbudget(this%bditems))
+    allocate(this%sfrname(this%maxbound))
     !
     ! -- variables originally in SfrDataType
     call mem_allocate(this%iboundpak, this%maxbound, 'IBOUNDPAK', this%origin)
@@ -459,6 +465,29 @@ contains
     ! -- Call define_listlabel to construct the list label that is written
     !    when PRINT_INPUT option is used.
     call this%define_listlabel()
+
+    
+    
+    
+    !
+    ! -- Allocate arrays in package superclass
+    call this%sfr_allocate_arrays()
+    !
+    ! -- read package data
+    call this%sfr_read_packagedata()
+    !
+    ! -- read connection data
+    call this%sfr_read_connectiondata()
+    !
+    ! -- read diversion data
+    call this%sfr_read_diversions()
+    
+    !
+    ! -- setup the budget object
+    call this%sfr_setup_budobj()
+    
+    
+    
     !
     ! -- return
     return
@@ -585,47 +614,120 @@ contains
   !
   !    SPECIFICATIONS:
   ! ------------------------------------------------------------------------------
-    use ConstantsModule, only: LINELENGTH
-    use InputOutputModule, only: urword
-    use SimModule, only: ustop, store_error, count_errors, store_error_unit
-    use TimeSeriesManagerModule, only: read_single_value_or_time_series
+    use SimModule, only: ustop, count_errors
     ! -- dummy
     class(SfrType),intent(inout) :: this
     ! -- local
-    character (len=LINELENGTH) :: line, errmsg
-    character(len=LINELENGTH) :: text, cellid, keyword
     character (len=10) :: cnum
-    character (len=10) :: cval
-    character(len=LENBOUNDNAME) :: bndName, bndNameTemp, manningname
-    character(len=50), dimension(:), allocatable :: caux
-    integer(I4B) :: j, n, ierr, ival
-    integer(I4B) :: ipos
-    integer(I4B) :: ndiv
-    logical :: isfound, endOfBlock
-    integer(I4B) :: i
-    integer(I4B) :: jj
-    integer(I4B) :: iaux
-    integer(I4B) :: nja
-    integer(I4B), dimension(:), pointer, contiguous :: rowmaxnnz => null()
-    integer(I4B) :: idiv
-    integer, allocatable, dimension(:) :: iachk
-    integer, allocatable, dimension(:) :: nboundchk
+    character(len=LENBOUNDNAME) :: bndName
+    integer(I4B) :: n, ierr
     ! -- format
   ! ------------------------------------------------------------------------------
     !
     call this%obs%obs_ar()
     !
-    ! -- Allocate arrays in package superclass
-    call this%sfr_allocate_arrays()
+    ! -- call standard BndType allocate scalars
+    call this%BndType%allocate_arrays()
     !
-    ! -- addition
+    ! -- set boundname for each connection
+    if (this%inamedbound /= 0) then
+      do n = 1, this%maxbound
+        this%boundname(n) = this%sfrname(n)
+      end do
+    endif
+    !
+    ! -- copy igwfnode into nodelist
+    do n = 1, this%maxbound
+      this%nodelist(n) = this%igwfnode(n)
+    end do
+    !
+    ! -- check the sfr data
+    call this%sfr_check_reaches()
+
+    ! -- check the connection data
+    call this%sfr_check_connections()
+
+    ! -- check the diversion data
+    if (this%idiversions /= 0) then
+      call this%sfr_check_diversions()
+    end if
+    !
+    ! -- calculate the total fraction of connected reaches that are
+    !    not diversions
+    call this%sfr_check_ustrf()
+    !
+    ! -- terminate if errors were detected in any of the static sfr data
+    ierr = count_errors()
+    if (ierr > 0) then
+      call this%parser%StoreErrorUnit()
+      call ustop()
+    end if
+    !
+    ! -- write header
+    if (this%iprpak /= 0) then
+      write (this%iout, '(//a)') 'SFR GEOMETRY DATA'
+      write (this%iout, "(40('-'))")
+    end if
+    !
+    ! -- build the rectangular geo type
+    allocate(this%geo(this%maxbound))
+    do n = 1, this%maxbound
+      if(this%inamedbound==1) then
+        bndName = this%boundname(n)
+      else
+        write (cnum,'(i10.0)') n
+        bndName = 'Reach ' // trim(adjustl(cnum))
+      end if
+      call this%geo(n)%init(n, bndName, &
+                            this%width(n), &
+                            this%length(n))
+      if (this%iprpak /= 0) then
+        call this%geo(n)%print_attributes(this%iout)
+      end if
+    end do
+    if (this%iprpak /= 0) then
+      write (this%iout, "(40('-'))")
+    end if
+    !
+    ! -- setup pakmvrobj
+    if (this%imover /= 0) then
+      allocate(this%pakmvrobj)
+      call this%pakmvrobj%ar(this%maxbound, this%maxbound, this%origin)
+    endif
+    !
+    ! -- return
+    return
+  end subroutine sfr_ar
+
+  subroutine sfr_read_packagedata(this)
+  ! ******************************************************************************
+  ! sfr_read_packagedata -- read package data
+  ! ******************************************************************************
+  !
+  !    SPECIFICATIONS:
+  ! ------------------------------------------------------------------------------
+    use ConstantsModule, only: LINELENGTH
+    use SimModule, only: ustop, store_error, count_errors
+    use TimeSeriesManagerModule, only: read_single_value_or_time_series
+    ! -- dummy
+    class(SfrType),intent(inout) :: this
+    ! -- local
+    character (len=LINELENGTH) :: errmsg
+    character(len=LINELENGTH) :: text, cellid, keyword
+    character (len=10) :: cnum
+    character(len=LENBOUNDNAME) :: bndName, bndNameTemp, manningname
+    character(len=50), dimension(:), allocatable :: caux
+    integer(I4B) :: n, ierr, ival
+    logical :: isfound, endOfBlock
+    integer(I4B) :: i
+    integer(I4B) :: jj
+    integer(I4B) :: iaux
+    integer, allocatable, dimension(:) :: nboundchk
+    ! -- format
+  ! ------------------------------------------------------------------------------
     !
     ! -- allocate space for sfr reach data
     allocate(this%reaches(this%maxbound))
-    allocate(rowmaxnnz(this%maxbound))
-    do i = 1, this%maxbound
-      rowmaxnnz(i) = 0
-    enddo 
     allocate(nboundchk(this%maxbound))
     do i = 1, this%maxbound
       nboundchk(i) = 0
@@ -642,7 +744,6 @@ contains
     !
     ! -- parse reaches block if detected
     if (isfound) then
-      nja = 0
       write(this%iout,'(/1x,a)')'PROCESSING '//trim(adjustl(this%text))// &
         ' PACKAGEDATA'
       do
@@ -668,7 +769,7 @@ contains
         this%igwfnode(n) = this%dis%noder_from_cellid(cellid, &
                            this%inunit, this%iout, flag_string=.true.)
         this%igwftopnode(n) = this%igwfnode(n)
-        this%nodelist(n) = this%igwfnode(n)
+        !cdl this%nodelist(n) = this%igwfnode(n)
         ! -- read the cellid string and determine if 'none' is specified
         if (this%igwfnode(n) < 1) then
           call this%parser%GetStringCaps(keyword)
@@ -706,8 +807,6 @@ contains
         else if (ival < 0) then
           ival = 0
         end if
-        rowmaxnnz(n) = ival + 1
-        nja = nja + ival + 1 !add the connections and the sfr reach
         ! -- get upstream fraction for reach
         this%ustrf(n) = this%parser%GetDouble()
         ! -- get number of diversions for reach
@@ -735,8 +834,9 @@ contains
           if (bndNameTemp /= '') then
             bndName = bndNameTemp(1:16)
           endif
-          this%boundname(n) = bndName
+          !this%boundname(n) = bndName
         end if
+        this%sfrname(n) = bndName
 
         ! -- set Mannings
         text = manningname
@@ -804,11 +904,47 @@ contains
       deallocate(caux)
     end if
     !
+    ! -- return
+    return
+  end subroutine sfr_read_packagedata
+
+  subroutine sfr_read_connectiondata(this)
+  ! ******************************************************************************
+  ! sfr_read_connectiondata -- 
+  ! ******************************************************************************
+  !
+  !    SPECIFICATIONS:
+  ! ------------------------------------------------------------------------------
+    use ConstantsModule, only: LINELENGTH
+    use SimModule, only: ustop, store_error, count_errors
+    ! -- dummy
+    class(SfrType),intent(inout) :: this
+    ! -- local
+    character (len=LINELENGTH) :: line, errmsg
+    integer(I4B) :: n, ierr, ival
+    logical :: isfound, endOfBlock
+    integer(I4B) :: i
+    integer(I4B) :: nja
+    integer(I4B), dimension(:), pointer, contiguous :: rowmaxnnz => null()
+    integer, allocatable, dimension(:) :: nboundchk
+    ! -- format
+  ! ------------------------------------------------------------------------------
+    !
     ! -- allocate and initialize local variables for reach connections
     allocate(nboundchk(this%maxbound))
     do n = 1, this%maxbound
       nboundchk(n) = 0
     end do
+    !
+    ! -- 
+    nja = 0
+    allocate(rowmaxnnz(this%maxbound))
+    do n = 1, this%maxbound
+      ival = this%nconnreach(n)
+      if (ival < 0) ival = 0
+      rowmaxnnz(n) = ival + 1
+      nja = nja + ival + 1
+    enddo 
     !
     ! -- allocate space for connectivity
     allocate(this%sparse)
@@ -914,6 +1050,36 @@ contains
     ! -- destroy sparse
     call this%sparse%destroy()
     deallocate(this%sparse)
+    !
+    ! -- return
+    return
+  end subroutine sfr_read_connectiondata
+
+
+  subroutine sfr_read_diversions(this)
+  ! ******************************************************************************
+  ! sfr_read_diversions -- 
+  ! ******************************************************************************
+  !
+  !    SPECIFICATIONS:
+  ! ------------------------------------------------------------------------------
+    use ConstantsModule, only: LINELENGTH
+    use SimModule, only: ustop, store_error, count_errors
+    ! -- dummy
+    class(SfrType),intent(inout) :: this
+    ! -- local
+    character (len=LINELENGTH) :: errmsg
+    character (len=10) :: cnum
+    character (len=10) :: cval
+    integer(I4B) :: j, n, ierr, ival
+    integer(I4B) :: ipos
+    integer(I4B) :: ndiv
+    logical :: isfound, endOfBlock
+    integer(I4B) :: idiv
+    integer, allocatable, dimension(:) :: iachk
+    integer, allocatable, dimension(:) :: nboundchk
+    ! -- format
+  ! ------------------------------------------------------------------------------
     !
     ! -- read diversions
     call this%parser%GetBlock('DIVERSIONS', isfound, ierr,                      &
@@ -1052,73 +1218,15 @@ contains
       end if
     end if
     !
-    ! -- write summary of package block error messages
+    ! -- write summary of diversion error messages
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
       call ustop()
     end if
     !
-    ! -- check the sfr data
-    ! -- check the base sfr data
-    call this%sfr_check_reaches()
-
-    ! -- check the connection data
-    call this%sfr_check_connections()
-
-    ! -- check the diversion data
-    if (this%idiversions /= 0) then
-      call this%sfr_check_diversions()
-    end if
-    !
-    ! -- calculate the total fraction of connected reaches that are
-    !    not diversions
-    call this%sfr_check_ustrf()
-    !
-    ! -- terminate if errors were detected in any of the static sfr data
-    ierr = count_errors()
-    if (ierr>0) then
-      call this%parser%StoreErrorUnit()
-      call ustop()
-    end if
-    !
-    ! -- write header
-    if (this%iprpak /= 0) then
-      write (this%iout, '(//a)') 'SFR GEOMETRY DATA'
-      write (this%iout, "(40('-'))")
-    end if
-    !
-    ! -- build the rectangular geo type
-    allocate(this%geo(this%maxbound))
-    do n = 1, this%maxbound
-      if(this%inamedbound==1) then
-        bndName = this%boundname(n)
-      else
-        write (cnum,'(i10.0)') n
-        bndName = 'Reach ' // trim(adjustl(cnum))
-      end if
-      call this%geo(n)%init(n, bndName, &
-                            this%width(n), &
-                            this%length(n))
-      if (this%iprpak /= 0) then
-        call this%geo(n)%print_attributes(this%iout)
-      end if
-    end do
-    if (this%iprpak /= 0) then
-      write (this%iout, "(40('-'))")
-    end if
-    !
-    ! -- setup pakmvrobj
-    if (this%imover /= 0) then
-      allocate(this%pakmvrobj)
-      call this%pakmvrobj%ar(this%maxbound, this%maxbound, this%origin)
-    endif
-    !
-    ! -- setup the budget object
-    call this%sfr_setup_budobj()
-    !
     ! -- return
     return
-  end subroutine sfr_ar
+  end subroutine sfr_read_diversions
 
 
   subroutine sfr_rp(this)
@@ -1982,6 +2090,7 @@ contains
     call mem_deallocate(this%qoutflow)
     call mem_deallocate(this%qextoutflow)
     deallocate(this%csfrbudget)
+    deallocate(this%sfrname)
     call mem_deallocate(this%dbuff)
     deallocate(this%cauxcbc)
     call mem_deallocate(this%qauxcbc)

@@ -882,6 +882,9 @@ contains
     !    when PRINT_INPUT option is used.
     call this%define_listlabel()
     !
+    ! -- setup the budget object
+    call this%maw_setup_budobj()
+    !
     ! -- return
     return
   end subroutine maw_read_dimensions
@@ -1588,9 +1591,6 @@ contains
       allocate(this%pakmvrobj)
       call this%pakmvrobj%ar(this%nmawwells, this%nmawwells, this%origin)
     endif
-    !
-    ! -- setup the budget object
-    call this%maw_setup_budobj()
     !
     ! -- return
     return
