@@ -3166,8 +3166,9 @@ contains
     integer(I4B) :: maxlist, naux
     integer(I4B) :: idx
     integer(I4B) :: nlen
-    integer(I4B) :: n
+    integer(I4B) :: n, n1, n2
     integer(I4B) :: ivertflag
+    real(DP) :: q
     character(len=LENBUDTXT) :: text
     character(len=LENBUDTXT), dimension(1) :: auxtxt
 ! ------------------------------------------------------------------------------
@@ -3210,6 +3211,19 @@ contains
                                                this%name, &
                                                maxlist, .false., .false., &
                                                naux, auxtxt)
+      !
+      ! -- store connectivity
+      call this%budobj%budterm(idx)%reset(nlen * 2)
+      q = DZERO
+      do n = 1, this%nodes
+        ivertflag = this%uzfobj%ivertcon(n)
+        if (ivertflag > 0) then
+          n1 = n
+          n2 = ivertflag
+          call this%budobj%budterm(idx)%update_term(n1, n2, q)
+          call this%budobj%budterm(idx)%update_term(n2, n1, -q)
+        end if
+      end do
     end if
     !
     ! -- 
@@ -3225,6 +3239,12 @@ contains
                                              this%name_model, &
                                              maxlist, .false., .true., &
                                              naux, auxtxt)
+    call this%budobj%budterm(idx)%reset(this%nodes)
+    q = DZERO
+    do n = 1, this%nodes
+      n2 = this%mfcellid(n)
+      call this%budobj%budterm(idx)%update_term(n, n2, q)
+    end do
     !
     ! -- 
     text = '    INFILTRATION'

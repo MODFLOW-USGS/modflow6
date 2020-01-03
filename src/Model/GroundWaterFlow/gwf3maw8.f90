@@ -3924,6 +3924,8 @@ contains
     class(MawType) :: this
     ! -- local
     integer(I4B) :: nbudterm
+    integer(I4B) :: n, j, n2
+    real(DP) :: q
     integer(I4B) :: maxlist, naux
     integer(I4B) :: idx
     character(len=LENBUDTXT) :: text
@@ -3962,6 +3964,14 @@ contains
                                              this%name_model, &
                                              maxlist, .false., .true., &
                                              naux, auxtxt)
+    call this%budobj%budterm(idx)%reset(this%maxbound)
+    q = DZERO
+    do n = 1, this%nmawwells
+      do j = 1, this%mawwells(n)%ngwfnodes
+        n2 = this%mawwells(n)%gwfnodes(j)
+        call this%budobj%budterm(idx)%update_term(n, n2, q)
+      end do
+    end do
     !
     ! -- 
     text = '            RATE'

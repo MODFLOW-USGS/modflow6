@@ -4214,8 +4214,10 @@ contains
     class(SfrType) :: this
     ! -- local
     integer(I4B) :: nbudterm
+    integer(I4B) :: i, n, n1, n2
     integer(I4B) :: maxlist, naux
     integer(I4B) :: idx
+    real(DP) :: q
     character(len=LENBUDTXT) :: text
     character(len=LENBUDTXT), dimension(1) :: auxtxt
 ! ------------------------------------------------------------------------------
@@ -4247,6 +4249,17 @@ contains
                                              maxlist, .false., .false., &
                                              naux, auxtxt)
     !
+    ! -- store connectivity
+    call this%budobj%budterm(idx)%reset(this%nconn)
+    q = DZERO
+    do n = 1, this%maxbound
+      n1 = n
+      do i = 1, this%nconnreach(n)
+        n2 = this%reaches(n)%iconn(i)
+        call this%budobj%budterm(idx)%update_term(n1, n2, q)
+      end do
+    end do
+    !
     ! -- 
     text = '             GWF'
     idx = idx + 1
@@ -4260,6 +4273,12 @@ contains
                                              this%name_model, &
                                              maxlist, .false., .true., &
                                              naux, auxtxt)
+    call this%budobj%budterm(idx)%reset(this%maxbound)
+    q = DZERO
+    do n = 1, this%maxbound
+      n2 = this%igwfnode(n)
+      call this%budobj%budterm(idx)%update_term(n, n2, q)
+    end do
     !
     ! -- 
     text = '        RAINFALL'
@@ -4407,6 +4426,7 @@ contains
     idx = idx + 1
     call this%budobj%budterm(idx)%reset(this%nconn)
     do n = 1, this%maxbound
+      n1 = n
       do i = 1, this%nconnreach(n)
         n2 = this%reaches(n)%iconn(i)
         ! flow to downstream reaches
