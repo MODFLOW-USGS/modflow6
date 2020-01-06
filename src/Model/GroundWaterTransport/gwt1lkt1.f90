@@ -1595,7 +1595,7 @@ module GwtLktModule
     !  this%xnewpak(n) = c1
     !end do
     !
-    ! -- first assign old mass in lake to xnewpak
+    ! -- first accumulate mass in dbuff
     do n = 1, this%nlakes
       !hlak0 = this%lakptr%xoldpak(n)
       !hlak = this%lakptr%xnewpak(n)
@@ -1603,7 +1603,7 @@ module GwtLktModule
       !call this%lakptr%lak_calculate_vol(n, hlak, v1)
       call this%get_volumes(n, v1, v0, delt)
       c1 = this%xoldpak(n) * v0
-      this%xnewpak(n) = c1
+      this%dbuff(n) = c1
     end do
     !
     ! -- go through each gwf connection and add the mass
@@ -1621,7 +1621,7 @@ module GwtLktModule
         this%hcof(j) = -qbnd
       end if
       c1 = qbnd * ctmp * delt
-      this%xnewpak(n) = this%xnewpak(n) + c1
+      this%dbuff(n) = this%dbuff(n) + c1
     end do
     !
     ! -- Now divide total mass in lake by the lake volume
@@ -1630,8 +1630,8 @@ module GwtLktModule
       !hlak = this%lakptr%xnewpak(n)
       !call this%lakptr%lak_calculate_vol(n, hlak0, v0)
       !call this%lakptr%lak_calculate_vol(n, hlak, v1)
-      !call this%get_volumes(n, v1, v0, delt)
-      c1 = this%xnewpak(n) / v1
+      call this%get_volumes(n, v1, v0, delt)
+      c1 = this%dbuff(n) / v1
       this%xnewpak(n) = c1
     end do
     !
