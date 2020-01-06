@@ -268,11 +268,9 @@ contains
     character(len=LENMODELNAME) :: model_name
     integer(I4B), dimension(:), pointer :: grid_shape
     character(kind=c_char) :: grid_type(MAXSTRLEN)
-    integer :: status
     
-    ! make sure it is only used for rectilinear grids
-    status = get_grid_type(grid_id, grid_type)
-    if (char_array_to_string(grid_type, strlen(grid_type)) /= "rectilinear") then
+    ! make sure function is only used for implemented grid_types
+    if (get_grid_type(grid_id, grid_type) /= BMI_SUCCESS) then
       bmi_status = BMI_FAILURE
       return
     end if
@@ -301,11 +299,9 @@ contains
     character(len=LENMODELNAME) :: model_name
     integer(I4B), dimension(:), pointer :: grid_shape
     character(kind=c_char) :: grid_type(MAXSTRLEN)
-    integer :: status
     
-    ! make sure it is only used for rectilinear grids
-    status = get_grid_type(grid_id, grid_type)
-    if (char_array_to_string(grid_type, strlen(grid_type)) /= "rectilinear") then
+    ! make sure function is only used for implemented grid_types
+    if (get_grid_type(grid_id, grid_type) /= BMI_SUCCESS) then
       bmi_status = BMI_FAILURE
       return
     end if
@@ -329,11 +325,9 @@ contains
     integer, dimension(:), pointer :: grid_shape_ptr
     character(len=LENMODELNAME) :: model_name
     character(kind=c_char) :: grid_type(MAXSTRLEN)
-    integer :: status
     
-    ! make sure it is only used for rectilinear grids
-    status = get_grid_type(grid_id, grid_type)
-    if (char_array_to_string(grid_type, strlen(grid_type)) /= "rectilinear") then
+    ! make sure function is only used for implemented grid_types
+    if (get_grid_type(grid_id, grid_type) /= BMI_SUCCESS) then
       bmi_status = BMI_FAILURE
       return
     end if
@@ -364,11 +358,9 @@ contains
     real(DP), dimension(:), target, allocatable, save :: array
     character(len=LENMODELNAME) :: model_name
     character(kind=c_char) :: grid_type(MAXSTRLEN)
-    integer :: status
     
-    ! make sure it is only used for rectilinear grids
-    status = get_grid_type(grid_id, grid_type)
-    if (char_array_to_string(grid_type, strlen(grid_type)) /= "rectilinear") then
+    ! make sure function is only used for implemented grid_types
+    if (get_grid_type(grid_id, grid_type) /= BMI_SUCCESS) then
       bmi_status = BMI_FAILURE
       return
     end if
@@ -398,11 +390,9 @@ contains
     real(DP), dimension(:), target, allocatable, save :: array
     character(len=LENMODELNAME) :: model_name
     character(kind=c_char) :: grid_type(MAXSTRLEN)
-    integer :: status
     
-    ! make sure it is only used for rectilinear grids
-    status = get_grid_type(grid_id, grid_type)
-    if (char_array_to_string(grid_type, strlen(grid_type)) /= "rectilinear") then
+    ! make sure function is only used for implemented grid_types
+    if (get_grid_type(grid_id, grid_type) /= BMI_SUCCESS) then
       bmi_status = BMI_FAILURE
       return
     end if
