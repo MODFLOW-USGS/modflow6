@@ -76,6 +76,7 @@ module BudgetTermModule
     this%text1id2 = text1id2
     this%text2id2 = text2id2
     this%maxlist = maxlist
+    this%nlist = 0
     this%olconv1 = olconv1
     this%olconv2 = olconv2
     this%naux = naux
