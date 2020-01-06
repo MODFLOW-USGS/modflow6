@@ -79,7 +79,7 @@ module BudgetTermModule
     this%olconv1 = olconv1
     this%olconv2 = olconv2
     this%naux = naux
-    this%nlist = maxlist
+    this%nlist = 0
     call this%allocate_arrays()
     if (present(auxtxt)) this%auxtxt(:) = auxtxt(1:naux)
   end subroutine initialize
