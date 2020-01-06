@@ -38,6 +38,7 @@ module GwtLktModule
     integer(I4B), pointer                              :: igwflakpak => null()  ! package number of corresponding lak package
     real(DP), dimension(:), pointer, contiguous        :: strt => null()        ! starting lake concentration
     integer(I4B), dimension(:), pointer, contiguous    :: idxlocnode => null()      !map position in global rhs and x array of pack entry
+    integer(I4B), dimension(:), pointer, contiguous    :: idxpakdiag => null()      !map diag position of lake in global amat
     integer(I4B), dimension(:), pointer, contiguous    :: idxdglo => null()         !map position in global array of package diagonal row entries
     integer(I4B), dimension(:), pointer, contiguous    :: idxoffdglo => null()      !map position in global array of package off diagonal row entries
     integer(I4B), dimension(:), pointer, contiguous    :: idxsymdglo => null()      !map position in global array of package diagonal entries to model rows
@@ -52,8 +53,11 @@ module GwtLktModule
     type(GwtFmiType), pointer                          :: fmi => null()         ! pointer to fmi object
     type(LakType), pointer                             :: lakptr => null()      ! pointer to lake package
     type(BudgetType), pointer :: budget => NULL()
-    type(BudgetObjectType), pointer                    :: lakbudptr => null()
     real(DP), dimension(:), pointer, contiguous        :: qsto => null()
+    type(BudgetObjectType), pointer                    :: lakbudptr => null()
+    integer(I4B), pointer                              :: idxbudfjf => null()   ! index of flow ja face in lakbudptr
+    integer(I4B), pointer                              :: idxbudgwf => null()   ! index of gwf terms in lakbudptr
+    integer(I4B), pointer                              :: idxbudsto => null()   ! index of storage terms in lakbudptr
 
   contains
     procedure :: set_pointers => lkt_set_pointers
@@ -78,6 +82,7 @@ module GwtLktModule
     procedure :: lkt_read_lakes
     procedure :: read_initial_attr => lkt_read_initial_attr
     procedure :: define_listlabel
+    procedure :: get_volumes
     
   end type GwtLktType
 
@@ -151,24 +156,45 @@ module GwtLktModule
     integer(I4B), intent(in) :: moffset
     type(sparsematrix), intent(inout) :: sparse
     ! -- local
-    integer(I4B) :: j, n
+    integer(I4B) :: i, j, n
     integer(I4B) :: jj, jglo
     integer(I4B) :: nglo
     ! -- format
 ! ------------------------------------------------------------------------------
+    !!
+    !!
+    !! -- Add package rows to sparse
+    !if (this%imatrows /= 0) then
+    !  do n = 1, this%nlakes
+    !    nglo = moffset + this%dis%nodes + this%ioffset + n
+    !    call sparse%addconnection(nglo, nglo, 1)
+    !    do j = this%lakptr%idxlakeconn(n), this%lakptr%idxlakeconn(n+1)-1
+    !      jj = this%lakptr%cellid(j)
+    !      jglo = jj + moffset
+    !      call sparse%addconnection(nglo, jglo, 1)
+    !      call sparse%addconnection(jglo, nglo, 1)
+    !    end do
+    !  end do
+    !end if
     !
     !
     ! -- Add package rows to sparse
     if (this%imatrows /= 0) then
+      !
+      ! -- diagonal
       do n = 1, this%nlakes
         nglo = moffset + this%dis%nodes + this%ioffset + n
         call sparse%addconnection(nglo, nglo, 1)
-        do j = this%lakptr%idxlakeconn(n), this%lakptr%idxlakeconn(n+1)-1
-          jj = this%lakptr%cellid(j)
-          jglo = jj + moffset
-          call sparse%addconnection(nglo, jglo, 1)
-          call sparse%addconnection(jglo, nglo, 1)
-        end do
+      end do
+      !
+      ! -- lake-gwf connections
+      do i = 1, this%lakbudptr%budterm(this%idxbudgwf)%nlist
+        n = this%lakbudptr%budterm(this%idxbudgwf)%id1(i)
+        jj = this%lakbudptr%budterm(this%idxbudgwf)%id2(i)
+        nglo = moffset + this%dis%nodes + this%ioffset + n
+        jglo = jj + moffset
+        call sparse%addconnection(nglo, jglo, 1)
+        call sparse%addconnection(jglo, nglo, 1)
       end do
     end if
     !
@@ -199,6 +225,7 @@ module GwtLktModule
     !
     if (this%imatrows /= 0) then
       allocate(this%idxlocnode(this%nlakes))
+      allocate(this%idxpakdiag(this%nlakes))
       allocate(this%idxdglo(this%maxbound))
       allocate(this%idxoffdglo(this%maxbound))
       allocate(this%idxsymdglo(this%maxbound))
@@ -208,41 +235,82 @@ module GwtLktModule
       !    and store them in idxglo.  idxglo allows this model to insert or
       !    retrieve values into or from the global A matrix
       ! -- maw rows
-      ipos = 1
+      !ipos = 1
+      !do n = 1, this%nlakes
+      !  iglo = moffset + this%dis%nodes + this%ioffset + n
+      !  this%idxlocnode(n) = this%dis%nodes + this%ioffset + n
+      !  do ii = this%lakptr%idxlakeconn(n), this%lakptr%idxlakeconn(n+1)-1
+      !    j = this%lakptr%cellid(ii)
+      !    jglo = j + moffset
+      !    searchloop: do jj = iasln(iglo), iasln(iglo + 1) - 1
+      !      if(jglo == jasln(jj)) then
+      !        this%idxdglo(ipos) = iasln(iglo)
+      !        this%idxoffdglo(ipos) = jj
+      !        exit searchloop
+      !      endif
+      !    enddo searchloop
+      !    ipos = ipos + 1
+      !  end do
+      !end do
+      
       do n = 1, this%nlakes
-        iglo = moffset + this%dis%nodes + this%ioffset + n
         this%idxlocnode(n) = this%dis%nodes + this%ioffset + n
-        do ii = this%lakptr%idxlakeconn(n), this%lakptr%idxlakeconn(n+1)-1
-          j = this%lakptr%cellid(ii)
-          jglo = j + moffset
-          searchloop: do jj = iasln(iglo), iasln(iglo + 1) - 1
-            if(jglo == jasln(jj)) then
-              this%idxdglo(ipos) = iasln(iglo)
-              this%idxoffdglo(ipos) = jj
-              exit searchloop
-            endif
-          enddo searchloop
-          ipos = ipos + 1
-        end do
+        iglo = moffset + this%dis%nodes + this%ioffset + n
+        this%idxpakdiag(n) = iasln(iglo)
       end do
+      do ipos = 1, this%lakbudptr%budterm(this%idxbudgwf)%nlist
+        n = this%lakbudptr%budterm(this%idxbudgwf)%id1(ipos)
+        j = this%lakbudptr%budterm(this%idxbudgwf)%id2(ipos)
+        iglo = moffset + this%dis%nodes + this%ioffset + n
+        jglo = j + moffset
+        searchloop: do jj = iasln(iglo), iasln(iglo + 1) - 1
+          if(jglo == jasln(jj)) then
+            this%idxdglo(ipos) = iasln(iglo)
+            this%idxoffdglo(ipos) = jj
+            exit searchloop
+          endif
+        enddo searchloop
+      end do
+      
+      
+      
+      !
       ! -- lkt contributions gwf portion of global matrix
-      ipos = 1
-      do n = 1, this%nlakes
-        do ii = this%lakptr%idxlakeconn(n), this%lakptr%idxlakeconn(n+1)-1
-          iglo = this%lakptr%cellid(ii) + moffset
-          jglo = moffset + this%dis%nodes + this%ioffset + n
-          symsearchloop: do jj = iasln(iglo), iasln(iglo + 1) - 1
-            if(jglo == jasln(jj)) then
-              this%idxsymdglo(ipos) = iasln(iglo)
-              this%idxsymoffdglo(ipos) = jj
-              exit symsearchloop
-            endif
-          enddo symsearchloop
-          ipos = ipos + 1
-        end do
+      !ipos = 1
+      !do n = 1, this%nlakes
+      !  do ii = this%lakptr%idxlakeconn(n), this%lakptr%idxlakeconn(n+1)-1
+      !    iglo = this%lakptr%cellid(ii) + moffset
+      !    jglo = moffset + this%dis%nodes + this%ioffset + n
+      !    symsearchloop: do jj = iasln(iglo), iasln(iglo + 1) - 1
+      !      if(jglo == jasln(jj)) then
+      !        this%idxsymdglo(ipos) = iasln(iglo)
+      !        this%idxsymoffdglo(ipos) = jj
+      !        exit symsearchloop
+      !      endif
+      !    enddo symsearchloop
+      !    ipos = ipos + 1
+      !  end do
+      !end do
+      
+      do ipos = 1, this%lakbudptr%budterm(this%idxbudgwf)%nlist
+        n = this%lakbudptr%budterm(this%idxbudgwf)%id1(ipos)
+        j = this%lakbudptr%budterm(this%idxbudgwf)%id2(ipos)
+        iglo = j + moffset
+        jglo = moffset + this%dis%nodes + this%ioffset + n
+        symsearchloop: do jj = iasln(iglo), iasln(iglo + 1) - 1
+          if(jglo == jasln(jj)) then
+            this%idxsymdglo(ipos) = iasln(iglo)
+            this%idxsymoffdglo(ipos) = jj
+            exit symsearchloop
+          endif
+        enddo symsearchloop
       end do
+      
+      
+      
     else
       allocate(this%idxlocnode(0))
+      allocate(this%idxpakdiag(0))
       allocate(this%idxdglo(0))
       allocate(this%idxoffdglo(0))
       allocate(this%idxsymdglo(0))
@@ -285,8 +353,11 @@ module GwtLktModule
     !write(this%iout, fmtssm) this%inunit
     !!
     !! -- Set dimensions
-    this%nlakes = this%lakptr%nlakes
-    this%maxbound = this%lakptr%maxbound
+    !this%nlakes = this%lakptr%nlakes
+    !this%maxbound = this%lakptr%maxbound
+    !this%nbound = this%maxbound
+    this%nlakes = this%lakbudptr%ncv
+    this%maxbound = this%lakbudptr%budterm(this%idxbudgwf)%maxlist
     this%nbound = this%maxbound
     !!
     ! -- Allocate arrays
@@ -310,10 +381,15 @@ module GwtLktModule
     ! -- dummy
     class(GwtLktType), intent(inout) :: this
     ! -- local
+    integer(I4B) :: i, igwfnode
 ! ------------------------------------------------------------------------------
     !
     ! -- TODO: read initial packagedata
-    this%nodelist(:) = this%lakptr%nodelist(:)
+    !this%nodelist(:) = this%lakptr%nodelist(:)
+    do i = 1, this%lakbudptr%budterm(this%idxbudgwf)%nlist
+      igwfnode = this%lakbudptr%budterm(this%idxbudgwf)%id2(i)
+      this%nodelist(i) = igwfnode
+    end do
     !
     ! -- Return
     return
@@ -391,15 +467,24 @@ module GwtLktModule
     call this%lkt_solve()
     !
     ! -- add terms to the gwf matrix
-    do n = 1, this%nlakes
-      do j = this%lakptr%idxlakeconn(n), this%lakptr%idxlakeconn(n+1)-1
-        igwfnode = this%lakptr%cellid(j)
-        if (this%ibound(igwfnode) < 1) cycle
-        idiag = idxglo(ia(igwfnode))
-        amatsln(idiag) = amatsln(idiag) + this%hcof(j)
-        rhs(igwfnode) = rhs(igwfnode) + this%rhs(j)
-      end do
+    !do n = 1, this%nlakes
+    !  do j = this%lakptr%idxlakeconn(n), this%lakptr%idxlakeconn(n+1)-1
+    !    igwfnode = this%lakptr%cellid(j)
+    !    if (this%ibound(igwfnode) < 1) cycle
+    !    idiag = idxglo(ia(igwfnode))
+    !    amatsln(idiag) = amatsln(idiag) + this%hcof(j)
+    !    rhs(igwfnode) = rhs(igwfnode) + this%rhs(j)
+    !  end do
+    !end do
+
+    do j = 1, this%lakbudptr%budterm(this%idxbudgwf)%nlist
+      igwfnode = this%lakbudptr%budterm(this%idxbudgwf)%id2(j)
+      if (this%ibound(igwfnode) < 1) cycle
+      idiag = idxglo(ia(igwfnode))
+      amatsln(idiag) = amatsln(idiag) + this%hcof(j)
+      rhs(igwfnode) = rhs(igwfnode) + this%rhs(j)
     end do
+    
     !
     ! -- Return
     return
@@ -422,7 +507,7 @@ module GwtLktModule
     real(DP), dimension(:), intent(inout) :: amatsln
     ! -- local
     integer(I4B) :: j, n
-    integer(I4B) :: idx
+    !integer(I4B) :: idx
     integer(I4B) :: iloc, isymloc
     integer(I4B) :: iposd, iposoffd
     integer(I4B) :: isymnode
@@ -437,52 +522,79 @@ module GwtLktModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Add coefficients for LKT and GWF connections (qbnd positive into lake)
-    idx = 1
+    !idx = 1
     do n = 1, this%nlakes
       cold  = this%xoldpak(n)
       iloc = this%idxlocnode(n)
-      iposd = this%idxdglo(idx)
+      !iposd = this%idxdglo(idx)
+      iposd = this%idxpakdiag(n)
       !
       ! -- mass storage in lak
-      hlak0 = this%lakptr%xoldpak(n)
-      hlak = this%lakptr%xnewpak(n)
-      call this%lakptr%lak_calculate_vol(n, hlak0, v0)
-      call this%lakptr%lak_calculate_vol(n, hlak, v1)
+      !hlak0 = this%lakptr%xoldpak(n)
+      !hlak = this%lakptr%xnewpak(n)
+      !call this%lakptr%lak_calculate_vol(n, hlak0, v0)
+      !call this%lakptr%lak_calculate_vol(n, hlak, v1)
+      call this%get_volumes(n, v1, v0, delt)
       amatsln(iposd) = amatsln(iposd) - v1 / delt
       rhs(iloc) = rhs(iloc) - cold * v0 / delt
       !
       ! -- todo: add or remove mass directly to and from lak (precip, evap, runoff, etc.)
       !
       ! -- go through each GWF connection
-      do j = this%lakptr%idxlakeconn(n), this%lakptr%idxlakeconn(n+1)-1
-        if (this%iboundpak(n) /= 0) then
-          !
-          ! -- set acoef and rhs to negative so they are relative to lkt and not gwt
-          qbnd = this%lakptr%qleak(j)
-          omega = DZERO
-          if (qbnd < DZERO) omega = DONE
-          !
-          ! -- add to lkt row
-          iposd = this%idxdglo(idx)
-          iposoffd = this%idxoffdglo(idx)
-          amatsln(iposd) = amatsln(iposd) + omega * qbnd
-          amatsln(iposoffd) = amatsln(iposoffd) + (DONE - omega) * qbnd
-          !
-          ! -- add to gwf row for lkt connection
-          isymnode = this%lakptr%cellid(j)
-          isymloc = ia(isymnode)
-          ipossymd = this%idxsymdglo(idx)
-          ipossymoffd = this%idxsymoffdglo(idx)
-          amatsln(ipossymd) = amatsln(ipossymd) - (DONE - omega) * qbnd
-          amatsln(ipossymoffd) = amatsln(ipossymoffd) - omega * qbnd
-        endif
-        !
-        ! -- increment lkt connection counter
-        idx = idx + 1
-      end do
+      !do j = this%lakptr%idxlakeconn(n), this%lakptr%idxlakeconn(n+1)-1
+      !  if (this%iboundpak(n) /= 0) then
+      !    !
+      !    ! -- set acoef and rhs to negative so they are relative to lkt and not gwt
+      !    qbnd = this%lakptr%qleak(j)
+      !    omega = DZERO
+      !    if (qbnd < DZERO) omega = DONE
+      !    !
+      !    ! -- add to lkt row
+      !    iposd = this%idxdglo(idx)
+      !    iposoffd = this%idxoffdglo(idx)
+      !    amatsln(iposd) = amatsln(iposd) + omega * qbnd
+      !    amatsln(iposoffd) = amatsln(iposoffd) + (DONE - omega) * qbnd
+      !    !
+      !    ! -- add to gwf row for lkt connection
+      !    isymnode = this%lakptr%cellid(j)
+      !    isymloc = ia(isymnode)
+      !    ipossymd = this%idxsymdglo(idx)
+      !    ipossymoffd = this%idxsymoffdglo(idx)
+      !    amatsln(ipossymd) = amatsln(ipossymd) - (DONE - omega) * qbnd
+      !    amatsln(ipossymoffd) = amatsln(ipossymoffd) - omega * qbnd
+      !  endif
+      !  !
+      !  ! -- increment lkt connection counter
+      !  idx = idx + 1
+      !end do
     end do
         
-    
+    ! -- go through each lak-gwf connection
+    do j = 1, this%lakbudptr%budterm(this%idxbudgwf)%nlist
+      !
+      ! -- set n to lake number and process if active lake
+      n = this%lakbudptr%budterm(this%idxbudgwf)%id1(j)
+      if (this%iboundpak(n) /= 0) then
+        !
+        ! -- set acoef and rhs to negative so they are relative to lkt and not gwt
+        qbnd = this%lakbudptr%budterm(this%idxbudgwf)%flow(j)
+        omega = DZERO
+        if (qbnd < DZERO) omega = DONE
+        !
+        ! -- add to lkt row
+        iposd = this%idxdglo(j)
+        iposoffd = this%idxoffdglo(j)
+        amatsln(iposd) = amatsln(iposd) + omega * qbnd
+        amatsln(iposoffd) = amatsln(iposoffd) + (DONE - omega) * qbnd
+        !
+        ! -- add to gwf row for lkt connection
+        ipossymd = this%idxsymdglo(j)
+        ipossymoffd = this%idxsymoffdglo(j)
+        amatsln(ipossymd) = amatsln(ipossymd) - (DONE - omega) * qbnd
+        amatsln(ipossymoffd) = amatsln(ipossymoffd) - omega * qbnd
+
+      end if    
+    end do
     !
     ! -- Return
     return
@@ -506,25 +618,40 @@ module GwtLktModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Calculate hcof and rhs terms so GWF exchanges are calculated correctly
-    idx = 1
-    do n = 1, this%nlakes
-      !
-      ! -- go through each GWF connection
-      do j = this%lakptr%idxlakeconn(n), this%lakptr%idxlakeconn(n+1)-1
-        this%hcof(idx) = DZERO
-        this%rhs(idx) = DZERO
-        if (this%iboundpak(n) /= 0) then
-          qbnd = this%lakptr%qleak(j)
-          omega = DZERO
-          if (qbnd < DZERO) omega = DONE
-          this%hcof(idx) = - (DONE - omega) * qbnd
-          this%rhs(idx) = omega * qbnd * this%xnewpak(n)
-        endif
-        !
-        ! -- increment lkt connection counter
-        idx = idx + 1
-      end do
-    end do
+    !idx = 1
+    !do n = 1, this%nlakes
+    !  !
+    !  ! -- go through each GWF connection
+    !  do j = this%lakptr%idxlakeconn(n), this%lakptr%idxlakeconn(n+1)-1
+    !    this%hcof(idx) = DZERO
+    !    this%rhs(idx) = DZERO
+    !    if (this%iboundpak(n) /= 0) then
+    !      qbnd = this%lakptr%qleak(j)
+    !      omega = DZERO
+    !      if (qbnd < DZERO) omega = DONE
+    !      this%hcof(idx) = - (DONE - omega) * qbnd
+    !      this%rhs(idx) = omega * qbnd * this%xnewpak(n)
+    !    endif
+    !    !
+    !    ! -- increment lkt connection counter
+    !    idx = idx + 1
+    !  end do
+    !end do
+    
+    ! -- go through each lak-gwf connection
+    do j = 1, this%lakbudptr%budterm(this%idxbudgwf)%nlist
+      n = this%lakbudptr%budterm(this%idxbudgwf)%id1(j)
+      this%hcof(j) = DZERO
+      this%rhs(j) = DZERO
+      if (this%iboundpak(n) /= 0) then
+        qbnd = this%lakbudptr%budterm(this%idxbudgwf)%flow(j)
+        omega = DZERO
+        if (qbnd < DZERO) omega = DONE
+        this%hcof(j) = - (DONE - omega) * qbnd
+        this%rhs(j) = omega * qbnd * this%xnewpak(n)
+      endif
+    end do    
+    
     !
     ! -- Return
     return
@@ -589,40 +716,62 @@ module GwtLktModule
     !
     ! -- lak budget routines (start by resetting)
     call this%budget%reset()
+    !!
+    !! -- gwf term
+    !ratein = DZERO
+    !rateout = DZERO
+    !idx = 1
+    !do n = 1, this%nlakes
+    !  do j = this%lakptr%idxlakeconn(n), this%lakptr%idxlakeconn(n+1)-1
+    !    rrate = DZERO
+    !    if (this%iboundpak(n) > 0) then
+    !      igwfnode = this%lakptr%cellid(idx)
+    !      rrate = this%hcof(idx) * x(igwfnode) - this%rhs(idx)
+    !      rrate = -rrate  ! flip sign so relative to lake
+    !    end if
+    !    if(rrate < DZERO) then
+    !      rateout = rateout - rrate
+    !    else
+    !      ratein = ratein + rrate
+    !    endif
+    !    idx = idx + 1
+    !  end do
+    !end do
     !
     ! -- gwf term
     ratein = DZERO
     rateout = DZERO
-    idx = 1
-    do n = 1, this%nlakes
-      do j = this%lakptr%idxlakeconn(n), this%lakptr%idxlakeconn(n+1)-1
-        rrate = DZERO
-        if (this%iboundpak(n) > 0) then
-          igwfnode = this%lakptr%cellid(idx)
-          rrate = this%hcof(idx) * x(igwfnode) - this%rhs(idx)
-          rrate = -rrate  ! flip sign so relative to lake
-        end if
-        if(rrate < DZERO) then
-          rateout = rateout - rrate
-        else
-          ratein = ratein + rrate
-        endif
-        idx = idx + 1
-      end do
+    do j = 1, this%lakbudptr%budterm(this%idxbudgwf)%nlist
+      n = this%lakbudptr%budterm(this%idxbudgwf)%id1(j)
+      rrate = DZERO
+      if (this%iboundpak(n) > 0) then
+        igwfnode = this%lakbudptr%budterm(this%idxbudgwf)%id2(j)
+        rrate = this%hcof(j) * x(igwfnode) - this%rhs(j)
+        rrate = -rrate  ! flip sign so relative to lake
+      end if
+      if(rrate < DZERO) then
+        rateout = rateout - rrate
+      else
+        ratein = ratein + rrate
+      endif
     end do
+    !
+    ! -- check in the rates
     call this%budget%addentry(ratein, rateout, delt,  &
                               this%clktbudget(1), isuppress_output)
     !
     ! -- storage term
+    ! -- todo: need alternative way to get volume
     ratein = DZERO
     rateout = DZERO
     do n = 1, this%nlakes
       rrate = DZERO
       if (this%iboundpak(n) > 0) then
-        hlak0 = this%lakptr%xoldpak(n)
-        hlak = this%lakptr%xnewpak(n)
-        call this%lakptr%lak_calculate_vol(n, hlak0, v0)
-        call this%lakptr%lak_calculate_vol(n, hlak, v1)
+        !hlak0 = this%lakptr%xoldpak(n)
+        !hlak = this%lakptr%xnewpak(n)
+        !call this%lakptr%lak_calculate_vol(n, hlak0, v0)
+        !call this%lakptr%lak_calculate_vol(n, hlak, v1)
+        call this%get_volumes(n, v1, v0, delt)
         call lkt_calc_qsto(v0, v1, this%xoldpak(n), this%xnewpak(n), delt,     &
                           rhs, hcof, rrate)
       end if
@@ -791,6 +940,9 @@ module GwtLktModule
     call mem_allocate(this%igwflakpak, 'IGWFLAKPAK', this%origin)
     call mem_allocate(this%nlakes, 'NLAKES', this%origin)
     call mem_allocate(this%bditems, 'BDITEMS', this%origin)
+    call mem_allocate(this%idxbudfjf, 'IDXBUDFJF', this%origin)
+    call mem_allocate(this%idxbudgwf, 'IDXBUDGWF', this%origin)
+    call mem_allocate(this%idxbudsto, 'IDXBUDSTO', this%origin)
     !
     ! -- Initialize
     this%imatrows = 1
@@ -800,6 +952,9 @@ module GwtLktModule
     this%igwflakpak = 0
     this%nlakes = 0
     this%bditems = 3
+    this%idxbudfjf = 0
+    this%idxbudgwf = 0
+    this%idxbudsto = 0
     !
     ! -- Return
     return
@@ -889,6 +1044,14 @@ module GwtLktModule
     deallocate(this%status)
     deallocate(this%lakename)
     !
+    ! -- index pointers
+    deallocate(this%idxlocnode)
+    deallocate(this%idxpakdiag)
+    deallocate(this%idxdglo)
+    deallocate(this%idxoffdglo)
+    deallocate(this%idxsymdglo)
+    deallocate(this%idxsymoffdglo)
+    !
     ! -- deallocate scalars
     call mem_deallocate(this%imatrows)
     call mem_deallocate(this%iprconc)
@@ -897,6 +1060,9 @@ module GwtLktModule
     call mem_deallocate(this%igwflakpak)
     call mem_deallocate(this%nlakes)
     call mem_deallocate(this%bditems)
+    call mem_deallocate(this%idxbudfjf)
+    call mem_deallocate(this%idxbudgwf)
+    call mem_deallocate(this%idxbudsto)
     !
     ! -- deallocate scalars in NumericalPackageType
     call this%BndType%bnd_da()
@@ -942,13 +1108,21 @@ module GwtLktModule
       if (found) exit
     end do
     
-    ! -- test code to see what is in lakbudptr
+    ! -- Assign index values for special budget terms
+    print *, 'number of lakes: ', this%lakbudptr%ncv
     do ip = 1, this%lakbudptr%nbudterm
       print *, this%lakbudptr%budterm(ip)%flowtype
-      do i = 1, this%lakbudptr%budterm(ip)%nlist
-        print *, '  ', this%lakbudptr%budterm(ip)%id1(i), &
-                       this%lakbudptr%budterm(ip)%id2(i)
-      end do
+      select case(trim(adjustl(this%lakbudptr%budterm(ip)%flowtype)))
+      case('FLOW-JA-FACE')
+        this%idxbudfjf = ip
+        print *, 'idxbudfjf=', this%idxbudfjf
+      case('GWF')
+        this%idxbudgwf = ip
+        print *, 'idxbudgwf=', this%idxbudgwf
+      case('STORAGE')
+        this%idxbudsto = ip
+        print *, 'idxbudsto=', this%idxbudsto
+      end select
     end do
     !
     ! -- error if lak package not found
@@ -1061,8 +1235,11 @@ module GwtLktModule
     call this%find_lak_package()
     !
     ! -- Set dimensions from the GWF LAK package
-    this%nlakes = this%lakptr%nlakes
-    this%maxbound = this%lakptr%maxbound
+    !this%nlakes = this%lakptr%nlakes
+    !this%maxbound = this%lakptr%maxbound
+    !this%nbound = this%maxbound
+    this%nlakes = this%lakbudptr%ncv
+    this%maxbound = this%lakbudptr%budterm(this%idxbudgwf)%maxlist
     this%nbound = this%maxbound
     if (this%imatrows /= 0) this%npakeq = this%nlakes
     write(this%iout,'(4x,a,i7)')'LKT NLAKES = ', this%nlakes
@@ -1092,7 +1269,7 @@ module GwtLktModule
 
   subroutine lkt_read_lakes(this)
 ! ******************************************************************************
-! pak1read_dimensions -- Read feature infromation for this package
+! lkt_read_lakes -- Read feature infromation for this package
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -1327,6 +1504,7 @@ module GwtLktModule
     call this%budget%budget_df(ival, this%name, 'M')
     !
     ! -- initialize xnewpak and set lake concentration
+    ! -- todo: this should be a time series?
     do n = 1, this%nlakes
       this%xnewpak(n) = this%strt(n)
       !write(text,'(g15.7)') this%strt(n)
@@ -1340,6 +1518,10 @@ module GwtLktModule
       !                                      this%iprpak, n, jj, 'STAGE', &
       !                                      this%lakename(n), this%inunit)
 
+      ! -- todo: read aux
+      
+      ! -- todo: read boundname
+      
     end do
     !
     ! -- initialize status (iboundpak) of lakes to active
@@ -1354,13 +1536,13 @@ module GwtLktModule
     end do
     !
     ! -- set boundname for each connection
-    if (this%inamedbound /= 0) then
-      do n = 1, this%nlakes
-        do j = this%lakptr%idxlakeconn(n), this%lakptr%idxlakeconn(n+1)-1
-          this%boundname(j) = this%lakename(n)
-        end do
-      end do
-    endif
+    !if (this%inamedbound /= 0) then
+    !  do n = 1, this%nlakes
+    !    do j = this%lakptr%idxlakeconn(n), this%lakptr%idxlakeconn(n+1)-1
+    !      this%boundname(j) = this%lakename(n)
+    !    end do
+    !  end do
+    !endif
     !
     ! -- return
     return
@@ -1383,33 +1565,73 @@ module GwtLktModule
     real(DP) :: c1, ctmp, qbnd, v0, v1, hlak0, hlak
 ! ------------------------------------------------------------------------------
     !
+    !do n = 1, this%nlakes
+    !  !
+    !  ! -- mass storage from previous time step
+    !  hlak0 = this%lakptr%xoldpak(n)
+    !  hlak = this%lakptr%xnewpak(n)
+    !  call this%lakptr%lak_calculate_vol(n, hlak0, v0)
+    !  call this%lakptr%lak_calculate_vol(n, hlak, v1)
+    !  c1 = this%xoldpak(n) * v0
+    !  !
+    !  ! -- mass flux from groundwater flow (qleak sign is relative to lak)
+    !  do j = this%lakptr%idxlakeconn(n), this%lakptr%idxlakeconn(n + 1) - 1
+    !    this%hcof(j) = DZERO
+    !    this%rhs(j) = DZERO
+    !    igwfnode = this%lakptr%cellid(j)
+    !    qbnd = this%lakptr%qleak(j)
+    !    if (qbnd <= DZERO) then
+    !      ctmp = this%xnewpak(n)
+    !      this%rhs(j) = qbnd * ctmp
+    !    else
+    !      ctmp = this%xnew(igwfnode)
+    !      this%hcof(j) = -qbnd
+    !    end if
+    !    c1 = c1 + qbnd * ctmp * delt
+    !  end do
+    !  !
+    !  ! -- divide by new volume and store concentration
+    !  c1 = c1 / v1
+    !  this%xnewpak(n) = c1
+    !end do
+    !
+    ! -- first assign old mass in lake to xnewpak
     do n = 1, this%nlakes
-      !
-      ! -- mass storage from previous time step
-      hlak0 = this%lakptr%xoldpak(n)
-      hlak = this%lakptr%xnewpak(n)
-      call this%lakptr%lak_calculate_vol(n, hlak0, v0)
-      call this%lakptr%lak_calculate_vol(n, hlak, v1)
+      !hlak0 = this%lakptr%xoldpak(n)
+      !hlak = this%lakptr%xnewpak(n)
+      !call this%lakptr%lak_calculate_vol(n, hlak0, v0)
+      !call this%lakptr%lak_calculate_vol(n, hlak, v1)
+      call this%get_volumes(n, v1, v0, delt)
       c1 = this%xoldpak(n) * v0
-      !
-      ! -- mass flux from groundwater flow (qleak sign is relative to lak)
-      do j = this%lakptr%idxlakeconn(n), this%lakptr%idxlakeconn(n + 1) - 1
-        this%hcof(j) = DZERO
-        this%rhs(j) = DZERO
-        igwfnode = this%lakptr%cellid(j)
-        qbnd = this%lakptr%qleak(j)
-        if (qbnd <= DZERO) then
-          ctmp = this%xnewpak(n)
-          this%rhs(j) = qbnd * ctmp
-        else
-          ctmp = this%xnew(igwfnode)
-          this%hcof(j) = -qbnd
-        end if
-        c1 = c1 + qbnd * ctmp * delt
-      end do
-      !
-      ! -- divide by new volume and store concentration
-      c1 = c1 / v1
+      this%xnewpak(n) = c1
+    end do
+    !
+    ! -- go through each gwf connection and add the mass
+    do j = 1, this%lakbudptr%budterm(this%idxbudgwf)%nlist
+      n = this%lakbudptr%budterm(this%idxbudgwf)%id1(j)
+      this%hcof(j) = DZERO
+      this%rhs(j) = DZERO
+      igwfnode = this%lakbudptr%budterm(this%idxbudgwf)%id2(j)
+      qbnd = this%lakbudptr%budterm(this%idxbudgwf)%flow(j)
+      if (qbnd <= DZERO) then
+        ctmp = this%xnewpak(n)
+        this%rhs(j) = qbnd * ctmp
+      else
+        ctmp = this%xnew(igwfnode)
+        this%hcof(j) = -qbnd
+      end if
+      c1 = qbnd * ctmp * delt
+      this%xnewpak(n) = this%xnewpak(n) + c1
+    end do
+    !
+    ! -- Now divide total mass in lake by the lake volume
+    do n = 1, this%nlakes
+      !hlak0 = this%lakptr%xoldpak(n)
+      !hlak = this%lakptr%xnewpak(n)
+      !call this%lakptr%lak_calculate_vol(n, hlak0, v0)
+      !call this%lakptr%lak_calculate_vol(n, hlak, v1)
+      !call this%get_volumes(n, v1, v0, delt)
+      c1 = this%xnewpak(n) / v1
       this%xnewpak(n) = c1
     end do
     !
@@ -1483,5 +1705,36 @@ module GwtLktModule
     ! -- return
   end subroutine lkt_set_pointers
   
+  subroutine get_volumes(this, ilake, vnew, vold, delt)
+! ******************************************************************************
+! get_volumes -- return the lake new volume and old volume
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwtLktType) :: this
+    integer(I4B), intent(in) :: ilake
+    real(DP), intent(inout) :: vnew, vold
+    real(DP), intent(in) :: delt
+    ! -- local
+    real(DP) :: qss
+! ------------------------------------------------------------------------------
+    !
+    ! -- get volumes
+    vold = DZERO
+    vnew = vold
+    if (this%idxbudsto /= 0) then
+      qss = this%lakbudptr%budterm(this%idxbudsto)%flow(ilake)
+      vnew = this%lakbudptr%budterm(this%idxbudsto)%auxvar(1, ilake)
+      vold = vnew - qss * delt
+    end if
+    !
+    ! -- Return
+    return
+  end subroutine get_volumes
+
+
   
 end module GwtLktModule
