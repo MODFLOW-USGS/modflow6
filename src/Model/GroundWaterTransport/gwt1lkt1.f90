@@ -15,7 +15,8 @@ module GwtLktModule
   use GwtFmiModule, only: GwtFmiType
   use LakModule, only: LakType
   use MemoryTypeModule, only: MemoryTSType
-  use BudgetModule, only : BudgetType
+  use BudgetModule, only: BudgetType
+  use BudgetObjectModule, only: BudgetObjectType
   
   implicit none
   
@@ -51,7 +52,9 @@ module GwtLktModule
     type(GwtFmiType), pointer                          :: fmi => null()         ! pointer to fmi object
     type(LakType), pointer                             :: lakptr => null()      ! pointer to lake package
     type(BudgetType), pointer :: budget => NULL()
+    type(BudgetObjectType), pointer                    :: lakbudptr => null()
     real(DP), dimension(:), pointer, contiguous        :: qsto => null()
+
   contains
     procedure :: set_pointers => lkt_set_pointers
     procedure :: bnd_ac => lkt_ac
@@ -916,7 +919,7 @@ module GwtLktModule
     ! -- local
     character(len=LINELENGTH) :: errmsg
     class(BndType), pointer :: packobj
-    integer(I4B) :: ip
+    integer(I4B) :: ip, i
     logical :: found
 ! ------------------------------------------------------------------------------
     !
@@ -933,9 +936,19 @@ module GwtLktModule
         select type (packobj)
           type is (LakType)
             this%lakptr => packobj
+            this%lakbudptr => packobj%budobj
         end select
       end if
       if (found) exit
+    end do
+    
+    ! -- test code to see what is in lakbudptr
+    do ip = 1, this%lakbudptr%nbudterm
+      print *, this%lakbudptr%budterm(ip)%flowtype
+      do i = 1, this%lakbudptr%budterm(ip)%nlist
+        print *, '  ', this%lakbudptr%budterm(ip)%id1(i), &
+                       this%lakbudptr%budterm(ip)%id2(i)
+      end do
     end do
     !
     ! -- error if lak package not found
