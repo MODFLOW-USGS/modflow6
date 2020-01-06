@@ -248,6 +248,9 @@ contains
       grid_type_f = "rectilinear"
     else if ((grid_type_f == "DISV") .or. (grid_type_f == "DISU")) then
       grid_type_f = "unstructured"
+    else
+      bmi_status = BMI_FAILURE
+      return
     end if
 
     grid_type = string_to_char_array(trim(grid_type_f), len(trim(grid_type_f)))
