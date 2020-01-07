@@ -143,7 +143,7 @@ contains
   ! set the pointer to the array of the given double variable.
   function get_value_ptr_double(c_var_name, x) result(bmi_status) bind(C, name="get_value_ptr_double")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_value_ptr_double
-    use MemoryManagerModule, only: setptr_dbl1d
+    use MemoryManagerModule, only: mem_setptr
     character (kind=c_char), intent(in) :: c_var_name(*)    
     type(c_ptr), intent(inout) :: x
     integer(kind=c_int) :: bmi_status
@@ -158,7 +158,7 @@ contains
     idx = index(var_name, '/', back=.true.)
     origin = var_name(:idx-1)
     var_name_only = var_name(idx+1:)
-    call setptr_dbl1d(adbl, var_name_only, origin)
+    call mem_setptr(adbl, var_name_only, origin)
     
     ! set the C pointer to the internal array
     x = c_loc(adbl)
@@ -168,7 +168,7 @@ contains
   
   function get_value_ptr_int(c_var_name, x) result(bmi_status) bind(C, name="get_value_ptr_int")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_value_ptr_int
-    use MemoryManagerModule, only: setptr_int1d
+    use MemoryManagerModule, only: mem_setptr
     character (kind=c_char), intent(in) :: c_var_name(*)    
     type(c_ptr), intent(inout) :: x
     integer(kind=c_int) :: bmi_status
@@ -183,7 +183,7 @@ contains
     idx = index(var_name, '/', back=.true.)
     origin = var_name(:idx-1)
     var_name_only = var_name(idx+1:)
-    call setptr_int1d(adbl, var_name_only, origin)
+    call mem_setptr(adbl, var_name_only, origin)
     
     ! set the C pointer to the internal array
     x = c_loc(adbl)
@@ -260,7 +260,7 @@ contains
   ! Get number of dimensions of the computational grid.
   function get_grid_rank(grid_id, grid_rank) result(bmi_status) bind(C, name="get_grid_rank")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_rank
-    use MemoryManagerModule, only: setptr_int1d
+    use MemoryManagerModule, only: mem_setptr
     integer(kind=c_int), intent(in) :: grid_id
     integer(kind=c_int), intent(out) :: grid_rank
     integer(kind=c_int) :: bmi_status
@@ -277,7 +277,7 @@ contains
     
     ! get shape array
     model_name = get_model_name(grid_id)
-    call setptr_int1d(grid_shape, "MSHAPE", trim(model_name) // " DIS")
+    call mem_setptr(grid_shape, "MSHAPE", trim(model_name) // " DIS")
     
     if (grid_shape(1) == 1) then
       grid_rank = 2
@@ -291,7 +291,7 @@ contains
   ! Get the total number of elements in the computational grid.
   function get_grid_size(grid_id, grid_size) result(bmi_status) bind(C, name="get_grid_size")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_size
-    use MemoryManagerModule, only: setptr_int1d
+    use MemoryManagerModule, only: mem_setptr
     integer(kind=c_int), intent(in) :: grid_id
     integer(kind=c_int), intent(out) :: grid_size
     integer(kind=c_int) :: bmi_status
@@ -310,7 +310,7 @@ contains
         
     ! get shape array
     model_name = get_model_name(grid_id)
-    call setptr_int1d(grid_shape, "MSHAPE", trim(model_name) // " DIS")
+    call mem_setptr(grid_shape, "MSHAPE", trim(model_name) // " DIS")
     
     if (grid_type_f == "rectilinear") then      
       grid_size = grid_shape(1) * grid_shape(2) * grid_shape(3)
@@ -331,7 +331,7 @@ contains
   ! Get the dimensions of the computational grid.
   function get_grid_shape(grid_id, grid_shape) result(bmi_status) bind(C, name="get_grid_shape")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_shape
-    use MemoryManagerModule, only: setptr_int1d
+    use MemoryManagerModule, only: mem_setptr
     integer(kind=c_int), intent(in) :: grid_id
     type(c_ptr), intent(out) :: grid_shape
     integer(kind=c_int) :: bmi_status
@@ -348,7 +348,7 @@ contains
     
     ! get shape array
     model_name = get_model_name(grid_id)
-    call setptr_int1d(grid_shape_ptr, "MSHAPE", trim(model_name) // " DIS")
+    call mem_setptr(grid_shape_ptr, "MSHAPE", trim(model_name) // " DIS")
     
     if (grid_shape_ptr(1) == 1) then
       grid_shape_ptr = grid_shape_ptr(2:3)
@@ -361,7 +361,7 @@ contains
    ! Provides an array (whose length is the number of rows) that gives the y-coordinate for each row.
   function get_grid_x(grid_id, grid_x) result(bmi_status) bind(C, name="get_grid_x")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_x
-    use MemoryManagerModule, only: setptr_int1d
+    use MemoryManagerModule, only: mem_setptr
     integer(kind=c_int), intent(in) :: grid_id
     type(c_ptr), intent(out) :: grid_x
     integer(kind=c_int) :: bmi_status
@@ -382,7 +382,7 @@ contains
     
     ! get shape array
     model_name = get_model_name(grid_id)
-    call setptr_int1d(grid_shape, "MSHAPE", trim(model_name) // " DIS")
+    call mem_setptr(grid_shape, "MSHAPE", trim(model_name) // " DIS")
     
     array = [ (i, i=0,grid_shape(3)) ]   
     
@@ -395,7 +395,7 @@ contains
   !   ! Provides an array (whose length is the number of rows) that gives the y-coordinate for each row.
   !function get_grid_x(grid_id, grid_x) result(bmi_status) bind(C, name="get_grid_x")
   !!DEC$ ATTRIBUTES DLLEXPORT :: get_grid_x
-  !  use MemoryManagerModule, only: setptr_int, setptr_dbl2d
+  !  use MemoryManagerModule, only: mem_setptr
   !  integer(kind=c_int), intent(in) :: grid_id
   !  type(c_ptr), intent(out) :: grid_x
   !  integer(kind=c_int) :: bmi_status
@@ -417,12 +417,12 @@ contains
   !  
   !  ! get shape array
   !  model_name = get_model_name(grid_id)    
-  !  call setptr_int1d(grid_shape, "MSHAPE", trim(model_name) // " DIS")
+  !  call mem_setptr(grid_shape, "MSHAPE", trim(model_name) // " DIS")
   !  
   !  
   !  ! get nvert and vertices
-  !  call setptr_int(grid_shape_ptr, "NVERT", trim(model_name) // " DIS")
-  !  call setptr_dbl2d(vertices_ptr, 2,  "VERTICES", trim(model_name) // " DIS")
+  !  call mem_setptr(grid_shape_ptr, "NVERT", trim(model_name) // " DIS")
+  !  call mem_setptr(vertices_ptr, 2,  "VERTICES", trim(model_name) // " DIS")
   !  
   !  
   !  array = [ (i, i=0,grid_shape(3)) ]   
@@ -435,7 +435,7 @@ contains
   ! Provides an array (whose length is the number of rows) that gives the y-coordinate for each row.
   function get_grid_y(grid_id, grid_y) result(bmi_status) bind(C, name="get_grid_y")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_y
-    use MemoryManagerModule, only: setptr_int1d
+    use MemoryManagerModule, only: mem_setptr
     integer(kind=c_int), intent(in) :: grid_id
     type(c_ptr), intent(out) :: grid_y
     integer(kind=c_int) :: bmi_status
@@ -455,7 +455,7 @@ contains
     
     ! get shape array
     model_name = get_model_name(grid_id)
-    call setptr_int1d(grid_shape, "MSHAPE", trim(model_name) // " DIS")
+    call mem_setptr(grid_shape, "MSHAPE", trim(model_name) // " DIS")
     
     array = [ (i, i=grid_shape(2),0,-1) ]
     
