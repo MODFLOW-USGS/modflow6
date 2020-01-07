@@ -26,6 +26,7 @@ module GwtLktModule
   character(len=16)       :: text  = '             LKT'
   
   type, extends(BndType) :: GwtLktType
+    
     character (len=8), dimension(:), pointer, contiguous :: status => null()
     character(len=16), dimension(:), pointer, contiguous :: clktbudget => NULL()
     integer(I4B), pointer                              :: imatrows => null()   ! if active, add new rows to matrix
@@ -57,9 +58,13 @@ module GwtLktModule
     integer(I4B), pointer                              :: idxbudfjf => null()   ! index of flow ja face in lakbudptr
     integer(I4B), pointer                              :: idxbudgwf => null()   ! index of gwf terms in lakbudptr
     integer(I4B), pointer                              :: idxbudsto => null()   ! index of storage terms in lakbudptr
+    integer(I4B), pointer                              :: idxbudaux => null()   ! index of auxiliary terms in lakbudptr
     integer(I4B), dimension(:), pointer, contiguous    :: idxbudssm => null()   ! flag that lakbudptr%buditem is a general solute source/sink
+    integer(I4B), pointer                              :: nconcbudssm => null() ! number of concbudssm terms (columns)
+    real(DP), dimension(:, : ), pointer, contiguous    :: concbudssm => null()  ! user specified concentrations for lake flow terms
 
   contains
+  
     procedure :: set_pointers => lkt_set_pointers
     procedure :: bnd_ac => lkt_ac
     procedure :: bnd_mc => lkt_mc
@@ -286,15 +291,13 @@ module GwtLktModule
       &' INPUT READ FROM UNIT ', i0, //)"
 ! ------------------------------------------------------------------------------
     !
-    ! -- Tell fmi that this package is being handled by LKT
+    ! -- Tell fmi that this package is being handled by LKT, otherwise
+    !    SSM would handle the flows into GWT from this LAK
     this%fmi%iatp(this%igwflakpak) = 1
     !
     ! -- Get obs setup 
     !call this%obs%obs_ar()
-    !!
-    !! -- find corresponding lak package
-    !call this%find_lak_package()
-    !!
+    !
     ! --print a message identifying the lkt package.
     write(this%iout, fmtlkt) this%inunit
     !
@@ -785,7 +788,9 @@ module GwtLktModule
     call mem_allocate(this%idxbudfjf, 'IDXBUDFJF', this%origin)
     call mem_allocate(this%idxbudgwf, 'IDXBUDGWF', this%origin)
     call mem_allocate(this%idxbudsto, 'IDXBUDSTO', this%origin)
-    !
+    call mem_allocate(this%idxbudaux, 'IDXBUDAUX', this%origin)
+    call mem_allocate(this%nconcbudssm, 'NCONCBUDSSM', this%origin)
+    ! 
     ! -- Initialize
     this%imatrows = 1
     this%iprconc = 0
@@ -797,6 +802,8 @@ module GwtLktModule
     this%idxbudfjf = 0
     this%idxbudgwf = 0
     this%idxbudsto = 0
+    this%idxbudaux = 0
+    this%nconcbudssm = 0
     !
     ! -- Return
     return
@@ -841,6 +848,10 @@ module GwtLktModule
     ! -- budget terms
     call mem_allocate(this%qsto, this%nlakes, 'QSTO', this%origin)
     !
+    ! -- concentration for budget terms
+    call mem_allocate(this%concbudssm, this%nconcbudssm, this%nlakes, &
+      'CONCBUDSSM', this%origin)
+    !
     ! -- Initialize
     !
     !-- fill clktbudget
@@ -852,6 +863,7 @@ module GwtLktModule
     do n = 1, this%nlakes
       this%status(n) = 'ACTIVE'
       this%qsto(n) = DZERO
+      this%concbudssm(:, n) = DZERO
     end do
     !
     ! -- Return
@@ -905,6 +917,7 @@ module GwtLktModule
     call mem_deallocate(this%idxbudfjf)
     call mem_deallocate(this%idxbudgwf)
     call mem_deallocate(this%idxbudsto)
+    call mem_deallocate(this%idxbudaux)
     call mem_deallocate(this%idxbudssm)
     !
     ! -- deallocate scalars in NumericalPackageType
@@ -929,7 +942,7 @@ module GwtLktModule
     ! -- local
     character(len=LINELENGTH) :: errmsg
     class(BndType), pointer :: packobj
-    integer(I4B) :: ip
+    integer(I4B) :: ip, icount
     integer(I4B) :: nbudterm
     logical :: found
 ! ------------------------------------------------------------------------------
@@ -950,12 +963,27 @@ module GwtLktModule
       if (found) exit
     end do
     !
+    ! -- error if lak package not found
+    if (.not. found) then
+      write(errmsg, '(a)') '****ERROR. CORRESPONDING LAK PACKAGE NOT FOUND &
+                            &FOR LKT.'
+      call store_error(errmsg)
+      call this%parser%StoreErrorUnit()
+      call ustop()
+    endif
+    !
     ! -- allocate space for idxbudssm, which indicates whether this is a 
     !    special budget term or one that is a general source and sink
     nbudterm = this%lakbudptr%nbudterm
     call mem_allocate(this%idxbudssm, nbudterm, 'IDXBUDSSM', this%origin)
     !
-    ! -- Assign index values for special budget terms
+    ! -- Process budget terms and identify special budget terms
+    write(this%iout, '(/, a, a)') &
+      'PROCESSING LKT INFORMATION FOR ', this%name
+    write(this%iout, '(a)') '  IDENTIFYING FLOW TERMS IN LAK PACKAGE'
+    write(this%iout, '(a, i0)') &
+      '  NUMBER OF LAKES = ', this%lakbudptr%ncv
+    icount = 1
     do ip = 1, this%lakbudptr%nbudterm
       select case(trim(adjustl(this%lakbudptr%budterm(ip)%flowtype)))
       case('FLOW-JA-FACE')
@@ -967,25 +995,27 @@ module GwtLktModule
       case('STORAGE')
         this%idxbudsto = ip
         this%idxbudssm(ip) = 0
+      case('AUXILIARY')
+        this%idxbudaux = ip
+        this%idxbudssm(ip) = 0
       case default
-        this%idxbudssm(ip) = 1
+        !
+        ! -- set idxbudssm equal to a column index for where the concentrations
+        !    are stored in the concbud(nbudssm, nlake) array
+        this%idxbudssm(ip) = icount
+        icount = icount + 1
       end select
+      write(this%iout, '(a, i0, " = ", a,/, a, i0)') &
+        '  TERM ', ip, trim(adjustl(this%lakbudptr%budterm(ip)%flowtype)), &
+        '   MAX NO. OF ENTRIES = ', this%lakbudptr%budterm(ip)%maxlist
     end do
-    !
-    ! -- error if lak package not found
-    if (.not. found) then
-      write(errmsg, '(a)') '****ERROR. CORRESPONDING LAK PACKAGE NOT FOUND &
-                            &FOR LKT.'
-      call store_error(errmsg)
-      call this%parser%StoreErrorUnit()
-      call ustop()
-    endif
+    write(this%iout, '(a, //)') 'DONE PROCESSING LKT INFORMATION'
     !
     ! -- Return
     return
   end subroutine find_lak_package
 
-  subroutine lkt_options(this, option, found)
+  subroutine  lkt_options(this, option, found)
 ! ******************************************************************************
 ! lkt_options -- set options specific to GwtLktType
 !
@@ -1063,7 +1093,7 @@ module GwtLktModule
 
   subroutine lkt_read_dimensions(this)
 ! ******************************************************************************
-! pak1read_dimensions -- Read the dimensions for this package
+! lkt_read_dimensions -- Determine dimensions for this package
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -1085,9 +1115,19 @@ module GwtLktModule
     this%nlakes = this%lakbudptr%ncv
     this%maxbound = this%lakbudptr%budterm(this%idxbudgwf)%maxlist
     this%nbound = this%maxbound
-    if (this%imatrows /= 0) this%npakeq = this%nlakes
-    write(this%iout,'(4x,a,i7)')'LKT NLAKES = ', this%nlakes
-    write(this%iout,'(4x,a,i7)')'LKT MAXBOUND = ', this%maxbound
+    write(this%iout, '(a, a)') 'SETTING DIMENSIONS FOR LKT PACKAGE ', this%name
+    write(this%iout,'(2x,a,i0)')'NLAKES = ', this%nlakes
+    write(this%iout,'(2x,a,i0)')'MAXBOUND = ', this%maxbound
+    write(this%iout,'(2x,a,i0)')'NBOUND = ', this%nbound
+    if (this%imatrows /= 0) then
+      this%npakeq = this%nlakes
+      write(this%iout,'(2x,a)') 'LKT SOLVED AS PART OF GWT MATRIX EQUATIONS'
+    else
+      write(this%iout,'(2x,a)') 'LKT SOLVED SEPARATELY FROM GWT MATRIX EQUATIONS '
+    end if
+    write(this%iout, '(a, //)') 'DONE SETTING LKT DIMENSIONS'
+    !
+    ! -- Check for errors
     if (this%nlakes < 0) then
       write(errmsg, '(1x,a)') &
         'ERROR:  NUMBER OF LAKES COULD NOT BE DETERMINED CORRECTLY.'
