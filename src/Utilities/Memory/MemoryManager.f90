@@ -23,6 +23,8 @@ module MemoryManagerModule
   public :: setptr_dbl1d
   public :: copy_dbl1d
   public :: setptr_int1d
+  public :: setptr_int
+  public :: setptr_dbl2d
   
   type(MemoryListType) :: memorylist
   integer(I8B) :: nvalues_alogical = 0
