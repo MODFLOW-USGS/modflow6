@@ -313,6 +313,118 @@ module GwtLktModule
 
   subroutine lkt_rp(this)
 ! ******************************************************************************
+! lkt_rp -- Read and Prepare
+! Subroutine: (1) read itmp
+!             (2) read new boundaries if itmp>0
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    use ConstantsModule, only: LINELENGTH
+    use TdisModule, only: kper, nper
+    use SimModule, only: ustop, store_error, count_errors
+    ! -- dummy
+    class(GwtLktType), intent(inout) :: this
+    ! -- local
+    integer(I4B) :: ierr
+    integer(I4B) :: node, n
+    logical :: isfound, endOfBlock
+    character(len=LINELENGTH) :: line
+    character(len=LINELENGTH) :: errmsg
+    integer(I4B) :: itemno
+    integer(I4B) :: j
+    integer(I4B) :: isfirst
+    integer(I4B) :: igwfnode
+    ! -- formats
+    character(len=*),parameter :: fmtblkerr = &
+      "('Error.  Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
+    character(len=*),parameter :: fmtlsp = &
+      "(1X,/1X,'REUSING ',A,'S FROM LAST STRESS PERIOD')"
+! ------------------------------------------------------------------------------
+    !
+    ! -- initialize flags
+    isfirst = 1
+    !
+    ! -- set nbound to maxbound
+    this%nbound = this%maxbound
+    !
+    ! -- Set ionper to the stress period number for which a new block of data
+    !    will be read.
+    if(this%inunit == 0) return
+    !
+    ! -- get stress period data
+    if (this%ionper < kper) then
+      !
+      ! -- get period block
+      call this%parser%GetBlock('PERIOD', isfound, ierr, &
+                                supportOpenClose=.true.)
+      if(isfound) then
+        !
+        ! -- read ionper and check for increasing period numbers
+        call this%read_check_ionper()
+      else
+        !
+        ! -- PERIOD block not found
+        if (ierr < 0) then
+          ! -- End of file found; data applies for remainder of simulation.
+          this%ionper = nper + 1
+        else
+          ! -- Found invalid block
+          write(errmsg, fmtblkerr) adjustl(trim(line))
+          call store_error(errmsg)
+          call this%parser%StoreErrorUnit()
+          call ustop()
+        end if
+      endif
+    end if
+    !
+    ! -- Read data if ionper == kper
+    if(this%ionper == kper) then
+      stressperiod: do
+        call this%parser%GetNextLine(endOfBlock)
+        if (endOfBlock) exit
+        if (isfirst /= 0) then
+          isfirst = 0
+          if (this%iprpak /= 0) then
+            write(this%iout,'(/1x,a,1x,i6,/)')                                  &
+              'READING '//trim(adjustl(this%text))//' DATA FOR PERIOD', kper
+            write(this%iout,'(3x,a)')  '     LKT KEYWORD AND DATA'
+            write(this%iout,'(3x,78("-"))')
+          end if
+        end if
+        itemno = this%parser%GetInteger()
+        call this%parser%GetRemainingLine(line)
+        !call this%lkt_set_stressperiod(itemno, line)
+      end do stressperiod
+
+      if (this%iprpak /= 0) then
+        write(this%iout,'(/1x,a,1x,i6,/)')                                      &
+          'END OF '//trim(adjustl(this%text))//' DATA FOR PERIOD', kper
+      end if
+    !
+    else
+      write(this%iout,fmtlsp) trim(this%filtyp)
+    endif
+    !
+    !write summary of lake stress period error messages
+    ierr = count_errors()
+    if (ierr > 0) then
+      call this%parser%StoreErrorUnit()
+      call ustop()
+    end if
+    !
+    ! -- fill arrays
+    do n = 1, this%lakbudptr%budterm(this%idxbudgwf)%nlist
+      igwfnode = this%lakbudptr%budterm(this%idxbudgwf)%id2(n)
+      this%nodelist(n) = igwfnode
+    end do
+    !
+    ! -- return
+    return
+  end subroutine lkt_rp
+
+  subroutine lkt_rp2(this)
+! ******************************************************************************
 ! lkt_rp
 ! ******************************************************************************
 !
@@ -333,7 +445,7 @@ module GwtLktModule
     !
     ! -- Return
     return
-  end subroutine lkt_rp
+  end subroutine lkt_rp2
 
   subroutine lkt_ad(this)
 ! ******************************************************************************
@@ -894,6 +1006,7 @@ module GwtLktModule
       call mem_deallocate(this%iboundpak)
       call mem_deallocate(this%xnewpak)
     end if
+    call mem_deallocate(this%concbudssm)
     deallocate(this%clktbudget)
     deallocate(this%status)
     deallocate(this%lakename)
@@ -919,6 +1032,7 @@ module GwtLktModule
     call mem_deallocate(this%idxbudsto)
     call mem_deallocate(this%idxbudaux)
     call mem_deallocate(this%idxbudssm)
+    call mem_deallocate(this%nconcbudssm)
     !
     ! -- deallocate scalars in NumericalPackageType
     call this%BndType%bnd_da()
