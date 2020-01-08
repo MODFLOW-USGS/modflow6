@@ -298,6 +298,7 @@ contains
     ! local
     character(len=LENMODELNAME) :: model_name
     integer(I4B), dimension(:), pointer :: grid_shape
+    integer(I4B), pointer :: nvert_ptr
     character(kind=c_char) :: grid_type(MAXSTRLEN)
     character(len=MAXSTRLEN) :: grid_type_f
     
@@ -310,21 +311,17 @@ contains
         
     ! get shape array
     model_name = get_model_name(grid_id)
-    call mem_setptr(grid_shape, "MSHAPE", trim(model_name) // " DIS")
     
-    if (grid_type_f == "rectilinear") then      
+    if (grid_type_f == "rectilinear") then
+      call mem_setptr(grid_shape, "MSHAPE", trim(model_name) // " DIS")
       grid_size = grid_shape(1) * grid_shape(2) * grid_shape(3)
       bmi_status = BMI_SUCCESS
-      return
     else if (grid_type_f == "unstructured") then
-      ! for unstructured grids, the grid shape is a 1D integer array
-      ! with only one element containing the node 
-      grid_size = grid_shape(1)
+      call mem_setptr(nvert_ptr, "NVERT", trim(model_name) // " DIS")
+      grid_size = nvert_ptr
       bmi_status = BMI_SUCCESS
-      return
     else
       bmi_status = BMI_FAILURE
-      return
     end if
   end function get_grid_size
   
@@ -358,7 +355,8 @@ contains
     bmi_status = BMI_SUCCESS
   end function get_grid_shape
   
-   ! Provides an array (whose length is the number of rows) that gives the y-coordinate for each row.
+
+  ! Provides an array (whose length is the number of rows) that gives the x-coordinate for each row.
   function get_grid_x(grid_id, grid_x) result(bmi_status) bind(C, name="get_grid_x")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_x
     use MemoryManagerModule, only: mem_setptr
@@ -372,65 +370,33 @@ contains
     real(DP), dimension(:), target, allocatable, save :: array
     character(len=LENMODELNAME) :: model_name
     character(kind=c_char) :: grid_type(MAXSTRLEN)
-    
+    real(DP), dimension(:,:), pointer, contiguous :: vertices_ptr
+    character(len=MAXSTRLEN) :: grid_type_f
     
     ! make sure function is only used for implemented grid_types
     if (get_grid_type(grid_id, grid_type) /= BMI_SUCCESS) then
       bmi_status = BMI_FAILURE
       return
     end if
+    grid_type_f = char_array_to_string(grid_type, strlen(grid_type))
     
-    ! get shape array
     model_name = get_model_name(grid_id)
-    call mem_setptr(grid_shape, "MSHAPE", trim(model_name) // " DIS")
-    
-    array = [ (i, i=0,grid_shape(3)) ]   
+    if (grid_type_f == "rectilinear") then      
+      call mem_setptr(grid_shape, "MSHAPE", trim(model_name) // " DIS")
+      array = [ (i, i=0,grid_shape(3)) ]      
+    else if (grid_type_f == "unstructured") then
+      call mem_setptr(vertices_ptr, "VERTICES", trim(model_name) // " DIS")
+      array = vertices_ptr(1, :)
+    else
+      bmi_status = BMI_FAILURE
+      return
+    end if
     
     array_ptr => array
     grid_x = c_loc(array_ptr)
     bmi_status = BMI_SUCCESS
-  end function get_grid_x
   
-  ! TODO_JH: Overload get_grid_x
-  !   ! Provides an array (whose length is the number of rows) that gives the y-coordinate for each row.
-  !function get_grid_x(grid_id, grid_x) result(bmi_status) bind(C, name="get_grid_x")
-  !!DEC$ ATTRIBUTES DLLEXPORT :: get_grid_x
-  !  use MemoryManagerModule, only: mem_setptr
-  !  integer(kind=c_int), intent(in) :: grid_id
-  !  type(c_ptr), intent(out) :: grid_x
-  !  integer(kind=c_int) :: bmi_status
-  !  ! local
-  !  integer :: i
-  !  integer(I4B), dimension(:), pointer :: grid_shape
-  !  real(DP), dimension(:), pointer, contiguous :: array_ptr
-  !  real(DP), dimension(:), target, allocatable, save :: array
-  !  character(len=LENMODELNAME) :: model_name
-  !  character(kind=c_char) :: grid_type(MAXSTRLEN)
-  !  integer(I4B), pointer :: nvert_ptr
-  !  real(DP), dimension(:,:), pointer, contiguous :: vertices_ptr
-  !  
-  !  ! make sure function is only used for implemented grid_types
-  !  if (get_grid_type(grid_id, grid_type) /= BMI_SUCCESS) then
-  !    bmi_status = BMI_FAILURE
-  !    return
-  !  end if
-  !  
-  !  ! get shape array
-  !  model_name = get_model_name(grid_id)    
-  !  call mem_setptr(grid_shape, "MSHAPE", trim(model_name) // " DIS")
-  !  
-  !  
-  !  ! get nvert and vertices
-  !  call mem_setptr(grid_shape_ptr, "NVERT", trim(model_name) // " DIS")
-  !  call mem_setptr(vertices_ptr, 2,  "VERTICES", trim(model_name) // " DIS")
-  !  
-  !  
-  !  array = [ (i, i=0,grid_shape(3)) ]   
-  !  
-  !  array_ptr => array
-  !  grid_x = c_loc(array_ptr)
-  !  bmi_status = BMI_SUCCESS
-  !end function get_grid_x
+  end function get_grid_x
   
   ! Provides an array (whose length is the number of rows) that gives the y-coordinate for each row.
   function get_grid_y(grid_id, grid_y) result(bmi_status) bind(C, name="get_grid_y")
@@ -446,18 +412,27 @@ contains
     real(DP), dimension(:), target, allocatable, save :: array
     character(len=LENMODELNAME) :: model_name
     character(kind=c_char) :: grid_type(MAXSTRLEN)
+    real(DP), dimension(:,:), pointer, contiguous :: vertices_ptr
+    character(len=MAXSTRLEN) :: grid_type_f
     
     ! make sure function is only used for implemented grid_types
     if (get_grid_type(grid_id, grid_type) /= BMI_SUCCESS) then
       bmi_status = BMI_FAILURE
       return
     end if
+    grid_type_f = char_array_to_string(grid_type, strlen(grid_type))
     
-    ! get shape array
     model_name = get_model_name(grid_id)
-    call mem_setptr(grid_shape, "MSHAPE", trim(model_name) // " DIS")
-    
-    array = [ (i, i=grid_shape(2),0,-1) ]
+    if (grid_type_f == "rectilinear") then      
+      call mem_setptr(grid_shape, "MSHAPE", trim(model_name) // " DIS")
+      array = [ (i, i=grid_shape(2),0,-1) ]      
+    else if (grid_type_f == "unstructured") then
+      call mem_setptr(vertices_ptr, "VERTICES", trim(model_name) // " DIS")
+      array = vertices_ptr(2, :)
+    else
+      bmi_status = BMI_FAILURE
+      return
+    end if
     
     array_ptr => array
     grid_y = c_loc(array_ptr)
