@@ -58,14 +58,22 @@ module GwtLktModule
     integer(I4B), pointer                              :: idxbudfjf => null()   ! index of flow ja face in lakbudptr
     integer(I4B), pointer                              :: idxbudgwf => null()   ! index of gwf terms in lakbudptr
     integer(I4B), pointer                              :: idxbudsto => null()   ! index of storage terms in lakbudptr
+    integer(I4B), pointer                              :: idxbudrain => null()  ! index of rainfall terms in lakbudptr
+    integer(I4B), pointer                              :: idxbudevap => null()  ! index of evaporation terms in lakbudptr
+    integer(I4B), pointer                              :: idxbudroff => null()  ! index of runoff terms in lakbudptr
+    integer(I4B), pointer                              :: idxbudiflw => null()  ! index of inflow terms in lakbudptr
+    integer(I4B), pointer                              :: idxbudwdrl => null()  ! index of withdrawal terms in lakbudptr
     integer(I4B), pointer                              :: idxbudaux => null()   ! index of auxiliary terms in lakbudptr
     integer(I4B), dimension(:), pointer, contiguous    :: idxbudssm => null()   ! flag that lakbudptr%buditem is a general solute source/sink
     integer(I4B), pointer                              :: nconcbudssm => null() ! number of concbudssm terms (columns)
     real(DP), dimension(:, : ), pointer, contiguous    :: concbudssm => null()  ! user specified concentrations for lake flow terms
 
     ! -- time series aware data
-    type (MemoryTSType), dimension(:), pointer, contiguous :: conclak => null()
-    
+    type (MemoryTSType), dimension(:), pointer, contiguous :: conclak => null()  ! lake concentration
+    type (MemoryTSType), dimension(:), pointer, contiguous :: concrain => null() ! rainfall concentration
+    type (MemoryTSType), dimension(:), pointer, contiguous :: concevap => null() ! evaporation concentration
+    type (MemoryTSType), dimension(:), pointer, contiguous :: concroff => null() ! runoff concentration
+    type (MemoryTSType), dimension(:), pointer, contiguous :: conciflw => null() ! inflow concentration
     
   contains
   
@@ -412,7 +420,7 @@ module GwtLktModule
       write(this%iout,fmtlsp) trim(this%filtyp)
     endif
     !
-    !write summary of lake stress period error messages
+    ! -- write summary of lake stress period error messages
     ierr = count_errors()
     if (ierr > 0) then
       call this%parser%StoreErrorUnit()
@@ -516,12 +524,9 @@ module GwtLktModule
       case ('CONCENTRATION')
         ierr = this%lkt_check_valid(itemno)
         if (ierr /= 0) goto 999
-        !bndName = this%boundname(itemno)
         call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
         text = line(istart:istop)
         jj = 1    ! For lake concentration
-        !call urword(line, lloc, istart, istop, 3, ival, rval, this%iout, this%inunit)
-        !this%xnewpak(itemno) = rval
         call read_single_value_or_time_series(text, &
                                               this%conclak(itmp)%value, &
                                               this%conclak(itmp)%name, &
@@ -532,17 +537,55 @@ module GwtLktModule
       case ('RAINFALL')
         ierr = this%lkt_check_valid(itemno)
         if (ierr /= 0) goto 999
-        !bndName = this%boundname(itemno)
         call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
         text = line(istart:istop)
         jj = 1    ! For RAINFALL
-        !call read_single_value_or_time_series(text, &
-        !                                      this%rainfall(itmp)%value, &
-        !                                      this%rainfall(itmp)%name, &
-        !                                      endtim,  &
-        !                                      this%name, 'BND', this%TsManager, &
-        !                                      this%iprpak, itmp, jj, 'RAINFALL', &
-        !                                      bndName, this%inunit)
+        call read_single_value_or_time_series(text, &
+                                              this%concrain(itmp)%value, &
+                                              this%concrain(itmp)%name, &
+                                              endtim,  &
+                                              this%name, 'BND', this%TsManager, &
+                                              this%iprpak, itmp, jj, 'RAINFALL', &
+                                              bndName, this%inunit)
+      case ('EVAPORATION')
+        ierr = this%lkt_check_valid(itemno)
+        if (ierr /= 0) goto 999
+        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
+        text = line(istart:istop)
+        jj = 1    ! For EVAPORATION
+        call read_single_value_or_time_series(text, &
+                                              this%concevap(itmp)%value, &
+                                              this%concevap(itmp)%name, &
+                                              endtim,  &
+                                              this%name, 'BND', this%TsManager, &
+                                              this%iprpak, itmp, jj, 'EVAPORATION', &
+                                              bndName, this%inunit)
+      case ('RUNOFF')
+        ierr = this%lkt_check_valid(itemno)
+        if (ierr /= 0) goto 999
+        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
+        text = line(istart:istop)
+        jj = 1    ! For RUNOFF
+        call read_single_value_or_time_series(text, &
+                                              this%concroff(itmp)%value, &
+                                              this%concroff(itmp)%name, &
+                                              endtim,  &
+                                              this%name, 'BND', this%TsManager, &
+                                              this%iprpak, itmp, jj, 'RUNOFF', &
+                                              bndName, this%inunit)
+      case ('INFLOW')
+        ierr = this%lkt_check_valid(itemno)
+        if (ierr /= 0) goto 999
+        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
+        text = line(istart:istop)
+        jj = 1    ! For INFLOW
+        call read_single_value_or_time_series(text, &
+                                              this%conciflw(itmp)%value, &
+                                              this%conciflw(itmp)%name, &
+                                              endtim,  &
+                                              this%name, 'BND', this%TsManager, &
+                                              this%iprpak, itmp, jj, 'INFLOW', &
+                                              bndName, this%inunit)
       case ('AUXILIARY')
         ierr = this%lkt_check_valid(itemno)
         if (ierr /= 0) goto 999
@@ -801,6 +844,7 @@ module GwtLktModule
     real(DP) :: v0
     real(DP) :: v1
     real(DP) :: omega
+    real(DP) :: ctmp
 ! ------------------------------------------------------------------------------
     !
     ! -- Add coefficients for LKT and GWF connections (qbnd positive into lake)
@@ -816,7 +860,69 @@ module GwtLktModule
       !
       ! -- todo: add or remove mass directly to and from lak (precip, evap, runoff, etc.)
       ! -- add em here
+      
     end do
+    !
+    ! -- add rainfall contribution
+    if (this%idxbudrain /= 0) then
+      do j = 1, this%lakbudptr%budterm(this%idxbudrain)%nlist
+        n = this%lakbudptr%budterm(this%idxbudrain)%id1(j)
+        iloc = this%idxlocnode(n)
+        qbnd = this%lakbudptr%budterm(this%idxbudrain)%flow(j)
+        ctmp = this%concrain(n)%value
+        rhs(iloc) = rhs(iloc) - ctmp * qbnd
+      end do
+    end if
+    !
+    ! -- add evaporation contribution
+    if (this%idxbudevap /= 0) then
+      do j = 1, this%lakbudptr%budterm(this%idxbudevap)%nlist
+        n = this%lakbudptr%budterm(this%idxbudevap)%id1(j)
+        iloc = this%idxlocnode(n)
+        iposd = this%idxpakdiag(n)
+        qbnd = this%lakbudptr%budterm(this%idxbudevap)%flow(j)
+        ctmp = this%concevap(n)%value
+        if (this%xnewpak(n) < ctmp) then
+          omega = DONE
+        else
+          omega = DZERO
+        end if
+        amatsln(iposd) = amatsln(iposd) + omega * qbnd
+        rhs(iloc) = rhs(iloc) - (DONE - omega) * qbnd * ctmp
+      end do
+    end if
+    !
+    ! -- add runoff contribution
+    if (this%idxbudroff /= 0) then
+      do j = 1, this%lakbudptr%budterm(this%idxbudroff)%nlist
+        n = this%lakbudptr%budterm(this%idxbudroff)%id1(j)
+        iloc = this%idxlocnode(n)
+        qbnd = this%lakbudptr%budterm(this%idxbudroff)%flow(j)
+        ctmp = this%concroff(n)%value
+        rhs(iloc) = rhs(iloc) - ctmp * qbnd
+      end do
+    end if
+    !
+    ! -- add inflow contribution
+    if (this%idxbudiflw /= 0) then
+      do j = 1, this%lakbudptr%budterm(this%idxbudiflw)%nlist
+        n = this%lakbudptr%budterm(this%idxbudiflw)%id1(j)
+        iloc = this%idxlocnode(n)
+        qbnd = this%lakbudptr%budterm(this%idxbudroff)%flow(j)
+        ctmp = this%conciflw(n)%value
+        rhs(iloc) = rhs(iloc) - ctmp * qbnd
+      end do
+    end if
+    !
+    ! -- add withdrawal contribution
+    if (this%idxbudwdrl /= 0) then
+      do j = 1, this%lakbudptr%budterm(this%idxbudwdrl)%nlist
+        n = this%lakbudptr%budterm(this%idxbudwdrl)%id1(j)
+        iposd = this%idxpakdiag(n)
+        qbnd = this%lakbudptr%budterm(this%idxbudwdrl)%flow(j)
+        amatsln(iposd) = amatsln(iposd) + qbnd
+      end do
+    end if
     !
     ! -- go through each lak-gwf connection
     do j = 1, this%lakbudptr%budterm(this%idxbudgwf)%nlist
@@ -920,6 +1026,7 @@ module GwtLktModule
     real(DP) :: rrate, rhs, hcof
     real(DP) :: ratein, rateout
     real(DP) :: v0, v1
+    real(DP) :: qbnd, ctmp, omega
     ! -- for observations
     integer(I4B) :: iprobslocal
     ! -- formats
@@ -985,8 +1092,115 @@ module GwtLktModule
     end do
     call this%budget%addentry(ratein, rateout, delt,  &
                               this%clktbudget(2), isuppress_output)
+
     !
-    ! -- todo: add terms to budget object
+    ! -- rainfall contribution
+    ! -- todo: need to accumulate chterm for constant concentration lakes
+    ratein = DZERO
+    rateout = DZERO
+    if (this%idxbudrain /= 0) then
+      do j = 1, this%lakbudptr%budterm(this%idxbudrain)%nlist
+        n = this%lakbudptr%budterm(this%idxbudrain)%id1(j)
+        qbnd = this%lakbudptr%budterm(this%idxbudrain)%flow(j)
+        ctmp = this%concrain(n)%value
+        rrate = ctmp * qbnd
+        if(rrate < DZERO) then
+          rateout = rateout - rrate
+        else
+          ratein = ratein + rrate
+        endif
+      end do
+    end if
+    call this%budget%addentry(ratein, rateout, delt,  &
+                              this%clktbudget(4), isuppress_output)
+    !
+    ! -- evaporation contribution
+    ! -- todo: need to accumulate chterm for constant concentration lakes
+    ratein = DZERO
+    rateout = DZERO
+    if (this%idxbudevap /= 0) then
+      do j = 1, this%lakbudptr%budterm(this%idxbudevap)%nlist
+        n = this%lakbudptr%budterm(this%idxbudevap)%id1(j)
+        qbnd = this%lakbudptr%budterm(this%idxbudevap)%flow(j)
+        ctmp = this%concevap(n)%value
+        if (this%xnewpak(n) < ctmp) then
+          omega = DONE
+        else
+          omega = DZERO
+        end if
+        rrate = omega * qbnd * this%xnewpak(n) + (DONE - omega) * qbnd * ctmp
+        if(rrate < DZERO) then
+          rateout = rateout - rrate
+        else
+          ratein = ratein + rrate
+        endif
+      end do
+    end if
+    call this%budget%addentry(ratein, rateout, delt,  &
+                              this%clktbudget(5), isuppress_output)
+    !
+    ! -- runoff contribution
+    ! -- todo: need to accumulate chterm for constant concentration lakes
+    ratein = DZERO
+    rateout = DZERO
+    if (this%idxbudroff /= 0) then
+      do j = 1, this%lakbudptr%budterm(this%idxbudroff)%nlist
+        n = this%lakbudptr%budterm(this%idxbudroff)%id1(j)
+        qbnd = this%lakbudptr%budterm(this%idxbudroff)%flow(j)
+        ctmp = this%concroff(n)%value
+        rrate = ctmp * qbnd
+        if(rrate < DZERO) then
+          rateout = rateout - rrate
+        else
+          ratein = ratein + rrate
+        endif
+      end do
+    end if
+    call this%budget%addentry(ratein, rateout, delt,  &
+                              this%clktbudget(6), isuppress_output)
+    !
+    ! -- inflow contribution
+    ! -- todo: need to accumulate chterm for constant concentration lakes
+    ratein = DZERO
+    rateout = DZERO
+    if (this%idxbudiflw /= 0) then
+      do j = 1, this%lakbudptr%budterm(this%idxbudiflw)%nlist
+        n = this%lakbudptr%budterm(this%idxbudiflw)%id1(j)
+        qbnd = this%lakbudptr%budterm(this%idxbudiflw)%flow(j)
+        ctmp = this%conciflw(n)%value
+        rrate = ctmp * qbnd
+        if(rrate < DZERO) then
+          rateout = rateout - rrate
+        else
+          ratein = ratein + rrate
+        endif
+      end do
+    end if
+    call this%budget%addentry(ratein, rateout, delt,  &
+                              this%clktbudget(7), isuppress_output)
+    !
+    ! -- withdrawal contribution
+    ! -- todo: need to accumulate chterm for constant concentration lakes
+    ratein = DZERO
+    rateout = DZERO
+    if (this%idxbudwdrl /= 0) then
+      do j = 1, this%lakbudptr%budterm(this%idxbudwdrl)%nlist
+        n = this%lakbudptr%budterm(this%idxbudwdrl)%id1(j)
+        qbnd = this%lakbudptr%budterm(this%idxbudwdrl)%flow(j)
+        ctmp = this%xnewpak(n)
+        rrate = qbnd * this%xnewpak(n)
+        if(rrate < DZERO) then
+          rateout = rateout - rrate
+        else
+          ratein = ratein + rrate
+        endif
+      end do
+    end if
+    call this%budget%addentry(ratein, rateout, delt,  &
+                              this%clktbudget(8), isuppress_output)
+    !
+    ! -- todo: implement the budobj for printing the budget
+    !    and writing the individual budget terms to an lkt binary bud file
     
     !    
     ! -- todo: For continuous observations, save simulated values.
@@ -1144,6 +1358,11 @@ module GwtLktModule
     call mem_allocate(this%idxbudfjf, 'IDXBUDFJF', this%origin)
     call mem_allocate(this%idxbudgwf, 'IDXBUDGWF', this%origin)
     call mem_allocate(this%idxbudsto, 'IDXBUDSTO', this%origin)
+    call mem_allocate(this%idxbudrain, 'IDXBUDRAIN', this%origin)
+    call mem_allocate(this%idxbudevap, 'IDXBUDEVAP', this%origin)
+    call mem_allocate(this%idxbudroff, 'IDXBUDROFF', this%origin)
+    call mem_allocate(this%idxbudiflw, 'IDXBUDIFLW', this%origin)
+    call mem_allocate(this%idxbudwdrl, 'IDXBUDWDRL', this%origin)
     call mem_allocate(this%idxbudaux, 'IDXBUDAUX', this%origin)
     call mem_allocate(this%nconcbudssm, 'NCONCBUDSSM', this%origin)
     ! 
@@ -1154,10 +1373,15 @@ module GwtLktModule
     this%ibudgetout = 0
     this%igwflakpak = 0
     this%nlakes = 0
-    this%bditems = 3
+    this%bditems = 8
     this%idxbudfjf = 0
     this%idxbudgwf = 0
     this%idxbudsto = 0
+    this%idxbudrain = 0
+    this%idxbudevap = 0
+    this%idxbudroff = 0
+    this%idxbudiflw = 0
+    this%idxbudwdrl = 0
     this%idxbudaux = 0
     this%nconcbudssm = 0
     !
@@ -1203,6 +1427,10 @@ module GwtLktModule
     !
     ! -- time series
     call mem_allocate(this%conclak, this%nlakes, 'CONCLAK', this%origin)
+    call mem_allocate(this%concrain, this%nlakes, 'CONCRAIN', this%origin)
+    call mem_allocate(this%concevap, this%nlakes, 'CONCEVAP', this%origin)
+    call mem_allocate(this%concroff, this%nlakes, 'CONCROFF', this%origin)
+    call mem_allocate(this%conciflw, this%nlakes, 'CONCIFLW', this%origin)
     !
     ! -- budget terms
     call mem_allocate(this%qsto, this%nlakes, 'QSTO', this%origin)
@@ -1217,6 +1445,11 @@ module GwtLktModule
     this%clktbudget(1) = '             GWF'
     this%clktbudget(2) = '         STORAGE'
     this%clktbudget(3) = '        CONSTANT'
+    this%clktbudget(4) = '        RAINFALL'
+    this%clktbudget(5) = '     EVAPORATION'
+    this%clktbudget(6) = '          RUNOFF'
+    this%clktbudget(7) = '          INFLOW'
+    this%clktbudget(8) = '      WITHDRAWAL'
     !
     ! -- initialize arrays
     do n = 1, this%nlakes
@@ -1255,6 +1488,10 @@ module GwtLktModule
     end if
     call mem_deallocate(this%concbudssm)
     call mem_deallocate(this%conclak)
+    call mem_deallocate(this%concrain)
+    call mem_deallocate(this%concevap)
+    call mem_deallocate(this%concroff)
+    call mem_deallocate(this%conciflw)
     deallocate(this%clktbudget)
     deallocate(this%status)
     deallocate(this%lakename)
@@ -1278,6 +1515,11 @@ module GwtLktModule
     call mem_deallocate(this%idxbudfjf)
     call mem_deallocate(this%idxbudgwf)
     call mem_deallocate(this%idxbudsto)
+    call mem_deallocate(this%idxbudrain)
+    call mem_deallocate(this%idxbudevap)
+    call mem_deallocate(this%idxbudroff)
+    call mem_deallocate(this%idxbudiflw)
+    call mem_deallocate(this%idxbudwdrl)
     call mem_deallocate(this%idxbudaux)
     call mem_deallocate(this%idxbudssm)
     call mem_deallocate(this%nconcbudssm)
@@ -1356,6 +1598,21 @@ module GwtLktModule
         this%idxbudssm(ip) = 0
       case('STORAGE')
         this%idxbudsto = ip
+        this%idxbudssm(ip) = 0
+      case('RAINFALL')
+        this%idxbudrain = ip
+        this%idxbudssm(ip) = 0
+      case('EVAPORATION')
+        this%idxbudevap = ip
+        this%idxbudssm(ip) = 0
+      case('RUNOFF')
+        this%idxbudroff = ip
+        this%idxbudssm(ip) = 0
+      case('EXT-INFLOW')
+        this%idxbudiflw = ip
+        this%idxbudssm(ip) = 0
+      case('WITHDRAWAL')
+        this%idxbudwdrl = ip
         this%idxbudssm(ip) = 0
       case('AUXILIARY')
         this%idxbudaux = ip
@@ -1804,7 +2061,7 @@ module GwtLktModule
     class(GwtLktType) :: this
     ! -- local
     integer(I4B) :: n, j, igwfnode
-    real(DP) :: c1, ctmp, qbnd, v0, v1
+    real(DP) :: c1, ctmp, qbnd, v0, v1, omega
 ! ------------------------------------------------------------------------------
     !
     !
@@ -1814,6 +2071,64 @@ module GwtLktModule
       c1 = this%xoldpak(n) * v0
       this%dbuff(n) = c1
     end do
+    !
+    ! -- add rainfall contribution
+    if (this%idxbudrain /= 0) then
+      do j = 1, this%lakbudptr%budterm(this%idxbudrain)%nlist
+        n = this%lakbudptr%budterm(this%idxbudrain)%id1(j)
+        qbnd = this%lakbudptr%budterm(this%idxbudrain)%flow(j)
+        ctmp = this%concrain(n)%value
+        this%dbuff(n) = this%dbuff(n) + ctmp * qbnd
+      end do
+    end if
+    !
+    ! -- add evaporation contribution
+    if (this%idxbudevap /= 0) then
+      do j = 1, this%lakbudptr%budterm(this%idxbudevap)%nlist
+        n = this%lakbudptr%budterm(this%idxbudevap)%id1(j)
+        qbnd = this%lakbudptr%budterm(this%idxbudevap)%flow(j)
+        ctmp = this%concevap(n)%value
+        if (this%xnewpak(n) < ctmp) then
+          omega = DONE
+        else
+          omega = DZERO
+        end if
+        c1 = omega * qbnd * this%xnewpak(n) + &
+             (DONE - omega) * qbnd * ctmp
+        this%dbuff(n) = this%dbuff(n) + c1
+      end do
+    end if
+    !
+    ! -- add runoff contribution
+    if (this%idxbudroff /= 0) then
+      do j = 1, this%lakbudptr%budterm(this%idxbudroff)%nlist
+        n = this%lakbudptr%budterm(this%idxbudroff)%id1(j)
+        qbnd = this%lakbudptr%budterm(this%idxbudroff)%flow(j)
+        ctmp = this%concroff(n)%value
+        this%dbuff(n) = this%dbuff(n) + ctmp * qbnd
+      end do
+    end if
+    !
+    ! -- add inflow contribution
+    if (this%idxbudiflw /= 0) then
+      do j = 1, this%lakbudptr%budterm(this%idxbudiflw)%nlist
+        n = this%lakbudptr%budterm(this%idxbudiflw)%id1(j)
+        qbnd = this%lakbudptr%budterm(this%idxbudiflw)%flow(j)
+        ctmp = this%conciflw(n)%value
+        this%dbuff(n) = this%dbuff(n) + ctmp * qbnd
+      end do
+    end if
+    !
+    ! -- add withdrawal contribution
+    if (this%idxbudwdrl /= 0) then
+      do j = 1, this%lakbudptr%budterm(this%idxbudwdrl)%nlist
+        n = this%lakbudptr%budterm(this%idxbudwdrl)%id1(j)
+        qbnd = this%lakbudptr%budterm(this%idxbudwdrl)%flow(j)
+        ctmp = this%xnewpak(n)
+        c1 = qbnd * ctmp
+        this%dbuff(n) = this%dbuff(n) + c1
+      end do
+    end if
     !
     ! -- go through each gwf connection and accumulate 
     !    total mass in dbuff mass

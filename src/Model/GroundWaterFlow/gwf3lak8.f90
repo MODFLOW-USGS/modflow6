@@ -5172,7 +5172,7 @@ contains
   ! ------------------------------------------------------------------------------
       class(LakType), intent(inout) :: this
       integer(I4B) :: j, n, node
-      real(DP) :: hlak, head, clak, blak
+      real(DP) :: hlak, head, clak
   ! ------------------------------------------------------------------------------
   !
   ! -- Return if no lak lakes

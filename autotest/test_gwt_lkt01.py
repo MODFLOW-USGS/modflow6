@@ -1,5 +1,7 @@
-# Simple one-layer model with a lak.  Purpose is to calculate transport
-# through the lake.  Need a better test of the actual concentration values.
+# Simple one-layer model with a lak.  Purpose is to test a constant
+# stage and constant concentration lake with a value of 100.  The aquifer
+# starts with a concentration of zero, but the values grow as the lake
+# leaks into the aquifer.
 
 import os
 import sys
@@ -117,7 +119,6 @@ def get_model(idx, dir):
     # pak_data = [lakeno, strt, nlakeconn, CONC, dense, boundname]
     pak_data = [(0, -0.4, nlakeconn, 0., 1025.)]
 
-    con_data = []
     connlen = connwidth = delr / 2.
     con_data = []
     # con_data=(lakeno,iconn,(cellid),claktype,bedleak,belev,telev,connlen,connwidth )
@@ -127,21 +128,29 @@ def get_model(idx, dir):
         (0, 1, (0, 0, 3), 'HORIZONTAL', 'None', 10, 10, connlen, connwidth))
     con_data.append(
         (0, 2, (0, 0, 2), 'VERTICAL', 'None', 10, 10, connlen, connwidth))
-    p_data = [(0, 'STATUS', 'CONSTANT'), (0, 'STAGE', -0.4)]
+    p_data = [(0, 'STATUS', 'CONSTANT'),
+              (0, 'STAGE', -0.4),
+              (0, 'RAINFALL', .1),
+              (0, 'EVAPORATION', .2),
+              (0, 'RUNOFF', .1 * delr * delc),
+              ]
 
     # note: for specifying lake number, use fortran indexing!
     lak_obs = {('lak_obs.csv'): [('lakestage', 'stage', 1),
                                  ('lakevolume', 'volume', 1),
-                                 ('lak1', 'lak', 1, 1), ('lak2', 'lak', 1, 2),
+                                 ('lak1', 'lak', 1, 1),
+                                 ('lak2', 'lak', 1, 2),
                                  ('lak3', 'lak', 1, 3)]}
 
     lak = flopy.mf6.modflow.ModflowGwflak(gwf, save_flows=True,
-                                          print_input=True, print_flows=True,
+                                          print_input=True,
+                                          print_flows=True,
                                           print_stage=True,
                                           stage_filerecord='stage',
                                           budget_filerecord='lakebud',
                                           nlakes=1, ntables=0,
-                                          packagedata=pak_data, pname='LAK-1',
+                                          packagedata=pak_data,
+                                          pname='LAK-1',
                                           connectiondata=con_data,
                                           lakeperioddata=p_data,
                                           observations=lak_obs,
@@ -210,7 +219,11 @@ def get_model(idx, dir):
 
     lktpackagedata = [(0, 35., 99., 999., 'mylake'), ]
     lktperioddata = [(0, 'STATUS', 'CONSTANT'),
-                     (0, 'CONCENTRATION', 100.)]
+                     (0, 'CONCENTRATION', 100.),
+                     (0, 'RAINFALL', 25.),
+                     (0, 'EVAPORATION', 25.),
+                     (0, 'RUNOFF', 25.),
+                     ]
     lkt = flopy.mf6.modflow.ModflowGwtlkt(gwt,
                                           boundnames=True,
                                           save_flows=True,
@@ -262,10 +275,20 @@ def eval_results(sim):
     fname = os.path.join(sim.simpath, fname)
     assert os.path.isfile(fname)
 
-    # load the lake concentrations and make sure there are 100
+    # load the lake concentrations and make sure all values are 100.
     cobj = flopy.utils.HeadFile(fname, text='CONCENTRATION')
     clak = cobj.get_alldata().flatten()
-    assert clak.shape == (100,)
+    print(clak)
+    assert np.allclose(clak, np.ones(10)*100.)
+
+    # load the aquifer concentrations and make sure all values are correct
+    fname = gwtname + '.ucn'
+    fname = os.path.join(sim.simpath, fname)
+    cobj = flopy.utils.HeadFile(fname, text='CONCENTRATION')
+    caq = cobj.get_alldata()
+    answer = np.array([ 4.86242795, 27.24270616, 64.55536421,
+                        27.24270616, 4.86242795])
+    assert np.allclose(caq[-1].flatten(), answer), '{} {}'.format(caq[-1].flatten(), answer)
 
     # todo: add a better check of the lake concentrations
     assert False
