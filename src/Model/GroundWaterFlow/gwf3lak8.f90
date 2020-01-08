@@ -3951,6 +3951,8 @@ contains
                              iadv=1)
     !
     ! -- calculate several budget terms
+    chratin = DZERO
+    chratout = DZERO
     do n = 1, this%nlakes
       this%chterm(n) = DZERO
       if (this%iboundpak(n) == 0) cycle

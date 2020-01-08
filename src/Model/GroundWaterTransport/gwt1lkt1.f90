@@ -63,6 +63,10 @@ module GwtLktModule
     integer(I4B), pointer                              :: nconcbudssm => null() ! number of concbudssm terms (columns)
     real(DP), dimension(:, : ), pointer, contiguous    :: concbudssm => null()  ! user specified concentrations for lake flow terms
 
+    ! -- time series aware data
+    type (MemoryTSType), dimension(:), pointer, contiguous :: conclak => null()
+    
+    
   contains
   
     procedure :: set_pointers => lkt_set_pointers
@@ -75,6 +79,8 @@ module GwtLktModule
     procedure, private :: lkt_fc_expanded
     procedure, private :: lkt_fc_nonexpanded
     procedure, private :: lkt_cfupdate
+    procedure, private :: lkt_check_valid
+    procedure, private :: lkt_set_stressperiod
     procedure :: bnd_bd => lkt_bd
     procedure :: bnd_ot => lkt_ot
     procedure :: bnd_da => lkt_da
@@ -394,7 +400,7 @@ module GwtLktModule
         end if
         itemno = this%parser%GetInteger()
         call this%parser%GetRemainingLine(line)
-        !call this%lkt_set_stressperiod(itemno, line)
+        call this%lkt_set_stressperiod(itemno, line)
       end do stressperiod
 
       if (this%iprpak /= 0) then
@@ -423,6 +429,190 @@ module GwtLktModule
     return
   end subroutine lkt_rp
 
+  subroutine lkt_set_stressperiod(this, itemno, line)
+! ******************************************************************************
+! lkt_set_stressperiod -- Set a stress period attribute for lakweslls(itemno)
+!                         using keywords.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    use TdisModule, only: kper, perlen, totimsav
+    use TimeSeriesManagerModule, only: read_single_value_or_time_series
+    use InputOutputModule, only: urword
+    use SimModule, only: ustop, store_error, count_errors
+    ! -- dummy
+    class(GwtLktType),intent(inout) :: this
+    integer(I4B), intent(in) :: itemno
+    character (len=*), intent(in) :: line
+    ! -- local
+    character(len=LINELENGTH) :: text
+    character(len=LINELENGTH) :: caux
+    character(len=LINELENGTH) :: keyword
+    character(len=LINELENGTH) :: errmsg
+    character(len=LENBOUNDNAME) :: bndName
+    character(len=9) :: citem
+    integer(I4B) :: ierr
+    integer(I4B) :: itmp
+    integer(I4B) :: ival, istart, istop
+    integer(I4B) :: i0
+    integer(I4B) :: lloc
+    integer(I4B) :: ii
+    integer(I4B) :: jj
+    integer(I4B) :: iaux
+    real(DP) :: rval
+    real(DP) :: endtim
+    ! -- formats
+! ------------------------------------------------------------------------------
+    !
+    ! STATUS <status>
+    ! STAGE <stage>
+    ! RAINFALL <rainfall>
+    ! EVAPORATION <evaporation>
+    ! RUNOFF <runoff>
+    ! INFLOW <inflow>
+    ! WITHDRAWAL <withdrawal>
+    ! AUXILIARY <auxname> <auxval>    
+    !
+    ! -- Find time interval of current stress period.
+    endtim = totimsav + perlen(kper)
+    !
+    ! -- write abs(itemno) to citem string
+    itmp = ABS(itemno)
+    write (citem,'(i9.9)') itmp
+    !
+    ! -- Assign boundary name
+    if (this%inamedbound==1) then
+      bndName = this%boundname(itemno)
+    else
+      bndName = ''
+    end if
+    !
+    ! -- read line
+    lloc = 1
+    call urword(line, lloc, istart, istop, 1, ival, rval, this%iout, this%inunit)
+    i0 = istart
+    keyword = line(istart:istop)
+    select case (line(istart:istop))
+      case ('STATUS')
+        ierr = this%lkt_check_valid(itemno)
+        if (ierr /= 0) goto 999
+        !bndName = this%boundname(itemno)
+        call urword(line, lloc, istart, istop, 1, ival, rval, this%iout, this%inunit)
+        text = line(istart:istop)
+        this%status(itmp) = text(1:8)
+        if (text == 'CONSTANT') then
+          this%iboundpak(itmp) = -1
+        else if (text == 'INACTIVE') then
+          this%iboundpak(itmp) = 0
+        else if (text == 'ACTIVE') then
+          this%iboundpak(itmp) = 1
+        else
+          write(errmsg,'(4x,a,a)') &
+            '****ERROR. UNKNOWN '//trim(this%text)//' LAK STATUS KEYWORD: ', &
+            text
+          call store_error(errmsg)
+        end if
+      case ('CONCENTRATION')
+        ierr = this%lkt_check_valid(itemno)
+        if (ierr /= 0) goto 999
+        !bndName = this%boundname(itemno)
+        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
+        text = line(istart:istop)
+        jj = 1    ! For lake concentration
+        !call urword(line, lloc, istart, istop, 3, ival, rval, this%iout, this%inunit)
+        !this%xnewpak(itemno) = rval
+        call read_single_value_or_time_series(text, &
+                                              this%conclak(itmp)%value, &
+                                              this%conclak(itmp)%name, &
+                                              endtim,  &
+                                              this%name, 'BND', this%TsManager, &
+                                              this%iprpak, itmp, jj, 'CONCENTRATION', &
+                                              bndName, this%inunit)
+      case ('RAINFALL')
+        ierr = this%lkt_check_valid(itemno)
+        if (ierr /= 0) goto 999
+        !bndName = this%boundname(itemno)
+        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
+        text = line(istart:istop)
+        jj = 1    ! For RAINFALL
+        !call read_single_value_or_time_series(text, &
+        !                                      this%rainfall(itmp)%value, &
+        !                                      this%rainfall(itmp)%name, &
+        !                                      endtim,  &
+        !                                      this%name, 'BND', this%TsManager, &
+        !                                      this%iprpak, itmp, jj, 'RAINFALL', &
+        !                                      bndName, this%inunit)
+      case ('AUXILIARY')
+        ierr = this%lkt_check_valid(itemno)
+        if (ierr /= 0) goto 999
+        !bndName = this%boundname(itemno)
+        call urword(line, lloc, istart, istop, 1, ival, rval, this%iout, this%inunit)
+        caux = line(istart:istop)
+        do iaux = 1, this%naux
+          if (trim(adjustl(caux)) /= trim(adjustl(this%auxname(iaux)))) cycle
+          call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
+          text = line(istart:istop)
+          jj = 1 !iaux
+          ii = (itmp-1) * this%naux + iaux
+          !call read_single_value_or_time_series(text, &
+          !                                      this%lauxvar(ii)%value, &
+          !                                      this%lauxvar(ii)%name, &
+          !                                      endtim,  &
+          !                                      this%Name, 'AUX', this%TsManager, &
+          !                                      this%iprpak, itmp, jj, &
+          !                                      this%auxname(iaux), bndName, &
+          !                                      this%inunit)
+          exit
+        end do
+      case default
+        write(errmsg,'(4x,a,a)') &
+          '****ERROR. UNKNOWN '//trim(this%text)//' LAK DATA KEYWORD: ', &
+                                  line(istart:istop)
+        call store_error(errmsg)
+        call ustop()
+    end select
+    !
+    ! -- terminate if any errors were detected
+999 if (count_errors() > 0) then
+      call this%parser%StoreErrorUnit()
+      call ustop()
+    end if
+    !
+    ! -- write keyword data to output file
+    if (this%iprpak /= 0) then
+      write (this%iout, '(3x,i10,1x,a)') itmp, line(i0:istop)
+    end if
+    !
+    ! -- return
+    return
+  end subroutine lkt_set_stressperiod
+
+  function lkt_check_valid(this, itemno) result(ierr)
+! ******************************************************************************
+!  lkt_check_valid -- Determine if a valid lake or outlet number has been
+!                     specified.
+! ******************************************************************************
+    use SimModule, only: ustop, store_error
+    ! -- return
+    integer(I4B) :: ierr
+    ! -- dummy
+    class(GwtLktType),intent(inout) :: this
+    integer(I4B), intent(in) :: itemno
+    ! -- local
+    character(len=LINELENGTH) :: errmsg
+    ! -- formats
+! ------------------------------------------------------------------------------
+    ierr = 0
+    if (itemno < 1 .or. itemno > this%nlakes) then
+      write(errmsg,'(4x,a,1x,i6,1x,a,1x,i6)') &
+        '****ERROR. LAKENO ', itemno, 'MUST BE > 0 and <= ', this%nlakes
+      call store_error(errmsg)
+      ierr = 1
+    end if
+  end function lkt_check_valid
+
+
   subroutine lkt_rp2(this)
 ! ******************************************************************************
 ! lkt_rp
@@ -449,6 +639,60 @@ module GwtLktModule
 
   subroutine lkt_ad(this)
 ! ******************************************************************************
+! lkt_ad -- Add package connection to matrix
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(GwtLktType) :: this
+    ! -- local
+    integer(I4B) :: n
+    integer(I4B) :: j, iaux, ii
+! ------------------------------------------------------------------------------
+    !
+    ! -- Advance the time series
+    call this%TsManager%ad()
+    !
+    ! -- update auxiliary variables by copying from the derived-type time
+    !    series variable into the bndpackage auxvar variable so that this
+    !    information is properly written to the GWF budget file
+    !if (this%naux > 0) then
+    !  do n = 1, this%nlakes
+    !    do j = this%idxlakeconn(n), this%idxlakeconn(n + 1) - 1
+    !      do iaux = 1, this%naux
+    !        ii = (n - 1) * this%naux + iaux
+    !        this%auxvar(iaux, j) = this%lauxvar(ii)%value
+    !      end do
+    !    end do
+    !  end do
+    !end if
+    !
+    ! -- copy xnew into xold and set xnewpak to stage%value for
+    !    constant stage lakes
+    do n = 1, this%nlakes
+      this%xoldpak(n) = this%xnewpak(n)
+      if (this%iboundpak(n) < 0) then
+        this%xnewpak(n) = this%conclak(n)%value
+      end if
+    end do
+    !
+    ! -- pakmvrobj ad
+    !if (this%imover == 1) then
+    !  call this%pakmvrobj%ad()
+    !end if
+    !
+    ! -- For each observation, push simulated value and corresponding
+    !    simulation time from "current" to "preceding" and reset
+    !    "current" value.
+    !call this%obs%obs_ad()
+    !
+    ! -- return
+    return
+  end subroutine lkt_ad
+
+  subroutine lkt_ad2(this)
+! ******************************************************************************
 ! lkt_ad
 ! ******************************************************************************
 !
@@ -468,7 +712,7 @@ module GwtLktModule
     !
     ! -- Return
     return
-  end subroutine lkt_ad
+  end subroutine lkt_ad2
 
   subroutine lkt_fc(this, rhs, ia, idxglo, amatsln)
 ! ******************************************************************************
@@ -957,6 +1201,9 @@ module GwtLktModule
     ! -- allocate character array for status
     allocate(this%status(this%nlakes))
     !
+    ! -- time series
+    call mem_allocate(this%conclak, this%nlakes, 'CONCLAK', this%origin)
+    !
     ! -- budget terms
     call mem_allocate(this%qsto, this%nlakes, 'QSTO', this%origin)
     !
@@ -1007,6 +1254,7 @@ module GwtLktModule
       call mem_deallocate(this%xnewpak)
     end if
     call mem_deallocate(this%concbudssm)
+    call mem_deallocate(this%conclak)
     deallocate(this%clktbudget)
     deallocate(this%status)
     deallocate(this%lakename)

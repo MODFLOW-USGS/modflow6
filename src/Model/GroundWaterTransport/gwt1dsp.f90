@@ -611,7 +611,6 @@ module GwtDspModule
     logical :: isfound, endOfBlock
     logical, dimension(6)           :: lname
     character(len=24), dimension(6) :: aname
-    integer(I4B) :: n
     ! -- formats
     ! -- data
     data aname(1) /'   DIFFUSION COEFFICIENT'/
