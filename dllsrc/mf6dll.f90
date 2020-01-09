@@ -257,6 +257,7 @@ contains
     bmi_status = BMI_SUCCESS
   end function get_grid_type
   
+  !TODO_JH: Currently only works for rectilinear grids
   ! Get number of dimensions of the computational grid.
   function get_grid_rank(grid_id, grid_rank) result(bmi_status) bind(C, name="get_grid_rank")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_rank
@@ -298,9 +299,9 @@ contains
     ! local
     character(len=LENMODELNAME) :: model_name
     integer(I4B), dimension(:), pointer :: grid_shape
-    integer(I4B), pointer :: nvert_ptr
     character(kind=c_char) :: grid_type(MAXSTRLEN)
     character(len=MAXSTRLEN) :: grid_type_f
+    integer :: status
     
     ! make sure function is only used for implemented grid_types
     if (get_grid_type(grid_id, grid_type) /= BMI_SUCCESS) then
@@ -309,7 +310,6 @@ contains
     end if
     grid_type_f = char_array_to_string(grid_type, strlen(grid_type))
         
-    ! get shape array
     model_name = get_model_name(grid_id)
     
     if (grid_type_f == "rectilinear") then
@@ -317,8 +317,7 @@ contains
       grid_size = grid_shape(1) * grid_shape(2) * grid_shape(3)
       bmi_status = BMI_SUCCESS
     else if (grid_type_f == "unstructured") then
-      call mem_setptr(nvert_ptr, "NVERT", trim(model_name) // " DIS")
-      grid_size = nvert_ptr
+      status = get_grid_node_count(grid_id, grid_size)
       bmi_status = BMI_SUCCESS
     else
       bmi_status = BMI_FAILURE
@@ -464,6 +463,137 @@ contains
     bmi_status = BMI_SUCCESS
     
   end function get_value_double
+  
+  ! NOTE: node in BMI-terms is a vertex in Modflow terms
+  ! Get the number of nodes in an unstructured grid.
+  function get_grid_node_count(grid_id, count) result(bmi_status) bind(C, name="get_grid_node_count")
+  !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_node_count
+    use MemoryManagerModule, only: mem_setptr
+    integer(kind=c_int), intent(in) :: grid_id
+    integer(kind=c_int), intent(out) :: count
+    integer(kind=c_int) :: bmi_status
+    ! local
+    character(len=LENMODELNAME) :: model_name
+    integer :: status
+    integer(I4B), pointer :: nvert_ptr
+    character(kind=c_char) :: grid_type(MAXSTRLEN)
+    character(len=MAXSTRLEN) :: grid_type_f
+    
+    ! make sure function is only used for unstructured grids
+    status = get_grid_type(grid_id, grid_type)
+    grid_type_f = char_array_to_string(grid_type, strlen(grid_type))
+    if (grid_type_f /= "unstructured") then
+      bmi_status = BMI_FAILURE
+      return
+    end if    
+    
+    model_name = get_model_name(grid_id)
+    call mem_setptr(nvert_ptr, "NVERT", trim(model_name) // " DIS")
+    count = nvert_ptr
+    bmi_status = BMI_SUCCESS  
+  end function get_grid_node_count
+  
+  ! TODO_JH: This is a simplified implementation which ignores vertical face
+  ! Get the number of faces in an unstructured grid.
+  function get_grid_face_count(grid_id, count) result(bmi_status) bind(C, name="get_grid_face_count")
+  !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_face_count
+    use ListsModule, only: basemodellist
+    use NumericalModelModule, only: NumericalModelType, GetNumericalModelFromList
+    integer(kind=c_int), intent(in) :: grid_id
+    integer(kind=c_int), intent(out) :: count
+    integer(kind=c_int) :: bmi_status
+    ! local
+    character(len=LENMODELNAME) :: model_name
+    integer :: i
+    integer :: status
+    character(kind=c_char) :: grid_type(MAXSTRLEN)
+    character(len=MAXSTRLEN) :: grid_type_f
+    class(NumericalModelType), pointer :: numericalModel
+    
+    ! make sure function is only used for unstructured grids
+    status = get_grid_type(grid_id, grid_type)
+    grid_type_f = char_array_to_string(grid_type, strlen(grid_type))
+    if (grid_type_f /= "unstructured") then
+      bmi_status = BMI_FAILURE
+      return
+    end if
+    
+    model_name = get_model_name(grid_id)    
+    do i = 1,basemodellist%Count()
+      numericalModel => GetNumericalModelFromList(basemodellist, i)
+      if (numericalModel%name == model_name) then
+        count = numericalModel%dis%nodes 
+      end if
+    end do  
+    bmi_status = BMI_SUCCESS  
+  end function get_grid_face_count
+  
+  ! Get the face-node connectivity.
+  function get_grid_face_nodes(grid_id, face_nodes) result(bmi_status) bind(C, name="get_grid_face_nodes")
+  !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_face_nodes
+    use MemoryManagerModule, only: mem_setptr
+    integer(kind=c_int), intent(in) :: grid_id
+    type(c_ptr), intent(out) :: face_nodes
+    integer(kind=c_int) :: bmi_status
+    ! local
+    integer :: status
+    character(len=LENMODELNAME) :: model_name
+    character(kind=c_char) :: grid_type(MAXSTRLEN)
+    integer, dimension(:), pointer, contiguous :: javert_ptr
+    character(len=MAXSTRLEN) :: grid_type_f
+    
+    ! make sure function is only used for unstructured grids
+    status = get_grid_type(grid_id, grid_type)
+    grid_type_f = char_array_to_string(grid_type, strlen(grid_type))
+    if (grid_type_f /= "unstructured") then
+      bmi_status = BMI_FAILURE
+      return
+    end if
+    
+    model_name = get_model_name(grid_id)
+    call mem_setptr(javert_ptr, "JAVERT", trim(model_name) // " DIS")
+    face_nodes = c_loc(javert_ptr)
+    bmi_status = BMI_SUCCESS
+  end function get_grid_face_nodes
+  
+  ! Get the number of nodes for each face.
+  function get_grid_nodes_per_face(grid_id, nodes_per_face) result(bmi_status) bind(C, name="get_grid_nodes_per_face")
+  !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_nodes_per_face
+    use MemoryManagerModule, only: mem_setptr
+    integer(kind=c_int), intent(in) :: grid_id
+    type(c_ptr), intent(out) :: nodes_per_face
+    integer(kind=c_int) :: bmi_status
+    ! local
+    integer :: i
+    integer :: status
+    character(len=LENMODELNAME) :: model_name
+    character(kind=c_char) :: grid_type(MAXSTRLEN)
+    integer, dimension(:), pointer, contiguous :: iavert_ptr
+    character(len=MAXSTRLEN) :: grid_type_f
+    integer, dimension(:), pointer, contiguous :: array_ptr
+    integer, dimension(:), target, allocatable, save :: array
+    
+    ! make sure function is only used for unstructured grids
+    status = get_grid_type(grid_id, grid_type)
+    grid_type_f = char_array_to_string(grid_type, strlen(grid_type))
+    if (grid_type_f /= "unstructured") then
+      bmi_status = BMI_FAILURE
+      return
+    end if
+    
+    model_name = get_model_name(grid_id)
+    call mem_setptr(iavert_ptr, "IAVERT", trim(model_name) // " DIS")
+    
+    allocate(array(size(iavert_ptr) - 1))
+    do i = 2, size(iavert_ptr)
+      array = iavert_ptr(i) - iavert_ptr(i-1) - 1
+    end do
+    
+    array_ptr => array
+    nodes_per_face = c_loc(array_ptr)
+    bmi_status = BMI_SUCCESS
+  end function get_grid_nodes_per_face
+  
   
   integer(c_int) pure function strlen(char_array)
     character(c_char), intent(in) :: char_array(LENORIGIN)
