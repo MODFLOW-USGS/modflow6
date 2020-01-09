@@ -2240,7 +2240,7 @@ module GwtLktModule
   
   subroutine lkt_accumulate_ccterm(this, ilak, rrate, ccratin, ccratout)
 ! ******************************************************************************
-! lkt_accumulate_ccterm -- Accumulate constant head terms for budget.
+! lkt_accumulate_ccterm -- Accumulate constant concentration terms for budget.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
