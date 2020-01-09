@@ -53,7 +53,8 @@ module GwtLktModule
     type (MemoryTSType), dimension(:), pointer, contiguous :: lauxvar => null()
     type(GwtFmiType), pointer                          :: fmi => null()         ! pointer to fmi object
     type(BudgetType), pointer :: budget => NULL()
-    real(DP), dimension(:), pointer, contiguous        :: qsto => null()
+    real(DP), dimension(:), pointer, contiguous        :: qsto => null()        ! mass flux due to storage change
+    real(DP), dimension(:), pointer, contiguous        :: ccterm => null()      ! mass flux required to maintain constant concentration
     type(BudgetObjectType), pointer                    :: lakbudptr => null()
     integer(I4B), pointer                              :: idxbudfjf => null()   ! index of flow ja face in lakbudptr
     integer(I4B), pointer                              :: idxbudgwf => null()   ! index of gwf terms in lakbudptr
@@ -63,6 +64,7 @@ module GwtLktModule
     integer(I4B), pointer                              :: idxbudroff => null()  ! index of runoff terms in lakbudptr
     integer(I4B), pointer                              :: idxbudiflw => null()  ! index of inflow terms in lakbudptr
     integer(I4B), pointer                              :: idxbudwdrl => null()  ! index of withdrawal terms in lakbudptr
+    integer(I4B), pointer                              :: idxbudoutf => null()  ! index of outflow terms in lakbudptr
     integer(I4B), pointer                              :: idxbudaux => null()   ! index of auxiliary terms in lakbudptr
     integer(I4B), dimension(:), pointer, contiguous    :: idxbudssm => null()   ! flag that lakbudptr%buditem is a general solute source/sink
     integer(I4B), pointer                              :: nconcbudssm => null() ! number of concbudssm terms (columns)
@@ -89,6 +91,7 @@ module GwtLktModule
     procedure, private :: lkt_cfupdate
     procedure, private :: lkt_check_valid
     procedure, private :: lkt_set_stressperiod
+    procedure, private :: lkt_accumulate_ccterm
     procedure :: bnd_bd => lkt_bd
     procedure :: bnd_ot => lkt_ot
     procedure :: bnd_da => lkt_da
@@ -924,6 +927,16 @@ module GwtLktModule
       end do
     end if
     !
+    ! -- add outflow contribution
+    if (this%idxbudoutf /= 0) then
+      do j = 1, this%lakbudptr%budterm(this%idxbudoutf)%nlist
+        n = this%lakbudptr%budterm(this%idxbudoutf)%id1(j)
+        iposd = this%idxpakdiag(n)
+        qbnd = this%lakbudptr%budterm(this%idxbudoutf)%flow(j)
+        amatsln(iposd) = amatsln(iposd) + qbnd
+      end do
+    end if
+    !
     ! -- go through each lak-gwf connection
     do j = 1, this%lakbudptr%budterm(this%idxbudgwf)%nlist
       !
@@ -1027,6 +1040,7 @@ module GwtLktModule
     real(DP) :: ratein, rateout
     real(DP) :: v0, v1
     real(DP) :: qbnd, ctmp, omega
+    real(DP) :: ccratin, ccratout
     ! -- for observations
     integer(I4B) :: iprobslocal
     ! -- formats
@@ -1051,6 +1065,14 @@ module GwtLktModule
     ! -- lak budget routines (start by resetting)
     call this%budget%reset()
     !
+    ! -- initialize ccterm, which is used to sum up all mass flows
+    !    into a constant concentration cell
+    ccratin = DZERO
+    ccratout = DZERO
+    do n = 1, this%nlakes
+      this%ccterm(n) = DZERO
+    end do
+    !
     ! -- gwf term
     ratein = DZERO
     rateout = DZERO
@@ -1062,6 +1084,7 @@ module GwtLktModule
         rrate = this%hcof(j) * x(igwfnode) - this%rhs(j)
         rrate = -rrate  ! flip sign so relative to lake
       end if
+      call this%lkt_accumulate_ccterm(n, rrate, ccratin, ccratout)
       if(rrate < DZERO) then
         rateout = rateout - rrate
       else
@@ -1084,6 +1107,7 @@ module GwtLktModule
                           rhs, hcof, rrate)
       end if
       this%qsto(n) = rrate
+      call this%lkt_accumulate_ccterm(n, rrate, ccratin, ccratout)
       if(rrate < DZERO) then
         rateout = rateout - rrate
       else
@@ -1104,6 +1128,7 @@ module GwtLktModule
         qbnd = this%lakbudptr%budterm(this%idxbudrain)%flow(j)
         ctmp = this%concrain(n)%value
         rrate = ctmp * qbnd
+        call this%lkt_accumulate_ccterm(n, rrate, ccratin, ccratout)
         if(rrate < DZERO) then
           rateout = rateout - rrate
         else
@@ -1129,6 +1154,7 @@ module GwtLktModule
           omega = DZERO
         end if
         rrate = omega * qbnd * this%xnewpak(n) + (DONE - omega) * qbnd * ctmp
+        call this%lkt_accumulate_ccterm(n, rrate, ccratin, ccratout)
         if(rrate < DZERO) then
           rateout = rateout - rrate
         else
@@ -1149,6 +1175,7 @@ module GwtLktModule
         qbnd = this%lakbudptr%budterm(this%idxbudroff)%flow(j)
         ctmp = this%concroff(n)%value
         rrate = ctmp * qbnd
+        call this%lkt_accumulate_ccterm(n, rrate, ccratin, ccratout)
         if(rrate < DZERO) then
           rateout = rateout - rrate
         else
@@ -1169,6 +1196,7 @@ module GwtLktModule
         qbnd = this%lakbudptr%budterm(this%idxbudiflw)%flow(j)
         ctmp = this%conciflw(n)%value
         rrate = ctmp * qbnd
+        call this%lkt_accumulate_ccterm(n, rrate, ccratin, ccratout)
         if(rrate < DZERO) then
           rateout = rateout - rrate
         else
@@ -1189,6 +1217,7 @@ module GwtLktModule
         qbnd = this%lakbudptr%budterm(this%idxbudwdrl)%flow(j)
         ctmp = this%xnewpak(n)
         rrate = qbnd * this%xnewpak(n)
+        call this%lkt_accumulate_ccterm(n, rrate, ccratin, ccratout)
         if(rrate < DZERO) then
           rateout = rateout - rrate
         else
@@ -1198,6 +1227,32 @@ module GwtLktModule
     end if
     call this%budget%addentry(ratein, rateout, delt,  &
                               this%clktbudget(8), isuppress_output)
+    !
+    ! -- outflow contribution
+    ! -- todo: need to accumulate chterm for constant concentration lakes
+    ratein = DZERO
+    rateout = DZERO
+    if (this%idxbudoutf /= 0) then
+      do j = 1, this%lakbudptr%budterm(this%idxbudoutf)%nlist
+        n = this%lakbudptr%budterm(this%idxbudoutf)%id1(j)
+        qbnd = this%lakbudptr%budterm(this%idxbudoutf)%flow(j)
+        ctmp = this%xnewpak(n)
+        rrate = qbnd * this%xnewpak(n)
+        call this%lkt_accumulate_ccterm(n, rrate, ccratin, ccratout)
+        if(rrate < DZERO) then
+          rateout = rateout - rrate
+        else
+          ratein = ratein + rrate
+        endif
+      end do
+    end if
+    call this%budget%addentry(ratein, rateout, delt,  &
+                              this%clktbudget(9), isuppress_output)
+    !
+    ! -- add entry for constant concentration terms
+    call this%budget%addentry(ccratin, ccratout, delt,  &
+                              this%clktbudget(3), isuppress_output)
+    
     !
     ! -- todo: implement the budobj for printing the budget
     !    and writing the individual budget terms to an lkt binary bud file
@@ -1363,6 +1418,7 @@ module GwtLktModule
     call mem_allocate(this%idxbudroff, 'IDXBUDROFF', this%origin)
     call mem_allocate(this%idxbudiflw, 'IDXBUDIFLW', this%origin)
     call mem_allocate(this%idxbudwdrl, 'IDXBUDWDRL', this%origin)
+    call mem_allocate(this%idxbudoutf, 'IDXBUDOUTF', this%origin)
     call mem_allocate(this%idxbudaux, 'IDXBUDAUX', this%origin)
     call mem_allocate(this%nconcbudssm, 'NCONCBUDSSM', this%origin)
     ! 
@@ -1373,7 +1429,7 @@ module GwtLktModule
     this%ibudgetout = 0
     this%igwflakpak = 0
     this%nlakes = 0
-    this%bditems = 8
+    this%bditems = 9
     this%idxbudfjf = 0
     this%idxbudgwf = 0
     this%idxbudsto = 0
@@ -1382,6 +1438,7 @@ module GwtLktModule
     this%idxbudroff = 0
     this%idxbudiflw = 0
     this%idxbudwdrl = 0
+    this%idxbudoutf = 0
     this%idxbudaux = 0
     this%nconcbudssm = 0
     !
@@ -1434,6 +1491,7 @@ module GwtLktModule
     !
     ! -- budget terms
     call mem_allocate(this%qsto, this%nlakes, 'QSTO', this%origin)
+    call mem_allocate(this%ccterm, this%nlakes, 'CCTERM', this%origin)
     !
     ! -- concentration for budget terms
     call mem_allocate(this%concbudssm, this%nconcbudssm, this%nlakes, &
@@ -1448,13 +1506,15 @@ module GwtLktModule
     this%clktbudget(4) = '        RAINFALL'
     this%clktbudget(5) = '     EVAPORATION'
     this%clktbudget(6) = '          RUNOFF'
-    this%clktbudget(7) = '          INFLOW'
+    this%clktbudget(7) = '      EXT-INFLOW'
     this%clktbudget(8) = '      WITHDRAWAL'
+    this%clktbudget(9) = '     EXT-OUTFLOW'
     !
     ! -- initialize arrays
     do n = 1, this%nlakes
       this%status(n) = 'ACTIVE'
       this%qsto(n) = DZERO
+      this%ccterm(n) = DZERO
       this%concbudssm(:, n) = DZERO
     end do
     !
@@ -1479,6 +1539,7 @@ module GwtLktModule
     ! -- deallocate arrays
     call mem_deallocate(this%dbuff)
     call mem_deallocate(this%qsto)
+    call mem_deallocate(this%ccterm)
     call mem_deallocate(this%strt)
     call mem_deallocate(this%lauxvar)
     call mem_deallocate(this%xoldpak)
@@ -1520,6 +1581,7 @@ module GwtLktModule
     call mem_deallocate(this%idxbudroff)
     call mem_deallocate(this%idxbudiflw)
     call mem_deallocate(this%idxbudwdrl)
+    call mem_deallocate(this%idxbudoutf)
     call mem_deallocate(this%idxbudaux)
     call mem_deallocate(this%idxbudssm)
     call mem_deallocate(this%nconcbudssm)
@@ -1613,6 +1675,9 @@ module GwtLktModule
         this%idxbudssm(ip) = 0
       case('WITHDRAWAL')
         this%idxbudwdrl = ip
+        this%idxbudssm(ip) = 0
+      case('EXT-OUTFLOW')
+        this%idxbudoutf = ip
         this%idxbudssm(ip) = 0
       case('AUXILIARY')
         this%idxbudaux = ip
@@ -2130,6 +2195,17 @@ module GwtLktModule
       end do
     end if
     !
+    ! -- add outflow contribution
+    if (this%idxbudoutf /= 0) then
+      do j = 1, this%lakbudptr%budterm(this%idxbudoutf)%nlist
+        n = this%lakbudptr%budterm(this%idxbudoutf)%id1(j)
+        qbnd = this%lakbudptr%budterm(this%idxbudoutf)%flow(j)
+        ctmp = this%xnewpak(n)
+        c1 = qbnd * ctmp
+        this%dbuff(n) = this%dbuff(n) + c1
+      end do
+    end if
+    !
     ! -- go through each gwf connection and accumulate 
     !    total mass in dbuff mass
     do j = 1, this%lakbudptr%budterm(this%idxbudgwf)%nlist
@@ -2153,13 +2229,53 @@ module GwtLktModule
     do n = 1, this%nlakes
       call this%get_volumes(n, v1, v0, delt)
       c1 = this%dbuff(n) / v1
-      this%xnewpak(n) = c1
+      if (this%iboundpak(n) > 0) then
+        this%xnewpak(n) = c1
+      end if
     end do
     !
     ! -- Return
     return
   end subroutine lkt_solve
   
+  subroutine lkt_accumulate_ccterm(this, ilak, rrate, ccratin, ccratout)
+! ******************************************************************************
+! lkt_accumulate_ccterm -- Accumulate constant head terms for budget.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(GwtLktType) :: this
+    integer(I4B), intent(in) :: ilak
+    real(DP), intent(in) :: rrate
+    real(DP), intent(inout) :: ccratin
+    real(DP), intent(inout) :: ccratout
+    ! -- locals
+    real(DP) :: q
+    ! format
+    ! code
+! ------------------------------------------------------------------------------
+    !
+    if (this%iboundpak(ilak) < 0) then
+      q = -rrate
+      this%ccterm(ilak) = this%ccterm(ilak) + q
+      !
+      ! -- See if flow is into lake or out of lake.
+      if (q < DZERO) then
+        !
+        ! -- Flow is out of lake subtract rate from ratout.
+        ccratout = ccratout - q
+      else
+        !
+        ! -- Flow is into lake; add rate to ratin.
+        ccratin = ccratin + q
+      end if
+    end if
+    ! -- return
+    return
+  end subroutine lkt_accumulate_ccterm
+
   subroutine define_listlabel(this)
 ! ******************************************************************************
 ! define_listlabel -- Define the list heading that is written to iout when
