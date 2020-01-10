@@ -115,7 +115,22 @@ Version numbers for MODFLOW 6 will follow a major.minor.revision format.  The ma
 This section describes changes introduced into MODFLOW 6 with each release.  These changes may substantially affect users.
 
 \begin{itemize}
-\item Version mf6.1.0--Release Candidate
+\item Version mf6.1.1--Release Candidate
+
+\underline{NEW FUNCTIONALITY}
+
+\underline{BASIC FUNCTIONALITY}
+
+\underline{STRESS PACKAGES}
+
+\underline{ADVANCED STRESS PACKAGES}
+\begin{itemize}
+\item The LAK Package would accept negative user-input values for  RAINFALL, EVAPORATION, RUNOFF, INFLOW, and WITHDRAWAL even though the user guide mentioned that negative values are not allowed for these flow terms.  Error checks were added to ensure these values are specified as positive.
+\end{itemize}
+
+\underline{SOLUTION}
+
+\item Version mf6.1.0
 
 \underline{NEW FUNCTIONALITY}
 \begin{itemize}
