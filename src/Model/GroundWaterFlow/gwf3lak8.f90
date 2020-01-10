@@ -3040,6 +3040,12 @@ contains
                                               this%name, 'BND', this%TsManager, &
                                               this%iprpak, itmp, jj, 'RAINFALL', &
                                               bndName, this%inunit)
+        if (this%rainfall(itmp)%value < DZERO) then
+          write(errmsg, '(4x, a, i0, a, G0, a)') &
+            '****ERROR. LAKE ', itmp, ' WAS ASSIGNED A RAINFALL VALUE OF ', &
+            this%rainfall(itmp)%value, '. RAINFALL MUST BE POSITIVE.'
+          call store_error(errmsg)
+        end if
       case ('EVAPORATION')
         ierr = this%lak_check_valid(itemno)
         if (ierr /= 0) goto 999
@@ -3054,6 +3060,12 @@ contains
                                               this%name, 'BND', this%TsManager, &
                                               this%iprpak, itmp, jj, 'EVAPORATION', &
                                               bndName, this%inunit)
+        if (this%evaporation(itmp)%value < DZERO) then
+          write(errmsg, '(4x, a, i0, a, G0, a)') &
+            '****ERROR. LAKE ', itmp, ' WAS ASSIGNED AN EVAPORATION VALUE OF ', &
+            this%evaporation(itmp)%value, '. EVAPORATION MUST BE POSITIVE.'
+          call store_error(errmsg)
+        end if
       case ('RUNOFF')
         ierr = this%lak_check_valid(itemno)
         if (ierr /= 0) goto 999
@@ -3068,6 +3080,12 @@ contains
                                               this%name, 'BND', this%TsManager, &
                                               this%iprpak, itmp, jj, 'RUNOFF', &
                                               bndName, this%inunit)
+        if (this%runoff(itmp)%value < DZERO) then
+          write(errmsg, '(4x, a, i0, a, G0, a)') &
+            '****ERROR. LAKE ', itmp, ' WAS ASSIGNED A RUNOFF VALUE OF ', &
+            this%runoff(itmp)%value, '. RUNOFF MUST BE POSITIVE.'
+          call store_error(errmsg)
+        end if
       case ('INFLOW')
         ierr = this%lak_check_valid(itemno)
         if (ierr /= 0) goto 999
@@ -3082,6 +3100,12 @@ contains
                                               this%name, 'BND', this%TsManager, &
                                               this%iprpak, itmp, jj, 'INFLOW', &
                                               bndName, this%inunit)
+        if (this%inflow(itmp)%value < DZERO) then
+          write(errmsg, '(4x, a, i0, a, G0, a)') &
+            '****ERROR. LAKE ', itmp, ' WAS ASSIGNED AN INFLOW VALUE OF ', &
+            this%inflow(itmp)%value, '. INFLOW MUST BE POSITIVE.'
+          call store_error(errmsg)
+        end if
       case ('WITHDRAWAL')
         ierr = this%lak_check_valid(itemno)
         if (ierr /= 0) goto 999
@@ -3096,6 +3120,12 @@ contains
                                               this%name, 'BND', this%TsManager, &
                                               this%iprpak, itmp, jj, 'WITHDRAWAL', &
                                               bndName, this%inunit)
+        if (this%withdrawal(itmp)%value < DZERO) then
+          write(errmsg, '(4x, a, i0, a, G0, a)') &
+            '****ERROR. LAKE ', itmp, ' WAS ASSIGNED A WITHDRAWAL VALUE OF ', &
+            this%withdrawal(itmp)%value, '. WITHDRAWAL MUST BE POSITIVE.'
+          call store_error(errmsg)
+        end if
       case ('RATE')
         ierr = this%lak_check_valid(-itemno)
         if (ierr /= 0) goto 999

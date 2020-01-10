@@ -16,7 +16,7 @@ module GwtLktModule
   use LakModule, only: LakType
   use MemoryTypeModule, only: MemoryTSType
   use BudgetModule, only: BudgetType
-  use BudgetObjectModule, only: BudgetObjectType
+  use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr
   
   implicit none
   
@@ -52,7 +52,6 @@ module GwtLktModule
                                  contiguous :: lakename => null()
     type (MemoryTSType), dimension(:), pointer, contiguous :: lauxvar => null()
     type(GwtFmiType), pointer                          :: fmi => null()         ! pointer to fmi object
-    type(BudgetType), pointer :: budget => NULL()
     real(DP), dimension(:), pointer, contiguous        :: qsto => null()        ! mass flux due to storage change
     real(DP), dimension(:), pointer, contiguous        :: ccterm => null()      ! mass flux required to maintain constant concentration
     type(BudgetObjectType), pointer                    :: lakbudptr => null()
@@ -69,6 +68,9 @@ module GwtLktModule
     integer(I4B), dimension(:), pointer, contiguous    :: idxbudssm => null()   ! flag that lakbudptr%buditem is a general solute source/sink
     integer(I4B), pointer                              :: nconcbudssm => null() ! number of concbudssm terms (columns)
     real(DP), dimension(:, : ), pointer, contiguous    :: concbudssm => null()  ! user specified concentrations for lake flow terms
+    !
+    ! -- lake budget object
+    type(BudgetObjectType), pointer :: budobj => null()
 
     ! -- time series aware data
     type (MemoryTSType), dimension(:), pointer, contiguous :: conclak => null()  ! lake concentration
@@ -105,6 +107,14 @@ module GwtLktModule
     procedure :: read_initial_attr => lkt_read_initial_attr
     procedure :: define_listlabel
     procedure :: get_volumes
+    procedure, private :: lkt_setup_budobj
+    procedure, private :: lkt_fill_budobj
+    procedure, private :: lkt_rain_term
+    procedure, private :: lkt_evap_term
+    procedure, private :: lkt_roff_term
+    procedure, private :: lkt_iflw_term
+    procedure, private :: lkt_wdrl_term
+    procedure, private :: lkt_outf_term
     
   end type GwtLktType
 
@@ -344,12 +354,11 @@ module GwtLktModule
     class(GwtLktType), intent(inout) :: this
     ! -- local
     integer(I4B) :: ierr
-    integer(I4B) :: node, n
+    integer(I4B) :: n
     logical :: isfound, endOfBlock
     character(len=LINELENGTH) :: line
     character(len=LINELENGTH) :: errmsg
     integer(I4B) :: itemno
-    integer(I4B) :: j
     integer(I4B) :: isfirst
     integer(I4B) :: igwfnode
     ! -- formats
@@ -601,14 +610,14 @@ module GwtLktModule
           text = line(istart:istop)
           jj = 1 !iaux
           ii = (itmp-1) * this%naux + iaux
-          !call read_single_value_or_time_series(text, &
-          !                                      this%lauxvar(ii)%value, &
-          !                                      this%lauxvar(ii)%name, &
-          !                                      endtim,  &
-          !                                      this%Name, 'AUX', this%TsManager, &
-          !                                      this%iprpak, itmp, jj, &
-          !                                      this%auxname(iaux), bndName, &
-          !                                      this%inunit)
+          call read_single_value_or_time_series(text, &
+                                                this%lauxvar(ii)%value, &
+                                                this%lauxvar(ii)%name, &
+                                                endtim,  &
+                                                this%Name, 'AUX', this%TsManager, &
+                                                this%iprpak, itmp, jj, &
+                                                this%auxname(iaux), bndName, &
+                                                this%inunit)
           exit
         end do
       case default
@@ -658,31 +667,6 @@ module GwtLktModule
     end if
   end function lkt_check_valid
 
-
-  subroutine lkt_rp2(this)
-! ******************************************************************************
-! lkt_rp
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    ! -- dummy
-    class(GwtLktType), intent(inout) :: this
-    ! -- local
-    integer(I4B) :: i, igwfnode
-! ------------------------------------------------------------------------------
-    !
-    ! -- TODO: read period data
-    do i = 1, this%lakbudptr%budterm(this%idxbudgwf)%nlist
-      igwfnode = this%lakbudptr%budterm(this%idxbudgwf)%id2(i)
-      this%nodelist(i) = igwfnode
-    end do
-    !
-    ! -- Return
-    return
-  end subroutine lkt_rp2
-
   subroutine lkt_ad(this)
 ! ******************************************************************************
 ! lkt_ad -- Add package connection to matrix
@@ -703,16 +687,15 @@ module GwtLktModule
     ! -- update auxiliary variables by copying from the derived-type time
     !    series variable into the bndpackage auxvar variable so that this
     !    information is properly written to the GWF budget file
-    !if (this%naux > 0) then
-    !  do n = 1, this%nlakes
-    !    do j = this%idxlakeconn(n), this%idxlakeconn(n + 1) - 1
-    !      do iaux = 1, this%naux
-    !        ii = (n - 1) * this%naux + iaux
-    !        this%auxvar(iaux, j) = this%lauxvar(ii)%value
-    !      end do
-    !    end do
-    !  end do
-    !end if
+    if (this%naux > 0) then
+      do j = 1, this%lakbudptr%budterm(this%idxbudgwf)%nlist
+        n = this%lakbudptr%budterm(this%idxbudgwf)%id1(j)
+        do iaux = 1, this%naux
+          ii = (n - 1) * this%naux + iaux
+          this%auxvar(iaux, j) = this%lauxvar(ii)%value
+        end do
+      end do
+    end if
     !
     ! -- copy xnew into xold and set xnewpak to stage%value for
     !    constant stage lakes
@@ -736,29 +719,6 @@ module GwtLktModule
     ! -- return
     return
   end subroutine lkt_ad
-
-  subroutine lkt_ad2(this)
-! ******************************************************************************
-! lkt_ad
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    ! -- dummy
-    class(GwtLktType) :: this
-    ! -- local
-    integer(I4B) :: n
-! ------------------------------------------------------------------------------
-    !
-    ! -- allocate scalars in NumericalPackageType
-    do n = 1, this%nlakes
-      this%xoldpak(n) = this%xnewpak(n)
-    end do
-    !
-    ! -- Return
-    return
-  end subroutine lkt_ad2
 
   subroutine lkt_fc(this, rhs, ia, idxglo, amatsln)
 ! ******************************************************************************
@@ -816,7 +776,6 @@ module GwtLktModule
       amatsln(idiag) = amatsln(idiag) + this%hcof(j)
       rhs(igwfnode) = rhs(igwfnode) + this%rhs(j)
     end do
-    
     !
     ! -- Return
     return
@@ -838,7 +797,7 @@ module GwtLktModule
     integer(I4B), dimension(:), intent(in) :: idxglo
     real(DP), dimension(:), intent(inout) :: amatsln
     ! -- local
-    integer(I4B) :: j, n
+    integer(I4B) :: j, n, n1, n2
     integer(I4B) :: iloc
     integer(I4B) :: iposd, iposoffd
     integer(I4B) :: ipossymd, ipossymoffd
@@ -847,7 +806,9 @@ module GwtLktModule
     real(DP) :: v0
     real(DP) :: v1
     real(DP) :: omega
-    real(DP) :: ctmp
+    real(DP) :: rrate
+    real(DP) :: rhsval
+    real(DP) :: hcofval
 ! ------------------------------------------------------------------------------
     !
     ! -- Add coefficients for LKT and GWF connections (qbnd positive into lake)
@@ -861,79 +822,71 @@ module GwtLktModule
       amatsln(iposd) = amatsln(iposd) - v1 / delt
       rhs(iloc) = rhs(iloc) - cold * v0 / delt
       !
-      ! -- todo: add or remove mass directly to and from lak (precip, evap, runoff, etc.)
-      ! -- add em here
-      
     end do
     !
     ! -- add rainfall contribution
     if (this%idxbudrain /= 0) then
       do j = 1, this%lakbudptr%budterm(this%idxbudrain)%nlist
-        n = this%lakbudptr%budterm(this%idxbudrain)%id1(j)
-        iloc = this%idxlocnode(n)
-        qbnd = this%lakbudptr%budterm(this%idxbudrain)%flow(j)
-        ctmp = this%concrain(n)%value
-        rhs(iloc) = rhs(iloc) - ctmp * qbnd
+        call this%lkt_rain_term(j, n1, n2, rrate, rhsval, hcofval)
+        iloc = this%idxlocnode(n1)
+        iposd = this%idxpakdiag(n1)
+        amatsln(iposd) = amatsln(iposd) + hcofval
+        rhs(iloc) = rhs(iloc) + rhsval
       end do
     end if
     !
     ! -- add evaporation contribution
     if (this%idxbudevap /= 0) then
       do j = 1, this%lakbudptr%budterm(this%idxbudevap)%nlist
-        n = this%lakbudptr%budterm(this%idxbudevap)%id1(j)
-        iloc = this%idxlocnode(n)
-        iposd = this%idxpakdiag(n)
-        qbnd = this%lakbudptr%budterm(this%idxbudevap)%flow(j)
-        ctmp = this%concevap(n)%value
-        if (this%xnewpak(n) < ctmp) then
-          omega = DONE
-        else
-          omega = DZERO
-        end if
-        amatsln(iposd) = amatsln(iposd) + omega * qbnd
-        rhs(iloc) = rhs(iloc) - (DONE - omega) * qbnd * ctmp
+        call this%lkt_evap_term(j, n1, n2, rrate, rhsval, hcofval)
+        iloc = this%idxlocnode(n1)
+        iposd = this%idxpakdiag(n1)
+        amatsln(iposd) = amatsln(iposd) + hcofval
+        rhs(iloc) = rhs(iloc) + rhsval
       end do
     end if
     !
     ! -- add runoff contribution
     if (this%idxbudroff /= 0) then
       do j = 1, this%lakbudptr%budterm(this%idxbudroff)%nlist
-        n = this%lakbudptr%budterm(this%idxbudroff)%id1(j)
-        iloc = this%idxlocnode(n)
-        qbnd = this%lakbudptr%budterm(this%idxbudroff)%flow(j)
-        ctmp = this%concroff(n)%value
-        rhs(iloc) = rhs(iloc) - ctmp * qbnd
+        call this%lkt_roff_term(j, n1, n2, rrate, rhsval, hcofval)
+        iloc = this%idxlocnode(n1)
+        iposd = this%idxpakdiag(n1)
+        amatsln(iposd) = amatsln(iposd) + hcofval
+        rhs(iloc) = rhs(iloc) + rhsval
       end do
     end if
     !
     ! -- add inflow contribution
     if (this%idxbudiflw /= 0) then
       do j = 1, this%lakbudptr%budterm(this%idxbudiflw)%nlist
-        n = this%lakbudptr%budterm(this%idxbudiflw)%id1(j)
-        iloc = this%idxlocnode(n)
-        qbnd = this%lakbudptr%budterm(this%idxbudroff)%flow(j)
-        ctmp = this%conciflw(n)%value
-        rhs(iloc) = rhs(iloc) - ctmp * qbnd
+        call this%lkt_iflw_term(j, n1, n2, rrate, rhsval, hcofval)
+        iloc = this%idxlocnode(n1)
+        iposd = this%idxpakdiag(n1)
+        amatsln(iposd) = amatsln(iposd) + hcofval
+        rhs(iloc) = rhs(iloc) + rhsval
       end do
     end if
     !
     ! -- add withdrawal contribution
     if (this%idxbudwdrl /= 0) then
       do j = 1, this%lakbudptr%budterm(this%idxbudwdrl)%nlist
-        n = this%lakbudptr%budterm(this%idxbudwdrl)%id1(j)
-        iposd = this%idxpakdiag(n)
-        qbnd = this%lakbudptr%budterm(this%idxbudwdrl)%flow(j)
-        amatsln(iposd) = amatsln(iposd) + qbnd
+        call this%lkt_wdrl_term(j, n1, n2, rrate, rhsval, hcofval)
+        iloc = this%idxlocnode(n1)
+        iposd = this%idxpakdiag(n1)
+        amatsln(iposd) = amatsln(iposd) + hcofval
+        rhs(iloc) = rhs(iloc) + rhsval
       end do
     end if
     !
     ! -- add outflow contribution
     if (this%idxbudoutf /= 0) then
       do j = 1, this%lakbudptr%budterm(this%idxbudoutf)%nlist
-        n = this%lakbudptr%budterm(this%idxbudoutf)%id1(j)
-        iposd = this%idxpakdiag(n)
-        qbnd = this%lakbudptr%budterm(this%idxbudoutf)%flow(j)
-        amatsln(iposd) = amatsln(iposd) + qbnd
+        call this%lkt_outf_term(j, n1, n2, rrate, rhsval, hcofval)
+        iloc = this%idxlocnode(n1)
+        iposd = this%idxpakdiag(n1)
+        amatsln(iposd) = amatsln(iposd) + hcofval
+        rhs(iloc) = rhs(iloc) + rhsval
       end do
     end if
     !
@@ -1021,7 +974,7 @@ module GwtLktModule
     use InputOutputModule, only: ulasav, ubdsv06
     ! -- dummy
     class(GwtLktType) :: this
-    real(DP),dimension(:),intent(in) :: x
+    real(DP),dimension(:), intent(in) :: x
     integer(I4B), intent(in) :: idvfl
     integer(I4B), intent(in) :: icbcfl
     integer(I4B), intent(in) :: ibudfl
@@ -1033,14 +986,10 @@ module GwtLktModule
     integer(I4B), optional, intent(in) :: iadv
     ! -- local
     integer(I4B) :: ibinun
-    integer(I4B) :: n, j
-    integer(I4B) :: igwfnode
+    integer(I4B) :: n
     real(DP) :: c
     real(DP) :: rrate, rhs, hcof
-    real(DP) :: ratein, rateout
     real(DP) :: v0, v1
-    real(DP) :: qbnd, ctmp, omega
-    real(DP) :: ccratin, ccratout
     ! -- for observations
     integer(I4B) :: iprobslocal
     ! -- formats
@@ -1062,43 +1011,7 @@ module GwtLktModule
     call this%BndType%bnd_bd(x, idvfl, icbcfl, ibudfl, icbcun, iprobslocal,    &
                              isuppress_output, model_budget)
     !
-    ! -- lak budget routines (start by resetting)
-    call this%budget%reset()
-    !
-    ! -- initialize ccterm, which is used to sum up all mass flows
-    !    into a constant concentration cell
-    ccratin = DZERO
-    ccratout = DZERO
-    do n = 1, this%nlakes
-      this%ccterm(n) = DZERO
-    end do
-    !
-    ! -- gwf term
-    ratein = DZERO
-    rateout = DZERO
-    do j = 1, this%lakbudptr%budterm(this%idxbudgwf)%nlist
-      n = this%lakbudptr%budterm(this%idxbudgwf)%id1(j)
-      rrate = DZERO
-      if (this%iboundpak(n) > 0) then
-        igwfnode = this%lakbudptr%budterm(this%idxbudgwf)%id2(j)
-        rrate = this%hcof(j) * x(igwfnode) - this%rhs(j)
-        rrate = -rrate  ! flip sign so relative to lake
-      end if
-      call this%lkt_accumulate_ccterm(n, rrate, ccratin, ccratout)
-      if(rrate < DZERO) then
-        rateout = rateout - rrate
-      else
-        ratein = ratein + rrate
-      endif
-    end do
-    !
-    ! -- check the lkt-gwt rates into the lkt package budget
-    call this%budget%addentry(ratein, rateout, delt,  &
-                              this%clktbudget(1), isuppress_output)
-    !
-    ! -- storage term
-    ratein = DZERO
-    rateout = DZERO
+    ! -- calculate storage term
     do n = 1, this%nlakes
       rrate = DZERO
       if (this%iboundpak(n) > 0) then
@@ -1107,156 +1020,7 @@ module GwtLktModule
                           rhs, hcof, rrate)
       end if
       this%qsto(n) = rrate
-      call this%lkt_accumulate_ccterm(n, rrate, ccratin, ccratout)
-      if(rrate < DZERO) then
-        rateout = rateout - rrate
-      else
-        ratein = ratein + rrate
-      endif
     end do
-    call this%budget%addentry(ratein, rateout, delt,  &
-                              this%clktbudget(2), isuppress_output)
-
-    !
-    ! -- rainfall contribution
-    ! -- todo: need to accumulate chterm for constant concentration lakes
-    ratein = DZERO
-    rateout = DZERO
-    if (this%idxbudrain /= 0) then
-      do j = 1, this%lakbudptr%budterm(this%idxbudrain)%nlist
-        n = this%lakbudptr%budterm(this%idxbudrain)%id1(j)
-        qbnd = this%lakbudptr%budterm(this%idxbudrain)%flow(j)
-        ctmp = this%concrain(n)%value
-        rrate = ctmp * qbnd
-        call this%lkt_accumulate_ccterm(n, rrate, ccratin, ccratout)
-        if(rrate < DZERO) then
-          rateout = rateout - rrate
-        else
-          ratein = ratein + rrate
-        endif
-      end do
-    end if
-    call this%budget%addentry(ratein, rateout, delt,  &
-                              this%clktbudget(4), isuppress_output)
-    !
-    ! -- evaporation contribution
-    ! -- todo: need to accumulate chterm for constant concentration lakes
-    ratein = DZERO
-    rateout = DZERO
-    if (this%idxbudevap /= 0) then
-      do j = 1, this%lakbudptr%budterm(this%idxbudevap)%nlist
-        n = this%lakbudptr%budterm(this%idxbudevap)%id1(j)
-        qbnd = this%lakbudptr%budterm(this%idxbudevap)%flow(j)
-        ctmp = this%concevap(n)%value
-        if (this%xnewpak(n) < ctmp) then
-          omega = DONE
-        else
-          omega = DZERO
-        end if
-        rrate = omega * qbnd * this%xnewpak(n) + (DONE - omega) * qbnd * ctmp
-        call this%lkt_accumulate_ccterm(n, rrate, ccratin, ccratout)
-        if(rrate < DZERO) then
-          rateout = rateout - rrate
-        else
-          ratein = ratein + rrate
-        endif
-      end do
-    end if
-    call this%budget%addentry(ratein, rateout, delt,  &
-                              this%clktbudget(5), isuppress_output)
-    !
-    ! -- runoff contribution
-    ! -- todo: need to accumulate chterm for constant concentration lakes
-    ratein = DZERO
-    rateout = DZERO
-    if (this%idxbudroff /= 0) then
-      do j = 1, this%lakbudptr%budterm(this%idxbudroff)%nlist
-        n = this%lakbudptr%budterm(this%idxbudroff)%id1(j)
-        qbnd = this%lakbudptr%budterm(this%idxbudroff)%flow(j)
-        ctmp = this%concroff(n)%value
-        rrate = ctmp * qbnd
-        call this%lkt_accumulate_ccterm(n, rrate, ccratin, ccratout)
-        if(rrate < DZERO) then
-          rateout = rateout - rrate
-        else
-          ratein = ratein + rrate
-        endif
-      end do
-    end if
-    call this%budget%addentry(ratein, rateout, delt,  &
-                              this%clktbudget(6), isuppress_output)
-    !
-    ! -- inflow contribution
-    ! -- todo: need to accumulate chterm for constant concentration lakes
-    ratein = DZERO
-    rateout = DZERO
-    if (this%idxbudiflw /= 0) then
-      do j = 1, this%lakbudptr%budterm(this%idxbudiflw)%nlist
-        n = this%lakbudptr%budterm(this%idxbudiflw)%id1(j)
-        qbnd = this%lakbudptr%budterm(this%idxbudiflw)%flow(j)
-        ctmp = this%conciflw(n)%value
-        rrate = ctmp * qbnd
-        call this%lkt_accumulate_ccterm(n, rrate, ccratin, ccratout)
-        if(rrate < DZERO) then
-          rateout = rateout - rrate
-        else
-          ratein = ratein + rrate
-        endif
-      end do
-    end if
-    call this%budget%addentry(ratein, rateout, delt,  &
-                              this%clktbudget(7), isuppress_output)
-    !
-    ! -- withdrawal contribution
-    ! -- todo: need to accumulate chterm for constant concentration lakes
-    ratein = DZERO
-    rateout = DZERO
-    if (this%idxbudwdrl /= 0) then
-      do j = 1, this%lakbudptr%budterm(this%idxbudwdrl)%nlist
-        n = this%lakbudptr%budterm(this%idxbudwdrl)%id1(j)
-        qbnd = this%lakbudptr%budterm(this%idxbudwdrl)%flow(j)
-        ctmp = this%xnewpak(n)
-        rrate = qbnd * this%xnewpak(n)
-        call this%lkt_accumulate_ccterm(n, rrate, ccratin, ccratout)
-        if(rrate < DZERO) then
-          rateout = rateout - rrate
-        else
-          ratein = ratein + rrate
-        endif
-      end do
-    end if
-    call this%budget%addentry(ratein, rateout, delt,  &
-                              this%clktbudget(8), isuppress_output)
-    !
-    ! -- outflow contribution
-    ! -- todo: need to accumulate chterm for constant concentration lakes
-    ratein = DZERO
-    rateout = DZERO
-    if (this%idxbudoutf /= 0) then
-      do j = 1, this%lakbudptr%budterm(this%idxbudoutf)%nlist
-        n = this%lakbudptr%budterm(this%idxbudoutf)%id1(j)
-        qbnd = this%lakbudptr%budterm(this%idxbudoutf)%flow(j)
-        ctmp = this%xnewpak(n)
-        rrate = qbnd * this%xnewpak(n)
-        call this%lkt_accumulate_ccterm(n, rrate, ccratin, ccratout)
-        if(rrate < DZERO) then
-          rateout = rateout - rrate
-        else
-          ratein = ratein + rrate
-        endif
-      end do
-    end if
-    call this%budget%addentry(ratein, rateout, delt,  &
-                              this%clktbudget(9), isuppress_output)
-    !
-    ! -- add entry for constant concentration terms
-    call this%budget%addentry(ccratin, ccratout, delt,  &
-                              this%clktbudget(3), isuppress_output)
-    
-    !
-    ! -- todo: implement the budobj for printing the budget
-    !    and writing the individual budget terms to an lkt binary bud file
-    
     !    
     ! -- todo: For continuous observations, save simulated values.
     !if (this%obs%npakobs > 0 .and. iprobs > 0) then
@@ -1275,9 +1039,9 @@ module GwtLktModule
     if (ibinun > 0) then
       do n = 1, this%nlakes
         c = this%xnewpak(n)
-        !if (this%iboundpak(n) < 1) then
-        !  v = DHNOFLO
-        !end if
+        if (this%iboundpak(n) < 1) then
+          c = DHNOFLO
+        end if
         this%dbuff(n) = c
       end do
       call ulasav(this%dbuff, '   CONCENTRATION', kstp, kper, pertim, totim,   &
@@ -1292,7 +1056,20 @@ module GwtLktModule
     if(icbcfl == 0) ibinun = 0
     if (isuppress_output /= 0) ibinun = 0
     !
-    ! -- todo: write lake binary budget output
+    ! -- fill the budget object
+    call this%lkt_fill_budobj(x)
+    !
+    ! -- write the flows from the budobj
+    ibinun = 0
+    if(this%ibudgetout /= 0) then
+      ibinun = this%ibudgetout
+    end if
+    if(icbcfl == 0) ibinun = 0
+    if (isuppress_output /= 0) ibinun = 0
+    if (ibinun > 0) then
+      call this%budobj%save_flows(this%dis, ibinun, kstp, kper, delt, &
+                        pertim, totim, this%iout)
+    end if
     !
     ! -- return
     return
@@ -1378,8 +1155,8 @@ module GwtLktModule
       end do
     end if
     !
-    ! -- Output lkt budget
-    call this%budget%budget_ot(kstp, kper, iout)
+    ! -- Output lake budget
+    call this%budobj%write_budtable(kstp, kper, iout)
     !
     ! -- Return
     return
@@ -1831,6 +1608,9 @@ module GwtLktModule
     !    when PRINT_INPUT option is used.
     call this%define_listlabel()
     !
+    ! -- setup the budget object
+    call this%lkt_setup_budobj()
+    !
     ! -- return
     return
   end subroutine lkt_read_dimensions
@@ -2034,7 +1814,6 @@ module GwtLktModule
     integer(I4B) :: j, n
     !integer(I4B) :: nn
     !integer(I4B) :: idx
-    integer(I4B) :: ival
     !real(DP) :: endtim
     !real(DP) :: top
     !real(DP) :: bot
@@ -2063,10 +1842,6 @@ module GwtLktModule
     ! -- format
 ! ------------------------------------------------------------------------------
 
-    ! -- setup the lake budget
-    call budget_cr(this%budget, this%origin)
-    ival = this%bditems
-    call this%budget%budget_df(ival, this%name, 'M')
     !
     ! -- initialize xnewpak and set lake concentration
     ! -- todo: this should be a time series?
@@ -2126,7 +1901,10 @@ module GwtLktModule
     class(GwtLktType) :: this
     ! -- local
     integer(I4B) :: n, j, igwfnode
-    real(DP) :: c1, ctmp, qbnd, v0, v1, omega
+    integer(I4B) :: n1, n2
+    real(DP) :: rrate
+    real(DP) :: ctmp
+    real(DP) :: c1, qbnd, v0, v1
 ! ------------------------------------------------------------------------------
     !
     !
@@ -2140,69 +1918,48 @@ module GwtLktModule
     ! -- add rainfall contribution
     if (this%idxbudrain /= 0) then
       do j = 1, this%lakbudptr%budterm(this%idxbudrain)%nlist
-        n = this%lakbudptr%budterm(this%idxbudrain)%id1(j)
-        qbnd = this%lakbudptr%budterm(this%idxbudrain)%flow(j)
-        ctmp = this%concrain(n)%value
-        this%dbuff(n) = this%dbuff(n) + ctmp * qbnd
+        call this%lkt_rain_term(j, n1, n2, rrate)
+        this%dbuff(n1) = this%dbuff(n1) + rrate
       end do
     end if
     !
     ! -- add evaporation contribution
     if (this%idxbudevap /= 0) then
       do j = 1, this%lakbudptr%budterm(this%idxbudevap)%nlist
-        n = this%lakbudptr%budterm(this%idxbudevap)%id1(j)
-        qbnd = this%lakbudptr%budterm(this%idxbudevap)%flow(j)
-        ctmp = this%concevap(n)%value
-        if (this%xnewpak(n) < ctmp) then
-          omega = DONE
-        else
-          omega = DZERO
-        end if
-        c1 = omega * qbnd * this%xnewpak(n) + &
-             (DONE - omega) * qbnd * ctmp
-        this%dbuff(n) = this%dbuff(n) + c1
+        call this%lkt_evap_term(j, n1, n2, rrate)
+        this%dbuff(n1) = this%dbuff(n1) + rrate
       end do
     end if
     !
     ! -- add runoff contribution
     if (this%idxbudroff /= 0) then
       do j = 1, this%lakbudptr%budterm(this%idxbudroff)%nlist
-        n = this%lakbudptr%budterm(this%idxbudroff)%id1(j)
-        qbnd = this%lakbudptr%budterm(this%idxbudroff)%flow(j)
-        ctmp = this%concroff(n)%value
-        this%dbuff(n) = this%dbuff(n) + ctmp * qbnd
+        call this%lkt_roff_term(j, n1, n2, rrate)
+        this%dbuff(n1) = this%dbuff(n1) + rrate
       end do
     end if
     !
     ! -- add inflow contribution
     if (this%idxbudiflw /= 0) then
       do j = 1, this%lakbudptr%budterm(this%idxbudiflw)%nlist
-        n = this%lakbudptr%budterm(this%idxbudiflw)%id1(j)
-        qbnd = this%lakbudptr%budterm(this%idxbudiflw)%flow(j)
-        ctmp = this%conciflw(n)%value
-        this%dbuff(n) = this%dbuff(n) + ctmp * qbnd
+        call this%lkt_iflw_term(j, n1, n2, rrate)
+        this%dbuff(n1) = this%dbuff(n1) + rrate
       end do
     end if
     !
     ! -- add withdrawal contribution
     if (this%idxbudwdrl /= 0) then
       do j = 1, this%lakbudptr%budterm(this%idxbudwdrl)%nlist
-        n = this%lakbudptr%budterm(this%idxbudwdrl)%id1(j)
-        qbnd = this%lakbudptr%budterm(this%idxbudwdrl)%flow(j)
-        ctmp = this%xnewpak(n)
-        c1 = qbnd * ctmp
-        this%dbuff(n) = this%dbuff(n) + c1
+        call this%lkt_wdrl_term(j, n1, n2, rrate)
+        this%dbuff(n1) = this%dbuff(n1) + rrate
       end do
     end if
     !
     ! -- add outflow contribution
     if (this%idxbudoutf /= 0) then
       do j = 1, this%lakbudptr%budterm(this%idxbudoutf)%nlist
-        n = this%lakbudptr%budterm(this%idxbudoutf)%id1(j)
-        qbnd = this%lakbudptr%budterm(this%idxbudoutf)%flow(j)
-        ctmp = this%xnewpak(n)
-        c1 = qbnd * ctmp
-        this%dbuff(n) = this%dbuff(n) + c1
+        call this%lkt_outf_term(j, n1, n2, rrate)
+        this%dbuff(n1) = this%dbuff(n1) + rrate
       end do
     end if
     !
@@ -2371,5 +2128,609 @@ module GwtLktModule
     ! -- Return
     return
   end subroutine get_volumes
+  
+  subroutine lkt_setup_budobj(this)
+! ******************************************************************************
+! lkt_setup_budobj -- Set up the budget object that stores all the lake flows
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule, only: LENBUDTXT
+    ! -- dummy
+    class(GwtLktType) :: this
+    ! -- local
+    integer(I4B) :: nbudterm
+    integer(I4B) :: nlen
+    integer(I4B) :: n, n1, n2
+    integer(I4B) :: maxlist, naux
+    integer(I4B) :: idx
+    real(DP) :: q
+    character(len=LENBUDTXT) :: text
+    character(len=LENBUDTXT), dimension(1) :: auxtxt
+! ------------------------------------------------------------------------------
+    !
+    ! -- Determine the number of lake budget terms. These are fixed for 
+    !    the simulation and cannot change
+    nbudterm = 9
+    nlen = 0
+    if (this%idxbudfjf /= 0) then
+      nlen = this%lakbudptr%budterm(this%idxbudfjf)%maxlist
+    end if
+    if (nlen > 0) nbudterm = nbudterm + 1
+    !if (this%imover == 1) nbudterm = nbudterm + 2
+    if (this%naux > 0) nbudterm = nbudterm + 1
+    !
+    ! -- set up budobj
+    call budgetobject_cr(this%budobj, this%name)
+    call this%budobj%budgetobject_df(this%nlakes, nbudterm, 0, 0)
+    idx = 0
+    !
+    ! -- Go through and set up each budget term
+    if (nlen > 0) then
+      text = '    FLOW-JA-FACE'
+      idx = idx + 1
+      maxlist = this%lakbudptr%budterm(this%idxbudfjf)%maxlist
+      naux = 0
+      call this%budobj%budterm(idx)%initialize(text, &
+                                               this%name_model, &
+                                               this%name, &
+                                               this%name_model, &
+                                               this%name, &
+                                               maxlist, .false., .false., &
+                                               naux)
+      !
+      ! -- store connectivity
+      call this%budobj%budterm(idx)%reset(maxlist)
+      q = DZERO
+      do n = 1, maxlist
+        n1 = this%lakbudptr%budterm(this%idxbudfjf)%id1(n)
+        n2 = this%lakbudptr%budterm(this%idxbudfjf)%id2(n)
+        call this%budobj%budterm(idx)%update_term(n1, n2, q)
+        call this%budobj%budterm(idx)%update_term(n2, n1, -q)
+      end do      
+    end if
+    !
+    ! -- 
+    text = '             GWF'
+    idx = idx + 1
+    maxlist = this%lakbudptr%budterm(this%idxbudgwf)%maxlist
+    naux = 0
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name_model, &
+                                             maxlist, .false., .true., &
+                                             naux)
+    call this%budobj%budterm(idx)%reset(maxlist)
+    q = DZERO
+    do n = 1, maxlist
+      n1 = this%lakbudptr%budterm(this%idxbudgwf)%id1(n)
+      n2 = this%lakbudptr%budterm(this%idxbudgwf)%id2(n)
+      call this%budobj%budterm(idx)%update_term(n1, n2, q)
+    end do
+    !
+    ! -- 
+    text = '        RAINFALL'
+    idx = idx + 1
+    maxlist = this%lakbudptr%budterm(this%idxbudrain)%maxlist
+    naux = 0
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name, &
+                                             maxlist, .false., .false., &
+                                             naux)
+    !
+    ! -- 
+    text = '     EVAPORATION'
+    idx = idx + 1
+    maxlist = this%lakbudptr%budterm(this%idxbudevap)%maxlist
+    naux = 0
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name, &
+                                             maxlist, .false., .false., &
+                                             naux)
+    !
+    ! -- 
+    text = '          RUNOFF'
+    idx = idx + 1
+    maxlist = this%lakbudptr%budterm(this%idxbudroff)%maxlist
+    naux = 0
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name, &
+                                             maxlist, .false., .false., &
+                                             naux)
+    !
+    ! -- 
+    text = '      EXT-INFLOW'
+    idx = idx + 1
+    maxlist = this%lakbudptr%budterm(this%idxbudiflw)%maxlist
+    naux = 0
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name, &
+                                             maxlist, .false., .false., &
+                                             naux)
+    !
+    ! -- 
+    text = '      WITHDRAWAL'
+    idx = idx + 1
+    maxlist = this%lakbudptr%budterm(this%idxbudwdrl)%maxlist
+    naux = 0
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name, &
+                                             maxlist, .false., .false., &
+                                             naux)
+    !
+    ! -- 
+    text = '     EXT-OUTFLOW'
+    idx = idx + 1
+    maxlist = this%lakbudptr%budterm(this%idxbudoutf)%maxlist
+    naux = 0
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name, &
+                                             maxlist, .false., .false., &
+                                             naux)
+    !
+    ! -- 
+    text = '         STORAGE'
+    idx = idx + 1
+    maxlist = this%lakbudptr%budterm(this%idxbudsto)%maxlist
+    naux = 1
+    auxtxt(1) = '            MASS'
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name, &
+                                             maxlist, .false., .false., &
+                                             naux, auxtxt)
+    !
+    ! -- 
+    text = '        CONSTANT'
+    idx = idx + 1
+    maxlist = this%nlakes
+    naux = 0
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name, &
+                                             maxlist, .false., .false., &
+                                             naux)
+    !
+    ! -- 
+    !if (this%imover == 1) then
+    !  !
+    !  ! -- 
+    !  text = '        FROM-MVR'
+    !  idx = idx + 1
+    !  maxlist = this%nlakes
+    !  naux = 0
+    !  call this%budobj%budterm(idx)%initialize(text, &
+    !                                           this%name_model, &
+    !                                           this%name, &
+    !                                           this%name_model, &
+    !                                           this%name, &
+    !                                           maxlist, .false., .false., &
+    !                                           naux)
+    !  !
+    !  ! -- 
+    !  text = '          TO-MVR'
+    !  idx = idx + 1
+    !  maxlist = this%noutlets
+    !  naux = 0
+    !  call this%budobj%budterm(idx)%initialize(text, &
+    !                                           this%name_model, &
+    !                                           this%name, &
+    !                                           this%name_model, &
+    !                                           this%name, &
+    !                                           maxlist, .false., .false., &
+    !                                           naux)
+    !end if
+    !
+    ! -- 
+    naux = this%naux
+    if (naux > 0) then
+      !
+      ! -- 
+      text = '       AUXILIARY'
+      idx = idx + 1
+      maxlist = this%nlakes
+      call this%budobj%budterm(idx)%initialize(text, &
+                                               this%name_model, &
+                                               this%name, &
+                                               this%name_model, &
+                                               this%name, &
+                                               maxlist, .false., .false., &
+                                               naux, this%auxname)
+    end if
+    !
+    ! -- return
+    return
+  end subroutine lkt_setup_budobj
+
+  subroutine lkt_fill_budobj(this, x)
+! ******************************************************************************
+! lkt_fill_budobj -- copy flow terms into this%budobj
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwtLktType) :: this
+    real(DP), dimension(:), intent(in) :: x
+    ! -- local
+    integer(I4B) :: naux
+    real(DP), dimension(:), allocatable :: auxvartmp
+    integer(I4B) :: i, j, n1, n2
+    integer(I4B) :: ii
+    integer(I4B) :: idx
+    integer(I4B) :: nlen
+    integer(I4B) :: nlist
+    integer(I4B) :: igwfnode
+    real(DP) :: q
+    real(DP) :: ccratin, ccratout
+    ! -- formats
+! -----------------------------------------------------------------------------
+    !
+    ! -- initialize counter
+    idx = 0
+    !
+    ! -- initialize ccterm, which is used to sum up all mass flows
+    !    into a constant concentration cell
+    ccratin = DZERO
+    ccratout = DZERO
+    do n1 = 1, this%nlakes
+      this%ccterm(n1) = DZERO
+    end do
+
+    
+    ! -- FLOW JA FACE
+    nlen = 0
+    ! -- todo: add flow between lakes
+    !do n = 1, this%noutlets
+    !  if (this%lakein(n) > 0 .and. this%lakeout(n) > 0) then
+    !    nlen = nlen + 1
+    !  end if
+    !end do
+    if (nlen > 0) then
+      idx = idx + 1
+    !  call this%budobj%budterm(idx)%reset(2 * nlen)
+    !  do n = 1, this%noutlets
+    !    n1 = this%lakein(n)
+    !    n2 = this%lakeout(n)
+    !    if (n1 > 0 .and. n2 > 0) then
+    !      q = this%simoutrate(n)
+    !      if (this%imover == 1) then
+    !        q = q + this%pakmvrobj%get_qtomvr(n)
+    !      end if
+    !      call this%budobj%budterm(idx)%update_term(n1, n2, q)
+    !      call this%budobj%budterm(idx)%update_term(n2, n1, -q)
+    !    end if
+    !  end do
+    end if
+
+    
+    ! -- GWF (LEAKAGE)
+    idx = idx + 1
+    call this%budobj%budterm(idx)%reset(this%maxbound)
+    do j = 1, this%lakbudptr%budterm(this%idxbudgwf)%nlist
+      q = DZERO
+      n1 = this%lakbudptr%budterm(this%idxbudgwf)%id1(j)
+      if (this%iboundpak(n1) /= 0) then
+        igwfnode = this%lakbudptr%budterm(this%idxbudgwf)%id2(j)
+        q = this%hcof(j) * x(igwfnode) - this%rhs(j)
+        q = -q  ! flip sign so relative to lake
+      end if
+      call this%budobj%budterm(idx)%update_term(n1, igwfnode, q)
+      call this%lkt_accumulate_ccterm(n1, q, ccratin, ccratout)
+    end do
+
+    
+    ! -- RAIN
+    idx = idx + 1
+    nlist = this%lakbudptr%budterm(this%idxbudrain)%nlist
+    call this%budobj%budterm(idx)%reset(nlist)
+    do j = 1, nlist
+      call this%lkt_rain_term(j, n1, n2, q)
+      call this%budobj%budterm(idx)%update_term(n1, n2, q)
+      call this%lkt_accumulate_ccterm(n1, q, ccratin, ccratout)
+    end do
+    
+    
+    ! -- EVAPORATION
+    idx = idx + 1
+    nlist = this%lakbudptr%budterm(this%idxbudevap)%nlist
+    call this%budobj%budterm(idx)%reset(nlist)
+    do j = 1, nlist
+      call this%lkt_evap_term(j, n1, n2, q)
+      call this%budobj%budterm(idx)%update_term(n1, n2, q)
+      call this%lkt_accumulate_ccterm(n1, q, ccratin, ccratout)
+    end do
+    
+    
+    ! -- RUNOFF
+    idx = idx + 1
+    nlist = this%lakbudptr%budterm(this%idxbudroff)%nlist
+    call this%budobj%budterm(idx)%reset(nlist)
+    do j = 1, nlist
+      call this%lkt_roff_term(j, n1, n2, q)
+      call this%budobj%budterm(idx)%update_term(n1, n2, q)
+      call this%lkt_accumulate_ccterm(n1, q, ccratin, ccratout)
+    end do
+    
+    
+    ! -- INFLOW
+    idx = idx + 1
+    nlist = this%lakbudptr%budterm(this%idxbudiflw)%nlist
+    call this%budobj%budterm(idx)%reset(nlist)
+    do j = 1, nlist
+      call this%lkt_iflw_term(j, n1, n2, q)
+      call this%budobj%budterm(idx)%update_term(n1, n2, q)
+      call this%lkt_accumulate_ccterm(n1, q, ccratin, ccratout)
+    end do
+    
+    
+    ! -- WITHDRAWAL
+    idx = idx + 1
+    nlist = this%lakbudptr%budterm(this%idxbudwdrl)%nlist
+    call this%budobj%budterm(idx)%reset(nlist)
+    do j = 1, nlist
+      call this%lkt_wdrl_term(j, n1, n2, q)
+      call this%budobj%budterm(idx)%update_term(n1, n2, q)
+      call this%lkt_accumulate_ccterm(n1, q, ccratin, ccratout)
+    end do
+    
+    
+    ! -- OUTFLOW
+    idx = idx + 1
+    nlist = this%lakbudptr%budterm(this%idxbudoutf)%nlist
+    call this%budobj%budterm(idx)%reset(nlist)
+    do j = 1, nlist
+      call this%lkt_outf_term(j, n1, n2, q)
+      call this%budobj%budterm(idx)%update_term(n1, n2, q)
+      call this%lkt_accumulate_ccterm(n1, q, ccratin, ccratout)
+    end do
+    
+    
+    ! -- STORAGE
+    idx = idx + 1
+    call this%budobj%budterm(idx)%reset(this%nlakes)
+    do n1 = 1, this%nlakes
+      ! -- todo: can we get the total mass in the lake into aux here?
+      !call this%lak_calculate_vol(n, this%xnewpak(n), v1)
+      !this%qauxcbc(1) = v1
+      !call this%budobj%budterm(idx)%update_term(n, n, q, this%qauxcbc)
+      q = this%qsto(n1)
+      call this%budobj%budterm(idx)%update_term(n1, n1, q)
+      call this%lkt_accumulate_ccterm(n1, q, ccratin, ccratout)
+    end do
+    
+    
+    ! -- CONSTANT FLOW
+    idx = idx + 1
+    call this%budobj%budterm(idx)%reset(this%nlakes)
+    do n1 = 1, this%nlakes
+      q = this%ccterm(n1)
+      call this%budobj%budterm(idx)%update_term(n1, n1, q)
+    end do
+    
+    
+    !! -- MOVER
+    !if (this%imover == 1) then
+    !  
+    !  ! -- FROM MOVER
+    !  idx = idx + 1
+    !  call this%budobj%budterm(idx)%reset(this%nlakes)
+    !  do n = 1, this%nlakes
+    !    q = this%pakmvrobj%get_qfrommvr(n)
+    !    call this%budobj%budterm(idx)%update_term(n, n, q)
+    !  end do
+    !  
+    !  
+    !  ! -- TO MOVER
+    !  idx = idx + 1
+    !  call this%budobj%budterm(idx)%reset(this%noutlets)
+    !  do n = 1, this%noutlets
+    !    q = this%pakmvrobj%get_qtomvr(n)
+    !    if (q > DZERO) then
+    !      q = -q
+    !    end if
+    !    call this%budobj%budterm(idx)%update_term(n, n, q)
+    !  end do
+    !  
+    !end if
+    
+    
+    ! -- AUXILIARY VARIABLES
+    naux = this%naux
+    if (naux > 0) then
+      idx = idx + 1
+      allocate(auxvartmp(naux))
+      call this%budobj%budterm(idx)%reset(this%nlakes)
+      do n1 = 1, this%nlakes
+        q = DZERO
+        do i = 1, naux
+          ii = (n1 - 1) * naux + i
+          auxvartmp(i) = this%lauxvar(ii)%value
+        end do
+        call this%budobj%budterm(idx)%update_term(n1, n1, q, auxvartmp)
+      end do
+      deallocate(auxvartmp)
+    end if
+    !
+    ! --Terms are filled, now accumulate them for this time step
+    call this%budobj%accumulate_terms()
+    !
+    ! -- return
+    return
+  end subroutine lkt_fill_budobj
+
+  subroutine lkt_rain_term(this, ientry, n1, n2, rrate, &
+                           rhsval, hcofval)
+    class(GwtLktType) :: this
+    integer(I4B), intent(in) :: ientry
+    integer(I4B), intent(inout) :: n1
+    integer(I4B), intent(inout) :: n2
+    real(DP), intent(inout), optional :: rrate
+    real(DP), intent(inout), optional :: rhsval
+    real(DP), intent(inout), optional :: hcofval
+    real(DP) :: qbnd
+    real(DP) :: ctmp
+    n1 = this%lakbudptr%budterm(this%idxbudrain)%id1(ientry)
+    n2 = this%lakbudptr%budterm(this%idxbudrain)%id2(ientry)
+    qbnd = this%lakbudptr%budterm(this%idxbudrain)%flow(ientry)
+    ctmp = this%concrain(n1)%value
+    if (present(rrate)) rrate = ctmp * qbnd
+    if (present(rhsval)) rhsval = -rrate
+    if (present(hcofval)) hcofval = DZERO
+    !
+    ! -- return
+    return
+  end subroutine lkt_rain_term
+  
+  subroutine lkt_evap_term(this, ientry, n1, n2, rrate, &
+                           rhsval, hcofval)
+    class(GwtLktType) :: this
+    integer(I4B), intent(in) :: ientry
+    integer(I4B), intent(inout) :: n1
+    integer(I4B), intent(inout) :: n2
+    real(DP), intent(inout), optional :: rrate
+    real(DP), intent(inout), optional :: rhsval
+    real(DP), intent(inout), optional :: hcofval
+    real(DP) :: qbnd
+    real(DP) :: ctmp
+    real(DP) :: omega
+    n1 = this%lakbudptr%budterm(this%idxbudevap)%id1(ientry)
+    n2 = this%lakbudptr%budterm(this%idxbudevap)%id2(ientry)
+    ! -- note that qbnd is negative for evap
+    qbnd = this%lakbudptr%budterm(this%idxbudevap)%flow(ientry)
+    ctmp = this%concevap(n1)%value
+    if (this%xnewpak(n1) < ctmp) then
+      omega = DONE
+    else
+      omega = DZERO
+    end if
+    if (present(rrate)) &
+      rrate = omega * qbnd * this%xnewpak(n1) + &
+              (DONE - omega) * qbnd * ctmp
+    if (present(rhsval)) rhsval = - (DONE - omega) * qbnd * ctmp
+    if (present(hcofval)) hcofval = omega * qbnd
+    !
+    ! -- return
+    return
+  end subroutine lkt_evap_term
+  
+  subroutine lkt_roff_term(this, ientry, n1, n2, rrate, &
+                           rhsval, hcofval)
+    class(GwtLktType) :: this
+    integer(I4B), intent(in) :: ientry
+    integer(I4B), intent(inout) :: n1
+    integer(I4B), intent(inout) :: n2
+    real(DP), intent(inout), optional :: rrate
+    real(DP), intent(inout), optional :: rhsval
+    real(DP), intent(inout), optional :: hcofval
+    real(DP) :: qbnd
+    real(DP) :: ctmp
+    n1 = this%lakbudptr%budterm(this%idxbudroff)%id1(ientry)
+    n2 = this%lakbudptr%budterm(this%idxbudroff)%id2(ientry)
+    qbnd = this%lakbudptr%budterm(this%idxbudroff)%flow(ientry)
+    ctmp = this%concroff(n1)%value
+    if (present(rrate)) rrate = ctmp * qbnd
+    if (present(rhsval)) rhsval = -rrate
+    if (present(hcofval)) hcofval = DZERO
+    !
+    ! -- return
+    return
+  end subroutine lkt_roff_term
+  
+  subroutine lkt_iflw_term(this, ientry, n1, n2, rrate, &
+                           rhsval, hcofval)
+    class(GwtLktType) :: this
+    integer(I4B), intent(in) :: ientry
+    integer(I4B), intent(inout) :: n1
+    integer(I4B), intent(inout) :: n2
+    real(DP), intent(inout), optional :: rrate
+    real(DP), intent(inout), optional :: rhsval
+    real(DP), intent(inout), optional :: hcofval
+    real(DP) :: qbnd
+    real(DP) :: ctmp
+    n1 = this%lakbudptr%budterm(this%idxbudiflw)%id1(ientry)
+    n2 = this%lakbudptr%budterm(this%idxbudiflw)%id2(ientry)
+    qbnd = this%lakbudptr%budterm(this%idxbudiflw)%flow(ientry)
+    ctmp = this%conciflw(n1)%value
+    if (present(rrate)) rrate = ctmp * qbnd
+    if (present(rhsval)) rhsval = -rrate
+    if (present(hcofval)) hcofval = DZERO
+    !
+    ! -- return
+    return
+  end subroutine lkt_iflw_term
+  
+  subroutine lkt_wdrl_term(this, ientry, n1, n2, rrate, &
+                           rhsval, hcofval)
+    class(GwtLktType) :: this
+    integer(I4B), intent(in) :: ientry
+    integer(I4B), intent(inout) :: n1
+    integer(I4B), intent(inout) :: n2
+    real(DP), intent(inout), optional :: rrate
+    real(DP), intent(inout), optional :: rhsval
+    real(DP), intent(inout), optional :: hcofval
+    real(DP) :: qbnd
+    real(DP) :: ctmp
+    n1 = this%lakbudptr%budterm(this%idxbudwdrl)%id1(ientry)
+    n2 = this%lakbudptr%budterm(this%idxbudwdrl)%id2(ientry)
+    qbnd = this%lakbudptr%budterm(this%idxbudwdrl)%flow(ientry)
+    ctmp = this%xnewpak(n1)
+    if (present(rrate)) rrate = ctmp * qbnd
+    if (present(rhsval)) rhsval = DZERO
+    if (present(hcofval)) hcofval = qbnd
+    !
+    ! -- return
+    return
+  end subroutine lkt_wdrl_term
+  
+  subroutine lkt_outf_term(this, ientry, n1, n2, rrate, &
+                           rhsval, hcofval)
+    class(GwtLktType) :: this
+    integer(I4B), intent(in) :: ientry
+    integer(I4B), intent(inout) :: n1
+    integer(I4B), intent(inout) :: n2
+    real(DP), intent(inout), optional :: rrate
+    real(DP), intent(inout), optional :: rhsval
+    real(DP), intent(inout), optional :: hcofval
+    real(DP) :: qbnd
+    real(DP) :: ctmp
+    n1 = this%lakbudptr%budterm(this%idxbudoutf)%id1(ientry)
+    n2 = this%lakbudptr%budterm(this%idxbudoutf)%id2(ientry)
+    qbnd = this%lakbudptr%budterm(this%idxbudoutf)%flow(ientry)
+    ctmp = this%xnewpak(n1)
+    if (present(rrate)) rrate = ctmp * qbnd
+    if (present(rhsval)) rhsval = DZERO
+    if (present(hcofval)) hcofval = qbnd
+    !
+    ! -- return
+    return
+  end subroutine lkt_outf_term
   
 end module GwtLktModule
