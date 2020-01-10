@@ -284,8 +284,9 @@ def eval_results(sim):
     # load the lake concentrations and make sure all values are 100.
     cobj = flopy.utils.HeadFile(fname, text='CONCENTRATION')
     clak = cobj.get_alldata().flatten()
+    answer = np.ones(10)*100.
     print(clak)
-    assert np.allclose(clak, np.ones(10)*100.)
+    assert np.allclose(clak, answer), '{} {}'.format(clak, answer)
 
     # load the aquifer concentrations and make sure all values are correct
     fname = gwtname + '.ucn'

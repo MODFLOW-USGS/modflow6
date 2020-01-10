@@ -106,6 +106,10 @@ module GwtLktModule
     procedure :: lkt_read_lakes
     procedure :: read_initial_attr => lkt_read_initial_attr
     procedure :: define_listlabel
+    ! -- methods for observations
+    !procedure, public :: bnd_obs_supported => lkt_obs_supported
+    !procedure, public :: bnd_df_obs => lkt_df_obs
+    !procedure, public :: bnd_rp_obs => lkt_rp_obs
     procedure :: get_volumes
     procedure, private :: lkt_setup_budobj
     procedure, private :: lkt_fill_budobj
@@ -323,7 +327,7 @@ module GwtLktModule
     this%fmi%iatp(this%igwflakpak) = 1
     !
     ! -- Get obs setup 
-    !call this%obs%obs_ar()
+    call this%obs%obs_ar()
     !
     ! --print a message identifying the lkt package.
     write(this%iout, fmtlkt) this%inunit
@@ -714,7 +718,7 @@ module GwtLktModule
     ! -- For each observation, push simulated value and corresponding
     !    simulation time from "current" to "preceding" and reset
     !    "current" value.
-    !call this%obs%obs_ad()
+    call this%obs%obs_ad()
     !
     ! -- return
     return
@@ -1022,10 +1026,10 @@ module GwtLktModule
       this%qsto(n) = rrate
     end do
     !    
-    ! -- todo: For continuous observations, save simulated values.
-    !if (this%obs%npakobs > 0 .and. iprobs > 0) then
-    !  call this%lak_bd_obs()
-    !endif
+    ! -- For continuous observations, save simulated values.
+    if (this%obs%npakobs > 0 .and. iprobs > 0) then
+      !call this%lkt_bd_obs()
+    endif
     !
     ! -- set unit number for binary dependent variable output
     ibinun = 0
