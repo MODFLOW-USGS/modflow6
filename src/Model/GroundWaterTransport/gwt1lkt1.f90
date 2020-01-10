@@ -1039,7 +1039,7 @@ module GwtLktModule
     if (ibinun > 0) then
       do n = 1, this%nlakes
         c = this%xnewpak(n)
-        if (this%iboundpak(n) < 1) then
+        if (this%iboundpak(n) == 0) then
           c = DHNOFLO
         end if
         this%dbuff(n) = c
