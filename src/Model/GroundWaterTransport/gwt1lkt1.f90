@@ -10,13 +10,18 @@ module GwtLktModule
 
   use KindModule, only: DP, I4B
   use ConstantsModule, only: DZERO, DONE, DHALF, DEP20, LENFTYPE, LINELENGTH,  &
-                             LENBOUNDNAME
+                             LENBOUNDNAME, NAMEDBOUNDFLAG, DNODATA
+  use SimModule, only: store_error, count_errors, store_error_unit, ustop
   use BndModule, only: BndType, GetBndFromList
   use GwtFmiModule, only: GwtFmiType
   use LakModule, only: LakType
   use MemoryTypeModule, only: MemoryTSType
   use BudgetModule, only: BudgetType
   use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr
+  use ObserveModule, only: ObserveType
+  use InputOutputModule, only: extract_idnum_or_bndname
+  use BaseDisModule, only: DisBaseType
+  use ArrayHandlersModule, only: ExpandArray
   
   implicit none
   
@@ -107,9 +112,10 @@ module GwtLktModule
     procedure :: read_initial_attr => lkt_read_initial_attr
     procedure :: define_listlabel
     ! -- methods for observations
-    !procedure, public :: bnd_obs_supported => lkt_obs_supported
-    !procedure, public :: bnd_df_obs => lkt_df_obs
-    !procedure, public :: bnd_rp_obs => lkt_rp_obs
+    procedure, public :: bnd_obs_supported => lkt_obs_supported
+    procedure, public :: bnd_df_obs => lkt_df_obs
+    procedure, public :: bnd_rp_obs => lkt_rp_obs
+    procedure, private :: lkt_bd_obs
     procedure :: get_volumes
     procedure, private :: lkt_setup_budobj
     procedure, private :: lkt_fill_budobj
@@ -186,7 +192,6 @@ module GwtLktModule
 ! ------------------------------------------------------------------------------
     use MemoryManagerModule, only: mem_setptr
     use SparseModule, only: sparsematrix
-    use SimModule, only: store_error, ustop
     ! -- dummy
     class(GwtLktType),intent(inout) :: this
     integer(I4B), intent(in) :: moffset
@@ -230,7 +235,6 @@ module GwtLktModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use SparseModule, only: sparsematrix
-    use SimModule, only: store_error, ustop
     ! -- dummy
     class(GwtLktType),intent(inout) :: this
     integer(I4B), intent(in) :: moffset
@@ -311,7 +315,6 @@ module GwtLktModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule,           only: ustop, store_error
     use ConstantsModule,   only: LINELENGTH
     ! -- dummy
     class(GwtLktType), intent(inout) :: this
@@ -353,7 +356,6 @@ module GwtLktModule
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
     use TdisModule, only: kper, nper
-    use SimModule, only: ustop, store_error, count_errors
     ! -- dummy
     class(GwtLktType), intent(inout) :: this
     ! -- local
@@ -464,7 +466,6 @@ module GwtLktModule
     use TdisModule, only: kper, perlen, totimsav
     use TimeSeriesManagerModule, only: read_single_value_or_time_series
     use InputOutputModule, only: urword
-    use SimModule, only: ustop, store_error, count_errors
     ! -- dummy
     class(GwtLktType),intent(inout) :: this
     integer(I4B), intent(in) :: itemno
@@ -652,7 +653,6 @@ module GwtLktModule
 !  lkt_check_valid -- Determine if a valid lake or outlet number has been
 !                     specified.
 ! ******************************************************************************
-    use SimModule, only: ustop, store_error
     ! -- return
     integer(I4B) :: ierr
     ! -- dummy
@@ -1025,11 +1025,6 @@ module GwtLktModule
       end if
       this%qsto(n) = rrate
     end do
-    !    
-    ! -- For continuous observations, save simulated values.
-    if (this%obs%npakobs > 0 .and. iprobs > 0) then
-      !call this%lkt_bd_obs()
-    endif
     !
     ! -- set unit number for binary dependent variable output
     ibinun = 0
@@ -1074,6 +1069,13 @@ module GwtLktModule
       call this%budobj%save_flows(this%dis, ibinun, kstp, kper, delt, &
                         pertim, totim, this%iout)
     end if
+    !    
+    ! -- For continuous observations, save simulated values.  This
+    !    needs to be called after lkt_fill_budobj() so that the budget
+    !    terms have been calculated
+    if (this%obs%npakobs > 0 .and. iprobs > 0) then
+      call this%lkt_bd_obs()
+    endif
     !
     ! -- return
     return
@@ -1383,7 +1385,6 @@ module GwtLktModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
-    use SimModule, only: ustop, store_error
     ! -- dummy
     class(GwtLktType) :: this
     ! -- local
@@ -1491,7 +1492,6 @@ module GwtLktModule
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: MAXCHARLEN, DZERO
     use OpenSpecModule, only: access, form
-    use SimModule, only: ustop, store_error
     use InputOutputModule, only: urword, getunit, openfile
     ! -- dummy
     class(GwtLktType), intent(inout) :: this
@@ -1564,7 +1564,6 @@ module GwtLktModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, store_error, count_errors
     ! -- dummy
     class(GwtLktType),intent(inout) :: this
     ! -- local
@@ -1629,7 +1628,6 @@ module GwtLktModule
     ! -- modules
     use ConstantsModule, only: LINELENGTH
     use MemoryManagerModule, only: mem_allocate
-    use SimModule, only: ustop, store_error, count_errors, store_error_unit
     use TimeSeriesManagerModule, only: read_single_value_or_time_series
     ! -- dummy
     class(GwtLktType),intent(inout) :: this
@@ -1808,7 +1806,6 @@ module GwtLktModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, store_error, count_errors
     use BudgetModule, only: budget_cr
     use TimeSeriesManagerModule, only: read_single_value_or_time_series
     ! -- dummy
@@ -1898,9 +1895,8 @@ module GwtLktModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use ConstantsModule,   only: LINELENGTH
-    use SimModule,         only: ustop, store_error, count_errors
-    use TdisModule,        only: delt
+    use ConstantsModule, only: LINELENGTH
+    use TdisModule, only: delt
     ! -- dummy
     class(GwtLktType) :: this
     ! -- local
@@ -2737,4 +2733,463 @@ module GwtLktModule
     return
   end subroutine lkt_outf_term
   
+  logical function lkt_obs_supported(this)
+! ******************************************************************************
+! lkt_obs_supported -- obs are supported?
+!   -- Return true because LAK package supports observations.
+!   -- Overrides BndType%bnd_obs_supported()
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwtLktType) :: this
+! ------------------------------------------------------------------------------
+    !
+    ! -- Set to true
+    lkt_obs_supported = .true.
+    !
+    ! -- return
+    return
+  end function lkt_obs_supported
+  
+  subroutine lkt_df_obs(this)
+! ******************************************************************************
+! lkt_df_obs -- obs are supported?
+!   -- Store observation type supported by LAK package.
+!   -- Overrides BndType%bnd_df_obs
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwtLktType) :: this
+    ! -- local
+    integer(I4B) :: indx
+! ------------------------------------------------------------------------------
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for stage observation type.
+    call this%obs%StoreObsType('concentration', .false., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => lkt_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for ext-inflow observation type.
+    call this%obs%StoreObsType('ext-inflow', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => lkt_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for outlet-inflow observation type.
+    call this%obs%StoreObsType('outlet-inflow', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => lkt_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for inflow observation type.
+    call this%obs%StoreObsType('inflow', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => lkt_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for from-mvr observation type.
+    call this%obs%StoreObsType('from-mvr', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => lkt_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for rainfall observation type.
+    call this%obs%StoreObsType('rainfall', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => lkt_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for runoff observation type.
+    call this%obs%StoreObsType('runoff', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => lkt_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for lak observation type.
+    call this%obs%StoreObsType('lkt', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => lkt_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for evaporation observation type.
+    call this%obs%StoreObsType('evaporation', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => lkt_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for withdrawal observation type.
+    call this%obs%StoreObsType('withdrawal', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => lkt_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for ext-outflow observation type.
+    call this%obs%StoreObsType('ext-outflow', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => lkt_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for to-mvr observation type.
+    call this%obs%StoreObsType('to-mvr', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => lkt_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for storage observation type.
+    call this%obs%StoreObsType('storage', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => lkt_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for constant observation type.
+    call this%obs%StoreObsType('constant', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => lkt_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for outlet observation type.
+    call this%obs%StoreObsType('outlet', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => lkt_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for volume observation type.
+    call this%obs%StoreObsType('volume', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => lkt_process_obsID
+    !
+    return
+  end subroutine lkt_df_obs
+  
+  subroutine lkt_rp_obs(this)
+! ******************************************************************************
+! lkt_rp_obs -- 
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(GwtLktType), intent(inout) :: this
+    ! -- local
+    integer(I4B) :: i, j, n, nn1, nn2
+    integer(I4B) :: n1, n2
+    integer(I4B) :: jj
+    character(len=200) :: ermsg
+    character(len=LENBOUNDNAME) :: bname
+    logical :: jfound
+    class(ObserveType), pointer :: obsrv => null()
+! ------------------------------------------------------------------------------
+    ! -- formats
+10  format('Error: Boundary "',a,'" for observation "',a, &
+           '" is invalid in package "',a,'"')
+    !
+    do i = 1, this%obs%npakobs
+      obsrv => this%obs%pakobs(i)%obsrv
+      !
+      ! -- indxbnds needs to be deallocated and reallocated (using
+      !    ExpandArray) each stress period because list of boundaries
+      !    can change each stress period.
+      if (allocated(obsrv%indxbnds)) then
+        deallocate(obsrv%indxbnds)
+      end if
+      !
+      ! -- get node number 1
+      nn1 = obsrv%NodeNumber
+      if (nn1 == NAMEDBOUNDFLAG) then
+        bname = obsrv%FeatureName
+        if (bname /= '') then
+          ! -- Observation lake is based on a boundary name.
+          !    Iterate through all lakes to identify and store
+          !    corresponding index in bound array.
+          jfound = .false.
+          if (obsrv%ObsTypeId=='LKT') then
+            do j = 1, this%lakbudptr%budterm(this%idxbudgwf)%nlist
+              !n1 = this%lakbudptr%budterm(this%idxbudgwf)%id1(j)
+              if (this%boundname(j) == bname) then
+                jfound = .true.
+                call ExpandArray(obsrv%indxbnds)
+                n = size(obsrv%indxbnds)
+                obsrv%indxbnds(n) = j
+              end if
+            end do
+          else if (obsrv%ObsTypeId=='EXT-OUTFLOW' .or.   &
+                   obsrv%ObsTypeId=='TO-MVR' .or. &
+                   obsrv%ObsTypeId=='OUTLET') then
+            
+            ! -- todo: need to get this working for outlet flows
+            !do j = 1, this%noutlets
+            !  jj = this%lakein(j)
+            !  if (this%lakename(jj) == bname) then
+            !    jfound = .true.
+            !    call ExpandArray(obsrv%indxbnds)
+            !    n = size(obsrv%indxbnds)
+            !    obsrv%indxbnds(n) = j
+            !  end if
+            !end do
+            
+          else
+            do j = 1, this%nlakes
+              if (this%lakename(j) == bname) then
+                jfound = .true.
+                call ExpandArray(obsrv%indxbnds)
+                n = size(obsrv%indxbnds)
+                obsrv%indxbnds(n) = j
+              end if
+            end do
+          end if
+          if (.not. jfound) then
+            write(ermsg,10) trim(bname), trim(obsrv%Name), trim(this%name)
+            call store_error(ermsg)
+          end if
+        end if
+      else
+        call ExpandArray(obsrv%indxbnds)
+        n = size(obsrv%indxbnds)
+        if (n == 1) then
+          if (obsrv%ObsTypeId=='LKT') then
+            nn2 = obsrv%NodeNumber2
+            j = nn2
+            obsrv%indxbnds(1) = j
+          else
+            obsrv%indxbnds(1) = nn1
+          end if
+        else
+          ermsg = 'Programming error in lkt_rp_obs'
+          call store_error(ermsg)
+        endif
+      end if
+      !
+      ! -- catch non-cumulative observation assigned to observation defined
+      !    by a boundname that is assigned to more than one element
+      if (obsrv%ObsTypeId == 'CONCENTRATION') then
+        n = size(obsrv%indxbnds)
+        if (n > 1) then
+          write (ermsg, '(4x,a,4(1x,a))') &
+            'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
+            'for observation', trim(adjustl(obsrv%Name)), &
+            ' must be assigned to a lake with a unique boundname.'
+          call store_error(ermsg)
+        end if
+      end if
+      !
+      ! -- check that index values are valid
+      if (obsrv%ObsTypeId=='TO-MVR' .or. &
+          obsrv%ObsTypeId=='EXT-OUTFLOW' .or. &
+          obsrv%ObsTypeId=='OUTLET') then
+        do j = 1, size(obsrv%indxbnds)
+          nn1 =  obsrv%indxbnds(j)
+          ! -- todo: how do we replace noutlets here?
+          !if (nn1 < 1 .or. nn1 > this%noutlets) then
+          !  write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
+          !    'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
+          !    ' outlet must be > 0 and <=', this%noutlets, &
+          !    '(specified value is ', nn1, ')'
+            call store_error(ermsg)
+          !end if
+        end do
+      else if (obsrv%ObsTypeId=='LKT') then
+        do j = 1, size(obsrv%indxbnds)
+          nn1 =  obsrv%indxbnds(j)
+          if (nn1 < 1 .or. nn1 > this%maxbound) then
+            write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
+              'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
+              ' lake connection number must be > 0 and <=', this%maxbound, &
+              '(specified value is ', nn1, ')'
+            call store_error(ermsg)
+          end if
+        end do
+      else
+        do j = 1, size(obsrv%indxbnds)
+          nn1 =  obsrv%indxbnds(j)
+          if (nn1 < 1 .or. nn1 > this%nlakes) then
+            write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
+              'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
+              ' lake must be > 0 and <=', this%nlakes, &
+              '(specified value is ', nn1, ')'
+            call store_error(ermsg)
+          end if
+        end do
+      end if
+    end do
+    if (count_errors() > 0) call ustop()
+    !
+    return
+  end subroutine lkt_rp_obs
+  
+  subroutine lkt_bd_obs(this)
+! ******************************************************************************
+! lkt_bd_obs -- 
+!   -- Calculate observations this time step and call
+!      ObsType%SaveOneSimval for each GwtLktType observation.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(GwtLktType), intent(inout) :: this
+    ! -- local
+    integer(I4B) :: i, igwfnode, j, jj, n, nn
+    integer(I4B) :: n1, n2
+    real(DP) :: hgwf, hlak, v, v2
+    character(len=100) :: errmsg
+    type(ObserveType), pointer :: obsrv => null()
+! ------------------------------------------------------------------------------
+    !
+    ! -- Write simulated values for all LAK observations
+    if (this%obs%npakobs > 0) then
+      call this%obs%obs_bd_clear()
+      do i = 1, this%obs%npakobs
+        obsrv => this%obs%pakobs(i)%obsrv
+        nn = size(obsrv%indxbnds)
+        do j = 1, nn
+          v = DNODATA
+          jj = obsrv%indxbnds(j)
+          select case (obsrv%ObsTypeId)
+            case ('CONCENTRATION')
+              if (this%iboundpak(jj) /= 0) then
+                v = this%xnewpak(jj)
+              end if
+            case ('EXT-INFLOW')
+              if (this%iboundpak(jj) /= 0) then
+                call this%lkt_iflw_term(jj, n1, n2, v)
+              end if
+            !case ('OUTLET-INFLOW')
+            !  if (this%iboundpak(jj) /= 0) then
+            !    call this%lak_calculate_outlet_inflow(jj, v)
+            !  end if
+            !case ('INFLOW')
+            !  if (this%iboundpak(jj) /= 0) then
+            !    call this%lak_calculate_inflow(jj, v)
+            !    call this%lak_calculate_outlet_inflow(jj, v2)
+            !    v = v + v2
+            !  end if
+            !case ('FROM-MVR')
+            !  if (this%iboundpak(jj) /= 0) then
+            !    if (this%imover == 1) then
+            !      v = this%pakmvrobj%get_qfrommvr(jj)
+            !    end if
+            !  end if
+            case ('RAINFALL')
+              if (this%iboundpak(jj) /= 0) then
+                call this%lkt_rain_term(jj, n1, n2, v)
+              end if
+            case ('RUNOFF')
+              if (this%iboundpak(jj) /= 0) then
+                call this%lkt_rain_term(jj, n1, n2, v)
+              end if
+            case ('LKT')
+              n = this%lakbudptr%budterm(this%idxbudgwf)%id1(jj)
+              if (this%iboundpak(n) /= 0) then
+                igwfnode = this%lakbudptr%budterm(this%idxbudgwf)%id2(jj)
+                v = this%hcof(jj) * this%xnew(igwfnode) - this%rhs(jj)
+                v = -v
+              end if
+            case ('EVAPORATION')
+              if (this%iboundpak(jj) /= 0) then
+                call this%lkt_evap_term(jj, n1, n2, v)
+              end if
+            case ('WITHDRAWAL')
+              if (this%iboundpak(jj) /= 0) then
+                call this%lkt_wdrl_term(jj, n1, n2, v)
+              end if
+            !case ('EXT-OUTFLOW')
+            !  n = this%lakein(jj)
+            !  if (this%iboundpak(n) /= 0) then
+            !    if (this%lakeout(jj) == 0) then
+            !      v = this%simoutrate(jj)
+            !      if (v < DZERO) then
+            !        if (this%imover == 1) then
+            !          v = v + this%pakmvrobj%get_qtomvr(jj)
+            !        end if
+            !      end if
+            !    end if
+            !  end if
+            !case ('TO-MVR')
+            !  n = this%lakein(jj)
+            !  if (this%iboundpak(n) /= 0) then
+            !    if (this%imover == 1) then
+            !      v = this%pakmvrobj%get_qtomvr(jj)
+            !      if (v > DZERO) then
+            !        v = -v
+            !      end if
+            !    end if
+            !  end if
+            case ('STORAGE')
+              if (this%iboundpak(jj) /= 0) then
+                v = this%qsto(jj)
+              end if
+            case ('CONSTANT')
+              if (this%iboundpak(jj) /= 0) then
+                v = this%ccterm(jj)
+              end if
+            !case ('OUTLET')
+            !  n = this%lakein(jj)
+            !  if (this%iboundpak(jj) /= 0) then
+            !    v = this%simoutrate(jj)
+            !    !if (this%imover == 1) then
+            !    !  v = v + this%pakmvrobj%get_qtomvr(jj)
+            !    !end if
+            !  end if
+            !case ('VOLUME')
+            !  if (this%iboundpak(jj) /= 0) then
+            !    call this%lak_calculate_vol(jj, this%xnewpak(jj), v)
+            !  end if
+            case default
+              errmsg = 'Error: Unrecognized observation type: ' // &
+                        trim(obsrv%ObsTypeId)
+              call store_error(errmsg)
+              call ustop()
+          end select
+          call this%obs%SaveOneSimval(obsrv, v)
+        end do
+      end do
+    end if
+    !
+    return
+  end subroutine lkt_bd_obs
+
+  subroutine lkt_process_obsID(obsrv, dis, inunitobs, iout)
+! ******************************************************************************
+! lkt_process_obsID --
+! -- This procedure is pointed to by ObsDataType%ProcesssIdPtr. It processes
+!    the ID string of an observation definition for LAK package observations.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    type(ObserveType), intent(inout) :: obsrv
+    class(DisBaseType), intent(in)    :: dis
+    integer(I4B), intent(in)    :: inunitobs
+    integer(I4B), intent(in)    :: iout
+    ! -- local
+    integer(I4B) :: nn1, nn2
+    integer(I4B) :: icol, istart, istop
+    character(len=LINELENGTH) :: strng
+    character(len=LENBOUNDNAME) :: bndname
+    ! -- formats
+! ------------------------------------------------------------------------------
+    !
+    strng = obsrv%IDstring
+    ! -- Extract lake number from strng and store it.
+    !    If 1st item is not an integer(I4B), it should be a
+    !    lake name--deal with it.
+    icol = 1
+    ! -- get lake number or boundary name
+    call extract_idnum_or_bndname(strng, icol, istart, istop, nn1, bndname)
+    if (nn1 == NAMEDBOUNDFLAG) then
+      obsrv%FeatureName = bndname
+    else
+      if (obsrv%ObsTypeId=='LKT') then
+        call extract_idnum_or_bndname(strng, icol, istart, istop, nn2, bndname)
+        if (nn2 == NAMEDBOUNDFLAG) then
+          obsrv%FeatureName = bndname
+          ! -- reset nn1
+          nn1 = nn2
+        else
+          obsrv%NodeNumber2 = nn2
+        end if
+        !! -- store connection number (NodeNumber2)
+        !obsrv%NodeNumber2 = nn2
+      endif
+    endif
+    ! -- store lake number (NodeNumber)
+    obsrv%NodeNumber = nn1
+    !
+    return
+  end subroutine lkt_process_obsID
+
 end module GwtLktModule

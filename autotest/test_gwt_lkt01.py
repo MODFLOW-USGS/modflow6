@@ -230,6 +230,30 @@ def get_model(idx, dir):
                      (0, 'EVAPORATION', 25.),
                      (0, 'RUNOFF', 25.),
                      ]
+
+    lkt_obs = {(gwtname + '.lkt.obs.csv', ):
+                   [
+                    ('lkt-1-conc', 'CONCENTRATION', 1),
+                    ('lkt-1-extinflow', 'EXT-INFLOW', 1),
+                    ('lkt-1-rain', 'RAINFALL', 1),
+                    ('lkt-1-roff', 'RUNOFF', 1),
+                    ('lkt-1-evap', 'EVAPORATION', 1),
+                    ('lkt-1-wdrl', 'WITHDRAWAL', 1),
+                    ('lkt-1-stor', 'STORAGE', 1),
+                    ('lkt-1-const', 'CONSTANT', 1),
+                    ('lkt-1-gwt2', 'LKT', 1, 1),
+                    ('lkt-1-gwt4', 'LKT', 1, 3),
+                    ('lkt-1-gwt3', 'LKT', 1, 2),
+                    ('lkt-1-mylake', 'LKT', 'MYLAKE'),
+                   ],
+               #'ghb_flows.csv': [('Estuary2', 'GHB', 'Estuary-L2'),
+               #                  ('Estuary3', 'GHB', 'Estuary-L3')]
+               }
+    # append additional obs attributes to obs dictionary
+    lkt_obs['digits'] = 7
+    lkt_obs['print_input'] = True
+    lkt_obs['filename'] = gwtname + '.lkt.obs'
+
     lkt = flopy.mf6.modflow.ModflowGwtlkt(gwt,
                                           boundnames=True,
                                           save_flows=True,
@@ -240,6 +264,7 @@ def get_model(idx, dir):
                                           budget_filerecord='gwtlak1.bud',
                                           packagedata=lktpackagedata,
                                           lakeperioddata=lktperioddata,
+                                          observations=lkt_obs,
                                           pname='LAK-1',
                                           auxiliary=['aux1', 'aux2'])
     # output control
@@ -285,7 +310,6 @@ def eval_results(sim):
     cobj = flopy.utils.HeadFile(fname, text='CONCENTRATION')
     clak = cobj.get_alldata().flatten()
     answer = np.ones(10)*100.
-    print(clak)
     assert np.allclose(clak, answer), '{} {}'.format(clak, answer)
 
     # load the aquifer concentrations and make sure all values are correct
@@ -296,6 +320,49 @@ def eval_results(sim):
     answer = np.array([ 4.86242795, 27.24270616, 64.55536421,
                         27.24270616, 4.86242795])
     assert np.allclose(caq[-1].flatten(), answer), '{} {}'.format(caq[-1].flatten(), answer)
+
+    # lkt observation results
+    fpth = os.path.join(sim.simpath, gwtname + '.lkt.obs.csv')
+    try:
+        tc = np.genfromtxt(fpth, names=True, delimiter=',')
+    except:
+        assert False, 'could not load data from "{}"'.format(fpth)
+    res = tc['LKT1CONC']
+    answer = np.ones(10) * 100.
+    assert np.allclose(res, answer), '{} {}'.format(res, answer)
+    res = tc['LKT1EXTINFLOW']
+    answer = np.ones(10) * 0.
+    assert np.allclose(res, answer), '{} {}'.format(res, answer)
+    res = tc['LKT1RAIN']
+    answer = np.ones(10) * 2.5
+    assert np.allclose(res, answer), '{} {}'.format(res, answer)
+    res = tc['LKT1ROFF']
+    answer = np.ones(10) * 2.5
+    assert np.allclose(res, answer), '{} {}'.format(res, answer)
+    res = tc['LKT1EVAP']
+    answer = np.ones(10) * -5.
+    assert np.allclose(res, answer), '{} {}'.format(res, answer)
+    res = tc['LKT1WDRL']
+    answer = np.ones(10) * -10.
+    assert np.allclose(res, answer), '{} {}'.format(res, answer)
+    res = tc['LKT1STOR']
+    answer = np.ones(10) * 0.
+    assert np.allclose(res, answer), '{} {}'.format(res, answer)
+    res = tc['LKT1CONST']
+    answer = np.ones(10) * 236.3934
+    assert np.allclose(res, answer), '{} {}'.format(res, answer)
+    res = tc['LKT1GWT2']
+    answer = np.ones(10) * -91.80328
+    assert np.allclose(res, answer), '{} {}'.format(res, answer)
+    res = tc['LKT1GWT4']
+    answer = np.ones(10) * -32.78689
+    assert np.allclose(res, answer), '{} {}'.format(res, answer)
+    res = tc['LKT1GWT3']
+    answer = np.ones(10) * -91.80328
+    assert np.allclose(res, answer), '{} {}'.format(res, answer)
+    res = tc['LKT1MYLAKE']
+    answer = np.ones(10) * -216.3934
+    assert np.allclose(res, answer), '{} {}'.format(res, answer)
 
     # todo: add a better check of the lake concentrations
     # assert False
