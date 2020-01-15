@@ -1,7 +1,5 @@
-# Simple one-layer model with a lak.  Purpose is to test a constant
-# stage and constant concentration lake with a value of 100.  The aquifer
-# starts with a concentration of zero, but the values grow as the lake
-# leaks into the aquifer.
+# Simple one-layer model with a lak.  Purpose is to test outlets that
+# move solute from one lake to another.
 
 import os
 import sys
@@ -18,23 +16,23 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['lkt_01']
+ex = ['lkt_02']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
 
 
 def get_model(idx, dir):
-    lx = 5.
+    lx = 7.
     lz = 1.
     nlay = 1
     nrow = 1
-    ncol = 5
+    ncol = 7
     nper = 1
     delc = 1.
     delr = lx / ncol
     delz = lz / nlay
-    top = [0., 0., -0.90, 0., 0.]
+    top = [0., 0., -0.90, -0.90, -0.90, 0., 0.]
     botm = list(top - np.arange(delz, nlay * delz + delz, delz))
     botm[2] = -1.0
 
@@ -100,8 +98,8 @@ def get_model(idx, dir):
                                   k=Kh, k33=Kv)
 
     # chd files
-    chdlist1 = [[(0, 0, 0), -0.5],
-                [(0, 0, ncol - 1), -0.5],
+    chdlist1 = [[(0, 0, 0), -0.4, 100.],
+                [(0, 0, ncol - 1), -0.5, 0.],
                 ]
     chd1 = flopy.mf6.ModflowGwfchd(gwf,
                                    stress_period_data=chdlist1,
@@ -112,29 +110,38 @@ def get_model(idx, dir):
                                    auxiliary='CONCENTRATION',
                                    filename='{}.chd'.format(gwfname))
 
-    nlakeconn = 3  # note: this is the number of cells, not total number of connections
     # pak_data = [lakeno, strt, nlakeconn, CONC, dense, boundname]
-    pak_data = [(0, -0.4, nlakeconn, 0., 1025.)]
+    pak_data = [(0, -0.4, 2, 0., 1025.),
+                (1, -0.4, 1, 0., 1025.),
+                (2, -0.4, 2, 0., 1025.)]
 
     connlen = connwidth = delr / 2.
     con_data = []
     # con_data=(lakeno,iconn,(cellid),claktype,bedleak,belev,telev,connlen,connwidth )
+    # lake 1
     con_data.append(
         (0, 0, (0, 0, 1), 'HORIZONTAL', 'None', 10, 10, connlen, connwidth))
     con_data.append(
-        (0, 1, (0, 0, 3), 'HORIZONTAL', 'None', 10, 10, connlen, connwidth))
+        (0, 1, (0, 0, 2), 'VERTICAL', 'None', 10, 10, connlen, connwidth))
+    # lake 2
     con_data.append(
-        (0, 2, (0, 0, 2), 'VERTICAL', 'None', 10, 10, connlen, connwidth))
-    p_data = [(0, 'STATUS', 'CONSTANT'),
-              (0, 'STAGE', -0.4),
-              (0, 'RAINFALL', .1),
-              (0, 'EVAPORATION', .2),
-              (0, 'RUNOFF', .1 * delr * delc),
-              (0, 'WITHDRAWAL', .1),
+        (1, 0, (0, 0, 3), 'VERTICAL', 'None', 10, 10, connlen, connwidth))
+    # lake 3
+    con_data.append(
+        (2, 0, (0, 0, 4), 'VERTICAL', 'None', 10, 10, connlen, connwidth))
+    con_data.append(
+        (2, 1, (0, 0, 5), 'HORIZONTAL', 'None', 10, 10, connlen, connwidth))
+
+    p_data = [
+              (0, 'RAINFALL', .0),
+              (1, 'RAINFALL', .0),
+              (2, 'RAINFALL', .0),
               ]
     # <outletno> <lakein> <lakeout> <couttype> <invert> <width> <rough> <slope>
-    outlets = [(0, 0, -1, 'SPECIFIED', 999., 999., 999., 999.)]
-    outletperioddata = [(0, 'RATE', -0.1)]
+    outlets = [(0, 0, 1, 'SPECIFIED', 999., 999., 999., 999.),
+               (1, 1, 2, 'SPECIFIED', 999., 999., 999., 999.)]
+    outletperioddata = [(0, 'RATE', -0.1),
+                        (1, 'RATE', -0.1),]
 
     # note: for specifying lake number, use fortran indexing!
     lak_obs = {('lak_obs.csv'): [('lakestage', 'stage', 1),
@@ -147,9 +154,9 @@ def get_model(idx, dir):
                                           print_input=True,
                                           print_flows=True,
                                           print_stage=True,
-                                          stage_filerecord='stage',
-                                          budget_filerecord='lakebud',
-                                          nlakes=1, ntables=0, noutlets=1,
+                                          stage_filerecord=gwfname+'.lak.stg',
+                                          budget_filerecord=gwfname+'.lak.bud',
+                                          nlakes=3, ntables=0, noutlets=1,
                                           packagedata=pak_data,
                                           outlets=outlets,
                                           pname='LAK-1',
@@ -196,7 +203,7 @@ def get_model(idx, dir):
                                   top=top, botm=botm, idomain=idomain)
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwtic(gwt, strt=0.,
+    ic = flopy.mf6.ModflowGwtic(gwt, strt=[100., 0., 0., 0., 0., 0., 0.],
                                 filename='{}.ic'.format(gwtname))
 
     # advection
@@ -220,12 +227,13 @@ def get_model(idx, dir):
     ssm = flopy.mf6.ModflowGwtssm(gwt, sources=sourcerecarray,
                                   filename='{}.ssm'.format(gwtname))
 
-    lktpackagedata = [(0, 35., 99., 999., 'mylake'), ]
-    lktperioddata = [(0, 'STATUS', 'CONSTANT'),
-                     (0, 'CONCENTRATION', 100.),
-                     (0, 'RAINFALL', 25.),
-                     (0, 'EVAPORATION', 25.),
-                     (0, 'RUNOFF', 25.),
+    lktpackagedata = [(0, 0., 99., 999., 'mylake1'),
+                      (1, 0., 99., 999., 'mylake2'),
+                      (2, 0., 99., 999., 'mylake3'),]
+    lktperioddata = [
+                     (0, 'STATUS', 'ACTIVE'),
+                     (1, 'STATUS', 'ACTIVE'),
+                     (2, 'STATUS', 'ACTIVE'),
                      ]
 
     lkt_obs = {(gwtname + '.lkt.obs.csv', ):
@@ -241,7 +249,7 @@ def get_model(idx, dir):
                     ('lkt-1-gwt2', 'LKT', 1, 1),
                     ('lkt-1-gwt4', 'LKT', 1, 3),
                     ('lkt-1-gwt3', 'LKT', 1, 2),
-                    ('lkt-1-mylake', 'LKT', 'MYLAKE'),
+                    ('lkt-1-mylake1', 'LKT', 'MYLAKE1'),
                    ],
                }
     # append additional obs attributes to obs dictionary
@@ -301,20 +309,21 @@ def eval_results(sim):
     fname = os.path.join(sim.simpath, fname)
     assert os.path.isfile(fname)
 
-    # load the lake concentrations and make sure all values are 100.
+    # load the lake concentrations and make sure all values are correct
     cobj = flopy.utils.HeadFile(fname, text='CONCENTRATION')
-    clak = cobj.get_alldata().flatten()
-    answer = np.ones(10)*100.
+    clak = cobj.get_data()
+    answer = np.array([2.20913605e-01, 2.06598617e-03, 1.64112298e-05])
     assert np.allclose(clak, answer), '{} {}'.format(clak, answer)
 
     # load the aquifer concentrations and make sure all values are correct
     fname = gwtname + '.ucn'
     fname = os.path.join(sim.simpath, fname)
     cobj = flopy.utils.HeadFile(fname, text='CONCENTRATION')
-    caq = cobj.get_alldata()
-    answer = np.array([ 4.86242795, 27.24270616, 64.55536421,
-                        27.24270616, 4.86242795])
-    assert np.allclose(caq[-1].flatten(), answer), '{} {}'.format(caq[-1].flatten(), answer)
+    caq = cobj.get_data()
+    answer = np.array([1.00000000e+02, 8.50686091e+00, 5.71594204e-01,
+                       1.30062708e-02, 2.38399700e-04, 3.30711200e-06,
+                       7.33445279e-08])
+    assert np.allclose(caq, answer), '{} {}'.format(caq[-1].flatten(), answer)
 
     # lkt observation results
     fpth = os.path.join(sim.simpath, gwtname + '.lkt.obs.csv')
@@ -323,40 +332,19 @@ def eval_results(sim):
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
     res = tc['LKT1CONC']
-    answer = np.ones(10) * 100.
-    assert np.allclose(res, answer), '{} {}'.format(res, answer)
-    res = tc['LKT1EXTINFLOW']
-    answer = np.ones(10) * 0.
-    assert np.allclose(res, answer), '{} {}'.format(res, answer)
-    res = tc['LKT1RAIN']
-    answer = np.ones(10) * 2.5
-    assert np.allclose(res, answer), '{} {}'.format(res, answer)
-    res = tc['LKT1ROFF']
-    answer = np.ones(10) * 2.5
-    assert np.allclose(res, answer), '{} {}'.format(res, answer)
-    res = tc['LKT1EVAP']
-    answer = np.ones(10) * -5.
-    assert np.allclose(res, answer), '{} {}'.format(res, answer)
-    res = tc['LKT1WDRL']
-    answer = np.ones(10) * -10.
+    answer = [0.00418347, 0.01249363, 0.02487425, 0.04126975, 0.06162508,
+              0.0858858,  0.113998,   0.1459085,  0.1815644,  0.2209136 ]
+    answer = np.array(answer)
     assert np.allclose(res, answer), '{} {}'.format(res, answer)
     res = tc['LKT1STOR']
-    answer = np.ones(10) * 0.
+    answer = [-0.1988482, -0.3949968, -0.588474,  -0.779308,  -0.9675264,
+              -1.153157, -1.336226,  -1.516762,  -1.694791,  -1.87034]
+    answer = np.array(answer)
     assert np.allclose(res, answer), '{} {}'.format(res, answer)
-    res = tc['LKT1CONST']
-    answer = np.ones(10) * 236.3934
-    assert np.allclose(res, answer), '{} {}'.format(res, answer)
-    res = tc['LKT1GWT2']
-    answer = np.ones(10) * -91.80328
-    assert np.allclose(res, answer), '{} {}'.format(res, answer)
-    res = tc['LKT1GWT4']
-    answer = np.ones(10) * -32.78689
-    assert np.allclose(res, answer), '{} {}'.format(res, answer)
-    res = tc['LKT1GWT3']
-    answer = np.ones(10) * -91.80328
-    assert np.allclose(res, answer), '{} {}'.format(res, answer)
-    res = tc['LKT1MYLAKE']
-    answer = np.ones(10) * -216.3934
+    res = tc['LKT1MYLAKE1']
+    answer = [0.1992666, 0.3962462, 0.5909615, 0.7834349, 0.9736889, 1.161745,
+              1.347626, 1.531353,  1.712948,  1.892431]
+    answer = np.array(answer)
     assert np.allclose(res, answer), '{} {}'.format(res, answer)
 
     # todo: add a better check of the lake concentrations

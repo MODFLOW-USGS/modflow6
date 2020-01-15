@@ -49,6 +49,8 @@ module GwtLktModule
     integer(I4B), dimension(:), pointer, contiguous    :: idxoffdglo => null()      !map position in global array of package off diagonal row entries
     integer(I4B), dimension(:), pointer, contiguous    :: idxsymdglo => null()      !map position in global array of package diagonal entries to model rows
     integer(I4B), dimension(:), pointer, contiguous    :: idxsymoffdglo => null()   !map position in global array of package off diagonal entries to model rows
+    integer(I4B), dimension(:), pointer, contiguous    :: idxfjfdglo => null()      !map diagonal lak to lak in global amat
+    integer(I4B), dimension(:), pointer, contiguous    :: idxfjfoffdglo => null()   !map off diagonal lak to lak in global amat
     integer(I4B), dimension(:), pointer, contiguous    :: iboundpak => null()       !package ibound
     real(DP), dimension(:), pointer, contiguous        :: xnewpak => null()     ! lak concentration for current time step
     real(DP), dimension(:), pointer, contiguous        :: xoldpak => null()     ! lak concentration from previous time step
@@ -221,6 +223,17 @@ module GwtLktModule
         call sparse%addconnection(nglo, jglo, 1)
         call sparse%addconnection(jglo, nglo, 1)
       end do
+      !
+      ! -- lake-lake connections
+      if (this%idxbudfjf /= 0) then
+        do i = 1, this%lakbudptr%budterm(this%idxbudfjf)%maxlist
+          n = this%lakbudptr%budterm(this%idxbudfjf)%id1(i)
+          jj = this%lakbudptr%budterm(this%idxbudfjf)%id2(i)
+          nglo = moffset + this%dis%nodes + this%ioffset + n
+          jglo = moffset + this%dis%nodes + this%ioffset + jj
+          call sparse%addconnection(nglo, jglo, 1)
+        end do
+      end if
     end if
     !
     ! -- return
@@ -256,6 +269,12 @@ module GwtLktModule
       allocate(this%idxoffdglo(this%maxbound))
       allocate(this%idxsymdglo(this%maxbound))
       allocate(this%idxsymoffdglo(this%maxbound))
+      n = 0
+      if (this%idxbudfjf /= 0) then
+        n = this%lakbudptr%budterm(this%idxbudfjf)%maxlist
+      end if
+      allocate(this%idxfjfdglo(n))
+      allocate(this%idxfjfoffdglo(n))
       !
       ! -- Find the position of each connection in the global ia, ja structure
       !    and store them in idxglo.  idxglo allows this model to insert or
@@ -294,6 +313,23 @@ module GwtLktModule
           endif
         enddo symsearchloop
       end do
+      !
+      ! -- lak-lak contributions to gwf portion of global matrix
+      if (this%idxbudfjf /= 0) then
+        do ipos = 1, this%lakbudptr%budterm(this%idxbudfjf)%nlist
+          n = this%lakbudptr%budterm(this%idxbudfjf)%id1(ipos)
+          j = this%lakbudptr%budterm(this%idxbudfjf)%id2(ipos)
+          iglo = moffset + this%dis%nodes + this%ioffset + n
+          jglo = moffset + this%dis%nodes + this%ioffset + j
+          fjfsearchloop: do jj = iasln(iglo), iasln(iglo + 1) - 1
+            if(jglo == jasln(jj)) then
+              this%idxfjfdglo(ipos) = iasln(iglo)
+              this%idxfjfoffdglo(ipos) = jj
+              exit fjfsearchloop
+            endif
+          enddo fjfsearchloop
+        end do
+      end if
     else
       allocate(this%idxlocnode(0))
       allocate(this%idxpakdiag(0))
@@ -301,6 +337,8 @@ module GwtLktModule
       allocate(this%idxoffdglo(0))
       allocate(this%idxsymdglo(0))
       allocate(this%idxsymoffdglo(0))
+      allocate(this%idxfjfdglo(0))
+      allocate(this%idxfjfoffdglo(0))
     endif
     !
     ! -- return
@@ -920,6 +958,24 @@ module GwtLktModule
       end if    
     end do
     !
+    ! -- go through each lak-lak connection
+    if (this%idxbudfjf /= 0) then
+      do j = 1, this%lakbudptr%budterm(this%idxbudfjf)%nlist
+        n1 = this%lakbudptr%budterm(this%idxbudfjf)%id1(j)
+        n2 = this%lakbudptr%budterm(this%idxbudfjf)%id2(j)
+        qbnd = this%lakbudptr%budterm(this%idxbudfjf)%flow(j)
+        if (qbnd <= DZERO) then
+          omega = DONE
+        else
+          omega = DZERO
+        end if
+        iposd = this%idxfjfdglo(j)
+        iposoffd = this%idxfjfoffdglo(j)
+        amatsln(iposd) = amatsln(iposd) + omega * qbnd
+        amatsln(iposoffd) = amatsln(iposoffd) + (DONE - omega) * qbnd
+      end do
+    end if
+    !
     ! -- Return
     return
   end subroutine lkt_fc_expanded
@@ -1347,6 +1403,8 @@ module GwtLktModule
     deallocate(this%idxoffdglo)
     deallocate(this%idxsymdglo)
     deallocate(this%idxsymoffdglo)
+    deallocate(this%idxfjfdglo)
+    deallocate(this%idxfjfoffdglo)
     !
     ! -- deallocate scalars
     call mem_deallocate(this%imatrows)
@@ -1982,6 +2040,23 @@ module GwtLktModule
       this%dbuff(n) = this%dbuff(n) + c1
     end do
     !
+    ! -- go through each lak-lak connection and accumulate 
+    !    total mass in dbuff mass
+    if (this%idxbudfjf /= 0) then
+      do j = 1, this%lakbudptr%budterm(this%idxbudfjf)%nlist
+        n1 = this%lakbudptr%budterm(this%idxbudfjf)%id1(j)
+        n2 = this%lakbudptr%budterm(this%idxbudfjf)%id2(j)
+        qbnd = this%lakbudptr%budterm(this%idxbudfjf)%flow(j)
+        if (qbnd <= DZERO) then
+          ctmp = this%xnewpak(n1)
+        else
+          ctmp = this%xnewpak(n2)
+        end if
+        c1 = qbnd * ctmp * delt
+        this%dbuff(n1) = this%dbuff(n1) + c1
+      end do
+    end if
+    !
     ! -- Now divide total accumulated mass in lake by the lake volume
     do n = 1, this%nlakes
       call this%get_volumes(n, v1, v0, delt)
@@ -2181,14 +2256,13 @@ module GwtLktModule
                                                maxlist, .false., .false., &
                                                naux)
       !
-      ! -- store connectivity
+      ! -- store outlet connectivity
       call this%budobj%budterm(idx)%reset(maxlist)
       q = DZERO
       do n = 1, maxlist
         n1 = this%lakbudptr%budterm(this%idxbudfjf)%id1(n)
         n2 = this%lakbudptr%budterm(this%idxbudfjf)%id2(n)
         call this%budobj%budterm(idx)%update_term(n1, n2, q)
-        call this%budobj%budterm(idx)%update_term(n2, n1, -q)
       end do      
     end if
     !
@@ -2389,6 +2463,7 @@ module GwtLktModule
     integer(I4B) :: nlist
     integer(I4B) :: igwfnode
     real(DP) :: q
+    real(DP) :: ctmp
     real(DP) :: ccratin, ccratout
     ! -- formats
 ! -----------------------------------------------------------------------------
@@ -2407,27 +2482,26 @@ module GwtLktModule
     
     ! -- FLOW JA FACE
     nlen = 0
-    ! -- todo: add flow between lakes
-    !do n = 1, this%noutlets
-    !  if (this%lakein(n) > 0 .and. this%lakeout(n) > 0) then
-    !    nlen = nlen + 1
-    !  end if
-    !end do
+    if (this%idxbudfjf /= 0) then
+      nlen = this%lakbudptr%budterm(this%idxbudfjf)%maxlist
+    end if
     if (nlen > 0) then
       idx = idx + 1
-    !  call this%budobj%budterm(idx)%reset(2 * nlen)
-    !  do n = 1, this%noutlets
-    !    n1 = this%lakein(n)
-    !    n2 = this%lakeout(n)
-    !    if (n1 > 0 .and. n2 > 0) then
-    !      q = this%simoutrate(n)
-    !      if (this%imover == 1) then
-    !        q = q + this%pakmvrobj%get_qtomvr(n)
-    !      end if
-    !      call this%budobj%budterm(idx)%update_term(n1, n2, q)
-    !      call this%budobj%budterm(idx)%update_term(n2, n1, -q)
-    !    end if
-    !  end do
+      nlist = this%lakbudptr%budterm(this%idxbudfjf)%maxlist
+      call this%budobj%budterm(idx)%reset(nlist)
+      q = DZERO
+      do j = 1, nlist
+        n1 = this%lakbudptr%budterm(this%idxbudfjf)%id1(j)
+        n2 = this%lakbudptr%budterm(this%idxbudfjf)%id2(j)
+        q = this%lakbudptr%budterm(this%idxbudfjf)%flow(j)
+        if (q <= DZERO) then
+          ctmp = this%xnewpak(n1)
+        else
+          ctmp = this%xnewpak(n2)
+        end if
+        q = q * ctmp
+        call this%budobj%budterm(idx)%update_term(n1, n2, q)
+      end do      
     end if
 
     
