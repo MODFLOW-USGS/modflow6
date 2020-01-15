@@ -127,6 +127,7 @@ module GwtLktModule
     procedure, private :: lkt_iflw_term
     procedure, private :: lkt_wdrl_term
     procedure, private :: lkt_outf_term
+    procedure, private :: lkt_fjf_term
     
   end type GwtLktType
 
@@ -2044,15 +2045,8 @@ module GwtLktModule
     !    total mass in dbuff mass
     if (this%idxbudfjf /= 0) then
       do j = 1, this%lakbudptr%budterm(this%idxbudfjf)%nlist
-        n1 = this%lakbudptr%budterm(this%idxbudfjf)%id1(j)
-        n2 = this%lakbudptr%budterm(this%idxbudfjf)%id2(j)
-        qbnd = this%lakbudptr%budterm(this%idxbudfjf)%flow(j)
-        if (qbnd <= DZERO) then
-          ctmp = this%xnewpak(n1)
-        else
-          ctmp = this%xnewpak(n2)
-        end if
-        c1 = qbnd * ctmp * delt
+        call this%lkt_fjf_term(j, n1, n2, rrate)
+        c1 = rrate * delt
         this%dbuff(n1) = this%dbuff(n1) + c1
       end do
     end if
@@ -2491,15 +2485,7 @@ module GwtLktModule
       call this%budobj%budterm(idx)%reset(nlist)
       q = DZERO
       do j = 1, nlist
-        n1 = this%lakbudptr%budterm(this%idxbudfjf)%id1(j)
-        n2 = this%lakbudptr%budterm(this%idxbudfjf)%id2(j)
-        q = this%lakbudptr%budterm(this%idxbudfjf)%flow(j)
-        if (q <= DZERO) then
-          ctmp = this%xnewpak(n1)
-        else
-          ctmp = this%xnewpak(n2)
-        end if
-        q = q * ctmp
+        call this%lkt_fjf_term(j, n1, n2, q)
         call this%budobj%budterm(idx)%update_term(n1, n2, q)
       end do      
     end if
@@ -2806,6 +2792,33 @@ module GwtLktModule
     ! -- return
     return
   end subroutine lkt_outf_term
+  
+  subroutine lkt_fjf_term(this, ientry, n1, n2, rrate, &
+                          rhsval, hcofval)
+    class(GwtLktType) :: this
+    integer(I4B), intent(in) :: ientry
+    integer(I4B), intent(inout) :: n1
+    integer(I4B), intent(inout) :: n2
+    real(DP), intent(inout), optional :: rrate
+    real(DP), intent(inout), optional :: rhsval
+    real(DP), intent(inout), optional :: hcofval
+    real(DP) :: qbnd
+    real(DP) :: ctmp
+    n1 = this%lakbudptr%budterm(this%idxbudfjf)%id1(ientry)
+    n2 = this%lakbudptr%budterm(this%idxbudfjf)%id2(ientry)
+    qbnd = this%lakbudptr%budterm(this%idxbudfjf)%flow(ientry)
+    if (qbnd <= 0) then
+      ctmp = this%xnewpak(n1)
+    else
+      ctmp = this%xnewpak(n2)
+    end if
+    if (present(rrate)) rrate = ctmp * qbnd
+    if (present(rhsval)) rhsval = -rrate
+    if (present(hcofval)) hcofval = DZERO
+    !
+    ! -- return
+    return
+  end subroutine lkt_fjf_term
   
   logical function lkt_obs_supported(this)
 ! ******************************************************************************
