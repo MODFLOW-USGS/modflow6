@@ -264,7 +264,7 @@ def get_model(idx, dir):
                                           print_flows=True,
                                           print_concentration=True,
                                           concentration_filerecord=gwtname + '.lkt.bin',
-                                          budget_filerecord='gwtlak1.bud',
+                                          budget_filerecord=gwtname + '.lkt.bud',
                                           packagedata=lktpackagedata,
                                           lakeperioddata=lktperioddata,
                                           observations=lkt_obs,
@@ -278,9 +278,10 @@ def get_model(idx, dir):
                                 concentrationprintrecord=[
                                     ('COLUMNS', 10, 'WIDTH', 15,
                                      'DIGITS', 6, 'GENERAL')],
-                                saverecord=[('CONCENTRATION', 'ALL', 'STEP')],
-                                printrecord=[('CONCENTRATION', 'ALL', 'STEP'),
-                                             ('BUDGET', 'ALL', 'STEP')])
+                                saverecord=[('CONCENTRATION', 'ALL'),
+                                            ('BUDGET', 'ALL')],
+                                printrecord=[('CONCENTRATION', 'ALL'),
+                                             ('BUDGET', 'ALL')])
 
     # GWF GWT exchange
     gwfgwt = flopy.mf6.ModflowGwfgwt(sim, exgtype='GWF6-GWT6',
@@ -323,7 +324,7 @@ def eval_results(sim):
     answer = np.array([1.00000000e+02, 8.50686091e+00, 5.71594204e-01,
                        1.30062708e-02, 2.38399700e-04, 3.30711200e-06,
                        7.33445279e-08])
-    assert np.allclose(caq, answer), '{} {}'.format(caq[-1].flatten(), answer)
+    assert np.allclose(caq, answer), '{} {}'.format(caq.flatten(), answer)
 
     # lkt observation results
     fpth = os.path.join(sim.simpath, gwtname + '.lkt.obs.csv')
@@ -346,6 +347,19 @@ def eval_results(sim):
               1.347626, 1.531353,  1.712948,  1.892431]
     answer = np.array(answer)
     assert np.allclose(res, answer), '{} {}'.format(res, answer)
+
+    # load the lake budget file
+    fname = gwtname + '.lkt.bud'
+    fname = os.path.join(sim.simpath, fname)
+    assert os.path.isfile(fname)
+    bobj = flopy.utils.CellBudgetFile(fname, precision='double', verbose=False)
+    res = bobj.get_data(text='flow-ja-face')[-1]
+    answer = [(1, 2, -0.02209136), (2, 1,  0.02209136), (2, 3, -0.0002066 ),
+              (3, 2,  0.0002066)]
+    dt = [('node', '<i4'), ('node2', '<i4'), ('q', '<f8')]
+    answer = np.array(answer, dtype=dt)
+    for dtname, dttype in dt:
+        assert np.allclose(res[dtname], answer[dtname]), '{} {}'.format(res, answer)
 
     # todo: add a better check of the lake concentrations
     # assert False
