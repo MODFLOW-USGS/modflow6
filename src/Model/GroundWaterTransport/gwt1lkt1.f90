@@ -1397,6 +1397,11 @@ module GwtLktModule
     deallocate(this%status)
     deallocate(this%lakename)
     !
+    ! -- budobj
+    call this%budobj%budgetobject_da()
+    deallocate(this%budobj)
+    nullify(this%budobj)
+    !
     ! -- index pointers
     deallocate(this%idxlocnode)
     deallocate(this%idxpakdiag)
@@ -2458,7 +2463,6 @@ module GwtLktModule
     integer(I4B) :: nlist
     integer(I4B) :: igwfnode
     real(DP) :: q
-    real(DP) :: ctmp
     real(DP) :: v0, v1
     real(DP) :: ccratin, ccratout
     ! -- formats
@@ -2952,8 +2956,6 @@ module GwtLktModule
     class(GwtLktType), intent(inout) :: this
     ! -- local
     integer(I4B) :: i, j, n, nn1, nn2
-    integer(I4B) :: n1, n2
-    integer(I4B) :: jj
     character(len=200) :: ermsg
     character(len=LENBOUNDNAME) :: bname
     logical :: jfound
@@ -3110,7 +3112,7 @@ module GwtLktModule
     ! -- local
     integer(I4B) :: i, igwfnode, j, jj, n, nn
     integer(I4B) :: n1, n2
-    real(DP) :: hgwf, hlak, v, v2
+    real(DP) :: v
     character(len=100) :: errmsg
     type(ObserveType), pointer :: obsrv => null()
 ! ------------------------------------------------------------------------------

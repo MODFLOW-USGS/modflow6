@@ -366,7 +366,7 @@ def eval_results(sim):
     answer = [(1, 1, -1.87033970e+00, 1.05004295e-01),
               (2, 2, -2.18847617e-02, 8.85953709e-04),
               (3, 3, -2.10987695e-04, 6.88867607e-06)]
-    dt = res.dtype
+    dt = [('node', '<i4'), ('node2', '<i4'), ('q', '<f8'), ('MASS', '<f8')]
     answer = np.array(answer, dtype=dt)
     for dtname, dttype in dt:
         assert np.allclose(res[dtname], answer[dtname]), '{} {}'.format(res, answer)
