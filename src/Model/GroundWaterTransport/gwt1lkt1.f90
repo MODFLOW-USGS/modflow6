@@ -2444,6 +2444,7 @@ module GwtLktModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    use TdisModule, only: delt
     ! -- dummy
     class(GwtLktType) :: this
     real(DP), dimension(:), intent(in) :: x
@@ -2458,6 +2459,7 @@ module GwtLktModule
     integer(I4B) :: igwfnode
     real(DP) :: q
     real(DP) :: ctmp
+    real(DP) :: v0, v1
     real(DP) :: ccratin, ccratout
     ! -- formats
 ! -----------------------------------------------------------------------------
@@ -2576,16 +2578,15 @@ module GwtLktModule
     ! -- STORAGE
     idx = idx + 1
     call this%budobj%budterm(idx)%reset(this%nlakes)
+    allocate(auxvartmp(1))
     do n1 = 1, this%nlakes
-      ! -- todo: can we get the total mass in the lake into aux here?
-      !call this%lak_calculate_vol(n, this%xnewpak(n), v1)
-      !this%qauxcbc(1) = v1
-      !call this%budobj%budterm(idx)%update_term(n, n, q, this%qauxcbc)
+      call this%get_volumes(n1, v1, v0, delt)
+      auxvartmp(1) = v1 * this%xnewpak(n1)
       q = this%qsto(n1)
-      call this%budobj%budterm(idx)%update_term(n1, n1, q)
+      call this%budobj%budterm(idx)%update_term(n1, n1, q, auxvartmp)
       call this%lkt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
-    
+    deallocate(auxvartmp)
     
     ! -- CONSTANT FLOW
     idx = idx + 1

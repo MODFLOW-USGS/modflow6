@@ -353,6 +353,7 @@ def eval_results(sim):
     fname = os.path.join(sim.simpath, fname)
     assert os.path.isfile(fname)
     bobj = flopy.utils.CellBudgetFile(fname, precision='double', verbose=False)
+    # check the flow-ja-face terms
     res = bobj.get_data(text='flow-ja-face')[-1]
     answer = [(1, 2, -0.02209136), (2, 1,  0.02209136), (2, 3, -0.0002066 ),
               (3, 2,  0.0002066)]
@@ -360,6 +361,16 @@ def eval_results(sim):
     answer = np.array(answer, dtype=dt)
     for dtname, dttype in dt:
         assert np.allclose(res[dtname], answer[dtname]), '{} {}'.format(res, answer)
+    # check the storage terms, which include the total mass in the lake as an aux variable
+    res = bobj.get_data(text='storage')[-1]
+    answer = [(1, 1, -1.87033970e+00, 1.05004295e-01),
+              (2, 2, -2.18847617e-02, 8.85953709e-04),
+              (3, 3, -2.10987695e-04, 6.88867607e-06)]
+    dt = res.dtype
+    answer = np.array(answer, dtype=dt)
+    for dtname, dttype in dt:
+        assert np.allclose(res[dtname], answer[dtname]), '{} {}'.format(res, answer)
+
 
     # todo: add a better check of the lake concentrations
     # assert False
