@@ -7,5 +7,4 @@ BEGIN OPTIONS
   [SAVE_FLOWS]
   [TS6 FILEIN <ts6_filename>]
   [OBS6 FILEIN <obs6_filename>]
-  [MOVER]
 END OPTIONS

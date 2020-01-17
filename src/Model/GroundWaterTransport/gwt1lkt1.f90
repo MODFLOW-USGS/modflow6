@@ -1,11 +1,27 @@
 ! -- Lake Transport Module
-! -- todo: need to implement mass terms for rain, evap, inflow, withdrawal, etc.
-! -- todo: support ibound concept for lkt?
-! -- todo: write lkt budget table
-! -- todo: save lkt budget to binary file
 ! -- todo: what to do about reactions in lake?  Decay?
 ! -- todo: save the lkt concentration into the lak aux variable?
 ! -- todo: calculate the lak DENSE aux variable using concentration?
+!
+! LAK flows (lakbudptr)     index var     LKT term              Transport Type
+!---------------------------------------------------------------------------------
+! FLOW-JA-FACE              idxbudfjf     FLOW-JA-FACE          lak2lak
+! GWF (aux FLOW-AREA)       idxbudgwf     GWF                   lak2gwf
+! RAINFALL                  idxbudrain    RAINFALL              q * crain
+! EVAPORATION               idxbudevap    EVAPORATION           clak<cevap: q*clak, else: q*cevap
+! RUNOFF                    idxbudroff    RUNOFF                q * croff
+! EXT-INFLOW                idxbudiflw    EXT-INFLOW            q * ciflw
+! WITHDRAWAL                idxbudwdrl    WITHDRAWAL            q * clak
+! EXT-OUTFLOW               idxbudoutf    EXT-OUTFLOW           q * clak
+! STORAGE (aux VOLUME)      idxbudsto     STORAGE (aux MASS)    
+! CONSTANT                  none          none                  none
+! FROM-MVR                  ?             FROM-MVR              q * cext
+! TO-MVR                    idxbudtmvr?   TO-MVR                q * clak
+! AUXILIARY                 none          none                  none
+! none                      none          AUXILIARY             none
+! none                      none          CONSTANT              accumulate
+!
+!
 module GwtLktModule
 
   use KindModule, only: DP, I4B
