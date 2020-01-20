@@ -333,6 +333,7 @@ contains
     integer(kind=c_int) :: bmi_status
     ! local
     integer, dimension(:), pointer :: grid_shape_ptr
+    integer, dimension(:), target, allocatable, save :: array
     character(len=LENMODELNAME) :: model_name
     character(kind=c_char) :: grid_type(MAXSTRLEN)
     
@@ -347,7 +348,8 @@ contains
     call mem_setptr(grid_shape_ptr, "MSHAPE", trim(model_name) // " DIS")
     
     if (grid_shape_ptr(1) == 1) then
-      grid_shape_ptr = grid_shape_ptr(2:3)
+      array = grid_shape_ptr(2:3)
+      grid_shape_ptr => array
     end if
     
     grid_shape = c_loc(grid_shape_ptr)
@@ -364,7 +366,7 @@ contains
     integer(kind=c_int) :: bmi_status
     ! local
     integer :: i
-    integer(I4B), dimension(:), pointer :: grid_shape
+    integer, dimension(:), pointer :: grid_shape_ptr
     real(DP), dimension(:), pointer, contiguous :: array_ptr
     real(DP), dimension(:), target, allocatable, save :: array
     character(len=LENMODELNAME) :: model_name
@@ -381,8 +383,8 @@ contains
     
     model_name = get_model_name(grid_id)
     if (grid_type_f == "rectilinear") then      
-      call mem_setptr(grid_shape, "MSHAPE", trim(model_name) // " DIS")
-      array = [ (i, i=0,grid_shape(3)) ]      
+      call mem_setptr(grid_shape_ptr, "MSHAPE", trim(model_name) // " DIS")
+      array = [ (i, i=0,grid_shape_ptr(size(grid_shape_ptr))) ]      
     else if (grid_type_f == "unstructured") then
       call mem_setptr(vertices_ptr, "VERTICES", trim(model_name) // " DIS")
       array = vertices_ptr(1, :)
@@ -406,7 +408,7 @@ contains
     integer(kind=c_int) :: bmi_status
     ! local
     integer :: i
-    integer(I4B), dimension(:), pointer :: grid_shape
+    integer, dimension(:), pointer :: grid_shape_ptr
     real(DP), dimension(:), pointer, contiguous :: array_ptr
     real(DP), dimension(:), target, allocatable, save :: array
     character(len=LENMODELNAME) :: model_name
@@ -423,8 +425,8 @@ contains
     
     model_name = get_model_name(grid_id)
     if (grid_type_f == "rectilinear") then      
-      call mem_setptr(grid_shape, "MSHAPE", trim(model_name) // " DIS")
-      array = [ (i, i=grid_shape(2),0,-1) ]      
+      call mem_setptr(grid_shape_ptr, "MSHAPE", trim(model_name) // " DIS")
+      array = [ (i, i=grid_shape_ptr(size(grid_shape_ptr)-1),0,-1) ]      
     else if (grid_type_f == "unstructured") then
       call mem_setptr(vertices_ptr, "VERTICES", trim(model_name) // " DIS")
       array = vertices_ptr(2, :)
@@ -586,7 +588,7 @@ contains
     
     allocate(array(size(iavert_ptr) - 1))
     do i = 2, size(iavert_ptr)
-      array = iavert_ptr(i) - iavert_ptr(i-1) - 1
+      array(i-1) = iavert_ptr(i) - iavert_ptr(i-1) - 1
     end do
     
     array_ptr => array
