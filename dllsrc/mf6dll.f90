@@ -1,15 +1,15 @@
 module mf6dll
   use mf6core
-  use bmif
+  use bmif, only: BMI_SUCCESS, BMI_FAILURE
   use iso_c_binding, only: c_int, c_char, c_double, C_NULL_CHAR, c_loc, c_ptr
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: LENORIGIN, LENVARNAME, LENMODELNAME
+  use ConstantsModule, only: LENORIGIN, LENVARNAME, LENMODELNAME, MAXCHARLEN
   implicit none
   
   
   ! Define global constants
   
-  integer(c_int), BIND(C, name="MAXSTRLEN") :: MAXSTRLEN = 1024
+  integer(c_int), BIND(C, name="MAXSTRLEN") :: MAXSTRLEN = MAXCHARLEN
   !DEC$ ATTRIBUTES DLLEXPORT :: MAXSTRLEN
   
 contains
