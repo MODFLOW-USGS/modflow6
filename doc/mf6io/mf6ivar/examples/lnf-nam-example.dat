@@ -1,0 +1,13 @@
+# This block is optional
+BEGIN OPTIONS
+  PRINT_INPUT
+  PRINT_FLOWS
+  SAVE_FLOWS
+END OPTIONS
+
+# List of packages.  List can be listed in any order.
+BEGIN PACKAGES
+  IC6           bcf2ss.ic
+  OC6           bcf2ss.oc
+  DISL6         bcf2ss.disl
+END PACKAGES

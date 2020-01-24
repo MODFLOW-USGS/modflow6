@@ -1,0 +1,5 @@
+BEGIN OPTIONS
+  [BUDGET FILEOUT <budgetfile>]
+  [HEAD FILEOUT <headfile>]
+  [HEAD PRINT_FORMAT COLUMNS <columns> WIDTH <width> DIGITS <digits> <format>]
+END OPTIONS
