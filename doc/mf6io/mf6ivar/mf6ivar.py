@@ -472,6 +472,10 @@ if __name__ == '__main__':
                   'gwf-mvr',     # dfn completed  tex updated
                   'gwf-gnc',     # dfn completed  tex updated
                   'gwf-oc',      # dfn completed  tex updated
+                  'lnf-nam',     # dfn completed  tex updated
+                  'lnf-disl',    # dfn completed  tex updated
+                  'lnf-ic',      # dfn completed  tex updated
+                  'lnf-oc',      # dfn completed  tex updated
                   'utl-lak-tab', # dfn completed  tex updated
                   'utl-obs',
                   'utl-ts',

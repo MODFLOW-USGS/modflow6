@@ -1,0 +1,37 @@
+This section describes the data files for a \mf Groundwater Transport (GWT) Model.  A GWT Model is added to the simulation by including a GWT entry in the MODELS block of the simulation name file.
+
+There a single type of spatial discretization approaches that can be used with the LNF Model: DISL.
+
+The LNF Model is designed to permit input to be gathered, as it is needed, from many different files.  Likewise, results from the model calculations can be written to a number of output files. The LNF Model Listing File is a key file to which the LNF model output is written.  As \mf runs, information about the LNF Model is written to the LNF Model Listing File, including much of the input data (as a record of the simulation) and calculated results.  Details about the files used by each package are provided in this section on the LNF Model Instructions.
+
+The LNF Model reads a file called the Name File, which specifies most of the files that will be used in a simulation. Several files are always required whereas other files are optional depending on the simulation. The Output Control Package receives instructions from the user to control the amount and frequency of output.  Details about the Name File and the Output Control Package are described in this section.
+
+
+\subsection{Units of Length and Time}
+The GWF Model formulates the groundwater flow equation without using prescribed length and time units. Any consistent units of length and time can be used when specifying the input data for a simulation. This capability gives a certain amount of freedom to the user, but care must be exercised to avoid mixing units.  The program cannot detect the use of inconsistent units.
+
+\subsection{Steady-State Simulations}
+A steady-state transport simulation is represented by a single stress period having a single time step with the storage term set to zero. Setting the number and length of stress periods and time steps is the responsibility of the Timing Module of the \mf framework.
+
+\subsection{Volumetric Budget}
+A summary of all inflow (sources) and outflow (sinks) of solute mass is called a mass budget.  \mf calculates a mass budget for the overall model as a check on the acceptability of the solution, and to provide a summary of the sources and sinks of mass to the flow system.  The solute mass budget is printed to the LNF Model Listing File for selected time steps.
+
+\subsection{Time Stepping}
+
+
+\newpage
+\subsection{LNF Model Name File}
+\input{lnf/namefile.tex}
+
+\newpage
+\subsection{Discretization with Vertices (DISL) Input File}
+\input{lnf/disl}
+
+\newpage
+\subsection{Initial Conditions (IC) Package}
+\input{lnf/ic}
+
+\newpage
+\subsection{Output Control (OC) Option}
+\input{lnf/oc}
+
