@@ -5,5 +5,5 @@ END OPTIONS
 #The GRIDDATA block is required
 BEGIN GRIDDATA
   STRT
-    CONSTANT   0.0  Initial Head layer
+    CONSTANT   0.0  Initial Head
 END GRIDDATA

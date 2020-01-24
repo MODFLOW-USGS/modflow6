@@ -475,6 +475,7 @@ if __name__ == '__main__':
                   'lnf-nam',     # dfn completed  tex updated
                   'lnf-disl',    # dfn completed  tex updated
                   'lnf-ic',      # dfn completed  tex updated
+                  'lnf-chd',     # dfn completed  tex updated
                   'lnf-oc',      # dfn completed  tex updated
                   'utl-lak-tab', # dfn completed  tex updated
                   'utl-obs',

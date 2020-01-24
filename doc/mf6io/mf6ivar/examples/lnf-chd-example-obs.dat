@@ -1,0 +1,12 @@
+BEGIN OPTIONS
+  DIGITS 8
+  PRINT_INPUT
+END OPTIONS
+
+BEGIN CONTINUOUS FILEOUT lnf_model.chd.csv
+# obsname  obstype   ID
+  chd_1    CHD       1
+  chd_7    CHD       7
+  chd_8    CHD       8
+  coastal  CHD       coastal
+END SINGLE
