@@ -1,4 +1,4 @@
-# --------------------- gwt lkt options ---------------------
+# --------------------- gwt sft options ---------------------
 
 block options
 name auxiliary
@@ -16,7 +16,7 @@ shape
 reader urword
 optional true
 longname
-description REPLACE boundnames {'{#1}': 'lake'}
+description REPLACE boundnames {'{#1}': 'reach'}
 
 block options
 name print_input
@@ -24,7 +24,7 @@ type keyword
 reader urword
 optional true
 longname print input to listing file
-description REPLACE print_input {'{#1}': 'lake'}
+description REPLACE print_input {'{#1}': 'reach'}
 
 block options
 name print_concentration
@@ -32,7 +32,7 @@ type keyword
 reader urword
 optional true
 longname print calculated stages to listing file
-description REPLACE print_head {'{#1}': 'lake', '{#2}': 'stages', '{#3}': 'STAGE'}
+description REPLACE print_head {'{#1}': 'reach', '{#2}': 'stages', '{#3}': 'STAGE'}
 
 block options
 name print_flows
@@ -40,15 +40,15 @@ type keyword
 reader urword
 optional true
 longname print calculated flows to listing file
-description REPLACE print_flows {'{#1}': 'lake'}
+description REPLACE print_flows {'{#1}': 'reach'}
 
 block options
 name save_flows
 type keyword
 reader urword
 optional true
-longname save lake flows to budget file
-description REPLACE save_flows {'{#1}': 'lake'}
+longname save reach flows to budget file
+description REPLACE save_flows {'{#1}': 'reach'}
 
 block options
 name concentration_filerecord
@@ -200,28 +200,28 @@ tagged false
 reader urword
 optional false
 longname obs6 input filename
-description REPLACE obs6_filename {'{#1}': 'LKT'}
+description REPLACE obs6_filename {'{#1}': 'SFT'}
 
 
 # --------------------- gwt lkt packagedata ---------------------
 
 block packagedata
 name packagedata
-type recarray lakeno strt aux boundname
+type recarray rno strt aux boundname
 shape (maxbound)
 reader urword
 longname
 description
 
 block packagedata
-name lakeno
+name rno
 type integer
 shape
 tagged false
 in_record true
 reader urword
-longname lake number for this entry
-description integer value that defines the lake number associated with the specified PACKAGEDATA data on the line. LAKENO must be greater than zero and less than or equal to NLAKES. Lake information must be specified for every lake or the program will terminate with an error.  The program will also terminate with an error if information for a lake is specified more than once.
+longname reach number for this entry
+description integer value that defines the reach number associated with the specified PACKAGEDATA data on the line. RNO must be greater than zero and less than or equal to NREACHES. Reach information must be specified for every reach or the program will terminate with an error.  The program will also terminate with an error if information for a reach is specified more than once.
 numeric_index true
 
 block packagedata
@@ -231,8 +231,8 @@ shape
 tagged false
 in_record true
 reader urword
-longname starting lake concentration
-description real value that defines the starting concentration for the lake.
+longname starting reach concentration
+description real value that defines the starting concentration for the reach.
 
 block packagedata
 name aux
@@ -244,7 +244,7 @@ reader urword
 time_series true
 optional true
 longname auxiliary variables
-description REPLACE aux {'{#1}': 'lake'}
+description REPLACE aux {'{#1}': 'reach'}
 
 block packagedata
 name boundname
@@ -255,10 +255,10 @@ in_record true
 reader urword
 optional true
 longname well name
-description REPLACE boundname {'{#1}': 'lake'}
+description REPLACE boundname {'{#1}': 'reach'}
 
 
-# --------------------- gwt lkt period ---------------------
+# --------------------- gwt sft period ---------------------
 
 block period
 name iper
@@ -274,33 +274,33 @@ longname stress period number
 description REPLACE iper {}
 
 block period
-name lakeperioddata
-type recarray lakeno laksetting
+name reachperioddata
+type recarray rno reachsetting
 shape
 reader urword
 longname
 description
 
 block period
-name lakeno
+name rno
 type integer
 shape
 tagged false
 in_record true
 reader urword
-longname lake number for this entry
-description integer value that defines the lake number associated with the specified PERIOD data on the line. LAKENO must be greater than zero and less than or equal to NLAKES.
+longname reach number for this entry
+description integer value that defines the reach number associated with the specified PERIOD data on the line. RNO must be greater than zero and less than or equal to NREACHES.
 numeric_index true
 
 block period
-name laksetting
+name reachsetting
 type keystring status concentration rainfall evaporation runoff inflow auxiliaryrecord
 shape
 tagged false
 in_record true
 reader urword
 longname
-description line of information that is parsed into a keyword and values.  Keyword values that can be used to start the LAKSETTING string include: STATUS, CONCENTRATION, RAINFALL, EVAPORATION, RUNOFF, and AUXILIARY.  These settings are used to assign the concentration of associated with the corresponding flow terms.  Concentrations cannot be specified for all flow terms.  For example, the Lake Package supports a ``WITHDRAWAL'' flow term.  If this withdrawal term is active, then water will be withdrawn from the lake at the calculated concentration of the lake.
+description line of information that is parsed into a keyword and values.  Keyword values that can be used to start the REACHSETTING string include: STATUS, CONCENTRATION, RAINFALL, EVAPORATION, RUNOFF, and AUXILIARY.  These settings are used to assign the concentration of associated with the corresponding flow terms.  Concentrations cannot be specified for all flow terms.  For example, the Streamflow Package supports a ``DIVERSION'' flow term.  Diversion water will be routed using the calculated concentration of the reach.
 
 block period
 name status
@@ -309,8 +309,8 @@ shape
 tagged true
 in_record true
 reader urword
-longname lake concentration status
-description keyword option to define lake status.  STATUS can be ACTIVE, INACTIVE, or CONSTANT. By default, STATUS is ACTIVE, which means that concentration will be calculated for the lake.  If a lake is inactive, then there will be no solute mass fluxes into or out of the lake and the inactive value will be written for the lake concentration.  If a lake is constant, then the concentration for the lake will be fixed at the user specified value.
+longname reach concentration status
+description keyword option to define reach status.  STATUS can be ACTIVE, INACTIVE, or CONSTANT. By default, STATUS is ACTIVE, which means that concentration will be calculated for the reach.  If a reach is inactive, then there will be no solute mass fluxes into or out of the reach and the inactive value will be written for the reach concentration.  If a reach is constant, then the concentration for the reach will be fixed at the user specified value.
 
 block period
 name concentration
@@ -320,8 +320,8 @@ tagged true
 in_record true
 time_series true
 reader urword
-longname lake concentration
-description real or character value that defines the concentration for the lake. The specified CONCENTRATION is only applied if the lake is a constant concentration lake. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.
+longname reach concentration
+description real or character value that defines the concentration for the reach. The specified CONCENTRATION is only applied if the reach is a constant concentration reach. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.
 
 block period
 name rainfall
@@ -332,7 +332,7 @@ in_record true
 reader urword
 time_series true
 longname rainfall concentration
-description real or character value that defines the rainfall solute concentration $(ML^{-3})$ for the lake. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.
+description real or character value that defines the rainfall solute concentration $(ML^{-3})$ for the reach. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.
 
 block period
 name evaporation
@@ -343,7 +343,7 @@ in_record true
 reader urword
 time_series true
 longname evaporation concentration
-description real or character value that defines the concentration of evaporated water $(ML^{-3})$ for the lake. If this concentration value is larger than the simulated concentration in the lake, then the evaporated water will be removed at the same concentration as the lake.  If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.
+description real or character value that defines the concentration of evaporated water $(ML^{-3})$ for the reach. If this concentration value is larger than the simulated concentration in the reach, then the evaporated water will be removed at the same concentration as the reach.  If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.
 
 block period
 name runoff
@@ -354,7 +354,7 @@ in_record true
 reader urword
 time_series true
 longname runoff concentration
-description real or character value that defines the concentration of runoff $(ML^{-3})$ for the lake. Value must be greater than or equal to zero. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.
+description real or character value that defines the concentration of runoff $(ML^{-3})$ for the reach. Value must be greater than or equal to zero. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.
 
 block period
 name inflow
@@ -365,7 +365,7 @@ in_record true
 reader urword
 time_series true
 longname inflow concentration
-description real or character value that defines the concentration of inflow $(ML^{-3})$ for the lake. Value must be greater than or equal to zero. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.
+description real or character value that defines the concentration of inflow $(ML^{-3})$ for the reach. Value must be greater than or equal to zero. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.
 
 block period
 name auxiliaryrecord

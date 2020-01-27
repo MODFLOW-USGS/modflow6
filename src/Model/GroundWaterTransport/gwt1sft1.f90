@@ -11,7 +11,6 @@
 ! EVAPORATION               idxbudevap    EVAPORATION           csfr<cevap: q*csfr, else: q*cevap
 ! RUNOFF                    idxbudroff    RUNOFF                q * croff
 ! EXT-INFLOW                idxbudiflw    EXT-INFLOW            q * ciflw
-! WITHDRAWAL                idxbudwdrl    WITHDRAWAL            q * csfr
 ! EXT-OUTFLOW               idxbudoutf    EXT-OUTFLOW           q * csfr
 ! STORAGE (aux VOLUME)      idxbudsto     STORAGE (aux MASS)    
 ! CONSTANT                  none          none                  none
@@ -85,7 +84,6 @@ module GwtSftModule
     integer(I4B), pointer                              :: idxbudevap => null()  ! index of evaporation terms in sfrbudptr
     integer(I4B), pointer                              :: idxbudroff => null()  ! index of runoff terms in sfrbudptr
     integer(I4B), pointer                              :: idxbudiflw => null()  ! index of inflow terms in sfrbudptr
-    integer(I4B), pointer                              :: idxbudwdrl => null()  ! index of withdrawal terms in sfrbudptr
     integer(I4B), pointer                              :: idxbudoutf => null()  ! index of outflow terms in sfrbudptr
     integer(I4B), pointer                              :: idxbudaux => null()   ! index of auxiliary terms in sfrbudptr
     integer(I4B), dimension(:), pointer, contiguous    :: idxbudssm => null()   ! flag that sfrbudptr%buditem is a general solute source/sink
@@ -141,7 +139,6 @@ module GwtSftModule
     procedure, private :: sft_evap_term
     procedure, private :: sft_roff_term
     procedure, private :: sft_iflw_term
-    procedure, private :: sft_wdrl_term
     procedure, private :: sft_outf_term
     procedure, private :: sft_fjf_term
     
@@ -927,17 +924,6 @@ module GwtSftModule
       end do
     end if
     !
-    ! -- add withdrawal contribution
-    if (this%idxbudwdrl /= 0) then
-      do j = 1, this%sfrbudptr%budterm(this%idxbudwdrl)%nlist
-        call this%sft_wdrl_term(j, n1, n2, rrate, rhsval, hcofval)
-        iloc = this%idxlocnode(n1)
-        iposd = this%idxpakdiag(n1)
-        amatsln(iposd) = amatsln(iposd) + hcofval
-        rhs(iloc) = rhs(iloc) + rhsval
-      end do
-    end if
-    !
     ! -- add outflow contribution
     if (this%idxbudoutf /= 0) then
       do j = 1, this%sfrbudptr%budterm(this%idxbudoutf)%nlist
@@ -1273,7 +1259,6 @@ module GwtSftModule
     call mem_allocate(this%idxbudevap, 'IDXBUDEVAP', this%origin)
     call mem_allocate(this%idxbudroff, 'IDXBUDROFF', this%origin)
     call mem_allocate(this%idxbudiflw, 'IDXBUDIFLW', this%origin)
-    call mem_allocate(this%idxbudwdrl, 'IDXBUDWDRL', this%origin)
     call mem_allocate(this%idxbudoutf, 'IDXBUDOUTF', this%origin)
     call mem_allocate(this%idxbudaux, 'IDXBUDAUX', this%origin)
     call mem_allocate(this%nconcbudssm, 'NCONCBUDSSM', this%origin)
@@ -1293,7 +1278,6 @@ module GwtSftModule
     this%idxbudevap = 0
     this%idxbudroff = 0
     this%idxbudiflw = 0
-    this%idxbudwdrl = 0
     this%idxbudoutf = 0
     this%idxbudaux = 0
     this%nconcbudssm = 0
@@ -1443,7 +1427,6 @@ module GwtSftModule
     call mem_deallocate(this%idxbudevap)
     call mem_deallocate(this%idxbudroff)
     call mem_deallocate(this%idxbudiflw)
-    call mem_deallocate(this%idxbudwdrl)
     call mem_deallocate(this%idxbudoutf)
     call mem_deallocate(this%idxbudaux)
     call mem_deallocate(this%idxbudssm)
@@ -1534,9 +1517,6 @@ module GwtSftModule
         this%idxbudssm(ip) = 0
       case('EXT-INFLOW')
         this%idxbudiflw = ip
-        this%idxbudssm(ip) = 0
-      case('WITHDRAWAL')
-        this%idxbudwdrl = ip
         this%idxbudssm(ip) = 0
       case('EXT-OUTFLOW')
         this%idxbudoutf = ip
@@ -1846,11 +1826,11 @@ module GwtSftModule
       ! -- check for duplicate or missing reaches
       do n = 1, this%nstrm
         if (nboundchk(n) == 0) then
-          write(errmsg,'(a,1x,i0)')  'ERROR.  NO DATA SPECIFIED FOR LAKE', n
+          write(errmsg,'(a,1x,i0)')  'ERROR.  NO DATA SPECIFIED FOR REACH', n
           call store_error(errmsg)
         else if (nboundchk(n) > 1) then
           write(errmsg,'(a,1x,i0,1x,a,1x,i0,1x,a)')                             &
-            'ERROR.  DATA FOR LAKE', n, 'SPECIFIED', nboundchk(n), 'TIMES'
+            'ERROR.  DATA FOR REACH', n, 'SPECIFIED', nboundchk(n), 'TIMES'
           call store_error(errmsg)
         end if
       end do
@@ -2023,14 +2003,6 @@ module GwtSftModule
     if (this%idxbudiflw /= 0) then
       do j = 1, this%sfrbudptr%budterm(this%idxbudiflw)%nlist
         call this%sft_iflw_term(j, n1, n2, rrate)
-        this%dbuff(n1) = this%dbuff(n1) + rrate
-      end do
-    end if
-    !
-    ! -- add withdrawal contribution
-    if (this%idxbudwdrl /= 0) then
-      do j = 1, this%sfrbudptr%budterm(this%idxbudwdrl)%nlist
-        call this%sft_wdrl_term(j, n1, n2, rrate)
         this%dbuff(n1) = this%dbuff(n1) + rrate
       end do
     end if
@@ -2243,7 +2215,7 @@ module GwtSftModule
     !
     ! -- Determine the number of reach budget terms. These are fixed for 
     !    the simulation and cannot change
-    nbudterm = 9
+    nbudterm = 8
     nlen = 0
     if (this%idxbudfjf /= 0) then
       nlen = this%sfrbudptr%budterm(this%idxbudfjf)%maxlist
@@ -2344,19 +2316,6 @@ module GwtSftModule
     text = '      EXT-INFLOW'
     idx = idx + 1
     maxlist = this%sfrbudptr%budterm(this%idxbudiflw)%maxlist
-    naux = 0
-    call this%budobj%budterm(idx)%initialize(text, &
-                                             this%name_model, &
-                                             this%name, &
-                                             this%name_model, &
-                                             this%name, &
-                                             maxlist, .false., .false., &
-                                             naux)
-    !
-    ! -- 
-    text = '      WITHDRAWAL'
-    idx = idx + 1
-    maxlist = this%sfrbudptr%budterm(this%idxbudwdrl)%maxlist
     naux = 0
     call this%budobj%budterm(idx)%initialize(text, &
                                              this%name_model, &
@@ -2509,6 +2468,7 @@ module GwtSftModule
       do j = 1, nlist
         call this%sft_fjf_term(j, n1, n2, q)
         call this%budobj%budterm(idx)%update_term(n1, n2, q)
+        call this%sft_accumulate_ccterm(n1, q, ccratin, ccratout)
       end do      
     end if
 
@@ -2573,17 +2533,6 @@ module GwtSftModule
     end do
     
     
-    ! -- WITHDRAWAL
-    idx = idx + 1
-    nlist = this%sfrbudptr%budterm(this%idxbudwdrl)%nlist
-    call this%budobj%budterm(idx)%reset(nlist)
-    do j = 1, nlist
-      call this%sft_wdrl_term(j, n1, n2, q)
-      call this%budobj%budterm(idx)%update_term(n1, n2, q)
-      call this%sft_accumulate_ccterm(n1, q, ccratin, ccratout)
-    end do
-    
-    
     ! -- OUTFLOW
     idx = idx + 1
     nlist = this%sfrbudptr%budterm(this%idxbudoutf)%nlist
@@ -2595,7 +2544,7 @@ module GwtSftModule
     end do
     
     
-    ! -- STORAGE
+    ! -- MASS STORAGE
     idx = idx + 1
     call this%budobj%budterm(idx)%reset(this%nstrm)
     allocate(auxvartmp(1))
@@ -2767,29 +2716,6 @@ module GwtSftModule
     ! -- return
     return
   end subroutine sft_iflw_term
-  
-  subroutine sft_wdrl_term(this, ientry, n1, n2, rrate, &
-                           rhsval, hcofval)
-    class(GwtSftType) :: this
-    integer(I4B), intent(in) :: ientry
-    integer(I4B), intent(inout) :: n1
-    integer(I4B), intent(inout) :: n2
-    real(DP), intent(inout), optional :: rrate
-    real(DP), intent(inout), optional :: rhsval
-    real(DP), intent(inout), optional :: hcofval
-    real(DP) :: qbnd
-    real(DP) :: ctmp
-    n1 = this%sfrbudptr%budterm(this%idxbudwdrl)%id1(ientry)
-    n2 = this%sfrbudptr%budterm(this%idxbudwdrl)%id2(ientry)
-    qbnd = this%sfrbudptr%budterm(this%idxbudwdrl)%flow(ientry)
-    ctmp = this%xnewpak(n1)
-    if (present(rrate)) rrate = ctmp * qbnd
-    if (present(rhsval)) rhsval = DZERO
-    if (present(hcofval)) hcofval = qbnd
-    !
-    ! -- return
-    return
-  end subroutine sft_wdrl_term
   
   subroutine sft_outf_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
@@ -3184,10 +3110,6 @@ module GwtSftModule
             case ('EVAPORATION')
               if (this%iboundpak(jj) /= 0) then
                 call this%sft_evap_term(jj, n1, n2, v)
-              end if
-            case ('WITHDRAWAL')
-              if (this%iboundpak(jj) /= 0) then
-                call this%sft_wdrl_term(jj, n1, n2, v)
               end if
             !case ('EXT-OUTFLOW')
             !  n = this%lakein(jj)

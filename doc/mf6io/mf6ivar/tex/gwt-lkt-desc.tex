@@ -33,7 +33,7 @@
 
 \item \texttt{OBS6}---keyword to specify that record corresponds to an observations file.
 
-\item \texttt{obs6\_filename}---name of input file to define observations for the LAK package. See the ``Observation utility'' section for instructions for preparing observation input files. Table \ref{table:obstype} lists observation type(s) supported by the LAK package.
+\item \texttt{obs6\_filename}---name of input file to define observations for the LKT package. See the ``Observation utility'' section for instructions for preparing observation input files. Table \ref{table:obstype} lists observation type(s) supported by the LKT package.
 
 \end{description}
 \item \textbf{Block: PACKAGEDATA}
@@ -66,7 +66,7 @@ RUNOFF <@runoff@>
 AUXILIARY <auxname> <@auxval@> 
 \end{lstlisting}
 
-\item \texttt{status}---keyword option to define lake status.  STATUS can be ACTIVE, INACTIVE, or CONSTANT. By default, STATUS is ACTIVE, which means that concentration will be calculated for the lake.  If a lake is inactive, then there will be no solute mass fluxes into or out of the lake and the inactive value will be written for the lake concentration.  If a lake constant, then the concentration for the lake will be fixed at the user specified value.
+\item \texttt{status}---keyword option to define lake status.  STATUS can be ACTIVE, INACTIVE, or CONSTANT. By default, STATUS is ACTIVE, which means that concentration will be calculated for the lake.  If a lake is inactive, then there will be no solute mass fluxes into or out of the lake and the inactive value will be written for the lake concentration.  If a lake is constant, then the concentration for the lake will be fixed at the user specified value.
 
 \item \textcolor{blue}{\texttt{concentration}---real or character value that defines the concentration for the lake. The specified CONCENTRATION is only applied if the lake is a constant concentration lake. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.}
 
