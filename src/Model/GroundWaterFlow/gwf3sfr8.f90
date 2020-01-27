@@ -4227,7 +4227,7 @@ contains
     !    the simulation and cannot change.  This includes FLOW-JA-FACE
     !    so they can be written to the binary budget files, but these internal
     !    flows are not included as part of the budget table.
-    nbudterm = 7
+    nbudterm = 8
     if (this%imover == 1) nbudterm = nbudterm + 2
     if (this%naux > 0) nbudterm = nbudterm + 1
     !
@@ -4345,6 +4345,20 @@ contains
                                              this%name, &
                                              maxlist, .false., .false., &
                                              naux)
+    !
+    ! -- 
+    text = '         STORAGE'
+    idx = idx + 1
+    maxlist = this%maxbound
+    naux = 1
+    auxtxt(1) = '          VOLUME'
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name, &
+                                             maxlist, .false., .false., &
+                                             naux, auxtxt)
     !
     ! -- 
     if (this%imover == 1) then
@@ -4517,6 +4531,16 @@ contains
       call this%budobj%budterm(idx)%update_term(n, n, q)
     end do
 
+    ! -- STORAGE
+    idx = idx + 1
+    call this%budobj%budterm(idx)%reset(this%maxbound)
+    do n = 1, this%maxbound
+      q = DZERO
+      d = this%depth(n)
+      a = this%width(n) * this%length(n)
+      this%qauxcbc(1) = a * d
+      call this%budobj%budterm(idx)%update_term(n, n, q, this%qauxcbc)
+    end do
     
     ! -- MOVER
     if (this%imover == 1) then
