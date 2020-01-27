@@ -1,7 +1,8 @@
-# Simple one-layer model with sfr.  Purpose is to test transport in a one-d
-# sfr network.
-# Just in the beginning stages of getting this to work -- need to turn on
-# sft package and start testing for transport down stream channel
+# Simple one-layer model with sfr on top.  Purpose is to test transport in a
+# one-d sfr network.  Flows in the sfr network were specified to exactly
+# match flows in the aquifer.  A constant concentration boundary is
+# specified upgradient for both the stream and aquifer, so concentrations
+# in the stream should exactly equal the concentrations in the aquifer.
 
 import os
 import sys
@@ -100,8 +101,8 @@ def get_model(idx, dir):
                                   k=Kh, k33=Kv)
 
     # chd files
-    chdlist1 = [[(0, 0, 0), 0., 0.],
-                [(0, 0, ncol - 1), -0.5, 0.],
+    chdlist1 = [
+                [(0, 0, ncol - 1), 0., 0.],
                 ]
     chd1 = flopy.mf6.ModflowGwfchd(gwf,
                                    stress_period_data=chdlist1,
@@ -112,14 +113,27 @@ def get_model(idx, dir):
                                    auxiliary='CONCENTRATION',
                                    filename='{}.chd'.format(gwfname))
 
+    # wel files
+    wellist1 = [
+                [(0, 0, 0), 1., 0.],
+                ]
+    wel1 = flopy.mf6.ModflowGwfwel(gwf,
+                                   stress_period_data=wellist1,
+                                   print_input=True,
+                                   print_flows=True,
+                                   save_flows=False,
+                                   pname='WEL-1',
+                                   auxiliary='CONCENTRATION',
+                                   filename='{}.wel'.format(gwfname))
+
     # pak_data = [<rno> <cellid(ncelldim)> <rlen> <rwid> <rgrd> <rtp> <rbth> <rhk> <man> <ncon> <ustrf> <ndv> [<aux(naux)>] [<boundname>]]
     rlen = delr
     rwid = delc
-    rgrd = 0.01
+    rgrd = 1.
     rtp = 0.
     rbth = 0.1
     rhk = 0. #0.01
-    rman = 0.2
+    rman = 1.
     ncon = 2
     ustrf = 1.
     ndv = 0
@@ -221,15 +235,27 @@ def get_model(idx, dir):
     #                              filename='{}.dsp'.format(gwtname))
 
     # storage
-    porosity = 0.30
+    porosity = 1.0
     sto = flopy.mf6.ModflowGwtmst(gwt, porosity=porosity,
                                   filename='{}.sto'.format(gwtname))
     # sources
     sourcerecarray = [('CHD-1', 'AUX', 'CONCENTRATION'),
-                      #('WEL-1', 'AUX', 'CONCENTRATION'),
+                      ('WEL-1', 'AUX', 'CONCENTRATION'),
                       ]
     ssm = flopy.mf6.ModflowGwtssm(gwt, sources=sourcerecarray,
                                   filename='{}.ssm'.format(gwtname))
+
+    # cnc files
+    cnclist1 = [
+                [(0, 0, 0), 100.],
+                ]
+    cnc1 = flopy.mf6.ModflowGwtcnc(gwt,
+                                   stress_period_data=cnclist1,
+                                   print_input=True,
+                                   print_flows=True,
+                                   save_flows=False)
+
+
 
     sftpackagedata = []
     for irno in range(ncol):
@@ -311,74 +337,44 @@ def eval_results(sim):
     # ensure lake concentrations were saved
     name = ex[sim.idxsim]
     gwtname = 'gwt_' + name
-    fname = gwtname + '.lkt.bin'
+    fname = gwtname + '.sft.bin'
     fname = os.path.join(sim.simpath, fname)
     assert os.path.isfile(fname)
 
     # load the lake concentrations and make sure all values are correct
     cobj = flopy.utils.HeadFile(fname, text='CONCENTRATION')
-    clak = cobj.get_data()
-    answer = np.array([2.20913605e-01, 2.06598617e-03, 1.64112298e-05])
-    assert np.allclose(clak, answer), '{} {}'.format(clak, answer)
+    csft = cobj.get_data().flatten()
 
     # load the aquifer concentrations and make sure all values are correct
     fname = gwtname + '.ucn'
     fname = os.path.join(sim.simpath, fname)
     cobj = flopy.utils.HeadFile(fname, text='CONCENTRATION')
-    caq = cobj.get_data()
-    answer = np.array([1.00000000e+02, 8.50686091e+00, 5.71594204e-01,
-                       1.30062708e-02, 2.38399700e-04, 3.30711200e-06,
-                       7.33445279e-08])
-    assert np.allclose(caq, answer), '{} {}'.format(caq.flatten(), answer)
+    caq = cobj.get_data().flatten()
 
-    # lkt observation results
-    fpth = os.path.join(sim.simpath, gwtname + '.lkt.obs.csv')
+    assert np.allclose(csft, caq), '{} {}'.format(csft, caq)
+
+    # sft observation results
+    fpth = os.path.join(sim.simpath, gwtname + '.sft.obs.csv')
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=',')
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
-    res = tc['LKT1CONC']
-    answer = [0.00418347, 0.01249363, 0.02487425, 0.04126975, 0.06162508,
-              0.0858858,  0.113998,   0.1459085,  0.1815644,  0.2209136 ]
-    answer = np.array(answer)
-    assert np.allclose(res, answer), '{} {}'.format(res, answer)
-    res = tc['LKT1STOR']
-    answer = [-0.1988482, -0.3949968, -0.588474,  -0.779308,  -0.9675264,
-              -1.153157, -1.336226,  -1.516762,  -1.694791,  -1.87034]
-    answer = np.array(answer)
-    assert np.allclose(res, answer), '{} {}'.format(res, answer)
-    res = tc['LKT1MYLAKE1']
-    answer = [0.1992666, 0.3962462, 0.5909615, 0.7834349, 0.9736889, 1.161745,
-              1.347626, 1.531353,  1.712948,  1.892431]
-    answer = np.array(answer)
-    assert np.allclose(res, answer), '{} {}'.format(res, answer)
 
     # load the lake budget file
-    fname = gwtname + '.lkt.bud'
+    fname = gwtname + '.sft.bud'
     fname = os.path.join(sim.simpath, fname)
     assert os.path.isfile(fname)
     bobj = flopy.utils.CellBudgetFile(fname, precision='double', verbose=False)
     # check the flow-ja-face terms
     res = bobj.get_data(text='flow-ja-face')[-1]
-    answer = [(1, 2, -0.02209136), (2, 1,  0.02209136), (2, 3, -0.0002066 ),
-              (3, 2,  0.0002066)]
-    dt = [('node', '<i4'), ('node2', '<i4'), ('q', '<f8')]
-    answer = np.array(answer, dtype=dt)
-    for dtname, dttype in dt:
-        assert np.allclose(res[dtname], answer[dtname]), '{} {}'.format(res, answer)
+    #print(res)
+
     # check the storage terms, which include the total mass in the lake as an aux variable
     res = bobj.get_data(text='storage')[-1]
-    answer = [(1, 1, -1.87033970e+00, 1.05004295e-01),
-              (2, 2, -2.18847617e-02, 8.85953709e-04),
-              (3, 3, -2.10987695e-04, 6.88867607e-06)]
-    dt = [('node', '<i4'), ('node2', '<i4'), ('q', '<f8'), ('MASS', '<f8')]
-    answer = np.array(answer, dtype=dt)
-    for dtname, dttype in dt:
-        assert np.allclose(res[dtname], answer[dtname]), '{} {}'.format(res, answer)
+    #print(res)
 
-
-    # todo: add a better check of the lake concentrations
-    # assert False
+    # uncomment when testing
+    assert False
 
     return
 

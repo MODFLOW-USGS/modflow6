@@ -270,6 +270,8 @@ module GwtSsmModule
     rout = DZERO
     !
     ! -- do for each flow package
+    ! -- todo: may want ssm broken down further so that the budget table
+    !    contains the contributions for each flow package
     do ip = 1, this%fmi%nflowpack
       if (this%fmi%iatp(ip) /= 0) cycle
       !
