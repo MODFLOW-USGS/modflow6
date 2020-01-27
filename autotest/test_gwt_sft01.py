@@ -374,7 +374,7 @@ def eval_results(sim):
     #print(res)
 
     # uncomment when testing
-    assert False
+    # assert False
 
     return
 
