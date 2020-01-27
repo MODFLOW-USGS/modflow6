@@ -270,6 +270,8 @@ module GwtSsmModule
     rout = DZERO
     !
     ! -- do for each flow package
+    ! -- todo: may want ssm broken down further so that the budget table
+    !    contains the contributions for each flow package
     do ip = 1, this%fmi%nflowpack
       if (this%fmi%iatp(ip) /= 0) cycle
       !
@@ -664,7 +666,7 @@ module GwtSsmModule
           write(this%iout,'(1x,a)') 'AUX SOURCE DETECTED.'
         case default
           write(errmsg,'(1x, a, a)')                                          &
-            'ERROR.  SRCTYPE MUST BE AUX OR LKT ', srctype
+            'ERROR.  SRCTYPE MUST BE AUX, LKT, OR SFT ', srctype
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
           call ustop()
