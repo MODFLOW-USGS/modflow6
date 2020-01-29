@@ -882,8 +882,6 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use TdisModule, only: kstp, kper, delt, pertim, totim
-    use InputOutputModule, only: ulasav, ubdsv06
     ! -- dummy
     class(GwfCsubType) :: this
     integer(I4B), intent(in) :: idvfl

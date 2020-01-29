@@ -101,7 +101,7 @@
 \item \textbf{Block: PACKAGEDATA}
 
 \begin{description}
-\item \texttt{icsubno}---integer value that defines the CSUB interbed number associated with the specified PACKAGEDATA data on the line. CSUBNO must be greater than zero and less than or equal to NCSUBCELLS.  CSUB information must be specified for every CSUB cell or the program will terminate with an error.  The program will also terminate with an error if information for a CSUB interbed number is specified more than once.
+\item \texttt{icsubno}---integer value that defines the CSUB interbed number associated with the specified PACKAGEDATA data on the line. CSUBNO must be greater than zero and less than or equal to NINTERBEDS.  CSUB information must be specified for every CSUB cell or the program will terminate with an error.  The program will also terminate with an error if information for a CSUB interbed number is specified more than once.
 
 \item \texttt{cellid}---is the cell identifier, and depends on the type of grid that is used for the simulation.  For a structured grid that uses the DIS input file, CELLID is the layer, row, and column.   For a grid that uses the DISV input file, CELLID is the layer and CELL2D number.  If the model uses the unstructured discretization (DISU) input file, CELLID is the node number for the cell.
 
