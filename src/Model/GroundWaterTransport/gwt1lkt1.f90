@@ -13,7 +13,8 @@
 ! EXT-INFLOW                idxbudiflw    EXT-INFLOW            q * ciflw
 ! WITHDRAWAL                idxbudwdrl    WITHDRAWAL            q * clak
 ! EXT-OUTFLOW               idxbudoutf    EXT-OUTFLOW           q * clak
-! STORAGE (aux VOLUME)      idxbudsto     STORAGE (aux MASS)    
+! STORAGE (aux VOLUME)      idxbudsto     none                  used for lake volumes
+! none                      none          STORAGE (aux MASS)    
 ! CONSTANT                  none          none                  none
 ! FROM-MVR                  ?             FROM-MVR              q * cext
 ! TO-MVR                    idxbudtmvr?   TO-MVR                q * clak
@@ -2971,7 +2972,7 @@ module GwtLktModule
     ! -- dummy
     class(GwtLktType), intent(inout) :: this
     ! -- local
-    integer(I4B) :: i, j, n, nn1, nn2
+    integer(I4B) :: i, j, n, nn1, nn2, idx
     character(len=200) :: ermsg
     character(len=LENBOUNDNAME) :: bname
     logical :: jfound
@@ -3046,8 +3047,22 @@ module GwtLktModule
         if (n == 1) then
           if (obsrv%ObsTypeId=='LKT') then
             nn2 = obsrv%NodeNumber2
-            j = nn2
-            obsrv%indxbnds(1) = j
+            ! -- Look for the first occurrence of nn1, then set indxbnds
+            !    to the nn2 record after that
+            do j = 1, this%lakbudptr%budterm(this%idxbudgwf)%nlist
+              if (this%lakbudptr%budterm(this%idxbudgwf)%id1(j) == nn1) then
+                idx = j + nn2 - 1
+                obsrv%indxbnds(1) = idx
+                exit
+              end if
+            end do
+            if (this%lakbudptr%budterm(this%idxbudgwf)%id1(idx) /= nn1) then
+              write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
+                'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
+                ' lake connection number =', nn2, &
+                '(does not correspond to lake ', nn1, ')'
+              call store_error(ermsg)
+            end if
           else
             obsrv%indxbnds(1) = nn1
           end if

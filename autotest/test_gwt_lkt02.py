@@ -246,9 +246,9 @@ def get_model(idx, dir):
                     ('lkt-1-wdrl', 'WITHDRAWAL', 1),
                     ('lkt-1-stor', 'STORAGE', 1),
                     ('lkt-1-const', 'CONSTANT', 1),
-                    ('lkt-1-gwt2', 'LKT', 1, 1),
-                    ('lkt-1-gwt4', 'LKT', 1, 3),
-                    ('lkt-1-gwt3', 'LKT', 1, 2),
+                    ('lkt-1-gwt1', 'LKT', 1, 1),
+                    ('lkt-1-gwt2', 'LKT', 1, 2),
+                    ('lkt-2-gwt1', 'LKT', 2, 1),
                     ('lkt-1-mylake1', 'LKT', 'MYLAKE1'),
                    ],
                }
@@ -371,8 +371,7 @@ def eval_results(sim):
     for dtname, dttype in dt:
         assert np.allclose(res[dtname], answer[dtname]), '{} {}'.format(res, answer)
 
-
-    # todo: add a better check of the lake concentrations
+    # uncomment when testing
     # assert False
 
     return

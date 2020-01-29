@@ -112,7 +112,7 @@ def get_model(idx, dir):
                                    auxiliary='CONCENTRATION',
                                    filename='{}.chd'.format(gwfname))
 
-    nlakeconn = 3  # note: this is the number of cells, not total number of connections
+    nlakeconn = 3  # note: this is the number of connectiosn for a lake, not total number of connections
     # pak_data = [lakeno, strt, nlakeconn, CONC, dense, boundname]
     pak_data = [(0, -0.4, nlakeconn, 0., 1025.)]
 
@@ -359,7 +359,7 @@ def eval_results(sim):
     answer = np.ones(10) * -216.3934
     assert np.allclose(res, answer), '{} {}'.format(res, answer)
 
-    # todo: add a better check of the lake concentrations
+    # uncomment when testing
     # assert False
 
     return
