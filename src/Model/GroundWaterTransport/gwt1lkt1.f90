@@ -2885,6 +2885,11 @@ module GwtLktModule
     this%obs%obsData(indx)%ProcessIdPtr => lkt_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
+    !    for flow between lakes.
+    call this%obs%StoreObsType('flow-ja-face', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => lkt_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
     !    for ext-inflow observation type.
     call this%obs%StoreObsType('ext-inflow', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => lkt_process_obsID
@@ -3003,29 +3008,24 @@ module GwtLktModule
           jfound = .false.
           if (obsrv%ObsTypeId=='LKT') then
             do j = 1, this%lakbudptr%budterm(this%idxbudgwf)%nlist
-              !n1 = this%lakbudptr%budterm(this%idxbudgwf)%id1(j)
-              if (this%boundname(j) == bname) then
+              n = this%lakbudptr%budterm(this%idxbudgwf)%id1(j)
+              if (this%boundname(n) == bname) then
                 jfound = .true.
                 call ExpandArray(obsrv%indxbnds)
                 n = size(obsrv%indxbnds)
                 obsrv%indxbnds(n) = j
               end if
             end do
-          else if (obsrv%ObsTypeId=='EXT-OUTFLOW' .or.   &
-                   obsrv%ObsTypeId=='TO-MVR' .or. &
-                   obsrv%ObsTypeId=='OUTLET') then
-            
-            ! -- todo: need to get this working for outlet flows
-            !do j = 1, this%noutlets
-            !  jj = this%lakein(j)
-            !  if (this%lakename(jj) == bname) then
-            !    jfound = .true.
-            !    call ExpandArray(obsrv%indxbnds)
-            !    n = size(obsrv%indxbnds)
-            !    obsrv%indxbnds(n) = j
-            !  end if
-            !end do
-            
+          else if (obsrv%ObsTypeId=='FLOW-JA-FACE') then
+            do j = 1, this%lakbudptr%budterm(this%idxbudfjf)%nlist
+              n = this%lakbudptr%budterm(this%idxbudfjf)%id1(j)
+              if (this%lakename(n) == bname) then
+                jfound = .true.
+                call ExpandArray(obsrv%indxbnds)
+                n = size(obsrv%indxbnds)
+                obsrv%indxbnds(n) = j
+              end if
+            end do
           else
             do j = 1, this%nlakes
               if (this%lakename(j) == bname) then
@@ -3061,6 +3061,26 @@ module GwtLktModule
                 'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
                 ' lake connection number =', nn2, &
                 '(does not correspond to lake ', nn1, ')'
+              call store_error(ermsg)
+            end if
+          else if (obsrv%ObsTypeId=='FLOW-JA-FACE') then
+            nn2 = obsrv%NodeNumber2
+            ! -- Look for the first occurrence of nn1, then set indxbnds
+            !    to the nn2 record after that
+            idx = 0
+            do j = 1, this%lakbudptr%budterm(this%idxbudfjf)%nlist
+              if (this%lakbudptr%budterm(this%idxbudfjf)%id1(j) == nn1 .and. &
+                  this%lakbudptr%budterm(this%idxbudfjf)%id2(j) == nn2) then
+                idx = j
+                obsrv%indxbnds(1) = idx
+                exit
+              end if
+            end do
+            if (idx == 0) then
+              write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
+                'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
+                ' lake number =', nn1, &
+                '(is not connected to lake ', nn2, ')'
               call store_error(ermsg)
             end if
           else
@@ -3100,7 +3120,8 @@ module GwtLktModule
             call store_error(ermsg)
           !end if
         end do
-      else if (obsrv%ObsTypeId=='LKT') then
+      else if (obsrv%ObsTypeId=='LKT' .or. &
+               obsrv%ObsTypeId=='FLOW-JA-FACE') then
         do j = 1, size(obsrv%indxbnds)
           nn1 =  obsrv%indxbnds(j)
           if (nn1 < 1 .or. nn1 > this%maxbound) then
@@ -3196,6 +3217,11 @@ module GwtLktModule
                 igwfnode = this%lakbudptr%budterm(this%idxbudgwf)%id2(jj)
                 v = this%hcof(jj) * this%xnew(igwfnode) - this%rhs(jj)
                 v = -v
+              end if
+            case ('FLOW-JA-FACE')
+              n = this%lakbudptr%budterm(this%idxbudgwf)%id1(jj)
+              if (this%iboundpak(n) /= 0) then
+                call this%lkt_fjf_term(jj, n1, n2, v)
               end if
             case ('EVAPORATION')
               if (this%iboundpak(jj) /= 0) then
@@ -3294,7 +3320,8 @@ module GwtLktModule
     if (nn1 == NAMEDBOUNDFLAG) then
       obsrv%FeatureName = bndname
     else
-      if (obsrv%ObsTypeId=='LKT') then
+      if (obsrv%ObsTypeId == 'LKT' .or. &
+          obsrv%ObsTypeId == 'FLOW-JA-FACE') then
         call extract_idnum_or_bndname(strng, icol, istart, istop, nn2, bndname)
         if (nn2 == NAMEDBOUNDFLAG) then
           obsrv%FeatureName = bndname
