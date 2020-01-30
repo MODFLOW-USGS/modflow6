@@ -42,12 +42,12 @@ script:
   else echo $TRAVIS_PULL_REQUEST_BRANCH; fi)
 - echo "TRAVIS_BRANCH=$TRAVIS_BRANCH, PR=$PR, BRANCH=$BRANCH"
 - pwd
-- git clone https://github.com/MODFLOW-USGS/modflow6-examples --depth 1 --branch=$BRANCH ../modflow6-examples
+- git clone https://github.com/MODFLOW-USGS/modflow6-examples ../modflow6-examples
 - cd ../modflow6-examples
-#- if git show-ref -q --heads $BRANCH; then
-#  git checkout $BRANCH; echo switched to modflow6-examples branch $BRANCH;
-#  else echo using modflow6-examples branch master;  fi
-#- git branch
+- if git show-ref -q --heads $BRANCH; then
+  git checkout $BRANCH; echo switched to modflow6-examples branch $BRANCH;
+  else echo using modflow6-examples branch master;  fi
+- git branch
 - cd ../modflow6
 - ls ../
 - which python
