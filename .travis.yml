@@ -33,8 +33,10 @@ install:
 - pip --version
 - pip config --user set global.progress_bar off
 - pip install --user nose-timer pydotplus
-- pip install --user https://github.com/modflowpy/flopy/zipball/develop
-- pip install --user https://github.com/modflowpy/pymake/zipball/master
+- git clone https://github.com/modflowpy/flopy --depth 1 --branch=develop ~/flopy
+- pip install --user -e ~/flopy
+- git clone https://github.com/modflowpy/pymake --depth 1 --branch=master ~/pymake
+- pip install --user -e ~/pymake
 script:
 - export BRANCH=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_BRANCH;
   else echo $TRAVIS_PULL_REQUEST_BRANCH; fi)
