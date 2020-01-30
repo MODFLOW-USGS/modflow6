@@ -122,10 +122,17 @@ This section describes changes introduced into MODFLOW 6 with each release.  The
 \underline{BASIC FUNCTIONALITY}
 
 \underline{STRESS PACKAGES}
+\begin{itemize}
+	\item Fixed a bug in binary budget file header for CSUB Package budget data written using IMETH=6 (CSUB-ELASTIC and CSUB-INELASTIC) .
+	\item Added information on the CSUB Package budget terms and compaction data written the the Input/Output document in the `Description of Groundwater Flow (GWF) Model Binary Output Files' section.
+	\item Refactored the SFR Package to remove use of RectangularChGeometry objects and added required functionality as private methods in the SFR module.
+\end{itemize}
 
 \underline{ADVANCED STRESS PACKAGES}
 \begin{itemize}
+\item The code for saving the budget terms for the advanced packages was refactored to use common routines.  These changes should have no affect on simulation results.
 \item The LAK Package would accept negative user-input values for  RAINFALL, EVAPORATION, RUNOFF, INFLOW, and WITHDRAWAL even though the user guide mentioned that negative values are not allowed for these flow terms.  Error checks were added to ensure these values are specified as positive.
+\item Added a storage term to the SFR Package binary output file.  This term is always zero with the present implementation.  An auxiliary variable, called VOLUME, is also written with the storage budget term.  This term contains the calculated water volume in the reach.
 \end{itemize}
 
 \underline{SOLUTION}
