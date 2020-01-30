@@ -1,0 +1,5 @@
+BEGIN PACKAGEDATA
+  <cellid(ncelldim)> <width> <height>
+  <cellid(ncelldim)> <width> <height>
+  ...
+END PACKAGEDATA

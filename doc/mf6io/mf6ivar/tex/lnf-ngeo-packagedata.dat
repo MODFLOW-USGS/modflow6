@@ -1,0 +1,5 @@
+BEGIN PACKAGEDATA
+  <cellid(ncelldim)> <npoint> <xzpairs(npoint)>
+  <cellid(ncelldim)> <npoint> <xzpairs(npoint)>
+  ...
+END PACKAGEDATA

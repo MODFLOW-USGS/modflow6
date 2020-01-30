@@ -474,6 +474,9 @@ if __name__ == '__main__':
                   'gwf-oc',      # dfn completed  tex updated
                   'lnf-nam',     # dfn completed  tex updated
                   'lnf-disl',    # dfn completed  tex updated
+                  'lnf-cgeo',    # dfn completed  tex updated
+                  'lnf-rgeo',    # dfn completed  tex updated
+                  'lnf-ngeo',    # dfn completed  tex updated
                   'lnf-ic',      # dfn completed  tex updated
                   'lnf-chd',     # dfn completed  tex updated
                   'lnf-oc',      # dfn completed  tex updated
