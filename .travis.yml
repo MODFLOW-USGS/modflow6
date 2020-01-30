@@ -22,7 +22,7 @@ before_install:
     texlive-latex-recommended texlive-science texlive-fonts-extra
 - sudo apt-get install -y graphviz python3-pip python3-setuptools
     python3-matplotlib python3-netcdf4 python3-pyproj python3-pyshp
-    python3-shapely
+    python3-shapely python3-tk
 install:
 - if [[ ! -d "$HOME/.local/bin" ]]; then mkdir "$HOME/.local/bin"; fi
 - ln -fs /usr/bin/$FC $HOME/.local/bin/gfortran
@@ -33,14 +33,16 @@ install:
 - pip --version
 - pip config --user set global.progress_bar off
 - pip install --user nose-timer pydotplus
-- pip install --user https://github.com/modflowpy/flopy/zipball/develop
-- pip install --user https://github.com/modflowpy/pymake/zipball/master
+- git clone https://github.com/modflowpy/flopy --depth 1 --branch=develop ~/flopy
+- pip install --user -e ~/flopy
+- git clone https://github.com/modflowpy/pymake --depth 1 --branch=master ~/pymake
+- pip install --user -e ~/pymake
 script:
 - export BRANCH=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_BRANCH;
   else echo $TRAVIS_PULL_REQUEST_BRANCH; fi)
 - echo "TRAVIS_BRANCH=$TRAVIS_BRANCH, PR=$PR, BRANCH=$BRANCH"
 - pwd
-- git clone https://github.com/MODFLOW-USGS/modflow6-examples.git ../modflow6-examples
+- git clone https://github.com/MODFLOW-USGS/modflow6-examples ../modflow6-examples
 - cd ../modflow6-examples
 - if git show-ref -q --heads $BRANCH; then
   git checkout $BRANCH; echo switched to modflow6-examples branch $BRANCH;
