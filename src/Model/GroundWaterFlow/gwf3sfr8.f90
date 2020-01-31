@@ -20,7 +20,6 @@ module SfrModule
   use BaseDisModule, only: DisBaseType
   use SimModule, only: count_errors, store_error, store_error_unit, ustop
   use SparseModule, only: sparsematrix
-  use RectangularChGeometryModule, only: RectangularChGeometryType
   use ArrayHandlersModule, only: ExpandArray
   use BlockParserModule,   only: BlockParserType
   !
@@ -103,8 +102,7 @@ module SfrModule
     type(BudgetObjectType), pointer :: budobj => null()
     type(SfrDataType), dimension(:), pointer, contiguous :: reaches => NULL()
     type(sparsematrix), pointer :: sparse => null()
-    type(RectangularChGeometryType), dimension(:), pointer,                     &
-                                     contiguous :: geo => null()
+    !
     ! -- moved from SfrDataType
     integer(I4B), dimension(:), pointer, contiguous :: iboundpak => null()
     integer(I4B), dimension(:), pointer, contiguous :: igwfnode => null()
@@ -165,6 +163,12 @@ module SfrModule
     procedure, private :: sfr_calc_qd
     procedure, private :: sfr_calc_qsource
     procedure, private :: sfr_calc_div
+    ! -- geometry 
+    procedure, private :: area_wet
+    procedure, private :: perimeter_wet
+    procedure, private :: surface_area
+    procedure, private :: surface_area_wet
+    procedure, private :: top_width_wet
     ! -- reading
     procedure, private :: sfr_read_packagedata
     procedure, private :: sfr_read_connectiondata
@@ -618,8 +622,6 @@ contains
     ! -- dummy
     class(SfrType),intent(inout) :: this
     ! -- local
-    character (len=10) :: cnum
-    character(len=LENBOUNDNAME) :: bndName
     integer(I4B) :: n, ierr
     ! -- format
   ! ------------------------------------------------------------------------------
@@ -661,32 +663,6 @@ contains
     if (ierr > 0) then
       call this%parser%StoreErrorUnit()
       call ustop()
-    end if
-    !
-    ! -- write header
-    if (this%iprpak /= 0) then
-      write (this%iout, '(//a)') 'SFR GEOMETRY DATA'
-      write (this%iout, "(40('-'))")
-    end if
-    !
-    ! -- build the rectangular geo type
-    allocate(this%geo(this%maxbound))
-    do n = 1, this%maxbound
-      if(this%inamedbound==1) then
-        bndName = this%boundname(n)
-      else
-        write (cnum,'(i10.0)') n
-        bndName = 'Reach ' // trim(adjustl(cnum))
-      end if
-      call this%geo(n)%init(n, bndName, &
-                            this%width(n), &
-                            this%length(n))
-      if (this%iprpak /= 0) then
-        call this%geo(n)%print_attributes(this%iout)
-      end if
-    end do
-    if (this%iprpak /= 0) then
-      write (this%iout, "(40('-'))")
     end if
     !
     ! -- setup pakmvrobj
@@ -1879,11 +1855,11 @@ contains
         call UWWORD(line, iloc, 20, 1, cellid, n, q, left=.TRUE.)
         depth = this%depth(n)
         stage = this%stage(n)
-        w = this%geo(n)%top_width_wet(depth)
+        w = this%top_width_wet(n, depth)
         call UWWORD(line, iloc, 11, 3, text, n, stage)
         call UWWORD(line, iloc, 11, 3, text, n, depth)
         call UWWORD(line, iloc, 11, 3, text, n, w)
-        call this%sfr_calc_cond(n, depth, cond)
+        call this%sfr_calc_cond(n, cond)
         if (node > 0) then
           sbot = this%strtop(n) - this%bthick(n)
           if (hgwf < sbot) then
@@ -1972,8 +1948,8 @@ contains
          else
            cellid = 'none'
          end if
-         a = this%geo(n)%surface_area()
-         ae = this%geo(n)%surface_area_wet(depth)
+         a = this%surface_area(n)
+         ae = this%surface_area_wet(n, depth)
          qu = this%usflow(n)
          qr = this%reaches(n)%rain%value * a
          qi =  this%reaches(n)%inflow%value
@@ -2133,9 +2109,6 @@ contains
     ! -- ia ja
     deallocate(this%ia)
     deallocate(this%ja)
-    !
-    ! -- objects
-    deallocate(this%geo)
     !
     ! -- budobj
     call this%budobj%budgetobject_da()
@@ -3107,7 +3080,7 @@ contains
     !
     ! -- calculate reach conductance for a unit depth of water
     !    if equal to zero will skip iterations
-    call this%sfr_calc_cond(n, DONE, cstr)
+    call this%sfr_calc_cond(n, cstr)
     !
     ! -- set flag to skip iterations
     isolve = 1
@@ -3515,8 +3488,8 @@ contains
     qro = this%reaches(n)%runoff%value
     !
     ! -- calculate rainfall and evap
-    a = this%geo(n)%surface_area()
-    ae = this%geo(n)%surface_area_wet(depth)
+    a = this%surface_area(n)
+    ae = this%surface_area_wet(n, depth)
     qr = this%reaches(n)%rain%value * a
     !qe = this%reaches(n)%evap%value * ae
     qe = this%reaches(n)%evap%value * a
@@ -3577,8 +3550,8 @@ contains
     call sChSmooth(depth, sat, derv)
     s = this%slope(n)
     r = this%reaches(n)%rough%value
-    aw = this%geo(n)%area_wet(depth)
-    wp = this%geo(n)%perimeter_wet(depth)
+    aw = this%area_wet(n, depth)
+    wp = this%perimeter_wet(n)
     rh = DZERO
     if (wp > DZERO) then
       rh = aw / wp
@@ -3629,7 +3602,7 @@ contains
     call sChSmooth(depth, sat, derv)
     !
     ! -- calculate conductance
-    call this%sfr_calc_cond(n, depth, cond)
+    call this%sfr_calc_cond(n, cond)
     !
     ! -- calculate groundwater leakage
     tp = this%strtop(n)
@@ -3645,7 +3618,7 @@ contains
     return
   end subroutine sfr_calc_qgwf
 
-  subroutine sfr_calc_cond(this, n, depth, cond)
+  subroutine sfr_calc_cond(this, n, cond)
   ! ******************************************************************************
   ! sfr_calc_qgwf -- Calculate sfr-aquifer exchange
   ! ******************************************************************************
@@ -3654,7 +3627,6 @@ contains
   ! ------------------------------------------------------------------------------
       class(SfrType) :: this
       integer(I4B), intent(in) :: n
-      real(DP), intent(in) :: depth
       real(DP), intent(inout) :: cond
       ! -- local
       integer(I4B) :: node
@@ -3666,7 +3638,7 @@ contains
     node = this%igwfnode(n)
     if (node > 0) then
       if (this%ibound(node) > 0) then
-        wp = this%geo(n)%perimeter_wet(depth)
+        wp = this%perimeter_wet(n)
         cond = this%hk(n) * this%length(n) * wp / this%bthick(n)
       end if
     end if
@@ -4226,7 +4198,7 @@ contains
     !    the simulation and cannot change.  This includes FLOW-JA-FACE
     !    so they can be written to the binary budget files, but these internal
     !    flows are not included as part of the budget table.
-    nbudterm = 7
+    nbudterm = 8
     if (this%imover == 1) nbudterm = nbudterm + 2
     if (this%naux > 0) nbudterm = nbudterm + 1
     !
@@ -4344,6 +4316,20 @@ contains
                                              this%name, &
                                              maxlist, .false., .false., &
                                              naux)
+    !
+    ! -- 
+    text = '         STORAGE'
+    idx = idx + 1
+    maxlist = this%maxbound
+    naux = 1
+    auxtxt(1) = '          VOLUME'
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name, &
+                                             maxlist, .false., .false., &
+                                             naux, auxtxt)
     !
     ! -- 
     if (this%imover == 1) then
@@ -4466,7 +4452,7 @@ contains
     idx = idx + 1
     call this%budobj%budterm(idx)%reset(this%maxbound)
     do n = 1, this%maxbound
-      a = this%geo(n)%surface_area()
+      a = this%surface_area(n)
       q = this%reaches(n)%rain%value * a
       call this%budobj%budterm(idx)%update_term(n, n, q)
     end do
@@ -4516,6 +4502,16 @@ contains
       call this%budobj%budterm(idx)%update_term(n, n, q)
     end do
 
+    ! -- STORAGE
+    idx = idx + 1
+    call this%budobj%budterm(idx)%reset(this%maxbound)
+    do n = 1, this%maxbound
+      q = DZERO
+      d = this%depth(n)
+      a = this%width(n) * this%length(n)
+      this%qauxcbc(1) = a * d
+      call this%budobj%budterm(idx)%update_term(n, n, q, this%qauxcbc)
+    end do
     
     ! -- MOVER
     if (this%imover == 1) then
@@ -4560,5 +4556,127 @@ contains
     ! -- return
     return
   end subroutine sfr_fill_budobj
+
+  ! -- geometry functions
+  function area_wet(this, n, depth)
+! ******************************************************************************
+! area_wet -- return wetted area
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- return
+    real(DP) :: area_wet
+    ! -- dummy
+    class(SfrType) :: this
+    integer(I4B), intent(in) :: n
+    real(DP), intent(in) :: depth
+! ------------------------------------------------------------------------------
+    !
+    ! -- Calculate area
+    area_wet = depth * this%width(n)
+    !
+    ! -- Return
+    return
+  end function area_wet
+  
+  
+  function perimeter_wet(this, n)
+! ******************************************************************************
+! perimeter_wet -- return wetted perimeter
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- return
+    real(DP) :: perimeter_wet
+    ! -- dummy
+    class(SfrType) :: this
+    integer(I4B), intent(in) :: n
+! ------------------------------------------------------------------------------
+    !
+    ! -- Calculate wetted perimeter
+    perimeter_wet = this%width(n)
+    !
+    ! -- return
+    return
+  end function perimeter_wet
+
+  function surface_area(this, n)
+! ******************************************************************************
+! surface_area -- return surface area
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- return variable
+    real(DP) :: surface_area
+    ! -- dummy
+    class(SfrType) :: this
+    integer(I4B), intent(in) :: n
+! ------------------------------------------------------------------------------
+    !
+    ! -- Calculate surface area
+    surface_area = this%width(n) * this%length(n)
+    !
+    ! -- Return
+    return
+  end function surface_area  
+  
+  function surface_area_wet(this, n, depth)
+! ******************************************************************************
+! area_wet -- return wetted surface area
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- return
+    real(DP) :: surface_area_wet
+    ! -- dummy
+    class(SfrType) :: this
+    integer(I4B), intent(in) :: n
+    real(DP), intent(in) :: depth
+    ! -- local
+    real(DP) :: top_width
+! ------------------------------------------------------------------------------
+    !
+    ! -- Calculate surface area
+    top_width = this%top_width_wet(n, depth)
+    surface_area_wet = top_width * this%length(n)
+    !
+    ! -- Return
+    return
+  end function surface_area_wet
+  
+  function top_width_wet(this, n, depth)
+! ******************************************************************************
+! area_wet -- return wetted surface area
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule, only: DEM5, DZERO
+    ! -- return
+    real(DP) :: top_width_wet
+    ! -- dummy
+    class(SfrType) :: this
+    integer(I4B), intent(in) :: n
+    real(DP), intent(in) :: depth
+    ! -- local
+    real(DP) :: sat
+! ------------------------------------------------------------------------------
+    !
+    ! -- Calculate surface area
+    sat = sCubicSaturation(DEM5, DZERO, depth, DEM5)
+    top_width_wet = this%width(n) * sat
+    !
+    ! -- Return
+    return
+  end function top_width_wet
 
 end module SfrModule

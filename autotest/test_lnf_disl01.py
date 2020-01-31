@@ -78,6 +78,16 @@ cell1d = [(0, 0.5, 3, 0, 1, 2),
           (6, 1.0, 2, 20, 27),
           (7, 0.0, 2, 28, 26)]
 
+# geometry data
+gdc = [((0,), 0.5),
+       ((1,), 0.6),
+       ((2,), 0.7),
+       ((3,), 1.5)]
+gdr = [((3,), 1.5, 1.4),
+       ((6,), 1.5, 1.5),
+       ((5,), 1.4, 1.3)]
+gdn = [(7, 5, 0., 1.5, 0., 0., 1.5, 0., 1.5, 1.5, 0., 1.5)]
+
 # temporal discretization
 nper = 1
 perlen, nstp, tsmult = 1., 1, 1.
@@ -122,9 +132,14 @@ def get_model(idx, dir):
 
     dis = flopy.mf6.ModflowLnfdisl(lnf, length_units='METERS',
                                    nodes=nodes, nvert=nvert,
-                                   # idomain=1,
+                                   # idomain=1, # for scott to fix
                                    vertices=vertices,
                                    cell1d=cell1d)
+
+    # # create geometry packages # for scott to fix
+    # cgeo = flopy.mf6.ModflowLnfcgeo(lnf, geometry_data=gdc)
+    # rgeo = flopy.mf6.ModflowLnfrgeo(lnf, geometry_data=gdr)
+    # ngeo = flopy.mf6.ModflowLnfngeo(lnf, geometry_data=gdn)
 
     # initial conditions
     ic = flopy.mf6.ModflowLnfic(lnf, strt=strt)
