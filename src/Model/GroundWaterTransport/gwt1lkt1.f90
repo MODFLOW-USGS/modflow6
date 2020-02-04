@@ -13,10 +13,11 @@
 ! EXT-INFLOW                idxbudiflw    EXT-INFLOW            q * ciflw
 ! WITHDRAWAL                idxbudwdrl    WITHDRAWAL            q * clak
 ! EXT-OUTFLOW               idxbudoutf    EXT-OUTFLOW           q * clak
-! STORAGE (aux VOLUME)      idxbudsto     STORAGE (aux MASS)    
+! TO-MVR                    idxbudtmvr    TO-MVR                q * clak
+! FROM-MVR                  idxbudfmvr    FROM-MVR              q * cext
+! STORAGE (aux VOLUME)      idxbudsto     none                  used for lake volumes
+! none                      none          STORAGE (aux MASS)    
 ! CONSTANT                  none          none                  none
-! FROM-MVR                  ?             FROM-MVR              q * cext
-! TO-MVR                    idxbudtmvr?   TO-MVR                q * clak
 ! AUXILIARY                 none          none                  none
 ! none                      none          AUXILIARY             none
 ! none                      none          CONSTANT              accumulate
@@ -87,10 +88,13 @@ module GwtLktModule
     integer(I4B), pointer                              :: idxbudiflw => null()  ! index of inflow terms in lakbudptr
     integer(I4B), pointer                              :: idxbudwdrl => null()  ! index of withdrawal terms in lakbudptr
     integer(I4B), pointer                              :: idxbudoutf => null()  ! index of outflow terms in lakbudptr
+    integer(I4B), pointer                              :: idxbudtmvr => null()  ! index of to mover terms in lakbudptr
+    integer(I4B), pointer                              :: idxbudfmvr => null()  ! index of from mover terms in lakbudptr
     integer(I4B), pointer                              :: idxbudaux => null()   ! index of auxiliary terms in lakbudptr
     integer(I4B), dimension(:), pointer, contiguous    :: idxbudssm => null()   ! flag that lakbudptr%buditem is a general solute source/sink
     integer(I4B), pointer                              :: nconcbudssm => null() ! number of concbudssm terms (columns)
     real(DP), dimension(:, : ), pointer, contiguous    :: concbudssm => null()  ! user specified concentrations for lake flow terms
+    real(DP), dimension(:), pointer, contiguous        :: qmfrommvr => null()   ! a mass flow coming from the mover that needs to be added
     !
     ! -- lake budget object
     type(BudgetObjectType), pointer :: budobj => null()
@@ -143,6 +147,7 @@ module GwtLktModule
     procedure, private :: lkt_iflw_term
     procedure, private :: lkt_wdrl_term
     procedure, private :: lkt_outf_term
+    procedure, private :: lkt_tmvr_term
     procedure, private :: lkt_fjf_term
     
   end type GwtLktType
@@ -380,10 +385,6 @@ module GwtLktModule
       &' INPUT READ FROM UNIT ', i0, //)"
 ! ------------------------------------------------------------------------------
     !
-    ! -- Tell fmi that this package is being handled by LKT, otherwise
-    !    SSM would handle the flows into GWT from this LAK
-    this%fmi%iatp(this%igwflakpak) = 1
-    !
     ! -- Get obs setup 
     call this%obs%obs_ar()
     !
@@ -395,6 +396,13 @@ module GwtLktModule
     !
     ! -- read optional initial package parameters
     call this%read_initial_attr()
+    !
+    ! -- Tell fmi that this package is being handled by LKT, otherwise
+    !    SSM would handle the flows into GWT from this LAK.  Then point the
+    !    fmi data for an advanced package to xnewpak and qmfrommvr
+    this%fmi%iatp(this%igwflakpak) = 1
+    this%fmi%datp(this%igwflakpak)%concpack => this%xnewpak
+    this%fmi%datp(this%igwflakpak)%qmfrommvr => this%qmfrommvr
     !
     ! -- Return
     return
@@ -949,6 +957,26 @@ module GwtLktModule
       end do
     end if
     !
+    ! -- add to mover contribution
+    if (this%idxbudtmvr /= 0) then
+      do j = 1, this%lakbudptr%budterm(this%idxbudtmvr)%nlist
+        call this%lkt_tmvr_term(j, n1, n2, rrate, rhsval, hcofval)
+        iloc = this%idxlocnode(n1)
+        iposd = this%idxpakdiag(n1)
+        amatsln(iposd) = amatsln(iposd) + hcofval
+        rhs(iloc) = rhs(iloc) + rhsval
+      end do
+    end if
+    !
+    ! -- add from mover contribution
+    if (this%idxbudfmvr /= 0) then
+      do n = 1, this%nlakes
+        rhsval = this%qmfrommvr(n)
+        iloc = this%idxlocnode(n)
+        rhs(iloc) = rhs(iloc) - rhsval
+      end do
+    end if
+    !
     ! -- go through each lak-gwf connection
     do j = 1, this%lakbudptr%budterm(this%idxbudgwf)%nlist
       !
@@ -1275,6 +1303,8 @@ module GwtLktModule
     call mem_allocate(this%idxbudiflw, 'IDXBUDIFLW', this%origin)
     call mem_allocate(this%idxbudwdrl, 'IDXBUDWDRL', this%origin)
     call mem_allocate(this%idxbudoutf, 'IDXBUDOUTF', this%origin)
+    call mem_allocate(this%idxbudtmvr, 'IDXBUDTMVR', this%origin)
+    call mem_allocate(this%idxbudfmvr, 'IDXBUDFMVR', this%origin)
     call mem_allocate(this%idxbudaux, 'IDXBUDAUX', this%origin)
     call mem_allocate(this%nconcbudssm, 'NCONCBUDSSM', this%origin)
     ! 
@@ -1295,6 +1325,8 @@ module GwtLktModule
     this%idxbudiflw = 0
     this%idxbudwdrl = 0
     this%idxbudoutf = 0
+    this%idxbudtmvr = 0
+    this%idxbudfmvr = 0
     this%idxbudaux = 0
     this%nconcbudssm = 0
     !
@@ -1353,6 +1385,9 @@ module GwtLktModule
     call mem_allocate(this%concbudssm, this%nconcbudssm, this%nlakes, &
       'CONCBUDSSM', this%origin)
     !
+    ! -- mass added from the mover transport package
+    call mem_allocate(this%qmfrommvr, this%nlakes, 'QMFROMMVR', this%origin)
+    !
     ! -- Initialize
     !
     !-- fill clktbudget
@@ -1371,6 +1406,7 @@ module GwtLktModule
       this%status(n) = 'ACTIVE'
       this%qsto(n) = DZERO
       this%ccterm(n) = DZERO
+      this%qmfrommvr(n) = DZERO
       this%concbudssm(:, n) = DZERO
     end do
     !
@@ -1409,6 +1445,7 @@ module GwtLktModule
     call mem_deallocate(this%concevap)
     call mem_deallocate(this%concroff)
     call mem_deallocate(this%conciflw)
+    call mem_deallocate(this%qmfrommvr)
     deallocate(this%clktbudget)
     deallocate(this%status)
     deallocate(this%lakename)
@@ -1445,6 +1482,8 @@ module GwtLktModule
     call mem_deallocate(this%idxbudiflw)
     call mem_deallocate(this%idxbudwdrl)
     call mem_deallocate(this%idxbudoutf)
+    call mem_deallocate(this%idxbudtmvr)
+    call mem_deallocate(this%idxbudfmvr)
     call mem_deallocate(this%idxbudaux)
     call mem_deallocate(this%idxbudssm)
     call mem_deallocate(this%nconcbudssm)
@@ -1540,6 +1579,12 @@ module GwtLktModule
         this%idxbudssm(ip) = 0
       case('EXT-OUTFLOW')
         this%idxbudoutf = ip
+        this%idxbudssm(ip) = 0
+      case('TO-MVR')
+        this%idxbudtmvr = ip
+        this%idxbudssm(ip) = 0
+      case('FROM-MVR')
+        this%idxbudfmvr = ip
         this%idxbudssm(ip) = 0
       case('AUXILIARY')
         this%idxbudaux = ip
@@ -2043,6 +2088,22 @@ module GwtLktModule
       end do
     end if
     !
+    ! -- add to mover contribution
+    if (this%idxbudtmvr /= 0) then
+      do j = 1, this%lakbudptr%budterm(this%idxbudtmvr)%nlist
+        call this%lkt_tmvr_term(j, n1, n2, rrate)
+        this%dbuff(n1) = this%dbuff(n1) + rrate
+      end do
+    end if
+    !
+    ! -- add from mover contribution
+    if (this%idxbudfmvr /= 0) then
+      do n1 = 1, size(this%qmfrommvr)
+        rrate = this%qmfrommvr(n1)
+        this%dbuff(n1) = this%dbuff(n1) + rrate
+      end do
+    end if
+    !
     ! -- go through each gwf connection and accumulate 
     !    total mass in dbuff mass
     do j = 1, this%lakbudptr%budterm(this%idxbudgwf)%nlist
@@ -2249,7 +2310,8 @@ module GwtLktModule
       nlen = this%lakbudptr%budterm(this%idxbudfjf)%maxlist
     end if
     if (nlen > 0) nbudterm = nbudterm + 1
-    !if (this%imover == 1) nbudterm = nbudterm + 2
+    if (this%idxbudtmvr /= 0) nbudterm = nbudterm + 1
+    if (this%idxbudfmvr /= 0) nbudterm = nbudterm + 1
     if (this%naux > 0) nbudterm = nbudterm + 1
     !
     ! -- set up budobj
@@ -2392,6 +2454,36 @@ module GwtLktModule
                                              this%name, &
                                              maxlist, .false., .false., &
                                              naux, auxtxt)
+    if (this%idxbudtmvr /= 0) then
+      !
+      ! -- 
+      text = '          TO-MVR'
+      idx = idx + 1
+      maxlist = this%lakbudptr%budterm(this%idxbudtmvr)%maxlist
+      naux = 0
+      call this%budobj%budterm(idx)%initialize(text, &
+                                               this%name_model, &
+                                               this%name, &
+                                               this%name_model, &
+                                               this%name, &
+                                               maxlist, .false., .false., &
+                                               naux)
+    end if
+    if (this%idxbudfmvr /= 0) then
+      !
+      ! -- 
+      text = '        FROM-MVR'
+      idx = idx + 1
+      maxlist = this%nlakes
+      naux = 0
+      call this%budobj%budterm(idx)%initialize(text, &
+                                               this%name_model, &
+                                               this%name, &
+                                               this%name_model, &
+                                               this%name, &
+                                               maxlist, .false., .false., &
+                                               naux)
+    end if
     !
     ! -- 
     text = '        CONSTANT'
@@ -2405,36 +2497,7 @@ module GwtLktModule
                                              this%name, &
                                              maxlist, .false., .false., &
                                              naux)
-    !
-    ! -- 
-    !if (this%imover == 1) then
-    !  !
-    !  ! -- 
-    !  text = '        FROM-MVR'
-    !  idx = idx + 1
-    !  maxlist = this%nlakes
-    !  naux = 0
-    !  call this%budobj%budterm(idx)%initialize(text, &
-    !                                           this%name_model, &
-    !                                           this%name, &
-    !                                           this%name_model, &
-    !                                           this%name, &
-    !                                           maxlist, .false., .false., &
-    !                                           naux)
-    !  !
-    !  ! -- 
-    !  text = '          TO-MVR'
-    !  idx = idx + 1
-    !  maxlist = this%noutlets
-    !  naux = 0
-    !  call this%budobj%budterm(idx)%initialize(text, &
-    !                                           this%name_model, &
-    !                                           this%name, &
-    !                                           this%name_model, &
-    !                                           this%name, &
-    !                                           maxlist, .false., .false., &
-    !                                           naux)
-    !end if
+    
     !
     ! -- 
     naux = this%naux
@@ -2607,6 +2670,31 @@ module GwtLktModule
       call this%lkt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
     deallocate(auxvartmp)
+    
+    
+    ! -- TO MOVER
+    if (this%idxbudtmvr /= 0) then
+      idx = idx + 1
+      nlist = this%lakbudptr%budterm(this%idxbudtmvr)%nlist
+      call this%budobj%budterm(idx)%reset(nlist)
+      do j = 1, nlist
+        call this%lkt_tmvr_term(j, n1, n2, q)
+        call this%budobj%budterm(idx)%update_term(n1, n2, q)
+        call this%lkt_accumulate_ccterm(n1, q, ccratin, ccratout)
+      end do
+    end if
+    
+    ! -- FROM MOVER
+    if (this%idxbudfmvr /= 0) then
+      idx = idx + 1
+      nlist = this%nlakes
+      call this%budobj%budterm(idx)%reset(nlist)
+      do n1 = 1, nlist
+        q = this%qmfrommvr(n1)
+        call this%budobj%budterm(idx)%update_term(n1, n1, q)
+        call this%lkt_accumulate_ccterm(n1, q, ccratin, ccratout)
+      end do
+    end if
     
     ! -- CONSTANT FLOW
     idx = idx + 1
@@ -2814,6 +2902,29 @@ module GwtLktModule
     return
   end subroutine lkt_outf_term
   
+  subroutine lkt_tmvr_term(this, ientry, n1, n2, rrate, &
+                           rhsval, hcofval)
+    class(GwtLktType) :: this
+    integer(I4B), intent(in) :: ientry
+    integer(I4B), intent(inout) :: n1
+    integer(I4B), intent(inout) :: n2
+    real(DP), intent(inout), optional :: rrate
+    real(DP), intent(inout), optional :: rhsval
+    real(DP), intent(inout), optional :: hcofval
+    real(DP) :: qbnd
+    real(DP) :: ctmp
+    n1 = this%lakbudptr%budterm(this%idxbudtmvr)%id1(ientry)
+    n2 = this%lakbudptr%budterm(this%idxbudtmvr)%id2(ientry)
+    qbnd = this%lakbudptr%budterm(this%idxbudtmvr)%flow(ientry)
+    ctmp = this%xnewpak(n1)
+    if (present(rrate)) rrate = ctmp * qbnd
+    if (present(rhsval)) rhsval = -rrate
+    if (present(hcofval)) hcofval = DZERO
+    !
+    ! -- return
+    return
+  end subroutine lkt_tmvr_term
+  
   subroutine lkt_fjf_term(this, ientry, n1, n2, rrate, &
                           rhsval, hcofval)
     class(GwtLktType) :: this
@@ -2881,6 +2992,11 @@ module GwtLktModule
     ! -- Store obs type and assign procedure pointer
     !    for stage observation type.
     call this%obs%StoreObsType('concentration', .false., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => lkt_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for flow between lakes.
+    call this%obs%StoreObsType('flow-ja-face', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => lkt_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
@@ -2971,7 +3087,7 @@ module GwtLktModule
     ! -- dummy
     class(GwtLktType), intent(inout) :: this
     ! -- local
-    integer(I4B) :: i, j, n, nn1, nn2
+    integer(I4B) :: i, j, n, nn1, nn2, idx
     character(len=200) :: ermsg
     character(len=LENBOUNDNAME) :: bname
     logical :: jfound
@@ -3002,29 +3118,24 @@ module GwtLktModule
           jfound = .false.
           if (obsrv%ObsTypeId=='LKT') then
             do j = 1, this%lakbudptr%budterm(this%idxbudgwf)%nlist
-              !n1 = this%lakbudptr%budterm(this%idxbudgwf)%id1(j)
-              if (this%boundname(j) == bname) then
+              n = this%lakbudptr%budterm(this%idxbudgwf)%id1(j)
+              if (this%boundname(n) == bname) then
                 jfound = .true.
                 call ExpandArray(obsrv%indxbnds)
                 n = size(obsrv%indxbnds)
                 obsrv%indxbnds(n) = j
               end if
             end do
-          else if (obsrv%ObsTypeId=='EXT-OUTFLOW' .or.   &
-                   obsrv%ObsTypeId=='TO-MVR' .or. &
-                   obsrv%ObsTypeId=='OUTLET') then
-            
-            ! -- todo: need to get this working for outlet flows
-            !do j = 1, this%noutlets
-            !  jj = this%lakein(j)
-            !  if (this%lakename(jj) == bname) then
-            !    jfound = .true.
-            !    call ExpandArray(obsrv%indxbnds)
-            !    n = size(obsrv%indxbnds)
-            !    obsrv%indxbnds(n) = j
-            !  end if
-            !end do
-            
+          else if (obsrv%ObsTypeId=='FLOW-JA-FACE') then
+            do j = 1, this%lakbudptr%budterm(this%idxbudfjf)%nlist
+              n = this%lakbudptr%budterm(this%idxbudfjf)%id1(j)
+              if (this%lakename(n) == bname) then
+                jfound = .true.
+                call ExpandArray(obsrv%indxbnds)
+                n = size(obsrv%indxbnds)
+                obsrv%indxbnds(n) = j
+              end if
+            end do
           else
             do j = 1, this%nlakes
               if (this%lakename(j) == bname) then
@@ -3046,8 +3157,42 @@ module GwtLktModule
         if (n == 1) then
           if (obsrv%ObsTypeId=='LKT') then
             nn2 = obsrv%NodeNumber2
-            j = nn2
-            obsrv%indxbnds(1) = j
+            ! -- Look for the first occurrence of nn1, then set indxbnds
+            !    to the nn2 record after that
+            do j = 1, this%lakbudptr%budterm(this%idxbudgwf)%nlist
+              if (this%lakbudptr%budterm(this%idxbudgwf)%id1(j) == nn1) then
+                idx = j + nn2 - 1
+                obsrv%indxbnds(1) = idx
+                exit
+              end if
+            end do
+            if (this%lakbudptr%budterm(this%idxbudgwf)%id1(idx) /= nn1) then
+              write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
+                'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
+                ' lake connection number =', nn2, &
+                '(does not correspond to lake ', nn1, ')'
+              call store_error(ermsg)
+            end if
+          else if (obsrv%ObsTypeId=='FLOW-JA-FACE') then
+            nn2 = obsrv%NodeNumber2
+            ! -- Look for the first occurrence of nn1, then set indxbnds
+            !    to the nn2 record after that
+            idx = 0
+            do j = 1, this%lakbudptr%budterm(this%idxbudfjf)%nlist
+              if (this%lakbudptr%budterm(this%idxbudfjf)%id1(j) == nn1 .and. &
+                  this%lakbudptr%budterm(this%idxbudfjf)%id2(j) == nn2) then
+                idx = j
+                obsrv%indxbnds(1) = idx
+                exit
+              end if
+            end do
+            if (idx == 0) then
+              write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
+                'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
+                ' lake number =', nn1, &
+                '(is not connected to lake ', nn2, ')'
+              call store_error(ermsg)
+            end if
           else
             obsrv%indxbnds(1) = nn1
           end if
@@ -3085,7 +3230,8 @@ module GwtLktModule
             call store_error(ermsg)
           !end if
         end do
-      else if (obsrv%ObsTypeId=='LKT') then
+      else if (obsrv%ObsTypeId=='LKT' .or. &
+               obsrv%ObsTypeId=='FLOW-JA-FACE') then
         do j = 1, size(obsrv%indxbnds)
           nn1 =  obsrv%indxbnds(j)
           if (nn1 < 1 .or. nn1 > this%maxbound) then
@@ -3181,6 +3327,11 @@ module GwtLktModule
                 igwfnode = this%lakbudptr%budterm(this%idxbudgwf)%id2(jj)
                 v = this%hcof(jj) * this%xnew(igwfnode) - this%rhs(jj)
                 v = -v
+              end if
+            case ('FLOW-JA-FACE')
+              n = this%lakbudptr%budterm(this%idxbudgwf)%id1(jj)
+              if (this%iboundpak(n) /= 0) then
+                call this%lkt_fjf_term(jj, n1, n2, v)
               end if
             case ('EVAPORATION')
               if (this%iboundpak(jj) /= 0) then
@@ -3279,7 +3430,8 @@ module GwtLktModule
     if (nn1 == NAMEDBOUNDFLAG) then
       obsrv%FeatureName = bndname
     else
-      if (obsrv%ObsTypeId=='LKT') then
+      if (obsrv%ObsTypeId == 'LKT' .or. &
+          obsrv%ObsTypeId == 'FLOW-JA-FACE') then
         call extract_idnum_or_bndname(strng, icol, istart, istop, nn2, bndname)
         if (nn2 == NAMEDBOUNDFLAG) then
           obsrv%FeatureName = bndname

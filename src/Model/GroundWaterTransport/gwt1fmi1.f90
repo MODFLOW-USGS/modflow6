@@ -14,12 +14,18 @@ module GwtFmiModule
   use BudgetFileReaderModule, only: BudgetFileReaderType
   use HeadFileReaderModule,   only: HeadFileReaderType
   use PackageBudgetModule,    only: PackageBudgetType
+  use BudgetObjectModule,     only: BudgetObjectType
 
   implicit none
   private
   public :: GwtFmiType
   public :: fmi_cr
 
+  type :: DataAdvancedPackageType
+    real(DP), dimension(:), contiguous, pointer :: concpack => null()
+    real(DP), dimension(:), contiguous, pointer :: qmfrommvr => null()
+  end type
+  
   type, extends(NumericalPackageType) :: GwtFmiType
     
     logical, pointer                                :: flows_from_file => null() ! if .false., then there is no water flow
@@ -44,7 +50,9 @@ module GwtFmiModule
     integer(I4B), pointer                           :: nflowpack => null()
     type(BudgetFileReaderType)                      :: bfr
     type(HeadFileReaderType)                        :: hfr
-    type(PackageBudgetType), dimension(:), allocatable :: gwfpackages
+    type(PackageBudgetType), dimension(:), allocatable :: gwfpackages           ! used to get flows between a package and gwf
+    type(BudgetObjectType), pointer                 :: mvrbudobj    => null()   ! pointer to the mover budget budget object
+    type(DataAdvancedPackageType), dimension(:), pointer, contiguous :: datp => null()
   contains
   
     procedure :: fmi_ar
@@ -63,6 +71,7 @@ module GwtFmiModule
     procedure :: advance_hfr
     procedure :: finalize_hfr
     procedure :: allocate_gwfpackages
+    procedure :: get_package_index
   
   end type GwtFmiType
 
@@ -511,6 +520,7 @@ module GwtFmiModule
     ! -- Allocate variables needed for all cases
     call mem_allocate(this%flowerr, nodes, 'FLOWERR', this%origin)
     call mem_allocate(this%iatp, this%nflowpack, 'IATP', this%origin)
+    allocate(this%datp(this%nflowpack))
     !
     ! -- Initialize
     do n = 1, nodes
@@ -1031,6 +1041,38 @@ module GwtFmiModule
     allocate(this%gwfpackages(nflowpack))
     this%nflowpack = nflowpack
     !
+    ! -- return
+    return
   end subroutine allocate_gwfpackages
+  
+  subroutine get_package_index(this, name, idx)
+! ******************************************************************************
+! get_package_index -- find the package index for package called name
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    use BndModule, only: BndType, GetBndFromList
+    class(GwtFmiType) :: this
+    character(len=*), intent(in) :: name
+    integer(I4B), intent(inout) :: idx
+    ! -- local
+    integer(I4B) :: ip
+    class(BndType), pointer :: packobj
+! ------------------------------------------------------------------------------
+    !
+    ! -- Look through all the packages and return the index with name
+    idx = 0
+    do ip = 1, this%gwfbndlist%Count()
+      packobj => GetBndFromList(this%gwfbndlist, ip)
+      if (packobj%name == name) then
+        idx = ip
+        exit
+      end if
+    end do
+    !
+    ! -- return
+    return
+  end subroutine get_package_index
   
 end module GwtFmiModule

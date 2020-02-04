@@ -1,7 +1,8 @@
-# Simple one-layer model with a lak.  Purpose is to test a constant
-# stage and constant concentration lake with a value of 100.  The aquifer
-# starts with a concentration of zero, but the values grow as the lake
-# leaks into the aquifer.
+# Simple one-layer model with a lak and sfr network on top.  Purpose is to
+# test movement of solute between advanced packages.  In this case water
+# from a lake outlet is moved into the first sfr reach.  The test confirms
+# that the solute from the lake is moved into the sfr reach.
+# There is no flow between the stream and the aquifer.
 
 import os
 import sys
@@ -18,23 +19,23 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['lkt_01']
+ex = ['mvt_01']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
 
 
 def get_model(idx, dir):
-    lx = 5.
+    lx = 7.
     lz = 1.
     nlay = 1
     nrow = 1
-    ncol = 5
+    ncol = 7
     nper = 1
     delc = 1.
     delr = lx / ncol
     delz = lz / nlay
-    top = [0., 0., -0.90, 0., 0.]
+    top = [0., 0., 0., 0., 0., 0., 0.]
     botm = list(top - np.arange(delz, nlay * delz + delz, delz))
     botm[2] = -1.0
 
@@ -100,8 +101,8 @@ def get_model(idx, dir):
                                   k=Kh, k33=Kv)
 
     # chd files
-    chdlist1 = [[(0, 0, 0), -0.5],
-                [(0, 0, ncol - 1), -0.5],
+    chdlist1 = [
+                [(0, 0, ncol - 1), 0., 0.],
                 ]
     chd1 = flopy.mf6.ModflowGwfchd(gwf,
                                    stress_period_data=chdlist1,
@@ -112,41 +113,46 @@ def get_model(idx, dir):
                                    auxiliary='CONCENTRATION',
                                    filename='{}.chd'.format(gwfname))
 
-    nlakeconn = 3  # note: this is the number of connectiosn for a lake, not total number of connections
+    # wel files
+    wellist1 = [
+                [(0, 0, 0), 1., 100.],
+                ]
+    wel1 = flopy.mf6.ModflowGwfwel(gwf,
+                                   stress_period_data=wellist1,
+                                   print_input=True,
+                                   print_flows=True,
+                                   save_flows=False,
+                                   pname='WEL-1',
+                                   auxiliary='CONCENTRATION',
+                                   filename='{}.wel'.format(gwfname))
+
+
+    nlakeconn = 1  # note: this is the number of connectiosn for a lake, not total number of connections
     # pak_data = [lakeno, strt, nlakeconn, CONC, dense, boundname]
-    pak_data = [(0, -0.4, nlakeconn, 0., 1025.)]
+    pak_data = [(0, 1.0, nlakeconn, 0., 1025.)]
 
     connlen = connwidth = delr / 2.
     con_data = []
     # con_data=(lakeno,iconn,(cellid),claktype,bedleak,belev,telev,connlen,connwidth )
     con_data.append(
-        (0, 0, (0, 0, 1), 'HORIZONTAL', 'None', 10, 10, connlen, connwidth))
-    con_data.append(
-        (0, 1, (0, 0, 3), 'HORIZONTAL', 'None', 10, 10, connlen, connwidth))
-    con_data.append(
-        (0, 2, (0, 0, 2), 'VERTICAL', 'None', 10, 10, connlen, connwidth))
+        (0, 0, (0, 0, 0), 'VERTICAL', 0., 0, 0, connlen, connwidth))
     p_data = [(0, 'STATUS', 'CONSTANT'),
-              (0, 'STAGE', -0.4),
-              (0, 'RAINFALL', .1),
-              (0, 'EVAPORATION', .2),
-              (0, 'RUNOFF', .1 * delr * delc),
-              (0, 'WITHDRAWAL', .1),
+              (0, 'STAGE', 1.0),
               ]
     # <outletno> <lakein> <lakeout> <couttype> <invert> <width> <rough> <slope>
     outlets = [(0, 0, -1, 'SPECIFIED', 999., 999., 999., 999.)]
-    outletperioddata = [(0, 'RATE', -0.1)]
+    outletperioddata = [(0, 'RATE', -1.0)]
 
     # note: for specifying lake number, use fortran indexing!
     lak_obs = {('lak_obs.csv'): [('lakestage', 'stage', 1),
-                                 ('lakevolume', 'volume', 1),
-                                 ('lak1', 'lak', 1, 1),
-                                 ('lak2', 'lak', 1, 2),
-                                 ('lak3', 'lak', 1, 3)]}
+                                 ('lakevolume', 'volume', 1),]
+              }
 
     lak = flopy.mf6.modflow.ModflowGwflak(gwf, save_flows=True,
                                           print_input=True,
                                           print_flows=True,
                                           print_stage=True,
+                                          mover=True,
                                           stage_filerecord='stage',
                                           budget_filerecord='lakebud',
                                           nlakes=1, ntables=0, noutlets=1,
@@ -160,6 +166,66 @@ def get_model(idx, dir):
                                           auxiliary=['CONCENTRATION',
                                                      'DENSITY'])
 
+    # pak_data = [<rno> <cellid(ncelldim)> <rlen> <rwid> <rgrd> <rtp> <rbth> <rhk> <man> <ncon> <ustrf> <ndv> [<aux(naux)>] [<boundname>]]
+    rlen = delr
+    rwid = delc
+    rgrd = 1.
+    rtp = 0.
+    rbth = 0.1
+    rhk = 0. #0.01
+    rman = 1.
+    ncon = 2
+    ustrf = 1.
+    ndv = 0
+    pak_data = []
+    for irno in range(ncol):
+        ncon = 2
+        if irno in [0, ncol - 1]:
+            ncon = 1
+        cellid = (0, 0, irno)
+        t = (irno, cellid, rlen, rwid, rgrd, rtp, rbth, rhk, rman, ncon, ustrf, ndv)
+        pak_data.append(t)
+
+
+    con_data = []
+    for irno in range(ncol):
+        if irno == 0:
+            t = (irno, -(irno + 1))
+        elif irno == ncol - 1:
+            t = (irno, irno - 1)
+        else:
+            t = (irno, irno - 1, -(irno + 1))
+        con_data.append(t)
+
+
+    p_data = [
+              (0, 'INFLOW', 0.),
+              ]
+
+    # note: for specifying sfr number, use fortran indexing!
+    #sfr_obs = {('sfr_obs.csv'): [('lakestage', 'stage', 1),
+    #                             ('lakevolume', 'volume', 1),
+    #                             ('lak1', 'lak', 1, 1),
+    #                             ('lak2', 'lak', 1, 2),
+    #                             ('lak3', 'lak', 1, 3)]}
+
+    sfr = flopy.mf6.modflow.ModflowGwfsfr(gwf, save_flows=True,
+                                          print_input=True,
+                                          print_flows=True,
+                                          print_stage=True,
+                                          mover=True,
+                                          stage_filerecord=gwfname+'.sfr.stg',
+                                          budget_filerecord=gwfname+'.sfr.bud',
+                                          nreaches=ncol,
+                                          packagedata=pak_data,
+                                          pname='SFR-1',
+                                          connectiondata=con_data,
+                                          perioddata=p_data,
+                                          #observations=lak_obs,
+                                          #auxiliary=['CONCENTRATION',
+                                          #           'DENSITY'],
+                                          )
+
     # output control
     oc = flopy.mf6.ModflowGwfoc(gwf,
                                 budget_filerecord='{}.cbc'.format(gwfname),
@@ -171,6 +237,20 @@ def get_model(idx, dir):
                                             ('BUDGET', 'ALL', 'STEPS')],
                                 printrecord=[('HEAD', 'LAST', 'STEPS'),
                                              ('BUDGET', 'LAST', 'STEPS')])
+
+
+    packages = [('lak-1',), ('sfr-1',), ]
+    perioddata = [
+        ('lak-1', 0, 'sfr-1', 0, 'factor', 1.),
+                 ]
+    mvr = flopy.mf6.ModflowGwfmvr(gwf, maxmvr=len(perioddata),
+                                  budget_filerecord='{}.mvr.bud'.format(name),
+                                  maxpackages=len(packages),
+                                  print_flows=True,
+                                  packages=packages,
+                                  perioddata=perioddata)
+
+
 
     # create gwt model
     gwtname = 'gwt_' + name
@@ -196,7 +276,7 @@ def get_model(idx, dir):
                                   top=top, botm=botm, idomain=idomain)
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwtic(gwt, strt=0.,
+    ic = flopy.mf6.ModflowGwtic(gwt, strt=[0., 0., 0., 0., 0., 0., 0.],
                                 filename='{}.ic'.format(gwtname))
 
     # advection
@@ -210,22 +290,21 @@ def get_model(idx, dir):
     #                              filename='{}.dsp'.format(gwtname))
 
     # storage
-    porosity = 0.30
+    porosity = 1.0
     sto = flopy.mf6.ModflowGwtmst(gwt, porosity=porosity,
                                   filename='{}.sto'.format(gwtname))
     # sources
     sourcerecarray = [('CHD-1', 'AUX', 'CONCENTRATION'),
-                      #('WEL-1', 'AUX', 'CONCENTRATION'),
+                      ('WEL-1', 'AUX', 'CONCENTRATION'),
                       ]
     ssm = flopy.mf6.ModflowGwtssm(gwt, sources=sourcerecarray,
                                   filename='{}.ssm'.format(gwtname))
 
-    lktpackagedata = [(0, 35., 99., 999., 'mylake'), ]
+
+    # lkt package
+    lktpackagedata = [(0, 0., 99., 999., 'mylake'), ]
     lktperioddata = [(0, 'STATUS', 'CONSTANT'),
                      (0, 'CONCENTRATION', 100.),
-                     (0, 'RAINFALL', 25.),
-                     (0, 'EVAPORATION', 25.),
-                     (0, 'RUNOFF', 25.),
                      ]
 
     lkt_obs = {(gwtname + '.lkt.obs.csv', ):
@@ -239,8 +318,6 @@ def get_model(idx, dir):
                     ('lkt-1-stor', 'STORAGE', 1),
                     ('lkt-1-const', 'CONSTANT', 1),
                     ('lkt-1-gwt2', 'LKT', 1, 1),
-                    ('lkt-1-gwt4', 'LKT', 1, 3),
-                    ('lkt-1-gwt3', 'LKT', 1, 2),
                     ('lkt-1-mylake', 'LKT', 'MYLAKE'),
                    ],
                }
@@ -262,6 +339,51 @@ def get_model(idx, dir):
                                           observations=lkt_obs,
                                           pname='LAK-1',
                                           auxiliary=['aux1', 'aux2'])
+
+
+    # sft
+    sftpackagedata = []
+    for irno in range(ncol):
+        t = (irno, 0., 99., 999., 'myreach{}'.format(irno + 1))
+        sftpackagedata.append(t)
+
+    sftperioddata = [
+                     (0, 'STATUS', 'ACTIVE'),
+                     ]
+
+    sft_obs = {(gwtname + '.sft.obs.csv', ):
+                   [('sft-{}-conc'.format(i + 1), 'CONCENTRATION', i + 1) for i in range(7)] +
+                   [
+                    ('sft-1-extinflow', 'EXT-INFLOW', 1),
+                    ('sft-1-rain', 'RAINFALL', 1),
+                    ('sft-1-roff', 'RUNOFF', 1),
+                    ('sft-1-evap', 'EVAPORATION', 1),
+                    ('sft-1-const', 'CONSTANT', 1),
+                    ('sft-1-gwt1', 'SFT', 1, 1),
+                    ('sft-1-gwt2', 'SFT', 2, 1),
+                    ('sft-1-gwt3', 'SFT', 3, 1),
+                    ('sft-1-myreach1', 'SFT', 'MYREACH1'),
+                   ],
+               }
+    # append additional obs attributes to obs dictionary
+    sft_obs['digits'] = 7
+    sft_obs['print_input'] = True
+    sft_obs['filename'] = gwtname + '.sft.obs'
+
+    sft = flopy.mf6.modflow.ModflowGwtsft(gwt,
+                                          boundnames=True,
+                                          save_flows=True,
+                                          print_input=True,
+                                          print_flows=True,
+                                          print_concentration=True,
+                                          concentration_filerecord=gwtname + '.sft.bin',
+                                          budget_filerecord=gwtname + '.sft.bud',
+                                          packagedata=sftpackagedata,
+                                          reachperioddata=sftperioddata,
+                                          observations=sft_obs,
+                                          pname='SFR-1',
+                                          auxiliary=['aux1', 'aux2'])
+
     # output control
     oc = flopy.mf6.ModflowGwtoc(gwt,
                                 budget_filerecord='{}.cbc'.format(gwtname),
@@ -270,14 +392,16 @@ def get_model(idx, dir):
                                 concentrationprintrecord=[
                                     ('COLUMNS', 10, 'WIDTH', 15,
                                      'DIGITS', 6, 'GENERAL')],
-                                saverecord=[('CONCENTRATION', 'ALL', 'STEP')],
-                                printrecord=[('CONCENTRATION', 'ALL', 'STEP'),
-                                             ('BUDGET', 'ALL', 'STEP')])
+                                saverecord=[('CONCENTRATION', 'ALL'),
+                                            ('BUDGET', 'ALL')],
+                                printrecord=[('CONCENTRATION', 'ALL'),
+                                             ('BUDGET', 'ALL')])
 
     # GWF GWT exchange
     gwfgwt = flopy.mf6.ModflowGwfgwt(sim, exgtype='GWF6-GWT6',
                                      exgmnamea=gwfname, exgmnameb=gwtname,
                                      filename='{}.gwfgwt'.format(name))
+
 
 
 
@@ -297,69 +421,47 @@ def eval_results(sim):
     # ensure lake concentrations were saved
     name = ex[sim.idxsim]
     gwtname = 'gwt_' + name
-    fname = gwtname + '.lkt.bin'
+    fname = gwtname + '.sft.bin'
     fname = os.path.join(sim.simpath, fname)
     assert os.path.isfile(fname)
 
-    # load the lake concentrations and make sure all values are 100.
+    # load the lake concentrations and make sure all values are correct
     cobj = flopy.utils.HeadFile(fname, text='CONCENTRATION')
-    clak = cobj.get_alldata().flatten()
-    answer = np.ones(10)*100.
-    assert np.allclose(clak, answer), '{} {}'.format(clak, answer)
+    csft = cobj.get_data().flatten()
 
     # load the aquifer concentrations and make sure all values are correct
     fname = gwtname + '.ucn'
     fname = os.path.join(sim.simpath, fname)
     cobj = flopy.utils.HeadFile(fname, text='CONCENTRATION')
-    caq = cobj.get_alldata()
-    answer = np.array([ 4.86242795, 27.24270616, 64.55536421,
-                        27.24270616, 4.86242795])
-    assert np.allclose(caq[-1].flatten(), answer), '{} {}'.format(caq[-1].flatten(), answer)
+    caq = cobj.get_data().flatten()
 
-    # lkt observation results
-    fpth = os.path.join(sim.simpath, gwtname + '.lkt.obs.csv')
+    assert np.allclose(csft, caq), '{} {}'.format(csft, caq)
+
+    # sft observation results
+    fpth = os.path.join(sim.simpath, gwtname + '.sft.obs.csv')
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=',')
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
-    res = tc['LKT1CONC']
-    answer = np.ones(10) * 100.
-    assert np.allclose(res, answer), '{} {}'.format(res, answer)
-    res = tc['LKT1EXTINFLOW']
-    answer = np.ones(10) * 0.
-    assert np.allclose(res, answer), '{} {}'.format(res, answer)
-    res = tc['LKT1RAIN']
-    answer = np.ones(10) * 2.5
-    assert np.allclose(res, answer), '{} {}'.format(res, answer)
-    res = tc['LKT1ROFF']
-    answer = np.ones(10) * 2.5
-    assert np.allclose(res, answer), '{} {}'.format(res, answer)
-    res = tc['LKT1EVAP']
-    answer = np.ones(10) * -5.
-    assert np.allclose(res, answer), '{} {}'.format(res, answer)
-    res = tc['LKT1WDRL']
-    answer = np.ones(10) * -10.
-    assert np.allclose(res, answer), '{} {}'.format(res, answer)
-    res = tc['LKT1STOR']
-    answer = np.ones(10) * 0.
-    assert np.allclose(res, answer), '{} {}'.format(res, answer)
-    res = tc['LKT1CONST']
-    answer = np.ones(10) * 236.3934
-    assert np.allclose(res, answer), '{} {}'.format(res, answer)
-    res = tc['LKT1GWT2']
-    answer = np.ones(10) * -91.80328
-    assert np.allclose(res, answer), '{} {}'.format(res, answer)
-    res = tc['LKT1GWT4']
-    answer = np.ones(10) * -32.78689
-    assert np.allclose(res, answer), '{} {}'.format(res, answer)
-    res = tc['LKT1GWT3']
-    answer = np.ones(10) * -91.80328
-    assert np.allclose(res, answer), '{} {}'.format(res, answer)
-    res = tc['LKT1MYLAKE']
-    answer = np.ones(10) * -216.3934
-    assert np.allclose(res, answer), '{} {}'.format(res, answer)
+    # compare observation concs with binary file concs
+    for i in range(7):
+        oname = 'SFT{}CONC'.format(i + 1)
+        assert np.allclose(tc[oname][-1], csft[i]), '{} {}'.format(tc[oname][-1], csft[i])
 
-    # uncomment when testing
+    # load the sft budget file
+    fname = gwtname + '.sft.bud'
+    fname = os.path.join(sim.simpath, fname)
+    assert os.path.isfile(fname)
+    bobj = flopy.utils.CellBudgetFile(fname, precision='double', verbose=False)
+    # check the flow-ja-face terms
+    res = bobj.get_data(text='flow-ja-face')[-1]
+    #print(res)
+
+    # check the storage terms, which include the total mass in the reach as an aux variable
+    res = bobj.get_data(text='storage')[-1]
+    #print(res)
+
+    # uncomment when testing so files aren't deleted
     # assert False
 
     return

@@ -228,6 +228,11 @@ module GwfGwtExchangeModule
     ! -- transfer the boundary package information from gwf to gwt
     call this%gwfbnd2gwtfmi()
     !
+    ! -- if mover package is active, then set a pointer to it's budget object
+    if (gwfmodel%inmvr /= 0) then
+      gwtmodel%fmi%mvrbudobj => gwfmodel%mvr%budobj
+    end if
+    !
     ! -- return
     return
   end subroutine exg_ar

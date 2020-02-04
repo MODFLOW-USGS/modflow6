@@ -882,8 +882,6 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use TdisModule, only: kstp, kper, delt, pertim, totim
-    use InputOutputModule, only: ulasav, ubdsv06
     ! -- dummy
     class(GwfCsubType) :: this
     integer(I4B), intent(in) :: idvfl
@@ -929,10 +927,9 @@ contains
       if (this%ninterbeds > 0) then
         naux = 0
         ! -- interbed elastic storage
-        call ubdsv06(kstp, kper, budtxt(2), this%name_model, this%name,         &
-                     this%name_model, this%name,                                &
-                     ibinun, naux, this%auxname, this%ninterbeds, 1, 1,         &
-                     this%ninterbeds, this%iout, delt, pertim, totim)
+        call this%dis%record_srcdst_list_header(budtxt(2), this%name_model,     &
+                    this%name_model, this%name_model, this%name, naux,          &
+                    this%auxname, ibinun, this%ninterbeds, this%iout)
         do ib = 1, this%ninterbeds
           q = this%storagee(ib)
           node = this%nodelist(ib)
@@ -940,10 +937,9 @@ contains
                                               this%auxvar(:,ib))
         end do
         ! -- interbed inelastic storage
-        call ubdsv06(kstp, kper, budtxt(3), this%name_model, this%name,         &
-                     this%name_model, this%name,                                &
-                     ibinun, naux, this%auxname, this%ninterbeds, 1, 1,         &
-                     this%ninterbeds, this%iout, delt, pertim, totim)
+        call this%dis%record_srcdst_list_header(budtxt(3), this%name_model,     &
+                    this%name_model, this%name_model, this%name, naux,          &
+                    this%auxname, ibinun, this%ninterbeds, this%iout)
         do ib = 1, this%ninterbeds
           q = this%storagei(ib)
           node = this%nodelist(ib)
