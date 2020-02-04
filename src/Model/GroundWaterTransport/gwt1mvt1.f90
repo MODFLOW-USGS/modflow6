@@ -113,6 +113,8 @@ module GwtMvtModule
             cp = this%fmi%datp(ipr)%concpack(id1)
             !
             ! -- add the mover rate times the provider concentration into the receiver
+            !    make sure these are accumulated since multiple providers can move
+            !    water into the same receiver
             this%fmi%datp(irc)%qmfrommvr(id2) = this%fmi%datp(irc)%qmfrommvr(id2) - q * cp
           end do
         end if
@@ -123,6 +125,10 @@ module GwtMvtModule
     ! -- Return
     return
   end subroutine mvt_fc
+  
+  subroutine mvt_bd()
+    ! -- todo: this needs to be added here.  Should create a new budget object?
+  end subroutine mvt_bd
   
   subroutine mvt_da(this)
 ! ******************************************************************************

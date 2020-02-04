@@ -462,7 +462,7 @@ def eval_results(sim):
     #print(res)
 
     # uncomment when testing so files aren't deleted
-    assert False
+    # assert False
 
     return
 
