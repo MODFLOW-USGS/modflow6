@@ -50,6 +50,7 @@ module GwtModule
   use GwtAdvModule,                only: GwtAdvType
   use GwtDspModule,                only: GwtDspType
   use GwtSsmModule,                only: GwtSsmType
+  use GwtMvtModule,                only: GwtMvtType
   use GwtMstModule,                only: GwtMstType
   use GwtOcModule,                 only: GwtOcType
   use GwtObsModule,                only: GwtObsType
@@ -69,6 +70,7 @@ module GwtModule
     type(GwtAdvType),               pointer :: adv     => null()                ! advection package
     type(GwtDspType),               pointer :: dsp     => null()                ! dispersion package
     type(GwtSsmType),               pointer :: ssm     => null()                ! source sink mixing package
+    type(GwtMvtType),               pointer :: mvt     => null()                ! mover transport package
     type(GwtOcType),                pointer :: oc      => null()                ! output control package
     type(GwtObsType),               pointer :: obs     => null()                ! observation package
     type(BudgetType),               pointer :: budget  => null()                ! budget object
@@ -143,6 +145,7 @@ module GwtModule
     use GwtAdvModule,               only: adv_cr
     use GwtDspModule,               only: dsp_cr
     use GwtSsmModule,               only: ssm_cr
+    use GwtMvtModule,               only: mvt_cr
     use GwtOcModule,                only: oc_cr
     use GwtObsModule,               only: obs_cr
     use BudgetModule,               only: budget_cr
@@ -278,6 +281,7 @@ module GwtModule
     call adv_cr(this%adv, this%name, this%inadv, this%iout, this%fmi)
     call dsp_cr(this%dsp, this%name, this%indsp, this%iout, this%fmi)
     call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi)
+    call mvt_cr(this%mvt, this%name, 0, this%iout, this%fmi)
     call oc_cr(this%oc, this%name, this%inoc, this%iout)
     call obs_cr(this%obs, this%inobs)
     !
@@ -590,6 +594,8 @@ module GwtModule
     ! -- call fc routines
     call this%fmi%fmi_fc(this%dis%nodes, this%xold, this%nja, njasln,          &
                          amatsln, this%idxglo, this%rhs)
+    call this%mvt%mvt_fc(this%dis%nodes, this%xold, this%nja, njasln,          &
+                         amatsln, this%idxglo, this%rhs)
     if(this%inmst > 0) then
       call this%mst%mst_fc(this%dis%nodes, this%xold, this%nja, njasln,        &
                            amatsln, this%idxglo, this%rhs)
@@ -875,6 +881,7 @@ module GwtModule
     call this%dsp%dsp_da()
     call this%ssm%ssm_da()
     call this%mst%mst_da()
+    call this%mvt%mvt_da()
     call this%budget%budget_da()
     call this%oc%oc_da()
     call this%obs%obs_da()

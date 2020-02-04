@@ -246,10 +246,17 @@ def get_model(idx, dir):
                     ('lkt-1-wdrl', 'WITHDRAWAL', 1),
                     ('lkt-1-stor', 'STORAGE', 1),
                     ('lkt-1-const', 'CONSTANT', 1),
-                    ('lkt-1-gwt2', 'LKT', 1, 1),
-                    ('lkt-1-gwt4', 'LKT', 1, 3),
-                    ('lkt-1-gwt3', 'LKT', 1, 2),
+                    ('lkt-1-gwt1', 'LKT', 1, 1),
+                    ('lkt-1-gwt2', 'LKT', 1, 2),
+                    ('lkt-2-gwt1', 'LKT', 2, 1),
                     ('lkt-1-mylake1', 'LKT', 'MYLAKE1'),
+                    ('lkt-1-fjf', 'FLOW-JA-FACE', 1, 2),
+                    ('lkt-2-fjf', 'FLOW-JA-FACE', 2, 1),
+                    ('lkt-3-fjf', 'FLOW-JA-FACE', 2, 3),
+                    ('lkt-4-fjf', 'FLOW-JA-FACE', 3, 2),
+                    ('lkt-5-fjf', 'FLOW-JA-FACE', 'MYLAKE1'),
+                    ('lkt-6-fjf', 'FLOW-JA-FACE', 'MYLAKE2'),
+                    ('lkt-7-fjf', 'FLOW-JA-FACE', 'MYLAKE3'),
                    ],
                }
     # append additional obs attributes to obs dictionary
@@ -347,6 +354,22 @@ def eval_results(sim):
               1.347626, 1.531353,  1.712948,  1.892431]
     answer = np.array(answer)
     assert np.allclose(res, answer), '{} {}'.format(res, answer)
+    res = tc['LKT1FJF']
+    answer = -tc['LKT2FJF']
+    assert np.allclose(res, answer), '{} {}'.format(res, answer)
+    res = tc['LKT3FJF']
+    answer = -tc['LKT4FJF']
+    assert np.allclose(res, answer), '{} {}'.format(res, answer)
+    res = tc['LKT5FJF']
+    answer = tc['LKT1FJF']
+    assert np.allclose(res, answer), '{} {}'.format(res, answer)
+    res = tc['LKT6FJF']
+    answer = tc['LKT2FJF'] + tc['LKT3FJF']
+    assert np.allclose(res, answer), '{} {}'.format(res, answer)
+    res = tc['LKT7FJF']
+    answer = tc['LKT4FJF']
+    assert np.allclose(res, answer), '{} {}'.format(res, answer)
+
 
     # load the lake budget file
     fname = gwtname + '.lkt.bud'
@@ -371,8 +394,7 @@ def eval_results(sim):
     for dtname, dttype in dt:
         assert np.allclose(res[dtname], answer[dtname]), '{} {}'.format(res, answer)
 
-
-    # todo: add a better check of the lake concentrations
+    # uncomment when testing
     # assert False
 
     return

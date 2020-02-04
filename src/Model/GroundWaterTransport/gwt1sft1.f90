@@ -12,7 +12,8 @@
 ! RUNOFF                    idxbudroff    RUNOFF                q * croff
 ! EXT-INFLOW                idxbudiflw    EXT-INFLOW            q * ciflw
 ! EXT-OUTFLOW               idxbudoutf    EXT-OUTFLOW           q * csfr
-! STORAGE (aux VOLUME)      idxbudsto     STORAGE (aux MASS)    
+! STORAGE (aux VOLUME)      idxbudsto     none                  used for reach volumes
+! none                      none          STORAGE (aux MASS)    
 ! CONSTANT                  none          none                  none
 ! FROM-MVR                  ?             FROM-MVR              q * cext
 ! TO-MVR                    idxbudtmvr?   TO-MVR                q * csfr
@@ -85,10 +86,13 @@ module GwtSftModule
     integer(I4B), pointer                              :: idxbudroff => null()  ! index of runoff terms in sfrbudptr
     integer(I4B), pointer                              :: idxbudiflw => null()  ! index of inflow terms in sfrbudptr
     integer(I4B), pointer                              :: idxbudoutf => null()  ! index of outflow terms in sfrbudptr
+    integer(I4B), pointer                              :: idxbudtmvr => null()  ! index of to mover terms in sfrbudptr
+    integer(I4B), pointer                              :: idxbudfmvr => null()  ! index of from mover terms in sfrbudptr
     integer(I4B), pointer                              :: idxbudaux => null()   ! index of auxiliary terms in sfrbudptr
     integer(I4B), dimension(:), pointer, contiguous    :: idxbudssm => null()   ! flag that sfrbudptr%buditem is a general solute source/sink
     integer(I4B), pointer                              :: nconcbudssm => null() ! number of concbudssm terms (columns)
     real(DP), dimension(:, : ), pointer, contiguous    :: concbudssm => null()  ! user specified concentrations for reach flow terms
+    real(DP), dimension(:), pointer, contiguous        :: qmfrommvr => null()   ! a mass flow coming from the mover that needs to be added
     !
     ! -- sfr budget object
     type(BudgetObjectType), pointer :: budobj => null()
@@ -120,7 +124,7 @@ module GwtSftModule
     procedure :: bnd_da => sft_da
     procedure :: allocate_scalars
     procedure :: sft_allocate_arrays
-    procedure :: find_lak_package
+    procedure :: find_sfr_package
     procedure :: sft_solve
     procedure :: bnd_options => sft_options
     procedure :: read_dimensions => sft_read_dimensions
@@ -140,6 +144,7 @@ module GwtSftModule
     procedure, private :: sft_roff_term
     procedure, private :: sft_iflw_term
     procedure, private :: sft_outf_term
+    procedure, private :: sft_tmvr_term
     procedure, private :: sft_fjf_term
     
   end type GwtSftType
@@ -377,10 +382,6 @@ module GwtSftModule
       &' INPUT READ FROM UNIT ', i0, //)"
 ! ------------------------------------------------------------------------------
     !
-    ! -- Tell fmi that this package is being handled by SFT, otherwise
-    !    SSM would handle the flows into GWT from this LAK
-    this%fmi%iatp(this%igwfsfrpak) = 1
-    !
     ! -- Get obs setup 
     call this%obs%obs_ar()
     !
@@ -392,6 +393,13 @@ module GwtSftModule
     !
     ! -- read optional initial package parameters
     call this%read_initial_attr()
+    !
+    ! -- Tell fmi that this package is being handled by SFT, otherwise
+    !    SSM would handle the flows into GWT from this LAK.  Then point the
+    !    fmi data for an advanced package to xnewpak and qmfrommvr
+    this%fmi%iatp(this%igwfsfrpak) = 1
+    this%fmi%datp(this%igwfsfrpak)%concpack => this%xnewpak
+    this%fmi%datp(this%igwfsfrpak)%qmfrommvr => this%qmfrommvr
     !
     ! -- Return
     return
@@ -935,6 +943,26 @@ module GwtSftModule
       end do
     end if
     !
+    ! -- add to mover contribution
+    if (this%idxbudtmvr /= 0) then
+      do j = 1, this%sfrbudptr%budterm(this%idxbudtmvr)%nlist
+        call this%sft_tmvr_term(j, n1, n2, rrate, rhsval, hcofval)
+        iloc = this%idxlocnode(n1)
+        iposd = this%idxpakdiag(n1)
+        amatsln(iposd) = amatsln(iposd) + hcofval
+        rhs(iloc) = rhs(iloc) + rhsval
+      end do
+    end if
+    !
+    ! -- add from mover contribution
+    if (this%idxbudfmvr /= 0) then
+      do n = 1, this%nstrm
+        rhsval = this%qmfrommvr(n)
+        iloc = this%idxlocnode(n)
+        rhs(iloc) = rhs(iloc) - rhsval
+      end do
+    end if
+    !
     ! -- go through each lak-gwf connection
     do j = 1, this%sfrbudptr%budterm(this%idxbudgwf)%nlist
       !
@@ -1260,6 +1288,8 @@ module GwtSftModule
     call mem_allocate(this%idxbudroff, 'IDXBUDROFF', this%origin)
     call mem_allocate(this%idxbudiflw, 'IDXBUDIFLW', this%origin)
     call mem_allocate(this%idxbudoutf, 'IDXBUDOUTF', this%origin)
+    call mem_allocate(this%idxbudtmvr, 'IDXBUDTMVR', this%origin)
+    call mem_allocate(this%idxbudfmvr, 'IDXBUDFMVR', this%origin)
     call mem_allocate(this%idxbudaux, 'IDXBUDAUX', this%origin)
     call mem_allocate(this%nconcbudssm, 'NCONCBUDSSM', this%origin)
     ! 
@@ -1279,6 +1309,8 @@ module GwtSftModule
     this%idxbudroff = 0
     this%idxbudiflw = 0
     this%idxbudoutf = 0
+    this%idxbudtmvr = 0
+    this%idxbudfmvr = 0
     this%idxbudaux = 0
     this%nconcbudssm = 0
     !
@@ -1337,6 +1369,9 @@ module GwtSftModule
     call mem_allocate(this%concbudssm, this%nconcbudssm, this%nstrm, &
       'CONCBUDSSM', this%origin)
     !
+    ! -- mass added from the mover transport package
+    call mem_allocate(this%qmfrommvr, this%nstrm, 'QMFROMMVR', this%origin)
+    !
     ! -- Initialize
     !
     !-- fill csftbudget
@@ -1355,6 +1390,7 @@ module GwtSftModule
       this%status(n) = 'ACTIVE'
       this%qsto(n) = DZERO
       this%ccterm(n) = DZERO
+      this%qmfrommvr(n) = DZERO
       this%concbudssm(:, n) = DZERO
     end do
     !
@@ -1393,6 +1429,7 @@ module GwtSftModule
     call mem_deallocate(this%concevap)
     call mem_deallocate(this%concroff)
     call mem_deallocate(this%conciflw)
+    call mem_deallocate(this%qmfrommvr)
     deallocate(this%csftbudget)
     deallocate(this%status)
     deallocate(this%streamname)
@@ -1428,6 +1465,8 @@ module GwtSftModule
     call mem_deallocate(this%idxbudroff)
     call mem_deallocate(this%idxbudiflw)
     call mem_deallocate(this%idxbudoutf)
+    call mem_deallocate(this%idxbudtmvr)
+    call mem_deallocate(this%idxbudfmvr)
     call mem_deallocate(this%idxbudaux)
     call mem_deallocate(this%idxbudssm)
     call mem_deallocate(this%nconcbudssm)
@@ -1439,7 +1478,7 @@ module GwtSftModule
     return
   end subroutine sft_da
 
-  subroutine find_lak_package(this)
+  subroutine find_sfr_package(this)
 ! ******************************************************************************
 ! find corresponding lak package
 ! ******************************************************************************
@@ -1458,7 +1497,7 @@ module GwtSftModule
     logical :: found
 ! ------------------------------------------------------------------------------
     !
-    ! -- Look through gwfbndlist for a LAK package with the same name as this
+    ! -- Look through gwfbndlist for a SFR package with the same name as this
     !    SFT package name
     found = .false.
     do ip = 1, this%fmi%gwfbndlist%Count()
@@ -1521,6 +1560,12 @@ module GwtSftModule
       case('EXT-OUTFLOW')
         this%idxbudoutf = ip
         this%idxbudssm(ip) = 0
+      case('TO-MVR')
+        this%idxbudtmvr = ip
+        this%idxbudssm(ip) = 0
+      case('FROM-MVR')
+        this%idxbudfmvr = ip
+        this%idxbudssm(ip) = 0
       case('AUXILIARY')
         this%idxbudaux = ip
         this%idxbudssm(ip) = 0
@@ -1539,7 +1584,7 @@ module GwtSftModule
     !
     ! -- Return
     return
-  end subroutine find_lak_package
+  end subroutine find_sfr_package
 
   subroutine  sft_options(this, option, found)
 ! ******************************************************************************
@@ -1632,8 +1677,8 @@ module GwtSftModule
     ! -- format
 ! ------------------------------------------------------------------------------
     !
-    ! -- Set a pointer to the GWF LAK Package budobj
-    call this%find_lak_package()
+    ! -- Set a pointer to the GWF SFR Package budobj
+    call this%find_sfr_package()
     !
     ! -- Set dimensions from the GWF LAK package
     this%nstrm = this%sfrbudptr%ncv
@@ -2015,8 +2060,24 @@ module GwtSftModule
       end do
     end if
     !
+    ! -- add to mover contribution
+    if (this%idxbudtmvr /= 0) then
+      do j = 1, this%sfrbudptr%budterm(this%idxbudtmvr)%nlist
+        call this%sft_tmvr_term(j, n1, n2, rrate)
+        this%dbuff(n1) = this%dbuff(n1) + rrate
+      end do
+    end if
+    !
+    ! -- add from mover contribution
+    if (this%idxbudfmvr /= 0) then
+      do n1 = 1, size(this%qmfrommvr)
+        rrate = this%qmfrommvr(n1)
+        this%dbuff(n1) = this%dbuff(n1) + rrate
+      end do
+    end if
+    !
     ! -- go through each gwf connection and accumulate 
-    !    total mass in dbuff mass
+    !    total mass in dbuff
     do j = 1, this%sfrbudptr%budterm(this%idxbudgwf)%nlist
       n = this%sfrbudptr%budterm(this%idxbudgwf)%id1(j)
       this%hcof(j) = DZERO
@@ -2221,7 +2282,8 @@ module GwtSftModule
       nlen = this%sfrbudptr%budterm(this%idxbudfjf)%maxlist
     end if
     if (nlen > 0) nbudterm = nbudterm + 1
-    !if (this%imover == 1) nbudterm = nbudterm + 2
+    if (this%idxbudtmvr /= 0) nbudterm = nbudterm + 1
+    if (this%idxbudfmvr /= 0) nbudterm = nbudterm + 1
     if (this%naux > 0) nbudterm = nbudterm + 1
     !
     ! -- set up budobj
@@ -2351,6 +2413,36 @@ module GwtSftModule
                                              this%name, &
                                              maxlist, .false., .false., &
                                              naux, auxtxt)
+    if (this%idxbudtmvr /= 0) then
+      !
+      ! -- 
+      text = '          TO-MVR'
+      idx = idx + 1
+      maxlist = this%sfrbudptr%budterm(this%idxbudtmvr)%maxlist
+      naux = 0
+      call this%budobj%budterm(idx)%initialize(text, &
+                                               this%name_model, &
+                                               this%name, &
+                                               this%name_model, &
+                                               this%name, &
+                                               maxlist, .false., .false., &
+                                               naux)
+    end if
+    if (this%idxbudfmvr /= 0) then
+      !
+      ! -- 
+      text = '        FROM-MVR'
+      idx = idx + 1
+      maxlist = this%nstrm
+      naux = 0
+      call this%budobj%budterm(idx)%initialize(text, &
+                                               this%name_model, &
+                                               this%name, &
+                                               this%name_model, &
+                                               this%name, &
+                                               maxlist, .false., .false., &
+                                               naux)
+    end if
     !
     ! -- 
     text = '        CONSTANT'
@@ -2364,36 +2456,6 @@ module GwtSftModule
                                              this%name, &
                                              maxlist, .false., .false., &
                                              naux)
-    !
-    ! -- 
-    !if (this%imover == 1) then
-    !  !
-    !  ! -- 
-    !  text = '        FROM-MVR'
-    !  idx = idx + 1
-    !  maxlist = this%nstrm
-    !  naux = 0
-    !  call this%budobj%budterm(idx)%initialize(text, &
-    !                                           this%name_model, &
-    !                                           this%name, &
-    !                                           this%name_model, &
-    !                                           this%name, &
-    !                                           maxlist, .false., .false., &
-    !                                           naux)
-    !  !
-    !  ! -- 
-    !  text = '          TO-MVR'
-    !  idx = idx + 1
-    !  maxlist = this%noutlets
-    !  naux = 0
-    !  call this%budobj%budterm(idx)%initialize(text, &
-    !                                           this%name_model, &
-    !                                           this%name, &
-    !                                           this%name_model, &
-    !                                           this%name, &
-    !                                           maxlist, .false., .false., &
-    !                                           naux)
-    !end if
     !
     ! -- 
     naux = this%naux
@@ -2557,6 +2619,31 @@ module GwtSftModule
     end do
     deallocate(auxvartmp)
     
+    
+    ! -- TO MOVER
+    if (this%idxbudtmvr /= 0) then
+      idx = idx + 1
+      nlist = this%sfrbudptr%budterm(this%idxbudtmvr)%nlist
+      call this%budobj%budterm(idx)%reset(nlist)
+      do j = 1, nlist
+        call this%sft_tmvr_term(j, n1, n2, q)
+        call this%budobj%budterm(idx)%update_term(n1, n2, q)
+        call this%sft_accumulate_ccterm(n1, q, ccratin, ccratout)
+      end do
+    end if
+    
+    ! -- FROM MOVER
+    if (this%idxbudfmvr /= 0) then
+      idx = idx + 1
+      nlist = this%nstrm
+      call this%budobj%budterm(idx)%reset(nlist)
+      do n1 = 1, nlist
+        q = this%qmfrommvr(n1)
+        call this%budobj%budterm(idx)%update_term(n1, n1, q)
+        call this%sft_accumulate_ccterm(n1, q, ccratin, ccratout)
+      end do
+    end if
+    
     ! -- CONSTANT FLOW
     idx = idx + 1
     call this%budobj%budterm(idx)%reset(this%nstrm)
@@ -2564,32 +2651,6 @@ module GwtSftModule
       q = this%ccterm(n1)
       call this%budobj%budterm(idx)%update_term(n1, n1, q)
     end do
-    
-    
-    !! -- MOVER
-    !if (this%imover == 1) then
-    !  
-    !  ! -- FROM MOVER
-    !  idx = idx + 1
-    !  call this%budobj%budterm(idx)%reset(this%nstrm)
-    !  do n = 1, this%nstrm
-    !    q = this%pakmvrobj%get_qfrommvr(n)
-    !    call this%budobj%budterm(idx)%update_term(n, n, q)
-    !  end do
-    !  
-    !  
-    !  ! -- TO MOVER
-    !  idx = idx + 1
-    !  call this%budobj%budterm(idx)%reset(this%noutlets)
-    !  do n = 1, this%noutlets
-    !    q = this%pakmvrobj%get_qtomvr(n)
-    !    if (q > DZERO) then
-    !      q = -q
-    !    end if
-    !    call this%budobj%budterm(idx)%update_term(n, n, q)
-    !  end do
-    !  
-    !end if
     
     
     ! -- AUXILIARY VARIABLES
@@ -2739,6 +2800,29 @@ module GwtSftModule
     ! -- return
     return
   end subroutine sft_outf_term
+  
+  subroutine sft_tmvr_term(this, ientry, n1, n2, rrate, &
+                           rhsval, hcofval)
+    class(GwtSftType) :: this
+    integer(I4B), intent(in) :: ientry
+    integer(I4B), intent(inout) :: n1
+    integer(I4B), intent(inout) :: n2
+    real(DP), intent(inout), optional :: rrate
+    real(DP), intent(inout), optional :: rhsval
+    real(DP), intent(inout), optional :: hcofval
+    real(DP) :: qbnd
+    real(DP) :: ctmp
+    n1 = this%sfrbudptr%budterm(this%idxbudtmvr)%id1(ientry)
+    n2 = this%sfrbudptr%budterm(this%idxbudtmvr)%id2(ientry)
+    qbnd = this%sfrbudptr%budterm(this%idxbudtmvr)%flow(ientry)
+    ctmp = this%xnewpak(n1)
+    if (present(rrate)) rrate = ctmp * qbnd
+    if (present(rhsval)) rhsval = -rrate
+    if (present(hcofval)) hcofval = DZERO
+    !
+    ! -- return
+    return
+  end subroutine sft_tmvr_term
   
   subroutine sft_fjf_term(this, ientry, n1, n2, rrate, &
                           rhsval, hcofval)
@@ -2897,7 +2981,7 @@ module GwtSftModule
     ! -- dummy
     class(GwtSftType), intent(inout) :: this
     ! -- local
-    integer(I4B) :: i, j, n, nn1, nn2
+    integer(I4B) :: i, j, n, nn1, nn2, idx
     character(len=200) :: ermsg
     character(len=LENBOUNDNAME) :: bname
     logical :: jfound
@@ -2971,8 +3055,22 @@ module GwtSftModule
         if (n == 1) then
           if (obsrv%ObsTypeId=='SFT') then
             nn2 = obsrv%NodeNumber2
-            j = nn2
-            obsrv%indxbnds(1) = j
+            ! -- Look for the first occurrence of nn1, then set indxbnds
+            !    to the nn2 record after that
+            do j = 1, this%sfrbudptr%budterm(this%idxbudgwf)%nlist
+              if (this%sfrbudptr%budterm(this%idxbudgwf)%id1(j) == nn1) then
+                idx = j + nn2 - 1
+                obsrv%indxbnds(1) = idx
+                exit
+              end if
+            end do
+            if (this%sfrbudptr%budterm(this%idxbudgwf)%id1(idx) /= nn1) then
+              write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
+                'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
+                ' reach connection number =', nn2, &
+                '(does not correspond to reach ', nn1, ')'
+              call store_error(ermsg)
+            end if
           else
             obsrv%indxbnds(1) = nn1
           end if

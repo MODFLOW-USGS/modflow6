@@ -3,6 +3,7 @@
 # match flows in the aquifer.  A constant concentration boundary is
 # specified upgradient for both the stream and aquifer, so concentrations
 # in the stream should exactly equal the concentrations in the aquifer.
+# There is no flow between the stream and the aquifer.
 
 import os
 import sys
@@ -268,17 +269,17 @@ def get_model(idx, dir):
                      ]
 
     sft_obs = {(gwtname + '.sft.obs.csv', ):
+                   [('sft-{}-conc'.format(i + 1), 'CONCENTRATION', i + 1) for i in range(7)] +
                    [
-                    ('sft-1-conc', 'CONCENTRATION', 1),
                     ('sft-1-extinflow', 'EXT-INFLOW', 1),
                     ('sft-1-rain', 'RAINFALL', 1),
                     ('sft-1-roff', 'RUNOFF', 1),
                     ('sft-1-evap', 'EVAPORATION', 1),
                     ('sft-1-const', 'CONSTANT', 1),
-                    ('sft-1-gwt2', 'SFT', 1, 1),
-                    ('sft-1-gwt4', 'SFT', 1, 3),
-                    ('sft-1-gwt3', 'SFT', 1, 2),
-                    ('sft-1-mylake1', 'SFT', 'MYREACH1'),
+                    ('sft-1-gwt1', 'SFT', 1, 1),
+                    ('sft-1-gwt2', 'SFT', 2, 1),
+                    ('sft-1-gwt3', 'SFT', 3, 1),
+                    ('sft-1-myreach1', 'SFT', 'MYREACH1'),
                    ],
                }
     # append additional obs attributes to obs dictionary
@@ -359,8 +360,12 @@ def eval_results(sim):
         tc = np.genfromtxt(fpth, names=True, delimiter=',')
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
+    # compare observation concs with binary file concs
+    for i in range(7):
+        oname = 'SFT{}CONC'.format(i + 1)
+        assert np.allclose(tc[oname][-1], csft[i]), '{} {}'.format(tc[oname][-1], csft[i])
 
-    # load the lake budget file
+    # load the sft budget file
     fname = gwtname + '.sft.bud'
     fname = os.path.join(sim.simpath, fname)
     assert os.path.isfile(fname)
@@ -369,7 +374,7 @@ def eval_results(sim):
     res = bobj.get_data(text='flow-ja-face')[-1]
     #print(res)
 
-    # check the storage terms, which include the total mass in the lake as an aux variable
+    # check the storage terms, which include the total mass in the reach as an aux variable
     res = bobj.get_data(text='storage')[-1]
     #print(res)
 
