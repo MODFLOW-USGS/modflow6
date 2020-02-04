@@ -13,15 +13,13 @@ module SfrModule
                               sQuadraticSaturationDerivative, sQSaturationDerivative, &
                               sCubicSaturation, sChSmooth
   use BndModule, only: BndType
-  use BudgetModule, only : BudgetType
-
+  use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr
   use ObserveModule, only: ObserveType
   use ObsModule, only: ObsType
   use InputOutputModule, only: get_node, URWORD, extract_idnum_or_bndname
   use BaseDisModule, only: DisBaseType
   use SimModule, only: count_errors, store_error, store_error_unit, ustop
   use SparseModule, only: sparsematrix
-  use RectangularChGeometryModule, only: RectangularChGeometryType
   use ArrayHandlersModule, only: ExpandArray
   use BlockParserModule,   only: BlockParserType
   !
@@ -73,6 +71,8 @@ module SfrModule
     ! -- characters
     character(len=16), dimension(:), pointer, contiguous :: csfrbudget => NULL()
     character(len=16), dimension(:), pointer, contiguous :: cauxcbc => NULL()
+    character(len=LENBOUNDNAME), dimension(:), pointer,                         &
+                                 contiguous :: sfrname => null()
     ! -- integers
     integer(I4B), pointer :: iprhed => null()
     integer(I4B), pointer :: istageout => null()
@@ -97,12 +97,12 @@ module SfrModule
     real(DP), dimension(:), pointer, contiguous :: qextoutflow => null()
     real(DP), dimension(:), pointer, contiguous :: qauxcbc => null()
     real(DP), dimension(:), pointer, contiguous :: dbuff => null()
-    ! -- derived types
-    type(BudgetType), pointer :: budget => NULL()
+    !
+    ! -- sfr budget object
+    type(BudgetObjectType), pointer :: budobj => null()
     type(SfrDataType), dimension(:), pointer, contiguous :: reaches => NULL()
     type(sparsematrix), pointer :: sparse => null()
-    type(RectangularChGeometryType), dimension(:), pointer,                     &
-                                     contiguous :: geo => null()
+    !
     ! -- moved from SfrDataType
     integer(I4B), dimension(:), pointer, contiguous :: iboundpak => null()
     integer(I4B), dimension(:), pointer, contiguous :: igwfnode => null()
@@ -126,7 +126,6 @@ module SfrModule
     real(DP), dimension(:), pointer, contiguous :: simrunoff => null()
     real(DP), dimension(:), pointer, contiguous :: stage0 => null()
     real(DP), dimension(:), pointer, contiguous :: usflow0 => null()
-    
     ! -- type bound procedures
     contains
     procedure :: sfr_allocate_scalars
@@ -164,6 +163,16 @@ module SfrModule
     procedure, private :: sfr_calc_qd
     procedure, private :: sfr_calc_qsource
     procedure, private :: sfr_calc_div
+    ! -- geometry 
+    procedure, private :: area_wet
+    procedure, private :: perimeter_wet
+    procedure, private :: surface_area
+    procedure, private :: surface_area_wet
+    procedure, private :: top_width_wet
+    ! -- reading
+    procedure, private :: sfr_read_packagedata
+    procedure, private :: sfr_read_connectiondata
+    procedure, private :: sfr_read_diversions
     ! -- calculations
     procedure, private :: sfr_rectch_depth
     ! -- error checking
@@ -171,6 +180,9 @@ module SfrModule
     procedure, private :: sfr_check_connections
     procedure, private :: sfr_check_diversions
     procedure, private :: sfr_check_ustrf
+    ! -- budget
+    procedure, private :: sfr_setup_budobj
+    procedure, private :: sfr_fill_budobj
   end type SfrType
 
 contains
@@ -291,10 +303,11 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- call standard BndType allocate scalars
-    call this%BndType%allocate_arrays()
+    !call this%BndType%allocate_arrays()
     !
     ! -- allocate character array for budget text
     allocate(this%csfrbudget(this%bditems))
+    allocate(this%sfrname(this%maxbound))
     !
     ! -- variables originally in SfrDataType
     call mem_allocate(this%iboundpak, this%maxbound, 'IBOUNDPAK', this%origin)
@@ -456,6 +469,29 @@ contains
     ! -- Call define_listlabel to construct the list label that is written
     !    when PRINT_INPUT option is used.
     call this%define_listlabel()
+
+    
+    
+    
+    !
+    ! -- Allocate arrays in package superclass
+    call this%sfr_allocate_arrays()
+    !
+    ! -- read package data
+    call this%sfr_read_packagedata()
+    !
+    ! -- read connection data
+    call this%sfr_read_connectiondata()
+    !
+    ! -- read diversion data
+    call this%sfr_read_diversions()
+    
+    !
+    ! -- setup the budget object
+    call this%sfr_setup_budobj()
+    
+    
+    
     !
     ! -- return
     return
@@ -582,48 +618,92 @@ contains
   !
   !    SPECIFICATIONS:
   ! ------------------------------------------------------------------------------
-    use ConstantsModule, only: LINELENGTH
-    use InputOutputModule, only: urword
-    use SimModule, only: ustop, store_error, count_errors, store_error_unit
-    use TimeSeriesManagerModule, only: read_single_value_or_time_series
-    use BudgetModule, only: budget_cr
+    use SimModule, only: ustop, count_errors
     ! -- dummy
     class(SfrType),intent(inout) :: this
     ! -- local
-    character (len=LINELENGTH) :: line, errmsg
-    character(len=LINELENGTH) :: text, cellid, keyword
-    character (len=10) :: cnum
-    character (len=10) :: cval
-    character(len=LENBOUNDNAME) :: bndName, bndNameTemp, manningname
-    character(len=50), dimension(:), allocatable :: caux
-    integer(I4B) :: j, n, ierr, ival
-    integer(I4B) :: ipos
-    integer(I4B) :: ndiv
-    logical :: isfound, endOfBlock
-    integer(I4B) :: i
-    integer(I4B) :: jj
-    integer(I4B) :: iaux
-    integer(I4B) :: nja
-    integer(I4B), dimension(:), pointer, contiguous :: rowmaxnnz => null()
-    integer(I4B) :: idiv
-    integer, allocatable, dimension(:) :: iachk
-    integer, allocatable, dimension(:) :: nboundchk
+    integer(I4B) :: n, ierr
     ! -- format
   ! ------------------------------------------------------------------------------
     !
     call this%obs%obs_ar()
     !
-    ! -- Allocate arrays in package superclass
-    call this%sfr_allocate_arrays()
+    ! -- call standard BndType allocate scalars
+    call this%BndType%allocate_arrays()
     !
-    ! -- addition
+    ! -- set boundname for each connection
+    if (this%inamedbound /= 0) then
+      do n = 1, this%maxbound
+        this%boundname(n) = this%sfrname(n)
+      end do
+    endif
+    !
+    ! -- copy igwfnode into nodelist
+    do n = 1, this%maxbound
+      this%nodelist(n) = this%igwfnode(n)
+    end do
+    !
+    ! -- check the sfr data
+    call this%sfr_check_reaches()
+
+    ! -- check the connection data
+    call this%sfr_check_connections()
+
+    ! -- check the diversion data
+    if (this%idiversions /= 0) then
+      call this%sfr_check_diversions()
+    end if
+    !
+    ! -- calculate the total fraction of connected reaches that are
+    !    not diversions
+    call this%sfr_check_ustrf()
+    !
+    ! -- terminate if errors were detected in any of the static sfr data
+    ierr = count_errors()
+    if (ierr > 0) then
+      call this%parser%StoreErrorUnit()
+      call ustop()
+    end if
+    !
+    ! -- setup pakmvrobj
+    if (this%imover /= 0) then
+      allocate(this%pakmvrobj)
+      call this%pakmvrobj%ar(this%maxbound, this%maxbound, this%origin)
+    endif
+    !
+    ! -- return
+    return
+  end subroutine sfr_ar
+
+  subroutine sfr_read_packagedata(this)
+  ! ******************************************************************************
+  ! sfr_read_packagedata -- read package data
+  ! ******************************************************************************
+  !
+  !    SPECIFICATIONS:
+  ! ------------------------------------------------------------------------------
+    use ConstantsModule, only: LINELENGTH
+    use SimModule, only: ustop, store_error, count_errors
+    use TimeSeriesManagerModule, only: read_single_value_or_time_series
+    ! -- dummy
+    class(SfrType),intent(inout) :: this
+    ! -- local
+    character (len=LINELENGTH) :: errmsg
+    character(len=LINELENGTH) :: text, cellid, keyword
+    character (len=10) :: cnum
+    character(len=LENBOUNDNAME) :: bndName, bndNameTemp, manningname
+    character(len=50), dimension(:), allocatable :: caux
+    integer(I4B) :: n, ierr, ival
+    logical :: isfound, endOfBlock
+    integer(I4B) :: i
+    integer(I4B) :: jj
+    integer(I4B) :: iaux
+    integer, allocatable, dimension(:) :: nboundchk
+    ! -- format
+  ! ------------------------------------------------------------------------------
     !
     ! -- allocate space for sfr reach data
     allocate(this%reaches(this%maxbound))
-    allocate(rowmaxnnz(this%maxbound))
-    do i = 1, this%maxbound
-      rowmaxnnz(i) = 0
-    enddo 
     allocate(nboundchk(this%maxbound))
     do i = 1, this%maxbound
       nboundchk(i) = 0
@@ -640,7 +720,6 @@ contains
     !
     ! -- parse reaches block if detected
     if (isfound) then
-      nja = 0
       write(this%iout,'(/1x,a)')'PROCESSING '//trim(adjustl(this%text))// &
         ' PACKAGEDATA'
       do
@@ -666,7 +745,7 @@ contains
         this%igwfnode(n) = this%dis%noder_from_cellid(cellid, &
                            this%inunit, this%iout, flag_string=.true.)
         this%igwftopnode(n) = this%igwfnode(n)
-        this%nodelist(n) = this%igwfnode(n)
+        !cdl this%nodelist(n) = this%igwfnode(n)
         ! -- read the cellid string and determine if 'none' is specified
         if (this%igwfnode(n) < 1) then
           call this%parser%GetStringCaps(keyword)
@@ -704,8 +783,6 @@ contains
         else if (ival < 0) then
           ival = 0
         end if
-        rowmaxnnz(n) = ival + 1
-        nja = nja + ival + 1 !add the connections and the sfr reach
         ! -- get upstream fraction for reach
         this%ustrf(n) = this%parser%GetDouble()
         ! -- get number of diversions for reach
@@ -733,8 +810,9 @@ contains
           if (bndNameTemp /= '') then
             bndName = bndNameTemp(1:16)
           endif
-          this%boundname(n) = bndName
+          !this%boundname(n) = bndName
         end if
+        this%sfrname(n) = bndName
 
         ! -- set Mannings
         text = manningname
@@ -802,11 +880,47 @@ contains
       deallocate(caux)
     end if
     !
+    ! -- return
+    return
+  end subroutine sfr_read_packagedata
+
+  subroutine sfr_read_connectiondata(this)
+  ! ******************************************************************************
+  ! sfr_read_connectiondata -- 
+  ! ******************************************************************************
+  !
+  !    SPECIFICATIONS:
+  ! ------------------------------------------------------------------------------
+    use ConstantsModule, only: LINELENGTH
+    use SimModule, only: ustop, store_error, count_errors
+    ! -- dummy
+    class(SfrType),intent(inout) :: this
+    ! -- local
+    character (len=LINELENGTH) :: line, errmsg
+    integer(I4B) :: n, ierr, ival
+    logical :: isfound, endOfBlock
+    integer(I4B) :: i
+    integer(I4B) :: nja
+    integer(I4B), dimension(:), pointer, contiguous :: rowmaxnnz => null()
+    integer, allocatable, dimension(:) :: nboundchk
+    ! -- format
+  ! ------------------------------------------------------------------------------
+    !
     ! -- allocate and initialize local variables for reach connections
     allocate(nboundchk(this%maxbound))
     do n = 1, this%maxbound
       nboundchk(n) = 0
     end do
+    !
+    ! -- 
+    nja = 0
+    allocate(rowmaxnnz(this%maxbound))
+    do n = 1, this%maxbound
+      ival = this%nconnreach(n)
+      if (ival < 0) ival = 0
+      rowmaxnnz(n) = ival + 1
+      nja = nja + ival + 1
+    enddo 
     !
     ! -- allocate space for connectivity
     allocate(this%sparse)
@@ -912,6 +1026,36 @@ contains
     ! -- destroy sparse
     call this%sparse%destroy()
     deallocate(this%sparse)
+    !
+    ! -- return
+    return
+  end subroutine sfr_read_connectiondata
+
+
+  subroutine sfr_read_diversions(this)
+  ! ******************************************************************************
+  ! sfr_read_diversions -- 
+  ! ******************************************************************************
+  !
+  !    SPECIFICATIONS:
+  ! ------------------------------------------------------------------------------
+    use ConstantsModule, only: LINELENGTH
+    use SimModule, only: ustop, store_error, count_errors
+    ! -- dummy
+    class(SfrType),intent(inout) :: this
+    ! -- local
+    character (len=LINELENGTH) :: errmsg
+    character (len=10) :: cnum
+    character (len=10) :: cval
+    integer(I4B) :: j, n, ierr, ival
+    integer(I4B) :: ipos
+    integer(I4B) :: ndiv
+    logical :: isfound, endOfBlock
+    integer(I4B) :: idiv
+    integer, allocatable, dimension(:) :: iachk
+    integer, allocatable, dimension(:) :: nboundchk
+    ! -- format
+  ! ------------------------------------------------------------------------------
     !
     ! -- read diversions
     call this%parser%GetBlock('DIVERSIONS', isfound, ierr,                      &
@@ -1050,75 +1194,15 @@ contains
       end if
     end if
     !
-    ! -- write summary of package block error messages
+    ! -- write summary of diversion error messages
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
       call ustop()
     end if
     !
-    ! -- check the sfr data
-    ! -- check the base sfr data
-    call this%sfr_check_reaches()
-
-    ! -- check the connection data
-    call this%sfr_check_connections()
-
-    ! -- check the diversion data
-    if (this%idiversions /= 0) then
-      call this%sfr_check_diversions()
-    end if
-    !
-    ! -- calculate the total fraction of connected reaches that are
-    !    not diversions
-    call this%sfr_check_ustrf()
-    !
-    ! -- terminate if errors were detected in any of the static sfr data
-    ierr = count_errors()
-    if (ierr>0) then
-      call this%parser%StoreErrorUnit()
-      call ustop()
-    end if
-    !
-    ! -- write header
-    if (this%iprpak /= 0) then
-      write (this%iout, '(//a)') 'SFR GEOMETRY DATA'
-      write (this%iout, "(40('-'))")
-    end if
-    !
-    ! -- build the rectangular geo type
-    allocate(this%geo(this%maxbound))
-    do n = 1, this%maxbound
-      if(this%inamedbound==1) then
-        bndName = this%boundname(n)
-      else
-        write (cnum,'(i10.0)') n
-        bndName = 'Reach ' // trim(adjustl(cnum))
-      end if
-      call this%geo(n)%init(n, bndName, &
-                            this%width(n), &
-                            this%length(n))
-      if (this%iprpak /= 0) then
-        call this%geo(n)%print_attributes(this%iout)
-      end if
-    end do
-    if (this%iprpak /= 0) then
-      write (this%iout, "(40('-'))")
-    end if
-    !
-    ! -- setup the sfr budget
-    call budget_cr(this%budget, this%origin)
-    ival = this%bditems
-    call this%budget%budget_df(ival, this%name, 'L**3')
-    !
-    ! -- setup pakmvrobj
-    if (this%imover /= 0) then
-      allocate(this%pakmvrobj)
-      call this%pakmvrobj%ar(this%maxbound, this%maxbound, this%origin)
-    endif
-    !
     ! -- return
     return
-  end subroutine sfr_ar
+  end subroutine sfr_read_diversions
 
 
   subroutine sfr_rp(this)
@@ -1556,27 +1640,14 @@ contains
     ! -- local
     integer(I4B) :: i
     integer(I4B) :: ibinun
-    real(DP) :: rain_ratin, rain_ratout
-    real(DP) :: evap_ratin, evap_ratout
-    real(DP) :: runoff_ratin, runoff_ratout
-    real(DP) :: extin_ratin, extin_ratout
-    real(DP) :: qgwf_ratin, qgwf_ratout
-    real(DP) :: extout_ratin, extout_ratout
-    real(DP) :: qmvr_ratin, qmvr_ratout
-    real(DP) :: qfrommvr, qtomvr
-    real(DP) :: depth
-    real(DP) :: a, ae
-    real(DP) :: qi, qro, qr, qe, qgwf, qext
+    real(DP) :: qext
     ! -- for budget
     integer(I4B) :: n
-    integer(I4B) :: n2
-    integer(I4B) ::  ii
-    integer(I4B) :: naux
-    real(DP) :: q
-    real(DP) :: qt
     real(DP) :: d
     real(DP) :: v
     real(DP) :: qoutflow
+    real(DP) :: qfrommvr
+    real(DP) :: qtomvr
     ! -- for observations
     integer(I4B) :: iprobslocal
     ! -- formats
@@ -1590,38 +1661,8 @@ contains
     call this%BndType%bnd_bd(x, idvfl, icbcfl, ibudfl, icbcun, iprobslocal,    &
                              isuppress_output, model_budget, iadv=1)
     !
-    ! -- sfr budget routines (start by resetting)
-    call this%budget%reset()
-    !
-    ! -- initialize accumulators
-    rain_ratin = DZERO
-    rain_ratout = DZERO
-    evap_ratin = DZERO
-    evap_ratout = DZERO
-    runoff_ratin = DZERO
-    runoff_ratout = DZERO
-    extin_ratin = DZERO
-    extin_ratout = DZERO
-    qgwf_ratin = DZERO
-    qgwf_ratout = DZERO
-    extout_ratin = DZERO
-    extout_ratout = DZERO
-    qmvr_ratin = DZERO
-    qmvr_ratout = DZERO
-    !
-    ! -- sfr budget term calculations
+    ! -- Calculate qextoutflow and qoutflow for subsequent budgets
     do n = 1, this%maxbound
-      !
-      ! -- rainfall and evaporation
-      depth = this%depth(n)
-      a = this%geo(n)%surface_area()
-      ae = this%geo(n)%surface_area_wet(depth)
-      qr = this%reaches(n)%rain%value * a
-      qe = -this%simevap(n)
-      !
-      ! -- inflow and runoff
-      qi = this%reaches(n)%inflow%value
-      qro = this%reaches(n)%runoff%value
       !
       ! -- mover
       qfrommvr = DZERO
@@ -1633,9 +1674,6 @@ contains
           qtomvr = -qtomvr
         end if
       endif
-      !
-      ! -- groundwater leakage
-      qgwf = -this%gwflow(n)
       !
       ! -- external downstream stream flow
       qext = this%dsflow(n)
@@ -1666,102 +1704,7 @@ contains
       this%qextoutflow(n) = qext
       this%qoutflow(n) = qoutflow
       !
-      ! -- accumulate terms
-      if (qr < DZERO) then
-        !
-        ! -- Flow is out of sfr
-        rain_ratout = rain_ratout - qr
-      else
-        !
-        ! -- Flow is into sfr
-        rain_ratin = rain_ratin + qr
-      end if
-      if (qe < DZERO) then
-        !
-        ! -- Flow is out of sfr
-        evap_ratout = evap_ratout - qe
-      else
-        !
-        ! -- Flow is into sfr
-        evap_ratin = evap_ratin + qe
-      end if
-      if (qi < DZERO) then
-        !
-        ! -- Flow is out of sfr
-        extin_ratout = extin_ratout - qi
-      else
-        !
-        ! -- Flow is into sfr
-        extin_ratin = extin_ratin + qi
-      end if
-      if (qro < DZERO) then
-        !
-        ! -- Flow is out of sfr
-        runoff_ratout = runoff_ratout - qro
-      else
-        !
-        ! -- Flow is into sfr
-        runoff_ratin = runoff_ratin + qro
-      end if
-      if (qgwf < DZERO) then
-        !
-        ! -- Flow is out of sfr
-        qgwf_ratout = qgwf_ratout - qgwf
-      else
-        !
-        ! -- Flow is into sfr
-        qgwf_ratin = qgwf_ratin + qgwf
-      end if
-      if (qext < DZERO) then
-        !
-        ! -- Flow is out of sfr
-        extout_ratout = extout_ratout - qext
-      else
-        !
-        ! -- Flow is into sfr
-        extout_ratin = extout_ratin + qext
-      end if
-      if (qfrommvr < DZERO) then
-        !
-        ! -- Flow is out of sfr
-        qmvr_ratout = qmvr_ratout - qfrommvr
-      else
-        !
-        ! -- Flow is into sfr
-        qmvr_ratin = qmvr_ratin + qfrommvr
-      end if
-      if (qtomvr < DZERO) then
-        !
-        ! -- Flow is out of sfr
-        qmvr_ratout = qmvr_ratout - qtomvr
-      else
-        !
-        ! -- Flow is into sfr
-        qmvr_ratin = qmvr_ratin + qtomvr
-      end if
     end do
-    !
-    ! -- add calculated terms
-    call this%budget%addentry(extin_ratin, extin_ratout, delt,  &
-                              this%csfrbudget(4), isuppress_output)
-    if (this%imover == 1) then
-      call this%budget%addentry(qmvr_ratin, DZERO, delt,  &
-                              this%csfrbudget(7), isuppress_output)
-    end if
-    call this%budget%addentry(rain_ratin, rain_ratout, delt,  &
-                              this%csfrbudget(1), isuppress_output)
-    call this%budget%addentry(runoff_ratin, runoff_ratout, delt,  &
-                              this%csfrbudget(3), isuppress_output)
-    call this%budget%addentry(qgwf_ratin, qgwf_ratout, delt,  &
-                              this%csfrbudget(5), isuppress_output)
-    call this%budget%addentry(evap_ratin, evap_ratout, delt,  &
-                              this%csfrbudget(2), isuppress_output)
-    call this%budget%addentry(extout_ratin, extout_ratout, delt,  &
-                              this%csfrbudget(6), isuppress_output)
-    if (this%imover == 1) then
-      call this%budget%addentry(DZERO, qmvr_ratout, delt,  &
-                              this%csfrbudget(8), isuppress_output)
-    end if
     !
     ! -- For continuous observations, save simulated values.
     if (this%obs%npakobs > 0 .and. iprobs > 0) then
@@ -1792,198 +1735,25 @@ contains
                   this%maxbound, 1, 1, ibinun)
     end if
     !
-    ! -- Set unit number for binary budget output
+    ! -- fill the budget object
+    call this%sfr_fill_budobj()
+    !
+    ! -- write the flows from the budobj
     ibinun = 0
     if(this%ibudgetout /= 0) then
       ibinun = this%ibudgetout
     end if
     if(icbcfl == 0) ibinun = 0
     if (isuppress_output /= 0) ibinun = 0
-    !
-    ! -- write sfr binary budget output
     if (ibinun > 0) then
-      ! FLOW JA FACE
-      naux = this%cbcauxitems
-      call ubdsv06(kstp, kper, '    FLOW-JA-FACE', this%name_model, this%name, &
-                   this%name_model, this%name,                                 &
-                   ibinun, naux, this%cauxcbc, this%nconn, 1, 1, this%nconn,   &
-                   this%iout, delt, pertim, totim)
-      do n = 1, this%maxbound
-        do i = 1, this%nconnreach(n)
-          n2 = this%reaches(n)%iconn(i)
-          ! flow to downstream reaches
-          if (this%reaches(n)%idir(i) < 0) then
-            qt = this%dsflow(n)
-            q = -this%reaches(n)%qconn(i)
-          ! flow from upstream reaches
-          else
-            qt = this%usflow(n)
-            do ii = 1, this%nconnreach(n2)
-              if (this%reaches(n2)%idir(ii) > 0) cycle
-              if (this%reaches(n2)%iconn(ii) /= n) cycle
-              q = this%reaches(n2)%qconn(ii)
-              exit
-            end do
-          end if
-          ! calculate flow area
-          call this%sfr_rectch_depth(n, qt, d)
-          this%qauxcbc(1) = d * this%width(n)
-          call this%dis%record_mf6_list_entry(ibinun, n, n2, q, naux,      &
-                                                  this%qauxcbc,                &
-                                                  olconv=.FALSE.,              &
-                                                  olconv2=.FALSE.)
-        end do
-      end do
-      ! LEAKAGE
-      naux = this%cbcauxitems
-      call ubdsv06(kstp, kper, this%csfrbudget(5), this%name_model, this%name, &
-                   this%name_model, this%name_model,                           &
-                   ibinun, naux, this%cauxcbc, this%maxbound, 1, 1,            &
-                   this%maxbound, this%iout, delt, pertim, totim)
-      do n = 1, this%maxbound
-        ! -- fill qauxcbc
-        ! -- reach volume
-        this%qauxcbc(1) = this%width(n) * this%length(n)
-        ! -- get leakage
-        n2 = this%igwfnode(n)
-        q = -this%gwflow(n)
-        call this%dis%record_mf6_list_entry(ibinun, n, n2, q, naux,        &
-                                                this%qauxcbc,                  &
-                                                olconv=.FALSE.)
-      end do
-      ! INFLOW
-      naux = 0
-      call ubdsv06(kstp, kper, this%csfrbudget(4), this%name_model, this%name, &
-                   this%name_model, this%name,                                 &
-                   ibinun, naux, this%auxname, this%maxbound, 1, 1,            &
-                   this%maxbound, this%iout, delt, pertim, totim)
-      do n = 1, this%maxbound
-        q = this%reaches(n)%inflow%value
-        call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,         &
-                                                this%auxvar(:,n),              &
-                                                olconv=.FALSE.,                &
-                                                olconv2=.FALSE.)
-      end do
-      ! RAIN
-      naux = 0
-      call ubdsv06(kstp, kper, this%csfrbudget(1), this%name_model, this%name, &
-                   this%name_model, this%name,                                 &
-                   ibinun, naux, this%auxname, this%maxbound, 1, 1,            &
-                   this%maxbound, this%iout, delt, pertim, totim)
-      do n = 1, this%maxbound
-        a = this%geo(n)%surface_area()
-        q = this%reaches(n)%rain%value * a
-        call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,         &
-                                                this%auxvar(:,n),              &
-                                                olconv=.FALSE.,                &
-                                                olconv2=.FALSE.)
-      end do
-      ! RUNOFF
-      naux = 0
-      call ubdsv06(kstp, kper, this%csfrbudget(3), this%name_model, this%name, &
-                   this%name_model, this%name,                                 &
-                   ibinun, naux, this%auxname, this%maxbound, 1, 1,            &
-                   this%maxbound, this%iout, delt, pertim, totim)
-      do n = 1, this%maxbound
-        q = this%simrunoff(n)
-        call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,         &
-                                                this%auxvar(:,n),              &
-                                                olconv=.FALSE.,                &
-                                                olconv2=.FALSE.)
-      end do
-      ! EVAPORATION
-      naux = 0
-      call ubdsv06(kstp, kper, this%csfrbudget(2), this%name_model, this%name, &
-                   this%name_model, this%name,                                 &
-                   ibinun, naux, this%auxname, this%maxbound, 1, 1,            &
-                   this%maxbound, this%iout, delt, pertim, totim)
-      do n = 1, this%maxbound
-        ae = this%geo(n)%surface_area_wet(depth)
-        q = -this%simevap(n)
-        call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,         &
-                                                this%auxvar(:,n),              &
-                                                olconv=.FALSE.,                &
-                                                olconv2=.FALSE.)
-      end do
-      ! EXTERNAL OUTFLOW
-      naux = 0
-      call ubdsv06(kstp, kper, this%csfrbudget(6), this%name_model, this%name, &
-                   this%name_model, this%name,                                 &
-                   ibinun, naux, this%auxname, this%maxbound, 1, 1,            &
-                   this%maxbound, this%iout, delt, pertim, totim)
-      do n = 1, this%maxbound
-        q = this%dsflow(n)
-        if (q > DZERO) q = -q
-        do i = 1, this%nconnreach(n)
-          if (this%reaches(n)%idir(i) > 0) cycle
-          q = DZERO
-          exit
-        end do
-        if (this%imover == 1) then
-          q = q + this%pakmvrobj%get_qtomvr(n)
-        end if
-        call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,         &
-                                                this%auxvar(:,n),              &
-                                                olconv=.FALSE.,                &
-                                                olconv2=.FALSE.)
-      end do
-      ! MOVER
-      if (this%imover == 1) then
-        ! FROM MOVER
-        naux = 0
-        call ubdsv06(kstp, kper, this%csfrbudget(7), this%name_model,          &
-                     this%name, this%name_model, this%name,                    &
-                     ibinun, naux, this%auxname,                               &
-                     this%maxbound, 1, 1,                                      &
-                     this%maxbound, this%iout, delt, pertim, totim)
-        do n = 1, this%maxbound
-          q = this%pakmvrobj%get_qfrommvr(n)
-          call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,       &
-                                                  this%auxvar(:,n),            &
-                                                  olconv=.FALSE.,              &
-                                                  olconv2=.FALSE.)
-        end do
-        ! TO MOVER
-        naux = 0
-        call ubdsv06(kstp, kper, this%csfrbudget(8), this%name_model,          &
-                     this%name, this%name_model, this%name,                    &
-                     ibinun, naux, this%auxname,                               &
-                     this%maxbound, 1, 1,                                      &
-                     this%maxbound, this%iout, delt, pertim, totim)
-        do n = 1, this%maxbound
-          q = this%pakmvrobj%get_qtomvr(n)
-          if (q > DZERO) then
-            q = -q
-          end if
-          call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,       &
-                                                  this%auxvar(:,n),            &
-                                                  olconv=.FALSE.,              &
-                                                  olconv2=.FALSE.)
-        end do
-      end if
-      ! AUXILIARY VARIABLES
-      naux = this%naux
-      if (naux > 0) then
-        call ubdsv06(kstp, kper, '       AUXILIARY', this%name_model, this%name,&
-                     this%name_model, this%name,                                &
-                     ibinun, naux, this%auxname, this%maxbound, 1, 1,           &
-                     this%maxbound, this%iout, delt, pertim, totim)
-        do n = 1, this%maxbound
-          q = DZERO
-          call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,       &
-                                                  this%auxvar(:,n),            &
-                                                  olconv=.FALSE.,              &
-                                                  olconv2=.FALSE.)
-        end do
-      end if
-
+      call this%budobj%save_flows(this%dis, ibinun, kstp, kper, delt, &
+                                  pertim, totim, this%iout)
     end if
     !
     !
     ! -- return
     return
   end subroutine sfr_bd
-
 
   subroutine sfr_ot(this, kstp, kper, iout, ihedfl, ibudfl)
     ! **************************************************************************
@@ -2085,11 +1855,11 @@ contains
         call UWWORD(line, iloc, 20, 1, cellid, n, q, left=.TRUE.)
         depth = this%depth(n)
         stage = this%stage(n)
-        w = this%geo(n)%top_width_wet(depth)
+        w = this%top_width_wet(n, depth)
         call UWWORD(line, iloc, 11, 3, text, n, stage)
         call UWWORD(line, iloc, 11, 3, text, n, depth)
         call UWWORD(line, iloc, 11, 3, text, n, w)
-        call this%sfr_calc_cond(n, depth, cond)
+        call this%sfr_calc_cond(n, cond)
         if (node > 0) then
           sbot = this%strtop(n) - this%bthick(n)
           if (hgwf < sbot) then
@@ -2178,8 +1948,8 @@ contains
          else
            cellid = 'none'
          end if
-         a = this%geo(n)%surface_area()
-         ae = this%geo(n)%surface_area_wet(depth)
+         a = this%surface_area(n)
+         ae = this%surface_area_wet(n, depth)
          qu = this%usflow(n)
          qr = this%reaches(n)%rain%value * a
          qi =  this%reaches(n)%inflow%value
@@ -2271,7 +2041,7 @@ contains
       end if
       !
       ! -- Output sfr budget
-      call this%budget%budget_ot(kstp, kper, iout)
+      call this%budobj%write_budtable(kstp, kper, iout)
       !
       ! -- return
       return
@@ -2296,6 +2066,7 @@ contains
     call mem_deallocate(this%qoutflow)
     call mem_deallocate(this%qextoutflow)
     deallocate(this%csfrbudget)
+    deallocate(this%sfrname)
     call mem_deallocate(this%dbuff)
     deallocate(this%cauxcbc)
     call mem_deallocate(this%qauxcbc)
@@ -2339,10 +2110,10 @@ contains
     deallocate(this%ia)
     deallocate(this%ja)
     !
-    ! -- objects
-    deallocate(this%geo)
-    call this%budget%budget_da()
-    deallocate(this%budget)
+    ! -- budobj
+    call this%budobj%budgetobject_da()
+    deallocate(this%budobj)
+    nullify(this%budobj)
     !
     ! -- scalars
     call mem_deallocate(this%iprhed)
@@ -3309,7 +3080,7 @@ contains
     !
     ! -- calculate reach conductance for a unit depth of water
     !    if equal to zero will skip iterations
-    call this%sfr_calc_cond(n, DONE, cstr)
+    call this%sfr_calc_cond(n, cstr)
     !
     ! -- set flag to skip iterations
     isolve = 1
@@ -3717,8 +3488,8 @@ contains
     qro = this%reaches(n)%runoff%value
     !
     ! -- calculate rainfall and evap
-    a = this%geo(n)%surface_area()
-    ae = this%geo(n)%surface_area_wet(depth)
+    a = this%surface_area(n)
+    ae = this%surface_area_wet(n, depth)
     qr = this%reaches(n)%rain%value * a
     !qe = this%reaches(n)%evap%value * ae
     qe = this%reaches(n)%evap%value * a
@@ -3779,8 +3550,8 @@ contains
     call sChSmooth(depth, sat, derv)
     s = this%slope(n)
     r = this%reaches(n)%rough%value
-    aw = this%geo(n)%area_wet(depth)
-    wp = this%geo(n)%perimeter_wet(depth)
+    aw = this%area_wet(n, depth)
+    wp = this%perimeter_wet(n)
     rh = DZERO
     if (wp > DZERO) then
       rh = aw / wp
@@ -3831,7 +3602,7 @@ contains
     call sChSmooth(depth, sat, derv)
     !
     ! -- calculate conductance
-    call this%sfr_calc_cond(n, depth, cond)
+    call this%sfr_calc_cond(n, cond)
     !
     ! -- calculate groundwater leakage
     tp = this%strtop(n)
@@ -3847,7 +3618,7 @@ contains
     return
   end subroutine sfr_calc_qgwf
 
-  subroutine sfr_calc_cond(this, n, depth, cond)
+  subroutine sfr_calc_cond(this, n, cond)
   ! ******************************************************************************
   ! sfr_calc_qgwf -- Calculate sfr-aquifer exchange
   ! ******************************************************************************
@@ -3856,7 +3627,6 @@ contains
   ! ------------------------------------------------------------------------------
       class(SfrType) :: this
       integer(I4B), intent(in) :: n
-      real(DP), intent(in) :: depth
       real(DP), intent(inout) :: cond
       ! -- local
       integer(I4B) :: node
@@ -3868,7 +3638,7 @@ contains
     node = this%igwfnode(n)
     if (node > 0) then
       if (this%ibound(node) > 0) then
-        wp = this%geo(n)%perimeter_wet(depth)
+        wp = this%perimeter_wet(n)
         cond = this%hk(n) * this%length(n) * wp / this%bthick(n)
       end if
     end if
@@ -4401,4 +4171,512 @@ contains
     return
   end subroutine sfr_check_ustrf
 
-  end module SfrModule
+  subroutine sfr_setup_budobj(this)
+! ******************************************************************************
+! sfr_setup_budobj -- Set up the budget object that stores all the sfr flows
+!   The terms listed here must correspond in number and order to the ones 
+!   listed in the sfr_fill_budobj routine.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule, only: LENBUDTXT
+    ! -- dummy
+    class(SfrType) :: this
+    ! -- local
+    integer(I4B) :: nbudterm
+    integer(I4B) :: i, n, n1, n2
+    integer(I4B) :: maxlist, naux
+    integer(I4B) :: idx
+    real(DP) :: q
+    character(len=LENBUDTXT) :: text
+    character(len=LENBUDTXT), dimension(1) :: auxtxt
+! ------------------------------------------------------------------------------
+    !
+    ! -- Determine the number of sfr budget terms. These are fixed for 
+    !    the simulation and cannot change.  This includes FLOW-JA-FACE
+    !    so they can be written to the binary budget files, but these internal
+    !    flows are not included as part of the budget table.
+    nbudterm = 8
+    if (this%imover == 1) nbudterm = nbudterm + 2
+    if (this%naux > 0) nbudterm = nbudterm + 1
+    !
+    ! -- set up budobj
+    call budgetobject_cr(this%budobj, this%name)
+    call this%budobj%budgetobject_df(this%maxbound, nbudterm, 0, 0)
+    idx = 0
+    !
+    ! -- Go through and set up each budget term
+    text = '    FLOW-JA-FACE'
+    idx = idx + 1
+    maxlist = this%nconn
+    naux = 1
+    auxtxt(1) = '       FLOW-AREA'
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name, &
+                                             maxlist, .false., .false., &
+                                             naux, auxtxt)
+    !
+    ! -- store connectivity
+    call this%budobj%budterm(idx)%reset(this%nconn)
+    q = DZERO
+    do n = 1, this%maxbound
+      n1 = n
+      do i = 1, this%nconnreach(n)
+        n2 = this%reaches(n)%iconn(i)
+        call this%budobj%budterm(idx)%update_term(n1, n2, q)
+      end do
+    end do
+    !
+    ! -- 
+    text = '             GWF'
+    idx = idx + 1
+    maxlist = this%maxbound 
+    naux = 1
+    auxtxt(1) = '       FLOW-AREA'
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name_model, &
+                                             maxlist, .false., .true., &
+                                             naux, auxtxt)
+    call this%budobj%budterm(idx)%reset(this%maxbound)
+    q = DZERO
+    do n = 1, this%maxbound
+      n2 = this%igwfnode(n)
+      call this%budobj%budterm(idx)%update_term(n, n2, q)
+    end do
+    !
+    ! -- 
+    text = '        RAINFALL'
+    idx = idx + 1
+    maxlist = this%maxbound
+    naux = 0
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name, &
+                                             maxlist, .false., .false., &
+                                             naux)
+    !
+    ! -- 
+    text = '     EVAPORATION'
+    idx = idx + 1
+    maxlist = this%maxbound
+    naux = 0
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name, &
+                                             maxlist, .false., .false., &
+                                             naux)
+    !
+    ! -- 
+    text = '          RUNOFF'
+    idx = idx + 1
+    maxlist = this%maxbound
+    naux = 0
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name, &
+                                             maxlist, .false., .false., &
+                                             naux)
+    !
+    ! -- 
+    text = '      EXT-INFLOW'
+    idx = idx + 1
+    maxlist = this%maxbound
+    naux = 0
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name, &
+                                             maxlist, .false., .false., &
+                                             naux)
+    !
+    ! -- 
+    text = '     EXT-OUTFLOW'
+    idx = idx + 1
+    maxlist = this%maxbound
+    naux = 0
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name, &
+                                             maxlist, .false., .false., &
+                                             naux)
+    !
+    ! -- 
+    text = '         STORAGE'
+    idx = idx + 1
+    maxlist = this%maxbound
+    naux = 1
+    auxtxt(1) = '          VOLUME'
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name, &
+                                             maxlist, .false., .false., &
+                                             naux, auxtxt)
+    !
+    ! -- 
+    if (this%imover == 1) then
+      !
+      ! -- 
+      text = '        FROM-MVR'
+      idx = idx + 1
+      maxlist = this%maxbound
+      naux = 0
+      call this%budobj%budterm(idx)%initialize(text, &
+                                               this%name_model, &
+                                               this%name, &
+                                               this%name_model, &
+                                               this%name, &
+                                               maxlist, .false., .false., &
+                                               naux)
+      !
+      ! -- 
+      text = '          TO-MVR'
+      idx = idx + 1
+      maxlist = this%maxbound
+      naux = 0
+      call this%budobj%budterm(idx)%initialize(text, &
+                                               this%name_model, &
+                                               this%name, &
+                                               this%name_model, &
+                                               this%name, &
+                                               maxlist, .false., .false., &
+                                               naux)
+    end if
+    !
+    ! -- 
+    naux = this%naux
+    if (naux > 0) then
+      !
+      ! -- 
+      text = '       AUXILIARY'
+      idx = idx + 1
+      maxlist = this%maxbound
+      call this%budobj%budterm(idx)%initialize(text, &
+                                               this%name_model, &
+                                               this%name, &
+                                               this%name_model, &
+                                               this%name, &
+                                               maxlist, .false., .false., &
+                                               naux, this%auxname)
+    end if
+    !
+    ! -- return
+    return
+  end subroutine sfr_setup_budobj
+
+  subroutine sfr_fill_budobj(this)
+! ******************************************************************************
+! sfr_fill_budobj -- copy flow terms into this%budobj
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(SfrType) :: this
+    ! -- local
+    integer(I4B) :: naux
+    integer(I4B) :: i, n, n1, n2
+    integer(I4B) :: ii
+    integer(I4B) :: idx
+    real(DP) :: q
+    real(DP) :: qt
+    real(DP) :: d
+    real(DP) :: a
+    ! -- formats
+! -----------------------------------------------------------------------------
+    !
+    ! -- initialize counter
+    idx = 0
+
+    
+    ! -- FLOW JA FACE
+    idx = idx + 1
+    call this%budobj%budterm(idx)%reset(this%nconn)
+    do n = 1, this%maxbound
+      n1 = n
+      do i = 1, this%nconnreach(n)
+        n2 = this%reaches(n)%iconn(i)
+        ! flow to downstream reaches
+        if (this%reaches(n)%idir(i) < 0) then
+          qt = this%dsflow(n)
+          q = -this%reaches(n)%qconn(i)
+        ! flow from upstream reaches
+        else
+          qt = this%usflow(n)
+          do ii = 1, this%nconnreach(n2)
+            if (this%reaches(n2)%idir(ii) > 0) cycle
+            if (this%reaches(n2)%iconn(ii) /= n) cycle
+            q = this%reaches(n2)%qconn(ii)
+            exit
+          end do
+        end if
+        ! calculate flow area
+        call this%sfr_rectch_depth(n, qt, d)
+        this%qauxcbc(1) = d * this%width(n)
+        call this%budobj%budterm(idx)%update_term(n1, n2, q, this%qauxcbc)
+      end do
+    end do
+
+    
+    ! -- GWF (LEAKAGE)
+    idx = idx + 1
+    call this%budobj%budterm(idx)%reset(this%maxbound)
+    do n = 1, this%maxbound
+      this%qauxcbc(1) = this%width(n) * this%length(n)
+      n2 = this%igwfnode(n)
+      q = -this%gwflow(n)
+      call this%budobj%budterm(idx)%update_term(n, n2, q, this%qauxcbc)
+    end do
+
+    
+    ! -- RAIN
+    idx = idx + 1
+    call this%budobj%budterm(idx)%reset(this%maxbound)
+    do n = 1, this%maxbound
+      a = this%surface_area(n)
+      q = this%reaches(n)%rain%value * a
+      call this%budobj%budterm(idx)%update_term(n, n, q)
+    end do
+    
+    
+    ! -- EVAPORATION
+    idx = idx + 1
+    call this%budobj%budterm(idx)%reset(this%maxbound)
+    do n = 1, this%maxbound
+      q = -this%simevap(n)
+      call this%budobj%budterm(idx)%update_term(n, n, q)
+    end do
+    
+
+    ! -- RUNOFF
+    idx = idx + 1
+    call this%budobj%budterm(idx)%reset(this%maxbound)
+    do n = 1, this%maxbound
+      q = this%simrunoff(n)
+      call this%budobj%budterm(idx)%update_term(n, n, q)
+    end do
+
+    
+    ! -- INFLOW
+    idx = idx + 1
+    call this%budobj%budterm(idx)%reset(this%maxbound)
+    do n = 1, this%maxbound
+      q = this%reaches(n)%inflow%value
+      call this%budobj%budterm(idx)%update_term(n, n, q)
+    end do
+    
+    
+    ! -- EXTERNAL OUTFLOW
+    idx = idx + 1
+    call this%budobj%budterm(idx)%reset(this%maxbound)
+    do n = 1, this%maxbound
+      q = this%dsflow(n)
+      if (q > DZERO) q = -q
+      do i = 1, this%nconnreach(n)
+        if (this%reaches(n)%idir(i) > 0) cycle
+        q = DZERO
+        exit
+      end do
+      if (this%imover == 1) then
+        q = q + this%pakmvrobj%get_qtomvr(n)
+      end if
+      call this%budobj%budterm(idx)%update_term(n, n, q)
+    end do
+
+    ! -- STORAGE
+    idx = idx + 1
+    call this%budobj%budterm(idx)%reset(this%maxbound)
+    do n = 1, this%maxbound
+      q = DZERO
+      d = this%depth(n)
+      a = this%width(n) * this%length(n)
+      this%qauxcbc(1) = a * d
+      call this%budobj%budterm(idx)%update_term(n, n, q, this%qauxcbc)
+    end do
+    
+    ! -- MOVER
+    if (this%imover == 1) then
+      
+      ! -- FROM MOVER
+      idx = idx + 1
+      call this%budobj%budterm(idx)%reset(this%maxbound)
+      do n = 1, this%maxbound
+        q = this%pakmvrobj%get_qfrommvr(n)
+        call this%budobj%budterm(idx)%update_term(n, n, q)
+      end do
+      
+      
+      ! -- TO MOVER
+      idx = idx + 1
+      call this%budobj%budterm(idx)%reset(this%maxbound)
+      do n = 1, this%maxbound
+        q = this%pakmvrobj%get_qtomvr(n)
+        if (q > DZERO) then
+          q = -q
+        end if
+        call this%budobj%budterm(idx)%update_term(n, n, q)
+      end do
+      
+    end if
+    
+    
+    ! -- AUXILIARY VARIABLES
+    naux = this%naux
+    if (naux > 0) then
+      idx = idx + 1
+      call this%budobj%budterm(idx)%reset(this%maxbound)
+      do n = 1, this%maxbound
+        q = DZERO
+        call this%budobj%budterm(idx)%update_term(n, n, q, this%auxvar(:, n))
+      end do
+    end if
+    !
+    ! --Terms are filled, now accumulate them for this time step
+    call this%budobj%accumulate_terms()
+    !
+    ! -- return
+    return
+  end subroutine sfr_fill_budobj
+
+  ! -- geometry functions
+  function area_wet(this, n, depth)
+! ******************************************************************************
+! area_wet -- return wetted area
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- return
+    real(DP) :: area_wet
+    ! -- dummy
+    class(SfrType) :: this
+    integer(I4B), intent(in) :: n
+    real(DP), intent(in) :: depth
+! ------------------------------------------------------------------------------
+    !
+    ! -- Calculate area
+    area_wet = depth * this%width(n)
+    !
+    ! -- Return
+    return
+  end function area_wet
+  
+  
+  function perimeter_wet(this, n)
+! ******************************************************************************
+! perimeter_wet -- return wetted perimeter
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- return
+    real(DP) :: perimeter_wet
+    ! -- dummy
+    class(SfrType) :: this
+    integer(I4B), intent(in) :: n
+! ------------------------------------------------------------------------------
+    !
+    ! -- Calculate wetted perimeter
+    perimeter_wet = this%width(n)
+    !
+    ! -- return
+    return
+  end function perimeter_wet
+
+  function surface_area(this, n)
+! ******************************************************************************
+! surface_area -- return surface area
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- return variable
+    real(DP) :: surface_area
+    ! -- dummy
+    class(SfrType) :: this
+    integer(I4B), intent(in) :: n
+! ------------------------------------------------------------------------------
+    !
+    ! -- Calculate surface area
+    surface_area = this%width(n) * this%length(n)
+    !
+    ! -- Return
+    return
+  end function surface_area  
+  
+  function surface_area_wet(this, n, depth)
+! ******************************************************************************
+! area_wet -- return wetted surface area
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- return
+    real(DP) :: surface_area_wet
+    ! -- dummy
+    class(SfrType) :: this
+    integer(I4B), intent(in) :: n
+    real(DP), intent(in) :: depth
+    ! -- local
+    real(DP) :: top_width
+! ------------------------------------------------------------------------------
+    !
+    ! -- Calculate surface area
+    top_width = this%top_width_wet(n, depth)
+    surface_area_wet = top_width * this%length(n)
+    !
+    ! -- Return
+    return
+  end function surface_area_wet
+  
+  function top_width_wet(this, n, depth)
+! ******************************************************************************
+! area_wet -- return wetted surface area
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule, only: DEM5, DZERO
+    ! -- return
+    real(DP) :: top_width_wet
+    ! -- dummy
+    class(SfrType) :: this
+    integer(I4B), intent(in) :: n
+    real(DP), intent(in) :: depth
+    ! -- local
+    real(DP) :: sat
+! ------------------------------------------------------------------------------
+    !
+    ! -- Calculate surface area
+    sat = sCubicSaturation(DEM5, DZERO, depth, DEM5)
+    top_width_wet = this%width(n) * sat
+    !
+    ! -- Return
+    return
+  end function top_width_wet
+
+end module SfrModule
