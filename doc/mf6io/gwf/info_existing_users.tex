@@ -47,16 +47,13 @@ The following list, which is repeated from \cite{modflow6gwf}, summarizes the ma
 
 \item The GWF Model described in this report does not support the following list of packages and capabilities.  Support for some of these capabilities may be added in future \mf versions.
   \begin{itemize}
-    \item Interbed Storage Package \citep{leake1991documentation},
-    \item Subsidence Package \citep{hoffmann2003modflow},
-    \item Subsidence and Aquifer-System Compaction Package for Water-Table Aquifers \citep{leake2007modflow},
     \item Drain with Return Flow Package \citep{modflowdrtpack}
     \item Reservoir Package \citep{fenske1996documentation},
     \item Seawater Intrusion Package \citep{bakker2013documentation},
     \item Surface-Water Routing Process \citep{hughes2012documentation},
     \item Connected Linear Network Process \citep{modflowusg},
     \item Parameter Value File \citep{modflow2005}, and
-    \item Link to the MT3DMS Contaminant Transport Model \citep{zheng2001modflow}.
+    \item Link to the MT3DMS Contaminant Transport Model \citep{zheng2001modflow}.  However, MT3D-USGS can read the head and budget files created by MODFLOW 6, but only if the GWF Model uses the DIS Package.  MT3D-USGS will not work with GWF output if the DISV or DISU Packages are used.
   \end{itemize}
 
 \end{enumerate}

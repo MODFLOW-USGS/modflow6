@@ -2621,6 +2621,7 @@ contains
     !
     ! -- calculate and set offsets
     noder = 0
+    str = ''
     do i = 1, this%modellist%Count()
       mp => GetNumericalModelFromList(this%modellist, i)
       call mp%get_mrange(istart, iend)

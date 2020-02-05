@@ -742,7 +742,7 @@ module GwfNpfModule
 
   subroutine npf_flowja(this, hnew, flowja)
 ! ******************************************************************************
-! npf_flowja -- Budget
+! npf_flowja -- Calculate flowja
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -892,7 +892,7 @@ module GwfNpfModule
 
   subroutine npf_bdadj(this, flowja, icbcfl, icbcun)
 ! ******************************************************************************
-! npf_bdadj -- Calculate intercell flows
+! npf_bdadj -- Record flowja and calculate specific discharge if requested
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -995,6 +995,7 @@ module GwfNpfModule
     ! -- Strings
     !
     ! -- Scalars
+    call mem_deallocate(this%iname)
     call mem_deallocate(this%ixt3d)
     call mem_deallocate(this%satomega)
     call mem_deallocate(this%hnoflo)
@@ -1022,6 +1023,8 @@ module GwfNpfModule
     call mem_deallocate(this%iangle3)
     call mem_deallocate(this%nedges)
     call mem_deallocate(this%lastedge)
+    call mem_deallocate(this%ik22overk)
+    call mem_deallocate(this%ik33overk)
     !
     ! -- Deallocate arrays
     call mem_deallocate(this%icelltype)

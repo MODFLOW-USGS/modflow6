@@ -382,7 +382,7 @@ def eval_zb6(sim):
         f.write(line + '\n')
     f.close()
 
-    if diffmax > budtol or diffzbmax> budtol:
+    if diffmax > budtol or diffzbmax > budtol:
         sim.success = False
         msg += '\n...exceeds {}'.format(budtol)
         assert diffmax < budtol and diffzbmax < budtol, msg

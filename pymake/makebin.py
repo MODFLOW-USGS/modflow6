@@ -14,20 +14,8 @@ args = pymake.pymake.parser()
 
 args.subdirs = True
 
-excludefiles = os.path.join('excludefiles.txt')
-args.excludefiles = excludefiles
-
-app = os.path.basename(args.target)
-args.cmake = os.path.join('..', 'cmake_{}_files.txt'.format(app))
-
-args
-
 pymake.pymake.main(args.srcdir, args.target, fc=args.fc, cc=args.cc,
                    makeclean=args.makeclean, expedite=args.expedite,
-                   dryrun=args.dryrun, double=args.double,
-                   debug=args.debug, include_subdirs=args.subdirs,
-                   fflags=args.fflags, arch=args.arch,
-                   makefile=args.makefile, srcdir2=args.commonsrc,
-                   extrafiles=args.extrafiles,
-                   excludefiles=args.excludefiles,
-                   cmake=args.cmake)
+                   dryrun=args.dryrun, double=args.double, debug=args.debug,
+                   include_subdirs=args.subdirs, fflags=args.fflags,
+                   arch=args.arch, makefile=args.makefile)
