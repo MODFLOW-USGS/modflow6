@@ -237,6 +237,8 @@ def get_model(idx, dir):
         fn = '{}.{}.sfr'.format(mname, pname)
 
         sfr = flopy.mf6.ModflowGwfsfr(gwf, unit_conversion=unit_conv,
+                                      print_stage=True,
+                                      print_flows=True,
                                       mover=True,
                                       nreaches=len(rchd),
                                       packagedata=rchd,

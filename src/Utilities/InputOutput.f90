@@ -6,7 +6,9 @@ module InputOutputModule
   use SimModule, only: store_error, ustop, store_error_unit,                   &
                        store_error_filename
   use ConstantsModule, only: LINELENGTH, LENBIGLINE, LENBOUNDNAME,             &
-                             NAMEDBOUNDFLAG, LINELENGTH, MAXCHARLEN
+                             NAMEDBOUNDFLAG, LINELENGTH, MAXCHARLEN,           &
+                             TABLEFT, TABCENTER, TABRIGHT,                     &
+                             TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
   use GenericUtilities, only: IS_SAME
   private
   public :: GetUnit, u8rdcom, uget_block,                                      &
@@ -19,7 +21,8 @@ module InputOutputModule
             read_line, uget_any_block,                                         &
             GetFileFromPath, extract_idnum_or_bndname, urdaux,                 &
             get_jk, uget_block_line, print_format, BuildFixedFormat,           &
-            BuildFloatFormat, BuildIntFormat
+            BuildFloatFormat, BuildIntFormat,                                  &
+            get_nwords
 
   contains
 
@@ -605,7 +608,7 @@ module InputOutputModule
       return
       end subroutine lowcase
 
-      subroutine UWWORD(LINE,ICOL,ILEN,NCODE,C,N,R,FMT,CENTER,LEFT,SEP)
+      subroutine UWWORD(LINE,ICOL,ILEN,NCODE,C,N,R,FMT,ALIGNMENT,SEP)
       implicit none
       ! -- dummy
       character (len=*), intent(inout) :: LINE
@@ -616,14 +619,12 @@ module InputOutputModule
       integer(I4B), intent(in) :: N
       real(DP), intent(in) :: R
       character (len=*), optional, intent(in) :: FMT
-      logical, optional, intent(in) :: CENTER
-      logical, optional, intent(in) :: LEFT
+      integer(I4B), optional, intent(in) :: ALIGNMENT
       character (len=*), optional, intent(in) :: SEP
       ! -- local
       character (len=16) :: cfmt
       character (len=ILEN) :: cval
-      logical :: lcenter
-      logical :: lleft
+      integer(I4B) :: ialign
       integer(I4B) :: i
       integer(I4B) :: ispace
       integer(I4B) :: istop
@@ -632,44 +633,38 @@ module InputOutputModule
         CFMT = FMT
       else
         select case(NCODE)
-          case(0, 1)
+          case(TABSTRING, TABUCSTRING)
             write(cfmt, '(A,I0,A)') '(A', ILEN, ')'
-          case(2)
+          case(TABINTEGER)
             write(cfmt, '(A,I0,A)') '(I', ILEN, ')'
-          case(3)
+          case(TABREAL)
             i = ILEN - 7
             write(cfmt, '(A,I0,A,I0,A)') '(G', ILEN, '.', i, ')'
         end select
       end if
 
-      if (present(CENTER)) then
-        lcenter = CENTER
+      if (present(ALIGNMENT)) then
+        ialign = ALIGNMENT
       else
-        lcenter = .FALSE.
+        ialign = TABRIGHT
       end if
 
-      if (present(LEFT)) then
-        lleft = LEFT
-      else
-        lleft = .FALSE.
-      end if
-
-      if (NCODE == 0 .or. NCODE == 1) then
+      if (NCODE == TABSTRING .or. NCODE == TABUCSTRING) then
         if (len_trim(adjustl(C)) > ILEN) then
           cval = adjustl(C)
         else
           cval = trim(adjustl(C))
         end if
-        if (lcenter) then
+        if (ialign == TABCENTER) then
           i = len_trim(cval)
           ispace = (ILEN - i) / 2
           cval = repeat(' ', ispace) // trim(cval)
-        else if (lleft) then
+        else if (ialign == TABLEFT) then
           cval = trim(adjustl(cval))
         else
           cval = adjustr(cval)
         end if
-        if (NCODE == 1) then
+        if (NCODE == TABUCSTRING) then
           call UPCASE(cval)
         end if
       end if
@@ -677,11 +672,11 @@ module InputOutputModule
       istop = ICOL + ILEN
 
       select case(NCODE)
-        case(0, 1)
+        case(TABSTRING, TABUCSTRING)
           write(LINE(ICOL:istop), cfmt) cval
-        case(2)
+        case(TABINTEGER)
           write(LINE(ICOL:istop), cfmt) N
-        case(3)
+        case(TABREAL)
           write(LINE(ICOL:istop), cfmt) R
       end select
 
@@ -1516,21 +1511,27 @@ module InputOutputModule
     endif
     linelen = len(line)
     !
-    ! -- Count words in line and allocate words array
-    lloc = 1
-    do
-      call URWORD(line, lloc, istart, istop, 0, idum, rdum, 0, 0)
-      if (istart == linelen) exit
-      nwords = nwords + 1
-    enddo
+    ! -- get the number of words in a line and allocate words array
+    nwords = get_nwords(line)
     allocate(words(nwords))
+    !!
+    !! -- Count words in line and allocate words array
+    !lloc = 1
+    !do
+    !  call URWORD(line, lloc, istart, istop, 0, idum, rdum, 0, 0)
+    !  if (istart == linelen) exit
+    !  nwords = nwords + 1
+    !enddo
+    !allocate(words(nwords))
     !
     ! -- Populate words array and return
     lloc = 1
     do i = 1, nwords
       call URWORD(line, lloc, istart, istop, 0, idum, rdum, 0, 0)
       words(i) = line(istart:istop)
-    enddo
+    end do
+    !
+    ! -- return
     return
   end subroutine ParseLine
 
@@ -2117,5 +2118,40 @@ module InputOutputModule
     !
     return
   end subroutine BuildIntFormat
+
+  function get_nwords(line)
+! ******************************************************************************
+! get_nwords -- return number of words in a string
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- return variable
+    integer(I4B) :: get_nwords
+    ! -- dummy
+    character(len=*), intent(in) :: line
+    ! -- local
+    integer(I4B) :: linelen
+    integer(I4B) :: lloc
+    integer(I4B) :: istart
+    integer(I4B) :: iend
+    integer(I4B) :: idum
+    real(DP) :: rdum
+    !
+    ! -- initialize variables
+    get_nwords = 0
+    linelen = len(line)
+    !
+    ! -- Count words in line and allocate words array
+    lloc = 1
+    do
+      call URWORD(line, lloc, istart, istop, 0, idum, rdum, 0, 0)
+      if (istart == linelen) exit
+      get_nwords = get_nwords + 1
+    end do
+    !
+    ! -- return
+    return
+  end function get_nwords
 
 END MODULE InputOutputModule

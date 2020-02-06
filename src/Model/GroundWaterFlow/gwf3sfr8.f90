@@ -8,12 +8,16 @@ module SfrModule
                              DHUNDRED, DEP20,                                  &
                              NAMEDBOUNDFLAG, LENBOUNDNAME, LENFTYPE,           &
                              LENPACKAGENAME, MAXCHARLEN,                       &
-                             DHNOFLO, DHDRY, DNODATA
+                             DHNOFLO, DHDRY, DNODATA,                          &
+                             TABLEFT, TABCENTER, TABRIGHT,                     &
+                             TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
+    
   use SmoothingModule,  only: sQuadraticSaturation, sQSaturation, &
                               sQuadraticSaturationDerivative, sQSaturationDerivative, &
                               sCubicSaturation, sChSmooth
   use BndModule, only: BndType
   use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr
+  use TableObjectModule, only: TableObjectType, tableobject_cr
   use ObserveModule, only: ObserveType
   use ObsModule, only: ObsType
   use InputOutputModule, only: get_node, URWORD, extract_idnum_or_bndname
@@ -103,6 +107,11 @@ module SfrModule
     type(SfrDataType), dimension(:), pointer, contiguous :: reaches => NULL()
     type(sparsematrix), pointer :: sparse => null()
     !
+    ! -- sfr table objects
+    type(TableObjectType), pointer :: inputtab => null()
+    type(TableObjectType), pointer :: stagetab => null()
+    type(TableObjectType), pointer :: flowtab => null()
+    !
     ! -- moved from SfrDataType
     integer(I4B), dimension(:), pointer, contiguous :: iboundpak => null()
     integer(I4B), dimension(:), pointer, contiguous :: igwfnode => null()
@@ -183,6 +192,9 @@ module SfrModule
     ! -- budget
     procedure, private :: sfr_setup_budobj
     procedure, private :: sfr_fill_budobj
+    ! -- table
+    procedure, private :: sfr_setup_tableobj
+    !procedure, private :: sfr_fill_tableobj
   end type SfrType
 
 contains
@@ -485,13 +497,12 @@ contains
     !
     ! -- read diversion data
     call this%sfr_read_diversions()
-    
     !
     ! -- setup the budget object
     call this%sfr_setup_budobj()
-    
-    
-    
+    !
+    ! -- set up summary tables
+    call this%sfr_setup_tableobj()
     !
     ! -- return
     return
@@ -1805,16 +1816,25 @@ contains
       iloc = 1
       line = ''
       if(this%inamedbound==1) then
-        call UWWORD(line, iloc, 16, 1, 'reach', n, q, left=.TRUE.)
+        call UWWORD(line, iloc, 16, TABUCSTRING,                                 &
+                    'reach', n, q, ALIGNMENT=TABLEFT)
       end if
-      call UWWORD(line, iloc, 6, 1, 'reach', n, q, CENTER=.TRUE., sep=' ')
-      call UWWORD(line, iloc, 20, 1, 'reach ', n, q, left=.TRUE.)
-      call UWWORD(line, iloc, 11, 1, 'reach', n, q, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 11, 1, 'reach', n, q, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 11, 1, 'reach', n, q, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 11, 1, 'gwf', n, q, CENTER=.TRUE., sep=' ')
-      call UWWORD(line, iloc, 11, 1, 'streambed', n, q, CENTER=.TRUE., sep=' ')
-      call UWWORD(line, iloc, 11, 1, 'streambed', n, q, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 6, TABUCSTRING,                                    &
+                  'reach', n, q, ALIGNMENT=TABCENTER, sep=' ')
+      call UWWORD(line, iloc, 20, TABUCSTRING,                                   &
+                  'reach ', n, q, ALIGNMENT=TABLEFT)
+      call UWWORD(line, iloc, 11, TABUCSTRING,                                   &
+                  'reach', n, q, ALIGNMENT=TABCENTER)
+      call UWWORD(line, iloc, 11, TABUCSTRING,                                   &
+                  'reach', n, q, ALIGNMENT=TABCENTER)
+      call UWWORD(line, iloc, 11, TABUCSTRING,                                   &
+                  'reach', n, q, ALIGNMENT=TABCENTER)
+      call UWWORD(line, iloc, 11, TABUCSTRING,                                   &
+                  'gwf', n, q, ALIGNMENT=TABCENTER, sep=' ')
+      call UWWORD(line, iloc, 11, TABUCSTRING,                                   &
+                  'streambed', n, q, ALIGNMENT=TABCENTER, sep=' ')
+      call UWWORD(line, iloc, 11, TABUCSTRING,                                   &
+                  'streambed', n, q, ALIGNMENT=TABCENTER)
       ! -- create line separator
       linesep = repeat('-', iloc)
       ! -- write first line
@@ -1824,16 +1844,25 @@ contains
       iloc = 1
       line = ''
       if(this%inamedbound==1) then
-        call UWWORD(line, iloc, 16, 1, 'name', n, q, left=.TRUE.)
+        call UWWORD(line, iloc, 16, TABUCSTRING,                                 &
+                   'name', n, q, ALIGNMENT=TABLEFT)
       end if
-      call UWWORD(line, iloc, 6, 1, 'no.', n, q, CENTER=.TRUE., sep=' ')
-      call UWWORD(line, iloc, 20, 1, cellids, n, q, left=.TRUE.)
-      call UWWORD(line, iloc, 11, 1, 'stage', n, q, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 11, 1, 'depth', n, q, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 11, 1, 'width', n, q, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 11, 1, 'head', n, q, CENTER=.TRUE., sep=' ')
-      call UWWORD(line, iloc, 11, 1, 'conductance', n, q, CENTER=.TRUE., sep=' ')
-      call UWWORD(line, iloc, 11, 1, 'gradient', n, q, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 6, TABUCSTRING,                                    &
+                  'no.', n, q, ALIGNMENT=TABCENTER, sep=' ')
+      call UWWORD(line, iloc, 20, TABUCSTRING,                                   &
+                  cellids, n, q, ALIGNMENT=TABLEFT)
+      call UWWORD(line, iloc, 11, TABUCSTRING,                                   &
+                  'stage', n, q, ALIGNMENT=TABCENTER)
+      call UWWORD(line, iloc, 11, TABUCSTRING,                                   &
+                  'depth', n, q, ALIGNMENT=TABCENTER)
+      call UWWORD(line, iloc, 11, TABUCSTRING,                                   &
+                  'width', n, q, ALIGNMENT=TABCENTER)
+      call UWWORD(line, iloc, 11, TABUCSTRING,                                   &
+                  'head', n, q, ALIGNMENT=TABCENTER, sep=' ')
+      call UWWORD(line, iloc, 11, TABUCSTRING,                                   &
+                  'conductance', n, q, ALIGNMENT=TABCENTER, sep=' ')
+      call UWWORD(line, iloc, 11, TABUCSTRING,                                   &
+                  'gradient', n, q, ALIGNMENT=TABCENTER)
       ! -- write second line
       write(iout,'(1X,A)') line(1:iloc)
       write(iout,'(1X,A)') linesep(1:iloc)
@@ -1849,16 +1878,18 @@ contains
         iloc = 1
         line = ''
         if(this%inamedbound==1) then
-          call UWWORD(line, iloc, 16, 1, this%boundname(n), n, q, left=.TRUE.)
+          call UWWORD(line, iloc, 16, TABUCSTRING,                               &
+                      this%boundname(n), n, q, ALIGNMENT=TABLEFT)
         end if
-        call UWWORD(line, iloc, 6, 2, text, n, q, sep=' ')
-        call UWWORD(line, iloc, 20, 1, cellid, n, q, left=.TRUE.)
+        call UWWORD(line, iloc, 6, TABINTEGER, text, n, q, sep=' ')
+        call UWWORD(line, iloc, 20, TABUCSTRING,                                 &
+                    cellid, n, q, ALIGNMENT=TABLEFT)
         depth = this%depth(n)
         stage = this%stage(n)
         w = this%top_width_wet(n, depth)
-        call UWWORD(line, iloc, 11, 3, text, n, stage)
-        call UWWORD(line, iloc, 11, 3, text, n, depth)
-        call UWWORD(line, iloc, 11, 3, text, n, w)
+        call UWWORD(line, iloc, 11, TABREAL, text, n, stage)
+        call UWWORD(line, iloc, 11, TABREAL, text, n, depth)
+        call UWWORD(line, iloc, 11, TABREAL, text, n, w)
         call this%sfr_calc_cond(n, cond)
         if (node > 0) then
           sbot = this%strtop(n) - this%bthick(n)
@@ -1868,13 +1899,15 @@ contains
             grad = stage - hgwf
           end if
           grad = grad / this%bthick(n)
-          call UWWORD(line, iloc, 11, 3, text, n, hgwf, sep=' ')
-          call UWWORD(line, iloc, 11, 3, text, n, cond, sep=' ')
-          call UWWORD(line, iloc, 11, 3, text, n, grad)
+          call UWWORD(line, iloc, 11, TABREAL, text, n, hgwf, sep=' ')
+          call UWWORD(line, iloc, 11, TABREAL, text, n, cond, sep=' ')
+          call UWWORD(line, iloc, 11, TABREAL, text, n, grad)
         else
-          call UWWORD(line, iloc, 11, 1, '--', n, q, center=.TRUE., sep=' ')
-          call UWWORD(line, iloc, 11, 3, text, n, cond, sep=' ')
-          call UWWORD(line, iloc, 11, 1, '--', n, q, center=.TRUE.)
+          call UWWORD(line, iloc, 11, TABUCSTRING,                               &
+                      '--', n, q, ALIGNMENT=TABCENTER, sep=' ')
+          call UWWORD(line, iloc, 11, TABREAL, text, n, cond, sep=' ')
+          call UWWORD(line, iloc, 11, TABUCSTRING,                               &
+                      '--', n, q, ALIGNMENT=TABCENTER)
         end if
         write(iout, '(1X,A)') line(1:iloc)
       end do
@@ -1886,26 +1919,41 @@ contains
        iloc = 1
        line = ''
        if(this%inamedbound==1) then
-         call UWWORD(line, iloc, 16, 1, 'reach', n, q, left=.TRUE.)
+         call UWWORD(line, iloc, 16, TABUCSTRING,                                &
+                     'reach', n, q, ALIGNMENT=TABLEFT)
        end if
-       call UWWORD(line, iloc, 6, 1, 'reach', n, q, CENTER=.TRUE., sep=' ')
-       call UWWORD(line, iloc, 20, 1, 'reach ', n, q, left=.TRUE., sep=' ')
-       call UWWORD(line, iloc, 11, 1, 'external', n, q, CENTER=.TRUE., sep=' ')
-       call UWWORD(line, iloc, 11, 1, 'reach', n, q, CENTER=.TRUE., sep=' ')
+       call UWWORD(line, iloc, 6, TABUCSTRING,                                   &
+                   'reach', n, q, ALIGNMENT=TABCENTER, sep=' ')
+       call UWWORD(line, iloc, 20, TABUCSTRING,                                  &
+                   'reach ', n, q, ALIGNMENT=TABLEFT, sep=' ')
+       call UWWORD(line, iloc, 11, TABUCSTRING,                                  &
+                   'external', n, q, ALIGNMENT=TABCENTER, sep=' ')
+       call UWWORD(line, iloc, 11, TABUCSTRING,                                  &
+                   'reach', n, q, ALIGNMENT=TABCENTER, sep=' ')
        if (this%imover == 1) then
-        call UWWORD(line, iloc, 11, 1, 'reach', n, q, CENTER=.TRUE., sep=' ')
+        call UWWORD(line, iloc, 11, TABUCSTRING,                                 &
+                    'reach', n, q, ALIGNMENT=TABCENTER, sep=' ')
        end if
-       call UWWORD(line, iloc, 11, 1, 'reach', n, q, CENTER=.TRUE., sep=' ')
-       call UWWORD(line, iloc, 11, 1, 'reach', n, q, CENTER=.TRUE., sep=' ')
-       call UWWORD(line, iloc, 11, 1, 'reach', n, q, CENTER=.TRUE., sep=' ')
-       call UWWORD(line, iloc, 11, 1, 'reach', n, q, CENTER=.TRUE., sep=' ')
-       call UWWORD(line, iloc, 11, 1, 'reach', n, q, CENTER=.TRUE., sep=' ')
-       call UWWORD(line, iloc, 11, 1, 'external', n, q, CENTER=.TRUE., sep=' ')
+       call UWWORD(line, iloc, 11, TABUCSTRING,                                  &
+                   'reach', n, q, ALIGNMENT=TABCENTER, sep=' ')
+       call UWWORD(line, iloc, 11, TABUCSTRING,                                  &
+                   'reach', n, q, ALIGNMENT=TABCENTER, sep=' ')
+       call UWWORD(line, iloc, 11, TABUCSTRING,                                  &
+                   'reach', n, q, ALIGNMENT=TABCENTER, sep=' ')
+       call UWWORD(line, iloc, 11, TABUCSTRING,                                  &
+                   'reach', n, q, ALIGNMENT=TABCENTER, sep=' ')
+       call UWWORD(line, iloc, 11, TABUCSTRING,                                  &
+                   'reach', n, q, ALIGNMENT=TABCENTER, sep=' ')
+       call UWWORD(line, iloc, 11, TABUCSTRING,                                  &
+                   'external', n, q, ALIGNMENT=TABCENTER, sep=' ')
        if (this%imover == 1) then
-        call UWWORD(line, iloc, 11, 1, 'reach', n, q, CENTER=.TRUE., sep=' ')
+        call UWWORD(line, iloc, 11, TABUCSTRING,                                 &
+                    'reach', n, q, ALIGNMENT=TABCENTER, sep=' ')
        end if
-       call UWWORD(line, iloc, 11, 1, 'reach', n, q, CENTER=.TRUE., sep=' ')
-       call UWWORD(line, iloc, 11, 1, 'percent', n, q, CENTER=.TRUE.)
+       call UWWORD(line, iloc, 11, TABUCSTRING,                                  &
+                   'reach', n, q, ALIGNMENT=TABCENTER, sep=' ')
+       call UWWORD(line, iloc, 11, TABUCSTRING,                                  &
+                   'percent', n, q, ALIGNMENT=TABCENTER)
        ! -- create line separator
        linesep = repeat('-', iloc)
        ! -- write first line
@@ -1915,26 +1963,41 @@ contains
        iloc = 1
        line = ''
        if(this%inamedbound==1) then
-         call UWWORD(line, iloc, 16, 1, 'name', n, q, left=.TRUE.)
+         call UWWORD(line, iloc, 16, TABUCSTRING,                                &
+                     'name', n, q, ALIGNMENT=TABLEFT)
        end if
-       call UWWORD(line, iloc, 6, 1, 'no.', n, q, CENTER=.TRUE., sep=' ')
-       call UWWORD(line, iloc, 20, 1, cellids, n, q, left=.TRUE., sep=' ')
-       call UWWORD(line, iloc, 11, 1, 'inflow', n, q, CENTER=.TRUE., sep=' ')
-       call UWWORD(line, iloc, 11, 1, 'inflow', n, q, CENTER=.TRUE., sep=' ')
+       call UWWORD(line, iloc, 6, TABUCSTRING,                                   &
+                   'no.', n, q, ALIGNMENT=TABCENTER, sep=' ')
+       call UWWORD(line, iloc, 20, TABUCSTRING,                                  &
+                   cellids, n, q, ALIGNMENT=TABLEFT, sep=' ')
+       call UWWORD(line, iloc, 11, TABUCSTRING,                                  &
+                   'inflow', n, q, ALIGNMENT=TABCENTER, sep=' ')
+       call UWWORD(line, iloc, 11, TABUCSTRING,                                  &
+                   'inflow', n, q, ALIGNMENT=TABCENTER, sep=' ')
        if (this%imover == 1) then
-        call UWWORD(line, iloc, 11, 1, 'from mvr', n, q, CENTER=.TRUE., sep=' ')
+        call UWWORD(line, iloc, 11, TABUCSTRING,                                 &
+                    'from mvr', n, q, ALIGNMENT=TABCENTER, sep=' ')
        end if
-       call UWWORD(line, iloc, 11, 1, 'rainfall', n, q, CENTER=.TRUE., sep=' ')
-       call UWWORD(line, iloc, 11, 1, 'runoff', n, q, CENTER=.TRUE., sep=' ')
-       call UWWORD(line, iloc, 11, 1, 'leakage', n, q, CENTER=.TRUE., sep=' ')
-       call UWWORD(line, iloc, 11, 1, 'evaporation', n, q, CENTER=.TRUE., sep=' ')
-       call UWWORD(line, iloc, 11, 1, 'outflow', n, q, CENTER=.TRUE., sep=' ')
-       call UWWORD(line, iloc, 11, 1, 'outflow', n, q, CENTER=.TRUE., sep=' ')
+       call UWWORD(line, iloc, 11, TABUCSTRING,                                  &
+                   'rainfall', n, q, ALIGNMENT=TABCENTER, sep=' ')
+       call UWWORD(line, iloc, 11, TABUCSTRING,                                  &
+                   'runoff', n, q, ALIGNMENT=TABCENTER, sep=' ')
+       call UWWORD(line, iloc, 11, TABUCSTRING,                                  &
+                   'leakage', n, q, ALIGNMENT=TABCENTER, sep=' ')
+       call UWWORD(line, iloc, 11, TABUCSTRING,                                  &
+                   'evaporation', n, q, ALIGNMENT=TABCENTER, sep=' ')
+       call UWWORD(line, iloc, 11, TABUCSTRING,                                  &
+                   'outflow', n, q, ALIGNMENT=TABCENTER, sep=' ')
+       call UWWORD(line, iloc, 11, TABUCSTRING,                                  &
+                   'outflow', n, q, ALIGNMENT=TABCENTER, sep=' ')
        if (this%imover == 1) then
-        call UWWORD(line, iloc, 11, 1, 'to mvr', n, q, CENTER=.TRUE., sep=' ')
+        call UWWORD(line, iloc, 11, TABUCSTRING,                                 &
+                    'to mvr', n, q, ALIGNMENT=TABCENTER, sep=' ')
        end if
-       call UWWORD(line, iloc, 11, 1, 'in - out', n, q, CENTER=.TRUE., sep=' ')
-       call UWWORD(line, iloc, 11, 1, 'difference', n, q, CENTER=.TRUE.)
+       call UWWORD(line, iloc, 11, TABUCSTRING,                                  &
+                   'in - out', n, q, ALIGNMENT=TABCENTER, sep=' ')
+       call UWWORD(line, iloc, 11, TABUCSTRING,                                  &
+                   'difference', n, q, ALIGNMENT=TABCENTER)
        ! -- write second line
        write(iout,'(1X,A)') line(1:iloc)
        write(iout,'(1X,A)') linesep(1:iloc)
@@ -2016,26 +2079,29 @@ contains
          iloc = 1
          line = ''
          if (this%inamedbound==1) then
-           call UWWORD(line, iloc, 16, 1, this%boundname(n), n, q, left=.TRUE.)
+           call UWWORD(line, iloc, 16, TABUCSTRING,                              &
+                       this%boundname(n), n, q, ALIGNMENT=TABLEFT)
          end if
-         call UWWORD(line, iloc, 6, 2, text, n, q, CENTER=.TRUE., sep=' ')
-         call UWWORD(line, iloc, 20, 1, cellid, n, q, left=.TRUE., sep=' ')
-         call UWWORD(line, iloc, 11, 3, text, n, qi, sep=' ')
-         call UWWORD(line, iloc, 11, 3, text, n, qu, sep=' ')
+         call UWWORD(line, iloc, 6, TABINTEGER,                                  &
+                     text, n, q, ALIGNMENT=TABCENTER, sep=' ')
+         call UWWORD(line, iloc, 20, TABUCSTRING,                                &
+                     cellid, n, q, ALIGNMENT=TABLEFT, sep=' ')
+         call UWWORD(line, iloc, 11, TABREAL, text, n, qi, sep=' ')
+         call UWWORD(line, iloc, 11, TABREAL, text, n, qu, sep=' ')
          if (this%imover == 1) then
-           call UWWORD(line, iloc, 11, 3, text, n, qfrommvr, sep=' ')
+           call UWWORD(line, iloc, 11, TABREAL, text, n, qfrommvr, sep=' ')
          end if
-         call UWWORD(line, iloc, 11, 3, text, n, qr, sep=' ')
-         call UWWORD(line, iloc, 11, 3, text, n, qro, sep=' ')
-         call UWWORD(line, iloc, 11, 3, text, n, qgwf, sep=' ')
-         call UWWORD(line, iloc, 11, 3, text, n, qe, sep=' ')
-         call UWWORD(line, iloc, 11, 3, text, n, qd, sep=' ')
-         call UWWORD(line, iloc, 11, 3, text, n, qext, sep=' ')
+         call UWWORD(line, iloc, 11, TABREAL, text, n, qr, sep=' ')
+         call UWWORD(line, iloc, 11, TABREAL, text, n, qro, sep=' ')
+         call UWWORD(line, iloc, 11, TABREAL, text, n, qgwf, sep=' ')
+         call UWWORD(line, iloc, 11, TABREAL, text, n, qe, sep=' ')
+         call UWWORD(line, iloc, 11, TABREAL, text, n, qd, sep=' ')
+         call UWWORD(line, iloc, 11, TABREAL, text, n, qext, sep=' ')
          if (this%imover == 1) then
-           call UWWORD(line, iloc, 11, 3, text, n, qtomvr, sep=' ')
+           call UWWORD(line, iloc, 11, TABREAL, text, n, qtomvr, sep=' ')
          end if
-         call UWWORD(line, iloc, 11, 3, text, n, qerr, sep=' ')
-         call UWWORD(line, iloc, 11, 3, text, n, qpd)
+         call UWWORD(line, iloc, 11, TABREAL, text, n, qerr, sep=' ')
+         call UWWORD(line, iloc, 11, TABREAL, text, n, qpd)
          write(iout, '(1X,A)') line(1:iloc)
         end do
       end if
@@ -4556,6 +4622,134 @@ contains
     ! -- return
     return
   end subroutine sfr_fill_budobj
+
+  subroutine sfr_setup_tableobj(this)
+! ******************************************************************************
+! sfr_setup_budobj -- Set up the budget object that stores all the sfr flows
+!   The terms listed here must correspond in number and order to the ones 
+!   listed in the sfr_fill_budobj routine.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule, only: LINELENGTH, LENBUDTXT
+    ! -- dummy
+    class(SfrType) :: this
+    ! -- local
+    integer(I4B) :: nterms
+    integer(I4B) :: i, n, n1, n2
+    integer(I4B) :: maxlist, naux
+    integer(I4B) :: idx
+    real(DP) :: q
+    character(len=LINELENGTH) :: title
+    character(len=LINELENGTH) :: text
+! ------------------------------------------------------------------------------
+    if (this%iprhed > 0) then
+      !
+      ! -- Determine the number of sfr budget terms. These are fixed for 
+      !    the simulation and cannot change.  This includes FLOW-JA-FACE
+      !    so they can be written to the binary budget files, but these internal
+      !    flows are not included as part of the budget table.
+      nterms = 8
+      if (this%inamedbound == 1) nterms = nterms + 1
+      !
+      ! -- set up table title
+      title = 'SFR (' // trim(this%name) // ') STAGE'
+      !
+      ! -- set up stage tableobj
+      call tableobject_cr(this%stagetab, this%name, title, transient=.TRUE.)
+      call this%stagetab%tableobject_df(this%maxbound, nterms)
+      idx = 0
+      !
+      ! -- Go through and set up table budget term
+      if (this%inamedbound == 1) then
+        text = 'NAME'
+        idx = idx + 1
+        call this%stagetab%tableterm(idx)%initialize(text,                &
+                                                     20,                  &
+                                                     alignment=TABLEFT,   &
+                                                     datatype=TABUCSTRING)
+      end if
+      !
+      ! -- reach number
+      text = 'REACH NUMBER'
+      idx = idx + 1
+      call this%stagetab%tableterm(idx)%initialize(text,                  &
+                                                   6,                     &
+                                                   alignment=TABCENTER,   &
+                                                   datatype=TABINTEGER)
+      !
+      ! -- cellids
+      text = 'CELLIDS'
+      idx = idx + 1
+      call this%stagetab%tableterm(idx)%initialize(text,                  &
+                                                   20,                    &
+                                                   alignment=TABLEFT,     &
+                                                   datatype=TABUCSTRING)
+      !
+      ! -- reach stage
+      text = 'REACH STAGE'
+      idx = idx + 1
+      call this%stagetab%tableterm(idx)%initialize(text,                  &
+                                                   11,                    &
+                                                   alignment=TABCENTER,   &
+                                                   datatype=TABREAL)
+      !
+      ! -- reach depth
+      text = 'REACH DEPTH'
+      idx = idx + 1
+      call this%stagetab%tableterm(idx)%initialize(text,                  &
+                                                   11,                    &
+                                                   alignment=TABCENTER,   &
+                                                   datatype=TABREAL)
+      !
+      ! -- reach width
+      text = 'REACH WIDTH'
+      idx = idx + 1
+      call this%stagetab%tableterm(idx)%initialize(text,                  &
+                                                   11,                    &
+                                                   alignment=TABCENTER,   &
+                                                   datatype=TABREAL)
+      !
+      ! -- gwf head
+      text = 'GWF HEAD'
+      idx = idx + 1
+      call this%stagetab%tableterm(idx)%initialize(text,                  &
+                                                   11,                    &
+                                                   alignment=TABCENTER,   &
+                                                   datatype=TABREAL)
+      !
+      ! -- streambed conductance
+      text = 'STREAMBED CONDUCTANCE'
+      idx = idx + 1
+      call this%stagetab%tableterm(idx)%initialize(text,                  &
+                                                   11,                    &
+                                                   alignment=TABCENTER,   &
+                                                   datatype=TABREAL)
+      !
+      ! -- streambed gradient
+      text = 'STREAMBED GRADIENT'
+      idx = idx + 1
+      call this%stagetab%tableterm(idx)%initialize(text,                  &
+                                                   11,                    &
+                                                   alignment=TABCENTER,   &
+                                                   datatype=TABREAL)
+      
+      !
+      ! -- build header
+      call this%stagetab%set_header()
+      
+    end if
+    
+    if (this%iprflow > 0) then
+    end if
+    !
+    ! -- return
+    return
+  end subroutine sfr_setup_tableobj
+  
+  
 
   ! -- geometry functions
   function area_wet(this, n, depth)

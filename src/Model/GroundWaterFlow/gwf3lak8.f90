@@ -8,7 +8,9 @@ module LakModule
                              DONETHIRD, DTWOTHIRDS, DFIVETHIRDS,               &
                              DGRAVITY, DCD,                                    &
                              NAMEDBOUNDFLAG, LENFTYPE, LENPACKAGENAME,         &
-                             DNODATA
+                             DNODATA,                                          &
+                             TABLEFT, TABCENTER, TABRIGHT,                     &
+                             TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
   use MemoryTypeModule, only: MemoryTSType
   use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_setptr,     &
                                  mem_deallocate
@@ -4156,10 +4158,10 @@ contains
       iloc = 1
       line = ''
       if (this%inamedbound==1) then
-        call UWWORD(line, iloc, 16, 1, 'lake', n, q, left=.TRUE.)
+        call UWWORD(line, iloc, 16, TABUCSTRING, 'lake', n, q, ALIGNMENT=TABLEFT)
       end if
-      call UWWORD(line, iloc, 6, 1, 'lake', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'lake', n, q, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 6, TABUCSTRING, 'lake', n, q, ALIGNMENT=TABCENTER, SEP=' ')
+      call UWWORD(line, iloc, 11, TABUCSTRING, 'lake', n, q, ALIGNMENT=TABCENTER)
       ! -- create line separator
       linesep = repeat('-', iloc)
       ! -- write first line
@@ -4169,10 +4171,10 @@ contains
       iloc = 1
       line = ''
       if (this%inamedbound==1) then
-        call UWWORD(line, iloc, 16, 1, 'name', n, q, left=.TRUE.)
+        call UWWORD(line, iloc, 16, TABUCSTRING, 'name', n, q, ALIGNMENT=TABLEFT)
       end if
-      call UWWORD(line, iloc, 6, 1, 'no.', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'stage', n, q, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 6, TABUCSTRING, 'no.', n, q, ALIGNMENT=TABCENTER, SEP=' ')
+      call UWWORD(line, iloc, 11, TABUCSTRING, 'stage', n, q, ALIGNMENT=TABCENTER)
       ! -- write second line
       write(iout,'(1X,A)') line(1:iloc)
       write(iout,'(1X,A)') linesep(1:iloc)
@@ -4181,7 +4183,7 @@ contains
         iloc = 1
         line = ''
         if (this%inamedbound==1) then
-          call UWWORD(line, iloc, 16, 1, this%lakename(n), n, q, left=.TRUE.)
+          call UWWORD(line, iloc, 16, 1, this%lakename(n), n, q, ALIGNMENT=TABLEFT)
         end if
         call UWWORD(line, iloc, 6, 2, text, n, q, SEP=' ')
         call UWWORD(line, iloc, 11, 3, text, n, this%xnewpak(n))
@@ -4195,33 +4197,33 @@ contains
       iloc = 1
       line = ''
       if (this%inamedbound==1) then
-        call UWWORD(line, iloc, 16, 1, 'lake', n, q, left=.TRUE.)
+        call UWWORD(line, iloc, 16, TABUCSTRING, 'lake', n, q, ALIGNMENT=TABLEFT)
       end if
-      call UWWORD(line, iloc, 6, 1, 'lake', n, q, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 11, 1, 'lake', n, q, CENTER=.TRUE., SEP=' ')
+      call UWWORD(line, iloc, 6, TABUCSTRING, 'lake', n, q, ALIGNMENT=TABCENTER)
+      call UWWORD(line, iloc, 11, TABUCSTRING, 'lake', n, q, ALIGNMENT=TABCENTER, SEP=' ')
       if (this%noutlets > 0) then
-        call UWWORD(line, iloc, 11, 1, 'internal', n, q, CENTER=.TRUE., SEP=' ')
+        call UWWORD(line, iloc, 11, TABUCSTRING, 'internal', n, q, ALIGNMENT=TABCENTER, SEP=' ')
       end if
-      call UWWORD(line, iloc, 11, 1, 'lake', n, q, CENTER=.TRUE., SEP=' ')
+      call UWWORD(line, iloc, 11, TABUCSTRING, 'lake', n, q, ALIGNMENT=TABCENTER, SEP=' ')
       if (this%imover == 1) then
-        call UWWORD(line, iloc, 11, 1, 'lake', n, q, CENTER=.TRUE., SEP=' ')
+        call UWWORD(line, iloc, 11, TABUCSTRING, 'lake', n, q, ALIGNMENT=TABCENTER, SEP=' ')
       end if
-      call UWWORD(line, iloc, 11, 1, 'lake', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'lake', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'lake', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'lake', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'lake', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'lake', n, q, CENTER=.TRUE., SEP=' ')
+      call UWWORD(line, iloc, 11, TABUCSTRING, 'lake', n, q, ALIGNMENT=TABCENTER, SEP=' ')
+      call UWWORD(line, iloc, 11, TABUCSTRING, 'lake', n, q, ALIGNMENT=TABCENTER, SEP=' ')
+      call UWWORD(line, iloc, 11, TABUCSTRING, 'lake', n, q, ALIGNMENT=TABCENTER, SEP=' ')
+      call UWWORD(line, iloc, 11, TABUCSTRING, 'lake', n, q, ALIGNMENT=TABCENTER, SEP=' ')
+      call UWWORD(line, iloc, 11, TABUCSTRING, 'lake', n, q, ALIGNMENT=TABCENTER, SEP=' ')
+      call UWWORD(line, iloc, 11, TABUCSTRING, 'lake', n, q, ALIGNMENT=TABCENTER, SEP=' ')
       if (this%noutlets > 0) then
-        call UWWORD(line, iloc, 11, 1, 'external', n, q, CENTER=.TRUE., SEP=' ')
-        call UWWORD(line, iloc, 11, 1, 'internal', n, q, CENTER=.TRUE., SEP=' ')
+        call UWWORD(line, iloc, 11, TABUCSTRING, 'external', n, q, ALIGNMENT=TABCENTER, SEP=' ')
+        call UWWORD(line, iloc, 11, TABUCSTRING, 'internal', n, q, ALIGNMENT=TABCENTER, SEP=' ')
         if (this%imover == 1) then
-          call UWWORD(line, iloc, 11, 1, 'lake', n, q, CENTER=.TRUE., SEP=' ')
+          call UWWORD(line, iloc, 11, TABUCSTRING, 'lake', n, q, ALIGNMENT=TABCENTER, SEP=' ')
         end if
       end if
-      call UWWORD(line, iloc, 11, 1, 'constant', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'lake', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'percent', n, q, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 11, TABUCSTRING, 'constant', n, q, ALIGNMENT=TABCENTER, SEP=' ')
+      call UWWORD(line, iloc, 11, TABUCSTRING, 'lake', n, q, ALIGNMENT=TABCENTER, SEP=' ')
+      call UWWORD(line, iloc, 11, TABUCSTRING, 'percent', n, q, ALIGNMENT=TABCENTER)
       ! -- create line separator
       linesep = repeat('-', iloc)
       ! -- write first line
@@ -4231,33 +4233,33 @@ contains
       iloc = 1
       line = ''
       if (this%inamedbound==1) then
-        call UWWORD(line, iloc, 16, 1, 'name', n, q, left=.TRUE.)
+        call UWWORD(line, iloc, 16, TABUCSTRING, 'name', n, q, ALIGNMENT=TABLEFT)
       end if
-      call UWWORD(line, iloc, 6, 1, 'no.', n, q, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 11, 1, 'inflow', n, q, CENTER=.TRUE., SEP=' ')
+      call UWWORD(line, iloc, 6, TABUCSTRING, 'no.', n, q, ALIGNMENT=TABCENTER)
+      call UWWORD(line, iloc, 11, TABUCSTRING, 'inflow', n, q, ALIGNMENT=TABCENTER, SEP=' ')
       if (this%noutlets > 0) then
-        call UWWORD(line, iloc, 11, 1, 'inflow', n, q, CENTER=.TRUE., SEP=' ')
+        call UWWORD(line, iloc, 11, TABUCSTRING, 'inflow', n, q, ALIGNMENT=TABCENTER, SEP=' ')
       end if
-      call UWWORD(line, iloc, 11, 1, 'runoff', n, q, CENTER=.TRUE., SEP=' ')
+      call UWWORD(line, iloc, 11, TABUCSTRING, 'runoff', n, q, ALIGNMENT=TABCENTER, SEP=' ')
       if (this%imover == 1) then
-        call UWWORD(line, iloc, 11, 1, 'from mvr', n, q, CENTER=.TRUE., SEP=' ')
+        call UWWORD(line, iloc, 11, TABUCSTRING, 'from mvr', n, q, ALIGNMENT=TABCENTER, SEP=' ')
       end if
-      call UWWORD(line, iloc, 11, 1, 'rainfall', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'leakage in', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'leakage out', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'evaporation', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'withdrawal', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'storage', n, q, CENTER=.TRUE., SEP=' ')
+      call UWWORD(line, iloc, 11, TABUCSTRING, 'rainfall', n, q, ALIGNMENT=TABCENTER, SEP=' ')
+      call UWWORD(line, iloc, 11, TABUCSTRING, 'leakage in', n, q, ALIGNMENT=TABCENTER, SEP=' ')
+      call UWWORD(line, iloc, 11, TABUCSTRING, 'leakage out', n, q, ALIGNMENT=TABCENTER, SEP=' ')
+      call UWWORD(line, iloc, 11, TABUCSTRING, 'evaporation', n, q, ALIGNMENT=TABCENTER, SEP=' ')
+      call UWWORD(line, iloc, 11, TABUCSTRING, 'withdrawal', n, q, ALIGNMENT=TABCENTER, SEP=' ')
+      call UWWORD(line, iloc, 11, TABUCSTRING, 'storage', n, q, ALIGNMENT=TABCENTER, SEP=' ')
       if (this%noutlets > 0) then
-        call UWWORD(line, iloc, 11, 1, 'outflow', n, q, CENTER=.TRUE., SEP=' ')
-        call UWWORD(line, iloc, 11, 1, 'outflow', n, q, CENTER=.TRUE., SEP=' ')
+        call UWWORD(line, iloc, 11, TABUCSTRING, 'outflow', n, q, ALIGNMENT=TABCENTER, SEP=' ')
+        call UWWORD(line, iloc, 11, TABUCSTRING, 'outflow', n, q, ALIGNMENT=TABCENTER, SEP=' ')
         if (this%imover == 1) then
-          call UWWORD(line, iloc, 11, 1, 'to mvr', n, q, CENTER=.TRUE., SEP=' ')
+          call UWWORD(line, iloc, 11, TABUCSTRING, 'to mvr', n, q, ALIGNMENT=TABCENTER, SEP=' ')
         end if
       end if
-      call UWWORD(line, iloc, 11, 1, 'flow', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'in - out', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'difference', n, q, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 11, TABUCSTRING, 'flow', n, q, ALIGNMENT=TABCENTER, SEP=' ')
+      call UWWORD(line, iloc, 11, TABUCSTRING, 'in - out', n, q, ALIGNMENT=TABCENTER, SEP=' ')
+      call UWWORD(line, iloc, 11, TABUCSTRING, 'difference', n, q, ALIGNMENT=TABCENTER)
       ! -- write second line
       write(iout,'(1X,A)') line(1:iloc)
       write(iout,'(1X,A)') linesep(1:iloc)
@@ -4267,7 +4269,7 @@ contains
         iloc = 1
         line = ''
         if (this%inamedbound==1) then
-          call UWWORD(line, iloc, 16, 1, this%lakename(n), n, q, left=.TRUE.)
+          call UWWORD(line, iloc, 16, 1, this%lakename(n), n, q, ALIGNMENT=TABLEFT)
         end if
         call UWWORD(line, iloc, 6, 2, text, n, q)
         qtin = DZERO
