@@ -26,8 +26,14 @@ module NumericalSolutionModule
 
   implicit none
   private
+  
   public :: solution_create
-
+  
+  ! expose for use in the bmi++
+  public :: NumericalSolutionType
+  public :: GetNumericalSolutionFromList
+  public :: prepareIteration, doIteration, finalizeIteration
+  
   type, extends(BaseSolutionType) :: NumericalSolutionType
     character(len=LINELENGTH)                            :: fname
     type(ListType)                                       :: modellist
@@ -66,6 +72,7 @@ module NumericalSolutionModule
     real(DP), pointer                                    :: res_in  => NULL()
     integer(I4B), pointer                                :: ibcount => NULL()
     integer(I4B), pointer                                :: icnvg => NULL()
+    integer(I4B), pointer                                :: itertot => NULL() ! total nr. of linear solves per call to sln_ca
     integer(I4B), pointer                                :: mxiter => NULL()
     integer(I4B), pointer                                :: linmeth => NULL()
     integer(I4B), pointer                                :: nonmeth => NULL()
@@ -145,6 +152,14 @@ module NumericalSolutionModule
     procedure, private :: convergence_summary
     procedure, private :: csv_convergence_summary
 
+    ! for BMI refactoring:
+    procedure, public :: prepareIteration
+    procedure, public :: doIteration
+    procedure, public :: finalizeIteration
+    procedure, private :: writeCSVHeader
+    procedure, private :: writePTCInfoToFile
+    procedure, private :: advanceSolution
+    
   end type NumericalSolutionType
 
 contains
@@ -234,6 +249,7 @@ contains
     call mem_allocate (this%res_in, 'RES_IN', solutionname)
     call mem_allocate (this%ibcount, 'IBCOUNT', solutionname)
     call mem_allocate (this%icnvg, 'ICNVG', solutionname)
+    call mem_allocate (this%itertot, 'ITERTOT', solutionname)
     call mem_allocate (this%mxiter, 'MXITER', solutionname)
     call mem_allocate (this%linmeth, 'LINMETH', solutionname)
     call mem_allocate (this%nonmeth, 'NONMETH', solutionname)
@@ -279,6 +295,7 @@ contains
     this%res_in = DZERO
     this%ibcount = 0
     this%icnvg = 0
+    this%itertot = 0
     this%mxiter = 0
     this%linmeth = 1
     this%nonmeth = 0
@@ -1026,6 +1043,7 @@ contains
     call mem_deallocate(this%res_in)
     call mem_deallocate(this%ibcount)
     call mem_deallocate(this%icnvg)
+    call mem_deallocate(this%itertot)
     call mem_deallocate(this%mxiter)
     call mem_deallocate(this%linmeth)
     call mem_deallocate(this%nonmeth)
@@ -1059,7 +1077,7 @@ contains
     return
   end subroutine sln_da
 
-  subroutine sln_ca(this, kstp, kper, kpicard, isgcnvg, isuppress_output)
+  subroutine sln_ca(this, kpicard, isgcnvg, isuppress_output)
 ! ******************************************************************************
 ! sln_ca -- Solve the models in this solution for kper and kstp.  If necessary
 !           use subtiming to get to the end of the time step
@@ -1068,87 +1086,25 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimVariablesModule, only:iout
-    use TdisModule, only: subtiming_begin, subtiming_end, perlen, totimsav
+    use TdisModule, only: kper, subtiming_begin, subtiming_end, perlen, totimsav
     ! -- dummy
     class(NumericalSolutionType) :: this
-    integer(I4B), intent(in) :: kstp
-    integer(I4B), intent(in) :: kper
     integer(I4B), intent(in) :: kpicard
     integer(I4B), intent(inout) :: isgcnvg
-    integer(I4B), intent(in) :: isuppress_output
+    integer(I4B), intent(in) :: isuppress_output    
     ! -- local
     class(NumericalModelType), pointer :: mp
     class(NumericalExchangeType), pointer :: cp
-    character(len=16) :: cval
-    character(len=34) :: strh
+    integer(I4B) :: kiter   ! non-linear iteration counter
     integer(I4B) :: im, ic
-    integer(I4B) :: kiter
-    integer(I4B) :: iter
-    integer(I4B) :: nsubtimes, nstm, isubtime
-    integer(I4B) :: itertot
-    integer(I4B) :: inewtonur
-    integer(I4B) :: itestmat, n
-    integer(I4B) :: i0, i1
-    integer(I4B) :: iend
-    integer(I4B) :: iptc
-    integer(I4B) :: iallowptc
-    integer(I4B) :: nodeu
-    real(DP) :: ptcf
+    integer(I4B) :: nsubtimes, nstm, isubtime    
     real(DP) :: dt
     real(DP) :: totim
-    real(DP) :: ttform
-    real(DP) :: ttsoln
-    real(DP) :: dxmax
-    ! -- formats
-    character(len=*), parameter :: fmtnocnvg =                                 &
-      "(1X,'Solution ', i0, ' did not converge for stress period ', i0,        &
-       &' and time step ', i0)"
- 11 FORMAT(//1X,'OUTER ITERATION SUMMARY',/,1x,139('-'),/,                     &
-        18x,'     OUTER     INNER BACKTRACK BACKTRACK        INCOMING        ',&
-           'OUTGOING         MAXIMUM                    MAXIMUM CHANGE',/,     &
-        18x,' ITERATION ITERATION      FLAG    NUMBER        RESIDUAL        ',&
-           'RESIDUAL          CHANGE                    MODEL-(CELLID)',/,     &
-          1x,139('-'))
- 12 FORMAT(//1X,'OUTER ITERATION SUMMARY',/,1x,87('-'),/,                      &
-         18x,'     OUTER     INNER         MAXIMUM                    ',       &
-            'MAXIMUM CHANGE',/,                                                &
-         18x,' ITERATION ITERATION          CHANGE                    ',       &
-            'MODEL-(CELLID)',/,                                                &
-         1x,87('-'))
+
 ! ------------------------------------------------------------------------------
-    !
-    ! -- write header for csv output
-    if (kper == 1 .and. kstp == 1) then
-      if (this%icsvout > 0) then
-        write(this%icsvout, '(*(G0,:,","))', advance='NO')                     &
-          'total_iterations', 'totim', 'kper', 'kstp', 'ksub', 'nouter',       &
-          'ninner', 'solution_dvmax', 'solution_dvmax_model',                  &
-          'solution_dvmax_node'
-        if (this%iprims == 2) then
-          write(this%icsvout, '(*(G0,:,","))', advance='NO')                   &
-            '', 'solution_drmax', 'solution_drmax_model',                      &
-            'solution_drmax_node', 'solution_alpha'
-          if (this%imslinear%ilinmeth == 2) then
-            write(this%icsvout, '(*(G0,:,","))', advance='NO')                 &
-              '', 'solution_omega'
-          end if
-          ! -- check for more than one model
-          if (this%convnmod > 1) then
-            do im=1,this%modellist%Count()
-              mp => GetNumericalModelFromList(this%modellist, im)
-              write(this%icsvout, '(*(G0,:,","))', advance='NO')               &
-                '', trim(adjustl(mp%name)) // '_dvmax',                        &
-                trim(adjustl(mp%name)) // '_dvmax_node',                       &
-                trim(adjustl(mp%name)) // '_drmax',                            &
-                trim(adjustl(mp%name)) // '_drmax_node'
-            end do
-          end if
-        end if
-        write (this%icsvout,'(a)') ''
-      end if
-    end if
-    !
+  
+    ! TODO_MJR: the subtime loop is now around the sln_ca body, easy to discard, do we still want this?
+    
     ! -- Find the number of sub-timesteps for each model and then use
     !    the largest one.
     nsubtimes = 1
@@ -1157,8 +1113,7 @@ contains
       nstm = mp%get_nsubtimes()
       if(nstm > nsubtimes) nsubtimes = nstm
     enddo
-    !
-    itertot = 0
+    
     dt = perlen(kper) / REAL(nsubtimes, DP)
     totim = totimsav
     !
@@ -1169,329 +1124,35 @@ contains
       !
       ! -- Start subtiming
       call subtiming_begin(isubtime, nsubtimes, this%id)
-      !
-      ! -- Exchange advance
-      do ic=1,this%exchangelist%Count()
-        cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-        call cp%exg_ad(this%id, kpicard, isubtime)
-      enddo
-      !
-      ! -- Model advance
-      do im = 1, this%modellist%Count()
-        mp => GetNumericalModelFromList(this%modellist, im)
-        call mp%model_ad(kpicard, isubtime)
-      enddo
-      !
-      ! -- determine if PTC will be used in any model
-      n = 1
-      do im = 1, this%modellist%Count()
-        mp => GetNumericalModelFromList(this%modellist, im)
-        call mp%model_ptcchk(iptc)
-        !
-        ! -- set iallowptc
-        ! -- no_ptc_option is FIRST
-        if (this%iallowptc < 0) then
-          if (kper > 1) then
-            iallowptc = 1
-          else
-            iallowptc = 0
-          end if
-        ! -- no_ptc_option is ALL (0) or using PTC (1)
-        else
-          iallowptc = this%iallowptc
-        end if
-        iptc = iptc * iallowptc
-        if (iptc /= 0) then
-          if (n == 1) then
-            write (iout, '(//)')
-            n = 0
-          end if
-          write (iout, '(1x,a,1x,i0,1x,3a)')                                           &
-            'PSEUDO-TRANSIENT CONTINUATION WILL BE APPLIED TO MODEL', im, '("',        &
-            trim(adjustl(mp%name)), '") DURING THIS TIME STEP'
-        end if
-      enddo
-
-      !
-      ! -- Nonlinear iteration loop for this solution
-      this%icnvg = 0
+      
+      ! prepare for the nonlinear iteration loop
+      call this%prepareIteration(kpicard, isubtime)
+      
+      ! nonlinear iteration loop for this solution      
       outerloop: do kiter = 1, this%mxiter
-        !
-        ! --backtracking
-        if (this%numtrack > 0) then
-          if (kiter == 1) then
-            ! -- write header for solver output
-            if (this%iprims > 0) then
-              write (iout,11)
-            end if
-          end if
-          !
-          ! -- call backtracking
-          call this%sln_backtracking(mp, cp, kiter)
-        else
-          if (kiter == 1) then
-            ! -- write header for solver output
-            if (this%iprims > 0) then
-              write (iout,12)
-            end if
-          end if
-        end if
-        !
-        ! -- Set amat and rhs to zero
-        call this%sln_reset()
-        call code_timer(0, ttform, this%ttform)
-        !
-        ! -- Calculate the matrix terms for each exchange
-        do ic=1,this%exchangelist%Count()
-          cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-          call cp%exg_cf(kiter)
-        enddo
-        !
-        ! -- Calculate the matrix terms for each model
-        do im=1,this%modellist%Count()
-          mp => GetNumericalModelFromList(this%modellist, im)
-          call mp%model_cf(kiter)
-        enddo
-        !
-        ! -- Add exchange coefficients to the solution
-        do ic=1,this%exchangelist%Count()
-          cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-          call cp%exg_fc(kiter, this%ia, this%amat, 1)
-        enddo
-        !
-        ! -- Add model coefficients to the solution
-        do im=1,this%modellist%Count()
-          mp => GetNumericalModelFromList(this%modellist, im)
-          call mp%model_fc(kiter, this%amat, this%nja, 1)
-        enddo
-        !
-        ! -- Add exchange Newton-Raphson terms to solution
-        do ic=1,this%exchangelist%Count()
-          cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-          call cp%exg_nr(kiter, this%ia, this%amat)
-        enddo
-        !
-        ! -- Calculate pseudo-transient continuation factor for each model
-        iptc = 0
-        ptcf = DZERO
-        do im=1,this%modellist%Count()
-          mp => GetNumericalModelFromList(this%modellist, im)
-          call mp%model_ptc(kiter, this%neq, this%nja,                         &
-                            this%ia, this%ja, this%x,                          &
-                            this%rhs, this%amat,                               &
-                            iptc, ptcf)
-        end do
-        !
-        ! -- Add model Newton-Raphson terms to solution
-        do im=1,this%modellist%Count()
-          mp => GetNumericalModelFromList(this%modellist, im)
-          call mp%model_nr(kiter, this%amat, this%nja, 1)
-        enddo
-        call code_timer(1, ttform, this%ttform)
-        !
-        ! -- linear solve
-        call code_timer(0, ttsoln, this%ttsoln)
-        CALL this%sln_ls(kiter, kstp, kper, iter, itertot, iptc, ptcf)
-        call code_timer(1, ttsoln, this%ttsoln)
-        !
-        !-------------------------------------------------------
-        itestmat = 0
-        if(itestmat.eq.1)then
-            open(99,file='sol_MF6.TXT')
-        WRITE(99,*)'MATRIX SOLUTION FOLLOWS'
-        WRITE(99,67)(n,this%x(N),N=1,this%NEQ)
-67      FORMAT(10(I8,G15.4))
-        close(99)
-        stop
-        endif
-        !-------------------------------------------------------
-        ! -- check convergence of solution
-        call this%sln_outer_check(this%hncg(kiter), this%lrch(1,kiter))
-        if (this%icnvg /= 0) then
-          this%icnvg = 0
-          if (abs(this%hncg(kiter)) <= this%hclose) this%icnvg = 1
-        end if
-        !
-        ! -- Additional convergence check for pseudo-transient continuation
-        !    term. Evaluate if the ptc value added to the diagonal has
-        !    decayed sufficiently.
-        if (iptc > 0) then
-          if (this%icnvg /= 0) then
-            if (this%ptcrat > this%ptcthresh) then
-              this%icnvg = 0
-              if (kiter == this%mxiter) then
-                write(*,*) 'pseudo-transient continuation caused convergence failure'
-              end if
-            end if
-          end if
-        end if
-        !
-        ! -- Additional convergence check for exchanges
-        do ic=1,this%exchangelist%Count()
-          cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-          call cp%exg_cc(this%icnvg)
-        enddo
-        !
-        ! -- additional convergence check for model packages
+        
+        ! perform a single iteration
+        call this%doIteration(kiter)        
+        
+        ! exit if converged
         if (this%icnvg == 1) then
-          iend = 0
-          if (kiter == this%mxiter) then
-            iend = 1
-          end if
-          do im=1,this%modellist%Count()
-            mp => GetNumericalModelFromList(this%modellist, im)
-            call mp%model_cc(kiter, iend, this%icnvg, this%hclose, this%rclosebnd)
-          enddo
-        end if
-        !
-        !--write maximum head change from linear solver to list file
-        itertot = itertot + iter
-        if (this%iprims > 0) then
-          cval = 'Linear Solver   '
-          call this%sln_get_loc(this%lrch(1,kiter), strh)
-          if (this%numtrack > 0) then
-            WRITE(IOUT,22) cval, kiter, iter, this%hncg(kiter),               &
-                           adjustr(trim(strh))
-          else
-            WRITE(IOUT,23) cval, kiter, iter, this%hncg(kiter),               &
-                           adjustr(trim(strh))
-          end if
-        end if
-        !
-        ! -- dampening
-        if (this%icnvg /= 1) then
-          if (this%nonmeth > 0) then
-            call this%sln_underrelax(kiter, this%hncg(kiter), this%neq,        &
-                                     this%active, this%x, this%xtemp)
-          else
-            call this%sln_calcdx(this%neq, this%active,                        &
-                                 this%x, this%xtemp, this%dxold)
-          endif
-          !
-          ! --adjust heads if necessary
-          inewtonur = 0
-          do im=1,this%modellist%Count()
-            mp => GetNumericalModelFromList(this%modellist, im)
-            i0 = mp%moffset + 1
-            i1 = i0 + mp%neq - 1
-            call mp%model_nur(mp%neq, this%x(i0:i1), this%xtemp(i0:i1),        &
-                              this%dxold(i0:i1), inewtonur)
-          end do
-          !
-          ! --update maximum head change
-          call this%sln_outer_check(this%hncg(kiter), this%lrch(1,kiter))
-          if (inewtonur /= 0) then
-            call this%sln_maxval(this%neq, this%dxold, dxmax)
-            if (abs(dxmax) <= this%hclose .and.                                &
-                abs(this%hncg(kiter)) <= this%hclose) then
-              this%icnvg = 1
-            end if
-          end if
-          !
-          !--write maximum head change after under relaxation to list file
-          !itertot = itertot + iter
-          if (this%iprims > 0) then
-            cval = 'Under-relaxation'
-            call this%sln_get_loc(this%lrch(1,kiter), strh)
-            if (this%numtrack > 0) then
-             WRITE(IOUT,24) cval, kiter, this%hncg(kiter), adjustr(trim(strh))
-            else
-             WRITE(IOUT,25) cval, kiter, this%hncg(kiter), adjustr(trim(strh))
-            end if
-          end if
-        end if
-22    FORMAT(1X,A16,1X,I10,I10,53X,1PG15.6,A34)
-23    FORMAT(1X,A16,1X,I10,I10,1X,1PG15.6,A34)
-24    FORMAT(1X,A16,1X,I10,10X,53X,1PG15.6,A34)
-25    FORMAT(1X,A16,1X,I10,10X,1X,1PG15.6,A34)
-        !
-        ! -- Write a message if convergence was not achieved
-        if (kiter == this%mxiter) then
-          write(iout, fmtnocnvg) this%id, kper, kstp
-        end if
-        !
-        ! -- Exit outer iteration loop if converged
-        if (this%icnvg == 1) then
-          if (this%iprims > 0) then
-            write(iout,1010) kiter, kstp, kper, itertot
-          end if
           exit outerloop
         end if
-        !
-        ! -- End of outer iteration loop
+        
       end do outerloop
-
-01010 format(/1X,I0,' CALLS TO NUMERICAL SOLUTION ','IN TIME STEP ',I0,        &
-            ' STRESS PERIOD ',I0,/1X,I0,' TOTAL ITERATIONS')
-      !
-      ! -- write inner iteration convergence summary
-      if (this%iprims == 2) then
-        !
-        ! -- write summary for each model
-        do im=1,this%modellist%Count()
-          mp => GetNumericalModelFromList(this%modellist, im)
-          call this%convergence_summary(mp%iout, im, itertot)
-        end do
-        !
-        ! -- write summary for entire solution
-        call this%convergence_summary(iout, this%convnmod+1, itertot)
-      end if
-      !
-      ! -- write to csv file
-      if (this%icsvout > 0) then
-        if (this%iprims < 2) then
-          !
-          ! -- determine the total number of iterations at the end of this outer
-          this%nitercnt = this%nitercnt + itertot
-          !
-          ! -- get model number and user node number
-          call this%sln_get_nodeu(this%lrch(1,kiter), im, nodeu)
-          !
-          ! -- write line
-          write(this%icsvout, '(*(G0,:,","))')                                 &
-             this%nitercnt, totim, kper, kstp, isubtime, kiter, itertot,       &
-             this%hncg(kiter), im, nodeu
-        else
-          call this%csv_convergence_summary(this%icsvout, totim, kper, kstp,   &
-                                            isubtime, itertot)
-        end if
-      end if
-      !
-      !
-      if (this%icnvg == 0) isgcnvg = 0
-      !
-      ! -- Calculate flow for each model
-      do im=1,this%modellist%Count()
-        mp => GetNumericalModelFromList(this%modellist, im)
-        call mp%model_cq(this%icnvg, isuppress_output)
-      enddo
-      !
-      ! -- Calculate flow for each exchange
-      do ic = 1, this%exchangelist%Count()
-        cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-        call cp%exg_cq(isgcnvg, isuppress_output, this%id)
-      enddo
-      !
-      ! -- Budget terms for each model
-      do im=1,this%modellist%Count()
-        mp => GetNumericalModelFromList(this%modellist, im)
-        call mp%model_bd(this%icnvg, isuppress_output)
-      enddo
-      !
-      ! -- Budget terms for each exchange
-      do ic = 1, this%exchangelist%Count()
-        cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-        call cp%exg_bd(isgcnvg, isuppress_output, this%id)
-      enddo
-      !
-      ! -- End of the sub-timestep loop
-    enddo
-    !
+      
+      ! finish up, write convergence info, CSV file, budgets and flows, ...
+      call this%finalizeIteration(kiter, isgcnvg, isubtime, isuppress_output)      
+      
+    ! -- End of the sub-timestep loop
+    end do 
+    
     ! -- end the subtiming
     call subtiming_end()
     !
     !
     ! -- Check if convergence for the exchange packages
+    ! TODO_MJR: shouldn't this be in the subtiming loop?
     do ic = 1, this%exchangelist%Count()
       cp => GetNumericalExchangeFromList(this%exchangelist, ic)
       call cp%exg_cnvg(this%id, isgcnvg)
@@ -1501,6 +1162,470 @@ contains
     return
   end subroutine sln_ca
 
+  ! prepare for iteration loop, use isubtime == 1 when there is no subtiming
+  ! and the default kpicard == 1 when no picard loop (c.f. sgp_ca())
+  subroutine prepareIteration(this, kpicard, isubtime)
+    use TdisModule, only: kper, kstp
+    class(NumericalSolutionType) :: this
+    integer(I4B), intent(in) :: kpicard
+    integer(I4B), intent(in) :: isubtime
+        
+    ! write headers to CSV file
+    if (kper == 1 .and. kstp == 1 .and. isubtime == 1) then
+      call this%writeCSVHeader()
+    end if
+      
+    ! advance models and exchanges
+    call this%advanceSolution(kpicard, isubtime)
+      
+    ! write PTC info on models to iout
+    call this%writePTCInfoToFile(kper)
+
+    ! reset convergence flag and inner solve counter
+    this%icnvg = 0
+    if (isubtime == 1) then
+      this%itertot = 0
+    end if
+    
+  end subroutine      
+      
+  ! write the header for the solver output to the CSV file
+  subroutine writeCSVHeader(this)  
+    class(NumericalSolutionType) :: this
+    ! local
+    integer(I4B) :: im
+    class(NumericalModelType), pointer :: mp
+    
+    if (this%icsvout > 0) then
+      write(this%icsvout, '(*(G0,:,","))', advance='NO')                     &
+        'total_iterations', 'totim', 'kper', 'kstp', 'ksub', 'nouter',       &
+        'ninner', 'solution_dvmax', 'solution_dvmax_model',                  &
+        'solution_dvmax_node'
+      if (this%iprims == 2) then
+        write(this%icsvout, '(*(G0,:,","))', advance='NO')                   &
+          '', 'solution_drmax', 'solution_drmax_model',                      &
+          'solution_drmax_node', 'solution_alpha'
+        if (this%imslinear%ilinmeth == 2) then
+          write(this%icsvout, '(*(G0,:,","))', advance='NO')                 &
+            '', 'solution_omega'
+        end if
+        ! -- check for more than one model
+        if (this%convnmod > 1) then
+          do im=1,this%modellist%Count()
+            mp => GetNumericalModelFromList(this%modellist, im)
+            write(this%icsvout, '(*(G0,:,","))', advance='NO')               &
+              '', trim(adjustl(mp%name)) // '_dvmax',                        &
+              trim(adjustl(mp%name)) // '_dvmax_node',                       &
+              trim(adjustl(mp%name)) // '_drmax',                            &
+              trim(adjustl(mp%name)) // '_drmax_node'
+          end do
+        end if
+      end if
+      write (this%icsvout,'(a)') ''
+    end if
+    
+  end subroutine writeCSVHeader
+  
+  ! advances the exchanges and models in this solution by 1 (sub)timestep
+  ! kpicard will change if we are running the outer picard loop,
+  ! if not (the current use cases) then we use kpicard == 1  
+  subroutine advanceSolution(this, isubtime, kpicard)
+    class(NumericalSolutionType) :: this
+    integer(I4B), intent(in) :: isubtime, kpicard
+    ! local
+    integer(I4B) :: ic, im
+    class(NumericalExchangeType), pointer :: cp
+    class(NumericalModelType), pointer :: mp
+    
+    ! -- Exchange advance
+    do ic=1,this%exchangelist%Count()
+      cp => GetNumericalExchangeFromList(this%exchangelist, ic)
+      call cp%exg_ad(this%id, kpicard, isubtime)
+    enddo
+    
+    ! -- Model advance
+    do im = 1, this%modellist%Count()
+      mp => GetNumericalModelFromList(this%modellist, im)
+      call mp%model_ad(kpicard, isubtime)
+    enddo
+    
+  end subroutine advanceSolution
+  
+  ! write the PTC header information to file
+  subroutine writePTCInfoToFile(this, kper)
+    class(NumericalSolutionType) :: this
+    integer(I4B), intent(in) :: kper
+    ! local
+    integer(I4B) :: n, im, iallowptc, iptc
+    class(NumericalModelType), pointer :: mp
+    
+    ! -- determine if PTC will be used in any model
+    n = 1
+    do im = 1, this%modellist%Count()
+      mp => GetNumericalModelFromList(this%modellist, im)
+      call mp%model_ptcchk(iptc)
+      !
+      ! -- set iallowptc
+      ! -- no_ptc_option is FIRST
+      if (this%iallowptc < 0) then
+        if (kper > 1) then
+          iallowptc = 1
+        else
+          iallowptc = 0
+        end if
+      ! -- no_ptc_option is ALL (0) or using PTC (1)
+      else
+        iallowptc = this%iallowptc
+      end if
+      iptc = iptc * iallowptc
+      if (iptc /= 0) then
+        if (n == 1) then
+          write (iout, '(//)')
+          n = 0
+        end if
+        write (iout, '(1x,a,1x,i0,1x,3a)')                                           &
+          'PSEUDO-TRANSIENT CONTINUATION WILL BE APPLIED TO MODEL', im, '("',        &
+          trim(adjustl(mp%name)), '") DURING THIS TIME STEP'
+      end if
+    enddo
+    
+  end subroutine writePTCInfoToFile
+  
+  ! this routine performs a single iteration, with the following steps:
+  ! (TODO_MJR: refactor this routine, it is long)
+  !
+  ! - backtracking
+  ! - reset amat and rhs
+  ! - calculate matrix terms (*_cf)
+  ! - add coefficients to matrix (*_fc)
+  ! - newton-raphson
+  ! - PTC
+  ! - linear solve
+  ! - convergence checks
+  ! - write output
+  ! - underrelaxation
+  !
+  ! it updates the convergence flag "this%icnvg" accordingly
+  subroutine doIteration(this, kiter)
+    use TdisModule, only: kstp, kper
+    class(NumericalSolutionType) :: this    
+    integer(I4B), intent(in) :: kiter
+    ! local
+    integer(I4B) :: ic, im    
+    class(NumericalModelType), pointer :: mp
+    class(NumericalExchangeType), pointer :: cp    
+    integer(I4B) :: i0, i1    
+    integer(I4B) :: itestmat, n
+    integer(I4B) :: iter    
+    integer(I4B) :: inewtonur    
+    integer(I4B) :: iend
+    integer(I4B) :: iptc
+    real(DP) :: dxmax, ptcf, ttform, ttsoln
+    character(len=34) :: strh
+    character(len=16) :: cval
+    
+    ! formats
+11  FORMAT(//1X,'OUTER ITERATION SUMMARY',/,1x,139('-'),/,                  &
+    18x,'     OUTER     INNER BACKTRACK BACKTRACK        INCOMING        ', &
+        'OUTGOING         MAXIMUM                    MAXIMUM CHANGE',/,     &
+    18x,' ITERATION ITERATION      FLAG    NUMBER        RESIDUAL        ', &
+        'RESIDUAL          CHANGE                    MODEL-(CELLID)',/,     &
+      1x,139('-'))
+    
+12  FORMAT(//1X,'OUTER ITERATION SUMMARY',/,1x,87('-'),/,                   &
+    18x,'     OUTER     INNER         MAXIMUM                    ',         &
+      'MAXIMUM CHANGE',/,                                                   &
+    18x,' ITERATION ITERATION          CHANGE                    ',         &
+      'MODEL-(CELLID)',/,                                                   &
+    1x,87('-'))
+    
+    ! --backtracking
+    if (this%numtrack > 0) then
+      if (kiter == 1) then
+        ! -- write header for solver output
+        if (this%iprims > 0) then
+          write (iout,11)
+        end if
+      end if
+      !
+      ! -- call backtracking
+      call this%sln_backtracking(mp, cp, kiter)
+    else
+      if (kiter == 1) then
+        ! -- write header for solver output
+        if (this%iprims > 0) then
+          write (iout,12)
+        end if
+      end if
+    end if
+    !
+    ! -- Set amat and rhs to zero
+    call this%sln_reset()
+    call code_timer(0, ttform, this%ttform)
+    !
+    ! -- Calculate the matrix terms for each exchange
+    do ic=1,this%exchangelist%Count()
+      cp => GetNumericalExchangeFromList(this%exchangelist, ic)
+      call cp%exg_cf(kiter)
+    enddo
+    !
+    ! -- Calculate the matrix terms for each model
+    do im=1,this%modellist%Count()
+      mp => GetNumericalModelFromList(this%modellist, im)
+      call mp%model_cf(kiter)
+    enddo
+    !
+    ! -- Add exchange coefficients to the solution
+    do ic=1,this%exchangelist%Count()
+      cp => GetNumericalExchangeFromList(this%exchangelist, ic)
+      call cp%exg_fc(kiter, this%ia, this%amat, 1)
+    enddo
+    !
+    ! -- Add model coefficients to the solution
+    do im=1,this%modellist%Count()
+      mp => GetNumericalModelFromList(this%modellist, im)
+      call mp%model_fc(kiter, this%amat, this%nja, 1)
+    enddo
+    !
+    ! -- Add exchange Newton-Raphson terms to solution
+    do ic=1,this%exchangelist%Count()
+      cp => GetNumericalExchangeFromList(this%exchangelist, ic)
+      call cp%exg_nr(kiter, this%ia, this%amat)
+    enddo
+    !
+    ! -- Calculate pseudo-transient continuation factor for each model
+    iptc = 0
+    ptcf = DZERO
+    do im=1,this%modellist%Count()
+      mp => GetNumericalModelFromList(this%modellist, im)
+      call mp%model_ptc(kiter, this%neq, this%nja,                         &
+                        this%ia, this%ja, this%x,                          &
+                        this%rhs, this%amat,                               &
+                        iptc, ptcf)
+    end do
+    !
+    ! -- Add model Newton-Raphson terms to solution
+    do im=1,this%modellist%Count()
+      mp => GetNumericalModelFromList(this%modellist, im)
+      call mp%model_nr(kiter, this%amat, this%nja, 1)
+    enddo
+    call code_timer(1, ttform, this%ttform)
+    !
+    ! -- linear solve
+    call code_timer(0, ttsoln, this%ttsoln)
+    CALL this%sln_ls(kiter, kstp, kper, iter, iptc, ptcf)
+    call code_timer(1, ttsoln, this%ttsoln)
+    !
+    !-------------------------------------------------------
+    itestmat = 0
+    if(itestmat.eq.1)then
+        open(99,file='sol_MF6.TXT')
+    WRITE(99,*)'MATRIX SOLUTION FOLLOWS'
+    WRITE(99,67)(n,this%x(N),N=1,this%NEQ)
+67      FORMAT(10(I8,G15.4))
+    close(99)
+    stop
+    endif
+    !-------------------------------------------------------
+    ! -- check convergence of solution
+    call this%sln_outer_check(this%hncg(kiter), this%lrch(1,kiter))
+    if (this%icnvg /= 0) then
+      this%icnvg = 0
+      if (abs(this%hncg(kiter)) <= this%hclose) this%icnvg = 1
+    end if
+    !
+    ! -- Additional convergence check for pseudo-transient continuation
+    !    term. Evaluate if the ptc value added to the diagonal has
+    !    decayed sufficiently.
+    if (iptc > 0) then
+      if (this%icnvg /= 0) then
+        if (this%ptcrat > this%ptcthresh) then
+          this%icnvg = 0
+          if (kiter == this%mxiter) then
+            write(*,*) 'pseudo-transient continuation caused convergence failure'
+          end if
+        end if
+      end if
+    end if
+    !
+    ! -- Additional convergence check for exchanges
+    do ic=1,this%exchangelist%Count()
+      cp => GetNumericalExchangeFromList(this%exchangelist, ic)
+      call cp%exg_cc(this%icnvg)
+    enddo
+    !
+    ! -- additional convergence check for model packages
+    if (this%icnvg == 1) then
+      iend = 0
+      if (kiter == this%mxiter) then
+        iend = 1
+      end if
+      do im=1,this%modellist%Count()
+        mp => GetNumericalModelFromList(this%modellist, im)
+        call mp%model_cc(kiter, iend, this%icnvg, this%hclose, this%rclosebnd)
+      enddo
+    end if
+    !
+    !--write maximum head change from linear solver to list file
+    this%itertot = this%itertot + iter
+    if (this%iprims > 0) then
+      cval = 'Linear Solver   '
+      call this%sln_get_loc(this%lrch(1,kiter), strh)
+      if (this%numtrack > 0) then
+        WRITE(IOUT,22) cval, kiter, iter, this%hncg(kiter),               &
+                        adjustr(trim(strh))
+      else
+        WRITE(IOUT,23) cval, kiter, iter, this%hncg(kiter),               &
+                        adjustr(trim(strh))
+      end if
+    end if
+    !
+    ! -- dampening
+    if (this%icnvg /= 1) then
+      if (this%nonmeth > 0) then
+        call this%sln_underrelax(kiter, this%hncg(kiter), this%neq,        &
+                                  this%active, this%x, this%xtemp)
+      else
+        call this%sln_calcdx(this%neq, this%active,                        &
+                              this%x, this%xtemp, this%dxold)
+      endif
+      !
+      ! --adjust heads if necessary
+      inewtonur = 0
+      do im=1,this%modellist%Count()
+        mp => GetNumericalModelFromList(this%modellist, im)
+        i0 = mp%moffset + 1
+        i1 = i0 + mp%neq - 1
+        call mp%model_nur(mp%neq, this%x(i0:i1), this%xtemp(i0:i1),        &
+                          this%dxold(i0:i1), inewtonur)
+      end do
+      !
+      ! --update maximum head change
+      call this%sln_outer_check(this%hncg(kiter), this%lrch(1,kiter))
+      if (inewtonur /= 0) then
+        call this%sln_maxval(this%neq, this%dxold, dxmax)
+        if (abs(dxmax) <= this%hclose .and.                                &
+            abs(this%hncg(kiter)) <= this%hclose) then
+          this%icnvg = 1
+        end if
+      end if
+      !
+      !--write maximum head change after under relaxation to list file
+      if (this%iprims > 0) then
+        cval = 'Under-relaxation'
+        call this%sln_get_loc(this%lrch(1,kiter), strh)
+        if (this%numtrack > 0) then
+          WRITE(IOUT,24) cval, kiter, this%hncg(kiter), adjustr(trim(strh))
+        else
+          WRITE(IOUT,25) cval, kiter, this%hncg(kiter), adjustr(trim(strh))
+        end if
+      end if
+    end if
+22    FORMAT(1X,A16,1X,I10,I10,53X,1PG15.6,A34)
+23    FORMAT(1X,A16,1X,I10,I10,1X,1PG15.6,A34)
+24    FORMAT(1X,A16,1X,I10,10X,53X,1PG15.6,A34)
+25    FORMAT(1X,A16,1X,I10,10X,1X,1PG15.6,A34)
+    
+  end subroutine doIteration
+  
+  ! finalize the solution calculate, called after the non-linear iteration loop
+  ! when used without subtiming, do isubtime == 1
+  subroutine finalizeIteration(this, kiter, isgcnvg, isubtime, isuppress_output)
+    use TdisModule, only: totim, kper, kstp
+    class(NumericalSolutionType) :: this
+    integer(I4B), intent(in) :: kiter ! the number at which the iteration loop was exited
+    integer(I4B), intent(inout) :: isgcnvg
+    integer(I4B), intent(in) :: isubtime
+    integer(I4B), intent(in) :: isuppress_output
+    ! local
+    integer(I4B) :: ic, im
+    class(NumericalModelType), pointer :: mp
+    class(NumericalExchangeType), pointer :: cp
+    integer(I4B) :: nodeu
+    
+    ! -- formats for convergence info 
+    character(len=*), parameter :: fmtnocnvg =                                 &
+      &"(1X,'Solution ', i0, ' did not converge for stress period ', i0,       &
+      &' and time step ', i0)"
+    character(len=*), parameter :: fmtcnvg =                                   &
+      &"(1X, I0, ' CALLS TO NUMERICAL SOLUTION ', 'IN TIME STEP ', I0,         &
+      &' STRESS PERIOD ',I0,/1X,I0,' TOTAL ITERATIONS')" 
+    
+    ! -- write convergence info
+    if (this%icnvg == 1) then
+      if (this%iprims > 0) then
+        write(iout, fmtcnvg) kiter, kstp, kper, this%itertot
+      end if
+    end if
+      
+    ! -- Write a message if convergence was not achieved
+    if (this%icnvg == 0) then
+      write(iout, fmtnocnvg) this%id, kper, kstp
+    end if
+      
+    !
+    ! -- write inner iteration convergence summary
+    if (this%iprims == 2) then
+      !
+      ! -- write summary for each model
+      do im=1,this%modellist%Count()
+        mp => GetNumericalModelFromList(this%modellist, im)
+        call this%convergence_summary(mp%iout, im, this%itertot)
+      end do
+      !
+      ! -- write summary for entire solution
+      call this%convergence_summary(iout, this%convnmod+1, this%itertot)
+    end if
+    !
+    ! -- write to csv file
+    if (this%icsvout > 0) then
+      if (this%iprims < 2) then
+        !
+        ! -- determine the total number of iterations at the end of this outer
+        this%nitercnt = this%nitercnt + this%itertot
+        !
+        ! -- get model number and user node number
+        call this%sln_get_nodeu(this%lrch(1,kiter), im, nodeu)
+        !
+        ! -- write line
+        write(this%icsvout, '(*(G0,:,","))')                                 &
+            this%nitercnt, totim, kper, kstp, isubtime, kiter, this%itertot,       &
+            this%hncg(kiter), im, nodeu
+      else
+        call this%csv_convergence_summary(this%icsvout, totim, kper, kstp,   &
+                                          isubtime, this%itertot)
+      end if
+    end if
+    !
+    !
+    if (this%icnvg == 0) isgcnvg = 0
+    !
+    ! -- Calculate flow for each model
+    do im=1,this%modellist%Count()
+      mp => GetNumericalModelFromList(this%modellist, im)
+      call mp%model_cq(this%icnvg, isuppress_output)
+    enddo
+    !
+    ! -- Calculate flow for each exchange
+    do ic = 1, this%exchangelist%Count()
+      cp => GetNumericalExchangeFromList(this%exchangelist, ic)
+      call cp%exg_cq(isgcnvg, isuppress_output, this%id)
+    enddo
+    !
+    ! -- Budget terms for each model
+    do im=1,this%modellist%Count()
+      mp => GetNumericalModelFromList(this%modellist, im)
+      call mp%model_bd(this%icnvg, isuppress_output)
+    enddo
+    !
+    ! -- Budget terms for each exchange
+    do ic = 1, this%exchangelist%Count()
+      cp => GetNumericalExchangeFromList(this%exchangelist, ic)
+      call cp%exg_bd(isgcnvg, isuppress_output, this%id)
+    enddo
+    
+  end subroutine finalizeIteration
+  
   subroutine convergence_summary(this, iu, im, itertot)
 ! ******************************************************************************
 ! convergence_summary -- Save convergence summary to a File
@@ -1886,7 +2011,7 @@ contains
     return
   end subroutine sln_reset
 !
-  subroutine sln_ls(this, kiter, kstp, kper, in_iter, itersum, iptc, ptcf)
+  subroutine sln_ls(this, kiter, kstp, kper, in_iter, iptc, ptcf)
 ! ******************************************************************************
 ! perform residual reduction and newton linearization and
 ! prepare for sparse solver, and check convergence of nonlinearities
@@ -1900,7 +2025,6 @@ contains
     integer(I4B), intent(in) :: kstp
     integer(I4B), intent(in) :: kper
     integer(I4B), intent(inout) :: in_iter
-    integer(I4B), intent(in) :: itersum
     integer(I4B), intent(inout) :: iptc
     real(DP), intent(in) :: ptcf
     ! -- local
@@ -2673,4 +2797,36 @@ contains
     return
   end subroutine sln_get_nodeu
 
+  function CastAsNumericalSolutionClass(obj) result (res)
+    implicit none
+    class(*), pointer, intent(inout) :: obj
+    class(NumericalSolutionType), pointer :: res
+    !
+    res => null()
+    if (.not. associated(obj)) return
+    !
+    select type (obj)
+    class is (NumericalSolutionType)
+      res => obj
+    end select
+    return
+  end function CastAsNumericalSolutionClass
+  
+  function GetNumericalSolutionFromList(list, idx) result (res)
+    implicit none
+    ! -- dummy
+    type(ListType),           intent(inout) :: list
+    integer(I4B),                  intent(in)    :: idx
+    class(NumericalSolutionType), pointer       :: res
+    ! -- local
+    class(*), pointer :: obj
+    !
+    obj => list%GetItem(idx)
+    res => CastAsNumericalSolutionClass(obj)
+    !
+    return
+  end function GetNumericalSolutionFromList
+  
+  
+  
 end module NumericalSolutionModule

@@ -12,45 +12,45 @@ module mf6dll
   integer(c_int), BIND(C, name="MAXSTRLEN") :: MAXSTRLEN = MAXCHARLEN
   !DEC$ ATTRIBUTES DLLEXPORT :: MAXSTRLEN
   
-contains
-    
+  contains    
   
   ! initialize the computational core, assuming to have the configuration 
   ! file 'mfsim.nam' in the working directory
-  function initialize() result(bmi_status) bind(C, name="initialize")
-  !DEC$ ATTRIBUTES DLLEXPORT :: initialize
+  ! TODO_MJR: or do we use the path?
+  function bmi_initialize() result(bmi_status) bind(C, name="initialize")
+  !DEC$ ATTRIBUTES DLLEXPORT :: bmi_initialize
     integer(kind=c_int) :: bmi_status
       
-    call mf6_initialize()
+    call initialize()
     bmi_status = BMI_SUCCESS
     
-  end function initialize
+  end function bmi_initialize
   
   ! perform a time step
-  function update() result(bmi_status) bind(C, name="update")
-  !DEC$ ATTRIBUTES DLLEXPORT :: update
+  function bmi_update() result(bmi_status) bind(C, name="update")
+  !DEC$ ATTRIBUTES DLLEXPORT :: bmi_update
     integer(kind=c_int) :: bmi_status
     ! local
     logical :: hasConverged
     
-    hasConverged = mf6_update()
+    hasConverged = update()
     if (hasConverged) then
       bmi_status = BMI_SUCCESS
     else
       bmi_status = BMI_FAILURE
     end if
     
-  end function update
+  end function bmi_update
      
   ! Perform teardown tasks for the model.
-  function finalize() result(bmi_status) bind(C, name="finalize")
-  !DEC$ ATTRIBUTES DLLEXPORT :: finalize
+  function bmi_finalize() result(bmi_status) bind(C, name="finalize")
+  !DEC$ ATTRIBUTES DLLEXPORT :: bmi_finalize
     integer(kind=c_int) :: bmi_status
     
-    call mf6_finalize()
+    call finalize()
     bmi_status = BMI_SUCCESS
     
-  end function finalize
+  end function bmi_finalize
   
   ! Start time of the model.
   function get_start_time(time) result(bmi_status) bind(C, name="get_start_time")
@@ -187,6 +187,7 @@ contains
     
     ! set the C pointer to the internal array
     x = c_loc(adbl)
+    bmi_status = BMI_SUCCESS
     
   end function get_value_ptr_int
   
@@ -573,6 +574,7 @@ contains
     integer, dimension(:), pointer, contiguous :: iavert_ptr
     character(len=MAXSTRLEN) :: grid_type_f
     integer, dimension(:), pointer, contiguous :: array_ptr
+    ! TODO_MJR: this array will not work for multiple models, or multiple calls
     integer, dimension(:), target, allocatable, save :: array
     
     ! make sure function is only used for unstructured grids
@@ -586,6 +588,7 @@ contains
     model_name = get_model_name(grid_id)
     call mem_setptr(iavert_ptr, "IAVERT", trim(model_name) // " DIS")
     
+    if (allocated(array)) deallocate(array)
     allocate(array(size(iavert_ptr) - 1))
     do i = 2, size(iavert_ptr)
       array(i-1) = iavert_ptr(i) - iavert_ptr(i-1) - 1
