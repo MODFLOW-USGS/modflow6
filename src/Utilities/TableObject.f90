@@ -148,6 +148,15 @@ module TableObjectModule
     ! -- allocate the header and line separator
     call this%allocate_strings(width, nlines)
     !
+    ! -- build final header lines
+    do n = 1, this%ntableterm
+      call this%tableterm(n)%set_header(nlines)
+    end do
+    !
+    ! -- build header
+    
+    
+    !
     ! -- return
     return
   end subroutine set_header
@@ -162,13 +171,34 @@ module TableObjectModule
     ! -- modules
     ! -- dummy
     class(TableObjectType) :: this
-    integer(I4B) :: width
-    integer(I4B) :: nlines
+    integer(I4B), intent(in) :: width
+    integer(I4B), intent(in) :: nlines
     ! -- local
+    character(len=width) :: string
+    character(len=width) :: linesep
     integer(I4B) :: n
 ! ------------------------------------------------------------------------------
     !
+    ! -- initialize variables
+    string = ''
+    linesep = repeat('-', width)
+    !
     ! -- allocate deferred length strings
+    allocate(this%header(nlines+2))
+    allocate(this%linesep)
+    allocate(this%dataline)
+    !
+    ! -- initialize lines
+    this%linesep%string = linesep(1:width)
+    this%dataline%string = string(1:width)
+    do n = 1, nlines+2
+      this%header(n)%string = string(1:width)
+    end do
+    !
+    ! -- fill first and last header line with
+    !    linesep
+    this%header(1)%string = linesep(1:width)
+    this%header(nlines+2)%string = linesep(1:width)
     !
     ! -- return
     return

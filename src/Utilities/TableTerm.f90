@@ -242,9 +242,9 @@ module TableTermModule
     ! -- return
   end subroutine da
   
-  subroutine set_header(this, nsize)
+  subroutine set_header(this, nlines)
 ! ******************************************************************************
-! da -- deallocate table terms
+! set_header -- set final header lines for table term
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -252,17 +252,34 @@ module TableTermModule
     ! -- modules
     ! -- dummy
     class(TableTermType) :: this
-    integer(I4B), intent(in) :: nsize
+    integer(I4B), intent(in) :: nlines
     ! -- local
-    integer(I4B) :: n
+    integer(I4B) :: idiff
+    integer(I4B) :: i0
+    integer(I4B) :: i
+    integer(I4B) :: j
 ! ------------------------------------------------------------------------------
     !
-    ! 
+    ! allocate header_lines 
+    allocate(this%header_lines(nlines))
     !
-    ! -- reinitialize nheader_lines
-    this%nheader_lines = nsize
+    ! -- fill header_lines with initial_lines from
+    !    bottom to top
+    idiff = nlines - this%nheader_lines
+    i0 = 1 - idiff
+    do i = this%nheader_lines, i0, -1 
+      j = i - idiff
+      this%header_lines(i)%string = this%initial_lines(j)%string
+    end do
     !
     ! -- deallocate temporary header lines
+    do i = 1, this%nheader_lines
+      deallocate(this%initial_lines(i)%string)
+    end do
+    deallocate(this%initial_lines)
+    !
+    ! -- reinitialize nheader_lines
+    this%nheader_lines = nlines
     !
     ! -- return
   end subroutine set_header

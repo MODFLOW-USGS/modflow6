@@ -4637,6 +4637,7 @@ contains
     ! -- dummy
     class(SfrType) :: this
     ! -- local
+    character(len=20) :: cellids
     integer(I4B) :: nterms
     integer(I4B) :: i, n, n1, n2
     integer(I4B) :: maxlist, naux
@@ -4645,6 +4646,17 @@ contains
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: text
 ! ------------------------------------------------------------------------------
+    !
+    ! -- set up cellids for the reach stage and budget tables
+    if (this%dis%ndim == 3) then
+      cellids = "'(LAYER,ROW,COLUMN)'"
+    elseif (this%dis%ndim == 2) then
+      cellids = "'(LAYER,CELL2D)'    "
+    else
+      cellids = "'(NODE)'            "
+    end if
+    !
+    ! -- setup stage table
     if (this%iprhed > 0) then
       !
       ! -- Determine the number of sfr budget terms. These are fixed for 
@@ -4681,7 +4693,7 @@ contains
                                                    datatype=TABINTEGER)
       !
       ! -- cellids
-      text = 'CELLIDS'
+      text = 'CELLIDS ' // trim(adjustl(cellids))
       idx = idx + 1
       call this%stagetab%tableterm(idx)%initialize(text,                  &
                                                    20,                    &
