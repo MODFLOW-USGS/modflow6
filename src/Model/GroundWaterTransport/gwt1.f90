@@ -93,7 +93,7 @@ module GwtModule
     procedure :: model_ad                => gwt_ad
     procedure :: model_cf                => gwt_cf
     procedure :: model_fc                => gwt_fc
-    !procedure :: model_cc                => gwt_cc
+    procedure :: model_cc                => gwt_cc
     procedure :: model_cq                => gwt_cq
     procedure :: model_bd                => gwt_bd
     procedure :: model_ot                => gwt_ot
@@ -622,6 +622,40 @@ module GwtModule
     return
   end subroutine gwt_fc
 
+  subroutine gwt_cc(this, kiter, iend, icnvg, hclose, rclose)
+! ******************************************************************************
+! gwt_cc -- GroundWater Transport Model Final Convergence Check
+! Subroutine: (1) calls package cc routines
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(GwtModelType) :: this
+    integer(I4B),intent(in) :: kiter
+    integer(I4B),intent(in) :: iend
+    integer(I4B),intent(inout) :: icnvg
+    real(DP), intent(in) :: hclose
+    real(DP), intent(in) :: rclose
+    ! -- local
+    class(BndType), pointer :: packobj
+    integer(I4B) :: ip
+    ! -- formats
+! ------------------------------------------------------------------------------
+    !
+    ! -- If mover is on, then at least 2 outers required
+    call this%mvt%mvt_cc(kiter, iend, icnvg)
+    !
+    ! -- Call package cc routines
+    !do ip = 1, this%bndlist%Count()
+    !  packobj => GetBndFromList(this%bndlist, ip)
+    !  call packobj%bnd_cc(iend, icnvg, hclose, rclose)
+    !enddo
+    !
+    ! -- return
+    return
+  end subroutine gwt_cc
+  
   subroutine gwt_cq(this, icnvg, isuppress_output)
 ! ******************************************************************************
 ! gwt_cq --Groundwater transport model calculate flow
