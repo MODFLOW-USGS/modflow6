@@ -129,15 +129,19 @@ def get_model(idx, dir):
 
     nlakeconn = 1  # note: this is the number of connectiosn for a lake, not total number of connections
     # pak_data = [lakeno, strt, nlakeconn, CONC, dense, boundname]
-    pak_data = [(0, 1.0, nlakeconn, 0., 1025.)]
+    pak_data = [(0, 1.0, nlakeconn, 0., 1025.),
+                (1, 1.0, nlakeconn, 0., 1025.),]
 
     connlen = connwidth = delr / 2.
     con_data = []
     # con_data=(lakeno,iconn,(cellid),claktype,bedleak,belev,telev,connlen,connwidth )
-    con_data.append(
-        (0, 0, (0, 0, 0), 'VERTICAL', 0., 0, 0, connlen, connwidth))
-    p_data = [(0, 'STATUS', 'CONSTANT'),
+    con_data.append((0, 0, (0, 0, 0), 'VERTICAL', 0., 0, 0, connlen, connwidth))
+    con_data.append((1, 0, (0, 0, ncol - 1), 'VERTICAL', 0., 0, 0, connlen, connwidth))
+    p_data = [
+              (0, 'STATUS', 'CONSTANT'),
               (0, 'STAGE', 1.0),
+              (1, 'STATUS', 'CONSTANT'),
+              (1, 'STAGE', 1.0),
               ]
     # <outletno> <lakein> <lakeout> <couttype> <invert> <width> <rough> <slope>
     outlets = [(0, 0, -1, 'SPECIFIED', 999., 999., 999., 999.)]
@@ -155,7 +159,7 @@ def get_model(idx, dir):
                                           mover=True,
                                           stage_filerecord='stage',
                                           budget_filerecord='lakebud',
-                                          nlakes=1, ntables=0, noutlets=1,
+                                          nlakes=2, ntables=0, noutlets=1,
                                           packagedata=pak_data,
                                           outlets=outlets,
                                           pname='LAK-1',
@@ -242,6 +246,7 @@ def get_model(idx, dir):
     packages = [('lak-1',), ('sfr-1',), ]
     perioddata = [
         ('lak-1', 0, 'sfr-1', 0, 'factor', 1.),
+        ('sfr-1', 6, 'lak-1', 1, 'factor', 1.),
                  ]
     mvr = flopy.mf6.ModflowGwfmvr(gwf, maxmvr=len(perioddata),
                                   budget_filerecord='{}.mvr.bud'.format(name),
@@ -302,7 +307,8 @@ def get_model(idx, dir):
 
 
     # lkt package
-    lktpackagedata = [(0, 0., 99., 999., 'mylake'), ]
+    lktpackagedata = [(0, 0., 99., 999., 'mylake'),
+                      (1, 0., 99., 999., 'mylake2'), ]
     lktperioddata = [(0, 'STATUS', 'CONSTANT'),
                      (0, 'CONCENTRATION', 100.),
                      ]

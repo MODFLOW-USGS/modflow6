@@ -2704,33 +2704,6 @@ module GwtLktModule
       call this%budobj%budterm(idx)%update_term(n1, n1, q)
     end do
     
-    
-    !! -- MOVER
-    !if (this%imover == 1) then
-    !  
-    !  ! -- FROM MOVER
-    !  idx = idx + 1
-    !  call this%budobj%budterm(idx)%reset(this%nlakes)
-    !  do n = 1, this%nlakes
-    !    q = this%pakmvrobj%get_qfrommvr(n)
-    !    call this%budobj%budterm(idx)%update_term(n, n, q)
-    !  end do
-    !  
-    !  
-    !  ! -- TO MOVER
-    !  idx = idx + 1
-    !  call this%budobj%budterm(idx)%reset(this%noutlets)
-    !  do n = 1, this%noutlets
-    !    q = this%pakmvrobj%get_qtomvr(n)
-    !    if (q > DZERO) then
-    !      q = -q
-    !    end if
-    !    call this%budobj%budterm(idx)%update_term(n, n, q)
-    !  end do
-    !  
-    !end if
-    
-    
     ! -- AUXILIARY VARIABLES
     naux = this%naux
     if (naux > 0) then

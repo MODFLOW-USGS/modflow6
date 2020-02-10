@@ -875,13 +875,13 @@ module GwtSftModule
     real(DP) :: hcofval
 ! ------------------------------------------------------------------------------
     !
-    ! -- Add coefficients for SFT and GWF connections (qbnd positive into reach)
+    ! -- Add coefficients for change in reach volume
     do n = 1, this%nstrm
       cold  = this%xoldpak(n)
       iloc = this%idxlocnode(n)
       iposd = this%idxpakdiag(n)
       !
-      ! -- mass storage in lak
+      ! -- mass storage in sfr
       call this%get_volumes(n, v1, v0, delt)
       amatsln(iposd) = amatsln(iposd) - v1 / delt
       rhs(iloc) = rhs(iloc) - cold * v0 / delt
@@ -2817,8 +2817,8 @@ module GwtSftModule
     qbnd = this%sfrbudptr%budterm(this%idxbudtmvr)%flow(ientry)
     ctmp = this%xnewpak(n1)
     if (present(rrate)) rrate = ctmp * qbnd
-    if (present(rhsval)) rhsval = -rrate
-    if (present(hcofval)) hcofval = DZERO
+    if (present(rhsval)) rhsval = DZERO
+    if (present(hcofval)) hcofval = qbnd
     !
     ! -- return
     return
