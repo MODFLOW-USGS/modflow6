@@ -15,6 +15,7 @@ module GwtMvtModule
     type(GwtFmiType), pointer                          :: fmi => null()         ! pointer to fmi object
   contains
     procedure :: mvt_fc
+    procedure :: mvt_cc
     procedure :: mvt_da
   end type GwtMvtType
 
@@ -110,12 +111,19 @@ module GwtMvtModule
             q = this%fmi%mvrbudobj%budterm(i)%flow(n)
             !
             ! -- concentration of the provider
-            cp = this%fmi%datp(ipr)%concpack(id1)
+            cp = DZERO
+            if (this%fmi%iatp(ipr) /= 0) then
+              cp = this%fmi%datp(ipr)%concpack(id1)
+            else
+              ! check for aux?
+            end if
             !
             ! -- add the mover rate times the provider concentration into the receiver
             !    make sure these are accumulated since multiple providers can move
             !    water into the same receiver
-            this%fmi%datp(irc)%qmfrommvr(id2) = this%fmi%datp(irc)%qmfrommvr(id2) - q * cp
+            if (this%fmi%iatp(irc) /= 0) then
+              this%fmi%datp(irc)%qmfrommvr(id2) = this%fmi%datp(irc)%qmfrommvr(id2) - q * cp
+            end if
           end do
         end if
       end do
@@ -125,6 +133,37 @@ module GwtMvtModule
     ! -- Return
     return
   end subroutine mvt_fc
+
+  subroutine mvt_cc(this, kiter, iend, icnvg)
+! ******************************************************************************
+! mvt_cc -- extra convergence check for mover
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(GwtMvtType) :: this
+    integer(I4B),intent(in) :: kiter
+    integer(I4B),intent(in) :: iend
+    integer(I4B),intent(inout) :: icnvg
+    ! -- local
+    ! -- formats
+    character(len=*),parameter :: fmtmvrcnvg = &
+      "(/,1x,'MOVER PACKAGE REQUIRES AT LEAST TWO OUTER ITERATIONS. CONVERGE &
+      &FLAG HAS BEEN RESET TO FALSE.')"
+! ------------------------------------------------------------------------------
+    !
+    ! -- If there are active movers, then at least 2 outers required
+    if (associated(this%fmi%mvrbudobj)) then
+      if (icnvg == 1 .and. kiter == 1) then
+        icnvg = 0
+        write(this%iout, fmtmvrcnvg)
+      endif
+    endif
+    !
+    ! -- return
+    return
+  end subroutine mvt_cc
   
   subroutine mvt_bd()
     ! -- todo: this needs to be added here.  Should create a new budget object?
