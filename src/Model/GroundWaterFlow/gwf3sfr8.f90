@@ -4693,7 +4693,7 @@ contains
                                                    datatype=TABINTEGER)
       !
       ! -- cellids
-      text = 'CELLIDS ' // trim(adjustl(cellids))
+      text = 'REACH CELLIDS ' // trim(adjustl(cellids))
       idx = idx + 1
       call this%stagetab%tableterm(idx)%initialize(text,                  &
                                                    20,                    &

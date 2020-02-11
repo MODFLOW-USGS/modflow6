@@ -267,9 +267,9 @@ module TableTermModule
     !    bottom to top
     idiff = nlines - this%nheader_lines
     i0 = 1 - idiff
-    do i = this%nheader_lines, i0, -1 
-      j = i - idiff
-      this%header_lines(i)%string = this%initial_lines(j)%string
+    do i = this%nheader_lines, 1, -1 
+      j = i + idiff
+      this%header_lines(j)%string = this%initial_lines(i)%string
     end do
     !
     ! -- deallocate temporary header lines
