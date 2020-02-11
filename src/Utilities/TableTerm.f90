@@ -35,8 +35,10 @@ module TableTermModule
     procedure :: initialize
     procedure, private :: allocate_scalars
     procedure :: get_width
+    procedure :: get_alignment
     procedure :: get_header_lines
     procedure :: set_header
+    procedure :: get_header
     procedure :: reset
     procedure :: update_term
     procedure :: da
@@ -163,6 +165,26 @@ module TableTermModule
     return
   end function get_width
   
+  function get_alignment(this)
+! ******************************************************************************
+! get_width -- get column width 
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- return variable
+    integer(I4B) :: get_alignment
+    ! -- modules
+    ! -- dummy
+    class(TableTermType) :: this
+    ! -- local
+! ------------------------------------------------------------------------------
+    get_alignment = this%alignment
+    !
+    ! -- return
+    return
+  end function get_alignment 
+  
   function get_header_lines(this)
 ! ******************************************************************************
 ! get_header_lines -- get the number of lines in initial_lines
@@ -254,14 +276,23 @@ module TableTermModule
     class(TableTermType) :: this
     integer(I4B), intent(in) :: nlines
     ! -- local
+    character(len=this%width) :: string
     integer(I4B) :: idiff
     integer(I4B) :: i0
     integer(I4B) :: i
     integer(I4B) :: j
 ! ------------------------------------------------------------------------------
     !
+    ! -- initialize variables
+    string = ' '
+    !
     ! allocate header_lines 
     allocate(this%header_lines(nlines))
+    !
+    ! -- initialize header lines
+    do i = 1, nlines
+      this%header_lines(i)%string = string
+    end do
     !
     ! -- fill header_lines with initial_lines from
     !    bottom to top
@@ -284,6 +315,27 @@ module TableTermModule
     ! -- return
   end subroutine set_header
   
+  subroutine get_header(this, iline, cval)
+! ******************************************************************************
+! get_header -- get header entry for table term iline
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(TableTermType) :: this
+    integer(I4B), intent(in) :: iline
+    character(len=*), intent(inout) :: cval
+    ! -- return variable
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    ! -- set return value
+    cval = this%header_lines(iline)%string(1:this%width)
+    !
+    ! -- return
+  end subroutine get_header  
   
   
   subroutine reset(this, nlist)

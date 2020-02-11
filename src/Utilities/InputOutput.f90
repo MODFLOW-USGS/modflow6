@@ -669,7 +669,7 @@ module InputOutputModule
         end if
       end if
 
-      istop = ICOL + ILEN
+      istop = ICOL + ILEN - 1
 
       select case(NCODE)
         case(TABSTRING, TABUCSTRING)
@@ -680,7 +680,7 @@ module InputOutputModule
           write(LINE(ICOL:istop), cfmt) R
       end select
 
-      ICOL = istop
+      ICOL = istop + 1
 
       if (present(SEP)) then
         i = len(SEP)
@@ -688,6 +688,7 @@ module InputOutputModule
         write(LINE(ICOL:istop), '(A)') SEP
         ICOL = istop
       end if
+      
 !
 !------return.
       return

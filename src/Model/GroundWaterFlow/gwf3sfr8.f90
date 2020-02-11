@@ -17,7 +17,7 @@ module SfrModule
                               sCubicSaturation, sChSmooth
   use BndModule, only: BndType
   use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr
-  use TableObjectModule, only: TableObjectType, tableobject_cr
+  use TableModule, only: TableType, table_cr
   use ObserveModule, only: ObserveType
   use ObsModule, only: ObsType
   use InputOutputModule, only: get_node, URWORD, extract_idnum_or_bndname
@@ -108,9 +108,9 @@ module SfrModule
     type(sparsematrix), pointer :: sparse => null()
     !
     ! -- sfr table objects
-    type(TableObjectType), pointer :: inputtab => null()
-    type(TableObjectType), pointer :: stagetab => null()
-    type(TableObjectType), pointer :: flowtab => null()
+    type(TableType), pointer :: inputtab => null()
+    type(TableType), pointer :: stagetab => null()
+    type(TableType), pointer :: flowtab => null()
     !
     ! -- moved from SfrDataType
     integer(I4B), dimension(:), pointer, contiguous :: iboundpak => null()
@@ -4670,8 +4670,8 @@ contains
       title = 'SFR (' // trim(this%name) // ') STAGE'
       !
       ! -- set up stage tableobj
-      call tableobject_cr(this%stagetab, this%name, title, transient=.TRUE.)
-      call this%stagetab%tableobject_df(this%maxbound, nterms)
+      call table_cr(this%stagetab, this%name, title, this%iout)
+      call this%stagetab%table_df(this%maxbound, nterms)
       idx = 0
       !
       ! -- Go through and set up table budget term
@@ -4749,8 +4749,11 @@ contains
                                                    datatype=TABREAL)
       
       !
-      ! -- build header
+      ! -- build table header
       call this%stagetab%set_header()
+      
+      call this%stagetab%write_line()
+      call this%stagetab%finalize_table()
       
     end if
     
