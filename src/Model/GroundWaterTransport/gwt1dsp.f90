@@ -286,6 +286,9 @@ module GwtDspModule
         nodeloop: do n = 1, this%dis%nodes
           do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
             fd = abs(this%gwfflowjaold(ipos) - this%fmi%gwfflowja(ipos))
+            !
+            ! -- todo: this check is not robust.  Should find a better way
+            !    to determine if flow has changed.
             if(fd > 1.D-8) then
               iflwchng = 1
               exit nodeloop
