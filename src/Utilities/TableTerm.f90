@@ -10,7 +10,6 @@ module TableTermModule
                               TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
   use BaseDisModule, only: DisBaseType
   use InputOutputModule, only: ubdsv06, UPCASE, parseline
-  use DeferredStringModule, only: deferred_string_type
 
   implicit none
 
@@ -25,8 +24,6 @@ module TableTermModule
     integer(I4B), pointer :: nheader_lines => null()
     integer(I4B), pointer :: nlist => null()
     
-    !type(deferred_string_type), dimension(:), pointer :: initial_lines => null()
-    !type(deferred_string_type), dimension(:), pointer :: header_lines => null()
     character(len=LINELENGTH), dimension(:), pointer :: initial_lines => null()
     character(len=LINELENGTH), dimension(:), pointer :: header_lines => null()
     
@@ -41,9 +38,8 @@ module TableTermModule
     procedure :: get_header_lines
     procedure :: set_header
     procedure :: get_header
-    procedure :: reset
-    procedure :: update_term
     procedure :: da
+    
     
   end type TableTermType
 
@@ -247,13 +243,8 @@ module TableTermModule
     ! -- dummy
     class(TableTermType) :: this
     ! -- local
-    integer(I4B) :: n
+    !integer(I4B) :: n
 ! ------------------------------------------------------------------------------
-    !
-    ! -- deallocate deferred character arrays
-    !do n = 1, this%nheader_lines
-    !  deallocate(this%header_lines(n)%string)
-    !end do
     !
     ! -- deallocate scalars 
     deallocate(this%tag)
@@ -294,7 +285,6 @@ module TableTermModule
     !
     ! -- initialize header lines
     do i = 1, nlines
-      !this%header_lines(i)%string = string
       this%header_lines(i) = string
     end do
     !
@@ -304,14 +294,10 @@ module TableTermModule
     i0 = 1 - idiff
     do i = this%nheader_lines, 1, -1 
       j = i + idiff
-      !this%header_lines(j)%string = this%initial_lines(i)%string
       this%header_lines(j) = this%initial_lines(i)
     end do
     !
     ! -- deallocate temporary header lines
-    !do i = 1, this%nheader_lines
-    !  deallocate(this%initial_lines(i)%string)
-    !end do
     deallocate(this%initial_lines)
     !
     ! -- reinitialize nheader_lines
@@ -337,50 +323,9 @@ module TableTermModule
 ! ------------------------------------------------------------------------------
     !
     ! -- set return value
-    !cval = this%header_lines(iline)%string(1:this%width)
     cval = this%header_lines(iline)(1:this%width)
     !
     ! -- return
   end subroutine get_header  
-  
-  
-  subroutine reset(this, nlist)
-! ******************************************************************************
-! reset -- reset the table term and counter so terms can be updated
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    ! -- dummy
-    class(TableTermType) :: this
-    integer(I4B), intent(in) :: nlist
-! ------------------------------------------------------------------------------
-    this%nlist = nlist
-    this%icounter = 1
-  end subroutine reset
-  
-  subroutine update_term(this, id1, id2, flow, auxvar)
-! ******************************************************************************
-! update_term -- replace the terms in position this%icounter 
-!   for id1, id2, flow, and aux
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    ! -- dummy
-    class(TableTermType) :: this
-    integer(I4B), intent(in) :: id1
-    integer(I4B), intent(in) :: id2
-    real(DP), intent(in) :: flow
-    real(DP), dimension(:), intent(in), optional :: auxvar
-! ------------------------------------------------------------------------------
-    !this%id1(this%icounter) = id1
-    !this%id2(this%icounter) = id2
-    !this%flow(this%icounter) = flow
-    !this%icounter = this%icounter + 1
-  end subroutine update_term
-  
   
 end module TableTermModule
