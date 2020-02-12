@@ -396,29 +396,30 @@ module GwtSsmModule
           n = this%fmi%gwfpackages(ip)%nodelist(i)
           rrate = DZERO
           !
-          ! -- skip if transport cell is inactive or constant concentration
-          if (this%ibound(n) <= 0) cycle
-          !
-          ! -- Calculate the volumetric flow rate
-          qbnd = this%fmi%gwfpackages(ip)%get_flow(i)
-          !
-          ! -- get the first auxiliary variable
-          iauxpos = this%iauxpak(ip)
-          if(iauxpos > 0) then
-            cbnd = this%fmi%gwfpackages(ip)%auxvar(iauxpos, i)
-          else
-            cbnd = DZERO
-          endif
-          !
-          ! -- Add terms based on qbnd sign
-          if(qbnd <= DZERO) then
-            ctmp = this%cnew(n)
-          else
-            ctmp = cbnd
-          endif
-          !
-          ! -- Rate is now a mass flux
-          rrate = qbnd * ctmp
+          ! -- skip calc if transport cell is inactive or constant concentration
+          if (this%ibound(n) > 0) then
+            !
+            ! -- Calculate the volumetric flow rate
+            qbnd = this%fmi%gwfpackages(ip)%get_flow(i)
+            !
+            ! -- get the first auxiliary variable
+            iauxpos = this%iauxpak(ip)
+            if(iauxpos > 0) then
+              cbnd = this%fmi%gwfpackages(ip)%auxvar(iauxpos, i)
+            else
+              cbnd = DZERO
+            endif
+            !
+            ! -- Add terms based on qbnd sign
+            if(qbnd <= DZERO) then
+              ctmp = this%cnew(n)
+            else
+              ctmp = cbnd
+            endif
+            !
+            ! -- Rate is now a mass flux
+            rrate = qbnd * ctmp
+          end if
           !
           ! -- Print the individual rates if the budget is being printed
           !    and PRINT_FLOWS was specified (this%iprflow<0)

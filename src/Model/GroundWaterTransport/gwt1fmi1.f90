@@ -218,7 +218,8 @@ module GwtFmiModule
     real(DP) :: crewet, tflow, flownm
     character (len=15) :: nodestr
     character(len=*), parameter :: fmtdry = &
-     &"(/1X,'WARNING: DRY CELL ENCOUNTERED AT ',a,';  RESET AS INACTIVE')"
+     &"(/1X,'WARNING: DRY CELL ENCOUNTERED AT ',a,';  RESET AS INACTIVE &
+     &WITH DRY CONCENTRATION = ', G13.5)"
     character(len=*), parameter :: fmtrewet = &
      &"(/1X,'DRY CELL REACTIVATED AT ', a,&
      &' WITH STARTING CONCENTRATION =',G13.5)"
@@ -244,7 +245,7 @@ module GwtFmiModule
           this%ibound(n) = 0
           cnew(n) = DHDRY
           call this%dis%noder_to_string(n, nodestr)
-          write(this%iout, fmtdry) trim(nodestr)
+          write(this%iout, fmtdry) trim(nodestr), DHDRY
         endif
       endif
       !
