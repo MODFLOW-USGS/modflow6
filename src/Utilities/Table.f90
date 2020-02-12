@@ -37,9 +37,12 @@ module TableModule
     ! -- table table object, for writing the typical MODFLOW table
     type(TableType), pointer :: table => null()
     
-    type(deferred_string_type), pointer :: linesep => null()
-    type(deferred_string_type), pointer :: dataline => null()
-    type(deferred_string_type), dimension(:), pointer :: header => null()
+    !type(deferred_string_type), pointer :: linesep => null()
+    !type(deferred_string_type), pointer :: dataline => null()
+    !type(deferred_string_type), dimension(:), pointer :: header => null()
+    character(len=LINELENGTH), pointer :: linesep => null()
+    character(len=LINELENGTH), pointer :: dataline => null()
+    character(len=LINELENGTH), dimension(:), pointer :: header => null()
 
     
   contains
@@ -164,10 +167,14 @@ module TableModule
         alignment = this%tableterm(j)%get_alignment()
         call this%tableterm(j)%get_header(n, cval)
         if (j == this%ntableterm) then
-          call UWWORD(this%header(n+1)%string, iloc, width, TABUCSTRING,         &
+          call UWWORD(this%header(n+1), iloc, width, TABUCSTRING,                &
                       cval(1:width), ival, rval, ALIGNMENT=alignment)
+          !call UWWORD(this%header(n+1)%string, iloc, width, TABUCSTRING,         &
+          !            cval(1:width), ival, rval, ALIGNMENT=alignment)
         else
-          call UWWORD(this%header(n+1)%string, iloc, width, TABUCSTRING,         &
+          !call UWWORD(this%header(n+1)%string, iloc, width, TABUCSTRING,         &
+          !            cval(1:width), ival, rval, ALIGNMENT=alignment, SEP=' ')
+          call UWWORD(this%header(n+1), iloc, width, TABUCSTRING,                &
                       cval(1:width), ival, rval, ALIGNMENT=alignment, SEP=' ')
         end if
       end do
@@ -207,18 +214,30 @@ module TableModule
     allocate(this%header(this%nheaderlines))
     allocate(this%linesep)
     allocate(this%dataline)
+    !!
+    !! -- initialize lines
+    !this%linesep%string = linesep(1:width)
+    !this%dataline%string = string(1:width)
+    !do n = 1, this%nheaderlines
+    !  this%header(n)%string = string(1:width)
+    !end do
+    !!
+    !! -- fill first and last header line with
+    !!    linesep
+    !this%header(1)%string = linesep(1:width)
+    !this%header(nlines+2)%string = linesep(1:width)
     !
     ! -- initialize lines
-    this%linesep%string = linesep(1:width)
-    this%dataline%string = string(1:width)
+    this%linesep = linesep(1:width)
+    this%dataline = string(1:width)
     do n = 1, this%nheaderlines
-      this%header(n)%string = string(1:width)
+      this%header(n) = string(1:width)
     end do
     !
     ! -- fill first and last header line with
     !    linesep
-    this%header(1)%string = linesep(1:width)
-    this%header(nlines+2)%string = linesep(1:width)
+    this%header(1) = linesep(1:width)
+    this%header(nlines+2) = linesep(1:width)
     !
     ! -- return
     return
@@ -278,7 +297,8 @@ module TableModule
     ! -- write the table header
     write(this%iout, '(1x,a)') trim(adjustl(title))
     do n = 1, this%nheaderlines
-      write(this%iout, '(1x,a)') this%header(n)%string(1:width)
+      !write(this%iout, '(1x,a)') this%header(n)%string(1:width)
+      write(this%iout, '(1x,a)') this%header(n)(1:width)
     end do
     this%first_entry = .FALSE.
     !
@@ -304,7 +324,8 @@ module TableModule
     width = this%nlinewidth
     !
     ! -- write the final table seperator
-    write(this%iout, '(1x,a,/)') this%linesep%string(1:width)
+    !write(this%iout, '(1x,a,/)') this%linesep%string(1:width)
+    write(this%iout, '(1x,a,/)') this%linesep(1:width)
     !
     ! -- reset first entry
     this%first_entry = .TRUE.

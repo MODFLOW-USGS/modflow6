@@ -25,8 +25,10 @@ module TableTermModule
     integer(I4B), pointer :: nheader_lines => null()
     integer(I4B), pointer :: nlist => null()
     
-    type(deferred_string_type), dimension(:), pointer :: initial_lines => null()
-    type(deferred_string_type), dimension(:), pointer :: header_lines => null()
+    !type(deferred_string_type), dimension(:), pointer :: initial_lines => null()
+    !type(deferred_string_type), dimension(:), pointer :: header_lines => null()
+    character(len=LINELENGTH), dimension(:), pointer :: initial_lines => null()
+    character(len=LINELENGTH), dimension(:), pointer :: header_lines => null()
     
     integer(I4B), pointer :: icounter => null() ! counter variable
   
@@ -134,7 +136,8 @@ module TableTermModule
     ! allocate initial_lines and fill with words
     allocate(this%initial_lines(this%nheader_lines))
     do i = 1, this%nheader_lines 
-      this%initial_lines(i)%string = words(i)(1:width)
+      !this%initial_lines(i)%string = words(i)(1:width)
+      this%initial_lines(i) = words(i)(1:width)
     end do
     !
     ! -- deallocate words
@@ -248,9 +251,9 @@ module TableTermModule
 ! ------------------------------------------------------------------------------
     !
     ! -- deallocate deferred character arrays
-    do n = 1, this%nheader_lines
-      deallocate(this%header_lines(n)%string)
-    end do
+    !do n = 1, this%nheader_lines
+    !  deallocate(this%header_lines(n)%string)
+    !end do
     !
     ! -- deallocate scalars 
     deallocate(this%tag)
@@ -291,7 +294,8 @@ module TableTermModule
     !
     ! -- initialize header lines
     do i = 1, nlines
-      this%header_lines(i)%string = string
+      !this%header_lines(i)%string = string
+      this%header_lines(i) = string
     end do
     !
     ! -- fill header_lines with initial_lines from
@@ -300,13 +304,14 @@ module TableTermModule
     i0 = 1 - idiff
     do i = this%nheader_lines, 1, -1 
       j = i + idiff
-      this%header_lines(j)%string = this%initial_lines(i)%string
+      !this%header_lines(j)%string = this%initial_lines(i)%string
+      this%header_lines(j) = this%initial_lines(i)
     end do
     !
     ! -- deallocate temporary header lines
-    do i = 1, this%nheader_lines
-      deallocate(this%initial_lines(i)%string)
-    end do
+    !do i = 1, this%nheader_lines
+    !  deallocate(this%initial_lines(i)%string)
+    !end do
     deallocate(this%initial_lines)
     !
     ! -- reinitialize nheader_lines
@@ -332,7 +337,8 @@ module TableTermModule
 ! ------------------------------------------------------------------------------
     !
     ! -- set return value
-    cval = this%header_lines(iline)%string(1:this%width)
+    !cval = this%header_lines(iline)%string(1:this%width)
+    cval = this%header_lines(iline)(1:this%width)
     !
     ! -- return
   end subroutine get_header  
