@@ -8,8 +8,8 @@ module TableModule
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
   use TableTermModule, only: TableTermType
   use BaseDisModule, only: DisBaseType
-  use DeferredStringModule, only: deferred_string_type
   use InputOutputModule, only: UWWORD
+  use SimModule, only: count_errors, store_error, store_error_unit, ustop
 
   
   implicit none
@@ -55,6 +55,7 @@ module TableModule
     procedure :: write_header   ! make private
     procedure :: write_line     ! make private
     procedure :: finalize_table ! make private
+    procedure, private :: add_error
     
     generic, public :: add_term => add_integer, add_real, add_string
     procedure, private :: add_integer, add_real, add_string    
@@ -145,6 +146,7 @@ module TableModule
     integer(I4B), intent(in) :: alignment
     integer(I4B), intent(in) :: datatype
     ! -- local
+    character (len=LINELENGTH) :: errmsg
     integer(I4B) :: idx
 ! ------------------------------------------------------------------------------
     !
@@ -154,10 +156,18 @@ module TableModule
     !
     ! -- check that ientry is in bounds
     if (this%ientry > this%ntableterm) then
-      call this%tableterm(idx)%initialize(text, width,                           &
-                                          alignment=alignment,                   &
-                                          datatype=datatype)      
+      write(errmsg,'(4x,a,a,a,i0,a,1x,a,1x,a,a,a,1x,i0,1x,a)')                   &
+        '****ERROR. TRYING TO ADD COLUMN "', trim(adjustl(text)), '" (',         &
+        this%ientry, ') IN THE', trim(adjustl(this%name)), 'TABLE ("',           &
+        trim(adjustl(this%title)), '") THAT ONLY HAS', this%ntableterm, 'COLUMNS'
+      call store_error(errmsg)
+      call ustop()
     end if
+    !
+    ! -- initialize table term
+    call this%tableterm(idx)%initialize(text, width,                             &
+                                        alignment=alignment,                     &
+                                        datatype=datatype)      
     !
     ! -- create header when all terms have been specified
     if (this%ientry == this%ntableterm) then
@@ -228,9 +238,6 @@ module TableModule
         end if
       end do
     end do
-    !
-    ! -- reset column count
-    this%ientry = 0
     !
     ! -- return
     return
@@ -314,7 +321,7 @@ module TableModule
       if (present(kstp)) then
         write(title, '(a,a,i8)') trim(adjustl(title)), '   STEP ', kstp
       end if
-      write(this%iout, '(1x,a)') trim(adjustl(title))
+      write(this%iout, '(/,1x,a)') trim(adjustl(title))
       !
       ! -- write header
       do n = 1, this%nheaderlines
@@ -324,6 +331,7 @@ module TableModule
     !
     ! -- reinitialize variables
     this%first_entry = .FALSE.
+    this%ientry = 0
     this%icount = 0
     !
     ! -- return
@@ -424,6 +432,34 @@ module TableModule
     return
   end subroutine table_da
   
+  subroutine add_error(this)
+! ******************************************************************************
+! add_error -- evaluate if error condition occurs when adding data to dataline
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(TableType) :: this
+    ! -- local
+    character (len=LINELENGTH) :: errmsg
+! ------------------------------------------------------------------------------
+    !
+    ! -- check that ientry is within bounds
+    if (this%ientry > this%ntableterm) then
+      write(errmsg,'(4x,a,1x,i0,5(1x,a),1x,i0,1x,a)')                            &
+        '****ERROR. TRYING TO ADD DATA TO COLUMN ', this%ientry, 'IN THE',       &
+        trim(adjustl(this%name)), 'TABLE (', trim(adjustl(this%title)),          &
+        ') THAT ONLY HAS', this%ntableterm, 'COLUMNS'
+      call store_error(errmsg)
+      call ustop()
+    end if
+    !
+    ! -- Return
+    return
+  end subroutine add_error
+  
   subroutine add_integer(this, ival)
 ! ******************************************************************************
 ! add_integer -- add integer value to the dataline
@@ -435,7 +471,7 @@ module TableModule
     ! -- dummy
     class(TableType) :: this
     integer(I4B), intent(in) :: ival
-    ! -- dummy
+    ! -- local
     logical :: line_end
     character(len=LINELENGTH) :: cval
     real(DP) :: rval
@@ -446,6 +482,9 @@ module TableModule
     !
     ! -- update index for tableterm
     this%ientry = this%ientry + 1
+    !
+    ! -- check that ientry is within bounds
+    call this%add_error()
     !
     ! -- initialize local variables
     j = this%ientry
@@ -486,7 +525,7 @@ module TableModule
     ! -- dummy
     class(TableType) :: this
     real(DP), intent(in) :: rval
-    ! -- dummy
+    ! -- local
     logical :: line_end
     character(len=LINELENGTH) :: cval
     integer(I4B) :: ival
@@ -497,6 +536,9 @@ module TableModule
     !
     ! -- update index for tableterm
     this%ientry = this%ientry + 1
+    !
+    ! -- check that ientry is within bounds
+    call this%add_error()
     !
     ! -- initialize local variables
     j = this%ientry
@@ -537,7 +579,7 @@ module TableModule
     ! -- dummy
     class(TableType) :: this
     character(len=*) :: cval
-    ! -- dummy
+    ! -- local
     logical :: line_end
     integer(I4B) :: j
     integer(I4B) :: ival
@@ -548,6 +590,9 @@ module TableModule
     !
     ! -- update index for tableterm
     this%ientry = this%ientry + 1
+    !
+    ! -- check that ientry is within bounds
+    call this%add_error()
     !
     ! -- initialize local variables
     j = this%ientry

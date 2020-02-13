@@ -4667,7 +4667,7 @@ contains
       if (this%inamedbound == 1) nterms = nterms + 1
       !
       ! -- set up table title
-      title = 'SFR (' // trim(this%name) // ') STAGE'
+      title = 'SFR (' // trim(this%name) // ') REACH STAGE'
       !
       ! -- set up stage tableobj
       call table_cr(this%stagetab, this%name, title)
@@ -4677,98 +4677,49 @@ contains
       ! -- Go through and set up table budget term
       if (this%inamedbound == 1) then
         text = 'NAME'
-        idx = idx + 1
-        !call this%stagetab%tableterm(idx)%initialize(text,                &
-        !                                             20,                  &
-        !                                             alignment=TABLEFT,   &
-        !                                             datatype=TABUCSTRING)
         call this%stagetab%initialize_column(text, 20, alignment=TABLEFT,  &
                                              datatype=TABUCSTRING)
       end if
       !
       ! -- reach number
-      text = 'REACH NUMBER'
-      idx = idx + 1
-      !call this%stagetab%tableterm(idx)%initialize(text,                  &
-      !                                             6,                     &
-      !                                             alignment=TABCENTER,   &
-      !                                             datatype=TABINTEGER)
+      text = 'NUMBER'
       call this%stagetab%initialize_column(text, 6, alignment=TABCENTER,  &
                                            datatype=TABINTEGER)
       !
       ! -- cellids
-      text = 'REACH CELLIDS ' // trim(adjustl(cellids))
-      idx = idx + 1
-      !call this%stagetab%tableterm(idx)%initialize(text,                  &
-      !                                             20,                    &
-      !                                             alignment=TABLEFT,     &
-      !                                             datatype=TABUCSTRING)
+      text = 'CELLIDS ' // trim(adjustl(cellids))
       call this%stagetab%initialize_column(text, 20, alignment=TABLEFT,   &
                                            datatype=TABUCSTRING)
       !
       ! -- reach stage
-      text = 'REACH STAGE'
-      idx = idx + 1
-      !call this%stagetab%tableterm(idx)%initialize(text,                  &
-      !                                             11,                    &
-      !                                             alignment=TABCENTER,   &
-      !                                             datatype=TABREAL)
+      text = 'STAGE'
       call this%stagetab%initialize_column(text, 11, alignment=TABCENTER, &
                                            datatype=TABREAL)
       !
       ! -- reach depth
-      text = 'REACH DEPTH'
-      idx = idx + 1
-      !call this%stagetab%tableterm(idx)%initialize(text,                  &
-      !                                             11,                    &
-      !                                             alignment=TABCENTER,   &
-      !                                             datatype=TABREAL)
+      text = 'DEPTH'
       call this%stagetab%initialize_column(text, 11, alignment=TABCENTER, &
                                            datatype=TABREAL)
       !
       ! -- reach width
-      text = 'REACH WIDTH'
-      idx = idx + 1
-      !call this%stagetab%tableterm(idx)%initialize(text,                  &
-      !                                             11,                    &
-      !                                             alignment=TABCENTER,   &
-      !                                             datatype=TABREAL)
+      text = 'WIDTH'
       call this%stagetab%initialize_column(text, 11, alignment=TABCENTER, &
                                            datatype=TABREAL)
       !
       ! -- gwf head
       text = 'GWF HEAD'
-      idx = idx + 1
-      !call this%stagetab%tableterm(idx)%initialize(text,                  &
-      !                                             11,                    &
-      !                                             alignment=TABCENTER,   &
-      !                                             datatype=TABREAL)
       call this%stagetab%initialize_column(text, 11, alignment=TABCENTER, &
                                            datatype=TABREAL)
       !
       ! -- streambed conductance
       text = 'STREAMBED CONDUCTANCE'
-      idx = idx + 1
-      !call this%stagetab%tableterm(idx)%initialize(text,                  &
-      !                                             11,                    &
-      !                                             alignment=TABCENTER,   &
-      !                                             datatype=TABREAL)
       call this%stagetab%initialize_column(text, 11, alignment=TABCENTER, &
                                            datatype=TABREAL)
       !
       ! -- streambed gradient
       text = 'STREAMBED GRADIENT'
-      idx = idx + 1
-      !call this%stagetab%tableterm(idx)%initialize(text,                  &
-      !                                             11,                    &
-      !                                             alignment=TABCENTER,   &
-      !                                             datatype=TABREAL)
       call this%stagetab%initialize_column(text, 11, alignment=TABCENTER, &
                                            datatype=TABREAL)
-      
-      !!
-      !! -- build table header
-      !call this%stagetab%set_header()
       !
       ! -- test 
       call this%stagetab%write_header(kper=0, kstp=0)
