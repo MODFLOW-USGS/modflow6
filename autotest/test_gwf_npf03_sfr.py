@@ -254,6 +254,8 @@ def get_model(idx, dir):
                     999.]]
             perioddata = [[0, 'RATE', -1e-5]]
             maw = flopy.mf6.ModflowGwfmaw(gwf, print_input=True,
+                                          print_head=True,
+                                          print_flows=True,
                                           nmawwells=len(mpd),
                                           packagedata=mpd,
                                           connectiondata=mcd,

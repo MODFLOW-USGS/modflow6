@@ -7,9 +7,9 @@ module TableModule
   use ConstantsModule, only: LINELENGTH, LENBUDTXT,                              &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
   use TableTermModule, only: TableTermType
-  use BaseDisModule, only: DisBaseType
+  !use BaseDisModule, only: DisBaseType
   use InputOutputModule, only: UWWORD
-  use SimModule, only: count_errors, store_error, store_error_unit, ustop
+  use SimModule, only: store_error, ustop
   use TdisModule, only: kstp, kper
   
   implicit none
@@ -82,6 +82,13 @@ module TableModule
     ! -- local
 ! ------------------------------------------------------------------------------
     !
+    ! -- check if table already associated and reset if necessary
+    if (associated(this)) then
+      call this%table_da()
+      deallocate(this)
+      nullify(this)
+    end if
+    !
     ! -- Create the object
     allocate(this)
     !
@@ -141,7 +148,7 @@ module TableModule
     return
   end subroutine table_df
   
-  subroutine initialize_column(this, text, width, alignment, datatype)
+  subroutine initialize_column(this, text, width, alignment)
 ! ******************************************************************************
 ! initialize_column -- Initialize data for a column
 ! ******************************************************************************
@@ -154,7 +161,6 @@ module TableModule
     character(len=*), intent(in) :: text
     integer(I4B), intent(in) :: width
     integer(I4B), intent(in) :: alignment
-    integer(I4B), intent(in) :: datatype
     ! -- local
     character (len=LINELENGTH) :: errmsg
     integer(I4B) :: idx
@@ -175,9 +181,7 @@ module TableModule
     end if
     !
     ! -- initialize table term
-    call this%tableterm(idx)%initialize(text, width,                             &
-                                        alignment=alignment,                     &
-                                        datatype=datatype)      
+    call this%tableterm(idx)%initialize(text, width, alignment=alignment)      
     !
     ! -- create header when all terms have been specified
     if (this%ientry == this%ntableterm) then
@@ -423,7 +427,16 @@ module TableModule
     integer(I4B) :: i
 ! ------------------------------------------------------------------------------
     !
+    ! -- deallocate each table term
+    do i = 1, this%ntableterm
+      call this%tableterm(i)%da()
+    end do
+    !
+    ! -- deallocate space for tableterm
+    deallocate(this%tableterm)
+    !
     ! -- deallocate scalars
+    deallocate(this%transient)
     deallocate(this%first_entry)
     deallocate(this%iout)
     deallocate(this%maxbound)
@@ -433,14 +446,6 @@ module TableModule
     deallocate(this%ientry)
     deallocate(this%iloc)
     deallocate(this%icount)
-    !
-    ! -- deallocate each table term
-    do i = 1, this%ntableterm
-      call this%tableterm(i)%da()
-    end do
-    !
-    ! -- deallocate space for tableterm
-    deallocate(this%tableterm)
     !
     ! -- Return
     return

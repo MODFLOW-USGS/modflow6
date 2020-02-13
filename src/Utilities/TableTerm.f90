@@ -20,14 +20,10 @@ module TableTermModule
     character(len=LINELENGTH), pointer :: tag => null()
     integer(I4B), pointer :: width => null()
     integer(I4B), pointer :: alignment => null()
-    integer(I4B), pointer :: datatype => null()
     integer(I4B), pointer :: nheader_lines => null()
-    integer(I4B), pointer :: nlist => null()
     
     character(len=LINELENGTH), dimension(:), pointer :: initial_lines => null()
     character(len=LINELENGTH), dimension(:), pointer :: header_lines => null()
-    
-    integer(I4B), pointer :: icounter => null() ! counter variable
   
   contains
   
@@ -45,7 +41,7 @@ module TableTermModule
 
   contains
   
-  subroutine initialize(this, tag, width, alignment, datatype)
+  subroutine initialize(this, tag, width, alignment)
 ! ******************************************************************************
 ! initialize -- initialize the table term
 ! ******************************************************************************
@@ -58,7 +54,6 @@ module TableTermModule
     character(len=*), intent(in) :: tag
     integer(I4B), intent(in) :: width
     integer(I4B), intent(in), optional :: alignment
-    integer(I4B), intent(in), optional :: datatype
     ! -- local
     character(len=LINELENGTH) :: string
     character(len=LINELENGTH) :: tstring
@@ -83,12 +78,6 @@ module TableTermModule
     end if
     
     this%width = width
-    
-    if (present(datatype)) then
-      this%datatype = datatype
-    else
-      this%datatype = TABREAL
-    end if
     !
     ! -- parse tag into words
     call parseline(tag, nwords, words, 0)
@@ -132,7 +121,6 @@ module TableTermModule
     ! allocate initial_lines and fill with words
     allocate(this%initial_lines(this%nheader_lines))
     do i = 1, this%nheader_lines 
-      !this%initial_lines(i)%string = words(i)(1:width)
       this%initial_lines(i) = words(i)(1:width)
     end do
     !
@@ -220,12 +208,9 @@ module TableTermModule
     allocate(this%tag)
     allocate(this%alignment)
     allocate(this%width)
-    allocate(this%datatype)
-    allocate(this%nlist)
     allocate(this%nheader_lines)
     !
     ! -- initialize scalars
-    this%nlist = 0
     this%nheader_lines = 0
     !
     ! -- return
@@ -250,8 +235,6 @@ module TableTermModule
     deallocate(this%tag)
     deallocate(this%alignment)
     deallocate(this%width)
-    deallocate(this%datatype)
-    deallocate(this%nlist)
     deallocate(this%nheader_lines)
     deallocate(this%header_lines)
     !

@@ -811,7 +811,7 @@ contains
           call this%parser%GetString(caux(iaux))
         end do
 
-            ! -- set default bndName
+        ! -- set default bndName
         write (cnum,'(i10.10)') n
         bndName = 'Reach' // cnum
 
@@ -1796,7 +1796,6 @@ contains
     real(DP) :: qfrommvr, qtomvr
     real(DP) :: qin, qout, qerr, qavg, qpd
     ! format
- 2000 FORMAT ( 1X, ///1X, A, A, A, '   PERIOD ', I6, '   STEP ', I8)
      ! --------------------------------------------------------------------------
      !
      ! -- set cell id based on discretization
@@ -2030,6 +2029,23 @@ contains
     call this%budobj%budgetobject_da()
     deallocate(this%budobj)
     nullify(this%budobj)
+    !
+    ! -- tables
+    if (this%iprhed > 0) then
+      call this%stagetab%table_da()
+      deallocate(this%stagetab)
+      nullify(this%stagetab)
+    end if
+    if (this%iprflow > 0) then
+      call this%flowtab%table_da()
+      deallocate(this%flowtab)
+      nullify(this%flowtab)
+    end if
+    if (associated(this%inputtab)) then
+      call this%inputtab%table_da()
+      deallocate(this%inputtab)
+      nullify(this%inputtab)
+    end if
     !
     ! -- scalars
     call mem_deallocate(this%iprhed)
@@ -3656,18 +3672,38 @@ contains
     character (len= 5) :: crch
     character (len=10) :: cval
     character (len=30) :: nodestr
+    character (len=LINELENGTH) :: title
+    character(len=LINELENGTH) :: text
     character (len=LINELENGTH) :: ermsg
     integer(I4B) :: n, nn
     real(DP) :: btgwf, bt
     ! -- code
     !
-    ! -- write header
+    ! -- setup inputtab tableobj
     if (this%iprpak /= 0) then
-      write (this%iout, '(//a)') 'SFR STATIC REACH DATA'
-      write (this%iout, '(a)') '     REACH CELLID                        ' //   &
-            '    LENGTH      WIDTH      SLOPE        TOP ' //                   &
-            ' THICKNESS         HK  ROUGHNESS  USTR FRAC'
-      write (this%iout, "(128('-'))")
+      title = 'SFR (' // trim(this%name) // ') STATIC REACH DATA'
+      call table_cr(this%inputtab, this%name, title)
+      call this%inputtab%table_df(this%maxbound, 10, this%iout)
+      text = 'NUMBER'
+      call this%inputtab%initialize_column(text, 6, alignment=TABCENTER)
+      text = 'CELLID'
+      call this%inputtab%initialize_column(text, 20, alignment=TABLEFT)
+      text = 'LENGTH'
+      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      text = 'WIDTH'
+      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      text = 'SLOPE' 
+      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      text = 'TOP'
+      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      text = 'THICKNESS'
+      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      text = 'HK'
+      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      text = 'ROUGHNESS'
+      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      text = 'UPSTREAM FRACTION'
+      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
     end if
     !
     ! -- check the reach data for simple errors
@@ -3723,17 +3759,18 @@ contains
       end if
       ! -- write summary of reach information
       if (this%iprpak /= 0) then
-        write (this%iout,'(i10,1x,a30,2(f10.4,1x),g10.3,1x,2(f10.4,1x),2(g10.3,1x),f10.4)') &
-               n, nodestr,                                                      &
-               this%length(n), this%width(n),                                   &
-               this%slope(n), this%strtop(n),                                   &
-               this%bthick(n), this%hk(n),                                      &
-               this%reaches(n)%rough%value, this%ustrf(n)
+        call this%inputtab%add_term(n)
+        call this%inputtab%add_term(nodestr)
+        call this%inputtab%add_term(this%length(n))
+        call this%inputtab%add_term(this%width(n))
+        call this%inputtab%add_term(this%slope(n))
+        call this%inputtab%add_term(this%strtop(n))
+        call this%inputtab%add_term(this%bthick(n))
+        call this%inputtab%add_term(this%hk(n))
+        call this%inputtab%add_term(this%reaches(n)%rough%value)
+        call this%inputtab%add_term(this%ustrf(n))
       end if
     end do
-    if (this%iprpak /= 0) then
-      write (this%iout, "(128('-'))")
-    end if
 
     ! -- return
     return
@@ -3745,71 +3782,85 @@ contains
     ! -- local
     character (len= 5) :: crch
     character (len= 5) :: crch2
-    character (len=LINELENGTH) :: ermsg
-    character (len=LINELENGTH) :: line
+    character (len=LINELENGTH) :: text
+    character (len=LINELENGTH) :: title
+    character (len=LINELENGTH) :: errmsg
     integer(I4B) :: n, nn, nc
     integer(I4B) :: i, ii
     integer(I4B) :: ifound
     integer(I4B) :: ierr
+    integer(I4B) :: maxconn
+    integer(I4B) :: ntabcol
     ! -- code
-
+    !
+    ! -- create input table for reach connections data
+    if (this%iprpak /= 0) then
+      !
+      ! -- calculate the maximum number of connections
+      maxconn = 0
+      do n = 1, this%maxbound
+        maxconn = max(maxconn, this%nconnreach(n))
+      end do
+      ntabcol = 1 + maxconn
+      !
+      ! -- reset the input table object
+      title = 'SFR (' // trim(this%name) // ') STATIC REACH CONNECTION DATA'
+      call table_cr(this%inputtab, this%name, title)
+      call this%inputtab%table_df(this%maxbound, ntabcol, this%iout)
+      text = 'NUMBER'
+      call this%inputtab%initialize_column(text, 6, alignment=TABCENTER)
+      do n = 1, maxconn
+        write(text, '(a,1x,i6)') 'CONN', n
+        call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      end do
+    end if
     !
     ! -- check the reach connections for simple errors
-    ! -- connection header
-    line = 'REACH'
-    do n = 1, 24
-      write (crch, '(i5)') n
-      line = trim(line) // crch
-    end do
-    if (this%iprpak /= 0) then
-      write (this%iout, '(//a)') 'SFR REACH CONNECTION DATA'
-      write (this%iout, '(59x,a)') 'CONNECTED REACH DATA'
-      write (this%iout, '(a)') line
-      write (this%iout, "(128('-'))")
-    end if
     ! -- connection check
     do n = 1, this%maxbound
       write (crch, '(i5)') n
-      line = crch
       eachconn: do i = 1, this%nconnreach(n)
         nn = this%reaches(n)%iconn(i)
         write (crch2, '(i5)') nn
-        line = trim(line) // crch2
         ifound = 0
         connreach: do ii = 1, this%nconnreach(nn)
           nc = this%reaches(nn)%iconn(ii)
           if (nc == n) then
-            !if (this%reaches(n)%idir(i) /= this%reaches(nn)%idir(ii)) then
-            !  ifound = 1
-            !end if
             ifound = 1
             exit connreach
           end if
         end do connreach
         if (ifound /= 1) then
-          ermsg = 'ERROR: Reach ' // crch // ' is connected to ' // &
-     &            'reach ' // crch2 // ' but reach ' // crch2 // &
-     &            ' is not connected to reach ' // crch // '.'
-          call store_error(ermsg)
+          errmsg = 'ERROR: Reach ' // crch // ' is connected to ' //             &
+                   'reach ' // crch2 // ' but reach ' // crch2 //                &
+                   ' is not connected to reach ' // crch // '.'
+          call store_error(errmsg)
           call this%parser%StoreErrorUnit()
           call ustop()
         end if
       end do eachconn
-      ! write line to output file
+      !
+      ! -- write connection data to the table
       if (this%iprpak /= 0) then
-        write (this%iout, '(a)') trim(line)
+        call this%inputtab%add_term(n)
+        do i = 1, this%nconnreach(n)
+          call this%inputtab%add_term(this%reaches(n)%iconn(i))
+        end do
+        nn = maxconn - this%nconnreach(n)
+        do i = 1, nn
+          call this%inputtab%add_term(' ')
+        end do
       end if
     end do
-    if (this%iprpak /= 0) then
-      write (this%iout, "(128('-'))")
-    end if
-
     !
     ! -- check for incorrect connections between upstream connections
+    !
+    ! -- check upstream connections for each reach
     ierr = 0
     do n = 1, this%maxbound
       write (crch, '(i5)') n
       eachconnv: do i = 1, this%nconnreach(n)
+        !
         ! -- skip downstream connections
         if (this%reaches(n)%idir(i) < 0) cycle eachconnv
         nn = this%reaches(n)%iconn(i)
@@ -3818,14 +3869,15 @@ contains
           ! -- skip downstream connections
           if (this%reaches(nn)%idir(ii) < 0) cycle connreachv
           nc = this%reaches(nn)%iconn(ii)
-          ! if nc == n then that means reach n is an upstream connection for
-          !  reach nn and reach nn is an upstream connection for reach n
+          !
+          ! -- if n == n then that means reach n is an upstream connection for
+          !    reach nn and reach nn is an upstream connection for reach n
           if (nc == n) then
             ierr = ierr + 1
-            ermsg = 'ERROR: Reach ' // crch // ' is connected to ' //       &
-                    'reach ' // crch2 // ' but streamflow from reach ' //   &
-                    crch // ' to reach ' // crch2 // ' is not permitted.'
-            call store_error(ermsg)
+            errmsg = 'ERROR: Reach ' // crch // ' is connected to ' //           &
+                     'reach ' // crch2 // ' but streamflow from reach ' //       &
+                     crch // ' to reach ' // crch2 // ' is not permitted.'
+            call store_error(errmsg)
             exit connreachv
           end if
         end do connreachv
@@ -3838,28 +3890,12 @@ contains
     !
     ! -- check that downstream reaches for a reach are
     !    the upstream reaches for the reach
-    ! -- downstream connection header
-    line = 'REACH'
-    do n = 1, 24
-      write (crch, '(i5)') n
-      line = trim(line) // crch
-    end do
-    !
-    ! -- write header for downstream connections
-    if (this%iprpak /= 0) then
-      write (this%iout, '(//a)') 'SFR DOWNSTREAM CONNECTIONS'
-      write (this%iout, '(60x,a)') 'DOWNSTREAM REACHES'
-      write (this%iout, '(a)') line
-      write (this%iout, "(128('-'))")
-    end if
     do n = 1, this%maxbound
       write (crch, '(i5)') n
-      line = crch
       eachconnds: do i = 1, this%nconnreach(n)
         nn = this%reaches(n)%iconn(i)
         if (this%reaches(n)%idir(i) > 0) cycle eachconnds
         write (crch2, '(i5)') nn
-        line = trim(line) // crch2
         ifound = 0
         connreachds: do ii = 1, this%nconnreach(nn)
           nc = this%reaches(nn)%iconn(ii)
@@ -3871,52 +3907,100 @@ contains
           end if
         end do connreachds
         if (ifound /= 1) then
-          ermsg = 'ERROR: Reach ' // crch // ' downstream connected reach is ' // &
-     &            'reach ' // crch2 // ' but reach ' // crch // &
-     &            ' is not the upstream connected reach for reach ' // crch2 // '.'
-          call store_error(ermsg)
+          errmsg = 'ERROR: Reach ' // crch // ' downstream connected reach ' //  &
+                   'is reach ' // crch2 // ' but reach ' // crch // ' is not' // &
+                   ' the upstream connected reach for reach ' // crch2 // '.'
+          call store_error(errmsg)
         end if
       end do eachconnds
-      ! write line to output file
-      if (this%iprpak /= 0) then
-        write (this%iout, '(a)') trim(line)
-      end if
     end do
+    !
+    ! -- create input table for upstream and downstream connections
     if (this%iprpak /= 0) then
-      write (this%iout, "(128('-'))")
+      !
+      ! -- calculate the maximum number of upstream connections
+      maxconn = 0
+      do n = 1, this%maxbound
+        ii = 0
+        do i = 1, this%nconnreach(n)
+          if (this%reaches(n)%idir(i) > 0) then
+            ii = ii + 1
+          end if
+        end do
+        maxconn = max(maxconn, ii)
+      end do
+      ntabcol = 1 + maxconn
+      !
+      ! -- reset the input table object
+      title = 'SFR (' // trim(this%name) //                                      &
+              ') STATIC UPSTREAM REACH CONNECTION DATA'
+      call table_cr(this%inputtab, this%name, title)
+      call this%inputtab%table_df(this%maxbound, ntabcol, this%iout)
+      text = 'NUMBER'
+      call this%inputtab%initialize_column(text, 6, alignment=TABCENTER)
+      do n = 1, maxconn
+        write(text, '(a,1x,i6)') 'UPSTREAM CONN', n
+        call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      end do
+      !
+      ! -- upstream connection data
+      do n = 1, this%maxbound
+        call this%inputtab%add_term(n)
+        ii = 0
+        do i = 1, this%nconnreach(n)
+          if (this%reaches(n)%idir(i) > 0) then
+            call this%inputtab%add_term(this%reaches(n)%iconn(i))
+            ii = ii + 1
+          end if
+        end do
+        nn = maxconn - ii
+        do i = 1, nn
+          call this%inputtab%add_term(' ')
+        end do  
+      end do
+      !
+      ! -- calculate the maximum number of downstream connections
+      maxconn = 0
+      do n = 1, this%maxbound
+        ii = 0
+        do i = 1, this%nconnreach(n)
+          if (this%reaches(n)%idir(i) < 0) then
+            ii = ii + 1
+          end if
+        end do
+        maxconn = max(maxconn, ii)
+      end do
+      ntabcol = 1 + maxconn
+      !
+      ! -- reset the input table object
+      title = 'SFR (' // trim(this%name) //                                      &
+              ') STATIC DOWNSTREAM REACH CONNECTION DATA'
+      call table_cr(this%inputtab, this%name, title)
+      call this%inputtab%table_df(this%maxbound, ntabcol, this%iout)
+      text = 'NUMBER'
+      call this%inputtab%initialize_column(text, 6, alignment=TABCENTER)
+      do n = 1, maxconn
+        write(text, '(a,1x,i6)') 'DOWNSTREAM CONN', n
+        call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      end do
+      !
+      ! -- downstream connection data
+      do n = 1, this%maxbound
+        call this%inputtab%add_term(n)
+        ii = 0
+        do i = 1, this%nconnreach(n)
+          if (this%reaches(n)%idir(i) < 0) then
+            call this%inputtab%add_term(this%reaches(n)%iconn(i))
+            ii = ii + 1
+          end if
+        end do
+        nn = maxconn - ii
+        do i = 1, nn
+          call this%inputtab%add_term(' ')
+        end do  
+      end do
     end if
     !
-    ! -- output upstream reaches for each reach
-    ! -- upstream connection header
-    line = 'REACH'
-    do n = 1, 24
-      write (crch, '(i5)') n
-      line = trim(line) // crch
-    end do
-    if (this%iprpak /= 0) then
-      write (this%iout, '(//a)') 'SFR UPSTREAM CONNECTIONS'
-      write (this%iout, '(61x,a)') 'UPSTREAM REACHES'
-      write (this%iout, '(a)') line
-      write (this%iout, "(128('-'))")
-    end if
-    do n = 1, this%maxbound
-      write (crch, '(i5)') n
-      line = crch
-      eachconnus: do i = 1, this%nconnreach(n)
-        nn = this%reaches(n)%iconn(i)
-        if (this%reaches(n)%idir(i) < 0) cycle eachconnus
-        write (crch2, '(i5)') nn
-        line = trim(line) // crch2
-      end do eachconnus
-      ! write line to output file
-      if (this%iprpak /= 0) then
-        write (this%iout, '(a)') trim(line)
-      end if
-    end do
-    if (this%iprpak /= 0) then
-      write (this%iout, "(128('-'))")
-    end if
-
     ! -- return
     return
   end subroutine sfr_check_connections
@@ -4523,49 +4607,40 @@ contains
       ! -- Go through and set up table budget term
       if (this%inamedbound == 1) then
         text = 'NAME'
-        call this%stagetab%initialize_column(text, 20, alignment=TABLEFT,        &
-                                             datatype=TABUCSTRING)
+        call this%stagetab%initialize_column(text, 20, alignment=TABLEFT)
       end if
       !
       ! -- reach number
       text = 'NUMBER'
-      call this%stagetab%initialize_column(text, 6, alignment=TABCENTER,        &
-                                           datatype=TABINTEGER)
+      call this%stagetab%initialize_column(text, 6, alignment=TABCENTER)
       !
       ! -- cellids
       text = 'CELLIDS ' // trim(adjustl(cellids))
-      call this%stagetab%initialize_column(text, 20, alignment=TABLEFT,         &
-                                           datatype=TABUCSTRING)
+      call this%stagetab%initialize_column(text, 20, alignment=TABLEFT)
       !
       ! -- reach stage
       text = 'STAGE'
-      call this%stagetab%initialize_column(text, 11, alignment=TABCENTER,        &
-                                           datatype=TABREAL)
+      call this%stagetab%initialize_column(text, 11, alignment=TABCENTER)
       !
       ! -- reach depth
       text = 'DEPTH'
-      call this%stagetab%initialize_column(text, 11, alignment=TABCENTER,        &
-                                           datatype=TABREAL)
+      call this%stagetab%initialize_column(text, 11, alignment=TABCENTER)
       !
       ! -- reach width
       text = 'WIDTH'
-      call this%stagetab%initialize_column(text, 11, alignment=TABCENTER,        &
-                                           datatype=TABREAL)
+      call this%stagetab%initialize_column(text, 11, alignment=TABCENTER)
       !
       ! -- gwf head
       text = 'GWF HEAD'
-      call this%stagetab%initialize_column(text, 11, alignment=TABCENTER,        &
-                                           datatype=TABREAL)
+      call this%stagetab%initialize_column(text, 11, alignment=TABCENTER)
       !
       ! -- streambed conductance
       text = 'STREAMBED CONDUCTANCE'
-      call this%stagetab%initialize_column(text, 11, alignment=TABCENTER,        &
-                                           datatype=TABREAL)
+      call this%stagetab%initialize_column(text, 11, alignment=TABCENTER)
       !
       ! -- streambed gradient
       text = 'STREAMBED GRADIENT'
-      call this%stagetab%initialize_column(text, 11, alignment=TABCENTER,        &
-                                           datatype=TABREAL)
+      call this%stagetab%initialize_column(text, 11, alignment=TABCENTER)
     end if
     
     if (this%iprflow > 0) then
@@ -4591,79 +4666,64 @@ contains
       ! -- Go through and set up table budget term
       if (this%inamedbound == 1) then
         text = 'NAME'
-        call this%flowtab%initialize_column(text, 20, alignment=TABLEFT,        &
-                                            datatype=TABUCSTRING)
+        call this%flowtab%initialize_column(text, 20, alignment=TABLEFT)
       end if
       !
       ! -- reach number
       text = 'NUMBER'
-      call this%flowtab%initialize_column(text, 6, alignment=TABCENTER,        &
-                                          datatype=TABINTEGER)
+      call this%flowtab%initialize_column(text, 6, alignment=TABCENTER)
       !
       ! -- cellids
       text = 'CELLIDS ' // trim(adjustl(cellids))
-      call this%flowtab%initialize_column(text, 20, alignment=TABLEFT,         &
-                                          datatype=TABUCSTRING)
+      call this%flowtab%initialize_column(text, 20, alignment=TABLEFT)
       !
       ! -- reach external inflow
       text = 'EXTERNAL INFLOW'
-      call this%flowtab%initialize_column(text, 11, alignment=TABCENTER,        &
-                                          datatype=TABREAL)
+      call this%flowtab%initialize_column(text, 11, alignment=TABCENTER)
       !
       ! -- reach inflow
       text = 'INFLOW'
-      call this%flowtab%initialize_column(text, 11, alignment=TABCENTER,        &
-                                          datatype=TABREAL)
+      call this%flowtab%initialize_column(text, 11, alignment=TABCENTER)
       !
       ! -- reach inflow from mover
       text = 'INFLOW FROM MVR'
-      call this%flowtab%initialize_column(text, 11, alignment=TABCENTER,        &
-                                          datatype=TABREAL)
+      call this%flowtab%initialize_column(text, 11, alignment=TABCENTER)
       !
       ! -- reach rainfall
       text = 'RAINFALL'
-      call this%flowtab%initialize_column(text, 11, alignment=TABCENTER,        &
-                                          datatype=TABREAL)
+      call this%flowtab%initialize_column(text, 11, alignment=TABCENTER)
       !
       ! -- reach external runoff
       text = 'EXTERNAL RUNOFF'
-      call this%flowtab%initialize_column(text, 11, alignment=TABCENTER,        &
-                                          datatype=TABREAL)
+      call this%flowtab%initialize_column(text, 11, alignment=TABCENTER)
       !
       ! -- reach leakage
       text = 'LEAKAGE'
-      call this%flowtab%initialize_column(text, 11, alignment=TABCENTER,        &
-                                          datatype=TABREAL)
+      call this%flowtab%initialize_column(text, 11, alignment=TABCENTER)
       !
       ! -- reach evaporation
       text = 'EVAPORATION'
-      call this%flowtab%initialize_column(text, 11, alignment=TABCENTER,        &
-                                          datatype=TABREAL)
+      call this%flowtab%initialize_column(text, 11, alignment=TABCENTER)
       !
       ! -- reach outflow
       text = 'OUTFLOW'
-      call this%flowtab%initialize_column(text, 11, alignment=TABCENTER,        &
-                                          datatype=TABREAL)
+      call this%flowtab%initialize_column(text, 11, alignment=TABCENTER)
       !
       ! -- reach external outflow
       text = 'EXTERNAL OUTFLOW'
-      call this%flowtab%initialize_column(text, 11, alignment=TABCENTER,        &
-                                          datatype=TABREAL)
+      call this%flowtab%initialize_column(text, 11, alignment=TABCENTER)
       !
       ! -- reach outflow from mover
       text = 'OUTFLOW FROM MVR'
-      call this%flowtab%initialize_column(text, 11, alignment=TABCENTER,        &
-                                          datatype=TABREAL)
+      call this%flowtab%initialize_column(text, 11, alignment=TABCENTER)
       !
       ! -- reach in-out
       text = '"IN - OUT"'
-      call this%flowtab%initialize_column(text, 11, alignment=TABCENTER,        &
-                                          datatype=TABREAL)
+      call this%flowtab%initialize_column(text, 11, alignment=TABCENTER)
       !
       ! -- reach percent difference
       text = 'PERCENT DIFFERENCE'
-      call this%flowtab%initialize_column(text, 11, alignment=TABCENTER,        &
-                                          datatype=TABREAL)
+      call this%flowtab%initialize_column(text, 11, alignment=TABCENTER)
     end if
     !
     ! -- return
