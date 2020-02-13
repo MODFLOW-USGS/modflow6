@@ -10,7 +10,7 @@ module TableModule
   use BaseDisModule, only: DisBaseType
   use InputOutputModule, only: UWWORD
   use SimModule, only: count_errors, store_error, store_error_unit, ustop
-
+  use TdisModule, only: kstp, kper
   
   implicit none
   
@@ -23,6 +23,7 @@ module TableModule
     character(len=LENBUDTXT) :: name
     character(len=LINELENGTH) :: title
     logical, pointer :: first_entry => null()
+    logical, pointer :: transient => null()
     integer(I4B), pointer :: iout => null()
     integer(I4B), pointer :: maxbound => null()
     integer(I4B), pointer :: nheaderlines => null()
@@ -31,6 +32,8 @@ module TableModule
     integer(I4B), pointer :: ientry => null()
     integer(I4B), pointer :: iloc => null()
     integer(I4B), pointer :: icount => null()
+    integer(I4B), pointer :: kstp => null()
+    integer(I4B), pointer :: kper => null()
     !
     ! -- array of table terms, with one separate entry for each term
     !    such as rainfall, et, leakage, etc.
@@ -51,10 +54,10 @@ module TableModule
     procedure :: set_maxbound
 
     procedure, private :: allocate_strings
-    procedure :: set_header     ! make private
-    procedure :: write_header   ! make private
-    procedure :: write_line     ! make private
-    procedure :: finalize_table ! make private
+    procedure, private :: set_header  
+    procedure, private :: write_header 
+    procedure, private :: write_line  
+    procedure, private :: finalize_table
     procedure, private :: add_error
     
     generic, public :: add_term => add_integer, add_real, add_string
@@ -90,7 +93,7 @@ module TableModule
     return
   end subroutine table_cr
 
-  subroutine table_df(this, maxbound, ntableterm, iout)
+  subroutine table_df(this, maxbound, ntableterm, iout, transient)
 ! ******************************************************************************
 ! table_df -- Define the new table object
 ! ******************************************************************************
@@ -103,9 +106,11 @@ module TableModule
     integer(I4B), intent(in) :: maxbound
     integer(I4B), intent(in) :: ntableterm
     integer(I4B), intent(in) :: iout
+    logical, intent(in), optional :: transient
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate scalars
+    allocate(this%transient)
     allocate(this%first_entry)
     allocate(this%iout)
     allocate(this%maxbound)
@@ -120,6 +125,11 @@ module TableModule
     allocate(this%tableterm(ntableterm))
     !
     ! -- initialize values
+    if (present(transient)) then
+      this%transient = transient
+    else
+      this%transient = .FALSE.
+    end if
     this%first_entry = .TRUE.
     this%iout = iout
     this%maxbound = maxbound
@@ -172,6 +182,9 @@ module TableModule
     ! -- create header when all terms have been specified
     if (this%ientry == this%ntableterm) then
       call this%set_header()
+      !
+      ! -- reset ientry
+      this%ientry = 0
     end if
     !
     ! -- return
@@ -290,7 +303,7 @@ module TableModule
     return
   end subroutine allocate_strings  
 
-  subroutine write_header(this, kstp, kper)
+  subroutine write_header(this)
 ! ******************************************************************************
 ! write_table -- Write the table header
 ! ******************************************************************************
@@ -300,8 +313,6 @@ module TableModule
     ! -- modules
     ! -- dummy
     class(TableType) :: this
-    integer(I4B),intent(in), optional :: kstp
-    integer(I4B),intent(in), optional :: kper
     ! -- local
     character(len=LINELENGTH) :: title
     integer(I4B) :: width
@@ -315,10 +326,8 @@ module TableModule
     if (this%first_entry) then
       ! -- write title
       title = this%title
-      if (present(kper)) then
+      if (this%transient) then
         write(title, '(a,a,i6)') trim(adjustl(title)), '   PERIOD ', kper
-      end if
-      if (present(kstp)) then
         write(title, '(a,a,i8)') trim(adjustl(title)), '   STEP ', kstp
       end if
       write(this%iout, '(/,1x,a)') trim(adjustl(title))
@@ -360,6 +369,7 @@ module TableModule
     !
     ! -- update column and line counters
     this%ientry = 0
+    this%iloc = 1
     this%icount = this%icount + 1
     !
     ! -- return
@@ -380,16 +390,20 @@ module TableModule
     integer(I4B) :: width
 ! ------------------------------------------------------------------------------
     !
-    ! -- initialize local variables
-    width = this%nlinewidth
-    !
-    ! -- write the final table seperator
-    write(this%iout, '(1x,a,/)') this%linesep(1:width)
-    !
-    ! -- reinitialize variables
-    this%ientry = 0
-    this%icount = 0
-    this%first_entry = .TRUE.
+    ! -- finalize table if last entry
+    if (this%icount == this%maxbound) then
+      !
+      ! -- initialize local variables
+      width = this%nlinewidth
+      !
+      ! -- write the final table seperator
+      write(this%iout, '(1x,a,/)') this%linesep(1:width)
+      !
+      ! -- reinitialize variables
+      this%ientry = 0
+      this%icount = 0
+      this%first_entry = .TRUE.
+    end if
     !
     ! -- return
     return
@@ -480,6 +494,11 @@ module TableModule
     integer(I4B) :: j
 ! ------------------------------------------------------------------------------
     !
+    ! -- write header
+    if (this%icount == 0 .and. this%ientry == 0) then
+      call this%write_header()
+    end if
+    !
     ! -- update index for tableterm
     this%ientry = this%ientry + 1
     !
@@ -490,25 +509,25 @@ module TableModule
     j = this%ientry
     width = this%tableterm(j)%get_width()
     alignment = this%tableterm(j)%get_alignment()
+    line_end = .FALSE.
+    !
+    ! -- add data to line
     if (j == this%ntableterm) then
       line_end = .TRUE.
       call UWWORD(this%dataline, this%iloc, width, TABINTEGER,                   &
                   cval, ival, rval, ALIGNMENT=alignment)
     else
-      line_end = .FALSE.
       call UWWORD(this%dataline, this%iloc, width, TABINTEGER,                   &
-                  cval, ival, rval, ALIGNMENT=alignment)
+                  cval, ival, rval, ALIGNMENT=alignment, SEP=' ')
     end if
     !
-    ! -- write the data line
+    ! -- write the data line, if necessary
     if (line_end) then
       call this%write_line()
     end if
     !
-    ! -- finalize the table
-    if (this%icount == this%maxbound) then
-      call this%finalize_table()
-    end if
+    ! -- finalize the table, if necessary
+    call this%finalize_table()
     !
     ! -- Return
     return
@@ -534,6 +553,11 @@ module TableModule
     integer(I4B) :: alignment
 ! ------------------------------------------------------------------------------
     !
+    ! -- write header
+    if (this%icount == 0 .and. this%ientry == 0) then
+      call this%write_header()
+    end if
+    !
     ! -- update index for tableterm
     this%ientry = this%ientry + 1
     !
@@ -544,6 +568,9 @@ module TableModule
     j = this%ientry
     width = this%tableterm(j)%get_width()
     alignment = this%tableterm(j)%get_alignment()
+    line_end = .FALSE.
+    !
+    ! -- add data to line
     if (j == this%ntableterm) then
       line_end = .TRUE.
       call UWWORD(this%dataline, this%iloc, width, TABREAL,                      &
@@ -551,18 +578,16 @@ module TableModule
     else
       line_end = .FALSE.
       call UWWORD(this%dataline, this%iloc, width, TABREAL,                      &
-                  cval, ival, rval, ALIGNMENT=alignment)
+                  cval, ival, rval, ALIGNMENT=alignment, SEP=' ')
     end if
     !
-    ! -- write the data line
+    ! -- write the data line, if necessary
     if (line_end) then
       call this%write_line()
     end if
     !
-    ! -- finalize the table
-    if (this%icount == this%maxbound) then
-      call this%finalize_table()
-    end if
+    ! -- finalize the table, if necessary
+    call this%finalize_table()
     !
     ! -- Return
     return
@@ -588,6 +613,11 @@ module TableModule
     integer(I4B) :: alignment
 ! ------------------------------------------------------------------------------
     !
+    ! -- write header
+    if (this%icount == 0 .and. this%ientry == 0) then
+      call this%write_header()
+    end if
+    !
     ! -- update index for tableterm
     this%ientry = this%ientry + 1
     !
@@ -598,25 +628,25 @@ module TableModule
     j = this%ientry
     width = this%tableterm(j)%get_width()
     alignment = this%tableterm(j)%get_alignment()
+    line_end = .FALSE.
+    !
+    ! -- add data to line
     if (j == this%ntableterm) then
       line_end = .TRUE.
       call UWWORD(this%dataline, this%iloc, width, TABUCSTRING,                  &
                   cval, ival, rval, ALIGNMENT=alignment)
     else
-      line_end = .FALSE.
       call UWWORD(this%dataline, this%iloc, width, TABUCSTRING,                  &
-                  cval, ival, rval, ALIGNMENT=alignment)
+                  cval, ival, rval, ALIGNMENT=alignment, SEP=' ')
     end if
     !
-    ! -- write the data line
+    ! -- write the data line, if necessary
     if (line_end) then
       call this%write_line()
     end if
     !
-    ! -- finalize the table
-    if (this%icount == this%maxbound) then
-      call this%finalize_table()
-    end if
+    ! -- finalize the table, if necessary
+    call this%finalize_table()
     !
     ! -- Return
     return
