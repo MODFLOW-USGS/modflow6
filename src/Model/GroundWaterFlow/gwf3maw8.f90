@@ -1274,10 +1274,10 @@ contains
     ! -- formats
 ! ------------------------------------------------------------------------------
     if (len(msg) == 0) then
-      write(errmsg,'(4x,a,1x,a,1x,a,1x,i6,1x,a)') &
+      write(errmsg,'(4x,a,1x,a,1x,a,1x,i0,1x,a)') &
         '****ERROR.', keyword, ' for MAW well', imaw, 'has already been set.'
     else
-      write(errmsg,'(4x,a,1x,a,1x,a,1x,i6,1x,a)') &
+      write(errmsg,'(4x,a,1x,a,1x,a,1x,i0,1x,a)') &
         '****ERROR.', keyword, ' for MAW well', imaw, msg
     end if
     call store_error(errmsg)
@@ -1288,7 +1288,7 @@ contains
 
   subroutine maw_check_attributes(this)
 ! ******************************************************************************
-! maw_check_attributes -- Issue parameter errors for mawweslls(imaw)
+! maw_check_attributes -- Issue parameter errors for mawwells(imaw)
 ! Subroutine: (1) read itmp
 !             (2) read new boundaries if itmp>0
 ! ******************************************************************************
@@ -1308,7 +1308,8 @@ contains
     idx = 1
     do n = 1, this%nmawwells
       if (this%mawwells(n)%ngwfnodes < 1) then
-        call this%maw_set_attribute_error(n, 'NGWFNODES', 'must be greater than 0.')
+        call this%maw_set_attribute_error(n, 'NGWFNODES', 'must be greater ' //  &
+                                          'than 0.')
       end if
       ! -- CDL 2/5/2018 Moved to maw_set_stressperiod so it is only done if a
       !    new head is read in.
@@ -1321,22 +1322,40 @@ contains
       end if
       if (this%mawwells(n)%shutoffmin > DZERO) then
         if (this%mawwells(n)%shutoffmin >= this%mawwells(n)%shutoffmax) then
-          call this%maw_set_attribute_error(n, 'SHUT_OFF', 'shutoffmax must be > shutoffmin.')
+          call this%maw_set_attribute_error(n, 'SHUT_OFF', 'shutoffmax must ' // &
+                                            'be > shutoffmin.')
         end if
       end if
       do j = 1, this%mawwells(n)%ngwfnodes
         ! -- write gwfnode number
-        write(cgwfnode,'(a,1x,i3,1x,a)') 'gwfnode(', j,')'
+        write(cgwfnode,'(a,i0,a)') 'gwfnode(', j,')'
         if (this%mawwells(n)%botscrn(j) >= this%mawwells(n)%topscrn(j)) then
-          call this%maw_set_attribute_error(n, 'SCREEN_TOP', 'screen bottom must be < screen top. '//trim(cgwfnode))
+          call this%maw_set_attribute_error(n, 'SCREEN_TOP', 'screen bottom ' // &
+                                            'must be < screen top. ' //          &
+                                            trim(cgwfnode))
         end if
-        if (this%mawwells(n)%ieqn==2 .OR. this%mawwells(n)%ieqn==3 .OR.       &
+        if (this%mawwells(n)%ieqn==2 .OR. this%mawwells(n)%ieqn==3 .OR.          &
             this%mawwells(n)%ieqn==4) then
           if (this%mawwells(n)%sradius(j) > DZERO) then
             if (this%mawwells(n)%sradius(j) <= this%mawwells(n)%radius) then
-              call this%maw_set_attribute_error(n, 'RADIUS_SKIN', 'skin radius must be >= well radius. '//trim(cgwfnode))
+              call this%maw_set_attribute_error(n, 'RADIUS_SKIN', 'skin ' //     &
+                                                'radius must be >= well ' //     &
+                                                'radius. ' // trim(cgwfnode))
             end if
           end if
+          if (this%mawwells(n)%hk(j) <= DZERO) then
+            call this%maw_set_attribute_error(n, 'HK_SKIN', 'skin hyraulic ' //  &
+                                              'conductivity must be > zero. ' // &
+                                              trim(cgwfnode))
+          end if
+        else if (this%mawwells(n)%ieqn == 0) then
+          if (this%mawwells(n)%satcond(j) < DZERO) then
+            call this%maw_set_attribute_error(n, 'HK_SKIN',                      &
+                                              'skin hyraulic conductivity ' //   &
+                                              'must be >= zero when using ' //   &
+                                              'SPECIFIED condeqn. ' //           &
+                                              trim(cgwfnode))
+          end if    
         end if
         idx = idx + 1
       end do
@@ -3261,8 +3280,8 @@ contains
     integer(I4B), intent(in) :: j
     integer(I4B), intent(in) :: node
     ! -- local
-    character(len=20) :: cellid
     character(len=LINELENGTH) :: errmsg
+    integer(I4B) :: iTcontrastErr
     real(DP) :: c
     real(DP) :: k11
     real(DP) :: k22
@@ -3274,6 +3293,7 @@ contains
     real(DP) :: botw
     real(DP) :: tthkw
     real(DP) :: tthka
+    real(DP) :: Tcontrast
     real(DP) :: skin
     real(DP) :: ravg
     real(DP) :: slen
@@ -3293,7 +3313,8 @@ contains
     ! -- formats
     ! ------------------------------------------------------------------------------
     !
-    ! -- initialize connductance variables
+    ! -- initialize conductance variables
+    iTcontrastErr = 0
     lc1 = DZERO
     lc2 = DZERO
     !
@@ -3352,19 +3373,22 @@ contains
     if (this%mawwells(i)%ieqn == 2 .or. this%mawwells(i)%ieqn == 3) then
       hks = this%mawwells(i)%hk(j)
       if (tthkw * hks > DZERO) then
-        skin = (((sqrtk11k22 * tthka) / (hks * tthkw)) - DONE) *                 &
+        Tcontrast = (sqrtk11k22 * tthka) / (hks * tthkw)
+        skin = (Tcontrast - DONE) *                                              &
                 log(this%mawwells(i)%sradius(j) / this%mawwells(i)%radius)
-        ! -- trap invalid skin condition if using skin equation (2).
+        ! -- trap invalid transmissvity contrast if using skin equation (2).
         !    Not trapped for cumulative Thiem and skin equations (3) 
         !    because the MNW2 package allowed this condition (for 
         !    backward compatibility with the MNW2 package for  
         !    MODFLOW-2005, MODFLOW-NWT, and MODFLOW-USG).
-        if (skin <= 0 .and. this%mawwells(i)%ieqn == 2) then
-          write(errmsg, '(4x,a,g0,a,1x,i0,1x,a,1x,i0,a,3(1x,a))')                &
-            '****ERROR. INVALID CALCULATED SKIN FACTOR (', skin,                 &
+        if (Tcontrast <= 1 .and. this%mawwells(i)%ieqn == 2) then
+          iTcontrastErr = 1
+          write(errmsg, '(4x,a,g0,a,1x,i0,1x,a,1x,i0,a,4(1x,a))')                &
+            '****ERROR. INVALID CALCULATED TRANSMISSIVITY CONTRAST (', Tcontrast,&
             ') for MAW WELL', i, 'CONNECTION', j, '.', 'THIS HAPPENS WHEN THE',  &
-            'SKIN TRANSMISSIVITY EXCEEDS THE AQUIFER TRANSMISSIVITY.',           &
-            'CONSIDER USING THE "CUMULATIVE" OR "MEAN" CONDUCTANCE EQUATIONS.'
+            'SKIN TRANSMISSIVITY EQUALS OR EXCEEDS THE AQUIFER TRANSMISSIVITY.', &
+            'CONSIDER DECREASING HK_SKIN FOR THE CONNECTION OR USING THE',       &
+            'CUMULATIVE OR MEAN CONDUCTANCE EQUATIONS.'
           call store_error(errmsg)
         else
           lc2 = skin / T2pi
@@ -3384,16 +3408,22 @@ contains
     ! -- calculate final conductance for Theim (1), Skin (2), and 
     ! and cumulative Thiem and skin equations (3)
     if (this%mawwells(i)%ieqn < 4) then
-      c = DONE / (lc1 + lc2)
+      if (lc1 + lc2 /= DZERO) then
+        c = DONE / (lc1 + lc2)
+      else
+        c = -DNODATA
+      end if
     end if
     !
-    ! -- ensure that the conductance is not negative
-    if (c < DZERO) then
-      write(errmsg, '(4x,a,g0,a,1x,i0,1x,a,1x,i0,a,3(1x,a))')                    &
+    ! -- ensure that the conductance is not negative. Only write error message
+    !    if error condition has not occured for skin calculations (LC2)
+    if (c < DZERO .and. iTcontrastErr == 0) then
+      write(errmsg, '(4x,a,g0,a,1x,i0,1x,a,1x,i0,a,4(1x,a))')                    &
         '****ERROR. INVALID CALCULATED NEGATIVE CONDUCTANCE (', c,               &
         ') for MAW WELL', i, 'CONNECTION', j, '.', 'THIS HAPPENS WHEN THE',      &
-        'SKIN TRANSMISSIVITY EXCEEDS THE AQUIFER TRANSMISSIVITY.',               &
-        'CONSIDER USING THE "THEIM" OR "MEAN" CONDUCTANCE EQUATIONS.'
+        'SKIN TRANSMISSIVITY EQUALS OR EXCEEDS THE AQUIFER TRANSMISSIVITY.',     &
+        'CONSIDER DECREASING HK_SKIN FOR THE CONNECTION OR USING THE',           &
+        'MEAN CONDUCTANCE EQUATION.'
       call store_error(errmsg)
     end if
     !
