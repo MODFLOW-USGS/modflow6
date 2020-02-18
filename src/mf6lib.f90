@@ -1,4 +1,4 @@
-module mf6lib 
+module mf6core 
   use KindModule,             only: I4B
   use ListsModule,            only: basesolutionlist, solutiongrouplist, basemodellist, baseexchangelist
   use BaseModelModule,        only: BaseModelType, GetBaseModelFromList
@@ -314,4 +314,4 @@ contains
     
   end function finalizeTimestep
   
-end module mf6lib
+end module mf6core

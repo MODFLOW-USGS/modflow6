@@ -1,14 +1,14 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.27130.2024
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{6989167D-11E4-40FE-8C1A-2192A86A7E90}") = "mf6", "mf6.vfproj", "{369C1E2E-A513-4E83-A076-923534E30304}"
 	ProjectSection(ProjectDependencies) = postProject
 		{380139B4-29CE-4CF3-BD74-5AA979FD0F43} = {380139B4-29CE-4CF3-BD74-5AA979FD0F43}
 	EndProjectSection
 EndProject
-Project("{6989167D-11E4-40FE-8C1A-2192A86A7E90}") = "mf6lib", "mf6lib.vfproj", "{380139B4-29CE-4CF3-BD74-5AA979FD0F43}"
+Project("{6989167D-11E4-40FE-8C1A-2192A86A7E90}") = "mf6core", "mf6core.vfproj", "{380139B4-29CE-4CF3-BD74-5AA979FD0F43}"
 EndProject
 Project("{6989167D-11E4-40FE-8C1A-2192A86A7E90}") = "mf6dll", "mf6dll.vfproj", "{63FE82B0-6FA8-43FC-9B31-C1D6478CB4BC}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -62,5 +62,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {A077BEB2-AC7C-4B3D-AC89-2F6B4A677AF2}
 	EndGlobalSection
 EndGlobal

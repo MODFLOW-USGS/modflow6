@@ -1,5 +1,5 @@
 module mf6dll
-  use mf6lib
+  use mf6core
   use bmif
   use iso_c_binding, only: c_int, c_char, c_double, C_NULL_CHAR, c_loc, c_ptr
   use KindModule, only: DP, I4B
