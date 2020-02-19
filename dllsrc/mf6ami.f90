@@ -1,7 +1,7 @@
 ! this module contains entry points for the mf6 dll to expose functionality
 ! that is _beyond_ the basic model interface: https://bmi-spec.readthedocs.io/en/latest/
 module mf6ami
-  use mf6lib
+  use mf6core
   use KindModule
   use bmif, only: BMI_SUCCESS, BMI_FAILURE
   use iso_c_binding, only: c_int
