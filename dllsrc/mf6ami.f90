@@ -40,7 +40,7 @@ module mf6ami
   ! returns the number of NumericalSolutions in the simulation. 
   ! It works if there is only one SolutionGroup used.
   function ami_get_subcomponent_count(count) result(bmi_status) bind(C, name="get_subcomponent_count")
-  !DEC$ ATTRIBUTES DLLEXPORT :: ami_finalize_timestep
+  !DEC$ ATTRIBUTES DLLEXPORT :: ami_get_subcomponent_count
     use ListsModule, only: solutiongrouplist
     use SimVariablesModule, only: iout
     integer(kind=c_int) :: bmi_status
@@ -80,7 +80,7 @@ module mf6ami
     
     ! reset counter
     allocate(iterationCounter)
-    iterationCounter = 1
+    iterationCounter = 0
     
     bmi_status = BMI_SUCCESS
     
@@ -88,10 +88,11 @@ module mf6ami
   
   ! execute a single outer iteration on the specified 
   ! subcomponent (=NumericalSolution)
-  function ami_do_iteration(subcomponent_idx) result(bmi_status) bind(C, name="do_iteration")
+  function ami_do_iteration(subcomponent_idx, has_converged) result(bmi_status) bind(C, name="do_iteration")
   !DEC$ ATTRIBUTES DLLEXPORT :: ami_do_iteration   
     use NumericalSolutionModule
     integer(kind=c_int), intent(in) :: subcomponent_idx ! 1,2,...,ami_get_subcomponent_count()
+    integer(kind=c_int), intent(out) :: has_converged
     integer(kind=c_int) :: bmi_status
     ! local
     class(NumericalSolutionType), pointer :: ns
@@ -99,9 +100,17 @@ module mf6ami
     ! get the numerical solution we are running
     ns => getSolution(subcomponent_idx)
     
-    ! execute the kiter'th iteration    
-    call ns%doIteration(iterationCounter)
+    ! execute the nth iteration    
     iterationCounter = iterationCounter + 1
+    call ns%doIteration(iterationCounter)
+        
+    ! the following check is equivalent to that in NumericalSolution%sln_ca
+    if (ns%icnvg == 1) then
+      has_converged = 1
+    else
+      has_converged = 0
+    end if
+    
     bmi_status = BMI_SUCCESS
     
   end function ami_do_iteration
@@ -120,7 +129,11 @@ module mf6ami
     ! get the numerical solution we are running
     ns => getSolution(subcomponent_idx)
     
-    ! and finalize
+    ! hasConverged is equivalent to the isgcnvg variable which is initialized to 1, 
+    ! see the body of the picard loop in SolutionGroupType%sgp_ca
+    hasConverged = 1
+    
+    ! finish up
     call ns%finalizeIteration(iterationCounter, hasConverged, 1, 0)
     
     ! check convergence on solution

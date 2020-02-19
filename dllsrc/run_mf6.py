@@ -1,14 +1,16 @@
 import sys
+import os
 import numpy as np
 from ctypes import *
-
 
 nargs = len(sys.argv) - 1
 if nargs < 1:
     sys.exit()
 
+print("working dir:", os.getcwd())
 dllpath = sys.argv[1]
 print("running from mf6 dll: ", dllpath)
+
 mf6 = cdll.LoadLibrary(dllpath)
 
 # initialize the model
