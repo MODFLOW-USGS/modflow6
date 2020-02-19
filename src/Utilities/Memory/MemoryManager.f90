@@ -18,6 +18,7 @@ module MemoryManagerModule
   public :: mem_da
   public :: mem_set_print_option
   ! TODO_MJR: do we want to expose these like this?
+  public :: get_var_rank
   public :: get_var_size
   public :: get_isize
   public :: copy_dbl1d
@@ -71,6 +72,32 @@ module MemoryManagerModule
 
   contains
   
+  subroutine get_var_rank(name, origin, rank)
+    character(len=*), intent(in) :: name
+    character(len=*), intent(in) :: origin
+    integer(I4B), intent(out)    :: rank    
+    ! local
+    type(MemoryType), pointer :: mt
+    logical :: found
+        
+    mt => null()
+    rank = -1
+    call get_from_memorylist(name, origin, mt, found)
+    if (found) then
+      if(associated(mt%logicalsclr)) rank = 0
+      if(associated(mt%intsclr)) rank = 0
+      if(associated(mt%dblsclr)) rank = 0
+      if(associated(mt%aint1d)) rank = 1
+      if(associated(mt%aint2d)) rank = 2
+      if(associated(mt%aint3d)) rank = 3
+      if(associated(mt%adbl1d)) rank = 1
+      if(associated(mt%adbl2d)) rank = 2 
+      if(associated(mt%adbl3d)) rank = 3 
+      if(associated(mt%ats1d)) rank = 1      
+    end if    
+    
+  end subroutine get_var_rank 
+    
   subroutine get_var_size(name, origin, size)
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
@@ -83,12 +110,14 @@ module MemoryManagerModule
     call get_from_memorylist(name, origin, mt, found)
         
     size = -1
-    select case(mt%memtype(1:index(mt%memtype,' ')))
-    case ('INTEGER')
-      size = 4
-    case ('DOUBLE')
-      size = 8
-    end select
+    if (found) then      
+      select case(mt%memtype(1:index(mt%memtype,' ')))
+      case ('INTEGER')
+        size = 4
+      case ('DOUBLE')
+        size = 8
+      end select 
+    end if    
     
   end subroutine get_var_size
   

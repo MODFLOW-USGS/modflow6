@@ -151,24 +151,24 @@ module mf6dll
     integer :: idx, i
     character(len=LENORIGIN) :: origin, var_name
     character(len=LENVARNAME) :: var_name_only
-    real(DP), dimension(:), pointer, contiguous :: adbl
+    real(DP), dimension(:), pointer, contiguous :: arrayptr
     
     var_name = char_array_to_string(c_var_name, strlen(c_var_name))
     
     idx = index(var_name, '/', back=.true.)
     origin = var_name(:idx-1)
     var_name_only = var_name(idx+1:)
-    call mem_setptr(adbl, var_name_only, origin)
+    call mem_setptr(arrayptr, var_name_only, origin)
     
     ! set the C pointer to the internal array
-    x = c_loc(adbl)
+    x = c_loc(arrayptr)
     bmi_status = BMI_SUCCESS
     
   end function get_value_ptr_double
   
   function get_value_ptr_int(c_var_name, x) result(bmi_status) bind(C, name="get_value_ptr_int")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_value_ptr_int
-    use MemoryManagerModule, only: mem_setptr
+    use MemoryManagerModule, only: mem_setptr, get_var_rank
     character (kind=c_char), intent(in) :: c_var_name(*)    
     type(c_ptr), intent(inout) :: x
     integer(kind=c_int) :: bmi_status
@@ -176,17 +176,33 @@ module mf6dll
     integer :: idx, i
     character(len=LENORIGIN) :: origin, var_name
     character(len=LENVARNAME) :: var_name_only
-    integer(I4B), dimension(:), pointer, contiguous :: adbl
+    integer(I4B) :: rank
+    integer(I4B), dimension(:), pointer, contiguous :: arrayptr
+    integer(I4B), pointer :: scalarptr
     
     var_name = char_array_to_string(c_var_name, strlen(c_var_name))
     
     idx = index(var_name, '/', back=.true.)
     origin = var_name(:idx-1)
     var_name_only = var_name(idx+1:)
-    call mem_setptr(adbl, var_name_only, origin)
     
-    ! set the C pointer to the internal array
-    x = c_loc(adbl)
+    rank = -1
+    call get_var_rank(var_name_only, origin, rank)
+    if (rank == -1 .or. rank > 1) then
+        bmi_status = BMI_FAILURE
+        return
+    end if
+    
+    if (rank == 0) then
+      ! set the C pointer to the internal scalar
+      call mem_setptr(scalarptr, var_name_only, origin)      
+      x = c_loc(scalarptr)
+    else if (rank ==1) then    
+      ! set the C pointer to the internal array
+      call mem_setptr(arrayptr, var_name_only, origin)
+      x = c_loc(arrayptr)
+    end if
+    
     bmi_status = BMI_SUCCESS
     
   end function get_value_ptr_int
