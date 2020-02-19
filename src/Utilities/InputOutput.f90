@@ -623,6 +623,7 @@ module InputOutputModule
       character (len=*), optional, intent(in) :: SEP
       ! -- local
       character (len=16) :: cfmt
+      character (len=16) :: cffmt
       character (len=ILEN) :: cval
       integer(I4B) :: ialign
       integer(I4B) :: i
@@ -639,46 +640,53 @@ module InputOutputModule
             write(cfmt, '(A,I0,A)') '(I', ILEN, ')'
           case(TABREAL)
             i = ILEN - 7
-            write(cfmt, '(A,I0,A,I0,A)') '(G', ILEN, '.', i, ')'
+            write(cfmt, '(A,I0,A,I0,A)') '(1PG', ILEN, '.', i, ')'
         end select
       end if
+      write(cffmt, '(A,I0,A)') '(A', ILEN, ')'
 
       if (present(ALIGNMENT)) then
         ialign = ALIGNMENT
       else
         ialign = TABRIGHT
       end if
-
+      !
+      ! -- 
       if (NCODE == TABSTRING .or. NCODE == TABUCSTRING) then
-        if (len_trim(adjustl(C)) > ILEN) then
-          cval = adjustl(C)
-        else
-          cval = trim(adjustl(C))
-        end if
-        if (ialign == TABCENTER) then
-          i = len_trim(cval)
-          ispace = (ILEN - i) / 2
-          cval = repeat(' ', ispace) // trim(cval)
-        else if (ialign == TABLEFT) then
-          cval = trim(adjustl(cval))
-        else
-          cval = adjustr(cval)
-        end if
+        cval = C
         if (NCODE == TABUCSTRING) then
           call UPCASE(cval)
         end if
+      else if (NCODE == TABINTEGER) then
+        write(cval, cfmt) N
+      else if (NCODE == TABREAL) then
+        write(cval, cfmt) R
       end if
-
+      !
+      ! -- apply alignment to cval
+      if (len_trim(adjustl(cval)) > ILEN) then
+        cval = adjustl(cval)
+      else
+        cval = trim(adjustl(cval))
+      end if
+      if (ialign == TABCENTER) then
+        i = len_trim(cval)
+        ispace = (ILEN - i) / 2
+        cval = repeat(' ', ispace) // trim(cval)
+      else if (ialign == TABLEFT) then
+        cval = trim(adjustl(cval))
+      else
+        cval = adjustr(cval)
+      end if
+      if (NCODE == TABUCSTRING) then
+        call UPCASE(cval)
+      end if
+      !
+      ! -- increment istop to the end of the column
       istop = ICOL + ILEN - 1
-
-      select case(NCODE)
-        case(TABSTRING, TABUCSTRING)
-          write(LINE(ICOL:istop), cfmt) cval
-        case(TABINTEGER)
-          write(LINE(ICOL:istop), cfmt) N
-        case(TABREAL)
-          write(LINE(ICOL:istop), cfmt) R
-      end select
+      !
+      ! -- write final string to line
+      write(LINE(ICOL:istop), cffmt) cval
 
       ICOL = istop + 1
 
@@ -1515,15 +1523,6 @@ module InputOutputModule
     ! -- get the number of words in a line and allocate words array
     nwords = get_nwords(line)
     allocate(words(nwords))
-    !!
-    !! -- Count words in line and allocate words array
-    !lloc = 1
-    !do
-    !  call URWORD(line, lloc, istart, istop, 0, idum, rdum, 0, 0)
-    !  if (istart == linelen) exit
-    !  nwords = nwords + 1
-    !enddo
-    !allocate(words(nwords))
     !
     ! -- Populate words array and return
     lloc = 1
@@ -2135,7 +2134,7 @@ module InputOutputModule
     integer(I4B) :: linelen
     integer(I4B) :: lloc
     integer(I4B) :: istart
-    integer(I4B) :: iend
+    integer(I4B) :: istop
     integer(I4B) :: idum
     real(DP) :: rdum
     !

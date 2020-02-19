@@ -9,7 +9,7 @@ module TableTermModule
                               TABLEFT, TABCENTER, TABRIGHT,                     &
                               TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
   use BaseDisModule, only: DisBaseType
-  use InputOutputModule, only: ubdsv06, UPCASE, parseline
+  use InputOutputModule, only: UPCASE, parseline
 
   implicit none
 

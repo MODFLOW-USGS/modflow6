@@ -194,7 +194,6 @@ module SfrModule
     procedure, private :: sfr_fill_budobj
     ! -- table
     procedure, private :: sfr_setup_tableobj
-    !procedure, private :: sfr_fill_tableobj
   end type SfrType
 
 contains
@@ -443,7 +442,7 @@ contains
     !
     ! -- parse dimensions block if detected
     if (isfound) then
-      write(this%iout,'(/1x,a)')'PROCESSING '//trim(adjustl(this%text))// &
+      write(this%iout,'(/1x,a)')'PROCESSING '//trim(adjustl(this%text))//        &
         ' DIMENSIONS'
       do
         call this%parser%GetNextLine(endOfBlock)
@@ -454,9 +453,9 @@ contains
             this%maxbound = this%parser%GetInteger()
             write(this%iout,'(4x,a,i0)')'NREACHES = ', this%maxbound
           case default
-            write(errmsg,'(4x,a,a)') &
-              '****ERROR. UNKNOWN '//trim(this%text)//' DIMENSION: ', &
-                                     trim(keyword)
+            write(errmsg,'(4x,a,a)')                                             &
+              '****ERROR. UNKNOWN '//trim(this%text)//' DIMENSION: ',            &
+              trim(keyword)
             call store_error(errmsg)
         end select
       end do
@@ -762,8 +761,9 @@ contains
           call this%parser%GetStringCaps(keyword)
           if (keyword .ne. 'NONE') then
             write (cnum, '(i0)') n
-            errmsg = 'ERROR: cellid (' // trim(cellid) //                    &
-                     ') for unconnected reach ' //  trim(cnum) // ' must be NONE'
+            errmsg = 'ERROR: cellid (' // trim(cellid) //                        &
+                     ') for unconnected reach ' //  trim(cnum) //                &
+                     ' must be NONE'
             call store_error(errmsg)
           end if
         end if
@@ -992,7 +992,8 @@ contains
         end do
       end do
       
-      write(this%iout,'(1x,a)')'END OF '//trim(adjustl(this%text))//' CONNECTIONDATA'
+      write(this%iout,'(1x,a)') 'END OF '//trim(adjustl(this%text))//            &
+                                ' CONNECTIONDATA'
       
       do n = 1, this%maxbound
         if (this%nconnreach(n) > 0) then
@@ -1233,13 +1234,13 @@ contains
     ! -- dummy
     class(SfrType),intent(inout) :: this
     ! -- local
+    character(len=LINELENGTH) :: title
+    character(len=LINELENGTH) :: line
+    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: ierr
     integer(I4B) :: n
     integer(I4B) :: ichkustrm
     logical :: isfound, endOfBlock
-    integer(I4B) :: isfirst
-    character(len=LINELENGTH) :: line
-    character(len=LINELENGTH) :: errmsg
     ! -- formats
     character(len=*),parameter :: fmtblkerr = &
       "('Error.  Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
@@ -1252,7 +1253,7 @@ contains
     !
     ! -- initialize flags
     ichkustrm =  0
-    isfirst = 1
+    !isfirst = 1
     !
     ! -- set nbound to maxbound
     this%nbound = this%maxbound
@@ -1287,20 +1288,28 @@ contains
     ! -- Read data if ionper == kper
     if(this%ionper==kper) then
       !
+      ! -- setup table for period data
+      if (this%iprpak /= 0) then
+        !
+        ! -- reset the input table object
+        title = 'SFR (' // trim(this%name) // ') DATA FOR PERIOD'
+        write(title, '(a,1x,i6)') trim(adjustl(title)), kper
+        call table_cr(this%inputtab, this%name, title)
+        call this%inputtab%table_df(1, 4, this%iout)
+        text = 'REACH'
+        call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+        text = 'KEYWORD'
+        call this%inputtab%initialize_column(text, 20, alignment=TABLEFT)
+        do n = 1, 2
+          write(text, '(a,1x,i6)') 'VALUE', n
+          call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+        end do
+      end if
+      !
       ! -- read data
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
-        if (isfirst /= 0) then
-          isfirst = 0
-          if (this%iprpak /= 0) then
-            write(this%iout,'(/1x,a,1x,i6,/)')                                  &
-              'READING '//trim(adjustl(this%text))//                            &
-              ' DATA FOR PERIOD', kper
-            write(this%iout,'(3x,a)') '     REACH KEYWORD AND DATA'
-            write(this%iout,'(3x,78("-"))')
-          end if
-        end if
         n = this%parser%GetInteger()
         if (n < 1 .or. n > this%maxbound) then
           write(errmsg,'(4x,a,1x,i6)') &
@@ -1308,13 +1317,19 @@ contains
           call store_error(errmsg)
           cycle
         end if
+        !
         ! -- read data from the rest of the line
         call this%parser%GetRemainingLine(line)
         call this%sfr_set_stressperiod(n, line, ichkustrm)
+        !
+        ! -- write line to table
+        if (this%iprpak /= 0) then
+          call this%inputtab%add_term(n, finalize=.FALSE.)
+          call this%inputtab%line_to_columns(line, finalize=.FALSE.)
+        end if
       end do
       if (this%iprpak /= 0) then
-        write(this%iout,'(/,1x,a,1x,i6,/)')                                     &
-          'END OF '//trim(adjustl(this%text))//' DATA FOR PERIOD', kper
+        call this%inputtab%finalize_table()
       end if
       !
       ! -- check upstream fraction values
@@ -1773,7 +1788,6 @@ contains
     !
     !    SPECIFICATIONS:
     ! --------------------------------------------------------------------------
-    use InputOutputModule, only: UWWORD
     ! -- dummy
     class(SfrType) :: this
     integer(I4B),intent(in) :: kstp
@@ -2320,7 +2334,7 @@ contains
     class(SfrType), intent(inout) :: this
     ! -- local
     integer(I4B) :: i, j, n, nn1
-    character(len=200) :: ermsg
+    character(len=200) :: errmsg
     character(len=LENBOUNDNAME) :: bname
     logical :: jfound
     class(ObserveType),   pointer :: obsrv => null()
@@ -2358,27 +2372,27 @@ contains
             endif
           enddo
           if (.not. jfound) then
-            write(ermsg,10)trim(bname), trim(obsrv%name), trim(this%name)
-            call store_error(ermsg)
+            write(errmsg,10)trim(bname), trim(obsrv%name), trim(this%name)
+            call store_error(errmsg)
           endif
         else
-          write (ermsg,30) trim(obsrv%name), trim(this%name)
-          call store_error(ermsg)
+          write (errmsg,30) trim(obsrv%name), trim(this%name)
+          call store_error(errmsg)
         endif
       elseif (nn1 < 1 .or. nn1 > this%maxbound) then
-        write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
+        write (errmsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
           'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
           ' reach must be > 0 and <=', this%maxbound, &
           '(specified value is ', nn1, ')'
-        call store_error(ermsg)
+        call store_error(errmsg)
       else
         call ExpandArray(obsrv%indxbnds)
         n = size(obsrv%indxbnds)
         if (n == 1) then
           obsrv%indxbnds(1) = nn1
         else
-          ermsg = 'Programming error in sfr_rp_obs'
-          call store_error(ermsg)
+          errmsg = 'Programming error in sfr_rp_obs'
+          call store_error(errmsg)
         endif
       end if
       !
@@ -2389,11 +2403,11 @@ contains
         if (nn1 == NAMEDBOUNDFLAG) then
           n = size(obsrv%indxbnds)
           if (n > 1) then
-            write (ermsg, '(4x,a,4(1x,a))') &
+            write (errmsg, '(4x,a,4(1x,a))') &
               'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
               'for observation', trim(adjustl(obsrv%Name)), &
               ' must be assigned to a reach with a unique boundname.'
-            call store_error(ermsg)
+            call store_error(errmsg)
           end if
         end if
       end if
@@ -2403,11 +2417,11 @@ contains
       do j = 1, n
         nn1 = obsrv%indxbnds(j)
         if (nn1 < 1 .or. nn1 > this%maxbound) then
-          write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
+          write (errmsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
             'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
             ' reach must be > 0 and <=', this%maxbound, &
             '(specified value is ', nn1, ')'
-          call store_error(ermsg)
+          call store_error(errmsg)
         end if
       end do
     end do
@@ -2609,7 +2623,8 @@ contains
           write (cnum, '(i0)') n
           errmsg = 'ERROR: reach  ' // trim(cnum)
           write (cnum, '(i0)') this%ndiv(n)
-          errmsg = trim(errmsg) // ' diversion number should be between 1 and ' // trim(cnum) // '.'
+          errmsg = trim(errmsg) // ' diversion number should be between 1 ' //   &
+                   'and ' // trim(cnum) // '.'
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
           call ustop()
@@ -2661,11 +2676,6 @@ contains
         call ustop()
       end select
     !
-    ! -- write keyword data to output file
-    if (this%iprpak /= 0) then
-      write (this%iout, '(3x,i10,1x,a)') n, line(i0:istop)
-    end if
-    !
     ! -- return
     return
   end subroutine sfr_set_stressperiod
@@ -2681,7 +2691,7 @@ contains
     integer(I4B), intent(in) :: n
     integer(I4B), intent(in) :: nboundchk
     ! -- local
-    character(len=LINELENGTH) :: ermsg
+    character(len=LINELENGTH) :: errmsg
     character(len=10) :: crch
     integer(I4B) :: iaux
 ! ------------------------------------------------------------------------------
@@ -2689,8 +2699,8 @@ contains
     ! -- make sure reach has not been allocated
     if (nboundchk > 1) then
       write (crch, '(i10)') n
-      ermsg = 'reach ' // trim(crch) // ' is already allocated'
-      call store_error(ermsg)
+      errmsg = 'reach ' // trim(crch) // ' is already allocated'
+      call store_error(errmsg)
       call this%parser%StoreErrorUnit()
       call ustop()
     end if
@@ -2806,7 +2816,7 @@ contains
     integer(I4B), intent(in) :: n
     integer(I4B), intent(in) :: ndiv
     ! -- local
-    character(len=LINELENGTH) :: ermsg
+    character(len=LINELENGTH) :: errmsg
     character(len=10) :: crch
     integer(I4B) :: j
 ! ------------------------------------------------------------------------------
@@ -2814,9 +2824,9 @@ contains
     ! -- make sure reach has not been allocated
     if (associated(this%reaches(n)%diversion)) then
       write (crch, '(i10)') n
-      ermsg = 'ERROR: reach ' // trim(adjustl(crch)) // &
-     &        ' diversions are already allocated'
-      call store_error(ermsg)
+      errmsg = 'ERROR: reach ' // trim(adjustl(crch)) // &
+              ' diversions are already allocated'
+      call store_error(errmsg)
       call this%parser%StoreErrorUnit()
       call ustop()
     end if
@@ -3674,7 +3684,7 @@ contains
     character (len=30) :: nodestr
     character (len=LINELENGTH) :: title
     character(len=LINELENGTH) :: text
-    character (len=LINELENGTH) :: ermsg
+    character (len=LINELENGTH) :: errmsg
     integer(I4B) :: n, nn
     real(DP) :: btgwf, bt
     ! -- code
@@ -3684,8 +3694,8 @@ contains
       title = 'SFR (' // trim(this%name) // ') STATIC REACH DATA'
       call table_cr(this%inputtab, this%name, title)
       call this%inputtab%table_df(this%maxbound, 10, this%iout)
-      text = 'NUMBER'
-      call this%inputtab%initialize_column(text, 6, alignment=TABCENTER)
+      text = 'REACH'
+      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
       text = 'CELLID'
       call this%inputtab%initialize_column(text, 20, alignment=TABLEFT)
       text = 'LENGTH'
@@ -3718,44 +3728,45 @@ contains
       end if
       ! -- check reach length
       if (this%length(n) <= DZERO) then
-        ermsg = 'ERROR: Reach ' // crch // ' length must be > 0.0'
-        call store_error(ermsg)
+        errmsg = 'ERROR: Reach ' // crch // ' length must be > 0.0'
+        call store_error(errmsg)
       end if
       ! -- check reach width
       if (this%width(n) <= DZERO) then
-        ermsg = 'ERROR: Reach ' // crch // ' width must be > 0.0'
-        call store_error(ermsg)
+        errmsg = 'ERROR: Reach ' // crch // ' width must be > 0.0'
+        call store_error(errmsg)
       end if
       ! -- check reach slope
       if (this%slope(n) <= DZERO) then
-        ermsg = 'ERROR: Reach ' // crch // ' slope must be > 0.0'
-        call store_error(ermsg)
+        errmsg = 'ERROR: Reach ' // crch // ' slope must be > 0.0'
+        call store_error(errmsg)
       end if
       ! -- check bed thickness and bed hk for reaches connected to GWF
       if (nn > 0) then
         bt = this%strtop(n) - this%bthick(n)
         if (bt <= btgwf .and. this%icheck /= 0) then
           write (cval,'(f10.4)') bt
-          ermsg = 'ERROR: Reach ' // crch // ' bed bottom (rtp-rbth =' // cval
-          ermsg = trim(adjustl(ermsg)) // ') must be > the bottom of cell (' // nodestr
+          errmsg = 'ERROR: Reach ' // crch // ' bed bottom (rtp-rbth =' //       &
+                   cval // ') must be > the bottom of cell (' // nodestr
           write (cval,'(f10.4)') btgwf
-          ermsg = trim(adjustl(ermsg)) // '=' // cval // ').'
-          call store_error(ermsg)
+          errmsg = trim(adjustl(errmsg)) // '=' // cval // ').'
+          call store_error(errmsg)
         end if
         if (this%hk(n) < DZERO) then
-          ermsg = 'ERROR: Reach ' // crch // ' hk must be >= 0.0'
-          call store_error(ermsg)
+          errmsg = 'ERROR: Reach ' // crch // ' hk must be >= 0.0'
+          call store_error(errmsg)
         end if
       end if
       ! -- check reach roughness
       if (this%reaches(n)%rough%value <= DZERO) then
-        ermsg = 'ERROR: Reach ' // crch // " Manning's roughness coefficient must be > 0.0"
-        call store_error(ermsg)
+        errmsg = 'ERROR: Reach ' // crch // " Manning's roughness " //           &
+                 'coefficient must be > 0.0'
+        call store_error(errmsg)
       end if
       ! -- check reach upstream fraction
       if (this%ustrf(n) < DZERO) then
-        ermsg = 'ERROR: Reach ' // crch // " upstream fraction must be >= 0.0"
-        call store_error(ermsg)
+        errmsg = 'ERROR: Reach ' // crch // " upstream fraction must be >= 0.0"
+        call store_error(errmsg)
       end if
       ! -- write summary of reach information
       if (this%iprpak /= 0) then
@@ -3807,8 +3818,8 @@ contains
       title = 'SFR (' // trim(this%name) // ') STATIC REACH CONNECTION DATA'
       call table_cr(this%inputtab, this%name, title)
       call this%inputtab%table_df(this%maxbound, ntabcol, this%iout)
-      text = 'NUMBER'
-      call this%inputtab%initialize_column(text, 6, alignment=TABCENTER)
+      text = 'REACH'
+      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
       do n = 1, maxconn
         write(text, '(a,1x,i6)') 'CONN', n
         call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
@@ -3936,8 +3947,8 @@ contains
               ') STATIC UPSTREAM REACH CONNECTION DATA'
       call table_cr(this%inputtab, this%name, title)
       call this%inputtab%table_df(this%maxbound, ntabcol, this%iout)
-      text = 'NUMBER'
-      call this%inputtab%initialize_column(text, 6, alignment=TABCENTER)
+      text = 'REACH'
+      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
       do n = 1, maxconn
         write(text, '(a,1x,i6)') 'UPSTREAM CONN', n
         call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
@@ -3977,8 +3988,8 @@ contains
               ') STATIC DOWNSTREAM REACH CONNECTION DATA'
       call table_cr(this%inputtab, this%name, title)
       call this%inputtab%table_df(this%maxbound, ntabcol, this%iout)
-      text = 'NUMBER'
-      call this%inputtab%initialize_column(text, 6, alignment=TABCENTER)
+      text = 'REACH'
+      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
       do n = 1, maxconn
         write(text, '(a,1x,i6)') 'DOWNSTREAM CONN', n
         call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
@@ -4009,44 +4020,64 @@ contains
   subroutine sfr_check_diversions(this)
     class(SfrType) :: this
     ! -- local
+    character (len=LINELENGTH) :: title
+    character (len=LINELENGTH) :: text
     character (len= 5) :: crch
     character (len= 5) :: cdiv
     character (len= 5) :: crch2
     character (len=10) :: cprior
-    character (len=LINELENGTH) :: ermsg
-    character (len=LINELENGTH) :: line
+    character (len=LINELENGTH) :: errmsg
+    integer(I4B) :: maxdiv
     integer(I4B) :: n, nn, nc
     integer(I4B) :: ii
     integer(I4B) :: idiv
     integer(I4B) :: ifound
     ! -- format
-10  format('Diversion ',i0,' of reach ',i0,' is invalid or has not been defined.')
+10  format('Diversion ',i0,' of reach ',i0,                                      &
+           ' is invalid or has not been defined.')
     ! -- code
     !
     ! -- write header
     if (this%iprpak /= 0) then
-      write (this%iout, '(//a)') 'SFR DIVERSION DATA'
-      write (this%iout, '(a)') '     REACH DIVERSION    REACH2 CPRIOR'
-      write (this%iout, "(45('-'))")
+      !
+      ! -- determine the maximum number of diversions
+      maxdiv = 0
+      do n = 1, this%maxbound
+        maxdiv = maxdiv + this%ndiv(n)
+      end do
+      !
+      ! -- reset the input table object
+      title = 'SFR (' // trim(this%name) // ') REACH DIVERSION DATA'
+      call table_cr(this%inputtab, this%name, title)
+      call this%inputtab%table_df(maxdiv, 4, this%iout)
+      text = 'REACH'
+      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      text = 'DIVERSION'
+      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      text = 'REACH 2'
+      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      text = 'CPRIOR'
+      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
     end if
     !
     ! -- check that diversion data are correct
     do n = 1, this%maxbound
       if (this%ndiv(n) < 1) cycle
       write (crch, '(i5)') n
-      line = '     ' // crch
+      !line = '     ' // crch
+      
       do idiv = 1, this%ndiv(n)
         write (cdiv, '(i5)') idiv
-        line = trim(line) // '     ' // cdiv
+        !
         !
         nn = this%reaches(n)%diversion(idiv)%reach
         write (crch2, '(i5)') nn
-        line = trim(line) // '     ' // crch2
+        !
         ! -- make sure diversion reach is connected to current reach
         ifound = 0
         if (nn < 1 .or. nn > this%maxbound) then
-          write(ermsg,10)idiv, n
-          call store_error(ermsg)
+          write(errmsg,10)idiv, n
+          call store_error(errmsg)
           call this%parser%StoreErrorUnit()
           call ustop()
         endif
@@ -4060,25 +4091,24 @@ contains
           end if
         end do connreach
         if (ifound /= 1) then
-          ermsg = 'ERROR: Reach ' // crch // ' is not a upstream reach for ' // &
-     &            'reach ' // crch2 // ' as a result diversion ' // cdiv // ' from ' // &
-     &            'reach ' // crch //' to reach ' // crch2 // ' is not possible. ' // &
-     &            'Check reach connectivity.'
-          call store_error(ermsg)
+          errmsg = 'ERROR: Reach ' // crch // ' is not a upstream reach for ' // &
+                   'reach ' // crch2 // ' as a result diversion ' // cdiv //     &
+                   ' from reach ' // crch //' to reach ' // crch2 //             &
+                   ' is not possible. Check reach connectivity.'
+          call store_error(errmsg)
         end if
         ! -- iprior
         cprior = this%reaches(n)%diversion(idiv)%cprior
-        line = trim(line) // ' ' // cprior
         !
-        ! write final line to output file
+        ! -- add terms to the table
         if (this%iprpak /= 0) then
-          write (this%iout, '(a)') trim(line)
+          call this%inputtab%add_term(n)
+          call this%inputtab%add_term(idiv)
+          call this%inputtab%add_term(nn)
+          call this%inputtab%add_term(this%reaches(n)%diversion(idiv)%cprior)
         end if
       end do
     end do
-    if (this%iprpak /= 0) then
-      write (this%iout, "(45('-'))")
-    end if
     !
     ! -- return
     return
@@ -4088,11 +4118,16 @@ contains
   subroutine sfr_check_ustrf(this)
     class(SfrType) :: this
     ! -- local
+    character (len=LINELENGTH) :: title
+    character (len=LINELENGTH) :: text
+    logical :: lcycle
     logical :: ladd
     character (len=5) :: crch, crch2
     character (len=10) :: cval
-    character (len=LINELENGTH) :: ermsg
-    character (len=LINELENGTH) :: line
+    character (len=LINELENGTH) :: errmsg
+    integer(I4B) :: maxcols
+    integer(I4B) :: npairs
+    integer(I4B) :: ipair
     integer(I4B) :: i, n
     integer(I4B) :: n2
     integer(I4B) :: idiv
@@ -4101,17 +4136,43 @@ contains
     real(DP) :: rval
     ! -- code
     !
-    ! -- write header
-    line = 'REACH'
-    do n = 1, 8
-      write (crch, '(i5)') n
-      line = trim(line) // crch // '  FRACTION'
-    end do
+    ! -- write table header
     if (this%iprpak /= 0) then
-      write (this%iout, '(//a)') 'SFR UPSTREAM FRACTIONS'
-      write (this%iout, '(47x,a)') 'CONNECTED REACHES UPSTREAM FRACTIONS'
-      write (this%iout, '(a)') line
-      write (this%iout, "(128('-'))")
+      !
+      ! -- determine the maximum number of columns
+      npairs = 0
+      do n = 1, this%maxbound
+        ipair = 0
+        ec: do i = 1, this%nconnreach(n)
+          !
+          ! -- skip upstream connections
+          if (this%reaches(n)%idir(i) > 0) cycle ec
+          n2 = this%reaches(n)%iconn(i)
+          !
+          ! -- skip inactive downstream reaches
+          if (this%iboundpak(n2) == 0) cycle ec
+          !
+          ! -- increment ipair and see if it exceeds npairs
+          ipair = ipair + 1
+          npairs = max(npairs, ipair)
+        end do ec
+      end do
+      maxcols = 1 + npairs * 2
+      !
+      ! -- reset the input table object
+      title = 'SFR (' // trim(this%name) // ') CONNECTED REACHES UPSTREAM ' //   &
+              'FRACTION DATA'
+      call table_cr(this%inputtab, this%name, title)
+      call this%inputtab%table_df(this%maxbound, maxcols, this%iout)
+      text = 'REACH'
+      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      do i = 1, npairs
+        write(cval, '(i10)') i
+        text = 'DOWNSTREAM REACH ' // trim(adjustl(cval)) 
+        call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+        text = 'FRACTION ' // trim(adjustl(cval)) 
+        call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      end do
     end if
     !
     ! -- calculate the total fraction of connected reaches that are
@@ -4122,21 +4183,41 @@ contains
       rval = DZERO
       f = DZERO
       write (crch, '(i5)') n
-      line = crch
+      if (this%iprpak /= 0) then
+        call this%inputtab%add_term(n)
+      end if
+      ipair = 0
       eachconn: do i = 1, this%nconnreach(n)
+        lcycle = .FALSE.
+        !
         ! -- initialize downstream connection q
         this%reaches(n)%qconn(i) = DZERO
+        !
         ! -- skip upstream connections
-        if (this%reaches(n)%idir(i) > 0) cycle eachconn
+        if (this%reaches(n)%idir(i) > 0) then
+          lcycle = .TRUE.
+        end if
         n2 = this%reaches(n)%iconn(i)
+        !
         ! -- skip inactive downstream reaches
-        if (this%iboundpak(n2) == 0) cycle eachconn
+        if (this%iboundpak(n2) == 0) then
+          lcycle = .TRUE.
+        end if
+        if (lcycle) then
+          cycle eachconn
+        end if
+        ipair = ipair + 1
         write (crch2, '(i5)') n2
         ids = ids + 1
         ladd = .true.
         f = f + this%ustrf(n2)
         write (cval, '(f10.4)') this%ustrf(n2)
-        line = trim(line) // crch2 // cval
+        !
+        ! -- write upstream fractions
+        if (this%iprpak /= 0) then
+          call this%inputtab%add_term(n2)
+          call this%inputtab%add_term(this%ustrf(n2))
+        end if
         eachdiv: do idiv = 1, this%ndiv(n)
           if (this%reaches(n)%diversion(idiv)%reach == n2) then
             this%reaches(n)%idiv(i) = idiv
@@ -4150,22 +4231,26 @@ contains
       end do eachconn
       this%ftotnd(n) = rval
       !
-      ! -- write upstream fractions
+      ! -- write remaining table columns
       if (this%iprpak /= 0) then
-        write (this%iout, '(a)') line
+        ipair = ipair + 1
+        do i = ipair, npairs
+          call this%inputtab%add_term('  ')
+          call this%inputtab%add_term('  ')
+        end do
       end if
+      !
+      ! -- evaluate if an error condition has occured
+      !    the sum of fractions is not equal to 1
       if (ids /= 0) then
         if (abs(f-DONE) > DEM6) then
           write (cval, '(f10.4)') f
-          ermsg = 'ERROR: upstream fractions for reach ' // crch // ' not equal to one ('
-          ermsg = trim(adjustl(ermsg)) // cval // '). Check reach connectivity.'
-          call store_error(ermsg)
+          errmsg = 'ERROR: upstream fractions for reach ' // crch // ' not ' //   &
+                  'equal to one (' // cval // '). Check reach connectivity.'
+          call store_error(errmsg)
         end if
       end if
     end do
-    if (this%iprpak /= 0) then
-      write (this%iout, "(128('-'),//)")
-    end if
     !
     ! -- return
     return
