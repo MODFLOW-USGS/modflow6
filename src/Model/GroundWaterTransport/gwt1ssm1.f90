@@ -131,7 +131,8 @@ module GwtSsmModule
     if (this%fmi%nflowpack == 0) then
       write(errmsg, '(a)') '****ERROR. SSM PACKAGE DOES NOT HAVE &
                             &BOUNDARY FLOWS.  ACTIVATE GWF-GWT EXCHANGE &
-                            &OR TURN ON FMI AND PROVIDE BUDGET FILE.'
+                            &OR TURN ON FMI AND PROVIDE A BUDGET FILE &
+                            &THAT CONTAINS BOUNDARY FLOWS.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
       call ustop()

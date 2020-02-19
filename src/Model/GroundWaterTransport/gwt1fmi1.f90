@@ -438,8 +438,8 @@ module GwtFmiModule
       call mem_deallocate(this%gwfflowja)
       call mem_deallocate(this%gwfsat)
       call mem_deallocate(this%gwfhead)
-      !call mem_deallocate(this%gwfstrgss)
-      !call mem_deallocate(this%gwfstrgsy)
+      call mem_deallocate(this%gwfstrgss)
+      call mem_deallocate(this%gwfstrgsy)
       call mem_deallocate(this%gwfspdis)
       call mem_deallocate(this%gwfibound)
       call mem_deallocate(this%gwficelltype)
@@ -453,7 +453,6 @@ module GwtFmiModule
     call mem_deallocate(this%iubud)
     call mem_deallocate(this%iuhds)
     call mem_deallocate(this%nflowpack)
-    
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
@@ -539,19 +538,15 @@ module GwtFmiModule
       call mem_allocate(this%gwfflowja, this%dis%con%nja, 'GWFFLOWJA', this%origin)
       call mem_allocate(this%gwfsat, nodes, 'GWFSAT', this%origin)
       call mem_allocate(this%gwfhead, nodes, 'GWFHEAD', this%origin)
-      !call mem_allocate(this%gwfstrgss, nodes, 'GWFSTRGSS', this%origin)
-      !call mem_allocate(this%gwfstrgsy, nodes, 'GWFSTRGSY', this%origin)
+      call mem_allocate(this%gwfstrgss, 0, 'GWFSTRGSS', this%origin)
+      call mem_allocate(this%gwfstrgsy, 0, 'GWFSTRGSY', this%origin)
       call mem_allocate(this%gwfspdis, 3, nodes, 'GWFSPDIS', this%origin)
       call mem_allocate(this%gwfibound, nodes, 'GWFIBOUND', this%origin)
       call mem_allocate(this%gwficelltype, nodes, 'GWFICELLTYPE', this%origin)
       this%igwfinwtup = 0
-      !this%igwfstrgss = 1
-      !this%igwfstrgsy = 1
       do n = 1, nodes
         this%gwfsat(n) = DONE
         this%gwfhead(n) = DZERO
-        !this%gwfstrgss(n) = DZERO
-        !this%gwfstrgsy(n) = DZERO
         this%gwfspdis(:, n) = DZERO
         this%gwfibound(n) = 1
         this%gwficelltype(n) = 0
@@ -560,9 +555,6 @@ module GwtFmiModule
         this%gwfflowja(n) = DZERO
       end do
     end if
-    !
-    ! -- todo: need to handle  allocation of gwfstrgss and gwfstrgsy
-    !    for transient flow when fmi reading from file
     !
     ! -- Return
     return
@@ -690,8 +682,11 @@ module GwtFmiModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_reallocate
+    use SimModule, only: store_error, store_error_unit, ustop, count_errors
     ! -- dummy
     class(GwtFmiType) :: this
+    ! -- local
+    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: ncrbud
     integer(I4B) :: nflowpack
     integer(I4B) :: i, ip
@@ -748,8 +743,36 @@ module GwtFmiModule
     call mem_reallocate(this%iatp, nflowpack, 'IATP', this%origin)
     this%iatp(:) = 0
     !
-    ! -- todo: error if flowja and qxqyqz not found
-    
+    ! -- Reallocate storage arrays if they were found
+    if (found_stoss) then
+      this%igwfstrgss = 1
+      call mem_reallocate(this%gwfstrgss, this%dis%nodes, 'GWFSTRGSS', this%origin)
+    end if
+    if (found_stosy) then
+      this%igwfstrgsy = 1
+      call mem_reallocate(this%gwfstrgsy, this%dis%nodes, 'GWFSTRGSY', this%origin)
+    end if
+    !
+    ! -- Error if flowja and qxqyqz not found
+    if (.not. found_dataspdis) then
+      write(errmsg, '(4x,a)') '***ERROR. SPECIFIC DISCHARGE NOT FOUND IN &
+                              &BUDGET FILE. SAVE_SPECIFIC_DISCHARGE AND &
+                              &SAVE_FLOWS MUST BE ACTIVATED IN THE NPF PACKAGE.'
+      call store_error(errmsg)
+    end if
+    if (.not. found_flowja) then
+      write(errmsg, '(4x,a)') '***ERROR. FLOWJA NOT FOUND IN &
+                              &BUDGET FILE. SAVE_FLOWS MUST &
+                              &BE ACTIVATED IN THE NPF PACKAGE.'
+      call store_error(errmsg)
+    end if
+    if (count_errors() > 0) then
+      call this%parser%StoreErrorUnit()
+      call ustop()
+    end if
+    !
+    ! -- return
+    return
   end subroutine initialize_bfr
   
   subroutine advance_bfr(this)
@@ -843,12 +866,13 @@ module GwtFmiModule
               this%gwfflowja(iposr) = this%bfr%flowja(iposu)
             end do
           case('DATA-SPDIS')
-            do nu = 1, this%dis%nodesuser
+            do i = 1, this%bfr%nlist
+              nu = this%bfr%nodesrc(i)
               nr = this%dis%get_nodenumber(nu, 0)
               if (nr <= 0) cycle
-              this%gwfspdis(1, nr) = this%bfr%auxvar(1, nu)
-              this%gwfspdis(2, nr) = this%bfr%auxvar(2, nu)
-              this%gwfspdis(3, nr) = this%bfr%auxvar(3, nu)
+              this%gwfspdis(1, nr) = this%bfr%auxvar(1, i)
+              this%gwfspdis(2, nr) = this%bfr%auxvar(2, i)
+              this%gwfspdis(3, nr) = this%bfr%auxvar(3, i)
             end do
           case('STO-SS')
             do nu = 1, this%dis%nodesuser
