@@ -2090,6 +2090,11 @@ contains
       end do
     end if
     !
+    ! -- Output uzf flow table
+    if (ibudfl /= 0 .and. this%iprflow /= 0) then
+      call this%budobj%write_flowtable(this%dis)
+    end if
+    !
     ! -- Output uzf budget
     call this%budobj%write_budtable(kstp, kper, iout)
     !
@@ -3430,6 +3435,11 @@ contains
                                                this%name, &
                                                maxlist, .false., .false., &
                                                naux, this%auxname)
+    end if
+    !
+    ! -- if uzf flow for each reach are written to the listing file
+    if (this%iprflow /= 0) then
+      call this%budobj%flowtable_df(this%iout, cellids='GWF')
     end if
     !
     ! -- return

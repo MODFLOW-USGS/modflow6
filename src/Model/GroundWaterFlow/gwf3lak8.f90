@@ -4419,6 +4419,11 @@ contains
 
     end if
     !
+    ! -- Output lake flow table
+    if (ibudfl /= 0 .and. this%iprflow /= 0) then
+      call this%budobj%write_flowtable(this%dis)
+    end if
+    !
     ! -- Output lake budget
     call this%budobj%write_budtable(kstp, kper, iout)
     !
@@ -6020,6 +6025,11 @@ contains
                                                this%name, &
                                                maxlist, .false., .false., &
                                                naux, this%auxname)
+    end if
+    !
+    ! -- if lake flow for each reach are written to the listing file
+    if (this%iprflow /= 0) then
+      call this%budobj%flowtable_df(this%iout)
     end if
     !
     ! -- return
