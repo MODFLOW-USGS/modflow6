@@ -1,15 +1,16 @@
 module MawModule
   !
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: LINELENGTH, LENBOUNDNAME, LENTIMESERIESNAME,       &
-  &                          DZERO, DEM6, DEM4, DEM2, DHALF, DP7, DP9, DONE,    &
-  &                          DTWO, DPI, DEIGHT, DHUNDRED, DEP20,                &
-  &                          NAMEDBOUNDFLAG, LENPACKAGENAME, LENAUXNAME,        &
+  use ConstantsModule, only: LINELENGTH, LENBOUNDNAME, LENTIMESERIESNAME,        &
+                             DZERO, DEM6, DEM4, DEM2, DQUARTER, DHALF, DP7,      &
+                             DP9, DONE, DTWO, DPI, DTWOPI, DEIGHT, DHUNDRED,     &
+                             DEP20, NAMEDBOUNDFLAG, LENPACKAGENAME, LENAUXNAME,  &
   &                          LENFTYPE, DHNOFLO, DHDRY, DNODATA, MAXCHARLEN,     &
                              TABLEFT, TABCENTER, TABRIGHT,                      &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
-  use SmoothingModule,  only: sQuadraticSaturation, sQSaturation, &
-  &                           sQuadraticSaturationDerivative, sQSaturationDerivative
+  use SmoothingModule,  only: sQuadraticSaturation, sQSaturation,                &
+                              sQuadraticSaturationDerivative,                    &
+                              sQSaturationDerivative
   use BndModule, only: BndType
   use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr
   use ObserveModule,        only: ObserveType
@@ -19,7 +20,7 @@ module MawModule
   use SimModule,        only: count_errors, store_error, store_error_unit, ustop
   use ArrayHandlersModule, only: ExpandArray
   use BlockParserModule,   only: BlockParserType
-  use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_setptr,      &
+  use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_setptr,       &
                                  mem_deallocate
   !
   implicit none
@@ -112,7 +113,7 @@ module MawModule
     integer(I4B), pointer :: bditems => NULL()
     type(BudgetObjectType), pointer :: budobj => null()
     !
-    ! -- pointer to gwf iss and gwf hk
+    ! -- pointer to gwf iss, k11, k22.
     integer(I4B), pointer :: gwfiss => NULL()
     real(DP), dimension(:), pointer, contiguous :: gwfk11 => NULL()
     real(DP), dimension(:), pointer, contiguous :: gwfk22 => NULL()
@@ -387,7 +388,6 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, store_error, count_errors, store_error_unit
     use TimeSeriesManagerModule, only: read_single_value_or_time_series
     ! -- dummy
     class(MawType),intent(inout) :: this
@@ -620,7 +620,6 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, store_error, count_errors
     ! -- dummy
     class(MawType),intent(inout) :: this
     ! -- local
@@ -815,7 +814,6 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, store_error, count_errors
     ! -- dummy
     class(MawType),intent(inout) :: this
     ! -- local
@@ -901,7 +899,6 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, store_error, count_errors
     use MemoryManagerModule, only: mem_setptr
     ! -- dummy
     class(MawType),intent(inout) :: this
@@ -1072,6 +1069,12 @@ contains
     this%gwfik22 => null()
     this%gwfsat => null()
     !
+    ! -- check for any error conditions
+    if (count_errors() > 0) then
+      call ustop()
+    end if
+    
+    !
     ! -- return
     return
   end subroutine maw_read_initial_attr
@@ -1088,7 +1091,6 @@ contains
     ! -- modules
     use TdisModule, only: kper, perlen, totimsav
     use TimeSeriesManagerModule, only: read_single_value_or_time_series
-    use SimModule, only: ustop, store_error
     ! -- dummy
     class(MawType),intent(inout) :: this
     integer(I4B), intent(in) :: imaw
@@ -1274,10 +1276,10 @@ contains
     ! -- formats
 ! ------------------------------------------------------------------------------
     if (len(msg) == 0) then
-      write(errmsg,'(4x,a,1x,a,1x,a,1x,i6,1x,a)') &
+      write(errmsg,'(4x,a,1x,a,1x,a,1x,i0,1x,a)') &
         '****ERROR.', keyword, ' for MAW well', imaw, 'has already been set.'
     else
-      write(errmsg,'(4x,a,1x,a,1x,a,1x,i6,1x,a)') &
+      write(errmsg,'(4x,a,1x,a,1x,a,1x,i0,1x,a)') &
         '****ERROR.', keyword, ' for MAW well', imaw, msg
     end if
     call store_error(errmsg)
@@ -1288,7 +1290,7 @@ contains
 
   subroutine maw_check_attributes(this)
 ! ******************************************************************************
-! maw_check_attributes -- Issue parameter errors for mawweslls(imaw)
+! maw_check_attributes -- Issue parameter errors for mawwells(imaw)
 ! Subroutine: (1) read itmp
 !             (2) read new boundaries if itmp>0
 ! ******************************************************************************
@@ -1308,7 +1310,8 @@ contains
     idx = 1
     do n = 1, this%nmawwells
       if (this%mawwells(n)%ngwfnodes < 1) then
-        call this%maw_set_attribute_error(n, 'NGWFNODES', 'must be greater than 0.')
+        call this%maw_set_attribute_error(n, 'NGWFNODES', 'must be greater ' //  &
+                                          'than 0.')
       end if
       ! -- CDL 2/5/2018 Moved to maw_set_stressperiod so it is only done if a
       !    new head is read in.
@@ -1321,22 +1324,40 @@ contains
       end if
       if (this%mawwells(n)%shutoffmin > DZERO) then
         if (this%mawwells(n)%shutoffmin >= this%mawwells(n)%shutoffmax) then
-          call this%maw_set_attribute_error(n, 'SHUT_OFF', 'shutoffmax must be > shutoffmin.')
+          call this%maw_set_attribute_error(n, 'SHUT_OFF', 'shutoffmax must ' // &
+                                            'be > shutoffmin.')
         end if
       end if
       do j = 1, this%mawwells(n)%ngwfnodes
         ! -- write gwfnode number
-        write(cgwfnode,'(a,1x,i3,1x,a)') 'gwfnode(', j,')'
+        write(cgwfnode,'(a,i0,a)') 'gwfnode(', j,')'
         if (this%mawwells(n)%botscrn(j) >= this%mawwells(n)%topscrn(j)) then
-          call this%maw_set_attribute_error(n, 'SCREEN_TOP', 'screen bottom must be < screen top. '//trim(cgwfnode))
+          call this%maw_set_attribute_error(n, 'SCREEN_TOP', 'screen bottom ' // &
+                                            'must be < screen top. ' //          &
+                                            trim(cgwfnode))
         end if
-        if (this%mawwells(n)%ieqn==2 .OR. this%mawwells(n)%ieqn==3 .OR.       &
+        if (this%mawwells(n)%ieqn==2 .OR. this%mawwells(n)%ieqn==3 .OR.          &
             this%mawwells(n)%ieqn==4) then
           if (this%mawwells(n)%sradius(j) > DZERO) then
             if (this%mawwells(n)%sradius(j) <= this%mawwells(n)%radius) then
-              call this%maw_set_attribute_error(n, 'RADIUS_SKIN', 'skin radius must be >= well radius. '//trim(cgwfnode))
+              call this%maw_set_attribute_error(n, 'RADIUS_SKIN', 'skin ' //     &
+                                                'radius must be >= well ' //     &
+                                                'radius. ' // trim(cgwfnode))
             end if
           end if
+          if (this%mawwells(n)%hk(j) <= DZERO) then
+            call this%maw_set_attribute_error(n, 'HK_SKIN', 'skin hyraulic ' //  &
+                                              'conductivity must be > zero. ' // &
+                                              trim(cgwfnode))
+          end if
+        else if (this%mawwells(n)%ieqn == 0) then
+          if (this%mawwells(n)%satcond(j) < DZERO) then
+            call this%maw_set_attribute_error(n, 'HK_SKIN',                      &
+                                              'skin hyraulic conductivity ' //   &
+                                              'must be >= zero when using ' //   &
+                                              'SPECIFIED condeqn. ' //           &
+                                              trim(cgwfnode))
+          end if    
         end if
         idx = idx + 1
       end do
@@ -1355,7 +1376,6 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use SparseModule, only: sparsematrix
-    use SimModule, only: store_error, ustop
     ! -- dummy
     class(MawType),intent(inout) :: this
     integer(I4B), intent(in) :: moffset
@@ -1393,7 +1413,6 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use SparseModule, only: sparsematrix
-    use SimModule, only: store_error, ustop
     ! -- dummy
     class(MawType),intent(inout) :: this
     integer(I4B), intent(in) :: moffset
@@ -1465,7 +1484,6 @@ contains
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: MAXCHARLEN, DZERO
     use OpenSpecModule, only: access, form
-    use SimModule, only: ustop, store_error
     use InputOutputModule, only: urword, getunit, openfile
     ! -- dummy
     class(MawType),   intent(inout) :: this
@@ -1610,7 +1628,6 @@ contains
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
     use TdisModule, only: kper, nper
-    use SimModule, only: ustop, store_error, count_errors
     ! -- dummy
     class(MawType),intent(inout) :: this
     ! -- local
@@ -3297,6 +3314,8 @@ contains
     integer(I4B), intent(in) :: j
     integer(I4B), intent(in) :: node
     ! -- local
+    character(len=LINELENGTH) :: errmsg
+    integer(I4B) :: iTcontrastErr
     real(DP) :: c
     real(DP) :: k11
     real(DP) :: k22
@@ -3308,6 +3327,7 @@ contains
     real(DP) :: botw
     real(DP) :: tthkw
     real(DP) :: tthka
+    real(DP) :: Tcontrast
     real(DP) :: skin
     real(DP) :: ravg
     real(DP) :: slen
@@ -3315,17 +3335,22 @@ contains
     real(DP) :: gwfsat
     real(DP) :: gwftop
     real(DP) :: gwfbot
-    real(DP) :: denom
     real(DP) :: lc1
     real(DP) :: lc2
     real(DP) :: dx
     real(DP) :: dy
     real(DP) :: Txx
     real(DP) :: Tyy
+    real(DP) :: T2pi
     real(DP) :: yx4
     real(DP) :: xy4
     ! -- formats
     ! ------------------------------------------------------------------------------
+    !
+    ! -- initialize conductance variables
+    iTcontrastErr = 0
+    lc1 = DZERO
+    lc2 = DZERO
     !
     ! -- set K11 and K22
     k11 = this%gwfk11(node)
@@ -3356,59 +3381,87 @@ contains
       end if
     end if
     !
+    ! -- calculate the aquifer transmissivity (T2pi)
+    T2pi = DTWOPI * tthka * sqrtk11k22
+    !
     ! -- calculate effective radius
     if (this%dis%ndim == 3 .and. this%ieffradopt /= 0) then
       Txx = k11 * tthka
       Tyy = k22 * tthka
       dx = sqrt(this%dis%area(node))
       dy = dx
-      yx4 = (Tyy/Txx)**0.25D0
-      xy4 = (Txx/Tyy)**0.25D0
-      eradius = 0.28D0 *((yx4*dx)**2 +(xy4*dy)**2)**0.5D0 / (yx4+xy4)
+      yx4 = (Tyy/Txx)**DQUARTER
+      xy4 = (Txx/Tyy)**DQUARTER
+      eradius = 0.28_DP * ((yx4*dx)**DTWO + (xy4*dy)**DTWO)**DHALF / (yx4+xy4)
     else
       area = this%dis%area(node)
       eradius = sqrt(area / (DEIGHT * DPI))
     end if
     !
-    ! -- conductance calculated using Thiem equation
-    if (this%mawwells(i)%ieqn == 1) then
-      c = (DTWO * DPI * tthka * sqrtk11k22) / log(eradius / this%mawwells(i)%radius)
-    ! -- conductance calculated using skin
-    else if (this%mawwells(i)%ieqn == 2) then
+    ! -- conductance calculations
+    ! -- Thiem equation (1) and cumulative Thiem and skin equations (3)
+    if (this%mawwells(i)%ieqn == 1 .or. this%mawwells(i)%ieqn == 3) then
+      lc1 = log(eradius / this%mawwells(i)%radius) / T2pi
+    end if
+    ! -- skin equation (2) and cumulative Thiem and skin equations (3)
+    if (this%mawwells(i)%ieqn == 2 .or. this%mawwells(i)%ieqn == 3) then
       hks = this%mawwells(i)%hk(j)
-      ! prevent division by zero
       if (tthkw * hks > DZERO) then
-        skin = (((sqrtk11k22*tthka)/(hks*tthkw)) - DONE) * &
-               log(this%mawwells(i)%sradius(j)/this%mawwells(i)%radius)
-        c = (DTWO * DPI * tthka * sqrtk11k22) / skin
+        Tcontrast = (sqrtk11k22 * tthka) / (hks * tthkw)
+        skin = (Tcontrast - DONE) *                                              &
+                log(this%mawwells(i)%sradius(j) / this%mawwells(i)%radius)
+        ! -- trap invalid transmissvity contrast if using skin equation (2).
+        !    Not trapped for cumulative Thiem and skin equations (3) 
+        !    because the MNW2 package allowed this condition (for 
+        !    backward compatibility with the MNW2 package for  
+        !    MODFLOW-2005, MODFLOW-NWT, and MODFLOW-USG).
+        if (Tcontrast <= 1 .and. this%mawwells(i)%ieqn == 2) then
+          iTcontrastErr = 1
+          write(errmsg, '(4x,a,g0,a,1x,i0,1x,a,1x,i0,a,4(1x,a))')                &
+            '****ERROR. INVALID CALCULATED TRANSMISSIVITY CONTRAST (', Tcontrast,&
+            ') for MAW WELL', i, 'CONNECTION', j, '.', 'THIS HAPPENS WHEN THE',  &
+            'SKIN TRANSMISSIVITY EQUALS OR EXCEEDS THE AQUIFER TRANSMISSIVITY.', &
+            'CONSIDER DECREASING HK_SKIN FOR THE CONNECTION OR USING THE',       &
+            'CUMULATIVE OR MEAN CONDUCTANCE EQUATIONS.'
+          call store_error(errmsg)
+        else
+          lc2 = skin / T2pi
+        end if
       end if
-    ! -- conductance calculated using cumulative Thiem and skin equations
-    else if (this%mawwells(i)%ieqn == 3) then
-      ! calculate lc1
-      lc1 = log(eradius / this%mawwells(i)%radius) / (DTWO * DPI * tthka * sqrtk11k22)
-      ! calculate lc2
-      hks = this%mawwells(i)%hk(j)
-      ! prevent division by zero
-      if (tthkw * hks > DZERO) then
-        skin = (((sqrtk11k22*tthka)/(hks*tthkw)) - DONE) * &
-               log(this%mawwells(i)%sradius(j)/this%mawwells(i)%radius)
-        lc2 = skin / (DTWO * DPI * tthka * sqrtk11k22)
-      else
-        lc2 = DZERO
-      end if
-      ! calculate conductance
-      denom = lc1 + lc2
-      if (denom > DZERO) then
-        c = DONE / denom
-      end if
-    ! -- conductance calculated using screen elevations, hk, well radius, and screen radius
-    else if (this%mawwells(i)%ieqn == 4) then
+    end if
+    ! -- conductance using screen elevations, hk, well radius, 
+    !    and screen radius
+    if (this%mawwells(i)%ieqn == 4) then
       hks = this%mawwells(i)%hk(j)
       ravg = DHALF * (this%mawwells(i)%radius + this%mawwells(i)%sradius(j))
       slen = this%mawwells(i)%sradius(j) - this%mawwells(i)%radius
-      pavg = DTWO * DPI * ravg
+      pavg = DTWOPI * ravg
       c = hks * pavg * tthkw / slen
     end if
+    !
+    ! -- calculate final conductance for Theim (1), Skin (2), and 
+    ! and cumulative Thiem and skin equations (3)
+    if (this%mawwells(i)%ieqn < 4) then
+      if (lc1 + lc2 /= DZERO) then
+        c = DONE / (lc1 + lc2)
+      else
+        c = -DNODATA
+      end if
+    end if
+    !
+    ! -- ensure that the conductance is not negative. Only write error message
+    !    if error condition has not occured for skin calculations (LC2)
+    if (c < DZERO .and. iTcontrastErr == 0) then
+      write(errmsg, '(4x,a,g0,a,1x,i0,1x,a,1x,i0,a,4(1x,a))')                    &
+        '****ERROR. INVALID CALCULATED NEGATIVE CONDUCTANCE (', c,               &
+        ') for MAW WELL', i, 'CONNECTION', j, '.', 'THIS HAPPENS WHEN THE',      &
+        'SKIN TRANSMISSIVITY EQUALS OR EXCEEDS THE AQUIFER TRANSMISSIVITY.',     &
+        'CONSIDER DECREASING HK_SKIN FOR THE CONNECTION OR USING THE',           &
+        'MEAN CONDUCTANCE EQUATION.'
+      call store_error(errmsg)
+    end if
+    !
+    ! -- set saturated conductance
     this%mawwells(i)%satcond(j) = c
     !
     ! -- return

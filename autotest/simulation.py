@@ -27,7 +27,7 @@ sfmt = '{:25s} - {}'
 
 class Simulation(object):
     def __init__(self, name, exfunc=None, exe_dict=None, htol=None,
-                 idxsim=None, cmp_verbose=True):
+                 idxsim=None, cmp_verbose=True, require_failure=None):
         delFiles = True
         for idx, arg in enumerate(sys.argv):
             if arg.lower() == '--keep':
@@ -78,6 +78,9 @@ class Simulation(object):
 
         # set compare verbosity
         self.cmp_verbose = cmp_verbose
+
+        # set allow failure
+        self.require_failure = require_failure
 
         sysinfo = platform.system()
         self.delFiles = delFiles
@@ -164,7 +167,13 @@ class Simulation(object):
             print(msg)
             success = False
 
-        assert success
+        if self.require_failure is None:
+            assert success
+        else:
+            if self.require_failure:
+                assert success is False
+            else:
+                assert success is True
 
         self.nam_cmp = None
         if success:

@@ -1344,10 +1344,6 @@ module GwfDisModule
     integer(I4B) :: nodeu1, nodeu2, ipos
 ! ------------------------------------------------------------------------------
     !
-    ! -- Calculate cell center z values
-    z1 = this%bot(noden) + DHALF * (this%top(noden) - this%bot(noden))
-    z2 = this%bot(nodem) + DHALF * (this%top(nodem) - this%bot(nodem))
-    !
     ! -- Set vector components based on ihc
     if(ihc == 0) then
       !
@@ -1359,6 +1355,8 @@ module GwfDisModule
       else
         zcomp = -DONE
       endif
+      z1 = this%bot(noden) + DHALF * (this%top(noden) - this%bot(noden))
+      z2 = this%bot(nodem) + DHALF * (this%top(nodem) - this%bot(nodem))
       conlen = abs(z2 - z1)
     else
       !
@@ -1366,8 +1364,8 @@ module GwfDisModule
         z1 = DZERO
         z2 = DZERO
       else
-        z1 = z1 * satn
-        z2 = z2 * satm
+        z1 = this%bot(noden) + DHALF * satn * (this%top(noden) - this%bot(noden))
+        z2 = this%bot(nodem) + DHALF * satm * (this%top(nodem) - this%bot(nodem))
       endif
       ipos = this%con%getjaindex(noden, nodem)
       ds = this%con%cl1(this%con%jas(ipos)) + this%con%cl2(this%con%jas(ipos))
