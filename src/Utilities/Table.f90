@@ -485,7 +485,6 @@ module TableModule
     character(len=LINELENGTH), intent(in) :: line
     logical, intent(in), optional :: finalize
     ! -- local
-    character(len=LINELENGTH) :: cval
     character(len=LINELENGTH), allocatable, dimension(:) :: words
     logical :: allow_finalization
     integer(I4B) :: nwords
@@ -508,7 +507,9 @@ module TableModule
     ! -- parse line into words
     call parseline(line, nwords, words, 0)
     !
-    !
+    ! -- calculate the number of entries in line but
+    !    limit it to the maximum number of columns if
+    !    the number of words exceeds ntableterm
     icols = this%ntableterm
     icols = min(nwords, icols)
     !

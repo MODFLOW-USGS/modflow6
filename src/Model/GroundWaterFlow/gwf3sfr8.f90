@@ -108,7 +108,6 @@ module SfrModule
     type(sparsematrix), pointer :: sparse => null()
     !
     ! -- sfr table objects
-    type(TableType), pointer :: inputtab => null()
     type(TableType), pointer :: stagetab => null()
     !
     ! -- moved from SfrDataType
@@ -499,7 +498,7 @@ contains
     ! -- setup the budget object
     call this%sfr_setup_budobj()
     !
-    ! -- set up summary tables
+    ! -- setup the stage table object
     call this%sfr_setup_tableobj()
     !
     ! -- return
@@ -1291,17 +1290,17 @@ contains
       if (this%iprpak /= 0) then
         !
         ! -- reset the input table object
-        title = 'SFR (' // trim(this%name) // ') DATA FOR PERIOD'
+        title = trim(this%name) // ' PACKAGE - DATA FOR PERIOD'
         write(title, '(a,1x,i6)') trim(adjustl(title)), kper
         call table_cr(this%inputtab, this%name, title)
         call this%inputtab%table_df(1, 4, this%iout)
-        text = 'REACH'
+        text = 'NUMBER'
         call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
         text = 'KEYWORD'
         call this%inputtab%initialize_column(text, 20, alignment=TABLEFT)
         do n = 1, 2
           write(text, '(a,1x,i6)') 'VALUE', n
-          call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)
+          call this%inputtab%initialize_column(text, 15, alignment=TABCENTER)
         end do
       end if
       !
@@ -1795,11 +1794,9 @@ contains
     integer(I4B),intent(in) :: ihedfl
     integer(I4B),intent(in) :: ibudfl
     ! -- locals
-    character (len=20) :: cellids, cellid
-    character(len=LINELENGTH) :: line
+    character (len=20) :: cellid
     integer(I4B) :: n
     integer(I4B) :: node
-    integer(I4B) :: iloc
     real(DP) :: hgwf
     real(DP) :: sbot
     real(DP) :: depth, stage
@@ -1807,16 +1804,7 @@ contains
     ! format
      ! --------------------------------------------------------------------------
      !
-     ! -- set cell id based on discretization
-     if (this%dis%ndim == 3) then
-       cellids = '(LAYER,ROW,COLUMN)  '
-     elseif (this%dis%ndim == 2) then
-       cellids = '(LAYER,CELL2D)      '
-     else
-       cellids = '(NODE)              '
-     end if
-     !
-     ! -- write sfr stage and depth
+     ! -- write sfr stage and depth table
      if (ihedfl /= 0 .and. this%iprhed /= 0) then
       !
       ! -- fill stage data
@@ -1828,8 +1816,6 @@ contains
         else
           cellid = 'none'
         end if
-        iloc = 1
-        line = ''
         if(this%inamedbound==1) then
           call this%stagetab%add_term(this%boundname(n))
         end if
@@ -1941,16 +1927,11 @@ contains
     deallocate(this%budobj)
     nullify(this%budobj)
     !
-    ! -- tables
+    ! -- stage table
     if (this%iprhed > 0) then
       call this%stagetab%table_da()
       deallocate(this%stagetab)
       nullify(this%stagetab)
-    end if
-    if (associated(this%inputtab)) then
-      call this%inputtab%table_da()
-      deallocate(this%inputtab)
-      nullify(this%inputtab)
     end if
     !
     ! -- scalars
@@ -3575,7 +3556,7 @@ contains
     character (len=10) :: cval
     character (len=30) :: nodestr
     character (len=LINELENGTH) :: title
-    character(len=LINELENGTH) :: text
+    character (len=LINELENGTH) :: text
     character (len=LINELENGTH) :: errmsg
     integer(I4B) :: n, nn
     real(DP) :: btgwf, bt
@@ -3583,10 +3564,10 @@ contains
     !
     ! -- setup inputtab tableobj
     if (this%iprpak /= 0) then
-      title = 'SFR (' // trim(this%name) // ') STATIC REACH DATA'
+      title = trim(this%name) // ' PACKAGE - STATIC REACH DATA'
       call table_cr(this%inputtab, this%name, title)
       call this%inputtab%table_df(this%maxbound, 10, this%iout)
-      text = 'REACH'
+      text = 'NUMBER'
       call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
       text = 'CELLID'
       call this%inputtab%initialize_column(text, 20, alignment=TABLEFT)
@@ -4541,9 +4522,10 @@ contains
 
   subroutine sfr_setup_tableobj(this)
 ! ******************************************************************************
-! sfr_setup_budobj -- Set up the budget object that stores all the sfr flows
-!   The terms listed here must correspond in number and order to the ones 
-!   listed in the sfr_fill_budobj routine.
+! sfr_setup_tableobj -- Set up the table object that is used to write the sfr 
+!                       stage data. The terms listed here must correspond in  
+!                       number and order to the ones written to the stage table 
+!                       in the sfr_ot method.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
