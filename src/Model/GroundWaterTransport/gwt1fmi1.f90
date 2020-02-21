@@ -47,12 +47,13 @@ module GwtFmiModule
     integer(I4B), pointer                           :: igwfinwtup => null()     ! NR indicator
     integer(I4B), pointer                           :: iubud => null()          ! unit number GWF budget file
     integer(I4B), pointer                           :: iuhds => null()          ! unit number GWF head file
-    integer(I4B), pointer                           :: nflowpack => null()
-    type(BudgetFileReaderType)                      :: bfr
-    type(HeadFileReaderType)                        :: hfr
+    integer(I4B), pointer                           :: nflowpack => null()      ! number of GWF flow packages
+    type(BudgetFileReaderType)                      :: bfr                      ! budget file reader
+    type(HeadFileReaderType)                        :: hfr                      ! head file reader
     type(PackageBudgetType), dimension(:), allocatable :: gwfpackages           ! used to get flows between a package and gwf
     type(BudgetObjectType), pointer                 :: mvrbudobj    => null()   ! pointer to the mover budget budget object
     type(DataAdvancedPackageType), dimension(:), pointer, contiguous :: datp => null()
+    character(len=16), dimension(:), allocatable    :: flowpacknamearray        ! array of boundary package names (e.g. LAK-1, SFR-3, etc.)
   contains
   
     procedure :: fmi_ar
@@ -143,11 +144,11 @@ module GwtFmiModule
       write(this%iout, fmtfmi) this%inunit
     else
       write(this%iout, fmtfmi0)
-      if (.not. this%flows_from_file) then
+      if (this%flows_from_file) then
+        write(this%iout, '(a)') '  FLOWS ARE ASSUMED TO BE ZERO.'
+      else
         write(this%iout, '(a)') '  FLOWS PROVIDED BY A GWF MODEL IN THIS &
           &SIMULATION'
-      else
-        write(this%iout, '(a)') '  FLOWS ARE ASSUMED TO BE ZERO.'
       endif 
     endif
     !
@@ -741,7 +742,19 @@ module GwtFmiModule
     ! -- Now that nflowpack is known, need to reallocate the advanced
     !    package indicator array
     call mem_reallocate(this%iatp, nflowpack, 'IATP', this%origin)
+    if (associated(this%datp)) then
+      deallocate(this%datp)
+      allocate(this%datp(nflowpack))
+    end if
     this%iatp(:) = 0
+    allocate(this%flowpacknamearray(nflowpack))
+    ip = 1
+    do i = 1, size(imap)
+      if (imap(i) == 1) then
+        this%flowpacknamearray(ip) = this%bfr%dstpackagenamearray(i)
+        ip = ip + 1
+      end if
+    end do
     !
     ! -- Reallocate storage arrays if they were found
     if (found_stoss) then
@@ -1088,13 +1101,23 @@ module GwtFmiModule
     !
     ! -- Look through all the packages and return the index with name
     idx = 0
-    do ip = 1, this%gwfbndlist%Count()
-      packobj => GetBndFromList(this%gwfbndlist, ip)
-      if (packobj%name == name) then
-        idx = ip
-        exit
-      end if
-    end do
+    if (associated(this%gwfbndlist)) then
+      do ip = 1, this%gwfbndlist%Count()
+        packobj => GetBndFromList(this%gwfbndlist, ip)
+        if (packobj%name == name) then
+          idx = ip
+          exit
+        end if
+      end do
+    else
+      do ip = 1, size(this%flowpacknamearray)
+        if (this%flowpacknamearray(ip) == name) then
+          idx = ip
+          exit
+        end if
+      end do
+    end if
+    if (idx == 0) call ustop('Error in get_package_index.  Could not find '//name)
     !
     ! -- return
     return

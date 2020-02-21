@@ -113,9 +113,8 @@ module BudgetFileReaderModule
       this%dstpackagenamearray(ibudterm) = this%dstpackagename
       this%nauxarray(ibudterm) = this%naux
       this%auxtxtarray(1:this%naux, ibudterm) = this%auxtxt(:)
-      if (trim(adjustl(this%budtxt)) == 'FLOW-JA-FACE' .and. &
-          this%srcmodelname == this%dstmodelname) then
-        if(allocated(this%nodesrc)) ncrbud = maxval(this%nodesrc)
+      if (this%srcmodelname == this%dstmodelname) then
+        if(allocated(this%nodesrc)) ncrbud = max(ncrbud, maxval(this%nodesrc))
       endif
     enddo
     rewind(this%inunit)
@@ -155,6 +154,7 @@ module BudgetFileReaderModule
     this%kper = 0
     this%budtxt = ''
     this%nval = 0
+    this%naux = 0
     this%idum1 = 0
     this%idum2 = 0
     this%srcmodelname = ''

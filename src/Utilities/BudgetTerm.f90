@@ -20,12 +20,12 @@ module BudgetTermModule
     character(len=LENBUDTXT) :: text2id1                           ! to model
     character(len=LENBUDTXT) :: text1id2                           ! package/model
     character(len=LENBUDTXT) :: text2id2                           ! to package/model
-    character(len=LENBUDTXT), dimension(:), pointer :: auxtxt      ! name of auxiliary variables
+    character(len=LENBUDTXT), dimension(:), pointer :: auxtxt => null()     ! name of auxiliary variables
     integer(I4B) :: maxlist                                        ! allocated size of arrays
     integer(I4B) :: naux                                           ! number of auxiliary variables
     integer(I4B) :: nlist                                          ! size of arrays for this period
-    logical :: olconv1                                             ! convert id1 to user node upon output
-    logical :: olconv2                                             ! convert id2 to user node upon output
+    logical :: olconv1 = .false.                                   ! convert id1 to user node upon output
+    logical :: olconv2 = .false.                                   ! convert id2 to user node upon output
     integer(I4B), dimension(:), pointer :: id1 => null()           ! first id (maxlist)
     integer(I4B), dimension(:), pointer :: id2 => null()           ! second id (maxlist)
     real(DP), dimension(:), pointer :: flow => null()              ! point this to simvals or simtomvr (maxlist)
@@ -40,6 +40,7 @@ module BudgetTermModule
     procedure :: update_term
     procedure :: accumulate_flow
     procedure :: save_flows
+    procedure :: read_flows
     procedure :: deallocate_arrays
     
   end type BudgetTermType
@@ -228,5 +229,79 @@ module BudgetTermModule
                                      olconv2=this%olconv2)
     end do
   end subroutine save_flows
+  
+  subroutine read_flows(this, dis, ibinun, kstp, kper, delt, pertim, totim)
+! ******************************************************************************
+! read_flows -- read flows from a binary file
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(BudgetTermType) :: this
+    class(DisBaseType), intent(in) :: dis
+    integer(I4B), intent(in) :: ibinun
+    integer(I4B), intent(inout) :: kstp
+    integer(I4B), intent(inout) :: kper
+    real(DP), intent(inout) :: delt
+    real(DP), intent(inout) :: pertim
+    real(DP), intent(inout) :: totim
+    ! -- local
+    integer(I4B) :: idum1, idum2, imeth
+    integer(I4B) :: i, j
+    integer(I4B) :: n1
+    integer(I4B) :: n2
+    real(DP) :: q
+! ------------------------------------------------------------------------------
+    read(ibinun) kstp, kper, this%flowtype, this%nlist, idum1, idum2
+    read(ibinun) imeth, delt, pertim, totim
+    read(ibinun) this%text1id1
+    read(ibinun) this%text2id1
+    read(ibinun) this%text1id2
+    read(ibinun) this%text2id2
+    read(ibinun) this%naux
+    this%naux = this%naux - 1
+    if (.not. associated(this%auxtxt)) then
+      allocate(this%auxtxt(this%naux))
+    else
+      if (size(this%auxtxt) /= this%naux) then
+        deallocate(this%auxtxt)
+        allocate(this%auxtxt(this%naux))
+      end if
+    end if
+    if (this%naux > 0) read(ibinun) (this%auxtxt(j), j = 1, this%naux)
+    read(ibinun) this%nlist
+    if (.not. associated(this%id1)) then
+      this%maxlist = this%nlist
+      allocate(this%id1(this%maxlist))
+      allocate(this%id2(this%maxlist))
+      allocate(this%flow(this%maxlist))
+      allocate(this%auxvar(this%naux, this%maxlist))
+    else
+      if (this%nlist > this%maxlist) then
+        this%maxlist = this%nlist
+        deallocate(this%id1)
+        deallocate(this%id2)
+        deallocate(this%flow)
+        deallocate(this%auxvar)
+        allocate(this%id1(this%maxlist))
+        allocate(this%id2(this%maxlist))
+        allocate(this%flow(this%maxlist))
+        allocate(this%auxvar(this%naux, this%maxlist))
+      end if
+    end if
+    do i = 1, this%nlist
+      read(ibinun) n1
+      read(ibinun) n2
+      read(ibinun) q
+      read(ibinun) (this%auxvar(j, i), j = 1, this%naux)
+      if (this%olconv1) n1 = dis%get_nodenumber(n1, 0)
+      if (this%olconv2) n2 = dis%get_nodenumber(n2, 0)
+      this%id1(i) = n1
+      this%id2(i) = n2
+      this%flow(i) = q
+    end do
+  end subroutine read_flows
   
 end module BudgetTermModule

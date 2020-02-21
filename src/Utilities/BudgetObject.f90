@@ -47,6 +47,7 @@ module BudgetObjectModule
     procedure :: accumulate_terms
     procedure :: write_budtable
     procedure :: save_flows
+    procedure :: read_flows
     procedure :: budgetobject_da
     
   end type BudgetObjectType
@@ -214,6 +215,38 @@ module BudgetObjectModule
     ! -- return
     return
   end subroutine save_flows
+  
+  subroutine read_flows(this, dis, ibinun)
+! ******************************************************************************
+! read_flows -- Read froms from a binary file into this BudgetObjectType
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(BudgetObjectType) :: this
+    class(DisBaseType), intent(in) :: dis
+    integer(I4B), intent(in) :: ibinun
+    ! -- local
+    integer(I4B) :: kstp
+    integer(I4B) :: kper
+    real(DP) :: delt
+    real(DP) :: pertim
+    real(DP) :: totim
+    ! -- dummy
+    integer(I4B) :: i
+! ------------------------------------------------------------------------------
+    !
+    ! -- save flows for each budget term
+    do i = 1, this%nbudterm
+      call this%budterm(i)%read_flows(dis, ibinun, kstp, kper, delt, &
+                                      pertim, totim)
+    end do
+    !
+    ! -- return
+    return
+  end subroutine read_flows
   
   subroutine budgetobject_da(this)
 ! ******************************************************************************

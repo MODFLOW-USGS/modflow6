@@ -35,6 +35,7 @@ module GwtLktModule
   use MemoryTypeModule, only: MemoryTSType
   use BudgetModule, only: BudgetType
   use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr
+  use BudgetFileReaderModule, only: BudgetFileReaderType
   use ObserveModule, only: ObserveType
   use InputOutputModule, only: extract_idnum_or_bndname
   use BaseDisModule, only: DisBaseType
@@ -55,6 +56,7 @@ module GwtLktModule
     integer(I4B), pointer                              :: iprconc => null()
     integer(I4B), pointer                              :: iconcout => null()
     integer(I4B), pointer                              :: ibudgetout => null()
+    integer(I4B), pointer                              :: iflowbudget => null() ! unit number for existing lake flow budget file
     integer(I4B), pointer                              :: cbcauxitems => NULL()
     integer(I4B), pointer                              :: nlakes => null()      ! number of lakes.  set from gwf lak nlakes
     integer(I4B), pointer                              :: bditems => NULL()
@@ -78,7 +80,6 @@ module GwtLktModule
     type(GwtFmiType), pointer                          :: fmi => null()         ! pointer to fmi object
     real(DP), dimension(:), pointer, contiguous        :: qsto => null()        ! mass flux due to storage change
     real(DP), dimension(:), pointer, contiguous        :: ccterm => null()      ! mass flux required to maintain constant concentration
-    type(BudgetObjectType), pointer                    :: lakbudptr => null()
     integer(I4B), pointer                              :: idxbudfjf => null()   ! index of flow ja face in lakbudptr
     integer(I4B), pointer                              :: idxbudgwf => null()   ! index of gwf terms in lakbudptr
     integer(I4B), pointer                              :: idxbudsto => null()   ! index of storage terms in lakbudptr
@@ -97,7 +98,11 @@ module GwtLktModule
     real(DP), dimension(:), pointer, contiguous        :: qmfrommvr => null()   ! a mass flow coming from the mover that needs to be added
     !
     ! -- lake budget object
-    type(BudgetObjectType), pointer :: budobj => null()
+    type(BudgetObjectType), pointer                    :: budobj => null()      ! lkt solute budget object
+    type(BudgetObjectType), pointer                    :: lakbudptr => null()   ! lake flows budget object
+    !
+    ! -- budget file reader
+    type(BudgetFileReaderType)                         :: bfr                   ! budget file reader
 
     ! -- time series aware data
     type (MemoryTSType), dimension(:), pointer, contiguous :: conclak => null()  ! lake concentration
@@ -396,6 +401,10 @@ module GwtLktModule
     !
     ! -- read optional initial package parameters
     call this%read_initial_attr()
+    !
+    ! -- Find the package index in the GWF model or GWF budget file 
+    !    for the corresponding lake package
+    call this%fmi%get_package_index(this%name, this%igwflakpak)
     !
     ! -- Tell fmi that this package is being handled by LKT, otherwise
     !    SSM would handle the flows into GWT from this LAK.  Then point the
@@ -747,6 +756,11 @@ module GwtLktModule
     integer(I4B) :: n
     integer(I4B) :: j, iaux, ii
 ! ------------------------------------------------------------------------------
+    !
+    ! -- If flows are being read from file, then need to advance
+    if (this%iflowbudget /= 0) then
+      
+    end if
     !
     ! -- Advance the time series
     call this%TsManager%ad()
@@ -1291,6 +1305,7 @@ module GwtLktModule
     call mem_allocate(this%iprconc, 'IPRCONC', this%origin)
     call mem_allocate(this%iconcout, 'ICONCOUT', this%origin)
     call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%origin)
+    call mem_allocate(this%iflowbudget, 'IFLOWBUDGET', this%origin)
     call mem_allocate(this%igwflakpak, 'IGWFLAKPAK', this%origin)
     call mem_allocate(this%nlakes, 'NLAKES', this%origin)
     call mem_allocate(this%bditems, 'BDITEMS', this%origin)
@@ -1313,6 +1328,7 @@ module GwtLktModule
     this%iprconc = 0
     this%iconcout = 0
     this%ibudgetout = 0
+    this%iflowbudget = 0
     this%igwflakpak = 0
     this%nlakes = 0
     this%bditems = 9
@@ -1470,6 +1486,7 @@ module GwtLktModule
     call mem_deallocate(this%iprconc)
     call mem_deallocate(this%iconcout)
     call mem_deallocate(this%ibudgetout)
+    call mem_deallocate(this%iflowbudget)
     call mem_deallocate(this%igwflakpak)
     call mem_deallocate(this%nlakes)
     call mem_deallocate(this%bditems)
@@ -1509,27 +1526,64 @@ module GwtLktModule
     ! -- local
     character(len=LINELENGTH) :: errmsg
     class(BndType), pointer :: packobj
-    integer(I4B) :: ip, icount
-    integer(I4B) :: nbudterm
+    integer(I4B) :: igwf, ip, icount
+    integer(I4B) :: nbudterm, ncrbud
     logical :: found
 ! ------------------------------------------------------------------------------
     !
-    ! -- Look through gwfbndlist for a LAK package with the same name as this
-    !    LKT package name
+    ! -- Initialize found to false, and error later if lake package cannot
+    !    be found
     found = .false.
-    if (associated(this%fmi%gwfbndlist)) then
-      do ip = 1, this%fmi%gwfbndlist%Count()
-        packobj => GetBndFromList(this%fmi%gwfbndlist, ip)
-        if (packobj%name == this%name) then
-          found = .true.
-          this%igwflakpak = ip
-          select type (packobj)
-            type is (LakType)
-              this%lakbudptr => packobj%budobj
-          end select
+    !
+    ! -- If user is specifying lake flows in a binary budget file, then set up
+    !    the budget file reader
+    if (this%iflowbudget /= 0) then
+      !
+      ! -- initialize the binary file reader by reading the first set of 
+      !    records
+      call this%bfr%initialize(this%iflowbudget, this%iout, ncrbud)
+      nbudterm = this%bfr%nbudterms
+      !
+      ! -- find which budget entry is GWF so ol2conv can be set to true so that
+      !    user node numbers in the binary file can be convered to reduced 
+      !    node numbers in the lakbudptr object
+      igwf = 0
+      do icount = 1, this%bfr%nbudterms
+        if (adjustl(this%bfr%budtxtarray(icount)) == 'GWF') then
+          igwf = icount
+          exit
         end if
-        if (found) exit
       end do
+      !
+      ! -- create and initialize lakbudptr
+      call budgetobject_cr(this%lakbudptr, this%name)
+      call this%lakbudptr%budgetobject_df(ncrbud, nbudterm, 0, 0)
+      !
+      ! -- Set olconv2 to true for the GWF budterm so that node numbers are 
+      !    converted from user nodes to reduced nodes
+      if (igwf > 0) this%lakbudptr%budterm(igwf)%olconv2 = .true.
+      !
+      ! -- Fill the lakbudptr object with the first time step information 
+      !    in the binary file
+      call this%lakbudptr%read_flows(this%dis, this%iflowbudget)
+      found = .true.
+      !
+    else
+      if (associated(this%fmi%gwfbndlist)) then
+        ! -- Look through gwfbndlist for a LAK package with the same name as this
+        !    LKT package name
+        do ip = 1, this%fmi%gwfbndlist%Count()
+          packobj => GetBndFromList(this%fmi%gwfbndlist, ip)
+          if (packobj%name == this%name) then
+            found = .true.
+            select type (packobj)
+              type is (LakType)
+                this%lakbudptr => packobj%budobj
+            end select
+          end if
+          if (found) exit
+        end do
+      end if
     end if
     !
     ! -- error if lak package not found
@@ -1631,6 +1685,8 @@ module GwtLktModule
       "(4x, 'LAKE ', a, ' VALUE (',g15.7,') SPECIFIED.')"
     character(len=*),parameter :: fmtlakbin = &
       "(4x, 'LAK ', 1x, a, 1x, ' WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I7)"
+    character(len=*),parameter :: fmtlakbud = &
+      "(4x, 'LAK ', 1x, a, 1x, ' WILL BE READ FROM FILE: ', a, /4x, 'OPENED ON UNIT: ', I7)"
 ! ------------------------------------------------------------------------------
     !
     select case (option)
@@ -1672,6 +1728,18 @@ module GwtLktModule
           found = .true.
         else
           call store_error('OPTIONAL BUDGET KEYWORD MUST BE FOLLOWED BY FILEOUT')
+        end if
+      case('FLOW_BUDGET')
+        call this%parser%GetStringCaps(keyword)
+        if (keyword == 'FILEIN') then
+          call this%parser%GetString(fname)
+          this%iflowbudget = getunit()
+          call openfile(this%iflowbudget, this%iout, fname, 'DATA(BINARY)',       &
+                        form, access, 'UNKNOWN')
+          write(this%iout,fmtlakbud) 'BUDGET', fname, this%iflowbudget
+          found = .true.
+        else
+          call store_error('OPTIONAL FLOW_BUDGET KEYWORD MUST BE FOLLOWED BY FILEIN')
         end if
       case default
         !
