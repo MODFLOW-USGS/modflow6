@@ -55,6 +55,7 @@ module BudgetObjectModule
     procedure :: read_flows
     procedure :: budgetobject_da
     procedure :: bfr_init
+    procedure :: bfr_advance
     procedure :: fill_from_bfr
     
   end type BudgetObjectType
@@ -313,22 +314,26 @@ module BudgetObjectModule
     !
     ! -- Set the conversion flags, which cause id1 or id2 to be converted from
     !    user node numbers to reduced node numbers
-    do i = 1, nbudterm
-      if (present(colconv1)) then
+    if (present(colconv1)) then
+      do i = 1, nbudterm
         do j = 1, size(colconv1)
-          if (colconv1(j) == this%bfr%budtxtarray(i)) then
+          if (colconv1(j) == adjustl(this%bfr%budtxtarray(i))) then
             this%budterm(i)%olconv1 = .true.
+            exit
           end if
         end do
-      end if
-      if (present(colconv2)) then
+      end do
+    end if
+    if (present(colconv2)) then
+      do i = 1, nbudterm
         do j = 1, size(colconv2)
-          if (colconv2(j) == this%bfr%budtxtarray(i)) then
+          if (colconv2(j) == adjustl(this%bfr%budtxtarray(i))) then
             this%budterm(i)%olconv2 = .true.
+            exit
           end if
         end do
-      end if
-    end do
+      end do
+    end if
     !
     ! -- Return
     return
@@ -359,6 +364,63 @@ module BudgetObjectModule
     ! -- Return
     return
   end subroutine bfr_init
+  
+  subroutine bfr_advance(this, dis, iout)
+! ******************************************************************************
+! bfr_advance -- copy the information from the binary file into budterms
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use TdisModule, only: kstp, kper
+    ! -- dummy
+    class(BudgetObjectType) :: this
+    class(DisBaseType), intent(in) :: dis
+    integer(I4B), intent(in) :: iout
+    ! -- dummy
+    logical :: readnext
+    character(len=*), parameter :: fmtkstpkper =                               &
+      "(1x,/1x, a, ' READING BUDGET TERMS FOR KSTP ', i0, ' KPER ', i0)"
+    character(len=*), parameter :: fmtbudkstpkper = &
+      "(1x,/1x, a, ' SETTING BUDGET TERMS FOR KSTP ', i0, ' AND KPER ',     &
+      &i0, ' TO BUDGET FILE TERMS FROM KSTP ', i0, ' AND KPER ', i0)"
+! ------------------------------------------------------------------------------
+    !
+    ! -- Do not read the budget if the budget is at end of file or if the next
+    !    record in the budget file is the first timestep of the next stress
+    !    period.  Also do not read if it is the very first time step because
+    !    the first chunk of data is read as part of the initialization
+    readnext = .true.
+    if (kstp * kper == 1) then
+      readnext = .false.
+    else if (kstp * kper > 1) then
+      if (this%bfr%endoffile) then
+        readnext = .false.
+      else
+        if (this%bfr%kpernext == kper + 1 .and. this%bfr%kstpnext == 1) &
+          readnext = .false.
+      endif
+    endif
+    !
+    ! -- Read the next record
+    if (readnext) then
+      !
+      ! -- Write the current time step and stress period
+      if (iout > 0) &
+        write(iout, fmtkstpkper) this%name, kstp, kper
+      !
+      ! -- read flows from the binary file and copy them into this%budterm(:)
+      call this%fill_from_bfr(dis, iout)
+    else
+      if (iout > 0) &
+        write(iout, fmtbudkstpkper) trim(this%name), kstp, kper,               &
+         this%bfr%kstp, this%bfr%kper
+    endif
+    !
+    ! -- Return
+    return
+  end subroutine bfr_advance
   
   subroutine fill_from_bfr(this, dis, iout)
 ! ******************************************************************************

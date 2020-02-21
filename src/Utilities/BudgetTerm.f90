@@ -318,12 +318,6 @@ module BudgetTermModule
     class(BudgetTermType) :: this
     type(BudgetFileReaderType) :: bfr
     class(DisBaseType), intent(in) :: dis
-    !integer(I4B), intent(in) :: ibinun
-    !integer(I4B), intent(inout) :: kstp
-    !integer(I4B), intent(inout) :: kper
-    !real(DP), intent(inout) :: delt
-    !real(DP), intent(inout) :: pertim
-    !real(DP), intent(inout) :: totim
     ! -- local
     integer(I4B) :: i
     integer(I4B) :: n1

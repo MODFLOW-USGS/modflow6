@@ -759,7 +759,7 @@ module GwtLktModule
     !
     ! -- If flows are being read from file, then need to advance
     if (this%iflowbudget /= 0) then
-      
+      call this%lakbudptr%bfr_advance(this%dis, this%iout)
     end if
     !
     ! -- Advance the time series
@@ -1526,8 +1526,8 @@ module GwtLktModule
     ! -- local
     character(len=LINELENGTH) :: errmsg
     class(BndType), pointer :: packobj
-    integer(I4B) :: igwf, ip, icount
-    integer(I4B) :: nbudterm, ncrbud
+    integer(I4B) :: ip, icount
+    integer(I4B) :: nbudterm
     logical :: found
 ! ------------------------------------------------------------------------------
     !
@@ -1536,45 +1536,21 @@ module GwtLktModule
     found = .false.
     !
     ! -- If user is specifying lake flows in a binary budget file, then set up
-    !    the budget file reader
+    !    the budget file reader, otherwise set a pointer to the lak package
+    !    budobj
     if (this%iflowbudget /= 0) then
       !
-      !! -- initialize the binary file reader by reading the first set of 
-      !!    records
-      !call this%bfr%initialize(this%iflowbudget, this%iout, ncrbud)
-      !nbudterm = this%bfr%nbudterms
-      !!
-      !! -- find which budget entry is GWF so ol2conv can be set to true so that
-      !!    user node numbers in the binary file can be convered to reduced 
-      !!    node numbers in the lakbudptr object
-      !igwf = 0
-      !do icount = 1, this%bfr%nbudterms
-      !  if (adjustl(this%bfr%budtxtarray(icount)) == 'GWF') then
-      !    igwf = icount
-      !    exit
-      !  end if
-      !end do
-      !!
-      !! -- create and initialize lakbudptr
-      !call budgetobject_cr(this%lakbudptr, this%name)
-      !call this%lakbudptr%budgetobject_df(ncrbud, nbudterm, 0, 0)
-      !!
-      !! -- Set olconv2 to true for the GWF budterm so that node numbers are 
-      !!    converted from user nodes to reduced nodes
-      !if (igwf > 0) this%lakbudptr%budterm(igwf)%olconv2 = .true.
-      !!
-      !! -- Fill the lakbudptr object with the first time step information 
-      !!    in the binary file
-      !call this%lakbudptr%read_flows(this%dis, this%iflowbudget)
-      call budgetobject_cr_bfr(this%lakbudptr, this%name, this%iflowbudget, this%iout, &
-                               colconv2=['GWF             '])
+      ! -- Set up the lakbudptr by filling it from a preexisting binary
+      !    file created by a previous GWF simulation
+      call budgetobject_cr_bfr(this%lakbudptr, this%name, this%iflowbudget,    &
+                               this%iout, colconv2=['GWF             '])
       call this%lakbudptr%fill_from_bfr(this%dis, this%iout)
       found = .true.
       !
     else
       if (associated(this%fmi%gwfbndlist)) then
-        ! -- Look through gwfbndlist for a LAK package with the same name as this
-        !    LKT package name
+        ! -- Look through gwfbndlist for a LAK package with the same name as 
+        !    this LKT package name
         do ip = 1, this%fmi%gwfbndlist%Count()
           packobj => GetBndFromList(this%fmi%gwfbndlist, ip)
           if (packobj%name == this%name) then
