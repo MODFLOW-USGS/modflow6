@@ -82,6 +82,18 @@ module TableTermModule
     ! -- parse tag into words
     call parseline(tag, nwords, words, 0)
     !
+    ! -- abbreviate any words that exceed the specified width
+    !    and trim trailing characters
+    do i = 1, nwords
+      ilen = len(trim(words(i)))
+      if (ilen > width) then
+        words(i)(width:width) = '.'
+        do j = width + 1, ilen
+          words(i)(j:j) = ' '
+        end do
+      end if
+    end do
+    !
     ! -- combine words that fit into width
     i = 0
     do 

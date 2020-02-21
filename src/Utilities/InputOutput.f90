@@ -8,7 +8,8 @@ module InputOutputModule
   use ConstantsModule, only: LINELENGTH, LENBIGLINE, LENBOUNDNAME,             &
                              NAMEDBOUNDFLAG, LINELENGTH, MAXCHARLEN,           &
                              TABLEFT, TABCENTER, TABRIGHT,                     &
-                             TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
+                             TABSTRING, TABUCSTRING, TABINTEGER, TABREAL,      &
+                             DZERO
   use GenericUtilities, only: IS_SAME
   private
   public :: GetUnit, u8rdcom, uget_block,                                      &
@@ -629,7 +630,14 @@ module InputOutputModule
       integer(I4B) :: i
       integer(I4B) :: ispace
       integer(I4B) :: istop
+      integer(I4B) :: ipad
+      integer(I4B) :: ireal
       ! -- code
+      !
+      ! -- initialize locals
+      ireal = 0
+      !
+      ! -- process dummy variables
       if (present(FMT)) then
         CFMT = FMT
       else
@@ -639,8 +647,14 @@ module InputOutputModule
           case(TABINTEGER)
             write(cfmt, '(A,I0,A)') '(I', ILEN, ')'
           case(TABREAL)
+            ireal = 1
             i = ILEN - 7
             write(cfmt, '(A,I0,A,I0,A)') '(1PG', ILEN, '.', i, ')'
+            if (R < DZERO) then
+              ipad = 0
+            else
+              ipad = 1
+            end if
         end select
       end if
       write(cffmt, '(A,I0,A)') '(A', ILEN, ')'
@@ -672,9 +686,20 @@ module InputOutputModule
       if (ialign == TABCENTER) then
         i = len_trim(cval)
         ispace = (ILEN - i) / 2
-        cval = repeat(' ', ispace) // trim(cval)
+        if (ireal > 0) then
+          if (ipad > 0) then
+            cval = ' ' //trim(adjustl(cval))
+          else
+            cval = trim(adjustl(cval))
+          end if
+        else
+          cval = repeat(' ', ispace) // trim(cval)
+        end if
       else if (ialign == TABLEFT) then
         cval = trim(adjustl(cval))
+        if (ipad > 0) then
+          cval = ' ' //trim(adjustl(cval))
+        end if
       else
         cval = adjustr(cval)
       end if

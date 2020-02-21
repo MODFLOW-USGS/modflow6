@@ -230,12 +230,12 @@ module BudgetObjectModule
       if (trim(adjustl(flowtype)) == 'FLOW-JA-FACE') then
         lfound = .TRUE.
         text = 'INFLOW'
-        call this%flowtab%initialize_column(text, 11, alignment=TABCENTER)
+        call this%flowtab%initialize_column(text, 12, alignment=TABCENTER)
         text = 'OUTFLOW'
-        call this%flowtab%initialize_column(text, 11, alignment=TABCENTER)
+        call this%flowtab%initialize_column(text, 12, alignment=TABCENTER)
       else if (trim(adjustl(flowtype)) /= 'AUXILIARY') then
         lfound = .TRUE.
-        call this%flowtab%initialize_column(tag, 11, alignment=TABCENTER)
+        call this%flowtab%initialize_column(tag, 12, alignment=TABCENTER)
       end if
       if (lfound) then
         this%iflowterms(idx) = i
@@ -243,9 +243,9 @@ module BudgetObjectModule
       end if
     end do
     text = 'IN - OUT'
-    call this%flowtab%initialize_column(text, 11, alignment=TABCENTER)
+    call this%flowtab%initialize_column(text, 12, alignment=TABCENTER)
     text = 'PERCENT DIFFERENCE'
-    call this%flowtab%initialize_column(text, 11, alignment=TABCENTER)
+    call this%flowtab%initialize_column(text, 12, alignment=TABCENTER)
     !
     ! -- Return
     return
@@ -346,7 +346,11 @@ module BudgetObjectModule
         idx = this%iflowterms(j)
         i = this%istart(j)
         id2 = this%budterm(idx)%get_id2(i)
-        call dis%noder_to_string(id2, cellid)
+        if (id2 > 0) then
+          call dis%noder_to_string(id2, cellid)
+        else
+          cellid = 'NONE'
+        end if
         call this%flowtab%add_term(cellid)
       end if
       !

@@ -2458,7 +2458,7 @@ contains
 
   subroutine maw_ot(this, kstp, kper, iout, ihedfl, ibudfl)
     ! **************************************************************************
-    ! pak1t -- Output package budget
+    ! maw_ot -- Output package budget
     ! **************************************************************************
     !
     !    SPECIFICATIONS:
@@ -2475,26 +2475,9 @@ contains
     ! -- locals
     character(len=LINELENGTH) :: line, linesep
     character(len=16) :: text
-    integer(I4B) :: j
     integer(I4B) :: n
-    integer(I4B) :: ibnd
     integer(I4B) :: iloc
     real(DP) :: q
-    real(DP) :: qfact
-    real(DP) :: qgwfin
-    real(DP) :: qgwfout
-    real(DP) :: qfrommvr
-    real(DP) :: qrate
-    real(DP) :: qfwrate
-    real(DP) :: qratetomvr
-    real(DP) :: qfwratetomvr
-    real(DP) :: qsto
-    real(DP) :: qconst
-    real(DP) :: qin
-    real(DP) :: qout
-    real(DP) :: qerr
-    real(DP) :: qavg
-    real(DP) :: qpd
     ! format
  2000 FORMAT ( 1X, ///1X, A, A, A, '   PERIOD ', I6, '   STEP ', I8)
     ! --------------------------------------------------------------------------
@@ -2541,211 +2524,6 @@ contains
         end if
         call UWWORD(line, iloc, 6, TABINTEGER, text, n, q)
         call UWWORD(line, iloc, 11, TABREAL, text, n, this%xnewpak(n))
-        write(iout, '(1X,A)') line(1:iloc)
-      end do
-    end if
-    !
-    ! -- write MAW flows to the listing file
-    if (ibudfl /= 0 .and. this%iprflow /= 0) then
-      write (iout, 2000) 'MULTI-AQUIFER WELL (', trim(this%name), ') FLOWS', kper, kstp
-      iloc = 1
-      line = ''
-      if (this%inamedbound==1) then
-        call UWWORD(line, iloc, 16, TABUCSTRING,                                 &
-                    'well', n, q, ALIGNMENT=TABLEFT)
-      end if
-      call UWWORD(line, iloc, 6, TABUCSTRING,                                    &
-                  'well', n, q, ALIGNMENT=TABCENTER)
-      call UWWORD(line, iloc, 11, TABUCSTRING,                                   &
-                  'gwf', n, q, ALIGNMENT=TABCENTER)
-      call UWWORD(line, iloc, 11, TABUCSTRING,                                   &
-                  'gwf', n, q, ALIGNMENT=TABCENTER)
-      if (this%imover == 1) then
-        call UWWORD(line, iloc, 11, TABUCSTRING,                                 &
-                    'from', n, q, ALIGNMENT=TABCENTER)
-      end if
-      call UWWORD(line, iloc, 11, TABUCSTRING,                                   &
-                  'well', n, q, ALIGNMENT=TABCENTER)
-      if (this%imover == 1) then
-        call UWWORD(line, iloc, 11, TABUCSTRING,                                 &
-                    'rate', n, q, ALIGNMENT=TABCENTER)
-      end if
-      if (this%iflowingwells > 0) then
-        call UWWORD(line, iloc, 11, TABUCSTRING,                                 &
-                    'flowing', n, q, ALIGNMENT=TABCENTER)
-        if (this%imover == 1) then
-          call UWWORD(line, iloc, 11, TABUCSTRING,                               &
-                      'flowing', n, q, ALIGNMENT=TABCENTER)
-        end if
-      end if
-      if (this%imawissopt /= 1) then
-        call UWWORD(line, iloc, 11, TABUCSTRING,                                 &
-                    'well', n, q, ALIGNMENT=TABCENTER)
-      end if
-      call UWWORD(line, iloc, 11, TABUCSTRING,                                   &
-                  'constant', n, q, ALIGNMENT=TABCENTER)
-      call UWWORD(line, iloc, 11, TABUCSTRING,                                   &
-                  'well', n, q, ALIGNMENT=TABCENTER, SEP=' ')
-      call UWWORD(line, iloc, 11, TABUCSTRING,                                   &
-                  'percent', n, q, ALIGNMENT=TABCENTER)
-      ! -- create line separator
-      linesep = repeat('-', iloc)
-      ! -- write first line
-      write(iout,'(1X,A)') linesep(1:iloc)
-      write(iout,'(1X,A)') line(1:iloc)
-      ! -- create second header line
-      iloc = 1
-      line = ''
-      if (this%inamedbound==1) then
-        call UWWORD(line, iloc, 16, TABUCSTRING,                                 &
-                    'name', n, q, ALIGNMENT=TABLEFT)
-      end if
-      call UWWORD(line, iloc, 6, TABUCSTRING,                                    &
-                  'no.', n, q, ALIGNMENT=TABCENTER)
-      call UWWORD(line, iloc, 11, TABUCSTRING, 'in', n, q, ALIGNMENT=TABCENTER)
-      call UWWORD(line, iloc, 11, TABUCSTRING, 'out', n, q, ALIGNMENT=TABCENTER)
-      if (this%imover == 1) then
-        call UWWORD(line, iloc, 11, TABUCSTRING,                                 &
-                    'mover', n, q, ALIGNMENT=TABCENTER)
-      end if
-      call UWWORD(line, iloc, 11, TABUCSTRING,                                   &
-                  'rate', n, q, ALIGNMENT=TABCENTER)
-      if (this%imover == 1) then
-        call UWWORD(line, iloc, 11, TABUCSTRING,                                 &
-                    'to mvr', n, q, ALIGNMENT=TABCENTER)
-      end if
-      if (this%iflowingwells > 0) then
-        call UWWORD(line, iloc, 11, TABUCSTRING,                                 &
-                    'rate', n, q, ALIGNMENT=TABCENTER)
-        if (this%imover == 1) then
-          call UWWORD(line, iloc, 11, TABUCSTRING,                               &
-                      'to mvr', n, q, ALIGNMENT=TABCENTER)
-        end if
-      end if
-      if (this%imawissopt /= 1) then
-        call UWWORD(line, iloc, 11, TABUCSTRING,                                 &
-                    'storage', n, q, ALIGNMENT=TABCENTER)
-      end if
-      call UWWORD(line, iloc, 11, TABUCSTRING,                                   &
-                  'flow', n, q, ALIGNMENT=TABCENTER)
-      call UWWORD(line, iloc, 11, TABUCSTRING,                                   &
-                  'in - out', n, q, ALIGNMENT=TABCENTER, SEP=' ')
-      call UWWORD(line, iloc, 11, TABUCSTRING,                                   &
-                  'difference', n, q, ALIGNMENT=TABCENTER)
-      ! -- write second line
-      write(iout,'(1X,A)') line(1:iloc)
-      write(iout,'(1X,A)') linesep(1:iloc)
-      !
-      ibnd = 1
-      do n = 1, this%nmawwells
-        qgwfin = DZERO
-        qgwfout = DZERO
-        qfrommvr = DZERO
-        qrate = DZERO
-        qfwrate = DZERO
-        qratetomvr = DZERO
-        qfwratetomvr = DZERO
-        qsto = DZERO
-        qconst = DZERO
-        qin = DZERO
-        qout = DZERO
-        qerr = DZERO
-        qpd = DZERO
-        qfact = DZERO
-        do j = 1, this%mawwells(n)%ngwfnodes
-          q = this%qleak(ibnd)
-          if (q < DZERO) then
-            qgwfout = qgwfout + q
-          else
-            qgwfin = qgwfin + q
-          end if
-          ibnd = ibnd + 1
-        end do
-        iloc = 1
-        line = ''
-        if (this%inamedbound==1) then
-          call UWWORD(line, iloc, 16, TABUCSTRING,                               &
-                      this%mawwells(n)%name, n, q, ALIGNMENT=TABLEFT)
-        end if
-        call UWWORD(line, iloc, 6, TABINTEGER, text, n, q)
-        call UWWORD(line, iloc, 11, TABREAL, text, n, qgwfin)
-        call UWWORD(line, iloc, 11, TABREAL, text, n, qgwfout)
-        if (this%imover == 1) then
-          if (this%iboundpak(n) /= 0) then
-            qfrommvr = this%pakmvrobj%get_qfrommvr(n)
-          end if
-          call UWWORD(line, iloc, 11, TABREAL, text, n, qfrommvr)
-        end if
-        if (this%iboundpak(n) < 0) then
-          q = DZERO
-        else
-          q = this%mawwells(n)%ratesim
-        end if
-        if (q < DZERO .and. this%qout(n) < DZERO) then
-          qfact = q / this%qout(n)
-          if (this%imover == 1) then
-            q = q + this%pakmvrobj%get_qtomvr(n) * qfact
-          end if
-        end if
-        qrate = q
-        call UWWORD(line, iloc, 11, TABREAL, text, n, qrate)
-        if (this%imover == 1) then
-          qratetomvr = this%pakmvrobj%get_qtomvr(n) * qfact
-          if (qratetomvr > DZERO) then
-            qratetomvr = -qratetomvr
-          end if
-          call UWWORD(line, iloc, 11, TABREAL, text, n, qratetomvr)
-        end if
-        if (this%iflowingwells > 0) then
-          q = this%qfw(n)
-          qfact = DONE
-          if (q < DZERO .and. this%qout(n) < DZERO) then
-            qfact = q / this%qout(n)
-            if (this%imover == 1) then
-              q = q + this%pakmvrobj%get_qtomvr(n) * qfact
-            end if
-          end if
-          qfwrate = q
-          call UWWORD(line, iloc, 11, TABREAL, text, n, qfwrate)
-          if (this%imover == 1) then
-            qfwratetomvr = this%pakmvrobj%get_qtomvr(n) * qfact
-            if (qfwratetomvr > DZERO) then
-              qfwratetomvr = -qfwratetomvr
-            end if
-            call UWWORD(line, iloc, 11, TABREAL, text, n, qfwratetomvr)
-          end if
-        end if
-        if (this%imawissopt /= 1) then
-          qsto = this%qsto(n)
-          call UWWORD(line, iloc, 11, TABREAL, text, n, qsto)
-        end if
-        qconst = this%qconst(n)
-        call UWWORD(line, iloc, 11, TABREAL, text, n, qconst)
-        ! accumulate qin
-        qin = qgwfin + qfrommvr
-        qout = -qgwfout - qratetomvr - qfwratetomvr
-        if (qrate < DZERO) then
-          qout = qout - qrate
-        else
-          qin = qin + qrate
-        end if
-        if (qsto < DZERO) then
-          qout = qout - qsto
-        else
-          qin = qin + qsto
-        end if
-        if (qconst < DZERO) then
-          qout = qout - qconst
-        else
-          qin = qin + qconst
-        end if
-        qerr = qin - qout
-        call UWWORD(line, iloc, 11, TABREAL, text, n, qerr, SEP=' ')
-        qavg = DHALF * (qin + qout)
-        if (qavg > DZERO) then
-          qpd = DHUNDRED * qerr / qavg
-        end if
-        call UWWORD(line, iloc, 11, TABREAL, text, n, qpd)
         write(iout, '(1X,A)') line(1:iloc)
       end do
     end if

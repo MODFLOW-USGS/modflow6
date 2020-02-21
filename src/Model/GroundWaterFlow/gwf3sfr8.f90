@@ -110,7 +110,6 @@ module SfrModule
     ! -- sfr table objects
     type(TableType), pointer :: inputtab => null()
     type(TableType), pointer :: stagetab => null()
-    type(TableType), pointer :: flowtab => null()
     !
     ! -- moved from SfrDataType
     integer(I4B), dimension(:), pointer, contiguous :: iboundpak => null()
@@ -1302,7 +1301,7 @@ contains
         call this%inputtab%initialize_column(text, 20, alignment=TABLEFT)
         do n = 1, 2
           write(text, '(a,1x,i6)') 'VALUE', n
-          call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+          call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)
         end do
       end if
       !
@@ -1798,17 +1797,13 @@ contains
     ! -- locals
     character (len=20) :: cellids, cellid
     character(len=LINELENGTH) :: line
-    integer(I4B) :: i
     integer(I4B) :: n
     integer(I4B) :: node
     integer(I4B) :: iloc
     real(DP) :: hgwf
     real(DP) :: sbot
-    real(DP) :: depth, stage, a, ae
-    real(DP) :: qu, qr, qe, qi, qro, qgwf, qd, qext
+    real(DP) :: depth, stage
     real(DP) :: w, cond, grad
-    real(DP) :: qfrommvr, qtomvr
-    real(DP) :: qin, qout, qerr, qavg, qpd
     ! format
      ! --------------------------------------------------------------------------
      !
@@ -1865,120 +1860,17 @@ contains
         end if
       end do
      end if
-     !
-     ! -- write sfr rates
-     if (ibudfl /= 0 .and. this%iprflow /= 0) then
-       ! -- write data
-       do n = 1, this%maxbound
-         depth = this%depth(n)
-         stage = this%stage(n)
-         node = this%igwfnode(n)
-         if (node > 0) then
-           call this%dis%noder_to_string(node, cellid)
-         else
-           cellid = 'none'
-         end if
-         a = this%surface_area(n)
-         ae = this%surface_area_wet(n, depth)
-         qu = this%usflow(n)
-         qr = this%reaches(n)%rain%value * a
-         qi =  this%reaches(n)%inflow%value
-         qro = this%simrunoff(n)
-         qe = this%simevap(n)
-         if (qe > DZERO) then
-           qe = -qe
-         end if
-         qgwf = this%gwflow(n)
-         if (qgwf /= DZERO) then
-           qgwf = -qgwf
-         end if
-         qext = this%dsflow(n)
-         qd = DZERO
-         do i = 1, this%nconnreach(n)
-           if (this%reaches(n)%idir(i) > 0) cycle
-           qd = qext
-           qext = DZERO
-           exit
-         end do
-
-         if (qd > DZERO) then
-           qd = -qd
-         end if
-
-         if (qext > DZERO) then
-           qext = -qext
-         end if
-         !
-         ! -- mover term
-         qfrommvr = DZERO
-         qtomvr = DZERO
-         if (this%imover == 1) then
-           qfrommvr = this%pakmvrobj%get_qfrommvr(n)
-           qtomvr = this%pakmvrobj%get_qtomvr(n)
-           if (qd < DZERO) then
-             qd = qd + qtomvr
-           end if
-           if (qext < DZERO) then
-             qext = qext + qtomvr
-           end if
-           if (qtomvr > DZERO) then
-             qtomvr = -qtomvr
-           end if
-         end if
-         !
-         ! -- calculate error
-         qin = qi + qu + qfrommvr + qr + qro
-         qout = -qe - qd - qext - qtomvr
-         if (qgwf < DZERO) then
-           qout = qout - qgwf
-         else
-           qin = qin + qgwf
-         end if
-         qerr = qin - qout
-         qavg = DHALF * (qin + qout)
-         qpd = DZERO
-         if (qavg > DZERO) then
-           qpd = DHUNDRED * qerr / qavg
-         end if
-         !
-         !
-         ! -- fill line
-         iloc = 1
-         line = ''
-         if (this%inamedbound==1) then
-           call this%flowtab%add_term(this%boundname(n))
-         end if
-         call this%flowtab%add_term(n)
-         call this%flowtab%add_term(cellid)
-         call this%flowtab%add_term(qi)
-         call this%flowtab%add_term(qu)
-         if (this%imover == 1) then
-          call this%flowtab%add_term(qfrommvr)
-         end if
-         call this%flowtab%add_term(qr)
-         call this%flowtab%add_term(qro)
-         call this%flowtab%add_term(qgwf)
-         call this%flowtab%add_term(qe)
-         call this%flowtab%add_term(qd)
-         call this%flowtab%add_term(qext)
-         if (this%imover == 1) then
-           call this%flowtab%add_term(qtomvr)
-         end if
-         call this%flowtab%add_term(qerr)
-         call this%flowtab%add_term(qpd)
-        end do
-      end if
-      !
-      ! -- Output sfr flow table
-      if (ibudfl /= 0 .and. this%iprflow /= 0) then
-        call this%budobj%write_flowtable(this%dis)
-      end if
-      !
-      ! -- Output sfr budget
-      call this%budobj%write_budtable(kstp, kper, iout)
-      !
-      ! -- return
-      return
+    !
+    ! -- Output sfr flow table
+    if (ibudfl /= 0 .and. this%iprflow /= 0) then
+      call this%budobj%write_flowtable(this%dis)
+    end if
+    !
+    ! -- Output sfr budget
+    call this%budobj%write_budtable(kstp, kper, iout)
+    !
+    ! -- return
+    return
   end subroutine sfr_ot
 
   subroutine sfr_da(this)
@@ -2054,11 +1946,6 @@ contains
       call this%stagetab%table_da()
       deallocate(this%stagetab)
       nullify(this%stagetab)
-    end if
-    if (this%iprflow > 0) then
-      call this%flowtab%table_da()
-      deallocate(this%flowtab)
-      nullify(this%flowtab)
     end if
     if (associated(this%inputtab)) then
       call this%inputtab%table_da()
@@ -3704,21 +3591,21 @@ contains
       text = 'CELLID'
       call this%inputtab%initialize_column(text, 20, alignment=TABLEFT)
       text = 'LENGTH'
-      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)
       text = 'WIDTH'
-      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)
       text = 'SLOPE' 
-      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)
       text = 'TOP'
-      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)
       text = 'THICKNESS'
-      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)
       text = 'HK'
-      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)
       text = 'ROUGHNESS'
-      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)
       text = 'UPSTREAM FRACTION'
-      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)
     end if
     !
     ! -- check the reach data for simple errors
@@ -4176,7 +4063,7 @@ contains
         text = 'DOWNSTREAM REACH ' // trim(adjustl(cval)) 
         call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
         text = 'FRACTION ' // trim(adjustl(cval)) 
-        call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+        call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)
       end do
     end if
     !
@@ -4666,20 +4553,10 @@ contains
     ! -- dummy
     class(SfrType) :: this
     ! -- local
-    character(len=20) :: cellids
     integer(I4B) :: nterms
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: text
 ! ------------------------------------------------------------------------------
-    !
-    ! -- set up cellids for the reach stage and budget tables
-    if (this%dis%ndim == 3) then
-      cellids = "'(LAYER,ROW,COLUMN)'"
-    elseif (this%dis%ndim == 2) then
-      cellids = "'(LAYER,CELL2D)'    "
-    else
-      cellids = "'(NODE)'            "
-    end if
     !
     ! -- setup stage table
     if (this%iprhed > 0) then
@@ -4692,7 +4569,8 @@ contains
       if (this%inamedbound == 1) nterms = nterms + 1
       !
       ! -- set up table title
-      title = 'SFR (' // trim(this%name) // ') REACH STAGE'
+      title = trim(this%name) // ' PACKAGE - SUMMARY OF STAGES FOR ' //          &
+              'EACH CONTROL VOLUME'
       !
       ! -- set up stage tableobj
       call table_cr(this%stagetab, this%name, title)
@@ -4707,118 +4585,35 @@ contains
       !
       ! -- reach number
       text = 'NUMBER'
-      call this%stagetab%initialize_column(text, 6, alignment=TABCENTER)
+      call this%stagetab%initialize_column(text, 10, alignment=TABCENTER)
       !
       ! -- cellids
-      text = 'CELLIDS ' // trim(adjustl(cellids))
+      text = 'CELLID'
       call this%stagetab%initialize_column(text, 20, alignment=TABLEFT)
       !
       ! -- reach stage
       text = 'STAGE'
-      call this%stagetab%initialize_column(text, 11, alignment=TABCENTER)
+      call this%stagetab%initialize_column(text, 12, alignment=TABCENTER)
       !
       ! -- reach depth
       text = 'DEPTH'
-      call this%stagetab%initialize_column(text, 11, alignment=TABCENTER)
+      call this%stagetab%initialize_column(text, 12, alignment=TABCENTER)
       !
       ! -- reach width
       text = 'WIDTH'
-      call this%stagetab%initialize_column(text, 11, alignment=TABCENTER)
+      call this%stagetab%initialize_column(text, 12, alignment=TABCENTER)
       !
       ! -- gwf head
       text = 'GWF HEAD'
-      call this%stagetab%initialize_column(text, 11, alignment=TABCENTER)
+      call this%stagetab%initialize_column(text, 12, alignment=TABCENTER)
       !
       ! -- streambed conductance
       text = 'STREAMBED CONDUCTANCE'
-      call this%stagetab%initialize_column(text, 11, alignment=TABCENTER)
+      call this%stagetab%initialize_column(text, 12, alignment=TABCENTER)
       !
       ! -- streambed gradient
       text = 'STREAMBED GRADIENT'
-      call this%stagetab%initialize_column(text, 11, alignment=TABCENTER)
-    end if
-    
-    if (this%iprflow > 0) then
-      !
-      ! -- Determine the number of sfr budget terms. These are fixed for 
-      !    the simulation and cannot change.  This includes FLOW-JA-FACE
-      !    so they can be written to the binary budget files, but these internal
-      !    flows are not included as part of the budget table.
-      nterms = 12
-      if (this%inamedbound == 1) nterms = nterms + 1
-      if (this%imover == 1) then
-        nterms = nterms + 2
-      end if
-      !
-      ! -- set up table title
-      title = 'SFR (' // trim(this%name) // ') REACH FLOWS'
-      !
-      ! -- set up budget tableobj
-      call table_cr(this%flowtab, this%name, title)
-      call this%flowtab%table_df(this%maxbound, nterms, this%iout,              &
-                                  transient=.TRUE.)
-      !
-      ! -- Go through and set up table budget term
-      if (this%inamedbound == 1) then
-        text = 'NAME'
-        call this%flowtab%initialize_column(text, 20, alignment=TABLEFT)
-      end if
-      !
-      ! -- reach number
-      text = 'NUMBER'
-      call this%flowtab%initialize_column(text, 6, alignment=TABCENTER)
-      !
-      ! -- cellids
-      text = 'CELLIDS ' // trim(adjustl(cellids))
-      call this%flowtab%initialize_column(text, 20, alignment=TABLEFT)
-      !
-      ! -- reach external inflow
-      text = 'EXTERNAL INFLOW'
-      call this%flowtab%initialize_column(text, 11, alignment=TABCENTER)
-      !
-      ! -- reach inflow
-      text = 'INFLOW'
-      call this%flowtab%initialize_column(text, 11, alignment=TABCENTER)
-      !
-      ! -- reach inflow from mover
-      text = 'INFLOW FROM MVR'
-      call this%flowtab%initialize_column(text, 11, alignment=TABCENTER)
-      !
-      ! -- reach rainfall
-      text = 'RAINFALL'
-      call this%flowtab%initialize_column(text, 11, alignment=TABCENTER)
-      !
-      ! -- reach external runoff
-      text = 'EXTERNAL RUNOFF'
-      call this%flowtab%initialize_column(text, 11, alignment=TABCENTER)
-      !
-      ! -- reach leakage
-      text = 'LEAKAGE'
-      call this%flowtab%initialize_column(text, 11, alignment=TABCENTER)
-      !
-      ! -- reach evaporation
-      text = 'EVAPORATION'
-      call this%flowtab%initialize_column(text, 11, alignment=TABCENTER)
-      !
-      ! -- reach outflow
-      text = 'OUTFLOW'
-      call this%flowtab%initialize_column(text, 11, alignment=TABCENTER)
-      !
-      ! -- reach external outflow
-      text = 'EXTERNAL OUTFLOW'
-      call this%flowtab%initialize_column(text, 11, alignment=TABCENTER)
-      !
-      ! -- reach outflow from mover
-      text = 'OUTFLOW FROM MVR'
-      call this%flowtab%initialize_column(text, 11, alignment=TABCENTER)
-      !
-      ! -- reach in-out
-      text = '"IN - OUT"'
-      call this%flowtab%initialize_column(text, 11, alignment=TABCENTER)
-      !
-      ! -- reach percent difference
-      text = 'PERCENT DIFFERENCE'
-      call this%flowtab%initialize_column(text, 11, alignment=TABCENTER)
+      call this%stagetab%initialize_column(text, 12, alignment=TABCENTER)
     end if
     !
     ! -- return
