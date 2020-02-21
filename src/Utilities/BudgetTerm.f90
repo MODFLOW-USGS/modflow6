@@ -40,6 +40,11 @@ module BudgetTermModule
     procedure :: update_term
     procedure :: accumulate_flow
     procedure :: save_flows
+    procedure :: get_nlist
+    procedure :: get_flowtype
+    procedure :: get_flow
+    procedure :: get_id1
+    procedure :: get_id2
     procedure :: deallocate_arrays
     
   end type BudgetTermType
@@ -228,5 +233,103 @@ module BudgetTermModule
                                      olconv2=this%olconv2)
     end do
   end subroutine save_flows
+  
+  function get_nlist(this) result(nlist)
+! ******************************************************************************
+! get_nlist -- get the number of entries for the stress period
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- return
+    integer(I4B) :: nlist   
+    ! -- dummy
+    class(BudgetTermType) :: this
+! ------------------------------------------------------------------------------
+    nlist = this%nlist
+    !
+    ! -- return
+    return
+  end function get_nlist
+  
+  function get_flowtype(this) result(flowtype)
+! ******************************************************************************
+! get_flowtype -- get the flowtype for the budget term
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- return
+    character(len=LENBUDTXT) :: flowtype   
+    ! -- dummy
+    class(BudgetTermType) :: this
+! ------------------------------------------------------------------------------
+    flowtype = this%flowtype
+    !
+    ! -- return
+    return
+  end function get_flowtype
+  
+  function get_id1(this, icount) result(id1)
+! ******************************************************************************
+! get_id1 -- get id1(icount) for the budget term
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- return
+    integer(I4B) :: id1 
+    ! -- dummy
+    class(BudgetTermType) :: this
+    integer(I4B), intent(in) :: icount
+! ------------------------------------------------------------------------------
+    id1 = this%id1(icount)
+    !
+    ! -- return
+    return
+  end function get_id1
+  
+  function get_id2(this, icount) result(id2)
+! ******************************************************************************
+! get_id2 -- get id2(icount) for the budget term
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- return
+    integer(I4B) :: id2 
+    ! -- dummy
+    class(BudgetTermType) :: this
+    integer(I4B), intent(in) :: icount
+! ------------------------------------------------------------------------------
+    id2 = this%id2(icount)
+    !
+    ! -- return
+    return
+  end function get_id2
+  
+  function get_flow(this, icount) result(flow)
+! ******************************************************************************
+! get_flow -- get flow(icount) for the budget term
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- return
+    real(DP) :: flow 
+    ! -- dummy
+    class(BudgetTermType) :: this
+    integer(I4B), intent(in) :: icount
+! ------------------------------------------------------------------------------
+    flow = this%flow(icount)
+    !
+    ! -- return
+    return
+  end function get_flow
   
 end module BudgetTermModule

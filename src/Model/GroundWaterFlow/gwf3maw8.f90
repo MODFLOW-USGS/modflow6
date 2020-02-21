@@ -5,7 +5,9 @@ module MawModule
                              DZERO, DEM6, DEM4, DEM2, DQUARTER, DHALF, DP7,      &
                              DP9, DONE, DTWO, DPI, DTWOPI, DEIGHT, DHUNDRED,     &
                              DEP20, NAMEDBOUNDFLAG, LENPACKAGENAME, LENAUXNAME,  &
-                             LENFTYPE, DHNOFLO, DHDRY, DNODATA, MAXCHARLEN
+  &                          LENFTYPE, DHNOFLO, DHDRY, DNODATA, MAXCHARLEN,     &
+                             TABLEFT, TABCENTER, TABRIGHT,                      &
+                             TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
   use SmoothingModule,  only: sQuadraticSaturation, sQSaturation,                &
                               sQuadraticSaturationDerivative,                    &
                               sQSaturationDerivative
@@ -2456,7 +2458,7 @@ contains
 
   subroutine maw_ot(this, kstp, kper, iout, ihedfl, ibudfl)
     ! **************************************************************************
-    ! pak1t -- Output package budget
+    ! maw_ot -- Output package budget
     ! **************************************************************************
     !
     !    SPECIFICATIONS:
@@ -2473,26 +2475,9 @@ contains
     ! -- locals
     character(len=LINELENGTH) :: line, linesep
     character(len=16) :: text
-    integer(I4B) :: j
     integer(I4B) :: n
-    integer(I4B) :: ibnd
     integer(I4B) :: iloc
     real(DP) :: q
-    real(DP) :: qfact
-    real(DP) :: qgwfin
-    real(DP) :: qgwfout
-    real(DP) :: qfrommvr
-    real(DP) :: qrate
-    real(DP) :: qfwrate
-    real(DP) :: qratetomvr
-    real(DP) :: qfwratetomvr
-    real(DP) :: qsto
-    real(DP) :: qconst
-    real(DP) :: qin
-    real(DP) :: qout
-    real(DP) :: qerr
-    real(DP) :: qavg
-    real(DP) :: qpd
     ! format
  2000 FORMAT ( 1X, ///1X, A, A, A, '   PERIOD ', I6, '   STEP ', I8)
     ! --------------------------------------------------------------------------
@@ -2503,10 +2488,13 @@ contains
       iloc = 1
       line = ''
       if (this%inamedbound==1) then
-        call UWWORD(line, iloc, 16, 1, 'well', n, q, left=.TRUE.)
+        call UWWORD(line, iloc, 16, TABUCSTRING,                                 &
+                    'well', n, q, ALIGNMENT=TABLEFT)
       end if
-      call UWWORD(line, iloc, 6, 1, 'well', n, q, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 11, 1, 'well', n, q, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 6, TABUCSTRING,                                    &
+                  'well', n, q, ALIGNMENT=TABCENTER)
+      call UWWORD(line, iloc, 11, TABUCSTRING,                                   &
+                  'well', n, q, ALIGNMENT=TABCENTER)
       ! -- create line separator
       linesep = repeat('-', iloc)
       ! -- write first line
@@ -2516,10 +2504,13 @@ contains
       iloc = 1
       line = ''
       if (this%inamedbound==1) then
-        call UWWORD(line, iloc, 16, 1, 'name', n, q, left=.TRUE.)
+        call UWWORD(line, iloc, 16, TABUCSTRING,                                 &
+                    'name', n, q, ALIGNMENT=TABLEFT)
       end if
-      call UWWORD(line, iloc, 6, 1, 'no.', n, q, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 11, 1, 'head', n, q, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 6, TABUCSTRING,                                    &
+                  'no.', n, q, ALIGNMENT=TABCENTER)
+      call UWWORD(line, iloc, 11, TABUCSTRING,                                   &
+                  'head', n, q, ALIGNMENT=TABCENTER)
       ! -- write second line
       write(iout,'(1X,A)') line(1:iloc)
       write(iout,'(1X,A)') linesep(1:iloc)
@@ -2528,192 +2519,18 @@ contains
         iloc = 1
         line = ''
         if (this%inamedbound==1) then
-          call UWWORD(line, iloc, 16, 1, this%mawwells(n)%name, n, q, left=.TRUE.)
+          call UWWORD(line, iloc, 16, TABUCSTRING,                               &
+                      this%mawwells(n)%name, n, q, ALIGNMENT=TABLEFT)
         end if
-        call UWWORD(line, iloc, 6, 2, text, n, q)
-        call UWWORD(line, iloc, 11, 3, text, n, this%xnewpak(n))
+        call UWWORD(line, iloc, 6, TABINTEGER, text, n, q)
+        call UWWORD(line, iloc, 11, TABREAL, text, n, this%xnewpak(n))
         write(iout, '(1X,A)') line(1:iloc)
       end do
     end if
     !
-    ! -- write MAW flows to the listing file
+    ! -- Output maw flow table
     if (ibudfl /= 0 .and. this%iprflow /= 0) then
-      write (iout, 2000) 'MULTI-AQUIFER WELL (', trim(this%name), ') FLOWS', kper, kstp
-      iloc = 1
-      line = ''
-      if (this%inamedbound==1) then
-        call UWWORD(line, iloc, 16, 1, 'well', n, q, left=.TRUE.)
-      end if
-      call UWWORD(line, iloc, 6, 1, 'well', n, q, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 11, 1, 'gwf', n, q, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 11, 1, 'gwf', n, q, CENTER=.TRUE.)
-      if (this%imover == 1) then
-        call UWWORD(line, iloc, 11, 1, 'from', n, q, CENTER=.TRUE.)
-      end if
-      call UWWORD(line, iloc, 11, 1, 'well', n, q, CENTER=.TRUE.)
-      if (this%imover == 1) then
-        call UWWORD(line, iloc, 11, 1, 'rate', n, q, CENTER=.TRUE.)
-      end if
-      if (this%iflowingwells > 0) then
-        call UWWORD(line, iloc, 11, 1, 'flowing', n, q, CENTER=.TRUE.)
-        if (this%imover == 1) then
-          call UWWORD(line, iloc, 11, 1, 'flowing', n, q, CENTER=.TRUE.)
-        end if
-      end if
-      if (this%imawissopt /= 1) then
-        call UWWORD(line, iloc, 11, 1, 'well', n, q, CENTER=.TRUE.)
-      end if
-      call UWWORD(line, iloc, 11, 1, 'constant', n, q, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 11, 1, 'well', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'percent', n, q, CENTER=.TRUE.)
-      ! -- create line separator
-      linesep = repeat('-', iloc)
-      ! -- write first line
-      write(iout,'(1X,A)') linesep(1:iloc)
-      write(iout,'(1X,A)') line(1:iloc)
-      ! -- create second header line
-      iloc = 1
-      line = ''
-      if (this%inamedbound==1) then
-        call UWWORD(line, iloc, 16, 1, 'name', n, q, left=.TRUE.)
-      end if
-      call UWWORD(line, iloc, 6, 1, 'no.', n, q, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 11, 1, 'in', n, q, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 11, 1, 'out', n, q, CENTER=.TRUE.)
-      if (this%imover == 1) then
-        call UWWORD(line, iloc, 11, 1, 'mover', n, q, CENTER=.TRUE.)
-      end if
-      call UWWORD(line, iloc, 11, 1, 'rate', n, q, CENTER=.TRUE.)
-      if (this%imover == 1) then
-        call UWWORD(line, iloc, 11, 1, 'to mvr', n, q, CENTER=.TRUE.)
-      end if
-      if (this%iflowingwells > 0) then
-        call UWWORD(line, iloc, 11, 1, 'rate', n, q, CENTER=.TRUE.)
-        if (this%imover == 1) then
-          call UWWORD(line, iloc, 11, 1, 'to mvr', n, q, CENTER=.TRUE.)
-        end if
-      end if
-      if (this%imawissopt /= 1) then
-        call UWWORD(line, iloc, 11, 1, 'storage', n, q, CENTER=.TRUE.)
-      end if
-      call UWWORD(line, iloc, 11, 1, 'flow', n, q, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 11, 1, 'in - out', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'difference', n, q, CENTER=.TRUE.)
-      ! -- write second line
-      write(iout,'(1X,A)') line(1:iloc)
-      write(iout,'(1X,A)') linesep(1:iloc)
-      !
-      ibnd = 1
-      do n = 1, this%nmawwells
-        qgwfin = DZERO
-        qgwfout = DZERO
-        qfrommvr = DZERO
-        qrate = DZERO
-        qfwrate = DZERO
-        qratetomvr = DZERO
-        qfwratetomvr = DZERO
-        qsto = DZERO
-        qconst = DZERO
-        qin = DZERO
-        qout = DZERO
-        qerr = DZERO
-        qpd = DZERO
-        qfact = DZERO
-        do j = 1, this%mawwells(n)%ngwfnodes
-          q = this%qleak(ibnd)
-          if (q < DZERO) then
-            qgwfout = qgwfout + q
-          else
-            qgwfin = qgwfin + q
-          end if
-          ibnd = ibnd + 1
-        end do
-        iloc = 1
-        line = ''
-        if (this%inamedbound==1) then
-          call UWWORD(line, iloc, 16, 1, this%mawwells(n)%name, n, q, left=.TRUE.)
-        end if
-        call UWWORD(line, iloc, 6, 2, text, n, q)
-        call UWWORD(line, iloc, 11, 3, text, n, qgwfin)
-        call UWWORD(line, iloc, 11, 3, text, n, qgwfout)
-        if (this%imover == 1) then
-          if (this%iboundpak(n) /= 0) then
-            qfrommvr = this%pakmvrobj%get_qfrommvr(n)
-          end if
-          call UWWORD(line, iloc, 11, 3, text, n, qfrommvr)
-        end if
-        if (this%iboundpak(n) < 0) then
-          q = DZERO
-        else
-          q = this%mawwells(n)%ratesim
-        end if
-        if (q < DZERO .and. this%qout(n) < DZERO) then
-          qfact = q / this%qout(n)
-          if (this%imover == 1) then
-            q = q + this%pakmvrobj%get_qtomvr(n) * qfact
-          end if
-        end if
-        qrate = q
-        call UWWORD(line, iloc, 11, 3, text, n, qrate)
-        if (this%imover == 1) then
-          qratetomvr = this%pakmvrobj%get_qtomvr(n) * qfact
-          if (qratetomvr > DZERO) then
-            qratetomvr = -qratetomvr
-          end if
-          call UWWORD(line, iloc, 11, 3, text, n, qratetomvr)
-        end if
-        if (this%iflowingwells > 0) then
-          q = this%qfw(n)
-          qfact = DONE
-          if (q < DZERO .and. this%qout(n) < DZERO) then
-            qfact = q / this%qout(n)
-            if (this%imover == 1) then
-              q = q + this%pakmvrobj%get_qtomvr(n) * qfact
-            end if
-          end if
-          qfwrate = q
-          call UWWORD(line, iloc, 11, 3, text, n, qfwrate)
-          if (this%imover == 1) then
-            qfwratetomvr = this%pakmvrobj%get_qtomvr(n) * qfact
-            if (qfwratetomvr > DZERO) then
-              qfwratetomvr = -qfwratetomvr
-            end if
-            call UWWORD(line, iloc, 11, 3, text, n, qfwratetomvr)
-          end if
-        end if
-        if (this%imawissopt /= 1) then
-          qsto = this%qsto(n)
-          call UWWORD(line, iloc, 11, 3, text, n, qsto)
-        end if
-        qconst = this%qconst(n)
-        call UWWORD(line, iloc, 11, 3, text, n, qconst)
-        ! accumulate qin
-        qin = qgwfin + qfrommvr
-        qout = -qgwfout - qratetomvr - qfwratetomvr
-        if (qrate < DZERO) then
-          qout = qout - qrate
-        else
-          qin = qin + qrate
-        end if
-        if (qsto < DZERO) then
-          qout = qout - qsto
-        else
-          qin = qin + qsto
-        end if
-        if (qconst < DZERO) then
-          qout = qout - qconst
-        else
-          qin = qin + qconst
-        end if
-        qerr = qin - qout
-        call UWWORD(line, iloc, 11, 3, text, n, qerr, SEP=' ')
-        qavg = DHALF * (qin + qout)
-        if (qavg > DZERO) then
-          qpd = DHUNDRED * qerr / qavg
-        end if
-        call UWWORD(line, iloc, 11, 3, text, n, qpd)
-        write(iout, '(1X,A)') line(1:iloc)
-      end do
+      call this%budobj%write_flowtable(this%dis)
     end if
     !
     ! -- Output maw budget
@@ -4145,6 +3962,11 @@ contains
                                                this%name, &
                                                maxlist, .false., .false., &
                                                naux, this%auxname)
+    end if
+    !
+    ! -- if maw flow for each reach are written to the listing file
+    if (this%iprflow /= 0) then
+      call this%budobj%flowtable_df(this%iout)
     end if
     !
     ! -- return
