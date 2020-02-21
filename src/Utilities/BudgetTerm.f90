@@ -41,6 +41,7 @@ module BudgetTermModule
     procedure :: accumulate_flow
     procedure :: save_flows
     procedure :: read_flows
+    procedure :: fill_from_bfr
     procedure :: deallocate_arrays
     
   end type BudgetTermType
@@ -303,5 +304,78 @@ module BudgetTermModule
       this%flow(i) = q
     end do
   end subroutine read_flows
+  
+  subroutine fill_from_bfr(this, bfr, dis)
+! ******************************************************************************
+! fill_from_bfr -- copy the flow from the binary file reader into this budterm
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use BudgetFileReaderModule, only: BudgetFileReaderType
+    ! -- dummy
+    class(BudgetTermType) :: this
+    type(BudgetFileReaderType) :: bfr
+    class(DisBaseType), intent(in) :: dis
+    !integer(I4B), intent(in) :: ibinun
+    !integer(I4B), intent(inout) :: kstp
+    !integer(I4B), intent(inout) :: kper
+    !real(DP), intent(inout) :: delt
+    !real(DP), intent(inout) :: pertim
+    !real(DP), intent(inout) :: totim
+    ! -- local
+    integer(I4B) :: i
+    integer(I4B) :: n1
+    integer(I4B) :: n2
+    real(DP) :: q
+! ------------------------------------------------------------------------------
+    this%flowtype = bfr%budtxt
+    this%text1id1 = bfr%srcmodelname
+    this%text2id1 = bfr%srcpackagename
+    this%text1id2 = bfr%dstmodelname
+    this%text2id2 = bfr%dstpackagename
+    this%naux = bfr%naux
+    if (.not. associated(this%auxtxt)) then
+      allocate(this%auxtxt(this%naux))
+    else
+      if (size(this%auxtxt) /= this%naux) then
+        deallocate(this%auxtxt)
+        allocate(this%auxtxt(this%naux))
+      end if
+    end if
+    if (this%naux > 0) this%auxtxt(:) = bfr%auxtxt(:)
+    this%nlist = bfr%nlist
+    if (.not. associated(this%id1)) then
+      this%maxlist = this%nlist
+      allocate(this%id1(this%maxlist))
+      allocate(this%id2(this%maxlist))
+      allocate(this%flow(this%maxlist))
+      allocate(this%auxvar(this%naux, this%maxlist))
+    else
+      if (this%nlist > this%maxlist) then
+        this%maxlist = this%nlist
+        deallocate(this%id1)
+        deallocate(this%id2)
+        deallocate(this%flow)
+        deallocate(this%auxvar)
+        allocate(this%id1(this%maxlist))
+        allocate(this%id2(this%maxlist))
+        allocate(this%flow(this%maxlist))
+        allocate(this%auxvar(this%naux, this%maxlist))
+      end if
+    end if
+    do i = 1, this%nlist
+      n1 = bfr%nodesrc(i)
+      n2 = bfr%nodedst(i)
+      q = bfr%flow(i)
+      this%auxvar(:, i) = bfr%auxvar(:, i)
+      if (this%olconv1) n1 = dis%get_nodenumber(n1, 0)
+      if (this%olconv2) n2 = dis%get_nodenumber(n2, 0)
+      this%id1(i) = n1
+      this%id2(i) = n2
+      this%flow(i) = q
+    end do
+  end subroutine fill_from_bfr
   
 end module BudgetTermModule

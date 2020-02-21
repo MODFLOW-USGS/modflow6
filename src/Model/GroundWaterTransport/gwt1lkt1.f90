@@ -34,7 +34,7 @@ module GwtLktModule
   use LakModule, only: LakType
   use MemoryTypeModule, only: MemoryTSType
   use BudgetModule, only: BudgetType
-  use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr
+  use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr, budgetobject_cr_bfr
   use BudgetFileReaderModule, only: BudgetFileReaderType
   use ObserveModule, only: ObserveType
   use InputOutputModule, only: extract_idnum_or_bndname
@@ -1539,33 +1539,36 @@ module GwtLktModule
     !    the budget file reader
     if (this%iflowbudget /= 0) then
       !
-      ! -- initialize the binary file reader by reading the first set of 
-      !    records
-      call this%bfr%initialize(this%iflowbudget, this%iout, ncrbud)
-      nbudterm = this%bfr%nbudterms
-      !
-      ! -- find which budget entry is GWF so ol2conv can be set to true so that
-      !    user node numbers in the binary file can be convered to reduced 
-      !    node numbers in the lakbudptr object
-      igwf = 0
-      do icount = 1, this%bfr%nbudterms
-        if (adjustl(this%bfr%budtxtarray(icount)) == 'GWF') then
-          igwf = icount
-          exit
-        end if
-      end do
-      !
-      ! -- create and initialize lakbudptr
-      call budgetobject_cr(this%lakbudptr, this%name)
-      call this%lakbudptr%budgetobject_df(ncrbud, nbudterm, 0, 0)
-      !
-      ! -- Set olconv2 to true for the GWF budterm so that node numbers are 
-      !    converted from user nodes to reduced nodes
-      if (igwf > 0) this%lakbudptr%budterm(igwf)%olconv2 = .true.
-      !
-      ! -- Fill the lakbudptr object with the first time step information 
-      !    in the binary file
-      call this%lakbudptr%read_flows(this%dis, this%iflowbudget)
+      !! -- initialize the binary file reader by reading the first set of 
+      !!    records
+      !call this%bfr%initialize(this%iflowbudget, this%iout, ncrbud)
+      !nbudterm = this%bfr%nbudterms
+      !!
+      !! -- find which budget entry is GWF so ol2conv can be set to true so that
+      !!    user node numbers in the binary file can be convered to reduced 
+      !!    node numbers in the lakbudptr object
+      !igwf = 0
+      !do icount = 1, this%bfr%nbudterms
+      !  if (adjustl(this%bfr%budtxtarray(icount)) == 'GWF') then
+      !    igwf = icount
+      !    exit
+      !  end if
+      !end do
+      !!
+      !! -- create and initialize lakbudptr
+      !call budgetobject_cr(this%lakbudptr, this%name)
+      !call this%lakbudptr%budgetobject_df(ncrbud, nbudterm, 0, 0)
+      !!
+      !! -- Set olconv2 to true for the GWF budterm so that node numbers are 
+      !!    converted from user nodes to reduced nodes
+      !if (igwf > 0) this%lakbudptr%budterm(igwf)%olconv2 = .true.
+      !!
+      !! -- Fill the lakbudptr object with the first time step information 
+      !!    in the binary file
+      !call this%lakbudptr%read_flows(this%dis, this%iflowbudget)
+      call budgetobject_cr_bfr(this%lakbudptr, this%name, this%iflowbudget, this%iout, &
+                               colconv2=['GWF             '])
+      call this%lakbudptr%fill_from_bfr(this%dis, this%iout)
       found = .true.
       !
     else
