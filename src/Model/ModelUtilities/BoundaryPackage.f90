@@ -80,7 +80,8 @@ module BndModule
     integer(I4B), dimension(:), pointer, contiguous :: icelltype => null()       !pointer to icelltype array in NPF
     character(len=10) :: ictorigin  = ''                                         !package name for icelltype (NPF for GWF)
     !
-    ! -- print_flows table object
+    ! -- table objects
+    type(TableType), pointer :: inputtab => null()
     type(TableType), pointer :: outputtab => null()
 
     
@@ -613,16 +614,21 @@ module BndModule
       ! -- initialize output table
       if (this%iprpak /= 0) then
         !
-        ! -- reset the input table object
+        ! -- initialize the input table object
         title = trim(this%name) // ' PACKAGE DATA CALCULATED FLOW DATA'
         call table_cr(this%outputtab, this%name, title)
-        call this%outputtab%table_df(this%nbound, 3, this%iout)
+        call this%outputtab%table_df(this%nbound, 3, this%iout,                  &
+                                      transient=.TRUE.)
         tag = 'NUMBER'
         call this%outputtab%initialize_column(tag, 10, alignment=TABCENTER)
         tag = 'CELLID'
         call this%outputtab%initialize_column(tag, 20, alignment=TABLEFT)
         tag = trim(adjustl(this%name_model)) // ' RATE'
         call this%outputtab%initialize_column(tag, 10, alignment=TABCENTER)
+        if (this%inamedbound > 0) then
+          text = 'NAME'
+          call this%outputtab%initialize_column(text, 20, alignment=TABLEFT)
+        end if
       end if
       !
       ! -- Loop through each boundary calculating flow.
@@ -669,6 +675,9 @@ module BndModule
                 call this%outputtab%add_term(i)
                 call this%outputtab%add_term(nodestr)
                 call this%outputtab%add_term(rrate)
+                if (this%inamedbound > 0) then
+                  call this%outputtab%add_term(bname)
+                end if
                 
               end if
             end if
@@ -859,6 +868,20 @@ module BndModule
       deallocate(this%pakmvrobj)
       nullify(this%pakmvrobj)
     endif
+    !
+    ! -- output table object
+    if (associated(this%inputtab)) then
+      call this%inputtab%table_da()
+      deallocate(this%inputtab)
+      nullify(this%inputtab)
+    end if
+    !
+    ! -- output table object
+    if (associated(this%outputtab)) then
+      call this%outputtab%table_da()
+      deallocate(this%outputtab)
+      nullify(this%outputtab)
+    end if
     !
     ! -- Deallocate scalars
     call mem_deallocate(this%ibcnum)

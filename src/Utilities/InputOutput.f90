@@ -635,6 +635,7 @@ module InputOutputModule
       ! -- code
       !
       ! -- initialize locals
+      ipad = 0
       ireal = 0
       !
       ! -- process dummy variables
@@ -650,9 +651,7 @@ module InputOutputModule
             ireal = 1
             i = ILEN - 7
             write(cfmt, '(A,I0,A,I0,A)') '(1PG', ILEN, '.', i, ')'
-            if (R < DZERO) then
-              ipad = 0
-            else
+            if (R >= DZERO) then
               ipad = 1
             end if
         end select
