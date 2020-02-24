@@ -376,6 +376,8 @@ contains
     call mem_allocate(this%qout, this%nmawwells, 'QOUT', this%origin)
     call mem_allocate(this%qsto, this%nmawwells, 'QSTO', this%origin)
     call mem_allocate(this%qconst, this%nmawwells, 'QCONST', this%origin)
+    !
+    ! -- initialize flowing well, storage, and constant flow terms
     do i = 1, this%nmawwells
       if (this%iflowingwells /= 0) this%qfw(i) = DZERO
       this%qsto(i) = DZERO
@@ -2414,8 +2416,6 @@ contains
     ! -- local
     integer(I4B) :: ibinun
     real(DP) :: rrate
-    real(DP) :: chrrate
-    real(DP) :: ratsum
     ! -- for budget
     integer(I4B) :: j, n
     integer(I4B) :: igwfnode
@@ -2444,51 +2444,54 @@ contains
                              isuppress_output, model_budget, this%imap,        &
                              iadv=1)
     !
-    ! -- calculate maw budget terms
+    ! -- calculate maw budget flow and storage terms
     do n = 1, this%nmawwells
       this%qout(n) = DZERO
       this%qsto(n) = DZERO
       if (this%iflowingwells > 0) this%qfw(n) = DZERO
       if (this%iboundpak(n) == 0) cycle
+      !
+      ! -- set hmaw and xsto
       hmaw = this%xnewpak(n)
+      this%mawwells(n)%xsto = hmaw
+      !
       ! -- add pumping rate to active maw well
-      if (this%iboundpak(n) > 0) then
-        rrate = this%mawwells(n)%ratesim
-        if (rrate < DZERO) then
+      rrate = this%mawwells(n)%ratesim
+      !
+      ! -- If flow is out of maw set qout to rrate.
+      if (rrate < DZERO) then
+        this%qout(n) = rrate
+      end if
+      !
+      ! -- add flowing well
+      if (this%iflowingwells > 0) then
+        if (this%mawwells(n)%fwcond > DZERO) then
+          cfw = this%mawwells(n)%fwcondsim
+          this%mawwells(n)%xsto = this%mawwells(n)%fwelev
+          rrate = cfw * (this%mawwells(n)%fwelev - hmaw)
+          this%qfw(n) = rrate
           !
-          ! -- Flow is out of maw subtract rate from ratout.
-          this%qout(n) = rrate
+          ! -- Subtract flowing well rrate from qout.
+          this%qout(n) = this%qout(n) + rrate
         end if
-        ! -- add flowing well
-        this%mawwells(n)%xsto = hmaw
-        if (this%iflowingwells > 0) then
-          if (this%mawwells(n)%fwcond > DZERO) then
-            cfw = this%mawwells(n)%fwcondsim
-            this%mawwells(n)%xsto = this%mawwells(n)%fwelev
-            rrate = cfw * (this%mawwells(n)%fwelev - hmaw)
-            this%qfw(n) = rrate
-            this%qout(n) = this%qout(n) + rrate
-          end if
-        end if
-        !
-        ! -- Calculate qsto
-        if (this%imawiss /= 1) then
-          rrate = -this%mawwells(n)%area * (this%mawwells(n)%xsto - this%mawwells(n)%xoldsto) / delt
-          this%qsto(n) = rrate
-        end if
+      end if
+      !
+      ! -- Calculate qsto
+      if (this%imawiss /= 1) then
+        rrate = -this%mawwells(n)%area * (this%mawwells(n)%xsto - this%mawwells(n)%xoldsto) / delt
+        this%qsto(n) = rrate
       end if
     end do
     !
-    ! -- gwf flow and constant flow to maw
+    ! -- gwf and constant flow
     ibnd = 1
     do n = 1, this%nmawwells
       rrate = DZERO
-      chrrate = DZERO
       hmaw = this%xnewpak(n)
-      ratsum = DZERO
+      this%qconst(n) = DZERO
       do j = 1, this%mawwells(n)%ngwfnodes
         this%qleak(ibnd) = DZERO
-        !if (this%iboundpak(n) == 0) cycle
+        if (this%iboundpak(n) == 0) cycle
         igwfnode = this%mawwells(n)%gwfnodes(j)
         hgwf = this%xnew(igwfnode)
         cmaw = this%mawwells(n)%simcond(j)
@@ -2500,17 +2503,39 @@ contains
           cterm = cmaw * (bmaw - hmaw)
         end if
         rrate = -(cmaw * (hmaw - hgwf) + cterm)
-        ratsum = ratsum + rrate
         this%qleak(ibnd) = rrate
         if (this%iboundpak(n) < 0) then
-          chrrate = chrrate - rrate
+          this%qconst(n) = this%qconst(n) - rrate
+          !
+          ! -- If flow is out increment qout by -rrate.
+          if (-rrate < DZERO) then
+            this%qout(n) = this%qout(n) - rrate
+          end if
         end if
         ibnd = ibnd + 1
       end do
+      !!
+      !! -- Update .
+      !if (this%qconst(n) < DZERO) then
+      !    this%qout(n) = this%qout(n) + this%qconst(n)
+      !end if
+      !
+      ! -- add additional flow terms to constant head term
       if (this%iboundpak(n) < 0) then
-        this%mawwells(n)%ratesim = -ratsum
+        !
+        ! -- add well pumping rate
+        this%qconst(n) = this%qconst(n) - this%mawwells(n)%ratesim
+        !
+        ! -- add flowing well rate
+        if (this%iflowingwells > 0) then
+          this%qconst(n) = this%qconst(n) - this%qfw(n)
+        end if
+        !
+        ! -- add storage term
+        if (this%imawiss /= 1) then
+          this%qconst(n) = this%qconst(n) - this%qsto(n)
+        end if
       end if
-      this%qconst(n) = chrrate
     end do
     !
     ! -- For continuous observations, save simulated values.
@@ -2571,7 +2596,6 @@ contains
     !    SPECIFICATIONS:
     ! --------------------------------------------------------------------------
     !
-    use InputOutputModule, only: UWWORD
     ! -- dummy
     class(MawType) :: this
     integer(I4B),intent(in) :: kstp
@@ -2580,13 +2604,8 @@ contains
     integer(I4B),intent(in) :: ihedfl
     integer(I4B),intent(in) :: ibudfl
     ! -- locals
-    character(len=LINELENGTH) :: line, linesep
-    character(len=16) :: text
     integer(I4B) :: n
-    integer(I4B) :: iloc
-    real(DP) :: q
     ! format
- 2000 FORMAT ( 1X, ///1X, A, A, A, '   PERIOD ', I6, '   STEP ', I8)
     ! --------------------------------------------------------------------------
      !
      ! -- write maw head table
@@ -3885,19 +3904,19 @@ contains
     !
     ! -- Determine the number of maw budget terms. These are fixed for 
     !    the simulation and cannot change.  
-    ! gwf rate [flowing_well] [storage] constant_flow [frommvr tomvr [tomvrfw]] [aux]
+    ! gwf rate [flowing_well] [storage] constant_flow [frommvr tomvr tomvrcf [tomvrfw]] [aux]
     nbudterm = 3
     if (this%iflowingwells > 0) nbudterm = nbudterm + 1
     if (this%imawissopt /= 1) nbudterm = nbudterm + 1
     if (this%imover == 1) then
-      nbudterm = nbudterm + 2
+      nbudterm = nbudterm + 3
       if (this%iflowingwells > 0) nbudterm = nbudterm + 1
     end if
     if (this%naux > 0) nbudterm = nbudterm + 1
     !
     ! -- set up budobj
     call budgetobject_cr(this%budobj, this%name)
-    call this%budobj%budgetobject_df(this%maxbound, nbudterm, 0, 0)
+    call this%budobj%budgetobject_df(this%nmawwells, nbudterm, 0, 0)
     idx = 0
     !
     ! -- Go through and set up each budget term
@@ -3998,7 +4017,20 @@ contains
                                                naux)
       !
       ! -- 
-      text = '          TO-MVR'
+      text = '     RATE TO-MVR'
+      idx = idx + 1
+      maxlist = this%nmawwells
+      naux = 0
+      call this%budobj%budterm(idx)%initialize(text, &
+                                               this%name_model, &
+                                               this%name, &
+                                               this%name_model, &
+                                               this%name, &
+                                               maxlist, .false., .false., &
+                                               naux)
+      !
+      ! -- constant-head flow to mover
+      text = ' CONSTANT TO-MVR'
       idx = idx + 1
       maxlist = this%nmawwells
       naux = 0
@@ -4014,7 +4046,7 @@ contains
       if (this%iflowingwells > 0) then
         !
         ! -- 
-        text = '  FW-RATE-TO-MVR'
+        text = '  FW-RATE TO-MVR'
         idx = idx + 1
         maxlist = this%nmawwells
         naux = 0
@@ -4058,7 +4090,7 @@ contains
 ! ******************************************************************************
 ! maw_fill_budobj -- copy flow terms into this%budobj
 !
-! gwf rate [flowing_well] [storage] constant_flow [frommvr tomvr [tomvrfw]] [aux]
+! gwf rate [flowing_well] [storage] constant_flow [frommvr tomvr tomvrcf [tomvrfw]] [aux]
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -4084,8 +4116,7 @@ contains
     !
     ! -- initialize counter
     idx = 0
-
-    
+    !
     ! -- GWF (LEAKAGE) and connection surface area (aux)
     idx = idx + 1
     call this%budobj%budterm(idx)%reset(this%maxbound)
@@ -4102,28 +4133,24 @@ contains
         ibnd = ibnd + 1
       end do
     end do
-
-    
+    !
     ! -- RATE (WITHDRAWAL RATE)
     idx = idx + 1
     call this%budobj%budterm(idx)%reset(this%nmawwells)
     do n = 1, this%nmawwells
       q = this%mawwells(n)%ratesim
-      ! adjust if well rate is an outflow
+      ! -- adjust if well rate is an outflow
       if (this%imover == 1 .and. q < DZERO) then
         qfact = DONE
-        if (this%iflowingwells > 0) then
-          if (this%qout(n) < DZERO) then
-            qfact = q / this%qout(n)
-          end if
+        if (this%qout(n) < DZERO) then
+          qfact = q / this%qout(n)
         end if
         q = q + qfact * this%pakmvrobj%get_qtomvr(n)
       end if
       call this%budobj%budterm(idx)%update_term(n, n, q)
     end do
-    
-    
-    ! -- FLOW WELL
+    !
+    ! -- FLOWING WELL
     if (this%iflowingwells > 0) then
       idx = idx + 1
       call this%budobj%budterm(idx)%reset(this%nmawwells)
@@ -4131,20 +4158,16 @@ contains
         q = this%qfw(n)
         if (this%imover == 1) then
           qfact = DONE
-          q2 = this%mawwells(n)%ratesim
-          ! adjust if well rate is an outflow
-          if (q2 < DZERO) then
-            if (this%qout(n) < DZERO) then
-              qfact = q / this%qout(n)
-            end if
+          ! -- adjust if well rate is an outflow
+          if (this%qout(n) < DZERO) then
+            qfact = q / this%qout(n)
           end if
           q = q + qfact * this%pakmvrobj%get_qtomvr(n)
         end if
         call this%budobj%budterm(idx)%update_term(n, n, q)
       end do
     end if
-    
-
+    !
     ! -- STORAGE (AND VOLUME AS AUX)
     if (this%imawissopt /= 1) then
       idx = idx + 1
@@ -4160,20 +4183,27 @@ contains
         call this%budobj%budterm(idx)%update_term(n, n, q, this%qauxcbc)
       end do
     end if
-
-    
+    !
     ! -- CONSTANT FLOW
     idx = idx + 1
     call this%budobj%budterm(idx)%reset(this%nmawwells)
     do n = 1, this%nmawwells
       q = this%qconst(n)
+      !
+      ! -- adjust if constant-flow rate is an outflow
+      if (this%imover == 1 .and. q < DZERO) then
+        qfact = DONE
+        if (this%qout(n) < DZERO) then
+          qfact = q / this%qout(n)
+        end if
+        q = q + qfact * this%pakmvrobj%get_qtomvr(n)
+      end if
       call this%budobj%budterm(idx)%update_term(n, n, q)
     end do
-    
-    
+    !
     ! -- MOVER
     if (this%imover == 1) then
-      
+      !
       ! -- FROM MOVER
       idx = idx + 1
       call this%budobj%budterm(idx)%reset(this%nmawwells)
@@ -4185,9 +4215,8 @@ contains
         end if
         call this%budobj%budterm(idx)%update_term(n, n, q)
       end do
-      
-      
-      ! -- TO MOVER
+      !
+      ! -- RATE TO MOVER
       idx = idx + 1
       call this%budobj%budterm(idx)%reset(this%nmawwells)
       do n = 1, this%nmawwells
@@ -4195,7 +4224,7 @@ contains
         if (q > DZERO) then
           q = -q
           q2 = this%mawwells(n)%ratesim
-          ! adjust TO MOVER if well rate is outflow
+          ! -- adjust TO MOVER if well rate is outflow
           if (q2 < DZERO) then
             qfact = q2 / this%qout(n)
             q = q * qfact
@@ -4205,9 +4234,27 @@ contains
         end if
         call this%budobj%budterm(idx)%update_term(n, n, q)
       end do
-
-      
-      ! -- TO MOVER FLOW WELL
+      !
+      ! -- CONSTANT TO MOVER
+      idx = idx + 1
+      call this%budobj%budterm(idx)%reset(this%nmawwells)
+      do n = 1, this%nmawwells
+        q = this%pakmvrobj%get_qtomvr(n)
+        if (q > DZERO) then
+          q = -q
+          q2 = this%qconst(n)
+          ! -- adjust TO MOVER if well rate is outflow
+          if (q2 < DZERO) then
+            qfact = q2 / this%qout(n)
+            q = q * qfact
+          else
+            q = DZERO
+          end if
+        end if
+        call this%budobj%budterm(idx)%update_term(n, n, q)
+      end do
+      !
+      ! -- FLOWING WELL TO MOVER
       if (this%iflowingwells > 0) then
         idx = idx + 1
         call this%budobj%budterm(idx)%reset(this%nmawwells)
@@ -4216,7 +4263,7 @@ contains
           if (q > DZERO) then
             q = -q
             q2 = this%mawwells(n)%ratesim
-            ! adjust TO MOVER if well rate is outflow
+            ! -- adjust TO MOVER if well rate is outflow
             qfact = DONE
             if (this%qout(n) < DZERO) then
               qfact = this%qfw(n) / this%qout(n)
@@ -4228,8 +4275,7 @@ contains
       end if
       
     end if
-    
-    
+    !
     ! -- AUXILIARY VARIABLES
     naux = this%naux
     if (naux > 0) then
