@@ -13,6 +13,7 @@ module MawModule
                               sQSaturationDerivative
   use BndModule, only: BndType
   use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr
+  use TableModule, only: TableType, table_cr
   use ObserveModule,        only: ObserveType
   use ObsModule, only: ObsType
   use InputOutputModule, only: get_node, URWORD, extract_idnum_or_bndname
@@ -113,6 +114,9 @@ module MawModule
     integer(I4B), pointer :: bditems => NULL()
     type(BudgetObjectType), pointer :: budobj => null()
     !
+    ! -- table objects
+    type(TableType), pointer :: headtab => null()
+    !
     ! -- pointer to gwf iss, k11, k22.
     integer(I4B), pointer :: gwfiss => NULL()
     real(DP), dimension(:), pointer, contiguous :: gwfk11 => NULL()
@@ -189,6 +193,8 @@ module MawModule
     ! -- budget
     procedure, private :: maw_setup_budobj
     procedure, private :: maw_fill_budobj
+    ! -- table
+    procedure, private :: maw_setup_tableobj
   end type MawType
 
 contains
@@ -370,6 +376,8 @@ contains
     call mem_allocate(this%qout, this%nmawwells, 'QOUT', this%origin)
     call mem_allocate(this%qsto, this%nmawwells, 'QSTO', this%origin)
     call mem_allocate(this%qconst, this%nmawwells, 'QCONST', this%origin)
+    !
+    ! -- initialize flowing well, storage, and constant flow terms
     do i = 1, this%nmawwells
       if (this%iflowingwells /= 0) this%qfw(i) = DZERO
       this%qsto(i) = DZERO
@@ -597,7 +605,7 @@ contains
     end if
     !
     ! -- set MAXBOUND
-    this%MAXBOUND = itmp
+    this%maxbound = itmp
     write(this%iout,'(//4x,a,i7)') 'MAXBOUND = ', this%maxbound
     !
     ! -- deallocate local storage for aux variables
@@ -652,8 +660,8 @@ contains
     do n = 1, this%nmawwells
       iachk(n+1) = iachk(n) +  this%mawwells(n)%ngwfnodes
     end do
-    allocate(nboundchk(this%MAXBOUND))
-    do n = 1, this%MAXBOUND
+    allocate(nboundchk(this%maxbound))
+    do n = 1, this%maxbound
       nboundchk(n) = 0
     end do
     !
@@ -885,6 +893,9 @@ contains
     ! -- setup the budget object
     call this%maw_setup_budobj()
     !
+    ! -- setup the head table object
+    call this%maw_setup_tableobj()
+    !
     ! -- return
     return
   end subroutine maw_read_dimensions
@@ -892,7 +903,7 @@ contains
 
   subroutine maw_read_initial_attr(this)
 ! ******************************************************************************
-! pak1read_dimensions -- Read the initial parameters for this package
+! maw_read_initial_attr -- Read the initial parameters for this package
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -903,6 +914,9 @@ contains
     ! -- dummy
     class(MawType),intent(inout) :: this
     ! -- local
+    character(len=LINELENGTH) :: title
+    character(len=LINELENGTH) :: text
+    integer(I4B) :: ntabcols
     integer(I4B) :: j, n
     integer(I4B) :: nn
     integer(I4B) :: inode
@@ -910,7 +924,6 @@ contains
     real(DP) :: k11, k22
     character (len=10), dimension(0:4) :: ccond
     character (len=30) :: nodestr
-    character (len=10) :: crskin, ckskin
     ! -- data
     data ccond(0) /'SPECIFIED '/
     data ccond(1) /'THIEM     '/
@@ -1014,54 +1027,111 @@ contains
     !
     ! -- write summary of static well data
     ! -- write well data
-    write (this%iout,fmtwelln) '  WELL NO.', '    RADIUS', '      AREA', &
-                               ' WELL BOT.', '      STRT', ' NGWFNODES', &
-                               'CONDEQN   ', 'NAME            '
-    do n = 1, this%nmawwells
-      write (this%iout,fmtwelld) n, this%mawwells(n)%radius, this%mawwells(n)%area, &
-                                 this%mawwells(n)%bot, this%mawwells(n)%strt, &
-                                 this%mawwells(n)%ngwfnodes, &
-                                 ccond(this%mawwells(n)%ieqn), &
-                                 this%mawwells(n)%name
-    end do
-    ! -- write end line
-    write (this%iout,fmtline)
+    if (this%iprpak /= 0) then
+      ntabcols = 7
+      if (this%inamedbound /= 0) then
+        ntabcols = ntabcols + 1
+      end if
+      title = trim(this%name) // ' PACKAGE - STATIC WELL DATA'
+      call table_cr(this%inputtab, this%name, title)
+      call this%inputtab%table_df(this%nmawwells, ntabcols, this%iout)
+      text = 'NUMBER'
+      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      text = 'RADIUS'
+      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      text = 'AREA'
+      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      text = 'WELL BOTTOM'
+      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      text = 'STARTING HEAD'
+      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      text = 'NUMBER OF GWF NODES'
+      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      text = 'CONDUCT. EQUATION'
+      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      if (this%inamedbound /= 0) then
+        text = 'NAME'
+        call this%inputtab%initialize_column(text, 20, alignment=TABLEFT)
+      end if    
+      do n = 1, this%nmawwells
+        call this%inputtab%add_term(n)
+        call this%inputtab%add_term(this%mawwells(n)%radius)
+        call this%inputtab%add_term(this%mawwells(n)%area)
+        call this%inputtab%add_term(this%mawwells(n)%bot)
+        call this%inputtab%add_term(this%mawwells(n)%strt)
+        call this%inputtab%add_term(this%mawwells(n)%ngwfnodes)
+        call this%inputtab%add_term(ccond(this%mawwells(n)%ieqn))
+        if (this%inamedbound /= 0) then 
+          call this%inputtab%add_term(this%mawwells(n)%name)
+        end if
+      end do
+    end if
     !
     ! -- write well connection data
-    write (this%iout,fmtwellcn) '  WELL NO.', 'WELL CONN', &
-                               'CELL                ',     &
-                               '  TOP SCRN', '  BOT SCRN', &
-                               ' SKIN RAD.', '    SKIN K', &
-                               '       K11', '       K22', &
-                               'WELL COND.'
-    do n = 1, this%nmawwells
-      do j = 1, this%mawwells(n)%ngwfnodes
-        nn = this%mawwells(n)%gwfnodes(j)
-        call this%dis%noder_to_string(nn, nodestr)
-        crskin = '          '
-        ckskin = '          '
-        if (this%mawwells(n)%ieqn == 2 .or. &
-            this%mawwells(n)%ieqn == 3 .or. &
-            this%mawwells(n)%ieqn == 4) then
-          write (crskin, '(G10.3)') this%mawwells(n)%sradius(j)
-          write (ckskin, '(G10.3)') this%mawwells(n)%hk(j)
-        end if
-        k11 = this%gwfk11(nn)
-        if(this%gwfik22 == 0) then
-          k22 = this%gwfk11(nn)
-        else
-          k22 = this%gwfk22(nn)
-        endif
-        write (this%iout,fmtwellcd) n, j, nodestr, &
-                                    this%mawwells(n)%topscrn(j), &
-                                    this%mawwells(n)%botscrn(j), &
-                                    crskin, ckskin, &
-                                    k11, k22, this%mawwells(n)%satcond(j)
+    if (this%iprpak /= 0) then
+      ntabcols = 10
+      title = trim(this%name) // ' PACKAGE - STATIC WELL CONNECTION DATA'
+      call table_cr(this%inputtab, this%name, title)
+      call this%inputtab%table_df(this%maxbound, ntabcols, this%iout)
+      text = 'NUMBER'
+      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      text = 'WELL CONNECTION'
+      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      text = 'CELLID'
+      call this%inputtab%initialize_column(text, 20, alignment=TABLEFT)
+      text = 'TOP OF SCREEN'
+      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      text = 'BOTTOM OF SCREEN'
+      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      text = 'SKIN RADIUS'
+      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      text = 'SKIN K'
+      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      text = 'K11'
+      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      text = 'K22'
+      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      text = 'SATURATED WELL CONDUCT.'
+      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      !
+      ! -- write the data to the table
+      do n = 1, this%nmawwells
+        do j = 1, this%mawwells(n)%ngwfnodes
+          call this%inputtab%add_term(n)
+          call this%inputtab%add_term(j)
+          nn = this%mawwells(n)%gwfnodes(j)
+          call this%dis%noder_to_string(nn, nodestr)
+          call this%inputtab%add_term(nodestr)
+          call this%inputtab%add_term(this%mawwells(n)%topscrn(j))
+          call this%inputtab%add_term(this%mawwells(n)%botscrn(j))
+          if (this%mawwells(n)%ieqn == 2 .or.                                    &
+              this%mawwells(n)%ieqn == 3 .or.                                    &
+              this%mawwells(n)%ieqn == 4) then
+            call this%inputtab%add_term(this%mawwells(n)%sradius(j))
+            call this%inputtab%add_term(this%mawwells(n)%hk(j))
+          else
+            call this%inputtab%add_term(' ')      
+            call this%inputtab%add_term(' ')      
+          end if      
+          if (this%mawwells(n)%ieqn == 1 .or.                                    &
+              this%mawwells(n)%ieqn == 2 .or.                                    &
+              this%mawwells(n)%ieqn == 3) then
+            k11 = this%gwfk11(nn)
+            if (this%gwfik22 == 0) then
+              k22 = this%gwfk11(nn)
+            else
+              k22 = this%gwfk22(nn)
+            end if
+            call this%inputtab%add_term(k11)
+            call this%inputtab%add_term(k22)
+          else
+            call this%inputtab%add_term(' ')
+            call this%inputtab%add_term(' ')
+          end if
+          call this%inputtab%add_term(this%mawwells(n)%satcond(j))
+        end do
       end do
-    end do
-    !
-    ! -- write end line
-    write (this%iout,fmtline)
+    end if
     !
     ! -- finished with pointer to gwf hydraulic conductivity
     this%gwfk11 => null()
@@ -1073,7 +1143,6 @@ contains
     if (count_errors() > 0) then
       call ustop()
     end if
-    
     !
     ! -- return
     return
@@ -1245,11 +1314,7 @@ contains
         call store_error(errmsg)
         call ustop()
       end select
-    !
-    ! -- write keyword data to output file
-    if (this%iprpak /= 0) then
-      write (this%iout, '(3x,i10,1x,a)') imaw, line(i0:istop)
-    end if
+
     !
     ! -- return
     return
@@ -1631,52 +1696,26 @@ contains
     ! -- dummy
     class(MawType),intent(inout) :: this
     ! -- local
+    character(len=LINELENGTH) :: title
+    character(len=LINELENGTH) :: line
+    character(len=LINELENGTH) :: text
+    character(len=LINELENGTH) :: errmsg
     character (len=16) :: csteady
-    character (len=10) :: chead, credlen, cmin, cmax
     integer(I4B) :: ierr
     integer(I4B) :: node, n
-    integer(I4B) :: isofirst
     logical :: isfound, endOfBlock
-    character(len=LINELENGTH) :: line
-    character(len=LINELENGTH) :: errmsg
+    integer(I4B) :: ntabcols
+    integer(I4B) :: ntabrows
     integer(I4B) :: imaw
     integer(I4B) :: ibnd
     integer(I4B) :: j
-    integer(I4B) :: isfirst
+    !integer(I4B) :: isfirst
     ! -- formats
     character(len=*),parameter :: fmtblkerr = &
       "('Error.  Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
     character(len=*),parameter :: fmtlsp = &
       "(1X,/1X,'REUSING ',A,'S FROM LAST STRESS PERIOD')"
-    character(len=*),parameter :: fmtstdy = &
-      "(1X,//21X,'MULTI-AQUIFER WELL DATA'," // &
-      "/21X,'FOR STRESS PERIOD',I6," // &
-      "/20X,A16,1X,'MAW WELLS'," // &
-      "//29X,'RATE DATA'," // &
-      "/1X,65('-'),/1X,'  WELL NO.     STATUS       RATE SPEC. HEAD " // &
-      " PUMP ELEV  RED. LEN.')"
-    character(len=*), parameter :: fmtwelld = &
-      "(1X,I10,1X,A10,1X,G10.3,1X,A10,G10.3,1X,A10)"
-    character(len=*),parameter :: fmtfwh = &
-      "(1X,//21X,'MULTI-AQUIFER WELL DATA'," // &
-      "/21X,'FOR STRESS PERIOD',I6," // &
-      "//25X,'FLOWING WELL DATA'," // &
-      "/1X,65('-'),/12X,'  WELL NO.  ELEVATION   CONDUCT.  RED. LEN.')"
-    character(len=*), parameter :: fmtfwd = &
-      "(12X,I10,1X,3(G10.3,1X))"
-    character(len=*),parameter :: fmtsoh = &
-      "(1X,//21X,'MULTI-AQUIFER WELL DATA'," // &
-      "/21X,'FOR STRESS PERIOD',I6," // &
-      "//25X,'WELL SHUTOFF DATA'," // &
-      "/1X,65('-'),/12X,'  WELL NO.  ELEVATION       MINQ       MAXQ')"
-    character(len=*), parameter :: fmtsod = &
-      "(12X,I10,1X,G10.3,1X,2(A10,1X))"
-    character(len=*), parameter :: fmtline = &
-      "(1X,65('-'),//)"
 ! ------------------------------------------------------------------------------
-    !
-    ! -- initialize flags
-    isfirst = 1
     !
     ! -- set steady-state flag based on gwfiss
     this%imawiss = this%gwfiss
@@ -1719,22 +1758,32 @@ contains
     !
     ! -- Read data if ionper == kper
     if(this%ionper == kper) then
-
+      !
+      ! -- setup table for period data
+      if (this%iprpak /= 0) then
+        !
+        ! -- reset the input table object
+        title = trim(this%name) // ' PACKAGE - DATA FOR PERIOD'
+        write(title, '(a,1x,i6)') trim(adjustl(title)), kper
+        call table_cr(this%inputtab, this%name, title)
+        call this%inputtab%table_df(1, 5, this%iout)
+        text = 'NUMBER'
+        call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+        text = 'KEYWORD'
+        call this%inputtab%initialize_column(text, 20, alignment=TABLEFT)
+        do n = 1, 3
+          write(text, '(a,1x,i6)') 'VALUE', n
+          call this%inputtab%initialize_column(text, 15, alignment=TABCENTER)
+        end do
+      end if
+      !
+      ! -- set flag to check attributes
       this%check_attr = 1
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
-        if (isfirst /= 0) then
-          isfirst = 0
-          if (this%iprpak /= 0) then
-            write(this%iout,'(/1x,a,1x,i6,/)')                                  &
-              'READING '//trim(adjustl(this%text))//' DATA FOR PERIOD', kper
-            write(this%iout,'(3x,a)') '  MAW WELL KEYWORD AND DATA'
-            write(this%iout,'(3x,78("-"))')
-          end if
-        end if
-        imaw = this%parser%GetInteger()
 
+        imaw = this%parser%GetInteger()
         if (imaw < 1 .or. imaw > this%nmawwells) then
           write(errmsg,'(4x,a,1x,i6)') &
             '****ERROR. IMAW MUST BE > 0 and <= ', this%nmawwells
@@ -1745,8 +1794,15 @@ contains
 
         call this%parser%GetRemainingLine(line)
         call this%maw_set_stressperiod(imaw, line)
+        !
+        ! -- write line to table
+        if (this%iprpak /= 0) then
+          call this%inputtab%add_term(imaw, finalize=.FALSE.)
+          call this%inputtab%line_to_columns(line, finalize=.FALSE.)
+        end if
       end do
       if (this%iprpak /= 0) then
+        call this%inputtab%finalize_table()
         write(this%iout,'(/1x,a,1x,i6,/)')                                      &
           'END OF '//trim(adjustl(this%text))//' DATA FOR PERIOD', kper
       end if
@@ -1772,56 +1828,109 @@ contains
         else
           csteady = 'TRANSIENT       '
         end if
-        write (this%iout, fmtstdy) kper, csteady
+        !
+        ! -- reset the input table object for rate data
+        title = trim(this%name) // ' PACKAGE - '// trim(adjustl(csteady)) //     &
+                ' RATE DATA FOR PERIOD'
+        write(title, '(a,1x,i6)') trim(adjustl(title)), kper
+        ntabcols = 6
+        call table_cr(this%inputtab, this%name, title)
+        call this%inputtab%table_df(this%nmawwells, ntabcols, this%iout)
+        text = 'NUMBER'
+        call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)      
+        text = 'STATUS'
+        call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)      
+        text = 'RATE'
+        call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)      
+        text = 'SPECIFIED HEAD'
+        call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)      
+        text = 'PUMP ELEVATION'
+        call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)      
+        text = 'REDUCTION LENGTH'
+        call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)
         do n = 1, this%nmawwells
-          chead = '    --    '
+          call this%inputtab%add_term(n)
+          call this%inputtab%add_term(this%mawwells(n)%status)
+          call this%inputtab%add_term(this%mawwells(n)%rate%value)
           if (this%iboundpak(n) < 0) then
-            !write (chead,'(G10.3)') this%xnewpak(n)
-            write (chead,'(G10.3)') this%mawwells(n)%head%value
+            call this%inputtab%add_term(this%mawwells(n)%head%value)
+          else
+            call this%inputtab%add_term(' ')
           end if
-          credlen = '    --    '
+          call this%inputtab%add_term(this%mawwells(n)%pumpelev)
           if (this%mawwells(n)%reduction_length /= DEP20) then
-            write (credlen,'(G10.3)') this%mawwells(n)%reduction_length
+            call this%inputtab%add_term(this%mawwells(n)%reduction_length)
+          else
+            call this%inputtab%add_term(' ')
           end if
-          write(this%iout,fmtwelld) n, this%mawwells(n)%status, &
-                                    this%mawwells(n)%rate%value, chead, &
-                                    this%mawwells(n)%pumpelev, &
-                                    credlen
         end do
-        write (this%iout, fmtline)
-
+        !
+        ! -- flowing wells
         if (this%iflowingwells /= 0) then
-          write (this%iout, fmtfwh) kper
+          !
+          ! -- reset the input table object for flowing well data
+          title = trim(this%name) // ' PACKAGE - '// trim(adjustl(csteady)) //   &
+                  ' FLOWING WELL DATA FOR PERIOD'
+          write(title, '(a,1x,i6)') trim(adjustl(title)), kper
+          ntabcols = 4
+          ntabrows = 0
           do n = 1, this%nmawwells
             if (this%mawwells(n)%fwcond > DZERO) then
-              write(this%iout,fmtfwd) n, this%mawwells(n)%fwelev, &
-                                      this%mawwells(n)%fwcond, &
-                                      this%mawwells(n)%fwrlen
+              ntabrows = ntabrows + 1
             end if
           end do
-          write (this%iout, fmtline)
+          if (ntabrows > 0) then
+            call table_cr(this%inputtab, this%name, title)
+            call this%inputtab%table_df(ntabrows, ntabcols, this%iout)
+            text = 'NUMBER'
+            call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)      
+            text = 'ELEVATION'
+            call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)      
+            text = 'CONDUCT.'
+            call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)      
+            text = 'REDUCTION LENGTH'
+            call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)
+            do n = 1, this%nmawwells
+              if (this%mawwells(n)%fwcond > DZERO) then
+                call this%inputtab%add_term(n)
+                call this%inputtab%add_term(this%mawwells(n)%fwelev)
+                call this%inputtab%add_term(this%mawwells(n)%fwcond)
+                call this%inputtab%add_term(this%mawwells(n)%fwrlen)
+              end if
+            end do
+          end if
         end if
-
-        ! -- shutoff data
-        isofirst = 1
+        !
+        ! -- reset the input table object for shutoff data
+        title = trim(this%name) // ' PACKAGE - '// trim(adjustl(csteady)) //   &
+                ' WELL SHUTOFF DATA FOR PERIOD'
+        write(title, '(a,1x,i6)') trim(adjustl(title)), kper
+        ntabcols = 4
+        ntabrows = 0
         do n = 1, this%nmawwells
           if (this%mawwells(n)%shutofflevel /= DEP20) then
-            if (isofirst /= 0) then
-              isofirst = 0
-              write (this%iout, fmtsoh) kper
-            end if
-            cmin = '    --    '
-            cmax = '    --    '
-            if (this%mawwells(n)%shutoffmin > DZERO) then
-              write (cmin,'(G10.3)') this%mawwells(n)%shutoffmin
-              write (cmax,'(G10.3)') this%mawwells(n)%shutoffmax
-            end if
-            write(this%iout,fmtsod) n, this%mawwells(n)%shutofflevel, &
-                                    cmin, cmax
+            ntabrows = ntabrows + 1
           end if
         end do
-        if (isofirst /= 1) then
-          write (this%iout, fmtline)
+        if (ntabrows > 0) then
+          call table_cr(this%inputtab, this%name, title)
+          call this%inputtab%table_df(ntabrows, ntabcols, this%iout)
+          text = 'NUMBER'
+          call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)      
+          text = 'ELEVATION'
+          call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)      
+          text = 'MINIMUM. Q'
+          call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)      
+          text = 'MAXIMUM Q'
+          call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)
+          do n = 1, this%nmawwells
+            if (this%mawwells(n)%shutofflevel /= DEP20) then
+              call this%inputtab%add_term(n)
+              call this%inputtab%add_term(this%mawwells(n)%shutofflevel)
+              call this%inputtab%add_term(this%mawwells(n)%shutoffmin)
+              call this%inputtab%add_term(this%mawwells(n)%shutoffmax)
+            end if
+          end do
         end if
       end if
     end if
@@ -2307,8 +2416,6 @@ contains
     ! -- local
     integer(I4B) :: ibinun
     real(DP) :: rrate
-    real(DP) :: chrrate
-    real(DP) :: ratsum
     ! -- for budget
     integer(I4B) :: j, n
     integer(I4B) :: igwfnode
@@ -2337,51 +2444,54 @@ contains
                              isuppress_output, model_budget, this%imap,        &
                              iadv=1)
     !
-    ! -- calculate maw budget terms
+    ! -- calculate maw budget flow and storage terms
     do n = 1, this%nmawwells
       this%qout(n) = DZERO
       this%qsto(n) = DZERO
       if (this%iflowingwells > 0) this%qfw(n) = DZERO
       if (this%iboundpak(n) == 0) cycle
+      !
+      ! -- set hmaw and xsto
       hmaw = this%xnewpak(n)
+      this%mawwells(n)%xsto = hmaw
+      !
       ! -- add pumping rate to active maw well
-      if (this%iboundpak(n) > 0) then
-        rrate = this%mawwells(n)%ratesim
-        if (rrate < DZERO) then
+      rrate = this%mawwells(n)%ratesim
+      !
+      ! -- If flow is out of maw set qout to rrate.
+      if (rrate < DZERO) then
+        this%qout(n) = rrate
+      end if
+      !
+      ! -- add flowing well
+      if (this%iflowingwells > 0) then
+        if (this%mawwells(n)%fwcond > DZERO) then
+          cfw = this%mawwells(n)%fwcondsim
+          this%mawwells(n)%xsto = this%mawwells(n)%fwelev
+          rrate = cfw * (this%mawwells(n)%fwelev - hmaw)
+          this%qfw(n) = rrate
           !
-          ! -- Flow is out of maw subtract rate from ratout.
-          this%qout(n) = rrate
+          ! -- Subtract flowing well rrate from qout.
+          this%qout(n) = this%qout(n) + rrate
         end if
-        ! -- add flowing well
-        this%mawwells(n)%xsto = hmaw
-        if (this%iflowingwells > 0) then
-          if (this%mawwells(n)%fwcond > DZERO) then
-            cfw = this%mawwells(n)%fwcondsim
-            this%mawwells(n)%xsto = this%mawwells(n)%fwelev
-            rrate = cfw * (this%mawwells(n)%fwelev - hmaw)
-            this%qfw(n) = rrate
-            this%qout(n) = this%qout(n) + rrate
-          end if
-        end if
-        !
-        ! -- Calculate qsto
-        if (this%imawiss /= 1) then
-          rrate = -this%mawwells(n)%area * (this%mawwells(n)%xsto - this%mawwells(n)%xoldsto) / delt
-          this%qsto(n) = rrate
-        end if
+      end if
+      !
+      ! -- Calculate qsto
+      if (this%imawiss /= 1) then
+        rrate = -this%mawwells(n)%area * (this%mawwells(n)%xsto - this%mawwells(n)%xoldsto) / delt
+        this%qsto(n) = rrate
       end if
     end do
     !
-    ! -- gwf flow and constant flow to maw
+    ! -- gwf and constant flow
     ibnd = 1
     do n = 1, this%nmawwells
       rrate = DZERO
-      chrrate = DZERO
       hmaw = this%xnewpak(n)
-      ratsum = DZERO
+      this%qconst(n) = DZERO
       do j = 1, this%mawwells(n)%ngwfnodes
         this%qleak(ibnd) = DZERO
-        !if (this%iboundpak(n) == 0) cycle
+        if (this%iboundpak(n) == 0) cycle
         igwfnode = this%mawwells(n)%gwfnodes(j)
         hgwf = this%xnew(igwfnode)
         cmaw = this%mawwells(n)%simcond(j)
@@ -2393,17 +2503,39 @@ contains
           cterm = cmaw * (bmaw - hmaw)
         end if
         rrate = -(cmaw * (hmaw - hgwf) + cterm)
-        ratsum = ratsum + rrate
         this%qleak(ibnd) = rrate
         if (this%iboundpak(n) < 0) then
-          chrrate = chrrate - rrate
+          this%qconst(n) = this%qconst(n) - rrate
+          !
+          ! -- If flow is out increment qout by -rrate.
+          if (-rrate < DZERO) then
+            this%qout(n) = this%qout(n) - rrate
+          end if
         end if
         ibnd = ibnd + 1
       end do
+      !!
+      !! -- Update .
+      !if (this%qconst(n) < DZERO) then
+      !    this%qout(n) = this%qout(n) + this%qconst(n)
+      !end if
+      !
+      ! -- add additional flow terms to constant head term
       if (this%iboundpak(n) < 0) then
-        this%mawwells(n)%ratesim = -ratsum
+        !
+        ! -- add well pumping rate
+        this%qconst(n) = this%qconst(n) - this%mawwells(n)%ratesim
+        !
+        ! -- add flowing well rate
+        if (this%iflowingwells > 0) then
+          this%qconst(n) = this%qconst(n) - this%qfw(n)
+        end if
+        !
+        ! -- add storage term
+        if (this%imawiss /= 1) then
+          this%qconst(n) = this%qconst(n) - this%qsto(n)
+        end if
       end if
-      this%qconst(n) = chrrate
     end do
     !
     ! -- For continuous observations, save simulated values.
@@ -2464,7 +2596,6 @@ contains
     !    SPECIFICATIONS:
     ! --------------------------------------------------------------------------
     !
-    use InputOutputModule, only: UWWORD
     ! -- dummy
     class(MawType) :: this
     integer(I4B),intent(in) :: kstp
@@ -2473,60 +2604,22 @@ contains
     integer(I4B),intent(in) :: ihedfl
     integer(I4B),intent(in) :: ibudfl
     ! -- locals
-    character(len=LINELENGTH) :: line, linesep
-    character(len=16) :: text
     integer(I4B) :: n
-    integer(I4B) :: iloc
-    real(DP) :: q
     ! format
- 2000 FORMAT ( 1X, ///1X, A, A, A, '   PERIOD ', I6, '   STEP ', I8)
     ! --------------------------------------------------------------------------
-    !
-    ! -- write MAW heads to the listing file
-    if (ihedfl /= 0 .and. this%iprhed /= 0) then
-      write (iout, 2000) 'MULTI-AQUIFER WELL (', trim(this%name), ') HEAD', kper, kstp
-      iloc = 1
-      line = ''
-      if (this%inamedbound==1) then
-        call UWWORD(line, iloc, 16, TABUCSTRING,                                 &
-                    'well', n, q, ALIGNMENT=TABLEFT)
-      end if
-      call UWWORD(line, iloc, 6, TABUCSTRING,                                    &
-                  'well', n, q, ALIGNMENT=TABCENTER)
-      call UWWORD(line, iloc, 11, TABUCSTRING,                                   &
-                  'well', n, q, ALIGNMENT=TABCENTER)
-      ! -- create line separator
-      linesep = repeat('-', iloc)
-      ! -- write first line
-      write(iout,'(1X,A)') linesep(1:iloc)
-      write(iout,'(1X,A)') line(1:iloc)
-      ! -- create second header line
-      iloc = 1
-      line = ''
-      if (this%inamedbound==1) then
-        call UWWORD(line, iloc, 16, TABUCSTRING,                                 &
-                    'name', n, q, ALIGNMENT=TABLEFT)
-      end if
-      call UWWORD(line, iloc, 6, TABUCSTRING,                                    &
-                  'no.', n, q, ALIGNMENT=TABCENTER)
-      call UWWORD(line, iloc, 11, TABUCSTRING,                                   &
-                  'head', n, q, ALIGNMENT=TABCENTER)
-      ! -- write second line
-      write(iout,'(1X,A)') line(1:iloc)
-      write(iout,'(1X,A)') linesep(1:iloc)
-      ! -- write data
-      do n = 1, this%nmawwells
-        iloc = 1
-        line = ''
-        if (this%inamedbound==1) then
-          call UWWORD(line, iloc, 16, TABUCSTRING,                               &
-                      this%mawwells(n)%name, n, q, ALIGNMENT=TABLEFT)
+     !
+     ! -- write maw head table
+     if (ihedfl /= 0 .and. this%iprhed /= 0) then
+      !
+      ! -- fill stage data
+      do n = 1, this%maxbound
+        if(this%inamedbound==1) then
+          call this%headtab%add_term(this%boundname(n))
         end if
-        call UWWORD(line, iloc, 6, TABINTEGER, text, n, q)
-        call UWWORD(line, iloc, 11, TABREAL, text, n, this%xnewpak(n))
-        write(iout, '(1X,A)') line(1:iloc)
+        call this%headtab%add_term(n)
+        call this%headtab%add_term(this%xnewpak(n))
       end do
-    end if
+     end if
     !
     ! -- Output maw flow table
     if (ibudfl /= 0 .and. this%iprflow /= 0) then
@@ -2565,6 +2658,13 @@ contains
     call this%budobj%budgetobject_da()
     deallocate(this%budobj)
     nullify(this%budobj)
+    !
+    ! -- head table
+    if (this%iprhed > 0) then
+      call this%headtab%table_da()
+      deallocate(this%headtab)
+      nullify(this%headtab)
+    end if
     !
     ! -- arrays
     deallocate(this%cmawname)
@@ -3804,19 +3904,19 @@ contains
     !
     ! -- Determine the number of maw budget terms. These are fixed for 
     !    the simulation and cannot change.  
-    ! gwf rate [flowing_well] [storage] constant_flow [frommvr tomvr [tomvrfw]] [aux]
+    ! gwf rate [flowing_well] [storage] constant_flow [frommvr tomvr tomvrcf [tomvrfw]] [aux]
     nbudterm = 3
     if (this%iflowingwells > 0) nbudterm = nbudterm + 1
     if (this%imawissopt /= 1) nbudterm = nbudterm + 1
     if (this%imover == 1) then
-      nbudterm = nbudterm + 2
+      nbudterm = nbudterm + 3
       if (this%iflowingwells > 0) nbudterm = nbudterm + 1
     end if
     if (this%naux > 0) nbudterm = nbudterm + 1
     !
     ! -- set up budobj
     call budgetobject_cr(this%budobj, this%name)
-    call this%budobj%budgetobject_df(this%maxbound, nbudterm, 0, 0)
+    call this%budobj%budgetobject_df(this%nmawwells, nbudterm, 0, 0)
     idx = 0
     !
     ! -- Go through and set up each budget term
@@ -3917,7 +4017,20 @@ contains
                                                naux)
       !
       ! -- 
-      text = '          TO-MVR'
+      text = '     RATE TO-MVR'
+      idx = idx + 1
+      maxlist = this%nmawwells
+      naux = 0
+      call this%budobj%budterm(idx)%initialize(text, &
+                                               this%name_model, &
+                                               this%name, &
+                                               this%name_model, &
+                                               this%name, &
+                                               maxlist, .false., .false., &
+                                               naux)
+      !
+      ! -- constant-head flow to mover
+      text = ' CONSTANT TO-MVR'
       idx = idx + 1
       maxlist = this%nmawwells
       naux = 0
@@ -3933,7 +4046,7 @@ contains
       if (this%iflowingwells > 0) then
         !
         ! -- 
-        text = '  FW-RATE-TO-MVR'
+        text = '  FW-RATE TO-MVR'
         idx = idx + 1
         maxlist = this%nmawwells
         naux = 0
@@ -3977,7 +4090,7 @@ contains
 ! ******************************************************************************
 ! maw_fill_budobj -- copy flow terms into this%budobj
 !
-! gwf rate [flowing_well] [storage] constant_flow [frommvr tomvr [tomvrfw]] [aux]
+! gwf rate [flowing_well] [storage] constant_flow [frommvr tomvr tomvrcf [tomvrfw]] [aux]
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -4003,8 +4116,7 @@ contains
     !
     ! -- initialize counter
     idx = 0
-
-    
+    !
     ! -- GWF (LEAKAGE) and connection surface area (aux)
     idx = idx + 1
     call this%budobj%budterm(idx)%reset(this%maxbound)
@@ -4021,28 +4133,24 @@ contains
         ibnd = ibnd + 1
       end do
     end do
-
-    
+    !
     ! -- RATE (WITHDRAWAL RATE)
     idx = idx + 1
     call this%budobj%budterm(idx)%reset(this%nmawwells)
     do n = 1, this%nmawwells
       q = this%mawwells(n)%ratesim
-      ! adjust if well rate is an outflow
+      ! -- adjust if well rate is an outflow
       if (this%imover == 1 .and. q < DZERO) then
         qfact = DONE
-        if (this%iflowingwells > 0) then
-          if (this%qout(n) < DZERO) then
-            qfact = q / this%qout(n)
-          end if
+        if (this%qout(n) < DZERO) then
+          qfact = q / this%qout(n)
         end if
         q = q + qfact * this%pakmvrobj%get_qtomvr(n)
       end if
       call this%budobj%budterm(idx)%update_term(n, n, q)
     end do
-    
-    
-    ! -- FLOW WELL
+    !
+    ! -- FLOWING WELL
     if (this%iflowingwells > 0) then
       idx = idx + 1
       call this%budobj%budterm(idx)%reset(this%nmawwells)
@@ -4050,20 +4158,16 @@ contains
         q = this%qfw(n)
         if (this%imover == 1) then
           qfact = DONE
-          q2 = this%mawwells(n)%ratesim
-          ! adjust if well rate is an outflow
-          if (q2 < DZERO) then
-            if (this%qout(n) < DZERO) then
-              qfact = q / this%qout(n)
-            end if
+          ! -- adjust if well rate is an outflow
+          if (this%qout(n) < DZERO) then
+            qfact = q / this%qout(n)
           end if
           q = q + qfact * this%pakmvrobj%get_qtomvr(n)
         end if
         call this%budobj%budterm(idx)%update_term(n, n, q)
       end do
     end if
-    
-
+    !
     ! -- STORAGE (AND VOLUME AS AUX)
     if (this%imawissopt /= 1) then
       idx = idx + 1
@@ -4079,20 +4183,27 @@ contains
         call this%budobj%budterm(idx)%update_term(n, n, q, this%qauxcbc)
       end do
     end if
-
-    
+    !
     ! -- CONSTANT FLOW
     idx = idx + 1
     call this%budobj%budterm(idx)%reset(this%nmawwells)
     do n = 1, this%nmawwells
       q = this%qconst(n)
+      !
+      ! -- adjust if constant-flow rate is an outflow
+      if (this%imover == 1 .and. q < DZERO) then
+        qfact = DONE
+        if (this%qout(n) < DZERO) then
+          qfact = q / this%qout(n)
+        end if
+        q = q + qfact * this%pakmvrobj%get_qtomvr(n)
+      end if
       call this%budobj%budterm(idx)%update_term(n, n, q)
     end do
-    
-    
+    !
     ! -- MOVER
     if (this%imover == 1) then
-      
+      !
       ! -- FROM MOVER
       idx = idx + 1
       call this%budobj%budterm(idx)%reset(this%nmawwells)
@@ -4104,9 +4215,8 @@ contains
         end if
         call this%budobj%budterm(idx)%update_term(n, n, q)
       end do
-      
-      
-      ! -- TO MOVER
+      !
+      ! -- RATE TO MOVER
       idx = idx + 1
       call this%budobj%budterm(idx)%reset(this%nmawwells)
       do n = 1, this%nmawwells
@@ -4114,7 +4224,7 @@ contains
         if (q > DZERO) then
           q = -q
           q2 = this%mawwells(n)%ratesim
-          ! adjust TO MOVER if well rate is outflow
+          ! -- adjust TO MOVER if well rate is outflow
           if (q2 < DZERO) then
             qfact = q2 / this%qout(n)
             q = q * qfact
@@ -4124,9 +4234,27 @@ contains
         end if
         call this%budobj%budterm(idx)%update_term(n, n, q)
       end do
-
-      
-      ! -- TO MOVER FLOW WELL
+      !
+      ! -- CONSTANT TO MOVER
+      idx = idx + 1
+      call this%budobj%budterm(idx)%reset(this%nmawwells)
+      do n = 1, this%nmawwells
+        q = this%pakmvrobj%get_qtomvr(n)
+        if (q > DZERO) then
+          q = -q
+          q2 = this%qconst(n)
+          ! -- adjust TO MOVER if well rate is outflow
+          if (q2 < DZERO) then
+            qfact = q2 / this%qout(n)
+            q = q * qfact
+          else
+            q = DZERO
+          end if
+        end if
+        call this%budobj%budterm(idx)%update_term(n, n, q)
+      end do
+      !
+      ! -- FLOWING WELL TO MOVER
       if (this%iflowingwells > 0) then
         idx = idx + 1
         call this%budobj%budterm(idx)%reset(this%nmawwells)
@@ -4135,7 +4263,7 @@ contains
           if (q > DZERO) then
             q = -q
             q2 = this%mawwells(n)%ratesim
-            ! adjust TO MOVER if well rate is outflow
+            ! -- adjust TO MOVER if well rate is outflow
             qfact = DONE
             if (this%qout(n) < DZERO) then
               qfact = this%qfw(n) / this%qout(n)
@@ -4147,8 +4275,7 @@ contains
       end if
       
     end if
-    
-    
+    !
     ! -- AUXILIARY VARIABLES
     naux = this%naux
     if (naux > 0) then
@@ -4167,5 +4294,62 @@ contains
     return
   end subroutine maw_fill_budobj
 
+  subroutine maw_setup_tableobj(this)
+! ******************************************************************************
+! maw_setup_tableobj -- Set up the table object that is used to write the maw 
+!                       head data. The terms listed here must correspond in  
+!                       number and order to the ones written to the head table 
+!                       in the maw_ot method.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule, only: LINELENGTH, LENBUDTXT
+    ! -- dummy
+    class(MawType) :: this
+    ! -- local
+    integer(I4B) :: nterms
+    character(len=LINELENGTH) :: title
+    character(len=LINELENGTH) :: text
+! ------------------------------------------------------------------------------
+    !
+    ! -- setup stage table
+    if (this%iprhed > 0) then
+      !
+      ! -- Determine the number of sfr budget terms. These are fixed for 
+      !    the simulation and cannot change.  This includes FLOW-JA-FACE
+      !    so they can be written to the binary budget files, but these internal
+      !    flows are not included as part of the budget table.
+      nterms = 2
+      if (this%inamedbound == 1) nterms = nterms + 1
+      !
+      ! -- set up table title
+      title = trim(this%name) // ' PACKAGE - SUMMARY OF HEADS FOR ' //           &
+              'EACH CONTROL VOLUME'
+      !
+      ! -- set up stage tableobj
+      call table_cr(this%headtab, this%name, title)
+      call this%headtab%table_df(this%maxbound, nterms, this%iout,              &
+                                 transient=.TRUE.)
+      !
+      ! -- Go through and set up table budget term
+      if (this%inamedbound == 1) then
+        text = 'NAME'
+        call this%headtab%initialize_column(text, 20, alignment=TABLEFT)
+      end if
+      !
+      ! -- reach number
+      text = 'NUMBER'
+      call this%headtab%initialize_column(text, 10, alignment=TABCENTER)
+      !
+      ! -- reach stage
+      text = 'HEAD'
+      call this%headtab%initialize_column(text, 12, alignment=TABCENTER)
+    end if
+    !
+    ! -- return
+    return
+  end subroutine maw_setup_tableobj
 
 end module MawModule
