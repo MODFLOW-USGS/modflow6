@@ -4,7 +4,8 @@ module BndModule
   use ConstantsModule,              only: LENAUXNAME, LENBOUNDNAME, LENFTYPE,  &
                                           DZERO, LENMODELNAME, LENPACKAGENAME, &
                                           LENORIGIN, MAXCHARLEN, LINELENGTH,   &
-                                          DNODATA, LENLISTLABEL
+                                          DNODATA, LENLISTLABEL,               &
+                                          TABLEFT, TABCENTER
   use SimModule,                    only: count_errors, store_error, ustop,    &
                                           store_error_unit
   use NumericalPackageModule,       only: NumericalPackageType
@@ -20,6 +21,7 @@ module BndModule
   use PackageMoverModule,           only: PackageMoverType
   use BaseDisModule,                only: DisBaseType
   use BlockParserModule,            only: BlockParserType
+  use TableModule,                  only: TableType, table_cr
 
   implicit none
 
@@ -77,6 +79,11 @@ module BndModule
     real(DP), dimension(:), pointer, contiguous :: flowja => null()              !intercell flows
     integer(I4B), dimension(:), pointer, contiguous :: icelltype => null()       !pointer to icelltype array in NPF
     character(len=10) :: ictorigin  = ''                                         !package name for icelltype (NPF for GWF)
+    !
+    ! -- print_flows table object
+    type(TableType), pointer :: outputtab => null()
+
+    
   contains
     procedure :: bnd_df
     procedure :: bnd_ac
@@ -547,7 +554,11 @@ module BndModule
     integer(I4B), dimension(:), optional, intent(in) :: imap
     integer(I4B), optional, intent(in) :: iadv
     ! -- local
+    character (len=LINELENGTH) :: title
+    character(len=LINELENGTH) :: tag
+    character(len=20) :: nodestr
     character (len=LENPACKAGENAME) :: text
+    integer(I4B) :: nodeu
     integer(I4B) :: imover
     integer(I4B) :: i, node, n2, ibinun
     real(DP) :: q
@@ -599,6 +610,21 @@ module BndModule
     ! -- If no boundaries, skip flow calculations.
     if(this%nbound > 0) then
       !
+      ! -- initialize output table
+      if (this%iprpak /= 0) then
+        !
+        ! -- reset the input table object
+        title = trim(this%name) // ' PACKAGE DATA CALCULATED FLOW DATA'
+        call table_cr(this%outputtab, this%name, title)
+        call this%outputtab%table_df(this%nbound, 3, this%iout)
+        tag = 'NUMBER'
+        call this%outputtab%initialize_column(tag, 10, alignment=TABCENTER)
+        tag = 'CELLID'
+        call this%outputtab%initialize_column(tag, 20, alignment=TABLEFT)
+        tag = trim(adjustl(this%name_model)) // ' RATE'
+        call this%outputtab%initialize_column(tag, 10, alignment=TABCENTER)
+      end if
+      !
       ! -- Loop through each boundary calculating flow.
       do i = 1, this%nbound
         node = this%nodelist(i)
@@ -627,15 +653,25 @@ module BndModule
             !
             ! -- Print the individual rates if the budget is being printed
             !    and PRINT_FLOWS was specified (this%iprflow<0)
-            if(ibudfl /= 0) then
-              if(this%iprflow /= 0) then
-                if(ibdlbl == 0) write(this%iout,fmttkk)                        &
+            if (ibudfl /= 0) then
+              if (this%iprflow /= 0) then
+                if (ibdlbl == 0) write(this%iout,fmttkk)                        &
                   this%text // ' (' // trim(this%name) // ')', kper, kstp
                 call this%dis%print_list_entry(i, node, rrate, this%iout,      &
                         bname)
                 ibdlbl=1
-              endif
-            endif
+                !
+                ! -- 
+                nodeu = this%dis%get_nodeuser(node)
+                call this%dis%nodeu_to_string(nodeu, nodestr)
+                !
+                ! -- fill table terms
+                call this%outputtab%add_term(i)
+                call this%outputtab%add_term(nodestr)
+                call this%outputtab%add_term(rrate)
+                
+              end if
+            end if
             !
             ! -- See if flow is into aquifer or out of aquifer.
             if(rrate < dzero) then

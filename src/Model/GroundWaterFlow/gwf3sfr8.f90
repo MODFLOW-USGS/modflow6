@@ -9,8 +9,7 @@ module SfrModule
                              NAMEDBOUNDFLAG, LENBOUNDNAME, LENFTYPE,           &
                              LENPACKAGENAME, MAXCHARLEN,                       &
                              DHNOFLO, DHDRY, DNODATA,                          &
-                             TABLEFT, TABCENTER, TABRIGHT,                     &
-                             TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
+                             TABLEFT, TABCENTER, TABRIGHT
     
   use SmoothingModule,  only: sQuadraticSaturation, sQSaturation, &
                               sQuadraticSaturationDerivative, sQSaturationDerivative, &
