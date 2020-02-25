@@ -9,8 +9,7 @@ module SfrModule
                              NAMEDBOUNDFLAG, LENBOUNDNAME, LENFTYPE,           &
                              LENPACKAGENAME, MAXCHARLEN,                       &
                              DHNOFLO, DHDRY, DNODATA,                          &
-                             TABLEFT, TABCENTER, TABRIGHT,                     &
-                             TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
+                             TABLEFT, TABCENTER, TABRIGHT
     
   use SmoothingModule,  only: sQuadraticSaturation, sQSaturation, &
                               sQuadraticSaturationDerivative, sQSaturationDerivative, &
@@ -1290,7 +1289,8 @@ contains
       if (this%iprpak /= 0) then
         !
         ! -- reset the input table object
-        title = trim(this%name) // ' PACKAGE - DATA FOR PERIOD'
+        title = trim(adjustl(this%text)) // ' PACKAGE (' //                        &
+                trim(adjustl(this%name)) //') DATA FOR PERIOD'
         write(title, '(a,1x,i6)') trim(adjustl(title)), kper
         call table_cr(this%inputtab, this%name, title)
         call this%inputtab%table_df(1, 4, this%iout)
@@ -3564,7 +3564,8 @@ contains
     !
     ! -- setup inputtab tableobj
     if (this%iprpak /= 0) then
-      title = trim(this%name) // ' PACKAGE - STATIC REACH DATA'
+      title = trim(adjustl(this%text)) // ' PACKAGE (' //                        &
+              trim(adjustl(this%name)) //') STATIC REACH DATA'
       call table_cr(this%inputtab, this%name, title)
       call this%inputtab%table_df(this%maxbound, 10, this%iout)
       text = 'NUMBER'
@@ -3688,7 +3689,8 @@ contains
       ntabcol = 1 + maxconn
       !
       ! -- reset the input table object
-      title = 'SFR (' // trim(this%name) // ') STATIC REACH CONNECTION DATA'
+      title = trim(adjustl(this%text)) // ' PACKAGE (' //                        &
+              trim(adjustl(this%name)) //') STATIC REACH CONNECTION DATA'
       call table_cr(this%inputtab, this%name, title)
       call this%inputtab%table_df(this%maxbound, ntabcol, this%iout)
       text = 'REACH'
@@ -3816,8 +3818,9 @@ contains
       ntabcol = 1 + maxconn
       !
       ! -- reset the input table object
-      title = 'SFR (' // trim(this%name) //                                      &
-              ') STATIC UPSTREAM REACH CONNECTION DATA'
+      title = trim(adjustl(this%text)) // ' PACKAGE (' //                        &
+              trim(adjustl(this%name)) //') STATIC UPSTREAM REACH ' //           &
+              'CONNECTION DATA'
       call table_cr(this%inputtab, this%name, title)
       call this%inputtab%table_df(this%maxbound, ntabcol, this%iout)
       text = 'REACH'
@@ -3857,8 +3860,9 @@ contains
       ntabcol = 1 + maxconn
       !
       ! -- reset the input table object
-      title = 'SFR (' // trim(this%name) //                                      &
-              ') STATIC DOWNSTREAM REACH CONNECTION DATA'
+      title = trim(adjustl(this%text)) // ' PACKAGE (' //                        &
+              trim(adjustl(this%name)) //') STATIC DOWNSTREAM ' //               &
+              'REACH CONNECTION DATA'
       call table_cr(this%inputtab, this%name, title)
       call this%inputtab%table_df(this%maxbound, ntabcol, this%iout)
       text = 'REACH'
@@ -3920,7 +3924,8 @@ contains
       end do
       !
       ! -- reset the input table object
-      title = 'SFR (' // trim(this%name) // ') REACH DIVERSION DATA'
+      title = trim(adjustl(this%text)) // ' PACKAGE (' //                        &
+              trim(adjustl(this%name)) //') REACH DIVERSION DATA'
       call table_cr(this%inputtab, this%name, title)
       call this%inputtab%table_df(maxdiv, 4, this%iout)
       text = 'REACH'
@@ -4033,7 +4038,8 @@ contains
       maxcols = 1 + npairs * 2
       !
       ! -- reset the input table object
-      title = 'SFR (' // trim(this%name) // ') CONNECTED REACHES UPSTREAM ' //   &
+      title = trim(adjustl(this%text)) // ' PACKAGE (' //                        &
+              trim(adjustl(this%name)) //') CONNECTED REACH UPSTREAM '        // &
               'FRACTION DATA'
       call table_cr(this%inputtab, this%name, title)
       call this%inputtab%table_df(this%maxbound, maxcols, this%iout)
@@ -4551,8 +4557,8 @@ contains
       if (this%inamedbound == 1) nterms = nterms + 1
       !
       ! -- set up table title
-      title = trim(this%name) // ' PACKAGE - SUMMARY OF STAGES FOR ' //          &
-              'EACH CONTROL VOLUME'
+      title = trim(adjustl(this%text)) // ' PACKAGE (' //                        &
+              trim(adjustl(this%name)) //') STAGES FOR EACH CONTROL VOLUME'
       !
       ! -- set up stage tableobj
       call table_cr(this%stagetab, this%name, title)
