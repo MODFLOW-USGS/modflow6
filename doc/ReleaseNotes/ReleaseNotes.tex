@@ -122,6 +122,7 @@ This section describes changes introduced into MODFLOW 6 with each release.  The
 \underline{BASIC FUNCTIONALITY}
 \begin{itemize}
 \item Corrected an error in how the discretization package (for regular MODFLOW grids) calculates the distance between two cells when one or both of the cells are unconfined.  The error in the code would have only affected XT3D simulations with a regular grid, unconfined conditions, and specification of ANGLE2 in the NPF Package.  
+\item Corrected an error in the use of the AUXMULTNAME option for boundary packages when time series are used.
 \end{itemize}
 
 \underline{STRESS PACKAGES}
