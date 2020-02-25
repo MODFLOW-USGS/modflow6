@@ -8,7 +8,6 @@ module TableTermModule
   use ConstantsModule, only:  LINELENGTH, LENBUDTXT, DZERO,                     &
                               TABLEFT, TABCENTER, TABRIGHT,                     &
                               TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
-  use BaseDisModule, only: DisBaseType
   use InputOutputModule, only: UPCASE, parseline
 
   implicit none

@@ -111,6 +111,7 @@ module BndModule
     procedure :: bnd_options
     procedure :: set_pointers
     procedure :: define_listlabel
+    procedure, private :: pak_setup_outputtab
     !
     ! -- procedures to support observations
     procedure, public :: bnd_obs_supported
@@ -539,7 +540,7 @@ module BndModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule, only: kstp, kper, delt
+    use TdisModule, only: delt
     use ConstantsModule, only: LENBOUNDNAME, DZERO
     use BudgetModule, only: BudgetType
     ! -- dummy
@@ -556,10 +557,10 @@ module BndModule
     integer(I4B), optional, intent(in) :: iadv
     ! -- local
     character (len=LINELENGTH) :: title
-    character(len=LINELENGTH) :: tag
     character(len=20) :: nodestr
     character (len=LENPACKAGENAME) :: text
     integer(I4B) :: nodeu
+    integer(I4B) :: maxrows
     integer(I4B) :: imover
     integer(I4B) :: i, node, n2, ibinun
     real(DP) :: q
@@ -569,8 +570,6 @@ module BndModule
     ! -- for observations
     character(len=LENBOUNDNAME) :: bname
     ! -- formats
-    character(len=*), parameter :: fmttkk = &
-      "(1X,/1X,A,'   PERIOD ',I0,'   STEP ',I0)"
 ! ------------------------------------------------------------------------------
     !
     ! -- check for iadv optional variable
@@ -582,6 +581,23 @@ module BndModule
       end if
     else
       imover = this%imover
+    end if
+    !
+    ! -- set maxrows
+    maxrows = 0
+    if (ibudfl /= 0 .and. this%iprflow /= 0) then
+      do i = 1, this%nbound
+        node = this%nodelist(i)
+        if (node > 0 .and. this%ibound(node) > 0) then
+          maxrows = maxrows + 1
+        end if
+      end do
+      if (maxrows > 0) then
+        call this%outputtab%set_maxbound(maxrows)
+      end if
+      title = trim(adjustl(this%text)) // ' PACKAGE (' // trim(this%name) //     &
+              ') FLOW RATES'
+      call this%outputtab%set_title(title)
     end if
     !
     ! -- Clear accumulators and set flags
@@ -610,26 +626,6 @@ module BndModule
     !
     ! -- If no boundaries, skip flow calculations.
     if(this%nbound > 0) then
-      !
-      ! -- initialize output table
-      if (this%iprpak /= 0) then
-        !
-        ! -- initialize the input table object
-        title = trim(this%name) // ' PACKAGE DATA CALCULATED FLOW DATA'
-        call table_cr(this%outputtab, this%name, title)
-        call this%outputtab%table_df(this%nbound, 3, this%iout,                  &
-                                      transient=.TRUE.)
-        tag = 'NUMBER'
-        call this%outputtab%initialize_column(tag, 10, alignment=TABCENTER)
-        tag = 'CELLID'
-        call this%outputtab%initialize_column(tag, 20, alignment=TABLEFT)
-        tag = trim(adjustl(this%name_model)) // ' RATE'
-        call this%outputtab%initialize_column(tag, 10, alignment=TABCENTER)
-        if (this%inamedbound > 0) then
-          text = 'NAME'
-          call this%outputtab%initialize_column(text, 20, alignment=TABLEFT)
-        end if
-      end if
       !
       ! -- Loop through each boundary calculating flow.
       do i = 1, this%nbound
@@ -661,24 +657,15 @@ module BndModule
             !    and PRINT_FLOWS was specified (this%iprflow<0)
             if (ibudfl /= 0) then
               if (this%iprflow /= 0) then
-                if (ibdlbl == 0) write(this%iout,fmttkk)                        &
-                  this%text // ' (' // trim(this%name) // ')', kper, kstp
-                call this%dis%print_list_entry(i, node, rrate, this%iout,      &
-                        bname)
-                ibdlbl=1
                 !
-                ! -- 
+                ! -- set nodestr and write outputtab table
                 nodeu = this%dis%get_nodeuser(node)
                 call this%dis%nodeu_to_string(nodeu, nodestr)
+                call this%outputtab%print_list_entry(i, trim(adjustl(nodestr)),  &
+                                                     rrate, bname)
                 !
-                ! -- fill table terms
-                call this%outputtab%add_term(i)
-                call this%outputtab%add_term(nodestr)
-                call this%outputtab%add_term(rrate)
-                if (this%inamedbound > 0) then
-                  call this%outputtab%add_term(bname)
-                end if
-                
+                ! -- reset ibdlbl
+                ibdlbl=1
               end if
             end if
             !
@@ -725,6 +712,11 @@ module BndModule
       ibdlbl = 0
       text = trim(adjustl(this%text)) // '-TO-MVR'
       text = adjustr(text)
+      if (ibudfl /= 0 .and. this%iprflow /= 0) then
+        title = trim(adjustl(this%text)) // ' PACKAGE (' // trim(this%name) //   &
+                ') FLOW RATES TO-MVR'
+        call this%outputtab%set_title(title)
+      end if
       !
       ! -- If cell-by-cell flows will be saved as a list, write header.
       if(ibinun /= 0) then
@@ -765,9 +757,14 @@ module BndModule
               !    and PRINT_FLOWS was specified (this%iprflow<0)
               if(ibudfl /= 0) then
                 if(this%iprflow /= 0) then
-                  if(ibdlbl == 0) write(this%iout,fmttkk) text, kper, kstp
-                  call this%dis%print_list_entry(i, node, rrate, this%iout,    &
-                          bname)
+                  !
+                  ! -- set nodestr and write outputtab table
+                  nodeu = this%dis%get_nodeuser(node)
+                  call this%dis%nodeu_to_string(nodeu, nodestr)
+                  call this%outputtab%print_list_entry(i, trim(adjustl(nodestr)),&
+                                                       rrate, bname)
+                  !
+                  ! -- reset ibdlbl
                   ibdlbl=1
                 endif
               endif
@@ -1073,6 +1070,9 @@ module BndModule
       end if
     end do
     if(this%inamedbound /= 1) this%boundname(1) = ''
+    !
+    ! -- setup the output table
+    call this%pak_setup_outputtab()
     !
     ! -- return
     return
@@ -1424,6 +1424,55 @@ module BndModule
     ! -- return
     return
   end subroutine bnd_options
+
+  subroutine pak_setup_outputtab(this)
+! ******************************************************************************
+! bnd_options -- set options for a class derived from BndType
+! This subroutine can be overridden by specific packages to set custom options
+! that are not part of the package superclass.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(BndType),intent(inout) :: this
+    ! -- local
+    character(len=LINELENGTH) :: title
+    character(len=LINELENGTH) :: text
+    integer(I4B) :: ntabcol
+! ------------------------------------------------------------------------------
+    !
+    ! -- allocate and initialize the output table
+    if (this%iprflow /= 0) then
+      !
+      ! -- dimension table
+      ntabcol = 3
+      if (this%inamedbound > 0) then
+        ntabcol = ntabcol + 1
+      end if
+      !
+      ! -- initialize the output table object
+      title = trim(adjustl(this%text)) // ' PACKAGE (' // trim(this%name) //     &
+              ') FLOW RATES'
+      call table_cr(this%outputtab, this%name, title)
+      call this%outputtab%table_df(this%maxbound, ntabcol, this%iout,            &
+                                    transient=.TRUE.)
+      text = 'NUMBER'
+      call this%outputtab%initialize_column(text, 10, alignment=TABCENTER)
+      text = 'CELLID'
+      call this%outputtab%initialize_column(text, 20, alignment=TABLEFT)
+      text = 'RATE'
+      call this%outputtab%initialize_column(text, 15, alignment=TABCENTER)
+      if (this%inamedbound > 0) then
+        text = 'NAME'
+        call this%outputtab%initialize_column(text, 20, alignment=TABLEFT)
+      end if
+    end if
+    !
+    ! -- return
+    return
+  end subroutine pak_setup_outputtab
+
 
   subroutine define_listlabel(this)
     ! define_listlabel

@@ -1334,6 +1334,10 @@ contains
     integer(I4B), dimension(:), optional, intent(in) :: imap
     integer(I4B), optional, intent(in) :: iadv
     ! -- local
+    character(len=LINELENGTH) :: title
+    character(len=20) :: nodestr
+    integer(I4B) :: maxrows
+    integer(I4B) :: nodeu
     integer(I4B) :: i, node, ibinun
     integer(I4B) :: n, m, ivertflag, ierr
     integer(I4B) :: n2
@@ -1402,6 +1406,19 @@ contains
     qseep = DZERO
     qseeptomvr = DZERO
     qgwet = DZERO
+    !
+    ! -- set maxrows
+    maxrows = 0
+    if (this%iprflow /= 0) then
+      do i = 1, this%nodes
+        node = this%nodelist(i)
+        if (this%ibound(node) > 0) then
+          maxrows = maxrows + 1
+        end if
+      end do
+      call this%outputtab%set_maxbound(maxrows)
+    end if
+    
     !
     ! -- Go through and process each UZF cell
     do i = 1, this%nodes
@@ -1601,6 +1618,13 @@ contains
           bname = ''
         end if
         !
+        ! -- reset table title
+        if (this%iprflow /= 0) then
+          title = trim(this%text) // ' PACKAGE (' // trim(this%name) //          &
+                  ') ' // trim(adjustl(this%bdtxt(2))) // ' FLOW RATES'
+          call this%outputtab%set_title(title)
+        end if
+        !
         ! -- If cell is no-flow or constant-head, then ignore it.
         rrate = DZERO
         if (this%ibound(node) > 0) then
@@ -1612,10 +1636,13 @@ contains
           ! -- Print the individual rates if requested(this%iprflow<0)
           if (ibudfl /= 0) then
             if (this%iprflow /= 0) then
-              if (ibdlbl == 0) write(this%iout,fmttkk)                         &
-                  this%bdtxt(2) // ' (' // trim(this%name) // ')', kper, kstp
-              call this%dis%print_list_entry(i, node, rrate, this%iout,        &
-                      bname)
+              !
+              ! -- set nodestr and write outputtab table
+              nodeu = this%dis%get_nodeuser(node)
+              call this%dis%nodeu_to_string(nodeu, nodestr)
+              call this%outputtab%print_list_entry(i, nodestr, rrate, bname)
+              !
+              ! -- reset ibdlbl
               ibdlbl=1
             end if
           end if
@@ -1640,6 +1667,13 @@ contains
                       this%auxname, ibinun, this%nodes, this%iout)
         end if
         !
+        ! -- reset table title
+        if (this%iprflow /= 0) then
+          title = trim(this%text) // ' PACKAGE (' // trim(this%name) //          &
+                  ') ' // trim(adjustl(this%bdtxt(4))) // ' FLOW RATES'
+          call this%outputtab%set_title(title)
+        end if
+        !
         ! -- Loop through each boundary calculating flow.
         do i = 1, this%nodes
           node = this%nodelist(i)
@@ -1660,10 +1694,13 @@ contains
             ! -- Print the individual rates if requested(this%iprflow<0)
             if (ibudfl /= 0) then
               if (this%iprflow /= 0) then
-                if (ibdlbl == 0) write(this%iout,fmttkk)                       &
-                  this%bdtxt(3) // ' (' // trim(this%name) // ')', kper, kstp
-                call this%dis%print_list_entry(i, node, rrate, this%iout, &
-                        bname)
+                !
+                ! -- set nodestr and write outputtab table
+                nodeu = this%dis%get_nodeuser(node)
+                call this%dis%nodeu_to_string(nodeu, nodestr)
+                call this%outputtab%print_list_entry(i, nodestr, rrate, bname)
+                !
+                ! -- reset ibdlbl
                 ibdlbl=1
               end if
             end if
@@ -1688,6 +1725,13 @@ contains
                         this%auxname, ibinun, this%nodes, this%iout)
           end if
           !
+          ! -- reset table title
+          if (this%iprflow /= 0) then
+            title = trim(this%text) // ' PACKAGE (' // trim(this%name) //        &
+                    ') ' // trim(adjustl(this%bdtxt(5))) // ' FLOW RATES'
+            call this%outputtab%set_title(title)
+          end if
+          !
           ! -- Loop through each boundary calculating flow.
           do i = 1, this%nodes
             node = this%nodelist(i)
@@ -1708,10 +1752,13 @@ contains
               ! -- Print the individual rates if requested(this%iprflow<0)
               if (ibudfl /= 0) then
                 if (this%iprflow /= 0) then
-                  if (ibdlbl == 0) write(this%iout,fmttkk)                     &
-                    this%bdtxt(5) // ' (' // trim(this%name) // ')', kper, kstp
-                  call this%dis%print_list_entry(i, node, rrate, this%iout,    &
-                          bname)
+                  !
+                  ! -- set nodestr and write outputtab table
+                  nodeu = this%dis%get_nodeuser(node)
+                  call this%dis%nodeu_to_string(nodeu, nodestr)
+                  call this%outputtab%print_list_entry(i, nodestr, rrate, bname)
+                  !
+                  ! -- reset ibdlbl
                   ibdlbl=1
                 end if
               end if
@@ -1736,6 +1783,13 @@ contains
                       this%auxname, ibinun, this%nodes, this%iout)
         end if
         !
+        ! -- reset table title
+        if (this%iprflow /= 0) then
+          title = trim(this%text) // ' PACKAGE (' // trim(this%name) //          &
+                  ') ' // trim(adjustl(this%bdtxt(4))) // ' FLOW RATES'
+          call this%outputtab%set_title(title)
+        end if
+        !
         ! -- Loop through each boundary calculating flow.
         do i = 1, this%nodes
           node = this%nodelist(i)
@@ -1756,10 +1810,13 @@ contains
             ! -- Print the individual rates if requested(this%iprflow<0)
             if (ibudfl /= 0) then
               if (this%iprflow /= 0) then
-                if (ibdlbl == 0) write(this%iout,fmttkk)                       &
-                  this%bdtxt(4) // ' (' // trim(this%name) // ')', kper, kstp
-                call this%dis%print_list_entry(i, node, rrate, this%iout, &
-                        bname)
+                !
+                ! -- set nodestr and write outputtab table
+                nodeu = this%dis%get_nodeuser(node)
+                call this%dis%nodeu_to_string(nodeu, nodestr)
+                call this%outputtab%print_list_entry(i, nodestr, rrate, bname)
+                !
+                ! -- reset ibdlbl
                 ibdlbl=1
               end if
             end if
