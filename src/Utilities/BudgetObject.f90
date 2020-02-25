@@ -8,11 +8,13 @@ module BudgetObjectModule
   use BudgetModule, only : BudgetType, budget_cr
   use BudgetTermModule, only: BudgetTermType
   use BaseDisModule, only: DisBaseType
+  use BudgetFileReaderModule, only: BudgetFileReaderType
   
   implicit none
   
   public :: BudgetObjectType
   public :: budgetobject_cr
+  public :: budgetobject_cr_bfr
   
   type :: BudgetObjectType
     !
@@ -40,6 +42,9 @@ module BudgetObjectModule
     !
     ! -- budget table object, for writing the typical MODFLOW budget
     type(BudgetType), pointer :: budtable => null()
+    !
+    ! -- budget file reader, for reading flows from a binary file
+    type(BudgetFileReaderType), pointer :: bfr => null()
     
   contains
   
@@ -47,7 +52,11 @@ module BudgetObjectModule
     procedure :: accumulate_terms
     procedure :: write_budtable
     procedure :: save_flows
+    procedure :: read_flows
     procedure :: budgetobject_da
+    procedure :: bfr_init
+    procedure :: bfr_advance
+    procedure :: fill_from_bfr
     
   end type BudgetObjectType
   
@@ -215,6 +224,38 @@ module BudgetObjectModule
     return
   end subroutine save_flows
   
+  subroutine read_flows(this, dis, ibinun)
+! ******************************************************************************
+! read_flows -- Read froms from a binary file into this BudgetObjectType
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(BudgetObjectType) :: this
+    class(DisBaseType), intent(in) :: dis
+    integer(I4B), intent(in) :: ibinun
+    ! -- local
+    integer(I4B) :: kstp
+    integer(I4B) :: kper
+    real(DP) :: delt
+    real(DP) :: pertim
+    real(DP) :: totim
+    ! -- dummy
+    integer(I4B) :: i
+! ------------------------------------------------------------------------------
+    !
+    ! -- read flows for each budget term
+    do i = 1, this%nbudterm
+      call this%budterm(i)%read_flows(dis, ibinun, kstp, kper, delt, &
+                                      pertim, totim)
+    end do
+    !
+    ! -- return
+    return
+  end subroutine read_flows
+  
   subroutine budgetobject_da(this)
 ! ******************************************************************************
 ! budgetobject_da -- deallocate
@@ -237,5 +278,175 @@ module BudgetObjectModule
     ! -- Return
     return
   end subroutine budgetobject_da
+  
+  subroutine budgetobject_cr_bfr(this, name, ibinun, iout, colconv1, colconv2)
+! ******************************************************************************
+! budgetobject_cr_bfr -- Create a new budget object from a binary flow file
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    type(BudgetObjectType), pointer :: this
+    character(len=*), intent(in) :: name
+    integer(I4B), intent(in) :: ibinun
+    integer(I4B), intent(in) :: iout
+    character(len=16), dimension(:), optional :: colconv1
+    character(len=16), dimension(:), optional :: colconv2
+    ! -- local
+    integer(I4B) :: ncv, nbudterm
+    integer(I4B) :: iflowja, nsto
+    integer(I4B) :: i, j
+! ------------------------------------------------------------------------------
+    !
+    ! -- Create the object
+    call budgetobject_cr(this, name)
+    !
+    ! -- Initialize the budget file reader
+    call this%bfr_init(ibinun, ncv, nbudterm, iout)
+    !
+    ! -- Define this budget object using number of control volumes and number
+    !    of budget terms read from ibinun
+    iflowja = 0
+    nsto = 0
+    call this%budgetobject_df(ncv, nbudterm, iflowja, nsto)
+    !
+    ! -- Set the conversion flags, which cause id1 or id2 to be converted from
+    !    user node numbers to reduced node numbers
+    if (present(colconv1)) then
+      do i = 1, nbudterm
+        do j = 1, size(colconv1)
+          if (colconv1(j) == adjustl(this%bfr%budtxtarray(i))) then
+            this%budterm(i)%olconv1 = .true.
+            exit
+          end if
+        end do
+      end do
+    end if
+    if (present(colconv2)) then
+      do i = 1, nbudterm
+        do j = 1, size(colconv2)
+          if (colconv2(j) == adjustl(this%bfr%budtxtarray(i))) then
+            this%budterm(i)%olconv2 = .true.
+            exit
+          end if
+        end do
+      end do
+    end if
+    !
+    ! -- Return
+    return
+  end subroutine budgetobject_cr_bfr
+  
+  subroutine bfr_init(this, ibinun, ncv, nbudterm, iout)
+! ******************************************************************************
+! bfr_init -- initialize the budget file reader
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(BudgetObjectType) :: this
+    integer(I4B), intent(in) :: ibinun
+    integer(I4B), intent(inout) :: ncv
+    integer(I4B), intent(inout) :: nbudterm
+    integer(I4B), intent(in) :: iout
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    ! -- initialize budget file reader
+    allocate(this%bfr)
+    call this%bfr%initialize(ibinun, iout, ncv)
+    nbudterm = this%bfr%nbudterms
+    !
+    ! -- Return
+    return
+  end subroutine bfr_init
+  
+  subroutine bfr_advance(this, dis, iout)
+! ******************************************************************************
+! bfr_advance -- copy the information from the binary file into budterms
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use TdisModule, only: kstp, kper
+    ! -- dummy
+    class(BudgetObjectType) :: this
+    class(DisBaseType), intent(in) :: dis
+    integer(I4B), intent(in) :: iout
+    ! -- dummy
+    logical :: readnext
+    character(len=*), parameter :: fmtkstpkper =                               &
+      "(1x,/1x, a, ' READING BUDGET TERMS FOR KSTP ', i0, ' KPER ', i0)"
+    character(len=*), parameter :: fmtbudkstpkper = &
+      "(1x,/1x, a, ' SETTING BUDGET TERMS FOR KSTP ', i0, ' AND KPER ',     &
+      &i0, ' TO BUDGET FILE TERMS FROM KSTP ', i0, ' AND KPER ', i0)"
+! ------------------------------------------------------------------------------
+    !
+    ! -- Do not read the budget if the budget is at end of file or if the next
+    !    record in the budget file is the first timestep of the next stress
+    !    period.  Also do not read if it is the very first time step because
+    !    the first chunk of data is read as part of the initialization
+    readnext = .true.
+    if (kstp * kper == 1) then
+      readnext = .false.
+    else if (kstp * kper > 1) then
+      if (this%bfr%endoffile) then
+        readnext = .false.
+      else
+        if (this%bfr%kpernext == kper + 1 .and. this%bfr%kstpnext == 1) &
+          readnext = .false.
+      endif
+    endif
+    !
+    ! -- Read the next record
+    if (readnext) then
+      !
+      ! -- Write the current time step and stress period
+      if (iout > 0) &
+        write(iout, fmtkstpkper) this%name, kstp, kper
+      !
+      ! -- read flows from the binary file and copy them into this%budterm(:)
+      call this%fill_from_bfr(dis, iout)
+    else
+      if (iout > 0) &
+        write(iout, fmtbudkstpkper) trim(this%name), kstp, kper,               &
+         this%bfr%kstp, this%bfr%kper
+    endif
+    !
+    ! -- Return
+    return
+  end subroutine bfr_advance
+  
+  subroutine fill_from_bfr(this, dis, iout)
+! ******************************************************************************
+! fill_from_bfr -- copy the information from the binary file into budterms
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(BudgetObjectType) :: this
+    class(DisBaseType), intent(in) :: dis
+    integer(I4B), intent(in) :: iout
+    ! -- dummy
+    integer(I4B) :: i
+    logical :: success
+! ------------------------------------------------------------------------------
+    !
+    ! -- read flows from the binary file and copy them into this%budterm(:)
+    do i = 1, this%nbudterm
+      call this%bfr%read_record(success, iout)
+      call this%budterm(i)%fill_from_bfr(this%bfr, dis)
+    end do
+    !
+    ! -- Return
+    return
+  end subroutine fill_from_bfr
   
 end module BudgetObjectModule

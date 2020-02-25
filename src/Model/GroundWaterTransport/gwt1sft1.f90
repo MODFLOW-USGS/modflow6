@@ -1500,18 +1500,20 @@ module GwtSftModule
     ! -- Look through gwfbndlist for a SFR package with the same name as this
     !    SFT package name
     found = .false.
-    do ip = 1, this%fmi%gwfbndlist%Count()
-      packobj => GetBndFromList(this%fmi%gwfbndlist, ip)
-      if (packobj%name == this%name) then
-        found = .true.
-        this%igwfsfrpak = ip
-        select type (packobj)
-          type is (SfrType)
-            this%sfrbudptr => packobj%budobj
-        end select
-      end if
-      if (found) exit
-    end do
+    if (associated(this%fmi%gwfbndlist)) then
+      do ip = 1, this%fmi%gwfbndlist%Count()
+        packobj => GetBndFromList(this%fmi%gwfbndlist, ip)
+        if (packobj%name == this%name) then
+          found = .true.
+          this%igwfsfrpak = ip
+          select type (packobj)
+            type is (SfrType)
+              this%sfrbudptr => packobj%budobj
+          end select
+        end if
+        if (found) exit
+      end do
+    end if
     !
     ! -- error if lak package not found
     if (.not. found) then

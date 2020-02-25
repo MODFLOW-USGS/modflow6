@@ -638,8 +638,8 @@ module GwtModule
     real(DP), intent(in) :: hclose
     real(DP), intent(in) :: rclose
     ! -- local
-    class(BndType), pointer :: packobj
-    integer(I4B) :: ip
+    !class(BndType), pointer :: packobj
+    !integer(I4B) :: ip
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
