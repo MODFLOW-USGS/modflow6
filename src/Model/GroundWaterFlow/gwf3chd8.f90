@@ -261,7 +261,7 @@ contains
     integer(I4B) :: nodeu
     integer(I4B) :: i, node, ibinun, n2
     real(DP) :: rrate, chin, chout, q
-    integer(I4B) :: ibdlbl, naux, ipos
+    integer(I4B) :: naux, ipos
     ! -- for observations
     character(len=LENBOUNDNAME) :: bname
     ! -- formats
@@ -272,7 +272,6 @@ contains
     ! -- initialize local variables
     chin = DZERO
     chout = DZERO
-    ibdlbl = 0
     !
     ! -- Set unit number for binary output
     if(this%ipakcb < 0) then
@@ -296,7 +295,7 @@ contains
     if(this%nbound > 0) then
       !
       ! -- reset size of table
-      if (this%iprpak /= 0) then
+      if (this%iprflow /= 0) then
         call this%outputtab%set_maxbound(this%nbound)
       end if
       !
@@ -340,9 +339,6 @@ contains
             nodeu = this%dis%get_nodeuser(node)
             call this%dis%nodeu_to_string(nodeu, nodestr)
             call this%outputtab%print_list_entry(i, nodestr, rrate, bname)
-            !
-            ! -- reset ibdlbl
-            ibdlbl=1
           end if
         end if
         !

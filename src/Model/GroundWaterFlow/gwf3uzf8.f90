@@ -1360,7 +1360,7 @@ contains
     real(DP) :: qseep
     real(DP) :: qseeptomvr
     real(DP) :: qgwet
-    integer(I4B) :: ibdlbl, naux, numobs
+    integer(I4B) :: naux, numobs
     ! -- for observations
     integer(I4B) :: j
     character(len=LENBOUNDNAME) :: bname
@@ -1601,7 +1601,6 @@ contains
       naux = this%naux
       !
       ! -- uzf-gwrch
-      ibdlbl = 0
       if (ibinun /= 0) then
         call this%dis%record_srcdst_list_header(this%bdtxt(2), this%name_model, &
                     this%name_model, this%name_model, this%name, naux,          &
@@ -1641,9 +1640,6 @@ contains
               nodeu = this%dis%get_nodeuser(node)
               call this%dis%nodeu_to_string(nodeu, nodestr)
               call this%outputtab%print_list_entry(i, nodestr, rrate, bname)
-              !
-              ! -- reset ibdlbl
-              ibdlbl=1
             end if
           end if
         end if
@@ -1659,7 +1655,6 @@ contains
       !
       ! -- uzf-gwd
       if (this%iseepflag == 1) then
-        ibdlbl = 0
         if (ibinun /= 0) then
           call this%dis%record_srcdst_list_header(this%bdtxt(3),               &
                       this%name_model,                                         &
@@ -1699,9 +1694,6 @@ contains
                 nodeu = this%dis%get_nodeuser(node)
                 call this%dis%nodeu_to_string(nodeu, nodestr)
                 call this%outputtab%print_list_entry(i, nodestr, rrate, bname)
-                !
-                ! -- reset ibdlbl
-                ibdlbl=1
               end if
             end if
           end if
@@ -1717,7 +1709,6 @@ contains
         !
         ! -- uzf-gwd to mover
         if (this%imover == 1) then
-          ibdlbl = 0
           if (ibinun /= 0) then
             call this%dis%record_srcdst_list_header(this%bdtxt(5),              &
                         this%name_model, this%name_model,                       &
@@ -1757,9 +1748,6 @@ contains
                   nodeu = this%dis%get_nodeuser(node)
                   call this%dis%nodeu_to_string(nodeu, nodestr)
                   call this%outputtab%print_list_entry(i, nodestr, rrate, bname)
-                  !
-                  ! -- reset ibdlbl
-                  ibdlbl=1
                 end if
               end if
             end if
@@ -1776,7 +1764,6 @@ contains
       end if
       ! -- uzf-evt
       if (this%ietflag /= 0) then
-        ibdlbl = 0
         if (ibinun /= 0) then
           call this%dis%record_srcdst_list_header(this%bdtxt(4), this%name_model,&
                       this%name_model, this%name_model, this%name, naux,        &
@@ -1815,9 +1802,6 @@ contains
                 nodeu = this%dis%get_nodeuser(node)
                 call this%dis%nodeu_to_string(nodeu, nodestr)
                 call this%outputtab%print_list_entry(i, nodestr, rrate, bname)
-                !
-                ! -- reset ibdlbl
-                ibdlbl=1
               end if
             end if
           end if

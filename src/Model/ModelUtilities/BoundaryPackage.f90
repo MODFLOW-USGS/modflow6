@@ -566,7 +566,7 @@ module BndModule
     real(DP) :: q
     real(DP) :: qtomvr
     real(DP) :: ratin, ratout, rrate
-    integer(I4B) :: ibdlbl, naux
+    integer(I4B) :: naux
     ! -- for observations
     character(len=LENBOUNDNAME) :: bname
     ! -- formats
@@ -588,8 +588,10 @@ module BndModule
     if (ibudfl /= 0 .and. this%iprflow /= 0) then
       do i = 1, this%nbound
         node = this%nodelist(i)
-        if (node > 0 .and. this%ibound(node) > 0) then
-          maxrows = maxrows + 1
+        if (node > 0) then
+          if (this%ibound(node) > 0) then
+            maxrows = maxrows + 1
+          end if
         end if
       end do
       if (maxrows > 0) then
@@ -603,7 +605,6 @@ module BndModule
     ! -- Clear accumulators and set flags
     ratin = DZERO
     ratout = DZERO
-    ibdlbl = 0
     !
     ! -- Set unit number for binary output
     if (this%ipakcb < 0) then
@@ -663,9 +664,6 @@ module BndModule
                 call this%dis%nodeu_to_string(nodeu, nodestr)
                 call this%outputtab%print_list_entry(i, trim(adjustl(nodestr)),  &
                                                      rrate, bname)
-                !
-                ! -- reset ibdlbl
-                ibdlbl=1
               end if
             end if
             !
@@ -709,7 +707,6 @@ module BndModule
     if (imover == 1) then
       ratin = DZERO
       ratout = DZERO
-      ibdlbl = 0
       text = trim(adjustl(this%text)) // '-TO-MVR'
       text = adjustr(text)
       if (ibudfl /= 0 .and. this%iprflow /= 0) then
@@ -763,9 +760,6 @@ module BndModule
                   call this%dis%nodeu_to_string(nodeu, nodestr)
                   call this%outputtab%print_list_entry(i, trim(adjustl(nodestr)),&
                                                        rrate, bname)
-                  !
-                  ! -- reset ibdlbl
-                  ibdlbl=1
                 endif
               endif
               !
@@ -866,7 +860,7 @@ module BndModule
       nullify(this%pakmvrobj)
     endif
     !
-    ! -- output table object
+    ! -- input table object
     if (associated(this%inputtab)) then
       call this%inputtab%table_da()
       deallocate(this%inputtab)
