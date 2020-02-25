@@ -1033,8 +1033,9 @@ module BaseDisModule
                 bndElem, pkgName, 'BND', tsManager, iprpak, tsLinkBnd)
         if (associated(tsLinkBnd)) then
           !
-          ! -- If iauxmultcol is the same as this column, then assign 
-          !    tsLinkBnd%RMultiplier to auxvar multiplier
+          ! -- If iauxmultcol is active and this column is the column
+          !    to be scaled, then assign tsLinkBnd%RMultiplier to auxvar 
+          !    multiplier
           if (iauxmultcol > 0 .and. jj == iscloc) then
             tsLinkBnd%RMultiplier => auxvar(iauxmultcol, ii)
           endif
