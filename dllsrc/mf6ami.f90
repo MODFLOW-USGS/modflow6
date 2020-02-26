@@ -166,5 +166,5 @@ module mf6ami
     solution => GetNumericalSolutionFromList(basesolutionlist, solutionIdx)    
     
   end function getSolution
-  
+
 end module mf6ami

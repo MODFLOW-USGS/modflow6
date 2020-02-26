@@ -3,7 +3,7 @@ module MemoryManagerModule
   use KindModule,             only: DP, I4B, I8B
   use ConstantsModule,        only: DZERO, LENORIGIN, LENVARNAME, LINELENGTH
   use SimModule,              only: store_error, ustop
-  use MemoryTypeModule,       only: MemoryTSType, MemoryType
+  use MemoryTypeModule,       only: MemoryTSType, MemoryType, LENMEMTYPE
   use MemoryListModule,       only: MemoryListType
   
   implicit none
@@ -17,9 +17,11 @@ module MemoryManagerModule
   public :: mem_usage
   public :: mem_da
   public :: mem_set_print_option
-  ! TODO_MJR: do we want to expose these like this?
-  public :: get_var_rank
-  public :: get_var_size
+  
+  public :: get_mem_type
+  public :: get_mem_rank
+  public :: get_mem_size
+  public :: get_mem_shape
   public :: get_isize
   public :: copy_dbl1d
   
@@ -72,7 +74,24 @@ module MemoryManagerModule
 
   contains
   
-  subroutine get_var_rank(name, origin, rank)
+  subroutine get_mem_type(name, origin, var_type)
+    character(len=*), intent(in) :: name
+    character(len=*), intent(in) :: origin
+    character(len=LENMEMTYPE), intent(out) :: var_type    
+    ! local
+    type(MemoryType), pointer :: mt
+    logical :: found
+        
+    mt => null()
+    var_type = 'UNKNOWN'
+    call get_from_memorylist(name, origin, mt, found)
+    if (found) then
+      var_type = mt%memtype
+    end if
+    
+  end subroutine get_mem_type
+  
+  subroutine get_mem_rank(name, origin, rank)
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
     integer(I4B), intent(out)    :: rank    
@@ -96,9 +115,9 @@ module MemoryManagerModule
       if(associated(mt%ats1d)) rank = 1      
     end if    
     
-  end subroutine get_var_rank 
+  end subroutine get_mem_rank 
     
-  subroutine get_var_size(name, origin, size)
+  subroutine get_mem_size(name, origin, size)
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: origin
     integer(I4B), intent(out)    :: size
@@ -119,7 +138,35 @@ module MemoryManagerModule
       end select 
     end if    
     
-  end subroutine get_var_size
+  end subroutine get_mem_size
+  
+  subroutine get_mem_shape(name, origin, mem_shape)
+    character(len=*), intent(in) :: name
+    character(len=*), intent(in) :: origin
+    integer(I4B), dimension(:), intent(out) :: mem_shape
+    ! local
+    type(MemoryType), pointer :: mt
+    logical :: found
+    
+    mt => null()
+    call get_from_memorylist(name, origin, mt, found)
+    if (found) then
+      if(associated(mt%logicalsclr)) mem_shape = shape(mt%logicalsclr) 
+      if(associated(mt%intsclr)) mem_shape = shape(mt%logicalsclr)
+      if(associated(mt%dblsclr)) mem_shape = shape(mt%dblsclr)
+      if(associated(mt%aint1d)) mem_shape = shape(mt%aint1d)
+      if(associated(mt%aint2d)) mem_shape = shape(mt%aint2d)
+      if(associated(mt%aint3d)) mem_shape = shape(mt%aint3d)
+      if(associated(mt%adbl1d)) mem_shape = shape(mt%adbl1d)
+      if(associated(mt%adbl2d)) mem_shape = shape(mt%adbl2d)
+      if(associated(mt%adbl3d)) mem_shape = shape(mt%adbl3d)
+      if(associated(mt%ats1d)) mem_shape = shape(mt%ats1d)
+    else
+      ! to communicate failure
+      mem_shape(1) = -1
+    end if    
+    
+  end subroutine get_mem_shape
   
   subroutine get_isize(name, origin, isize)
     character(len=*), intent(in) :: name

@@ -11,11 +11,13 @@ module MemoryTypeModule
     real(DP), pointer :: value => null()
   end type MemoryTSType
   
+  integer(I4B), public, parameter :: MAXMEMRANK = 3
+  integer(I4B), public, parameter :: LENMEMTYPE = 50
   
   type MemoryType
     character(len=LENVARNAME)                              :: name                   !name of the array
     character(len=LENORIGIN)                               :: origin                 !name of origin
-    character(len=50)                                      :: memtype                !type (INTEGER or DOUBLE)
+    character(len=LENMEMTYPE)                              :: memtype                !type (INTEGER or DOUBLE)
     integer(I4B)                                           :: id                     !id, not used
     integer(I4B)                                           :: nrealloc = 0           !number of times reallocated
     integer(I4B)                                           :: isize                  !size of the array

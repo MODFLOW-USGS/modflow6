@@ -153,7 +153,7 @@
 		<File RelativePath="..\src\Utilities\StringList.f90"/>
 		<File RelativePath="..\src\Utilities\Timer.f90"/>
 		<File RelativePath="..\src\Utilities\version.f90"/></Filter>
-		<File RelativePath="..\src\mf6lib.f90"/>
+		<File RelativePath="..\src\mf6core.f90"/>
 		<File RelativePath="..\src\mf6lists.f90"/>
 		<File RelativePath="..\src\SimulationCreate.f90"/></Filter></Files>
 	<Globals/></VisualStudioProject>

@@ -6,9 +6,7 @@ module mf6dll
   use ConstantsModule, only: LENORIGIN, LENVARNAME, LENMODELNAME, MAXCHARLEN
   implicit none
   
-  
-  ! Define global constants
-  
+  ! Define global constants  
   integer(c_int), BIND(C, name="MAXSTRLEN") :: MAXSTRLEN = MAXCHARLEN
   !DEC$ ATTRIBUTES DLLEXPORT :: MAXSTRLEN
   
@@ -90,7 +88,7 @@ module mf6dll
   ! Get memory use per array element, in bytes.
   function get_var_itemsize(c_var_name, var_size) result(bmi_status) bind(C, name="get_var_itemsize")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_var_itemsize
-    use MemoryManagerModule, only: get_var_size
+    use MemoryManagerModule, only: get_mem_size
     character (kind=c_char), intent(in) :: c_var_name(*)
     integer, intent(out) :: var_size
     integer(kind=c_int) :: bmi_status
@@ -106,7 +104,7 @@ module mf6dll
     var_name_only = var_name(idx+1:)
     
     bmi_status = BMI_SUCCESS
-    call get_var_size(var_name_only, origin, var_size)    
+    call get_mem_size(var_name_only, origin, var_size)    
     if (var_size == -1) bmi_status = BMI_FAILURE
         
   end function get_var_itemsize
@@ -114,7 +112,7 @@ module mf6dll
   ! Get size of the given variable, in bytes.
   function get_var_nbytes(c_var_name, var_nbytes) result(bmi_status) bind(C, name="get_var_nbytes")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_var_nbytes
-    use MemoryManagerModule, only: get_var_size, get_isize
+    use MemoryManagerModule, only: get_mem_size, get_isize
     character (kind=c_char), intent(in) :: c_var_name(*)
     integer, intent(out) :: var_nbytes
     integer(kind=c_int) :: bmi_status
@@ -130,7 +128,7 @@ module mf6dll
     var_name_only = var_name(idx+1:)
     
     bmi_status = BMI_SUCCESS
-    call get_var_size(var_name_only, origin, var_size)    
+    call get_mem_size(var_name_only, origin, var_size)    
     if (var_size == -1) bmi_status = BMI_FAILURE
     call get_isize(var_name_only, origin, isize)
     if (isize == -1) bmi_status = BMI_FAILURE
@@ -143,42 +141,19 @@ module mf6dll
   ! set the pointer to the array of the given double variable.
   function get_value_ptr_double(c_var_name, x) result(bmi_status) bind(C, name="get_value_ptr_double")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_value_ptr_double
-    use MemoryManagerModule, only: mem_setptr
-    character (kind=c_char), intent(in) :: c_var_name(*)    
+    use MemoryManagerModule, only: mem_setptr, get_mem_rank
+    character (kind=c_char), intent(in) :: c_var_name(*)
     type(c_ptr), intent(inout) :: x
     integer(kind=c_int) :: bmi_status
     ! local
     integer :: idx, i
     character(len=LENORIGIN) :: origin, var_name
     character(len=LENVARNAME) :: var_name_only
+    real(DP), pointer :: dblptr
     real(DP), dimension(:), pointer, contiguous :: arrayptr
-    
-    var_name = char_array_to_string(c_var_name, strlen(c_var_name))
-    
-    idx = index(var_name, '/', back=.true.)
-    origin = var_name(:idx-1)
-    var_name_only = var_name(idx+1:)
-    call mem_setptr(arrayptr, var_name_only, origin)
-    
-    ! set the C pointer to the internal array
-    x = c_loc(arrayptr)
-    bmi_status = BMI_SUCCESS
-    
-  end function get_value_ptr_double
-  
-  function get_value_ptr_int(c_var_name, x) result(bmi_status) bind(C, name="get_value_ptr_int")
-  !DEC$ ATTRIBUTES DLLEXPORT :: get_value_ptr_int
-    use MemoryManagerModule, only: mem_setptr, get_var_rank
-    character (kind=c_char), intent(in) :: c_var_name(*)    
-    type(c_ptr), intent(inout) :: x
-    integer(kind=c_int) :: bmi_status
-    ! local
-    integer :: idx, i
-    character(len=LENORIGIN) :: origin, var_name
-    character(len=LENVARNAME) :: var_name_only
+    real(DP), dimension(:,:), pointer, contiguous :: arrayptr2D
+    real(DP), dimension(:,:,:), pointer, contiguous :: arrayptr3D
     integer(I4B) :: rank
-    integer(I4B), dimension(:), pointer, contiguous :: arrayptr
-    integer(I4B), pointer :: scalarptr
     
     var_name = char_array_to_string(c_var_name, strlen(c_var_name))
     
@@ -187,25 +162,155 @@ module mf6dll
     var_name_only = var_name(idx+1:)
     
     rank = -1
-    call get_var_rank(var_name_only, origin, rank)
-    if (rank == -1 .or. rank > 1) then
-        bmi_status = BMI_FAILURE
-        return
-    end if
-    
+    call get_mem_rank(var_name_only, origin, rank)
     if (rank == 0) then
-      ! set the C pointer to the internal scalar
-      call mem_setptr(scalarptr, var_name_only, origin)      
-      x = c_loc(scalarptr)
-    else if (rank ==1) then    
-      ! set the C pointer to the internal array
+      call mem_setptr(dblptr, var_name_only, origin)
+      x = c_loc(dblptr)
+    else if (rank == 1) then
       call mem_setptr(arrayptr, var_name_only, origin)
       x = c_loc(arrayptr)
+    else if (rank == 2) then
+      call mem_setptr(arrayptr2D, var_name_only, origin)
+      x = c_loc(arrayptr2D)
+    else if (rank == 3) then
+      call mem_setptr(arrayptr2D, var_name_only, origin)
+      x = c_loc(arrayptr2D)
+    else
+      bmi_status = BMI_FAILURE
+      return
+    end if
+    bmi_status = BMI_SUCCESS    
+    
+  end function get_value_ptr_double
+  
+  function get_value_ptr_int(c_var_name, x) result(bmi_status) bind(C, name="get_value_ptr_int")
+  !DEC$ ATTRIBUTES DLLEXPORT :: get_value_ptr_int
+    use MemoryManagerModule, only: mem_setptr, get_mem_rank
+    character (kind=c_char), intent(in) :: c_var_name(*)    
+    type(c_ptr), intent(inout) :: x
+    integer(kind=c_int) :: bmi_status
+    ! local
+    integer :: idx, i
+    character(len=LENORIGIN) :: origin, var_name
+    character(len=LENVARNAME) :: var_name_only
+    integer(I4B) :: rank
+    integer(I4B), pointer :: scalarptr
+    integer(I4B), dimension(:), pointer, contiguous :: arrayptr
+    integer(I4B), dimension(:,:), pointer, contiguous :: arrayptr2D
+    integer(I4B), dimension(:,:,:), pointer, contiguous :: arrayptr3D
+    
+    var_name = char_array_to_string(c_var_name, strlen(c_var_name))
+    
+    idx = index(var_name, '/', back=.true.)
+    origin = var_name(:idx-1)
+    var_name_only = var_name(idx+1:)
+    
+    rank = -1
+    call get_mem_rank(var_name_only, origin, rank)
+        
+    if (rank == 0) then
+      call mem_setptr(scalarptr, var_name_only, origin)      
+      x = c_loc(scalarptr)
+    else if (rank == 1) then
+      call mem_setptr(arrayptr, var_name_only, origin)
+      x = c_loc(arrayptr)
+    else if (rank == 2) then
+      call mem_setptr(arrayptr, var_name_only, origin)
+      x = c_loc(arrayptr2D)
+    else if (rank == 3) then
+      call mem_setptr(arrayptr, var_name_only, origin)
+      x = c_loc(arrayptr3D)
+    else
+      bmi_status = BMI_FAILURE
+      return
     end if
     
     bmi_status = BMI_SUCCESS
     
   end function get_value_ptr_int
+  
+  function get_var_type(c_var_name, c_var_type) result(bmi_status) bind(C, name="get_var_type")
+  !DEC$ ATTRIBUTES DLLEXPORT :: get_var_type
+    use MemoryManagerModule, only: get_mem_type
+    use MemoryTypeModule, only: LENMEMTYPE
+    character (kind=c_char), intent(in) :: c_var_name(*)
+    character (kind=c_char), intent(out) :: c_var_type(MAXSTRLEN)
+    integer(kind=c_int) :: bmi_status    
+    ! local
+    integer :: var_size, isize, idx
+    character(len=LENORIGIN) :: origin, var_name
+    character(len=LENVARNAME) :: var_name_only
+    character(len=LENMEMTYPE) :: mem_type
+    
+    ! TODO_MJR: refactor this logic into convenience routine!!!
+    var_name = char_array_to_string(c_var_name, strlen(c_var_name))    
+    idx = index(var_name, '/', back=.true.)
+    origin = var_name(:idx-1)
+    var_name_only = var_name(idx+1:)
+    
+    bmi_status = BMI_SUCCESS
+    call get_mem_type(var_name_only, origin, mem_type)
+    c_var_type = string_to_char_array(trim(mem_type), len(trim(mem_type)))
+    
+  end function get_var_type
+  
+  function get_var_rank(c_var_name, c_var_rank) result(bmi_status) bind(C, name="get_var_rank")
+  !DEC$ ATTRIBUTES DLLEXPORT :: get_var_rank
+    use MemoryManagerModule, only: get_mem_rank
+    character (kind=c_char), intent(in) :: c_var_name(*)
+    integer(kind=c_int), intent(out) :: c_var_rank
+    integer(kind=c_int) :: bmi_status
+    ! local
+    integer :: idx
+    character(len=LENORIGIN) :: origin, var_name
+    character(len=LENVARNAME) :: var_name_only
+    
+    var_name = char_array_to_string(c_var_name, strlen(c_var_name))    
+    idx = index(var_name, '/', back=.true.)
+    origin = var_name(:idx-1)
+    var_name_only = var_name(idx+1:)
+    
+    call get_mem_rank(var_name_only, origin, c_var_rank)
+    if (c_var_rank == -1) then
+        bmi_status = BMI_FAILURE
+        return
+    end if
+    
+    bmi_status = BMI_SUCCESS
+    
+  end function get_var_rank
+  
+  ! TODO_MJR: this is no longer bmi as well...    
+  function get_var_shape(c_var_name, c_var_shape) result(bmi_status) bind(C, name="get_var_shape")
+  !DEC$ ATTRIBUTES DLLEXPORT :: get_var_shape
+    use MemoryTypeModule, only: MAXMEMRANK
+    use MemoryManagerModule, only: get_mem_shape
+    character (kind=c_char), intent(in) :: c_var_name(*)
+    integer(c_int), intent(inout) :: c_var_shape(MAXMEMRANK)
+    integer(kind=c_int) :: bmi_status
+    ! local
+    integer(I4B), dimension(MAXMEMRANK) :: var_shape
+    integer :: idx
+    character(len=LENORIGIN) :: origin, var_name
+    character(len=LENVARNAME) :: var_name_only
+    
+    var_name = char_array_to_string(c_var_name, strlen(c_var_name))    
+    idx = index(var_name, '/', back=.true.)
+    origin = var_name(:idx-1)
+    var_name_only = var_name(idx+1:)
+    
+    var_shape = 0
+    call get_mem_shape(var_name_only, origin, var_shape)
+    if (var_shape(1) == -1) then
+      bmi_status = BMI_FAILURE
+      return
+    end if
+    
+    c_var_shape = var_shape
+    bmi_status = BMI_SUCCESS
+  end function get_var_shape
+  
+  
   
   ! Get the grid identifier for the given variable.
   function get_var_grid(c_var_name, var_grid) result(bmi_status) bind(C, name="get_var_grid")
@@ -239,20 +344,33 @@ module mf6dll
   
   ! Get the grid type as a string.
   function get_grid_type(grid_id, grid_type) result(bmi_status) bind(C, name="get_grid_type")
-  !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_type
-    use ListsModule, only: basemodellist
-    use NumericalModelModule, only: NumericalModelType, GetNumericalModelFromList
+  !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_type  
     integer(kind=c_int), intent(in) :: grid_id
     character(kind=c_char), intent(out) :: grid_type(MAXSTRLEN)
     integer(kind=c_int) :: bmi_status
     ! local
     character(len=MAXSTRLEN) :: grid_type_f
     character(len=LENMODELNAME) :: model_name
-    character(len=LENORIGIN) :: var_name
-    integer :: i
-    class(NumericalModelType), pointer :: numericalModel
     
     model_name = get_model_name(grid_id) 
+    bmi_status = get_grid_type_model(model_name, grid_type_f)
+    if (bmi_status == BMI_FAILURE) return
+    
+    grid_type = string_to_char_array(trim(grid_type_f), len(trim(grid_type_f)))
+    
+  end function get_grid_type
+  
+  ! internal helper function to return the grid type for a 
+  ! named model as a fortran string following BMI convention
+  function get_grid_type_model(model_name, grid_type_f) result(bmi_status)
+    use ListsModule, only: basemodellist
+    use NumericalModelModule, only: NumericalModelType, GetNumericalModelFromList
+    character(len=LENMODELNAME) :: model_name
+    character(len=MAXSTRLEN) :: grid_type_f
+    integer(kind=c_int) :: bmi_status
+    ! local
+    integer :: i    
+    class(NumericalModelType), pointer :: numericalModel
     
     do i = 1,basemodellist%Count()
       numericalModel => GetNumericalModelFromList(basemodellist, i)
@@ -269,10 +387,9 @@ module mf6dll
       bmi_status = BMI_FAILURE
       return
     end if
-
-    grid_type = string_to_char_array(trim(grid_type_f), len(trim(grid_type_f)))
     bmi_status = BMI_SUCCESS
-  end function get_grid_type
+    
+  end function get_grid_type_model
   
   !TODO_JH: Currently only works for rectilinear grids
   ! Get number of dimensions of the computational grid.
@@ -457,7 +574,6 @@ module mf6dll
     bmi_status = BMI_SUCCESS
   end function get_grid_y
   
-  
 
   ! Get a copy of values (flattened!) of the given double variable.
   function get_value_double(c_var_name, x, nx) result(bmi_status) bind(C, name="get_value_double")
@@ -495,16 +611,10 @@ module mf6dll
     character(len=LENMODELNAME) :: model_name
     integer :: status
     integer(I4B), pointer :: nvert_ptr
-    character(kind=c_char) :: grid_type(MAXSTRLEN)
-    character(len=MAXSTRLEN) :: grid_type_f
     
     ! make sure function is only used for unstructured grids
-    status = get_grid_type(grid_id, grid_type)
-    grid_type_f = char_array_to_string(grid_type, strlen(grid_type))
-    if (grid_type_f /= "unstructured") then
-      bmi_status = BMI_FAILURE
-      return
-    end if    
+    bmi_status = BMI_FAILURE
+    if (.not. confirm_grid_type(grid_id, "unstructured")) return   
     
     model_name = get_model_name(grid_id)
     call mem_setptr(nvert_ptr, "NVERT", trim(model_name) // " DIS")
@@ -525,17 +635,11 @@ module mf6dll
     character(len=LENMODELNAME) :: model_name
     integer :: i
     integer :: status
-    character(kind=c_char) :: grid_type(MAXSTRLEN)
-    character(len=MAXSTRLEN) :: grid_type_f
     class(NumericalModelType), pointer :: numericalModel
     
     ! make sure function is only used for unstructured grids
-    status = get_grid_type(grid_id, grid_type)
-    grid_type_f = char_array_to_string(grid_type, strlen(grid_type))
-    if (grid_type_f /= "unstructured") then
-      bmi_status = BMI_FAILURE
-      return
-    end if
+    bmi_status = BMI_FAILURE
+    if (.not. confirm_grid_type(grid_id, "unstructured")) return
     
     model_name = get_model_name(grid_id)    
     do i = 1,basemodellist%Count()
@@ -557,17 +661,11 @@ module mf6dll
     ! local
     integer :: status
     character(len=LENMODELNAME) :: model_name
-    character(kind=c_char) :: grid_type(MAXSTRLEN)
     integer, dimension(:), pointer, contiguous :: javert_ptr
-    character(len=MAXSTRLEN) :: grid_type_f
     
     ! make sure function is only used for unstructured grids
-    status = get_grid_type(grid_id, grid_type)
-    grid_type_f = char_array_to_string(grid_type, strlen(grid_type))
-    if (grid_type_f /= "unstructured") then
-      bmi_status = BMI_FAILURE
-      return
-    end if
+    bmi_status = BMI_FAILURE
+    if (.not. confirm_grid_type(grid_id, "unstructured")) return
     
     model_name = get_model_name(grid_id)
     call mem_setptr(javert_ptr, "JAVERT", trim(model_name) // " DIS")
@@ -586,20 +684,15 @@ module mf6dll
     integer :: i
     integer :: status
     character(len=LENMODELNAME) :: model_name
-    character(kind=c_char) :: grid_type(MAXSTRLEN)
     integer, dimension(:), pointer, contiguous :: iavert_ptr
-    character(len=MAXSTRLEN) :: grid_type_f
     integer, dimension(:), pointer, contiguous :: array_ptr
-    ! TODO_MJR: this array will not work for multiple models, or multiple calls
+    ! TODO_MJR: this array will not work for multiple models, or multiple calls,
+    ! should we let the outside manage the memory?
     integer, dimension(:), target, allocatable, save :: array
     
     ! make sure function is only used for unstructured grids
-    status = get_grid_type(grid_id, grid_type)
-    grid_type_f = char_array_to_string(grid_type, strlen(grid_type))
-    if (grid_type_f /= "unstructured") then
-      bmi_status = BMI_FAILURE
-      return
-    end if
+    bmi_status = BMI_FAILURE
+    if (.not. confirm_grid_type(grid_id, "unstructured")) return
     
     model_name = get_model_name(grid_id)
     call mem_setptr(iavert_ptr, "IAVERT", trim(model_name) // " DIS")
@@ -615,6 +708,28 @@ module mf6dll
     bmi_status = BMI_SUCCESS
   end function get_grid_nodes_per_face
   
+  ! Helper function to check the grid, not all bmi routines are implemented
+  ! for all types of discretizations
+  function confirm_grid_type(grid_id, expected_type) result(is_match)
+    integer(kind=c_int), intent(in) :: grid_id
+    character(kind=c_char), intent(in) :: expected_type(MAXSTRLEN) ! this is a C-style string
+    logical :: is_match
+    ! local
+    integer :: status
+    character(len=LENMODELNAME) :: model_name
+    character(len=MAXSTRLEN) :: expected_type_f ! this is a fortran style string
+    character(len=MAXSTRLEN) :: grid_type_f
+    
+    is_match = .false.
+     
+    model_name = get_model_name(grid_id)
+    status = get_grid_type_model(model_name, grid_type_f) 
+    
+    ! careful comparison:
+    expected_type_f = char_array_to_string(expected_type, strlen(expected_type))
+    if (expected_type_f == grid_type_f) is_match = .true.
+    
+  end function confirm_grid_type
   
   integer(c_int) pure function strlen(char_array)
     character(c_char), intent(in) :: char_array(LENORIGIN)
