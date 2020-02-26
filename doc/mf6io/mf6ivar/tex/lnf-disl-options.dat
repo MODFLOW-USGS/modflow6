@@ -1,7 +1,0 @@
-BEGIN OPTIONS
-  [LENGTH_UNITS <length_units>]
-  [NOGRB]
-  [XORIGIN <xorigin>]
-  [YORIGIN <yorigin>]
-  [ANGROT <angrot>]
-END OPTIONS

@@ -1,5 +1,0 @@
-BEGIN PACKAGEDATA
-  <cellid(ncelldim)> <npoint> <xcoords(npoint)> <zcoords(npoint)>
-  <cellid(ncelldim)> <npoint> <xcoords(npoint)> <zcoords(npoint)>
-  ...
-END PACKAGEDATA

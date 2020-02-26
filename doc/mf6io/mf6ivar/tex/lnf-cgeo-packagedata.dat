@@ -1,5 +1,0 @@
-BEGIN PACKAGEDATA
-  <cellid(ncelldim)> <radius>
-  <cellid(ncelldim)> <radius>
-  ...
-END PACKAGEDATA

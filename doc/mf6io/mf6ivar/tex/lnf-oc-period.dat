@@ -1,4 +1,0 @@
-BEGIN PERIOD <iper>
-  [SAVE <rtype> <ocsetting>]
-  [PRINT <rtype> <ocsetting>]
-END PERIOD
