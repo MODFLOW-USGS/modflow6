@@ -19,7 +19,9 @@
 
 \item \texttt{npoint}---is the number of vertices required to define the cell.  There may be a different number of vertices for each cell.
 
-\item \texttt{xzpairs}---is an array of double precision values containing NPOINT pairs of x and z data to define the geometry.  X and Z data can be specified as absolute or relative values. XZ pairs must be listed in the order that defines the line representing the cross-section. If the first and last XZ pair are equal, the n-point cross-section is closed.
+\item \texttt{xcoords}---is an array of double precision values containing NPOINT x-coordinate data to define the geometry.  XCOORDS data can be specified as absolute or relative values. XCOORDS must be listed in the order that defines the line representing the cross-section. If the first and last XCOORD AND ZCOORD pair are equal, the n-point cross-section is closed.
+
+\item \texttt{zcoords}---is an array of double precision values containing NPOINT z-coordinate data to define the geometry.  ZCOORDS data can be specified as absolute or relative values. ZCOORDS must be listed in the order that defines the line representing the cross-section. If the first and last XCOORD AND ZCOORD pair are equal, the n-point cross-section is closed.
 
 \end{description}
 
