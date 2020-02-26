@@ -241,7 +241,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule, only: kstp, kper, delt
+    use TdisModule, only: delt
     use ConstantsModule, only: LENBOUNDNAME
     use BudgetModule, only: BudgetType
     ! -- dummy
@@ -257,9 +257,11 @@ contains
     integer(I4B), dimension(:), optional, intent(in) :: imap
     integer(I4B), optional, intent(in) :: iadv
     ! -- local
+    character(len=20) :: nodestr
+    integer(I4B) :: nodeu
     integer(I4B) :: i, node, ibinun, n2
     real(DP) :: rrate, chin, chout, q
-    integer(I4B) :: ibdlbl, naux, ipos
+    integer(I4B) :: naux, ipos
     ! -- for observations
     character(len=LENBOUNDNAME) :: bname
     ! -- formats
@@ -267,9 +269,9 @@ contains
       "(1X,/1X,A,'   PERIOD ',I0,'   STEP ',I0)"
 ! ------------------------------------------------------------------------------
     !
+    ! -- initialize local variables
     chin = DZERO
     chout = DZERO
-    ibdlbl = 0
     !
     ! -- Set unit number for binary output
     if(this%ipakcb < 0) then
@@ -291,6 +293,11 @@ contains
     !
     ! -- If no boundaries, skip flow calculations.
     if(this%nbound > 0) then
+      !
+      ! -- reset size of table
+      if (this%iprflow /= 0) then
+        call this%outputtab%set_maxbound(this%nbound)
+      end if
       !
       ! -- Loop through each boundary calculating flow.
       do i = 1, this%nbound
@@ -327,11 +334,11 @@ contains
         ! -- Print the individual rates if requested(this%iprflow<0)
         if (ibudfl /= 0) then
           if(this%iprflow /= 0) then
-                if(ibdlbl == 0) write(this%iout,fmttkk)                        &
-                  this%text // ' (' // trim(this%name) // ')', kper, kstp
-            call this%dis%print_list_entry(i, node, rrate, this%iout,          &
-                    bname)
-            ibdlbl=1
+            !
+            ! -- set nodestr and write outputtab table
+            nodeu = this%dis%get_nodeuser(node)
+            call this%dis%nodeu_to_string(nodeu, nodestr)
+            call this%outputtab%print_list_entry(i, nodestr, rrate, bname)
           end if
         end if
         !
