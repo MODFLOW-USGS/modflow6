@@ -1,0 +1,5 @@
+BEGIN CELL1D
+  <icell1d> <fdc> <ncvert> <icvert(ncvert)>
+  <icell1d> <fdc> <ncvert> <icvert(ncvert)>
+  ...
+END CELL1D

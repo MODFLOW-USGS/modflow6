@@ -1,0 +1,4 @@
+BEGIN GRIDDATA
+  [IDOMAIN
+    <idomain(nodes)> -- READARRAY]
+END GRIDDATA

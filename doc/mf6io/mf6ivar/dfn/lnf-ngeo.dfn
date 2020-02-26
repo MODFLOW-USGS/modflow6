@@ -1,0 +1,71 @@
+# --------------------- lnf rgeo options ---------------------
+
+block options
+name print_input
+type keyword
+reader urword
+optional true
+longname print input to listing file
+description REPLACE print_input {'{#1}': 'n-point cross-section geometry'}
+
+# --------------------- lnf ngeo dimensions ---------------------
+
+block dimensions
+name ngeo
+type integer
+reader urword
+optional false
+longname number of n-point cross-section geometry cells
+description is the number of n-point cross-section geometry cells.
+
+# --------------------- gwf ngeo packagedata ---------------------
+
+block packagedata
+name geometry_data
+type recarray cellid npoint xcoords zcoords
+reader urword
+optional false
+longname n-point cross-section geometry data
+description
+
+block packagedata
+name cellid
+type integer
+shape (ncelldim)
+tagged false
+in_record true
+reader urword
+longname cell identifier
+description REPLACE cellid {}
+
+block packagedata
+name npoint
+type integer
+in_record true
+tagged false
+reader urword
+optional false
+longname number of cell vertices
+description is the number of vertices required to define the cell.  There may be a different number of vertices for each cell.
+
+block packagedata
+name xcoords
+type double precision
+shape (npoint)
+in_record true
+tagged false
+reader urword
+optional false
+longname x-coordinates
+description is an array of double precision values containing NPOINT x-coordinate data to define the geometry.  XCOORDS data can be specified as absolute or relative values. XCOORDS must be listed in the order that defines the line representing the cross-section. If the first and last XCOORD AND ZCOORD pair are equal, the n-point cross-section is closed.
+
+block packagedata
+name zcoords
+type double precision
+shape (npoint)
+in_record true
+tagged false
+reader urword
+optional false
+longname z-coordinates
+description is an array of double precision values containing NPOINT z-coordinate data to define the geometry.  ZCOORDS data can be specified as absolute or relative values. ZCOORDS must be listed in the order that defines the line representing the cross-section. If the first and last XCOORD AND ZCOORD pair are equal, the n-point cross-section is closed.
