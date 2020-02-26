@@ -20,6 +20,7 @@ module BndModule
   use PackageMoverModule,           only: PackageMoverType
   use BaseDisModule,                only: DisBaseType
   use BlockParserModule,            only: BlockParserType
+  use TableModule, only: TableType
 
   implicit none
 
@@ -77,6 +78,10 @@ module BndModule
     real(DP), dimension(:), pointer, contiguous :: flowja => null()              !intercell flows
     integer(I4B), dimension(:), pointer, contiguous :: icelltype => null()       !pointer to icelltype array in NPF
     character(len=10) :: ictorigin  = ''                                         !package name for icelltype (NPF for GWF)
+    !
+    ! -- input data table object
+    type(TableType), pointer :: inputtab => null()
+
   contains
     procedure :: bnd_df
     procedure :: bnd_ac
@@ -823,6 +828,13 @@ module BndModule
       deallocate(this%pakmvrobj)
       nullify(this%pakmvrobj)
     endif
+    !
+    ! -- input table object
+    if (associated(this%inputtab)) then
+      call this%inputtab%table_da()
+      deallocate(this%inputtab)
+      nullify(this%inputtab)
+    end if
     !
     ! -- Deallocate scalars
     call mem_deallocate(this%ibcnum)

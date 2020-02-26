@@ -27,7 +27,9 @@ module GwtLktModule
 
   use KindModule, only: DP, I4B
   use ConstantsModule, only: DZERO, DONE, DHALF, DEP20, LENFTYPE, LINELENGTH,  &
-                             LENBOUNDNAME, NAMEDBOUNDFLAG, DNODATA
+                             LENBOUNDNAME, NAMEDBOUNDFLAG, DNODATA,            &
+                             TABLEFT, TABCENTER, TABRIGHT,                     &
+                             TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
   use SimModule, only: store_error, count_errors, store_error_unit, ustop
   use BndModule, only: BndType, GetBndFromList
   use GwtFmiModule, only: GwtFmiType
@@ -1243,10 +1245,13 @@ module GwtLktModule
       iloc = 1
       line = ''
       if (this%inamedbound==1) then
-        call UWWORD(line, iloc, 16, 1, 'lake', n, q, left=.TRUE.)
+        call UWWORD(line, iloc, 16, TABUCSTRING,                                 &
+                    'lake', n, q, ALIGNMENT=TABLEFT)
       end if
-      call UWWORD(line, iloc, 6, 1, 'lake', n, q, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 11, 1, 'lake', n, q, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 6, TABUCSTRING,                                    &
+                  'lake', n, q, ALIGNMENT=TABCENTER, SEP=' ')
+      call UWWORD(line, iloc, 11, TABUCSTRING,                                   &
+                  'lake', n, q, ALIGNMENT=TABCENTER)
       ! -- create line separator
       linesep = repeat('-', iloc)
       ! -- write first line
@@ -1256,10 +1261,13 @@ module GwtLktModule
       iloc = 1
       line = ''
       if (this%inamedbound==1) then
-        call UWWORD(line, iloc, 16, 1, 'name', n, q, left=.TRUE.)
+        call UWWORD(line, iloc, 16, TABUCSTRING,                                 &
+                    'name', n, q, ALIGNMENT=TABLEFT)
       end if
-      call UWWORD(line, iloc, 6, 1, 'no.', n, q, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 11, 1, 'conc', n, q, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 6, TABUCSTRING,                                    &
+                  'no.', n, q, ALIGNMENT=TABCENTER, SEP=' ')
+      call UWWORD(line, iloc, 11, TABUCSTRING,                                   &
+                  'conc', n, q, ALIGNMENT=TABCENTER)
       ! -- write second line
       write(iout,'(1X,A)') line(1:iloc)
       write(iout,'(1X,A)') linesep(1:iloc)
@@ -1268,13 +1276,20 @@ module GwtLktModule
         iloc = 1
         line = ''
         if (this%inamedbound==1) then
-          call UWWORD(line, iloc, 16, 1, this%lakename(n), n, q, left=.TRUE.)
+          call UWWORD(line, iloc, 16, TABUCSTRING,                               &
+                      this%lakename(n), n, q, ALIGNMENT=TABLEFT)
         end if
-        call UWWORD(line, iloc, 6, 2, text, n, q)
-        call UWWORD(line, iloc, 11, 3, text, n, this%xnewpak(n))
+        call UWWORD(line, iloc, 6, TABINTEGER, text, n, q, SEP=' ')
+        call UWWORD(line, iloc, 11, TABREAL, text, n, this %xnewpak(n))
         write(iout, '(1X,A)') line(1:iloc)
       end do
     end if
+    !
+    ! -- Output lake flow table
+    if (ibudfl /= 0 .and. this%iprflow /= 0) then
+      call this%budobj%write_flowtable(this%dis)
+    end if
+    !
     !
     ! -- Output lake budget
     call this%budobj%write_budtable(kstp, kper, iout)
@@ -2563,6 +2578,11 @@ module GwtLktModule
                                                this%name, &
                                                maxlist, .false., .false., &
                                                naux, this%auxname)
+    end if
+    !
+    ! -- if lkt flow for each reach are written to the listing file
+    if (this%iprflow /= 0) then
+      call this%budobj%flowtable_df(this%iout)
     end if
     !
     ! -- return

@@ -26,7 +26,9 @@ module GwtSftModule
 
   use KindModule, only: DP, I4B
   use ConstantsModule, only: DZERO, DONE, DHALF, DEP20, LENFTYPE, LINELENGTH,  &
-                             LENBOUNDNAME, NAMEDBOUNDFLAG, DNODATA
+                             LENBOUNDNAME, NAMEDBOUNDFLAG, DNODATA,            &
+                             TABLEFT, TABCENTER, TABRIGHT,                     &
+                             TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
   use SimModule, only: store_error, count_errors, store_error_unit, ustop
   use BndModule, only: BndType, GetBndFromList
   use GwtFmiModule, only: GwtFmiType
@@ -1212,13 +1214,17 @@ module GwtSftModule
     ! -- write reach concentration
     if (ihedfl /= 0 .and. this%iprconc /= 0) then
       write (iout, fmthdr) 'REACH (', trim(this%name), ') CONCENTRATION', kper, kstp
+      
       iloc = 1
       line = ''
       if (this%inamedbound==1) then
-        call UWWORD(line, iloc, 16, 1, 'reach', n, q, left=.TRUE.)
+        call UWWORD(line, iloc, 16, TABUCSTRING,                                 &
+                    'lake', n, q, ALIGNMENT=TABLEFT)
       end if
-      call UWWORD(line, iloc, 6, 1, 'reach', n, q, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 11, 1, 'reach', n, q, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 6, TABUCSTRING,                                    &
+                  'lake', n, q, ALIGNMENT=TABCENTER, SEP=' ')
+      call UWWORD(line, iloc, 11, TABUCSTRING,                                   &
+                  'lake', n, q, ALIGNMENT=TABCENTER)
       ! -- create line separator
       linesep = repeat('-', iloc)
       ! -- write first line
@@ -1228,10 +1234,13 @@ module GwtSftModule
       iloc = 1
       line = ''
       if (this%inamedbound==1) then
-        call UWWORD(line, iloc, 16, 1, 'name', n, q, left=.TRUE.)
+        call UWWORD(line, iloc, 16, TABUCSTRING,                                 &
+                    'name', n, q, ALIGNMENT=TABLEFT)
       end if
-      call UWWORD(line, iloc, 6, 1, 'no.', n, q, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 11, 1, 'conc', n, q, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 6, TABUCSTRING,                                    &
+                  'no.', n, q, ALIGNMENT=TABCENTER, SEP=' ')
+      call UWWORD(line, iloc, 11, TABUCSTRING,                                   &
+                  'conc', n, q, ALIGNMENT=TABCENTER)
       ! -- write second line
       write(iout,'(1X,A)') line(1:iloc)
       write(iout,'(1X,A)') linesep(1:iloc)
@@ -1240,12 +1249,56 @@ module GwtSftModule
         iloc = 1
         line = ''
         if (this%inamedbound==1) then
-          call UWWORD(line, iloc, 16, 1, this%streamname(n), n, q, left=.TRUE.)
+          call UWWORD(line, iloc, 16, TABUCSTRING,                               &
+                      this%streamname(n), n, q, ALIGNMENT=TABLEFT)
         end if
-        call UWWORD(line, iloc, 6, 2, text, n, q)
-        call UWWORD(line, iloc, 11, 3, text, n, this%xnewpak(n))
+        call UWWORD(line, iloc, 6, TABINTEGER, text, n, q, SEP=' ')
+        call UWWORD(line, iloc, 11, TABREAL, text, n, this %xnewpak(n))
         write(iout, '(1X,A)') line(1:iloc)
       end do
+    end if      
+      
+      
+      
+    !  iloc = 1
+    !  line = ''
+    !  if (this%inamedbound==1) then
+    !    call UWWORD(line, iloc, 16, 1, 'reach', n, q, left=.TRUE.)
+    !  end if
+    !  call UWWORD(line, iloc, 6, 1, 'reach', n, q, CENTER=.TRUE.)
+    !  call UWWORD(line, iloc, 11, 1, 'reach', n, q, CENTER=.TRUE.)
+    !  ! -- create line separator
+    !  linesep = repeat('-', iloc)
+    !  ! -- write first line
+    !  write(iout,'(1X,A)') linesep(1:iloc)
+    !  write(iout,'(1X,A)') line(1:iloc)
+    !  ! -- create second header line
+    !  iloc = 1
+    !  line = ''
+    !  if (this%inamedbound==1) then
+    !    call UWWORD(line, iloc, 16, 1, 'name', n, q, left=.TRUE.)
+    !  end if
+    !  call UWWORD(line, iloc, 6, 1, 'no.', n, q, CENTER=.TRUE.)
+    !  call UWWORD(line, iloc, 11, 1, 'conc', n, q, CENTER=.TRUE.)
+    !  ! -- write second line
+    !  write(iout,'(1X,A)') line(1:iloc)
+    !  write(iout,'(1X,A)') linesep(1:iloc)
+    !  ! -- write data
+    !  do n = 1, this%nstrm
+    !    iloc = 1
+    !    line = ''
+    !    if (this%inamedbound==1) then
+    !      call UWWORD(line, iloc, 16, 1, this%streamname(n), n, q, left=.TRUE.)
+    !    end if
+    !    call UWWORD(line, iloc, 6, 2, text, n, q)
+    !    call UWWORD(line, iloc, 11, 3, text, n, this%xnewpak(n))
+    !    write(iout, '(1X,A)') line(1:iloc)
+    !  end do
+    !end if
+    !
+    ! -- Output sfr flow table
+    if (ibudfl /= 0 .and. this%iprflow /= 0) then
+      call this%budobj%write_flowtable(this%dis)
     end if
     !
     ! -- Output reach budget
@@ -2474,6 +2527,11 @@ module GwtSftModule
                                                this%name, &
                                                maxlist, .false., .false., &
                                                naux, this%auxname)
+    end if
+    !
+    ! -- if sft flow for each reach are written to the listing file
+    if (this%iprflow /= 0) then
+      call this%budobj%flowtable_df(this%iout, cellids='GWF')
     end if
     !
     ! -- return
