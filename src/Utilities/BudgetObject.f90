@@ -368,12 +368,17 @@ module BudgetObjectModule
         flowtype = this%budterm(idx)%get_flowtype()
         nlist = this%budterm(idx)%get_nlist()
         !
-        ! -- iterate over the enteries in the flowtype
+        ! -- iterate over the entries in the flowtype.  If id1 is not ordered
+        !    then need to look through the entire list each time
         colterm: do i = this%istart(j), nlist
           id1 = this%budterm(idx)%get_id1(i)
-          if(id1 > icv) then
-            this%istart(j) = i
-            exit colterm
+          if (this%budterm(idx)%ordered_id1) then
+            if(id1 > icv) then
+              this%istart(j) = i
+              exit colterm
+            end if
+          else
+            if (id1 /= icv) cycle colterm
           end if
           v = this%budterm(idx)%get_flow(i)
           if (trim(adjustl(flowtype)) == 'FLOW-JA-FACE') then
