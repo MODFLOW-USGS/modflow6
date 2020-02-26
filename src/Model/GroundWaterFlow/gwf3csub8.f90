@@ -5,7 +5,9 @@ module GwfCsubModule
                              DGRAVITY, DTEN, DHUNDRED, DNODATA, DHNOFLO,        &
                              LENFTYPE, LENPACKAGENAME,                          &
                              LINELENGTH, LENBOUNDNAME, NAMEDBOUNDFLAG,          &
-                             LENBUDTXT, LENAUXNAME, LENORIGIN
+                             LENBUDTXT, LENAUXNAME, LENORIGIN,                  &
+                             TABLEFT, TABCENTER, TABRIGHT,                      &
+                             TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
   use GenericUtilities, only: is_same
   use SmoothingModule,        only: sQuadraticSaturation,                       &
                                     sQuadraticSaturationDerivative
@@ -1228,15 +1230,24 @@ contains
         trim(adjustl(msg))
       iloc = 1
       line = ''
-      call UWWORD(line, iloc, 10, 1, 'interbed', n, rval, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 10, 1, 'interbed', n, rval, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 20, 1, 'interbed', n, rval, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 16, 1, 'initial', n, rval, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 16, 1, 'final', n, rval, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 16, 1, 'total', n, rval, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 16, 1, 'final', n, rval, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 16, 1, 'percent', n, rval, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 10, 1, '', n, rval, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 10, TABUCSTRING,                                   &
+                  'interbed', n, rval, ALIGNMENT=TABCENTER)
+      call UWWORD(line, iloc, 10, TABUCSTRING,                                   &
+                  'interbed', n, rval, ALIGNMENT=TABCENTER)
+      call UWWORD(line, iloc, 20, TABUCSTRING,                                   &
+                  'interbed', n, rval, ALIGNMENT=TABCENTER)
+      call UWWORD(line, iloc, 16, TABUCSTRING,                                   &
+                  'initial', n, rval, ALIGNMENT=TABCENTER)
+      call UWWORD(line, iloc, 16, TABUCSTRING,                                   &
+                  'final', n, rval, ALIGNMENT=TABCENTER)
+      call UWWORD(line, iloc, 16, TABUCSTRING,                                   &
+                  'total', n, rval, ALIGNMENT=TABCENTER)
+      call UWWORD(line, iloc, 16, TABUCSTRING,                                   &
+                  'final', n, rval, ALIGNMENT=TABCENTER)
+      call UWWORD(line, iloc, 16, TABUCSTRING,                                   &
+                  'percent', n, rval, ALIGNMENT=TABCENTER)
+      call UWWORD(line, iloc, 10, TABUCSTRING,                                   &
+                  '', n, rval, ALIGNMENT=TABCENTER)
       ! -- create line separator
       linesep = repeat('-', iloc)
       ! -- write first line
@@ -1245,15 +1256,24 @@ contains
       ! -- create second header line
       iloc = 1
       line = ''
-      call UWWORD(line, iloc, 10, 1, 'number', n, rval, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 10, 1, 'type', n, rval, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 20, 1, 'location', n, rval, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 16, 1, 'thickness', n, rval, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 16, 1, 'thickness', n, rval, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 16, 1, 'compaction', n, rval, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 16, 1, 'strain', n, rval, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 16, 1, 'compaction', n, rval, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 10, 1, 'flag', n, rval, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 10, TABUCSTRING,                                   &
+                  'number', n, rval, ALIGNMENT=TABCENTER)
+      call UWWORD(line, iloc, 10, TABUCSTRING,                                   &
+                  'type', n, rval, ALIGNMENT=TABCENTER)
+      call UWWORD(line, iloc, 20, TABUCSTRING,                                   &
+                  'location', n, rval, ALIGNMENT=TABCENTER)
+      call UWWORD(line, iloc, 16, TABUCSTRING,                                   &
+                  'thickness', n, rval, ALIGNMENT=TABCENTER)
+      call UWWORD(line, iloc, 16, TABUCSTRING,                                   &
+                  'thickness', n, rval, ALIGNMENT=TABCENTER)
+      call UWWORD(line, iloc, 16, TABUCSTRING,                                   &
+                  'compaction', n, rval, ALIGNMENT=TABCENTER)
+      call UWWORD(line, iloc, 16, TABUCSTRING,                                   &
+                  'strain', n, rval, ALIGNMENT=TABCENTER)
+      call UWWORD(line, iloc, 16, TABUCSTRING,                                   &
+                  'compaction', n, rval, ALIGNMENT=TABCENTER)
+      call UWWORD(line, iloc, 10, TABUCSTRING,                                   &
+                  'flag', n, rval, ALIGNMENT=TABCENTER)
       ! -- write second line
       write(this%iout,'(1X,A)') line(1:iloc)
       write(this%iout,'(1X,A)') linesep(1:iloc)
@@ -1283,15 +1303,16 @@ contains
           call this%dis%noder_to_string(node, cellid)
           iloc = 1
           line = ''
-          call UWWORD(line, iloc, 10, 2, text, ib, rval)
-          call UWWORD(line, iloc, 10, 1, ctype, n, rval)
-          call UWWORD(line, iloc, 20, 1, cellid, n, rval, CENTER=.TRUE.)
-          call UWWORD(line, iloc, 16, 3, text, n, b0)
-          call UWWORD(line, iloc, 16, 3, text, n, b1)
-          call UWWORD(line, iloc, 16, 3, text, n, this%tcomp(ib))
-          call UWWORD(line, iloc, 16, 3, text, n, strain)
-          call UWWORD(line, iloc, 16, 3, text, n, pctcomp)
-          call UWWORD(line, iloc, 10, 1, cflag, ib, rval)
+          call UWWORD(line, iloc, 10, TABINTEGER, text, ib, rval)
+          call UWWORD(line, iloc, 10, TABUCSTRING, ctype, n, rval)
+          call UWWORD(line, iloc, 20, TABUCSTRING,                               &
+                      cellid, n, rval, ALIGNMENT=TABCENTER)
+          call UWWORD(line, iloc, 16, TABREAL, text, n, b0)
+          call UWWORD(line, iloc, 16, TABREAL, text, n, b1)
+          call UWWORD(line, iloc, 16, TABREAL, text, n, this%tcomp(ib))
+          call UWWORD(line, iloc, 16, TABREAL, text, n, strain)
+          call UWWORD(line, iloc, 16, TABREAL, text, n, pctcomp)
+          call UWWORD(line, iloc, 10, TABUCSTRING, cflag, ib, rval)
           write(this%iout, '(1X,A)') line(1:iloc)
         end do
         write(this%iout, '(/1X,A,1X,I0,1X,A,1X,I0,1X,A,/1X,A,/1X,A)') &
@@ -1308,14 +1329,22 @@ contains
       if (this%istrainib /= 0) then
         iloc = 1
         line = ''
-        call UWWORD(line, iloc, 20, 1, 'interbed_number', n, rval, SEP=',')
-        call UWWORD(line, iloc, 20, 1, 'interbed_type', n, rval, SEP=',')
-        call UWWORD(line, iloc, 22, 1, 'cellid', n, rval, SEP=',')
-        call UWWORD(line, iloc, 20, 1, 'initial_thickness', n, rval, SEP=',')
-        call UWWORD(line, iloc, 20, 1, 'final_thickness', n, rval, SEP=',')
-        call UWWORD(line, iloc, 20, 1, 'total_compaction', n, rval, SEP=',')
-        call UWWORD(line, iloc, 20, 1, 'total_strain', n, rval, SEP=',')
-        call UWWORD(line, iloc, 20, 1, 'percent_compaction', n, rval)
+        call UWWORD(line, iloc, 20, TABUCSTRING,                                &
+                    'interbed_number', n, rval, SEP=',')
+        call UWWORD(line, iloc, 20, TABUCSTRING,                                &
+                    'interbed_type', n, rval, SEP=',')
+        call UWWORD(line, iloc, 22, TABUCSTRING,                                &
+                    'cellid', n, rval, SEP=',')
+        call UWWORD(line, iloc, 20, TABUCSTRING,                                &
+                    'initial_thickness', n, rval, SEP=',')
+        call UWWORD(line, iloc, 20, TABUCSTRING,                                &
+                    'final_thickness', n, rval, SEP=',')
+        call UWWORD(line, iloc, 20, TABUCSTRING,                                &
+                    'total_compaction', n, rval, SEP=',')
+        call UWWORD(line, iloc, 20, TABUCSTRING,                                &
+                    'total_strain', n, rval, SEP=',')
+        call UWWORD(line, iloc, 20, TABUCSTRING,                                &
+                    'percent_compaction', n, rval)
         ! -- write second line
         write(this%istrainib,'(1X,A)') line(1:iloc)
         ! -- write data
@@ -1335,15 +1364,15 @@ contains
           call this%dis%noder_to_string(node, cellid)
           iloc = 1
           line = ''
-          call UWWORD(line, iloc, 20, 2, text, ib, rval, SEP=',')
-          call UWWORD(line, iloc, 20, 1, ctype, n, rval, SEP=',')
-          call UWWORD(line, iloc, 22, 1, '"'//trim(adjustl(cellid))//'"',       &
-                      n, rval, SEP=',')
-          call UWWORD(line, iloc, 20, 3, text, n, b0, SEP=',')
-          call UWWORD(line, iloc, 20, 3, text, n, b1, SEP=',')
-          call UWWORD(line, iloc, 20, 3, text, n, this%tcomp(ib), SEP=',')
-          call UWWORD(line, iloc, 20, 3, text, n, strain, SEP=',')
-          call UWWORD(line, iloc, 20, 3, text, n, pctcomp)
+          call UWWORD(line, iloc, 20, TABINTEGER, text, ib, rval, SEP=',')
+          call UWWORD(line, iloc, 20, TABUCSTRING, ctype, n, rval, SEP=',')
+          call UWWORD(line, iloc, 22, TABUCSTRING,                               &
+                      '"'//trim(adjustl(cellid))//'"', n, rval, SEP=',')
+          call UWWORD(line, iloc, 20, TABREAL, text, n, b0, SEP=',')
+          call UWWORD(line, iloc, 20, TABREAL, text, n, b1, SEP=',')
+          call UWWORD(line, iloc, 20, TABREAL, text, n, this%tcomp(ib), SEP=',')
+          call UWWORD(line, iloc, 20, TABREAL, text, n, strain, SEP=',')
+          call UWWORD(line, iloc, 20, TABREAL, text, n, pctcomp)
           write(this%istrainib, '(1X,A)') line(1:iloc)
         end do
       end if
@@ -1383,13 +1412,20 @@ contains
       trim(adjustl(msg))
     iloc = 1
     line = ''
-    call UWWORD(line, iloc, 20, 1, 'cell', n, rval, CENTER=.TRUE.)
-    call UWWORD(line, iloc, 16, 1, 'initial', n, rval, CENTER=.TRUE.)
-    call UWWORD(line, iloc, 16, 1, 'final', n, rval, CENTER=.TRUE.)
-    call UWWORD(line, iloc, 16, 1, 'total', n, rval, CENTER=.TRUE.)
-    call UWWORD(line, iloc, 16, 1, 'final', n, rval, CENTER=.TRUE.)
-    call UWWORD(line, iloc, 16, 1, 'percent', n, rval, CENTER=.TRUE.)
-    call UWWORD(line, iloc, 10, 1, '', n, rval, CENTER=.TRUE.)
+    call UWWORD(line, iloc, 20, TABUCSTRING,                                    &
+                'cell', n, rval, ALIGNMENT=TABCENTER)
+    call UWWORD(line, iloc, 16, TABUCSTRING,                                    &
+                'initial', n, rval, ALIGNMENT=TABCENTER)
+    call UWWORD(line, iloc, 16, TABUCSTRING,                                    &
+                'final', n, rval, ALIGNMENT=TABCENTER)
+    call UWWORD(line, iloc, 16, TABUCSTRING,                                    &
+                'total', n, rval, ALIGNMENT=TABCENTER)
+    call UWWORD(line, iloc, 16, TABUCSTRING,                                    &
+                'final', n, rval, ALIGNMENT=TABCENTER)
+    call UWWORD(line, iloc, 16, TABUCSTRING,                                    &
+                'percent', n, rval, ALIGNMENT=TABCENTER)
+    call UWWORD(line, iloc, 10, TABUCSTRING,                                    &
+                '', n, rval, ALIGNMENT=TABCENTER)
     ! -- create line separator
     linesep = repeat('-', iloc)
     ! -- write first line
@@ -1398,13 +1434,20 @@ contains
     ! -- create second header line
     iloc = 1
     line = ''
-    call UWWORD(line, iloc, 20, 1, 'location', n, rval, CENTER=.TRUE.)
-    call UWWORD(line, iloc, 16, 1, 'thickness', n, rval, CENTER=.TRUE.)
-    call UWWORD(line, iloc, 16, 1, 'thickness', n, rval, CENTER=.TRUE.)
-    call UWWORD(line, iloc, 16, 1, 'compaction', n, rval, CENTER=.TRUE.)
-    call UWWORD(line, iloc, 16, 1, 'strain', n, rval, CENTER=.TRUE.)
-    call UWWORD(line, iloc, 16, 1, 'compaction', n, rval, CENTER=.TRUE.)
-    call UWWORD(line, iloc, 10, 1, 'flag', n, rval, CENTER=.TRUE.)
+    call UWWORD(line, iloc, 20, TABUCSTRING,                                    &
+                'location', n, rval, ALIGNMENT=TABCENTER)
+    call UWWORD(line, iloc, 16, TABUCSTRING,                                    &
+                'thickness', n, rval, ALIGNMENT=TABCENTER)
+    call UWWORD(line, iloc, 16, TABUCSTRING,                                    &
+                'thickness', n, rval, ALIGNMENT=TABCENTER)
+    call UWWORD(line, iloc, 16, TABUCSTRING,                                    &
+                'compaction', n, rval, ALIGNMENT=TABCENTER)
+    call UWWORD(line, iloc, 16, TABUCSTRING,                                    &
+                'strain', n, rval, ALIGNMENT=TABCENTER)
+    call UWWORD(line, iloc, 16, TABUCSTRING,                                    &
+                'compaction', n, rval, ALIGNMENT=TABCENTER)
+    call UWWORD(line, iloc, 10, TABUCSTRING,                                    &
+                'flag', n, rval, ALIGNMENT=TABCENTER)
     ! -- write second line
     write(this%iout,'(1X,A)') line(1:iloc)
     write(this%iout,'(1X,A)') linesep(1:iloc)
@@ -1428,13 +1471,14 @@ contains
         call this%dis%noder_to_string(node, cellid)
         iloc = 1
         line = ''
-        call UWWORD(line, iloc, 20, 1, cellid, n, rval, CENTER=.TRUE.)
-        call UWWORD(line, iloc, 16, 3, text, n, this%cg_thickini(node))
-        call UWWORD(line, iloc, 16, 3, text, n, this%cg_thick(node))
-        call UWWORD(line, iloc, 16, 3, text, n, this%cg_tcomp(node))
-        call UWWORD(line, iloc, 16, 3, text, n, strain)
-        call UWWORD(line, iloc, 16, 3, text, n, pctcomp)
-        call UWWORD(line, iloc, 10, 1, cflag, ib, rval)
+        call UWWORD(line, iloc, 20, TABUCSTRING,                                 &
+                    cellid, n, rval, ALIGNMENT=TABCENTER)
+        call UWWORD(line, iloc, 16, TABREAL, text, n, this%cg_thickini(node))
+        call UWWORD(line, iloc, 16, TABREAL, text, n, this%cg_thick(node))
+        call UWWORD(line, iloc, 16, TABREAL, text, n, this%cg_tcomp(node))
+        call UWWORD(line, iloc, 16, TABREAL, text, n, strain)
+        call UWWORD(line, iloc, 16, TABREAL, text, n, pctcomp)
+        call UWWORD(line, iloc, 10, TABUCSTRING, cflag, ib, rval)
         write(this%iout, '(1X,A)') line(1:iloc)
       end do
       write(this%iout, '(/1X,A,1X,I0,1X,A,1X,I0,1X,A,/1X,A,/1X,A)') &
@@ -1452,13 +1496,18 @@ contains
     if (this%istrainsk /= 0) then
       iloc = 1
       line = ''
-      call UWWORD(line, iloc, 20, 1, 'node', n, rval, SEP=',')
-      call UWWORD(line, iloc, 22, 1, 'cellid', n, rval, SEP=',')
-      call UWWORD(line, iloc, 20, 1, 'initial_thickness', n, rval, SEP=',')
-      call UWWORD(line, iloc, 20, 1, 'final_thickness', n, rval, SEP=',')
-      call UWWORD(line, iloc, 20, 1, 'total_compaction', n, rval, SEP=',')
-      call UWWORD(line, iloc, 20, 1, 'total_strain', n, rval, SEP=',')
-      call UWWORD(line, iloc, 20, 1, 'percent_compaction', n, rval)
+      call UWWORD(line, iloc, 20, TABUCSTRING, 'node', n, rval, SEP=',')
+      call UWWORD(line, iloc, 22, TABUCSTRING, 'cellid', n, rval, SEP=',')
+      call UWWORD(line, iloc, 20, TABUCSTRING,                                  &
+                  'initial_thickness', n, rval, SEP=',')
+      call UWWORD(line, iloc, 20, TABUCSTRING,                                  &
+                  'final_thickness', n, rval, SEP=',')
+      call UWWORD(line, iloc, 20, TABUCSTRING,                                  &
+                  'total_compaction', n, rval, SEP=',')
+      call UWWORD(line, iloc, 20, TABUCSTRING,                                  &
+                  'total_strain', n, rval, SEP=',')
+      call UWWORD(line, iloc, 20, TABUCSTRING,                                  &
+                  'percent_compaction', n, rval)
       ! -- write second line
       write(this%istrainsk,'(1X,A)') line(1:iloc)
       ! -- write data
@@ -1472,15 +1521,19 @@ contains
         call this%dis%noder_to_string(node, cellid)
         iloc = 1
         line = ''
-        call UWWORD(line, iloc, 20, 2, text, node, rval, SEP=',')
-        call UWWORD(line, iloc, 22, 1, '"'//trim(adjustl(cellid))//'"',       &
-                    n, rval, SEP=',')
-        call UWWORD(line, iloc, 20, 3, text, n, this%cg_thickini(node),       &
-                    SEP=',')
-        call UWWORD(line, iloc, 20, 3, text, n, this%cg_thick(node), SEP=',')
-        call UWWORD(line, iloc, 20, 3, text, n, this%cg_tcomp(node), SEP=',')
-        call UWWORD(line, iloc, 20, 3, text, n, strain, SEP=',')
-        call UWWORD(line, iloc, 20, 3, text, n, pctcomp)
+        call UWWORD(line, iloc, 20, TABINTEGER, text, node, rval, SEP=',')
+        call UWWORD(line, iloc, 22, TABUCSTRING,                                &
+                    '"'//trim(adjustl(cellid))//'"', n, rval, SEP=',')
+        call UWWORD(line, iloc, 20, TABREAL,                                    &
+                    text, n, this%cg_thickini(node), SEP=',')
+        call UWWORD(line, iloc, 20, TABREAL,                                    &
+                    text, n, this%cg_thick(node), SEP=',')
+        call UWWORD(line, iloc, 20, TABREAL,                                    &
+                    text, n, this%cg_tcomp(node), SEP=',')
+        call UWWORD(line, iloc, 20, TABREAL,                                    &
+                    text, n, strain, SEP=',')
+        call UWWORD(line, iloc, 20, TABREAL,                                    &
+                    text, n, pctcomp)
         write(this%istrainsk, '(1X,A)') line(1:iloc)
       end do
     end if
@@ -1724,20 +1777,31 @@ contains
       write(this%iout, '(//1X,A)') 'INTERBED DATA'
       iloc = 1
       line = ''
-      call UWWORD(line, iloc, 10, 1, 'INTERBED', n, q, left=.TRUE.)
-      call UWWORD(line, iloc, 20, 1, 'CELLID', n, q, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 10, 1, 'CDELAY', n, q, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 10, 1, 'PCS', n, q, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 10, 1, 'THICK', n, q, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 10, 1, 'RNB', n, q, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 10, 1, 'SSV_CC', n, q, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 10, 1, 'SSE_CR', n, q, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 10, 1, 'THETA', n, q, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 10, 1, 'KV', n, q, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 10, 1, 'H0', n, q, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 10, TABUCSTRING, 'INTERBED', n, q,      &
+                  ALIGNMENT=TABLEFT)
+      call UWWORD(line, iloc, 20, TABUCSTRING, 'CELLID', n, q,        &
+                  ALIGNMENT=TABCENTER)
+      call UWWORD(line, iloc, 10, TABUCSTRING, 'CDELAY', n, q,        &
+                  ALIGNMENT=TABCENTER)
+      call UWWORD(line, iloc, 10, TABUCSTRING, 'PCS', n, q,           &
+                  ALIGNMENT=TABCENTER)
+      call UWWORD(line, iloc, 10, TABUCSTRING, 'THICK', n, q,         &
+                  ALIGNMENT=TABCENTER)
+      call UWWORD(line, iloc, 10, TABUCSTRING, 'RNB', n, q,           &
+                  ALIGNMENT=TABCENTER)
+      call UWWORD(line, iloc, 10, TABUCSTRING, 'SSV_CC', n, q,        &
+                  ALIGNMENT=TABCENTER)
+      call UWWORD(line, iloc, 10, TABUCSTRING, 'SSE_CR', n, q,        &
+                  ALIGNMENT=TABCENTER)
+      call UWWORD(line, iloc, 10, TABUCSTRING, 'THETA', n, q,         &
+                  ALIGNMENT=TABCENTER)
+      call UWWORD(line, iloc, 10, TABUCSTRING, 'KV', n, q,            &
+                  ALIGNMENT=TABCENTER)
+      call UWWORD(line, iloc, 10, TABUCSTRING, 'H0', n, q,            &
+                  ALIGNMENT=TABCENTER)
       if (this%inamedbound /= 0) then
-        call UWWORD(line, iloc, LENBOUNDNAME, 1,                      &
-                    'BOUNDNAME', n, q, LEFT=.TRUE.)
+        call UWWORD(line, iloc, LENBOUNDNAME, TABUCSTRING,            &
+                    'BOUNDNAME', n, q, ALIGNMENT=TABLEFT)
       end if
       linesep = repeat('-', iloc)
       isep = iloc
@@ -1746,40 +1810,45 @@ contains
       do ib = 1, this%ninterbeds
         iloc = 1
         line = ''
-        call UWWORD(line, iloc, 10, 2, text, ib, q, left=.TRUE.)
+        call UWWORD(line, iloc, 10, TABREAL,                          &
+                    text, ib, q, ALIGNMENT=TABLEFT)
         call this%dis%noder_to_string(this%nodelist(ib), scellid)
-        call UWWORD(line, iloc, 20, 1, scellid, n, q, center=.TRUE.)
+        call UWWORD(line, iloc, 20, TABUCSTRING, scellid, n, q,       &
+                    ALIGNMENT=TABCENTER)
         if (this%idelay(ib) == 0) then
           text = 'NODELAY'
         else
           text = 'DELAY'
         end if
-        call UWWORD(line, iloc, 10, 1, text, n, q, center=.TRUE.)
-        call UWWORD(line, iloc, 10, 3,                                &
-                    text, n, this%pcs(ib), center=.TRUE.)
-        call UWWORD(line, iloc, 10, 3,                                &
-                    text, n, this%thickini(ib), center=.TRUE.)
-        call UWWORD(line, iloc, 10, 3,                                &
-                    text, n, this%rnb(ib), center=.TRUE.)
-        call UWWORD(line, iloc, 10, 3,                                &
-                    text, n, this%ci(ib), center=.TRUE.)
-        call UWWORD(line, iloc, 10, 3,                                &
-                    text, n, this%rci(ib), center=.TRUE.)
-        call UWWORD(line, iloc, 10, 3,                                &
-                    text, n, this%thetaini(ib), center=.TRUE.)
+        call UWWORD(line, iloc, 10, TABUCSTRING, text, n, q,          &
+                    ALIGNMENT=TABCENTER)
+        call UWWORD(line, iloc, 10, TABREAL,                          &
+                    text, n, this%pcs(ib), ALIGNMENT=TABCENTER)
+        call UWWORD(line, iloc, 10, TABREAL,                          &
+                    text, n, this%thickini(ib), ALIGNMENT=TABCENTER)
+        call UWWORD(line, iloc, 10, TABREAL,                          &
+                    text, n, this%rnb(ib), ALIGNMENT=TABCENTER)
+        call UWWORD(line, iloc, 10, TABREAL,                          &
+                    text, n, this%ci(ib), ALIGNMENT=TABCENTER)
+        call UWWORD(line, iloc, 10, TABREAL,                          &
+                    text, n, this%rci(ib), ALIGNMENT=TABCENTER)
+        call UWWORD(line, iloc, 10, TABREAL,                          &
+                    text, n, this%thetaini(ib), ALIGNMENT=TABCENTER)
         if (this%idelay(ib) == 0) then
           text = '-'
-          call UWWORD(line, iloc, 10, 1, text, n, q, center=.TRUE.)
-          call UWWORD(line, iloc, 10, 1, text, n, q, center=.TRUE.)
+          call UWWORD(line, iloc, 10, TABUCSTRING,                    &
+                      text, n, q, ALIGNMENT=TABCENTER)
+          call UWWORD(line, iloc, 10, TABUCSTRING,                    &
+                      text, n, q, ALIGNMENT=TABCENTER)
         else
-          call UWWORD(line, iloc, 10, 3,                              &
-                      text, n, this%kv(ib), center=.TRUE.)
-          call UWWORD(line, iloc, 10, 3,                              &
-                      text, n, this%h0(ib), center=.TRUE.)
+          call UWWORD(line, iloc, 10, TABREAL,                        &
+                      text, n, this%kv(ib), ALIGNMENT=TABCENTER)
+          call UWWORD(line, iloc, 10, TABREAL,                        &
+                      text, n, this%h0(ib), ALIGNMENT=TABCENTER)
         end if
         if (this%inamedbound /= 0) then
-          call UWWORD(line, iloc, LENBOUNDNAME, 1,                    &
-                      this%boundname(ib), n, q, left=.TRUE.)
+          call UWWORD(line, iloc, LENBOUNDNAME, TABUCSTRING,          &
+                      this%boundname(ib), n, q, ALIGNMENT=TABLEFT)
         end if
         write(this%iout, '(1X,A)') line(1:iloc)
       end do
@@ -3875,13 +3944,14 @@ contains
       ! -- first header line
       iloc = 1
       line = ''
-      call UWWORD(line, iloc, 10, 1, 'INTERBED', n, q, left=.TRUE.)
-      call UWWORD(line, iloc, 16, 1,                                             & 
-                  'GEOSTATIC', n, q, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 16, 1,                                             & 
-                  'EFFECTIVE', n, q, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 16, 1,                                             & 
-                  'PRECONSOLIDATION', n, q, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 10, TABUCSTRING, 'INTERBED', n, q,                 &
+                  ALIGNMENT=TABLEFT)
+      call UWWORD(line, iloc, 16, TABUCSTRING,                                   & 
+                  'GEOSTATIC', n, q, ALIGNMENT=TABCENTER)
+      call UWWORD(line, iloc, 16, TABUCSTRING,                                   & 
+                  'EFFECTIVE', n, q, ALIGNMENT=TABCENTER)
+      call UWWORD(line, iloc, 16, TABUCSTRING,                                   & 
+                  'PRECONSOLIDATION', n, q, ALIGNMENT=TABCENTER)
       linesep = repeat('-', iloc)
       isep = iloc
       write(this%iout, '(1X,A)') linesep(1:iloc)
@@ -3890,27 +3960,28 @@ contains
       ! -- second header line
       iloc = 1
       line = ''
-      call UWWORD(line, iloc, 10, 1, 'NUMBER', n, q, left=.TRUE.)
-      call UWWORD(line, iloc, 16, 1,                                             & 
-                  'STRESS', n, q, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 16, 1,                                             & 
-                  'STRESS', n, q, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 16, 1,                                             & 
-                  'STRESS', n, q, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 10, TABUCSTRING, 'NUMBER', n, q, ALIGNMENT=TABLEFT)
+      call UWWORD(line, iloc, 16, TABUCSTRING,                                   & 
+                  'STRESS', n, q, ALIGNMENT=TABCENTER)
+      call UWWORD(line, iloc, 16, TABUCSTRING,                                   & 
+                  'STRESS', n, q, ALIGNMENT=TABCENTER)
+      call UWWORD(line, iloc, 16, TABUCSTRING,                                   & 
+                  'STRESS', n, q, ALIGNMENT=TABCENTER)
       write(this%iout, '(1X,A)') line(1:iloc)
       write(this%iout, '(1X,A)') linesep(1:iloc)
 
       do ib = 1, this%ninterbeds
         iloc = 1
         line = ''
-        call UWWORD(line, iloc, 10, 2, text, ib, q, left=.TRUE.)
+        call UWWORD(line, iloc, 10, TABINTEGER,                                  &
+                    text, ib, q, ALIGNMENT=TABLEFT)
         node = this%nodelist(ib)
-        call UWWORD(line, iloc, 16, 3,                                           &
-                    text, n, this%cg_gs(node), center=.TRUE.)
-        call UWWORD(line, iloc, 16, 3,                                           &
-                    text, n, this%cg_es(node), center=.TRUE.)
-        call UWWORD(line, iloc, 16, 3,                                           & 
-                    text, n, this%pcs(ib), CENTER=.TRUE.)
+        call UWWORD(line, iloc, 16, TABREAL,                                     &
+                    text, n, this%cg_gs(node), ALIGNMENT=TABCENTER)
+        call UWWORD(line, iloc, 16, TABREAL,                                     &
+                    text, n, this%cg_es(node), ALIGNMENT=TABCENTER)
+        call UWWORD(line, iloc, 16, TABREAL,                                     & 
+                    text, n, this%pcs(ib), ALIGNMENT=TABCENTER)
         write(this%iout, '(1X,A)') line(1:iloc)
       end do
       write(this%iout, '(1X,A,/)') linesep(1:isep)
@@ -3927,13 +3998,14 @@ contains
           ! -- first header line
           iloc = 1
           line = ''
-          call UWWORD(line, iloc, 10, 1, 'DELAY', n, q, left=.TRUE.)
-          call UWWORD(line, iloc, 16, 1,                                         &
-                      'GEOSTATIC', n, q, CENTER=.TRUE.)
-          call UWWORD(line, iloc, 16, 1,                                         &
-                      'EFFECTIVE', n, q, CENTER=.TRUE.)
-          call UWWORD(line, iloc, 16, 1,                                         &
-                      'PRECONSOLIDATION', n, q, CENTER=.TRUE.)
+          call UWWORD(line, iloc, 10, TABUCSTRING,                               &
+                      'DELAY', n, q, ALIGNMENT=TABLEFT)
+          call UWWORD(line, iloc, 16, TABUCSTRING,                               &
+                      'GEOSTATIC', n, q, ALIGNMENT=TABCENTER)
+          call UWWORD(line, iloc, 16, TABUCSTRING,                               &
+                      'EFFECTIVE', n, q, ALIGNMENT=TABCENTER)
+          call UWWORD(line, iloc, 16, TABUCSTRING,                               &
+                      'PRECONSOLIDATION', n, q, ALIGNMENT=TABCENTER)
           linesep = repeat('-', iloc)
           isep = iloc
           write(this%iout, '(1X,A)') linesep(1:iloc)
@@ -3942,28 +4014,30 @@ contains
           ! -- second header line
           iloc = 1
           line = ''
-          call UWWORD(line, iloc, 10, 1, 'CELL', n, q, left=.TRUE.)
-          call UWWORD(line, iloc, 16, 1,                                         &
-                      'STRESS', n, q, CENTER=.TRUE.)
-          call UWWORD(line, iloc, 16, 1,                                         &
-                      'STRESS', n, q, CENTER=.TRUE.)
-          call UWWORD(line, iloc, 16, 1,                                         &
-                      'STRESS', n, q, CENTER=.TRUE.)
+          call UWWORD(line, iloc, 10, TABUCSTRING,                               &
+                      'CELL', n, q, ALIGNMENT=TABLEFT)
+          call UWWORD(line, iloc, 16, TABUCSTRING,                               &
+                      'STRESS', n, q, ALIGNMENT=TABCENTER)
+          call UWWORD(line, iloc, 16, TABUCSTRING,                               &
+                      'STRESS', n, q, ALIGNMENT=TABCENTER)
+          call UWWORD(line, iloc, 16, TABUCSTRING,                               &
+                      'STRESS', n, q, ALIGNMENT=TABCENTER)
           write(this%iout, '(1X,A)') line(1:iloc)
           write(this%iout, '(1X,A)') linesep(1:iloc)
 
           do n = 1, this%ndelaycells
             iloc = 1
             line = ''
-            call UWWORD(line, iloc, 10, 2, text, n, q, left=.TRUE.)
-            call UWWORD(line, iloc, 16, 3,                                       &
+            call UWWORD(line, iloc, 10, TABINTEGER,                              &
+                        text, n, q, ALIGNMENT=TABLEFT)
+            call UWWORD(line, iloc, 16, TABREAL,                                 &
                         text, n, this%dbgeo(n, idelay),                          &
-                        center=.TRUE.)
-            call UWWORD(line, iloc, 16, 3,                                       &
+                        ALIGNMENT=TABCENTER)
+            call UWWORD(line, iloc, 16, TABREAL,                                 &
                         text, n, this%dbes(n, idelay),                           &
-                        center=.TRUE.)
-            call UWWORD(line, iloc, 16, 3,                                       &
-                        text, n, this%dbpcs(n, idelay), center=.TRUE.)
+                        ALIGNMENT=TABCENTER)
+            call UWWORD(line, iloc, 16, TABREAL,                                 &
+                        text, n, this%dbpcs(n, idelay), ALIGNMENT=TABCENTER)
             write(this%iout, '(1X,A)') line(1:iloc)
           end do
           write(this%iout, '(1X,A,/)') linesep(1:isep)
@@ -3974,14 +4048,15 @@ contains
       ! -- write calculated compression indices
       if (this%istoragec == 1) then
         if (this%lhead_based .EQV. .FALSE.) then
-          write(this%iout, '(//1X,A)')                                &
-            'CALCULATED COMPRESSION INDICES'
+          write(this%iout, '(//1X,A)') 'CALCULATED COMPRESSION INDICES'
           iloc = 1
           line = ''
-          call UWWORD(line, iloc, 10, 1,                              &
-                      'INTERBED', n, q, left=.TRUE.)
-          call UWWORD(line, iloc, 16, 1, 'CC', n, q, CENTER=.TRUE.)
-          call UWWORD(line, iloc, 16, 1, 'CR', n, q, CENTER=.TRUE.)
+          call UWWORD(line, iloc, 10, TABUCSTRING,                               &
+                      'INTERBED', n, q, ALIGNMENT=TABLEFT)
+          call UWWORD(line, iloc, 16, TABUCSTRING,                               &
+                      'CC', n, q, ALIGNMENT=TABCENTER)
+          call UWWORD(line, iloc, 16, TABUCSTRING,                               &
+                      'CR', n, q, ALIGNMENT=TABCENTER)
           linesep = repeat('-', iloc)
           isep = iloc
           write(this%iout, '(1X,A)') linesep(1:iloc)
@@ -3991,12 +4066,12 @@ contains
             fact = DONE / dlog10es
             iloc = 1
             line = ''
-            call UWWORD(line, iloc, 10, 2,                            &
-                        text, ib, q, left=.TRUE.)
-            call UWWORD(line, iloc, 16, 3,                            & 
-                        text, n, this%ci(ib) * fact, CENTER=.TRUE.)
-            call UWWORD(line, iloc, 16, 3,                            & 
-                        text, n, this%rci(ib) * fact, CENTER=.TRUE.)
+            call UWWORD(line, iloc, 10, TABINTEGER,                              &
+                        text, ib, q, ALIGNMENT=TABLEFT)
+            call UWWORD(line, iloc, 16, TABREAL,                                 & 
+                        text, n, this%ci(ib) * fact, ALIGNMENT=TABCENTER)
+            call UWWORD(line, iloc, 16, TABREAL,                                 & 
+                        text, n, this%rci(ib) * fact, ALIGNMENT=TABCENTER)
             write(this%iout, '(1X,A)') line(1:iloc)
           end do
           write(this%iout, '(1X,A,/)') linesep(1:isep)

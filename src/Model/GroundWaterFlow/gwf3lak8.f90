@@ -8,7 +8,9 @@ module LakModule
                              DONETHIRD, DTWOTHIRDS, DFIVETHIRDS,               &
                              DGRAVITY, DCD,                                    &
                              NAMEDBOUNDFLAG, LENFTYPE, LENPACKAGENAME,         &
-                             DNODATA
+                             DNODATA,                                          &
+                             TABLEFT, TABCENTER, TABRIGHT,                     &
+                             TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
   use MemoryTypeModule, only: MemoryTSType
   use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_setptr,     &
                                  mem_deallocate
@@ -4112,7 +4114,7 @@ contains
 
   subroutine lak_ot(this, kstp, kper, iout, ihedfl, ibudfl)
     ! **************************************************************************
-    ! pak1t -- Output package budget
+    ! lak_ot -- Output package budget
     ! **************************************************************************
     !
     !    SPECIFICATIONS:
@@ -4129,29 +4131,8 @@ contains
     character(len=LINELENGTH) :: line, linesep
     character(len=16) :: text
     integer(I4B) :: n
-    integer(I4B) :: j
     integer(I4B) :: iloc
-    real(DP) :: hlak
     real(DP) :: q
-    real(DP) :: qin
-    real(DP) :: qinternalin
-    real(DP) :: qro
-    real(DP) :: qrai
-    real(DP) :: qleakin
-    real(DP) :: qleakout
-    real(DP) :: qevt
-    real(DP) :: qwdw
-    real(DP) :: qext
-    real(DP) :: qinternalout
-    real(DP) :: qsto
-    real(DP) :: qch
-    real(DP) :: qtomover
-    real(DP) :: qfrommover
-    real(DP) :: qtin
-    real(DP) :: qtout
-    real(DP) :: qerr
-    real(DP) :: qavg
-    real(DP) :: qerrpd
     ! format
  2000 FORMAT ( 1X, ///1X, A, A, A, '   PERIOD ', I6, '   STEP ', I8)
     ! --------------------------------------------------------------------------
@@ -4162,10 +4143,13 @@ contains
       iloc = 1
       line = ''
       if (this%inamedbound==1) then
-        call UWWORD(line, iloc, 16, 1, 'lake', n, q, left=.TRUE.)
+        call UWWORD(line, iloc, 16, TABUCSTRING,                                 &
+                    'lake', n, q, ALIGNMENT=TABLEFT)
       end if
-      call UWWORD(line, iloc, 6, 1, 'lake', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'lake', n, q, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 6, TABUCSTRING,                                    &
+                  'lake', n, q, ALIGNMENT=TABCENTER, SEP=' ')
+      call UWWORD(line, iloc, 11, TABUCSTRING,                                   &
+                  'lake', n, q, ALIGNMENT=TABCENTER)
       ! -- create line separator
       linesep = repeat('-', iloc)
       ! -- write first line
@@ -4175,10 +4159,13 @@ contains
       iloc = 1
       line = ''
       if (this%inamedbound==1) then
-        call UWWORD(line, iloc, 16, 1, 'name', n, q, left=.TRUE.)
+        call UWWORD(line, iloc, 16, TABUCSTRING,                                 &
+                    'name', n, q, ALIGNMENT=TABLEFT)
       end if
-      call UWWORD(line, iloc, 6, 1, 'no.', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'stage', n, q, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 6, TABUCSTRING,                                    &
+                  'no.', n, q, ALIGNMENT=TABCENTER, SEP=' ')
+      call UWWORD(line, iloc, 11, TABUCSTRING,                                   &
+                  'stage', n, q, ALIGNMENT=TABCENTER)
       ! -- write second line
       write(iout,'(1X,A)') line(1:iloc)
       write(iout,'(1X,A)') linesep(1:iloc)
@@ -4187,196 +4174,18 @@ contains
         iloc = 1
         line = ''
         if (this%inamedbound==1) then
-          call UWWORD(line, iloc, 16, 1, this%lakename(n), n, q, left=.TRUE.)
+          call UWWORD(line, iloc, 16, TABUCSTRING,                               &
+                      this%lakename(n), n, q, ALIGNMENT=TABLEFT)
         end if
-        call UWWORD(line, iloc, 6, 2, text, n, q, SEP=' ')
-        call UWWORD(line, iloc, 11, 3, text, n, this%xnewpak(n))
+        call UWWORD(line, iloc, 6, TABINTEGER, text, n, q, SEP=' ')
+        call UWWORD(line, iloc, 11, TABREAL, text, n, this %xnewpak(n))
         write(iout, '(1X,A)') line(1:iloc)
       end do
     end if
     !
-    ! -- write lake rates
+    ! -- Output lake flow table
     if (ibudfl /= 0 .and. this%iprflow /= 0) then
-      write (iout, 2000) 'LAKE (', trim(this%name), ') FLOWS', kper, kstp
-      iloc = 1
-      line = ''
-      if (this%inamedbound==1) then
-        call UWWORD(line, iloc, 16, 1, 'lake', n, q, left=.TRUE.)
-      end if
-      call UWWORD(line, iloc, 6, 1, 'lake', n, q, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 11, 1, 'lake', n, q, CENTER=.TRUE., SEP=' ')
-      if (this%noutlets > 0) then
-        call UWWORD(line, iloc, 11, 1, 'internal', n, q, CENTER=.TRUE., SEP=' ')
-      end if
-      call UWWORD(line, iloc, 11, 1, 'lake', n, q, CENTER=.TRUE., SEP=' ')
-      if (this%imover == 1) then
-        call UWWORD(line, iloc, 11, 1, 'lake', n, q, CENTER=.TRUE., SEP=' ')
-      end if
-      call UWWORD(line, iloc, 11, 1, 'lake', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'lake', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'lake', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'lake', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'lake', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'lake', n, q, CENTER=.TRUE., SEP=' ')
-      if (this%noutlets > 0) then
-        call UWWORD(line, iloc, 11, 1, 'external', n, q, CENTER=.TRUE., SEP=' ')
-        call UWWORD(line, iloc, 11, 1, 'internal', n, q, CENTER=.TRUE., SEP=' ')
-        if (this%imover == 1) then
-          call UWWORD(line, iloc, 11, 1, 'lake', n, q, CENTER=.TRUE., SEP=' ')
-        end if
-      end if
-      call UWWORD(line, iloc, 11, 1, 'constant', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'lake', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'percent', n, q, CENTER=.TRUE.)
-      ! -- create line separator
-      linesep = repeat('-', iloc)
-      ! -- write first line
-      write(iout,'(1X,A)') linesep(1:iloc)
-      write(iout,'(1X,A)') line(1:iloc)
-      ! -- create second header line
-      iloc = 1
-      line = ''
-      if (this%inamedbound==1) then
-        call UWWORD(line, iloc, 16, 1, 'name', n, q, left=.TRUE.)
-      end if
-      call UWWORD(line, iloc, 6, 1, 'no.', n, q, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 11, 1, 'inflow', n, q, CENTER=.TRUE., SEP=' ')
-      if (this%noutlets > 0) then
-        call UWWORD(line, iloc, 11, 1, 'inflow', n, q, CENTER=.TRUE., SEP=' ')
-      end if
-      call UWWORD(line, iloc, 11, 1, 'runoff', n, q, CENTER=.TRUE., SEP=' ')
-      if (this%imover == 1) then
-        call UWWORD(line, iloc, 11, 1, 'from mvr', n, q, CENTER=.TRUE., SEP=' ')
-      end if
-      call UWWORD(line, iloc, 11, 1, 'rainfall', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'leakage in', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'leakage out', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'evaporation', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'withdrawal', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'storage', n, q, CENTER=.TRUE., SEP=' ')
-      if (this%noutlets > 0) then
-        call UWWORD(line, iloc, 11, 1, 'outflow', n, q, CENTER=.TRUE., SEP=' ')
-        call UWWORD(line, iloc, 11, 1, 'outflow', n, q, CENTER=.TRUE., SEP=' ')
-        if (this%imover == 1) then
-          call UWWORD(line, iloc, 11, 1, 'to mvr', n, q, CENTER=.TRUE., SEP=' ')
-        end if
-      end if
-      call UWWORD(line, iloc, 11, 1, 'flow', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'in - out', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'difference', n, q, CENTER=.TRUE.)
-      ! -- write second line
-      write(iout,'(1X,A)') line(1:iloc)
-      write(iout,'(1X,A)') linesep(1:iloc)
-      !
-      ! -- write data
-      do n = 1, this%nlakes
-        iloc = 1
-        line = ''
-        if (this%inamedbound==1) then
-          call UWWORD(line, iloc, 16, 1, this%lakename(n), n, q, left=.TRUE.)
-        end if
-        call UWWORD(line, iloc, 6, 2, text, n, q)
-        qtin = DZERO
-        qtout = DZERO
-        qin = this%inflow(n)%value
-        call UWWORD(line, iloc, 11, 3, text, n, qin, SEP=' ')
-        qinternalin = DZERO
-        if (this%noutlets > 0) then
-          call this%lak_get_internal_inlet(n, qinternalin)
-          call UWWORD(line, iloc, 11, 3, text, n, qinternalin, SEP=' ')
-        end if
-        qro = this%runoff(n)%value
-        call UWWORD(line, iloc, 11, 3, text, n, qro, SEP=' ')
-        qfrommover = DZERO
-        if (this%imover == 1) then
-          qfrommover = this%pakmvrobj%get_qfrommvr(n)
-          call UWWORD(line, iloc, 11, 3, text, n, qfrommover, SEP=' ')
-        end if
-        qrai = this%precip(n)
-        call UWWORD(line, iloc, 11, 3, text, n, qrai, SEP=' ')
-        ! leakage
-        qleakin = DZERO
-        qleakout = DZERO
-        hlak = this%xnewpak(n)
-        do j = this%idxlakeconn(n), this%idxlakeconn(n+1)-1
-          q = this%qleak(j)
-          if (q < DZERO) then
-            qleakout = qleakout + q
-            qtout = qtout + q
-          else
-            qleakin = qleakin + q
-            qtin = qtin + q
-          end if
-        end do
-        call UWWORD(line, iloc, 11, 3, text, n, qleakin, SEP=' ')
-        call UWWORD(line, iloc, 11, 3, text, n, qleakout, SEP=' ')
-        qevt = this%evap(n)
-        call UWWORD(line, iloc, 11, 3, text, n, qevt, SEP=' ')
-        qwdw = this%withr(n)
-        call UWWORD(line, iloc, 11, 3, text, n, qwdw, SEP=' ')
-        ! storage changes
-        qsto = DZERO
-        qsto = this%qsto(n)
-        if (qsto < DZERO) then
-          qtout = qtout + qsto
-        else
-          qtin = qtin + qsto
-        end if
-        call UWWORD(line, iloc, 11, 3, text, n, qsto, SEP=' ')
-        qext = DZERO
-        qtomover = DZERO
-        qinternalout = DZERO
-        if (this%noutlets > 0) then
-          ! external outflow
-          call this%lak_get_external_outlet(n, qext)
-          ! internal outflow
-          call this%lak_get_internal_outlet(n, qinternalout)
-          ! subtract tomover from external or internal outflow
-          if (this%imover == 1) then
-            if (qext < DZERO) then
-              call this%lak_get_external_mover(n, qtomover)
-              qext = qext + qtomover
-            else if (qinternalout < DZERO) then
-              call this%lak_get_internal_mover(n, qtomover)
-              qinternalout = qinternalout + qtomover
-            end if
-            if (qtomover > DZERO) then
-              qtomover = -qtomover
-            end if
-          end if
-          ! write external outflow, internal outflow, and tomover
-          call UWWORD(line, iloc, 11, 3, text, n, qext, SEP=' ')
-          call UWWORD(line, iloc, 11, 3, text, n, qinternalout, SEP=' ')
-          if (this%imover == 1) then
-            call UWWORD(line, iloc, 11, 3, text, n, qtomover, SEP=' ')
-          end if
-        end if
-        ! constant flow
-        qch = this%chterm(n)
-        if (qch < DZERO) then
-          qtout = qtout + qch
-        else
-          qtin = qtin + qch
-        end if
-        call UWWORD(line, iloc, 11, 3, text, n, qch, SEP=' ')
-        ! complete qtin
-        qtin = qtin + qin + qinternalin + qro + qfrommover + qrai
-        ! complete qtout
-        qtout = qtout + qevt + qwdw + qext + qtomover + qinternalout
-        ! error
-        qerr = qtin + qtout
-        ! percent difference
-        qavg = DHALF * (qtin - qtout)
-        qerrpd = DZERO
-        if (qavg /= DZERO) then
-          qerrpd = DHUNDRED * qerr / qavg
-        end if
-        call UWWORD(line, iloc, 11, 3, text, n, qerr, SEP=' ')
-        call UWWORD(line, iloc, 11, 3, text, n, qerrpd)
-        ! -- write data for lake
-        write(iout, '(1X,A)') line(1:iloc)
-      end do
-
+      call this%budobj%write_flowtable(this%dis)
     end if
     !
     ! -- Output lake budget
@@ -6012,6 +5821,11 @@ contains
                                                this%name, &
                                                maxlist, .false., .false., &
                                                naux, this%auxname)
+    end if
+    !
+    ! -- if lake flow for each reach are written to the listing file
+    if (this%iprflow /= 0) then
+      call this%budobj%flowtable_df(this%iout)
     end if
     !
     ! -- return
