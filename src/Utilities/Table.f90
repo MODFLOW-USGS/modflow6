@@ -7,7 +7,6 @@ module TableModule
   use ConstantsModule, only: LINELENGTH, LENBUDTXT,                              &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
   use TableTermModule, only: TableTermType
-  !use BaseDisModule, only: DisBaseType
   use InputOutputModule, only: UWWORD, parseline
   use SimModule, only: store_error, ustop
   use TdisModule, only: kstp, kper
@@ -54,6 +53,8 @@ module TableModule
     procedure :: line_to_columns
     procedure :: finalize_table  
     procedure :: set_maxbound
+    procedure :: set_title
+    procedure :: print_list_entry
 
     procedure, private :: allocate_strings
     procedure, private :: set_header  
@@ -61,6 +62,7 @@ module TableModule
     procedure, private :: write_line  
     procedure, private :: finalize
     procedure, private :: add_error
+    procedure, private :: reset
     
     generic, public :: add_term => add_integer, add_real, add_string
     procedure, private :: add_integer, add_real, add_string    
@@ -426,9 +428,10 @@ module TableModule
     write(this%iout, '(1x,a,/)') this%linesep(1:width)
     !
     ! -- reinitialize variables
-    this%ientry = 0
-    this%icount = 0
-    this%first_entry = .TRUE.
+    call this%reset()
+    !this%ientry = 0
+    !this%icount = 0
+    !this%first_entry = .TRUE.
     !
     ! -- return
     return
@@ -782,9 +785,87 @@ module TableModule
     integer(I4B), intent(in) :: maxbound
     ! -- local
 ! ------------------------------------------------------------------------------
+    !
+    ! -- set maxbound
     this%maxbound = maxbound
+    !
+    ! -- reset counters
+    call this%reset()
     !
     ! -- return
     return
   end subroutine set_maxbound   
+  
+  subroutine set_title(this, title)
+! ******************************************************************************
+! set_maxbound -- reset maxbound
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(TableType) :: this
+    character(len=*), intent(in) :: title
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    ! -- set maxbound
+    this%title = title
+    !
+    ! -- return
+    return
+  end subroutine set_title
+  
+  subroutine print_list_entry(this, i, nodestr, q, bname)
+! ******************************************************************************
+! print_list_entry -- write flow term table values
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(TableType) :: this
+    integer(I4B), intent(in) :: i
+    character(len=*), intent(in) :: nodestr
+    real(DP), intent(in) :: q
+    character(len=*), intent(in) :: bname
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    ! -- fill table terms
+    call this%add_term(i)
+    call this%add_term(nodestr)
+    call this%add_term(q)
+    if (this%ntableterm > 3) then
+      call this%add_term(bname)
+    end if
+    !
+    ! -- return
+    return
+  end subroutine print_list_entry  
+  
+  subroutine reset(this)
+! ******************************************************************************
+! reset -- Private method to reset table counters
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(TableType) :: this
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    ! -- reset counters
+    this%ientry = 0
+    this%icount = 0
+    this%first_entry = .TRUE.
+    !
+    ! -- return
+    return
+  end subroutine reset 
+
 end module TableModule

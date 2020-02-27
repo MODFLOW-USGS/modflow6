@@ -93,6 +93,8 @@ module BaseDisModule
     procedure, public  :: record_srcdst_list_header
     procedure, private :: record_srcdst_list_entry
     generic, public    :: record_mf6_list_entry => record_srcdst_list_entry
+  ! *** NOTE: REMOVE print_list_entry WHEN ALL USES OF THIS METHOD ARE 
+  !           REMOVED FROM TRANSPORT
     procedure, public  :: print_list_entry
     procedure, public  :: nlarray_to_nodelist
     procedure, public  :: highest_active
@@ -1336,6 +1338,8 @@ module BaseDisModule
     return
   end subroutine record_srcdst_list_entry
 
+  ! *** NOTE: REMOVE print_list_entry WHEN ALL USES OF THIS METHOD ARE 
+  !           REMOVED FROM TRANSPORT
   subroutine print_list_entry(this, l, noder, q, iout, boundname)
 ! ******************************************************************************
 ! print_list_entry -- Print list budget entry

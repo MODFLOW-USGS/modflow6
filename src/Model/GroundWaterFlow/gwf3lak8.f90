@@ -4178,7 +4178,7 @@ contains
                       this%lakename(n), n, q, ALIGNMENT=TABLEFT)
         end if
         call UWWORD(line, iloc, 6, TABINTEGER, text, n, q, SEP=' ')
-        call UWWORD(line, iloc, 11, TABREAL, text, n, this %xnewpak(n))
+        call UWWORD(line, iloc, 11, TABREAL, text, n, this%xnewpak(n))
         write(iout, '(1X,A)') line(1:iloc)
       end do
     end if
@@ -5803,7 +5803,7 @@ contains
                                                this%name_model, &
                                                this%name, &
                                                maxlist, .false., .false., &
-                                               naux)
+                                               naux, ordered_id1=.false.)
     end if
     !
     ! -- 
@@ -5992,11 +5992,12 @@ contains
       idx = idx + 1
       call this%budobj%budterm(idx)%reset(this%noutlets)
       do n = 1, this%noutlets
+        n1 = this%lakein(n)
         q = this%pakmvrobj%get_qtomvr(n)
         if (q > DZERO) then
           q = -q
         end if
-        call this%budobj%budterm(idx)%update_term(n, n, q)
+        call this%budobj%budterm(idx)%update_term(n1, n1, q)
       end do
       
     end if
