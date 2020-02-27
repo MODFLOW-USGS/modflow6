@@ -103,6 +103,8 @@
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3sto8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3uzf8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3wel8.f90"/></Filter>
+		<Filter Name="LinearNetworkFlow">
+		<File RelativePath="..\src\Model\LinearNetworkFlow\lnf1.f90"/></Filter>
 		<Filter Name="ModelUtilities">
 		<File RelativePath="..\src\Model\ModelUtilities\BoundaryPackage.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\Connections.f90"/>
