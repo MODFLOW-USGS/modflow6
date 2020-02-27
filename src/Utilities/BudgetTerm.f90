@@ -26,6 +26,7 @@ module BudgetTermModule
     integer(I4B) :: nlist                                          ! size of arrays for this period
     logical :: olconv1                                             ! convert id1 to user node upon output
     logical :: olconv2                                             ! convert id2 to user node upon output
+    logical :: ordered_id1                                         ! the id1 array is ordered sequentially
     integer(I4B), dimension(:), pointer :: id1 => null()           ! first id (maxlist)
     integer(I4B), dimension(:), pointer :: id2 => null()           ! second id (maxlist)
     real(DP), dimension(:), pointer :: flow => null()              ! point this to simvals or simtomvr (maxlist)
@@ -53,7 +54,7 @@ module BudgetTermModule
   
   subroutine initialize(this, flowtype, text1id1, text2id1, &
                         text1id2, text2id2, maxlist, olconv1, olconv2, &
-                        naux, auxtxt)
+                        naux, auxtxt, ordered_id1)
 ! ******************************************************************************
 ! initialize -- initialize the budget term
 ! ******************************************************************************
@@ -73,6 +74,7 @@ module BudgetTermModule
     logical, intent(in) :: olconv2
     integer(I4B), intent(in) :: naux
     character(len=LENBUDTXT), dimension(:), intent(in), optional :: auxtxt
+    logical, intent(in), optional :: ordered_id1
     ! -- local
 ! ------------------------------------------------------------------------------
     this%flowtype = flowtype
@@ -87,6 +89,8 @@ module BudgetTermModule
     this%nlist = 0
     call this%allocate_arrays()
     if (present(auxtxt)) this%auxtxt(:) = auxtxt(1:naux)
+    this%ordered_id1 = .true.
+    if (present(ordered_id1)) this%ordered_id1 = ordered_id1
   end subroutine initialize
   
   subroutine allocate_arrays(this)

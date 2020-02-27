@@ -179,6 +179,7 @@ def get_model(idx, dir):
     lak = flopy.mf6.ModflowGwflak(gwf, mover=True, nlakes=nlakes,
                                   noutlets=noutlets,
                                   print_stage=True,
+                                  print_flows=True,
                                   packagedata=packagedata,
                                   connectiondata=connectiondata,
                                   outlets=outlets,
