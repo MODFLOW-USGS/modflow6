@@ -2,10 +2,12 @@ module GwtSsmModule
   
   use KindModule,             only: DP, I4B
   use ConstantsModule,        only: DONE, DZERO, LENAUXNAME, LENFTYPE,         &
-                                    LENPACKAGENAME
+                                    LENPACKAGENAME, LINELENGTH,                &
+                                    TABLEFT, TABCENTER
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule,          only: DisBaseType
   use GwtFmiModule,           only: GwtFmiType
+  use TableModule,            only: TableType, table_cr
   
   implicit none
   public :: GwtSsmType
@@ -21,6 +23,9 @@ module GwtSsmModule
     integer(I4B), dimension(:), pointer, contiguous    :: ibound => null()      ! pointer to model ibound
     real(DP), dimension(:), pointer, contiguous        :: cnew => null()        ! pointer to gwt%x
     type(GwtFmiType), pointer                          :: fmi => null()         ! pointer to fmi object
+    !
+    ! -- table objects
+    type(TableType), pointer :: outputtab => null()
     
   contains
   
@@ -35,6 +40,7 @@ module GwtSsmModule
     procedure, private :: allocate_arrays
     procedure, private :: read_options
     procedure, private :: read_data
+    procedure, private :: pak_setup_outputtab
   
   end type GwtSsmType
   
@@ -146,6 +152,9 @@ module GwtSsmModule
     !
     ! -- read the data block
     call this%read_data()
+    !
+    ! -- setup the output table
+    call this%pak_setup_outputtab()
     !
     ! -- Return
     return
@@ -331,7 +340,6 @@ module GwtSsmModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule, only: kstp, kper
     use ConstantsModule, only: LENPACKAGENAME, LENBOUNDNAME, LENAUXNAME, DZERO
     use BudgetModule, only: BudgetType
     ! -- dummy
@@ -343,14 +351,17 @@ module GwtSsmModule
     integer(I4B), intent(in) :: isuppress_output
     integer(I4B), dimension(:), optional, intent(in) :: imap
     ! -- local
+    character (len=LINELENGTH) :: title
+    integer(I4B) :: node, nodeu
+    character(len=20) :: nodestr
+    integer(I4B) :: maxrows
     integer(I4B) :: ip
-    integer(I4B) :: n
     integer(I4B) :: iauxpos
     integer(I4B) :: i, n2, ibinun
     real(DP) :: qbnd
     real(DP) :: cbnd, ctmp
     real(DP) :: rrate
-    integer(I4B) :: ibdlbl, naux
+    integer(I4B) :: naux
     real(DP), dimension(0,0) :: auxvar
     character(len=LENAUXNAME), dimension(0) :: auxname
     ! -- for observations
@@ -360,9 +371,29 @@ module GwtSsmModule
       "(1X,/1X,A,'   PERIOD ',I0,'   STEP ',I0)"
 ! ------------------------------------------------------------------------------
     !
-    !
-    ! -- Initialize
-    ibdlbl = 0
+    ! -- set maxrows
+    maxrows = 0
+    if (ibudfl /= 0 .and. this%iprflow /= 0) then
+      do ip = 1, this%fmi%nflowpack
+        if (this%fmi%iatp(ip) /= 0) cycle
+        !
+        ! -- do for each boundary
+        do i = 1, this%fmi%gwfpackages(ip)%nbound
+          node = this%fmi%gwfpackages(ip)%nodelist(i)
+          if (node > 0) then
+          !  if (this%ibound(node) > 0) then
+              maxrows = maxrows + 1
+          !  end if
+          end if
+        end do
+      end do
+      if (maxrows > 0) then
+        call this%outputtab%set_maxbound(maxrows)
+      end if
+      title = 'SSM PACKAGE (' // trim(this%name) //     &
+              ') FLOW RATES'
+      call this%outputtab%set_title(title)
+    end if
     !
     ! -- Set unit number for binary output
     if (this%ipakcb < 0) then
@@ -394,11 +425,11 @@ module GwtSsmModule
         do i = 1, this%fmi%gwfpackages(ip)%nbound
           !
           ! -- set nodenumber and initialize
-          n = this%fmi%gwfpackages(ip)%nodelist(i)
+          node = this%fmi%gwfpackages(ip)%nodelist(i)
           rrate = DZERO
           !
           ! -- skip calc if transport cell is inactive or constant concentration
-          if (this%ibound(n) > 0) then
+          if (this%ibound(node) > 0) then
             !
             ! -- Calculate the volumetric flow rate
             qbnd = this%fmi%gwfpackages(ip)%get_flow(i)
@@ -413,7 +444,7 @@ module GwtSsmModule
             !
             ! -- Add terms based on qbnd sign
             if(qbnd <= DZERO) then
-              ctmp = this%cnew(n)
+              ctmp = this%cnew(node)
             else
               ctmp = cbnd
             endif
@@ -424,22 +455,23 @@ module GwtSsmModule
           !
           ! -- Print the individual rates if the budget is being printed
           !    and PRINT_FLOWS was specified (this%iprflow<0)
-          if(ibudfl /= 0) then
-            if(this%iprflow /= 0) then
-              if(ibdlbl == 0) write(this%iout,fmttkk)                        &
-                text // ' (' // trim(this%name) // ')', kper, kstp
+          if (ibudfl /= 0) then
+            if (this%iprflow /= 0) then
+              !
+              ! -- set nodestr and write outputtab table
+              nodeu = this%dis%get_nodeuser(node)
+              call this%dis%nodeu_to_string(node, nodestr)
               bname = this%fmi%gwfpackages(ip)%name
-              call this%dis%print_list_entry(i, n, rrate, this%iout,      &
-                      bname)
-              ibdlbl=1
-            endif
-          endif
+              call this%outputtab%print_list_entry(i, trim(adjustl(nodestr)),  &
+                                                   rrate, bname)
+            end if
+          end if
           !
           ! -- If saving cell-by-cell flows in list, write flow
           if (ibinun /= 0) then
             n2 = i
             if (present(imap)) n2 = imap(i)
-            call this%dis%record_mf6_list_entry(ibinun, n, n2, rrate,          &
+            call this%dis%record_mf6_list_entry(ibinun, node, n2, rrate,       &
                                                     naux, auxvar(:,i),         &
                                                     olconv2=.FALSE.)
           end if
@@ -485,6 +517,13 @@ module GwtSsmModule
       this%ibound => null()
       this%fmi => null()
     endif
+    !
+    ! -- output table object
+    if (associated(this%outputtab)) then
+      call this%outputtab%table_da()
+      deallocate(this%outputtab)
+      nullify(this%outputtab)
+    end if
     !
     ! -- Scalars
     call mem_deallocate(this%nbound)
@@ -724,4 +763,53 @@ module GwtSsmModule
     return
   end subroutine read_data
   
+  subroutine pak_setup_outputtab(this)
+! ******************************************************************************
+! bnd_options -- set options for a class derived from BndType
+! This subroutine can be overridden by specific packages to set custom options
+! that are not part of the package superclass.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(GwtSsmtype),intent(inout) :: this
+    ! -- local
+    character(len=LINELENGTH) :: title
+    character(len=LINELENGTH) :: text
+    integer(I4B) :: ntabcol
+! ------------------------------------------------------------------------------
+    !
+    ! -- allocate and initialize the output table
+    if (this%iprflow /= 0) then
+      !
+      ! -- dimension table
+      ntabcol = 4
+      !if (this%inamedbound > 0) then
+      !  ntabcol = ntabcol + 1
+      !end if
+      !
+      ! -- initialize the output table object
+      title = 'SSM PACKAGE (' // trim(this%name) //     &
+              ') FLOW RATES'
+      call table_cr(this%outputtab, this%name, title)
+      call this%outputtab%table_df(1, ntabcol, this%iout, transient=.TRUE.)
+      text = 'NUMBER'
+      call this%outputtab%initialize_column(text, 10, alignment=TABCENTER)
+      text = 'CELLID'
+      call this%outputtab%initialize_column(text, 20, alignment=TABLEFT)
+      text = 'RATE'
+      call this%outputtab%initialize_column(text, 15, alignment=TABCENTER)
+      text = 'PACKAGE NAME'
+      call this%outputtab%initialize_column(text, 16, alignment=TABCENTER)
+      !if (this%inamedbound > 0) then
+      !  text = 'NAME'
+      !  call this%outputtab%initialize_column(text, 20, alignment=TABLEFT)
+      !end if
+    end if
+    !
+    ! -- return
+    return
+  end subroutine pak_setup_outputtab
+
 end module GwtSsmModule

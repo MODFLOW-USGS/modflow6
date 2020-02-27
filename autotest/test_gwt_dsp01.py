@@ -109,6 +109,7 @@ def get_model(idx, dir):
     chd = flopy.mf6.ModflowGwfchd(gwf, maxbound=len(c),
                                   stress_period_data=c,
                                   save_flows=False,
+                                  print_flows=True,
                                   pname='CHD-1')
 
     # output control
@@ -166,6 +167,7 @@ def get_model(idx, dir):
     cncs = {0: [[(0, 0, 0), 1.0]]}
     cnc = flopy.mf6.ModflowGwtcnc(gwt, maxbound=len(cncs),
                                   stress_period_data=cncs,
+                                  print_flows=True,
                                   save_flows=False,
                                   pname='CNC-1')
 
@@ -174,6 +176,7 @@ def get_model(idx, dir):
 
     # sources
     ssm = flopy.mf6.ModflowGwtssm(gwt, sources=[[]],
+                                  print_flows=True,
                                   filename='{}.ssm'.format(gwtname))
 
     # output control

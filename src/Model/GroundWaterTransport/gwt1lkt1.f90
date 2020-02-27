@@ -2361,6 +2361,7 @@ module GwtLktModule
     integer(I4B) :: n, n1, n2
     integer(I4B) :: maxlist, naux
     integer(I4B) :: idx
+    logical :: ordered_id1
     real(DP) :: q
     character(len=LENBUDTXT) :: text
     character(len=LENBUDTXT), dimension(1) :: auxtxt
@@ -2525,13 +2526,14 @@ module GwtLktModule
       idx = idx + 1
       maxlist = this%lakbudptr%budterm(this%idxbudtmvr)%maxlist
       naux = 0
+      ordered_id1 = this%lakbudptr%budterm(this%idxbudtmvr)%ordered_id1
       call this%budobj%budterm(idx)%initialize(text, &
                                                this%name_model, &
                                                this%name, &
                                                this%name_model, &
                                                this%name, &
                                                maxlist, .false., .false., &
-                                               naux)
+                                               naux, ordered_id1=ordered_id1)
     end if
     if (this%idxbudfmvr /= 0) then
       !

@@ -1032,7 +1032,8 @@ contains
       if (this%inamedbound /= 0) then
         ntabcols = ntabcols + 1
       end if
-      title = trim(this%name) // ' PACKAGE - STATIC WELL DATA'
+      title = trim(adjustl(this%text)) // ' PACKAGE (' //                        &
+              trim(adjustl(this%name)) //') STATIC WELL DATA'
       call table_cr(this%inputtab, this%name, title)
       call this%inputtab%table_df(this%nmawwells, ntabcols, this%iout)
       text = 'NUMBER'
@@ -1070,7 +1071,8 @@ contains
     ! -- write well connection data
     if (this%iprpak /= 0) then
       ntabcols = 10
-      title = trim(this%name) // ' PACKAGE - STATIC WELL CONNECTION DATA'
+      title = trim(adjustl(this%text)) // ' PACKAGE (' //                        &
+              trim(adjustl(this%name)) //') STATIC WELL CONNECTION DATA'
       call table_cr(this%inputtab, this%name, title)
       call this%inputtab%table_df(this%maxbound, ntabcols, this%iout)
       text = 'NUMBER'
@@ -1763,7 +1765,8 @@ contains
       if (this%iprpak /= 0) then
         !
         ! -- reset the input table object
-        title = trim(this%name) // ' PACKAGE - DATA FOR PERIOD'
+        title = trim(adjustl(this%text)) // ' PACKAGE (' //                      &
+                trim(adjustl(this%name)) //') DATA FOR PERIOD'
         write(title, '(a,1x,i6)') trim(adjustl(title)), kper
         call table_cr(this%inputtab, this%name, title)
         call this%inputtab%table_df(1, 5, this%iout)
@@ -1830,7 +1833,8 @@ contains
         end if
         !
         ! -- reset the input table object for rate data
-        title = trim(this%name) // ' PACKAGE - '// trim(adjustl(csteady)) //     &
+        title = trim(adjustl(this%text)) // ' PACKAGE (' //                      &
+                trim(adjustl(this%name)) //') ' // trim(adjustl(csteady)) //     &
                 ' RATE DATA FOR PERIOD'
         write(title, '(a,1x,i6)') trim(adjustl(title)), kper
         ntabcols = 6
@@ -1869,7 +1873,8 @@ contains
         if (this%iflowingwells /= 0) then
           !
           ! -- reset the input table object for flowing well data
-          title = trim(this%name) // ' PACKAGE - '// trim(adjustl(csteady)) //   &
+          title = trim(adjustl(this%text)) // ' PACKAGE (' //                    &
+                  trim(adjustl(this%name)) //') ' // trim(adjustl(csteady)) //   &
                   ' FLOWING WELL DATA FOR PERIOD'
           write(title, '(a,1x,i6)') trim(adjustl(title)), kper
           ntabcols = 4
@@ -1902,7 +1907,8 @@ contains
         end if
         !
         ! -- reset the input table object for shutoff data
-        title = trim(this%name) // ' PACKAGE - '// trim(adjustl(csteady)) //   &
+        title = trim(adjustl(this%text)) // ' PACKAGE (' //                      &
+                trim(adjustl(this%name)) //') '// trim(adjustl(csteady)) //      &
                 ' WELL SHUTOFF DATA FOR PERIOD'
         write(title, '(a,1x,i6)') trim(adjustl(title)), kper
         ntabcols = 4
@@ -4325,8 +4331,8 @@ contains
       if (this%inamedbound == 1) nterms = nterms + 1
       !
       ! -- set up table title
-      title = trim(this%name) // ' PACKAGE - SUMMARY OF HEADS FOR ' //           &
-              'EACH CONTROL VOLUME'
+      title = trim(adjustl(this%text)) // ' PACKAGE (' //                        &
+              trim(adjustl(this%name)) //') HEADS FOR EACH CONTROL VOLUME'
       !
       ! -- set up stage tableobj
       call table_cr(this%headtab, this%name, title)
