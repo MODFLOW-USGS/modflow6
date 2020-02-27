@@ -483,7 +483,7 @@ For each stress period, time step, and data type that is saved to the LAK, MAW, 
 \texttt{CONSTANT} & 6 & 1 / \texttt{nlakes} & Calculated flow to maintain constant stage for lake. The lake number is written to (\texttt{ID1}) and (\texttt{ID2}). \\
 \texttt{EXT-OUTFLOW} & 6 & 1 / \texttt{nlakes} & Calculated outflow to external boundaries (is nonzero for lakes with outlets not connected to another lake). The lake number is written to (\texttt{ID1}) and (\texttt{ID2}). \\
 \texttt{FROM-MVR} & 6 & 1 / \texttt{nlakes} & Calculated flow to lake from the MVR Package. Only saved if MVR Package is used in the LAK Package. The lake number is written to (\texttt{ID1}) and (\texttt{ID2}). \\
-\texttt{TO-MVR} & 6 & 1 / \texttt{noutlets} & Calculated flow from a lake outlet to the MVR Package. Only saved if MVR Package is used in the LAK Package. The lake outlet number is written to (\texttt{ID1}) and (\texttt{ID2}). \\
+\texttt{TO-MVR} & 6 & 1 / \texttt{noutlets} & Calculated flow from a lake outlet to the MVR Package. Only saved if MVR Package is used in the LAK Package. The lake number \texttt{LAKEIN} for the connected outlet is written to (\texttt{ID1}) and (\texttt{ID2}). \\
 \texttt{AUXILIARY} & 6 & \texttt{naux}+1 / \texttt{nlakes} & Auxiliary variables, if specified in the LAK Package, are saved to this flow term. The first entry of the \texttt{DATA2D} column has a value of zero. The lake number is written to (\texttt{ID1}) and (\texttt{ID2}).
 \label{table:binarylak}
 \end{longtable}
