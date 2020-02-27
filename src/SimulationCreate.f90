@@ -332,6 +332,7 @@ module SimulationCreateModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use GwfModule,              only: gwf_cr
+    use LnfModule,              only: lnf_cr
     use ConstantsModule,        only: LENMODELNAME
     ! -- dummy
     ! -- local
