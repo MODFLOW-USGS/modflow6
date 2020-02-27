@@ -401,7 +401,7 @@ module mf6dll
     integer(kind=c_int) :: bmi_status
     ! local
     character(len=LENMODELNAME) :: model_name
-    integer(I4B), dimension(:), pointer :: grid_shape
+    integer(I4B), dimension(:), pointer, contiguous :: grid_shape
     character(kind=c_char) :: grid_type(MAXSTRLEN)
     
     ! make sure function is only used for implemented grid_types
@@ -432,7 +432,7 @@ module mf6dll
     integer(kind=c_int) :: bmi_status
     ! local
     character(len=LENMODELNAME) :: model_name
-    integer(I4B), dimension(:), pointer :: grid_shape
+    integer(I4B), dimension(:), pointer, contiguous :: grid_shape
     character(kind=c_char) :: grid_type(MAXSTRLEN)
     character(len=MAXSTRLEN) :: grid_type_f
     integer :: status
@@ -466,7 +466,7 @@ module mf6dll
     type(c_ptr), intent(out) :: grid_shape
     integer(kind=c_int) :: bmi_status
     ! local
-    integer, dimension(:), pointer :: grid_shape_ptr
+    integer, dimension(:), pointer, contiguous :: grid_shape_ptr
     integer, dimension(:), target, allocatable, save :: array
     character(len=LENMODELNAME) :: model_name
     character(kind=c_char) :: grid_type(MAXSTRLEN)
@@ -500,7 +500,7 @@ module mf6dll
     integer(kind=c_int) :: bmi_status
     ! local
     integer :: i
-    integer, dimension(:), pointer :: grid_shape_ptr
+    integer, dimension(:), pointer, contiguous :: grid_shape_ptr
     real(DP), dimension(:), pointer, contiguous :: array_ptr
     real(DP), dimension(:), target, allocatable, save :: array
     character(len=LENMODELNAME) :: model_name
@@ -542,7 +542,7 @@ module mf6dll
     integer(kind=c_int) :: bmi_status
     ! local
     integer :: i
-    integer, dimension(:), pointer :: grid_shape_ptr
+    integer, dimension(:), pointer, contiguous :: grid_shape_ptr
     real(DP), dimension(:), pointer, contiguous :: array_ptr
     real(DP), dimension(:), target, allocatable, save :: array
     character(len=LENMODELNAME) :: model_name
