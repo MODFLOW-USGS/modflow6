@@ -167,14 +167,57 @@ module TimeSeriesManagerModule
     begintime = totimc
     endtime = begintime + delt
     !
+    ! -- Determine number of ts links
+    nlinks = this%boundtslinks%Count()
+    nauxlinks = this%auxvartslinks%Count()
+    !
+    ! -- Iterate through auxvartslinks and replace specified
+    !    elements of auxvar with average value obtained from
+    !    appropriate time series.  Need to do auxvartslinks
+    !    first because they may be a multiplier column
+    do i = 1, nauxlinks
+      tsLink => GetTimeSeriesLinkFromList(this%auxvarTsLinks, i)
+      timeseries => tsLink%timeSeries
+      if (i == 1) then
+        if (tsLink%Iprpak == 1) then
+          write(this%iout, fmt5) kper, kstp
+        endif
+      endif
+      tsLink%BndElement = timeseries%GetValue(begintime, endtime)
+      !
+      ! -- Write time series values to output file
+      if (tsLink%Iprpak == 1) then
+        pkgID = '"' // trim(tsLink%PackageName) // '"'
+        if (tsLink%Text == '') then
+          if (tsLink%BndName == '') then
+            write(this%iout,10)trim(pkgID), tsLink%IRow, tsLink%JCol, &
+                                trim(tsLink%timeSeries%Name), &
+                                tsLink%BndElement
+          else
+            write(this%iout,15)trim(pkgID), tsLink%IRow, tsLink%JCol, &
+                                trim(tsLink%timeSeries%Name), &
+                                tsLink%BndElement, trim(tsLink%BndName)
+          endif
+        else
+          if (tsLink%BndName == '') then
+            write(this%iout,20)trim(pkgID), tsLink%IRow, trim(tsLink%Text), &
+                                trim(tsLink%timeSeries%Name), &
+                                tsLink%BndElement
+          else
+            write(this%iout,25)trim(pkgID), tsLink%IRow, trim(tsLink%Text), &
+                                trim(tsLink%timeSeries%Name), &
+                                tsLink%BndElement, trim(tsLink%BndName)
+          endif
+        endif
+      endif
+    enddo
+    !
     ! -- Iterate through boundtslinks and replace specified
     !    elements of bound with average value obtained from
     !    appropriate time series. (For list-type packages)
-    nlinks = this%boundtslinks%Count()
-    nauxlinks = this%auxvartslinks%Count()
     do i = 1, nlinks
       tsLink => GetTimeSeriesLinkFromList(this%boundTsLinks, i)
-      if (i == 1) then
+      if (i == 1 .and. nauxlinks == 0) then
         if (tsLink%Iprpak == 1) then
           write(this%iout, fmt5) kper, kstp
         endif
@@ -185,12 +228,15 @@ module TimeSeriesManagerModule
       if (tsLink%UseDefaultProc) then
         timeseries => tsLink%timeSeries
         tsLink%BndElement = timeseries%GetValue(begintime, endtime)
-!        ! -- If multiplier is active and it applies to this element, do the multiplication
+        !
+        ! -- If multiplier is active and it applies to this element, 
+        !    do the multiplication.  This must be done after the auxlinks
+        !    have been calculated in case iauxmultcol is being used.
         if (associated(tsLink%RMultiplier)) then
           tsLink%BndElement = tsLink%BndElement * tsLink%RMultiplier
         endif
-!        ! Ned TODO: Need a flag to control output of values generated from time series
-!        ! Also need to format as a table? Otherwise, just remove this if block.
+        !
+        ! -- Write time series values to output files
         if (tsLink%Iprpak == 1) then
           pkgID = '"' // trim(tsLink%PackageName) // '"'
           if (tsLink%Text == '') then
@@ -221,50 +267,9 @@ module TimeSeriesManagerModule
           tsLink%BndElement = tsLink%BndElement * tsLink%CellArea
         endif
       endif
-      !if (i==nlinks) then
-      !  write(this%iout,'()')
-      !endif
     enddo
     !
-    ! -- Iterate through auxvartslinks and replace specified
-    !    elements of auxvar with average value obtained from
-    !    appropriate time series.
-    do i=1,nauxlinks
-      tsLink => GetTimeSeriesLinkFromList(this%auxvarTsLinks, i)
-      timeseries => tsLink%timeSeries
-      if (i==1 .and. nlinks==0) then
-        if (tsLink%Iprpak == 1) then
-          write(this%iout, fmt5) kper, kstp
-        endif
-      endif
-      tsLink%BndElement = timeseries%GetValue(begintime, endtime)
-!     ! Ned TODO: Need a flag to control output of values generated from time series
-!     ! Also need to format as a table? Otherwise, just remove this if block.
-      if (tsLink%Iprpak == 1) then
-        pkgID = '"' // trim(tsLink%PackageName) // '"'
-        if (tsLink%Text == '') then
-          if (tsLink%BndName == '') then
-            write(this%iout,10)trim(pkgID), tsLink%IRow, tsLink%JCol, &
-                                trim(tsLink%timeSeries%Name), &
-                                tsLink%BndElement
-          else
-            write(this%iout,15)trim(pkgID), tsLink%IRow, tsLink%JCol, &
-                                trim(tsLink%timeSeries%Name), &
-                                tsLink%BndElement, trim(tsLink%BndName)
-          endif
-        else
-          if (tsLink%BndName == '') then
-            write(this%iout,20)trim(pkgID), tsLink%IRow, trim(tsLink%Text), &
-                                trim(tsLink%timeSeries%Name), &
-                                tsLink%BndElement
-          else
-            write(this%iout,25)trim(pkgID), tsLink%IRow, trim(tsLink%Text), &
-                                trim(tsLink%timeSeries%Name), &
-                                tsLink%BndElement, trim(tsLink%BndName)
-          endif
-        endif
-      endif
-    enddo
+    ! -- Finish with ending line
     if (nlinks + nauxlinks > 0) then
       if (tsLink%Iprpak == 1) then
         write(this%iout,'()')

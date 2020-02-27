@@ -10,6 +10,6 @@ END DIMENSIONS
 
 #The PACKAGEDATA block is required
 BEGIN PACKAGEDATA
-# cellid  npoints  xzpairs
-       8        5  0. 1.5 0. 0. 1.5 0. 1.5 1.5 0. 1.5
+# cellid  npoints  xcoords            zcoords
+       8        5  1. 1. 2.5 2.5 1. 1.5 0. 0. 1.5 1.5
 END PACKAGEDATA

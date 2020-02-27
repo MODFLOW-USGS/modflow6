@@ -162,6 +162,7 @@
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration></File>
 		<File RelativePath="..\src\Utilities\Constants.f90"/>
+		<File RelativePath="..\src\Utilities\DeferredStringObject.f90"/>
 		<File RelativePath="..\src\Utilities\genericutils.f90"/>
 		<File RelativePath="..\src\Utilities\HashTable.f90"/>
 		<File RelativePath="..\src\Utilities\InputOutput.f90"/>
@@ -177,6 +178,8 @@
 		<File RelativePath="..\src\Utilities\sort.f90"/>
 		<File RelativePath="..\src\Utilities\Sparse.f90"/>
 		<File RelativePath="..\src\Utilities\StringList.f90"/>
+		<File RelativePath="..\src\Utilities\Table.f90"/>
+		<File RelativePath="..\src\Utilities\TableTerm.f90"/>
 		<File RelativePath="..\src\Utilities\Timer.f90"/>
 		<File RelativePath="..\src\Utilities\version.f90"/></Filter>
 		<File RelativePath="..\src\mf6.f90"/>
