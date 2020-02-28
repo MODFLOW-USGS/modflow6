@@ -1,12 +1,12 @@
 module RectangularGeometryModule
   use KindModule, only: DP, I4B
-  use BaseGeometryModule, only: BaseGeometryType
+  use BaseGeometryModule, only: GeometryBaseType
   use ConstantsModule, only: DZERO
   implicit none
   private
   public :: RectangularGeometryType
   
-  type, extends(BaseGeometryType) :: RectangularGeometryType
+  type, extends(GeometryBaseType) :: RectangularGeometryType
     real(DP) :: height = DZERO
     real(DP) :: width  = DZERO
   contains
@@ -188,7 +188,7 @@ module RectangularGeometryModule
 ! ------------------------------------------------------------------------------
     !
     ! -- call parent to print parent attributes
-    call this%BaseGeometryType%print_attributes(iout)
+    call this%GeometryBaseType%print_attributes(iout)
     !
     ! -- Print specifics of this geometry type
     write(iout, fmttd) 'HEIGHT = ', this%height

@@ -1,13 +1,13 @@
 module RectangularChGeometryModule
   use KindModule, only: DP, I4B
-  use BaseGeometryModule, only: BaseGeometryType
+  use BaseGeometryModule, only: GeometryBaseType
   use ConstantsModule, only: DZERO, DEM5
   use SmoothingModule,  only: sCubicSaturation
   implicit none
   private
   public :: RectangularChGeometryType
   
-  type, extends(BaseGeometryType) :: RectangularChGeometryType
+  type, extends(GeometryBaseType) :: RectangularChGeometryType
     real(DP) :: width  = DZERO
     real(DP) :: length = DZERO
   contains
@@ -239,7 +239,7 @@ module RectangularChGeometryModule
 ! ------------------------------------------------------------------------------
     !
     ! -- call parent to print parent attributes
-    call this%BaseGeometryType%print_attributes(iout)
+    call this%GeometryBaseType%print_attributes(iout)
     !
     ! -- Print specifics of this geometry type
     write(iout, fmttd) 'WIDTH = ', this%width

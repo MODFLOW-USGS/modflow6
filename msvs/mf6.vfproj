@@ -75,7 +75,7 @@
 		<File RelativePath="..\src\Exchange\NumericalExchange.f90"/></Filter>
 		<Filter Name="Model">
 		<Filter Name="Geometry">
-		<File RelativePath="..\src\Model\Geometry\BaseGeometry.f90"/>
+		<File RelativePath="..\src\Model\Geometry\GeometryBase.f90"/>
 		<File RelativePath="..\src\Model\Geometry\CircularGeometry.f90"/>
 		<File RelativePath="..\src\Model\Geometry\RectangularChGeometry.f90"/>
 		<File RelativePath="..\src\Model\Geometry\RectangularGeometry.f90"/></Filter>
