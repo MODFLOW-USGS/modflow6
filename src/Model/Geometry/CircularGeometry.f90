@@ -2,10 +2,12 @@ module CircularGeometryModule
   use KindModule, only: DP, I4B
   use BaseGeometryModule, only: GeometryBaseType
   use ConstantsModule, only: DZERO, DTWO, DPI,                                   &
-                             LINELENGTH, LENORIGIN, LENFTYPE, LENPACKAGENAME
-
+                             LINELENGTH, LENORIGIN, LENFTYPE, LENPACKAGENAME,    &
+                             TABLEFT, TABCENTER
   use SimModule,                    only: count_errors, store_error, ustop,    &
                                           store_error_unit
+  use TableModule, only: table_cr
+
   implicit none
 
   private
@@ -15,25 +17,28 @@ module CircularGeometryModule
   character(len=LENPACKAGENAME) :: text  = '            CGEO'
   
   type, extends(GeometryBaseType) :: CircularGeometryType
-    real(DP), dimension(:), pointer :: radius => null()
-    real(DP), dimension(:), pointer :: diameter => null()
+    real(DP), dimension(:), pointer, contiguous :: radius => null()
+    real(DP), dimension(:), pointer, contiguous :: diameter => null()
   contains
-    procedure :: geo_df => cgeo_df
+    procedure :: geo_ar => cgeo_ar
     procedure :: geo_da => cgeo_da
     procedure :: area_sat
     procedure :: perimeter_sat
     procedure :: area_wet
     procedure :: perimeter_wet
     ! -- private
+    procedure, private :: cgeo_allocate_scalars
+    procedure, private :: cgeo_allocate_arrays
     procedure, private :: read_options
     procedure, private :: read_dimensions
+    procedure, private :: read_packagedata
   end type CircularGeometryType
   
   contains
 
   subroutine cgeo_cr(geo, name_model, inunit, iout)
 ! ******************************************************************************
-! cgeo_cr -- Create a new circular geometry  object
+! cgeo_cr -- Create a new circular geometry object
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -49,7 +54,7 @@ module CircularGeometryModule
     geo => geonew
     !
     !
-    call geonew%allocate_scalars(name_model, text)
+    call geonew%cgeo_allocate_scalars(name_model, text)
     !
     ! -- set
     geo%inunit = inunit
@@ -63,7 +68,7 @@ module CircularGeometryModule
     return
   end subroutine cgeo_cr  
   
-  subroutine cgeo_df(this)
+  subroutine cgeo_ar(this)
     ! -- dummy
     class(CircularGeometryType) :: this
 ! ------------------------------------------------------------------------------
@@ -82,11 +87,15 @@ module CircularGeometryModule
       ! -- Read dimensions block
       call this%read_dimensions()
       !
+      ! -- allocate arrays
+      call this%cgeo_allocate_arrays()
+      !
       ! -- read package data
+      call this%read_packagedata()
     end if
     ! -- return
     return
-  end subroutine cgeo_df
+  end subroutine cgeo_ar
 
   subroutine cgeo_da(this)
     use MemoryManagerModule, only: mem_deallocate
@@ -94,12 +103,12 @@ module CircularGeometryModule
     class(CircularGeometryType) :: this
 ! ------------------------------------------------------------------------------
     !
-    ! -- Allocate parent scalars
-    call this%GeometryBaseType%geo_da()    
-    !
-    ! -- deallocate local arrays
+    ! -- deallocate local variables
     call mem_deallocate(this%radius)
     call mem_deallocate(this%diameter)
+    !
+    ! -- deallocate parent variables
+    call this%GeometryBaseType%geo_da()    
     !
     ! -- return
     return
@@ -151,7 +160,7 @@ module CircularGeometryModule
         'NO', trim(adjustl(ftype)), 'OPTION BLOCK DETECTED.'
     end if
     if(isfound) then
-      write(this%iout,'(1x,a)')'END OF DISCRETIZATION OPTIONS'
+      write(this%iout,'(1x,a)')'END OF CIRCULAR GEOMETRY OPTIONS'
     endif
     !
     ! -- Return
@@ -218,8 +227,112 @@ module CircularGeometryModule
     ! -- Return
     return
   end subroutine read_dimensions
-  
-  subroutine allocate_scalars(this, name_model, ftype)
+
+  subroutine read_packagedata(this)
+  ! ******************************************************************************
+  ! read_packagedata -- read package data
+  ! ******************************************************************************
+  !
+  !    SPECIFICATIONS:
+  ! ------------------------------------------------------------------------------
+    use ConstantsModule, only: LINELENGTH
+    use SimModule, only: ustop, store_error, count_errors
+    ! -- dummy
+    class(CircularGeometryType),intent(inout) :: this
+    ! -- local
+    character (len=LINELENGTH) :: title
+    character (len=LINELENGTH) :: text
+    character (len=LINELENGTH) :: errmsg
+    logical :: isfound, endOfBlock
+    integer(I4B) :: ntabcol
+    integer(I4B) :: ntabrow
+    integer(I4B) :: ierr
+    integer(I4B) :: idx
+    integer(I4B) :: n
+    ! -- format
+  ! ------------------------------------------------------------------------------
+    !
+    ! -- initialize local variables
+    idx = 0
+    !
+    ! -- read package data
+    call this%parser%GetBlock('PACKAGEDATA', isfound, ierr, &
+                              supportOpenClose=.true.)
+    !
+    ! -- parse reaches block if detected
+    if (isfound) then
+      write(this%iout,'(/1x,a)')'PROCESSING '//trim(adjustl(this%text))// &
+        ' PACKAGEDATA'
+      do
+        call this%parser%GetNextLine(endOfBlock)
+        if (endOfBlock) then
+          exit
+        end if
+        !
+        ! -- increment counter
+        idx = idx + 1
+        !
+        ! -- check if idx exceeds ngeo dimension
+        if (idx > this%ngeo) then
+          cycle
+        end if
+        ! -- read cell number
+        n = this%parser%GetInteger()
+        !
+        ! -- convert cell number to cellid
+        ! use disl to convert
+        this%nodelist(idx) = n
+        ! -- get radius
+        this%radius(idx) = this%parser%GetDouble()
+      end do
+      write(this%iout,'(1x,a)')'END OF '//trim(adjustl(this%text))//' PACKAGEDATA'
+    else
+      call store_error('ERROR.  REQUIRED PACKAGEDATA BLOCK NOT FOUND.')
+    end if
+    !
+    ! -- print input data
+    if (this%iprpak /= 0) then
+      !
+      ! -- reset the input table object
+      title = trim(adjustl(this%text)) // ' PACKAGE ' //                         &
+              'CIRCULAR GEOMETRY DATA'
+      ntabcol = 3
+      ntabrow = min(idx, this%ngeo)
+      call table_cr(this%inputtab, this%text, title)
+      call this%inputtab%table_df(ntabrow, ntabcol, this%iout)
+      text = 'NUMBER'
+      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      text = 'CELLID'
+      call this%inputtab%initialize_column(text, 20, alignment=TABLEFT)
+      text = 'RADIUS'
+      call this%inputtab%initialize_column(text, 15, alignment=TABCENTER)
+      do n = 1, ntabrow
+        call this%inputtab%add_term(n)
+        call this%inputtab%add_term(this%nodelist(n))
+        call this%inputtab%add_term(this%radius(n))
+      end do
+    end if
+    
+    !
+    ! -- check if the number of entries is not equal to
+    if (idx /= this%ngeo) then
+      write(errmsg,'(4x,a,i0,a,i0,a)')                                           &
+        '****ERROR. NUMBER OF CIRCULAR GEOMETRY ENTRIES (', idx,                 &
+        ') IS NOT EQUAL TO NGEO (', this%ngeo, ')'
+      call store_error(errmsg)
+    end if
+    !
+    ! -- write summary of error messages for block
+    if (count_errors() > 0) then
+      call this%parser%StoreErrorUnit()
+      call ustop()
+    end if
+    !
+    ! -- return
+    return
+  end subroutine read_packagedata  
+
+  subroutine cgeo_allocate_scalars(this, name_model, ftype)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
@@ -234,9 +347,9 @@ module CircularGeometryModule
     !
     ! -- return
     return
-  end subroutine allocate_scalars
+  end subroutine cgeo_allocate_scalars
 
-  subroutine allocate_arrays(this)
+  subroutine cgeo_allocate_arrays(this)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
@@ -253,7 +366,7 @@ module CircularGeometryModule
     !
     ! -- return
     return
-  end subroutine allocate_arrays
+  end subroutine cgeo_allocate_arrays
   
   function area_sat(this, n)
 ! ******************************************************************************

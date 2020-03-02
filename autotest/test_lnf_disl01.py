@@ -91,7 +91,7 @@ gdn = [(7, 5, 1., 1., 2.5, 2.5, 1., 1.5, 0., 0., 1.5, 1.5)]
 # temporal discretization
 nper = 1
 perlen, nstp, tsmult = 1., 1, 1.
-tdis_rc = (perlen, nstp, tsmult)
+tdis_rc = [[perlen, nstp, tsmult]]
 
 # solver parameters
 nouter, ninner = 500, 300
@@ -137,9 +137,12 @@ def get_model(idx, dir):
                                    cell1d=cell1d)
 
     # create geometry packages # for scott to fix
-    cgeo = flopy.mf6.ModflowLnfcgeo(lnf, geometry_data=gdc)
-    rgeo = flopy.mf6.ModflowLnfrgeo(lnf, geometry_data=gdr)
-    ngeo = flopy.mf6.ModflowLnfngeo(lnf, geometry_data=gdn)
+    cgeo = flopy.mf6.ModflowLnfcgeo(lnf, print_input=True,
+                                    ngeo=len(gdc), geometry_data=gdc)
+    rgeo = flopy.mf6.ModflowLnfrgeo(lnf, print_input=True,
+                                    ngeo=len(gdr), geometry_data=gdr)
+    ngeo = flopy.mf6.ModflowLnfngeo(lnf, print_input=True,
+                                    ngeo=len(gdn), geometry_data=gdn)
 
     # initial conditions
     ic = flopy.mf6.ModflowLnfic(lnf, strt=strt)

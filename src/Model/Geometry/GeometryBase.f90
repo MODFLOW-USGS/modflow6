@@ -4,7 +4,8 @@ module BaseGeometryModule
   use ConstantsModule, only: DZERO,                                              &
                              LENORIGIN, LENMODELNAME, LENFTYPE, LENPACKAGENAME
   use SimModule, only: store_error, ustop  
-  use BlockParserModule,       only: BlockParserType
+  use BlockParserModule, only: BlockParserType
+  use TableModule, only: TableType
 
   implicit none
   
@@ -22,8 +23,11 @@ module BaseGeometryModule
     integer(I4B), pointer                           :: ngeo       => null()
     integer(I4B), dimension(:), pointer, contiguous :: nodelist   => null()      !vector of reduced node numbers
     type(BlockParserType)                           :: parser                    !object to read blocks
+    !
+    ! -- table objects
+    type(TableType), pointer :: inputtab => null()
   contains
-    procedure :: geo_df
+    procedure :: geo_ar
     procedure :: geo_da
     procedure :: area_sat
     procedure :: perimeter_sat
@@ -35,7 +39,7 @@ module BaseGeometryModule
 
   contains
   
-  subroutine geo_df(this)
+  subroutine geo_ar(this)
     ! -- dummy
     class(GeometryBaseType) :: this
 ! ------------------------------------------------------------------------------
@@ -43,9 +47,10 @@ module BaseGeometryModule
     call store_error('Program error: GeometryBaseType method geo_df not' //      &
                      'implemented.')
     call ustop()
+    !
     ! -- return
     return
-  end subroutine geo_df
+  end subroutine geo_ar
 
   subroutine geo_da(this)
     use MemoryManagerModule, only: mem_deallocate
@@ -61,11 +66,19 @@ module BaseGeometryModule
     ! -- deallocate arrays
     call mem_deallocate(this%nodelist)
     !
+    ! -- input table object
+    if (associated(this%inputtab)) then
+      call this%inputtab%table_da()
+      deallocate(this%inputtab)
+      nullify(this%inputtab)
+    end if
+    !
     ! -- deallocate scalars
     call mem_deallocate(this%inunit)
     call mem_deallocate(this%iout)
     call mem_deallocate(this%iprpak)
     call mem_deallocate(this%ngeo)
+    !
     ! -- return
     return
   end subroutine geo_da
