@@ -152,7 +152,6 @@ module mf6dll
     real(DP), pointer :: dblptr
     real(DP), dimension(:), pointer, contiguous :: arrayptr
     real(DP), dimension(:,:), pointer, contiguous :: arrayptr2D
-    real(DP), dimension(:,:,:), pointer, contiguous :: arrayptr3D
     integer(I4B) :: rank
     
     var_name = char_array_to_string(c_var_name, strlen(c_var_name))
@@ -170,9 +169,6 @@ module mf6dll
       call mem_setptr(arrayptr, var_name_only, origin)
       x = c_loc(arrayptr)
     else if (rank == 2) then
-      call mem_setptr(arrayptr2D, var_name_only, origin)
-      x = c_loc(arrayptr2D)
-    else if (rank == 3) then
       call mem_setptr(arrayptr2D, var_name_only, origin)
       x = c_loc(arrayptr2D)
     else
@@ -197,7 +193,6 @@ module mf6dll
     integer(I4B), pointer :: scalarptr
     integer(I4B), dimension(:), pointer, contiguous :: arrayptr
     integer(I4B), dimension(:,:), pointer, contiguous :: arrayptr2D
-    integer(I4B), dimension(:,:,:), pointer, contiguous :: arrayptr3D
     
     var_name = char_array_to_string(c_var_name, strlen(c_var_name))
     
@@ -217,9 +212,6 @@ module mf6dll
     else if (rank == 2) then
       call mem_setptr(arrayptr, var_name_only, origin)
       x = c_loc(arrayptr2D)
-    else if (rank == 3) then
-      call mem_setptr(arrayptr, var_name_only, origin)
-      x = c_loc(arrayptr3D)
     else
       bmi_status = BMI_FAILURE
       return
@@ -284,13 +276,13 @@ module mf6dll
   function get_var_shape(c_var_name, c_var_shape) result(bmi_status) bind(C, name="get_var_shape")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_var_shape
     use MemoryTypeModule, only: MAXMEMRANK
-    use MemoryManagerModule, only: get_mem_shape
+    use MemoryManagerModule, only: get_mem_shape, get_mem_rank
     character (kind=c_char), intent(in) :: c_var_name(*)
-    integer(c_int), intent(inout) :: c_var_shape(MAXMEMRANK)
+    integer(c_int), intent(inout) :: c_var_shape(*)
     integer(kind=c_int) :: bmi_status
     ! local
     integer(I4B), dimension(MAXMEMRANK) :: var_shape
-    integer :: idx
+    integer :: idx, var_rank
     character(len=LENORIGIN) :: origin, var_name
     character(len=LENVARNAME) :: var_name_only
     
@@ -300,14 +292,22 @@ module mf6dll
     var_name_only = var_name(idx+1:)
     
     var_shape = 0
+    var_rank = 0
+    call get_mem_rank(var_name_only, origin, var_rank)
     call get_mem_shape(var_name_only, origin, var_shape)
-    if (var_shape(1) == -1) then
+    if (var_shape(1) == -1 .or. var_rank == -1) then
       bmi_status = BMI_FAILURE
       return
     end if
     
-    c_var_shape = var_shape
+    
+    ! if shape is (100,1)
+    ! then we get (100,1,undef) from the call get_mem_shape
+    ! we need to revert to c-style in BMI convention, thus: 
+    ! (1,100) means reverse and drop undef    
+    c_var_shape(1:var_rank) = var_shape(var_rank:1:-1)
     bmi_status = BMI_SUCCESS
+    
   end function get_var_shape
   
   
@@ -481,6 +481,7 @@ module mf6dll
     model_name = get_model_name(grid_id)
     call mem_setptr(grid_shape_ptr, "MSHAPE", trim(model_name) // " DIS")
     
+    ! TODO_MJR: review this!
     if (grid_shape_ptr(1) == 1) then
       array = grid_shape_ptr(2:3)
       grid_shape_ptr => array
