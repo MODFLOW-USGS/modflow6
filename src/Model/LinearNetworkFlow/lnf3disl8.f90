@@ -1,4 +1,4 @@
-module GwfDislModule
+module LnfDislModule
 
   use ArrayReadersModule, only: ReadArray
   use KindModule, only: DP, I4B
@@ -14,16 +14,16 @@ module GwfDislModule
 
   implicit none
   private
-  public disv_cr, disv_init_mem, GwfDislType
+  public disv_cr, disv_init_mem, LnfDislType
 
-  type, extends(DisBaseType) :: GwfDislType
+  type, extends(DisBaseType) :: LnfDislType
     integer(I4B), pointer :: nnodes => null()                                    ! number of cells
     integer(I4B), pointer :: nvert => null()                                     ! number of x,y vertices
     real(DP), dimension(:,:), pointer, contiguous :: vertices => null()          ! cell vertices stored as 3d array of x, y, and z
-    real(DP), dimension(:,:), pointer, contiguous :: cellfdc => null()           ! fdc stored as array
+    real(DP), dimension(:), pointer, contiguous :: cellfdc => null()             ! fdc stored as array
     integer(I4B), dimension(:), pointer, contiguous :: iavert => null()          ! cell vertex pointer ia array
     integer(I4B), dimension(:), pointer, contiguous :: javert => null()          ! cell vertex pointer ja array
-    integer(I4B), dimension(:, :, :), pointer, contiguous :: idomain  => null()  ! idomain (ncpl, 1, nlay)
+    integer(I4B), dimension(:), pointer, contiguous :: idomain  => null()        ! idomain (ncpl, 1, nlay)
     type(DisvGeomType) :: cell1                                                  ! cell object used to calculate geometric properties
     type(DisvGeomType)  :: cell2                                                 ! cell object used to calculate geometric properties
   contains
@@ -31,7 +31,6 @@ module GwfDislModule
     procedure :: dis_da => disv_da
     procedure :: get_cellxy => get_cellxy_disl
     procedure, public :: record_array
-    procedure, public :: read_layer_array
     procedure, public :: record_srcdst_list_header
     ! -- helper functions
     procedure :: get_nodenumber_idx1
@@ -40,8 +39,7 @@ module GwfDislModule
     procedure :: nodeu_from_cellid
     procedure :: connection_normal
     procedure :: connection_vector
-    procedure :: supports_layers
-    procedure :: get_ncpl
+    procedure :: get_cellxyz_disl
     ! -- private
     procedure :: read_options
     procedure :: read_dimensions
@@ -58,7 +56,7 @@ module GwfDislModule
     procedure :: read_int_array
     procedure :: read_dbl_array
     !
-  end type GwfDislType
+  end type LnfDislType
 
   contains
 
@@ -73,7 +71,7 @@ module GwfDislModule
     character(len=*), intent(in) :: name_model
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
-    type(GwfDislType), pointer :: disnew
+    type(LnfDislType), pointer :: disnew
 ! ------------------------------------------------------------------------------
     allocate(disnew)
     dis => disnew
@@ -100,11 +98,10 @@ module GwfDislModule
     integer(I4B), intent(in) :: iout
     integer(I4B), intent(in) :: nnodes
     integer(I4B), dimension(:, :), pointer, contiguous, intent(in) :: vertices
-    integer(I4B), dimension(:, :), pointer, contiguous, intent(in) :: cellfdc
-    integer(I4B), dimension(:, :, :), pointer, contiguous, intent(in),           &
-      optional :: idomain
+    integer(I4B), dimension(:), pointer, contiguous, intent(in) :: cellfdc
+    integer(I4B), dimension(:), pointer, contiguous, intent(in), optional :: idomain
     ! -- local
-    type(GwfDislType), pointer :: disext
+    type(LnfDislType), pointer :: disext
     integer(I4B) :: n
     integer(I4B) :: j
     integer(I4B) :: k
@@ -124,8 +121,7 @@ module GwfDislModule
     disext%nodesuser = nnodes
     !
     ! -- Allocate non-reduced vectors for disv
-    call mem_allocate(disext%idomain, disext%nnodes, 1, 'IDOMAIN',    &
-                      disext%origin)
+    call mem_allocate(disext%idomain, disext%nnodes, 'IDOMAIN', disext%origin)
     !
     ! -- Allocate vertices array
     call mem_allocate(disext%vertices, 3, disext%nvert, 'VERTICES', disext%origin)
@@ -146,7 +142,7 @@ module GwfDislModule
       end do
     end do
     do n = 1, disext%nnodes
-      disext%cellfdc(n) = cellxy(n)
+      disext%cellfdc(n) = cellfdc(n)
     end do
     !
     ! -- Return
@@ -161,7 +157,7 @@ module GwfDislModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwfDislType) :: this
+    class(LnfDislType) :: this
     ! -- locals
 ! ------------------------------------------------------------------------------
     !
@@ -206,7 +202,7 @@ module GwfDislModule
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
-    class(GwfDislType) :: this
+    class(LnfDislType) :: this
     ! -- locals
 ! ------------------------------------------------------------------------------
     !
@@ -239,7 +235,7 @@ module GwfDislModule
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
     ! -- dummy
-    class(GwfDislType) :: this
+    class(LnfDislType) :: this
     ! -- locals
     character(len=LINELENGTH) :: errmsg, keyword
     integer(I4B) :: ierr
@@ -318,9 +314,10 @@ module GwfDislModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    use MemoryManagerModule, only: mem_allocate  
     use ConstantsModule,  only: LINELENGTH
     ! -- dummy
-    class(GwfDislType) :: this
+    class(LnfDislType) :: this
     ! -- locals
     character(len=LINELENGTH) :: errmsg, keyword
     integer(I4B) :: ierr
@@ -406,7 +403,7 @@ module GwfDislModule
     use SimModule, only: ustop, count_errors, store_error
     use ConstantsModule,   only: LINELENGTH, DZERO
     ! -- dummy
-    class(GwfDislType) :: this
+    class(LnfDislType) :: this
     ! -- locals
     character(len=LINELENGTH) :: keyword
     integer(I4B) :: n
@@ -439,10 +436,9 @@ module GwfDislModule
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
           case ('IDOMAIN')
-            call this%parser%GetStringCaps(keyword)
+            call this%parser%GetStringCaps(keyword)                       
             call ReadArray(this%parser%iuactive, this%idomain, aname(1),    &
-                           1, this%nodesuser, this%iout, 0, 0)
-            end if
+                           this%ndim, this%nodesuser, this%iout, 0)
             lname(1) = .true.
           case default
             write(ermsg,'(4x,a,a)')'ERROR. UNKNOWN GRIDDATA TAG: ',            &
@@ -487,7 +483,7 @@ module GwfDislModule
     use SimModule, only: ustop, count_errors, store_error
     use ConstantsModule,   only: LINELENGTH, DZERO
     ! -- dummy
-    class(GwfDislType) :: this
+    class(LnfDislType) :: this
     ! -- locals
     integer(I4B) :: node, noder, j, k
     real(DP) :: top
@@ -538,7 +534,7 @@ module GwfDislModule
         if(this%idomain(k) > 0) then
           this%nodereduced(node) = noder
           noder = noder + 1
-        elseif(this%idomain(j, 1, k) < 0) then
+        elseif(this%idomain(k) < 0) then
           this%nodereduced(node) = -1
         else
           this%nodereduced(node) = 0
@@ -581,7 +577,7 @@ module GwfDislModule
     use SimModule, only: ustop, count_errors, store_error
     use ConstantsModule,   only: LINELENGTH, DZERO
     ! -- dummy
-    class(GwfDislType) :: this
+    class(LnfDislType) :: this
     integer(I4B) :: i
     integer(I4B) :: ierr, ival
     logical :: isfound, endOfBlock
@@ -681,7 +677,7 @@ module GwfDislModule
     use SparseModule, only: sparsematrix
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
-    class(GwfDislType) :: this
+    class(LnfDislType) :: this
     integer(I4B) :: i, j, ivert, ivert1, ncvert
     integer(I4B) :: ierr, ival
     logical :: isfound, endOfBlock
@@ -783,7 +779,7 @@ module GwfDislModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwfDislType) :: this
+    class(LnfDislType) :: this
     ! -- local
     integer(I4B) :: j, k
     integer(I4B) :: noder, nrsize
@@ -820,7 +816,7 @@ module GwfDislModule
     use OpenSpecModule, only: access, form
     use ConstantsModule, only: DZERO
     ! -- dummy
-    class(GwfDislType) :: this
+    class(LnfDislType) :: this
     integer(I4B), dimension(:), intent(in) :: icelltype
     ! -- local
     integer(I4B) :: iunit, i, ntxt
@@ -914,7 +910,7 @@ module GwfDislModule
     write(iunit) this%yorigin                                                   ! yorigin
     write(iunit) this%angrot                                                    ! angrot
     write(iunit) this%vertices                                                  ! vertices
-    write(iunit) (this%cellfdc(1, i), i = 1, this%nnodes)                       ! cellfdc
+    write(iunit) (this%cellfdc(i), i = 1, this%nnodes)                          ! cellfdc
     write(iunit) this%iavert                                                    ! iavert
     write(iunit) this%javert                                                    ! javert
     write(iunit) this%con%iausr                                                 ! iausr
@@ -940,16 +936,14 @@ module GwfDislModule
     ! -- modules
     use InputOutputModule, only: get_ijk
     ! -- dummy
-    class(GwfDislType) :: this
+    class(LnfDislType) :: this
     integer(I4B), intent(in) :: nodeu
     character(len=*), intent(inout) :: str
     ! -- local
     integer(I4B) :: i, j, k
     character(len=10) :: unstr
 ! ------------------------------------------------------------------------------
-    !
-    
-    call get_ijk(nodeu, 1, this%ncpl, this%nlay, i, j, k)
+    !    
     write(unstr, '(i10)') nodeu
     str = '(' // trim(adjustl(unstr)) // ')'
     !
@@ -970,7 +964,7 @@ module GwfDislModule
     ! -- return
     integer(I4B) :: nodenumber
     ! -- dummy
-    class(GwfDislType), intent(in) :: this
+    class(LnfDislType), intent(in) :: this
     integer(I4B), intent(in) :: nodeu
     integer(I4B), intent(in) :: icheck
     ! -- local
@@ -1013,7 +1007,7 @@ module GwfDislModule
     use ConstantsModule, only: DONE, DZERO
     use SimModule, only: ustop, store_error
     ! -- dummy
-    class(GwfDislType) :: this
+    class(LnfDislType) :: this
     integer(I4B), intent(in) :: noden
     integer(I4B), intent(in) :: nodem
     integer(I4B), intent(in) :: ihc
@@ -1074,7 +1068,7 @@ module GwfDislModule
     use InputOutputModule, only: get_jk
     use DisvGeom, only: line_unit_vector
     ! -- dummy
-    class(GwfDislType) :: this
+    class(LnfDislType) :: this
     integer(I4B), intent(in) :: noden
     integer(I4B), intent(in) :: nodem
     logical, intent(in) :: nozee
@@ -1089,74 +1083,89 @@ module GwfDislModule
     integer(I4B) :: nodeu, ncell2d, mcell2d, k
     real(DP) :: xn, xm, yn, ym, zn, zm
 ! ------------------------------------------------------------------------------
-    ! SRP TODO: Rewrite this
+    ! get cell centers
+    call this%get_cellxyz_disl(noden, xn, yn, zn)
+    call this%get_cellxyz_disl(nodem, xm, ym, zm)
+    if (nozee) then
+      zn = DZERO
+      zm = DZERO
+    end if
     
-    !
-    ! -- Set vector components based on ihc
-    if(ihc == 0) then
-      !
-      ! -- vertical connection; set zcomp positive upward
-      xcomp = DZERO
-      ycomp = DZERO
-      if(nodem < noden) then
-        zcomp = DONE
-      else
-        zcomp = -DONE
-      endif
-      zn = this%bot(noden) + DHALF * (this%top(noden) - this%bot(noden))
-      zm = this%bot(nodem) + DHALF * (this%top(nodem) - this%bot(nodem))
-      conlen = abs(zm - zn)
-    else
-      !
-      ! -- horizontal connection, with possible z component due to cell offsets
-      !    and/or water table conditions
-      if (nozee) then
-        zn = DZERO
-        zm = DZERO
-      else
-        zn = this%bot(noden) + DHALF * satn * (this%top(noden) - this%bot(noden))
-        zm = this%bot(nodem) + DHALF * satm * (this%top(nodem) - this%bot(nodem))
-      endif
-      nodeu = this%get_nodeuser(noden)
-      call get_jk(nodeu, this%ncpl, this%nlay, ncell2d, k)
-      nodeu = this%get_nodeuser(nodem)
-      call get_jk(nodeu, this%ncpl, this%nlay, mcell2d, k)
-      xn = this%cellxy(1, ncell2d)
-      yn = this%cellxy(2, ncell2d)
-      xm = this%cellxy(1, mcell2d)
-      ym = this%cellxy(2, mcell2d)
-      call line_unit_vector(xn, yn, zn, xm, ym, zm, xcomp, ycomp, zcomp,       &
-                            conlen)
-    endif
+    ! Set vector components based on cell centers
+    call line_unit_vector(xn, yn, zn, xm, ym, zm, xcomp, ycomp, zcomp,       &
+                          conlen)
     !
     ! -- return
     return
-  end subroutine connection_vector
+    end subroutine connection_vector
 
-  ! return x,y coordinate for a node
+    ! return x,y coordinate for a node
   subroutine get_cellxy_disl(this, node, xcell, ycell)
     use InputOutputModule, only: get_jk
-    class(GwfDislType), intent(in)  :: this
+    class(LnfDislType), intent(in)  :: this
     integer(I4B), intent(in)        :: node         ! the reduced node number
     real(DP), intent(out)           :: xcell, ycell ! the x,y for the cell
     ! local
-    integer(I4B) :: nodeuser, ncell2d, k
+    real(DP) :: zcell
+
+    call this%get_cellxyz_disl(node, xcell, ycell, zcell)    
+  end subroutine get_cellxy_disl  
+    
+  ! return x,y,z coordinate for a node
+  subroutine get_cellxyz_disl(this, node, xcell, ycell, zcell)
+    use InputOutputModule, only: get_jk
+    class(LnfDislType), intent(in)  :: this
+    integer(I4B), intent(in)        :: node                ! the reduced node number
+    real(DP), intent(out)           :: xcell, ycell, zcell ! the x,y for the cell
+    ! local
+    integer(I4B) :: nodeuser, ncell2d, k, numseg, ivert, segnum
+    real(DP) :: lnflen, lnfcendist, curdist, distsegone, distsegtwo
+    real(DP) :: disttot, xdist, ydist, zdist
+    real, dimension (:), allocatable :: lnfsegdist
     
     nodeuser = this%get_nodeuser(node)
-    !this%cellfdc(nodeuser)
-    ! SRP TODO:
-    ! calculate linear distance between each set of vertices
+    numseg = this%iavert(nodeuser + 1) - 1 - this%iavert(nodeuser)
+    allocate(lnfsegdist(numseg))
+    lnflen = 0.0
+    do ivert = this%iavert(nodeuser), this%iavert(nodeuser + 1) - 1
+      ! calculate linear distance between each set of vertices
+      xdist = abs(this%vertices(1, ivert) - this%vertices(1, ivert + 1))
+      ydist = abs(this%vertices(2, ivert) - this%vertices(2, ivert + 1))
+      zdist = abs(this%vertices(3, ivert) - this%vertices(3, ivert + 1))
+      lnfsegdist(this%iavert(nodeuser) + 1) = sqrt(xdist * xdist + ydist * ydist &
+                                                   + zdist * zdist)
+      ! calculate total distance
+      lnflen = lnflen + lnfsegdist(this%iavert(nodeuser) + 1)
+    end do      
+        
+    ! calculate cellfdc percent of the total distance
+    lnfcendist = lnflen * this%cellfdc(nodeuser)
     
-    ! calculate total distance
+    ! find segment that contains midpoint and midpoint location
+    curdist = 0.0
+    do segnum = 1, numseg
+      curdist = curdist + lnfsegdist(segnum)
+      if(curdist > lnfcendist) then
+        distsegtwo = curdist - lnfcendist
+        distsegone = lnfsegdist(segnum) - distsegtwo
+        xcell = this%vertices(1, this%iavert(nodeuser) + segnum) *      &
+                (distsegtwo / lnfsegdist(segnum)) -                     &
+                 this%vertices(1, this%iavert(nodeuser) + segnum - 1) * &
+                (distsegone / lnfsegdist(segnum))
+        ycell = this%vertices(2, this%iavert(nodeuser) + segnum) *      &
+                (distsegtwo / lnfsegdist(segnum)) -                     &
+                 this%vertices(2, this%iavert(nodeuser) + segnum - 1) * &
+                (distsegone / lnfsegdist(segnum))
+        zcell = this%vertices(3, this%iavert(nodeuser) + segnum) *      &
+                (distsegtwo / lnfsegdist(segnum)) -                     &
+                 this%vertices(3, this%iavert(nodeuser) + segnum - 1) * &
+                (distsegone / lnfsegdist(segnum))
+        exit
+      end if
+    end do
     
-    ! travel cellfdc percent of the total distance to get the cell center
-    
-    call get_jk(nodeuser, this%ncpl, this%nlay, ncell2d, k)
-    
-    xcell = this%cellxy(1, ncell2d)
-    ycell = this%cellxy(2, ncell2d)
-    
-  end subroutine get_cellxy_disl 
+    deallocate(lnfsegdist)    
+  end subroutine get_cellxyz_disl 
                                
   subroutine allocate_scalars(this, name_model)
 ! ******************************************************************************
@@ -1168,7 +1177,7 @@ module GwfDislModule
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
-    class(GwfDislType) :: this
+    class(LnfDislType) :: this
     character(len=*), intent(in) :: name_model
 ! ------------------------------------------------------------------------------
     !
@@ -1198,13 +1207,13 @@ module GwfDislModule
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
-    class(GwfDislType) :: this
+    class(LnfDislType) :: this
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate arrays in DisBaseType (mshape, top, bot, area)
     call this%DisBaseType%allocate_arrays()
     !
-    ! -- Allocate arrays for GwfDislType
+    ! -- Allocate arrays for LnfDislType
     if(this%nodes < this%nodesuser) then
       call mem_allocate(this%nodeuser, this%nodes, 'NODEUSER', this%origin)
       call mem_allocate(this%nodereduced, this%nodesuser, 'NODEREDUCED',       &
@@ -1234,7 +1243,7 @@ module GwfDislModule
     ! -- module
     use ConstantsModule, only: DZERO, DHALF, DONE
     ! -- dummy
-    class(GwfDisvType) :: this
+    class(LnfDislType) :: this
     integer(I4B), intent(in) :: icell2d
     ! -- return
     real(DP) :: area
@@ -1292,7 +1301,7 @@ module GwfDislModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwfDislType) :: this
+    class(LnfDislType) :: this
     integer(I4B), intent(inout) :: lloc
     integer(I4B), intent(inout) :: istart
     integer(I4B), intent(inout) :: istop
@@ -1366,7 +1375,7 @@ module GwfDislModule
     ! -- return
     integer(I4B) :: nodeu
     ! -- dummy
-    class(GwfDisuType) :: this
+    class(LnfDislType) :: this
     character(len=*), intent(inout) :: cellid
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
@@ -1433,7 +1442,7 @@ module GwfDislModule
     use SimModule, only: store_error, ustop
     use ConstantsModule, only: LINELENGTH
     ! -- dummy
-    class(GwfDisuType), intent(inout)                  :: this
+    class(LnfDislType), intent(inout)                  :: this
     character(len=*), intent(inout)                    :: line
     integer(I4B), intent(inout)                        :: lloc
     integer(I4B), intent(inout)                        :: istart
@@ -1485,7 +1494,7 @@ module GwfDislModule
     use SimModule, only: ustop, store_error
     use ConstantsModule, only: LINELENGTH
     ! -- dummy
-    class(GwfDisuType), intent(inout)              :: this
+    class(LnfDislType), intent(inout)              :: this
     character(len=*), intent(inout)                :: line
     integer(I4B), intent(inout)                    :: lloc
     integer(I4B), intent(inout)                    :: istart
@@ -1547,7 +1556,7 @@ module GwfDislModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwfDisuType), intent(inout)              :: this
+    class(LnfDislType), intent(inout)              :: this
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: darray
     integer(I4B), intent(in)                       :: iout
     integer(I4B), intent(in)                       :: iprint
@@ -1643,7 +1652,7 @@ module GwfDislModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwfDisuType) :: this
+    class(LnfDislType) :: this
     character(len=16), intent(in) :: text
     character(len=16), intent(in) :: textmodel
     character(len=16), intent(in) :: textpackage
@@ -1671,4 +1680,4 @@ module GwfDislModule
     return
   end subroutine record_srcdst_list_header
     
-end module GwfDisvModule
+end module LnfDislModule
