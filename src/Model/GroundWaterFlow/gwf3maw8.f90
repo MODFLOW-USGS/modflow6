@@ -25,6 +25,9 @@ module MawModule
                                  mem_deallocate
   !
   implicit none
+  
+  public :: MawType
+  
   !
   character(len=LENFTYPE)       :: ftype = 'MAW'
   character(len=LENPACKAGENAME) :: text  = '             MAW'

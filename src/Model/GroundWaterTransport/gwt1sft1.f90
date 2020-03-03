@@ -2150,7 +2150,7 @@ module GwtSftModule
       this%dbuff(n) = this%dbuff(n) + c1
     end do
     !
-    ! -- go through each lak-lak connection and accumulate 
+    ! -- go through each sfr-sfr connection and accumulate 
     !    total mass in dbuff mass
     if (this%idxbudfjf /= 0) then
       do j = 1, this%sfrbudptr%budterm(this%idxbudfjf)%nlist

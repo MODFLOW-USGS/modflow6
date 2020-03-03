@@ -1,4 +1,4 @@
-# --------------------- gwt lkt options ---------------------
+# --------------------- gwt mwt options ---------------------
 
 block options
 name auxiliary
@@ -16,7 +16,7 @@ shape
 reader urword
 optional true
 longname
-description REPLACE boundnames {'{#1}': 'lake'}
+description REPLACE boundnames {'{#1}': 'well'}
 
 block options
 name print_input
@@ -24,15 +24,15 @@ type keyword
 reader urword
 optional true
 longname print input to listing file
-description REPLACE print_input {'{#1}': 'lake'}
+description REPLACE print_input {'{#1}': 'well'}
 
 block options
 name print_concentration
 type keyword
 reader urword
 optional true
-longname print calculated stages to listing file
-description REPLACE print_head {'{#1}': 'lake', '{#2}': 'concentration', '{#3}': 'CONCENTRATION'}
+longname print calculated concentrations to listing file
+description REPLACE print_head {'{#1}': 'well', '{#2}': 'concentration', '{#3}': 'CONCENTRATION'}
 
 block options
 name print_flows
@@ -40,15 +40,15 @@ type keyword
 reader urword
 optional true
 longname print calculated flows to listing file
-description REPLACE print_flows {'{#1}': 'lake'}
+description REPLACE print_flows {'{#1}': 'well'}
 
 block options
 name save_flows
 type keyword
 reader urword
 optional true
-longname save lake flows to budget file
-description REPLACE save_flows {'{#1}': 'lake'}
+longname save well flows to budget file
+description REPLACE save_flows {'{#1}': 'well'}
 
 block options
 name concentration_filerecord
@@ -169,7 +169,7 @@ reader urword
 tagged false
 optional false
 longname file keyword
-description name of the binary lake flow budget file to read as input for the LKT Package.  This budget file can be created by running a separate GWF Model with the Lake Package and saving the lake flows to the budget file.
+description name of the binary maw flow budget file to read as input for the MWT Package.  This budget file can be created by running a separate GWF Model with the Multi-Aquifer Well Package and saving the maw flows to the budget file.
 
 block options
 name ts_filerecord
@@ -247,25 +247,25 @@ longname obs6 input filename
 description REPLACE obs6_filename {'{#1}': 'LKT'}
 
 
-# --------------------- gwt lkt packagedata ---------------------
+# --------------------- gwt mwt packagedata ---------------------
 
 block packagedata
 name packagedata
-type recarray lakeno strt aux boundname
+type recarray mawno strt aux boundname
 shape (maxbound)
 reader urword
 longname
 description
 
 block packagedata
-name lakeno
+name mawno
 type integer
 shape
 tagged false
 in_record true
 reader urword
-longname lake number for this entry
-description integer value that defines the lake number associated with the specified PACKAGEDATA data on the line. LAKENO must be greater than zero and less than or equal to NLAKES. Lake information must be specified for every lake or the program will terminate with an error.  The program will also terminate with an error if information for a lake is specified more than once.
+longname well number for this entry
+description integer value that defines the well number associated with the specified PACKAGEDATA data on the line. MAWNO must be greater than zero and less than or equal to NMAWWELLS. Well information must be specified for every well or the program will terminate with an error.  The program will also terminate with an error if information for a well is specified more than once.
 numeric_index true
 
 block packagedata
@@ -275,8 +275,8 @@ shape
 tagged false
 in_record true
 reader urword
-longname starting lake concentration
-description real value that defines the starting concentration for the lake.
+longname starting well concentration
+description real value that defines the starting concentration for the well.
 
 block packagedata
 name aux
@@ -288,7 +288,7 @@ reader urword
 time_series true
 optional true
 longname auxiliary variables
-description REPLACE aux {'{#1}': 'lake'}
+description REPLACE aux {'{#1}': 'well'}
 
 block packagedata
 name boundname
@@ -298,11 +298,11 @@ tagged false
 in_record true
 reader urword
 optional true
-longname lake name
-description REPLACE boundname {'{#1}': 'lake'}
+longname well name
+description REPLACE boundname {'{#1}': 'well'}
 
 
-# --------------------- gwt lkt period ---------------------
+# --------------------- gwt mwt period ---------------------
 
 block period
 name iper
@@ -318,33 +318,33 @@ longname stress period number
 description REPLACE iper {}
 
 block period
-name lakeperioddata
-type recarray lakeno laksetting
+name mwtperioddata
+type recarray mawno mawsetting
 shape
 reader urword
 longname
 description
 
 block period
-name lakeno
+name mawno
 type integer
 shape
 tagged false
 in_record true
 reader urword
-longname lake number for this entry
-description integer value that defines the lake number associated with the specified PERIOD data on the line. LAKENO must be greater than zero and less than or equal to NLAKES.
+longname well number for this entry
+description integer value that defines the well number associated with the specified PERIOD data on the line. MAWNO must be greater than zero and less than or equal to NMAWWELLS.
 numeric_index true
 
 block period
-name laksetting
+name mwtsetting
 type keystring status concentration rainfall evaporation runoff inflow auxiliaryrecord
 shape
 tagged false
 in_record true
 reader urword
 longname
-description line of information that is parsed into a keyword and values.  Keyword values that can be used to start the LAKSETTING string include: STATUS, CONCENTRATION, RAINFALL, EVAPORATION, RUNOFF, and AUXILIARY.  These settings are used to assign the concentration of associated with the corresponding flow terms.  Concentrations cannot be specified for all flow terms.  For example, the Lake Package supports a ``WITHDRAWAL'' flow term.  If this withdrawal term is active, then water will be withdrawn from the lake at the calculated concentration of the lake.
+description line of information that is parsed into a keyword and values.  Keyword values that can be used to start the MWTSETTING string include: STATUS, CONCENTRATION, RAINFALL, EVAPORATION, RUNOFF, and AUXILIARY.  These settings are used to assign the concentration of associated with the corresponding flow terms.  Concentrations cannot be specified for all flow terms.  For example, the Multi-Aquifer Well Package supports a ``WITHDRAWAL'' flow term.  If this withdrawal term is active, then water will be withdrawn from the well at the calculated concentration of the well.
 
 block period
 name status
@@ -353,8 +353,8 @@ shape
 tagged true
 in_record true
 reader urword
-longname lake concentration status
-description keyword option to define lake status.  STATUS can be ACTIVE, INACTIVE, or CONSTANT. By default, STATUS is ACTIVE, which means that concentration will be calculated for the lake.  If a lake is inactive, then there will be no solute mass fluxes into or out of the lake and the inactive value will be written for the lake concentration.  If a lake is constant, then the concentration for the lake will be fixed at the user specified value.
+longname well concentration status
+description keyword option to define well status.  STATUS can be ACTIVE, INACTIVE, or CONSTANT. By default, STATUS is ACTIVE, which means that concentration will be calculated for the well.  If a well is inactive, then there will be no solute mass fluxes into or out of the well and the inactive value will be written for the well concentration.  If a well is constant, then the concentration for the well will be fixed at the user specified value.
 
 block period
 name concentration
@@ -364,8 +364,8 @@ tagged true
 in_record true
 time_series true
 reader urword
-longname lake concentration
-description real or character value that defines the concentration for the lake. The specified CONCENTRATION is only applied if the lake is a constant concentration lake. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.
+longname well concentration
+description real or character value that defines the concentration for the well. The specified CONCENTRATION is only applied if the well is a constant concentration well. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.
 
 block period
 name rainfall
@@ -376,7 +376,7 @@ in_record true
 reader urword
 time_series true
 longname rainfall concentration
-description real or character value that defines the rainfall solute concentration $(ML^{-3})$ for the lake. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.
+description real or character value that defines the rainfall solute concentration $(ML^{-3})$ for the well. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.
 
 block period
 name evaporation
@@ -387,7 +387,7 @@ in_record true
 reader urword
 time_series true
 longname evaporation concentration
-description real or character value that defines the concentration of evaporated water $(ML^{-3})$ for the lake. If this concentration value is larger than the simulated concentration in the lake, then the evaporated water will be removed at the same concentration as the lake.  If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.
+description real or character value that defines the concentration of evaporated water $(ML^{-3})$ for the well. If this concentration value is larger than the simulated concentration in the well, then the evaporated water will be removed at the same concentration as the well.  If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.
 
 block period
 name runoff
@@ -398,7 +398,7 @@ in_record true
 reader urword
 time_series true
 longname runoff concentration
-description real or character value that defines the concentration of runoff $(ML^{-3})$ for the lake. Value must be greater than or equal to zero. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.
+description real or character value that defines the concentration of runoff $(ML^{-3})$ for the well. Value must be greater than or equal to zero. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.
 
 block period
 name inflow
@@ -409,7 +409,7 @@ in_record true
 reader urword
 time_series true
 longname inflow concentration
-description real or character value that defines the concentration of inflow $(ML^{-3})$ for the lake. Value must be greater than or equal to zero. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.
+description real or character value that defines the concentration of inflow $(ML^{-3})$ for the well. Value must be greater than or equal to zero. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.
 
 block period
 name auxiliaryrecord
