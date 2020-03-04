@@ -2562,7 +2562,7 @@ contains
       do n = 1, this%nmawwells
         v = this%xnewpak(n)
         d = v - this%mawwells(n)%bot
-        if (this%iboundpak(n) < 1) then
+        if (this%iboundpak(n) == 0) then
           v = DHNOFLO
         else if (d <= DZERO) then
           v = DHDRY

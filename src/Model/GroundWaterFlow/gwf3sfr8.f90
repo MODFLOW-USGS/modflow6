@@ -1748,7 +1748,7 @@ contains
       do n = 1, this%maxbound
         d = this%depth(n)
         v = this%stage(n)
-        if (this%iboundpak(n) < 1) then
+        if (this%iboundpak(n) == 0) then
           v = DHNOFLO
         else if (d == DZERO) then
           v = DHDRY
