@@ -18,8 +18,10 @@
 ! none                      none          STORAGE (aux MASS)    
 ! none                      none          AUXILIARY             none
 ! none                      none          CONSTANT              accumulate
-!
-!
+
+
+  
+  
 module GwtMwtModule
 
   use KindModule, only: DP, I4B

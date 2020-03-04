@@ -24,8 +24,8 @@ module BudgetTermModule
     integer(I4B) :: maxlist                                        ! allocated size of arrays
     integer(I4B) :: naux                                           ! number of auxiliary variables
     integer(I4B) :: nlist                                          ! size of arrays for this period
-    logical :: olconv1                                             ! convert id1 to user node upon output
-    logical :: olconv2                                             ! convert id2 to user node upon output
+    logical :: olconv1 = .false.                                   ! convert id1 to user node upon output
+    logical :: olconv2 = .false.                                   ! convert id2 to user node upon output
     logical :: ordered_id1                                         ! the id1 array is ordered sequentially
     integer(I4B), dimension(:), pointer :: id1 => null()           ! first id (maxlist)
     integer(I4B), dimension(:), pointer :: id2 => null()           ! second id (maxlist)

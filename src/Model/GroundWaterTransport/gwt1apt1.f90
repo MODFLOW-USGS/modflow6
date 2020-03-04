@@ -5,22 +5,30 @@
 ! -- todo: save the lkt concentration into the lak aux variable?
 ! -- todo: calculate the lak DENSE aux variable using concentration?
 !
-! LAK flows (lakbudptr)     index var     LKT term              Transport Type
+! AFP flows (lakbudptr)     index var     ATP term              Transport Type
 !---------------------------------------------------------------------------------
-! FLOW-JA-FACE              idxbudfjf     FLOW-JA-FACE          lak2lak
-! GWF (aux FLOW-AREA)       idxbudgwf     GWF                   lak2gwf
+
+! -- specialized terms in the flow budget
+! FLOW-JA-FACE              idxbudfjf     FLOW-JA-FACE          cv2cv
+! GWF (aux FLOW-AREA)       idxbudgwf     GWF                   cv2gwf
+! STORAGE (aux VOLUME)      idxbudsto     none                  used for cv volumes
+! FROM-MVR                  idxbudfmvr    FROM-MVR              q * cext = this%qfrommvr(:)
+! TO-MVR                    idxbudtmvr    TO-MVR                q * clak
+
+! -- generalized source/sink terms (except ET?)
 ! RAINFALL                  idxbudrain    RAINFALL              q * crain
 ! EVAPORATION               idxbudevap    EVAPORATION           clak<cevap: q*clak, else: q*cevap
 ! RUNOFF                    idxbudroff    RUNOFF                q * croff
 ! EXT-INFLOW                idxbudiflw    EXT-INFLOW            q * ciflw
 ! WITHDRAWAL                idxbudwdrl    WITHDRAWAL            q * clak
 ! EXT-OUTFLOW               idxbudoutf    EXT-OUTFLOW           q * clak
-! TO-MVR                    idxbudtmvr    TO-MVR                q * clak
-! FROM-MVR                  idxbudfmvr    FROM-MVR              q * cext
-! STORAGE (aux VOLUME)      idxbudsto     none                  used for lake volumes
-! none                      none          STORAGE (aux MASS)    
+  
+! -- terms from a flow file that should be skipped
 ! CONSTANT                  none          none                  none
 ! AUXILIARY                 none          none                  none
+
+! -- terms that are written to the transport budget file
+! none                      none          STORAGE (aux MASS)    dM/dt
 ! none                      none          AUXILIARY             none
 ! none                      none          CONSTANT              accumulate
 !
@@ -150,6 +158,7 @@ module GwtAptModule
     procedure :: get_volumes
     procedure, private :: lkt_setup_budobj
     procedure, private :: lkt_fill_budobj
+    procedure, private :: lkt_stor_term
     procedure, private :: lkt_rain_term
     procedure, private :: lkt_evap_term
     procedure, private :: lkt_roff_term
@@ -874,7 +883,6 @@ module GwtAptModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule, only: delt
     ! -- dummy
     class(GwtAptType) :: this
     real(DP), dimension(:), intent(inout) :: rhs
@@ -888,25 +896,20 @@ module GwtAptModule
     integer(I4B) :: ipossymd, ipossymoffd
     real(DP) :: cold
     real(DP) :: qbnd
-    real(DP) :: v0
-    real(DP) :: v1
     real(DP) :: omega
     real(DP) :: rrate
     real(DP) :: rhsval
     real(DP) :: hcofval
 ! ------------------------------------------------------------------------------
     !
-    ! -- Add coefficients for LKT and GWF connections (qbnd positive into lake)
+    ! -- mass storage in lake
     do n = 1, this%nlakes
       cold  = this%xoldpak(n)
       iloc = this%idxlocnode(n)
       iposd = this%idxpakdiag(n)
-      !
-      ! -- mass storage in lak
-      call this%get_volumes(n, v1, v0, delt)
-      amatsln(iposd) = amatsln(iposd) - v1 / delt
-      rhs(iloc) = rhs(iloc) - cold * v0 / delt
-      !
+      call this%lkt_stor_term(n, n1, n2, rrate, rhsval, hcofval)
+      amatsln(iposd) = amatsln(iposd) + hcofval
+      rhs(iloc) = rhs(iloc) + rhsval
     end do
     !
     ! -- add rainfall contribution
@@ -1109,10 +1112,9 @@ module GwtAptModule
     integer(I4B), optional, intent(in) :: iadv
     ! -- local
     integer(I4B) :: ibinun
-    integer(I4B) :: n
+    integer(I4B) :: n, n1, n2
     real(DP) :: c
-    real(DP) :: rrate, rhs, hcof
-    real(DP) :: v0, v1
+    real(DP) :: rrate
     ! -- for observations
     integer(I4B) :: iprobslocal
     ! -- formats
@@ -1138,9 +1140,7 @@ module GwtAptModule
     do n = 1, this%nlakes
       rrate = DZERO
       if (this%iboundpak(n) > 0) then
-        call this%get_volumes(n, v1, v0, delt)
-        call lkt_calc_qsto(v0, v1, this%xoldpak(n), this%xnewpak(n), delt,     &
-                          rhs, hcof, rrate)
+        call this%lkt_stor_term(n, n1, n2, rrate)
       end if
       this%qsto(n) = rrate
     end do
@@ -1200,20 +1200,6 @@ module GwtAptModule
     return
   end subroutine lkt_bd
 
-  subroutine lkt_calc_qsto(v0, v1, c0, c1, delt, rhs, hcof, rate)
-    real(DP), intent(in) :: v0
-    real(DP), intent(in) :: v1
-    real(DP), intent(in) :: c0
-    real(DP), intent(in) :: c1
-    real(DP), intent(in) :: delt
-    real(DP), intent(inout) :: rhs
-    real(DP), intent(inout) :: hcof
-    real(DP), intent(inout) :: rate
-    hcof = - v1 / delt
-    rhs = - c0 * v0 / delt
-    rate = hcof * c1 - rhs
-  end subroutine lkt_calc_qsto
-  
   subroutine lkt_ot(this, kstp, kper, iout, ihedfl, ibudfl)
 ! ******************************************************************************
 ! lkt_ot
@@ -2087,7 +2073,6 @@ module GwtAptModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
-    use TdisModule, only: delt
     ! -- dummy
     class(GwtAptType) :: this
     ! -- local
@@ -2095,15 +2080,14 @@ module GwtAptModule
     integer(I4B) :: n1, n2
     real(DP) :: rrate
     real(DP) :: ctmp
-    real(DP) :: c1, qbnd, v0, v1
+    real(DP) :: c1, qbnd
+    real(DP) :: hcofval, rhsval
 ! ------------------------------------------------------------------------------
     !
     !
-    ! -- first initialize dbuff with initial solute mass in lake
+    ! -- first initialize dbuff
     do n = 1, this%nlakes
-      call this%get_volumes(n, v1, v0, delt)
-      c1 = this%xoldpak(n) * v0
-      this%dbuff(n) = c1
+      this%dbuff(n) = DZERO
     end do
     !
     ! -- add rainfall contribution
@@ -2185,7 +2169,7 @@ module GwtAptModule
         ctmp = this%xnew(igwfnode)
         this%hcof(j) = -qbnd
       end if
-      c1 = qbnd * ctmp * delt
+      c1 = qbnd * ctmp
       this%dbuff(n) = this%dbuff(n) + c1
     end do
     !
@@ -2194,15 +2178,21 @@ module GwtAptModule
     if (this%idxbudfjf /= 0) then
       do j = 1, this%flowbudptr%budterm(this%idxbudfjf)%nlist
         call this%lkt_fjf_term(j, n1, n2, rrate)
-        c1 = rrate * delt
+        c1 = rrate
         this%dbuff(n1) = this%dbuff(n1) + c1
       end do
     end if
     !
-    ! -- Now divide total accumulated mass in lake by the lake volume
+    ! -- calulate the lake concentration
     do n = 1, this%nlakes
-      call this%get_volumes(n, v1, v0, delt)
-      c1 = this%dbuff(n) / v1
+      call this%lkt_stor_term(n, n1, n2, rrate, rhsval, hcofval)
+      !
+      ! -- at this point, dbuff has q * c for all sources, so now
+      !    add Vold / dt * Cold
+      this%dbuff(n) = this%dbuff(n) - rhsval
+      !
+      ! -- Now to calculate c, need to divide dbuff by hcofval
+      c1 = - this%dbuff(n) / hcofval
       if (this%iboundpak(n) > 0) then
         this%xnewpak(n) = c1
       end if
@@ -2801,6 +2791,31 @@ module GwtAptModule
     return
   end subroutine lkt_fill_budobj
 
+  subroutine lkt_stor_term(this, ientry, n1, n2, rrate, &
+                           rhsval, hcofval)
+    use TdisModule, only: delt
+    class(GwtAptType) :: this
+    integer(I4B), intent(in) :: ientry
+    integer(I4B), intent(inout) :: n1
+    integer(I4B), intent(inout) :: n2
+    real(DP), intent(inout), optional :: rrate
+    real(DP), intent(inout), optional :: rhsval
+    real(DP), intent(inout), optional :: hcofval
+    real(DP) :: v0, v1
+    real(DP) :: c0, c1
+    n1 = ientry
+    n2 = ientry
+    call this%get_volumes(n1, v1, v0, delt)
+    c0 = this%xoldpak(n1)
+    c1 = this%xnewpak(n1) 
+    if (present(rrate)) rrate = -c1 * v1 / delt + c0 * v0 / delt
+    if (present(rhsval)) rhsval = -c0 * v0 / delt
+    if (present(hcofval)) hcofval = -v1 / delt
+    !
+    ! -- return
+    return
+  end subroutine lkt_stor_term
+  
   subroutine lkt_rain_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
     class(GwtAptType) :: this
