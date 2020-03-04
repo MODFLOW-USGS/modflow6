@@ -1,24 +1,21 @@
 ! -- Multi-Aquifer Well Transport Module
-! -- todo: what to do about reactions in naw?  Decay?
+! -- todo: what to do about reactions in maw?  Decay?
 ! -- todo: save the mwt concentration into the mwt aux variable?
 ! -- todo: calculate the maw DENSE aux variable using concentration?
 !
-! LAK flows (lakbudptr)     index var     LKT term              Transport Type
+! MAW flows (flowbudptr)     index var    MWT term              Transport Type
 !---------------------------------------------------------------------------------
-! FLOW-JA-FACE              idxbudfjf     FLOW-JA-FACE          lak2lak
-! GWF (aux FLOW-AREA)       idxbudgwf     GWF                   lak2gwf
-! RAINFALL                  idxbudrain    RAINFALL              q * crain
-! EVAPORATION               idxbudevap    EVAPORATION           clak<cevap: q*clak, else: q*cevap
-! RUNOFF                    idxbudroff    RUNOFF                q * croff
-! EXT-INFLOW                idxbudiflw    EXT-INFLOW            q * ciflw
-! WITHDRAWAL                idxbudwdrl    WITHDRAWAL            q * clak
-! EXT-OUTFLOW               idxbudoutf    EXT-OUTFLOW           q * clak
-! TO-MVR                    idxbudtmvr    TO-MVR                q * clak
-! FROM-MVR                  idxbudfmvr    FROM-MVR              q * cext
-! STORAGE (aux VOLUME)      idxbudsto     none                  used for lake volumes
-! none                      none          STORAGE (aux MASS)    
+! GWF (aux FLOW-AREA)       idxbudgwf     GWF                   maw2gwf
+! RATE                      ?             RATE                  q < 0: q * cwell, else q * cuser
+! FW-RATE                   ?             FW-RATE               q * cwell
+! STORAGE (aux VOLUME)      ?             none                  used for well volumes
 ! CONSTANT                  none          none                  none
+! FROM-MVR                  ?             FROM-MVR              q * cext = this%qfrommvr(:)
+! RATE TO-MVR               ?             RATE TO-MVR           q * cwell
+! CONSTANT TO-MVR           ?             CONSTANT TO-MVR       q * cwell
+! FW-RATE TO-MVR            ?             FW-RATE TO-MVR        q * cwell
 ! AUXILIARY                 none          none                  none
+! none                      none          STORAGE (aux MASS)    
 ! none                      none          AUXILIARY             none
 ! none                      none          CONSTANT              accumulate
 !
