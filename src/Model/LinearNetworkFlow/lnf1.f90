@@ -12,6 +12,7 @@ module LnfModule
   !use LnfMvrModule,                only: mvr_cr
   use CircularGeometryModule,      only: cgeo_cr
   use RectangularGeometryModule,   only: rgeo_cr
+  use NpointGeometryModule,        only: ngeo_cr
   use BudgetModule,                only: BudgetType
   use GwfOcModule,                 only: GwfOcType
   use SimModule,                   only: count_errors, store_error,            &
@@ -48,6 +49,7 @@ module LnfModule
     ! -- Derived types
     class(GeometryBaseType),        pointer  :: cgeo     => null()                !circular geometry object
     class(GeometryBaseType),        pointer  :: rgeo     => null()                !rectangular geometry object
+    class(GeometryBaseType),        pointer  :: ngeo     => null()                !rectangular geometry object
 
   contains
 
@@ -267,6 +269,9 @@ module LnfModule
     if (this%inrgeo /= 0) then
       call rgeo_cr(this%rgeo, this%name, this%inrgeo, this%iout)
     end if
+    if (this%inngeo /= 0) then
+      call ngeo_cr(this%ngeo, this%name, this%inngeo, this%iout)
+    end if
     !call ic_cr(this%ic, this%name, this%inic, this%iout, this%dis)
     !call oc_cr(this%oc, this%name, this%inoc, this%iout)
     !!
@@ -425,6 +430,7 @@ module LnfModule
     !if(this%inmvr > 0) call this%mvr%mvr_ar()
     if(this%incgeo > 0) call this%cgeo%geo_ar()
     if(this%inrgeo > 0) call this%rgeo%geo_ar()
+    if(this%inngeo > 0) call this%ngeo%geo_ar()
     !if(this%inobs > 0) call this%obs%lnf_obs_ar(this%ic, this%x, this%flowja)
     !!
     !! -- Call dis_ar to write binary grid file
@@ -1084,9 +1090,10 @@ module LnfModule
       call this%rgeo%geo_da()
       deallocate(this%rgeo)
     end if
-    !if (this%inngeo /= 0) then
-    !  call this%ngeo%geo_da()
-    !end if
+    if (this%inngeo /= 0) then
+      call this%ngeo%geo_da()
+      deallocate(this%ngeo)
+    end if
     !!
     !! -- Internal package objects
     !deallocate(this%dis)
