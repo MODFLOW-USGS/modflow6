@@ -319,7 +319,7 @@ description REPLACE iper {}
 
 block period
 name mwtperioddata
-type recarray mawno mawsetting
+type recarray mawno mwtsetting
 shape
 reader urword
 longname

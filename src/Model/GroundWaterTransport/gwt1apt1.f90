@@ -2,10 +2,10 @@
 ! -- This module contains most of the routines for simulating transport
 ! -- through the advanced packages.  
 ! -- todo: what to do about reactions in lake?  Decay?
-! -- todo: save the lkt concentration into the lak aux variable?
-! -- todo: calculate the lak DENSE aux variable using concentration?
+! -- todo: save the apt concentration into the package aux variable?
+! -- todo: calculate the package DENSE aux variable using concentration?
 !
-! AFP flows (lakbudptr)     index var     ATP term              Transport Type
+! AFP flows (flowbudptr)    index var     ATP term              Transport Type
 !---------------------------------------------------------------------------------
 
 ! -- specialized terms in the flow budget
@@ -55,7 +55,7 @@ module GwtAptModule
   
   implicit none
   
-  public GwtAptType
+  public GwtAptType, apt_process_obsID
   
   character(len=LENFTYPE) :: ftype = 'APT'
   character(len=16)       :: text  = '             APT'
@@ -63,14 +63,13 @@ module GwtAptModule
   type, extends(BndType) :: GwtAptType
     
     character (len=8), dimension(:), pointer, contiguous :: status => null()
-    character(len=16), dimension(:), pointer, contiguous :: clktbudget => NULL()
     integer(I4B), pointer                              :: imatrows => null()   ! if active, add new rows to matrix
     integer(I4B), pointer                              :: iprconc => null()
     integer(I4B), pointer                              :: iconcout => null()
     integer(I4B), pointer                              :: ibudgetout => null()
     integer(I4B), pointer                              :: iflowbudget => null() ! unit number for existing lake flow budget file
     integer(I4B), pointer                              :: cbcauxitems => NULL()
-    integer(I4B), pointer                              :: nlakes => null()      ! number of lakes.  set from gwf lak nlakes
+    integer(I4B), pointer                              :: ncv => null()         ! number of control volumes
     integer(I4B), pointer                              :: bditems => NULL()
     integer(I4B), pointer                              :: igwflakpak => null()  ! package number of corresponding lak package
     real(DP), dimension(:), pointer, contiguous        :: strt => null()        ! starting lake concentration
@@ -95,12 +94,6 @@ module GwtAptModule
     integer(I4B), pointer                              :: idxbudfjf => null()   ! index of flow ja face in flowbudptr
     integer(I4B), pointer                              :: idxbudgwf => null()   ! index of gwf terms in flowbudptr
     integer(I4B), pointer                              :: idxbudsto => null()   ! index of storage terms in flowbudptr
-    integer(I4B), pointer                              :: idxbudrain => null()  ! index of rainfall terms in flowbudptr
-    integer(I4B), pointer                              :: idxbudevap => null()  ! index of evaporation terms in flowbudptr
-    integer(I4B), pointer                              :: idxbudroff => null()  ! index of runoff terms in flowbudptr
-    integer(I4B), pointer                              :: idxbudiflw => null()  ! index of inflow terms in flowbudptr
-    integer(I4B), pointer                              :: idxbudwdrl => null()  ! index of withdrawal terms in flowbudptr
-    integer(I4B), pointer                              :: idxbudoutf => null()  ! index of outflow terms in flowbudptr
     integer(I4B), pointer                              :: idxbudtmvr => null()  ! index of to mover terms in flowbudptr
     integer(I4B), pointer                              :: idxbudfmvr => null()  ! index of from mover terms in flowbudptr
     integer(I4B), pointer                              :: idxbudaux => null()   ! index of auxiliary terms in flowbudptr
@@ -110,8 +103,8 @@ module GwtAptModule
     real(DP), dimension(:), pointer, contiguous        :: qmfrommvr => null()   ! a mass flow coming from the mover that needs to be added
     !
     ! -- lake budget object
-    type(BudgetObjectType), pointer                    :: budobj => null()      ! lkt solute budget object
-    type(BudgetObjectType), pointer                    :: flowbudptr => null()   ! lake flows budget object
+    type(BudgetObjectType), pointer                    :: budobj => null()      ! apt solute budget object
+    type(BudgetObjectType), pointer                    :: flowbudptr => null()  ! lake flows budget object
     !
     ! -- budget file reader
     type(BudgetFileReaderType)                         :: bfr                   ! budget file reader
@@ -125,107 +118,55 @@ module GwtAptModule
     
   contains
   
-    procedure :: set_pointers => lkt_set_pointers
-    procedure :: bnd_ac => lkt_ac
-    procedure :: bnd_mc => lkt_mc
-    procedure :: bnd_ar => lkt_ar
-    procedure :: bnd_rp => lkt_rp
-    procedure :: bnd_ad => lkt_ad
-    procedure :: bnd_fc => lkt_fc
-    procedure, private :: lkt_fc_expanded
-    procedure, private :: lkt_fc_nonexpanded
-    procedure, private :: lkt_cfupdate
-    procedure, private :: lkt_check_valid
-    procedure, private :: lkt_set_stressperiod
-    procedure, private :: lkt_accumulate_ccterm
-    procedure :: bnd_bd => lkt_bd
-    procedure :: bnd_ot => lkt_ot
-    procedure :: bnd_da => lkt_da
+    procedure :: set_pointers => apt_set_pointers
+    procedure :: bnd_ac => apt_ac
+    procedure :: bnd_mc => apt_mc
+    procedure :: bnd_ar => apt_ar
+    procedure :: bnd_rp => apt_rp
+    procedure :: bnd_ad => apt_ad
+    procedure :: bnd_fc => apt_fc
+    procedure, private :: apt_fc_expanded
+    procedure :: pak_fc_expanded
+    procedure, private :: apt_fc_nonexpanded
+    procedure, private :: apt_cfupdate
+    procedure, private :: apt_check_valid
+    procedure, private :: apt_set_stressperiod
+    procedure :: apt_accumulate_ccterm
+    procedure :: bnd_bd => apt_bd
+    procedure :: bnd_ot => apt_ot
+    procedure :: bnd_da => apt_da
     procedure :: allocate_scalars
-    procedure :: lkt_allocate_arrays
+    procedure :: apt_allocate_arrays
     procedure :: find_apt_package
-    procedure :: lkt_solve
-    procedure :: bnd_options => lkt_options
-    procedure :: read_dimensions => lkt_read_dimensions
-    procedure :: lkt_read_lakes
-    procedure :: read_initial_attr => lkt_read_initial_attr
+    procedure :: apt_solve
+    procedure :: pak_solve
+    procedure :: bnd_options => apt_options
+    procedure :: read_dimensions => apt_read_dimensions
+    procedure :: apt_read_cvs
+    procedure :: read_initial_attr => apt_read_initial_attr
     procedure :: define_listlabel
     ! -- methods for observations
-    procedure, public :: bnd_obs_supported => lkt_obs_supported
-    procedure, public :: bnd_df_obs => lkt_df_obs
-    procedure, public :: bnd_rp_obs => lkt_rp_obs
-    procedure, private :: lkt_bd_obs
+    procedure :: bnd_obs_supported => apt_obs_supported
+    procedure :: bnd_df_obs => apt_df_obs
+    procedure :: pak_df_obs
+    procedure :: bnd_rp_obs => apt_rp_obs
+    procedure :: apt_bd_obs
+    procedure :: pak_bd_obs
     procedure :: get_volumes
-    procedure, private :: lkt_setup_budobj
-    procedure, private :: lkt_fill_budobj
-    procedure, private :: lkt_stor_term
-    procedure, private :: lkt_rain_term
-    procedure, private :: lkt_evap_term
-    procedure, private :: lkt_roff_term
-    procedure, private :: lkt_iflw_term
-    procedure, private :: lkt_wdrl_term
-    procedure, private :: lkt_outf_term
-    procedure, private :: lkt_tmvr_term
-    procedure, private :: lkt_fjf_term
+    procedure :: pak_get_nbudterms
+    procedure :: apt_setup_budobj
+    procedure :: pak_setup_budobj
+    procedure :: apt_fill_budobj
+    procedure :: pak_fill_budobj
+    procedure, private :: apt_stor_term
+    procedure, private :: apt_tmvr_term
+    procedure, private :: apt_fjf_term
     
   end type GwtAptType
 
   contains  
   
-  subroutine lkt_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
-                        fmi)
-! ******************************************************************************
-! lkt_create -- Create a New LKT Package
-! Subroutine: (1) create new-style package
-!             (2) point bndobj to the new package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    class(BndType), pointer :: packobj
-    integer(I4B),intent(in) :: id
-    integer(I4B),intent(in) :: ibcnum
-    integer(I4B),intent(in) :: inunit
-    integer(I4B),intent(in) :: iout
-    character(len=*), intent(in) :: namemodel
-    character(len=*), intent(in) :: pakname
-    type(GwtFmiType), pointer :: fmi
-    ! -- local
-    type(GwtAptType), pointer :: lktobj
-! ------------------------------------------------------------------------------
-    !
-    ! -- allocate the object and assign values to object variables
-    allocate(lktobj)
-    packobj => lktobj
-    !
-    ! -- create name and origin
-    call packobj%set_names(ibcnum, namemodel, pakname, ftype)
-    packobj%text = text
-    !
-    ! -- allocate scalars
-    call lktobj%allocate_scalars()
-    !
-    ! -- initialize package
-    call packobj%pack_initialize()
-
-    packobj%inunit = inunit
-    packobj%iout = iout
-    packobj%id = id
-    packobj%ibcnum = ibcnum
-    packobj%ncolbnd = 1
-    packobj%iscloc = 1
-    
-    ! -- Store pointer to flow model interface.  When the GwfGwt exchange is
-    !    created, it sets fmi%bndlist so that the GWT model has access to all
-    !    the flow packages
-    lktobj%fmi => fmi
-    !
-    ! -- return
-    return
-  end subroutine lkt_create
-
-  subroutine lkt_ac(this, moffset, sparse)
+  subroutine apt_ac(this, moffset, sparse)
 ! ******************************************************************************
 ! bnd_ac -- Add package connection to matrix
 ! ******************************************************************************
@@ -249,7 +190,7 @@ module GwtAptModule
     if (this%imatrows /= 0) then
       !
       ! -- diagonal
-      do n = 1, this%nlakes
+      do n = 1, this%ncv
         nglo = moffset + this%dis%nodes + this%ioffset + n
         call sparse%addconnection(nglo, nglo, 1)
       end do
@@ -278,11 +219,11 @@ module GwtAptModule
     !
     ! -- return
     return
-  end subroutine lkt_ac
+  end subroutine apt_ac
 
-  subroutine lkt_mc(this, moffset, iasln, jasln)
+  subroutine apt_mc(this, moffset, iasln, jasln)
 ! ******************************************************************************
-! bnd_ac -- map package connection to matrix
+! apt_mc -- map package connection to matrix
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -303,8 +244,8 @@ module GwtAptModule
     if (this%imatrows /= 0) then
       !
       ! -- allocate pointers to global matrix
-      allocate(this%idxlocnode(this%nlakes))
-      allocate(this%idxpakdiag(this%nlakes))
+      allocate(this%idxlocnode(this%ncv))
+      allocate(this%idxpakdiag(this%ncv))
       allocate(this%idxdglo(this%maxbound))
       allocate(this%idxoffdglo(this%maxbound))
       allocate(this%idxsymdglo(this%maxbound))
@@ -319,8 +260,8 @@ module GwtAptModule
       ! -- Find the position of each connection in the global ia, ja structure
       !    and store them in idxglo.  idxglo allows this model to insert or
       !    retrieve values into or from the global A matrix
-      ! -- lkt rows
-      do n = 1, this%nlakes
+      ! -- apt rows
+      do n = 1, this%ncv
         this%idxlocnode(n) = this%dis%nodes + this%ioffset + n
         iglo = moffset + this%dis%nodes + this%ioffset + n
         this%idxpakdiag(n) = iasln(iglo)
@@ -339,7 +280,7 @@ module GwtAptModule
         enddo searchloop
       end do
       !
-      ! -- lkt contributions to gwf portion of global matrix
+      ! -- apt contributions to gwf portion of global matrix
       do ipos = 1, this%flowbudptr%budterm(this%idxbudgwf)%nlist
         n = this%flowbudptr%budterm(this%idxbudgwf)%id1(ipos)
         j = this%flowbudptr%budterm(this%idxbudgwf)%id2(ipos)
@@ -383,11 +324,11 @@ module GwtAptModule
     !
     ! -- return
     return
-  end subroutine lkt_mc
+  end subroutine apt_mc
 
-  subroutine lkt_ar(this)
+  subroutine apt_ar(this)
 ! ******************************************************************************
-! lkt_ar -- Allocate and Read
+! apt_ar -- Allocate and Read
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -398,19 +339,19 @@ module GwtAptModule
     class(GwtAptType), intent(inout) :: this
     ! -- local
     ! -- formats
-    character(len=*), parameter :: fmtlkt =                                    &
-      "(1x,/1x,'LKT -- LAKE TRANSPORT PACKAGE, VERSION 1, 8/5/2019',           &
+    character(len=*), parameter :: fmtapt =                                    &
+      "(1x,/1x,'APT -- ADVANCED PACKAGE TRANSPORT, VERSION 1, 3/5/2020',       &
       &' INPUT READ FROM UNIT ', i0, //)"
 ! ------------------------------------------------------------------------------
     !
     ! -- Get obs setup 
     call this%obs%obs_ar()
     !
-    ! --print a message identifying the lkt package.
-    write(this%iout, fmtlkt) this%inunit
+    ! --print a message identifying the apt package.
+    write(this%iout, fmtapt) this%inunit
     !
     ! -- Allocate arrays
-    call this%lkt_allocate_arrays()
+    call this%apt_allocate_arrays()
     !
     ! -- read optional initial package parameters
     call this%read_initial_attr()
@@ -419,8 +360,8 @@ module GwtAptModule
     !    for the corresponding lake package
     call this%fmi%get_package_index(this%name, this%igwflakpak)
     !
-    ! -- Tell fmi that this package is being handled by LKT, otherwise
-    !    SSM would handle the flows into GWT from this LAK.  Then point the
+    ! -- Tell fmi that this package is being handled by APT, otherwise
+    !    SSM would handle the flows into GWT from this pack.  Then point the
     !    fmi data for an advanced package to xnewpak and qmfrommvr
     this%fmi%iatp(this%igwflakpak) = 1
     this%fmi%datp(this%igwflakpak)%concpack => this%xnewpak
@@ -428,11 +369,11 @@ module GwtAptModule
     !
     ! -- Return
     return
-  end subroutine lkt_ar
+  end subroutine apt_ar
 
-  subroutine lkt_rp(this)
+  subroutine apt_rp(this)
 ! ******************************************************************************
-! lkt_rp -- Read and Prepare
+! apt_rp -- Read and Prepare
 ! Subroutine: (1) read itmp
 !             (2) read new boundaries if itmp>0
 ! ******************************************************************************
@@ -505,13 +446,13 @@ module GwtAptModule
           if (this%iprpak /= 0) then
             write(this%iout,'(/1x,a,1x,i6,/)')                                  &
               'READING '//trim(adjustl(this%text))//' DATA FOR PERIOD', kper
-            write(this%iout,'(3x,a)')  '     LKT KEYWORD AND DATA'
+            write(this%iout,'(3x,a)')  '     '//trim(adjustl(this%text))//' KEYWORD AND DATA'
             write(this%iout,'(3x,78("-"))')
           end if
         end if
         itemno = this%parser%GetInteger()
         call this%parser%GetRemainingLine(line)
-        call this%lkt_set_stressperiod(itemno, line)
+        call this%apt_set_stressperiod(itemno, line)
       end do stressperiod
 
       if (this%iprpak /= 0) then
@@ -538,11 +479,11 @@ module GwtAptModule
     !
     ! -- return
     return
-  end subroutine lkt_rp
+  end subroutine apt_rp
 
-  subroutine lkt_set_stressperiod(this, itemno, line)
+  subroutine apt_set_stressperiod(this, itemno, line)
 ! ******************************************************************************
-! lkt_set_stressperiod -- Set a stress period attribute for lakweslls(itemno)
+! apt_set_stressperiod -- Set a stress period attribute for lakweslls(itemno)
 !                         using keywords.
 ! ******************************************************************************
 !
@@ -605,7 +546,7 @@ module GwtAptModule
     keyword = line(istart:istop)
     select case (line(istart:istop))
       case ('STATUS')
-        ierr = this%lkt_check_valid(itemno)
+        ierr = this%apt_check_valid(itemno)
         if (ierr /= 0) goto 999
         !bndName = this%boundname(itemno)
         call urword(line, lloc, istart, istop, 1, ival, rval, this%iout, this%inunit)
@@ -624,7 +565,7 @@ module GwtAptModule
           call store_error(errmsg)
         end if
       case ('CONCENTRATION')
-        ierr = this%lkt_check_valid(itemno)
+        ierr = this%apt_check_valid(itemno)
         if (ierr /= 0) goto 999
         call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
         text = line(istart:istop)
@@ -637,7 +578,7 @@ module GwtAptModule
                                               this%iprpak, itmp, jj, 'CONCENTRATION', &
                                               bndName, this%inunit)
       case ('RAINFALL')
-        ierr = this%lkt_check_valid(itemno)
+        ierr = this%apt_check_valid(itemno)
         if (ierr /= 0) goto 999
         call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
         text = line(istart:istop)
@@ -650,7 +591,7 @@ module GwtAptModule
                                               this%iprpak, itmp, jj, 'RAINFALL', &
                                               bndName, this%inunit)
       case ('EVAPORATION')
-        ierr = this%lkt_check_valid(itemno)
+        ierr = this%apt_check_valid(itemno)
         if (ierr /= 0) goto 999
         call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
         text = line(istart:istop)
@@ -663,7 +604,7 @@ module GwtAptModule
                                               this%iprpak, itmp, jj, 'EVAPORATION', &
                                               bndName, this%inunit)
       case ('RUNOFF')
-        ierr = this%lkt_check_valid(itemno)
+        ierr = this%apt_check_valid(itemno)
         if (ierr /= 0) goto 999
         call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
         text = line(istart:istop)
@@ -676,7 +617,7 @@ module GwtAptModule
                                               this%iprpak, itmp, jj, 'RUNOFF', &
                                               bndName, this%inunit)
       case ('INFLOW')
-        ierr = this%lkt_check_valid(itemno)
+        ierr = this%apt_check_valid(itemno)
         if (ierr /= 0) goto 999
         call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
         text = line(istart:istop)
@@ -689,7 +630,7 @@ module GwtAptModule
                                               this%iprpak, itmp, jj, 'INFLOW', &
                                               bndName, this%inunit)
       case ('AUXILIARY')
-        ierr = this%lkt_check_valid(itemno)
+        ierr = this%apt_check_valid(itemno)
         if (ierr /= 0) goto 999
         !bndName = this%boundname(itemno)
         call urword(line, lloc, istart, istop, 1, ival, rval, this%iout, this%inunit)
@@ -731,11 +672,11 @@ module GwtAptModule
     !
     ! -- return
     return
-  end subroutine lkt_set_stressperiod
+  end subroutine apt_set_stressperiod
 
-  function lkt_check_valid(this, itemno) result(ierr)
+  function apt_check_valid(this, itemno) result(ierr)
 ! ******************************************************************************
-!  lkt_check_valid -- Determine if a valid lake or outlet number has been
+!  apt_check_valid -- Determine if a valid lake or outlet number has been
 !                     specified.
 ! ******************************************************************************
     ! -- return
@@ -748,17 +689,17 @@ module GwtAptModule
     ! -- formats
 ! ------------------------------------------------------------------------------
     ierr = 0
-    if (itemno < 1 .or. itemno > this%nlakes) then
+    if (itemno < 1 .or. itemno > this%ncv) then
       write(errmsg,'(4x,a,1x,i6,1x,a,1x,i6)') &
-        '****ERROR. LAKENO ', itemno, 'MUST BE > 0 and <= ', this%nlakes
+        '****ERROR. LAKENO ', itemno, 'MUST BE > 0 and <= ', this%ncv
       call store_error(errmsg)
       ierr = 1
     end if
-  end function lkt_check_valid
+  end function apt_check_valid
 
-  subroutine lkt_ad(this)
+  subroutine apt_ad(this)
 ! ******************************************************************************
-! lkt_ad -- Add package connection to matrix
+! apt_ad -- Add package connection to matrix
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -793,7 +734,7 @@ module GwtAptModule
     !
     ! -- copy xnew into xold and set xnewpak to stage%value for
     !    constant stage lakes
-    do n = 1, this%nlakes
+    do n = 1, this%ncv
       this%xoldpak(n) = this%xnewpak(n)
       if (this%iboundpak(n) < 0) then
         this%xnewpak(n) = this%conclak(n)%value
@@ -812,11 +753,11 @@ module GwtAptModule
     !
     ! -- return
     return
-  end subroutine lkt_ad
+  end subroutine apt_ad
 
-  subroutine lkt_fc(this, rhs, ia, idxglo, amatsln)
+  subroutine apt_fc(this, rhs, ia, idxglo, amatsln)
 ! ******************************************************************************
-! lkt_fc
+! apt_fc
 ! ****************************************************************************
 !
 !    SPECIFICATIONS:
@@ -833,17 +774,17 @@ module GwtAptModule
     !
     ! -- Call fc depending on whether or not a matrix is expanded or not
     if (this%imatrows == 0) then
-      call this%lkt_fc_nonexpanded(rhs, ia, idxglo, amatsln)
+      call this%apt_fc_nonexpanded(rhs, ia, idxglo, amatsln)
     else
-      call this%lkt_fc_expanded(rhs, ia, idxglo, amatsln)
+      call this%apt_fc_expanded(rhs, ia, idxglo, amatsln)
     end if
     ! -- Return
     return
-  end subroutine lkt_fc
+  end subroutine apt_fc
 
-  subroutine lkt_fc_nonexpanded(this, rhs, ia, idxglo, amatsln)
+  subroutine apt_fc_nonexpanded(this, rhs, ia, idxglo, amatsln)
 ! ******************************************************************************
-! lkt_fc_nonexpanded -- formulate for the nonexpanded a matrix case
+! apt_fc_nonexpanded -- formulate for the nonexpanded a matrix case
 ! ****************************************************************************
 !
 !    SPECIFICATIONS:
@@ -860,9 +801,9 @@ module GwtAptModule
 ! ------------------------------------------------------------------------------
     !
     ! -- solve for concentration in the lakes
-    call this%lkt_solve()
+    call this%apt_solve()
     !
-    ! -- add hcof and rhs terms (from lkt_solve) to the gwf matrix
+    ! -- add hcof and rhs terms (from apt_solve) to the gwf matrix
     do j = 1, this%flowbudptr%budterm(this%idxbudgwf)%nlist
       igwfnode = this%flowbudptr%budterm(this%idxbudgwf)%id2(j)
       if (this%ibound(igwfnode) < 1) cycle
@@ -873,11 +814,11 @@ module GwtAptModule
     !
     ! -- Return
     return
-  end subroutine lkt_fc_nonexpanded
+  end subroutine apt_fc_nonexpanded
 
-  subroutine lkt_fc_expanded(this, rhs, ia, idxglo, amatsln)
+  subroutine apt_fc_expanded(this, rhs, ia, idxglo, amatsln)
 ! ******************************************************************************
-! lkt_fc_expanded -- formulate for the expanded a matrix case
+! apt_fc_expanded -- formulate for the expanded a matrix case
 ! ****************************************************************************
 !
 !    SPECIFICATIONS:
@@ -902,86 +843,27 @@ module GwtAptModule
     real(DP) :: hcofval
 ! ------------------------------------------------------------------------------
     !
+    ! -- call the specific method for the advanced transport package, such as
+    !    what would be overridden by 
+    !      GwtLktType, GwtSftType, GwtMwtType, GwtUztType
+    !    This routine will add terms for rainfall, runoff, or other terms
+    !    specific to the package
+    call this%pak_fc_expanded(rhs, ia, idxglo, amatsln)
+    !
     ! -- mass storage in lake
-    do n = 1, this%nlakes
+    do n = 1, this%ncv
       cold  = this%xoldpak(n)
       iloc = this%idxlocnode(n)
       iposd = this%idxpakdiag(n)
-      call this%lkt_stor_term(n, n1, n2, rrate, rhsval, hcofval)
+      call this%apt_stor_term(n, n1, n2, rrate, rhsval, hcofval)
       amatsln(iposd) = amatsln(iposd) + hcofval
       rhs(iloc) = rhs(iloc) + rhsval
     end do
     !
-    ! -- add rainfall contribution
-    if (this%idxbudrain /= 0) then
-      do j = 1, this%flowbudptr%budterm(this%idxbudrain)%nlist
-        call this%lkt_rain_term(j, n1, n2, rrate, rhsval, hcofval)
-        iloc = this%idxlocnode(n1)
-        iposd = this%idxpakdiag(n1)
-        amatsln(iposd) = amatsln(iposd) + hcofval
-        rhs(iloc) = rhs(iloc) + rhsval
-      end do
-    end if
-    !
-    ! -- add evaporation contribution
-    if (this%idxbudevap /= 0) then
-      do j = 1, this%flowbudptr%budterm(this%idxbudevap)%nlist
-        call this%lkt_evap_term(j, n1, n2, rrate, rhsval, hcofval)
-        iloc = this%idxlocnode(n1)
-        iposd = this%idxpakdiag(n1)
-        amatsln(iposd) = amatsln(iposd) + hcofval
-        rhs(iloc) = rhs(iloc) + rhsval
-      end do
-    end if
-    !
-    ! -- add runoff contribution
-    if (this%idxbudroff /= 0) then
-      do j = 1, this%flowbudptr%budterm(this%idxbudroff)%nlist
-        call this%lkt_roff_term(j, n1, n2, rrate, rhsval, hcofval)
-        iloc = this%idxlocnode(n1)
-        iposd = this%idxpakdiag(n1)
-        amatsln(iposd) = amatsln(iposd) + hcofval
-        rhs(iloc) = rhs(iloc) + rhsval
-      end do
-    end if
-    !
-    ! -- add inflow contribution
-    if (this%idxbudiflw /= 0) then
-      do j = 1, this%flowbudptr%budterm(this%idxbudiflw)%nlist
-        call this%lkt_iflw_term(j, n1, n2, rrate, rhsval, hcofval)
-        iloc = this%idxlocnode(n1)
-        iposd = this%idxpakdiag(n1)
-        amatsln(iposd) = amatsln(iposd) + hcofval
-        rhs(iloc) = rhs(iloc) + rhsval
-      end do
-    end if
-    !
-    ! -- add withdrawal contribution
-    if (this%idxbudwdrl /= 0) then
-      do j = 1, this%flowbudptr%budterm(this%idxbudwdrl)%nlist
-        call this%lkt_wdrl_term(j, n1, n2, rrate, rhsval, hcofval)
-        iloc = this%idxlocnode(n1)
-        iposd = this%idxpakdiag(n1)
-        amatsln(iposd) = amatsln(iposd) + hcofval
-        rhs(iloc) = rhs(iloc) + rhsval
-      end do
-    end if
-    !
-    ! -- add outflow contribution
-    if (this%idxbudoutf /= 0) then
-      do j = 1, this%flowbudptr%budterm(this%idxbudoutf)%nlist
-        call this%lkt_outf_term(j, n1, n2, rrate, rhsval, hcofval)
-        iloc = this%idxlocnode(n1)
-        iposd = this%idxpakdiag(n1)
-        amatsln(iposd) = amatsln(iposd) + hcofval
-        rhs(iloc) = rhs(iloc) + rhsval
-      end do
-    end if
-    !
     ! -- add to mover contribution
     if (this%idxbudtmvr /= 0) then
       do j = 1, this%flowbudptr%budterm(this%idxbudtmvr)%nlist
-        call this%lkt_tmvr_term(j, n1, n2, rrate, rhsval, hcofval)
+        call this%apt_tmvr_term(j, n1, n2, rrate, rhsval, hcofval)
         iloc = this%idxlocnode(n1)
         iposd = this%idxpakdiag(n1)
         amatsln(iposd) = amatsln(iposd) + hcofval
@@ -991,7 +873,7 @@ module GwtAptModule
     !
     ! -- add from mover contribution
     if (this%idxbudfmvr /= 0) then
-      do n = 1, this%nlakes
+      do n = 1, this%ncv
         rhsval = this%qmfrommvr(n)
         iloc = this%idxlocnode(n)
         rhs(iloc) = rhs(iloc) - rhsval
@@ -1005,18 +887,18 @@ module GwtAptModule
       n = this%flowbudptr%budterm(this%idxbudgwf)%id1(j)
       if (this%iboundpak(n) /= 0) then
         !
-        ! -- set acoef and rhs to negative so they are relative to lkt and not gwt
+        ! -- set acoef and rhs to negative so they are relative to apt and not gwt
         qbnd = this%flowbudptr%budterm(this%idxbudgwf)%flow(j)
         omega = DZERO
         if (qbnd < DZERO) omega = DONE
         !
-        ! -- add to lkt row
+        ! -- add to apt row
         iposd = this%idxdglo(j)
         iposoffd = this%idxoffdglo(j)
         amatsln(iposd) = amatsln(iposd) + omega * qbnd
         amatsln(iposoffd) = amatsln(iposoffd) + (DONE - omega) * qbnd
         !
-        ! -- add to gwf row for lkt connection
+        ! -- add to gwf row for apt connection
         ipossymd = this%idxsymdglo(j)
         ipossymoffd = this%idxsymoffdglo(j)
         amatsln(ipossymd) = amatsln(ipossymd) - (DONE - omega) * qbnd
@@ -1044,11 +926,37 @@ module GwtAptModule
     !
     ! -- Return
     return
-  end subroutine lkt_fc_expanded
+  end subroutine apt_fc_expanded
 
-  subroutine lkt_cfupdate(this)
+  subroutine pak_fc_expanded(this, rhs, ia, idxglo, amatsln)
 ! ******************************************************************************
-! lkt_cfupdate -- calculate package hcof and rhs so gwt budget is calculated
+! pak_fc_expanded -- allow a subclass advanced transport package to inject
+!   terms into the matrix assembly.  This method must be overridden.
+! ****************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwtAptType) :: this
+    real(DP), dimension(:), intent(inout) :: rhs
+    integer(I4B), dimension(:), intent(in) :: ia
+    integer(I4B), dimension(:), intent(in) :: idxglo
+    real(DP), dimension(:), intent(inout) :: amatsln
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    ! -- this routine should never be called
+    call store_error('Program error: pak_fc_expanded not implemented.')
+    call ustop()
+    !
+    ! -- Return
+    return
+  end subroutine pak_fc_expanded
+
+  subroutine apt_cfupdate(this)
+! ******************************************************************************
+! apt_cfupdate -- calculate package hcof and rhs so gwt budget is calculated
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -1080,12 +988,12 @@ module GwtAptModule
     !
     ! -- Return
     return
-  end subroutine lkt_cfupdate
+  end subroutine apt_cfupdate
 
-  subroutine lkt_bd(this, x, idvfl, icbcfl, ibudfl, icbcun, iprobs,            &
+  subroutine apt_bd(this, x, idvfl, icbcfl, ibudfl, icbcun, iprobs,            &
                     isuppress_output, model_budget, imap, iadv)
 ! ******************************************************************************
-! lkt_bd -- Calculate Volumetric Budget for the lake
+! apt_bd -- Calculate Volumetric Budget for the lake
 ! Note that the compact budget will always be used.
 ! Subroutine: (1) Process each package entry
 !             (2) Write output
@@ -1123,9 +1031,9 @@ module GwtAptModule
     ! -- Solve the lak concentrations again or update the lake hcof 
     !    and rhs terms
     if (this%imatrows == 0) then
-      call this%lkt_solve()
+      call this%apt_solve()
     else
-      call this%lkt_cfupdate()
+      call this%apt_cfupdate()
     end if
     !
     ! -- Suppress saving of simulated values; they
@@ -1137,10 +1045,10 @@ module GwtAptModule
                              isuppress_output, model_budget)
     !
     ! -- calculate storage term
-    do n = 1, this%nlakes
+    do n = 1, this%ncv
       rrate = DZERO
       if (this%iboundpak(n) > 0) then
-        call this%lkt_stor_term(n, n1, n2, rrate)
+        call this%apt_stor_term(n, n1, n2, rrate)
       end if
       this%qsto(n) = rrate
     end do
@@ -1155,7 +1063,7 @@ module GwtAptModule
     !
     ! -- write lake binary output
     if (ibinun > 0) then
-      do n = 1, this%nlakes
+      do n = 1, this%ncv
         c = this%xnewpak(n)
         if (this%iboundpak(n) == 0) then
           c = DHNOFLO
@@ -1163,7 +1071,7 @@ module GwtAptModule
         this%dbuff(n) = c
       end do
       call ulasav(this%dbuff, '   CONCENTRATION', kstp, kper, pertim, totim,   &
-                  this%nlakes, 1, 1, ibinun)
+                  this%ncv, 1, 1, ibinun)
     end if
     !
     ! -- Set unit number for binary budget output
@@ -1175,7 +1083,7 @@ module GwtAptModule
     if (isuppress_output /= 0) ibinun = 0
     !
     ! -- fill the budget object
-    call this%lkt_fill_budobj(x)
+    call this%apt_fill_budobj(x)
     !
     ! -- write the flows from the budobj
     ibinun = 0
@@ -1190,19 +1098,19 @@ module GwtAptModule
     end if
     !    
     ! -- For continuous observations, save simulated values.  This
-    !    needs to be called after lkt_fill_budobj() so that the budget
+    !    needs to be called after apt_fill_budobj() so that the budget
     !    terms have been calculated
     if (this%obs%npakobs > 0 .and. iprobs > 0) then
-      call this%lkt_bd_obs()
+      call this%apt_bd_obs()
     endif
     !
     ! -- return
     return
-  end subroutine lkt_bd
+  end subroutine apt_bd
 
-  subroutine lkt_ot(this, kstp, kper, iout, ihedfl, ibudfl)
+  subroutine apt_ot(this, kstp, kper, iout, ihedfl, ibudfl)
 ! ******************************************************************************
-! lkt_ot
+! apt_ot
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -1260,7 +1168,7 @@ module GwtAptModule
       write(iout,'(1X,A)') line(1:iloc)
       write(iout,'(1X,A)') linesep(1:iloc)
       ! -- write data
-      do n = 1, this%nlakes
+      do n = 1, this%ncv
         iloc = 1
         line = ''
         if (this%inamedbound==1) then
@@ -1284,7 +1192,7 @@ module GwtAptModule
     !
     ! -- Return
     return
-  end subroutine lkt_ot
+  end subroutine apt_ot
 
   subroutine allocate_scalars(this)
 ! ******************************************************************************
@@ -1310,17 +1218,11 @@ module GwtAptModule
     call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%origin)
     call mem_allocate(this%iflowbudget, 'IFLOWBUDGET', this%origin)
     call mem_allocate(this%igwflakpak, 'IGWFLAKPAK', this%origin)
-    call mem_allocate(this%nlakes, 'NLAKES', this%origin)
+    call mem_allocate(this%ncv, 'NCV', this%origin)
     call mem_allocate(this%bditems, 'BDITEMS', this%origin)
     call mem_allocate(this%idxbudfjf, 'IDXBUDFJF', this%origin)
     call mem_allocate(this%idxbudgwf, 'IDXBUDGWF', this%origin)
     call mem_allocate(this%idxbudsto, 'IDXBUDSTO', this%origin)
-    call mem_allocate(this%idxbudrain, 'IDXBUDRAIN', this%origin)
-    call mem_allocate(this%idxbudevap, 'IDXBUDEVAP', this%origin)
-    call mem_allocate(this%idxbudroff, 'IDXBUDROFF', this%origin)
-    call mem_allocate(this%idxbudiflw, 'IDXBUDIFLW', this%origin)
-    call mem_allocate(this%idxbudwdrl, 'IDXBUDWDRL', this%origin)
-    call mem_allocate(this%idxbudoutf, 'IDXBUDOUTF', this%origin)
     call mem_allocate(this%idxbudtmvr, 'IDXBUDTMVR', this%origin)
     call mem_allocate(this%idxbudfmvr, 'IDXBUDFMVR', this%origin)
     call mem_allocate(this%idxbudaux, 'IDXBUDAUX', this%origin)
@@ -1333,17 +1235,11 @@ module GwtAptModule
     this%ibudgetout = 0
     this%iflowbudget = 0
     this%igwflakpak = 0
-    this%nlakes = 0
+    this%ncv = 0
     this%bditems = 9
     this%idxbudfjf = 0
     this%idxbudgwf = 0
     this%idxbudsto = 0
-    this%idxbudrain = 0
-    this%idxbudevap = 0
-    this%idxbudroff = 0
-    this%idxbudiflw = 0
-    this%idxbudwdrl = 0
-    this%idxbudoutf = 0
     this%idxbudtmvr = 0
     this%idxbudfmvr = 0
     this%idxbudaux = 0
@@ -1353,7 +1249,7 @@ module GwtAptModule
     return
   end subroutine allocate_scalars
 
-  subroutine lkt_allocate_arrays(this)
+  subroutine apt_allocate_arrays(this)
 ! ******************************************************************************
 ! allocate_arrays
 ! ******************************************************************************
@@ -1375,53 +1271,39 @@ module GwtAptModule
     !
     ! -- allocate and initialize dbuff
     if (this%iconcout > 0) then
-      call mem_allocate(this%dbuff, this%nlakes, 'DBUFF', this%origin)
-      do n = 1, this%nlakes
+      call mem_allocate(this%dbuff, this%ncv, 'DBUFF', this%origin)
+      do n = 1, this%ncv
         this%dbuff(n) = DZERO
       end do
     else
       call mem_allocate(this%dbuff, 0, 'DBUFF', this%origin)
     end if
     !
-    ! -- allocate character array for budget text
-    allocate(this%clktbudget(this%bditems))
-    !
     ! -- allocate character array for status
-    allocate(this%status(this%nlakes))
+    allocate(this%status(this%ncv))
     !
     ! -- time series
-    call mem_allocate(this%conclak, this%nlakes, 'CONCLAK', this%origin)
-    call mem_allocate(this%concrain, this%nlakes, 'CONCRAIN', this%origin)
-    call mem_allocate(this%concevap, this%nlakes, 'CONCEVAP', this%origin)
-    call mem_allocate(this%concroff, this%nlakes, 'CONCROFF', this%origin)
-    call mem_allocate(this%conciflw, this%nlakes, 'CONCIFLW', this%origin)
+    call mem_allocate(this%conclak, this%ncv, 'CONCLAK', this%origin)
+    call mem_allocate(this%concrain, this%ncv, 'CONCRAIN', this%origin)
+    call mem_allocate(this%concevap, this%ncv, 'CONCEVAP', this%origin)
+    call mem_allocate(this%concroff, this%ncv, 'CONCROFF', this%origin)
+    call mem_allocate(this%conciflw, this%ncv, 'CONCIFLW', this%origin)
     !
     ! -- budget terms
-    call mem_allocate(this%qsto, this%nlakes, 'QSTO', this%origin)
-    call mem_allocate(this%ccterm, this%nlakes, 'CCTERM', this%origin)
+    call mem_allocate(this%qsto, this%ncv, 'QSTO', this%origin)
+    call mem_allocate(this%ccterm, this%ncv, 'CCTERM', this%origin)
     !
     ! -- concentration for budget terms
-    call mem_allocate(this%concbudssm, this%nconcbudssm, this%nlakes, &
+    call mem_allocate(this%concbudssm, this%nconcbudssm, this%ncv, &
       'CONCBUDSSM', this%origin)
     !
     ! -- mass added from the mover transport package
-    call mem_allocate(this%qmfrommvr, this%nlakes, 'QMFROMMVR', this%origin)
+    call mem_allocate(this%qmfrommvr, this%ncv, 'QMFROMMVR', this%origin)
     !
     ! -- Initialize
     !
-    !-- fill clktbudget
-    this%clktbudget(1) = '             GWF'
-    this%clktbudget(2) = '         STORAGE'
-    this%clktbudget(3) = '        CONSTANT'
-    this%clktbudget(4) = '        RAINFALL'
-    this%clktbudget(5) = '     EVAPORATION'
-    this%clktbudget(6) = '          RUNOFF'
-    this%clktbudget(7) = '      EXT-INFLOW'
-    this%clktbudget(8) = '      WITHDRAWAL'
-    this%clktbudget(9) = '     EXT-OUTFLOW'
-    !
     ! -- initialize arrays
-    do n = 1, this%nlakes
+    do n = 1, this%ncv
       this%status(n) = 'ACTIVE'
       this%qsto(n) = DZERO
       this%ccterm(n) = DZERO
@@ -1431,11 +1313,11 @@ module GwtAptModule
     !
     ! -- Return
     return
-  end subroutine lkt_allocate_arrays
+  end subroutine apt_allocate_arrays
   
-  subroutine lkt_da(this)
+  subroutine apt_da(this)
 ! ******************************************************************************
-! lkt_da
+! apt_da
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -1465,7 +1347,6 @@ module GwtAptModule
     call mem_deallocate(this%concroff)
     call mem_deallocate(this%conciflw)
     call mem_deallocate(this%qmfrommvr)
-    deallocate(this%clktbudget)
     deallocate(this%status)
     deallocate(this%lakename)
     !
@@ -1491,17 +1372,11 @@ module GwtAptModule
     call mem_deallocate(this%ibudgetout)
     call mem_deallocate(this%iflowbudget)
     call mem_deallocate(this%igwflakpak)
-    call mem_deallocate(this%nlakes)
+    call mem_deallocate(this%ncv)
     call mem_deallocate(this%bditems)
     call mem_deallocate(this%idxbudfjf)
     call mem_deallocate(this%idxbudgwf)
     call mem_deallocate(this%idxbudsto)
-    call mem_deallocate(this%idxbudrain)
-    call mem_deallocate(this%idxbudevap)
-    call mem_deallocate(this%idxbudroff)
-    call mem_deallocate(this%idxbudiflw)
-    call mem_deallocate(this%idxbudwdrl)
-    call mem_deallocate(this%idxbudoutf)
     call mem_deallocate(this%idxbudtmvr)
     call mem_deallocate(this%idxbudfmvr)
     call mem_deallocate(this%idxbudaux)
@@ -1513,7 +1388,7 @@ module GwtAptModule
     !
     ! -- Return
     return
-  end subroutine lkt_da
+  end subroutine apt_da
 
   subroutine find_apt_package(this)
 ! ******************************************************************************
@@ -1527,128 +1402,21 @@ module GwtAptModule
     ! -- dummy
     class(GwtAptType) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg
-    class(BndType), pointer :: packobj
-    integer(I4B) :: ip, icount
-    integer(I4B) :: nbudterm
-    logical :: found
 ! ------------------------------------------------------------------------------
     !
-    ! -- Initialize found to false, and error later if lake package cannot
-    !    be found
-    found = .false.
-    !
-    ! -- If user is specifying lake flows in a binary budget file, then set up
-    !    the budget file reader, otherwise set a pointer to the lak package
-    !    budobj
-    if (this%iflowbudget /= 0) then
-      !
-      ! -- Set up the flowbudptr by filling it from a preexisting binary
-      !    file created by a previous GWF simulation
-      call budgetobject_cr_bfr(this%flowbudptr, this%name, this%iflowbudget,    &
-                               this%iout, colconv2=['GWF             '])
-      call this%flowbudptr%fill_from_bfr(this%dis, this%iout)
-      found = .true.
-      !
-    else
-      if (associated(this%fmi%gwfbndlist)) then
-        ! -- Look through gwfbndlist for a LAK package with the same name as 
-        !    this LKT package name
-        do ip = 1, this%fmi%gwfbndlist%Count()
-          packobj => GetBndFromList(this%fmi%gwfbndlist, ip)
-          if (packobj%name == this%name) then
-            found = .true.
-            select type (packobj)
-              type is (LakType)
-                this%flowbudptr => packobj%budobj
-            end select
-          end if
-          if (found) exit
-        end do
-      end if
-    end if
-    !
-    ! -- error if lak package not found
-    if (.not. found) then
-      write(errmsg, '(a)') '****ERROR. CORRESPONDING LAK PACKAGE NOT FOUND &
-                            &FOR LKT.'
-      call store_error(errmsg)
-      call this%parser%StoreErrorUnit()
-      call ustop()
-    endif
-    !
-    ! -- allocate space for idxbudssm, which indicates whether this is a 
-    !    special budget term or one that is a general source and sink
-    nbudterm = this%flowbudptr%nbudterm
-    call mem_allocate(this%idxbudssm, nbudterm, 'IDXBUDSSM', this%origin)
-    !
-    ! -- Process budget terms and identify special budget terms
-    write(this%iout, '(/, a, a)') &
-      'PROCESSING LKT INFORMATION FOR ', this%name
-    write(this%iout, '(a)') '  IDENTIFYING FLOW TERMS IN LAK PACKAGE'
-    write(this%iout, '(a, i0)') &
-      '  NUMBER OF LAKES = ', this%flowbudptr%ncv
-    icount = 1
-    do ip = 1, this%flowbudptr%nbudterm
-      select case(trim(adjustl(this%flowbudptr%budterm(ip)%flowtype)))
-      case('FLOW-JA-FACE')
-        this%idxbudfjf = ip
-        this%idxbudssm(ip) = 0
-      case('GWF')
-        this%idxbudgwf = ip
-        this%idxbudssm(ip) = 0
-      case('STORAGE')
-        this%idxbudsto = ip
-        this%idxbudssm(ip) = 0
-      case('RAINFALL')
-        this%idxbudrain = ip
-        this%idxbudssm(ip) = 0
-      case('EVAPORATION')
-        this%idxbudevap = ip
-        this%idxbudssm(ip) = 0
-      case('RUNOFF')
-        this%idxbudroff = ip
-        this%idxbudssm(ip) = 0
-      case('EXT-INFLOW')
-        this%idxbudiflw = ip
-        this%idxbudssm(ip) = 0
-      case('WITHDRAWAL')
-        this%idxbudwdrl = ip
-        this%idxbudssm(ip) = 0
-      case('EXT-OUTFLOW')
-        this%idxbudoutf = ip
-        this%idxbudssm(ip) = 0
-      case('TO-MVR')
-        this%idxbudtmvr = ip
-        this%idxbudssm(ip) = 0
-      case('FROM-MVR')
-        this%idxbudfmvr = ip
-        this%idxbudssm(ip) = 0
-      case('AUXILIARY')
-        this%idxbudaux = ip
-        this%idxbudssm(ip) = 0
-      case default
-        !
-        ! -- set idxbudssm equal to a column index for where the concentrations
-        !    are stored in the concbud(nbudssm, nlake) array
-        this%idxbudssm(ip) = icount
-        icount = icount + 1
-      end select
-      write(this%iout, '(a, i0, " = ", a,/, a, i0)') &
-        '  TERM ', ip, trim(adjustl(this%flowbudptr%budterm(ip)%flowtype)), &
-        '   MAX NO. OF ENTRIES = ', this%flowbudptr%budterm(ip)%maxlist
-    end do
-    write(this%iout, '(a, //)') 'DONE PROCESSING LKT INFORMATION'
+    ! -- this routine should never be called
+    call store_error('Program error: pak_solve not implemented.')
+    call ustop()
     !
     ! -- Return
     return
   end subroutine find_apt_package
 
-  subroutine  lkt_options(this, option, found)
+  subroutine  apt_options(this, option, found)
 ! ******************************************************************************
-! lkt_options -- set options specific to GwtAptType
+! apt_options -- set options specific to GwtAptType
 !
-! lkt_options overrides BndType%bnd_options
+! apt_options overrides BndType%bnd_options
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -1680,7 +1448,7 @@ module GwtAptModule
         call this%parser%DevOpt()
         this%imatrows = 0
         write(this%iout,'(4x,a)') &
-          ' LKT WILL NOT ADD ADDITIONAL ROWS TO THE A MATRIX.'
+          trim(adjustl(this%text))//' WILL NOT ADD ADDITIONAL ROWS TO THE A MATRIX.'
         found = .true.
       case ('PRINT_CONCENTRATION')
         this%iprconc = 1
@@ -1731,11 +1499,11 @@ module GwtAptModule
     !
     ! -- return
     return
-  end subroutine lkt_options
+  end subroutine apt_options
 
-  subroutine lkt_read_dimensions(this)
+  subroutine apt_read_dimensions(this)
 ! ******************************************************************************
-! lkt_read_dimensions -- Determine dimensions for this package
+! apt_read_dimensions -- Determine dimensions for this package
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -1753,25 +1521,28 @@ module GwtAptModule
     call this%find_apt_package()
     !
     ! -- Set dimensions from the GWF LAK package
-    this%nlakes = this%flowbudptr%ncv
+    this%ncv = this%flowbudptr%ncv
     this%maxbound = this%flowbudptr%budterm(this%idxbudgwf)%maxlist
     this%nbound = this%maxbound
-    write(this%iout, '(a, a)') 'SETTING DIMENSIONS FOR LKT PACKAGE ', this%name
-    write(this%iout,'(2x,a,i0)')'NLAKES = ', this%nlakes
+    write(this%iout, '(a, a)') 'SETTING DIMENSIONS FOR PACKAGE ', this%name
+    write(this%iout,'(2x,a,i0)')'NUMBER OF CONTROL VOLUMES = ', this%ncv
     write(this%iout,'(2x,a,i0)')'MAXBOUND = ', this%maxbound
     write(this%iout,'(2x,a,i0)')'NBOUND = ', this%nbound
     if (this%imatrows /= 0) then
-      this%npakeq = this%nlakes
-      write(this%iout,'(2x,a)') 'LKT SOLVED AS PART OF GWT MATRIX EQUATIONS'
+      this%npakeq = this%ncv
+      write(this%iout,'(2x,a)') trim(adjustl(this%text)) // &
+        ' SOLVED AS PART OF GWT MATRIX EQUATIONS'
     else
-      write(this%iout,'(2x,a)') 'LKT SOLVED SEPARATELY FROM GWT MATRIX EQUATIONS '
+      write(this%iout,'(2x,a)') trim(adjustl(this%text)) // &
+        ' SOLVED SEPARATELY FROM GWT MATRIX EQUATIONS '
     end if
-    write(this%iout, '(a, //)') 'DONE SETTING LKT DIMENSIONS'
+    write(this%iout, '(a, //)') 'DONE SETTING DIMENSIONS FOR ' // &
+      trim(adjustl(this%text))
     !
     ! -- Check for errors
-    if (this%nlakes < 0) then
+    if (this%ncv < 0) then
       write(errmsg, '(1x,a)') &
-        'ERROR:  NUMBER OF LAKES COULD NOT BE DETERMINED CORRECTLY.'
+        'ERROR:  NUMBER OF CONTROL VOLUMES COULD NOT BE DETERMINED CORRECTLY.'
       call store_error(errmsg)
     end if
     !
@@ -1782,22 +1553,22 @@ module GwtAptModule
     end if
     !
     ! -- read packagedata block
-    call this%lkt_read_lakes()
+    call this%apt_read_cvs()
     !
     ! -- Call define_listlabel to construct the list label that is written
     !    when PRINT_INPUT option is used.
     call this%define_listlabel()
     !
     ! -- setup the budget object
-    call this%lkt_setup_budobj()
+    call this%apt_setup_budobj()
     !
     ! -- return
     return
-  end subroutine lkt_read_dimensions
+  end subroutine apt_read_dimensions
 
-  subroutine lkt_read_lakes(this)
+  subroutine apt_read_cvs(this)
 ! ******************************************************************************
-! lkt_read_lakes -- Read feature infromation for this package
+! apt_read_cvs -- Read feature infromation for this package
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -1829,26 +1600,26 @@ module GwtAptModule
     itmp = 0
     !
     ! -- allocate lake data
-    call mem_allocate(this%strt, this%nlakes, 'STRT', this%origin)
-    !call mem_allocate(this%rainfall, this%nlakes, 'RAINFALL', this%origin)
-    !call mem_allocate(this%evaporation, this%nlakes, 'EVAPORATION', this%origin)
-    !call mem_allocate(this%runoff, this%nlakes, 'RUNOFF', this%origin)
-    !call mem_allocate(this%inflow, this%nlakes, 'INFLOW', this%origin)
-    !call mem_allocate(this%withdrawal, this%nlakes, 'WITHDRAWAL', this%origin)
-    call mem_allocate(this%lauxvar, this%naux*this%nlakes, 'LAUXVAR', this%origin)
+    call mem_allocate(this%strt, this%ncv, 'STRT', this%origin)
+    !call mem_allocate(this%rainfall, this%ncv, 'RAINFALL', this%origin)
+    !call mem_allocate(this%evaporation, this%ncv, 'EVAPORATION', this%origin)
+    !call mem_allocate(this%runoff, this%ncv, 'RUNOFF', this%origin)
+    !call mem_allocate(this%inflow, this%ncv, 'INFLOW', this%origin)
+    !call mem_allocate(this%withdrawal, this%ncv, 'WITHDRAWAL', this%origin)
+    call mem_allocate(this%lauxvar, this%naux*this%ncv, 'LAUXVAR', this%origin)
     !
     ! -- lake boundary and concentrations
     if (this%imatrows == 0) then
-      call mem_allocate(this%iboundpak, this%nlakes, 'IBOUND', this%origin)
-      call mem_allocate(this%xnewpak, this%nlakes, 'XNEWPAK', this%origin)
+      call mem_allocate(this%iboundpak, this%ncv, 'IBOUND', this%origin)
+      call mem_allocate(this%xnewpak, this%ncv, 'XNEWPAK', this%origin)
     end if
-    call mem_allocate(this%xoldpak, this%nlakes, 'XOLDPAK', this%origin)
+    call mem_allocate(this%xoldpak, this%ncv, 'XOLDPAK', this%origin)
     !
     ! -- allocate character storage not managed by the memory manager
-    allocate(this%lakename(this%nlakes)) ! ditch after boundnames allocated??
-    !allocate(this%status(this%nlakes))
+    allocate(this%lakename(this%ncv)) ! ditch after boundnames allocated??
+    !allocate(this%status(this%ncv))
     !
-    do n = 1, this%nlakes
+    do n = 1, this%ncv
       !this%status(n) = 'ACTIVE'
       this%strt(n) = DEP20
       this%xoldpak(n) = DEP20
@@ -1864,8 +1635,8 @@ module GwtAptModule
     end if
     !
     ! -- allocate and initialize temporary variables
-    allocate(nboundchk(this%nlakes))
-    do n = 1, this%nlakes
+    allocate(nboundchk(this%ncv))
+    do n = 1, this%ncv
       nboundchk(n) = 0
     end do
     !
@@ -1883,9 +1654,9 @@ module GwtAptModule
         if (endOfBlock) exit
         n = this%parser%GetInteger()
 
-        if (n < 1 .or. n > this%nlakes) then
+        if (n < 1 .or. n > this%ncv) then
           write(errmsg,'(4x,a,1x,i6)') &
-            '****ERROR. lakeno MUST BE > 0 and <= ', this%nlakes
+            '****ERROR. itemno MUST BE > 0 and <= ', this%ncv
           call store_error(errmsg)
           cycle
         end if
@@ -1941,7 +1712,7 @@ module GwtAptModule
       end do
       !
       ! -- check for duplicate or missing lakes
-      do n = 1, this%nlakes
+      do n = 1, this%ncv
         if (nboundchk(n) == 0) then
           write(errmsg,'(a,1x,i0)')  'ERROR.  NO DATA SPECIFIED FOR LAKE', n
           call store_error(errmsg)
@@ -1973,11 +1744,11 @@ module GwtAptModule
     !
     ! -- return
     return
-  end subroutine lkt_read_lakes
+  end subroutine apt_read_cvs
   
-  subroutine lkt_read_initial_attr(this)
+  subroutine apt_read_initial_attr(this)
 ! ******************************************************************************
-! lkt_read_initial_attr -- Read the initial parameters for this package
+! apt_read_initial_attr -- Read the initial parameters for this package
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -2023,7 +1794,7 @@ module GwtAptModule
     !
     ! -- initialize xnewpak and set lake concentration
     ! -- todo: this should be a time series?
-    do n = 1, this%nlakes
+    do n = 1, this%ncv
       this%xnewpak(n) = this%strt(n)
       !write(text,'(g15.7)') this%strt(n)
       !endtim = DZERO
@@ -2043,7 +1814,7 @@ module GwtAptModule
     end do
     !
     ! -- initialize status (iboundpak) of lakes to active
-    do n = 1, this%nlakes
+    do n = 1, this%ncv
       if (this%status(n) == 'CONSTANT') then
         this%iboundpak(n) = -1
       else if (this%status(n) == 'INACTIVE') then
@@ -2063,11 +1834,11 @@ module GwtAptModule
     !
     ! -- return
     return
-  end subroutine lkt_read_initial_attr
+  end subroutine apt_read_initial_attr
 
-  subroutine lkt_solve(this)
+  subroutine apt_solve(this)
 ! ******************************************************************************
-! lkt_solve -- solve for concentration in the lakes
+! apt_solve -- solve for concentration in the lakes
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -2086,62 +1857,18 @@ module GwtAptModule
     !
     !
     ! -- first initialize dbuff
-    do n = 1, this%nlakes
+    do n = 1, this%ncv
       this%dbuff(n) = DZERO
     end do
     !
-    ! -- add rainfall contribution
-    if (this%idxbudrain /= 0) then
-      do j = 1, this%flowbudptr%budterm(this%idxbudrain)%nlist
-        call this%lkt_rain_term(j, n1, n2, rrate)
-        this%dbuff(n1) = this%dbuff(n1) + rrate
-      end do
-    end if
-    !
-    ! -- add evaporation contribution
-    if (this%idxbudevap /= 0) then
-      do j = 1, this%flowbudptr%budterm(this%idxbudevap)%nlist
-        call this%lkt_evap_term(j, n1, n2, rrate)
-        this%dbuff(n1) = this%dbuff(n1) + rrate
-      end do
-    end if
-    !
-    ! -- add runoff contribution
-    if (this%idxbudroff /= 0) then
-      do j = 1, this%flowbudptr%budterm(this%idxbudroff)%nlist
-        call this%lkt_roff_term(j, n1, n2, rrate)
-        this%dbuff(n1) = this%dbuff(n1) + rrate
-      end do
-    end if
-    !
-    ! -- add inflow contribution
-    if (this%idxbudiflw /= 0) then
-      do j = 1, this%flowbudptr%budterm(this%idxbudiflw)%nlist
-        call this%lkt_iflw_term(j, n1, n2, rrate)
-        this%dbuff(n1) = this%dbuff(n1) + rrate
-      end do
-    end if
-    !
-    ! -- add withdrawal contribution
-    if (this%idxbudwdrl /= 0) then
-      do j = 1, this%flowbudptr%budterm(this%idxbudwdrl)%nlist
-        call this%lkt_wdrl_term(j, n1, n2, rrate)
-        this%dbuff(n1) = this%dbuff(n1) + rrate
-      end do
-    end if
-    !
-    ! -- add outflow contribution
-    if (this%idxbudoutf /= 0) then
-      do j = 1, this%flowbudptr%budterm(this%idxbudoutf)%nlist
-        call this%lkt_outf_term(j, n1, n2, rrate)
-        this%dbuff(n1) = this%dbuff(n1) + rrate
-      end do
-    end if
+    ! -- call the individual package routines to add terms specific to the
+    !    advanced transport package
+    call this%pak_solve()
     !
     ! -- add to mover contribution
     if (this%idxbudtmvr /= 0) then
       do j = 1, this%flowbudptr%budterm(this%idxbudtmvr)%nlist
-        call this%lkt_tmvr_term(j, n1, n2, rrate)
+        call this%apt_tmvr_term(j, n1, n2, rrate)
         this%dbuff(n1) = this%dbuff(n1) + rrate
       end do
     end if
@@ -2177,15 +1904,15 @@ module GwtAptModule
     !    total mass in dbuff mass
     if (this%idxbudfjf /= 0) then
       do j = 1, this%flowbudptr%budterm(this%idxbudfjf)%nlist
-        call this%lkt_fjf_term(j, n1, n2, rrate)
+        call this%apt_fjf_term(j, n1, n2, rrate)
         c1 = rrate
         this%dbuff(n1) = this%dbuff(n1) + c1
       end do
     end if
     !
     ! -- calulate the lake concentration
-    do n = 1, this%nlakes
-      call this%lkt_stor_term(n, n1, n2, rrate, rhsval, hcofval)
+    do n = 1, this%ncv
+      call this%apt_stor_term(n, n1, n2, rrate, rhsval, hcofval)
       !
       ! -- at this point, dbuff has q * c for all sources, so now
       !    add Vold / dt * Cold
@@ -2200,11 +1927,31 @@ module GwtAptModule
     !
     ! -- Return
     return
-  end subroutine lkt_solve
+  end subroutine apt_solve
   
-  subroutine lkt_accumulate_ccterm(this, ilak, rrate, ccratin, ccratout)
+  subroutine pak_solve(this)
 ! ******************************************************************************
-! lkt_accumulate_ccterm -- Accumulate constant concentration terms for budget.
+! pak_solve -- must be overridden
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(GwtAptType) :: this
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    ! -- this routine should never be called
+    call store_error('Program error: pak_solve not implemented.')
+    call ustop()
+    !
+    ! -- Return
+    return
+  end subroutine pak_solve
+  
+  subroutine apt_accumulate_ccterm(this, ilak, rrate, ccratin, ccratout)
+! ******************************************************************************
+! apt_accumulate_ccterm -- Accumulate constant concentration terms for budget.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -2238,7 +1985,7 @@ module GwtAptModule
     end if
     ! -- return
     return
-  end subroutine lkt_accumulate_ccterm
+  end subroutine apt_accumulate_ccterm
 
   subroutine define_listlabel(this)
 ! ******************************************************************************
@@ -2272,7 +2019,7 @@ module GwtAptModule
     return
   end subroutine define_listlabel
 
-  subroutine lkt_set_pointers(this, neq, ibound, xnew, xold, flowja)
+  subroutine apt_set_pointers(this, neq, ibound, xnew, xold, flowja)
 ! ******************************************************************************
 ! set_pointers -- Set pointers to model arrays and variables so that a package
 !                 has access to these things.
@@ -2293,18 +2040,18 @@ module GwtAptModule
     ! -- call base BndType set_pointers
     call this%BndType%set_pointers(neq, ibound, xnew, xold, flowja)
     !
-    ! -- Set the LKT pointers
+    ! -- Set the pointers
     !
     ! -- set package pointers
     if (this%imatrows /= 0) then
       istart = this%dis%nodes + this%ioffset + 1
-      iend = istart + this%nlakes - 1
+      iend = istart + this%ncv - 1
       this%iboundpak => this%ibound(istart:iend)
       this%xnewpak => this%xnew(istart:iend)
     end if
     !
     ! -- return
-  end subroutine lkt_set_pointers
+  end subroutine apt_set_pointers
   
   subroutine get_volumes(this, ilake, vnew, vold, delt)
 ! ******************************************************************************
@@ -2336,9 +2083,31 @@ module GwtAptModule
     return
   end subroutine get_volumes
   
-  subroutine lkt_setup_budobj(this)
+  function pak_get_nbudterms(this) result(nbudterms)
 ! ******************************************************************************
-! lkt_setup_budobj -- Set up the budget object that stores all the lake flows
+! pak_get_nbudterms -- function to return the number of budget terms just for
+!   this package.  Must be overridden.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwtAptType) :: this
+    ! -- return
+    integer(I4B) :: nbudterms
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    ! -- this routine should never be called
+    call store_error('Program error: pak_get_nbudterms not implemented.')
+    call ustop()
+    nbudterms = 0
+  end function pak_get_nbudterms
+  
+  subroutine apt_setup_budobj(this)
+! ******************************************************************************
+! apt_setup_budobj -- Set up the budget object that stores all the lake flows
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -2359,21 +2128,31 @@ module GwtAptModule
     character(len=LENBUDTXT), dimension(1) :: auxtxt
 ! ------------------------------------------------------------------------------
     !
-    ! -- Determine the number of lake budget terms. These are fixed for 
-    !    the simulation and cannot change
-    nbudterm = 9
+    ! -- Determine if there are flow-ja-face terms
     nlen = 0
     if (this%idxbudfjf /= 0) then
       nlen = this%flowbudptr%budterm(this%idxbudfjf)%maxlist
     end if
+    !
+    ! -- Determine the number of lake budget terms. These are fixed for 
+    !    the simulation and cannot change
+    ! -- the first 3 is for GWF, STORAGE, and CONSTANT
+    nbudterm = 3
+    !
+    ! -- add terms for the specific package
+    nbudterm = nbudterm + this%pak_get_nbudterms()
+    !
+    ! -- add one for flow-ja-face
     if (nlen > 0) nbudterm = nbudterm + 1
+    !
+    ! -- add for mover terms and auxiliary
     if (this%idxbudtmvr /= 0) nbudterm = nbudterm + 1
     if (this%idxbudfmvr /= 0) nbudterm = nbudterm + 1
     if (this%naux > 0) nbudterm = nbudterm + 1
     !
     ! -- set up budobj
     call budgetobject_cr(this%budobj, this%name)
-    call this%budobj%budgetobject_df(this%nlakes, nbudterm, 0, 0)
+    call this%budobj%budgetobject_df(this%ncv, nbudterm, 0, 0)
     idx = 0
     !
     ! -- Go through and set up each budget term
@@ -2420,83 +2199,8 @@ module GwtAptModule
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
     end do
     !
-    ! -- 
-    text = '        RAINFALL'
-    idx = idx + 1
-    maxlist = this%flowbudptr%budterm(this%idxbudrain)%maxlist
-    naux = 0
-    call this%budobj%budterm(idx)%initialize(text, &
-                                             this%name_model, &
-                                             this%name, &
-                                             this%name_model, &
-                                             this%name, &
-                                             maxlist, .false., .false., &
-                                             naux)
-    !
-    ! -- 
-    text = '     EVAPORATION'
-    idx = idx + 1
-    maxlist = this%flowbudptr%budterm(this%idxbudevap)%maxlist
-    naux = 0
-    call this%budobj%budterm(idx)%initialize(text, &
-                                             this%name_model, &
-                                             this%name, &
-                                             this%name_model, &
-                                             this%name, &
-                                             maxlist, .false., .false., &
-                                             naux)
-    !
-    ! -- 
-    text = '          RUNOFF'
-    idx = idx + 1
-    maxlist = this%flowbudptr%budterm(this%idxbudroff)%maxlist
-    naux = 0
-    call this%budobj%budterm(idx)%initialize(text, &
-                                             this%name_model, &
-                                             this%name, &
-                                             this%name_model, &
-                                             this%name, &
-                                             maxlist, .false., .false., &
-                                             naux)
-    !
-    ! -- 
-    text = '      EXT-INFLOW'
-    idx = idx + 1
-    maxlist = this%flowbudptr%budterm(this%idxbudiflw)%maxlist
-    naux = 0
-    call this%budobj%budterm(idx)%initialize(text, &
-                                             this%name_model, &
-                                             this%name, &
-                                             this%name_model, &
-                                             this%name, &
-                                             maxlist, .false., .false., &
-                                             naux)
-    !
-    ! -- 
-    text = '      WITHDRAWAL'
-    idx = idx + 1
-    maxlist = this%flowbudptr%budterm(this%idxbudwdrl)%maxlist
-    naux = 0
-    call this%budobj%budterm(idx)%initialize(text, &
-                                             this%name_model, &
-                                             this%name, &
-                                             this%name_model, &
-                                             this%name, &
-                                             maxlist, .false., .false., &
-                                             naux)
-    !
-    ! -- 
-    text = '     EXT-OUTFLOW'
-    idx = idx + 1
-    maxlist = this%flowbudptr%budterm(this%idxbudoutf)%maxlist
-    naux = 0
-    call this%budobj%budterm(idx)%initialize(text, &
-                                             this%name_model, &
-                                             this%name, &
-                                             this%name_model, &
-                                             this%name, &
-                                             maxlist, .false., .false., &
-                                             naux)
+    ! -- Reserve space for the package specific terms
+    call this%pak_setup_budobj(idx)
     !
     ! -- 
     text = '         STORAGE'
@@ -2532,7 +2236,7 @@ module GwtAptModule
       ! -- 
       text = '        FROM-MVR'
       idx = idx + 1
-      maxlist = this%nlakes
+      maxlist = this%ncv
       naux = 0
       call this%budobj%budterm(idx)%initialize(text, &
                                                this%name_model, &
@@ -2546,7 +2250,7 @@ module GwtAptModule
     ! -- 
     text = '        CONSTANT'
     idx = idx + 1
-    maxlist = this%nlakes
+    maxlist = this%ncv
     naux = 0
     call this%budobj%budterm(idx)%initialize(text, &
                                              this%name_model, &
@@ -2564,7 +2268,7 @@ module GwtAptModule
       ! -- 
       text = '       AUXILIARY'
       idx = idx + 1
-      maxlist = this%nlakes
+      maxlist = this%ncv
       call this%budobj%budterm(idx)%initialize(text, &
                                                this%name_model, &
                                                this%name, &
@@ -2574,18 +2278,41 @@ module GwtAptModule
                                                naux, this%auxname)
     end if
     !
-    ! -- if lkt flow for each reach are written to the listing file
+    ! -- if flow for each control volume are written to the listing file
     if (this%iprflow /= 0) then
       call this%budobj%flowtable_df(this%iout)
     end if
     !
     ! -- return
     return
-  end subroutine lkt_setup_budobj
+  end subroutine apt_setup_budobj
 
-  subroutine lkt_fill_budobj(this, x)
+  subroutine pak_setup_budobj(this, idx)
 ! ******************************************************************************
-! lkt_fill_budobj -- copy flow terms into this%budobj
+! pak_setup_budobj -- Individual packages set up their budget terms.  Must
+!   be overridden
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwtAptType) :: this
+    integer(I4B), intent(inout) :: idx
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    ! -- this routine should never be called
+    call store_error('Program error: pak_setup_budobj not implemented.')
+    call ustop()
+    !
+    ! -- return
+    return
+  end subroutine pak_setup_budobj
+
+  subroutine apt_fill_budobj(this, x)
+! ******************************************************************************
+! apt_fill_budobj -- copy flow terms into this%budobj
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -2617,7 +2344,7 @@ module GwtAptModule
     !    into a constant concentration cell
     ccratin = DZERO
     ccratout = DZERO
-    do n1 = 1, this%nlakes
+    do n1 = 1, this%ncv
       this%ccterm(n1) = DZERO
     end do
 
@@ -2633,7 +2360,7 @@ module GwtAptModule
       call this%budobj%budterm(idx)%reset(nlist)
       q = DZERO
       do j = 1, nlist
-        call this%lkt_fjf_term(j, n1, n2, q)
+        call this%apt_fjf_term(j, n1, n2, q)
         call this%budobj%budterm(idx)%update_term(n1, n2, q)
       end do      
     end if
@@ -2651,86 +2378,24 @@ module GwtAptModule
         q = -q  ! flip sign so relative to lake
       end if
       call this%budobj%budterm(idx)%update_term(n1, igwfnode, q)
-      call this%lkt_accumulate_ccterm(n1, q, ccratin, ccratout)
+      call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
 
     
-    ! -- RAIN
-    idx = idx + 1
-    nlist = this%flowbudptr%budterm(this%idxbudrain)%nlist
-    call this%budobj%budterm(idx)%reset(nlist)
-    do j = 1, nlist
-      call this%lkt_rain_term(j, n1, n2, q)
-      call this%budobj%budterm(idx)%update_term(n1, n2, q)
-      call this%lkt_accumulate_ccterm(n1, q, ccratin, ccratout)
-    end do
-    
-    
-    ! -- EVAPORATION
-    idx = idx + 1
-    nlist = this%flowbudptr%budterm(this%idxbudevap)%nlist
-    call this%budobj%budterm(idx)%reset(nlist)
-    do j = 1, nlist
-      call this%lkt_evap_term(j, n1, n2, q)
-      call this%budobj%budterm(idx)%update_term(n1, n2, q)
-      call this%lkt_accumulate_ccterm(n1, q, ccratin, ccratout)
-    end do
-    
-    
-    ! -- RUNOFF
-    idx = idx + 1
-    nlist = this%flowbudptr%budterm(this%idxbudroff)%nlist
-    call this%budobj%budterm(idx)%reset(nlist)
-    do j = 1, nlist
-      call this%lkt_roff_term(j, n1, n2, q)
-      call this%budobj%budterm(idx)%update_term(n1, n2, q)
-      call this%lkt_accumulate_ccterm(n1, q, ccratin, ccratout)
-    end do
-    
-    
-    ! -- INFLOW
-    idx = idx + 1
-    nlist = this%flowbudptr%budterm(this%idxbudiflw)%nlist
-    call this%budobj%budterm(idx)%reset(nlist)
-    do j = 1, nlist
-      call this%lkt_iflw_term(j, n1, n2, q)
-      call this%budobj%budterm(idx)%update_term(n1, n2, q)
-      call this%lkt_accumulate_ccterm(n1, q, ccratin, ccratout)
-    end do
-    
-    
-    ! -- WITHDRAWAL
-    idx = idx + 1
-    nlist = this%flowbudptr%budterm(this%idxbudwdrl)%nlist
-    call this%budobj%budterm(idx)%reset(nlist)
-    do j = 1, nlist
-      call this%lkt_wdrl_term(j, n1, n2, q)
-      call this%budobj%budterm(idx)%update_term(n1, n2, q)
-      call this%lkt_accumulate_ccterm(n1, q, ccratin, ccratout)
-    end do
-    
-    
-    ! -- OUTFLOW
-    idx = idx + 1
-    nlist = this%flowbudptr%budterm(this%idxbudoutf)%nlist
-    call this%budobj%budterm(idx)%reset(nlist)
-    do j = 1, nlist
-      call this%lkt_outf_term(j, n1, n2, q)
-      call this%budobj%budterm(idx)%update_term(n1, n2, q)
-      call this%lkt_accumulate_ccterm(n1, q, ccratin, ccratout)
-    end do
-    
+    ! -- individual package terms
+    call this%pak_fill_budobj(idx, x)
+
     
     ! -- STORAGE
     idx = idx + 1
-    call this%budobj%budterm(idx)%reset(this%nlakes)
+    call this%budobj%budterm(idx)%reset(this%ncv)
     allocate(auxvartmp(1))
-    do n1 = 1, this%nlakes
+    do n1 = 1, this%ncv
       call this%get_volumes(n1, v1, v0, delt)
       auxvartmp(1) = v1 * this%xnewpak(n1)
       q = this%qsto(n1)
       call this%budobj%budterm(idx)%update_term(n1, n1, q, auxvartmp)
-      call this%lkt_accumulate_ccterm(n1, q, ccratin, ccratout)
+      call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
     deallocate(auxvartmp)
     
@@ -2741,28 +2406,28 @@ module GwtAptModule
       nlist = this%flowbudptr%budterm(this%idxbudtmvr)%nlist
       call this%budobj%budterm(idx)%reset(nlist)
       do j = 1, nlist
-        call this%lkt_tmvr_term(j, n1, n2, q)
+        call this%apt_tmvr_term(j, n1, n2, q)
         call this%budobj%budterm(idx)%update_term(n1, n2, q)
-        call this%lkt_accumulate_ccterm(n1, q, ccratin, ccratout)
+        call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
       end do
     end if
     
     ! -- FROM MOVER
     if (this%idxbudfmvr /= 0) then
       idx = idx + 1
-      nlist = this%nlakes
+      nlist = this%ncv
       call this%budobj%budterm(idx)%reset(nlist)
       do n1 = 1, nlist
         q = this%qmfrommvr(n1)
         call this%budobj%budterm(idx)%update_term(n1, n1, q)
-        call this%lkt_accumulate_ccterm(n1, q, ccratin, ccratout)
+        call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
       end do
     end if
     
     ! -- CONSTANT FLOW
     idx = idx + 1
-    call this%budobj%budterm(idx)%reset(this%nlakes)
-    do n1 = 1, this%nlakes
+    call this%budobj%budterm(idx)%reset(this%ncv)
+    do n1 = 1, this%ncv
       q = this%ccterm(n1)
       call this%budobj%budterm(idx)%update_term(n1, n1, q)
     end do
@@ -2772,8 +2437,8 @@ module GwtAptModule
     if (naux > 0) then
       idx = idx + 1
       allocate(auxvartmp(naux))
-      call this%budobj%budterm(idx)%reset(this%nlakes)
-      do n1 = 1, this%nlakes
+      call this%budobj%budterm(idx)%reset(this%ncv)
+      do n1 = 1, this%ncv
         q = DZERO
         do i = 1, naux
           ii = (n1 - 1) * naux + i
@@ -2789,9 +2454,33 @@ module GwtAptModule
     !
     ! -- return
     return
-  end subroutine lkt_fill_budobj
+  end subroutine apt_fill_budobj
 
-  subroutine lkt_stor_term(this, ientry, n1, n2, rrate, &
+  subroutine pak_fill_budobj(this, idx, x)
+! ******************************************************************************
+! pak_fill_budobj -- copy flow terms into this%budobj, must be overridden
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwtAptType) :: this
+    integer(I4B), intent(inout) :: idx
+    real(DP), dimension(:), intent(in) :: x
+    ! -- local
+    ! -- formats
+! -----------------------------------------------------------------------------
+    !
+    ! -- this routine should never be called
+    call store_error('Program error: pak_fill_budobj not implemented.')
+    call ustop()
+    !
+    ! -- return
+    return
+  end subroutine pak_fill_budobj
+
+  subroutine apt_stor_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
     use TdisModule, only: delt
     class(GwtAptType) :: this
@@ -2814,156 +2503,9 @@ module GwtAptModule
     !
     ! -- return
     return
-  end subroutine lkt_stor_term
+  end subroutine apt_stor_term
   
-  subroutine lkt_rain_term(this, ientry, n1, n2, rrate, &
-                           rhsval, hcofval)
-    class(GwtAptType) :: this
-    integer(I4B), intent(in) :: ientry
-    integer(I4B), intent(inout) :: n1
-    integer(I4B), intent(inout) :: n2
-    real(DP), intent(inout), optional :: rrate
-    real(DP), intent(inout), optional :: rhsval
-    real(DP), intent(inout), optional :: hcofval
-    real(DP) :: qbnd
-    real(DP) :: ctmp
-    n1 = this%flowbudptr%budterm(this%idxbudrain)%id1(ientry)
-    n2 = this%flowbudptr%budterm(this%idxbudrain)%id2(ientry)
-    qbnd = this%flowbudptr%budterm(this%idxbudrain)%flow(ientry)
-    ctmp = this%concrain(n1)%value
-    if (present(rrate)) rrate = ctmp * qbnd
-    if (present(rhsval)) rhsval = -rrate
-    if (present(hcofval)) hcofval = DZERO
-    !
-    ! -- return
-    return
-  end subroutine lkt_rain_term
-  
-  subroutine lkt_evap_term(this, ientry, n1, n2, rrate, &
-                           rhsval, hcofval)
-    class(GwtAptType) :: this
-    integer(I4B), intent(in) :: ientry
-    integer(I4B), intent(inout) :: n1
-    integer(I4B), intent(inout) :: n2
-    real(DP), intent(inout), optional :: rrate
-    real(DP), intent(inout), optional :: rhsval
-    real(DP), intent(inout), optional :: hcofval
-    real(DP) :: qbnd
-    real(DP) :: ctmp
-    real(DP) :: omega
-    n1 = this%flowbudptr%budterm(this%idxbudevap)%id1(ientry)
-    n2 = this%flowbudptr%budterm(this%idxbudevap)%id2(ientry)
-    ! -- note that qbnd is negative for evap
-    qbnd = this%flowbudptr%budterm(this%idxbudevap)%flow(ientry)
-    ctmp = this%concevap(n1)%value
-    if (this%xnewpak(n1) < ctmp) then
-      omega = DONE
-    else
-      omega = DZERO
-    end if
-    if (present(rrate)) &
-      rrate = omega * qbnd * this%xnewpak(n1) + &
-              (DONE - omega) * qbnd * ctmp
-    if (present(rhsval)) rhsval = - (DONE - omega) * qbnd * ctmp
-    if (present(hcofval)) hcofval = omega * qbnd
-    !
-    ! -- return
-    return
-  end subroutine lkt_evap_term
-  
-  subroutine lkt_roff_term(this, ientry, n1, n2, rrate, &
-                           rhsval, hcofval)
-    class(GwtAptType) :: this
-    integer(I4B), intent(in) :: ientry
-    integer(I4B), intent(inout) :: n1
-    integer(I4B), intent(inout) :: n2
-    real(DP), intent(inout), optional :: rrate
-    real(DP), intent(inout), optional :: rhsval
-    real(DP), intent(inout), optional :: hcofval
-    real(DP) :: qbnd
-    real(DP) :: ctmp
-    n1 = this%flowbudptr%budterm(this%idxbudroff)%id1(ientry)
-    n2 = this%flowbudptr%budterm(this%idxbudroff)%id2(ientry)
-    qbnd = this%flowbudptr%budterm(this%idxbudroff)%flow(ientry)
-    ctmp = this%concroff(n1)%value
-    if (present(rrate)) rrate = ctmp * qbnd
-    if (present(rhsval)) rhsval = -rrate
-    if (present(hcofval)) hcofval = DZERO
-    !
-    ! -- return
-    return
-  end subroutine lkt_roff_term
-  
-  subroutine lkt_iflw_term(this, ientry, n1, n2, rrate, &
-                           rhsval, hcofval)
-    class(GwtAptType) :: this
-    integer(I4B), intent(in) :: ientry
-    integer(I4B), intent(inout) :: n1
-    integer(I4B), intent(inout) :: n2
-    real(DP), intent(inout), optional :: rrate
-    real(DP), intent(inout), optional :: rhsval
-    real(DP), intent(inout), optional :: hcofval
-    real(DP) :: qbnd
-    real(DP) :: ctmp
-    n1 = this%flowbudptr%budterm(this%idxbudiflw)%id1(ientry)
-    n2 = this%flowbudptr%budterm(this%idxbudiflw)%id2(ientry)
-    qbnd = this%flowbudptr%budterm(this%idxbudiflw)%flow(ientry)
-    ctmp = this%conciflw(n1)%value
-    if (present(rrate)) rrate = ctmp * qbnd
-    if (present(rhsval)) rhsval = -rrate
-    if (present(hcofval)) hcofval = DZERO
-    !
-    ! -- return
-    return
-  end subroutine lkt_iflw_term
-  
-  subroutine lkt_wdrl_term(this, ientry, n1, n2, rrate, &
-                           rhsval, hcofval)
-    class(GwtAptType) :: this
-    integer(I4B), intent(in) :: ientry
-    integer(I4B), intent(inout) :: n1
-    integer(I4B), intent(inout) :: n2
-    real(DP), intent(inout), optional :: rrate
-    real(DP), intent(inout), optional :: rhsval
-    real(DP), intent(inout), optional :: hcofval
-    real(DP) :: qbnd
-    real(DP) :: ctmp
-    n1 = this%flowbudptr%budterm(this%idxbudwdrl)%id1(ientry)
-    n2 = this%flowbudptr%budterm(this%idxbudwdrl)%id2(ientry)
-    qbnd = this%flowbudptr%budterm(this%idxbudwdrl)%flow(ientry)
-    ctmp = this%xnewpak(n1)
-    if (present(rrate)) rrate = ctmp * qbnd
-    if (present(rhsval)) rhsval = DZERO
-    if (present(hcofval)) hcofval = qbnd
-    !
-    ! -- return
-    return
-  end subroutine lkt_wdrl_term
-  
-  subroutine lkt_outf_term(this, ientry, n1, n2, rrate, &
-                           rhsval, hcofval)
-    class(GwtAptType) :: this
-    integer(I4B), intent(in) :: ientry
-    integer(I4B), intent(inout) :: n1
-    integer(I4B), intent(inout) :: n2
-    real(DP), intent(inout), optional :: rrate
-    real(DP), intent(inout), optional :: rhsval
-    real(DP), intent(inout), optional :: hcofval
-    real(DP) :: qbnd
-    real(DP) :: ctmp
-    n1 = this%flowbudptr%budterm(this%idxbudoutf)%id1(ientry)
-    n2 = this%flowbudptr%budterm(this%idxbudoutf)%id2(ientry)
-    qbnd = this%flowbudptr%budterm(this%idxbudoutf)%flow(ientry)
-    ctmp = this%xnewpak(n1)
-    if (present(rrate)) rrate = ctmp * qbnd
-    if (present(rhsval)) rhsval = DZERO
-    if (present(hcofval)) hcofval = qbnd
-    !
-    ! -- return
-    return
-  end subroutine lkt_outf_term
-  
-  subroutine lkt_tmvr_term(this, ientry, n1, n2, rrate, &
+  subroutine apt_tmvr_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
     class(GwtAptType) :: this
     integer(I4B), intent(in) :: ientry
@@ -2984,9 +2526,9 @@ module GwtAptModule
     !
     ! -- return
     return
-  end subroutine lkt_tmvr_term
+  end subroutine apt_tmvr_term
   
-  subroutine lkt_fjf_term(this, ientry, n1, n2, rrate, &
+  subroutine apt_fjf_term(this, ientry, n1, n2, rrate, &
                           rhsval, hcofval)
     class(GwtAptType) :: this
     integer(I4B), intent(in) :: ientry
@@ -3011,12 +2553,12 @@ module GwtAptModule
     !
     ! -- return
     return
-  end subroutine lkt_fjf_term
+  end subroutine apt_fjf_term
   
-  logical function lkt_obs_supported(this)
+  logical function apt_obs_supported(this)
 ! ******************************************************************************
-! lkt_obs_supported -- obs are supported?
-!   -- Return true because LAK package supports observations.
+! apt_obs_supported -- obs are supported?
+!   -- Return true because APT package supports observations.
 !   -- Overrides BndType%bnd_obs_supported()
 ! ******************************************************************************
 !
@@ -3028,16 +2570,16 @@ module GwtAptModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Set to true
-    lkt_obs_supported = .true.
+    apt_obs_supported = .true.
     !
     ! -- return
     return
-  end function lkt_obs_supported
+  end function apt_obs_supported
   
-  subroutine lkt_df_obs(this)
+  subroutine apt_df_obs(this)
 ! ******************************************************************************
-! lkt_df_obs -- obs are supported?
-!   -- Store observation type supported by LAK package.
+! apt_df_obs -- obs are supported?
+!   -- Store observation type supported by APT package.
 !   -- Overrides BndType%bnd_df_obs
 ! ******************************************************************************
 !
@@ -3051,96 +2593,71 @@ module GwtAptModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Store obs type and assign procedure pointer
-    !    for stage observation type.
+    !    for concentration observation type.
     call this%obs%StoreObsType('concentration', .false., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => lkt_process_obsID
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for flow between lakes.
     call this%obs%StoreObsType('flow-ja-face', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => lkt_process_obsID
-    !
-    ! -- Store obs type and assign procedure pointer
-    !    for ext-inflow observation type.
-    call this%obs%StoreObsType('ext-inflow', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => lkt_process_obsID
-    !
-    ! -- Store obs type and assign procedure pointer
-    !    for outlet-inflow observation type.
-    call this%obs%StoreObsType('outlet-inflow', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => lkt_process_obsID
-    !
-    ! -- Store obs type and assign procedure pointer
-    !    for inflow observation type.
-    call this%obs%StoreObsType('inflow', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => lkt_process_obsID
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for from-mvr observation type.
     call this%obs%StoreObsType('from-mvr', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => lkt_process_obsID
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
-    !    for rainfall observation type.
-    call this%obs%StoreObsType('rainfall', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => lkt_process_obsID
-    !
-    ! -- Store obs type and assign procedure pointer
-    !    for runoff observation type.
-    call this%obs%StoreObsType('runoff', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => lkt_process_obsID
-    !
-    ! -- Store obs type and assign procedure pointer
-    !    for lak observation type.
-    call this%obs%StoreObsType('lkt', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => lkt_process_obsID
-    !
-    ! -- Store obs type and assign procedure pointer
-    !    for evaporation observation type.
-    call this%obs%StoreObsType('evaporation', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => lkt_process_obsID
-    !
-    ! -- Store obs type and assign procedure pointer
-    !    for withdrawal observation type.
-    call this%obs%StoreObsType('withdrawal', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => lkt_process_obsID
-    !
-    ! -- Store obs type and assign procedure pointer
-    !    for ext-outflow observation type.
-    call this%obs%StoreObsType('ext-outflow', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => lkt_process_obsID
+    !    for observation type: lkt, sft, mwt, uzt.
+    call this%obs%StoreObsType(trim(adjustl(this%text)), .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for to-mvr observation type.
     call this%obs%StoreObsType('to-mvr', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => lkt_process_obsID
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for storage observation type.
     call this%obs%StoreObsType('storage', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => lkt_process_obsID
-    !
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
+    !  
     ! -- Store obs type and assign procedure pointer
     !    for constant observation type.
     call this%obs%StoreObsType('constant', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => lkt_process_obsID
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
-    ! -- Store obs type and assign procedure pointer
-    !    for outlet observation type.
-    call this%obs%StoreObsType('outlet', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => lkt_process_obsID
-    !
-    ! -- Store obs type and assign procedure pointer
-    !    for volume observation type.
-    call this%obs%StoreObsType('volume', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => lkt_process_obsID
+    ! -- call child contributions
+    call this%pak_df_obs()
     !
     return
-  end subroutine lkt_df_obs
+  end subroutine apt_df_obs
   
-  subroutine lkt_rp_obs(this)
+  subroutine pak_df_obs(this)
 ! ******************************************************************************
-! lkt_rp_obs -- 
+! pak_df_obs -- obs are supported?
+!   -- Store observation type supported by APT package.
+!   -- must be overridden by child class
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwtAptType) :: this
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    ! -- this routine should never be called
+    call store_error('Program error: pak_df_obs not implemented.')
+    call ustop()
+    !
+    return
+  end subroutine pak_df_obs
+  
+subroutine apt_rp_obs(this)
+! ******************************************************************************
+! apt_rp_obs -- 
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -3177,7 +2694,7 @@ module GwtAptModule
           !    Iterate through all lakes to identify and store
           !    corresponding index in bound array.
           jfound = .false.
-          if (obsrv%ObsTypeId=='LKT') then
+          if (obsrv%ObsTypeId == trim(adjustl(this%text))) then
             do j = 1, this%flowbudptr%budterm(this%idxbudgwf)%nlist
               n = this%flowbudptr%budterm(this%idxbudgwf)%id1(j)
               if (this%boundname(n) == bname) then
@@ -3198,7 +2715,7 @@ module GwtAptModule
               end if
             end do
           else
-            do j = 1, this%nlakes
+            do j = 1, this%ncv
               if (this%lakename(j) == bname) then
                 jfound = .true.
                 call ExpandArray(obsrv%indxbnds)
@@ -3216,7 +2733,7 @@ module GwtAptModule
         call ExpandArray(obsrv%indxbnds)
         n = size(obsrv%indxbnds)
         if (n == 1) then
-          if (obsrv%ObsTypeId=='LKT') then
+          if (obsrv%ObsTypeId == trim(adjustl(this%text))) then
             nn2 = obsrv%NodeNumber2
             ! -- Look for the first occurrence of nn1, then set indxbnds
             !    to the nn2 record after that
@@ -3230,8 +2747,8 @@ module GwtAptModule
             if (this%flowbudptr%budterm(this%idxbudgwf)%id1(idx) /= nn1) then
               write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
                 'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
-                ' lake connection number =', nn2, &
-                '(does not correspond to lake ', nn1, ')'
+                ' connection number =', nn2, &
+                '(does not correspond to control volume ', nn1, ')'
               call store_error(ermsg)
             end if
           else if (obsrv%ObsTypeId=='FLOW-JA-FACE') then
@@ -3258,7 +2775,7 @@ module GwtAptModule
             obsrv%indxbnds(1) = nn1
           end if
         else
-          ermsg = 'Programming error in lkt_rp_obs'
+          ermsg = 'Programming error in apt_rp_obs'
           call store_error(ermsg)
         endif
       end if
@@ -3278,8 +2795,7 @@ module GwtAptModule
       !
       ! -- check that index values are valid
       if (obsrv%ObsTypeId=='TO-MVR' .or. &
-          obsrv%ObsTypeId=='EXT-OUTFLOW' .or. &
-          obsrv%ObsTypeId=='OUTLET') then
+          obsrv%ObsTypeId=='EXT-OUTFLOW') then
         do j = 1, size(obsrv%indxbnds)
           nn1 =  obsrv%indxbnds(j)
           ! -- todo: how do we replace noutlets here?
@@ -3291,14 +2807,14 @@ module GwtAptModule
             call store_error(ermsg)
           !end if
         end do
-      else if (obsrv%ObsTypeId=='LKT' .or. &
-               obsrv%ObsTypeId=='FLOW-JA-FACE') then
+      else if (obsrv%ObsTypeId == trim(adjustl(this%text)) .or. &
+               obsrv%ObsTypeId == 'FLOW-JA-FACE') then
         do j = 1, size(obsrv%indxbnds)
           nn1 =  obsrv%indxbnds(j)
           if (nn1 < 1 .or. nn1 > this%maxbound) then
             write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
               'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
-              ' lake connection number must be > 0 and <=', this%maxbound, &
+              ' connection number must be > 0 and <=', this%maxbound, &
               '(specified value is ', nn1, ')'
             call store_error(ermsg)
           end if
@@ -3306,10 +2822,10 @@ module GwtAptModule
       else
         do j = 1, size(obsrv%indxbnds)
           nn1 =  obsrv%indxbnds(j)
-          if (nn1 < 1 .or. nn1 > this%nlakes) then
+          if (nn1 < 1 .or. nn1 > this%ncv) then
             write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
               'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
-              ' lake must be > 0 and <=', this%nlakes, &
+              ' control volume must be > 0 and <=', this%ncv, &
               '(specified value is ', nn1, ')'
             call store_error(ermsg)
           end if
@@ -3319,11 +2835,11 @@ module GwtAptModule
     if (count_errors() > 0) call ustop()
     !
     return
-  end subroutine lkt_rp_obs
+  end subroutine apt_rp_obs
   
-  subroutine lkt_bd_obs(this)
+  subroutine apt_bd_obs(this)
 ! ******************************************************************************
-! lkt_bd_obs -- 
+! apt_bd_obs -- 
 !   -- Calculate observations this time step and call
 !      ObsType%SaveOneSimval for each GwtAptType observation.
 ! ******************************************************************************
@@ -3338,6 +2854,7 @@ module GwtAptModule
     real(DP) :: v
     character(len=100) :: errmsg
     type(ObserveType), pointer :: obsrv => null()
+    logical :: found
 ! ------------------------------------------------------------------------------
     !
     ! -- Write simulated values for all LAK observations
@@ -3354,35 +2871,7 @@ module GwtAptModule
               if (this%iboundpak(jj) /= 0) then
                 v = this%xnewpak(jj)
               end if
-            case ('EXT-INFLOW')
-              if (this%iboundpak(jj) /= 0) then
-                call this%lkt_iflw_term(jj, n1, n2, v)
-              end if
-            !case ('OUTLET-INFLOW')
-            !  if (this%iboundpak(jj) /= 0) then
-            !    call this%lak_calculate_outlet_inflow(jj, v)
-            !  end if
-            !case ('INFLOW')
-            !  if (this%iboundpak(jj) /= 0) then
-            !    call this%lak_calculate_inflow(jj, v)
-            !    call this%lak_calculate_outlet_inflow(jj, v2)
-            !    v = v + v2
-            !  end if
-            !case ('FROM-MVR')
-            !  if (this%iboundpak(jj) /= 0) then
-            !    if (this%imover == 1) then
-            !      v = this%pakmvrobj%get_qfrommvr(jj)
-            !    end if
-            !  end if
-            case ('RAINFALL')
-              if (this%iboundpak(jj) /= 0) then
-                call this%lkt_rain_term(jj, n1, n2, v)
-              end if
-            case ('RUNOFF')
-              if (this%iboundpak(jj) /= 0) then
-                call this%lkt_rain_term(jj, n1, n2, v)
-              end if
-            case ('LKT')
+            case ('LKT', 'SFT', 'MWT', 'UZT')
               n = this%flowbudptr%budterm(this%idxbudgwf)%id1(jj)
               if (this%iboundpak(n) /= 0) then
                 igwfnode = this%flowbudptr%budterm(this%idxbudgwf)%id2(jj)
@@ -3392,38 +2881,8 @@ module GwtAptModule
             case ('FLOW-JA-FACE')
               n = this%flowbudptr%budterm(this%idxbudgwf)%id1(jj)
               if (this%iboundpak(n) /= 0) then
-                call this%lkt_fjf_term(jj, n1, n2, v)
+                call this%apt_fjf_term(jj, n1, n2, v)
               end if
-            case ('EVAPORATION')
-              if (this%iboundpak(jj) /= 0) then
-                call this%lkt_evap_term(jj, n1, n2, v)
-              end if
-            case ('WITHDRAWAL')
-              if (this%iboundpak(jj) /= 0) then
-                call this%lkt_wdrl_term(jj, n1, n2, v)
-              end if
-            !case ('EXT-OUTFLOW')
-            !  n = this%lakein(jj)
-            !  if (this%iboundpak(n) /= 0) then
-            !    if (this%lakeout(jj) == 0) then
-            !      v = this%simoutrate(jj)
-            !      if (v < DZERO) then
-            !        if (this%imover == 1) then
-            !          v = v + this%pakmvrobj%get_qtomvr(jj)
-            !        end if
-            !      end if
-            !    end if
-            !  end if
-            !case ('TO-MVR')
-            !  n = this%lakein(jj)
-            !  if (this%iboundpak(n) /= 0) then
-            !    if (this%imover == 1) then
-            !      v = this%pakmvrobj%get_qtomvr(jj)
-            !      if (v > DZERO) then
-            !        v = -v
-            !      end if
-            !    end if
-            !  end if
             case ('STORAGE')
               if (this%iboundpak(jj) /= 0) then
                 v = this%qsto(jj)
@@ -3432,23 +2891,19 @@ module GwtAptModule
               if (this%iboundpak(jj) /= 0) then
                 v = this%ccterm(jj)
               end if
-            !case ('OUTLET')
-            !  n = this%lakein(jj)
-            !  if (this%iboundpak(jj) /= 0) then
-            !    v = this%simoutrate(jj)
-            !    !if (this%imover == 1) then
-            !    !  v = v + this%pakmvrobj%get_qtomvr(jj)
-            !    !end if
-            !  end if
-            !case ('VOLUME')
-            !  if (this%iboundpak(jj) /= 0) then
-            !    call this%lak_calculate_vol(jj, this%xnewpak(jj), v)
-            !  end if
             case default
-              errmsg = 'Error: Unrecognized observation type: ' // &
-                        trim(obsrv%ObsTypeId)
-              call store_error(errmsg)
-              call ustop()
+              found = .false.
+              !
+              ! -- check the child package for any specific obs
+              call this%pak_bd_obs(obsrv%ObsTypeId, jj, v, found)
+              !
+              ! -- if none found then terminate with an error
+              if (.not. found) then
+                errmsg = 'Error: Unrecognized observation type: ' // &
+                          trim(obsrv%ObsTypeId)
+                call store_error(errmsg)
+                call ustop()
+              end if
           end select
           call this%obs%SaveOneSimval(obsrv, v)
         end do
@@ -3456,11 +2911,34 @@ module GwtAptModule
     end if
     !
     return
-  end subroutine lkt_bd_obs
+  end subroutine apt_bd_obs
 
-  subroutine lkt_process_obsID(obsrv, dis, inunitobs, iout)
+  subroutine pak_bd_obs(this, obstypeid, jj, v, found)
 ! ******************************************************************************
-! lkt_process_obsID --
+! pak_bd_obs -- 
+!   -- check for observations in concrete packages.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(GwtAptType), intent(inout) :: this
+    character(len=*), intent(in) :: obstypeid
+    integer(I4B), intent(in) :: jj
+    real(DP), intent(inout) :: v
+    logical, intent(inout) :: found
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    ! -- set found = .false. because obstypeid is not known
+    found = .false.
+    !
+    return
+  end subroutine pak_bd_obs
+
+  subroutine apt_process_obsID(obsrv, dis, inunitobs, iout)
+! ******************************************************************************
+! apt_process_obsID --
 ! -- This procedure is pointed to by ObsDataType%ProcesssIdPtr. It processes
 !    the ID string of an observation definition for LAK package observations.
 ! ******************************************************************************
@@ -3486,12 +2964,15 @@ module GwtAptModule
     !    If 1st item is not an integer(I4B), it should be a
     !    lake name--deal with it.
     icol = 1
-    ! -- get lake number or boundary name
+    ! -- get number or boundary name
     call extract_idnum_or_bndname(strng, icol, istart, istop, nn1, bndname)
     if (nn1 == NAMEDBOUNDFLAG) then
       obsrv%FeatureName = bndname
     else
       if (obsrv%ObsTypeId == 'LKT' .or. &
+          obsrv%ObsTypeId == 'SFT' .or. &
+          obsrv%ObsTypeId == 'MWT' .or. &
+          obsrv%ObsTypeId == 'UZT' .or. &
           obsrv%ObsTypeId == 'FLOW-JA-FACE') then
         call extract_idnum_or_bndname(strng, icol, istart, istop, nn2, bndname)
         if (nn2 == NAMEDBOUNDFLAG) then
@@ -3509,6 +2990,6 @@ module GwtAptModule
     obsrv%NodeNumber = nn1
     !
     return
-  end subroutine lkt_process_obsID
-
+  end subroutine apt_process_obsID
+  
 end module GwtAptModule

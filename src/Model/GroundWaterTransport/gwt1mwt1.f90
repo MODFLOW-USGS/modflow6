@@ -197,24 +197,24 @@ module GwtMwtModule
       case('STORAGE')
         this%idxbudsto = ip
         this%idxbudssm(ip) = 0
-      case('RAINFALL')
-        this%idxbudrain = ip
-        this%idxbudssm(ip) = 0
-      case('EVAPORATION')
-        this%idxbudevap = ip
-        this%idxbudssm(ip) = 0
-      case('RUNOFF')
-        this%idxbudroff = ip
-        this%idxbudssm(ip) = 0
-      case('EXT-INFLOW')
-        this%idxbudiflw = ip
-        this%idxbudssm(ip) = 0
-      case('WITHDRAWAL')
-        this%idxbudwdrl = ip
-        this%idxbudssm(ip) = 0
-      case('EXT-OUTFLOW')
-        this%idxbudoutf = ip
-        this%idxbudssm(ip) = 0
+      !case('RAINFALL')
+      !  this%idxbudrain = ip
+      !  this%idxbudssm(ip) = 0
+      !case('EVAPORATION')
+      !  this%idxbudevap = ip
+      !  this%idxbudssm(ip) = 0
+      !case('RUNOFF')
+      !  this%idxbudroff = ip
+      !  this%idxbudssm(ip) = 0
+      !case('EXT-INFLOW')
+      !  this%idxbudiflw = ip
+      !  this%idxbudssm(ip) = 0
+      !case('WITHDRAWAL')
+      !  this%idxbudwdrl = ip
+      !  this%idxbudssm(ip) = 0
+      !case('EXT-OUTFLOW')
+      !  this%idxbudoutf = ip
+      !  this%idxbudssm(ip) = 0
       case('TO-MVR')
         this%idxbudtmvr = ip
         this%idxbudssm(ip) = 0

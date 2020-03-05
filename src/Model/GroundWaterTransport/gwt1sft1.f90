@@ -3256,7 +3256,7 @@ module GwtSftModule
               end if
             case ('RUNOFF')
               if (this%iboundpak(jj) /= 0) then
-                call this%sft_rain_term(jj, n1, n2, v)
+                call this%sft_roff_term(jj, n1, n2, v)
               end if
             case ('SFT')
               n = this%sfrbudptr%budterm(this%idxbudgwf)%id1(jj)
