@@ -110,7 +110,7 @@ module LnfModule
                                           FMTDISCLAIMER, IDEVELOPMODE
     use CompilerVersion
     use MemoryManagerModule,        only: mem_allocate
-    !use LnfDislModule,              only: dis_cr
+    use LnfDislModule,              only: disl_cr
     !use LnfNpfModule,               only: npf_cr
     !use LnfStoModule,               only: sto_cr
     !use LnfMvrModule,               only: mvr_cr
@@ -248,11 +248,11 @@ module LnfModule
     call this%ftype_check(namefile_obj, indis)
     !!
     !! -- Create discretization object
-    !if (indisl6 > 0) then
-    !  call dis_cr(this%dis, this%name, indis, this%iout)
+    if (indisl6 > 0) then
+      call disl_cr(this%dis, this%name, indis, this%iout)
     !else
     !  ! -- todo - issue error and stop if disl not specified
-    !endif
+    endif
     !!
     !! -- Create utility objects
     !call budget_cr(this%budget, this%name)
@@ -306,7 +306,7 @@ module LnfModule
 ! ------------------------------------------------------------------------------
     !!
     !! -- Define packages and utility objects
-    !call this%dis%dis_df()
+    call this%dis%dis_df()
     !!call this%npf%npf_df(this%dis, this%xt3d, this%ingnc)
     !call this%oc%oc_df()
     !! -- todo: niunit is not a good indicator of budterm size
@@ -353,7 +353,7 @@ module LnfModule
 ! ------------------------------------------------------------------------------
     !!
     !! -- Add the primary grid connections of this model to sparse
-    !call this%dis%dis_ac(this%moffset, sparse)
+    call this%dis%dis_ac(this%moffset, sparse)
     !!
     !! -- Add any additional connections that NPF may need
     !if(this%innpf > 0) call this%npf%npf_ac(this%moffset, sparse)
@@ -387,7 +387,7 @@ module LnfModule
     !!
     !! -- Find the position of each connection in the global ia, ja structure
     !!    and store them in idxglo.
-    !call this%dis%dis_mc(this%moffset, this%idxglo, iasln, jasln)
+    call this%dis%dis_mc(this%moffset, this%idxglo, iasln, jasln)
     !!
     !! -- Map any additional connections that NPF may need
     !if(this%innpf > 0) call this%npf%npf_mc(this%moffset, iasln, jasln)
