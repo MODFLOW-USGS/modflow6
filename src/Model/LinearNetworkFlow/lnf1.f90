@@ -10,11 +10,14 @@ module LnfModule
   !use LnfNpfModule,                only: LnfNpfType
   !use LnfStoModule,                only: sto_cr
   !use LnfMvrModule,                only: mvr_cr
+  use CircularGeometryModule,      only: cgeo_cr
+  use RectangularGeometryModule,   only: rgeo_cr
   use BudgetModule,                only: BudgetType
   use GwfOcModule,                 only: GwfOcType
   use SimModule,                   only: count_errors, store_error,            &
                                          store_error_unit, ustop
   use BaseModelModule,             only: BaseModelType
+  use BaseGeometryModule,          only: GeometryBaseType
 
   implicit none
 
@@ -24,20 +27,27 @@ module LnfModule
 
   type, extends(NumericalModelType) :: LnfModelType
 
-    type(GwfIcType),                pointer :: ic      => null()                ! initial conditions package
-    !type(LnfNpfType),               pointer :: npf     => null()                ! node property flow package
-    !type(LnfStoType),               pointer :: sto     => null()                ! storage package
-    !type(LnfMvrType),               pointer :: mvr     => null()                ! water mover package
-    type(GwfOcType),                pointer :: oc      => null()                ! output control package
-    type(BudgetType),               pointer :: budget  => null()                ! budget object
-    integer(I4B),                   pointer :: inic    => null()                ! unit number IC
-    integer(I4B),                   pointer :: inoc    => null()                ! unit number OC
-    !integer(I4B),                   pointer :: innpf   => null()                ! unit number NPF
-    integer(I4B),                   pointer :: insto   => null()                ! unit number STO
-    integer(I4B),                   pointer :: inmvr   => null()                ! unit number MVR
-    integer(I4B),                   pointer :: inobs   => null()                ! unit number OBS
-    integer(I4B),                   pointer :: iss     => null()                ! steady state flag
-    integer(I4B),                   pointer :: inewtonur => null()              ! newton under relaxation flag
+    type(GwfIcType),                pointer :: ic        => null()                ! initial conditions package
+    !type(LnfNpfType),               pointer :: npf       => null()                ! node property flow package
+    !type(LnfStoType),               pointer :: sto       => null()                ! storage package
+    !type(LnfMvrType),               pointer :: mvr       => null()                ! water mover package
+    type(GwfOcType),                pointer :: oc        => null()                ! output control package
+    type(BudgetType),               pointer :: budget    => null()                ! budget object
+    integer(I4B),                   pointer :: inic      => null()                ! unit number IC
+    integer(I4B),                   pointer :: inoc      => null()                ! unit number OC
+    !integer(I4B),                   pointer :: innpf     => null()                ! unit number NPF
+    integer(I4B),                   pointer :: insto     => null()                ! unit number STO
+    integer(I4B),                   pointer :: inmvr     => null()                ! unit number MVR
+    integer(I4B),                   pointer :: incgeo    => null()                ! unit number CGEO
+    integer(I4B),                   pointer :: inrgeo    => null()                ! unit number RGEO
+    integer(I4B),                   pointer :: inngeo    => null()                ! unit number NGEO
+    integer(I4B),                   pointer :: inobs     => null()                ! unit number OBS
+    integer(I4B),                   pointer :: iss       => null()                ! steady state flag
+    integer(I4B),                   pointer :: inewtonur => null()                ! newton under relaxation flag
+    !
+    ! -- Derived types
+    class(GeometryBaseType),        pointer  :: cgeo     => null()                !circular geometry object
+    class(GeometryBaseType),        pointer  :: rgeo     => null()                !rectangular geometry object
 
   contains
 
@@ -73,7 +83,7 @@ module LnfModule
   character(len=LENFTYPE), dimension(NIUNIT) :: cunit
   data cunit/   'IC6  ', 'DISL6', '     ', 'OC6  ', '     ', & !  5
                 'STO6 ', '     ', '     ', '     ', '     ', & ! 10
-                '     ', '     ', '     ', '     ', '     ', & ! 15
+                'CGEO6', 'RGEO6', 'NGEO6', '     ', '     ', & ! 15
                 '     ', 'CHD6 ', '     ', '     ', '     ', & ! 20
                 '     ', '     ', '     ', '     ', '     ', & ! 25
                 '     ', 'MVR6 ', '     ', '     ', '     ', & ! 30
@@ -230,6 +240,9 @@ module LnfModule
     !call namefile_obj%get_unitnumber('NPF6', this%innpf, 1)
     call namefile_obj%get_unitnumber('STO6', this%insto, 1)
     call namefile_obj%get_unitnumber('MVR6', this%inmvr, 1)
+    call namefile_obj%get_unitnumber('CGEO6', this%incgeo, 1)
+    call namefile_obj%get_unitnumber('RGEO6', this%inrgeo, 1)
+    call namefile_obj%get_unitnumber('NGEO6', this%inngeo, 1)
     !
     ! -- Check to make sure that required ftype's have been specified
     call this%ftype_check(namefile_obj, indis)
@@ -248,6 +261,12 @@ module LnfModule
     !!call npf_cr(this%npf, this%name, this%innpf, this%iout)
     !!call sto_cr(this%sto, this%name, this%insto, this%iout)
     !!call mvr_cr(this%mvr, this%name, this%inmvr, this%iout, dis=this%dis)
+    if (this%incgeo /= 0) then
+      call cgeo_cr(this%cgeo, this%name, this%incgeo, this%iout)
+    end if
+    if (this%inrgeo /= 0) then
+      call rgeo_cr(this%rgeo, this%name, this%inrgeo, this%iout)
+    end if
     !call ic_cr(this%ic, this%name, this%inic, this%iout, this%dis)
     !call oc_cr(this%oc, this%name, this%inoc, this%iout)
     !!
@@ -404,6 +423,8 @@ module LnfModule
     !if(this%innpf > 0) call this%npf%npf_ar(this%ic, this%ibound, this%x)
     !if(this%insto > 0) call this%sto%sto_ar(this%dis, this%ibound)
     !if(this%inmvr > 0) call this%mvr%mvr_ar()
+    if(this%incgeo > 0) call this%cgeo%geo_ar()
+    if(this%inrgeo > 0) call this%rgeo%geo_ar()
     !if(this%inobs > 0) call this%obs%lnf_obs_ar(this%ic, this%x, this%flowja)
     !!
     !! -- Call dis_ar to write binary grid file
@@ -1053,6 +1074,19 @@ module LnfModule
     !call this%mvr%mvr_da()
     !call this%oc%oc_da()
     !call this%obs%obs_da()
+    !
+    ! -- geometry objects
+    if (this%incgeo /= 0) then
+      call this%cgeo%geo_da()
+      deallocate(this%cgeo)
+    end if
+    if (this%inrgeo /= 0) then
+      call this%rgeo%geo_da()
+      deallocate(this%rgeo)
+    end if
+    !if (this%inngeo /= 0) then
+    !  call this%ngeo%geo_da()
+    !end if
     !!
     !! -- Internal package objects
     !deallocate(this%dis)
@@ -1078,6 +1112,9 @@ module LnfModule
     !call mem_deallocate(this%innpf)
     call mem_deallocate(this%insto)
     call mem_deallocate(this%inmvr)
+    call mem_deallocate(this%incgeo)
+    call mem_deallocate(this%inrgeo)
+    call mem_deallocate(this%inngeo)
     call mem_deallocate(this%iss)
     call mem_deallocate(this%inewtonur)
     !
@@ -1191,6 +1228,9 @@ module LnfModule
     !call mem_allocate(this%innpf, 'INNPF', modelname)
     call mem_allocate(this%insto, 'INSTO', modelname)
     call mem_allocate(this%inmvr, 'INMVR', modelname)
+    call mem_allocate(this%incgeo, 'INCGEO', modelname)
+    call mem_allocate(this%inrgeo, 'INRGEO', modelname)
+    call mem_allocate(this%inngeo, 'INNGEO', modelname)
     call mem_allocate(this%inobs, 'INOBS', modelname)
     call mem_allocate(this%iss,   'ISS',   modelname)
     call mem_allocate(this%inewtonur, 'INEWTONUR', modelname)
@@ -1200,6 +1240,9 @@ module LnfModule
     !this%innpf = 0
     this%insto = 0
     this%inmvr = 0
+    this%incgeo = 0
+    this%inrgeo = 0
+    this%inngeo = 0
     this%inobs = 0
     this%iss = 1       !default is steady-state (i.e., no STO package)
     this%inewtonur = 0 !default is to not use newton bottom head dampening

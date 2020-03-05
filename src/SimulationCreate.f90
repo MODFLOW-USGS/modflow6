@@ -362,7 +362,7 @@ module SimulationCreateModule
           case ('LNF6')
             call parser%GetString(fname)
             call add_model(im, 'LNF6', mname)
-            call lnf_cr(fname, im, modelname(im))              
+            call lnf_cr(fname, im, modelname(im))
           case default
             write(errmsg, '(4x,a,a)') &
                   '****ERROR. UNKNOWN SIMULATION MODEL: ',                     &
