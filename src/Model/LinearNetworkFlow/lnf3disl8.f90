@@ -14,10 +14,9 @@ module LnfDislModule
 
   implicit none
   private
-  public disv_cr, disv_init_mem, LnfDislType
+  public disl_cr, disl_init_mem, LnfDislType
 
   type, extends(DisBaseType) :: LnfDislType
-    integer(I4B), pointer :: nnodes => null()                                    ! number of cells
     integer(I4B), pointer :: nvert => null()                                     ! number of x,y vertices
     real(DP), dimension(:,:), pointer, contiguous :: vertices => null()          ! cell vertices stored as 3d array of x, y, and z
     real(DP), dimension(:), pointer, contiguous :: cellfdc => null()             ! fdc stored as array
@@ -27,8 +26,8 @@ module LnfDislModule
     type(DisvGeomType) :: cell1                                                  ! cell object used to calculate geometric properties
     type(DisvGeomType)  :: cell2                                                 ! cell object used to calculate geometric properties
   contains
-    procedure :: dis_df => disv_df
-    procedure :: dis_da => disv_da
+    procedure :: dis_df => disl_df
+    procedure :: dis_da => disl_da
     procedure :: get_cellxy => get_cellxy_disl
     procedure, public :: record_array
     procedure, public :: record_srcdst_list_header
@@ -60,9 +59,9 @@ module LnfDislModule
 
   contains
 
-  subroutine disv_cr(dis, name_model, inunit, iout)
+  subroutine disl_cr(dis, name_model, inunit, iout)
 ! ******************************************************************************
-! disv_cr -- Create a new discretization by vertices object
+! disl_cr -- Create a new discretization by vertices object
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -84,9 +83,9 @@ module LnfDislModule
     !
     ! -- Return
     return
-  end subroutine disv_cr
+  end subroutine disl_cr
   
-  subroutine disv_init_mem(dis, name_model, iout, nnodes, vertices, cellfdc, idomain)
+  subroutine disl_init_mem(dis, name_model, iout, nnodes, vertices, cellfdc, idomain)
 ! ******************************************************************************
 ! dis_init_mem -- Create a new discretization by vertices object from memory
 ! ******************************************************************************
@@ -114,21 +113,18 @@ module LnfDislModule
     dis%inunit = 0
     dis%iout = iout
     !
-    ! -- set dimensions
-    disext%nnodes = nnodes
-    !
     ! -- Calculate nodesuser
     disext%nodesuser = nnodes
     !
-    ! -- Allocate non-reduced vectors for disv
-    call mem_allocate(disext%idomain, disext%nnodes, 'IDOMAIN', disext%origin)
+    ! -- Allocate non-reduced vectors for disl
+    call mem_allocate(disext%idomain, disext%nodesuser, 'IDOMAIN', disext%origin)
     !
     ! -- Allocate vertices array
     call mem_allocate(disext%vertices, 3, disext%nvert, 'VERTICES', disext%origin)
-    call mem_allocate(disext%cellfdc, disext%nnodes, 'CELLFDC', disext%origin)
+    call mem_allocate(disext%cellfdc, disext%nodesuser, 'CELLFDC', disext%origin)
     !
     ! -- fill data
-    do k = 1, disext%nnodes
+    do k = 1, disext%nodesuser
       if (present(idomain)) then
         ival = idomain(k)
       else
@@ -141,15 +137,15 @@ module LnfDislModule
         disext%vertices(j, n) = vertices(j, n)
       end do
     end do
-    do n = 1, disext%nnodes
+    do n = 1, disext%nodesuser
       disext%cellfdc(n) = cellfdc(n)
     end do
     !
     ! -- Return
     return
-  end subroutine disv_init_mem
+  end subroutine disl_init_mem
 
-  subroutine disv_df(this)
+  subroutine disl_df(this)
 ! ******************************************************************************
 ! read_from_file -- Allocate and read discretization information
 ! ******************************************************************************
@@ -166,7 +162,7 @@ module LnfDislModule
       !
       ! -- Identify package
       write(this%iout,1) this%inunit
-  1   format(1X,/1X,'DISV -- VERTEX GRID DISCRETIZATION PACKAGE,',               &
+  1   format(1X,/1X,'disl -- VERTEX GRID DISCRETIZATION PACKAGE,',               &
                     ' VERSION 1 : 12/23/2015 - INPUT READ FROM UNIT ',I0,//)
       !
       ! -- Read options
@@ -190,11 +186,11 @@ module LnfDislModule
     !
     ! -- Return
     return
-  end subroutine disv_df
+  end subroutine disl_df
 
-  subroutine disv_da(this)
+  subroutine disl_da(this)
 ! ******************************************************************************
-! disv_da -- Deallocate discretization data
+! disl_da -- Deallocate discretization data
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -210,7 +206,6 @@ module LnfDislModule
     call this%DisBaseType%dis_da()
     !
     ! -- Deallocate scalars
-    call mem_deallocate(this%nnodes)
     call mem_deallocate(this%nvert)
     !
     ! -- Deallocate Arrays
@@ -224,7 +219,7 @@ module LnfDislModule
     !
     ! -- Return
     return
-  end subroutine disv_da
+  end subroutine disl_da
 
   subroutine read_options(this)
 ! ******************************************************************************
@@ -296,7 +291,7 @@ module LnfDislModule
         end select
       end do
     else
-      write(this%iout,'(1x,a)')'NO DISV OPTION BLOCK DETECTED.'
+      write(this%iout,'(1x,a)')'NO disl OPTION BLOCK DETECTED.'
     end if
     if(this%lenuni==0) write(this%iout,'(3x,a)') 'MODEL LENGTH UNIT IS UNDEFINED'
     if(isfound) then
@@ -339,8 +334,8 @@ module LnfDislModule
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
           case ('NODES')
-            this%nnodes = this%parser%GetInteger()
-            write(this%iout,'(3x,a,i0)')'NODES = ', this%nnodes
+            this%nodesuser = this%parser%GetInteger()
+            write(this%iout,'(3x,a,i0)')'NODES = ', this%nodesuser
           case ('NVERT')
             this%nvert = this%parser%GetInteger()
             write(this%iout,'(3x,a,i0)')'NVERT = ', this%nvert
@@ -359,7 +354,7 @@ module LnfDislModule
     end if
     !
     ! -- verify dimensions were set
-    if(this%nnodes < 1) then
+    if(this%nodesuser < 1) then
       call store_error( &
           'ERROR.  NODES WAS NOT SPECIFIED OR WAS SPECIFIED INCORRECTLY.')
       call this%parser%StoreErrorUnit()
@@ -373,18 +368,15 @@ module LnfDislModule
     endif
     write(this%iout,'(1x,a)')'END OF DISCRETIZATION DIMENSIONS'
     !
-    ! -- Calculate nodesuser
-    this%nodesuser = this%nnodes
-    !
-    ! -- Allocate non-reduced vectors for disv
-    call mem_allocate(this%idomain, this%nnodes, 'IDOMAIN', this%origin)
+    ! -- Allocate non-reduced vectors for disl
+    call mem_allocate(this%idomain, this%nodesuser, 'IDOMAIN', this%origin)
     !
     ! -- Allocate vertices array
     call mem_allocate(this%vertices, 3, this%nvert, 'VERTICES', this%origin)
-    call mem_allocate(this%cellfdc, this%nnodes, 'CELLFDC', this%origin)
+    call mem_allocate(this%cellfdc, this%nodesuser, 'CELLFDC', this%origin)
     !
     ! -- initialize all cells to be active (idomain = 1)
-    do k = 1, this%nnodes
+    do k = 1, this%nodesuser
       this%idomain(k) = 1
     end do
     !
@@ -502,7 +494,7 @@ module LnfDislModule
     !
     ! -- count active cells
     this%nodes = 0
-    do k = 1, this%nnodes
+    do k = 1, this%nodesuser
       if(this%idomain(k) > 0) this%nodes = this%nodes + 1
     enddo
     !
@@ -530,7 +522,7 @@ module LnfDislModule
     if(this%nodes < this%nodesuser) then
       node = 1
       noder = 1
-      do k = 1, this%nnodes
+      do k = 1, this%nodesuser
         if(this%idomain(k) > 0) then
           this%nodereduced(node) = noder
           noder = noder + 1
@@ -547,7 +539,7 @@ module LnfDislModule
     if(this%nodes < this%nodesuser) then
       node = 1
       noder = 1
-      do k = 1, this%nnodes
+      do k = 1, this%nodesuser
         if(this%idomain(k) > 0) then
           this%nodeuser(noder) = node
           noder = noder + 1
@@ -592,9 +584,6 @@ module LnfDislModule
     character(len=*), parameter :: fmtcoord = &
       "(3x, a,' COORDINATE = ', 1(1pg24.15))"
 ! ------------------------------------------------------------------------------
-    !
-    ! -- Calculates nodesuser
-    this%nodesuser = this%nnodes
     !
     ! --Read DISDATA block
     call this%parser%GetBlock('VERTICES', isfound, ierr, &
@@ -707,17 +696,17 @@ module LnfDislModule
     !    temporarily store the vertex numbers for each cell.  This will
     !    be converted to iavert and javert after all cell vertices have
     !    been read.
-    allocate(maxnnz(this%nnodes))
-    do i = 1, this%nnodes
+    allocate(maxnnz(this%nodesuser))
+    do i = 1, this%nodesuser
       maxnnz(i) = 5
     enddo
-    call vertspm%init(this%nnodes, this%nvert, maxnnz)
+    call vertspm%init(this%nodesuser, this%nvert, maxnnz)
     !
     ! --Read CELL2D block
     call this%parser%GetBlock('CELL1D', isfound, ierr, supportOpenClose=.true.)
     if(isfound) then
       write(this%iout,'(/,1x,a)') 'PROCESSING CELL1D'
-      do i = 1, this%nnodes
+      do i = 1, this%nodesuser
         call this%parser%GetNextLine(endOfBlock)
         !
         ! -- cell number
@@ -730,7 +719,7 @@ module LnfDislModule
         endif
         !
         ! -- Fractional distance to cell center
-        this%cellfdc = this%parser%GetDouble()
+        this%cellfdc(i) = this%parser%GetDouble()
         !
         ! -- Number of vertices for this cell
         ncvert = this%parser%GetInteger()
@@ -739,8 +728,7 @@ module LnfDislModule
           maxvertcell = i
         endif
         !
-        ! -- Read each vertex number, and then close the polygon if
-        !    the last vertex does not equal the first vertex
+        ! -- Read each vertex number
         do j = 1, ncvert
           ivert = this%parser%GetInteger()
           call vertspm%addconnection(i, ivert, 0)
@@ -756,13 +744,13 @@ module LnfDislModule
     end if
     !
     ! -- Convert vertspm into ia/ja form
-    call mem_allocate(this%iavert, this%nnodes+1, 'IAVERT', this%origin)
+    call mem_allocate(this%iavert, this%nodesuser+1, 'IAVERT', this%origin)
     call mem_allocate(this%javert, vertspm%nnz, 'JAVERT', this%origin)
     call vertspm%filliaja(this%iavert, this%javert, ierr)
     call vertspm%destroy()
     !
     ! -- Write information
-    write(this%iout, fmtncpl) this%nnodes
+    write(this%iout, fmtncpl) this%nodesuser
     write(this%iout, fmtmaxvert) maxvert, maxvertcell
     write(this%iout,'(1x,a)')'END PROCESSING VERTICES'
     !
@@ -789,15 +777,15 @@ module LnfDislModule
     !
     ! -- create and fill the connections object
     nrsize = 0
-    if(this%nodes < this%nodesuser) nrsize = this%nnodes
+    if(this%nodes < this%nodesuser) nrsize = this%nodes
     allocate(this%con)
     ! SRP TODO: connections need geometry info
     !call this%con%dislconnections(this%name_model, this%nnodes, nrsize,        &
     !                              this%nvert, this%vertices, this%iavert,      &
     !                              this%javert, this%cellfdc,                    &
     !                              this%nodereduced, this%nodeuser)
-    this%nja = this%con%nja
-    this%njas = this%con%njas
+    !this%nja = this%con%nja
+    !this%njas = this%con%njas
     !
     !
     ! -- return
@@ -879,10 +867,10 @@ module LnfDislModule
     write(txt, '(3a, i0)') 'VERTICES ', 'DOUBLE ', 'NDIM 2 2 ', this%nvert
     txt(lentxt:lentxt) = new_line('a')
     write(iunit) txt
-    write(txt, '(3a, i0)') 'CELLFDC ', 'DOUBLE ', 'NDIM 1 ', this%nnodes
+    write(txt, '(3a, i0)') 'CELLFDC ', 'DOUBLE ', 'NDIM 1 ', this%nodesuser
     txt(lentxt:lentxt) = new_line('a')
     write(iunit) txt
-    write(txt, '(3a, i0)') 'IAVERT ', 'INTEGER ', 'NDIM 1 ', this%nnodes + 1
+    write(txt, '(3a, i0)') 'IAVERT ', 'INTEGER ', 'NDIM 1 ', this%nodesuser + 1
     txt(lentxt:lentxt) = new_line('a')
     write(iunit) txt
     write(txt, '(3a, i0)') 'JAVERT ', 'INTEGER ', 'NDIM 1 ', size(this%javert)
@@ -910,7 +898,7 @@ module LnfDislModule
     write(iunit) this%yorigin                                                   ! yorigin
     write(iunit) this%angrot                                                    ! angrot
     write(iunit) this%vertices                                                  ! vertices
-    write(iunit) (this%cellfdc(i), i = 1, this%nnodes)                          ! cellfdc
+    write(iunit) (this%cellfdc(i), i = 1, this%nodesuser)                       ! cellfdc
     write(iunit) this%iavert                                                    ! iavert
     write(iunit) this%javert                                                    ! javert
     write(iunit) this%con%iausr                                                 ! iausr
@@ -1185,11 +1173,9 @@ module LnfDislModule
     call this%DisBaseType%allocate_scalars(name_model)
     !
     ! -- Allocate
-    call mem_allocate(this%nnodes, 'NNODES', this%origin)
     call mem_allocate(this%nvert, 'NVERT', this%origin)
     !
     ! -- Initialize
-    this%nnodes = 0
     this%nvert = 0
     this%ndim = 1
     !
@@ -1224,7 +1210,7 @@ module LnfDislModule
     endif
     !
     ! -- Initialize
-    this%mshape(1) = this%nnodes
+    this%mshape(1) = this%nodesuser
     !
     ! -- Return
     return
