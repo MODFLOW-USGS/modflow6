@@ -2618,9 +2618,9 @@ contains
      if (ihedfl /= 0 .and. this%iprhed /= 0) then
       !
       ! -- fill stage data
-      do n = 1, this%maxbound
+      do n = 1, this%nmawwells
         if(this%inamedbound==1) then
-          call this%headtab%add_term(this%boundname(n))
+          call this%headtab%add_term(this%cmawname(n))
         end if
         call this%headtab%add_term(n)
         call this%headtab%add_term(this%xnewpak(n))
@@ -4320,13 +4320,10 @@ contains
     character(len=LINELENGTH) :: text
 ! ------------------------------------------------------------------------------
     !
-    ! -- setup stage table
+    ! -- setup well head table
     if (this%iprhed > 0) then
       !
-      ! -- Determine the number of sfr budget terms. These are fixed for 
-      !    the simulation and cannot change.  This includes FLOW-JA-FACE
-      !    so they can be written to the binary budget files, but these internal
-      !    flows are not included as part of the budget table.
+      ! -- Determine the number of head table columns
       nterms = 2
       if (this%inamedbound == 1) nterms = nterms + 1
       !
@@ -4334,9 +4331,9 @@ contains
       title = trim(adjustl(this%text)) // ' PACKAGE (' //                        &
               trim(adjustl(this%name)) //') HEADS FOR EACH CONTROL VOLUME'
       !
-      ! -- set up stage tableobj
+      ! -- set up head tableobj
       call table_cr(this%headtab, this%name, title)
-      call this%headtab%table_df(this%maxbound, nterms, this%iout,              &
+      call this%headtab%table_df(this%nmawwells, nterms, this%iout,              &
                                  transient=.TRUE.)
       !
       ! -- Go through and set up table budget term
