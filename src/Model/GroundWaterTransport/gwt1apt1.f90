@@ -13,15 +13,15 @@
 ! GWF (aux FLOW-AREA)       idxbudgwf     GWF                   cv2gwf
 ! STORAGE (aux VOLUME)      idxbudsto     none                  used for cv volumes
 ! FROM-MVR                  idxbudfmvr    FROM-MVR              q * cext = this%qfrommvr(:)
-! TO-MVR                    idxbudtmvr    TO-MVR                q * clak
+! TO-MVR                    idxbudtmvr    TO-MVR                q * cfeat
 
 ! -- generalized source/sink terms (except ET?)
 ! RAINFALL                  idxbudrain    RAINFALL              q * crain
-! EVAPORATION               idxbudevap    EVAPORATION           clak<cevap: q*clak, else: q*cevap
+! EVAPORATION               idxbudevap    EVAPORATION           cfeat<cevap: q*cfeat, else: q*cevap
 ! RUNOFF                    idxbudroff    RUNOFF                q * croff
 ! EXT-INFLOW                idxbudiflw    EXT-INFLOW            q * ciflw
-! WITHDRAWAL                idxbudwdrl    WITHDRAWAL            q * clak
-! EXT-OUTFLOW               idxbudoutf    EXT-OUTFLOW           q * clak
+! WITHDRAWAL                idxbudwdrl    WITHDRAWAL            q * cfeat
+! EXT-OUTFLOW               idxbudoutf    EXT-OUTFLOW           q * cfeat
   
 ! -- terms from a flow file that should be skipped
 ! CONSTANT                  none          none                  none
@@ -43,7 +43,6 @@ module GwtAptModule
   use SimModule, only: store_error, count_errors, store_error_unit, ustop
   use BndModule, only: BndType, GetBndFromList
   use GwtFmiModule, only: GwtFmiType
-  use LakModule, only: LakType
   use MemoryTypeModule, only: MemoryTSType
   use BudgetModule, only: BudgetType
   use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr, budgetobject_cr_bfr
@@ -67,26 +66,26 @@ module GwtAptModule
     integer(I4B), pointer                              :: iprconc => null()
     integer(I4B), pointer                              :: iconcout => null()
     integer(I4B), pointer                              :: ibudgetout => null()
-    integer(I4B), pointer                              :: iflowbudget => null() ! unit number for existing lake flow budget file
+    integer(I4B), pointer                              :: iflowbudget => null() ! unit number for existing flow budget file
     integer(I4B), pointer                              :: cbcauxitems => NULL()
     integer(I4B), pointer                              :: ncv => null()         ! number of control volumes
     integer(I4B), pointer                              :: bditems => NULL()
-    integer(I4B), pointer                              :: igwflakpak => null()  ! package number of corresponding lak package
-    real(DP), dimension(:), pointer, contiguous        :: strt => null()        ! starting lake concentration
-    integer(I4B), dimension(:), pointer, contiguous    :: idxlocnode => null()      !map position in global rhs and x array of pack entry
-    integer(I4B), dimension(:), pointer, contiguous    :: idxpakdiag => null()      !map diag position of lake in global amat
-    integer(I4B), dimension(:), pointer, contiguous    :: idxdglo => null()         !map position in global array of package diagonal row entries
-    integer(I4B), dimension(:), pointer, contiguous    :: idxoffdglo => null()      !map position in global array of package off diagonal row entries
-    integer(I4B), dimension(:), pointer, contiguous    :: idxsymdglo => null()      !map position in global array of package diagonal entries to model rows
-    integer(I4B), dimension(:), pointer, contiguous    :: idxsymoffdglo => null()   !map position in global array of package off diagonal entries to model rows
-    integer(I4B), dimension(:), pointer, contiguous    :: idxfjfdglo => null()      !map diagonal lak to lak in global amat
-    integer(I4B), dimension(:), pointer, contiguous    :: idxfjfoffdglo => null()   !map off diagonal lak to lak in global amat
-    integer(I4B), dimension(:), pointer, contiguous    :: iboundpak => null()       !package ibound
-    real(DP), dimension(:), pointer, contiguous        :: xnewpak => null()     ! lak concentration for current time step
-    real(DP), dimension(:), pointer, contiguous        :: xoldpak => null()     ! lak concentration from previous time step
+    integer(I4B), pointer                              :: igwfaptpak => null()  ! package number of corresponding this package
+    real(DP), dimension(:), pointer, contiguous        :: strt => null()        ! starting feature concentration
+    integer(I4B), dimension(:), pointer, contiguous    :: idxlocnode => null()      ! map position in global rhs and x array of pack entry
+    integer(I4B), dimension(:), pointer, contiguous    :: idxpakdiag => null()      ! map diag position of feature in global amat
+    integer(I4B), dimension(:), pointer, contiguous    :: idxdglo => null()         ! map position in global array of package diagonal row entries
+    integer(I4B), dimension(:), pointer, contiguous    :: idxoffdglo => null()      ! map position in global array of package off diagonal row entries
+    integer(I4B), dimension(:), pointer, contiguous    :: idxsymdglo => null()      ! map position in global array of package diagonal entries to model rows
+    integer(I4B), dimension(:), pointer, contiguous    :: idxsymoffdglo => null()   ! map position in global array of package off diagonal entries to model rows
+    integer(I4B), dimension(:), pointer, contiguous    :: idxfjfdglo => null()      ! map diagonal feature to feature in global amat
+    integer(I4B), dimension(:), pointer, contiguous    :: idxfjfoffdglo => null()   ! map off diagonal feature to feature in global amat
+    integer(I4B), dimension(:), pointer, contiguous    :: iboundpak => null()       ! package ibound
+    real(DP), dimension(:), pointer, contiguous        :: xnewpak => null()     ! feature concentration for current time step
+    real(DP), dimension(:), pointer, contiguous        :: xoldpak => null()     ! feature concentration from previous time step
     real(DP), dimension(:), pointer, contiguous        :: dbuff => null()
     character(len=LENBOUNDNAME), dimension(:), pointer,                         &
-                                 contiguous :: lakename => null()
+                                 contiguous :: featname => null()
     type (MemoryTSType), dimension(:), pointer, contiguous :: lauxvar => null()
     type(GwtFmiType), pointer                          :: fmi => null()         ! pointer to fmi object
     real(DP), dimension(:), pointer, contiguous        :: qsto => null()        ! mass flux due to storage change
@@ -99,18 +98,18 @@ module GwtAptModule
     integer(I4B), pointer                              :: idxbudaux => null()   ! index of auxiliary terms in flowbudptr
     integer(I4B), dimension(:), pointer, contiguous    :: idxbudssm => null()   ! flag that flowbudptr%buditem is a general solute source/sink
     integer(I4B), pointer                              :: nconcbudssm => null() ! number of concbudssm terms (columns)
-    real(DP), dimension(:, : ), pointer, contiguous    :: concbudssm => null()  ! user specified concentrations for lake flow terms
+    real(DP), dimension(:, : ), pointer, contiguous    :: concbudssm => null()  ! user specified concentrations for flow terms
     real(DP), dimension(:), pointer, contiguous        :: qmfrommvr => null()   ! a mass flow coming from the mover that needs to be added
     !
-    ! -- lake budget object
+    ! -- budget objects
     type(BudgetObjectType), pointer                    :: budobj => null()      ! apt solute budget object
-    type(BudgetObjectType), pointer                    :: flowbudptr => null()  ! lake flows budget object
+    type(BudgetObjectType), pointer                    :: flowbudptr => null()  ! GWF flow budget object
     !
     ! -- budget file reader
     type(BudgetFileReaderType)                         :: bfr                   ! budget file reader
 
     ! -- time series aware data
-    type (MemoryTSType), dimension(:), pointer, contiguous :: conclak => null()  ! lake concentration
+    type (MemoryTSType), dimension(:), pointer, contiguous :: concfeat => null()  ! feature concentration
     
   contains
   
@@ -192,7 +191,7 @@ module GwtAptModule
         call sparse%addconnection(nglo, nglo, 1)
       end do
       !
-      ! -- lake-gwf connections
+      ! -- apt-gwf connections
       do i = 1, this%flowbudptr%budterm(this%idxbudgwf)%nlist
         n = this%flowbudptr%budterm(this%idxbudgwf)%id1(i)
         jj = this%flowbudptr%budterm(this%idxbudgwf)%id2(i)
@@ -202,7 +201,7 @@ module GwtAptModule
         call sparse%addconnection(jglo, nglo, 1)
       end do
       !
-      ! -- lake-lake connections
+      ! -- apt-apt connections
       if (this%idxbudfjf /= 0) then
         do i = 1, this%flowbudptr%budterm(this%idxbudfjf)%maxlist
           n = this%flowbudptr%budterm(this%idxbudfjf)%id1(i)
@@ -292,7 +291,7 @@ module GwtAptModule
         enddo symsearchloop
       end do
       !
-      ! -- lak-lak contributions to gwf portion of global matrix
+      ! -- apt-apt contributions to gwf portion of global matrix
       if (this%idxbudfjf /= 0) then
         do ipos = 1, this%flowbudptr%budterm(this%idxbudfjf)%nlist
           n = this%flowbudptr%budterm(this%idxbudfjf)%id1(ipos)
@@ -354,15 +353,15 @@ module GwtAptModule
     call this%read_initial_attr()
     !
     ! -- Find the package index in the GWF model or GWF budget file 
-    !    for the corresponding lake package
-    call this%fmi%get_package_index(this%name, this%igwflakpak)
+    !    for the corresponding apt flow package
+    call this%fmi%get_package_index(this%name, this%igwfaptpak)
     !
     ! -- Tell fmi that this package is being handled by APT, otherwise
     !    SSM would handle the flows into GWT from this pack.  Then point the
     !    fmi data for an advanced package to xnewpak and qmfrommvr
-    this%fmi%iatp(this%igwflakpak) = 1
-    this%fmi%datp(this%igwflakpak)%concpack => this%xnewpak
-    this%fmi%datp(this%igwflakpak)%qmfrommvr => this%qmfrommvr
+    this%fmi%iatp(this%igwfaptpak) = 1
+    this%fmi%datp(this%igwfaptpak)%concpack => this%xnewpak
+    this%fmi%datp(this%igwfaptpak)%qmfrommvr => this%qmfrommvr
     !
     ! -- Return
     return
@@ -461,7 +460,7 @@ module GwtAptModule
       write(this%iout,fmtlsp) trim(this%filtyp)
     endif
     !
-    ! -- write summary of lake stress period error messages
+    ! -- write summary of stress period error messages
     ierr = count_errors()
     if (ierr > 0) then
       call this%parser%StoreErrorUnit()
@@ -480,7 +479,7 @@ module GwtAptModule
 
   subroutine apt_set_stressperiod(this, itemno, line)
 ! ******************************************************************************
-! apt_set_stressperiod -- Set a stress period attribute for lakweslls(itemno)
+! apt_set_stressperiod -- Set a stress period attribute for feature (itemno)
 !                         using keywords.
 ! ******************************************************************************
 !
@@ -554,7 +553,7 @@ module GwtAptModule
           this%iboundpak(itmp) = 1
         else
           write(errmsg,'(4x,a,a)') &
-            '****ERROR. UNKNOWN '//trim(this%text)//' LAK STATUS KEYWORD: ', &
+            '****ERROR. UNKNOWN ' // trim(this%text) // ' STATUS KEYWORD: ', &
             text
           call store_error(errmsg)
         end if
@@ -563,10 +562,10 @@ module GwtAptModule
         if (ierr /= 0) goto 999
         call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
         text = line(istart:istop)
-        jj = 1    ! For lake concentration
+        jj = 1    ! For feature concentration
         call read_single_value_or_time_series(text, &
-                                              this%conclak(itmp)%value, &
-                                              this%conclak(itmp)%name, &
+                                              this%concfeat(itmp)%value, &
+                                              this%concfeat(itmp)%name, &
                                               endtim,  &
                                               this%name, 'BND', this%TsManager, &
                                               this%iprpak, itmp, jj, 'CONCENTRATION', &
@@ -659,7 +658,7 @@ module GwtAptModule
 
   function apt_check_valid(this, itemno) result(ierr)
 ! ******************************************************************************
-!  apt_check_valid -- Determine if a valid lake or outlet number has been
+!  apt_check_valid -- Determine if a valid feature number has been
 !                     specified.
 ! ******************************************************************************
     ! -- return
@@ -674,7 +673,7 @@ module GwtAptModule
     ierr = 0
     if (itemno < 1 .or. itemno > this%ncv) then
       write(errmsg,'(4x,a,1x,i6,1x,a,1x,i6)') &
-        '****ERROR. LAKENO ', itemno, 'MUST BE > 0 and <= ', this%ncv
+        '****ERROR. FEATURENO ', itemno, 'MUST BE > 0 and <= ', this%ncv
       call store_error(errmsg)
       ierr = 1
     end if
@@ -716,11 +715,11 @@ module GwtAptModule
     end if
     !
     ! -- copy xnew into xold and set xnewpak to stage%value for
-    !    constant stage lakes
+    !    constant concentration features
     do n = 1, this%ncv
       this%xoldpak(n) = this%xnewpak(n)
       if (this%iboundpak(n) < 0) then
-        this%xnewpak(n) = this%conclak(n)%value
+        this%xnewpak(n) = this%concfeat(n)%value
       end if
     end do
     !
@@ -783,7 +782,7 @@ module GwtAptModule
     integer(I4B) :: j, igwfnode, idiag
 ! ------------------------------------------------------------------------------
     !
-    ! -- solve for concentration in the lakes
+    ! -- solve for concentration in the features
     call this%apt_solve()
     !
     ! -- add hcof and rhs terms (from apt_solve) to the gwf matrix
@@ -833,7 +832,7 @@ module GwtAptModule
     !    specific to the package
     call this%pak_fc_expanded(rhs, ia, idxglo, amatsln)
     !
-    ! -- mass storage in lake
+    ! -- mass storage in features
     do n = 1, this%ncv
       cold  = this%xoldpak(n)
       iloc = this%idxlocnode(n)
@@ -863,10 +862,10 @@ module GwtAptModule
       end do
     end if
     !
-    ! -- go through each lak-gwf connection
+    ! -- go through each apt-gwf connection
     do j = 1, this%flowbudptr%budterm(this%idxbudgwf)%nlist
       !
-      ! -- set n to lake number and process if active lake
+      ! -- set n to feature number and process if active feature
       n = this%flowbudptr%budterm(this%idxbudgwf)%id1(j)
       if (this%iboundpak(n) /= 0) then
         !
@@ -889,7 +888,7 @@ module GwtAptModule
       end if    
     end do
     !
-    ! -- go through each lak-lak connection
+    ! -- go through each apt-apt connection
     if (this%idxbudfjf /= 0) then
       do j = 1, this%flowbudptr%budterm(this%idxbudfjf)%nlist
         n1 = this%flowbudptr%budterm(this%idxbudfjf)%id1(j)
@@ -954,7 +953,7 @@ module GwtAptModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Calculate hcof and rhs terms so GWF exchanges are calculated correctly
-    ! -- go through each lak-gwf connection and calculate
+    ! -- go through each apt-gwf connection and calculate
     !    rhs and hcof terms for gwt matrix rows
     do j = 1, this%flowbudptr%budterm(this%idxbudgwf)%nlist
       n = this%flowbudptr%budterm(this%idxbudgwf)%id1(j)
@@ -976,7 +975,7 @@ module GwtAptModule
   subroutine apt_bd(this, x, idvfl, icbcfl, ibudfl, icbcun, iprobs,            &
                     isuppress_output, model_budget, imap, iadv)
 ! ******************************************************************************
-! apt_bd -- Calculate Volumetric Budget for the lake
+! apt_bd -- Calculate Volumetric Budget for the feature
 ! Note that the compact budget will always be used.
 ! Subroutine: (1) Process each package entry
 !             (2) Write output
@@ -1011,7 +1010,7 @@ module GwtAptModule
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
-    ! -- Solve the lak concentrations again or update the lake hcof 
+    ! -- Solve the feature concentrations again or update the feature hcof 
     !    and rhs terms
     if (this%imatrows == 0) then
       call this%apt_solve()
@@ -1044,7 +1043,7 @@ module GwtAptModule
     if(idvfl == 0) ibinun = 0
     if (isuppress_output /= 0) ibinun = 0
     !
-    ! -- write lake binary output
+    ! -- write binary output
     if (ibinun > 0) then
       do n = 1, this%ncv
         c = this%xnewpak(n)
@@ -1118,19 +1117,19 @@ module GwtAptModule
       "( 1X, ///1X, A, A, A, ' PERIOD ', I0, ' STEP ', I0)"
 ! ------------------------------------------------------------------------------
     !
-    ! -- write lake concentration
+    ! -- write feature concentration
     if (ihedfl /= 0 .and. this%iprconc /= 0) then
-      write (iout, fmthdr) 'LAKE (', trim(this%name), ') CONCENTRATION', kper, kstp
+      write (iout, fmthdr) 'FEATURE (', trim(this%name), ') CONCENTRATION', kper, kstp
       iloc = 1
       line = ''
       if (this%inamedbound==1) then
         call UWWORD(line, iloc, 16, TABUCSTRING,                                 &
-                    'lake', n, q, ALIGNMENT=TABLEFT)
+                    'feature', n, q, ALIGNMENT=TABLEFT)
       end if
       call UWWORD(line, iloc, 6, TABUCSTRING,                                    &
-                  'lake', n, q, ALIGNMENT=TABCENTER, SEP=' ')
+                  'feature', n, q, ALIGNMENT=TABCENTER, SEP=' ')
       call UWWORD(line, iloc, 11, TABUCSTRING,                                   &
-                  'lake', n, q, ALIGNMENT=TABCENTER)
+                  'feature', n, q, ALIGNMENT=TABCENTER)
       ! -- create line separator
       linesep = repeat('-', iloc)
       ! -- write first line
@@ -1156,7 +1155,7 @@ module GwtAptModule
         line = ''
         if (this%inamedbound==1) then
           call UWWORD(line, iloc, 16, TABUCSTRING,                               &
-                      this%lakename(n), n, q, ALIGNMENT=TABLEFT)
+                      this%featname(n), n, q, ALIGNMENT=TABLEFT)
         end if
         call UWWORD(line, iloc, 6, TABINTEGER, text, n, q, SEP=' ')
         call UWWORD(line, iloc, 11, TABREAL, text, n, this %xnewpak(n))
@@ -1164,13 +1163,13 @@ module GwtAptModule
       end do
     end if
     !
-    ! -- Output lake flow table
+    ! -- Output flow table
     if (ibudfl /= 0 .and. this%iprflow /= 0) then
       call this%budobj%write_flowtable(this%dis)
     end if
     !
     !
-    ! -- Output lake budget
+    ! -- Output budget
     call this%budobj%write_budtable(kstp, kper, iout)
     !
     ! -- Return
@@ -1200,7 +1199,7 @@ module GwtAptModule
     call mem_allocate(this%iconcout, 'ICONCOUT', this%origin)
     call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%origin)
     call mem_allocate(this%iflowbudget, 'IFLOWBUDGET', this%origin)
-    call mem_allocate(this%igwflakpak, 'IGWFLAKPAK', this%origin)
+    call mem_allocate(this%igwfaptpak, 'IGWFAPTPAK', this%origin)
     call mem_allocate(this%ncv, 'NCV', this%origin)
     call mem_allocate(this%bditems, 'BDITEMS', this%origin)
     call mem_allocate(this%idxbudfjf, 'IDXBUDFJF', this%origin)
@@ -1217,7 +1216,7 @@ module GwtAptModule
     this%iconcout = 0
     this%ibudgetout = 0
     this%iflowbudget = 0
-    this%igwflakpak = 0
+    this%igwfaptpak = 0
     this%ncv = 0
     this%bditems = 9
     this%idxbudfjf = 0
@@ -1266,7 +1265,7 @@ module GwtAptModule
     allocate(this%status(this%ncv))
     !
     ! -- time series
-    call mem_allocate(this%conclak, this%ncv, 'CONCLAK', this%origin)
+    call mem_allocate(this%concfeat, this%ncv, 'CONCFEAT', this%origin)
     !
     ! -- budget terms
     call mem_allocate(this%qsto, this%ncv, 'QSTO', this%origin)
@@ -1320,10 +1319,10 @@ module GwtAptModule
       call mem_deallocate(this%xnewpak)
     end if
     call mem_deallocate(this%concbudssm)
-    call mem_deallocate(this%conclak)
+    call mem_deallocate(this%concfeat)
     call mem_deallocate(this%qmfrommvr)
     deallocate(this%status)
-    deallocate(this%lakename)
+    deallocate(this%featname)
     !
     ! -- budobj
     call this%budobj%budgetobject_da()
@@ -1346,7 +1345,7 @@ module GwtAptModule
     call mem_deallocate(this%iconcout)
     call mem_deallocate(this%ibudgetout)
     call mem_deallocate(this%iflowbudget)
-    call mem_deallocate(this%igwflakpak)
+    call mem_deallocate(this%igwfaptpak)
     call mem_deallocate(this%ncv)
     call mem_deallocate(this%bditems)
     call mem_deallocate(this%idxbudfjf)
@@ -1367,7 +1366,7 @@ module GwtAptModule
 
   subroutine find_apt_package(this)
 ! ******************************************************************************
-! find corresponding lak package
+! find corresponding flow package
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -1406,17 +1405,15 @@ module GwtAptModule
     ! -- local
     character(len=MAXCHARLEN) :: fname, keyword
     ! -- formats
-    character(len=*),parameter :: fmtlakeopt = &
-      "(4x, 'LAKE ', a, ' VALUE (',g15.7,') SPECIFIED.')"
     character(len=*),parameter :: fmtlakbin = &
-      "(4x, 'LAK ', 1x, a, 1x, ' WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I7)"
+      "(4x, a, 1x, a, 1x, ' WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I7)"
     character(len=*),parameter :: fmtlakbud = &
-      "(4x, 'LAK ', 1x, a, 1x, ' WILL BE READ FROM FILE: ', a, /4x, 'OPENED ON UNIT: ', I7)"
+      "(4x, a, 1x, a, 1x, ' WILL BE READ FROM FILE: ', a, /4x, 'OPENED ON UNIT: ', I7)"
 ! ------------------------------------------------------------------------------
     !
     select case (option)
       case ('DEV_NONEXPANDING_MATRIX')
-        ! -- use an iterative solution where lak concentration is not solved
+        ! -- use an iterative solution where concentration is not solved
         !    as part of the matrix.  It is instead solved separately with a 
         !    general mixing equation and then added to the RHS of the GWT 
         !    equations
@@ -1437,7 +1434,7 @@ module GwtAptModule
           this%iconcout = getunit()
           call openfile(this%iconcout, this%iout, fname, 'DATA(BINARY)',  &
                        form, access, 'REPLACE')
-          write(this%iout,fmtlakbin) 'CONCENTRATION', fname, this%iconcout
+          write(this%iout,fmtlakbin) trim(adjustl(this%text)), 'CONCENTRATION', fname, this%iconcout
           found = .true.
         else
           call store_error('OPTIONAL CONCENTRATION KEYWORD MUST BE FOLLOWED BY FILEOUT')
@@ -1449,7 +1446,7 @@ module GwtAptModule
           this%ibudgetout = getunit()
           call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)',  &
                         form, access, 'REPLACE')
-          write(this%iout,fmtlakbin) 'BUDGET', fname, this%ibudgetout
+          write(this%iout,fmtlakbin) trim(adjustl(this%text)), 'BUDGET', fname, this%ibudgetout
           found = .true.
         else
           call store_error('OPTIONAL BUDGET KEYWORD MUST BE FOLLOWED BY FILEOUT')
@@ -1461,7 +1458,7 @@ module GwtAptModule
           this%iflowbudget = getunit()
           call openfile(this%iflowbudget, this%iout, fname, 'DATA(BINARY)',       &
                         form, access, 'UNKNOWN')
-          write(this%iout,fmtlakbud) 'BUDGET', fname, this%iflowbudget
+          write(this%iout,fmtlakbud) trim(adjustl(this%text)), 'BUDGET', fname, this%iflowbudget
           found = .true.
         else
           call store_error('OPTIONAL FLOW_BUDGET KEYWORD MUST BE FOLLOWED BY FILEIN')
@@ -1591,7 +1588,7 @@ module GwtAptModule
     call mem_allocate(this%xoldpak, this%ncv, 'XOLDPAK', this%origin)
     !
     ! -- allocate character storage not managed by the memory manager
-    allocate(this%lakename(this%ncv)) ! ditch after boundnames allocated??
+    allocate(this%featname(this%ncv)) ! ditch after boundnames allocated??
     !allocate(this%status(this%ncv))
     !
     do n = 1, this%ncv
@@ -1651,14 +1648,14 @@ module GwtAptModule
         write (cno,'(i9.9)') n
         bndName = 'Lake' // cno
 
-        ! -- lakename
+        ! -- featname
         if (this%inamedbound /= 0) then
           call this%parser%GetStringCaps(bndNameTemp)
           if (bndNameTemp /= '') then
             bndName = bndNameTemp(1:16)
           endif
         end if
-        this%lakename(n) = bndName
+        this%featname(n) = bndName
 
         ! -- fill time series aware data
         ! -- fill aux data
@@ -1666,7 +1663,7 @@ module GwtAptModule
           !
           ! -- Assign boundary name
           if (this%inamedbound==1) then
-            bndName = this%lakename(n)
+            bndName = this%featname(n)
           else
             bndName = ''
           end if
@@ -1780,7 +1777,7 @@ module GwtAptModule
       !                                      endtim,  &
       !                                      this%name, 'BND', this%TsManager, &
       !                                      this%iprpak, n, jj, 'STAGE', &
-      !                                      this%lakename(n), this%inunit)
+      !                                      this%featname(n), this%inunit)
 
       ! -- todo: read aux
       
@@ -1803,7 +1800,7 @@ module GwtAptModule
     if (this%inamedbound /= 0) then
       do j = 1, this%flowbudptr%budterm(this%idxbudgwf)%nlist
         n = this%flowbudptr%budterm(this%idxbudgwf)%id1(j)
-        this%boundname(j) = this%lakename(n)
+        this%boundname(j) = this%featname(n)
       end do
     end if
     !
@@ -2684,7 +2681,7 @@ subroutine apt_rp_obs(this)
           else if (obsrv%ObsTypeId=='FLOW-JA-FACE') then
             do j = 1, this%flowbudptr%budterm(this%idxbudfjf)%nlist
               n = this%flowbudptr%budterm(this%idxbudfjf)%id1(j)
-              if (this%lakename(n) == bname) then
+              if (this%featname(n) == bname) then
                 jfound = .true.
                 call ExpandArray(obsrv%indxbnds)
                 n = size(obsrv%indxbnds)
@@ -2693,7 +2690,7 @@ subroutine apt_rp_obs(this)
             end do
           else
             do j = 1, this%ncv
-              if (this%lakename(j) == bname) then
+              if (this%featname(j) == bname) then
                 jfound = .true.
                 call ExpandArray(obsrv%indxbnds)
                 n = size(obsrv%indxbnds)
@@ -2765,7 +2762,7 @@ subroutine apt_rp_obs(this)
           write (ermsg, '(4x,a,4(1x,a))') &
             'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
             'for observation', trim(adjustl(obsrv%Name)), &
-            ' must be assigned to a lake with a unique boundname.'
+            ' must be assigned to a feature with a unique boundname.'
           call store_error(ermsg)
         end if
       end if

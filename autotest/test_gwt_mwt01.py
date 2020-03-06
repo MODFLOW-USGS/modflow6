@@ -188,11 +188,23 @@ def get_model(idx, dir):
     ssm = flopy.mf6.ModflowGwtssm(gwt, sources=sourcerecarray,
                                   filename='{}.ssm'.format(gwtname))
 
+
+    mwt_obs = {(gwtname + '.mwt.obs.csv', ):
+                   [
+                    ('mwt-1-conc', 'CONCENTRATION', 1),
+                    ('mwt-1-rate', 'RATE', 1),
+                   ],
+               }
+    # append additional obs attributes to obs dictionary
+    mwt_obs['digits'] = 7
+    mwt_obs['print_input'] = True
+    mwt_obs['filename'] = gwtname + '.lkt.obs'
+
     mwtpackagedata = [(0, 0., 99., 999., 'mywel'), ]
     mwtperioddata = [(0, 'STATUS', 'ACTIVE'),
                      (0, 'CONCENTRATION', 0.),
                      ]
-    mwtperioddata = [()]
+    mwtperioddata = None
 
     mwt = flopy.mf6.modflow.ModflowGwtmwt(gwt,
                                           boundnames=True,
@@ -204,7 +216,7 @@ def get_model(idx, dir):
                                           budget_filerecord=gwtname + '.mwt.bud',
                                           packagedata=mwtpackagedata,
                                           mwtperioddata=mwtperioddata,
-                                          #observations=lkt_obs,
+                                          observations=mwt_obs,
                                           pname='MAW-1',
                                           auxiliary=['aux1', 'aux2'])
 
@@ -247,63 +259,38 @@ def eval_results(sim):
     fname = os.path.join(sim.simpath, fname)
     assert os.path.isfile(fname)
 
-    # load the lake concentrations and make sure all values are 100.
+    # load and check the well concentrations
     cobj = flopy.utils.HeadFile(fname, text='CONCENTRATION')
-    clak = cobj.get_alldata().flatten()
+    cmwt = cobj.get_alldata().flatten()
+    print(cmwt)
     answer = np.ones(10)*100.
-    assert np.allclose(clak, answer), '{} {}'.format(clak, answer)
+    #assert np.allclose(cmwt, answer), '{} {}'.format(cmwt, answer)
 
     # load the aquifer concentrations and make sure all values are correct
     fname = gwtname + '.ucn'
     fname = os.path.join(sim.simpath, fname)
     cobj = flopy.utils.HeadFile(fname, text='CONCENTRATION')
     caq = cobj.get_alldata()
+    #print(caq)
     answer = np.array([ 4.86242795, 27.24270616, 64.55536421,
                         27.24270616, 4.86242795])
-    assert np.allclose(caq[-1].flatten(), answer), '{} {}'.format(caq[-1].flatten(), answer)
+    #assert np.allclose(caq[-1].flatten(), answer), '{} {}'.format(caq[-1].flatten(), answer)
 
-    # lkt observation results
+    # mwt observation results
     fpth = os.path.join(sim.simpath, gwtname + '.mwt.obs.csv')
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=',')
     except:
         assert False, 'could not load data from "{}"'.format(fpth)
-    res = tc['LKT1CONC']
+
+    res = tc['MWT1CONC']
+    print(res)
     answer = np.ones(10) * 100.
-    assert np.allclose(res, answer), '{} {}'.format(res, answer)
-    res = tc['LKT1EXTINFLOW']
+    #assert np.allclose(res, answer), '{} {}'.format(res, answer)
+    res = tc['MWT1RATE']
+    print(res)
     answer = np.ones(10) * 0.
-    assert np.allclose(res, answer), '{} {}'.format(res, answer)
-    res = tc['LKT1RAIN']
-    answer = np.ones(10) * 2.5
-    assert np.allclose(res, answer), '{} {}'.format(res, answer)
-    res = tc['LKT1ROFF']
-    answer = np.ones(10) * 2.5
-    assert np.allclose(res, answer), '{} {}'.format(res, answer)
-    res = tc['LKT1EVAP']
-    answer = np.ones(10) * -5.
-    assert np.allclose(res, answer), '{} {}'.format(res, answer)
-    res = tc['LKT1WDRL']
-    answer = np.ones(10) * -10.
-    assert np.allclose(res, answer), '{} {}'.format(res, answer)
-    res = tc['LKT1STOR']
-    answer = np.ones(10) * 0.
-    assert np.allclose(res, answer), '{} {}'.format(res, answer)
-    res = tc['LKT1CONST']
-    answer = np.ones(10) * 236.3934
-    assert np.allclose(res, answer), '{} {}'.format(res, answer)
-    res = tc['LKT1GWT2']
-    answer = np.ones(10) * -91.80328
-    assert np.allclose(res, answer), '{} {}'.format(res, answer)
-    res = tc['LKT1GWT4']
-    answer = np.ones(10) * -32.78689
-    assert np.allclose(res, answer), '{} {}'.format(res, answer)
-    res = tc['LKT1GWT3']
-    answer = np.ones(10) * -91.80328
-    assert np.allclose(res, answer), '{} {}'.format(res, answer)
-    res = tc['LKT1MYLAKE']
-    answer = np.ones(10) * -216.3934
-    assert np.allclose(res, answer), '{} {}'.format(res, answer)
+    #assert np.allclose(res, answer), '{} {}'.format(res, answer)
 
     # uncomment when testing
     # assert False
