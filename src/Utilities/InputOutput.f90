@@ -432,7 +432,7 @@ module InputOutputModule
           ermsg = 'Error: Looking for BEGIN ' // trim(ctag) // &
                   ' but found END ' // line(istart:istop) // &
                   ' instead.'
-          call store_error(ermsg)
+          call ustop()
           call ustop()
           call ustop()
         endif
@@ -2142,6 +2142,8 @@ module InputOutputModule
     !
     return
   end subroutine BuildIntFormat
+
+
   function get_nwords(line)
 ! ******************************************************************************
 ! get_nwords -- return number of words in a string

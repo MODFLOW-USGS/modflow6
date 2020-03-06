@@ -4082,7 +4082,7 @@ contains
       do n = 1, this%nlakes
         v = this%xnewpak(n)
         d = v - this%lakebot(n)
-        if (this%iboundpak(n) < 1) then
+        if (this%iboundpak(n) == 0) then
           v = DHNOFLO
         else if (d <= DZERO) then
           v = DHDRY
