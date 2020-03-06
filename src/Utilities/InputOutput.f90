@@ -432,8 +432,8 @@ module InputOutputModule
           ermsg = 'Error: Looking for BEGIN ' // trim(ctag) // &
                   ' but found END ' // line(istart:istop) // &
                   ' instead.'
-          call ustop()
-          call ustop()
+          call store_error(ermsg)
+          call store_error_unit(iuext)
           call ustop()
         endif
       end if
