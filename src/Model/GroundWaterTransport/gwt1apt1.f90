@@ -111,10 +111,6 @@ module GwtAptModule
 
     ! -- time series aware data
     type (MemoryTSType), dimension(:), pointer, contiguous :: conclak => null()  ! lake concentration
-    type (MemoryTSType), dimension(:), pointer, contiguous :: concrain => null() ! rainfall concentration
-    type (MemoryTSType), dimension(:), pointer, contiguous :: concevap => null() ! evaporation concentration
-    type (MemoryTSType), dimension(:), pointer, contiguous :: concroff => null() ! runoff concentration
-    type (MemoryTSType), dimension(:), pointer, contiguous :: conciflw => null() ! inflow concentration
     
   contains
   
@@ -129,8 +125,9 @@ module GwtAptModule
     procedure :: pak_fc_expanded
     procedure, private :: apt_fc_nonexpanded
     procedure, private :: apt_cfupdate
-    procedure, private :: apt_check_valid
-    procedure, private :: apt_set_stressperiod
+    procedure :: apt_check_valid
+    procedure :: apt_set_stressperiod
+    procedure :: pak_set_stressperiod
     procedure :: apt_accumulate_ccterm
     procedure :: bnd_bd => apt_bd
     procedure :: bnd_ot => apt_ot
@@ -513,15 +510,13 @@ module GwtAptModule
     integer(I4B) :: iaux
     real(DP) :: rval
     real(DP) :: endtim
+    logical :: found
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
+    ! -- Support these general options with apply to LKT, SFT, MWT, UZT
     ! STATUS <status>
-    ! STAGE <stage>
-    ! RAINFALL <rainfall>
-    ! EVAPORATION <evaporation>
-    ! RUNOFF <runoff>
-    ! INFLOW <inflow>
+    ! CONCENTRATION <concentration>
     ! WITHDRAWAL <withdrawal>
     ! AUXILIARY <auxname> <auxval>    
     !
@@ -533,7 +528,7 @@ module GwtAptModule
     write (citem,'(i9.9)') itmp
     !
     ! -- Assign boundary name
-    if (this%inamedbound==1) then
+    if (this%inamedbound == 1) then
       bndName = this%boundname(itemno)
     else
       bndName = ''
@@ -548,7 +543,6 @@ module GwtAptModule
       case ('STATUS')
         ierr = this%apt_check_valid(itemno)
         if (ierr /= 0) goto 999
-        !bndName = this%boundname(itemno)
         call urword(line, lloc, istart, istop, 1, ival, rval, this%iout, this%inunit)
         text = line(istart:istop)
         this%status(itmp) = text(1:8)
@@ -577,62 +571,9 @@ module GwtAptModule
                                               this%name, 'BND', this%TsManager, &
                                               this%iprpak, itmp, jj, 'CONCENTRATION', &
                                               bndName, this%inunit)
-      case ('RAINFALL')
-        ierr = this%apt_check_valid(itemno)
-        if (ierr /= 0) goto 999
-        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
-        text = line(istart:istop)
-        jj = 1    ! For RAINFALL
-        call read_single_value_or_time_series(text, &
-                                              this%concrain(itmp)%value, &
-                                              this%concrain(itmp)%name, &
-                                              endtim,  &
-                                              this%name, 'BND', this%TsManager, &
-                                              this%iprpak, itmp, jj, 'RAINFALL', &
-                                              bndName, this%inunit)
-      case ('EVAPORATION')
-        ierr = this%apt_check_valid(itemno)
-        if (ierr /= 0) goto 999
-        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
-        text = line(istart:istop)
-        jj = 1    ! For EVAPORATION
-        call read_single_value_or_time_series(text, &
-                                              this%concevap(itmp)%value, &
-                                              this%concevap(itmp)%name, &
-                                              endtim,  &
-                                              this%name, 'BND', this%TsManager, &
-                                              this%iprpak, itmp, jj, 'EVAPORATION', &
-                                              bndName, this%inunit)
-      case ('RUNOFF')
-        ierr = this%apt_check_valid(itemno)
-        if (ierr /= 0) goto 999
-        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
-        text = line(istart:istop)
-        jj = 1    ! For RUNOFF
-        call read_single_value_or_time_series(text, &
-                                              this%concroff(itmp)%value, &
-                                              this%concroff(itmp)%name, &
-                                              endtim,  &
-                                              this%name, 'BND', this%TsManager, &
-                                              this%iprpak, itmp, jj, 'RUNOFF', &
-                                              bndName, this%inunit)
-      case ('INFLOW')
-        ierr = this%apt_check_valid(itemno)
-        if (ierr /= 0) goto 999
-        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
-        text = line(istart:istop)
-        jj = 1    ! For INFLOW
-        call read_single_value_or_time_series(text, &
-                                              this%conciflw(itmp)%value, &
-                                              this%conciflw(itmp)%name, &
-                                              endtim,  &
-                                              this%name, 'BND', this%TsManager, &
-                                              this%iprpak, itmp, jj, 'INFLOW', &
-                                              bndName, this%inunit)
       case ('AUXILIARY')
         ierr = this%apt_check_valid(itemno)
         if (ierr /= 0) goto 999
-        !bndName = this%boundname(itemno)
         call urword(line, lloc, istart, istop, 1, ival, rval, this%iout, this%inunit)
         caux = line(istart:istop)
         do iaux = 1, this%naux
@@ -652,11 +593,19 @@ module GwtAptModule
           exit
         end do
       case default
-        write(errmsg,'(4x,a,a)') &
-          '****ERROR. UNKNOWN '//trim(this%text)//' LAK DATA KEYWORD: ', &
-                                  line(istart:istop)
-        call store_error(errmsg)
-        call ustop()
+        !
+        ! -- call the specific package to look for stress period data
+        call this%pak_set_stressperiod(itemno, itmp, line, found, lloc, istart, &
+                                       istop, endtim, bndName)
+        !
+        ! -- terminate with error if data not valid
+        if (.not. found) then
+          write(errmsg,'(4x,a,a)') &
+            '****ERROR. UNKNOWN ' // trim(this%text) // ' DATA KEYWORD: ', &
+                                    line(istart:istop)
+          call store_error(errmsg)
+          call ustop()
+        end if
     end select
     !
     ! -- terminate if any errors were detected
@@ -673,6 +622,40 @@ module GwtAptModule
     ! -- return
     return
   end subroutine apt_set_stressperiod
+
+  subroutine pak_set_stressperiod(this, itemno, itmp, line, found,  &
+                                  lloc, istart, istop, endtim, bndName)
+! ******************************************************************************
+! pak_set_stressperiod -- Set a stress period attribute for individual package.
+!   This must be overridden.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(GwtAptType),intent(inout) :: this
+    integer(I4B), intent(in) :: itemno
+    integer(I4B), intent(in) :: itmp
+    character (len=*), intent(in) :: line
+    logical, intent(inout) :: found
+    integer(I4B), intent(inout) :: lloc
+    integer(I4B), intent(inout) :: istart
+    integer(I4B), intent(inout) :: istop
+    real(DP), intent(in) :: endtim
+    character(len=LENBOUNDNAME), intent(in) :: bndName
+    ! -- local
+
+    ! -- formats
+! ------------------------------------------------------------------------------
+    !
+    ! -- this routine should never be called
+    found = .false.
+    call store_error('Program error: pak_set_stressperiod not implemented.')
+    call ustop()
+    !
+    ! -- return
+    return
+  end subroutine pak_set_stressperiod
 
   function apt_check_valid(this, itemno) result(ierr)
 ! ******************************************************************************
@@ -1284,10 +1267,6 @@ module GwtAptModule
     !
     ! -- time series
     call mem_allocate(this%conclak, this%ncv, 'CONCLAK', this%origin)
-    call mem_allocate(this%concrain, this%ncv, 'CONCRAIN', this%origin)
-    call mem_allocate(this%concevap, this%ncv, 'CONCEVAP', this%origin)
-    call mem_allocate(this%concroff, this%ncv, 'CONCROFF', this%origin)
-    call mem_allocate(this%conciflw, this%ncv, 'CONCIFLW', this%origin)
     !
     ! -- budget terms
     call mem_allocate(this%qsto, this%ncv, 'QSTO', this%origin)
@@ -1342,10 +1321,6 @@ module GwtAptModule
     end if
     call mem_deallocate(this%concbudssm)
     call mem_deallocate(this%conclak)
-    call mem_deallocate(this%concrain)
-    call mem_deallocate(this%concevap)
-    call mem_deallocate(this%concroff)
-    call mem_deallocate(this%conciflw)
     call mem_deallocate(this%qmfrommvr)
     deallocate(this%status)
     deallocate(this%lakename)
@@ -2383,7 +2358,7 @@ module GwtAptModule
 
     
     ! -- individual package terms
-    call this%pak_fill_budobj(idx, x)
+    call this%pak_fill_budobj(idx, x, ccratin, ccratout)
 
     
     ! -- STORAGE
@@ -2456,7 +2431,7 @@ module GwtAptModule
     return
   end subroutine apt_fill_budobj
 
-  subroutine pak_fill_budobj(this, idx, x)
+  subroutine pak_fill_budobj(this, idx, x, ccratin, ccratout)
 ! ******************************************************************************
 ! pak_fill_budobj -- copy flow terms into this%budobj, must be overridden
 ! ******************************************************************************
@@ -2468,6 +2443,8 @@ module GwtAptModule
     class(GwtAptType) :: this
     integer(I4B), intent(inout) :: idx
     real(DP), dimension(:), intent(in) :: x
+    real(DP), intent(inout) :: ccratin
+    real(DP), intent(inout) :: ccratout
     ! -- local
     ! -- formats
 ! -----------------------------------------------------------------------------

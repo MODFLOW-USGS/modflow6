@@ -62,10 +62,16 @@ module GwtLktModule
     integer(I4B), pointer                              :: idxbudwdrl => null()  ! index of withdrawal terms in flowbudptr
     integer(I4B), pointer                              :: idxbudoutf => null()  ! index of outflow terms in flowbudptr
 
+    type (MemoryTSType), dimension(:), pointer, contiguous :: concrain => null() ! rainfall concentration
+    type (MemoryTSType), dimension(:), pointer, contiguous :: concevap => null() ! evaporation concentration
+    type (MemoryTSType), dimension(:), pointer, contiguous :: concroff => null() ! runoff concentration
+    type (MemoryTSType), dimension(:), pointer, contiguous :: conciflw => null() ! inflow concentration
+
   contains
   
     procedure :: bnd_da => lkt_da
     procedure :: allocate_scalars
+    procedure :: apt_allocate_arrays => lkt_allocate_arrays
     procedure :: find_apt_package => find_lkt_package
     procedure :: pak_fc_expanded => lkt_fc_expanded
     procedure :: pak_solve => lkt_solve
@@ -80,6 +86,7 @@ module GwtLktModule
     procedure :: lkt_outf_term
     procedure :: pak_df_obs => lkt_df_obs
     procedure :: pak_bd_obs => lkt_bd_obs
+    procedure :: pak_set_stressperiod => lkt_set_stressperiod
     
   end type GwtLktType
 
@@ -548,7 +555,7 @@ end subroutine find_lkt_package
     return
   end subroutine lkt_setup_budobj
 
-  subroutine lkt_fill_budobj(this, idx, x)
+  subroutine lkt_fill_budobj(this, idx, x, ccratin, ccratout)
 ! ******************************************************************************
 ! lkt_fill_budobj -- copy flow terms into this%budobj
 ! ******************************************************************************
@@ -560,11 +567,12 @@ end subroutine find_lkt_package
     class(GwtLktType) :: this
     integer(I4B), intent(inout) :: idx
     real(DP), dimension(:), intent(in) :: x
+    real(DP), intent(inout) :: ccratin
+    real(DP), intent(inout) :: ccratout
     ! -- local
     integer(I4B) :: j, n1, n2
     integer(I4B) :: nlist
     real(DP) :: q
-    real(DP) :: ccratin, ccratout
     ! -- formats
 ! -----------------------------------------------------------------------------
     
@@ -676,6 +684,34 @@ end subroutine find_lkt_package
     return
   end subroutine allocate_scalars
 
+  subroutine lkt_allocate_arrays(this)
+! ******************************************************************************
+! lkt_allocate_arrays
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use MemoryManagerModule, only: mem_allocate
+    ! -- dummy
+    class(GwtLktType), intent(inout) :: this
+    ! -- local
+! ------------------------------------------------------------------------------
+    !    
+    ! -- time series
+    call mem_allocate(this%concrain, this%ncv, 'CONCRAIN', this%origin)
+    call mem_allocate(this%concevap, this%ncv, 'CONCEVAP', this%origin)
+    call mem_allocate(this%concroff, this%ncv, 'CONCROFF', this%origin)
+    call mem_allocate(this%conciflw, this%ncv, 'CONCIFLW', this%origin)
+    !
+    ! -- call standard GwtApttype allocate arrays
+    call this%GwtAptType%apt_allocate_arrays()
+    !
+    !
+    ! -- Return
+    return
+  end subroutine lkt_allocate_arrays
+  
   subroutine lkt_da(this)
 ! ******************************************************************************
 ! lkt_da
@@ -698,6 +734,12 @@ end subroutine find_lkt_package
     call mem_deallocate(this%idxbudwdrl)
     call mem_deallocate(this%idxbudoutf)
     !
+    ! -- deallocate time series
+    call mem_deallocate(this%concrain)
+    call mem_deallocate(this%concevap)
+    call mem_deallocate(this%concroff)
+    call mem_deallocate(this%conciflw)
+    !
     ! -- deallocate scalars in GwtAptType
     call this%GwtAptType%bnd_da()
     !
@@ -707,6 +749,13 @@ end subroutine find_lkt_package
 
   subroutine lkt_rain_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
+! ******************************************************************************
+! lkt_rain_term
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
     class(GwtLktType) :: this
     integer(I4B), intent(in) :: ientry
     integer(I4B), intent(inout) :: n1
@@ -714,8 +763,10 @@ end subroutine find_lkt_package
     real(DP), intent(inout), optional :: rrate
     real(DP), intent(inout), optional :: rhsval
     real(DP), intent(inout), optional :: hcofval
+    ! -- local
     real(DP) :: qbnd
     real(DP) :: ctmp
+! ------------------------------------------------------------------------------
     n1 = this%flowbudptr%budterm(this%idxbudrain)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudrain)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudrain)%flow(ientry)
@@ -730,6 +781,13 @@ end subroutine find_lkt_package
   
   subroutine lkt_evap_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
+! ******************************************************************************
+! lkt_evap_term
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
     class(GwtLktType) :: this
     integer(I4B), intent(in) :: ientry
     integer(I4B), intent(inout) :: n1
@@ -737,9 +795,11 @@ end subroutine find_lkt_package
     real(DP), intent(inout), optional :: rrate
     real(DP), intent(inout), optional :: rhsval
     real(DP), intent(inout), optional :: hcofval
+    ! -- local
     real(DP) :: qbnd
     real(DP) :: ctmp
     real(DP) :: omega
+! ------------------------------------------------------------------------------
     n1 = this%flowbudptr%budterm(this%idxbudevap)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudevap)%id2(ientry)
     ! -- note that qbnd is negative for evap
@@ -762,6 +822,13 @@ end subroutine find_lkt_package
   
   subroutine lkt_roff_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
+! ******************************************************************************
+! lkt_roff_term
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
     class(GwtLktType) :: this
     integer(I4B), intent(in) :: ientry
     integer(I4B), intent(inout) :: n1
@@ -769,8 +836,10 @@ end subroutine find_lkt_package
     real(DP), intent(inout), optional :: rrate
     real(DP), intent(inout), optional :: rhsval
     real(DP), intent(inout), optional :: hcofval
+    ! -- local
     real(DP) :: qbnd
     real(DP) :: ctmp
+! ------------------------------------------------------------------------------
     n1 = this%flowbudptr%budterm(this%idxbudroff)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudroff)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudroff)%flow(ientry)
@@ -785,6 +854,13 @@ end subroutine find_lkt_package
   
   subroutine lkt_iflw_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
+! ******************************************************************************
+! lkt_iflw_term
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
     class(GwtLktType) :: this
     integer(I4B), intent(in) :: ientry
     integer(I4B), intent(inout) :: n1
@@ -792,8 +868,10 @@ end subroutine find_lkt_package
     real(DP), intent(inout), optional :: rrate
     real(DP), intent(inout), optional :: rhsval
     real(DP), intent(inout), optional :: hcofval
+    ! -- local
     real(DP) :: qbnd
     real(DP) :: ctmp
+! ------------------------------------------------------------------------------
     n1 = this%flowbudptr%budterm(this%idxbudiflw)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudiflw)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudiflw)%flow(ientry)
@@ -808,6 +886,13 @@ end subroutine find_lkt_package
   
   subroutine lkt_wdrl_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
+! ******************************************************************************
+! lkt_wdrl_term
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
     class(GwtLktType) :: this
     integer(I4B), intent(in) :: ientry
     integer(I4B), intent(inout) :: n1
@@ -815,8 +900,10 @@ end subroutine find_lkt_package
     real(DP), intent(inout), optional :: rrate
     real(DP), intent(inout), optional :: rhsval
     real(DP), intent(inout), optional :: hcofval
+    ! -- local
     real(DP) :: qbnd
     real(DP) :: ctmp
+! ------------------------------------------------------------------------------
     n1 = this%flowbudptr%budterm(this%idxbudwdrl)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudwdrl)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudwdrl)%flow(ientry)
@@ -831,6 +918,13 @@ end subroutine find_lkt_package
   
   subroutine lkt_outf_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
+! ******************************************************************************
+! lkt_outf_term
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
     class(GwtLktType) :: this
     integer(I4B), intent(in) :: ientry
     integer(I4B), intent(inout) :: n1
@@ -838,8 +932,10 @@ end subroutine find_lkt_package
     real(DP), intent(inout), optional :: rrate
     real(DP), intent(inout), optional :: rhsval
     real(DP), intent(inout), optional :: hcofval
+    ! -- local
     real(DP) :: qbnd
     real(DP) :: ctmp
+! ------------------------------------------------------------------------------
     n1 = this%flowbudptr%budterm(this%idxbudoutf)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudoutf)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudoutf)%flow(ientry)
@@ -886,7 +982,7 @@ end subroutine find_lkt_package
     !
     ! -- Store obs type and assign procedure pointer
     !    for inflow observation type.
-    call this%obs%StoreObsType('inflow', .true., indx)
+    call this%obs%StoreObsType('ext-inflow', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
@@ -904,8 +1000,7 @@ end subroutine find_lkt_package
   
   subroutine lkt_bd_obs(this, obstypeid, jj, v, found)
 ! ******************************************************************************
-! pak_bd_obs -- 
-!   -- check for observations in concrete packages.
+! lkt_bd_obs -- calculate observation value and pass it back to APT
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -953,6 +1048,107 @@ end subroutine find_lkt_package
     return
   end subroutine lkt_bd_obs
 
+  subroutine lkt_set_stressperiod(this, itemno, itmp, line, found, &
+                                  lloc, istart, istop, endtim, bndName)
+! ******************************************************************************
+! lkt_set_stressperiod -- Set a stress period attribute for using keywords.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    use TimeSeriesManagerModule, only: read_single_value_or_time_series
+    use InputOutputModule, only: urword
+    ! -- dummy
+    class(GwtLktType),intent(inout) :: this
+    integer(I4B), intent(in) :: itemno
+    integer(I4B), intent(in) :: itmp
+    character (len=*), intent(in) :: line
+    logical, intent(inout) :: found
+    integer(I4B), intent(inout) :: lloc
+    integer(I4B), intent(inout) :: istart
+    integer(I4B), intent(inout) :: istop
+    real(DP), intent(in) :: endtim
+    character(len=LENBOUNDNAME), intent(in) :: bndName
+    ! -- local
+    character(len=LINELENGTH) :: text
+    integer(I4B) :: ierr
+    integer(I4B) :: ival
+    integer(I4B) :: jj
+    real(DP) :: rval
+    ! -- formats
+! ------------------------------------------------------------------------------
+    !
+    ! RAINFALL <rainfall>
+    ! EVAPORATION <evaporation>
+    ! RUNOFF <runoff>
+    ! INFLOW <inflow>
+    ! WITHDRAWAL <withdrawal>
+    !
+    found = .true.
+    select case (line(istart:istop))
+      case ('RAINFALL')
+        ierr = this%apt_check_valid(itemno)
+        if (ierr /= 0) goto 999
+        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
+        text = line(istart:istop)
+        jj = 1    ! For RAINFALL
+        call read_single_value_or_time_series(text, &
+                                              this%concrain(itmp)%value, &
+                                              this%concrain(itmp)%name, &
+                                              endtim,  &
+                                              this%name, 'BND', this%TsManager, &
+                                              this%iprpak, itmp, jj, 'RAINFALL', &
+                                              bndName, this%inunit)
+      case ('EVAPORATION')
+        ierr = this%apt_check_valid(itemno)
+        if (ierr /= 0) goto 999
+        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
+        text = line(istart:istop)
+        jj = 1    ! For EVAPORATION
+        call read_single_value_or_time_series(text, &
+                                              this%concevap(itmp)%value, &
+                                              this%concevap(itmp)%name, &
+                                              endtim,  &
+                                              this%name, 'BND', this%TsManager, &
+                                              this%iprpak, itmp, jj, 'EVAPORATION', &
+                                              bndName, this%inunit)
+      case ('RUNOFF')
+        ierr = this%apt_check_valid(itemno)
+        if (ierr /= 0) goto 999
+        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
+        text = line(istart:istop)
+        jj = 1    ! For RUNOFF
+        call read_single_value_or_time_series(text, &
+                                              this%concroff(itmp)%value, &
+                                              this%concroff(itmp)%name, &
+                                              endtim,  &
+                                              this%name, 'BND', this%TsManager, &
+                                              this%iprpak, itmp, jj, 'RUNOFF', &
+                                              bndName, this%inunit)
+      case ('INFLOW')
+        ierr = this%apt_check_valid(itemno)
+        if (ierr /= 0) goto 999
+        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
+        text = line(istart:istop)
+        jj = 1    ! For INFLOW
+        call read_single_value_or_time_series(text, &
+                                              this%conciflw(itmp)%value, &
+                                              this%conciflw(itmp)%name, &
+                                              endtim,  &
+                                              this%name, 'BND', this%TsManager, &
+                                              this%iprpak, itmp, jj, 'INFLOW', &
+                                              bndName, this%inunit)
+      case default
+        !
+        ! -- keyword not recognized so return to caller with found = .false.
+        found = .false.
+    end select
+    !
+999 continue      
+    !
+    ! -- return
+    return
+  end subroutine lkt_set_stressperiod
 
 
 end module GwtLktModule

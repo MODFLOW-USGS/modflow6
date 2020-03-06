@@ -119,7 +119,7 @@ def get_model(idx, dir):
                                [0, 1, (1, 0, 2), -1., -2, 1., 0.1],
                                [0, 2, (2, 0, 2), -2., -3, 1., 0.1],]
     wellperiodrecarray = [[0, 'rate', -1.]]
-    maw = flopy.mf6.ModflowGwfmaw(gwf, filename='{}.maw'.format(name),
+    maw = flopy.mf6.ModflowGwfmaw(gwf, filename='{}.maw'.format(gwfname),
                                   print_input=True, print_head=True,
                                   print_flows=True, save_flows=True,
                                   packagedata=wellrecarray,

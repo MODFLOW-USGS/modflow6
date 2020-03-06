@@ -53,9 +53,24 @@ module GwtMwtModule
   
   type, extends(GwtAptType) :: GwtMwtType
     
+    integer(I4B), pointer                              :: idxbudrate => null()  ! index of well rate terms in flowbudptr
+    type (MemoryTSType), dimension(:), pointer, contiguous :: concrate => null() ! well rate concentration
+
   contains
   
+    procedure :: bnd_da => mwt_da
+    procedure :: allocate_scalars
+    procedure :: apt_allocate_arrays => mwt_allocate_arrays
     procedure :: find_apt_package => find_mwt_package
+    procedure :: pak_fc_expanded => mwt_fc_expanded
+    procedure :: pak_solve => mwt_solve
+    procedure :: pak_get_nbudterms => mwt_get_nbudterms
+    procedure :: pak_setup_budobj => mwt_setup_budobj
+    procedure :: pak_fill_budobj => mwt_fill_budobj
+    procedure :: mwt_rate_term
+    procedure :: pak_df_obs => mwt_df_obs
+    procedure :: pak_bd_obs => mwt_bd_obs
+    procedure :: pak_set_stressperiod => mwt_set_stressperiod
     
   end type GwtMwtType
 
@@ -197,24 +212,9 @@ module GwtMwtModule
       case('STORAGE')
         this%idxbudsto = ip
         this%idxbudssm(ip) = 0
-      !case('RAINFALL')
-      !  this%idxbudrain = ip
-      !  this%idxbudssm(ip) = 0
-      !case('EVAPORATION')
-      !  this%idxbudevap = ip
-      !  this%idxbudssm(ip) = 0
-      !case('RUNOFF')
-      !  this%idxbudroff = ip
-      !  this%idxbudssm(ip) = 0
-      !case('EXT-INFLOW')
-      !  this%idxbudiflw = ip
-      !  this%idxbudssm(ip) = 0
-      !case('WITHDRAWAL')
-      !  this%idxbudwdrl = ip
-      !  this%idxbudssm(ip) = 0
-      !case('EXT-OUTFLOW')
-      !  this%idxbudoutf = ip
-      !  this%idxbudssm(ip) = 0
+      case('RATE')
+        this%idxbudrate = ip
+        this%idxbudssm(ip) = 0
       case('TO-MVR')
         this%idxbudtmvr = ip
         this%idxbudssm(ip) = 0
@@ -240,5 +240,399 @@ module GwtMwtModule
     ! -- Return
     return
   end subroutine find_mwt_package
+
+  subroutine mwt_fc_expanded(this, rhs, ia, idxglo, amatsln)
+! ******************************************************************************
+! mwt_fc_expanded -- this will be called from GwtAptType%apt_fc_expanded()
+!   in order to add matrix terms specifically for this package
+! ****************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwtMwtType) :: this
+    real(DP), dimension(:), intent(inout) :: rhs
+    integer(I4B), dimension(:), intent(in) :: ia
+    integer(I4B), dimension(:), intent(in) :: idxglo
+    real(DP), dimension(:), intent(inout) :: amatsln
+    ! -- local
+    integer(I4B) :: j, n1, n2
+    integer(I4B) :: iloc
+    integer(I4B) :: iposd
+    real(DP) :: rrate
+    real(DP) :: rhsval
+    real(DP) :: hcofval
+! ------------------------------------------------------------------------------
+    !
+    ! -- add puping rate contribution
+    if (this%idxbudrate /= 0) then
+      do j = 1, this%flowbudptr%budterm(this%idxbudrate)%nlist
+        call this%mwt_rate_term(j, n1, n2, rrate, rhsval, hcofval)
+        iloc = this%idxlocnode(n1)
+        iposd = this%idxpakdiag(n1)
+        amatsln(iposd) = amatsln(iposd) + hcofval
+        rhs(iloc) = rhs(iloc) + rhsval
+      end do
+    end if
+    !
+    ! -- Return
+    return
+  end subroutine mwt_fc_expanded
+
+  subroutine mwt_solve(this)
+! ******************************************************************************
+! mwt_solve -- add terms specific to lakes to the explicit lake solve
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(GwtMwtType) :: this
+    ! -- local
+    integer(I4B) :: j
+    integer(I4B) :: n1, n2
+    real(DP) :: rrate
+! ------------------------------------------------------------------------------
+    !
+    ! -- add rainfall contribution
+    if (this%idxbudrate /= 0) then
+      do j = 1, this%flowbudptr%budterm(this%idxbudrate)%nlist
+        call this%mwt_rate_term(j, n1, n2, rrate)
+        this%dbuff(n1) = this%dbuff(n1) + rrate
+      end do
+    end if
+    !
+    ! -- Return
+    return
+  end subroutine mwt_solve
+  
+  function mwt_get_nbudterms(this) result(nbudterms)
+! ******************************************************************************
+! mwt_get_nbudterms -- function to return the number of budget terms just for
+!   this package.  This overrides function in parent.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwtMwtType) :: this
+    ! -- return
+    integer(I4B) :: nbudterms
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    ! -- Number of budget terms is 1
+    nbudterms = 1
+    !
+    ! -- Return
+    return
+  end function mwt_get_nbudterms
+  
+  subroutine mwt_setup_budobj(this, idx)
+! ******************************************************************************
+! mwt_setup_budobj -- Set up the budget object that stores all the lake flows
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule, only: LENBUDTXT
+    ! -- dummy
+    class(GwtMwtType) :: this
+    integer(I4B), intent(inout) :: idx
+    ! -- local
+    integer(I4B) :: maxlist, naux
+    character(len=LENBUDTXT) :: text
+! ------------------------------------------------------------------------------
+    !
+    ! -- 
+    text = '            RATE'
+    idx = idx + 1
+    maxlist = this%flowbudptr%budterm(this%idxbudrate)%maxlist
+    naux = 0
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name, &
+                                             maxlist, .false., .false., &
+                                             naux)
+    !
+    ! -- return
+    return
+  end subroutine mwt_setup_budobj
+
+  subroutine mwt_fill_budobj(this, idx, x, ccratin, ccratout)
+! ******************************************************************************
+! mwt_fill_budobj -- copy flow terms into this%budobj
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwtMwtType) :: this
+    integer(I4B), intent(inout) :: idx
+    real(DP), dimension(:), intent(in) :: x
+    real(DP), intent(inout) :: ccratin
+    real(DP), intent(inout) :: ccratout
+    ! -- local
+    integer(I4B) :: j, n1, n2
+    integer(I4B) :: nlist
+    real(DP) :: q
+    ! -- formats
+! -----------------------------------------------------------------------------
+    
+    ! -- RATE
+    idx = idx + 1
+    nlist = this%flowbudptr%budterm(this%idxbudrate)%nlist
+    call this%budobj%budterm(idx)%reset(nlist)
+    do j = 1, nlist
+      call this%mwt_rate_term(j, n1, n2, q)
+      call this%budobj%budterm(idx)%update_term(n1, n2, q)
+      call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
+    end do
+    
+    !
+    ! -- return
+    return
+  end subroutine mwt_fill_budobj
+
+  subroutine allocate_scalars(this)
+! ******************************************************************************
+! allocate_scalars
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use MemoryManagerModule, only: mem_allocate
+    ! -- dummy
+    class(GwtMwtType) :: this
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    ! -- allocate scalars in GwtAptType
+    call this%GwtAptType%allocate_scalars()
+    !
+    ! -- Allocate
+    call mem_allocate(this%idxbudrate, 'IDXBUDRATE', this%origin)
+    ! 
+    ! -- Initialize
+    this%idxbudrate = 0
+    !
+    ! -- Return
+    return
+  end subroutine allocate_scalars
+
+  subroutine mwt_allocate_arrays(this)
+! ******************************************************************************
+! mwt_allocate_arrays
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use MemoryManagerModule, only: mem_allocate
+    ! -- dummy
+    class(GwtMwtType), intent(inout) :: this
+    ! -- local
+! ------------------------------------------------------------------------------
+    !    
+    ! -- time series
+    call mem_allocate(this%concrate, this%ncv, 'CONCRATE', this%origin)
+    !
+    ! -- call standard GwtApttype allocate arrays
+    call this%GwtAptType%apt_allocate_arrays()
+    !
+    !
+    ! -- Return
+    return
+  end subroutine mwt_allocate_arrays
+  
+  subroutine mwt_da(this)
+! ******************************************************************************
+! mwt_da
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use MemoryManagerModule, only: mem_deallocate
+    ! -- dummy
+    class(GwtMwtType) :: this
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    ! -- deallocate scalars
+    call mem_deallocate(this%idxbudrate)
+    !
+    ! -- deallocate time series
+    call mem_deallocate(this%concrate)
+    !
+    ! -- deallocate scalars in GwtAptType
+    call this%GwtAptType%bnd_da()
+    !
+    ! -- Return
+    return
+  end subroutine mwt_da
+
+  subroutine mwt_rate_term(this, ientry, n1, n2, rrate, &
+                           rhsval, hcofval)
+! ******************************************************************************
+! mwt_rate_term
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(GwtMwtType) :: this
+    integer(I4B), intent(in) :: ientry
+    integer(I4B), intent(inout) :: n1
+    integer(I4B), intent(inout) :: n2
+    real(DP), intent(inout), optional :: rrate
+    real(DP), intent(inout), optional :: rhsval
+    real(DP), intent(inout), optional :: hcofval
+    ! -- local
+    real(DP) :: qbnd
+    real(DP) :: ctmp
+    real(DP) :: h, r
+! ------------------------------------------------------------------------------
+    n1 = this%flowbudptr%budterm(this%idxbudrate)%id1(ientry)
+    n2 = this%flowbudptr%budterm(this%idxbudrate)%id2(ientry)
+    ! -- note that qbnd is negative for extracting well
+    qbnd = this%flowbudptr%budterm(this%idxbudrate)%flow(ientry)
+    if (qbnd < DZERO) then
+      ctmp = this%xnewpak(n1)
+      h = qbnd
+      r = DZERO
+    else
+      ctmp = this%concrate(n1)%value
+      h = DZERO
+      r = -qbnd * ctmp
+    end if
+    if (present(rrate)) rrate = qbnd * ctmp
+    if (present(rhsval)) rhsval = r
+    if (present(hcofval)) hcofval = h
+    !
+    ! -- return
+    return
+  end subroutine mwt_rate_term
+  
+  subroutine mwt_df_obs(this)
+! ******************************************************************************
+! mwt_df_obs -- obs are supported?
+!   -- Store observation type supported by APT package.
+!   -- Overrides BndType%bnd_df_obs
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use GwtAptModule, only: apt_process_obsID
+    ! -- dummy
+    class(GwtMwtType) :: this
+    ! -- local
+    integer(I4B) :: indx
+! ------------------------------------------------------------------------------
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for rainfall observation type.
+    call this%obs%StoreObsType('rate', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
+    !
+    return
+  end subroutine mwt_df_obs
+  
+  subroutine mwt_bd_obs(this, obstypeid, jj, v, found)
+! ******************************************************************************
+! mwt_bd_obs -- calculate observation value and pass it back to APT
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(GwtMwtType), intent(inout) :: this
+    character(len=*), intent(in) :: obstypeid
+    real(DP), intent(inout) :: v
+    integer(I4B), intent(in) :: jj
+    logical, intent(inout) :: found
+    ! -- local
+    integer(I4B) :: n1, n2
+! ------------------------------------------------------------------------------
+    !
+    found = .true.
+    select case (obstypeid)
+      case ('RATE')
+        if (this%iboundpak(jj) /= 0) then
+          call this%mwt_rate_term(jj, n1, n2, v)
+        end if
+      case default
+        found = .false.
+    end select
+    !
+    return
+  end subroutine mwt_bd_obs
+
+  subroutine mwt_set_stressperiod(this, itemno, itmp, line, found, &
+                                  lloc, istart, istop, endtim, bndName)
+! ******************************************************************************
+! mwt_set_stressperiod -- Set a stress period attribute for using keywords.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    use TimeSeriesManagerModule, only: read_single_value_or_time_series
+    use InputOutputModule, only: urword
+    ! -- dummy
+    class(GwtMwtType),intent(inout) :: this
+    integer(I4B), intent(in) :: itemno
+    integer(I4B), intent(in) :: itmp
+    character (len=*), intent(in) :: line
+    logical, intent(inout) :: found
+    integer(I4B), intent(inout) :: lloc
+    integer(I4B), intent(inout) :: istart
+    integer(I4B), intent(inout) :: istop
+    real(DP), intent(in) :: endtim
+    character(len=LENBOUNDNAME), intent(in) :: bndName
+    ! -- local
+    character(len=LINELENGTH) :: text
+    integer(I4B) :: ierr
+    integer(I4B) :: ival
+    integer(I4B) :: jj
+    real(DP) :: rval
+    ! -- formats
+! ------------------------------------------------------------------------------
+    !
+    ! RATE <rate>
+    !
+    found = .true.
+    select case (line(istart:istop))
+      case ('RATE')
+        ierr = this%apt_check_valid(itemno)
+        if (ierr /= 0) goto 999
+        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
+        text = line(istart:istop)
+        jj = 1    ! For RATE
+        call read_single_value_or_time_series(text, &
+                                              this%concrate(itmp)%value, &
+                                              this%concrate(itmp)%name, &
+                                              endtim,  &
+                                              this%name, 'BND', this%TsManager, &
+                                              this%iprpak, itmp, jj, 'RATE', &
+                                              bndName, this%inunit)
+      case default
+        !
+        ! -- keyword not recognized so return to caller with found = .false.
+        found = .false.
+    end select
+    !
+999 continue      
+    !
+    ! -- return
+    return
+  end subroutine mwt_set_stressperiod
 
 end module GwtMwtModule
