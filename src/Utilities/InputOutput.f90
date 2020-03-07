@@ -433,7 +433,7 @@ module InputOutputModule
                   ' but found END ' // line(istart:istop) // &
                   ' instead.'
           call store_error(ermsg)
-          call ustop()
+          call store_error_unit(iuext)
           call ustop()
         endif
       end if
@@ -2142,6 +2142,8 @@ module InputOutputModule
     !
     return
   end subroutine BuildIntFormat
+
+
   function get_nwords(line)
 ! ******************************************************************************
 ! get_nwords -- return number of words in a string
