@@ -242,6 +242,9 @@ def get_model(idx, dir):
         for jobs, otup in enumerate(obspos):
             otag = '{}{}'.format(obstag[iobs], jobs + 1)
             obsarr.append((otag, cobs, otup))
+    obsarr.append(('ibc', 'interbed-compaction', (0,)))
+    obsarr.append(('dft', 'delay-flowtop', (1,)))
+    obsarr.append(('csub', 'csub', (0,)))
 
     orecarray = {}
     orecarray['csub_obs.csv'] = obsarr
