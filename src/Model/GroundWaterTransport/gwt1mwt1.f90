@@ -5,21 +5,25 @@
 !
 ! MAW flows (flowbudptr)     index var    MWT term              Transport Type
 !---------------------------------------------------------------------------------
+
+! -- terms from MAW that will be handled by parent APT Package
 ! GWF (aux FLOW-AREA)       idxbudgwf     GWF                   maw2gwf
-! RATE                      ?             RATE                  q < 0: q * cwell, else q * cuser
-! FW-RATE                   ?             FW-RATE               q * cwell
 ! STORAGE (aux VOLUME)      ?             none                  used for well volumes
-! CONSTANT                  none          none                  none
 ! FROM-MVR                  ?             FROM-MVR              q * cext = this%qfrommvr(:)
-! RATE TO-MVR               ?             RATE TO-MVR           q * cwell
-! CONSTANT TO-MVR           ?             CONSTANT TO-MVR       q * cwell
-! FW-RATE TO-MVR            ?             FW-RATE TO-MVR        q * cwell
+! CONSTANT                  none          none                  none
 ! AUXILIARY                 none          none                  none
 ! none                      none          STORAGE (aux MASS)    
 ! none                      none          AUXILIARY             none
 ! none                      none          CONSTANT              accumulate
 
+! -- terms from MAW that need to be handled here
+! RATE                      idxbudrate    RATE                  q < 0: q * cwell, else q * cuser
+! FW-RATE                   idxbudfwrt    FW-RATE               q * cwell
+! RATE-TO-MVR               idxbudrtmv    RATE-TO-MVR           q * cwell
+! FW-RATE-TO-MVR            idxbudfrtm    FW-RATE-TO-MVR        q * cwell
 
+! -- terms from MAW that should be skipped
+! CONSTANT-TO-MVR           ?             CONSTANT-TO-MVR       q * cwell
   
   
 module GwtMwtModule
@@ -53,8 +57,11 @@ module GwtMwtModule
   
   type, extends(GwtAptType) :: GwtMwtType
     
-    integer(I4B), pointer                              :: idxbudrate => null()  ! index of well rate terms in flowbudptr
-    type (MemoryTSType), dimension(:), pointer, contiguous :: concrate => null() ! well rate concentration
+    integer(I4B), pointer                                  :: idxbudrate => null()  ! index of well rate terms in flowbudptr
+    integer(I4B), pointer                                  :: idxbudfwrt => null()  ! index of flowing well rate terms in flowbudptr
+    integer(I4B), pointer                                  :: idxbudrtmv => null()  ! index of rate to mover terms in flowbudptr
+    integer(I4B), pointer                                  :: idxbudfrtm => null()  ! index of flowing well rate to mover terms in flowbudptr
+    type (MemoryTSType), dimension(:), pointer, contiguous :: concrate => null()    ! well rate concentration
 
   contains
   
@@ -68,6 +75,9 @@ module GwtMwtModule
     procedure :: pak_setup_budobj => mwt_setup_budobj
     procedure :: pak_fill_budobj => mwt_fill_budobj
     procedure :: mwt_rate_term
+    procedure :: mwt_fwrt_term
+    procedure :: mwt_rtmv_term
+    procedure :: mwt_frtm_term
     procedure :: pak_df_obs => mwt_df_obs
     procedure :: pak_bd_obs => mwt_bd_obs
     procedure :: pak_set_stressperiod => mwt_set_stressperiod
@@ -215,6 +225,15 @@ module GwtMwtModule
       case('RATE')
         this%idxbudrate = ip
         this%idxbudssm(ip) = 0
+      case('FW-RATE')
+        this%idxbudfwrt = ip
+        this%idxbudssm(ip) = 0
+      case('RATE-TO-MVR')
+        this%idxbudrtmv = ip
+        this%idxbudssm(ip) = 0
+      case('FW-RATE-TO-MVR')
+        this%idxbudfrtm = ip
+        this%idxbudssm(ip) = 0
       case('TO-MVR')
         this%idxbudtmvr = ip
         this%idxbudssm(ip) = 0
@@ -276,6 +295,39 @@ module GwtMwtModule
       end do
     end if
     !
+    ! -- add flowing well rate contribution
+    if (this%idxbudfwrt /= 0) then
+      do j = 1, this%flowbudptr%budterm(this%idxbudfwrt)%nlist
+        call this%mwt_fwrt_term(j, n1, n2, rrate, rhsval, hcofval)
+        iloc = this%idxlocnode(n1)
+        iposd = this%idxpakdiag(n1)
+        amatsln(iposd) = amatsln(iposd) + hcofval
+        rhs(iloc) = rhs(iloc) + rhsval
+      end do
+    end if
+    !
+    ! -- add rate to mover contribution
+    if (this%idxbudrtmv /= 0) then
+      do j = 1, this%flowbudptr%budterm(this%idxbudrtmv)%nlist
+        call this%mwt_rtmv_term(j, n1, n2, rrate, rhsval, hcofval)
+        iloc = this%idxlocnode(n1)
+        iposd = this%idxpakdiag(n1)
+        amatsln(iposd) = amatsln(iposd) + hcofval
+        rhs(iloc) = rhs(iloc) + rhsval
+      end do
+    end if
+    !
+    ! -- add puping rate contribution
+    if (this%idxbudfrtm /= 0) then
+      do j = 1, this%flowbudptr%budterm(this%idxbudfrtm)%nlist
+        call this%mwt_frtm_term(j, n1, n2, rrate, rhsval, hcofval)
+        iloc = this%idxlocnode(n1)
+        iposd = this%idxpakdiag(n1)
+        amatsln(iposd) = amatsln(iposd) + hcofval
+        rhs(iloc) = rhs(iloc) + rhsval
+      end do
+    end if
+    !
     ! -- Return
     return
   end subroutine mwt_fc_expanded
@@ -295,10 +347,34 @@ module GwtMwtModule
     real(DP) :: rrate
 ! ------------------------------------------------------------------------------
     !
-    ! -- add rainfall contribution
+    ! -- add well pumping contribution
     if (this%idxbudrate /= 0) then
       do j = 1, this%flowbudptr%budterm(this%idxbudrate)%nlist
         call this%mwt_rate_term(j, n1, n2, rrate)
+        this%dbuff(n1) = this%dbuff(n1) + rrate
+      end do
+    end if
+    !
+    ! -- add flowing well rate contribution
+    if (this%idxbudfwrt /= 0) then
+      do j = 1, this%flowbudptr%budterm(this%idxbudfwrt)%nlist
+        call this%mwt_fwrt_term(j, n1, n2, rrate)
+        this%dbuff(n1) = this%dbuff(n1) + rrate
+      end do
+    end if
+    !
+    ! -- add well pumping rate to mover contribution
+    if (this%idxbudrtmv /= 0) then
+      do j = 1, this%flowbudptr%budterm(this%idxbudrtmv)%nlist
+        call this%mwt_rtmv_term(j, n1, n2, rrate)
+        this%dbuff(n1) = this%dbuff(n1) + rrate
+      end do
+    end if
+    !
+    ! -- add flowing well rate to mover contribution
+    if (this%idxbudfrtm /= 0) then
+      do j = 1, this%flowbudptr%budterm(this%idxbudfrtm)%nlist
+        call this%mwt_frtm_term(j, n1, n2, rrate)
         this%dbuff(n1) = this%dbuff(n1) + rrate
       end do
     end if
@@ -323,8 +399,11 @@ module GwtMwtModule
     ! -- local
 ! ------------------------------------------------------------------------------
     !
-    ! -- Number of budget terms is 1
+    ! -- Number of budget terms is 4
     nbudterms = 1
+    if (this%idxbudfwrt /= 0) nbudterms = nbudterms + 1
+    if (this%idxbudrtmv /= 0) nbudterms = nbudterms + 1
+    if (this%idxbudfrtm /= 0) nbudterms = nbudterms + 1
     !
     ! -- Return
     return
@@ -359,6 +438,55 @@ module GwtMwtModule
                                              this%name, &
                                              maxlist, .false., .false., &
                                              naux)
+    
+    !
+    ! -- 
+    if (this%idxbudfwrt /= 0) then
+      text = '         FW-RATE'
+      idx = idx + 1
+      maxlist = this%flowbudptr%budterm(this%idxbudfwrt)%maxlist
+      naux = 0
+      call this%budobj%budterm(idx)%initialize(text, &
+                                               this%name_model, &
+                                               this%name, &
+                                               this%name_model, &
+                                               this%name, &
+                                               maxlist, .false., .false., &
+                                               naux)
+    end if
+    
+    !
+    ! -- 
+    if (this%idxbudrtmv /= 0) then
+      text = '     RATE-TO-MVR'
+      idx = idx + 1
+      maxlist = this%flowbudptr%budterm(this%idxbudrtmv)%maxlist
+      naux = 0
+      call this%budobj%budterm(idx)%initialize(text, &
+                                               this%name_model, &
+                                               this%name, &
+                                               this%name_model, &
+                                               this%name, &
+                                               maxlist, .false., .false., &
+                                               naux)
+    end if
+    
+    !
+    ! -- 
+    if (this%idxbudfrtm /= 0) then
+      text = '  FW-RATE-TO-MVR'
+      idx = idx + 1
+      maxlist = this%flowbudptr%budterm(this%idxbudfrtm)%maxlist
+      naux = 0
+      call this%budobj%budterm(idx)%initialize(text, &
+                                               this%name_model, &
+                                               this%name, &
+                                               this%name_model, &
+                                               this%name, &
+                                               maxlist, .false., .false., &
+                                               naux)
+    end if
+    
     !
     ! -- return
     return
@@ -395,6 +523,42 @@ module GwtMwtModule
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
     
+    ! -- FW-RATE
+    if (this%idxbudfwrt /= 0) then
+      idx = idx + 1
+      nlist = this%flowbudptr%budterm(this%idxbudfwrt)%nlist
+      call this%budobj%budterm(idx)%reset(nlist)
+      do j = 1, nlist
+        call this%mwt_fwrt_term(j, n1, n2, q)
+        call this%budobj%budterm(idx)%update_term(n1, n2, q)
+        call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
+      end do
+    end if
+    
+    ! -- RATE-TO-MVR
+    if (this%idxbudrtmv /= 0) then
+      idx = idx + 1
+      nlist = this%flowbudptr%budterm(this%idxbudrtmv)%nlist
+      call this%budobj%budterm(idx)%reset(nlist)
+      do j = 1, nlist
+        call this%mwt_rtmv_term(j, n1, n2, q)
+        call this%budobj%budterm(idx)%update_term(n1, n2, q)
+        call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
+      end do
+    end if
+    
+    ! -- FW-RATE-TO-MVR
+    if (this%idxbudfrtm /= 0) then
+      idx = idx + 1
+      nlist = this%flowbudptr%budterm(this%idxbudfrtm)%nlist
+      call this%budobj%budterm(idx)%reset(nlist)
+      do j = 1, nlist
+        call this%mwt_frtm_term(j, n1, n2, q)
+        call this%budobj%budterm(idx)%update_term(n1, n2, q)
+        call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
+      end do
+    end if
+    
     !
     ! -- return
     return
@@ -419,9 +583,15 @@ module GwtMwtModule
     !
     ! -- Allocate
     call mem_allocate(this%idxbudrate, 'IDXBUDRATE', this%origin)
+    call mem_allocate(this%idxbudfwrt, 'IDXBUDFWRT', this%origin)
+    call mem_allocate(this%idxbudrtmv, 'IDXBUDRTMV', this%origin)
+    call mem_allocate(this%idxbudfrtm, 'IDXBUDFRTM', this%origin)
     ! 
     ! -- Initialize
     this%idxbudrate = 0
+    this%idxbudfwrt = 0
+    this%idxbudrtmv = 0
+    this%idxbudfrtm = 0
     !
     ! -- Return
     return
@@ -468,6 +638,9 @@ module GwtMwtModule
     !
     ! -- deallocate scalars
     call mem_deallocate(this%idxbudrate)
+    call mem_deallocate(this%idxbudfwrt)
+    call mem_deallocate(this%idxbudrtmv)
+    call mem_deallocate(this%idxbudfrtm)
     !
     ! -- deallocate time series
     call mem_deallocate(this%concrate)
@@ -520,6 +693,102 @@ module GwtMwtModule
     ! -- return
     return
   end subroutine mwt_rate_term
+  
+  subroutine mwt_fwrt_term(this, ientry, n1, n2, rrate, &
+                           rhsval, hcofval)
+! ******************************************************************************
+! mwt_fwrt_term
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(GwtMwtType) :: this
+    integer(I4B), intent(in) :: ientry
+    integer(I4B), intent(inout) :: n1
+    integer(I4B), intent(inout) :: n2
+    real(DP), intent(inout), optional :: rrate
+    real(DP), intent(inout), optional :: rhsval
+    real(DP), intent(inout), optional :: hcofval
+    ! -- local
+    real(DP) :: qbnd
+    real(DP) :: ctmp
+! ------------------------------------------------------------------------------
+    n1 = this%flowbudptr%budterm(this%idxbudfwrt)%id1(ientry)
+    n2 = this%flowbudptr%budterm(this%idxbudfwrt)%id2(ientry)
+    qbnd = this%flowbudptr%budterm(this%idxbudfwrt)%flow(ientry)
+    ctmp = this%xnewpak(n1)
+    if (present(rrate)) rrate = ctmp * qbnd
+    if (present(rhsval)) rhsval = DZERO
+    if (present(hcofval)) hcofval = qbnd
+    !
+    ! -- return
+    return
+  end subroutine mwt_fwrt_term
+  
+  subroutine mwt_rtmv_term(this, ientry, n1, n2, rrate, &
+                           rhsval, hcofval)
+! ******************************************************************************
+! mwt_rtmv_term
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(GwtMwtType) :: this
+    integer(I4B), intent(in) :: ientry
+    integer(I4B), intent(inout) :: n1
+    integer(I4B), intent(inout) :: n2
+    real(DP), intent(inout), optional :: rrate
+    real(DP), intent(inout), optional :: rhsval
+    real(DP), intent(inout), optional :: hcofval
+    ! -- local
+    real(DP) :: qbnd
+    real(DP) :: ctmp
+! ------------------------------------------------------------------------------
+    n1 = this%flowbudptr%budterm(this%idxbudrtmv)%id1(ientry)
+    n2 = this%flowbudptr%budterm(this%idxbudrtmv)%id2(ientry)
+    qbnd = this%flowbudptr%budterm(this%idxbudrtmv)%flow(ientry)
+    ctmp = this%xnewpak(n1)
+    if (present(rrate)) rrate = ctmp * qbnd
+    if (present(rhsval)) rhsval = DZERO
+    if (present(hcofval)) hcofval = qbnd
+    !
+    ! -- return
+    return
+  end subroutine mwt_rtmv_term
+  
+  subroutine mwt_frtm_term(this, ientry, n1, n2, rrate, &
+                           rhsval, hcofval)
+! ******************************************************************************
+! mwt_frtm_term
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(GwtMwtType) :: this
+    integer(I4B), intent(in) :: ientry
+    integer(I4B), intent(inout) :: n1
+    integer(I4B), intent(inout) :: n2
+    real(DP), intent(inout), optional :: rrate
+    real(DP), intent(inout), optional :: rhsval
+    real(DP), intent(inout), optional :: hcofval
+    ! -- local
+    real(DP) :: qbnd
+    real(DP) :: ctmp
+! ------------------------------------------------------------------------------
+    n1 = this%flowbudptr%budterm(this%idxbudfrtm)%id1(ientry)
+    n2 = this%flowbudptr%budterm(this%idxbudfrtm)%id2(ientry)
+    qbnd = this%flowbudptr%budterm(this%idxbudfrtm)%flow(ientry)
+    ctmp = this%xnewpak(n1)
+    if (present(rrate)) rrate = ctmp * qbnd
+    if (present(rhsval)) rhsval = DZERO
+    if (present(hcofval)) hcofval = qbnd
+    !
+    ! -- return
+    return
+  end subroutine mwt_frtm_term
   
   subroutine mwt_df_obs(this)
 ! ******************************************************************************

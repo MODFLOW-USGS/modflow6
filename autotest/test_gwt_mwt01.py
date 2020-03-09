@@ -198,7 +198,7 @@ def get_model(idx, dir):
     # append additional obs attributes to obs dictionary
     mwt_obs['digits'] = 7
     mwt_obs['print_input'] = True
-    mwt_obs['filename'] = gwtname + '.lkt.obs'
+    mwt_obs['filename'] = gwtname + '.mwt.obs'
 
     mwtpackagedata = [(0, 0., 99., 999., 'mywel'), ]
     mwtperioddata = [(0, 'STATUS', 'ACTIVE'),
@@ -260,6 +260,8 @@ def eval_results(sim):
     assert os.path.isfile(fname)
 
     # load and check the well concentrations
+    fname = gwtname + '.ucn'
+    fname = os.path.join(sim.simpath, fname)
     cobj = flopy.utils.HeadFile(fname, text='CONCENTRATION')
     cmwt = cobj.get_alldata().flatten()
     print(cmwt)
