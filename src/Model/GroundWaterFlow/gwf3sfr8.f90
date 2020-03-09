@@ -661,10 +661,6 @@ contains
       call this%sfr_check_diversions()
     end if
     !
-    ! -- calculate the total fraction of connected reaches that are
-    !    not diversions
-    call this%sfr_check_ustrf()
-    !
     ! -- terminate if errors were detected in any of the static sfr data
     ierr = count_errors()
     if (ierr > 0) then
@@ -1249,8 +1245,10 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize flags
-    ichkustrm =  0
-    !isfirst = 1
+    ichkustrm = 0
+    if (kper == 1) then
+      ichkustrm = 1
+    end if
     !
     ! -- set nbound to maxbound
     this%nbound = this%maxbound
@@ -1329,16 +1327,16 @@ contains
       if (this%iprpak /= 0) then
         call this%inputtab%finalize_table()
       end if
-      !
-      ! -- check upstream fraction values
-      if (ichkustrm /= 0) then
-        call this%sfr_check_ustrf()
-      end if
 
     ! -- Reuse data from last stress period
     else
       write(this%iout,fmtlsp) trim(this%filtyp)
     endif
+    !
+    ! -- check upstream fraction values
+    if (ichkustrm /= 0) then
+      call this%sfr_check_ustrf()
+    end if
     !
     ! -- write summary of package block error messages
     if (count_errors() > 0) then
