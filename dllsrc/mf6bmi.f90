@@ -15,7 +15,7 @@ module mf6dll
   ! initialize the computational core, assuming to have the configuration 
   ! file 'mfsim.nam' in the working directory
   ! TODO_MJR: or do we use the path?
-  function bmi_initialize() result(bmi_status) bind(C, name="initialize")
+  function bmi_initialize() result(bmi_status) bind(C, name="bmi_initialize")
   !DEC$ ATTRIBUTES DLLEXPORT :: bmi_initialize
     integer(kind=c_int) :: bmi_status
       
@@ -25,7 +25,7 @@ module mf6dll
   end function bmi_initialize
   
   ! perform a time step
-  function bmi_update() result(bmi_status) bind(C, name="update")
+  function bmi_update() result(bmi_status) bind(C, name="bmi_update")
   !DEC$ ATTRIBUTES DLLEXPORT :: bmi_update
     integer(kind=c_int) :: bmi_status
     ! local
@@ -41,7 +41,7 @@ module mf6dll
   end function bmi_update
      
   ! Perform teardown tasks for the model.
-  function bmi_finalize() result(bmi_status) bind(C, name="finalize")
+  function bmi_finalize() result(bmi_status) bind(C, name="bmi_finalize")
   !DEC$ ATTRIBUTES DLLEXPORT :: bmi_finalize
     integer(kind=c_int) :: bmi_status
     
