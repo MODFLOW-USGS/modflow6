@@ -3913,10 +3913,9 @@ contains
     !
     ! -- Determine the number of maw budget terms. These are fixed for 
     !    the simulation and cannot change.  
-    ! gwf rate [flowing_well] [storage] constant_flow [frommvr tomvr tomvrcf [tomvrfw]] [aux]
-    nbudterm = 3
+    ! gwf rate [flowing_well] storage constant_flow [frommvr tomvr tomvrcf [tomvrfw]] [aux]
+    nbudterm = 4
     if (this%iflowingwells > 0) nbudterm = nbudterm + 1
-    if (this%imawissopt /= 1) nbudterm = nbudterm + 1
     if (this%imover == 1) then
       nbudterm = nbudterm + 3
       if (this%iflowingwells > 0) nbudterm = nbudterm + 1
@@ -3981,20 +3980,18 @@ contains
     end if
     !
     ! -- 
-    if (this%imawissopt /= 1) then
-      text = '         STORAGE'
-      idx = idx + 1
-      maxlist = this%nmawwells 
-      naux = 1
-      auxtxt(1) = '          VOLUME'
-      call this%budobj%budterm(idx)%initialize(text, &
-                                               this%name_model, &
-                                               this%name, &
-                                               this%name_model, &
-                                               this%name_model, &
-                                               maxlist, .false., .true., &
-                                               naux, auxtxt)
-    end if
+    text = '         STORAGE'
+    idx = idx + 1
+    maxlist = this%nmawwells 
+    naux = 1
+    auxtxt(1) = '          VOLUME'
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name_model, &
+                                             maxlist, .false., .true., &
+                                             naux, auxtxt)
     !
     ! -- 
     text = '        CONSTANT'
@@ -4026,7 +4023,7 @@ contains
                                                naux)
       !
       ! -- 
-      text = '     RATE TO-MVR'
+      text = '     RATE-TO-MVR'
       idx = idx + 1
       maxlist = this%nmawwells
       naux = 0
@@ -4039,7 +4036,7 @@ contains
                                                naux)
       !
       ! -- constant-head flow to mover
-      text = ' CONSTANT TO-MVR'
+      text = ' CONSTANT-TO-MVR'
       idx = idx + 1
       maxlist = this%nmawwells
       naux = 0
@@ -4055,7 +4052,7 @@ contains
       if (this%iflowingwells > 0) then
         !
         ! -- 
-        text = '  FW-RATE TO-MVR'
+        text = '  FW-RATE-TO-MVR'
         idx = idx + 1
         maxlist = this%nmawwells
         naux = 0
@@ -4178,20 +4175,22 @@ contains
     end if
     !
     ! -- STORAGE (AND VOLUME AS AUX)
-    if (this%imawissopt /= 1) then
-      idx = idx + 1
-      call this%budobj%budterm(idx)%reset(this%nmawwells)
-      do n = 1, this%nmawwells
-        b = this%mawwells(n)%xsto - this%mawwells(n)%bot
-        if (b < DZERO) then
-          b = DZERO
-        end if
-        v = this%mawwells(n)%area * b
+    idx = idx + 1
+    call this%budobj%budterm(idx)%reset(this%nmawwells)
+    do n = 1, this%nmawwells
+      b = this%mawwells(n)%xsto - this%mawwells(n)%bot
+      if (b < DZERO) then
+        b = DZERO
+      end if
+      v = this%mawwells(n)%area * b
+      if (this%imawissopt /= 1) then
         q = this%qsto(n)
-        this%qauxcbc(1) = v
-        call this%budobj%budterm(idx)%update_term(n, n, q, this%qauxcbc)
-      end do
-    end if
+      else
+        q = DZERO
+      end if
+      this%qauxcbc(1) = v
+      call this%budobj%budterm(idx)%update_term(n, n, q, this%qauxcbc)
+    end do
     !
     ! -- CONSTANT FLOW
     idx = idx + 1

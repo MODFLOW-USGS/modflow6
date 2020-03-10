@@ -1686,11 +1686,11 @@ module GwtAptModule
       ! -- check for duplicate or missing lakes
       do n = 1, this%ncv
         if (nboundchk(n) == 0) then
-          write(errmsg,'(a,1x,i0)')  'ERROR.  NO DATA SPECIFIED FOR LAKE', n
+          write(errmsg,'(a,1x,i0)')  'ERROR.  NO DATA SPECIFIED FOR FEATURE', n
           call store_error(errmsg)
         else if (nboundchk(n) > 1) then
           write(errmsg,'(a,1x,i0,1x,a,1x,i0,1x,a)')                             &
-            'ERROR.  DATA FOR LAKE', n, 'SPECIFIED', nboundchk(n), 'TIMES'
+            'ERROR.  DATA FOR FEATURE', n, 'SPECIFIED', nboundchk(n), 'TIMES'
           call store_error(errmsg)
         end if
       end do
@@ -1882,7 +1882,7 @@ module GwtAptModule
       end do
     end if
     !
-    ! -- calulate the lake concentration
+    ! -- calulate the feature concentration
     do n = 1, this%ncv
       call this%apt_stor_term(n, n1, n2, rrate, rhsval, hcofval)
       !
