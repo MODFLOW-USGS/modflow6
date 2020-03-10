@@ -242,12 +242,40 @@ def get_model(idx, dir):
         for jobs, otup in enumerate(obspos):
             otag = '{}{}'.format(obstag[iobs], jobs + 1)
             obsarr.append((otag, cobs, otup))
-    obsarr.append(('ibc', 'interbed-compaction', (0,)))
-    obsarr.append(('dft', 'delay-flowtop', (1,)))
-    obsarr.append(('csub', 'csub', (0,)))
+
+    obsarr2 = []
+    obstype2 = ['csub', 'inelastic-csub', 'elastic-csub', 'sk', 'ske',
+               'thickness', 'theta', 'interbed-compaction',
+               'inelastic-compaction', 'elastic-compaction',
+               'delay-flowtop', 'delay-flowbot']
+    iobs = 0
+    for cobs in obstype2:
+        iobs += 1
+        otag = 'obs{:03d}'.format(iobs)
+        obsarr2.append((otag, cobs, (0,)))
+
+    obstype3 = ['delay-preconstress', 'delay-head', 'delay-gstress',
+                'delay-estress', 'delay-compaction', 'delay-thickness',
+                'delay-theta']
+    for cobs in obstype3:
+        iobs += 1
+        otag = 'obs{:03d}'.format(iobs)
+        obsarr2.append((otag, cobs, (0,), (0,)))
+
+    obsarr3 = []
+    obstype4 = ['gstress-cell', 'estress-cell', 'thickness-cell',
+                'coarse-csub', 'wcomp-csub-cell', 'coarse-compaction',
+                'coarse-theta', 'coarse-thickness', 'csub-cell',
+                'ske-cell', 'sk-cell', 'theta-cell', 'compaction-cell']
+    for cobs in obstype4:
+        iobs += 1
+        otag = 'obs{:03d}'.format(iobs)
+        obsarr3.append((otag, cobs, obspos[-1]))
 
     orecarray = {}
     orecarray['csub_obs.csv'] = obsarr
+    orecarray['interbed_obs.csv'] = obsarr2
+    orecarray['coarse_cell_obs.csv'] = obsarr3
 
     csub_obs_package = csub.obs.initialize(filename=opth, digits=10,
                                            print_input=True,

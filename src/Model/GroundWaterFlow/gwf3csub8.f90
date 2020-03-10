@@ -6667,7 +6667,6 @@ contains
                obsrv%ObsTypeId == 'INELASTIC-CSUB' .or.                         &
                obsrv%ObsTypeId == 'ELASTIC-CSUB' .or.                           &
                obsrv%ObsTypeId == 'SK' .or.                                     &
-               obsrv%ObsTypeId == 'SK' .or.                                     &
                obsrv%ObsTypeId == 'SKE' .or.                                    &
                obsrv%ObsTypeId == 'THICKNESS' .or.                              &
                obsrv%ObsTypeId == 'THETA' .or.                                  &
