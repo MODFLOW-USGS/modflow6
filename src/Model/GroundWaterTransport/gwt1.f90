@@ -114,7 +114,7 @@ module GwtModule
   data cunit/   'DIS6 ', 'DISV6', 'DISU6', 'IC6  ', 'MST6 ', & !  5
                 'ADV6 ', 'DSP6 ', 'SSM6 ', '     ', 'CNC6 ', & ! 10
                 'OC6  ', 'OBS6 ', 'FMI6 ', 'SRC6 ', 'IST6 ', & ! 15
-                'LKT6 ', 'SFT6 ', 'MWT6 ', '     ', '     ', & ! 20
+                'LKT6 ', 'SFT6 ', 'MWT6 ', 'UZT6 ', '     ', & ! 20
                 80 * '     '/
   
   contains
@@ -1036,6 +1036,7 @@ module GwtModule
     use GwtLktModule, only: lkt_create
     use GwtSftModule, only: sft_create
     use GwtMwtModule, only: mwt_create
+    use GwtUztModule, only: uzt_create
     ! -- dummy
     class(GwtModelType) :: this
     character(len=*),intent(in) :: filtyp
@@ -1065,6 +1066,9 @@ module GwtModule
                       pakname, this%fmi)
     case('MWT6')
       call mwt_create(packobj, ipakid, ipaknum, inunit, iout, this%name,       &
+                      pakname, this%fmi)
+    case('UZT6')
+      call uzt_create(packobj, ipakid, ipaknum, inunit, iout, this%name,       &
                       pakname, this%fmi)
     case('IST6')
       call ist_create(packobj, ipakid, ipaknum, inunit, iout, this%name,       &
