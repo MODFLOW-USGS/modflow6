@@ -32,6 +32,7 @@ module UzfModule
 
   private
   public :: uzf_create
+  public :: UzfType
 
   type, extends(BndType) :: UzfType
     ! output integers
@@ -3400,7 +3401,7 @@ contains
       end do
       
       
-      ! -- TO MOVER
+      ! -- REJ-INF-TO-MVR
       idx = idx + 1
       call this%budobj%budterm(idx)%reset(this%nodes)
       do n = 1, this%nodes

@@ -1,36 +1,30 @@
-! -- Stream Transport Module
-! -- todo: what to do about reactions in stream?  Decay?
-! -- todo: save the sft concentration into the sfr aux variable?
-! -- todo: calculate the sfr DENSE aux variable using concentration?
+! -- Unsaturated Zone Flow Transport Module
+! -- todo: what to do about reactions in uzf?  Decay?
+! -- todo: save the uzt concentration into the uzt aux variable?
+! -- todo: calculate the uzf DENSE aux variable using concentration?
 !
-! SFR flows (sfrbudptr)     index var     SFT term              Transport Type
+! UZF flows (flowbudptr)     index var    UZT term              Transport Type
 !---------------------------------------------------------------------------------
-  
-! -- terms from SFR that will be handled by parent APT Package
+
+! -- terms from UZF that will be handled by parent APT Package
 ! FLOW-JA-FACE              idxbudfjf     FLOW-JA-FACE          cv2cv
-! GWF (aux FLOW-AREA)       idxbudgwf     GWF                   cv2gwf
-! STORAGE (aux VOLUME)      idxbudsto     none                  used for cv volumes
+! GWF (aux FLOW-AREA)       idxbudgwf     GWF                   uzf2gwf
+! STORAGE (aux VOLUME)      idxbudsto     none                  used for water volumes
 ! FROM-MVR                  idxbudfmvr    FROM-MVR              q * cext = this%qfrommvr(:)
-! TO-MVR                    idxbudtmvr    TO-MVR                q * cfeat
-
-! -- SFR terms
-! RAINFALL                  idxbudrain    RAINFALL              q * crain
-! EVAPORATION               idxbudevap    EVAPORATION           cfeat<cevap: q*cfeat, else: q*cevap
-! RUNOFF                    idxbudroff    RUNOFF                q * croff
-! EXT-INFLOW                idxbudiflw    EXT-INFLOW            q * ciflw
-! EXT-OUTFLOW               idxbudoutf    EXT-OUTFLOW           q * cfeat
-  
-! -- terms from a flow file that should be skipped
-! CONSTANT                  none          none                  none
 ! AUXILIARY                 none          none                  none
-
-! -- terms that are written to the transport budget file
-! none                      none          STORAGE (aux MASS)    dM/dt
+! none                      none          STORAGE (aux MASS)    
 ! none                      none          AUXILIARY             none
-! none                      none          CONSTANT              accumulate
-!
-!
-module GwtSftModule
+
+! -- terms from UZF that need to be handled here
+! INFILTRATION              idxbudinfl    INFILTRATION          q < 0: q * cwell, else q * cuser
+! REJ-INF                   idxbudrinf    REJ-INF               q * cuzt
+! UZET                      idxbuduzet    UZET                  q * cet
+! REJ-INF-TO-MVR            idxbudritm    REJ-INF-TO-MVR        q * cinfil?
+
+! -- terms from UZF that should be skipped
+  
+  
+module GwtUztModule
 
   use KindModule, only: DP, I4B
   use ConstantsModule, only: DZERO, DONE, DHALF, DEP20, LENFTYPE, LINELENGTH,  &
@@ -40,7 +34,7 @@ module GwtSftModule
   use SimModule, only: store_error, count_errors, store_error_unit, ustop
   use BndModule, only: BndType, GetBndFromList
   use GwtFmiModule, only: GwtFmiType
-  use SfrModule, only: SfrType
+  use UzfModule, only: UzfType
   use MemoryTypeModule, only: MemoryTSType
   use BudgetModule, only: BudgetType
   use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr, budgetobject_cr_bfr
@@ -53,53 +47,48 @@ module GwtSftModule
   
   implicit none
   
-  public sft_create
+  public uzt_create
   
-  character(len=*), parameter :: ftype = 'SFT'
-  character(len=*), parameter :: flowtype = 'SFR'
-  character(len=16)       :: text  = '             SFT'
+  character(len=*), parameter :: ftype = 'UZT'
+  character(len=*), parameter :: flowtype = 'UZF'
+  character(len=16)       :: text  = '             UZT'
   
-  type, extends(GwtAptType) :: GwtSftType
+  type, extends(GwtAptType) :: GwtUztType
     
-    integer(I4B), pointer                              :: idxbudrain => null()  ! index of rainfall terms in flowbudptr
-    integer(I4B), pointer                              :: idxbudevap => null()  ! index of evaporation terms in flowbudptr
-    integer(I4B), pointer                              :: idxbudroff => null()  ! index of runoff terms in flowbudptr
-    integer(I4B), pointer                              :: idxbudiflw => null()  ! index of inflow terms in flowbudptr
-    integer(I4B), pointer                              :: idxbudoutf => null()  ! index of outflow terms in flowbudptr
-
-    type (MemoryTSType), dimension(:), pointer, contiguous :: concrain => null() ! rainfall concentration
-    type (MemoryTSType), dimension(:), pointer, contiguous :: concevap => null() ! evaporation concentration
-    type (MemoryTSType), dimension(:), pointer, contiguous :: concroff => null() ! runoff concentration
-    type (MemoryTSType), dimension(:), pointer, contiguous :: conciflw => null() ! inflow concentration
+    integer(I4B), pointer                                  :: idxbudinfl => null()  ! index of uzf infiltration terms in flowbudptr
+    integer(I4B), pointer                                  :: idxbudrinf => null()  ! index of rejected infiltration terms in flowbudptr
+    integer(I4B), pointer                                  :: idxbuduzet => null()  ! index of unsat et terms in flowbudptr
+    integer(I4B), pointer                                  :: idxbudritm => null()  ! index of rej infil to mover rate to mover terms in flowbudptr
+    type (MemoryTSType), dimension(:), pointer, contiguous :: concinfl => null()    ! infiltration concentration
+    type (MemoryTSType), dimension(:), pointer, contiguous :: concuzet => null()    ! unsat et concentration
 
   contains
   
-    procedure :: bnd_da => sft_da
+    procedure :: bnd_da => uzt_da
     procedure :: allocate_scalars
-    procedure :: apt_allocate_arrays => sft_allocate_arrays
-    procedure :: find_apt_package => find_sft_package
-    procedure :: pak_fc_expanded => sft_fc_expanded
-    procedure :: pak_solve => sft_solve
-    procedure :: pak_get_nbudterms => sft_get_nbudterms
-    procedure :: pak_setup_budobj => sft_setup_budobj
-    procedure :: pak_fill_budobj => sft_fill_budobj
-    procedure :: sft_rain_term
-    procedure :: sft_evap_term
-    procedure :: sft_roff_term
-    procedure :: sft_iflw_term
-    procedure :: sft_outf_term
-    procedure :: pak_df_obs => sft_df_obs
-    procedure :: pak_bd_obs => sft_bd_obs
-    procedure :: pak_set_stressperiod => sft_set_stressperiod
+    procedure :: apt_allocate_arrays => uzt_allocate_arrays
+    procedure :: find_apt_package => find_uzt_package
+    procedure :: pak_fc_expanded => uzt_fc_expanded
+    procedure :: pak_solve => uzt_solve
+    procedure :: pak_get_nbudterms => uzt_get_nbudterms
+    procedure :: pak_setup_budobj => uzt_setup_budobj
+    procedure :: pak_fill_budobj => uzt_fill_budobj
+    procedure :: uzt_infl_term
+    procedure :: uzt_rinf_term
+    procedure :: uzt_uzet_term
+    procedure :: uzt_ritm_term
+    procedure :: pak_df_obs => uzt_df_obs
+    procedure :: pak_bd_obs => uzt_bd_obs
+    procedure :: pak_set_stressperiod => uzt_set_stressperiod
     
-  end type GwtSftType
+  end type GwtUztType
 
   contains  
   
-  subroutine sft_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
+  subroutine uzt_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
                         fmi)
 ! ******************************************************************************
-! mwt_create -- Create a New MWT Package
+! uzt_create -- Create a New UZT Package
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -114,19 +103,19 @@ module GwtSftModule
     character(len=*), intent(in) :: pakname
     type(GwtFmiType), pointer :: fmi
     ! -- local
-    type(GwtSftType), pointer :: lktobj
+    type(GwtUztType), pointer :: uztobj
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate the object and assign values to object variables
-    allocate(lktobj)
-    packobj => lktobj
+    allocate(uztobj)
+    packobj => uztobj
     !
     ! -- create name and origin
     call packobj%set_names(ibcnum, namemodel, pakname, ftype)
     packobj%text = text
     !
     ! -- allocate scalars
-    call lktobj%allocate_scalars()
+    call uztobj%allocate_scalars()
     !
     ! -- initialize package
     call packobj%pack_initialize()
@@ -141,15 +130,15 @@ module GwtSftModule
     ! -- Store pointer to flow model interface.  When the GwfGwt exchange is
     !    created, it sets fmi%bndlist so that the GWT model has access to all
     !    the flow packages
-    lktobj%fmi => fmi
+    uztobj%fmi => fmi
     !
     ! -- return
     return
-  end subroutine sft_create
+  end subroutine uzt_create
 
-  subroutine find_sft_package(this)
+  subroutine find_uzt_package(this)
 ! ******************************************************************************
-! find corresponding lkt package
+! find corresponding uzt package
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -157,7 +146,7 @@ module GwtSftModule
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
-    class(GwtSftType) :: this
+    class(GwtUztType) :: this
     ! -- local
     character(len=LINELENGTH) :: errmsg
     class(BndType), pointer :: packobj
@@ -191,7 +180,7 @@ module GwtSftModule
           if (packobj%name == this%name) then
             found = .true.
             select type (packobj)
-              type is (SfrType)
+              type is (UzfType)
                 this%flowbudptr => packobj%budobj
             end select
           end if
@@ -232,20 +221,17 @@ module GwtSftModule
       case('STORAGE')
         this%idxbudsto = ip
         this%idxbudssm(ip) = 0
-      case('RAINFALL')
-        this%idxbudrain = ip
+      case('INFILTRATION')
+        this%idxbudinfl = ip
         this%idxbudssm(ip) = 0
-      case('EVAPORATION')
-        this%idxbudevap = ip
+      case('REJ-INF')
+        this%idxbudrinf = ip
         this%idxbudssm(ip) = 0
-      case('RUNOFF')
-        this%idxbudroff = ip
+      case('UZET')
+        this%idxbuduzet = ip
         this%idxbudssm(ip) = 0
-      case('EXT-INFLOW')
-        this%idxbudiflw = ip
-        this%idxbudssm(ip) = 0
-      case('EXT-OUTFLOW')
-        this%idxbudoutf = ip
+      case('REJ-INF-TO-MVR')
+        this%idxbudritm = ip
         this%idxbudssm(ip) = 0
       case('TO-MVR')
         this%idxbudtmvr = ip
@@ -271,19 +257,19 @@ module GwtSftModule
     !
     ! -- Return
     return
-end subroutine find_sft_package
+  end subroutine find_uzt_package
 
-  subroutine sft_fc_expanded(this, rhs, ia, idxglo, amatsln)
+  subroutine uzt_fc_expanded(this, rhs, ia, idxglo, amatsln)
 ! ******************************************************************************
-! sft_fc_expanded -- this will be called from GwtAptType%apt_fc_expanded()
-!   in order to add matrix terms specifically for LKT
+! uzt_fc_expanded -- this will be called from GwtAptType%apt_fc_expanded()
+!   in order to add matrix terms specifically for this package
 ! ****************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtSftType) :: this
+    class(GwtUztType) :: this
     real(DP), dimension(:), intent(inout) :: rhs
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
@@ -297,10 +283,10 @@ end subroutine find_sft_package
     real(DP) :: hcofval
 ! ------------------------------------------------------------------------------
     !
-    ! -- add rainfall contribution
-    if (this%idxbudrain /= 0) then
-      do j = 1, this%flowbudptr%budterm(this%idxbudrain)%nlist
-        call this%sft_rain_term(j, n1, n2, rrate, rhsval, hcofval)
+    ! -- add infiltration contribution
+    if (this%idxbudinfl /= 0) then
+      do j = 1, this%flowbudptr%budterm(this%idxbudinfl)%nlist
+        call this%uzt_infl_term(j, n1, n2, rrate, rhsval, hcofval)
         iloc = this%idxlocnode(n1)
         iposd = this%idxpakdiag(n1)
         amatsln(iposd) = amatsln(iposd) + hcofval
@@ -308,10 +294,10 @@ end subroutine find_sft_package
       end do
     end if
     !
-    ! -- add evaporation contribution
-    if (this%idxbudevap /= 0) then
-      do j = 1, this%flowbudptr%budterm(this%idxbudevap)%nlist
-        call this%sft_evap_term(j, n1, n2, rrate, rhsval, hcofval)
+    ! -- add rejected infiltration contribution
+    if (this%idxbudrinf /= 0) then
+      do j = 1, this%flowbudptr%budterm(this%idxbudrinf)%nlist
+        call this%uzt_rinf_term(j, n1, n2, rrate, rhsval, hcofval)
         iloc = this%idxlocnode(n1)
         iposd = this%idxpakdiag(n1)
         amatsln(iposd) = amatsln(iposd) + hcofval
@@ -319,10 +305,10 @@ end subroutine find_sft_package
       end do
     end if
     !
-    ! -- add runoff contribution
-    if (this%idxbudroff /= 0) then
-      do j = 1, this%flowbudptr%budterm(this%idxbudroff)%nlist
-        call this%sft_roff_term(j, n1, n2, rrate, rhsval, hcofval)
+    ! -- add unsaturated et contribution
+    if (this%idxbuduzet /= 0) then
+      do j = 1, this%flowbudptr%budterm(this%idxbuduzet)%nlist
+        call this%uzt_uzet_term(j, n1, n2, rrate, rhsval, hcofval)
         iloc = this%idxlocnode(n1)
         iposd = this%idxpakdiag(n1)
         amatsln(iposd) = amatsln(iposd) + hcofval
@@ -330,21 +316,10 @@ end subroutine find_sft_package
       end do
     end if
     !
-    ! -- add inflow contribution
-    if (this%idxbudiflw /= 0) then
-      do j = 1, this%flowbudptr%budterm(this%idxbudiflw)%nlist
-        call this%sft_iflw_term(j, n1, n2, rrate, rhsval, hcofval)
-        iloc = this%idxlocnode(n1)
-        iposd = this%idxpakdiag(n1)
-        amatsln(iposd) = amatsln(iposd) + hcofval
-        rhs(iloc) = rhs(iloc) + rhsval
-      end do
-    end if
-    !
-    ! -- add outflow contribution
-    if (this%idxbudoutf /= 0) then
-      do j = 1, this%flowbudptr%budterm(this%idxbudoutf)%nlist
-        call this%sft_outf_term(j, n1, n2, rrate, rhsval, hcofval)
+    ! -- add rejected infiltration to mover contribution
+    if (this%idxbudritm /= 0) then
+      do j = 1, this%flowbudptr%budterm(this%idxbudritm)%nlist
+        call this%uzt_ritm_term(j, n1, n2, rrate, rhsval, hcofval)
         iloc = this%idxlocnode(n1)
         iposd = this%idxpakdiag(n1)
         amatsln(iposd) = amatsln(iposd) + hcofval
@@ -354,70 +329,62 @@ end subroutine find_sft_package
     !
     ! -- Return
     return
-  end subroutine sft_fc_expanded
+  end subroutine uzt_fc_expanded
 
-  subroutine sft_solve(this)
+  subroutine uzt_solve(this)
 ! ******************************************************************************
-! sft_solve -- add terms specific to sfr to the explicit sfr solve
+! uzt_solve -- add terms specific to lakes to the explicit lake solve
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwtSftType) :: this
+    class(GwtUztType) :: this
     ! -- local
     integer(I4B) :: j
     integer(I4B) :: n1, n2
     real(DP) :: rrate
 ! ------------------------------------------------------------------------------
     !
-    ! -- add rainfall contribution
-    if (this%idxbudrain /= 0) then
-      do j = 1, this%flowbudptr%budterm(this%idxbudrain)%nlist
-        call this%sft_rain_term(j, n1, n2, rrate)
+    ! -- add infiltration contribution
+    if (this%idxbudinfl /= 0) then
+      do j = 1, this%flowbudptr%budterm(this%idxbudinfl)%nlist
+        call this%uzt_infl_term(j, n1, n2, rrate)
         this%dbuff(n1) = this%dbuff(n1) + rrate
       end do
     end if
     !
-    ! -- add evaporation contribution
-    if (this%idxbudevap /= 0) then
-      do j = 1, this%flowbudptr%budterm(this%idxbudevap)%nlist
-        call this%sft_evap_term(j, n1, n2, rrate)
+    ! -- add rejected infiltration contribution
+    if (this%idxbudrinf /= 0) then
+      do j = 1, this%flowbudptr%budterm(this%idxbudrinf)%nlist
+        call this%uzt_rinf_term(j, n1, n2, rrate)
         this%dbuff(n1) = this%dbuff(n1) + rrate
       end do
     end if
     !
-    ! -- add runoff contribution
-    if (this%idxbudroff /= 0) then
-      do j = 1, this%flowbudptr%budterm(this%idxbudroff)%nlist
-        call this%sft_roff_term(j, n1, n2, rrate)
+    ! -- add unsaturated et contribution
+    if (this%idxbuduzet /= 0) then
+      do j = 1, this%flowbudptr%budterm(this%idxbuduzet)%nlist
+        call this%uzt_uzet_term(j, n1, n2, rrate)
         this%dbuff(n1) = this%dbuff(n1) + rrate
       end do
     end if
     !
-    ! -- add inflow contribution
-    if (this%idxbudiflw /= 0) then
-      do j = 1, this%flowbudptr%budterm(this%idxbudiflw)%nlist
-        call this%sft_iflw_term(j, n1, n2, rrate)
-        this%dbuff(n1) = this%dbuff(n1) + rrate
-      end do
-    end if
-    !
-    ! -- add outflow contribution
-    if (this%idxbudoutf /= 0) then
-      do j = 1, this%flowbudptr%budterm(this%idxbudoutf)%nlist
-        call this%sft_outf_term(j, n1, n2, rrate)
+    ! -- add rejected infiltration to mover contribution
+    if (this%idxbudritm /= 0) then
+      do j = 1, this%flowbudptr%budterm(this%idxbudritm)%nlist
+        call this%uzt_ritm_term(j, n1, n2, rrate)
         this%dbuff(n1) = this%dbuff(n1) + rrate
       end do
     end if
     !
     ! -- Return
     return
-  end subroutine sft_solve
+  end subroutine uzt_solve
   
-  function sft_get_nbudterms(this) result(nbudterms)
+  function uzt_get_nbudterms(this) result(nbudterms)
 ! ******************************************************************************
-! sft_get_nbudterms -- function to return the number of budget terms just for
+! uzt_get_nbudterms -- function to return the number of budget terms just for
 !   this package.  This overrides function in parent.
 ! ******************************************************************************
 !
@@ -425,22 +392,26 @@ end subroutine find_sft_package
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtSftType) :: this
+    class(GwtUztType) :: this
     ! -- return
     integer(I4B) :: nbudterms
     ! -- local
 ! ------------------------------------------------------------------------------
     !
-    ! -- Number of budget terms is 6
-    nbudterms = 5
+    ! -- Number of budget terms is 4
+    nbudterms = 0
+    if (this%idxbudinfl /= 0) nbudterms = nbudterms + 1
+    if (this%idxbudrinf /= 0) nbudterms = nbudterms + 1
+    if (this%idxbuduzet /= 0) nbudterms = nbudterms + 1
+    if (this%idxbudritm /= 0) nbudterms = nbudterms + 1
     !
     ! -- Return
     return
-  end function sft_get_nbudterms
+  end function uzt_get_nbudterms
   
-  subroutine sft_setup_budobj(this, idx)
+  subroutine uzt_setup_budobj(this, idx)
 ! ******************************************************************************
-! sft_setup_budobj -- Set up the budget object that stores all the sfr flows
+! uzt_setup_budobj -- Set up the budget object that stores all the lake flows
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -448,7 +419,7 @@ end subroutine find_sft_package
     ! -- modules
     use ConstantsModule, only: LENBUDTXT
     ! -- dummy
-    class(GwtSftType) :: this
+    class(GwtUztType) :: this
     integer(I4B), intent(inout) :: idx
     ! -- local
     integer(I4B) :: maxlist, naux
@@ -456,9 +427,9 @@ end subroutine find_sft_package
 ! ------------------------------------------------------------------------------
     !
     ! -- 
-    text = '        RAINFALL'
+    text = '    INFILTRATION'
     idx = idx + 1
-    maxlist = this%flowbudptr%budterm(this%idxbudrain)%maxlist
+    maxlist = this%flowbudptr%budterm(this%idxbudinfl)%maxlist
     naux = 0
     call this%budobj%budterm(idx)%initialize(text, &
                                              this%name_model, &
@@ -467,73 +438,70 @@ end subroutine find_sft_package
                                              this%name, &
                                              maxlist, .false., .false., &
                                              naux)
+    
     !
     ! -- 
-    text = '     EVAPORATION'
-    idx = idx + 1
-    maxlist = this%flowbudptr%budterm(this%idxbudevap)%maxlist
-    naux = 0
-    call this%budobj%budterm(idx)%initialize(text, &
-                                             this%name_model, &
-                                             this%name, &
-                                             this%name_model, &
-                                             this%name, &
-                                             maxlist, .false., .false., &
-                                             naux)
+    if (this%idxbudrinf /= 0) then
+      text = '         REJ-INF'
+      idx = idx + 1
+      maxlist = this%flowbudptr%budterm(this%idxbudrinf)%maxlist
+      naux = 0
+      call this%budobj%budterm(idx)%initialize(text, &
+                                               this%name_model, &
+                                               this%name, &
+                                               this%name_model, &
+                                               this%name, &
+                                               maxlist, .false., .false., &
+                                               naux)
+    end if
+    
     !
     ! -- 
-    text = '          RUNOFF'
-    idx = idx + 1
-    maxlist = this%flowbudptr%budterm(this%idxbudroff)%maxlist
-    naux = 0
-    call this%budobj%budterm(idx)%initialize(text, &
-                                             this%name_model, &
-                                             this%name, &
-                                             this%name_model, &
-                                             this%name, &
-                                             maxlist, .false., .false., &
-                                             naux)
+    if (this%idxbuduzet /= 0) then
+      text = '            UZET'
+      idx = idx + 1
+      maxlist = this%flowbudptr%budterm(this%idxbuduzet)%maxlist
+      naux = 0
+      call this%budobj%budterm(idx)%initialize(text, &
+                                               this%name_model, &
+                                               this%name, &
+                                               this%name_model, &
+                                               this%name, &
+                                               maxlist, .false., .false., &
+                                               naux)
+    end if
+    
     !
     ! -- 
-    text = '      EXT-INFLOW'
-    idx = idx + 1
-    maxlist = this%flowbudptr%budterm(this%idxbudiflw)%maxlist
-    naux = 0
-    call this%budobj%budterm(idx)%initialize(text, &
-                                             this%name_model, &
-                                             this%name, &
-                                             this%name_model, &
-                                             this%name, &
-                                             maxlist, .false., .false., &
-                                             naux)
-    !
-    ! -- 
-    text = '     EXT-OUTFLOW'
-    idx = idx + 1
-    maxlist = this%flowbudptr%budterm(this%idxbudoutf)%maxlist
-    naux = 0
-    call this%budobj%budterm(idx)%initialize(text, &
-                                             this%name_model, &
-                                             this%name, &
-                                             this%name_model, &
-                                             this%name, &
-                                             maxlist, .false., .false., &
-                                             naux)
+    if (this%idxbudritm /= 0) then
+      text = '  INF-REJ-TO-MVR'
+      idx = idx + 1
+      maxlist = this%flowbudptr%budterm(this%idxbudritm)%maxlist
+      naux = 0
+      call this%budobj%budterm(idx)%initialize(text, &
+                                               this%name_model, &
+                                               this%name, &
+                                               this%name_model, &
+                                               this%name, &
+                                               maxlist, .false., .false., &
+                                               naux)
+    end if
+    
     !
     ! -- return
     return
-  end subroutine sft_setup_budobj
+  end subroutine uzt_setup_budobj
 
-  subroutine sft_fill_budobj(this, idx, x, ccratin, ccratout)
+  subroutine uzt_fill_budobj(this, idx, x, ccratin, ccratout)
 ! ******************************************************************************
-! sft_fill_budobj -- copy flow terms into this%budobj
+! uzt_fill_budobj -- copy flow terms into this%budobj
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtSftType) :: this
+    class(GwtUztType) :: this
     integer(I4B), intent(inout) :: idx
     real(DP), dimension(:), intent(in) :: x
     real(DP), intent(inout) :: ccratin
@@ -545,65 +513,56 @@ end subroutine find_sft_package
     ! -- formats
 ! -----------------------------------------------------------------------------
     
-    ! -- RAIN
+    ! -- INFILTRATION
     idx = idx + 1
-    nlist = this%flowbudptr%budterm(this%idxbudrain)%nlist
+    nlist = this%flowbudptr%budterm(this%idxbudinfl)%nlist
     call this%budobj%budterm(idx)%reset(nlist)
     do j = 1, nlist
-      call this%sft_rain_term(j, n1, n2, q)
+      call this%uzt_infl_term(j, n1, n2, q)
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
     
+    ! -- REJ-INF
+    if (this%idxbudrinf /= 0) then
+      idx = idx + 1
+      nlist = this%flowbudptr%budterm(this%idxbudrinf)%nlist
+      call this%budobj%budterm(idx)%reset(nlist)
+      do j = 1, nlist
+        call this%uzt_rinf_term(j, n1, n2, q)
+        call this%budobj%budterm(idx)%update_term(n1, n2, q)
+        call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
+      end do
+    end if
     
-    ! -- EVAPORATION
-    idx = idx + 1
-    nlist = this%flowbudptr%budterm(this%idxbudevap)%nlist
-    call this%budobj%budterm(idx)%reset(nlist)
-    do j = 1, nlist
-      call this%sft_evap_term(j, n1, n2, q)
-      call this%budobj%budterm(idx)%update_term(n1, n2, q)
-      call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
-    end do
+    ! -- UZET
+    if (this%idxbuduzet /= 0) then
+      idx = idx + 1
+      nlist = this%flowbudptr%budterm(this%idxbuduzet)%nlist
+      call this%budobj%budterm(idx)%reset(nlist)
+      do j = 1, nlist
+        call this%uzt_uzet_term(j, n1, n2, q)
+        call this%budobj%budterm(idx)%update_term(n1, n2, q)
+        call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
+      end do
+    end if
     
+    ! -- REJ-INF-TO-MVR
+    if (this%idxbudritm /= 0) then
+      idx = idx + 1
+      nlist = this%flowbudptr%budterm(this%idxbudritm)%nlist
+      call this%budobj%budterm(idx)%reset(nlist)
+      do j = 1, nlist
+        call this%uzt_ritm_term(j, n1, n2, q)
+        call this%budobj%budterm(idx)%update_term(n1, n2, q)
+        call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
+      end do
+    end if
     
-    ! -- RUNOFF
-    idx = idx + 1
-    nlist = this%flowbudptr%budterm(this%idxbudroff)%nlist
-    call this%budobj%budterm(idx)%reset(nlist)
-    do j = 1, nlist
-      call this%sft_roff_term(j, n1, n2, q)
-      call this%budobj%budterm(idx)%update_term(n1, n2, q)
-      call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
-    end do
-    
-    
-    ! -- EXT-INFLOW
-    idx = idx + 1
-    nlist = this%flowbudptr%budterm(this%idxbudiflw)%nlist
-    call this%budobj%budterm(idx)%reset(nlist)
-    do j = 1, nlist
-      call this%sft_iflw_term(j, n1, n2, q)
-      call this%budobj%budterm(idx)%update_term(n1, n2, q)
-      call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
-    end do
-    
-    
-    ! -- EXT-OUTFLOW
-    idx = idx + 1
-    nlist = this%flowbudptr%budterm(this%idxbudoutf)%nlist
-    call this%budobj%budterm(idx)%reset(nlist)
-    do j = 1, nlist
-      call this%sft_outf_term(j, n1, n2, q)
-      call this%budobj%budterm(idx)%update_term(n1, n2, q)
-      call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
-    end do
-    
-
     !
     ! -- return
     return
-  end subroutine sft_fill_budobj
+  end subroutine uzt_fill_budobj
 
   subroutine allocate_scalars(this)
 ! ******************************************************************************
@@ -615,7 +574,7 @@ end subroutine find_sft_package
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
-    class(GwtSftType) :: this
+    class(GwtUztType) :: this
     ! -- local
 ! ------------------------------------------------------------------------------
     !
@@ -623,26 +582,24 @@ end subroutine find_sft_package
     call this%GwtAptType%allocate_scalars()
     !
     ! -- Allocate
-    call mem_allocate(this%idxbudrain, 'IDXBUDRAIN', this%origin)
-    call mem_allocate(this%idxbudevap, 'IDXBUDEVAP', this%origin)
-    call mem_allocate(this%idxbudroff, 'IDXBUDROFF', this%origin)
-    call mem_allocate(this%idxbudiflw, 'IDXBUDIFLW', this%origin)
-    call mem_allocate(this%idxbudoutf, 'IDXBUDOUTF', this%origin)
+    call mem_allocate(this%idxbudinfl, 'IDXBUDINFL', this%origin)
+    call mem_allocate(this%idxbudrinf, 'IDXBUDRINF', this%origin)
+    call mem_allocate(this%idxbuduzet, 'IDXBUDUZET', this%origin)
+    call mem_allocate(this%idxbudritm, 'IDXBUDRITM', this%origin)
     ! 
     ! -- Initialize
-    this%idxbudrain = 0
-    this%idxbudevap = 0
-    this%idxbudroff = 0
-    this%idxbudiflw = 0
-    this%idxbudoutf = 0
+    this%idxbudinfl = 0
+    this%idxbudrinf = 0
+    this%idxbuduzet = 0
+    this%idxbudritm = 0
     !
     ! -- Return
     return
   end subroutine allocate_scalars
 
-  subroutine sft_allocate_arrays(this)
+  subroutine uzt_allocate_arrays(this)
 ! ******************************************************************************
-! sft_allocate_arrays
+! uzt_allocate_arrays
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -650,15 +607,13 @@ end subroutine find_sft_package
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
-    class(GwtSftType), intent(inout) :: this
+    class(GwtUztType), intent(inout) :: this
     ! -- local
 ! ------------------------------------------------------------------------------
     !    
     ! -- time series
-    call mem_allocate(this%concrain, this%ncv, 'CONCRAIN', this%origin)
-    call mem_allocate(this%concevap, this%ncv, 'CONCEVAP', this%origin)
-    call mem_allocate(this%concroff, this%ncv, 'CONCROFF', this%origin)
-    call mem_allocate(this%conciflw, this%ncv, 'CONCIFLW', this%origin)
+    call mem_allocate(this%concinfl, this%ncv, 'CONCINFL', this%origin)
+    call mem_allocate(this%concuzet, this%ncv, 'CONCUZET', this%origin)
     !
     ! -- call standard GwtApttype allocate arrays
     call this%GwtAptType%apt_allocate_arrays()
@@ -666,11 +621,11 @@ end subroutine find_sft_package
     !
     ! -- Return
     return
-  end subroutine sft_allocate_arrays
+  end subroutine uzt_allocate_arrays
   
-  subroutine sft_da(this)
+  subroutine uzt_da(this)
 ! ******************************************************************************
-! sft_da
+! uzt_da
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -678,40 +633,79 @@ end subroutine find_sft_package
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
-    class(GwtSftType) :: this
+    class(GwtUztType) :: this
     ! -- local
 ! ------------------------------------------------------------------------------
     !
     ! -- deallocate scalars
-    call mem_deallocate(this%idxbudrain)
-    call mem_deallocate(this%idxbudevap)
-    call mem_deallocate(this%idxbudroff)
-    call mem_deallocate(this%idxbudiflw)
-    call mem_deallocate(this%idxbudoutf)
+    call mem_deallocate(this%idxbudinfl)
+    call mem_deallocate(this%idxbudrinf)
+    call mem_deallocate(this%idxbuduzet)
+    call mem_deallocate(this%idxbudritm)
     !
     ! -- deallocate time series
-    call mem_deallocate(this%concrain)
-    call mem_deallocate(this%concevap)
-    call mem_deallocate(this%concroff)
-    call mem_deallocate(this%conciflw)
+    call mem_deallocate(this%concinfl)
+    call mem_deallocate(this%concuzet)
     !
     ! -- deallocate scalars in GwtAptType
     call this%GwtAptType%bnd_da()
     !
     ! -- Return
     return
-  end subroutine sft_da
+  end subroutine uzt_da
 
-  subroutine sft_rain_term(this, ientry, n1, n2, rrate, &
+  subroutine uzt_infl_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
 ! ******************************************************************************
-! sft_rain_term
+! uzt_infl_term
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwtSftType) :: this
+    class(GwtUztType) :: this
+    integer(I4B), intent(in) :: ientry
+    integer(I4B), intent(inout) :: n1
+    integer(I4B), intent(inout) :: n2
+    real(DP), intent(inout), optional :: rrate
+    real(DP), intent(inout), optional :: rhsval
+    real(DP), intent(inout), optional :: hcofval
+    ! -- local
+    real(DP) :: qbnd
+    real(DP) :: ctmp
+    real(DP) :: h, r
+! ------------------------------------------------------------------------------
+    n1 = this%flowbudptr%budterm(this%idxbudinfl)%id1(ientry)
+    n2 = this%flowbudptr%budterm(this%idxbudinfl)%id2(ientry)
+    ! -- note that qbnd is negative for negative infiltration
+    qbnd = this%flowbudptr%budterm(this%idxbudinfl)%flow(ientry)
+    if (qbnd < DZERO) then
+      ctmp = this%xnewpak(n1)
+      h = qbnd
+      r = DZERO
+    else
+      ctmp = this%concinfl(n1)%value
+      h = DZERO
+      r = -qbnd * ctmp
+    end if
+    if (present(rrate)) rrate = qbnd * ctmp
+    if (present(rhsval)) rhsval = r
+    if (present(hcofval)) hcofval = h
+    !
+    ! -- return
+    return
+  end subroutine uzt_infl_term
+  
+  subroutine uzt_rinf_term(this, ientry, n1, n2, rrate, &
+                           rhsval, hcofval)
+! ******************************************************************************
+! uzt_rinf_term
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(GwtUztType) :: this
     integer(I4B), intent(in) :: ientry
     integer(I4B), intent(inout) :: n1
     integer(I4B), intent(inout) :: n2
@@ -722,28 +716,28 @@ end subroutine find_sft_package
     real(DP) :: qbnd
     real(DP) :: ctmp
 ! ------------------------------------------------------------------------------
-    n1 = this%flowbudptr%budterm(this%idxbudrain)%id1(ientry)
-    n2 = this%flowbudptr%budterm(this%idxbudrain)%id2(ientry)
-    qbnd = this%flowbudptr%budterm(this%idxbudrain)%flow(ientry)
-    ctmp = this%concrain(n1)%value
+    n1 = this%flowbudptr%budterm(this%idxbudrinf)%id1(ientry)
+    n2 = this%flowbudptr%budterm(this%idxbudrinf)%id2(ientry)
+    qbnd = this%flowbudptr%budterm(this%idxbudrinf)%flow(ientry)
+    ctmp = this%concinfl(n1)%value
     if (present(rrate)) rrate = ctmp * qbnd
-    if (present(rhsval)) rhsval = -rrate
-    if (present(hcofval)) hcofval = DZERO
+    if (present(rhsval)) rhsval = DZERO
+    if (present(hcofval)) hcofval = qbnd
     !
     ! -- return
     return
-  end subroutine sft_rain_term
+  end subroutine uzt_rinf_term
   
-  subroutine sft_evap_term(this, ientry, n1, n2, rrate, &
+  subroutine uzt_uzet_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
 ! ******************************************************************************
-! sft_evap_term
+! uzt_uzet_term
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwtSftType) :: this
+    class(GwtUztType) :: this
     integer(I4B), intent(in) :: ientry
     integer(I4B), intent(inout) :: n1
     integer(I4B), intent(inout) :: n2
@@ -755,11 +749,11 @@ end subroutine find_sft_package
     real(DP) :: ctmp
     real(DP) :: omega
 ! ------------------------------------------------------------------------------
-    n1 = this%flowbudptr%budterm(this%idxbudevap)%id1(ientry)
-    n2 = this%flowbudptr%budterm(this%idxbudevap)%id2(ientry)
-    ! -- note that qbnd is negative for evap
-    qbnd = this%flowbudptr%budterm(this%idxbudevap)%flow(ientry)
-    ctmp = this%concevap(n1)%value
+    n1 = this%flowbudptr%budterm(this%idxbuduzet)%id1(ientry)
+    n2 = this%flowbudptr%budterm(this%idxbuduzet)%id2(ientry)
+    ! -- note that qbnd is negative for uzet
+    qbnd = this%flowbudptr%budterm(this%idxbuduzet)%flow(ientry)
+    ctmp = this%concuzet(n1)%value
     if (this%xnewpak(n1) < ctmp) then
       omega = DONE
     else
@@ -773,18 +767,18 @@ end subroutine find_sft_package
     !
     ! -- return
     return
-  end subroutine sft_evap_term
+  end subroutine uzt_uzet_term
   
-  subroutine sft_roff_term(this, ientry, n1, n2, rrate, &
+  subroutine uzt_ritm_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
 ! ******************************************************************************
-! sft_roff_term
+! uzt_ritm_term
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwtSftType) :: this
+    class(GwtUztType) :: this
     integer(I4B), intent(in) :: ientry
     integer(I4B), intent(inout) :: n1
     integer(I4B), intent(inout) :: n2
@@ -795,85 +789,21 @@ end subroutine find_sft_package
     real(DP) :: qbnd
     real(DP) :: ctmp
 ! ------------------------------------------------------------------------------
-    n1 = this%flowbudptr%budterm(this%idxbudroff)%id1(ientry)
-    n2 = this%flowbudptr%budterm(this%idxbudroff)%id2(ientry)
-    qbnd = this%flowbudptr%budterm(this%idxbudroff)%flow(ientry)
-    ctmp = this%concroff(n1)%value
-    if (present(rrate)) rrate = ctmp * qbnd
-    if (present(rhsval)) rhsval = -rrate
-    if (present(hcofval)) hcofval = DZERO
-    !
-    ! -- return
-    return
-  end subroutine sft_roff_term
-  
-  subroutine sft_iflw_term(this, ientry, n1, n2, rrate, &
-                           rhsval, hcofval)
-! ******************************************************************************
-! sft_iflw_term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    class(GwtSftType) :: this
-    integer(I4B), intent(in) :: ientry
-    integer(I4B), intent(inout) :: n1
-    integer(I4B), intent(inout) :: n2
-    real(DP), intent(inout), optional :: rrate
-    real(DP), intent(inout), optional :: rhsval
-    real(DP), intent(inout), optional :: hcofval
-    ! -- local
-    real(DP) :: qbnd
-    real(DP) :: ctmp
-! ------------------------------------------------------------------------------
-    n1 = this%flowbudptr%budterm(this%idxbudiflw)%id1(ientry)
-    n2 = this%flowbudptr%budterm(this%idxbudiflw)%id2(ientry)
-    qbnd = this%flowbudptr%budterm(this%idxbudiflw)%flow(ientry)
-    ctmp = this%conciflw(n1)%value
-    if (present(rrate)) rrate = ctmp * qbnd
-    if (present(rhsval)) rhsval = -rrate
-    if (present(hcofval)) hcofval = DZERO
-    !
-    ! -- return
-    return
-  end subroutine sft_iflw_term
-  
-  subroutine sft_outf_term(this, ientry, n1, n2, rrate, &
-                           rhsval, hcofval)
-! ******************************************************************************
-! sft_outf_term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    class(GwtSftType) :: this
-    integer(I4B), intent(in) :: ientry
-    integer(I4B), intent(inout) :: n1
-    integer(I4B), intent(inout) :: n2
-    real(DP), intent(inout), optional :: rrate
-    real(DP), intent(inout), optional :: rhsval
-    real(DP), intent(inout), optional :: hcofval
-    ! -- local
-    real(DP) :: qbnd
-    real(DP) :: ctmp
-! ------------------------------------------------------------------------------
-    n1 = this%flowbudptr%budterm(this%idxbudoutf)%id1(ientry)
-    n2 = this%flowbudptr%budterm(this%idxbudoutf)%id2(ientry)
-    qbnd = this%flowbudptr%budterm(this%idxbudoutf)%flow(ientry)
-    ctmp = this%xnewpak(n1)
+    n1 = this%flowbudptr%budterm(this%idxbudritm)%id1(ientry)
+    n2 = this%flowbudptr%budterm(this%idxbudritm)%id2(ientry)
+    qbnd = this%flowbudptr%budterm(this%idxbudritm)%flow(ientry)
+    ctmp = this%concinfl(n1)%value
     if (present(rrate)) rrate = ctmp * qbnd
     if (present(rhsval)) rhsval = DZERO
     if (present(hcofval)) hcofval = qbnd
     !
     ! -- return
     return
-  end subroutine sft_outf_term
+  end subroutine uzt_ritm_term
   
-  subroutine sft_df_obs(this)
+  subroutine uzt_df_obs(this)
 ! ******************************************************************************
-! sft_df_obs -- obs are supported?
+! uzt_df_obs -- obs are supported?
 !   -- Store observation type supported by APT package.
 !   -- Overrides BndType%bnd_df_obs
 ! ******************************************************************************
@@ -883,53 +813,28 @@ end subroutine find_sft_package
     ! -- modules
     use GwtAptModule, only: apt_process_obsID
     ! -- dummy
-    class(GwtSftType) :: this
+    class(GwtUztType) :: this
     ! -- local
     integer(I4B) :: indx
 ! ------------------------------------------------------------------------------
     !
     ! -- Store obs type and assign procedure pointer
     !    for rainfall observation type.
-    call this%obs%StoreObsType('rainfall', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
-    !
-    ! -- Store obs type and assign procedure pointer
-    !    for evaporation observation type.
-    call this%obs%StoreObsType('evaporation', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
-    !
-    ! -- Store obs type and assign procedure pointer
-    !    for runoff observation type.
-    call this%obs%StoreObsType('runoff', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
-    !
-    ! -- Store obs type and assign procedure pointer
-    !    for inflow observation type.
-    call this%obs%StoreObsType('ext-inflow', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
-    !
-    ! -- Store obs type and assign procedure pointer
-    !    for withdrawal observation type.
-    call this%obs%StoreObsType('withdrawal', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
-    !
-    ! -- Store obs type and assign procedure pointer
-    !    for ext-outflow observation type.
-    call this%obs%StoreObsType('outflow', .true., indx)
+    call this%obs%StoreObsType('infiltration', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     return
-  end subroutine sft_df_obs
+  end subroutine uzt_df_obs
   
-  subroutine sft_bd_obs(this, obstypeid, jj, v, found)
+  subroutine uzt_bd_obs(this, obstypeid, jj, v, found)
 ! ******************************************************************************
-! sft_bd_obs -- calculate observation value and pass it back to APT
+! uzt_bd_obs -- calculate observation value and pass it back to APT
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwtSftType), intent(inout) :: this
+    class(GwtUztType), intent(inout) :: this
     character(len=*), intent(in) :: obstypeid
     real(DP), intent(inout) :: v
     integer(I4B), intent(in) :: jj
@@ -940,37 +845,21 @@ end subroutine find_sft_package
     !
     found = .true.
     select case (obstypeid)
-      case ('RAINFALL')
+      case ('INFILTRATION')
         if (this%iboundpak(jj) /= 0) then
-          call this%sft_rain_term(jj, n1, n2, v)
-        end if
-      case ('EVAPORATION')
-        if (this%iboundpak(jj) /= 0) then
-          call this%sft_evap_term(jj, n1, n2, v)
-        end if
-      case ('RUNOFF')
-        if (this%iboundpak(jj) /= 0) then
-          call this%sft_roff_term(jj, n1, n2, v)
-        end if
-      case ('EXT-INFLOW')
-        if (this%iboundpak(jj) /= 0) then
-          call this%sft_iflw_term(jj, n1, n2, v)
-        end if
-      case ('EXT-OUTFLOW')
-        if (this%iboundpak(jj) /= 0) then
-          call this%sft_outf_term(jj, n1, n2, v)
+          call this%uzt_infl_term(jj, n1, n2, v)
         end if
       case default
         found = .false.
     end select
     !
     return
-  end subroutine sft_bd_obs
+  end subroutine uzt_bd_obs
 
-  subroutine sft_set_stressperiod(this, itemno, itmp, line, found, &
+  subroutine uzt_set_stressperiod(this, itemno, itmp, line, found, &
                                   lloc, istart, istop, endtim, bndName)
 ! ******************************************************************************
-! sft_set_stressperiod -- Set a stress period attribute for using keywords.
+! uzt_set_stressperiod -- Set a stress period attribute for using keywords.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -978,7 +867,7 @@ end subroutine find_sft_package
     use TimeSeriesManagerModule, only: read_single_value_or_time_series
     use InputOutputModule, only: urword
     ! -- dummy
-    class(GwtSftType),intent(inout) :: this
+    class(GwtUztType),intent(inout) :: this
     integer(I4B), intent(in) :: itemno
     integer(I4B), intent(in) :: itmp
     character (len=*), intent(in) :: line
@@ -997,65 +886,35 @@ end subroutine find_sft_package
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
-    ! RAINFALL <rainfall>
-    ! EVAPORATION <evaporation>
-    ! RUNOFF <runoff>
-    ! INFLOW <inflow>
-    ! WITHDRAWAL <withdrawal>
+    ! RATE <rate>
     !
     found = .true.
     select case (line(istart:istop))
-      case ('RAINFALL')
+      case ('INFILTRATION')
         ierr = this%apt_check_valid(itemno)
         if (ierr /= 0) goto 999
         call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
         text = line(istart:istop)
-        jj = 1    ! For RAINFALL
+        jj = 1    ! For INFILTRATION
         call read_single_value_or_time_series(text, &
-                                              this%concrain(itmp)%value, &
-                                              this%concrain(itmp)%name, &
+                                              this%concinfl(itmp)%value, &
+                                              this%concinfl(itmp)%name, &
                                               endtim,  &
                                               this%name, 'BND', this%TsManager, &
-                                              this%iprpak, itmp, jj, 'RAINFALL', &
+                                              this%iprpak, itmp, jj, 'INFILTRATION', &
                                               bndName, this%inunit)
-      case ('EVAPORATION')
+      case ('UZET')
         ierr = this%apt_check_valid(itemno)
         if (ierr /= 0) goto 999
         call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
         text = line(istart:istop)
-        jj = 1    ! For EVAPORATION
+        jj = 1    ! For UZET
         call read_single_value_or_time_series(text, &
-                                              this%concevap(itmp)%value, &
-                                              this%concevap(itmp)%name, &
+                                              this%concuzet(itmp)%value, &
+                                              this%concuzet(itmp)%name, &
                                               endtim,  &
                                               this%name, 'BND', this%TsManager, &
-                                              this%iprpak, itmp, jj, 'EVAPORATION', &
-                                              bndName, this%inunit)
-      case ('RUNOFF')
-        ierr = this%apt_check_valid(itemno)
-        if (ierr /= 0) goto 999
-        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
-        text = line(istart:istop)
-        jj = 1    ! For RUNOFF
-        call read_single_value_or_time_series(text, &
-                                              this%concroff(itmp)%value, &
-                                              this%concroff(itmp)%name, &
-                                              endtim,  &
-                                              this%name, 'BND', this%TsManager, &
-                                              this%iprpak, itmp, jj, 'RUNOFF', &
-                                              bndName, this%inunit)
-      case ('INFLOW')
-        ierr = this%apt_check_valid(itemno)
-        if (ierr /= 0) goto 999
-        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
-        text = line(istart:istop)
-        jj = 1    ! For INFLOW
-        call read_single_value_or_time_series(text, &
-                                              this%conciflw(itmp)%value, &
-                                              this%conciflw(itmp)%name, &
-                                              endtim,  &
-                                              this%name, 'BND', this%TsManager, &
-                                              this%iprpak, itmp, jj, 'INFLOW', &
+                                              this%iprpak, itmp, jj, 'UZET', &
                                               bndName, this%inunit)
       case default
         !
@@ -1067,7 +926,6 @@ end subroutine find_sft_package
     !
     ! -- return
     return
-  end subroutine sft_set_stressperiod
+  end subroutine uzt_set_stressperiod
 
-
-end module GwtSftModule
+end module GwtUztModule
