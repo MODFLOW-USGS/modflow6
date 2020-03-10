@@ -22,7 +22,7 @@ module InputOutputModule
             read_line, uget_any_block,                                         &
             GetFileFromPath, extract_idnum_or_bndname, urdaux,                 &
             get_jk, uget_block_line, print_format, BuildFixedFormat,           &
-            BuildFloatFormat, BuildIntFormat,                                  &
+            BuildFloatFormat, BuildIntFormat, fseek_stream,                    &
             get_nwords
 
   contains
@@ -2143,6 +2143,7 @@ module InputOutputModule
     return
   end subroutine BuildIntFormat
 
+
   function get_nwords(line)
 ! ******************************************************************************
 ! get_nwords -- return number of words in a string
@@ -2177,5 +2178,50 @@ module InputOutputModule
     ! -- return
     return
   end function get_nwords
+
+  subroutine fseek_stream(iu, offset, whence, status)
+! ******************************************************************************
+! Move the file pointer.  Patterned after fseek, which is not 
+! supported as part of the fortran standard.  For this subroutine to work
+! the file must have been opened with access='stream' and action='readwrite'.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    integer(I4B), intent(in) :: iu
+    integer(I4B), intent(in) :: offset
+    integer(I4B), intent(in) :: whence
+    integer(I4B), intent(inout) :: status
+    integer(I4B) :: ipos
+! ------------------------------------------------------------------------------
+    !
+    inquire(unit=iu, size=ipos)
+    
+    select case(whence)
+    case(0)
+      !
+      ! -- whence = 0, offset is relative to start of file
+      ipos = 0 + offset
+    case(1)
+      !
+      ! -- whence = 1, offset is relative to current pointer position
+      inquire(unit=iu, pos=ipos)
+      ipos = ipos + offset
+    case(2)
+      !
+      ! -- whence = 2, offset is relative to end of file
+      inquire(unit=iu, size=ipos)
+      ipos = ipos + offset
+    end select
+    !
+    ! -- position the file pointer to ipos
+    write(iu, pos=ipos, iostat=status)
+    inquire(unit=iu, pos=ipos)
+    !
+    ! -- return
+    return
+  end subroutine fseek_stream
+  
+  
 
 END MODULE InputOutputModule

@@ -642,7 +642,7 @@ module GwfDisuModule
             write(this%iout,'(3x,a)') 'VERTICES AND CELL2D BLOCKS WILL ' //    &
               'BE READ BELOW. '
           case default
-            write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN DIS DIMENSION: ',      &
+            write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN DISU DIMENSION: ',      &
                                       trim(keyword)
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()

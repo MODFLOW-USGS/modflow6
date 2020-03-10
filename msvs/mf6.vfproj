@@ -155,6 +155,7 @@
 		<File RelativePath="..\src\Utilities\ArrayReaders.f90"/>
 		<File RelativePath="..\src\Utilities\BlockParser.f90"/>
 		<File RelativePath="..\src\Utilities\Budget.f90"/>
+		<File RelativePath="..\src\Utilities\BudgetFileReader.f90"/>
 		<File RelativePath="..\src\Utilities\BudgetObject.f90"/>
 		<File RelativePath="..\src\Utilities\BudgetTerm.f90"/>
 		<File RelativePath="..\src\Utilities\comarg.f90"/>
