@@ -26,13 +26,13 @@ contains
     call GetCommandLineArguments()
     !
     ! initialize simulation
-    call mf6_initialize()
+    call initialize()
     !
     ! -- time loop
     tsloop: do while (totim < totalsimtime)
       
       ! perform a time step
-      hasConverged = mf6_update()
+      hasConverged = update()
       
       ! if not converged, break
       if(.not. hasConverged) exit tsloop   
@@ -40,30 +40,29 @@ contains
     enddo tsloop
     !
     ! -- finalize simulation
-    call mf6_finalize()
+    call finalize()
     
   end subroutine runmf6
   
-  subroutine mf6_initialize()
-    use SimulationCreateModule, only: simulation_cr     
-    !
+  subroutine initialize()
+    use SimulationCreateModule, only: simulation_cr
+    
     ! -- print banner and info to screen
     call printInfo()
-    !
-    ! -- create simulation
+    
+    ! -- create
     call simulation_cr()
-    !
-    ! -- prepare simulation (_df + _ar)
-    call prepareSimulation()   
     
-  end subroutine mf6_initialize
+    ! -- define
+    call simulation_df()
+       
+    ! -- allocate and read
+    call simulation_ar()
+    
+  end subroutine initialize
   
-  function mf6_update() result(hasConverged)
-    Use TdisModule, only: tdis_tu
+  function update() result(hasConverged)
     logical :: hasConverged
-    
-    ! -- time update
-    call tdis_tu()
     !
     ! -- prepare timestep
     call prepareTimestep()
@@ -74,9 +73,9 @@ contains
     ! -- after timestep
     hasConverged = finalizeTimestep()
     !
-  end function mf6_update
+  end function update
   
-  subroutine mf6_finalize()
+  subroutine finalize()
     use ListsModule,            only: lists_da
     use MemoryManagerModule,    only: mem_usage, mem_da
     use TimerModule,            only: elapsed_time   
@@ -149,7 +148,7 @@ contains
     call elapsed_time(iout, 1)
     call final_message()
     !        
-  end subroutine mf6_finalize
+  end subroutine finalize
   
   subroutine printInfo()         
     use CompilerVersion
@@ -179,12 +178,11 @@ contains
     
   end subroutine printInfo
   
-  subroutine prepareSimulation()    
+  subroutine simulation_df()
     integer(I4B) :: im, ic, is
     class(BaseSolutionType), pointer :: sp => null()
     class(BaseModelType), pointer :: mp => null()
     class(BaseExchangeType), pointer :: ep => null()
-    
     
     ! -- Define each model
     do im = 1, basemodellist%Count()
@@ -203,9 +201,15 @@ contains
       sp => GetBaseSolutionFromList(basesolutionlist, is)
       call sp%sln_df()
     enddo
-    !
-    !
-    ! -- ALLOCATE AND READ (AR)
+  
+  end subroutine simulation_df
+  
+  subroutine simulation_ar()  
+    integer(I4B) :: im, ic, is
+    class(BaseSolutionType), pointer :: sp => null()
+    class(BaseModelType), pointer :: mp => null()
+    class(BaseExchangeType), pointer :: ep => null()
+    
     ! -- Allocate and read each model
     do im = 1, basemodellist%Count()
       mp => GetBaseModelFromList(basemodellist, im)
@@ -224,10 +228,11 @@ contains
       call sp%sln_ar()
     enddo
     !
-  end subroutine prepareSimulation
+  end subroutine simulation_ar
   
   subroutine prepareTimestep()
     use KindModule,             only: I4B
+    use TdisModule,             only: tdis_tu
     use ListsModule,            only: basesolutionlist, basemodellist, baseexchangelist
     use BaseModelModule,        only: BaseModelType, GetBaseModelFromList
     use BaseExchangeModule,     only: BaseExchangeType, GetBaseExchangeFromList
@@ -238,6 +243,9 @@ contains
     class(BaseSolutionType), pointer :: sp => null()
     class(BaseModelType), pointer :: mp => null()
     class(BaseExchangeType), pointer :: ep => null()
+    
+    ! -- time update
+    call tdis_tu()
     
     ! -- Read and prepare each model
     do im = 1, basemodellist%Count()
@@ -281,7 +289,6 @@ contains
     use BaseModelModule,        only: BaseModelType, GetBaseModelFromList
     use BaseExchangeModule,     only: BaseExchangeType, GetBaseExchangeFromList
     use BaseSolutionModule,     only: BaseSolutionType, GetBaseSolutionFromList
-    use TdisModule,             only: endofsimulation
     use SimModule,              only: converge_check
     logical :: hasConverged    
     integer(I4B) :: im, ic, is
@@ -308,9 +315,7 @@ contains
     enddo
     !
     ! -- Check if we're done
-    call converge_check(hasConverged)       
-    ! TODO_MJR: delete this
-    !if(endofsimulation) exitTimeloop = .true.
+    call converge_check(hasConverged)
     
   end function finalizeTimestep
   

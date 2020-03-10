@@ -28,6 +28,7 @@
 		<Filter Name="Resource Files" Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"/>
 		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl">
 		<File RelativePath="..\dllsrc\bmi.f90"/>
-		<File RelativePath="..\dllsrc\mf6dll.f90"/>
+		<File RelativePath="..\dllsrc\mf6ami.f90"/>
+		<File RelativePath="..\dllsrc\mf6bmi.f90"/>
 		<File RelativePath="..\dllsrc\run_mf6.py"/></Filter></Files>
 	<Globals/></VisualStudioProject>

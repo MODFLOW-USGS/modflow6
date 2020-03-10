@@ -71,6 +71,7 @@ module BaseDisModule
     procedure :: connection_normal
     procedure :: connection_vector
     procedure :: get_cellxy
+    procedure :: get_dis_type
     procedure :: supports_layers
     procedure :: allocate_scalars
     procedure :: allocate_arrays
@@ -491,10 +492,23 @@ module BaseDisModule
     xcell = -999999.0
     ycell = -999999.0
     
-    call store_error('Program error: getcellxy not implemented.')
+    call store_error('Program error: get_cellxy not implemented.')
     call ustop()
     
-  end subroutine get_cellxy                             
+  end subroutine get_cellxy     
+  
+  ! return discretization type
+  subroutine get_dis_type(this, dis_type)
+    class(DisBaseType), intent(in)  :: this
+    character(len=*), intent(out)   :: dis_type
+      
+    ! suppress warning
+    dis_type = "Not implemented" 
+    
+    call store_error('Program error: get_dis_type not implemented.')
+    call ustop()
+    
+  end subroutine get_dis_type
                                
   subroutine allocate_scalars(this, name_model)
 ! ******************************************************************************

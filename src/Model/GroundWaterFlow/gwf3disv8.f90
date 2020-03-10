@@ -33,6 +33,7 @@ module GwfDisvModule
     procedure :: dis_df => disv_df
     procedure :: dis_da => disv_da
     procedure :: get_cellxy => get_cellxy_disv
+    procedure :: get_dis_type => get_dis_type
     procedure, public :: record_array
     procedure, public :: read_layer_array
     procedure, public :: record_srcdst_list_header
@@ -1379,6 +1380,15 @@ module GwfDisvModule
     ycell = this%cellxy(2, ncell2d)
     
   end subroutine get_cellxy_disv 
+  
+   ! return discretization type
+  subroutine get_dis_type(this, dis_type)
+    class(GwfDisvType), intent(in)  :: this
+    character(len=*), intent(out)  :: dis_type
+      
+    dis_type = "DISV"
+    
+  end subroutine get_dis_type
                                
   subroutine allocate_scalars(this, name_model)
 ! ******************************************************************************

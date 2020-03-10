@@ -1,4 +1,5 @@
 import sys
+import os
 import numpy as np
 from ctypes import *
 
@@ -6,8 +7,10 @@ nargs = len(sys.argv) - 1
 if nargs < 1:
     sys.exit()
 
+print("working dir:", os.getcwd())
 dllpath = sys.argv[1]
 print("running from mf6 dll: ", dllpath)
+
 mf6 = cdll.LoadLibrary(dllpath)
 
 # initialize the model
@@ -42,6 +45,7 @@ localArray = np.zeros(nsize, dtype="double", order='F')
 
 # model time loop
 while ct.value < et.value:
+    print("time: ", ct.value)
     # calculate
     mf6.update()
 
@@ -51,11 +55,11 @@ while ct.value < et.value:
     print(k11array)
     mf6.get_value_ptr_double(k33name, byref(k33))
     k33array = k33.contents
-    print(k33array)
+    # print(k33array)
 
     # get data copied into our own array
     mf6.get_value_double(k11name, localArray, byref(c_int(nsize)))
-    print(localArray)
+    # print(localArray)
 
     # update time
     mf6.get_current_time(byref(ct))
