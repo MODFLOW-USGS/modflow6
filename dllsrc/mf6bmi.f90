@@ -1,5 +1,11 @@
-module mf6dll
-  use mf6core
+! Module description:
+! TODO_MJR
+!
+! Note on style: BMI apparently uses underscores, we use underscores in some 
+! places but camelcase in other. Since this is a dedicated BMI interface module,
+! we'll use underscores here as well.
+module mf6bmi
+  use Mf6CoreModule
   use bmif, only: BMI_SUCCESS, BMI_FAILURE
   use iso_c_binding, only: c_int, c_char, c_double, C_NULL_CHAR, c_loc, c_ptr
   use KindModule, only: DP, I4B
@@ -10,28 +16,35 @@ module mf6dll
   integer(c_int), BIND(C, name="MAXSTRLEN") :: MAXSTRLEN = MAXCHARLEN
   !DEC$ ATTRIBUTES DLLEXPORT :: MAXSTRLEN
   
-  contains    
+  contains  
   
   ! initialize the computational core, assuming to have the configuration 
   ! file 'mfsim.nam' in the working directory
-  ! TODO_MJR: or do we use the path?
+  ! NOTE: initialize should be matched with a call to finalize, but there
+  ! is currently no reason to believe that we can reinitialize a model in
+  ! the same memory space... currently you would have to create a new process
+  ! for that.
   function bmi_initialize() result(bmi_status) bind(C, name="initialize")
   !DEC$ ATTRIBUTES DLLEXPORT :: bmi_initialize
     integer(kind=c_int) :: bmi_status
       
-    call initialize()
+    call Mf6Initialize()
     bmi_status = BMI_SUCCESS
     
   end function bmi_initialize
   
-  ! perform a time step
+  ! perform a computational time step, it will prepare the timestep and 
+  ! then call sgp_ca (calculate) on all the solution groups in the simulation
   function bmi_update() result(bmi_status) bind(C, name="update")
   !DEC$ ATTRIBUTES DLLEXPORT :: bmi_update
     integer(kind=c_int) :: bmi_status
     ! local
     logical :: hasConverged
     
-    hasConverged = update()
+    hasConverged = Mf6Update()
+    
+    ! TODO_MJR: not sure about this. Should bmi_status only represent the
+    ! state of the BMI, or does it include the state of the simulation?
     if (hasConverged) then
       bmi_status = BMI_SUCCESS
     else
@@ -43,14 +56,19 @@ module mf6dll
   ! Perform teardown tasks for the model.
   function bmi_finalize() result(bmi_status) bind(C, name="finalize")
   !DEC$ ATTRIBUTES DLLEXPORT :: bmi_finalize
+    use SimVariablesModule, only: iforcestop, ireturnerr
     integer(kind=c_int) :: bmi_status
     
-    call finalize()
+    ! we don't want a full stop() here, this disables it:    
+    iforcestop = 0    
+    call Mf6Finalize()
+      
     bmi_status = BMI_SUCCESS
-    
+      
   end function bmi_finalize
   
-  ! Start time of the model.
+  ! Start time of the model, as MODFLOW does not have internal time,
+  ! this will currently be returning 0.0
   function get_start_time(time) result(bmi_status) bind(C, name="get_start_time")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_start_time
     double precision, intent(out) :: time
@@ -93,15 +111,10 @@ module mf6dll
     integer, intent(out) :: var_size
     integer(kind=c_int) :: bmi_status
     ! local
-    integer(I4B) :: idx
-    character(len=LENORIGIN) :: origin, var_name
+    character(len=LENORIGIN) :: origin
     character(len=LENVARNAME) :: var_name_only
-    
-    var_name = char_array_to_string(c_var_name, strlen(c_var_name))
-    
-    idx = index(var_name, '/', back=.true.)
-    origin = var_name(:idx-1)
-    var_name_only = var_name(idx+1:)
+        
+    call split_c_var_name(c_var_name, origin, var_name_only)
     
     bmi_status = BMI_SUCCESS
     call get_mem_size(var_name_only, origin, var_size)    
@@ -117,15 +130,11 @@ module mf6dll
     integer, intent(out) :: var_nbytes
     integer(kind=c_int) :: bmi_status
     ! local
-    integer :: var_size, isize, idx
-    character(len=LENORIGIN) :: origin, var_name
+    integer :: var_size, isize
+    character(len=LENORIGIN) :: origin
     character(len=LENVARNAME) :: var_name_only
-    
-    var_name = char_array_to_string(c_var_name, strlen(c_var_name))
-    
-    idx = index(var_name, '/', back=.true.)
-    origin = var_name(:idx-1)
-    var_name_only = var_name(idx+1:)
+        
+    call split_c_var_name(c_var_name, origin, var_name_only)
     
     bmi_status = BMI_SUCCESS
     call get_mem_size(var_name_only, origin, var_size)    
@@ -138,7 +147,8 @@ module mf6dll
   end function get_var_nbytes
 
 
-  ! set the pointer to the array of the given double variable.
+  ! set the pointer to the array of the given double variable, there
+  ! is no copying of data involved!!
   function get_value_ptr_double(c_var_name, x) result(bmi_status) bind(C, name="get_value_ptr_double")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_value_ptr_double
     use MemoryManagerModule, only: mem_setptr, get_mem_rank
@@ -146,19 +156,15 @@ module mf6dll
     type(c_ptr), intent(inout) :: x
     integer(kind=c_int) :: bmi_status
     ! local
-    integer :: idx, i
-    character(len=LENORIGIN) :: origin, var_name
+    integer :: i
+    character(len=LENORIGIN) :: origin
     character(len=LENVARNAME) :: var_name_only
     real(DP), pointer :: dblptr
     real(DP), dimension(:), pointer, contiguous :: arrayptr
     real(DP), dimension(:,:), pointer, contiguous :: arrayptr2D
     integer(I4B) :: rank
     
-    var_name = char_array_to_string(c_var_name, strlen(c_var_name))
-    
-    idx = index(var_name, '/', back=.true.)
-    origin = var_name(:idx-1)
-    var_name_only = var_name(idx+1:)
+    call split_c_var_name(c_var_name, origin, var_name_only)
     
     rank = -1
     call get_mem_rank(var_name_only, origin, rank)
@@ -179,6 +185,11 @@ module mf6dll
     
   end function get_value_ptr_double
   
+  ! set the pointer to the array of the given integer variable, there
+  ! is no copying of data involved!!
+  !
+  ! NB: in the future this might merge with get_value_ptr_double, we could 
+  ! dispatch on the type ourselves and the c_ptr will work for both...  
   function get_value_ptr_int(c_var_name, x) result(bmi_status) bind(C, name="get_value_ptr_int")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_value_ptr_int
     use MemoryManagerModule, only: mem_setptr, get_mem_rank
@@ -186,19 +197,15 @@ module mf6dll
     type(c_ptr), intent(inout) :: x
     integer(kind=c_int) :: bmi_status
     ! local
-    integer :: idx, i
-    character(len=LENORIGIN) :: origin, var_name
+    integer :: i
+    character(len=LENORIGIN) :: origin
     character(len=LENVARNAME) :: var_name_only
     integer(I4B) :: rank
     integer(I4B), pointer :: scalarptr
     integer(I4B), dimension(:), pointer, contiguous :: arrayptr
     integer(I4B), dimension(:,:), pointer, contiguous :: arrayptr2D
     
-    var_name = char_array_to_string(c_var_name, strlen(c_var_name))
-    
-    idx = index(var_name, '/', back=.true.)
-    origin = var_name(:idx-1)
-    var_name_only = var_name(idx+1:)
+    call split_c_var_name(c_var_name, origin, var_name_only)
     
     rank = -1
     call get_mem_rank(var_name_only, origin, rank)
@@ -229,16 +236,11 @@ module mf6dll
     character (kind=c_char), intent(out) :: c_var_type(MAXSTRLEN)
     integer(kind=c_int) :: bmi_status    
     ! local
-    integer :: var_size, isize, idx
-    character(len=LENORIGIN) :: origin, var_name
+    character(len=LENORIGIN) :: origin
     character(len=LENVARNAME) :: var_name_only
     character(len=LENMEMTYPE) :: mem_type
     
-    ! TODO_MJR: refactor this logic into convenience routine!!!
-    var_name = char_array_to_string(c_var_name, strlen(c_var_name))    
-    idx = index(var_name, '/', back=.true.)
-    origin = var_name(:idx-1)
-    var_name_only = var_name(idx+1:)
+    call split_c_var_name(c_var_name, origin, var_name_only)
     
     bmi_status = BMI_SUCCESS
     call get_mem_type(var_name_only, origin, mem_type)
@@ -246,6 +248,7 @@ module mf6dll
     
   end function get_var_type
   
+  ! TODO_MJR: this isn't BMI, move?
   function get_var_rank(c_var_name, c_var_rank) result(bmi_status) bind(C, name="get_var_rank")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_var_rank
     use MemoryManagerModule, only: get_mem_rank
@@ -253,14 +256,10 @@ module mf6dll
     integer(kind=c_int), intent(out) :: c_var_rank
     integer(kind=c_int) :: bmi_status
     ! local
-    integer :: idx
-    character(len=LENORIGIN) :: origin, var_name
+    character(len=LENORIGIN) :: origin
     character(len=LENVARNAME) :: var_name_only
     
-    var_name = char_array_to_string(c_var_name, strlen(c_var_name))    
-    idx = index(var_name, '/', back=.true.)
-    origin = var_name(:idx-1)
-    var_name_only = var_name(idx+1:)
+    call split_c_var_name(c_var_name, origin, var_name_only)
     
     call get_mem_rank(var_name_only, origin, c_var_rank)
     if (c_var_rank == -1) then
@@ -272,7 +271,7 @@ module mf6dll
     
   end function get_var_rank
   
-  ! TODO_MJR: this is no longer bmi as well...    
+  ! TODO_MJR: this isn't BMI, move? 
   function get_var_shape(c_var_name, c_var_shape) result(bmi_status) bind(C, name="get_var_shape")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_var_shape
     use MemoryTypeModule, only: MAXMEMRANK
@@ -282,14 +281,11 @@ module mf6dll
     integer(kind=c_int) :: bmi_status
     ! local
     integer(I4B), dimension(MAXMEMRANK) :: var_shape
-    integer :: idx, var_rank
-    character(len=LENORIGIN) :: origin, var_name
+    integer :: var_rank
+    character(len=LENORIGIN) :: origin
     character(len=LENVARNAME) :: var_name_only
-    
-    var_name = char_array_to_string(c_var_name, strlen(c_var_name))    
-    idx = index(var_name, '/', back=.true.)
-    origin = var_name(:idx-1)
-    var_name_only = var_name(idx+1:)
+        
+    call split_c_var_name(c_var_name, origin, var_name_only)
     
     var_shape = 0
     var_rank = 0
@@ -299,18 +295,16 @@ module mf6dll
       bmi_status = BMI_FAILURE
       return
     end if
-    
-    
-    ! if shape is (100,1)
-    ! then we get (100,1,undef) from the call get_mem_shape
-    ! we need to revert to c-style in BMI convention, thus: 
-    ! (1,100) means reverse and drop undef    
+        
+    ! The user of the BMI is assumed C style, so if the internal shape 
+    ! is (100,1) we get (100,1,undef) from the call get_mem_shape
+    ! This we need to revert to C-style which should be (1,100) 
+    ! hence, we reverse the array and drop undef
     c_var_shape(1:var_rank) = var_shape(var_rank:1:-1)
     bmi_status = BMI_SUCCESS
     
   end function get_var_shape
-  
-  
+   
   
   ! Get the grid identifier for the given variable.
   function get_var_grid(c_var_name, var_grid) result(bmi_status) bind(C, name="get_var_grid")
@@ -338,6 +332,11 @@ module mf6dll
         return
       end if
     end do
+    
+    ! TODO_MJR: some variables will not have a model associated, 
+    ! but maybe a numerical solution instead, e.g. head "X", and then
+    ! even have multiple grids (from multiple models)
+    ! How should this work?
     
     bmi_status = BMI_FAILURE
   end function get_var_grid
@@ -458,6 +457,9 @@ module mf6dll
     end if
   end function get_grid_size
   
+  ! TODO_MJR: refactor this, grid_shape should be copied into an externally
+  ! allocated array (same for get_grid_x and get_grid_y)
+  !
   ! Get the dimensions of the computational grid.
   function get_grid_shape(grid_id, grid_shape) result(bmi_status) bind(C, name="get_grid_shape")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_grid_shape
@@ -709,6 +711,10 @@ module mf6dll
     bmi_status = BMI_SUCCESS
   end function get_grid_nodes_per_face
   
+  ! -----------------------------------------------------------------------
+  ! convenience functions follow here, TODO_MJR: move to dedicated module?
+  ! -----------------------------------------------------------------------
+  
   ! Helper function to check the grid, not all bmi routines are implemented
   ! for all types of discretizations
   function confirm_grid_type(grid_id, expected_type) result(is_match)
@@ -732,9 +738,27 @@ module mf6dll
     
   end function confirm_grid_type
   
+  ! splits the variable name from the full address string into
+  ! an origin and name as used by the memory manager
+  subroutine split_c_var_name(c_var_name, origin, var_name_only)
+    character (kind=c_char), intent(in) :: c_var_name(*)
+    character(len=LENORIGIN), intent(out) :: origin
+    character(len=LENVARNAME), intent(out) :: var_name_only    
+    ! local
+    integer :: idx
+    character(len=LENORIGIN) :: var_name    
+    
+    var_name = char_array_to_string(c_var_name, strlen(c_var_name))    
+    idx = index(var_name, '/', back=.true.)
+    origin = var_name(:idx-1)
+    var_name_only = var_name(idx+1:)
+    
+  end subroutine split_c_var_name
+  
   integer(c_int) pure function strlen(char_array)
     character(c_char), intent(in) :: char_array(LENORIGIN)
     integer :: inull, i
+    
     strlen = 0
     do i = 1, size(char_array)
       if (char_array(i) .eq. C_NULL_CHAR) then
@@ -742,6 +766,7 @@ module mf6dll
           exit
       end if
     end do
+    
   end function strlen
   
   pure function char_array_to_string(char_array, length)
@@ -749,9 +774,11 @@ module mf6dll
     character(c_char),intent(in) :: char_array(length)
     character(len=length) :: char_array_to_string
     integer :: i
+    
     do i = 1, length
       char_array_to_string(i:i) = char_array(i)
     enddo
+    
   end function char_array_to_string
   
   pure function string_to_char_array(string, length)
@@ -759,39 +786,50 @@ module mf6dll
    character(len=length), intent(in) :: string
    character(kind=c_char,len=1) :: string_to_char_array(length+1)
    integer :: i
+   
    do i = 1, length
       string_to_char_array(i) = string(i:i)
    enddo
    string_to_char_array(length+1) = C_NULL_CHAR
+   
   end function string_to_char_array
   
+  ! get the model name from the string, assuming that it is
+  ! the substring in front of the first space
   pure function extract_model_name(var_name)
     character(len=*), intent(in) :: var_name
     character(len=LENMODELNAME) :: extract_model_name
     integer :: idx
+    
     idx = index(var_name, ' ')
     extract_model_name = var_name(:idx-1)
+    
   end function extract_model_name
   
-  function get_model_name(grid_id)
+  function get_model_name(grid_id) result(model_name)
     use ListsModule, only: basemodellist
     use BaseModelModule, only: BaseModelType, GetBaseModelFromList
     integer(kind=c_int), intent(in) :: grid_id
-    character(len=LENMODELNAME) :: get_model_name
+    character(len=LENMODELNAME) :: model_name
     ! local
     integer :: i
     class(BaseModelType), pointer :: baseModel    
 
+    model_name = ''
+    
     do i = 1,basemodellist%Count()
       baseModel => GetBaseModelFromList(basemodellist, i)
       if (baseModel%id == grid_id) then
-        get_model_name = baseModel%name
+        model_name = baseModel%name
         return
       end if
     end do
+    
+    ! TODO_MJR: error message, should never get here...
+    
   end function get_model_name
   
   
 
 
-end module mf6dll
+end module mf6bmi

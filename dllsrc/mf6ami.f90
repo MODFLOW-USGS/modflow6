@@ -1,7 +1,7 @@
 ! this module contains entry points for the mf6 dll to expose functionality
 ! that is _beyond_ the basic model interface: https://bmi-spec.readthedocs.io/en/latest/
 module mf6ami
-  use mf6core
+  use Mf6CoreModule
   use KindModule
   use bmif, only: BMI_SUCCESS, BMI_FAILURE
   use iso_c_binding, only: c_int
@@ -17,7 +17,7 @@ module mf6ami
   !DEC$ ATTRIBUTES DLLEXPORT :: ami_prepare_timestep
     integer(kind=c_int) :: bmi_status
       
-    call prepareTimestep()    
+    call Mf6PrepareTimestep()    
     bmi_status = BMI_SUCCESS
     
   end function ami_prepare_timestep
@@ -28,7 +28,7 @@ module mf6ami
     ! local
     logical :: hasConverged
     
-    hasConverged = finalizeTimestep()
+    hasConverged = Mf6FinalizeTimestep()
     if (hasConverged) then
       bmi_status = BMI_SUCCESS
     else

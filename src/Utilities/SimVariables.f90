@@ -9,4 +9,5 @@ module SimVariablesModule
   integer(I4B) :: isimcheck = 1                                                  ! -- 1 to check input, 0 to ignore checks
   integer(I4B) :: numnoconverge = 0                                              ! -- number of times there were convergence problems
   integer(I4B) :: ireturnerr = 0                                                 ! -- return code for program (0 successful, 1 non-convergence, 2 error)
+  integer(I4B) :: iforcestop = 1                                                 ! -- 1 forces a call to ustop(..) when the simulation has ended, 0 doesn't
 end module SimVariablesModule
