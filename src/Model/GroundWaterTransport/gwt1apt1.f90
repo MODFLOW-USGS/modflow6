@@ -2025,9 +2025,9 @@ module GwtAptModule
     ! -- return
   end subroutine apt_set_pointers
   
-  subroutine get_volumes(this, ilake, vnew, vold, delt)
+  subroutine get_volumes(this, icv, vnew, vold, delt)
 ! ******************************************************************************
-! get_volumes -- return the lake new volume and old volume
+! get_volumes -- return the feature new volume and old volume
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -2035,7 +2035,7 @@ module GwtAptModule
     ! -- modules
     ! -- dummy
     class(GwtAptType) :: this
-    integer(I4B), intent(in) :: ilake
+    integer(I4B), intent(in) :: icv
     real(DP), intent(inout) :: vnew, vold
     real(DP), intent(in) :: delt
     ! -- local
@@ -2046,9 +2046,9 @@ module GwtAptModule
     vold = DZERO
     vnew = vold
     if (this%idxbudsto /= 0) then
-      qss = this%flowbudptr%budterm(this%idxbudsto)%flow(ilake)
-      vnew = this%flowbudptr%budterm(this%idxbudsto)%auxvar(1, ilake)
-      vold = vnew - qss * delt
+      qss = this%flowbudptr%budterm(this%idxbudsto)%flow(icv)
+      vnew = this%flowbudptr%budterm(this%idxbudsto)%auxvar(1, icv)
+      vold = vnew + qss * delt
     end if
     !
     ! -- Return

@@ -5,25 +5,32 @@
 !
 ! LAK flows (lakbudptr)     index var     LKT term              Transport Type
 !---------------------------------------------------------------------------------
-! FLOW-JA-FACE              idxbudfjf     FLOW-JA-FACE          lak2lak
-! GWF (aux FLOW-AREA)       idxbudgwf     GWF                   lak2gwf
+  
+! -- terms from LAK that will be handled by parent APT Package
+! FLOW-JA-FACE              idxbudfjf     FLOW-JA-FACE          cv2cv
+! GWF (aux FLOW-AREA)       idxbudgwf     GWF                   cv2gwf
+! STORAGE (aux VOLUME)      idxbudsto     none                  used for cv volumes
+! FROM-MVR                  idxbudfmvr    FROM-MVR              q * cext = this%qfrommvr(:)
+! TO-MVR                    idxbudtmvr    TO-MVR                q * cfeat
+
+! -- LAK terms
 ! RAINFALL                  idxbudrain    RAINFALL              q * crain
-! EVAPORATION               idxbudevap    EVAPORATION           clak<cevap: q*clak, else: q*cevap
+! EVAPORATION               idxbudevap    EVAPORATION           cfeat<cevap: q*cfeat, else: q*cevap
 ! RUNOFF                    idxbudroff    RUNOFF                q * croff
 ! EXT-INFLOW                idxbudiflw    EXT-INFLOW            q * ciflw
-! WITHDRAWAL                idxbudwdrl    WITHDRAWAL            q * clak
-! EXT-OUTFLOW               idxbudoutf    EXT-OUTFLOW           q * clak
-! TO-MVR                    idxbudtmvr    TO-MVR                q * clak
-! FROM-MVR                  idxbudfmvr    FROM-MVR              q * cext
-! STORAGE (aux VOLUME)      idxbudsto     none                  used for lake volumes
-! none                      none          STORAGE (aux MASS)    
+! WITHDRAWAL                idxbudwdrl    WITHDRAWAL            q * cfeat
+! EXT-OUTFLOW               idxbudoutf    EXT-OUTFLOW           q * cfeat
+  
+! -- terms from a flow file that should be skipped
 ! CONSTANT                  none          none                  none
 ! AUXILIARY                 none          none                  none
+
+! -- terms that are written to the transport budget file
+! none                      none          STORAGE (aux MASS)    dM/dt
 ! none                      none          AUXILIARY             none
 ! none                      none          CONSTANT              accumulate
 !
 !
-
 module GwtLktModule
 
   use KindModule, only: DP, I4B

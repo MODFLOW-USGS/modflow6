@@ -1,4 +1,4 @@
-# --------------------- gwt mwt options ---------------------
+# --------------------- gwt uzt options ---------------------
 
 block options
 name auxiliary
@@ -16,7 +16,7 @@ shape
 reader urword
 optional true
 longname
-description REPLACE boundnames {'{#1}': 'well'}
+description REPLACE boundnames {'{#1}': 'unsaturated zone flow'}
 
 block options
 name print_input
@@ -24,7 +24,7 @@ type keyword
 reader urword
 optional true
 longname print input to listing file
-description REPLACE print_input {'{#1}': 'well'}
+description REPLACE print_input {'{#1}': 'unsaturated zone flow'}
 
 block options
 name print_concentration
@@ -32,7 +32,7 @@ type keyword
 reader urword
 optional true
 longname print calculated concentrations to listing file
-description REPLACE print_head {'{#1}': 'well', '{#2}': 'concentration', '{#3}': 'CONCENTRATION'}
+description REPLACE print_head {'{#1}': 'UZF cell', '{#2}': 'concentration', '{#3}': 'CONCENTRATION'}
 
 block options
 name print_flows
@@ -40,15 +40,15 @@ type keyword
 reader urword
 optional true
 longname print calculated flows to listing file
-description REPLACE print_flows {'{#1}': 'well'}
+description REPLACE print_flows {'{#1}': 'unsaturated zone flow'}
 
 block options
 name save_flows
 type keyword
 reader urword
 optional true
-longname save well flows to budget file
-description REPLACE save_flows {'{#1}': 'well'}
+longname save UZT cell flows to budget file
+description REPLACE save_flows {'{#1}': 'unsaturated zone flow'}
 
 block options
 name concentration_filerecord
@@ -169,7 +169,7 @@ reader urword
 tagged false
 optional false
 longname file keyword
-description name of the binary maw flow budget file to read as input for the MWT Package.  This budget file can be created by running a separate GWF Model with the Multi-Aquifer Well Package and saving the maw flows to the budget file.
+description name of the binary maw flow budget file to read as input for the UZT Package.  This budget file can be created by running a separate GWF Model with the Unsaturated Zone Flow Package and saving the UZF flows to the budget file.
 
 block options
 name ts_filerecord
@@ -244,10 +244,10 @@ tagged false
 reader urword
 optional false
 longname obs6 input filename
-description REPLACE obs6_filename {'{#1}': 'MWT'}
+description REPLACE obs6_filename {'{#1}': 'UZT'}
 
 
-# --------------------- gwt mwt packagedata ---------------------
+# --------------------- gwt uzt packagedata ---------------------
 
 block packagedata
 name packagedata
@@ -264,8 +264,8 @@ shape
 tagged false
 in_record true
 reader urword
-longname well number for this entry
-description integer value that defines the well number associated with the specified PACKAGEDATA data on the line. MAWNO must be greater than zero and less than or equal to NMAWWELLS. Well information must be specified for every well or the program will terminate with an error.  The program will also terminate with an error if information for a well is specified more than once.
+longname UZF cell number for this entry
+description integer value that defines the UZF cell number associated with the specified PACKAGEDATA data on the line. UZFNO must be greater than zero and less than or equal to NUZFCELLS. Unsaturated zone flow information must be specified for every UZF cell or the program will terminate with an error.  The program will also terminate with an error if information for a UZF cell is specified more than once.
 numeric_index true
 
 block packagedata
@@ -275,8 +275,8 @@ shape
 tagged false
 in_record true
 reader urword
-longname starting well concentration
-description real value that defines the starting concentration for the well.
+longname starting UZF cell concentration
+description real value that defines the starting concentration for the unsaturated zone flow cell.
 
 block packagedata
 name aux
@@ -288,7 +288,7 @@ reader urword
 time_series true
 optional true
 longname auxiliary variables
-description REPLACE aux {'{#1}': 'well'}
+description REPLACE aux {'{#1}': 'unsaturated zone flow'}
 
 block packagedata
 name boundname
@@ -298,11 +298,11 @@ tagged false
 in_record true
 reader urword
 optional true
-longname well name
-description REPLACE boundname {'{#1}': 'well'}
+longname UZF cell name
+description REPLACE boundname {'{#1}': 'unsaturated zone flow'}
 
 
-# --------------------- gwt mwt period ---------------------
+# --------------------- gwt uzt period ---------------------
 
 block period
 name iper
@@ -318,33 +318,33 @@ longname stress period number
 description REPLACE iper {}
 
 block period
-name mwtperioddata
-type recarray mawno mwtsetting
+name uztperioddata
+type recarray uzfno uztsetting
 shape
 reader urword
 longname
 description
 
 block period
-name mawno
+name uzfno
 type integer
 shape
 tagged false
 in_record true
 reader urword
-longname well number for this entry
-description integer value that defines the well number associated with the specified PERIOD data on the line. MAWNO must be greater than zero and less than or equal to NMAWWELLS.
+longname unsaturated zone flow cell number for this entry
+description integer value that defines the UZF cell number associated with the specified PERIOD data on the line. UZFNO must be greater than zero and less than or equal to NUZFCELLS.
 numeric_index true
 
 block period
-name mwtsetting
-type keystring status concentration rate auxiliaryrecord
+name uztsetting
+type keystring status concentration infiltration uzet auxiliaryrecord
 shape
 tagged false
 in_record true
 reader urword
 longname
-description line of information that is parsed into a keyword and values.  Keyword values that can be used to start the MWTSETTING string include: STATUS, CONCENTRATION, RAINFALL, EVAPORATION, RUNOFF, and AUXILIARY.  These settings are used to assign the concentration of associated with the corresponding flow terms.  Concentrations cannot be specified for all flow terms.  For example, the Multi-Aquifer Well Package supports a ``WITHDRAWAL'' flow term.  If this withdrawal term is active, then water will be withdrawn from the well at the calculated concentration of the well.
+description line of information that is parsed into a keyword and values.  Keyword values that can be used to start the UZTSETTING string include: STATUS, CONCENTRATION, INFILTRATION, UZET, and AUXILIARY.  These settings are used to assign the concentration of associated with the corresponding flow terms.  Concentrations cannot be specified for all flow terms.
 
 block period
 name status
@@ -353,8 +353,8 @@ shape
 tagged true
 in_record true
 reader urword
-longname well concentration status
-description keyword option to define well status.  STATUS can be ACTIVE, INACTIVE, or CONSTANT. By default, STATUS is ACTIVE, which means that concentration will be calculated for the well.  If a well is inactive, then there will be no solute mass fluxes into or out of the well and the inactive value will be written for the well concentration.  If a well is constant, then the concentration for the well will be fixed at the user specified value.
+longname unsaturated zone flow cell concentration status
+description keyword option to define UZF cell status.  STATUS can be ACTIVE, INACTIVE, or CONSTANT. By default, STATUS is ACTIVE, which means that concentration will be calculated for the UZF cell.  If a UZF cell is inactive, then there will be no solute mass fluxes into or out of the UZF cell and the inactive value will be written for the UZF cell concentration.  If a UZF cell is constant, then the concentration for the UZF cell will be fixed at the user specified value.
 
 block period
 name concentration
@@ -364,19 +364,30 @@ tagged true
 in_record true
 time_series true
 reader urword
-longname well concentration
-description real or character value that defines the concentration for the well. The specified CONCENTRATION is only applied if the well is a constant concentration well. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.
+longname unsaturated zone flow cell concentration
+description real or character value that defines the concentration for the unsaturated zone flow cell. The specified CONCENTRATION is only applied if the unsaturated zone flow cell is a constant concentration cell. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.
 
 block period
-name rate
+name infiltration
 type string
 shape
 tagged true
 in_record true
 reader urword
 time_series true
-longname well injection concentration
-description real or character value that defines the injection solute concentration $(ML^{-3})$ for the well. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.
+longname infiltration concentration
+description real or character value that defines the infiltration solute concentration $(ML^{-3})$ for the UZF cell. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.
+
+block period
+name uzet
+type string
+shape
+tagged true
+in_record true
+reader urword
+time_series true
+longname unsaturated zone et concentration
+description real or character value that defines the concentration of unsaturated zone evapotranspiration water $(ML^{-3})$ for the UZF cell. If this concentration value is larger than the simulated concentration in the UZF cell, then the unsaturated zone ET water will be removed at the same concentration as the UZF cell.  If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.
 
 block period
 name auxiliaryrecord
