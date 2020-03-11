@@ -1,8 +1,8 @@
 ! this is the main entry point for the mf6 program
 program mf6
-  use mf6core
+  use Mf6CoreModule
   
-  call runmf6()
+  call Mf6Run()
   
 end program
   

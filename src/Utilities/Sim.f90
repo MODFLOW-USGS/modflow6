@@ -2,7 +2,7 @@ module SimModule
   
   use KindModule,         only: DP, I4B
   use ConstantsModule,    only: MAXCHARLEN, LINELENGTH, ISTDOUT
-  use SimVariablesModule, only: iout, ireturnerr
+  use SimVariablesModule, only: iout, ireturnerr, iforcestop
 
   implicit none
 
@@ -523,6 +523,9 @@ subroutine sim_message(iv, message)
   endif
 end subroutine sim_message
 
+! this subroutine prints final messages and then stops with the active
+! error code. If you don't want to halt the program, call print_final_message
+! instead...
 subroutine ustop(stopmess, ioutlocal)
 ! ******************************************************************************
 ! Stop program, with option to print message before stopping.
@@ -533,10 +536,23 @@ subroutine ustop(stopmess, ioutlocal)
   ! -- dummy
   character, optional, intent(in) :: stopmess*(*)
   integer(I4B),   optional, intent(in) :: ioutlocal
+  
+  !---------------------------------------------------------------------------  
+  call print_final_message(stopmess, ioutlocal)
+  
+  ! -- return appropriate error codes when terminating the program
+  call stop_with_error(ireturnerr)
+  
+  
+end subroutine ustop
+
+subroutine print_final_message(stopmess, ioutlocal)
+  character, optional, intent(in) :: stopmess*(*)
+  integer(I4B),   optional, intent(in) :: ioutlocal  
   ! -- local
   character(len=*), parameter :: fmt = '(1x,a)'
   character(len=*), parameter :: msg = 'Stopping due to error(s)'
-  logical :: errorfound
+  logical :: errorfound  
   !---------------------------------------------------------------------------
   call print_notes()
   call print_warnings()
@@ -565,9 +581,13 @@ subroutine ustop(stopmess, ioutlocal)
   !
   ! -- close iout file
   close(iout)
-  !
-  ! -- return appropriate error codes when terminating the program
-  select case (ireturnerr)
+  
+end subroutine print_final_message
+
+subroutine stop_with_error(ierr)
+  integer(I4B), intent(in) :: ierr
+
+  select case (ierr)
     case (0)
       stop
     case (1)
@@ -577,9 +597,10 @@ subroutine ustop(stopmess, ioutlocal)
     case default
       stop 999
   end select
-end subroutine ustop
+  
+end subroutine stop_with_error
 
-  subroutine converge_reset()
+subroutine converge_reset()
 ! ******************************************************************************
 ! converge_reset
 ! ******************************************************************************
@@ -658,13 +679,15 @@ end subroutine ustop
     !
     if(isimcnvg == 0) then
       ireturnerr = 1
-      call ustop('Premature termination of simulation.', iout)
+      call print_final_message('Premature termination of simulation.', iout)
     else
-      call ustop('Normal termination of simulation.', iout)
+      call print_final_message('Normal termination of simulation.', iout)
     endif
     !
-    ! -- Return
+    ! -- Return or halt
+    if (iforcestop == 1) call stop_with_error(ireturnerr)
     return
+    
   end subroutine final_message
 
 end module SimModule

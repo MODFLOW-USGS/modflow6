@@ -1,4 +1,4 @@
-module mf6core 
+module Mf6CoreModule 
   use KindModule,             only: I4B
   use ListsModule,            only: basesolutionlist, solutiongrouplist, basemodellist, baseexchangelist
   use BaseModelModule,        only: BaseModelType, GetBaseModelFromList
@@ -8,7 +8,7 @@ module mf6core
   implicit none  
 contains
   
-  subroutine runmf6
+  subroutine Mf6Run
   ! ******************************************************************************
   ! Main MODFLOW Version 6 program.
   ! ******************************************************************************
@@ -26,13 +26,13 @@ contains
     call GetCommandLineArguments()
     !
     ! initialize simulation
-    call initialize()
+    call Mf6Initialize()
     !
     ! -- time loop
     tsloop: do while (totim < totalsimtime)
       
       ! perform a time step
-      hasConverged = update()
+      hasConverged = Mf6Update()
       
       ! if not converged, break
       if(.not. hasConverged) exit tsloop   
@@ -40,11 +40,11 @@ contains
     enddo tsloop
     !
     ! -- finalize simulation
-    call finalize()
+    call Mf6Finalize()
     
-  end subroutine runmf6
+  end subroutine Mf6Run
   
-  subroutine initialize()
+  subroutine Mf6Initialize()
     use SimulationCreateModule, only: simulation_cr
     
     ! -- print banner and info to screen
@@ -59,23 +59,23 @@ contains
     ! -- allocate and read
     call simulation_ar()
     
-  end subroutine initialize
+  end subroutine Mf6Initialize
   
-  function update() result(hasConverged)
+  function Mf6Update() result(hasConverged)
     logical :: hasConverged
     !
     ! -- prepare timestep
-    call prepareTimestep()
+    call Mf6PrepareTimestep()
     !
     ! -- do timestep
-    call doTimestep()      
+    call Mf6DoTimestep()      
     !
     ! -- after timestep
-    hasConverged = finalizeTimestep()
+    hasConverged = Mf6FinalizeTimestep()
     !
-  end function update
+  end function Mf6Update
   
-  subroutine finalize()
+  subroutine Mf6Finalize()
     use ListsModule,            only: lists_da
     use MemoryManagerModule,    only: mem_usage, mem_da
     use TimerModule,            only: elapsed_time   
@@ -148,7 +148,7 @@ contains
     call elapsed_time(iout, 1)
     call final_message()
     !        
-  end subroutine finalize
+  end subroutine Mf6Finalize
   
   subroutine printInfo()         
     use CompilerVersion
@@ -230,7 +230,7 @@ contains
     !
   end subroutine simulation_ar
   
-  subroutine prepareTimestep()
+  subroutine Mf6PrepareTimestep()
     use KindModule,             only: I4B
     use TdisModule,             only: tdis_tu
     use ListsModule,            only: basesolutionlist, basemodellist, baseexchangelist
@@ -267,9 +267,9 @@ contains
     !
     call converge_reset()
     
-  end subroutine
+  end subroutine Mf6PrepareTimestep
   
-  subroutine doTimestep()
+  subroutine Mf6DoTimestep()
     use KindModule,           only: I4B
     use ListsModule,          only: solutiongrouplist
     use SolutionGroupModule,  only: SolutionGroupType, GetSolutionGroupFromList
@@ -281,9 +281,9 @@ contains
       call sgp%sgp_ca()
     enddo
       
-  end subroutine doTimestep
+  end subroutine Mf6DoTimestep
   
-  function finalizeTimestep() result(hasConverged)
+  function Mf6FinalizeTimestep() result(hasConverged)
     use KindModule,             only: I4B
     use ListsModule,            only: basesolutionlist, basemodellist, baseexchangelist    
     use BaseModelModule,        only: BaseModelType, GetBaseModelFromList
@@ -317,6 +317,6 @@ contains
     ! -- Check if we're done
     call converge_check(hasConverged)
     
-  end function finalizeTimestep
+  end function Mf6FinalizeTimestep
   
-end module mf6core
+end module Mf6CoreModule
