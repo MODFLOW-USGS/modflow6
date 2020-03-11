@@ -7,25 +7,31 @@
 !---------------------------------------------------------------------------------
 
 ! -- terms from MAW that will be handled by parent APT Package
-! GWF (aux FLOW-AREA)       idxbudgwf     GWF                   maw2gwf
-! STORAGE (aux VOLUME)      ?             none                  used for well volumes
-! FROM-MVR                  ?             FROM-MVR              q * cext = this%qfrommvr(:)
-! CONSTANT                  none          none                  none
-! AUXILIARY                 none          none                  none
-! none                      none          STORAGE (aux MASS)    
-! none                      none          AUXILIARY             none
-! none                      none          CONSTANT              accumulate
+! FLOW-JA-FACE              idxbudfjf     FLOW-JA-FACE          cv2cv
+! GWF (aux FLOW-AREA)       idxbudgwf     GWF                   cv2gwf
+! STORAGE (aux VOLUME)      idxbudsto     none                  used for cv volumes
+! FROM-MVR                  idxbudfmvr    FROM-MVR              q * cext = this%qfrommvr(:)
+! TO-MVR                    idxbudtmvr    TO-MVR                q * cfeat
 
-! -- terms from MAW that need to be handled here
+! -- MAW terms
 ! RATE                      idxbudrate    RATE                  q < 0: q * cwell, else q * cuser
 ! FW-RATE                   idxbudfwrt    FW-RATE               q * cwell
 ! RATE-TO-MVR               idxbudrtmv    RATE-TO-MVR           q * cwell
 ! FW-RATE-TO-MVR            idxbudfrtm    FW-RATE-TO-MVR        q * cwell
-
+  
 ! -- terms from MAW that should be skipped
 ! CONSTANT-TO-MVR           ?             CONSTANT-TO-MVR       q * cwell
-  
-  
+
+  ! -- terms from a flow file that should be skipped
+! CONSTANT                  none          none                  none
+! AUXILIARY                 none          none                  none
+
+! -- terms that are written to the transport budget file
+! none                      none          STORAGE (aux MASS)    dM/dt
+! none                      none          AUXILIARY             none
+! none                      none          CONSTANT              accumulate
+!
+!  
 module GwtMwtModule
 
   use KindModule, only: DP, I4B
