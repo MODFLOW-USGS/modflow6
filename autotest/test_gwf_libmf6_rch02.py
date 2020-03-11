@@ -170,7 +170,7 @@ def bmifunc(exe, idx, model_ws=None):
     mf6 = cdll.LoadLibrary(exe)
 
     # initialize the model
-    statcode = mf6.bmi_initialize()
+    statcode = mf6.initialize()
 
     # check for error condition
     if statcode != 0:
@@ -205,7 +205,7 @@ def bmifunc(exe, idx, model_ws=None):
     # model time loop
     while ct.value < et.value:
         # calculate
-        statcode = mf6.bmi_update()
+        statcode = mf6.update()
 
         # check for error condition
         if statcode != 0:
@@ -215,13 +215,15 @@ def bmifunc(exe, idx, model_ws=None):
         mf6.get_current_time(byref(ct))
 
     # cleanup
-    statcode = mf6.bmi_finalize()
+    statcode = mf6.finalize()
+    if statcode == 0:
+        success = True
 
     if model_ws is not None:
         os.chdir(init_wd)
 
     # cleanup and return
-    return True
+    return success
 
 # - No need to change any code below
 def test_mf6model():

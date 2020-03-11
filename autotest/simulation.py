@@ -185,7 +185,7 @@ class Simulation(object):
                     cpth = os.path.join(self.simpath, self.action)
                     key = self.action.lower().replace('.cmp', '')
                     exe = os.path.abspath(targets.target_dict[key])
-                    if 'mf6' in key or 'libmf6':
+                    if 'mf6' in key or 'libmf6' in key:
                         nam = None
                     else:
                         npth = pymake.get_namefiles(cpth)[0]

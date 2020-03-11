@@ -172,6 +172,12 @@ module OutputControlData
     class(OutputControlDataType) :: this
 ! ------------------------------------------------------------------------------
     !
+    ! -- flush the file
+    if (this%idataun > 0) then
+      flush(this%idataun)
+    end if
+    !
+    ! -- deallocate 
     deallocate(this%cname)
     deallocate(this%cdatafmp)
     deallocate(this%idataun)
