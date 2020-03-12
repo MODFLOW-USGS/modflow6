@@ -32,7 +32,7 @@ install:
 - pip3 install --user --upgrade pip
 - pip --version
 - pip config --user set global.progress_bar off
-- pip install --user nose-timer pydotplus bmipy
+- pip install --user nose-timer pydotplus black click jinja2 bmipy
 - git clone https://github.com/modflowpy/flopy --depth 1 --branch=develop ~/flopy
 - pip install --user -e ~/flopy
 - git clone https://github.com/modflowpy/pymake --depth 1 --branch=master ~/pymake
