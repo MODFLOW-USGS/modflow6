@@ -9,9 +9,10 @@ IRCH is specified as 1, and in test c IRCH is specified as [2, 2, 1, 2, 2]
 """
 
 import os
+import io
 import sys
 import numpy as np
-from ctypes import *
+from amiwrapper import AmiWrapper
 
 try:
     import pymake
@@ -167,56 +168,50 @@ def bmifunc(exe, idx, model_ws=None):
     if model_ws is not None:
         os.chdir(model_ws)
 
-    mf6 = cdll.LoadLibrary(exe)
+    mf6_config_file = os.path.join(model_ws, 'mfsim.nam')
+    mf6 = AmiWrapper(exe)
 
     # initialize the model
-    statcode = mf6.initialize()
+    statcode = mf6.initialize(mf6_config_file)
 
     # check for error condition
-    if statcode != 0:
+    if statcode is not None:
         return success
 
-    # get times
-    ct = c_double(0.0)
-    mf6.get_current_time(byref(ct))
-    et = c_double(0.0)
-    mf6.get_end_time(byref(et))
+    # time loop
+    start_time = mf6.get_start_time()
+    current_time = mf6.get_current_time()
+    end_time = mf6.get_end_time()
+    simulation_length = end_time - current_time
 
-    # get variable size(s)
-    elsize = c_int(0)
-    nbytes = c_int(0)
-    rchname = c_char_p(b"LIBGWF_RCH02 RCHA/RHS")
-    mf6.get_var_itemsize(rchname, byref(elsize))
-    mf6.get_var_nbytes(rchname, byref(nbytes))
-    nsize = int(nbytes.value / elsize.value)
-
-    # set the function prototype and declare the receiving pointers-to-array
-    arraytype = np.ctypeslib.ndpointer(dtype="double", ndim=1, shape=(nsize,),
-                                       flags='F')
-    mf6.get_value_ptr_double.argtypes = [c_char_p, POINTER(arraytype)]
-    mf6.get_value_ptr_double.restype = c_int
-    mf6.get_value_double.argtypes = [c_char_p, arraytype, POINTER(c_int)]
-    mf6.get_value_double.restype = c_int
-
-    # rch = arraytype()
-    #
-    # localArray = np.zeros(nsize, dtype="double", order='F')
+    # get recharge array
+    cdata = "{} RCHA/BOUND".format(name)
+    # recharge = mf6.get_value_ptr(cdata)
+    trch = np.zeros((ncol), dtype=np.float64)
 
     # model time loop
-    while ct.value < et.value:
+    idx = 0
+    while current_time < end_time:
+        # update recharge
+        trch[:] = rch_spd[idx]
+        # recharge[0, :] = trch[:]
+
         # calculate
         statcode = mf6.update()
 
         # check for error condition
-        if statcode != 0:
+        if statcode is not None:
             return success
 
         # update time
-        mf6.get_current_time(byref(ct))
+        current_time = mf6.get_current_time()
+
+        # increment counter
+        idx += 1
 
     # cleanup
     statcode = mf6.finalize()
-    if statcode == 0:
+    if statcode is None:
         success = True
 
     if model_ws is not None:

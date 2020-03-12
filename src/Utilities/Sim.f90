@@ -1,7 +1,8 @@
 module SimModule
   
   use KindModule,         only: DP, I4B
-  use ConstantsModule,    only: MAXCHARLEN, LINELENGTH, ISTDOUT
+  use ConstantsModule,    only: MAXCHARLEN, LINELENGTH, ISTDOUT,                 &
+                                IUSTART, IULAST
   use SimVariablesModule, only: iout, ireturnerr, iforcestop
 
   implicit none
@@ -23,9 +24,11 @@ module SimModule
   public :: store_error_filename
   public :: print_notes
   public :: maxerrors
+  public :: iunext
   
   integer(I4B) :: iverbose = 0 !0: print nothing
                                !1: print first level subroutine information
+  integer(I4B) :: iunext = iustart
   character(len=MAXCHARLEN), allocatable, dimension(:) :: sim_errors
   character(len=MAXCHARLEN), allocatable, dimension(:) :: sim_warnings
   character(len=MAXCHARLEN), allocatable, dimension(:) :: sim_notes
@@ -579,8 +582,11 @@ subroutine print_final_message(stopmess, ioutlocal)
     endif
   endif
   !
-  ! -- close iout file
-  close(iout)
+  ! -- close all open files
+  call sim_closefiles()
+  !
+  ! -- return
+  return
   
 end subroutine print_final_message
 
@@ -689,5 +695,33 @@ subroutine converge_reset()
     return
     
   end subroutine final_message
+  
+  subroutine sim_closefiles()
+! ******************************************************************************
+! Close all opened files.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    implicit none
+    ! -- dummy
+    ! -- local
+    integer(I4B) :: i
+    logical :: opened
+! ------------------------------------------------------------------------------
+    !
+    ! -- close file unit i if it is open
+    do i = iustart, iunext - 1
+      inquire(unit=i, opened=opened)
+      if(.not. opened) then
+        cycle
+      end if
+      close(i)
+    end do
+    !
+    ! -- return
+    return
+  end subroutine sim_closefiles
 
 end module SimModule

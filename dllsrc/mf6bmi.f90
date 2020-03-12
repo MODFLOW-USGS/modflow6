@@ -231,7 +231,7 @@ module mf6bmi
   function get_var_type(c_var_name, c_var_type) result(bmi_status) bind(C, name="get_var_type")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_var_type
     use MemoryManagerModule, only: get_mem_type
-    use MemoryTypeModule, only: LENMEMTYPE
+    use ConstantsModule, only: LENMEMTYPE
     character (kind=c_char), intent(in) :: c_var_name(*)
     character (kind=c_char), intent(out) :: c_var_type(MAXSTRLEN)
     integer(kind=c_int) :: bmi_status    
@@ -274,7 +274,7 @@ module mf6bmi
   ! TODO_MJR: this isn't BMI, move? 
   function get_var_shape(c_var_name, c_var_shape) result(bmi_status) bind(C, name="get_var_shape")
   !DEC$ ATTRIBUTES DLLEXPORT :: get_var_shape
-    use MemoryTypeModule, only: MAXMEMRANK
+    use ConstantsModule, only: MAXMEMRANK
     use MemoryManagerModule, only: get_mem_shape, get_mem_rank
     character (kind=c_char), intent(in) :: c_var_name(*)
     integer(c_int), intent(inout) :: c_var_shape(*)
