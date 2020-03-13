@@ -39,7 +39,7 @@ install:
 - git clone https://github.com/modflowpy/pymake --depth 1 --branch=master ~/pymake
 - pip install --user -e ~/pymake
 - git clone https://github.com/mjr-deltares/modflow6-bmipy.git --depth 1 --branch=master ~/ami
-- conda develop ~/ami/
+- conda-develop ~/ami/
 script:
 - export BRANCH=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_BRANCH;
   else echo $TRAVIS_PULL_REQUEST_BRANCH; fi)
