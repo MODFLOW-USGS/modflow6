@@ -1,9 +1,9 @@
 module SimModule
   
   use KindModule,         only: DP, I4B
-  use ConstantsModule,    only: MAXCHARLEN, LINELENGTH, ISTDOUT,                 &
+  use ConstantsModule,    only: MAXCHARLEN, LINELENGTH,                          &
                                 IUSTART, IULAST
-  use SimVariablesModule, only: iout, ireturnerr, iforcestop, iunext
+  use SimVariablesModule, only: istdout, iout, ireturnerr, iforcestop, iunext
 
   implicit none
 
@@ -267,7 +267,7 @@ logical function print_errors()
     if (isize > 0) then
       print_errors = .true.
       if (iout > 0) write(iout, 10)
-      write(*, 10)
+      write(istdout, 10)
       do i = 1, isize
         call write_message(sim_errors(i))
         if (iout > 0) call write_message(sim_errors(i), iout)
@@ -310,13 +310,13 @@ subroutine print_warnings()
     isize = count_warnings()
     if (isize>0) then
       if (iout>0) write(iout,10)
-      write(*,10)
+      write(istdout, 10)
       do i=1,isize
         call write_message(sim_warnings(i))
         if (iout>0) call write_message(sim_warnings(i),iout)
       enddo
     endif
-    write(*,'()')
+    write(istdout,'()')
     if (iout>0) write(iout,'()')
   endif
   !
@@ -353,7 +353,7 @@ subroutine print_notes(numberlist)
     isize = count_notes()
     if (isize>0) then
       if (iout>0) write(iout,10)
-      write(*,10)
+      write(istdout,10)
       do i=1,isize
         if (numlist) then
           write(noteplus,20)i,trim(sim_notes(i))
@@ -406,14 +406,14 @@ subroutine write_message(message, iunit, error, leadspace, endspace)
   if(present(iunit))then
     junit = iunit
   else
-    junit = ISTDOUT
+    junit = istdout
   end if
   if(present(leadspace))then
     if(leadspace) then
       if (junit>0) then
         write(junit,*)
       else
-        write(*,*)
+        write(istdout,*)
       endif
     endif
   endif
@@ -441,14 +441,14 @@ subroutine write_message(message, iunit, error, leadspace, endspace)
         if (junit>0) then
           write(junit,'(a)',err=200) amessage(j+1:i)
         else
-          write(*,'(a)',err=200) amessage(j+1:i)
+          write(istdout,'(a)',err=200) amessage(j+1:i)
         endif
         itake=2+leadblank
       else
         if (junit>0) then
           write(junit,'(a)',err=200) ablank(1:leadblank+2)//amessage(j+1:i)
         else
-          write(*,'(a)',err=200) ablank(1:leadblank+2)//amessage(j+1:i)
+          write(istdout,'(a)',err=200) ablank(1:leadblank+2)//amessage(j+1:i)
         endif
       end if
       j=i
@@ -459,14 +459,14 @@ subroutine write_message(message, iunit, error, leadspace, endspace)
     if (junit>0) then
       write(junit,'(a)',err=200) amessage(j+1:jend)
     else
-      write(*,'(a)',err=200) amessage(j+1:jend)
+      write(istdout,'(a)',err=200) amessage(j+1:jend)
     endif
     itake=2+leadblank
   else
     if (junit>0) then
       write(junit,'(a)',err=200) ablank(1:leadblank+2)//amessage(j+1:jend)
     else
-      write(*,'(a)',err=200) ablank(1:leadblank+2)//amessage(j+1:jend)
+      write(istdout,'(a)',err=200) ablank(1:leadblank+2)//amessage(j+1:jend)
     endif
   end if
   j=jend
@@ -478,13 +478,13 @@ subroutine write_message(message, iunit, error, leadspace, endspace)
     if (junit>0) then
       write(junit,'(a)',err=200) amessage(j+1:jend)
     else
-      write(*,'(a)',err=200) amessage(j+1:jend)
+      write(istdout,'(a)',err=200) amessage(j+1:jend)
     endif
   else
     if (junit>0) then
       write(junit,'(a)',err=200) ablank(1:leadblank+2)//amessage(j+1:jend)
     else
-      write(*,'(a)',err=200) ablank(1:leadblank+2)//amessage(j+1:jend)
+      write(istdout,'(a)',err=200) ablank(1:leadblank+2)//amessage(j+1:jend)
     endif
   end if
   !
@@ -493,7 +493,7 @@ subroutine write_message(message, iunit, error, leadspace, endspace)
       if (junit>0) then
         write(junit,*)
       else
-        write(*,*)
+        write(istdout,*)
       endif
     endif
   end if
@@ -560,12 +560,12 @@ subroutine print_final_message(stopmess, ioutlocal)
   errorfound = print_errors()
   if (present(stopmess)) then
     if (stopmess.ne.' ') then
-      write(*,fmt) stopmess
+      write(istdout,fmt) stopmess
       write(iout,fmt) stopmess
       if (present(ioutlocal)) then
         if (ioutlocal > 0 .and. ioutlocal .ne. iout) then
           write(ioutlocal,fmt) trim(stopmess)
-          close(ioutlocal)
+          close (ioutlocal)
         endif
       endif
     endif
@@ -573,7 +573,7 @@ subroutine print_final_message(stopmess, ioutlocal)
   !
   if (errorfound) then
     ireturnerr = 2
-    write(*,fmt) msg
+    write(istdout,fmt) msg
     if (iout > 0) write(iout,fmt) msg
     if (present(ioutlocal)) then
       if (ioutlocal > 0 .and. ioutlocal /= iout) write(ioutlocal,fmt) msg
@@ -677,7 +677,7 @@ subroutine converge_reset()
     !
     ! -- Write message if any nonconvergence
     if(numnoconverge > 0) then
-      write(*, fmtnocnvg) numnoconverge
+      write(istdout, fmtnocnvg) numnoconverge
       write(iout, fmtnocnvg) numnoconverge
     endif
     !

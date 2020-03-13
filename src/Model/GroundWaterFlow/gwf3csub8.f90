@@ -8,6 +8,7 @@ module GwfCsubModule
                              LENBUDTXT, LENAUXNAME, LENORIGIN,                  &
                              TABLEFT, TABCENTER, TABRIGHT,                      &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
+  use SimVariablesModule, only: istdout
   use GenericUtilities, only: is_same
   use SmoothingModule,        only: sQuadraticSaturation,                       &
                                     sQuadraticSaturationDerivative
@@ -534,11 +535,11 @@ contains
         icnvg = 0
         ! write convergence check information if this is the last outer iteration
         if (iend == 1) then
-          write(*,2030) this%name
-          write(this%iout, 2000)                                              &
-            '  LOCATION', '    HEAD CHANGE',                                  &
+          write(istdout,2030) this%name
+          write(this%iout, 2000)                                                 &
+            '  LOCATION', '    HEAD CHANGE',                                     &
             '  LOCATION', 'FLOW DIFFERENCE'
-          write(*,2010) ihmax, hmax, irmax, rmax
+          write(istdout,2010) ihmax, hmax, irmax, rmax
           write(this%iout,2010) ihmax, hmax, irmax, rmax
         end if
       end if
@@ -1226,7 +1227,7 @@ contains
           '-- LARGEST', (i1 - i0 + 1), 'OF', this%ninterbeds,                   &
           'INTERBED STRAIN VALUES SHOWN'
       end if
-      write (this%iout, 2000) trim(this%name), 'INTERBED STRAIN SUMMARY',       &
+      write(this%iout, 2000) trim(this%name), 'INTERBED STRAIN SUMMARY',       &
         trim(adjustl(msg))
       iloc = 1
       line = ''
@@ -1408,7 +1409,7 @@ contains
         '-- LARGEST ', (i1 - i0 + 1), 'OF', this%dis%nodes,                     &
         'CELL COARSE-GRAINED VALUES SHOWN'
     end if
-    write (this%iout, 2000) trim(this%name), 'COARSE-GRAINED STRAIN SUMMARY',   &
+    write(this%iout, 2000) trim(this%name), 'COARSE-GRAINED STRAIN SUMMARY',   &
       trim(adjustl(msg))
     iloc = 1
     line = ''
@@ -1752,7 +1753,7 @@ contains
         this%h0(itmp) = rval
 
         ! -- get bound names
-        write (cno,'(i9.9)') nn
+        write(cno,'(i9.9)') nn
           bndName = 'nsystem' // cno
         if (this%inamedbound /= 0) then
           call this%parser%GetStringCaps(bndNameTemp)
@@ -6649,7 +6650,7 @@ contains
             j = (idelay - 1) * this%ndelaycells + 1
             n2 = obsrv%NodeNumber2
             if (n2 < 1 .or. n2 > this%ndelaycells) then
-              write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
+              write(ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
                 'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
                 ' interbed cell must be > 0 and <=', this%ndelaycells, &
                 '(specified value is ', n2, ')'
@@ -6676,7 +6677,7 @@ contains
         if (this%ninterbeds > 0) then
           j = obsrv%NodeNumber
           if (j < 1 .or. j > this%ninterbeds) then
-            write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)')             &
+            write(ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)')             &
               'ERROR:', trim(adjustl(obsrv%ObsTypeId)),                         &
               ' interbed cell must be > 0 and <=', this%ninterbeds,             &
               '(specified value is ', j, ')'
@@ -6694,7 +6695,7 @@ contains
         if (this%ninterbeds > 0) then
           j = obsrv%NodeNumber
           if (j < 1 .or. j > this%ninterbeds) then
-            write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
+            write(ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
               'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
               ' interbed cell must be > 0 and <=', this%ninterbeds, &
               '(specified value is ', j, ')'

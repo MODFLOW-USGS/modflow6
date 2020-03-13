@@ -3,7 +3,7 @@
 module InputOutputModule
 
   use KindModule, only: DP, I4B
-  use SimVariablesModule, only: iunext
+  use SimVariablesModule, only: istdout, iunext
   use SimModule, only: store_error, ustop, store_error_unit,                   &
                        store_error_filename
   use ConstantsModule, only: IUSTART, IULAST,                                  &
@@ -868,9 +868,9 @@ module InputOutputModule
 !C7C-----If output unit is 0; write a message to default output.
       ELSE
          IF(IN.GT.0) THEN
-            WRITE(*,201) IN,LINE(ISTART:ISTOP),STRING(1:L),LINE
+            WRITE(istdout,201) IN,LINE(ISTART:ISTOP),STRING(1:L),LINE
          ELSE
-            WRITE(*,202) LINE(ISTART:ISTOP),STRING(1:L),LINE
+            WRITE(istdout,202) LINE(ISTART:ISTOP),STRING(1:L),LINE
          END IF
       END IF
 !C
@@ -1515,8 +1515,8 @@ module InputOutputModule
     '    formatted:',a, &
     '  sequential:',a,'  unformatted:',a,'  form:',a)
 
-    write(*,10)iu,trim(fname),trim(ac),trim(act),trim(fm),trim(seq), &
-    trim(unf),trim(frm)
+    write(istdout,10) iu, trim(fname), trim(ac), trim(act), trim(fm), trim(seq), &
+                      trim(unf),trim(frm)
     return
   end subroutine unitinquire
 

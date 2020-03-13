@@ -1,9 +1,9 @@
 module CommandArguments
   use KindModule
-  use ConstantsModule, only: ISTDOUT, LINELENGTH, LENHUGELINE
+  use ConstantsModule, only: LINELENGTH, LENHUGELINE
   use VersionModule,          only: VERSION, MFVNAM, IDEVELOPMODE
   use CompilerVersion
-  use SimVariablesModule,     only: simfile
+  use SimVariablesModule,     only: istdout, simfile
   use SimModule, only: store_error, ustop, store_error_unit,                   &
                        store_error_filename
   use InputOutputModule, only: upcase
@@ -82,14 +82,14 @@ module CommandArguments
         case('-H', '-?', '--HELP')
           call write_usage(trim(adjustl(header)), trim(adjustl(cexe)))
         case('-V', '--VERSION')
-          write(ISTDOUT,'(2a,2(1x,a))') &
+          write(istdout,'(2a,2(1x,a))')                                          &
             trim(adjustl(cexe)), ':', trim(adjustl(VERSION)), ctyp
         case('-DEV', '--DEVELOP')
-          write(ISTDOUT,'(2a,g0)') &
+          write(istdout,'(2a,g0)')                                               &
             trim(adjustl(cexe)), ': develop version ', ltyp
         case('-C', '--COMPILER') 
           call get_compiler(compiler)
-          write(ISTDOUT,'(2a,1x,a)') &
+          write(istdout,'(2a,1x,a)')                                             &
             trim(adjustl(cexe)), ':', trim(adjustl(compiler))
         case default 
           call write_usage(trim(adjustl(header)), trim(adjustl(cexe)))
@@ -124,29 +124,29 @@ module CommandArguments
     character(len=*), intent(in) :: header
     character(len=*), intent(in) :: cexe
     ! -- local
-    character(len=*), parameter :: OPTIONSFMT =                                    &
-      "(/,                                                                      &
-      &'Options   GNU long option   Meaning ',/,                                &
-      &' -h, -?   --help            Show this message',/,                       &
-      &' -v       --version         Display program version information.',/,    &
-      &' -dev     --develop         Display program develop option mode.',/,    &
-      &' -c       --compiler        Display compiler information.',/,           &
-      &'                                                                    ',/,&
-      &'Bug reporting and contributions are welcome from the community. ',/,    &
-      &'Questions can be asked on the issues page[1]. Before creating a new',/, &
-      &'issue, please take a moment to search and make sure a similar issue',/, &
-      &'does not already exist. If one does exist, you can comment (most',/,    &
-      &'simply even with just :+1:) to show your support for that issue.',/,    &
-      &'                                                                    ',/,&
+    character(len=*), parameter :: OPTIONSFMT =                                  &
+      "(/,                                                                       &
+      &'Options   GNU long option   Meaning ',/,                                 &
+      &' -h, -?   --help            Show this message',/,                        &
+      &' -v       --version         Display program version information.',/,     &
+      &' -dev     --develop         Display program develop option mode.',/,     &
+      &' -c       --compiler        Display compiler information.',/,            &
+      &'                                                                    ',/, &
+      &'Bug reporting and contributions are welcome from the community. ',/,     &
+      &'Questions can be asked on the issues page[1]. Before creating a new',/,  &
+      &'issue, please take a moment to search and make sure a similar issue',/,  &
+      &'does not already exist. If one does exist, you can comment (most',/,     &
+      &'simply even with just :+1:) to show your support for that issue.',/,     &
+      &'                                                                    ',/, &
       &'[1] https://github.com/MODFLOW-USGS/modflow6/issues',/)"
 ! ------------------------------------------------------------------------------
-    write(ISTDOUT,'(a,/,a,1x,a,15x,a,2(1x,a),2a,/,a,1x,a,1x,a,5x,a)') &
-      trim(adjustl(header)),                                              &
-      'usage:', cexe, 'run MODFLOW', trim(adjustl(MFVNAM)),               &
-      'using "', trim(adjustl(simfile)), '"',                             &
-      '   or:', cexe, '[options]',                                        &
+    write(istdout,'(a,/,a,1x,a,15x,a,2(1x,a),2a,/,a,1x,a,1x,a,5x,a)')            &
+      trim(adjustl(header)),                                                     &
+      'usage:', cexe, 'run MODFLOW', trim(adjustl(MFVNAM)),                      &
+      'using "', trim(adjustl(simfile)), '"',                                    &
+      '   or:', cexe, '[options]',                                               &
       'retrieve program information'
-    write(ISTDOUT, OPTIONSFMT)
+    write(istdout, OPTIONSFMT)
     !
     ! -- return
     return

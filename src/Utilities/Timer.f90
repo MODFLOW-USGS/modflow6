@@ -2,6 +2,7 @@ module TimerModule
   
   use KindModule, only: DP, I4B
   use ConstantsModule, only: DZERO
+  use SimVariablesModule, only: istdout
   implicit none
   private
   public :: start_time
@@ -26,7 +27,7 @@ module TimerModule
     !    
     ! -- Get current date and time, assign to IBDT, and write to screen
     call date_and_time(values=ibdt)
-    write(*, fmtdt) (ibdt(i), i = 1, 3), (ibdt(i), i = 5, 7)
+    write(istdout, fmtdt) (ibdt(i), i = 1, 3), (ibdt(i), i = 5, 7)
     !
     ! -- return
     return
@@ -55,12 +56,12 @@ module TimerModule
 !
 !     Get current date and time, assign to IEDT, and write.
       CALL DATE_AND_TIME(VALUES=IEDT)
-      WRITE(*,1000) (IEDT(I),I=1,3),(IEDT(I),I=5,7)
+      write(istdout,1000) (IEDT(I),I=1,3),(IEDT(I),I=5,7)
  1000 FORMAT(1X,'Run end date and time (yyyy/mm/dd hh:mm:ss): ',               &
              I4,'/',I2.2,'/',I2.2,1X,I2,':',I2.2,':',I2.2)
       IF(IPRTIM.GT.0) THEN
-        WRITE(IOUT,'(1X)')
-        WRITE(IOUT,1000) (IEDT(I),I=1,3),(IEDT(I),I=5,7)
+        write(IOUT,'(1X)')
+        write(IOUT,1000) (IEDT(I),I=1,3),(IEDT(I),I=5,7)
       END IF
 !
 !     Calculate elapsed time in days and seconds
@@ -117,19 +118,19 @@ module TimerModule
 !
 !     Write elapsed time to screen
         IF (NDAYS.GT.0) THEN
-          WRITE(*,1010) NDAYS,NHOURS,NMINS,NRSECS
+          WRITE(istdout, 1010) NDAYS,NHOURS,NMINS,NRSECS
  1010     FORMAT(1X,'Elapsed run time: ',I3,' Days, ',I2,' Hours, ',I2,        &
             ' Minutes, ',I2,' Seconds',/)
         ELSEIF (NHOURS.GT.0) THEN
-          WRITE(*,1020) NHOURS,NMINS,NRSECS
+          WRITE(istdout, 1020) NHOURS,NMINS,NRSECS
  1020     FORMAT(1X,'Elapsed run time: ',I2,' Hours, ',I2,                     &
             ' Minutes, ',I2,' Seconds',/)
         ELSEIF (NMINS.GT.0) THEN
-          WRITE(*,1030) NMINS,NSECS,MSECS
+          WRITE(istdout, 1030) NMINS,NSECS,MSECS
  1030     FORMAT(1X,'Elapsed run time: ',I2,' Minutes, ',                      &
             I2,'.',I3.3,' Seconds',/)
         ELSE
-          WRITE(*,1040) NSECS,MSECS
+          WRITE(istdout, 1040) NSECS,MSECS
  1040     FORMAT(1X,'Elapsed run time: ',I2,'.',I3.3,' Seconds',/)
         ENDIF
 !
