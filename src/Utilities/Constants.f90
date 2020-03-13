@@ -29,7 +29,16 @@ module ConstantsModule
   integer(I4B), parameter :: MAXOBSTYPES = 100
   integer(I4B), parameter :: NAMEDBOUNDFLAG = -9
   integer(I4B), parameter :: IZERO = 0
-
+  !
+  ! -- file constants
+  integer(I4B), parameter :: IUSTART = 1000
+  integer(I4B), parameter :: IULAST = 10000
+  !
+  ! -- memory manager constants
+  integer(I4B), public, parameter :: MAXMEMRANK = 3
+  integer(I4B), public, parameter :: LENMEMTYPE = 50
+  !
+  ! -- real constants
   real(DP), parameter :: DZERO = 0.0_DP
   real(DP), parameter :: DONETHIRD = 1.0_DP / 3.0_DP
   real(DP), parameter :: DHALF = 0.5_DP

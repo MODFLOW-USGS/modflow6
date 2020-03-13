@@ -3,9 +3,11 @@
 module InputOutputModule
 
   use KindModule, only: DP, I4B
+  use SimVariablesModule, only: iunext
   use SimModule, only: store_error, ustop, store_error_unit,                   &
                        store_error_filename
-  use ConstantsModule, only: LINELENGTH, LENBIGLINE, LENBOUNDNAME,             &
+  use ConstantsModule, only: IUSTART, IULAST,                                  &
+                             LINELENGTH, LENBIGLINE, LENBOUNDNAME,             &
                              NAMEDBOUNDFLAG, LINELENGTH, MAXCHARLEN,           &
                              TABLEFT, TABCENTER, TABRIGHT,                     &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL,      &
@@ -167,19 +169,16 @@ module InputOutputModule
     ! -- dummy
     integer(I4B),intent(inout) :: iu
     ! -- local
-    integer(I4B) :: lastunitnumber
-    parameter(lastunitnumber=10000)
-    integer(I4B), save :: nextunitnumber=1000
     integer(I4B) :: i
     logical :: opened
 ! ------------------------------------------------------------------------------
   !
-    do i = nextunitnumber, lastunitnumber
+    do i = iunext, iulast
       inquire(unit=i, opened=opened)
       if(.not. opened) exit
     enddo
     iu = i
-    nextunitnumber = iu + 1
+    iunext = iu + 1
     !
     ! -- return
     return

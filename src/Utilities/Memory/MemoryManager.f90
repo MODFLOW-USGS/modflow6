@@ -1,9 +1,10 @@
 module MemoryManagerModule
 
   use KindModule,             only: DP, I4B, I8B
-  use ConstantsModule,        only: DZERO, LENORIGIN, LENVARNAME, LINELENGTH
+  use ConstantsModule,        only: DZERO, LENORIGIN, LENVARNAME, LINELENGTH,    &
+                                    LENMEMTYPE
   use SimModule,              only: store_error, ustop
-  use MemoryTypeModule,       only: MemoryTSType, MemoryType, LENMEMTYPE
+  use MemoryTypeModule,       only: MemoryTSType, MemoryType
   use MemoryListModule,       only: MemoryListType
   
   implicit none

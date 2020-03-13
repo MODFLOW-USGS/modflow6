@@ -186,6 +186,37 @@ def test_build_modflow6():
     assert os.path.isfile(target), msg
 
 
+def test_build_modflow6_so():
+    # determine if app should be build
+    for idx, arg in enumerate(sys.argv):
+        if arg.lower() == '--nomf6':
+            txt = 'Command line cancel of MODFLOW 6 build'
+            print(txt)
+            return
+
+    # set source and target paths
+    srcdir = os.path.join('..', 'dllsrc')
+    comdir = os.path.join('..', 'src')
+    excludefiles = [os.path.join(comdir, 'mf6.f90')]
+    target = os.path.join('..', 'bin', 'libmf6.so')
+    target += eext
+    fc, cc = pymake.set_compiler('mf6')
+
+    fflags = None
+    if fc == 'gfortran':
+        # some flags to check for errors in the code
+        # add -Werror for compilation to terminate if errors are found
+        fflags = ('-Wtabs -Wline-truncation -Wunused-label '
+                  '-Wunused-variable -pedantic -std=f2008')
+
+    pymake.main(srcdir, target, fc=fc, cc=cc, include_subdirs=True,
+                fflags=fflags, srcdir2=comdir, excludefiles=excludefiles,
+                sharedobject=True)
+
+    msg = '{} does not exist.'.format(relpath_fallback(target))
+    assert os.path.isfile(target), msg
+
+
 def test_build_mf5to6():
     # determine if app should be build
     for idx, arg in enumerate(sys.argv):
@@ -249,5 +280,6 @@ if __name__ == "__main__":
     test_build_usg()
     test_build_lgr()
     test_build_modflow6()
+    test_build_modflow6_so()
     test_build_mf5to6()
     test_build_zonebudget()
