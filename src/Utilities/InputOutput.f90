@@ -3,8 +3,8 @@
 module InputOutputModule
 
   use KindModule, only: DP, I4B
-  use SimModule, only: iunext,                                                 &
-                       store_error, ustop, store_error_unit,                   &
+  use SimVariablesModule, only: iunext
+  use SimModule, only: store_error, ustop, store_error_unit,                   &
                        store_error_filename
   use ConstantsModule, only: IUSTART, IULAST,                                  &
                              LINELENGTH, LENBIGLINE, LENBOUNDNAME,             &

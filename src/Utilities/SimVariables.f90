@@ -1,5 +1,6 @@
 module SimVariablesModule
   use KindModule, only: DP, I4B
+  use ConstantsModule, only: IUSTART
   public
   character(len=9), parameter :: simfile    = 'mfsim.nam'
   character(len=9), parameter :: simlstfile = 'mfsim.lst'
@@ -10,4 +11,5 @@ module SimVariablesModule
   integer(I4B) :: numnoconverge = 0                                              ! -- number of times there were convergence problems
   integer(I4B) :: ireturnerr = 0                                                 ! -- return code for program (0 successful, 1 non-convergence, 2 error)
   integer(I4B) :: iforcestop = 1                                                 ! -- 1 forces a call to ustop(..) when the simulation has ended, 0 doesn't
+  integer(I4B) :: iunext = iustart
 end module SimVariablesModule

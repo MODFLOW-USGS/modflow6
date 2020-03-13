@@ -3,7 +3,7 @@ module SimModule
   use KindModule,         only: DP, I4B
   use ConstantsModule,    only: MAXCHARLEN, LINELENGTH, ISTDOUT,                 &
                                 IUSTART, IULAST
-  use SimVariablesModule, only: iout, ireturnerr, iforcestop
+  use SimVariablesModule, only: iout, ireturnerr, iforcestop, iunext
 
   implicit none
 
@@ -24,11 +24,9 @@ module SimModule
   public :: store_error_filename
   public :: print_notes
   public :: maxerrors
-  public :: iunext
   
   integer(I4B) :: iverbose = 0 !0: print nothing
                                !1: print first level subroutine information
-  integer(I4B) :: iunext = iustart
   character(len=MAXCHARLEN), allocatable, dimension(:) :: sim_errors
   character(len=MAXCHARLEN), allocatable, dimension(:) :: sim_warnings
   character(len=MAXCHARLEN), allocatable, dimension(:) :: sim_notes
