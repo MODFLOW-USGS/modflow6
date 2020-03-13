@@ -1,5 +1,10 @@
-pydotplus>=2.0
 matplotlib
 netcdf4
 pyproj
 pyshp
+shapely
+tk
+pip
+nose-timer
+pydotplus
+bmipy
