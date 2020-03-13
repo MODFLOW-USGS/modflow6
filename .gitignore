@@ -56,8 +56,10 @@ doc/ConverterGuide/*.pdf
 doc/zonebudget/*.pdf
 
 bin/mf6
+bin/libmf6.*
 bin/mf5to6
 bin/zbud6
+bin/*.txt
 
 tmp_simulations/
 autotest/temp/
@@ -70,6 +72,8 @@ distribution/*.zip
 mod_temp/
 obj_temp/
 src_temp/
+
+trash/
 
 .ipynb_checkpoints/
 
@@ -87,3 +91,6 @@ Thumbs.db
 *.bat
 
 msvs/My Advisor Results*
+
+build/
+CMakeFiles/
