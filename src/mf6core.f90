@@ -76,10 +76,11 @@ contains
   end function Mf6Update
   
   subroutine Mf6Finalize()
+    use, intrinsic :: iso_fortran_env, only: output_unit
     use ListsModule,            only: lists_da
     use MemoryManagerModule,    only: mem_usage, mem_da
     use TimerModule,            only: elapsed_time   
-    use SimVariablesModule,     only: iout
+    use SimVariablesModule,     only: istdout, iout
     use SimulationCreateModule, only: simulation_cr, simulation_da  
     use TdisModule,             only: tdis_tu, tdis_da
     use SimModule,              only: final_message
@@ -147,6 +148,11 @@ contains
     call mem_da()
     call elapsed_time(iout, 1)
     call final_message()
+    !
+    ! -- close mfsim.stdout file if it has been opened
+    if (istdout /= output_unit) then
+      close(istdout)
+    end if
     !        
   end subroutine Mf6Finalize
   

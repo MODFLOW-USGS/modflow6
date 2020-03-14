@@ -71,7 +71,6 @@ module mf6bmi
     ! we don't want a full stop() here, this disables it:    
     iforcestop = 0    
     call Mf6Finalize()
-    close(istdout)
       
     bmi_status = BMI_SUCCESS
       

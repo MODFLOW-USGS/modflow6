@@ -709,12 +709,23 @@ subroutine converge_reset()
     logical :: opened
 ! ------------------------------------------------------------------------------
     !
-    ! -- close file unit i if it is open
+    ! -- close all open file units
     do i = iustart, iunext - 1
+      !
+      ! -- determine if file unit i is open
       inquire(unit=i, opened=opened)
+      !
+      ! -- skip file units that are no longer open
       if(.not. opened) then
         cycle
       end if
+      !
+      ! -- skip istdout if it has been opened
+      if (i == istdout) then
+        cycle
+      end if
+      !
+      ! -- close file unit i
       close(i)
     end do
     !

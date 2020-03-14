@@ -6,7 +6,7 @@ module CommandArguments
   use SimVariablesModule,     only: istdout, simfile
   use SimModule, only: store_error, ustop, store_error_unit,                   &
                        store_error_filename
-  use InputOutputModule, only: upcase
+  use InputOutputModule, only: upcase, getunit
   !
   implicit none
   !
@@ -91,6 +91,14 @@ module CommandArguments
           call get_compiler(compiler)
           write(istdout,'(2a,1x,a)')                                             &
             trim(adjustl(cexe)), ':', trim(adjustl(compiler))
+        case('-S', '--SILENT') 
+          iterm = 0
+          !
+          ! -- set ISTDUNIT to a physical file unit
+          istdout = getunit()  
+          !
+          ! -- open istdout file mfsim.stdout
+          open(unit=istdout, file='mfsim.stdout')
         case default 
           call write_usage(trim(adjustl(header)), trim(adjustl(cexe)))
           write(errmsg, '(2a,1x,a)') &
@@ -131,6 +139,7 @@ module CommandArguments
       &' -v       --version         Display program version information.',/,     &
       &' -dev     --develop         Display program develop option mode.',/,     &
       &' -c       --compiler        Display compiler information.',/,            &
+      &' -s       --silent          STDOUT output piped to mfsim.stdout file.',/,&
       &'                                                                    ',/, &
       &'Bug reporting and contributions are welcome from the community. ',/,     &
       &'Questions can be asked on the issues page[1]. Before creating a new',/,  &
