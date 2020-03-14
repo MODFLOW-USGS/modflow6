@@ -1,9 +1,7 @@
 module ConstantsModule
-  use, intrinsic :: iso_fortran_env, only: output_unit
   use KindModule
   public
   ! -- constants
-  integer(I4B), parameter :: ISTDOUT = output_unit
   integer(I4B), parameter :: IUSERFORMATSTRIP = -99
   integer(I4B), parameter :: IUSERFORMATWRAP = 99
   integer(I4B), parameter :: LENBIGLINE = 5000

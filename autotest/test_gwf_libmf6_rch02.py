@@ -31,7 +31,7 @@ except:
     raise Exception(msg)
 
 from framework import testing_framework
-from simulation import Simulation
+from simulation import Simulation, bmi_return
 
 ex = ['libgwf_rch02']
 exdirs = []
@@ -172,11 +172,10 @@ def bmifunc(exe, idx, model_ws=None):
     mf6 = AmiWrapper(exe)
 
     # initialize the model
-    statcode = mf6.initialize(mf6_config_file)
-
-    # check for error condition
-    if statcode is not None:
-        return success
+    try:
+        mf6.initialize(mf6_config_file)
+    except:
+        return bmi_return(success, model_ws)
 
     # time loop
     start_time = mf6.get_start_time()
@@ -196,12 +195,11 @@ def bmifunc(exe, idx, model_ws=None):
         trch[:] = rch_spd[idx]
         # recharge[0, :] = trch[:]
 
-        # calculate
-        statcode = mf6.update()
-
-        # check for error condition
-        if statcode is not None:
-            return success
+        # run timestep
+        try:
+            mf6.update()
+        except:
+            return bmi_return(success, model_ws)
 
         # update time
         current_time = mf6.get_current_time()
@@ -210,15 +208,17 @@ def bmifunc(exe, idx, model_ws=None):
         idx += 1
 
     # cleanup
-    statcode = mf6.finalize()
-    if statcode is None:
+    try:
+        mf6.finalize()
         success = True
+    except:
+        return bmi_return(success, model_ws)
 
     if model_ws is not None:
         os.chdir(init_wd)
 
     # cleanup and return
-    return success
+    return bmi_return(success, model_ws)
 
 # - No need to change any code below
 def test_mf6model():

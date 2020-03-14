@@ -10,6 +10,8 @@ module mf6bmi
   use iso_c_binding, only: c_int, c_char, c_double, C_NULL_CHAR, c_loc, c_ptr
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LENORIGIN, LENVARNAME, LENMODELNAME, MAXCHARLEN
+  use SimVariablesModule, only: istdout
+  use InputOutputModule, only: getunit
   implicit none
   
   ! Define global constants  
@@ -27,7 +29,14 @@ module mf6bmi
   function bmi_initialize() result(bmi_status) bind(C, name="initialize")
   !DEC$ ATTRIBUTES DLLEXPORT :: bmi_initialize
     integer(kind=c_int) :: bmi_status
-      
+    !
+    ! -- set ISTDUNIT to a physical file unit
+    istdout = getunit()  
+    !
+    ! -- open istdout file mfsim.stdout
+    open(unit=istdout, file='mfsim.stdout')
+    !
+    ! -- initialize MODFLOW 6
     call Mf6Initialize()
     bmi_status = BMI_SUCCESS
     

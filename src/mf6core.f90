@@ -76,10 +76,11 @@ contains
   end function Mf6Update
   
   subroutine Mf6Finalize()
+    use, intrinsic :: iso_fortran_env, only: output_unit
     use ListsModule,            only: lists_da
     use MemoryManagerModule,    only: mem_usage, mem_da
     use TimerModule,            only: elapsed_time   
-    use SimVariablesModule,     only: iout
+    use SimVariablesModule,     only: istdout, iout
     use SimulationCreateModule, only: simulation_cr, simulation_da  
     use TdisModule,             only: tdis_tu, tdis_da
     use SimModule,              only: final_message
@@ -147,32 +148,37 @@ contains
     call mem_da()
     call elapsed_time(iout, 1)
     call final_message()
+    !
+    ! -- close mfsim.stdout file if it has been opened
+    if (istdout /= output_unit) then
+      close(istdout)
+    end if
     !        
   end subroutine Mf6Finalize
   
   subroutine printInfo()         
     use CompilerVersion
-    use ConstantsModule,    only: ISTDOUT  
+    use SimVariablesModule, only: istdout  
     use VersionModule,      only: VERSION, MFVNAM, MFTITLE, FMTDISCLAIMER, IDEVELOPMODE
     use TimerModule,        only: start_time    
     use InputOutputModule,  only: write_centered
     character(len=80) :: compiler
     
     ! -- Write banner to screen (unit 6) and start timer
-    call write_centered('MODFLOW'//MFVNAM, ISTDOUT, 80)
-    call write_centered(MFTITLE, ISTDOUT, 80)
-    call write_centered('VERSION '//VERSION, ISTDOUT, 80)
+    call write_centered('MODFLOW'//MFVNAM, istdout, 80)
+    call write_centered(MFTITLE, istdout, 80)
+    call write_centered('VERSION '//VERSION, istdout, 80)
     !
     ! -- Write if develop mode
-    if (IDEVELOPMODE == 1) call write_centered('***DEVELOP MODE***', ISTDOUT, 80)
+    if (IDEVELOPMODE == 1) call write_centered('***DEVELOP MODE***', istdout, 80)
     !
     ! -- Write compiler version
     call get_compiler(compiler)
-    call write_centered(' ', ISTDOUT, 80)
-    call write_centered(trim(adjustl(compiler)), ISTDOUT, 80)
+    call write_centered(' ', istdout, 80)
+    call write_centered(trim(adjustl(compiler)), istdout, 80)
     !
     ! -- Write disclaimer
-    write(ISTDOUT, FMTDISCLAIMER)
+    write(istdout, FMTDISCLAIMER)
     ! -- get start time
     call start_time()
     

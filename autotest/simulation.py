@@ -198,8 +198,9 @@ class Simulation(object):
                                                                 silent=False,
                                                                 report=True)
                         else:
-                            success_cmp = self.bmifunc(exe, self.idxsim,
-                                                       model_ws=cpth)
+                            success_cmp, buff = self.bmifunc(exe,
+                                                             self.idxsim,
+                                                             model_ws=cpth)
                         msg = sfmt.format('Comparison run',
                                           self.name + '/' + key)
                         if success:
@@ -357,3 +358,11 @@ class Simulation(object):
             else:
                 print('Retaining test files')
         return
+
+
+def bmi_return(success, model_ws):
+    """
+    parse libmf6.so and libmf6.dll stdout file
+    """
+    fpth = os.path.join(model_ws, 'mfsim.stdout')
+    return success, open(fpth).readlines()

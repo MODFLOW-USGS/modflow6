@@ -20,7 +20,7 @@ module NumericalSolutionModule
                                      AddNumericalExchangeToList,               &
                                      GetNumericalExchangeFromList
   use SparseModule,            only: sparsematrix
-  use SimVariablesModule,      only: iout
+  use SimVariablesModule,      only: istdout, iout
   use BlockParserModule,       only: BlockParserType
   use IMSLinearModule
 
@@ -744,7 +744,7 @@ contains
     !
     ! -- check that MXITER is greater than zero
     if (this%mxiter <= 0) then
-      write (errmsg,'(a)') 'IMS sln_ar: OUTER ITERATION NUMBER MUST BE > 0.'
+      write(errmsg,'(a)') 'IMS sln_ar: OUTER ITERATION NUMBER MUST BE > 0.'
       call store_error(errmsg)
     END IF
     !
@@ -1221,7 +1221,7 @@ contains
           end do
         end if
       end if
-      write (this%icsvout,'(a)') ''
+      write(this%icsvout,'(a)') ''
     end if
     
   end subroutine writeCSVHeader
@@ -1280,10 +1280,10 @@ contains
       iptc = iptc * iallowptc
       if (iptc /= 0) then
         if (n == 1) then
-          write (iout, '(//)')
+          write(iout, '(//)')
           n = 0
         end if
-        write (iout, '(1x,a,1x,i0,1x,3a)')                                           &
+        write(iout, '(1x,a,1x,i0,1x,3a)')                                           &
           'PSEUDO-TRANSIENT CONTINUATION WILL BE APPLIED TO MODEL', im, '("',        &
           trim(adjustl(mp%name)), '") DURING THIS TIME STEP'
       end if
@@ -1344,7 +1344,7 @@ contains
       if (kiter == 1) then
         ! -- write header for solver output
         if (this%iprims > 0) then
-          write (iout,11)
+          write(iout,11)
         end if
       end if
       !
@@ -1354,7 +1354,7 @@ contains
       if (kiter == 1) then
         ! -- write header for solver output
         if (this%iprims > 0) then
-          write (iout,12)
+          write(iout,12)
         end if
       end if
     end if
@@ -1442,7 +1442,8 @@ contains
         if (this%ptcrat > this%ptcthresh) then
           this%icnvg = 0
           if (kiter == this%mxiter) then
-            write(*,*) 'pseudo-transient continuation caused convergence failure'
+            write(istdout,*) 'pseudo-transient continuation ' //                 &
+                              'caused convergence failure'
           end if
         end if
       end if
@@ -1791,7 +1792,7 @@ contains
       end if
       !
       ! -- write line
-      write (iu,'(a)') ''
+      write(iu,'(a)') ''
       !
       ! -- update i0
       i0 = i
