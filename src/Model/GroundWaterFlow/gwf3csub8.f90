@@ -8,6 +8,7 @@ module GwfCsubModule
                              LENBUDTXT, LENAUXNAME, LENORIGIN,                  &
                              TABLEFT, TABCENTER, TABRIGHT,                      &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
+  use SimVariablesModule, only: istdout
   use GenericUtilities, only: is_same
   use SmoothingModule,        only: sQuadraticSaturation,                       &
                                     sQuadraticSaturationDerivative
@@ -534,11 +535,11 @@ contains
         icnvg = 0
         ! write convergence check information if this is the last outer iteration
         if (iend == 1) then
-          write(*,2030) this%name
+          write(istdout, 2030) this%name
           write(this%iout, 2000)                                              &
             '  LOCATION', '    HEAD CHANGE',                                  &
             '  LOCATION', 'FLOW DIFFERENCE'
-          write(*,2010) ihmax, hmax, irmax, rmax
+          write(istdout, 2010) ihmax, hmax, irmax, rmax
           write(this%iout,2010) ihmax, hmax, irmax, rmax
         end if
       end if

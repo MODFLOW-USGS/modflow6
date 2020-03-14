@@ -2,7 +2,8 @@ module ConnectionsModule
 
   use ArrayReadersModule, only: ReadArray
   use KindModule, only: DP, I4B
-  use ConstantsModule,   only: LENMODELNAME, LENORIGIN
+  use ConstantsModule, only: LENMODELNAME, LENORIGIN
+  use SimVariablesModule, only: istdout
   use BlockParserModule, only: BlockParserType
   
   implicit none
@@ -458,7 +459,7 @@ module ConnectionsModule
       do ii = this%ia(n), this%ia(n + 1) - 1
         m = this%ja(ii)
         if(n /= this%ja(this%isym(ii))) then
-          write(*, fmtsymerr) aname(2), ii, this%isym(ii)
+          write(istdout, fmtsymerr) aname(2), ii, this%isym(ii)
           call this%parser%StoreErrorUnit()
           call ustop()
         endif
