@@ -3,9 +3,11 @@
 module InputOutputModule
 
   use KindModule, only: DP, I4B
+  use SimVariablesModule, only: istdout, iunext
   use SimModule, only: store_error, ustop, store_error_unit,                   &
                        store_error_filename
-  use ConstantsModule, only: LINELENGTH, LENBIGLINE, LENBOUNDNAME,             &
+  use ConstantsModule, only: IUSTART, IULAST,                                  &
+                             LINELENGTH, LENBIGLINE, LENBOUNDNAME,             &
                              NAMEDBOUNDFLAG, LINELENGTH, MAXCHARLEN,           &
                              TABLEFT, TABCENTER, TABRIGHT,                     &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL,      &
@@ -167,19 +169,16 @@ module InputOutputModule
     ! -- dummy
     integer(I4B),intent(inout) :: iu
     ! -- local
-    integer(I4B) :: lastunitnumber
-    parameter(lastunitnumber=10000)
-    integer(I4B), save :: nextunitnumber=1000
     integer(I4B) :: i
     logical :: opened
 ! ------------------------------------------------------------------------------
   !
-    do i = nextunitnumber, lastunitnumber
+    do i = iunext, iulast
       inquire(unit=i, opened=opened)
       if(.not. opened) exit
     enddo
     iu = i
-    nextunitnumber = iu + 1
+    iunext = iu + 1
     !
     ! -- return
     return
@@ -869,9 +868,9 @@ module InputOutputModule
 !C7C-----If output unit is 0; write a message to default output.
       ELSE
          IF(IN.GT.0) THEN
-            WRITE(*,201) IN,LINE(ISTART:ISTOP),STRING(1:L),LINE
+            WRITE(istdout,201) IN,LINE(ISTART:ISTOP),STRING(1:L),LINE
          ELSE
-            WRITE(*,202) LINE(ISTART:ISTOP),STRING(1:L),LINE
+            WRITE(istdout,202) LINE(ISTART:ISTOP),STRING(1:L),LINE
          END IF
       END IF
 !C
@@ -1516,8 +1515,8 @@ module InputOutputModule
     '    formatted:',a, &
     '  sequential:',a,'  unformatted:',a,'  form:',a)
 
-    write(*,10)iu,trim(fname),trim(ac),trim(act),trim(fm),trim(seq), &
-    trim(unf),trim(frm)
+    write(istdout,10) iu, trim(fname), trim(ac), trim(act), trim(fm), trim(seq), &
+                      trim(unf),trim(frm)
     return
   end subroutine unitinquire
 

@@ -204,13 +204,15 @@ contains
   end function GetPreviousItem
 
   subroutine InsertAfter(this, objptr, indx)
+    use, intrinsic :: iso_fortran_env, only: output_unit
     implicit none
     ! -- dummy
     class(ListType), intent(inout) :: this
     class(*), pointer, intent(inout) :: objptr
     integer(I4B), intent(in) :: indx
     ! -- local
-    integer :: numnodes
+    integer(I4B) :: istdout = output_unit
+    integer(I4B) :: numnodes
     type(ListNodeType), pointer :: precedingNode => null()
     type(ListNodeType), pointer :: followingNode => null()
     type(ListNodeType), pointer :: newNode => null()
@@ -230,7 +232,7 @@ contains
         followingNode%prevNode => newNode
         this%nodeCount = this%nodeCount + 1
       else
-        write(*,*)'Programming error in ListType%insert_after'
+        write(istdout,*) 'Programming error in ListType%insert_after'
         stop
       endif
     endif
