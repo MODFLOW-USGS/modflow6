@@ -1,6 +1,7 @@
 module ListModule
   ! -- ListType implements a generic list.
   use KindModule, only: DP, I4B
+  use SimVariablesModule, only: istdout
   private
   public :: ListType, ListNodeType
 
@@ -204,14 +205,12 @@ contains
   end function GetPreviousItem
 
   subroutine InsertAfter(this, objptr, indx)
-    use, intrinsic :: iso_fortran_env, only: output_unit
     implicit none
     ! -- dummy
     class(ListType), intent(inout) :: this
     class(*), pointer, intent(inout) :: objptr
     integer(I4B), intent(in) :: indx
     ! -- local
-    integer(I4B) :: istdout = output_unit
     integer(I4B) :: numnodes
     type(ListNodeType), pointer :: precedingNode => null()
     type(ListNodeType), pointer :: followingNode => null()

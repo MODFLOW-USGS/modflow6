@@ -9,7 +9,7 @@ module SimFileWriterModule
   use ModelModule, only: ModelType
   use MoverModule, only: MoverType, AddMoverToList
   use MvrPackageWriterModule, only: MvrPackageWriterType
-  use SimVariablesModule, only: SimMovers
+  use SimListVariablesModule, only: SimMovers
 
   implicit none
 
