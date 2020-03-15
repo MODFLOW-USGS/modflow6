@@ -95,6 +95,7 @@
 		<File RelativePath="..\..\..\src\Utilities\kind.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\List.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\OpenSpec.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\SimVariables.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\version.f90"/></Filter></Filter>
 		<Filter Name="NWT">
 		<File RelativePath="..\src\NWT\gwf2hfb7_NWT.f"/>
@@ -125,7 +126,7 @@
 		<File RelativePath="..\src\Preproc\ObservePHMF.f90"/>
 		<File RelativePath="..\src\Preproc\Preproc.f90"/>
 		<File RelativePath="..\src\Preproc\SimPHMF.f90"/>
-		<File RelativePath="..\src\Preproc\SimVariables.f90"/>
+		<File RelativePath="..\src\Preproc\SimListVariables.f90"/>
 		<File RelativePath="..\src\Preproc\SimVariablesPHMF.f90"/>
 		<File RelativePath="..\src\Preproc\Utilities.f90"/></Filter>
 		<File RelativePath="..\src\ArrayReadersMF5.f90"/>

@@ -536,18 +536,26 @@ subroutine ustop(stopmess, ioutlocal)
 ! ------------------------------------------------------------------------------
   ! -- dummy
   character, optional, intent(in) :: stopmess*(*)
-  integer(I4B),   optional, intent(in) :: ioutlocal
+  integer(I4B), optional, intent(in) :: ioutlocal
   
-  !---------------------------------------------------------------------------  
+  !---------------------------------------------------------------------------
+  !
+  ! -- print the final message
   call print_final_message(stopmess, ioutlocal)
-  
+  !
   ! -- return appropriate error codes when terminating the program
   call stop_with_error(ireturnerr)
-  
   
 end subroutine ustop
 
 subroutine print_final_message(stopmess, ioutlocal)
+! ******************************************************************************
+! Print a final message and close all open files
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+  ! -- dummy
   character, optional, intent(in) :: stopmess*(*)
   integer(I4B),   optional, intent(in) :: ioutlocal  
   ! -- local
@@ -589,8 +597,18 @@ subroutine print_final_message(stopmess, ioutlocal)
 end subroutine print_final_message
 
 subroutine stop_with_error(ierr)
+! ******************************************************************************
+! Stop the program and issue the correct return code 
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+  ! -- modules
+  ! -- dummy
   integer(I4B), intent(in) :: ierr
-
+!-------------------------------------------------------------------------------
+  !
+  ! -- return the correct return code
   select case (ierr)
     case (0)
       stop
@@ -623,7 +641,7 @@ subroutine converge_reset()
 
   subroutine converge_check(hasConverged)
 ! ******************************************************************************
-! converge_check
+! convergence check
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -663,12 +681,13 @@ subroutine converge_reset()
 
   subroutine final_message()
 ! ******************************************************************************
-! final_message
+! Create the appropriate final message and terminate the program
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    ! -- dummy
     use SimVariablesModule, only: isimcnvg, numnoconverge, ireturnerr
     ! -- formats
     character(len=*), parameter :: fmtnocnvg =                                 &
@@ -690,7 +709,6 @@ subroutine converge_reset()
     !
     ! -- Return or halt
     if (iforcestop == 1) call stop_with_error(ireturnerr)
-    return
     
   end subroutine final_message
   
@@ -717,11 +735,6 @@ subroutine converge_reset()
       !
       ! -- skip file units that are no longer open
       if(.not. opened) then
-        cycle
-      end if
-      !
-      ! -- skip istdout if it has been opened
-      if (i == istdout) then
         cycle
       end if
       !
