@@ -104,7 +104,8 @@
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule, only: DONE, DZERO, ISTDOUT
+    use ConstantsModule, only: DONE, DZERO
+    use SimVariablesModule, only: istdout
     ! -- local
     ! -- formats
     character(len=*),parameter :: fmtspi =                                     &
@@ -142,7 +143,7 @@
               (DONE - tsmult(kper) ** nstp(kper))
       !
       ! -- Print length of first time step
-       write (iout, fmttsi) delt
+       write(iout, fmttsi) delt
       !
       ! -- Initialize pertim (Elapsed time within stress period)
       pertim = DZERO
@@ -159,7 +160,7 @@
     if(kstp /= 1) delt = tsmult(kper) * delt
     !
     ! -- Print stress period and time step to console
-    write(ISTDOUT, fmtspts) kper, kstp
+    write(istdout, fmtspts) kper, kstp
     !
     ! -- Store totim and pertim, which are times at end of previous time step
     totimsav = totim
@@ -172,7 +173,10 @@
     !
     ! -- End of stress period and/or simulation?
     if(kstp == nstp(kper)) endofperiod = .true.
-    if(endofperiod .and. kper==nper) endofsimulation = .true.
+    if(endofperiod .and. kper==nper) then
+      endofsimulation = .true.
+      totim = totalsimtime  
+    end if
     !
     ! -- return
     return
@@ -243,7 +247,7 @@
       WRITE(IOUT,200)
   200 FORMAT(19X,' SECONDS     MINUTES      HOURS',7X, &
      &    'DAYS        YEARS'/20X,59('-'))
-      WRITE (IOUT,201) DELSEC,DELMN,DELHR,DELDY,DELYR
+      write(IOUT,201) DELSEC,DELMN,DELHR,DELDY,DELYR
   201 FORMAT(1X,'  TIME STEP LENGTH',1P,5G12.5)
       WRITE(IOUT,202) PERSEC,PERMN,PERHR,PERDY,PERYR
   202 FORMAT(1X,'STRESS PERIOD TIME',1P,5G12.5)
@@ -552,7 +556,7 @@
         perlen(n) = parser%GetDouble()
         nstp(n) = parser%GetInteger()
         tsmult(n) = parser%GetDouble()
-        write (iout, fmtrow) n, perlen(n), nstp(n), tsmult(n)
+        write(iout, fmtrow) n, perlen(n), nstp(n), tsmult(n)
         totalsimtime = totalsimtime + perlen(n)
       enddo
       !

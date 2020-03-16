@@ -8,6 +8,7 @@ module GwfCsubModule
                              LENBUDTXT, LENAUXNAME, LENORIGIN,                  &
                              TABLEFT, TABCENTER, TABRIGHT,                      &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
+  use SimVariablesModule, only: istdout
   use GenericUtilities, only: is_same
   use SmoothingModule,        only: sQuadraticSaturation,                       &
                                     sQuadraticSaturationDerivative
@@ -534,11 +535,11 @@ contains
         icnvg = 0
         ! write convergence check information if this is the last outer iteration
         if (iend == 1) then
-          write(*,2030) this%name
+          write(istdout, 2030) this%name
           write(this%iout, 2000)                                              &
             '  LOCATION', '    HEAD CHANGE',                                  &
             '  LOCATION', 'FLOW DIFFERENCE'
-          write(*,2010) ihmax, hmax, irmax, rmax
+          write(istdout, 2010) ihmax, hmax, irmax, rmax
           write(this%iout,2010) ihmax, hmax, irmax, rmax
         end if
       end if
@@ -6438,131 +6439,136 @@ contains
       call this%obs%obs_bd_clear()
       do i = 1, this%obs%npakobs
         obsrv => this%obs%pakobs(i)%obsrv
-        nn = size(obsrv%indxbnds)
-        v = DZERO
-        do j = 1, nn
-          n = obsrv%indxbnds(j)
-          select case (obsrv%ObsTypeId)
-            case ('CSUB')
-              v = this%storagee(n) + this%storagei(n)
-            case ('INELASTIC-CSUB')
-              v = this%storagei(n)
-            case ('ELASTIC-CSUB')
-              v = this%storagee(n)
-            case ('COARSE-CSUB')
-              v = this%cg_stor(n)
-            case ('WCOMP-CSUB-CELL')
-              v = this%cell_wcstor(n)
-            case ('CSUB-CELL')
-              ! -- add the coarse component
-              if (j == 1) then
-                v = this%cg_stor(n)
-              else
+        if (obsrv%BndFound) then
+          nn = size(obsrv%indxbnds)
+          v = DZERO
+          do j = 1, nn
+            n = obsrv%indxbnds(j)
+            select case (obsrv%ObsTypeId)
+              case ('CSUB')
                 v = this%storagee(n) + this%storagei(n)
-              end if
-            case ('SKE')
-              v = this%ske(n)
-            case ('SK')
-              v = this%sk(n)
-            case ('SKE-CELL')
-              ! -- add the coarse component
-              if (j == 1) then
-                v = this%cg_ske(n)
-              else
+              case ('INELASTIC-CSUB')
+                v = this%storagei(n)
+              case ('ELASTIC-CSUB')
+                v = this%storagee(n)
+              case ('COARSE-CSUB')
+                v = this%cg_stor(n)
+              case ('WCOMP-CSUB-CELL')
+                v = this%cell_wcstor(n)
+              case ('CSUB-CELL')
+                ! -- add the coarse component
+                if (j == 1) then
+                  v = this%cg_stor(n)
+                else
+                  v = this%storagee(n) + this%storagei(n)
+                end if
+              case ('SKE')
                 v = this%ske(n)
-              end if
-            case ('SK-CELL')
-              ! -- add the coarse component
-              if (j == 1) then
-                v = this%cg_sk(n)
-              else
+              case ('SK')
                 v = this%sk(n)
-              end if
-            case ('THETA')
-              v = this%theta(n)
-            case ('COARSE-THETA')
-              v = this%cg_theta(n)
-            case ('THETA-CELL')
-              ! -- add the coarse component
-              if (j == 1) then
-                f = this%cg_thick(n) / this%cell_thick(n)
-                v = f * this%cg_theta(n)
-              else
-                node = this%nodelist(n) 
-                f = this%csub_calc_interbed_thickness(n) / this%cell_thick(node)
-                v = f * this%theta(n)
-              end if
-            case ('GSTRESS-CELL')
-              v = this%cg_gs(n)
-            case ('ESTRESS-CELL')
-              v = this%cg_es(n)
-            case ('INTERBED-COMPACTION')
-              v = this%tcomp(n)
-            case ('INELASTIC-COMPACTION')
-              v = this%tcompi(n)
-            case ('ELASTIC-COMPACTION')
-              v = this%tcompe(n)
-            case ('COARSE-COMPACTION')
-              v = this%cg_tcomp(n)
-            case ('COMPACTION-CELL')
-              ! -- add the coarse component
-              if (j == 1) then
-                v = this%cg_tcomp(n)
-              else
+              case ('SKE-CELL')
+                ! -- add the coarse component
+                if (j == 1) then
+                  v = this%cg_ske(n)
+                else
+                  v = this%ske(n)
+                end if
+              case ('SK-CELL')
+                ! -- add the coarse component
+                if (j == 1) then
+                  v = this%cg_sk(n)
+                else
+                  v = this%sk(n)
+                end if
+              case ('THETA')
+                v = this%theta(n)
+              case ('COARSE-THETA')
+                v = this%cg_theta(n)
+              case ('THETA-CELL')
+                ! -- add the coarse component
+                if (j == 1) then
+                  f = this%cg_thick(n) / this%cell_thick(n)
+                  v = f * this%cg_theta(n)
+                else
+                  node = this%nodelist(n) 
+                  f = this%csub_calc_interbed_thickness(n) / this%cell_thick(node)
+                  v = f * this%theta(n)
+                end if
+              case ('GSTRESS-CELL')
+                v = this%cg_gs(n)
+              case ('ESTRESS-CELL')
+                v = this%cg_es(n)
+              case ('INTERBED-COMPACTION')
                 v = this%tcomp(n)
-              end if
-            case ('THICKNESS')
-              idelay = this%idelay(n)
-              v = this%thick(n)
-              if (idelay /= 0) then
-                v = v * this%rnb(n)
-              end if
-            case ('COARSE-THICKNESS')
-              v = this%cg_thick(n)
-            case ('THICKNESS-CELL')
-              v = this%cell_thick(n)
-            case ('DELAY-HEAD', 'DELAY-PRECONSTRESS',                           &
-                  'DELAY-GSTRESS', 'DELAY-ESTRESS',                             &
-                  'DELAY-COMPACTION', 'DELAY-THICKNESS',                        &
-                  'DELAY-THETA')
-              if (n > this%ndelaycells) then
-                r = real(n, DP) / real(this%ndelaycells, DP)
-                idelay = int(floor(r)) + 1
-                ncol = mod(n, this%ndelaycells)
-              else
-                idelay = 1
-                ncol = n
-              end if
-              select case(obsrv%ObsTypeId)
-                case ('DELAY-PRECONSTRESS')
-                  v = this%dbpcs(ncol, idelay)
-                case ('DELAY-HEAD')
-                  v = this%dbh(ncol, idelay)
-                case ('DELAY-GSTRESS')
-                  v = this%dbgeo(ncol, idelay)
-                case ('DELAY-ESTRESS')
-                  v = this%dbes(ncol, idelay)
-                case ('DELAY-COMPACTION')
-                  v = this%dbtcomp(ncol, idelay)
-                case ('DELAY-THICKNESS')
-                  v = this%dbdz(ncol, idelay)
-                case ('DELAY-THETA')
-                  v = this%dbtheta(ncol, idelay)
-              end select
-            case ('PRECONSTRESS-CELL')
-              v = this%pcs(n)
-            case ('DELAY-FLOWTOP')
-              idelay = this%idelay(n)
-              v = this%dbflowtop(idelay)
-            case ('DELAY-FLOWBOT')
-              idelay = this%idelay(n)
-              v = this%dbflowbot(idelay)
-            case default
-              msg = 'Error: Unrecognized observation type: ' // trim(obsrv%ObsTypeId)
-              call store_error(msg)
-          end select
-          call this%obs%SaveOneSimval(obsrv, v)
+              case ('INELASTIC-COMPACTION')
+                v = this%tcompi(n)
+              case ('ELASTIC-COMPACTION')
+                v = this%tcompe(n)
+              case ('COARSE-COMPACTION')
+                v = this%cg_tcomp(n)
+              case ('COMPACTION-CELL')
+                ! -- add the coarse component
+                if (j == 1) then
+                  v = this%cg_tcomp(n)
+                else
+                  v = this%tcomp(n)
+                end if
+              case ('THICKNESS')
+                idelay = this%idelay(n)
+                v = this%thick(n)
+                if (idelay /= 0) then
+                  v = v * this%rnb(n)
+                end if
+              case ('COARSE-THICKNESS')
+                v = this%cg_thick(n)
+              case ('THICKNESS-CELL')
+                v = this%cell_thick(n)
+              case ('DELAY-HEAD', 'DELAY-PRECONSTRESS',                          &
+                    'DELAY-GSTRESS', 'DELAY-ESTRESS',                            &
+                    'DELAY-COMPACTION', 'DELAY-THICKNESS',                       &
+                    'DELAY-THETA')
+                if (n > this%ndelaycells) then
+                  r = real(n, DP) / real(this%ndelaycells, DP)
+                  idelay = int(floor(r)) + 1
+                  ncol = mod(n, this%ndelaycells)
+                else
+                  idelay = 1
+                  ncol = n
+                end if
+                select case(obsrv%ObsTypeId)
+                  case ('DELAY-PRECONSTRESS')
+                    v = this%dbpcs(ncol, idelay)
+                  case ('DELAY-HEAD')
+                    v = this%dbh(ncol, idelay)
+                  case ('DELAY-GSTRESS')
+                    v = this%dbgeo(ncol, idelay)
+                  case ('DELAY-ESTRESS')
+                    v = this%dbes(ncol, idelay)
+                  case ('DELAY-COMPACTION')
+                    v = this%dbtcomp(ncol, idelay)
+                  case ('DELAY-THICKNESS')
+                    v = this%dbdz(ncol, idelay)
+                  case ('DELAY-THETA')
+                    v = this%dbtheta(ncol, idelay)
+                end select
+              case ('PRECONSTRESS-CELL')
+                v = this%pcs(n)
+              case ('DELAY-FLOWTOP')
+                idelay = this%idelay(n)
+                v = this%dbflowtop(idelay)
+              case ('DELAY-FLOWBOT')
+                idelay = this%idelay(n)
+                v = this%dbflowbot(idelay)
+              case default
+                msg = 'Error: Unrecognized observation type: ' //                &
+                      trim(obsrv%ObsTypeId)
+                call store_error(msg)
+            end select
+            call this%obs%SaveOneSimval(obsrv, v)
         end do
+        else
+          call this%obs%SaveOneSimval(obsrv, DNODATA)
+        end if
       end do
     end if
     !
@@ -6586,7 +6592,6 @@ contains
     class(ObserveType), pointer :: obsrv => null()
     character(len=LENBOUNDNAME) :: bname
     character(len=200) :: ermsg
-    logical :: jfound
     !
     if (.not. this%csub_obs_supported()) return
     !
@@ -6598,7 +6603,9 @@ contains
       !    can change each stress period.
       if (allocated(obsrv%indxbnds)) then
         deallocate(obsrv%indxbnds)
-      endif
+      end if
+      !
+      ! -- initialize BndFound to .false.
       obsrv%BndFound = .false.
       !
       bname = obsrv%FeatureName
@@ -6606,10 +6613,8 @@ contains
         ! -- Observation location(s) is(are) based on a boundary name.
         !    Iterate through all boundaries to identify and store
         !    corresponding index(indices) in bound array.
-        jfound = .false.
         do j = 1, this%ninterbeds
           if (this%boundname(j) == bname) then
-            jfound = .true.
             obsrv%BndFound = .true.
             obsrv%CurrentTimeStepEndValue = DZERO
             call ExpandArray(obsrv%indxbnds)
@@ -6626,7 +6631,6 @@ contains
                obsrv%ObsTypeId == 'COARSE-COMPACTION' .or.                      &
                obsrv%ObsTypeId == 'COARSE-THETA' .or.                           &
                obsrv%ObsTypeId == 'COARSE-THICKNESS') then
-        jfound = .true.
         obsrv%BndFound = .true.
         obsrv%CurrentTimeStepEndValue = DZERO
         call ExpandArray(obsrv%indxbnds)
@@ -6639,26 +6643,30 @@ contains
                obsrv%ObsTypeId == 'DELAY-COMPACTION' .or.                       &
                obsrv%ObsTypeId == 'DELAY-THICKNESS' .or.                        &
                obsrv%ObsTypeId == 'DELAY-THETA') then
-        n = obsrv%NodeNumber
-        idelay = this%idelay(n)
-        j = (idelay - 1) * this%ndelaycells + 1
-        n2 = obsrv%NodeNumber2
-        if (n2 < 1 .or. n2 > this%ndelaycells) then
-          write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
-            'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
-            ' interbed cell must be > 0 and <=', this%ndelaycells, &
-            '(specified value is ', n2, ')'
-          call store_error(ermsg)
-        else
-          j = (idelay - 1) * this%ndelaycells + n2
+        if (this%ninterbeds > 0) then
+          n = obsrv%NodeNumber
+          idelay = this%idelay(n)
+          if (idelay /= 0) then
+            j = (idelay - 1) * this%ndelaycells + 1
+            n2 = obsrv%NodeNumber2
+            if (n2 < 1 .or. n2 > this%ndelaycells) then
+              write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
+                'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
+                ' interbed cell must be > 0 and <=', this%ndelaycells, &
+                '(specified value is ', n2, ')'
+              call store_error(ermsg)
+            else
+              j = (idelay - 1) * this%ndelaycells + n2
+            end if
+            obsrv%BndFound = .true.
+            call ExpandArray(obsrv%indxbnds)
+            obsrv%indxbnds(1) = j
+          end if
         end if
-        call ExpandArray(obsrv%indxbnds)
-        obsrv%indxbnds(1) = j
       ! -- interbed value
       else if (obsrv%ObsTypeId == 'CSUB' .or.                                   &
                obsrv%ObsTypeId == 'INELASTIC-CSUB' .or.                         &
                obsrv%ObsTypeId == 'ELASTIC-CSUB' .or.                           &
-               obsrv%ObsTypeId == 'SK' .or.                                     &
                obsrv%ObsTypeId == 'SK' .or.                                     &
                obsrv%ObsTypeId == 'SKE' .or.                                    &
                obsrv%ObsTypeId == 'THICKNESS' .or.                              &
@@ -6666,48 +6674,45 @@ contains
                obsrv%ObsTypeId == 'INTERBED-COMPACTION' .or.                    &
                obsrv%ObsTypeId == 'INELASTIC-COMPACTION' .or.                   &
                obsrv%ObsTypeId == 'ELASTIC-COMPACTION') then
-        j = obsrv%NodeNumber
-        idelay = this%idelay(j)
-        if (j < 1 .or. j > this%ninterbeds) then
-          write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
-            'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
-            ' interbed cell must be > 0 and <=', this%ninterbeds, &
-            '(specified value is ', j, ')'
-          call store_error(ermsg)
-        else
-          obsrv%BndFound = .true.
-          obsrv%CurrentTimeStepEndValue = DZERO
-          call ExpandArray(obsrv%indxbnds)
-          n = size(obsrv%indxbnds)
-          obsrv%indxbnds(n) = j
+        if (this%ninterbeds > 0) then
+          j = obsrv%NodeNumber
+          if (j < 1 .or. j > this%ninterbeds) then
+            write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)')             &
+              'ERROR:', trim(adjustl(obsrv%ObsTypeId)),                         &
+              ' interbed cell must be > 0 and <=', this%ninterbeds,             &
+              '(specified value is ', j, ')'
+            call store_error(ermsg)
+          else
+            obsrv%BndFound = .true.
+            obsrv%CurrentTimeStepEndValue = DZERO
+            call ExpandArray(obsrv%indxbnds)
+            n = size(obsrv%indxbnds)
+            obsrv%indxbnds(n) = j
+          end if
         end if
       else if (obsrv%ObsTypeId == 'DELAY-FLOWTOP' .or.                          &
                obsrv%ObsTypeId == 'DELAY-FLOWBOT') then
-        j = obsrv%NodeNumber
-        if (j < 1 .or. j > this%ninterbeds) then
-          write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
-            'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
-            ' interbed cell must be > 0 and <=', this%ninterbeds, &
-            '(specified value is ', j, ')'
-          call store_error(ermsg)
-        end if
-        idelay = this%idelay(j)
-        if (idelay == 0) then
-          write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a)') &
-            'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
-            ' interbed', j, 'must be a delay interbed'
-          call store_error(ermsg)
-        else
-          obsrv%BndFound = .true.
-          obsrv%CurrentTimeStepEndValue = DZERO
-          call ExpandArray(obsrv%indxbnds)
-          n = size(obsrv%indxbnds)
-          obsrv%indxbnds(n) = j
+        if (this%ninterbeds > 0) then
+          j = obsrv%NodeNumber
+          if (j < 1 .or. j > this%ninterbeds) then
+            write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
+              'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
+              ' interbed cell must be > 0 and <=', this%ninterbeds, &
+              '(specified value is ', j, ')'
+            call store_error(ermsg)
+          end if
+          idelay = this%idelay(j)
+          if (idelay /= 0) then
+            obsrv%BndFound = .true.
+            obsrv%CurrentTimeStepEndValue = DZERO
+            call ExpandArray(obsrv%indxbnds)
+            n = size(obsrv%indxbnds)
+            obsrv%indxbnds(n) = j
+          end if
         end if
       else
         ! -- Accumulate values in a single cell
         ! -- Observation location is a single node number
-        jfound = .false.
         ! -- save node number in first position
         if (obsrv%ObsTypeId == 'CSUB-CELL' .or.                                 &
             obsrv%ObsTypeId == 'SKE-CELL' .or.                                  &
@@ -6715,7 +6720,6 @@ contains
             obsrv%ObsTypeId == 'THETA-CELL' .or.                                &
             obsrv%ObsTypeId == 'COMPACTION-CELL') then 
           if (.NOT. obsrv%BndFound) then
-            jfound = .true.
             obsrv%BndFound = .true.
             obsrv%CurrentTimeStepEndValue = DZERO
             call ExpandArray(obsrv%indxbnds)
@@ -6725,14 +6729,13 @@ contains
         end if
         jloop: do j = 1, this%ninterbeds
           if (this%nodelist(j) == obsrv%NodeNumber) then
-            jfound = .true.
             obsrv%BndFound = .true.
             obsrv%CurrentTimeStepEndValue = DZERO
             call ExpandArray(obsrv%indxbnds)
             n = size(obsrv%indxbnds)
             obsrv%indxbnds(n) = j
           endif
-        enddo jloop
+        end do jloop
       endif
     enddo
     !
