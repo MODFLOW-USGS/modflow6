@@ -146,9 +146,10 @@ def get_model(idx, dir):
     fbin.close()
 
     # flow model interface
+    flowfiles = [('GWFBUDGET', 'mybudget.bud'),
+                 ('GWFHEAD', 'myhead.hds')]
     fmi = flopy.mf6.ModflowGwtfmi(gwt, flow_imbalance_correction=True,
-                                  gwfbudget_filerecord='mybudget.bud',
-                                  gwfhead_filerecord='myhead.hds')
+                                  flowfiles=flowfiles)
 
     return sim
 
@@ -177,7 +178,9 @@ def eval_transport(sim):
     # This is the answer to this problem.  Concentration should not change
     cres = [[[10, 10, 10]]]
     cres = np.array(cres)
-    assert np.allclose(cres, conc), 'simulated concentrations do not match with known solution.'
+    errmsg = 'simulated concentrations do not match with known solution.\n'
+    errmsg += 'cres: {}\ncans:{}'.format(cres, conc)
+    assert np.allclose(cres, conc), errmsg
 
     return
 
