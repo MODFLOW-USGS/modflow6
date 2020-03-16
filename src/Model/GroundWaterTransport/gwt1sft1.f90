@@ -203,7 +203,7 @@ module GwtSftModule
     ! -- error if flow package not found
     if (.not. found) then
       write(errmsg, '(a)') '****ERROR. CORRESPONDING FLOW PACKAGE NOT FOUND &
-                            &FOR' // ftype // '.'
+                            & FOR' // ftype // '.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
       call ustop()
