@@ -1,4 +1,13 @@
 BEGIN OPTIONS
+  FLOW_IMBALANCE_CORRECTION
+END OPTIONS
+
+BEGIN PACKAGEDATA
   GWFBUDGET FILEIN mygwfmodel.bud
   GWFHEAD FILEIN mygwfmodel.hds
-END OPTIONS
+  LAK-1 FILEIN mygwfmodel.lak.bud
+  SFR-1 FILEIN mygwfmodel.sfr.bud
+  MAW-1 FILEIN mygwfmodel.maw.bud
+  UZF-1 FILEIN mygwfmodel.uzf.bud
+  LAK-2 FILEIN mygwfmodel-2.lak.bud
+END PACKAGEDATA
