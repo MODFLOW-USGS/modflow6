@@ -10,9 +10,9 @@ module SfrModule
                              LENPACKAGENAME, MAXCHARLEN,                       &
                              DHNOFLO, DHDRY, DNODATA,                          &
                              TABLEFT, TABCENTER, TABRIGHT
-  use SimVariablesModule, only: istdout
-  use SmoothingModule,  only: sQuadraticSaturation, sQSaturation, &
-                              sQuadraticSaturationDerivative, sQSaturationDerivative, &
+  use SmoothingModule,  only: sQuadraticSaturation, sQSaturation,              &
+                              sQuadraticSaturationDerivative,                  &
+                              sQSaturationDerivative,                          &
                               sCubicSaturation, sChSmooth
   use BndModule, only: BndType
   use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr
@@ -22,6 +22,7 @@ module SfrModule
   use InputOutputModule, only: get_node, URWORD, extract_idnum_or_bndname
   use BaseDisModule, only: DisBaseType
   use SimModule, only: count_errors, store_error, store_error_unit, ustop
+  use GenericUtilitiesModule, only: sim_message
   use SparseModule, only: sparsematrix
   use ArrayHandlersModule, only: ExpandArray
   use BlockParserModule,   only: BlockParserType
@@ -1576,6 +1577,7 @@ contains
     real(DP), intent(in) :: hclose
     real(DP), intent(in) :: rclose
     ! -- local
+    character(len=LINELENGTH) :: line
     character(len=15) :: cdhmax
     character(len=15) :: crmax
     integer(I4B) :: n
@@ -1583,12 +1585,21 @@ contains
     real(DP) :: dh
     real(DP) :: r
     ! format
-02000 format(4x,'STREAMFLOW ROUTING PACKAGE FAILED CONVERGENCE CRITERIA',//,    &
-             4x,a10,2(1x,a15),/,4x,74('-'))
-02010 format(4x,i10,2(1x,G15.7))
-02020 format(4x,74('-'))
-02030 format('CONVERGENCE FAILED AS A RESULT OF STREAMFLOW ROUTING PACKAGE',    &
-             1x,a)
+!02000 format(4x,'STREAMFLOW ROUTING PACKAGE FAILED CONVERGENCE CRITERIA',//,    &
+!             4x,a10,2(1x,a15),/,4x,74('-'))
+!02010 format(4x,i10,2(1x,G15.7))
+!02020 format(4x,74('-'))
+!02030 format('CONVERGENCE FAILED AS A RESULT OF STREAMFLOW ROUTING PACKAGE',    &
+!             1x,a)
+      character(len=*), parameter :: fmtheader = "(4x,a10,2(1x,a15))"
+      character(len=*), parameter :: header =                                   &
+         &"(4x,'STREAMFLOW ROUTING PACKAGE FAILED CONVERGENCE CRITERIA',//,     &
+         &4x,a/,4x,74('-'))"  
+      character(len=*), parameter :: fmtline = "(4x,i10,2(1x,a15))"                                  
+      character(len=*), parameter :: fmtfooter = "(4x,74('-'))"                                  
+      character(len=*), parameter :: fmtmsg =                                   &
+         &"('CONVERGENCE FAILED AS A RESULT OF STREAMFLOW ROUTING PACKAGE',     &
+         &1x,a)"                                  
 ! --------------------------------------------------------------------------
     ifirst = 1
     if (this%iconvchk /= 0) then
@@ -1602,9 +1613,14 @@ contains
           if (iend == 1) then
             if (ifirst == 1) then
               ifirst = 0
-              write(istdout,2030) this%name
-              write(this%iout, 2000) '     REACH',                               &
-                 '        MAX. DH', '  MAX. RESIDUAL'
+              ! -- write table to this%iout
+              call sim_message(this%name, fmt=fmtmsg, iunit=this%iout)
+              write(line, fmtheader)                                             &
+                '     REACH',                                                    &
+                '        MAX. DH', '  MAX. RESIDUAL'
+              call sim_message(line, fmt=header, iunit=this%iout)
+              ! -- write table to stdout
+              call sim_message(line, fmt=header)
             end if
             cdhmax = '               '
             crmax = '               '
@@ -1614,7 +1630,11 @@ contains
             if (ABS(r) > rclose) then
               write(crmax, '(G15.7)') r
             end if
-            write(this%iout,2010) n, cdhmax, crmax
+            !write(this%iout,2010) n, cdhmax, crmax
+            write(line, fmtline)  n, cdhmax, crmax
+            call sim_message(line, iunit=this%iout)
+            ! -- write table to stdout
+            call sim_message(line)
           ! terminate check since no need to find more than one non-convergence
           else
             exit final_check
@@ -1622,7 +1642,11 @@ contains
         end if
       end do final_check
       if (ifirst == 0) then
-        write(this%iout,2020)
+        !write(this%iout,2020)
+        ! -- write table to this%iout
+        call sim_message('', fmt=fmtfooter, iunit=this%iout)
+        ! -- write table to stdout
+        call sim_message('', fmt=fmtfooter)
       end if
     end if
     !

@@ -7,7 +7,7 @@
   use KindModule, only: DP, I4B
   use SimVariablesModule, only: iout
   use BlockParserModule, only: BlockParserType
-  use ConstantsModule, only: LENDATETIME
+  use ConstantsModule, only: LINELENGTH, LENDATETIME, VALL
   !
   implicit none
   !
@@ -105,8 +105,9 @@
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: DONE, DZERO
-    use SimVariablesModule, only: istdout
+    use GenericUtilitiesModule, only: sim_message
     ! -- local
+    character(len=LINELENGTH) :: line
     ! -- formats
     character(len=*),parameter :: fmtspi =                                     &
       "('1',/28X,'STRESS PERIOD NO. ',I4,', LENGTH =',G15.7,/                  &
@@ -160,7 +161,8 @@
     if(kstp /= 1) delt = tsmult(kper) * delt
     !
     ! -- Print stress period and time step to console
-    write(istdout, fmtspts) kper, kstp
+    write(line, fmtspts) kper, kstp
+    call sim_message(line, level=VALL)
     !
     ! -- Store totim and pertim, which are times at end of previous time step
     totimsav = totim

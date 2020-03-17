@@ -8,8 +8,7 @@ module GwfCsubModule
                              LENBUDTXT, LENAUXNAME, LENORIGIN,                  &
                              TABLEFT, TABCENTER, TABRIGHT,                      &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
-  use SimVariablesModule, only: istdout
-  use GenericUtilities, only: is_same
+  use GenericUtilitiesModule, only: is_same
   use SmoothingModule,        only: sQuadraticSaturation,                       &
                                     sQuadraticSaturationDerivative
   use NumericalPackageModule, only: NumericalPackageType
@@ -20,7 +19,8 @@ module GwfCsubModule
                                   GetTimeSeriesLinkFromList
   use InputOutputModule, only: get_node, extract_idnum_or_bndname, UWWORD
   use BaseDisModule, only: DisBaseType
-  use SimModule, only: count_errors, store_error, store_error_unit, ustop
+  use SimModule, only: count_errors, store_error, store_error_unit, ustop 
+  use GenericUtilitiesModule, only: sim_message
   use ArrayHandlersModule, only: ExpandArray
   use SortModule, only: qsort, selectn
   !
@@ -448,6 +448,7 @@ contains
     real(DP), intent(in) :: hclose
     real(DP), intent(in) :: rclose
     ! -- local
+    character(len=LINELENGTH) :: line
     integer(I4B) :: ifirst
     integer(I4B) :: ib
     integer(I4B) :: node
@@ -471,12 +472,21 @@ contains
     real(DP) :: v2
     real(DP) :: df
     ! format
-02000 format(4x,'CSUB PACKAGE FAILED CONVERGENCE CRITERIA',//,                  &
-             4x,'INTERBED MAX. HEAD CHANGE ',1x,'INTERBED MAX. FLOW DIFF',/,    &                           
-             4x,2(a10,1x,a15,1x),/,4x,53('-'))
-02010 format(4x,2(i10,1x,G15.7,1x))
-02020 format(4x,53('-'))
-02030 format('CONVERGENCE FAILED AS A RESULT OF CSUB PACKAGE',1x,a)
+!02000 format(4x,'CSUB PACKAGE FAILED CONVERGENCE CRITERIA',//,                  &
+!             4x,'INTERBED MAX. HEAD CHANGE ',1x,'INTERBED MAX. FLOW DIFF',/,    &                           
+!             4x,2(a10,1x,a15,1x),/,4x,53('-'))
+!02010 format(4x,2(i10,1x,G15.7,1x))
+!02020 format(4x,53('-'))
+!02030 format('CONVERGENCE FAILED AS A RESULT OF CSUB PACKAGE',1x,a)
+      character(len=*), parameter :: fmtheader = "(2(a10,1x,a15,1x))"
+      character(len=*), parameter :: header =                                   &
+         &"(4x,'CSUB PACKAGE FAILED CONVERGENCE CRITERIA',//,                   &
+         &4x,'INTERBED MAX. HEAD CHANGE ',1x,'INTERBED MAX. FLOW DIFF',/,       &                           
+         &4x,a/,4x,53('-'))"  
+      character(len=*), parameter :: fmtline = "(4x,2(i10,1x,G15.7,1x))"                                  
+      character(len=*), parameter :: fmtfooter = "(4x,53('-'))"                                  
+      character(len=*), parameter :: fmtmsg =                                   &
+         &"('CONVERGENCE FAILED AS A RESULT OF CSUB PACKAGE',1x,a)"                                  
 ! --------------------------------------------------------------------------
     ifirst = 1
     if (this%gwfiss == 0) then
@@ -535,17 +545,29 @@ contains
         icnvg = 0
         ! write convergence check information if this is the last outer iteration
         if (iend == 1) then
-          write(istdout, 2030) this%name
-          write(this%iout, 2000)                                              &
+          ! -- write table to this%iout
+          call sim_message(this%name, fmt=fmtmsg, iunit=this%iout)
+          write(line, fmtheader)                                              &
             '  LOCATION', '    HEAD CHANGE',                                  &
             '  LOCATION', 'FLOW DIFFERENCE'
-          write(istdout, 2010) ihmax, hmax, irmax, rmax
-          write(this%iout,2010) ihmax, hmax, irmax, rmax
+          call sim_message(line, fmt=header, iunit=this%iout)
+          write(line, fmtline)  ihmax, hmax, irmax, rmax
+          call sim_message(line, iunit=this%iout)
+          ! -- write table to istdout
+          call sim_message(this%name, fmt=fmtmsg)
+          write(line, fmtheader)                                              &
+            '  LOCATION', '    HEAD CHANGE',                                  &
+            '  LOCATION', 'FLOW DIFFERENCE'
+          call sim_message(line, fmt=header)
+          write(line, fmtline)  ihmax, hmax, irmax, rmax
+          call sim_message(line)
         end if
       end if
     end if
     if (icnvg == 0) then
-      write(this%iout,2020)
+      !write(this%iout,2020)
+      call sim_message('', fmt=fmtfooter, iunit=this%iout)
+      call sim_message('', fmt=fmtfooter)
     end if
     !
     ! -- return

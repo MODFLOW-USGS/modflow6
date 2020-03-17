@@ -37,13 +37,7 @@ module SimulationCreateModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- local
-    !character(len=LINELENGTH) :: simfile
-    !character(len=LINELENGTH) :: simlstfile
 ! ------------------------------------------------------------------------------
-    !!
-    !! -- set default simfile and simlstfile
-    !simfile    = 'mfsim.nam'
-    !simlstfile = 'mfsim.lst'
     !
     ! -- initialize iout 
     iout = 0

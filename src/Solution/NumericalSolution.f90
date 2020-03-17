@@ -7,7 +7,7 @@ module NumericalSolutionModule
                                      DPREC, DZERO, DEM20, DEM15, DEM6,         &
                                      DEM4, DEM3, DEM2, DEM1, DHALF,            &
                                      DONE, DTHREE, DEP6, DEP20
-  use GenericUtilities,        only: IS_SAME
+  use GenericUtilitiesModule,        only: IS_SAME
   use VersionModule,           only: IDEVELOPMODE
   use BaseModelModule,         only: BaseModelType
   use BaseSolutionModule,      only: BaseSolutionType, AddBaseSolutionToList
@@ -20,7 +20,8 @@ module NumericalSolutionModule
                                      AddNumericalExchangeToList,               &
                                      GetNumericalExchangeFromList
   use SparseModule,            only: sparsematrix
-  use SimVariablesModule,      only: istdout, iout
+  use SimVariablesModule,      only: iout
+  use GenericUtilitiesModule,  only: sim_message
   use BlockParserModule,       only: BlockParserType
   use IMSLinearModule
 
@@ -1080,6 +1081,7 @@ contains
     ! -- local
     class(NumericalModelType), pointer :: mp
     class(NumericalExchangeType), pointer :: cp
+    character(len=LINELENGTH) :: line
     character(len=16) :: cval
     character(len=34) :: strh
     integer(I4B) :: im, ic
@@ -1320,8 +1322,9 @@ contains
             if (this%ptcrat > this%ptcthresh) then
               this%icnvg = 0
               if (kiter == this%mxiter) then
-                write(istdout, *) 'pseudo-transient continuation ' //            &
-                                  'caused convergence failure'
+                write(line, '(a)') 'pseudo-transient continuation ' //           &
+                                   'caused convergence failure'
+                call sim_message(line)
               end if
             end if
           end if
