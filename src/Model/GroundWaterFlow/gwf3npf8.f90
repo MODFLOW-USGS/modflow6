@@ -3279,7 +3279,7 @@ module GwfNpfModule
       this%name_model, this%name, naux, auxtxt, ibinun, this%dis%nodes,        &
       this%iout)
     !
-    ! -- Write a zero for Q, and then write qx, qy, qz as aux variables
+    ! -- Write a zero for Q, and then write saturation as an aux variables
     do n = 1, this%dis%nodes
       a(1) = this%sat(n)
       call this%dis%record_mf6_list_entry(ibinun, n, n, DZERO, naux, a)
