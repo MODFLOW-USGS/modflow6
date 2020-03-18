@@ -33,6 +33,7 @@ module LakModule
   implicit none
   !
   private
+  public :: LakType
   public :: lak_create
   !
   character(len=LENFTYPE)       :: ftype = 'LAK'
@@ -212,11 +213,12 @@ module LakModule
     procedure, private :: lak_set_stressperiod
     procedure, private :: lak_set_attribute_error
     procedure, private :: lak_cfupdate
+    procedure, private :: lak_bound_update
     procedure, private :: lak_bd_obs
     procedure, private :: lak_calculate_sarea
     procedure, private :: lak_calculate_warea
     procedure, private :: lak_calculate_conn_warea
-    procedure, private :: lak_calculate_vol
+    procedure, public  :: lak_calculate_vol
     procedure, private :: lak_calculate_conductance
     procedure, private :: lak_calculate_cond_head
     procedure, private :: lak_calculate_conn_conductance
@@ -3706,6 +3708,10 @@ contains
 
     end do
     !
+    ! -- Store the lake stage and cond in bound array for other
+    !    packages, such as the BUY package
+    call this%lak_bound_update()
+    !
     ! -- Return
     return
   end subroutine lak_cf
@@ -4979,6 +4985,38 @@ contains
       ! -- Return
       return
   end subroutine lak_cfupdate
+
+  subroutine lak_bound_update(this)
+  ! ******************************************************************************
+  ! lak_bound_update -- store the lake head and connection conductance in the
+  !   bound array
+  ! ******************************************************************************
+  !
+  !    SPECIFICATIONS:
+  ! ------------------------------------------------------------------------------
+      class(LakType), intent(inout) :: this
+      integer(I4B) :: j, n, node
+      real(DP) :: hlak, head, clak
+  ! ------------------------------------------------------------------------------
+  !
+  ! -- Return if no lak lakes
+      if (this%nbound == 0) return
+  !
+  ! -- Calculate hcof and rhs for each lak entry
+      do n = 1, this%nlakes
+        hlak = this%xnewpak(n)
+        do j = this%idxlakeconn(n), this%idxlakeconn(n+1)-1
+          node = this%cellid(j)
+          head = this%xnew(node)
+          call this%lak_calculate_conn_conductance(n, j, hlak, head, clak)
+          this%bound(1, j) = hlak
+          this%bound(2, j) = clak
+        end do
+      end do
+      !
+      ! -- Return
+      return
+  end subroutine lak_bound_update
 
   subroutine lak_solve(this, update)
   ! **************************************************************************
