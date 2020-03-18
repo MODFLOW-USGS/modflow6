@@ -1,6 +1,7 @@
 module ListModule
   ! -- ListType implements a generic list.
   use KindModule, only: DP, I4B
+  use SimVariablesModule, only: istdout
   private
   public :: ListType, ListNodeType
 
@@ -210,7 +211,7 @@ contains
     class(*), pointer, intent(inout) :: objptr
     integer(I4B), intent(in) :: indx
     ! -- local
-    integer :: numnodes
+    integer(I4B) :: numnodes
     type(ListNodeType), pointer :: precedingNode => null()
     type(ListNodeType), pointer :: followingNode => null()
     type(ListNodeType), pointer :: newNode => null()
@@ -230,7 +231,7 @@ contains
         followingNode%prevNode => newNode
         this%nodeCount = this%nodeCount + 1
       else
-        write(*,*)'Programming error in ListType%insert_after'
+        write(istdout,*) 'Programming error in ListType%insert_after'
         stop
       endif
     endif

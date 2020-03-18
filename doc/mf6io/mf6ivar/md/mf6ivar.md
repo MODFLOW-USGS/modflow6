@@ -867,8 +867,10 @@
 | GWT | SFT | OPTIONS | BUDGET | KEYWORD | keyword to specify that record corresponds to the budget. |
 | GWT | SFT | OPTIONS | FILEOUT | KEYWORD | keyword to specify that an output filename is expected next. |
 | GWT | SFT | OPTIONS | BUDGETFILE | STRING | name of the binary output file to write budget information. |
-| GWT | SFT | OPTIONS | TS6 | KEYWORD | keyword to specify that record corresponds to a time-series file. |
+| GWT | SFT | OPTIONS | FLOW_BUDGET | KEYWORD | keyword to specify that record corresponds to the flow budget binary input file. |
 | GWT | SFT | OPTIONS | FILEIN | KEYWORD | keyword to specify that an input filename is expected next. |
+| GWT | SFT | OPTIONS | FLOWBUDGETFILE | STRING | name of the binary lake sfr budget file to read as input for the SFT Package.  This budget file can be created by running a separate GWF Model with the SFR Package and saving the flows to the budget file. |
+| GWT | SFT | OPTIONS | TS6 | KEYWORD | keyword to specify that record corresponds to a time-series file. |
 | GWT | SFT | OPTIONS | TS6_FILENAME | STRING | defines a time-series file defining time series that can be used to assign time-varying values. See the ``Time-Variable Input'' section for instructions on using the time-series capability. |
 | GWT | SFT | OPTIONS | OBS6 | KEYWORD | keyword to specify that record corresponds to an observations file. |
 | GWT | SFT | OPTIONS | OBS6_FILENAME | STRING | name of input file to define observations for the SFT package. See the ``Observation utility'' section for instructions for preparing observation input files. Table \ref{table:obstype} lists observation type(s) supported by the SFT package. |
@@ -986,11 +988,9 @@
 | GWT | UZT | PERIOD | AUXNAME | STRING | name for the auxiliary variable to be assigned AUXVAL.  AUXNAME must match one of the auxiliary variable names defined in the OPTIONS block. If AUXNAME does not match one of the auxiliary variable names defined in the OPTIONS block the data are ignored. |
 | GWT | UZT | PERIOD | AUXVAL | DOUBLE PRECISION | value for the auxiliary variable. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value. |
 | GWT | FMI | OPTIONS | FLOW_IMBALANCE_CORRECTION | KEYWORD | correct for an imbalance in flows by assuming that any residual flow error comes in or leaves at the concentration of the cell. |
-| GWT | FMI | OPTIONS | GWFBUDGET | KEYWORD | keyword to specify that record corresponds to the gwfbudget input file. |
-| GWT | FMI | OPTIONS | FILEIN | KEYWORD | keyword to specify that an input filename is expected next. |
-| GWT | FMI | OPTIONS | GWFBUDGETFILE | STRING | name of the binary GWF budget file to read as input for the FMI Package |
-| GWT | FMI | OPTIONS | GWFHEAD | KEYWORD | keyword to specify that record corresponds to the gwfhead input file. |
-| GWT | FMI | OPTIONS | GWFHEADFILE | STRING | name of the binary GWF head file to read as input for the FMI Package |
+| GWT | FMI | PACKAGEDATA | FLOWTYPE | STRING | is the type of flow contained in the corresponding file.  This must be GWFBUDGET or the name of an advanced package.  If GWFBUDGET is specified, then the corresponding file must be a budget file from a previous GWF Model run.  If an advanced package name appears then the corresponding file must be the budget file saved by a LAK, SFR, MAW or UZF Package. |
+| GWT | FMI | PACKAGEDATA | FILEIN | KEYWORD | keyword to specify that an input filename is expected next. |
+| GWT | FMI | PACKAGEDATA | FNAME | STRING | is the name of the file containing flows.  The path to the file should be included if the file is not located in the folder where the program was run. |
 | UTL | LAK | DIMENSIONS | NROW | INTEGER | integer value specifying the number of rows in the lake table. There must be NROW rows of data in the TABLE block. |
 | UTL | LAK | DIMENSIONS | NCOL | INTEGER | integer value specifying the number of columns in the lake table. There must be NCOL columns of data in the TABLE block. For lakes with HORIZONTAL and/or VERTICAL CTYPE connections, NCOL must be equal to 3. For lakes with EMBEDDEDH or EMBEDDEDV CTYPE connections, NCOL must be equal to 4. |
 | UTL | LAK | TABLE | STAGE | DOUBLE PRECISION | real value that defines the stage corresponding to the remaining data on the line. |

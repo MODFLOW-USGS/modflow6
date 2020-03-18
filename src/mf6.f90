@@ -8,7 +8,6 @@ program mf6
 ! ------------------------------------------------------------------------------
   ! -- modules
   use KindModule,             only: DP, I4B
-  use ConstantsModule,        only: ISTDOUT
   use VersionModule,          only: VERSION, MFVNAM, MFTITLE, FMTDISCLAIMER,   & 
                                     IDEVELOPMODE
   use CompilerVersion
@@ -24,7 +23,7 @@ program mf6
   use ListsModule,            only: basesolutionlist, solutiongrouplist,       &
                                     basemodellist, baseexchangelist,           &
                                     lists_da
-  use SimVariablesModule,     only: iout 
+  use SimVariablesModule,     only: istdout, iout 
   use SimModule,              only: converge_reset, converge_check,            &
                                     final_message
   use TdisModule,             only: tdis_tu, tdis_da,                          &
@@ -36,7 +35,7 @@ program mf6
   class(BaseModelType), pointer :: mp => null()
   class(BaseExchangeType), pointer :: ep => null()
   integer(I4B) :: im, ic, is, isg
-  logical :: exit_tsloop
+  logical :: hasConverged
   character(len=80) :: compiler
   ! -- formats
 ! ------------------------------------------------------------------------------
@@ -162,8 +161,8 @@ program mf6
     enddo
     !
     ! -- Time step exit conditions
-    call converge_check(exit_tsloop)
-    if(exit_tsloop) exit tsloop
+    call converge_check(hasConverged)
+    if(.not. hasConverged) exit tsloop
     if(endofsimulation) exit tsloop
     !
   enddo tsloop
@@ -228,5 +227,6 @@ program mf6
   call elapsed_time(iout, 1)
   call final_message()
   !
+  ! -- end of program
 end program mf6
 

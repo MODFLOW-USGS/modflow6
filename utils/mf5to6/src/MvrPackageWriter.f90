@@ -6,7 +6,7 @@ module MvrPackageWriterModule
   use ListModule, only: ListType
   use MoverModule, only: MoverType, AddMoverToList, GetMoverFromList
   use PackageWriterModule, only: PackageWriterType
-  use SimVariablesModule, only: SimMovers
+  use SimListVariablesModule, only: SimMovers
 
   implicit none
 

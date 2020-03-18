@@ -2,7 +2,7 @@ module ModelPackageModule
 
   use ConstantsModule, only: LENMODELNAME, LENPACKAGENAME
   use ListModule, only: ListType
-  use SimVariablesModule, only: ModelPacks
+  use SimListVariablesModule, only: ModelPacks
 
   implicit none
 
