@@ -7,7 +7,7 @@ module NumericalSolutionModule
                                      DPREC, DZERO, DEM20, DEM15, DEM6,         &
                                      DEM4, DEM3, DEM2, DEM1, DHALF,            &
                                      DONE, DTHREE, DEP6, DEP20
-  use GenericUtilitiesModule,  only: IS_SAME, stop_with_error
+  use GenericUtilitiesModule,  only: IS_SAME, stop_with_error, sim_message
   use VersionModule,           only: IDEVELOPMODE
   use BaseModelModule,         only: BaseModelType
   use BaseSolutionModule,      only: BaseSolutionType, AddBaseSolutionToList
@@ -21,7 +21,6 @@ module NumericalSolutionModule
                                      GetNumericalExchangeFromList
   use SparseModule,            only: sparsematrix
   use SimVariablesModule,      only: iout
-  use GenericUtilitiesModule,  only: sim_message
   use BlockParserModule,       only: BlockParserType
   use IMSLinearModule
 

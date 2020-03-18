@@ -6,8 +6,7 @@
                              DEM8, DEM6, DEM5, DEM4, DEM3, DEM2, DEM1,         &
                              DHALF, DONE, DTWO,                                &
                              VDEBUG
-  use GenericUtilitiesModule, only: sim_message
-  use GenericUtilitiesModule, only: IS_SAME
+  use GenericUtilitiesModule, only: sim_message, IS_SAME
   use IMSReorderingModule, only: ims_genrcm, ims_odrv, ims_dperm, ims_vperm
   use BlockParserModule, only: BlockParserType
 

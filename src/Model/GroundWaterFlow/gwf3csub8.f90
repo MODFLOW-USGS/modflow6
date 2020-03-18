@@ -8,7 +8,7 @@ module GwfCsubModule
                              LENBUDTXT, LENAUXNAME, LENORIGIN,                  &
                              TABLEFT, TABCENTER, TABRIGHT,                      &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
-  use GenericUtilitiesModule, only: is_same
+  use GenericUtilitiesModule, only: is_same, sim_message
   use SmoothingModule,        only: sQuadraticSaturation,                       &
                                     sQuadraticSaturationDerivative
   use NumericalPackageModule, only: NumericalPackageType
@@ -20,7 +20,6 @@ module GwfCsubModule
   use InputOutputModule, only: get_node, extract_idnum_or_bndname, UWWORD
   use BaseDisModule, only: DisBaseType
   use SimModule, only: count_errors, store_error, store_error_unit, ustop 
-  use GenericUtilitiesModule, only: sim_message
   use ArrayHandlersModule, only: ExpandArray
   use SortModule, only: qsort, selectn
   !
