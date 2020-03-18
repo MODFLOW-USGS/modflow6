@@ -471,12 +471,6 @@ contains
     real(DP) :: v2
     real(DP) :: df
     ! format
-!02000 format(4x,'CSUB PACKAGE FAILED CONVERGENCE CRITERIA',//,                  &
-!             4x,'INTERBED MAX. HEAD CHANGE ',1x,'INTERBED MAX. FLOW DIFF',/,    &                           
-!             4x,2(a10,1x,a15,1x),/,4x,53('-'))
-!02010 format(4x,2(i10,1x,G15.7,1x))
-!02020 format(4x,53('-'))
-!02030 format('CONVERGENCE FAILED AS A RESULT OF CSUB PACKAGE',1x,a)
       character(len=*), parameter :: fmtheader = "(2(a10,1x,a15,1x))"
       character(len=*), parameter :: header =                                   &
          &"(4x,'CSUB PACKAGE FAILED CONVERGENCE CRITERIA',//,                   &

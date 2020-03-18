@@ -1585,12 +1585,6 @@ contains
     real(DP) :: dh
     real(DP) :: r
     ! format
-!02000 format(4x,'STREAMFLOW ROUTING PACKAGE FAILED CONVERGENCE CRITERIA',//,    &
-!             4x,a10,2(1x,a15),/,4x,74('-'))
-!02010 format(4x,i10,2(1x,G15.7))
-!02020 format(4x,74('-'))
-!02030 format('CONVERGENCE FAILED AS A RESULT OF STREAMFLOW ROUTING PACKAGE',    &
-!             1x,a)
       character(len=*), parameter :: fmtheader = "(4x,a10,2(1x,a15))"
       character(len=*), parameter :: header =                                   &
          &"(4x,'STREAMFLOW ROUTING PACKAGE FAILED CONVERGENCE CRITERIA',//,     &

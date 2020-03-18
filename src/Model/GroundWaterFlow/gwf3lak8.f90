@@ -3849,11 +3849,6 @@ contains
     real(DP) :: ex
     real(DP) :: pd
     ! format
-!02000 format(4x,'LAKE PACKAGE FAILED CONVERGENCE CRITERIA',//,                  &
-!             4x,a10,4(1x,a15),/,4x,74('-'))
-!02010 format(4x,i10,4(1x,G15.7))
-!02020 format(4x,74('-'))
-!02030 format('CONVERGENCE FAILED AS A RESULT OF LAKE PACKAGE',1x,a)
       character(len=*), parameter :: fmtheader = "(4x,a10,4(1x,a15))"
       character(len=*), parameter :: header =                                   &
          &"(4x,'LAKE PACKAGE FAILED CONVERGENCE CRITERIA',//,                   &
