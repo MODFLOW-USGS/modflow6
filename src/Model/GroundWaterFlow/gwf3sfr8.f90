@@ -67,6 +67,7 @@ module SfrModule
   !
   private
   public :: sfr_create
+  public :: SfrType
   !
   type, extends(BndType) :: SfrType
     ! -- scalars
