@@ -27,8 +27,9 @@ module CommandArguments
 ! ------------------------------------------------------------------------------
     ! -- dummy
     ! -- local
+    character(len=LINELENGTH) :: tag
+    character(len=LINELENGTH) :: uctag
     character(len=LENHUGELINE) :: line
-    character(len=LENHUGELINE) :: ucline
     character(len=LINELENGTH) :: clevel
     character(len=LINELENGTH) :: header
     character(len=LINELENGTH) :: errmsg
@@ -39,7 +40,6 @@ module CommandArguments
     logical :: ltyp
     logical :: lexist
     logical :: lstop
-    integer(I4B) :: iscrn
     integer(I4B) :: icountcmd
     integer(I4B) :: ipos
     integer(I4B) :: ilen
@@ -48,7 +48,6 @@ module CommandArguments
     !
     ! -- initialize local variables
     lstop = .FALSE.
-    iscrn = istdout
     !
     ! -- set mf6 executable name
     icountcmd = command_argument_count()
@@ -81,14 +80,25 @@ module CommandArguments
       ltyp = .FALSE.
     end if
     !
+    ! -- check for silent option
+    do iarg = 1, icountcmd
+      call get_command_argument(iarg, uctag)
+      call upcase(uctag)
+      if (trim(adjustl(uctag)) == '-S' .or.                                      &
+          trim(adjustl(uctag)) == '-SILENT') then 
+        !
+        ! -- get file unit and open mfsim.stdout
+        istdout = getunit()
+        open(unit=istdout, file=trim(adjustl(simstdout)))
+        !
+        ! -- exit loop
+        exit
+      end if
+    end do
+    !
     ! -- Read remaining arguments
     iarg = 0
     do
-      !
-      ! -- terminate loop if lstop is true
-      if (lstop) then
-        exit
-      end if
       !
       ! -- increment iarg and determine if loop should be terminated
       iarg = iarg + 1
@@ -97,56 +107,50 @@ module CommandArguments
       end if
       !
       ! -- get command line argument
-      call get_command_argument(iarg, line)
-      ucline = line
-      call upcase(ucline)
+      call get_command_argument(iarg, tag)
+      uctag = tag
+      call upcase(uctag)
       !
       ! -- skip commands without - or --
-      ipos = index(ucline, '-')
+      ipos = index(uctag, '-')
       if (ipos < 1) then
         cycle
       end if
       !
       ! -- parse level string, if necessary
       clevel = ' '
-      ipos = index(ucline, '--LEVEL=')
+      ipos = index(uctag, '--LEVEL=')
       if (ipos > 0) then
-        ipos = index(line, '=')
-        ilen = len_trim(line)
-        clevel = line(ipos+1:ilen)
+        ipos = index(tag, '=')
+        ilen = len_trim(tag)
+        clevel = tag(ipos+1:ilen)
         call upcase(clevel)
-        ucline = line(1:ipos-1)
-        call upcase(ucline)
+        uctag = tag(1:ipos-1)
+        call upcase(uctag)
       end if
       !
-      ! -- evaluate the command line argument in line
-      select case(trim(adjustl(ucline)))
+      ! -- evaluate the command line argument (uctag)
+      select case(trim(adjustl(uctag)))
         case('-H', '-?', '--HELP')
           lstop = .TRUE.
-          call write_usage(trim(adjustl(header)), trim(adjustl(cexe)), iscrn)
+          call write_usage(trim(adjustl(header)), trim(adjustl(cexe)))
         case('-V', '--VERSION')
           lstop = .TRUE.
           write(line, '(2a,2(1x,a))')                                            &
             trim(adjustl(cexe)), ':', trim(adjustl(VERSION)), ctyp
-          call sim_message(line, iunit=iscrn)
+          call sim_message(line)
         case('-DEV', '--DEVELOP')
           lstop = .TRUE.
           write(line, '(2a,g0)')                                                 &
             trim(adjustl(cexe)), ': develop version ', ltyp
-          call sim_message(line, iunit=iscrn)
+          call sim_message(line)
         case('-C', '--COMPILER') 
           lstop = .TRUE.
           call get_compiler(compiler)
           write(line, '(2a,1x,a)')                                               &
             trim(adjustl(cexe)), ':', trim(adjustl(compiler))
-          call sim_message(line, iunit=iscrn)
+          call sim_message(line)
         case('-S', '--SILENT')
-          !
-          ! -- get file unit and open mfsim.stdout
-          istdout = getunit()
-          open(unit=istdout, file=trim(adjustl(simstdout)))
-          !
-          ! -- write message to stdout
           write(line, '(2a,1x,a)')                                               &
             trim(adjustl(cexe)), ':', 'all screen output sent to mfsim.stdout'
           call sim_message(line)
@@ -162,7 +166,7 @@ module CommandArguments
             case('DEBUG')
               isim_level = VDEBUG
             case default
-              call write_usage(trim(adjustl(header)), trim(adjustl(cexe)), iscrn)
+              call write_usage(trim(adjustl(header)), trim(adjustl(cexe)))
               write(errmsg, '(2a,1x,a)') &
                 trim(adjustl(cexe)), ': illegal STDOUT level option -',          &
                 trim(adjustl(clevel))
@@ -176,9 +180,9 @@ module CommandArguments
           call sim_message(line)
         case default
           lstop = .TRUE.
-          call write_usage(trim(adjustl(header)), trim(adjustl(cexe)), iscrn)
+          call write_usage(trim(adjustl(header)), trim(adjustl(cexe)))
           write(errmsg, '(2a,1x,a)') &
-            trim(adjustl(cexe)), ': illegal option -', trim(adjustl(ucline))
+            trim(adjustl(cexe)), ': illegal option -', trim(adjustl(tag))
           call store_error(errmsg)
       end select
     end do
@@ -207,11 +211,10 @@ module CommandArguments
     return
   end subroutine GetCommandLineArguments
   
-  subroutine write_usage(header, cexe, iu)
+  subroutine write_usage(header, cexe)
     ! -- dummy
     character(len=*), intent(in) :: header
     character(len=*), intent(in) :: cexe
-    integer(I4B), intent(in) :: iu
     ! -- local
     character(len=LINELENGTH) :: line
     ! -- format
@@ -237,16 +240,16 @@ module CommandArguments
 ! ------------------------------------------------------------------------------
     !
     ! -- write command line usage information to the screen
-    call sim_message(header, iunit=iu)
+    call sim_message(header)
     write(line, '(a,1x,a,15x,a,2(1x,a),2a)')                                     &
       'usage:', cexe, 'run MODFLOW', trim(adjustl(MFVNAM)),                      &
       'using "', trim(adjustl(simfile)), '"'
-    call sim_message(line, iunit=iu)
+    call sim_message(line)
     write(line, '(a,1x,a,1x,a,5x,a)')                                            &
       '   or:', cexe, '[options]',                                               &
       'retrieve program information'
-    call sim_message(line, iunit=iu)
-    call sim_message('', iunit=iu, fmt=OPTIONSFMT)
+    call sim_message(line)
+    call sim_message('', fmt=OPTIONSFMT)
     !
     ! -- return
     return
