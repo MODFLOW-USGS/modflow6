@@ -553,7 +553,7 @@ contains
           call sim_message(line, fmt=header, iunit=this%iout)
           write(line, fmtline)  ihmax, hmax, irmax, rmax
           call sim_message(line, iunit=this%iout)
-          ! -- write table to istdout
+          ! -- write table to stdout
           call sim_message(this%name, fmt=fmtmsg)
           write(line, fmtheader)                                              &
             '  LOCATION', '    HEAD CHANGE',                                  &

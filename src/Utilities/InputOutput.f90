@@ -3,23 +3,23 @@
 module InputOutputModule
 
   use KindModule, only: DP, I4B
-  use SimVariablesModule, only: istdout, iunext
+  use SimVariablesModule, only: iunext
   use SimModule, only: store_error, ustop, store_error_unit,                   &
                        store_error_filename
   use ConstantsModule, only: IUSTART, IULAST,                                  &
                              LINELENGTH, LENBIGLINE, LENBOUNDNAME,             &
-                             NAMEDBOUNDFLAG, LINELENGTH, MAXCHARLEN,           &
+                             NAMEDBOUNDFLAG, MAXCHARLEN,                       &
                              TABLEFT, TABCENTER, TABRIGHT,                     &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL,      &
                              DZERO
-  use GenericUtilitiesModule, only: IS_SAME
+  use GenericUtilitiesModule, only: IS_SAME, sim_message
   private
   public :: GetUnit, u8rdcom, uget_block,                                      &
             uterminate_block, UPCASE, URWORD, ULSTLB, UBDSV4,                  &
             ubdsv06, UBDSVB, UCOLNO, ULAPRW,                                   &
             ULASAV, ubdsv1, ubdsvc, ubdsvd, UWWORD,                            &
             same_word, get_node, get_ijk, unitinquire,                         &
-            ParseLine, ulaprufw, write_centered, openfile,                     &
+            ParseLine, ulaprufw, openfile,                                     &
             linear_interpolate, lowcase,                                       &
             read_line, uget_any_block,                                         &
             GetFileFromPath, extract_idnum_or_bndname, urdaux,                 &
@@ -213,7 +213,6 @@ module InputOutputModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use ConstantsModule, only: LINELENGTH
     use, intrinsic :: iso_fortran_env, only: IOSTAT_END
     implicit none
     ! -- dummy
@@ -763,6 +762,7 @@ module InputOutputModule
       CHARACTER(len=30) RW
       CHARACTER(len=1) TAB
       character(len=200) :: msg
+      character(len=LINELENGTH) :: msg_line
 !C     ------------------------------------------------------------------
       TAB=CHAR(9)
 !C
@@ -856,30 +856,40 @@ module InputOutputModule
 !C7B-----If output unit is positive; write a message to output unit.
       ELSE IF(IOUT.GT.0) THEN
          IF(IN.GT.0) THEN
-            WRITE(IOUT,201) IN,LINE(ISTART:ISTOP),STRING(1:L),LINE
+            !WRITE(IOUT,201) IN,LINE(ISTART:ISTOP),STRING(1:L),LINE
+            write(msg_line,201) IN,LINE(ISTART:ISTOP),STRING(1:L)
          ELSE
-            WRITE(IOUT,202) LINE(ISTART:ISTOP),STRING(1:L),LINE
+            !WRITE(IOUT,202) LINE(ISTART:ISTOP),STRING(1:L),LINE
+            WRITE(msg_line,202) LINE(ISTART:ISTOP),STRING(1:L)
          END IF
-201      FORMAT(1X,/1X,'FILE UNIT ',I4,' : ERROR CONVERTING "',A, &
-     &       '" TO ',A,' IN LINE:',/1X,A)
-202      FORMAT(1X,/1X,'KEYBOARD INPUT : ERROR CONVERTING "',A, &
-     &       '" TO ',A,' IN LINE:',/1X,A)
+         call sim_message(msg_line, iunit=IOUT, skipbefore=1)
+         call sim_message(LINE, iunit=IOUT, fmt='(1x,a)')
+!201      FORMAT(1X,/1X,'FILE UNIT ',I4,' : ERROR CONVERTING "',A, &
+!     &       '" TO ',A,' IN LINE:',/1X,A)
+!202      FORMAT(1X,/1X,'KEYBOARD INPUT : ERROR CONVERTING "',A, &
+!     &       '" TO ',A,' IN LINE:',/1X,A)
+201      FORMAT(1X,'FILE UNIT ',I4,' : ERROR CONVERTING "',A,                    &
+     &          '" TO ',A,' IN LINE:')
+202      FORMAT(1X,'KEYBOARD INPUT : ERROR CONVERTING "',A,                      &
+                '" TO ',A,' IN LINE:')
 !C
 !C7C-----If output unit is 0; write a message to default output.
       ELSE
          IF(IN.GT.0) THEN
-            WRITE(istdout,201) IN,LINE(ISTART:ISTOP),STRING(1:L),LINE
+            write(msg_line,201) IN,LINE(ISTART:ISTOP),STRING(1:L)
          ELSE
-            WRITE(istdout,202) LINE(ISTART:ISTOP),STRING(1:L),LINE
+            WRITE(msg_line,202) LINE(ISTART:ISTOP),STRING(1:L)
          END IF
+         call sim_message(msg_line, iunit=IOUT, skipbefore=1)
+         call sim_message(LINE, iunit=IOUT, fmt='(1x,a)')
       END IF
 !C
 !C7D-----STOP after storing error message.
       call lowcase(string)
       if (in > 0) then
-        write(msg,205)in,line(istart:istop),trim(string)
+        write(msg,205) in,line(istart:istop),trim(string)
       else
-        write(msg,207)line(istart:istop),trim(string)
+        write(msg,207) line(istart:istop),trim(string)
       endif
 205   format('File unit ',I0,': Error converting "',A, &
      &       '" to ',A,' in following line:')
@@ -1506,17 +1516,29 @@ module InputOutputModule
   end subroutine get_jk
 
   subroutine unitinquire(iu)
+    ! -- dummy
     integer(I4B) :: iu
-    character(len=100) :: fname,ac,act,fm,frm,seq,unf
-    inquire(unit=iu,name=fname,access=ac,action=act,formatted=fm, &
-    sequential=seq,unformatted=unf,form=frm)
-
-    10 format('unit:',i4,'  name:',a,'  access:',a,'  action:',a,/, &
-    '    formatted:',a, &
-    '  sequential:',a,'  unformatted:',a,'  form:',a)
-
-    write(istdout,10) iu, trim(fname), trim(ac), trim(act), trim(fm), trim(seq), &
-                      trim(unf),trim(frm)
+    ! -- local
+    character(len=LINELENGTH) :: line
+    character(len=100) :: fname, ac, act, fm, frm, seq, unf
+    ! -- format
+    character(len=*), parameter :: fmta =                                        &
+       &"('unit:',i4,'  name:',a,'  access:',a,'  action:',a)"                                  
+    character(len=*), parameter :: fmtb =                                        &
+       &"('    formatted:',a,'  sequential:',a,'  unformatted:',a,'  form:',a)"                                  
+    ! -- code
+    !
+    ! -- set strings using inquire statement
+    inquire(unit=iu, name=fname, access=ac, action=act, formatted=fm,            &
+            sequential=seq, unformatted=unf, form=frm)
+    !
+    ! -- write the results of the inquire statement
+    write(line,fmta) iu, trim(fname), trim(ac), trim(act)
+    call sim_message(line)
+    write(line,fmtb) trim(fm), trim(seq), trim(unf), trim(frm)
+    call sim_message(line)
+    !
+    ! -- return
     return
   end subroutine unitinquire
 
@@ -1603,32 +1625,6 @@ module InputOutputModule
     !
     return
   end subroutine ulaprufw
-
-  subroutine write_centered(text, iout, linelen)
-    ! Write text to unit iout centered in width defined by linelen
-    ! Left-pad with blanks as needed.
-    use ConstantsModule, only: LINELENGTH
-    implicit none
-    ! -- dummy
-    character(len=*), intent(in) :: text
-    integer(I4B), intent(in) :: iout
-    integer(I4B), intent(in) :: linelen
-    ! -- local
-    integer(I4B) :: loc1, loc2, lentext, nspaces
-    character(len=LINELENGTH) :: newline, textleft
-    !
-    if (iout<=0) return
-    textleft = adjustl(text)
-    lentext = len_trim(textleft)
-    nspaces = linelen - lentext
-    loc1 = (nspaces / 2) + 1
-    loc2 = loc1 + lentext - 1
-    newline = ' '
-    newline(loc1:loc2) = textleft
-    write(iout,'(a)')trim(newline)
-    !
-    return
-  end subroutine write_centered
 
   function linear_interpolate(t0, t1, y0, y1, t) result(y)
     implicit none

@@ -7,7 +7,7 @@ module NumericalSolutionModule
                                      DPREC, DZERO, DEM20, DEM15, DEM6,         &
                                      DEM4, DEM3, DEM2, DEM1, DHALF,            &
                                      DONE, DTHREE, DEP6, DEP20
-  use GenericUtilitiesModule,        only: IS_SAME
+  use GenericUtilitiesModule,  only: IS_SAME, stop_with_error
   use VersionModule,           only: IDEVELOPMODE
   use BaseModelModule,         only: BaseModelType
   use BaseSolutionModule,      only: BaseSolutionType, AddBaseSolutionToList
@@ -1298,14 +1298,13 @@ contains
         !
         !-------------------------------------------------------
         itestmat = 0
-        if(itestmat.eq.1)then
+        if (itestmat.eq.1) then
             open(99,file='sol_MF6.TXT')
-        WRITE(99,*)'MATRIX SOLUTION FOLLOWS'
-        WRITE(99,67)(n,this%x(N),N=1,this%NEQ)
-67      FORMAT(10(I8,G15.4))
-        close(99)
-        stop
-        endif
+            WRITE(99,*) 'MATRIX SOLUTION FOLLOWS'
+            WRITE(99,'(10(I8,G15.4))')  (n, this%x(N), N = 1, this%NEQ)
+            close(99)
+            call stop_with_error()
+        end if
         !-------------------------------------------------------
         ! -- check convergence of solution
         call this%sln_outer_check(this%hncg(kiter), this%lrch(1,kiter))

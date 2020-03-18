@@ -9,20 +9,25 @@ module GenericUtilitiesModule
   private
   
   public :: sim_message
+  public :: write_centered
   public :: is_same
   public :: stop_with_error
 
   contains
 
-  subroutine sim_message(message, iunit, fmt, level)
+  subroutine sim_message(message, iunit, fmt, level,                             &
+                         skipbefore, skipafter, advance)
   ! ******************************************************************************
   ! Print message to user specified iunit or STDOUT based on level.
   !
   ! -- Arguments are as follows:
-  !     message            : message to write to iunit
-  !     iunit   (optional) : file unit to write the message to (default=istdout)
-  !     fmt     (optional) : format to write the message (default='(a)')
-  !     level   (optional) : level for the message (default=summary)
+  !     message               : message to write to iunit
+  !     iunit      (optional) : file unit to write the message to (default=stdout)
+  !     fmt        (optional) : format to write the message (default='(a)')
+  !     level      (optional) : level for the message (default=summary)
+  !     skipbefore (optional) : number of empty lines before message
+  !     skipafter  (optional) : number of empty lines after message
+  !     advance    (optional) : advancing output (default is .TRUE.)
   !
   ! ******************************************************************************
   !
@@ -35,7 +40,12 @@ module GenericUtilitiesModule
     integer(I4B), intent(in), optional :: iunit
     character(len=*), intent(in), optional :: fmt
     integer(I4B), intent(in), optional :: level
+    integer(I4B), intent(in), optional :: skipbefore
+    integer(I4B), intent(in), optional :: skipafter
+    logical, intent(in), optional :: advance
     ! -- local
+    character(len=3) :: cadvance
+    integer(I4B) :: i
     integer(I4B) :: ilen
     integer(I4B) :: iu
     integer(I4B) :: ilevel
@@ -67,23 +77,112 @@ module GenericUtilitiesModule
     else
       ilevel = VSUMMARY
     end if
+    if (present(advance)) then
+      if (advance) then
+        cadvance = 'YES'
+      else
+        cadvance = 'NO'
+      end if
+    else
+      cadvance = 'YES'
+    end if
+    !
+    ! -- write empty line before message
+    if (present(skipbefore)) then
+      do i = 1, skipbefore
+        write(iu, *)
+      end do
+    end if
     !
     ! -- write message if the level of the message is less than
     !    or equal the isim_level for the simulation
     if (ilevel <= isim_level) then
       if (ilen > 0) then
-        write(iu, trim(simfmt)) message(1:ilen)
+        write(iu, trim(simfmt), advance=cadvance) message(1:ilen)
       else
-        write(iu, trim(simfmt))
+        write(iu, trim(simfmt), advance=cadvance)
       end if
+    end if
+    !
+    ! -- write empty line after message
+    if (present(skipafter)) then
+      do i = 1, skipafter
+        write(iu, *)
+      end do
     end if
     !
     ! -- return
     return
   end subroutine sim_message
+
+  subroutine write_centered(text, linelen, iunit)
+  ! ******************************************************************************
+  ! Write text to unit iunit centered in width defined by linelen. Left-pad with
+  ! blanks as needed.
+  !
+  ! -- Arguments are as follows:
+  !     text               : message to write to iunit
+  !     linelen            : length of line to center text in
+  !     iunit   (optional) : file unit to write text (default stdout)
+  !
+  ! ******************************************************************************
+  !
+  !    SPECIFICATIONS:
+  ! ------------------------------------------------------------------------------
+    ! -- dummy
+    character(len=*), intent(in) :: text
+    integer(I4B), intent(in) :: linelen
+    integer(I4B), intent(in), optional :: iunit
+    ! -- local
+    character(len=LINELENGTH) :: newline
+    character(len=LINELENGTH) :: textleft
+    integer(I4B) :: iu
+    integer(I4B) :: loc1
+    integer(I4B) :: loc2
+    integer(I4B) :: lentext
+    integer(I4B) :: nspaces
+    ! -- code
+    !
+    ! -- process optional parameters
+    if (present(iunit)) then
+      iu = iunit
+    else
+      iu = istdout
+    end if
+    !
+    ! -- process text
+    if (iu > 0) then
+      textleft = adjustl(text)
+      lentext = len_trim(textleft)
+      nspaces = linelen - lentext
+      loc1 = (nspaces / 2) + 1
+      loc2 = loc1 + lentext - 1
+      newline = ' '
+      newline(loc1:loc2) = textleft
+      !
+      ! -- write processed text to iu
+      write(iu,'(a)') trim(newline)
+    end if
+    !
+    ! -- retirn
+    return
+  end subroutine write_centered
   
   function is_same(a, b, eps) result(lvalue)
-    ! -- return
+  ! ******************************************************************************
+  ! Evaluate if the difference between a and b are less than eps 
+  ! (i.e. a and b are the same).
+  !
+  ! -- Arguments are as follows:
+  !     a              : first number to evaluate 
+  !     b              : second number to evaluate
+  !     eps (optional) : maximum difference between a abd b (default DSAME)
+  !
+  ! ******************************************************************************
+  !
+  !    SPECIFICATIONS:
+  ! ------------------------------------------------------------------------------
+    ! -- return variable
     logical :: lvalue
     ! -- dummy arguments
     real(DP), intent(in)   :: a
@@ -118,6 +217,7 @@ module GenericUtilitiesModule
         lvalue = .TRUE.
       end if
     end if
+    !
     ! -- return
     return
   end function is_same

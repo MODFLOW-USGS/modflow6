@@ -126,20 +126,30 @@ module CommandArguments
           call write_usage(trim(adjustl(header)), trim(adjustl(cexe)), iscrn)
         case('-V', '--VERSION')
           lstop = .TRUE.
-          write(istdout,'(2a,2(1x,a))')                                          &
+          write(line, '(2a,2(1x,a))')                                            &
             trim(adjustl(cexe)), ':', trim(adjustl(VERSION)), ctyp
+          call sim_message(line, iunit=iscrn)
         case('-DEV', '--DEVELOP')
           lstop = .TRUE.
-          write(istdout,'(2a,g0)')                                               &
+          write(line, '(2a,g0)')                                                 &
             trim(adjustl(cexe)), ': develop version ', ltyp
+          call sim_message(line, iunit=iscrn)
         case('-C', '--COMPILER') 
           lstop = .TRUE.
           call get_compiler(compiler)
-          write(istdout,'(2a,1x,a)')                                             &
+          write(line, '(2a,1x,a)')                                               &
             trim(adjustl(cexe)), ':', trim(adjustl(compiler))
-        case('-S', '--SILENT') 
+          call sim_message(line, iunit=iscrn)
+        case('-S', '--SILENT')
+          !
+          ! -- get file unit and open mfsim.stdout
           istdout = getunit()
           open(unit=istdout, file=trim(adjustl(simstdout)))
+          !
+          ! -- write message to stdout
+          write(line, '(2a,1x,a)')                                               &
+            trim(adjustl(cexe)), ':', 'all screen output sent to mfsim.stdout'
+          call sim_message(line)
         case('-L', '--LEVEL')
           if (len_trim(clevel) < 1) then
             iarg = iarg + 1
@@ -158,6 +168,12 @@ module CommandArguments
                 trim(adjustl(clevel))
               call store_error(errmsg)
           end select
+          !
+          ! -- write message to stdout
+          write(line, '(2a,2(1x,a))')                                            &
+            trim(adjustl(cexe)), ':', 'stdout output level',                     &
+            trim(adjustl(clevel))
+          call sim_message(line)
         case default
           lstop = .TRUE.
           call write_usage(trim(adjustl(header)), trim(adjustl(cexe)), iscrn)
@@ -180,6 +196,11 @@ module CommandArguments
     ! -- terminate program if lstop
     if (lstop) then
       call ustop()
+    end if
+    !
+    ! -- write blank line to stdout
+    if (icountcmd > 0) then
+      call sim_message('')
     end if
     !
     ! -- return

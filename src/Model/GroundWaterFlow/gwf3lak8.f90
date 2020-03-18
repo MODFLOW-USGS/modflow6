@@ -3909,7 +3909,7 @@ contains
       if (ifirst == 0) then
         ! -- write table to this%iout
         call sim_message('', fmt=fmtfooter, iunit=this%iout)
-        ! -- write table to istdout
+        ! -- write table to stdout
         call sim_message('', fmt=fmtfooter)
       end if
     end if
