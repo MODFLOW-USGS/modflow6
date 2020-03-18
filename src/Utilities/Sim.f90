@@ -1,8 +1,9 @@
 module SimModule
   
   use KindModule,         only: DP, I4B
-  use ConstantsModule,    only: MAXCHARLEN, LINELENGTH, ISTDOUT
-  use SimVariablesModule, only: iout, ireturnerr
+  use ConstantsModule,    only: MAXCHARLEN, LINELENGTH,                          &
+                                IUSTART, IULAST
+  use SimVariablesModule, only: istdout, iout, ireturnerr, iunext
 
   implicit none
 
@@ -266,7 +267,7 @@ logical function print_errors()
     if (isize > 0) then
       print_errors = .true.
       if (iout > 0) write(iout, 10)
-      write(*, 10)
+      write(istdout,10)
       do i = 1, isize
         call write_message(sim_errors(i))
         if (iout > 0) call write_message(sim_errors(i), iout)
@@ -309,13 +310,13 @@ subroutine print_warnings()
     isize = count_warnings()
     if (isize>0) then
       if (iout>0) write(iout,10)
-      write(*,10)
+      write(istdout,10)
       do i=1,isize
         call write_message(sim_warnings(i))
         if (iout>0) call write_message(sim_warnings(i),iout)
       enddo
     endif
-    write(*,'()')
+    write(istdout,'()')
     if (iout>0) write(iout,'()')
   endif
   !
@@ -352,7 +353,7 @@ subroutine print_notes(numberlist)
     isize = count_notes()
     if (isize>0) then
       if (iout>0) write(iout,10)
-      write(*,10)
+      write(istdout,10)
       do i=1,isize
         if (numlist) then
           write(noteplus,20)i,trim(sim_notes(i))
@@ -405,14 +406,14 @@ subroutine write_message(message, iunit, error, leadspace, endspace)
   if(present(iunit))then
     junit = iunit
   else
-    junit = ISTDOUT
+    junit = istdout
   end if
   if(present(leadspace))then
     if(leadspace) then
       if (junit>0) then
         write(junit,*)
       else
-        write(*,*)
+        write(istdout,*)
       endif
     endif
   endif
@@ -440,14 +441,14 @@ subroutine write_message(message, iunit, error, leadspace, endspace)
         if (junit>0) then
           write(junit,'(a)',err=200) amessage(j+1:i)
         else
-          write(*,'(a)',err=200) amessage(j+1:i)
+          write(istdout,'(a)',err=200) amessage(j+1:i)
         endif
         itake=2+leadblank
       else
         if (junit>0) then
           write(junit,'(a)',err=200) ablank(1:leadblank+2)//amessage(j+1:i)
         else
-          write(*,'(a)',err=200) ablank(1:leadblank+2)//amessage(j+1:i)
+          write(istdout,'(a)',err=200) ablank(1:leadblank+2)//amessage(j+1:i)
         endif
       end if
       j=i
@@ -458,14 +459,14 @@ subroutine write_message(message, iunit, error, leadspace, endspace)
     if (junit>0) then
       write(junit,'(a)',err=200) amessage(j+1:jend)
     else
-      write(*,'(a)',err=200) amessage(j+1:jend)
+      write(istdout,'(a)',err=200) amessage(j+1:jend)
     endif
     itake=2+leadblank
   else
     if (junit>0) then
       write(junit,'(a)',err=200) ablank(1:leadblank+2)//amessage(j+1:jend)
     else
-      write(*,'(a)',err=200) ablank(1:leadblank+2)//amessage(j+1:jend)
+      write(istdout,'(a)',err=200) ablank(1:leadblank+2)//amessage(j+1:jend)
     endif
   end if
   j=jend
@@ -477,13 +478,13 @@ subroutine write_message(message, iunit, error, leadspace, endspace)
     if (junit>0) then
       write(junit,'(a)',err=200) amessage(j+1:jend)
     else
-      write(*,'(a)',err=200) amessage(j+1:jend)
+      write(istdout,'(a)',err=200) amessage(j+1:jend)
     endif
   else
     if (junit>0) then
       write(junit,'(a)',err=200) ablank(1:leadblank+2)//amessage(j+1:jend)
     else
-      write(*,'(a)',err=200) ablank(1:leadblank+2)//amessage(j+1:jend)
+      write(istdout,'(a)',err=200) ablank(1:leadblank+2)//amessage(j+1:jend)
     endif
   end if
   !
@@ -492,7 +493,7 @@ subroutine write_message(message, iunit, error, leadspace, endspace)
       if (junit>0) then
         write(junit,*)
       else
-        write(*,*)
+        write(istdout,*)
       endif
     endif
   end if
@@ -523,6 +524,8 @@ subroutine sim_message(iv, message)
   endif
 end subroutine sim_message
 
+! -- this subroutine prints final messages and then stops with the active
+!    error code.
 subroutine ustop(stopmess, ioutlocal)
 ! ******************************************************************************
 ! Stop program, with option to print message before stopping.
@@ -532,23 +535,44 @@ subroutine ustop(stopmess, ioutlocal)
 ! ------------------------------------------------------------------------------
   ! -- dummy
   character, optional, intent(in) :: stopmess*(*)
-  integer(I4B),   optional, intent(in) :: ioutlocal
+  integer(I4B), optional, intent(in) :: ioutlocal
+  
+  !---------------------------------------------------------------------------
+  !
+  ! -- print the final message
+  call print_final_message(stopmess, ioutlocal)
+  !
+  ! -- return appropriate error codes when terminating the program
+  call stop_with_error(ireturnerr)
+  
+end subroutine ustop
+
+subroutine print_final_message(stopmess, ioutlocal)
+! ******************************************************************************
+! Print a final message and close all open files
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+  ! -- dummy
+  character, optional, intent(in) :: stopmess*(*)
+  integer(I4B),   optional, intent(in) :: ioutlocal  
   ! -- local
   character(len=*), parameter :: fmt = '(1x,a)'
   character(len=*), parameter :: msg = 'Stopping due to error(s)'
-  logical :: errorfound
+  logical :: errorfound  
   !---------------------------------------------------------------------------
   call print_notes()
   call print_warnings()
   errorfound = print_errors()
   if (present(stopmess)) then
     if (stopmess.ne.' ') then
-      write(*,fmt) stopmess
+      write(istdout,fmt) stopmess
       write(iout,fmt) stopmess
       if (present(ioutlocal)) then
         if (ioutlocal > 0 .and. ioutlocal .ne. iout) then
           write(ioutlocal,fmt) trim(stopmess)
-          close(ioutlocal)
+          close (ioutlocal)
         endif
       endif
     endif
@@ -556,18 +580,35 @@ subroutine ustop(stopmess, ioutlocal)
   !
   if (errorfound) then
     ireturnerr = 2
-    write(*,fmt) msg
+    write(istdout,fmt) msg
     if (iout > 0) write(iout,fmt) msg
     if (present(ioutlocal)) then
       if (ioutlocal > 0 .and. ioutlocal /= iout) write(ioutlocal,fmt) msg
     endif
   endif
   !
-  ! -- close iout file
-  close(iout)
+  ! -- close all open files
+  call sim_closefiles()
   !
-  ! -- return appropriate error codes when terminating the program
-  select case (ireturnerr)
+  ! -- return
+  return
+  
+end subroutine print_final_message
+
+subroutine stop_with_error(ierr)
+! ******************************************************************************
+! Stop the program and issue the correct return code 
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+  ! -- modules
+  ! -- dummy
+  integer(I4B), intent(in) :: ierr
+!-------------------------------------------------------------------------------
+  !
+  ! -- return the correct return code
+  select case (ierr)
     case (0)
       stop
     case (1)
@@ -577,9 +618,10 @@ subroutine ustop(stopmess, ioutlocal)
     case default
       stop 999
   end select
-end subroutine ustop
+  
+end subroutine stop_with_error
 
-  subroutine converge_reset()
+subroutine converge_reset()
 ! ******************************************************************************
 ! converge_reset
 ! ******************************************************************************
@@ -596,9 +638,9 @@ end subroutine ustop
     return
   end subroutine converge_reset
 
-  subroutine converge_check(exit_tsloop)
+  subroutine converge_check(hasConverged)
 ! ******************************************************************************
-! converge_check
+! convergence check
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -606,7 +648,7 @@ end subroutine ustop
     ! -- modules
     use SimVariablesModule, only: isimcnvg, numnoconverge, isimcontinue
     ! -- dummy
-    logical, intent(inout) :: exit_tsloop
+    logical, intent(inout) :: hasConverged
     ! -- format
     character(len=*), parameter :: fmtfail =                                   &
       "(1x, 'Simulation convergence failure.',                                 &
@@ -614,7 +656,7 @@ end subroutine ustop
 ! ------------------------------------------------------------------------------
     !
     ! -- Initialize
-    exit_tsloop = .false.
+    hasConverged = .true.
     !
     ! -- Count number of failures
     if(isimcnvg == 0) numnoconverge = numnoconverge + 1
@@ -629,7 +671,7 @@ end subroutine ustop
     ! --
     if(isimcnvg == 0) then
       write(iout, fmtfail)
-      exit_tsloop = .true.
+      hasConverged = .false.
     endif
     !
     ! -- Return
@@ -638,12 +680,13 @@ end subroutine ustop
 
   subroutine final_message()
 ! ******************************************************************************
-! final_message
+! Create the appropriate final message and terminate the program
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    ! -- dummy
     use SimVariablesModule, only: isimcnvg, numnoconverge, ireturnerr
     ! -- formats
     character(len=*), parameter :: fmtnocnvg =                                 &
@@ -652,19 +695,54 @@ end subroutine ustop
     !
     ! -- Write message if any nonconvergence
     if(numnoconverge > 0) then
-      write(*, fmtnocnvg) numnoconverge
+      write(istdout, fmtnocnvg) numnoconverge
       write(iout, fmtnocnvg) numnoconverge
     endif
     !
     if(isimcnvg == 0) then
       ireturnerr = 1
-      call ustop('Premature termination of simulation.', iout)
+      call print_final_message('Premature termination of simulation.', iout)
     else
-      call ustop('Normal termination of simulation.', iout)
+      call print_final_message('Normal termination of simulation.', iout)
     endif
     !
-    ! -- Return
-    return
+    ! -- terminate the program
+    call stop_with_error(ireturnerr)
+    
   end subroutine final_message
+  
+  subroutine sim_closefiles()
+! ******************************************************************************
+! Close all opened files.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    implicit none
+    ! -- dummy
+    ! -- local
+    integer(I4B) :: i
+    logical :: opened
+! ------------------------------------------------------------------------------
+    !
+    ! -- close all open file units
+    do i = iustart, iunext - 1
+      !
+      ! -- determine if file unit i is open
+      inquire(unit=i, opened=opened)
+      !
+      ! -- skip file units that are no longer open
+      if(.not. opened) then
+        cycle
+      end if
+      !
+      ! -- close file unit i
+      close(i)
+    end do
+    !
+    ! -- return
+    return
+  end subroutine sim_closefiles
 
 end module SimModule

@@ -2,17 +2,17 @@ module SimulationCreateModule
 
   use KindModule,             only: DP, I4B, write_kindinfo
   use ConstantsModule,        only: LINELENGTH, LENMODELNAME, LENBIGLINE, DZERO
-  use SimVariablesModule,     only: simfile, simlstfile, iout
-  use SimModule,              only: ustop, store_error, count_errors,          &
+  use SimVariablesModule,     only: simfile, simlstfile, istdout, iout
+  use SimModule,              only: ustop, store_error, count_errors,            &
                                     store_error_unit, maxerrors
   use InputOutputModule,      only: getunit, urword, openfile
   use ArrayHandlersModule,    only: expandarray, ifind
   use BaseModelModule,        only: BaseModelType
-  use BaseSolutionModule,     only: BaseSolutionType, AddBaseSolutionToList,   &
+  use BaseSolutionModule,     only: BaseSolutionType, AddBaseSolutionToList,     &
                                     GetBaseSolutionFromList
   use SolutionGroupModule,    only: SolutionGroupType, AddSolutionGroupToList
   use BaseExchangeModule,     only: BaseExchangeType
-  use ListsModule,            only: basesolutionlist, basemodellist,           &
+  use ListsModule,            only: basesolutionlist, basemodellist,             &
                                     solutiongrouplist
   use BaseModelModule,        only: GetBaseModelFromList
   use BlockParserModule,      only: BlockParserType
@@ -51,8 +51,8 @@ module SimulationCreateModule
     ! -- Open simulation list file
     iout = getunit()
     call openfile(iout, 0, simlstfile, 'LIST', filstat_opt='REPLACE')
-    write(*,'(A,A)') ' Writing simulation list file: ', &
-                     trim(adjustl(simlstfile))
+    write(istdout,'(A,A)') ' Writing simulation list file: ',                    &
+                            trim(adjustl(simlstfile))
     call write_simulation_header()
     !
     ! -- Read the simulation name file and create objects
@@ -149,7 +149,7 @@ module SimulationCreateModule
     ! -- Open simulation name file
     inunit = getunit()
     call openfile(inunit, iout, simfile, 'NAM')
-    write(*,'(A,A)') ' Using Simulation name file: ', simfile
+    write(istdout,'(A,A)') ' Using Simulation name file: ', simfile
     !
     ! -- Initialize block parser
     call parser%Initialize(inunit, iout)

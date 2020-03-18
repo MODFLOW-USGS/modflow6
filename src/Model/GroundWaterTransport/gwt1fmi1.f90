@@ -14,7 +14,7 @@ module GwtFmiModule
   use BudgetFileReaderModule, only: BudgetFileReaderType
   use HeadFileReaderModule,   only: HeadFileReaderType
   use PackageBudgetModule,    only: PackageBudgetType
-  use BudgetObjectModule,     only: BudgetObjectType
+  use BudgetObjectModule,     only: BudgetObjectType, budgetobject_cr_bfr
 
   implicit none
   private
@@ -47,6 +47,7 @@ module GwtFmiModule
     integer(I4B), pointer                           :: igwfinwtup => null()     ! NR indicator
     integer(I4B), pointer                           :: iubud => null()          ! unit number GWF budget file
     integer(I4B), pointer                           :: iuhds => null()          ! unit number GWF head file
+    integer(I4B), pointer                           :: iumvr => null()          ! unit number GWF mover budget file
     integer(I4B), pointer                           :: nflowpack => null()      ! number of GWF flow packages
     type(BudgetFileReaderType)                      :: bfr                      ! budget file reader
     type(HeadFileReaderType)                        :: hfr                      ! head file reader
@@ -65,6 +66,7 @@ module GwtFmiModule
     procedure :: allocate_arrays
     procedure :: gwfsatold
     procedure :: read_options
+    procedure :: read_packagedata
     procedure :: initialize_bfr
     procedure :: advance_bfr
     procedure :: finalize_bfr
@@ -174,6 +176,11 @@ module GwtFmiModule
       call this%read_options()
     end if
     !
+    ! -- Read packagedata options
+    if (this%inunit /= 0) then
+      call this%read_packagedata()
+    end if
+    !
     ! -- Initialize the budget file reader
     if (this%iubud /= 0) then
       call this%initialize_bfr()
@@ -183,6 +190,13 @@ module GwtFmiModule
     if (this%iuhds /= 0) then
       call this%initialize_hfr()
     endif
+    !
+    ! -- Initialize the mover reader
+    if (this%iumvr /= 0) then
+      call budgetobject_cr_bfr(this%mvrbudobj, this%name, this%iumvr,    &
+                               this%iout)
+      call this%mvrbudobj%fill_from_bfr(this%dis, this%iout)
+    end if
     !
     ! -- Make sure that ssm is on if there are any boundary packages
     if (inssm == 0) then
@@ -235,6 +249,11 @@ module GwtFmiModule
     if (this%iuhds /= 0) then
       call this%advance_hfr()
     endif
+    !
+    ! -- If mover flows are being read from file, read the next set of records
+    if (this%iumvr /= 0) then
+      call this%mvrbudobj%bfr_advance(this%dis, this%iout)
+    end if
     !
     ! -- if flow cell is dry, then set gwt%ibound = 0 and conc to dry
     do n = 1, this%dis%nodes
@@ -453,6 +472,7 @@ module GwtFmiModule
     call mem_deallocate(this%igwfstrgsy)
     call mem_deallocate(this%iubud)
     call mem_deallocate(this%iuhds)
+    call mem_deallocate(this%iumvr)
     call mem_deallocate(this%nflowpack)
     !
     ! -- deallocate parent
@@ -486,6 +506,7 @@ module GwtFmiModule
     call mem_allocate(this%igwfstrgsy, 'IGWFSTRGSY', this%origin)
     call mem_allocate(this%iubud, 'IUBUD', this%origin)
     call mem_allocate(this%iuhds, 'IUHDS', this%origin)
+    call mem_allocate(this%iumvr, 'IUMVR', this%origin)
     call mem_allocate(this%nflowpack, 'NFLOWPACK', this%origin)
     !
     ! -- Initialize
@@ -495,6 +516,7 @@ module GwtFmiModule
     this%igwfstrgsy = 0
     this%iubud = 0
     this%iuhds = 0
+    this%iumvr = 0
     this%nflowpack = 0
     !
     ! -- Return
@@ -603,16 +625,14 @@ module GwtFmiModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use OpenSpecModule, only: ACCESS, FORM
     use ConstantsModule, only: LINELENGTH, DEM6
     use InputOutputModule, only: getunit, openfile, urdaux
     use SimModule, only: store_error, store_error_unit, ustop
     ! -- dummy
     class(GwtFmiType) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg, keyword, fname
+    character(len=LINELENGTH) :: errmsg, keyword
     integer(I4B) :: ierr
-    integer(I4B) :: inunit
     logical :: isfound, endOfBlock
     character(len=*), parameter :: fmtifc =                                    &
       "(4x,'MASS WILL BE ADDED OR REMOVED TO COMPENSATE FOR FLOW IMBALANCE.')"
@@ -632,6 +652,54 @@ module GwtFmiModule
           case ('FLOW_IMBALANCE_CORRECTION')
             write(this%iout, fmtifc)
             this%iflowerr = 1
+          case default
+            write(errmsg,'(4x,a,a)')'***ERROR. UNKNOWN FMI OPTION: ', &
+                                     trim(keyword)
+            call store_error(errmsg)
+            call this%parser%StoreErrorUnit()
+            call ustop()
+        end select
+      end do
+      write(this%iout,'(1x,a)') 'END OF FMI OPTIONS'
+    end if
+    !
+    ! -- return
+    return
+  end subroutine read_options
+
+  subroutine read_packagedata(this)
+! ******************************************************************************
+! read_packagedata -- Read Options
+! Subroutine: (1) read packagedata block from input file
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use OpenSpecModule, only: ACCESS, FORM
+    use ConstantsModule, only: LINELENGTH, DEM6
+    use InputOutputModule, only: getunit, openfile, urdaux
+    use SimModule, only: store_error, store_error_unit, ustop
+    ! -- dummy
+    class(GwtFmiType) :: this
+    ! -- local
+    character(len=LINELENGTH) :: errmsg, keyword, fname
+    integer(I4B) :: ierr
+    integer(I4B) :: inunit
+    logical :: isfound, endOfBlock
+! ------------------------------------------------------------------------------
+    !
+    ! -- get options block
+    call this%parser%GetBlock('PACKAGEDATA', isfound, ierr, blockRequired=.false.)
+    !
+    ! -- parse options block if detected
+    if (isfound) then
+      write(this%iout,'(1x,a)')'PROCESSING FMI PACKAGEDATA'
+      do
+        call this%parser%GetNextLine(endOfBlock)
+        if (endOfBlock) exit
+        call this%parser%GetStringCaps(keyword)
+        select case (keyword)
           case ('GWFBUDGET')
             call this%parser%GetStringCaps(keyword)
             if(keyword /= 'FILEIN') then
@@ -658,20 +726,33 @@ module GwtFmiModule
             call openfile(inunit, this%iout, fname, 'DATA(BINARY)', FORM,      &
               ACCESS, 'UNKNOWN')
             this%iuhds = inunit
+          case ('GWFMOVER')
+            call this%parser%GetStringCaps(keyword)
+            if(keyword /= 'FILEIN') then
+              call store_error('GWFMOVER KEYWORD MUST BE FOLLOWED BY ' //     &
+                '"FILEIN" then by filename.')
+              call this%parser%StoreErrorUnit()
+              call ustop()
+            endif
+            call this%parser%GetString(fname)
+            inunit = getunit()
+            call openfile(inunit, this%iout, fname, 'DATA(BINARY)', FORM,      &
+              ACCESS, 'UNKNOWN')
+            this%iumvr = inunit
           case default
-            write(errmsg,'(4x,a,a)')'***ERROR. UNKNOWN FMI OPTION: ', &
+            write(errmsg,'(4x,a,a)')'***ERROR. UNKNOWN FMI PACKAGEDATA: ', &
                                      trim(keyword)
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
             call ustop()
         end select
       end do
-      write(this%iout,'(1x,a)') 'END OF FMI OPTIONS'
+      write(this%iout,'(1x,a)') 'END OF FMI PACKAGEDATA'
     end if
     !
     ! -- return
     return
-  end subroutine read_options
+  end subroutine read_packagedata
 
   subroutine initialize_bfr(this)
 ! ******************************************************************************
@@ -694,6 +775,7 @@ module GwtFmiModule
     integer(I4B) :: naux
     logical :: found_flowja
     logical :: found_dataspdis
+    logical :: found_datasat
     logical :: found_stoss
     logical :: found_stosy
     integer(I4B), dimension(:), allocatable :: imap
@@ -718,6 +800,8 @@ module GwtFmiModule
         found_flowja = .true.
       case ('DATA-SPDIS')
         found_dataspdis = .true.
+      case ('DATA-SAT')
+        found_datasat = .true.
       case ('STO-SS')
         found_stoss = .true.
       case ('STO-SY')
@@ -804,7 +888,7 @@ module GwtFmiModule
     character(len=LINELENGTH) :: errmsg
     logical :: success
     integer(I4B) :: n
-    integer(I4B) :: iposu, iposr
+    integer(I4B) :: ipos
     integer(I4B) :: nu, nr
     integer(I4B) :: ip, i
     logical :: readnext
@@ -869,14 +953,12 @@ module GwtFmiModule
         ! -- parse based on the type of data, and compress all user node
         !    numbers into reduced node numbers
         select case(trim(adjustl(this%bfr%budtxt)))
-        case('FLOW-JA-FACE')
-            iposr = 0
-            do iposu = 1, size(this%bfr%flowja)
-              nu = this%dis%con%jausr(iposu)
-              nr = this%dis%get_nodenumber(nu, 0)
-              if (nr <= 0) cycle
-              iposr = iposr + 1
-              this%gwfflowja(iposr) = this%bfr%flowja(iposu)
+          case('FLOW-JA-FACE')
+            !
+            ! -- bfr%flowja contains only reduced connections so there is
+            !    a one-to-one match with this%gwfflowja
+            do ipos = 1, size(this%bfr%flowja)
+              this%gwfflowja(ipos) = this%bfr%flowja(ipos)
             end do
           case('DATA-SPDIS')
             do i = 1, this%bfr%nlist
@@ -886,6 +968,13 @@ module GwtFmiModule
               this%gwfspdis(1, nr) = this%bfr%auxvar(1, i)
               this%gwfspdis(2, nr) = this%bfr%auxvar(2, i)
               this%gwfspdis(3, nr) = this%bfr%auxvar(3, i)
+            end do
+          case('DATA-SAT')
+            do i = 1, this%bfr%nlist
+              nu = this%bfr%nodesrc(i)
+              nr = this%dis%get_nodenumber(nu, 0)
+              if (nr <= 0) cycle
+              this%gwfsat(nr) = this%bfr%auxvar(1, i)
             end do
           case('STO-SS')
             do nu = 1, this%dis%nodesuser
