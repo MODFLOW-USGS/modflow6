@@ -856,18 +856,12 @@ module InputOutputModule
 !C7B-----If output unit is positive; write a message to output unit.
       ELSE IF(IOUT.GT.0) THEN
          IF(IN.GT.0) THEN
-            !WRITE(IOUT,201) IN,LINE(ISTART:ISTOP),STRING(1:L),LINE
             write(msg_line,201) IN,LINE(ISTART:ISTOP),STRING(1:L)
          ELSE
-            !WRITE(IOUT,202) LINE(ISTART:ISTOP),STRING(1:L),LINE
             WRITE(msg_line,202) LINE(ISTART:ISTOP),STRING(1:L)
          END IF
          call sim_message(msg_line, iunit=IOUT, skipbefore=1)
          call sim_message(LINE, iunit=IOUT, fmt='(1x,a)')
-!201      FORMAT(1X,/1X,'FILE UNIT ',I4,' : ERROR CONVERTING "',A, &
-!     &       '" TO ',A,' IN LINE:',/1X,A)
-!202      FORMAT(1X,/1X,'KEYBOARD INPUT : ERROR CONVERTING "',A, &
-!     &       '" TO ',A,' IN LINE:',/1X,A)
 201      FORMAT(1X,'FILE UNIT ',I4,' : ERROR CONVERTING "',A,                    &
      &          '" TO ',A,' IN LINE:')
 202      FORMAT(1X,'KEYBOARD INPUT : ERROR CONVERTING "',A,                      &
