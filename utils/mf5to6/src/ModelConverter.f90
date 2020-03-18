@@ -36,7 +36,7 @@ module ModelConverterModule
   use GlobalVariablesModule, only: echo
   use SimModule, only: store_error, store_note, store_warning, ustop, &
                        write_message
-  use SimVariablesModule, only: SimMovers
+  use SimListVariablesModule, only: SimMovers
   use UpwSubsModule, only: GWF2UPW1AR
   use UtilitiesModule, only: GetArgs
 

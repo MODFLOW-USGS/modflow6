@@ -5,6 +5,7 @@
                              IZERO, DZERO, DPREC, DSAME,                       &
                              DEM8, DEM6, DEM5, DEM4, DEM3, DEM2, DEM1,         &
                              DHALF, DONE, DTWO
+  use SimVariablesModule, only: istdout
   use GenericUtilities, only: IS_SAME
   use IMSReorderingModule, only: ims_genrcm, ims_odrv, ims_dperm, ims_vperm
   use BlockParserModule, only: BlockParserType
@@ -194,7 +195,7 @@
       THIS%ICNVGOPT = 0
 !
 !-------PRINT A MESSAGE IDENTIFYING IMSLINEAR SOLVER PACKAGE
-      WRITE (iout,2000)
+      write(iout,2000)
 02000 FORMAT (1X,/1X,'IMSLINEAR -- UNSTRUCTURED LINEAR SOLUTION',               &
      &        ' PACKAGE, VERSION 8, 04/28/2017')
 !
@@ -301,7 +302,7 @@
      &            'MUST BE GREATER THAN OR EQUAL TO ZERO'
                 call store_error(errmsg)
               end if
-              !write (clevel, '(i15)') i
+              !write(clevel, '(i15)') i
             case ('PRECONDITIONER_DROP_TOLERANCE')
               r = parser%GetDouble()
               THIS%DROPTOL = r
@@ -311,7 +312,7 @@
      &            'MUST BE GREATER THAN OR EQUAL TO ZERO'
                 call store_error(errmsg)
               end if
-              !write (cdroptol, '(e15.5)') r
+              !write(cdroptol, '(e15.5)') r
             case default
               write(errmsg,'(4x,a,a)') &
      &          '****WARNING. UNKNOWN IMSLINEAR KEYWORD: ', &
@@ -583,7 +584,7 @@
       cdroptol = ''
       !
       ! -- PRINT MXITER,ITER1,IPC,ISCL,IORD,HCLOSE,RCLOSE
-      write (this%iout,2010)                                        &
+      write(this%iout,2010)                                        &
                         clintit(THIS%ILINMETH), MXITER, THIS%ITER1, &
                         clin(THIS%ILINMETH), cipc(THIS%IPC),        &
                         cscale(THIS%ISCL), corder(THIS%IORD),       &
@@ -591,16 +592,16 @@
                         THIS%ICNVGOPT, ccnvgopt(THIS%ICNVGOPT),     &
                         THIS%RELAX
       if (this%level > 0) then
-        write (clevel, '(i15)') this%level
+        write(clevel, '(i15)') this%level
       end if
       if (this%droptol > DZERO) then
-        write (cdroptol, '(e15.5)') this%droptol
+        write(cdroptol, '(e15.5)') this%droptol
       end if
       IF (this%level > 0 .or. this%droptol > DZERO) THEN
-        write (this%iout,2015) trim(adjustl(clevel)),               &
+        write(this%iout,2015) trim(adjustl(clevel)),               &
                                trim(adjustl(cdroptol))
       ELSE
-         WRITE (this%iout,'(//)')
+         write(this%iout,'(//)')
       END IF
       
       if (this%iord /= 0) then
@@ -608,14 +609,14 @@
         ! -- WRITE SUMMARY OF REORDERING INFORMATION TO LIST FILE                                                  
         if (this%iprims ==  2) then 
           DO i = 1, this%neq, 6 
-            WRITE (this%iout,2030) 'ORIGINAL NODE      :',                      &
+            write(this%iout,2030) 'ORIGINAL NODE      :',                      &
                               (j,j=i,MIN(i+5,this%neq))                      
-            WRITE (this%iout,2040) 
-            WRITE (this%iout,2030) 'REORDERED INDEX    :',                      &
+            write(this%iout,2040) 
+            write(this%iout,2030) 'REORDERED INDEX    :',                      &
                               (this%lorder(j),j=i,MIN(i+5,this%neq))              
-            WRITE (this%iout,2030) 'REORDERED NODE     :',                      &
+            write(this%iout,2030) 'REORDERED NODE     :',                      &
                               (this%iorder(j),j=i,MIN(i+5,this%neq))              
-            WRITE (this%iout,2050) 
+            write(this%iout,2050) 
           END DO 
         END IF 
       end if
@@ -1023,7 +1024,7 @@
             CALL ims_odrv(NEQ, NJA, nsp, IA, JA, LORDER, iwork0,        &
                           iwork1, iflag)                           
             IF (iflag.NE.0) THEN 
-              write (errmsg,'(A)') 'ERROR CREATING MINIMUM DEGREE '//   &
+              write(errmsg,'(A)') 'ERROR CREATING MINIMUM DEGREE '//   &
      &                   'ORDER PERMUTATION '                           
               call store_error(errmsg) 
               !call ustop()                                             
@@ -2630,7 +2631,7 @@
           do k = 1, ilen
             !            if (ju0 .gt. iwk) goto 996
             if (ju0 .gt. iwk) then
-              write (*,'(//1x,2i10)') ju0, iwk
+              write(istdout,'(//1x,2i10)') ju0, iwk
               goto 996
             end if
             alu(ju0) =  w(k)
@@ -2664,7 +2665,7 @@
           t = abs(w(ii))
           !         if (ilen + ju0 .gt. iwk) goto 997
           if (ilen + ju0 .gt. iwk) then
-            write (*,'(//1x,2i10)') (ilen + ju0), iwk
+            write(istdout,'(//1x,2i10)') (ilen + ju0), iwk
             goto 997
           end if
           do k = ii+1, ii+ilen-1

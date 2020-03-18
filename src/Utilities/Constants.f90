@@ -1,9 +1,7 @@
 module ConstantsModule
-  use, intrinsic :: iso_fortran_env, only: output_unit
   use KindModule
   public
   ! -- constants
-  integer(I4B), parameter :: ISTDOUT = output_unit
   integer(I4B), parameter :: IUSERFORMATSTRIP = -99
   integer(I4B), parameter :: IUSERFORMATWRAP = 99
   integer(I4B), parameter :: LENBIGLINE = 5000
@@ -29,10 +27,20 @@ module ConstantsModule
   integer(I4B), parameter :: MAXOBSTYPES = 100
   integer(I4B), parameter :: NAMEDBOUNDFLAG = -9
   integer(I4B), parameter :: IZERO = 0
-
+  !
+  ! -- file constants
+  integer(I4B), parameter :: IUSTART = 1000
+  integer(I4B), parameter :: IULAST = 10000
+  !
+  ! -- memory manager constants
+  integer(I4B), public, parameter :: MAXMEMRANK = 3
+  integer(I4B), public, parameter :: LENMEMTYPE = 50
+  !
+  ! -- real constants
   real(DP), parameter :: DZERO = 0.0_DP
   real(DP), parameter :: DONETHIRD = 1.0_DP / 3.0_DP
   real(DP), parameter :: DHALF = 0.5_DP
+  real(DP), parameter :: DQUARTER = 0.25_DP
   real(DP), parameter :: DP6 = 0.6_DP
   real(DP), parameter :: DTWOTHIRDS = 2.0_DP / 3.0_DP
   real(DP), parameter :: DP7 = 0.7_DP
@@ -97,6 +105,17 @@ module ConstantsModule
   ENUM, BIND(C)
     ! Sets UNDEFINED=0, STEPWISE=1, LINEAR=2, LINEAREND=3
     ENUMERATOR :: UNDEFINED, STEPWISE, LINEAR, LINEAREND
+  END ENUM
+  
+  ! -- enumerators used with table objects
+  ENUM, BIND(C)
+    ! Sets TABLEFT=0, TABCENTER=1, TABRIGHT=2
+    ENUMERATOR :: TABLEFT, TABCENTER, TABRIGHT
+  END ENUM
+  
+  ENUM, BIND(C)
+    ! Sets TABSTRING=0, TABUCSTRING=1, TABINTEGER=3, TABREAL=3
+    ENUMERATOR :: TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
   END ENUM
 
 

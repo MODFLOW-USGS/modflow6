@@ -2,7 +2,7 @@ module ArrayHandlersModule
 
   use KindModule, only: DP, I4B
   use ConstantsModule, only: MAXCHARLEN
-  use SimVariablesModule, only: iout
+  use SimVariablesModule, only: istdout, iout
   private
   public :: ExpandArray, ExtendPtrArray
   public :: ifind
@@ -13,7 +13,7 @@ module ArrayHandlersModule
     ! IMPORTANT: Do not use pointers to elements of arrays when using
     ! ExpandArray to increase the array size!  The locations of array
     ! elements in memory are changed when ExpandArray is invoked.
-    module procedure expand_integer, expand_double, &
+    module procedure expand_integer, expand_double,                              &
                      expand_character  !, expand_real
   end interface ExpandArray
 
@@ -108,10 +108,11 @@ contains
     if (lenc>MAXCHARLEN) then
       ! Can't use store_error or ustop here because SimModule
       ! is dependent on ArrayHandlersModule.
-      write(iout,*)'Error in ArrayHandlersModule: Need to increase MAXCHARLEN'
-      write(*,*)'Error in ArrayHandlersModule: Need to increase MAXCHARLEN'
-      write(iout,*)'Stopping...'
-      write(*,*)'Stopping...'
+      write(iout,*) 'Error in ArrayHandlersModule: Need to increase MAXCHARLEN'
+      write(istdout,*) 'Error in ArrayHandlersModule: ' //                       &
+                        'Need to increase MAXCHARLEN'
+      write(iout,*) 'Stopping...'
+      write(istdout,*) 'Stopping...'
       stop
     endif
     !
@@ -190,12 +191,12 @@ contains
     99 continue
       ! Can't use store_error or ustop here because SimModule
       ! is dependent on ArrayHandlersModule.
-      write(iout,*)'Error encountered while trying to increase array size:'
-      write(iout,'(a)')trim(ermsg)
-      write(iout,*)'Stopping...'
-      write(*,*)'Error encountered while trying to increase array size:'
-      write(iout,'(a)')trim(ermsg)
-      write(*,*)'Stopping...'
+      write(iout,*) 'Error encountered while trying to increase array size:'
+      write(iout,'(a)') trim(ermsg)
+      write(iout,*) 'Stopping...'
+      write(istdout,*) 'Error encountered while trying to increase array size:'
+      write(iout,'(a)') trim(ermsg)
+      write(istdout,*) 'Stopping...'
       stop
   end subroutine extend_double
 
@@ -238,12 +239,12 @@ contains
     99 continue
       ! Can't use store_error or ustop here because SimModule
       ! is dependent on ArrayHandlersModule.
-      write(iout,*)'Error encountered while trying to increase array size:'
-      write(iout,'(a)')trim(ermsg)
-      write(iout,*)'Stopping...'
-      write(*,*)'Error encountered while trying to increase array size:'
-      write(iout,'(a)')trim(ermsg)
-      write(*,*)'Stopping...'
+      write(iout,*) 'Error encountered while trying to increase array size:'
+      write(iout,'(a)') trim(ermsg)
+      write(iout,*) 'Stopping...'
+      write(istdout,*) 'Error encountered while trying to increase array size:'
+      write(iout,'(a)') trim(ermsg)
+      write(istdout,*) 'Stopping...'
       stop
   end subroutine extend_integer
 
@@ -304,10 +305,11 @@ contains
     if (lenc>MAXCHARLEN) then
       ! Can't use store_error or ustop here because SimModule
       ! is dependent on ArrayHandlersModule.
-      write(iout,*)'Error in ArrayHandlersModule: Need to increase MAXCHARLEN'
-      write(*,*)'Error in ArrayHandlersModule: Need to increase MAXCHARLEN'
-      write(iout,*)'Stopping...'
-      write(*,*)'Stopping...'
+      write(iout,*) 'Error in ArrayHandlersModule: Need to increase MAXCHARLEN'
+      write(istdout,*) 'Error in ArrayHandlersModule: ' //                       &
+                        'Need to increase MAXCHARLEN'
+      write(iout,*) 'Stopping...'
+      write(istdout,*) 'Stopping...'
       stop
     endif
     !

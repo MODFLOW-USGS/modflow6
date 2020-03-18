@@ -872,8 +872,8 @@ module Xt3dModule
         call this%xt3d_qnbrs(nodes, m, n, nnbr1, inbr1, chat1j, hnew, qnbrs)
         qnm = qnm - qnbrs
         ipos = ii01
-        flowja(ipos) = qnm
-        flowja(this%dis%con%isym(ipos)) = -qnm        
+        flowja(ipos) = flowja(ipos) + qnm
+        flowja(this%dis%con%isym(ipos)) = flowja(this%dis%con%isym(ipos)) - qnm        
       enddo
     enddo
     !

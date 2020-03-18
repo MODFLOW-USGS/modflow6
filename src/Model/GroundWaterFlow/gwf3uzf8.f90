@@ -8,7 +8,9 @@ module UzfModule
                              LINELENGTH, LENFTYPE, LENPACKAGENAME,              &
                              LENBOUNDNAME, LENBUDTXT, DNODATA,                  &
                              NAMEDBOUNDFLAG, MAXCHARLEN,                        &
-                             DHNOFLO, DHDRY
+                             DHNOFLO, DHDRY,                                    &
+                             TABLEFT, TABCENTER, TABRIGHT,                      &
+                             TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
   use MemoryTypeModule, only: MemoryTSType
   use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_setptr,      &
                                  mem_deallocate
@@ -30,6 +32,7 @@ module UzfModule
 
   private
   public :: uzf_create
+  public :: UzfType
 
   type, extends(BndType) :: UzfType
     ! output integers
@@ -743,25 +746,35 @@ contains
         else
           cellids = '(NODE)              '
         end if
-        write (this%iout, '(//3a)')                                                 &
+        write (this%iout, '(//3a)')                                              &
           'UZF PACKAGE (', trim(adjustl(this%name)), ') STRESS PERIOD DATA'
         !<uzfno> <finf> <pet> <extdp> <extwc> <ha> <hroot> <rootact>
         iloc = 1
         line = ''
         if(this%inamedbound==1) then
-          call UWWORD(line, iloc, 16, 1, 'name', n, q, left=.TRUE.)
+          call UWWORD(line, iloc, 16, TABUCSTRING,                               &
+                      'name', n, q, ALIGNMENT=TABLEFT)
         end if
-        call UWWORD(line, iloc, 6, 1, 'no.', n, q, CENTER=.TRUE., sep=' ')
-        call UWWORD(line, iloc, 20, 1, cellids, n, q, CENTER=.TRUE., sep=' ')
-        call UWWORD(line, iloc, 11, 1, 'finf', n, q, CENTER=.TRUE., sep=' ')
+        call UWWORD(line, iloc, 6, TABUCSTRING,                                  &
+                      'no.', n, q, ALIGNMENT=TABCENTER, sep=' ')
+        call UWWORD(line, iloc, 20, TABUCSTRING,                                 &
+                      cellids, n, q, ALIGNMENT=TABCENTER, sep=' ')
+        call UWWORD(line, iloc, 11, TABUCSTRING,                                 &
+                      'finf', n, q, ALIGNMENT=TABCENTER, sep=' ')
         if (this%ietflag /= 0) then
-          call UWWORD(line, iloc, 11, 1, 'pet', n, q, CENTER=.TRUE., sep=' ')
-          call UWWORD(line, iloc, 11, 1, 'extdep', n, q, CENTER=.TRUE., sep=' ')
-          call UWWORD(line, iloc, 11, 1, 'extwc', n, q, CENTER=.TRUE., sep=' ')
+          call UWWORD(line, iloc, 11, TABUCSTRING,                               &
+                      'pet', n, q, ALIGNMENT=TABCENTER, sep=' ')
+          call UWWORD(line, iloc, 11, TABUCSTRING,                               &
+                      'extdep', n, q, ALIGNMENT=TABCENTER, sep=' ')
+          call UWWORD(line, iloc, 11, TABUCSTRING,                               &
+                      'extwc', n, q, ALIGNMENT=TABCENTER, sep=' ')
           if (this%ietflag == 2) then
-            call UWWORD(line, iloc, 11, 1, 'ha', n, q, CENTER=.TRUE., sep=' ')
-            call UWWORD(line, iloc, 11, 1, 'hroot', n, q, CENTER=.TRUE., sep=' ')
-            call UWWORD(line, iloc, 11, 1, 'rootact', n, q, CENTER=.TRUE.)
+            call UWWORD(line, iloc, 11, TABUCSTRING,                             &
+                        'ha', n, q, ALIGNMENT=TABCENTER, sep=' ')
+            call UWWORD(line, iloc, 11, TABUCSTRING,                             &
+                        'hroot', n, q, ALIGNMENT=TABCENTER, sep=' ')
+            call UWWORD(line, iloc, 11, TABUCSTRING,                             &
+                        'rootact', n, q, ALIGNMENT=TABCENTER)
           end if
         end if
         ! -- create line separator
@@ -895,19 +908,28 @@ contains
           iloc = 1
           line = ''
           if(this%inamedbound==1) then
-            call UWWORD(line, iloc, 16, 1, this%boundname(i), n, q, left=.TRUE.)
+            call UWWORD(line, iloc, 16, TABUCSTRING,                             &
+                        this%boundname(i), n, q, ALIGNMENT=TABLEFT)
           end if
-          call UWWORD(line, iloc, 6, 2, text, i, q, sep=' ')
-          call UWWORD(line, iloc, 20, 1, cellid, n, q, left=.TRUE.)
-          call UWWORD(line, iloc, 11, 3, text, i, this%sinf(i)%value, sep=' ')
+          call UWWORD(line, iloc, 6, TABINTEGER, text, i, q, sep=' ')
+          call UWWORD(line, iloc, 20, TABUCSTRING,                               &
+                      cellid, n, q, ALIGNMENT=TABLEFT)
+          call UWWORD(line, iloc, 11, TABREAL,                                   &
+                      text, i, this%sinf(i)%value, sep=' ')
           if (this%ietflag /= 0) then
-            call UWWORD(line, iloc, 11, 3, text, i, this%pet(i)%value, sep=' ')
-            call UWWORD(line, iloc, 11, 3, text, i, this%extdp(i)%value, sep=' ')
-            call UWWORD(line, iloc, 11, 3, text, i, this%extwc(i)%value, sep=' ')
+            call UWWORD(line, iloc, 11, TABREAL,                                 &
+                        text, i, this%pet(i)%value, sep=' ')
+            call UWWORD(line, iloc, 11, TABREAL,                                 &
+                        text, i, this%extdp(i)%value, sep=' ')
+            call UWWORD(line, iloc, 11, TABREAL,                                 &
+                        text, i, this%extwc(i)%value, sep=' ')
             if (this%ietflag == 2) then
-              call UWWORD(line, iloc, 11, 3, text, i, this%ha(i)%value, sep=' ')
-              call UWWORD(line, iloc, 11, 3, text, i, this%hroot(i)%value, sep=' ')
-              call UWWORD(line, iloc, 11, 3, text, i, this%rootact(i)%value)
+              call UWWORD(line, iloc, 11, TABREAL,                               &
+                          text, i, this%ha(i)%value, sep=' ')
+              call UWWORD(line, iloc, 11, TABREAL,                               &
+                          text, i, this%hroot(i)%value, sep=' ')
+              call UWWORD(line, iloc, 11, TABREAL,                               &
+                          text, i, this%rootact(i)%value)
             end if
           end if
           ! -- write line
@@ -1206,16 +1228,24 @@ contains
               ! -- create first header line
               iloc = 1
               line = ''
-              call UWWORD(line, iloc, 10, 1, 'uzf', n, r, CENTER=.TRUE., sep=' ')
-              call UWWORD(line, iloc, 15, 1, 'rej infil', n, r, CENTER=.TRUE., sep=' ')
-              call UWWORD(line, iloc, 15, 1, 'rej infil', n, r, CENTER=.TRUE., sep=' ')
-              call UWWORD(line, iloc, 15, 1, 'gwf recharge', n, r, CENTER=.TRUE., sep=' ')
-              call UWWORD(line, iloc, 15, 1, 'gwf recharge', n, r, CENTER=.TRUE., sep=' ')
+              call UWWORD(line, iloc, 10, TABUCSTRING,                          &
+                          'uzf', n, r, ALIGNMENT=TABCENTER, sep=' ')
+              call UWWORD(line, iloc, 15, TABUCSTRING,                          &
+                          'rej infil', n, r, ALIGNMENT=TABCENTER, sep=' ')
+              call UWWORD(line, iloc, 15, TABUCSTRING,                          &
+                          'rej infil', n, r, ALIGNMENT=TABCENTER, sep=' ')
+              call UWWORD(line, iloc, 15, TABUCSTRING,                          &
+                          'gwf recharge', n, r, ALIGNMENT=TABCENTER, sep=' ')
+              call UWWORD(line, iloc, 15, TABUCSTRING,                          &
+                          'gwf recharge', n, r, ALIGNMENT=TABCENTER, sep=' ')
               if (this%iseepflag == 1) then
-                call UWWORD(line, iloc, 15, 1, 'gwf seepage', n, r, CENTER=.TRUE., sep=' ')
-                call UWWORD(line, iloc, 15, 1, 'gwf seepage', n, r, CENTER=.TRUE., sep=' ')
+                call UWWORD(line, iloc, 15, TABUCSTRING,                        &
+                            'gwf seepage', n, r, ALIGNMENT=TABCENTER, sep=' ')
+                call UWWORD(line, iloc, 15, TABUCSTRING,                        &
+                            'gwf seepage', n, r, ALIGNMENT=TABCENTER, sep=' ')
               end if
-              call UWWORD(line, iloc, 15, 1, 'closure', n, r, CENTER=.TRUE.)
+              call UWWORD(line, iloc, 15, TABUCSTRING,                          &
+                          'closure', n, r, ALIGNMENT=TABCENTER)
               ! -- create line separator
               linesep = repeat('-', iloc)
               ! -- write first line
@@ -1225,16 +1255,24 @@ contains
               ! -- create second header line
               iloc = 1
               line = ''
-              call UWWORD(line, iloc, 10, 1, 'cell', n, r, CENTER=.TRUE., sep=' ')
-              call UWWORD(line, iloc, 15, 1, 'difference', n, r, CENTER=.TRUE., sep=' ')
-              call UWWORD(line, iloc, 15, 1, 'pct difference', n, r, CENTER=.TRUE., sep=' ')
-              call UWWORD(line, iloc, 15, 1, 'difference', n, r, CENTER=.TRUE., sep=' ')
-              call UWWORD(line, iloc, 15, 1, 'pct difference', n, r, CENTER=.TRUE., sep=' ')
+              call UWWORD(line, iloc, 10, TABUCSTRING,                          &
+                          'cell', n, r, ALIGNMENT=TABCENTER, sep=' ')
+              call UWWORD(line, iloc, 15, TABUCSTRING,                          &
+                          'difference', n, r, ALIGNMENT=TABCENTER, sep=' ')
+              call UWWORD(line, iloc, 15, TABUCSTRING,                          &
+                          'pct difference', n, r, ALIGNMENT=TABCENTER, sep=' ')
+              call UWWORD(line, iloc, 15, TABUCSTRING,                          &
+                          'difference', n, r, ALIGNMENT=TABCENTER, sep=' ')
+              call UWWORD(line, iloc, 15, TABUCSTRING,                          &
+                          'pct difference', n, r, ALIGNMENT=TABCENTER, sep=' ')
               if (this%iseepflag == 1) then
-                call UWWORD(line, iloc, 15, 1, 'difference', n, r, CENTER=.TRUE., sep=' ')
-                call UWWORD(line, iloc, 15, 1, 'pct difference', n, r, CENTER=.TRUE., sep=' ')
+                call UWWORD(line, iloc, 15, TABUCSTRING,                        &
+                            'difference', n, r, ALIGNMENT=TABCENTER, sep=' ')
+                call UWWORD(line, iloc, 15, TABUCSTRING,                        &
+                            'pct difference', n, r, ALIGNMENT=TABCENTER, sep=' ')
               end if
-              call UWWORD(line, iloc, 15, 1, 'criteria', n, r, CENTER=.TRUE.)
+              call UWWORD(line, iloc, 15, TABUCSTRING,                          &
+                          'criteria', n, r, ALIGNMENT=TABCENTER)
               ! -- write second line
               write(this%iout,'(1X,A)') line(1:iloc)
               write(this%iout,'(1X,A)') linesep(1:iloc)
@@ -1242,16 +1280,16 @@ contains
             ! -- write data
             iloc = 1
             line = ''
-            call UWWORD(line, iloc, 10, 2, text, n, r, sep=' ')
-            call UWWORD(line, iloc, 15, 3, text, n, drejinf, sep=' ')
-            call UWWORD(line, iloc, 15, 3, text, n, pdrejinf, sep=' ')
-            call UWWORD(line, iloc, 15, 3, text, n, drch, sep=' ')
-            call UWWORD(line, iloc, 15, 3, text, n, pdrch, sep=' ')
+            call UWWORD(line, iloc, 10, TABINTEGER, text, n, r, sep=' ')
+            call UWWORD(line, iloc, 15, TABREAL, text, n, drejinf, sep=' ')
+            call UWWORD(line, iloc, 15, TABREAL, text, n, pdrejinf, sep=' ')
+            call UWWORD(line, iloc, 15, TABREAL, text, n, drch, sep=' ')
+            call UWWORD(line, iloc, 15, TABREAL, text, n, pdrch, sep=' ')
             if (this%iseepflag == 1) then
-              call UWWORD(line, iloc, 15, 3, text, n, dseep, sep=' ')
-              call UWWORD(line, iloc, 15, 3, text, n, pdseep, sep=' ')
+              call UWWORD(line, iloc, 15, TABREAL, text, n, dseep, sep=' ')
+              call UWWORD(line, iloc, 15, TABREAL, text, n, pdseep, sep=' ')
             end if
-            call UWWORD(line, iloc, 15, 3, text, n, rclose)
+            call UWWORD(line, iloc, 15, TABREAL, text, n, rclose)
             write(this%iout, '(1X,A)') line(1:iloc)
           else
             exit final_check
@@ -1297,13 +1335,15 @@ contains
     integer(I4B), dimension(:), optional, intent(in) :: imap
     integer(I4B), optional, intent(in) :: iadv
     ! -- local
+    character(len=LINELENGTH) :: title
+    character(len=20) :: nodestr
+    integer(I4B) :: maxrows
+    integer(I4B) :: nodeu
     integer(I4B) :: i, node, ibinun
     integer(I4B) :: n, m, ivertflag, ierr
     integer(I4B) :: n2
     real(DP) :: rfinf
     real(DP) :: rin,rout,rsto,ret,retgw,rgwseep,rvflux
-    real(DP) :: rstoin
-    real(DP) :: rstoout
     real(DP) :: hgwf,hgwflm1,ratin,ratout,rrate,rrech
     real(DP) :: trhsgwet,thcofgwet,gwet,derivgwet
     real(DP) :: qfrommvr, qformvr, qgwformvr, sumaet
@@ -1319,7 +1359,8 @@ contains
     real(DP) :: qseep
     real(DP) :: qseeptomvr
     real(DP) :: qgwet
-    integer(I4B) :: ibdlbl, naux, numobs
+    real(DP) :: cvv
+    integer(I4B) :: naux, numobs
     ! -- for observations
     integer(I4B) :: j
     character(len=LENBOUNDNAME) :: bname
@@ -1348,8 +1389,6 @@ contains
     rout = DZERO
     rrech = DZERO
     rsto = DZERO
-    rstoin = DZERO
-    rstoout = DZERO
     ret = DZERO
     retgw = DZERO
     rgwseep = DZERO
@@ -1365,6 +1404,19 @@ contains
     qseep = DZERO
     qseeptomvr = DZERO
     qgwet = DZERO
+    !
+    ! -- set maxrows
+    maxrows = 0
+    if (this%iprflow /= 0) then
+      do i = 1, this%nodes
+        node = this%nodelist(i)
+        if (this%ibound(node) > 0) then
+          maxrows = maxrows + 1
+        end if
+      end do
+      call this%outputtab%set_maxbound(maxrows)
+    end if
+    
     !
     ! -- Go through and process each UZF cell
     do i = 1, this%nodes
@@ -1389,6 +1441,10 @@ contains
       m = n
       hgwflm1 = hgwf
       !
+      ! -- for now set cvv = DZERO
+      ! cvv = this%gwfhcond(m)
+      cvv = DZERO
+      !
       ! -- Get obs information, check if there is obs in uzf cell
       numobs = 0
       do j = 1, this%obs%npakobs
@@ -1404,7 +1460,7 @@ contains
       call this%uzfobj%budget(ivertflag,i,this%totfluxtot,                     &
                               rfinf,rin,rout,rsto,ret,retgw,rgwseep,rvflux,    &
                               this%ietflag,this%iseepflag,this%issflag,hgwf,   &
-                              hgwflm1,this%gwfhcond(m),numobs,this%obs_num,    &
+                              hgwflm1,cvv,numobs,this%obs_num,                 &
                               this%obs_depth,this%obs_theta,qfrommvr,qformvr,  &
                               qgwformvr,sumaet,ierr)
       if ( ierr > 0 ) then
@@ -1493,11 +1549,6 @@ contains
       ! -- accumulate groundwater et
       qgwet = qgwet + this%gwet(i)
 
-      if (this%qsto(i) < DZERO) then
-        rstoin = rstoin - this%qsto(i)
-      else
-        rstoout = rstoout + this%qsto(i)
-      end if
       !
       ! -- End of UZF cell loop
       !
@@ -1547,7 +1598,6 @@ contains
       naux = this%naux
       !
       ! -- uzf-gwrch
-      ibdlbl = 0
       if (ibinun /= 0) then
         call this%dis%record_srcdst_list_header(this%bdtxt(2), this%name_model, &
                     this%name_model, this%name_model, this%name, naux,          &
@@ -1564,6 +1614,13 @@ contains
           bname = ''
         end if
         !
+        ! -- reset table title
+        if (this%iprflow /= 0) then
+          title = trim(this%text) // ' PACKAGE (' // trim(this%name) //          &
+                  ') ' // trim(adjustl(this%bdtxt(2))) // ' FLOW RATES'
+          call this%outputtab%set_title(title)
+        end if
+        !
         ! -- If cell is no-flow or constant-head, then ignore it.
         rrate = DZERO
         if (this%ibound(node) > 0) then
@@ -1575,11 +1632,11 @@ contains
           ! -- Print the individual rates if requested(this%iprflow<0)
           if (ibudfl /= 0) then
             if (this%iprflow /= 0) then
-              if (ibdlbl == 0) write(this%iout,fmttkk)                         &
-                  this%bdtxt(2) // ' (' // trim(this%name) // ')', kper, kstp
-              call this%dis%print_list_entry(i, node, rrate, this%iout,        &
-                      bname)
-              ibdlbl=1
+              !
+              ! -- set nodestr and write outputtab table
+              nodeu = this%dis%get_nodeuser(node)
+              call this%dis%nodeu_to_string(nodeu, nodestr)
+              call this%outputtab%print_list_entry(i, nodestr, rrate, bname)
             end if
           end if
         end if
@@ -1595,12 +1652,18 @@ contains
       !
       ! -- uzf-gwd
       if (this%iseepflag == 1) then
-        ibdlbl = 0
         if (ibinun /= 0) then
           call this%dis%record_srcdst_list_header(this%bdtxt(3),               &
                       this%name_model,                                         &
                       this%name_model, this%name_model, this%name, naux,       &
                       this%auxname, ibinun, this%nodes, this%iout)
+        end if
+        !
+        ! -- reset table title
+        if (this%iprflow /= 0) then
+          title = trim(this%text) // ' PACKAGE (' // trim(this%name) //          &
+                  ') ' // trim(adjustl(this%bdtxt(4))) // ' FLOW RATES'
+          call this%outputtab%set_title(title)
         end if
         !
         ! -- Loop through each boundary calculating flow.
@@ -1623,11 +1686,11 @@ contains
             ! -- Print the individual rates if requested(this%iprflow<0)
             if (ibudfl /= 0) then
               if (this%iprflow /= 0) then
-                if (ibdlbl == 0) write(this%iout,fmttkk)                       &
-                  this%bdtxt(3) // ' (' // trim(this%name) // ')', kper, kstp
-                call this%dis%print_list_entry(i, node, rrate, this%iout, &
-                        bname)
-                ibdlbl=1
+                !
+                ! -- set nodestr and write outputtab table
+                nodeu = this%dis%get_nodeuser(node)
+                call this%dis%nodeu_to_string(nodeu, nodestr)
+                call this%outputtab%print_list_entry(i, nodestr, rrate, bname)
               end if
             end if
           end if
@@ -1643,12 +1706,18 @@ contains
         !
         ! -- uzf-gwd to mover
         if (this%imover == 1) then
-          ibdlbl = 0
           if (ibinun /= 0) then
             call this%dis%record_srcdst_list_header(this%bdtxt(5),              &
                         this%name_model, this%name_model,                       &
                         this%name_model, this%name, naux,                       &
                         this%auxname, ibinun, this%nodes, this%iout)
+          end if
+          !
+          ! -- reset table title
+          if (this%iprflow /= 0) then
+            title = trim(this%text) // ' PACKAGE (' // trim(this%name) //        &
+                    ') ' // trim(adjustl(this%bdtxt(5))) // ' FLOW RATES'
+            call this%outputtab%set_title(title)
           end if
           !
           ! -- Loop through each boundary calculating flow.
@@ -1671,11 +1740,11 @@ contains
               ! -- Print the individual rates if requested(this%iprflow<0)
               if (ibudfl /= 0) then
                 if (this%iprflow /= 0) then
-                  if (ibdlbl == 0) write(this%iout,fmttkk)                     &
-                    this%bdtxt(5) // ' (' // trim(this%name) // ')', kper, kstp
-                  call this%dis%print_list_entry(i, node, rrate, this%iout,    &
-                          bname)
-                  ibdlbl=1
+                  !
+                  ! -- set nodestr and write outputtab table
+                  nodeu = this%dis%get_nodeuser(node)
+                  call this%dis%nodeu_to_string(nodeu, nodestr)
+                  call this%outputtab%print_list_entry(i, nodestr, rrate, bname)
                 end if
               end if
             end if
@@ -1692,11 +1761,17 @@ contains
       end if
       ! -- uzf-evt
       if (this%ietflag /= 0) then
-        ibdlbl = 0
         if (ibinun /= 0) then
           call this%dis%record_srcdst_list_header(this%bdtxt(4), this%name_model,&
                       this%name_model, this%name_model, this%name, naux,        &
                       this%auxname, ibinun, this%nodes, this%iout)
+        end if
+        !
+        ! -- reset table title
+        if (this%iprflow /= 0) then
+          title = trim(this%text) // ' PACKAGE (' // trim(this%name) //          &
+                  ') ' // trim(adjustl(this%bdtxt(4))) // ' FLOW RATES'
+          call this%outputtab%set_title(title)
         end if
         !
         ! -- Loop through each boundary calculating flow.
@@ -1719,11 +1794,11 @@ contains
             ! -- Print the individual rates if requested(this%iprflow<0)
             if (ibudfl /= 0) then
               if (this%iprflow /= 0) then
-                if (ibdlbl == 0) write(this%iout,fmttkk)                       &
-                  this%bdtxt(4) // ' (' // trim(this%name) // ')', kper, kstp
-                call this%dis%print_list_entry(i, node, rrate, this%iout, &
-                        bname)
-                ibdlbl=1
+                !
+                ! -- set nodestr and write outputtab table
+                nodeu = this%dis%get_nodeuser(node)
+                call this%dis%nodeu_to_string(nodeu, nodestr)
+                call this%outputtab%print_list_entry(i, nodestr, rrate, bname)
               end if
             end if
           end if
@@ -1820,17 +1895,6 @@ contains
     integer(I4B),intent(in) :: ihedfl
     integer(I4B),intent(in) :: ibudfl
     ! -- local
-    character(len=LINELENGTH) :: line, linesep
-    character(len=16) :: text
-    integer(I4B) :: n
-    integer(I4B) :: iloc
-    integer(I4B) :: ivertflag
-    real(DP) :: q
-    real(DP) :: qin
-    real(DP) :: qout
-    real(DP) :: qerr
-    real(DP) :: qavg
-    real(DP) :: qpd
     ! -- format
  2000 FORMAT ( 1X, ///1X, A, A, A, '   PERIOD ', I6, '   STEP ', I8)
 ! ------------------------------------------------------------------------------
@@ -1841,188 +1905,9 @@ contains
       ! add code to write moisture content
     end if
     !
-    ! -- write uzf rates
+    ! -- Output uzf flow table
     if (ibudfl /= 0 .and. this%iprflow /= 0) then
-      write (iout, 2000) 'UZF (', trim(this%name), ') FLOWS', kper, kstp
-       iloc = 1
-       line = ''
-       if(this%inamedbound==1) then
-         call UWWORD(line, iloc, 16, 1, 'uzf', n, q, left=.TRUE.)
-       end if
-       call UWWORD(line, iloc, 6, 1, 'uzf', n, q, CENTER=.TRUE., sep=' ')
-       call UWWORD(line, iloc, 11, 1, 'uzf', n, q, CENTER=.TRUE., sep=' ')
-       if (this%iuzf2uzf == 1) then
-         call UWWORD(line, iloc, 11, 1, 'uzf-uzf', n, q, CENTER=.TRUE., sep=' ')
-       end if
-       if (this%imover == 1) then
-        call UWWORD(line, iloc, 11, 1, 'uzf', n, q, CENTER=.TRUE., sep=' ')
-       end if
-       call UWWORD(line, iloc, 11, 1, 'uzf', n, q, CENTER=.TRUE., sep=' ')
-       if (this%imover == 1) then
-         call UWWORD(line, iloc, 11, 1, 'uzf rej-inf', n, q, CENTER=.TRUE., sep=' ')
-       end if
-       if (this%ietflag /= 0) then
-         call UWWORD(line, iloc, 11, 1, 'uzf', n, q, CENTER=.TRUE., sep=' ')
-       end if
-       call UWWORD(line, iloc, 11, 1, 'uzf', n, q, CENTER=.TRUE., sep=' ')
-       if (this%iuzf2uzf == 1) then
-         call UWWORD(line, iloc, 11, 1, 'uzf-uzf', n, q, CENTER=.TRUE., sep=' ')
-       end if
-       call UWWORD(line, iloc, 11, 1, 'uzf', n, q, CENTER=.TRUE., sep=' ')
-       call UWWORD(line, iloc, 11, 1, 'uzf', n, q, CENTER=.TRUE., sep=' ')
-       call UWWORD(line, iloc, 11, 1, 'percent', n, q, CENTER=.TRUE.)
-       ! -- create line separator
-       linesep = repeat('-', iloc)
-       ! -- write first line
-       write(iout,'(1X,A)') linesep(1:iloc)
-       write(iout,'(1X,A)') line(1:iloc)
-       ! -- create second header line
-       iloc = 1
-       line = ''
-       if(this%inamedbound==1) then
-         call UWWORD(line, iloc, 16, 1, 'name', n, q, left=.TRUE.)
-       end if
-       call UWWORD(line, iloc, 6, 1, 'no.', n, q, CENTER=.TRUE., sep=' ')
-       call UWWORD(line, iloc, 11, 1, 'infilt.', n, q, CENTER=.TRUE., sep=' ')
-       if (this%iuzf2uzf == 1) then
-         call UWWORD(line, iloc, 11, 1, 'inflow', n, q, CENTER=.TRUE., sep=' ')
-       end if
-       if (this%imover == 1) then
-         call UWWORD(line, iloc, 11, 1, 'from mvr', n, q, CENTER=.TRUE., sep=' ')
-       end if
-       call UWWORD(line, iloc, 11, 1, 'rej-inf', n, q, CENTER=.TRUE., sep=' ')
-       if (this%imover == 1) then
-         call UWWORD(line, iloc, 11, 1, 'to mvr', n, q, CENTER=.TRUE., sep=' ')
-       end if
-       if (this%ietflag /= 0) then
-         call UWWORD(line, iloc, 11, 1, 'uzet', n, q, CENTER=.TRUE., sep=' ')
-       end if
-       call UWWORD(line, iloc, 11, 1, 'gwrch', n, q, CENTER=.TRUE., sep=' ')
-       if (this%iuzf2uzf == 1) then
-         call UWWORD(line, iloc, 11, 1, 'outflow', n, q, CENTER=.TRUE., sep=' ')
-       end if
-       call UWWORD(line, iloc, 11, 1, 'storage', n, q, CENTER=.TRUE., sep=' ')
-       call UWWORD(line, iloc, 11, 1, 'in - out', n, q, CENTER=.TRUE., sep=' ')
-       call UWWORD(line, iloc, 11, 1, 'difference', n, q, CENTER=.TRUE.)
-       ! -- write second line
-       write(iout,'(1X,A)') line(1:iloc)
-       write(iout,'(1X,A)') linesep(1:iloc)
-      ! write uzf rates for each uzf cell
-      do n = 1, this%maxbound
-        !
-        ! -- reset accumulators
-        qin = DZERO
-        qout = DZERO
-        !
-        ! -- fill line
-        iloc = 1
-        line = ''
-        if (this%inamedbound==1) then
-          call UWWORD(line, iloc, 16, 1, this%boundname(n), n, q, left=.TRUE.)
-        end if
-        call UWWORD(line, iloc, 6, 2, text, n, q, CENTER=.TRUE., sep=' ')
-        !
-        ! -- specified infiltration
-        q = this%appliedinf(n)
-        qin = qin + q
-        call UWWORD(line, iloc, 11, 3, text, n, q, sep=' ')
-        !
-        ! -- infiltration from cell above
-        if (this%iuzf2uzf == 1) then
-          q = DZERO
-          if (this%uzfobj%landflag(n) == 0) then
-            q = this%infiltration(n)
-            qin = qin + q
-          end if
-          call UWWORD(line, iloc, 11, 3, text, n, q, sep=' ')
-        end if
-        !
-        ! -- from mover
-        if (this%imover == 1) then
-          q = this%pakmvrobj%get_qfrommvr(n)
-          qin = qin + q
-          call UWWORD(line, iloc, 11, 3, text, n, q, sep=' ')
-        end if
-        !
-        ! -- rejected infiltration
-        q = this%rejinf(n)
-        if (q > DZERO) then
-          qout = qout + q
-          q = -q
-        end if
-        call UWWORD(line, iloc, 11, 3, text, n, q, sep=' ')
-        !
-        ! -- rejected infiltration to mover
-        if (this%imover == 1) then
-          q = this%rejinftomvr(n)
-          if (q > DZERO) then
-            qout = qout + q
-            q = -q
-          end if
-          call UWWORD(line, iloc, 11, 3, text, n, q, sep=' ')
-        end if
-        !
-        ! -- unsaturated evapotranspiration
-        if (this%ietflag /= 0) then
-          q = this%uzet(n)
-          if (q > DZERO) then
-            qout = qout + q
-            q = -q
-          end if
-          call UWWORD(line, iloc, 11, 3, text, n, q, sep=' ')
-        end if
-        !
-        ! -- groundwater recharge
-        q = this%rch(n)
-        if (q > DZERO) then
-          qout = qout + q
-          q = -q
-        end if
-        call UWWORD(line, iloc, 11, 3, text, n, q, sep=' ')
-        !
-        ! -- uzf below
-        if (this%iuzf2uzf == 1) then
-          q = DZERO
-          ivertflag = this%uzfobj%ivertcon(n)
-          if ( ivertflag > 0 ) then
-              q = this%uzfobj%surfluxbelow(n) * this%uzfobj%uzfarea(n)
-              if (q > DZERO) then
-                qout = qout + q
-                q = -q
-              end if
-          end if
-          call UWWORD(line, iloc, 11, 3, text, n, q, sep=' ')
-        end if
-        !
-        ! -- storage
-        q = this%qsto(n)
-        if (q > DZERO) then
-          qout = qout + q
-        else
-          qin = qin - q
-        end if
-        if (q /= DZERO) then
-          q = -q
-        end if
-        call UWWORD(line, iloc, 11, 3, text, n, q, sep=' ')
-        !
-        ! -- calculate error
-        qerr = qin - qout
-        call UWWORD(line, iloc, 11, 3, text, n, qerr, sep=' ')
-        !
-        ! -- calculate percent difference
-        qavg = DHALF * (qin + qout)
-        if (qavg > DZERO) then
-        end if
-        qpd = DZERO
-        if (qavg > DZERO) then
-          qpd = DHUNDRED * qerr / qavg
-        end if
-        call UWWORD(line, iloc, 11, 3, text, n, qpd)
-        !
-        ! -- write line
-        write(iout, '(1X,A)') line(1:iloc)
-      end do
+      call this%budobj%write_flowtable(this%dis)
     end if
     !
     ! -- Output uzf budget
@@ -2451,18 +2336,28 @@ contains
     iloc = 1
     line = ''
     if(this%inamedbound==1) then
-      call UWWORD(line, iloc, 16, 1, 'name', n, q, left=.TRUE.)
+      call UWWORD(line, iloc, 16, TABUCSTRING,                                  &
+                  'name', n, q, ALIGNMENT=TABLEFT)
     end if
-    call UWWORD(line, iloc, 6, 1, 'no.', n, q, CENTER=.TRUE., sep=' ')
-    call UWWORD(line, iloc, 20, 1, cellids, n, q, CENTER=.TRUE., sep=' ')
-    call UWWORD(line, iloc, 11, 1, 'landflag', n, q, CENTER=.TRUE., sep=' ')
-    call UWWORD(line, iloc, 11, 1, 'ivertcon', n, q, CENTER=.TRUE., sep=' ')
-    call UWWORD(line, iloc, 11, 1, 'surfdep', n, q, CENTER=.TRUE., sep=' ')
-    call UWWORD(line, iloc, 11, 1, 'vks', n, q, CENTER=.TRUE., sep=' ')
-    call UWWORD(line, iloc, 11, 1, 'thtr', n, q, CENTER=.TRUE., sep=' ')
-    call UWWORD(line, iloc, 11, 1, 'thts', n, q, CENTER=.TRUE., sep=' ')
-    call UWWORD(line, iloc, 11, 1, 'thti', n, q, CENTER=.TRUE., sep=' ')
-    call UWWORD(line, iloc, 11, 1, 'eps', n, q, CENTER=.TRUE.)
+    call UWWORD(line, iloc, 6, TABUCSTRING,                                     &
+                'no.', n, q, ALIGNMENT=TABCENTER, sep=' ')
+    call UWWORD(line, iloc, 20, 1, cellids, n, q, ALIGNMENT=TABCENTER, sep=' ')
+    call UWWORD(line, iloc, 11, TABUCSTRING,                                     &
+                'landflag', n, q, ALIGNMENT=TABCENTER, sep=' ')
+    call UWWORD(line, iloc, 11, TABUCSTRING,                                     &
+                'ivertcon', n, q, ALIGNMENT=TABCENTER, sep=' ')
+    call UWWORD(line, iloc, 11, TABUCSTRING,                                     &
+                'surfdep', n, q, ALIGNMENT=TABCENTER, sep=' ')
+    call UWWORD(line, iloc, 11, TABUCSTRING,                                     &
+                'vks', n, q, ALIGNMENT=TABCENTER, sep=' ')
+    call UWWORD(line, iloc, 11, TABUCSTRING,                                     &
+                'thtr', n, q, ALIGNMENT=TABCENTER, sep=' ')
+    call UWWORD(line, iloc, 11, TABUCSTRING,                                     &
+                'thts', n, q, ALIGNMENT=TABCENTER, sep=' ')
+    call UWWORD(line, iloc, 11, TABUCSTRING,                                     &
+                'thti', n, q, ALIGNMENT=TABCENTER, sep=' ')
+    call UWWORD(line, iloc, 11, TABUCSTRING,                                     &
+                'eps', n, q, ALIGNMENT=TABCENTER)
     ! -- create line separator
     linesep = repeat('-', iloc)
     ! -- write header line and separator
@@ -2484,18 +2379,27 @@ contains
       iloc = 1
       line = ''
       if(this%inamedbound==1) then
-        call UWWORD(line, iloc, 16, 1, this%uzfname(i), n, q, left=.TRUE.)
+        call UWWORD(line, iloc, 16, TABUCSTRING,                                 &
+                    this%uzfname(i), n, q, ALIGNMENT=TABLEFT)
       end if
-      call UWWORD(line, iloc, 6, 2, text, i, q, sep=' ')
-      call UWWORD(line, iloc, 20, 1, cellid, n, q, left=.TRUE.)
-      call UWWORD(line, iloc, 11, 2, text, this%uzfobj%landflag(i), q, sep=' ')
-      call UWWORD(line, iloc, 11, 2, text, this%uzfobj%ivertcon(i), q, sep=' ')
-      call UWWORD(line, iloc, 11, 3, text, i, this%uzfobj%surfdep(i), sep=' ')
-      call UWWORD(line, iloc, 11, 3, text, i, this%uzfobj%vks(i), sep=' ')
-      call UWWORD(line, iloc, 11, 3, text, i, this%uzfobj%thtr(i), sep=' ')
-      call UWWORD(line, iloc, 11, 3, text, i, this%uzfobj%thts(i), sep=' ')
-      call UWWORD(line, iloc, 11, 3, text, i, this%uzfobj%thti(i), sep=' ')
-      call UWWORD(line, iloc, 11, 3, text, i, this%uzfobj%eps(i))
+      call UWWORD(line, iloc, 6, TABINTEGER, text, i, q, sep=' ')
+      call UWWORD(line, iloc, 20, TABUCSTRING, cellid, n, q, ALIGNMENT=TABLEFT)
+      call UWWORD(line, iloc, 11, TABINTEGER,                                    &
+                  text, this%uzfobj%landflag(i), q, sep=' ')
+      call UWWORD(line, iloc, 11, TABINTEGER,                                    &
+                  text, this%uzfobj%ivertcon(i), q, sep=' ')
+      call UWWORD(line, iloc, 11, TABREAL,                                       &
+                  text, i, this%uzfobj%surfdep(i), sep=' ')
+      call UWWORD(line, iloc, 11, TABREAL,                                       &
+                  text, i, this%uzfobj%vks(i), sep=' ')
+      call UWWORD(line, iloc, 11, TABREAL,                                       &
+                  text, i, this%uzfobj%thtr(i), sep=' ')
+      call UWWORD(line, iloc, 11, TABREAL,                                       &
+                  text, i, this%uzfobj%thts(i), sep=' ')
+      call UWWORD(line, iloc, 11, TABREAL,                                       &
+                  text, i, this%uzfobj%thti(i), sep=' ')
+      call UWWORD(line, iloc, 11, TABREAL,                                       &
+                  text, i, this%uzfobj%eps(i))
       ! -- write line
       write(this%iout,'(1X,A)') line(1:iloc)
     end do
@@ -3299,7 +3203,7 @@ contains
                                              this%name_model, &
                                              this%name, &
                                              maxlist, .false., .false., &
-                                             naux)
+                                             naux, auxtxt)
     !
     ! -- 
     if (this%imover == 1) then
@@ -3346,6 +3250,11 @@ contains
                                                this%name, &
                                                maxlist, .false., .false., &
                                                naux, this%auxname)
+    end if
+    !
+    ! -- if uzf flow for each reach are written to the listing file
+    if (this%iprflow /= 0) then
+      call this%budobj%flowtable_df(this%iout, cellids='GWF')
     end if
     !
     ! -- return
@@ -3488,7 +3397,7 @@ contains
       end do
       
       
-      ! -- TO MOVER
+      ! -- REJ-INF-TO-MVR
       idx = idx + 1
       call this%budobj%budterm(idx)%reset(this%nodes)
       do n = 1, this%nodes

@@ -14,7 +14,7 @@ module PackageWriterModule
   use MoverModule, only: MoverType, AddMoverToList
   use ObsWriterModule, only: ObsWriterType
   use SimModule, only: store_error, store_note, ustop
-  use SimVariablesModule, only: SimMovers
+  use SimListVariablesModule, only: SimMovers
   use UtilitiesModule, only: ConstantReal2D
 
   implicit none

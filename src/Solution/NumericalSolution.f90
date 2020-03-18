@@ -20,7 +20,7 @@ module NumericalSolutionModule
                                      AddNumericalExchangeToList,               &
                                      GetNumericalExchangeFromList
   use SparseModule,            only: sparsematrix
-  use SimVariablesModule,      only: iout
+  use SimVariablesModule,      only: istdout, iout
   use BlockParserModule,       only: BlockParserType
   use IMSLinearModule
 
@@ -1320,7 +1320,8 @@ contains
             if (this%ptcrat > this%ptcthresh) then
               this%icnvg = 0
               if (kiter == this%mxiter) then
-                write(*,*) 'pseudo-transient continuation caused convergence failure'
+                write(istdout, *) 'pseudo-transient continuation ' //            &
+                                  'caused convergence failure'
               end if
             end if
           end if
