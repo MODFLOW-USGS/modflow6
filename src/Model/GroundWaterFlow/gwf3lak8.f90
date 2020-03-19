@@ -11,7 +11,6 @@ module LakModule
                              DNODATA,                                          &
                              TABLEFT, TABCENTER, TABRIGHT,                     &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
-  use SimVariablesModule, only: istdout
   use MemoryTypeModule, only: MemoryTSType
   use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_setptr,     &
                                  mem_deallocate
@@ -24,8 +23,8 @@ module LakModule
   use ObsModule, only: ObsType
   use InputOutputModule, only: get_node, URWORD, extract_idnum_or_bndname
   use BaseDisModule, only: DisBaseType
-  use SimModule,           only: count_errors, store_error, ustop, &
-                                 store_error_unit
+  use SimModule,           only: count_errors, store_error, ustop
+  use GenericUtilitiesModule, only: sim_message
   use ArrayHandlersModule, only: ExpandArray
   use BlockParserModule,   only: BlockParserType
   use BaseDisModule,       only: DisBaseType
@@ -33,6 +32,7 @@ module LakModule
   implicit none
   !
   private
+  public :: LakType
   public :: lak_create
   !
   character(len=LENFTYPE)       :: ftype = 'LAK'
@@ -212,11 +212,12 @@ module LakModule
     procedure, private :: lak_set_stressperiod
     procedure, private :: lak_set_attribute_error
     procedure, private :: lak_cfupdate
+    procedure, private :: lak_bound_update
     procedure, private :: lak_bd_obs
     procedure, private :: lak_calculate_sarea
     procedure, private :: lak_calculate_warea
     procedure, private :: lak_calculate_conn_warea
-    procedure, private :: lak_calculate_vol
+    procedure, public  :: lak_calculate_vol
     procedure, private :: lak_calculate_conductance
     procedure, private :: lak_calculate_cond_head
     procedure, private :: lak_calculate_conn_conductance
@@ -3706,6 +3707,10 @@ contains
 
     end do
     !
+    ! -- Store the lake stage and cond in bound array for other
+    !    packages, such as the BUY package
+    call this%lak_bound_update()
+    !
     ! -- Return
     return
   end subroutine lak_cf
@@ -3834,6 +3839,7 @@ contains
     real(DP), intent(in) :: hclose
     real(DP), intent(in) :: rclose
     ! -- local
+    character(len=LINELENGTH) :: line
     integer(I4B) :: n
     integer(I4B) :: ifirst
     real(DP) :: dh
@@ -3849,11 +3855,14 @@ contains
     real(DP) :: ex
     real(DP) :: pd
     ! format
-02000 format(4x,'LAKE PACKAGE FAILED CONVERGENCE CRITERIA',//,                  &
-             4x,a10,4(1x,a15),/,4x,74('-'))
-02010 format(4x,i10,4(1x,G15.7))
-02020 format(4x,74('-'))
-02030 format('CONVERGENCE FAILED AS A RESULT OF LAKE PACKAGE',1x,a)
+      character(len=*), parameter :: fmtheader = "(4x,a10,4(1x,a15))"
+      character(len=*), parameter :: header =                                   &
+         &"(4x,'LAKE PACKAGE FAILED CONVERGENCE CRITERIA',//,                   &
+         &4x,a/,4x,74('-'))"  
+      character(len=*), parameter :: fmtline = "(4x,i10,4(1x,G15.7))"                                  
+      character(len=*), parameter :: fmtfooter = "(4x,74('-'))"                                  
+      character(len=*), parameter :: fmtmsg =                                   &
+         &"('CONVERGENCE FAILED AS A RESULT OF LAKE PACKAGE',1x,a)"                                  
 ! --------------------------------------------------------------------------
     ifirst = 1
     if (this%iconvchk /= 0) then
@@ -3879,19 +3888,30 @@ contains
           if (iend == 1) then
             if (ifirst == 1) then
               ifirst = 0
-              write(istdout,2030) this%name
-              write(this%iout, 2000) '      LAKE',                                 &
-                '             DH', '    DH CRITERIA',                              &
+              ! -- write table to this%iout
+              call sim_message(this%name, fmt=fmtmsg, iunit=this%iout)
+              write(line, fmtheader)                                             &
+                '      LAKE',                                                    &
+                '             DH', '    DH CRITERIA',                            &
                 '        PCTDIFF', ' PCTDIFF CRITER'
+              call sim_message(line, fmt=header, iunit=this%iout)
+              ! -- write table to stdout
+              call sim_message(line, fmt=header)
             end if
-            write(this%iout,2010) n, dh, hclose, pd, this%pdmax
+            write(line, fmtline)  n, dh, hclose, pd, this%pdmax
+            call sim_message(line, iunit=this%iout)
+            ! -- write table to stdout
+            call sim_message(line)
           else
             exit final_check
           end if
         end if
       end do final_check
       if (ifirst == 0) then
-        write(this%iout,2020)
+        ! -- write table to this%iout
+        call sim_message('', fmt=fmtfooter, iunit=this%iout)
+        ! -- write table to stdout
+        call sim_message('', fmt=fmtfooter)
       end if
     end if
     !
@@ -4979,6 +4999,38 @@ contains
       ! -- Return
       return
   end subroutine lak_cfupdate
+
+  subroutine lak_bound_update(this)
+  ! ******************************************************************************
+  ! lak_bound_update -- store the lake head and connection conductance in the
+  !   bound array
+  ! ******************************************************************************
+  !
+  !    SPECIFICATIONS:
+  ! ------------------------------------------------------------------------------
+      class(LakType), intent(inout) :: this
+      integer(I4B) :: j, n, node
+      real(DP) :: hlak, head, clak
+  ! ------------------------------------------------------------------------------
+  !
+  ! -- Return if no lak lakes
+      if (this%nbound == 0) return
+  !
+  ! -- Calculate hcof and rhs for each lak entry
+      do n = 1, this%nlakes
+        hlak = this%xnewpak(n)
+        do j = this%idxlakeconn(n), this%idxlakeconn(n+1)-1
+          node = this%cellid(j)
+          head = this%xnew(node)
+          call this%lak_calculate_conn_conductance(n, j, hlak, head, clak)
+          this%bound(1, j) = hlak
+          this%bound(2, j) = clak
+        end do
+      end do
+      !
+      ! -- Return
+      return
+  end subroutine lak_bound_update
 
   subroutine lak_solve(this, update)
   ! **************************************************************************

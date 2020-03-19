@@ -1,11 +1,13 @@
 module SimVariablesModule
   use, intrinsic :: iso_fortran_env, only: output_unit
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: IUSTART
+  use ConstantsModule, only: LINELENGTH, IUSTART, VALL
   public
-  character(len=9), parameter :: simfile    = 'mfsim.nam'
-  character(len=9), parameter :: simlstfile = 'mfsim.lst'
+  character(len=LINELENGTH) :: simfile    = 'mfsim.nam'
+  character(len=LINELENGTH) :: simlstfile = 'mfsim.lst'
+  character(len=LINELENGTH) :: simstdout  = 'mfsim.stdout'
   integer(I4B) :: istdout = output_unit                                          ! -- unit number for stdout
+  integer(I4B) :: isim_level = VALL                                              ! -- unit number for stdout
   integer(I4B) :: iout                                                           ! -- unit number for simulation output
   integer(I4B) :: isimcnvg                                                       ! -- 1 if all objects have converged, 0 otherwise
   integer(I4B) :: isimcontinue = 0                                               ! -- 1 to continue if isimcnvg = 0, 0 to terminate

@@ -7,7 +7,7 @@ module NumericalSolutionModule
                                      DPREC, DZERO, DEM20, DEM15, DEM6,         &
                                      DEM4, DEM3, DEM2, DEM1, DHALF,            &
                                      DONE, DTHREE, DEP6, DEP20
-  use GenericUtilities,        only: IS_SAME
+  use GenericUtilitiesModule,  only: IS_SAME, sim_message, stop_with_error
   use VersionModule,           only: IDEVELOPMODE
   use BaseModelModule,         only: BaseModelType
   use BaseSolutionModule,      only: BaseSolutionType, AddBaseSolutionToList
@@ -20,7 +20,7 @@ module NumericalSolutionModule
                                      AddNumericalExchangeToList,               &
                                      GetNumericalExchangeFromList
   use SparseModule,            only: sparsematrix
-  use SimVariablesModule,      only: istdout, iout
+  use SimVariablesModule,      only: iout
   use BlockParserModule,       only: BlockParserType
   use IMSLinearModule
 
@@ -1314,15 +1314,19 @@ contains
     integer(I4B) :: ic, im    
     class(NumericalModelType), pointer :: mp
     class(NumericalExchangeType), pointer :: cp    
+    character(len=LINELENGTH) :: line
+    character(len=34) :: strh
+    character(len=16) :: cval
     integer(I4B) :: i0, i1    
     integer(I4B) :: itestmat, n
     integer(I4B) :: iter    
     integer(I4B) :: inewtonur    
     integer(I4B) :: iend
     integer(I4B) :: iptc
-    real(DP) :: dxmax, ptcf, ttform, ttsoln
-    character(len=34) :: strh
-    character(len=16) :: cval
+    real(DP) :: dxmax
+    real(DP) :: ptcf
+    real(DP) :: ttform
+    real(DP) :: ttsoln
     
     ! formats
 11  FORMAT(//1X,'OUTER ITERATION SUMMARY',/,1x,139('-'),/,                  &
@@ -1419,13 +1423,12 @@ contains
     !-------------------------------------------------------
     itestmat = 0
     if(itestmat.eq.1)then
-        open(99,file='sol_MF6.TXT')
-    WRITE(99,*)'MATRIX SOLUTION FOLLOWS'
-    WRITE(99,67)(n,this%x(N),N=1,this%NEQ)
-67      FORMAT(10(I8,G15.4))
-    close(99)
-    stop
-    endif
+      open(99,file='sol_MF6.TXT')
+      WRITE(99,*) 'MATRIX SOLUTION FOLLOWS'
+      WRITE(99,'(10(I8,G15.4))')  (n, this%x(N), N = 1, this%NEQ)
+      close(99)
+      call stop_with_error()
+    end if
     !-------------------------------------------------------
     ! -- check convergence of solution
     call this%sln_outer_check(this%hncg(kiter), this%lrch(1,kiter))
@@ -1442,8 +1445,9 @@ contains
         if (this%ptcrat > this%ptcthresh) then
           this%icnvg = 0
           if (kiter == this%mxiter) then
-            write(istdout,*) 'pseudo-transient continuation ' //                 &
-                              'caused convergence failure'
+            write(line, '(a)') 'pseudo-transient continuation ' //               &
+                                'caused convergence failure'
+            call sim_message(line)
           end if
         end if
       end if

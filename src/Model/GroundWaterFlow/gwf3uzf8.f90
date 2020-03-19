@@ -32,6 +32,7 @@ module UzfModule
 
   private
   public :: uzf_create
+  public :: UzfType
 
   type, extends(BndType) :: UzfType
     ! output integers
@@ -1343,8 +1344,6 @@ contains
     integer(I4B) :: n2
     real(DP) :: rfinf
     real(DP) :: rin,rout,rsto,ret,retgw,rgwseep,rvflux
-    real(DP) :: rstoin
-    real(DP) :: rstoout
     real(DP) :: hgwf,hgwflm1,ratin,ratout,rrate,rrech
     real(DP) :: trhsgwet,thcofgwet,gwet,derivgwet
     real(DP) :: qfrommvr, qformvr, qgwformvr, sumaet
@@ -1360,6 +1359,7 @@ contains
     real(DP) :: qseep
     real(DP) :: qseeptomvr
     real(DP) :: qgwet
+    real(DP) :: cvv
     integer(I4B) :: naux, numobs
     ! -- for observations
     integer(I4B) :: j
@@ -1389,8 +1389,6 @@ contains
     rout = DZERO
     rrech = DZERO
     rsto = DZERO
-    rstoin = DZERO
-    rstoout = DZERO
     ret = DZERO
     retgw = DZERO
     rgwseep = DZERO
@@ -1443,6 +1441,10 @@ contains
       m = n
       hgwflm1 = hgwf
       !
+      ! -- for now set cvv = DZERO
+      ! cvv = this%gwfhcond(m)
+      cvv = DZERO
+      !
       ! -- Get obs information, check if there is obs in uzf cell
       numobs = 0
       do j = 1, this%obs%npakobs
@@ -1458,7 +1460,7 @@ contains
       call this%uzfobj%budget(ivertflag,i,this%totfluxtot,                     &
                               rfinf,rin,rout,rsto,ret,retgw,rgwseep,rvflux,    &
                               this%ietflag,this%iseepflag,this%issflag,hgwf,   &
-                              hgwflm1,this%gwfhcond(m),numobs,this%obs_num,    &
+                              hgwflm1,cvv,numobs,this%obs_num,                 &
                               this%obs_depth,this%obs_theta,qfrommvr,qformvr,  &
                               qgwformvr,sumaet,ierr)
       if ( ierr > 0 ) then
@@ -1547,11 +1549,6 @@ contains
       ! -- accumulate groundwater et
       qgwet = qgwet + this%gwet(i)
 
-      if (this%qsto(i) < DZERO) then
-        rstoin = rstoin - this%qsto(i)
-      else
-        rstoout = rstoout + this%qsto(i)
-      end if
       !
       ! -- End of UZF cell loop
       !
@@ -3206,7 +3203,7 @@ contains
                                              this%name_model, &
                                              this%name, &
                                              maxlist, .false., .false., &
-                                             naux)
+                                             naux, auxtxt)
     !
     ! -- 
     if (this%imover == 1) then
@@ -3253,6 +3250,11 @@ contains
                                                this%name, &
                                                maxlist, .false., .false., &
                                                naux, this%auxname)
+    end if
+    !
+    ! -- if uzf flow for each reach are written to the listing file
+    if (this%iprflow /= 0) then
+      call this%budobj%flowtable_df(this%iout, cellids='GWF')
     end if
     !
     ! -- if uzf flow for each reach are written to the listing file
@@ -3400,7 +3402,7 @@ contains
       end do
       
       
-      ! -- TO MOVER
+      ! -- REJ-INF-TO-MVR
       idx = idx + 1
       call this%budobj%budterm(idx)%reset(this%nodes)
       do n = 1, this%nodes

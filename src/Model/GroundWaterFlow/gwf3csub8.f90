@@ -8,8 +8,7 @@ module GwfCsubModule
                              LENBUDTXT, LENAUXNAME, LENORIGIN,                  &
                              TABLEFT, TABCENTER, TABRIGHT,                      &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
-  use SimVariablesModule, only: istdout
-  use GenericUtilities, only: is_same
+  use GenericUtilitiesModule, only: is_same, sim_message
   use SmoothingModule,        only: sQuadraticSaturation,                       &
                                     sQuadraticSaturationDerivative
   use NumericalPackageModule, only: NumericalPackageType
@@ -20,7 +19,7 @@ module GwfCsubModule
                                   GetTimeSeriesLinkFromList
   use InputOutputModule, only: get_node, extract_idnum_or_bndname, UWWORD
   use BaseDisModule, only: DisBaseType
-  use SimModule, only: count_errors, store_error, store_error_unit, ustop
+  use SimModule, only: count_errors, store_error, store_error_unit, ustop 
   use ArrayHandlersModule, only: ExpandArray
   use SortModule, only: qsort, selectn
   !
@@ -448,6 +447,7 @@ contains
     real(DP), intent(in) :: hclose
     real(DP), intent(in) :: rclose
     ! -- local
+    character(len=LINELENGTH) :: line
     integer(I4B) :: ifirst
     integer(I4B) :: ib
     integer(I4B) :: node
@@ -471,12 +471,15 @@ contains
     real(DP) :: v2
     real(DP) :: df
     ! format
-02000 format(4x,'CSUB PACKAGE FAILED CONVERGENCE CRITERIA',//,                  &
-             4x,'INTERBED MAX. HEAD CHANGE ',1x,'INTERBED MAX. FLOW DIFF',/,    &                           
-             4x,2(a10,1x,a15,1x),/,4x,53('-'))
-02010 format(4x,2(i10,1x,G15.7,1x))
-02020 format(4x,53('-'))
-02030 format('CONVERGENCE FAILED AS A RESULT OF CSUB PACKAGE',1x,a)
+      character(len=*), parameter :: fmtheader = "(2(a10,1x,a15,1x))"
+      character(len=*), parameter :: header =                                   &
+         &"(4x,'CSUB PACKAGE FAILED CONVERGENCE CRITERIA',//,                   &
+         &4x,'INTERBED MAX. HEAD CHANGE ',1x,'INTERBED MAX. FLOW DIFF',/,       &                           
+         &4x,a/,4x,53('-'))"  
+      character(len=*), parameter :: fmtline = "(4x,2(i10,1x,G15.7,1x))"                                  
+      character(len=*), parameter :: fmtfooter = "(4x,53('-'))"                                  
+      character(len=*), parameter :: fmtmsg =                                   &
+         &"('CONVERGENCE FAILED AS A RESULT OF CSUB PACKAGE',1x,a)"                                  
 ! --------------------------------------------------------------------------
     ifirst = 1
     if (this%gwfiss == 0) then
@@ -535,17 +538,29 @@ contains
         icnvg = 0
         ! write convergence check information if this is the last outer iteration
         if (iend == 1) then
-          write(istdout,2030) this%name
-          write(this%iout, 2000)                                                 &
-            '  LOCATION', '    HEAD CHANGE',                                     &
+          ! -- write table to this%iout
+          call sim_message(this%name, fmt=fmtmsg, iunit=this%iout)
+          write(line, fmtheader)                                              &
+            '  LOCATION', '    HEAD CHANGE',                                  &
             '  LOCATION', 'FLOW DIFFERENCE'
-          write(istdout,2010) ihmax, hmax, irmax, rmax
-          write(this%iout,2010) ihmax, hmax, irmax, rmax
+          call sim_message(line, fmt=header, iunit=this%iout)
+          write(line, fmtline)  ihmax, hmax, irmax, rmax
+          call sim_message(line, iunit=this%iout)
+          ! -- write table to stdout
+          call sim_message(this%name, fmt=fmtmsg)
+          write(line, fmtheader)                                              &
+            '  LOCATION', '    HEAD CHANGE',                                  &
+            '  LOCATION', 'FLOW DIFFERENCE'
+          call sim_message(line, fmt=header)
+          write(line, fmtline)  ihmax, hmax, irmax, rmax
+          call sim_message(line)
         end if
       end if
     end if
     if (icnvg == 0) then
-      write(this%iout,2020)
+      !write(this%iout,2020)
+      call sim_message('', fmt=fmtfooter, iunit=this%iout)
+      call sim_message('', fmt=fmtfooter)
     end if
     !
     ! -- return
@@ -1227,7 +1242,7 @@ contains
           '-- LARGEST', (i1 - i0 + 1), 'OF', this%ninterbeds,                   &
           'INTERBED STRAIN VALUES SHOWN'
       end if
-      write(this%iout, 2000) trim(this%name), 'INTERBED STRAIN SUMMARY',       &
+      write (this%iout, 2000) trim(this%name), 'INTERBED STRAIN SUMMARY',       &
         trim(adjustl(msg))
       iloc = 1
       line = ''
@@ -1409,7 +1424,7 @@ contains
         '-- LARGEST ', (i1 - i0 + 1), 'OF', this%dis%nodes,                     &
         'CELL COARSE-GRAINED VALUES SHOWN'
     end if
-    write(this%iout, 2000) trim(this%name), 'COARSE-GRAINED STRAIN SUMMARY',   &
+    write (this%iout, 2000) trim(this%name), 'COARSE-GRAINED STRAIN SUMMARY',   &
       trim(adjustl(msg))
     iloc = 1
     line = ''
@@ -1753,7 +1768,7 @@ contains
         this%h0(itmp) = rval
 
         ! -- get bound names
-        write(cno,'(i9.9)') nn
+        write (cno,'(i9.9)') nn
           bndName = 'nsystem' // cno
         if (this%inamedbound /= 0) then
           call this%parser%GetStringCaps(bndNameTemp)
@@ -6650,7 +6665,7 @@ contains
             j = (idelay - 1) * this%ndelaycells + 1
             n2 = obsrv%NodeNumber2
             if (n2 < 1 .or. n2 > this%ndelaycells) then
-              write(ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
+              write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
                 'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
                 ' interbed cell must be > 0 and <=', this%ndelaycells, &
                 '(specified value is ', n2, ')'
@@ -6677,7 +6692,7 @@ contains
         if (this%ninterbeds > 0) then
           j = obsrv%NodeNumber
           if (j < 1 .or. j > this%ninterbeds) then
-            write(ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)')             &
+            write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)')             &
               'ERROR:', trim(adjustl(obsrv%ObsTypeId)),                         &
               ' interbed cell must be > 0 and <=', this%ninterbeds,             &
               '(specified value is ', j, ')'
@@ -6695,7 +6710,7 @@ contains
         if (this%ninterbeds > 0) then
           j = obsrv%NodeNumber
           if (j < 1 .or. j > this%ninterbeds) then
-            write(ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
+            write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
               'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
               ' interbed cell must be > 0 and <=', this%ninterbeds, &
               '(specified value is ', j, ')'
