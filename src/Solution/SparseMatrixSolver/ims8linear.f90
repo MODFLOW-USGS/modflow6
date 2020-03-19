@@ -4,9 +4,9 @@
   use ConstantsModule, only: LINELENGTH, LENSOLUTIONNAME,                      &
                              IZERO, DZERO, DPREC, DSAME,                       &
                              DEM8, DEM6, DEM5, DEM4, DEM3, DEM2, DEM1,         &
-                             DHALF, DONE, DTWO
-  use SimVariablesModule, only: istdout
-  use GenericUtilities, only: IS_SAME
+                             DHALF, DONE, DTWO,                                &
+                             VDEBUG
+  use GenericUtilitiesModule, only: sim_message, IS_SAME
   use IMSReorderingModule, only: ims_genrcm, ims_odrv, ims_dperm, ims_vperm
   use BlockParserModule, only: BlockParserType
 
@@ -2448,9 +2448,13 @@
         ! (however, fill-in is then unpredictable).                            *
         !----------------------------------------------------------------------*
         !     locals
+        character(len=LINELENGTH) :: line
         integer(I4B) :: ju0,k,j1,j2,j,ii,i,lenl,lenu,jj,jrow,jpos,ilen
         real(DP) :: tnorm, t, abs, s, fact
         real(DP) :: rs, d, sd1, tl
+        !     format
+        character(len=*), parameter :: fmterr = "(//,1x,a)"
+        !     code
         if (lfil .lt. 0) goto 998
         !-----------------------------------------------------------------------
         !     initialize ju0 (points to next element to be added to alu,jlu)
@@ -2631,7 +2635,8 @@
           do k = 1, ilen
             !            if (ju0 .gt. iwk) goto 996
             if (ju0 .gt. iwk) then
-              write(istdout,'(//1x,2i10)') ju0, iwk
+              write(line, '(2i10)') ju0, iwk
+              call sim_message(line, fmt=fmterr, level=VDEBUG)
               goto 996
             end if
             alu(ju0) =  w(k)
@@ -2665,7 +2670,8 @@
           t = abs(w(ii))
           !         if (ilen + ju0 .gt. iwk) goto 997
           if (ilen + ju0 .gt. iwk) then
-            write(istdout,'(//1x,2i10)') (ilen + ju0), iwk
+            write(line, '(2i10)') (ilen + ju0), iwk
+            call sim_message(line, fmt=fmterr, level=VDEBUG)
             goto 997
           end if
           do k = ii+1, ii+ilen-1

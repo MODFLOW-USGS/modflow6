@@ -1,8 +1,8 @@
 module MultiLayerObs
   
-  use ConstantsModule, only: DONE, MAXCHARLEN
-  use ConstantsPHMFModule, only: LENOBSNAMENEW
-  use GenericUtilities, only: IS_SAME
+  use ConstantsModule,        only: DONE, MAXCHARLEN
+  use ConstantsPHMFModule,    only: LENOBSNAMENEW
+  use GenericUtilitiesModule, only: IS_SAME
   use ListModule, only: ListType
   use SimModule, only: store_error, ustop
 

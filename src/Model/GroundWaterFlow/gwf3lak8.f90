@@ -11,7 +11,6 @@ module LakModule
                              DNODATA,                                          &
                              TABLEFT, TABCENTER, TABRIGHT,                     &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
-  use SimVariablesModule, only: istdout
   use MemoryTypeModule, only: MemoryTSType
   use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_setptr,     &
                                  mem_deallocate
@@ -24,8 +23,8 @@ module LakModule
   use ObsModule, only: ObsType
   use InputOutputModule, only: get_node, URWORD, extract_idnum_or_bndname
   use BaseDisModule, only: DisBaseType
-  use SimModule,           only: count_errors, store_error, ustop, &
-                                 store_error_unit
+  use SimModule,           only: count_errors, store_error, ustop
+  use GenericUtilitiesModule, only: sim_message
   use ArrayHandlersModule, only: ExpandArray
   use BlockParserModule,   only: BlockParserType
   use BaseDisModule,       only: DisBaseType
@@ -3840,6 +3839,7 @@ contains
     real(DP), intent(in) :: hclose
     real(DP), intent(in) :: rclose
     ! -- local
+    character(len=LINELENGTH) :: line
     integer(I4B) :: n
     integer(I4B) :: ifirst
     real(DP) :: dh
@@ -3855,11 +3855,14 @@ contains
     real(DP) :: ex
     real(DP) :: pd
     ! format
-02000 format(4x,'LAKE PACKAGE FAILED CONVERGENCE CRITERIA',//,                  &
-             4x,a10,4(1x,a15),/,4x,74('-'))
-02010 format(4x,i10,4(1x,G15.7))
-02020 format(4x,74('-'))
-02030 format('CONVERGENCE FAILED AS A RESULT OF LAKE PACKAGE',1x,a)
+      character(len=*), parameter :: fmtheader = "(4x,a10,4(1x,a15))"
+      character(len=*), parameter :: header =                                   &
+         &"(4x,'LAKE PACKAGE FAILED CONVERGENCE CRITERIA',//,                   &
+         &4x,a/,4x,74('-'))"  
+      character(len=*), parameter :: fmtline = "(4x,i10,4(1x,G15.7))"                                  
+      character(len=*), parameter :: fmtfooter = "(4x,74('-'))"                                  
+      character(len=*), parameter :: fmtmsg =                                   &
+         &"('CONVERGENCE FAILED AS A RESULT OF LAKE PACKAGE',1x,a)"                                  
 ! --------------------------------------------------------------------------
     ifirst = 1
     if (this%iconvchk /= 0) then
@@ -3885,19 +3888,30 @@ contains
           if (iend == 1) then
             if (ifirst == 1) then
               ifirst = 0
-              write(istdout,2030) this%name
-              write(this%iout, 2000) '      LAKE',                                 &
-                '             DH', '    DH CRITERIA',                              &
+              ! -- write table to this%iout
+              call sim_message(this%name, fmt=fmtmsg, iunit=this%iout)
+              write(line, fmtheader)                                             &
+                '      LAKE',                                                    &
+                '             DH', '    DH CRITERIA',                            &
                 '        PCTDIFF', ' PCTDIFF CRITER'
+              call sim_message(line, fmt=header, iunit=this%iout)
+              ! -- write table to stdout
+              call sim_message(line, fmt=header)
             end if
-            write(this%iout,2010) n, dh, hclose, pd, this%pdmax
+            write(line, fmtline)  n, dh, hclose, pd, this%pdmax
+            call sim_message(line, iunit=this%iout)
+            ! -- write table to stdout
+            call sim_message(line)
           else
             exit final_check
           end if
         end if
       end do final_check
       if (ifirst == 0) then
-        write(this%iout,2020)
+        ! -- write table to this%iout
+        call sim_message('', fmt=fmtfooter, iunit=this%iout)
+        ! -- write table to stdout
+        call sim_message('', fmt=fmtfooter)
       end if
     end if
     !
