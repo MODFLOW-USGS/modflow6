@@ -1,16 +1,17 @@
 module SimModule
   
-  use KindModule,         only: DP, I4B
-  use ConstantsModule,    only: MAXCHARLEN, LINELENGTH,                          &
-                                IUSTART, IULAST
-  use SimVariablesModule, only: istdout, iout, ireturnerr, iforcestop, iunext
+  use KindModule,             only: DP, I4B
+  use ConstantsModule,        only: MAXCHARLEN, LINELENGTH,                      &
+                                    IUSTART, IULAST,                             &
+                                    VSUMMARY, VALL, VDEBUG
+  use SimVariablesModule,     only: istdout, iout, isim_level, ireturnerr,       &
+                                    iforcestop, iunext
+  use GenericUtilitiesModule, only: sim_message, stop_with_error
 
   implicit none
 
   private
   public :: count_errors
-  public :: iverbose
-  public :: sim_message
   public :: store_error
   public :: ustop
   public :: converge_reset
@@ -25,8 +26,6 @@ module SimModule
   public :: print_notes
   public :: maxerrors
   
-  integer(I4B) :: iverbose = 0 !0: print nothing
-                               !1: print first level subroutine information
   character(len=MAXCHARLEN), allocatable, dimension(:) :: sim_errors
   character(len=MAXCHARLEN), allocatable, dimension(:) :: sim_warnings
   character(len=MAXCHARLEN), allocatable, dimension(:) :: sim_notes
@@ -258,7 +257,7 @@ logical function print_errors()
   integer(I4B) :: i, isize
   character(len=LINELENGTH) :: errmsg
   ! -- formats
-10 format(/,'ERROR REPORT:',/)
+  character(len=*), parameter :: stdfmt = "(/,'ERROR REPORT:',/)"
 ! ------------------------------------------------------------------------------
   !
   print_errors = .false.
@@ -266,25 +265,30 @@ logical function print_errors()
     isize = count_errors()
     if (isize > 0) then
       print_errors = .true.
-      if (iout > 0) write(iout, 10)
-      write(istdout, 10)
+      if (iout > 0) write(iout, stdfmt)
+      call sim_message('', fmt=stdfmt)
       do i = 1, isize
         call write_message(sim_errors(i))
-        if (iout > 0) call write_message(sim_errors(i), iout)
+        if (iout > 0) then
+          call write_message(sim_errors(i), iout)
+        end if
       enddo
       !
       ! -- write the number of errors
-      write(errmsg, '(i0, a)') isize,                                          &
-        ' errors detected.'
+      write(errmsg, '(i0, a)') isize, ' errors detected.'
       call write_message(trim(errmsg))
-      if (iout > 0) call write_message(trim(errmsg), iout)
+      if (iout > 0) then
+        call write_message(trim(errmsg), iout)
+      end if
       !
       ! -- write number of additional errors
       if (maxerrors_exceeded > 0) then
         write(errmsg, '(i0, a)') maxerrors_exceeded,                           &
           ' additional errors detected but not printed.'
         call write_message(trim(errmsg))
-        if (iout > 0) call write_message(trim(errmsg), iout)
+        if (iout > 0) then
+          call write_message(trim(errmsg), iout)
+        end if
       end if
     endif
   endif
@@ -303,22 +307,30 @@ subroutine print_warnings()
   ! -- local
   integer(I4B) :: i, isize
   ! -- formats
-10 format(/,'WARNINGS:',/)
+  character(len=*), parameter :: stdfmt = "(/,'WARNINGS:',/)"
 ! ------------------------------------------------------------------------------
   !
   if (allocated(sim_warnings)) then
     isize = count_warnings()
     if (isize>0) then
-      if (iout>0) write(iout,10)
-      write(istdout, 10)
+      if (iout>0) then
+        call sim_message('', fmt=stdfmt, iunit=iout)
+      end if
+      call sim_message('', fmt=stdfmt)
       do i=1,isize
         call write_message(sim_warnings(i))
-        if (iout>0) call write_message(sim_warnings(i),iout)
-      enddo
-    endif
-    write(istdout,'()')
-    if (iout>0) write(iout,'()')
-  endif
+        if (iout>0) then
+          call write_message(sim_warnings(i), iout)
+        end if
+      end do
+    end if
+    !
+    ! -- write a blank line
+    if (iout>0) then
+      call sim_message('', iunit=iout)
+    end if
+    call sim_message('')
+  end if
   !
   return
 end subroutine print_warnings
@@ -338,9 +350,9 @@ subroutine print_notes(numberlist)
   character(len=MAXCHARLEN+10) :: noteplus
   logical :: numlist
   ! -- formats
-10 format(/,'NOTES:')
-20 format(i0,'. ',a)
-30 format(a)
+   character(len=*), parameter :: fmtnotes = "(/,'NOTES:')"
+   character(len=*), parameter :: fmta = "(i0,'. ',a)" 
+   character(len=*), parameter :: fmtb = '(a)' 
 ! ------------------------------------------------------------------------------
   !
   if (present(numberlist)) then
@@ -352,16 +364,20 @@ subroutine print_notes(numberlist)
   if (allocated(sim_notes)) then
     isize = count_notes()
     if (isize>0) then
-      if (iout>0) write(iout,10)
-      write(istdout,10)
-      do i=1,isize
+      if (iout>0) then
+        call sim_message('', fmt=fmtnotes, iunit=iout)
+      end if
+      call sim_message('', fmt=fmtnotes)
+      do i=1, isize
         if (numlist) then
-          write(noteplus,20)i,trim(sim_notes(i))
+          write(noteplus,fmta) i, trim(sim_notes(i))
         else
-          write(noteplus,30)trim(sim_notes(i))
+          write(noteplus,fmtb) trim(sim_notes(i))
         endif
         call write_message(noteplus)
-        if (iout>0) call write_message(noteplus,iout)
+        if (iout > 0) then
+          call write_message(noteplus, iout)
+        end if
       enddo
     endif
   endif
@@ -369,7 +385,7 @@ subroutine print_notes(numberlist)
   return
 end subroutine print_notes
 
-subroutine write_message(message, iunit, error, leadspace, endspace)
+subroutine write_message(message, iunit, error, skipbefore, skipafter)
 ! ******************************************************************************
 ! Subroutine write_message formats and writes a message.
 !
@@ -377,8 +393,8 @@ subroutine write_message(message, iunit, error, leadspace, endspace)
 !       MESSAGE      : message to be written
 !       IUNIT        : the unit number to which the message is written
 !       ERROR        : if true precede message with "Error"
-!       LEADSPACE    : if true precede message with blank line
-!       ENDSPACE     : if true follow message by blank line
+!       SKIPBEFORE   : number of empty lines before message
+!       SKIPAFTER    : number of empty lines after message
 !
 ! ******************************************************************************
 !
@@ -388,8 +404,8 @@ subroutine write_message(message, iunit, error, leadspace, endspace)
   character (len=*), intent(in) :: message
   integer(I4B),      intent(in), optional :: iunit
   logical,           intent(in), optional :: error
-  logical,           intent(in), optional :: leadspace
-  logical,           intent(in), optional :: endspace
+  integer(I4B),      intent(in), optional :: skipbefore
+  integer(I4B),      intent(in), optional :: skipafter
   ! -- local
   integer(I4B)              :: jend, i, nblc, junit, leadblank
   integer(I4B)              :: itake, j
@@ -399,23 +415,24 @@ subroutine write_message(message, iunit, error, leadspace, endspace)
   !
   amessage = message
   if (amessage==' ') return
-  if (amessage(1:1).ne.' ') amessage=' ' // trim(amessage)
-  ablank=' '
-  itake=0
-  j=0
+  if (amessage(1:1).ne.' ') amessage = ' ' // trim(amessage)
+  !
+  ! -- initialize local variables
+  junit = istdout
+  ablank = ' '
+  itake = 0
+  j = 0
+  !
+  ! -- process optional dummy variables
   if(present(iunit))then
-    junit = iunit
-  else
-    junit = istdout
+    if (iunit > 0) then
+      junit = iunit
+    end if
   end if
-  if(present(leadspace))then
-    if(leadspace) then
-      if (junit>0) then
-        write(junit,*)
-      else
-        write(istdout,*)
-      endif
-    endif
+  if(present(skipbefore))then
+    do i = 1, skipbefore
+      call sim_message('', iunit=junit)
+    end do
   endif
   if(present(error))then
     if(error)then
@@ -427,106 +444,59 @@ subroutine write_message(message, iunit, error, leadspace, endspace)
   end if
   !
   do i=1,20
-    if(amessage(i:i).ne.' ')exit
+    if (amessage(i:i).ne.' ') exit
   end do
   leadblank=i-1
   nblc=len_trim(amessage)
   !
 5 continue
-  jend=j+78-itake
-  if(jend.ge.nblc) go to 100
+  jend = j + 78 - itake
+  if (jend >= nblc) go to 100
   do i=jend,j+1,-1
     if(amessage(i:i).eq.' ') then
       if(itake.eq.0) then
-        if (junit>0) then
-          write(junit,'(a)',err=200) amessage(j+1:i)
-        else
-          write(istdout,'(a)',err=200) amessage(j+1:i)
-        endif
-        itake=2+leadblank
+        call sim_message(amessage(j+1:i), iunit=junit)
+        itake = 2 + leadblank
       else
-        if (junit>0) then
-          write(junit,'(a)',err=200) ablank(1:leadblank+2)//amessage(j+1:i)
-        else
-          write(istdout,'(a)',err=200) ablank(1:leadblank+2)//amessage(j+1:i)
-        endif
+        call sim_message(ablank(1:leadblank+2)//amessage(j+1:i), iunit=junit)
       end if
-      j=i
+      j = i
       go to 5
     end if
   end do
-  if(itake.eq.0)then
-    if (junit>0) then
-      write(junit,'(a)',err=200) amessage(j+1:jend)
-    else
-      write(istdout,'(a)',err=200) amessage(j+1:jend)
-    endif
-    itake=2+leadblank
+  if(itake == 0)then
+    call sim_message(amessage(j+1:jend), iunit=junit)
+    itake = 2 + leadblank
   else
-    if (junit>0) then
-      write(junit,'(a)',err=200) ablank(1:leadblank+2)//amessage(j+1:jend)
-    else
-      write(istdout,'(a)',err=200) ablank(1:leadblank+2)//amessage(j+1:jend)
-    endif
+    call sim_message(ablank(1:leadblank+2)//amessage(j+1:jend), iunit=junit)
   end if
-  j=jend
+  j = jend
   go to 5
   !
 100 continue
-  jend=nblc
-  if(itake.eq.0)then
-    if (junit>0) then
-      write(junit,'(a)',err=200) amessage(j+1:jend)
-    else
-      write(istdout,'(a)',err=200) amessage(j+1:jend)
-    endif
+  jend = nblc
+  if (itake == 0)then
+    call sim_message(amessage(j+1:jend), iunit=junit)
   else
-    if (junit>0) then
-      write(junit,'(a)',err=200) ablank(1:leadblank+2)//amessage(j+1:jend)
-    else
-      write(istdout,'(a)',err=200) ablank(1:leadblank+2)//amessage(j+1:jend)
-    endif
+    call sim_message(ablank(1:leadblank+2)//amessage(j+1:jend), iunit=junit)
   end if
   !
-  if(present(endspace))then
-    if(endspace) then
-      if (junit>0) then
-        write(junit,*)
-      else
-        write(istdout,*)
-      endif
-    endif
-  end if
+  if(present(skipafter))then
+    do i = 1, skipafter
+      call sim_message('', iunit=junit)
+    end do
+  endif
+  !
+  ! -- return
   return
-  !
-200 continue
-  call ustop()
+!  !
+!200 continue
+!  call ustop()
   !
 end subroutine write_message
 
-subroutine sim_message(iv, message)
-! ******************************************************************************
-! Print all notes that have been stored
-!    iv is the verbosity level of this message
-!     (1) means primary subroutine for simulation, exchange, model,
-!         solution, package, etc.
-!    message is a character string message to write
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-  ! -- modules
-  integer(I4B),intent(in) :: iv
-  character(len=*),intent(in) :: message
-! ------------------------------------------------------------------------------
-  if(iv<=iverbose) then
-    write(iout,'(a)') message
-  endif
-end subroutine sim_message
-
-! this subroutine prints final messages and then stops with the active
-! error code. If you don't want to halt the program, call print_final_message
-! instead...
+! -- this subroutine prints final messages and then stops with the active
+!    error code.
 subroutine ustop(stopmess, ioutlocal)
 ! ******************************************************************************
 ! Stop program, with option to print message before stopping.
@@ -568,8 +538,8 @@ subroutine print_final_message(stopmess, ioutlocal)
   errorfound = print_errors()
   if (present(stopmess)) then
     if (stopmess.ne.' ') then
-      write(istdout,fmt) stopmess
-      write(iout,fmt) stopmess
+      call sim_message(stopmess, fmt=fmt, iunit=iout)
+      call sim_message(stopmess, fmt=fmt)
       if (present(ioutlocal)) then
         if (ioutlocal > 0 .and. ioutlocal .ne. iout) then
           write(ioutlocal,fmt) trim(stopmess)
@@ -581,8 +551,11 @@ subroutine print_final_message(stopmess, ioutlocal)
   !
   if (errorfound) then
     ireturnerr = 2
-    write(istdout,fmt) msg
-    if (iout > 0) write(iout,fmt) msg
+    if (iout > 0) then
+      call sim_message(stopmess, fmt=fmt, iunit=iout)
+    end if
+    call sim_message(stopmess, fmt=fmt)
+    
     if (present(ioutlocal)) then
       if (ioutlocal > 0 .and. ioutlocal /= iout) write(ioutlocal,fmt) msg
     endif
@@ -595,32 +568,6 @@ subroutine print_final_message(stopmess, ioutlocal)
   return
   
 end subroutine print_final_message
-
-subroutine stop_with_error(ierr)
-! ******************************************************************************
-! Stop the program and issue the correct return code 
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-  ! -- modules
-  ! -- dummy
-  integer(I4B), intent(in) :: ierr
-!-------------------------------------------------------------------------------
-  !
-  ! -- return the correct return code
-  select case (ierr)
-    case (0)
-      stop
-    case (1)
-      stop 1
-    case (2)
-      stop 2
-    case default
-      stop 999
-  end select
-  
-end subroutine stop_with_error
 
 subroutine converge_reset()
 ! ******************************************************************************
@@ -660,7 +607,9 @@ subroutine converge_reset()
     hasConverged = .true.
     !
     ! -- Count number of failures
-    if(isimcnvg == 0) numnoconverge = numnoconverge + 1
+    if(isimcnvg == 0) then
+      numnoconverge = numnoconverge + 1
+    end if
     !
     ! -- Continue if 'CONTINUE' specified in simulation control file
     if(isimcontinue == 1) then
@@ -671,7 +620,8 @@ subroutine converge_reset()
     !
     ! --
     if(isimcnvg == 0) then
-      write(iout, fmtfail)
+      !write(iout, fmtfail)
+      call sim_message('', fmt=fmtfail, iunit=iout)
       hasConverged = .false.
     endif
     !
@@ -689,6 +639,8 @@ subroutine converge_reset()
     ! -- modules
     ! -- dummy
     use SimVariablesModule, only: isimcnvg, numnoconverge, ireturnerr
+    ! -- local
+    character(len=LINELENGTH) :: line
     ! -- formats
     character(len=*), parameter :: fmtnocnvg =                                 &
       "(1x, 'Simulation convergence failure occurred ', i0, ' time(s).')"
@@ -696,8 +648,9 @@ subroutine converge_reset()
     !
     ! -- Write message if any nonconvergence
     if(numnoconverge > 0) then
-      write(istdout, fmtnocnvg) numnoconverge
-      write(iout, fmtnocnvg) numnoconverge
+      write(line, fmtnocnvg) numnoconverge
+      call sim_message(line, iunit=iout)
+      call sim_message(line)
     endif
     !
     if(isimcnvg == 0) then
@@ -708,7 +661,9 @@ subroutine converge_reset()
     endif
     !
     ! -- Return or halt
-    if (iforcestop == 1) call stop_with_error(ireturnerr)
+    if (iforcestop == 1) then
+      call stop_with_error(ireturnerr)
+    end if
     
   end subroutine final_message
   
@@ -745,5 +700,5 @@ subroutine converge_reset()
     ! -- return
     return
   end subroutine sim_closefiles
-
+  
 end module SimModule

@@ -12,13 +12,13 @@
 !-----------------------------------------------------------------------
 module ObserveModule
 
-  use ConstantsModule,   only: DONE, DZERO, LENOBSNAME,  &
-                               LENOBSTYPE, MAXCHARLEN
-  use ConstantsPHMFModule, only: LENOBSNAMENEW, HUGEDBL, HDRYDEFAULT
-  use GenericUtilities, only: IS_SAME
-  use ListModule,        only: ListType
-  use SimModule,         only: store_warning, store_error, &
-                               store_error_unit, ustop
+  use ConstantsModule,        only: DONE, DZERO, LENOBSNAME,  &
+                                    LENOBSTYPE, MAXCHARLEN
+  use ConstantsPHMFModule,    only: LENOBSNAMENEW, HUGEDBL, HDRYDEFAULT
+  use GenericUtilitiesModule, only: IS_SAME
+  use ListModule,             only: ListType
+  use SimModule,              only: store_warning, store_error, &
+                                    store_error_unit, ustop
 
   implicit none
 

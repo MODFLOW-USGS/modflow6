@@ -120,6 +120,7 @@ This section describes changes introduced into MODFLOW 6 with each release.  The
 \underline{NEW FUNCTIONALITY}
 \begin{itemize}
 \item Added silent command line switch (-s or --silent) that sends all output to the screen (\texttt{STDOUT})  to a file (``mfsim.stdout'').
+\item Added a new option, called SAVE\_SATURATION to the Node Property Flow Package.  When invoked, cell saturation is written to the binary budget file.  The cell saturation can be used by post-processors to determine how much of the cell is saturated without having to know the value for ICELLTYPE or the value for head. If a cell is marked as confined (ICELLTYPE=0) then saturation is always one. If ICELLTYPE is one, then saturation ranges between zero and one.
 \end{itemize}
 
 \underline{BASIC FUNCTIONALITY}

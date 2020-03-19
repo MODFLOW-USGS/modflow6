@@ -30,10 +30,10 @@ module mf6bmi
   !DEC$ ATTRIBUTES DLLEXPORT :: bmi_initialize
     integer(kind=c_int) :: bmi_status
     !
-    ! -- set ISTDUNIT to a physical file unit
+    ! -- set STDOUT to a physical file unit
     istdout = getunit()  
     !
-    ! -- open istdout file mfsim.stdout
+    ! -- open stdout file mfsim.stdout
     open(unit=istdout, file='mfsim.stdout')
     !
     ! -- initialize MODFLOW 6

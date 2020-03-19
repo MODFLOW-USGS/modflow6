@@ -148,37 +148,35 @@ contains
     call mem_da()
     call elapsed_time(iout, 1)
     call final_message()
-    !
-    ! -- close mfsim.stdout file if it has been opened
-    if (istdout /= output_unit) then
-      close(istdout)
-    end if
     !        
   end subroutine Mf6Finalize
   
   subroutine printInfo()         
     use CompilerVersion
-    use SimVariablesModule, only: istdout  
-    use VersionModule,      only: VERSION, MFVNAM, MFTITLE, FMTDISCLAIMER, IDEVELOPMODE
-    use TimerModule,        only: start_time    
-    use InputOutputModule,  only: write_centered
+    use VersionModule,          only: VERSION, MFVNAM, MFTITLE, FMTDISCLAIMER,   &
+                                      IDEVELOPMODE
+    use TimerModule,            only: start_time    
+    use GenericUtilitiesModule, only: write_centered, sim_message
     character(len=80) :: compiler
     
-    ! -- Write banner to screen (unit 6) and start timer
-    call write_centered('MODFLOW'//MFVNAM, istdout, 80)
-    call write_centered(MFTITLE, istdout, 80)
-    call write_centered('VERSION '//VERSION, istdout, 80)
+    ! -- Write banner to screen (unit stdout) and start timer
+    call write_centered('MODFLOW'//MFVNAM, 80)
+    call write_centered(MFTITLE, 80)
+    call write_centered('VERSION '//VERSION, 80)
     !
     ! -- Write if develop mode
-    if (IDEVELOPMODE == 1) call write_centered('***DEVELOP MODE***', istdout, 80)
+    if (IDEVELOPMODE == 1) then
+      call write_centered('***DEVELOP MODE***', 80)
+    end if
     !
     ! -- Write compiler version
     call get_compiler(compiler)
-    call write_centered(' ', istdout, 80)
-    call write_centered(trim(adjustl(compiler)), istdout, 80)
+    call write_centered(' ', 80)
+    call write_centered(trim(adjustl(compiler)), 80)
     !
     ! -- Write disclaimer
-    write(istdout, FMTDISCLAIMER)
+    call sim_message('', fmt=FMTDISCLAIMER)
+    !
     ! -- get start time
     call start_time()
     

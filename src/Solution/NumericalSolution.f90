@@ -7,7 +7,7 @@ module NumericalSolutionModule
                                      DPREC, DZERO, DEM20, DEM15, DEM6,         &
                                      DEM4, DEM3, DEM2, DEM1, DHALF,            &
                                      DONE, DTHREE, DEP6, DEP20
-  use GenericUtilities,        only: IS_SAME
+  use GenericUtilitiesModule,  only: IS_SAME
   use VersionModule,           only: IDEVELOPMODE
   use BaseModelModule,         only: BaseModelType
   use BaseSolutionModule,      only: BaseSolutionType, AddBaseSolutionToList
