@@ -2,7 +2,7 @@ module SimulationCreateModule
 
   use KindModule,             only: DP, I4B, write_kindinfo
   use ConstantsModule,        only: LINELENGTH, LENMODELNAME, LENBIGLINE, DZERO
-  use SimVariablesModule,     only: simfile, simlstfile, istdout, iout
+  use SimVariablesModule,     only: simfile, simlstfile, iout
   use GenericUtilitiesModule, only: sim_message, write_centered
   use SimModule,              only: ustop, store_error, count_errors,            &
                                     store_error_unit, maxerrors

@@ -10,7 +10,7 @@ module mf6bmi
   use iso_c_binding, only: c_int, c_char, c_double, C_NULL_CHAR, c_loc, c_ptr
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LENORIGIN, LENVARNAME, LENMODELNAME, MAXCHARLEN
-  use SimVariablesModule, only: istdout
+  use SimVariablesModule, only: simstdout, istdout
   use InputOutputModule, only: getunit
   implicit none
   
@@ -34,7 +34,7 @@ module mf6bmi
     istdout = getunit()  
     !
     ! -- open stdout file mfsim.stdout
-    open(unit=istdout, file='mfsim.stdout')
+    open(unit=istdout, file=simstdout)
     !
     ! -- initialize MODFLOW 6
     call Mf6Initialize()
