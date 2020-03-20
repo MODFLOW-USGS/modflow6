@@ -3791,17 +3791,12 @@ contains
     real(DP), dimension(nodes), intent(in) :: hnew
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: tag
-    character(len=LINELENGTH) :: line
-    character(len=LINELENGTH) :: linesep
-    character(len=16) :: text
     character(len=20) :: cellid
     character (len=LINELENGTH) :: errmsg
     integer(I4B) :: ib
     integer(I4B) :: node
     integer(I4B) :: n
     integer(I4B) :: idelay
-    integer(I4B) :: iloc
-    integer(I4B) :: isep
     integer(I4B) :: ntabrows
     integer(I4B) :: ntabcols
     real(DP) :: pcs0
@@ -3816,7 +3811,6 @@ contains
     real(DP) :: dzhalf
     real(DP) :: zbot
     real(DP) :: dbpcs
-    real(DP) :: q
 ! ------------------------------------------------------------------------------
     !
     ! -- update geostatic load calculation
