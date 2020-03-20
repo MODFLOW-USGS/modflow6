@@ -2627,7 +2627,7 @@ contains
     class(GwfCsubType) :: this
 ! ------------------------------------------------------------------------------
     !
-    ! -- Deallocate arrays
+    ! -- Deallocate arrays if package is active
     if(this%inunit > 0) then
       call mem_deallocate(this%unodelist)
       call mem_deallocate(this%nodelist)
@@ -2641,8 +2641,6 @@ contains
       call mem_deallocate(this%sgm)
       call mem_deallocate(this%sgs)
       call mem_deallocate(this%cg_ske_cr)
-      !call mem_deallocate(this%cg_theta)
-      !call mem_deallocate(this%cg_thick)
       call mem_deallocate(this%cg_gs)
       call mem_deallocate(this%cg_es)
       call mem_deallocate(this%cg_es0)
@@ -2755,20 +2753,20 @@ contains
       ! -- pointers to storage variables
       nullify(this%stoiconv)
       nullify(this%stosc1)
-    end if
-    !
-    ! -- input table
-    if (this%iprpak > 0) then
-      call this%inputtab%table_da()
-      deallocate(this%inputtab)
-      nullify(this%inputtab)
-    end if
-    !
-    ! -- output table
-    if (this%istrainib > 0 .or. this%istrainsk > 0) then
-      call this%outputtab%table_da()
-      deallocate(this%outputtab)
-      nullify(this%outputtab)
+      !
+      ! -- input table
+      if (this%iprpak > 0) then
+        call this%inputtab%table_da()
+        deallocate(this%inputtab)
+        nullify(this%inputtab)
+      end if
+      !
+      ! -- output table
+      if (this%istrainib > 0 .or. this%istrainsk > 0) then
+        call this%outputtab%table_da()
+        deallocate(this%outputtab)
+        nullify(this%outputtab)
+      end if
     end if
     !
     ! -- deallocate scalars
@@ -5962,11 +5960,13 @@ contains
     real(DP) :: bet
     real(DP) :: beti
 ! ------------------------------------------------------------------------------
+    !
     ! -- initialize variables
     w(1) = DZERO
     bet = td(1)
     beti = DONE / bet
     x(1) = b(1) * beti
+    !
     ! -- decomposition and forward substitution
     do j = 2, n
       w(j) = tu(j-1) * beti
@@ -5974,6 +5974,7 @@ contains
       beti = DONE / bet
       x(j) = (b(j) - tl(j) * x(j-1)) * beti
     end do
+    !
     ! -- backsubstitution
     do j = n-1, 1, -1
       x(j) = x(j) - w(j+1) * x(j+1)
@@ -6099,7 +6100,7 @@ contains
     ! -- calculate cell saturation
     call this%csub_calc_sat(node, hcell, hcellold, snnew, snold)
     !
-    !
+    ! -- calculate compaction
     if (this%thickini(ib) > DZERO) then
       fmult = this%dbdzini(1, idelay)
       do n = 1, this%ndelaycells
@@ -6505,8 +6506,8 @@ contains
     type(ObserveType), pointer :: obsrv => null()
     !---------------------------------------------------------------------------
     !
-    ! Write simulated values for all csub observations
-    if (this%obs%npakobs>0) then
+    ! -- Fill simulated values for all csub observations
+    if (this%obs%npakobs > 0) then
       call this%obs%obs_bd_clear()
       do i = 1, this%obs%npakobs
         obsrv => this%obs%pakobs(i)%obsrv
@@ -6527,6 +6528,7 @@ contains
               case ('WCOMP-CSUB-CELL')
                 v = this%cell_wcstor(n)
               case ('CSUB-CELL')
+                !
                 ! -- add the coarse component
                 if (j == 1) then
                   v = this%cg_stor(n)
@@ -6538,6 +6540,7 @@ contains
               case ('SK')
                 v = this%sk(n)
               case ('SKE-CELL')
+                !
                 ! -- add the coarse component
                 if (j == 1) then
                   v = this%cg_ske(n)
@@ -6545,6 +6548,7 @@ contains
                   v = this%ske(n)
                 end if
               case ('SK-CELL')
+                !
                 ! -- add the coarse component
                 if (j == 1) then
                   v = this%cg_sk(n)
@@ -6556,6 +6560,7 @@ contains
               case ('COARSE-THETA')
                 v = this%cg_theta(n)
               case ('THETA-CELL')
+                !
                 ! -- add the coarse component
                 if (j == 1) then
                   f = this%cg_thick(n) / this%cell_thick(n)
@@ -6578,6 +6583,7 @@ contains
               case ('COARSE-COMPACTION')
                 v = this%cg_tcomp(n)
               case ('COMPACTION-CELL')
+                !
                 ! -- add the coarse component
                 if (j == 1) then
                   v = this%cg_tcomp(n)
@@ -6664,9 +6670,13 @@ contains
     character(len=LENBOUNDNAME) :: bname
     character(len=200) :: ermsg
     !
-    if (.not. this%csub_obs_supported()) return
+    !  -- return if observations are not supported 
+    if (.not. this%csub_obs_supported()) then
+      return
+    end if
     !
-    do i=1,this%obs%npakobs
+    ! -- process each package observation
+    do i = 1, this%obs%npakobs
       obsrv => this%obs%pakobs(i)%obsrv
       !
       ! -- indxbnds needs to be deallocated and reallocated (using
@@ -6681,6 +6691,7 @@ contains
       !
       bname = obsrv%FeatureName
       if (bname /= '') then
+        !
         ! -- Observation location(s) is(are) based on a boundary name.
         !    Iterate through all boundaries to identify and store
         !    corresponding index(indices) in bound array.
@@ -6693,6 +6704,7 @@ contains
             obsrv%indxbnds(n) = j
           end if
         end do
+      !
       ! -- one value per cell
       else if (obsrv%ObsTypeId == 'GSTRESS-CELL' .or.                           &
                obsrv%ObsTypeId == 'ESTRESS-CELL' .or.                           &
@@ -6734,6 +6746,7 @@ contains
             obsrv%indxbnds(1) = j
           end if
         end if
+      !
       ! -- interbed value
       else if (obsrv%ObsTypeId == 'CSUB' .or.                                   &
                obsrv%ObsTypeId == 'INELASTIC-CSUB' .or.                         &
@@ -6782,6 +6795,7 @@ contains
           end if
         end if
       else
+        !
         ! -- Accumulate values in a single cell
         ! -- Observation location is a single node number
         ! -- save node number in first position
@@ -6837,10 +6851,12 @@ contains
     !--------------------------------------------------------------------------
     !
     strng = obsrv%IDstring
+    !
     ! -- Extract reach number from strng and store it.
     !    If 1st item is not an integer(I4B), it should be a
     !    boundary name--deal with it.
     icol = 1
+    !
     ! -- get icsubno number or boundary name
     if (obsrv%ObsTypeId=='CSUB' .or.                                            &
         obsrv%ObsTypeId == 'INELASTIC-CSUB' .or.                                &
@@ -6886,15 +6902,18 @@ contains
         end if
       end if
     endif
+    !
     ! -- store reach number (NodeNumber)
     obsrv%NodeNumber = nn1
     !
+    ! -- return
     return
   end subroutine csub_process_obsID
 
   !
   ! -- Procedure related to time series
   subroutine csub_rp_ts(this)
+    !
     ! -- Assign tsLink%Text appropriately for
     !    all time series in use by package.
     !    In the CSUB package only the SIG0 variable
@@ -6905,8 +6924,9 @@ contains
     integer(I4B) :: i, nlinks
     type(TimeSeriesLinkType), pointer :: tslink => null()
     !
+    ! -- process all timeseries links
     nlinks = this%TsManager%boundtslinks%Count()
-    do i=1,nlinks
+    do i = 1, nlinks
       tslink => GetTimeSeriesLinkFromList(this%TsManager%boundtslinks, i)
       if (associated(tslink)) then
         if (tslink%JCol==1) then
@@ -6917,6 +6937,5 @@ contains
     !
     return
   end subroutine csub_rp_ts
-
 
 end module GwfCsubModule
