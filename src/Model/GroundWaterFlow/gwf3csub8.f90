@@ -17,7 +17,7 @@ module GwfCsubModule
   use BlockParserModule,      only: BlockParserType
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
                                   GetTimeSeriesLinkFromList
-  use InputOutputModule, only: get_node, extract_idnum_or_bndname, UWWORD
+  use InputOutputModule, only: get_node, extract_idnum_or_bndname
   use BaseDisModule, only: DisBaseType
   use SimModule, only: count_errors, store_error, store_error_unit, ustop 
   use ArrayHandlersModule, only: ExpandArray
@@ -539,10 +539,15 @@ contains
           rmax = df
         end if
       end do final_check
+      !
+      ! -- write convergence failure information
       if (abs(hmax) > hclose .or. abs(rmax) > rclose) then
         icnvg = 0
-        ! write convergence check information if this is the last outer iteration
+        !
+        ! -- write convergence check information if this is the last 
+        !    outer iteration
         if (iend == 1) then
+          !
           ! -- write table to this%iout
           call sim_message(this%name, fmt=fmtmsg, iunit=this%iout)
           write(line, fmtheader)                                              &
@@ -551,6 +556,8 @@ contains
           call sim_message(line, fmt=header, iunit=this%iout)
           write(line, fmtline)  ihmax, hmax, irmax, rmax
           call sim_message(line, iunit=this%iout)
+          call sim_message('', fmt=fmtfooter, iunit=this%iout)
+          !
           ! -- write table to stdout
           call sim_message(this%name, fmt=fmtmsg)
           write(line, fmtheader)                                              &
@@ -559,13 +566,9 @@ contains
           call sim_message(line, fmt=header)
           write(line, fmtline)  ihmax, hmax, irmax, rmax
           call sim_message(line)
+          call sim_message('', fmt=fmtfooter)
         end if
       end if
-    end if
-    if (icnvg == 0) then
-      !write(this%iout,2020)
-      call sim_message('', fmt=fmtfooter, iunit=this%iout)
-      call sim_message('', fmt=fmtfooter)
     end if
     !
     ! -- return
@@ -1218,7 +1221,6 @@ contains
     integer(I4B), dimension(:), allocatable :: locs
     real(DP), dimension(:), allocatable :: pctcomp_arr
     ! format
-02000 FORMAT (1X,///1X,A,1X,A,1X,A)
 ! --------------------------------------------------------------------------
     !
     ! -- initialize locs
@@ -2763,7 +2765,7 @@ contains
     end if
     !
     ! -- output table
-    if (this%istrainib > 0 .or. this%istrainsk) then
+    if (this%istrainib > 0 .or. this%istrainsk > 0) then
       call this%outputtab%table_da()
       deallocate(this%outputtab)
       nullify(this%outputtab)
@@ -4018,6 +4020,8 @@ contains
       do ib = 1, this%ninterbeds
         node = this%nodelist(ib)
         call this%dis%noder_to_string(node, cellid)
+        !
+        ! -- write the columns
         call this%inputtab%add_term(ib)
         call this%inputtab%add_term(cellid)
         call this%inputtab%add_term(this%cg_gs(node))
@@ -4030,93 +4034,125 @@ contains
       !
       ! -- write effective stress and preconsolidation stress 
       !    for delay beds
+      ! -- set title
+      title = trim(adjustl(this%name)) //                                        &
+        ' PACKAGE CALCULATED INITIAL DELAY INTERBED STRESSES'
+      !
+      ! -- determine the number of columns and rows
+      ntabrows = 0
       do ib = 1, this%ninterbeds
         idelay = this%idelay(ib)
         if (idelay /= 0) then
-          write(this%iout, '(//1X,A,/1X,A,1X,I0)')                               &
-            'CALCULATED INITIAL INTERBED GEOSTATIC, EFFECTIVE,',                 &
-            'AND PRECONSOLIDATION STRESS FOR INTERBED', ib
-          !
-          ! -- first header line
-          iloc = 1
-          line = ''
-          call UWWORD(line, iloc, 10, TABUCSTRING,                               &
-                      'DELAY', n, q, ALIGNMENT=TABLEFT)
-          call UWWORD(line, iloc, 16, TABUCSTRING,                               &
-                      'GEOSTATIC', n, q, ALIGNMENT=TABCENTER)
-          call UWWORD(line, iloc, 16, TABUCSTRING,                               &
-                      'EFFECTIVE', n, q, ALIGNMENT=TABCENTER)
-          call UWWORD(line, iloc, 16, TABUCSTRING,                               &
-                      'PRECONSOLIDATION', n, q, ALIGNMENT=TABCENTER)
-          linesep = repeat('-', iloc)
-          isep = iloc
-          write(this%iout, '(1X,A)') linesep(1:iloc)
-          write(this%iout, '(1X,A)') line(1:iloc)
-          !
-          ! -- second header line
-          iloc = 1
-          line = ''
-          call UWWORD(line, iloc, 10, TABUCSTRING,                               &
-                      'CELL', n, q, ALIGNMENT=TABLEFT)
-          call UWWORD(line, iloc, 16, TABUCSTRING,                               &
-                      'STRESS', n, q, ALIGNMENT=TABCENTER)
-          call UWWORD(line, iloc, 16, TABUCSTRING,                               &
-                      'STRESS', n, q, ALIGNMENT=TABCENTER)
-          call UWWORD(line, iloc, 16, TABUCSTRING,                               &
-                      'STRESS', n, q, ALIGNMENT=TABCENTER)
-          write(this%iout, '(1X,A)') line(1:iloc)
-          write(this%iout, '(1X,A)') linesep(1:iloc)
-
-          do n = 1, this%ndelaycells
-            iloc = 1
-            line = ''
-            call UWWORD(line, iloc, 10, TABINTEGER,                              &
-                        text, n, q, ALIGNMENT=TABLEFT)
-            call UWWORD(line, iloc, 16, TABREAL,                                 &
-                        text, n, this%dbgeo(n, idelay),                          &
-                        ALIGNMENT=TABCENTER)
-            call UWWORD(line, iloc, 16, TABREAL,                                 &
-                        text, n, this%dbes(n, idelay),                           &
-                        ALIGNMENT=TABCENTER)
-            call UWWORD(line, iloc, 16, TABREAL,                                 &
-                        text, n, this%dbpcs(n, idelay), ALIGNMENT=TABCENTER)
-            write(this%iout, '(1X,A)') line(1:iloc)
-          end do
-          write(this%iout, '(1X,A,/)') linesep(1:isep)
+          ntabrows = ntabrows + this%ndelaycells
         end if
       end do
-    
+      ntabcols = 6
+      if (this%inamedbound /= 0) then
+        ntabcols = ntabcols + 1
+      end if
+      !
+      ! -- setup table
+      call table_cr(this%inputtab, this%name, title)
+      call this%inputtab%table_df(ntabrows, ntabcols, this%iout)
+      !
+      ! add columns
+      tag = 'INTERBED NUMBER'
+      call this%inputtab%initialize_column(tag, 10, alignment=TABLEFT)
+      tag = 'CELLID'
+      call this%inputtab%initialize_column(tag, 20)
+      tag = 'DELAY CELL'
+      call this%inputtab%initialize_column(tag, 10, alignment=TABLEFT)
+      tag = 'GEOSTATIC STRESS'
+      call this%inputtab%initialize_column(tag, 16)
+      tag = 'EFFECTIVE STRESS'
+      call this%inputtab%initialize_column(tag, 16)
+      tag = 'PRECONSOLIDATION STRESS'
+      call this%inputtab%initialize_column(tag, 16)
+      if (this%inamedbound /= 0) then
+        tag = 'BOUNDNAME'
+        call this%inputtab%initialize_column(tag, LENBOUNDNAME,                  &
+                                             alignment=TABLEFT)
+      end if
+      !
+      ! -- write the data
+      do ib = 1, this%ninterbeds
+        idelay = this%idelay(ib)
+        if (idelay /= 0) then
+          node = this%nodelist(ib)
+          call this%dis%noder_to_string(node, cellid)
+          !
+          ! -- write the columns
+          do n = 1, this%ndelaycells
+            if (n == 1) then
+              call this%inputtab%add_term(ib)
+              call this%inputtab%add_term(cellid)
+            else
+              call this%inputtab%add_term(' ')
+              call this%inputtab%add_term(' ')
+            end if
+            call this%inputtab%add_term(n)
+            call this%inputtab%add_term(this%dbgeo(n, idelay))
+            call this%inputtab%add_term(this%dbes(n, idelay))
+            call this%inputtab%add_term(this%dbpcs(n, idelay))
+            if (this%inamedbound /= 0) then
+              if (n == 1) then
+                call this%inputtab%add_term(this%boundname(ib))
+              else
+                call this%inputtab%add_term(' ')
+              end if
+            end if
+          end do
+        end if
+      end do
       !
       ! -- write calculated compression indices
       if (this%istoragec == 1) then
         if (this%lhead_based .EQV. .FALSE.) then
-          write(this%iout, '(//1X,A)') 'CALCULATED COMPRESSION INDICES'
-          iloc = 1
-          line = ''
-          call UWWORD(line, iloc, 10, TABUCSTRING,                               &
-                      'INTERBED', n, q, ALIGNMENT=TABLEFT)
-          call UWWORD(line, iloc, 16, TABUCSTRING,                               &
-                      'CC', n, q, ALIGNMENT=TABCENTER)
-          call UWWORD(line, iloc, 16, TABUCSTRING,                               &
-                      'CR', n, q, ALIGNMENT=TABCENTER)
-          linesep = repeat('-', iloc)
-          isep = iloc
-          write(this%iout, '(1X,A)') linesep(1:iloc)
-          write(this%iout, '(1X,A)') line(1:iloc)
-          write(this%iout, '(1X,A)') linesep(1:iloc)
+          ! -- set title
+          title = trim(adjustl(this%name)) //                                    &
+            ' PACKAGE COMPRESSION INDICES'
+          !
+          ! -- determine the number of columns and rows
+          ntabrows = this%ninterbeds
+          ntabcols = 4
+          if (this%inamedbound /= 0) then
+            ntabcols = ntabcols + 1
+          end if
+          !
+          ! -- setup table
+          call table_cr(this%inputtab, this%name, title)
+          call this%inputtab%table_df(ntabrows, ntabcols, this%iout)
+          !
+          ! add columns
+          tag = 'INTERBED NUMBER'
+          call this%inputtab%initialize_column(tag, 10, alignment=TABLEFT)
+          tag = 'CELLID'
+          call this%inputtab%initialize_column(tag, 20)
+          tag = 'CC'
+          call this%inputtab%initialize_column(tag, 16)
+          tag = 'CR'
+          call this%inputtab%initialize_column(tag, 16)
+          if (this%inamedbound /= 0) then
+            tag = 'BOUNDNAME'
+            call this%inputtab%initialize_column(tag, LENBOUNDNAME,              &
+                                                 alignment=TABLEFT)
+          end if
+          !
+          ! -- write the data
           do ib = 1, this%ninterbeds
             fact = DONE / dlog10es
-            iloc = 1
-            line = ''
-            call UWWORD(line, iloc, 10, TABINTEGER,                              &
-                        text, ib, q, ALIGNMENT=TABLEFT)
-            call UWWORD(line, iloc, 16, TABREAL,                                 & 
-                        text, n, this%ci(ib) * fact, ALIGNMENT=TABCENTER)
-            call UWWORD(line, iloc, 16, TABREAL,                                 & 
-                        text, n, this%rci(ib) * fact, ALIGNMENT=TABCENTER)
-            write(this%iout, '(1X,A)') line(1:iloc)
+            node = this%nodelist(ib)
+            call this%dis%noder_to_string(node, cellid)
+            !
+            ! -- write the columns
+            call this%inputtab%add_term(ib)
+            call this%inputtab%add_term(cellid)
+            call this%inputtab%add_term(this%ci(ib) * fact)
+            call this%inputtab%add_term(this%rci(ib) * fact)
+            if (this%inamedbound /= 0) then
+              call this%inputtab%add_term(this%boundname(ib))
+            end if
           end do
-          write(this%iout, '(1X,A,/)') linesep(1:isep)
         end if
       end if
     end if
