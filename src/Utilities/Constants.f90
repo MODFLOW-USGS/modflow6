@@ -17,7 +17,7 @@ module ConstantsModule
   integer(I4B), parameter :: LENORIGIN = LENMODELNAME + LENPACKAGENAME + 1
   integer(I4B), parameter :: LENFTYPE = 5
   integer(I4B), parameter :: LENOBSNAME = 40
-  integer(I4B), parameter :: LENOBSTYPE = 20
+  integer(I4B), parameter :: LENOBSTYPE = 30
   integer(I4B), parameter :: LENTIMESERIESNAME = LENOBSNAME
   integer(I4B), parameter :: LENTIMESERIESTEXT = 12
   integer(I4B), parameter :: LENDATETIME = 30
