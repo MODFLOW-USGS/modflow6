@@ -469,7 +469,10 @@ def eval_results(sim):
           3.85227989e+01,  3.90670861e+01,  3.94641768e+01,  3.97535991e+01,
           3.99669840e+01,  4.01262471e+01,  4.02470985e+01,  4.03391824e+01,
           4.04108589e+01,  4.04673231e+01]
-    assert np.allclose(res_lak1, ans_lak1), '{} {}'.format(res_lak1, ans_lak1)
+    ans_lak1 = np.array(ans_lak1)
+    d = res_lak1 - ans_lak1
+    msg = '{} {} {}'.format(res_lak1, ans_lak1, d)
+    assert np.allclose(res_lak1, ans_lak1), msg
 
     res_sfr3 = sfaconc[:, 30]
     ans_sfr3 = \
@@ -480,8 +483,11 @@ def eval_results(sim):
           1.73388875e+01,  1.93957919e+01,  2.14081754e+01,  2.33360511e+01,
           2.51463391e+01,  2.68341700e+01,  2.83711539e+01,  2.97397682e+01,
           3.09364802e+01,  3.19695161e+01]
-    assert np.allclose(res_sfr3, ans_sfr3, atol=0.01), '{} {}'.format(res_sfr3,
-                                                                      ans_sfr3)
+    ans_sfr3 = np.array(ans_sfr3)
+    d = res_sfr3 - ans_sfr3
+    msg = '{} {} {}'.format(res_sfr3, ans_sfr3, d)
+    assert np.allclose(res_sfr3, ans_sfr3, atol=0.01), msg
+
 
     res_sfr4 = sfaconc[:, 37]
     ans_sfr4 = \
@@ -492,8 +498,10 @@ def eval_results(sim):
           2.91280420e+01,  3.03423574e+01,  3.14564411e+01,  3.24729884e+01,
           3.33949019e+01,  3.42319415e+01,  3.49798247e+01,  3.56380299e+01,
           3.62092533e+01,  3.66991479e+01]
-    assert np.allclose(res_sfr4, ans_sfr4, atol=0.01), '{} {}'.format(res_sfr4,
-                                                                      ans_sfr4)
+    ans_sfr4 = np.array(ans_sfr4)
+    d = res_sfr4 - ans_sfr4
+    msg = '{} {} {}'.format(res_sfr4, ans_sfr4, d)
+    assert np.allclose(res_sfr4, ans_sfr4, atol=0.01), msg
 
     # uncomment when testing
     # assert False
