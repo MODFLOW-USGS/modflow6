@@ -10,4 +10,5 @@ BEGIN PACKAGEDATA
   MAW-1 FILEIN mygwfmodel.maw.bud
   UZF-1 FILEIN mygwfmodel.uzf.bud
   LAK-2 FILEIN mygwfmodel-2.lak.bud
+  MVRBUDGET FILEIN mygwfmodel.mvr.bud
 END PACKAGEDATA

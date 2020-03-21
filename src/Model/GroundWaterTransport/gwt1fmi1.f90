@@ -669,7 +669,7 @@ module GwtFmiModule
 
   subroutine read_packagedata(this)
 ! ******************************************************************************
-! read_packagedata -- Read Options
+! read_packagedata -- Read PACKAGEDATA block
 ! Subroutine: (1) read packagedata block from input file
 ! ******************************************************************************
 !
