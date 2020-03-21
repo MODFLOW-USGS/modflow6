@@ -6392,6 +6392,16 @@ contains
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
+    !    for inelastic-compaction-cell observation type.
+    call this%obs%StoreObsType('inelastic-compaction-cell', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for elastic-compaction-cell observation type.
+    call this%obs%StoreObsType('elastic-compaction-cell', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
     !    for compaction-cell observation type.
     call this%obs%StoreObsType('compaction-cell', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => csub_process_obsID
@@ -6582,6 +6592,20 @@ contains
                 v = this%tcompe(n)
               case ('COARSE-COMPACTION')
                 v = this%cg_tcomp(n)
+              case ('INELASTIC-COMPACTION-CELL')
+                !
+                ! -- no coarse inelastic component
+                if (j > 1) then
+                  v = this%tcompi(n)
+                end if
+              case ('ELASTIC-COMPACTION-CELL')
+                !
+                ! -- add the coarse component
+                if (j == 1) then
+                  v = this%cg_tcomp(n)
+                else
+                  v = this%tcompe(n)
+                end if
               case ('COMPACTION-CELL')
                 !
                 ! -- add the coarse component
@@ -6803,6 +6827,8 @@ contains
             obsrv%ObsTypeId == 'SKE-CELL' .or.                                  &
             obsrv%ObsTypeId == 'SK-CELL' .or.                                   &
             obsrv%ObsTypeId == 'THETA-CELL' .or.                                &
+            obsrv%ObsTypeId == 'INELASTIC-COMPACTION-CELL' .or.                 &
+            obsrv%ObsTypeId == 'ELASTIC-COMPACTION-CELL' .or.                   &
             obsrv%ObsTypeId == 'COMPACTION-CELL') then 
           if (.NOT. obsrv%BndFound) then
             obsrv%BndFound = .true.
