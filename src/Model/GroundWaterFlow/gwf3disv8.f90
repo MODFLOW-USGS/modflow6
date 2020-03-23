@@ -43,6 +43,7 @@ module GwfDisvModule
     procedure :: get_nodenumber_idx1
     procedure :: get_nodenumber_idx2
     procedure :: nodeu_to_string
+    procedure :: nodeu_to_array
     procedure :: nodeu_from_string
     procedure :: nodeu_from_cellid
     procedure :: connection_normal
@@ -1136,6 +1137,46 @@ module GwfDisvModule
     return
   end subroutine nodeu_to_string
 
+  subroutine nodeu_to_array(this, nodeu, arr)
+! ******************************************************************************
+! nodeu_to_array -- Convert user node number to cellid and fill array with
+!                   (nodenumber) or (k, j) or (k,i,j)
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    use InputOutputModule, only: get_ijk
+    implicit none
+    class(GwfDisvType) :: this
+    integer(I4B), intent(in) :: nodeu
+    integer(I4B), dimension(:), intent(inout) :: arr
+    ! -- local
+    character(len=LINELENGTH) :: errmsg
+    integer(I4B) :: isize
+    integer(I4B) :: i, j, k
+! ------------------------------------------------------------------------------
+    !
+    ! -- check the size of arr
+    isize = size(arr)
+    if (isize /= this%ndim) then
+      write(errmsg,'(a,i0,a,i0,a)')                                              &
+        'Program error: nodeu_to_array size of array (', isize,                  &
+        ') is not equal to the discretization dimension (', this%ndim, ')'
+      call store_error(errmsg)
+      call ustop()
+    end if
+    !
+    ! -- get k, i, j
+    call get_ijk(nodeu, 1, this%ncpl, this%nlay, i, j, k)
+    !
+    ! -- fill array
+    arr(1) = k
+    arr(2) = j
+    !
+    ! -- return
+    return
+  end subroutine nodeu_to_array
+  
   function get_nodenumber_idx1(this, nodeu, icheck) result(nodenumber)
 ! ******************************************************************************
 ! get_nodenumber -- Return a nodenumber from the user specified node number

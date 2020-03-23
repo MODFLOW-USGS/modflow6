@@ -5,7 +5,7 @@ module TimeSeriesModule
   use ConstantsModule,        only: LINELENGTH, UNDEFINED, STEPWISE, LINEAR, &
                                     LINEAREND, LENTIMESERIESNAME, LENHUGELINE, &
                                     DZERO, DONE, DNODATA
-  use GenericUtilities,       only: IS_SAME
+  use GenericUtilitiesModule,       only: IS_SAME
   use InputOutputModule,      only: GetUnit, openfile, ParseLine, upcase
   use ListModule,             only: ListType, ListNodeType
   use SimModule,              only: count_errors, store_error, &

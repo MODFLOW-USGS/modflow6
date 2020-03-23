@@ -17,7 +17,7 @@ module ConstantsModule
   integer(I4B), parameter :: LENORIGIN = LENMODELNAME + LENPACKAGENAME + 1
   integer(I4B), parameter :: LENFTYPE = 5
   integer(I4B), parameter :: LENOBSNAME = 40
-  integer(I4B), parameter :: LENOBSTYPE = 20
+  integer(I4B), parameter :: LENOBSTYPE = 30
   integer(I4B), parameter :: LENTIMESERIESNAME = LENOBSNAME
   integer(I4B), parameter :: LENTIMESERIESTEXT = 12
   integer(I4B), parameter :: LENDATETIME = 30
@@ -114,9 +114,13 @@ module ConstantsModule
   END ENUM
   
   ENUM, BIND(C)
-    ! Sets TABSTRING=0, TABUCSTRING=1, TABINTEGER=3, TABREAL=3
+    ! Sets TABSTRING=0, TABUCSTRING=1, TABINTEGER=2, TABREAL=3
     ENUMERATOR :: TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
   END ENUM
-
+  
+  ENUM, BIND(C)
+    ! Sets VSUMMARY=0, VALL=1, VDEBUG=2
+    ENUMERATOR :: VSUMMARY, VALL, VDEBUG
+  END ENUM
 
 end module ConstantsModule
