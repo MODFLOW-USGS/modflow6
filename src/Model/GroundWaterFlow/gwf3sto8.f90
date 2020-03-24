@@ -606,7 +606,7 @@ module GwfStoModule
     class(GwfStoType) :: this
 ! ------------------------------------------------------------------------------
     !
-    ! -- Deallocate arrays if package was active
+    ! -- Deallocate arrays if package is active
     if(this%inunit > 0) then
       call mem_deallocate(this%iconvert)
       call mem_deallocate(this%sc1)
@@ -615,7 +615,7 @@ module GwfStoModule
       call mem_deallocate(this%strgsy)
     endif
     !
-    ! -- Scalars
+    ! -- Deallocate scalars
     call mem_deallocate(this%isfac)
     call mem_deallocate(this%isseg)
     call mem_deallocate(this%satomega)

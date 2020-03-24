@@ -143,7 +143,9 @@ def get_model(idx, dir):
 
     # build MODFLOW 6 files
     ws = dir
-    sim = flopy.mf6.MFSimulation(sim_name=name, version='mf6',
+    sim = flopy.mf6.MFSimulation(sim_name=name,
+                                 memory_print_option='all',
+                                 version='mf6',
                                  exe_name='mf6',
                                  sim_ws=ws)
     # create tdis package
@@ -151,7 +153,8 @@ def get_model(idx, dir):
                                  nper=nper, perioddata=tdis_rc)
 
     # create gwf model
-    gwf = flopy.mf6.ModflowGwf(sim, modelname=name, save_flows=True)
+    gwf = flopy.mf6.ModflowGwf(sim, modelname=name, save_flows=True,
+                               print_input=True)
 
     # create iterative model solution and register the gwf model with it
     ims = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
@@ -200,8 +203,11 @@ def get_model(idx, dir):
             gg.append([(0, i, j), gs0[idx]])
     sig0 = {0: gg}
     opth = '{}.csub.obs'.format(name)
+    fcgstrain = '{}.csub.strain.cg.csv'.format(name)
+    fibstrain = '{}.csub.strain.ib.csv'.format(name)
     csub = flopy.mf6.ModflowGwfcsub(gwf,
-                                    #interbed_stress_offset=True,
+                                    straincg_filerecord=fcgstrain,
+                                    strainib_filerecord=fibstrain,
                                     boundnames=True,
                                     compression_indices=True,
                                     update_material_properties=ump[idx],

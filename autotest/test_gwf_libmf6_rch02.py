@@ -12,7 +12,7 @@ import os
 import io
 import sys
 import numpy as np
-from amiwrapper import AmiWrapper
+from amipy import AmiWrapper
 
 try:
     import pymake
@@ -59,6 +59,7 @@ nlay, nrow, ncol = 1, 1, 100
 # cell spacing
 delr = 50.
 delc = 1.
+area = delr * delc
 
 # top of the aquifer
 top = 25.
@@ -145,8 +146,7 @@ def get_model(idx, dir):
 
     # build comparison model
     ws = os.path.join(dir, 'libmf6')
-    # mc = build_model(ws, name, rech=avg_rch)
-    mc = build_model(ws, name, rech=rch_spd)
+    mc = build_model(ws, name, rech=avg_rch)
 
     return sim, mc
 
@@ -185,15 +185,15 @@ def bmifunc(exe, idx, model_ws=None):
 
     # get recharge array
     cdata = "{} RCHA/BOUND".format(name)
-    # recharge = mf6.get_value_ptr(cdata)
+    recharge = mf6.get_value_ptr(cdata)
     trch = np.zeros((ncol), dtype=np.float64)
 
     # model time loop
     idx = 0
     while current_time < end_time:
         # update recharge
-        trch[:] = rch_spd[idx]
-        # recharge[0, :] = trch[:]
+        trch[:] = rch_spd[idx] * area
+        recharge[:, 0] = trch[:]
 
         # run timestep
         try:

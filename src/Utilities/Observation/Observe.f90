@@ -129,7 +129,7 @@ contains
     class(ObserveType), intent(inout) :: this
     integer(I4B), intent(in) :: iout
     ! formats
-    20 format(a,2x,a,a,t76,'All times',t89,'"',a,'"')
+    20 format(a,2x,a,a,t87,'All times',t100,'"',a,'"')
     !
     write(iout,20)this%Name, 'Continuous ', this%ObsTypeId, &
                   trim(this%IDstring)

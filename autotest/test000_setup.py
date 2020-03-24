@@ -2,7 +2,6 @@ import os
 import sys
 import platform
 import shutil
-import flopy
 import pymake
 
 os.environ["TRAVIS"] = "1"
@@ -195,7 +194,7 @@ def test_build_modflow6_so():
             return
 
     # set source and target paths
-    srcdir = os.path.join('..', 'dllsrc')
+    srcdir = os.path.join('..', 'srcbmi')
     comdir = os.path.join('..', 'src')
     excludefiles = [os.path.join(comdir, 'mf6.f90')]
     target = os.path.join('..', 'bin', 'libmf6.so')
