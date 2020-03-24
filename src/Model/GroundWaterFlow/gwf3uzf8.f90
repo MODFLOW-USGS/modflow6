@@ -3257,11 +3257,6 @@ contains
       call this%budobj%flowtable_df(this%iout, cellids='GWF')
     end if
     !
-    ! -- if uzf flow for each reach are written to the listing file
-    if (this%iprflow /= 0) then
-      call this%budobj%flowtable_df(this%iout, cellids='GWF')
-    end if
-    !
     ! -- return
     return
   end subroutine uzf_setup_budobj
