@@ -1,5 +1,7 @@
 *.exe
 *.lib
+*.dll
+*.exp
 *.obj
 *.suo
 *.u2d
