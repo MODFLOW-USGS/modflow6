@@ -323,7 +323,7 @@ def get_model(idx, dir):
                                                   print_flows=True,
                                                   print_concentration=True,
                                                   concentration_filerecord=gwtname + '.lkt.bin',
-                                                  budget_filerecord='.lkt.bud',
+                                                  budget_filerecord=gwtname + '.lkt.bud',
                                                   packagedata=lktpackagedata,
                                                   lakeperioddata=lktperioddata,
                                                   observations=lkt_obs,

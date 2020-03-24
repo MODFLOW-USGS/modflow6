@@ -329,6 +329,7 @@ module GwtModule
     !
     ! -- Define packages and utility objects
     call this%dis%dis_df()
+    call this%fmi%fmi_df(this%dis, this%inssm)
     if (this%indsp > 0) call this%dsp%dsp_df(this%dis)
     if (this%inssm > 0) call this%ssm%ssm_df()
     call this%oc%oc_df()
@@ -441,7 +442,7 @@ module GwtModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate and read modules attached to model
-    call this%fmi%fmi_ar(this%dis, this%ibound, this%inssm)
+    call this%fmi%fmi_ar(this%ibound)
     if(this%inic  > 0) call this%ic%ic_ar(this%x)
     if(this%inmst > 0) call this%mst%mst_ar(this%dis, this%ibound)
     if(this%inadv > 0) call this%adv%adv_ar(this%dis, this%ibound)

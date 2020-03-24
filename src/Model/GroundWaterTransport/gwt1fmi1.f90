@@ -57,6 +57,7 @@ module GwtFmiModule
     character(len=16), dimension(:), allocatable    :: flowpacknamearray        ! array of boundary package names (e.g. LAK-1, SFR-3, etc.)
   contains
   
+    procedure :: fmi_df
     procedure :: fmi_ar
     procedure :: fmi_ad
     procedure :: fmi_fc
@@ -118,19 +119,18 @@ module GwtFmiModule
     return
   end subroutine fmi_cr
 
-  subroutine fmi_ar(this, dis, ibound, inssm)
+  subroutine fmi_df(this, dis, inssm)
 ! ******************************************************************************
-! fmi_ar -- Allocate and Read
+! fmi_df -- Define
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule,           only: ustop, store_error
+    use SimModule, only: ustop, store_error
     ! -- dummy
     class(GwtFmiType) :: this
     class(DisBaseType), pointer, intent(in) :: dis
-    integer(I4B), dimension(:), pointer, contiguous :: ibound
     integer(I4B), intent(in) :: inssm
     ! -- local
     ! -- formats
@@ -154,22 +154,8 @@ module GwtFmiModule
       endif 
     endif
     !
-    ! -- Add a check to see if GWF-GWT Exchange is on and the FMI 
-    !    package is specified by the user.  Program should return with an
-    !    error in this case.
-    !if (.not. this%flows_from_file .and. this%inunit /= 0) then
-    !  call store_error('ERROR: A GWF-GWT EXCHANGE IS MAKING GWF FLOWS&
-    !    & AVAILABLE FOR THIS TRANSPORT MODEL AND AN FMI PACKAGE HAS ALSO&
-    !    & BEEN SPECIFIED BY THE USER.  REMOVE THE FMI PACKAGE FROM THE&
-    !    & GWT NAME FILE OR TURN OFF THE GWF-GWT EXCHANGE IN MFSIM.NAM')
-    !end if
-    !
     ! -- store pointers to arguments that were passed in
-    this%dis     => dis
-    this%ibound  => ibound
-    !
-    ! -- Allocate arrays
-    call this%allocate_arrays(dis%nodes)
+    this%dis => dis
     !
     ! -- Read fmi options
     if (this%inunit /= 0) then
@@ -207,8 +193,41 @@ module GwtFmiModule
       endif
     endif
     !
-    ! -- read the data block
-    !call this%read_data()
+    ! -- Return
+    return
+  end subroutine fmi_df
+  
+  subroutine fmi_ar(this, ibound)
+! ******************************************************************************
+! fmi_ar -- Allocate and Read
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use SimModule, only: ustop, store_error
+    ! -- dummy
+    class(GwtFmiType) :: this
+    integer(I4B), dimension(:), pointer, contiguous :: ibound
+    ! -- local
+    ! -- formats
+! ------------------------------------------------------------------------------
+    !
+    ! -- Add a check to see if GWF-GWT Exchange is on and the FMI 
+    !    package is specified by the user.  Program should return with an
+    !    error in this case.
+    !if (.not. this%flows_from_file .and. this%inunit /= 0) then
+    !  call store_error('ERROR: A GWF-GWT EXCHANGE IS MAKING GWF FLOWS&
+    !    & AVAILABLE FOR THIS TRANSPORT MODEL AND AN FMI PACKAGE HAS ALSO&
+    !    & BEEN SPECIFIED BY THE USER.  REMOVE THE FMI PACKAGE FROM THE&
+    !    & GWT NAME FILE OR TURN OFF THE GWF-GWT EXCHANGE IN MFSIM.NAM')
+    !end if
+    !
+    ! -- store pointers to arguments that were passed in
+    this%ibound  => ibound
+    !
+    ! -- Allocate arrays
+    call this%allocate_arrays(this%dis%nodes)
     !
     ! -- Return
     return
@@ -451,6 +470,7 @@ module GwtFmiModule
     ! -- todo: finalize hfr and bfr either here or in a finalize routine
     !
     ! -- deallocate fmi arrays
+    deallocate(this%datp)
     call mem_deallocate(this%flowerr)
     call mem_deallocate(this%iatp)
     if (this%flows_from_file) then
@@ -541,28 +561,22 @@ module GwtFmiModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate variables needed for all cases
-    call mem_allocate(this%flowerr, nodes, 'FLOWERR', this%origin)
-    call mem_allocate(this%iatp, this%nflowpack, 'IATP', this%origin)
-    allocate(this%datp(this%nflowpack))
-    !
-    ! -- Initialize
-    do n = 1, nodes
+    if (this%iflowerr == 0) then
+      call mem_allocate(this%flowerr, 1, 'FLOWERR', this%origin)
+    else
+      call mem_allocate(this%flowerr, nodes, 'FLOWERR', this%origin)
+    end if
+    do n = 1, size(this%flowerr)
       this%flowerr(n) = DZERO
     enddo
-    do n = 1, this%nflowpack
-      this%iatp(n) = 0
-    end do
     !
-    ! -- Allocate variables needed when there isn't a GWF model running 
-    !    concurrently.  In that case, these variables are pointed directly
-    !    to the corresponding GWF variables.
+    ! -- Allocate differently depending on whether or not flows are
+    !    being read from a file.
     if (this%flows_from_file) then
       call mem_allocate(this%igwfinwtup, 'IGWFINWTUP', this%origin)
       call mem_allocate(this%gwfflowja, this%dis%con%nja, 'GWFFLOWJA', this%origin)
       call mem_allocate(this%gwfsat, nodes, 'GWFSAT', this%origin)
       call mem_allocate(this%gwfhead, nodes, 'GWFHEAD', this%origin)
-      call mem_allocate(this%gwfstrgss, 0, 'GWFSTRGSS', this%origin)
-      call mem_allocate(this%gwfstrgsy, 0, 'GWFSTRGSY', this%origin)
       call mem_allocate(this%gwfspdis, 3, nodes, 'GWFSPDIS', this%origin)
       call mem_allocate(this%gwfibound, nodes, 'GWFIBOUND', this%origin)
       call mem_allocate(this%gwficelltype, nodes, 'GWFICELLTYPE', this%origin)
@@ -576,6 +590,38 @@ module GwtFmiModule
       end do
       do n = 1, size(this%gwfflowja)
         this%gwfflowja(n) = DZERO
+      end do
+      !
+      !
+      ! -- allocate and initialize storage arrays
+      if (this%igwfstrgss == 0) then
+        call mem_allocate(this%gwfstrgss, 1, 'GWFSTRGSS', this%origin)
+      else
+        call mem_allocate(this%gwfstrgss, nodes, 'GWFSTRGSS', this%origin)
+      end if
+      if (this%igwfstrgsy == 0) then
+        call mem_allocate(this%gwfstrgsy, 1, 'GWFSTRGSY', this%origin)
+      else
+        call mem_allocate(this%gwfstrgsy, nodes, 'GWFSTRGSY', this%origin)
+      end if
+      do n = 1, size(this%gwfstrgss)
+        this%gwfstrgss(n) = DZERO
+      end do
+      do n = 1, size(this%gwfstrgsy)
+        this%gwfstrgsy(n) = DZERO
+      end do
+    end if
+    !
+    ! -- These need to be allocated for case where GWF-GWT exchange
+    !    is in use or when FMI is not specified and there are no flows.  
+    !    The other variables allocated for flows_from_file
+    !    do not need to be allocated because they point directly into
+    !    their GWF model counterparts
+    if (.not. associated(this%iatp)) then
+      call mem_allocate(this%iatp, this%nflowpack, 'IATP', this%origin)
+      allocate(this%datp(this%nflowpack))
+      do n = 1, this%nflowpack
+        this%iatp(n) = 0
       end do
     end if
     !
@@ -763,7 +809,7 @@ module GwtFmiModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use MemoryManagerModule, only: mem_reallocate
+    use MemoryManagerModule, only: mem_allocate
     use SimModule, only: store_error, store_error_unit, ustop, count_errors
     ! -- dummy
     class(GwtFmiType) :: this
@@ -781,12 +827,6 @@ module GwtFmiModule
     integer(I4B), dimension(:), allocatable :: imap
 ! ------------------------------------------------------------------------------
     !
-    ! -- initialize variables
-    found_flowja = .false.
-    found_dataspdis = .false.
-    found_stoss = .false.
-    found_stosy = .false.
-    !
     ! -- Initialize the budget file reader
     call this%bfr%initialize(this%iubud, this%iout, ncrbud)
     !
@@ -794,6 +834,10 @@ module GwtFmiModule
     allocate(imap(this%bfr%nbudterms))
     imap(:) = 0
     nflowpack = 0
+    found_flowja = .false.
+    found_dataspdis = .false.
+    found_stoss = .false.
+    found_stosy = .false.
     do i = 1, this%bfr%nbudterms
       select case(trim(adjustl(this%bfr%budtxtarray(i))))
       case ('FLOW-JA-FACE')
@@ -804,8 +848,10 @@ module GwtFmiModule
         found_datasat = .true.
       case ('STO-SS')
         found_stoss = .true.
+        this%igwfstrgss = 1
       case ('STO-SY')
         found_stosy = .true.
+        this%igwfstrgsy = 1
       case default
         nflowpack = nflowpack + 1
         imap(i) = 1
@@ -823,13 +869,10 @@ module GwtFmiModule
       ip = ip + 1
     end do
     !
-    ! -- Now that nflowpack is known, need to reallocate the advanced
+    ! -- Now that nflowpack is known, need to allocate the advanced
     !    package indicator array
-    call mem_reallocate(this%iatp, nflowpack, 'IATP', this%origin)
-    if (associated(this%datp)) then
-      deallocate(this%datp)
-      allocate(this%datp(nflowpack))
-    end if
+    call mem_allocate(this%iatp, nflowpack, 'IATP', this%origin)
+    allocate(this%datp(nflowpack))
     this%iatp(:) = 0
     allocate(this%flowpacknamearray(nflowpack))
     ip = 1
@@ -839,16 +882,6 @@ module GwtFmiModule
         ip = ip + 1
       end if
     end do
-    !
-    ! -- Reallocate storage arrays if they were found
-    if (found_stoss) then
-      this%igwfstrgss = 1
-      call mem_reallocate(this%gwfstrgss, this%dis%nodes, 'GWFSTRGSS', this%origin)
-    end if
-    if (found_stosy) then
-      this%igwfstrgsy = 1
-      call mem_reallocate(this%gwfstrgsy, this%dis%nodes, 'GWFSTRGSY', this%origin)
-    end if
     !
     ! -- Error if flowja and qxqyqz not found
     if (.not. found_dataspdis) then
