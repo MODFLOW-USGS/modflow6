@@ -47,6 +47,7 @@ examples/python/.ipynb_checkpoints/*.ipynb
 doc/Notes/*.pdf
 doc/mf6report/*.pdf
 doc/GWFModelReport/*.pdf
+doc/mf6bmi/*.pdf
 doc/mf6io/*.pdf
 doc/ReleaseNotes/*.pdf
 doc/GettingStarted/*.pdf
