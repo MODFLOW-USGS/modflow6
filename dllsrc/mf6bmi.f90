@@ -253,8 +253,7 @@ module mf6bmi
     
     bmi_status = BMI_SUCCESS
     call get_mem_type(var_name_only, origin, mem_type)
-    c_var_type = string_to_char_array(trim(mem_type), len(trim(mem_type)))
-    
+    c_var_type(1:len(trim(mem_type))+1) = string_to_char_array(trim(mem_type), len(trim(mem_type)))    
   end function get_var_type
   
   ! TODO_MJR: this isn't BMI, move?
@@ -364,7 +363,7 @@ module mf6bmi
     bmi_status = get_grid_type_model(model_name, grid_type_f)
     if (bmi_status == BMI_FAILURE) return
     
-    grid_type = string_to_char_array(trim(grid_type_f), len(trim(grid_type_f)))
+    grid_type(1:len(trim(grid_type_f))+1) = string_to_char_array(trim(grid_type_f), len(trim(grid_type_f)))
     
   end function get_grid_type
   
