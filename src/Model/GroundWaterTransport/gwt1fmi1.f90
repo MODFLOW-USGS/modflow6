@@ -471,6 +471,8 @@ module GwtFmiModule
     !
     ! -- deallocate fmi arrays
     deallocate(this%datp)
+    deallocate(this%gwfpackages)
+    deallocate(this%flowpacknamearray)
     call mem_deallocate(this%flowerr)
     call mem_deallocate(this%iatp)
     if (this%flows_from_file) then
@@ -610,19 +612,10 @@ module GwtFmiModule
       do n = 1, size(this%gwfstrgsy)
         this%gwfstrgsy(n) = DZERO
       end do
-    end if
-    !
-    ! -- These need to be allocated for case where GWF-GWT exchange
-    !    is in use or when FMI is not specified and there are no flows.  
-    !    The other variables allocated for flows_from_file
-    !    do not need to be allocated because they point directly into
-    !    their GWF model counterparts
-    if (.not. associated(this%iatp)) then
-      call mem_allocate(this%iatp, this%nflowpack, 'IATP', this%origin)
-      allocate(this%datp(this%nflowpack))
-      do n = 1, this%nflowpack
-        this%iatp(n) = 0
-      end do
+      !
+      ! -- If there is no fmi package, then there are no flows at all or a
+      !    connected GWF model, so allocate gwfpackages to zero
+      if (this%inunit == 0) call this%allocate_gwfpackages(this%nflowpack)
     end if
     !
     ! -- Return
@@ -858,8 +851,11 @@ module GwtFmiModule
       end select
     end do
     !
-    ! -- allocate gwfpackages and set the name
+    ! -- allocate gwfpackage arrays (gwfpackages, iatp, datp, ...)
     call this%allocate_gwfpackages(nflowpack)
+    !
+    ! -- Copy the package name and aux names from budget file reader
+    !    to the gwfpackages derived-type variable
     ip = 1
     do i = 1, this%bfr%nbudterms
       if (imap(i) == 0) cycle
@@ -869,12 +865,8 @@ module GwtFmiModule
       ip = ip + 1
     end do
     !
-    ! -- Now that nflowpack is known, need to allocate the advanced
-    !    package indicator array
-    call mem_allocate(this%iatp, nflowpack, 'IATP', this%origin)
-    allocate(this%datp(nflowpack))
-    this%iatp(:) = 0
-    allocate(this%flowpacknamearray(nflowpack))
+    ! -- Copy just the package names for the boundary packages into
+    !    the flowpacknamearray
     ip = 1
     do i = 1, size(imap)
       if (imap(i) == 1) then
@@ -1192,14 +1184,28 @@ module GwtFmiModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(GwtFmiType) :: this
     integer(I4B), intent(in) :: nflowpack
+    ! -- local
+    integer(I4B) :: n
 ! ------------------------------------------------------------------------------
     !
-    ! -- allocate
+    ! -- direct allocate
     allocate(this%gwfpackages(nflowpack))
+    allocate(this%flowpacknamearray(nflowpack))
+    allocate(this%datp(nflowpack))
+    !
+    ! -- mem_allocate
+    call mem_allocate(this%iatp, nflowpack, 'IATP', this%origin)
+    !
+    ! -- initialize
     this%nflowpack = nflowpack
+    do n = 1, this%nflowpack
+      this%iatp(n) = 0
+      this%flowpacknamearray(n) = ''
+    end do
     !
     ! -- return
     return
