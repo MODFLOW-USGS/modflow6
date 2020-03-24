@@ -172,6 +172,7 @@ module OutputControlData
     class(OutputControlDataType) :: this
 ! ------------------------------------------------------------------------------
     !
+    ! -- deallocate 
     deallocate(this%cname)
     deallocate(this%cdatafmp)
     deallocate(this%idataun)

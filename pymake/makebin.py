@@ -18,4 +18,4 @@ pymake.pymake.main(args.srcdir, args.target, fc=args.fc, cc=args.cc,
                    makeclean=args.makeclean, expedite=args.expedite,
                    dryrun=args.dryrun, double=args.double, debug=args.debug,
                    include_subdirs=args.subdirs, fflags=args.fflags,
-                   arch=args.arch, makefile=args.makefile)
+                   arch=args.arch, makefile=args.makefile, srcdir2=args.commonsrc)
