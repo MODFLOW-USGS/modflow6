@@ -2,7 +2,8 @@ module ConnectionsModule
 
   use ArrayReadersModule, only: ReadArray
   use KindModule, only: DP, I4B
-  use ConstantsModule,   only: LENMODELNAME, LENORIGIN
+  use ConstantsModule, only: LENMODELNAME, LENORIGIN
+  use GenericUtilitiesModule, only: sim_message
   use BlockParserModule, only: BlockParserType
   
   implicit none
@@ -359,6 +360,7 @@ module ConnectionsModule
     integer(I4B), intent(in) :: nja
     integer(I4B), intent(in) :: iout
     ! -- local
+    character(len=LINELENGTH) :: line
     character(len=LINELENGTH) :: keyword
     integer(I4B) :: ii,n,m
     integer(I4B) :: ierr, nerr
@@ -458,7 +460,8 @@ module ConnectionsModule
       do ii = this%ia(n), this%ia(n + 1) - 1
         m = this%ja(ii)
         if(n /= this%ja(this%isym(ii))) then
-          write(*, fmtsymerr) aname(2), ii, this%isym(ii)
+          write(line, fmtsymerr) aname(2), ii, this%isym(ii)
+          call sim_message(line)
           call this%parser%StoreErrorUnit()
           call ustop()
         endif

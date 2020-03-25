@@ -10,9 +10,9 @@ module SfrModule
                              LENPACKAGENAME, MAXCHARLEN,                       &
                              DHNOFLO, DHDRY, DNODATA,                          &
                              TABLEFT, TABCENTER, TABRIGHT
-    
-  use SmoothingModule,  only: sQuadraticSaturation, sQSaturation, &
-                              sQuadraticSaturationDerivative, sQSaturationDerivative, &
+  use SmoothingModule,  only: sQuadraticSaturation, sQSaturation,              &
+                              sQuadraticSaturationDerivative,                  &
+                              sQSaturationDerivative,                          &
                               sCubicSaturation, sChSmooth
   use BndModule, only: BndType
   use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr
@@ -22,6 +22,7 @@ module SfrModule
   use InputOutputModule, only: get_node, URWORD, extract_idnum_or_bndname
   use BaseDisModule, only: DisBaseType
   use SimModule, only: count_errors, store_error, store_error_unit, ustop
+  use GenericUtilitiesModule, only: sim_message
   use SparseModule, only: sparsematrix
   use ArrayHandlersModule, only: ExpandArray
   use BlockParserModule,   only: BlockParserType
@@ -67,6 +68,7 @@ module SfrModule
   !
   private
   public :: sfr_create
+  public :: SfrType
   !
   type, extends(BndType) :: SfrType
     ! -- scalars
@@ -661,10 +663,6 @@ contains
       call this%sfr_check_diversions()
     end if
     !
-    ! -- calculate the total fraction of connected reaches that are
-    !    not diversions
-    call this%sfr_check_ustrf()
-    !
     ! -- terminate if errors were detected in any of the static sfr data
     ierr = count_errors()
     if (ierr > 0) then
@@ -757,7 +755,7 @@ contains
         if (this%igwfnode(n) < 1) then
           call this%parser%GetStringCaps(keyword)
           if (keyword .ne. 'NONE') then
-            write (cnum, '(i0)') n
+            write(cnum, '(i0)') n
             errmsg = 'ERROR: cellid (' // trim(cellid) //                        &
                      ') for unconnected reach ' //  trim(cnum) //                &
                      ' must be NONE'
@@ -809,7 +807,7 @@ contains
         end do
 
         ! -- set default bndName
-        write (cnum,'(i10.10)') n
+        write(cnum,'(i10.10)') n
         bndName = 'Reach' // cnum
 
         ! -- get reach name
@@ -1100,7 +1098,7 @@ contains
           ! -- get reach number
           n = this%parser%GetInteger()
           if (n < 1 .or. n > this%maxbound) then
-            write (cnum, '(i0)') n
+            write(cnum, '(i0)') n
             errmsg = 'ERROR: reach number should be between 1 and ' //          &
                       trim(cnum) // '.'
             call store_error(errmsg)
@@ -1109,7 +1107,7 @@ contains
           !
           ! -- make sure reach has at least one diversion
           if (this%ndiv(n) < 1) then
-            write (cnum, '(i0)') n
+            write(cnum, '(i0)') n
             errmsg = 'ERROR: diversions cannot be specified ' //                &
                      'for reach ' // trim(cnum)
             call store_error(errmsg)
@@ -1119,9 +1117,9 @@ contains
           ! -- read diversion number
           ival = this%parser%GetInteger()
           if (ival < 1 .or. ival > this%ndiv(n)) then
-            write (cnum, '(i0)') n
+            write(cnum, '(i0)') n
             errmsg = 'ERROR: reach  ' // trim(cnum)
-            write (cnum, '(i0)') this%ndiv(n)
+            write(cnum, '(i0)') this%ndiv(n)
             errmsg = trim(errmsg) // ' diversion number should be between ' //  &
                      '1 and ' // trim(cnum) // '.'
             call store_error(errmsg)
@@ -1137,7 +1135,7 @@ contains
           ! -- get target reach for diversion
           ival = this%parser%GetInteger()
           if (ival < 1 .or. ival > this%maxbound) then
-            write (cnum, '(i0)') ival
+            write(cnum, '(i0)') ival
             errmsg = 'ERROR: diversion target reach number should be ' //       &
                      'between 1 and ' // trim(cnum) // '.'
             call store_error(errmsg)
@@ -1249,8 +1247,10 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize flags
-    ichkustrm =  0
-    !isfirst = 1
+    ichkustrm = 0
+    if (kper == 1) then
+      ichkustrm = 1
+    end if
     !
     ! -- set nbound to maxbound
     this%nbound = this%maxbound
@@ -1329,16 +1329,16 @@ contains
       if (this%iprpak /= 0) then
         call this%inputtab%finalize_table()
       end if
-      !
-      ! -- check upstream fraction values
-      if (ichkustrm /= 0) then
-        call this%sfr_check_ustrf()
-      end if
 
     ! -- Reuse data from last stress period
     else
       write(this%iout,fmtlsp) trim(this%filtyp)
     endif
+    !
+    ! -- check upstream fraction values
+    if (ichkustrm /= 0) then
+      call this%sfr_check_ustrf()
+    end if
     !
     ! -- write summary of package block error messages
     if (count_errors() > 0) then
@@ -1578,6 +1578,7 @@ contains
     real(DP), intent(in) :: hclose
     real(DP), intent(in) :: rclose
     ! -- local
+    character(len=LINELENGTH) :: line
     character(len=15) :: cdhmax
     character(len=15) :: crmax
     integer(I4B) :: n
@@ -1585,12 +1586,15 @@ contains
     real(DP) :: dh
     real(DP) :: r
     ! format
-02000 format(4x,'STREAMFLOW ROUTING PACKAGE FAILED CONVERGENCE CRITERIA',//,    &
-             4x,a10,2(1x,a15),/,4x,74('-'))
-02010 format(4x,i10,2(1x,G15.7))
-02020 format(4x,74('-'))
-02030 format('CONVERGENCE FAILED AS A RESULT OF STREAMFLOW ROUTING PACKAGE',    &
-             1x,a)
+      character(len=*), parameter :: fmtheader = "(4x,a10,2(1x,a15))"
+      character(len=*), parameter :: header =                                   &
+         &"(4x,'STREAMFLOW ROUTING PACKAGE FAILED CONVERGENCE CRITERIA',//,     &
+         &4x,a/,4x,74('-'))"  
+      character(len=*), parameter :: fmtline = "(4x,i10,2(1x,a15))"                                  
+      character(len=*), parameter :: fmtfooter = "(4x,74('-'))"                                  
+      character(len=*), parameter :: fmtmsg =                                   &
+         &"('CONVERGENCE FAILED AS A RESULT OF STREAMFLOW ROUTING PACKAGE',     &
+         &1x,a)"                                  
 ! --------------------------------------------------------------------------
     ifirst = 1
     if (this%iconvchk /= 0) then
@@ -1604,9 +1608,14 @@ contains
           if (iend == 1) then
             if (ifirst == 1) then
               ifirst = 0
-              write(*,2030) this%name
-              write(this%iout, 2000) '     REACH',                              &
-                 '        MAX. DH', '  MAX. RESIDUAL'
+              ! -- write table to this%iout
+              call sim_message(this%name, fmt=fmtmsg, iunit=this%iout)
+              write(line, fmtheader)                                             &
+                '     REACH',                                                    &
+                '        MAX. DH', '  MAX. RESIDUAL'
+              call sim_message(line, fmt=header, iunit=this%iout)
+              ! -- write table to stdout
+              call sim_message(line, fmt=header)
             end if
             cdhmax = '               '
             crmax = '               '
@@ -1616,7 +1625,11 @@ contains
             if (ABS(r) > rclose) then
               write(crmax, '(G15.7)') r
             end if
-            write(this%iout,2010) n, cdhmax, crmax
+            !write(this%iout,2010) n, cdhmax, crmax
+            write(line, fmtline)  n, cdhmax, crmax
+            call sim_message(line, iunit=this%iout)
+            ! -- write table to stdout
+            call sim_message(line)
           ! terminate check since no need to find more than one non-convergence
           else
             exit final_check
@@ -1624,7 +1637,11 @@ contains
         end if
       end do final_check
       if (ifirst == 0) then
-        write(this%iout,2020)
+        !write(this%iout,2020)
+        ! -- write table to this%iout
+        call sim_message('', fmt=fmtfooter, iunit=this%iout)
+        ! -- write table to stdout
+        call sim_message('', fmt=fmtfooter)
       end if
     end if
     !
@@ -1748,7 +1765,7 @@ contains
       do n = 1, this%maxbound
         d = this%depth(n)
         v = this%stage(n)
-        if (this%iboundpak(n) < 1) then
+        if (this%iboundpak(n) == 0) then
           v = DHNOFLO
         else if (d == DZERO) then
           v = DHDRY
@@ -2249,11 +2266,11 @@ contains
             call store_error(errmsg)
           endif
         else
-          write (errmsg,30) trim(obsrv%name), trim(this%name)
+          write(errmsg,30) trim(obsrv%name), trim(this%name)
           call store_error(errmsg)
         endif
       elseif (nn1 < 1 .or. nn1 > this%maxbound) then
-        write (errmsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
+        write(errmsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
           'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
           ' reach must be > 0 and <=', this%maxbound, &
           '(specified value is ', nn1, ')'
@@ -2276,7 +2293,7 @@ contains
         if (nn1 == NAMEDBOUNDFLAG) then
           n = size(obsrv%indxbnds)
           if (n > 1) then
-            write (errmsg, '(4x,a,4(1x,a))') &
+            write(errmsg, '(4x,a,4(1x,a))') &
               'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
               'for observation', trim(adjustl(obsrv%Name)), &
               ' must be assigned to a reach with a unique boundname.'
@@ -2290,7 +2307,7 @@ contains
       do j = 1, n
         nn1 = obsrv%indxbnds(j)
         if (nn1 < 1 .or. nn1 > this%maxbound) then
-          write (errmsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
+          write(errmsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
             'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
             ' reach must be > 0 and <=', this%maxbound, &
             '(specified value is ', nn1, ')'
@@ -2483,7 +2500,7 @@ contains
         !
         ! -- make sure reach has at least one diversion
         if (this%ndiv(n) < 1) then
-          write (cnum, '(i0)') n
+          write(cnum, '(i0)') n
           errmsg = 'ERROR: diversions cannot be specified for reach ' // trim(cnum)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
@@ -2493,9 +2510,9 @@ contains
         ! -- read diversion number
         call urword(line, lloc, istart, istop, 2, ival, rval, this%iout, this%inunit)
         if (ival < 1 .or. ival > this%ndiv(n)) then
-          write (cnum, '(i0)') n
+          write(cnum, '(i0)') n
           errmsg = 'ERROR: reach  ' // trim(cnum)
-          write (cnum, '(i0)') this%ndiv(n)
+          write(cnum, '(i0)') this%ndiv(n)
           errmsg = trim(errmsg) // ' diversion number should be between 1 ' //   &
                    'and ' // trim(cnum) // '.'
           call store_error(errmsg)
@@ -2571,7 +2588,7 @@ contains
     !
     ! -- make sure reach has not been allocated
     if (nboundchk > 1) then
-      write (crch, '(i10)') n
+      write(crch, '(i10)') n
       errmsg = 'reach ' // trim(crch) // ' is already allocated'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
@@ -2696,7 +2713,7 @@ contains
     !
     ! -- make sure reach has not been allocated
     if (associated(this%reaches(n)%diversion)) then
-      write (crch, '(i10)') n
+      write(crch, '(i10)') n
       errmsg = 'ERROR: reach ' // trim(adjustl(crch)) // &
               ' diversions are already allocated'
       call store_error(errmsg)
@@ -3592,7 +3609,7 @@ contains
     !
     ! -- check the reach data for simple errors
     do n = 1, this%maxbound
-      write (crch, '(i5)') n
+      write(crch, '(i5)') n
       nn = this%igwfnode(n)
       if (nn > 0) then
         btgwf = this%dis%bot(nn)
@@ -3619,10 +3636,10 @@ contains
       if (nn > 0) then
         bt = this%strtop(n) - this%bthick(n)
         if (bt <= btgwf .and. this%icheck /= 0) then
-          write (cval,'(f10.4)') bt
+          write(cval,'(f10.4)') bt
           errmsg = 'ERROR: Reach ' // crch // ' bed bottom (rtp-rbth =' //       &
                    cval // ') must be > the bottom of cell (' // nodestr
-          write (cval,'(f10.4)') btgwf
+          write(cval,'(f10.4)') btgwf
           errmsg = trim(adjustl(errmsg)) // '=' // cval // ').'
           call store_error(errmsg)
         end if
@@ -3704,10 +3721,10 @@ contains
     ! -- check the reach connections for simple errors
     ! -- connection check
     do n = 1, this%maxbound
-      write (crch, '(i5)') n
+      write(crch, '(i5)') n
       eachconn: do i = 1, this%nconnreach(n)
         nn = this%reaches(n)%iconn(i)
-        write (crch2, '(i5)') nn
+        write(crch2, '(i5)') nn
         ifound = 0
         connreach: do ii = 1, this%nconnreach(nn)
           nc = this%reaches(nn)%iconn(ii)
@@ -3744,13 +3761,13 @@ contains
     ! -- check upstream connections for each reach
     ierr = 0
     do n = 1, this%maxbound
-      write (crch, '(i5)') n
+      write(crch, '(i5)') n
       eachconnv: do i = 1, this%nconnreach(n)
         !
         ! -- skip downstream connections
         if (this%reaches(n)%idir(i) < 0) cycle eachconnv
         nn = this%reaches(n)%iconn(i)
-        write (crch2, '(i5)') nn
+        write(crch2, '(i5)') nn
         connreachv: do ii = 1, this%nconnreach(nn)
           ! -- skip downstream connections
           if (this%reaches(nn)%idir(ii) < 0) cycle connreachv
@@ -3777,11 +3794,11 @@ contains
     ! -- check that downstream reaches for a reach are
     !    the upstream reaches for the reach
     do n = 1, this%maxbound
-      write (crch, '(i5)') n
+      write(crch, '(i5)') n
       eachconnds: do i = 1, this%nconnreach(n)
         nn = this%reaches(n)%iconn(i)
         if (this%reaches(n)%idir(i) > 0) cycle eachconnds
-        write (crch2, '(i5)') nn
+        write(crch2, '(i5)') nn
         ifound = 0
         connreachds: do ii = 1, this%nconnreach(nn)
           nc = this%reaches(nn)%iconn(ii)
@@ -3941,15 +3958,15 @@ contains
     ! -- check that diversion data are correct
     do n = 1, this%maxbound
       if (this%ndiv(n) < 1) cycle
-      write (crch, '(i5)') n
+      write(crch, '(i5)') n
       !line = '     ' // crch
       
       do idiv = 1, this%ndiv(n)
-        write (cdiv, '(i5)') idiv
+        write(cdiv, '(i5)') idiv
         !
         !
         nn = this%reaches(n)%diversion(idiv)%reach
-        write (crch2, '(i5)') nn
+        write(crch2, '(i5)') nn
         !
         ! -- make sure diversion reach is connected to current reach
         ifound = 0
@@ -4061,7 +4078,7 @@ contains
       ids = 0
       rval = DZERO
       f = DZERO
-      write (crch, '(i5)') n
+      write(crch, '(i5)') n
       if (this%iprpak /= 0) then
         call this%inputtab%add_term(n)
       end if
@@ -4086,11 +4103,11 @@ contains
           cycle eachconn
         end if
         ipair = ipair + 1
-        write (crch2, '(i5)') n2
+        write(crch2, '(i5)') n2
         ids = ids + 1
         ladd = .true.
         f = f + this%ustrf(n2)
-        write (cval, '(f10.4)') this%ustrf(n2)
+        write(cval, '(f10.4)') this%ustrf(n2)
         !
         ! -- write upstream fractions
         if (this%iprpak /= 0) then
@@ -4123,7 +4140,7 @@ contains
       !    the sum of fractions is not equal to 1
       if (ids /= 0) then
         if (abs(f-DONE) > DEM6) then
-          write (cval, '(f10.4)') f
+          write(cval, '(f10.4)') f
           errmsg = 'ERROR: upstream fractions for reach ' // crch // ' not ' //   &
                   'equal to one (' // cval // '). Check reach connectivity.'
           call store_error(errmsg)

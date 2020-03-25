@@ -25,6 +25,9 @@ module MawModule
                                  mem_deallocate
   !
   implicit none
+  
+  public :: MawType
+  
   !
   character(len=LENFTYPE)       :: ftype = 'MAW'
   character(len=LENPACKAGENAME) :: text  = '             MAW'
@@ -2562,7 +2565,7 @@ contains
       do n = 1, this%nmawwells
         v = this%xnewpak(n)
         d = v - this%mawwells(n)%bot
-        if (this%iboundpak(n) < 1) then
+        if (this%iboundpak(n) == 0) then
           v = DHNOFLO
         else if (d <= DZERO) then
           v = DHDRY
@@ -2618,9 +2621,9 @@ contains
      if (ihedfl /= 0 .and. this%iprhed /= 0) then
       !
       ! -- fill stage data
-      do n = 1, this%maxbound
+      do n = 1, this%nmawwells
         if(this%inamedbound==1) then
-          call this%headtab%add_term(this%boundname(n))
+          call this%headtab%add_term(this%cmawname(n))
         end if
         call this%headtab%add_term(n)
         call this%headtab%add_term(this%xnewpak(n))
@@ -3910,10 +3913,9 @@ contains
     !
     ! -- Determine the number of maw budget terms. These are fixed for 
     !    the simulation and cannot change.  
-    ! gwf rate [flowing_well] [storage] constant_flow [frommvr tomvr tomvrcf [tomvrfw]] [aux]
-    nbudterm = 3
+    ! gwf rate [flowing_well] storage constant_flow [frommvr tomvr tomvrcf [tomvrfw]] [aux]
+    nbudterm = 4
     if (this%iflowingwells > 0) nbudterm = nbudterm + 1
-    if (this%imawissopt /= 1) nbudterm = nbudterm + 1
     if (this%imover == 1) then
       nbudterm = nbudterm + 3
       if (this%iflowingwells > 0) nbudterm = nbudterm + 1
@@ -3978,20 +3980,18 @@ contains
     end if
     !
     ! -- 
-    if (this%imawissopt /= 1) then
-      text = '         STORAGE'
-      idx = idx + 1
-      maxlist = this%nmawwells 
-      naux = 1
-      auxtxt(1) = '          VOLUME'
-      call this%budobj%budterm(idx)%initialize(text, &
-                                               this%name_model, &
-                                               this%name, &
-                                               this%name_model, &
-                                               this%name_model, &
-                                               maxlist, .false., .true., &
-                                               naux, auxtxt)
-    end if
+    text = '         STORAGE'
+    idx = idx + 1
+    maxlist = this%nmawwells 
+    naux = 1
+    auxtxt(1) = '          VOLUME'
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name_model, &
+                                             maxlist, .false., .true., &
+                                             naux, auxtxt)
     !
     ! -- 
     text = '        CONSTANT'
@@ -4023,7 +4023,7 @@ contains
                                                naux)
       !
       ! -- 
-      text = '     RATE TO-MVR'
+      text = '     RATE-TO-MVR'
       idx = idx + 1
       maxlist = this%nmawwells
       naux = 0
@@ -4036,7 +4036,7 @@ contains
                                                naux)
       !
       ! -- constant-head flow to mover
-      text = ' CONSTANT TO-MVR'
+      text = ' CONSTANT-TO-MVR'
       idx = idx + 1
       maxlist = this%nmawwells
       naux = 0
@@ -4052,7 +4052,7 @@ contains
       if (this%iflowingwells > 0) then
         !
         ! -- 
-        text = '  FW-RATE TO-MVR'
+        text = '  FW-RATE-TO-MVR'
         idx = idx + 1
         maxlist = this%nmawwells
         naux = 0
@@ -4175,20 +4175,22 @@ contains
     end if
     !
     ! -- STORAGE (AND VOLUME AS AUX)
-    if (this%imawissopt /= 1) then
-      idx = idx + 1
-      call this%budobj%budterm(idx)%reset(this%nmawwells)
-      do n = 1, this%nmawwells
-        b = this%mawwells(n)%xsto - this%mawwells(n)%bot
-        if (b < DZERO) then
-          b = DZERO
-        end if
-        v = this%mawwells(n)%area * b
+    idx = idx + 1
+    call this%budobj%budterm(idx)%reset(this%nmawwells)
+    do n = 1, this%nmawwells
+      b = this%mawwells(n)%xsto - this%mawwells(n)%bot
+      if (b < DZERO) then
+        b = DZERO
+      end if
+      v = this%mawwells(n)%area * b
+      if (this%imawissopt /= 1) then
         q = this%qsto(n)
-        this%qauxcbc(1) = v
-        call this%budobj%budterm(idx)%update_term(n, n, q, this%qauxcbc)
-      end do
-    end if
+      else
+        q = DZERO
+      end if
+      this%qauxcbc(1) = v
+      call this%budobj%budterm(idx)%update_term(n, n, q, this%qauxcbc)
+    end do
     !
     ! -- CONSTANT FLOW
     idx = idx + 1
@@ -4320,13 +4322,10 @@ contains
     character(len=LINELENGTH) :: text
 ! ------------------------------------------------------------------------------
     !
-    ! -- setup stage table
+    ! -- setup well head table
     if (this%iprhed > 0) then
       !
-      ! -- Determine the number of sfr budget terms. These are fixed for 
-      !    the simulation and cannot change.  This includes FLOW-JA-FACE
-      !    so they can be written to the binary budget files, but these internal
-      !    flows are not included as part of the budget table.
+      ! -- Determine the number of head table columns
       nterms = 2
       if (this%inamedbound == 1) nterms = nterms + 1
       !
@@ -4334,9 +4333,9 @@ contains
       title = trim(adjustl(this%text)) // ' PACKAGE (' //                        &
               trim(adjustl(this%name)) //') HEADS FOR EACH CONTROL VOLUME'
       !
-      ! -- set up stage tableobj
+      ! -- set up head tableobj
       call table_cr(this%headtab, this%name, title)
-      call this%headtab%table_df(this%maxbound, nterms, this%iout,              &
+      call this%headtab%table_df(this%nmawwells, nterms, this%iout,              &
                                  transient=.TRUE.)
       !
       ! -- Go through and set up table budget term

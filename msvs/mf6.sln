@@ -1,7 +1,14 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2012
+# Visual Studio 15
+VisualStudioVersion = 15.0.27130.2024
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{6989167D-11E4-40FE-8C1A-2192A86A7E90}") = "mf6", "mf6.vfproj", "{369C1E2E-A513-4E83-A076-923534E30304}"
+	ProjectSection(ProjectDependencies) = postProject
+		{380139B4-29CE-4CF3-BD74-5AA979FD0F43} = {380139B4-29CE-4CF3-BD74-5AA979FD0F43}
+	EndProjectSection
+EndProject
+Project("{6989167D-11E4-40FE-8C1A-2192A86A7E90}") = "mf6core", "mf6core.vfproj", "{380139B4-29CE-4CF3-BD74-5AA979FD0F43}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -25,8 +32,23 @@ Global
 		{369C1E2E-A513-4E83-A076-923534E30304}.Release|Win32.Build.0 = Release|x64
 		{369C1E2E-A513-4E83-A076-923534E30304}.Release|x64.ActiveCfg = Release|x64
 		{369C1E2E-A513-4E83-A076-923534E30304}.Release|x64.Build.0 = Release|x64
+		{380139B4-29CE-4CF3-BD74-5AA979FD0F43}.Debug|Win32.ActiveCfg = Debug|Win32
+		{380139B4-29CE-4CF3-BD74-5AA979FD0F43}.Debug|Win32.Build.0 = Debug|Win32
+		{380139B4-29CE-4CF3-BD74-5AA979FD0F43}.Debug|x64.ActiveCfg = Debug|x64
+		{380139B4-29CE-4CF3-BD74-5AA979FD0F43}.Debug|x64.Build.0 = Debug|x64
+		{380139B4-29CE-4CF3-BD74-5AA979FD0F43}.Profile|Win32.ActiveCfg = Release|Win32
+		{380139B4-29CE-4CF3-BD74-5AA979FD0F43}.Profile|Win32.Build.0 = Release|Win32
+		{380139B4-29CE-4CF3-BD74-5AA979FD0F43}.Profile|x64.ActiveCfg = Release|x64
+		{380139B4-29CE-4CF3-BD74-5AA979FD0F43}.Profile|x64.Build.0 = Release|x64
+		{380139B4-29CE-4CF3-BD74-5AA979FD0F43}.Release|Win32.ActiveCfg = Release|Win32
+		{380139B4-29CE-4CF3-BD74-5AA979FD0F43}.Release|Win32.Build.0 = Release|Win32
+		{380139B4-29CE-4CF3-BD74-5AA979FD0F43}.Release|x64.ActiveCfg = Release|x64
+		{380139B4-29CE-4CF3-BD74-5AA979FD0F43}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {A077BEB2-AC7C-4B3D-AC89-2F6B4A677AF2}
 	EndGlobalSection
 EndGlobal
