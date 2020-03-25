@@ -1,8 +1,9 @@
 module ArrayHandlersModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: MAXCHARLEN
+  use ConstantsModule, only: LINELENGTH, MAXCHARLEN
   use SimVariablesModule, only: iout
+  use GenericUtilitiesModule, only: sim_message, stop_with_error
   private
   public :: ExpandArray, ExtendPtrArray
   public :: ifind
@@ -13,7 +14,7 @@ module ArrayHandlersModule
     ! IMPORTANT: Do not use pointers to elements of arrays when using
     ! ExpandArray to increase the array size!  The locations of array
     ! elements in memory are changed when ExpandArray is invoked.
-    module procedure expand_integer, expand_double, &
+    module procedure expand_integer, expand_double,                              &
                      expand_character  !, expand_real
   end interface ExpandArray
 
@@ -100,20 +101,26 @@ contains
     character(len=*), allocatable, intent(inout) :: array(:)
     integer(I4B), optional,             intent(in)    :: increment
     ! -- local
-    integer(I4B) :: i, inclocal, isize, lenc, newsize
+    character(len=LINELENGTH) :: line
     character(len=MAXCHARLEN), allocatable, dimension(:) :: array_temp
+    integer(I4B) :: i, inclocal, isize, lenc, newsize
+    ! -- format
+    character(len=*), parameter :: stdfmt = "(/,'ERROR REPORT:',/,1x,a)"
     !
     ! -- check character length
     lenc = len(array)
-    if (lenc>MAXCHARLEN) then
-      ! Can't use store_error or ustop here because SimModule
-      ! is dependent on ArrayHandlersModule.
-      write(iout,*)'Error in ArrayHandlersModule: Need to increase MAXCHARLEN'
-      write(*,*)'Error in ArrayHandlersModule: Need to increase MAXCHARLEN'
-      write(iout,*)'Stopping...'
-      write(*,*)'Stopping...'
-      stop
-    endif
+    if (lenc > MAXCHARLEN) then
+      write(line, '(a)') 'Error in ArrayHandlersModule: ' //                     &
+                         'Need to increase MAXCHARLEN'
+      call sim_message(line, iunit=iout, fmt=stdfmt)
+      call sim_message(line, fmt=stdfmt)
+      !
+      ! -- stop message
+      write(line, '(a)') 'Stopping...'
+      call sim_message(line, iunit=iout)
+      call sim_message(line)
+      call stop_with_error(138)
+    end if
     !
     ! -- initialize
     if (present(increment)) then
@@ -157,9 +164,12 @@ contains
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: array
     integer(I4B), optional, intent(in) :: increment
     ! -- local
+    character(len=LINELENGTH) :: line
+    character(len=100) :: ermsg
     integer(I4B) :: i, inclocal, isize, istat, newsize
     real(DP), dimension(:), pointer, contiguous :: array_temp => null()
-    character(len=100) :: ermsg
+    ! -- format
+    character(len=*), parameter :: stdfmt = "(/,'ERROR REPORT:',/,1x,a)"
     !
     ! -- initialize
     if (present(increment)) then
@@ -184,19 +194,27 @@ contains
       allocate(array(inclocal))
     endif
     !
-    return  ! normal return
+    ! -- normal return
+    return  
     !
     ! -- Error reporting
-    99 continue
-      ! Can't use store_error or ustop here because SimModule
-      ! is dependent on ArrayHandlersModule.
-      write(iout,*)'Error encountered while trying to increase array size:'
-      write(iout,'(a)')trim(ermsg)
-      write(iout,*)'Stopping...'
-      write(*,*)'Error encountered while trying to increase array size:'
-      write(iout,'(a)')trim(ermsg)
-      write(*,*)'Stopping...'
-      stop
+99  continue
+
+    write(line, '(a)') 'Error in ArrayHandlersModule: ' //                       &
+                        'Could not increase array size'
+    call sim_message(line, iunit=iout, fmt=stdfmt)
+    call sim_message(line, fmt=stdfmt)
+    !
+    ! -- error message
+    call sim_message(ermsg, iunit=iout)
+    call sim_message(ermsg)
+    !
+    ! -- stop message
+    write(line, '(a)') 'Stopping...'
+    call sim_message(line, iunit=iout)
+    call sim_message(line)
+    call stop_with_error(138)
+      
   end subroutine extend_double
 
   subroutine extend_integer(array, increment)
@@ -205,9 +223,12 @@ contains
     integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: array
     integer(I4B), optional, intent(in) :: increment
     ! -- local
+    character(len=LINELENGTH) :: line
+    character(len=100) :: ermsg
     integer(I4B) :: i, inclocal, isize, istat, newsize
     integer(I4B), dimension(:), pointer, contiguous :: array_temp => null()
-    character(len=100) :: ermsg
+    ! -- format
+    character(len=*), parameter :: stdfmt = "(/,'ERROR REPORT:',/,1x,a)"
     !
     ! -- initialize
     if (present(increment)) then
@@ -232,19 +253,27 @@ contains
       allocate(array(inclocal))
     endif
     !
+    ! -- normal return
     return
     !
     ! -- Error reporting
-    99 continue
-      ! Can't use store_error or ustop here because SimModule
-      ! is dependent on ArrayHandlersModule.
-      write(iout,*)'Error encountered while trying to increase array size:'
-      write(iout,'(a)')trim(ermsg)
-      write(iout,*)'Stopping...'
-      write(*,*)'Error encountered while trying to increase array size:'
-      write(iout,'(a)')trim(ermsg)
-      write(*,*)'Stopping...'
-      stop
+99  continue
+
+    write(line, '(a)') 'Error in ArrayHandlersModule: ' //                       &
+                        'Could not increase array size'
+    call sim_message(line, iunit=iout, fmt=stdfmt)
+    call sim_message(line, fmt=stdfmt)
+    !
+    ! -- error message
+    call sim_message(ermsg, iunit=iout)
+    call sim_message(ermsg)
+    !
+    ! -- stop message
+    write(line, '(a)') 'Stopping...'
+    call sim_message(line, iunit=iout)
+    call sim_message(line)
+    call stop_with_error(138)
+      
   end subroutine extend_integer
 
   function ifind_character(array, str)
@@ -296,19 +325,26 @@ contains
     character(len=*), allocatable, intent(inout) :: array(:)
     integer(I4B),                       intent(in)    :: ipos
     ! -- local
-    integer(I4B) :: i, isize, lenc, newsize, inew
+    character(len=LINELENGTH) :: line
     character(len=MAXCHARLEN), allocatable, dimension(:) :: array_temp
+    integer(I4B) :: i, isize, lenc, newsize, inew
+    ! -- format
+    character(len=*), parameter :: stdfmt = "(/,'ERROR REPORT:',/,1x,a)"
     !
     ! -- check character length
     lenc = len(array)
-    if (lenc>MAXCHARLEN) then
-      ! Can't use store_error or ustop here because SimModule
-      ! is dependent on ArrayHandlersModule.
-      write(iout,*)'Error in ArrayHandlersModule: Need to increase MAXCHARLEN'
-      write(*,*)'Error in ArrayHandlersModule: Need to increase MAXCHARLEN'
-      write(iout,*)'Stopping...'
-      write(*,*)'Stopping...'
-      stop
+    if (lenc > MAXCHARLEN) then
+
+      write(line, '(a)') 'Error in ArrayHandlersModule: ' //                       &
+                         'Need to increase MAXCHARLEN'
+      call sim_message(line, iunit=iout, fmt=stdfmt)
+      call sim_message(line, fmt=stdfmt)
+      !
+      ! -- stop message
+      write(line, '(a)') 'Stopping...'
+      call sim_message(line, iunit=iout)
+      call sim_message(line)
+      call stop_with_error(138)
     endif
     !
     ! -- calculate sizes

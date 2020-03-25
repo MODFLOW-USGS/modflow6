@@ -5,7 +5,7 @@ module NpointGeometryModule
                              LINELENGTH, LENORIGIN, LENFTYPE, LENPACKAGENAME,    &
                              TABLEFT, TABCENTER
   use SimModule, only: count_errors, store_error, ustop, store_error_unit
-  use GenericUtilities, only: is_same
+  use GenericUtilitiesModule, only: is_same
   use SmoothingModule,  only: sCubicSaturation
   use TableModule, only: table_cr
 

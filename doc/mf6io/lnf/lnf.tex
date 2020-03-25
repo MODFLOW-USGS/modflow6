@@ -1,4 +1,4 @@
-This section describes the data files for a \mf Groundwater Transport (GWT) Model.  A GWT Model is added to the simulation by including a GWT entry in the MODELS block of the simulation name file.
+This section describes the data files for a \mf Linear Network FLow (LNF) Model.  A LNF Model is added to the simulation by including a LNF entry in the MODELS block of the simulation name file.
 
 There a single type of spatial discretization approaches that can be used with the LNF Model: DISL.
 
@@ -8,7 +8,7 @@ The LNF Model reads a file called the Name File, which specifies most of the fil
 
 
 \subsection{Units of Length and Time}
-The GWF Model formulates the groundwater flow equation without using prescribed length and time units. Any consistent units of length and time can be used when specifying the input data for a simulation. This capability gives a certain amount of freedom to the user, but care must be exercised to avoid mixing units.  The program cannot detect the use of inconsistent units.
+The LNF Model formulates the groundwater flow equation without using prescribed length and time units. Any consistent units of length and time can be used when specifying the input data for a simulation. This capability gives a certain amount of freedom to the user, but care must be exercised to avoid mixing units.  The program cannot detect the use of inconsistent units.
 
 \subsection{Steady-State Simulations}
 A steady-state transport simulation is represented by a single stress period having a single time step with the storage term set to zero. Setting the number and length of stress periods and time steps is the responsibility of the Timing Module of the \mf framework.

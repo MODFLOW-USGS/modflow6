@@ -27,7 +27,8 @@ sfmt = '{:25s} - {}'
 
 class Simulation(object):
     def __init__(self, name, exfunc=None, exe_dict=None, htol=None,
-                 idxsim=None, cmp_verbose=True, require_failure=None):
+                 idxsim=None, cmp_verbose=True, require_failure=None,
+                 bmifunc=None):
         delFiles = True
         for idx, arg in enumerate(sys.argv):
             if arg.lower() == '--keep':
@@ -35,7 +36,7 @@ class Simulation(object):
             elif arg[2:].lower() in list(targets.target_dict.keys()):
                 key = arg[2:].lower()
                 exe0 = targets.target_dict[key]
-                exe = os.path.join(os.path.dirname(exe0), sys.argv[idx+1])
+                exe = os.path.join(os.path.dirname(exe0), sys.argv[idx + 1])
                 msg = 'replacing {} executable '.format(key) + \
                       '"{}" with '.format(targets.target_dict[key]) + \
                       '"{}".'.format(exe)
@@ -57,8 +58,6 @@ class Simulation(object):
                     print(msg)
                     targets.target_dict[key] = exe
 
-
-
         msg = sfmt.format('Initializing test', name)
         print(msg)
         self.name = name
@@ -67,6 +66,7 @@ class Simulation(object):
         self.inpt = None
         self.outp = None
         self.coutp = None
+        self.bmifunc = bmifunc
 
         # set htol for comparisons
         if htol is None:
@@ -185,17 +185,22 @@ class Simulation(object):
                     cpth = os.path.join(self.simpath, self.action)
                     key = self.action.lower().replace('.cmp', '')
                     exe = os.path.abspath(targets.target_dict[key])
-                    if 'mf6' in key:
+                    if 'mf6' in key or 'libmf6' in key:
                         nam = None
                     else:
                         npth = pymake.get_namefiles(cpth)[0]
                         nam = os.path.basename(npth)
                     self.nam_cmp = nam
                     try:
-                        success_cmp, buff = flopy.run_model(exe, nam,
-                                                            model_ws=cpth,
-                                                            silent=False,
-                                                            report=True)
+                        if self.bmifunc is None:
+                            success_cmp, buff = flopy.run_model(exe, nam,
+                                                                model_ws=cpth,
+                                                                silent=False,
+                                                                report=True)
+                        else:
+                            success_cmp, buff = self.bmifunc(exe,
+                                                             self.idxsim,
+                                                             model_ws=cpth)
                         msg = sfmt.format('Comparison run',
                                           self.name + '/' + key)
                         if success:
@@ -353,3 +358,11 @@ class Simulation(object):
             else:
                 print('Retaining test files')
         return
+
+
+def bmi_return(success, model_ws):
+    """
+    parse libmf6.so and libmf6.dll stdout file
+    """
+    fpth = os.path.join(model_ws, 'mfsim.stdout')
+    return success, open(fpth).readlines()

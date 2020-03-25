@@ -22,7 +22,7 @@ module ModelConverterModule
   use GwfLgrSubsModule, only: GWF2LGR2AR
   use GwfLpfSubs, only: GWF2LPF7AR
   use HfBSubsNwt, only: GWF2HFB7AR, GWF2HFB7UPW
-  use InputOutputModule, only: write_centered, GetUnit, openfile
+  use InputOutputModule, only: GetUnit, openfile
   use ListModule, only: ListType
   use ModelModule, only: ModelType
   use ModelPackageModule, only: ModelPackageType, ConstructModelPackageType
@@ -36,7 +36,7 @@ module ModelConverterModule
   use GlobalVariablesModule, only: echo
   use SimModule, only: store_error, store_note, store_warning, ustop, &
                        write_message
-  use SimVariablesModule, only: SimMovers
+  use SimListVariablesModule, only: SimMovers
   use UpwSubsModule, only: GWF2UPW1AR
   use UtilitiesModule, only: GetArgs
 

@@ -106,7 +106,7 @@ module LnfModule
     use ListsModule,                only: basemodellist
     use BaseModelModule,            only: AddBaseModelToList
     use SimModule,                  only: ustop, store_error, count_errors
-    use InputOutputModule,          only: write_centered
+    use GenericUtilitiesModule,     only: write_centered
     use ConstantsModule,            only: LINELENGTH, LENPACKAGENAME
     use VersionModule,              only: VERSION, MFVNAM, MFTITLE,             &
                                           FMTDISCLAIMER, IDEVELOPMODE
@@ -159,20 +159,20 @@ module LnfModule
     call namefile_obj%openlistfile(this%iout)
     !
     ! -- Write title to list file
-    call write_centered('MODFLOW'//MFVNAM, this%iout, 80)
-    call write_centered(MFTITLE, this%iout, 80)
-    call write_centered('LINEAR NETWORK FLOW MODEL (LNF)', this%iout, 80)
-    call write_centered('VERSION '//VERSION, this%iout, 80)
+    call write_centered('MODFLOW'//MFVNAM, 80, this%iout)
+    call write_centered(MFTITLE, 80, this%iout)
+    call write_centered('LINEAR NETWORK FLOW MODEL (LNF)', 80, this%iout)
+    call write_centered('VERSION '//VERSION, 80, this%iout)
     !
     ! -- Write if develop mode
     if (IDEVELOPMODE == 1) then
-      call write_centered('***DEVELOP MODE***', this%iout, 80)
+      call write_centered('***DEVELOP MODE***', 80, this%iout)
     end if
     !
     ! -- Write compiler version
     call get_compiler(compiler)
-    call write_centered(' ', this%iout, 80)
-    call write_centered(trim(adjustl(compiler)), this%iout, 80)
+    call write_centered(' ', 80, this%iout)
+    call write_centered(trim(adjustl(compiler)), 80, this%iout)
     !
     ! -- Write disclaimer
     write(this%iout, FMTDISCLAIMER)

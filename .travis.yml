@@ -20,23 +20,26 @@ before_install:
 - sudo apt-get install -y $FC
 - sudo apt-get install -y texlive texlive-latex-extra
     texlive-latex-recommended texlive-science texlive-fonts-extra
-- sudo apt-get install -y graphviz python3-pip python3-setuptools
-    python3-matplotlib python3-netcdf4 python3-pyproj python3-pyshp
-    python3-shapely python3-tk
+- curl https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh > $HOME/miniconda.sh
+- bash $HOME/miniconda.sh -b -p $HOME/anaconda
+- export PATH="$HOME/anaconda/bin:$PATH"
+- hash -r
+- conda config --set always_yes yes
+- conda config --add channels conda-forge
+- conda install --file requirements.travis.txt
 install:
 - if [[ ! -d "$HOME/.local/bin" ]]; then mkdir "$HOME/.local/bin"; fi
 - ln -fs /usr/bin/$FC $HOME/.local/bin/gfortran
-- ln -fs /usr/bin/python3 $HOME/.local/bin/python
 - gfortran --version
 - python --version
-- pip3 install --user --upgrade pip
 - pip --version
 - pip config --user set global.progress_bar off
-- pip install --user nose-timer pydotplus
 - git clone https://github.com/modflowpy/flopy --depth 1 --branch=develop ~/flopy
 - pip install --user -e ~/flopy
 - git clone https://github.com/modflowpy/pymake --depth 1 --branch=master ~/pymake
 - pip install --user -e ~/pymake
+- git clone https://github.com/mjr-deltares/modflow6-bmipy.git --depth 1 --branch=master ~/amipy
+- pip install --user -e ~/amipy
 script:
 - export BRANCH=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_BRANCH;
   else echo $TRAVIS_PULL_REQUEST_BRANCH; fi)
