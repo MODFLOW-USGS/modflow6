@@ -29,6 +29,5 @@
 		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl">
 		<File RelativePath="..\srcbmi\bmi.f90"/>
 		<File RelativePath="..\srcbmi\mf6ami.f90"/>
-		<File RelativePath="..\srcbmi\mf6bmi.f90"/>
-		<File RelativePath="..\srcbmi\run_mf6.py"/></Filter></Files>
+		<File RelativePath="..\srcbmi\mf6bmi.f90"/></Filter></Files>
 	<Globals/></VisualStudioProject>
