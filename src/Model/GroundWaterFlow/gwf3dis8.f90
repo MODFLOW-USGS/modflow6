@@ -31,6 +31,7 @@ module GwfDisModule
     procedure :: dis_df => dis3d_df
     procedure :: dis_da => dis3d_da
     procedure :: get_cellxy => get_cellxy_dis3d
+    procedure :: get_dis_type => get_dis_type
     procedure, public :: record_array
     procedure, public :: read_layer_array
     procedure, public :: record_srcdst_list_header
@@ -1451,6 +1452,15 @@ module GwfDisModule
     ycell = this%celly(i)
     
   end subroutine get_cellxy_dis3d
+  
+  ! return discretization type
+  subroutine get_dis_type(this, dis_type)
+    class(GwfDisType), intent(in)  :: this
+    character(len=*), intent(out)  :: dis_type
+      
+    dis_type = "DIS"
+    
+  end subroutine get_dis_type
                                
   subroutine read_int_array(this, line, lloc, istart, istop, iout, in, &
                             iarray, aname)

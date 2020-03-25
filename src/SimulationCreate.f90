@@ -90,6 +90,7 @@ module SimulationCreateModule
     use VersionModule,          only: VERSION, MFVNAM, MFTITLE, FMTDISCLAIMER,  & 
                                       IDEVELOPMODE
     use CompilerVersion
+    use GenericUtilitiesModule, only: write_centered
     ! -- dummy
     ! -- local
     character(len=LENBIGLINE) :: syscmd
