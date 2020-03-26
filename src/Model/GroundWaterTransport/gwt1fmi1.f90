@@ -32,7 +32,7 @@ module GwtFmiModule
   
   type, extends(NumericalPackageType) :: GwtFmiType
     
-    logical, pointer                                :: flows_from_file => null() ! if .false., then there is no water flow
+    logical, pointer                                :: flows_from_file => null() ! if .false., then flows come from GWF through GWF-GWT exg
     integer(I4B), dimension(:), pointer, contiguous :: iatp => null()           ! advanced transport package applied to gwfpackages
     type(ListType), pointer                         :: gwfbndlist => null()     ! list of gwf stress packages
     integer(I4B), pointer                           :: iflowerr => null()       ! add the flow error correction
@@ -902,6 +902,7 @@ module GwtFmiModule
     nflowpack = 0
     found_flowja = .false.
     found_dataspdis = .false.
+    found_datasat = .false.
     found_stoss = .false.
     found_stosy = .false.
     do i = 1, this%bfr%nbudterms
@@ -948,10 +949,16 @@ module GwtFmiModule
       end if
     end do
     !
-    ! -- Error if flowja and qxqyqz not found
+    ! -- Error if specific discharge, saturation or flowja not found
     if (.not. found_dataspdis) then
       write(errmsg, '(4x,a)') '***ERROR. SPECIFIC DISCHARGE NOT FOUND IN &
                               &BUDGET FILE. SAVE_SPECIFIC_DISCHARGE AND &
+                              &SAVE_FLOWS MUST BE ACTIVATED IN THE NPF PACKAGE.'
+      call store_error(errmsg)
+    end if
+    if (.not. found_datasat) then
+      write(errmsg, '(4x,a)') '***ERROR. SATURATION NOT FOUND IN &
+                              &BUDGET FILE. SAVE_SATURATION AND &
                               &SAVE_FLOWS MUST BE ACTIVATED IN THE NPF PACKAGE.'
       call store_error(errmsg)
     end if
