@@ -147,7 +147,7 @@ def test_mf6_idomain_error():
 
 @raises(RuntimeError)
 def test_unknown_keyword_error():
-    returncode, buff = run_mf6([mf6_exe, 'unknown_keyword'], ws)
+    returncode, buff = run_mf6([mf6_exe, '--unknown_keyword'], ws)
     msg = 'could not run {}'.format('unknown_keyword')
     if returncode != 0:
         err_str = 'mf6: illegal option'

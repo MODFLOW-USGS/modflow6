@@ -104,14 +104,21 @@ module GwfGwtExchangeModule
       gwtmodel => mb
     end select
     !
+    ! -- Tell transport model fmi flows are not read from file
+    gwtmodel%fmi%flows_from_file = .false.
+    !
     ! -- setup pointer to gwf variables that were allocated in gwf_df
     gwtmodel%fmi%gwfbndlist => gwfmodel%bndlist
     ngwfpack = gwfmodel%bndlist%Count()
+    !
+    ! -- allocate arrays in fmi of size ngwfpack
     call gwtmodel%fmi%allocate_gwfpackages(ngwfpack)
+    !
+    ! -- Assign values in the fmi package
     do ip = 1, ngwfpack
       packobj => GetBndFromList(gwfmodel%bndlist, ip)
       call gwtmodel%fmi%gwfpackages(ip)%set_name(packobj%name)
-      !gwtmodel%fmi%gwfpackages(ip)%name = packobj%name
+      gwtmodel%fmi%flowpacknamearray(ip) = packobj%name
     end do
     !
     ! -- return
@@ -151,8 +158,7 @@ module GwfGwtExchangeModule
       gwtmodel => mb
     end select
     !
-    ! -- Tell transport model flows are not read from file and set pointers
-    gwtmodel%fmi%flows_from_file = .false.
+    ! -- Set pointer to flowja
     gwtmodel%fmi%gwfflowja => gwfmodel%flowja
     !
     ! -- Set the auxiliary names for gwf flow packages in gwt%fmi

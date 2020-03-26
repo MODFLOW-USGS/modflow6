@@ -22,7 +22,7 @@ module ModelConverterModule
   use GwfLgrSubsModule, only: GWF2LGR2AR
   use GwfLpfSubs, only: GWF2LPF7AR
   use HfBSubsNwt, only: GWF2HFB7AR, GWF2HFB7UPW
-  use InputOutputModule, only: write_centered, GetUnit, openfile
+  use InputOutputModule, only: GetUnit, openfile
   use ListModule, only: ListType
   use ModelModule, only: ModelType
   use ModelPackageModule, only: ModelPackageType, ConstructModelPackageType

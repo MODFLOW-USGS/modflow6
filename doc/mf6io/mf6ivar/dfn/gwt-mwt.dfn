@@ -128,50 +128,6 @@ longname file keyword
 description name of the binary output file to write budget information.
 
 block options
-name flowbudget_filerecord
-type record flow_budget filein flowbudgetfile
-shape
-reader urword
-tagged true
-optional true
-longname
-description
-
-block options
-name flow_budget
-type keyword
-shape
-in_record true
-reader urword
-tagged true
-optional false
-longname flow_budget keyword
-description keyword to specify that record corresponds to the flow budget binary input file.
-
-block options
-name filein
-type keyword
-shape
-in_record true
-reader urword
-tagged true
-optional false
-longname file keyword
-description keyword to specify that an input filename is expected next.
-
-block options
-name flowbudgetfile
-type string
-preserve_case true
-shape
-in_record true
-reader urword
-tagged false
-optional false
-longname file keyword
-description name of the binary maw flow budget file to read as input for the MWT Package.  This budget file can be created by running a separate GWF Model with the Multi-Aquifer Well Package and saving the maw flows to the budget file.
-
-block options
 name ts_filerecord
 type record ts6 filein ts6_filename
 shape

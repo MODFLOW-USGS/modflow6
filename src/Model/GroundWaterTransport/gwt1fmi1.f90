@@ -26,9 +26,13 @@ module GwtFmiModule
     real(DP), dimension(:), contiguous, pointer :: qmfrommvr => null()
   end type
   
+  type :: BudObjPtrArray
+    type(BudgetObjectType), pointer :: ptr
+  end type BudObjPtrArray  
+  
   type, extends(NumericalPackageType) :: GwtFmiType
     
-    logical, pointer                                :: flows_from_file => null() ! if .false., then there is no water flow
+    logical, pointer                                :: flows_from_file => null() ! if .false., then flows come from GWF through GWF-GWT exg
     integer(I4B), dimension(:), pointer, contiguous :: iatp => null()           ! advanced transport package applied to gwfpackages
     type(ListType), pointer                         :: gwfbndlist => null()     ! list of gwf stress packages
     integer(I4B), pointer                           :: iflowerr => null()       ! add the flow error correction
@@ -55,8 +59,10 @@ module GwtFmiModule
     type(BudgetObjectType), pointer                 :: mvrbudobj    => null()   ! pointer to the mover budget budget object
     type(DataAdvancedPackageType), dimension(:), pointer, contiguous :: datp => null()
     character(len=16), dimension(:), allocatable    :: flowpacknamearray        ! array of boundary package names (e.g. LAK-1, SFR-3, etc.)
+    type(BudObjPtrArray), dimension(:), allocatable :: aptbudobj              ! flow budget objects for the advanced packages
   contains
   
+    procedure :: fmi_df
     procedure :: fmi_ar
     procedure :: fmi_ad
     procedure :: fmi_fc
@@ -75,6 +81,7 @@ module GwtFmiModule
     procedure :: finalize_hfr
     procedure :: allocate_gwfpackages
     procedure :: get_package_index
+    procedure :: set_aptbudobj_pointer
   
   end type GwtFmiType
 
@@ -118,19 +125,18 @@ module GwtFmiModule
     return
   end subroutine fmi_cr
 
-  subroutine fmi_ar(this, dis, ibound, inssm)
+  subroutine fmi_df(this, dis, inssm)
 ! ******************************************************************************
-! fmi_ar -- Allocate and Read
+! fmi_df -- Define
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule,           only: ustop, store_error
+    use SimModule, only: ustop, store_error
     ! -- dummy
     class(GwtFmiType) :: this
     class(DisBaseType), pointer, intent(in) :: dis
-    integer(I4B), dimension(:), pointer, contiguous :: ibound
     integer(I4B), intent(in) :: inssm
     ! -- local
     ! -- formats
@@ -154,22 +160,8 @@ module GwtFmiModule
       endif 
     endif
     !
-    ! -- Add a check to see if GWF-GWT Exchange is on and the FMI 
-    !    package is specified by the user.  Program should return with an
-    !    error in this case.
-    !if (.not. this%flows_from_file .and. this%inunit /= 0) then
-    !  call store_error('ERROR: A GWF-GWT EXCHANGE IS MAKING GWF FLOWS&
-    !    & AVAILABLE FOR THIS TRANSPORT MODEL AND AN FMI PACKAGE HAS ALSO&
-    !    & BEEN SPECIFIED BY THE USER.  REMOVE THE FMI PACKAGE FROM THE&
-    !    & GWT NAME FILE OR TURN OFF THE GWF-GWT EXCHANGE IN MFSIM.NAM')
-    !end if
-    !
     ! -- store pointers to arguments that were passed in
-    this%dis     => dis
-    this%ibound  => ibound
-    !
-    ! -- Allocate arrays
-    call this%allocate_arrays(dis%nodes)
+    this%dis => dis
     !
     ! -- Read fmi options
     if (this%inunit /= 0) then
@@ -177,25 +169,8 @@ module GwtFmiModule
     end if
     !
     ! -- Read packagedata options
-    if (this%inunit /= 0) then
+    if (this%inunit /= 0 .and. this%flows_from_file) then
       call this%read_packagedata()
-    end if
-    !
-    ! -- Initialize the budget file reader
-    if (this%iubud /= 0) then
-      call this%initialize_bfr()
-    endif
-    !
-    ! -- Initialize the head file reader
-    if (this%iuhds /= 0) then
-      call this%initialize_hfr()
-    endif
-    !
-    ! -- Initialize the mover reader
-    if (this%iumvr /= 0) then
-      call budgetobject_cr_bfr(this%mvrbudobj, this%name, this%iumvr,    &
-                               this%iout)
-      call this%mvrbudobj%fill_from_bfr(this%dis, this%iout)
     end if
     !
     ! -- Make sure that ssm is on if there are any boundary packages
@@ -207,8 +182,41 @@ module GwtFmiModule
       endif
     endif
     !
-    ! -- read the data block
-    !call this%read_data()
+    ! -- Return
+    return
+  end subroutine fmi_df
+  
+  subroutine fmi_ar(this, ibound)
+! ******************************************************************************
+! fmi_ar -- Allocate and Read
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use SimModule, only: ustop, store_error
+    ! -- dummy
+    class(GwtFmiType) :: this
+    integer(I4B), dimension(:), pointer, contiguous :: ibound
+    ! -- local
+    ! -- formats
+! ------------------------------------------------------------------------------
+    !
+    ! -- Add a check to see if GWF-GWT Exchange is on and the FMI 
+    !    package is specified by the user.  Program should return with an
+    !    error in this case.
+    !if (.not. this%flows_from_file .and. this%inunit /= 0) then
+    !  call store_error('ERROR: A GWF-GWT EXCHANGE IS MAKING GWF FLOWS&
+    !    & AVAILABLE FOR THIS TRANSPORT MODEL AND AN FMI PACKAGE HAS ALSO&
+    !    & BEEN SPECIFIED BY THE USER.  REMOVE THE FMI PACKAGE FROM THE&
+    !    & GWT NAME FILE OR TURN OFF THE GWF-GWT EXCHANGE IN MFSIM.NAM')
+    !end if
+    !
+    ! -- store pointers to arguments that were passed in
+    this%ibound  => ibound
+    !
+    ! -- Allocate arrays
+    call this%allocate_arrays(this%dis%nodes)
     !
     ! -- Return
     return
@@ -253,6 +261,13 @@ module GwtFmiModule
     ! -- If mover flows are being read from file, read the next set of records
     if (this%iumvr /= 0) then
       call this%mvrbudobj%bfr_advance(this%dis, this%iout)
+    end if
+    !
+    ! -- If advanced package flows are being read from file, read the next set of records
+    if (this%flows_from_file .and. this%inunit /= 0) then
+      do n = 1, size(this%aptbudobj)
+        call this%aptbudobj(n)%ptr%bfr_advance(this%dis, this%iout)
+      end do
     end if
     !
     ! -- if flow cell is dry, then set gwt%ibound = 0 and conc to dry
@@ -451,6 +466,10 @@ module GwtFmiModule
     ! -- todo: finalize hfr and bfr either here or in a finalize routine
     !
     ! -- deallocate fmi arrays
+    deallocate(this%datp)
+    deallocate(this%gwfpackages)
+    deallocate(this%flowpacknamearray)
+    deallocate(this%aptbudobj)
     call mem_deallocate(this%flowerr)
     call mem_deallocate(this%iatp)
     if (this%flows_from_file) then
@@ -509,6 +528,10 @@ module GwtFmiModule
     call mem_allocate(this%iumvr, 'IUMVR', this%origin)
     call mem_allocate(this%nflowpack, 'NFLOWPACK', this%origin)
     !
+    ! -- Although not a scalar, allocate the advanced package transport
+    !    budget object to zero so that it can be dynamically resized later
+    allocate(this%aptbudobj(0))
+    !
     ! -- Initialize
     this%flows_from_file = .true.
     this%iflowerr = 0
@@ -541,28 +564,22 @@ module GwtFmiModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate variables needed for all cases
-    call mem_allocate(this%flowerr, nodes, 'FLOWERR', this%origin)
-    call mem_allocate(this%iatp, this%nflowpack, 'IATP', this%origin)
-    allocate(this%datp(this%nflowpack))
-    !
-    ! -- Initialize
-    do n = 1, nodes
+    if (this%iflowerr == 0) then
+      call mem_allocate(this%flowerr, 1, 'FLOWERR', this%origin)
+    else
+      call mem_allocate(this%flowerr, nodes, 'FLOWERR', this%origin)
+    end if
+    do n = 1, size(this%flowerr)
       this%flowerr(n) = DZERO
     enddo
-    do n = 1, this%nflowpack
-      this%iatp(n) = 0
-    end do
     !
-    ! -- Allocate variables needed when there isn't a GWF model running 
-    !    concurrently.  In that case, these variables are pointed directly
-    !    to the corresponding GWF variables.
+    ! -- Allocate differently depending on whether or not flows are
+    !    being read from a file.
     if (this%flows_from_file) then
       call mem_allocate(this%igwfinwtup, 'IGWFINWTUP', this%origin)
       call mem_allocate(this%gwfflowja, this%dis%con%nja, 'GWFFLOWJA', this%origin)
       call mem_allocate(this%gwfsat, nodes, 'GWFSAT', this%origin)
       call mem_allocate(this%gwfhead, nodes, 'GWFHEAD', this%origin)
-      call mem_allocate(this%gwfstrgss, 0, 'GWFSTRGSS', this%origin)
-      call mem_allocate(this%gwfstrgsy, 0, 'GWFSTRGSY', this%origin)
       call mem_allocate(this%gwfspdis, 3, nodes, 'GWFSPDIS', this%origin)
       call mem_allocate(this%gwfibound, nodes, 'GWFIBOUND', this%origin)
       call mem_allocate(this%gwficelltype, nodes, 'GWFICELLTYPE', this%origin)
@@ -577,6 +594,29 @@ module GwtFmiModule
       do n = 1, size(this%gwfflowja)
         this%gwfflowja(n) = DZERO
       end do
+      !
+      !
+      ! -- allocate and initialize storage arrays
+      if (this%igwfstrgss == 0) then
+        call mem_allocate(this%gwfstrgss, 1, 'GWFSTRGSS', this%origin)
+      else
+        call mem_allocate(this%gwfstrgss, nodes, 'GWFSTRGSS', this%origin)
+      end if
+      if (this%igwfstrgsy == 0) then
+        call mem_allocate(this%gwfstrgsy, 1, 'GWFSTRGSY', this%origin)
+      else
+        call mem_allocate(this%gwfstrgsy, nodes, 'GWFSTRGSY', this%origin)
+      end if
+      do n = 1, size(this%gwfstrgss)
+        this%gwfstrgss(n) = DZERO
+      end do
+      do n = 1, size(this%gwfstrgsy)
+        this%gwfstrgsy(n) = DZERO
+      end do
+      !
+      ! -- If there is no fmi package, then there are no flows at all or a
+      !    connected GWF model, so allocate gwfpackages to zero
+      if (this%inunit == 0) call this%allocate_gwfpackages(this%nflowpack)
     end if
     !
     ! -- Return
@@ -669,7 +709,7 @@ module GwtFmiModule
 
   subroutine read_packagedata(this)
 ! ******************************************************************************
-! read_packagedata -- Read Options
+! read_packagedata -- Read PACKAGEDATA block
 ! Subroutine: (1) read packagedata block from input file
 ! ******************************************************************************
 !
@@ -677,20 +717,30 @@ module GwtFmiModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use OpenSpecModule, only: ACCESS, FORM
-    use ConstantsModule, only: LINELENGTH, DEM6
+    use ConstantsModule, only: LINELENGTH, DEM6, LENPACKAGENAME
     use InputOutputModule, only: getunit, openfile, urdaux
     use SimModule, only: store_error, store_error_unit, ustop
     ! -- dummy
     class(GwtFmiType) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg, keyword, fname
+    type(BudgetObjectType), pointer :: budobjptr
+    character(len=LINELENGTH) :: keyword, fname
+    character(len=LENPACKAGENAME) :: pname
+    integer(I4B) :: i
     integer(I4B) :: ierr
     integer(I4B) :: inunit
+    integer(I4B) :: iapt
     logical :: isfound, endOfBlock
+    logical :: blockrequired
+    type(BudObjPtrArray), dimension(:), allocatable :: tmpbudobj
 ! ------------------------------------------------------------------------------
     !
+    ! -- initialize
+    iapt = 0
+    !
     ! -- get options block
-    call this%parser%GetBlock('PACKAGEDATA', isfound, ierr, blockRequired=.false.)
+    call this%parser%GetBlock('PACKAGEDATA', isfound, ierr,                    &
+                              blockRequired=blockRequired)
     !
     ! -- parse options block if detected
     if (isfound) then
@@ -713,6 +763,7 @@ module GwtFmiModule
             call openfile(inunit, this%iout, fname, 'DATA(BINARY)', FORM,      &
               ACCESS, 'UNKNOWN')
             this%iubud = inunit
+            call this%initialize_bfr()
           case ('GWFHEAD')
             call this%parser%GetStringCaps(keyword)
             if(keyword /= 'FILEIN') then
@@ -726,6 +777,7 @@ module GwtFmiModule
             call openfile(inunit, this%iout, fname, 'DATA(BINARY)', FORM,      &
               ACCESS, 'UNKNOWN')
             this%iuhds = inunit
+            call this%initialize_hfr()
           case ('GWFMOVER')
             call this%parser%GetStringCaps(keyword)
             if(keyword /= 'FILEIN') then
@@ -739,12 +791,41 @@ module GwtFmiModule
             call openfile(inunit, this%iout, fname, 'DATA(BINARY)', FORM,      &
               ACCESS, 'UNKNOWN')
             this%iumvr = inunit
+            call budgetobject_cr_bfr(this%mvrbudobj, 'MVT', this%iumvr,    &
+                                     this%iout)
+            call this%mvrbudobj%fill_from_bfr(this%dis, this%iout)
           case default
-            write(errmsg,'(4x,a,a)')'***ERROR. UNKNOWN FMI PACKAGEDATA: ', &
-                                     trim(keyword)
-            call store_error(errmsg)
-            call this%parser%StoreErrorUnit()
-            call ustop()
+            !
+            ! --expand the size of aptbudobj, which stores a pointer to the budobj
+            allocate(tmpbudobj(iapt))
+            do i = 1, size(this%aptbudobj)
+              tmpbudobj(i)%ptr => this%aptbudobj(i)%ptr
+            end do
+            deallocate(this%aptbudobj)
+            allocate(this%aptbudobj(iapt + 1))
+            do i = 1, size(tmpbudobj)
+              this%aptbudobj(i)%ptr => tmpbudobj(i)%ptr
+            end do
+            deallocate(tmpbudobj)
+            !
+            ! -- Open the budget file and start filling it
+            iapt = iapt + 1
+            pname = keyword
+            call this%parser%GetStringCaps(keyword)
+            if(keyword /= 'FILEIN') then
+              call store_error('PACKAGE NAME MUST BE FOLLOWED BY ' //     &
+                '"FILEIN" then by filename.')
+              call this%parser%StoreErrorUnit()
+              call ustop()
+            endif
+            call this%parser%GetString(fname)
+            inunit = getunit()
+            call openfile(inunit, this%iout, fname, 'DATA(BINARY)', FORM,      &
+              ACCESS, 'UNKNOWN')
+            call budgetobject_cr_bfr(budobjptr, pname, inunit,    &
+                                     this%iout, colconv2=['GWF             '])
+            call budobjptr%fill_from_bfr(this%dis, this%iout)
+            this%aptbudobj(iapt)%ptr => budobjptr
         end select
       end do
       write(this%iout,'(1x,a)') 'END OF FMI PACKAGEDATA'
@@ -753,6 +834,37 @@ module GwtFmiModule
     ! -- return
     return
   end subroutine read_packagedata
+  
+  subroutine set_aptbudobj_pointer(this, name, budobjptr)
+! ******************************************************************************
+! set_aptbudobj_pointer -- an advanced transport can pass in a name and a
+!   pointer budget object, and this routine will look through the budget
+!   objects managed by FMI and point to the one with the same name, such as
+!   LAK-1, SFR-1, etc.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    class(GwtFmiType) :: this
+    ! -- dumm
+    character(len=*), intent(in) :: name
+    type(BudgetObjectType), pointer :: budobjptr
+    ! -- local
+    integer(I4B) :: i
+! ------------------------------------------------------------------------------
+    !
+    ! -- find and set the pointer
+    do i = 1, size(this%aptbudobj)
+      if (this%aptbudobj(i)%ptr%name == name) then
+        budobjptr => this%aptbudobj(i)%ptr
+        exit
+      end if
+    end do
+    !
+    ! -- return
+    return
+  end subroutine set_aptbudobj_pointer
 
   subroutine initialize_bfr(this)
 ! ******************************************************************************
@@ -763,7 +875,7 @@ module GwtFmiModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use MemoryManagerModule, only: mem_reallocate
+    use MemoryManagerModule, only: mem_allocate
     use SimModule, only: store_error, store_error_unit, ustop, count_errors
     ! -- dummy
     class(GwtFmiType) :: this
@@ -781,12 +893,6 @@ module GwtFmiModule
     integer(I4B), dimension(:), allocatable :: imap
 ! ------------------------------------------------------------------------------
     !
-    ! -- initialize variables
-    found_flowja = .false.
-    found_dataspdis = .false.
-    found_stoss = .false.
-    found_stosy = .false.
-    !
     ! -- Initialize the budget file reader
     call this%bfr%initialize(this%iubud, this%iout, ncrbud)
     !
@@ -794,6 +900,11 @@ module GwtFmiModule
     allocate(imap(this%bfr%nbudterms))
     imap(:) = 0
     nflowpack = 0
+    found_flowja = .false.
+    found_dataspdis = .false.
+    found_datasat = .false.
+    found_stoss = .false.
+    found_stosy = .false.
     do i = 1, this%bfr%nbudterms
       select case(trim(adjustl(this%bfr%budtxtarray(i))))
       case ('FLOW-JA-FACE')
@@ -804,16 +915,21 @@ module GwtFmiModule
         found_datasat = .true.
       case ('STO-SS')
         found_stoss = .true.
+        this%igwfstrgss = 1
       case ('STO-SY')
         found_stosy = .true.
+        this%igwfstrgsy = 1
       case default
         nflowpack = nflowpack + 1
         imap(i) = 1
       end select
     end do
     !
-    ! -- allocate gwfpackages and set the name
+    ! -- allocate gwfpackage arrays (gwfpackages, iatp, datp, ...)
     call this%allocate_gwfpackages(nflowpack)
+    !
+    ! -- Copy the package name and aux names from budget file reader
+    !    to the gwfpackages derived-type variable
     ip = 1
     do i = 1, this%bfr%nbudterms
       if (imap(i) == 0) cycle
@@ -823,15 +939,8 @@ module GwtFmiModule
       ip = ip + 1
     end do
     !
-    ! -- Now that nflowpack is known, need to reallocate the advanced
-    !    package indicator array
-    call mem_reallocate(this%iatp, nflowpack, 'IATP', this%origin)
-    if (associated(this%datp)) then
-      deallocate(this%datp)
-      allocate(this%datp(nflowpack))
-    end if
-    this%iatp(:) = 0
-    allocate(this%flowpacknamearray(nflowpack))
+    ! -- Copy just the package names for the boundary packages into
+    !    the flowpacknamearray
     ip = 1
     do i = 1, size(imap)
       if (imap(i) == 1) then
@@ -840,20 +949,16 @@ module GwtFmiModule
       end if
     end do
     !
-    ! -- Reallocate storage arrays if they were found
-    if (found_stoss) then
-      this%igwfstrgss = 1
-      call mem_reallocate(this%gwfstrgss, this%dis%nodes, 'GWFSTRGSS', this%origin)
-    end if
-    if (found_stosy) then
-      this%igwfstrgsy = 1
-      call mem_reallocate(this%gwfstrgsy, this%dis%nodes, 'GWFSTRGSY', this%origin)
-    end if
-    !
-    ! -- Error if flowja and qxqyqz not found
+    ! -- Error if specific discharge, saturation or flowja not found
     if (.not. found_dataspdis) then
       write(errmsg, '(4x,a)') '***ERROR. SPECIFIC DISCHARGE NOT FOUND IN &
                               &BUDGET FILE. SAVE_SPECIFIC_DISCHARGE AND &
+                              &SAVE_FLOWS MUST BE ACTIVATED IN THE NPF PACKAGE.'
+      call store_error(errmsg)
+    end if
+    if (.not. found_datasat) then
+      write(errmsg, '(4x,a)') '***ERROR. SATURATION NOT FOUND IN &
+                              &BUDGET FILE. SAVE_SATURATION AND &
                               &SAVE_FLOWS MUST BE ACTIVATED IN THE NPF PACKAGE.'
       call store_error(errmsg)
     end if
@@ -1159,14 +1264,28 @@ module GwtFmiModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(GwtFmiType) :: this
     integer(I4B), intent(in) :: nflowpack
+    ! -- local
+    integer(I4B) :: n
 ! ------------------------------------------------------------------------------
     !
-    ! -- allocate
+    ! -- direct allocate
     allocate(this%gwfpackages(nflowpack))
+    allocate(this%flowpacknamearray(nflowpack))
+    allocate(this%datp(nflowpack))
+    !
+    ! -- mem_allocate
+    call mem_allocate(this%iatp, nflowpack, 'IATP', this%origin)
+    !
+    ! -- initialize
     this%nflowpack = nflowpack
+    do n = 1, this%nflowpack
+      this%iatp(n) = 0
+      this%flowpacknamearray(n) = ''
+    end do
     !
     ! -- return
     return
