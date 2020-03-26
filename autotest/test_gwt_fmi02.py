@@ -1,3 +1,5 @@
+# tests to ability to run flow model first followed by transport model
+
 import os
 import shutil
 import numpy as np
@@ -29,21 +31,24 @@ if os.path.isdir(d):
     shutil.rmtree(d)
 
 
-def test_flow_model():
+def run_flow_model():
     name = 'flow'
     ws = os.path.join(testdir, testgroup, name)
     sim = flopy.mf6.MFSimulation(sim_name=name, sim_ws=ws,
                                  exe_name=exe_name_mf6)
-    tdis = flopy.mf6.ModflowTdis(sim)
+    pd = [(1., 1, 1.), (1., 1, 1.)]
+    tdis = flopy.mf6.ModflowTdis(sim, nper=len(pd), perioddata=pd)
     ims = flopy.mf6.ModflowIms(sim)
     gwf = flopy.mf6.ModflowGwf(sim, modelname=name, save_flows=True)
     dis = flopy.mf6.ModflowGwfdis(gwf, nrow=10, ncol=10)
     ic = flopy.mf6.ModflowGwfic(gwf)
     npf = flopy.mf6.ModflowGwfnpf(gwf, save_specific_discharge=True,
                                   save_saturation=True)
-    chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=[[(0, 0, 0), 1., 1.],
-                                                           [(0, 9, 9), 0., 1.]],
-                                  auxiliary=['concentration'], pname='CHD-1')
+    spd = {0: [[(0, 0, 0), 1., 1.], [(0, 9, 9), 0., 0.]],
+           1: [[(0, 0, 0), 0., 0.], [(0, 9, 9), 1., 2.]],}
+    chd = flopy.mf6.ModflowGwfchd(gwf, pname='CHD-1',
+                                  stress_period_data=spd,
+                                  auxiliary=['concentration'])
     budget_file = name + '.bud'
     head_file = name + '.hds'
     oc = flopy.mf6.ModflowGwfoc(gwf,
@@ -59,12 +64,12 @@ def test_flow_model():
     return
 
 
-def test_transport_model():
+def run_transport_model():
     name = 'transport'
     ws = os.path.join(testdir, testgroup, name)
     sim = flopy.mf6.MFSimulation(sim_name=name, sim_ws=ws,
                                  exe_name=exe_name_mf6)
-    pd = [(1., 10, 1.)]
+    pd = [(1., 10, 1.), (1., 10, 1.)]
     tdis = flopy.mf6.ModflowTdis(sim, nper=len(pd), perioddata=pd)
     ims = flopy.mf6.ModflowIms(sim, linear_acceleration='BICGSTAB')
     gwt = flopy.mf6.ModflowGwt(sim, modelname=name, save_flows=True)
@@ -75,14 +80,16 @@ def test_transport_model():
     pd = [('GWFBUDGET', '../flow/flow.bud')]
     fmi = flopy.mf6.ModflowGwtfmi(gwt, packagedata=pd)
     sources = [('CHD-1', 'AUX', 'CONCENTRATION')]
-    ssm = flopy.mf6.ModflowGwtssm(gwt, sources=sources)
+    ssm = flopy.mf6.ModflowGwtssm(gwt, print_flows=True, sources=sources)
     budget_file = name + '.bud'
     concentration_file = name + '.ucn'
     oc = flopy.mf6.ModflowGwtoc(gwt,
                                 budget_filerecord=budget_file,
                                 concentration_filerecord=concentration_file,
                                 saverecord=[('CONCENTRATION', 'ALL'),
-                                            ('BUDGET', 'ALL')])
+                                            ('BUDGET', 'ALL')],
+                                printrecord=[('CONCENTRATION', 'LAST'),
+                                             ('BUDGET', 'LAST')])
     sim.write_simulation()
     sim.run_simulation()
     fname = os.path.join(ws, budget_file)
@@ -92,12 +99,20 @@ def test_transport_model():
     return
 
 
+def test_fmi():
+    run_flow_model()
+    run_transport_model()
+    d = os.path.join(testdir, testgroup)
+    #if os.path.isdir(d):
+    #    shutil.rmtree(d)
+    return
+
+
 
 if __name__ == "__main__":
     # print message
     print('standalone run of {}'.format(os.path.basename(__file__)))
 
     # run tests
-    test_flow_model()
-    test_transport_model()
+    test_fmi()
 
