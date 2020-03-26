@@ -66,7 +66,6 @@ module GwtAptModule
     integer(I4B), pointer                              :: iprconc => null()
     integer(I4B), pointer                              :: iconcout => null()
     integer(I4B), pointer                              :: ibudgetout => null()
-    integer(I4B), pointer                              :: iflowbudget => null() ! unit number for existing flow budget file
     integer(I4B), pointer                              :: cbcauxitems => NULL()
     integer(I4B), pointer                              :: ncv => null()         ! number of control volumes
     integer(I4B), pointer                              :: bditems => NULL()
@@ -693,11 +692,6 @@ module GwtAptModule
     integer(I4B) :: j, iaux, ii
 ! ------------------------------------------------------------------------------
     !
-    ! -- If flows are being read from file, then need to advance
-    if (this%iflowbudget /= 0) then
-      call this%flowbudptr%bfr_advance(this%dis, this%iout)
-    end if
-    !
     ! -- Advance the time series
     call this%TsManager%ad()
     !
@@ -1198,7 +1192,6 @@ module GwtAptModule
     call mem_allocate(this%iprconc, 'IPRCONC', this%origin)
     call mem_allocate(this%iconcout, 'ICONCOUT', this%origin)
     call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%origin)
-    call mem_allocate(this%iflowbudget, 'IFLOWBUDGET', this%origin)
     call mem_allocate(this%igwfaptpak, 'IGWFAPTPAK', this%origin)
     call mem_allocate(this%ncv, 'NCV', this%origin)
     call mem_allocate(this%bditems, 'BDITEMS', this%origin)
@@ -1215,7 +1208,6 @@ module GwtAptModule
     this%iprconc = 0
     this%iconcout = 0
     this%ibudgetout = 0
-    this%iflowbudget = 0
     this%igwfaptpak = 0
     this%ncv = 0
     this%bditems = 9
@@ -1344,7 +1336,6 @@ module GwtAptModule
     call mem_deallocate(this%iprconc)
     call mem_deallocate(this%iconcout)
     call mem_deallocate(this%ibudgetout)
-    call mem_deallocate(this%iflowbudget)
     call mem_deallocate(this%igwfaptpak)
     call mem_deallocate(this%ncv)
     call mem_deallocate(this%bditems)
@@ -1450,18 +1441,6 @@ module GwtAptModule
           found = .true.
         else
           call store_error('OPTIONAL BUDGET KEYWORD MUST BE FOLLOWED BY FILEOUT')
-        end if
-      case('FLOW_BUDGET')
-        call this%parser%GetStringCaps(keyword)
-        if (keyword == 'FILEIN') then
-          call this%parser%GetString(fname)
-          this%iflowbudget = getunit()
-          call openfile(this%iflowbudget, this%iout, fname, 'DATA(BINARY)',       &
-                        form, access, 'UNKNOWN')
-          write(this%iout,fmtlakbud) trim(adjustl(this%text)), 'BUDGET', fname, this%iflowbudget
-          found = .true.
-        else
-          call store_error('OPTIONAL FLOW_BUDGET KEYWORD MUST BE FOLLOWED BY FILEIN')
         end if
       case default
         !

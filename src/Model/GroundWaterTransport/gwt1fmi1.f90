@@ -26,6 +26,10 @@ module GwtFmiModule
     real(DP), dimension(:), contiguous, pointer :: qmfrommvr => null()
   end type
   
+  type :: BudObjPtrArray
+    type(BudgetObjectType), pointer :: ptr
+  end type BudObjPtrArray  
+  
   type, extends(NumericalPackageType) :: GwtFmiType
     
     logical, pointer                                :: flows_from_file => null() ! if .false., then there is no water flow
@@ -55,6 +59,7 @@ module GwtFmiModule
     type(BudgetObjectType), pointer                 :: mvrbudobj    => null()   ! pointer to the mover budget budget object
     type(DataAdvancedPackageType), dimension(:), pointer, contiguous :: datp => null()
     character(len=16), dimension(:), allocatable    :: flowpacknamearray        ! array of boundary package names (e.g. LAK-1, SFR-3, etc.)
+    type(BudObjPtrArray), dimension(:), allocatable :: aptbudobj              ! flow budget objects for the advanced packages
   contains
   
     procedure :: fmi_df
@@ -76,6 +81,7 @@ module GwtFmiModule
     procedure :: finalize_hfr
     procedure :: allocate_gwfpackages
     procedure :: get_package_index
+    procedure :: set_aptbudobj_pointer
   
   end type GwtFmiType
 
@@ -167,23 +173,6 @@ module GwtFmiModule
       call this%read_packagedata()
     end if
     !
-    ! -- Initialize the budget file reader
-    if (this%iubud /= 0) then
-      call this%initialize_bfr()
-    endif
-    !
-    ! -- Initialize the head file reader
-    if (this%iuhds /= 0) then
-      call this%initialize_hfr()
-    endif
-    !
-    ! -- Initialize the mover reader
-    if (this%iumvr /= 0) then
-      call budgetobject_cr_bfr(this%mvrbudobj, this%name, this%iumvr,    &
-                               this%iout)
-      call this%mvrbudobj%fill_from_bfr(this%dis, this%iout)
-    end if
-    !
     ! -- Make sure that ssm is on if there are any boundary packages
     if (inssm == 0) then
       if (this%nflowpack > 0) then
@@ -272,6 +261,13 @@ module GwtFmiModule
     ! -- If mover flows are being read from file, read the next set of records
     if (this%iumvr /= 0) then
       call this%mvrbudobj%bfr_advance(this%dis, this%iout)
+    end if
+    !
+    ! -- If advanced package flows are being read from file, read the next set of records
+    if (this%flows_from_file .and. this%inunit /= 0) then
+      do n = 1, size(this%aptbudobj)
+        call this%aptbudobj(n)%ptr%bfr_advance(this%dis, this%iout)
+      end do
     end if
     !
     ! -- if flow cell is dry, then set gwt%ibound = 0 and conc to dry
@@ -716,17 +712,26 @@ module GwtFmiModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use OpenSpecModule, only: ACCESS, FORM
-    use ConstantsModule, only: LINELENGTH, DEM6
+    use ConstantsModule, only: LINELENGTH, DEM6, LENPACKAGENAME
     use InputOutputModule, only: getunit, openfile, urdaux
     use SimModule, only: store_error, store_error_unit, ustop
     ! -- dummy
     class(GwtFmiType) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg, keyword, fname
+    type(BudgetObjectType), pointer :: budobjptr
+    character(len=LINELENGTH) :: keyword, fname
+    character(len=LENPACKAGENAME) :: pname
+    integer(I4B) :: i
     integer(I4B) :: ierr
     integer(I4B) :: inunit
+    integer(I4B) :: iapt
     logical :: isfound, endOfBlock
+    type(BudObjPtrArray), dimension(:), allocatable :: tmpbudobj
 ! ------------------------------------------------------------------------------
+    !
+    ! -- initialize
+    allocate(this%aptbudobj(0))
+    iapt = 0
     !
     ! -- get options block
     call this%parser%GetBlock('PACKAGEDATA', isfound, ierr, blockRequired=.false.)
@@ -752,6 +757,7 @@ module GwtFmiModule
             call openfile(inunit, this%iout, fname, 'DATA(BINARY)', FORM,      &
               ACCESS, 'UNKNOWN')
             this%iubud = inunit
+            call this%initialize_bfr()
           case ('GWFHEAD')
             call this%parser%GetStringCaps(keyword)
             if(keyword /= 'FILEIN') then
@@ -765,6 +771,7 @@ module GwtFmiModule
             call openfile(inunit, this%iout, fname, 'DATA(BINARY)', FORM,      &
               ACCESS, 'UNKNOWN')
             this%iuhds = inunit
+            call this%initialize_hfr()
           case ('GWFMOVER')
             call this%parser%GetStringCaps(keyword)
             if(keyword /= 'FILEIN') then
@@ -778,12 +785,41 @@ module GwtFmiModule
             call openfile(inunit, this%iout, fname, 'DATA(BINARY)', FORM,      &
               ACCESS, 'UNKNOWN')
             this%iumvr = inunit
+            call budgetobject_cr_bfr(this%mvrbudobj, 'MVT', this%iumvr,    &
+                                     this%iout)
+            call this%mvrbudobj%fill_from_bfr(this%dis, this%iout)
           case default
-            write(errmsg,'(4x,a,a)')'***ERROR. UNKNOWN FMI PACKAGEDATA: ', &
-                                     trim(keyword)
-            call store_error(errmsg)
-            call this%parser%StoreErrorUnit()
-            call ustop()
+            !
+            ! --expand the size of aptbudobj, which stores a pointer to the budobj
+            allocate(tmpbudobj(iapt))
+            do i = 1, size(this%aptbudobj)
+              tmpbudobj(i)%ptr => this%aptbudobj(i)%ptr
+            end do
+            deallocate(this%aptbudobj)
+            allocate(this%aptbudobj(iapt + 1))
+            do i = 1, size(tmpbudobj)
+              this%aptbudobj(i)%ptr => tmpbudobj(i)%ptr
+            end do
+            deallocate(tmpbudobj)
+            !
+            ! -- Open the budget file and start filling it
+            iapt = iapt + 1
+            pname = keyword
+            call this%parser%GetStringCaps(keyword)
+            if(keyword /= 'FILEIN') then
+              call store_error('PACKAGE NAME MUST BE FOLLOWED BY ' //     &
+                '"FILEIN" then by filename.')
+              call this%parser%StoreErrorUnit()
+              call ustop()
+            endif
+            call this%parser%GetString(fname)
+            inunit = getunit()
+            call openfile(inunit, this%iout, fname, 'DATA(BINARY)', FORM,      &
+              ACCESS, 'UNKNOWN')
+            call budgetobject_cr_bfr(budobjptr, pname, inunit,    &
+                                     this%iout, colconv2=['GWF             '])
+            call budobjptr%fill_from_bfr(this%dis, this%iout)
+            this%aptbudobj(iapt)%ptr => budobjptr
         end select
       end do
       write(this%iout,'(1x,a)') 'END OF FMI PACKAGEDATA'
@@ -792,6 +828,20 @@ module GwtFmiModule
     ! -- return
     return
   end subroutine read_packagedata
+  
+  subroutine set_aptbudobj_pointer(this, name, budobjptr)
+    class(GwtFmiType) :: this
+    character(len=*), intent(in) :: name
+    type(BudgetObjectType), pointer :: budobjptr
+    integer(I4B) :: i
+    do i = 1, size(this%aptbudobj)
+      if (this%aptbudobj(i)%ptr%name == name) then
+        budobjptr => this%aptbudobj(i)%ptr
+        exit
+      end if
+    end do
+    return
+  end subroutine set_aptbudobj_pointer
 
   subroutine initialize_bfr(this)
 ! ******************************************************************************

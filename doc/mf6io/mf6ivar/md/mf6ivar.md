@@ -868,10 +868,8 @@
 | GWT | SFT | OPTIONS | BUDGET | KEYWORD | keyword to specify that record corresponds to the budget. |
 | GWT | SFT | OPTIONS | FILEOUT | KEYWORD | keyword to specify that an output filename is expected next. |
 | GWT | SFT | OPTIONS | BUDGETFILE | STRING | name of the binary output file to write budget information. |
-| GWT | SFT | OPTIONS | FLOW_BUDGET | KEYWORD | keyword to specify that record corresponds to the flow budget binary input file. |
-| GWT | SFT | OPTIONS | FILEIN | KEYWORD | keyword to specify that an input filename is expected next. |
-| GWT | SFT | OPTIONS | FLOWBUDGETFILE | STRING | name of the binary lake sfr budget file to read as input for the SFT Package.  This budget file can be created by running a separate GWF Model with the SFR Package and saving the flows to the budget file. |
 | GWT | SFT | OPTIONS | TS6 | KEYWORD | keyword to specify that record corresponds to a time-series file. |
+| GWT | SFT | OPTIONS | FILEIN | KEYWORD | keyword to specify that an input filename is expected next. |
 | GWT | SFT | OPTIONS | TS6_FILENAME | STRING | defines a time-series file defining time series that can be used to assign time-varying values. See the ``Time-Variable Input'' section for instructions on using the time-series capability. |
 | GWT | SFT | OPTIONS | OBS6 | KEYWORD | keyword to specify that record corresponds to an observations file. |
 | GWT | SFT | OPTIONS | OBS6_FILENAME | STRING | name of input file to define observations for the SFT package. See the ``Observation utility'' section for instructions for preparing observation input files. Table \ref{table:obstype} lists observation type(s) supported by the SFT package. |
@@ -902,10 +900,8 @@
 | GWT | LKT | OPTIONS | BUDGET | KEYWORD | keyword to specify that record corresponds to the budget. |
 | GWT | LKT | OPTIONS | FILEOUT | KEYWORD | keyword to specify that an output filename is expected next. |
 | GWT | LKT | OPTIONS | BUDGETFILE | STRING | name of the binary output file to write budget information. |
-| GWT | LKT | OPTIONS | FLOW_BUDGET | KEYWORD | keyword to specify that record corresponds to the flow budget binary input file. |
-| GWT | LKT | OPTIONS | FILEIN | KEYWORD | keyword to specify that an input filename is expected next. |
-| GWT | LKT | OPTIONS | FLOWBUDGETFILE | STRING | name of the binary lake flow budget file to read as input for the LKT Package.  This budget file can be created by running a separate GWF Model with the Lake Package and saving the lake flows to the budget file. |
 | GWT | LKT | OPTIONS | TS6 | KEYWORD | keyword to specify that record corresponds to a time-series file. |
+| GWT | LKT | OPTIONS | FILEIN | KEYWORD | keyword to specify that an input filename is expected next. |
 | GWT | LKT | OPTIONS | TS6_FILENAME | STRING | defines a time-series file defining time series that can be used to assign time-varying values. See the ``Time-Variable Input'' section for instructions on using the time-series capability. |
 | GWT | LKT | OPTIONS | OBS6 | KEYWORD | keyword to specify that record corresponds to an observations file. |
 | GWT | LKT | OPTIONS | OBS6_FILENAME | STRING | name of input file to define observations for the LKT package. See the ``Observation utility'' section for instructions for preparing observation input files. Table \ref{table:obstype} lists observation type(s) supported by the LKT package. |
@@ -936,10 +932,8 @@
 | GWT | MWT | OPTIONS | BUDGET | KEYWORD | keyword to specify that record corresponds to the budget. |
 | GWT | MWT | OPTIONS | FILEOUT | KEYWORD | keyword to specify that an output filename is expected next. |
 | GWT | MWT | OPTIONS | BUDGETFILE | STRING | name of the binary output file to write budget information. |
-| GWT | MWT | OPTIONS | FLOW_BUDGET | KEYWORD | keyword to specify that record corresponds to the flow budget binary input file. |
-| GWT | MWT | OPTIONS | FILEIN | KEYWORD | keyword to specify that an input filename is expected next. |
-| GWT | MWT | OPTIONS | FLOWBUDGETFILE | STRING | name of the binary maw flow budget file to read as input for the MWT Package.  This budget file can be created by running a separate GWF Model with the Multi-Aquifer Well Package and saving the maw flows to the budget file. |
 | GWT | MWT | OPTIONS | TS6 | KEYWORD | keyword to specify that record corresponds to a time-series file. |
+| GWT | MWT | OPTIONS | FILEIN | KEYWORD | keyword to specify that an input filename is expected next. |
 | GWT | MWT | OPTIONS | TS6_FILENAME | STRING | defines a time-series file defining time series that can be used to assign time-varying values. See the ``Time-Variable Input'' section for instructions on using the time-series capability. |
 | GWT | MWT | OPTIONS | OBS6 | KEYWORD | keyword to specify that record corresponds to an observations file. |
 | GWT | MWT | OPTIONS | OBS6_FILENAME | STRING | name of input file to define observations for the MWT package. See the ``Observation utility'' section for instructions for preparing observation input files. Table \ref{table:obstype} lists observation type(s) supported by the MWT package. |
@@ -967,10 +961,8 @@
 | GWT | UZT | OPTIONS | BUDGET | KEYWORD | keyword to specify that record corresponds to the budget. |
 | GWT | UZT | OPTIONS | FILEOUT | KEYWORD | keyword to specify that an output filename is expected next. |
 | GWT | UZT | OPTIONS | BUDGETFILE | STRING | name of the binary output file to write budget information. |
-| GWT | UZT | OPTIONS | FLOW_BUDGET | KEYWORD | keyword to specify that record corresponds to the flow budget binary input file. |
-| GWT | UZT | OPTIONS | FILEIN | KEYWORD | keyword to specify that an input filename is expected next. |
-| GWT | UZT | OPTIONS | FLOWBUDGETFILE | STRING | name of the binary maw flow budget file to read as input for the UZT Package.  This budget file can be created by running a separate GWF Model with the Unsaturated Zone Flow Package and saving the UZF flows to the budget file. |
 | GWT | UZT | OPTIONS | TS6 | KEYWORD | keyword to specify that record corresponds to a time-series file. |
+| GWT | UZT | OPTIONS | FILEIN | KEYWORD | keyword to specify that an input filename is expected next. |
 | GWT | UZT | OPTIONS | TS6_FILENAME | STRING | defines a time-series file defining time series that can be used to assign time-varying values. See the ``Time-Variable Input'' section for instructions on using the time-series capability. |
 | GWT | UZT | OPTIONS | OBS6 | KEYWORD | keyword to specify that record corresponds to an observations file. |
 | GWT | UZT | OPTIONS | OBS6_FILENAME | STRING | name of input file to define observations for the UZT package. See the ``Observation utility'' section for instructions for preparing observation input files. Table \ref{table:obstype} lists observation type(s) supported by the UZT package. |
