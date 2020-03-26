@@ -169,7 +169,7 @@ module GwtFmiModule
     end if
     !
     ! -- Read packagedata options
-    if (this%inunit /= 0) then
+    if (this%inunit /= 0 .and. this%flows_from_file) then
       call this%read_packagedata()
     end if
     !
@@ -469,6 +469,7 @@ module GwtFmiModule
     deallocate(this%datp)
     deallocate(this%gwfpackages)
     deallocate(this%flowpacknamearray)
+    deallocate(this%aptbudobj)
     call mem_deallocate(this%flowerr)
     call mem_deallocate(this%iatp)
     if (this%flows_from_file) then
@@ -526,6 +527,10 @@ module GwtFmiModule
     call mem_allocate(this%iuhds, 'IUHDS', this%origin)
     call mem_allocate(this%iumvr, 'IUMVR', this%origin)
     call mem_allocate(this%nflowpack, 'NFLOWPACK', this%origin)
+    !
+    ! -- Although not a scalar, allocate the advanced package transport
+    !    budget object to zero so that it can be dynamically resized later
+    allocate(this%aptbudobj(0))
     !
     ! -- Initialize
     this%flows_from_file = .true.
@@ -726,15 +731,16 @@ module GwtFmiModule
     integer(I4B) :: inunit
     integer(I4B) :: iapt
     logical :: isfound, endOfBlock
+    logical :: blockrequired
     type(BudObjPtrArray), dimension(:), allocatable :: tmpbudobj
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize
-    allocate(this%aptbudobj(0))
     iapt = 0
     !
     ! -- get options block
-    call this%parser%GetBlock('PACKAGEDATA', isfound, ierr, blockRequired=.false.)
+    call this%parser%GetBlock('PACKAGEDATA', isfound, ierr,                    &
+                              blockRequired=blockRequired)
     !
     ! -- parse options block if detected
     if (isfound) then
@@ -830,16 +836,33 @@ module GwtFmiModule
   end subroutine read_packagedata
   
   subroutine set_aptbudobj_pointer(this, name, budobjptr)
+! ******************************************************************************
+! set_aptbudobj_pointer -- an advanced transport can pass in a name and a
+!   pointer budget object, and this routine will look through the budget
+!   objects managed by FMI and point to the one with the same name, such as
+!   LAK-1, SFR-1, etc.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
     class(GwtFmiType) :: this
+    ! -- dumm
     character(len=*), intent(in) :: name
     type(BudgetObjectType), pointer :: budobjptr
+    ! -- local
     integer(I4B) :: i
+! ------------------------------------------------------------------------------
+    !
+    ! -- find and set the pointer
     do i = 1, size(this%aptbudobj)
       if (this%aptbudobj(i)%ptr%name == name) then
         budobjptr => this%aptbudobj(i)%ptr
         exit
       end if
     end do
+    !
+    ! -- return
     return
   end subroutine set_aptbudobj_pointer
 

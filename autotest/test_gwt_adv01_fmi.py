@@ -140,9 +140,9 @@ def get_model(idx, dir):
 
 
     # flow model interface
-    flowfiles = [('GWFBUDGET', 'mybudget.bud'),
-                 ('GWFHEAD', 'myheads.hds')]
-    fmi = flopy.mf6.ModflowGwtfmi(gwt, flowfiles=flowfiles)
+    packagedata = [('GWFBUDGET', 'mybudget.bud'),
+                   ('GWFHEAD', 'myheads.hds')]
+    fmi = flopy.mf6.ModflowGwtfmi(gwt, packagedata=packagedata)
 
     # output control
     oc = flopy.mf6.ModflowGwtoc(gwt,

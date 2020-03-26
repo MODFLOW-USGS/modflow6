@@ -1,3 +1,6 @@
+! -- need a way to write a budget table to the list file for the budget terms
+! -- need observations for SSM terms
+  
 module GwtSsmModule
   
   use KindModule,             only: DP, I4B
