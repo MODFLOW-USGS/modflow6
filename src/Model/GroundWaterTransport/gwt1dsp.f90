@@ -231,7 +231,7 @@ module GwtDspModule
     ! -- modules
     use TdisModule, only: kstp, kper
     ! -- dummy
-     class(GwtDspType) :: this
+    class(GwtDspType) :: this
     ! -- local
 ! ------------------------------------------------------------------------------
     !

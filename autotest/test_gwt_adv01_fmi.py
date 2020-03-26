@@ -125,12 +125,20 @@ def get_model(idx, dir):
     wel = np.array([(0 + 1, 0 + 1, 1., 1.)], dtype=dt)
     chd = np.array([(ncol - 1 + 1, 0 + 1, -1., 0.)], dtype=dt)
 
+    dt = np.dtype([('ID1', np.int32),
+                   ('ID2', np.int32),
+                   ('FLOW', np.float64),
+                   ('SATURATION', np.float64),
+                   ])
+    sat = np.array([(i, i, 0., 1.) for i in range(nlay * nrow * ncol)], dtype=dt)
 
     fname = os.path.join(ws, 'mybudget.bud')
     with open(fname, 'wb') as fbin:
         for kstp in range(1): #nstp[0]):
             write_budget(fbin, flowja, kstp=kstp + 1)
             write_budget(fbin, spdis, text='      DATA-SPDIS', imeth=6,
+                         kstp=kstp + 1)
+            write_budget(fbin, sat, text='        DATA-SAT', imeth=6,
                          kstp=kstp + 1)
             write_budget(fbin, wel, text='             WEL', imeth=6,
                          text2id2='           WEL-1', kstp=kstp + 1)
@@ -140,9 +148,9 @@ def get_model(idx, dir):
 
 
     # flow model interface
-    flowfiles = [('GWFBUDGET', 'mybudget.bud'),
-                 ('GWFHEAD', 'myheads.hds')]
-    fmi = flopy.mf6.ModflowGwtfmi(gwt, flowfiles=flowfiles)
+    packagedata = [('GWFBUDGET', 'mybudget.bud'),
+                   ('GWFHEAD', 'myheads.hds')]
+    fmi = flopy.mf6.ModflowGwtfmi(gwt, packagedata=packagedata)
 
     # output control
     oc = flopy.mf6.ModflowGwtoc(gwt,

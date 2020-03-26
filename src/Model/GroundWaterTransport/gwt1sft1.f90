@@ -173,14 +173,9 @@ module GwtSftModule
     ! -- If user is specifying flows in a binary budget file, then set up
     !    the budget file reader, otherwise set a pointer to the flow package
     !    budobj
-    if (this%iflowbudget /= 0) then
-      !
-      ! -- Set up the flowbudptr by filling it from a preexisting binary
-      !    file created by a previous GWF simulation
-      call budgetobject_cr_bfr(this%flowbudptr, this%name, this%iflowbudget,    &
-                               this%iout, colconv2=['GWF             '])
-      call this%flowbudptr%fill_from_bfr(this%dis, this%iout)
-      found = .true.
+    if (this%fmi%flows_from_file) then
+      call this%fmi%set_aptbudobj_pointer(this%name, this%flowbudptr)
+      if (associated(this%flowbudptr)) found = .true.
       !
     else
       if (associated(this%fmi%gwfbndlist)) then

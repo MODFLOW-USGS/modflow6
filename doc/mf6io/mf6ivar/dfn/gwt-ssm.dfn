@@ -44,7 +44,7 @@ tagged false
 optional false
 reader urword
 longname source type
-description type of the source.  Must be AUX or LKT
+description type of the source.  Must be AUX.
 
 block sources
 name auxname

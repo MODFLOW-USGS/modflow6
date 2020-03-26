@@ -11,7 +11,7 @@
         use global, only: iout
         use GlobalVariablesModule, only: echo
         use GwfBasModule, only: SGWF2BAS7PNT, SGWF2BAS7PSV
-        use InputOutputModule, only: write_centered
+        use GenericUtilitiesModule, only: write_centered
         use ModelModule, only: ModelType
         use ObsWriterModule, only: ObsWriterType
         use OpenSpecModule, only: ACCESS, ACTION, FORM
@@ -1051,9 +1051,9 @@ C6------SPECIAL CHECK FOR 1ST FILE.
           model%iulist = iu
           OPEN(UNIT=IU,FILE=FNAME(1:IFLEN),STATUS='REPLACE',
      1          FORM='FORMATTED',ACCESS='SEQUENTIAL')
-          call write_centered(PROGNAM, iout, 80)
+          call write_centered(PROGNAM, 80, iunit=iout)
           msg = 'Conversion Report'
-          call write_centered(msg, iout, 80)
+          call write_centered(msg, 80, iunit=iout)
           write(iout,1)trim(model%NameFile2005)
           write(iout,2)trim(model%BaseName)
           if (.not. model%ConversionDone) then

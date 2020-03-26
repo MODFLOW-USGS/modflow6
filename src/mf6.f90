@@ -12,7 +12,7 @@ program mf6
                                     IDEVELOPMODE
   use CompilerVersion
   use CommandArguments,       only: GetCommandLineArguments
-  use InputOutputModule,      only: write_centered
+  use GenericUtilitiesModule, only: sim_message, write_centered
   use SimulationCreateModule, only: simulation_cr, simulation_da
   use TimerModule,            only: start_time, elapsed_time
   use MemoryManagerModule,    only: mem_usage, mem_da
@@ -23,7 +23,7 @@ program mf6
   use ListsModule,            only: basesolutionlist, solutiongrouplist,       &
                                     basemodellist, baseexchangelist,           &
                                     lists_da
-  use SimVariablesModule,     only: istdout, iout 
+  use SimVariablesModule,     only: iout 
   use SimModule,              only: converge_reset, converge_check,            &
                                     final_message
   use TdisModule,             only: tdis_tu, tdis_da,                          &
@@ -44,23 +44,23 @@ program mf6
   call GetCommandLineArguments()
   !
   ! -- Write banner to screen (unit 6) and start timer
-  call write_centered('MODFLOW'//MFVNAM, ISTDOUT, 80)
-  call write_centered(MFTITLE, ISTDOUT, 80)
-  call write_centered('VERSION '//VERSION, ISTDOUT, 80)
+  call write_centered('MODFLOW'//MFVNAM, 80)
+  call write_centered(MFTITLE, 80)
+  call write_centered('VERSION '//VERSION, 80)
   !
   ! -- Write if develop mode
-  if (IDEVELOPMODE == 1) call write_centered('***DEVELOP MODE***', ISTDOUT, 80)
+  if (IDEVELOPMODE == 1) call write_centered('***DEVELOP MODE***', 80)
   !
   ! -- Write compiler version
   call get_compiler(compiler)
-  call write_centered(' ', ISTDOUT, 80)
-  call write_centered(trim(adjustl(compiler)), ISTDOUT, 80)
+  call write_centered(' ', 80)
+  call write_centered(trim(adjustl(compiler)), 80)
   !
   ! -- Write disclaimer
-  write(ISTDOUT, FMTDISCLAIMER)
+  call sim_message('', fmt=FMTDISCLAIMER)
+  !
   ! -- get start time
   call start_time()
-  !
   !
   ! -- CREATE (CR)
   call simulation_cr()

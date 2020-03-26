@@ -137,19 +137,30 @@ def get_model(idx, dir):
                         0.,  0.,  -0.01,
                         0.,  0.01])
 
+    dt = np.dtype([('ID1', np.int32),
+                   ('ID2', np.int32),
+                   ('FLOW', np.float64),
+                   ('SATURATION', np.float64),
+                   ])
+    sat = np.array([(i, i, 0., 1.) for i in range(nlay * nrow * ncol)],
+                   dtype=dt)
+
+
     fname = os.path.join(ws, 'mybudget.bud')
     with open(fname, 'wb') as fbin:
         for kstp in range(nstp[0]):
             write_budget(fbin, flowja, kstp=kstp + 1)
             write_budget(fbin, spdis, text='      DATA-SPDIS', imeth=6,
                          kstp=kstp + 1)
+            write_budget(fbin, sat, text='        DATA-SAT', imeth=6,
+                         kstp=kstp + 1)
     fbin.close()
 
     # flow model interface
-    flowfiles = [('GWFBUDGET', 'mybudget.bud'),
-                 ('GWFHEAD', 'myhead.hds')]
+    packagedata = [('GWFBUDGET', 'mybudget.bud'),
+                   ('GWFHEAD', 'myhead.hds')]
     fmi = flopy.mf6.ModflowGwtfmi(gwt, flow_imbalance_correction=True,
-                                  flowfiles=flowfiles)
+                                  packagedata=packagedata)
 
     return sim
 
