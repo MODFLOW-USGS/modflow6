@@ -15,6 +15,7 @@ dispersion, and reaction (sorption and decay):
 """
 
 import os
+import shutil
 import sys
 import numpy as np
 
@@ -41,6 +42,7 @@ exe_name_mt = os.path.abspath('./temp/mfexes/mt3dms')
 exe_name_mf6 = targets.target_dict['mf6']
 testdir = './temp'
 testgroup = 'mt3dms_p01'
+remove_files = True
 
 
 def p01mt3d(model_ws, al, retardation, lambda1, mixelm,
@@ -374,6 +376,8 @@ def test_mt3dmsp01a():
 
     msg = 'concentrations not equal {} {}'.format(conc_mt3d, conc_mf6)
     assert  np.allclose(conc_mt3d, conc_mf6, atol=1e-4), msg
+    if remove_files:
+        shutil.rmtree(mf6_ws)
     return
 
 
@@ -398,6 +402,8 @@ def test_mt3dmsp01b():
 
     msg = 'concentrations not equal {} {}'.format(conc_mt3d, conc_mf6)
     assert np.allclose(conc_mt3d, conc_mf6, atol=1e-4), msg
+    if remove_files:
+        shutil.rmtree(mf6_ws)
     return
 
 
@@ -422,6 +428,8 @@ def test_mt3dmsp01c():
 
     msg = 'concentrations not equal {} {}'.format(conc_mt3d, conc_mf6)
     assert np.allclose(conc_mt3d, conc_mf6, atol=1e-4), msg
+    if remove_files:
+        shutil.rmtree(mf6_ws)
     return
 
 
@@ -446,6 +454,8 @@ def test_mt3dmsp01d():
 
     msg = 'concentrations not equal {} {}'.format(conc_mt3d, conc_mf6)
     assert np.allclose(conc_mt3d, conc_mf6, atol=1e-4), msg
+    if remove_files:
+        shutil.rmtree(mf6_ws)
     return
 
 
@@ -470,6 +480,8 @@ def test_mt3dmsp01e():
 
     msg = 'concentrations not equal {} {}'.format(conc_mt3d, conc_mf6)
     assert np.allclose(conc_mt3d, conc_mf6, atol=1e-1), msg
+    if remove_files:
+        shutil.rmtree(mf6_ws)
     return
 
 
@@ -494,6 +506,8 @@ def test_mt3dmsp01f():
 
     msg = 'concentrations not equal {} {}'.format(conc_mt3d, conc_mf6)
     assert np.allclose(conc_mt3d, conc_mf6, atol=1e-1), msg
+    if remove_files:
+        shutil.rmtree(mf6_ws)
     return
 
 

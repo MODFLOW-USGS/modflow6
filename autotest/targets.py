@@ -12,9 +12,11 @@ def target_pth(target, pth):
     return target
 
 target_ext = ''
+target_so = '.so'
 sysinfo = platform.system()
 if sysinfo.lower() == 'windows':
     target_ext = '.exe'
+    target_so = '.dll'
 
 # paths to executables for  previous versions of MODFLOW
 ebindir = os.path.join(os.path.expanduser('~'), '.local', 'bin')
@@ -40,6 +42,11 @@ target = os.path.join(bindir, program)
 
 # add MODFLOW 6 to dictionary of valid executable targets
 target_dict[os.path.basename(target).split('.')[0]] = target
+
+# create MODFLOW 6 so/dll target name
+tprog = 'libmf6{}'.format(target_so)
+ttarg = os.path.join(bindir, tprog)
+target_dict['libmf6'] = ttarg
 
 # add MODFLOW 5 to 6 converter to dictionary of valid executable targets
 tprog = 'mf5to6{}'.format(target_ext)
