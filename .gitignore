@@ -64,6 +64,8 @@ bin/mf5to6
 bin/zbud6
 bin/*.txt
 
+UserPrefs.xml
+
 tmp_simulations/
 autotest/temp/
 autotest/tempbin/

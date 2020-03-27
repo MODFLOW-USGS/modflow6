@@ -83,6 +83,7 @@ module BndModule
     ! -- table objects
     type(TableType), pointer :: inputtab => null()
     type(TableType), pointer :: outputtab => null()
+    type(TableType), pointer :: errortab => null()
 
     
   contains
@@ -872,6 +873,13 @@ module BndModule
       call this%outputtab%table_da()
       deallocate(this%outputtab)
       nullify(this%outputtab)
+    end if
+    !
+    ! -- error table object
+    if (associated(this%errortab)) then
+      call this%errortab%table_da()
+      deallocate(this%errortab)
+      nullify(this%errortab)
     end if
     !
     ! -- Deallocate scalars
