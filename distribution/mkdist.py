@@ -580,8 +580,11 @@ if __name__ == '__main__':
 
     # Copy the Visual Studio solution and project files
     flist = [
-             # os.path.join('..', 'msvs', 'mf6.sln'),
+             os.path.join('..', 'msvs', 'mf6.sln'),
              os.path.join('..', 'msvs', 'mf6.vfproj'),
+             os.path.join('..', 'msvs', 'mf6core.vfproj'),
+             os.path.join('..', 'msvs', 'mf6bmi.sln'),
+             os.path.join('..', 'msvs', 'mf6bmi.vfproj'),
              ]
     print('Copying msvs files')
     for d in flist:
