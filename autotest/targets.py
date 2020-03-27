@@ -53,6 +53,11 @@ tprog = 'libmf6{}'.format(target_so)
 ttarg = os.path.join(bindir, tprog)
 target_dict['libmf6'] = ttarg
 
+# create MODFLOW 6 so/dll target name
+tprog = 'libmf6{}'.format(target_so)
+ttarg = os.path.join(bindir, tprog)
+target_dict['libmf6'] = ttarg
+
 # add MODFLOW 5 to 6 converter to dictionary of valid executable targets
 tprog = 'mf5to6{}'.format(target_ext)
 ttarg = os.path.join(bindir, tprog)

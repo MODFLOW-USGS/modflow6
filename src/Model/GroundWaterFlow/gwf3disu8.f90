@@ -535,7 +535,6 @@ module GwfDisuModule
     ! -- local
     character(len=LINELENGTH) :: errmsg
     integer(I4B) :: isize
-    integer(I4B) :: i, j, k
 ! ------------------------------------------------------------------------------
     !
     ! -- check the size of arr
