@@ -769,10 +769,10 @@ module TableModule
     ! -- add data to line
     if (j == this%ntableterm) then
       line_end = .TRUE.
-      call UWWORD(this%dataline, this%iloc, width, TABUCSTRING,                  &
+      call UWWORD(this%dataline, this%iloc, width, TABSTRING,                    &
                   cval, ival, rval, ALIGNMENT=alignment)
     else
-      call UWWORD(this%dataline, this%iloc, width, TABUCSTRING,                  &
+      call UWWORD(this%dataline, this%iloc, width, TABSTRING,                    &
                   cval, ival, rval, ALIGNMENT=alignment, SEP=this%sep)
     end if
     !
