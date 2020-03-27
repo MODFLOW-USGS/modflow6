@@ -100,8 +100,8 @@ def get_model(idx, dir):
                                   k=Kh, k33=Kv)
 
     # chd files
-    chdlist1 = [[(0, 0, 0), -0.5],
-                [(0, 0, ncol - 1), -0.5],
+    chdlist1 = [[(0, 0, 0), -0.5, 0.],
+                [(0, 0, ncol - 1), -0.5, 0.],
                 ]
     chd1 = flopy.mf6.ModflowGwfchd(gwf,
                                    stress_period_data=chdlist1,

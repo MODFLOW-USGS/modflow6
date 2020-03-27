@@ -64,6 +64,7 @@ module BaseDisModule
     procedure :: get_nodenumber_idx3
     procedure :: get_nodeuser
     procedure :: nodeu_to_string
+    procedure :: nodeu_to_array
     procedure :: nodeu_from_string
     procedure :: nodeu_from_cellid
     procedure :: noder_from_string
@@ -71,6 +72,7 @@ module BaseDisModule
     procedure :: connection_normal
     procedure :: connection_vector
     procedure :: get_cellxy
+    procedure :: get_dis_type
     procedure :: supports_layers
     procedure :: allocate_scalars
     procedure :: allocate_arrays
@@ -90,6 +92,7 @@ module BaseDisModule
     procedure, public  :: record_array
     procedure, public  :: record_connection_array
     procedure, public  :: noder_to_string
+    procedure, public  :: noder_to_array
     procedure, public  :: record_srcdst_list_header
     procedure, private :: record_srcdst_list_entry
     generic, public    :: record_mf6_list_entry => record_srcdst_list_entry
@@ -295,7 +298,7 @@ module BaseDisModule
 
   subroutine nodeu_to_string(this, nodeu, str)
 ! ******************************************************************************
-! noder_to_string -- Convert user node number to a string in the form of
+! nodeu_to_string -- Convert user node number to a string in the form of
 ! (nodenumber) or (k,i,j)
 ! ******************************************************************************
 !
@@ -315,6 +318,29 @@ module BaseDisModule
     ! -- return
     return
   end subroutine nodeu_to_string
+
+  subroutine nodeu_to_array(this, nodeu, arr)
+! ******************************************************************************
+! nodeu_to_array -- Convert user node number to cellid and fill array with
+!                   (nodenumber) or (k,j) or (k,i,j) 
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(DisBaseType) :: this
+    integer(I4B), intent(in) :: nodeu
+    integer(I4B), dimension(:), intent(inout) :: arr
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    call store_error('Program error: DisBaseType method nodeu_to_array not &
+                     &implemented.')
+    call ustop()
+    !
+    ! -- return
+    return
+  end subroutine nodeu_to_array
 
   function get_nodeuser(this, noder) result(nodenumber)
 ! ******************************************************************************
@@ -493,10 +519,23 @@ module BaseDisModule
     xcell = -999999.0
     ycell = -999999.0
     
-    call store_error('Program error: getcellxy not implemented.')
+    call store_error('Program error: get_cellxy not implemented.')
     call ustop()
     
-  end subroutine get_cellxy                             
+  end subroutine get_cellxy     
+  
+  ! return discretization type
+  subroutine get_dis_type(this, dis_type)
+    class(DisBaseType), intent(in)  :: this
+    character(len=*), intent(out)   :: dis_type
+      
+    ! suppress warning
+    dis_type = "Not implemented" 
+    
+    call store_error('Program error: get_dis_type not implemented.')
+    call ustop()
+    
+  end subroutine get_dis_type
                                
   subroutine allocate_scalars(this, name_model)
 ! ******************************************************************************
@@ -1249,6 +1288,30 @@ module BaseDisModule
     ! -- return
     return
   end subroutine noder_to_string
+
+  subroutine noder_to_array(this, noder, arr)
+! ******************************************************************************
+! noder_to_array -- Convert reduced node number to cellid and fill array with
+!                   (nodenumber) or (k,j) or (k,i,j) 
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(DisBaseType) :: this
+    integer(I4B), intent(in) :: noder
+    integer(I4B), dimension(:), intent(inout) :: arr
+    ! -- local
+    integer(I4B) :: nodeu
+! ------------------------------------------------------------------------------
+    !
+    nodeu = this%get_nodeuser(noder)
+    call this%nodeu_to_array(nodeu, arr)
+    !
+    ! -- return
+    return
+  end subroutine noder_to_array
 
   subroutine record_srcdst_list_header(this, text, textmodel, textpackage,      &
                                        dstmodel, dstpackage, naux, auxtxt,      &

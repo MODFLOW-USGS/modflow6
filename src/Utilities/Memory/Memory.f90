@@ -1,7 +1,8 @@
 module MemoryTypeModule
   
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: LENORIGIN, LENTIMESERIESNAME, LENVARNAME
+  use ConstantsModule, only: LENORIGIN, LENTIMESERIESNAME, LENVARNAME,           &
+                             MAXMEMRANK, LENMEMTYPE
   implicit none
   private
   public :: MemoryTSType, MemoryType
@@ -10,12 +11,11 @@ module MemoryTypeModule
     character (len=LENTIMESERIESNAME), pointer :: name => null()
     real(DP), pointer :: value => null()
   end type MemoryTSType
-  
-  
+ 
   type MemoryType
     character(len=LENVARNAME)                              :: name                   !name of the array
     character(len=LENORIGIN)                               :: origin                 !name of origin
-    character(len=50)                                      :: memtype                !type (INTEGER or DOUBLE)
+    character(len=LENMEMTYPE)                              :: memtype                !type (INTEGER or DOUBLE)
     integer(I4B)                                           :: id                     !id, not used
     integer(I4B)                                           :: nrealloc = 0           !number of times reallocated
     integer(I4B)                                           :: isize                  !size of the array

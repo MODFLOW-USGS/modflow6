@@ -5,7 +5,8 @@ module TableModule
   
   use KindModule, only: I4B, DP
   use ConstantsModule, only: LINELENGTH, LENBUDTXT,                              &
-                             TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
+                             TABSTRING, TABUCSTRING, TABINTEGER, TABREAL,        &
+                             TABCENTER
   use TableTermModule, only: TableTermType
   use InputOutputModule, only: UWWORD, parseline
   use SimModule, only: store_error, ustop
@@ -21,8 +22,10 @@ module TableModule
     ! -- name, number of control volumes, and number of table terms
     character(len=LENBUDTXT) :: name
     character(len=LINELENGTH) :: title
+    character(len=1), pointer :: sep => null()
     logical, pointer :: first_entry => null()
     logical, pointer :: transient => null()
+    logical, pointer :: add_linesep => null()
     integer(I4B), pointer :: iout => null()
     integer(I4B), pointer :: maxbound => null()
     integer(I4B), pointer :: nheaderlines => null()
@@ -104,7 +107,8 @@ module TableModule
     return
   end subroutine table_cr
 
-  subroutine table_df(this, maxbound, ntableterm, iout, transient)
+  subroutine table_df(this, maxbound, ntableterm, iout, transient,               &
+                      lineseparator, separator)
 ! ******************************************************************************
 ! table_df -- Define the new table object
 ! ******************************************************************************
@@ -118,11 +122,15 @@ module TableModule
     integer(I4B), intent(in) :: ntableterm
     integer(I4B), intent(in) :: iout
     logical, intent(in), optional :: transient
+    logical, intent(in), optional :: lineseparator
+    character(len=1), intent(in), optional :: separator
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate scalars
-    allocate(this%transient)
+    allocate(this%sep)
     allocate(this%first_entry)
+    allocate(this%transient)
+    allocate(this%add_linesep)
     allocate(this%iout)
     allocate(this%maxbound)
     allocate(this%nheaderlines)
@@ -135,12 +143,24 @@ module TableModule
     ! -- allocate space for tableterm
     allocate(this%tableterm(ntableterm))
     !
-    ! -- initialize values
+    ! -- initialize values based on optional dummy variables
     if (present(transient)) then
       this%transient = transient
     else
       this%transient = .FALSE.
     end if
+    if (present(separator)) then
+      this%sep = separator
+    else
+      this%sep = ' '
+    end if
+    if (present(lineseparator)) then
+      this%add_linesep = lineseparator
+    else
+      this%add_linesep = .TRUE.
+    end if
+    !
+    ! -- initialize variables
     this%first_entry = .TRUE.
     this%iout = iout
     this%maxbound = maxbound
@@ -164,11 +184,19 @@ module TableModule
     class(TableType) :: this
     character(len=*), intent(in) :: text
     integer(I4B), intent(in) :: width
-    integer(I4B), intent(in) :: alignment
+    integer(I4B), intent(in), optional :: alignment
     ! -- local
     character (len=LINELENGTH) :: errmsg
     integer(I4B) :: idx
+    integer(I4B) :: ialign
 ! ------------------------------------------------------------------------------
+    !
+    ! -- process optional dummy variables
+    if (present(alignment)) then
+      ialign = alignment
+    else
+      ialign = TABCENTER
+    end if
     !
     ! -- update index for tableterm
     this%ientry = this%ientry + 1
@@ -185,7 +213,7 @@ module TableModule
     end if
     !
     ! -- initialize table term
-    call this%tableterm(idx)%initialize(text, width, alignment=alignment)      
+    call this%tableterm(idx)%initialize(text, width, alignment=ialign)      
     !
     ! -- create header when all terms have been specified
     if (this%ientry == this%ntableterm) then
@@ -219,6 +247,7 @@ module TableModule
     real(DP) :: rval
     integer(I4B) :: j
     integer(I4B) :: n
+    integer(I4B) :: nn
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
@@ -246,16 +275,22 @@ module TableModule
     do n = 1, nlines
       iloc = 1
       this%iloc = 1
+      if (this%add_linesep) then
+        nn = n + 1
+      else
+        nn = n
+      end if
       do j = 1, this%ntableterm
         width = this%tableterm(j)%get_width()
         alignment = this%tableterm(j)%get_alignment()
         call this%tableterm(j)%get_header(n, cval)
         if (j == this%ntableterm) then
-          call UWWORD(this%header(n+1), iloc, width, TABUCSTRING,                &
+          call UWWORD(this%header(nn), iloc, width, TABUCSTRING,                 &
                       cval(1:width), ival, rval, ALIGNMENT=alignment)
         else
-          call UWWORD(this%header(n+1), iloc, width, TABUCSTRING,                &
-                      cval(1:width), ival, rval, ALIGNMENT=alignment, SEP=' ')
+          call UWWORD(this%header(nn), iloc, width, TABUCSTRING,                 &
+                      cval(1:width), ival, rval, ALIGNMENT=alignment,            &
+                      SEP=this%sep)
         end if
       end do
     end do
@@ -266,7 +301,7 @@ module TableModule
   
   subroutine allocate_strings(this, width, nlines)
 ! ******************************************************************************
-! allocate_header -- Allocate deferred length strings
+! allocate_strings -- Allocate allocatable character arrays
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -287,7 +322,10 @@ module TableModule
     linesep = repeat('-', width)
     !
     ! -- initialize variables
-    this%nheaderlines = nlines + 2
+    this%nheaderlines = nlines
+    if (this%add_linesep) then
+      this%nheaderlines = this%nheaderlines + 2
+    end if
     this%nlinewidth = width
     !
     ! -- allocate deferred length strings
@@ -304,8 +342,10 @@ module TableModule
     !
     ! -- fill first and last header line with
     !    linesep
-    this%header(1) = linesep(1:width)
-    this%header(nlines+2) = linesep(1:width)
+    if (this%add_linesep) then
+      this%header(1) = linesep(1:width)
+      this%header(nlines+2) = linesep(1:width)
+    end if
     !
     ! -- return
     return
@@ -338,7 +378,11 @@ module TableModule
         write(title, '(a,a,i6)') trim(adjustl(title)), '   PERIOD ', kper
         write(title, '(a,a,i8)') trim(adjustl(title)), '   STEP ', kstp
       end if
-      write(this%iout, '(/,1x,a)') trim(adjustl(title))
+      if (len_trim(title) > 0) then
+        write(this%iout, '(/,1x,a)') trim(adjustl(title))
+      end if
+      !
+      ! -- 
       !
       ! -- write header
       do n = 1, this%nheaderlines
@@ -424,14 +468,13 @@ module TableModule
     ! -- initialize local variables
     width = this%nlinewidth
     !
-    ! -- write the final table seperator
-    write(this%iout, '(1x,a,/)') this%linesep(1:width)
+    ! -- write the final table separator
+    if (this%add_linesep) then
+      write(this%iout, '(1x,a,/)') this%linesep(1:width)
+    end if
     !
     ! -- reinitialize variables
     call this%reset()
-    !this%ientry = 0
-    !this%icount = 0
-    !this%first_entry = .TRUE.
     !
     ! -- return
     return
@@ -460,8 +503,10 @@ module TableModule
     deallocate(this%tableterm)
     !
     ! -- deallocate scalars
-    deallocate(this%transient)
+    deallocate(this%sep)
     deallocate(this%first_entry)
+    deallocate(this%transient)
+    deallocate(this%add_linesep)
     deallocate(this%iout)
     deallocate(this%maxbound)
     deallocate(this%nheaderlines)
@@ -614,7 +659,7 @@ module TableModule
                   cval, ival, rval, ALIGNMENT=alignment)
     else
       call UWWORD(this%dataline, this%iloc, width, TABINTEGER,                   &
-                  cval, ival, rval, ALIGNMENT=alignment, SEP=' ')
+                  cval, ival, rval, ALIGNMENT=alignment, SEP=this%sep)
     end if
     !
     ! -- write the data line, if necessary
@@ -685,7 +730,7 @@ module TableModule
     else
       line_end = .FALSE.
       call UWWORD(this%dataline, this%iloc, width, TABREAL,                      &
-                  cval, ival, rval, ALIGNMENT=alignment, SEP=' ')
+                  cval, ival, rval, ALIGNMENT=alignment, SEP=this%sep)
     end if
     !
     ! -- write the data line, if necessary
@@ -755,7 +800,7 @@ module TableModule
                   cval, ival, rval, ALIGNMENT=alignment)
     else
       call UWWORD(this%dataline, this%iloc, width, TABUCSTRING,                  &
-                  cval, ival, rval, ALIGNMENT=alignment, SEP=' ')
+                  cval, ival, rval, ALIGNMENT=alignment, SEP=this%sep)
     end if
     !
     ! -- write the data line, if necessary

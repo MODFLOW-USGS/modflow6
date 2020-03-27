@@ -835,8 +835,10 @@ module GwfBuyModule
       call this%parser%GetNextLine(endOfBlock)
       if (endOfBlock) exit
       call this%parser%GetStringCaps(keyword)
+      call this%parser%GetRemainingLine(line)
       !
       ! -- Parse the keywords
+      lloc = 1
       select case (keyword)
       case ('ELEVATION')
         this%ireadelev = 1

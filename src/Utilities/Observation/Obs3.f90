@@ -1024,8 +1024,9 @@ contains
     type(ObsOutputType),   pointer :: obsOutput => null()
     ! formats
     50 format(/,'Observations read from file "',a,'":',/, &
-         'Name',38x,'Type',29x,'Time',9x,'Location data',/, &
-         '----------------------------------------  -------------------------------', &
+         'Name',38x,'Type',40x,'Time',9x,'Location data',/,                      &
+         '----------------------------------------  ',                           &
+         '------------------------------------------',                           &
          '  -----------  --------------------------'  )
     !
     numspec = -1

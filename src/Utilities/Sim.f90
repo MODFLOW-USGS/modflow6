@@ -4,7 +4,8 @@ module SimModule
   use ConstantsModule,        only: MAXCHARLEN, LINELENGTH,                      &
                                     IUSTART, IULAST,                             &
                                     VSUMMARY, VALL, VDEBUG
-  use SimVariablesModule,     only: istdout, iout, isim_level, ireturnerr, iunext
+  use SimVariablesModule,     only: istdout, iout, isim_level, ireturnerr,       &
+                                    iforcestop, iunext
   use GenericUtilitiesModule, only: sim_message, stop_with_error
 
   implicit none
@@ -659,8 +660,10 @@ subroutine converge_reset()
       call print_final_message('Normal termination of simulation.', iout)
     endif
     !
-    ! -- terminate the program
-    call stop_with_error(ireturnerr)
+    ! -- Return or halt
+    if (iforcestop == 1) then
+      call stop_with_error(ireturnerr)
+    end if
     
   end subroutine final_message
   
