@@ -1772,7 +1772,7 @@ contains
                 trim(adjustl(this%name)) //') DATA FOR PERIOD'
         write(title, '(a,1x,i6)') trim(adjustl(title)), kper
         call table_cr(this%inputtab, this%name, title)
-        call this%inputtab%table_df(1, 5, this%iout)
+        call this%inputtab%table_df(1, 5, this%iout, finalize=.FALSE.)
         text = 'NUMBER'
         call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
         text = 'KEYWORD'
@@ -1803,8 +1803,8 @@ contains
         !
         ! -- write line to table
         if (this%iprpak /= 0) then
-          call this%inputtab%add_term(imaw, finalize=.FALSE.)
-          call this%inputtab%line_to_columns(line, finalize=.FALSE.)
+          call this%inputtab%add_term(imaw)
+          call this%inputtab%line_to_columns(line)
         end if
       end do
       if (this%iprpak /= 0) then
