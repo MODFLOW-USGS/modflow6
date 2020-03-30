@@ -15,8 +15,12 @@ module mf6bmi
   implicit none
   
   ! Define global constants  
-  integer(c_int), BIND(C, name="MAXSTRLEN") :: MAXSTRLEN = MAXCHARLEN
+  integer(c_int), bind(C, name="MAXSTRLEN") :: MAXSTRLEN = MAXCHARLEN
   !DEC$ ATTRIBUTES DLLEXPORT :: MAXSTRLEN
+  
+  ! Output control: =0 to screen, >0 to file
+  integer(c_int), bind(C, name="ISTDOUTTOFILE") :: istdout_to_file = 1
+  !DEC$ ATTRIBUTES DLLEXPORT :: istdout_to_file
   
   contains  
   
@@ -29,12 +33,14 @@ module mf6bmi
   function bmi_initialize() result(bmi_status) bind(C, name="initialize")
   !DEC$ ATTRIBUTES DLLEXPORT :: bmi_initialize
     integer(kind=c_int) :: bmi_status
-    !
-    ! -- set STDOUT to a physical file unit
-    istdout = getunit()  
-    !
-    ! -- open stdout file mfsim.stdout
-    open(unit=istdout, file=simstdout)
+        
+    if (istdout_to_file > 0) then
+      ! -- open stdout file mfsim.stdout
+      istdout = getunit() 
+      !
+      ! -- set STDOUT to a physical file unit
+      open(unit=istdout, file=simstdout)
+    end if        
     !
     ! -- initialize MODFLOW 6
     call Mf6Initialize()
