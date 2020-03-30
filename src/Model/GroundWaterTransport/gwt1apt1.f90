@@ -2112,13 +2112,14 @@ module GwtAptModule
       idx = idx + 1
       maxlist = this%flowbudptr%budterm(this%idxbudfjf)%maxlist
       naux = 0
+      ordered_id1 = this%flowbudptr%budterm(this%idxbudfjf)%ordered_id1
       call this%budobj%budterm(idx)%initialize(text, &
                                                this%name_model, &
                                                this%name, &
                                                this%name_model, &
                                                this%name, &
                                                maxlist, .false., .false., &
-                                               naux)
+                                               naux, ordered_id1=ordered_id1)
       !
       ! -- store outlet connectivity
       call this%budobj%budterm(idx)%reset(maxlist)

@@ -3114,7 +3114,7 @@ contains
                                                this%name_model, &
                                                this%name, &
                                                maxlist, .false., .false., &
-                                               naux, auxtxt)
+                                               naux, auxtxt, ordered_id1=.false.)
       !
       ! -- store connectivity
       call this%budobj%budterm(idx)%reset(nlen * 2)
