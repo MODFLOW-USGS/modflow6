@@ -26,6 +26,7 @@ module TableModule
     logical, pointer :: first_entry => null()
     logical, pointer :: transient => null()
     logical, pointer :: add_linesep => null()
+    logical, pointer :: allow_finalization => null()
     integer(I4B), pointer :: iout => null()
     integer(I4B), pointer :: maxbound => null()
     integer(I4B), pointer :: nheaderlines => null()
@@ -108,7 +109,7 @@ module TableModule
   end subroutine table_cr
 
   subroutine table_df(this, maxbound, ntableterm, iout, transient,               &
-                      lineseparator, separator)
+                      lineseparator, separator, finalize)
 ! ******************************************************************************
 ! table_df -- Define the new table object
 ! ******************************************************************************
@@ -124,6 +125,7 @@ module TableModule
     logical, intent(in), optional :: transient
     logical, intent(in), optional :: lineseparator
     character(len=1), intent(in), optional :: separator
+    logical, intent(in), optional :: finalize
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate scalars
@@ -131,6 +133,7 @@ module TableModule
     allocate(this%first_entry)
     allocate(this%transient)
     allocate(this%add_linesep)
+    allocate(this%allow_finalization)
     allocate(this%iout)
     allocate(this%maxbound)
     allocate(this%nheaderlines)
@@ -158,6 +161,11 @@ module TableModule
       this%add_linesep = lineseparator
     else
       this%add_linesep = .TRUE.
+    end if
+    if (present(finalize)) then
+      this%allow_finalization = finalize
+    else
+      this%allow_finalization = .TRUE.
     end if
     !
     ! -- initialize variables
@@ -507,6 +515,7 @@ module TableModule
     deallocate(this%first_entry)
     deallocate(this%transient)
     deallocate(this%add_linesep)
+    deallocate(this%allow_finalization)
     deallocate(this%iout)
     deallocate(this%maxbound)
     deallocate(this%nheaderlines)
@@ -520,7 +529,7 @@ module TableModule
     return
   end subroutine table_da
   
-  subroutine line_to_columns(this, line, finalize)
+  subroutine line_to_columns(this, line)
 ! ******************************************************************************
 ! line_to_columns -- convert a line to the correct number of columns
 ! ******************************************************************************
@@ -531,21 +540,12 @@ module TableModule
     ! -- dummy
     class(TableType) :: this
     character(len=LINELENGTH), intent(in) :: line
-    logical, intent(in), optional :: finalize
     ! -- local
     character(len=LINELENGTH), allocatable, dimension(:) :: words
-    logical :: allow_finalization
     integer(I4B) :: nwords
     integer(I4B) :: icols
     integer(I4B) :: i
 ! ------------------------------------------------------------------------------
-    !
-    ! -- initialize optional variables
-    if (present(finalize)) then
-      allow_finalization = finalize
-    else
-      allow_finalization = .TRUE.
-    end if
     !
     ! -- write header
     if (this%icount == 0 .and. this%ientry == 0) then
@@ -563,12 +563,12 @@ module TableModule
     !
     ! -- add data (as strings) to line
     do i = 1, icols
-      call this%add_term(words(i), finalize=allow_finalization)
+      call this%add_term(words(i))
     end do
     !
     ! -- add empty strings to complete the line
     do i = this%ientry + 1, this%ntableterm
-      call this%add_term(' ', finalize=allow_finalization)
+      call this%add_term(' ')
     end do
     !
     ! -- clean up local allocatable array
@@ -606,7 +606,7 @@ module TableModule
     return
   end subroutine add_error
   
-  subroutine add_integer(this, ival, finalize)
+  subroutine add_integer(this, ival)
 ! ******************************************************************************
 ! add_integer -- add integer value to the dataline
 ! ******************************************************************************
@@ -617,9 +617,7 @@ module TableModule
     ! -- dummy
     class(TableType) :: this
     integer(I4B), intent(in) :: ival
-    logical, intent(in), optional :: finalize
     ! -- local
-    logical :: allow_finalization
     logical :: line_end
     character(len=LINELENGTH) :: cval
     real(DP) :: rval
@@ -627,13 +625,6 @@ module TableModule
     integer(I4B) :: alignment
     integer(I4B) :: j
 ! ------------------------------------------------------------------------------
-    !
-    ! -- initialize optional variables
-    if (present(finalize)) then
-      allow_finalization = finalize
-    else
-      allow_finalization = .TRUE.
-    end if
     !
     ! -- write header
     if (this%icount == 0 .and. this%ientry == 0) then
@@ -668,7 +659,7 @@ module TableModule
     end if
     !
     ! -- finalize the table, if necessary
-    if (allow_finalization) then
+    if (this%allow_finalization) then
       call this%finalize()
     end if
     !
@@ -676,7 +667,7 @@ module TableModule
     return
   end subroutine add_integer
 
-  subroutine add_real(this, rval, finalize)
+  subroutine add_real(this, rval)
 ! ******************************************************************************
 ! add_real -- add real value to the dataline
 ! ******************************************************************************
@@ -687,9 +678,7 @@ module TableModule
     ! -- dummy
     class(TableType) :: this
     real(DP), intent(in) :: rval
-    logical, intent(in), optional :: finalize
     ! -- local
-    logical :: allow_finalization
     logical :: line_end
     character(len=LINELENGTH) :: cval
     integer(I4B) :: ival
@@ -697,13 +686,6 @@ module TableModule
     integer(I4B) :: width
     integer(I4B) :: alignment
 ! ------------------------------------------------------------------------------
-    !
-    ! -- initialize optional variables
-    if (present(finalize)) then
-      allow_finalization = finalize
-    else
-      allow_finalization = .TRUE.
-    end if
     !
     ! -- write header
     if (this%icount == 0 .and. this%ientry == 0) then
@@ -739,7 +721,7 @@ module TableModule
     end if
     !
     ! -- finalize the table, if necessary
-    if (allow_finalization) then
+    if (this%allow_finalization) then
       call this%finalize()
     end if
     !
@@ -747,7 +729,7 @@ module TableModule
     return
   end subroutine add_real
   
-  subroutine add_string(this, cval, finalize)
+  subroutine add_string(this, cval)
 ! ******************************************************************************
 ! add_string -- add string value to the dataline
 ! ******************************************************************************
@@ -758,9 +740,7 @@ module TableModule
     ! -- dummy
     class(TableType) :: this
     character(len=*) :: cval
-    logical, intent(in), optional :: finalize
     ! -- local
-    logical :: allow_finalization
     logical :: line_end
     integer(I4B) :: j
     integer(I4B) :: ival
@@ -768,13 +748,6 @@ module TableModule
     integer(I4B) :: width
     integer(I4B) :: alignment
 ! ------------------------------------------------------------------------------
-    !
-    ! -- initialize optional variables
-    if (present(finalize)) then
-      allow_finalization = finalize
-    else
-      allow_finalization = .TRUE.
-    end if
     !
     ! -- write header
     if (this%icount == 0 .and. this%ientry == 0) then
@@ -796,10 +769,10 @@ module TableModule
     ! -- add data to line
     if (j == this%ntableterm) then
       line_end = .TRUE.
-      call UWWORD(this%dataline, this%iloc, width, TABUCSTRING,                  &
+      call UWWORD(this%dataline, this%iloc, width, TABSTRING,                    &
                   cval, ival, rval, ALIGNMENT=alignment)
     else
-      call UWWORD(this%dataline, this%iloc, width, TABUCSTRING,                  &
+      call UWWORD(this%dataline, this%iloc, width, TABSTRING,                    &
                   cval, ival, rval, ALIGNMENT=alignment, SEP=this%sep)
     end if
     !
@@ -809,7 +782,7 @@ module TableModule
     end if
     !
     ! -- finalize the table, if necessary
-    if (allow_finalization) then
+    if (this%allow_finalization) then
       call this%finalize()
     end if
     !
