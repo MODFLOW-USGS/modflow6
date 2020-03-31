@@ -228,7 +228,7 @@ module GwfBuyModule
     real(DP), intent(inout), dimension(:) :: hnew
     ! -- local
     integer(I4B) :: n, nodes
-    real(DP) :: hn, tp
+    real(DP) :: hn, tp, bt
 ! ------------------------------------------------------------------------------
     !
     ! -- update density using the last concentration
@@ -244,8 +244,8 @@ module GwfBuyModule
         else
           hn = hnew(n)
         end if
-        if(this%npf%icelltype(n) /= 0) tp = min(tp, hn)
-        this%elev(n) = this%dis%bot(n) + DHALF * (tp - this%dis%bot(n))
+        bt = this%dis%bot(n)
+        this%elev(n) = bt + DHALF * this%npf%sat(n) * (tp - bt)
       end do
     end if
     !
@@ -253,7 +253,7 @@ module GwfBuyModule
     return
   end subroutine buy_cf
   
-  subroutine buy_cf_bnd(this, packobj) !, hcof, rhs, auxnam, auxvar)
+  subroutine buy_cf_bnd(this, packobj, hnew) !, hcof, rhs, auxnam, auxvar)
 ! ******************************************************************************
 ! buy_cf_bnd -- Fill coefficients
 ! ******************************************************************************
@@ -265,6 +265,7 @@ module GwfBuyModule
     ! -- dummy
     class(GwfBuyType) :: this
     class(BndType), pointer :: packobj
+    real(DP), intent(in), dimension(:) :: hnew
     ! -- local
     integer(I4B) :: n, node
     integer(I4B) :: locdense, locelev
@@ -272,6 +273,7 @@ module GwfBuyModule
     real(DP) :: cond, hbnd
     real(DP) :: elevbnd
     real(DP) :: densebnd, avgdense, avgelev, t1, t2, term
+    logical :: add_terms
 ! ------------------------------------------------------------------------------
     !
     ! -- Return if freshwater head formulation
@@ -280,9 +282,9 @@ module GwfBuyModule
     ! -- Return if not a head-dependent boundary
     iheaddep = 0
     if (packobj%filtyp == 'GHB') iheaddep = 1
-    if (packobj%filtyp == 'RIV') iheaddep = 1
-    if (packobj%filtyp == 'DRN') iheaddep = 1
-    if (packobj%filtyp == 'LAK') iheaddep = 1
+    if (packobj%filtyp == 'RIV') iheaddep = 2
+    if (packobj%filtyp == 'DRN') iheaddep = 3
+    if (packobj%filtyp == 'LAK') iheaddep = 4
     if (iheaddep == 0) return
     !
     ! -- Add buoyancy terms for head-dependent boundaries
@@ -316,13 +318,19 @@ module GwfBuyModule
       cond = packobj%bound(2, n)
       !
       ! -- calculate terms and add to hcof and rhs
-      t1 = avgdense / this%denseref - DONE
-      t2 = (densebnd - this%dense(node)) / this%denseref
-      term = cond * (-t1 + DHALF * t2)
-      packobj%hcof(n) = packobj%hcof(n) + term
-      term = t1 * hbnd + DHALF * t2 * hbnd - t2 * avgelev
-      term = term * cond
-      packobj%rhs(n) = packobj%rhs(n) - term
+      add_terms = .true.
+      if (iheaddep == 3 .and. hnew(node) <= hbnd) add_terms = .false.
+      !
+      ! -- add terms if necessary
+      if (add_terms) then
+        t1 = avgdense / this%denseref - DONE
+        t2 = (densebnd - this%dense(node)) / this%denseref
+        term = cond * (-t1 + DHALF * t2)
+        packobj%hcof(n) = packobj%hcof(n) + term
+        term = t1 * hbnd + DHALF * t2 * hbnd - t2 * avgelev
+        term = term * cond
+        packobj%rhs(n) = packobj%rhs(n) - term
+      end if
     end do
     !
     ! -- Return
@@ -473,7 +481,7 @@ module GwfBuyModule
     ! -- local
     integer(I4B) :: ihc
     real(DP) :: densen, densem, cl1, cl2, avgdense, wt, elevn, elevm, &
-                     cond, tp
+                     cond, tp, bt
     real(DP) :: hyn
     real(DP) :: hym
 ! ------------------------------------------------------------------------------
@@ -489,16 +497,16 @@ module GwfBuyModule
       cl2 = this%dis%con%cl1(this%dis%con%jas(icon))
     end if
     wt =  cl1 / (cl1 + cl2)
-    avgdense = wt * densen + (1.0 - wt) * densem
+    avgdense = wt * densen + (DONE - wt) * densem
     !
     ! -- Elevations
     if(this%ireadelev == 0) then
       tp = this%dis%top(n)
-      if(this%npf%icelltype(n) /= 0) tp = min(tp, hn)
-      elevn = this%dis%bot(n) + DHALF * (tp - this%dis%bot(n))
+      bt = this%dis%bot(n)
+      elevn = bt + DHALF * this%npf%sat(n) * (tp - bt)
       tp = this%dis%top(m)
-      if(this%npf%icelltype(m) /= 0) tp = min(tp, hm)
-      elevm = this%dis%bot(m) + DHALF * (tp - this%dis%bot(m))
+      bt = this%dis%bot(m)
+      elevm = bt + DHALF * this%npf%sat(m) * (tp - bt)
     else
       elevn = this%elev(n)
       elevm = this%elev(m)
@@ -702,12 +710,15 @@ module GwfBuyModule
     call mem_allocate(this%drhodc, 'DRHODC', this%origin)
     !
     ! -- Initialize
-    this%iform = 0
     this%ireadelev = 0
     this%iconcset = 0
     this%ireaddense = 0
     this%denseref = 1000.d0
     this%drhodc = 0.7d0
+    !
+    ! -- Initialize default to LHS implementation of hydraulic head formulation
+    this%iform = 2
+    this%iasym = 1
     !
     ! -- Return
     return
@@ -773,15 +784,11 @@ module GwfBuyModule
         if (endOfBlock) exit
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
-          case ('HHFORMULATION')
+          case ('HHFORMULATION_RHS')
             this%iform = 1
-            write(this%iout,'(4x,a)') 'FORMULATION SET TO HYDRAULIC HEAD'
-            call this%parser%GetStringCaps(keyword)
-            if(keyword == 'LHS') then
-              this%iform = 2
-              this%iasym = 1
-              write(this%iout,'(4x,a)') 'HHFORMULATION LEFT-HAND SIDE'
-            endif
+            this%iasym = 0
+            write(this%iout,'(4x,a)') &
+              'HYDDRAULIC HEAD FORMULATION SET TO RIGHT-HAND SIDE'
           case ('DENSEREF')
             this%denseref = this%parser%GetDouble()
             write(this%iout, '(4x,a,1pg15.6)')                                 &
@@ -792,6 +799,12 @@ module GwfBuyModule
             write(this%iout, '(4x,a,1pg15.6)')                                 &
                              'DRHODC HAS BEEN SET TO: ',  &
                              this%drhodc
+          case ('DEV_EFH_FORMULATION')
+            call this%parser%DevOpt()
+            this%iform = 0
+            this%iasym = 0
+            write(this%iout,'(4x,a)') &
+              'FORMULATION SET TO EQUIVALENT FRESHWATER HEAD'
           case default
             write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN BUY OPTION: ',         &
                                      trim(keyword)
