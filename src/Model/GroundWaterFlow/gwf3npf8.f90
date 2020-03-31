@@ -2208,7 +2208,7 @@ contains
     class(GwfNpfType) :: this
     
     ! local
-    integer(I4B) :: n, m, ii, ipos, ihc
+    integer(I4B) :: n, m, ii, ihc
     real(DP) :: satn, topn, topm, botn
     real(DP) :: hyn, hym, hn, hm
     real(DP) :: csat, fawidth

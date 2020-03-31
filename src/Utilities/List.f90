@@ -4,7 +4,7 @@ module ListModule
   use ConstantsModule, only: LINELENGTH
   use GenericUtilitiesModule, only: sim_message, stop_with_error
   private
-  public :: ListType, ListNodeType
+  public :: ListType, ListNodeType, isEqualIface
 
   type :: ListType
     ! -- Public members
@@ -160,7 +160,6 @@ contains
     logical :: hasObj
     ! local
     type(ListNodeType), pointer :: current => null()
-    type(ListNodeType), pointer :: next => null()
    
     hasObj = .false.
     current => this%firstNode

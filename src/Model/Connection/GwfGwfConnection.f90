@@ -31,7 +31,7 @@ module GwfGwfConnectionModule
     
   contains 
     procedure, pass(this) :: gwfGwfConnection_ctor
-	  generic, public :: construct => gwfGwfConnection_ctor
+    generic, public :: construct => gwfGwfConnection_ctor
     
     ! implement (abstract) virtual
     procedure, pass(this) :: mc_ar => gwfgwfcon_ar

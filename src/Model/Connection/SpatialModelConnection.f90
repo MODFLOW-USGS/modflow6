@@ -1,19 +1,19 @@
 ! Module holding the definition of the SpatialModelConnectionType
 module SpatialModelConnectionModule
   use KindModule, only: I4B, DP
-	use ModelConnectionModule
-	use NumericalModelModule, only: NumericalModelType
+  use ModelConnectionModule
+  use NumericalModelModule, only: NumericalModelType
   use NumericalExchangeModule, only: NumericalExchangeType, GetNumericalExchangeFromList
   use GridConnectionModule, only: GridConnectionType, GlobalCellType
   use ListModule, only: ListType
   
-	implicit none
-	private
+  implicit none
+  private
 
-	! Class to manage spatial connection of a model to one or more models of the same type.
-	! Spatial connection here means that the model domains (spatial discretization) are adjacent
-	! and connected via NumericalExchangeType object(s).
-	type, public, abstract, extends(ModelConnectionType) :: SpatialModelConnectionType
+  ! Class to manage spatial connection of a model to one or more models of the same type.
+  ! Spatial connection here means that the model domains (spatial discretization) are adjacent
+  ! and connected via NumericalExchangeType object(s).
+  type, public, abstract, extends(ModelConnectionType) :: SpatialModelConnectionType
         
     ! aggregation, all exchanges which directly connect with our model
     type(ListType), pointer :: exchangeList => null()    
@@ -58,7 +58,6 @@ contains ! module procedures
     class(SpatialModelConnectionType), intent(inout) :: this
     class(NumericalModelType), intent(in), pointer :: model
     character(len=*), intent(in) :: name
-    integer(I4B) :: stencilDepth
     
     ! base props:
     this%name = name
@@ -79,7 +78,7 @@ contains ! module procedures
   
   subroutine addExchangeToSpatialConnection(this, exchange)
     class(SpatialModelConnectionType), intent(inout) :: this
-	  class(NumericalExchangeType), pointer, intent(in) :: exchange
+    class(NumericalExchangeType), pointer, intent(in) :: exchange
     ! local
     class(*), pointer :: exg
     
@@ -190,7 +189,7 @@ contains ! module procedures
   subroutine findModelNeighbors(this)
     class(SpatialModelConnectionType), intent(inout) :: this
     ! local   
-    integer(I4B) :: i, depth
+    integer(I4B) :: i
     class(NumericalExchangeType), pointer :: numEx
       
     ! loop over all exchanges in solution with same conn. type
