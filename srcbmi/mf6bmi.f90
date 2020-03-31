@@ -65,7 +65,7 @@ module mf6bmi
   ! Perform teardown tasks for the model.
   function bmi_finalize() result(bmi_status) bind(C, name="finalize")
   !DEC$ ATTRIBUTES DLLEXPORT :: bmi_finalize
-    use SimVariablesModule, only: iforcestop, ireturnerr
+    use SimVariablesModule, only: iforcestop
     integer(kind=c_int) :: bmi_status
     
     ! we don't want a full stop() here, this disables it:    
@@ -165,7 +165,6 @@ module mf6bmi
     type(c_ptr), intent(inout) :: x
     integer(kind=c_int) :: bmi_status
     ! local
-    integer :: i
     character(len=LENORIGIN) :: origin
     character(len=LENVARNAME) :: var_name_only
     real(DP), pointer :: dblptr
@@ -206,7 +205,6 @@ module mf6bmi
     type(c_ptr), intent(inout) :: x
     integer(kind=c_int) :: bmi_status
     ! local
-    integer :: i
     character(len=LENORIGIN) :: origin
     character(len=LENVARNAME) :: var_name_only
     integer(I4B) :: rank
@@ -595,7 +593,7 @@ module mf6bmi
     real(DP), dimension(nx), intent(inout) :: x    
     integer :: bmi_status
     ! local
-    integer :: idx, i
+    integer :: idx
     character(len=LENORIGIN) :: origin, var_name
     character(len=LENVARNAME) :: var_name_only
     
@@ -620,7 +618,6 @@ module mf6bmi
     integer(kind=c_int) :: bmi_status
     ! local
     character(len=LENMODELNAME) :: model_name
-    integer :: status
     integer(I4B), pointer :: nvert_ptr
     
     ! make sure function is only used for unstructured grids
@@ -645,7 +642,6 @@ module mf6bmi
     ! local
     character(len=LENMODELNAME) :: model_name
     integer :: i
-    integer :: status
     class(NumericalModelType), pointer :: numericalModel
     
     ! make sure function is only used for unstructured grids
@@ -670,7 +666,6 @@ module mf6bmi
     type(c_ptr), intent(out) :: face_nodes
     integer(kind=c_int) :: bmi_status
     ! local
-    integer :: status
     character(len=LENMODELNAME) :: model_name
     integer, dimension(:), pointer, contiguous :: javert_ptr
     
@@ -693,7 +688,6 @@ module mf6bmi
     integer(kind=c_int) :: bmi_status
     ! local
     integer :: i
-    integer :: status
     character(len=LENMODELNAME) :: model_name
     integer, dimension(:), pointer, contiguous :: iavert_ptr
     integer, dimension(:), pointer, contiguous :: array_ptr
@@ -765,7 +759,7 @@ module mf6bmi
   
   integer(c_int) pure function strlen(char_array)
     character(c_char), intent(in) :: char_array(LENORIGIN)
-    integer :: inull, i
+    integer :: i
     
     strlen = 0
     do i = 1, size(char_array)

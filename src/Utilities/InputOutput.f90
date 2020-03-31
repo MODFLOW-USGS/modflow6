@@ -685,17 +685,17 @@ module InputOutputModule
         ispace = (ILEN - i) / 2
         if (ireal > 0) then
           if (ipad > 0) then
-            cval = ' ' //trim(adjustl(cval))
+             cval = ' ' //trim(adjustl(cval))
           else
             cval = trim(adjustl(cval))
           end if
         else
-          cval = repeat(' ', ispace) // trim(cval)
+           cval = repeat(' ', ispace) // trim(cval)
         end if
       else if (ialign == TABLEFT) then
         cval = trim(adjustl(cval))
         if (ipad > 0) then
-          cval = ' ' //trim(adjustl(cval))
+           cval = ' ' //trim(adjustl(cval))
         end if
       else
         cval = adjustr(cval)

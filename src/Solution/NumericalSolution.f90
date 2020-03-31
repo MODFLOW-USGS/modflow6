@@ -2022,7 +2022,6 @@ contains
     class(NumericalSolutionType) :: this
     ! local    
     class(ModelConnectionType), pointer :: connection
-    class(*), pointer :: objPtr
     class(NumericalModelType), pointer :: model
     class(NumericalExchangeType), pointer :: numEx
     integer(I4B) :: ic, im, ie
@@ -2446,8 +2445,6 @@ contains
     class(NumericalExchangeType), pointer :: cp
     integer(I4B), intent(in) :: kiter
     ! -- local
-    integer(I4B) :: ic
-    integer(I4B) :: im
     integer(I4B) :: nb
     integer(I4B) :: btflag
     integer(I4B) :: ibflag

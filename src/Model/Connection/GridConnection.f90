@@ -2,7 +2,7 @@ module GridConnectionModule
   use KindModule, only: I4B, DP
   use SimModule, only: ustop
   use ConstantsModule, only: LENORIGIN
-  use ListModule, only: ListType
+  use ListModule, only: ListType, isEqualIface
   use NumericalModelModule
   use NumericalExchangeModule
   use ConnectionsModule
@@ -186,6 +186,7 @@ module GridConnectionModule
     integer(I4B) :: inbr, newDepth
     class(NumericalModelType), pointer      :: neighborModel
     class(*), pointer :: numExObj
+    procedure(isEqualIface), pointer :: areEqualMethod
     
     if (depth < 1) then
       return
@@ -221,6 +222,7 @@ module GridConnectionModule
       
       ! add to list of exchanges
       numExObj => numEx
+      areEqualMethod => arePointersEqual
       if (.not. this%exchanges%Contains(numExObj, areEqualMethod)) then
         call AddNumericalExchangeToList(this%exchanges, numEx)
       end if
@@ -228,11 +230,11 @@ module GridConnectionModule
     
   end subroutine connectModels
   
-  function areEqualMethod(obj1, obj2) result(areIdentical)
+  function arePointersEqual(obj1, obj2) result(areIdentical)
     class(*), pointer :: obj1, obj2
     logical :: areIdentical
     areIdentical = associated(obj1, obj2) 
-  end function areEqualMethod
+  end function arePointersEqual
   
   subroutine addToRegionalModels(this, modelToAdd)
     class(GridConnectionType), intent(inout) :: this  
@@ -304,7 +306,7 @@ module GridConnectionModule
     type(GlobalCellType), optional            :: mask
     logical, optional                         :: local ! controls whether only local (within the same model) neighbors are added
     ! local
-    integer(I4B)                              :: idx, nbrIdx, ipos, inbr, iexg
+    integer(I4B)                              :: nbrIdx, ipos, inbr
     type(ConnectionsType), pointer            :: conn
     integer(I4B)                              :: newDepth
     type(ModelWithNbrsType), pointer          :: modelWithNbrs
@@ -736,8 +738,7 @@ module GridConnectionModule
   subroutine createConnectionMask(this)
     class(GridConnectionType), intent(inout) :: this
     ! local
-    integer(I4B) :: iconn, icell, inbr, n, ipos
-    integer(I4B) :: ifaceIdx, ifaceIdxNbr
+    integer(I4B) :: icell, inbr, n, ipos
     integer(I4B) :: level, newMask
     type(CellWithNbrsType), pointer :: cell, nbrCell
     
@@ -865,7 +866,7 @@ module GridConnectionModule
   
   subroutine allocateScalars(this)
     use MemoryManagerModule, only: mem_allocate
-    class(GridConnectionType), intent(in) :: this
+    class(GridConnectionType) :: this
       
     call mem_allocate(this%linkCapacity, 'LINKCAP', this%memOrigin)
     call mem_allocate(this%nrOfBoundaryCells, 'NRBNDCELLS', this%memOrigin)

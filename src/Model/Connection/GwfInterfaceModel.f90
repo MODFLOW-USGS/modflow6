@@ -51,7 +51,6 @@ contains
     class(GwfInterfaceModelType), intent(inout) :: this
     class(GridConnectionType), pointer, intent(in) :: gridConn
     ! local
-    integer(I4B) :: im
     class(NumericalModelType), pointer :: numMod
     
     this%gridConnection => gridConn
@@ -112,9 +111,7 @@ contains
     class(GwfInterfaceModelType), intent(inout) :: this
     ! local
     integer(I4B) :: icell, nrOfCells, idx
-    integer(I4B) :: ierror
     type(NumericalModelType), pointer :: model
-    type(ConnectionsType), pointer :: connections
     class(DisBaseType), pointer :: disbase
     class(GwfDisuType), pointer :: disu
     real(DP) :: x,y

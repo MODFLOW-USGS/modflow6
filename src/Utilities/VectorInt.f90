@@ -45,7 +45,6 @@ contains ! module routines
   subroutine push_back(this, newValue)
     class(VectorInt), intent(inout) :: this
     integer(I4B) :: newValue
-    integer(I4B) :: increment
     ! check capacity
     if (this%size + 1 > this%capacity) then
       call this%expand()

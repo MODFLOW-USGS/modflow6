@@ -12,7 +12,7 @@ module ConnectionBuilderModule
     ! TODO: better name? 
     ! This procedure either creates a connection, or extends it for the given exchange.
     procedure, pass(this) :: processExchangeImpl
-	  generic, public :: processExchange => processExchangeImpl
+    generic, public :: processExchange => processExchangeImpl
   end type ConnectionBuilderType  
   
   contains

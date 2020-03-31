@@ -8,7 +8,7 @@ module ModelConnectionModule
   use NumericalExchangeModule, only: NumericalExchangeType 
   
   implicit none
-	private
+  private
   
   public :: GetConnectionFromList
   public :: CastAsModelConnectionClass
