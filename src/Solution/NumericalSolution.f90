@@ -1367,34 +1367,13 @@ contains
         end if
       end if
     end if
-    !
-    ! -- Set amat and rhs to zero
-    call this%sln_reset()
+    
+    ! TODO_MJR: discuss this, moved timer now sln_reset is inside...
     call code_timer(0, ttform, this%ttform)
-    !
-    ! -- Calculate the matrix terms for each exchange
-    do ic=1,this%exchangelist%Count()
-      cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-      call cp%exg_cf(kiter)
-    enddo
-    !
-    ! -- Calculate the matrix terms for each model
-    do im=1,this%modellist%Count()
-      mp => GetNumericalModelFromList(this%modellist, im)
-      call mp%model_cf(kiter)
-    enddo
-    !
-    ! -- Add exchange coefficients to the solution
-    do ic=1,this%exchangelist%Count()
-      cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-      call cp%exg_fc(kiter, this%ia, this%amat, 1)
-    enddo
-    !
-    ! -- Add model coefficients to the solution
-    do im=1,this%modellist%Count()
-      mp => GetNumericalModelFromList(this%modellist, im)
-      call mp%model_fc(kiter, this%amat, this%nja, 1)
-    enddo
+        
+    ! (re)build the solution matrix
+    call this%sln_buildsystem(kiter, inewton=1)
+    
     !
     ! -- Add exchange Newton-Raphson terms to solution
     do ic=1,this%exchangelist%Count()

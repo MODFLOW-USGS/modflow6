@@ -1777,12 +1777,7 @@ contains
     endif
     call this%obs%obs_da()
     deallocate(this%obs)
-    !
-    ! -- arrays
-    call mem_deallocate(this%ihc)
-    call mem_deallocate(this%cl1)
-    call mem_deallocate(this%cl2)
-    call mem_deallocate(this%hwva)
+    
     call mem_deallocate(this%condsat)
     deallocate(this%boundname)
     !
