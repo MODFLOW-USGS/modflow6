@@ -3,9 +3,7 @@
 \item \textbf{Block: OPTIONS}
 
 \begin{description}
-\item \texttt{HHFORMULATION}---use the variable-density hydraulic head formulation instead of the equivalent freshwater head formulation.
-
-\item \texttt{LHS}---use the variable-density hydraulic head formulation and put add the terms to the left-hand and right-hand sides.
+\item \texttt{HHFORMULATION\_RHS}---use the variable-density hydraulic head formulation and add off-diagonal terms to the right-hand.  This option will prevent the BUY Package from adding asymmetric terms to the flow matrix.
 
 \item \texttt{denseref}---fluid reference density used in the equation of state.  This value is set to 1000. if not specified as an option.
 

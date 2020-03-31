@@ -579,7 +579,7 @@ module GwfModule
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_cf()
-      if (this%inbuy > 0) call this%buy%buy_cf_bnd(packobj)
+      if (this%inbuy > 0) call this%buy%buy_cf_bnd(packobj, this%x)
     enddo
     !
     ! -- return

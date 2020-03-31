@@ -101,7 +101,7 @@ def get_model(idx, dir):
                                   icelltype=0,
                                   k=Kh, k33=Kv)
 
-    buy = flopy.mf6.ModflowGwfbuy(gwf, hhoptions=True,
+    buy = flopy.mf6.ModflowGwfbuy(gwf,
                                   denseref=1000., drhodc=0.7,
                                   dense=1000.)
 
