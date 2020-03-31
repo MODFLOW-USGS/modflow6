@@ -6,7 +6,9 @@ module NumericalSolutionModule
   use ConstantsModule,         only: LINELENGTH, LENSOLUTIONNAME,              &
                                      DPREC, DZERO, DEM20, DEM15, DEM6,         &
                                      DEM4, DEM3, DEM2, DEM1, DHALF,            &
-                                     DONE, DTHREE, DEP6, DEP20
+                                     DONE, DTHREE, DEP6, DEP20,                &
+                                     TABLEFT, TABRIGHT
+  use TableModule,             only: TableType, table_cr
   use GenericUtilitiesModule,  only: IS_SAME, sim_message, stop_with_error
   use VersionModule,           only: IDEVELOPMODE
   use BaseModelModule,         only: BaseModelType
@@ -120,6 +122,10 @@ module NumericalSolutionModule
     !
     ! -- sparse object
     type(sparsematrix)                                   :: sparse
+    !
+    ! -- table objects
+    type(TableType), pointer :: innertab => null()
+    type(TableType), pointer :: outertab => null()
 
   contains
     procedure :: sln_df
@@ -1001,6 +1007,20 @@ contains
     ! -- character arrays
     deallocate(this%caccel)
     !
+    ! -- inner iteration table object
+    if (associated(this%innertab)) then
+      call this%innertab%table_da()
+      deallocate(this%innertab)
+      nullify(this%innertab)
+    end if
+    !
+    ! -- outer iteration table object
+    if (associated(this%outertab)) then
+      call this%outertab%table_da()
+      deallocate(this%outertab)
+      nullify(this%outertab)
+    end if
+    !
     ! -- arrays
     call mem_deallocate(this%ja)
     call mem_deallocate(this%amat)
@@ -1314,9 +1334,13 @@ contains
     integer(I4B) :: ic, im    
     class(NumericalModelType), pointer :: mp
     class(NumericalExchangeType), pointer :: cp    
+    character(len=LINELENGTH) :: title
+    character(len=LINELENGTH) :: tag
     character(len=LINELENGTH) :: line
     character(len=34) :: strh
-    character(len=16) :: cval
+    character(len=25) :: cval
+    integer(I4B) :: ntabrows
+    integer(I4B) :: ntabcols
     integer(I4B) :: i0, i1    
     integer(I4B) :: itestmat, n
     integer(I4B) :: iter    
@@ -1327,40 +1351,53 @@ contains
     real(DP) :: ptcf
     real(DP) :: ttform
     real(DP) :: ttsoln
-    
     ! formats
-11  FORMAT(//1X,'OUTER ITERATION SUMMARY',/,1x,139('-'),/,                  &
-    18x,'     OUTER     INNER BACKTRACK BACKTRACK        INCOMING        ', &
-        'OUTGOING         MAXIMUM                    MAXIMUM CHANGE',/,     &
-    18x,' ITERATION ITERATION      FLAG    NUMBER        RESIDUAL        ', &
-        'RESIDUAL          CHANGE                    MODEL-(CELLID)',/,     &
-      1x,139('-'))
-    
-12  FORMAT(//1X,'OUTER ITERATION SUMMARY',/,1x,87('-'),/,                   &
-    18x,'     OUTER     INNER         MAXIMUM                    ',         &
-      'MAXIMUM CHANGE',/,                                                   &
-    18x,' ITERATION ITERATION          CHANGE                    ',         &
-      'MODEL-(CELLID)',/,                                                   &
-    1x,87('-'))
-    
-    ! --backtracking
+    !
+    ! -- code     
+    !
+    ! -- create header for outer iteration table
+    if (this%iprims > 0) then
+      if (.not. associated(this%outertab)) then
+        !
+        ! -- create outer iteration table
+        ! -- table dimensions
+        ntabrows = 1
+        ntabcols = 5
+        if (this%numtrack > 0) then
+          ntabcols = ntabcols + 4
+        end if
+        !
+        ! -- initialize table and define columns
+        title = 'OUTER ITERATION SUMMARY'
+        call table_cr(this%outertab, this%name, title)
+        call this%outertab%table_df(ntabrows, ntabcols, iout,        &
+                                    finalize=.FALSE.)
+        tag = 'IMS SOLUTION STEP'
+        call this%outertab%initialize_column(tag, 25, alignment=TABLEFT)
+        tag = 'OUTER ITERATION'
+        call this%outertab%initialize_column(tag, 10, alignment=TABRIGHT)
+        tag = 'INNER ITERATION'
+        call this%outertab%initialize_column(tag, 10, alignment=TABRIGHT)
+        if (this%numtrack > 0) then
+          tag = 'BACKTRACK FLAG'
+          call this%outertab%initialize_column(tag, 10, alignment=TABRIGHT)
+          tag = 'BACKTRACK NUMBER'
+          call this%outertab%initialize_column(tag, 10, alignment=TABRIGHT)
+          tag = 'INCOMING RESIDUAL'
+          call this%outertab%initialize_column(tag, 15, alignment=TABRIGHT)
+          tag = 'OUTGOINGING RESIDUAL'
+          call this%outertab%initialize_column(tag, 15, alignment=TABRIGHT)
+        end if
+        tag = 'MAXIMUM CHANGE'
+        call this%outertab%initialize_column(tag, 15, alignment=TABRIGHT)
+        tag = 'MAXIMUM CHANGE MODEL-(CELLID) OR MODEL-PACKAGE-(NUMBER)'
+        call this%outertab%initialize_column(tag, 34, alignment=TABRIGHT)
+      end if
+    end if
+    !
+    ! -- backtracking
     if (this%numtrack > 0) then
-      if (kiter == 1) then
-        ! -- write header for solver output
-        if (this%iprims > 0) then
-          write(iout,11)
-        end if
-      end if
-      !
-      ! -- call backtracking
       call this%sln_backtracking(mp, cp, kiter)
-    else
-      if (kiter == 1) then
-        ! -- write header for solver output
-        if (this%iprims > 0) then
-          write(iout,12)
-        end if
-      end if
     end if
     !
     ! -- Set amat and rhs to zero
@@ -1420,9 +1457,11 @@ contains
     CALL this%sln_ls(kiter, kstp, kper, iter, iptc, ptcf)
     call code_timer(1, ttsoln, this%ttsoln)
     !
+    ! -- save matrix to a file
+    !    to enable set itestmat to 1 and recompile
     !-------------------------------------------------------
     itestmat = 0
-    if(itestmat.eq.1)then
+    if (itestmat /= 0) then
       open(99,file='sol_MF6.TXT')
       WRITE(99,*) 'MATRIX SOLUTION FOLLOWS'
       WRITE(99,'(10(I8,G15.4))')  (n, this%x(N), N = 1, this%NEQ)
@@ -1430,11 +1469,31 @@ contains
       call stop_with_error()
     end if
     !-------------------------------------------------------
+    !    
     ! -- check convergence of solution
     call this%sln_outer_check(this%hncg(kiter), this%lrch(1,kiter))
     if (this%icnvg /= 0) then
       this%icnvg = 0
       if (abs(this%hncg(kiter)) <= this%hclose) this%icnvg = 1
+    end if
+    !
+    ! -- write maximum head change from linear solver to list file
+    if (this%iprims > 0) then
+      cval = 'Linear Solver   '
+      call this%sln_get_loc(this%lrch(1,kiter), strh)
+      !
+      ! -- add data to outertab
+      call this%outertab%add_term(cval)
+      call this%outertab%add_term(kiter)
+      call this%outertab%add_term(iter)
+      if (this%numtrack > 0) then
+        call this%outertab%add_term(' ')
+        call this%outertab%add_term(' ')
+        call this%outertab%add_term(' ')
+        call this%outertab%add_term(' ')
+      end if
+      call this%outertab%add_term(this%hncg(kiter))
+      call this%outertab%add_term(trim(strh))
     end if
     !
     ! -- Additional convergence check for pseudo-transient continuation
@@ -1457,7 +1516,7 @@ contains
     do ic=1,this%exchangelist%Count()
       cp => GetNumericalExchangeFromList(this%exchangelist, ic)
       call cp%exg_cc(this%icnvg)
-    enddo
+    end do
     !
     ! -- additional convergence check for model packages
     if (this%icnvg == 1) then
@@ -1468,34 +1527,65 @@ contains
       do im=1,this%modellist%Count()
         mp => GetNumericalModelFromList(this%modellist, im)
         call mp%model_cc(kiter, iend, this%icnvg, this%hclose, this%rclosebnd)
-      enddo
-    end if
-    !
-    !--write maximum head change from linear solver to list file
-    this%itertot = this%itertot + iter
-    if (this%iprims > 0) then
-      cval = 'Linear Solver   '
-      call this%sln_get_loc(this%lrch(1,kiter), strh)
-      if (this%numtrack > 0) then
-        WRITE(IOUT,22) cval, kiter, iter, this%hncg(kiter),               &
-                        adjustr(trim(strh))
-      else
-        WRITE(IOUT,23) cval, kiter, iter, this%hncg(kiter),               &
-                        adjustr(trim(strh))
+      end do
+      !
+      ! -- write maximum change in package convergence check
+      if (this%icnvg /= 1) then
+        !
+        !--write maximum head change after under relaxation to list file
+        if (this%iprims > 0) then
+          cval = 'Package convergence'
+          !call this%sln_get_loc(this%lrch(1,kiter), strh)
+          !
+          ! -- add data to outertab
+          call this%outertab%add_term(cval)
+          call this%outertab%add_term(kiter)
+          call this%outertab%add_term(' ')
+          if (this%numtrack > 0) then
+            call this%outertab%add_term(' ')
+            call this%outertab%add_term(' ')
+            call this%outertab%add_term(' ')
+            call this%outertab%add_term(' ')
+          end if
+          call this%outertab%add_term('value')
+          call this%outertab%add_term('package location')
+        end if
       end if
     end if
+    !
+    ! -- increment the counter storing the total number of linear iterations
+    this%itertot = this%itertot + iter
     !
     ! -- dampening
     if (this%icnvg /= 1) then
       if (this%nonmeth > 0) then
-        call this%sln_underrelax(kiter, this%hncg(kiter), this%neq,        &
-                                  this%active, this%x, this%xtemp)
+        call this%sln_underrelax(kiter, this%hncg(kiter), this%neq,              &
+                                 this%active, this%x, this%xtemp)
+        !
+        !--write maximum head change after under relaxation to list file
+        if (this%iprims > 0) then
+          cval = 'Under-relaxation'
+          call this%sln_get_loc(this%lrch(1,kiter), strh)
+          !
+          ! -- add data to outertab
+          call this%outertab%add_term(cval)
+          call this%outertab%add_term(kiter)
+          call this%outertab%add_term(' ')
+          if (this%numtrack > 0) then
+            call this%outertab%add_term(' ')
+            call this%outertab%add_term(' ')
+            call this%outertab%add_term(' ')
+            call this%outertab%add_term(' ')
+          end if
+          call this%outertab%add_term(this%hncg(kiter))
+          call this%outertab%add_term(trim(strh))
+        end if
       else
-        call this%sln_calcdx(this%neq, this%active,                        &
+        call this%sln_calcdx(this%neq, this%active,                              &
                               this%x, this%xtemp, this%dxold)
       endif
       !
-      ! --adjust heads if necessary
+      ! -- adjust heads by newton under-relaxation, if necessary
       inewtonur = 0
       do im=1,this%modellist%Count()
         mp => GetNumericalModelFromList(this%modellist, im)
@@ -1505,31 +1595,38 @@ contains
                           this%dxold(i0:i1), inewtonur)
       end do
       !
-      ! --update maximum head change
+      ! -- update maximum head change
       call this%sln_outer_check(this%hncg(kiter), this%lrch(1,kiter))
+      !
+      ! -- check for convergence if newton under-relaxation applied
       if (inewtonur /= 0) then
         call this%sln_maxval(this%neq, this%dxold, dxmax)
         if (abs(dxmax) <= this%hclose .and.                                &
             abs(this%hncg(kiter)) <= this%hclose) then
           this%icnvg = 1
-        end if
-      end if
-      !
-      !--write maximum head change after under relaxation to list file
-      if (this%iprims > 0) then
-        cval = 'Under-relaxation'
-        call this%sln_get_loc(this%lrch(1,kiter), strh)
-        if (this%numtrack > 0) then
-          WRITE(IOUT,24) cval, kiter, this%hncg(kiter), adjustr(trim(strh))
+        !
+        !--write maximum head change after newton under relaxation to list file
         else
-          WRITE(IOUT,25) cval, kiter, this%hncg(kiter), adjustr(trim(strh))
+          if (this%iprims > 0) then
+            cval = 'Newton under-relaxation'
+            call this%sln_get_loc(this%lrch(1,kiter), strh)
+            !
+            ! -- add data to outertab
+            call this%outertab%add_term(cval)
+            call this%outertab%add_term(kiter)
+            call this%outertab%add_term(' ')
+            if (this%numtrack > 0) then
+              call this%outertab%add_term(' ')
+              call this%outertab%add_term(' ')
+              call this%outertab%add_term(' ')
+              call this%outertab%add_term(' ')
+            end if
+            call this%outertab%add_term(this%hncg(kiter))
+            call this%outertab%add_term(trim(strh))
+          end if
         end if
       end if
     end if
-22    FORMAT(1X,A16,1X,I10,I10,53X,1PG15.6,A34)
-23    FORMAT(1X,A16,1X,I10,I10,1X,1PG15.6,A34)
-24    FORMAT(1X,A16,1X,I10,10X,53X,1PG15.6,A34)
-25    FORMAT(1X,A16,1X,I10,10X,1X,1PG15.6,A34)
     
   end subroutine doIteration
   
@@ -1556,6 +1653,11 @@ contains
       &"(1X, I0, ' CALLS TO NUMERICAL SOLUTION ', 'IN TIME STEP ', I0,         &
       &' STRESS PERIOD ',I0,/1X,I0,' TOTAL ITERATIONS')" 
     
+    !
+    ! -- finalize the outer iteration table
+    if (this%iprims > 0) then
+      call this%outertab%finalize_table()
+    end if
     ! -- write convergence info
     if (this%icnvg == 1) then
       if (this%iprims > 0) then
@@ -2402,11 +2504,28 @@ contains
       ! -- save new residual
       this%res_prev = this%res_new
     end if
+!    !
+!    ! -- write backtracking results
+!66  FORMAT(1X,A16,1X,I10,10X,I10,I10,1X,1PG15.6,1X,1PG15.6)
+!    WRITE(IOUT,66) 'Backtracking    ', kiter, ibflag, ibtcnt,                  &
+!                    resin, this%res_prev
     !
-    ! -- write backtracking results
-66  FORMAT(1X,A16,1X,I10,10X,I10,I10,1X,1PG15.6,1X,1PG15.6)
-    WRITE(IOUT,66) 'Backtracking    ', kiter, ibflag, ibtcnt,                  &
-                    resin, this%res_prev
+    ! -- write back backtracking results
+    if (this%iprims > 0) then
+      !
+      ! -- add data to outertab
+      call this%outertab%add_term( 'Backtracking    ')
+      call this%outertab%add_term(kiter)
+      call this%outertab%add_term(' ')
+      if (this%numtrack > 0) then
+        call this%outertab%add_term(ibflag)
+        call this%outertab%add_term(ibtcnt)
+        call this%outertab%add_term(resin)
+        call this%outertab%add_term(this%res_prev)
+      end if
+      call this%outertab%add_term(' ')
+      call this%outertab%add_term(' ')
+    end if
     !
     ! -- return
     return
@@ -2497,7 +2616,7 @@ contains
 
   subroutine sln_maxval(this, neq, v, vnorm)
 ! ******************************************************************************
-! sln_l2norm
+! sln_maxval
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -2534,7 +2653,7 @@ contains
 
   subroutine sln_calcdx(this, neq, active, x, xtemp, dx)
 ! ******************************************************************************
-! sln_l2norm
+! sln_calcdx
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
