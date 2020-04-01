@@ -1,5 +1,7 @@
 Input to the Buoyancy (BUY) Package is read from the file that has type ``BUY6'' in the Name File.  If the BUY Package is included for a model, then the model will use the variable-density form of Darcy's Law for all flow calculations.  Only one BUY Package can be specified for a GWF model.
 
+For head-dependent boundary conditions, it may be necessary to provide a density and elevation for each head-dependent boundary so that the model can calculate accurate flows between the boundary and the aquifer.  Density and elevations can be specified for the GHB, DRN, and LAK Packages using auxiliary variables.  If auxiliary variables with the name DENSITY and/or ELEVATION are specified in these packages, then these values will be used in the variable-density form of Darcy's Law for the boundary.  If these auxiliary variables are not specified, then the boundary density will be set to the reference density and the elevation will be set to the connected cell center elevation.
+
 \vspace{5mm}
 \subsubsection{Structure of Blocks}
 

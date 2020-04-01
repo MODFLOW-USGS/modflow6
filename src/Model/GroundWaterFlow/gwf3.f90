@@ -575,7 +575,7 @@ module GwfModule
     !
     ! -- Call package cf routines
     if(this%innpf > 0) call this%npf%npf_cf(kiter, this%dis%nodes, this%x)
-    if(this%inbuy > 0) call this%buy%buy_cf(kiter, this%x)
+    if(this%inbuy > 0) call this%buy%buy_cf(kiter)
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_cf()
