@@ -239,11 +239,6 @@ module GwfBuyModule
     if (this%ireadelev == 0) then
       do n = 1, nodes
         tp = this%dis%top(n)
-        if (this%ibound(n) == 0) then
-          hn = tp
-        else
-          hn = hnew(n)
-        end if
         bt = this%dis%bot(n)
         this%elev(n) = bt + DHALF * this%npf%sat(n) * (tp - bt)
       end do
@@ -319,7 +314,11 @@ module GwfBuyModule
       !
       ! -- calculate terms and add to hcof and rhs
       add_terms = .true.
+      !
+      ! -- Check if drain should be on
       if (iheaddep == 3 .and. hnew(node) <= hbnd) add_terms = .false.
+      !
+      ! -- TODO: What should river correction look like when head is below rbot?
       !
       ! -- add terms if necessary
       if (add_terms) then
