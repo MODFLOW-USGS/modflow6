@@ -6,7 +6,7 @@ module UzfModule
   use ConstantsModule, only: DZERO, DEM6, DEM4, DEM2, DEM1, DHALF,              &
                              DONE, DHUNDRED,                                    &
                              LINELENGTH, LENFTYPE, LENPACKAGENAME,              &
-                             LENBOUNDNAME, LENBUDTXT, DNODATA,                  &
+                             LENBOUNDNAME, LENBUDTXT, LENPAKLOC, DNODATA,       &
                              NAMEDBOUNDFLAG, MAXCHARLEN,                        &
                              DHNOFLO, DHDRY,                                    &
                              TABLEFT, TABCENTER, TABRIGHT,                      &
@@ -1156,7 +1156,7 @@ contains
     return
   end subroutine uzf_fn
 
-  subroutine uzf_cc(this, iend, icnvg, hclose, rclose)
+  subroutine uzf_cc(this, kiter, iend, icnvg, hclose, rclose, dpak, cpak)
 ! **************************************************************************
 ! uzf_cc -- Final convergence check for package
 ! **************************************************************************
@@ -1165,11 +1165,15 @@ contains
 ! --------------------------------------------------------------------------
     ! -- dummy
     class(Uzftype), intent(inout) :: this
+    integer(I4B), intent(in) :: kiter
     integer(I4B), intent(in) :: iend
     integer(I4B), intent(inout) :: icnvg
     real(DP), intent(in) :: hclose
     real(DP), intent(in) :: rclose
+    real(DP), dimension(2), intent(inout) :: dpak
+    character(len=LENPAKLOC), dimension(2), intent(inout) :: cpak
     ! -- local
+    character(len=LENPAKLOC) :: cloc
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: tag
     character(len=20) :: cellid
@@ -1219,7 +1223,25 @@ contains
         if (ABS(drejinf) > rclose .or. ABS(drch) > rclose .or.                  &
             ABS(dseep) > rclose) then
           icnvg = 0
-          ! write convergence check information if this is the last outer iteration
+          !
+          ! -- create base location
+          write(cloc, "(a,'-(',i0,')')") trim(this%origin), n
+          !
+          ! -- set dpak and cpak
+          if (ABS(drejinf) > abs(dpak(2))) then
+            dpak(2) = drejinf
+            cpak(2) = trim(cloc) // ' rejinf'
+          end if
+          if (ABS(drch) > abs(dpak(2))) then
+            dpak(2) = drch
+            cpak(2) = trim(cloc) // ' rech'
+          end if
+          if (ABS(dseep) > abs(dpak(2))) then
+            dpak(2) = dseep
+            cpak(2) = trim(cloc) // ' seep'
+          end if
+          !
+          ! -- write convergence check information if this is the last outer iteration
           if (iend == 1) then
             ! -- write header
             if (ifirst == 1) then

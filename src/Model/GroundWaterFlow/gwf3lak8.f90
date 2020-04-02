@@ -8,7 +8,7 @@ module LakModule
                              DONETHIRD, DTWOTHIRDS, DFIVETHIRDS,               &
                              DGRAVITY, DCD,                                    &
                              NAMEDBOUNDFLAG, LENFTYPE, LENPACKAGENAME,         &
-                             DNODATA,                                          &
+                             LENPAKLOC, DNODATA,                               &
                              TABLEFT, TABCENTER, TABRIGHT,                     &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
   use MemoryTypeModule, only: MemoryTSType
@@ -3826,7 +3826,7 @@ contains
     return
   end subroutine lak_fn
 
-  subroutine lak_cc(this, iend, icnvg, hclose, rclose)
+  subroutine lak_cc(this, kiter, iend, icnvg, hclose, rclose, dpak, cpak)
 ! **************************************************************************
 ! lak_cc -- Final convergence check for package
 ! **************************************************************************
@@ -3835,11 +3835,15 @@ contains
 ! --------------------------------------------------------------------------
     ! -- dummy
     class(LakType), intent(inout) :: this
+    integer(I4B), intent(in) :: kiter
     integer(I4B), intent(in) :: iend
     integer(I4B), intent(inout) :: icnvg
     real(DP), intent(in) :: hclose
     real(DP), intent(in) :: rclose
+    real(DP), dimension(2), intent(inout) :: dpak
+    character(len=LENPAKLOC), dimension(2), intent(inout) :: cpak
     ! -- local
+    character(len=LENPAKLOC) :: cloc
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: tag
     integer(I4B) :: ntabrows
@@ -3880,9 +3884,26 @@ contains
             pd = DHUNDRED * residb / avgf
           end if
         end if
+        !
+        ! -- evaluate package convergence
         if (ABS(dh) > hclose .or. ABS(pd) > this%pdmax) then
           icnvg = 0
-          ! write convergence check information if this is the last outer iteration
+          !
+          ! -- create base location
+          write(cloc, "(a,'-(',i0,')')") trim(this%origin), n
+          !
+          ! -- set dpak and cpak
+          if (ABS(dh) > abs(dpak(1))) then
+            dpak(1) = dh
+            cpak(1) = trim(cloc)
+          end if
+          ! - JDH not sure if pd is the correct thing to use here
+          if (ABS(pd) > abs(dpak(2))) then
+            dpak(2) = pd
+            cpak(2) = trim(cloc)
+          end if
+          ! 
+          ! -- write convergence check information if this is the last outer iteration
           if (iend == 1) then
             if (ifirst == 1) then
               ifirst = 0

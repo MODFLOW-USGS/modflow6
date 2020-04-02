@@ -3,7 +3,7 @@
 module NumericalSolutionModule
   use KindModule,              only: DP, I4B
   use TimerModule,             only: code_timer
-  use ConstantsModule,         only: LINELENGTH, LENSOLUTIONNAME,              &
+  use ConstantsModule,         only: LINELENGTH, LENSOLUTIONNAME, LENPAKLOC,   &
                                      DPREC, DZERO, DEM20, DEM15, DEM6,         &
                                      DEM4, DEM3, DEM2, DEM1, DHALF,            &
                                      DONE, DTHREE, DEP6, DEP20,                &
@@ -89,6 +89,8 @@ module NumericalSolutionModule
     real(DP), dimension(:), pointer, contiguous          :: hchold => NULL()
     !
     ! -- convergence summary information
+    character(len=LENPAKLOC), dimension(:), pointer,                             &
+                                            contiguous   :: cpak => NULL()
     character(len=31), dimension(:), pointer, contiguous :: caccel => NULL()
     integer(I4B), pointer                                :: icsvout => NULL()
     integer(I4B), pointer                                :: nitermax => NULL()
@@ -100,6 +102,7 @@ module NumericalSolutionModule
     integer(I4B), dimension(:), pointer, contiguous      :: itinner => NULL()
     integer(I4B), pointer, dimension(:,:), contiguous    :: convlocdv => NULL()
     integer(I4B), pointer, dimension(:,:), contiguous    :: convlocdr => NULL()
+    real(DP), dimension(:), pointer, contiguous          :: dpak => NULL()
     real(DP), dimension(:), pointer, contiguous          :: dvmax => NULL()
     real(DP), dimension(:), pointer, contiguous          :: drmax => NULL()
     real(DP), pointer, dimension(:,:), contiguous        :: convdvmax => NULL()
@@ -373,6 +376,7 @@ contains
     call mem_allocate(this%itinner, 0, 'ITINNER', this%name)
     call mem_allocate(this%convlocdv, this%convnmod, 0, 'CONVLOCDV', this%name)
     call mem_allocate(this%convlocdr, this%convnmod, 0, 'CONVLOCDR', this%name)
+    call mem_allocate(this%dpak, 2, 'DVMAX', this%name)
     call mem_allocate(this%dvmax, this%convnmod, 'DVMAX', this%name)
     call mem_allocate(this%drmax, this%convnmod, 'DRMAX', this%name)
     call mem_allocate(this%convdvmax, this%convnmod, 0, 'CONVDVMAX', this%name)
@@ -886,6 +890,7 @@ contains
       this%nitermax = 1
     end if
 
+    allocate(this%cpak(2))
     allocate(this%caccel(this%nitermax))
 
     im = this%convnmod
@@ -1005,6 +1010,7 @@ contains
     call this%exchangelist%Clear()
     !
     ! -- character arrays
+    deallocate(this%cpak)
     deallocate(this%caccel)
     !
     ! -- inner iteration table object
@@ -1041,6 +1047,7 @@ contains
     call mem_deallocate(this%itinner)
     call mem_deallocate(this%convlocdv)
     call mem_deallocate(this%convlocdr)
+    call mem_deallocate(this%dpak)
     call mem_deallocate(this%dvmax)
     call mem_deallocate(this%drmax)
     call mem_deallocate(this%convdvmax)
@@ -1339,14 +1346,18 @@ contains
     character(len=LINELENGTH) :: line
     character(len=34) :: strh
     character(len=25) :: cval
+    character(len=7) :: cfail
     integer(I4B) :: ntabrows
     integer(I4B) :: ntabcols
     integer(I4B) :: i0, i1    
     integer(I4B) :: itestmat, n
     integer(I4B) :: iter    
     integer(I4B) :: inewtonur    
+    integer(I4B) :: locmax_nur    
     integer(I4B) :: iend
     integer(I4B) :: iptc
+    integer(I4B) :: ipak
+    real(DP) :: dxmax_nur
     real(DP) :: dxmax
     real(DP) :: ptcf
     real(DP) :: ttform
@@ -1362,7 +1373,7 @@ contains
         ! -- create outer iteration table
         ! -- table dimensions
         ntabrows = 1
-        ntabcols = 5
+        ntabcols = 6
         if (this%numtrack > 0) then
           ntabcols = ntabcols + 4
         end if
@@ -1390,6 +1401,8 @@ contains
         end if
         tag = 'MAXIMUM CHANGE'
         call this%outertab%initialize_column(tag, 15, alignment=TABRIGHT)
+        tag = 'SOLVER FAILURE'
+        call this%outertab%initialize_column(tag, 7, alignment=TABRIGHT)
         tag = 'MAXIMUM CHANGE MODEL-(CELLID) OR MODEL-PACKAGE-(NUMBER)'
         call this%outertab%initialize_column(tag, 34, alignment=TABRIGHT)
       end if
@@ -1477,9 +1490,33 @@ contains
       if (abs(this%hncg(kiter)) <= this%hclose) this%icnvg = 1
     end if
     !
+    ! -- set failure flag
+    if (this%icnvg == 0) then
+      cfail = '*'
+    else
+      cfail = ' '
+    end if
+    !
+    ! -- Additional convergence check for pseudo-transient continuation
+    !    term. Evaluate if the ptc value added to the diagonal has
+    !    decayed sufficiently.
+    if (iptc > 0) then
+      if (this%icnvg /= 0) then
+        if (this%ptcrat > this%ptcthresh) then
+          this%icnvg = 0
+          cfail = 'PTC'
+          if (kiter == this%mxiter) then
+            write(line, '(a)') 'pseudo-transient continuation ' //               &
+                                'caused convergence failure'
+            call sim_message(line)
+          end if
+        end if
+      end if
+    end if
+    !
     ! -- write maximum head change from linear solver to list file
     if (this%iprims > 0) then
-      cval = 'Linear Solver   '
+      cval = 'Model convergence'
       call this%sln_get_loc(this%lrch(1,kiter), strh)
       !
       ! -- add data to outertab
@@ -1493,23 +1530,8 @@ contains
         call this%outertab%add_term(' ')
       end if
       call this%outertab%add_term(this%hncg(kiter))
+      call this%outertab%add_term(cfail)
       call this%outertab%add_term(trim(strh))
-    end if
-    !
-    ! -- Additional convergence check for pseudo-transient continuation
-    !    term. Evaluate if the ptc value added to the diagonal has
-    !    decayed sufficiently.
-    if (iptc > 0) then
-      if (this%icnvg /= 0) then
-        if (this%ptcrat > this%ptcthresh) then
-          this%icnvg = 0
-          if (kiter == this%mxiter) then
-            write(line, '(a)') 'pseudo-transient continuation ' //               &
-                                'caused convergence failure'
-            call sim_message(line)
-          end if
-        end if
-      end if
     end if
     !
     ! -- Additional convergence check for exchanges
@@ -1519,23 +1541,30 @@ contains
     end do
     !
     ! -- additional convergence check for model packages
-    if (this%icnvg == 1) then
-      iend = 0
-      if (kiter == this%mxiter) then
-        iend = 1
-      end if
-      do im=1,this%modellist%Count()
-        mp => GetNumericalModelFromList(this%modellist, im)
-        call mp%model_cc(kiter, iend, this%icnvg, this%hclose, this%rclosebnd)
-      end do
+    iend = 0
+    if (kiter == this%mxiter) then
+      iend = 1
+    end if
+    do ipak = 1, 2
+      this%dpak(ipak) = DZERO
+      this%cpak(ipak) = ' '
+    end do
+    do im=1,this%modellist%Count()
+      mp => GetNumericalModelFromList(this%modellist, im)
+      call mp%model_cc(kiter, iend, this%icnvg, this%hclose, this%rclosebnd,   &
+                        this%dpak, this%cpak)
+    end do
+    !
+    ! -- write maximum change in package convergence check
+    if (this%icnvg /= 1) then
       !
-      ! -- write maximum change in package convergence check
-      if (this%icnvg /= 1) then
-        !
-        !--write maximum head change after under relaxation to list file
-        if (this%iprims > 0) then
-          cval = 'Package convergence'
-          !call this%sln_get_loc(this%lrch(1,kiter), strh)
+      !--write maximum head change after under relaxation to list file
+      if (this%iprims > 0) then
+        cval = 'Package convergence'
+        do ipak = 1, 2
+          if (len_trim(this%cpak(ipak)) < 1) then
+            cycle
+          end if
           !
           ! -- add data to outertab
           call this%outertab%add_term(cval)
@@ -1547,39 +1576,24 @@ contains
             call this%outertab%add_term(' ')
             call this%outertab%add_term(' ')
           end if
-          call this%outertab%add_term('value')
-          call this%outertab%add_term('package location')
-        end if
+          call this%outertab%add_term(this%dpak(ipak))
+          call this%outertab%add_term('*')
+          call this%outertab%add_term(this%cpak(ipak))
+          !
+          ! -- only need to write the first package convergence failure
+          exit
+        end do
       end if
     end if
     !
     ! -- increment the counter storing the total number of linear iterations
     this%itertot = this%itertot + iter
     !
-    ! -- dampening
+    ! -- under-relaxation - only done if convergence not achieved
     if (this%icnvg /= 1) then
       if (this%nonmeth > 0) then
         call this%sln_underrelax(kiter, this%hncg(kiter), this%neq,              &
                                  this%active, this%x, this%xtemp)
-        !
-        !--write maximum head change after under relaxation to list file
-        if (this%iprims > 0) then
-          cval = 'Under-relaxation'
-          call this%sln_get_loc(this%lrch(1,kiter), strh)
-          !
-          ! -- add data to outertab
-          call this%outertab%add_term(cval)
-          call this%outertab%add_term(kiter)
-          call this%outertab%add_term(' ')
-          if (this%numtrack > 0) then
-            call this%outertab%add_term(' ')
-            call this%outertab%add_term(' ')
-            call this%outertab%add_term(' ')
-            call this%outertab%add_term(' ')
-          end if
-          call this%outertab%add_term(this%hncg(kiter))
-          call this%outertab%add_term(trim(strh))
-        end if
       else
         call this%sln_calcdx(this%neq, this%active,                              &
                               this%x, this%xtemp, this%dxold)
@@ -1587,43 +1601,24 @@ contains
       !
       ! -- adjust heads by newton under-relaxation, if necessary
       inewtonur = 0
+      dxmax_nur = DZERO
+      locmax_nur = 0
       do im=1,this%modellist%Count()
         mp => GetNumericalModelFromList(this%modellist, im)
         i0 = mp%moffset + 1
         i1 = i0 + mp%neq - 1
-        call mp%model_nur(mp%neq, this%x(i0:i1), this%xtemp(i0:i1),        &
-                          this%dxold(i0:i1), inewtonur)
+        call mp%model_nur(mp%neq, this%x(i0:i1), this%xtemp(i0:i1),              &
+                          this%dxold(i0:i1), inewtonur, dxmax_nur, locmax_nur)
       end do
-      !
-      ! -- update maximum head change
-      call this%sln_outer_check(this%hncg(kiter), this%lrch(1,kiter))
       !
       ! -- check for convergence if newton under-relaxation applied
       if (inewtonur /= 0) then
         call this%sln_maxval(this%neq, this%dxold, dxmax)
-        if (abs(dxmax) <= this%hclose .and.                                &
+        !
+        ! -- evaluate convergence
+        if (abs(dxmax) <= this%hclose .and.                                      &
             abs(this%hncg(kiter)) <= this%hclose) then
           this%icnvg = 1
-        !
-        !--write maximum head change after newton under relaxation to list file
-        else
-          if (this%iprims > 0) then
-            cval = 'Newton under-relaxation'
-            call this%sln_get_loc(this%lrch(1,kiter), strh)
-            !
-            ! -- add data to outertab
-            call this%outertab%add_term(cval)
-            call this%outertab%add_term(kiter)
-            call this%outertab%add_term(' ')
-            if (this%numtrack > 0) then
-              call this%outertab%add_term(' ')
-              call this%outertab%add_term(' ')
-              call this%outertab%add_term(' ')
-              call this%outertab%add_term(' ')
-            end if
-            call this%outertab%add_term(this%hncg(kiter))
-            call this%outertab%add_term(trim(strh))
-          end if
         end if
       end if
     end if
@@ -2504,11 +2499,6 @@ contains
       ! -- save new residual
       this%res_prev = this%res_new
     end if
-!    !
-!    ! -- write backtracking results
-!66  FORMAT(1X,A16,1X,I10,10X,I10,I10,1X,1PG15.6,1X,1PG15.6)
-!    WRITE(IOUT,66) 'Backtracking    ', kiter, ibflag, ibtcnt,                  &
-!                    resin, this%res_prev
     !
     ! -- write back backtracking results
     if (this%iprims > 0) then
@@ -2523,6 +2513,7 @@ contains
         call this%outertab%add_term(resin)
         call this%outertab%add_term(this%res_prev)
       end if
+      call this%outertab%add_term(' ')
       call this%outertab%add_term(' ')
       call this%outertab%add_term(' ')
     end if

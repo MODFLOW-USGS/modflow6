@@ -5,7 +5,7 @@ module GwfCsubModule
                              DGRAVITY, DTEN, DHUNDRED, DNODATA, DHNOFLO,        &
                              LENFTYPE, LENPACKAGENAME,                          &
                              LINELENGTH, LENBOUNDNAME, NAMEDBOUNDFLAG,          &
-                             LENBUDTXT, LENAUXNAME, LENORIGIN,                  &
+                             LENBUDTXT, LENAUXNAME, LENORIGIN, LENPAKLOC,       &
                              TABLEFT, TABCENTER, TABRIGHT,                      &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
   use GenericUtilitiesModule, only: is_same, sim_message
@@ -434,7 +434,8 @@ contains
     return
    end subroutine csub_allocate_scalars
 
-  subroutine csub_cc(this, iend, icnvg, nodes, hnew, hold, hclose, rclose)
+  subroutine csub_cc(this, kiter, iend, icnvg, nodes, hnew, hold, hclose, rclose,&
+                     dpak, cpak)
 ! **************************************************************************
 ! csub_cc -- Final convergence check for package
 ! **************************************************************************
@@ -444,6 +445,7 @@ contains
     use TdisModule, only:delt
     ! -- dummy
     class(GwfCsubType) :: this
+    integer(I4B), intent(in) :: kiter
     integer(I4B), intent(in) :: iend
     integer(I4B), intent(inout) :: icnvg
     integer(I4B), intent(in) :: nodes
@@ -451,7 +453,10 @@ contains
     real(DP), dimension(nodes), intent(in) :: hold
     real(DP), intent(in) :: hclose
     real(DP), intent(in) :: rclose
+    real(DP), dimension(2), intent(inout) :: dpak
+    character(len=LENPAKLOC), dimension(2), intent(inout) :: cpak
     ! -- local
+    character(len=LENPAKLOC) :: cloc
     character(len=LINELENGTH) :: line
     integer(I4B) :: ifirst
     integer(I4B) :: ib
@@ -542,7 +547,22 @@ contains
       !
       ! -- write convergence failure information
       if (abs(hmax) > hclose .or. abs(rmax) > rclose) then
+      !if (abs(hmax) > DZERO .or. abs(rmax) > DZERO) then
         icnvg = 0
+        !
+        ! -- update head error
+        if (abs(hmax) > abs(dpak(1))) then
+          dpak(1) = hmax
+          write(cloc, "(a,'-(',i0,')')") trim(this%origin), ihmax
+          cpak(1) = cloc
+        end if
+        !
+        ! -- update flow error
+        if (abs(rmax) > abs(dpak(2))) then
+          dpak(2) = rmax
+          write(cloc, "(a,'-(',i0,')')") trim(this%origin), irmax
+          cpak(2) = cloc
+        end if
         !
         ! -- write convergence check information if this is the last 
         !    outer iteration

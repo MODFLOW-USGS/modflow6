@@ -2354,7 +2354,7 @@ contains
   end subroutine maw_fn
 
 
-  subroutine maw_nur(this, neqpak, x, xtemp, dx, inewtonur)
+  subroutine maw_nur(this, neqpak, x, xtemp, dx, inewtonur, dxmax, locmax)
 ! ******************************************************************************
 ! maw_nur -- under-relaxation
 ! Subroutine: (1) Under-relaxation of Groundwater Flow Model MAW Package Heads
@@ -2370,9 +2370,13 @@ contains
     real(DP), dimension(neqpak), intent(in) :: xtemp
     real(DP), dimension(neqpak), intent(inout) :: dx
     integer(I4B), intent(inout) :: inewtonur
+    real(DP), intent(inout) :: dxmax
+    integer(I4B), intent(inout) :: locmax
     ! -- local
     integer(I4B) :: n
     real(DP) :: botw
+    real(DP) :: xx
+    real(DP) :: dxx
 ! ------------------------------------------------------------------------------
 
     !
@@ -2384,7 +2388,13 @@ contains
       !    solution head is below the bottom of the well
       if (x(n) < botw) then
         inewtonur = 1
-        x(n) = xtemp(n)*(DONE-DP9) + botw*DP9
+        xx = xtemp(n)*(DONE-DP9) + botw*DP9
+        dxx = x(n) - xx
+        if (abs(dxx) > abs(dxmax)) then
+          locmax = n
+          dxmax = dxx
+        end if
+        x(n) = xx
         dx(n) = DZERO
       end if
     end do
