@@ -196,7 +196,7 @@ subroutine riv_cf(this, reset_mover)
     ! -- pakmvrobj cf
     lrm = .true.
     if (present(reset_mover)) lrm = reset_mover
-    if(this%imover == 1 .and. reset_mover) then
+    if(this%imover == 1 .and. lrm) then
       call this%pakmvrobj%cf()
     endif
     !
