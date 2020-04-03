@@ -3620,7 +3620,7 @@ contains
     return
   end subroutine lak_ad
 
-  subroutine lak_cf(this)
+  subroutine lak_cf(this, reset_mover)
   ! ******************************************************************************
   ! lak_cf -- Formulate the HCOF and RHS terms
   ! Subroutine: (1) skip if no lakes
@@ -3629,10 +3629,14 @@ contains
   !
   !    SPECIFICATIONS:
   ! ------------------------------------------------------------------------------
+    ! -- dummy
     class(LakType) :: this
+    logical, intent(in), optional :: reset_mover
+    ! -- local
     integer(I4B) :: j, n
     integer(I4B) :: igwfnode
     real(DP) ::  hlak, blak
+    logical :: lrm
   ! ------------------------------------------------------------------------------
     !!
     !! -- Calculate lak conductance and update package RHS and HCOF
@@ -3649,7 +3653,9 @@ contains
     end do
     !
     ! -- pakmvrobj cf
-    if(this%imover == 1) then
+    lrm = .true.
+    if (present(reset_mover)) lrm = reset_mover
+    if(this%imover == 1 .and. lrm) then
       call this%pakmvrobj%cf()
     end if
     !

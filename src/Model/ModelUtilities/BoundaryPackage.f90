@@ -408,7 +408,7 @@ module BndModule
     return
   end subroutine bnd_ck
 
-  subroutine bnd_cf(this)
+  subroutine bnd_cf(this, reset_mover)
 ! ******************************************************************************
 ! bnd_cf -- This is the package specific routine where a package adds its
 !           contributions to this%rhs and this%hcof
@@ -418,6 +418,7 @@ module BndModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     class(BndType) :: this
+    logical, intent(in), optional :: reset_mover
 ! ------------------------------------------------------------------------------
     ! -- bnd has no cf routine
     !

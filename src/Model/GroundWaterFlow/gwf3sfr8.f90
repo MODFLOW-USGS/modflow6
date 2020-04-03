@@ -1400,7 +1400,7 @@ contains
     return
   end subroutine sfr_ad
 
-  subroutine sfr_cf(this)
+  subroutine sfr_cf(this, reset_mover)
   ! ******************************************************************************
   ! sfr_cf -- Formulate the HCOF and RHS terms
   ! Subroutine: (1) skip in no wells
@@ -1409,12 +1409,13 @@ contains
   !
   !    SPECIFICATIONS:
   ! ------------------------------------------------------------------------------
-      ! -- dummy variables
-      class(SfrType) :: this
-      ! -- local variables
-      integer(I4B) :: n
-      integer(I4B) :: igwfnode
-
+    ! -- dummy
+    class(SfrType) :: this
+    logical, intent(in), optional :: reset_mover
+    ! -- local variables
+    integer(I4B) :: n
+    integer(I4B) :: igwfnode
+    logical :: lrm
   ! ------------------------------------------------------------------------------
     !
     ! -- Return if no sfr reaches
@@ -1433,7 +1434,9 @@ contains
     end do
     !
     ! -- pakmvrobj cf
-    if(this%imover == 1) then
+    lrm = .true.
+    if (present(reset_mover)) lrm = reset_mover
+    if(this%imover == 1 .and. reset_mover) then
       call this%pakmvrobj%cf()
     endif
     !
