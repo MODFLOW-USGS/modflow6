@@ -13,8 +13,7 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['henry01',  # This is for flow and transport in separate matrix solutions
-      'henry02']  # This is for flow and transport in the same matrix solution
+ex = ['henry01']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
@@ -101,8 +100,9 @@ def get_model(idx, dir):
     buy = flopy.mf6.ModflowGwfbuy(gwf)
 
     def chd_value(k):
-        depth = k * delz + 0.5 * delz
-        hf = top + 0.025 * depth
+        #depth = k * delz + 0.5 * delz
+        #hf = top + 0.025 * depth
+        hf = top
         return hf
 
     # chd files
@@ -233,11 +233,19 @@ def eval_transport(sim):
 
     # This is the answer to this problem.  These concentrations are for
     # time step 500 and only for the bottom layer.
-    cres = [[2.89573493e-05, 1.14446653e-04, 4.51581911e-04, 1.76640638e-03,
-             6.82342381e-03, 2.59046347e-02, 9.59028163e-02, 3.41705012e-01,
-             1.14554311e+00, 3.47615268e+00, 8.98354607e+00, 1.51879954e+01,
-             2.06578219e+01, 2.51309261e+01, 2.85181814e+01, 3.09868580e+01,
-             3.26940512e+01, 3.37932558e+01, 3.44410870e+01, 3.47819736e+01]]
+
+    # these commented out concs are for equivalent freshwater head formulation
+    #cres = [[2.89573493e-05, 1.14446653e-04, 4.51581911e-04, 1.76640638e-03,
+    #         6.82342381e-03, 2.59046347e-02, 9.59028163e-02, 3.41705012e-01,
+    #         1.14554311e+00, 3.47615268e+00, 8.98354607e+00, 1.51879954e+01,
+    #         2.06578219e+01, 2.51309261e+01, 2.85181814e+01, 3.09868580e+01,
+    #         3.26940512e+01, 3.37932558e+01, 3.44410870e+01, 3.47819736e+01]]
+
+    cres = [[6.62568993e-05, 2.62136709e-04, 1.03376866e-03, 4.03149437e-03,
+             1.54745356e-02, 5.80960685e-02, 2.11109069e-01, 7.29225328e-01,
+             2.32090039e+00, 6.46492264e+00, 1.28547693e+01, 1.86965727e+01,
+             2.36023472e+01, 2.74207659e+01, 3.02383176e+01, 3.22172463e+01,
+             3.35101828e+01, 3.42835666e+01, 3.46963233e+01, 3.48890176e+01]]
 
     cres = np.array(cres)
     assert np.allclose(cres, conc[-1, :, :]), ('simulated concentrations '

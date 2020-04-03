@@ -37,6 +37,7 @@ module GwfBuyModule
     procedure, private :: calcbuy
     procedure, private :: calchhterms
     procedure, private :: buy_calcdens
+    procedure, private :: buy_calcelev
     procedure :: allocate_scalars
     procedure, private :: allocate_arrays
     procedure, private :: read_options
@@ -138,6 +139,9 @@ module GwfBuyModule
     ! -- Read storage options
     call this%read_options()
     !
+    ! -- Calculate cell elevations
+    call this%buy_calcelev()
+    !
     ! -- Return
     return
   end subroutine buy_ar
@@ -215,7 +219,7 @@ module GwfBuyModule
     return
   end subroutine buy_rp
 
-  subroutine buy_cf(this, kiter, hnew)
+  subroutine buy_cf(this, kiter)
 ! ******************************************************************************
 ! buy_cf -- Fill coefficients
 ! ******************************************************************************
@@ -225,28 +229,15 @@ module GwfBuyModule
     ! -- dummy
     class(GwfBuyType) :: this
     integer(I4B) :: kiter
-    real(DP), intent(inout), dimension(:) :: hnew
     ! -- local
-    integer(I4B) :: n, nodes
-    real(DP) :: hn, tp, bt
 ! ------------------------------------------------------------------------------
     !
     ! -- update density using the last concentration
     call this%buy_calcdens()
     !
     ! -- Calculate the elev array
-    nodes = size(hnew)
     if (this%ireadelev == 0) then
-      do n = 1, nodes
-        tp = this%dis%top(n)
-        if (this%ibound(n) == 0) then
-          hn = tp
-        else
-          hn = hnew(n)
-        end if
-        bt = this%dis%bot(n)
-        this%elev(n) = bt + DHALF * this%npf%sat(n) * (tp - bt)
-      end do
+      !todo: now calling once at beginning call this%buy_calcelev()
     end if
     !
     ! -- Return
@@ -267,25 +258,11 @@ module GwfBuyModule
     class(BndType), pointer :: packobj
     real(DP), intent(in), dimension(:) :: hnew
     ! -- local
-    integer(I4B) :: n, node
-    integer(I4B) :: locdense, locelev
-    integer(I4B) :: iheaddep
-    real(DP) :: cond, hbnd
-    real(DP) :: elevbnd
-    real(DP) :: densebnd, avgdense, avgelev, t1, t2, term
-    logical :: add_terms
+    integer(I4B) :: n, locdense, locelev
 ! ------------------------------------------------------------------------------
     !
     ! -- Return if freshwater head formulation
     if (this%iform == 0) return
-    !
-    ! -- Return if not a head-dependent boundary
-    iheaddep = 0
-    if (packobj%filtyp == 'GHB') iheaddep = 1
-    if (packobj%filtyp == 'RIV') iheaddep = 2
-    if (packobj%filtyp == 'DRN') iheaddep = 3
-    if (packobj%filtyp == 'LAK') iheaddep = 4
-    if (iheaddep == 0) return
     !
     ! -- Add buoyancy terms for head-dependent boundaries
     locdense = 0
@@ -298,44 +275,168 @@ module GwfBuyModule
       end if
     end do
     !
-    ! Go through each stress boundary and add density term
-    do n = 1, packobj%nbound
-      node = packobj%nodelist(n)
-      if (this%ibound(node) <= 0) cycle
-      !
-      ! -- density
-      densebnd = this%denseref
-      if (locdense > 0) densebnd = packobj%auxvar(locdense, n)
-      avgdense = DHALF * densebnd + DHALF * this%dense(node)
-      !
-      ! -- elevation
-      elevbnd = this%elev(node)
-      if (locelev > 0) elevbnd = packobj%auxvar(locelev, n)
-      avgelev = DHALF * elevbnd + DHALF * this%elev(node)
-      !
-      ! -- boundary head and conductance
-      hbnd = packobj%bound(1, n)
-      cond = packobj%bound(2, n)
-      !
-      ! -- calculate terms and add to hcof and rhs
-      add_terms = .true.
-      if (iheaddep == 3 .and. hnew(node) <= hbnd) add_terms = .false.
-      !
-      ! -- add terms if necessary
-      if (add_terms) then
-        t1 = avgdense / this%denseref - DONE
-        t2 = (densebnd - this%dense(node)) / this%denseref
-        term = cond * (-t1 + DHALF * t2)
-        packobj%hcof(n) = packobj%hcof(n) + term
-        term = t1 * hbnd + DHALF * t2 * hbnd - t2 * avgelev
-        term = term * cond
-        packobj%rhs(n) = packobj%rhs(n) - term
-      end if
-    end do
+    ! -- Add density terms based on boundary package type
+    select case (packobj%filtyp)
+      case('GHB', 'LAK')
+        !
+        ! -- general head boundary
+        call buy_cf_ghb(packobj, hnew, this%dense, this%elev, this%denseref, &
+                        locdense, locelev)
+      case('RIV')
+        !
+        ! -- river
+        call buy_cf_riv(packobj, hnew, this%dense, this%elev, this%denseref, &
+                        locdense, locelev)
+      case('DRN')
+        !
+        ! drain
+        call buy_cf_drn(packobj, hnew, this%dense, this%denseref)
+      case default
+        !
+        ! -- nothing
+    end select
     !
     ! -- Return
     return
   end subroutine buy_cf_bnd
+  
+  subroutine buy_cf_ghb(packobj, hnew, dense, elev, denseref, locdense, locelev)
+    ! -- modules
+    use BndModule, only: BndType
+    class(BndType), pointer :: packobj
+    ! -- dummy
+    real(DP), intent(in), dimension(:) :: hnew
+    real(DP), intent(in), dimension(:) :: dense
+    real(DP), intent(in), dimension(:) :: elev
+    real(DP), intent(in) :: denseref
+    integer(I4B), intent(in) :: locdense
+    integer(I4B), intent(in) :: locelev
+    ! -- local
+    integer(I4B) :: n
+    integer(I4B) :: node
+    real(DP) :: denseghb
+    real(DP) :: elevghb
+    real(DP) :: avgdense
+    real(DP) :: avgelev
+    real(DP) :: hghb
+    real(DP) :: cond
+    real(DP) :: t1, t2, term
+    do n = 1, packobj%nbound
+      node = packobj%nodelist(n)
+      if (packobj%ibound(node) <= 0) cycle
+      !
+      ! -- density
+      denseghb = denseref
+      if (locdense > 0) denseghb = packobj%auxvar(locdense, n)
+      avgdense = DHALF * denseghb + DHALF * dense(node)
+      !
+      ! -- elevation
+      elevghb = elev(node)
+      if (locelev > 0) elevghb = packobj%auxvar(locelev, n)
+      avgelev = DHALF * elevghb + DHALF * elev(node)
+      !
+      ! -- boundary head and conductance
+      hghb = packobj%bound(1, n)
+      cond = packobj%bound(2, n)
+      !
+      ! -- calculate and add terms
+      t1 = avgdense / denseref - DONE
+      t2 = (denseghb - dense(node)) / denseref
+      term = cond * (-t1 + DHALF * t2)
+      packobj%hcof(n) = packobj%hcof(n) + term
+      term = t1 * hghb + DHALF * t2 * hghb - t2 * avgelev
+      term = term * cond
+      packobj%rhs(n) = packobj%rhs(n) - term
+    end do
+  end subroutine buy_cf_ghb
+  
+  subroutine buy_cf_riv(packobj, hnew, dense, elev, denseref, locdense, locelev)
+    ! -- modules
+    use BndModule, only: BndType
+    class(BndType), pointer :: packobj
+    ! -- dummy
+    real(DP), intent(in), dimension(:) :: hnew
+    real(DP), intent(in), dimension(:) :: dense
+    real(DP), intent(in), dimension(:) :: elev
+    real(DP), intent(in) :: denseref
+    integer(I4B), intent(in) :: locdense
+    integer(I4B), intent(in) :: locelev
+    ! -- local
+    integer(I4B) :: n
+    integer(I4B) :: node
+    real(DP) :: denseriv
+    real(DP) :: elevriv
+    real(DP) :: avgdense
+    real(DP) :: avgelev
+    real(DP) :: hriv
+    real(DP) :: rbot
+    real(DP) :: cond
+    real(DP) :: t1, t2, term
+    do n = 1, packobj%nbound
+      node = packobj%nodelist(n)
+      if (packobj%ibound(node) <= 0) cycle
+      !
+      ! -- density
+      denseriv = denseref
+      if (locdense > 0) denseriv = packobj%auxvar(locdense, n)
+      avgdense = DHALF * denseriv + DHALF * dense(node)
+      !
+      ! -- elevation
+      elevriv = elev(node)
+      if (locelev > 0) elevriv = packobj%auxvar(locelev, n)
+      avgelev = DHALF * elevriv + DHALF * elev(node)
+      !
+      ! -- boundary head and conductance
+      hriv = packobj%bound(1, n)
+      cond = packobj%bound(2, n)
+      rbot = packobj%bound(3, n)
+      !
+      ! -- calculate and add terms depending on whether head is above rbot
+      if (hnew(node) > rbot) then
+        t1 = avgdense / denseref - DONE
+        t2 = (denseriv - dense(node)) / denseref
+        term = cond * (-t1 + DHALF * t2)
+        packobj%hcof(n) = packobj%hcof(n) + term
+        term = t1 * hriv + DHALF * t2 * hriv - t2 * avgelev
+        term = term * cond
+        packobj%rhs(n) = packobj%rhs(n) - term
+      else
+        term = cond * (denseriv / denseref - DONE) * (hriv - rbot)
+        packobj%rhs(n) = packobj%rhs(n) - term
+      end if
+    end do
+  end subroutine buy_cf_riv
+  
+  subroutine buy_cf_drn(packobj, hnew, dense, denseref)
+    ! -- modules
+    use BndModule, only: BndType
+    class(BndType), pointer :: packobj
+    ! -- dummy
+    real(DP), intent(in), dimension(:) :: hnew
+    real(DP), intent(in), dimension(:) :: dense
+    real(DP), intent(in) :: denseref
+    ! -- local
+    integer(I4B) :: n
+    integer(I4B) :: node
+    real(DP) :: rho
+    real(DP) :: hbnd
+    real(DP) :: cond
+    real(DP) :: hcofterm
+    real(DP) :: rhsterm
+    do n = 1, packobj%nbound
+      node = packobj%nodelist(n)
+      if (packobj%ibound(node) <= 0) cycle
+      rho = dense(node)
+      hbnd = packobj%bound(1, n)
+      cond = packobj%bound(2, n)
+      if (hnew(node) > hbnd) then
+        hcofterm = - cond * (rho  / denseref - DONE)
+        rhsterm = hcofterm * hbnd
+        packobj%hcof(n) = packobj%hcof(n) + hcofterm
+        packobj%rhs(n) = packobj%rhs(n) + rhsterm
+      end if
+    end do
+  end subroutine buy_cf_drn
   
   subroutine buy_fc(this, kiter, njasln, amat, idxglo, rhs, hnew)
 ! ******************************************************************************
@@ -682,6 +783,32 @@ module GwfBuyModule
     ! -- Return
     return
   end subroutine buy_calcdens
+  
+  subroutine buy_calcelev(this)
+! ******************************************************************************
+! buy_calcelev -- Calculate cell elevations to use in density flow equations
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(GwfBuyType) :: this
+    ! -- local
+    integer(I4B) :: n
+    real(DP) :: tp, bt, frac
+! ------------------------------------------------------------------------------
+    !
+    ! -- Calculate the elev array
+    do n = 1, this%dis%nodes
+      tp = this%dis%top(n)
+      bt = this%dis%bot(n)
+      frac = this%npf%sat(n)
+      this%elev(n) = bt + DHALF * frac * (tp - bt)
+    end do
+    !
+    ! -- Return
+    return
+  end subroutine buy_calcelev
   
   subroutine allocate_scalars(this)
 ! ******************************************************************************
