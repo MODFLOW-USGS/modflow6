@@ -1620,18 +1620,11 @@ contains
 ! --------------------------------------------------------------------------
     !
     ! -- initialize local variables
-    icheck = 0
+    icheck = this%iconvchk  
     locdhmax = 0
     locrmax = 0
     dhmax = DZERO
     rmax = DZERO
-    !
-    ! -- set flag that determines if converged check should performed
-    if (this%ipakcsv /= 0) then
-      icheck = 1
-    else
-      icheck = icnvg
-    end if
     !
     ! -- header for package csv
     if (this%ipakcsv /= 0) then
@@ -1668,7 +1661,6 @@ contains
     end if
     !
     ! --
-    !if (this%iconvchk /= 0) then
     if (icheck /= 0) then
       final_check: do n = 1, this%maxbound
         if (this%iboundpak(n) == 0) cycle
@@ -1679,25 +1671,30 @@ contains
         r = r * delt / this%surface_area(n)
         !
         ! -- evaluate magnitude of differences
-        if (abs(dh) > abs(dhmax)) then
+        if (n == 1) then
           locdhmax = n
           dhmax = dh
-        end if
-        if (abs(r) > abs(rmax)) then
           locrmax = n
           rmax = r
-        end if
-        !
-        ! -- evaluate package convergence
-!        if (ABS(dh) > hclose .or. ABS(r) > rclose) then
-        if (ABS(dh) > hclose .or. ABS(r) > hclose) then
-        !if (ABS(dh) > DZERO .or. ABS(r) > DZERO) then
-          icnvg = 0
+        else
+          if (abs(dh) > abs(dhmax)) then
+            locdhmax = n
+            dhmax = dh
+          end if
+          if (abs(r) > abs(rmax)) then
+            locrmax = n
+            rmax = r
+          end if
         end if
       end do final_check
       !
+      ! -- evaluate package convergence
+      if (ABS(dhmax) > hclose .or. ABS(rmax) > hclose) then
+        icnvg = 0
+      end if
+      !
       ! -- set dpak and cpak
-      if (ABS(dhmax) > abs(dpak(1))) then
+      if (len_trim(cpak(1)) < 1 .or. ABS(dhmax) > abs(dpak(1))) then
         dpak(1) = dhmax
         write(cloc, "(a,'-(',i0,')-',a)")                                        &
           trim(this%origin), locdhmax, 'stage'
@@ -1730,7 +1727,7 @@ contains
       end if
       !
       ! -- convergence check final information
-      if (icnvg == 0) then
+      if (icheck /= 0 .and. icnvg == 0) then
         !
         ! -- write convergence check information if this is the last outer iteration
         if (iend == 1) then

@@ -70,6 +70,7 @@ module GwfCsubModule
     integer(I4B), pointer :: ispecified_pcs => null()
     integer(I4B), pointer :: ispecified_dbh => null()
     integer(I4B), pointer :: inamedbound => null()                               !flag to read boundnames
+    integer(I4B), pointer :: iconvchk => NULL()
     integer(I4B), pointer :: naux => null()                                      !number of auxiliary variables
     integer(I4B), pointer :: ninterbeds => null()
     integer(I4B), pointer :: maxsig0 => null()
@@ -357,6 +358,7 @@ contains
     call mem_allocate(this%ispecified_pcs, 'ISPECIFIED_PCS', this%origin)
     call mem_allocate(this%ispecified_dbh, 'ISPECIFIED_DBH', this%origin)
     call mem_allocate(this%inamedbound, 'INAMEDBOUND', this%origin)
+    call mem_allocate(this%iconvchk, 'ICONVCHK', this%origin)
     call mem_allocate(this%naux, 'NAUX', this%origin)
     call mem_allocate(this%istoragec, 'ISTORAGEC', this%origin)
     call mem_allocate(this%istrainib, 'ISTRAINIB', this%origin)
@@ -402,6 +404,7 @@ contains
     this%ispecified_pcs = 0
     this%ispecified_dbh = 0
     this%inamedbound = 0
+    this%iconvchk = 1
     this%naux = 0
     this%istoragec = 1
     this%istrainib = 0
@@ -458,7 +461,7 @@ contains
     ! -- local
     character(len=LENPAKLOC) :: cloc
     character(len=LINELENGTH) :: line
-    integer(I4B) :: ifirst
+    integer(I4B) :: icheck
     integer(I4B) :: ib
     integer(I4B) :: node
     integer(I4B) :: idelay
@@ -491,7 +494,19 @@ contains
       character(len=*), parameter :: fmtmsg =                                   &
          &"('CONVERGENCE FAILED AS A RESULT OF CSUB PACKAGE',1x,a)"                                  
 ! --------------------------------------------------------------------------
-    ifirst = 1
+    !
+    ! -- initialize local variables
+    icheck = this%iconvchk  
+    locdhmax = 0
+    locrmax = 0
+    dhmax = DZERO
+    rmax = DZERO
+    !
+    !
+    if (this%gwfiss == 0) then
+      icheck = 0
+    end if
+    
     if (this%gwfiss == 0) then
       ihmax = 0
       irmax = 0
@@ -562,7 +577,7 @@ contains
         dpak(1) = rmax
         write(cloc, "(a,'-(',i0,')-',a)")                                        &
           trim(this%origin), irmax, 'storage'
-        cpak(2) = cloc
+        cpak(1) = cloc
       end if
       !
       ! -- write convergence data to package csv
@@ -2362,6 +2377,13 @@ contains
           !    development version and are not included in the documentation.
           !    These options are only available when IDEVELOPMODE in
           !    constants module is set to 1
+          case('DEV_NO_FINAL_CHECK')
+            call this%parser%DevOpt()
+            this%iconvchk = 0
+            write(this%iout, '(4x,a)')                                           &
+              'A FINAL CONVERGENCE CHECK OF THE CHANGE IN DELAY INTERBED ' //    &
+              'HEADS AND FLOWS WILL NOT BE MADE'
+            found = .true.
           
           !
           ! default case
@@ -2831,6 +2853,7 @@ contains
     call mem_deallocate(this%ispecified_pcs)
     call mem_deallocate(this%ispecified_dbh)
     call mem_deallocate(this%inamedbound)
+    call mem_deallocate(this%iconvchk)
     call mem_deallocate(this%naux)
     call mem_deallocate(this%istoragec)
     call mem_deallocate(this%istrainib)

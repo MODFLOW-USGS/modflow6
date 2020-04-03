@@ -3833,6 +3833,7 @@ contains
 !
 !    SPECIFICATIONS:
 ! --------------------------------------------------------------------------
+    use TdisModule, only: totim, kstp, kper, delt
     ! -- dummy
     class(LakType), intent(inout) :: this
     integer(I4B), intent(in) :: kiter

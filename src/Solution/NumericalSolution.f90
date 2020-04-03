@@ -6,7 +6,7 @@ module NumericalSolutionModule
   use ConstantsModule,         only: LINELENGTH, LENSOLUTIONNAME, LENPAKLOC,   &
                                      DPREC, DZERO, DEM20, DEM15, DEM6,         &
                                      DEM4, DEM3, DEM2, DEM1, DHALF,            &
-                                     DONE, DTHREE, DEP6, DEP20,                &
+                                     DONE, DTHREE, DEP6, DEP20, DNODATA,       &
                                      TABLEFT, TABRIGHT
   use TableModule,             only: TableType, table_cr
   use GenericUtilitiesModule,  only: IS_SAME, sim_message, stop_with_error
@@ -1346,7 +1346,7 @@ contains
     character(len=LINELENGTH) :: line
     character(len=34) :: strh
     character(len=25) :: cval
-    character(len=7) :: cfail
+    character(len=7) :: cmsg
     integer(I4B) :: ntabrows
     integer(I4B) :: ntabcols
     integer(I4B) :: i0, i1    
@@ -1363,6 +1363,7 @@ contains
     real(DP) :: ttform
     real(DP) :: ttsoln
     ! formats
+!   -----------------------------------------------------------------------------
     !
     ! -- code     
     !
@@ -1383,8 +1384,8 @@ contains
         call table_cr(this%outertab, this%name, title)
         call this%outertab%table_df(ntabrows, ntabcols, iout,        &
                                     finalize=.FALSE.)
-        tag = 'IMS SOLUTION STEP'
-        call this%outertab%initialize_column(tag, 25, alignment=TABLEFT)
+        tag = 'OUTER ITERATION STEP'
+        call this%outertab%initialize_column(tag, 15, alignment=TABLEFT)
         tag = 'OUTER ITERATION'
         call this%outertab%initialize_column(tag, 10, alignment=TABRIGHT)
         tag = 'INNER ITERATION'
@@ -1392,16 +1393,16 @@ contains
         if (this%numtrack > 0) then
           tag = 'BACKTRACK FLAG'
           call this%outertab%initialize_column(tag, 10, alignment=TABRIGHT)
-          tag = 'BACKTRACK NUMBER'
+          tag = 'BACKTRACK ITERATIONS'
           call this%outertab%initialize_column(tag, 10, alignment=TABRIGHT)
           tag = 'INCOMING RESIDUAL'
           call this%outertab%initialize_column(tag, 15, alignment=TABRIGHT)
-          tag = 'OUTGOINGING RESIDUAL'
+          tag = 'OUTGOING RESIDUAL'
           call this%outertab%initialize_column(tag, 15, alignment=TABRIGHT)
         end if
         tag = 'MAXIMUM CHANGE'
         call this%outertab%initialize_column(tag, 15, alignment=TABRIGHT)
-        tag = 'SOLVER FAILURE'
+        tag = 'STEP SUCCESS'
         call this%outertab%initialize_column(tag, 7, alignment=TABRIGHT)
         tag = 'MAXIMUM CHANGE MODEL-(CELLID) OR MODEL-PACKAGE-(NUMBER)'
         call this%outertab%initialize_column(tag, 34, alignment=TABRIGHT)
@@ -1487,14 +1488,16 @@ contains
     call this%sln_outer_check(this%hncg(kiter), this%lrch(1,kiter))
     if (this%icnvg /= 0) then
       this%icnvg = 0
-      if (abs(this%hncg(kiter)) <= this%hclose) this%icnvg = 1
+      if (abs(this%hncg(kiter)) <= this%hclose) then
+        this%icnvg = 1
+      end if
     end if
     !
     ! -- set failure flag
     if (this%icnvg == 0) then
-      cfail = '*'
+      cmsg = ' '
     else
-      cfail = ' '
+      cmsg = '*'
     end if
     !
     ! -- Additional convergence check for pseudo-transient continuation
@@ -1504,7 +1507,7 @@ contains
       if (this%icnvg /= 0) then
         if (this%ptcrat > this%ptcthresh) then
           this%icnvg = 0
-          cfail = 'PTC'
+          cmsg = trim(cmsg) // 'PTC'
           if (kiter == this%mxiter) then
             write(line, '(a)') 'pseudo-transient continuation ' //               &
                                 'caused convergence failure'
@@ -1516,7 +1519,7 @@ contains
     !
     ! -- write maximum head change from linear solver to list file
     if (this%iprims > 0) then
-      cval = 'Model convergence'
+      cval = 'Model'
       call this%sln_get_loc(this%lrch(1,kiter), strh)
       !
       ! -- add data to outertab
@@ -1530,7 +1533,7 @@ contains
         call this%outertab%add_term(' ')
       end if
       call this%outertab%add_term(this%hncg(kiter))
-      call this%outertab%add_term(cfail)
+      call this%outertab%add_term(cmsg)
       call this%outertab%add_term(trim(strh))
     end if
     !
@@ -1557,11 +1560,11 @@ contains
     !
     ! -- write maximum change in package convergence check
     if (this%iprims > 0) then
-      cval = 'Package convergence'
+      cval = 'Package'
       if (this%icnvg /= 1) then
-        cfail = '*'
+        cmsg = ' '
       else
-        cfail = ' '
+        cmsg = '*'
       end if
       do ipak = 1, 2
         if (len_trim(this%cpak(ipak)) < 1) then
@@ -1579,7 +1582,7 @@ contains
           call this%outertab%add_term(' ')
         end if
         call this%outertab%add_term(this%dpak(ipak))
-        call this%outertab%add_term(cfail)
+        call this%outertab%add_term(cmsg)
         call this%outertab%add_term(this%cpak(ipak))
         !
         ! -- only need to write the first package convergence failure
@@ -2261,24 +2264,25 @@ contains
       end if
       this%l2norm0 = l2norm
     end if
-
-
+  !
+  ! -- save rhs, amat to a file
+  !    to enable set itestmat to 1 and recompile
   !-------------------------------------------------------
       itestmat = 0
-      if(itestmat == 1) then
+      if (itestmat == 1) then
         write(fname, fmtfname) this%id, kper, kstp, kiter
         print *, 'Saving amat to: ', trim(adjustl(fname))
         open(99,file=trim(adjustl(fname)))
         WRITE(99,*)'NODE, RHS, AMAT FOLLOW'
-        DO N=1,this%NEQ
+        DO N = 1, this%NEQ
           I1 = this%IA(N)
           I2 = this%IA(N+1)-1
           WRITE(99,'(*(G0,:,","))') N, this%RHS(N), (this%ja(i),i=i1,i2), &
                         (this%AMAT(I),I=I1,I2)
-        ENDDO
+        END DO
         close(99)
         !stop
-      endif
+      end if
   !-------------------------------------------------------
     !
     ! call appropriate linear solver
@@ -2383,6 +2387,7 @@ contains
     class(NumericalExchangeType), pointer :: cp
     integer(I4B), intent(in) :: kiter
     ! -- local
+    character(len=7) :: cmsg
     integer(I4B) :: ic
     integer(I4B) :: im
     integer(I4B) :: nb
@@ -2392,6 +2397,7 @@ contains
     real(DP) :: resin
 ! ------------------------------------------------------------------------------
     !
+    ! -- initialize local variables
     ibflag = 0
     !
     ! -- refill amat and rhs with standard conductance
@@ -2438,6 +2444,8 @@ contains
     ibtcnt = 0
     if (kiter > 1) then
       if (this%res_new > this%res_prev * this%btol) then
+        !
+        ! -- iterate until backtracking complete
         btloop: do nb = 1, this%numtrack
           !
           ! -- backtrack heads
@@ -2503,9 +2511,14 @@ contains
     !
     ! -- write back backtracking results
     if (this%iprims > 0) then
+      if (ibtcnt > 0) then
+        cmsg = ' '
+      else
+        cmsg = '*'
+      end if
       !
       ! -- add data to outertab
-      call this%outertab%add_term( 'Backtracking    ')
+      call this%outertab%add_term( 'Backtracking')
       call this%outertab%add_term(kiter)
       call this%outertab%add_term(' ')
       if (this%numtrack > 0) then
@@ -2515,7 +2528,7 @@ contains
         call this%outertab%add_term(this%res_prev)
       end if
       call this%outertab%add_term(' ')
-      call this%outertab%add_term(' ')
+      call this%outertab%add_term(cmsg)
       call this%outertab%add_term(' ')
     end if
     !
