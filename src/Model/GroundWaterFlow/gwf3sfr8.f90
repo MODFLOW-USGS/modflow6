@@ -1588,7 +1588,7 @@ contains
 !
 !    SPECIFICATIONS:
 ! --------------------------------------------------------------------------
-    use TdisModule, only: totim, kstp, kper
+    use TdisModule, only: totim, kstp, kper, delt
     ! -- dummy
     class(SfrType), intent(inout) :: this
     integer(I4B), intent(in) :: kiter
@@ -1675,8 +1675,8 @@ contains
         dh = this%stage0(n) - this%stage(n)
         r = this%usflow0(n) - this%usflow(n)
         !
-        ! -- normalize flow difference
-        r = r / this%surface_area(n)
+        ! -- normalize flow difference and convert to a depth
+        r = r * delt / this%surface_area(n)
         !
         ! -- evaluate magnitude of differences
         if (abs(dh) > abs(dhmax)) then
@@ -1697,21 +1697,40 @@ contains
       end do final_check
       !
       ! -- set dpak and cpak
-      if (icnvg == 0) then
+      if (ABS(dhmax) > abs(dpak(1))) then
+        dpak(1) = dhmax
+        write(cloc, "(a,'-(',i0,')-',a)")                                        &
+          trim(this%origin), locdhmax, 'stage'
+        cpak(1) = trim(cloc)
+      end if
+      if (ABS(rmax) > abs(dpak(1))) then
+        dpak(1) = rmax
+        write(cloc, "(a,'-(',i0,')-',a)")                                        &
+          trim(this%origin), locrmax, 'inflow'
+        cpak(1) = trim(cloc)
+      end if
+      !
+      ! -- write convergence data to package csv
+      if (this%ipakcsv /= 0) then
         !
-        ! -- set dpak and cpak
-        if (ABS(dhmax) > abs(dpak(1))) then
-          dpak(1) = dhmax
-          write(cloc, "(a,'-(',i0,')-',a)")                                      &
-            trim(this%origin), locdhmax, 'stage'
-          cpak(1) = trim(cloc)
+        ! -- write the data
+        call this%pakcsvtab%add_term(totim)
+        call this%pakcsvtab%add_term(kper)
+        call this%pakcsvtab%add_term(kstp)
+        call this%pakcsvtab%add_term(kiter)
+        call this%pakcsvtab%add_term(dhmax)
+        call this%pakcsvtab%add_term(locdhmax)
+        call this%pakcsvtab%add_term(rmax)
+        call this%pakcsvtab%add_term(locrmax)
+        !
+        ! -- finalize the package csv
+        if (iend == 1) then
+          call this%pakcsvtab%finalize_table()
         end if
-        if (ABS(rmax) > abs(dpak(1))) then
-          dpak(1) = rmax
-          write(cloc, "(a,'-(',i0,')-',a)")                                      &
-            trim(this%origin), locrmax, 'inflow'
-          cpak(1) = trim(cloc)
-        end if
+      end if
+      !
+      ! -- convergence check final information
+      if (icnvg == 0) then
         !
         ! -- write convergence check information if this is the last outer iteration
         if (iend == 1) then
@@ -1783,25 +1802,6 @@ contains
           if (this%inamedbound == 1) then
             call this%errortab%add_term(this%boundname(n))
           end if
-        end if
-      end if
-      !
-      ! -- write convergence data to package csv
-      if (this%ipakcsv /= 0) then
-        !
-        ! -- write the data
-        call this%pakcsvtab%add_term(totim)
-        call this%pakcsvtab%add_term(kper)
-        call this%pakcsvtab%add_term(kstp)
-        call this%pakcsvtab%add_term(kiter)
-        call this%pakcsvtab%add_term(dhmax)
-        call this%pakcsvtab%add_term(locdhmax)
-        call this%pakcsvtab%add_term(rmax)
-        call this%pakcsvtab%add_term(locrmax)
-        !
-        ! -- finalize the package csv
-        if (iend == 1) then
-          call this%pakcsvtab%finalize_table()
         end if
       end if
     end if

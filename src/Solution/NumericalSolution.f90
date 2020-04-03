@@ -1556,34 +1556,35 @@ contains
     end do
     !
     ! -- write maximum change in package convergence check
-    if (this%icnvg /= 1) then
-      !
-      !--write maximum head change after under relaxation to list file
-      if (this%iprims > 0) then
-        cval = 'Package convergence'
-        do ipak = 1, 2
-          if (len_trim(this%cpak(ipak)) < 1) then
-            cycle
-          end if
-          !
-          ! -- add data to outertab
-          call this%outertab%add_term(cval)
-          call this%outertab%add_term(kiter)
-          call this%outertab%add_term(' ')
-          if (this%numtrack > 0) then
-            call this%outertab%add_term(' ')
-            call this%outertab%add_term(' ')
-            call this%outertab%add_term(' ')
-            call this%outertab%add_term(' ')
-          end if
-          call this%outertab%add_term(this%dpak(ipak))
-          call this%outertab%add_term('*')
-          call this%outertab%add_term(this%cpak(ipak))
-          !
-          ! -- only need to write the first package convergence failure
-          exit
-        end do
+    if (this%iprims > 0) then
+      cval = 'Package convergence'
+      if (this%icnvg /= 1) then
+        cfail = '*'
+      else
+        cfail = ' '
       end if
+      do ipak = 1, 2
+        if (len_trim(this%cpak(ipak)) < 1) then
+          cycle
+        end if
+        !
+        ! -- add data to outertab
+        call this%outertab%add_term(cval)
+        call this%outertab%add_term(kiter)
+        call this%outertab%add_term(' ')
+        if (this%numtrack > 0) then
+          call this%outertab%add_term(' ')
+          call this%outertab%add_term(' ')
+          call this%outertab%add_term(' ')
+          call this%outertab%add_term(' ')
+        end if
+        call this%outertab%add_term(this%dpak(ipak))
+        call this%outertab%add_term(cfail)
+        call this%outertab%add_term(this%cpak(ipak))
+        !
+        ! -- only need to write the first package convergence failure
+        exit
+      end do
     end if
     !
     ! -- increment the counter storing the total number of linear iterations

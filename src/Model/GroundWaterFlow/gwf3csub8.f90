@@ -538,31 +538,41 @@ contains
         !    storage and the flow between the interbed and the cell
         df = v2 - v1
         !
-        ! -- evaluate difference relative to rrmax
+        ! -- normalize by cell area and convert to a depth
+        df = df * delt / area
+        !
+        ! -- evaluate difference relative to rmax
         if (abs(df) > abs(rmax)) then
           irmax = ib
           rmax = df
         end if
       end do final_check
       !
+      ! -- set dpak and cpak
+      ! -- update head error
+      if (abs(hmax) > abs(dpak(1))) then
+        dpak(1) = hmax
+        write(cloc, "(a,'-(',i0,')-',a)")                                        &
+          trim(this%origin), ihmax, 'head'
+        cpak(1) = cloc
+      end if
+      !
+      ! -- update storage error
+      if (abs(rmax) > abs(dpak(1))) then
+        dpak(1) = rmax
+        write(cloc, "(a,'-(',i0,')-',a)")                                        &
+          trim(this%origin), irmax, 'storage'
+        cpak(2) = cloc
+      end if
+      !
+      ! -- write convergence data to package csv
+
+      !
       ! -- write convergence failure information
-      if (abs(hmax) > hclose .or. abs(rmax) > rclose) then
+      !if (abs(hmax) > hclose .or. abs(rmax) > rclose) then
+      if (abs(hmax) > hclose .or. abs(rmax) > hclose) then
       !if (abs(hmax) > DZERO .or. abs(rmax) > DZERO) then
         icnvg = 0
-        !
-        ! -- update head error
-        if (abs(hmax) > abs(dpak(1))) then
-          dpak(1) = hmax
-          write(cloc, "(a,'-(',i0,')')") trim(this%origin), ihmax
-          cpak(1) = cloc
-        end if
-        !
-        ! -- update flow error
-        if (abs(rmax) > abs(dpak(2))) then
-          dpak(2) = rmax
-          write(cloc, "(a,'-(',i0,')')") trim(this%origin), irmax
-          cpak(2) = cloc
-        end if
         !
         ! -- write convergence check information if this is the last 
         !    outer iteration
