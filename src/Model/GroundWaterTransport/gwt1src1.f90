@@ -123,7 +123,7 @@ contains
     return
   end subroutine src_allocate_scalars
 
-  subroutine src_cf(this)
+  subroutine src_cf(this, reset_mover)
 ! ******************************************************************************
 ! src_cf -- Formulate the HCOF and RHS terms
 ! Subroutine: (1) skip if no sources
@@ -134,16 +134,20 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwtSrcType) :: this
+    logical, intent(in), optional :: reset_mover
     ! -- local
     integer(I4B) :: i, node
     real(DP) :: q
+    logical :: lrm
 ! ------------------------------------------------------------------------------
     !
     ! -- Return if no sources
     if(this%nbound == 0) return
     !
     ! -- pakmvrobj cf
-    if(this%imover == 1) then
+    lrm = .true.
+    if (present(reset_mover)) lrm = reset_mover
+    if(this%imover == 1 .and. lrm) then
       call this%pakmvrobj%cf()
     endif
     !
