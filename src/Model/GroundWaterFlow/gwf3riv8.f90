@@ -172,7 +172,7 @@ end subroutine riv_create
     return
   end subroutine riv_ck
 
-subroutine riv_cf(this)
+subroutine riv_cf(this, reset_mover)
 ! ******************************************************************************
 ! riv_cf -- Formulate the HCOF and RHS terms
 ! Subroutine: (1) skip in no rivs
@@ -181,16 +181,22 @@ subroutine riv_cf(this)
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- dummy
     class(RivType) :: this
+    logical, intent(in), optional :: reset_mover
+    ! -- local
     integer(I4B) :: i, node
     real(DP) :: hriv, criv, rbot
+    logical :: lrm
 ! ------------------------------------------------------------------------------
     !
     ! -- Return if no rivs
     if(this%nbound.eq.0) return
     !
     ! -- pakmvrobj cf
-    if(this%imover == 1) then
+    lrm = .true.
+    if (present(reset_mover)) lrm = reset_mover
+    if(this%imover == 1 .and. lrm) then
       call this%pakmvrobj%cf()
     endif
     !
