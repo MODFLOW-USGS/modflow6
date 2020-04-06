@@ -210,6 +210,8 @@
 | GWF | CSUB | OPTIONS | COARSE_COMPACTION_FILENAME | STRING | name of the binary output file to write elastic coarse-grained material compaction information. |
 | GWF | CSUB | OPTIONS | ZDISPLACEMENT | KEYWORD | keyword to specify that record corresponds to the z-displacement binary file. |
 | GWF | CSUB | OPTIONS | ZDISPLACEMENT_FILENAME | STRING | name of the binary output file to write z-displacement information. |
+| GWF | CSUB | OPTIONS | PACKAGE_CONVERGENCE | KEYWORD | keyword to specify that record corresponds to the package convergence comma spaced values file. |
+| GWF | CSUB | OPTIONS | PACKAGE_CONVERGENCE_FILENAME | STRING | name of the comma spaced values output file to write package convergence information. |
 | GWF | CSUB | OPTIONS | TS6 | KEYWORD | keyword to specify that record corresponds to a time-series file. |
 | GWF | CSUB | OPTIONS | FILEIN | KEYWORD | keyword to specify that an input filename is expected next. |
 | GWF | CSUB | OPTIONS | TS6_FILENAME | STRING | defines a time-series file defining time series that can be used to assign time-varying values. See the ``Time-Variable Input'' section for instructions on using the time-series capability. |
@@ -481,6 +483,8 @@
 | GWF | SFR | OPTIONS | BUDGET | KEYWORD | keyword to specify that record corresponds to the budget. |
 | GWF | SFR | OPTIONS | FILEOUT | KEYWORD | keyword to specify that an output filename is expected next. |
 | GWF | SFR | OPTIONS | BUDGETFILE | STRING | name of the binary output file to write budget information. |
+| GWF | SFR | OPTIONS | PACKAGE_CONVERGENCE | KEYWORD | keyword to specify that record corresponds to the package convergence comma spaced values file. |
+| GWF | SFR | OPTIONS | PACKAGE_CONVERGENCE_FILENAME | STRING | name of the comma spaced values output file to write package convergence information. |
 | GWF | SFR | OPTIONS | TS6 | KEYWORD | keyword to specify that record corresponds to a time-series file. |
 | GWF | SFR | OPTIONS | FILEIN | KEYWORD | keyword to specify that an input filename is expected next. |
 | GWF | SFR | OPTIONS | TS6_FILENAME | STRING | defines a time-series file defining time series that can be used to assign time-varying values. See the ``Time-Variable Input'' section for instructions on using the time-series capability. |
@@ -539,6 +543,8 @@
 | GWF | LAK | OPTIONS | BUDGET | KEYWORD | keyword to specify that record corresponds to the budget. |
 | GWF | LAK | OPTIONS | FILEOUT | KEYWORD | keyword to specify that an output filename is expected next. |
 | GWF | LAK | OPTIONS | BUDGETFILE | STRING | name of the binary output file to write budget information. |
+| GWF | LAK | OPTIONS | PACKAGE_CONVERGENCE | KEYWORD | keyword to specify that record corresponds to the package convergence comma spaced values file. |
+| GWF | LAK | OPTIONS | PACKAGE_CONVERGENCE_FILENAME | STRING | name of the comma spaced values output file to write package convergence information. |
 | GWF | LAK | OPTIONS | TS6 | KEYWORD | keyword to specify that record corresponds to a time-series file. |
 | GWF | LAK | OPTIONS | FILEIN | KEYWORD | keyword to specify that an input filename is expected next. |
 | GWF | LAK | OPTIONS | TS6_FILENAME | STRING | defines a time-series file defining time series that can be used to assign time-varying values. See the ``Time-Variable Input'' section for instructions on using the time-series capability. |
@@ -606,6 +612,8 @@
 | GWF | UZF | OPTIONS | BUDGET | KEYWORD | keyword to specify that record corresponds to the budget. |
 | GWF | UZF | OPTIONS | FILEOUT | KEYWORD | keyword to specify that an output filename is expected next. |
 | GWF | UZF | OPTIONS | BUDGETFILE | STRING | name of the binary output file to write budget information. |
+| GWF | UZF | OPTIONS | PACKAGE_CONVERGENCE | KEYWORD | keyword to specify that record corresponds to the package convergence comma spaced values file. |
+| GWF | UZF | OPTIONS | PACKAGE_CONVERGENCE_FILENAME | STRING | name of the comma spaced values output file to write package convergence information. |
 | GWF | UZF | OPTIONS | TS6 | KEYWORD | keyword to specify that record corresponds to a time-series file. |
 | GWF | UZF | OPTIONS | FILEIN | KEYWORD | keyword to specify that an input filename is expected next. |
 | GWF | UZF | OPTIONS | TS6_FILENAME | STRING | defines a time-series file defining time series that can be used to assign time-varying values. See the ``Time-Variable Input'' section for instructions on using the time-series capability. |

@@ -1355,6 +1355,7 @@ contains
     integer(I4B) :: inewtonur    
     integer(I4B) :: locmax_nur    
     integer(I4B) :: iend
+    integer(I4B) :: icnvgmod
     integer(I4B) :: iptc
     integer(I4B) :: ipak
     real(DP) :: dxmax_nur
@@ -1545,6 +1546,7 @@ contains
     !
     ! -- additional convergence check for model packages
     iend = 0
+    icnvgmod = this%icnvg
     if (kiter == this%mxiter) then
       iend = 1
     end if
@@ -1554,8 +1556,9 @@ contains
     end do
     do im=1,this%modellist%Count()
       mp => GetNumericalModelFromList(this%modellist, im)
-      call mp%model_cc(kiter, iend, this%icnvg, this%hclose, this%rclosebnd,   &
-                        this%dpak, this%cpak)
+      call mp%model_cc(kiter, iend, icnvgmod,                                    &
+                       this%icnvg, this%hclose, this%rclosebnd,                  &
+                       this%dpak, this%cpak)
     end do
     !
     ! -- write maximum change in package convergence check

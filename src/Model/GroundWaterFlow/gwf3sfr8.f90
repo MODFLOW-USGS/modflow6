@@ -1581,7 +1581,8 @@ contains
     return
   end subroutine sfr_fn
 
-  subroutine sfr_cc(this, kiter, iend, icnvg, hclose, rclose, dpak, cpak)
+  subroutine sfr_cc(this, kiter, iend, icnvgmod, icnvg, hclose, rclose,          &
+                    dpak, cpak)
 ! **************************************************************************
 ! sfr_cc -- Final convergence check for package
 ! **************************************************************************
@@ -1593,6 +1594,7 @@ contains
     class(SfrType), intent(inout) :: this
     integer(I4B), intent(in) :: kiter
     integer(I4B), intent(in) :: iend
+    integer(I4B), intent(in) :: icnvgmod
     integer(I4B), intent(inout) :: icnvg
     real(DP), intent(in) :: hclose
     real(DP), intent(in) :: rclose
@@ -1604,6 +1606,7 @@ contains
     character(len=LINELENGTH) :: tag
     character(len=15) :: cellid
     integer(I4B) :: icheck
+    integer(I4B) :: ipakfail
     integer(I4B) :: locdhmax
     integer(I4B) :: locrmax
     integer(I4B) :: ntabrows
@@ -1620,14 +1623,24 @@ contains
 ! --------------------------------------------------------------------------
     !
     ! -- initialize local variables
-    icheck = this%iconvchk  
+    icheck = this%iconvchk 
+    ipakfail = 0
     locdhmax = 0
     locrmax = 0
     dhmax = DZERO
     rmax = DZERO
     !
-    ! -- header for package csv
-    if (this%ipakcsv /= 0) then
+    ! -- if not saving package convergence data on check convergence if
+    !    the model is considered converged
+    if (this%ipakcsv == 0) then
+      if (icnvgmod == 0) then
+        icheck = 0
+      end if
+    !
+    ! -- saving package convergence data
+    else
+      !
+      ! -- header for package csv
       if (.not. associated(this%pakcsvtab)) then
         !
         ! -- determine the number of columns and rows
@@ -1660,7 +1673,7 @@ contains
       end if
     end if
     !
-    ! --
+    ! -- perform package convergence check
     if (icheck /= 0) then
       final_check: do n = 1, this%maxbound
         if (this%iboundpak(n) == 0) cycle
@@ -1691,6 +1704,7 @@ contains
       ! -- evaluate package convergence
       if (ABS(dhmax) > hclose .or. ABS(rmax) > hclose) then
         icnvg = 0
+        ipakfail = 1
       end if
       !
       ! -- set dpak and cpak
@@ -1725,80 +1739,80 @@ contains
           call this%pakcsvtab%finalize_table()
         end if
       end if
+    end if
+    !
+    ! -- convergence check final information
+    if (ipakfail /= 0) then
       !
-      ! -- convergence check final information
-      if (icheck /= 0 .and. icnvg == 0) then
+      ! -- write convergence check information if this is the last outer iteration
+      if (iend == 1) then
         !
-        ! -- write convergence check information if this is the last outer iteration
-        if (iend == 1) then
-          !
-          ! -- write an error messsage to stdout
-          call sim_message('', fmt=errmsg)
-          !
-          ! -- create error table
-          ! -- table dimensions
-          ntabrows = 1
-          ntabcols = 8
-          if (this%inamedbound == 1) then
-            ntabcols = ntabcols + 1
-          end if
-          !
-          ! -- initialize table and define columns
-          title = trim(adjustl(this%text)) // ' PACKAGE (' //                &
-                  trim(adjustl(this%name)) //                                &
-                  ') STREAMFLOW ROUTING CONVERGENCE CHECK'
-          call table_cr(this%errortab, this%name, title)
-          call this%errortab%table_df(ntabrows, ntabcols, this%iout)
-          tag = 'STAGE NUMBER'
-          call this%errortab%initialize_column(tag, 10)
-          tag = 'STAGE CELLID'
-          call this%errortab%initialize_column(tag, 20, alignment=TABLEFT)
-          tag = 'MAXIMUM STAGE DIFFERENCE'
-          call this%errortab%initialize_column(tag, 12)
-          tag = 'HCLOSE CRITERIA'
-          call this%errortab%initialize_column(tag, 12)
-          tag = 'INFLOW NUMBER'
-          call this%errortab%initialize_column(tag, 10)
-          tag = 'INFLOW CELLID'
-          call this%errortab%initialize_column(tag, 20, alignment=TABLEFT)
-          tag = 'MAXIMUM INFLOW RESIDUAL'
-          call this%errortab%initialize_column(tag, 12)
-          tag = 'RCLOSE CRITERIA'
-          call this%errortab%initialize_column(tag, 12)
-          if (this%inamedbound == 1) then
-            tag = 'BOUNDNAME'
-            call this%errortab%initialize_column(tag, LENBOUNDNAME, alignment=TABLEFT)
-          end if
-          !
-          ! -- write to error table
-          ! -- get cellid
-          node = this%igwfnode(locdhmax)
-          if (node > 0) then
-            call this%dis%noder_to_string(node, cellid)
-          else
-            cellid = 'none'
-          end if
-          !
-          ! -- add data
-          call this%errortab%add_term(locdhmax)
-          call this%errortab%add_term(cellid)
-          call this%errortab%add_term(dhmax)
-          call this%errortab%add_term(hclose)
-          !
-          ! -- get cellid
-          node = this%igwfnode(locrmax)
-          if (node > 0) then
-            call this%dis%noder_to_string(node, cellid)
-          else
-            cellid = 'none'
-          end if
-          call this%errortab%add_term(locrmax)
-          call this%errortab%add_term(cellid)
-          call this%errortab%add_term(rmax)
-          call this%errortab%add_term(hclose)
-          if (this%inamedbound == 1) then
-            call this%errortab%add_term(this%boundname(n))
-          end if
+        ! -- write an error messsage to stdout
+        call sim_message('', fmt=errmsg)
+        !
+        ! -- create error table
+        ! -- table dimensions
+        ntabrows = 1
+        ntabcols = 8
+        if (this%inamedbound == 1) then
+          ntabcols = ntabcols + 1
+        end if
+        !
+        ! -- initialize table and define columns
+        title = trim(adjustl(this%text)) // ' PACKAGE (' //                &
+                trim(adjustl(this%name)) //                                &
+                ') STREAMFLOW ROUTING CONVERGENCE CHECK'
+        call table_cr(this%errortab, this%name, title)
+        call this%errortab%table_df(ntabrows, ntabcols, this%iout)
+        tag = 'STAGE NUMBER'
+        call this%errortab%initialize_column(tag, 10)
+        tag = 'STAGE CELLID'
+        call this%errortab%initialize_column(tag, 20, alignment=TABLEFT)
+        tag = 'MAXIMUM STAGE DIFFERENCE'
+        call this%errortab%initialize_column(tag, 12)
+        tag = 'HCLOSE CRITERIA'
+        call this%errortab%initialize_column(tag, 12)
+        tag = 'INFLOW NUMBER'
+        call this%errortab%initialize_column(tag, 10)
+        tag = 'INFLOW CELLID'
+        call this%errortab%initialize_column(tag, 20, alignment=TABLEFT)
+        tag = 'MAXIMUM INFLOW RESIDUAL'
+        call this%errortab%initialize_column(tag, 12)
+        tag = 'RCLOSE CRITERIA'
+        call this%errortab%initialize_column(tag, 12)
+        if (this%inamedbound == 1) then
+          tag = 'BOUNDNAME'
+          call this%errortab%initialize_column(tag, LENBOUNDNAME, alignment=TABLEFT)
+        end if
+        !
+        ! -- write to error table
+        ! -- get cellid
+        node = this%igwfnode(locdhmax)
+        if (node > 0) then
+          call this%dis%noder_to_string(node, cellid)
+        else
+          cellid = 'none'
+        end if
+        !
+        ! -- add data
+        call this%errortab%add_term(locdhmax)
+        call this%errortab%add_term(cellid)
+        call this%errortab%add_term(dhmax)
+        call this%errortab%add_term(hclose)
+        !
+        ! -- get cellid
+        node = this%igwfnode(locrmax)
+        if (node > 0) then
+          call this%dis%noder_to_string(node, cellid)
+        else
+          cellid = 'none'
+        end if
+        call this%errortab%add_term(locrmax)
+        call this%errortab%add_term(cellid)
+        call this%errortab%add_term(rmax)
+        call this%errortab%add_term(hclose)
+        if (this%inamedbound == 1) then
+          call this%errortab%add_term(this%boundname(n))
         end if
       end if
     end if

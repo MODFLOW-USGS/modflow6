@@ -1175,7 +1175,8 @@ contains
     return
   end subroutine uzf_fn
 
-  subroutine uzf_cc(this, kiter, iend, icnvg, hclose, rclose, dpak, cpak)
+  subroutine uzf_cc(this, kiter, iend, icnvgmod, icnvg, hclose, rclose,          &
+                    dpak, cpak)
 ! **************************************************************************
 ! uzf_cc -- Final convergence check for package
 ! **************************************************************************
@@ -1187,6 +1188,7 @@ contains
     class(Uzftype), intent(inout) :: this
     integer(I4B), intent(in) :: kiter
     integer(I4B), intent(in) :: iend
+    integer(I4B), intent(in) :: icnvgmod
     integer(I4B), intent(inout) :: icnvg
     real(DP), intent(in) :: hclose
     real(DP), intent(in) :: rclose
@@ -1198,6 +1200,7 @@ contains
     character(len=LINELENGTH) :: tag
     character(len=20) :: cellid
     integer(I4B) :: icheck
+    integer(I4B) :: ipakfail
     integer(I4B) :: locdrejinfmax
     integer(I4B) :: locdrchmax
     integer(I4B) :: locdseepmax
@@ -1208,16 +1211,10 @@ contains
     real(DP) :: qtolfact
     real(DP) :: drejinf
     real(DP) :: drejinfmax
-    real(DP) :: avgrejinf
-    real(DP) :: pdrejinf
     real(DP) :: drch
     real(DP) :: drchmax
-    real(DP) :: avgrch
-    real(DP) :: pdrch
     real(DP) :: dseep
     real(DP) :: dseepmax
-    real(DP) :: avgseep
-    real(DP) :: pdseep
     ! format
     character(len=*), parameter :: errmsg =                                      &
         &"(/'CONVERGENCE FAILED AS A RESULT OF UNSATURATED ZONE FLOW PACKAGE')"                                  
@@ -1225,6 +1222,7 @@ contains
     !
     ! -- initialize local variables
     icheck = this%iconvchk
+    ipakfail = 0
     locdrejinfmax = 0
     locdrchmax = 0
     locdseepmax = 0
@@ -1232,8 +1230,15 @@ contains
     drchmax = DZERO
     dseepmax = DZERO
     !
-    ! -- header for package csv
-    if (this%ipakcsv /= 0) then
+    ! -- if not saving package convergence data on check convergence if
+    !    the model is considered converged
+    if (this%ipakcsv == 0) then
+      if (icnvgmod == 0) then
+        icheck = 0
+      end if
+    else
+      !
+      ! -- header for package csv
       if (.not. associated(this%pakcsvtab)) then
         !
         ! -- determine the number of columns and rows
@@ -1275,7 +1280,7 @@ contains
       end if
     end if
     !
-    ! -- evaluate convergence
+    ! -- perform package convergence check
     if (icheck /= 0) then
       final_check: do n = 1, this%nodes
         !
@@ -1284,31 +1289,15 @@ contains
         !
         ! -- rejected infiltration
         drejinf = qtolfact * (this%rejinf0(n) - this%rejinf(n))
-        !avgrejinf = DHALF * (this%rejinf0(n) + this%rejinf(n))
-        !pdrejinf = DZERO
-        !if (avgrejinf > DZERO) then
-        !  pdrejinf = DHUNDRED * drejinf / avgrejinf
-        !end if
         !
         ! -- groundwater recharge
         drch = qtolfact * (this%rch0(n) - this%rch(n))
-        !avgrch = DHALF * (this%rch0(n) + this%rch(n))
-        !pdrch = DZERO
-        !if (avgrch > DZERO) then
-        !  pdrch = DHUNDRED * drch / avgrch
-        !end if
         !
         ! -- groundwater seepage to the land surface
         dseep = DZERO
-        !avgseep = DZERO
         if (this%iseepflag == 1) then
           dseep = qtolfact * (this%gwd0(n) - this%gwd(n))
-          !avgseep = DHALF * (this%gwd0(n) + this%gwd(n))
         end if
-        !pdseep = DZERO
-        !if (avgseep > DZERO) then
-        !  pdseep = DHUNDRED * dseep / avgseep
-        !end if
         !
         ! -- evaluate magnitude of differences
         if (n == 1) then
@@ -1338,6 +1327,7 @@ contains
       if (ABS(drejinfmax) > hclose .or. ABS(drchmax) > hclose .or.                 &
           ABS(dseepmax) > hclose) then
         icnvg = 0
+        ipakfail = 1
       end if
       !
       ! -- set dpak and cpak
@@ -1384,7 +1374,7 @@ contains
     end if
     !
     ! -- convergence check final information
-    if (icheck /= 0 .and. icnvg == 0) then
+    if (ipakfail /= 0) then
       !
       ! -- write convergence check information if this is the last outer iteration
       if (iend == 1) then

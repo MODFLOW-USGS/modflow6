@@ -677,7 +677,8 @@ module GwfModule
     return
   end subroutine gwf_fc
 
-  subroutine gwf_cc(this, kiter, iend, icnvg, hclose, rclose, dpak, cpak)
+  subroutine gwf_cc(this, kiter, iend, icnvgmod, icnvg, hclose, rclose,          &
+                    dpak, cpak)
 ! ******************************************************************************
 ! gwf_cc -- GroundWater Flow Model Final Convergence Check for Boundary Packages
 ! Subroutine: (1) calls package cc routines
@@ -689,6 +690,7 @@ module GwfModule
     class(GwfModelType) :: this
     integer(I4B),intent(in) :: kiter
     integer(I4B),intent(in) :: iend
+    integer(I4B),intent(in) :: icnvgmod
     integer(I4B),intent(inout) :: icnvg
     real(DP), intent(in) :: hclose
     real(DP), intent(in) :: rclose
@@ -701,11 +703,13 @@ module GwfModule
 ! ------------------------------------------------------------------------------
     !
     ! -- If mover is on, then at least 2 outers required
-    if (this%inmvr > 0) call this%mvr%mvr_cc(kiter, iend, icnvg, dpak, cpak)
+    if (this%inmvr > 0) then
+      call this%mvr%mvr_cc(kiter, iend, icnvgmod, icnvg, dpak, cpak)
+    end if
     !
     ! -- csub convergence check
     if (this%incsub > 0) then
-      call this%csub%csub_cc(kiter, iend, icnvg,                                 &
+      call this%csub%csub_cc(kiter, iend, icnvgmod, icnvg,                       &
                              this%dis%nodes, this%x, this%xold,                  &
                              hclose, rclose, dpak, cpak)
     end if
@@ -713,7 +717,8 @@ module GwfModule
     ! -- Call package cc routines
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
-      call packobj%bnd_cc(kiter, iend, icnvg, hclose, rclose, dpak, cpak)
+      call packobj%bnd_cc(kiter, iend, icnvgmod, icnvg, hclose, rclose,          &
+                          dpak, cpak)
     enddo
     !
     ! -- return

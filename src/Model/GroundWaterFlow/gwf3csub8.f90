@@ -64,6 +64,7 @@ module GwfCsubModule
     integer(I4B), pointer :: ioutcompib => null()
     integer(I4B), pointer :: ioutcomps => null()
     integer(I4B), pointer :: ioutzdisp => null()
+    integer(I4B), pointer :: ipakcsv => null()
     integer(I4B), pointer :: iupdatematprop => null()
     integer(I4B), pointer :: istoragec => null()
     integer(I4B), pointer :: icellf => null()
@@ -199,6 +200,7 @@ module GwfCsubModule
     ! -- table objects
     type(TableType), pointer :: inputtab => null()
     type(TableType), pointer :: outputtab => null()
+    type(TableType), pointer :: pakcsvtab => null()
 
   contains
     procedure :: define_listlabel
@@ -369,6 +371,7 @@ contains
     call mem_allocate(this%ioutcompib, 'IOUTCOMPIB', this%origin)
     call mem_allocate(this%ioutcomps, 'IOUTCOMPS', this%origin)
     call mem_allocate(this%ioutzdisp, 'IOUTZDISP', this%origin)
+    call mem_allocate(this%ipakcsv, 'IPAKCSV', this%origin)
     call mem_allocate(this%iupdatematprop, 'IUPDATEMATPROP', this%origin)
     call mem_allocate(this%epsilon, 'EPSILON', this%origin)
     call mem_allocate(this%cc_crit, 'CC_CRIT', this%origin)
@@ -415,6 +418,7 @@ contains
     this%ioutcompib = 0
     this%ioutcomps = 0
     this%ioutzdisp = 0
+    this%ipakcsv = 0
     this%iupdatematprop = 0
     this%epsilon = DZERO
     this%cc_crit = DEM7
@@ -437,19 +441,20 @@ contains
     return
    end subroutine csub_allocate_scalars
 
-  subroutine csub_cc(this, kiter, iend, icnvg, nodes, hnew, hold, hclose, rclose,&
-                     dpak, cpak)
+  subroutine csub_cc(this, kiter, iend, icnvgmod, icnvg, nodes,                  &
+                     hnew, hold, hclose, rclose, dpak, cpak)
 ! **************************************************************************
 ! csub_cc -- Final convergence check for package
 ! **************************************************************************
 !
 !    SPECIFICATIONS:
 ! --------------------------------------------------------------------------
-    use TdisModule, only:delt
+    use TdisModule, only: totim, kstp, kper, delt
     ! -- dummy
     class(GwfCsubType) :: this
     integer(I4B), intent(in) :: kiter
     integer(I4B), intent(in) :: iend
+    integer(I4B), intent(in) :: icnvgmod
     integer(I4B), intent(inout) :: icnvg
     integer(I4B), intent(in) :: nodes
     real(DP), dimension(nodes), intent(in) :: hnew
@@ -459,15 +464,20 @@ contains
     real(DP), dimension(2), intent(inout) :: dpak
     character(len=LENPAKLOC), dimension(2), intent(inout) :: cpak
     ! -- local
+    character(len=LINELENGTH) :: tag
     character(len=LENPAKLOC) :: cloc
     character(len=LINELENGTH) :: line
     integer(I4B) :: icheck
+    integer(I4B) :: ipakfail
+    integer(I4B) :: ntabrows
+    integer(I4B) :: ntabcols
     integer(I4B) :: ib
     integer(I4B) :: node
     integer(I4B) :: idelay
-    integer(I4B) :: ihmax
-    integer(I4B) :: irmax
-    real(DP) :: hmax
+    integer(I4B) :: locdhmax
+    integer(I4B) :: locrmax
+    integer(I4B) :: ifirst
+    real(DP) :: dhmax
     real(DP) :: rmax
     real(DP) :: dh
     real(DP) :: area
@@ -496,22 +506,64 @@ contains
 ! --------------------------------------------------------------------------
     !
     ! -- initialize local variables
-    icheck = this%iconvchk  
+    icheck = this%iconvchk 
+    ipakfail = 0
     locdhmax = 0
     locrmax = 0
     dhmax = DZERO
     rmax = DZERO
+    ifirst = 1
     !
-    !
-    if (this%gwfiss == 0) then
+    ! -- additional checks to see if convergence needs to be checked
+    ! -- no convergence check for steady-state stress periods
+    if (this%gwfiss /= 0) then
       icheck = 0
+    else
+      !
+      ! -- if not saving package convergence data on check convergence if
+      !    the model is considered converged
+      if (this%ipakcsv == 0) then
+        if (icnvgmod == 0) then
+          icheck = 0
+        end if
+      else
+        !
+        ! -- header for package csv
+        if (.not. associated(this%pakcsvtab)) then
+          !
+          ! -- determine the number of columns and rows
+          ntabrows = 1
+          ntabcols = 8
+          !
+          ! -- setup table
+          call table_cr(this%pakcsvtab, this%name, '')
+          call this%pakcsvtab%table_df(ntabrows, ntabcols, this%ipakcsv,           &
+                                       lineseparator=.FALSE., separator=',',       &
+                                       finalize=.FALSE.)
+          !
+          ! -- add columns to package csv
+          tag = 'totim'
+          call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
+          tag = 'kper'
+          call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
+          tag = 'kstp'
+          call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
+          tag = 'nouter'
+          call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
+          tag = 'dvmax'
+          call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+          tag = 'dvmax_loc'
+          call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+          tag = 'dstoragemax'
+          call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+          tag = 'dstoragemax_loc'
+          call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+        end if
+      end if
     end if
-    
-    if (this%gwfiss == 0) then
-      ihmax = 0
-      irmax = 0
-      hmax = DZERO
-      rmax = DZERO
+    !
+    ! -- perform package convergence check
+    if (icheck /= 0) then
       if (DELT > DZERO) then
         tled = DONE / DELT
       else
@@ -525,10 +577,6 @@ contains
         !
         ! -- evaluate the maximum head change in the interbed
         dh = this%dbdhmax(idelay)
-        if (abs(dh) > abs(hmax)) then
-          ihmax = ib
-          hmax = dh
-        end if
         !
         ! -- evaluate difference between storage changes
         !    in the interbed and exchange between the interbed
@@ -556,19 +604,37 @@ contains
         ! -- normalize by cell area and convert to a depth
         df = df * delt / area
         !
-        ! -- evaluate difference relative to rmax
-        if (abs(df) > abs(rmax)) then
-          irmax = ib
+        ! -- evaluate magnitude of differences
+        if (ifirst == 1) then
+          ifirst = 0
+          locdhmax = ib
+          dhmax = dh
+          locrmax = ib
           rmax = df
+        else
+          if (abs(dh) > abs(dhmax)) then
+            locdhmax = ib
+            dhmax = dh
+          end if
+          if (abs(df) > abs(rmax)) then
+            locrmax = ib
+            rmax = df
+          end if
         end if
       end do final_check
       !
+      !
+      if (abs(dhmax) > hclose .or. abs(rmax) > hclose) then
+        icnvg = 0
+        ipakfail = 1
+      end if
+      !
       ! -- set dpak and cpak
       ! -- update head error
-      if (abs(hmax) > abs(dpak(1))) then
-        dpak(1) = hmax
+      if (abs(dhmax) > abs(dpak(1))) then
+        dpak(1) = dhmax
         write(cloc, "(a,'-(',i0,')-',a)")                                        &
-          trim(this%origin), ihmax, 'head'
+          trim(this%origin), locdhmax, 'head'
         cpak(1) = cloc
       end if
       !
@@ -576,43 +642,56 @@ contains
       if (abs(rmax) > abs(dpak(1))) then
         dpak(1) = rmax
         write(cloc, "(a,'-(',i0,')-',a)")                                        &
-          trim(this%origin), irmax, 'storage'
+          trim(this%origin), locrmax, 'storage'
         cpak(1) = cloc
       end if
       !
       ! -- write convergence data to package csv
-
-      !
-      ! -- write convergence failure information
-      !if (abs(hmax) > hclose .or. abs(rmax) > rclose) then
-      if (abs(hmax) > hclose .or. abs(rmax) > hclose) then
-      !if (abs(hmax) > DZERO .or. abs(rmax) > DZERO) then
-        icnvg = 0
+      if (this%ipakcsv /= 0) then
         !
-        ! -- write convergence check information if this is the last 
-        !    outer iteration
+        ! -- write the data
+        call this%pakcsvtab%add_term(totim)
+        call this%pakcsvtab%add_term(kper)
+        call this%pakcsvtab%add_term(kstp)
+        call this%pakcsvtab%add_term(kiter)
+        call this%pakcsvtab%add_term(dhmax)
+        call this%pakcsvtab%add_term(locdhmax)
+        call this%pakcsvtab%add_term(rmax)
+        call this%pakcsvtab%add_term(locrmax)
+        !
+        ! -- finalize the package csv
         if (iend == 1) then
-          !
-          ! -- write table to this%iout
-          call sim_message(this%name, fmt=fmtmsg, iunit=this%iout)
-          write(line, fmtheader)                                              &
-            '  LOCATION', '    HEAD CHANGE',                                  &
-            '  LOCATION', 'FLOW DIFFERENCE'
-          call sim_message(line, fmt=header, iunit=this%iout)
-          write(line, fmtline)  ihmax, hmax, irmax, rmax
-          call sim_message(line, iunit=this%iout)
-          call sim_message('', fmt=fmtfooter, iunit=this%iout)
-          !
-          ! -- write table to stdout
-          call sim_message(this%name, fmt=fmtmsg)
-          write(line, fmtheader)                                              &
-            '  LOCATION', '    HEAD CHANGE',                                  &
-            '  LOCATION', 'FLOW DIFFERENCE'
-          call sim_message(line, fmt=header)
-          write(line, fmtline)  ihmax, hmax, irmax, rmax
-          call sim_message(line)
-          call sim_message('', fmt=fmtfooter)
+          call this%pakcsvtab%finalize_table()
         end if
+      end if
+    end if
+    !
+    ! -- convergence check final information
+    if (ipakfail /= 0) then
+      !
+      ! -- write convergence check information if this is the last 
+      !    outer iteration
+      if (iend == 1) then
+        !
+        ! -- write table to this%iout
+        call sim_message(this%name, fmt=fmtmsg, iunit=this%iout)
+        write(line, fmtheader)                                              &
+          '  LOCATION', '    HEAD CHANGE',                                  &
+          '  LOCATION', 'FLOW DIFFERENCE'
+        call sim_message(line, fmt=header, iunit=this%iout)
+        write(line, fmtline)  locdhmax, dhmax, locrmax, rmax
+        call sim_message(line, iunit=this%iout)
+        call sim_message('', fmt=fmtfooter, iunit=this%iout)
+        !
+        ! -- write table to stdout
+        call sim_message(this%name, fmt=fmtmsg)
+        write(line, fmtheader)                                              &
+          '  LOCATION', '    HEAD CHANGE',                                  &
+          '  LOCATION', 'FLOW DIFFERENCE'
+        call sim_message(line, fmt=header)
+        write(line, fmtline)  locdhmax, dhmax, locrmax, rmax
+        call sim_message(line)
+        call sim_message('', fmt=fmtfooter)
       end if
     end if
     !
@@ -2372,6 +2451,19 @@ contains
                        'FOLLOWED BY FILEOUT'
               call store_error(errmsg)
             end if
+          ! -- package convergence
+          case('PACKAGE_CONVERGENCE')
+            call this%parser%GetStringCaps(keyword)
+            if (keyword == 'FILEOUT') then
+              call this%parser%GetString(fname)
+              this%ipakcsv = getunit()
+              call openfile(this%ipakcsv, this%iout, fname, 'CSV',                   &
+                            filstat_opt='REPLACE')
+              write(this%iout,fmtfileout) 'PACKAGE_CONVERGENCE', fname, this%ipakcsv
+            else
+              call store_error('OPTIONAL PACKAGE_CONVERGENCE KEYWORD MUST BE ' //    &
+                               'FOLLOWED BY FILEOUT')
+            end if
           !
           ! -- right now these are options that are only available in the
           !    development version and are not included in the documentation.
@@ -2383,7 +2475,6 @@ contains
             write(this%iout, '(4x,a)')                                           &
               'A FINAL CONVERGENCE CHECK OF THE CHANGE IN DELAY INTERBED ' //    &
               'HEADS AND FLOWS WILL NOT BE MADE'
-            found = .true.
           
           !
           ! default case
@@ -2834,6 +2925,13 @@ contains
       end if
     end if
     !
+    ! -- package csv table
+    if (this%ipakcsv > 0) then
+      call this%pakcsvtab%table_da()
+      deallocate(this%pakcsvtab)
+      nullify(this%pakcsvtab)
+    end if
+    !
     ! -- deallocate scalars
     call mem_deallocate(this%istounit)
     call mem_deallocate(this%inobspkg)
@@ -2864,6 +2962,7 @@ contains
     call mem_deallocate(this%ioutcompib)
     call mem_deallocate(this%ioutcomps)
     call mem_deallocate(this%ioutzdisp)
+    call mem_deallocate(this%ipakcsv)
     call mem_deallocate(this%iupdatematprop)
     call mem_deallocate(this%epsilon)
     call mem_deallocate(this%cc_crit)
