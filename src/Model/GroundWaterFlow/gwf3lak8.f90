@@ -226,6 +226,7 @@ module LakModule
     procedure, private :: lak_calculate_conductance
     procedure, private :: lak_calculate_cond_head
     procedure, private :: lak_calculate_conn_conductance
+    procedure, private :: lak_calculate_exchange
     procedure, private :: lak_calculate_conn_exchange
     procedure, private :: lak_estimate_conn_exchange
     procedure, private :: lak_calculate_storagechange
@@ -2060,7 +2061,7 @@ contains
     wa = DZERO
     topl = this%telev(iconn)
     botl = this%belev(iconn)
-    call this%lak_calculate_cond_head(ilak, iconn, stage, head, vv)
+    call this%lak_calculate_cond_head(iconn, stage, head, vv)
     if (this%ictype(iconn) == 2 .or. this%ictype(iconn) == 3) then
       if (vv > topl) vv = topl
       i = this%ntabrow(ilak)
@@ -2176,7 +2177,7 @@ contains
     return
   end subroutine lak_calculate_conductance
 
-  subroutine lak_calculate_cond_head(this, ilak, iconn, stage, head, vv)
+  subroutine lak_calculate_cond_head(this, iconn, stage, head, vv)
 ! ******************************************************************************
 ! lak_calculate_conn_head -- Calculate the controlling lake stage or groundwater
 !                            head used to calculate the conductance for a lake
@@ -2188,7 +2189,6 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(LakType),intent(inout) :: this
-    integer(I4B), intent(in) :: ilak
     integer(I4B), intent(in) :: iconn
     real(DP), intent(in) :: stage
     real(DP), intent(in) :: head
@@ -2247,7 +2247,7 @@ contains
     cond = DZERO
     topl = this%telev(iconn)
     botl = this%belev(iconn)
-    call this%lak_calculate_cond_head(ilak, iconn, stage, head, vv)
+    call this%lak_calculate_cond_head(iconn, stage, head, vv)
     sat = sQuadraticSaturation(topl, botl, vv)
     ! vertical connection
     ! use full saturated conductance if top and bottom of the lake connection
@@ -2279,6 +2279,40 @@ contains
     ! -- return
     return
   end subroutine lak_calculate_conn_conductance
+
+
+  subroutine lak_calculate_exchange(this, ilak, stage, totflow)
+! ******************************************************************************
+! lak_calculate_exchange -- Calculate the total groundwater-lake flow at a
+!                           provided stage.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(LakType),intent(inout) :: this
+    integer(I4B), intent(in) :: ilak
+    real(DP), intent(in) :: stage
+    real(DP), intent(inout) :: totflow
+    ! -- local
+    integer(I4B) :: j
+    integer(I4B) :: igwfnode
+    real(DP)  :: flow
+    real(DP) :: hgwf
+    real(DP) :: cond
+    ! -- formats
+! ------------------------------------------------------------------------------
+    totflow = DZERO
+    do j = this%idxlakeconn(ilak), this%idxlakeconn(ilak+1)-1
+      igwfnode = this%cellid(j)
+      hgwf = this%xnew(igwfnode)
+      call this%lak_calculate_conn_exchange(ilak, j, stage, hgwf, flow, cond)
+      totflow = totflow + flow
+    end do
+    !
+    ! -- return
+    return
+  end subroutine lak_calculate_exchange
 
 
   subroutine lak_calculate_conn_exchange(this, ilak, iconn, stage, head, flow, cond)
@@ -3851,50 +3885,51 @@ contains
     return
   end subroutine lak_fn
 
-  subroutine lak_cc(this, kiter, iend, icnvgmod, icnvg, hclose, rclose,          &
-                    dpak, cpak)
+  subroutine lak_cc(this, kiter, iend, icnvgmod, cpak, dpak)
 ! **************************************************************************
 ! lak_cc -- Final convergence check for package
 ! **************************************************************************
 !
 !    SPECIFICATIONS:
 ! --------------------------------------------------------------------------
-    use TdisModule, only: totim, kstp, kper !, delt
+    use TdisModule, only: totim, kstp, kper, delt
     ! -- dummy
     class(LakType), intent(inout) :: this
     integer(I4B), intent(in) :: kiter
     integer(I4B), intent(in) :: iend
     integer(I4B), intent(in) :: icnvgmod
-    integer(I4B), intent(inout) :: icnvg
-    real(DP), intent(in) :: hclose
-    real(DP), intent(in) :: rclose
-    real(DP), dimension(2), intent(inout) :: dpak
-    character(len=LENPAKLOC), dimension(2), intent(inout) :: cpak
+    character(len=LENPAKLOC), intent(inout) :: cpak
+    real(DP), intent(inout) :: dpak
     ! -- local
     character(len=LENPAKLOC) :: cloc
-    character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: tag
     integer(I4B) :: icheck
     integer(I4B) :: ipakfail
     integer(I4B) :: locdhmax
-    integer(I4B) :: locrmax
+    integer(I4B) :: locdgwfmax
+    integer(I4B) :: locdqoutmax
     integer(I4B) :: ntabrows
     integer(I4B) :: ntabcols
     integer(I4B) :: n
+    real(DP) :: area0
+    real(DP) :: area
+    real(DP) :: gwf0
+    real(DP) :: gwf
     real(DP) :: dh
-    real(DP) :: residb0
-    real(DP) :: residb
-    real(DP) :: dr
+    real(DP) :: dgwf
+    real(DP) :: hlak0
+    real(DP) :: hlak
+    real(DP) :: qout0
+    real(DP) :: qout
+    real(DP) :: dqout
     real(DP) :: inf
-    real(DP) :: outf
-    real(DP) :: avgf
     real(DP) :: ra
     real(DP) :: ro
     real(DP) :: qinf
     real(DP) :: ex
-    real(DP) :: pd
     real(DP) :: dhmax
-    real(DP) :: rmax
+    real(DP) :: dgwfmax
+    real(DP) :: dqoutmax
     ! format
     character(len=*), parameter :: errmsg =                                      &
         &"(/,'CONVERGENCE FAILED AS A RESULT OF LAKE PACKAGE')"                                  
@@ -3904,9 +3939,11 @@ contains
     icheck = this%iconvchk
     ipakfail = 0
     locdhmax = 0
-    locrmax = 0
+    locdgwfmax = 0
+    locdqoutmax = 0
     dhmax = DZERO
-    rmax = DZERO
+    dgwfmax = DZERO
+    dqoutmax = DZERO
     !
     ! -- if not saving package convergence data on check convergence if
     !    the model is considered converged
@@ -3924,6 +3961,9 @@ contains
         ! -- determine the number of columns and rows
         ntabrows = 1
         ntabcols = 8
+        if (this%noutlets > 0) then
+          ntabcols = ntabcols + 2
+        end if
         !
         ! -- setup table
         call table_cr(this%pakcsvtab, this%name, '')
@@ -3944,10 +3984,16 @@ contains
         call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
         tag = 'dvmax_loc'
         call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
-        tag = 'dinflowmax'
+        tag = 'dgwfmax'
         call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
-        tag = 'dinflowmax_loc'
+        tag = 'dgwfmax_loc'
         call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+        if (this%noutlets > 0) then
+          tag = 'dqoutmax'
+          call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+          tag = 'dqoutmax_loc'
+          call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+        end if
       end if
     end if
     !
@@ -3956,21 +4002,38 @@ contains
       final_check: do n = 1, this%nlakes
         if (this%iboundpak(n) < 1) cycle
         !
-        ! -- stage difference
-        dh = this%s0(n) - this%xnewpak(n)
+        ! -- set previous and current lake stage
+        hlak0 = this%s0(n)
+        hlak = this%xnewpak(n)
         !
-        ! -- flow difference
-        call this%lak_calculate_residual(n, this%s0(n), residb0)
-        call this%lak_calculate_residual(n, this%xnewpak(n), residb)
-        dr = residb0 - residb
-        call this%lak_calculate_available(n, this%xnewpak(n), inf, &
-                                          ra, ro, qinf, ex)
-        outf = inf - residb
-        avgf = DHALF * (inf + outf)
-        pd = DZERO
-        if (this%iconvresidchk /= 0) then
-          if (avgf > DZERO) then
-            pd = DHUNDRED * residb / avgf
+        ! -- stage difference
+        dh = hlak0 - hlak
+        !
+        ! -- calculate surface area
+        call this%lak_calculate_sarea(n, hlak0, area0)
+        call this%lak_calculate_sarea(n, hlak, area)
+        !
+        ! -- change in gwf exchange
+        dgwf = DZERO
+        if (area0 > DZERO .and. area > DZERO) then
+          call this%lak_calculate_exchange(n, hlak0, gwf0)
+          call this%lak_calculate_exchange(n, hlak, gwf)
+          gwf0 = gwf0 * delt / area0
+          gwf = gwf * delt / area
+          dgwf = gwf0 - gwf
+        end if
+        !
+        ! -- change in outflows
+        dqout = DZERO
+        if (this%noutlets > 0) then
+          if (area0 > DZERO .and. area > DZERO) then
+            call this%lak_calculate_available(n, hlak0, inf, ra, ro, qinf, ex)
+            call this%lak_calculate_outlet_outflow(n, hlak0, inf, qout0)
+            call this%lak_calculate_available(n, hlak, inf, ra, ro, qinf, ex)
+            call this%lak_calculate_outlet_outflow(n, hlak, inf, qout)
+            qout0 = qout0 * delt / area0
+            qout = qout * delt / area
+            dqout = qout0 - qout
           end if
         end if
         !
@@ -3978,39 +4041,46 @@ contains
         if (n == 1) then
           locdhmax = n
           dhmax = dh
-          locrmax = n
-          rmax = pd
+          locdgwfmax = n
+          dgwfmax = dgwf
+          locdqoutmax = n
+          dqoutmax = dqout
         else
           if (abs(dh) > abs(dhmax)) then
             locdhmax = n
             dhmax = dh
           end if
-          if (abs(pd) > abs(rmax)) then
-            locrmax = n
-            rmax = pd
+          if (abs(dgwf) > abs(dgwfmax)) then
+            locdgwfmax = n
+            dgwfmax = dgwf
+          end if
+          if (abs(dqout) > abs(dqoutmax)) then
+            locdqoutmax = n
+            dqoutmax = dqout
           end if
         end if
       end do final_check
       !
-      ! -- evaluate package convergence
-      if (ABS(dhmax) > hclose .or. ABS(rmax) > this%pdmax) then
-        icnvg = 0
-        ipakfail = 1
-      end if
-      !
       ! -- set dpak and cpak
-      if (ABS(dh) > abs(dpak(1))) then
-        dpak(1) = dh
+      if (ABS(dhmax) > abs(dpak)) then
+        dpak = dhmax
         write(cloc, "(a,'-(',i0,')-',a)")                                        &
-          trim(this%origin), locdhmax, 'stage'
-        cpak(1) = trim(cloc)
+          trim(this%name), locdhmax, 'stage'
+        cpak = trim(cloc)
       end if
-      ! - JDH not sure if pd is the correct thing to use here
-      if (ABS(rmax) > abs(dpak(2))) then
-        dpak(2) = rmax
+      if (ABS(dgwfmax) > abs(dpak)) then
+        dpak = dgwfmax
         write(cloc, "(a,'-(',i0,')-',a)")                                        &
-          trim(this%origin), locrmax, 'flow'
-        cpak(2) = trim(cloc)
+          trim(this%name), locdhmax, 'gwf'
+        cpak = trim(cloc)
+      end if
+      if (this%noutlets > 0) then
+        if (ABS(dqoutmax) > abs(dpak)) then
+          dpak = dqoutmax
+          write(cloc, "(a,'-(',i0,')-',a)")                                       &
+          trim(this%name), locdhmax, 'outlet'
+          cpak = trim(cloc)
+        end if
       end if
       !
       ! -- write convergence data to package csv
@@ -4023,63 +4093,16 @@ contains
         call this%pakcsvtab%add_term(kiter)
         call this%pakcsvtab%add_term(dhmax)
         call this%pakcsvtab%add_term(locdhmax)
-        call this%pakcsvtab%add_term(rmax)
-        call this%pakcsvtab%add_term(locrmax)
+        call this%pakcsvtab%add_term(dgwfmax)
+        call this%pakcsvtab%add_term(locdgwfmax)
+        if (this%noutlets > 0) then
+          call this%pakcsvtab%add_term(dqoutmax)
+          call this%pakcsvtab%add_term(locdqoutmax)
+        end if
         !
         ! -- finalize the package csv
         if (iend == 1) then
           call this%pakcsvtab%finalize_table()
-        end if
-      end if
-    end if
-    !
-    ! -- convergence check final information
-    if (ipakfail /= 0) then
-      !
-      ! -- write convergence check information if this is the last outer iteration
-      if (iend == 1) then
-        !
-        ! -- write error message to stdout
-        call sim_message('', fmt=errmsg)
-        !
-        ! -- create error table
-        ! -- table dimensions
-        ntabrows = 1
-        ntabcols = 5
-        if (this%inamedbound == 1) then
-          ntabcols = ntabcols + 1
-        end if
-        !
-        ! -- initialize table and define columns
-        title = trim(adjustl(this%text)) // ' PACKAGE (' //                &
-                trim(adjustl(this%name)) //                                &
-                ') LAKE CONVERGENCE CHECK'
-        call table_cr(this%errortab, this%name, title)
-        call this%errortab%table_df(ntabrows, ntabcols, this%iout,        &
-                                      finalize=.FALSE.)
-        tag = 'NUMBER'
-        call this%errortab%initialize_column(tag, 10)
-        tag = 'MAXIMUM STAGE DIFFERENCE'
-        call this%errortab%initialize_column(tag, 12)
-        tag = 'HCLOSE CRITERIA'
-        call this%errortab%initialize_column(tag, 12)
-        tag = 'PERCENT DIFFERENCE'
-        call this%errortab%initialize_column(tag, 12)
-        tag = 'RCLOSE CRITERIA'
-        call this%errortab%initialize_column(tag, 12)
-        if (this%inamedbound == 1) then
-          tag = 'BOUNDNAME'
-          call this%errortab%initialize_column(tag, LENBOUNDNAME, alignment=TABLEFT)
-        end if
-        !
-        ! -- write to error table
-        call this%errortab%add_term(n)
-        call this%errortab%add_term(dh)
-        call this%errortab%add_term(hclose)
-        call this%errortab%add_term(rmax)
-        call this%errortab%add_term(this%pdmax)
-        if (this%inamedbound == 1) then
-          call this%errortab%add_term(this%boundname(n))
         end if
       end if
     end if
@@ -4125,8 +4148,9 @@ contains
     integer(I4B) :: igwfnode
     real(DP) :: hlak, hgwf
     real(DP) :: v0, v1
-    real(DP) :: blak
-    real(DP) :: s
+    real(DP) :: cond
+    !real(DP) :: blak
+    !real(DP) :: s
     real(DP) :: d
     real(DP) :: v
     ! -- for observations
@@ -4216,17 +4240,18 @@ contains
       do j = this%idxlakeconn(n), this%idxlakeconn(n+1)-1
         igwfnode = this%cellid(j)
         hgwf = this%xnew(igwfnode)
-        blak = this%belev(j)
-        if (-this%hcof(j) > DZERO) then
-          if (hgwf >= blak) then
-            s = max(hlak, blak)
-            rrate = this%hcof(j) * (s - hgwf)
-          else
-            rrate = this%rhs(j)
-          end if
-        else
-          rrate = this%rhs(j)
-        end if
+        call this%lak_calculate_conn_exchange(n, j, hlak, hgwf, rrate, cond)
+        !blak = this%belev(j)
+        !if (-this%hcof(j) > DZERO) then
+        !  if (hgwf >= blak) then
+        !    s = max(hlak, blak)
+        !    rrate = this%hcof(j) * (s - hgwf)
+        !  else
+        !    rrate = this%rhs(j)
+        !  end if
+        !else
+        !  rrate = this%rhs(j)
+        !end if
         this%qleak(j) = rrate
         call this%lak_accumulate_chterm(n, rrate, chratin, chratout)
       end do
