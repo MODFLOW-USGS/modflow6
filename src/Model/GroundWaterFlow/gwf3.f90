@@ -1010,6 +1010,13 @@ module GwfModule
     ! -- Mover budget
     if(this%inmvr > 0) call this%mvr%mvr_bd(icbcfl, ibudfl, isuppress_output)
     !
+    ! -- Recalculate package hcof and rhs so that bnd_bd will calculate
+    !    flows based on the final head solution
+    do ip = 1, this%bndlist%Count()
+      packobj => GetBndFromList(this%bndlist, ip)
+      call packobj%bnd_cf(reset_mover=.false.)
+    enddo
+    !
     ! -- Boundary packages calculate budget and total flows to model budget
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)

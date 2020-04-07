@@ -1,5 +1,7 @@
 *.exe
 *.lib
+*.dll
+*.exp
 *.obj
 *.suo
 *.u2d
@@ -47,6 +49,7 @@ examples/python/.ipynb_checkpoints/*.ipynb
 doc/Notes/*.pdf
 doc/mf6report/*.pdf
 doc/GWFModelReport/*.pdf
+doc/mf6bmi/*.pdf
 doc/mf6io/*.pdf
 doc/ReleaseNotes/*.pdf
 doc/GettingStarted/*.pdf
@@ -61,8 +64,7 @@ bin/mf5to6
 bin/zbud6
 bin/*.txt
 
-make/makefile
-make/*.gcno
+UserPrefs.xml
 
 tmp_simulations/
 autotest/temp/

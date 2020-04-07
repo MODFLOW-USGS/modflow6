@@ -87,7 +87,7 @@ module SolutionGroupModule
       do is = 1, this%nsolutions
         isoln = this%idsolutions(is)
         sp => GetBaseSolutionFromList(basesolutionlist, isoln)
-        call sp%sln_ca(kstp, kper, kpicard, isgcnvg, isuppress_output)
+        call sp%sln_ca(kpicard, isgcnvg, isuppress_output)
       enddo
       if(isgcnvg == 1) exit picardloop
     enddo picardloop
@@ -102,7 +102,7 @@ module SolutionGroupModule
         do is = 1, this%nsolutions
           isoln = this%idsolutions(is)
           sp => GetBaseSolutionFromList(basesolutionlist, isoln)
-          call sp%sln_ca(kstp, kper, kpicard, isgcnvg, isuppress_output)
+          call sp%sln_ca(kpicard, isgcnvg, isuppress_output)
         enddo
       endif
     else

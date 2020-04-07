@@ -988,7 +988,6 @@ module GwfNpfModule
     endif
     !
     ! -- Save saturation, if requested
-    this%isavsat = 1
     if (this%isavsat /= 0) then
       if(ibinun /= 0) call this%sav_sat(ibinun)
     endif

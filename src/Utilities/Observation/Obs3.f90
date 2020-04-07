@@ -130,21 +130,23 @@ module ObsModule
   use ArrayHandlersModule, only: ExpandArray
   use BaseDisModule,       only: DisBaseType
   use BlockParserModule,   only: BlockParserType
-  use ConstantsModule,     only: LENBIGLINE, LENFTYPE, LENOBSNAME, &
-                                 LENOBSTYPE, LENPACKAGENAME, &
-                                 LINELENGTH, NAMEDBOUNDFLAG, MAXCHARLEN, &
-                                 MAXOBSTYPES, LENHUGELINE, DNODATA
+  use ConstantsModule,     only: LENBIGLINE, LENFTYPE, LENOBSNAME,               &
+                                 LENOBSTYPE, LENPACKAGENAME, LENBOUNDNAME,       &
+                                 LINELENGTH, NAMEDBOUNDFLAG, MAXCHARLEN,         &
+                                 MAXOBSTYPES, LENHUGELINE, DNODATA,              &
+                                 TABLEFT
+  use TableModule,         only: TableType, table_cr
   use InputOutputModule,   only: UPCASE, openfile, GetUnit, GetFileFromPath
   use ListModule,          only: ListType
   use ObsContainerModule,  only: ObsContainerType
-  use ObserveModule,       only: ConstructObservation, ObsDataType, &
-                                 ObserveType, GetObsFromList, &
+  use ObserveModule,       only: ConstructObservation, ObsDataType,              &
+                                 ObserveType, GetObsFromList,                    &
                                  AddObsToList
   use ObsOutputListModule, only: ObsOutputListType
   use ObsOutputModule,     only: ObsOutputType
   use ObsUtilityModule,    only: write_fmtd_cont, write_unfmtd_cont
   use OpenSpecModule,      only: ACCESS, FORM
-  use SimModule,           only: count_errors, store_error, store_error_unit, &
+  use SimModule,           only: count_errors, store_error, store_error_unit,    &
                                  ustop
   use StringListModule,    only: AddStringToList, GetStringFromList
   use TdisModule,          only: totim
@@ -177,6 +179,9 @@ module ObsModule
     type(ObsOutputListType), pointer, private :: obsOutputList => null()
     class(DisBaseType), pointer, private :: dis => null()
     type(BlockParserType), private :: parser
+    !
+    ! -- table object
+    type(TableType), pointer :: obstab => null()
   contains
     ! -- Public procedures
     procedure, public  :: obs_df
@@ -413,6 +418,13 @@ contains
     deallocate(this%active)
     deallocate(this%inputFilename)
     deallocate(this%obsData)
+    !
+    ! -- obs table object
+    if (associated(this%obstab)) then
+      call this%obstab%table_da()
+      deallocate(this%obstab)
+      nullify(this%obstab)
+    end if
     !
     ! -- deallocate pakobs components and pakobs
     if (associated(this%pakobs)) then
@@ -1012,30 +1024,52 @@ contains
     implicit none
     ! -- dummy
     class(ObsType), intent(inout) :: this
-    character(len=*),      intent(inout) :: fname
+    character(len=*), intent(inout) :: fname
     ! -- local
     integer(I4B) :: ierr, indexobsout, numspec
     logical :: fmtd, found, endOfBlock
     character(len=LENBIGLINE) :: pnamein, fnamein
     character(len=LENHUGELINE) :: line
     character(len=LINELENGTH) :: btagfound, ermsg, message, word
+    character(len=LINELENGTH) :: title
+    character(len=LINELENGTH) :: tag
     character(len=20) :: accarg, bin, fmtarg
     type(ObserveType),     pointer :: obsrv => null()
     type(ObsOutputType),   pointer :: obsOutput => null()
-    ! formats
-    50 format(/,'Observations read from file "',a,'":',/, &
-         'Name',38x,'Type',40x,'Time',9x,'Location data',/,                      &
-         '----------------------------------------  ',                           &
-         '------------------------------------------',                           &
-         '  -----------  --------------------------'  )
+    integer(I4B) :: ntabrows
+    integer(I4B) :: ntabcols
+    ! -- formats
     !
+    ! -- initialize local variables
     numspec = -1
     ermsg = ''
     !
     inquire(unit=this%parser%iuactive, name=pnamein)
     call GetFileFromPath(pnamein, fnamein)
     !
-    if (this%echo) write(this%iout,50)trim(fnamein)
+    if (this%echo) then
+      !
+      ! -- create the observation table
+      ! -- table dimensions
+      ntabrows = 1
+      ntabcols = 5
+      !
+      ! -- initialize table and define columns
+      title = 'OBSERVATIONS READ FROM FILE "' // trim(fnamein) // '"'
+      call table_cr(this%obstab, fnamein, title)
+      call this%obstab%table_df(ntabrows, ntabcols, this%iout,                   &
+                                finalize=.FALSE.)
+      tag = 'NAME'
+      call this%obstab%initialize_column(tag, LENOBSNAME, alignment=TABLEFT)
+      tag = 'TYPE'
+      call this%obstab%initialize_column(tag, LENOBSTYPE+12, alignment=TABLEFT)
+      tag = 'TIME'
+      call this%obstab%initialize_column(tag, 12, alignment=TABLEFT)
+      tag = 'LOCATION DATA'
+      call this%obstab%initialize_column(tag, LENBOUNDNAME+2, alignment=TABLEFT)
+      tag = 'OUTPUT FILENAME'
+      call this%obstab%initialize_column(tag, 80, alignment=TABLEFT)
+    end if
     !
     found = .true.
     readblocks: do
@@ -1044,28 +1078,31 @@ contains
       call this%parser%GetBlock('*', found, ierr, .true., .false., btagfound)
       if (.not. found) then
         exit readblocks
-      endif
+      end if
       this%blockTypeFound = btagfound
       !
       ! Get keyword, which should be FILEOUT
       call this%parser%GetStringCaps(word)
+      if (word /= 'FILEOUT') then
+        call store_error('CONTINUOUS keyword must be followed by ' //            &
+          '"FILEOUT" then by filename.')
+        cycle
+      end if
       !
       ! -- get name of output file
       call this%parser%GetString(fname)
       ! Fname is the output file name defined in the BEGIN line of the block.
       if (fname == '') then
-        message = 'Error reading OBS input file, likely due to bad' // &
+        message = 'Error reading OBS input file, likely due to bad' //           &
                   ' block or missing file name.'
         call store_error(message)
-        call this%parser%StoreErrorUnit()
-        call ustop()
-      elseif  (this%obsOutputList%ContainsFile(fname)) then
+        cycle
+      else if (this%obsOutputList%ContainsFile(fname)) then
         ermsg = 'OBS outfile "' // trim(fname) // &
                 '" is provided more than once.'
         call store_error(ermsg)
-        call this%parser%StoreErrorUnit()
-        call ustop()
-      endif
+        cycle
+      end if
       !
       ! -- look for BINARY option
       call this%parser%GetStringCaps(bin)
@@ -1081,7 +1118,7 @@ contains
       !
       ! -- open the output file
       numspec = 0
-      call openfile(numspec, 0, fname, 'OBS OUTPUT', fmtarg, &
+      call openfile(numspec, 0, fname, 'OBS OUTPUT', fmtarg,                     &
                     accarg, 'REPLACE')
       !
       ! -- add output file to list of output files and assign its
@@ -1094,12 +1131,7 @@ contains
       ! -- process lines defining observations
       select case (btagfound)
       case ('CONTINUOUS')
-        if (word /= 'FILEOUT') then
-          call store_error('CONTINUOUS keyword must be followed by ' //    &
-            '"FILEOUT" then by filename.')
-          call this%parser%StoreErrorUnit()
-          call ustop()
-        endif
+        !
         ! -- construct a continuous observation from each line in the block
         readblockcontinuous: do
           call this%parser%GetNextLine(endOfBlock)
@@ -1108,24 +1140,37 @@ contains
           call ConstructObservation(obsrv, line, numspec, fmtd, &
                                     indexobsout, this%obsData, &
                                     this%parser%iuactive)
+          !
           ! -- increment number of observations
           !    to be written to this output file.
           obsOutput => this%obsOutputList%Get(indexobsout)
           obsOutput%nobs = obsOutput%nobs + 1
           call AddObsToList(this%obsList, obsrv)
+          !
+          ! -- write line to the observation table
           if (this%echo) then
-            call obsrv%WriteTo(this%iout)
-          endif
-        enddo readblockcontinuous
+            call obsrv%WriteTo(this%obstab, btagfound, fname)
+          end if
+        end do readblockcontinuous
       case default
-        ermsg = 'Error: Observation type not recognized: '// &
-                       trim(btagfound)
+        ermsg = 'Error: Observation block type not recognized: ' //              &
+                trim(btagfound)
         call store_error(ermsg)
-        call this%parser%StoreErrorUnit()
-        call ustop()
       end select
-    enddo readblocks
+    end do readblocks
     !
+    ! -- finalize the observation table
+    if (this%echo) then
+      call this%obstab%finalize_table()
+    end if
+    !
+    ! -- determine if error condition occurs
+    if (count_errors() > 0) then
+      call this%parser%StoreErrorUnit()
+      call ustop()
+    end if
+    !
+    ! -- return
     return
   end subroutine read_obs_blocks
 

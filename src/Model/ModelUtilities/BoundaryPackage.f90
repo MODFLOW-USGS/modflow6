@@ -83,6 +83,7 @@ module BndModule
     ! -- table objects
     type(TableType), pointer :: inputtab => null()
     type(TableType), pointer :: outputtab => null()
+    type(TableType), pointer :: errortab => null()
 
     
   contains
@@ -407,7 +408,7 @@ module BndModule
     return
   end subroutine bnd_ck
 
-  subroutine bnd_cf(this)
+  subroutine bnd_cf(this, reset_mover)
 ! ******************************************************************************
 ! bnd_cf -- This is the package specific routine where a package adds its
 !           contributions to this%rhs and this%hcof
@@ -417,6 +418,7 @@ module BndModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     class(BndType) :: this
+    logical, intent(in), optional :: reset_mover
 ! ------------------------------------------------------------------------------
     ! -- bnd has no cf routine
     !
@@ -872,6 +874,13 @@ module BndModule
       call this%outputtab%table_da()
       deallocate(this%outputtab)
       nullify(this%outputtab)
+    end if
+    !
+    ! -- error table object
+    if (associated(this%errortab)) then
+      call this%errortab%table_da()
+      deallocate(this%errortab)
+      nullify(this%errortab)
     end if
     !
     ! -- Deallocate scalars

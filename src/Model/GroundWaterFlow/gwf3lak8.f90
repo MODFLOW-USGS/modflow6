@@ -19,6 +19,7 @@ module LakModule
                               sQSaturationDerivative
   use BndModule, only: BndType
   use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr
+  use TableModule, only: table_cr
   use ObserveModule, only: ObserveType
   use ObsModule, only: ObsType
   use InputOutputModule, only: get_node, URWORD, extract_idnum_or_bndname
@@ -3619,7 +3620,7 @@ contains
     return
   end subroutine lak_ad
 
-  subroutine lak_cf(this)
+  subroutine lak_cf(this, reset_mover)
   ! ******************************************************************************
   ! lak_cf -- Formulate the HCOF and RHS terms
   ! Subroutine: (1) skip if no lakes
@@ -3628,10 +3629,14 @@ contains
   !
   !    SPECIFICATIONS:
   ! ------------------------------------------------------------------------------
+    ! -- dummy
     class(LakType) :: this
+    logical, intent(in), optional :: reset_mover
+    ! -- local
     integer(I4B) :: j, n
     integer(I4B) :: igwfnode
     real(DP) ::  hlak, blak
+    logical :: lrm
   ! ------------------------------------------------------------------------------
     !!
     !! -- Calculate lak conductance and update package RHS and HCOF
@@ -3648,7 +3653,9 @@ contains
     end do
     !
     ! -- pakmvrobj cf
-    if(this%imover == 1) then
+    lrm = .true.
+    if (present(reset_mover)) lrm = reset_mover
+    if(this%imover == 1 .and. lrm) then
       call this%pakmvrobj%cf()
     end if
     !
@@ -3839,7 +3846,10 @@ contains
     real(DP), intent(in) :: hclose
     real(DP), intent(in) :: rclose
     ! -- local
-    character(len=LINELENGTH) :: line
+    character(len=LINELENGTH) :: title
+    character(len=LINELENGTH) :: tag
+    integer(I4B) :: ntabrows
+    integer(I4B) :: ntabcols
     integer(I4B) :: n
     integer(I4B) :: ifirst
     real(DP) :: dh
@@ -3855,14 +3865,8 @@ contains
     real(DP) :: ex
     real(DP) :: pd
     ! format
-      character(len=*), parameter :: fmtheader = "(4x,a10,4(1x,a15))"
-      character(len=*), parameter :: header =                                   &
-         &"(4x,'LAKE PACKAGE FAILED CONVERGENCE CRITERIA',//,                   &
-         &4x,a/,4x,74('-'))"  
-      character(len=*), parameter :: fmtline = "(4x,i10,4(1x,G15.7))"                                  
-      character(len=*), parameter :: fmtfooter = "(4x,74('-'))"                                  
-      character(len=*), parameter :: fmtmsg =                                   &
-         &"('CONVERGENCE FAILED AS A RESULT OF LAKE PACKAGE',1x,a)"                                  
+    character(len=*), parameter :: errmsg =                                      &
+        &"(/,'CONVERGENCE FAILED AS A RESULT OF LAKE PACKAGE')"                                  
 ! --------------------------------------------------------------------------
     ifirst = 1
     if (this%iconvchk /= 0) then
@@ -3879,7 +3883,7 @@ contains
         pd = DZERO
         if (this%iconvresidchk /= 0) then
           if (avgf > DZERO) then
-            pd = 100.d0 * residb / avgf
+            pd = DHUNDRED * residb / avgf
           end if
         end if
         if (ABS(dh) > hclose .or. ABS(pd) > this%pdmax) then
@@ -3888,30 +3892,55 @@ contains
           if (iend == 1) then
             if (ifirst == 1) then
               ifirst = 0
-              ! -- write table to this%iout
-              call sim_message(this%name, fmt=fmtmsg, iunit=this%iout)
-              write(line, fmtheader)                                             &
-                '      LAKE',                                                    &
-                '             DH', '    DH CRITERIA',                            &
-                '        PCTDIFF', ' PCTDIFF CRITER'
-              call sim_message(line, fmt=header, iunit=this%iout)
-              ! -- write table to stdout
-              call sim_message(line, fmt=header)
+              !
+              ! -- create error table
+              ! -- table dimensions
+              ntabrows = 1
+              ntabcols = 5
+              if (this%inamedbound == 1) then
+                ntabcols = ntabcols + 1
+              end if
+              !
+              ! -- initialize table and define columns
+              title = trim(adjustl(this%text)) // ' PACKAGE (' //                &
+                      trim(adjustl(this%name)) //                                &
+                      ') LAKE CONVERGENCE CHECK'
+              call table_cr(this%errortab, this%name, title)
+              call this%errortab%table_df(ntabrows, ntabcols, this%iout,        &
+                                           finalize=.FALSE.)
+              tag = 'NUMBER'
+              call this%errortab%initialize_column(tag, 10)
+              tag = 'MAXIMUM STAGE DIFFERENCE'
+              call this%errortab%initialize_column(tag, 12)
+              tag = 'HCLOSE CRITERIA'
+              call this%errortab%initialize_column(tag, 12)
+              tag = 'PERCENT DIFFERENCE'
+              call this%errortab%initialize_column(tag, 12)
+              tag = 'RCLOSE CRITERIA'
+              call this%errortab%initialize_column(tag, 12)
+              if (this%inamedbound == 1) then
+                tag = 'BOUNDNAME'
+                call this%errortab%initialize_column(tag, LENBOUNDNAME, alignment=TABLEFT)
+              end if
             end if
-            write(line, fmtline)  n, dh, hclose, pd, this%pdmax
-            call sim_message(line, iunit=this%iout)
-            ! -- write table to stdout
-            call sim_message(line)
+            !
+            ! -- write to error table
+            call this%errortab%add_term(n)
+            call this%errortab%add_term(dh)
+            call this%errortab%add_term(hclose)
+            call this%errortab%add_term(pd)
+            call this%errortab%add_term(this%pdmax)
+            if (this%inamedbound == 1) then
+              call this%errortab%add_term(this%boundname(n))
+            end if
           else
             exit final_check
           end if
         end if
       end do final_check
       if (ifirst == 0) then
-        ! -- write table to this%iout
-        call sim_message('', fmt=fmtfooter, iunit=this%iout)
-        ! -- write table to stdout
-        call sim_message('', fmt=fmtfooter)
+        call this%errortab%finalize_table()
+        call sim_message('', fmt=errmsg)
       end if
     end if
     !

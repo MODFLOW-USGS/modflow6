@@ -728,14 +728,30 @@ contains
       rratewc = DZERO
       idelay = this%idelay(ib)
       ielastic = this%ielastic(ib)
+      !
+      ! -- calculate interbed thickness
+      ! -- no delay interbeds
+      if (idelay == 0) then
+        b = this%thick(ib)
+      ! -- delay interbeds
+      else
+        b = this%thick(ib) * this%rnb(ib)
+      end if
+      !
+      ! -- set variables required for no-delay and delay interbeds
+      node = this%nodelist(ib)
+      area = this%dis%get_area(node)
+      !
+      ! -- add interbed thickness to cell thickness
+      this%cell_thick(node) = this%cell_thick(node) + b
+      !
+      ! -- update budget terms if transient stress period
       if (this%gwfiss == 0) then
         if (DELT > DZERO) then
           tledm = DONE / DELT
         else
           tledm = DZERO
         end if
-        node = this%nodelist(ib)
-        area = this%dis%get_area(node)
         !
         ! -- skip inactive and constant head cells
         if (this%ibound(node) < 1) cycle
@@ -743,7 +759,6 @@ contains
         ! -- no delay interbeds
         if (idelay == 0) then
           iconvert = this%iconvert(ib)
-          b = this%thick(ib)
           stoi = DZERO
           !
           ! -- calculate compaction
@@ -788,7 +803,6 @@ contains
           !
           ! -- delay interbeds
         else
-          b = this%thick(ib) * this%rnb(ib)
           h = hnew(node)
           h0 = hold(node)
           !
@@ -847,7 +861,6 @@ contains
                                          hnew(node), hold(node), hcof, rhs)
         rratewc = hcof * hnew(node) - rhs
         this%cell_wcstor(node) = this%cell_wcstor(node) + rratewc
-        this%cell_thick(node) = this%cell_thick(node) + b
         !
         ! -- water compressibility budget terms
         if (rratewc < DZERO) then
@@ -3106,6 +3119,7 @@ contains
       top = this%dis%top(node)
       bot = this%dis%bot(node)
       this%cg_thickini(node) = top - bot
+      this%cell_thick(node) = top - bot
     end do
     !
     ! -- subtract the interbed thickness from aquifer thickness
@@ -6523,150 +6537,186 @@ contains
         obsrv => this%obs%pakobs(i)%obsrv
         if (obsrv%BndFound) then
           nn = size(obsrv%indxbnds)
-          v = DZERO
-          do j = 1, nn
-            n = obsrv%indxbnds(j)
-            select case (obsrv%ObsTypeId)
-              case ('CSUB')
-                v = this%storagee(n) + this%storagei(n)
-              case ('INELASTIC-CSUB')
-                v = this%storagei(n)
-              case ('ELASTIC-CSUB')
-                v = this%storagee(n)
-              case ('COARSE-CSUB')
-                v = this%cg_stor(n)
-              case ('WCOMP-CSUB-CELL')
-                v = this%cell_wcstor(n)
-              case ('CSUB-CELL')
-                !
-                ! -- add the coarse component
-                if (j == 1) then
-                  v = this%cg_stor(n)
-                else
-                  v = this%storagee(n) + this%storagei(n)
-                end if
-              case ('SKE')
-                v = this%ske(n)
-              case ('SK')
-                v = this%sk(n)
-              case ('SKE-CELL')
-                !
-                ! -- add the coarse component
-                if (j == 1) then
-                  v = this%cg_ske(n)
-                else
-                  v = this%ske(n)
-                end if
-              case ('SK-CELL')
-                !
-                ! -- add the coarse component
-                if (j == 1) then
-                  v = this%cg_sk(n)
-                else
-                  v = this%sk(n)
-                end if
-              case ('THETA')
-                v = this%theta(n)
-              case ('COARSE-THETA')
-                v = this%cg_theta(n)
-              case ('THETA-CELL')
-                !
-                ! -- add the coarse component
-                if (j == 1) then
-                  f = this%cg_thick(n) / this%cell_thick(n)
-                  v = f * this%cg_theta(n)
-                else
-                  node = this%nodelist(n) 
-                  f = this%csub_calc_interbed_thickness(n) / this%cell_thick(node)
-                  v = f * this%theta(n)
-                end if
-              case ('GSTRESS-CELL')
-                v = this%cg_gs(n)
-              case ('ESTRESS-CELL')
-                v = this%cg_es(n)
-              case ('INTERBED-COMPACTION')
-                v = this%tcomp(n)
-              case ('INELASTIC-COMPACTION')
-                v = this%tcompi(n)
-              case ('ELASTIC-COMPACTION')
-                v = this%tcompe(n)
-              case ('COARSE-COMPACTION')
-                v = this%cg_tcomp(n)
-              case ('INELASTIC-COMPACTION-CELL')
-                !
-                ! -- no coarse inelastic component
-                if (j > 1) then
-                  v = this%tcompi(n)
-                end if
-              case ('ELASTIC-COMPACTION-CELL')
-                !
-                ! -- add the coarse component
-                if (j == 1) then
-                  v = this%cg_tcomp(n)
-                else
-                  v = this%tcompe(n)
-                end if
-              case ('COMPACTION-CELL')
-                !
-                ! -- add the coarse component
-                if (j == 1) then
-                  v = this%cg_tcomp(n)
-                else
-                  v = this%tcomp(n)
-                end if
-              case ('THICKNESS')
-                idelay = this%idelay(n)
-                v = this%thick(n)
-                if (idelay /= 0) then
-                  v = v * this%rnb(n)
-                end if
-              case ('COARSE-THICKNESS')
-                v = this%cg_thick(n)
-              case ('THICKNESS-CELL')
-                v = this%cell_thick(n)
-              case ('DELAY-HEAD', 'DELAY-PRECONSTRESS',                          &
-                    'DELAY-GSTRESS', 'DELAY-ESTRESS',                            &
-                    'DELAY-COMPACTION', 'DELAY-THICKNESS',                       &
-                    'DELAY-THETA')
-                if (n > this%ndelaycells) then
-                  r = real(n, DP) / real(this%ndelaycells, DP)
-                  idelay = int(floor(r)) + 1
-                  ncol = mod(n, this%ndelaycells)
-                else
-                  idelay = 1
-                  ncol = n
-                end if
-                select case(obsrv%ObsTypeId)
-                  case ('DELAY-PRECONSTRESS')
-                    v = this%dbpcs(ncol, idelay)
-                  case ('DELAY-HEAD')
-                    v = this%dbh(ncol, idelay)
-                  case ('DELAY-GSTRESS')
-                    v = this%dbgeo(ncol, idelay)
-                  case ('DELAY-ESTRESS')
-                    v = this%dbes(ncol, idelay)
-                  case ('DELAY-COMPACTION')
-                    v = this%dbtcomp(ncol, idelay)
-                  case ('DELAY-THICKNESS')
-                    v = this%dbdz(ncol, idelay)
-                  case ('DELAY-THETA')
-                    v = this%dbtheta(ncol, idelay)
+          if (obsrv%ObsTypeId == 'SKE' .or.                                      &
+              obsrv%ObsTypeId == 'SK' .or.                                       &
+              obsrv%ObsTypeId == 'SKE-CELL' .or.                                 &
+              obsrv%ObsTypeId == 'SK-CELL' .or.                                  &
+              obsrv%ObsTypeId == 'DELAY-HEAD' .or.                               &
+              obsrv%ObsTypeId == 'DELAY-PRECONSTRESS' .or.                       &
+              obsrv%ObsTypeId == 'DELAY-GSTRESS' .or.                            &
+              obsrv%ObsTypeId == 'DELAY-ESTRESS' .or.                            &
+              obsrv%ObsTypeId == 'PRECONSTRESS-CELL') then
+            if (this%gwfiss /= 0) then
+              call this%obs%SaveOneSimval(obsrv, DNODATA)
+            else
+              v = DZERO
+              do j = 1, nn
+                n = obsrv%indxbnds(j)
+                select case (obsrv%ObsTypeId)
+                  case ('SKE')
+                    v = this%ske(n)
+                  case ('SK')
+                    v = this%sk(n)
+                  case ('SKE-CELL')
+                    !
+                    ! -- add the coarse component
+                    if (j == 1) then
+                      v = this%cg_ske(n)
+                    else
+                      v = this%ske(n)
+                    end if
+                  case ('SK-CELL')
+                    !
+                    ! -- add the coarse component
+                    if (j == 1) then
+                      v = this%cg_sk(n)
+                    else
+                      v = this%sk(n)
+                    end if
+                  case ('DELAY-HEAD', 'DELAY-PRECONSTRESS',                      &
+                        'DELAY-GSTRESS', 'DELAY-ESTRESS')
+                    if (n > this%ndelaycells) then
+                      r = real(n, DP) / real(this%ndelaycells, DP)
+                      idelay = int(floor(r)) + 1
+                      ncol = mod(n, this%ndelaycells)
+                    else
+                      idelay = 1
+                      ncol = n
+                    end if
+                    select case(obsrv%ObsTypeId)
+                      case ('DELAY-HEAD')
+                        v = this%dbh(ncol, idelay)
+                      case ('DELAY-PRECONSTRESS')
+                        v = this%dbpcs(ncol, idelay)
+                      case ('DELAY-GSTRESS')
+                        v = this%dbgeo(ncol, idelay)
+                      case ('DELAY-ESTRESS')
+                        v = this%dbes(ncol, idelay)
+                      end select
+                  case ('PRECONSTRESS-CELL')
+                    v = this%pcs(n)
+                  case default
+                    msg = 'Error: Unrecognized observation type: ' //            &
+                          trim(obsrv%ObsTypeId)
+                    call store_error(msg)
                 end select
-              case ('PRECONSTRESS-CELL')
-                v = this%pcs(n)
-              case ('DELAY-FLOWTOP')
-                idelay = this%idelay(n)
-                v = this%dbflowtop(idelay)
-              case ('DELAY-FLOWBOT')
-                idelay = this%idelay(n)
-                v = this%dbflowbot(idelay)
-              case default
-                msg = 'Error: Unrecognized observation type: ' //                &
-                      trim(obsrv%ObsTypeId)
-                call store_error(msg)
-            end select
-            call this%obs%SaveOneSimval(obsrv, v)
-        end do
+                call this%obs%SaveOneSimval(obsrv, v)
+              end do
+            end if
+          else
+            v = DZERO
+            do j = 1, nn
+              n = obsrv%indxbnds(j)
+              select case (obsrv%ObsTypeId)
+                case ('CSUB')
+                  v = this%storagee(n) + this%storagei(n)
+                case ('INELASTIC-CSUB')
+                  v = this%storagei(n)
+                case ('ELASTIC-CSUB')
+                  v = this%storagee(n)
+                case ('COARSE-CSUB')
+                  v = this%cg_stor(n)
+                case ('WCOMP-CSUB-CELL')
+                  v = this%cell_wcstor(n)
+                case ('CSUB-CELL')
+                  !
+                  ! -- add the coarse component
+                  if (j == 1) then
+                    v = this%cg_stor(n)
+                  else
+                    v = this%storagee(n) + this%storagei(n)
+                  end if
+                case ('THETA')
+                  v = this%theta(n)
+                case ('COARSE-THETA')
+                  v = this%cg_theta(n)
+                case ('THETA-CELL')
+                  !
+                  ! -- add the coarse component
+                  if (j == 1) then
+                    f = this%cg_thick(n) / this%cell_thick(n)
+                    v = f * this%cg_theta(n)
+                  else
+                    node = this%nodelist(n) 
+                    f = this%csub_calc_interbed_thickness(n) / this%cell_thick(node)
+                    v = f * this%theta(n)
+                  end if
+                case ('GSTRESS-CELL')
+                  v = this%cg_gs(n)
+                case ('ESTRESS-CELL')
+                  v = this%cg_es(n)
+                case ('INTERBED-COMPACTION')
+                  v = this%tcomp(n)
+                case ('INELASTIC-COMPACTION')
+                  v = this%tcompi(n)
+                case ('ELASTIC-COMPACTION')
+                  v = this%tcompe(n)
+                case ('COARSE-COMPACTION')
+                  v = this%cg_tcomp(n)
+                case ('INELASTIC-COMPACTION-CELL')
+                  !
+                  ! -- no coarse inelastic component
+                  if (j > 1) then
+                    v = this%tcompi(n)
+                  end if
+                case ('ELASTIC-COMPACTION-CELL')
+                  !
+                  ! -- add the coarse component
+                  if (j == 1) then
+                    v = this%cg_tcomp(n)
+                  else
+                    v = this%tcompe(n)
+                  end if
+                case ('COMPACTION-CELL')
+                  !
+                  ! -- add the coarse component
+                  if (j == 1) then
+                    v = this%cg_tcomp(n)
+                  else
+                    v = this%tcomp(n)
+                  end if
+                case ('THICKNESS')
+                  idelay = this%idelay(n)
+                  v = this%thick(n)
+                  if (idelay /= 0) then
+                    v = v * this%rnb(n)
+                  end if
+                case ('COARSE-THICKNESS')
+                  v = this%cg_thick(n)
+                case ('THICKNESS-CELL')
+                  v = this%cell_thick(n)
+                case ('DELAY-COMPACTION', 'DELAY-THICKNESS',                       &
+                      'DELAY-THETA')
+                  if (n > this%ndelaycells) then
+                    r = real(n, DP) / real(this%ndelaycells, DP)
+                    idelay = int(floor(r)) + 1
+                    ncol = mod(n, this%ndelaycells)
+                  else
+                    idelay = 1
+                    ncol = n
+                  end if
+                  select case(obsrv%ObsTypeId)
+                    case ('DELAY-COMPACTION')
+                      v = this%dbtcomp(ncol, idelay)
+                    case ('DELAY-THICKNESS')
+                      v = this%dbdz(ncol, idelay)
+                    case ('DELAY-THETA')
+                      v = this%dbtheta(ncol, idelay)
+                  end select
+                case ('DELAY-FLOWTOP')
+                  idelay = this%idelay(n)
+                  v = this%dbflowtop(idelay)
+                case ('DELAY-FLOWBOT')
+                  idelay = this%idelay(n)
+                  v = this%dbflowbot(idelay)
+                case default
+                  msg = 'Error: Unrecognized observation type: ' //                &
+                        trim(obsrv%ObsTypeId)
+                  call store_error(msg)
+              end select
+              call this%obs%SaveOneSimval(obsrv, v)
+            end do
+          end if
         else
           call this%obs%SaveOneSimval(obsrv, DNODATA)
         end if

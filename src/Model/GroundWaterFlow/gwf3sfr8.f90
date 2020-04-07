@@ -1293,7 +1293,7 @@ contains
                 trim(adjustl(this%name)) //') DATA FOR PERIOD'
         write(title, '(a,1x,i6)') trim(adjustl(title)), kper
         call table_cr(this%inputtab, this%name, title)
-        call this%inputtab%table_df(1, 4, this%iout)
+        call this%inputtab%table_df(1, 4, this%iout, finalize=.FALSE.)
         text = 'NUMBER'
         call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
         text = 'KEYWORD'
@@ -1322,8 +1322,8 @@ contains
         !
         ! -- write line to table
         if (this%iprpak /= 0) then
-          call this%inputtab%add_term(n, finalize=.FALSE.)
-          call this%inputtab%line_to_columns(line, finalize=.FALSE.)
+          call this%inputtab%add_term(n)
+          call this%inputtab%line_to_columns(line)
         end if
       end do
       if (this%iprpak /= 0) then
@@ -1400,7 +1400,7 @@ contains
     return
   end subroutine sfr_ad
 
-  subroutine sfr_cf(this)
+  subroutine sfr_cf(this, reset_mover)
   ! ******************************************************************************
   ! sfr_cf -- Formulate the HCOF and RHS terms
   ! Subroutine: (1) skip in no wells
@@ -1409,12 +1409,13 @@ contains
   !
   !    SPECIFICATIONS:
   ! ------------------------------------------------------------------------------
-      ! -- dummy variables
-      class(SfrType) :: this
-      ! -- local variables
-      integer(I4B) :: n
-      integer(I4B) :: igwfnode
-
+    ! -- dummy
+    class(SfrType) :: this
+    logical, intent(in), optional :: reset_mover
+    ! -- local variables
+    integer(I4B) :: n
+    integer(I4B) :: igwfnode
+    logical :: lrm
   ! ------------------------------------------------------------------------------
     !
     ! -- Return if no sfr reaches
@@ -1433,7 +1434,9 @@ contains
     end do
     !
     ! -- pakmvrobj cf
-    if(this%imover == 1) then
+    lrm = .true.
+    if (present(reset_mover)) lrm = reset_mover
+    if(this%imover == 1 .and. lrm) then
       call this%pakmvrobj%cf()
     endif
     !
@@ -1578,23 +1581,19 @@ contains
     real(DP), intent(in) :: hclose
     real(DP), intent(in) :: rclose
     ! -- local
-    character(len=LINELENGTH) :: line
-    character(len=15) :: cdhmax
-    character(len=15) :: crmax
+    character(len=LINELENGTH) :: title
+    character(len=LINELENGTH) :: tag
+    character(len=15) :: cellid
+    integer(I4B) :: ntabrows
+    integer(I4B) :: ntabcols
+    integer(I4B) :: node
     integer(I4B) :: n
     integer(I4B) :: ifirst
     real(DP) :: dh
     real(DP) :: r
     ! format
-      character(len=*), parameter :: fmtheader = "(4x,a10,2(1x,a15))"
-      character(len=*), parameter :: header =                                   &
-         &"(4x,'STREAMFLOW ROUTING PACKAGE FAILED CONVERGENCE CRITERIA',//,     &
-         &4x,a/,4x,74('-'))"  
-      character(len=*), parameter :: fmtline = "(4x,i10,2(1x,a15))"                                  
-      character(len=*), parameter :: fmtfooter = "(4x,74('-'))"                                  
-      character(len=*), parameter :: fmtmsg =                                   &
-         &"('CONVERGENCE FAILED AS A RESULT OF STREAMFLOW ROUTING PACKAGE',     &
-         &1x,a)"                                  
+    character(len=*), parameter :: errmsg =                                      &
+        &"(/,'CONVERGENCE FAILED AS A RESULT OF STREAMFLOW ROUTING PACKAGE')"                                  
 ! --------------------------------------------------------------------------
     ifirst = 1
     if (this%iconvchk /= 0) then
@@ -1608,40 +1607,69 @@ contains
           if (iend == 1) then
             if (ifirst == 1) then
               ifirst = 0
-              ! -- write table to this%iout
-              call sim_message(this%name, fmt=fmtmsg, iunit=this%iout)
-              write(line, fmtheader)                                             &
-                '     REACH',                                                    &
-                '        MAX. DH', '  MAX. RESIDUAL'
-              call sim_message(line, fmt=header, iunit=this%iout)
-              ! -- write table to stdout
-              call sim_message(line, fmt=header)
+              !
+              ! -- create error table
+              ! -- table dimensions
+              ntabrows = 1
+              ntabcols = 6
+              if (this%inamedbound == 1) then
+                ntabcols = ntabcols + 1
+              end if
+              !
+              ! -- initialize table and define columns
+              title = trim(adjustl(this%text)) // ' PACKAGE (' //                &
+                      trim(adjustl(this%name)) //                                &
+                      ') STREAMFLOW ROUTING CONVERGENCE CHECK'
+              call table_cr(this%errortab, this%name, title)
+              call this%errortab%table_df(ntabrows, ntabcols, this%iout,        &
+                                           finalize=.FALSE.)
+              tag = 'NUMBER'
+              call this%errortab%initialize_column(tag, 10)
+              tag = 'CELLID'
+              call this%errortab%initialize_column(tag, 20, alignment=TABLEFT)
+              tag = 'MAXIMUM STAGE DIFFERENCE'
+              call this%errortab%initialize_column(tag, 12)
+              tag = 'HCLOSE CRITERIA'
+              call this%errortab%initialize_column(tag, 12)
+              tag = 'MAXIMUM RESIDUAL'
+              call this%errortab%initialize_column(tag, 12)
+              tag = 'RCLOSE CRITERIA'
+              call this%errortab%initialize_column(tag, 12)
+              if (this%inamedbound == 1) then
+                tag = 'BOUNDNAME'
+                call this%errortab%initialize_column(tag, LENBOUNDNAME, alignment=TABLEFT)
+              end if
             end if
-            cdhmax = '               '
-            crmax = '               '
-            if (ABS(dh) > hclose) then
-              write(cdhmax, '(G15.7)') dh
+            !
+            ! -- write to error table
+            ! -- get cellid
+            node = this%igwfnode(n)
+            if (node > 0) then
+              call this%dis%noder_to_string(node, cellid)
+            else
+              cellid = 'none'
             end if
-            if (ABS(r) > rclose) then
-              write(crmax, '(G15.7)') r
+            !
+            ! -- add data
+            call this%errortab%add_term(n)
+            call this%errortab%add_term(cellid)
+            call this%errortab%add_term(dh)
+            call this%errortab%add_term(hclose)
+            call this%errortab%add_term(r)
+            call this%errortab%add_term(rclose)
+            if (this%inamedbound == 1) then
+              call this%errortab%add_term(this%boundname(n))
             end if
-            !write(this%iout,2010) n, cdhmax, crmax
-            write(line, fmtline)  n, cdhmax, crmax
-            call sim_message(line, iunit=this%iout)
-            ! -- write table to stdout
-            call sim_message(line)
-          ! terminate check since no need to find more than one non-convergence
+          !
+          ! -- terminate check since no need to find more than one non-convergence
           else
             exit final_check
           end if
         end if
       end do final_check
       if (ifirst == 0) then
-        !write(this%iout,2020)
-        ! -- write table to this%iout
-        call sim_message('', fmt=fmtfooter, iunit=this%iout)
-        ! -- write table to stdout
-        call sim_message('', fmt=fmtfooter)
+        call this%errortab%finalize_table()
+        call sim_message('', fmt=errmsg)
       end if
     end if
     !

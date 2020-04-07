@@ -134,6 +134,7 @@ This section describes changes introduced into MODFLOW 6 with each release.  The
 	\item Fixed a bug in binary budget file header for CSUB Package budget data written using IMETH=6 (CSUB-ELASTIC and CSUB-INELASTIC) .
 	\item Added information on the CSUB Package budget terms and compaction data written the the Input/Output document in the `Description of Groundwater Flow (GWF) Model Binary Output Files' section.
 	\item Refactored the SFR Package to remove use of RectangularChGeometry objects and added required functionality as private methods in the SFR module.
+	\item Prior to this release, the calculated flows between a standard stress package (WEL, DRN, RIV, GHB, RCH, and EVT) and the connected model cell were based on the RHS and HCOF terms from the previous iteration.  This was not consistent with previous MODFLOW versions.  These packages were modified so that the flows are recalculated using the final converged head solution.  As a result of this change, simulated groundwater flows for these packages may be slightly different (compared to previous releases) if the package HCOF and RHS values depend on the simulated groundwater head.
 \end{itemize}
 
 \underline{ADVANCED STRESS PACKAGES}
