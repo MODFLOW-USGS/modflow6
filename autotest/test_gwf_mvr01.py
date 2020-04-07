@@ -166,16 +166,16 @@ def get_model(idx, dir):
         (1, 8, (0, 4, 8), 'horizontal', 1.e-05, -1., 0., 100., 100.),
         (1, 9, (0, 3, 9), 'horizontal', 1.e-05, -1., 0., 100., 100.),
         (1, 10, (1, 3, 8), 'vertical', 1.e-05, -1., 0., 0., 0.)]
-    lakeperioddata = [(1, 'status', 'active'),
-                      (1, 'rainfall', '0.0'),
-                      (1, 'evaporation', '0.000000000000e+000'),
-                      (1, 'runoff', '0.000000000000e+000'),
-                      (1, 'withdrawal', '0.000000000000e+000')]
-    outletperioddata = [(0, 'rate', '1.000000000000e+000'),
-                        (0, 'invert', '1.000000000000e-003'),
-                        (0, 'width', '0.000000000000e+000'),
-                        (0, 'slope', '1.000000000000e-003'),
-                        (0, 'rough', '1.000000000000e-001')]
+    perioddata = [(1, 'status', 'active'),
+                  (1, 'rainfall', '0.0'),
+                  (1, 'evaporation', '0.000000000000e+000'),
+                  (1, 'runoff', '0.000000000000e+000'),
+                  (1, 'withdrawal', '0.000000000000e+000'),
+                  (0, 'rate', '1.000000000000e+000'),
+                  (0, 'invert', '1.000000000000e-003'),
+                  (0, 'width', '0.000000000000e+000'),
+                  (0, 'slope', '1.000000000000e-003'),
+                  (0, 'rough', '1.000000000000e-001')]
     lak = flopy.mf6.ModflowGwflak(gwf, mover=True, nlakes=nlakes,
                                   noutlets=noutlets,
                                   print_stage=True,
@@ -183,8 +183,7 @@ def get_model(idx, dir):
                                   packagedata=packagedata,
                                   connectiondata=connectiondata,
                                   outlets=outlets,
-                                  lakeperioddata=lakeperioddata,
-                                  outletperioddata=outletperioddata,
+                                  perioddata=perioddata,
                                   pname='lak-1')
 
     packagedata = [
