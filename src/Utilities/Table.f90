@@ -163,6 +163,7 @@ module TableModule
       end if
     else
       this%sep = ' '
+      this%write_csv = .FALSE.
     end if
     if (present(lineseparator)) then
       this%add_linesep = lineseparator
