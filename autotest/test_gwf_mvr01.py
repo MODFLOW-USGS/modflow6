@@ -178,6 +178,7 @@ def get_model(idx, dir):
                         (0, 'width', '0.000000000000e+000'),
                         (0, 'slope', '1.000000000000e-003'),
                         (0, 'rough', '1.000000000000e-001')]
+    perioddata = lakeperioddata + outletperioddata
     cnvgpth = '{}.lak.cnvg.csv'.format(name)
     lak = flopy.mf6.ModflowGwflak(gwf, mover=True, nlakes=nlakes,
                                   noutlets=noutlets,
@@ -187,8 +188,7 @@ def get_model(idx, dir):
                                   packagedata=packagedata,
                                   connectiondata=connectiondata,
                                   outlets=outlets,
-                                  lakeperioddata=lakeperioddata,
-                                  outletperioddata=outletperioddata,
+                                  perioddata=perioddata,
                                   pname='lak-1')
 
     packagedata = [
