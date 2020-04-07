@@ -99,7 +99,8 @@
 module GwfMvrModule
   use KindModule,             only: DP, I4B
   use ConstantsModule,        only: LENORIGIN, LENPACKAGENAME, LENMODELNAME,   &
-                                    LENBUDTXT, LENAUXNAME, DZERO, MAXCHARLEN
+                                    LENBUDTXT, LENAUXNAME, LENPAKLOC,          &
+                                    DZERO, MAXCHARLEN
   use MvrModule,              only: MvrType
   use BudgetModule,           only: BudgetType, budget_cr
   use BudgetObjectModule,     only: BudgetObjectType, budgetobject_cr
@@ -447,7 +448,7 @@ module GwfMvrModule
     return
   end subroutine mvr_fc
 
-  subroutine mvr_cc(this, kiter, iend, icnvg)
+  subroutine mvr_cc(this, kiter, iend, icnvgmod, icnvg, dpak, cpak)
 ! ******************************************************************************
 ! mvr_cc -- extra convergence check for mover
 ! ******************************************************************************
@@ -458,7 +459,10 @@ module GwfMvrModule
     class(GwfMvrType) :: this
     integer(I4B),intent(in) :: kiter
     integer(I4B),intent(in) :: iend
+    integer(I4B),intent(in) :: icnvgmod
     integer(I4B),intent(inout) :: icnvg
+    real(DP), dimension(2), intent(inout) :: dpak
+    character(len=LENPAKLOC), dimension(2), intent(inout) :: cpak
     ! -- local
     ! -- formats
     character(len=*),parameter :: fmtmvrcnvg = &
@@ -468,8 +472,9 @@ module GwfMvrModule
     !
     ! -- If there are active movers, then at least 2 outers required
     if (this%nmvr > 0) then
-      if (icnvg == 1 .and. kiter == 1) then
+      if (icnvgmod == 1 .and. kiter == 1) then
         icnvg = 0
+        cpak(2) = trim(this%origin)
         write(this%iout, fmtmvrcnvg)
       endif
     endif

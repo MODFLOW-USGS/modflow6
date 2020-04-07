@@ -8,7 +8,7 @@ module LakModule
                              DONETHIRD, DTWOTHIRDS, DFIVETHIRDS,               &
                              DGRAVITY, DCD,                                    &
                              NAMEDBOUNDFLAG, LENFTYPE, LENPACKAGENAME,         &
-                             DNODATA,                                          &
+                             LENPAKLOC, DNODATA,                               &
                              TABLEFT, TABCENTER, TABRIGHT,                     &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
   use MemoryTypeModule, only: MemoryTSType
@@ -19,7 +19,7 @@ module LakModule
                               sQSaturationDerivative
   use BndModule, only: BndType
   use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr
-  use TableModule, only: table_cr
+  use TableModule, only: TableType, table_cr
   use ObserveModule, only: ObserveType
   use ObsModule, only: ObsType
   use InputOutputModule, only: get_node, URWORD, extract_idnum_or_bndname
@@ -55,6 +55,7 @@ module LakModule
     integer(I4B), pointer :: iprhed => null()
     integer(I4B), pointer :: istageout => null()
     integer(I4B), pointer :: ibudgetout => null()
+    integer(I4B), pointer :: ipakcsv => null()
     integer(I4B), pointer :: cbcauxitems => NULL()
     integer(I4B), pointer :: nlakes => NULL()
     integer(I4B), pointer :: noutlets => NULL()
@@ -178,6 +179,9 @@ module LakModule
     !
     ! -- lake budget object
     type(BudgetObjectType), pointer :: budobj => null()
+    !
+    ! -- laketable objects
+    type(TableType), pointer :: pakcsvtab => null()
     !
     ! -- type bound procedures
     contains
@@ -314,6 +318,7 @@ contains
     call mem_allocate(this%iprhed, 'IPRHED', this%origin)
     call mem_allocate(this%istageout, 'ISTAGEOUT', this%origin)
     call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%origin)
+    call mem_allocate(this%ipakcsv, 'IPAKCSV', this%origin)
     call mem_allocate(this%nlakes, 'NLAKES', this%origin)
     call mem_allocate(this%noutlets, 'NOUTLETS', this%origin)
     call mem_allocate(this%ntables, 'NTABLES', this%origin)
@@ -334,6 +339,7 @@ contains
     this%iprhed = 0
     this%istageout = 0
     this%ibudgetout = 0
+    this%ipakcsv = 0
     this%nlakes = 0
     this%noutlets = 0
     this%ntables = 0
@@ -3338,6 +3344,19 @@ contains
         else
           call store_error('OPTIONAL BUDGET KEYWORD MUST BE FOLLOWED BY FILEOUT')
         end if
+      case('PACKAGE_CONVERGENCE')
+        call this%parser%GetStringCaps(keyword)
+        if (keyword == 'FILEOUT') then
+          call this%parser%GetString(fname)
+          this%ipakcsv = getunit()
+          call openfile(this%ipakcsv, this%iout, fname, 'CSV',                   &
+                        filstat_opt='REPLACE')
+          write(this%iout,fmtlakbin) 'PACKAGE_CONVERGENCE', fname, this%ipakcsv
+          found = .true.
+        else
+          call store_error('OPTIONAL PACKAGE_CONVERGENCE KEYWORD MUST BE ' //    &
+                           'FOLLOWED BY FILEOUT')
+        end if
       case('MOVER')
         this%imover = 1
         write(this%iout, '(4x,A)') 'MOVER OPTION ENABLED'
@@ -3832,26 +3851,36 @@ contains
     return
   end subroutine lak_fn
 
-  subroutine lak_cc(this, iend, icnvg, hclose, rclose)
+  subroutine lak_cc(this, kiter, iend, icnvgmod, icnvg, hclose, rclose,          &
+                    dpak, cpak)
 ! **************************************************************************
 ! lak_cc -- Final convergence check for package
 ! **************************************************************************
 !
 !    SPECIFICATIONS:
 ! --------------------------------------------------------------------------
+    use TdisModule, only: totim, kstp, kper !, delt
     ! -- dummy
     class(LakType), intent(inout) :: this
+    integer(I4B), intent(in) :: kiter
     integer(I4B), intent(in) :: iend
+    integer(I4B), intent(in) :: icnvgmod
     integer(I4B), intent(inout) :: icnvg
     real(DP), intent(in) :: hclose
     real(DP), intent(in) :: rclose
+    real(DP), dimension(2), intent(inout) :: dpak
+    character(len=LENPAKLOC), dimension(2), intent(inout) :: cpak
     ! -- local
+    character(len=LENPAKLOC) :: cloc
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: tag
+    integer(I4B) :: icheck
+    integer(I4B) :: ipakfail
+    integer(I4B) :: locdhmax
+    integer(I4B) :: locrmax
     integer(I4B) :: ntabrows
     integer(I4B) :: ntabcols
     integer(I4B) :: n
-    integer(I4B) :: ifirst
     real(DP) :: dh
     real(DP) :: residb0
     real(DP) :: residb
@@ -3864,15 +3893,73 @@ contains
     real(DP) :: qinf
     real(DP) :: ex
     real(DP) :: pd
+    real(DP) :: dhmax
+    real(DP) :: rmax
     ! format
     character(len=*), parameter :: errmsg =                                      &
         &"(/,'CONVERGENCE FAILED AS A RESULT OF LAKE PACKAGE')"                                  
 ! --------------------------------------------------------------------------
-    ifirst = 1
-    if (this%iconvchk /= 0) then
+    !
+    ! -- initialize local variables
+    icheck = this%iconvchk
+    ipakfail = 0
+    locdhmax = 0
+    locrmax = 0
+    dhmax = DZERO
+    rmax = DZERO
+    !
+    ! -- if not saving package convergence data on check convergence if
+    !    the model is considered converged
+    if (this%ipakcsv == 0) then
+      if (icnvgmod == 0) then
+        icheck = 0
+      end if
+    !
+    ! -- saving package convergence data
+    else
+      !
+      ! -- header for package csv
+      if (.not. associated(this%pakcsvtab)) then
+        !
+        ! -- determine the number of columns and rows
+        ntabrows = 1
+        ntabcols = 8
+        !
+        ! -- setup table
+        call table_cr(this%pakcsvtab, this%name, '')
+        call this%pakcsvtab%table_df(ntabrows, ntabcols, this%ipakcsv,           &
+                                     lineseparator=.FALSE., separator=',',       &
+                                     finalize=.FALSE.)
+        !
+        ! -- add columns to package csv
+        tag = 'totim'
+        call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
+        tag = 'kper'
+        call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
+        tag = 'kstp'
+        call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
+        tag = 'nouter'
+        call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
+        tag = 'dvmax'
+        call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+        tag = 'dvmax_loc'
+        call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+        tag = 'dinflowmax'
+        call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+        tag = 'dinflowmax_loc'
+        call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+      end if
+    end if
+    !
+    ! -- perform package convergence check
+    if (icheck /= 0) then
       final_check: do n = 1, this%nlakes
         if (this%iboundpak(n) < 1) cycle
+        !
+        ! -- stage difference
         dh = this%s0(n) - this%xnewpak(n)
+        !
+        ! -- flow difference
         call this%lak_calculate_residual(n, this%s0(n), residb0)
         call this%lak_calculate_residual(n, this%xnewpak(n), residb)
         dr = residb0 - residb
@@ -3886,61 +3973,114 @@ contains
             pd = DHUNDRED * residb / avgf
           end if
         end if
-        if (ABS(dh) > hclose .or. ABS(pd) > this%pdmax) then
-          icnvg = 0
-          ! write convergence check information if this is the last outer iteration
-          if (iend == 1) then
-            if (ifirst == 1) then
-              ifirst = 0
-              !
-              ! -- create error table
-              ! -- table dimensions
-              ntabrows = 1
-              ntabcols = 5
-              if (this%inamedbound == 1) then
-                ntabcols = ntabcols + 1
-              end if
-              !
-              ! -- initialize table and define columns
-              title = trim(adjustl(this%text)) // ' PACKAGE (' //                &
-                      trim(adjustl(this%name)) //                                &
-                      ') LAKE CONVERGENCE CHECK'
-              call table_cr(this%errortab, this%name, title)
-              call this%errortab%table_df(ntabrows, ntabcols, this%iout,        &
-                                           finalize=.FALSE.)
-              tag = 'NUMBER'
-              call this%errortab%initialize_column(tag, 10)
-              tag = 'MAXIMUM STAGE DIFFERENCE'
-              call this%errortab%initialize_column(tag, 12)
-              tag = 'HCLOSE CRITERIA'
-              call this%errortab%initialize_column(tag, 12)
-              tag = 'PERCENT DIFFERENCE'
-              call this%errortab%initialize_column(tag, 12)
-              tag = 'RCLOSE CRITERIA'
-              call this%errortab%initialize_column(tag, 12)
-              if (this%inamedbound == 1) then
-                tag = 'BOUNDNAME'
-                call this%errortab%initialize_column(tag, LENBOUNDNAME, alignment=TABLEFT)
-              end if
-            end if
-            !
-            ! -- write to error table
-            call this%errortab%add_term(n)
-            call this%errortab%add_term(dh)
-            call this%errortab%add_term(hclose)
-            call this%errortab%add_term(pd)
-            call this%errortab%add_term(this%pdmax)
-            if (this%inamedbound == 1) then
-              call this%errortab%add_term(this%boundname(n))
-            end if
-          else
-            exit final_check
+        !
+        ! -- evaluate magnitude of differences
+        if (n == 1) then
+          locdhmax = n
+          dhmax = dh
+          locrmax = n
+          rmax = pd
+        else
+          if (abs(dh) > abs(dhmax)) then
+            locdhmax = n
+            dhmax = dh
+          end if
+          if (abs(pd) > abs(rmax)) then
+            locrmax = n
+            rmax = pd
           end if
         end if
       end do final_check
-      if (ifirst == 0) then
-        call this%errortab%finalize_table()
+      !
+      ! -- evaluate package convergence
+      if (ABS(dhmax) > hclose .or. ABS(rmax) > this%pdmax) then
+        icnvg = 0
+        ipakfail = 1
+      end if
+      !
+      ! -- set dpak and cpak
+      if (ABS(dh) > abs(dpak(1))) then
+        dpak(1) = dh
+        write(cloc, "(a,'-(',i0,')-',a)")                                        &
+          trim(this%origin), locdhmax, 'stage'
+        cpak(1) = trim(cloc)
+      end if
+      ! - JDH not sure if pd is the correct thing to use here
+      if (ABS(rmax) > abs(dpak(2))) then
+        dpak(2) = rmax
+        write(cloc, "(a,'-(',i0,')-',a)")                                        &
+          trim(this%origin), locrmax, 'flow'
+        cpak(2) = trim(cloc)
+      end if
+      !
+      ! -- write convergence data to package csv
+      if (this%ipakcsv /= 0) then
+        !
+        ! -- write the data
+        call this%pakcsvtab%add_term(totim)
+        call this%pakcsvtab%add_term(kper)
+        call this%pakcsvtab%add_term(kstp)
+        call this%pakcsvtab%add_term(kiter)
+        call this%pakcsvtab%add_term(dhmax)
+        call this%pakcsvtab%add_term(locdhmax)
+        call this%pakcsvtab%add_term(rmax)
+        call this%pakcsvtab%add_term(locrmax)
+        !
+        ! -- finalize the package csv
+        if (iend == 1) then
+          call this%pakcsvtab%finalize_table()
+        end if
+      end if
+    end if
+    !
+    ! -- convergence check final information
+    if (ipakfail /= 0) then
+      !
+      ! -- write convergence check information if this is the last outer iteration
+      if (iend == 1) then
+        !
+        ! -- write error message to stdout
         call sim_message('', fmt=errmsg)
+        !
+        ! -- create error table
+        ! -- table dimensions
+        ntabrows = 1
+        ntabcols = 5
+        if (this%inamedbound == 1) then
+          ntabcols = ntabcols + 1
+        end if
+        !
+        ! -- initialize table and define columns
+        title = trim(adjustl(this%text)) // ' PACKAGE (' //                &
+                trim(adjustl(this%name)) //                                &
+                ') LAKE CONVERGENCE CHECK'
+        call table_cr(this%errortab, this%name, title)
+        call this%errortab%table_df(ntabrows, ntabcols, this%iout,        &
+                                      finalize=.FALSE.)
+        tag = 'NUMBER'
+        call this%errortab%initialize_column(tag, 10)
+        tag = 'MAXIMUM STAGE DIFFERENCE'
+        call this%errortab%initialize_column(tag, 12)
+        tag = 'HCLOSE CRITERIA'
+        call this%errortab%initialize_column(tag, 12)
+        tag = 'PERCENT DIFFERENCE'
+        call this%errortab%initialize_column(tag, 12)
+        tag = 'RCLOSE CRITERIA'
+        call this%errortab%initialize_column(tag, 12)
+        if (this%inamedbound == 1) then
+          tag = 'BOUNDNAME'
+          call this%errortab%initialize_column(tag, LENBOUNDNAME, alignment=TABLEFT)
+        end if
+        !
+        ! -- write to error table
+        call this%errortab%add_term(n)
+        call this%errortab%add_term(dh)
+        call this%errortab%add_term(hclose)
+        call this%errortab%add_term(rmax)
+        call this%errortab%add_term(this%pdmax)
+        if (this%inamedbound == 1) then
+          call this%errortab%add_term(this%boundname(n))
+        end if
       end if
     end if
     !
@@ -4284,10 +4424,18 @@ contains
       call mem_deallocate(this%simoutrate)
     endif
     !
+    ! -- package csv table
+    if (this%ipakcsv > 0) then
+      call this%pakcsvtab%table_da()
+      deallocate(this%pakcsvtab)
+      nullify(this%pakcsvtab)
+    end if
+    !
     ! -- scalars
     call mem_deallocate(this%iprhed)
     call mem_deallocate(this%istageout)
     call mem_deallocate(this%ibudgetout)
+    call mem_deallocate(this%ipakcsv)
     call mem_deallocate(this%nlakes)
     call mem_deallocate(this%noutlets)
     call mem_deallocate(this%ntables)

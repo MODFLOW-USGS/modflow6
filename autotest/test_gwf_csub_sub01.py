@@ -172,10 +172,12 @@ def get_model(idx, dir):
                  theta, kv, ini_stress]]
 
     opth = '{}.csub.obs'.format(name)
+    cnvgpth = '{}.csub.cnvg.csv'.format(name)
     csub = flopy.mf6.ModflowGwfcsub(gwf, head_based=True,
                                     compression_indices=ci,
                                     print_input=True,
                                     save_flows=True,
+                                    package_convergence_filerecord=cnvgpth,
                                     effective_stress_lag=True,
                                     ndelaycells=ndcell[idx],
                                     ninterbeds=1,

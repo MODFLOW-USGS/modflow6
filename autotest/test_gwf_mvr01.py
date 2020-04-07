@@ -120,8 +120,10 @@ def get_model(idx, dir):
         [3, 'status', 'active'],
         [4, 'status', 'active'],
     ]
+    cnvgpth = '{}.sfr.cnvg.csv'.format(name)
     sfr = flopy.mf6.ModflowGwfsfr(gwf, mover=True, nreaches=5,
                                   maximum_depth_change=1.e-5,
+                                  package_convergence_filerecord=cnvgpth,
                                   packagedata=packagedata,
                                   connectiondata=connectiondata,
                                   perioddata=perioddata, pname='sfr-1')
@@ -176,10 +178,12 @@ def get_model(idx, dir):
                         (0, 'width', '0.000000000000e+000'),
                         (0, 'slope', '1.000000000000e-003'),
                         (0, 'rough', '1.000000000000e-001')]
+    cnvgpth = '{}.lak.cnvg.csv'.format(name)
     lak = flopy.mf6.ModflowGwflak(gwf, mover=True, nlakes=nlakes,
                                   noutlets=noutlets,
                                   print_stage=True,
                                   print_flows=True,
+                                  package_convergence_filerecord=cnvgpth,
                                   packagedata=packagedata,
                                   connectiondata=connectiondata,
                                   outlets=outlets,
@@ -206,7 +210,11 @@ def get_model(idx, dir):
                   [6, 1.e-8, 0, 0, 0, 0, 0, 0],
                   [7, 1.e-8, 0, 0, 0, 0, 0, 0],
                   [8, 1.e-8, 0, 0, 0, 0, 0, 0], ]
-    uzf = flopy.mf6.ModflowGwfuzf(gwf, mover=True, nuzfcells=len(packagedata),
+    cnvgpth = '{}.uzf.cnvg.csv'.format(name)
+    uzf = flopy.mf6.ModflowGwfuzf(gwf,
+                                  mover=True,
+                                  package_convergence_filerecord=cnvgpth,
+                                  nuzfcells=len(packagedata),
                                   ntrailwaves=7, nwavesets=40,
                                   packagedata=packagedata,
                                   perioddata=perioddata, pname='uzf-1')
