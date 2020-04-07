@@ -119,7 +119,7 @@ INFLOW <@inflow@>
 RAINFALL <@rainfall@>
 EVAPORATION <@evaporation@>
 RUNOFF <@runoff@>
-DIVERSION <idv> <@divrate@> 
+DIVERSION <idv> <@divflow@> 
 UPSTREAM_FRACTION <upstream_fraction>
 AUXILIARY <auxname> <@auxval@> 
 \end{lstlisting}
@@ -142,7 +142,7 @@ AUXILIARY <auxname> <@auxval@>
 
 \item \texttt{idv}---diversion number.
 
-\item \textcolor{blue}{\texttt{divrate}---real or character value that defines the volumetric diversion (DIVFLOW) rate for the streamflow routing reach. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.}
+\item \textcolor{blue}{\texttt{divflow}---real or character value that defines the volumetric diversion (DIVFLOW) rate for the streamflow routing reach. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.}
 
 \item \texttt{upstream\_fraction}---real value that defines the fraction of upstream flow (USTRF) from each upstream reach that is applied as upstream inflow to the reach. The sum of all USTRF values for all reaches connected to the same upstream reach must be equal to one.
 
