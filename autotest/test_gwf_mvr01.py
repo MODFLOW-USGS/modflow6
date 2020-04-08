@@ -38,8 +38,8 @@ def get_model(idx, dir):
     hk = 1.e-4
 
     # solver options
-    nouter, ninner = 400, 100
-    hclose, rclose, relax = 1e-4, 0.1, 1.
+    nouter, ninner = 600, 100
+    hclose, rclose, relax = 1e-6, 0.1, 1.
     newtonoptions = ''
     imsla = 'BICGSTAB'
 

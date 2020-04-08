@@ -88,7 +88,6 @@ module NumericalSolutionModule
     real(DP), dimension(:), pointer, contiguous          :: hchold => NULL()
     !
     ! -- convergence summary information
-    character(len=LENPAKLOC), pointer                    :: cpak => NULL()
     character(len=31), dimension(:), pointer, contiguous :: caccel => NULL()
     integer(I4B), pointer                                :: icsvout => NULL()
     integer(I4B), pointer                                :: nitermax => NULL()
@@ -100,7 +99,6 @@ module NumericalSolutionModule
     integer(I4B), dimension(:), pointer, contiguous      :: itinner => NULL()
     integer(I4B), pointer, dimension(:,:), contiguous    :: convlocdv => NULL()
     integer(I4B), pointer, dimension(:,:), contiguous    :: convlocdr => NULL()
-    real(DP), pointer                                    :: dpak => NULL()
     real(DP), dimension(:), pointer, contiguous          :: dvmax => NULL()
     real(DP), dimension(:), pointer, contiguous          :: drmax => NULL()
     real(DP), pointer, dimension(:,:), contiguous        :: convdvmax => NULL()
@@ -285,10 +283,6 @@ contains
     call mem_allocate(this%ptcthresh, 'PTCTHRESH', solutionname)
     call mem_allocate(this%ptcrat, 'PTCRAT', solutionname)
     !
-    ! -- convergence information
-    allocate (this%cpak)
-    call mem_allocate(this%dpak, 'DPAK', solutionname)
-    !
     ! -- initialize
     this%id = 0
     this%iu = 0
@@ -333,10 +327,6 @@ contains
     this%ptcexp = done
     this%ptcthresh = DEM3
     this%ptcrat = DZERO
-    !
-    ! -- convergence information
-    this%cpak = ' '
-    this%dpak = DZERO
     !
     ! -- return
     return
@@ -1090,10 +1080,6 @@ contains
     call mem_deallocate(this%ptcthresh)
     call mem_deallocate(this%ptcrat)
     !
-    ! -- convergence information
-    deallocate(this%cpak)
-    call mem_deallocate(this%dpak)
-    !
     ! -- return
     return
   end subroutine sln_da
@@ -1512,7 +1498,7 @@ contains
           this%icnvg = 0
           cmsg = trim(cmsg) // 'PTC'
           if (iend /= 0) then
-            write(line, '(a)') &
+            write(line, '(a)')                                                   &
               'PSEUDO-TRANSIENT CONTINUATION CAUSED CONVERGENCE FAILURE'
             call sim_message(line)
           end if
@@ -1548,15 +1534,11 @@ contains
     !
     ! -- additional convergence check for model packages
     icnvgmod = this%icnvg
-    !this%dpak = DZERO
-    !this%cpak = ' '
     dpak = DZERO
     cpak = ' '
     do im=1,this%modellist%Count()
       mp => GetNumericalModelFromList(this%modellist, im)
       call mp%get_mcellid(0, cmod)
-      !call mp%model_cc(kiter, iend, icnvgmod,                                    &
-      !                 this%icnvg, this%hclose, cmod, this%cpak, this%dpak)
       call mp%model_cc(kiter, iend, icnvgmod, cpak, dpak)
       if (abs(dpak) > DZERO) then
         write(cpak, '(a,a)') trim(cmod) // trim(cpak)
@@ -1570,7 +1552,7 @@ contains
       this%icnvg = 0
       ! -- write message to stdout
       if (iend /= 0) then
-        write(line, '(a)')                                                       &
+        write(line, '(3a)')                                                       &
           'PACKAGE (', trim(cpak), ') CAUSED CONVERGENCE FAILURE'
         call sim_message(line)
       end if
