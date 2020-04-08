@@ -130,6 +130,7 @@ module LakModule
     real(DP), dimension(:), pointer, contiguous :: r2 => null()
     real(DP), dimension(:), pointer, contiguous :: dh0 => null()
     real(DP), dimension(:), pointer, contiguous :: s0 => null()
+    real(DP), dimension(:), pointer, contiguous :: qgwf0 => null()
     !
     ! -- lake connection data
     integer(I4B), dimension(:), pointer, contiguous :: imap => null()
@@ -512,6 +513,7 @@ contains
     call mem_allocate(this%r2, this%nlakes, 'R2', this%origin)
     call mem_allocate(this%dh0, this%nlakes, 'DH0', this%origin)
     call mem_allocate(this%s0, this%nlakes, 'S0', this%origin)
+    call mem_allocate(this%qgwf0, this%nlakes, 'QGWF0', this%origin)
     !
     ! -- allocate character storage not managed by the memory manager
     allocate(this%lakename(this%nlakes)) ! ditch after boundnames allocated??
@@ -3695,14 +3697,15 @@ contains
     !! -- Calculate lak conductance and update package RHS and HCOF
     !call this%lak_cfupdate()
     !
-    ! --
+    ! -- save groundwater seepage for lake solution
     do n = 1, this%nlakes
       this%seep0(n) = this%seep(n)
     end do
     !
-    !
+    ! -- save variables for convergence check
     do n = 1, this%nlakes
       this%s0(n) = this%xnewpak(n)
+      call this%lak_calculate_exchange(n, this%s0(n), this%qgwf0(n))
     end do
     !
     ! -- pakmvrobj cf
@@ -3911,7 +3914,6 @@ contains
     integer(I4B) :: ntabrows
     integer(I4B) :: ntabcols
     integer(I4B) :: n
-    real(DP) :: area0
     real(DP) :: area
     real(DP) :: gwf0
     real(DP) :: gwf
@@ -3931,8 +3933,6 @@ contains
     real(DP) :: dgwfmax
     real(DP) :: dqoutmax
     ! format
-    character(len=*), parameter :: errmsg =                                      &
-        &"(/,'CONVERGENCE FAILED AS A RESULT OF LAKE PACKAGE')"                                  
 ! --------------------------------------------------------------------------
     !
     ! -- initialize local variables
@@ -4010,30 +4010,25 @@ contains
         dh = hlak0 - hlak
         !
         ! -- calculate surface area
-        call this%lak_calculate_sarea(n, hlak0, area0)
         call this%lak_calculate_sarea(n, hlak, area)
         !
         ! -- change in gwf exchange
         dgwf = DZERO
-        if (area0 > DZERO .and. area > DZERO) then
-          call this%lak_calculate_exchange(n, hlak0, gwf0)
+        if (area > DZERO) then
+          gwf0 = this%qgwf0(n)
           call this%lak_calculate_exchange(n, hlak, gwf)
-          gwf0 = gwf0 * delt / area0
-          gwf = gwf * delt / area
-          dgwf = gwf0 - gwf
+          dgwf = (gwf0 - gwf) * delt / area
         end if
         !
         ! -- change in outflows
         dqout = DZERO
         if (this%noutlets > 0) then
-          if (area0 > DZERO .and. area > DZERO) then
+          if (area > DZERO) then
             call this%lak_calculate_available(n, hlak0, inf, ra, ro, qinf, ex)
             call this%lak_calculate_outlet_outflow(n, hlak0, inf, qout0)
             call this%lak_calculate_available(n, hlak, inf, ra, ro, qinf, ex)
             call this%lak_calculate_outlet_outflow(n, hlak, inf, qout)
-            qout0 = qout0 * delt / area0
-            qout = qout * delt / area
-            dqout = qout0 - qout
+            dqout = (qout0 - qout) * delt / area
           end if
         end if
         !
@@ -4527,6 +4522,7 @@ contains
     call mem_deallocate(this%r2)
     call mem_deallocate(this%dh0)
     call mem_deallocate(this%s0)
+    call mem_deallocate(this%qgwf0)
     !
     ! -- lake connection variables
     call mem_deallocate(this%imap)

@@ -1353,7 +1353,6 @@ contains
     integer(I4B) :: iend
     integer(I4B) :: icnvgmod
     integer(I4B) :: iptc
-    integer(I4B) :: ipak
     real(DP) :: dxmax_nur
     real(DP) :: dxmax
     real(DP) :: ptcf
@@ -1498,6 +1497,12 @@ contains
       cmsg = '*'
     end if
     !
+    ! -- set flag if this is the last outer iteration
+    iend = 0
+    if (kiter == this%mxiter) then
+      iend = 1
+    end if
+    !
     ! -- Additional convergence check for pseudo-transient continuation
     !    term. Evaluate if the ptc value added to the diagonal has
     !    decayed sufficiently.
@@ -1506,9 +1511,9 @@ contains
         if (this%ptcrat > this%ptcthresh) then
           this%icnvg = 0
           cmsg = trim(cmsg) // 'PTC'
-          if (kiter == this%mxiter) then
-            write(line, '(a)') 'pseudo-transient continuation ' //               &
-                                'caused convergence failure'
+          if (iend /= 0) then
+            write(line, '(a)') &
+              'PSEUDO-TRANSIENT CONTINUATION CAUSED CONVERGENCE FAILURE'
             call sim_message(line)
           end if
         end if
@@ -1542,11 +1547,7 @@ contains
     end do
     !
     ! -- additional convergence check for model packages
-    iend = 0
     icnvgmod = this%icnvg
-    if (kiter == this%mxiter) then
-      iend = 1
-    end if
     !this%dpak = DZERO
     !this%cpak = ' '
     dpak = DZERO
@@ -1569,6 +1570,9 @@ contains
       this%icnvg = 0
       ! -- write message to stdout
       if (iend /= 0) then
+        write(line, '(a)')                                                       &
+          'PACKAGE (', trim(cpak), ') CAUSED CONVERGENCE FAILURE'
+        call sim_message(line)
       end if
     end if
     !

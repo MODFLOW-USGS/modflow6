@@ -1614,8 +1614,6 @@ contains
     real(DP) :: dhmax
     real(DP) :: rmax
     ! format
-    character(len=*), parameter :: errmsg =                                      &
-        &"(/,'CONVERGENCE FAILED AS A RESULT OF STREAMFLOW ROUTING PACKAGE')"                                  
 ! --------------------------------------------------------------------------
     !
     ! -- initialize local variables
