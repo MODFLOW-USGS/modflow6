@@ -24,9 +24,10 @@ before_install:
 - bash $HOME/miniconda.sh -b -p $HOME/anaconda
 - export PATH="$HOME/anaconda/bin:$PATH"
 - hash -r
-- conda config --set always_yes yes
+- conda update -q conda
 - conda config --add channels conda-forge
-- conda install --file requirements.travis.txt
+- conda install --yes --file requirements.travis.txt
+- conda info -a
 install:
 - if [[ ! -d "$HOME/.local/bin" ]]; then mkdir "$HOME/.local/bin"; fi
 - ln -fs /usr/bin/$FC $HOME/.local/bin/gfortran
