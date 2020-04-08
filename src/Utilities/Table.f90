@@ -23,6 +23,7 @@ module TableModule
     character(len=LENBUDTXT) :: name
     character(len=LINELENGTH) :: title
     character(len=1), pointer :: sep => null()
+    logical, pointer :: write_csv => null()
     logical, pointer :: first_entry => null()
     logical, pointer :: transient => null()
     logical, pointer :: add_linesep => null()
@@ -130,6 +131,7 @@ module TableModule
     !
     ! -- allocate scalars
     allocate(this%sep)
+    allocate(this%write_csv)
     allocate(this%first_entry)
     allocate(this%transient)
     allocate(this%add_linesep)
@@ -154,8 +156,14 @@ module TableModule
     end if
     if (present(separator)) then
       this%sep = separator
+      if (separator == ',') then
+        this%write_csv = .TRUE.
+      else
+        this%write_csv = .FALSE.
+      end if
     else
       this%sep = ' '
+      this%write_csv = .FALSE.
     end if
     if (present(lineseparator)) then
       this%add_linesep = lineseparator
@@ -292,13 +300,22 @@ module TableModule
         width = this%tableterm(j)%get_width()
         alignment = this%tableterm(j)%get_alignment()
         call this%tableterm(j)%get_header(n, cval)
-        if (j == this%ntableterm) then
-          call UWWORD(this%header(nn), iloc, width, TABUCSTRING,                 &
-                      cval(1:width), ival, rval, ALIGNMENT=alignment)
+        if (this%write_csv) then
+          if ( j == 1) then
+            write(this%header(nn), '(a)') trim(adjustl(cval))
+          else
+            write(this%header(nn), '(a,",",G0)')                                 &
+              trim(this%header(nn)), trim(adjustl(cval))
+          end if
         else
-          call UWWORD(this%header(nn), iloc, width, TABUCSTRING,                 &
-                      cval(1:width), ival, rval, ALIGNMENT=alignment,            &
-                      SEP=this%sep)
+          if (j == this%ntableterm) then
+            call UWWORD(this%header(nn), iloc, width, TABUCSTRING,               &
+                          cval(1:width), ival, rval, ALIGNMENT=alignment)
+          else
+            call UWWORD(this%header(nn), iloc, width, TABUCSTRING,               &
+                        cval(1:width), ival, rval, ALIGNMENT=alignment,          &
+                        SEP=this%sep)
+          end if
         end if
       end do
     end do
@@ -389,8 +406,6 @@ module TableModule
       if (len_trim(title) > 0) then
         write(this%iout, '(/,1x,a)') trim(adjustl(title))
       end if
-      !
-      ! -- 
       !
       ! -- write header
       do n = 1, this%nheaderlines
@@ -512,6 +527,7 @@ module TableModule
     !
     ! -- deallocate scalars
     deallocate(this%sep)
+    deallocate(this%write_csv)
     deallocate(this%first_entry)
     deallocate(this%transient)
     deallocate(this%add_linesep)
@@ -642,15 +658,25 @@ module TableModule
     width = this%tableterm(j)%get_width()
     alignment = this%tableterm(j)%get_alignment()
     line_end = .FALSE.
-    !
-    ! -- add data to line
     if (j == this%ntableterm) then
       line_end = .TRUE.
-      call UWWORD(this%dataline, this%iloc, width, TABINTEGER,                   &
-                  cval, ival, rval, ALIGNMENT=alignment)
+    end if
+    !
+    ! -- add data to line
+    if (this%write_csv) then
+      if (j == 1) then
+        write(this%dataline, '(G0)') ival
+      else
+        write(this%dataline, '(a,",",G0)') trim(this%dataline), ival
+      end if
     else
-      call UWWORD(this%dataline, this%iloc, width, TABINTEGER,                   &
-                  cval, ival, rval, ALIGNMENT=alignment, SEP=this%sep)
+      if (j == this%ntableterm) then
+        call UWWORD(this%dataline, this%iloc, width, TABINTEGER,                 &
+                    cval, ival, rval, ALIGNMENT=alignment)
+      else
+        call UWWORD(this%dataline, this%iloc, width, TABINTEGER,                 &
+                    cval, ival, rval, ALIGNMENT=alignment, SEP=this%sep)
+      end if
     end if
     !
     ! -- write the data line, if necessary
@@ -703,16 +729,25 @@ module TableModule
     width = this%tableterm(j)%get_width()
     alignment = this%tableterm(j)%get_alignment()
     line_end = .FALSE.
-    !
-    ! -- add data to line
     if (j == this%ntableterm) then
       line_end = .TRUE.
-      call UWWORD(this%dataline, this%iloc, width, TABREAL,                      &
-                  cval, ival, rval, ALIGNMENT=alignment)
+    end if
+    !
+    ! -- add data to line
+    if (this%write_csv) then
+      if (j == 1) then
+        write(this%dataline, '(G0)') rval
+      else
+        write(this%dataline, '(a,",",G0)') trim(this%dataline), rval
+      end if
     else
-      line_end = .FALSE.
-      call UWWORD(this%dataline, this%iloc, width, TABREAL,                      &
-                  cval, ival, rval, ALIGNMENT=alignment, SEP=this%sep)
+      if (j == this%ntableterm) then
+        call UWWORD(this%dataline, this%iloc, width, TABREAL,                    &
+                    cval, ival, rval, ALIGNMENT=alignment)
+      else
+        call UWWORD(this%dataline, this%iloc, width, TABREAL,                    &
+                    cval, ival, rval, ALIGNMENT=alignment, SEP=this%sep)
+      end if
     end if
     !
     ! -- write the data line, if necessary
@@ -765,15 +800,26 @@ module TableModule
     width = this%tableterm(j)%get_width()
     alignment = this%tableterm(j)%get_alignment()
     line_end = .FALSE.
-    !
-    ! -- add data to line
     if (j == this%ntableterm) then
       line_end = .TRUE.
-      call UWWORD(this%dataline, this%iloc, width, TABSTRING,                    &
-                  cval, ival, rval, ALIGNMENT=alignment)
+    end if
+    !
+    ! -- add data to line
+    if (this%write_csv) then
+      if (j == 1) then
+        write(this%dataline, '(a)') trim(adjustl(cval))
+      else
+        write(this%dataline, '(a,",",a)')                                        &
+          trim(this%dataline), trim(adjustl(cval))
+      end if
     else
-      call UWWORD(this%dataline, this%iloc, width, TABSTRING,                    &
-                  cval, ival, rval, ALIGNMENT=alignment, SEP=this%sep)
+      if (j == this%ntableterm) then
+        call UWWORD(this%dataline, this%iloc, width, TABSTRING,                  &
+                    cval, ival, rval, ALIGNMENT=alignment)
+      else
+        call UWWORD(this%dataline, this%iloc, width, TABSTRING,                  &
+                    cval, ival, rval, ALIGNMENT=alignment, SEP=this%sep)
+      end if
     end if
     !
     ! -- write the data line, if necessary

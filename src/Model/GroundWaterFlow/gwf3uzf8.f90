@@ -6,7 +6,7 @@ module UzfModule
   use ConstantsModule, only: DZERO, DEM6, DEM4, DEM2, DEM1, DHALF,              &
                              DONE, DHUNDRED,                                    &
                              LINELENGTH, LENFTYPE, LENPACKAGENAME,              &
-                             LENBOUNDNAME, LENBUDTXT, DNODATA,                  &
+                             LENBOUNDNAME, LENBUDTXT, LENPAKLOC, DNODATA,       &
                              NAMEDBOUNDFLAG, MAXCHARLEN,                        &
                              DHNOFLO, DHDRY,                                    &
                              TABLEFT, TABCENTER, TABRIGHT,                      &
@@ -25,7 +25,7 @@ module UzfModule
   use InputOutputModule, only: URWORD
   use SimModule, only: count_errors, store_error, ustop, store_error_unit
   use BlockParserModule, only: BlockParserType
-  use TableModule, only: table_cr
+  use TableModule, only: TableType, table_cr
 
   implicit none
 
@@ -41,6 +41,7 @@ module UzfModule
     integer(I4B), pointer :: iprwcont => null()
     integer(I4B), pointer :: iwcontout => null()
     integer(I4B), pointer :: ibudgetout => null()
+    integer(I4B), pointer :: ipakcsv => null()
     !
     type(BudgetObjectType), pointer                    :: budobj      => null()
     integer(I4B), pointer                              :: bditems     => null()  !number of budget items
@@ -49,7 +50,12 @@ module UzfModule
                               contiguous               :: bdtxt       => null()  !budget items written to cbc file
     character(len=LENBOUNDNAME), dimension(:), pointer,                         &
                                  contiguous :: uzfname => null()
-    type(UzfCellGroupType), pointer                    :: uzfobj      => null()  !uzf kinematic object
+    !
+    ! -- uzf table objects
+    type(TableType), pointer                           :: pakcsvtab   => null()
+    !
+    ! -- uzf kinematic object
+    type(UzfCellGroupType), pointer                    :: uzfobj      => null()
     !
     ! -- pointer to gwf variables
     integer(I4B), pointer                                  :: gwfiss      => null()
@@ -471,6 +477,19 @@ contains
           found = .true.
         else
           call store_error('OPTIONAL BUDGET KEYWORD MUST BE FOLLOWED BY FILEOUT')
+        end if
+      case('PACKAGE_CONVERGENCE')
+        call this%parser%GetStringCaps(keyword)
+        if (keyword == 'FILEOUT') then
+          call this%parser%GetString(fname)
+          this%ipakcsv = getunit()
+          call openfile(this%ipakcsv, this%iout, fname, 'CSV',                   &
+                        filstat_opt='REPLACE')
+          write(this%iout,fmtuzfbin) 'PACKAGE_CONVERGENCE', fname, this%ipakcsv
+          found = .true.
+        else
+          call store_error('OPTIONAL PACKAGE_CONVERGENCE KEYWORD MUST BE ' //    &
+                           'FOLLOWED BY FILEOUT')
         end if
       case('SIMULATE_ET')
         this%ietflag = 1    !default
@@ -1160,150 +1179,192 @@ contains
     return
   end subroutine uzf_fn
 
-  subroutine uzf_cc(this, iend, icnvg, hclose, rclose)
+  subroutine uzf_cc(this, kiter, iend, icnvgmod, cpak, dpak)
 ! **************************************************************************
 ! uzf_cc -- Final convergence check for package
 ! **************************************************************************
 !
 !    SPECIFICATIONS:
 ! --------------------------------------------------------------------------
+    use TdisModule, only: totim, kstp, kper, delt
     ! -- dummy
     class(Uzftype), intent(inout) :: this
+    integer(I4B), intent(in) :: kiter
+    integer(I4B), intent(in) :: icnvgmod
     integer(I4B), intent(in) :: iend
-    integer(I4B), intent(inout) :: icnvg
-    real(DP), intent(in) :: hclose
-    real(DP), intent(in) :: rclose
+    character(len=LENPAKLOC), intent(inout) :: cpak
+    real(DP), intent(inout) :: dpak
     ! -- local
+    character(len=LENPAKLOC) :: cloc
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: tag
     character(len=20) :: cellid
+    integer(I4B) :: icheck
+    integer(I4B) :: ipakfail
+    integer(I4B) :: locdrejinfmax
+    integer(I4B) :: locdrchmax
+    integer(I4B) :: locdseepmax
     integer(I4B) :: ntabrows
     integer(I4B) :: ntabcols
     integer(I4B) :: n
-    integer(I4B) :: ifirst
     integer(I4B) :: node
+    real(DP) :: qtolfact
     real(DP) :: drejinf
-    real(DP) :: avgrejinf
-    real(DP) :: pdrejinf
+    real(DP) :: drejinfmax
     real(DP) :: drch
-    real(DP) :: avgrch
-    real(DP) :: pdrch
+    real(DP) :: drchmax
     real(DP) :: dseep
-    real(DP) :: avgseep
-    real(DP) :: pdseep
+    real(DP) :: dseepmax
+    real(DP) :: dmax
     ! format
-    character(len=*), parameter :: errmsg =                                      &
-        &"(/'CONVERGENCE FAILED AS A RESULT OF UNSATURATED ZONE FLOW PACKAGE')"                                  
 ! --------------------------------------------------------------------------
-    ifirst = 1
-    if (this%iconvchk /= 0) then
-      final_check: do n = 1, this%nodes
-        drejinf = this%rejinf0(n) - this%rejinf(n)
-        avgrejinf = DHALF * (this%rejinf0(n) + this%rejinf(n))
-        pdrejinf = DZERO
-        if (avgrejinf > DZERO) then
-          pdrejinf = DHUNDRED * drejinf / avgrejinf
-        end if
-        drch = this%rch0(n) - this%rch(n)
-        avgrch = DHALF * (this%rch0(n) + this%rch(n))
-        pdrch = DZERO
-        if (avgrch > DZERO) then
-          pdrch = DHUNDRED * drch / avgrch
-        end if
-        dseep = DZERO
-        avgseep = DZERO
+    !
+    ! -- initialize local variables
+    icheck = this%iconvchk
+    ipakfail = 0
+    locdrejinfmax = 0
+    locdrchmax = 0
+    locdseepmax = 0
+    drejinfmax = DZERO
+    drchmax = DZERO
+    dseepmax = DZERO
+    !
+    ! -- if not saving package convergence data on check convergence if
+    !    the model is considered converged
+    if (this%ipakcsv == 0) then
+      if (icnvgmod == 0) then
+        icheck = 0
+      end if
+    else
+      !
+      ! -- header for package csv
+      if (.not. associated(this%pakcsvtab)) then
+        !
+        ! -- determine the number of columns and rows
+        ntabrows = 1
+        ntabcols = 8
         if (this%iseepflag == 1) then
-          dseep = this%gwd0(n) - this%gwd(n)
-          avgseep = DHALF * (this%gwd0(n) + this%gwd(n))
+          ntabcols = ntabcols + 2
         end if
-        pdseep = DZERO
-        if (avgseep > DZERO) then
-          pdseep = DHUNDRED * dseep / avgseep
+        !
+        ! -- setup table
+        call table_cr(this%pakcsvtab, this%name, '')
+        call this%pakcsvtab%table_df(ntabrows, ntabcols, this%ipakcsv,           &
+                                     lineseparator=.FALSE., separator=',',       &
+                                     finalize=.FALSE.)
+        !
+        ! -- add columns to package csv
+        tag = 'totim'
+        call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
+        tag = 'kper'
+        call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
+        tag = 'kstp'
+        call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
+        tag = 'nouter'
+        call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
+        tag = 'drejinfmax'
+        call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+        tag = 'drejinfmax_loc'
+        call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+        tag = 'drchmax'
+        call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+        tag = 'drchmax_loc'
+        call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+        if (this%iseepflag == 1) then
+          tag = 'dseepmax'
+          call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+          tag = 'dseepmax_loc'
+          call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
         end if
-        if (ABS(drejinf) > rclose .or. ABS(drch) > rclose .or.                  &
-            ABS(dseep) > rclose) then
-          icnvg = 0
-          ! write convergence check information if this is the last outer iteration
-          if (iend == 1) then
-            ! -- write header
-            if (ifirst == 1) then
-              ifirst = 0
-              !
-              ! -- create error table
-              ! -- table dimensions
-              ntabrows = 1
-              ntabcols = 7
-              if (this%iseepflag == 1) then
-                ntabcols = ntabcols + 2
-              end if
-              if (this%inamedbound == 1) then
-                ntabcols = ntabcols + 1
-              end if
-              !
-              ! -- initialize table and define columns
-              title = trim(adjustl(this%text)) // ' PACKAGE (' //                &
-                      trim(adjustl(this%name)) //') UZF CELL CONVERGENCE CHECK'
-              call table_cr(this%errortab, this%name, title)
-              call this%errortab%table_df(ntabrows, ntabcols, this%iout,        &
-                                           finalize=.FALSE.)
-              tag = 'NUMBER'
-              call this%errortab%initialize_column(tag, 10)
-              tag = 'CELLID'
-              call this%errortab%initialize_column(tag, 20, alignment=TABLEFT)
-              tag = 'REJECTED INFILTRATION DIFFERENCE'
-              call this%errortab%initialize_column(tag, 12)
-              tag = 'REJECTED INFILTRATION PERCENT DIFFERENCE'
-              call this%errortab%initialize_column(tag, 12)
-              tag = 'GWF RECHARGE DIFFERENCE'
-              call this%errortab%initialize_column(tag, 12)
-              tag = 'GWF RECHARGE PERCENT DIFFERENCE'
-              call this%errortab%initialize_column(tag, 12)
-              if (this%iseepflag == 1) then
-                tag = 'GWF SEEPAGE DIFFERENCE'
-                call this%errortab%initialize_column(tag, 12)
-                tag = 'GWF SEEPAGE PERCENT DIFFERENCE'
-                call this%errortab%initialize_column(tag, 12)
-              end if
-              tag = 'CLOSURE CRITERIA'
-              call this%errortab%initialize_column(tag, 12)
-              if (this%inamedbound == 1) then
-                tag = 'BOUNDNAME'
-                call this%errortab%initialize_column(tag, LENBOUNDNAME, alignment=TABLEFT)
-              end if
-            end if
-            !
-            ! -- write to error table
-            ! -- get cellid
-            node = this%igwfnode(n)
-            if (node > 0) then
-              call this%dis%noder_to_string(node, cellid)
-            else
-              cellid = 'none'
-            end if
-            !
-            ! -- add data
-            call this%errortab%add_term(n)
-            call this%errortab%add_term(cellid)
-            call this%errortab%add_term(drejinf)
-            call this%errortab%add_term(pdrejinf)
-            call this%errortab%add_term(drch)
-            call this%errortab%add_term(pdrch)
-            if (this%iseepflag == 1) then
-              call this%errortab%add_term(dseep)
-              call this%errortab%add_term(pdseep)
-            end if
-            call this%errortab%add_term(rclose)
-            if (this%inamedbound == 1) then
-              call this%errortab%add_term(this%uzfname(n))
-            end if
-          else
-            exit final_check
+      end if
+    end if
+    !
+    ! -- perform package convergence check
+    if (icheck /= 0) then
+      final_check: do n = 1, this%nodes
+        !
+        ! -- set the Q to length factor
+        qtolfact = delt / this%uzfobj%uzfarea(n)
+        !
+        ! -- rejected infiltration
+        drejinf = qtolfact * (this%rejinf0(n) - this%rejinf(n))
+        !
+        ! -- groundwater recharge
+        drch = qtolfact * (this%rch0(n) - this%rch(n))
+        !
+        ! -- groundwater seepage to the land surface
+        dseep = DZERO
+        if (this%iseepflag == 1) then
+          dseep = qtolfact * (this%gwd0(n) - this%gwd(n))
+        end if
+        !
+        ! -- evaluate magnitude of differences
+        if (n == 1) then
+          drejinfmax = drejinf
+          locdrejinfmax = n
+          drchmax = drch
+          locdrchmax = n
+          dseepmax = dseep
+          locdseepmax = n
+        else
+          if (ABS(drejinf) > abs(drejinfmax)) then
+            drejinfmax = drejinf
+            locdrejinfmax = n
+          end if
+          if (ABS(drch) > abs(drchmax)) then
+            drchmax = drch
+            locdrchmax = n
+          end if
+          if (ABS(dseep) > abs(dseepmax)) then
+            dseepmax = dseep
+            locdseepmax = n
           end if
         end if
       end do final_check
-      if (ifirst == 0) then
-        call this%errortab%finalize_table()
-        call sim_message('', fmt=errmsg)
+      !
+      ! -- set dpak and cpak
+      if (ABS(drejinfmax) > abs(dpak)) then
+        dpak = drejinfmax
+        write(cloc, "(a,'-(',i0,')-',a)")                                        &
+          trim(this%name), locdrejinfmax, 'rejinf'
+        cpak = trim(cloc)
+      end if
+      if (ABS(drchmax) > abs(dpak)) then
+        dpak = drchmax
+        write(cloc, "(a,'-(',i0,')-',a)")                                        &
+          trim(this%name), locdrchmax, 'rech'
+        cpak = trim(cloc)
+      end if
+      if (this%iseepflag == 1) then
+        if (ABS(dseepmax) > abs(dpak)) then
+          dpak = dseepmax
+          write(cloc, "(a,'-(',i0,')-',a)")                                      &
+          trim(this%name), locdseepmax, 'seep'
+          cpak = trim(cloc)
+        end if
+      end if
+      !
+      ! -- write convergence data to package csv
+      if (this%ipakcsv /= 0) then
+        !
+        ! -- write the data
+        call this%pakcsvtab%add_term(totim)
+        call this%pakcsvtab%add_term(kper)
+        call this%pakcsvtab%add_term(kstp)
+        call this%pakcsvtab%add_term(kiter)
+        call this%pakcsvtab%add_term(drejinfmax)
+        call this%pakcsvtab%add_term(locdrejinfmax)
+        call this%pakcsvtab%add_term(drchmax)
+        call this%pakcsvtab%add_term(locdrchmax)
+        if (this%iseepflag == 1) then
+          call this%pakcsvtab%add_term(dseepmax)
+          call this%pakcsvtab%add_term(locdseepmax)
+        end if
+        !
+        ! -- finalize the package csv
+        if (iend == 1) then
+          call this%pakcsvtab%finalize_table()
+        end if
       end if
     end if
     !
@@ -2880,6 +2941,7 @@ contains
     call mem_allocate(this%iprwcont, 'IPRWCONT', this%origin)
     call mem_allocate(this%iwcontout, 'IWCONTOUT', this%origin)
     call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%origin)
+    call mem_allocate(this%ipakcsv, 'IPAKCSV', this%origin)
     call mem_allocate(this%ntrail, 'NTRAIL', this%origin)
     call mem_allocate(this%nsets, 'NSETS', this%origin)
     call mem_allocate(this%nodes, 'NODES', this%origin)
@@ -2910,6 +2972,7 @@ contains
     this%iprwcont = 0
     this%iwcontout = 0
     this%ibudgetout = 0
+    this%ipakcsv = 0
     this%infilsum = DZERO
     this%uzetsum = DZERO
     this%rechsum = DZERO
@@ -2961,10 +3024,18 @@ contains
     deallocate(this%cauxcbc)
     deallocate(this%uzfname)
     !
+    ! -- package csv table
+    if (this%ipakcsv > 0) then
+      call this%pakcsvtab%table_da()
+      deallocate(this%pakcsvtab)
+      nullify(this%pakcsvtab)
+    end if
+    !
     ! -- deallocate scalars
     call mem_deallocate(this%iprwcont)
     call mem_deallocate(this%iwcontout)
     call mem_deallocate(this%ibudgetout)
+    call mem_deallocate(this%ipakcsv)
     call mem_deallocate(this%ntrail)
     call mem_deallocate(this%nsets)
     call mem_deallocate(this%nodes)
