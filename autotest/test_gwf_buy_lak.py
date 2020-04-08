@@ -160,7 +160,7 @@ def get_model(idx, dir):
                                           nlakes=1, ntables=0,
                                           packagedata=pak_data, pname='LAK-1',
                                           connectiondata=con_data,
-                                          lakeperioddata=p_data,
+                                          perioddata=p_data,
                                           observations=lak_obs,
                                           auxiliary=['CONCENTRATION',
                                                      'DENSITY'])
