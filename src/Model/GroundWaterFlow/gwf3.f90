@@ -677,8 +677,7 @@ module GwfModule
     return
   end subroutine gwf_fc
 
-  subroutine gwf_cc(this, kiter, iend, icnvgmod, icnvg, hclose, rclose,          &
-                    dpak, cpak)
+  subroutine gwf_cc(this, kiter, iend, icnvgmod, cpak, dpak)
 ! ******************************************************************************
 ! gwf_cc -- GroundWater Flow Model Final Convergence Check for Boundary Packages
 ! Subroutine: (1) calls package cc routines
@@ -691,11 +690,8 @@ module GwfModule
     integer(I4B),intent(in) :: kiter
     integer(I4B),intent(in) :: iend
     integer(I4B),intent(in) :: icnvgmod
-    integer(I4B),intent(inout) :: icnvg
-    real(DP), intent(in) :: hclose
-    real(DP), intent(in) :: rclose
-    real(DP), dimension(2), intent(inout) :: dpak
-    character(len=LENPAKLOC), dimension(2), intent(inout) :: cpak
+    character(len=LENPAKLOC), intent(inout) :: cpak
+    real(DP), intent(inout) :: dpak
     ! -- local
     class(BndType), pointer :: packobj
     integer(I4B) :: ip
@@ -704,21 +700,20 @@ module GwfModule
     !
     ! -- If mover is on, then at least 2 outers required
     if (this%inmvr > 0) then
-      call this%mvr%mvr_cc(kiter, iend, icnvgmod, icnvg, dpak, cpak)
+      call this%mvr%mvr_cc(kiter, iend, icnvgmod, cpak, dpak)
     end if
     !
     ! -- csub convergence check
     if (this%incsub > 0) then
-      call this%csub%csub_cc(kiter, iend, icnvgmod, icnvg,                       &
+      call this%csub%csub_cc(kiter, iend, icnvgmod,                              &
                              this%dis%nodes, this%x, this%xold,                  &
-                             hclose, rclose, dpak, cpak)
+                             cpak, dpak)
     end if
     !
     ! -- Call package cc routines
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
-      call packobj%bnd_cc(kiter, iend, icnvgmod, icnvg, hclose, rclose,          &
-                          dpak, cpak)
+      call packobj%bnd_cc(kiter, iend, icnvgmod, cpak, dpak)
     enddo
     !
     ! -- return

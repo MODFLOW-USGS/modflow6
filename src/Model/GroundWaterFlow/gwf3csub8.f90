@@ -441,8 +441,8 @@ contains
     return
    end subroutine csub_allocate_scalars
 
-  subroutine csub_cc(this, kiter, iend, icnvgmod, icnvg, nodes,                  &
-                     hnew, hold, hclose, rclose, dpak, cpak)
+  subroutine csub_cc(this, kiter, iend, icnvgmod, nodes, hnew, hold,             &
+                     cpak, dpak)
 ! **************************************************************************
 ! csub_cc -- Final convergence check for package
 ! **************************************************************************
@@ -455,18 +455,14 @@ contains
     integer(I4B), intent(in) :: kiter
     integer(I4B), intent(in) :: iend
     integer(I4B), intent(in) :: icnvgmod
-    integer(I4B), intent(inout) :: icnvg
     integer(I4B), intent(in) :: nodes
     real(DP), dimension(nodes), intent(in) :: hnew
     real(DP), dimension(nodes), intent(in) :: hold
-    real(DP), intent(in) :: hclose
-    real(DP), intent(in) :: rclose
-    real(DP), dimension(2), intent(inout) :: dpak
-    character(len=LENPAKLOC), dimension(2), intent(inout) :: cpak
+    character(len=LENPAKLOC), intent(inout) :: cpak
+    real(DP), intent(inout) :: dpak
     ! -- local
     character(len=LINELENGTH) :: tag
     character(len=LENPAKLOC) :: cloc
-    character(len=LINELENGTH) :: line
     integer(I4B) :: icheck
     integer(I4B) :: ipakfail
     integer(I4B) :: ntabrows
@@ -494,15 +490,6 @@ contains
     real(DP) :: v2
     real(DP) :: df
     ! format
-      character(len=*), parameter :: fmtheader = "(2(a10,1x,a15,1x))"
-      character(len=*), parameter :: header =                                   &
-         &"(4x,'CSUB PACKAGE FAILED CONVERGENCE CRITERIA',//,                   &
-         &4x,'INTERBED MAX. HEAD CHANGE ',1x,'INTERBED MAX. FLOW DIFF',/,       &                           
-         &4x,a/,4x,53('-'))"  
-      character(len=*), parameter :: fmtline = "(4x,2(i10,1x,G15.7,1x))"                                  
-      character(len=*), parameter :: fmtfooter = "(4x,53('-'))"                                  
-      character(len=*), parameter :: fmtmsg =                                   &
-         &"('CONVERGENCE FAILED AS A RESULT OF CSUB PACKAGE',1x,a)"                                  
 ! --------------------------------------------------------------------------
     !
     ! -- initialize local variables
@@ -623,27 +610,19 @@ contains
         end if
       end do final_check
       !
-      !
-      if (abs(dhmax) > hclose .or. abs(rmax) > hclose) then
-        icnvg = 0
-        ipakfail = 1
-      end if
-      !
       ! -- set dpak and cpak
       ! -- update head error
-      if (abs(dhmax) > abs(dpak(1))) then
-        dpak(1) = dhmax
-        write(cloc, "(a,'-(',i0,')-',a)")                                        &
-          trim(this%origin), locdhmax, 'head'
-        cpak(1) = cloc
+      if (abs(dhmax) > abs(dpak)) then
+        dpak = dhmax
+        write(cloc, "(a,'-(',i0,')-',a)") trim(this%name), locdhmax, 'head'
+        cpak = cloc
       end if
       !
       ! -- update storage error
-      if (abs(rmax) > abs(dpak(1))) then
-        dpak(1) = rmax
-        write(cloc, "(a,'-(',i0,')-',a)")                                        &
-          trim(this%origin), locrmax, 'storage'
-        cpak(1) = cloc
+      if (abs(rmax) > abs(dpak)) then
+        dpak = rmax
+        write(cloc, "(a,'-(',i0,')-',a)") trim(this%name), locrmax, 'storage'
+        cpak = cloc
       end if
       !
       ! -- write convergence data to package csv
@@ -663,35 +642,6 @@ contains
         if (iend == 1) then
           call this%pakcsvtab%finalize_table()
         end if
-      end if
-    end if
-    !
-    ! -- convergence check final information
-    if (ipakfail /= 0) then
-      !
-      ! -- write convergence check information if this is the last 
-      !    outer iteration
-      if (iend == 1) then
-        !
-        ! -- write table to this%iout
-        call sim_message(this%name, fmt=fmtmsg, iunit=this%iout)
-        write(line, fmtheader)                                              &
-          '  LOCATION', '    HEAD CHANGE',                                  &
-          '  LOCATION', 'FLOW DIFFERENCE'
-        call sim_message(line, fmt=header, iunit=this%iout)
-        write(line, fmtline)  locdhmax, dhmax, locrmax, rmax
-        call sim_message(line, iunit=this%iout)
-        call sim_message('', fmt=fmtfooter, iunit=this%iout)
-        !
-        ! -- write table to stdout
-        call sim_message(this%name, fmt=fmtmsg)
-        write(line, fmtheader)                                              &
-          '  LOCATION', '    HEAD CHANGE',                                  &
-          '  LOCATION', 'FLOW DIFFERENCE'
-        call sim_message(line, fmt=header)
-        write(line, fmtline)  locdhmax, dhmax, locrmax, rmax
-        call sim_message(line)
-        call sim_message('', fmt=fmtfooter)
       end if
     end if
     !

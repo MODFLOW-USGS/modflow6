@@ -1179,8 +1179,7 @@ contains
     return
   end subroutine uzf_fn
 
-  subroutine uzf_cc(this, kiter, iend, icnvgmod, icnvg, hclose, rclose,          &
-                    dpak, cpak)
+  subroutine uzf_cc(this, kiter, iend, icnvgmod, cpak, dpak)
 ! **************************************************************************
 ! uzf_cc -- Final convergence check for package
 ! **************************************************************************
@@ -1191,13 +1190,10 @@ contains
     ! -- dummy
     class(Uzftype), intent(inout) :: this
     integer(I4B), intent(in) :: kiter
-    integer(I4B), intent(in) :: iend
     integer(I4B), intent(in) :: icnvgmod
-    integer(I4B), intent(inout) :: icnvg
-    real(DP), intent(in) :: hclose
-    real(DP), intent(in) :: rclose
-    real(DP), dimension(2), intent(inout) :: dpak
-    character(len=LENPAKLOC), dimension(2), intent(inout) :: cpak
+    integer(I4B), intent(in) :: iend
+    character(len=LENPAKLOC), intent(inout) :: cpak
+    real(DP), intent(inout) :: dpak
     ! -- local
     character(len=LENPAKLOC) :: cloc
     character(len=LINELENGTH) :: title
@@ -1219,9 +1215,8 @@ contains
     real(DP) :: drchmax
     real(DP) :: dseep
     real(DP) :: dseepmax
+    real(DP) :: dmax
     ! format
-    character(len=*), parameter :: errmsg =                                      &
-        &"(/'CONVERGENCE FAILED AS A RESULT OF UNSATURATED ZONE FLOW PACKAGE')"                                  
 ! --------------------------------------------------------------------------
     !
     ! -- initialize local variables
@@ -1327,29 +1322,25 @@ contains
         end if
       end do final_check
       !
-      ! -- evaluate package convergence
-      if (ABS(drejinfmax) > hclose .or. ABS(drchmax) > hclose .or.                 &
-          ABS(dseepmax) > hclose) then
-        icnvg = 0
-        ipakfail = 1
-      end if
-      !
       ! -- set dpak and cpak
-      if (len_trim(cpak(1)) < 1 .or. ABS(drejinfmax) > abs(dpak(1))) then
-        dpak(1) = drejinfmax
-        write(cloc, "(a,'-(',i0,')-')") trim(this%origin), locdrejinfmax
-        cpak(1) = trim(cloc) // 'rejinf'
+      if (ABS(drejinfmax) > abs(dpak)) then
+        dpak = drejinfmax
+        write(cloc, "(a,'-(',i0,')-',a)")                                        &
+          trim(this%name), locdrejinfmax, 'rejinf'
+        cpak = trim(cloc)
       end if
-      if (ABS(drchmax) > abs(dpak(1))) then
-        dpak(1) = drchmax
-        write(cloc, "(a,'-(',i0,')-')") trim(this%origin), locdrchmax
-        cpak(1) = trim(cloc) // 'rech'
+      if (ABS(drchmax) > abs(dpak)) then
+        dpak = drchmax
+        write(cloc, "(a,'-(',i0,')-',a)")                                        &
+          trim(this%name), locdrchmax, 'rech'
+        cpak = trim(cloc)
       end if
       if (this%iseepflag == 1) then
-        if (ABS(dseepmax) > abs(dpak(1))) then
-          dpak(1) = dseepmax
-          write(cloc, "(a,'-(',i0,')-')") trim(this%origin), locdseepmax
-          cpak(1) = trim(cloc) // 'seep'
+        if (ABS(dseepmax) > abs(dpak)) then
+          dpak = dseepmax
+          write(cloc, "(a,'-(',i0,')-',a)")                                      &
+          trim(this%name), locdseepmax, 'seep'
+          cpak = trim(cloc)
         end if
       end if
       !
@@ -1373,89 +1364,6 @@ contains
         ! -- finalize the package csv
         if (iend == 1) then
           call this%pakcsvtab%finalize_table()
-        end if
-      end if
-    end if
-    !
-    ! -- convergence check final information
-    if (ipakfail /= 0) then
-      !
-      ! -- write convergence check information if this is the last outer iteration
-      if (iend == 1) then
-        !
-        ! -- write error message to stdout
-        call sim_message('', fmt=errmsg)
-        !
-        ! -- create error table
-        ! -- table dimensions
-        ntabrows = 1
-        ntabcols = 7
-        if (this%iseepflag == 1) then
-          ntabcols = ntabcols + 3
-        end if
-        if (this%inamedbound == 1) then
-          ntabcols = ntabcols + 1
-        end if
-        !
-        ! -- initialize table and define columns
-        title = trim(adjustl(this%text)) // ' PACKAGE (' //                &
-                trim(adjustl(this%name)) //') UZF CELL CONVERGENCE CHECK'
-        call table_cr(this%errortab, this%name, title)
-        call this%errortab%table_df(ntabrows, ntabcols, this%iout)
-        tag = 'MAXIMUM REJECTED INFILTRATION NUMBER'
-        call this%errortab%initialize_column(tag, 12)
-        tag = 'MAXIMUM REJECTED INFILTRATION LOCATION'
-        call this%errortab%initialize_column(tag, 20)
-        tag = 'MAXIMUM REJECTED INFILTRATION DIFFERENCE'
-        call this%errortab%initialize_column(tag, 12)
-        tag = 'MAXIMUM GWF RECHARGE DIFFERENCE NUMBER'
-        call this%errortab%initialize_column(tag, 12)
-        tag = 'MAXIMUM GWF RECHARGE DIFFERENCE LOCATION'
-        call this%errortab%initialize_column(tag, 20)
-        tag = 'MAXIMUM GWF RECHARGE DIFFERENCE'
-        call this%errortab%initialize_column(tag, 12)
-        if (this%iseepflag == 1) then
-          tag = 'MAXIMUM GWF SEEPAGE DIFFERENCE NUMBER'
-          call this%errortab%initialize_column(tag, 12)
-          tag = 'MAXIMUM GWF SEEPAGE DIFFERENCE LOCATION'
-          call this%errortab%initialize_column(tag, 20)
-          tag = 'MAXIMUM GWF SEEPAGE DIFFERENCE'
-          call this%errortab%initialize_column(tag, 12)
-        end if
-        tag = 'OUTER ITERATION CONVERGENCE CRITERIA'
-        call this%errortab%initialize_column(tag, 12)
-        if (this%inamedbound == 1) then
-          tag = 'BOUNDNAME'
-          call this%errortab%initialize_column(tag, LENBOUNDNAME, alignment=TABLEFT)
-        end if
-        !
-        ! -- write to error table
-        ! -- get cellid
-        n = locdrejinfmax
-        node = this%igwfnode(n)
-        call this%dis%noder_to_string(node, cellid)
-        call this%errortab%add_term(n)
-        call this%errortab%add_term(cellid)
-        call this%errortab%add_term(drejinfmax)
-        ! -- get cellid
-        n = locdrchmax
-        node = this%igwfnode(n)
-        call this%dis%noder_to_string(node, cellid)
-        call this%errortab%add_term(n)
-        call this%errortab%add_term(cellid)
-        call this%errortab%add_term(drchmax)
-        if (this%iseepflag == 1) then
-          ! -- get cellid
-          n = locdseepmax
-          node = this%igwfnode(n)
-          call this%dis%noder_to_string(node, cellid)
-          call this%errortab%add_term(n)
-          call this%errortab%add_term(cellid)
-          call this%errortab%add_term(dseepmax)
-        end if
-        call this%errortab%add_term(hclose)
-        if (this%inamedbound == 1) then
-          call this%errortab%add_term(this%uzfname(n))
         end if
       end if
     end if

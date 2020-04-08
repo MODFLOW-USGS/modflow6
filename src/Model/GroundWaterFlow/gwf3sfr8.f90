@@ -1584,8 +1584,7 @@ contains
     return
   end subroutine sfr_fn
 
-  subroutine sfr_cc(this, kiter, iend, icnvgmod, icnvg, hclose, rclose,          &
-                    dpak, cpak)
+  subroutine sfr_cc(this, kiter, iend, icnvgmod, cpak, dpak)
 ! **************************************************************************
 ! sfr_cc -- Final convergence check for package
 ! **************************************************************************
@@ -1598,31 +1597,23 @@ contains
     integer(I4B), intent(in) :: kiter
     integer(I4B), intent(in) :: iend
     integer(I4B), intent(in) :: icnvgmod
-    integer(I4B), intent(inout) :: icnvg
-    real(DP), intent(in) :: hclose
-    real(DP), intent(in) :: rclose
-    real(DP), dimension(2), intent(inout) :: dpak
-    character(len=LENPAKLOC), dimension(2), intent(inout) :: cpak
+    character(len=LENPAKLOC), intent(inout) :: cpak
+    real(DP), intent(inout) :: dpak
     ! -- local
     character(len=LENPAKLOC) :: cloc
-    character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: tag
-    character(len=15) :: cellid
     integer(I4B) :: icheck
     integer(I4B) :: ipakfail
     integer(I4B) :: locdhmax
     integer(I4B) :: locrmax
     integer(I4B) :: ntabrows
     integer(I4B) :: ntabcols
-    integer(I4B) :: node
     integer(I4B) :: n
     real(DP) :: dh
     real(DP) :: r
     real(DP) :: dhmax
     real(DP) :: rmax
     ! format
-    character(len=*), parameter :: errmsg =                                      &
-        &"(/,'CONVERGENCE FAILED AS A RESULT OF STREAMFLOW ROUTING PACKAGE')"                                  
 ! --------------------------------------------------------------------------
     !
     ! -- initialize local variables
@@ -1704,24 +1695,18 @@ contains
         end if
       end do final_check
       !
-      ! -- evaluate package convergence
-      if (ABS(dhmax) > hclose .or. ABS(rmax) > hclose) then
-        icnvg = 0
-        ipakfail = 1
-      end if
-      !
       ! -- set dpak and cpak
-      if (len_trim(cpak(1)) < 1 .or. ABS(dhmax) > abs(dpak(1))) then
-        dpak(1) = dhmax
+      if (ABS(dhmax) > abs(dpak)) then
+        dpak = dhmax
         write(cloc, "(a,'-(',i0,')-',a)")                                        &
-          trim(this%origin), locdhmax, 'stage'
-        cpak(1) = trim(cloc)
+          trim(this%name), locdhmax, 'stage'
+        cpak = trim(cloc)
       end if
-      if (ABS(rmax) > abs(dpak(1))) then
-        dpak(1) = rmax
+      if (ABS(rmax) > abs(dpak)) then
+        dpak = rmax
         write(cloc, "(a,'-(',i0,')-',a)")                                        &
-          trim(this%origin), locrmax, 'inflow'
-        cpak(1) = trim(cloc)
+          trim(this%name), locrmax, 'inflow'
+        cpak = trim(cloc)
       end if
       !
       ! -- write convergence data to package csv
@@ -1740,82 +1725,6 @@ contains
         ! -- finalize the package csv
         if (iend == 1) then
           call this%pakcsvtab%finalize_table()
-        end if
-      end if
-    end if
-    !
-    ! -- convergence check final information
-    if (ipakfail /= 0) then
-      !
-      ! -- write convergence check information if this is the last outer iteration
-      if (iend == 1) then
-        !
-        ! -- write an error messsage to stdout
-        call sim_message('', fmt=errmsg)
-        !
-        ! -- create error table
-        ! -- table dimensions
-        ntabrows = 1
-        ntabcols = 8
-        if (this%inamedbound == 1) then
-          ntabcols = ntabcols + 1
-        end if
-        !
-        ! -- initialize table and define columns
-        title = trim(adjustl(this%text)) // ' PACKAGE (' //                &
-                trim(adjustl(this%name)) //                                &
-                ') STREAMFLOW ROUTING CONVERGENCE CHECK'
-        call table_cr(this%errortab, this%name, title)
-        call this%errortab%table_df(ntabrows, ntabcols, this%iout)
-        tag = 'STAGE NUMBER'
-        call this%errortab%initialize_column(tag, 10)
-        tag = 'STAGE CELLID'
-        call this%errortab%initialize_column(tag, 20, alignment=TABLEFT)
-        tag = 'MAXIMUM STAGE DIFFERENCE'
-        call this%errortab%initialize_column(tag, 12)
-        tag = 'HCLOSE CRITERIA'
-        call this%errortab%initialize_column(tag, 12)
-        tag = 'INFLOW NUMBER'
-        call this%errortab%initialize_column(tag, 10)
-        tag = 'INFLOW CELLID'
-        call this%errortab%initialize_column(tag, 20, alignment=TABLEFT)
-        tag = 'MAXIMUM INFLOW RESIDUAL'
-        call this%errortab%initialize_column(tag, 12)
-        tag = 'RCLOSE CRITERIA'
-        call this%errortab%initialize_column(tag, 12)
-        if (this%inamedbound == 1) then
-          tag = 'BOUNDNAME'
-          call this%errortab%initialize_column(tag, LENBOUNDNAME, alignment=TABLEFT)
-        end if
-        !
-        ! -- write to error table
-        ! -- get cellid
-        node = this%igwfnode(locdhmax)
-        if (node > 0) then
-          call this%dis%noder_to_string(node, cellid)
-        else
-          cellid = 'none'
-        end if
-        !
-        ! -- add data
-        call this%errortab%add_term(locdhmax)
-        call this%errortab%add_term(cellid)
-        call this%errortab%add_term(dhmax)
-        call this%errortab%add_term(hclose)
-        !
-        ! -- get cellid
-        node = this%igwfnode(locrmax)
-        if (node > 0) then
-          call this%dis%noder_to_string(node, cellid)
-        else
-          cellid = 'none'
-        end if
-        call this%errortab%add_term(locrmax)
-        call this%errortab%add_term(cellid)
-        call this%errortab%add_term(rmax)
-        call this%errortab%add_term(hclose)
-        if (this%inamedbound == 1) then
-          call this%errortab%add_term(this%boundname(n))
         end if
       end if
     end if

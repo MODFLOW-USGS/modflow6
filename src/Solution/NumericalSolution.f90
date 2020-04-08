@@ -56,7 +56,6 @@ module NumericalSolutionModule
     type(BlockParserType) :: parser
     !
     ! -- sparse matrix data
-    real(DP), pointer                                    :: rclosebnd => NULL()
     real(DP), pointer                                    :: theta => NULL()
     real(DP), pointer                                    :: akappa => NULL()
     real(DP), pointer                                    :: gamma => NULL()
@@ -89,8 +88,6 @@ module NumericalSolutionModule
     real(DP), dimension(:), pointer, contiguous          :: hchold => NULL()
     !
     ! -- convergence summary information
-    character(len=LENPAKLOC), dimension(:), pointer,                             &
-                                            contiguous   :: cpak => NULL()
     character(len=31), dimension(:), pointer, contiguous :: caccel => NULL()
     integer(I4B), pointer                                :: icsvout => NULL()
     integer(I4B), pointer                                :: nitermax => NULL()
@@ -102,7 +99,6 @@ module NumericalSolutionModule
     integer(I4B), dimension(:), pointer, contiguous      :: itinner => NULL()
     integer(I4B), pointer, dimension(:,:), contiguous    :: convlocdv => NULL()
     integer(I4B), pointer, dimension(:,:), contiguous    :: convlocdr => NULL()
-    real(DP), dimension(:), pointer, contiguous          :: dpak => NULL()
     real(DP), dimension(:), pointer, contiguous          :: dvmax => NULL()
     real(DP), dimension(:), pointer, contiguous          :: drmax => NULL()
     real(DP), pointer, dimension(:,:), contiguous        :: convdvmax => NULL()
@@ -242,51 +238,50 @@ contains
     this%name = solutionname
     !
     ! -- allocate scalars
-    call mem_allocate (this%id, 'ID', solutionname)
-    call mem_allocate (this%iu, 'IU', solutionname)
-    call mem_allocate (this%ttform, 'TTFORM', solutionname)
-    call mem_allocate (this%ttsoln, 'TTSOLN', solutionname)
+    call mem_allocate(this%id, 'ID', solutionname)
+    call mem_allocate(this%iu, 'IU', solutionname)
+    call mem_allocate(this%ttform, 'TTFORM', solutionname)
+    call mem_allocate(this%ttsoln, 'TTSOLN', solutionname)
     call mem_allocate(this%neq, 'NEQ', solutionname)
     call mem_allocate(this%nja, 'NJA', solutionname)
-    call mem_allocate (this%hclose, 'HCLOSE', solutionname)
-    call mem_allocate (this%hiclose, 'HICLOSE', solutionname)
-    call mem_allocate (this%bigchold, 'BIGCHOLD', solutionname)
-    call mem_allocate (this%bigch, 'BIGCH', solutionname)
-    call mem_allocate (this%relaxold, 'RELAXOLD', solutionname)
-    call mem_allocate (this%res_prev, 'RES_PREV', solutionname)
-    call mem_allocate (this%res_new, 'RES_NEW', solutionname)
-    call mem_allocate (this%res_in, 'RES_IN', solutionname)
-    call mem_allocate (this%ibcount, 'IBCOUNT', solutionname)
-    call mem_allocate (this%icnvg, 'ICNVG', solutionname)
-    call mem_allocate (this%itertot, 'ITERTOT', solutionname)
-    call mem_allocate (this%mxiter, 'MXITER', solutionname)
-    call mem_allocate (this%linmeth, 'LINMETH', solutionname)
-    call mem_allocate (this%nonmeth, 'NONMETH', solutionname)
-    call mem_allocate (this%iprims, 'IPRIMS', solutionname)
-    call mem_allocate (this%rclosebnd, 'RCLOSEBND', solutionname)
-    call mem_allocate (this%theta, 'THETA', solutionname)
-    call mem_allocate (this%akappa, 'AKAPPA', solutionname)
-    call mem_allocate (this%gamma, 'GAMMA', solutionname)
-    call mem_allocate (this%amomentum, 'AMOMENTUM', solutionname)
-    call mem_allocate (this%breduc, 'BREDUC', solutionname)
-    call mem_allocate (this%btol, 'BTOL', solutionname)
-    call mem_allocate (this%res_lim, 'RES_LIM', solutionname)
-    call mem_allocate (this%numtrack, 'NUMTRACK', solutionname)
-    call mem_allocate (this%ibflag, 'IBFLAG', solutionname)
-    call mem_allocate (this%icsvout, 'ICSVOUT', solutionname)
-    call mem_allocate (this%nitermax, 'NITERMAX', solutionname)
-    call mem_allocate (this%nitercnt, 'NITERCNT', solutionname)
+    call mem_allocate(this%hclose, 'HCLOSE', solutionname)
+    call mem_allocate(this%hiclose, 'HICLOSE', solutionname)
+    call mem_allocate(this%bigchold, 'BIGCHOLD', solutionname)
+    call mem_allocate(this%bigch, 'BIGCH', solutionname)
+    call mem_allocate(this%relaxold, 'RELAXOLD', solutionname)
+    call mem_allocate(this%res_prev, 'RES_PREV', solutionname)
+    call mem_allocate(this%res_new, 'RES_NEW', solutionname)
+    call mem_allocate(this%res_in, 'RES_IN', solutionname)
+    call mem_allocate(this%ibcount, 'IBCOUNT', solutionname)
+    call mem_allocate(this%icnvg, 'ICNVG', solutionname)
+    call mem_allocate(this%itertot, 'ITERTOT', solutionname)
+    call mem_allocate(this%mxiter, 'MXITER', solutionname)
+    call mem_allocate(this%linmeth, 'LINMETH', solutionname)
+    call mem_allocate(this%nonmeth, 'NONMETH', solutionname)
+    call mem_allocate(this%iprims, 'IPRIMS', solutionname)
+    call mem_allocate(this%theta, 'THETA', solutionname)
+    call mem_allocate(this%akappa, 'AKAPPA', solutionname)
+    call mem_allocate(this%gamma, 'GAMMA', solutionname)
+    call mem_allocate(this%amomentum, 'AMOMENTUM', solutionname)
+    call mem_allocate(this%breduc, 'BREDUC', solutionname)
+    call mem_allocate(this%btol, 'BTOL', solutionname)
+    call mem_allocate(this%res_lim, 'RES_LIM', solutionname)
+    call mem_allocate(this%numtrack, 'NUMTRACK', solutionname)
+    call mem_allocate(this%ibflag, 'IBFLAG', solutionname)
+    call mem_allocate(this%icsvout, 'ICSVOUT', solutionname)
+    call mem_allocate(this%nitermax, 'NITERMAX', solutionname)
+    call mem_allocate(this%nitercnt, 'NITERCNT', solutionname)
     call mem_allocate(this%convnmod, 'CONVNMOD', solutionname)
-    call mem_allocate (this%iallowptc, 'IALLOWPTC', solutionname)
-    call mem_allocate (this%iptcopt, 'IPTCOPT', solutionname)
-    call mem_allocate (this%iptcout, 'IPTCOUT', solutionname)
-    call mem_allocate (this%l2norm0, 'L2NORM0', solutionname)
-    call mem_allocate (this%ptcfact, 'PTCFACT', solutionname)
-    call mem_allocate (this%ptcdel, 'PTCDEL', solutionname)
-    call mem_allocate (this%ptcdel0, 'PTCDEL0', solutionname)
-    call mem_allocate (this%ptcexp, 'PTCEXP', solutionname)
-    call mem_allocate (this%ptcthresh, 'PTCTHRESH', solutionname)
-    call mem_allocate (this%ptcrat, 'PTCRAT', solutionname)
+    call mem_allocate(this%iallowptc, 'IALLOWPTC', solutionname)
+    call mem_allocate(this%iptcopt, 'IPTCOPT', solutionname)
+    call mem_allocate(this%iptcout, 'IPTCOUT', solutionname)
+    call mem_allocate(this%l2norm0, 'L2NORM0', solutionname)
+    call mem_allocate(this%ptcfact, 'PTCFACT', solutionname)
+    call mem_allocate(this%ptcdel, 'PTCDEL', solutionname)
+    call mem_allocate(this%ptcdel0, 'PTCDEL0', solutionname)
+    call mem_allocate(this%ptcexp, 'PTCEXP', solutionname)
+    call mem_allocate(this%ptcthresh, 'PTCTHRESH', solutionname)
+    call mem_allocate(this%ptcrat, 'PTCRAT', solutionname)
     !
     ! -- initialize
     this%id = 0
@@ -309,7 +304,6 @@ contains
     this%linmeth = 1
     this%nonmeth = 0
     this%iprims = 0
-    this%rclosebnd = DZERO
     this%theta = DZERO
     this%akappa = DZERO
     this%gamma = DZERO
@@ -376,7 +370,6 @@ contains
     call mem_allocate(this%itinner, 0, 'ITINNER', this%name)
     call mem_allocate(this%convlocdv, this%convnmod, 0, 'CONVLOCDV', this%name)
     call mem_allocate(this%convlocdr, this%convnmod, 0, 'CONVLOCDR', this%name)
-    call mem_allocate(this%dpak, 2, 'DVMAX', this%name)
     call mem_allocate(this%dvmax, this%convnmod, 'DVMAX', this%name)
     call mem_allocate(this%drmax, this%convnmod, 'DRMAX', this%name)
     call mem_allocate(this%convdvmax, this%convnmod, 0, 'CONVDVMAX', this%name)
@@ -685,8 +678,6 @@ contains
           this%hclose  = this%parser%GetDouble()
         case ('OUTER_MAXIMUM')
           this%mxiter  = this%parser%GetInteger()
-        case ('OUTER_RCLOSEBND')
-          this%rclosebnd  = this%parser%GetDouble()
         case ('UNDER_RELAXATION')
           call this%parser%GetStringCaps(keyword)
           ival = 0
@@ -758,12 +749,6 @@ contains
       call store_error(errmsg)
     END IF
     !
-    ! -- check that RCLOSEBND is greater than zero
-    IF (this%rclosebnd <=  DZERO) THEN
-      WRITE( errmsg,'(A)' ) 'SLN_AR: OUTER_RCLOSEBND MUST > 0.0. '
-      call store_error(errmsg)
-    END IF
-    !
     !
     isymflg = 1
     if ( this%nonmeth > 0 )then
@@ -826,12 +811,11 @@ contains
     ! -- write solver data to output file
     !
     ! -- non-linear solver data
-    WRITE(IOUT,9002) this%hclose, this%rclosebnd, this%mxiter,                 &
+    WRITE(IOUT,9002) this%hclose, this%mxiter,                                 &
                      this%iprims, this%nonmeth, this%linmeth
     !
     ! -- standard outer iteration formats
 9002 FORMAT(1X,'OUTER ITERATION CONVERGENCE CRITERION     (HCLOSE) = ', E15.6, &
-    &      /1X,'OUTER ITERATION BOUNDARY FLOW RESIDUAL (RCLOSEBND) = ', E15.6, &
     &      /1X,'MAXIMUM NUMBER OF OUTER ITERATIONS        (MXITER) = ', I9,    &
     &      /1X,'SOLVER PRINTOUT INDEX                     (IPRIMS) = ', I9,    &
     &      /1X,'NONLINEAR ITERATION METHOD            (NONLINMETH) = ', I9,    &
@@ -890,7 +874,6 @@ contains
       this%nitermax = 1
     end if
 
-    allocate(this%cpak(2))
     allocate(this%caccel(this%nitermax))
 
     im = this%convnmod
@@ -1010,7 +993,6 @@ contains
     call this%exchangelist%Clear()
     !
     ! -- character arrays
-    deallocate(this%cpak)
     deallocate(this%caccel)
     !
     ! -- inner iteration table object
@@ -1047,7 +1029,6 @@ contains
     call mem_deallocate(this%itinner)
     call mem_deallocate(this%convlocdv)
     call mem_deallocate(this%convlocdr)
-    call mem_deallocate(this%dpak)
     call mem_deallocate(this%dvmax)
     call mem_deallocate(this%drmax)
     call mem_deallocate(this%convdvmax)
@@ -1075,7 +1056,6 @@ contains
     call mem_deallocate(this%linmeth)
     call mem_deallocate(this%nonmeth)
     call mem_deallocate(this%iprims)
-    call mem_deallocate(this%rclosebnd)
     call mem_deallocate(this%theta)
     call mem_deallocate(this%akappa)
     call mem_deallocate(this%gamma)
@@ -1344,6 +1324,8 @@ contains
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: tag
     character(len=LINELENGTH) :: line
+    character(len=LENPAKLOC) :: cmod
+    character(len=LENPAKLOC) :: cpak
     character(len=34) :: strh
     character(len=25) :: cval
     character(len=7) :: cmsg
@@ -1357,12 +1339,12 @@ contains
     integer(I4B) :: iend
     integer(I4B) :: icnvgmod
     integer(I4B) :: iptc
-    integer(I4B) :: ipak
     real(DP) :: dxmax_nur
     real(DP) :: dxmax
     real(DP) :: ptcf
     real(DP) :: ttform
     real(DP) :: ttsoln
+    real(DP) :: dpak
     ! formats
 !   -----------------------------------------------------------------------------
     !
@@ -1501,6 +1483,12 @@ contains
       cmsg = '*'
     end if
     !
+    ! -- set flag if this is the last outer iteration
+    iend = 0
+    if (kiter == this%mxiter) then
+      iend = 1
+    end if
+    !
     ! -- Additional convergence check for pseudo-transient continuation
     !    term. Evaluate if the ptc value added to the diagonal has
     !    decayed sufficiently.
@@ -1509,9 +1497,9 @@ contains
         if (this%ptcrat > this%ptcthresh) then
           this%icnvg = 0
           cmsg = trim(cmsg) // 'PTC'
-          if (kiter == this%mxiter) then
-            write(line, '(a)') 'pseudo-transient continuation ' //               &
-                                'caused convergence failure'
+          if (iend /= 0) then
+            write(line, '(a)')                                                   &
+              'PSEUDO-TRANSIENT CONTINUATION CAUSED CONVERGENCE FAILURE'
             call sim_message(line)
           end if
         end if
@@ -1545,21 +1533,30 @@ contains
     end do
     !
     ! -- additional convergence check for model packages
-    iend = 0
     icnvgmod = this%icnvg
-    if (kiter == this%mxiter) then
-      iend = 1
-    end if
-    do ipak = 1, 2
-      this%dpak(ipak) = DZERO
-      this%cpak(ipak) = ' '
-    end do
+    dpak = DZERO
+    cpak = ' '
     do im=1,this%modellist%Count()
       mp => GetNumericalModelFromList(this%modellist, im)
-      call mp%model_cc(kiter, iend, icnvgmod,                                    &
-                       this%icnvg, this%hclose, this%rclosebnd,                  &
-                       this%dpak, this%cpak)
+      call mp%get_mcellid(0, cmod)
+      call mp%model_cc(kiter, iend, icnvgmod, cpak, dpak)
+      if (abs(dpak) > DZERO) then
+        write(cpak, '(a,a)') trim(cmod) // trim(cpak)
+      else
+        cpak = ' '
+      end if
     end do
+    !
+    ! -- evaluate package convergence
+    if (abs(dpak) > this%hclose) then
+      this%icnvg = 0
+      ! -- write message to stdout
+      if (iend /= 0) then
+        write(line, '(3a)')                                                       &
+          'PACKAGE (', trim(cpak), ') CAUSED CONVERGENCE FAILURE'
+        call sim_message(line)
+      end if
+    end if
     !
     ! -- write maximum change in package convergence check
     if (this%iprims > 0) then
@@ -1569,10 +1566,8 @@ contains
       else
         cmsg = '*'
       end if
-      do ipak = 1, 2
-        if (len_trim(this%cpak(ipak)) < 1) then
-          cycle
-        end if
+      !if (len_trim(this%cpak) > 0) then
+      if (len_trim(cpak) > 0) then
         !
         ! -- add data to outertab
         call this%outertab%add_term(cval)
@@ -1584,13 +1579,10 @@ contains
           call this%outertab%add_term(' ')
           call this%outertab%add_term(' ')
         end if
-        call this%outertab%add_term(this%dpak(ipak))
+        call this%outertab%add_term(dpak)
         call this%outertab%add_term(cmsg)
-        call this%outertab%add_term(this%cpak(ipak))
-        !
-        ! -- only need to write the first package convergence failure
-        exit
-      end do
+        call this%outertab%add_term(cpak)
+      end if
     end if
     !
     ! -- increment the counter storing the total number of linear iterations
@@ -2332,7 +2324,6 @@ contains
       this%hclose = dem3
       this%mxiter = 25
       this%nonmeth = 0
-      this%rclosebnd = DEM1
       this%theta = 1.0
       this%akappa = DZERO
       this%gamma = DZERO
@@ -2347,7 +2338,6 @@ contains
       this%hclose = dem2
       this%mxiter = 50
       this%nonmeth = 3
-      this%rclosebnd = DEM1
       this%theta = 0.9d0
       this%akappa = 0.0001d0
       this%gamma = DZERO
@@ -2362,7 +2352,6 @@ contains
       this%hclose = dem1
       this%mxiter = 100
       this%nonmeth = 3
-      this%rclosebnd = DEM1
       this%theta = 0.8d0
       this%akappa = 0.0001d0
       this%gamma = DZERO

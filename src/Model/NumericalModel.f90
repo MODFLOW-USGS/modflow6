@@ -150,17 +150,13 @@ module NumericalModelModule
     integer(I4B), intent(in) :: inwtflag
   end subroutine model_nr
 
-  subroutine model_cc(this, kiter, iend, icnvgmod, icnvg, hclose, rclose,        &
-                      dpak, cpak)
+  subroutine model_cc(this, kiter, iend, icnvgmod, cpak, dpak)
     class(NumericalModelType) :: this
     integer(I4B),intent(in) :: kiter
     integer(I4B),intent(in) :: iend
     integer(I4B),intent(in) :: icnvgmod
-    integer(I4B),intent(inout) :: icnvg
-    real(DP), intent(in) :: hclose
-    real(DP), intent(in) :: rclose
-    real(DP), dimension(2), intent(inout) :: dpak
-    character(len=LENPAKLOC), dimension(2), intent(inout) :: cpak
+    character(len=LENPAKLOC), intent(inout) :: cpak
+    real(DP), intent(inout) :: dpak
   end subroutine model_cc
 
   subroutine model_nur(this, neqmod, x, xtemp, dx, inewtonur, dxmax, locmax)
@@ -337,7 +333,9 @@ module NumericalModelModule
     integer(I4B) :: ip, ipaknode, istart, istop
     class(BndType), pointer :: packobj
     
-    if(node <= this%dis%nodes) then
+    if (node < 1) then
+      cellid = ''
+    else if(node <= this%dis%nodes) then
       call this%dis%noder_to_string(node, cellid)
     else
       cellid = '***ERROR***'
