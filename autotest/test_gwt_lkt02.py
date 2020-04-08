@@ -161,8 +161,7 @@ def get_model(idx, dir):
                                           outlets=outlets,
                                           pname='LAK-1',
                                           connectiondata=con_data,
-                                          perioddata=p_data,
-                                          outletperioddata=outletperioddata,
+                                          perioddata=p_data + outletperioddata,
                                           observations=lak_obs,
                                           auxiliary=['CONCENTRATION',
                                                      'DENSITY'])
