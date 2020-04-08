@@ -235,9 +235,11 @@ module GwfBuyModule
     ! -- update density using the last concentration
     call this%buy_calcdens()
     !
-    ! -- Calculate the elev array
+    ! -- Recalculate the elev array for this iteration
     if (this%ireadelev == 0) then
-      !todo: now calling once at beginning call this%buy_calcelev()
+      if (this%iform == 1 .or. this%iform == 2) then
+        call this%buy_calcelev()
+      end if
     end if
     !
     ! -- Return
@@ -261,7 +263,8 @@ module GwfBuyModule
     integer(I4B) :: n, locdense, locelev
 ! ------------------------------------------------------------------------------
     !
-    ! -- Return if freshwater head formulation
+    ! -- Return if freshwater head formulation; all boundary heads must be
+    !    entered as freshwater equivalents
     if (this%iform == 0) return
     !
     ! -- Add buoyancy terms for head-dependent boundaries
@@ -281,12 +284,12 @@ module GwfBuyModule
         !
         ! -- general head boundary
         call buy_cf_ghb(packobj, hnew, this%dense, this%elev, this%denseref, &
-                        locdense, locelev)
+                        locdense, locelev, this%iform)
       case('RIV')
         !
         ! -- river
         call buy_cf_riv(packobj, hnew, this%dense, this%elev, this%denseref, &
-                        locdense, locelev)
+                        locdense, locelev, this%iform)
       case('DRN')
         !
         ! drain
@@ -300,7 +303,14 @@ module GwfBuyModule
     return
   end subroutine buy_cf_bnd
   
-  subroutine buy_cf_ghb(packobj, hnew, dense, elev, denseref, locdense, locelev)
+  subroutine buy_cf_ghb(packobj, hnew, dense, elev, denseref, locdense, &
+                        locelev, iform)
+! ******************************************************************************
+! buy_cf_ghb -- Fill ghb coefficients
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- modules
     use BndModule, only: BndType
     class(BndType), pointer :: packobj
@@ -311,16 +321,18 @@ module GwfBuyModule
     real(DP), intent(in) :: denseref
     integer(I4B), intent(in) :: locdense
     integer(I4B), intent(in) :: locelev
+    integer(I4B), intent(in) :: iform
     ! -- local
     integer(I4B) :: n
     integer(I4B) :: node
     real(DP) :: denseghb
     real(DP) :: elevghb
-    real(DP) :: avgdense
-    real(DP) :: avgelev
     real(DP) :: hghb
     real(DP) :: cond
-    real(DP) :: t1, t2, term
+    real(DP) :: hcofterm, rhsterm
+! ------------------------------------------------------------------------------
+    !
+    ! -- Process density terms for each GHB
     do n = 1, packobj%nbound
       node = packobj%nodelist(n)
       if (packobj%ibound(node) <= 0) cycle
@@ -328,29 +340,91 @@ module GwfBuyModule
       ! -- density
       denseghb = denseref
       if (locdense > 0) denseghb = packobj%auxvar(locdense, n)
-      avgdense = DHALF * denseghb + DHALF * dense(node)
       !
       ! -- elevation
       elevghb = elev(node)
       if (locelev > 0) elevghb = packobj%auxvar(locelev, n)
-      avgelev = DHALF * elevghb + DHALF * elev(node)
       !
       ! -- boundary head and conductance
       hghb = packobj%bound(1, n)
       cond = packobj%bound(2, n)
       !
-      ! -- calculate and add terms
-      t1 = avgdense / denseref - DONE
-      t2 = (denseghb - dense(node)) / denseref
-      term = cond * (-t1 + DHALF * t2)
-      packobj%hcof(n) = packobj%hcof(n) + term
-      term = t1 * hghb + DHALF * t2 * hghb - t2 * avgelev
-      term = term * cond
-      packobj%rhs(n) = packobj%rhs(n) - term
+      ! --calculate HCOF and RHS terms
+      call calc_ghb_hcof_rhs_terms(denseref, denseghb, dense(node),            &
+                                   elevghb, elev(node), hghb, hnew(node),      &
+                                   cond, iform, rhsterm, hcofterm)      
+      packobj%hcof(n) = packobj%hcof(n) + hcofterm
+      packobj%rhs(n) = packobj%rhs(n) - rhsterm
+      !
     end do
+    !
+    ! -- Return
+    return
   end subroutine buy_cf_ghb
+                        
+  subroutine calc_ghb_hcof_rhs_terms(denseref, denseghb, densenode, &
+                                     elevghb, elevnode, hghb, hnode, &
+                                     cond, iform, rhsterm, hcofterm)
+! ******************************************************************************
+! calc_ghb_hcof_rhs_terms -- Calculate density hcof and rhs terms for ghb 
+!   conditions
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    real(DP), intent(in) :: denseref
+    real(DP), intent(in) :: denseghb
+    real(DP), intent(in) :: densenode
+    real(DP), intent(in) :: elevghb
+    real(DP), intent(in) :: elevnode
+    real(DP), intent(in) :: hghb
+    real(DP), intent(in) :: hnode
+    real(DP), intent(in) :: cond
+    integer(I4B), intent(in) :: iform
+    real(DP), intent(inout) :: rhsterm
+    real(DP), intent(inout) :: hcofterm
+    ! -- local
+    real(DP) :: t1, t2
+    real(DP) :: avgdense, avgelev
+! ------------------------------------------------------------------------------
+    !
+    ! -- Calculate common terms
+    avgdense = DHALF * denseghb + DHALF * densenode
+    avgelev = DHALF * elevghb + DHALF * elevnode
+    t1 = avgdense / denseref - DONE
+    t2 = (denseghb - densenode) / denseref
+    !
+    ! -- Add hcof terms
+    hcofterm = -cond * t1
+    if (iform == 2) then
+      !
+      ! -- this term goes on RHS for iform == 1
+      hcofterm = hcofterm + DHALF * cond * t2
+    end if
+    !
+    ! -- Add rhs terms
+    rhsterm = cond * t1 * hghb
+    rhsterm = rhsterm - cond * t2 * avgelev
+    rhsterm = rhsterm + DHALF * cond * t2 * hghb
+    if (iform == 1) then
+      !
+      ! -- this term goes on LHS for iform == 2
+      rhsterm = rhsterm + DHALF * cond * t2 * hnode
+    end if
+    !
+    ! -- return
+    return
+  end subroutine calc_ghb_hcof_rhs_terms
   
-  subroutine buy_cf_riv(packobj, hnew, dense, elev, denseref, locdense, locelev)
+  subroutine buy_cf_riv(packobj, hnew, dense, elev, denseref, locdense,        &
+                       locelev, iform)
+! ******************************************************************************
+! buy_cf_riv -- Fill riv coefficients
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- modules
     use BndModule, only: BndType
     class(BndType), pointer :: packobj
@@ -361,17 +435,20 @@ module GwfBuyModule
     real(DP), intent(in) :: denseref
     integer(I4B), intent(in) :: locdense
     integer(I4B), intent(in) :: locelev
+    integer(I4B), intent(in) :: iform
     ! -- local
     integer(I4B) :: n
     integer(I4B) :: node
     real(DP) :: denseriv
     real(DP) :: elevriv
-    real(DP) :: avgdense
-    real(DP) :: avgelev
     real(DP) :: hriv
     real(DP) :: rbot
     real(DP) :: cond
-    real(DP) :: t1, t2, term
+    real(DP) :: hcofterm
+    real(DP) :: rhsterm
+! ------------------------------------------------------------------------------
+    !
+    ! -- Process density terms for each RIV
     do n = 1, packobj%nbound
       node = packobj%nodelist(n)
       if (packobj%ibound(node) <= 0) cycle
@@ -379,12 +456,10 @@ module GwfBuyModule
       ! -- density
       denseriv = denseref
       if (locdense > 0) denseriv = packobj%auxvar(locdense, n)
-      avgdense = DHALF * denseriv + DHALF * dense(node)
       !
       ! -- elevation
       elevriv = elev(node)
       if (locelev > 0) elevriv = packobj%auxvar(locelev, n)
-      avgelev = DHALF * elevriv + DHALF * elev(node)
       !
       ! -- boundary head and conductance
       hriv = packobj%bound(1, n)
@@ -393,21 +468,32 @@ module GwfBuyModule
       !
       ! -- calculate and add terms depending on whether head is above rbot
       if (hnew(node) > rbot) then
-        t1 = avgdense / denseref - DONE
-        t2 = (denseriv - dense(node)) / denseref
-        term = cond * (-t1 + DHALF * t2)
-        packobj%hcof(n) = packobj%hcof(n) + term
-        term = t1 * hriv + DHALF * t2 * hriv - t2 * avgelev
-        term = term * cond
-        packobj%rhs(n) = packobj%rhs(n) - term
+        !
+        ! --calculate HCOF and RHS terms, similar to GHB in this case
+        call calc_ghb_hcof_rhs_terms(denseref, denseriv, dense(node),          &
+                                     elevriv, elev(node), hriv, hnew(node),    &
+                                     cond, iform, rhsterm, hcofterm)      
       else
-        term = cond * (denseriv / denseref - DONE) * (hriv - rbot)
-        packobj%rhs(n) = packobj%rhs(n) - term
+        hcofterm = DZERO
+        rhsterm = cond * (denseriv / denseref - DONE) * (hriv - rbot)
       end if
+      !
+      ! -- Add terms to package hcof and rhs accumulators
+      packobj%hcof(n) = packobj%hcof(n) + hcofterm
+      packobj%rhs(n) = packobj%rhs(n) - rhsterm
     end do
+    !
+    ! -- Return
+    return
   end subroutine buy_cf_riv
   
   subroutine buy_cf_drn(packobj, hnew, dense, denseref)
+! ******************************************************************************
+! buy_cf_drn -- Fill drn coefficients
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- modules
     use BndModule, only: BndType
     class(BndType), pointer :: packobj
@@ -423,6 +509,9 @@ module GwfBuyModule
     real(DP) :: cond
     real(DP) :: hcofterm
     real(DP) :: rhsterm
+! ------------------------------------------------------------------------------
+    !
+    ! -- Process density terms for each DRN
     do n = 1, packobj%nbound
       node = packobj%nodelist(n)
       if (packobj%ibound(node) <= 0) cycle
@@ -436,6 +525,9 @@ module GwfBuyModule
         packobj%rhs(n) = packobj%rhs(n) + rhsterm
       end if
     end do
+    !
+    ! -- Return
+    return
   end subroutine buy_cf_drn
   
   subroutine buy_fc(this, kiter, njasln, amat, idxglo, rhs, hnew)

@@ -4,6 +4,7 @@
 module Xt3dAlgorithmModule
 
   use KindModule, only: DP, I4B
+  use ConstantsModule, only: DPREC, DONE
   implicit none
 
   contains
@@ -89,6 +90,7 @@ module Xt3dAlgorithmModule
     real(DP) :: wght0
     real(DP), dimension(nnbrmx) :: bhat0
     real(DP), dimension(nnbrmx) :: bhat1
+    real(DP) :: denom
 ! ------------------------------------------------------------------------------
 !
 !.....Set the global cell number for cell 1, as found in the neighbor
@@ -114,7 +116,12 @@ module Xt3dAlgorithmModule
       call abhats(nnbrmx,nnbr1,inbr1,il10,vc1,vn1,dl1,dl1n,ck1,        &
                   vcthresh,allhc1,ar10,ahat1,bhat1)
 !........Compute "conductances" based on the two flux estimates.
-      wght1 = ahat0/(ahat0 + ahat1)
+      denom = (ahat0 + ahat1)
+      if (abs(denom) > DPREC) then
+        wght1 = ahat0/(ahat0 + ahat1)
+      else
+        wght1 = DONE
+      end if
       wght0 = 1d0 - wght1
       chat01 = wght1*ahat1
       do i=1,nnbrmx
