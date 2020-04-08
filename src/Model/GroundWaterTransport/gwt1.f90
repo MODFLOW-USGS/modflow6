@@ -41,7 +41,7 @@ module GwtModule
 
   use KindModule,                  only: DP, I4B
   use InputOutputModule,           only: ParseLine, upcase
-  use ConstantsModule,             only: LENFTYPE, DZERO
+  use ConstantsModule,             only: LENFTYPE, DZERO, LENPAKLOC
   use NumericalModelModule,        only: NumericalModelType  
   use BaseModelModule,             only: BaseModelType
   use BndModule,                   only: BndType, AddBndToList, GetBndFromList
@@ -630,7 +630,7 @@ module GwtModule
     return
   end subroutine gwt_fc
 
-  subroutine gwt_cc(this, kiter, iend, icnvg, hclose, rclose)
+  subroutine gwt_cc(this, kiter, iend, icnvgmod, cpak, dpak)
 ! ******************************************************************************
 ! gwt_cc -- GroundWater Transport Model Final Convergence Check
 ! Subroutine: (1) calls package cc routines
@@ -642,9 +642,9 @@ module GwtModule
     class(GwtModelType) :: this
     integer(I4B),intent(in) :: kiter
     integer(I4B),intent(in) :: iend
-    integer(I4B),intent(inout) :: icnvg
-    real(DP), intent(in) :: hclose
-    real(DP), intent(in) :: rclose
+    integer(I4B),intent(in) :: icnvgmod
+    character(len=LENPAKLOC), intent(inout) :: cpak
+    real(DP), intent(inout) :: dpak
     ! -- local
     !class(BndType), pointer :: packobj
     !integer(I4B) :: ip
@@ -652,7 +652,7 @@ module GwtModule
 ! ------------------------------------------------------------------------------
     !
     ! -- If mover is on, then at least 2 outers required
-    call this%mvt%mvt_cc(kiter, iend, icnvg)
+    call this%mvt%mvt_cc(kiter, iend, icnvgmod, cpak, dpak)
     !
     ! -- Call package cc routines
     !do ip = 1, this%bndlist%Count()

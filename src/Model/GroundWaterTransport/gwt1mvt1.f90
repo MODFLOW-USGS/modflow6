@@ -1,7 +1,7 @@
 module GwtMvtModule
   
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DZERO
+  use ConstantsModule, only: DZERO, LENPAKLOC, DNODATA
   use BaseDisModule, only: DisBaseType
   use NumericalPackageModule, only: NumericalPackageType
   use GwtFmiModule, only: GwtFmiType
@@ -134,7 +134,7 @@ module GwtMvtModule
     return
   end subroutine mvt_fc
 
-  subroutine mvt_cc(this, kiter, iend, icnvg)
+  subroutine mvt_cc(this, kiter, iend, icnvgmod, cpak, dpak)
 ! ******************************************************************************
 ! mvt_cc -- extra convergence check for mover
 ! ******************************************************************************
@@ -145,7 +145,9 @@ module GwtMvtModule
     class(GwtMvtType) :: this
     integer(I4B),intent(in) :: kiter
     integer(I4B),intent(in) :: iend
-    integer(I4B),intent(inout) :: icnvg
+    integer(I4B),intent(in) :: icnvgmod
+    character(len=LENPAKLOC), intent(inout) :: cpak
+    real(DP), intent(inout) :: dpak
     ! -- local
     ! -- formats
     character(len=*),parameter :: fmtmvrcnvg = &
@@ -155,8 +157,9 @@ module GwtMvtModule
     !
     ! -- If there are active movers, then at least 2 outers required
     if (associated(this%fmi%mvrbudobj)) then
-      if (icnvg == 1 .and. kiter == 1) then
-        icnvg = 0
+      if (icnvgmod == 1 .and. kiter == 1) then
+        dpak = DNODATA
+        cpak = trim(this%name)
         write(this%iout, fmtmvrcnvg)
       endif
     endif
