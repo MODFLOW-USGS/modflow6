@@ -287,12 +287,19 @@ module NumericalModelModule
   end subroutine allocate_scalars
 
   subroutine allocate_arrays(this)
+    use ConstantsModule, only: DZERO
     use MemoryManagerModule, only: mem_allocate
     class(NumericalModelType) :: this
+    integer(I4B) :: i
     !
     call mem_allocate(this%xold,   this%neq, 'XOLD',   trim(this%name))
     call mem_allocate(this%flowja, this%nja, 'FLOWJA', trim(this%name))
     call mem_allocate(this%idxglo, this%nja, 'IDXGLO', trim(this%name))
+    !
+    ! -- initialize
+    do i = 1, size(this%flowja)
+      this%flowja(i) = DZERO
+    end do
     !
     ! -- return
     return
