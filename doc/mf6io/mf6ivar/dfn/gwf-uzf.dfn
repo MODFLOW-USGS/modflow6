@@ -96,6 +96,38 @@ longname file keyword
 description name of the binary output file to write budget information.
 
 block options
+name package_convergence_filerecord
+type record package_convergence fileout package_convergence_filename
+shape
+reader urword
+tagged true
+optional true
+longname
+description
+
+block options
+name package_convergence
+type keyword
+shape
+in_record true
+reader urword
+tagged true
+optional false
+longname package_convergence keyword
+description keyword to specify that record corresponds to the package convergence comma spaced values file.
+
+block options
+name package_convergence_filename
+type string
+shape
+in_record true
+reader urword
+tagged false
+optional false
+longname file keyword
+description name of the comma spaced values output file to write package convergence information.
+
+block options
 name ts_filerecord
 type record ts6 filein ts6_filename
 shape

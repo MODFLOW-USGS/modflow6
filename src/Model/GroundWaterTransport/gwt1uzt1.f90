@@ -2,6 +2,7 @@
 ! -- todo: what to do about reactions in uzf?  Decay?
 ! -- todo: save the uzt concentration into the uzt aux variable?
 ! -- todo: calculate the uzf DENSE aux variable using concentration?
+! -- todo: GWD and GWD-TO-MVR do not seem to be included; prob in UZF?
 !
 ! UZF flows (flowbudptr)     index var    UZT term              Transport Type
 !---------------------------------------------------------------------------------

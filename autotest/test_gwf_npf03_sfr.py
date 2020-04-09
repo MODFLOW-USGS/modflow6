@@ -235,10 +235,12 @@ def get_model(idx, dir):
 
         pname = 'sfr{}'.format(jdx + 1)
         fn = '{}.{}.sfr'.format(mname, pname)
+        cnvgpth = '{}.sfr.cnvg.csv'.format(mname)
 
         sfr = flopy.mf6.ModflowGwfsfr(gwf, unit_conversion=unit_conv,
                                       print_stage=True,
                                       print_flows=True,
+                                      package_convergence_filerecord=cnvgpth,
                                       mover=True,
                                       nreaches=len(rchd),
                                       packagedata=rchd,
