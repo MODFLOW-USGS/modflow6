@@ -1205,9 +1205,8 @@ contains
     
     if (this%icsvout > 0) then
       write(this%icsvout, '(*(G0,:,","))', advance='NO')                     &
-        'total_iterations', 'totim', 'kper', 'kstp', 'ksub', 'nouter',       &
-        'ninner', 'solution_dvmax', 'solution_dvmax_model',                  &
-        'solution_dvmax_node'
+        'total_iterations', 'totim', 'kper', 'kstp', 'nouter', 'ninner',     &
+        'solution_dvmax', 'solution_dvmax_model', 'solution_dvmax_node'
       if (this%iprims == 2) then
         write(this%icsvout, '(*(G0,:,","))', advance='NO')                   &
           '', 'solution_drmax', 'solution_drmax_model',                      &
@@ -1368,7 +1367,7 @@ contains
         call this%outertab%table_df(ntabrows, ntabcols, iout,        &
                                     finalize=.FALSE.)
         tag = 'OUTER ITERATION STEP'
-        call this%outertab%initialize_column(tag, 15, alignment=TABLEFT)
+        call this%outertab%initialize_column(tag, 25, alignment=TABLEFT)
         tag = 'OUTER ITERATION'
         call this%outertab%initialize_column(tag, 10, alignment=TABRIGHT)
         tag = 'INNER ITERATION'
@@ -1453,6 +1452,9 @@ contains
     call code_timer(0, ttsoln, this%ttsoln)
     CALL this%sln_ls(kiter, kstp, kper, iter, iptc, ptcf)
     call code_timer(1, ttsoln, this%ttsoln)
+    !
+    ! -- increment the counter storing the total number of linear iterations
+    this%itertot = this%itertot + iter
     !
     ! -- save matrix to a file
     !    to enable set itestmat to 1 and recompile
@@ -1566,7 +1568,6 @@ contains
       else
         cmsg = '*'
       end if
-      !if (len_trim(this%cpak) > 0) then
       if (len_trim(cpak) > 0) then
         !
         ! -- add data to outertab
@@ -1584,9 +1585,6 @@ contains
         call this%outertab%add_term(cpak)
       end if
     end if
-    !
-    ! -- increment the counter storing the total number of linear iterations
-    this%itertot = this%itertot + iter
     !
     ! -- under-relaxation - only done if convergence not achieved
     if (this%icnvg /= 1) then
@@ -1618,6 +1616,28 @@ contains
         if (abs(dxmax) <= this%hclose .and.                                      &
             abs(this%hncg(kiter)) <= this%hclose) then
           this%icnvg = 1
+          !
+          ! -- write revised head change data after 
+          !    newton under-relaxation
+          if (this%iprims > 0) then
+            cval = 'Newton under-relaxation'
+            cmsg = '*'
+            call this%sln_get_loc(this%lrch(1,kiter), strh)
+            !
+            ! -- add data to outertab
+            call this%outertab%add_term(cval)
+            call this%outertab%add_term(kiter)
+            call this%outertab%add_term(iter)
+            if (this%numtrack > 0) then
+              call this%outertab%add_term(' ')
+              call this%outertab%add_term(' ')
+              call this%outertab%add_term(' ')
+              call this%outertab%add_term(' ')
+            end if
+            call this%outertab%add_term(this%hncg(kiter))
+            call this%outertab%add_term(cmsg)
+            call this%outertab%add_term(trim(strh))
+          end if
         end if
       end if
     end if
@@ -1652,18 +1672,19 @@ contains
     if (this%iprims > 0) then
       call this%outertab%finalize_table()
     end if
+    !
     ! -- write convergence info
-    if (this%icnvg == 1) then
+    !
+    ! -- convergence was achieved
+    if (this%icnvg /= 0) then
       if (this%iprims > 0) then
         write(iout, fmtcnvg) kiter, kstp, kper, this%itertot
       end if
-    end if
-      
-    ! -- Write a message if convergence was not achieved
-    if (this%icnvg == 0) then
+    !
+    ! -- convergence was not achieved
+    else
       write(iout, fmtnocnvg) this%id, kper, kstp
     end if
-      
     !
     ! -- write inner iteration convergence summary
     if (this%iprims == 2) then
@@ -1690,11 +1711,11 @@ contains
         !
         ! -- write line
         write(this%icsvout, '(*(G0,:,","))')                                 &
-            this%nitercnt, totim, kper, kstp, isubtime, kiter, this%itertot,       &
+            this%nitercnt, totim, kper, kstp, kiter, this%itertot,           &
             this%hncg(kiter), im, nodeu
       else
         call this%csv_convergence_summary(this%icsvout, totim, kper, kstp,   &
-                                          isubtime, this%itertot)
+                                          this%itertot)
       end if
     end if
     !
@@ -1742,7 +1763,12 @@ contains
     integer(I4B), intent(in) :: im
     integer(I4B), intent(in) :: itertot
     ! -- local
-    character(len=34) :: strh, strr
+    character(len=LINELENGTH) :: title
+    character(len=LINELENGTH) :: tag
+    character(len=LENPAKLOC) :: strh
+    character(len=LENPAKLOC) :: strr
+    integer(I4B) :: ntabrows
+    integer(I4B) :: ntabcols
     integer(I4B) :: i
     integer(I4B) :: i0
     integer(I4B) :: iouter
@@ -1753,16 +1779,43 @@ contains
     real(DP) :: dv
     real(DP) :: dr
 ! ------------------------------------------------------------------------------
+    !
+    ! -- initialize local variables
     iouter = 1
-    write(iu,"(/,1x,A)") 'INNER ITERATION SUMMARY'
-    write(iu,"(1x,128('-'))")
-    write(iu,'(1x,3a)') '    TOTAL      OUTER     INNER',                      &
-      '                    MAXIMUM CHANGE        MAXIMUM',                     &
-      '                  MAXIMUM RESIDUAL        MAXIMUM'
-    write(iu,'(1x,3a)') 'ITERATION  ITERATION ITERATION',                      &
-      '                    MODEL-(CELLID)         CHANGE',                     &
-      '                    MODEL-(CELLID)       RESIDUAL'
-    write(iu,"(1x,128('-'))")
+    !
+    ! -- initialize inner iteration summary table
+    if (.not. associated(this%innertab)) then
+      !
+      ! -- create outer iteration table
+      ! -- table dimensions
+      ntabrows = itertot
+      ntabcols = 7
+      !
+      ! -- initialize table and define columns
+      title = 'INNER ITERATION SUMMARY'
+      call table_cr(this%innertab, this%name, title)
+      call this%innertab%table_df(ntabrows, ntabcols, iu)
+      tag = 'TOTAL ITERATION'
+      call this%innertab%initialize_column(tag, 10, alignment=TABRIGHT)
+      tag = 'OUTER ITERATION'
+      call this%innertab%initialize_column(tag, 10, alignment=TABRIGHT)
+      tag = 'INNER ITERATION'
+      call this%innertab%initialize_column(tag, 10, alignment=TABRIGHT)
+      tag = 'MAXIMUM CHANGE'
+      call this%innertab%initialize_column(tag, 15, alignment=TABRIGHT)
+      tag = 'MAXIMUM CHANGE MODEL-(CELLID)'
+      call this%innertab%initialize_column(tag, LENPAKLOC, alignment=TABRIGHT)
+      tag = 'MAXIMUM RESIDUAL'
+      call this%innertab%initialize_column(tag, 15, alignment=TABRIGHT)
+      tag = 'MAXIMUM RESIDUAL MODEL-(CELLID)'
+      call this%innertab%initialize_column(tag, LENPAKLOC, alignment=TABRIGHT)
+    !
+    ! -- reset the output unit
+    else
+      call this%innertab%set_iout(iu)
+    end if
+    !
+    ! -- write the inner iteration summary to unit iu
     i0 = 0
     do k = 1, itertot
       i = this%itinner(k)
@@ -1790,24 +1843,26 @@ contains
       end if
       call this%sln_get_loc(locdv, strh)
       call this%sln_get_loc(locdr, strr)
-      write(iu, '(1x,3i10,a34,g15.7,a34,g15.7)') k, iouter, i,                 &
-                                                 adjustr(trim(strh)), dv,      &
-                                                 adjustr(trim(strr)), dr
+      !
+      ! -- add data to innertab
+      call this%innertab%add_term(k)
+      call this%innertab%add_term(iouter)
+      call this%innertab%add_term(i)
+      call this%innertab%add_term(dv)
+      call this%innertab%add_term(adjustr(trim(strh)))
+      call this%innertab%add_term(dr)
+      call this%innertab%add_term(adjustr(trim(strr)))
+      !
+      ! -- update i0
       i0 = i
     end do
-    !
-    ! -- write blank line
-    if (im <= this%convnmod) then
-      write(iu, '(a)') ''
-    end if
     !
     ! -- return
     return
   end subroutine convergence_summary
 
 
-  subroutine csv_convergence_summary(this, iu, totim, kper, kstp, isubtime,    &
-                                     itertot)
+  subroutine csv_convergence_summary(this, iu, totim, kper, kstp, itertot)
 ! ******************************************************************************
 ! csv_convergence_summary -- Save convergence summary to a csv file
 ! ******************************************************************************
@@ -1822,7 +1877,6 @@ contains
     real(DP), intent(in) :: totim
     integer(I4B), intent(in) :: kper
     integer(I4B), intent(in) :: kstp
-    integer(I4B), intent(in) :: isubtime
     integer(I4B), intent(in) :: itertot
     ! -- local
     integer(I4B) :: i
@@ -1846,7 +1900,7 @@ contains
         iouter = iouter + 1
       end if
       write(iu, '(*(G0,:,","))', advance='NO')                                 &
-        this%nitercnt, totim, kper, kstp, isubtime, iouter, i
+        this%nitercnt, totim, kper, kstp, iouter, i
       !
       ! -- solution summary
       dv = DZERO
