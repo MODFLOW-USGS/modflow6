@@ -21,7 +21,7 @@
 
 \item \texttt{nja}---is the sum of the number of connections and NODES.  When calculating the total number of connections, the connection between cell n and cell m is considered to be different from the connection between cell m and cell n.  Thus, NJA is equal to the total number of connections, including n to m and m to n, and the total number of cells.
 
-\item \texttt{nvert}---is the total number of (x, y) vertex pairs used to define the plan-view shape of each cell in the model grid.  If NVERT is not specified or is specified as zero, then the VERTICES and CELL2D blocks below are not read.
+\item \texttt{nvert}---is the total number of (x, y) vertex pairs used to define the plan-view shape of each cell in the model grid.  If NVERT is not specified or is specified as zero, then the VERTICES and CELL2D blocks below are not read.  NVERT and the accompanying VERTICES and CELL2D blocks should be specified for most simulations.  If the XT3D or SAVE\_SPECIFIC\_DISCHARGE options are specified in the NPF Package, then this information is required.
 
 \end{description}
 \item \textbf{Block: GRIDDATA}
@@ -32,6 +32,8 @@
 \item \texttt{bot}---is the bottom elevation for each cell.
 
 \item \texttt{area}---is the cell surface area (in plan view).
+
+\item \texttt{idomain}---is an optional array that characterizes the existence status of a cell.  If the IDOMAIN array is not specified, then all model cells exist within the solution.  If the IDOMAIN value for a cell is 0, the cell does not exist in the simulation.  Input and output values will be read and written for the cell, but internal to the program, the cell is excluded from the solution.  If the IDOMAIN value for a cell is 1, the cell exists in the simulation.  IDOMAIN values of -1 cannot be specified for the DISU Package.
 
 \end{description}
 \item \textbf{Block: CONNECTIONDATA}
@@ -47,7 +49,7 @@
 
 \item \texttt{hwva}---is a symmetric array of size NJA.  For horizontal connections, entries in HWVA are the horizontal width perpendicular to flow.  For vertical connections, entries in HWVA are the vertical area for flow.  Thus, values in the HWVA array contain dimensions of both length and area.  Entries in the HWVA array have a one-to-one correspondence with the connections specified in the JA array.  Likewise, there is a one-to-one correspondence between entries in the HWVA array and entries in the IHC array, which specifies the connection type (horizontal or vertical).  Entries in the HWVA array must be symmetric; the program will terminate with an error if the value for HWVA for an n to m connection does not equal the value for HWVA for the corresponding n to m connection.
 
-\item \texttt{angldegx}---is the angle (in degrees) between the horizontal x-axis and the outward normal to the face between a cell and its connecting cells (see figure 8 in the MODFLOW-USG documentation). The angle varies between zero and 360.0 degrees.  ANGLDEGX is only needed if horizontal anisotropy is specified in the NPF Package or if the XT3D option is used in the NPF Package.  ANGLDEGX does not need to be specified if horizontal anisotropy or the XT3D option is not used.  ANGLDEGX is of size NJA; values specified for vertical connections and for the diagonal position are not used.  Note that ANGLDEGX is read in degrees, which is different from MODFLOW-USG, which reads a similar variable (ANGLEX) in radians.
+\item \texttt{angldegx}---is the angle (in degrees) between the horizontal x-axis and the outward normal to the face between a cell and its connecting cells. The angle varies between zero and 360.0 degrees, where zero degrees points in the positive x-axis direction, and 90 degrees points in the positive y-axis direction.  ANGLDEGX is only needed if horizontal anisotropy is specified in the NPF Package, if the XT3D option is used in the NPF Package, or if the SAVE\_SPECIFIC\_DISCHARGE option is specifed in the NPF Package.  ANGLDEGX does not need to be specified if these conditions are not met.  ANGLDEGX is of size NJA; values specified for vertical connections and for the diagonal position are not used.  Note that ANGLDEGX is read in degrees, which is different from MODFLOW-USG, which reads a similar variable (ANGLEX) in radians.
 
 \end{description}
 \item \textbf{Block: VERTICES}

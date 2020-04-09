@@ -12,7 +12,7 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ['csub_sto01']
+ex = ['gwf_sto01']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
@@ -25,8 +25,7 @@ ddir = 'data'
 ## run all examples on Travis
 travis = [True for idx in range(len(exdirs))]
 
-# set replace_exe to None to use default executable
-#replace_exe = {'mf2005': 'mf2005devdbl'}
+# use default executable
 replace_exe = None
 
 htol = [None for idx in range(len(exdirs))]
@@ -156,11 +155,11 @@ def get_model(idx, dir):
     dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
                                   delr=delr, delc=delc,
                                   top=top, botm=botm,
-                                  fname='{}.dis'.format(name))
+                                  filename='{}.dis'.format(name))
 
     # initial conditions
     ic = flopy.mf6.ModflowGwfic(gwf, strt=strt,
-                                fname='{}.ic'.format(name))
+                                filename='{}.ic'.format(name))
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False,
@@ -371,7 +370,6 @@ def main():
     return
 
 
-# use python testmf6_csub_sub03.py --mf2005 mf2005devdbl
 if __name__ == "__main__":
     # print message
     print('standalone run of {}'.format(os.path.basename(__file__)))

@@ -96,7 +96,7 @@ module OutputControlModule
     logical :: isfound, found, endOfBlock
     character(len=LINELENGTH) :: line
     character(len=LINELENGTH) :: ermsg, keyword1, keyword2
-    character(len=5) :: printsave
+    character(len=LINELENGTH) :: printsave
     class(OutputControlDataType), pointer :: ocdobjptr
     ! -- formats
     character(len=*), parameter :: fmtboc =                                    &
@@ -337,7 +337,8 @@ module OutputControlModule
 ! ------------------------------------------------------------------------------
     !
     ! -- get options block
-    call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false.)
+    call this%parser%GetBlock('OPTIONS', isfound, ierr, &
+      supportOpenClose=.true., blockRequired=.false.)
     !
     ! -- parse options block if detected
     if (isfound) then
@@ -356,7 +357,7 @@ module OutputControlModule
         enddo
         if (.not. found) then
           write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN OC OPTION: ',       &
-                                 keyword
+                                 trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
           call ustop()

@@ -3,59 +3,31 @@
 module InputOutputModule
 
   use KindModule, only: DP, I4B
+  use SimVariablesModule, only: iunext
   use SimModule, only: store_error, ustop, store_error_unit,                   &
                        store_error_filename
-  use ConstantsModule, only: LINELENGTH, LENBIGLINE, LENBOUNDNAME,             &
-                             NAMEDBOUNDFLAG, LINELENGTH, MAXCHARLEN
+  use ConstantsModule, only: IUSTART, IULAST,                                  &
+                             LINELENGTH, LENBIGLINE, LENBOUNDNAME,             &
+                             NAMEDBOUNDFLAG, MAXCHARLEN,                       &
+                             TABLEFT, TABCENTER, TABRIGHT,                     &
+                             TABSTRING, TABUCSTRING, TABINTEGER, TABREAL,      &
+                             DZERO
+  use GenericUtilitiesModule, only: IS_SAME, sim_message
   private
-  public :: dclosetest, GetUnit, u8rdcom, uget_block,                          &
+  public :: GetUnit, u8rdcom, uget_block,                                      &
             uterminate_block, UPCASE, URWORD, ULSTLB, UBDSV4,                  &
             ubdsv06, UBDSVB, UCOLNO, ULAPRW,                                   &
             ULASAV, ubdsv1, ubdsvc, ubdsvd, UWWORD,                            &
             same_word, get_node, get_ijk, unitinquire,                         &
-            ParseLine, ulaprufw, write_centered, openfile,                     &
+            ParseLine, ulaprufw, openfile,                                     &
             linear_interpolate, lowcase,                                       &
             read_line, uget_any_block,                                         &
             GetFileFromPath, extract_idnum_or_bndname, urdaux,                 &
             get_jk, uget_block_line, print_format, BuildFixedFormat,           &
-            BuildFloatFormat, BuildIntFormat
+            BuildFloatFormat, BuildIntFormat, fseek_stream,                    &
+            get_nwords
 
   contains
-
-  logical function dclosetest(a,b,eps)
-! ******************************************************************************
-! Check and see if two doubles are close enough to be considered equal
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    implicit none
-    ! -- dummy
-    real(DP), intent(in) :: a
-    real(DP), intent(in) :: b
-    real(DP), intent(in), optional :: eps
-    ! -- local
-    real(DP) :: epslocal, absval
-! ------------------------------------------------------------------------------
-    !
-    if (present(eps)) then
-      epslocal = eps
-    else
-      epslocal = 1.2d-7
-    endif
-    dclosetest=.true.
-    if(a.gt.b) then
-      absval = abs(a)
-      if((a-b) .le. absval*epslocal) return
-    else
-      absval = abs(b)
-      if((b-a) .le. absval*epslocal) return
-    end if
-    dclosetest=.false.
-    !
-    ! -- Return
-    return
-  end function dclosetest
 
   subroutine openfile(iu, iout, fname, ftype, fmtarg_opt, accarg_opt,          &
                       filstat_opt)
@@ -197,19 +169,16 @@ module InputOutputModule
     ! -- dummy
     integer(I4B),intent(inout) :: iu
     ! -- local
-    integer(I4B) :: lastunitnumber
-    parameter(lastunitnumber=10000)
-    integer(I4B), save :: nextunitnumber=1000
     integer(I4B) :: i
     logical :: opened
 ! ------------------------------------------------------------------------------
   !
-    do i = nextunitnumber, lastunitnumber
+    do i = iunext, iulast
       inquire(unit=i, opened=opened)
       if(.not. opened) exit
     enddo
     iu = i
-    nextunitnumber = iu + 1
+    iunext = iu + 1
     !
     ! -- return
     return
@@ -244,7 +213,6 @@ module InputOutputModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use ConstantsModule, only: LINELENGTH
     use, intrinsic :: iso_fortran_env, only: IOSTAT_END
     implicit none
     ! -- dummy
@@ -639,7 +607,7 @@ module InputOutputModule
       return
       end subroutine lowcase
 
-      subroutine UWWORD(LINE,ICOL,ILEN,NCODE,C,N,R,FMT,CENTER,LEFT,SEP)
+      subroutine UWWORD(LINE,ICOL,ILEN,NCODE,C,N,R,FMT,ALIGNMENT,SEP)
       implicit none
       ! -- dummy
       character (len=*), intent(inout) :: LINE
@@ -650,76 +618,99 @@ module InputOutputModule
       integer(I4B), intent(in) :: N
       real(DP), intent(in) :: R
       character (len=*), optional, intent(in) :: FMT
-      logical, optional, intent(in) :: CENTER
-      logical, optional, intent(in) :: LEFT
+      integer(I4B), optional, intent(in) :: ALIGNMENT
       character (len=*), optional, intent(in) :: SEP
       ! -- local
       character (len=16) :: cfmt
+      character (len=16) :: cffmt
       character (len=ILEN) :: cval
-      logical :: lcenter
-      logical :: lleft
+      integer(I4B) :: ialign
       integer(I4B) :: i
       integer(I4B) :: ispace
       integer(I4B) :: istop
+      integer(I4B) :: ipad
+      integer(I4B) :: ireal
       ! -- code
+      !
+      ! -- initialize locals
+      ipad = 0
+      ireal = 0
+      !
+      ! -- process dummy variables
       if (present(FMT)) then
         CFMT = FMT
       else
         select case(NCODE)
-          case(0, 1)
+          case(TABSTRING, TABUCSTRING)
             write(cfmt, '(A,I0,A)') '(A', ILEN, ')'
-          case(2)
+          case(TABINTEGER)
             write(cfmt, '(A,I0,A)') '(I', ILEN, ')'
-          case(3)
+          case(TABREAL)
+            ireal = 1
             i = ILEN - 7
-            write(cfmt, '(A,I0,A,I0,A)') '(G', ILEN, '.', i, ')'
+            write(cfmt, '(A,I0,A,I0,A)') '(1PG', ILEN, '.', i, ')'
+            if (R >= DZERO) then
+              ipad = 1
+            end if
         end select
       end if
+      write(cffmt, '(A,I0,A)') '(A', ILEN, ')'
 
-      if (present(CENTER)) then
-        lcenter = CENTER
+      if (present(ALIGNMENT)) then
+        ialign = ALIGNMENT
       else
-        lcenter = .FALSE.
+        ialign = TABRIGHT
       end if
-
-      if (present(LEFT)) then
-        lleft = LEFT
-      else
-        lleft = .FALSE.
-      end if
-
-      if (NCODE == 0 .or. NCODE == 1) then
-        if (len_trim(adjustl(C)) > ILEN) then
-          cval = adjustl(C)
-        else
-          cval = trim(adjustl(C))
-        end if
-        if (lcenter) then
-          i = len_trim(cval)
-          ispace = (ILEN - i) / 2
-          cval = repeat(' ', ispace) // trim(cval)
-        else if (lleft) then
-          cval = trim(adjustl(cval))
-        else
-          cval = adjustr(cval)
-        end if
-        if (NCODE == 1) then
+      !
+      ! -- 
+      if (NCODE == TABSTRING .or. NCODE == TABUCSTRING) then
+        cval = C
+        if (NCODE == TABUCSTRING) then
           call UPCASE(cval)
         end if
+      else if (NCODE == TABINTEGER) then
+        write(cval, cfmt) N
+      else if (NCODE == TABREAL) then
+        write(cval, cfmt) R
       end if
+      !
+      ! -- apply alignment to cval
+      if (len_trim(adjustl(cval)) > ILEN) then
+        cval = adjustl(cval)
+      else
+        cval = trim(adjustl(cval))
+      end if
+      if (ialign == TABCENTER) then
+        i = len_trim(cval)
+        ispace = (ILEN - i) / 2
+        if (ireal > 0) then
+          if (ipad > 0) then
+            cval = ' ' //trim(adjustl(cval))
+          else
+            cval = trim(adjustl(cval))
+          end if
+        else
+          cval = repeat(' ', ispace) // trim(cval)
+        end if
+      else if (ialign == TABLEFT) then
+        cval = trim(adjustl(cval))
+        if (ipad > 0) then
+          cval = ' ' //trim(adjustl(cval))
+        end if
+      else
+        cval = adjustr(cval)
+      end if
+      if (NCODE == TABUCSTRING) then
+        call UPCASE(cval)
+      end if
+      !
+      ! -- increment istop to the end of the column
+      istop = ICOL + ILEN - 1
+      !
+      ! -- write final string to line
+      write(LINE(ICOL:istop), cffmt) cval
 
-      istop = ICOL + ILEN
-
-      select case(NCODE)
-        case(0, 1)
-          write(LINE(ICOL:istop), cfmt) cval
-        case(2)
-          write(LINE(ICOL:istop), cfmt) N
-        case(3)
-          write(LINE(ICOL:istop), cfmt) R
-      end select
-
-      ICOL = istop
+      ICOL = istop + 1
 
       if (present(SEP)) then
         i = len(SEP)
@@ -727,6 +718,7 @@ module InputOutputModule
         write(LINE(ICOL:istop), '(A)') SEP
         ICOL = istop
       end if
+      
 !
 !------return.
       return
@@ -770,6 +762,7 @@ module InputOutputModule
       CHARACTER(len=30) RW
       CHARACTER(len=1) TAB
       character(len=200) :: msg
+      character(len=LINELENGTH) :: msg_line
 !C     ------------------------------------------------------------------
       TAB=CHAR(9)
 !C
@@ -863,30 +856,34 @@ module InputOutputModule
 !C7B-----If output unit is positive; write a message to output unit.
       ELSE IF(IOUT.GT.0) THEN
          IF(IN.GT.0) THEN
-            WRITE(IOUT,201) IN,LINE(ISTART:ISTOP),STRING(1:L),LINE
+            write(msg_line,201) IN,LINE(ISTART:ISTOP),STRING(1:L)
          ELSE
-            WRITE(IOUT,202) LINE(ISTART:ISTOP),STRING(1:L),LINE
+            WRITE(msg_line,202) LINE(ISTART:ISTOP),STRING(1:L)
          END IF
-201      FORMAT(1X,/1X,'FILE UNIT ',I4,' : ERROR CONVERTING "',A, &
-     &       '" TO ',A,' IN LINE:',/1X,A)
-202      FORMAT(1X,/1X,'KEYBOARD INPUT : ERROR CONVERTING "',A, &
-     &       '" TO ',A,' IN LINE:',/1X,A)
+         call sim_message(msg_line, iunit=IOUT, skipbefore=1)
+         call sim_message(LINE, iunit=IOUT, fmt='(1x,a)')
+201      FORMAT(1X,'FILE UNIT ',I4,' : ERROR CONVERTING "',A,                    &
+     &          '" TO ',A,' IN LINE:')
+202      FORMAT(1X,'KEYBOARD INPUT : ERROR CONVERTING "',A,                      &
+                '" TO ',A,' IN LINE:')
 !C
 !C7C-----If output unit is 0; write a message to default output.
       ELSE
          IF(IN.GT.0) THEN
-            WRITE(*,201) IN,LINE(ISTART:ISTOP),STRING(1:L),LINE
+            write(msg_line,201) IN,LINE(ISTART:ISTOP),STRING(1:L)
          ELSE
-            WRITE(*,202) LINE(ISTART:ISTOP),STRING(1:L),LINE
+            WRITE(msg_line,202) LINE(ISTART:ISTOP),STRING(1:L)
          END IF
+         call sim_message(msg_line, iunit=IOUT, skipbefore=1)
+         call sim_message(LINE, iunit=IOUT, fmt='(1x,a)')
       END IF
 !C
 !C7D-----STOP after storing error message.
       call lowcase(string)
       if (in > 0) then
-        write(msg,205)in,line(istart:istop),trim(string)
+        write(msg,205) in,line(istart:istop),trim(string)
       else
-        write(msg,207)line(istart:istop),trim(string)
+        write(msg,207) line(istart:istop),trim(string)
       endif
 205   format('File unit ',I0,': Error converting "',A, &
      &       '" to ',A,' in following line:')
@@ -959,8 +956,6 @@ module InputOutputModule
 !C
 !C1------WRITE UNFORMATTED RECORDS IDENTIFYING DATA.
       IF(IOUT.GT.0) WRITE(IOUT,fmt) TEXT,IBDCHN,KSTP,KPER
-    1 FORMAT(1X,'UBDSV4 SAVING "',A16,'" ON UNIT',I4, &
-     &     ' AT TIME STEP',I3,', STRESS PERIOD',I4)
       WRITE(IBDCHN) KSTP,KPER,TEXT,NCOL,NROW,-NLAY
       WRITE(IBDCHN) 5,DELT,PERTIM,TOTIM
       WRITE(IBDCHN) NAUX+1
@@ -1108,7 +1103,7 @@ module InputOutputModule
 !C
 !C2------MAKE SURE THE FORMAT CODE (IP OR IPRN) IS
 !C2------BETWEEN 1 AND 21.
-    5 IP=IPRN
+      IP=IPRN
       IF(IP.LT.1 .OR. IP.GT.21) IP=12
 !C
 !C3------CALL THE UTILITY MODULE UCOLNO TO PRINT COLUMN NUMBERS.
@@ -1123,117 +1118,117 @@ module InputOutputModule
       IF(IP.EQ.21) CALL UCOLNO(1,NCOL,0,7,10,IOUT)
 !C
 !C4------LOOP THROUGH THE ROWS PRINTING EACH ONE IN ITS ENTIRETY.
-      DO 1000 I=1,NROW
-      GO TO(10,20,30,40,50,60,70,80,90,100,110,120,130,140,150,160,170, &
-     &      180,190,200,210), IP
-!C
+      DO I=1,NROW
+      SELECT CASE(IP)
+
+      CASE(1)
 !C------------ FORMAT 11G10.3
-   10 WRITE(IOUT,11) I,(BUF(J,I),J=1,NCOL)
-   11 FORMAT(1X,I3,2X,1PG10.3,10(1X,G10.3):/(5X,11(1X,G10.3)))
-      GO TO 1000
-!C
+      WRITE(IOUT,11) I,(BUF(J,I),J=1,NCOL)
+11    FORMAT(1X,I3,2X,1PG10.3,10(1X,G10.3):/(5X,11(1X,G10.3)))
+
+      CASE(2)
 !C------------ FORMAT 9G13.6
-   20 WRITE(IOUT,21) I,(BUF(J,I),J=1,NCOL)
-   21 FORMAT(1X,I3,2X,1PG13.6,8(1X,G13.6):/(5X,9(1X,G13.6)))
-      GO TO 1000
-!C
+      WRITE(IOUT,21) I,(BUF(J,I),J=1,NCOL)
+21    FORMAT(1X,I3,2X,1PG13.6,8(1X,G13.6):/(5X,9(1X,G13.6)))
+
+      CASE(3)
 !C------------ FORMAT 15F7.1
-   30 WRITE(IOUT,31) I,(BUF(J,I),J=1,NCOL)
-   31 FORMAT(1X,I3,1X,15(1X,F7.1):/(5X,15(1X,F7.1)))
-      GO TO 1000
-!C
+      WRITE(IOUT,31) I,(BUF(J,I),J=1,NCOL)
+31    FORMAT(1X,I3,1X,15(1X,F7.1):/(5X,15(1X,F7.1)))
+
+      CASE(4)
 !C------------ FORMAT 15F7.2
-   40 WRITE(IOUT,41) I,(BUF(J,I),J=1,NCOL)
-   41 FORMAT(1X,I3,1X,15(1X,F7.2):/(5X,15(1X,F7.2)))
-      GO TO 1000
-!C
+      WRITE(IOUT,41) I,(BUF(J,I),J=1,NCOL)
+41    FORMAT(1X,I3,1X,15(1X,F7.2):/(5X,15(1X,F7.2)))
+
+      CASE(5)
 !C------------ FORMAT 15F7.3
-   50 WRITE(IOUT,51) I,(BUF(J,I),J=1,NCOL)
-   51 FORMAT(1X,I3,1X,15(1X,F7.3):/(5X,15(1X,F7.3)))
-      GO TO 1000
-!C
+      WRITE(IOUT,51) I,(BUF(J,I),J=1,NCOL)
+51    FORMAT(1X,I3,1X,15(1X,F7.3):/(5X,15(1X,F7.3)))
+
+      CASE(6)
 !C------------ FORMAT 15F7.4
-   60 WRITE(IOUT,61) I,(BUF(J,I),J=1,NCOL)
-   61 FORMAT(1X,I3,1X,15(1X,F7.4):/(5X,15(1X,F7.4)))
-      GO TO 1000
-!C
+      WRITE(IOUT,61) I,(BUF(J,I),J=1,NCOL)
+61    FORMAT(1X,I3,1X,15(1X,F7.4):/(5X,15(1X,F7.4)))
+
+      CASE(7)
 !C------------ FORMAT 20F5.0
-   70 WRITE(IOUT,71) I,(BUF(J,I),J=1,NCOL)
-   71 FORMAT(1X,I3,1X,20(1X,F5.0):/(5X,20(1X,F5.0)))
-      GO TO 1000
-!C
+      WRITE(IOUT,71) I,(BUF(J,I),J=1,NCOL)
+71    FORMAT(1X,I3,1X,20(1X,F5.0):/(5X,20(1X,F5.0)))
+
+      CASE(8)
 !C------------ FORMAT 20F5.1
-   80 WRITE(IOUT,81) I,(BUF(J,I),J=1,NCOL)
-   81 FORMAT(1X,I3,1X,20(1X,F5.1):/(5X,20(1X,F5.1)))
-      GO TO 1000
-!C
+      WRITE(IOUT,81) I,(BUF(J,I),J=1,NCOL)
+81    FORMAT(1X,I3,1X,20(1X,F5.1):/(5X,20(1X,F5.1)))
+
+      CASE(9)
 !C------------ FORMAT 20F5.2
-   90 WRITE(IOUT,91) I,(BUF(J,I),J=1,NCOL)
-   91 FORMAT(1X,I3,1X,20(1X,F5.2):/(5X,20(1X,F5.2)))
-      GO TO 1000
-!C
+      WRITE(IOUT,91) I,(BUF(J,I),J=1,NCOL)
+91    FORMAT(1X,I3,1X,20(1X,F5.2):/(5X,20(1X,F5.2)))
+
+      CASE(10)
 !C------------ FORMAT 20F5.3
-  100 WRITE(IOUT,101) I,(BUF(J,I),J=1,NCOL)
-  101 FORMAT(1X,I3,1X,20(1X,F5.3):/(5X,20(1X,F5.3)))
-      GO TO 1000
-!C
+      WRITE(IOUT,101) I,(BUF(J,I),J=1,NCOL)
+101   FORMAT(1X,I3,1X,20(1X,F5.3):/(5X,20(1X,F5.3)))
+
+      CASE(11)
 !C------------ FORMAT 20F5.4
-  110 WRITE(IOUT,111) I,(BUF(J,I),J=1,NCOL)
-  111 FORMAT(1X,I3,1X,20(1X,F5.4):/(5X,20(1X,F5.4)))
-      GO TO 1000
-!C
+      WRITE(IOUT,111) I,(BUF(J,I),J=1,NCOL)
+111   FORMAT(1X,I3,1X,20(1X,F5.4):/(5X,20(1X,F5.4)))
+
+      CASE(12)
 !C------------ FORMAT 10G11.4
-  120 WRITE(IOUT,121) I,(BUF(J,I),J=1,NCOL)
-  121 FORMAT(1X,I3,2X,1PG11.4,9(1X,G11.4):/(5X,10(1X,G11.4)))
-      GO TO 1000
-!C
+      WRITE(IOUT,121) I,(BUF(J,I),J=1,NCOL)
+121   FORMAT(1X,I3,2X,1PG11.4,9(1X,G11.4):/(5X,10(1X,G11.4)))
+
+      CASE(13)
 !C------------ FORMAT 10F6.0
-  130 WRITE(IOUT,131) I,(BUF(J,I),J=1,NCOL)
-  131 FORMAT(1X,I3,1X,10(1X,F6.0):/(5X,10(1X,F6.0)))
-      GO TO 1000
-!C
+      WRITE(IOUT,131) I,(BUF(J,I),J=1,NCOL)
+131   FORMAT(1X,I3,1X,10(1X,F6.0):/(5X,10(1X,F6.0)))
+
+      CASE(14)
 !C------------ FORMAT 10F6.1
-  140 WRITE(IOUT,141) I,(BUF(J,I),J=1,NCOL)
-  141 FORMAT(1X,I3,1X,10(1X,F6.1):/(5X,10(1X,F6.1)))
-      GO TO 1000
-!C
+      WRITE(IOUT,141) I,(BUF(J,I),J=1,NCOL)
+141   FORMAT(1X,I3,1X,10(1X,F6.1):/(5X,10(1X,F6.1)))
+
+      CASE(15)
 !C------------ FORMAT 10F6.2
-  150 WRITE(IOUT,151) I,(BUF(J,I),J=1,NCOL)
-  151 FORMAT(1X,I3,1X,10(1X,F6.2):/(5X,10(1X,F6.2)))
-      GO TO 1000
-!C
+      WRITE(IOUT,151) I,(BUF(J,I),J=1,NCOL)
+151   FORMAT(1X,I3,1X,10(1X,F6.2):/(5X,10(1X,F6.2)))
+
+      CASE(16)
 !C------------ FORMAT 10F6.3
-  160 WRITE(IOUT,161) I,(BUF(J,I),J=1,NCOL)
-  161 FORMAT(1X,I3,1X,10(1X,F6.3):/(5X,10(1X,F6.3)))
-      GO TO 1000
-!C
+      WRITE(IOUT,161) I,(BUF(J,I),J=1,NCOL)
+161   FORMAT(1X,I3,1X,10(1X,F6.3):/(5X,10(1X,F6.3)))
+
+      CASE(17)
 !C------------ FORMAT 10F6.4
-  170 WRITE(IOUT,171) I,(BUF(J,I),J=1,NCOL)
-  171 FORMAT(1X,I3,1X,10(1X,F6.4):/(5X,10(1X,F6.4)))
-      GO TO 1000
-!C
+      WRITE(IOUT,171) I,(BUF(J,I),J=1,NCOL)
+171   FORMAT(1X,I3,1X,10(1X,F6.4):/(5X,10(1X,F6.4)))
+
+      CASE(18)
 !C------------ FORMAT 10F6.5
-  180 WRITE(IOUT,181) I,(BUF(J,I),J=1,NCOL)
-  181 FORMAT(1X,I3,1X,10(1X,F6.5):/(5X,10(1X,F6.5)))
-      GO TO 1000
-!C
+      WRITE(IOUT,181) I,(BUF(J,I),J=1,NCOL)
+181   FORMAT(1X,I3,1X,10(1X,F6.5):/(5X,10(1X,F6.5)))
+
+      CASE(19)
 !C------------FORMAT 5G12.5
-  190 WRITE(IOUT,191) I,(BUF(J,I),J=1,NCOL)
-  191 FORMAT(1X,I3,2X,1PG12.5,4(1X,G12.5):/(5X,5(1X,G12.5)))
-      GO TO 1000
-!C
+      WRITE(IOUT,191) I,(BUF(J,I),J=1,NCOL)
+191   FORMAT(1X,I3,2X,1PG12.5,4(1X,G12.5):/(5X,5(1X,G12.5)))
+
+      CASE(20)
 !C------------FORMAT 6G11.4
-  200 WRITE(IOUT,201) I,(BUF(J,I),J=1,NCOL)
-  201 FORMAT(1X,I3,2X,1PG11.4,5(1X,G11.4):/(5X,6(1X,G11.4)))
-      GO TO 1000
-!C
+      WRITE(IOUT,201) I,(BUF(J,I),J=1,NCOL)
+201   FORMAT(1X,I3,2X,1PG11.4,5(1X,G11.4):/(5X,6(1X,G11.4)))
+
+      CASE(21)
 !C------------FORMAT 7G9.2
-  210 WRITE(IOUT,211) I,(BUF(J,I),J=1,NCOL)
-  211 FORMAT(1X,I3,2X,1PG9.2,6(1X,G9.2):/(5X,7(1X,G9.2)))
-!C
- 1000 CONTINUE
-!C
-!C5------RETURN
+      WRITE(IOUT,211) I,(BUF(J,I),J=1,NCOL)
+211   FORMAT(1X,I3,2X,1PG9.2,6(1X,G9.2):/(5X,7(1X,G9.2)))
+
+      END SELECT
+      END DO
+      
       RETURN
       END SUBROUTINE ULAPRW
 
@@ -1515,17 +1510,29 @@ module InputOutputModule
   end subroutine get_jk
 
   subroutine unitinquire(iu)
+    ! -- dummy
     integer(I4B) :: iu
-    character(len=100) :: fname,ac,act,fm,frm,seq,unf
-    inquire(unit=iu,name=fname,access=ac,action=act,formatted=fm, &
-    sequential=seq,unformatted=unf,form=frm)
-
-    10 format('unit:',i4,'  name:',a,'  access:',a,'  action:',a,/, &
-    '    formatted:',a, &
-    '  sequential:',a,'  unformatted:',a,'  form:',a)
-
-    write(*,10)iu,trim(fname),trim(ac),trim(act),trim(fm),trim(seq), &
-    trim(unf),trim(frm)
+    ! -- local
+    character(len=LINELENGTH) :: line
+    character(len=100) :: fname, ac, act, fm, frm, seq, unf
+    ! -- format
+    character(len=*), parameter :: fmta =                                        &
+       &"('unit:',i4,'  name:',a,'  access:',a,'  action:',a)"                                  
+    character(len=*), parameter :: fmtb =                                        &
+       &"('    formatted:',a,'  sequential:',a,'  unformatted:',a,'  form:',a)"                                  
+    ! -- code
+    !
+    ! -- set strings using inquire statement
+    inquire(unit=iu, name=fname, access=ac, action=act, formatted=fm,            &
+            sequential=seq, unformatted=unf, form=frm)
+    !
+    ! -- write the results of the inquire statement
+    write(line,fmta) iu, trim(fname), trim(ac), trim(act)
+    call sim_message(line)
+    write(line,fmtb) trim(fm), trim(seq), trim(unf), trim(frm)
+    call sim_message(line)
+    !
+    ! -- return
     return
   end subroutine unitinquire
 
@@ -1552,13 +1559,8 @@ module InputOutputModule
     endif
     linelen = len(line)
     !
-    ! -- Count words in line and allocate words array
-    lloc = 1
-    do
-      call URWORD(line, lloc, istart, istop, 0, idum, rdum, 0, 0)
-      if (istart == linelen) exit
-      nwords = nwords + 1
-    enddo
+    ! -- get the number of words in a line and allocate words array
+    nwords = get_nwords(line)
     allocate(words(nwords))
     !
     ! -- Populate words array and return
@@ -1566,7 +1568,9 @@ module InputOutputModule
     do i = 1, nwords
       call URWORD(line, lloc, istart, istop, 0, idum, rdum, 0, 0)
       words(i) = line(istart:istop)
-    enddo
+    end do
+    !
+    ! -- return
     return
   end subroutine ParseLine
 
@@ -1616,32 +1620,6 @@ module InputOutputModule
     return
   end subroutine ulaprufw
 
-  subroutine write_centered(text, iout, linelen)
-    ! Write text to unit iout centered in width defined by linelen
-    ! Left-pad with blanks as needed.
-    use ConstantsModule, only: LINELENGTH
-    implicit none
-    ! -- dummy
-    character(len=*), intent(in) :: text
-    integer(I4B), intent(in) :: iout
-    integer(I4B), intent(in) :: linelen
-    ! -- local
-    integer(I4B) :: loc1, loc2, lentext, nspaces
-    character(len=LINELENGTH) :: newline, textleft
-    !
-    if (iout<=0) return
-    textleft = adjustl(text)
-    lentext = len_trim(textleft)
-    nspaces = linelen - lentext
-    loc1 = (nspaces / 2) + 1
-    loc2 = loc1 + lentext - 1
-    newline = ' '
-    newline(loc1:loc2) = textleft
-    write(iout,'(a)')trim(newline)
-    !
-    return
-  end subroutine write_centered
-
   function linear_interpolate(t0, t1, y0, y1, t) result(y)
     implicit none
     ! -- dummy
@@ -1652,7 +1630,7 @@ module InputOutputModule
     character(len=100) :: msg
     !
     ! -- don't get bitten by rounding errors or divide-by-zero
-    if (dclosetest(t0, t1) .or. dclosetest(t, t1)) then
+    if (IS_SAME(t0, t1) .or. IS_SAME(t, t1)) then
       y = y1
     elseif (t == t0) then
       y = y0
@@ -1902,6 +1880,9 @@ module InputOutputModule
     if (nwords < 1) then
       ermsg = 'Could not build PRINT_FORMAT from line' // trim(line)
       call store_error(trim(ermsg))
+      ermsg = 'Syntax is: COLUMNS <columns> WIDTH <width> DIGITS &
+              &<digits> <format>'
+      call store_error(trim(ermsg))
       call store_error_unit(inunit)
       call ustop()
     endif
@@ -1911,7 +1892,9 @@ module InputOutputModule
       if (.not. same_word(words(1), 'COLUMNS')) ierr = 1
       if (.not. same_word(words(3), 'WIDTH')) ierr = 1
       ! -- Read nvalues and nwidth
-      read(words(2), *, iostat=ierr) nvaluesp
+      if (ierr == 0) then
+        read(words(2), *, iostat=ierr) nvaluesp
+      endif
       if (ierr == 0) then
         read(words(4), *, iostat=ierr) nwidthp
       endif
@@ -1921,6 +1904,9 @@ module InputOutputModule
     if (ierr /= 0) then
       call store_error(ermsg)
       call store_error(line)
+      ermsg = 'Syntax is: COLUMNS <columns> WIDTH <width> &
+              &DIGITS <digits> <format>'
+      call store_error(trim(ermsg))
       call store_error_unit(inunit)
       call ustop()
     endif
@@ -1958,7 +1944,9 @@ module InputOutputModule
           editdesc = 'S'
           if (isint) ierr = 1
         case default
-          ermsg = 'Error in Output Control: Unrecognized option: ' // words(i)
+          ermsg = 'Error in format specification. Unrecognized option: ' // words(i)
+          call store_error(ermsg)
+          ermsg = 'Valid values are EXPONENTIAL, FIXED, GENERAL, or SCIENTIFIC.'
           call store_error(ermsg)
           call store_error_unit(inunit)
           call ustop()
@@ -2143,5 +2131,86 @@ module InputOutputModule
     !
     return
   end subroutine BuildIntFormat
+
+
+  function get_nwords(line)
+! ******************************************************************************
+! get_nwords -- return number of words in a string
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- return variable
+    integer(I4B) :: get_nwords
+    ! -- dummy
+    character(len=*), intent(in) :: line
+    ! -- local
+    integer(I4B) :: linelen
+    integer(I4B) :: lloc
+    integer(I4B) :: istart
+    integer(I4B) :: istop
+    integer(I4B) :: idum
+    real(DP) :: rdum
+    !
+    ! -- initialize variables
+    get_nwords = 0
+    linelen = len(line)
+    !
+    ! -- Count words in line and allocate words array
+    lloc = 1
+    do
+      call URWORD(line, lloc, istart, istop, 0, idum, rdum, 0, 0)
+      if (istart == linelen) exit
+      get_nwords = get_nwords + 1
+    end do
+    !
+    ! -- return
+    return
+  end function get_nwords
+
+  subroutine fseek_stream(iu, offset, whence, status)
+! ******************************************************************************
+! Move the file pointer.  Patterned after fseek, which is not 
+! supported as part of the fortran standard.  For this subroutine to work
+! the file must have been opened with access='stream' and action='readwrite'.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    integer(I4B), intent(in) :: iu
+    integer(I4B), intent(in) :: offset
+    integer(I4B), intent(in) :: whence
+    integer(I4B), intent(inout) :: status
+    integer(I4B) :: ipos
+! ------------------------------------------------------------------------------
+    !
+    inquire(unit=iu, size=ipos)
+    
+    select case(whence)
+    case(0)
+      !
+      ! -- whence = 0, offset is relative to start of file
+      ipos = 0 + offset
+    case(1)
+      !
+      ! -- whence = 1, offset is relative to current pointer position
+      inquire(unit=iu, pos=ipos)
+      ipos = ipos + offset
+    case(2)
+      !
+      ! -- whence = 2, offset is relative to end of file
+      inquire(unit=iu, size=ipos)
+      ipos = ipos + offset
+    end select
+    !
+    ! -- position the file pointer to ipos
+    write(iu, pos=ipos, iostat=status)
+    inquire(unit=iu, pos=ipos)
+    !
+    ! -- return
+    return
+  end subroutine fseek_stream
+  
+  
 
 END MODULE InputOutputModule

@@ -4,7 +4,8 @@ module TimeArraySeriesModule
   use BlockParserModule,  only: BlockParserType
   use ConstantsModule,    only: LINELENGTH, UNDEFINED, STEPWISE, LINEAR,        &
                                 LENTIMESERIESNAME, LENBIGLINE, DZERO, DONE
-  use InputOutputModule,  only: dclosetest, GetUnit, openfile
+  use GenericUtilitiesModule,   only: IS_SAME
+  use InputOutputModule,  only: GetUnit, openfile
   use KindModule,         only: DP, I4B
   use ListModule,         only: ListType, ListNodeType
   use SimModule,          only: count_errors, store_error, store_error_unit, &
@@ -19,9 +20,6 @@ module TimeArraySeriesModule
   private
   public  :: TimeArraySeriesType, ConstructTimeArraySeries, &
              CastAsTimeArraySeriesType, GetTimeArraySeriesFromList
-  private :: epsil
-
-  real(DP), parameter :: epsil = 1.0d-10
 
   type TimeArraySeriesType
     ! -- Public members
@@ -135,7 +133,8 @@ contains
     ierr = 0
     !
     ! -- get BEGIN line of ATTRIBUTES block
-    call this%parser%GetBlock('ATTRIBUTES', found, ierr)
+    call this%parser%GetBlock('ATTRIBUTES', found, ierr, &
+      supportOpenClose=.true.)
     if (.not. found) then
       ermsg = 'Error: Attributes block not found in file: ' // &
               trim(fname)
@@ -419,7 +418,8 @@ contains
       call ConstructTimeArray(ta, this%dis)
       ! -- read a time and an array from the input file
       ! -- Get a TIME block and read the time
-      call this%parser%GetBlock('TIME', isFound, ierr, supportOpenClose=.true.)
+      call this%parser%GetBlock('TIME', isFound, ierr, &
+        supportOpenClose=.true.)
       if (isFound) then
         ta%taTime = this%parser%GetDouble()
         ! -- Read the array
@@ -501,7 +501,7 @@ contains
           ierr = 1
         endif
       else
-        if (dclosetest(taEarlier%taTime, time, epsil)) then
+        if (IS_SAME(taEarlier%taTime, time)) then
           values = taEarlier%taArray
         else
           ! -- Only earlier time is available, and it is not time of interest;
@@ -515,7 +515,7 @@ contains
       endif
     else
       if (associated(taLater)) then
-        if (dclosetest(taLater%taTime, time, epsil)) then
+        if (IS_SAME(taLater%taTime, time)) then
           values = taLater%taArray
         else
           ! -- only later time is available, and it is not time of interest
@@ -760,7 +760,7 @@ contains
         if (associated(currNode%nextNode)) then
           obj => currNode%nextNode%GetItem()
           ta => CastAsTimeArrayType(obj)
-          if (ta%taTime < time  .or. dclosetest(ta%taTime, time, epsil)) then
+          if (ta%taTime < time  .or. IS_SAME(ta%taTime, time)) then
             currNode => currNode%nextNode
           else
             exit

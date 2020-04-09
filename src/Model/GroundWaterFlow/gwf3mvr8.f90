@@ -1,9 +1,9 @@
-!Water Mover Module
+!GWF Water Mover Module
 !This module contains a derived type, called GwfMvrType, that
 !is attached to the GWF model.  The water mover can be used to move water
-!between packages.  The mover requires that mover-aware packages have access to
-!three arrays: qformvr, qtomvr, and qfrommvr.  These arrays are store and
-!managed by a separate object PackageMoverType.  qformvr is a
+!between packages.  The mover requires that mover-aware packages have access
+!to four arrays: qtformvr, qformvr, qtomvr, and qfrommvr.  These arrays are 
+!stored and managed by a separate PackageMoverType object.  qformvr is a
 !vector of volumetric flow rates available for the mover.  The package
 !must fill the vector (dimensioned by number of reaches) with the available
 !water.  qtomvr is a vector containing how much water was actually moved
@@ -21,7 +21,8 @@
 !
 !      type(GwfMvrType),               pointer :: mvr     => null()
 !
-!      Mover aware packages define the following members:
+!      Mover aware packages have access to the following vectors of mover
+!      information, which are stored in the PackageMoverType object:
 !
 !      integer(I4B), pointer            :: imover        => null()
 !      real(DP), dimension(:), pointer, contiguous  :: qtformvr      => null()
@@ -35,23 +36,24 @@
 !      water, but this value decreases as the mover object consumes water from
 !      it.
 !
-!  2.  Create the mover package by calling the cr subroutine:
+!  2.  In gwf_cr create the mover package by calling the CR subroutine:
 !
 !      call mvr_cr(this%mvr, this%name, this%inmvr, this%iout)
 !
-!  3.  The AR method for the mover is called:
+!  3.  In gwf_ar call the AR method for the mover:
 !
 !      if(this%inmvr > 0) call this%mvr%mvr_ar()
 !
-!      Mover aware packages allocate the three vectors (typically to size
-!      maxbound)
+!      Mover aware packages allocate the four vectors.  The first three 
+!      (qtformvr, qformvr, qtomvr) are allocated to the number of providers
+!      and the last one (qfrommvr) is allocated to the number of receivers.
 !
-!  4.  The RP method for the mover is called.  This reads the movers active
-!      for the current period.
+!  4.  In gwf_rp call the RP method for the mover.  This reads the 
+!      movers active for the current period.
 !
 !      if(this%inmvr > 0) call this%mvr%mvr_rp()
 !
-!  5.  The AD method for the mover is called.  This saves qtomvr from the
+!  5.  In gwf_ad call the AD method for the mover.  This saves qtomvr from the
 !      the last time step.
 !
 !      if(this%inmvr > 0) call this%mvr%mvr_ad()
@@ -60,7 +62,7 @@
 !        qtomvr(:) = 0.
 !        qformvr(:) = 0.
 !
-!  6.  In the CF routine, Mover aware packages set:
+!  6.  In gwf_cf call the CF routine. Mover aware packages set:
 !        qtformvr(:) = qformvr(:)
 !        qfrommvr(:) = 0.
 !        qtomvr(:) = 0.
@@ -71,10 +73,12 @@
 !      qfrommvr vectors inside the packages.  This is done by the mover package
 !      using pointers to the appropriate reach locations in qtomvr and qfrommvr.
 !
-!      if(this%inmvr > 0) call this%mvr%mvr_fc()  ! called from gwf%fc()
+!      if(this%inmvr > 0) call this%mvr%mvr_fc()  ! called from gwf%gwf_fc()
 !
 !      a. Mover aware packages first set qformvr(:) = 0.
-!      b. Mover aware packages add qfrommvr terms as a source of water
+!      b. Mover aware packages that are receivers (MAW, SFR, LAK, UZF) add 
+!         qfrommvr terms to their individual control volume equations as a 
+!         source of water.
 !      c. Mover aware packages calculate qformvr as amount of water available
 !         to be moved (these qformvr terms are used in the next iteration
 !         by this%mvr%mvr_fc() to calculate how much water is actually moved)
@@ -95,11 +99,16 @@
 module GwfMvrModule
   use KindModule,             only: DP, I4B
   use ConstantsModule,        only: LENORIGIN, LENPACKAGENAME, LENMODELNAME,   &
-                                    LENBUDTXT, LENAUXNAME, DZERO, MAXCHARLEN
+                                    LENBUDTXT, LENAUXNAME, LENPAKLOC,          &
+                                    DZERO, DNODATA, MAXCHARLEN
   use MvrModule,              only: MvrType
   use BudgetModule,           only: BudgetType, budget_cr
+  use BudgetObjectModule,     only: BudgetObjectType, budgetobject_cr
   use NumericalPackageModule, only: NumericalPackageType
   use BlockParserModule,      only: BlockParserType
+  use PackageMoverModule,     only: PackageMoverType
+  use BaseDisModule,          only: DisBaseType
+  use InputOutputModule,      only: urword
 
   implicit none
   private
@@ -111,16 +120,19 @@ module GwfMvrModule
     integer(I4B), pointer                            :: maxpackages => null()    !max number of packages to be specified
     integer(I4B), pointer                            :: maxcomb => null()        !max number of combination of packages
     integer(I4B), pointer                            :: nmvr => null()           !number of movers for current stress period
-    integer(I4B), pointer                            :: iexgmvr => null()        !flag to indicate mover is for an exchange (not for a single model)
-    integer(I4B), pointer                            :: imodelnames => null()    !flag to indicate package input file has model names in it
+    integer(I4B), pointer                            :: iexgmvr => null()        !indicate mover is for an exchange (not for a single model)
+    integer(I4B), pointer                            :: imodelnames => null()    !indicate package input file has model names in it
     real(DP), pointer                                :: omega => null()          !temporal weighting factor (not presently used)
     integer(I4B), dimension(:), pointer, contiguous  :: ientries => null()       !number of entries for each combination
     character(len=LENORIGIN+1),                                                &
       dimension(:), pointer, contiguous              :: pakorigins               !array of model//package names
     character(len=LENPACKAGENAME),                                             &
-      dimension(:), pointer, contiguous              :: paknames                 !array of package names
+      dimension(:), pointer, contiguous              :: paknames => null()       !array of package names
     type(MvrType), dimension(:), pointer, contiguous :: mvr => null()            !array of movers
-    type(BudgetType), pointer                        :: budget => null()         !mover budget object
+    type(BudgetType), pointer                        :: budget => null()         !mover budget object (used to write table)
+    type(BudgetObjectType), pointer                  :: budobj => null()         !new budget container (used to write binary file)
+    type(PackageMoverType),                                                    &
+      dimension(:), pointer, contiguous    :: pakmovers => null()                !pointer to package mover objects
   contains
     procedure :: mvr_ar
     procedure :: mvr_rp
@@ -134,13 +146,17 @@ module GwfMvrModule
     procedure :: check_options
     procedure :: read_dimensions
     procedure :: read_packages
+    procedure :: check_packages
+    procedure :: assign_packagemovers
     procedure :: allocate_scalars
     procedure :: allocate_arrays
+    procedure, private :: mvr_setup_budobj
+    procedure, private :: mvr_fill_budobj
   end type GwfMvrType
 
   contains
 
-  subroutine mvr_cr(mvrobj, name_parent, inunit, iout, iexgmvr)
+  subroutine mvr_cr(mvrobj, name_parent, inunit, iout, iexgmvr, dis)
 ! ******************************************************************************
 ! mvr_cr -- Create a new mvr object
 ! ******************************************************************************
@@ -153,6 +169,7 @@ module GwfMvrModule
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
     integer(I4B), optional :: iexgmvr
+    class(DisBaseType), pointer, intent(in), optional :: dis
 ! ------------------------------------------------------------------------------
     !
     ! -- Create the object
@@ -164,6 +181,9 @@ module GwfMvrModule
     !
     ! -- Allocate scalars
     call mvrobj%allocate_scalars()
+    !
+    ! -- Set pointer to dis
+    if (present(dis)) mvrobj%dis => dis
     !
     ! -- Set variables
     mvrobj%inunit = inunit
@@ -212,11 +232,15 @@ module GwfMvrModule
     ! -- Allocate arrays
     call this%allocate_arrays()
     !
-    ! -- Read package names
+    ! -- Read and check package names
     call this%read_packages()
+    call this%check_packages()
     !
     ! -- Define the budget object to be the size of package names
     call this%budget%budget_df(this%maxpackages, 'WATER MOVER')
+    !
+    ! -- setup the budget object
+    call this%mvr_setup_budobj()
     !
     ! -- Return
     return
@@ -296,6 +320,12 @@ module GwfMvrModule
       else
         mname = ''
       endif
+      !
+      ! -- Assign a pointer to the package mover object.  The pointer assignment
+      !    will happen only the first time
+      call this%assign_packagemovers()
+      !
+      ! -- Read each mover entry
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
@@ -311,7 +341,8 @@ module GwfMvrModule
         endif
         !
         ! -- Process the water mover line (mname = '' if this is an exchange)
-        call this%mvr(i)%set(line, this%parser%iuactive, this%iout, mname)
+        call this%mvr(i)%set(line, this%parser%iuactive, this%iout, mname,     &
+                             this%pakorigins, this%pakmovers)
         !
         ! -- Echo input
         if(this%iprpak == 1) call this%mvr(i)%echo(this%iout)
@@ -357,9 +388,6 @@ module GwfMvrModule
         ii = ifind(this%pakorigins, this%mvr(i)%pname1)
         jj = ifind(this%pakorigins, this%mvr(i)%pname2)
         ipos = (ii - 1) * this%maxpackages + jj
-        this%ientries(ipos) = this%ientries(ipos) + 1
-        ! -- opposite direction
-        ipos = (jj - 1) * this%maxpackages + ii
         this%ientries(ipos) = this%ientries(ipos) + 1
       end do
     else
@@ -420,7 +448,7 @@ module GwfMvrModule
     return
   end subroutine mvr_fc
 
-  subroutine mvr_cc(this, kiter, iend, icnvg)
+  subroutine mvr_cc(this, kiter, iend, icnvgmod, cpak, dpak)
 ! ******************************************************************************
 ! mvr_cc -- extra convergence check for mover
 ! ******************************************************************************
@@ -431,7 +459,9 @@ module GwfMvrModule
     class(GwfMvrType) :: this
     integer(I4B),intent(in) :: kiter
     integer(I4B),intent(in) :: iend
-    integer(I4B),intent(inout) :: icnvg
+    integer(I4B),intent(in) :: icnvgmod
+    character(len=LENPAKLOC), intent(inout) :: cpak
+    real(DP), intent(inout) :: dpak
     ! -- local
     ! -- formats
     character(len=*),parameter :: fmtmvrcnvg = &
@@ -441,8 +471,9 @@ module GwfMvrModule
     !
     ! -- If there are active movers, then at least 2 outers required
     if (this%nmvr > 0) then
-      if (icnvg == 1 .and. kiter == 1) then
-        icnvg = 0
+      if (icnvgmod == 1 .and. kiter == 1) then
+        dpak = DNODATA
+        cpak = trim(this%name)
         write(this%iout, fmtmvrcnvg)
       endif
     endif
@@ -460,32 +491,15 @@ module GwfMvrModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only : kstp, kper, delt, pertim, totim
-    use InputOutputModule, only: urword, ubdsv06, ubdsvd
+    use InputOutputModule, only: ubdsv06, ubdsvd
     ! -- dummy
     class(GwfMvrType) :: this
     integer(I4B), intent(in) :: icbcfl
     integer(I4B), intent(in) :: ibudfl
     integer(I4B), intent(in) :: isuppress_output
     ! -- locals
-    character (len=LENBUDTXT) :: text
     integer(I4B) :: i
-    integer(I4B) :: j
-    integer(I4B) :: n
-    integer(I4B) :: ipos
     integer(I4B) :: ibinun
-    character (len=LENMODELNAME) :: modelname1, modelname2
-    character (len=LENPACKAGENAME) :: packagename1, packagename2
-    character (len=LENAUXNAME), dimension(1) :: cauxname
-    character (len=LENORIGIN+1) :: pakoriginsdummy
-    integer(I4B) :: ival
-    integer(I4B) :: naux
-    integer(I4B) :: nitems
-    integer(I4B) :: lloc
-    integer(I4B) :: istart
-    integer(I4B) :: istop
-    real(DP) :: rval
-    real(DP) :: q
-    real(DP), dimension(1) :: aux
     ! -- formats
     character(len=*), parameter :: fmttkk = &
       "(1X,/1X,A,'   PERIOD ',I0,'   STEP ',I0)"
@@ -498,63 +512,19 @@ module GwfMvrModule
       enddo
     endif
     !
-    ! -- Set unit number for binary budget output
+    ! -- fill the budget object
+    call this%mvr_fill_budobj()
+    !
+    ! -- write the flows from the budobj
     ibinun = 0
     if(this%ibudgetout /= 0) then
       ibinun = this%ibudgetout
     end if
     if(icbcfl == 0) ibinun = 0
-    if(isuppress_output /= 0) ibinun = 0
-    !
-    ! -- write mvr binary budget output
+    if (isuppress_output /= 0) ibinun = 0
     if (ibinun > 0) then
-      text = 'MOVER FLOW      '
-      do i = 1, this%maxpackages
-        ! -- Retrieve modelname1 and packagename1
-        lloc = 1
-        call urword(this%pakorigins(i), lloc, istart, istop, 1, ival, rval, -1, -1)
-!!!        modelname1 = this%pakorigins(i)(istart:istop)
-        pakoriginsdummy = this%pakorigins(i)
-        modelname1 = pakoriginsdummy(istart:istop)
-        call urword(this%pakorigins(i), lloc, istart, istop, 1, ival, rval, -1, -1)
-!!!        packagename1 = this%pakorigins(i)(istart:istop)
-        pakoriginsdummy = this%pakorigins(i)
-        packagename1 = pakoriginsdummy(istart:istop)
-        do j = 1, this%maxpackages
-          ! -- Retrieve modelname2 and packagename2
-          lloc = 1
-          call urword(this%pakorigins(j), lloc, istart, istop, 1, ival, rval, -1, -1)
-!!!          modelname2 = this%pakorigins(j)(istart:istop)
-          pakoriginsdummy = this%pakorigins(j)
-          modelname2 = pakoriginsdummy(istart:istop)
-          call urword(this%pakorigins(j), lloc, istart, istop, 1, ival, rval, -1, -1)
-!!!          packagename2 = this%pakorigins(j)(istart:istop)
-          pakoriginsdummy = this%pakorigins(j)
-          packagename2 = pakoriginsdummy(istart:istop)
-          ipos = (i - 1) * this%maxpackages + j
-          nitems = this%ientries(ipos)
-          naux = 0
-          call ubdsv06(kstp, kper, text, modelname1, packagename1,                    &
-                       modelname2, packagename2,                                      &
-                       ibinun, naux, cauxname, 1, 1, 1, nitems,                       &
-                       this%iout, delt, pertim, totim)
-          if (nitems < 1) cycle
-          do n = 1, this%nmvr
-            if(this%pakorigins(i) == this%mvr(n)%pname1) then
-              if(this%pakorigins(j) == this%mvr(n)%pname2) then
-                q = -this%mvr(n)%qpnew
-                call ubdsvd(ibinun, this%mvr(n)%irch1, this%mvr(n)%irch2, q, naux, aux)
-              end if
-            end if
-            if(this%pakorigins(i) == this%mvr(n)%pname2) then
-              if(this%pakorigins(j) == this%mvr(n)%pname1) then
-                q = this%mvr(n)%qpnew
-                call ubdsvd(ibinun, this%mvr(n)%irch2, this%mvr(n)%irch1, q, naux, aux)
-              end if
-            end if
-          end do
-        end do
-      end do
+      call this%budobj%save_flows(this%dis, ibinun, kstp, kper, delt, &
+                        pertim, totim, this%iout)
     end if
     !
     ! -- Return
@@ -615,6 +585,12 @@ module GwfMvrModule
     ! -- Deallocate
     deallocate(ratin, ratout)
     !
+    ! -- Output mvr budget
+    !    Not using budobj write_table here because it would result
+    !    in a table that has one entry.  A custom table looks
+    !    better here with a row for each package.
+    !call this%budobj%write_budtable(kstp, kper, this%iout)
+    !
     ! -- Return
     return
   end subroutine mvr_ot
@@ -640,8 +616,16 @@ module GwfMvrModule
       deallocate(this%mvr)
       deallocate(this%pakorigins)
       deallocate(this%paknames)
+      deallocate(this%pakmovers)
+      !
+      ! -- budget object
       call this%budget%budget_da()
       deallocate(this%budget)
+      !
+      ! -- budobj
+      call this%budobj%budgetobject_da()
+      deallocate(this%budobj)
+      nullify(this%budobj)
     endif
     !
     ! -- Scalars
@@ -686,8 +670,8 @@ module GwfMvrModule
 ! ------------------------------------------------------------------------------
     !
     ! -- get options block
-    call this%parser%GetBlock('OPTIONS', isfound, ierr, supportOpenClose=.true., &
-                              blockRequired=.false.)
+    call this%parser%GetBlock('OPTIONS', isfound, ierr, &
+      supportOpenClose=.true., blockRequired=.false.)
     !
     ! -- parse options block if detected
     if (isfound) then
@@ -941,6 +925,77 @@ module GwfMvrModule
     return
   end subroutine read_packages
 
+  subroutine check_packages(this)
+! ******************************************************************************
+! check_packages -- check to make sure packages have mover activated
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule, only: LINELENGTH
+    use MemoryManagerModule, only: mem_setptr
+    use SimModule, only: ustop, store_error, count_errors, store_error_unit
+    ! -- dummy
+    class(GwfMvrType),intent(inout) :: this
+    ! -- local
+    character (len=LINELENGTH) :: errmsg
+    integer(I4B) :: i
+    integer(I4B), pointer :: imover_ptr
+    ! -- format
+! ------------------------------------------------------------------------------
+    !
+    ! -- Check to make sure mover is activated for each package
+    do i = 1, size(this%pakorigins)
+      imover_ptr => null()
+      call mem_setptr(imover_ptr, 'IMOVER', trim(this%pakorigins(i)))
+      if (imover_ptr == 0) then
+        write(errmsg, '(a, a, a)') &
+                          'ERROR.  MODEL AND PACKAGE "', &
+                          trim(this%pakorigins(i)), &
+                          '" DOES NOT HAVE MOVER SPECIFIED IN OPTIONS BLOCK.'
+        call store_error(errmsg)
+      end if
+    end do
+    !
+    ! -- Terminate if errors detected.
+    if (count_errors() > 0) then
+      call this%parser%StoreErrorUnit()
+      call ustop()
+    endif
+    !
+    ! -- return
+    return
+  end subroutine check_packages
+
+  subroutine assign_packagemovers(this)
+! ******************************************************************************
+! assign_packagemovers -- assign pointer to each package's packagemover object
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use PackageMoverModule, only: set_packagemover_pointer
+    ! -- dummy
+    class(GwfMvrType),intent(inout) :: this
+    ! -- local
+    integer(I4B) :: i
+    ! -- format
+! ------------------------------------------------------------------------------
+    !
+    ! -- Assign the package mover pointer if it hasn't been assigned yet
+    do i = 1, size(this%pakorigins)
+      if (this%pakmovers(i)%origin == '') then
+        call set_packagemover_pointer(this%pakmovers(i), &
+                                      trim(this%pakorigins(i)))
+      end if
+    end do
+    !
+    ! -- return
+    return
+  end subroutine assign_packagemovers
+
   subroutine allocate_scalars(this)
 ! ******************************************************************************
 ! allocate_scalars
@@ -993,15 +1048,23 @@ module GwfMvrModule
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     use ConstantsModule, only: DZERO
+    use PackageMoverModule, only: nulllify_packagemover_pointer
     ! -- dummy
     class(GwfMvrType) :: this
     ! -- local
+    integer(I4B) :: i
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate
     allocate(this%mvr(this%maxmvr))
     allocate(this%pakorigins(this%maxpackages))
     allocate(this%paknames(this%maxpackages))
+    allocate(this%pakmovers(this%maxpackages))
+    !
+    ! -- nullify the pakmovers
+    do i = 1, this%maxpackages
+      call nulllify_packagemover_pointer(this%pakmovers(i))
+    end do
     !
     ! -- allocate the object and assign values to object variables
     call mem_allocate(this%ientries, this%maxcomb, 'IENTRIES', this%origin)
@@ -1010,5 +1073,170 @@ module GwfMvrModule
     return
   end subroutine allocate_arrays
 
+  subroutine mvr_setup_budobj(this)
+! ******************************************************************************
+! mvr_setup_budobj -- Set up the budget object that stores all the mvr flows
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule, only: LENBUDTXT
+    ! -- dummy
+    class(GwfMvrType) :: this
+    ! -- local
+    integer(I4B) :: nbudterm
+    integer(I4B) :: ncv
+    integer(I4B) :: i
+    integer(I4B) :: j
+    integer(I4B) :: ival
+    integer(I4B) :: naux
+    integer(I4B) :: lloc
+    integer(I4B) :: istart
+    integer(I4B) :: istop
+    real(DP) :: rval
+    character (len=LENMODELNAME) :: modelname1, modelname2
+    character (len=LENPACKAGENAME) :: packagename1, packagename2
+    character (len=LENORIGIN+1) :: pakoriginsdummy
+    integer(I4B) :: maxlist
+    integer(I4B) :: idx
+    character(len=LENBUDTXT) :: text
+! ------------------------------------------------------------------------------
+    !
+    ! -- Determine the number of mover budget terms. These are fixed for 
+    !    the simulation and cannot change.  A separate term is required
+    !    for each possible provider/receiver combination.
+    nbudterm = 0
+    do i = 1, this%maxpackages
+      do j = 1, this%maxpackages
+        nbudterm = nbudterm + 1
+      end do
+    end do
+    !
+    ! -- Number of control volumes is set to be 0, because there aren't
+    !    any for the mover
+    ncv = 0
+    !
+    ! -- set up budobj
+    call budgetobject_cr(this%budobj, 'WATER MOVER')
+    call this%budobj%budgetobject_df(ncv, nbudterm, 0, 0)
+    idx = 0
+    !
+    ! -- Go through and set up each budget term
+    text = '      MOVER-FLOW'
+    maxlist = this%maxmvr
+    naux = 0
+    do i = 1, this%maxpackages
+      lloc = 1
+      call urword(this%pakorigins(i), lloc, istart, istop, 1, ival, rval, -1, -1)
+      pakoriginsdummy = this%pakorigins(i)
+      modelname1 = pakoriginsdummy(istart:istop)
+      call urword(this%pakorigins(i), lloc, istart, istop, 1, ival, rval, -1, -1)
+      pakoriginsdummy = this%pakorigins(i)
+      packagename1 = pakoriginsdummy(istart:istop)
+      do j = 1, this%maxpackages
+        lloc = 1
+        call urword(this%pakorigins(j), lloc, istart, istop, 1, ival, rval, -1, -1)
+        pakoriginsdummy = this%pakorigins(j)
+        modelname2 = pakoriginsdummy(istart:istop)
+        call urword(this%pakorigins(j), lloc, istart, istop, 1, ival, rval, -1, -1)
+        pakoriginsdummy = this%pakorigins(j)
+        packagename2 = pakoriginsdummy(istart:istop)
+        idx = idx + 1
+        call this%budobj%budterm(idx)%initialize(text, &
+                                                 modelname1, &
+                                                 packagename1, &
+                                                 modelname2, &
+                                                 packagename2, &
+                                                 maxlist, .false., .false., &
+                                                 naux)
+      end do
+    end do
+    !
+    ! -- return
+    return
+  end subroutine mvr_setup_budobj
+
+  subroutine mvr_fill_budobj(this)
+! ******************************************************************************
+! mvr_fill_budobj -- copy flow terms into this%budobj
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwfMvrType) :: this
+    ! -- local
+    integer(I4B) :: idx
+    integer(I4B) :: i
+    integer(I4B) :: j
+    integer(I4B) :: n, n1, n2
+    integer(I4B) :: ipos
+    integer(I4B) :: ival
+    integer(I4B) :: nitems
+    integer(I4B) :: lloc
+    integer(I4B) :: istart
+    integer(I4B) :: istop
+    real(DP) :: rval
+    character (len=LENMODELNAME) :: modelname1, modelname2
+    character (len=LENPACKAGENAME) :: packagename1, packagename2
+    character (len=LENORIGIN+1) :: pakoriginsdummy
+    real(DP) :: q
+    ! -- formats
+! -----------------------------------------------------------------------------
+    !
+    ! -- initialize counter
+    idx = 0
+
+
+    do i = 1, this%maxpackages
+      ! -- Retrieve modelname1 and packagename1
+      lloc = 1
+      call urword(this%pakorigins(i), lloc, istart, istop, 1, ival, rval, -1, -1)
+      pakoriginsdummy = this%pakorigins(i)
+      modelname1 = pakoriginsdummy(istart:istop)
+      call urword(this%pakorigins(i), lloc, istart, istop, 1, ival, rval, -1, -1)
+      pakoriginsdummy = this%pakorigins(i)
+      packagename1 = pakoriginsdummy(istart:istop)
+      do j = 1, this%maxpackages
+        ! -- Retrieve modelname2 and packagename2
+        lloc = 1
+        call urword(this%pakorigins(j), lloc, istart, istop, 1, ival, rval, -1, -1)
+        pakoriginsdummy = this%pakorigins(j)
+        modelname2 = pakoriginsdummy(istart:istop)
+        call urword(this%pakorigins(j), lloc, istart, istop, 1, ival, rval, -1, -1)
+        pakoriginsdummy = this%pakorigins(j)
+        packagename2 = pakoriginsdummy(istart:istop)
+        ipos = (i - 1) * this%maxpackages + j
+        nitems = this%ientries(ipos)
+        !
+        ! -- nitems is the number of mover connections for this
+        !    model-package / model-package combination.  Cycle if none.
+        idx = idx + 1
+        call this%budobj%budterm(idx)%reset(nitems)
+        if (nitems < 1) cycle
+        do n = 1, this%nmvr
+          !
+          ! -- pname1 is provider, pname2 is receiver
+          !    flow is always negative because it is coming from provider
+          if(this%pakorigins(i) == this%mvr(n)%pname1) then
+            if(this%pakorigins(j) == this%mvr(n)%pname2) then
+              q = -this%mvr(n)%qpactual
+              n1 = this%mvr(n)%irch1
+              n2 = this%mvr(n)%irch2
+              call this%budobj%budterm(idx)%update_term(n1, n2, q)
+            end if
+          end if
+        end do
+      end do
+    end do
+    !
+    ! --Terms are filled, now accumulate them for this time step
+    call this%budobj%accumulate_terms()
+    !
+    ! -- return
+    return
+  end subroutine mvr_fill_budobj
 
 end module

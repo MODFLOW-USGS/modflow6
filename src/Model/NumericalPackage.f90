@@ -40,6 +40,7 @@ module NumericalPackageModule
     procedure :: allocate_scalars
     procedure :: da
     procedure :: read_check_ionper
+    procedure :: get_block_data
   end type NumericalPackageType
   !
   contains
@@ -210,6 +211,74 @@ module NumericalPackageModule
     ! -- return
     return
   end subroutine read_check_ionper
+
+  subroutine get_block_data(this, tags, lfound, varinames)
+! ******************************************************************************
+! get_block_data -- Read griddata block for a package 
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use MemoryManagerModule, only: mem_setptr
+    ! -- dummy
+    class(NumericalPackageType) :: this
+    character(len=24), dimension(:), intent(in)           :: tags
+    logical, dimension(:), intent(inout)                  :: lfound
+    character(len=24), dimension(:), intent(in), optional :: varinames
+    ! -- local
+    logical :: lkeyword
+    logical :: endOfBlock
+    integer(I4B) :: nsize
+    integer(I4B) :: j
+    character(len=LENORIGIN) :: name
+    character(len=LINELENGTH) :: line, errmsg, keyword
+    integer(I4B) :: istart, istop, lloc
+    integer(I4B), dimension(:), pointer, contiguous :: aint
+    real(DP), dimension(:), pointer, contiguous     :: adbl
+! ------------------------------------------------------------------------------
+    ! -- initialize nsize
+    nsize = size(tags)
+    do
+      call this%parser%GetNextLine(endOfBlock)
+      if (endOfBlock) exit
+      call this%parser%GetStringCaps(keyword)
+      call this%parser%GetRemainingLine(line)
+      lkeyword = .false.
+      lloc = 1
+      tag_iter: do j = 1, nsize
+        if (trim(adjustl(keyword)) == trim(adjustl(tags(j)))) then
+          lkeyword = .true.
+          lfound(j) = .true.
+          if (present(varinames)) then
+            name = adjustl(varinames(j))
+          else
+            name = adjustl(tags(j))
+          end if
+          if (keyword(1:1) == 'I') then
+            call mem_setptr(aint, trim(name), trim(this%origin))
+            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,  &
+                                this%parser%iuactive, aint, tags(j))
+          else
+            call mem_setptr(adbl, trim(name), trim(this%origin))
+            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,  &
+                                this%parser%iuactive, adbl, tags(j))
+          end if
+          exit tag_iter
+        end if
+      end do tag_iter
+      if (.not.lkeyword) then
+        write(errmsg,'(4x,a,a)')'ERROR. UNKNOWN GRIDDATA TAG: ',           &
+                                  trim(keyword)
+        call store_error(errmsg)
+        call this%parser%StoreErrorUnit()
+        call ustop()
+      end if
+    end do
+    !
+    ! -- return
+    return
+  end subroutine get_block_data
 
 end module NumericalPackageModule
   

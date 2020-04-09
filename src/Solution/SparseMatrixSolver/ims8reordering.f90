@@ -705,7 +705,7 @@
                     ip, isp(v), flag)
         if (flag.ne.0)  go to 100
         !
-2       return
+        return
         !
         ! ** error -- error detected in md
         !             flag = 9 * n + vi from routine mdi.
@@ -943,7 +943,7 @@
             !
             ! if a(vi,vj) is in strict lower triangle
             ! check for previous occurrence of a(vj,vi)
-2           lvk = vi
+            lvk = vi
             kmax = mark(vi) - 1
             if (kmax == 0) go to 4
             linner2: do k = 1, kmax
@@ -1241,7 +1241,7 @@
           !
           ! if vi neither prototype nor duplicate vertex, then merge elements
           ! to compute degree
-1         tag = tag + 1
+          tag = tag + 1
           dvi = last(ek)
           !
           ! for each vertex/element vs/es in element list of vi

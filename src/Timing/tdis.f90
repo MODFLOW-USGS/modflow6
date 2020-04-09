@@ -7,7 +7,7 @@
   use KindModule, only: DP, I4B
   use SimVariablesModule, only: iout
   use BlockParserModule, only: BlockParserType
-  use ConstantsModule, only: LENDATETIME
+  use ConstantsModule, only: LINELENGTH, LENDATETIME, VALL
   !
   implicit none
   !
@@ -104,8 +104,10 @@
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule, only: DONE, DZERO, ISTDOUT
+    use ConstantsModule, only: DONE, DZERO
+    use GenericUtilitiesModule, only: sim_message
     ! -- local
+    character(len=LINELENGTH) :: line
     ! -- formats
     character(len=*),parameter :: fmtspi =                                     &
       "('1',/28X,'STRESS PERIOD NO. ',I4,', LENGTH =',G15.7,/                  &
@@ -142,7 +144,7 @@
               (DONE - tsmult(kper) ** nstp(kper))
       !
       ! -- Print length of first time step
-       write (iout, fmttsi) delt
+       write(iout, fmttsi) delt
       !
       ! -- Initialize pertim (Elapsed time within stress period)
       pertim = DZERO
@@ -159,7 +161,8 @@
     if(kstp /= 1) delt = tsmult(kper) * delt
     !
     ! -- Print stress period and time step to console
-    write(ISTDOUT, fmtspts) kper, kstp
+    write(line, fmtspts) kper, kstp
+    call sim_message(line, level=VALL)
     !
     ! -- Store totim and pertim, which are times at end of previous time step
     totimsav = totim
@@ -172,7 +175,10 @@
     !
     ! -- End of stress period and/or simulation?
     if(kstp == nstp(kper)) endofperiod = .true.
-    if(endofperiod .and. kper==nper) endofsimulation = .true.
+    if(endofperiod .and. kper==nper) then
+      endofsimulation = .true.
+      totim = totalsimtime  
+    end if
     !
     ! -- return
     return
@@ -241,14 +247,14 @@
 !C
 !C5------PRINT TIME STEP LENGTH AND ELAPSED TIMES IN ALL TIME UNITS.
       WRITE(IOUT,200)
-  200 FORMAT(19X,' SECONDS     MINUTES      HOURS',7X, &
+  200 FORMAT(19X,' SECONDS     MINUTES      HOURS',7X,                           &
      &    'DAYS        YEARS'/20X,59('-'))
-      WRITE (IOUT,201) DELSEC,DELMN,DELHR,DELDY,DELYR
+      write(IOUT,201) DELSEC,DELMN,DELHR,DELDY,DELYR
   201 FORMAT(1X,'  TIME STEP LENGTH',1P,5G12.5)
       WRITE(IOUT,202) PERSEC,PERMN,PERHR,PERDY,PERYR
   202 FORMAT(1X,'STRESS PERIOD TIME',1P,5G12.5)
       WRITE(IOUT,203) TOTSEC,TOTMN,TOTHR,TOTDY,TOTYR
-  203 FORMAT(1X,'        TOTAL TIME',1P,5G12.5)
+  203 FORMAT(1X,'        TOTAL TIME',1P,5G12.5,/)
 !C
 !C6------RETURN
       RETURN
@@ -322,7 +328,8 @@
     undspec = .false.
     !
     ! -- get options block
-    call parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false.)
+    call parser%GetBlock('OPTIONS', isfound, ierr, &
+      supportOpenClose=.true., blockRequired=.false.)
     !
     ! -- parse options block if detected
     if (isfound) then
@@ -481,7 +488,8 @@
 ! ------------------------------------------------------------------------------
     !
     ! -- get DIMENSIONS block
-    call parser%GetBlock('DIMENSIONS', isfound, ierr)
+    call parser%GetBlock('DIMENSIONS', isfound, ierr, &
+      supportOpenClose=.true.)
     !
     ! -- parse block if detected
     if (isfound) then
@@ -535,14 +543,11 @@
        &'     MULTIPLIER FOR DELT',/1X,76('-'))"
     character(len=*), parameter :: fmtrow =                                    &
       "(1X,I8,1PG21.7,I7,0PF25.3)"
-    character(len=*), parameter :: fmtpwarn =                                  &
-      "(1X,/1X,                                                                &
-        &'WARNING: PERLEN MUST NOT BE 0.0 FOR TRANSIENT STRESS PERIODS')"
-    !data
 ! ------------------------------------------------------------------------------
     !
     ! -- get PERIODDATA block
-    call parser%GetBlock('PERIODDATA', isfound, ierr)
+    call parser%GetBlock('PERIODDATA', isfound, ierr, &
+      supportOpenClose=.true.)
     !
     ! -- parse block if detected
     if (isfound) then
@@ -553,27 +558,12 @@
         perlen(n) = parser%GetDouble()
         nstp(n) = parser%GetInteger()
         tsmult(n) = parser%GetDouble()
-        write (iout, fmtrow) n, perlen(n), nstp(n), tsmult(n)
-        !
-        !-----stop if nstp le 0, perlen eq 0 for transient stress periods,
-        !-----tsmult le 0, or perlen lt 0..
-        if(nstp(n) <= 0) then
-           call store_error( &
-             'THERE MUST BE AT LEAST ONE TIME STEP IN EVERY STRESS PERIOD')
-        end if
-        if(perlen(n) == dzero) then
-           write(iout, fmtpwarn)
-        end if
-        if(tsmult(n) <= dzero) then
-           call store_error( &
-            'TSMULT MUST BE GREATER THAN 0.0')
-        end if
-        if(perlen(n).lt.dzero) then
-           call store_error( &
-            'PERLEN CANNOT BE LESS THAN 0.0 FOR ANY STRESS PERIOD')
-        end if
+        write(iout, fmtrow) n, perlen(n), nstp(n), tsmult(n)
         totalsimtime = totalsimtime + perlen(n)
       enddo
+      !
+      ! -- Check timing information
+      call check_tdis_timing(nper, perlen, nstp, tsmult)
       call parser%terminateblock()
       !
       ! -- Check for errors
@@ -592,6 +582,100 @@
     ! -- Return
     return
   end subroutine tdis_read_timing
+  
+  subroutine check_tdis_timing(nper, perlen, nstp, tsmult)
+! ******************************************************************************
+! check_tdis_timing -- Check the tdis timing information.  Return back to 
+!   tdis_read_timing if an error condition is found and let the ustop
+!   routine be called there instead so the StoreErrorUnit routine can be
+!   called to assign the correct file name.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule, only: LINELENGTH, DZERO, DONE
+    use SimModule, only: ustop, store_error, count_errors
+    ! -- dummy
+    integer(I4B), intent(in) :: nper
+    real(DP), dimension(:), contiguous, intent(in) :: perlen
+    integer(I4B), dimension(:), contiguous, intent(in) :: nstp
+    real(DP), dimension(:), contiguous, intent(in) :: tsmult
+    ! -- local
+    integer(I4B) :: kper, kstp
+    real(DP) :: tstart, tend, dt
+    character(len=LINELENGTH) :: errmsg
+    ! -- formats
+    character(len=*), parameter :: fmtpwarn =                                   &
+      &"(1X,/1X,'PERLEN IS ZERO FOR STRESS PERIOD ', I0,                        &
+      &'. PERLEN MUST NOT BE ZERO FOR TRANSIENT PERIODS.')"
+    character(len=*), parameter :: fmtsperror =                                 &
+      &"(A,' FOR STRESS PERIOD ', I0)"
+    character(len=*), parameter :: fmtdterror =                                 &
+      &"('TIME STEP LENGTH OF ', G0, ' IS TOO SMALL IN PERIOD ', I0,            &
+      &' AND TIME STEP ', I0)"
+! ------------------------------------------------------------------------------
+    !
+    ! -- Initialize
+    tstart = DZERO
+    !
+    ! -- Go through and check each stress period
+    do kper = 1, nper
+      !
+      ! -- Error if nstp less than or equal to zero
+      if(nstp(kper) <= 0) then
+        write(errmsg, fmtsperror) 'NUMBER OF TIME STEPS LESS THAN ONE ', kper
+        call store_error(errmsg)
+        return
+      end if
+      !
+      ! -- Warn if perlen is zero
+      if(perlen(kper) == DZERO) then
+         write(iout, fmtpwarn) kper
+         return
+      end if
+      !
+      ! -- Error if tsmult is less than zero
+      if(tsmult(kper) <= DZERO) then
+        write(errmsg, fmtsperror) 'TSMULT MUST BE GREATER THAN 0.0 ', kper
+        call store_error(errmsg)
+        return
+      end if
+      !
+      ! -- Error if negative period length
+      if(perlen(kper) < DZERO) then
+        write(errmsg, fmtsperror) 'PERLEN CANNOT BE LESS THAN 0.0 ', kper
+        call store_error(errmsg)
+        return
+      end if
+      !
+      ! -- Go through all time step lengths and make sure they are valid
+      do kstp = 1, nstp(kper)
+        if (kstp == 1) then
+          dt = perlen(kper) / float(nstp(kper))
+          if(tsmult(kper) /= DONE)                                              &
+              dt = perlen(kper) * (DONE-tsmult(kper)) /                         &
+                  (DONE - tsmult(kper) ** nstp(kper))
+        else
+          dt = dt * tsmult(kper)
+        endif
+        tend = tstart + dt
+        !
+        ! -- Error condition if tstart == tend
+        if (tstart == tend) then
+          write(errmsg, fmtdterror) dt, kper, kstp
+          call store_error(errmsg)
+          return
+        endif
+      enddo
+      !
+      ! -- reset tstart = tend
+      tstart = tend
+      !
+    enddo
+    ! -- Return
+    return
+  end subroutine check_tdis_timing
 
   subroutine subtiming_begin(isubtime, nsubtimes, idsolution)
 ! ******************************************************************************

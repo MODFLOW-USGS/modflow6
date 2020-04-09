@@ -4,7 +4,9 @@
   use ConstantsModule, only: LINELENGTH, LENSOLUTIONNAME,                      &
                              IZERO, DZERO, DPREC, DSAME,                       &
                              DEM8, DEM6, DEM5, DEM4, DEM3, DEM2, DEM1,         &
-                             DHALF, DONE, DTWO
+                             DHALF, DONE, DTWO,                                &
+                             VDEBUG
+  use GenericUtilitiesModule, only: sim_message, IS_SAME
   use IMSReorderingModule, only: ims_genrcm, ims_odrv, ims_dperm, ims_vperm
   use BlockParserModule, only: BlockParserType
 
@@ -83,6 +85,7 @@
     ! PROCEDURES (METHODS)
     CONTAINS
       PROCEDURE :: IMSLINEAR_ALLOCATE => IMSLINEAR_AR
+      procedure :: imslinear_summary
       PROCEDURE :: IMSLINEAR_APPLY => IMSLINEAR_AP
       procedure :: IMSLINEAR_DA
       procedure, private :: allocate_scalars
@@ -105,7 +108,7 @@
 !     ------------------------------------------------------------------
       use MemoryManagerModule, only: mem_allocate
       use SimModule, only: ustop, store_error, count_errors
-      IMPLICIT NONE
+      !IMPLICIT NONE
 !     + + + DUMMY VARIABLES + + +
       CLASS(IMSLINEAR_DATA), INTENT(INOUT) :: THIS
       CHARACTER (LEN=LENSOLUTIONNAME), INTENT(IN) :: NAME
@@ -127,13 +130,6 @@
 !     + + + LOCAL VARIABLES + + +
       LOGICAL :: lreaddata
       character(len=LINELENGTH) :: errmsg, keyword
-      CHARACTER (LEN= 10) :: clin(0:2)
-      CHARACTER (LEN= 31) :: clintit(0:2)
-      CHARACTER (LEN= 20) :: cipc(0:4)
-      CHARACTER (LEN= 20) :: cscale(0:2)
-      CHARACTER (LEN= 25) :: corder(0:2)
-      CHARACTER (LEN= 16), DIMENSION(0:4) :: ccnvgopt
-      CHARACTER (LEN= 15) :: clevel, cdroptol 
       integer(I4B) :: i, n
       integer(I4B) :: i0
       integer(I4B) :: iscllen, iolen
@@ -145,54 +141,7 @@
       integer(I4B) :: iwlu
       integer(I4B) :: iwk
 !     + + + PARAMETERS + + +
-!       DATA
-      DATA clin  /'UNKNOWN   ', &
-                  'CG        ', &
-     &            'BCGS      '/
-      DATA clintit  /'             UNKNOWN           ', &
-                     '       CONJUGATE-GRADIENT      ', &
-     &               'BICONJUGATE-GRADIENT STABILIZED'/
-      DATA cipc  /'UNKNOWN             ', &
-     &            'INCOMPLETE LU       ', &
-     &            'MOD. INCOMPLETE LU  ', &
-     &            'INCOMPLETE LUT      ', &
-     &            'MOD. INCOMPLETE LUT '/
-      DATA cscale/'NO SCALING          ', &
-     &            'SYMMETRIC SCALING   ', &
-     &            'L2 NORM SCALING     '/
-      DATA corder/'ORIGINAL ORDERING        ', &
-     &            'RCM ORDERING             ', &
-     &            'MINIMUM DEGREE ORDERING  '/
-      DATA ccnvgopt  /'INFINITY NORM   ', &
-     &                'INFINITY NORM S ', &
-     &                'L2 NORM         ', &
-     &                'RELATIVE L2NORM ', &
-                      'L2 NORM W. REL. '/
-!       OUTPUT FORMATS
-02010 FORMAT (1X,/,7X,'SOLUTION BY THE',1X,A31,1X,'METHOD', &
-     &        /,1X,66('-'),/, &
-     &        ' MAXIMUM OF ',I6,' CALLS OF SOLUTION ROUTINE',/, &
-     &        ' MAXIMUM OF ',I6, &
-     &        ' INTERNAL ITERATIONS PER CALL TO SOLUTION ROUTINE',/, &
-     &        ' LINEAR ACCELERATION METHOD            =',1X,A,/, &
-     &        ' MATRIX PRECONDITIONING TYPE           =',1X,A,/, &
-     &        ' MATRIX SCALING APPROACH               =',1X,A,/, &
-     &        ' MATRIX REORDERING APPROACH            =',1X,A,/, &
-     &        ' NUMBER OF ORTHOGONALIZATIONS          =',I9,/, &
-     &        ' HEAD CHANGE CRITERION FOR CLOSURE     =',E15.5,/, &
-     &        ' RESIDUAL CHANGE CRITERION FOR CLOSURE =',E15.5,/, &
-     &        ' RESIDUAL CONVERGENCE OPTION           =',I9,/, &
-     &        ' RESIDUAL CONVERGENCE NORM             =',1X,A,/, &
-     &        ' RELAXATION FACTOR                     =',E15.5)
-02015 FORMAT (' NUMBER OF LEVELS                      =',A15,/, &
-     &        ' DROP TOLERANCE                        =',A15,//)
-02020 FORMAT (///,1X,'IMSLINEAR DATA INPUT ERROR:', &
-     &          /,2X,'SCALING MUST BE USED (ISCL.GT.0) IF USING', &
-     &          /,2X,'THE ILU0 OR MILU0 PRECONDITIONERS (IPC.EQ.2 OR', &
-     &          /,2X,'IPC.EQ.3) WITH MATRIX REORDERING (IORD.GT.0)')
-2030  FORMAT(1X,A20,1X,6(I6,1X))
-2040  FORMAT(1X,20('-'),1X,6(6('-'),1X))
-2050  FORMAT(1X,62('-'),/)
+!     + + + OUTPUT FORMATS + + +
 !------------------------------------------------------------------
 !
 !-------SET LREADDATA
@@ -230,8 +179,8 @@
       THIS%IPC = 0
       THIS%LEVEL = 0
       
-      clevel = ''
-      cdroptol = ''
+      !clevel = ''
+      !cdroptol = ''
 !
 !-------TRANSFER COMMON VARIABLES FROM IMS TO IMSLINEAR
       THIS%ILINMETH = 0
@@ -246,7 +195,7 @@
       THIS%ICNVGOPT = 0
 !
 !-------PRINT A MESSAGE IDENTIFYING IMSLINEAR SOLVER PACKAGE
-      WRITE (iout,2000)
+      write(iout,2000)
 02000 FORMAT (1X,/1X,'IMSLINEAR -- UNSTRUCTURED LINEAR SOLUTION',               &
      &        ' PACKAGE, VERSION 8, 04/28/2017')
 !
@@ -259,7 +208,8 @@
 !
 ! -- get IMSLINEAR block
       if (lreaddata) then
-        call parser%GetBlock('LINEAR', isfound, ierr)
+        call parser%GetBlock('LINEAR', isfound, ierr, &
+          supportOpenClose=.true., blockRequired=.FALSE.)
       else
         isfound = .FALSE.
       end if
@@ -286,7 +236,7 @@
               else if (keyword == 'RELATIVE_RCLOSE') then
                 THIS%ICNVGOPT = 3
               else if (keyword == 'L2NORM_RELATIVE_RCLOSE') then
-                THIS%ICNVGOPT = 3
+                THIS%ICNVGOPT = 4
               end if
             case ('INNER_MAXIMUM')
               i = parser%GetInteger()
@@ -352,7 +302,7 @@
      &            'MUST BE GREATER THAN OR EQUAL TO ZERO'
                 call store_error(errmsg)
               end if
-              write (clevel, '(i15)') i
+              !write(clevel, '(i15)') i
             case ('PRECONDITIONER_DROP_TOLERANCE')
               r = parser%GetDouble()
               THIS%DROPTOL = r
@@ -362,7 +312,7 @@
      &            'MUST BE GREATER THAN OR EQUAL TO ZERO'
                 call store_error(errmsg)
               end if
-              write (cdroptol, '(e15.5)') r
+              !write(cdroptol, '(e15.5)') r
             case default
               write(errmsg,'(4x,a,a)') &
      &          '****WARNING. UNKNOWN IMSLINEAR KEYWORD: ', &
@@ -424,20 +374,6 @@
         call parser%StoreErrorUnit()
         call ustop()
       endif
-!
-!-------PRINT MXITER,ITER1,IPC,ISCL,IORD,HCLOSE,RCLOSE
-      WRITE (IOUT,2010) clintit(THIS%ILINMETH), MXITER, THIS%ITER1, &
-     &                  clin(THIS%ILINMETH), cipc(THIS%IPC),        &
-     &                  cscale(THIS%ISCL), corder(THIS%IORD),       &
-     &                  THIS%NORTH, THIS%HCLOSE, THIS%RCLOSE,       &
-     &                  THIS%ICNVGOPT, ccnvgopt(THIS%ICNVGOPT),    &
-     &                  THIS%RELAX
-      IF (THIS%LEVEL > 0 .OR. THIS%DROPTOL > DZERO) THEN
-        WRITE (IOUT,2015) trim(adjustl(clevel)), &
-     &                    trim(adjustl(cdroptol))
-      ELSE
-         WRITE (IOUT,'(//)')
-      END IF
 !
 !-------INITIALIZE IMSLINEAR VARIABLES
       THIS%NITERC = 0
@@ -571,7 +507,7 @@
 !
 !-------REVERSE CUTHILL MCKEE AND MINIMUM DEGREE ORDERING
       IF (THIS%IORD.NE.0) THEN
-        CALL IMSLINEARSUB_CALC_ORDER(IOUT,THIS%IPRIMS, THIS%IORD,THIS%NEQ,      &
+        CALL IMSLINEARSUB_CALC_ORDER(IOUT, THIS%IPRIMS, THIS%IORD,THIS%NEQ,     &
                                      THIS%NJA,THIS%IA,THIS%JA,                  &
                                      THIS%LORDER,THIS%IORDER)
       END IF
@@ -583,6 +519,112 @@
       RETURN
     END SUBROUTINE IMSLINEAR_AR
 
+    subroutine imslinear_summary(this, mxiter)
+      class(IMSLINEAR_DATA), intent(inout) :: this
+      integer(I4B), intent(in) :: mxiter
+!     + + + LOCAL VARIABLES + + +
+      CHARACTER (LEN= 10) :: clin(0:2)
+      CHARACTER (LEN= 31) :: clintit(0:2)
+      CHARACTER (LEN= 20) :: cipc(0:4)
+      CHARACTER (LEN= 20) :: cscale(0:2)
+      CHARACTER (LEN= 25) :: corder(0:2)
+      CHARACTER (LEN= 16), DIMENSION(0:4) :: ccnvgopt
+      CHARACTER (LEN= 15) :: clevel
+      CHARACTER (LEN= 15) :: cdroptol 
+      integer(I4B) :: i, j
+!     + + + PARAMETERS + + +
+!       DATA
+      DATA clin  /'UNKNOWN   ', &
+                  'CG        ', &
+     &            'BCGS      '/
+      DATA clintit  /'             UNKNOWN           ', &
+                     '       CONJUGATE-GRADIENT      ', &
+     &               'BICONJUGATE-GRADIENT STABILIZED'/
+      DATA cipc  /'UNKNOWN             ', &
+     &            'INCOMPLETE LU       ', &
+     &            'MOD. INCOMPLETE LU  ', &
+     &            'INCOMPLETE LUT      ', &
+     &            'MOD. INCOMPLETE LUT '/
+      DATA cscale/'NO SCALING          ', &
+     &            'SYMMETRIC SCALING   ', &
+     &            'L2 NORM SCALING     '/
+      DATA corder/'ORIGINAL ORDERING        ', &
+     &            'RCM ORDERING             ', &
+     &            'MINIMUM DEGREE ORDERING  '/
+      DATA ccnvgopt  /'INFINITY NORM   ', &
+     &                'INFINITY NORM S ', &
+     &                'L2 NORM         ', &
+     &                'RELATIVE L2NORM ', &
+                      'L2 NORM W. REL. '/
+!       OUTPUT FORMATS
+02010 FORMAT (1X,/,7X,'SOLUTION BY THE',1X,A31,1X,'METHOD', &
+     &        /,1X,66('-'),/, &
+     &        ' MAXIMUM OF ',I6,' CALLS OF SOLUTION ROUTINE',/, &
+     &        ' MAXIMUM OF ',I6, &
+     &        ' INTERNAL ITERATIONS PER CALL TO SOLUTION ROUTINE',/, &
+     &        ' LINEAR ACCELERATION METHOD            =',1X,A,/, &
+     &        ' MATRIX PRECONDITIONING TYPE           =',1X,A,/, &
+     &        ' MATRIX SCALING APPROACH               =',1X,A,/, &
+     &        ' MATRIX REORDERING APPROACH            =',1X,A,/, &
+     &        ' NUMBER OF ORTHOGONALIZATIONS          =',I9,/, &
+     &        ' HEAD CHANGE CRITERION FOR CLOSURE     =',E15.5,/, &
+     &        ' RESIDUAL CHANGE CRITERION FOR CLOSURE =',E15.5,/, &
+     &        ' RESIDUAL CONVERGENCE OPTION           =',I9,/, &
+     &        ' RESIDUAL CONVERGENCE NORM             =',1X,A,/, &
+     &        ' RELAXATION FACTOR                     =',E15.5)
+02015 FORMAT (' NUMBER OF LEVELS                      =',A15,/, &
+     &        ' DROP TOLERANCE                        =',A15,//)
+2030  FORMAT(1X,A20,1X,6(I6,1X))
+2040  FORMAT(1X,20('-'),1X,6(6('-'),1X))
+2050  FORMAT(1X,62('-'),/)      !
+!------------------------------------------------------------------
+      !
+      ! -- initialize clevel and cdroptol
+      clevel = ''
+      cdroptol = ''
+      !
+      ! -- PRINT MXITER,ITER1,IPC,ISCL,IORD,HCLOSE,RCLOSE
+      write(this%iout,2010)                                        &
+                        clintit(THIS%ILINMETH), MXITER, THIS%ITER1, &
+                        clin(THIS%ILINMETH), cipc(THIS%IPC),        &
+                        cscale(THIS%ISCL), corder(THIS%IORD),       &
+                        THIS%NORTH, THIS%HCLOSE, THIS%RCLOSE,       &
+                        THIS%ICNVGOPT, ccnvgopt(THIS%ICNVGOPT),     &
+                        THIS%RELAX
+      if (this%level > 0) then
+        write(clevel, '(i15)') this%level
+      end if
+      if (this%droptol > DZERO) then
+        write(cdroptol, '(e15.5)') this%droptol
+      end if
+      IF (this%level > 0 .or. this%droptol > DZERO) THEN
+        write(this%iout,2015) trim(adjustl(clevel)),               &
+                               trim(adjustl(cdroptol))
+      ELSE
+         write(this%iout,'(//)')
+      END IF
+      
+      if (this%iord /= 0) then
+        !                                                                       
+        ! -- WRITE SUMMARY OF REORDERING INFORMATION TO LIST FILE                                                  
+        if (this%iprims ==  2) then 
+          DO i = 1, this%neq, 6 
+            write(this%iout,2030) 'ORIGINAL NODE      :',                      &
+                              (j,j=i,MIN(i+5,this%neq))                      
+            write(this%iout,2040) 
+            write(this%iout,2030) 'REORDERED INDEX    :',                      &
+                              (this%lorder(j),j=i,MIN(i+5,this%neq))              
+            write(this%iout,2030) 'REORDERED NODE     :',                      &
+                              (this%iorder(j),j=i,MIN(i+5,this%neq))              
+            write(this%iout,2050) 
+          END DO 
+        END IF 
+      end if
+      !
+      ! -- return
+    return
+    end subroutine imslinear_summary 
+    
     subroutine allocate_scalars(this)
       use MemoryManagerModule, only: mem_allocate
       class(IMSLINEAR_DATA), intent(inout) :: this
@@ -962,13 +1004,9 @@
         integer(I4B) :: nsp 
         integer(I4B), DIMENSION(:), ALLOCATABLE :: iwork0, iwork1 
         integer(I4B) :: iflag 
-        integer(I4B) :: i,j 
 !       + + + PARAMETERS + + +                                            
 !       + + + FUNCTIONS + + +                                             
 !       + + + FORMATS + + +                                               
- 2030 FORMAT(1X,A20,1X,6(I6,1X)) 
- 2040 FORMAT(1X,20('-'),1X,6(6('-'),1X)) 
- 2050 FORMAT(1X,62('-'),/) 
 !       + + + CODE + + +                                                  
         DO n = 1, NEQ 
           LORDER(n) = IZERO 
@@ -986,7 +1024,7 @@
             CALL ims_odrv(NEQ, NJA, nsp, IA, JA, LORDER, iwork0,        &
                           iwork1, iflag)                           
             IF (iflag.NE.0) THEN 
-              write (errmsg,'(A)') 'ERROR CREATING MINIMUM DEGREE '//   &
+              write(errmsg,'(A)') 'ERROR CREATING MINIMUM DEGREE '//   &
      &                   'ORDER PERMUTATION '                           
               call store_error(errmsg) 
               !call ustop()                                             
@@ -997,21 +1035,7 @@
         DO n = 1, NEQ 
           IORDER( LORDER(n) ) = n 
         END DO 
-!                                                                       
-!         WRITE SUMMARY OF REORDERING INFORMATION                       
-!         TO LIST FILE                                                  
-        IF (IPRIMS ==  2) THEN 
-          DO i = 1, NEQ, 6 
-            WRITE (IOUT,2030) 'ORIGINAL NODE      :',                   &
-     &                        (j,j=i,MIN(i+5,NEQ))                      
-            WRITE (IOUT,2040) 
-            WRITE (IOUT,2030) 'REORDERED INDEX    :',                   &
-     &                        (LORDER(j),j=i,MIN(i+5,NEQ))              
-            WRITE (IOUT,2030) 'REORDERED NODE     :',                   &
-     &                        (IORDER(j),j=i,MIN(i+5,NEQ))              
-            WRITE (IOUT,2050) 
-         END DO 
-         END IF 
+!
 !         DEALLOCATE TEMPORARY STORAGE                                  
         DEALLOCATE ( iwork0, iwork1 ) 
 !
@@ -1521,10 +1545,10 @@
         real(DP), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVDRMAX
 !       + + + LOCAL DEFINITIONS + + + 
         LOGICAL :: LORTH
+        logical :: lsame 
         character(len=31) :: cval
         integer(I4B) :: n 
         integer(I4B) :: iiter 
-        integer(I4B) :: isame 
         integer(I4B) :: xloc, rloc
         integer(I4B) :: im, im0, im1
         real(DP) :: tv 
@@ -1640,16 +1664,20 @@
           END IF 
           CALL IMSLINEARSUB_TESTCNVG(ICNVGOPT, ICNVG, INNERIT,                  &
                                      deltax, rcnvg,                             &
-                                     L2NORM0, EPFACT, HCLOSE, RCLOSE)         
+                                     L2NORM0, EPFACT, HCLOSE, RCLOSE) 
 !
-!           CHECK FOR EXACT SOLUTION                                    
-          IF (rcnvg ==  DZERO) ICNVG = 1 
+!-----------CHECK FOR EXACT SOLUTION                                    
+          IF (rcnvg == DZERO) ICNVG = 1 
+!          
+!-----------CHECK FOR STANDARD CONVERGENCE 
           IF (ICNVG.NE.0) EXIT INNER 
+!
 !-----------CHECK THAT CURRENT AND PREVIOUS rho ARE DIFFERENT           
-          isame = IMSLINEARSUB_SAME(rho, rho0) 
-          IF (isame.NE.0) THEN 
+          lsame = IS_SAME(rho, rho0) 
+          IF (lsame) THEN 
             EXIT INNER 
           END IF 
+!
 !-----------RECALCULATE THE RESIDUAL
           IF (NORTH > 0) THEN
             LORTH = mod(iiter+1,NORTH) == 0
@@ -1733,10 +1761,10 @@
         real(DP), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVDRMAX
 !       + + + LOCAL DEFINITIONS + + +  
         LOGICAL :: LORTH
+        logical :: lsame 
         character(len=15) :: cval1, cval2
         integer(I4B) :: n 
         integer(I4B) :: iiter 
-        integer(I4B) :: isame 
         integer(I4B) :: xloc, rloc
         integer(I4B) :: im, im0, im1
         real(DP) :: tv 
@@ -1916,21 +1944,25 @@
           CALL IMSLINEARSUB_TESTCNVG(ICNVGOPT, ICNVG, INNERIT,                  &
                                      deltax, rcnvg,                             &
                                      L2NORM0, EPFACT, HCLOSE, RCLOSE)         
-!           CHECK FOR EXACT SOLUTION                                    
-          IF (rcnvg ==  DZERO) ICNVG = 1 
+!          
+!-----------CHECK FOR EXACT SOLUTION                                    
+          IF (rcnvg == DZERO) ICNVG = 1 
+!          
+!-----------CHECK FOR STANDARD CONVERGENCE 
           IF (ICNVG.NE.0) EXIT INNER
+!
 !-----------CHECK THAT CURRENT AND PREVIOUS rho, alpha, AND omega ARE 
 !           DIFFERENT
-          isame = IMSLINEARSUB_SAME(rho, rho0) 
-          IF (isame.NE.0) THEN 
+          lsame = IS_SAME(rho, rho0) 
+          IF (lsame) THEN 
             EXIT INNER 
           END IF 
-          isame = IMSLINEARSUB_SAME(alpha, alpha0) 
-          IF (isame.NE.0) THEN 
+          lsame = IS_SAME(alpha, alpha0) 
+          IF (lsame) THEN 
             EXIT INNER 
           END IF 
-          isame = IMSLINEARSUB_SAME(omega, omega0) 
-          IF (isame.NE.0) THEN 
+          lsame = IS_SAME(omega, omega0) 
+          IF (lsame) THEN 
             EXIT INNER 
           END IF 
 !-----------RECALCULATE THE RESIDUAL
@@ -1975,28 +2007,31 @@
 !       + + + FUNCTIONS + + +                                             
 !       + + + CODE + + +                                                  
         IF (Icnvgopt ==  0) THEN 
-          IF (ABS(Hmax) <=  Hclose .AND. ABS(Rmax) <=  Rclose) THEN 
+          IF (ABS(Hmax) <= Hclose .AND. ABS(Rmax) <= Rclose) THEN 
             Icnvg = 1 
           END IF 
-        ELSE IF (Icnvgopt ==  1) THEN 
-          IF (ABS(Hmax) <=  Hclose .AND. ABS(Rmax) <=  Rclose .AND.               &
-              iiter ==  1) THEN 
-            Icnvg = 1 
+        ELSE IF (Icnvgopt == 1) THEN 
+          IF (ABS(Hmax) <= Hclose .AND. ABS(Rmax) <= Rclose) THEN
+            IF (iiter == 1) THEN 
+              Icnvg = 1
+            ELSE
+              Icnvg = -1
+            END IF
           END IF 
-        ELSE IF (Icnvgopt ==  2) THEN 
-          IF (ABS(Hmax) <=  Hclose .OR. Rmax <=  Rclose) THEN 
+        ELSE IF (Icnvgopt == 2) THEN 
+          IF (ABS(Hmax) <= Hclose .OR. Rmax <= Rclose) THEN 
             Icnvg = 1 
-          ELSE IF (Rmax <=  Rmax0*Epfact) THEN 
+          ELSE IF (Rmax <= Rmax0*Epfact) THEN 
             Icnvg = -1 
           END IF
-        ELSE IF (Icnvgopt ==  3) THEN 
-          IF (ABS(Hmax) <=  Hclose) THEN
+        ELSE IF (Icnvgopt == 3) THEN 
+          IF (ABS(Hmax) <= Hclose) THEN
             Icnvg = 1 
-          ELSE IF (Rmax <=  Rmax0*Rclose) THEN  
+          ELSE IF (Rmax <= Rmax0*Rclose) THEN  
             Icnvg = -1 
           END IF
-        ELSE IF (Icnvgopt ==  4) THEN 
-          IF (ABS(Hmax) <=  Hclose .AND. Rmax <=  Rclose) THEN
+        ELSE IF (Icnvgopt == 4) THEN 
+          IF (ABS(Hmax) <= Hclose .AND. Rmax <= Rclose) THEN
             Icnvg = 1 
           ELSE IF (Rmax <=  Rmax0*Epfact) THEN  
             Icnvg = -1 
@@ -2280,40 +2315,6 @@
       !---------return
       return
     END FUNCTION IMSLINEARSUB_RNRM2
-
-    FUNCTION IMSLINEARSUB_SAME(a, b) RESULT(ivalue)
-!     + + + return
-      integer(I4B) :: ivalue
-!     + + + dummy arguments + + +
-      real(DP), intent(in)   :: a
-      real(DP), intent(in)   :: b
-!     + + + local definitions + + +
-      real(DP) :: denom
-      real(DP) :: rdiff
-!     + + + parameters + + +
-!     + + + functions + + +
-!     + + + code + + +
-      ivalue = 0
-      if (a == b) then
-        ivalue = 1
-      else
-        if (abs(b) > abs(a)) then
-          denom = b
-        else
-          denom = a
-          if (abs(denom) == DZERO) then
-            denom = DPREC
-          end if
-        end if
-        rdiff = abs( (a - b) / denom )
-        !if (rdiff <= DEM5) then
-        if (rdiff <= DSAME) then
-          ivalue = 1
-        end if
-      end if
-      !---------return
-      return
-    END FUNCTION IMSLINEARSUB_SAME
 !
 !    
 !-------BEGINNING OF SUBROUTINES FROM OTHER LIBRARIES                   
@@ -2322,7 +2323,7 @@
       !
       !  SPARSKIT VERSION 2 SUBROUTINES INCLUDED INCLUDE:
       !
-      !    1 - ilut
+      !    1 - IMSLINEARSUB_PCMILUT
       !    2 - IMSLINEARSUB_PCMILUT_LUSOL
       !    3 - IMSLINEARSUB_PCMILUT_QSPLIT
       !
@@ -2458,9 +2459,13 @@
         ! (however, fill-in is then unpredictable).                            *
         !----------------------------------------------------------------------*
         !     locals
+        character(len=LINELENGTH) :: line
         integer(I4B) :: ju0,k,j1,j2,j,ii,i,lenl,lenu,jj,jrow,jpos,ilen
         real(DP) :: tnorm, t, abs, s, fact
         real(DP) :: rs, d, sd1, tl
+        !     format
+        character(len=*), parameter :: fmterr = "(//,1x,a)"
+        !     code
         if (lfil .lt. 0) goto 998
         !-----------------------------------------------------------------------
         !     initialize ju0 (points to next element to be added to alu,jlu)
@@ -2641,7 +2646,8 @@
           do k = 1, ilen
             !            if (ju0 .gt. iwk) goto 996
             if (ju0 .gt. iwk) then
-              write (*,'(//1x,2i10)') ju0, iwk
+              write(line, '(2i10)') ju0, iwk
+              call sim_message(line, fmt=fmterr, level=VDEBUG)
               goto 996
             end if
             alu(ju0) =  w(k)
@@ -2675,7 +2681,8 @@
           t = abs(w(ii))
           !         if (ilen + ju0 .gt. iwk) goto 997
           if (ilen + ju0 .gt. iwk) then
-            write (*,'(//1x,2i10)') (ilen + ju0), iwk
+            write(line, '(2i10)') (ilen + ju0), iwk
+            call sim_message(line, fmt=fmterr, level=VDEBUG)
             goto 997
           end if
           do k = ii+1, ii+ilen-1

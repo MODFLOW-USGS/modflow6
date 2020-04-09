@@ -27,7 +27,8 @@ sfmt = '{:25s} - {}'
 
 class Simulation(object):
     def __init__(self, name, exfunc=None, exe_dict=None, htol=None,
-                 idxsim=None):
+                 idxsim=None, cmp_verbose=True, require_failure=None,
+                 bmifunc=None):
         delFiles = True
         for idx, arg in enumerate(sys.argv):
             if arg.lower() == '--keep':
@@ -35,7 +36,7 @@ class Simulation(object):
             elif arg[2:].lower() in list(targets.target_dict.keys()):
                 key = arg[2:].lower()
                 exe0 = targets.target_dict[key]
-                exe = os.path.join(os.path.dirname(exe0), sys.argv[idx+1])
+                exe = os.path.join(os.path.dirname(exe0), sys.argv[idx + 1])
                 msg = 'replacing {} executable '.format(key) + \
                       '"{}" with '.format(targets.target_dict[key]) + \
                       '"{}".'.format(exe)
@@ -57,8 +58,6 @@ class Simulation(object):
                     print(msg)
                     targets.target_dict[key] = exe
 
-
-
         msg = sfmt.format('Initializing test', name)
         print(msg)
         self.name = name
@@ -66,6 +65,8 @@ class Simulation(object):
         self.simpath = None
         self.inpt = None
         self.outp = None
+        self.coutp = None
+        self.bmifunc = bmifunc
 
         # set htol for comparisons
         if htol is None:
@@ -74,6 +75,12 @@ class Simulation(object):
 
         # set index for multi-simulation comparisons
         self.idxsim = idxsim
+
+        # set compare verbosity
+        self.cmp_verbose = cmp_verbose
+
+        # set allow failure
+        self.require_failure = require_failure
 
         sysinfo = platform.system()
         self.delFiles = delFiles
@@ -95,13 +102,16 @@ class Simulation(object):
 
         self.simpath = pth
 
-        # get MNODFLOW6 output file names
+        # get MODFLOW 6 output file names
         fpth = os.path.join(pth, 'mfsim.nam')
         mf6inp, mf6outp = pymake.get_mf6_files(fpth)
         self.outp = mf6outp
 
         # determine comparison model
         self.action = pymake.get_mf6_comparison(pth)
+        if self.action is not None:
+            if 'mf6' in self.action:
+                cinp, self.coutp = pymake.get_mf6_files(fpth)
 
     def setup(self, src, dst):
         msg = sfmt.format('Setup test', self.name)
@@ -157,7 +167,13 @@ class Simulation(object):
             print(msg)
             success = False
 
-        assert success
+        if self.require_failure is None:
+            assert success
+        else:
+            if self.require_failure:
+                assert success is False
+            else:
+                assert success is True
 
         self.nam_cmp = None
         if success:
@@ -169,14 +185,22 @@ class Simulation(object):
                     cpth = os.path.join(self.simpath, self.action)
                     key = self.action.lower().replace('.cmp', '')
                     exe = os.path.abspath(targets.target_dict[key])
-                    npth = pymake.get_namefiles(cpth)[0]
-                    nam = os.path.basename(npth)
+                    if 'mf6' in key or 'libmf6' in key:
+                        nam = None
+                    else:
+                        npth = pymake.get_namefiles(cpth)[0]
+                        nam = os.path.basename(npth)
                     self.nam_cmp = nam
                     try:
-                        success_cmp, buff = flopy.run_model(exe, nam,
-                                                            model_ws=cpth,
-                                                            silent=False,
-                                                            report=True)
+                        if self.bmifunc is None:
+                            success_cmp, buff = flopy.run_model(exe, nam,
+                                                                model_ws=cpth,
+                                                                silent=False,
+                                                                report=True)
+                        else:
+                            success_cmp, buff = self.bmifunc(exe,
+                                                             self.idxsim,
+                                                             model_ws=cpth)
                         msg = sfmt.format('Comparison run',
                                           self.name + '/' + key)
                         if success:
@@ -249,7 +273,17 @@ class Simulation(object):
                                 os.path.basename(pth))
                             print(txt)
                     else:
-                        files2.append(None)
+                        if self.coutp is not None:
+                            for file2 in self.coutp:
+                                ext = os.path.splitext(file2)[1][1:]
+
+                                if ext.lower() in ['hds', 'hed', 'bhd', 'ahd']:
+                                    # simulation file
+                                    pth = os.path.join(cpth, file2)
+                                    files2.append(pth)
+
+                        else:
+                            files2.append(None)
 
             if self.nam_cmp is None:
                 pth = None
@@ -286,9 +320,9 @@ class Simulation(object):
                                                    files1=file1,
                                                    files2=file2,
                                                    htol=self.htol,
-                                                   difftol=False,
+                                                   difftol=True,
                                                    # Change to true to have list of all nodes exceeding htol
-                                                   verbose=True,
+                                                   verbose=self.cmp_verbose,
                                                    exfile=exfile)
                 msg = sfmt.format('{} comparison {}'.format(extdict[ext],
                                                             ipos + 1),
@@ -324,3 +358,11 @@ class Simulation(object):
             else:
                 print('Retaining test files')
         return
+
+
+def bmi_return(success, model_ws):
+    """
+    parse libmf6.so and libmf6.dll stdout file
+    """
+    fpth = os.path.join(model_ws, 'mfsim.stdout')
+    return success, open(fpth).readlines()

@@ -163,11 +163,11 @@ def get_model(idx, dir):
     dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
                                   delr=delr, delc=delc,
                                   top=top, botm=botm,
-                                  fname='{}.dis'.format(name))
+                                  filename='{}.dis'.format(name))
 
     # initial conditions
     ic = flopy.mf6.ModflowGwfic(gwf, strt=strt,
-                                fname='{}.ic'.format(name))
+                                filename='{}.ic'.format(name))
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False,
@@ -382,7 +382,7 @@ def eval_zb6(sim):
         f.write(line + '\n')
     f.close()
 
-    if diffmax > budtol or diffzbmax> budtol:
+    if diffmax > budtol or diffzbmax > budtol:
         sim.success = False
         msg += '\n...exceeds {}'.format(budtol)
         assert diffmax < budtol and diffzbmax < budtol, msg

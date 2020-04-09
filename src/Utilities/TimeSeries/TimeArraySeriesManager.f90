@@ -120,9 +120,10 @@ contains
     real(DP) :: begintime, endtime
     character(len=MAXCHARLEN) :: ermsg
     ! formats
-    5 format(/,'Time-array-series controlled arrays' &
-                ' in stress period ',i0,', time step ',i0,':')
-    10  format('"',a'" package: ',a,' array obtained from time-array series "',a,'"')
+    character(len=*),parameter :: fmt5 =                                       &
+      "(/,'Time-array-series controlled arrays in stress period ',             &
+      &i0, ', time step ', i0, ':')"
+10  format('"',a, '" package: ',a,' array obtained from time-array series "',a,'"')
 ! ------------------------------------------------------------------------------
     !
     ! -- Initialize time variables
@@ -137,7 +138,7 @@ contains
       do i = 1, nlinks
         tasLink => GetTimeArraySeriesLinkFromList(this%boundTasLinks, i)
         if (tasLink%Iprpak == 1 .and. i==1) then
-          write(this%iout,5)kper, kstp
+          write(this%iout, fmt5) kper, kstp
         endif
         if (tasLink%UseDefaultProc) then
           timearrayseries => tasLink%timeArraySeries
@@ -155,8 +156,9 @@ contains
           ! -- If PRINT_INPUT is specified, write information
           !    regarding source of time-array series data
           if (tasLink%Iprpak == 1) then
-            write(this%iout,10)trim(tasLink%PackageName), trim(tasLink%Text), &
-                               trim(tasLink%timeArraySeries%Name)
+            write(this%iout,10) trim(tasLink%PackageName),                  &
+                                   trim(tasLink%Text),                         &
+                                   trim(tasLink%timeArraySeries%Name)
           endif
         endif
         if (i == nlinks) then

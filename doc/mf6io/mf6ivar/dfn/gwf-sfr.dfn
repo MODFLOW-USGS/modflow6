@@ -128,6 +128,38 @@ longname file keyword
 description name of the binary output file to write budget information.
 
 block options
+name package_convergence_filerecord
+type record package_convergence fileout package_convergence_filename
+shape
+reader urword
+tagged true
+optional true
+longname
+description
+
+block options
+name package_convergence
+type keyword
+shape
+in_record true
+reader urword
+tagged true
+optional false
+longname package_convergence keyword
+description keyword to specify that record corresponds to the package convergence comma spaced values file.
+
+block options
+name package_convergence_filename
+type string
+shape
+in_record true
+reader urword
+tagged false
+optional false
+longname file keyword
+description name of the comma spaced values output file to write package convergence information.
+
+block options
 name ts_filerecord
 type record ts6 filein ts6_filename
 shape
@@ -213,11 +245,11 @@ description REPLACE mover {'{#1}': 'SFR'}
 
 block options
 name maximum_iterations
-type double precision
+type integer
 reader urword
 optional true
 longname SFR Newton-Raphson iterations
-description value that defines an maximum number of Streamflow Routing Newton-Raphson iterations allowed for a reach. By default, MAXSFRIT is equal to 100.
+description value that defines the maximum number of Streamflow Routing Newton-Raphson iterations allowed for a reach. By default, MAXSFRIT is equal to 100.
 
 block options
 name maximum_depth_change
@@ -487,7 +519,7 @@ tagged false
 in_record true
 reader urword
 longname iprior code
-description character string value that defines the the prioritization system for the diversion, such as when insufficient water is available to meet all diversion stipulations, and is used in conjunction with the value of FLOW value specified in the STRESS\_PERIOD\_DATA section. Available diversion options include:  (1) CPRIOR = `FRACTION', then the amount of the diversion is computed as a fraction of the streamflow leaving reach RNO ($Q_{DS}$); in this case, 0.0 $\le$ DIVFLOW $\le$ 1.0.  (2) CPRIOR = `EXCESS', a diversion is made only if $Q_{DS}$ for reach RNO exceeds the value of DIVFLOW. If this occurs, then the quantity of water diverted is the excess flow ($Q_{DS} -$ DIVFLOW) and $Q_{DS}$ from reach RNO is set equal to DIVFLOW. This represents a flood-control type of diversion, as described by Danskin and Hanson (2002). (3) CPRIOR = `THRESHOLD', then if $Q_{DS}$ in reach RNO is less than the specified diversion flow (DIVFLOW), no water is diverted from reach RNO. If $Q_{DS}$ in reach RNO is greater than or equal to (DIVFLOW), (DIVFLOW) is diverted and $Q_{DS}$ is set to the remainder ($Q_{DS} -$ DIVFLOW)). This approach assumes that once flow in the stream is sufficiently low, diversions from the stream cease, and is the `priority' algorithm that originally was programmed into the STR1 Package (Prudic, 1989).  (4) CPRIOR = `UPTO' -- if $Q_{DS}$ in reach RNO is greater than or equal to the specified diversion flow (DIVFLOW), $Q_{DS}$ is reduced by DIVFLOW. If $Q_{DS}$ in reach RNO is less than (DIVFLOW), DIVFLOW is set to $Q_{DS}$ and there will be no flow available for reaches connected to downstream end of reach RNO. 
+description character string value that defines the the prioritization system for the diversion, such as when insufficient water is available to meet all diversion stipulations, and is used in conjunction with the value of FLOW value specified in the STRESS\_PERIOD\_DATA section. Available diversion options include:  (1) CPRIOR = `FRACTION', then the amount of the diversion is computed as a fraction of the streamflow leaving reach RNO ($Q_{DS}$); in this case, 0.0 $\le$ DIVFLOW $\le$ 1.0.  (2) CPRIOR = `EXCESS', a diversion is made only if $Q_{DS}$ for reach RNO exceeds the value of DIVFLOW. If this occurs, then the quantity of water diverted is the excess flow ($Q_{DS} -$ DIVFLOW) and $Q_{DS}$ from reach RNO is set equal to DIVFLOW. This represents a flood-control type of diversion, as described by Danskin and Hanson (2002). (3) CPRIOR = `THRESHOLD', then if $Q_{DS}$ in reach RNO is less than the specified diversion flow (DIVFLOW), no water is diverted from reach RNO. If $Q_{DS}$ in reach RNO is greater than or equal to (DIVFLOW), (DIVFLOW) is diverted and $Q_{DS}$ is set to the remainder ($Q_{DS} -$ DIVFLOW)). This approach assumes that once flow in the stream is sufficiently low, diversions from the stream cease, and is the `priority' algorithm that originally was programmed into the STR1 Package (Prudic, 1989).  (4) CPRIOR = `UPTO' -- if $Q_{DS}$ in reach RNO is greater than or equal to the specified diversion flow (DIVFLOW), $Q_{DS}$ is reduced by DIVFLOW. If $Q_{DS}$ in reach RNO is less than (DIVFLOW), DIVFLOW is set to $Q_{DS}$ and there will be no flow available for reaches connected to downstream end of reach RNO.
 
 
 # --------------------- gwf sfr period ---------------------
@@ -542,7 +574,7 @@ tagged true
 in_record true
 reader urword
 longname well status
-description keyword option to define stream reach status.  STATUS can be ACTIVE, INACTIVE, or SIMPLE. The SIMPLE STATUS option simulates streamflow using a user-specified stage for a reach or a stage set to the top of the reach (depth = 0). In cases where the simulated leakage calculated using the specified stage exceeds the sum of inflows to the reach, the stage is set to the top of the reach and leakage is set equal to the sum of inflows. Upstream factions should be changed using the UPSTREAM\_FRACTION SFRSETTING if the status for one or more reaches is changed to ACTIVE or INACTIVE. For example, if one of two downstream connections for a reach is inactivated, the upstream fraction for the active and inactive downstream reach should be changed to 1.0 and 0.0, respectively, to ensure that the active reach receives all of the downstream outflow from the upstream reach. By default, STATUS is ACTIVE.
+description keyword option to define stream reach status.  STATUS can be ACTIVE, INACTIVE, or SIMPLE. The SIMPLE STATUS option simulates streamflow using a user-specified stage for a reach or a stage set to the top of the reach (depth = 0). In cases where the simulated leakage calculated using the specified stage exceeds the sum of inflows to the reach, the stage is set to the top of the reach and leakage is set equal to the sum of inflows. Upstream fractions should be changed using the UPSTREAM\_FRACTION SFRSETTING if the status for one or more reaches is changed to ACTIVE or INACTIVE. For example, if one of two downstream connections for a reach is inactivated, the upstream fraction for the active and inactive downstream reach should be changed to 1.0 and 0.0, respectively, to ensure that the active reach receives all of the downstream outflow from the upstream reach. By default, STATUS is ACTIVE.
 
 block period
 name manning
@@ -612,7 +644,7 @@ description real or character value that defines the volumetric rate of diffuse 
 
 block period
 name diversionrecord
-type record diversion idv divrate
+type record diversion idv divflow
 shape
 tagged
 in_record true
@@ -641,14 +673,14 @@ description diversion number.
 numeric_index true
 
 block period
-name divrate
+name divflow
 type double precision
 shape
 tagged false
 in_record true
 reader urword
 time_series true
-longname volumetric diversion rate
+longname volumetric diversion flow rate
 description real or character value that defines the volumetric diversion (DIVFLOW) rate for the streamflow routing reach. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.
 
 block period

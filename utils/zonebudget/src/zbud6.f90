@@ -1,14 +1,16 @@
 program zonbudmf6
   use KindModule
   use SimModule, only: ustop
-  use ConstantsModule, only: LENHUGELINE
+  use ConstantsModule, only: LINELENGTH, LENHUGELINE
   use VersionModule, only: VERSION
   use SimVariablesModule, only: iout
-  use InputOutputModule,  only: openfile, write_centered
+  use GenericUtilitiesModule, only: sim_message, write_centered
+  use InputOutputModule,  only: openfile
   
   implicit none
   
   character(len=10), parameter :: mfvnam=' Version 6'
+  character(len=LINELENGTH) :: line
   character(len=LENHUGELINE) :: fnam, flst, fcsv
   integer(I4B) :: iunit_lst = 20
   integer(I4B) :: iunit_csv = 21
@@ -19,27 +21,28 @@ program zonbudmf6
   logical :: exists
   
   ! -- Write title to screen
-  call write_centered('ZONEBUDGET'//mfvnam, 6, 80)
-  call write_centered('U.S. GEOLOGICAL SURVEY', 6, 80)
-  call write_centered('VERSION '//VERSION, 6, 80)
+  call write_centered('ZONEBUDGET'//mfvnam, 80)
+  call write_centered('U.S. GEOLOGICAL SURVEY', 80)
+  call write_centered('VERSION '//VERSION, 80)
   !
   ! -- Find name of zone budget name file and lst file
   fnam = 'zbud.nam'
   call parse_command_line(fnam, flst, fcsv)
   inquire(file=fnam, exist=exists)
   if (.not. exists) then
-    write(6, *)
-    write(6, '(a)') 'ERROR.  Name file not found.'
-    write(6, '(a)') 'Looking for: ' // trim(fnam)
+    write(line,'(a)') 'ERROR.  Name file not found.'
+    call sim_message(line, skipbefore=1)
+    write(line,'(a)')  'Looking for: ' // trim(fnam)
+    call sim_message(line)
     call ustop()
   endif
   !  
   ! -- Open list file and write title
   iout = iunit_lst
   call openfile(iunit_lst, 0, flst, 'LIST', filstat_opt='REPLACE')
-  call write_centered('ZONEBUDGET'//mfvnam, iout, 80)
-  call write_centered('U.S. GEOLOGICAL SURVEY', iout, 80)
-  call write_centered('VERSION '//VERSION, iout, 80)
+  call write_centered('ZONEBUDGET'//mfvnam, 80, iunit=iout)
+  call write_centered('U.S. GEOLOGICAL SURVEY', 80, iunit=iout)
+  call write_centered('VERSION '//VERSION, 80, iunit=iout)
   !
   ! -- Open name file, read name file, and open csv file
   call openfile(iunit_nam, iout, fnam, 'NAM')
@@ -53,8 +56,10 @@ program zonbudmf6
   write(iunit_lst, '(/, a)') 'Normal Termination'
   close(iunit_lst)
   close(iunit_csv)
-  write(6, '(a)') 'Normal Termination'
+  write(line,'(a)') 'Normal Termination'
+  call sim_message(line, skipbefore=1)
   !
+  ! -- end of program
 end program zonbudmf6
 
 subroutine read_namefile(iunit_nam, iunit_bud, iunit_zon, iunit_grb)
@@ -144,6 +149,7 @@ subroutine process_budget(iunit_csv, iunit_bud, iunit_zon, iunit_grb)
   use KindModule
   use ConstantsModule, only: LINELENGTH
   use SimVariablesModule, only: iout
+  use GenericUtilitiesModule, only: sim_message
   use SimModule, only: store_error, ustop
   use BudgetDataModule, only: budgetdata_init, budgetdata_read,                &
                               budgetdata_finalize,                             &
@@ -166,6 +172,7 @@ subroutine process_budget(iunit_csv, iunit_bud, iunit_zon, iunit_grb)
   integer, intent(in) :: iunit_zon
   integer, intent(in) :: iunit_grb
   ! -- local
+  character(len=1) :: cdot
   character(len=16), dimension(:), allocatable :: budtxtarray
   character(len=16), dimension(:), allocatable :: packagenamearray
   integer, dimension(:), allocatable :: internalflow
@@ -181,6 +188,9 @@ subroutine process_budget(iunit_csv, iunit_bud, iunit_zon, iunit_grb)
   logical :: foundchd = .false.
   character(len=LINELENGTH) :: errmsg
 ! ------------------------------------------------------------------------------
+  !
+  ! -- initialize local variables
+  cdot = '.'
   !
   ! -- Initialize budget data
   call budgetdata_init(iunit_bud, iout, ncrbud)
@@ -243,7 +253,7 @@ subroutine process_budget(iunit_csv, iunit_bud, iunit_zon, iunit_grb)
       endif
       !
       ! -- write message and check
-      write(6, '(a)', advance='no') '.'
+      call sim_message(cdot, advance=.FALSE.)
       if (itime == 1) then
         budtxtarray(ibudterm) = budtxt
         packagenamearray(ibudterm) = dstpackagename
@@ -297,7 +307,7 @@ subroutine process_budget(iunit_csv, iunit_bud, iunit_zon, iunit_grb)
   enddo timeloop
   !
   ! -- Finalize
-  write(6, '(a)') '.'
+  call sim_message(cdot)
   call budgetdata_finalize()
   call zoneoutput_finalize()
   call zone_finalize()

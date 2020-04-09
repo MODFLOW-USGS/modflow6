@@ -2,4 +2,5 @@ BEGIN OPTIONS
   [CONTINUE]
   [NOCHECK]
   [MEMORY_PRINT_OPTION <memory_print_option>]
+  [MAXERRORS <maxerrors>]
 END OPTIONS

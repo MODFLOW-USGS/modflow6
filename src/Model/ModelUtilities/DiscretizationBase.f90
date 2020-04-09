@@ -39,8 +39,10 @@ module BaseDisModule
     real(DP), dimension(:), pointer, contiguous     :: area       => null()      !(size:nodes) cell area, in plan view
     type(ConnectionsType), pointer                  :: con        => null()      !connections object
     type(BlockParserType)                           :: parser                    !object to read blocks
-    real(DP), dimension(:), pointer, contiguous     :: dbuff      => null()
-    integer(I4B), dimension(:), pointer, contiguous :: ibuff      => null()
+    real(DP), dimension(:), pointer, contiguous     :: dbuff      => null()      !helper double array of size nodesuser
+    integer(I4B), dimension(:), pointer, contiguous :: ibuff      => null()      !helper int array of size nodesuser
+    integer(I4B), dimension(:), pointer, contiguous :: nodereduced => null()     ! (size:nodesuser)contains reduced nodenumber (size 0 if not reduced); -1 means vertical pass through, 0 is idomain = 0
+    integer(I4B), dimension(:), pointer, contiguous :: nodeuser => null()        ! (size:nodes) given a reduced nodenumber, provide the user nodenumber (size 0 if not reduced)
   contains
     procedure :: dis_df
     procedure :: dis_ac
@@ -62,12 +64,15 @@ module BaseDisModule
     procedure :: get_nodenumber_idx3
     procedure :: get_nodeuser
     procedure :: nodeu_to_string
+    procedure :: nodeu_to_array
     procedure :: nodeu_from_string
     procedure :: nodeu_from_cellid
     procedure :: noder_from_string
     procedure :: noder_from_cellid
     procedure :: connection_normal
     procedure :: connection_vector
+    procedure :: get_cellxy
+    procedure :: get_dis_type
     procedure :: supports_layers
     procedure :: allocate_scalars
     procedure :: allocate_arrays
@@ -79,20 +84,26 @@ module BaseDisModule
     procedure          :: read_dbl_array
     generic, public    :: read_grid_array => read_int_array, read_dbl_array
     procedure, public  :: read_layer_array
+    procedure          :: fill_int_array
+    procedure          :: fill_dbl_array
+    generic, public    :: fill_grid_array => fill_int_array, fill_dbl_array
     procedure, public  :: read_list
     !
     procedure, public  :: record_array
     procedure, public  :: record_connection_array
     procedure, public  :: noder_to_string
+    procedure, public  :: noder_to_array
     procedure, public  :: record_srcdst_list_header
     procedure, private :: record_srcdst_list_entry
     generic, public    :: record_mf6_list_entry => record_srcdst_list_entry
+  ! *** NOTE: REMOVE print_list_entry WHEN ALL USES OF THIS METHOD ARE 
+  !           REMOVED FROM TRANSPORT
     procedure, public  :: print_list_entry
     procedure, public  :: nlarray_to_nodelist
     procedure, public  :: highest_active
     procedure, public  :: get_area
   end type DisBaseType
-
+  
   contains
 
   subroutine dis_df(this)
@@ -287,7 +298,7 @@ module BaseDisModule
 
   subroutine nodeu_to_string(this, nodeu, str)
 ! ******************************************************************************
-! noder_to_string -- Convert user node number to a string in the form of
+! nodeu_to_string -- Convert user node number to a string in the form of
 ! (nodenumber) or (k,i,j)
 ! ******************************************************************************
 !
@@ -308,8 +319,30 @@ module BaseDisModule
     return
   end subroutine nodeu_to_string
 
-  function get_nodeuser(this, noder) &
-    result(nodenumber)
+  subroutine nodeu_to_array(this, nodeu, arr)
+! ******************************************************************************
+! nodeu_to_array -- Convert user node number to cellid and fill array with
+!                   (nodenumber) or (k,j) or (k,i,j) 
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(DisBaseType) :: this
+    integer(I4B), intent(in) :: nodeu
+    integer(I4B), dimension(:), intent(inout) :: arr
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    call store_error('Program error: DisBaseType method nodeu_to_array not &
+                     &implemented.')
+    call ustop()
+    !
+    ! -- return
+    return
+  end subroutine nodeu_to_array
+
+  function get_nodeuser(this, noder) result(nodenumber)
 ! ******************************************************************************
 ! get_nodeuser -- Return the user nodenumber from the reduced node number
 ! ******************************************************************************
@@ -323,10 +356,11 @@ module BaseDisModule
     integer(I4B), intent(in) :: noder
 ! ------------------------------------------------------------------------------
     !
-    nodenumber = 0
-    call store_error('Program error: DisBaseType method get_nodeuser not &
-                     &implemented.')
-    call ustop()
+    if(this%nodes < this%nodesuser) then
+      nodenumber = this%nodeuser(noder)
+    else
+      nodenumber = noder
+    endif
     !
     ! -- return
     return
@@ -474,7 +508,35 @@ module BaseDisModule
     ! -- return
     return
   end subroutine connection_vector
+                                 
+  ! return x,y coordinate for a node
+  subroutine get_cellxy(this, node, xcell, ycell)
+    class(DisBaseType), intent(in)  :: this
+    integer(I4B), intent(in)        :: node
+    real(DP), intent(out)           :: xcell, ycell
+      
+    ! suppress warning
+    xcell = -999999.0
+    ycell = -999999.0
     
+    call store_error('Program error: get_cellxy not implemented.')
+    call ustop()
+    
+  end subroutine get_cellxy     
+  
+  ! return discretization type
+  subroutine get_dis_type(this, dis_type)
+    class(DisBaseType), intent(in)  :: this
+    character(len=*), intent(out)   :: dis_type
+      
+    ! suppress warning
+    dis_type = "Not implemented" 
+    
+    call store_error('Program error: get_dis_type not implemented.')
+    call ustop()
+    
+  end subroutine get_dis_type
+                               
   subroutine allocate_scalars(this, name_model)
 ! ******************************************************************************
 ! allocate_scalars -- Allocate and initialize scalar variables in this class
@@ -883,7 +945,6 @@ module BaseDisModule
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: darray
     character(len=*), intent(in)                               :: aname
     ! -- local
-    integer(I4B) :: ival
     character(len=LINELENGTH) :: ermsg
 ! ------------------------------------------------------------------------------
     !
@@ -895,6 +956,56 @@ module BaseDisModule
     ! -- return
     return
   end subroutine read_dbl_array
+
+  subroutine fill_int_array(this, ibuff1, ibuff2)
+! ******************************************************************************
+! fill_dbl_array -- Fill a GWF integer array
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(DisBaseType), intent(inout)                              :: this
+    integer(I4B), dimension(:), pointer, contiguous, intent(in)    :: ibuff1
+    integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: ibuff2
+    ! -- local
+    integer(I4B) :: nodeu
+    integer(I4B) :: noder
+! ------------------------------------------------------------------------------
+    do nodeu = 1, this%nodesuser
+      noder = this%get_nodenumber(nodeu, 0)
+      if(noder <= 0) cycle
+      ibuff2(noder) = ibuff1(nodeu)
+    end do
+    !
+    ! -- return
+    return
+  end subroutine fill_int_array
+
+  subroutine fill_dbl_array(this, buff1, buff2)
+! ******************************************************************************
+! fill_dbl_array -- Fill a GWF double precision array
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(DisBaseType), intent(inout)                          :: this
+    real(DP), dimension(:), pointer, contiguous, intent(in)    :: buff1
+    real(DP), dimension(:), pointer, contiguous, intent(inout) :: buff2
+    ! -- local
+    integer(I4B) :: nodeu
+    integer(I4B) :: noder
+! ------------------------------------------------------------------------------
+    do nodeu = 1, this%nodesuser
+      noder = this%get_nodenumber(nodeu, 0)
+      if(noder <= 0) cycle
+      buff2(noder) = buff1(nodeu)
+    end do
+    !
+    ! -- return
+    return
+  end subroutine fill_dbl_array
                             
   subroutine read_list(this, in, iout, iprpak, nlist, inamedbound,             &
                         iauxmultcol, nodelist,  rlist, auxvar, auxname,        &
@@ -915,7 +1026,6 @@ module BaseDisModule
     use ListReaderModule, only: ListReaderType
     use SimModule, only: store_error, store_error_unit, count_errors, ustop
     use InputOutputModule, only: urword
-    use TdisModule, only: totimsav, perlen
     use TimeSeriesLinkModule, only:  TimeSeriesLinkType
     use TimeSeriesManagerModule, only: read_value_or_time_series
     ! -- dummy
@@ -932,7 +1042,7 @@ module BaseDisModule
     character(len=16), dimension(:), intent(inout) :: auxname
     character(len=LENBOUNDNAME), dimension(:), pointer, contiguous,                        &
                                           intent(inout) :: boundname
-    character(len=500), intent(in) :: label
+    character(len=*), intent(in) :: label
     character(len=*),  intent(in) :: pkgName
     type(TimeSeriesManagerType)   :: tsManager
     integer(I4B), intent(in) :: iscloc
@@ -964,8 +1074,9 @@ module BaseDisModule
                 bndElem, pkgName, 'BND', tsManager, iprpak, tsLinkBnd)
         if (associated(tsLinkBnd)) then
           !
-          ! -- If iauxmultcol is the same as this column, then assign 
-          !    tsLinkBnd%RMultiplier to auxvar multiplier
+          ! -- If iauxmultcol is active and this column is the column
+          !    to be scaled, then assign tsLinkBnd%RMultiplier to auxvar 
+          !    multiplier
           if (iauxmultcol > 0 .and. jj == iscloc) then
             tsLinkBnd%RMultiplier => auxvar(iauxmultcol, ii)
           endif
@@ -1071,8 +1182,6 @@ module BaseDisModule
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
     ! -- local
-    integer(I4B) :: il, ir, ic, ncol, nrow, nlay, nval, nodeu
-    logical :: found
     character(len=LINELENGTH) :: ermsg
 ! ------------------------------------------------------------------------------
     !
@@ -1180,6 +1289,30 @@ module BaseDisModule
     return
   end subroutine noder_to_string
 
+  subroutine noder_to_array(this, noder, arr)
+! ******************************************************************************
+! noder_to_array -- Convert reduced node number to cellid and fill array with
+!                   (nodenumber) or (k,j) or (k,i,j) 
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(DisBaseType) :: this
+    integer(I4B), intent(in) :: noder
+    integer(I4B), dimension(:), intent(inout) :: arr
+    ! -- local
+    integer(I4B) :: nodeu
+! ------------------------------------------------------------------------------
+    !
+    nodeu = this%get_nodeuser(noder)
+    call this%nodeu_to_array(nodeu, arr)
+    !
+    ! -- return
+    return
+  end subroutine noder_to_array
+
   subroutine record_srcdst_list_header(this, text, textmodel, textpackage,      &
                                        dstmodel, dstpackage, naux, auxtxt,      &
                                        ibdchn, nlist, iout)
@@ -1268,6 +1401,8 @@ module BaseDisModule
     return
   end subroutine record_srcdst_list_entry
 
+  ! *** NOTE: REMOVE print_list_entry WHEN ALL USES OF THIS METHOD ARE 
+  !           REMOVED FROM TRANSPORT
   subroutine print_list_entry(this, l, noder, q, iout, boundname)
 ! ******************************************************************************
 ! print_list_entry -- Print list budget entry

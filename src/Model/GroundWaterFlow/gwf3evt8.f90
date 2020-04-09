@@ -105,6 +105,7 @@ module EvtModule
     packobj%ibcnum = ibcnum
     packobj%ncolbnd = 3 ! Assumes NSEG = 1
     packobj%iscloc = 2  ! sfac applies to max. ET rate
+    packobj%ictorigin = 'NPF'
     ! indxconvertflux is Column index of bound that will be multiplied by
     ! cell area to convert flux rates to flow rates
     packobj%indxconvertflux = 2
@@ -501,7 +502,7 @@ module EvtModule
     return
   end subroutine set_nodesontop
 
-  subroutine evt_cf(this)
+  subroutine evt_cf(this, reset_mover)
 ! ******************************************************************************
 ! evt_cf -- Formulate the HCOF and RHS terms
 ! ******************************************************************************
@@ -510,6 +511,7 @@ module EvtModule
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(EvtType) :: this
+    logical, intent(in), optional :: reset_mover
     ! -- local
     integer(I4B) :: i, iseg, node
     integer(I4B) :: idxdepth, idxrate
@@ -551,8 +553,8 @@ module EvtModule
         ! -- If head in cell is greater than or equal to SURFACE, ET is constant
         if (h >= s) then
           if (this%surfratespecified) then
-            ! -- Subtract -PETM0 from RHS
-            this%rhs(i) = this%rhs(i) + petm0
+            ! -- Subtract -PETM0 * max rate from RHS
+            this%rhs(i) = this%rhs(i) + petm0 * c
           else
             ! -- Subtract -RATE from RHS
             this%rhs(i) = this%rhs(i) + c
@@ -587,7 +589,7 @@ module EvtModule
               idxrate = 2 + this%nseg
               ! -- Iterate through segments to find segment that contains
               !    current depth of head below ET surface.
-              segloop: do iseg=1,this%nseg
+              segloop: do iseg = 1, this%nseg
                 ! -- Set proportions corresponding to lower end of
                 !    segment
                 if (iseg < this%nseg) then
@@ -612,13 +614,13 @@ module EvtModule
               enddo segloop
               ! -- Calculate terms to add to RHS and HCOF based on
               !    segment that applies at head elevation
-              thcof = -(abs(petm1-petm2))*c/((pxdp2-pxdp1)*x)
-              trhs = thcof*(s-pxdp1*x) + petm1*c
+              thcof = - (petm1 - petm2) * c / ((pxdp2 - pxdp1) * x)
+              trhs = thcof * (s - pxdp1 * x) + petm1 * c
             else
               ! -- Calculate terms to add to RHS and HCOF based on simple
               !    linear relation of ET vs. head for single segment
-              trhs = c - c*s/x
-              thcof = -c/x
+              trhs = c - c * s / x
+              thcof = -c / x
             endif
             this%rhs(i) = this%rhs(i) + trhs
             this%hcof(i) = this%hcof(i) + thcof
@@ -719,9 +721,8 @@ module EvtModule
     integer(I4B) :: indx, ipos
     integer(I4B) :: jcol, jauxcol, lpos, ivarsread
     character(len=LENTIMESERIESNAME) :: tasName
-    character(len=24) ::  atemp
     character(len=24), dimension(6) :: aname
-    character(len=100) :: ermsg, keyword
+    character(len=100) :: ermsg, keyword, atemp
     logical :: found, endOfBlock
     logical :: convertFlux
     !

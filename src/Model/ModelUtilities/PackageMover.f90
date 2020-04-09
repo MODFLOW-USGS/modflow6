@@ -8,6 +8,8 @@ module PackageMoverModule
   implicit none
   private
   public :: PackageMoverType
+  public :: set_packagemover_pointer
+  public :: nulllify_packagemover_pointer
   
   type PackageMoverType
     
@@ -34,6 +36,29 @@ module PackageMoverModule
   end type PackageMoverType
   
   contains
+  
+  subroutine set_packagemover_pointer(packagemover, origin)
+    type(PackageMoverType), intent(inout) :: packagemover
+    character(len=*), intent(in) :: origin
+    packagemover%origin = origin
+    call mem_setptr(packagemover%nproviders, 'NPROVIDERS', origin)
+    call mem_setptr(packagemover%nreceivers, 'NRECEIVERS', origin)
+    call mem_setptr(packagemover%qtformvr, 'QTFORMVR', origin)
+    call mem_setptr(packagemover%qformvr, 'QFORMVR', origin)
+    call mem_setptr(packagemover%qtomvr, 'QTOMVR', origin)
+    call mem_setptr(packagemover%qfrommvr, 'QFROMMVR', origin)
+  end subroutine set_packagemover_pointer
+
+  subroutine nulllify_packagemover_pointer(packagemover)
+    type(PackageMoverType), intent(inout) :: packagemover
+    packagemover%origin = ''
+    packagemover%nproviders => null()
+    packagemover%nreceivers => null()
+    packagemover%qtformvr => null()
+    packagemover%qformvr => null()
+    packagemover%qtomvr => null()
+    packagemover%qfrommvr => null()
+  end subroutine nulllify_packagemover_pointer
 
   subroutine ar(this, nproviders, nreceivers, origin)
     class(PackageMoverType) :: this

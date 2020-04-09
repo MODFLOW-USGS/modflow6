@@ -24,6 +24,13 @@ optional true
 longname memory print option
 description is a flag that controls printing of detailed memory manager usage to the end of the simulation list file.  NONE means do not print detailed information. SUMMARY means print only the total memory for each simulation component. ALL means print information for each variable stored in the memory manager. NONE is default if MEMORY\_PRINT\_OPTION is not specified.
 
+block options
+name maxerrors
+type integer
+reader urword
+optional true
+longname maximum number of errors
+description maximum number of errors that will be stored and printed.
 
 
 # --------------------- sim nam timing ---------------------
@@ -156,7 +163,7 @@ description is the list of solution types and models in the solution.
 block solutiongroup
 name slntype
 type string
-valid_values ims6
+valid ims6
 in_record true
 tagged false
 reader urword

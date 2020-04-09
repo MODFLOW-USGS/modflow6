@@ -41,7 +41,6 @@ module Xt3dModule
     integer(I4B), pointer                           :: ik33        => null()     !flag indicates K33 was read
     real(DP), dimension(:), pointer, contiguous     :: sat         => null()     !saturation (0. to 1.) for each cell
     integer(I4B), pointer                           :: inewton     => null()     !Newton flag
-    real(DP), pointer                               :: min_satthk  => null()     !min saturated thickness
     integer(I4B), dimension(:), pointer, contiguous :: icelltype   => null()     !cell type (confined or unconfined)
     integer(I4B), pointer                           :: iangle1     => null()     !flag to indicate angle1 was read
     integer(I4B), pointer                           :: iangle2     => null()     !flag to indicate angle2 was read
@@ -51,6 +50,7 @@ module Xt3dModule
     real(DP), dimension(:), pointer, contiguous     :: angle3      => null()     !k tensor rotation around x axis (roll)
     logical, pointer                                :: ldispersion => null()     !flag to indicate dispersion
   contains
+    procedure :: xt3d_df
     procedure :: xt3d_ac
     procedure :: xt3d_mc
     procedure :: xt3d_ar
@@ -81,7 +81,7 @@ module Xt3dModule
   
   contains
 
-    subroutine xt3d_cr(xt3dobj, name_model, inunit, iout, ldispopt)
+  subroutine xt3d_cr(xt3dobj, name_model, inunit, iout, ldispopt)
 ! ******************************************************************************
 ! xt3d_cr -- Create a new xt3d object
 ! ******************************************************************************
@@ -109,9 +109,28 @@ module Xt3dModule
     !
     ! -- Return
     return
-    end subroutine xt3d_cr
+  end subroutine xt3d_cr
 
-  subroutine xt3d_ac(this, moffset, sparse, nodes, ia, ja)
+  subroutine xt3d_df(this, dis)
+! ******************************************************************************
+! xt3d_df -- define the xt3d object
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(Xt3dType) :: this
+    class(DisBaseType), pointer, intent(inout) :: dis
+! ------------------------------------------------------------------------------
+    !
+    this%dis => dis
+    !
+    ! -- Return
+    return
+  end subroutine xt3d_df
+  
+  subroutine xt3d_ac(this, moffset, sparse)
 ! ******************************************************************************
 ! xt3d_ac -- Add connections for extended neighbors to the sparse matrix
 ! ******************************************************************************
@@ -120,12 +139,9 @@ module Xt3dModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use SparseModule, only: sparsematrix
-    use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(Xt3dType) :: this
-    integer(I4B), intent(in) :: moffset, nodes
-    integer(I4B), dimension(:), intent(in) :: ia
-    integer(I4B), dimension(:), intent(in) :: ja
+    integer(I4B), intent(in) :: moffset
     type(sparsematrix), intent(inout) :: sparse
     ! -- local
     integer(I4B) :: i, j, k, jj, kk, iglo, kglo, iadded
@@ -134,14 +150,14 @@ module Xt3dModule
     ! -- If not rhs, add connections
     if (this%ixt3d == 1) then
        ! -- loop over nodes
-       do i = 1, nodes
+       do i = 1, this%dis%nodes
          iglo = i + moffset
          ! -- loop over neighbors
-         do jj = ia(i), ia(i+1) - 1
-           j = ja(jj)
+         do jj = this%dis%con%ia(i), this%dis%con%ia(i+1) - 1
+           j = this%dis%con%ja(jj)
            ! -- loop over neighbors of neighbors
-           do kk = ia(j), ia(j+1) - 1
-             k = ja(kk)
+           do kk = this%dis%con%ia(j), this%dis%con%ia(j+1) - 1
+             k = this%dis%con%ja(kk)
              kglo = k + moffset
              call sparse%addconnection(iglo, kglo, 1, iadded)
              this%numextnbrs = this%numextnbrs + iadded
@@ -154,7 +170,7 @@ module Xt3dModule
     return
   end subroutine xt3d_ac
   
-  subroutine xt3d_mc(this, moffset, nodes, ia, ja, iasln, jasln, inewton)
+  subroutine xt3d_mc(this, moffset, iasln, jasln, inewton)
 ! ******************************************************************************
 ! xt3d_mc -- Map connections and construct iax, jax, and idxglox
 ! ******************************************************************************
@@ -166,9 +182,6 @@ module Xt3dModule
     ! -- dummy
     class(Xt3dType) :: this
     integer(I4B), intent(in) :: moffset
-    integer(I4B), intent(in) :: nodes
-    integer(I4B), dimension(:), intent(in) :: ia
-    integer(I4B), dimension(:), intent(in) :: ja
     integer(I4B), dimension(:), intent(in) :: iasln
     integer(I4B), dimension(:), intent(in) :: jasln
     ! -- local
@@ -184,10 +197,10 @@ module Xt3dModule
       ! -- calculate the first node for the model and the last node in global
       !    numbers
       igfirstnod = moffset + 1
-      iglastnod = moffset + nodes
+      iglastnod = moffset + this%dis%nodes
       !
       ! -- allocate iax, jax, and idxglox
-      niax = nodes + 1
+      niax = this%dis%nodes + 1
       njax = this%numextnbrs ! + 1
       call mem_allocate(this%iax, niax, 'IAX', trim(this%origin))
       call mem_allocate(this%jax, njax, 'JAX', trim(this%origin))
@@ -198,7 +211,7 @@ module Xt3dModule
       this%iax(1) = ipos
       !
       ! -- loop over nodes
-      do i = 1, nodes
+      do i = 1, this%dis%nodes
         !
         ! -- calculate global node number
         iglo = i + moffset
@@ -216,8 +229,8 @@ module Xt3dModule
           ! -- determine whether this neighbor is an extended neighbor
           !    by searching the original neighbors
           isextnbr = .true.
-          searchloop: do jj = ia(i), ia(i+1) - 1
-            j = ja(jj)
+          searchloop: do jj = this%dis%con%ia(i), this%dis%con%ia(i+1) - 1
+            j = this%dis%con%ja(jj)
             jglo = j + moffset
             !
             ! -- if an original neighbor, note that and end the search
@@ -250,9 +263,8 @@ module Xt3dModule
     return
   end subroutine xt3d_mc
   
-  subroutine xt3d_ar(this, dis, ibound, k11, ik33, k33, sat, ik22, k22,        &
-    inewton, min_satthk, icelltype, iangle1, iangle2, iangle3, angle1, angle2, &
-    angle3)
+  subroutine xt3d_ar(this, ibound, k11, ik33, k33, sat, ik22, k22,             &
+    inewton, icelltype, iangle1, iangle2, iangle3, angle1, angle2, angle3)
 ! ******************************************************************************
 ! xt3d_ar -- Allocate and Read
 ! ******************************************************************************
@@ -263,7 +275,6 @@ module Xt3dModule
     use SimModule, only: store_error, ustop
     ! -- dummy
     class(Xt3dType) :: this
-    class(DisBaseType),pointer,intent(inout) :: dis
     integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: ibound
     real(DP), dimension(:), intent(in), pointer, contiguous :: k11
     integer(I4B), intent(in), pointer :: ik33
@@ -272,7 +283,6 @@ module Xt3dModule
     integer(I4B), intent(in), pointer :: ik22
     real(DP), dimension(:), intent(in), pointer, contiguous :: k22
     integer(I4B), intent(in), pointer :: inewton
-    real(DP), intent(in), pointer :: min_satthk
     integer(I4B), dimension(:), intent(in), pointer, contiguous :: icelltype
     integer(I4B), intent(in), pointer :: iangle1
     integer(I4B), intent(in), pointer :: iangle2
@@ -292,7 +302,6 @@ module Xt3dModule
     write(this%iout, fmtheader)
     !
     ! -- Store pointers to arguments that were passed in
-    this%dis     => dis
     this%ibound  => ibound
     this%k11 => k11
     this%ik33 => ik33
@@ -301,7 +310,6 @@ module Xt3dModule
     this%ik22 => ik22
     this%k22 => k22
     this%inewton => inewton
-    this%min_satthk => min_satthk
     this%icelltype => icelltype
     this%iangle1 => iangle1
     this%iangle2 => iangle2
@@ -344,13 +352,14 @@ module Xt3dModule
     !
     ! -- If not Newton and not rhs, calculate amatpc and amatpcx for permanently
     ! -- confined connections
-    if(this%lamatsaved) call this%xt3d_fcpc(this%dis%nodes)
+    if(this%lamatsaved .and. .not. this%ldispersion) &
+      call this%xt3d_fcpc(this%dis%nodes)
     !
     ! -- Return
     return
   end subroutine xt3d_ar
 
-  subroutine xt3d_fc(this, kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew)
+  subroutine xt3d_fc(this, kiter, njasln, amat, idxglo, rhs, hnew)
 ! ******************************************************************************
 ! xt3d_fc -- Formulate
 ! ******************************************************************************
@@ -362,15 +371,14 @@ module Xt3dModule
     ! -- dummy
     class(Xt3dType) :: this
     integer(I4B) :: kiter
-    integer(I4B),intent(in) :: nodes
-    integer(I4B),intent(in) :: nja
     integer(I4B),intent(in) :: njasln
     real(DP),dimension(njasln),intent(inout) :: amat
-    integer(I4B),intent(in),dimension(nja) :: idxglo
-    real(DP),intent(inout),dimension(nodes) :: rhs
-    real(DP),intent(inout),dimension(nodes) :: hnew
+    integer(I4B),intent(in),dimension(:) :: idxglo
+    real(DP),intent(inout),dimension(:) :: rhs
+    real(DP),intent(inout),dimension(:) :: hnew
     ! -- local
-    integer(I4B) :: n, m
+    integer(I4B) :: nodes, nja
+    integer(I4B) :: n, m, ipos
     !
     logical :: allhc0, allhc1
     integer(I4B) :: nnbr0, nnbr1
@@ -389,8 +397,10 @@ module Xt3dModule
     ! -- Calculate xt3d conductance-like coefficients and put into amat and rhs
     ! -- as appropriate
     !
+    nodes = this%dis%nodes
+    nja = this%dis%con%nja
     if (this%lamatsaved) then
-      do i = 1, nja
+      do i = 1, this%dis%con%nja
         amat(idxglo(i)) = amat(idxglo(i)) + this%amatpc(i)
       end do
       do i = 1, this%numextnbrs
@@ -412,6 +422,9 @@ module Xt3dModule
       ! -- Loop over active neighbors of cell 0 that have a higher
       ! -- cell number (taking advantage of reciprocity).
       do il0 = 1,nnbr0
+        ipos = this%dis%con%ia(n) + il0
+        if (this%dis%con%mask(ipos) == 0) cycle
+        
         m = inbr0(il0)
         ! -- Skip if neighbor is inactive or has lower cell number.
         if ((m.eq.0).or.(m.lt.n)) cycle
@@ -499,7 +512,7 @@ module Xt3dModule
     class(Xt3dType) :: this
     integer(I4B) :: nodes
     ! -- local
-    integer(I4B) :: n, m
+    integer(I4B) :: n, m, ipos
     !
     logical :: allhc0, allhc1
     integer(I4B) :: nnbr0, nnbr1
@@ -513,6 +526,14 @@ module Xt3dModule
     real(DP),dimension(this%nbrmax) :: chati0, chat1j
 ! ------------------------------------------------------------------------------
     !
+    ! -- Initialize amatpc and amatpcx to zero
+    do n = 1, size(this%amatpc)
+      this%amatpc(n) = DZERO
+    enddo
+    do n = 1, size(this%amatpcx)
+      this%amatpcx(n) = DZERO
+    enddo
+    !
     ! -- Calculate xt3d conductance-like coefficients for permanently confined
     ! -- connections and put into amatpc and amatpcx as appropriate
     do n = 1, nodes
@@ -525,6 +546,9 @@ module Xt3dModule
       ! -- Loop over active neighbors of cell 0 that have a higher
       ! -- cell number (taking advantage of reciprocity).
       do il0 = 1,nnbr0
+        ipos = this%dis%con%ia(n) + il0
+        if (this%dis%con%mask(ipos) == 0) cycle
+        
         m = inbr0(il0)
         ! -- Skip if neighbor has lower cell number.
         if (m.lt.n) cycle
@@ -706,7 +730,7 @@ module Xt3dModule
     real(DP),intent(inout),dimension(nodes) :: rhs
     real(DP),intent(inout),dimension(nodes) :: hnew
     ! -- local
-    integer(I4B) :: n, m
+    integer(I4B) :: n, m, ipos
     !
     integer(I4B) :: nnbr0
     integer(I4B) :: il0, ii01, jjs01, il01, il10, ii00, ii11, ii10
@@ -731,6 +755,9 @@ module Xt3dModule
       ! -- Loop over active neighbors of cell 0 that have a higher
       ! -- cell number (taking advantage of reciprocity).
       do il0 = 1,nnbr0
+        ipos = this%dis%con%ia(n) + il0
+        if (this%dis%con%mask(ipos) == 0) cycle
+        
         m = inbr0(il0)
         ! -- Skip if neighbor is inactive or has lower cell number.
         if ((inbr0(il0).eq.0).or.(m.lt.n)) cycle
@@ -785,7 +812,7 @@ module Xt3dModule
     return
   end subroutine xt3d_fn
 
-  subroutine xt3d_flowja(this, nodes, nja, hnew, flowja)
+  subroutine xt3d_flowja(this, hnew, flowja)
 ! ******************************************************************************
 ! xt3d_flowja -- Budget
 ! ******************************************************************************
@@ -795,12 +822,10 @@ module Xt3dModule
     use Xt3dAlgorithmModule, only: qconds
     ! -- dummy
     class(Xt3dType) :: this
-    integer(I4B),intent(in) :: nodes
-    integer(I4B),intent(in) :: nja
-    real(DP),intent(inout),dimension(nodes) :: hnew
-    real(DP),intent(inout),dimension(nja) :: flowja
+    real(DP),intent(inout),dimension(:) :: hnew
+    real(DP),intent(inout),dimension(:) :: flowja
     ! -- local
-    integer(I4B) :: n,ipos,m
+    integer(I4B) :: n, ipos, m, nodes
     real(DP) :: qnm, qnbrs
     logical :: allhc0, allhc1
     integer(I4B) :: nnbr0, nnbr1
@@ -815,6 +840,7 @@ module Xt3dModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Calculate the flow across each cell face and store in flowja
+    nodes = this%dis%nodes
     do n = 1, nodes
       ! -- Skip if inactive.
       if (this%ibound(n).eq.0) cycle
@@ -853,8 +879,8 @@ module Xt3dModule
         call this%xt3d_qnbrs(nodes, m, n, nnbr1, inbr1, chat1j, hnew, qnbrs)
         qnm = qnm - qnbrs
         ipos = ii01
-        flowja(ipos) = qnm
-        flowja(this%dis%con%isym(ipos)) = -qnm        
+        flowja(ipos) = flowja(ipos) + qnm
+        flowja(this%dis%con%isym(ipos)) = flowja(this%dis%con%isym(ipos)) - qnm        
       enddo
     enddo
     !
@@ -862,7 +888,7 @@ module Xt3dModule
     return
   end subroutine xt3d_flowja
 
-  subroutine xt3d_flowjahfb(this, nodes, n, m, nja, hnew, flowja, condhfb)
+  subroutine xt3d_flowjahfb(this, n, m, hnew, flowja, condhfb)
 ! ******************************************************************************
 ! xt3d_flowjahfb -- hfb contribution to flowja when xt3d is used
 ! ******************************************************************************
@@ -873,14 +899,13 @@ module Xt3dModule
     use Xt3dAlgorithmModule, only: qconds
     ! -- dummy
     class(Xt3dType) :: this
-    integer(I4B),intent(in) :: nodes
-    integer(I4B),intent(in) :: nja
     integer(I4B) :: n, m
-    real(DP),intent(inout),dimension(nodes) :: hnew
-    real(DP),intent(inout),dimension(nja) :: flowja
+    real(DP),intent(inout),dimension(:) :: hnew
+    real(DP),intent(inout),dimension(:) :: flowja
     real(DP) :: condhfb
     ! -- local
     !
+    integer(I4B) :: nodes
     logical :: allhc0, allhc1
 !!!    integer(I4B), parameter :: nbrmax = 10
     integer(I4B) :: nnbr0, nnbr1
@@ -900,6 +925,7 @@ module Xt3dModule
     ! -- Calculate hfb corrections to xt3d conductance-like coefficients and
     ! -- put into amat and rhs as appropriate
     !
+    nodes = this%dis%nodes
     nnbr0 = this%dis%con%ia(n+1) - this%dis%con%ia(n) - 1
     ! -- Load conductivity and connection info for cell 0.
     call this%xt3d_load(nodes, n, nnbr0, inbr0, vc0, vn0, dl0, dl0n,    &
@@ -1085,7 +1111,19 @@ module Xt3dModule
       call mem_allocate(this%qrhs, 0, 'QRHS', this%origin)
     end if
     !
-    call this%xt3d_iallpc()
+    if (this%ldispersion) then
+      !
+      ! -- xt3d is being used for dispersion
+      this%lamatsaved = .true.
+      call mem_allocate(this%iallpc, this%dis%nodes, 'IALLPC', this%origin)
+      this%iallpc = 1
+    else
+      !
+      ! -- xt3d is being used for flow so find where connections are
+      !    permanently confined
+      call this%xt3d_iallpc()
+    endif
+    
     !
     if (this%lamatsaved) then
       call mem_allocate(this%amatpc, this%dis%nja, 'AMATPC', this%origin)
@@ -1132,7 +1170,7 @@ module Xt3dModule
     integer(I4B),dimension(this%nbrmax) :: inbr0, inbr1
 ! ------------------------------------------------------------------------------
     !
-    if(this%ixt3d == 2 .or. this%ldispersion) then
+    if(this%ixt3d == 2) then
       this%lamatsaved = .false.
       call mem_allocate(this%iallpc, 0, 'IALLPC', this%origin)
     else
@@ -1157,7 +1195,6 @@ module Xt3dModule
           call this%xt3d_load_inbr(m, nnbr1, inbr1)
           do il1 = 1,nnbr1
             mm = inbr1(il1)
-!!!            if (mm.lt.m) cycle
             if (this%icelltype(mm) /= 0) then
               this%iallpc(n) = 0
               this%iallpc(m) = 0
@@ -1176,7 +1213,7 @@ module Xt3dModule
     end if
     !
     if (.not.this%lamatsaved) then
-      call mem_deallocate(this%iallpc)       ! kluge: ok to do this???
+      call mem_deallocate(this%iallpc)
       call mem_allocate(this%iallpc, 0, 'IALLPC', this%origin)
     end if
     !
