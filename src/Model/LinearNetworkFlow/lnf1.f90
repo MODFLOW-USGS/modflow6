@@ -2,7 +2,8 @@ module LnfModule
 
   use KindModule,                  only: DP, I4B
   use InputOutputModule,           only: ParseLine, upcase
-  use ConstantsModule,             only: LENFTYPE, DZERO, DEM1, DTEN, DEP20
+  use ConstantsModule,             only: LENFTYPE, LENPAKLOC,                    &
+                                         DZERO, DEM1, DTEN, DEP20
   use NumericalModelModule,        only: NumericalModelType
   use BaseDisModule,               only: DisBaseType
   use BndModule,                   only: BndType, AddBndToList, GetBndFromList
@@ -621,7 +622,7 @@ module LnfModule
     return
   end subroutine lnf_fc
 
-  subroutine lnf_cc(this, kiter, iend, icnvg, hclose, rclose)
+  subroutine lnf_cc(this, kiter, iend, icnvgmod, cpak, dpak)
 ! ******************************************************************************
 ! lnf_cc -- Linear Network Flow Model Final Convergence Check for Boundary Packages
 ! Subroutine: (1) calls package cc routines
@@ -633,9 +634,9 @@ module LnfModule
     class(LnfModelType) :: this
     integer(I4B),intent(in) :: kiter
     integer(I4B),intent(in) :: iend
-    integer(I4B),intent(inout) :: icnvg
-    real(DP), intent(in) :: hclose
-    real(DP), intent(in) :: rclose
+    integer(I4B),intent(in) :: icnvgmod
+    character(len=LENPAKLOC), intent(inout) :: cpak
+    real(DP), intent(inout) :: dpak
     ! -- local
     class(BndType), pointer :: packobj
     integer(I4B) :: ip
@@ -794,12 +795,12 @@ module LnfModule
     return
   end subroutine lnf_ptc
 
-  subroutine lnf_nur(this, neqmod, x, xtemp, dx, inewtonur)
+  subroutine lnf_nur(this, neqmod, x, xtemp, dx, inewtonur, dxmax, locmax)
 ! ******************************************************************************
 ! lnf_nur -- under-relaxation
-! Subroutine: (1) Under-relaxation of Groundwater Flow Model Heads for current
-!                 outer iteration using the cell bottoms at the bottom of the
-!                 model
+! Subroutine: (1) Under-relaxation of Linear Network Flow Model Heads for 
+!                 current outer iteration using the cell bottoms at the bottom 
+!                 of the model
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -813,6 +814,8 @@ module LnfModule
     real(DP), dimension(neqmod), intent(in) :: xtemp
     real(DP), dimension(neqmod), intent(inout) :: dx
     integer(I4B), intent(inout) :: inewtonur
+    real(DP), intent(inout) :: dxmax
+    integer(I4B), intent(inout) :: locmax
     ! -- local
     !integer(I4B) :: n
     !integer(I4B) :: jcol
