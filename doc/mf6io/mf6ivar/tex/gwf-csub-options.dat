@@ -22,6 +22,7 @@ BEGIN OPTIONS
   [COMPACTION_INTERBED FILEOUT <interbed_compaction_filename>]
   [COMPACTION_COARSE FILEOUT <coarse_compaction_filename>]
   [ZDISPLACEMENT FILEOUT <zdisplacement_filename>]
+  [PACKAGE_CONVERGENCE FILEOUT <package_convergence_filename>]
   [TS6 FILEIN <ts6_filename>]
   [OBS6 FILEIN <obs6_filename>]
 END OPTIONS

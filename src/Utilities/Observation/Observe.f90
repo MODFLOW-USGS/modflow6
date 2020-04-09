@@ -15,6 +15,7 @@ module ObserveModule
   use BaseDisModule,     only: DisBaseType
   use ConstantsModule,   only: LENBOUNDNAME, LENOBSNAME, LENOBSTYPE, &
                                MAXOBSTYPES, DNODATA, DZERO
+  use TableModule,       only: TableType
   use InputOutputModule, only: urword
   use ListModule,        only: ListType
   use SimModule,         only: store_warning, store_error, &
@@ -117,7 +118,7 @@ contains
     return
   end subroutine ResetCurrent
 
-  subroutine WriteTo(this, iout)
+  subroutine WriteTo(this, obstab, btagfound, fnamein)
 ! **************************************************************************
 ! WriteTo -- Write information about this observation to table in list file.
 ! **************************************************************************
@@ -127,12 +128,36 @@ contains
     implicit none
     ! -- dummy
     class(ObserveType), intent(inout) :: this
-    integer(I4B), intent(in) :: iout
-    ! formats
-    20 format(a,2x,a,a,t87,'All times',t100,'"',a,'"')
+    type(TableType), intent(inout) :: obstab
+    character(len=*), intent(in) :: btagfound
+    character(len=*), intent(in) :: fnamein
+    ! -- local
+    character(len=12) :: tag
+    character(len=80) :: fnameout
+    ! -- formats
     !
-    write(iout,20)this%Name, 'Continuous ', this%ObsTypeId, &
-                  trim(this%IDstring)
+    ! -- write btagfound to tag
+    if (len_trim(btagfound) > 12) then
+      tag = btagfound(1:12)
+    else
+      write(tag, '(a12)') btagfound
+    end if
+    !
+    ! -- write fnamein to fnameout
+    if (len_trim(fnamein) > 80) then
+      fnameout = fnamein(1:80)
+    else
+      write(fnameout, '(a80)') fnamein
+    end if
+    !
+    ! -- write data to observation table
+    call obstab%add_term(this%Name)
+    call obstab%add_term(tag // trim(this%ObsTypeId))
+    call obstab%add_term('ALL TIMES')
+    call obstab%add_term('"' // trim(this%IDstring) // '"')
+    call obstab%add_term(fnameout)
+    !
+    ! -- return
     return
   end subroutine WriteTo
 

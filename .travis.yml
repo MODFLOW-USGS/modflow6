@@ -20,6 +20,7 @@ before_install:
 - sudo apt-get install -y $FC
 - sudo apt-get install -y texlive texlive-latex-extra
     texlive-latex-recommended texlive-science texlive-fonts-extra
+<<<<<<< HEAD
 - curl https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh > $HOME/miniconda.sh
 - bash $HOME/miniconda.sh -b -p $HOME/anaconda
 - export PATH="$HOME/anaconda/bin:$PATH"
@@ -27,6 +28,17 @@ before_install:
 - conda config --set always_yes yes
 - conda config --add channels conda-forge
 - conda install --file requirements.travis.txt
+=======
+- wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O $HOME/miniconda.sh
+- bash $HOME/miniconda.sh -b -p $HOME/anaconda
+- export PATH="$HOME/anaconda/bin:$PATH"
+- hash -r
+- conda config --set always_yes yes --set changeps1 no
+- conda update -q conda
+- conda config --add channels conda-forge
+- conda install --file requirements.travis.txt
+- conda info -a
+>>>>>>> upstream/develop
 install:
 - if [[ ! -d "$HOME/.local/bin" ]]; then mkdir "$HOME/.local/bin"; fi
 - ln -fs /usr/bin/$FC $HOME/.local/bin/gfortran

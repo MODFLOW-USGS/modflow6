@@ -7,7 +7,7 @@ module SfrModule
                              DONE, D1P1, DFIVETHIRDS, DTWO, DPI, DEIGHT,       &
                              DHUNDRED, DEP20,                                  &
                              NAMEDBOUNDFLAG, LENBOUNDNAME, LENFTYPE,           &
-                             LENPACKAGENAME, MAXCHARLEN,                       &
+                             LENPACKAGENAME, LENPAKLOC, MAXCHARLEN,            &
                              DHNOFLO, DHDRY, DNODATA,                          &
                              TABLEFT, TABCENTER, TABRIGHT
   use SmoothingModule,  only: sQuadraticSaturation, sQSaturation,              &
@@ -82,6 +82,7 @@ module SfrModule
     integer(I4B), pointer :: iprhed => null()
     integer(I4B), pointer :: istageout => null()
     integer(I4B), pointer :: ibudgetout => null()
+    integer(I4B), pointer :: ipakcsv => null()
     integer(I4B), pointer :: idiversions => null()
     integer(I4B), pointer :: nconn => NULL()
     integer(I4B), pointer :: maxsfrit => NULL()
@@ -110,6 +111,7 @@ module SfrModule
     !
     ! -- sfr table objects
     type(TableType), pointer :: stagetab => null()
+    type(TableType), pointer :: pakcsvtab => null()
     !
     ! -- moved from SfrDataType
     integer(I4B), dimension(:), pointer, contiguous :: iboundpak => null()
@@ -263,6 +265,7 @@ contains
     call mem_allocate(this%iprhed, 'IPRHED', this%origin)
     call mem_allocate(this%istageout, 'ISTAGEOUT', this%origin)
     call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%origin)
+    call mem_allocate(this%ipakcsv, 'IPAKCSV', this%origin)
     call mem_allocate(this%idiversions, 'IDIVERSIONS', this%origin)
     call mem_allocate(this%maxsfrit, 'MAXSFRIT', this%origin)
     call mem_allocate(this%bditems, 'BDITEMS', this%origin)
@@ -281,6 +284,7 @@ contains
     this%iprhed = 0
     this%istageout = 0
     this%ibudgetout = 0
+    this%ipakcsv = 0
     this%idiversions = 0
     this%maxsfrit = 100
     this%bditems = 8
@@ -567,6 +571,19 @@ contains
           found = .true.
         else
           call store_error('OPTIONAL BUDGET KEYWORD MUST BE FOLLOWED BY FILEOUT')
+        end if
+      case('PACKAGE_CONVERGENCE')
+        call this%parser%GetStringCaps(keyword)
+        if (keyword == 'FILEOUT') then
+          call this%parser%GetString(fname)
+          this%ipakcsv = getunit()
+          call openfile(this%ipakcsv, this%iout, fname, 'CSV',                   &
+                        filstat_opt='REPLACE')
+          write(this%iout,fmtsfrbin) 'PACKAGE_CONVERGENCE', fname, this%ipakcsv
+          found = .true.
+        else
+          call store_error('OPTIONAL PACKAGE_CONVERGENCE KEYWORD MUST BE ' //    &
+                           'FOLLOWED BY FILEOUT')
         end if
       case('UNIT_CONVERSION')
         this%unitconv = this%parser%GetDouble()
@@ -1293,7 +1310,7 @@ contains
                 trim(adjustl(this%name)) //') DATA FOR PERIOD'
         write(title, '(a,1x,i6)') trim(adjustl(title)), kper
         call table_cr(this%inputtab, this%name, title)
-        call this%inputtab%table_df(1, 4, this%iout)
+        call this%inputtab%table_df(1, 4, this%iout, finalize=.FALSE.)
         text = 'NUMBER'
         call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
         text = 'KEYWORD'
@@ -1322,8 +1339,8 @@ contains
         !
         ! -- write line to table
         if (this%iprpak /= 0) then
-          call this%inputtab%add_term(n, finalize=.FALSE.)
-          call this%inputtab%line_to_columns(line, finalize=.FALSE.)
+          call this%inputtab%add_term(n)
+          call this%inputtab%line_to_columns(line)
         end if
       end do
       if (this%iprpak /= 0) then
@@ -1400,7 +1417,7 @@ contains
     return
   end subroutine sfr_ad
 
-  subroutine sfr_cf(this)
+  subroutine sfr_cf(this, reset_mover)
   ! ******************************************************************************
   ! sfr_cf -- Formulate the HCOF and RHS terms
   ! Subroutine: (1) skip in no wells
@@ -1409,12 +1426,13 @@ contains
   !
   !    SPECIFICATIONS:
   ! ------------------------------------------------------------------------------
-      ! -- dummy variables
-      class(SfrType) :: this
-      ! -- local variables
-      integer(I4B) :: n
-      integer(I4B) :: igwfnode
-
+    ! -- dummy
+    class(SfrType) :: this
+    logical, intent(in), optional :: reset_mover
+    ! -- local variables
+    integer(I4B) :: n
+    integer(I4B) :: igwfnode
+    logical :: lrm
   ! ------------------------------------------------------------------------------
     !
     ! -- Return if no sfr reaches
@@ -1433,7 +1451,9 @@ contains
     end do
     !
     ! -- pakmvrobj cf
-    if(this%imover == 1) then
+    lrm = .true.
+    if (present(reset_mover)) lrm = reset_mover
+    if(this%imover == 1 .and. lrm) then
       call this%pakmvrobj%cf()
     endif
     !
@@ -1564,84 +1584,148 @@ contains
     return
   end subroutine sfr_fn
 
-  subroutine sfr_cc(this, iend, icnvg, hclose, rclose)
+  subroutine sfr_cc(this, kiter, iend, icnvgmod, cpak, dpak)
 ! **************************************************************************
 ! sfr_cc -- Final convergence check for package
 ! **************************************************************************
 !
 !    SPECIFICATIONS:
 ! --------------------------------------------------------------------------
+    use TdisModule, only: totim, kstp, kper, delt
     ! -- dummy
     class(SfrType), intent(inout) :: this
+    integer(I4B), intent(in) :: kiter
     integer(I4B), intent(in) :: iend
-    integer(I4B), intent(inout) :: icnvg
-    real(DP), intent(in) :: hclose
-    real(DP), intent(in) :: rclose
+    integer(I4B), intent(in) :: icnvgmod
+    character(len=LENPAKLOC), intent(inout) :: cpak
+    real(DP), intent(inout) :: dpak
     ! -- local
-    character(len=LINELENGTH) :: line
-    character(len=15) :: cdhmax
-    character(len=15) :: crmax
+    character(len=LENPAKLOC) :: cloc
+    character(len=LINELENGTH) :: tag
+    integer(I4B) :: icheck
+    integer(I4B) :: ipakfail
+    integer(I4B) :: locdhmax
+    integer(I4B) :: locrmax
+    integer(I4B) :: ntabrows
+    integer(I4B) :: ntabcols
     integer(I4B) :: n
-    integer(I4B) :: ifirst
     real(DP) :: dh
     real(DP) :: r
+    real(DP) :: dhmax
+    real(DP) :: rmax
     ! format
-      character(len=*), parameter :: fmtheader = "(4x,a10,2(1x,a15))"
-      character(len=*), parameter :: header =                                   &
-         &"(4x,'STREAMFLOW ROUTING PACKAGE FAILED CONVERGENCE CRITERIA',//,     &
-         &4x,a/,4x,74('-'))"  
-      character(len=*), parameter :: fmtline = "(4x,i10,2(1x,a15))"                                  
-      character(len=*), parameter :: fmtfooter = "(4x,74('-'))"                                  
-      character(len=*), parameter :: fmtmsg =                                   &
-         &"('CONVERGENCE FAILED AS A RESULT OF STREAMFLOW ROUTING PACKAGE',     &
-         &1x,a)"                                  
 ! --------------------------------------------------------------------------
-    ifirst = 1
-    if (this%iconvchk /= 0) then
+    !
+    ! -- initialize local variables
+    icheck = this%iconvchk 
+    ipakfail = 0
+    locdhmax = 0
+    locrmax = 0
+    dhmax = DZERO
+    rmax = DZERO
+    !
+    ! -- if not saving package convergence data on check convergence if
+    !    the model is considered converged
+    if (this%ipakcsv == 0) then
+      if (icnvgmod == 0) then
+        icheck = 0
+      end if
+    !
+    ! -- saving package convergence data
+    else
+      !
+      ! -- header for package csv
+      if (.not. associated(this%pakcsvtab)) then
+        !
+        ! -- determine the number of columns and rows
+        ntabrows = 1
+        ntabcols = 8
+        !
+        ! -- setup table
+        call table_cr(this%pakcsvtab, this%name, '')
+        call this%pakcsvtab%table_df(ntabrows, ntabcols, this%ipakcsv,           &
+                                     lineseparator=.FALSE., separator=',',       &
+                                     finalize=.FALSE.)
+        !
+        ! -- add columns to package csv
+        tag = 'totim'
+        call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
+        tag = 'kper'
+        call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
+        tag = 'kstp'
+        call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
+        tag = 'nouter'
+        call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
+        tag = 'dvmax'
+        call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+        tag = 'dvmax_loc'
+        call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+        tag = 'dinflowmax'
+        call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+        tag = 'dinflowmax_loc'
+        call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+      end if
+    end if
+    !
+    ! -- perform package convergence check
+    if (icheck /= 0) then
       final_check: do n = 1, this%maxbound
         if (this%iboundpak(n) == 0) cycle
         dh = this%stage0(n) - this%stage(n)
         r = this%usflow0(n) - this%usflow(n)
-        if (ABS(dh) > hclose .or. ABS(r) > rclose) then
-          icnvg = 0
-          ! write convergence check information if this is the last outer iteration
-          if (iend == 1) then
-            if (ifirst == 1) then
-              ifirst = 0
-              ! -- write table to this%iout
-              call sim_message(this%name, fmt=fmtmsg, iunit=this%iout)
-              write(line, fmtheader)                                             &
-                '     REACH',                                                    &
-                '        MAX. DH', '  MAX. RESIDUAL'
-              call sim_message(line, fmt=header, iunit=this%iout)
-              ! -- write table to stdout
-              call sim_message(line, fmt=header)
-            end if
-            cdhmax = '               '
-            crmax = '               '
-            if (ABS(dh) > hclose) then
-              write(cdhmax, '(G15.7)') dh
-            end if
-            if (ABS(r) > rclose) then
-              write(crmax, '(G15.7)') r
-            end if
-            !write(this%iout,2010) n, cdhmax, crmax
-            write(line, fmtline)  n, cdhmax, crmax
-            call sim_message(line, iunit=this%iout)
-            ! -- write table to stdout
-            call sim_message(line)
-          ! terminate check since no need to find more than one non-convergence
-          else
-            exit final_check
+        !
+        ! -- normalize flow difference and convert to a depth
+        r = r * delt / this%surface_area(n)
+        !
+        ! -- evaluate magnitude of differences
+        if (n == 1) then
+          locdhmax = n
+          dhmax = dh
+          locrmax = n
+          rmax = r
+        else
+          if (abs(dh) > abs(dhmax)) then
+            locdhmax = n
+            dhmax = dh
+          end if
+          if (abs(r) > abs(rmax)) then
+            locrmax = n
+            rmax = r
           end if
         end if
       end do final_check
-      if (ifirst == 0) then
-        !write(this%iout,2020)
-        ! -- write table to this%iout
-        call sim_message('', fmt=fmtfooter, iunit=this%iout)
-        ! -- write table to stdout
-        call sim_message('', fmt=fmtfooter)
+      !
+      ! -- set dpak and cpak
+      if (ABS(dhmax) > abs(dpak)) then
+        dpak = dhmax
+        write(cloc, "(a,'-(',i0,')-',a)")                                        &
+          trim(this%name), locdhmax, 'stage'
+        cpak = trim(cloc)
+      end if
+      if (ABS(rmax) > abs(dpak)) then
+        dpak = rmax
+        write(cloc, "(a,'-(',i0,')-',a)")                                        &
+          trim(this%name), locrmax, 'inflow'
+        cpak = trim(cloc)
+      end if
+      !
+      ! -- write convergence data to package csv
+      if (this%ipakcsv /= 0) then
+        !
+        ! -- write the data
+        call this%pakcsvtab%add_term(totim)
+        call this%pakcsvtab%add_term(kper)
+        call this%pakcsvtab%add_term(kstp)
+        call this%pakcsvtab%add_term(kiter)
+        call this%pakcsvtab%add_term(dhmax)
+        call this%pakcsvtab%add_term(locdhmax)
+        call this%pakcsvtab%add_term(rmax)
+        call this%pakcsvtab%add_term(locrmax)
+        !
+        ! -- finalize the package csv
+        if (iend == 1) then
+          call this%pakcsvtab%finalize_table()
+        end if
       end if
     end if
     !
@@ -1951,10 +2035,18 @@ contains
       nullify(this%stagetab)
     end if
     !
+    ! -- package csv table
+    if (this%ipakcsv > 0) then
+      call this%pakcsvtab%table_da()
+      deallocate(this%pakcsvtab)
+      nullify(this%pakcsvtab)
+    end if
+    !
     ! -- scalars
     call mem_deallocate(this%iprhed)
     call mem_deallocate(this%istageout)
     call mem_deallocate(this%ibudgetout)
+    call mem_deallocate(this%ipakcsv)
     call mem_deallocate(this%idiversions)
     call mem_deallocate(this%maxsfrit)
     call mem_deallocate(this%bditems)

@@ -189,7 +189,7 @@ contains
     return
   end subroutine wel_options
 
-  subroutine wel_cf(this)
+  subroutine wel_cf(this, reset_mover)
 ! ******************************************************************************
 ! wel_cf -- Formulate the HCOF and RHS terms
 ! Subroutine: (1) skip in no wells
@@ -200,6 +200,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(WelType) :: this
+    logical, intent(in), optional :: reset_mover
     ! -- local
     integer(I4B) :: i, node, ict
     real(DP) :: qmult
@@ -207,13 +208,16 @@ contains
     real(DP) :: tp
     real(DP) :: bt
     real(DP) :: thick
+    logical :: lrm
 ! ------------------------------------------------------------------------------
     !
     ! -- Return if no wells
     if(this%nbound == 0) return
     !
     ! -- pakmvrobj cf
-    if(this%imover == 1) then
+    lrm = .true.
+    if (present(reset_mover)) lrm = reset_mover
+    if(this%imover == 1 .and. lrm) then
       call this%pakmvrobj%cf()
     endif
     !
