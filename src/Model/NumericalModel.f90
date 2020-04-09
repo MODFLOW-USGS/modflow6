@@ -1,7 +1,7 @@
 module NumericalModelModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: LINELENGTH, LENBUDTXT, LENPACKAGENAME
+  use ConstantsModule, only: LINELENGTH, LENBUDTXT, LENPACKAGENAME, LENPAKLOC
   use BaseModelModule, only: BaseModelType
   use BaseDisModule, only: DisBaseType
   use SparseModule, only: sparsematrix
@@ -150,22 +150,24 @@ module NumericalModelModule
     integer(I4B), intent(in) :: inwtflag
   end subroutine model_nr
 
-  subroutine model_cc(this, kiter, iend, icnvg, hclose, rclose)
+  subroutine model_cc(this, kiter, iend, icnvgmod, cpak, dpak)
     class(NumericalModelType) :: this
     integer(I4B),intent(in) :: kiter
     integer(I4B),intent(in) :: iend
-    integer(I4B),intent(inout) :: icnvg
-    real(DP), intent(in) :: hclose
-    real(DP), intent(in) :: rclose
+    integer(I4B),intent(in) :: icnvgmod
+    character(len=LENPAKLOC), intent(inout) :: cpak
+    real(DP), intent(inout) :: dpak
   end subroutine model_cc
 
-  subroutine model_nur(this, neqmod, x, xtemp, dx, inewtonur)
+  subroutine model_nur(this, neqmod, x, xtemp, dx, inewtonur, dxmax, locmax)
     class(NumericalModelType) :: this
     integer(I4B), intent(in) :: neqmod
     real(DP), dimension(neqmod), intent(inout) :: x
     real(DP), dimension(neqmod), intent(in) :: xtemp
     real(DP), dimension(neqmod), intent(inout) :: dx
     integer(I4B), intent(inout) :: inewtonur
+    real(DP), intent(inout) :: dxmax
+    integer(I4B), intent(inout) :: locmax
   end subroutine model_nur
 
   subroutine model_cq(this, icnvg, isuppress_output)
@@ -285,12 +287,19 @@ module NumericalModelModule
   end subroutine allocate_scalars
 
   subroutine allocate_arrays(this)
+    use ConstantsModule, only: DZERO
     use MemoryManagerModule, only: mem_allocate
     class(NumericalModelType) :: this
+    integer(I4B) :: i
     !
     call mem_allocate(this%xold,   this%neq, 'XOLD',   trim(this%name))
     call mem_allocate(this%flowja, this%nja, 'FLOWJA', trim(this%name))
     call mem_allocate(this%idxglo, this%nja, 'IDXGLO', trim(this%name))
+    !
+    ! -- initialize
+    do i = 1, size(this%flowja)
+      this%flowja(i) = DZERO
+    end do
     !
     ! -- return
     return
@@ -331,7 +340,9 @@ module NumericalModelModule
     integer(I4B) :: ip, ipaknode, istart, istop
     class(BndType), pointer :: packobj
     
-    if(node <= this%dis%nodes) then
+    if (node < 1) then
+      cellid = ''
+    else if(node <= this%dis%nodes) then
       call this%dis%noder_to_string(node, cellid)
     else
       cellid = '***ERROR***'

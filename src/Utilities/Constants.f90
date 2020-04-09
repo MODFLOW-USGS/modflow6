@@ -26,6 +26,7 @@ module ConstantsModule
   integer(I4B), parameter :: MAXCHARLEN = 1000
   integer(I4B), parameter :: MAXOBSTYPES = 100
   integer(I4B), parameter :: NAMEDBOUNDFLAG = -9
+  integer(I4B), parameter :: LENPAKLOC = 34
   integer(I4B), parameter :: IZERO = 0
   !
   ! -- file constants

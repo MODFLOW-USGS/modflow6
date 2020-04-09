@@ -1772,7 +1772,7 @@ contains
                 trim(adjustl(this%name)) //') DATA FOR PERIOD'
         write(title, '(a,1x,i6)') trim(adjustl(title)), kper
         call table_cr(this%inputtab, this%name, title)
-        call this%inputtab%table_df(1, 5, this%iout)
+        call this%inputtab%table_df(1, 5, this%iout, finalize=.FALSE.)
         text = 'NUMBER'
         call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
         text = 'KEYWORD'
@@ -1803,8 +1803,8 @@ contains
         !
         ! -- write line to table
         if (this%iprpak /= 0) then
-          call this%inputtab%add_term(imaw, finalize=.FALSE.)
-          call this%inputtab%line_to_columns(line, finalize=.FALSE.)
+          call this%inputtab%add_term(imaw)
+          call this%inputtab%line_to_columns(line)
         end if
       end do
       if (this%iprpak /= 0) then
@@ -2041,7 +2041,7 @@ contains
     return
   end subroutine maw_ad
 
-  subroutine maw_cf(this)
+  subroutine maw_cf(this, reset_mover)
   ! ******************************************************************************
   ! maw_cf -- Formulate the HCOF and RHS terms
   ! Subroutine: (1) skip if no multi-aquifer wells
@@ -2050,14 +2050,20 @@ contains
   !
   !    SPECIFICATIONS:
   ! ------------------------------------------------------------------------------
+    ! -- dummy
     class(MawType) :: this
+    logical, intent(in), optional :: reset_mover
+    ! -- local
+    logical :: lrm
   ! ------------------------------------------------------------------------------
     !
     ! -- Calculate maw conductance and update package RHS and HCOF
     call this%maw_cfupdate()
     !
     ! -- pakmvrobj cf
-    if(this%imover == 1) then
+    lrm = .true.
+    if (present(reset_mover)) lrm = reset_mover
+    if(this%imover == 1 .and. lrm) then
       call this%pakmvrobj%cf()
     endif
     !
@@ -2354,7 +2360,7 @@ contains
   end subroutine maw_fn
 
 
-  subroutine maw_nur(this, neqpak, x, xtemp, dx, inewtonur)
+  subroutine maw_nur(this, neqpak, x, xtemp, dx, inewtonur, dxmax, locmax)
 ! ******************************************************************************
 ! maw_nur -- under-relaxation
 ! Subroutine: (1) Under-relaxation of Groundwater Flow Model MAW Package Heads
@@ -2370,9 +2376,13 @@ contains
     real(DP), dimension(neqpak), intent(in) :: xtemp
     real(DP), dimension(neqpak), intent(inout) :: dx
     integer(I4B), intent(inout) :: inewtonur
+    real(DP), intent(inout) :: dxmax
+    integer(I4B), intent(inout) :: locmax
     ! -- local
     integer(I4B) :: n
     real(DP) :: botw
+    real(DP) :: xx
+    real(DP) :: dxx
 ! ------------------------------------------------------------------------------
 
     !
@@ -2384,7 +2394,13 @@ contains
       !    solution head is below the bottom of the well
       if (x(n) < botw) then
         inewtonur = 1
-        x(n) = xtemp(n)*(DONE-DP9) + botw*DP9
+        xx = xtemp(n)*(DONE-DP9) + botw*DP9
+        dxx = x(n) - xx
+        if (abs(dxx) > abs(dxmax)) then
+          locmax = n
+          dxmax = dxx
+        end if
+        x(n) = xx
         dx(n) = DZERO
       end if
     end do

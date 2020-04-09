@@ -6,11 +6,12 @@ module UzfModule
   use ConstantsModule, only: DZERO, DEM6, DEM4, DEM2, DEM1, DHALF,              &
                              DONE, DHUNDRED,                                    &
                              LINELENGTH, LENFTYPE, LENPACKAGENAME,              &
-                             LENBOUNDNAME, LENBUDTXT, DNODATA,                  &
+                             LENBOUNDNAME, LENBUDTXT, LENPAKLOC, DNODATA,       &
                              NAMEDBOUNDFLAG, MAXCHARLEN,                        &
                              DHNOFLO, DHDRY,                                    &
                              TABLEFT, TABCENTER, TABRIGHT,                      &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
+  use GenericUtilitiesModule, only: sim_message
   use MemoryTypeModule, only: MemoryTSType
   use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_setptr,      &
                                  mem_deallocate
@@ -21,9 +22,10 @@ module UzfModule
   use BaseDisModule, only: DisBaseType
   use ObserveModule, only: ObserveType
   use ObsModule, only: ObsType
-  use InputOutputModule, only: URWORD, UWWORD
+  use InputOutputModule, only: URWORD
   use SimModule, only: count_errors, store_error, ustop, store_error_unit
   use BlockParserModule, only: BlockParserType
+  use TableModule, only: TableType, table_cr
 
   implicit none
 
@@ -39,6 +41,7 @@ module UzfModule
     integer(I4B), pointer :: iprwcont => null()
     integer(I4B), pointer :: iwcontout => null()
     integer(I4B), pointer :: ibudgetout => null()
+    integer(I4B), pointer :: ipakcsv => null()
     !
     type(BudgetObjectType), pointer                    :: budobj      => null()
     integer(I4B), pointer                              :: bditems     => null()  !number of budget items
@@ -47,7 +50,12 @@ module UzfModule
                               contiguous               :: bdtxt       => null()  !budget items written to cbc file
     character(len=LENBOUNDNAME), dimension(:), pointer,                         &
                                  contiguous :: uzfname => null()
-    type(UzfCellGroupType), pointer                    :: uzfobj      => null()  !uzf kinematic object
+    !
+    ! -- uzf table objects
+    type(TableType), pointer                           :: pakcsvtab   => null()
+    !
+    ! -- uzf kinematic object
+    type(UzfCellGroupType), pointer                    :: uzfobj      => null()
     !
     ! -- pointer to gwf variables
     integer(I4B), pointer                                  :: gwfiss      => null()
@@ -69,7 +77,7 @@ module UzfModule
     integer(I4B), pointer                                   :: igwetflag    => null()
     integer(I4B), pointer                                   :: iseepflag    => null()
     integer(I4B), pointer                                   :: imaxcellcnt  => null()
-    integer(I4B), dimension(:), pointer, contiguous         :: mfcellid     => null()
+    integer(I4B), dimension(:), pointer, contiguous         :: igwfnode     => null()
     real(DP), dimension(:), pointer, contiguous             :: appliedinf   => null()
     real(DP), dimension(:), pointer, contiguous             :: rejinf       => null()
     real(DP), dimension(:), pointer, contiguous             :: rejinf0      => null()
@@ -247,10 +255,10 @@ contains
       end do
     endif
     !
-    ! -- copy mfcellid into nodelist and set water table
+    ! -- copy igwfnode into nodelist and set water table
     do i = 1, this%nodes
-      this%nodelist(i) = this%mfcellid(i)
-      n = this%mfcellid(i)
+      this%nodelist(i) = this%igwfnode(i)
+      n = this%igwfnode(i)
       hgwf = this%xnew(n)
       call this%uzfobj%sethead(i, hgwf)
     end do
@@ -293,7 +301,7 @@ contains
     !call this%BndType%allocate_arrays()
     !
     ! -- allocate uzf specific arrays
-    call mem_allocate(this%mfcellid, this%nodes, 'MFCELLID', this%origin)
+    call mem_allocate(this%igwfnode, this%nodes, 'IGWFNODE', this%origin)
     call mem_allocate(this%appliedinf, this%nodes, 'APPLIEDINF', this%origin)
     call mem_allocate(this%rejinf, this%nodes, 'REJINF', this%origin)
     call mem_allocate(this%rejinf0, this%nodes, 'REJINF0', this%origin)
@@ -469,6 +477,19 @@ contains
           found = .true.
         else
           call store_error('OPTIONAL BUDGET KEYWORD MUST BE FOLLOWED BY FILEOUT')
+        end if
+      case('PACKAGE_CONVERGENCE')
+        call this%parser%GetStringCaps(keyword)
+        if (keyword == 'FILEOUT') then
+          call this%parser%GetString(fname)
+          this%ipakcsv = getunit()
+          call openfile(this%ipakcsv, this%iout, fname, 'CSV',                   &
+                        filstat_opt='REPLACE')
+          write(this%iout,fmtuzfbin) 'PACKAGE_CONVERGENCE', fname, this%ipakcsv
+          found = .true.
+        else
+          call store_error('OPTIONAL PACKAGE_CONVERGENCE KEYWORD MUST BE ' //    &
+                           'FOLLOWED BY FILEOUT')
         end if
       case('SIMULATE_ET')
         this%ietflag = 1    !default
@@ -676,13 +697,12 @@ contains
     logical :: isfound, endOfBlock
     character(len=LINELENGTH) :: line, errmsg
     ! -- table output
-    character (len=20) :: cellids, cellid
-    character(len=LINELENGTH) :: linesep
-    character(len=16) :: text
-    integer(I4B) :: n
+    character (len=20) :: cellid
+    character(len=LINELENGTH) :: title
+    character(len=LINELENGTH) :: tag
+    integer(I4B) :: ntabrows
+    integer(I4B) :: ntabcols
     integer(I4B) :: node
-    integer(I4B) :: iloc
-    real(DP) :: q
     !-- formats
     character(len=*),parameter :: fmtlsp = &
         "(1X,/1X,'REUSING ',A,'S FROM LAST STRESS PERIOD')"
@@ -738,52 +758,57 @@ contains
       ! -- write header
       if (this%iprpak /= 0) then
         !
-        ! -- set cell id based on discretization
-        if (this%dis%ndim == 3) then
-          cellids = '(LAYER,ROW,COLUMN)  '
-        elseif (this%dis%ndim == 2) then
-          cellids = '(LAYER,CELL2D)      '
-        else
-          cellids = '(NODE)              '
-        end if
-        write (this%iout, '(//3a)')                                              &
-          'UZF PACKAGE (', trim(adjustl(this%name)), ') STRESS PERIOD DATA'
-        !<uzfno> <finf> <pet> <extdp> <extwc> <ha> <hroot> <rootact>
-        iloc = 1
-        line = ''
-        if(this%inamedbound==1) then
-          call UWWORD(line, iloc, 16, TABUCSTRING,                               &
-                      'name', n, q, ALIGNMENT=TABLEFT)
-        end if
-        call UWWORD(line, iloc, 6, TABUCSTRING,                                  &
-                      'no.', n, q, ALIGNMENT=TABCENTER, sep=' ')
-        call UWWORD(line, iloc, 20, TABUCSTRING,                                 &
-                      cellids, n, q, ALIGNMENT=TABCENTER, sep=' ')
-        call UWWORD(line, iloc, 11, TABUCSTRING,                                 &
-                      'finf', n, q, ALIGNMENT=TABCENTER, sep=' ')
+        ! -- setup inputtab tableobj
+        !
+        ! -- table dimensions
+        ntabrows = 1
+        ntabcols = 3
         if (this%ietflag /= 0) then
-          call UWWORD(line, iloc, 11, TABUCSTRING,                               &
-                      'pet', n, q, ALIGNMENT=TABCENTER, sep=' ')
-          call UWWORD(line, iloc, 11, TABUCSTRING,                               &
-                      'extdep', n, q, ALIGNMENT=TABCENTER, sep=' ')
-          call UWWORD(line, iloc, 11, TABUCSTRING,                               &
-                      'extwc', n, q, ALIGNMENT=TABCENTER, sep=' ')
+          ntabcols = ntabcols + 3
           if (this%ietflag == 2) then
-            call UWWORD(line, iloc, 11, TABUCSTRING,                             &
-                        'ha', n, q, ALIGNMENT=TABCENTER, sep=' ')
-            call UWWORD(line, iloc, 11, TABUCSTRING,                             &
-                        'hroot', n, q, ALIGNMENT=TABCENTER, sep=' ')
-            call UWWORD(line, iloc, 11, TABUCSTRING,                             &
-                        'rootact', n, q, ALIGNMENT=TABCENTER)
+            ntabcols = ntabcols + 3
           end if
         end if
-        ! -- create line separator
-        linesep = repeat('-', iloc)
-        ! -- write header line and separator
-        write(this%iout,'(1X,A)') line(1:iloc)
-        write(this%iout,'(1X,A)') linesep(1:iloc)
+        if (this%inamedbound == 1) then
+          ntabcols = ntabcols + 1
+        end if
+        !
+        ! -- initialize table and define columns
+        title = trim(adjustl(this%text)) // ' PACKAGE (' //                        &
+                trim(adjustl(this%name)) //') DATA FOR PERIOD'
+        write(title, '(a,1x,i6)') trim(adjustl(title)), kper
+        call table_cr(this%inputtab, this%name, title)
+        call this%inputtab%table_df(ntabrows, ntabcols, this%iout,               &
+                                    finalize=.FALSE.)
+        tag = 'NUMBER'
+        call this%inputtab%initialize_column(tag, 10)
+        tag = 'CELLID'
+        call this%inputtab%initialize_column(tag, 20, alignment=TABLEFT)
+        tag = 'FINF'
+        call this%inputtab%initialize_column(tag, 12)
+        if (this%ietflag /= 0) then
+          tag = 'PET'
+          call this%inputtab%initialize_column(tag, 12)
+          tag = 'EXTDEP'
+          call this%inputtab%initialize_column(tag, 12)
+          tag = 'EXTWC'
+          call this%inputtab%initialize_column(tag, 12)
+          if (this%ietflag == 2) then
+            tag = 'HA'
+            call this%inputtab%initialize_column(tag, 12)
+            tag = 'HROOT'
+            call this%inputtab%initialize_column(tag, 12)
+            tag = 'ROOTACT'
+            call this%inputtab%initialize_column(tag, 12)
+          end if
+        end if
+        if (this%inamedbound == 1) then
+          tag = 'BOUNDNAME'
+          call this%inputtab%initialize_column(tag, LENBOUNDNAME, alignment=TABLEFT)
+        end if
       end if
       !
+      ! -- read the stress period data
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
@@ -791,11 +816,14 @@ contains
         ! -- check for valid uzf node
         i = this%parser%GetInteger()
         if (i < 1 .or. i > this%nodes) then
-          write(errmsg,'(4x,a,1x,i6)') &
-            '****ERROR. UZFNO MUST BE > 0 and <= ', this%nodes
+          tag = trim(adjustl(this%text)) // ' PACKAGE (' //                      &
+                trim(adjustl(this%name)) //') DATA FOR PERIOD'
+          write(tag, '(a,1x,i0)') trim(adjustl(tag)), kper
+          write(errmsg,'(4x,a,1x,a,a,i0,1x,a,i0)')                               &
+            '****ERROR.', trim(adjustl(tag)), ': UZFNO ', i,                     &
+            'MUST BE > 0 and <= ', this%nodes
           call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-          call ustop()
+          cycle
         end if
         !
         ! -- Setup boundname
@@ -896,49 +924,37 @@ contains
         if (this%iprpak /= 0) then
           !
           ! -- get cellid
-          node = this%mfcellid(i)
+          node = this%igwfnode(i)
           if (node > 0) then
             call this%dis%noder_to_string(node, cellid)
           else
             cellid = 'none'
           end if
           !
-          ! -- fill line
-          !<uzfno> <finf> <pet> <extdp> <extwc> <ha> <hroot> <rootact>
-          iloc = 1
-          line = ''
-          if(this%inamedbound==1) then
-            call UWWORD(line, iloc, 16, TABUCSTRING,                             &
-                        this%boundname(i), n, q, ALIGNMENT=TABLEFT)
-          end if
-          call UWWORD(line, iloc, 6, TABINTEGER, text, i, q, sep=' ')
-          call UWWORD(line, iloc, 20, TABUCSTRING,                               &
-                      cellid, n, q, ALIGNMENT=TABLEFT)
-          call UWWORD(line, iloc, 11, TABREAL,                                   &
-                      text, i, this%sinf(i)%value, sep=' ')
+          ! -- write data to the table
+          call this%inputtab%add_term(i)
+          call this%inputtab%add_term(cellid)
+          call this%inputtab%add_term(this%sinf(i)%value)
           if (this%ietflag /= 0) then
-            call UWWORD(line, iloc, 11, TABREAL,                                 &
-                        text, i, this%pet(i)%value, sep=' ')
-            call UWWORD(line, iloc, 11, TABREAL,                                 &
-                        text, i, this%extdp(i)%value, sep=' ')
-            call UWWORD(line, iloc, 11, TABREAL,                                 &
-                        text, i, this%extwc(i)%value, sep=' ')
+            call this%inputtab%add_term(this%pet(i)%value)
+            call this%inputtab%add_term(this%extdp(i)%value)
+            call this%inputtab%add_term(this%extwc(i)%value)
             if (this%ietflag == 2) then
-              call UWWORD(line, iloc, 11, TABREAL,                               &
-                          text, i, this%ha(i)%value, sep=' ')
-              call UWWORD(line, iloc, 11, TABREAL,                               &
-                          text, i, this%hroot(i)%value, sep=' ')
-              call UWWORD(line, iloc, 11, TABREAL,                               &
-                          text, i, this%rootact(i)%value)
+            call this%inputtab%add_term(this%ha(i)%value)
+            call this%inputtab%add_term(this%hroot(i)%value)
+            call this%inputtab%add_term(this%rootact(i)%value)
             end if
           end if
-          ! -- write line
-          write(this%iout,'(1X,A)') line(1:iloc)
+          if (this%inamedbound == 1) then
+            call this%inputtab%add_term(this%boundname(i))
+          end if
         end if
 
       end do
+      !
+      ! -- finalize the table
       if (this%iprpak /= 0) then
-        write(this%iout,'(1X,A)') linesep(1:iloc)
+        call this%inputtab%finalize_table()
       end if
 
       write(this%iout,'(1x,a,1x,i6)')'END OF '//trim(adjustl(this%text)) //    &
@@ -1056,7 +1072,7 @@ contains
     return
   end subroutine uzf_ad
 
-  subroutine uzf_cf(this)
+  subroutine uzf_cf(this, reset_mover)
 ! ******************************************************************************
 ! uzf_cf -- Formulate the HCOF and RHS terms
 ! Subroutine: (1) skip if no UZF cells
@@ -1068,8 +1084,10 @@ contains
     ! -- modules
     ! -- dummy
     class(UzfType) :: this
+    logical, intent(in), optional :: reset_mover
     ! -- locals
     integer(I4B) :: n
+    logical :: lrm
 ! ------------------------------------------------------------------------------
     !
     ! -- Return if no UZF cells
@@ -1084,7 +1102,9 @@ contains
     end do
     !
     ! -- pakmvrobj cf
-    if(this%imover == 1) then
+    lrm = .true.
+    if (present(reset_mover)) lrm = reset_mover
+    if(this%imover == 1 .and. lrm) then
       call this%pakmvrobj%cf()
     endif
     !
@@ -1159,145 +1179,192 @@ contains
     return
   end subroutine uzf_fn
 
-  subroutine uzf_cc(this, iend, icnvg, hclose, rclose)
+  subroutine uzf_cc(this, kiter, iend, icnvgmod, cpak, dpak)
 ! **************************************************************************
 ! uzf_cc -- Final convergence check for package
 ! **************************************************************************
 !
 !    SPECIFICATIONS:
 ! --------------------------------------------------------------------------
-    use InputOutputModule, only: UWWORD
+    use TdisModule, only: totim, kstp, kper, delt
     ! -- dummy
     class(Uzftype), intent(inout) :: this
+    integer(I4B), intent(in) :: kiter
+    integer(I4B), intent(in) :: icnvgmod
     integer(I4B), intent(in) :: iend
-    integer(I4B), intent(inout) :: icnvg
-    real(DP), intent(in) :: hclose
-    real(DP), intent(in) :: rclose
+    character(len=LENPAKLOC), intent(inout) :: cpak
+    real(DP), intent(inout) :: dpak
     ! -- local
-    character(len=LINELENGTH) :: line, linesep
-    character(len=16) :: text
+    character(len=LENPAKLOC) :: cloc
+    character(len=LINELENGTH) :: title
+    character(len=LINELENGTH) :: tag
+    character(len=20) :: cellid
+    integer(I4B) :: icheck
+    integer(I4B) :: ipakfail
+    integer(I4B) :: locdrejinfmax
+    integer(I4B) :: locdrchmax
+    integer(I4B) :: locdseepmax
+    integer(I4B) :: ntabrows
+    integer(I4B) :: ntabcols
     integer(I4B) :: n
-    integer(I4B) :: ifirst
-    integer(I4B) :: iloc
-    real(DP) :: r
+    integer(I4B) :: node
+    real(DP) :: qtolfact
     real(DP) :: drejinf
-    real(DP) :: avgrejinf
-    real(DP) :: pdrejinf
+    real(DP) :: drejinfmax
     real(DP) :: drch
-    real(DP) :: avgrch
-    real(DP) :: pdrch
+    real(DP) :: drchmax
     real(DP) :: dseep
-    real(DP) :: avgseep
-    real(DP) :: pdseep
+    real(DP) :: dseepmax
+    real(DP) :: dmax
     ! format
 ! --------------------------------------------------------------------------
-    ifirst = 1
-    if (this%iconvchk /= 0) then
-      final_check: do n = 1, this%nodes
-        drejinf = this%rejinf0(n) - this%rejinf(n)
-        avgrejinf = DHALF * (this%rejinf0(n) + this%rejinf(n))
-        pdrejinf = DZERO
-        if (avgrejinf > DZERO) then
-          pdrejinf = DHUNDRED * drejinf / avgrejinf
-        end if
-        drch = this%rch0(n) - this%rch(n)
-        avgrch = DHALF * (this%rch0(n) + this%rch(n))
-        pdrch = DZERO
-        if (avgrch > DZERO) then
-          pdrch = DHUNDRED * drch / avgrch
-        end if
-        dseep = DZERO
-        avgseep = DZERO
+    !
+    ! -- initialize local variables
+    icheck = this%iconvchk
+    ipakfail = 0
+    locdrejinfmax = 0
+    locdrchmax = 0
+    locdseepmax = 0
+    drejinfmax = DZERO
+    drchmax = DZERO
+    dseepmax = DZERO
+    !
+    ! -- if not saving package convergence data on check convergence if
+    !    the model is considered converged
+    if (this%ipakcsv == 0) then
+      if (icnvgmod == 0) then
+        icheck = 0
+      end if
+    else
+      !
+      ! -- header for package csv
+      if (.not. associated(this%pakcsvtab)) then
+        !
+        ! -- determine the number of columns and rows
+        ntabrows = 1
+        ntabcols = 8
         if (this%iseepflag == 1) then
-          dseep = this%gwd0(n) - this%gwd(n)
-          avgseep = DHALF * (this%gwd0(n) + this%gwd(n))
+          ntabcols = ntabcols + 2
         end if
-        pdseep = DZERO
-        if (avgseep > DZERO) then
-          pdseep = DHUNDRED * dseep / avgseep
+        !
+        ! -- setup table
+        call table_cr(this%pakcsvtab, this%name, '')
+        call this%pakcsvtab%table_df(ntabrows, ntabcols, this%ipakcsv,           &
+                                     lineseparator=.FALSE., separator=',',       &
+                                     finalize=.FALSE.)
+        !
+        ! -- add columns to package csv
+        tag = 'totim'
+        call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
+        tag = 'kper'
+        call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
+        tag = 'kstp'
+        call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
+        tag = 'nouter'
+        call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
+        tag = 'drejinfmax'
+        call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+        tag = 'drejinfmax_loc'
+        call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+        tag = 'drchmax'
+        call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+        tag = 'drchmax_loc'
+        call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+        if (this%iseepflag == 1) then
+          tag = 'dseepmax'
+          call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+          tag = 'dseepmax_loc'
+          call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
         end if
-        !if (ABS(pdrejinf) > this%pdmax .or. ABS(pdrch) > this%pdmax .or. ABS(pdseep) > this%pdmax) then
-        if (ABS(drejinf) > rclose .or. ABS(drch) > rclose .or.                  &
-            ABS(dseep) > rclose) then
-          icnvg = 0
-          ! write convergence check information if this is the last outer iteration
-          if (iend == 1) then
-            ! -- write header
-            if (ifirst == 1) then
-              ifirst = 0
-              ! -- create first header line
-              iloc = 1
-              line = ''
-              call UWWORD(line, iloc, 10, TABUCSTRING,                          &
-                          'uzf', n, r, ALIGNMENT=TABCENTER, sep=' ')
-              call UWWORD(line, iloc, 15, TABUCSTRING,                          &
-                          'rej infil', n, r, ALIGNMENT=TABCENTER, sep=' ')
-              call UWWORD(line, iloc, 15, TABUCSTRING,                          &
-                          'rej infil', n, r, ALIGNMENT=TABCENTER, sep=' ')
-              call UWWORD(line, iloc, 15, TABUCSTRING,                          &
-                          'gwf recharge', n, r, ALIGNMENT=TABCENTER, sep=' ')
-              call UWWORD(line, iloc, 15, TABUCSTRING,                          &
-                          'gwf recharge', n, r, ALIGNMENT=TABCENTER, sep=' ')
-              if (this%iseepflag == 1) then
-                call UWWORD(line, iloc, 15, TABUCSTRING,                        &
-                            'gwf seepage', n, r, ALIGNMENT=TABCENTER, sep=' ')
-                call UWWORD(line, iloc, 15, TABUCSTRING,                        &
-                            'gwf seepage', n, r, ALIGNMENT=TABCENTER, sep=' ')
-              end if
-              call UWWORD(line, iloc, 15, TABUCSTRING,                          &
-                          'closure', n, r, ALIGNMENT=TABCENTER)
-              ! -- create line separator
-              linesep = repeat('-', iloc)
-              ! -- write first line
-              write(this%iout,'(/1X,A)') 'UZF PACKAGE FAILED CONVERGENCE CRITERIA'
-              write(this%iout,'(1X,A)') linesep(1:iloc)
-              write(this%iout,'(1X,A)') line(1:iloc)
-              ! -- create second header line
-              iloc = 1
-              line = ''
-              call UWWORD(line, iloc, 10, TABUCSTRING,                          &
-                          'cell', n, r, ALIGNMENT=TABCENTER, sep=' ')
-              call UWWORD(line, iloc, 15, TABUCSTRING,                          &
-                          'difference', n, r, ALIGNMENT=TABCENTER, sep=' ')
-              call UWWORD(line, iloc, 15, TABUCSTRING,                          &
-                          'pct difference', n, r, ALIGNMENT=TABCENTER, sep=' ')
-              call UWWORD(line, iloc, 15, TABUCSTRING,                          &
-                          'difference', n, r, ALIGNMENT=TABCENTER, sep=' ')
-              call UWWORD(line, iloc, 15, TABUCSTRING,                          &
-                          'pct difference', n, r, ALIGNMENT=TABCENTER, sep=' ')
-              if (this%iseepflag == 1) then
-                call UWWORD(line, iloc, 15, TABUCSTRING,                        &
-                            'difference', n, r, ALIGNMENT=TABCENTER, sep=' ')
-                call UWWORD(line, iloc, 15, TABUCSTRING,                        &
-                            'pct difference', n, r, ALIGNMENT=TABCENTER, sep=' ')
-              end if
-              call UWWORD(line, iloc, 15, TABUCSTRING,                          &
-                          'criteria', n, r, ALIGNMENT=TABCENTER)
-              ! -- write second line
-              write(this%iout,'(1X,A)') line(1:iloc)
-              write(this%iout,'(1X,A)') linesep(1:iloc)
-            end if
-            ! -- write data
-            iloc = 1
-            line = ''
-            call UWWORD(line, iloc, 10, TABINTEGER, text, n, r, sep=' ')
-            call UWWORD(line, iloc, 15, TABREAL, text, n, drejinf, sep=' ')
-            call UWWORD(line, iloc, 15, TABREAL, text, n, pdrejinf, sep=' ')
-            call UWWORD(line, iloc, 15, TABREAL, text, n, drch, sep=' ')
-            call UWWORD(line, iloc, 15, TABREAL, text, n, pdrch, sep=' ')
-            if (this%iseepflag == 1) then
-              call UWWORD(line, iloc, 15, TABREAL, text, n, dseep, sep=' ')
-              call UWWORD(line, iloc, 15, TABREAL, text, n, pdseep, sep=' ')
-            end if
-            call UWWORD(line, iloc, 15, TABREAL, text, n, rclose)
-            write(this%iout, '(1X,A)') line(1:iloc)
-          else
-            exit final_check
+      end if
+    end if
+    !
+    ! -- perform package convergence check
+    if (icheck /= 0) then
+      final_check: do n = 1, this%nodes
+        !
+        ! -- set the Q to length factor
+        qtolfact = delt / this%uzfobj%uzfarea(n)
+        !
+        ! -- rejected infiltration
+        drejinf = qtolfact * (this%rejinf0(n) - this%rejinf(n))
+        !
+        ! -- groundwater recharge
+        drch = qtolfact * (this%rch0(n) - this%rch(n))
+        !
+        ! -- groundwater seepage to the land surface
+        dseep = DZERO
+        if (this%iseepflag == 1) then
+          dseep = qtolfact * (this%gwd0(n) - this%gwd(n))
+        end if
+        !
+        ! -- evaluate magnitude of differences
+        if (n == 1) then
+          drejinfmax = drejinf
+          locdrejinfmax = n
+          drchmax = drch
+          locdrchmax = n
+          dseepmax = dseep
+          locdseepmax = n
+        else
+          if (ABS(drejinf) > abs(drejinfmax)) then
+            drejinfmax = drejinf
+            locdrejinfmax = n
+          end if
+          if (ABS(drch) > abs(drchmax)) then
+            drchmax = drch
+            locdrchmax = n
+          end if
+          if (ABS(dseep) > abs(dseepmax)) then
+            dseepmax = dseep
+            locdseepmax = n
           end if
         end if
       end do final_check
-      if (ifirst == 0) then
-        write(this%iout,'(1X,A)') linesep(1:iloc)
+      !
+      ! -- set dpak and cpak
+      if (ABS(drejinfmax) > abs(dpak)) then
+        dpak = drejinfmax
+        write(cloc, "(a,'-(',i0,')-',a)")                                        &
+          trim(this%name), locdrejinfmax, 'rejinf'
+        cpak = trim(cloc)
+      end if
+      if (ABS(drchmax) > abs(dpak)) then
+        dpak = drchmax
+        write(cloc, "(a,'-(',i0,')-',a)")                                        &
+          trim(this%name), locdrchmax, 'rech'
+        cpak = trim(cloc)
+      end if
+      if (this%iseepflag == 1) then
+        if (ABS(dseepmax) > abs(dpak)) then
+          dpak = dseepmax
+          write(cloc, "(a,'-(',i0,')-',a)")                                      &
+          trim(this%name), locdseepmax, 'seep'
+          cpak = trim(cloc)
+        end if
+      end if
+      !
+      ! -- write convergence data to package csv
+      if (this%ipakcsv /= 0) then
+        !
+        ! -- write the data
+        call this%pakcsvtab%add_term(totim)
+        call this%pakcsvtab%add_term(kper)
+        call this%pakcsvtab%add_term(kstp)
+        call this%pakcsvtab%add_term(kiter)
+        call this%pakcsvtab%add_term(drejinfmax)
+        call this%pakcsvtab%add_term(locdrejinfmax)
+        call this%pakcsvtab%add_term(drchmax)
+        call this%pakcsvtab%add_term(locdrchmax)
+        if (this%iseepflag == 1) then
+          call this%pakcsvtab%add_term(dseepmax)
+          call this%pakcsvtab%add_term(locdseepmax)
+        end if
+        !
+        ! -- finalize the package csv
+        if (iend == 1) then
+          call this%pakcsvtab%finalize_table()
+        end if
       end if
     end if
     !
@@ -1886,7 +1953,6 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use InputOutputModule, only: UWWORD
     ! -- dummy
     class(UzfType) :: this
     integer(I4B),intent(in) :: kstp
@@ -2140,11 +2206,11 @@ contains
         ! -- increment nboundchk
         nboundchk(i) = nboundchk(i) + 1
         
-        ! -- store the reduced gwf nodenumber in mfcellid
+        ! -- store the reduced gwf nodenumber in igwfnode
         call this%parser%GetCellid(this%dis%ndim, cellid)
         ic = this%dis%noder_from_cellid(cellid,                                 &
                                         this%parser%iuactive, this%iout)
-        this%mfcellid(i) = ic
+        this%igwfnode(i) = ic
         rowmaxnnz(ic) = rowmaxnnz(ic) + 1
         !
         ! -- landflag
@@ -2230,7 +2296,7 @@ contains
         if (this%inamedbound == 1) then
           call this%parser%GetStringCaps(this%uzfname(i))
         endif
-        n = this%mfcellid(i)
+        n = this%igwfnode(i)
         !cdl hgwf = this%xnew(n)
         call this%uzfobj%setdata(i,this%gwfarea(n),this%gwftop(n),this%gwfbot(n), &
                                  surfdep,vks,thtr,thts,thti,eps,this%ntrail,      &
@@ -2269,7 +2335,7 @@ contains
     call sparse%init(this%dis%nodes, this%dis%nodes, rowmaxnnz)
     ! --
     do i = 1, this%nodes
-      ic = this%mfcellid(i)
+      ic = this%igwfnode(i)
       call sparse%addconnection(ic, i, 1)
     end do
     !
@@ -2312,101 +2378,81 @@ contains
     ! -- dummy
     class(UzfType), intent(inout) :: this
     ! -- local
-    character (len=20) :: cellids, cellid
-    character(len=LINELENGTH) :: line, linesep
-    character(len=16) :: text
+    character (len=20) :: cellid
+    character(len=LINELENGTH) :: title
+    character(len=LINELENGTH) :: tag
+    integer(I4B) :: ntabrows
+    integer(I4B) :: ntabcols
     integer(I4B) :: i
-    integer(I4B) :: n
     integer(I4B) :: node
-    integer(I4B) :: iloc
-    real(DP) :: q
 ! ------------------------------------------------------------------------------
 !
     !
-    ! -- set cell id based on discretization
-    if (this%dis%ndim == 3) then
-      cellids = '(LAYER,ROW,COLUMN)  '
-    elseif (this%dis%ndim == 2) then
-      cellids = '(LAYER,CELL2D)      '
-    else
-      cellids = '(NODE)              '
+    ! -- setup inputtab tableobj
+    !
+    ! -- table dimensions
+    ntabrows = this%nodes
+    ntabcols = 10
+    if (this%inamedbound == 1) then
+      ntabcols = ntabcols + 1
     end if
-    write (this%iout, '(//3a)')                                                 &
-      'UZF PACKAGE (', trim(adjustl(this%name)), ') CELL DATA'
-    iloc = 1
-    line = ''
-    if(this%inamedbound==1) then
-      call UWWORD(line, iloc, 16, TABUCSTRING,                                  &
-                  'name', n, q, ALIGNMENT=TABLEFT)
+    !
+    ! -- initialize table and define columns
+    title = trim(adjustl(this%text)) // ' PACKAGE (' //                        &
+            trim(adjustl(this%name)) //') STATIC UZF CELL DATA'
+    call table_cr(this%inputtab, this%name, title)
+    call this%inputtab%table_df(ntabrows, ntabcols, this%iout)
+    tag = 'NUMBER'
+    call this%inputtab%initialize_column(tag, 10)
+    tag = 'CELLID'
+    call this%inputtab%initialize_column(tag, 20, alignment=TABLEFT)
+    tag = 'LANDFLAG'
+    call this%inputtab%initialize_column(tag, 12)
+    tag = 'IVERTCON'
+    call this%inputtab%initialize_column(tag, 12)
+    tag = 'SURFDEP'
+    call this%inputtab%initialize_column(tag, 12)
+    tag = 'VKS'
+    call this%inputtab%initialize_column(tag, 12)
+    tag = 'THTR'
+    call this%inputtab%initialize_column(tag, 12)
+    tag = 'THTS'
+    call this%inputtab%initialize_column(tag, 12)
+    tag = 'THTI'
+    call this%inputtab%initialize_column(tag, 12)
+    tag = 'EPS'
+    call this%inputtab%initialize_column(tag, 12)
+    if (this%inamedbound == 1) then
+      tag = 'BOUNDNAME'
+      call this%inputtab%initialize_column(tag, LENBOUNDNAME, alignment=TABLEFT)
     end if
-    call UWWORD(line, iloc, 6, TABUCSTRING,                                     &
-                'no.', n, q, ALIGNMENT=TABCENTER, sep=' ')
-    call UWWORD(line, iloc, 20, 1, cellids, n, q, ALIGNMENT=TABCENTER, sep=' ')
-    call UWWORD(line, iloc, 11, TABUCSTRING,                                     &
-                'landflag', n, q, ALIGNMENT=TABCENTER, sep=' ')
-    call UWWORD(line, iloc, 11, TABUCSTRING,                                     &
-                'ivertcon', n, q, ALIGNMENT=TABCENTER, sep=' ')
-    call UWWORD(line, iloc, 11, TABUCSTRING,                                     &
-                'surfdep', n, q, ALIGNMENT=TABCENTER, sep=' ')
-    call UWWORD(line, iloc, 11, TABUCSTRING,                                     &
-                'vks', n, q, ALIGNMENT=TABCENTER, sep=' ')
-    call UWWORD(line, iloc, 11, TABUCSTRING,                                     &
-                'thtr', n, q, ALIGNMENT=TABCENTER, sep=' ')
-    call UWWORD(line, iloc, 11, TABUCSTRING,                                     &
-                'thts', n, q, ALIGNMENT=TABCENTER, sep=' ')
-    call UWWORD(line, iloc, 11, TABUCSTRING,                                     &
-                'thti', n, q, ALIGNMENT=TABCENTER, sep=' ')
-    call UWWORD(line, iloc, 11, TABUCSTRING,                                     &
-                'eps', n, q, ALIGNMENT=TABCENTER)
-    ! -- create line separator
-    linesep = repeat('-', iloc)
-    ! -- write header line and separator
-    write(this%iout,'(1X,A)') line(1:iloc)
-    write(this%iout,'(1X,A)') linesep(1:iloc)
     !
     ! -- write data for each cell
     do i = 1, this%nodes
       !
       ! -- get cellid
-      node = this%mfcellid(i)
+      node = this%igwfnode(i)
       if (node > 0) then
         call this%dis%noder_to_string(node, cellid)
       else
         cellid = 'none'
       end if
       !
-      ! -- fill line
-      iloc = 1
-      line = ''
-      if(this%inamedbound==1) then
-        call UWWORD(line, iloc, 16, TABUCSTRING,                                 &
-                    this%uzfname(i), n, q, ALIGNMENT=TABLEFT)
+      ! -- add data
+      call this%inputtab%add_term(i)
+      call this%inputtab%add_term(cellid)
+      call this%inputtab%add_term(this%uzfobj%landflag(i))
+      call this%inputtab%add_term(this%uzfobj%ivertcon(i))
+      call this%inputtab%add_term(this%uzfobj%surfdep(i))
+      call this%inputtab%add_term(this%uzfobj%vks(i))
+      call this%inputtab%add_term(this%uzfobj%thtr(i))
+      call this%inputtab%add_term(this%uzfobj%thts(i))
+      call this%inputtab%add_term(this%uzfobj%thti(i))
+      call this%inputtab%add_term(this%uzfobj%eps(i))
+      if (this%inamedbound == 1) then
+        call this%inputtab%add_term(this%uzfname(i))
       end if
-      call UWWORD(line, iloc, 6, TABINTEGER, text, i, q, sep=' ')
-      call UWWORD(line, iloc, 20, TABUCSTRING, cellid, n, q, ALIGNMENT=TABLEFT)
-      call UWWORD(line, iloc, 11, TABINTEGER,                                    &
-                  text, this%uzfobj%landflag(i), q, sep=' ')
-      call UWWORD(line, iloc, 11, TABINTEGER,                                    &
-                  text, this%uzfobj%ivertcon(i), q, sep=' ')
-      call UWWORD(line, iloc, 11, TABREAL,                                       &
-                  text, i, this%uzfobj%surfdep(i), sep=' ')
-      call UWWORD(line, iloc, 11, TABREAL,                                       &
-                  text, i, this%uzfobj%vks(i), sep=' ')
-      call UWWORD(line, iloc, 11, TABREAL,                                       &
-                  text, i, this%uzfobj%thtr(i), sep=' ')
-      call UWWORD(line, iloc, 11, TABREAL,                                       &
-                  text, i, this%uzfobj%thts(i), sep=' ')
-      call UWWORD(line, iloc, 11, TABREAL,                                       &
-                  text, i, this%uzfobj%thti(i), sep=' ')
-      call UWWORD(line, iloc, 11, TABREAL,                                       &
-                  text, i, this%uzfobj%eps(i))
-      ! -- write line
-      write(this%iout,'(1X,A)') line(1:iloc)
     end do
-    !
-    ! -- write separator
-    write(this%iout,'(1X,A)') linesep(1:iloc)
-
     !
     ! -- return
     return
@@ -2895,6 +2941,7 @@ contains
     call mem_allocate(this%iprwcont, 'IPRWCONT', this%origin)
     call mem_allocate(this%iwcontout, 'IWCONTOUT', this%origin)
     call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%origin)
+    call mem_allocate(this%ipakcsv, 'IPAKCSV', this%origin)
     call mem_allocate(this%ntrail, 'NTRAIL', this%origin)
     call mem_allocate(this%nsets, 'NSETS', this%origin)
     call mem_allocate(this%nodes, 'NODES', this%origin)
@@ -2925,6 +2972,7 @@ contains
     this%iprwcont = 0
     this%iwcontout = 0
     this%ibudgetout = 0
+    this%ipakcsv = 0
     this%infilsum = DZERO
     this%uzetsum = DZERO
     this%rechsum = DZERO
@@ -2976,10 +3024,18 @@ contains
     deallocate(this%cauxcbc)
     deallocate(this%uzfname)
     !
+    ! -- package csv table
+    if (this%ipakcsv > 0) then
+      call this%pakcsvtab%table_da()
+      deallocate(this%pakcsvtab)
+      nullify(this%pakcsvtab)
+    end if
+    !
     ! -- deallocate scalars
     call mem_deallocate(this%iprwcont)
     call mem_deallocate(this%iwcontout)
     call mem_deallocate(this%ibudgetout)
+    call mem_deallocate(this%ipakcsv)
     call mem_deallocate(this%ntrail)
     call mem_deallocate(this%nsets)
     call mem_deallocate(this%nodes)
@@ -3008,7 +3064,7 @@ contains
     call mem_deallocate(this%iconvchk)
     !
     ! -- deallocate arrays
-    call mem_deallocate(this%mfcellid)
+    call mem_deallocate(this%igwfnode)
     call mem_deallocate(this%appliedinf)
     call mem_deallocate(this%rejinf)
     call mem_deallocate(this%rejinf0)
@@ -3114,7 +3170,7 @@ contains
                                                this%name_model, &
                                                this%name, &
                                                maxlist, .false., .false., &
-                                               naux, auxtxt)
+                                               naux, auxtxt, ordered_id1=.false.)
       !
       ! -- store connectivity
       call this%budobj%budterm(idx)%reset(nlen * 2)
@@ -3146,7 +3202,7 @@ contains
     call this%budobj%budterm(idx)%reset(this%nodes)
     q = DZERO
     do n = 1, this%nodes
-      n2 = this%mfcellid(n)
+      n2 = this%igwfnode(n)
       call this%budobj%budterm(idx)%update_term(n, n2, q)
     end do
     !
@@ -3325,7 +3381,7 @@ contains
     call this%budobj%budterm(idx)%reset(this%nodes)
     do n = 1, this%nodes
       this%qauxcbc(1) = this%uzfobj%uzfarea(n)
-      n2 = this%mfcellid(n)
+      n2 = this%igwfnode(n)
       q = -this%rch(n)
       call this%budobj%budterm(idx)%update_term(n, n2, q, this%qauxcbc)
     end do

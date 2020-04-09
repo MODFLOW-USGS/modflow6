@@ -152,7 +152,7 @@ contains
     return
   end subroutine ghb_ck
 
-  subroutine ghb_cf(this)
+  subroutine ghb_cf(this, reset_mover)
 ! ******************************************************************************
 ! ghb_cf -- Formulate the HCOF and RHS terms
 ! Subroutine: (1) skip if no ghbs
@@ -161,16 +161,21 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    implicit none
+    ! -- dummy
     class(GhbType) :: this
+    logical, intent(in), optional :: reset_mover
+    ! -- local
     integer(I4B) :: i, node
+    logical :: lrm
 ! ------------------------------------------------------------------------------
     !
     ! -- Return if no ghbs
     if(this%nbound.eq.0) return
     !
     ! -- packmvrobj cf
-    if(this%imover == 1) then
+    lrm = .true.
+    if (present(reset_mover)) lrm = reset_mover
+    if(this%imover == 1 .and. lrm) then
       call this%pakmvrobj%cf()
     endif
     !
