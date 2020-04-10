@@ -86,6 +86,7 @@ module RchModule
     packobj%ibcnum = ibcnum
     packobj%ncolbnd = 1
     packobj%iscloc = 1   ! sfac applies to recharge rate
+    packobj%ictorigin = 'NPF'
     ! indxconvertflux is Column index of bound that will be multiplied by
     ! cell area to convert flux rates to flow rates
     packobj%indxconvertflux = 1
@@ -402,9 +403,8 @@ module RchModule
     integer(I4B) :: ipos
     integer(I4B) :: jcol, jauxcol, lpos, ivarsread
     character(len=LENTIMESERIESNAME) :: tasName
-    character(len=24) ::  atemp
     character(len=24), dimension(2) :: aname
-    character(len=LINELENGTH) :: keyword
+    character(len=LINELENGTH) :: keyword, atemp
     logical :: found, endOfBlock
     logical :: convertFlux
     !
@@ -639,7 +639,7 @@ module RchModule
     return
   end subroutine set_nodesontop
 
-  subroutine rch_cf(this)
+  subroutine rch_cf(this, reset_mover)
 ! ******************************************************************************
 ! rch_cf -- Formulate the HCOF and RHS terms
 ! Subroutine: (1) skip if no recharge
@@ -648,10 +648,11 @@ module RchModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    implicit none
+    ! -- dummy
     class(rchtype) :: this
+    logical, intent(in), optional :: reset_mover
+    ! -- local
     integer(I4B) :: i, node
-    !real(DP) :: zero = 0.d0
 ! ------------------------------------------------------------------------------
     !
     ! -- Return if no recharge

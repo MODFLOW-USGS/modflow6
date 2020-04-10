@@ -495,7 +495,7 @@ contains
     !
     if (.not. this%Active) return
     !
-    ! Ned todo: Write stress-period data for MF6.
+    ! Ned todo: Write stress period data for MF6.
     ! Write keywords and values for each reach.
     ! Keywords include: inflow, rainfall, evaporation, runoff,
     !                   diversion, upstream_fraction, auxiliary.

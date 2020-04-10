@@ -73,6 +73,7 @@ contains
     packobj%ibcnum = ibcnum
     packobj%ncolbnd=2  ! drnelev, conductance
     packobj%iscloc=2   !sfac applies to conductance
+    packobj%ictorigin = 'NPF'
     !
     ! -- return
     return
@@ -154,7 +155,7 @@ contains
     return
   end subroutine drn_ck
 
-  subroutine drn_cf(this)
+  subroutine drn_cf(this, reset_mover)
 ! ******************************************************************************
 ! drn_cf -- Formulate the HCOF and RHS terms
 ! Subroutine: (1) skip if no drains
@@ -163,16 +164,22 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- dummy
     class(DrnType) :: this
+    logical, intent(in), optional :: reset_mover
+    ! -- local
     integer(I4B) :: i, node
     real(DP) :: drnelev, cdrn
+    logical :: lrm
 ! ------------------------------------------------------------------------------
     !
     ! -- Return if no drains
     if(this%nbound == 0) return
     !
     ! -- pakmvrobj cf
-    if(this%imover == 1) then
+    lrm = .true.
+    if (present(reset_mover)) lrm = reset_mover
+    if(this%imover == 1 .and. lrm) then
       call this%pakmvrobj%cf()
     endif
     !

@@ -115,35 +115,111 @@ Version numbers for MODFLOW 6 will follow a major.minor.revision format.  The ma
 This section describes changes introduced into MODFLOW 6 with each release.  These changes may substantially affect users.
 
 \begin{itemize}
+\item Version mf6.1.1--Release Candidate
 
-\item \currentmodflowversion
+\underline{NEW FUNCTIONALITY}
+\begin{itemize}
+\item Added silent command line switch (-s or --silent) that sends all output to the screen (\texttt{STDOUT})  to a file (``mfsim.stdout'').
+\item Added a new option, called SAVE\_SATURATION to the Node Property Flow Package.  When invoked, cell saturation is written to the binary budget file.  The cell saturation can be used by post-processors to determine how much of the cell is saturated without having to know the value for ICELLTYPE or the value for head. If a cell is marked as confined (ICELLTYPE=0) then saturation is always one. If ICELLTYPE is one, then saturation ranges between zero and one.
+\end{itemize}
 
 \underline{BASIC FUNCTIONALITY}
 \begin{itemize}
-\item Addressed issue with pointing contiguous pointer vectors/arrays to non-contiguous pointer vectors/arrays that caused code compilation failure with gfortran-8. A consequence of addressing this issue is that all pointer vectors/arrays that are allocated or pointed to using the memory manager must be defined to be contiguous.
-\item -
-\item - 
+\item Corrected an error in how the discretization package (for regular MODFLOW grids) calculates the distance between two cells when one or both of the cells are unconfined.  The error in the code would have only affected XT3D simulations with a regular grid, unconfined conditions, and specification of ANGLE2 in the NPF Package.  
+\item Corrected an error in the use of the AUXMULTNAME option for boundary packages when time series are used.
 \end{itemize}
 
 \underline{STRESS PACKAGES}
 \begin{itemize}
-\item -
-\item -
-\item - 
+	\item Fixed a bug in binary budget file header for CSUB Package budget data written using IMETH=6 (CSUB-ELASTIC and CSUB-INELASTIC) .
+	\item Added information on the CSUB Package budget terms and compaction data written the the Input/Output document in the `Description of Groundwater Flow (GWF) Model Binary Output Files' section.
+	\item Refactored the SFR Package to remove use of RectangularChGeometry objects and added required functionality as private methods in the SFR module.
+	\item Prior to this release, the calculated flows between a standard stress package (WEL, DRN, RIV, GHB, RCH, and EVT) and the connected model cell were based on the RHS and HCOF terms from the previous iteration.  This was not consistent with previous MODFLOW versions.  These packages were modified so that the flows are recalculated using the final converged head solution.  As a result of this change, simulated groundwater flows for these packages may be slightly different (compared to previous releases) if the package HCOF and RHS values depend on the simulated groundwater head.
 \end{itemize}
 
 \underline{ADVANCED STRESS PACKAGES}
 \begin{itemize}
-\item -
-\item -
-\item - 
+\item The code for saving the budget terms for the advanced packages was refactored to use common routines.  These changes should have no affect on simulation results.
+\item The LAK Package would accept negative user-input values for  RAINFALL, EVAPORATION, RUNOFF, INFLOW, and WITHDRAWAL even though the user guide mentioned that negative values are not allowed for these flow terms.  Error checks were added to ensure these values are specified as positive.
+\item Added a storage term to the SFR Package binary output file.  This term is always zero with the present implementation.  An auxiliary variable, called VOLUME, is also written with the storage budget term.  This term contains the calculated water volume in the reach.
+\item  Added additional error trapping in the MAW Package to catch divide by zero errors when calculating the saturated conductance for wells using the SKIN CONDEQN in connections where the cell  transmissivity (the product of geometric mean of the horizontal hydraulic conductivity and cell thickness) and well transmissivity (the product of HK\_SKIN and screen thickness) is equal to one. Also add error trapping for well connections using the 1) SKIN CONDEQN where the contrast between the cell and well transmissivities are less than one and 2) SKIN and MEAN CONDEQN where the calculated connection saturated conductance is less than zero.
+\item For the Lake Package, the outlet number was written as ID1 and ID2 for the TO-MVR record in the binary budget file.  This has been changed so that the lake number of the connected outlet is written to ID1 and ID2.  This change was implemented so that lake budgets can be calculated using the information in the lake budget file.
+\item The Lake, Streamflow Routing, and Multi-Aquifer Well Packages were modified to save the user-specified stage or head to the binary output file for lakes, reaches, or wells that are specified as being CONSTANT.  Prior to this change, a no-flow value was written to the package binary output files for constant stage lakes and streams and constant head multi-aquifer wells.  The no-flow value is still written for those lakes, streams, or wells that are specified by the user as being inactive.  This change should make it easier to post-process the results from these packages.
+\end{itemize}
+
+\underline{SOLUTION}
+
+\item Version mf6.1.0
+
+\underline{NEW FUNCTIONALITY}
+\begin{itemize}
+	\item Added the Skeletal Storage, Compaction, and Subsidence (CSUB) Package. The one-dimensional effective-stress based compaction theory implemented in the CSUB Package is documented in Leake and Galloway (2007). The numerical approach used for delay interbeds in the CSUB package is documented in Hoffmann and others (2003) and uses the same one-dimensional effective-stress based compaction theory as coarse-grained and fine-grained no-delay interbed sediments. A number of example problems that use the CSUB Package are documented in the ``MODFLOW 6 CSUB Package Example Problems'' pdf document included in this and subsequent releases.
+\end{itemize}
+
+\underline{BASIC FUNCTIONALITY}
+\begin{itemize}
+\item Added an error check to the DISU Package that ensures that an underlying cell has a top elevation that is less than or equal to the bottom of an overlying cell.  An underlying cell is one in which the IHC value for the connection is zero and the connecting node number is greater than the cell node number.
+\item Added restricted IDOMAIN support for DISU grids.  Users can specify an optional IDOMAIN in the DISU Package input file.  IDOMAIN values must be zero or one.  Vertical pass-through cells (specified with an IDOMAIN value of -1 in the DIS or DISV Package input files) are not supported for DISU.   
+\item NPF Package will now write a message to the GWF Model list file to indicate when the SAVE\_SPECIFIC\_DISCHARGE option is invoked.
+\item Added two new options to the NPF Package.  The K22OVERK option allows the user to enter the anisotropy ratio for K22.  If activated, the K22 values entered by the user in the NPF input file will be multiplied by the K values entered in the NPF input file.  The K33OVERK option allows the user to enter the anisotropy ratio for K33.  If activated, the K33 values entered by the user in the NPF input file will be multiplied by the K values entered in the NPF input file.  With this K33OVERK option, for example, the user can specify a value of 0.1 for K33 and have all K33 values be one tenth of the values specified for K.  The program will terminate with an error if these options are invoked, but arrays for K22 and/or K33 are not provided in the NPF input file.
+\item Added new MAXERRORS option to mfsim.nam.  If specified, the maximum number of errors stored and printed will be limited to this number.  This can prevent a situation where memory will run out when there are an excessive number of errors.
+\item Refactored many parts of the code to remove unused variables, conform to stricter FORTRAN standard checks, and allow for new development efforts to be included in the code base.
+\end{itemize}
+
+\underline{STRESS PACKAGES}
+\begin{itemize}
+\item There was an error in the calculation of the segmented evapotranspiration rate for the case where the rate did not decrease with depth.  There was another error in which PETM0 was being used as the evapotranspiration rate at the surface instead of the proportion of the evapotranspiration rate at the surface.
+\end{itemize}
+
+\underline{ADVANCED STRESS PACKAGES}
+\begin{itemize}
+\item Corrected the way auxiliary variables are handled for the advanced packages.  In some cases, values for auxiliary variables were not being correctly written to the GWF Model budget file or to the advanced package budget file.  A consistent approach for updating and saving auxiliary variables was implemented for the MAW, SFR, LAK, and UZF Packages.
+\item The user guide was updated to include a missing laksetting that was omitted from the PERIOD block.  The laksetting description now includes an INFLOW option; a description for INFLOW is also now included.
+\item The LAK package was incorrectly making an error check against NOUTLETS instead of NLAKES.
+\item For the advanced stress packages, values assigned to the auxiliary variables were not written correctly to the GWF Model budget file, but the values were correct in the advanced package budget file.  Program was modified so that auxiliary variables are correctly written to the GWF Model budget file.
+\item Corrected several error messages issued by the SFR Package that were not formatted correctly.  
+\item Fixed a bug in which the lake stage stable would sometimes result in touching numbers.  This only occurred for negative lake stages.
+\item The UZF Package was built on the UZFKinematicType, which used an array of structures.  A large array like this, can cause memory problems.  The UZFKinematicType was replaced with a new UzfCellGroupType, which is a structure of arrays and is much more memory efficient.  The underlying UZF algorithm did not change.
 \end{itemize}
 
 \underline{SOLUTION}
 \begin{itemize}
-\item -
-\item -
-\item - 
+\item Add ALL and FIRST options to optional NO\_PTC optional keyword in OPTIONS block. If NO\_PTC option is FIRST, PTC is disabled for the first stress period but is applied in all subsequent steady-state stress periods. If NO\_PTC option is ALL, PTC is disabled for all steady-state stress periods. If the NO\_PTC options is not defined, PTC is disabled for all steady-state stress periods (this is consistent with the behaviour of the NO\_PTC option in previous versions).
+\end{itemize}
+
+\item Version mf6.0.4--Feb. 27, 2019
+
+\underline{BASIC FUNCTIONALITY}
+\begin{itemize}
+\item Addressed issue with pointing contiguous pointer vectors/arrays to non-contiguous pointer vectors/arrays that caused code compilation failure with gfortran-8. A consequence of addressing this issue is that all pointer vectors/arrays that are allocated or pointed to using the memory manager must be defined to be contiguous.
+\item Corrected a problem with the reading of grid data from a binary file, in which the program was reading a binary header for each row of data.
+\item Added a new error check for very small time steps.  If the value of the starting time is equal to the ending time (starting time plus the time step length), then the time step is too small to be differentiated by the program based on the precision of floating point numbers.  The program will terminate with an error in this case.  The program will also terminate if the storage package with a transient stress period has a time step length of zero.
+\item The observation package was modified to use non-advancing output instead of fixed length strings when writing ascii output. The previous use of fixed length strings resulted in truncation of ascii observation output when the product of user-specified \texttt{digits} + 7 and the number of observations exceeded 5000.
+\item Corrected an error in the GWF-GWF Exchange module that caused the specific discharge values in the child model to be calculated incorrectly.  The calculation was incorrect because the face normal for the child model was pointing toward the center of the cell instead of outward.
+\item Minor refactoring to improve code clarity.
+\end{itemize}
+
+\underline{STRESS PACKAGES}
+\begin{itemize}
+\item Minor refactoring to improve code clarity.
+\end{itemize}
+
+\underline{ADVANCED STRESS PACKAGES}
+\begin{itemize}
+\item Modified the Multi-Aquifer Well (MAW) Package so that the HEAD\_LIMIT and RATE\_SCALING options work for injection wells.  Prior to this change, these options only worked for extraction wells.  These options can be used to reduce or even shut off well injection as the head in the well rises above user-specified levels.
+\item Added stage and residual convergence checks to the SFR package to make sure that stage and upstream flow changes between successive outer iterations are less than OUTER\_HCLOSE and OUTER\_RCLOSEBND, respectively. This addition is expected to be useful for steady-state simulations with complicated networks and simple reaches.
+\item Modified the final convergence check for the LAK package to use OUTER\_HCLOSE when evaluating lake stage changes between successive outer iterations.
+\item Modified the final convergence check for the UZF package to use OUTER\_RCLOSEBND when evaluating rejected infiltration, groundwater recharge, and groundwater seepage changes between successive outer iterations.
+\item Minor refactoring to improve code clarity.
+\end{itemize}
+
+\underline{SOLUTION}
+\begin{itemize}
+\item Modified pseudo-transient continuation (PTC) approach to use PTC for steady-state stress period for models using the Newton-Raphson formulation for problems with and without the storage (STO) package. Previously, PTC was only used with problems that did not include the STO package (this was not the intended behavior of PTC).
+\item Added NO\_PTC option to disable PTC for problems where PTC degrades/prevents model convergence. Option only applies to steady-state stress periods for models using the Newton-Raphson formulation. For many problems, PTC can significantly improve convergence behavior for steady-state simulations, and for this reason it is active by default.  In some cases, however, PTC can worsen the convergence behavior, especially when the initial conditions are similar to the solution.  When the initial conditions are similar to, or exactly the same as, the solution and convergence is slow, then this NO\_PTC option should be used to deactivate PTC.  This NO\_PTC option should also be used in order to compare convergence behavior with other MODFLOW versions, as PTC is only available in MODFLOW 6. 
+\item Small improvements to PTC to reduce the initial PTCDEL value loaded on the diagonal. This reduces the number of iterations required to achieve convergence for steady-state stress periods for most problems.
+\item Added OUTER\_RCLOSEBND variable that is used when performing final convergence checks on model packages that solve a separate equation not solved by the IMS linear solver. This value represents the maximum allowable residual at any single model package element between successive outer iterations. An example of a model package that would use OUTER\_RCLOSEBND to evaluate convergence is the SFR package which solves a continuity equation for each reach.
+\item Minor refactoring to improve code clarity.
 \end{itemize}
 
 \item Version mf6.0.3--Aug. 9, 2018
@@ -298,7 +374,7 @@ Version mf6beta0.9.03---June 23, 2017
 \item Added functionality to pass SFR leakage to the aquifer to the highest active layer.
 \item Converted SFR Manning's to a time-varying, time series aware variable.  
 \item Updated LAK package so that conductance calculations correctly account for THICKSTRT in the NPF package for layers that use THICKSTRT (and are confined). Also updated EMBEDDEDH and EMBEDDEDV so that the conductance for these connection types are constant for confined layers.
-\item Converted UZF stress-period data to time series aware data.
+\item Converted UZF stress period data to time series aware data.
 \item Added time-series aware AUXILIARY variables to UZF package.
 \item Implemented AUXMULTNAME in options block for UZF package (AUXILIARY variables have to be specified). AUXMULTNAME is applied to the GWF cell area and is used to simulated more than one UZF cell per GWF cell. This could be used to simulate different land use classifications (i.e., agricultural and natural land use types) in the same GWF cell.
 \end{itemize}
@@ -360,7 +436,7 @@ The following distribution file is for use on personal computers: \modflowversio
 It is recommended that no user files are kept in the \modflowversion~directory structure.  If you do plan to put your own files in the \modflowversion~directory structure, do so only by creating additional subdirectories.
 
 % -------------------------------------------------
-\section{Installation and Executation}
+\section{Installation and Execution}
 There is no installation of MODFLOW 6 other than the requirement that \modflowversion.zip must be unzipped into a location where it can be accessed.  
 
 To make the executable versions of MODFLOW 6 accessible from any directory, the directory containing the executables should be included in the PATH environment variable.  Also, if a prior release of MODFLOW 6 is installed on your system, the directory containing the executables for the prior release should be removed from the PATH environment variable.
@@ -373,7 +449,7 @@ To run MODFLOW 6, simply type \texttt{mf6} in a terminal window.  The current wo
 \section{Compiling MODFLOW 6}
 MODFLOW 6 has been compiled using Intel Visual Fortran and gfortran on the Windows and Mac/OS operating systems.  Because the program uses relatively new Fortran capabilities, newer versions of the compilers may be required for successful compilation.  For example, to use gfortran to compile MODFLOW 6, gfortran version 4.9 or newer must be used.  If you have gfortran installed on your computer, you can tell which version it is by entering ``\verb|gfortran --version|'' at a terminal window.
 
-This distribution contains the Microsoft Visual Studio project files for compiling MODFLOW 6 on Windows using the Intel Fortran Compiler.  The files have been used successfully with Visual Studio 2017 and Intel(R) Visual Fortran Compiler 18.0.1.156.
+This distribution contains the Microsoft Visual Studio project files for compiling MODFLOW 6 on Windows using the Intel Fortran Compiler.  The files have been used successfully with Visual Studio 2017 and Intel(R) Visual Fortran Compiler 2019.2.190.
 
 This distribution also comes with a makefile for compiling MODFLOW 6 with gfortran.  The makefile is contained in the \texttt{make} folder.
 
@@ -436,23 +512,27 @@ Notices related to this software are as follows:
 \section{References Cited}
 
 \begin{itemize}
-\item Keating, E., and Zyvoloski, G. 2009. A stable and efficient numerical algorithm for unconfined aquifer analysis. Ground Water, 47: 569--579. doi:10.1111/j.1745-6584.2009.00555.x
+\item Hoffmann, J{\"o}rn, Leake, S.A., Galloway, D.L., and Wilson, A.M., 2003, MODFLOW-2000 Ground-Water Model--User Guide to the Subsidence and Aquifer-System Compaction (SUB) Package: U.S. Geological Survey Open-File Report 03–233, 44 p.,  \url{https://pubs.usgs.gov/of/2003/ofr03-233/}
 
-\item Laattoe, T., Post, V. E.A. and Werner, A. D. 2014, Spatial periodic boundary condition for MODFLOW. Groundwater, v. 52: 606--612. doi:10.1111/gwat.12086
+\item Keating, E., and Zyvoloski, G. 2009. A stable and efficient numerical algorithm for unconfined aquifer analysis. Ground Water, 47: 569--579. \href{https://doi.org/10.1111/j.1745-6584.2009.00555.x}{doi:10.1111/j.1745-6584.2009.00555.x}
 
-\item Merritt, M.L., and Konikow, L.F. 2000, Documentation of a computer program to simulate lake-aquifer interaction using the MODFLOW ground-water flow model and the MOC3D solute-transport model. U.S. Geological Survey Water-Resources Investigations Report 00--4167, 146 p. https://pubs.er.usgs.gov/publication/wri004167.
+\item Laattoe, T., Post, V. E.A. and Werner, A. D. 2014, Spatial periodic boundary condition for MODFLOW. Groundwater, v. 52: 606--612. \href{https://doi.org/10.1111/gwat.12086}{doi:10.1111/gwat.12086}
 
-\item Neville, C.J., and M.J. Tonkin. 2004. Modeling multiaquifer wells with MODFLOW.  Ground Water, 42: 910--919. doi:10.1111/j.1745-6584.2004.t01-9-.x
+\item Leake, S.A., and Galloway, D.L., 2007, MODFLOW Ground-water model--User guide to the Subsidence and Aquifer-System Compaction Package (SUB-WT) for Water-Table Aquifers: U.S. Geological Survey Techniques and Methods, book 6, chap. A23, 42 p., \url{https://pubs.er.usgs.gov/publication/tm6A23}.
 
-\item Panday, Sorab, Langevin, C.D., Niswonger, R.G., Ibaraki, Motomu, and Hughes, J.D. 2013, MODFLOW-USG version 1: An unstructured grid version of MODFLOW for simulating groundwater flow and tightly coupled processes using a control volume finite-difference formulation. U.S. Geological Survey Techniques and Methods, book 6, chap. A45, 66 p., https://pubs.usgs.gov/tm/06/a45.
+\item Merritt, M.L., and Konikow, L.F. 2000, Documentation of a computer program to simulate lake-aquifer interaction using the MODFLOW ground-water flow model and the MOC3D solute-transport model. U.S. Geological Survey Water-Resources Investigations Report 00--4167, 146 p. \url{https://pubs.er.usgs.gov/publication/wri004167}.
 
-\item Prudic, D.E. 1989, Documentation of a computer program to simulate stream-aquifer relations using a modular, finite-difference, ground-water flow model. U.S. Geological Survey Open-File Report 88--729, 113 p. https://pubs.er.usgs.gov/publication/ofr88729.
+\item Neville, C.J., and M.J. Tonkin. 2004. Modeling multiaquifer wells with MODFLOW.  Ground Water, 42: 910--919. \href{https://doi.org/10.1111/j.1745-6584.2004.t01-9-.x}{doi:10.1111/j.1745-6584.2004.t01-9-.x}
 
-\item Reilly, T.E., O.L. Franke, and Bennett, G.D. 1989. Bias in groundwater samples caused by wellbore flow. Journal of Hydraulic Engineering 115, no. 2: 270--276. https://doi.org/10.1061/(ASCE)0733-9429(1989)115:2(270)
+\item Panday, Sorab, Langevin, C.D., Niswonger, R.G., Ibaraki, Motomu, and Hughes, J.D. 2013, MODFLOW-USG version 1: An unstructured grid version of MODFLOW for simulating groundwater flow and tightly coupled processes using a control volume finite-difference formulation. U.S. Geological Survey Techniques and Methods, book 6, chap. A45, 66 p., \url{https://pubs.usgs.gov/tm/06/a45}.
 
-\item Vilhelmsen, T.N., Christensen, S., and Mehl, S.W., 2012, Evaluation of MODFLOW-LGR in connection with a synthetic regional-scale model. Ground Water, 50: 118--132. doi:10.1111/j.1745-6584.2011.00826.x
+\item Prudic, D.E. 1989, Documentation of a computer program to simulate stream-aquifer relations using a modular, finite-difference, ground-water flow model. U.S. Geological Survey Open-File Report 88--729, 113 p. \url{https://pubs.er.usgs.gov/publication/ofr88729}.
 
-\item Zaidel, J. 2013, Discontinuous Steady-State Analytical Solutions of the Boussinesq Equation and Their Numerical Representation by MODFLOW. Groundwater, 51: 952--959. doi:10.1111/gwat.12019
+\item Reilly, T.E., O.L. Franke, and Bennett, G.D. 1989. Bias in groundwater samples caused by wellbore flow. Journal of Hydraulic Engineering 115, no. 2: 270--276. \url{https://doi.org/10.1061/(ASCE)0733-9429(1989)115:2(270)}
+
+\item Vilhelmsen, T.N., Christensen, S., and Mehl, S.W., 2012, Evaluation of MODFLOW-LGR in connection with a synthetic regional-scale model. Ground Water, 50: 118--132. \href{https://doi.org/10.1111/j.1745-6584.2011.00826.x}{doi:10.1111/j.1745-6584.2011.00826.x}
+
+\item Zaidel, J. 2013, Discontinuous Steady-State Analytical Solutions of the Boussinesq Equation and Their Numerical Representation by MODFLOW. Groundwater, 51: 952--959. \href{https://doi.org/10.1111/gwat.12019}{doi:10.1111/gwat.12019}
 \end{itemize}
 
 
@@ -461,4 +541,4 @@ Notices related to this software are as follows:
 \clearpage
 \pagestyle{backofreport}
 \makebackcover
-\end{document}  
+\end{document}

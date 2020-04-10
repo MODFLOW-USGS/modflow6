@@ -74,22 +74,38 @@ def get_model(idx, dir):
                                relaxation_factor=relax)
     sim.register_ims_package(ims, [gwf.name])
 
-    dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
-                                  delr=delr, delc=delc,
-                                  top=0., botm=botm,
-                                  idomain=1,
-                                  fname='{}.dis'.format(name))
-
-    # initial conditions
-    # write initial heads to binary file
-    fname = 'ic.strt.bin'
+    # discretization
+    # write top to a binary file
+    text = 'TOP'
+    fname = 'top.bin'
     pth = os.path.join(exdirs[idx], fname)
     f = open(pth, 'wb')
+    header = flopy.utils.BinaryHeader.create(bintype='HEAD',
+                                             precision='double',
+                                             text=text,
+                                             nrow=nrow,
+                                             ncol=ncol,
+                                             ilay=1, pertim=1.0,
+                                             totim=1.0, kstp=1,
+                                             kper=1)
+    flopy.utils.Util2d.write_bin((nrow, ncol), f,
+                                 np.zeros((nrow, ncol), dtype=np.float64),
+                                 header_data=header)
+    f.close()
+    top = {'factor': 1., 'filename': fname, 'data': None, 'binary': True,
+           'iprn': 1}
+
+    # write botarr to binary file
     if idx == 0:
+        botarr = []
         for k in range(nlay):
+            text = 'BOTM_L{}'.format(k+1)
+            fname = 'botm.l{:02d}.bin'.format(k+1)
+            pth = os.path.join(exdirs[idx], fname)
+            f = open(pth, 'wb')
             header = flopy.utils.BinaryHeader.create(bintype='HEAD',
                                                      precision='double',
-                                                     text='HEAD',
+                                                     text=text,
                                                      nrow=nrow,
                                                      ncol=ncol,
                                                      ilay=k+1, pertim=1.0,
@@ -97,9 +113,107 @@ def get_model(idx, dir):
                                                      kper=1)
             flopy.utils.Util2d.write_bin((nrow, ncol), f,
                                          np.ones((nrow, ncol),
-                                                 dtype=np.float),
+                                                 dtype=np.float64) * botm[k],
                                          header_data=header)
+            f.close()
+            botarr.append({'factor': 1., 'filename': fname,
+                           'data': None, 'binary': True, 'iprn': 1})
     elif idx == 1:
+        fname = 'botm.bin'
+        pth = os.path.join(exdirs[idx], fname)
+        f = open(pth, 'wb')
+        tarr = np.ones((nlay, nrow, ncol), dtype=np.float64)
+        for k in range(nlay):
+            tarr[k, :, :] = botm[k]
+        tarr = tarr.flatten()
+        header = flopy.utils.BinaryHeader.create(bintype='HEAD',
+                                                 precision='double',
+                                                 text='BOTM', nrow=1,
+                                                 ncol=ncol*nrow*nlay,
+                                                 ilay=1, pertim=1.0,
+                                                 totim=1.0, kstp=1, kper=1)
+        flopy.utils.Util2d.write_bin((nrow, ncol), f,
+                                     tarr,
+                                     header_data=header)
+        f.close()
+        botarr = {'factor': 1., 'filename': fname,
+                  'data': None, 'binary': True, 'iprn': 1}
+
+    # write idomain to binary file
+    if idx == 0:
+        idomain = []
+        for k in range(nlay):
+            text = 'IDOMAIN_L{}'.format(k+1)
+            fname = 'idomain.l{:02d}.bin'.format(k+1)
+            pth = os.path.join(exdirs[idx], fname)
+            f = open(pth, 'wb')
+            header = flopy.utils.BinaryHeader.create(bintype='HEAD',
+                                                     precision='double',
+                                                     text=text,
+                                                     nrow=nrow,
+                                                     ncol=ncol,
+                                                     ilay=k+1, pertim=1.0,
+                                                     totim=1.0, kstp=1,
+                                                     kper=1)
+            flopy.utils.Util2d.write_bin((nrow, ncol), f,
+                                         np.ones((nrow, ncol),
+                                                 dtype=np.int32),
+                                         header_data=header)
+            f.close()
+            idomain.append({'factor': 1., 'filename': fname,
+                            'data': None, 'binary': True, 'iprn': 1})
+    elif idx == 1:
+        fname = 'idomain.bin'
+        pth = os.path.join(exdirs[idx], fname)
+        f = open(pth, 'wb')
+        header = flopy.utils.BinaryHeader.create(bintype='HEAD',
+                                                 precision='double',
+                                                 text='IDOMAIN', nrow=1,
+                                                 ncol=ncol*nrow*nlay,
+                                                 ilay=1, pertim=1.0,
+                                                 totim=1.0, kstp=1, kper=1)
+        flopy.utils.Util2d.write_bin((nrow, ncol), f,
+                                     np.ones((nrow*ncol*nlay),
+                                             dtype=np.int32),
+                                     header_data=header)
+        f.close()
+        idomain = {'factor': 1., 'filename': fname,
+                   'data': None, 'binary': True, 'iprn': 1}
+
+    dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
+                                  delr=delr, delc=delc,
+                                  top=top, botm=botarr,
+                                  idomain=idomain,
+                                  filename='{}.dis'.format(name))
+
+    # initial conditions
+    # write initial heads to binary file
+    if idx == 0:
+        strt = []
+        for k in range(nlay):
+            text = 'IC_L{}'.format(k+1)
+            fname = 'ic.strt_l{:02d}.bin'.format(k+1)
+            pth = os.path.join(exdirs[idx], fname)
+            f = open(pth, 'wb')
+            header = flopy.utils.BinaryHeader.create(bintype='HEAD',
+                                                     precision='double',
+                                                     text=text,
+                                                     nrow=nrow,
+                                                     ncol=ncol,
+                                                     ilay=k+1, pertim=1.0,
+                                                     totim=1.0, kstp=1,
+                                                     kper=1)
+            flopy.utils.Util2d.write_bin((nrow, ncol), f,
+                                         np.ones((nrow, ncol),
+                                                 dtype=np.float64),
+                                         header_data=header)
+            f.close()
+            strt.append({'factor': 1., 'filename': fname,
+                         'data': None, 'binary': True, 'iprn': 1})
+    elif idx == 1:
+        fname = 'ic.strt.bin'
+        pth = os.path.join(exdirs[idx], fname)
+        f = open(pth, 'wb')
         header = flopy.utils.BinaryHeader.create(bintype='HEAD',
                                                  precision='double',
                                                  text='HEAD', nrow=1,
@@ -108,21 +222,23 @@ def get_model(idx, dir):
                                                  totim=1.0, kstp=1, kper=1)
         flopy.utils.Util2d.write_bin((nrow, ncol), f,
                                      np.ones((nrow*ncol*nlay),
-                                             dtype=np.float),
+                                             dtype=np.float64),
                                      header_data=header)
-    f.close()
-    strt = {'factor': 1., 'filename': fname,
-            'data': None, 'binary': True, 'iprn': 1}
+        f.close()
+        strt = {'factor': 1., 'filename': fname,
+                'data': None, 'binary': True, 'iprn': 1}
+
     ic = flopy.mf6.ModflowGwfic(gwf, strt=strt,
-                                fname='{}.ic'.format(name))
+                                filename='{}.ic'.format(name))
 
     # node property flow
     # write icelltype to binary file
-    fname = 'npf.icelltype.bin'
-    pth = os.path.join(exdirs[idx], fname)
-    f = open(pth, 'wb')
     if idx == 0:
+        icelltype = []
         for k in range(nlay):
+            fname = 'npf.icelltype.l{}.bin'.format(k+1)
+            pth = os.path.join(exdirs[idx], fname)
+            f = open(pth, 'wb')
             header = flopy.utils.BinaryHeader.create(bintype='head',
                                                      text='ICELLTYPE',
                                                      precision='double',
@@ -136,7 +252,13 @@ def get_model(idx, dir):
                                          np.ones((nrow, ncol),
                                                  dtype=np.int32),
                                          header_data=header)
+            f.close()
+            icelltype.append({'factor': 1., 'filename': fname,
+                              'data': None, 'binary': True, 'iprn': 1})
     elif idx == 1:
+        fname = 'npf.icelltype.bin'
+        pth = os.path.join(exdirs[idx], fname)
+        f = open(pth, 'wb')
         header = flopy.utils.BinaryHeader.create(bintype='head',
                                                  text='ICELLTYPE',
                                                  precision='double',
@@ -149,14 +271,16 @@ def get_model(idx, dir):
                                      np.ones((nrow*ncol*nlay),
                                              dtype=np.int32),
                                      header_data=header)
-    f.close()
-    icelltype = {'factor': 1., 'filename': fname,
-                 'data': None, 'binary': True, 'iprn': 1}
+        icelltype = {'factor': 1., 'filename': fname,
+                     'data': None, 'binary': True, 'iprn': 1}
+
+        f.close()
+
     npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=True,
                                   icelltype=icelltype,
                                   k=hk,
                                   k33=hk,
-                                  fname='{}.npf'.format(name))
+                                  filename='{}.npf'.format(name))
 
     # chd files
     chdlist0 = []
@@ -167,7 +291,7 @@ def get_model(idx, dir):
     chd = flopy.mf6.ModflowGwfchd(gwf,
                                   stress_period_data=chdspdict,
                                   save_flows=False,
-                                  fname='{}.chd'.format(name))
+                                  filename='{}.chd'.format(name))
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(gwf,
@@ -179,7 +303,7 @@ def get_model(idx, dir):
                                 saverecord=[('HEAD', 'ALL')],
                                 printrecord=[('HEAD', 'ALL'),
                                              ('BUDGET', 'ALL')],
-                                fname='{}.oc'.format(name))
+                                filename='{}.oc'.format(name))
 
     return sim
 

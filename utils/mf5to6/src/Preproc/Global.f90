@@ -1,5 +1,5 @@
 MODULE GLOBAL
-  use ConstantsModule, only: MAXCHARLEN, ISTDOUT
+  use ConstantsModule, only: MAXCHARLEN
   ! scalars
   INTEGER,                   SAVE, POINTER :: NCOL, NROW, NLAY, NPER, NBOTM, NCNFBD
   INTEGER,                   SAVE, POINTER :: ITMUNI, LENUNI, IXSEC, ITRSS, INBAS

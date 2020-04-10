@@ -1,190 +1,73 @@
 language: c
 os: linux
-dist: trusty
-sudo: required
+dist: xenial
 compiler: gcc
 cache:
-  apt: true
   pip: true
   directories:
-    - $HOME/.cache/pip
-    - $HOME/.local
-      
+  - "$HOME/.cache/pip"
+  - "$HOME/.local"
 matrix:
   include:
-    - env: CVER=gfortran4
-      language: c
-      addons:
-        apt:
-          sources: 
-            - ubuntu-toolchain-r-test
-          packages: 
-            - gfortran-4.9
-            - texlive-base
-            - texlive-latex-base
-            - texlive-latex-extra
-            - texlive-latex-recommended
-            - texlive-science
-            - texlive-fonts-recommended
-            - texlive-fonts-extra
-            - dpkg
-            - tex-common
-            - latex-xcolor
-            - unzip
-
-    - env: CVER=gfortran5
-      language: c
-      addons:
-        apt:
-          sources: 
-            - ubuntu-toolchain-r-test
-          packages: 
-            - gfortran-5
-            - texlive-base
-            - texlive-latex-base
-            - texlive-latex-extra
-            - texlive-latex-recommended
-            - texlive-science
-            - texlive-fonts-recommended
-            - texlive-fonts-extra
-            - dpkg
-            - tex-common
-            - latex-xcolor
-            - unzip
-
-    - env: CVER=gfortran6
-      language: c
-      addons:
-        apt:
-          sources: 
-            - ubuntu-toolchain-r-test
-          packages: 
-            - gfortran-6
-            - texlive-base
-            - texlive-latex-base
-            - texlive-latex-extra
-            - texlive-latex-recommended
-            - texlive-science
-            - texlive-fonts-recommended
-            - texlive-fonts-extra
-            - dpkg
-            - tex-common
-            - latex-xcolor
-            - unzip
-
-    - env: CVER=gfortran7
-      language: c
-      addons:
-        apt:
-          sources: 
-            - ubuntu-toolchain-r-test
-          packages: 
-            - gfortran-7
-            - texlive-base
-            - texlive-latex-base
-            - texlive-latex-extra
-            - texlive-latex-recommended
-            - texlive-science
-            - texlive-fonts-recommended
-            - texlive-fonts-extra
-            - dpkg
-            - tex-common
-            - latex-xcolor
-            - unzip
-
-    - env: CVER=gfortran8
-      language: c
-      addons:
-        apt:
-          sources: 
-            - ubuntu-toolchain-r-test
-          packages: 
-            - gfortran-8
-            - texlive-base
-            - texlive-latex-base
-            - texlive-latex-extra
-            - texlive-latex-recommended
-            - texlive-science
-            - texlive-fonts-recommended
-            - texlive-fonts-extra
-            - dpkg
-            - tex-common
-            - latex-xcolor
-            - unzip
-     
-  # allowed failures - uncomment lines below to allow failure
-  #                    of specific gfortran compilers
-  #allow_failures:
-  #  - env: CVER=gfortran7
-  #  - env: CVER=gfortran8
-     
-
-
-
+  - env: FC=gfortran-4.9
+  - env: FC=gfortran-5
+  - env: FC=gfortran-6
+  - env: FC=gfortran-7
+  - env: FC=gfortran-8
+before_install:
+- sudo apt-add-repository -y ppa:ubuntu-toolchain-r/test
+- sudo apt-get update -y
+- sudo apt-get install -y $FC
+- sudo apt-get install -y texlive texlive-latex-extra
+    texlive-latex-recommended texlive-science texlive-fonts-extra
+- wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O $HOME/miniconda.sh
+- bash $HOME/miniconda.sh -b -p $HOME/anaconda
+- export PATH="$HOME/anaconda/bin:$PATH"
+- hash -r
+- conda config --set always_yes yes --set changeps1 no
+- conda update -q conda
+- conda config --add channels conda-forge
+- conda install --file requirements.travis.txt
+- conda info -a
 install:
-    - if [[ ! -d "$HOME/.local/bin" ]]; then
-        mkdir "$HOME/.local/bin";
-      fi
-    - export PATH="$HOME/.local/bin:$PATH"
-    - if [[ $CVER == "gfortran4" ]]; then
-        ln -fs /usr/bin/gfortran-4.9 "$HOME/.local/bin/gfortran";
-        gfortran --version;
-        ls -l /usr/bin/gfortran-4.9;
-      fi
-    - if [[ $CVER == "gfortran5" ]]; then
-        ln -fs /usr/bin/gfortran-5 "$HOME/.local/bin/gfortran";
-        gfortran --version;
-        ls -l /usr/bin/gfortran-5;
-      fi
-    - if [[ $CVER == "gfortran6" ]]; then
-        ln -fs /usr/bin/gfortran-6 "$HOME/.local/bin/gfortran";
-        gfortran --version;
-        ls -l /usr/bin/gfortran-6;
-      fi
-    - if [[ $CVER == "gfortran7" ]]; then
-        ln -fs /usr/bin/gfortran-7 "$HOME/.local/bin/gfortran";
-        gfortran --version;
-        ls -l /usr/bin/gfortran-7;
-      fi
-    - if [[ $CVER == "gfortran8" ]]; then
-        ln -fs /usr/bin/gfortran-8 "$HOME/.local/bin/gfortran";
-        gfortran --version;
-        ls -l /usr/bin/gfortran-8;
-      fi
-    # install anaconda
-    - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
-        wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
-      fi
-    - bash miniconda.sh -b -p $HOME/miniconda
-    - export PATH="$HOME/miniconda/bin:$PATH"
-    - hash -r
-    - conda config --set always_yes yes --set changeps1 no
-    - conda update -q conda
-    # Useful for debugging any issues with conda
-    - conda info -a
-    - conda install nose
-    - python --version
-    - pip install numpy
-    - pip install https://github.com/modflowpy/flopy/zipball/develop
-    - pip install https://github.com/modflowpy/pymake/zipball/master
-    - pip install nose-timer
-
-
+- if [[ ! -d "$HOME/.local/bin" ]]; then mkdir "$HOME/.local/bin"; fi
+- ln -fs /usr/bin/$FC $HOME/.local/bin/gfortran
+- gfortran --version
+- python --version
+- pip --version
+- pip config --user set global.progress_bar off
+- git clone https://github.com/modflowpy/flopy --depth 1 --branch=develop ~/flopy
+- pip install --user -e ~/flopy
+- git clone https://github.com/modflowpy/pymake --depth 1 --branch=master ~/pymake
+- pip install --user -e ~/pymake
+- git clone https://github.com/mjr-deltares/modflow6-bmipy.git --depth 1 --branch=master ~/amipy
+- pip install --user -e ~/amipy
 script:
-    - export BRANCH=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_BRANCH; else echo $TRAVIS_PULL_REQUEST_BRANCH; fi)
-    - echo "TRAVIS_BRANCH=$TRAVIS_BRANCH, PR=$PR, BRANCH=$BRANCH"
-    - pwd
-    - git clone https://github.com/MODFLOW-USGS/modflow6-examples.git ../modflow6-examples
-    - ls ../
-    - which python
-    - python --version
-    - python -c "import numpy as np; print('numpy version {}'.format(np.__version__))"
-    - python -c "import flopy; flopypth = flopy.__path__[0]; print('flopy is installed in {}'.format(flopypth))"
-    - python -c "import flopy; dir(flopy.mf6)"
-    - cd ./autotest
-    - python update_flopy.py
-    - cd ..
-    - python -c "import flopy; dir(flopy.mf6)"
-    - which nosetests
-    - nosetests --version
-    - nosetests -v --with-id --with-timer -w ./autotest
+- export BRANCH=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_BRANCH;
+  else echo $TRAVIS_PULL_REQUEST_BRANCH; fi)
+- echo "TRAVIS_BRANCH=$TRAVIS_BRANCH, PR=$PR, BRANCH=$BRANCH"
+- pwd
+- git clone https://github.com/MODFLOW-USGS/modflow6-examples ../modflow6-examples
+- cd ../modflow6-examples
+- if git show-ref -q --heads $BRANCH; then
+  git checkout $BRANCH; echo switched to modflow6-examples branch $BRANCH;
+  else echo using modflow6-examples branch master;  fi
+- git branch
+- cd ../modflow6
+- ls ../
+- which python
+- python --version
+- python -c "import numpy as np; print('numpy version {}'.format(np.__version__))"
+- python -c "import flopy; flopypth = flopy.__path__[0]; print('flopy is installed
+  in {}'.format(flopypth))"
+- python -c "import flopy; dir(flopy.mf6)"
+- cd ./autotest
+- python update_flopy.py
+- cd ..
+- python -c "import flopy; dir(flopy.mf6)"
+- which nosetests
+- nosetests --version
+- nosetests -v --with-id --with-timer -w ./autotest
+notifications:
+  slack:
+    secure: u8y6K08360InJfEUS3A4B+xxazxeuAbwViRDNnzkuQohFR3rewmzlnrDUSudZQbF4uokpkmQ9/kP8hlwKjrYHHay+4mRgu7ogoWGLnj/KOJjAr04bXuFa8+WOOOSHBjhVhrv86RlApO7/p9HWl2zqINVPl2/UUtnTxYoUnf82EfvYQh9C3hfq6sDAroV1Ei3USk3mpCITuNujHCvAheaBFGX/mElG3JG5TxfZbBQE+srwZTZ5cNT9px76nLfFB2lGKYnjq6WT9miwhIqLv/SJJamGr2an7fHeTtSB4fwETKYxDPhZurWZr4tulp8zUqLN9M9rsND59IJfwo6fV98SZvWSxCMfF31l9Y+n25mZJJFOXqx88glrcNbPLcZQMRG9qFvv8V7S0hpp/1HaMGGWB5gw+h4lrF5cuboatgzMQI6bArESbTNlkUj6TStH0cDw9+jnypPEwa+Ryh6qyq747h9K5duIOZW8DKFB08TAN/PVlmCc5c0HRb6TcEwDRvpOtDnWmsUiKhAhhamN5yfa/6xaXWaJ9aenlJ1lrZVcZkLODYCd52JTHH9CQ51xyXePGBTXVnYne7+7RyG79sXTW2AYvTzAHg8ixs613nrqZV8VyG5y+vKuUrJ61IKab14t9W0lOFDSQoX+pf3YwCkT05K72CHj0chVjrTaWF2Bu4=

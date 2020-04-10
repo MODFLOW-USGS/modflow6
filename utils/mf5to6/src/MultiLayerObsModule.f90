@@ -1,8 +1,8 @@
 module MultiLayerObs
   
-  use ConstantsModule, only: DONE, MAXCHARLEN
-  use ConstantsPHMFModule, only: LENOBSNAMENEW
-  use InputOutputModule, only: dclosetest
+  use ConstantsModule,        only: DONE, MAXCHARLEN
+  use ConstantsPHMFModule,    only: LENOBSNAMENEW
+  use GenericUtilitiesModule, only: IS_SAME
   use ListModule, only: ListType
   use SimModule, only: store_error, ustop
 
@@ -153,7 +153,7 @@ module MultiLayerObs
       weightsum = weightsum + layobs%weight
     enddo
     !
-    if (.not. dclosetest(weightsum, DONE, 1.0d-7)) then
+    if (.not. IS_SAME(weightsum, DONE)) then
       write(ermsg,10)trim(this%mlobsname)
       call store_error(ermsg)
       call ustop()

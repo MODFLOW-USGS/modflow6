@@ -232,8 +232,7 @@ module GwfStoModule
     return
   end subroutine sto_ad
 
-  subroutine sto_fc(this, kiter, nodes, hold, hnew, nja, njasln, amat, &
-                            idxglo, rhs)
+  subroutine sto_fc(this, kiter, hold, hnew, njasln, amat, idxglo, rhs)
 ! ******************************************************************************
 ! sto_fc -- Fill the solution amat and rhs with storage contribution newton
 !               term
@@ -241,18 +240,19 @@ module GwfStoModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- modules
+    use SimModule, only: ustop, store_error
+    use ConstantsModule, only: LINELENGTH
     use TdisModule, only: delt
     ! -- dummy
     class(GwfStoType) :: this
     integer(I4B),intent(in) :: kiter
-    integer(I4B),intent(in) :: nodes
-    real(DP), intent(in), dimension(nodes) :: hold
-    real(DP), intent(in), dimension(nodes) :: hnew
-    integer(I4B),intent(in) :: nja
+    real(DP), intent(in), dimension(:) :: hold
+    real(DP), intent(in), dimension(:) :: hnew
     integer(I4B),intent(in) :: njasln
     real(DP), dimension(njasln),intent(inout) :: amat
-    integer(I4B), intent(in),dimension(nja) :: idxglo
-    real(DP),intent(inout),dimension(nodes) :: rhs
+    integer(I4B), intent(in),dimension(:) :: idxglo
+    real(DP),intent(inout),dimension(:) :: rhs
     ! -- local
     integer(I4B) :: n, idiag
     real(DP) :: tled, rho1, rho2
@@ -260,10 +260,22 @@ module GwfStoModule
     real(DP) :: snold, snnew
     real(DP) :: ss0, ss1, ssh0, ssh1
     real(DP) :: rhsterm
+    character(len=LINELENGTH) :: errmsg
+    ! -- formats
+    character(len=*), parameter :: fmtsperror =                                &
+      &"('DETECTED TIME STEP LENGTH OF ZERO.  GWF STORAGE PACKAGE CANNOT BE ', &
+      &'USED UNLESS DELT IS NON-ZERO.')"
 ! ------------------------------------------------------------------------------
     !
     ! -- test if steady-state stress period
     if (this%iss /= 0) return
+    !
+    ! -- Ensure time step length is not zero
+    if (delt == DZERO) then
+      write(errmsg, fmtsperror)
+      call store_error(errmsg)
+      call ustop()
+    endif
     !
     ! -- set variables
     tled = DONE / delt
@@ -330,8 +342,7 @@ module GwfStoModule
     return
   end subroutine sto_fc
 
-  subroutine sto_fn(this, kiter, nodes, hold, hnew, nja, njasln, amat,         &
-                    idxglo, rhs)
+  subroutine sto_fn(this, kiter, hold, hnew, njasln, amat, idxglo, rhs)
 ! ******************************************************************************
 ! sto_fn -- Fill the solution amat and rhs with storage contribution
 ! ******************************************************************************
@@ -342,14 +353,12 @@ module GwfStoModule
     ! -- dummy
     class(GwfStoType) :: this
     integer(I4B),intent(in) :: kiter
-    integer(I4B),intent(in) :: nodes
-    real(DP), intent(in), dimension(nodes) :: hold
-    real(DP), intent(in), dimension(nodes) :: hnew
-    integer(I4B),intent(in) :: nja
+    real(DP), intent(in), dimension(:) :: hold
+    real(DP), intent(in), dimension(:) :: hnew
     integer(I4B),intent(in) :: njasln
     real(DP), dimension(njasln),intent(inout) :: amat
-    integer(I4B), intent(in),dimension(nja) :: idxglo
-    real(DP),intent(inout),dimension(nodes) :: rhs
+    integer(I4B), intent(in),dimension(:) :: idxglo
+    real(DP),intent(inout),dimension(:) :: rhs
     ! -- local
     integer(I4B) :: n, idiag
     real(DP) :: tled, rho1, rho2
@@ -597,7 +606,7 @@ module GwfStoModule
     class(GwfStoType) :: this
 ! ------------------------------------------------------------------------------
     !
-    ! -- Deallocate arrays if package was active
+    ! -- Deallocate arrays if package is active
     if(this%inunit > 0) then
       call mem_deallocate(this%iconvert)
       call mem_deallocate(this%sc1)
@@ -606,7 +615,7 @@ module GwfStoModule
       call mem_deallocate(this%strgsy)
     endif
     !
-    ! -- Scalars
+    ! -- Deallocate scalars
     call mem_deallocate(this%isfac)
     call mem_deallocate(this%isseg)
     call mem_deallocate(this%satomega)
@@ -722,7 +731,8 @@ module GwfStoModule
 ! ------------------------------------------------------------------------------
     !
     ! -- get options block
-    call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false.)
+    call this%parser%GetBlock('OPTIONS', isfound, ierr, &
+      supportOpenClose=.true., blockRequired=.false.)
     !
     ! -- parse options block if detected
     if (isfound) then

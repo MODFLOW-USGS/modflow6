@@ -2,29 +2,30 @@
 module ListReaderModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: LINELENGTH, LENBOUNDNAME, LENTIMESERIESNAME, DONE
+  use ConstantsModule, only: LINELENGTH, LENBOUNDNAME, LENTIMESERIESNAME, &
+                             LENLISTLABEL, DONE
   use SimModule,       only: store_error_unit
   implicit none
   private
   public ListReaderType
   
   type :: ListReaderType
-    integer(I4B) :: in                                                           ! unit number of file containing control record
-    integer(I4B) :: inlist                                                       ! unit number of file from which list will be read
-    integer(I4B) :: iout                                                         ! unit number to output messages
-    integer(I4B) :: inamedbound                                                  ! flag indicating boundary names are to be read
-    integer(I4B) :: ierr                                                         ! error flag
-    integer(I4B) :: nlist                                                        ! number of entries in list.  -1 indicates number will be automatically determined
-    integer(I4B) :: ibinary                                                      ! flag indicating to read binary list
-    integer(I4B) :: istart                                                       ! string starting location
-    integer(I4B) :: istop                                                        ! string ending location
-    integer(I4B) :: lloc                                                         ! entry number in line
-    integer(I4B) :: iclose                                                       ! flag indicating whether or not to close file
-    integer(I4B) :: ndim                                                         ! number of dimensions in model
-    integer(I4B) :: ntxtrlist                                                    ! number of text entries found in rlist
-    integer(I4B) :: ntxtauxvar                                                   ! number of text entries found in auxvar
-    character(len=LINELENGTH) :: label                                           ! label for printing list
-    character(len=LINELENGTH) :: line                                            ! line string for reading file
+    integer(I4B) :: in = 0                                                       ! unit number of file containing control record
+    integer(I4B) :: inlist = 0                                                   ! unit number of file from which list will be read
+    integer(I4B) :: iout = 0                                                     ! unit number to output messages
+    integer(I4B) :: inamedbound = 0                                              ! flag indicating boundary names are to be read
+    integer(I4B) :: ierr = 0                                                     ! error flag
+    integer(I4B) :: nlist = 0                                                    ! number of entries in list.  -1 indicates number will be automatically determined
+    integer(I4B) :: ibinary = 0                                                  ! flag indicating to read binary list
+    integer(I4B) :: istart = 0                                                   ! string starting location
+    integer(I4B) :: istop = 0                                                    ! string ending location
+    integer(I4B) :: lloc = 0                                                     ! entry number in line
+    integer(I4B) :: iclose = 0                                                   ! flag indicating whether or not to close file
+    integer(I4B) :: ndim = 0                                                     ! number of dimensions in model
+    integer(I4B) :: ntxtrlist = 0                                                ! number of text entries found in rlist
+    integer(I4B) :: ntxtauxvar = 0                                               ! number of text entries found in auxvar
+    character(len=LENLISTLABEL) :: label = ''                                    ! label for printing list
+    character(len=LINELENGTH) :: line = ''                                       ! line string for reading file
     integer(I4B), dimension(:), pointer, contiguous :: mshape => null()          ! pointer to model shape
     integer(I4B), dimension(:), pointer, contiguous :: nodelist => null()        ! pointer to nodelist
     real(DP), dimension(:, :), pointer, contiguous :: rlist => null()            ! pointer to rlist
@@ -178,7 +179,7 @@ module ListReaderModule
     character(len=LINELENGTH) :: errmsg
     ! -- formats
     character(len=*), parameter :: fmtocne = &
-      "('Specified OPEN/CLOSE file ',(A),' does not exit')"
+      "('Specified OPEN/CLOSE file ',(A),' does not exist')"
     character(len=*), parameter :: fmtobf = &
       "(1X,/1X,'OPENING BINARY FILE ON UNIT ',I0,':',/1X,A)"
     character(len=*), parameter :: fmtobfnlist = &
@@ -199,7 +200,7 @@ module ListReaderModule
     if (.not. exists) then
       write(errmsg, fmtocne) this%line(this%istart:this%istop)
       call store_error(errmsg)
-      call store_error('Specified OPEN/CLOSE file does not exit')
+      call store_error('Specified OPEN/CLOSE file does not exist')
       call store_error_unit(this%in)
       call ustop()
     endif
@@ -605,20 +606,29 @@ module ListReaderModule
   
   subroutine write_list(this)
 ! ******************************************************************************
-! init -- Initialize the reader
+! write_list -- Write input data to a list
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule, only: LINELENGTH, LENBOUNDNAME
+    use ConstantsModule, only: LINELENGTH, LENBOUNDNAME,                         &
+                               TABLEFT, TABCENTER
     use InputOutputModule, only: ulstlb, get_ijk
+    use TableModule, only: TableType, table_cr
     ! -- dummy
     class(ListReaderType) :: this
     ! -- local
+    character(len=10) :: cpos
+    character(len=LINELENGTH) :: tag
+    character(len=LINELENGTH), allocatable, dimension(:) :: words
+    integer(I4B) :: ntabrows
+    integer(I4B) :: ntabcols
+    integer(I4B) :: ipos
     integer(I4B) :: ii, jj, i, j, k, nod
     integer(I4B) :: ldim
     integer(I4B) :: naux
+    type(TableType), pointer :: inputtab => null()
     ! -- formats
     character(len=LINELENGTH) :: fmtlstbn
 ! ------------------------------------------------------------------------------
@@ -627,79 +637,134 @@ module ListReaderModule
     ldim = size(this%rlist, 1)
     naux = size(this%auxvar, 1)
     !
-    ! -- Build list-label output format
-    if(size(this%mshape) == 3) then
-      ! -- Grid is structured; start with fields for
-      !    sequence number, layer, row, and column.
-      fmtlstbn = '(1X,I6,I7,I7,I7'
-    elseif(size(this%mshape) == 2) then
-      ! -- Disv grid; start with fields for
-      !    sequence number, layer, and cell2d.
-      fmtlstbn = '(1X,I6,I7,I7'
-    else
-      ! -- Grid is unstructured, start with fields for
-      !    sequence number and node.
-      fmtlstbn = '(1X,I6,I7'
-    endif
-    ! -- Add fields for non-optional real values
-    do i = 1, ldim
-      fmtlstbn = trim(fmtlstbn) // ',G16.4'
-    enddo
-    ! -- Add field for boundary name
-    if(this%inamedbound == 1) fmtlstbn = trim(fmtlstbn) // ',2X,A'
-    ! -- Add fields for auxiliary variables
-    fmtlstbn = trim(fmtlstbn) // ',25G16.4)'
+    ! -- dimension table
+    ntabrows = this%nlist
     !
-    ! -- Write the label
-    write(this%iout, '(1x)')
-    call ulstlb(this%iout, trim(this%label), this%auxname, naux, naux)
+    ! -- start building format statement to parse this%label, which
+    !    contains the column headers (except for boundname and auxnames)
+    ipos = index(this%label, 'NO.')
+    if (ipos /= 0) then
+      write(cpos,'(i10)') ipos + 3
+      fmtlstbn = '(a' // trim(adjustl(cpos))
+    else
+      fmtlstbn = '(a7'
+    end if
+    ! -- sequence number, layer, row, and column.
+    if(size(this%mshape) == 3) then
+      ntabcols = 4
+      fmtlstbn = trim(fmtlstbn) // ',a7,a7,a7'
+    !
+    ! -- sequence number, layer, and cell2d.
+    else if(size(this%mshape) == 2) then
+      ntabcols = 3
+      fmtlstbn = trim(fmtlstbn) // ',a7,a7'
+    !
+    ! -- sequence number and node.
+    else
+      ntabcols = 2
+      fmtlstbn = trim(fmtlstbn) // ',a7'
+    end if
+    !
+    ! -- Add fields for non-optional real values
+    ntabcols = ntabcols + ldim
+    do i = 1, ldim
+      fmtlstbn = trim(fmtlstbn) // ',a16'
+    end do
+    !
+    ! -- Add field for boundary name
+    if (this%inamedbound == 1) then
+      ntabcols = ntabcols + 1
+      fmtlstbn = trim(fmtlstbn) // ',a16'
+    end if
+    !
+    ! -- Add fields for auxiliary variables
+    ntabcols = ntabcols + naux
+    do i = 1, naux
+      fmtlstbn = trim(fmtlstbn) // ',a16'
+    end do
+    fmtlstbn = trim(fmtlstbn) // ')'
+    !
+    ! -- allocate words
+    allocate(words(ntabcols))
+    !
+    ! -- parse this%label into words
+    read(this%label, fmtlstbn) (words(i), i=1, ntabcols)
+    !
+    ! -- initialize the input table object
+    call table_cr(inputtab, ' ', ' ')
+    call inputtab%table_df(ntabrows, ntabcols, this%iout)
+    !
+    ! -- add the columns
+    ipos = 1
+    call inputtab%initialize_column(words(ipos), 10, alignment=TABCENTER)
+    !
+    ! -- discretization
+    do i = 1, size(this%mshape)
+      ipos = ipos + 1
+      call inputtab%initialize_column(words(ipos), 7, alignment=TABCENTER)
+    end do
+    !
+    ! -- non-optional variables
+    do i = 1, ldim
+      ipos = ipos + 1
+      call inputtab%initialize_column(words(ipos), 16, alignment=TABCENTER)
+    end do
+    !
+    ! -- boundname
+    if (this%inamedbound == 1) then
+      ipos = ipos + 1
+      tag = 'BOUNDNAME'
+      call inputtab%initialize_column(tag, LENBOUNDNAME, alignment=TABLEFT)
+    end if
+    !
+    ! -- aux variables
+    do i = 1, naux
+      call inputtab%initialize_column(this%auxname(i), 16, alignment=TABCENTER)
+    end do
     !
     ! -- Write the table
     do ii = 1, this%nlist
+      call inputtab%add_term(ii)
       !
-      ! -- Structured, disv, or unstructured write
+      ! -- discretization
       if (size(this%mshape) == 3) then
         nod = this%nodelist(ii)
-        call get_ijk(nod, this%mshape(2), this%mshape(3), this%mshape(1),      &
+        call get_ijk(nod, this%mshape(2), this%mshape(3), this%mshape(1),        &
                      i, j, k)
-        if (this%inamedbound == 0) then
-          write(this%iout, fmtlstbn) ii, k, i, j,                              &
-                                   (this%rlist(jj, ii), jj = 1, ldim),         &
-                                   (this%auxvar(jj, ii), jj = 1, naux)
-        else
-          write(this%iout, fmtlstbn) ii, k, i, j,                              &
-                                (this%rlist(jj, ii), jj = 1, ldim),            &
-                                this%boundname(ii),                            &
-                                (this%auxvar(jj, ii), jj = 1, naux)
-        endif
-      elseif (size(this%mshape) == 2) then
+        call inputtab%add_term(k)
+        call inputtab%add_term(i)
+        call inputtab%add_term(j)
+      else if (size(this%mshape) == 2) then
         nod = this%nodelist(ii)
         call get_ijk(nod, 1, this%mshape(2), this%mshape(1), i, j, k)
-        if (this%inamedbound == 0) then
-          write(this%iout, fmtlstbn) ii, k, j,                                 &
-                                   (this%rlist(jj, ii), jj = 1, ldim),         &
-                                   (this%auxvar(jj, ii), jj = 1, naux)
-        else
-          write(this%iout, fmtlstbn) ii, k, j,                                 &
-                                (this%rlist(jj, ii), jj = 1, ldim),            &
-                                this%boundname(ii),                            &
-                                (this%auxvar(jj, ii), jj = 1, naux)
-        endif
+        call inputtab%add_term(k)
+        call inputtab%add_term(j)
       else
         nod = this%nodelist(ii)
-        if (this%inamedbound == 0) then
-          write(this%iout, fmtlstbn) ii, nod,                                  &
-                                    (this%rlist(jj,ii), jj = 1, ldim),         &
-                                    (this%auxvar(jj, ii), jj = 1, naux)
-        else
-          write(this%iout, fmtlstbn) ii, nod,                                  &
-                                     (this%rlist(jj, ii), jj = 1, ldim),       &
-                                     this%boundname(ii),                       &
-                                     (this%auxvar(jj, ii), jj = 1, naux)
-        endif
-      endif
+        call inputtab%add_term(nod)
+      end if
       !
-    enddo
+      ! -- non-optional variables
+      do jj = 1, ldim
+        call inputtab%add_term(this%rlist(jj,ii))
+      end do
+      !
+      ! -- boundname
+      if (this%inamedbound == 1) then
+        call inputtab%add_term(this%boundname(ii))
+      end if
+      !
+      ! -- aux variables
+      do jj = 1, naux
+        call inputtab%add_term(this%auxvar(jj,ii))
+      end do
+    end do    
+    !
+    ! -- deallocate the local variables
+    call inputtab%table_da()
+    deallocate(inputtab)
+    nullify(inputtab)
+    deallocate(words)
     !
     ! -- return
     return

@@ -2,7 +2,9 @@ module MvrModule
   
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LENMODELNAME, LENPACKAGENAME, LINELENGTH,         &
-                             LENBUDTXT, LENAUXNAME, DZERO, DONE
+                             LENBUDTXT, LENAUXNAME, LENBOUNDNAME, DZERO, DONE, &
+                             LENORIGIN
+  use PackageMoverModule, only: PackageMoverType
   
   implicit none
   private
@@ -16,15 +18,14 @@ module MvrModule
     character(len=LENMODELNAME+LENPACKAGENAME+1) :: pname2 = ''                  !receiver package name
     integer(I4B)                                 :: irch1 = 0                    !provider reach number
     integer(I4B)                                 :: irch2 = 0                    !receiver reach number
-    character(len=20)                            :: mvrtype = ''                 !FACTOR, THRESHOLD, UPTO, EXCESS
+    integer(I4B)                                 :: imvrtype = 0                 !mover type (1, 2, 3, 4) corresponds to mvrtypes
     real(DP)                                     :: value = DZERO                !factor or rate depending on mvrtype
     real(DP)                                     :: qpold = DZERO                !provider rate from last time step
-    real(DP)                                     :: qpnew = DZERO                !new provider rate
     real(DP)                                     :: qpactual = DZERO             !rate provided to the receiver
     real(DP)                                     :: qanew = DZERO                !rate available at time of providing
     real(DP)                                     :: qaold = DZERO                !rate available fromtime step
     real(DP), pointer                            :: qtformvr_ptr => null()       !pointer to total available flow (qtformvr)
-    real(DP), pointer                            :: qformvr_ptr => null()        !pointer to available flow after being consumed (qformvr)
+    real(DP), pointer                            :: qformvr_ptr => null()        !pointer to available flow after consumed (qformvr)
     real(DP), pointer                            :: qtomvr_ptr => null()         !pointer to provider flow rate (qtomvr)
     real(DP), pointer                            :: qfrommvr_ptr => null()       !pointer to receiver flow rate (qfrommvr)
   contains
@@ -39,32 +40,38 @@ module MvrModule
   
   contains
   
-  subroutine set(this, line, inunit, iout, mname)
+  subroutine set(this, line, inunit, iout, mname, pakorigins, pakmovers)
 ! ******************************************************************************
 ! set -- Setup mvr object
-!        If mname == '', then read mname out of line
+!        If mname == '', then read mname out of line. pakorigins is an array
+!        of strings, which are model names and package names.  The mover
+!        entries must be in pakorigins, or this routine will terminate with
+!        an error.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use InputOutputModule, only: urword
-    use SimModule, only: ustop, store_error, store_error_unit
-    use MemoryManagerModule, only: mem_setptr
+    use InputOutputModule, only: urword, extract_idnum_or_bndname
+    use SimModule, only: ustop, store_error, store_error_unit, count_errors
     ! -- dummy
     class(MvrType) :: this
     character(len=*), intent(inout) :: line
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
     character(len=LENMODELNAME), intent(in) :: mname
+    character(len=LENORIGIN+1),                                                &
+      dimension(:), pointer, contiguous              :: pakorigins
+    type(PackageMoverType), dimension(:), pointer, contiguous    :: pakmovers
     ! -- local
-    character(len=LENMODELNAME+LENPACKAGENAME+1) :: origin
-    integer(I4B) :: lloc, istart, istop, ival, i
+    integer(I4B) :: lloc, istart, istop, ival
     real(DP) :: rval
     real(DP), dimension(:), pointer, contiguous :: temp_ptr => null()
-    logical :: valid
     character(len=LINELENGTH) :: errmsg
-    logical :: mnamel
+    character(len=LENBOUNDNAME) :: bndname
+    logical :: mnamel, found
+    integer(I4B) :: i
+    integer(I4B) :: ipakloc1, ipakloc2
 ! ------------------------------------------------------------------------------
     !
     ! -- Check for valid mname and set logical mnamel flag
@@ -88,7 +95,7 @@ module MvrModule
     this%pname1 = trim(this%pname1) // ' ' // line(istart:istop)
     !
     ! -- Read id for the provider
-    call urword(line, lloc, istart, istop, 2, ival, rval, iout, inunit)
+    call extract_idnum_or_bndname(line, lloc, istart, istop, ival, bndname)
     this%irch1 = ival
     !
     ! -- Construct receiver name, which is modelname followed by packagename
@@ -102,54 +109,76 @@ module MvrModule
     this%pname2 = trim(this%pname2) // ' ' // line(istart:istop)
     !
     ! -- Read id for the receiver
-    call urword(line, lloc, istart, istop, 2, ival, rval, iout, inunit)
+    call extract_idnum_or_bndname(line, lloc, istart, istop, ival, bndname)
     this%irch2 = ival
     !
-    ! -- Read type and value
+    ! -- Read mover type
     call urword(line, lloc, istart, istop, 1, ival, rval, iout, inunit)
-    this%mvrtype = line(istart:istop)
+    select case(line(istart:istop))
+      case('FACTOR')
+        this%imvrtype = 1
+      case('EXCESS')
+        this%imvrtype = 2
+      case('THRESHOLD')
+        this%imvrtype = 3
+      case('UPTO')
+        this%imvrtype = 4
+      case default
+        call store_error('ERROR. INVALID MOVER TYPE: '//trim(line(istart:istop)) )
+        call store_error_unit(inunit)
+        call ustop()
+    end select
+    !
+    ! -- Read mover value
     call urword(line, lloc, istart, istop, 3, ival, rval, iout, inunit)
     this%value = rval
-    !
-    ! -- Ensure mvrtype is valid
-    valid = .false.
-    do i = 1, size(mvrtypes)
-      if(this%mvrtype == mvrtypes(i)) then
-        valid = .true.
-        exit
-      endif
-    enddo
-    if(.not. valid) then
-      call store_error('ERROR. INVALID MOVER TYPE: '//trim(this%mvrtype) )
-      call store_error_unit(inunit)
-      call ustop()
-    endif
     !
     ! -- initialize values to zero
     call this%set_qpold(DZERO)
     !
     ! -- Check to make sure provider and receiver are not the same
     if(this%pname1 == this%pname2 .and. this%irch1 == this%irch2) then
-      call store_error('ERROR. PROVIDER AND RECEIVER AND THE SAME: '//         &
+      call store_error('ERROR. PROVIDER AND RECEIVER ARE THE SAME: '//         &
         trim(line))
       call store_error_unit(inunit)
       call ustop()
     endif
     !
-    ! -- Set pointer to provider position in array
-    origin = trim(this%pname1)
-    call mem_setptr(temp_ptr, 'QTOMVR', origin)
-    if(.not. associated(temp_ptr)) then
-      call store_error('VALID PROVIDER COULD NOT BE FOUND: '//origin)
-      call store_error_unit(inunit)
-      call ustop()
-    endif
-    if(size(temp_ptr) == 0) then
-      call store_error('MOVER CAPABILITY NOT ACTIVATED IN '//origin)
+    ! -- Check to make sure pname1 and pname2 are both listed in pakorigins
+    !    pname1 is the provider package; pname2 is the receiver package
+    found = .false.
+    ipakloc1 = 0
+    do i = 1, size(pakorigins)
+      if (this%pname1 == pakorigins(i)) then
+        found = .true.
+        ipakloc1 = i
+        exit
+      endif
+    end do
+    if (.not. found) then
+      call store_error('MOVER CAPABILITY NOT ACTIVATED IN '//this%pname1)
       call store_error('ADD "MOVER" KEYWORD TO PACKAGE OPTIONS BLOCK.')
+    end if
+    found = .false.
+    ipakloc2 = 0
+    do i = 1, size(pakorigins)
+      if (this%pname2 == pakorigins(i)) then
+        found = .true.
+        ipakloc2 = i
+        exit
+      endif
+    end do
+    if (.not. found) then
+      call store_error('MOVER CAPABILITY NOT ACTIVATED IN '//this%pname2)
+      call store_error('ADD "MOVER" KEYWORD TO PACKAGE OPTIONS BLOCK.')
+    end if
+    if (count_errors() > 0) then
       call store_error_unit(inunit)
       call ustop()
-    endif
+    end if
+    !
+    ! -- Set pointer to QTOMVR array in the provider boundary package
+    temp_ptr => pakmovers(ipakloc1)%qtomvr
     if(this%irch1 < 1 .or. this%irch1 > size(temp_ptr)) then
       call store_error('ERROR. PROVIDER ID < 1 OR GREATER THAN PACKAGE SIZE ')
       write(errmsg, '(4x,a,i0,a,i0)') 'PROVIDER ID = ', this%irch1,            &
@@ -160,33 +189,18 @@ module MvrModule
     endif
     this%qtomvr_ptr => temp_ptr(this%irch1)
     !
-    ! -- Set pointer to available position in array
-    temp_ptr => null()
-    call mem_setptr(temp_ptr, 'QFORMVR', origin)
+    ! -- Set pointer to QFORMVR array in the provider boundary package
+    temp_ptr => pakmovers(ipakloc1)%qformvr
     this%qformvr_ptr => temp_ptr(this%irch1)
     !
-    ! -- Set pointer to total available position in array
-    temp_ptr => null()
-    call mem_setptr(temp_ptr, 'QTFORMVR', origin)
+    ! -- Set pointer to QTFORMVR array in the provider boundary package
+    temp_ptr => pakmovers(ipakloc1)%qtformvr
     this%qtformvr_ptr => temp_ptr(this%irch1)
     !
-    ! -- Set pointer to receiver position in array
-    temp_ptr => null()
-    origin = trim(this%pname2)
-    call mem_setptr(temp_ptr, 'QFROMMVR', origin)
-    if(.not. associated(temp_ptr)) then
-      call store_error('VALID RECEIVER COULD NOT BE FOUND: '//origin)
-      call store_error_unit(inunit)
-      call ustop()
-    endif
-    if(size(temp_ptr) == 0) then
-      call store_error('MOVER CAPABILITY NOT ACTIVATED IN '//origin)
-      call store_error('ADD "MOVER" KEYWORD TO PACKAGE OPTIONS BLOCK.')
-      call store_error_unit(inunit)
-      call ustop()
-    endif
+    ! -- Set pointer to QFROMMVR array in the receiver boundary package
+    temp_ptr => pakmovers(ipakloc2)%qfrommvr
     if(this%irch2 < 1 .or. this%irch2 > size(temp_ptr)) then
-      call store_error('ERROR. PROVIDER ID < 1 OR GREATER THAN PACKAGE SIZE ')
+      call store_error('ERROR. RECEIVER ID < 1 OR GREATER THAN PACKAGE SIZE ')
       write(errmsg, '(4x,a,i0,a,i0)') 'RECEIVER ID = ', this%irch2,            &
         '; PACKAGE SIZE = ', size(temp_ptr)
       call store_error(trim(errmsg))
@@ -237,8 +251,8 @@ module MvrModule
       ' FROM ID: ', this%irch1
     write(iout, '(4x, a, a, a, i0)') 'TO PACKAGE: ', trim(this%pname2),        &
       ' TO ID: ', this%irch2
-    write(iout, '(4x, a, a, a, 1pg15.6,/)') 'MOVER TYPE: ', trim(this%mvrtype),&
-      ' ', this%value
+    write(iout, '(4x, a, a, a, 1pg15.6,/)') 'MOVER TYPE: ',                    &
+      trim(mvrtypes(this%imvrtype)), ' ', this%value
     !
     ! -- return
     return
@@ -330,25 +344,28 @@ module MvrModule
     !    go to the receiver.
     qr = DZERO
     ! -- Calculate qr
-    select case (this%mvrtype)
-    case('FACTOR')
+    select case (this%imvrtype)
+      case(1)
         ! -- FACTOR uses total available to make calculation, and then
         !    limits qr by consumed available
         if(qta > DZERO) qr = qta * this%value
         qr = min(qr, qa)
-      case('EXCESS')
+      case(2)
+        ! -- EXCESS
         if(qa > this%value) then
           qr = qa - this%value
         else
           qr = DZERO
         endif
-      case('THRESHOLD')
+      case(3)
+        ! -- THRESHOLD
         if(this%value > qa) then
           qr = DZERO
         else
           qr = this%value
         endif
-      case('UPTO')
+      case(4)
+        ! -- UPTO
         if(qa > this%value) then
           qr = this%value
         else

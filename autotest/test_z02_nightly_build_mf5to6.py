@@ -24,8 +24,19 @@ from simulation import Simulation
 
 from targets import target_dict as target_dict
 
-exdir = os.path.join('..', '..', 'modflow6-examples', 'mf5to6')
+# find path to modflow6-examples or modflow6-examples.git directory
+home = os.path.expanduser('~')
+fdir = 'modflow6-examples'
+exdir = None
+for root, dirs, files in os.walk(home):
+    for d in dirs:
+        if d.startswith(fdir):
+            exdir = os.path.join(root, d, 'mf5to6')
+            break
+    if exdir is not None:
+        break
 testpaths = os.path.join('..', exdir)
+assert os.path.isdir(testpaths)
 
 sfmt = '{:25s} - {}'
 
@@ -45,9 +56,15 @@ def get_mf5to6_models():
                'testTwrip',
                'test028_sfr_simple')
 
+    # write a summary of the files to exclude
+    print('list of tests to exclude:')
+    for idx, ex in enumerate(exclude):
+        print('    {}: {}'.format(idx + 1, ex))
+
     # build list of directories with valid example files
     dirs = [d for d in os.listdir(exdir)
             if 'test' in d and d not in exclude]
+
     # sort in numerical order for case sensitive os
     dirs = sorted(dirs, key=lambda v: (v.upper(), v[0].islower()))
 
@@ -107,7 +124,6 @@ def get_mf5to6_models():
                     msg += ', '
             msg += ']'
             print(msg)
-
 
     return dirs
 
@@ -245,7 +261,9 @@ def test_model():
 
 
 def dir_avail():
-    avail = os.path.isdir(exdir)
+    avail = False
+    if exdir is not None:
+        avail = os.path.isdir(exdir)
     if not avail:
         print('"{}" does not exist'.format(exdir))
         print('no need to run {}'.format(os.path.basename(__file__)))

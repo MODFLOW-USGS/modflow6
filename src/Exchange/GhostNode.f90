@@ -208,7 +208,7 @@ module GhostNodeModule
     ! -- formats
     character(len=*),parameter :: fmterr = &
       "('GHOST NODE ERROR.  Cell ', i0, ' in model ', a,                       &
-        ' is not connected to cell ', i0, ' in model ', a)"
+        &' is not connected to cell ', i0, ' in model ', a)"
 ! ------------------------------------------------------------------------------
     !
     ! -- Find the location of Cnm in the global solution and store it in
@@ -307,7 +307,7 @@ module GhostNodeModule
     return
   end subroutine gnc_mc
 
-  subroutine gnc_fmsav(this, kiter, iasln, amatsln)
+  subroutine gnc_fmsav(this, kiter, amatsln)
 ! ******************************************************************************
 ! gnc_fmsav -- Store the n-m Picard conductance in cond prior to the Newton
 !   terms being added.
@@ -320,7 +320,6 @@ module GhostNodeModule
     ! -- dummy
     class(GhostNodeType) :: this
     integer(I4B), intent(in) :: kiter
-    integer(I4B), dimension(:), intent(in) :: iasln
     real(DP), dimension(:), intent(inout) :: amatsln
     ! -- local
     integer(I4B) :: ignc, ipos
@@ -343,7 +342,7 @@ module GhostNodeModule
     return
   end subroutine gnc_fmsav
 
-  subroutine gnc_fc(this, kiter, iasln, amatsln)
+  subroutine gnc_fc(this, kiter, amatsln)
 ! ******************************************************************************
 ! gnc_fc -- Fill matrix terms
 ! Subroutine: (1) Add the GNC terms to the solution amat or model rhs depending
@@ -357,7 +356,6 @@ module GhostNodeModule
     ! -- dummy
     class(GhostNodeType) :: this
     integer(I4B), intent(in) :: kiter
-    integer(I4B), dimension(:), intent(in) :: iasln
     real(DP), dimension(:), intent(inout) :: amatsln
     ! -- local
     integer(I4B) :: ignc, j, noden, nodem, ipos, jidx, iposjn, iposjm
@@ -366,7 +364,7 @@ module GhostNodeModule
     !
     ! -- If this is a single model gnc (not an exchange across models), then
     !    pull conductances out of amatsln and store them in this%cond
-    if(this%smgnc) call this%gnc_fmsav(kiter, iasln, amatsln)
+    if(this%smgnc) call this%gnc_fmsav(kiter, amatsln)
     !
     ! -- Add gnc terms to rhs or to amat depending on whether gnc is implicit
     !    or explicit
@@ -786,7 +784,8 @@ module GhostNodeModule
 ! ------------------------------------------------------------------------------
     !
     ! -- get options block
-    call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false.)
+    call this%parser%GetBlock('OPTIONS', isfound, ierr, &
+                              supportOpenClose=.true., blockRequired=.false.)
     !
     ! -- parse options block if detected
     if (isfound) then
@@ -848,7 +847,8 @@ module GhostNodeModule
 ! ------------------------------------------------------------------------------
     !
     ! -- get options block
-    call this%parser%GetBlock('DIMENSIONS', isfound, ierr)
+    call this%parser%GetBlock('DIMENSIONS', isfound, ierr, &
+                              supportOpenClose=.true.)
     !
     ! -- parse options block if detected
     if (isfound) then
@@ -913,7 +913,7 @@ module GhostNodeModule
     allocate(nodesuj(this%numjs))
     !
     ! -- get GNCDATA block
-    call this%parser%GetBlock('GNCDATA', isfound, ierr)
+    call this%parser%GetBlock('GNCDATA', isfound, ierr, supportOpenClose=.true.)
     !
     ! -- process GNC data
     if (isfound) then

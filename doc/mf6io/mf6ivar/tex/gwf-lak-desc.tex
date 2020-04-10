@@ -25,6 +25,10 @@
 
 \item \texttt{budgetfile}---name of the binary output file to write budget information.
 
+\item \texttt{PACKAGE\_CONVERGENCE}---keyword to specify that record corresponds to the package convergence comma spaced values file.
+
+\item \texttt{package\_convergence\_filename}---name of the comma spaced values output file to write package convergence information.
+
 \item \texttt{TS6}---keyword to specify that record corresponds to a time-series file.
 
 \item \texttt{FILEIN}---keyword to specify that an input filename is expected next.
@@ -77,7 +81,7 @@
 
 \item \texttt{cellid}---is the cell identifier, and depends on the type of grid that is used for the simulation.  For a structured grid that uses the DIS input file, CELLID is the layer, row, and column.   For a grid that uses the DISV input file, CELLID is the layer and CELL2D number.  If the model uses the unstructured discretization (DISU) input file, CELLID is the node number for the cell.
 
-\item \texttt{claktype}---character string that defines the lake-GWF connection type for the lake connection. Possible lake-GWF connection type strings include:  VERTICAL--character keyword to indicate the lake-GWF connection is vertical  and connection conductance calculations use the hydraulic conductivity corresponding to the $K_{33}$ tensor component defined for CELLID in the NPF package. HORIZONTAL--character keyword to indicate the lake-GWF connection is horizontal and connection conductance calculations use the hydraulic conductivity corresponding to the $K_{11}$ tensor component defined for CELLID in the NPF package. EMBEDDEDH--character keyword to indicate the lake-GWF connection is embedded in a single cell and connection conductance calculations use the hydraulic conductivity corresponding to the $K_{11}$ tensor component defined for CELLID in the NPF package. EMBEDDEDV--character keyword to indicate the lake-GWF connection is embedded in a single cell and connection conductance calculations use the hydraulic conductivity corresponding to the $K_{33}$ tensor component defined for CELLID in the NPF package. Embedded lakes can only be connected to a single cell (NLAKCONN = 1) and there must be a lake table associated with each embedded lake.
+\item \texttt{claktype}---character string that defines the lake-GWF connection type for the lake connection. Possible lake-GWF connection type strings include:  VERTICAL--character keyword to indicate the lake-GWF connection is vertical  and connection conductance calculations use the hydraulic conductivity corresponding to the $K_{33}$ tensor component defined for CELLID in the NPF package. HORIZONTAL--character keyword to indicate the lake-GWF connection is horizontal and connection conductance calculations use the hydraulic conductivity corresponding to the $K_{11}$ tensor component defined for CELLID in the NPF package. EMBEDDEDH--character keyword to indicate the lake-GWF connection is embedded in a single cell and connection conductance calculations use the hydraulic conductivity corresponding to the $K_{11}$ tensor component defined for CELLID in the NPF package. EMBEDDEDV--character keyword to indicate the lake-GWF connection is embedded in a single cell and connection conductance calculations use the hydraulic conductivity corresponding to the $K_{33}$ tensor component defined for CELLID in the NPF package. Embedded lakes can only be connected to a single cell (NLAKECONN = 1) and there must be a lake table associated with each embedded lake.
 
 \item \texttt{bedleak}---character string or real value that defines the bed leakance for the lake-GWF connection. BEDLEAK must be greater than or equal to zero or specified to be NONE. If BEDLEAK is specified to be NONE, the lake-GWF connection conductance is solely a function of aquifer properties in the connected GWF cell and lakebed sediments are assumed to be absent.
 
@@ -99,7 +103,7 @@
 
 \item \texttt{FILEIN}---keyword to specify that an input filename is expected next.
 
-\item \texttt{tab6\_filename}---character string that defines the path and filename for the file containing lake table data for the lake connection. The CTABNAME file includes the number of entries in the file and the relation between stage, surface area, and volume for each entry in the file. Lake table files for EMBEDDEDH and EMBEDDEDV lake-GWF connections also include lake-GWF exchange area data for each entry in the file. Input instructions for the CTABNAME file is included at the LAK package lake table file input instructions section.
+\item \texttt{tab6\_filename}---character string that defines the path and filename for the file containing lake table data for the lake connection. The CTABNAME file includes the number of entries in the file and the relation between stage, volume, and surface area for each entry in the file. Lake table files for EMBEDDEDH and EMBEDDEDV lake-GWF connections also include lake-GWF exchange area data for each entry in the file. Input instructions for the CTABNAME file is included at the LAK package lake table file input instructions section.
 
 \end{description}
 \item \textbf{Block: OUTLETS}
@@ -127,9 +131,9 @@
 \begin{description}
 \item \texttt{iper}---integer value specifying the starting stress period number for which the data specified in the PERIOD block apply.  IPER must be less than or equal to NPER in the TDIS Package and greater than zero.  The IPER value assigned to a stress period block must be greater than the IPER value assigned for the previous PERIOD block.  The information specified in the PERIOD block will continue to apply for all subsequent stress periods, unless the program encounters another PERIOD block.
 
-\item \texttt{lakeno}---integer value that defines the lake number associated with the specified PERIOD data on the line. LAKENO must be greater than zero and less than or equal to NLAKES.
+\item \texttt{number}---integer value that defines the lake or outlet number associated with the specified PERIOD data on the line.  NUMBER must be greater than zero and less than or equal to NLAKES for a lake number and less than or equal to NOUTLETS for an outlet number.
 
-\item \texttt{laksetting}---line of information that is parsed into a keyword and values.  Keyword values that can be used to start the LAKSETTING string include: STATUS, STAGE, RAINFALL, EVAPORATION, RUNOFFON, WITHDRAWAL, and AUXILIARY.
+\item \texttt{laksetting}---line of information that is parsed into a keyword and values.  Keyword values that can be used to start the LAKSETTING string include both keywords for lake settings and keywords for outlet settings.  Keywords for lake settings include: STATUS, STAGE, RAINFALL, EVAPORATION, RUNOFF, INFLOW, WITHDRAWAL, and AUXILIARY.  Keywords for outlet settings include RATE, INVERT, WIDTH, SLOPE, and ROUGH.
 
 \begin{lstlisting}[style=blockdefinition]
 STATUS <status>
@@ -137,7 +141,13 @@ STAGE <@stage@>
 RAINFALL <@rainfall@>
 EVAPORATION <@evaporation@>
 RUNOFF <@runoff@>
+INFLOW <@inflow@>
 WITHDRAWAL <@withdrawal@>
+RATE <@rate@>
+INVERT <@invert@>
+WIDTH <@width@>
+SLOPE <@slope@>
+ROUGH <@rough@>
 AUXILIARY <auxname> <@auxval@> 
 \end{lstlisting}
 
@@ -151,35 +161,25 @@ AUXILIARY <auxname> <@auxval@>
 
 \item \textcolor{blue}{\texttt{runoff}---real or character value that defines the runoff rate $(L^3 T^{-1})$ for the lake. Value must be greater than or equal to zero. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.}
 
+\item \textcolor{blue}{\texttt{inflow}---real or character value that defines the volumetric inflow rate $(L^3 T^{-1})$ for the lake. Value must be greater than or equal to zero. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value. By default, inflow rates are zero for each lake.}
+
 \item \textcolor{blue}{\texttt{withdrawal}---real or character value that defines the maximum withdrawal rate $(L^3 T^{-1})$ for the lake. Value must be greater than or equal to zero. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.}
+
+\item \textcolor{blue}{\texttt{rate}---real or character value that defines the extraction rate for the lake outflow. A positive value indicates inflow and a negative value indicates outflow from the lake. RATE only applies to active (IBOUND $>$ 0) lakes. A specified RATE is only applied if COUTTYPE for the OUTLETNO is SPECIFIED. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value. By default, the RATE for each SPECIFIED lake outlet is zero.}
+
+\item \textcolor{blue}{\texttt{invert}---real or character value that defines the invert elevation for the lake outlet. A specified INVERT value is only used for active lakes if COUTTYPE for lake outlet OUTLETNO is not SPECIFIED. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.}
+
+\item \textcolor{blue}{\texttt{rough}---real value that defines the roughness coefficient for the lake outlet. Any value can be specified if COUTTYPE is not MANNING. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.}
+
+\item \textcolor{blue}{\texttt{width}---real or character value that defines the width of the lake outlet. A specified WIDTH value is only used for active lakes if COUTTYPE for lake outlet OUTLETNO is not SPECIFIED. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.}
+
+\item \textcolor{blue}{\texttt{slope}---real or character value that defines the bed slope for the lake outlet. A specified SLOPE value is only used for active lakes if COUTTYPE for lake outlet OUTLETNO is MANNING. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.}
 
 \item \texttt{AUXILIARY}---keyword for specifying auxiliary variable.
 
 \item \texttt{auxname}---name for the auxiliary variable to be assigned AUXVAL.  AUXNAME must match one of the auxiliary variable names defined in the OPTIONS block. If AUXNAME does not match one of the auxiliary variable names defined in the OPTIONS block the data are ignored.
 
 \item \textcolor{blue}{\texttt{auxval}---value for the auxiliary variable. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.}
-
-\item \texttt{outletno}---integer value that defines the outlet number associated with the specified PERIOD data on the line. OUTLETNO must be greater than zero and less than or equal to NOUTLETS.
-
-\item \texttt{outletsetting}---line of information that is parsed into a keyword and values.  Keyword values that can be used to start the OUTLETSETTING string include: RATE, INVERT, WIDTH, SLOPE, and ROUGH.
-
-\begin{lstlisting}[style=blockdefinition]
-RATE <@rate@>
-INVERT <@invert@>
-WIDTH <@width@>
-SLOPE <@slope@>
-ROUGH <@rough@>
-\end{lstlisting}
-
-\item \textcolor{blue}{\texttt{rate}---real or character value that defines the extraction rate for the lake outflow. A positive value indicates inflow and a negative value indicates outflow from the lake. RATE only applies to active (IBOUND $>$ 0) lakes. A specified RATE is only applied if COUTTYPE for the OUTLETNO is SPECIFIED. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value. By default, the RATE for each SPECIFIED lake outlet is zero.}
-
-\item \textcolor{blue}{\texttt{invert}---real or character value that defines the invert elevation for the lake outlet. A specified INVERT value is only used for active lakes if COUTTYPE for lake outlet OUTLETNO is not SPECIFIED. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.}
-
-\item \textcolor{blue}{\texttt{rough}---real or character value that defines the width of the lake outlet. A specified WIDTH value is only used for active lakes if COUTTYPE for lake outlet OUTLETNO is not SPECIFIED. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.}
-
-\item \textcolor{blue}{\texttt{width}---real or character value that defines the width of the lake outlet. A specified WIDTH value is only used for active lakes if COUTTYPE for lake outlet OUTLETNO is not SPECIFIED. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.}
-
-\item \textcolor{blue}{\texttt{slope}---real or character value that defines the bed slope for the lake outlet. A specified SLOPE value is only used for active lakes if COUTTYPE for lake outlet OUTLETNO is MANNING. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.}
 
 \end{description}
 

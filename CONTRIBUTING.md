@@ -131,7 +131,7 @@ from the main (upstream) repository:
 ## <a name="rules"></a> Coding Rules
 To ensure consistency throughout the source code, keep these rules in mind as you are working:
 
-* All features or bug fixes **must be tested** by one or more specs (unit-tests).
+* All features or bug fixes **must be tested** by one or more specs (unit-tests and/or integration/regression-tests).
 
 ## <a name="commit"></a> Commit Message Guidelines
 
@@ -175,7 +175,7 @@ If the commit reverts a previous commit, it should begin with `revert: `, follow
 ### Type
 Must be one of the following:
 
-* **ci**: Changes to our CI configuration files and scripts (example scopes: Travis, Circle, BrowserStack, SauceLabs)
+* **ci**: Changes to our CI configuration files and scripts (example scopes: Travis)
 * **docs**: Documentation only changes
 * **feat**: A new feature
 * **fix**: A bug fix
@@ -185,13 +185,10 @@ Must be one of the following:
 * **test**: Adding missing tests or correcting existing tests
 
 ### Scope
-The scope should be the name of the MODFLOW 6 module/class affected (as perceived by the person reading the changelog generated from commit messages.
+The scope should be the name of the MODFLOW 6 module/class affected (as perceived by the person reading the changelog generated from commit messages).
 
 There are currently a few exceptions to the "use module/class name" rule:
 
-* **packaging**: used for changes that change the npm package layout in all of our packages, e.g.
-  public path changes, package.json changes done to all packages, d.ts file/format changes, changes
-  to bundles, etc.
 * **releasenotes**: used for updating the release notes
 * **readme**: used for updating the release notes in README.md
 * **changelog**: used for updating the release notes in CHANGELOG.md

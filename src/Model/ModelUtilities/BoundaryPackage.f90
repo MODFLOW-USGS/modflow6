@@ -4,7 +4,8 @@ module BndModule
   use ConstantsModule,              only: LENAUXNAME, LENBOUNDNAME, LENFTYPE,  &
                                           DZERO, LENMODELNAME, LENPACKAGENAME, &
                                           LENORIGIN, MAXCHARLEN, LINELENGTH,   &
-                                          DNODATA
+                                          DNODATA, LENLISTLABEL, LENPAKLOC,    &
+                                          TABLEFT, TABCENTER
   use SimModule,                    only: count_errors, store_error, ustop,    &
                                           store_error_unit
   use NumericalPackageModule,       only: NumericalPackageType
@@ -20,6 +21,7 @@ module BndModule
   use PackageMoverModule,           only: PackageMoverType
   use BaseDisModule,                only: DisBaseType
   use BlockParserModule,            only: BlockParserType
+  use TableModule,                  only: TableType, table_cr
 
   implicit none
 
@@ -29,7 +31,7 @@ module BndModule
 
   type, extends(NumericalPackageType) :: BndType
     ! -- characters
-    character(len=500) :: listlabel   = ''                                       !title of table written for RP
+    character(len=LENLISTLABEL) :: listlabel   = ''                              !title of table written for RP
     character(len=LENPACKAGENAME) :: text = ''
     character(len=LENAUXNAME), allocatable, dimension(:) :: auxname              !name for each auxiliary variable
     character(len=LENBOUNDNAME), dimension(:), pointer,                         &
@@ -76,7 +78,14 @@ module BndModule
     real(DP), dimension(:), pointer, contiguous :: xold => null()                !dependent variable for last time step
     real(DP), dimension(:), pointer, contiguous :: flowja => null()              !intercell flows
     integer(I4B), dimension(:), pointer, contiguous :: icelltype => null()       !pointer to icelltype array in NPF
+    character(len=10) :: ictorigin  = ''                                         !package name for icelltype (NPF for GWF)
+    !
+    ! -- table objects
+    type(TableType), pointer :: inputtab => null()
+    type(TableType), pointer :: outputtab => null()
+    type(TableType), pointer :: errortab => null()
 
+    
   contains
     procedure :: bnd_df
     procedure :: bnd_ac
@@ -103,6 +112,7 @@ module BndModule
     procedure :: bnd_options
     procedure :: set_pointers
     procedure :: define_listlabel
+    procedure, private :: pak_setup_outputtab
     !
     ! -- procedures to support observations
     procedure, public :: bnd_obs_supported
@@ -113,6 +123,7 @@ module BndModule
     !
     ! -- procedure to support time series
     procedure, public :: bnd_rp_ts
+    !
   end type BndType
 
   contains
@@ -274,10 +285,9 @@ module BndModule
     ! -- dummy
     class(BndType),intent(inout) :: this
     ! -- local
-    integer(I4B) :: i, ierr, nlinks, nlist, node
-    logical :: isfound, endOfBlock
+    integer(I4B) :: ierr, nlist
+    logical :: isfound
     character(len=LINELENGTH) :: line, errmsg
-    type(TimeSeriesLinkType), pointer :: tsLink => null()
     ! -- formats
     character(len=*),parameter :: fmtblkerr = &
       "('Error.  Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
@@ -398,7 +408,7 @@ module BndModule
     return
   end subroutine bnd_ck
 
-  subroutine bnd_cf(this)
+  subroutine bnd_cf(this, reset_mover)
 ! ******************************************************************************
 ! bnd_cf -- This is the package specific routine where a package adds its
 !           contributions to this%rhs and this%hcof
@@ -408,6 +418,7 @@ module BndModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     class(BndType) :: this
+    logical, intent(in), optional :: reset_mover
 ! ------------------------------------------------------------------------------
     ! -- bnd has no cf routine
     !
@@ -469,7 +480,7 @@ module BndModule
     return
   end subroutine bnd_fn
 
-  subroutine bnd_nur(this, neqpak, x, xtemp, dx, inewtonur)
+  subroutine bnd_nur(this, neqpak, x, xtemp, dx, inewtonur, dxmax, locmax)
 ! ******************************************************************************
 ! bnd_nur -- under-relaxation
 ! Subroutine: (1) Under-relaxation of Groundwater Flow Model Package Heads
@@ -486,6 +497,8 @@ module BndModule
     real(DP), dimension(neqpak), intent(in) :: xtemp
     real(DP), dimension(neqpak), intent(inout) :: dx
     integer(I4B), intent(inout) :: inewtonur
+    real(DP), intent(inout) :: dxmax
+    integer(I4B), intent(inout) :: locmax
     ! -- local
 ! ------------------------------------------------------------------------------
 
@@ -496,7 +509,7 @@ module BndModule
     return
   end subroutine bnd_nur
 
-  subroutine bnd_cc(this, iend, icnvg)
+  subroutine bnd_cc(this, kiter, iend, icnvgmod, cpak, dpak)
 ! ******************************************************************************
 ! bnd_cc -- additional convergence check for advanced packages
 ! ******************************************************************************
@@ -505,8 +518,11 @@ module BndModule
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(BndType), intent(inout) :: this
-    integer(I4B), intent(in) :: iend
-    integer(I4B), intent(inout) :: icnvg
+    integer(I4B), intent(in) :: kiter
+    integer(I4B),intent(in) :: iend
+    integer(I4B), intent(in) :: icnvgmod
+    character(len=LENPAKLOC), intent(inout) :: cpak
+    real(DP), intent(inout) :: dpak
     ! -- local
 ! ------------------------------------------------------------------------------
 
@@ -529,7 +545,7 @@ module BndModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule, only: kstp, kper, delt
+    use TdisModule, only: delt
     use ConstantsModule, only: LENBOUNDNAME, DZERO
     use BudgetModule, only: BudgetType
     ! -- dummy
@@ -545,18 +561,20 @@ module BndModule
     integer(I4B), dimension(:), optional, intent(in) :: imap
     integer(I4B), optional, intent(in) :: iadv
     ! -- local
+    character (len=LINELENGTH) :: title
+    character(len=20) :: nodestr
     character (len=LENPACKAGENAME) :: text
+    integer(I4B) :: nodeu
+    integer(I4B) :: maxrows
     integer(I4B) :: imover
     integer(I4B) :: i, node, n2, ibinun
     real(DP) :: q
     real(DP) :: qtomvr
     real(DP) :: ratin, ratout, rrate
-    integer(I4B) :: ibdlbl, naux
+    integer(I4B) :: naux
     ! -- for observations
     character(len=LENBOUNDNAME) :: bname
     ! -- formats
-    character(len=*), parameter :: fmttkk = &
-      "(1X,/1X,A,'   PERIOD ',I0,'   STEP ',I0)"
 ! ------------------------------------------------------------------------------
     !
     ! -- check for iadv optional variable
@@ -570,10 +588,28 @@ module BndModule
       imover = this%imover
     end if
     !
+    ! -- set maxrows
+    maxrows = 0
+    if (ibudfl /= 0 .and. this%iprflow /= 0) then
+      do i = 1, this%nbound
+        node = this%nodelist(i)
+        if (node > 0) then
+          if (this%ibound(node) > 0) then
+            maxrows = maxrows + 1
+          end if
+        end if
+      end do
+      if (maxrows > 0) then
+        call this%outputtab%set_maxbound(maxrows)
+      end if
+      title = trim(adjustl(this%text)) // ' PACKAGE (' // trim(this%name) //     &
+              ') FLOW RATES'
+      call this%outputtab%set_title(title)
+    end if
+    !
     ! -- Clear accumulators and set flags
     ratin = DZERO
     ratout = DZERO
-    ibdlbl = 0
     !
     ! -- Set unit number for binary output
     if (this%ipakcb < 0) then
@@ -625,15 +661,16 @@ module BndModule
             !
             ! -- Print the individual rates if the budget is being printed
             !    and PRINT_FLOWS was specified (this%iprflow<0)
-            if(ibudfl /= 0) then
-              if(this%iprflow /= 0) then
-                if(ibdlbl == 0) write(this%iout,fmttkk)                        &
-                  this%text // ' (' // trim(this%name) // ')', kper, kstp
-                call this%dis%print_list_entry(i, node, rrate, this%iout,      &
-                        bname)
-                ibdlbl=1
-              endif
-            endif
+            if (ibudfl /= 0) then
+              if (this%iprflow /= 0) then
+                !
+                ! -- set nodestr and write outputtab table
+                nodeu = this%dis%get_nodeuser(node)
+                call this%dis%nodeu_to_string(nodeu, nodestr)
+                call this%outputtab%print_list_entry(i, trim(adjustl(nodestr)),  &
+                                                     rrate, bname)
+              end if
+            end if
             !
             ! -- See if flow is into aquifer or out of aquifer.
             if(rrate < dzero) then
@@ -675,9 +712,13 @@ module BndModule
     if (imover == 1) then
       ratin = DZERO
       ratout = DZERO
-      ibdlbl = 0
       text = trim(adjustl(this%text)) // '-TO-MVR'
       text = adjustr(text)
+      if (ibudfl /= 0 .and. this%iprflow /= 0) then
+        title = trim(adjustl(this%text)) // ' PACKAGE (' // trim(this%name) //   &
+                ') FLOW RATES TO-MVR'
+        call this%outputtab%set_title(title)
+      end if
       !
       ! -- If cell-by-cell flows will be saved as a list, write header.
       if(ibinun /= 0) then
@@ -718,10 +759,12 @@ module BndModule
               !    and PRINT_FLOWS was specified (this%iprflow<0)
               if(ibudfl /= 0) then
                 if(this%iprflow /= 0) then
-                  if(ibdlbl == 0) write(this%iout,fmttkk) text, kper, kstp
-                  call this%dis%print_list_entry(i, node, rrate, this%iout,    &
-                          bname)
-                  ibdlbl=1
+                  !
+                  ! -- set nodestr and write outputtab table
+                  nodeu = this%dis%get_nodeuser(node)
+                  call this%dis%nodeu_to_string(nodeu, nodestr)
+                  call this%outputtab%print_list_entry(i, trim(adjustl(nodestr)),&
+                                                       rrate, bname)
                 endif
               endif
               !
@@ -821,6 +864,27 @@ module BndModule
       deallocate(this%pakmvrobj)
       nullify(this%pakmvrobj)
     endif
+    !
+    ! -- input table object
+    if (associated(this%inputtab)) then
+      call this%inputtab%table_da()
+      deallocate(this%inputtab)
+      nullify(this%inputtab)
+    end if
+    !
+    ! -- output table object
+    if (associated(this%outputtab)) then
+      call this%outputtab%table_da()
+      deallocate(this%outputtab)
+      nullify(this%outputtab)
+    end if
+    !
+    ! -- error table object
+    if (associated(this%errortab)) then
+      call this%errortab%table_da()
+      deallocate(this%errortab)
+      nullify(this%errortab)
+    end if
     !
     ! -- Deallocate scalars
     call mem_deallocate(this%ibcnum)
@@ -990,9 +1054,13 @@ module BndModule
       allocate(this%boundname(1))
     endif
     !
-    ! -- Set pointer to ICELLTYPE
-    call mem_setptr(this%icelltype, 'ICELLTYPE',                               &
-                    trim(adjustl(this%name_model))//' NPF')
+    ! -- Set pointer to ICELLTYPE. For GWF boundary packages, 
+    !    this%ictorigin will be 'NPF'.  If boundary packages do not set
+    !    this%ictorigin, then icelltype will remain as null()
+    if (this%ictorigin /= '')                                                  &
+      call mem_setptr(this%icelltype, 'ICELLTYPE',                             &
+                      trim(adjustl(this%name_model)) // ' ' //                 &
+                      trim(adjustl(this%ictorigin)))
     !
     ! -- Initialize values
     do j = 1, this%maxbound
@@ -1000,15 +1068,17 @@ module BndModule
         this%bound(i, j) = DZERO
       end do
     end do
-
     do i = 1, this%maxbound
-    this%hcof(i) = DZERO
-    this%rhs(i) = DZERO
-    if(this%inamedbound==1) then
-      this%boundname(i) = ''
-    end if
+      this%hcof(i) = DZERO
+      this%rhs(i) = DZERO
+      if(this%inamedbound==1) then
+        this%boundname(i) = ''
+      end if
     end do
     if(this%inamedbound /= 1) this%boundname(1) = ''
+    !
+    ! -- setup the output table
+    call this%pak_setup_outputtab()
     !
     ! -- return
     return
@@ -1361,6 +1431,55 @@ module BndModule
     return
   end subroutine bnd_options
 
+  subroutine pak_setup_outputtab(this)
+! ******************************************************************************
+! bnd_options -- set options for a class derived from BndType
+! This subroutine can be overridden by specific packages to set custom options
+! that are not part of the package superclass.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(BndType),intent(inout) :: this
+    ! -- local
+    character(len=LINELENGTH) :: title
+    character(len=LINELENGTH) :: text
+    integer(I4B) :: ntabcol
+! ------------------------------------------------------------------------------
+    !
+    ! -- allocate and initialize the output table
+    if (this%iprflow /= 0) then
+      !
+      ! -- dimension table
+      ntabcol = 3
+      if (this%inamedbound > 0) then
+        ntabcol = ntabcol + 1
+      end if
+      !
+      ! -- initialize the output table object
+      title = trim(adjustl(this%text)) // ' PACKAGE (' // trim(this%name) //     &
+              ') FLOW RATES'
+      call table_cr(this%outputtab, this%name, title)
+      call this%outputtab%table_df(this%maxbound, ntabcol, this%iout,            &
+                                    transient=.TRUE.)
+      text = 'NUMBER'
+      call this%outputtab%initialize_column(text, 10, alignment=TABCENTER)
+      text = 'CELLID'
+      call this%outputtab%initialize_column(text, 20, alignment=TABLEFT)
+      text = 'RATE'
+      call this%outputtab%initialize_column(text, 15, alignment=TABCENTER)
+      if (this%inamedbound > 0) then
+        text = 'NAME'
+        call this%outputtab%initialize_column(text, 20, alignment=TABLEFT)
+      end if
+    end if
+    !
+    ! -- return
+    return
+  end subroutine pak_setup_outputtab
+
+
   subroutine define_listlabel(this)
     ! define_listlabel
     ! -- List-type packages should always override define_listlabel
@@ -1536,6 +1655,8 @@ module BndModule
     !
     return
   end subroutine bnd_rp_ts
+
+  ! -- Procedures related to casting
 
   function CastAsBndClass(obj) result(res)
     implicit none

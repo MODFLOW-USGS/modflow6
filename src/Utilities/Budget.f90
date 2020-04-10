@@ -80,7 +80,7 @@ module BudgetModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     class(BudgetType) :: this
-    integer(I4B),intent(in) :: maxsize
+    integer(I4B), intent(in) :: maxsize
     character(len=*), optional :: bdtype
     character(len=*), optional :: bddim
     character(len=*), optional :: labeltitle

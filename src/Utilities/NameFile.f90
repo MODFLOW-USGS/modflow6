@@ -69,7 +69,8 @@ module NameFileModule
     call this%parser%Initialize(inunit, iout)
     !
     ! -- Read and set the options
-    call this%parser%GetBlock('OPTIONS', isFound, ierr, blockRequired=.false.)
+    call this%parser%GetBlock('OPTIONS', isFound, ierr, &
+      supportOpenClose=.true., blockRequired=.false.)
     if(isFound) then
       !
       ! -- Populate this%opts
@@ -98,7 +99,8 @@ module NameFileModule
     endif
     !
     ! -- Read and set the input_files
-    call this%parser%GetBlock('PACKAGES', isFound, ierr)
+    call this%parser%GetBlock('PACKAGES', isFound, ierr, &
+      supportOpenClose=.true.)
     if(isFound) then
       !
       ! -- Populate this%input_files
@@ -249,7 +251,7 @@ module NameFileModule
       ! -- Parse the line and set defaults
       call ParseLine(this%input_files(i), nwords, words)
       call upcase(words(1))
-      ftype = words(1)
+      ftype = words(1)(1:20)
       accarg = 'SEQUENTIAL'
       fmtarg = 'FORMATTED'
       filstat = 'OLD'

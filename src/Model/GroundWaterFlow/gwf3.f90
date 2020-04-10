@@ -2,7 +2,7 @@ module GwfModule
 
   use KindModule,                  only: DP, I4B
   use InputOutputModule,           only: ParseLine, upcase
-  use ConstantsModule,             only: LENFTYPE, DZERO, DTEN, DEP20
+  use ConstantsModule,             only: LENFTYPE, LENPAKLOC, DZERO, DEM1, DTEN, DEP20
   use NumericalModelModule,        only: NumericalModelType
   use BaseDisModule,               only: DisBaseType
   use BndModule,                   only: BndType, AddBndToList, GetBndFromList
@@ -11,6 +11,7 @@ module GwfModule
   use Xt3dModule,                  only: Xt3dType
   use GwfHfbModule,                only: GwfHfbType
   use GwfStoModule,                only: GwfStoType
+  use GwfCsubModule,               only: GwfCsubType
   use GwfMvrModule,                only: GwfMvrType
   use BudgetModule,                only: BudgetType
   use GwfOcModule,                 only: GwfOcType
@@ -32,6 +33,7 @@ module GwfModule
     type(GwfNpfType),               pointer :: npf     => null()                ! node property flow package
     type(Xt3dType),                 pointer :: xt3d    => null()                ! xt3d option for npf
     type(GwfStoType),               pointer :: sto     => null()                ! storage package
+    type(GwfCsubType),              pointer :: csub    => null()                ! subsidence package    
     type(GwfOcType),                pointer :: oc      => null()                ! output control package
     type(GhostNodeType),            pointer :: gnc     => null()                ! ghost node correction package
     type(GwfHfbType),               pointer :: hfb     => null()                ! horizontal flow barrier package
@@ -42,6 +44,7 @@ module GwfModule
     integer(I4B),                   pointer :: inoc    => null()                ! unit number OC
     integer(I4B),                   pointer :: innpf   => null()                ! unit number NPF
     integer(I4B),                   pointer :: insto   => null()                ! unit number STO
+    integer(I4B),                   pointer :: incsub  => null()                ! unit number CSUB
     integer(I4B),                   pointer :: inmvr   => null()                ! unit number MVR
     integer(I4B),                   pointer :: inhfb   => null()                ! unit number HFB
     integer(I4B),                   pointer :: ingnc   => null()                ! unit number GNC
@@ -86,7 +89,7 @@ module GwfModule
                 'GHB6 ', 'RCH6 ', 'EVT6 ', 'OBS6 ', 'GNC6 ', & ! 15
                 '     ', 'CHD6 ', '     ', '     ', '     ', & ! 20
                 '     ', 'MAW6 ', 'SFR6 ', 'LAK6 ', 'UZF6 ', & ! 25
-                'DISV6', 'MVR6 ', '     ', '     ', '     ', & ! 30
+                'DISV6', 'MVR6 ', 'CSUB6', '     ', '     ', & ! 30
                 70 * '     '/
 
   contains
@@ -104,7 +107,7 @@ module GwfModule
     use ListsModule,                only: basemodellist
     use BaseModelModule,            only: AddBaseModelToList
     use SimModule,                  only: ustop, store_error, count_errors
-    use InputOutputModule,          only: write_centered
+    use GenericUtilitiesModule,     only: write_centered
     use ConstantsModule,            only: LINELENGTH, LENPACKAGENAME
     use VersionModule,              only: VERSION, MFVNAM, MFTITLE,             &
                                           FMTDISCLAIMER, IDEVELOPMODE
@@ -116,6 +119,7 @@ module GwfModule
     use GwfNpfModule,               only: npf_cr
     use Xt3dModule,                 only: xt3d_cr
     use GwfStoModule,               only: sto_cr
+    use GwfCsubModule,              only: csub_cr
     use GwfMvrModule,               only: mvr_cr
     use GwfHfbModule,               only: hfb_cr
     use GwfIcModule,                only: ic_cr
@@ -160,19 +164,20 @@ module GwfModule
     call namefile_obj%openlistfile(this%iout)
     !
     ! -- Write title to list file
-    call write_centered('MODFLOW'//MFVNAM, this%iout, 80)
-    call write_centered(MFTITLE, this%iout, 80)
-    call write_centered('GROUNDWATER FLOW MODEL (GWF)', this%iout, 80)
-    call write_centered('VERSION '//VERSION, this%iout, 80)
+    call write_centered('MODFLOW'//MFVNAM, 80, iunit=this%iout)
+    call write_centered(MFTITLE, 80, iunit=this%iout)
+    call write_centered('GROUNDWATER FLOW MODEL (GWF)', 80, iunit=this%iout)
+    call write_centered('VERSION '//VERSION, 80, iunit=this%iout)
     !
     ! -- Write if develop mode
-    if (IDEVELOPMODE == 1) call write_centered('***DEVELOP MODE***',           &
-      this%iout, 80)
+    if (IDEVELOPMODE == 1) then
+      call write_centered('***DEVELOP MODE***', 80, iunit=this%iout)
+    end if
     !
     ! -- Write compiler version
     call get_compiler(compiler)
-    call write_centered(' ', this%iout, 80)
-    call write_centered(trim(adjustl(compiler)), this%iout, 80)
+    call write_centered(' ', 80, iunit=this%iout)
+    call write_centered(trim(adjustl(compiler)), 80, iunit=this%iout)
     !
     ! -- Write disclaimer
     write(this%iout, FMTDISCLAIMER)
@@ -247,6 +252,7 @@ module GwfModule
     call namefile_obj%get_unitnumber('OC6',  this%inoc, 1)
     call namefile_obj%get_unitnumber('NPF6', this%innpf, 1)
     call namefile_obj%get_unitnumber('STO6', this%insto, 1)
+    call namefile_obj%get_unitnumber('CSUB6', this%incsub, 1)
     call namefile_obj%get_unitnumber('MVR6', this%inmvr, 1)
     call namefile_obj%get_unitnumber('HFB6', this%inhfb, 1)
     call namefile_obj%get_unitnumber('GNC6', this%ingnc, 1)
@@ -273,8 +279,10 @@ module GwfModule
     call gnc_cr(this%gnc, this%name, this%ingnc, this%iout)
     call hfb_cr(this%hfb, this%name, this%inhfb, this%iout)
     call sto_cr(this%sto, this%name, this%insto, this%iout)
+    call csub_cr(this%csub, this%name, this%insto, this%sto%name,               &
+                 this%incsub, this%iout)
     call ic_cr(this%ic, this%name, this%inic, this%iout, this%dis)
-    call mvr_cr(this%mvr, this%name, this%inmvr, this%iout)
+    call mvr_cr(this%mvr, this%name, this%inmvr, this%iout, dis=this%dis)
     call oc_cr(this%oc, this%name, this%inoc, this%iout)
     call gwf_obs_cr(this%obs, this%inobs)
     !
@@ -315,22 +323,24 @@ module GwfModule
     !
     ! -- Define packages and utility objects
     call this%dis%dis_df()
-    call this%npf%npf_df(this%xt3d, this%ingnc)
+    call this%npf%npf_df(this%dis, this%xt3d, this%ingnc)
     call this%oc%oc_df()
+    ! -- todo: niunit is not a good indicator of budterm size
     call this%budget%budget_df(niunit, 'VOLUME', 'L**3')
     if(this%ingnc > 0) call this%gnc%gnc_df(this)
     !
     ! -- Assign or point model members to dis members
+    !    this%neq will be incremented if packages add additional unknowns
     this%neq = this%dis%nodes
     this%nja = this%dis%nja
     this%ia  => this%dis%con%ia
     this%ja  => this%dis%con%ja
     !
-    ! -- Allocate model arrays, now that neq and nja are assigned
+    ! -- Allocate model arrays, now that neq and nja are known
     call this%allocate_arrays()
     !
     ! -- Define packages and assign iout for time series managers
-    do ip=1,this%bndlist%Count()
+    do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_df(this%neq, this%dis)
     enddo
@@ -359,12 +369,11 @@ module GwfModule
     integer(I4B) :: ip
 ! ------------------------------------------------------------------------------
     !
-    ! -- Add the internal connections of this model to sparse
+    ! -- Add the primary grid connections of this model to sparse
     call this%dis%dis_ac(this%moffset, sparse)
     !
     ! -- Add any additional connections that NPF may need
-    if(this%innpf > 0) call this%npf%npf_ac(this%moffset, sparse,              &
-      this%dis%nodes, this%ia, this%ja)
+    if(this%innpf > 0) call this%npf%npf_ac(this%moffset, sparse)
     !
     ! -- Add any package connections
     do ip = 1, this%bndlist%Count()
@@ -401,8 +410,7 @@ module GwfModule
     call this%dis%dis_mc(this%moffset, this%idxglo, iasln, jasln)
     !
     ! -- Map any additional connections that NPF may need
-    if(this%innpf > 0) call this%npf%npf_mc(this%moffset, this%dis%nodes,      &
-      this%ia, this%ja, iasln, jasln)
+    if(this%innpf > 0) call this%npf%npf_mc(this%moffset, iasln, jasln)
     !
     ! -- Map any package connections
     do ip=1,this%bndlist%Count()
@@ -436,10 +444,10 @@ module GwfModule
     !
     ! -- Allocate and read modules attached to model
     if(this%inic  > 0) call this%ic%ic_ar(this%x)
-    if(this%innpf > 0) call this%npf%npf_ar(this%dis, this%ic,                 &
-                                            this%ibound, this%x)
+    if(this%innpf > 0) call this%npf%npf_ar(this%ic, this%ibound, this%x)
     if(this%inhfb > 0) call this%hfb%hfb_ar(this%ibound, this%xt3d, this%dis)
     if(this%insto > 0) call this%sto%sto_ar(this%dis, this%ibound)
+    if(this%incsub > 0) call this%csub%csub_ar(this%dis, this%ibound)
     if(this%inmvr > 0) call this%mvr%mvr_ar()
     if(this%inobs > 0) call this%obs%gwf_obs_ar(this%ic, this%x, this%flowja)
     !
@@ -450,7 +458,7 @@ module GwfModule
     call this%oc%oc_ar(this%x, this%dis, this%npf%hnoflo)
     !
     ! -- Package input files now open, so allocate and read
-    do ip=1,this%bndlist%Count()
+    do ip = 1,this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%set_pointers(this%dis%nodes, this%ibound, this%x,           &
                                 this%xold, this%flowja)
@@ -486,6 +494,7 @@ module GwfModule
     if(this%inhfb > 0) call this%hfb%hfb_rp()
     if(this%inoc > 0)  call this%oc%oc_rp()
     if(this%insto > 0) call this%sto%sto_rp()
+    if(this%incsub > 0) call this%csub%csub_rp()
     if(this%inmvr > 0) call this%mvr%mvr_rp()
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
@@ -524,6 +533,7 @@ module GwfModule
     ! -- Advance
     if(this%innpf > 0) call this%npf%npf_ad(this%dis%nodes, this%xold)
     if(this%insto > 0) call this%sto%sto_ad()
+    if(this%incsub > 0)  call this%csub%csub_ad(this%dis%nodes, this%x)
     if(this%inmvr > 0) call this%mvr%mvr_ad()
     do ip=1,this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
@@ -582,7 +592,7 @@ module GwfModule
     ! -- local
     class(BndType), pointer :: packobj
     integer(I4B) :: ip
-    integer(I4B) :: inwt, inwtsto, inwtpak
+    integer(I4B) :: inwt, inwtsto, inwtcsub, inwtpak
 ! ------------------------------------------------------------------------------
     !
     ! -- newton flags
@@ -592,19 +602,26 @@ module GwfModule
     if(this%insto > 0) then
       if(inwtflag == 1) inwtsto = this%sto%inewton
     endif
+    inwtcsub = inwtflag
+    if(this%incsub > 0) then
+      if(inwtflag == 1) inwtcsub = this%csub%inewton
+    endif
     !
     ! -- Fill standard conductance terms
-    if(this%innpf > 0) call this%npf%npf_fc(kiter, this%dis%nodes,             &
-                                                this%nja, njasln, amatsln,     &
-                                                this%idxglo, this%rhs, this%x)
-    if(this%inhfb > 0) call this%hfb%hfb_fc(kiter, this%dis%nodes,             &
-                                                this%nja, njasln, amatsln,     &
-                                                this%idxglo, this%rhs, this%x)
-    if(this%ingnc > 0) call this%gnc%gnc_fc(kiter, this%ia, amatsln)
+    if(this%innpf > 0) call this%npf%npf_fc(kiter, njasln, amatsln,            &
+                                            this%idxglo, this%rhs, this%x)
+    if(this%inhfb > 0) call this%hfb%hfb_fc(kiter, njasln, amatsln,            &
+                                            this%idxglo, this%rhs, this%x)
+    if(this%ingnc > 0) call this%gnc%gnc_fc(kiter, amatsln)
+    ! -- storage
     if(this%insto > 0) then
-      call this%sto%sto_fc(kiter, this%dis%nodes, this%xold,                   &
-                            this%x, this%nja, njasln,                          &
-                            amatsln, this%idxglo, this%rhs)
+      call this%sto%sto_fc(kiter, this%xold, this%x, njasln, amatsln,          &
+                           this%idxglo, this%rhs)
+    end if
+    ! -- skeletal storage, compaction, and land subsidence 
+    if(this%incsub > 0) then
+      call this%csub%csub_fc(kiter, this%xold, this%x, njasln, amatsln,        &
+                             this%idxglo, this%rhs)
     end if
     if(this%inmvr > 0) call this%mvr%mvr_fc()
     do ip = 1, this%bndlist%Count()
@@ -615,8 +632,8 @@ module GwfModule
     !--Fill newton terms
     if(this%innpf > 0) then
       if(inwt /= 0) then
-        call this%npf%npf_fn(kiter, this%dis%nodes, this%nja, njasln,          &
-                             amatsln, this%idxglo, this%rhs, this%x)
+        call this%npf%npf_fn(kiter, njasln, amatsln, this%idxglo, this%rhs,    &
+                             this%x)
       endif
     endif
     !
@@ -633,8 +650,16 @@ module GwfModule
     ! -- Fill newton terms for storage
     if(this%insto > 0) then
       if (inwtsto /= 0) then
-        call this%sto%sto_fn(kiter, this%dis%nodes, this%xold, this%x,         &
-                              this%nja, njasln, amatsln, this%idxglo, this%rhs)
+        call this%sto%sto_fn(kiter, this%xold, this%x, njasln, amatsln,        &
+                             this%idxglo, this%rhs)
+      end if
+    end if
+    !
+    ! -- Fill newton terms for skeletal storage, compaction, and land subsidence 
+    if(this%incsub > 0) then
+      if (inwtcsub /= 0) then
+        call this%csub%csub_fn(kiter, this%xold, this%x, njasln, amatsln,      &
+                               this%idxglo, this%rhs)
       end if
     end if
     !
@@ -652,7 +677,7 @@ module GwfModule
     return
   end subroutine gwf_fc
 
-  subroutine gwf_cc(this, kiter, iend, icnvg)
+  subroutine gwf_cc(this, kiter, iend, icnvgmod, cpak, dpak)
 ! ******************************************************************************
 ! gwf_cc -- GroundWater Flow Model Final Convergence Check for Boundary Packages
 ! Subroutine: (1) calls package cc routines
@@ -664,7 +689,9 @@ module GwfModule
     class(GwfModelType) :: this
     integer(I4B),intent(in) :: kiter
     integer(I4B),intent(in) :: iend
-    integer(I4B),intent(inout) :: icnvg
+    integer(I4B),intent(in) :: icnvgmod
+    character(len=LENPAKLOC), intent(inout) :: cpak
+    real(DP), intent(inout) :: dpak
     ! -- local
     class(BndType), pointer :: packobj
     integer(I4B) :: ip
@@ -672,12 +699,21 @@ module GwfModule
 ! ------------------------------------------------------------------------------
     !
     ! -- If mover is on, then at least 2 outers required
-    if (this%inmvr > 0) call this%mvr%mvr_cc(kiter, iend, icnvg)
+    if (this%inmvr > 0) then
+      call this%mvr%mvr_cc(kiter, iend, icnvgmod, cpak, dpak)
+    end if
+    !
+    ! -- csub convergence check
+    if (this%incsub > 0) then
+      call this%csub%csub_cc(kiter, iend, icnvgmod,                              &
+                             this%dis%nodes, this%x, this%xold,                  &
+                             cpak, dpak)
+    end if
     !
     ! -- Call package cc routines
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
-      call packobj%bnd_cc(iend, icnvg)
+      call packobj%bnd_cc(kiter, iend, icnvgmod, cpak, dpak)
     enddo
     !
     ! -- return
@@ -686,7 +722,7 @@ module GwfModule
   
   subroutine gwf_ptcchk(this, iptc)
 ! ******************************************************************************
-! gwf_ptc -- check if pseudo-transient continuation factor should be used
+! gwf_ptcchk -- check if pseudo-transient continuation factor should be used
 ! Subroutine: (1) Check if pseudo-transient continuation factor should be used
 ! ******************************************************************************
 !
@@ -698,17 +734,14 @@ module GwfModule
     integer(I4B), intent(inout) :: iptc
 ! ------------------------------------------------------------------------------
     ! -- determine if pseudo-transient continuation should be applied to this 
-    !    model - pseudo-transient continuation only appled to problems without 
-    !    storage
+    !    model - pseudo-transient continuation only applied to problems that
+    !    use the Newton-Raphson formulation during steady-state stress periods
     iptc = 0
     if (this%iss > 0) then
-      if (this%insto == 0) then
-        ! -- and problems using Newton-Raphson
-        if (this%inewton > 0) then
-          iptc = this%inewton
-        else
-          iptc = this%npf%inewton
-        end if
+      if (this%inewton > 0) then
+        iptc = this%inewton
+      else
+        iptc = this%npf%inewton
       end if
     end if
     !
@@ -746,55 +779,74 @@ module GwfModule
     integer(I4B) :: jcol
     integer(I4B) :: j, jj
     real(DP) :: v
-    real(DP) :: q
+    real(DP) :: resid
+    real(DP) :: ptcdelem1
     real(DP) :: diag
     real(DP) :: diagcnt
     real(DP) :: diagmin
+    real(DP) :: diagmax
 ! ------------------------------------------------------------------------------
     ! -- set temporary flag indicating if pseudo-transient continuation should
     !    be used for this model and time step
     iptct = 0
-    ! -- only apply pseudo-transient continuation for problems without storage
+    ! -- only apply pseudo-transient continuation to problems using the 
+    !    Newton-Raphson formulations for steady-state stress periods
     if (this%iss > 0) then
-      if (this%insto == 0) then
-        ! -- and problems using Newton-Raphson
-        if (this%inewton > 0) then
-          iptct = this%inewton
-        else
-          iptct = this%npf%inewton
-        end if
+      if (this%inewton > 0) then
+        iptct = this%inewton
+      else
+        iptct = this%npf%inewton
       end if
     end if
     !
     ! -- calculate pseudo-transient continuation factor for model
     if (iptct > 0) then
       diagmin = DEP20
+      diagmax = DZERO
       diagcnt = DZERO
       do n = 1, this%dis%nodes
         if (this%npf%ibound(n) < 1) cycle
         jcol = n + this%moffset
-        v = this%dis%get_cell_volume(n, x(jcol))
-        if (v > DZERO) then
-          q = DZERO
-          do j = ia(jcol), ia(jcol+1)-1
-            jj = ja(j)
-            q = q + amatsln(j) * x(jcol)
-          end do
-          q = q - rhs(jcol)
-        else
-          cycle
-        end if
-        q = q / v
-        if (abs(q) > ptcf) ptcf = abs(q)
+        !
+        ! get the maximum volume of the cell (head at top of cell)        
+        v = this%dis%get_cell_volume(n, this%dis%top(n))
+        !
+        ! -- calculate the residual for the cell
+        resid = DZERO
+        do j = ia(jcol), ia(jcol+1)-1
+          jj = ja(j)
+          resid = resid + amatsln(j) * x(jcol)
+        end do
+        resid = resid - rhs(jcol)
+        !
+        ! -- calculate the reciprocal of the pseudo-time step
+        !    resid [L3/T] / volume [L3] = [1/T]
+        ptcdelem1 = abs(resid) / v
+        !
+        ! -- set ptcf if the reciprocal of the pseudo-time step
+        !    exceeds the current value (equivalent to using the 
+        !    smallest pseudo-time step) 
+        if (ptcdelem1 > ptcf) ptcf = ptcdelem1
+        !
+        ! -- determine minimum and maximum diagonal entries
         j = ia(jcol)
         diag = abs(amatsln(j))
         diagcnt = diagcnt + DONE
         if (diag > DZERO) then
           if (diag < diagmin) diagmin = diag
+          if (diag > diagmax) diagmax = diag
         end if
       end do
+      !
+      ! -- set the reciprocal of the pseudo-time step
+      !    to a fraction of the minimum or maximum
+      !    diagonal entry to prevent excessively small
+      !    or large values
       if (diagcnt > DZERO) then
+        diagmin = diagmin * DEM1
+        diagmax = diagmax * DEM1
         if (ptcf < diagmin) ptcf = diagmin
+        if (ptcf > diagmax) ptcf = diagmax
       end if
     end if
 
@@ -807,7 +859,7 @@ module GwfModule
     return
   end subroutine gwf_ptc
 
-  subroutine gwf_nur(this, neqmod, x, xtemp, dx, inewtonur)
+  subroutine gwf_nur(this, neqmod, x, xtemp, dx, inewtonur, dxmax, locmax)
 ! ******************************************************************************
 ! gwf_nur -- under-relaxation
 ! Subroutine: (1) Under-relaxation of Groundwater Flow Model Heads for current
@@ -826,10 +878,9 @@ module GwfModule
     real(DP), dimension(neqmod), intent(in) :: xtemp
     real(DP), dimension(neqmod), intent(inout) :: dx
     integer(I4B), intent(inout) :: inewtonur
+    real(DP), intent(inout) :: dxmax
+    integer(I4B), intent(inout) :: locmax
     ! -- local
-    !integer(I4B) :: n
-    !integer(I4B) :: jcol
-    !real(DP) :: botm
     integer(I4B) :: i0
     integer(I4B) :: i1
     class(BndType), pointer :: packobj
@@ -841,7 +892,7 @@ module GwfModule
     !    under-relaxation is turned on.
     if (this%inewton /= 0 .and. this%inewtonur /= 0) then
       if (this%innpf > 0) then
-        call this%npf%npf_nur(neqmod, x, xtemp, dx, inewtonur)
+        call this%npf%npf_nur(neqmod, x, xtemp, dx, inewtonur, dxmax, locmax)
       end if
       !
       ! -- Call package nur routines
@@ -851,7 +902,7 @@ module GwfModule
         if (packobj%npakeq > 0) then
           i1 = i0 + packobj%npakeq - 1
           call packobj%bnd_nur(packobj%npakeq, x(i0:i1), xtemp(i0:i1), &
-                               dx(i0:i1), inewtonur)
+                               dx(i0:i1), inewtonur, dxmax, locmax)
           i0 = i1 + 1
         end if
       enddo
@@ -883,10 +934,8 @@ module GwfModule
     do i = 1, this%nja
       this%flowja(i) = DZERO
     enddo
-    if(this%innpf > 0) call this%npf%npf_flowja(this%neq, this%nja, this%x,    &
-                                                this%flowja)
-    if(this%inhfb > 0) call this%hfb%hfb_flowja(this%neq, this%nja, this%x,    &
-                                                this%flowja)
+    if(this%innpf > 0) call this%npf%npf_flowja(this%x, this%flowja)
+    if(this%inhfb > 0) call this%hfb%hfb_flowja(this%x, this%flowja)
     if(this%ingnc > 0) call this%gnc%flowja(this%flowja)
     !
     ! -- Return
@@ -942,10 +991,16 @@ module GwfModule
                            isuppress_output, this%budget)
       call this%sto%bdsav(icbcfl, icbcun)
     endif
+    ! -- Skeletal storage, compaction and subsidence
+    if (this%incsub > 0) then
+      call this%csub%bdcalc(this%dis%nodes, this%x, this%xold,                 &
+                            isuppress_output, this%budget)
+      call this%csub%bdsav(idvfl, icbcfl, icbcun)
+    end if
     !
     ! -- Node Property Flow
     if(this%innpf > 0) then
-      call this%npf%npf_bdadj(this%nja, this%flowja, icbcfl, icbcun)
+      call this%npf%npf_bdadj(this%flowja, icbcfl, icbcun)
     endif
     !
     ! -- Clear obs
@@ -953,6 +1008,13 @@ module GwfModule
     !
     ! -- Mover budget
     if(this%inmvr > 0) call this%mvr%mvr_bd(icbcfl, ibudfl, isuppress_output)
+    !
+    ! -- Recalculate package hcof and rhs so that bnd_bd will calculate
+    !    flows based on the final head solution
+    do ip = 1, this%bndlist%Count()
+      packobj => GetBndFromList(this%bndlist, ip)
+      call packobj%bnd_cf(reset_mover=.false.)
+    enddo
     !
     ! -- Boundary packages calculate budget and total flows to model budget
     do ip = 1, this%bndlist%Count()
@@ -1010,7 +1072,7 @@ module GwfModule
     if(ibudfl /= 0) then
       !
       ! -- NPF output
-      if(this%innpf > 0) call this%npf%npf_ot(this%neq, this%nja, this%flowja)
+      if(this%innpf > 0) call this%npf%npf_ot(this%flowja)
       !
       ! -- GNC output
       if(this%ingnc > 0) &
@@ -1071,8 +1133,12 @@ module GwfModule
     ! -- dummy
     class(GwfModelType) :: this
     ! -- local
-    class(BndType), pointer :: packobj
 ! ------------------------------------------------------------------------------
+    !
+    ! -- csub final processing
+    if (this%incsub > 0) then
+      call this%csub%csub_fp()
+    end if
     !
     return
   end subroutine gwf_fp
@@ -1100,6 +1166,7 @@ module GwfModule
     call this%xt3d%xt3d_da()
     call this%gnc%gnc_da()
     call this%sto%sto_da()
+    call this%csub%csub_da()
     call this%budget%budget_da()
     call this%hfb%hfb_da()
     call this%mvr%mvr_da()
@@ -1113,6 +1180,7 @@ module GwfModule
     deallocate(this%xt3d)
     deallocate(this%gnc)
     deallocate(this%sto)
+    deallocate(this%csub)
     deallocate(this%budget)
     deallocate(this%hfb)
     deallocate(this%mvr)
@@ -1132,6 +1200,7 @@ module GwfModule
     call mem_deallocate(this%inobs)
     call mem_deallocate(this%innpf)
     call mem_deallocate(this%insto)
+    call mem_deallocate(this%incsub)
     call mem_deallocate(this%inmvr)
     call mem_deallocate(this%inhfb)
     call mem_deallocate(this%ingnc)
@@ -1253,6 +1322,7 @@ module GwfModule
     call mem_allocate(this%inoc,  'INOC',  modelname)
     call mem_allocate(this%innpf, 'INNPF', modelname)
     call mem_allocate(this%insto, 'INSTO', modelname)
+    call mem_allocate(this%incsub, 'INCSUB', modelname)
     call mem_allocate(this%inmvr, 'INMVR', modelname)
     call mem_allocate(this%inhfb, 'INHFB', modelname)
     call mem_allocate(this%ingnc, 'INGNC', modelname)
@@ -1264,6 +1334,7 @@ module GwfModule
     this%inoc = 0
     this%innpf = 0
     this%insto = 0
+    this%incsub = 0
     this%inmvr = 0
     this%inhfb = 0
     this%ingnc = 0
@@ -1314,7 +1385,6 @@ module GwfModule
     integer(I4B) :: ip
 ! ------------------------------------------------------------------------------
     !
-    ! -- Now supporting new-style WEL and GHB packages.
     ! -- This part creates the package object
     select case(filtyp)
     case('CHD6')
@@ -1345,18 +1415,17 @@ module GwfModule
       call ustop()
     end select
     !
-    ! -- Packages is the bndlist that is associated with the parent model
-    ! -- The following statement puts a pointer to this package in the ipakid
-    ! -- position of packages.
-      do ip = 1, this%bndlist%Count()
-        packobj2 => GetBndFromList(this%bndlist, ip)
-        if(packobj2%name == pakname) then
-          write(errmsg, '(a,a)') 'Cannot create package.  Package name  ' //   &
-            'already exists: ', trim(pakname)
-          call store_error(errmsg)
-          call ustop()
-        endif
-      enddo
+    ! -- Check to make sure that the package name is unique, then store a
+    !    pointer to the package in the model bndlist
+    do ip = 1, this%bndlist%Count()
+      packobj2 => GetBndFromList(this%bndlist, ip)
+      if(packobj2%name == pakname) then
+        write(errmsg, '(a,a)') 'Cannot create package.  Package name  ' //   &
+          'already exists: ', trim(pakname)
+        call store_error(errmsg)
+        call ustop()
+      endif
+    enddo
     call AddBndToList(this%bndlist, packobj)
     !
     ! -- return
@@ -1426,7 +1495,7 @@ module GwfModule
     endif
     if(indis==0) then
       write(errmsg, '(1x,a)') &
-        'ERROR. DISCRETIZATION (DIS6 or DISU6) PACKAGE NOT SPECIFIED.'
+        'ERROR. DISCRETIZATION (DIS6, DISV6, or DISU6) PACKAGE NOT SPECIFIED.'
       call store_error(errmsg)
     endif
     if(this%innpf==0) then

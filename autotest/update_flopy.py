@@ -20,17 +20,17 @@ def cwd(path):
         os.chdir(oldpwd)
 
 
-# def test_delete_mf6():
-#    pth = os.path.join(flopypth, 'mf6', 'modflow')
-#    files = [entry for entry in os.listdir(pth) if os.path.isfile(os.path.join(pth, entry))]
-#    delete_files(files, pth)
+def test_delete_mf6():
+   pth = os.path.join(flopypth, 'mf6', 'modflow')
+   files = [entry for entry in os.listdir(pth) if os.path.isfile(os.path.join(pth, entry))]
+   delete_files(files, pth, exclude='mfsimulation.py')
 
 
 def test_delete_dfn():
     pth = os.path.join(flopypth, 'mf6', 'data', 'dfn')
     files = [entry for entry in os.listdir(pth) if
              os.path.isfile(os.path.join(pth, entry))]
-    delete_files(files, pth)
+    delete_files(files, pth, exclude='flopy.dfn')
 
 
 def test_copy_dfn():
@@ -139,8 +139,8 @@ def main():
     msg = 'Running {} test'.format(tnam)
     print(msg)
 
-    # print('deleting existing MODFLOW 6 FloPy files')
-    # test_delete_mf6()
+    print('deleting existing MODFLOW 6 FloPy files')
+    test_delete_mf6()
     print('deleting existing MODFLOW 6 dfn files')
     test_delete_dfn()
     print('copying MODFLOW 6 repo dfn files')

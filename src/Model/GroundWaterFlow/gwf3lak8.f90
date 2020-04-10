@@ -8,7 +8,9 @@ module LakModule
                              DONETHIRD, DTWOTHIRDS, DFIVETHIRDS,               &
                              DGRAVITY, DCD,                                    &
                              NAMEDBOUNDFLAG, LENFTYPE, LENPACKAGENAME,         &
-                             DNODATA
+                             LENPAKLOC, DNODATA,                               &
+                             TABLEFT, TABCENTER, TABRIGHT,                     &
+                             TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
   use MemoryTypeModule, only: MemoryTSType
   use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_setptr,     &
                                  mem_deallocate
@@ -16,14 +18,14 @@ module LakModule
                               sQuadraticSaturationDerivative,                  &
                               sQSaturationDerivative
   use BndModule, only: BndType
-  use BudgetModule, only : BudgetType
-
-  use ObserveModule,        only: ObserveType
+  use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr
+  use TableModule, only: TableType, table_cr
+  use ObserveModule, only: ObserveType
   use ObsModule, only: ObsType
   use InputOutputModule, only: get_node, URWORD, extract_idnum_or_bndname
   use BaseDisModule, only: DisBaseType
-  use SimModule,           only: count_errors, store_error, ustop, &
-                                 store_error_unit
+  use SimModule,           only: count_errors, store_error, ustop
+  use GenericUtilitiesModule, only: sim_message
   use ArrayHandlersModule, only: ExpandArray
   use BlockParserModule,   only: BlockParserType
   use BaseDisModule,       only: DisBaseType
@@ -31,6 +33,7 @@ module LakModule
   implicit none
   !
   private
+  public :: LakType
   public :: lak_create
   !
   character(len=LENFTYPE)       :: ftype = 'LAK'
@@ -52,6 +55,7 @@ module LakModule
     integer(I4B), pointer :: iprhed => null()
     integer(I4B), pointer :: istageout => null()
     integer(I4B), pointer :: ibudgetout => null()
+    integer(I4B), pointer :: ipakcsv => null()
     integer(I4B), pointer :: cbcauxitems => NULL()
     integer(I4B), pointer :: nlakes => NULL()
     integer(I4B), pointer :: noutlets => NULL()
@@ -126,6 +130,7 @@ module LakModule
     real(DP), dimension(:), pointer, contiguous :: r2 => null()
     real(DP), dimension(:), pointer, contiguous :: dh0 => null()
     real(DP), dimension(:), pointer, contiguous :: s0 => null()
+    real(DP), dimension(:), pointer, contiguous :: qgwf0 => null()
     !
     ! -- lake connection data
     integer(I4B), dimension(:), pointer, contiguous :: imap => null()
@@ -161,8 +166,6 @@ module LakModule
     real(DP), dimension(:), pointer, contiguous :: qleak => null()
     real(DP), dimension(:), pointer, contiguous :: qsto => null()
     !
-    ! -- derived types
-    type(BudgetType), pointer :: budget => NULL()
     ! -- pointer to gwf iss and gwf hk
     integer(I4B), pointer :: gwfiss => NULL()
     real(DP), dimension(:), pointer, contiguous :: gwfk11 => NULL()
@@ -174,6 +177,12 @@ module LakModule
     integer(I4B), dimension(:), pointer, contiguous :: iboundpak => null()       !package ibound
     real(DP), dimension(:), pointer, contiguous :: xnewpak => null()             !package x vector
     real(DP), dimension(:), pointer, contiguous :: xoldpak => null()             !package xold vector
+    !
+    ! -- lake budget object
+    type(BudgetObjectType), pointer :: budobj => null()
+    !
+    ! -- laketable objects
+    type(TableType), pointer :: pakcsvtab => null()
     !
     ! -- type bound procedures
     contains
@@ -209,14 +218,16 @@ module LakModule
     procedure, private :: lak_set_stressperiod
     procedure, private :: lak_set_attribute_error
     procedure, private :: lak_cfupdate
+    procedure, private :: lak_bound_update
     procedure, private :: lak_bd_obs
     procedure, private :: lak_calculate_sarea
     procedure, private :: lak_calculate_warea
     procedure, private :: lak_calculate_conn_warea
-    procedure, private :: lak_calculate_vol
+    procedure, public  :: lak_calculate_vol
     procedure, private :: lak_calculate_conductance
     procedure, private :: lak_calculate_cond_head
     procedure, private :: lak_calculate_conn_conductance
+    procedure, private :: lak_calculate_exchange
     procedure, private :: lak_calculate_conn_exchange
     procedure, private :: lak_estimate_conn_exchange
     procedure, private :: lak_calculate_storagechange
@@ -240,6 +251,8 @@ module LakModule
     procedure, private :: lak_calculate_available
     procedure, private :: lak_calculate_residual
     procedure, private :: lak_linear_interpolation
+    procedure, private :: lak_setup_budobj
+    procedure, private :: lak_fill_budobj
   end type LakType
 
 contains
@@ -283,6 +296,7 @@ contains
     packobj%ibcnum = ibcnum
     packobj%ncolbnd = 3
     packobj%iscloc = 0  ! not supported
+    packobj%ictorigin = 'NPF'
     !
     ! -- return
     return
@@ -306,6 +320,7 @@ contains
     call mem_allocate(this%iprhed, 'IPRHED', this%origin)
     call mem_allocate(this%istageout, 'ISTAGEOUT', this%origin)
     call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%origin)
+    call mem_allocate(this%ipakcsv, 'IPAKCSV', this%origin)
     call mem_allocate(this%nlakes, 'NLAKES', this%origin)
     call mem_allocate(this%noutlets, 'NOUTLETS', this%origin)
     call mem_allocate(this%ntables, 'NTABLES', this%origin)
@@ -326,6 +341,7 @@ contains
     this%iprhed = 0
     this%istageout = 0
     this%ibudgetout = 0
+    this%ipakcsv = 0
     this%nlakes = 0
     this%noutlets = 0
     this%ntables = 0
@@ -410,7 +426,7 @@ contains
     ! -- return
     return
   end subroutine lak_allocate_arrays
-
+  
   subroutine lak_read_lakes(this)
 ! ******************************************************************************
 ! pak1read_dimensions -- Read the dimensions for this package
@@ -497,6 +513,7 @@ contains
     call mem_allocate(this%r2, this%nlakes, 'R2', this%origin)
     call mem_allocate(this%dh0, this%nlakes, 'DH0', this%origin)
     call mem_allocate(this%s0, this%nlakes, 'S0', this%origin)
+    call mem_allocate(this%qgwf0, this%nlakes, 'QGWF0', this%origin)
     !
     ! -- allocate character storage not managed by the memory manager
     allocate(this%lakename(this%nlakes)) ! ditch after boundnames allocated??
@@ -526,7 +543,8 @@ contains
     !
     ! -- read lake well data
     ! -- get lakes block
-    call this%parser%GetBlock('PACKAGEDATA', isfound, ierr, supportOpenClose=.true.)
+    call this%parser%GetBlock('PACKAGEDATA', isfound, ierr, &
+      supportOpenClose=.true.)
     !
     ! -- parse locations block if detected
     if (isfound) then
@@ -557,7 +575,7 @@ contains
 
         if (ival < 0) then
           write(errmsg,'(4x,a,1x,i6)') &
-            '****ERROR. nlakecon MUST BE >= 0 for lake ', n
+            '****ERROR. nlakeconn MUST BE >= 0 for lake ', n
           call store_error(errmsg)
         end if
 
@@ -570,7 +588,7 @@ contains
         end do
 
         ! -- set default bndName
-        write (cno,'(i9.9)') n
+        write(cno,'(i9.9)') n
         bndName = 'Lake' // cno
 
         ! -- lakename
@@ -1192,7 +1210,7 @@ contains
       !
       ! -- allocate space
       this%ntabrow(ilak) = n
-      write (citem,'(i4.4)') ilak
+      write(citem,'(i4.4)') ilak
       ! -- build arrName for outlet
       arrName = 'TABSTAGE' // citem
       call mem_allocate(this%laketables(ilak)%tabstage, n, arrName, this%origin)
@@ -1395,10 +1413,10 @@ contains
           !
           ! -- read outlet lakein
           ival = this%parser%GetInteger()
-          if (ival <1 .or. ival > this%noutlets) then
+          if (ival <1 .or. ival > this%nlakes) then
             write(errmsg,'(4x,a,1x,i4,1x,a,1x,i6)') &
               '****ERROR. lakein FOR OUTLET ', n, 'MUST BE > 0 and <= ',        &
-              this%noutlets
+              this%nlakes
             call store_error(errmsg)
             cycle readoutlet
           end if
@@ -1409,7 +1427,7 @@ contains
           if (ival <0 .or. ival > this%nlakes) then
             write(errmsg,'(4x,a,1x,i4,1x,a,1x,i6)') &
               '****ERROR. lakeout FOR OUTLET ', n, 'MUST BE >= 0 and <= ',      &
-              this%noutlets
+              this%nlakes
             call store_error(errmsg)
             cycle readoutlet
           end if
@@ -1433,7 +1451,7 @@ contains
             end select
 
           ! -- build bndname for outlet
-          write (citem,'(i9.9)') n
+          write(citem,'(i9.9)') n
           bndName = 'OUTLET' // citem
 
           ! -- set a few variables for timeseries aware variables
@@ -1611,6 +1629,9 @@ contains
     !    when PRINT_INPUT option is used.
     call this%define_listlabel()
     !
+    ! -- setup the budget object
+    call this%lak_setup_budobj()
+    !
     ! -- return
     return
   end subroutine lak_read_dimensions
@@ -1625,7 +1646,6 @@ contains
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: ustop, store_error, count_errors
-    use BudgetModule, only: budget_cr
     use TimeSeriesManagerModule, only: read_single_value_or_time_series
     ! -- dummy
     class(LakType),intent(inout) :: this
@@ -1634,7 +1654,6 @@ contains
     integer(I4B) :: j, jj, n
     integer(I4B) :: nn
     integer(I4B) :: idx
-    integer(I4B) :: ival
     real(DP) :: endtim
     real(DP) :: top
     real(DP) :: bot
@@ -1662,11 +1681,6 @@ contains
     data ctype(3) /'EMBEDDEDV '/
     ! -- format
 ! ------------------------------------------------------------------------------
-
-    ! -- setup the lake budget
-    call budget_cr(this%budget, this%origin)
-    ival = this%bditems
-    call this%budget%budget_df(ival, this%name, 'L**3')
     !
     ! -- initialize xnewpak and set stage
     do n = 1, this%nlakes
@@ -1845,11 +1859,11 @@ contains
       !
       ! -- calculate stage, surface area, wetted area, volume relation
       do n = 1, this%nlakes
-        write (this%iout,'(//1x,a,1x,i10)') 'STAGE/VOLUME RELATION FOR LAKE  ', n
-        write (this%iout,'(/1x,5(a14))') '         STAGE', '  SURFACE AREA', &
+        write(this%iout,'(//1x,a,1x,i10)') 'STAGE/VOLUME RELATION FOR LAKE  ', n
+        write(this%iout,'(/1x,5(a14))') '         STAGE', '  SURFACE AREA', &
     &                                    '   WETTED AREA', '   CONDUCTANCE', &
     &                                    '        VOLUME'
-        write (this%iout,"(1x,70('-'))")
+        write(this%iout,"(1x,70('-'))")
         dx = (this%laketop(n) - this%lakebot(n)) / 150.
         s = this%lakebot(n)
         do j = 1, 151
@@ -1857,25 +1871,25 @@ contains
           call this%lak_calculate_sarea(n, s, sa)
           call this%lak_calculate_warea(n, s, wa, s)
           call this%lak_calculate_vol(n, s, v)
-          write (this%iout,'(1x,5(E14.5))') s, sa, wa, c, v
+          write(this%iout,'(1x,5(E14.5))') s, sa, wa, c, v
           s = s + dx
         end do
-        write (this%iout,"(1x,70('-'))")
+        write(this%iout,"(1x,70('-'))")
 
-        write (this%iout,'(//1x,a,1x,i10)') 'STAGE/VOLUME RELATION FOR LAKE  ', n
-        write (this%iout,'(/1x,4(a14))') '              ', '              ', &
+        write(this%iout,'(//1x,a,1x,i10)') 'STAGE/VOLUME RELATION FOR LAKE  ', n
+        write(this%iout,'(/1x,4(a14))') '              ', '              ', &
     &                                    '    CALCULATED', '         STAGE'
-        write (this%iout,'(1x,4(a14))')  '         STAGE', '        VOLUME', &
+        write(this%iout,'(1x,4(a14))')  '         STAGE', '        VOLUME', &
     &                                    '         STAGE', '    DIFFERENCE'
-        write (this%iout,"(1x,56('-'))")
+        write(this%iout,"(1x,56('-'))")
         s = this%lakebot(n) - dx
         do j = 1, 156
           call this%lak_calculate_vol(n, s, v)
           call this%lak_vol2stage(n, v, c)
-          write (this%iout,'(1x,4(E14.5))') s, v, c, s-c
+          write(this%iout,'(1x,4(E14.5))') s, v, c, s-c
           s = s + dx
         end do
-        write (this%iout,"(1x,56('-'))")
+        write(this%iout,"(1x,56('-'))")
       end do
     end if
     !
@@ -2049,7 +2063,7 @@ contains
     wa = DZERO
     topl = this%telev(iconn)
     botl = this%belev(iconn)
-    call this%lak_calculate_cond_head(ilak, iconn, stage, head, vv)
+    call this%lak_calculate_cond_head(iconn, stage, head, vv)
     if (this%ictype(iconn) == 2 .or. this%ictype(iconn) == 3) then
       if (vv > topl) vv = topl
       i = this%ntabrow(ilak)
@@ -2165,7 +2179,7 @@ contains
     return
   end subroutine lak_calculate_conductance
 
-  subroutine lak_calculate_cond_head(this, ilak, iconn, stage, head, vv)
+  subroutine lak_calculate_cond_head(this, iconn, stage, head, vv)
 ! ******************************************************************************
 ! lak_calculate_conn_head -- Calculate the controlling lake stage or groundwater
 !                            head used to calculate the conductance for a lake
@@ -2177,7 +2191,6 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(LakType),intent(inout) :: this
-    integer(I4B), intent(in) :: ilak
     integer(I4B), intent(in) :: iconn
     real(DP), intent(in) :: stage
     real(DP), intent(in) :: head
@@ -2236,7 +2249,7 @@ contains
     cond = DZERO
     topl = this%telev(iconn)
     botl = this%belev(iconn)
-    call this%lak_calculate_cond_head(ilak, iconn, stage, head, vv)
+    call this%lak_calculate_cond_head(iconn, stage, head, vv)
     sat = sQuadraticSaturation(topl, botl, vv)
     ! vertical connection
     ! use full saturated conductance if top and bottom of the lake connection
@@ -2268,6 +2281,40 @@ contains
     ! -- return
     return
   end subroutine lak_calculate_conn_conductance
+
+
+  subroutine lak_calculate_exchange(this, ilak, stage, totflow)
+! ******************************************************************************
+! lak_calculate_exchange -- Calculate the total groundwater-lake flow at a
+!                           provided stage.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(LakType),intent(inout) :: this
+    integer(I4B), intent(in) :: ilak
+    real(DP), intent(in) :: stage
+    real(DP), intent(inout) :: totflow
+    ! -- local
+    integer(I4B) :: j
+    integer(I4B) :: igwfnode
+    real(DP)  :: flow
+    real(DP) :: hgwf
+    real(DP) :: cond
+    ! -- formats
+! ------------------------------------------------------------------------------
+    totflow = DZERO
+    do j = this%idxlakeconn(ilak), this%idxlakeconn(ilak+1)-1
+      igwfnode = this%cellid(j)
+      hgwf = this%xnew(igwfnode)
+      call this%lak_calculate_conn_exchange(ilak, j, stage, hgwf, flow, cond)
+      totflow = totflow + flow
+    end do
+    !
+    ! -- return
+    return
+  end subroutine lak_calculate_exchange
 
 
   subroutine lak_calculate_conn_exchange(this, ilak, iconn, stage, head, flow, cond)
@@ -2350,8 +2397,8 @@ contains
 
   subroutine lak_calculate_storagechange(this, ilak, stage, stage0, delt, dvr)
 ! ******************************************************************************
-! lak_calculate_storagechange -- Calculate the inflow terms to a lake at a
-!                         provided stage.
+! lak_calculate_storagechange -- Calculate the storage change in a lake based on
+!                         provided stages and a passed delt.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -2874,7 +2921,6 @@ contains
         end if
         sm = s1 - ds
         if (ABS(ds) < DEM6) then
-          !write(*,'(i4,4(g15.6))') i, sm, vol, ds, fm
           exit secantbisection
         end if
         call this%lak_calculate_vol(ilak, sm, vm)
@@ -2976,7 +3022,7 @@ contains
     !
     ! -- write abs(itemno) to citem string
     itmp = ABS(itemno)
-    write (citem,'(i9.9)') itmp
+    write(citem,'(i9.9)') itmp
     !
     ! -- Assign boundary name
     if (this%inamedbound==1) then
@@ -2997,7 +3043,7 @@ contains
         !bndName = this%boundname(itemno)
         call urword(line, lloc, istart, istop, 1, ival, rval, this%iout, this%inunit)
         text = line(istart:istop)
-        this%status(itmp) = text
+        this%status(itmp) = text(1:8)
         if (text == 'CONSTANT') then
           this%iboundpak(itmp) = -1
         else if (text == 'INACTIVE') then
@@ -3038,6 +3084,12 @@ contains
                                               this%name, 'BND', this%TsManager, &
                                               this%iprpak, itmp, jj, 'RAINFALL', &
                                               bndName, this%inunit)
+        if (this%rainfall(itmp)%value < DZERO) then
+          write(errmsg, '(4x, a, i0, a, G0, a)') &
+            '****ERROR. LAKE ', itmp, ' WAS ASSIGNED A RAINFALL VALUE OF ', &
+            this%rainfall(itmp)%value, '. RAINFALL MUST BE POSITIVE.'
+          call store_error(errmsg)
+        end if
       case ('EVAPORATION')
         ierr = this%lak_check_valid(itemno)
         if (ierr /= 0) goto 999
@@ -3052,6 +3104,12 @@ contains
                                               this%name, 'BND', this%TsManager, &
                                               this%iprpak, itmp, jj, 'EVAPORATION', &
                                               bndName, this%inunit)
+        if (this%evaporation(itmp)%value < DZERO) then
+          write(errmsg, '(4x, a, i0, a, G0, a)') &
+            '****ERROR. LAKE ', itmp, ' WAS ASSIGNED AN EVAPORATION VALUE OF ', &
+            this%evaporation(itmp)%value, '. EVAPORATION MUST BE POSITIVE.'
+          call store_error(errmsg)
+        end if
       case ('RUNOFF')
         ierr = this%lak_check_valid(itemno)
         if (ierr /= 0) goto 999
@@ -3066,6 +3124,12 @@ contains
                                               this%name, 'BND', this%TsManager, &
                                               this%iprpak, itmp, jj, 'RUNOFF', &
                                               bndName, this%inunit)
+        if (this%runoff(itmp)%value < DZERO) then
+          write(errmsg, '(4x, a, i0, a, G0, a)') &
+            '****ERROR. LAKE ', itmp, ' WAS ASSIGNED A RUNOFF VALUE OF ', &
+            this%runoff(itmp)%value, '. RUNOFF MUST BE POSITIVE.'
+          call store_error(errmsg)
+        end if
       case ('INFLOW')
         ierr = this%lak_check_valid(itemno)
         if (ierr /= 0) goto 999
@@ -3080,6 +3144,12 @@ contains
                                               this%name, 'BND', this%TsManager, &
                                               this%iprpak, itmp, jj, 'INFLOW', &
                                               bndName, this%inunit)
+        if (this%inflow(itmp)%value < DZERO) then
+          write(errmsg, '(4x, a, i0, a, G0, a)') &
+            '****ERROR. LAKE ', itmp, ' WAS ASSIGNED AN INFLOW VALUE OF ', &
+            this%inflow(itmp)%value, '. INFLOW MUST BE POSITIVE.'
+          call store_error(errmsg)
+        end if
       case ('WITHDRAWAL')
         ierr = this%lak_check_valid(itemno)
         if (ierr /= 0) goto 999
@@ -3094,6 +3164,12 @@ contains
                                               this%name, 'BND', this%TsManager, &
                                               this%iprpak, itmp, jj, 'WITHDRAWAL', &
                                               bndName, this%inunit)
+        if (this%withdrawal(itmp)%value < DZERO) then
+          write(errmsg, '(4x, a, i0, a, G0, a)') &
+            '****ERROR. LAKE ', itmp, ' WAS ASSIGNED A WITHDRAWAL VALUE OF ', &
+            this%withdrawal(itmp)%value, '. WITHDRAWAL MUST BE POSITIVE.'
+          call store_error(errmsg)
+        end if
       case ('RATE')
         ierr = this%lak_check_valid(-itemno)
         if (ierr /= 0) goto 999
@@ -3202,7 +3278,7 @@ contains
     !
     ! -- write keyword data to output file
     if (this%iprpak /= 0) then
-      write (this%iout, '(3x,i10,1x,a)') itmp, line(i0:istop)
+      write(this%iout, '(3x,i10,1x,a)') itmp, line(i0:istop)
     end if
     !
     ! -- return
@@ -3303,6 +3379,19 @@ contains
           found = .true.
         else
           call store_error('OPTIONAL BUDGET KEYWORD MUST BE FOLLOWED BY FILEOUT')
+        end if
+      case('PACKAGE_CONVERGENCE')
+        call this%parser%GetStringCaps(keyword)
+        if (keyword == 'FILEOUT') then
+          call this%parser%GetString(fname)
+          this%ipakcsv = getunit()
+          call openfile(this%ipakcsv, this%iout, fname, 'CSV',                   &
+                        filstat_opt='REPLACE')
+          write(this%iout,fmtlakbin) 'PACKAGE_CONVERGENCE', fname, this%ipakcsv
+          found = .true.
+        else
+          call store_error('OPTIONAL PACKAGE_CONVERGENCE KEYWORD MUST BE ' //    &
+                           'FOLLOWED BY FILEOUT')
         end if
       case('MOVER')
         this%imover = 1
@@ -3541,10 +3630,25 @@ contains
     class(LakType) :: this
     ! -- local
     integer(I4B) :: n
+    integer(I4B) :: j, iaux, ii
 ! ------------------------------------------------------------------------------
     !
     ! -- Advance the time series
     call this%TsManager%ad()
+    !
+    ! -- update auxiliary variables by copying from the derived-type time
+    !    series variable into the bndpackage auxvar variable so that this
+    !    information is properly written to the GWF budget file
+    if (this%naux > 0) then
+      do n = 1, this%nlakes
+        do j = this%idxlakeconn(n), this%idxlakeconn(n + 1) - 1
+          do iaux = 1, this%naux
+            ii = (n - 1) * this%naux + iaux
+            this%auxvar(iaux, j) = this%lauxvar(ii)%value
+          end do
+        end do
+      end do
+    end if
     !
     ! -- copy xnew into xold and set xnewpak to stage%value for
     !    constant stage lakes
@@ -3571,7 +3675,7 @@ contains
     return
   end subroutine lak_ad
 
-  subroutine lak_cf(this)
+  subroutine lak_cf(this, reset_mover)
   ! ******************************************************************************
   ! lak_cf -- Formulate the HCOF and RHS terms
   ! Subroutine: (1) skip if no lakes
@@ -3580,28 +3684,34 @@ contains
   !
   !    SPECIFICATIONS:
   ! ------------------------------------------------------------------------------
+    ! -- dummy
     class(LakType) :: this
+    logical, intent(in), optional :: reset_mover
+    ! -- local
     integer(I4B) :: j, n
     integer(I4B) :: igwfnode
     real(DP) ::  hlak, blak
+    logical :: lrm
   ! ------------------------------------------------------------------------------
     !!
     !! -- Calculate lak conductance and update package RHS and HCOF
     !call this%lak_cfupdate()
     !
-    ! --
+    ! -- save groundwater seepage for lake solution
     do n = 1, this%nlakes
       this%seep0(n) = this%seep(n)
     end do
     !
-    !
+    ! -- save variables for convergence check
     do n = 1, this%nlakes
-    !  write(*,'(4x,1x,i4.4,1x,g15.7)') n, this%xnewpak(n)
       this%s0(n) = this%xnewpak(n)
+      call this%lak_calculate_exchange(n, this%s0(n), this%qgwf0(n))
     end do
     !
     ! -- pakmvrobj cf
-    if(this%imover == 1) then
+    lrm = .true.
+    if (present(reset_mover)) lrm = reset_mover
+    if(this%imover == 1 .and. lrm) then
       call this%pakmvrobj%cf()
     end if
     !
@@ -3660,6 +3770,10 @@ contains
 
     end do
     !
+    ! -- Store the lake stage and cond in bound array for other
+    !    packages, such as the BUY package
+    call this%lak_bound_update()
+    !
     ! -- Return
     return
   end subroutine lak_cf
@@ -3687,12 +3801,6 @@ contains
     if(this%imover == 1) then
       call this%pakmvrobj%fc()
     end if
-    !!
-    !!
-    !do n = 1, this%nlakes
-    !!  write(*,'(4x,1x,i4.4,1x,g15.7)') n, this%xnewpak(n)
-    !  this%s0(n) = this%xnewpak(n)
-    !end do
     !
     !
     ! -- make a stab at a solution
@@ -3708,12 +3816,6 @@ contains
         rhs(igwfnode) = rhs(igwfnode) + this%rhs(j)
       end do
     end do
-    !
-    ! -- write some output to the screen
-    !do n = 1, this%nlakes
-    !!  write(*,'(4x,i4,2(1x,g15.7))') n, this%seep0(n), this%seep(n)
-    !  write(*,'(4x,i4,2(1x,g15.7))') n, this%s0(n), this%xnewpak(n)
-    !end do
     !
     ! -- return
     return
@@ -3786,80 +3888,223 @@ contains
     return
   end subroutine lak_fn
 
-  subroutine lak_cc(this, iend, icnvg)
+  subroutine lak_cc(this, kiter, iend, icnvgmod, cpak, dpak)
 ! **************************************************************************
 ! lak_cc -- Final convergence check for package
 ! **************************************************************************
 !
 !    SPECIFICATIONS:
 ! --------------------------------------------------------------------------
+    use TdisModule, only: totim, kstp, kper, delt
     ! -- dummy
     class(LakType), intent(inout) :: this
+    integer(I4B), intent(in) :: kiter
     integer(I4B), intent(in) :: iend
-    integer(I4B), intent(inout) :: icnvg
+    integer(I4B), intent(in) :: icnvgmod
+    character(len=LENPAKLOC), intent(inout) :: cpak
+    real(DP), intent(inout) :: dpak
     ! -- local
+    character(len=LENPAKLOC) :: cloc
+    character(len=LINELENGTH) :: tag
+    integer(I4B) :: icheck
+    integer(I4B) :: ipakfail
+    integer(I4B) :: locdhmax
+    integer(I4B) :: locdgwfmax
+    integer(I4B) :: locdqoutmax
+    integer(I4B) :: ntabrows
+    integer(I4B) :: ntabcols
     integer(I4B) :: n
-    integer(I4B) :: ifirst
+    real(DP) :: area
+    real(DP) :: gwf0
+    real(DP) :: gwf
     real(DP) :: dh
-    real(DP) :: residb
+    real(DP) :: dgwf
+    real(DP) :: hlak0
+    real(DP) :: hlak
+    real(DP) :: qout0
+    real(DP) :: qout
+    real(DP) :: dqout
     real(DP) :: inf
-    real(DP) :: outf
-    real(DP) :: avgf
     real(DP) :: ra
     real(DP) :: ro
     real(DP) :: qinf
     real(DP) :: ex
-    real(DP) :: pd
+    real(DP) :: dhmax
+    real(DP) :: dgwfmax
+    real(DP) :: dqoutmax
     ! format
-02000 format(4x,'LAKE PACKAGE FAILED CONVERGENCE CRITERIA',//,                  &
-             4x,a10,4(1x,a15),/,4x,74('-'))
-02010 format(4x,i10,4(1x,G15.7))
-02020 format(4x,74('-'))
-02030 format('CONVERGENCE FAILED AS A RESULT OF LAKE PACKAGE',1x,a)
 ! --------------------------------------------------------------------------
-    ifirst = 1
-    if (this%iconvchk /= 0) then
+    !
+    ! -- initialize local variables
+    icheck = this%iconvchk
+    ipakfail = 0
+    locdhmax = 0
+    locdgwfmax = 0
+    locdqoutmax = 0
+    dhmax = DZERO
+    dgwfmax = DZERO
+    dqoutmax = DZERO
+    !
+    ! -- if not saving package convergence data on check convergence if
+    !    the model is considered converged
+    if (this%ipakcsv == 0) then
+      if (icnvgmod == 0) then
+        icheck = 0
+      end if
+    !
+    ! -- saving package convergence data
+    else
+      !
+      ! -- header for package csv
+      if (.not. associated(this%pakcsvtab)) then
+        !
+        ! -- determine the number of columns and rows
+        ntabrows = 1
+        ntabcols = 8
+        if (this%noutlets > 0) then
+          ntabcols = ntabcols + 2
+        end if
+        !
+        ! -- setup table
+        call table_cr(this%pakcsvtab, this%name, '')
+        call this%pakcsvtab%table_df(ntabrows, ntabcols, this%ipakcsv,           &
+                                     lineseparator=.FALSE., separator=',',       &
+                                     finalize=.FALSE.)
+        !
+        ! -- add columns to package csv
+        tag = 'totim'
+        call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
+        tag = 'kper'
+        call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
+        tag = 'kstp'
+        call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
+        tag = 'nouter'
+        call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
+        tag = 'dvmax'
+        call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+        tag = 'dvmax_loc'
+        call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+        tag = 'dgwfmax'
+        call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+        tag = 'dgwfmax_loc'
+        call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+        if (this%noutlets > 0) then
+          tag = 'dqoutmax'
+          call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+          tag = 'dqoutmax_loc'
+          call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+        end if
+      end if
+    end if
+    !
+    ! -- perform package convergence check
+    if (icheck /= 0) then
       final_check: do n = 1, this%nlakes
         if (this%iboundpak(n) < 1) cycle
-        dh = ABS(this%s0(n) - this%xnewpak(n))
-        call this%lak_calculate_residual(n, this%xnewpak(n), residb)
-        call this%lak_calculate_available(n, this%xnewpak(n), inf, &
-                                          ra, ro, qinf, ex)
-        outf = inf - residb
-        avgf = DHALF * (inf + outf)
-        pd = DZERO
-        if (this%iconvresidchk /= 0) then
-          if (avgf > DZERO) then
-            pd = 100.d0 * residb / avgf
+        !
+        ! -- set previous and current lake stage
+        hlak0 = this%s0(n)
+        hlak = this%xnewpak(n)
+        !
+        ! -- stage difference
+        dh = hlak0 - hlak
+        !
+        ! -- calculate surface area
+        call this%lak_calculate_sarea(n, hlak, area)
+        !
+        ! -- change in gwf exchange
+        dgwf = DZERO
+        if (area > DZERO) then
+          gwf0 = this%qgwf0(n)
+          call this%lak_calculate_exchange(n, hlak, gwf)
+          dgwf = (gwf0 - gwf) * delt / area
+        end if
+        !
+        ! -- change in outflows
+        dqout = DZERO
+        if (this%noutlets > 0) then
+          if (area > DZERO) then
+            call this%lak_calculate_available(n, hlak0, inf, ra, ro, qinf, ex)
+            call this%lak_calculate_outlet_outflow(n, hlak0, inf, qout0)
+            call this%lak_calculate_available(n, hlak, inf, ra, ro, qinf, ex)
+            call this%lak_calculate_outlet_outflow(n, hlak, inf, qout)
+            dqout = (qout0 - qout) * delt / area
           end if
         end if
-        !write(*,'(1x,i4,6(1x,g10.4))') n, this%s0(n), this%xnewpak(n), residb, outf, inf, pd
-        if (dh > this%delh .or. ABS(pd) > this%pdmax) then
-          icnvg = 0
-          ! write convergence check information if this is the last outer iteration
-          if (iend == 1) then
-            if (ifirst == 1) then
-              ifirst = 0
-              write(*,2030) this%name
-              write(this%iout, 2000) '      LAKE',                                 &
-                '        MAX. DH', '    DH CRITERIA',                              &
-                '      PCT DIFF.', 'PCT DIFF. CRIT.'
-            end if
-            write(this%iout,2010) n, dh, this%delh, pd, this%pdmax
-          else
-            exit final_check
+        !
+        ! -- evaluate magnitude of differences
+        if (n == 1) then
+          locdhmax = n
+          dhmax = dh
+          locdgwfmax = n
+          dgwfmax = dgwf
+          locdqoutmax = n
+          dqoutmax = dqout
+        else
+          if (abs(dh) > abs(dhmax)) then
+            locdhmax = n
+            dhmax = dh
+          end if
+          if (abs(dgwf) > abs(dgwfmax)) then
+            locdgwfmax = n
+            dgwfmax = dgwf
+          end if
+          if (abs(dqout) > abs(dqoutmax)) then
+            locdqoutmax = n
+            dqoutmax = dqout
           end if
         end if
       end do final_check
-      if (ifirst == 0) then
-        write(this%iout,2020)
+      !
+      ! -- set dpak and cpak
+      if (ABS(dhmax) > abs(dpak)) then
+        dpak = dhmax
+        write(cloc, "(a,'-(',i0,')-',a)")                                        &
+          trim(this%name), locdhmax, 'stage'
+        cpak = trim(cloc)
+      end if
+      if (ABS(dgwfmax) > abs(dpak)) then
+        dpak = dgwfmax
+        write(cloc, "(a,'-(',i0,')-',a)")                                        &
+          trim(this%name), locdhmax, 'gwf'
+        cpak = trim(cloc)
+      end if
+      if (this%noutlets > 0) then
+        if (ABS(dqoutmax) > abs(dpak)) then
+          dpak = dqoutmax
+          write(cloc, "(a,'-(',i0,')-',a)")                                       &
+          trim(this%name), locdhmax, 'outlet'
+          cpak = trim(cloc)
+        end if
+      end if
+      !
+      ! -- write convergence data to package csv
+      if (this%ipakcsv /= 0) then
+        !
+        ! -- write the data
+        call this%pakcsvtab%add_term(totim)
+        call this%pakcsvtab%add_term(kper)
+        call this%pakcsvtab%add_term(kstp)
+        call this%pakcsvtab%add_term(kiter)
+        call this%pakcsvtab%add_term(dhmax)
+        call this%pakcsvtab%add_term(locdhmax)
+        call this%pakcsvtab%add_term(dgwfmax)
+        call this%pakcsvtab%add_term(locdgwfmax)
+        if (this%noutlets > 0) then
+          call this%pakcsvtab%add_term(dqoutmax)
+          call this%pakcsvtab%add_term(locdqoutmax)
+        end if
+        !
+        ! -- finalize the package csv
+        if (iend == 1) then
+          call this%pakcsvtab%finalize_table()
+        end if
       end if
     end if
     !
     ! -- return
     return
   end subroutine lak_cc
-
 
   subroutine lak_bd(this, x, idvfl, icbcfl, ibudfl, icbcun, iprobs,            &
                     isuppress_output, model_budget, imap, iadv)
@@ -3892,32 +4137,17 @@ contains
     ! -- local
     integer(I4B) :: ibinun
     real(DP) :: rrate
-    real(DP) :: gwfratin, gwfratout
-    real(DP) :: rainin, rainout
-    real(DP) :: evapin, evapout
-    real(DP) :: within, without
-    real(DP) :: roin, roout
-    real(DP) :: qinfin, qinfout
-    real(DP) :: extin, extout
-    real(DP) :: storatin, storatout
-    real(DP) :: ratin, ratout
     real(DP) :: chratin, chratout
-    real(DP) :: mvrratin
-    real(DP) :: qtomvr
-    integer(I4B) :: naux
     ! -- for budget
-    integer(I4B) :: i, j, n, n2
-    integer(I4B) :: ii
+    integer(I4B) :: j, n
     integer(I4B) :: igwfnode
-    integer(I4B) :: nlen, n1
     real(DP) :: hlak, hgwf
     real(DP) :: v0, v1
-    real(DP) :: blak
-    real(DP) :: s
+    real(DP) :: cond
+    !real(DP) :: blak
+    !real(DP) :: s
     real(DP) :: d
     real(DP) :: v
-    real(DP) :: q
-    real(DP) :: q2
     ! -- for observations
     integer(I4B) :: iprobslocal
     ! -- formats
@@ -3933,38 +4163,15 @@ contains
     ! -- Suppress saving of simulated values; they
     !    will be saved at end of this procedure.
     iprobslocal = 0
+    !
     ! -- call base functionality in bnd_bd
     call this%BndType%bnd_bd(x, idvfl, icbcfl, ibudfl, icbcun, iprobslocal,    &
                              isuppress_output, model_budget, this%imap,        &
                              iadv=1)
     !
-    ! -- lak budget routines (start by resetting)
-    call this%budget%reset()
-    !
-    ! -- add to lake budget terms
-    ! -- gwf flow
-    gwfratin = DZERO
-    gwfratout = DZERO
-    rainin = DZERO
-    rainout = DZERO
-    evapin = DZERO
-    evapout = DZERO
-    within = DZERO
-    without = DZERO
-    roin = DZERO
-    roout = DZERO
-    qinfin = DZERO
-    qinfout = DZERO
-    extin = DZERO
-    extout = DZERO
-    storatin = DZERO
-    storatout = DZERO
-    ratin = DZERO
-    ratout = DZERO
+    ! -- calculate several budget terms
     chratin = DZERO
     chratout = DZERO
-    mvrratin = DZERO
-    qtomvr = DZERO
     do n = 1, this%nlakes
       this%chterm(n) = DZERO
       if (this%iboundpak(n) == 0) cycle
@@ -3972,76 +4179,26 @@ contains
       call this%lak_calculate_vol(n, hlak, v1)
       ! -- add budget terms for active lakes
       if (this%iboundpak(n) /= 0) then
+        !
         ! -- rainfall
         rrate = this%precip(n)
         call this%lak_accumulate_chterm(n, rrate, chratin, chratout)
         !
-        ! -- See if flow is into lake or out of lake.
-        if (rrate < DZERO) then
-          !
-          ! -- Flow is out of lake subtract rate from ratout.
-          rainout = rainout - rrate
-        else
-          !
-          ! -- Flow is into lake; add rate to ratin.
-          rainin = rainin + rrate
-        end if
         ! -- evaporation
         rrate = this%evap(n)
         call this%lak_accumulate_chterm(n, rrate, chratin, chratout)
         !
-        ! -- See if flow is into lake or out of lake.
-        if (rrate < DZERO) then
-          !
-          ! -- Flow is out of lake subtract rate from ratout.
-          evapout = evapout - rrate
-        else
-          !
-          ! -- Flow is into lake; add rate to ratin.
-          evapin = evapin + rrate
-        end if
         ! -- runoff
         rrate = this%runoff(n)%value
         call this%lak_accumulate_chterm(n, rrate, chratin, chratout)
         !
-        ! -- See if flow is into lake or out of lake.
-        if (rrate < DZERO) then
-          !
-          ! -- Flow is out of lake subtract rate from ratout.
-          roout = roout - rrate
-        else
-          !
-          ! -- Flow is into lake; add rate to ratin.
-          roin = roin + rrate
-        end if
         ! -- inflow
         rrate = this%inflow(n)%value
         call this%lak_accumulate_chterm(n, rrate, chratin, chratout)
         !
-        ! -- See if flow is into lake or out of lake.
-        if (rrate < DZERO) then
-          !
-          ! -- Flow is out of lake subtract rate from ratout.
-          qinfout = qinfout - rrate
-        else
-          !
-          ! -- Flow is into lake; add rate to ratin.
-          qinfin = qinfin + rrate
-        end if
         ! -- withdrawals
         rrate = this%withr(n)
         call this%lak_accumulate_chterm(n, rrate, chratin, chratout)
-        !
-        ! -- See if flow is into lake or out of lake.
-        if (rrate < DZERO) then
-          !
-          ! -- Flow is out of lake subtract rate from ratout.
-          without = without - rrate
-        else
-          !
-          ! -- Flow is into lake; add rate to ratin.
-          within = within + rrate
-        end if
         !
         ! -- add lake storage changes
         rrate = DZERO
@@ -4050,43 +4207,13 @@ contains
             call this%lak_calculate_vol(n, this%xoldpak(n), v0)
             rrate = -(v1 - v0) / delt
             call this%lak_accumulate_chterm(n, rrate, chratin, chratout)
-          !else
-          !  rrate = -v1 / delt
           end if
         end if
         this%qsto(n) = rrate
         !
-        ! -- See if storage flow is into maw or out of maw.
-        if(rrate < DZERO) then
-          !
-          ! -- Flow is out of lake subtract rate from ratout.
-          storatout = storatout - rrate
-        else
-          !
-          ! -- Flow is into lake; add rate to ratin.
-          storatin = storatin + rrate
-        endif
-        !
         ! -- add external outlets
         call this%lak_get_external_outlet(n, rrate)
         call this%lak_accumulate_chterm(n, rrate, chratin, chratout)
-        if (this%imover == 1) then
-          call this%lak_get_external_mover(n, q)
-          rrate = rrate + q
-          call this%lak_get_outlet_tomover(n, q2)
-          qtomvr = qtomvr + q2
-        end if
-        !
-        ! -- See if flow is into lake or out of lake.
-        if (rrate < DZERO) then
-          !
-          ! -- Flow is out of lake subtract rate from ratout.
-          extout = extout - rrate
-        else
-          !
-          ! -- Flow is into lake; add rate to ratin.
-          extin = extin + rrate
-        end if
         !
         ! -- add mover terms
         if (this%imover == 1) then
@@ -4096,7 +4223,6 @@ contains
             rrate = DZERO
           end if
           call this%lak_accumulate_chterm(n, rrate, chratin, chratout)
-          mvrratin = mvrratin + rrate
         endif
       end if
     end do
@@ -4109,60 +4235,23 @@ contains
       do j = this%idxlakeconn(n), this%idxlakeconn(n+1)-1
         igwfnode = this%cellid(j)
         hgwf = this%xnew(igwfnode)
-        blak = this%belev(j)
-        if (-this%hcof(j) > DZERO) then
-          if (hgwf >= blak) then
-            s = max(hlak, blak)
-            rrate = this%hcof(j) * (s - hgwf)
-          else
-            rrate = this%rhs(j)
-          end if
-        else
-          rrate = this%rhs(j)
-        end if
+        call this%lak_calculate_conn_exchange(n, j, hlak, hgwf, rrate, cond)
+        !blak = this%belev(j)
+        !if (-this%hcof(j) > DZERO) then
+        !  if (hgwf >= blak) then
+        !    s = max(hlak, blak)
+        !    rrate = this%hcof(j) * (s - hgwf)
+        !  else
+        !    rrate = this%rhs(j)
+        !  end if
+        !else
+        !  rrate = this%rhs(j)
+        !end if
         this%qleak(j) = rrate
         call this%lak_accumulate_chterm(n, rrate, chratin, chratout)
-        !
-        ! -- See if flow is into lake or out of lake.
-        if(rrate < DZERO) then
-          !
-          ! -- Flow is out of lake subtract rate from ratout.
-          gwfratout = gwfratout - rrate
-        else
-          !
-          ! -- Flow is into lake; add rate to ratin.
-          gwfratin = gwfratin + rrate
-        endif
       end do
-
     end do
-    ! -- add calculated terms
-    call this%budget%addentry(qinfin, qinfout, delt,  &
-                              this%clakbudget(5), isuppress_output)
-    if (this%imover == 1) then
-      call this%budget%addentry(mvrratin, DZERO, delt,  &
-                                this%clakbudget(10), isuppress_output)
-    end if
-    call this%budget%addentry(rainin, rainout, delt,  &
-                              this%clakbudget(2), isuppress_output)
-    call this%budget%addentry(roin, roout, delt,  &
-                              this%clakbudget(4), isuppress_output)
-    call this%budget%addentry(gwfratin, gwfratout, delt,  &
-                              this%clakbudget(1), isuppress_output)
-    call this%budget%addentry(evapin, evapout, delt,  &
-                              this%clakbudget(3), isuppress_output)
-    call this%budget%addentry(within, without, delt,  &
-                              this%clakbudget(6), isuppress_output)
-    call this%budget%addentry(extin, extout, delt,  &
-                              this%clakbudget(7), isuppress_output)
-    if (this%imover == 1) then
-      call this%budget%addentry(DZERO, qtomvr, delt,  &
-                                this%clakbudget(11), isuppress_output)
-    end if
-    call this%budget%addentry(storatin, storatout, delt,  &
-                              this%clakbudget(8), isuppress_output)
-    call this%budget%addentry(chratin, chratout, delt,  &
-                              this%clakbudget(9), isuppress_output)
+    !
     ! -- For continuous observations, save simulated values.
     if (this%obs%npakobs > 0 .and. iprobs > 0) then
       call this%lak_bd_obs()
@@ -4181,7 +4270,7 @@ contains
       do n = 1, this%nlakes
         v = this%xnewpak(n)
         d = v - this%lakebot(n)
-        if (this%iboundpak(n) < 1) then
+        if (this%iboundpak(n) == 0) then
           v = DHNOFLO
         else if (d <= DZERO) then
           v = DHDRY
@@ -4192,241 +4281,28 @@ contains
                   this%nlakes, 1, 1, ibinun)
     end if
     !
-    ! -- Set unit number for binary budget output
+    ! -- fill the budget object
+    call this%lak_fill_budobj()
+    !
+    ! -- write the flows from the budobj
     ibinun = 0
     if(this%ibudgetout /= 0) then
       ibinun = this%ibudgetout
     end if
     if(icbcfl == 0) ibinun = 0
     if (isuppress_output /= 0) ibinun = 0
-    !
-    ! -- write lake binary budget output
     if (ibinun > 0) then
-      ! FLOW JA FACE - lake to lake connections using outlets
-      nlen = 0
-      do n = 1, this%noutlets
-        if (this%lakein(n) > 0 .and. this%lakeout(n) > 0) then
-          nlen = nlen + 1
-        end if
-      end do
-      if (nlen > 0) then
-        naux = 0
-        call ubdsv06(kstp, kper, '    FLOW-JA-FACE', this%name_model, this%name, &
-                     this%name_model, this%name,                                 &
-                     ibinun, naux, this%cauxcbc, nlen*2, 1, 1,                   &
-                     nlen*2, this%iout, delt, pertim, totim)
-        do n = 1, this%noutlets
-          if (this%lakein(n) > 0 .and. this%lakeout(n) > 0) then
-             q = this%simoutrate(n)
-             if (this%imover == 1) then
-               q = q + this%pakmvrobj%get_qtomvr(n)
-             end if
-             n1 = this%lakein(n)
-             n2 = this%lakeout(n)
-             call this%dis%record_mf6_list_entry(ibinun, n1, n2, q, naux,     &
-                                                    this%qauxcbc,                 &
-                                                    olconv=.FALSE.,               &
-                                                    olconv2=.FALSE.)
-             call this%dis%record_mf6_list_entry(ibinun, n2, n1, -q, naux,    &
-                                                    this%qauxcbc,                 &
-                                                    olconv=.FALSE.,               &
-                                                    olconv2=.FALSE.)
-
-          end if
-        end do
-      end if
-      ! LEAKAGE
-      naux = this%cbcauxitems
-      this%cauxcbc(1) = '       FLOW-AREA'
-      call ubdsv06(kstp, kper, this%clakbudget(1), this%name_model, this%name, &
-                   this%name_model, this%name_model,                           &
-                   ibinun, naux, this%cauxcbc, this%maxbound, 1, 1,            &
-                   this%maxbound, this%iout, delt, pertim, totim)
-      do n = 1, this%nlakes
-        hlak = this%xnewpak(n)
-        do j = this%idxlakeconn(n), this%idxlakeconn(n+1)-1
-          n2 = this%cellid(j)
-          hgwf = this%xnew(n2)
-          call this%lak_calculate_conn_warea(n, j, hlak, hgwf, this%qauxcbc(1))
-          q = this%qleak(j)
-          call this%dis%record_mf6_list_entry(ibinun, n, n2, q, naux,        &
-                                                  this%qauxcbc,                  &
-                                                  olconv=.FALSE.)
-
-        end do
-      end do
-      ! INFLOW
-      naux = 0
-      call ubdsv06(kstp, kper, this%clakbudget(5), this%name_model, this%name, &
-                   this%name_model, this%name,                                 &
-                   ibinun, naux, this%auxname, this%nlakes, 1, 1,              &
-                   this%nlakes, this%iout, delt, pertim, totim)
-      do n = 1, this%nlakes
-        q = this%inflow(n)%value
-        call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,         &
-                                                this%auxvar(:,n),              &
-                                                olconv=.FALSE.,                &
-                                                olconv2=.FALSE.)
-      end do
-      ! RUNOFF
-      naux = 0
-      call ubdsv06(kstp, kper, this%clakbudget(4), this%name_model, this%name, &
-                   this%name_model, this%name,                                 &
-                   ibinun, naux, this%auxname, this%nlakes, 1, 1,              &
-                   this%nlakes, this%iout, delt, pertim, totim)
-      do n = 1, this%nlakes
-        q = this%runoff(n)%value
-        call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,         &
-                                                this%auxvar(:,n),              &
-                                                olconv=.FALSE.,                &
-                                                olconv2=.FALSE.)
-      end do
-      ! RAIN
-      naux = 0
-      call ubdsv06(kstp, kper, this%clakbudget(2), this%name_model, this%name, &
-                   this%name_model, this%name,                                 &
-                   ibinun, naux, this%auxname, this%nlakes, 1, 1,              &
-                   this%nlakes, this%iout, delt, pertim, totim)
-      do n = 1, this%nlakes
-        q = this%precip(n)
-        call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,         &
-                                                this%auxvar(:,n),              &
-                                                olconv=.FALSE.,                &
-                                                olconv2=.FALSE.)
-      end do
-      ! EVAPORATION
-      naux = 0
-      call ubdsv06(kstp, kper, this%clakbudget(3), this%name_model, this%name, &
-                   this%name_model, this%name,                                 &
-                   ibinun, naux, this%auxname, this%nlakes, 1, 1,              &
-                   this%nlakes, this%iout, delt, pertim, totim)
-      do n = 1, this%nlakes
-        q = this%evap(n)
-        call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,         &
-                                                this%auxvar(:,n),              &
-                                                olconv=.FALSE.,                &
-                                                olconv2=.FALSE.)
-      end do
-      ! WITHDRAWAL
-      naux = 0
-      call ubdsv06(kstp, kper, this%clakbudget(6), this%name_model, this%name, &
-                   this%name_model, this%name,                                 &
-                   ibinun, naux, this%auxname, this%nlakes, 1, 1,              &
-                   this%nlakes, this%iout, delt, pertim, totim)
-      do n = 1, this%nlakes
-        q = this%withr(n)
-        call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,         &
-                                                this%auxvar(:,n),              &
-                                                olconv=.FALSE.,                &
-                                                olconv2=.FALSE.)
-      end do
-      ! EXTERNAL OUTFLOW
-      naux = 0
-      call ubdsv06(kstp, kper, this%clakbudget(7), this%name_model, this%name, &
-                   this%name_model, this%name,                                 &
-                   ibinun, naux, this%auxname, this%nlakes, 1, 1,              &
-                   this%nlakes, this%iout, delt, pertim, totim)
-      do n = 1, this%nlakes
-        call this%lak_get_external_outlet(n, q)
-        ! subtract tomover from external outflow
-        call this%lak_get_external_mover(n, v)
-        q = q + v
-        call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,         &
-                                                this%auxvar(:,n),              &
-                                                olconv=.FALSE.,                &
-                                                olconv2=.FALSE.)
-      end do
-      ! STORAGE
-      naux = this%cbcauxitems
-      this%cauxcbc(1) = '          VOLUME'
-      call ubdsv06(kstp, kper, this%clakbudget(8), this%name_model, this%name, &
-                   this%name_model, this%name,                                 &
-                   ibinun, naux, this%cauxcbc, this%nlakes, 1, 1,              &
-                   this%nlakes, this%iout, delt, pertim, totim)
-      do n = 1, this%nlakes
-        call this%lak_calculate_vol(n, this%xnewpak(n), v1)
-        q = this%qsto(n)
-        this%qauxcbc(1) = v1
-        call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,         &
-                                                this%qauxcbc,                  &
-                                                olconv=.FALSE.,                &
-                                                olconv2=.FALSE.)
-      end do
-      ! CONSTANT FLOW
-      naux = 0
-      call ubdsv06(kstp, kper, this%clakbudget(9), this%name_model, this%name, &
-                   this%name_model, this%name,                                 &
-                   ibinun, naux, this%auxname, this%nlakes, 1, 1,              &
-                   this%nlakes, this%iout, delt, pertim, totim)
-      do n = 1, this%nlakes
-        q = this%chterm(n)
-        call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,         &
-                                                this%auxvar(:,n),              &
-                                                olconv=.FALSE.,                &
-                                                olconv2=.FALSE.)
-      end do
-      ! MOVER
-      if (this%imover == 1) then
-        ! FROM MOVER
-        naux = 0
-        call ubdsv06(kstp, kper, this%clakbudget(10), this%name_model,         &
-                     this%name, this%name_model, this%name,                    &
-                     ibinun, naux, this%auxname,                               &
-                     this%nlakes, 1, 1,                                        &
-                     this%nlakes, this%iout, delt, pertim, totim)
-        do n = 1, this%nlakes
-          q = this%pakmvrobj%get_qfrommvr(n)
-          call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,       &
-                                                  this%auxvar(:,n),            &
-                                                  olconv=.FALSE.,              &
-                                                  olconv2=.FALSE.)
-        end do
-        ! TO MOVER
-        naux = 0
-        call ubdsv06(kstp, kper, this%clakbudget(11), this%name_model,         &
-                     this%name, this%name_model, this%name,                    &
-                     ibinun, naux, this%auxname,                               &
-                     this%noutlets, 1, 1,                                      &
-                     this%noutlets, this%iout, delt, pertim, totim)
-        do n = 1, this%noutlets
-          q = this%pakmvrobj%get_qtomvr(n)
-          if (q > DZERO) then
-            q = -q
-          end if
-          call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,       &
-                                                  this%auxvar(:,n),            &
-                                                  olconv=.FALSE.,              &
-                                                  olconv2=.FALSE.)
-        end do
-      end if
-      ! AUXILIARY VARIABLES
-      naux = this%naux
-      if (naux > 0) then
-        call ubdsv06(kstp, kper, '       AUXILIARY', this%name_model, this%name,&
-                     this%name_model, this%name,                                &
-                     ibinun, naux, this%auxname, this%nlakes, 1, 1,             &
-                     this%nlakes, this%iout, delt, pertim, totim)
-        do n = 1, this%nlakes
-          q = DZERO
-          ! fill auxvar
-          do i = 1, naux
-            ii = (n-1) * naux + i
-            this%auxvar(i,n) = this%lauxvar(ii)%value
-          end do
-          call this%dis%record_mf6_list_entry(ibinun, n, n, q, naux,       &
-                                                  this%auxvar(:,n),            &
-                                                  olconv=.FALSE.,              &
-                                                  olconv2=.FALSE.)
-        end do
-      end if
+      call this%budobj%save_flows(this%dis, ibinun, kstp, kper, delt, &
+                        pertim, totim, this%iout)
     end if
+    !
     ! -- return
     return
   end subroutine lak_bd
 
   subroutine lak_ot(this, kstp, kper, iout, ihedfl, ibudfl)
     ! **************************************************************************
-    ! pak1t -- Output package budget
+    ! lak_ot -- Output package budget
     ! **************************************************************************
     !
     !    SPECIFICATIONS:
@@ -4443,43 +4319,25 @@ contains
     character(len=LINELENGTH) :: line, linesep
     character(len=16) :: text
     integer(I4B) :: n
-    integer(I4B) :: j
     integer(I4B) :: iloc
-    real(DP) :: hlak
     real(DP) :: q
-    real(DP) :: qin
-    real(DP) :: qinternalin
-    real(DP) :: qro
-    real(DP) :: qrai
-    real(DP) :: qleakin
-    real(DP) :: qleakout
-    real(DP) :: qevt
-    real(DP) :: qwdw
-    real(DP) :: qext
-    real(DP) :: qinternalout
-    real(DP) :: qsto
-    real(DP) :: qch
-    real(DP) :: qtomover
-    real(DP) :: qfrommover
-    real(DP) :: qtin
-    real(DP) :: qtout
-    real(DP) :: qerr
-    real(DP) :: qavg
-    real(DP) :: qerrpd
     ! format
  2000 FORMAT ( 1X, ///1X, A, A, A, '   PERIOD ', I6, '   STEP ', I8)
     ! --------------------------------------------------------------------------
     !
     ! -- write lake stage
     if (ihedfl /= 0 .and. this%iprhed /= 0) then
-      write (iout, 2000) 'LAKE (', trim(this%name), ') STAGE', kper, kstp
+      write(iout, 2000) 'LAKE (', trim(this%name), ') STAGE', kper, kstp
       iloc = 1
       line = ''
       if (this%inamedbound==1) then
-        call UWWORD(line, iloc, 16, 1, 'lake', n, q, left=.TRUE.)
+        call UWWORD(line, iloc, 16, TABUCSTRING,                                 &
+                    'lake', n, q, ALIGNMENT=TABLEFT)
       end if
-      call UWWORD(line, iloc, 6, 1, 'lake', n, q, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 11, 1, 'lake', n, q, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 6, TABUCSTRING,                                    &
+                  'lake', n, q, ALIGNMENT=TABCENTER, SEP=' ')
+      call UWWORD(line, iloc, 11, TABUCSTRING,                                   &
+                  'lake', n, q, ALIGNMENT=TABCENTER)
       ! -- create line separator
       linesep = repeat('-', iloc)
       ! -- write first line
@@ -4489,10 +4347,13 @@ contains
       iloc = 1
       line = ''
       if (this%inamedbound==1) then
-        call UWWORD(line, iloc, 16, 1, 'name', n, q, left=.TRUE.)
+        call UWWORD(line, iloc, 16, TABUCSTRING,                                 &
+                    'name', n, q, ALIGNMENT=TABLEFT)
       end if
-      call UWWORD(line, iloc, 6, 1, 'no.', n, q, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 11, 1, 'stage', n, q, CENTER=.TRUE.)
+      call UWWORD(line, iloc, 6, TABUCSTRING,                                    &
+                  'no.', n, q, ALIGNMENT=TABCENTER, SEP=' ')
+      call UWWORD(line, iloc, 11, TABUCSTRING,                                   &
+                  'stage', n, q, ALIGNMENT=TABCENTER)
       ! -- write second line
       write(iout,'(1X,A)') line(1:iloc)
       write(iout,'(1X,A)') linesep(1:iloc)
@@ -4501,200 +4362,22 @@ contains
         iloc = 1
         line = ''
         if (this%inamedbound==1) then
-          call UWWORD(line, iloc, 16, 1, this%lakename(n), n, q, left=.TRUE.)
+          call UWWORD(line, iloc, 16, TABUCSTRING,                               &
+                      this%lakename(n), n, q, ALIGNMENT=TABLEFT)
         end if
-        call UWWORD(line, iloc, 6, 2, text, n, q)
-        call UWWORD(line, iloc, 11, 3, text, n, this%xnewpak(n))
+        call UWWORD(line, iloc, 6, TABINTEGER, text, n, q, SEP=' ')
+        call UWWORD(line, iloc, 11, TABREAL, text, n, this%xnewpak(n))
         write(iout, '(1X,A)') line(1:iloc)
       end do
     end if
     !
-    ! -- write lake rates
+    ! -- Output lake flow table
     if (ibudfl /= 0 .and. this%iprflow /= 0) then
-      write (iout, 2000) 'LAKE (', trim(this%name), ') FLOWS', kper, kstp
-      iloc = 1
-      line = ''
-      if (this%inamedbound==1) then
-        call UWWORD(line, iloc, 16, 1, 'lake', n, q, left=.TRUE.)
-      end if
-      call UWWORD(line, iloc, 6, 1, 'lake', n, q, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 11, 1, 'lake', n, q, CENTER=.TRUE., SEP=' ')
-      if (this%noutlets > 0) then
-        call UWWORD(line, iloc, 11, 1, 'internal', n, q, CENTER=.TRUE., SEP=' ')
-      end if
-      call UWWORD(line, iloc, 11, 1, 'lake', n, q, CENTER=.TRUE., SEP=' ')
-      if (this%imover == 1) then
-        call UWWORD(line, iloc, 11, 1, 'lake', n, q, CENTER=.TRUE., SEP=' ')
-      end if
-      call UWWORD(line, iloc, 11, 1, 'lake', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'lake', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'lake', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'lake', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'lake', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'lake', n, q, CENTER=.TRUE., SEP=' ')
-      if (this%noutlets > 0) then
-        call UWWORD(line, iloc, 11, 1, 'external', n, q, CENTER=.TRUE., SEP=' ')
-        call UWWORD(line, iloc, 11, 1, 'internal', n, q, CENTER=.TRUE., SEP=' ')
-        if (this%imover == 1) then
-          call UWWORD(line, iloc, 11, 1, 'lake', n, q, CENTER=.TRUE., SEP=' ')
-        end if
-      end if
-      call UWWORD(line, iloc, 11, 1, 'constant', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'lake', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'percent', n, q, CENTER=.TRUE.)
-      ! -- create line separator
-      linesep = repeat('-', iloc)
-      ! -- write first line
-      write(iout,'(1X,A)') linesep(1:iloc)
-      write(iout,'(1X,A)') line(1:iloc)
-      ! -- create second header line
-      iloc = 1
-      line = ''
-      if (this%inamedbound==1) then
-        call UWWORD(line, iloc, 16, 1, 'name', n, q, left=.TRUE.)
-      end if
-      call UWWORD(line, iloc, 6, 1, 'no.', n, q, CENTER=.TRUE.)
-      call UWWORD(line, iloc, 11, 1, 'inflow', n, q, CENTER=.TRUE., SEP=' ')
-      if (this%noutlets > 0) then
-        call UWWORD(line, iloc, 11, 1, 'inflow', n, q, CENTER=.TRUE., SEP=' ')
-      end if
-      call UWWORD(line, iloc, 11, 1, 'runoff', n, q, CENTER=.TRUE., SEP=' ')
-      if (this%imover == 1) then
-        call UWWORD(line, iloc, 11, 1, 'from mvr', n, q, CENTER=.TRUE., SEP=' ')
-      end if
-      call UWWORD(line, iloc, 11, 1, 'rainfall', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'leakage in', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'leakage out', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'evaporation', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'withdrawal', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'storage', n, q, CENTER=.TRUE., SEP=' ')
-      if (this%noutlets > 0) then
-        call UWWORD(line, iloc, 11, 1, 'outflow', n, q, CENTER=.TRUE., SEP=' ')
-        call UWWORD(line, iloc, 11, 1, 'outflow', n, q, CENTER=.TRUE., SEP=' ')
-        if (this%imover == 1) then
-          call UWWORD(line, iloc, 11, 1, 'to mvr', n, q, CENTER=.TRUE., SEP=' ')
-        end if
-      end if
-      call UWWORD(line, iloc, 11, 1, 'flow', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'in - out', n, q, CENTER=.TRUE., SEP=' ')
-      call UWWORD(line, iloc, 11, 1, 'difference', n, q, CENTER=.TRUE.)
-      ! -- write second line
-      write(iout,'(1X,A)') line(1:iloc)
-      write(iout,'(1X,A)') linesep(1:iloc)
-      !
-      ! -- write data
-      do n = 1, this%nlakes
-        iloc = 1
-        line = ''
-        if (this%inamedbound==1) then
-          call UWWORD(line, iloc, 16, 1, this%lakename(n), n, q, left=.TRUE.)
-        end if
-        call UWWORD(line, iloc, 6, 2, text, n, q)
-        qtin = DZERO
-        qtout = DZERO
-        qin = this%inflow(n)%value
-        call UWWORD(line, iloc, 11, 3, text, n, qin, SEP=' ')
-        qinternalin = DZERO
-        if (this%noutlets > 0) then
-          call this%lak_get_internal_inlet(n, qinternalin)
-          call UWWORD(line, iloc, 11, 3, text, n, qinternalin, SEP=' ')
-        end if
-        qro = this%runoff(n)%value
-        call UWWORD(line, iloc, 11, 3, text, n, qro, SEP=' ')
-        qfrommover = DZERO
-        if (this%imover == 1) then
-          qfrommover = this%pakmvrobj%get_qfrommvr(n)
-          call UWWORD(line, iloc, 11, 3, text, n, qfrommover, SEP=' ')
-        end if
-        qrai = this%precip(n)
-        call UWWORD(line, iloc, 11, 3, text, n, qrai, SEP=' ')
-        ! leakage
-        qleakin = DZERO
-        qleakout = DZERO
-        hlak = this%xnewpak(n)
-        do j = this%idxlakeconn(n), this%idxlakeconn(n+1)-1
-          q = this%qleak(j)
-          if (q < DZERO) then
-            qleakout = qleakout + q
-            qtout = qtout + q
-          else
-            qleakin = qleakin + q
-            qtin = qtin + q
-          end if
-        end do
-        call UWWORD(line, iloc, 11, 3, text, n, qleakin, SEP=' ')
-        call UWWORD(line, iloc, 11, 3, text, n, qleakout, SEP=' ')
-        qevt = this%evap(n)
-        call UWWORD(line, iloc, 11, 3, text, n, qevt, SEP=' ')
-        qwdw = this%withr(n)
-        call UWWORD(line, iloc, 11, 3, text, n, qwdw, SEP=' ')
-        ! storage changes
-        qsto = DZERO
-        qsto = this%qsto(n)
-        if (qsto < DZERO) then
-          qtout = qtout + qsto
-        else
-          qtin = qtin + qsto
-        end if
-        call UWWORD(line, iloc, 11, 3, text, n, qsto, SEP=' ')
-        qext = DZERO
-        qtomover = DZERO
-        qinternalout = DZERO
-        if (this%noutlets > 0) then
-          ! external outflow
-          call this%lak_get_external_outlet(n, qext)
-          ! internal outflow
-          call this%lak_get_internal_outlet(n, qinternalout)
-          ! subtract tomover from external or internal outflow
-          if (this%imover == 1) then
-            if (qext < DZERO) then
-              call this%lak_get_external_mover(n, qtomover)
-              qext = qext + qtomover
-            else if (qinternalout < DZERO) then
-              call this%lak_get_internal_mover(n, qtomover)
-              qinternalout = qinternalout + qtomover
-            end if
-            if (qtomover > DZERO) then
-              qtomover = -qtomover
-            end if
-          end if
-          ! write external outflow, internal outflow, and tomover
-          call UWWORD(line, iloc, 11, 3, text, n, qext, SEP=' ')
-          call UWWORD(line, iloc, 11, 3, text, n, qinternalout, SEP=' ')
-          if (this%imover == 1) then
-            call UWWORD(line, iloc, 11, 3, text, n, qtomover, SEP=' ')
-          end if
-        end if
-        ! constant flow
-        qch = this%chterm(n)
-        if (qch < DZERO) then
-          qtout = qtout + qch
-        else
-          qtin = qtin + qch
-        end if
-        call UWWORD(line, iloc, 11, 3, text, n, qch, SEP=' ')
-        ! complete qtin
-        qtin = qtin + qin + qinternalin + qro + qfrommover + qrai
-        ! complete qtout
-        qtout = qtout + qevt + qwdw + qext + qtomover + qinternalout
-        ! error
-        qerr = qtin + qtout
-        ! percent difference
-        qavg = DHALF * (qtin - qtout)
-        qerrpd = DZERO
-        if (qavg /= DZERO) then
-          qerrpd = DHUNDRED * qerr / qavg
-        end if
-        call UWWORD(line, iloc, 11, 3, text, n, qerr, SEP=' ')
-        call UWWORD(line, iloc, 11, 3, text, n, qerrpd)
-        ! -- write data for lake
-        write(iout, '(1X,A)') line(1:iloc)
-      end do
-
+      call this%budobj%write_flowtable(this%dis)
     end if
     !
     ! -- Output lake budget
-    call this%budget%budget_ot(kstp, kper, iout)
+    call this%budobj%write_budtable(kstp, kper, iout)
     !
     ! -- return
     return
@@ -4743,9 +4426,10 @@ contains
       deallocate(this%laketables)
     end if
     !
-    ! -- Lake objects
-    call this%budget%budget_da()
-    deallocate(this%budget)
+    ! -- budobj
+    call this%budobj%budgetobject_da()
+    deallocate(this%budobj)
+    nullify(this%budobj)
     !
     ! -- outlets
     if (this%noutlets > 0) then
@@ -4760,10 +4444,18 @@ contains
       call mem_deallocate(this%simoutrate)
     endif
     !
+    ! -- package csv table
+    if (this%ipakcsv > 0) then
+      call this%pakcsvtab%table_da()
+      deallocate(this%pakcsvtab)
+      nullify(this%pakcsvtab)
+    end if
+    !
     ! -- scalars
     call mem_deallocate(this%iprhed)
     call mem_deallocate(this%istageout)
     call mem_deallocate(this%ibudgetout)
+    call mem_deallocate(this%ipakcsv)
     call mem_deallocate(this%nlakes)
     call mem_deallocate(this%noutlets)
     call mem_deallocate(this%ntables)
@@ -4830,6 +4522,7 @@ contains
     call mem_deallocate(this%r2)
     call mem_deallocate(this%dh0)
     call mem_deallocate(this%s0)
+    call mem_deallocate(this%qgwf0)
     !
     ! -- lake connection variables
     call mem_deallocate(this%imap)
@@ -5232,9 +4925,6 @@ contains
     ! -- formats
 10  format('Error: Boundary "',a,'" for observation "',a, &
            '" is invalid in package "',a,'"')
-30  format('Error: Boundary name not provided for observation "',a, &
-           '" in package "',a,'"')
-60  format('Error: Invalid node number in OBS input: ',i0)
     !
     do i = 1, this%obs%npakobs
       obsrv => this%obs%pakobs(i)%obsrv
@@ -5319,7 +5009,7 @@ contains
       if (obsrv%ObsTypeId == 'STAGE') then
         n = size(obsrv%indxbnds)
         if (n > 1) then
-          write (ermsg, '(4x,a,4(1x,a))') &
+          write(ermsg, '(4x,a,4(1x,a))') &
             'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
             'for observation', trim(adjustl(obsrv%Name)), &
             ' must be assigned to a lake with a unique boundname.'
@@ -5334,7 +5024,7 @@ contains
         do j = 1, size(obsrv%indxbnds)
           nn1 =  obsrv%indxbnds(j)
           if (nn1 < 1 .or. nn1 > this%noutlets) then
-            write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
+            write(ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
               'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
               ' outlet must be > 0 and <=', this%noutlets, &
               '(specified value is ', nn1, ')'
@@ -5347,7 +5037,7 @@ contains
         do j = 1, size(obsrv%indxbnds)
           nn1 =  obsrv%indxbnds(j)
           if (nn1 < 1 .or. nn1 > this%maxbound) then
-            write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
+            write(ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
               'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
               ' lake connection number must be > 0 and <=', this%maxbound, &
               '(specified value is ', nn1, ')'
@@ -5358,7 +5048,7 @@ contains
         do j = 1, size(obsrv%indxbnds)
           nn1 =  obsrv%indxbnds(j)
           if (nn1 < 1 .or. nn1 > this%nlakes) then
-            write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
+            write(ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
               'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
               ' lake must be > 0 and <=', this%nlakes, &
               '(specified value is ', nn1, ')'
@@ -5507,6 +5197,38 @@ contains
       ! -- Return
       return
   end subroutine lak_cfupdate
+
+  subroutine lak_bound_update(this)
+  ! ******************************************************************************
+  ! lak_bound_update -- store the lake head and connection conductance in the
+  !   bound array
+  ! ******************************************************************************
+  !
+  !    SPECIFICATIONS:
+  ! ------------------------------------------------------------------------------
+      class(LakType), intent(inout) :: this
+      integer(I4B) :: j, n, node
+      real(DP) :: hlak, head, clak
+  ! ------------------------------------------------------------------------------
+  !
+  ! -- Return if no lak lakes
+      if (this%nbound == 0) return
+  !
+  ! -- Calculate hcof and rhs for each lak entry
+      do n = 1, this%nlakes
+        hlak = this%xnewpak(n)
+        do j = this%idxlakeconn(n), this%idxlakeconn(n+1)-1
+          node = this%cellid(j)
+          head = this%xnew(node)
+          call this%lak_calculate_conn_conductance(n, j, hlak, head, clak)
+          this%bound(1, j) = hlak
+          this%bound(2, j) = clak
+        end do
+      end do
+      !
+      ! -- Return
+      return
+  end subroutine lak_bound_update
 
   subroutine lak_solve(this, update)
   ! **************************************************************************
@@ -5780,7 +5502,6 @@ contains
               if (ABS(derv) > DPREC) then
                 dh = resid / derv
               end if
-              !write(*,'(i1,3(1x,g15.7))') 0, resid, resid1, dh
             else
               if (resid < DZERO) then
                 resid = DZERO
@@ -5788,7 +5509,6 @@ contains
               call this%lak_vol2stage(n, resid, dh)
               dh = hlak - dh
               this%ncncvr(n) = 1
-              !write(*,'(i1,3(1x,g15.7))') 1, resid, resid1, dh
             end if
             !
             ! -- determine if the updated stage is outside the endpoints
@@ -5840,7 +5560,6 @@ contains
               end if
             end if
             if (ibflg == 1) then
-              !write(*,*) 'using bisection'
               ! -- change end points
               ! -- root is between r1 and residb
               if (this%r1(n)*residb < DZERO) then
@@ -5865,8 +5584,6 @@ contains
             this%ncncvr(n) = 1
           end if
           this%xnewpak(n) = hlak
-          !
-          !write(*,'(4x,2(i4.4,1x),2(g15.7,1x))') n, iter, this%seep0(n), this%seep(n)
           !
           ! -- save iterates for lake
           this%seep0(n) = this%seep(n)
@@ -6020,29 +5737,6 @@ contains
     ! -- calculate the available water
     call this%lak_calculate_available(n, hlak, avail, &
                                       ra, ro, qinf, ex, hp)
-    !!
-    !! -- calculate the aquifer sources to the lake
-    !do j = this%idxlakeconn(n), this%idxlakeconn(n+1)-1
-    !  igwfnode = this%cellid(j)
-    !  head = this%xnew(igwfnode) + hp
-    !  call this%lak_estimate_conn_exchange(1, n, j, idry, hlak, head, qlakgw, clak, avail)
-    !end do
-    !!
-    !! -- add rainfall
-    !call this%lak_calculate_rainfall(n, hlak, ra)
-    !avail = avail + ra
-    !!
-    !! -- calculate runoff
-    !call this%lak_calculate_runoff(n, ro)
-    !avail = avail + ro
-    !!
-    !! -- calculate inflow
-    !call this%lak_calculate_inflow(n, qinf)
-    !avail = avail + qinf
-    !!
-    !! -- calculate external flow terms
-    !call this%lak_calculate_external(n, ex)
-    !avail = avail + ex
     !
     ! -- calculate groundwater seepage
     do j = this%idxlakeconn(n), this%idxlakeconn(n+1)-1
@@ -6080,5 +5774,449 @@ contains
     return
   end subroutine lak_calculate_residual
 
+  subroutine lak_setup_budobj(this)
+! ******************************************************************************
+! lak_setup_budobj -- Set up the budget object that stores all the lake flows
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule, only: LENBUDTXT
+    ! -- dummy
+    class(LakType) :: this
+    ! -- local
+    integer(I4B) :: nbudterm
+    integer(I4B) :: nlen
+    integer(I4B) :: j, n, n1, n2
+    integer(I4B) :: maxlist, naux
+    integer(I4B) :: idx
+    real(DP) :: q
+    character(len=LENBUDTXT) :: text
+    character(len=LENBUDTXT), dimension(1) :: auxtxt
+! ------------------------------------------------------------------------------
+    !
+    ! -- Determine the number of lake budget terms. These are fixed for 
+    !    the simulation and cannot change
+    nbudterm = 9
+    nlen = 0
+    do n = 1, this%noutlets
+      if (this%lakein(n) > 0 .and. this%lakeout(n) > 0) then
+        nlen = nlen + 1
+      end if
+    end do
+    if (nlen > 0) nbudterm = nbudterm + 1
+    if (this%imover == 1) nbudterm = nbudterm + 2
+    if (this%naux > 0) nbudterm = nbudterm + 1
+    !
+    ! -- set up budobj
+    call budgetobject_cr(this%budobj, this%name)
+    call this%budobj%budgetobject_df(this%nlakes, nbudterm, 0, 0)
+    idx = 0
+    !
+    ! -- Go through and set up each budget term
+    if (nlen > 0) then
+      text = '    FLOW-JA-FACE'
+      idx = idx + 1
+      maxlist = 2 * this%noutlets
+      naux = 0
+      call this%budobj%budterm(idx)%initialize(text, &
+                                               this%name_model, &
+                                               this%name, &
+                                               this%name_model, &
+                                               this%name, &
+                                               maxlist, .false., .false., &
+                                               naux)
+      !
+      ! -- store connectivity
+      call this%budobj%budterm(idx)%reset(2 * nlen)
+      q = DZERO
+      do n = 1, this%noutlets
+        n1 = this%lakein(n)
+        n2 = this%lakeout(n)
+        if (n1 > 0 .and. n2 > 0) then
+          call this%budobj%budterm(idx)%update_term(n1, n2, q)
+          call this%budobj%budterm(idx)%update_term(n2, n1, -q)
+        end if
+      end do
+    end if
+    !
+    ! -- 
+    text = '             GWF'
+    idx = idx + 1
+    maxlist = this%maxbound 
+    naux = 1
+    auxtxt(1) = '       FLOW-AREA'
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name_model, &
+                                             maxlist, .false., .true., &
+                                             naux, auxtxt)
+    call this%budobj%budterm(idx)%reset(this%maxbound)
+    q = DZERO
+    do n = 1, this%nlakes
+      do j = this%idxlakeconn(n), this%idxlakeconn(n + 1) - 1
+        n2 = this%cellid(j)
+        call this%budobj%budterm(idx)%update_term(n, n2, q)
+      end do
+    end do
+    !
+    ! -- 
+    text = '        RAINFALL'
+    idx = idx + 1
+    maxlist = this%nlakes
+    naux = 0
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name, &
+                                             maxlist, .false., .false., &
+                                             naux)
+    !
+    ! -- 
+    text = '     EVAPORATION'
+    idx = idx + 1
+    maxlist = this%nlakes
+    naux = 0
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name, &
+                                             maxlist, .false., .false., &
+                                             naux)
+    !
+    ! -- 
+    text = '          RUNOFF'
+    idx = idx + 1
+    maxlist = this%nlakes
+    naux = 0
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name, &
+                                             maxlist, .false., .false., &
+                                             naux)
+    !
+    ! -- 
+    text = '      EXT-INFLOW'
+    idx = idx + 1
+    maxlist = this%nlakes
+    naux = 0
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name, &
+                                             maxlist, .false., .false., &
+                                             naux)
+    !
+    ! -- 
+    text = '      WITHDRAWAL'
+    idx = idx + 1
+    maxlist = this%nlakes
+    naux = 0
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name, &
+                                             maxlist, .false., .false., &
+                                             naux)
+    !
+    ! -- 
+    text = '     EXT-OUTFLOW'
+    idx = idx + 1
+    maxlist = this%nlakes
+    naux = 0
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name, &
+                                             maxlist, .false., .false., &
+                                             naux)
+    !
+    ! -- 
+    text = '         STORAGE'
+    idx = idx + 1
+    maxlist = this%nlakes
+    naux = 1
+    auxtxt(1) = '          VOLUME'
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name, &
+                                             maxlist, .false., .false., &
+                                             naux, auxtxt)
+    !
+    ! -- 
+    text = '        CONSTANT'
+    idx = idx + 1
+    maxlist = this%nlakes
+    naux = 0
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%name, &
+                                             this%name_model, &
+                                             this%name, &
+                                             maxlist, .false., .false., &
+                                             naux)
+    !
+    ! -- 
+    if (this%imover == 1) then
+      !
+      ! -- 
+      text = '        FROM-MVR'
+      idx = idx + 1
+      maxlist = this%nlakes
+      naux = 0
+      call this%budobj%budterm(idx)%initialize(text, &
+                                               this%name_model, &
+                                               this%name, &
+                                               this%name_model, &
+                                               this%name, &
+                                               maxlist, .false., .false., &
+                                               naux)
+      !
+      ! -- 
+      text = '          TO-MVR'
+      idx = idx + 1
+      maxlist = this%noutlets
+      naux = 0
+      call this%budobj%budterm(idx)%initialize(text, &
+                                               this%name_model, &
+                                               this%name, &
+                                               this%name_model, &
+                                               this%name, &
+                                               maxlist, .false., .false., &
+                                               naux, ordered_id1=.false.)
+    end if
+    !
+    ! -- 
+    naux = this%naux
+    if (naux > 0) then
+      !
+      ! -- 
+      text = '       AUXILIARY'
+      idx = idx + 1
+      maxlist = this%nlakes
+      call this%budobj%budterm(idx)%initialize(text, &
+                                               this%name_model, &
+                                               this%name, &
+                                               this%name_model, &
+                                               this%name, &
+                                               maxlist, .false., .false., &
+                                               naux, this%auxname)
+    end if
+    !
+    ! -- if lake flow for each reach are written to the listing file
+    if (this%iprflow /= 0) then
+      call this%budobj%flowtable_df(this%iout)
+    end if
+    !
+    ! -- return
+    return
+  end subroutine lak_setup_budobj
+
+  subroutine lak_fill_budobj(this)
+! ******************************************************************************
+! lak_fill_budobj -- copy flow terms into this%budobj
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(LakType) :: this
+    ! -- local
+    integer(I4B) :: naux
+    real(DP), dimension(:), allocatable :: auxvartmp
+    integer(I4B) :: i, j, n, n1, n2
+    integer(I4B) :: ii
+    integer(I4B) :: idx
+    integer(I4B) :: nlen
+    real(DP) :: hlak, hgwf
+    real(DP) :: v, v1
+    real(DP) :: q
+    ! -- formats
+! -----------------------------------------------------------------------------
+    !
+    ! -- initialize counter
+    idx = 0
+
+    
+    ! -- FLOW JA FACE
+    nlen = 0
+    do n = 1, this%noutlets
+      if (this%lakein(n) > 0 .and. this%lakeout(n) > 0) then
+        nlen = nlen + 1
+      end if
+    end do
+    if (nlen > 0) then
+      idx = idx + 1
+      call this%budobj%budterm(idx)%reset(2 * nlen)
+      do n = 1, this%noutlets
+        n1 = this%lakein(n)
+        n2 = this%lakeout(n)
+        if (n1 > 0 .and. n2 > 0) then
+          q = this%simoutrate(n)
+          if (this%imover == 1) then
+            q = q + this%pakmvrobj%get_qtomvr(n)
+          end if
+          call this%budobj%budterm(idx)%update_term(n1, n2, q)
+          call this%budobj%budterm(idx)%update_term(n2, n1, -q)
+        end if
+      end do
+    end if
+
+    
+    ! -- GWF (LEAKAGE)
+    idx = idx + 1
+    call this%budobj%budterm(idx)%reset(this%maxbound)
+    do n = 1, this%nlakes
+      hlak = this%xnewpak(n)
+      do j = this%idxlakeconn(n), this%idxlakeconn(n + 1) - 1
+        n2 = this%cellid(j)
+        hgwf = this%xnew(n2)
+        call this%lak_calculate_conn_warea(n, j, hlak, hgwf, this%qauxcbc(1))
+        q = this%qleak(j)
+        call this%budobj%budterm(idx)%update_term(n, n2, q, this%qauxcbc)
+      end do
+    end do
+
+    
+    ! -- RAIN
+    idx = idx + 1
+    call this%budobj%budterm(idx)%reset(this%nlakes)
+    do n = 1, this%nlakes
+      q = this%precip(n)
+      call this%budobj%budterm(idx)%update_term(n, n, q)
+    end do
+    
+    
+    ! -- EVAPORATION
+    idx = idx + 1
+    call this%budobj%budterm(idx)%reset(this%nlakes)
+    do n = 1, this%nlakes
+      q = this%evap(n)
+      call this%budobj%budterm(idx)%update_term(n, n, q)
+    end do
+    
+
+    ! -- RUNOFF
+    idx = idx + 1
+    call this%budobj%budterm(idx)%reset(this%nlakes)
+    do n = 1, this%nlakes
+      q = this%runoff(n)%value
+      call this%budobj%budterm(idx)%update_term(n, n, q)
+    end do
+
+    
+    ! -- INFLOW
+    idx = idx + 1
+    call this%budobj%budterm(idx)%reset(this%nlakes)
+    do n = 1, this%nlakes
+      q = this%inflow(n)%value
+      call this%budobj%budterm(idx)%update_term(n, n, q)
+    end do
+    
+    
+    ! -- WITHDRAWAL
+    idx = idx + 1
+    call this%budobj%budterm(idx)%reset(this%nlakes)
+    do n = 1, this%nlakes
+      q = this%withr(n)
+      call this%budobj%budterm(idx)%update_term(n, n, q)
+    end do
+
+    
+    ! -- EXTERNAL OUTFLOW
+    idx = idx + 1
+    call this%budobj%budterm(idx)%reset(this%nlakes)
+    do n = 1, this%nlakes
+      call this%lak_get_external_outlet(n, q)
+      ! subtract tomover from external outflow
+      call this%lak_get_external_mover(n, v)
+      q = q + v
+      call this%budobj%budterm(idx)%update_term(n, n, q)
+    end do
+
+    
+    ! -- STORAGE
+    idx = idx + 1
+    call this%budobj%budterm(idx)%reset(this%nlakes)
+    do n = 1, this%nlakes
+      call this%lak_calculate_vol(n, this%xnewpak(n), v1)
+      q = this%qsto(n)
+      this%qauxcbc(1) = v1
+      call this%budobj%budterm(idx)%update_term(n, n, q, this%qauxcbc)
+    end do
+    
+    
+    ! -- CONSTANT FLOW
+    idx = idx + 1
+    call this%budobj%budterm(idx)%reset(this%nlakes)
+    do n = 1, this%nlakes
+      q = this%chterm(n)
+      call this%budobj%budterm(idx)%update_term(n, n, q)
+    end do
+    
+    
+    ! -- MOVER
+    if (this%imover == 1) then
+      
+      ! -- FROM MOVER
+      idx = idx + 1
+      call this%budobj%budterm(idx)%reset(this%nlakes)
+      do n = 1, this%nlakes
+        q = this%pakmvrobj%get_qfrommvr(n)
+        call this%budobj%budterm(idx)%update_term(n, n, q)
+      end do
+      
+      
+      ! -- TO MOVER
+      idx = idx + 1
+      call this%budobj%budterm(idx)%reset(this%noutlets)
+      do n = 1, this%noutlets
+        n1 = this%lakein(n)
+        q = this%pakmvrobj%get_qtomvr(n)
+        if (q > DZERO) then
+          q = -q
+        end if
+        call this%budobj%budterm(idx)%update_term(n1, n1, q)
+      end do
+      
+    end if
+    
+    
+    ! -- AUXILIARY VARIABLES
+    naux = this%naux
+    if (naux > 0) then
+      idx = idx + 1
+      allocate(auxvartmp(naux))
+      call this%budobj%budterm(idx)%reset(this%nlakes)
+      do n = 1, this%nlakes
+        q = DZERO
+        do i = 1, naux
+          ii = (n - 1) * naux + i
+          auxvartmp(i) = this%lauxvar(ii)%value
+        end do
+        call this%budobj%budterm(idx)%update_term(n, n, q, auxvartmp)
+      end do
+      deallocate(auxvartmp)
+    end if
+    !
+    ! --Terms are filled, now accumulate them for this time step
+    call this%budobj%accumulate_terms()
+    !
+    ! -- return
+    return
+  end subroutine lak_fill_budobj
 
 end module LakModule

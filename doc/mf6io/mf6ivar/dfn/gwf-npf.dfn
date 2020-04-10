@@ -6,7 +6,7 @@ type keyword
 reader urword
 optional true
 longname keyword to save NPF flows
-description keyword to indicate that cell-by-cell flow terms will be written to the file specified with ``BUDGET SAVE FILE'' in Output Control.
+description keyword to indicate that budget flow terms will be written to the file specified with ``BUDGET SAVE FILE'' in Output Control.
 
 block options
 name alternative_cell_averaging
@@ -77,7 +77,7 @@ description activates model rewetting.  Rewetting is off by default.
 
 block options
 name wetfct
-type double
+type double precision
 in_record true
 reader urword
 optional false
@@ -133,7 +133,31 @@ type keyword
 reader urword
 optional true
 longname keyword to save specific discharge
-description keyword to indicate that x, y, and z components of specific discharge will be calculated at cell centers and written to the cell-by-cell flow file, which is specified with ``BUDGET SAVE FILE'' in Output Control.
+description keyword to indicate that x, y, and z components of specific discharge will be calculated at cell centers and written to the budget file, which is specified with ``BUDGET SAVE FILE'' in Output Control.  If this option is activated, then additional information may be required in the discretization packages and the GWF Exchange package (if GWF models are coupled).  Specifically, ANGLDEGX must be specified in the CONNECTIONDATA block of the DISU Package; ANGLDEGX must also be specified for the GWF Exchange as an auxiliary variable.
+
+block options
+name save_saturation
+type keyword
+reader urword
+optional true
+longname keyword to save saturation
+description keyword to indicate that cell saturation will be written to the budget file, which is specified with ``BUDGET SAVE FILE'' in Output Control.  Saturation will be saved to the budget file as an auxiliary variable saved with the DATA-SAT text label.  Saturation is a cell variable that ranges from zero to one and can be used by post processing programs to determine how much of a cell volume is saturated.  If ICELLTYPE is 0, then saturation is always one.
+
+block options
+name k22overk
+type keyword
+reader urword
+optional true
+longname keyword to indicate that specified K22 is a ratio
+description keyword to indicate that specified K22 is a ratio of K22 divided by K.  If this option is specified, then the K22 array entered in the NPF Package will be multiplied by K after being read.
+
+block options
+name k33overk
+type keyword
+reader urword
+optional true
+longname keyword to indicate that specified K33 is a ratio
+description keyword to indicate that specified K33 is a ratio of K33 divided by K.  If this option is specified, then the K33 array entered in the NPF Package will be multiplied by K after being read.
 
 block options
 name vkd_filerecord
@@ -214,7 +238,7 @@ reader readarray
 layered true
 optional true
 longname hydraulic conductivity of second ellipsoid axis
-description is the hydraulic conductivity of the second ellipsoid axis; for an unrotated case this is the hydraulic conductivity in the y direction.  If K22 is not included in the GRIDDATA block, then K22 is set equal to K.  For a regular MODFLOW grid (DIS Package is used) in which no rotation angles are specified, K22 is the hydraulic conductivity along columns in the y direction. For an unstructured DISU grid, the user must assign principal x and y axes and provide the angle for each cell face relative to the assigned x direction.  All included cells (IDOMAIN $>$ 0) must have a K22 value greater than zero.
+description is the hydraulic conductivity of the second ellipsoid axis (or the ratio of K22/K if the K22OVERK option is specified); for an unrotated case this is the hydraulic conductivity in the y direction.  If K22 is not included in the GRIDDATA block, then K22 is set equal to K.  For a regular MODFLOW grid (DIS Package is used) in which no rotation angles are specified, K22 is the hydraulic conductivity along columns in the y direction. For an unstructured DISU grid, the user must assign principal x and y axes and provide the angle for each cell face relative to the assigned x direction.  All included cells (IDOMAIN $>$ 0) must have a K22 value greater than zero.
 
 block griddata
 name k33
@@ -225,7 +249,7 @@ reader readarray
 layered true
 optional true
 longname hydraulic conductivity of third ellipsoid axis (L/T)
-description is the hydraulic conductivity of the third ellipsoid axis; for an unrotated case, this is the vertical hydraulic conductivity.  When anisotropy is applied, K33 corresponds to the K33 tensor component.  All included cells (IDOMAIN $>$ 0) must have a K33 value greater than zero.
+description is the hydraulic conductivity of the third ellipsoid axis (or the ratio of K33/K if the K33OVERK option is specified); for an unrotated case, this is the vertical hydraulic conductivity.  When anisotropy is applied, K33 corresponds to the K33 tensor component.  All included cells (IDOMAIN $>$ 0) must have a K33 value greater than zero.
 
 block griddata
 name angle1

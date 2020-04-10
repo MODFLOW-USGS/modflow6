@@ -1,5 +1,4 @@
 import os
-import sys
 import numpy as np
 
 try:
@@ -22,7 +21,7 @@ from framework import testing_framework
 from simulation import Simulation
 
 ex = ['maw01', 'maw01nwt', 'maw01nwtur']
-newtonoptions = [None, [''], ['UNDER_RELAXATION']]
+newtonoptions = [None, [''], ['NEWTON', 'UNDER_RELAXATION']]
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
@@ -36,10 +35,8 @@ def get_model(idx, dir):
     perlen = [1., 1., 1.]
     nstp = [1, 1, 1]
     tsmult = [1., 1., 1.]
-    steady = [True, True, True]
     lenx = 300.
     delr = delc = lenx / float(nrow)
-    botm = [0.]
     strt = 100.
     hnoflo = 1e30
     hdry = -1e30
@@ -86,25 +83,25 @@ def get_model(idx, dir):
                                   delr=delr, delc=delc,
                                   top=100., botm=0.,
                                   idomain=1,
-                                  fname='{}.dis'.format(name))
+                                  filename='{}.dis'.format(name))
 
     # initial conditions
     ic = flopy.mf6.ModflowGwfic(gwf, strt=strt,
-                                fname='{}.ic'.format(name))
+                                filename='{}.ic'.format(name))
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=True,
                                   icelltype=1,
                                   k=hk,
                                   k33=hk,
-                                  fname='{}.npf'.format(name))
+                                  filename='{}.npf'.format(name))
     # storage
     sto = flopy.mf6.ModflowGwfsto(gwf, save_flows=True,
                                   iconvert=1,
                                   ss=0., sy=0.1,
                                   steady_state={0: True},
                                   # transient={1: False},
-                                  fname='{}.sto'.format(name))
+                                  filename='{}.sto'.format(name))
 
     # chd files
     chdlist0 = []
@@ -119,7 +116,7 @@ def get_model(idx, dir):
     chd = flopy.mf6.ModflowGwfchd(gwf,
                                   stress_period_data=chdspdict,
                                   save_flows=False,
-                                  fname='{}.chd'.format(name))
+                                  filename='{}.chd'.format(name))
 
     # wel files
     #wel = flopy.mf6.ModflowGwfwel(gwf, print_input=True, print_flows=True,
@@ -132,20 +129,15 @@ def get_model(idx, dir):
     wellrecarray = [[0, 0.1, wellbottom, 100., 'THIEM', 1]]
     wellconnectionsrecarray = [[0, 0, (0, 0, 1), 100., wellbottom, 1., 0.1]]
     wellperiodrecarray = [[0, 'rate', 0.]]
-    maw = flopy.mf6.ModflowGwfmaw(gwf, fname='{}.maw'.format(name),
+    mawo_dict = {}
+    mawo_dict['maw_obs.csv'] = [('mh1', 'head', 1)]
+    maw = flopy.mf6.ModflowGwfmaw(gwf, filename='{}.maw'.format(name),
                                   print_input=True, print_head=True,
                                   print_flows=True, save_flows=True,
-                                  obs_filerecord=opth,
+                                  observations=mawo_dict,
                                   packagedata=wellrecarray,
                                   connectiondata=wellconnectionsrecarray,
                                   perioddata=wellperiodrecarray)
-    mawo_dict = {}
-    mawo_dict['maw_obs.csv'] = [('mh1', 'head', 1)]
-    maw_obs = flopy.mf6.ModflowUtlobs(gwf,
-                                      fname=opth,
-                                      parent_file=maw, digits=20,
-                                      print_input=True,
-                                      continuous=mawo_dict)
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(gwf,
@@ -157,7 +149,7 @@ def get_model(idx, dir):
                                 saverecord=[('HEAD', 'ALL')],
                                 printrecord=[('HEAD', 'ALL'),
                                              ('BUDGET', 'ALL')],
-                                fname='{}.oc'.format(name))
+                                filename='{}.oc'.format(name))
 
     return sim
 

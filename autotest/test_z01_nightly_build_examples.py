@@ -20,8 +20,19 @@ except:
 
 from simulation import Simulation
 
-exdir = os.path.join('..', '..', 'modflow6-examples', 'mf6')
+# find path to modflow6-examples or modflow6-examples.git directory
+home = os.path.expanduser('~')
+fdir = 'modflow6-examples'
+exdir = None
+for root, dirs, files in os.walk(home):
+    for d in dirs:
+        if d.startswith(fdir):
+            exdir = os.path.join(root, d, 'mf6')
+            break
+    if exdir is not None:
+        break
 testpaths = os.path.join('..', exdir)
+assert os.path.isdir(testpaths)
 
 
 def get_branch():
@@ -58,17 +69,21 @@ def get_mf6_models():
     print('On branch {}'.format(branch))
 
     # tuple of example files to exclude
-    exclude = ('test006_03models',
-               'test018_NAC',
-               'test051_uzf1d_a')
+    exclude = (None,)
 
-    exclude_travis = ('test006_gwf3_transport',
-                      'test022_MNW2_Fig28',
-                      'test007_751x751_confined',
-                      'test006_Gwf1-Lnf1')
+    # update exclude
+    if is_travis:
+        exclude_travis = ('test022_MNW2_Fig28',
+                          'test007_751x751_confined')
+        exclude = exclude + exclude_travis
+    exclude = list(exclude)
+
+    # write a summary of the files to exclude
+    print('list of tests to exclude:')
+    for idx, ex in enumerate(exclude):
+        print('    {}: {}'.format(idx + 1, ex))
 
     # build list of directories with valid example files
-    exclude = list(exclude + exclude_travis)
     dirs = [d for d in os.listdir(exdir)
             if 'test' in d and d not in exclude]
 
@@ -175,7 +190,9 @@ def test_mf6model():
 
 
 def dir_avail():
-    avail = os.path.isdir(exdir)
+    avail = False
+    if exdir is not None:
+        avail = os.path.isdir(exdir)
     if not avail:
         print('"{}" does not exist'.format(exdir))
         print('no need to run {}'.format(os.path.basename(__file__)))

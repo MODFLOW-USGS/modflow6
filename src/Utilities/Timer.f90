@@ -1,7 +1,8 @@
 module TimerModule
   
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DZERO
+  use ConstantsModule, only: LINELENGTH, DZERO
+  use GenericUtilitiesModule, only: sim_message
   implicit none
   private
   public :: start_time
@@ -18,15 +19,20 @@ module TimerModule
 !
 !        SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- dummy
+    ! -- local
+    character(len=LINELENGTH) :: line
     integer(I4B) :: i
+    ! -- format
     character(len=*), parameter :: fmtdt =                                     &
       "(1X,'Run start date and time (yyyy/mm/dd hh:mm:ss): ',                  &
-        &I4,'/',I2.2,'/',I2.2,1X,I2,':',I2.2,':',I2.2,/)"
+      &I4,'/',I2.2,'/',I2.2,1X,I2,':',I2.2,':',I2.2)"
 ! ------------------------------------------------------------------------------
     !    
     ! -- Get current date and time, assign to IBDT, and write to screen
     call date_and_time(values=ibdt)
-    write(*, fmtdt) (ibdt(i), i = 1, 3), (ibdt(i), i = 5, 7)
+    write(line, fmtdt) (ibdt(i), i = 1, 3), (ibdt(i), i = 5, 7)
+    call sim_message(line, skipafter=1)
     !
     ! -- return
     return
@@ -43,6 +49,7 @@ module TimerModule
     integer(i4b), intent(in) :: iout
     integer(I4B), intent(in) :: iprtim
     ! -- local
+    character(len=LINELENGTH) :: line
     INTEGER(I4B) :: IEDT(8), IDPM(12)
     integer(I4B) :: NSPD
     integer(I4B) :: i
@@ -51,16 +58,22 @@ module TimerModule
     real(DP) :: elsec, rsecs
     DATA IDPM/31,28,31,30,31,30,31,31,30,31,30,31/ ! Days per month
     DATA NSPD/86400/  ! Seconds per day
+    ! -- format
+    character(len=*), parameter :: fmtdt =                                       &
+      "(1X,'Run end date and time (yyyy/mm/dd hh:mm:ss): ',                      &
+      &I4,'/',I2.2,'/',I2.2,1X,I2,':',I2.2,':',I2.2)"
 ! ------------------------------------------------------------------------------
 !
 !     Get current date and time, assign to IEDT, and write.
       CALL DATE_AND_TIME(VALUES=IEDT)
-      WRITE(*,1000) (IEDT(I),I=1,3),(IEDT(I),I=5,7)
- 1000 FORMAT(1X,'Run end date and time (yyyy/mm/dd hh:mm:ss): ',               &
-             I4,'/',I2.2,'/',I2.2,1X,I2,':',I2.2,':',I2.2)
+      !
+      ! -- write elapsed time to stdout
+      write(line,fmtdt) (IEDT(I),I=1,3),(IEDT(I),I=5,7)
+      call sim_message(line, skipbefore=1)
+      !
+      ! -- write elapsted time to iout
       IF(IPRTIM.GT.0) THEN
-        WRITE(IOUT,'(1X)')
-        WRITE(IOUT,1000) (IEDT(I),I=1,3),(IEDT(I),I=5,7)
+        call sim_message(line, iunit=iout, skipbefore=1)
       END IF
 !
 !     Calculate elapsed time in days and seconds
@@ -117,21 +130,22 @@ module TimerModule
 !
 !     Write elapsed time to screen
         IF (NDAYS.GT.0) THEN
-          WRITE(*,1010) NDAYS,NHOURS,NMINS,NRSECS
+          WRITE(line, 1010) NDAYS,NHOURS,NMINS,NRSECS
  1010     FORMAT(1X,'Elapsed run time: ',I3,' Days, ',I2,' Hours, ',I2,        &
-            ' Minutes, ',I2,' Seconds',/)
+            ' Minutes, ',I2,' Seconds')
         ELSEIF (NHOURS.GT.0) THEN
-          WRITE(*,1020) NHOURS,NMINS,NRSECS
+          WRITE(line, 1020) NHOURS,NMINS,NRSECS
  1020     FORMAT(1X,'Elapsed run time: ',I2,' Hours, ',I2,                     &
-            ' Minutes, ',I2,' Seconds',/)
+            ' Minutes, ',I2,' Seconds')
         ELSEIF (NMINS.GT.0) THEN
-          WRITE(*,1030) NMINS,NSECS,MSECS
+          WRITE(line, 1030) NMINS,NSECS,MSECS
  1030     FORMAT(1X,'Elapsed run time: ',I2,' Minutes, ',                      &
-            I2,'.',I3.3,' Seconds',/)
+            I2,'.',I3.3,' Seconds')
         ELSE
-          WRITE(*,1040) NSECS,MSECS
- 1040     FORMAT(1X,'Elapsed run time: ',I2,'.',I3.3,' Seconds',/)
+          WRITE(line, 1040) NSECS,MSECS
+ 1040     FORMAT(1X,'Elapsed run time: ',I2,'.',I3.3,' Seconds')
         ENDIF
+        call sim_message(line, skipafter=1)
 !
 !     Write times to file if requested
       IF(IPRTIM.GT.0) THEN

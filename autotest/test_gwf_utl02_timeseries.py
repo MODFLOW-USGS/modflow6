@@ -72,18 +72,18 @@ def get_model(idx, dir):
                                   delr=delr, delc=delc,
                                   top=0., botm=botm,
                                   idomain=1,
-                                  fname='{}.dis'.format(name))
+                                  filename='{}.dis'.format(name))
 
     # initial conditions
     ic = flopy.mf6.ModflowGwfic(gwf, strt=0.,
-                                fname='{}.ic'.format(name))
+                                filename='{}.ic'.format(name))
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=True,
                                   icelltype=0,
                                   k=hk,
                                   k33=hk,
-                                  fname='{}.npf'.format(name))
+                                  filename='{}.npf'.format(name))
 
     # chd files
     chdlist0 = []
@@ -94,19 +94,17 @@ def get_model(idx, dir):
     chd = flopy.mf6.ModflowGwfchd(gwf,
                                   stress_period_data=chdspdict,
                                   save_flows=False,
-                                  fname='{}.chd'.format(name))
+                                  filename='{}.chd'.format(name))
 
 
     # wel files
     wellist1 = []
-    #wellist1.append([(0, 2, 2), -.5])
-    #wellist1.append([(0, 2, 2), -.5])
     wellist1.append([(0, 2, 2), 'ts01'])
     wellist1.append([(0, 2, 2), 'ts02'])
     wel = flopy.mf6.ModflowGwfwel(gwf, pname='wel', print_input=True,
                                   print_flows=True,
-                                  stress_period_data={1: wellist1},
-                                  ts_filerecord='well-rates.ts')
+                                  stress_period_data={1: wellist1})
+                                  #ts_filerecord='well-rates.ts')
 
     # well ts package
     ts_recarray = [(0.0, 0.0, 0.0),
@@ -115,14 +113,13 @@ def get_model(idx, dir):
                    (41272., 3.e30, 3.e30),
                    (15000., 0., 0.),
                    ]
-    wts = flopy.mf6.ModflowUtlts(gwf, pname='well_ts',
-                                 fname='well-rates.ts',
-                                 parent_file=wel,
-                                 timeseries=ts_recarray,
-                                 time_series_namerecord=[('ts01', 'ts02')],
-                                 interpolation_methodrecord=[(
-                                                             'linear',
-                                                             'linear')])
+
+    filename = name + '.wel.ts'
+    time_series_namerecord = [('ts01', 'ts02')]
+    interpolation_methodrecord = [('linear', 'linear')]
+    wel.ts.initialize(filename=filename, timeseries=ts_recarray,
+                      time_series_namerecord=time_series_namerecord,
+                      interpolation_methodrecord=interpolation_methodrecord)
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(gwf,
@@ -134,7 +131,7 @@ def get_model(idx, dir):
                                 saverecord=[('HEAD', 'ALL')],
                                 printrecord=[('HEAD', 'ALL'),
                                              ('BUDGET', 'ALL')],
-                                fname='{}.oc'.format(name))
+                                filename='{}.oc'.format(name))
 
     return sim
 
