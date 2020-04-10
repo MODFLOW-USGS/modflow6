@@ -57,7 +57,12 @@ def get_model(idx, dir):
                                save_flows=True, print_flows=True)
 
     # create iterative model solution and register the gwf model with it
-    ims = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
+    csv0 = '{}.outer.ims.csv'.format(name)
+    csv1 = '{}.inner.ims.csv'.format(name)
+    ims = flopy.mf6.ModflowIms(sim,
+                               csv_outer_output_filerecord=csv0,
+                               csv_inner_output_filerecord=csv1,
+                               print_option='SUMMARY',
                                outer_hclose=hclose,
                                outer_maximum=nouter,
                                under_relaxation='NONE',

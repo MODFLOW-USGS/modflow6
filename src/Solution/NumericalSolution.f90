@@ -89,9 +89,9 @@ module NumericalSolutionModule
     !
     ! -- convergence summary information
     character(len=31), dimension(:), pointer, contiguous :: caccel => NULL()
-    integer(I4B), pointer                                :: icsvout => NULL()
+    integer(I4B), pointer                                :: icsvouterout => NULL()
+    integer(I4B), pointer                                :: icsvinnerout => NULL()
     integer(I4B), pointer                                :: nitermax => NULL()
-    integer(I4B), pointer                                :: nitercnt => NULL()
     integer(I4B), pointer                                :: convnmod => NULL()
     integer(I4B), dimension(:), pointer, contiguous      :: convmodstart => NULL()
     integer(I4B), dimension(:), pointer, contiguous      :: locdv => NULL()
@@ -268,9 +268,9 @@ contains
     call mem_allocate(this%res_lim, 'RES_LIM', solutionname)
     call mem_allocate(this%numtrack, 'NUMTRACK', solutionname)
     call mem_allocate(this%ibflag, 'IBFLAG', solutionname)
-    call mem_allocate(this%icsvout, 'ICSVOUT', solutionname)
+    call mem_allocate(this%icsvouterout, 'ICSVOUTEROUT', solutionname)
+    call mem_allocate(this%icsvinnerout, 'ICSVINNEROUT', solutionname)
     call mem_allocate(this%nitermax, 'NITERMAX', solutionname)
-    call mem_allocate(this%nitercnt, 'NITERCNT', solutionname)
     call mem_allocate(this%convnmod, 'CONVNMOD', solutionname)
     call mem_allocate(this%iallowptc, 'IALLOWPTC', solutionname)
     call mem_allocate(this%iptcopt, 'IPTCOPT', solutionname)
@@ -313,9 +313,9 @@ contains
     this%res_lim = DZERO
     this%numtrack = 0
     this%ibflag = 0
-    this%icsvout = 0
+    this%icsvouterout = 0
+    this%icsvinnerout = 0
     this%nitermax = 0
-    this%nitercnt = 0
     this%convnmod = 0
     this%iallowptc = 1
     this%iptcopt = 0
@@ -543,16 +543,29 @@ contains
               trim(keyword)
             call store_error(errmsg)
           end if
-        case ('CSV_OUTPUT')
+        case ('CSV_OUTER_OUTPUT')
           call this%parser%GetStringCaps(keyword)
           if (keyword == 'FILEOUT') then
             call this%parser%GetString(fname)
-            this%icsvout = getunit()
-            call openfile(this%icsvout, iout, fname, 'CSV_OUTPUT',  &
+            this%icsvouterout = getunit()
+            call openfile(this%icsvouterout, iout, fname, 'CSV_OUTER_OUTPUT',  &
                           filstat_opt='REPLACE')
-            write(iout,fmtcsvout) trim(fname), this%icsvout
+            write(iout,fmtcsvout) trim(fname), this%icsvouterout
           else
-            write(errmsg,'(4x,a)') 'IMS sln_ar: OPTIONAL CSV_OUTPUT ' //       &
+            write(errmsg,'(4x,a)') 'IMS sln_ar: OPTIONAL CSV_OUTER_OUTPUT ' // &
+              'KEYWORD MUST BE FOLLOWED BY FILEOUT'
+            call store_error(errmsg)
+          end if
+        case ('CSV_INNER_OUTPUT')
+          call this%parser%GetStringCaps(keyword)
+          if (keyword == 'FILEOUT') then
+            call this%parser%GetString(fname)
+            this%icsvinnerout = getunit()
+            call openfile(this%icsvinnerout, iout, fname, 'CSV_INNER_OUTPUT',  &
+                          filstat_opt='REPLACE')
+            write(iout,fmtcsvout) trim(fname), this%icsvinnerout
+          else
+            write(errmsg,'(4x,a)') 'IMS sln_ar: OPTIONAL CSV_INNER_OUTPUT ' // &
               'KEYWORD MUST BE FOLLOWED BY FILEOUT'
             call store_error(errmsg)
           end if
@@ -868,7 +881,7 @@ contains
     this%lrch = 0
 
     ! allocate space for saving solver convergence history
-    if (this%iprims == 2) then
+    if (this%iprims == 2 .or. this%icsvinnerout > 0) then
       this%nitermax = this%nitermax * this%mxiter
     else
       this%nitermax = 1
@@ -1065,9 +1078,9 @@ contains
     call mem_deallocate(this%res_lim)
     call mem_deallocate(this%numtrack)
     call mem_deallocate(this%ibflag)
-    call mem_deallocate(this%icsvout)
+    call mem_deallocate(this%icsvouterout)
+    call mem_deallocate(this%icsvinnerout)
     call mem_deallocate(this%nitermax)
-    call mem_deallocate(this%nitercnt)
     call mem_deallocate(this%convnmod)
     call mem_deallocate(this%iallowptc)
     call mem_deallocate(this%iptcopt)
@@ -1196,40 +1209,55 @@ contains
     
   end subroutine      
       
-  ! write the header for the solver output to the CSV file
+  ! write the header for the solver output to the CSV files
   subroutine writeCSVHeader(this)  
     class(NumericalSolutionType) :: this
     ! local
     integer(I4B) :: im
     class(NumericalModelType), pointer :: mp
-    
-    if (this%icsvout > 0) then
-      write(this%icsvout, '(*(G0,:,","))', advance='NO')                     &
-        'total_iterations', 'totim', 'kper', 'kstp', 'nouter', 'ninner',     &
-        'solution_dvmax', 'solution_dvmax_model', 'solution_dvmax_node'
+    !
+    ! -- code
+    !
+    ! -- outer iteration csv header
+    if (this%icsvouterout > 0) then
+      write(this%icsvouterout, '(*(G0,:,","))')                              &
+        'total_inner_iterations', 'totim', 'kper', 'kstp', 'nouter',         &
+        'inner_iterations', 'solution_outer_dvmax',                          &
+        'solution_outer_dvmax_model', 'solution_outer_dvmax_package',        &
+        'solution_outer_dvmax_node'
+    end if
+    !
+    ! -- inner iteration csv header
+    if (this%icsvinnerout > 0) then
+      write(this%icsvinnerout, '(*(G0,:,","))', advance='NO')                &
+        'total_inner_iterations', 'totim', 'kper', 'kstp', 'nouter',         &
+        'ninner', 'solution_inner_dvmax', 'solution_inner_dvmax_model',      &
+        'solution_inner_dvmax_node'
       if (this%iprims == 2) then
-        write(this%icsvout, '(*(G0,:,","))', advance='NO')                   &
-          '', 'solution_drmax', 'solution_drmax_model',                      &
-          'solution_drmax_node', 'solution_alpha'
+        write(this%icsvinnerout, '(*(G0,:,","))', advance='NO')              &
+          '', 'solution_inner_drmax', 'solution_inner_drmax_model',          &
+          'solution_inner_drmax_node', 'solution_inner_alpha'
         if (this%imslinear%ilinmeth == 2) then
-          write(this%icsvout, '(*(G0,:,","))', advance='NO')                 &
-            '', 'solution_omega'
+          write(this%icsvinnerout, '(*(G0,:,","))', advance='NO')            &
+            '', 'solution_inner_omega'
         end if
         ! -- check for more than one model
         if (this%convnmod > 1) then
           do im=1,this%modellist%Count()
             mp => GetNumericalModelFromList(this%modellist, im)
-            write(this%icsvout, '(*(G0,:,","))', advance='NO')               &
-              '', trim(adjustl(mp%name)) // '_dvmax',                        &
-              trim(adjustl(mp%name)) // '_dvmax_node',                       &
-              trim(adjustl(mp%name)) // '_drmax',                            &
-              trim(adjustl(mp%name)) // '_drmax_node'
+            write(this%icsvinnerout, '(*(G0,:,","))', advance='NO')          &
+              '', trim(adjustl(mp%name)) // '_inner_dvmax',                  &
+              trim(adjustl(mp%name)) // '_inner_dvmax_node',                 &
+              trim(adjustl(mp%name)) // '_inner_drmax',                      &
+              trim(adjustl(mp%name)) // '_inner_drmax_node'
           end do
         end if
       end if
-      write(this%icsvout,'(a)') ''
+      write(this%icsvinnerout,'(a)') ''
     end if
-    
+    !
+    ! -- return
+    return
   end subroutine writeCSVHeader
   
   ! advances the exchanges and models in this solution by 1 (sub)timestep
@@ -1313,11 +1341,10 @@ contains
   !
   ! it updates the convergence flag "this%icnvg" accordingly
   subroutine doIteration(this, kiter)
-    use TdisModule, only: kstp, kper
+    use TdisModule, only: kstp, kper, totim
     class(NumericalSolutionType) :: this    
     integer(I4B), intent(in) :: kiter
     ! local
-    integer(I4B) :: ic, im    
     class(NumericalModelType), pointer :: mp
     class(NumericalExchangeType), pointer :: cp    
     character(len=LINELENGTH) :: title
@@ -1325,9 +1352,13 @@ contains
     character(len=LINELENGTH) :: line
     character(len=LENPAKLOC) :: cmod
     character(len=LENPAKLOC) :: cpak
-    character(len=34) :: strh
+    character(len=LENPAKLOC) :: cpakout
+    character(len=LENPAKLOC) :: strh
     character(len=25) :: cval
     character(len=7) :: cmsg
+    integer(I4B) :: ic
+    integer(I4B) :: im    
+    integer(I4B) :: icsv0
     integer(I4B) :: ntabrows
     integer(I4B) :: ntabcols
     integer(I4B) :: i0, i1    
@@ -1338,16 +1369,23 @@ contains
     integer(I4B) :: iend
     integer(I4B) :: icnvgmod
     integer(I4B) :: iptc
+    integer(I4B) :: nodeu
+    integer(I4B) :: ipos0
+    integer(I4B) :: ipos1
     real(DP) :: dxmax_nur
     real(DP) :: dxmax
     real(DP) :: ptcf
     real(DP) :: ttform
     real(DP) :: ttsoln
     real(DP) :: dpak
+    real(DP) :: outer_hncg
     ! formats
 !   -----------------------------------------------------------------------------
     !
-    ! -- code     
+    ! -- code
+    !
+    ! -- initialize local variables
+    icsv0 = max(1, this%itertot + 1)
     !
     ! -- create header for outer iteration table
     if (this%iprims > 0) then
@@ -1543,9 +1581,9 @@ contains
       call mp%get_mcellid(0, cmod)
       call mp%model_cc(kiter, iend, icnvgmod, cpak, dpak)
       if (abs(dpak) > DZERO) then
-        write(cpak, '(a,a)') trim(cmod) // trim(cpak)
+        write(cpakout, '(a,a)') trim(cmod) // trim(cpak)
       else
-        cpak = ' '
+        cpakout = ' '
       end if
     end do
     !
@@ -1555,7 +1593,7 @@ contains
       ! -- write message to stdout
       if (iend /= 0) then
         write(line, '(3a)')                                                       &
-          'PACKAGE (', trim(cpak), ') CAUSED CONVERGENCE FAILURE'
+          'PACKAGE (', trim(cpakout), ') CAUSED CONVERGENCE FAILURE'
         call sim_message(line)
       end if
     end if
@@ -1568,7 +1606,7 @@ contains
       else
         cmsg = '*'
       end if
-      if (len_trim(cpak) > 0) then
+      if (len_trim(cpakout) > 0) then
         !
         ! -- add data to outertab
         call this%outertab%add_term(cval)
@@ -1582,7 +1620,7 @@ contains
         end if
         call this%outertab%add_term(dpak)
         call this%outertab%add_term(cmsg)
-        call this%outertab%add_term(cpak)
+        call this%outertab%add_term(cpakout)
       end if
     end if
     !
@@ -1610,12 +1648,19 @@ contains
       !
       ! -- check for convergence if newton under-relaxation applied
       if (inewtonur /= 0) then
+        !
+        ! -- calculate maximum change in heads in cells that have
+        !    not been adjusted by newton under-relxation
         call this%sln_maxval(this%neq, this%dxold, dxmax)
         !
         ! -- evaluate convergence
         if (abs(dxmax) <= this%hclose .and.                                      &
-            abs(this%hncg(kiter)) <= this%hclose) then
+            abs(this%hncg(kiter)) <= this%hclose .and.                           &
+            abs(dpak) <= this%hclose) then
           this%icnvg = 1
+          !
+          ! -- reset outer head change and location for output
+          call this%sln_outer_check(this%hncg(kiter), this%lrch(1,kiter))
           !
           ! -- write revised head change data after 
           !    newton under-relaxation
@@ -1641,13 +1686,52 @@ contains
         end if
       end if
     end if
+    !
+    ! -- write to outer iteration csv file
+    if (this%icsvouterout > 0) then
+      !
+      ! -- set outer head change variable
+      outer_hncg = this%hncg(kiter)
+      !
+      ! -- model conververgence error 
+      if (abs(outer_hncg) > abs(dpak)) then
+        !
+        ! -- get model number and user node number
+        call this%sln_get_nodeu(this%lrch(1,kiter), im, nodeu)
+        cpak = ''
+      !
+      ! -- package convergence error
+      !    JDH - consider modifying cc routines to return cpak, dpak, and
+      !          ipakloc so that cpak does not have to be parsed to create
+      !          csvouter output file
+      else
+        outer_hncg = dpak
+        ipos0 = index(cmod,'_')
+        read(cmod(1:ipos0-1), *) im
+        ipos0 = index(cpak,'(')
+        ipos1 = index(cpak,')')
+        read(cpak(ipos0+1:ipos1-1), *) nodeu
+        cpak = cpak(1:ipos0-2)
+      end if
+      !
+      ! -- write line
+      write(this%icsvouterout, '(*(G0,:,","))')                                  &
+          this%itertot, totim, kper, kstp, kiter, iter,                          &
+          outer_hncg, im, trim(cpak), nodeu
+    end if
+    !
+    ! -- write to inner iteration csv file
+    if (this%icsvinnerout > 0) then
+      call this%csv_convergence_summary(this%icsvinnerout, totim, kper, kstp,    &
+                                        kiter, iter, icsv0)
+    end if
     
   end subroutine doIteration
   
   ! finalize the solution calculate, called after the non-linear iteration loop
   ! when used without subtiming, do isubtime == 1
   subroutine finalizeIteration(this, kiter, isgcnvg, isubtime, isuppress_output)
-    use TdisModule, only: totim, kper, kstp
+    use TdisModule, only: kper, kstp
     class(NumericalSolutionType) :: this
     integer(I4B), intent(in) :: kiter ! the number at which the iteration loop was exited
     integer(I4B), intent(inout) :: isgcnvg
@@ -1657,7 +1741,6 @@ contains
     integer(I4B) :: ic, im
     class(NumericalModelType), pointer :: mp
     class(NumericalExchangeType), pointer :: cp
-    integer(I4B) :: nodeu
     
     ! -- formats for convergence info 
     character(len=*), parameter :: fmtnocnvg =                                 &
@@ -1699,27 +1782,7 @@ contains
       call this%convergence_summary(iout, this%convnmod+1, this%itertot)
     end if
     !
-    ! -- write to csv file
-    if (this%icsvout > 0) then
-      if (this%iprims < 2) then
-        !
-        ! -- determine the total number of iterations at the end of this outer
-        this%nitercnt = this%nitercnt + this%itertot
-        !
-        ! -- get model number and user node number
-        call this%sln_get_nodeu(this%lrch(1,kiter), im, nodeu)
-        !
-        ! -- write line
-        write(this%icsvout, '(*(G0,:,","))')                                 &
-            this%nitercnt, totim, kper, kstp, kiter, this%itertot,           &
-            this%hncg(kiter), im, nodeu
-      else
-        call this%csv_convergence_summary(this%icsvout, totim, kper, kstp,   &
-                                          this%itertot)
-      end if
-    end if
-    !
-    !
+    ! -- set solution goup convergence flag
     if (this%icnvg == 0) isgcnvg = 0
     !
     ! -- Calculate flow for each model
@@ -1810,8 +1873,9 @@ contains
       tag = 'MAXIMUM RESIDUAL MODEL-(CELLID)'
       call this%innertab%initialize_column(tag, LENPAKLOC, alignment=TABRIGHT)
     !
-    ! -- reset the output unit
+    ! -- reset the output unit and the number of rows (maxbound)
     else
+      call this%innertab%set_maxbound(itertot)
       call this%innertab%set_iout(iu)
     end if
     !
@@ -1862,7 +1926,8 @@ contains
   end subroutine convergence_summary
 
 
-  subroutine csv_convergence_summary(this, iu, totim, kper, kstp, itertot)
+  subroutine csv_convergence_summary(this, iu, totim, kper, kstp, kouter,        &
+                                     niter, istart)
 ! ******************************************************************************
 ! csv_convergence_summary -- Save convergence summary to a csv file
 ! ******************************************************************************
@@ -1877,11 +1942,11 @@ contains
     real(DP), intent(in) :: totim
     integer(I4B), intent(in) :: kper
     integer(I4B), intent(in) :: kstp
-    integer(I4B), intent(in) :: itertot
+    integer(I4B), intent(in) :: kouter
+    integer(I4B), intent(in) :: niter
+    integer(I4B), intent(in) :: istart
     ! -- local
-    integer(I4B) :: i
-    integer(I4B) :: i0
-    integer(I4B) :: iouter
+    integer(I4B) :: itot
     integer(I4B) :: im
     integer(I4B) :: j
     integer(I4B) :: k
@@ -1891,16 +1956,14 @@ contains
     real(DP) :: dv
     real(DP) :: dr
 ! ------------------------------------------------------------------------------
-    iouter = 1
-    i0 = 0
-    do k = 1, itertot
-      this%nitercnt = this%nitercnt + 1
-      i = this%itinner(k)
-      if (i <= i0) then
-        iouter = iouter + 1
-      end if
+    !
+    ! -- initialize local variables
+    itot = istart
+    !
+    ! -- write inner iteration results to the inner csv output file
+    do k = 1, niter
       write(iu, '(*(G0,:,","))', advance='NO')                                 &
-        this%nitercnt, totim, kper, kstp, iouter, i
+        itot, totim, kper, kstp, kouter, k
       !
       ! -- solution summary
       dv = DZERO
@@ -1948,8 +2011,8 @@ contains
       ! -- write line
       write(iu,'(a)') ''
       !
-      ! -- update i0
-      i0 = i
+      ! -- update itot
+      itot = itot + 1
     end do
     !
     ! -- return
