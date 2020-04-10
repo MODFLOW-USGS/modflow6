@@ -59,6 +59,7 @@ module TableModule
     procedure :: finalize_table  
     procedure :: set_maxbound
     procedure :: set_title
+    procedure :: set_iout
     procedure :: print_list_entry
 
     procedure, private :: allocate_strings
@@ -880,6 +881,27 @@ module TableModule
     ! -- return
     return
   end subroutine set_title
+  
+  subroutine set_iout(this, iout)
+! ******************************************************************************
+! set_iout -- reset iout
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(TableType) :: this
+    integer(I4B), intent(in) :: iout
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    ! -- set iout
+    this%iout = iout
+    !
+    ! -- return
+    return
+  end subroutine set_iout   
   
   subroutine print_list_entry(this, i, nodestr, q, bname)
 ! ******************************************************************************
