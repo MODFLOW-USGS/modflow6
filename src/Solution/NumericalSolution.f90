@@ -74,6 +74,7 @@ module NumericalSolutionModule
     integer(I4B), pointer                                :: ibcount => NULL()
     integer(I4B), pointer                                :: icnvg => NULL()
     integer(I4B), pointer                                :: itertot => NULL() ! total nr. of linear solves per call to sln_ca
+    integer(I4B), pointer                                :: innertot => NULL() ! total nr. of inner iterations for simulation
     integer(I4B), pointer                                :: mxiter => NULL()
     integer(I4B), pointer                                :: linmeth => NULL()
     integer(I4B), pointer                                :: nonmeth => NULL()
@@ -255,6 +256,7 @@ contains
     call mem_allocate(this%ibcount, 'IBCOUNT', solutionname)
     call mem_allocate(this%icnvg, 'ICNVG', solutionname)
     call mem_allocate(this%itertot, 'ITERTOT', solutionname)
+    call mem_allocate(this%innertot, 'INNERTOT', solutionname)
     call mem_allocate(this%mxiter, 'MXITER', solutionname)
     call mem_allocate(this%linmeth, 'LINMETH', solutionname)
     call mem_allocate(this%nonmeth, 'NONMETH', solutionname)
@@ -300,6 +302,7 @@ contains
     this%ibcount = 0
     this%icnvg = 0
     this%itertot = 0
+    this%innertot = 0
     this%mxiter = 0
     this%linmeth = 1
     this%nonmeth = 0
@@ -1065,6 +1068,7 @@ contains
     call mem_deallocate(this%ibcount)
     call mem_deallocate(this%icnvg)
     call mem_deallocate(this%itertot)
+    call mem_deallocate(this%innertot)
     call mem_deallocate(this%mxiter)
     call mem_deallocate(this%linmeth)
     call mem_deallocate(this%nonmeth)
@@ -1385,7 +1389,7 @@ contains
     ! -- code
     !
     ! -- initialize local variables
-    icsv0 = max(1, this%itertot + 1)
+    icsv0 = max(1, this%innertot + 1)
     !
     ! -- create header for outer iteration table
     if (this%iprims > 0) then
@@ -1491,8 +1495,10 @@ contains
     CALL this%sln_ls(kiter, kstp, kper, iter, iptc, ptcf)
     call code_timer(1, ttsoln, this%ttsoln)
     !
-    ! -- increment the counter storing the total number of linear iterations
+    ! -- increment counters storing the total number of linear iterations
+    !    for this timestep and all timesteps
     this%itertot = this%itertot + iter
+    this%innertot = this%innertot + iter
     !
     ! -- save matrix to a file
     !    to enable set itestmat to 1 and recompile
@@ -1716,7 +1722,7 @@ contains
       !
       ! -- write line
       write(this%icsvouterout, '(*(G0,:,","))')                                  &
-          this%itertot, totim, kper, kstp, kiter, iter,                          &
+          this%innertot, totim, kper, kstp, kiter, iter,                          &
           outer_hncg, im, trim(cpak), nodeu
     end if
     !
