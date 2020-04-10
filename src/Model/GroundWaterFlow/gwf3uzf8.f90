@@ -1196,9 +1196,7 @@ contains
     real(DP), intent(inout) :: dpak
     ! -- local
     character(len=LENPAKLOC) :: cloc
-    character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: tag
-    character(len=20) :: cellid
     integer(I4B) :: icheck
     integer(I4B) :: ipakfail
     integer(I4B) :: locdrejinfmax
@@ -1207,7 +1205,6 @@ contains
     integer(I4B) :: ntabrows
     integer(I4B) :: ntabcols
     integer(I4B) :: n
-    integer(I4B) :: node
     real(DP) :: qtolfact
     real(DP) :: drejinf
     real(DP) :: drejinfmax
@@ -1215,7 +1212,6 @@ contains
     real(DP) :: drchmax
     real(DP) :: dseep
     real(DP) :: dseepmax
-    real(DP) :: dmax
     ! format
 ! --------------------------------------------------------------------------
     !
