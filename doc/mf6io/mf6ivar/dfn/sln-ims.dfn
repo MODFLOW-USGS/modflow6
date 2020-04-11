@@ -58,7 +58,7 @@ reader urword
 tagged false
 optional false
 longname file keyword
-description name of the ascii comma separated values output file to write maximum head change convergence information at the end of each outer iteration for each time step.
+description name of the ascii comma separated values output file to write maximum dependent-variable (head) change convergence information at the end of each outer iteration for each time step.
 
 block options
 name csv_inner_output_filerecord
@@ -91,7 +91,7 @@ reader urword
 tagged false
 optional false
 longname file keyword
-description name of the ascii comma separated values output file to write solver convergence information. Comma separated values output includes maximum head change and maximum residual convergence information for the solution and each model (if the solution includes more than one model) and linear acceleration information for each inner iteration.
+description name of the ascii comma separated values output file to write solver convergence information. Comma separated values output includes maximum dependent-variable (head) change and maximum residual convergence information for the solution and each model (if the solution includes more than one model) and linear acceleration information for each inner iteration.
 
 block options
 name no_ptcrecord
@@ -129,8 +129,8 @@ name outer_hclose
 type double precision
 reader urword
 optional false
-longname head change criterion
-description real value defining the head change criterion for convergence of the outer (nonlinear) iterations, in units of length. When the maximum absolute value of the head change at all nodes during an iteration is less than or equal to OUTER\_HCLOSE, iteration stops. Commonly, OUTER\_HCLOSE equals 0.01.
+longname dependent-variable change criterion
+description real value defining the dependent-variable (head) change criterion for convergence of the outer (nonlinear) iterations, in units of length. When the maximum absolute value of the dependent-variable change at all nodes during an iteration is less than or equal to OUTER\_HCLOSE, iteration stops. Commonly, OUTER\_HCLOSE equals 0.01.
 
 block nonlinear
 name outer_maximum
@@ -154,7 +154,7 @@ type double precision
 reader urword
 optional true
 longname under relaxation reduction factor
-description real value defining the reduction factor for the learning rate (under-relaxation term) of the delta-bar-delta algorithm. The value of UNDER\_RELAXATION\_THETA is between zero and one. If the change in the variable (head) is of opposite sign to that of the previous iteration, the under-relaxation term is reduced by a factor of UNDER\_RELAXATION\_THETA. The value usually ranges from 0.3 to 0.9; a value of 0.7 works well for most problems. UNDER\_RELAXATION\_THETA only needs to be specified if UNDER\_RELAXATION is DBD.
+description real value defining the reduction factor for the learning rate (under-relaxation term) of the delta-bar-delta algorithm. The value of UNDER\_RELAXATION\_THETA is between zero and one. If the change in the dependent-variable (head) is of opposite sign to that of the previous iteration, the under-relaxation term is reduced by a factor of UNDER\_RELAXATION\_THETA. The value usually ranges from 0.3 to 0.9; a value of 0.7 works well for most problems. UNDER\_RELAXATION\_THETA only needs to be specified if UNDER\_RELAXATION is DBD.
 
 block nonlinear
 name under_relaxation_kappa
@@ -162,7 +162,7 @@ type double precision
 reader urword
 optional true
 longname under relaxation increment for the learning rate
-description real value defining the increment for the learning rate (under-relaxation term) of the delta-bar-delta algorithm. The value of UNDER\_RELAXATION\_kappa is between zero and one. If the change in the variable (head) is of the same sign to that of the previous iteration, the under-relaxation term is increased by an increment of UNDER\_RELAXATION\_KAPPA. The value usually ranges from 0.03 to 0.3; a value of 0.1 works well for most problems. UNDER\_RELAXATION\_KAPPA only needs to be specified if UNDER\_RELAXATION is DBD.
+description real value defining the increment for the learning rate (under-relaxation term) of the delta-bar-delta algorithm. The value of UNDER\_RELAXATION\_kappa is between zero and one. If the change in the dependent-variable (head) is of the same sign to that of the previous iteration, the under-relaxation term is increased by an increment of UNDER\_RELAXATION\_KAPPA. The value usually ranges from 0.03 to 0.3; a value of 0.1 works well for most problems. UNDER\_RELAXATION\_KAPPA only needs to be specified if UNDER\_RELAXATION is DBD.
 
 block nonlinear
 name under_relaxation_gamma
@@ -228,8 +228,8 @@ name inner_hclose
 type double precision
 reader urword
 optional false
-longname head change tolerance
-description real value defining the head change criterion for convergence of the inner (linear) iterations, in units of length. When the maximum absolute value of the head change at all nodes during an iteration is less than or equal to INNER\_HCLOSE, the matrix solver assumes convergence. Commonly, INNER\_HCLOSE is set an order of magnitude less than the OUTER\_HCLOSE value specified for the NONLINEAR block.
+longname dependent-variable change tolerance
+description real value defining the dependent-variable (head) change criterion for convergence of the inner (linear) iterations, in units of length. When the maximum absolute value of the dependent-variable change at all nodes during an iteration is less than or equal to INNER\_HCLOSE, the matrix solver assumes convergence. Commonly, INNER\_HCLOSE is set an order of magnitude less than the OUTER\_HCLOSE value specified for the NONLINEAR block.
 
 block linear
 name rcloserecord
@@ -257,7 +257,7 @@ in_record true
 reader urword
 optional true
 longname flow residual tolerance
-description an optional keyword that defines the specific flow residual criterion used.  STRICT--an optional keyword that is used to specify that INNER\_RCLOSE represents a infinity-Norm (absolute convergence criteria) and that the head and flow convergence criteria must be met on the first inner iteration (this criteria is equivalent to the criteria used by the MODFLOW-2005 PCG package~\citep{hill1990preconditioned}). L2NORM\_RCLOSE--an optional keyword that is used to specify that INNER\_RCLOSE represents a L-2 Norm closure criteria instead of a infinity-Norm (absolute convergence criteria). When L2NORM\_RCLOSE is specified, a reasonable initial INNER\_RCLOSE value is 0.1 times the number of active cells when meters and seconds are the defined \mf length and time.  RELATIVE\_RCLOSE--an optional keyword that is used to specify that INNER\_RCLOSE represents a relative L-2 Norm reduction closure criteria instead of a infinity-Norm (absolute convergence criteria). When RELATIVE\_RCLOSE is specified, a reasonable initial INNER\_RCLOSE value is $1.0 \times 10^{-4}$ and convergence is achieved for a given inner (linear) iteration when $\Delta h \le$ INNER\_HCLOSE and the current L-2 Norm is $\le$ the product of the RELATIVE\_RCLOSE and the initial L-2 Norm for the current inner (linear) iteration. If RCLOSE\_OPTION is not specified, an absolute residual (infinity-norm) criterion is used.
+description an optional keyword that defines the specific flow residual criterion used.  STRICT--an optional keyword that is used to specify that INNER\_RCLOSE represents a infinity-Norm (absolute convergence criteria) and that the dependent-variable (head) and flow convergence criteria must be met on the first inner iteration (this criteria is equivalent to the criteria used by the MODFLOW-2005 PCG package~\citep{hill1990preconditioned}). L2NORM\_RCLOSE--an optional keyword that is used to specify that INNER\_RCLOSE represents a L-2 Norm closure criteria instead of a infinity-Norm (absolute convergence criteria). When L2NORM\_RCLOSE is specified, a reasonable initial INNER\_RCLOSE value is 0.1 times the number of active cells when meters and seconds are the defined \mf length and time.  RELATIVE\_RCLOSE--an optional keyword that is used to specify that INNER\_RCLOSE represents a relative L-2 Norm reduction closure criteria instead of a infinity-Norm (absolute convergence criteria). When RELATIVE\_RCLOSE is specified, a reasonable initial INNER\_RCLOSE value is $1.0 \times 10^{-4}$ and convergence is achieved for a given inner (linear) iteration when $\Delta h \le$ INNER\_HCLOSE and the current L-2 Norm is $\le$ the product of the RELATIVE\_RCLOSE and the initial L-2 Norm for the current inner (linear) iteration. If RCLOSE\_OPTION is not specified, an absolute residual (infinity-norm) criterion is used.
 
 block linear
 name linear_acceleration
@@ -297,7 +297,7 @@ type integer
 reader urword
 optional true
 longname drop tolerance used to drop preconditioner terms
-description optional integer value defining the interval used to explicitly recalculate the residual of the flow equation using the solver coefficient matrix, the latest head estimates, and the right hand side. For problems that benefit from explicit recalculation of the residual, a number between 4 and 10 is appropriate. By default, NUMBER\_ORTHOGONALIZATIONS is zero.
+description optional integer value defining the interval used to explicitly recalculate the residual of the flow equation using the solver coefficient matrix, the latest dependent-variable (head) estimates, and the right hand side. For problems that benefit from explicit recalculation of the residual, a number between 4 and 10 is appropriate. By default, NUMBER\_ORTHOGONALIZATIONS is zero.
 
 block linear
 name scaling_method

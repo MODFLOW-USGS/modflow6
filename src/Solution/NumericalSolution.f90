@@ -1237,25 +1237,23 @@ contains
         'total_inner_iterations', 'totim', 'kper', 'kstp', 'nouter',         &
         'ninner', 'solution_inner_dvmax', 'solution_inner_dvmax_model',      &
         'solution_inner_dvmax_node'
-      if (this%iprims == 2) then
-        write(this%icsvinnerout, '(*(G0,:,","))', advance='NO')              &
-          '', 'solution_inner_drmax', 'solution_inner_drmax_model',          &
-          'solution_inner_drmax_node', 'solution_inner_alpha'
-        if (this%imslinear%ilinmeth == 2) then
-          write(this%icsvinnerout, '(*(G0,:,","))', advance='NO')            &
-            '', 'solution_inner_omega'
-        end if
-        ! -- check for more than one model
-        if (this%convnmod > 1) then
-          do im=1,this%modellist%Count()
-            mp => GetNumericalModelFromList(this%modellist, im)
-            write(this%icsvinnerout, '(*(G0,:,","))', advance='NO')          &
-              '', trim(adjustl(mp%name)) // '_inner_dvmax',                  &
-              trim(adjustl(mp%name)) // '_inner_dvmax_node',                 &
-              trim(adjustl(mp%name)) // '_inner_drmax',                      &
-              trim(adjustl(mp%name)) // '_inner_drmax_node'
-          end do
-        end if
+      write(this%icsvinnerout, '(*(G0,:,","))', advance='NO')              &
+        '', 'solution_inner_drmax', 'solution_inner_drmax_model',          &
+        'solution_inner_drmax_node', 'solution_inner_alpha'
+      if (this%imslinear%ilinmeth == 2) then
+        write(this%icsvinnerout, '(*(G0,:,","))', advance='NO')            &
+          '', 'solution_inner_omega'
+      end if
+      ! -- check for more than one model
+      if (this%convnmod > 1) then
+        do im=1,this%modellist%Count()
+          mp => GetNumericalModelFromList(this%modellist, im)
+          write(this%icsvinnerout, '(*(G0,:,","))', advance='NO')          &
+            '', trim(adjustl(mp%name)) // '_inner_dvmax',                  &
+            trim(adjustl(mp%name)) // '_inner_dvmax_node',                 &
+            trim(adjustl(mp%name)) // '_inner_drmax',                      &
+            trim(adjustl(mp%name)) // '_inner_drmax_node'
+        end do
       end if
       write(this%icsvinnerout,'(a)') ''
     end if
@@ -1374,6 +1372,7 @@ contains
     integer(I4B) :: icnvgmod
     integer(I4B) :: iptc
     integer(I4B) :: nodeu
+    integer(I4B) :: ipak
     integer(I4B) :: ipos0
     integer(I4B) :: ipos1
     real(DP) :: dxmax_nur
@@ -1580,14 +1579,18 @@ contains
     !
     ! -- additional convergence check for model packages
     icnvgmod = this%icnvg
-    dpak = DZERO
     cpak = ' '
-    do im=1,this%modellist%Count()
+    ipak = 0
+    dpak = DZERO
+    do im = 1, this%modellist%Count()
       mp => GetNumericalModelFromList(this%modellist, im)
       call mp%get_mcellid(0, cmod)
-      call mp%model_cc(kiter, iend, icnvgmod, cpak, dpak)
-      if (abs(dpak) > DZERO) then
-        write(cpakout, '(a,a)') trim(cmod) // trim(cpak)
+      call mp%model_cc(this%innertot, kiter, iend, icnvgmod, cpak, ipak, dpak)
+      if (ipak /= 0) then
+        ipos0 = index(cpak, '-', back=.true.)
+        ipos1 = len_trim(cpak)
+        write(cpakout, '(a,a,"-(",i0,")",a)')                                    &
+          trim(cmod), cpak(1:ipos0-1), ipak, cpak(ipos0:ipos1) 
       else
         cpakout = ' '
       end if
@@ -1699,31 +1702,30 @@ contains
       ! -- set outer head change variable
       outer_hncg = this%hncg(kiter)
       !
-      ! -- model conververgence error 
+      ! -- model convergence error 
       if (abs(outer_hncg) > abs(dpak)) then
         !
         ! -- get model number and user node number
         call this%sln_get_nodeu(this%lrch(1,kiter), im, nodeu)
-        cpak = ''
+        cpakout = ''
       !
       ! -- package convergence error
-      !    JDH - consider modifying cc routines to return cpak, dpak, and
-      !          ipakloc so that cpak does not have to be parsed to create
-      !          csvouter output file
       else
+        !
+        ! -- set convergence error, model number, user node number,
+        !    and package name
         outer_hncg = dpak
-        ipos0 = index(cmod,'_')
+        ipos0 = index(cmod, '_')
         read(cmod(1:ipos0-1), *) im
-        ipos0 = index(cpak,'(')
-        ipos1 = index(cpak,')')
-        read(cpak(ipos0+1:ipos1-1), *) nodeu
-        cpak = cpak(1:ipos0-2)
+        nodeu = ipak
+        ipos0 = index(cpak, '-', back=.true.)
+        cpakout = cpak(1:ipos0-1)
       end if
       !
-      ! -- write line
+      ! -- write line to outer iteration csv file
       write(this%icsvouterout, '(*(G0,:,","))')                                  &
-          this%innertot, totim, kper, kstp, kiter, iter,                          &
-          outer_hncg, im, trim(cpak), nodeu
+          this%innertot, totim, kper, kstp, kiter, iter,                         &
+          outer_hncg, im, trim(cpakout), nodeu
     end if
     !
     ! -- write to inner iteration csv file
