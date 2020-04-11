@@ -150,12 +150,14 @@ module NumericalModelModule
     integer(I4B), intent(in) :: inwtflag
   end subroutine model_nr
 
-  subroutine model_cc(this, kiter, iend, icnvgmod, cpak, dpak)
+  subroutine model_cc(this, innertot, kiter, iend, icnvgmod, cpak, ipak, dpak)
     class(NumericalModelType) :: this
+    integer(I4B),intent(in) :: innertot
     integer(I4B),intent(in) :: kiter
     integer(I4B),intent(in) :: iend
     integer(I4B),intent(in) :: icnvgmod
     character(len=LENPAKLOC), intent(inout) :: cpak
+    integer(I4B), intent(inout) :: ipak
     real(DP), intent(inout) :: dpak
   end subroutine model_cc
 
