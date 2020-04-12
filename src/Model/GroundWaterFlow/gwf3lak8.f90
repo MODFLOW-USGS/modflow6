@@ -3888,7 +3888,7 @@ contains
     return
   end subroutine lak_fn
 
-  subroutine lak_cc(this, kiter, iend, icnvgmod, cpak, dpak)
+  subroutine lak_cc(this, innertot, kiter, iend, icnvgmod, cpak, ipak, dpak)
 ! **************************************************************************
 ! lak_cc -- Final convergence check for package
 ! **************************************************************************
@@ -3898,10 +3898,12 @@ contains
     use TdisModule, only: totim, kstp, kper, delt
     ! -- dummy
     class(LakType), intent(inout) :: this
+    integer(I4B), intent(in) :: innertot
     integer(I4B), intent(in) :: kiter
     integer(I4B), intent(in) :: iend
     integer(I4B), intent(in) :: icnvgmod
     character(len=LENPAKLOC), intent(inout) :: cpak
+    integer(I4B), intent(inout) :: ipak
     real(DP), intent(inout) :: dpak
     ! -- local
     character(len=LENPAKLOC) :: cloc
@@ -3960,7 +3962,7 @@ contains
         !
         ! -- determine the number of columns and rows
         ntabrows = 1
-        ntabcols = 8
+        ntabcols = 9
         if (this%noutlets > 0) then
           ntabcols = ntabcols + 2
         end if
@@ -3972,6 +3974,8 @@ contains
                                      finalize=.FALSE.)
         !
         ! -- add columns to package csv
+        tag = 'total_inner_iterations'
+        call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
         tag = 'totim'
         call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
         tag = 'kper'
@@ -4058,22 +4062,25 @@ contains
       !
       ! -- set dpak and cpak
       if (ABS(dhmax) > abs(dpak)) then
+        ipak = locdhmax
         dpak = dhmax
-        write(cloc, "(a,'-(',i0,')-',a)")                                        &
-          trim(this%name), locdhmax, 'stage'
+        write(cloc, "(a,'-',a)")                                        &
+          trim(this%name), 'stage'
         cpak = trim(cloc)
       end if
       if (ABS(dgwfmax) > abs(dpak)) then
+        ipak = locdgwfmax
         dpak = dgwfmax
-        write(cloc, "(a,'-(',i0,')-',a)")                                        &
-          trim(this%name), locdhmax, 'gwf'
+        write(cloc, "(a,'-',a)")                                        &
+          trim(this%name), 'gwf'
         cpak = trim(cloc)
       end if
       if (this%noutlets > 0) then
         if (ABS(dqoutmax) > abs(dpak)) then
+          ipak = locdqoutmax
           dpak = dqoutmax
-          write(cloc, "(a,'-(',i0,')-',a)")                                       &
-          trim(this%name), locdhmax, 'outlet'
+          write(cloc, "(a,'-',a)")                                       &
+          trim(this%name), 'outlet'
           cpak = trim(cloc)
         end if
       end if
@@ -4082,6 +4089,7 @@ contains
       if (this%ipakcsv /= 0) then
         !
         ! -- write the data
+        call this%pakcsvtab%add_term(innertot)
         call this%pakcsvtab%add_term(totim)
         call this%pakcsvtab%add_term(kper)
         call this%pakcsvtab%add_term(kstp)

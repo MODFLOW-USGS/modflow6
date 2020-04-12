@@ -1,0 +1,267 @@
+This appendix describes changes introduced into MODFLOW 6 in previous releases. These changes may substantially affect users.
+
+\begin{itemize}
+	\item Version mf6.1.0
+	
+	\underline{NEW FUNCTIONALITY}
+	\begin{itemize}
+		\item Added the Skeletal Storage, Compaction, and Subsidence (CSUB) Package. The one-dimensional effective-stress based compaction theory implemented in the CSUB Package is documented in Leake and Galloway (2007). The numerical approach used for delay interbeds in the CSUB package is documented in Hoffmann and others (2003) and uses the same one-dimensional effective-stress based compaction theory as coarse-grained and fine-grained no-delay interbed sediments. A number of example problems that use the CSUB Package are documented in the ``MODFLOW 6 CSUB Package Example Problems'' pdf document included in this and subsequent releases.
+	\end{itemize}
+	
+	\underline{BASIC FUNCTIONALITY}
+	\begin{itemize}
+		\item Added an error check to the DISU Package that ensures that an underlying cell has a top elevation that is less than or equal to the bottom of an overlying cell.  An underlying cell is one in which the IHC value for the connection is zero and the connecting node number is greater than the cell node number.
+		\item Added restricted IDOMAIN support for DISU grids.  Users can specify an optional IDOMAIN in the DISU Package input file.  IDOMAIN values must be zero or one.  Vertical pass-through cells (specified with an IDOMAIN value of -1 in the DIS or DISV Package input files) are not supported for DISU.   
+		\item NPF Package will now write a message to the GWF Model list file to indicate when the SAVE\_SPECIFIC\_DISCHARGE option is invoked.
+		\item Added two new options to the NPF Package.  The K22OVERK option allows the user to enter the anisotropy ratio for K22.  If activated, the K22 values entered by the user in the NPF input file will be multiplied by the K values entered in the NPF input file.  The K33OVERK option allows the user to enter the anisotropy ratio for K33.  If activated, the K33 values entered by the user in the NPF input file will be multiplied by the K values entered in the NPF input file.  With this K33OVERK option, for example, the user can specify a value of 0.1 for K33 and have all K33 values be one tenth of the values specified for K.  The program will terminate with an error if these options are invoked, but arrays for K22 and/or K33 are not provided in the NPF input file.
+		\item Added new MAXERRORS option to mfsim.nam.  If specified, the maximum number of errors stored and printed will be limited to this number.  This can prevent a situation where memory will run out when there are an excessive number of errors.
+		\item Refactored many parts of the code to remove unused variables, conform to stricter FORTRAN standard checks, and allow for new development efforts to be included in the code base.
+	\end{itemize}
+	
+	\underline{STRESS PACKAGES}
+	\begin{itemize}
+		\item There was an error in the calculation of the segmented evapotranspiration rate for the case where the rate did not decrease with depth.  There was another error in which PETM0 was being used as the evapotranspiration rate at the surface instead of the proportion of the evapotranspiration rate at the surface.
+	\end{itemize}
+	
+	\underline{ADVANCED STRESS PACKAGES}
+	\begin{itemize}
+		\item Corrected the way auxiliary variables are handled for the advanced packages.  In some cases, values for auxiliary variables were not being correctly written to the GWF Model budget file or to the advanced package budget file.  A consistent approach for updating and saving auxiliary variables was implemented for the MAW, SFR, LAK, and UZF Packages.
+		\item The user guide was updated to include a missing laksetting that was omitted from the PERIOD block.  The laksetting description now includes an INFLOW option; a description for INFLOW is also now included.
+		\item The LAK package was incorrectly making an error check against NOUTLETS instead of NLAKES.
+		\item For the advanced stress packages, values assigned to the auxiliary variables were not written correctly to the GWF Model budget file, but the values were correct in the advanced package budget file.  Program was modified so that auxiliary variables are correctly written to the GWF Model budget file.
+		\item Corrected several error messages issued by the SFR Package that were not formatted correctly.  
+		\item Fixed a bug in which the lake stage stable would sometimes result in touching numbers.  This only occurred for negative lake stages.
+		\item The UZF Package was built on the UZFKinematicType, which used an array of structures.  A large array like this, can cause memory problems.  The UZFKinematicType was replaced with a new UzfCellGroupType, which is a structure of arrays and is much more memory efficient.  The underlying UZF algorithm did not change.
+	\end{itemize}
+	
+	\underline{SOLUTION}
+	\begin{itemize}
+		\item Add ALL and FIRST options to optional NO\_PTC optional keyword in OPTIONS block. If NO\_PTC option is FIRST, PTC is disabled for the first stress period but is applied in all subsequent steady-state stress periods. If NO\_PTC option is ALL, PTC is disabled for all steady-state stress periods. If the NO\_PTC options is not defined, PTC is disabled for all steady-state stress periods (this is consistent with the behaviour of the NO\_PTC option in previous versions).
+	\end{itemize}
+	
+	\item Version mf6.0.4--Feb. 27, 2019
+	
+	\underline{BASIC FUNCTIONALITY}
+	\begin{itemize}
+		\item Addressed issue with pointing contiguous pointer vectors/arrays to non-contiguous pointer vectors/arrays that caused code compilation failure with gfortran-8. A consequence of addressing this issue is that all pointer vectors/arrays that are allocated or pointed to using the memory manager must be defined to be contiguous.
+		\item Corrected a problem with the reading of grid data from a binary file, in which the program was reading a binary header for each row of data.
+		\item Added a new error check for very small time steps.  If the value of the starting time is equal to the ending time (starting time plus the time step length), then the time step is too small to be differentiated by the program based on the precision of floating point numbers.  The program will terminate with an error in this case.  The program will also terminate if the storage package with a transient stress period has a time step length of zero.
+		\item The observation package was modified to use non-advancing output instead of fixed length strings when writing ascii output. The previous use of fixed length strings resulted in truncation of ascii observation output when the product of user-specified \texttt{digits} + 7 and the number of observations exceeded 5000.
+		\item Corrected an error in the GWF-GWF Exchange module that caused the specific discharge values in the child model to be calculated incorrectly.  The calculation was incorrect because the face normal for the child model was pointing toward the center of the cell instead of outward.
+		\item Minor refactoring to improve code clarity.
+	\end{itemize}
+	
+	\underline{STRESS PACKAGES}
+	\begin{itemize}
+		\item Minor refactoring to improve code clarity.
+	\end{itemize}
+	
+	\underline{ADVANCED STRESS PACKAGES}
+	\begin{itemize}
+		\item Modified the Multi-Aquifer Well (MAW) Package so that the HEAD\_LIMIT and RATE\_SCALING options work for injection wells.  Prior to this change, these options only worked for extraction wells.  These options can be used to reduce or even shut off well injection as the head in the well rises above user-specified levels.
+		\item Added stage and residual convergence checks to the SFR package to make sure that stage and upstream flow changes between successive outer iterations are less than OUTER\_HCLOSE and OUTER\_RCLOSEBND, respectively. This addition is expected to be useful for steady-state simulations with complicated networks and simple reaches.
+		\item Modified the final convergence check for the LAK package to use OUTER\_HCLOSE when evaluating lake stage changes between successive outer iterations.
+		\item Modified the final convergence check for the UZF package to use OUTER\_RCLOSEBND when evaluating rejected infiltration, groundwater recharge, and groundwater seepage changes between successive outer iterations.
+		\item Minor refactoring to improve code clarity.
+	\end{itemize}
+	
+	\underline{SOLUTION}
+	\begin{itemize}
+		\item Modified pseudo-transient continuation (PTC) approach to use PTC for steady-state stress period for models using the Newton-Raphson formulation for problems with and without the storage (STO) package. Previously, PTC was only used with problems that did not include the STO package (this was not the intended behavior of PTC).
+		\item Added NO\_PTC option to disable PTC for problems where PTC degrades/prevents model convergence. Option only applies to steady-state stress periods for models using the Newton-Raphson formulation. For many problems, PTC can significantly improve convergence behavior for steady-state simulations, and for this reason it is active by default.  In some cases, however, PTC can worsen the convergence behavior, especially when the initial conditions are similar to the solution.  When the initial conditions are similar to, or exactly the same as, the solution and convergence is slow, then this NO\_PTC option should be used to deactivate PTC.  This NO\_PTC option should also be used in order to compare convergence behavior with other MODFLOW versions, as PTC is only available in MODFLOW 6. 
+		\item Small improvements to PTC to reduce the initial PTCDEL value loaded on the diagonal. This reduces the number of iterations required to achieve convergence for steady-state stress periods for most problems.
+		\item Added OUTER\_RCLOSEBND variable that is used when performing final convergence checks on model packages that solve a separate equation not solved by the IMS linear solver. This value represents the maximum allowable residual at any single model package element between successive outer iterations. An example of a model package that would use OUTER\_RCLOSEBND to evaluate convergence is the SFR package which solves a continuity equation for each reach.
+		\item Minor refactoring to improve code clarity.
+	\end{itemize}
+	
+	\item Version mf6.0.3--Aug. 9, 2018
+	
+	\underline{BASIC FUNCTIONALITY}
+	\begin{itemize}
+		\item Fixed issues with observations specified using boundnames that are enclosed in quotes. Previously, the closing quote was retained on a boundname enclosed in quotes and resulted in an error (the erroneous observation boundname could not be found in the package).
+	\end{itemize}
+	
+	\underline{STRESS PACKAGES}
+	\begin{itemize}
+		\item If the AUXMULTNAME keyword was used in combination with time series, then the multiplier was erroneously applied to all time series, and not just the time series in the column to be scaled.  
+		\item For the array-based recharge and evapotranspiration packages, the IRCH and IEVT variables (if specified) must be specified as the first variable listed in the PERIOD block.  A check was added so that the program will terminate with an error if IRCH or IEVT is not the first variable listed in the PERIOD block.
+		\item For the standard boundary packages, the ``to mover'' term (such as DRN-TO-MVR) written to the GWF Model budget was incorrect.  The budget terms were incorrect because the accumulator variables were not initialized to zero. 
+		\item For regular MODFLOW grids, the recharge and evapotranspiration arrays of size (NCOL, NROW) were being echoed to the listing file (if requested by the user) of size (NCOL * NROW). 
+	\end{itemize}
+	
+	\underline{ADVANCED STRESS PACKAGES}
+	\begin{itemize}
+		\item Fixed spelling of the THIEM keyword in the source code and in the input instructions of the MAW Package.
+		\item Fixed an issue with the SFR package when the specified evaporation exceeds the sum of specified and calculated reach inflows, rainfall, and specified runoff. In this case, evaporation is set equal to the sum of specified and calculated reach inflows, rainfall, and specified runoff. Also if a negative runoff is specified and this value exceeds specified and calculated reach inflows, and rainfall then runoff is set to the sum of reach inflows and evaporation is set to zero.
+		\item Fixed an issue in the MAW package budget information written to the listing file and MAW cell-by-cell budget file when a previously active well is inactivated. The ratesim variable was not being reset to zero for these wells and the simulated rate from the last stress period when the well was active was being reported.
+		\item Program now terminates with an error if the OUTLETS block is present in the LAK package file and NOUTLETS is not specified or specified to be zero in the DIMENSIONS block.  Previously, this did not cause an error condition in the LAK package but would result in a segmentation fault error in the MVR package if LAK package OUTLETS are specified as providers.
+		\item Program now terminates with an error when a DIVERSION block is present in a SFR package file but no diversions (all ndiv values are 0) are specified in the PACKAGEDATA block. 
+	\end{itemize}
+	
+	\underline{SOLUTION}
+	\begin{itemize}
+		\item Fixed bug related to not allocating the preconditioner work array if a non-zero drop tolerance is specified but the number of levels is not specified or specified to be zero. In the case where the number of levels is not specified or specified to be zero the preconditioner work array is dimensioned to the product of the number of cells (NEQ) and the maximum number of connections for any cell.
+		\item Updated linear solver output so number of levels and drop tolerance are output if either are specified to be greater than zero. 
+	\end{itemize}
+	
+	\item Version mf6.0.2--Feb 23, 2018
+	
+	\underline{BASIC FUNCTIONALITY}
+	\begin{itemize}
+		\item Added a new option, called SAVE\_SPECIFIC\_DISCHARGE to the Node Property Flow Package.  When invoked, $x$, $y$, and $z$ specific discharge components are calculated for the center of each model cell and written to the binary budget file.
+		\item For binary input of grid data, such as initial heads, the array reading utility was not reading a header record consisting of KSTP, KPER, PERTIM, TOTIM, TEXT, NLAY, NROW, NCOL.  This meant that a binary head file written by MODFLOW could not be used as input for a subsequent simulation.  For binary input, the array reading utility now reads a header record before reading the array values.
+		\item The NOGRB option in the discretization packages was not working.  This option will now prevent the binary grid file from being written.
+		\item Removed the PRIVATE attribute for two methods of the discretization packages so that the program works as intended with the latest Intel Fortran release.
+		\item Switched to using a long integer for the memory manager so that memory usage is calculated correctly for large models.
+	\end{itemize}
+	
+	\underline{STRESS PACKAGES}
+	\begin{itemize}
+		\item If a steady-state stress period followed a transient stress period, the storage terms written to the budget file were not being reset to zero.  The program now initializes these budget values to zero for steady-state periods before they are written.
+	\end{itemize}
+	
+	\underline{ADVANCED STRESS PACKAGES}
+	\begin{itemize}
+		\item The STATUS INACTIVE option was not working correctly for the MAW Package.
+		\item Modified the MAW connection conductance calculation so that a linear relation between the water level in a cell and saturation is used for the standard formulation. In the previous version, the same quadratic saturation function was being used for the standard and Newton-Raphson formulation to calculate the MAW connection conductance. 
+		\item Modified the MAW Package so that the top and bottom of the screen for a connection are reset to the top and bottom of the cell, respectively, for SPECIFIED, THEIM, SKIN, and CUMULATIVE conductance equations (CONDEQN). Also, the program will now terminate with an error if a MAW well using SPECIFIED, THEIM, SKIN, or CUMULATIVE conductance equations has more than one connection to a single GWF cell. 
+		\item Modified the MAW package so that the well bottom (BOTTOM) is reset to the cell bottom in the lowermost GWF cell connection in cases where the specified well bottom is above the bottom of this GWF cell.
+	\end{itemize}
+	
+	\underline{SOLUTION}
+	\begin{itemize}
+		\item Prior to applying pseudo transient continuation terms, the Iterative Model Solution confirms that the L2-norm exceeds the previous L2-norm.  If it doesn't then pseudo transient continuation is turned off.  This fixes a rare situation in which convergence could not be achieved for consecutive steady state solutions with the same or similar answers. 
+	\end{itemize}
+	
+	
+	\item Version mf6.0.1--Sep 28, 2017
+	
+	\underline{BASIC FUNCTIONALITY}
+	\begin{itemize}
+		\item There is no requirement that FTYPE entries in the GWF name file should be upper case; however, an upper case convention was being enforced.  FTYPE entries can now be specified using any case.
+		\item Tab characters within model input files were not being skipped correctly.  This has been fixed.
+		\item The program was updated to use the ``approved for release'' disclaimer.  The previous version was still using a ``preliminary software'' disclaimer.
+		\item The source code for time series and time array series was refactored.  Included in the refactoring was a correction to time array series to allow the time array to change from one stress period to the next.  The source file TimeSeriesGroupList.f90 was renamed to TimeSeriesFileList.f90.
+	\end{itemize}
+	
+	\underline{STRESS PACKAGES}
+	\begin{itemize}
+		\item Fixed inconsistency with CHD package observation name in code (\texttt{chd-flow}) and name in the input-output document (\texttt{chd}). Using name defined in input-output document (\texttt{chd}).
+		\item The cell area was not being used in the calculation of recharge and evapotranspiration when list input was used with time series.
+		\item The AUXMULTNAME option was not being applied for recharge and evapotranspiration when the READASARRAYS option was used.
+		\item The program was not terminating with an error if a PERIOD block was encountered with an iper value equal to the previous iper value.  Program now terminates with an error.
+	\end{itemize}
+	
+	\underline{ADVANCED STRESS PACKAGES}
+	\begin{itemize}
+		\item Fixed incorrect sign for SFR package exchange with GWF model (\texttt{sfr}).
+		\item Added option to specify \texttt{none} as the \texttt{bedleak} for a lake-\texttt{GWF} connection in lake (LAK) package. This option makes the lake-\texttt{GWF} connection conductance solely a function of aquifer properties in the connected \texttt{GWF} cell and lakebed sediments are assumed to be absent for this connection.
+		\item Fixed bug in lake (LAK) and multi-aquifer well (MAW) packages that only reset steady-state flag if lake and/or multi-aquifer data are read for a stress period (in the pak\_rp() routines). Using pointer to GWF iss variable in the LAK package and resetting the MAW steady state flag in maw\_rp() routine every stress period, regardless of whether MAW data are specified for a stress period.
+		\item Added a convergence check routine to the GWF Mover Package that requires at least two outer iterations if there are any active movers.  Because mover rates are lagged by one outer iteration, at least two outer iterations are required for some problems.
+		\item Changed the behavior of the LAK Package so that recharge and evapotranspiration are applied to a vertically connected GWF model cell if the lake status is INACTIVE.  Prior to this change, recharge and evapotranspiration were only applied to an underlying GWF model cell if the lake was dry.
+	\end{itemize}
+	
+	\underline{SOLUTION}
+	\begin{itemize}
+		\item Fixed bug in IMS that allowed convergence when outer iteration HCLOSE value was satisfied but the model did not converge during the inner iterations.
+		\item Added STRICT rclose\_option that uses a infinity-Norm RCLOSE criteria but requires HCLOSE and RCLOSE be satisfied on the first inner iteration of an outer iteration. The STRICT option is identical to the closure criteria approach use in the PCG Package in MODFLOW-2005.
+	\end{itemize}
+	
+	\underline{EXCHANGES}
+	\begin{itemize}
+		\item Use of an OPEN/CLOSE file was not being allowed for the OPTIONS and DIMENSIONS blocks of the GWF6-GWF6 exchange input file.  OPEN/CLOSE input is now allowed for both of these blocks.
+	\end{itemize}
+	
+	\item
+	Version mf6.0.0---August 10, 2017
+	
+	\underline{BASIC FUNCTIONALITY}
+	\begin{itemize}
+		\item Removed support for the SINGLE observation type.  All observations must be CONTINUOUS, which means observation values are written for every time step. 
+		\item Added support for a no-data value (3.0E30), which can be used as a placeholder in a time-series file containing multiple time series. Use of the no-data value facilitates combining separate time series into a single file when the time series contain records for differing simulation times.
+		\item Model names specified in the simulation name file cannot have spaces in them.  A check was implemented to terminate with an error if the model name contains spaces.  Model names cannot exceed 16 characters.  Trailing spaces are allowed.
+		\item The name and version of the compiler used to make the run file is now written to the terminal and to the simulation list file.
+		\item Many of the Fortran source files were modified and reformatted.  Unused variables were removed.
+	\end{itemize}
+	
+	\underline{ADVANCED STRESS PACKAGES}
+	\begin{itemize}
+		\item Updated MAW package so that well connection conductance calculations correctly account for THICKSTRT in the NPF package for layers that use THICKSTRT (and are confined).
+		\item Added \texttt{CUMULATIVE} \texttt{coneqn} (conductance) option to MAW package.
+		\item Fixed bug in LAK package weir lake outlet calculation.
+		\item Fixed bug in LAK package when internal outlets were specified and combined with the MVR package that was also moving water internally in the same LAK package.
+		\item Updated the table created when PRINT\_FLOWS is specified in the LAK package OPTIONS block to include internal flow terms if NOUTLETS is greater than 0. 
+		\item Renamed Lake Tables DIMENSIONS block NENTRIES to NROW and added NCOL to DIMENSIONS block.
+		\item Eliminated MAXIMUM\_OUTLET\_DEPTH = 10 [L] as default behavior for MANNING and WEIR LAK package lake outlet types. The maximum depth threshold was used in MODFLOW-2005 lake package because a table was used to calculate lake outflows to SFR. Can still use maximum depth threshold in develop versions of MODFLOW 6 by specifying MAXIMUM\_OUTLET\_DEPTH in the options block with a value.
+		\item Removed MULTILAYER option for UZF package---this option didn't actually do anything.
+		\item Added the requirement that the UZF number be specified as the first value on each line in the PACKAGEDATA block.
+		\item Renamed MAXBOUND in the DIMENSIONS block of the SFR Package to be NREACHES.
+		\item Implemented a check in the SFR Package to make sure that information is specified in the PACKAGEDATA block for every reach.  Program terminates with an error if information for a reach is not found.
+	\end{itemize}
+	
+	\item
+	Version mf6beta0.9.03---June 23, 2017
+	
+	\underline{BASIC FUNCTIONALITY}
+	\begin{itemize}
+		\item Renamed all FTYPE keywords to version 6.  They were named with an 8.  So, for example, the GHB Package is now activated in the GWF name file using ``GHB6'' instead of ``GHB8''.
+		\item Keywords in the simulation name file must now be specified as TDIS6, GWF6, and GWF6-GWF6 to be consistent.
+		\item The DIS Package had grid offsets (XOFFSET and YOFFSET) that could be specified as options.  These offsets were relative to the upper-left corner of the model grid.  The default value for YOFFSET was set to the sum of DELR so that (0, 0) would correspond to the lower-left corner of the model grid.  These options have been removed and replaced with XORIGIN and YORIGIN, which is the coordinate of the lower-left corner of the model grid.  The default value is zero for XORIGIN and YORIGIN.
+		\item Can now specify XORIGIN, YORIGIN, and ANGROT as options for the DISV and DISU packages.  These values are written to the binary grid file, which can be used by post-processors to locate the model grid in space.  These options have no affect on the simulation results.  The default value is 0.0 if not specified.
+		\item Added a new option to the TDIS input file called START\_DATE\_TIME.  This is a 30 character string that represents the simulation starting date and time, preferably in the format described at https://www.w3.org/TR/NOTE-datetime.  The value provided by the user has no affect on the simulation, but if it is provided, the value is written to the simulation list file.
+		\item Changed default behavior for how memory usage is written to the end of the simulation list file.  Added new MEMORY\_PRINT\_OPTION to simulation options to control how memory usage is written.
+		\item Corrections were made to the memory manager to ensure that all memory is deallocated at the end of a simulation.
+	\end{itemize}
+	
+	\underline{INTERNAL FLOW PACKAGES}
+	\begin{itemize}
+		\item Changed the way hydraulic conductivity is specified in the NPF Package.  Users no longer specify HK, VK, and HANI.  Hydraulic conductivity is now specified as ``K''.  If hydraulic conductivity is isotropic, then this is all that needs to be specified.  For anisotropic cases, the user can specify an optional ``K22'' array and an optional ``K33'' array.  For an unrotated conductivity ellipsoid ``K22'' corresponds to hydraulic conductivity in the y direction and ``K33'' corresponds to hydraulic conductivity in the z direction, respectively.
+	\end {itemize}
+	
+	\underline{ADVANCED STRESS PACKAGES}
+	\begin{itemize}
+		\item Modified the MAW Package to include the effects of aquifer anisotropy in the calculation of conductance.
+		\item Simplified the SFR Package connectivity to reflect feedback from beta users. There is no longer a requirement to connect reaches that do not have flow between them.  Program will now terminate with an error if this condition is encountered.
+		\item Added simple routing option to SFR package. This is the equivalent of the specified depth option (icalc=0) in previous versions of MODFLOW. If water is available in the reach, then there can be leakage from the SFR reach into the aquifer.  If no water is available, then no leakage is applied.  STAGE keyword also added and only applies to reaches that use the simple routing option. If the STAGE keyword is not specified for reaches that use the simple routing option the specified stage is set to the top of the reach (depth = 0).
+		\item Added functionality to pass SFR leakage to the aquifer to the highest active layer.
+		\item Converted SFR Manning's to a time-varying, time series aware variable.  
+		\item Updated LAK package so that conductance calculations correctly account for THICKSTRT in the NPF package for layers that use THICKSTRT (and are confined). Also updated EMBEDDEDH and EMBEDDEDV so that the conductance for these connection types are constant for confined layers.
+		\item Converted UZF stress period data to time series aware data.
+		\item Added time-series aware AUXILIARY variables to UZF package.
+		\item Implemented AUXMULTNAME in options block for UZF package (AUXILIARY variables have to be specified). AUXMULTNAME is applied to the GWF cell area and is used to simulated more than one UZF cell per GWF cell. This could be used to simulate different land use classifications (i.e., agricultural and natural land use types) in the same GWF cell.
+	\end{itemize}
+	
+	\underline{SOLUTION}
+	\begin{itemize}
+		\item Reworked IMS convergence information so that model specific convergence information is also printed to each model listing file when PRINT\_OPTION ALL is specified in the IMS OPTIONS block.
+		\item Added csv output option for IMS convergence information. Solution convergence information and model specific convergence information (if the solution includes more than one model) is written to a comma separated value file. If PRINT\_OPTION is NONE or SUMMARY, csv output includes maximum head change convergence information at the end of each outer iteration for each time step. If PRINT\_OPTION is ALL, csv output includes maximum head change and maximum residual convergence information for the solution and each model (if the solution includes more than one model) and linear acceleration information for each inner iteration. 
+	\end{itemize}
+	
+	\item
+	Version mf6beta0.9.02---May 19, 2017
+	\begin{itemize}
+		\item Renamed gwf3.f90 to be lower case.
+		\item Added the missing ``divrate'' variable to the ``sfrsetting'' description in mf6io.pdf.
+		\item Added additional error trapping to the array reading utilities.
+		\item There was a problem with the binary budget file when a GWF Exchange was used to connect a GWF Model with itself.  This has been fixed.
+		\item Standardized `\texttt{to-mvr}' cell-by-cell item in standard stress packages and UZF package.
+		\item Fixed incorrect `\texttt{UZF-EVT}' budget accumulator used in GWF listing budget. 
+		\item Standardized justification of cell-by-cell `\texttt{text}' strings.
+		\item Standardized use of AUXILIARY keyword.
+	\end{itemize}
+	
+	\item
+	Version mf6beta0.9.01---May 11, 2017
+	\begin{itemize}
+		\item Added a copy of the third MODFLOW 6 report. 
+		\item Made several minor corrections to doc/mf6io.pdf.  
+		\item If vertices were specified for DISU, then the last header line was not written to the binary grid file.  This has been corrected.
+	\end{itemize}
+	
+	\item
+	Version mf6beta0.9.00---May 10, 2017
+	\begin{itemize}
+		\item First public release of MODFLOW 6 in beta form. 
+	\end{itemize}
+
+\end{itemize}

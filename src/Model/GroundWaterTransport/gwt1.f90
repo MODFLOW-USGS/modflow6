@@ -630,7 +630,7 @@ module GwtModule
     return
   end subroutine gwt_fc
 
-  subroutine gwt_cc(this, kiter, iend, icnvgmod, cpak, dpak)
+  subroutine gwt_cc(this, innertot, kiter, iend, icnvgmod, cpak, ipak, dpak)
 ! ******************************************************************************
 ! gwt_cc -- GroundWater Transport Model Final Convergence Check
 ! Subroutine: (1) calls package cc routines
@@ -640,10 +640,12 @@ module GwtModule
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwtModelType) :: this
+    integer(I4B),intent(in) :: innertot
     integer(I4B),intent(in) :: kiter
     integer(I4B),intent(in) :: iend
     integer(I4B),intent(in) :: icnvgmod
     character(len=LENPAKLOC), intent(inout) :: cpak
+    integer(I4B), intent(inout) :: ipak
     real(DP), intent(inout) :: dpak
     ! -- local
     !class(BndType), pointer :: packobj
