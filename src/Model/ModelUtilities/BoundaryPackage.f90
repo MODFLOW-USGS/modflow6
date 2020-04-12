@@ -509,7 +509,7 @@ module BndModule
     return
   end subroutine bnd_nur
 
-  subroutine bnd_cc(this, kiter, iend, icnvgmod, cpak, dpak)
+  subroutine bnd_cc(this, innertot, kiter, iend, icnvgmod, cpak, ipak, dpak)
 ! ******************************************************************************
 ! bnd_cc -- additional convergence check for advanced packages
 ! ******************************************************************************
@@ -518,10 +518,12 @@ module BndModule
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(BndType), intent(inout) :: this
+    integer(I4B), intent(in) :: innertot
     integer(I4B), intent(in) :: kiter
     integer(I4B),intent(in) :: iend
     integer(I4B), intent(in) :: icnvgmod
     character(len=LENPAKLOC), intent(inout) :: cpak
+    integer(I4B), intent(inout) :: ipak
     real(DP), intent(inout) :: dpak
     ! -- local
 ! ------------------------------------------------------------------------------
