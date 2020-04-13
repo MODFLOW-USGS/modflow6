@@ -457,10 +457,10 @@ def eval_transport(sim):
                      7.56138739, 7.37415009, 7.46278052, 7.34050542, 7.49958207])
 
     errmsg = 'heads not right for cell (0, 0, 20):\n{}\n{}'.format(hsim, hans)
-    assert np.allclose(hsim, hans), errmsg
+    assert np.allclose(hsim, hans, atol=1.e-4), errmsg
 
     errmsg = 'concs not right for cell (0, 0, 20):\n{}\n{}'.format(csim, cans)
-    assert np.allclose(hsim, hans), errmsg
+    assert np.allclose(hsim, hans, atol=1.e-4), errmsg
 
     makeplot = False
     if makeplot:
