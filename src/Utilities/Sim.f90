@@ -33,6 +33,8 @@ module SimModule
   integer(I4B) :: maxerrors = 1000
   integer(I4B) :: maxerrors_exceeded = 0
   integer(I4B) :: nwarnings = 0
+  integer(I4B) :: maxwarnings = 1000
+  integer(I4B) :: maxwarnings_exceeded = 0
   integer(I4B) :: nnotes = 0
   integer(I4B) :: inc_errors = 100
   integer(I4B) :: inc_warnings = 100
@@ -151,11 +153,13 @@ subroutine store_error_unit(iunit)
   integer(I4B), intent(in) :: iunit
   ! -- local
   character(len=LINELENGTH) :: fname
+  character(len=LINELENGTH) :: errmsg
 ! ------------------------------------------------------------------------------
   !
   inquire(unit=iunit, name=fname)
-  call store_error('ERROR OCCURRED WHILE READING FILE: ')
-  call store_error(trim(adjustl(fname)))
+  write(errmsg,'(3a)')                                                           &
+    "ERROR OCCURRED WHILE READING FILE '", trim(adjustl(fname)), "'"
+  call store_error(errmsg)
   !
   return
 end subroutine store_error_unit
@@ -171,10 +175,12 @@ subroutine store_error_filename(filename)
   ! -- dummy
   character(len=*), intent(in) :: filename
   ! -- local
+  character(len=LINELENGTH) :: errmsg
 ! ------------------------------------------------------------------------------
   !
-  call store_error('ERROR OCCURRED WHILE READING FILE: ')
-  call store_error(trim(adjustl(filename)))
+  write(errmsg,'(3a)')                                                           &
+    "ERROR OCCURRED WHILE READING FILE '", trim(adjustl(filename)), "'"
+  call store_error(errmsg)
   !
   return
 end subroutine store_error_filename
@@ -206,8 +212,12 @@ subroutine store_warning(warnmsg)
     inc_warnings = inc_warnings * 1.1
   end if
   i = count_warnings() + 1
-  nwarnings = i
-  sim_warnings(i) = warnmsg
+  if (i <= maxwarnings) then
+    nwarnings = i
+    sim_warnings(i) = warnmsg
+  else
+    maxwarnings_exceeded = maxwarnings_exceeded + 1
+  end if
   !
   return
 end subroutine store_warning
@@ -254,7 +264,8 @@ logical function print_errors()
 ! ------------------------------------------------------------------------------
   ! -- modules
   ! -- local
-  integer(I4B) :: i, isize
+  integer(I4B) :: i
+  integer(I4B) :: isize
   character(len=LINELENGTH) :: errmsg
   ! -- formats
   character(len=*), parameter :: stdfmt = "(/,'ERROR REPORT:',/)"
@@ -268,9 +279,9 @@ logical function print_errors()
       if (iout > 0) write(iout, stdfmt)
       call sim_message('', fmt=stdfmt)
       do i = 1, isize
-        call write_message(sim_errors(i))
+        call write_message(sim_errors(i), error=.true.)
         if (iout > 0) then
-          call write_message(sim_errors(i), iout)
+          call write_message(sim_errors(i), iunit=iout, error=.true.)
         end if
       enddo
       !
@@ -293,10 +304,11 @@ logical function print_errors()
     endif
   endif
   !
+  ! -- return
   return
 end function print_errors
 
-subroutine print_warnings()
+logical function print_warnings()
 ! ******************************************************************************
 ! Print all warning messages that have been stored
 ! ******************************************************************************
@@ -305,35 +317,53 @@ subroutine print_warnings()
 ! ------------------------------------------------------------------------------
   ! -- modules
   ! -- local
-  integer(I4B) :: i, isize
+  character(len=LINELENGTH) :: msg
+  integer(I4B) :: i
+  integer(I4B) :: isize
   ! -- formats
   character(len=*), parameter :: stdfmt = "(/,'WARNINGS:',/)"
 ! ------------------------------------------------------------------------------
   !
+  ! -- initialize
+  print_warnings = .false.
+  !
+  ! -- print warnings
   if (allocated(sim_warnings)) then
     isize = count_warnings()
-    if (isize>0) then
-      if (iout>0) then
+    if (isize > 0) then
+      print_warnings = .true.
+      if (iout > 0) then
         call sim_message('', fmt=stdfmt, iunit=iout)
       end if
       call sim_message('', fmt=stdfmt)
-      do i=1,isize
+      do i = 1, isize
         call write_message(sim_warnings(i))
-        if (iout>0) then
+        if (iout > 0) then
           call write_message(sim_warnings(i), iout)
         end if
       end do
     end if
     !
+    ! -- write number of additional warnings
+    if (maxwarnings_exceeded > 0) then
+      write(msg, '(i0, a)') maxwarnings_exceeded,                                &
+        ' additional warnings detected but not printed.'
+      call write_message(trim(msg))
+      if (iout > 0) then
+        call write_message(trim(msg), iout)
+      end if
+    end if
+    !
     ! -- write a blank line
-    if (iout>0) then
+    if (iout > 0) then
       call sim_message('', iunit=iout)
     end if
     call sim_message('')
   end if
   !
+  ! -- return
   return
-end subroutine print_warnings
+end function print_warnings
 
 subroutine print_notes(numberlist)
 ! ******************************************************************************
@@ -407,15 +437,25 @@ subroutine write_message(message, iunit, error, skipbefore, skipafter)
   integer(I4B),      intent(in), optional :: skipbefore
   integer(I4B),      intent(in), optional :: skipafter
   ! -- local
-  integer(I4B)              :: jend, i, nblc, junit, leadblank
-  integer(I4B)              :: itake, j
+  integer(I4B)              :: jend
+  integer(I4B)              :: nblc
+  integer(I4B)              :: junit
+  integer(I4B)              :: leadblank
+  integer(I4B)              :: itake
+  integer(I4B)              :: ipos
+  integer(I4B)              :: i
+  integer(I4B)              :: j
   character(len=20)         :: ablank
   character(len=MAXCHARLEN) :: amessage
 ! ------------------------------------------------------------------------------
   !
   amessage = message
-  if (amessage==' ') return
-  if (amessage(1:1).ne.' ') amessage = ' ' // trim(amessage)
+  if (amessage == ' ') return
+  !
+  ! -- ensure that there is at least one blank space at the start of amessage
+  if (amessage(1:1) /= ' ') then
+    amessage = ' ' // trim(amessage)
+  end if
   !
   ! -- initialize local variables
   junit = istdout
@@ -424,37 +464,56 @@ subroutine write_message(message, iunit, error, skipbefore, skipafter)
   j = 0
   !
   ! -- process optional dummy variables
+  !    set the unit number
   if(present(iunit))then
     if (iunit > 0) then
       junit = iunit
     end if
   end if
+  !
+  ! -- add blank lines before writing amessage
   if(present(skipbefore))then
     do i = 1, skipbefore
       call sim_message('', iunit=junit)
     end do
-  endif
+  end if
+  !
+  ! -- prepend amessage with 'Error:' string, if necessary
   if(present(error))then
-    if(error)then
-      nblc=len_trim(amessage)
-      amessage=adjustr(amessage(1:nblc+8))
-      if(nblc+8.lt.len(amessage)) amessage(nblc+9:)=' '
-      amessage(1:8)=' Error: '
+    if (error) then
+      !
+      ! -- evaluate if amessage already includes 'ERROR:' or 'Error:' string
+      ipos = index(amessage, 'ERROR:')
+      if (ipos < 1) then
+        ipos = index(amessage, 'Error:')
+      end if
+      !
+      ! -- prepend amessage with 'Error:' string
+      if (ipos < 1) then
+        nblc = len_trim(amessage)
+        amessage = adjustr(amessage(1:nblc+8))
+        if (nblc+8 < len(amessage)) then
+          amessage(nblc+9:) = ' '
+        end if
+        amessage(1:8) = ' Error: '
+      end if
     end if
   end if
   !
-  do i=1,20
+  ! -- determine the number of leading blanks
+  do i = 1, 20
     if (amessage(i:i).ne.' ') exit
   end do
-  leadblank=i-1
-  nblc=len_trim(amessage)
+  leadblank = i - 1
+  nblc = len_trim(amessage)
   !
+  ! -- parse the amessage into multiple lines
 5 continue
   jend = j + 78 - itake
   if (jend >= nblc) go to 100
-  do i=jend,j+1,-1
-    if(amessage(i:i).eq.' ') then
-      if(itake.eq.0) then
+  do i = jend, j+1, -1
+    if (amessage(i:i).eq.' ') then
+      if (itake.eq.0) then
         call sim_message(amessage(j+1:i), iunit=junit)
         itake = 2 + leadblank
       else
@@ -464,7 +523,7 @@ subroutine write_message(message, iunit, error, skipbefore, skipafter)
       go to 5
     end if
   end do
-  if(itake == 0)then
+  if (itake == 0)then
     call sim_message(amessage(j+1:jend), iunit=junit)
     itake = 2 + leadblank
   else
@@ -473,6 +532,7 @@ subroutine write_message(message, iunit, error, skipbefore, skipafter)
   j = jend
   go to 5
   !
+  ! -- last piece of amessage to write to a line
 100 continue
   jend = nblc
   if (itake == 0)then
@@ -481,6 +541,7 @@ subroutine write_message(message, iunit, error, skipbefore, skipafter)
     call sim_message(ablank(1:leadblank+2)//amessage(j+1:jend), iunit=junit)
   end if
   !
+  ! -- add blank lines at the end of amessage
   if(present(skipafter))then
     do i = 1, skipafter
       call sim_message('', iunit=junit)
@@ -489,10 +550,6 @@ subroutine write_message(message, iunit, error, skipbefore, skipafter)
   !
   ! -- return
   return
-!  !
-!200 continue
-!  call ustop()
-  !
 end subroutine write_message
 
 ! -- this subroutine prints final messages and then stops with the active
@@ -532,16 +589,17 @@ subroutine print_final_message(stopmess, ioutlocal)
   character(len=*), parameter :: fmt = '(1x,a)'
   character(len=*), parameter :: msg = 'Stopping due to error(s)'
   logical :: errorfound  
+  logical :: warningfound
   !---------------------------------------------------------------------------
   call print_notes()
-  call print_warnings()
+  warningfound =  print_warnings()
   errorfound = print_errors()
   if (present(stopmess)) then
     if (stopmess.ne.' ') then
       call sim_message(stopmess, fmt=fmt, iunit=iout)
       call sim_message(stopmess, fmt=fmt)
       if (present(ioutlocal)) then
-        if (ioutlocal > 0 .and. ioutlocal .ne. iout) then
+        if (ioutlocal > 0 .and. ioutlocal /= iout) then
           write(ioutlocal,fmt) trim(stopmess)
           close (ioutlocal)
         endif
@@ -549,6 +607,7 @@ subroutine print_final_message(stopmess, ioutlocal)
     endif
   endif
   !
+  ! -- determine if error condition occurred
   if (errorfound) then
     ireturnerr = 2
     if (iout > 0) then

@@ -158,7 +158,7 @@ def test_sim_errors():
     sim = get_minimal_gwf_simulation(ws,
                                      chdkwargs=chdkwargs)
     sim.write_simulation()
-    err_str = ['11 errors detected.',
+    err_str = ['10 errors detected.',
                'ERROR OCCURRED WHILE READING FILE:',
                'test.chd',
                'Stopping due to error(s)']
@@ -199,11 +199,11 @@ def test_disu_errors():
                                      disukwargs=disukwargs,
                                      chdkwargs={'stress_period_data': [[]]})
     sim.write_simulation()
-    err_str = ['Top elevation (    2.00000    ) for cell 10 is above bottom elevation (',
-               '-1.00000    ) for cell 1. Based on node numbering rules cell 10 must be',
-               'below cell 1.',
-               '3 errors detected.',
-               'Stopping due to error(s)']
+    err_str = ['Error:  Top elevation (    2.00000    ) for cell 10 is above bottom',
+               'elevation (   -1.00000    ) for cell 1. Based on node numbering rules cell',
+               '10 must be below cell 1.',
+               "Error:  ERROR OCCURRED WHILE READING FILE 'test.disu'",
+               '2 errors detected.']
     run_mf6_error(ws, err_str)
     return
 

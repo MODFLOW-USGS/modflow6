@@ -74,7 +74,7 @@ def get_model(idx, dir):
     gwf = flopy.mf6.ModflowGwf(sim, modelname=namea, save_flows=True)
 
     # create iterative model solution and register the gwf model with it
-    ims = flopy.mf6.ModflowIms(sim, outer_hclose=1e-9, inner_hclose=1.e-9)
+    ims = flopy.mf6.ModflowIms(sim, outer_dvclose=1e-9, inner_dvclose=1.e-9)
 
     # dis
     dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,

@@ -1,8 +1,8 @@
 module ChdModule
   !
   use KindModule,           only: DP, I4B
-  use ConstantsModule,      only: DZERO, DONE, NAMEDBOUNDFLAG, LENFTYPE,       &
-                             LENPACKAGENAME
+  use ConstantsModule,      only: DZERO, DONE, NAMEDBOUNDFLAG, LENFTYPE,         &
+                                  LINELENGTH, LENPACKAGENAME
   use ObsModule,            only: DefaultObsIdProcessor
   use BndModule,            only: BndType
   use ObserveModule,        only: ObserveType
@@ -90,10 +90,12 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use SimModule, only: ustop, store_error
-    implicit none
+    ! -- dummy
     class(ChdType), intent(inout) :: this
-    integer(I4B) :: i, node, ibd, ierr
+    ! -- local
+    character(len=LINELENGTH) :: errmsg
     character(len=30) :: nodestr
+    integer(I4B) :: i, node, ibd, ierr
 ! ------------------------------------------------------------------------------
     !
     ! -- Reset previous CHDs to active cell
@@ -112,8 +114,9 @@ contains
       ibd = this%ibound(node)
       if(ibd < 0) then
         call this%dis%noder_to_string(node, nodestr)
-        call store_error('Error.  Cell is already a constant head: ' &
-                         // trim(adjustl(nodestr)))
+        write(errmsg, '(3a)')                                                    &
+          'Cell is already a constant head (', trim(adjustl(nodestr)), ').'
+        call store_error(errmsg)
         ierr = ierr + 1
       else
         this%ibound(node) = -this%ibcnum
