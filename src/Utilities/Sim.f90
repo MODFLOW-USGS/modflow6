@@ -30,12 +30,20 @@ module SimModule
   character(len=MAXCHARLEN), allocatable, dimension(:) :: sim_errors
   character(len=MAXCHARLEN), allocatable, dimension(:) :: sim_warnings
   character(len=MAXCHARLEN), allocatable, dimension(:) :: sim_notes
+  integer(I4B), allocatable, dimension(:) :: icount_errors
+  integer(I4B), allocatable, dimension(:) :: icount_warnings
+  integer(I4B), allocatable, dimension(:) :: icount_notes
+  integer(I4B) :: lenerrors = 0
   integer(I4B) :: nerrors = 0
   integer(I4B) :: maxerrors = 1000
   integer(I4B) :: maxerrors_exceeded = 0
+  integer(I4B) :: lenwarnings = 0
   integer(I4B) :: nwarnings = 0
   integer(I4B) :: maxwarnings = 1000
   integer(I4B) :: maxwarnings_exceeded = 0
+  integer(I4B) :: maxnotes = 1000
+  integer(I4B) :: maxnotes_exceeded = 0
+  integer(I4B) :: lennotes = 0
   integer(I4B) :: nnotes = 0
   integer(I4B) :: inc_errors = 100
   integer(I4B) :: inc_warnings = 100
@@ -100,7 +108,7 @@ function count_notes()
   return
 end function count_notes
 
-subroutine store_error(errmsg)
+subroutine store_error(errmsg, count)
 ! ******************************************************************************
 ! Store an error message for printing at end of simulation
 ! ******************************************************************************
@@ -111,10 +119,20 @@ subroutine store_error(errmsg)
   use ArrayHandlersModule, only: ExpandArray
   ! -- dummy
   character(len=*), intent(in) :: errmsg
+  logical, intent(in), optional :: count
   ! -- local
+  logical :: inc_count
   logical :: inc_array
   integer(I4B) :: i
+  integer(I4B) :: j
 ! ------------------------------------------------------------------------------
+  !
+  ! -- process optional variables
+  if (present(count)) then
+    inc_count = count
+  else
+    inc_count = .true.
+  end if
   !
   ! -- determine if the sim_errors should be expanded
   inc_array = .TRUE.
@@ -127,18 +145,27 @@ subroutine store_error(errmsg)
   ! -- resize sim_errors
   if (inc_array) then
     call ExpandArray(sim_errors, increment=inc_errors)
+    call ExpandArray(icount_errors, increment=inc_errors)
     inc_errors = inc_errors * 1.1
   end if
   !
   ! -- store this error
-  i = count_errors() + 1
+  i = lenerrors + 1
   if (i <= maxerrors) then
-    nerrors = i
+    lenerrors = i
+    if (inc_count) then
+      j = nerrors + 1
+      nerrors = j
+    else
+      j = 0
+    end if
     sim_errors(i) = errmsg
+    icount_errors(i) = j
   else
     maxerrors_exceeded = maxerrors_exceeded + 1
   end if
   !
+  ! -- return
   return
 end subroutine store_error
 
@@ -160,7 +187,7 @@ subroutine store_error_unit(iunit)
   inquire(unit=iunit, name=fname)
   write(errmsg,'(3a)')                                                           &
     "ERROR OCCURRED WHILE READING FILE '", trim(adjustl(fname)), "'"
-  call store_error(errmsg)
+  call store_error(errmsg, count=.false.)
   !
   return
 end subroutine store_error_unit
@@ -181,12 +208,12 @@ subroutine store_error_filename(filename)
   !
   write(errmsg,'(3a)')                                                           &
     "ERROR OCCURRED WHILE READING FILE '", trim(adjustl(filename)), "'"
-  call store_error(errmsg)
+  call store_error(errmsg, count=.false.)
   !
   return
 end subroutine store_error_filename
 
-subroutine store_warning(warnmsg)
+subroutine store_warning(warnmsg, count)
 ! ******************************************************************************
 ! Store a warning message for printing at end of simulation
 ! ******************************************************************************
@@ -197,33 +224,57 @@ subroutine store_warning(warnmsg)
   use ArrayHandlersModule, only: ExpandArray
   ! -- dummy
   character(len=*), intent(in) :: warnmsg
+  logical, intent(in), optional :: count
   ! -- local
+  logical :: inc_count
   logical :: inc_array
   integer(I4B) :: i
+  integer(I4B) :: j
 ! ------------------------------------------------------------------------------
   !
+  ! -- process optional variables
+  if (present(count)) then
+    inc_count = count
+  else
+    inc_count = .true.
+  end if
+  !
+  ! -- determine if the sim_warnings should be expanded
   inc_array = .TRUE.
   if (allocated(sim_warnings)) then
     if (count_warnings() < size(sim_warnings)) then
       inc_array = .FALSE.
     end if
   end if
+  !
+  ! -- resize sim_warnings
   if (inc_array) then
     call ExpandArray(sim_warnings, increment=inc_warnings)
+    call ExpandArray(icount_warnings, increment=inc_warnings)
     inc_warnings = inc_warnings * 1.1
   end if
-  i = count_warnings() + 1
+  !
+  ! -- store this warning
+  i = lenwarnings + 1
   if (i <= maxwarnings) then
-    nwarnings = i
+    lenwarnings = i
+    if (inc_count) then
+      j = nwarnings + 1
+      nwarnings = j
+    else
+      j = 0
+    end if
     sim_warnings(i) = warnmsg
+    icount_warnings(i) = j
   else
     maxwarnings_exceeded = maxwarnings_exceeded + 1
   end if
   !
+  ! -- return
   return
 end subroutine store_warning
 
-subroutine store_note(note)
+subroutine store_note(note, count)
 ! ******************************************************************************
 ! Store a note for printing at end of simulation
 ! ******************************************************************************
@@ -234,25 +285,52 @@ subroutine store_note(note)
   use ArrayHandlersModule, only: ExpandArray
   ! -- dummy
   character(len=*), intent(in) :: note
+  logical, intent(in), optional :: count
   ! -- local
+  logical :: inc_count
   logical :: inc_array
   integer(I4B) :: i
+  integer(I4B) :: j
 ! ------------------------------------------------------------------------------
   !
+  ! -- process optional variables
+  if (present(count)) then
+    inc_count = count
+  else
+    inc_count = .true.
+  end if
+  !
+  ! -- determine if the sim_notes should be expanded
   inc_array = .TRUE.
   if (allocated(sim_notes)) then
     if (count_notes() < size(sim_notes)) then
       inc_array = .FALSE.
     end if
   end if
+  !
+  ! -- resize sim_notes
   if (inc_array) then
     call ExpandArray(sim_notes, increment=inc_notes)
     inc_notes = inc_notes * 1.1
   end if
-  i = count_notes() + 1
-  nnotes = i
-  sim_notes(i) = note
   !
+  ! -- store this note
+  i = lennotes + 1
+  if (i <= maxnotes) then
+    lennotes = i
+    if (inc_count) then
+      j = nnotes + 1
+      nnotes = j
+    else
+      j = 0
+    end if
+    sim_notes(i) = note
+    icount_notes(i) = j
+  else
+    maxnotes_exceeded = maxnotes_exceeded + 1
+  end if
+  !
+  ! -- return
   return
 end subroutine store_note
 
@@ -286,12 +364,10 @@ logical function print_errors()
         call sim_message('', iunit=iout, fmt=stdfmt)
       end if
       call sim_message('', fmt=stdfmt)
-      icnt = 0
-      do i = 1, isize
+      !do i = 1, isize
+      do i = 1, lenerrors
+        icnt = icount_errors(i)
         call write_message(sim_errors(i), icnt=icnt, ifmt=ifmt)
-      end do
-      icnt = 0
-      do i = 1, isize
         if (iout > 0) then
           call write_message(sim_errors(i), iunit=iout, icnt=icnt, ifmt=ifmt)
         end if
@@ -346,11 +422,11 @@ logical function print_warnings()
         call sim_message('', fmt=stdfmt, iunit=iout)
       end if
       call sim_message('', fmt=stdfmt)
-      icnt = 0
-      do i = 1, isize
+      !do i = 1, isize
+      do i = 1, lenwarnings
+        icnt = icount_warnings(i)
         call write_message(sim_warnings(i), icnt=icnt, ifmt=ifmt)
         if (iout > 0) then
-          icnt = icnt - 1
           call write_message(sim_warnings(i), iunit=iout, icnt=icnt, ifmt=ifmt)
         end if
       end do
@@ -382,8 +458,10 @@ subroutine print_notes(numberlist)
   ! -- dummy
   logical, intent(in), optional :: numberlist
   ! -- local
-  integer(I4B) :: i, isize
+  character(len=LINELENGTH) :: msg
   character(len=MAXCHARLEN+10) :: noteplus
+  integer(I4B) :: i
+  integer(I4B) :: isize
   logical :: numlist
   ! -- formats
    character(len=*), parameter :: fmtnotes = "(/,'NOTES:')"
@@ -391,6 +469,7 @@ subroutine print_notes(numberlist)
    character(len=*), parameter :: fmtb = '(a)' 
 ! ------------------------------------------------------------------------------
   !
+  ! -- process optional variables
   if (present(numberlist)) then
     numlist = numberlist
   else
@@ -416,8 +495,19 @@ subroutine print_notes(numberlist)
         end if
       enddo
     endif
+    !
+    ! -- write number of additional notes
+    if (maxnotes_exceeded > 0) then
+      write(msg, '(i0,1x,a)')                                                    &
+        maxnotes_exceeded, 'additional notes detected but not printed.'
+      call write_message(trim(msg))
+      if (iout > 0) then
+        call write_message(trim(msg), iout)
+      end if
+    end if
   endif
   !
+  ! -- return
   return
 end subroutine print_notes
 
@@ -438,13 +528,13 @@ subroutine write_message(message, iunit, error, skipbefore, skipafter,          
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
   ! -- dummy
-  character (len=*), intent(in)              :: message
-  integer(I4B),      intent(in),    optional :: iunit
-  logical,           intent(in),    optional :: error
-  integer(I4B),      intent(in),    optional :: skipbefore
-  integer(I4B),      intent(in),    optional :: skipafter
-  integer(I4B),      intent(inout), optional :: icnt
-  integer(I4B),      intent(in),    optional :: ifmt
+  character (len=*), intent(in)           :: message
+  integer(I4B),      intent(in), optional :: iunit
+  logical,           intent(in), optional :: error
+  integer(I4B),      intent(in), optional :: skipbefore
+  integer(I4B),      intent(in), optional :: skipafter
+  integer(I4B),      intent(in), optional :: icnt
+  integer(I4B),      intent(in), optional :: ifmt
   ! -- local
   character(len=MAXCHARLEN) :: amessage
   character(len=20)         :: ablank
@@ -455,8 +545,7 @@ subroutine write_message(message, iunit, error, skipbefore, skipafter,          
   integer(I4B)              :: junit
   integer(I4B)              :: leadblank
   integer(I4B)              :: itake
-  integer(I4B)              :: ipos0
-  integer(I4B)              :: ipos1
+  integer(I4B)              :: ipos
   integer(I4B)              :: i
   integer(I4B)              :: j
 ! ------------------------------------------------------------------------------
@@ -495,13 +584,13 @@ subroutine write_message(message, iunit, error, skipbefore, skipafter,          
     if (error) then
       !
       ! -- evaluate if amessage already includes 'ERROR:' or 'Error:' string
-      ipos0 = index(amessage, 'ERROR:')
-      if (ipos0 < 1) then
-        ipos0 = index(amessage, 'Error:')
+      ipos = index(amessage, 'ERROR:')
+      if (ipos < 1) then
+        ipos = index(amessage, 'Error:')
       end if
       !
       ! -- prepend amessage with 'Error:' string
-      if (ipos0 < 1) then
+      if (ipos < 1) then
         nblc = len_trim(amessage)
         amessage = adjustr(amessage(1:nblc+8))
         if (nblc+8 < len(amessage)) then
@@ -517,24 +606,22 @@ subroutine write_message(message, iunit, error, skipbefore, skipafter,          
     write(cfmt, '(A,I0,A)') '(1X,I', ifmt, ',".")'
     !
     ! -- update amessage, if required
-    ipos1 = index(amessage, 'ERROR OCCURRED WHILE READING FILE')
-    if (ipos1 < 1) then
-      icnt = icnt + 1
+    if (icnt > 0) then
       write(cval, cfmt) icnt
-      ipos0 = len_trim(cval)
+      ipos = len_trim(cval)
     else
       write(cfmt, '(A,I0,A)') '(1X,A', ifmt, ',1X)'
       write(cval, cfmt) '*'
       call sim_message('', iunit=junit)
-      ipos0 = ifmt + 2
+      ipos = ifmt + 2
     end if
     nblc = len_trim(amessage)
-    amessage = adjustr(amessage(1:nblc+ipos0))
-    if (nblc+ipos0 < len(amessage)) then
-      amessage(nblc+ipos0+1:) = ' '
+    amessage = adjustr(amessage(1:nblc+ipos))
+    if (nblc+ipos < len(amessage)) then
+      amessage(nblc+ipos+1:) = ' '
     end if
-    amessage(1:ipos0) = cval(1:ipos0)
-    leadblank = ipos0 - 1
+    amessage(1:ipos) = cval(1:ipos)
+    leadblank = ipos - 1
   !
   ! -- determine the default number of leading blanks
   else
