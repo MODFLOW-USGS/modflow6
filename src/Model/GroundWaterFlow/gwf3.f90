@@ -9,6 +9,7 @@ module GwfModule
   use GwfIcModule,                 only: GwfIcType
   use GwfNpfModule,                only: GwfNpfType
   use Xt3dModule,                  only: Xt3dType
+  use VKDModule,                   only: VKDType !, vkd_cr
   use GwfHfbModule,                only: GwfHfbType
   use GwfStoModule,                only: GwfStoType
   use GwfCsubModule,               only: GwfCsubType
@@ -32,6 +33,7 @@ module GwfModule
     type(GwfIcType),                pointer :: ic      => null()                ! initial conditions package
     type(GwfNpfType),               pointer :: npf     => null()                ! node property flow package
     type(Xt3dType),                 pointer :: xt3d    => null()                ! xt3d option for npf
+    !type(VKDType),                  pointer :: vkd    => null()                ! VKD option for npf
     type(GwfStoType),               pointer :: sto     => null()                ! storage package
     type(GwfCsubType),              pointer :: csub    => null()                ! subsidence package    
     type(GwfOcType),                pointer :: oc      => null()                ! output control package
@@ -118,6 +120,7 @@ module GwfModule
     use GwfDisuModule,              only: disu_cr
     use GwfNpfModule,               only: npf_cr
     use Xt3dModule,                 only: xt3d_cr
+    use VKDModule,                  only: vkd_cr
     use GwfStoModule,               only: sto_cr
     use GwfCsubModule,              only: csub_cr
     use GwfMvrModule,               only: mvr_cr
@@ -618,7 +621,7 @@ module GwfModule
       call this%sto%sto_fc(kiter, this%xold, this%x, njasln, amatsln,          &
                            this%idxglo, this%rhs)
     end if
-    ! -- skeletal storage, compaction, and land subsidence 
+    ! -- skeletal storage, compaction, and land subsidence
     if(this%incsub > 0) then
       call this%csub%csub_fc(kiter, this%xold, this%x, njasln, amatsln,        &
                              this%idxglo, this%rhs)
@@ -1178,6 +1181,7 @@ module GwfModule
     ! -- Internal package objects
     deallocate(this%dis)
     deallocate(this%ic)
+!    deallocate(this%npf%vkd)
     deallocate(this%npf)
     deallocate(this%xt3d)
     deallocate(this%gnc)

@@ -453,6 +453,7 @@ if __name__ == '__main__':
                   'gwf-disu',    # dfn completed  tex updated
                   'gwf-ic',      # dfn completed  tex updated
                   'gwf-npf',     # dfn completed  tex updated
+                  'gwf-vkd',     # dfn completed  tex updated
                   'gwf-sto',     # dfn completed  tex updated
                   'gwf-csub',    # dfn completed  tex updated
                   'gwf-hfb',     # dfn completed  tex updated

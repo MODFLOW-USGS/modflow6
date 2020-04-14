@@ -17,6 +17,7 @@ module GwfDisvModule
   public disv_cr, disv_init_mem, GwfDisvType
 
   type, extends(DisBaseType) :: GwfDisvType
+
     integer(I4B), pointer :: nlay  => null()                                     ! number of layers
     integer(I4B), pointer :: ncpl => null()                                      ! number of cells per layer
     integer(I4B), pointer :: nvert => null()                                     ! number of x,y vertices
@@ -29,6 +30,7 @@ module GwfDisvModule
     integer(I4B), dimension(:, :, :), pointer, contiguous :: idomain  => null()  ! idomain (ncpl, 1, nlay)
     type(DisvGeomType) :: cell1                                                  ! cell object used to calculate geometric properties
     type(DisvGeomType)  :: cell2                                                 ! cell object used to calculate geometric properties
+
   contains
     procedure :: dis_df => disv_df
     procedure :: dis_da => disv_da
@@ -94,7 +96,7 @@ module GwfDisvModule
     ! -- Return
     return
   end subroutine disv_cr
-  
+
   subroutine disv_init_mem(dis, name_model, iout, nlay, ncpl,              &
                            top2d, bot3d, vertices, cellxy, idomain)
 ! ******************************************************************************
@@ -1421,7 +1423,7 @@ module GwfDisvModule
     ycell = this%cellxy(2, ncell2d)
     
   end subroutine get_cellxy_disv 
-  
+                               
    ! return discretization type
   subroutine get_dis_type(this, dis_type)
     class(GwfDisvType), intent(in)  :: this

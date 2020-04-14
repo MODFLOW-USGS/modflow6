@@ -1,0 +1,4 @@
+BEGIN DIMENSIONS
+  NUMVKD <numvkd>
+  NUMELEVS <numelevs>
+END DIMENSIONS

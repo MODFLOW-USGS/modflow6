@@ -1,0 +1,5 @@
+BEGIN PACKAGEDATA
+  <cellid(ncelldim)> <eip(numelevs)> <kip(numelevs)>
+  <cellid(ncelldim)> <eip(numelevs)> <kip(numelevs)>
+  ...
+END PACKAGEDATA

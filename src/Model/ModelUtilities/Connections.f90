@@ -91,14 +91,14 @@ module ConnectionsModule
     !
     ! -- Arrays
     call mem_deallocate(this%ia)
-    call mem_deallocate(this%ja)  
+    call mem_deallocate(this%ja)
     call mem_deallocate(this%isym)
     call mem_deallocate(this%jas)
     call mem_deallocate(this%hwva)
     call mem_deallocate(this%anglex)
     call mem_deallocate(this%ihc)
     call mem_deallocate(this%cl1)
-    call mem_deallocate(this%cl2)     
+    call mem_deallocate(this%cl2)
     !
     ! -- return
     return
@@ -160,7 +160,7 @@ module ConnectionsModule
     call mem_allocate(this%cl2, this%njas, 'CL2', this%cid)
     call mem_allocate(this%iausr, 1, 'IAUSR', this%cid)
     call mem_allocate(this%jausr, 1, 'JAUSR', this%cid)
-    ! 
+    !
     ! -- let mask point to ja, which is always nonzero, 
     !    until someone decides to do a 'set_mask'
     this%mask => this%ja
@@ -168,7 +168,7 @@ module ConnectionsModule
     ! -- Return
     return
   end subroutine allocate_arrays
-  
+
   subroutine con_finalize(this, ihctemp, cl12temp, hwvatemp, angldegx)
 ! ******************************************************************************
 ! con_finalize -- Finalize connection data
@@ -341,7 +341,7 @@ module ConnectionsModule
     ! -- Return
     return
   end subroutine con_finalize
-    
+
   subroutine read_connectivity_from_block(this, name_model, nodes, nja, iout)
 ! ******************************************************************************
 ! read_connectivity_from_block -- Read and process IAC and JA from an
@@ -534,7 +534,7 @@ module ConnectionsModule
     real(DP), dimension(nrow),             intent(in) :: delc
     real(DP), dimension(nodes),            intent(in) :: top
     real(DP), dimension(nodes),            intent(in) :: bot
-    integer(I4B),          dimension(:), target,        intent(in) :: nodereduced
+    integer(I4B),          dimension(:), target, contiguous,  intent(in) :: nodereduced
     integer(I4B),          dimension(:),                intent(in) :: nodeuser
     ! -- local
     integer(I4B), dimension(:, :, :), pointer :: nrdcd_ptr => null() !non-contiguous because is a slice
@@ -1325,7 +1325,7 @@ module ConnectionsModule
     ! -- return
     return
   end subroutine set_mask
-                           
+  
   subroutine iac_to_ia(ia)
 ! ******************************************************************************
 ! iac_to_ia -- convert an iac array into an ia array

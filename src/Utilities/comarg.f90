@@ -17,7 +17,7 @@ module CommandArguments
   public :: GetCommandLineArguments
   !
   contains
-  
+
   subroutine GetCommandLineArguments()
 ! ******************************************************************************
 ! Write information on command line arguments
@@ -54,16 +54,16 @@ module CommandArguments
     call get_command_argument(0, cexe)
     cexe = adjustl(cexe)
     !
-    ! -- find the program basename, not including the path (this should be 
+    ! -- find the program basename, not including the path (this should be
     !    mf6.exe, mf6d.exe, etc.)
     ipos = index(cexe, '/', back=.TRUE.)
     if (ipos == 0) then
-      ipos = index(cexe, '\', back=.TRUE.)
+      ipos = index(cexe, char(92), back=.TRUE.)
     end if
     if (ipos /= 0) then
       ipos = ipos + 1
     end if
-    cexe = cexe(ipos:)
+    cexe = cexe(max(ipos,1):)
     !
     ! -- write header
     call get_compile_date(cdate)
@@ -144,13 +144,13 @@ module CommandArguments
           write(line, '(2a,g0)')                                                 &
             trim(adjustl(cexe)), ': develop version ', ltyp
           call sim_message(line)
-        case('-C', '--COMPILER') 
+        case('-C', '--COMPILER')
           lstop = .TRUE.
           call get_compiler(compiler)
           write(line, '(2a,1x,a)')                                               &
             trim(adjustl(cexe)), ':', trim(adjustl(compiler))
           call sim_message(line)
-        case('-S', '--SILENT')
+        case('-S', '--SILENT') 
           write(line, '(2a,1x,a)')                                               &
             trim(adjustl(cexe)), ':', 'all screen output sent to mfsim.stdout'
           call sim_message(line)
@@ -212,7 +212,7 @@ module CommandArguments
     ! -- return
     return
   end subroutine GetCommandLineArguments
-  
+
   subroutine write_usage(header, cexe)
     ! -- dummy
     character(len=*), intent(in) :: header
@@ -256,5 +256,5 @@ module CommandArguments
     ! -- return
     return
   end subroutine write_usage
-  
+
 end module CommandArguments

@@ -16,6 +16,7 @@ module GwfDisModule
   public dis_cr, dis_init_mem, GwfDisType
 
   type, extends(DisBaseType) :: GwfDisType
+
     integer(I4B), pointer :: nlay => null()                                      ! number of layers
     integer(I4B), pointer :: nrow => null()                                      ! number of rows
     integer(I4B), pointer :: ncol => null()                                      ! number of columns
@@ -88,7 +89,7 @@ module GwfDisModule
     ! -- Return
     return
   end subroutine dis_cr
-  
+
   subroutine dis_init_mem(dis, name_model, iout, nlay, nrow, ncol,       &
                           delr, delc, top2d, bot3d, idomain)
 ! ******************************************************************************
@@ -1452,7 +1453,7 @@ module GwfDisModule
     ycell = this%celly(i)
     
   end subroutine get_cellxy_dis3d
-  
+
   ! return discretization type
   subroutine get_dis_type(this, dis_type)
     class(GwfDisType), intent(in)  :: this

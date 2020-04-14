@@ -115,6 +115,7 @@ module GwfMvrModule
   public :: GwfMvrType, mvr_cr
 
   type, extends(NumericalPackageType) :: GwfMvrType
+
     integer(I4B), pointer                            :: ibudgetout => null()     !binary budget output file
     integer(I4B), pointer                            :: maxmvr => null()         !max number of movers to be specified
     integer(I4B), pointer                            :: maxpackages => null()    !max number of packages to be specified
@@ -124,6 +125,7 @@ module GwfMvrModule
     integer(I4B), pointer                            :: imodelnames => null()    !indicate package input file has model names in it
     real(DP), pointer                                :: omega => null()          !temporal weighting factor (not presently used)
     integer(I4B), dimension(:), pointer, contiguous  :: ientries => null()       !number of entries for each combination
+
     character(len=LENORIGIN+1),                                                &
       dimension(:), pointer, contiguous              :: pakorigins               !array of model//package names
     character(len=LENPACKAGENAME),                                             &

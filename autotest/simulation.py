@@ -154,6 +154,7 @@ class Simulation(object):
         exe = os.path.abspath(targets.target_dict[targets.program])
         msg = sfmt.format('using executable', exe)
         print(msg)
+        print(self.simpath)
         try:
             success, buff = flopy.run_model(exe, nam, model_ws=self.simpath,
                                             silent=False, report=True)

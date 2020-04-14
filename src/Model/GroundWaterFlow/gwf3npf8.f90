@@ -5,11 +5,14 @@ module GwfNpfModule
                                         DLNLOW, DLNHIGH,                        &
                                         DHNOFLO, DHDRY, DEM10
   use SmoothingModule,            only: sQuadraticSaturation,                   &
-                                        sQuadraticSaturationDerivative
+                                        sQuadraticSaturationDerivative,         &
+                                        sPChip_set_derivatives,                 &
+                                        sPChip_integrate
   use NumericalPackageModule,     only: NumericalPackageType
   use BaseDisModule,              only: DisBaseType
   use GwfIcModule,                only: GwfIcType
   use Xt3dModule,                 only: Xt3dType
+  use VKDModule,                  only: VKDType, vkd_cr
   use BlockParserModule,          only: BlockParserType
 
   implicit none
@@ -19,7 +22,7 @@ module GwfNpfModule
   public :: npf_cr
   public :: hcond
   public :: vcond
-  public :: condmean
+  !public :: condmean
   public :: thksatnm
   public :: hyeff_calc
 
@@ -27,11 +30,14 @@ module GwfNpfModule
 
     type(GwfIcType), pointer                        :: ic           => null()    ! initial conditions object
     type(Xt3dType), pointer                         :: xt3d         => null()    ! xt3d pointer
+    type(VKDType), pointer                          :: vkd          => null()    ! vkd pointer
     integer(I4B), pointer                           :: iname        => null()    ! length of variable names
     character(len=24), dimension(:), pointer        :: aname        => null()    ! variable names
     integer(I4B), dimension(:), pointer, contiguous :: ibound       => null()    ! pointer to model ibound
     real(DP), dimension(:), pointer, contiguous     :: hnew         => null()    ! pointer to model xnew
     integer(I4B), pointer                           :: ixt3d        => null()    ! xt3d flag (0 is off, 1 is lhs, 2 is rhs)
+    integer(I4B), pointer                           :: ivkd         => null()   ! vkd flag (0 is off, 1 is on)
+    integer(I4B), pointer                           :: inUnitVkd    => null()   ! vkd input file unit number
     integer(I4B), pointer                           :: iperched     => null()    ! vertical flow corrections if 1
     integer(I4B), pointer                           :: ivarcv       => null()    ! CV is function of water table
     integer(I4B), pointer                           :: idewatcv     => null()    ! CV may be a discontinuous function of water table
@@ -51,6 +57,7 @@ module GwfNpfModule
     real(DP), pointer                               :: wetfct       => null()    ! wetting factor
     real(DP), pointer                               :: hdry         => null()    ! default is -1.d30
     integer(I4B), dimension(:), pointer, contiguous :: icelltype    => null()    ! confined (0) or convertible (1)
+    integer(I4B), dimension(:), pointer, contiguous :: ibvkd        => null()   ! VKD ibound array
     !
     ! K properties
     real(DP), dimension(:), pointer, contiguous     :: k11          => null()    ! hydraulic conductivity; if anisotropic, then this is Kx prior to rotation
@@ -121,7 +128,7 @@ module GwfNpfModule
   subroutine npf_cr(npfobj, name_model, inunit, iout)
 ! ******************************************************************************
 ! npf_cr -- Create a new NPF object. Pass a inunit value of 0 if npf data will
-!           initialized from memory  
+!           initialized from memory
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -130,12 +137,13 @@ module GwfNpfModule
     ! -- dummy
     type(GwfNpftype), pointer :: npfobj
     character(len=*), intent(in) :: name_model
-    integer(I4B), intent(in) :: inunit  
+    integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
 ! ------------------------------------------------------------------------------
     !
     ! -- Create the object
     allocate(npfobj)
+!    allocate(npfobj%vkd)
     !
     ! -- create name and origin
     call npfobj%set_names(1, name_model, 'NPF', 'NPF')
@@ -159,8 +167,9 @@ module GwfNpfModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: ustop, store_error
+    use SimModule,  only: ustop, store_error
     use Xt3dModule, only: xt3d_cr
+    use VKDModule,  only: vkd_cr
     ! -- dummy
     class(GwfNpftype) :: this
     class(DisBaseType), pointer, intent(inout) :: dis
@@ -196,6 +205,13 @@ module GwfNpfModule
     if (this%ixt3d /= 0 .and. ingnc > 0) then
       call store_error('Error in model ' // trim(this%name_model) // &
         '.  The XT3D option cannot be used with the GNC Package.')
+      call ustop()
+    endif
+    !
+    ! -- Ensure VKD and XT3D are not both on at the same time
+    if (this%ixt3d > 0 .and. this%ivkd > 0) then
+      call store_error('Error in model ' // trim(this%name_model) // &
+        '.  The XT3D option cannot be used with the VKD Package.')
       call ustop()
     endif
     !
@@ -250,7 +266,7 @@ module GwfNpfModule
     ! -- Return
     return
   end subroutine npf_mc
-  
+
   subroutine npf_init_mem(this, dis, ixt3d, icelltype, k11, k22, k33, wetdry,    &
                           angle1, angle2, angle3)
 ! ******************************************************************************
@@ -359,6 +375,15 @@ module GwfNpfModule
       ! -- read the data block
       call this%read_data()
     end if
+    !
+    ! -- initialise vkd ib array
+    ! -- vkd
+    if(this%ivkd > 0) then
+      call this%vkd%vkd_ar(this%dis, ibound, this%k11, this%ik33,               &
+      this%k33, this%sat, this%ik22, this%k22, this%inewton, this%satmin,  &
+      this%icelltype, this%satomega, this%ibvkd)
+!      this%vkd%ibvkd => this%ibvkd
+    endif
     !
     ! -- Initialize and check data
     call this%prepcheck()
@@ -523,19 +548,31 @@ module GwfNpfModule
         else
           !
           ! -- Horizontal conductance
-          cond = hcond(this%ibound(n), this%ibound(m),                       &
-                       this%icelltype(n), this%icelltype(m),                 &
-                       this%inewton, this%inewton,                           &
-                       this%dis%con%ihc(this%dis%con%jas(ii)),               &
-                       this%icellavg, this%iusgnrhc, this%inwtupw,           &
-                       this%condsat(this%dis%con%jas(ii)),                   &
-                       hnew(n), hnew(m), this%sat(n), this%sat(m), hyn, hym, &
-                       this%dis%top(n), this%dis%top(m),                     &
-                       this%dis%bot(n), this%dis%bot(m),                     &
-                       this%dis%con%cl1(this%dis%con%jas(ii)),               &
-                       this%dis%con%cl2(this%dis%con%jas(ii)),               &
-                       this%dis%con%hwva(this%dis%con%jas(ii)),              &
-                       this%satomega, this%satmin)
+          if ((this%ibvkd(n) > 0) .or. (this%ibvkd(m) > 0)) then
+            cond = this%vkd%vkd_hcond(n, m, this%dis%con%cl1(this%dis%con%jas(ii)), &
+                this%dis%con%cl2(this%dis%con%jas(ii)),                             &
+                this%dis%con%hwva(this%dis%con%jas(ii)),                            &
+                this%condsat(this%dis%con%jas(ii)), hnew(n), hnew(m), this%inewton, &
+                ii, this%icellavg, hyn, hym,                                        &
+                this%dis%top(n), this%dis%top(m),                                   &
+                this%dis%bot(n), this%dis%bot(m),                                   &
+                this%sat(n), this%sat(m))
+          else
+            cond = hcond(this%ibound(n), this%ibound(m),              &
+                this%icelltype(n), this%icelltype(m),                 &
+                this%inewton, this%inewton,                           &
+                this%dis%con%ihc(this%dis%con%jas(ii)),               &
+                this%icellavg, this%iusgnrhc, this%inwtupw,           &
+                this%condsat(this%dis%con%jas(ii)),                   &
+                hnew(n), hnew(m), this%sat(n), this%sat(m), hyn, hym, &
+                this%dis%top(n), this%dis%top(m),                     &
+                this%dis%bot(n), this%dis%bot(m),                     &
+                this%dis%con%cl1(this%dis%con%jas(ii)),               &
+                this%dis%con%cl2(this%dis%con%jas(ii)),               &
+                this%dis%con%hwva(this%dis%con%jas(ii)),              &
+                this%satomega, this%satmin)
+          endif
+
         endif
         !
         ! -- Fill row n
@@ -694,7 +731,7 @@ module GwfNpfModule
       enddo
     end do
     !
-    end if
+  end if
     !
     ! -- Return
     return
@@ -802,20 +839,27 @@ module GwfNpfModule
     integer(I4B),intent(in) :: n
     real(DP),intent(in) :: hn
     real(DP),intent(inout) :: thksat
-! ------------------------------------------------------------------------------
+    ! ------------------------------------------------------------------------------
     !
-    ! -- Standard Formulation
-    if(hn >= this%dis%top(n)) then
-      thksat = DONE
-    else
-      thksat = (hn - this%dis%bot(n)) / (this%dis%top(n) - this%dis%bot(n))
-    endif
+    if(this%ibvkd(n) == 0) then
+      !
+      ! -- Standard Formulation no VKD
+      if(hn >= this%dis%top(n)) then
+        thksat = DONE
+      else
+        thksat = (hn - this%dis%bot(n)) / (this%dis%top(n) - this%dis%bot(n))
+      endif
     !
-    ! -- Newton-Raphson Formulation
+    ! -- Newton-Raphson Formulation no VKD
     if(this%inewton /= 0) then
       thksat = sQuadraticSaturation(this%dis%top(n), this%dis%bot(n), hn,      &
-                                    this%satomega, this%satmin)
-      !if (thksat < this%satmin) thksat = this%satmin
+          this%satomega)
+      if (thksat < this%satmin) thksat = this%satmin
+    endif
+    !
+    ! -- VKD Formulation both cases
+    else
+      thksat = this%vkd%vkd_satThk(n, hn)
     endif
     !
     ! -- Return
@@ -861,19 +905,31 @@ module GwfNpfModule
                       this%dis%bot(n), this%dis%bot(m),                        &
                       this%dis%con%hwva(this%dis%con%jas(icon)))
     else
-      condnm = hcond(this%ibound(n), this%ibound(m),                           &
-                     this%icelltype(n), this%icelltype(m),                     &
-                     this%inewton, this%inewton,                               &
-                     this%dis%con%ihc(this%dis%con%jas(icon)),                 &
-                     this%icellavg, this%iusgnrhc, this%inwtupw,               &
-                     this%condsat(this%dis%con%jas(icon)),                     &
-                     hn, hm, this%sat(n), this%sat(m), hyn, hym,               &
-                     this%dis%top(n), this%dis%top(m),                         &
-                     this%dis%bot(n), this%dis%bot(m),                         &
-                     this%dis%con%cl1(this%dis%con%jas(icon)),                 &
-                     this%dis%con%cl2(this%dis%con%jas(icon)),                 &
-                     this%dis%con%hwva(this%dis%con%jas(icon)),                &
-                     this%satomega, this%satmin)
+      if ((this%ibvkd(n) == 0) .and. (this%ibvkd(m) == 0)) then
+        condnm = hcond(this%ibound(n), this%ibound(m),                          &
+                      this%icelltype(n), this%icelltype(m),                     &
+                      this%inewton, this%inewton,                               &
+                      this%dis%con%ihc(this%dis%con%jas(icon)),                 &
+                      this%icellavg, this%iusgnrhc, this%inwtupw,               &
+                      this%condsat(this%dis%con%jas(icon)),                     &
+                      hn, hm, this%sat(n), this%sat(m), hyn, hym,               &
+                      this%dis%top(n), this%dis%top(m),                         &
+                      this%dis%bot(n), this%dis%bot(m),                         &
+                      this%dis%con%cl1(this%dis%con%jas(icon)),                 &
+                      this%dis%con%cl2(this%dis%con%jas(icon)),                 &
+                      this%dis%con%hwva(this%dis%con%jas(icon)),                &
+                      this%satomega, this%satmin)
+      else
+        ! vkd
+        condnm = this%vkd%vkd_hcond(n, m, this%dis%con%cl1(this%dis%con%jas(icon)), &
+                                    this%dis%con%cl2(this%dis%con%jas(icon)),       &
+                                    this%dis%con%hwva(this%dis%con%jas(icon)),      &
+                                    this%condsat(this%dis%con%jas(icon)),           &
+                                    hn, hm, this%inewton, icon, this%icellavg, hyn, &
+                                    hym, this%dis%top(n), this%dis%top(m),          &
+                                    this%dis%bot(n), this%dis%bot(m),               &
+                                    this%sat(n), this%sat(m))
+      endif
     endif
     !
     ! -- Initialize hntemp and hmtemp
@@ -1043,6 +1099,7 @@ module GwfNpfModule
     call mem_deallocate(this%lastedge)
     call mem_deallocate(this%ik22overk)
     call mem_deallocate(this%ik33overk)
+    call mem_deallocate(this%inUnitVkd)
     !
     ! -- Deallocate arrays
     call mem_deallocate(this%icelltype)
@@ -1059,9 +1116,17 @@ module GwfNpfModule
     call mem_deallocate(this%ihcedge)
     call mem_deallocate(this%propsedge)
     call mem_deallocate(this%spdis)
+    call mem_deallocate(this%ibvkd)
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
+    !
+    ! -- vkd
+    if(this%ivkd > 0) then
+      call this%vkd%vkd_da()
+      deallocate(this%vkd)
+    endif
+    call mem_deallocate(this%ivkd)
     !
     ! -- Return
     return
@@ -1086,6 +1151,8 @@ module GwfNpfModule
     ! -- Allocate scalars
     call mem_allocate(this%iname, 'INAME', this%origin)
     call mem_allocate(this%ixt3d, 'IXT3D', this%origin)
+    call mem_allocate(this%ivkd, 'IVKD', this%origin)
+    call mem_allocate(this%inUnitVkd, 'INUNITVKD', this%origin)
     call mem_allocate(this%satomega, 'SATOMEGA', this%origin)
     call mem_allocate(this%hnoflo, 'HNOFLO', this%origin)
     call mem_allocate(this%hdry, 'HDRY', this%origin)
@@ -1121,6 +1188,7 @@ module GwfNpfModule
     ! -- Initialize value
     this%iname = 8
     this%ixt3d = 0
+    this%ivkd = 0
     this%satomega = DZERO
     this%hnoflo = DHNOFLO !1.d30
     this%hdry = DHDRY !-1.d30
@@ -1189,6 +1257,7 @@ module GwfNpfModule
     !
     ! -- Optional arrays
     call mem_allocate(this%ibotnode, 0, 'IBOTNODE', trim(this%origin))
+    call mem_allocate(this%ibvkd, ncells, 'IBVKD', trim(this%origin))
     !
     ! -- Specific discharge
     if (this%icalcspdis == 1) then
@@ -1212,10 +1281,13 @@ module GwfNpfModule
       this%wetdry(n) = DZERO
     end do
     !
+    ! -- initialise ibvkd
+    this%ibvkd = 0
+    !
     ! -- allocate variable names
     allocate(this%aname(this%iname))
     this%aname = ['               ICELLTYPE', '                       K',       &
-                  '                     K33', '                     K22',       &    
+                  '                     K33', '                     K22',       &
                   '                  WETDRY', '                  ANGLE1',       &
                   '                  ANGLE2', '                  ANGLE3']
     !
@@ -1233,11 +1305,12 @@ module GwfNpfModule
     ! -- modules
     use ConstantsModule,   only: LINELENGTH
     use SimModule, only: ustop, store_error, count_errors
+    use VKDModule,                  only: vkd_cr
     implicit none
     ! -- dummy
     class(GwfNpftype) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg, keyword
+    character(len=LINELENGTH) :: errmsg, keyword, fname
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     ! -- formats
@@ -1250,7 +1323,9 @@ module GwfNpfModule
     character(len=*), parameter :: fmtcellavg =                                &
       "(4x,'ALTERNATIVE CELL AVERAGING HAS BEEN SET TO ', a)"
     character(len=*), parameter :: fmtnct =                                    &
-      "(1x, 'Negative cell thickness at cell: ', a)"
+        "(1x, 'Negative cell thickness at cell: ', a)"
+    character(len=*), parameter :: fmtvkd = &
+        "(4x, 'VKD DATA WILL BE READ FROM FILE: ', a)"
     ! -- data
 ! ------------------------------------------------------------------------------
     !
@@ -1321,6 +1396,24 @@ module GwfNpfModule
             if(keyword == 'RHS') then
               this%ixt3d = 2
             endif
+          case ('VKD6')
+            this%ivkd = 1
+            write(this%iout, '(4x,a)')                                         &
+                'VKD FORMULATION IS SELECTED.'
+            call this%parser%GetStringCaps(keyword)
+            if(trim(adjustl(keyword)) /= 'FILEIN') then
+              errmsg = 'VKD keyword must be followed by "FILEIN" ' //         &
+                  'then by filename.'
+              call store_error(errmsg)
+              call this%parser%StoreErrorUnit()
+              call ustop()
+            endif
+            
+            call this%parser%GetString(fname)
+            write(this%iout,fmtvkd)trim(fname)
+            open(file=fname, newunit=this%inUnitVkd)
+            call vkd_cr(this%vkd, this%name, this%inUnitVkd, this%iout)
+            
           case ('SAVE_SPECIFIC_DISCHARGE')
             this%icalcspdis = 1
             this%isavspdis = 1
@@ -1711,7 +1804,7 @@ module GwfNpfModule
     if (lname(5)) then
       this%iwetdry = 1
     else
-      call mem_reallocate(this%wetdry, 1, 'WETDRY', trim(this%origin))        
+      call mem_reallocate(this%wetdry, 1, 'WETDRY', trim(this%origin))
     end if
     !
     ! -- set angle flags
@@ -1719,21 +1812,21 @@ module GwfNpfModule
       this%iangle1 = 1
     else
       if (this%ixt3d == 0) then
-        call mem_reallocate(this%angle1, 1, 'ANGLE1', trim(this%origin))        
+        call mem_reallocate(this%angle1, 1, 'ANGLE1', trim(this%origin))
       end if
     endif
     if (lname(7)) then
       this%iangle2 = 1
     else
       if (this%ixt3d == 0) then
-        call mem_reallocate(this%angle2, 1, 'ANGLE2', trim(this%origin))        
+        call mem_reallocate(this%angle2, 1, 'ANGLE2', trim(this%origin))
       end if
     endif
     if (lname(8)) then
       this%iangle3 = 1
     else
       if (this%ixt3d == 0) then
-        call mem_reallocate(this%angle3, 1, 'ANGLE3', trim(this%origin))        
+        call mem_reallocate(this%angle3, 1, 'ANGLE3', trim(this%origin))
       end if
     endif
     !
@@ -2087,16 +2180,28 @@ module GwfNpfModule
           !
           ! -- Horizontal conductance for fully saturated conditions
           fawidth = this%dis%con%hwva(this%dis%con%jas(ii))
-          csat = hcond(1, 1, 1, 1, this%inewton, 0,                            &
-                       this%dis%con%ihc(this%dis%con%jas(ii)),                 &
-                       this%icellavg, this%iusgnrhc, this%inwtupw,             &
-                       DONE,                                                   &
-                       hn, hm, this%sat(n), this%sat(m), hyn, hym,             &
-                       topn, topm,                                             &
-                       this%dis%bot(n), this%dis%bot(m),                       &
-                       this%dis%con%cl1(this%dis%con%jas(ii)),                 &
-                       this%dis%con%cl2(this%dis%con%jas(ii)),                 &
-                       fawidth, this%satomega, this%satmin)
+          if ((this%ibvkd(n) == 0) .and. (this%ibvkd(m) == 0)) then
+            csat = hcond(1, 1, 1, 1, this%inewton, 0,                            &
+                         this%dis%con%ihc(this%dis%con%jas(ii)),                 &
+                         this%icellavg, this%iusgnrhc, this%inwtupw,             &
+                         DONE,                                                   &
+                         hn, hm, this%sat(n), this%sat(m), hyn, hym,             &
+                         topn, topm,                                             &
+                         this%dis%bot(n), this%dis%bot(m),                       &
+                         this%dis%con%cl1(this%dis%con%jas(ii)),                 &
+                         this%dis%con%cl2(this%dis%con%jas(ii)),                 &
+                         fawidth, this%satomega, this%satmin)
+          else
+            !wittw overwrite calls to hcond and condmean
+            csat = this%vkd%vkd_hcond(n, m, this%dis%con%cl1(this%dis%con%jas(ii)), &
+                                      this%dis%con%cl2(this%dis%con%jas(ii)),       &
+                                      this%dis%con%hwva(this%dis%con%jas(ii)),      &
+                                      DONE,           &
+                                      this%dis%top(n), this%dis%top(m), 0, ii,      &
+                                      this%icellavg, hyn, hym,topn, topm,           &
+                                      this%dis%bot(n), this%dis%bot(m),             &
+                                      this%sat(n), this%sat(m))
+          endif
         end if
         this%condsat(this%dis%con%jas(ii)) = csat
       enddo
@@ -2498,6 +2603,8 @@ module GwfNpfModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- modules
+    use AveragingModule, only: condmean
     ! -- return
     real(DP) :: condnm
     ! -- dummy
@@ -2609,6 +2716,7 @@ module GwfNpfModule
         ! -- multiply condsat by condnm factor
         condnm = condnm * condsat
       else
+        ! not nwt
         thksatn = satn * (topn - botn)
         thksatm = satm * (topm - botm)
         !
@@ -2735,123 +2843,123 @@ module GwfNpfModule
     return
   end function vcond
 
-  function condmean(k1, k2, thick1, thick2, cl1, cl2, width, iavgmeth)
-! ******************************************************************************
-! condmean -- Calculate the conductance between two cells
-!
-!   k1 is hydraulic conductivity for cell 1 (in the direction of cell2)
-!   k2 is hydraulic conductivity for cell 2 (in the direction of cell1)
-!   thick1 is the saturated thickness for cell 1
-!   thick2 is the saturated thickness for cell 2
-!   cl1 is the distance from the center of cell1 to the shared face with cell2
-!   cl2 is the distance from the center of cell2 to the shared face with cell1
-!   h1 is the head for cell1
-!   h2 is the head for cell2
-!   width is the width perpendicular to flow
-!   iavgmeth is the averaging method:
-!     0 is harmonic averaging
-!     1 is logarithmic averaging
-!     2 is arithmetic averaging of sat thickness and logarithmic averaging of
-!       hydraulic conductivity
-!     3 is arithmetic averaging of sat thickness and harmonic averaging of
-!       hydraulic conductivity
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- return
-    real(DP) :: condmean
-    ! -- dummy
-    real(DP), intent(in) :: k1
-    real(DP), intent(in) :: k2
-    real(DP), intent(in) :: thick1
-    real(DP), intent(in) :: thick2
-    real(DP), intent(in) :: cl1
-    real(DP), intent(in) :: cl2
-    real(DP), intent(in) :: width
-    integer(I4B), intent(in) :: iavgmeth
-    ! -- local
-    real(DP) :: t1
-    real(DP) :: t2
-    real(DP) :: tmean, kmean, denom
-! ------------------------------------------------------------------------------
-    !
-    ! -- Initialize
-    t1 = k1 * thick1
-    t2 = k2 * thick2
-    !
-    ! -- Averaging
-    select case (iavgmeth)
-    !
-    ! -- Harmonic-mean method
-    case(0)
-      !
-      if (t1*t2 > DZERO) then
-        condmean = width * t1 * t2 / (t1 * cl2 + t2 * cl1)
-      else
-        condmean = DZERO
-      end if
-    !
-    ! -- Logarithmic-mean method
-    case(1)
-      if (t1*t2 > DZERO) then
-        tmean = logmean(t1, t2)
-      else
-        tmean = DZERO
-      endif
-      condmean = tmean * width / (cl1 + cl2)
-    !
-    ! -- Arithmetic-mean thickness and logarithmic-mean hydraulic conductivity
-    case(2)
-      if (k1*k2 > DZERO) then
-        kmean = logmean(k1, k2)
-      else
-        kmean = DZERO
-      endif
-      condmean = kmean * DHALF * (thick1 + thick2) * width / (cl1 + cl2)
-    !
-    ! -- Arithmetic-mean thickness and harmonic-mean hydraulic conductivity
-    case(3)
-      denom = (k1 * cl2 + k2 * cl1)
-      if (denom > DZERO) then
-        kmean = k1 * k2 / denom
-      else
-        kmean = DZERO
-      end if
-      condmean = kmean * DHALF * (thick1 + thick2) * width
-    end select
-    !
-    ! -- Return
-    return
-  end function condmean
-
-  function logmean(d1, d2)
-! ******************************************************************************
-! logmean -- Calculate the the logarithmic mean of two double precision
-!            numbers.  Use an approximation if the ratio is near 1.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- return
-    real(DP) :: logmean
-    ! -- dummy
-    real(DP), intent(in) :: d1
-    real(DP), intent(in) :: d2
-    ! -- local
-    real(DP) :: drat
-! ------------------------------------------------------------------------------
-    !
-    drat = d2 / d1
-    if(drat <= DLNLOW .or. drat >= DLNHIGH) then
-      logmean = (d2 - d1) / log(drat)
-    else
-      logmean = DHALF * (d1 + d2)
-    endif
-    !
-    ! -- Return
-    return
-  end function logmean
+!!$  function condmean(k1, k2, thick1, thick2, cl1, cl2, width, iavgmeth)
+!!$! ******************************************************************************
+!!$! condmean -- Calculate the conductance between two cells
+!!$!
+!!$!   k1 is hydraulic conductivity for cell 1 (in the direction of cell2)
+!!$!   k2 is hydraulic conductivity for cell 2 (in the direction of cell1)
+!!$!   thick1 is the saturated thickness for cell 1
+!!$!   thick2 is the saturated thickness for cell 2
+!!$!   cl1 is the distance from the center of cell1 to the shared face with cell2
+!!$!   cl2 is the distance from the center of cell2 to the shared face with cell1
+!!$!   h1 is the head for cell1
+!!$!   h2 is the head for cell2
+!!$!   width is the width perpendicular to flow
+!!$!   iavgmeth is the averaging method:
+!!$!     0 is harmonic averaging
+!!$!     1 is logarithmic averaging
+!!$!     2 is arithmetic averaging of sat thickness and logarithmic averaging of
+!!$!       hydraulic conductivity
+!!$!     3 is arithmetic averaging of sat thickness and harmonic averaging of
+!!$!       hydraulic conductivity
+!!$! ******************************************************************************
+!!$!
+!!$!    SPECIFICATIONS:
+!!$! ------------------------------------------------------------------------------
+!!$    ! -- return
+!!$    real(DP) :: condmean
+!!$    ! -- dummy
+!!$    real(DP), intent(in) :: k1
+!!$    real(DP), intent(in) :: k2
+!!$    real(DP), intent(in) :: thick1
+!!$    real(DP), intent(in) :: thick2
+!!$    real(DP), intent(in) :: cl1
+!!$    real(DP), intent(in) :: cl2
+!!$    real(DP), intent(in) :: width
+!!$    integer(I4B), intent(in) :: iavgmeth
+!!$    ! -- local
+!!$    real(DP) :: t1
+!!$    real(DP) :: t2
+!!$    real(DP) :: tmean, kmean, denom
+!!$! ------------------------------------------------------------------------------
+!!$    !
+!!$    ! -- Initialize
+!!$    t1 = k1 * thick1
+!!$    t2 = k2 * thick2
+!!$    !
+!!$    ! -- Averaging
+!!$    select case (iavgmeth)
+!!$    !
+!!$    ! -- Harmonic-mean method
+!!$    case(0)
+!!$      !
+!!$      if (t1*t2 > DZERO) then
+!!$        condmean = width * t1 * t2 / (t1 * cl2 + t2 * cl1)
+!!$      else
+!!$        condmean = DZERO
+!!$      end if
+!!$    !
+!!$    ! -- Logarithmic-mean method
+!!$    case(1)
+!!$      if (t1*t2 > DZERO) then
+!!$        tmean = logmean(t1, t2)
+!!$      else
+!!$        tmean = DZERO
+!!$      endif
+!!$      condmean = tmean * width / (cl1 + cl2)
+!!$    !
+!!$    ! -- Arithmetic-mean thickness and logarithmic-mean hydraulic conductivity
+!!$    case(2)
+!!$      if (k1*k2 > DZERO) then
+!!$        kmean = logmean(k1, k2)
+!!$      else
+!!$        kmean = DZERO
+!!$      endif
+!!$      condmean = kmean * DHALF * (thick1 + thick2) * width / (cl1 + cl2)
+!!$    !
+!!$    ! -- Arithmetic-mean thickness and harmonic-mean hydraulic conductivity
+!!$    case(3)
+!!$      denom = (k1 * cl2 + k2 * cl1)
+!!$      if (denom > DZERO) then
+!!$        kmean = k1 * k2 / denom
+!!$      else
+!!$        kmean = DZERO
+!!$      end if
+!!$      condmean = kmean * DHALF * (thick1 + thick2) * width
+!!$    end select
+!!$    !
+!!$    ! -- Return
+!!$    return
+!!$  end function condmean
+!!$
+!!$  function logmean(d1, d2)
+!!$! ******************************************************************************
+!!$! logmean -- Calculate the the logarithmic mean of two double precision
+!!$!            numbers.  Use an approximation if the ratio is near 1.
+!!$! ******************************************************************************
+!!$!
+!!$!    SPECIFICATIONS:
+!!$! ------------------------------------------------------------------------------
+!!$    ! -- return
+!!$    real(DP) :: logmean
+!!$    ! -- dummy
+!!$    real(DP), intent(in) :: d1
+!!$    real(DP), intent(in) :: d2
+!!$    ! -- local
+!!$    real(DP) :: drat
+!!$! ------------------------------------------------------------------------------
+!!$    !
+!!$    drat = d2 / d1
+!!$    if(drat <= DLNLOW .or. drat >= DLNHIGH) then
+!!$      logmean = (d2 - d1) / log(drat)
+!!$    else
+!!$      logmean = DHALF * (d1 + d2)
+!!$    endif
+!!$    !
+!!$    ! -- Return
+!!$    return
+!!$  end function logmean
 
   function hyeff_calc(k11, k22, k33, ang1, ang2, ang3, vg1, vg2, vg3)          &
     result(hyeff)

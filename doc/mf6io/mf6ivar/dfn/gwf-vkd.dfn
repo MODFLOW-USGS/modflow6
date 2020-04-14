@@ -1,0 +1,69 @@
+# --------------------- gwf vkd options ---------------------
+
+block options
+name print_input
+type keyword
+reader urword
+optional true
+longname model print input to listing file
+description keyword to indicate that the list of VKD cells and information will be written to the listing file immediately after it is read.
+
+
+# --------------------- gwf vkd dimensions ---------------------
+
+block dimensions
+name numvkd
+type integer
+reader urword
+optional false
+longname number of VKD cells
+description integer value specifying the number of VKD cells. There must be NUMVKD entries in the PACKAGEDATA block.
+
+block dimensions
+name numelevs
+type integer
+reader urword
+optional false
+longname number of VKD inflections
+description integer value specifying the number of VKD inflections. There must be NUMELEVS entries for both EIP and KIP for every cell defined in PACKAGEDATA block. NB 'implicit inflection points' will be placed at the top and bottom elevations of each cell defined in PACKAGEDATA block.
+
+
+# --------------------- gwf vkd packagedata ---------------------
+
+block packagedata
+name packagedata
+type recarray cellid eip kip
+shape (numvkd)
+reader urword
+longname
+description
+
+block packagedata
+name cellid
+type integer
+shape (ncelldim)
+tagged false
+in_record true
+reader urword
+longname cell identifier
+description REPLACE cellid {}
+
+block packagedata
+name eip
+type double precision
+shape (numelevs)
+tagged false
+in_record true
+reader urword
+longname elevation of inflection point
+description elevation of VKD inflection point.  This number is an elevation (relative to the same datum used for cell tops and bottoms) in model length units.
+
+block packagedata
+name kip
+type double precision
+shape (numelevs)
+tagged false
+in_record true
+reader urword
+longname hydraulic conductivity factor
+description hydraulic conductivity factor at VKD inflection point.

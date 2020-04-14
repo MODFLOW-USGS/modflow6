@@ -12,7 +12,6 @@ module PackageMoverModule
   public :: nulllify_packagemover_pointer
   
   type PackageMoverType
-    
     character(len=LENORIGIN)                     :: origin
     integer, pointer                             :: nproviders
     integer, pointer                             :: nreceivers
@@ -36,7 +35,7 @@ module PackageMoverModule
   end type PackageMoverType
   
   contains
-  
+
   subroutine set_packagemover_pointer(packagemover, origin)
     type(PackageMoverType), intent(inout) :: packagemover
     character(len=*), intent(in) :: origin

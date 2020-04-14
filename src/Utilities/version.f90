@@ -25,4 +25,3 @@ module VersionModule
     &'liable for any damages resulting from the authorized or unauthorized ',/, &
     &'use of the software.',/)"
 end module VersionModule
-

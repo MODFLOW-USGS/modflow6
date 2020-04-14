@@ -298,7 +298,8 @@ contains
     ! -- modules
     use ConstantsModule, only: LINELENGTH, DZERO, DHALF, DONE, DPIO180
     use SimModule, only: store_error, ustop
-    use GwfNpfModule, only: condmean, vcond, hcond
+    use GwfNpfModule, only: vcond, hcond
+    use AveragingModule, only: condmean
     ! -- dummy
     class(GwfExchangeType) :: this
     ! -- local

@@ -10,6 +10,7 @@
 ### Version 6.1.1 release candidate
 [![Build Status](https://travis-ci.org/MODFLOW-USGS/modflow6.svg?branch=develop)](https://travis-ci.org/MODFLOW-USGS/modflow6)
 
+
 ## Introduction
 
 MODFLOW is a popular open-source groundwater flow model distributed by the U.S. Geological Survey.  For 30 years, the MODFLOW program has been widely used by academic researchers, private consultants, and government scientists to accurately, reliably, and efficiently simulate groundwater flow.  With time, growing interest in surface and groundwater interactions, local refinement with nested and unstructured grids, karst groundwater flow, solute transport, and saltwater intrusion, has led to the development of numerous MODFLOW versions.  Although these MODFLOW versions are often based on the core version (presently MODFLOW-2005), there are often incompatibilities that restrict their use with one another.  In many cases, development of these alternative versions has been challenging due to the underlying MODFLOW structure, which was designed for the simulation with a single groundwater flow model using a rectilinear grid.
