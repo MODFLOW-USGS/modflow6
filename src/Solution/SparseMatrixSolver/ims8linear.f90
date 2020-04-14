@@ -1664,16 +1664,20 @@
           END IF 
           CALL IMSLINEARSUB_TESTCNVG(ICNVGOPT, ICNVG, INNERIT,                  &
                                      deltax, rcnvg,                             &
-                                     L2NORM0, EPFACT, HCLOSE, RCLOSE)         
+                                     L2NORM0, EPFACT, HCLOSE, RCLOSE) 
 !
-!           CHECK FOR EXACT SOLUTION                                    
-          IF (rcnvg ==  DZERO) ICNVG = 1 
+!-----------CHECK FOR EXACT SOLUTION                                    
+          IF (rcnvg == DZERO) ICNVG = 1 
+!          
+!-----------CHECK FOR STANDARD CONVERGENCE 
           IF (ICNVG.NE.0) EXIT INNER 
+!
 !-----------CHECK THAT CURRENT AND PREVIOUS rho ARE DIFFERENT           
           lsame = IS_SAME(rho, rho0) 
           IF (lsame) THEN 
             EXIT INNER 
           END IF 
+!
 !-----------RECALCULATE THE RESIDUAL
           IF (NORTH > 0) THEN
             LORTH = mod(iiter+1,NORTH) == 0
@@ -1940,9 +1944,13 @@
           CALL IMSLINEARSUB_TESTCNVG(ICNVGOPT, ICNVG, INNERIT,                  &
                                      deltax, rcnvg,                             &
                                      L2NORM0, EPFACT, HCLOSE, RCLOSE)         
-!           CHECK FOR EXACT SOLUTION                                    
-          IF (rcnvg ==  DZERO) ICNVG = 1 
+!          
+!-----------CHECK FOR EXACT SOLUTION                                    
+          IF (rcnvg == DZERO) ICNVG = 1 
+!          
+!-----------CHECK FOR STANDARD CONVERGENCE 
           IF (ICNVG.NE.0) EXIT INNER
+!
 !-----------CHECK THAT CURRENT AND PREVIOUS rho, alpha, AND omega ARE 
 !           DIFFERENT
           lsame = IS_SAME(rho, rho0) 
@@ -1999,28 +2007,31 @@
 !       + + + FUNCTIONS + + +                                             
 !       + + + CODE + + +                                                  
         IF (Icnvgopt ==  0) THEN 
-          IF (ABS(Hmax) <=  Hclose .AND. ABS(Rmax) <=  Rclose) THEN 
+          IF (ABS(Hmax) <= Hclose .AND. ABS(Rmax) <= Rclose) THEN 
             Icnvg = 1 
           END IF 
-        ELSE IF (Icnvgopt ==  1) THEN 
-          IF (ABS(Hmax) <=  Hclose .AND. ABS(Rmax) <=  Rclose .AND.               &
-              iiter ==  1) THEN 
-            Icnvg = 1 
+        ELSE IF (Icnvgopt == 1) THEN 
+          IF (ABS(Hmax) <= Hclose .AND. ABS(Rmax) <= Rclose) THEN
+            IF (iiter == 1) THEN 
+              Icnvg = 1
+            ELSE
+              Icnvg = -1
+            END IF
           END IF 
-        ELSE IF (Icnvgopt ==  2) THEN 
-          IF (ABS(Hmax) <=  Hclose .OR. Rmax <=  Rclose) THEN 
+        ELSE IF (Icnvgopt == 2) THEN 
+          IF (ABS(Hmax) <= Hclose .OR. Rmax <= Rclose) THEN 
             Icnvg = 1 
-          ELSE IF (Rmax <=  Rmax0*Epfact) THEN 
+          ELSE IF (Rmax <= Rmax0*Epfact) THEN 
             Icnvg = -1 
           END IF
-        ELSE IF (Icnvgopt ==  3) THEN 
-          IF (ABS(Hmax) <=  Hclose) THEN
+        ELSE IF (Icnvgopt == 3) THEN 
+          IF (ABS(Hmax) <= Hclose) THEN
             Icnvg = 1 
-          ELSE IF (Rmax <=  Rmax0*Rclose) THEN  
+          ELSE IF (Rmax <= Rmax0*Rclose) THEN  
             Icnvg = -1 
           END IF
-        ELSE IF (Icnvgopt ==  4) THEN 
-          IF (ABS(Hmax) <=  Hclose .AND. Rmax <=  Rclose) THEN
+        ELSE IF (Icnvgopt == 4) THEN 
+          IF (ABS(Hmax) <= Hclose .AND. Rmax <= Rclose) THEN
             Icnvg = 1 
           ELSE IF (Rmax <=  Rmax0*Epfact) THEN  
             Icnvg = -1 

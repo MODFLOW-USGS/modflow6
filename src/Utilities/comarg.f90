@@ -187,14 +187,16 @@ module CommandArguments
       end select
     end do
     !
-    ! -- check if simfile exists
-    inquire(file=trim(adjustl(simfile)), exist=lexist)
-    if (.NOT. lexist) then
-      lstop = .TRUE.
-      write(errmsg, '(2a,2(1x,a))')                                              &
-          trim(adjustl(cexe)), ':', trim(adjustl(simfile)),                      &
-          'is not present in working directory.'
-      call store_error(errmsg)
+    ! -- check if simfile exists, only if the model should be run
+    if (.not. lstop) then
+      inquire(file=trim(adjustl(simfile)), exist=lexist)
+      if (.NOT. lexist) then
+        lstop = .TRUE.
+        write(errmsg, '(2a,2(1x,a))')                                              &
+            trim(adjustl(cexe)), ':', trim(adjustl(simfile)),                      &
+            'is not present in working directory.'
+        call store_error(errmsg)
+      end if
     end if
     !
     ! -- terminate program if lstop

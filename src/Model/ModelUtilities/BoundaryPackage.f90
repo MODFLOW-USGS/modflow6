@@ -4,7 +4,7 @@ module BndModule
   use ConstantsModule,              only: LENAUXNAME, LENBOUNDNAME, LENFTYPE,  &
                                           DZERO, LENMODELNAME, LENPACKAGENAME, &
                                           LENORIGIN, MAXCHARLEN, LINELENGTH,   &
-                                          DNODATA, LENLISTLABEL,               &
+                                          DNODATA, LENLISTLABEL, LENPAKLOC,    &
                                           TABLEFT, TABCENTER
   use SimModule,                    only: count_errors, store_error, ustop,    &
                                           store_error_unit
@@ -480,7 +480,7 @@ module BndModule
     return
   end subroutine bnd_fn
 
-  subroutine bnd_nur(this, neqpak, x, xtemp, dx, inewtonur)
+  subroutine bnd_nur(this, neqpak, x, xtemp, dx, inewtonur, dxmax, locmax)
 ! ******************************************************************************
 ! bnd_nur -- under-relaxation
 ! Subroutine: (1) Under-relaxation of Groundwater Flow Model Package Heads
@@ -497,6 +497,8 @@ module BndModule
     real(DP), dimension(neqpak), intent(in) :: xtemp
     real(DP), dimension(neqpak), intent(inout) :: dx
     integer(I4B), intent(inout) :: inewtonur
+    real(DP), intent(inout) :: dxmax
+    integer(I4B), intent(inout) :: locmax
     ! -- local
 ! ------------------------------------------------------------------------------
 
@@ -507,7 +509,7 @@ module BndModule
     return
   end subroutine bnd_nur
 
-  subroutine bnd_cc(this, iend, icnvg, hclose, rclose)
+  subroutine bnd_cc(this, innertot, kiter, iend, icnvgmod, cpak, ipak, dpak)
 ! ******************************************************************************
 ! bnd_cc -- additional convergence check for advanced packages
 ! ******************************************************************************
@@ -516,10 +518,13 @@ module BndModule
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(BndType), intent(inout) :: this
-    integer(I4B), intent(in) :: iend
-    integer(I4B), intent(inout) :: icnvg
-    real(DP), intent(in) :: hclose
-    real(DP), intent(in) :: rclose
+    integer(I4B), intent(in) :: innertot
+    integer(I4B), intent(in) :: kiter
+    integer(I4B),intent(in) :: iend
+    integer(I4B), intent(in) :: icnvgmod
+    character(len=LENPAKLOC), intent(inout) :: cpak
+    integer(I4B), intent(inout) :: ipak
+    real(DP), intent(inout) :: dpak
     ! -- local
 ! ------------------------------------------------------------------------------
 

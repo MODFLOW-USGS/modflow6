@@ -737,7 +737,7 @@ module GwfNpfModule
     return
   end subroutine npf_fn
 
-  subroutine npf_nur(this, neqmod, x, xtemp, dx, inewtonur)
+  subroutine npf_nur(this, neqmod, x, xtemp, dx, inewtonur, dxmax, locmax)
 ! ******************************************************************************
 ! bnd_nur -- under-relaxation
 ! Subroutine: (1) Under-relaxation of Groundwater Flow Model Heads for current
@@ -754,9 +754,13 @@ module GwfNpfModule
     real(DP), dimension(neqmod), intent(in) :: xtemp
     real(DP), dimension(neqmod), intent(inout) :: dx
     integer(I4B), intent(inout) :: inewtonur
+    real(DP), intent(inout) :: dxmax
+    integer(I4B), intent(inout) :: locmax
     ! -- local
     integer(I4B) :: n
     real(DP) :: botm
+    real(DP) :: xx
+    real(DP) :: dxx
 ! ------------------------------------------------------------------------------
 
     !
@@ -769,7 +773,13 @@ module GwfNpfModule
         !    solution head is below the bottom of the model
         if (x(n) < botm) then
           inewtonur = 1
-          x(n) = xtemp(n)*(DONE-DP9) + botm*DP9
+          xx = xtemp(n)*(DONE-DP9) + botm*DP9
+          dxx = x(n) - xx
+          if (abs(dxx) > abs(dxmax)) then
+            locmax = n
+            dxmax = dxx
+          end if
+          x(n) = xx
           dx(n) = DZERO
         end if
       end if

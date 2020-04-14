@@ -83,7 +83,7 @@ module Xt3dModule
   
   contains
 
-    subroutine xt3d_cr(xt3dobj, name_model, inunit, iout, ldispopt)
+  subroutine xt3d_cr(xt3dobj, name_model, inunit, iout, ldispopt)
 ! ******************************************************************************
 ! xt3d_cr -- Create a new xt3d object
 ! ******************************************************************************
@@ -111,7 +111,7 @@ module Xt3dModule
     !
     ! -- Return
     return
-    end subroutine xt3d_cr
+  end subroutine xt3d_cr
 
   subroutine xt3d_df(this, dis)
 ! ******************************************************************************
@@ -354,7 +354,8 @@ module Xt3dModule
     !
     ! -- If not Newton and not rhs, calculate amatpc and amatpcx for permanently
     ! -- confined connections
-    if(this%lamatsaved) call this%xt3d_fcpc(this%dis%nodes)
+    if(this%lamatsaved .and. .not. this%ldispersion) &
+      call this%xt3d_fcpc(this%dis%nodes)
     !
     ! -- Return
     return
@@ -526,6 +527,14 @@ module Xt3dModule
     real(DP) :: chat01
     real(DP),dimension(this%nbrmax) :: chati0, chat1j
 ! ------------------------------------------------------------------------------
+    !
+    ! -- Initialize amatpc and amatpcx to zero
+    do n = 1, size(this%amatpc)
+      this%amatpc(n) = DZERO
+    enddo
+    do n = 1, size(this%amatpcx)
+      this%amatpcx(n) = DZERO
+    enddo
     !
     ! -- Calculate xt3d conductance-like coefficients for permanently confined
     ! -- connections and put into amatpc and amatpcx as appropriate
@@ -1104,7 +1113,19 @@ module Xt3dModule
       call mem_allocate(this%qrhs, 0, 'QRHS', this%origin)
     end if
     !
-    call this%xt3d_iallpc()
+    if (this%ldispersion) then
+      !
+      ! -- xt3d is being used for dispersion
+      this%lamatsaved = .true.
+      call mem_allocate(this%iallpc, this%dis%nodes, 'IALLPC', this%origin)
+      this%iallpc = 1
+    else
+      !
+      ! -- xt3d is being used for flow so find where connections are
+      !    permanently confined
+      call this%xt3d_iallpc()
+    endif
+    
     !
     if (this%lamatsaved) then
       call mem_allocate(this%amatpc, this%dis%nja, 'AMATPC', this%origin)
@@ -1151,7 +1172,7 @@ module Xt3dModule
     integer(I4B),dimension(this%nbrmax) :: inbr0, inbr1
 ! ------------------------------------------------------------------------------
     !
-    if(this%ixt3d == 2 .or. this%ldispersion) then
+    if(this%ixt3d == 2) then
       this%lamatsaved = .false.
       call mem_allocate(this%iallpc, 0, 'IALLPC', this%origin)
     else
@@ -1176,7 +1197,6 @@ module Xt3dModule
           call this%xt3d_load_inbr(m, nnbr1, inbr1)
           do il1 = 1,nnbr1
             mm = inbr1(il1)
-!!!            if (mm.lt.m) cycle
             if (this%icelltype(mm) /= 0) then
               this%iallpc(n) = 0
               this%iallpc(m) = 0
@@ -1195,7 +1215,7 @@ module Xt3dModule
     end if
     !
     if (.not.this%lamatsaved) then
-      call mem_deallocate(this%iallpc)       ! kluge: ok to do this???
+      call mem_deallocate(this%iallpc)
       call mem_allocate(this%iallpc, 0, 'IALLPC', this%origin)
     end if
     !

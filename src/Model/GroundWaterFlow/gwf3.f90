@@ -2,7 +2,7 @@ module GwfModule
 
   use KindModule,                  only: DP, I4B
   use InputOutputModule,           only: ParseLine, upcase
-  use ConstantsModule,             only: LENFTYPE, DZERO, DEM1, DTEN, DEP20
+  use ConstantsModule,             only: LENFTYPE, LENPAKLOC, DZERO, DEM1, DTEN, DEP20
   use NumericalModelModule,        only: NumericalModelType
   use BaseDisModule,               only: DisBaseType
   use BndModule,                   only: BndType, AddBndToList, GetBndFromList
@@ -680,7 +680,7 @@ module GwfModule
     return
   end subroutine gwf_fc
 
-  subroutine gwf_cc(this, kiter, iend, icnvg, hclose, rclose)
+  subroutine gwf_cc(this, innertot, kiter, iend, icnvgmod, cpak, ipak, dpak)
 ! ******************************************************************************
 ! gwf_cc -- GroundWater Flow Model Final Convergence Check for Boundary Packages
 ! Subroutine: (1) calls package cc routines
@@ -690,11 +690,13 @@ module GwfModule
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwfModelType) :: this
+    integer(I4B),intent(in) :: innertot
     integer(I4B),intent(in) :: kiter
     integer(I4B),intent(in) :: iend
-    integer(I4B),intent(inout) :: icnvg
-    real(DP), intent(in) :: hclose
-    real(DP), intent(in) :: rclose
+    integer(I4B),intent(in) :: icnvgmod
+    character(len=LENPAKLOC), intent(inout) :: cpak
+    integer(I4B), intent(inout) :: ipak
+    real(DP), intent(inout) :: dpak
     ! -- local
     class(BndType), pointer :: packobj
     integer(I4B) :: ip
@@ -702,18 +704,21 @@ module GwfModule
 ! ------------------------------------------------------------------------------
     !
     ! -- If mover is on, then at least 2 outers required
-    if (this%inmvr > 0) call this%mvr%mvr_cc(kiter, iend, icnvg)
+    if (this%inmvr > 0) then
+      call this%mvr%mvr_cc(innertot, kiter, iend, icnvgmod, cpak, ipak, dpak)
+    end if
     !
     ! -- csub convergence check
     if (this%incsub > 0) then
-      call this%csub%csub_cc(iend, icnvg, this%dis%nodes, this%x, this%xold,     &
-                             hclose, rclose)
+      call this%csub%csub_cc(innertot, kiter, iend, icnvgmod,                    &
+                             this%dis%nodes, this%x, this%xold,                  &
+                             cpak, ipak, dpak)
     end if
     !
     ! -- Call package cc routines
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
-      call packobj%bnd_cc(iend, icnvg, hclose, rclose)
+      call packobj%bnd_cc(innertot, kiter, iend, icnvgmod, cpak, ipak, dpak)
     enddo
     !
     ! -- return
@@ -859,7 +864,7 @@ module GwfModule
     return
   end subroutine gwf_ptc
 
-  subroutine gwf_nur(this, neqmod, x, xtemp, dx, inewtonur)
+  subroutine gwf_nur(this, neqmod, x, xtemp, dx, inewtonur, dxmax, locmax)
 ! ******************************************************************************
 ! gwf_nur -- under-relaxation
 ! Subroutine: (1) Under-relaxation of Groundwater Flow Model Heads for current
@@ -878,10 +883,9 @@ module GwfModule
     real(DP), dimension(neqmod), intent(in) :: xtemp
     real(DP), dimension(neqmod), intent(inout) :: dx
     integer(I4B), intent(inout) :: inewtonur
+    real(DP), intent(inout) :: dxmax
+    integer(I4B), intent(inout) :: locmax
     ! -- local
-    !integer(I4B) :: n
-    !integer(I4B) :: jcol
-    !real(DP) :: botm
     integer(I4B) :: i0
     integer(I4B) :: i1
     class(BndType), pointer :: packobj
@@ -893,7 +897,7 @@ module GwfModule
     !    under-relaxation is turned on.
     if (this%inewton /= 0 .and. this%inewtonur /= 0) then
       if (this%innpf > 0) then
-        call this%npf%npf_nur(neqmod, x, xtemp, dx, inewtonur)
+        call this%npf%npf_nur(neqmod, x, xtemp, dx, inewtonur, dxmax, locmax)
       end if
       !
       ! -- Call package nur routines
@@ -903,7 +907,7 @@ module GwfModule
         if (packobj%npakeq > 0) then
           i1 = i0 + packobj%npakeq - 1
           call packobj%bnd_nur(packobj%npakeq, x(i0:i1), xtemp(i0:i1), &
-                               dx(i0:i1), inewtonur)
+                               dx(i0:i1), inewtonur, dxmax, locmax)
           i0 = i1 + 1
         end if
       enddo

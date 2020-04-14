@@ -69,11 +69,15 @@ def get_model(idx, dir):
     tdis = flopy.mf6.ModflowTdis(sim, time_units='DAYS',
                                  nper=nper, perioddata=tdis_rc)
 
-    # create gwf model
-    gwf = flopy.mf6.ModflowGwf(sim, modelname=name, save_flows=True)
+    # set ims csv files
+    csv0 = '{}.outer.ims.csv'.format(name)
+    csv1 = '{}.inner.ims.csv'.format(name)
 
     # create iterative model solution and register the gwf model with it
-    ims = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
+    ims = flopy.mf6.ModflowIms(sim,
+                               print_option='ALL',
+                               csv_outer_output_filerecord=csv0,
+                               csv_inner_output_filerecord=csv1,
                                outer_hclose=hclose,
                                outer_maximum=nouter,
                                under_relaxation='DBD',
@@ -83,7 +87,9 @@ def get_model(idx, dir):
                                scaling_method='NONE',
                                reordering_method='NONE',
                                relaxation_factor=relax)
-    sim.register_ims_package(ims, [gwf.name])
+
+    # create gwf model
+    gwf = flopy.mf6.ModflowGwf(sim, modelname=name, save_flows=True)
 
     dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
                                   delr=delr, delc=delc,

@@ -3,10 +3,12 @@
 module NumericalSolutionModule
   use KindModule,              only: DP, I4B
   use TimerModule,             only: code_timer
-  use ConstantsModule,         only: LINELENGTH, LENSOLUTIONNAME,              &
+  use ConstantsModule,         only: LINELENGTH, LENSOLUTIONNAME, LENPAKLOC,   &
                                      DPREC, DZERO, DEM20, DEM15, DEM6,         &
                                      DEM4, DEM3, DEM2, DEM1, DHALF,            &
-                                     DONE, DTHREE, DEP6, DEP20
+                                     DONE, DTHREE, DEP6, DEP20, DNODATA,       &
+                                     TABLEFT, TABRIGHT
+  use TableModule,             only: TableType, table_cr
   use GenericUtilitiesModule,  only: IS_SAME, sim_message, stop_with_error
   use VersionModule,           only: IDEVELOPMODE
   use BaseModelModule,         only: BaseModelType
@@ -54,7 +56,6 @@ module NumericalSolutionModule
     type(BlockParserType) :: parser
     !
     ! -- sparse matrix data
-    real(DP), pointer                                    :: rclosebnd => NULL()
     real(DP), pointer                                    :: theta => NULL()
     real(DP), pointer                                    :: akappa => NULL()
     real(DP), pointer                                    :: gamma => NULL()
@@ -73,6 +74,7 @@ module NumericalSolutionModule
     integer(I4B), pointer                                :: ibcount => NULL()
     integer(I4B), pointer                                :: icnvg => NULL()
     integer(I4B), pointer                                :: itertot => NULL() ! total nr. of linear solves per call to sln_ca
+    integer(I4B), pointer                                :: innertot => NULL() ! total nr. of inner iterations for simulation
     integer(I4B), pointer                                :: mxiter => NULL()
     integer(I4B), pointer                                :: linmeth => NULL()
     integer(I4B), pointer                                :: nonmeth => NULL()
@@ -88,9 +90,9 @@ module NumericalSolutionModule
     !
     ! -- convergence summary information
     character(len=31), dimension(:), pointer, contiguous :: caccel => NULL()
-    integer(I4B), pointer                                :: icsvout => NULL()
+    integer(I4B), pointer                                :: icsvouterout => NULL()
+    integer(I4B), pointer                                :: icsvinnerout => NULL()
     integer(I4B), pointer                                :: nitermax => NULL()
-    integer(I4B), pointer                                :: nitercnt => NULL()
     integer(I4B), pointer                                :: convnmod => NULL()
     integer(I4B), dimension(:), pointer, contiguous      :: convmodstart => NULL()
     integer(I4B), dimension(:), pointer, contiguous      :: locdv => NULL()
@@ -120,6 +122,10 @@ module NumericalSolutionModule
     !
     ! -- sparse object
     type(sparsematrix)                                   :: sparse
+    !
+    ! -- table objects
+    type(TableType), pointer :: innertab => null()
+    type(TableType), pointer :: outertab => null()
 
   contains
     procedure :: sln_df
@@ -233,51 +239,51 @@ contains
     this%name = solutionname
     !
     ! -- allocate scalars
-    call mem_allocate (this%id, 'ID', solutionname)
-    call mem_allocate (this%iu, 'IU', solutionname)
-    call mem_allocate (this%ttform, 'TTFORM', solutionname)
-    call mem_allocate (this%ttsoln, 'TTSOLN', solutionname)
+    call mem_allocate(this%id, 'ID', solutionname)
+    call mem_allocate(this%iu, 'IU', solutionname)
+    call mem_allocate(this%ttform, 'TTFORM', solutionname)
+    call mem_allocate(this%ttsoln, 'TTSOLN', solutionname)
     call mem_allocate(this%neq, 'NEQ', solutionname)
     call mem_allocate(this%nja, 'NJA', solutionname)
-    call mem_allocate (this%hclose, 'HCLOSE', solutionname)
-    call mem_allocate (this%hiclose, 'HICLOSE', solutionname)
-    call mem_allocate (this%bigchold, 'BIGCHOLD', solutionname)
-    call mem_allocate (this%bigch, 'BIGCH', solutionname)
-    call mem_allocate (this%relaxold, 'RELAXOLD', solutionname)
-    call mem_allocate (this%res_prev, 'RES_PREV', solutionname)
-    call mem_allocate (this%res_new, 'RES_NEW', solutionname)
-    call mem_allocate (this%res_in, 'RES_IN', solutionname)
-    call mem_allocate (this%ibcount, 'IBCOUNT', solutionname)
-    call mem_allocate (this%icnvg, 'ICNVG', solutionname)
-    call mem_allocate (this%itertot, 'ITERTOT', solutionname)
-    call mem_allocate (this%mxiter, 'MXITER', solutionname)
-    call mem_allocate (this%linmeth, 'LINMETH', solutionname)
-    call mem_allocate (this%nonmeth, 'NONMETH', solutionname)
-    call mem_allocate (this%iprims, 'IPRIMS', solutionname)
-    call mem_allocate (this%rclosebnd, 'RCLOSEBND', solutionname)
-    call mem_allocate (this%theta, 'THETA', solutionname)
-    call mem_allocate (this%akappa, 'AKAPPA', solutionname)
-    call mem_allocate (this%gamma, 'GAMMA', solutionname)
-    call mem_allocate (this%amomentum, 'AMOMENTUM', solutionname)
-    call mem_allocate (this%breduc, 'BREDUC', solutionname)
-    call mem_allocate (this%btol, 'BTOL', solutionname)
-    call mem_allocate (this%res_lim, 'RES_LIM', solutionname)
-    call mem_allocate (this%numtrack, 'NUMTRACK', solutionname)
-    call mem_allocate (this%ibflag, 'IBFLAG', solutionname)
-    call mem_allocate (this%icsvout, 'ICSVOUT', solutionname)
-    call mem_allocate (this%nitermax, 'NITERMAX', solutionname)
-    call mem_allocate (this%nitercnt, 'NITERCNT', solutionname)
+    call mem_allocate(this%hclose, 'HCLOSE', solutionname)
+    call mem_allocate(this%hiclose, 'HICLOSE', solutionname)
+    call mem_allocate(this%bigchold, 'BIGCHOLD', solutionname)
+    call mem_allocate(this%bigch, 'BIGCH', solutionname)
+    call mem_allocate(this%relaxold, 'RELAXOLD', solutionname)
+    call mem_allocate(this%res_prev, 'RES_PREV', solutionname)
+    call mem_allocate(this%res_new, 'RES_NEW', solutionname)
+    call mem_allocate(this%res_in, 'RES_IN', solutionname)
+    call mem_allocate(this%ibcount, 'IBCOUNT', solutionname)
+    call mem_allocate(this%icnvg, 'ICNVG', solutionname)
+    call mem_allocate(this%itertot, 'ITERTOT', solutionname)
+    call mem_allocate(this%innertot, 'INNERTOT', solutionname)
+    call mem_allocate(this%mxiter, 'MXITER', solutionname)
+    call mem_allocate(this%linmeth, 'LINMETH', solutionname)
+    call mem_allocate(this%nonmeth, 'NONMETH', solutionname)
+    call mem_allocate(this%iprims, 'IPRIMS', solutionname)
+    call mem_allocate(this%theta, 'THETA', solutionname)
+    call mem_allocate(this%akappa, 'AKAPPA', solutionname)
+    call mem_allocate(this%gamma, 'GAMMA', solutionname)
+    call mem_allocate(this%amomentum, 'AMOMENTUM', solutionname)
+    call mem_allocate(this%breduc, 'BREDUC', solutionname)
+    call mem_allocate(this%btol, 'BTOL', solutionname)
+    call mem_allocate(this%res_lim, 'RES_LIM', solutionname)
+    call mem_allocate(this%numtrack, 'NUMTRACK', solutionname)
+    call mem_allocate(this%ibflag, 'IBFLAG', solutionname)
+    call mem_allocate(this%icsvouterout, 'ICSVOUTEROUT', solutionname)
+    call mem_allocate(this%icsvinnerout, 'ICSVINNEROUT', solutionname)
+    call mem_allocate(this%nitermax, 'NITERMAX', solutionname)
     call mem_allocate(this%convnmod, 'CONVNMOD', solutionname)
-    call mem_allocate (this%iallowptc, 'IALLOWPTC', solutionname)
-    call mem_allocate (this%iptcopt, 'IPTCOPT', solutionname)
-    call mem_allocate (this%iptcout, 'IPTCOUT', solutionname)
-    call mem_allocate (this%l2norm0, 'L2NORM0', solutionname)
-    call mem_allocate (this%ptcfact, 'PTCFACT', solutionname)
-    call mem_allocate (this%ptcdel, 'PTCDEL', solutionname)
-    call mem_allocate (this%ptcdel0, 'PTCDEL0', solutionname)
-    call mem_allocate (this%ptcexp, 'PTCEXP', solutionname)
-    call mem_allocate (this%ptcthresh, 'PTCTHRESH', solutionname)
-    call mem_allocate (this%ptcrat, 'PTCRAT', solutionname)
+    call mem_allocate(this%iallowptc, 'IALLOWPTC', solutionname)
+    call mem_allocate(this%iptcopt, 'IPTCOPT', solutionname)
+    call mem_allocate(this%iptcout, 'IPTCOUT', solutionname)
+    call mem_allocate(this%l2norm0, 'L2NORM0', solutionname)
+    call mem_allocate(this%ptcfact, 'PTCFACT', solutionname)
+    call mem_allocate(this%ptcdel, 'PTCDEL', solutionname)
+    call mem_allocate(this%ptcdel0, 'PTCDEL0', solutionname)
+    call mem_allocate(this%ptcexp, 'PTCEXP', solutionname)
+    call mem_allocate(this%ptcthresh, 'PTCTHRESH', solutionname)
+    call mem_allocate(this%ptcrat, 'PTCRAT', solutionname)
     !
     ! -- initialize
     this%id = 0
@@ -296,11 +302,11 @@ contains
     this%ibcount = 0
     this%icnvg = 0
     this%itertot = 0
+    this%innertot = 0
     this%mxiter = 0
     this%linmeth = 1
     this%nonmeth = 0
     this%iprims = 0
-    this%rclosebnd = DZERO
     this%theta = DZERO
     this%akappa = DZERO
     this%gamma = DZERO
@@ -310,9 +316,9 @@ contains
     this%res_lim = DZERO
     this%numtrack = 0
     this%ibflag = 0
-    this%icsvout = 0
+    this%icsvouterout = 0
+    this%icsvinnerout = 0
     this%nitermax = 0
-    this%nitercnt = 0
     this%convnmod = 0
     this%iallowptc = 1
     this%iptcopt = 0
@@ -540,16 +546,29 @@ contains
               trim(keyword)
             call store_error(errmsg)
           end if
-        case ('CSV_OUTPUT')
+        case ('CSV_OUTER_OUTPUT')
           call this%parser%GetStringCaps(keyword)
           if (keyword == 'FILEOUT') then
             call this%parser%GetString(fname)
-            this%icsvout = getunit()
-            call openfile(this%icsvout, iout, fname, 'CSV_OUTPUT',  &
+            this%icsvouterout = getunit()
+            call openfile(this%icsvouterout, iout, fname, 'CSV_OUTER_OUTPUT',  &
                           filstat_opt='REPLACE')
-            write(iout,fmtcsvout) trim(fname), this%icsvout
+            write(iout,fmtcsvout) trim(fname), this%icsvouterout
           else
-            write(errmsg,'(4x,a)') 'IMS sln_ar: OPTIONAL CSV_OUTPUT ' //       &
+            write(errmsg,'(4x,a)') 'IMS sln_ar: OPTIONAL CSV_OUTER_OUTPUT ' // &
+              'KEYWORD MUST BE FOLLOWED BY FILEOUT'
+            call store_error(errmsg)
+          end if
+        case ('CSV_INNER_OUTPUT')
+          call this%parser%GetStringCaps(keyword)
+          if (keyword == 'FILEOUT') then
+            call this%parser%GetString(fname)
+            this%icsvinnerout = getunit()
+            call openfile(this%icsvinnerout, iout, fname, 'CSV_INNER_OUTPUT',  &
+                          filstat_opt='REPLACE')
+            write(iout,fmtcsvout) trim(fname), this%icsvinnerout
+          else
+            write(errmsg,'(4x,a)') 'IMS sln_ar: OPTIONAL CSV_INNER_OUTPUT ' // &
               'KEYWORD MUST BE FOLLOWED BY FILEOUT'
             call store_error(errmsg)
           end if
@@ -675,8 +694,6 @@ contains
           this%hclose  = this%parser%GetDouble()
         case ('OUTER_MAXIMUM')
           this%mxiter  = this%parser%GetInteger()
-        case ('OUTER_RCLOSEBND')
-          this%rclosebnd  = this%parser%GetDouble()
         case ('UNDER_RELAXATION')
           call this%parser%GetStringCaps(keyword)
           ival = 0
@@ -748,12 +765,6 @@ contains
       call store_error(errmsg)
     END IF
     !
-    ! -- check that RCLOSEBND is greater than zero
-    IF (this%rclosebnd <=  DZERO) THEN
-      WRITE( errmsg,'(A)' ) 'SLN_AR: OUTER_RCLOSEBND MUST > 0.0. '
-      call store_error(errmsg)
-    END IF
-    !
     !
     isymflg = 1
     if ( this%nonmeth > 0 )then
@@ -816,12 +827,11 @@ contains
     ! -- write solver data to output file
     !
     ! -- non-linear solver data
-    WRITE(IOUT,9002) this%hclose, this%rclosebnd, this%mxiter,                 &
+    WRITE(IOUT,9002) this%hclose, this%mxiter,                                 &
                      this%iprims, this%nonmeth, this%linmeth
     !
     ! -- standard outer iteration formats
 9002 FORMAT(1X,'OUTER ITERATION CONVERGENCE CRITERION     (HCLOSE) = ', E15.6, &
-    &      /1X,'OUTER ITERATION BOUNDARY FLOW RESIDUAL (RCLOSEBND) = ', E15.6, &
     &      /1X,'MAXIMUM NUMBER OF OUTER ITERATIONS        (MXITER) = ', I9,    &
     &      /1X,'SOLVER PRINTOUT INDEX                     (IPRIMS) = ', I9,    &
     &      /1X,'NONLINEAR ITERATION METHOD            (NONLINMETH) = ', I9,    &
@@ -874,7 +884,7 @@ contains
     this%lrch = 0
 
     ! allocate space for saving solver convergence history
-    if (this%iprims == 2) then
+    if (this%iprims == 2 .or. this%icsvinnerout > 0) then
       this%nitermax = this%nitermax * this%mxiter
     else
       this%nitermax = 1
@@ -1001,6 +1011,20 @@ contains
     ! -- character arrays
     deallocate(this%caccel)
     !
+    ! -- inner iteration table object
+    if (associated(this%innertab)) then
+      call this%innertab%table_da()
+      deallocate(this%innertab)
+      nullify(this%innertab)
+    end if
+    !
+    ! -- outer iteration table object
+    if (associated(this%outertab)) then
+      call this%outertab%table_da()
+      deallocate(this%outertab)
+      nullify(this%outertab)
+    end if
+    !
     ! -- arrays
     call mem_deallocate(this%ja)
     call mem_deallocate(this%amat)
@@ -1044,11 +1068,11 @@ contains
     call mem_deallocate(this%ibcount)
     call mem_deallocate(this%icnvg)
     call mem_deallocate(this%itertot)
+    call mem_deallocate(this%innertot)
     call mem_deallocate(this%mxiter)
     call mem_deallocate(this%linmeth)
     call mem_deallocate(this%nonmeth)
     call mem_deallocate(this%iprims)
-    call mem_deallocate(this%rclosebnd)
     call mem_deallocate(this%theta)
     call mem_deallocate(this%akappa)
     call mem_deallocate(this%gamma)
@@ -1058,9 +1082,9 @@ contains
     call mem_deallocate(this%res_lim)
     call mem_deallocate(this%numtrack)
     call mem_deallocate(this%ibflag)
-    call mem_deallocate(this%icsvout)
+    call mem_deallocate(this%icsvouterout)
+    call mem_deallocate(this%icsvinnerout)
     call mem_deallocate(this%nitermax)
-    call mem_deallocate(this%nitercnt)
     call mem_deallocate(this%convnmod)
     call mem_deallocate(this%iallowptc)
     call mem_deallocate(this%iptcopt)
@@ -1189,41 +1213,53 @@ contains
     
   end subroutine      
       
-  ! write the header for the solver output to the CSV file
+  ! write the header for the solver output to the CSV files
   subroutine writeCSVHeader(this)  
     class(NumericalSolutionType) :: this
     ! local
     integer(I4B) :: im
     class(NumericalModelType), pointer :: mp
-    
-    if (this%icsvout > 0) then
-      write(this%icsvout, '(*(G0,:,","))', advance='NO')                     &
-        'total_iterations', 'totim', 'kper', 'kstp', 'ksub', 'nouter',       &
-        'ninner', 'solution_dvmax', 'solution_dvmax_model',                  &
-        'solution_dvmax_node'
-      if (this%iprims == 2) then
-        write(this%icsvout, '(*(G0,:,","))', advance='NO')                   &
-          '', 'solution_drmax', 'solution_drmax_model',                      &
-          'solution_drmax_node', 'solution_alpha'
-        if (this%imslinear%ilinmeth == 2) then
-          write(this%icsvout, '(*(G0,:,","))', advance='NO')                 &
-            '', 'solution_omega'
-        end if
-        ! -- check for more than one model
-        if (this%convnmod > 1) then
-          do im=1,this%modellist%Count()
-            mp => GetNumericalModelFromList(this%modellist, im)
-            write(this%icsvout, '(*(G0,:,","))', advance='NO')               &
-              '', trim(adjustl(mp%name)) // '_dvmax',                        &
-              trim(adjustl(mp%name)) // '_dvmax_node',                       &
-              trim(adjustl(mp%name)) // '_drmax',                            &
-              trim(adjustl(mp%name)) // '_drmax_node'
-          end do
-        end if
-      end if
-      write(this%icsvout,'(a)') ''
+    !
+    ! -- code
+    !
+    ! -- outer iteration csv header
+    if (this%icsvouterout > 0) then
+      write(this%icsvouterout, '(*(G0,:,","))')                              &
+        'total_inner_iterations', 'totim', 'kper', 'kstp', 'nouter',         &
+        'inner_iterations', 'solution_outer_dvmax',                          &
+        'solution_outer_dvmax_model', 'solution_outer_dvmax_package',        &
+        'solution_outer_dvmax_node'
     end if
-    
+    !
+    ! -- inner iteration csv header
+    if (this%icsvinnerout > 0) then
+      write(this%icsvinnerout, '(*(G0,:,","))', advance='NO')                &
+        'total_inner_iterations', 'totim', 'kper', 'kstp', 'nouter',         &
+        'ninner', 'solution_inner_dvmax', 'solution_inner_dvmax_model',      &
+        'solution_inner_dvmax_node'
+      write(this%icsvinnerout, '(*(G0,:,","))', advance='NO')              &
+        '', 'solution_inner_drmax', 'solution_inner_drmax_model',          &
+        'solution_inner_drmax_node', 'solution_inner_alpha'
+      if (this%imslinear%ilinmeth == 2) then
+        write(this%icsvinnerout, '(*(G0,:,","))', advance='NO')            &
+          '', 'solution_inner_omega'
+      end if
+      ! -- check for more than one model
+      if (this%convnmod > 1) then
+        do im=1,this%modellist%Count()
+          mp => GetNumericalModelFromList(this%modellist, im)
+          write(this%icsvinnerout, '(*(G0,:,","))', advance='NO')          &
+            '', trim(adjustl(mp%name)) // '_inner_dvmax',                  &
+            trim(adjustl(mp%name)) // '_inner_dvmax_node',                 &
+            trim(adjustl(mp%name)) // '_inner_drmax',                      &
+            trim(adjustl(mp%name)) // '_inner_drmax_node'
+        end do
+      end if
+      write(this%icsvinnerout,'(a)') ''
+    end if
+    !
+    ! -- return
+    return
   end subroutine writeCSVHeader
   
   ! advances the exchanges and models in this solution by 1 (sub)timestep
@@ -1307,60 +1343,98 @@ contains
   !
   ! it updates the convergence flag "this%icnvg" accordingly
   subroutine doIteration(this, kiter)
-    use TdisModule, only: kstp, kper
+    use TdisModule, only: kstp, kper, totim
     class(NumericalSolutionType) :: this    
     integer(I4B), intent(in) :: kiter
     ! local
-    integer(I4B) :: ic, im    
     class(NumericalModelType), pointer :: mp
     class(NumericalExchangeType), pointer :: cp    
+    character(len=LINELENGTH) :: title
+    character(len=LINELENGTH) :: tag
     character(len=LINELENGTH) :: line
-    character(len=34) :: strh
-    character(len=16) :: cval
+    character(len=LENPAKLOC) :: cmod
+    character(len=LENPAKLOC) :: cpak
+    character(len=LENPAKLOC) :: cpakout
+    character(len=LENPAKLOC) :: strh
+    character(len=25) :: cval
+    character(len=7) :: cmsg
+    integer(I4B) :: ic
+    integer(I4B) :: im    
+    integer(I4B) :: icsv0
+    integer(I4B) :: ntabrows
+    integer(I4B) :: ntabcols
     integer(I4B) :: i0, i1    
     integer(I4B) :: itestmat, n
     integer(I4B) :: iter    
     integer(I4B) :: inewtonur    
+    integer(I4B) :: locmax_nur    
     integer(I4B) :: iend
+    integer(I4B) :: icnvgmod
     integer(I4B) :: iptc
+    integer(I4B) :: nodeu
+    integer(I4B) :: ipak
+    integer(I4B) :: ipos0
+    integer(I4B) :: ipos1
+    real(DP) :: dxmax_nur
     real(DP) :: dxmax
     real(DP) :: ptcf
     real(DP) :: ttform
     real(DP) :: ttsoln
-    
+    real(DP) :: dpak
+    real(DP) :: outer_hncg
     ! formats
-11  FORMAT(//1X,'OUTER ITERATION SUMMARY',/,1x,139('-'),/,                  &
-    18x,'     OUTER     INNER BACKTRACK BACKTRACK        INCOMING        ', &
-        'OUTGOING         MAXIMUM                    MAXIMUM CHANGE',/,     &
-    18x,' ITERATION ITERATION      FLAG    NUMBER        RESIDUAL        ', &
-        'RESIDUAL          CHANGE                    MODEL-(CELLID)',/,     &
-      1x,139('-'))
-    
-12  FORMAT(//1X,'OUTER ITERATION SUMMARY',/,1x,87('-'),/,                   &
-    18x,'     OUTER     INNER         MAXIMUM                    ',         &
-      'MAXIMUM CHANGE',/,                                                   &
-    18x,' ITERATION ITERATION          CHANGE                    ',         &
-      'MODEL-(CELLID)',/,                                                   &
-    1x,87('-'))
-    
-    ! --backtracking
+!   -----------------------------------------------------------------------------
+    !
+    ! -- code
+    !
+    ! -- initialize local variables
+    icsv0 = max(1, this%innertot + 1)
+    !
+    ! -- create header for outer iteration table
+    if (this%iprims > 0) then
+      if (.not. associated(this%outertab)) then
+        !
+        ! -- create outer iteration table
+        ! -- table dimensions
+        ntabrows = 1
+        ntabcols = 6
+        if (this%numtrack > 0) then
+          ntabcols = ntabcols + 4
+        end if
+        !
+        ! -- initialize table and define columns
+        title = 'OUTER ITERATION SUMMARY'
+        call table_cr(this%outertab, this%name, title)
+        call this%outertab%table_df(ntabrows, ntabcols, iout,        &
+                                    finalize=.FALSE.)
+        tag = 'OUTER ITERATION STEP'
+        call this%outertab%initialize_column(tag, 25, alignment=TABLEFT)
+        tag = 'OUTER ITERATION'
+        call this%outertab%initialize_column(tag, 10, alignment=TABRIGHT)
+        tag = 'INNER ITERATION'
+        call this%outertab%initialize_column(tag, 10, alignment=TABRIGHT)
+        if (this%numtrack > 0) then
+          tag = 'BACKTRACK FLAG'
+          call this%outertab%initialize_column(tag, 10, alignment=TABRIGHT)
+          tag = 'BACKTRACK ITERATIONS'
+          call this%outertab%initialize_column(tag, 10, alignment=TABRIGHT)
+          tag = 'INCOMING RESIDUAL'
+          call this%outertab%initialize_column(tag, 15, alignment=TABRIGHT)
+          tag = 'OUTGOING RESIDUAL'
+          call this%outertab%initialize_column(tag, 15, alignment=TABRIGHT)
+        end if
+        tag = 'MAXIMUM CHANGE'
+        call this%outertab%initialize_column(tag, 15, alignment=TABRIGHT)
+        tag = 'STEP SUCCESS'
+        call this%outertab%initialize_column(tag, 7, alignment=TABRIGHT)
+        tag = 'MAXIMUM CHANGE MODEL-(CELLID) OR MODEL-PACKAGE-(NUMBER)'
+        call this%outertab%initialize_column(tag, 34, alignment=TABRIGHT)
+      end if
+    end if
+    !
+    ! -- backtracking
     if (this%numtrack > 0) then
-      if (kiter == 1) then
-        ! -- write header for solver output
-        if (this%iprims > 0) then
-          write(iout,11)
-        end if
-      end if
-      !
-      ! -- call backtracking
       call this%sln_backtracking(mp, cp, kiter)
-    else
-      if (kiter == 1) then
-        ! -- write header for solver output
-        if (this%iprims > 0) then
-          write(iout,12)
-        end if
-      end if
     end if
     !
     ! -- Set amat and rhs to zero
@@ -1420,9 +1494,16 @@ contains
     CALL this%sln_ls(kiter, kstp, kper, iter, iptc, ptcf)
     call code_timer(1, ttsoln, this%ttsoln)
     !
+    ! -- increment counters storing the total number of linear iterations
+    !    for this timestep and all timesteps
+    this%itertot = this%itertot + iter
+    this%innertot = this%innertot + iter
+    !
+    ! -- save matrix to a file
+    !    to enable set itestmat to 1 and recompile
     !-------------------------------------------------------
     itestmat = 0
-    if(itestmat.eq.1)then
+    if (itestmat /= 0) then
       open(99,file='sol_MF6.TXT')
       WRITE(99,*) 'MATRIX SOLUTION FOLLOWS'
       WRITE(99,'(10(I8,G15.4))')  (n, this%x(N), N = 1, this%NEQ)
@@ -1430,11 +1511,27 @@ contains
       call stop_with_error()
     end if
     !-------------------------------------------------------
+    !    
     ! -- check convergence of solution
     call this%sln_outer_check(this%hncg(kiter), this%lrch(1,kiter))
     if (this%icnvg /= 0) then
       this%icnvg = 0
-      if (abs(this%hncg(kiter)) <= this%hclose) this%icnvg = 1
+      if (abs(this%hncg(kiter)) <= this%hclose) then
+        this%icnvg = 1
+      end if
+    end if
+    !
+    ! -- set failure flag
+    if (this%icnvg == 0) then
+      cmsg = ' '
+    else
+      cmsg = '*'
+    end if
+    !
+    ! -- set flag if this is the last outer iteration
+    iend = 0
+    if (kiter == this%mxiter) then
+      iend = 1
     end if
     !
     ! -- Additional convergence check for pseudo-transient continuation
@@ -1444,99 +1541,205 @@ contains
       if (this%icnvg /= 0) then
         if (this%ptcrat > this%ptcthresh) then
           this%icnvg = 0
-          if (kiter == this%mxiter) then
-            write(line, '(a)') 'pseudo-transient continuation ' //               &
-                                'caused convergence failure'
+          cmsg = trim(cmsg) // 'PTC'
+          if (iend /= 0) then
+            write(line, '(a)')                                                   &
+              'PSEUDO-TRANSIENT CONTINUATION CAUSED CONVERGENCE FAILURE'
             call sim_message(line)
           end if
         end if
       end if
     end if
     !
+    ! -- write maximum head change from linear solver to list file
+    if (this%iprims > 0) then
+      cval = 'Model'
+      call this%sln_get_loc(this%lrch(1,kiter), strh)
+      !
+      ! -- add data to outertab
+      call this%outertab%add_term(cval)
+      call this%outertab%add_term(kiter)
+      call this%outertab%add_term(iter)
+      if (this%numtrack > 0) then
+        call this%outertab%add_term(' ')
+        call this%outertab%add_term(' ')
+        call this%outertab%add_term(' ')
+        call this%outertab%add_term(' ')
+      end if
+      call this%outertab%add_term(this%hncg(kiter))
+      call this%outertab%add_term(cmsg)
+      call this%outertab%add_term(trim(strh))
+    end if
+    !
     ! -- Additional convergence check for exchanges
     do ic=1,this%exchangelist%Count()
       cp => GetNumericalExchangeFromList(this%exchangelist, ic)
       call cp%exg_cc(this%icnvg)
-    enddo
+    end do
     !
     ! -- additional convergence check for model packages
-    if (this%icnvg == 1) then
-      iend = 0
-      if (kiter == this%mxiter) then
-        iend = 1
-      end if
-      do im=1,this%modellist%Count()
-        mp => GetNumericalModelFromList(this%modellist, im)
-        call mp%model_cc(kiter, iend, this%icnvg, this%hclose, this%rclosebnd)
-      enddo
-    end if
-    !
-    !--write maximum head change from linear solver to list file
-    this%itertot = this%itertot + iter
-    if (this%iprims > 0) then
-      cval = 'Linear Solver   '
-      call this%sln_get_loc(this%lrch(1,kiter), strh)
-      if (this%numtrack > 0) then
-        WRITE(IOUT,22) cval, kiter, iter, this%hncg(kiter),               &
-                        adjustr(trim(strh))
+    icnvgmod = this%icnvg
+    cpak = ' '
+    ipak = 0
+    dpak = DZERO
+    do im = 1, this%modellist%Count()
+      mp => GetNumericalModelFromList(this%modellist, im)
+      call mp%get_mcellid(0, cmod)
+      call mp%model_cc(this%innertot, kiter, iend, icnvgmod, cpak, ipak, dpak)
+      if (ipak /= 0) then
+        ipos0 = index(cpak, '-', back=.true.)
+        ipos1 = len_trim(cpak)
+        write(cpakout, '(a,a,"-(",i0,")",a)')                                    &
+          trim(cmod), cpak(1:ipos0-1), ipak, cpak(ipos0:ipos1) 
       else
-        WRITE(IOUT,23) cval, kiter, iter, this%hncg(kiter),               &
-                        adjustr(trim(strh))
+        cpakout = ' '
+      end if
+    end do
+    !
+    ! -- evaluate package convergence
+    if (abs(dpak) > this%hclose) then
+      this%icnvg = 0
+      ! -- write message to stdout
+      if (iend /= 0) then
+        write(line, '(3a)')                                                       &
+          'PACKAGE (', trim(cpakout), ') CAUSED CONVERGENCE FAILURE'
+        call sim_message(line)
       end if
     end if
     !
-    ! -- dampening
+    ! -- write maximum change in package convergence check
+    if (this%iprims > 0) then
+      cval = 'Package'
+      if (this%icnvg /= 1) then
+        cmsg = ' '
+      else
+        cmsg = '*'
+      end if
+      if (len_trim(cpakout) > 0) then
+        !
+        ! -- add data to outertab
+        call this%outertab%add_term(cval)
+        call this%outertab%add_term(kiter)
+        call this%outertab%add_term(' ')
+        if (this%numtrack > 0) then
+          call this%outertab%add_term(' ')
+          call this%outertab%add_term(' ')
+          call this%outertab%add_term(' ')
+          call this%outertab%add_term(' ')
+        end if
+        call this%outertab%add_term(dpak)
+        call this%outertab%add_term(cmsg)
+        call this%outertab%add_term(cpakout)
+      end if
+    end if
+    !
+    ! -- under-relaxation - only done if convergence not achieved
     if (this%icnvg /= 1) then
       if (this%nonmeth > 0) then
-        call this%sln_underrelax(kiter, this%hncg(kiter), this%neq,        &
-                                  this%active, this%x, this%xtemp)
+        call this%sln_underrelax(kiter, this%hncg(kiter), this%neq,              &
+                                 this%active, this%x, this%xtemp)
       else
-        call this%sln_calcdx(this%neq, this%active,                        &
+        call this%sln_calcdx(this%neq, this%active,                              &
                               this%x, this%xtemp, this%dxold)
       endif
       !
-      ! --adjust heads if necessary
+      ! -- adjust heads by newton under-relaxation, if necessary
       inewtonur = 0
+      dxmax_nur = DZERO
+      locmax_nur = 0
       do im=1,this%modellist%Count()
         mp => GetNumericalModelFromList(this%modellist, im)
         i0 = mp%moffset + 1
         i1 = i0 + mp%neq - 1
-        call mp%model_nur(mp%neq, this%x(i0:i1), this%xtemp(i0:i1),        &
-                          this%dxold(i0:i1), inewtonur)
+        call mp%model_nur(mp%neq, this%x(i0:i1), this%xtemp(i0:i1),              &
+                          this%dxold(i0:i1), inewtonur, dxmax_nur, locmax_nur)
       end do
       !
-      ! --update maximum head change
-      call this%sln_outer_check(this%hncg(kiter), this%lrch(1,kiter))
+      ! -- check for convergence if newton under-relaxation applied
       if (inewtonur /= 0) then
+        !
+        ! -- calculate maximum change in heads in cells that have
+        !    not been adjusted by newton under-relxation
         call this%sln_maxval(this%neq, this%dxold, dxmax)
-        if (abs(dxmax) <= this%hclose .and.                                &
-            abs(this%hncg(kiter)) <= this%hclose) then
+        !
+        ! -- evaluate convergence
+        if (abs(dxmax) <= this%hclose .and.                                      &
+            abs(this%hncg(kiter)) <= this%hclose .and.                           &
+            abs(dpak) <= this%hclose) then
           this%icnvg = 1
-        end if
-      end if
-      !
-      !--write maximum head change after under relaxation to list file
-      if (this%iprims > 0) then
-        cval = 'Under-relaxation'
-        call this%sln_get_loc(this%lrch(1,kiter), strh)
-        if (this%numtrack > 0) then
-          WRITE(IOUT,24) cval, kiter, this%hncg(kiter), adjustr(trim(strh))
-        else
-          WRITE(IOUT,25) cval, kiter, this%hncg(kiter), adjustr(trim(strh))
+          !
+          ! -- reset outer head change and location for output
+          call this%sln_outer_check(this%hncg(kiter), this%lrch(1,kiter))
+          !
+          ! -- write revised head change data after 
+          !    newton under-relaxation
+          if (this%iprims > 0) then
+            cval = 'Newton under-relaxation'
+            cmsg = '*'
+            call this%sln_get_loc(this%lrch(1,kiter), strh)
+            !
+            ! -- add data to outertab
+            call this%outertab%add_term(cval)
+            call this%outertab%add_term(kiter)
+            call this%outertab%add_term(iter)
+            if (this%numtrack > 0) then
+              call this%outertab%add_term(' ')
+              call this%outertab%add_term(' ')
+              call this%outertab%add_term(' ')
+              call this%outertab%add_term(' ')
+            end if
+            call this%outertab%add_term(this%hncg(kiter))
+            call this%outertab%add_term(cmsg)
+            call this%outertab%add_term(trim(strh))
+          end if
         end if
       end if
     end if
-22    FORMAT(1X,A16,1X,I10,I10,53X,1PG15.6,A34)
-23    FORMAT(1X,A16,1X,I10,I10,1X,1PG15.6,A34)
-24    FORMAT(1X,A16,1X,I10,10X,53X,1PG15.6,A34)
-25    FORMAT(1X,A16,1X,I10,10X,1X,1PG15.6,A34)
+    !
+    ! -- write to outer iteration csv file
+    if (this%icsvouterout > 0) then
+      !
+      ! -- set outer head change variable
+      outer_hncg = this%hncg(kiter)
+      !
+      ! -- model convergence error 
+      if (abs(outer_hncg) > abs(dpak)) then
+        !
+        ! -- get model number and user node number
+        call this%sln_get_nodeu(this%lrch(1,kiter), im, nodeu)
+        cpakout = ''
+      !
+      ! -- package convergence error
+      else
+        !
+        ! -- set convergence error, model number, user node number,
+        !    and package name
+        outer_hncg = dpak
+        ipos0 = index(cmod, '_')
+        read(cmod(1:ipos0-1), *) im
+        nodeu = ipak
+        ipos0 = index(cpak, '-', back=.true.)
+        cpakout = cpak(1:ipos0-1)
+      end if
+      !
+      ! -- write line to outer iteration csv file
+      write(this%icsvouterout, '(*(G0,:,","))')                                  &
+          this%innertot, totim, kper, kstp, kiter, iter,                         &
+          outer_hncg, im, trim(cpakout), nodeu
+    end if
+    !
+    ! -- write to inner iteration csv file
+    if (this%icsvinnerout > 0) then
+      call this%csv_convergence_summary(this%icsvinnerout, totim, kper, kstp,    &
+                                        kiter, iter, icsv0)
+    end if
     
   end subroutine doIteration
   
   ! finalize the solution calculate, called after the non-linear iteration loop
   ! when used without subtiming, do isubtime == 1
   subroutine finalizeIteration(this, kiter, isgcnvg, isubtime, isuppress_output)
-    use TdisModule, only: totim, kper, kstp
+    use TdisModule, only: kper, kstp
     class(NumericalSolutionType) :: this
     integer(I4B), intent(in) :: kiter ! the number at which the iteration loop was exited
     integer(I4B), intent(inout) :: isgcnvg
@@ -1546,7 +1749,6 @@ contains
     integer(I4B) :: ic, im
     class(NumericalModelType), pointer :: mp
     class(NumericalExchangeType), pointer :: cp
-    integer(I4B) :: nodeu
     
     ! -- formats for convergence info 
     character(len=*), parameter :: fmtnocnvg =                                 &
@@ -1556,18 +1758,24 @@ contains
       &"(1X, I0, ' CALLS TO NUMERICAL SOLUTION ', 'IN TIME STEP ', I0,         &
       &' STRESS PERIOD ',I0,/1X,I0,' TOTAL ITERATIONS')" 
     
+    !
+    ! -- finalize the outer iteration table
+    if (this%iprims > 0) then
+      call this%outertab%finalize_table()
+    end if
+    !
     ! -- write convergence info
-    if (this%icnvg == 1) then
+    !
+    ! -- convergence was achieved
+    if (this%icnvg /= 0) then
       if (this%iprims > 0) then
         write(iout, fmtcnvg) kiter, kstp, kper, this%itertot
       end if
-    end if
-      
-    ! -- Write a message if convergence was not achieved
-    if (this%icnvg == 0) then
+    !
+    ! -- convergence was not achieved
+    else
       write(iout, fmtnocnvg) this%id, kper, kstp
     end if
-      
     !
     ! -- write inner iteration convergence summary
     if (this%iprims == 2) then
@@ -1582,27 +1790,7 @@ contains
       call this%convergence_summary(iout, this%convnmod+1, this%itertot)
     end if
     !
-    ! -- write to csv file
-    if (this%icsvout > 0) then
-      if (this%iprims < 2) then
-        !
-        ! -- determine the total number of iterations at the end of this outer
-        this%nitercnt = this%nitercnt + this%itertot
-        !
-        ! -- get model number and user node number
-        call this%sln_get_nodeu(this%lrch(1,kiter), im, nodeu)
-        !
-        ! -- write line
-        write(this%icsvout, '(*(G0,:,","))')                                 &
-            this%nitercnt, totim, kper, kstp, isubtime, kiter, this%itertot,       &
-            this%hncg(kiter), im, nodeu
-      else
-        call this%csv_convergence_summary(this%icsvout, totim, kper, kstp,   &
-                                          isubtime, this%itertot)
-      end if
-    end if
-    !
-    !
+    ! -- set solution goup convergence flag
     if (this%icnvg == 0) isgcnvg = 0
     !
     ! -- Calculate flow for each model
@@ -1646,7 +1834,12 @@ contains
     integer(I4B), intent(in) :: im
     integer(I4B), intent(in) :: itertot
     ! -- local
-    character(len=34) :: strh, strr
+    character(len=LINELENGTH) :: title
+    character(len=LINELENGTH) :: tag
+    character(len=LENPAKLOC) :: strh
+    character(len=LENPAKLOC) :: strr
+    integer(I4B) :: ntabrows
+    integer(I4B) :: ntabcols
     integer(I4B) :: i
     integer(I4B) :: i0
     integer(I4B) :: iouter
@@ -1657,16 +1850,44 @@ contains
     real(DP) :: dv
     real(DP) :: dr
 ! ------------------------------------------------------------------------------
+    !
+    ! -- initialize local variables
     iouter = 1
-    write(iu,"(/,1x,A)") 'INNER ITERATION SUMMARY'
-    write(iu,"(1x,128('-'))")
-    write(iu,'(1x,3a)') '    TOTAL      OUTER     INNER',                      &
-      '                    MAXIMUM CHANGE        MAXIMUM',                     &
-      '                  MAXIMUM RESIDUAL        MAXIMUM'
-    write(iu,'(1x,3a)') 'ITERATION  ITERATION ITERATION',                      &
-      '                    MODEL-(CELLID)         CHANGE',                     &
-      '                    MODEL-(CELLID)       RESIDUAL'
-    write(iu,"(1x,128('-'))")
+    !
+    ! -- initialize inner iteration summary table
+    if (.not. associated(this%innertab)) then
+      !
+      ! -- create outer iteration table
+      ! -- table dimensions
+      ntabrows = itertot
+      ntabcols = 7
+      !
+      ! -- initialize table and define columns
+      title = 'INNER ITERATION SUMMARY'
+      call table_cr(this%innertab, this%name, title)
+      call this%innertab%table_df(ntabrows, ntabcols, iu)
+      tag = 'TOTAL ITERATION'
+      call this%innertab%initialize_column(tag, 10, alignment=TABRIGHT)
+      tag = 'OUTER ITERATION'
+      call this%innertab%initialize_column(tag, 10, alignment=TABRIGHT)
+      tag = 'INNER ITERATION'
+      call this%innertab%initialize_column(tag, 10, alignment=TABRIGHT)
+      tag = 'MAXIMUM CHANGE'
+      call this%innertab%initialize_column(tag, 15, alignment=TABRIGHT)
+      tag = 'MAXIMUM CHANGE MODEL-(CELLID)'
+      call this%innertab%initialize_column(tag, LENPAKLOC, alignment=TABRIGHT)
+      tag = 'MAXIMUM RESIDUAL'
+      call this%innertab%initialize_column(tag, 15, alignment=TABRIGHT)
+      tag = 'MAXIMUM RESIDUAL MODEL-(CELLID)'
+      call this%innertab%initialize_column(tag, LENPAKLOC, alignment=TABRIGHT)
+    !
+    ! -- reset the output unit and the number of rows (maxbound)
+    else
+      call this%innertab%set_maxbound(itertot)
+      call this%innertab%set_iout(iu)
+    end if
+    !
+    ! -- write the inner iteration summary to unit iu
     i0 = 0
     do k = 1, itertot
       i = this%itinner(k)
@@ -1694,24 +1915,27 @@ contains
       end if
       call this%sln_get_loc(locdv, strh)
       call this%sln_get_loc(locdr, strr)
-      write(iu, '(1x,3i10,a34,g15.7,a34,g15.7)') k, iouter, i,                 &
-                                                 adjustr(trim(strh)), dv,      &
-                                                 adjustr(trim(strr)), dr
+      !
+      ! -- add data to innertab
+      call this%innertab%add_term(k)
+      call this%innertab%add_term(iouter)
+      call this%innertab%add_term(i)
+      call this%innertab%add_term(dv)
+      call this%innertab%add_term(adjustr(trim(strh)))
+      call this%innertab%add_term(dr)
+      call this%innertab%add_term(adjustr(trim(strr)))
+      !
+      ! -- update i0
       i0 = i
     end do
-    !
-    ! -- write blank line
-    if (im <= this%convnmod) then
-      write(iu, '(a)') ''
-    end if
     !
     ! -- return
     return
   end subroutine convergence_summary
 
 
-  subroutine csv_convergence_summary(this, iu, totim, kper, kstp, isubtime,    &
-                                     itertot)
+  subroutine csv_convergence_summary(this, iu, totim, kper, kstp, kouter,        &
+                                     niter, istart)
 ! ******************************************************************************
 ! csv_convergence_summary -- Save convergence summary to a csv file
 ! ******************************************************************************
@@ -1726,12 +1950,11 @@ contains
     real(DP), intent(in) :: totim
     integer(I4B), intent(in) :: kper
     integer(I4B), intent(in) :: kstp
-    integer(I4B), intent(in) :: isubtime
-    integer(I4B), intent(in) :: itertot
+    integer(I4B), intent(in) :: kouter
+    integer(I4B), intent(in) :: niter
+    integer(I4B), intent(in) :: istart
     ! -- local
-    integer(I4B) :: i
-    integer(I4B) :: i0
-    integer(I4B) :: iouter
+    integer(I4B) :: itot
     integer(I4B) :: im
     integer(I4B) :: j
     integer(I4B) :: k
@@ -1741,16 +1964,14 @@ contains
     real(DP) :: dv
     real(DP) :: dr
 ! ------------------------------------------------------------------------------
-    iouter = 1
-    i0 = 0
-    do k = 1, itertot
-      this%nitercnt = this%nitercnt + 1
-      i = this%itinner(k)
-      if (i <= i0) then
-        iouter = iouter + 1
-      end if
+    !
+    ! -- initialize local variables
+    itot = istart
+    !
+    ! -- write inner iteration results to the inner csv output file
+    do k = 1, niter
       write(iu, '(*(G0,:,","))', advance='NO')                                 &
-        this%nitercnt, totim, kper, kstp, isubtime, iouter, i
+        itot, totim, kper, kstp, kouter, k
       !
       ! -- solution summary
       dv = DZERO
@@ -1798,8 +2019,8 @@ contains
       ! -- write line
       write(iu,'(a)') ''
       !
-      ! -- update i0
-      i0 = i
+      ! -- update itot
+      itot = itot + 1
     end do
     !
     ! -- return
@@ -2163,24 +2384,25 @@ contains
       end if
       this%l2norm0 = l2norm
     end if
-
-
+  !
+  ! -- save rhs, amat to a file
+  !    to enable set itestmat to 1 and recompile
   !-------------------------------------------------------
       itestmat = 0
-      if(itestmat == 1) then
+      if (itestmat == 1) then
         write(fname, fmtfname) this%id, kper, kstp, kiter
         print *, 'Saving amat to: ', trim(adjustl(fname))
         open(99,file=trim(adjustl(fname)))
         WRITE(99,*)'NODE, RHS, AMAT FOLLOW'
-        DO N=1,this%NEQ
+        DO N = 1, this%NEQ
           I1 = this%IA(N)
           I2 = this%IA(N+1)-1
           WRITE(99,'(*(G0,:,","))') N, this%RHS(N), (this%ja(i),i=i1,i2), &
                         (this%AMAT(I),I=I1,I2)
-        ENDDO
+        END DO
         close(99)
         !stop
-      endif
+      end if
   !-------------------------------------------------------
     !
     ! call appropriate linear solver
@@ -2227,7 +2449,6 @@ contains
       this%hclose = dem3
       this%mxiter = 25
       this%nonmeth = 0
-      this%rclosebnd = DEM1
       this%theta = 1.0
       this%akappa = DZERO
       this%gamma = DZERO
@@ -2242,7 +2463,6 @@ contains
       this%hclose = dem2
       this%mxiter = 50
       this%nonmeth = 3
-      this%rclosebnd = DEM1
       this%theta = 0.9d0
       this%akappa = 0.0001d0
       this%gamma = DZERO
@@ -2257,7 +2477,6 @@ contains
       this%hclose = dem1
       this%mxiter = 100
       this%nonmeth = 3
-      this%rclosebnd = DEM1
       this%theta = 0.8d0
       this%akappa = 0.0001d0
       this%gamma = DZERO
@@ -2285,6 +2504,7 @@ contains
     class(NumericalExchangeType), pointer :: cp
     integer(I4B), intent(in) :: kiter
     ! -- local
+    character(len=7) :: cmsg
     integer(I4B) :: ic
     integer(I4B) :: im
     integer(I4B) :: nb
@@ -2294,6 +2514,7 @@ contains
     real(DP) :: resin
 ! ------------------------------------------------------------------------------
     !
+    ! -- initialize local variables
     ibflag = 0
     !
     ! -- refill amat and rhs with standard conductance
@@ -2340,6 +2561,8 @@ contains
     ibtcnt = 0
     if (kiter > 1) then
       if (this%res_new > this%res_prev * this%btol) then
+        !
+        ! -- iterate until backtracking complete
         btloop: do nb = 1, this%numtrack
           !
           ! -- backtrack heads
@@ -2403,10 +2626,28 @@ contains
       this%res_prev = this%res_new
     end if
     !
-    ! -- write backtracking results
-66  FORMAT(1X,A16,1X,I10,10X,I10,I10,1X,1PG15.6,1X,1PG15.6)
-    WRITE(IOUT,66) 'Backtracking    ', kiter, ibflag, ibtcnt,                  &
-                    resin, this%res_prev
+    ! -- write back backtracking results
+    if (this%iprims > 0) then
+      if (ibtcnt > 0) then
+        cmsg = ' '
+      else
+        cmsg = '*'
+      end if
+      !
+      ! -- add data to outertab
+      call this%outertab%add_term( 'Backtracking')
+      call this%outertab%add_term(kiter)
+      call this%outertab%add_term(' ')
+      if (this%numtrack > 0) then
+        call this%outertab%add_term(ibflag)
+        call this%outertab%add_term(ibtcnt)
+        call this%outertab%add_term(resin)
+        call this%outertab%add_term(this%res_prev)
+      end if
+      call this%outertab%add_term(' ')
+      call this%outertab%add_term(cmsg)
+      call this%outertab%add_term(' ')
+    end if
     !
     ! -- return
     return
@@ -2497,7 +2738,7 @@ contains
 
   subroutine sln_maxval(this, neq, v, vnorm)
 ! ******************************************************************************
-! sln_l2norm
+! sln_maxval
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -2534,7 +2775,7 @@ contains
 
   subroutine sln_calcdx(this, neq, active, x, xtemp, dx)
 ! ******************************************************************************
-! sln_l2norm
+! sln_calcdx
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
