@@ -1179,7 +1179,7 @@ contains
     return
   end subroutine uzf_fn
 
-  subroutine uzf_cc(this, kiter, iend, icnvgmod, cpak, dpak)
+  subroutine uzf_cc(this, innertot, kiter, iend, icnvgmod, cpak, ipak, dpak)
 ! **************************************************************************
 ! uzf_cc -- Final convergence check for package
 ! **************************************************************************
@@ -1189,16 +1189,16 @@ contains
     use TdisModule, only: totim, kstp, kper, delt
     ! -- dummy
     class(Uzftype), intent(inout) :: this
+    integer(I4B), intent(in) :: innertot
     integer(I4B), intent(in) :: kiter
     integer(I4B), intent(in) :: icnvgmod
     integer(I4B), intent(in) :: iend
     character(len=LENPAKLOC), intent(inout) :: cpak
+    integer(I4B), intent(inout) :: ipak
     real(DP), intent(inout) :: dpak
     ! -- local
     character(len=LENPAKLOC) :: cloc
-    character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: tag
-    character(len=20) :: cellid
     integer(I4B) :: icheck
     integer(I4B) :: ipakfail
     integer(I4B) :: locdrejinfmax
@@ -1207,7 +1207,6 @@ contains
     integer(I4B) :: ntabrows
     integer(I4B) :: ntabcols
     integer(I4B) :: n
-    integer(I4B) :: node
     real(DP) :: qtolfact
     real(DP) :: drejinf
     real(DP) :: drejinfmax
@@ -1215,7 +1214,6 @@ contains
     real(DP) :: drchmax
     real(DP) :: dseep
     real(DP) :: dseepmax
-    real(DP) :: dmax
     ! format
 ! --------------------------------------------------------------------------
     !
@@ -1242,7 +1240,7 @@ contains
         !
         ! -- determine the number of columns and rows
         ntabrows = 1
-        ntabcols = 8
+        ntabcols = 9
         if (this%iseepflag == 1) then
           ntabcols = ntabcols + 2
         end if
@@ -1254,6 +1252,8 @@ contains
                                      finalize=.FALSE.)
         !
         ! -- add columns to package csv
+        tag = 'total_inner_iterations'
+        call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
         tag = 'totim'
         call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
         tag = 'kper'
@@ -1324,22 +1324,22 @@ contains
       !
       ! -- set dpak and cpak
       if (ABS(drejinfmax) > abs(dpak)) then
+        ipak = locdrejinfmax
         dpak = drejinfmax
-        write(cloc, "(a,'-(',i0,')-',a)")                                        &
-          trim(this%name), locdrejinfmax, 'rejinf'
+        write(cloc, "(a,'-',a)") trim(this%name), 'rejinf'
         cpak = trim(cloc)
       end if
       if (ABS(drchmax) > abs(dpak)) then
+        ipak = locdrchmax
         dpak = drchmax
-        write(cloc, "(a,'-(',i0,')-',a)")                                        &
-          trim(this%name), locdrchmax, 'rech'
+        write(cloc, "(a,'-',a)") trim(this%name), 'rech'
         cpak = trim(cloc)
       end if
       if (this%iseepflag == 1) then
         if (ABS(dseepmax) > abs(dpak)) then
+          ipak = locdseepmax
           dpak = dseepmax
-          write(cloc, "(a,'-(',i0,')-',a)")                                      &
-          trim(this%name), locdseepmax, 'seep'
+          write(cloc, "(a,'-',a)") trim(this%name), 'seep'
           cpak = trim(cloc)
         end if
       end if
@@ -1348,6 +1348,7 @@ contains
       if (this%ipakcsv /= 0) then
         !
         ! -- write the data
+        call this%pakcsvtab%add_term(innertot)
         call this%pakcsvtab%add_term(totim)
         call this%pakcsvtab%add_term(kper)
         call this%pakcsvtab%add_term(kstp)

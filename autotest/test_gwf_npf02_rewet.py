@@ -98,9 +98,15 @@ def get_model(idx, dir):
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(sim, time_units='DAYS',
                                  nper=nper, perioddata=tdis_rc)
+    # set ims csv files
+    csv0 = '{}.outer.ims.csv'.format(name)
+    csv1 = '{}.inner.ims.csv'.format(name)
 
     # create iterative model solution and register the gwf model with it
-    ims = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
+    ims = flopy.mf6.ModflowIms(sim,
+                               print_option='ALL',
+                               csv_outer_output_filerecord=csv0,
+                               csv_inner_output_filerecord=csv1,
                                outer_hclose=hclose,
                                outer_maximum=nouter,
                                under_relaxation='NONE',
@@ -197,9 +203,9 @@ def build_models():
 
 def eval_hds(sim):
     print('evaluating rewet heads...')
-    
+
     hdata01lay = [[1.000000000000000000e+02, 9.491194675652451451e+01,
-                   8.963852784804279850e+01, 8.415783779990768210e+01, 
+                   8.963852784804279850e+01, 8.415783779990768210e+01,
                    7.844327192271720151e+01, 7.246197081412121577e+01,
                    6.617253666303386694e+01, 5.952154998933371388e+01,
                    5.243800267025346074e+01, 4.482387942676999870e+01,

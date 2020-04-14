@@ -1584,7 +1584,7 @@ contains
     return
   end subroutine sfr_fn
 
-  subroutine sfr_cc(this, kiter, iend, icnvgmod, cpak, dpak)
+  subroutine sfr_cc(this, innertot, kiter, iend, icnvgmod, cpak, ipak, dpak)
 ! **************************************************************************
 ! sfr_cc -- Final convergence check for package
 ! **************************************************************************
@@ -1594,10 +1594,12 @@ contains
     use TdisModule, only: totim, kstp, kper, delt
     ! -- dummy
     class(SfrType), intent(inout) :: this
+    integer(I4B), intent(in) :: innertot
     integer(I4B), intent(in) :: kiter
     integer(I4B), intent(in) :: iend
     integer(I4B), intent(in) :: icnvgmod
     character(len=LENPAKLOC), intent(inout) :: cpak
+    integer(I4B), intent(inout) :: ipak
     real(DP), intent(inout) :: dpak
     ! -- local
     character(len=LENPAKLOC) :: cloc
@@ -1639,7 +1641,7 @@ contains
         !
         ! -- determine the number of columns and rows
         ntabrows = 1
-        ntabcols = 8
+        ntabcols = 9
         !
         ! -- setup table
         call table_cr(this%pakcsvtab, this%name, '')
@@ -1648,6 +1650,8 @@ contains
                                      finalize=.FALSE.)
         !
         ! -- add columns to package csv
+        tag = 'total_inner_iterations'
+        call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
         tag = 'totim'
         call this%pakcsvtab%initialize_column(tag, 10, alignment=TABLEFT)
         tag = 'kper'
@@ -1697,15 +1701,15 @@ contains
       !
       ! -- set dpak and cpak
       if (ABS(dhmax) > abs(dpak)) then
+        ipak = locdhmax
         dpak = dhmax
-        write(cloc, "(a,'-(',i0,')-',a)")                                        &
-          trim(this%name), locdhmax, 'stage'
+        write(cloc, "(a,'-',a)") trim(this%name), 'stage'
         cpak = trim(cloc)
       end if
       if (ABS(rmax) > abs(dpak)) then
+        ipak = locrmax
         dpak = rmax
-        write(cloc, "(a,'-(',i0,')-',a)")                                        &
-          trim(this%name), locrmax, 'inflow'
+        write(cloc, "(a,'-',a)") trim(this%name), 'inflow'
         cpak = trim(cloc)
       end if
       !
@@ -1713,6 +1717,7 @@ contains
       if (this%ipakcsv /= 0) then
         !
         ! -- write the data
+        call this%pakcsvtab%add_term(innertot)
         call this%pakcsvtab%add_term(totim)
         call this%pakcsvtab%add_term(kper)
         call this%pakcsvtab%add_term(kstp)
