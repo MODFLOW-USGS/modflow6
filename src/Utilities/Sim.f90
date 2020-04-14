@@ -2,6 +2,7 @@ module SimModule
   
   use KindModule,             only: DP, I4B
   use ConstantsModule,        only: MAXCHARLEN, LINELENGTH,                      &
+                                    DONE,                                        &
                                     IUSTART, IULAST,                             &
                                     VSUMMARY, VALL, VDEBUG
   use SimVariablesModule,     only: istdout, iout, isim_level, ireturnerr,       &
@@ -264,9 +265,12 @@ logical function print_errors()
 ! ------------------------------------------------------------------------------
   ! -- modules
   ! -- local
+  character(len=LINELENGTH) :: errmsg
   integer(I4B) :: i
   integer(I4B) :: isize
-  character(len=LINELENGTH) :: errmsg
+  integer(I4B) :: ifmt
+  integer(I4B) :: icnt
+  real(DP) :: rval
   ! -- formats
   character(len=*), parameter :: stdfmt = "(/,'ERROR REPORT:',/)"
 ! ------------------------------------------------------------------------------
@@ -276,32 +280,33 @@ logical function print_errors()
     isize = count_errors()
     if (isize > 0) then
       print_errors = .true.
-      if (iout > 0) write(iout, stdfmt)
-      call sim_message('', fmt=stdfmt)
-      do i = 1, isize
-        call write_message(sim_errors(i), error=.true.)
-        if (iout > 0) then
-          call write_message(sim_errors(i), iunit=iout, error=.true.)
-        end if
-      enddo
-      !
-      ! -- write the number of errors
-      write(errmsg, '(i0, a)') isize, ' errors detected.'
-      call write_message(trim(errmsg))
+      rval = real(isize, DP)
+      ifmt = modulo(log10(rval), DONE) + 1
       if (iout > 0) then
-        call write_message(trim(errmsg), iout)
+        call sim_message('', iunit=iout, fmt=stdfmt)
       end if
+      call sim_message('', fmt=stdfmt)
+      icnt = 0
+      do i = 1, isize
+        call write_message(sim_errors(i), icnt=icnt, ifmt=ifmt)
+      end do
+      icnt = 0
+      do i = 1, isize
+        if (iout > 0) then
+          call write_message(sim_errors(i), iunit=iout, icnt=icnt, ifmt=ifmt)
+        end if
+      end do
       !
-      ! -- write number of additional errors
+      ! -- write the number of additional errors
       if (maxerrors_exceeded > 0) then
-        write(errmsg, '(i0, a)') maxerrors_exceeded,                           &
-          ' additional errors detected but not printed.'
+        write(errmsg, '(i0,1x,a)')                                               &
+          maxerrors_exceeded, 'additional errors detected but not printed.'
         call write_message(trim(errmsg))
         if (iout > 0) then
           call write_message(trim(errmsg), iout)
         end if
       end if
-    endif
+    end if
   endif
   !
   ! -- return
@@ -320,6 +325,9 @@ logical function print_warnings()
   character(len=LINELENGTH) :: msg
   integer(I4B) :: i
   integer(I4B) :: isize
+  integer(I4B) :: ifmt
+  integer(I4B) :: icnt
+  real(DP) :: rval
   ! -- formats
   character(len=*), parameter :: stdfmt = "(/,'WARNINGS:',/)"
 ! ------------------------------------------------------------------------------
@@ -332,33 +340,31 @@ logical function print_warnings()
     isize = count_warnings()
     if (isize > 0) then
       print_warnings = .true.
+      rval = real(isize, DP)
+      ifmt = modulo(log10(rval), DONE) + 1
       if (iout > 0) then
         call sim_message('', fmt=stdfmt, iunit=iout)
       end if
       call sim_message('', fmt=stdfmt)
+      icnt = 0
       do i = 1, isize
-        call write_message(sim_warnings(i))
+        call write_message(sim_warnings(i), icnt=icnt, ifmt=ifmt)
         if (iout > 0) then
-          call write_message(sim_warnings(i), iout)
+          icnt = icnt - 1
+          call write_message(sim_warnings(i), iunit=iout, icnt=icnt, ifmt=ifmt)
         end if
       end do
     end if
     !
     ! -- write number of additional warnings
     if (maxwarnings_exceeded > 0) then
-      write(msg, '(i0, a)') maxwarnings_exceeded,                                &
-        ' additional warnings detected but not printed.'
+      write(msg, '(i0,1x,a)')                                                    &
+        maxwarnings_exceeded, 'additional warnings detected but not printed.'
       call write_message(trim(msg))
       if (iout > 0) then
         call write_message(trim(msg), iout)
       end if
     end if
-    !
-    ! -- write a blank line
-    if (iout > 0) then
-      call sim_message('', iunit=iout)
-    end if
-    call sim_message('')
   end if
   !
   ! -- return
@@ -415,7 +421,8 @@ subroutine print_notes(numberlist)
   return
 end subroutine print_notes
 
-subroutine write_message(message, iunit, error, skipbefore, skipafter)
+subroutine write_message(message, iunit, error, skipbefore, skipafter,           &
+                         icnt, ifmt)
 ! ******************************************************************************
 ! Subroutine write_message formats and writes a message.
 !
@@ -431,22 +438,27 @@ subroutine write_message(message, iunit, error, skipbefore, skipafter)
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
   ! -- dummy
-  character (len=*), intent(in) :: message
-  integer(I4B),      intent(in), optional :: iunit
-  logical,           intent(in), optional :: error
-  integer(I4B),      intent(in), optional :: skipbefore
-  integer(I4B),      intent(in), optional :: skipafter
+  character (len=*), intent(in)              :: message
+  integer(I4B),      intent(in),    optional :: iunit
+  logical,           intent(in),    optional :: error
+  integer(I4B),      intent(in),    optional :: skipbefore
+  integer(I4B),      intent(in),    optional :: skipafter
+  integer(I4B),      intent(inout), optional :: icnt
+  integer(I4B),      intent(in),    optional :: ifmt
   ! -- local
+  character(len=MAXCHARLEN) :: amessage
+  character(len=20)         :: ablank
+  character(len=16)         :: cfmt
+  character(len=10)         :: cval
   integer(I4B)              :: jend
   integer(I4B)              :: nblc
   integer(I4B)              :: junit
   integer(I4B)              :: leadblank
   integer(I4B)              :: itake
-  integer(I4B)              :: ipos
+  integer(I4B)              :: ipos0
+  integer(I4B)              :: ipos1
   integer(I4B)              :: i
   integer(I4B)              :: j
-  character(len=20)         :: ablank
-  character(len=MAXCHARLEN) :: amessage
 ! ------------------------------------------------------------------------------
   !
   amessage = message
@@ -483,13 +495,13 @@ subroutine write_message(message, iunit, error, skipbefore, skipafter)
     if (error) then
       !
       ! -- evaluate if amessage already includes 'ERROR:' or 'Error:' string
-      ipos = index(amessage, 'ERROR:')
-      if (ipos < 1) then
-        ipos = index(amessage, 'Error:')
+      ipos0 = index(amessage, 'ERROR:')
+      if (ipos0 < 1) then
+        ipos0 = index(amessage, 'Error:')
       end if
       !
       ! -- prepend amessage with 'Error:' string
-      if (ipos < 1) then
+      if (ipos0 < 1) then
         nblc = len_trim(amessage)
         amessage = adjustr(amessage(1:nblc+8))
         if (nblc+8 < len(amessage)) then
@@ -500,11 +512,45 @@ subroutine write_message(message, iunit, error, skipbefore, skipafter)
     end if
   end if
   !
-  ! -- determine the number of leading blanks
-  do i = 1, 20
-    if (amessage(i:i).ne.' ') exit
-  end do
-  leadblank = i - 1
+  ! -- prepend amessage with counter
+  if (present(icnt) .and. present(ifmt)) then
+    write(cfmt, '(A,I0,A)') '(1X,I', ifmt, ',".")'
+    !
+    ! -- update amessage, if required
+    ipos1 = index(amessage, 'ERROR OCCURRED WHILE READING FILE')
+    if (ipos1 < 1) then
+      icnt = icnt + 1
+      write(cval, cfmt) icnt
+      ipos0 = len_trim(cval)
+    else
+      write(cfmt, '(A,I0,A)') '(1X,A', ifmt, ',1X)'
+      write(cval, cfmt) '*'
+      call sim_message('', iunit=junit)
+      ipos0 = ifmt + 2
+    end if
+    nblc = len_trim(amessage)
+    amessage = adjustr(amessage(1:nblc+ipos0))
+    if (nblc+ipos0 < len(amessage)) then
+      amessage(nblc+ipos0+1:) = ' '
+    end if
+    amessage(1:ipos0) = cval(1:ipos0)
+    leadblank = ipos0 - 1
+  !
+  ! -- determine the default number of leading blanks
+  else
+    do i = 1, 20
+      if (amessage(i:i).ne.' ') exit
+    end do
+    leadblank = i - 1
+  end if
+  !!
+  !! -- determine the number of leading blanks
+  !do i = 1, 20
+  !  if (amessage(i:i).ne.' ') exit
+  !end do
+  !leadblank = i - 1
+  !
+  ! -- calculate the final length of the message after modification
   nblc = len_trim(amessage)
   !
   ! -- parse the amessage into multiple lines
