@@ -158,7 +158,7 @@ def test_sim_errors():
     sim = get_minimal_gwf_simulation(ws,
                                      chdkwargs=chdkwargs)
     sim.write_simulation()
-    err_str = ["*  ERROR OCCURRED WHILE READING FILE 'test.chd'"]
+    err_str = ["1. ERROR OCCURRED WHILE READING FILE 'test.chd'"]
     run_mf6_error(ws, err_str)
     return
 
@@ -176,7 +176,9 @@ def test_sim_maxerrors():
                                      chdkwargs=chdkwargs)
     sim.write_simulation()
     err_str = ['5. Cell is already a constant head ((1,1,1)).',
-               '5 additional errors detected but not printed.']
+               '5 additional errors detected but not printed.',
+               'UNIT ERROR REPORT:',
+               "1. ERROR OCCURRED WHILE READING FILE 'test.chd'"]
     run_mf6_error(ws, err_str)
     return
 
