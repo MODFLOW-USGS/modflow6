@@ -195,8 +195,8 @@ contains
     ! -- dummy
     class(GwtObsType), intent(inout) :: this
     type(GwtIcType), pointer, intent(in) :: ic
-    real(DP), pointer, dimension(:), intent(in) :: x
-    real(DP), pointer, dimension(:), intent(in) :: flowja
+    real(DP), dimension(:), pointer, contiguous, intent(in) :: x
+    real(DP), dimension(:), pointer, contiguous, intent(in) :: flowja
 ! ------------------------------------------------------------------------------
     !
     this%ic => ic

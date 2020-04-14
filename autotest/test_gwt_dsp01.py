@@ -164,11 +164,15 @@ def get_model(idx, dir):
                                   filename='{}.dsp'.format(gwtname))
 
     # constant concentration
+    fname = gwtname + '.cnc.obs.csv'
+    cnc_obs = {(fname): [('cnc000', 'cnc', (0, 0, 0))]}
+    cnc_obs['digits'] = 15
     cncs = {0: [[(0, 0, 0), 1.0]]}
     cnc = flopy.mf6.ModflowGwtcnc(gwt, maxbound=len(cncs),
                                   stress_period_data=cncs,
                                   print_flows=True,
                                   save_flows=False,
+                                  observations=cnc_obs,
                                   pname='CNC-1')
 
     # mass storage and transfer
@@ -190,6 +194,14 @@ def get_model(idx, dir):
                                             ('BUDGET', 'LAST')],
                                 printrecord=[('CONCENTRATION', 'LAST'),
                                              ('BUDGET', 'LAST')])
+
+    # observations
+    obs_data0 = [('flow1', 'flow-ja-face', (0, 0, 0), (0, 0, 1))]
+    obs_recarray = {'{}.obs.csv'.format(gwtname): obs_data0}
+    obs = flopy.mf6.ModflowUtlobs(gwt, pname='gwt_obs',
+                                  filename='{}.obs'.format(gwtname),
+                                  digits=15, print_input=True,
+                                  continuous=obs_recarray)
 
     # GWF GWT exchange
     gwfgwt = flopy.mf6.ModflowGwfgwt(sim, exgtype='GWF6-GWT6',
@@ -244,6 +256,23 @@ def eval_transport(sim):
                0.00383879, 0.00369253, 0.00358368, 0.00351152, 0.00347556]]]
     cres = np.array(cres)
     assert np.allclose(cres, conc), 'simulated concentrations do not match with known solution.'
+
+    # load the gwt observation file
+    fname = gwtname + '.obs.csv'
+    fname = os.path.join(sim.simpath, fname)
+    gwtobs = np.genfromtxt(fname, names=True, delimiter=',', deletechars='')
+
+    # load the cnc observation file
+    fname = gwtname + '.cnc.obs.csv'
+    fname = os.path.join(sim.simpath, fname)
+    cncobs = np.genfromtxt(fname, names=True, delimiter=',', deletechars='')
+
+    # ensure flow right face for first cell is equal to cnc flows
+    errmsg = 'observations not equal:\n{}\n{}'.format(gwtobs, cncobs)
+    assert np.allclose(gwtobs['FLOW1'], -cncobs['CNC000']), errmsg
+
+    # comment when done testing
+    # assert False
 
     return
 

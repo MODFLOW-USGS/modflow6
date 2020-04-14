@@ -435,7 +435,7 @@ contains
     integer(I4B) :: indx
 ! ------------------------------------------------------------------------------
     !
-    call this%obs%StoreObsType('cnc-flow', .true., indx)
+    call this%obs%StoreObsType('cnc', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => DefaultObsIdProcessor
     !
     ! -- return
