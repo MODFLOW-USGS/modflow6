@@ -147,7 +147,7 @@ module GwtModule
     use GwtSsmModule,               only: ssm_cr
     use GwtMvtModule,               only: mvt_cr
     use GwtOcModule,                only: oc_cr
-    use GwtObsModule,               only: obs_cr
+    use GwtObsModule,               only: gwt_obs_cr
     use BudgetModule,               only: budget_cr
     use NameFileModule,             only: NameFileType
     ! -- dummy
@@ -290,7 +290,7 @@ module GwtModule
     call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi)
     call mvt_cr(this%mvt, this%name, 0, this%iout, this%fmi)
     call oc_cr(this%oc, this%name, this%inoc, this%iout)
-    call obs_cr(this%obs, this%inobs)
+    call gwt_obs_cr(this%obs, this%inobs)
     !
     ! -- Create stress packages
     ipakid = 1

@@ -1,6 +1,7 @@
 # Simple one-layer model with a lak.  Purpose is to calculate transport
 # through the lake.  Need a better test of the actual concentration values.
-# Buoyancy terms for lak-gwf connections not implemented yet.
+# Buoyancy terms for lak-gwf connections not implemented yet, so this is a
+# placeholder for future development efforts.
 
 import os
 import sys
@@ -37,23 +38,18 @@ def get_model(idx, dir):
     botm = list(top - np.arange(delz, nlay * delz + delz, delz))
     botm[2] = -1.0
 
-    perlen = [0.1]
+    perlen = [1.0]
     nstp = [100]
-    kstp = perlen[0] / nstp[0]
     tsmult = [1.]
 
     lakevap = 0.  # 0.008
-    lakewid0 = 1
-    rchrt = 0.  # 0.0005
     Kh = 20.
     Kv = 20.
 
-    steady = [True]
     tdis_rc = []
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    single_matrix = False
     nouter, ninner = 700, 300
     hclose, rclose, relax = 1e-8, 1e-6, 0.97
 
@@ -71,8 +67,7 @@ def get_model(idx, dir):
     # create gwf model
     gwfname = 'gwf_' + name
 
-    gwf = flopy.mf6.MFModel(sim, model_type='gwf6', modelname=gwfname,
-                            model_nam_file='{}.nam'.format(gwfname))
+    gwf = flopy.mf6.ModflowGwf(sim, modelname=gwfname)
 
     imsgwf = flopy.mf6.ModflowIms(sim, print_option='ALL',
                                   outer_hclose=hclose,
@@ -114,8 +109,7 @@ def get_model(idx, dir):
                                    print_flows=True,
                                    save_flows=False,
                                    pname='CHD-1',
-                                   auxiliary='CONCENTRATION',
-                                   filename='{}.chd'.format(gwfname))
+                                   auxiliary='CONCENTRATION')
 
     # wel pck for vertical connection cells
     wellist1 = []
@@ -127,10 +121,9 @@ def get_model(idx, dir):
                                   print_flows=True,
                                   save_flows=True,
                                   pname='WEL-1',
-                                  auxiliary='CONCENTRATION',
-                                  filename='{}.wel'.format(gwfname))
+                                  auxiliary='CONCENTRATION')
 
-    nlakeconn = 3  # note: this is the number of cells, not total number of connections
+    nlakeconn = 3  # note: number of connections for this lake
     # pak_data = [lakeno, strt, nlakeconn, CONC, dense, boundname]
     pak_data = [(0, -0.3, nlakeconn, 0., 1025.)]
 
@@ -144,12 +137,14 @@ def get_model(idx, dir):
         (0, 1, (0, 0, 3), 'HORIZONTAL', 'None', 10, 10, connlen, connwidth))
     con_data.append(
         (0, 2, (0, 0, 2), 'VERTICAL', 'None', 10, 10, connlen, connwidth))
-    p_data = [(0, 'RAINFALL', 0.0000), (0, 'EVAPORATION', lakevap)]
+    p_data = [(0, 'RAINFALL', 0.0000),
+              (0, 'EVAPORATION', lakevap)]
 
     # note: for specifying lake number, use fortran indexing!
     lak_obs = {('lak_obs.csv'): [('lakestage', 'stage', 1),
                                  ('lakevolume', 'volume', 1),
-                                 ('lak1', 'lak', 1, 1), ('lak2', 'lak', 1, 2),
+                                 ('lak1', 'lak', 1, 1),
+                                 ('lak2', 'lak', 1, 2),
                                  ('lak3', 'lak', 1, 3)]}
 
     lak = flopy.mf6.modflow.ModflowGwflak(gwf, save_flows=True,
@@ -157,7 +152,8 @@ def get_model(idx, dir):
                                           print_stage=True,
                                           stage_filerecord='stage',
                                           budget_filerecord='lakebud',
-                                          nlakes=1, ntables=0,
+                                          nlakes=len(pak_data),
+                                          ntables=0,
                                           packagedata=pak_data, pname='LAK-1',
                                           connectiondata=con_data,
                                           perioddata=p_data,
@@ -179,50 +175,44 @@ def get_model(idx, dir):
 
     # create gwt model
     gwtname = 'gwt_' + name
-    gwt = flopy.mf6.MFModel(sim, model_type='gwt6', modelname=gwtname,
-                            model_nam_file='{}.nam'.format(gwtname))
+    gwt = flopy.mf6.ModflowGwt(sim, modelname=gwtname)
 
-    if not single_matrix:
-        imsgwt = flopy.mf6.ModflowIms(sim, print_option='ALL',
-                                      outer_hclose=hclose,
-                                      outer_maximum=nouter,
-                                      under_relaxation='NONE',
-                                      inner_maximum=ninner,
-                                      inner_hclose=hclose, rcloserecord=rclose,
-                                      linear_acceleration='BICGSTAB',
-                                      scaling_method='NONE',
-                                      reordering_method='NONE',
-                                      relaxation_factor=relax,
-                                      filename='{}.ims'.format(gwtname))
-        sim.register_ims_package(imsgwt, [gwt.name])
+    imsgwt = flopy.mf6.ModflowIms(sim, print_option='ALL',
+                                  outer_hclose=hclose,
+                                  outer_maximum=nouter,
+                                  under_relaxation='NONE',
+                                  inner_maximum=ninner,
+                                  inner_hclose=hclose, rcloserecord=rclose,
+                                  linear_acceleration='BICGSTAB',
+                                  scaling_method='NONE',
+                                  reordering_method='NONE',
+                                  relaxation_factor=relax,
+                                  filename='{}.ims'.format(gwtname))
+    sim.register_ims_package(imsgwt, [gwt.name])
 
     dis = flopy.mf6.ModflowGwtdis(gwt, nlay=nlay, nrow=nrow, ncol=ncol,
                                   delr=delr, delc=delc,
                                   top=top, botm=botm, idomain=idomain)
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwtic(gwt, strt=0.,
-                                filename='{}.ic'.format(gwtname))
+    ic = flopy.mf6.ModflowGwtic(gwt, strt=0.)
 
     # advection
-    adv = flopy.mf6.ModflowGwtadv(gwt, scheme='UPSTREAM',
-                                  filename='{}.adv'.format(gwtname))
+    adv = flopy.mf6.ModflowGwtadv(gwt, scheme='UPSTREAM')
 
     # dispersion
     # diffc = 0.0
     # dsp = flopy.mf6.ModflowGwtdsp(gwt, xt3d=True, diffc=diffc,
-    #                              alh=0.1, ath1=0.01, atv=0.05,
-    #                              filename='{}.dsp'.format(gwtname))
+    #                              alh=0.1, ath1=0.01, atv=0.05)
 
     # storage
     porosity = 0.30
-    sto = flopy.mf6.ModflowGwtmst(gwt, porosity=porosity,
-                                  filename='{}.sto'.format(gwtname))
+    sto = flopy.mf6.ModflowGwtmst(gwt, porosity=porosity)
+
     # sources
     sourcerecarray = [('CHD-1', 'AUX', 'CONCENTRATION'),
                       ('WEL-1', 'AUX', 'CONCENTRATION')]
-    ssm = flopy.mf6.ModflowGwtssm(gwt, sources=sourcerecarray,
-                                  filename='{}.ssm'.format(gwtname))
+    ssm = flopy.mf6.ModflowGwtssm(gwt, sources=sourcerecarray)
 
     lktpackagedata = [(0, 35., 99., 999., 'mylake'), ]
     lkt = flopy.mf6.modflow.ModflowGwtlkt(gwt,
@@ -281,7 +271,7 @@ def eval_results(sim):
     assert clak.shape == (100,)
 
     # todo: add a better check of the lake concentrations
-    # assert False
+    assert False
 
     return
 

@@ -198,7 +198,7 @@ contains
         end if
     end do
     !
-    !write summary of cnc package error messages
+    ! -- write summary of cnc package error messages
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
       call ustop()
@@ -401,7 +401,7 @@ contains
 
   ! -- Procedures related to observations
 
-logical function cnc_obs_supported(this)
+  logical function cnc_obs_supported(this)
 ! ******************************************************************************
 ! cnc_obs_supported
 !   -- Return true because CNC package supports observations.
@@ -410,14 +410,17 @@ logical function cnc_obs_supported(this)
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-  implicit none
-  class(GwtCncType) :: this
+    ! -- dummy
+    class(GwtCncType) :: this
 ! ------------------------------------------------------------------------------
-  cnc_obs_supported = .true.
-  return
-end function cnc_obs_supported
+    !
+    cnc_obs_supported = .true.
+    !
+    ! -- return
+    return
+  end function cnc_obs_supported
 
-subroutine cnc_df_obs(this)
+  subroutine cnc_df_obs(this)
 ! ******************************************************************************
 ! cnc_df_obs (implements bnd_df_obs)
 !   -- Store observation type supported by CNC package.
@@ -426,29 +429,37 @@ subroutine cnc_df_obs(this)
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-  implicit none
-  ! -- dummy
-  class(GwtCncType) :: this
-  ! -- local
-  integer(I4B) :: indx
+    ! -- dummy
+    class(GwtCncType) :: this
+    ! -- local
+    integer(I4B) :: indx
 ! ------------------------------------------------------------------------------
-  call this%obs%StoreObsType('cnc-flow', .true., indx)
-  this%obs%obsData(indx)%ProcessIdPtr => DefaultObsIdProcessor
-  return
-end subroutine cnc_df_obs
+    !
+    call this%obs%StoreObsType('cnc-flow', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => DefaultObsIdProcessor
+    !
+    ! -- return
+    return
+  end subroutine cnc_df_obs
 
   ! -- Procedure related to time series
 
   subroutine cnc_rp_ts(this)
-    ! -- Assign tsLink%Text appropriately for
-    !    all time series in use by package.
-    !    In CNC package variable CONCENTRATION
-    !    can be controlled by time series.
+! ******************************************************************************
+! -- Assign tsLink%Text appropriately for
+!    all time series in use by package.
+!    In CNC package variable CONCENTRATION
+!    can be controlled by time series.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwtCncType), intent(inout) :: this
     ! -- local
     integer(I4B) :: i, nlinks
     type(TimeSeriesLinkType), pointer :: tslink => null()
+! ------------------------------------------------------------------------------
     !
     nlinks = this%TsManager%boundtslinks%Count()
     do i=1,nlinks
@@ -461,6 +472,7 @@ end subroutine cnc_df_obs
       endif
     enddo
     !
+    ! -- return
     return
   end subroutine cnc_rp_ts
 
