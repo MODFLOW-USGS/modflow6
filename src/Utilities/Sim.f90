@@ -34,7 +34,7 @@ module SimModule
 
 contains
 
-function count_errors()
+function count_errors() result(ncount)
 ! ******************************************************************************
 ! Return error count
 ! ******************************************************************************
@@ -43,13 +43,13 @@ function count_errors()
 ! ------------------------------------------------------------------------------
   ! -- modules
   ! -- return
-  integer(I4B) :: count_errors
+  integer(I4B) :: ncount
 ! ------------------------------------------------------------------------------
-  call sim_errors%count_message(count_errors)
+  ncount = sim_errors%count_message()
   return
 end function count_errors
 
-function count_warnings()
+function count_warnings() result(ncount)
 ! ******************************************************************************
 ! Return warning count
 ! ******************************************************************************
@@ -58,13 +58,13 @@ function count_warnings()
 ! ------------------------------------------------------------------------------
   ! -- modules
   ! -- return
-  integer(I4B) :: count_warnings
+  integer(I4B) :: ncount
 ! ------------------------------------------------------------------------------
-  call sim_warnings%count_message(count_warnings)
+  ncount = sim_warnings%count_message()
   return
 end function count_warnings
 
-function count_notes()
+function count_notes() result(ncount)
 ! ******************************************************************************
 ! Return notes count
 ! ******************************************************************************
@@ -73,9 +73,9 @@ function count_notes()
 ! ------------------------------------------------------------------------------
   ! -- modules
   ! -- return
-  integer(I4B) :: count_notes
+  integer(I4B) :: ncount
 ! ------------------------------------------------------------------------------
-  call sim_notes%count_message(count_notes)
+  ncount = sim_notes%count_message()
   return
 end function count_notes
 
@@ -90,6 +90,8 @@ subroutine MaxErrors(imax)
   integer(I4B), intent(in) :: imax
   ! -- local
 ! ------------------------------------------------------------------------------
+  !
+  ! -- set the maximum number of error messages that will be saved
   call sim_errors%set_max_message(imax)
   !
   ! -- return
@@ -109,6 +111,8 @@ subroutine store_error(errmsg)
   character(len=*), intent(in) :: errmsg
   ! -- local
 ! ------------------------------------------------------------------------------
+  !
+  ! -- store error
   call sim_errors%store_message(errmsg)
   !
   ! -- return
@@ -130,12 +134,13 @@ subroutine store_error_unit(iunit)
   character(len=LINELENGTH) :: errmsg
 ! ------------------------------------------------------------------------------
   !
+  ! -- store error unit
   inquire(unit=iunit, name=fname)
   write(errmsg,'(3a)')                                                           &
     "ERROR OCCURRED WHILE READING FILE '", trim(adjustl(fname)), "'"
-  !call sim_uniterrors%store_message(errmsg, count=.false.)
   call sim_uniterrors%store_message(errmsg)
   !
+  ! -- return
   return
 end subroutine store_error_unit
 
@@ -153,15 +158,16 @@ subroutine store_error_filename(filename)
   character(len=LINELENGTH) :: errmsg
 ! ------------------------------------------------------------------------------
   !
+  ! -- store error unit
   write(errmsg,'(3a)')                                                           &
     "ERROR OCCURRED WHILE READING FILE '", trim(adjustl(filename)), "'"
-  !call sim_uniterrors%store_message(errmsg, count=.false.)
   call sim_uniterrors%store_message(errmsg)
   !
+  ! -- return
   return
 end subroutine store_error_filename
 
-subroutine store_warning(warnmsg, count)
+subroutine store_warning(warnmsg)
 ! ******************************************************************************
 ! Store a warning message for printing at end of simulation
 ! ******************************************************************************
@@ -172,24 +178,16 @@ subroutine store_warning(warnmsg, count)
   use ArrayHandlersModule, only: ExpandArray
   ! -- dummy
   character(len=*), intent(in) :: warnmsg
-  logical, intent(in), optional :: count
-  ! -- local
-  logical :: inc_count
 ! ------------------------------------------------------------------------------
   !
-  ! -- process optional variables
-  if (present(count)) then
-    inc_count = count
-  else
-    inc_count = .true.
-  end if
-  call sim_warnings%store_message(warnmsg, count=inc_count)
+  ! -- store warning
+  call sim_warnings%store_message(warnmsg)
   !
   ! -- return
   return
 end subroutine store_warning
 
-subroutine store_note(note, count)
+subroutine store_note(note)
 ! ******************************************************************************
 ! Store a note for printing at end of simulation
 ! ******************************************************************************
@@ -200,18 +198,11 @@ subroutine store_note(note, count)
   use ArrayHandlersModule, only: ExpandArray
   ! -- dummy
   character(len=*), intent(in) :: note
-  logical, intent(in), optional :: count
   ! -- local
-  logical :: inc_count
 ! ------------------------------------------------------------------------------
   !
-  ! -- process optional variables
-  if (present(count)) then
-    inc_count = count
-  else
-    inc_count = .true.
-  end if
-  call sim_notes%store_message(note, count=inc_count)
+  ! -- store note
+  call sim_notes%store_message(note)
   !
   ! -- return
   return
@@ -253,20 +244,16 @@ subroutine print_final_message(stopmess, ioutlocal)
   ! -- local
   character(len=*), parameter :: fmt = '(1x,a)'
   character(len=*), parameter :: msg = 'Stopping due to error(s)'
-  !logical :: errorfound  
-  !logical :: warningfound
-  integer :: ierr
   !---------------------------------------------------------------------------
-  !call print_notes()
-  !warningfound =  print_warnings()
-  !errorfound = print_errors()
-  call sim_notes%print_message('NOTES:', 'notes', iunit=iout)
-  call sim_warnings%print_message('WARNING REPORT:', 'warnings', iunit=iout)
-  call sim_errors%print_message('ERROR REPORT:', 'errors', iunit=iout)
-  call sim_uniterrors%print_message('UNIT ERROR REPORT:', 'file unit errors',    &
-                                    iunit=iout)
   !
+  ! -- print the accumulated messages
+  call sim_notes%print_message('NOTES:', 'note(s)', iunit=iout)
+  call sim_warnings%print_message('WARNING REPORT:', 'warning(s)', iunit=iout)
+  call sim_errors%print_message('ERROR REPORT:', 'error(s)', iunit=iout)
+  call sim_uniterrors%print_message('UNIT ERROR REPORT:',                        &
+                                    'file unit error(s)', iunit=iout)
   !
+  ! -- write a stop message, if one is passed 
   if (present(stopmess)) then
     if (stopmess.ne.' ') then
       call sim_message(stopmess, fmt=fmt, iunit=iout)
@@ -280,10 +267,8 @@ subroutine print_final_message(stopmess, ioutlocal)
     endif
   endif
   !
-  ! -- determine if error condition occurred
-  !if (errorfound) then
-  call sim_errors%count_message(ierr)
-  if (ierr > 0) then
+  ! -- determine if an error condition has occurred
+  if (sim_errors%count_message() > 0) then
     ireturnerr = 2
     if (iout > 0) then
       call sim_message(stopmess, fmt=fmt, iunit=iout)
@@ -300,7 +285,6 @@ subroutine print_final_message(stopmess, ioutlocal)
   !
   ! -- return
   return
-  
 end subroutine print_final_message
 
 subroutine converge_reset()

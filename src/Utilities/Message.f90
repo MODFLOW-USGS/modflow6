@@ -1,6 +1,5 @@
-! Comprehensive table object that stores all of the 
-! intercell flows, and the inflows and the outflows for 
-! an advanced package.
+! Message object that stores errors, warnings, notes, and
+! error units recorded in a simulation.
 module MessageModule
   
   use KindModule, only: I4B, DP
@@ -18,12 +17,10 @@ module MessageModule
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: name
     integer(I4B) :: nmessage = 0
-    integer(I4B) :: ncount = 0
     integer(I4B) :: max_message = 1000
     integer(I4B) :: max_exceeded = 0
     integer(I4B) :: inc_message = 100
     character(len=MAXCHARLEN), allocatable, dimension(:) :: message
-    integer(I4B), allocatable, dimension(:) :: icount
     
     contains
   
@@ -36,7 +33,7 @@ module MessageModule
   
   contains
   
-    subroutine count_message(this, ncount)
+    function count_message(this) result(nmessage)
     ! ******************************************************************************
     ! Return message count
     ! ******************************************************************************
@@ -47,17 +44,17 @@ module MessageModule
       ! -- return variable
       ! -- dummy
       class(MessageType) :: this
-      integer(I4B), intent(inout) :: ncount
+      integer(I4B) :: nmessage
     ! ------------------------------------------------------------------------------
       if (allocated(this%message)) then
-        ncount = this%ncount
+        nmessage = this%nmessage
       else
-        ncount = 0
+        nmessage = 0
       end if
       !
       ! -- return
       return
-    end subroutine count_message
+    end function count_message
     
     subroutine set_max_message(this, imax)
     ! ******************************************************************************
@@ -78,9 +75,9 @@ module MessageModule
       return
     end subroutine set_max_message
     
-    subroutine store_message(this, msg, count)
+    subroutine store_message(this, msg)
     ! ******************************************************************************
-    ! Store an error message for printing at end of simulation
+    ! Store a message for printing at end of simulation
     ! ******************************************************************************
     !
     !    SPECIFICATIONS:
@@ -89,49 +86,31 @@ module MessageModule
       ! -- dummy
       class(MessageType) :: this
       character(len=*), intent(in) :: msg
-      logical, intent(in), optional :: count
       ! -- local
-      logical :: inc_count
       logical :: inc_array
       integer(I4B) :: i
-      integer(I4B) :: j
     ! ------------------------------------------------------------------------------
-      !
-      ! -- process optional variables
-      if (present(count)) then
-        inc_count = count
-      else
-        inc_count = .TRUE.
-      end if
       !
       ! -- determine if messages should be expanded
       inc_array = .TRUE.
-      if (allocated(this%icount)) then
+      if (allocated(this%message)) then
         i = this%nmessage
-        if (i < size(this%icount)) then
+        if (i < size(this%message)) then
           inc_array = .FALSE.
         end if
       end if
       !
-      ! -- resize message and icount
+      ! -- resize message
       if (inc_array) then
         call ExpandArray(this%message, increment=this%inc_message)
-        call ExpandArray(this%icount, increment=this%inc_message)
         this%inc_message = this%inc_message * 1.1
       end if
       !
-      ! -- store this message and calculate ncount
+      ! -- store this message and calculate nmessage
       i = this%nmessage + 1
       if (i <= this%max_message) then
         this%nmessage = i
-        if (inc_count) then
-          j = this%ncount + 1
-          this%ncount = j
-        else
-          j = 0
-        end if
         this%message(i) = msg
-        this%icount(i) = j
       else
         this%max_exceeded = this%max_exceeded + 1
       end if
@@ -188,9 +167,9 @@ module MessageModule
           !
           ! -- write each message
           do i = 1, isize
-            call write_message(this%message(i), this%icount(i), iwidth=iwidth)
+            call write_message(this%message(i), i, iwidth=iwidth)
             if (iu > 0) then
-              call write_message(this%message(i), this%icount(i), iwidth=iwidth, iunit=iu)
+              call write_message(this%message(i), i, iwidth=iwidth, iunit=iu)
             end if
           end do
           !
@@ -217,8 +196,7 @@ module MessageModule
   !
   ! -- Arguments are as follows:
   !       MESSAGE      : message to be written
-  !       ICOUNT       : counter for message. If ICOUNT==0 then no counter is
-  !                      prepended to the first line  
+  !       ICOUNT       : counter to prepended to the message  
   !       IWIDTH       : maximum width of the prepended counter
   !       IUNIT        : the unit number to which the message is written
   !
@@ -246,19 +224,22 @@ module MessageModule
     integer(I4B)              :: j
   ! ------------------------------------------------------------------------------
     !
+    ! -- return if no message is passed
+    if (len_trim(message) < 1) then
+      return
+    end if
+    !
+    ! -- initialize local variables
     amessage = message
-    if (amessage == ' ') return
+    junit = istdout
+    ablank = ' '
+    itake = 0
+    j = 0
     !
     ! -- ensure that there is at least one blank space at the start of amessage
     if (amessage(1:1) /= ' ') then
       amessage = ' ' // trim(amessage)
     end if
-    !
-    ! -- initialize local variables
-    junit = istdout
-    ablank = ' '
-    itake = 0
-    j = 0
     !
     ! -- process optional dummy variables
     !    set the unit number
@@ -268,18 +249,12 @@ module MessageModule
       end if
     end if
     !
-    ! -- prepend amessage with counter
+    ! -- create the counter to prepend to amessage
     write(cfmt, '(A,I0,A)') '(1X,I', iwidth, ',".")'
+    write(cval, cfmt) icount
     !
-    ! -- update amessage with the counter (or '*')
-    if (icount > 0) then
-      write(cval, cfmt) icount
-      ipos = len_trim(cval)
-    else
-      write(cfmt, '(A,I0,A)') '(1X,A', iwidth, ',1X)'
-      write(cval, cfmt) '*'
-      ipos = iwidth + 2
-    end if
+    ! -- prepend amessage with the counter
+    ipos = len_trim(cval)
     nblc = len_trim(amessage)
     amessage = adjustr(amessage(1:nblc+ipos))
     if (nblc+ipos < len(amessage)) then
@@ -292,11 +267,6 @@ module MessageModule
     !
     ! -- calculate the final length of the message after modification
     nblc = len_trim(amessage)
-    !
-    ! -- add blank line if an uncounted message
-    if (icount < 1) then
-      call sim_message('', iunit=junit)
-    end if
     !
     ! -- parse the amessage into multiple lines
 5   continue
