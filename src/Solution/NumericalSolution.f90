@@ -2694,6 +2694,7 @@ subroutine solution_create(filename, id)
     class(NumericalExchangeType), pointer :: cp          !< exchange pointer (currently null())
     integer(I4B), intent(in) :: kiter                    !< Picard iteration number
     ! -- local variables
+    character(len=7) :: cmsg
     integer(I4B) :: nb
     integer(I4B) :: btflag
     integer(I4B) :: ibflag
