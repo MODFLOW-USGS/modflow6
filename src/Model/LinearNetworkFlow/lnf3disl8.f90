@@ -7,10 +7,10 @@ module LnfDislModule
   use InputOutputModule, only: get_node, URWORD, ulasav, ulaprufw, ubdsv1, &
                                ubdsv06
   use SimModule, only: count_errors, store_error, store_error_unit, ustop
-  use DisvGeom, only: DisvGeomType
   use BlockParserModule, only: BlockParserType
   use MemoryManagerModule, only: mem_allocate
   use TdisModule,          only: kstp, kper, pertim, totim, delt
+  use DislGeom, only: calcdist, partialdist
 
   implicit none
   private
@@ -19,12 +19,14 @@ module LnfDislModule
   type, extends(DisBaseType) :: LnfDislType
     integer(I4B), pointer :: nvert => null()                                     ! number of x,y vertices
     real(DP), dimension(:,:), pointer, contiguous :: vertices => null()          ! cell vertices stored as 3d array of x, y, and z
+    real(DP), dimension(:,:), pointer, contiguous :: cellcenters => null()       ! cell centers stored as 3d array of x, y, and z
+    integer(I4B), dimension(:,:), pointer, contiguous :: centerverts => null()   ! vertex at cell center or vertices cell center is between
     real(DP), dimension(:), pointer, contiguous :: cellfdc => null()             ! fdc stored as array
     integer(I4B), dimension(:), pointer, contiguous :: iavert => null()          ! cell vertex pointer ia array
     integer(I4B), dimension(:), pointer, contiguous :: javert => null()          ! cell vertex pointer ja array
+    integer(I4B), dimension(:), pointer, contiguous :: iavertcells => null()      ! vertex to cells ia array
+    integer(I4B), dimension(:), pointer, contiguous :: javertcells => null()      ! vertex to cells ja array
     integer(I4B), dimension(:), pointer, contiguous :: idomain  => null()        ! idomain (ncpl, 1, nlay)
-    type(DisvGeomType) :: cell1                                                  ! cell object used to calculate geometric properties
-    type(DisvGeomType)  :: cell2                                                 ! cell object used to calculate geometric properties
   contains
     procedure :: dis_df => disl_df
     procedure :: dis_da => disl_da
@@ -50,7 +52,6 @@ module LnfDislModule
     procedure :: write_grb
     procedure :: allocate_scalars
     procedure :: allocate_arrays
-    procedure :: get_cell2d_area
     !
     procedure :: read_int_array
     procedure :: read_dbl_array
@@ -84,7 +85,7 @@ module LnfDislModule
     ! -- Return
     return
   end subroutine disl_cr
-  
+
   subroutine disl_init_mem(dis, name_model, iout, nnodes, vertices, cellfdc, idomain)
 ! ******************************************************************************
 ! dis_init_mem -- Create a new discretization by vertices object from memory
@@ -120,6 +121,8 @@ module LnfDislModule
     call mem_allocate(disext%idomain, disext%nodesuser, 'IDOMAIN', disext%origin)
     !
     ! -- Allocate vertices array
+    call mem_allocate(disext%cellcenters, 3, disext%nodesuser, 'CELLCENTERS', disext%origin)
+    call mem_allocate(disext%centerverts, 2, disext%nodesuser, 'CENTERVERTS', disext%origin)
     call mem_allocate(disext%vertices, 3, disext%nvert, 'VERTICES', disext%origin)
     call mem_allocate(disext%cellfdc, disext%nodesuser, 'CELLFDC', disext%origin)
     !
@@ -211,10 +214,14 @@ module LnfDislModule
     ! -- Deallocate Arrays
     call mem_deallocate(this%nodereduced)
     call mem_deallocate(this%nodeuser)
+    call mem_deallocate(this%cellcenters)
+    call mem_deallocate(this%centerverts)
     call mem_deallocate(this%vertices)
     call mem_deallocate(this%cellfdc)
     call mem_deallocate(this%iavert)
     call mem_deallocate(this%javert)
+    call mem_deallocate(this%iavertcells)
+    call mem_deallocate(this%javertcells)
     call mem_deallocate(this%idomain)
     !
     ! -- Return
@@ -309,7 +316,7 @@ module LnfDislModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use MemoryManagerModule, only: mem_allocate  
+    use MemoryManagerModule, only: mem_allocate
     use ConstantsModule,  only: LINELENGTH
     ! -- dummy
     class(LnfDislType) :: this
@@ -374,6 +381,9 @@ module LnfDislModule
     ! -- Allocate vertices array
     call mem_allocate(this%vertices, 3, this%nvert, 'VERTICES', this%origin)
     call mem_allocate(this%cellfdc, this%nodesuser, 'CELLFDC', this%origin)
+    call mem_allocate(this%cellcenters, 3, this%nodesuser, 'CELLCENTERS', this%origin)
+    call mem_allocate(this%centerverts, 2, this%nodesuser, 'CENTERVERTS', this%origin)
+
     !
     ! -- initialize all cells to be active (idomain = 1)
     do k = 1, this%nodesuser
@@ -428,7 +438,7 @@ module LnfDislModule
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
           case ('IDOMAIN')
-            call this%parser%GetStringCaps(keyword)                       
+            call this%parser%GetStringCaps(keyword)
             call ReadArray(this%parser%iuactive, this%idomain, aname(1),    &
                            this%ndim, this%nodesuser, this%iout, 0)
             lname(1) = .true.
@@ -463,7 +473,7 @@ module LnfDislModule
     ! -- Return
     return
   end subroutine read_mf6_griddata
-    
+
   subroutine grid_finalize(this)
 ! ******************************************************************************
 ! grid_finalize -- Finalize grid
@@ -473,13 +483,13 @@ module LnfDislModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use SimModule, only: ustop, count_errors, store_error
-    use ConstantsModule,   only: LINELENGTH, DZERO
+    use ConstantsModule,   only: LINELENGTH, DZERO, DONE
     ! -- dummy
     class(LnfDislType) :: this
     ! -- locals
-    integer(I4B) :: node, noder, j, k
-    real(DP) :: top
-    real(DP) :: dz
+    integer(I4B) :: node, noder, j, k, n
+    real(DP) :: nodelen, curlen, seglen
+    real(DP) :: cendist, segpercent
     character(len=300) :: ermsg
     ! -- formats
     character(len=*), parameter :: fmtdz = &
@@ -547,13 +557,69 @@ module LnfDislModule
           node = node + 1
       enddo
     endif
+
+    ! calculate and fill cell center array
+    do k = 1, this%nodesuser
+      ! calculate node length
+      nodelen = DZERO
+      do j = this%iavert(k), this%iavert(k+1) - 2
+        nodelen = nodelen + calcdist(this%vertices, this%javert(j), &
+          this%javert(j+1))
+      end do
+      ! calculate distance from start of node to cell center
+      cendist = nodelen * this%cellfdc(k)
+      ! calculate cell center location
+      curlen = DZERO
+      ! loop through cell's vertices
+      inner: do j = this%iavert(k), this%iavert(k+1) - 2
+        seglen = calcdist(this%vertices, this%javert(j), this%javert(j+1))
+        ! if cell center between vertex k and k+1
+        if (seglen + curlen >= cendist) then
+            ! calculate cell center locations
+            segpercent = (cendist - curlen) / seglen
+            this%cellcenters(1, k) = partialdist(this%vertices(1,   &
+              this%javert(j)), this%vertices(1, this%javert(j+1)),  &
+              segpercent)
+            this%cellcenters(2, k) = partialdist(this%vertices(2,   &
+              this%javert(j)), this%vertices(2, this%javert(j+1)),  &
+              segpercent)
+            this%cellcenters(3, k) = partialdist(this%vertices(3,   &
+              this%javert(j)), this%vertices(3, this%javert(j+1)),  &
+              segpercent)
+            ! record vertices that cell center is between
+            if (abs(segpercent - DONE) < 0.00001) then
+              this%centerverts(1, k) = this%javert(j+1)
+              this%centerverts(2, k) = 0
+            else if (abs(segpercent - DZERO) < 0.00001) then
+              this%centerverts(1, k) = this%javert(j)
+              this%centerverts(2, k) = 0
+            else
+              this%centerverts(1, k) = this%javert(j)
+              this%centerverts(2, k) = this%javert(j+1)
+            end if
+            exit inner
+        end if
+        curlen = curlen + seglen
+      end do inner
+    end do
+
+    !write(*, '(a)') 'cellcenters'
+    !do n = 1, this%nodesuser
+    !  write(*, '(1(1pg24.15), 1(1pg24.15), 1(1pg24.15))') &
+    !    this%cellcenters(1, n), this%cellcenters(2, n), this%cellcenters(3, n)
+    !end do
+
+    !write(*, '(a)') 'centerverts'
+    !do n = 1, this%nodesuser
+    !  !write(*, '(I4)') this%centerverts(1, n)
+    !  !write(*, '(I4)') this%centerverts(2, n)
+    !  write(*, '(I4, I4)') &
+    !    this%centerverts(1, n), this%centerverts(2, n)
+    !end do
+
     !
     ! -- Build connections
     call this%connect()
-    !
-    ! -- Create two cell objects that can be used for geometric processing
-    ! SRP TODO: Replace with pipe geometry objects
-    !
     ! -- Return
     return
   end subroutine grid_finalize
@@ -609,7 +675,7 @@ module LnfDislModule
         this%vertices(2, i) = this%parser%GetDouble()
         !
         ! -- z
-        this%vertices(3, i) = this%parser%GetDouble()        
+        this%vertices(3, i) = this%parser%GetDouble()
         !
         ! -- set min/max coords
         if(i == 1) then
@@ -667,15 +733,19 @@ module LnfDislModule
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(LnfDislType) :: this
-    integer(I4B) :: i, j, ivert, ivert1, ncvert
-    integer(I4B) :: ierr, ival
+    integer(I4B) :: i, j, k, ivert, ivert1, ncvert
+    integer(I4B) :: ierr, ival, icurcell
     logical :: isfound, endOfBlock
     integer(I4B) :: maxvert, maxvertcell, iuext
     real(DP) :: xmin, xmax, ymin, ymax
     character(len=300) :: ermsg
     integer(I4B), dimension(:), allocatable :: maxnnz
+    integer(I4B), dimension(:), pointer, contiguous :: vnumcells => null()
     type(sparsematrix) :: vertspm
     ! -- formats
+    character(len=*), parameter :: fmtvert = &
+      "('ERROR. IAVERTCELLS DOES NOT CONTAIN THE CORRECT NUMBER OF '" //   &
+      "' CONNECTIONS FOR VERTEX ', i0)"
     character(len=*), parameter :: fmtcnum = &
       "('ERROR. CELL NUMBER NOT CONSECUTIVE.  LOOKING FOR ',i0," //           &
       "' BUT FOUND ', i0)"
@@ -747,12 +817,61 @@ module LnfDislModule
     call mem_allocate(this%iavert, this%nodesuser+1, 'IAVERT', this%origin)
     call mem_allocate(this%javert, vertspm%nnz, 'JAVERT', this%origin)
     call vertspm%filliaja(this%iavert, this%javert, ierr)
+
+    ! allocate vertex to cellids map
+    call mem_allocate(this%iavertcells, this%nvert+1, 'IAVERTCELLS', this%origin)
+    call mem_allocate(this%javertcells, vertspm%nnz, 'JAVERTCELLS', this%origin)
+    ! calculate number of cell connections for each vertex
+    allocate(vnumcells(this%nvert))
+    do j = 1, this%nvert
+      vnumcells(j) = 0
+    end do
+    do j = 1, vertspm%nnz
+      vnumcells(this%javert(j)) = vnumcells(this%javert(j)) + 1
+    end do
+    ! build iavertcells
+    this%iavertcells(1) = 1
+    do j = 2, this%nvert
+      this%iavertcells(j) = this%iavertcells(j-1) + vnumcells(j-1)
+    end do
+    this%iavertcells(this%nvert+1) = vertspm%nnz + 1
+    ! initialize javertcells
+    do j = 1, vertspm%nnz
+      this%javertcells(j) = 0
+    end do
+    ! build javertcells
+    icurcell = 1
+    do j = 1, vertspm%nnz
+      if (this%iavert(icurcell+1) == j) then
+        icurcell = icurcell + 1
+      end if
+      isfound = .FALSE.
+      inner: do k = this%iavertcells(this%javert(j)), this%iavertcells(this%javert(j)+1) - 1
+        if (this%javertcells(k) == 0) then
+          ! fill the first available index and exit
+          this%javertcells(k) = icurcell
+          isfound = .TRUE.
+          exit inner
+        end if
+      end do inner
+      if (.not. isfound) then
+        write(ermsg, fmtvert) j
+        call store_error(ermsg)
+        call store_error_unit(iuext)
+        call ustop()
+      endif
+    end do
+
+    ! clean up
+    deallocate(vnumcells)
     call vertspm%destroy()
+
     !
     ! -- Write information
     write(this%iout, fmtncpl) this%nodesuser
     write(this%iout, fmtmaxvert) maxvert, maxvertcell
     write(this%iout,'(1x,a)')'END PROCESSING VERTICES'
+
     !
     ! -- Return
     return
@@ -780,12 +899,14 @@ module LnfDislModule
     if(this%nodes < this%nodesuser) nrsize = this%nodes
     allocate(this%con)
     ! SRP TODO: connections need geometry info
-    !call this%con%dislconnections(this%name_model, this%nnodes, nrsize,        &
-    !                              this%nvert, this%vertices, this%iavert,      &
-    !                              this%javert, this%cellfdc,                    &
-    !                              this%nodereduced, this%nodeuser)
-    !this%nja = this%con%nja
-    !this%njas = this%con%njas
+    call this%con%dislconnections(this%name_model, this%nodes, this%nodesuser, &
+                                  nrsize, this%nvert, this%vertices,           &
+                                  this%iavert, this%javert, this%iavertcells,  &
+                                  this%javertcells, this%cellcenters,          &
+                                  this%centerverts, this%cellfdc,              &
+                                  this%nodereduced, this%nodeuser)
+    this%nja = this%con%nja
+    this%njas = this%con%njas
     !
     !
     ! -- return
@@ -876,6 +997,12 @@ module LnfDislModule
     write(txt, '(3a, i0)') 'JAVERT ', 'INTEGER ', 'NDIM 1 ', size(this%javert)
     txt(lentxt:lentxt) = new_line('a')
     write(iunit) txt
+    write(txt, '(3a, i0)') 'IAVERTCELLS ', 'INTEGER ', 'NDIM 1 ', size(this%iavertcells)
+    txt(lentxt:lentxt) = new_line('a')
+    write(iunit) txt
+    write(txt, '(3a, i0)') 'JAVERTCELLS ', 'INTEGER ', 'NDIM 1 ', size(this%javertcells)
+    txt(lentxt:lentxt) = new_line('a')
+    write(iunit) txt
     write(txt, '(3a, i0)') 'IA ', 'INTEGER ', 'NDIM 1 ', this%nodesuser + 1
     txt(lentxt:lentxt) = new_line('a')
     write(iunit) txt
@@ -901,6 +1028,8 @@ module LnfDislModule
     write(iunit) (this%cellfdc(i), i = 1, this%nodesuser)                       ! cellfdc
     write(iunit) this%iavert                                                    ! iavert
     write(iunit) this%javert                                                    ! javert
+    write(iunit) this%iavertcells                                               ! iavert
+    write(iunit) this%javertcells                                               ! javert
     write(iunit) this%con%iausr                                                 ! iausr
     write(iunit) this%con%jausr                                                 ! jausr
     write(iunit) this%idomain                                                   ! idomain
@@ -931,7 +1060,7 @@ module LnfDislModule
     integer(I4B) :: i, j, k
     character(len=10) :: unstr
 ! ------------------------------------------------------------------------------
-    !    
+    !
     write(unstr, '(i10)') nodeu
     str = '(' // trim(adjustl(unstr)) // ')'
     !
@@ -1078,7 +1207,7 @@ module LnfDislModule
       zn = DZERO
       zm = DZERO
     end if
-    
+
     ! Set vector components based on cell centers
     call line_unit_vector(xn, yn, zn, xm, ym, zm, xcomp, ycomp, zcomp,       &
                           conlen)
@@ -1096,11 +1225,12 @@ module LnfDislModule
     ! local
     real(DP) :: zcell
 
-    call this%get_cellxyz_disl(node, xcell, ycell, zcell)    
-  end subroutine get_cellxy_disl  
-    
+    call this%get_cellxyz_disl(node, xcell, ycell, zcell)
+  end subroutine get_cellxy_disl
+
   ! return x,y,z coordinate for a node
   subroutine get_cellxyz_disl(this, node, xcell, ycell, zcell)
+    use ConstantsModule, only: DZERO, DONE, DHALF
     use InputOutputModule, only: get_jk
     class(LnfDislType), intent(in)  :: this
     integer(I4B), intent(in)        :: node                ! the reduced node number
@@ -1110,11 +1240,11 @@ module LnfDislModule
     real(DP) :: lnflen, lnfcendist, curdist, distsegone, distsegtwo
     real(DP) :: disttot, xdist, ydist, zdist
     real, dimension (:), allocatable :: lnfsegdist
-    
+
     nodeuser = this%get_nodeuser(node)
     numseg = this%iavert(nodeuser + 1) - 1 - this%iavert(nodeuser)
     allocate(lnfsegdist(numseg))
-    lnflen = 0.0
+    lnflen = DZERO
     do ivert = this%iavert(nodeuser), this%iavert(nodeuser + 1) - 1
       ! calculate linear distance between each set of vertices
       xdist = abs(this%vertices(1, ivert) - this%vertices(1, ivert + 1))
@@ -1124,13 +1254,13 @@ module LnfDislModule
                                                    + zdist * zdist)
       ! calculate total distance
       lnflen = lnflen + lnfsegdist(this%iavert(nodeuser) + 1)
-    end do      
-        
+    end do
+
     ! calculate cellfdc percent of the total distance
     lnfcendist = lnflen * this%cellfdc(nodeuser)
-    
+
     ! find segment that contains midpoint and midpoint location
-    curdist = 0.0
+    curdist = DZERO
     do segnum = 1, numseg
       curdist = curdist + lnfsegdist(segnum)
       if(curdist > lnfcendist) then
@@ -1151,10 +1281,10 @@ module LnfDislModule
         exit
       end if
     end do
-    
-    deallocate(lnfsegdist)    
-  end subroutine get_cellxyz_disl 
-                               
+
+    deallocate(lnfsegdist)
+  end subroutine get_cellxyz_disl
+
   subroutine allocate_scalars(this, name_model)
 ! ******************************************************************************
 ! allocate_scalars -- Allocate and initialize scalars
@@ -1215,64 +1345,6 @@ module LnfDislModule
     ! -- Return
     return
   end subroutine allocate_arrays
-
-  function get_cell2d_area(this, icell2d) result(area)
-! ******************************************************************************
-! get_cell2d_area -- Calculate and return the signed area of the cell.  A
-!   negative area means the points are in counter clockwise orientation.
-!   a = 1/2 *[(x1*y2 + x2*y3 + x3*y4 + ... + xn*y1) -
-!             (x2*y1 + x3*y2 + x4*y3 + ... + x1*yn)]
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- module
-    use ConstantsModule, only: DZERO, DHALF, DONE
-    ! -- dummy
-    class(LnfDislType) :: this
-    integer(I4B), intent(in) :: icell2d
-    ! -- return
-    real(DP) :: area
-    ! -- local
-    integer(I4B) :: ivert
-    integer(I4B) :: nvert
-    integer(I4B) :: icount
-    real(DP) :: x
-    real(DP) :: y
-! ------------------------------------------------------------------------------
-    !
-    ! SRP TODO: Access to geometries?
-    area = DZERO
-    nvert = this%iavert(icell2d + 1) - this%iavert(icell2d)
-    icount = 1
-    do ivert = this%iavert(icell2d), this%iavert(icell2d + 1) - 1
-      x = this%vertices(1, this%javert(ivert))
-      if(icount < nvert) then
-        y = this%vertices(2, this%javert(ivert + 1))
-      else
-        y = this%vertices(2, this%javert(this%iavert(icell2d)))
-      endif
-      area = area + x * y
-      icount = icount + 1
-    enddo
-    !
-    icount = 1
-    do ivert = this%iavert(icell2d), this%iavert(icell2d + 1) - 1
-      y = this%vertices(2, this%javert(ivert))
-      if(icount < nvert) then
-        x = this%vertices(1, this%javert(ivert + 1))
-      else
-        x = this%vertices(1, this%javert(this%iavert(icell2d)))
-      endif
-      area = area - x * y
-      icount = icount + 1
-    enddo
-    !
-    area = -DONE * area * DHALF
-    !
-    ! -- return
-    return
-  end function get_cell2d_area
 
   function nodeu_from_string(this, lloc, istart, istop, in, iout, line, &
                              flag_string, allow_zero) result(nodeu)
@@ -1342,7 +1414,7 @@ module LnfDislModule
     ! -- return
     return
   end function nodeu_from_string
-    
+
   function nodeu_from_cellid(this, cellid, inunit, iout, flag_string, &
                                      allow_zero) result(nodeu)
 ! ******************************************************************************
@@ -1627,7 +1699,7 @@ module LnfDislModule
     ! -- return
     return
   end subroutine record_array
-  
+
   subroutine record_srcdst_list_header(this, text, textmodel, textpackage,      &
                                        dstmodel, dstpackage, naux, auxtxt,      &
                                        ibdchn, nlist, iout)
@@ -1665,5 +1737,5 @@ module LnfDislModule
     ! -- return
     return
   end subroutine record_srcdst_list_header
-    
+
 end module LnfDislModule
