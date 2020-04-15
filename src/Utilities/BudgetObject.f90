@@ -109,7 +109,7 @@ module BudgetObjectModule
   end subroutine budgetobject_cr
 
   subroutine budgetobject_df(this, ncv, nbudterm, iflowja, nsto, &
-                             bdtype_opt, bddim_opt, labeltitle_opt, bdzone_opt)
+                             bddim_opt, labeltitle_opt, bdzone_opt)
 ! ******************************************************************************
 ! budgetobject_df -- Define the new budget object
 ! ******************************************************************************
@@ -123,7 +123,6 @@ module BudgetObjectModule
     integer(I4B), intent(in) :: nbudterm
     integer(I4B), intent(in) :: iflowja
     integer(I4B), intent(in) :: nsto
-    character(len=*), optional :: bdtype_opt
     character(len=*), optional :: bddim_opt
     character(len=*), optional :: labeltitle_opt
     character(len=*), optional :: bdzone_opt
@@ -143,12 +142,8 @@ module BudgetObjectModule
     ! -- allocate space for budterm
     allocate(this%budterm(nbudterm))
     !
-    ! -- Set the budget type
-    if(present(bdtype_opt)) then
-      bdtype = bdtype_opt
-    else
-      bdtype = 'VOLUME'
-    endif
+    ! -- Set the budget type to name
+    bdtype = this%name
     !
     ! -- Set the budget dimension
     if(present(bddim_opt)) then

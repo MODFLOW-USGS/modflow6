@@ -2101,7 +2101,6 @@ module GwtAptModule
     ! -- set up budobj
     call budgetobject_cr(this%budobj, this%name)
     call this%budobj%budgetobject_df(this%ncv, nbudterm, 0, 0, &
-                                     bdtype_opt=this%name, &
                                      bddim_opt='M')
     idx = 0
     !
