@@ -3,7 +3,8 @@
 module MessageModule
   
   use KindModule, only: I4B, DP
-  use ConstantsModule, only: LINELENGTH, MAXCHARLEN, DONE
+  use ConstantsModule, only: LINELENGTH, MAXCHARLEN, DONE,                       &
+                             VSUMMARY
   use GenericUtilitiesModule, only: sim_message  
   use SimVariablesModule,     only: istdout
   use ArrayHandlersModule, only: ExpandArray  
@@ -119,7 +120,7 @@ module MessageModule
       return
     end subroutine store_message
     
-    subroutine print_message(this, title, name, iunit)
+    subroutine print_message(this, title, name, iunit, level)
     ! ******************************************************************************
     ! Print all messages that have been stored
     ! ******************************************************************************
@@ -132,9 +133,11 @@ module MessageModule
       character(len=*), intent(in) :: title
       character(len=*), intent(in) :: name
       integer(I4B), intent(in), optional :: iunit
+      integer(I4B), intent(in), optional :: level
       ! -- local
       character(len=LINELENGTH) :: errmsg
       integer(I4B) :: iu
+      integer(I4B) :: ilevel
       integer(I4B) :: i
       integer(I4B) :: isize
       integer(I4B) :: iwidth
@@ -149,7 +152,13 @@ module MessageModule
       else
         iu = 0
       end if
+      if (present(level)) then
+        ilevel = level
+      else
+        ilevel = VSUMMARY
+      end if
       !
+      ! -- write the title and all message entries
       if (allocated(this%message)) then
         isize = this%nmessage
         if (isize > 0) then
@@ -161,15 +170,16 @@ module MessageModule
           !
           ! -- write title for message
           if (iu > 0) then
-            call sim_message(title, iunit=iu, fmt=stdfmt)
+            call sim_message(title, iunit=iu, fmt=stdfmt, level=ilevel)
           end if
-          call sim_message(title, fmt=stdfmt)
+          call sim_message(title, fmt=stdfmt, level=ilevel)
           !
           ! -- write each message
           do i = 1, isize
-            call write_message(this%message(i), i, iwidth=iwidth)
+            call write_message(this%message(i), i, iwidth=iwidth, level=ilevel)
             if (iu > 0) then
-              call write_message(this%message(i), i, iwidth=iwidth, iunit=iu)
+              call write_message(this%message(i), i, iwidth=iwidth, iunit=iu,    &
+                                 level=ilevel)
             end if
           end do
           !
@@ -178,9 +188,10 @@ module MessageModule
             write(errmsg, '(i0,3(1x,a))')                                        &
               this%max_exceeded, 'additional', trim(name),                       &
               'detected but not printed.'
-            call sim_message(trim(errmsg), fmt='(/,1x,a)')
+            call sim_message(trim(errmsg), fmt='(/,1x,a)', level=ilevel)
             if (iu > 0) then
-              call sim_message(trim(errmsg), iunit=iu, fmt='(/,1x,a)')
+              call sim_message(trim(errmsg), iunit=iu, fmt='(/,1x,a)',           &
+                               level=ilevel)
             end if
           end if
         end if
@@ -190,7 +201,7 @@ module MessageModule
       return
     end subroutine print_message
 
-    subroutine write_message(message, icount, iwidth, iunit)
+    subroutine write_message(message, icount, iwidth, iunit, level)
   ! ******************************************************************************
   ! Subroutine write_message formats and writes a message.
   !
@@ -199,6 +210,7 @@ module MessageModule
   !       ICOUNT       : counter to prepended to the message  
   !       IWIDTH       : maximum width of the prepended counter
   !       IUNIT        : the unit number to which the message is written
+  !       LEVEL        : level of message (VSUMMARY, VALL, VDEBUG)
   !
   ! ******************************************************************************
   !
@@ -209,6 +221,7 @@ module MessageModule
     integer(I4B),      intent(in)           :: icount
     integer(I4B),      intent(in)           :: iwidth
     integer(I4B),      intent(in), optional :: iunit
+    integer(I4B),      intent(in), optional :: level
     ! -- local
     character(len=MAXCHARLEN) :: amessage
     character(len=20)         :: ablank
@@ -217,6 +230,7 @@ module MessageModule
     integer(I4B)              :: jend
     integer(I4B)              :: nblc
     integer(I4B)              :: junit
+    integer(I4B)              :: ilevel
     integer(I4B)              :: leadblank
     integer(I4B)              :: itake
     integer(I4B)              :: ipos
@@ -248,6 +262,11 @@ module MessageModule
         junit = iunit
       end if
     end if
+    if (present(level)) then
+      ilevel = level
+    else
+      ilevel = VSUMMARY
+    end if
     !
     ! -- create the counter to prepend to amessage
     write(cfmt, '(A,I0,A)') '(1X,I', iwidth, ',".")'
@@ -275,20 +294,22 @@ module MessageModule
     do i = jend, j+1, -1
       if (amessage(i:i).eq.' ') then
         if (itake.eq.0) then
-          call sim_message(amessage(j+1:i), iunit=junit)
+          call sim_message(amessage(j+1:i), iunit=junit, level=ilevel)
           itake = 2 + leadblank
         else
-          call sim_message(ablank(1:leadblank+2)//amessage(j+1:i), iunit=junit)
+          call sim_message(ablank(1:leadblank+2)//amessage(j+1:i),               &
+                           iunit=junit, level=ilevel)
         end if
         j = i
         go to 5
       end if
     end do
     if (itake == 0)then
-      call sim_message(amessage(j+1:jend), iunit=junit)
+      call sim_message(amessage(j+1:jend), iunit=junit, level=ilevel)
       itake = 2 + leadblank
     else
-      call sim_message(ablank(1:leadblank+2)//amessage(j+1:jend), iunit=junit)
+      call sim_message(ablank(1:leadblank+2)//amessage(j+1:jend),                &
+                       iunit=junit, level=ilevel)
     end if
     j = jend
     go to 5
@@ -297,9 +318,10 @@ module MessageModule
 100 continue
     jend = nblc
     if (itake == 0)then
-      call sim_message(amessage(j+1:jend), iunit=junit)
+      call sim_message(amessage(j+1:jend), iunit=junit, level=ilevel)
     else
-      call sim_message(ablank(1:leadblank+2)//amessage(j+1:jend), iunit=junit)
+      call sim_message(ablank(1:leadblank+2)//amessage(j+1:jend),                &
+                       iunit=junit, level=ilevel)
     end if
     !
     ! -- return

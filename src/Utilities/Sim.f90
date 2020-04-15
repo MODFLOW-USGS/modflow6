@@ -247,8 +247,10 @@ subroutine print_final_message(stopmess, ioutlocal)
   !---------------------------------------------------------------------------
   !
   ! -- print the accumulated messages
-  call sim_notes%print_message('NOTES:', 'note(s)', iunit=iout)
-  call sim_warnings%print_message('WARNING REPORT:', 'warning(s)', iunit=iout)
+  call sim_notes%print_message('NOTES:', 'note(s)',                              &
+                               iunit=iout, level=VALL)
+  call sim_warnings%print_message('WARNING REPORT:', 'warning(s)',               &
+                                  iunit=iout, level=VALL)
   call sim_errors%print_message('ERROR REPORT:', 'error(s)', iunit=iout)
   call sim_uniterrors%print_message('UNIT ERROR REPORT:',                        &
                                     'file unit error(s)', iunit=iout)
