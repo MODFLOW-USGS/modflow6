@@ -108,7 +108,8 @@ module BudgetObjectModule
     return
   end subroutine budgetobject_cr
 
-  subroutine budgetobject_df(this, ncv, nbudterm, iflowja, nsto)
+  subroutine budgetobject_df(this, ncv, nbudterm, iflowja, nsto, &
+                             bdtype_opt, bddim_opt, labeltitle_opt, bdzone_opt)
 ! ******************************************************************************
 ! budgetobject_df -- Define the new budget object
 ! ******************************************************************************
@@ -122,6 +123,15 @@ module BudgetObjectModule
     integer(I4B), intent(in) :: nbudterm
     integer(I4B), intent(in) :: iflowja
     integer(I4B), intent(in) :: nsto
+    character(len=*), optional :: bdtype_opt
+    character(len=*), optional :: bddim_opt
+    character(len=*), optional :: labeltitle_opt
+    character(len=*), optional :: bdzone_opt
+    ! -- local
+    character(len=20) :: bdtype
+    character(len=5) :: bddim
+    character(len=16) :: labeltitle
+    character(len=20) :: bdzone
 ! ------------------------------------------------------------------------------
     !
     ! -- set values
@@ -133,9 +143,36 @@ module BudgetObjectModule
     ! -- allocate space for budterm
     allocate(this%budterm(nbudterm))
     !
+    ! -- Set the budget type
+    if(present(bdtype_opt)) then
+      bdtype = bdtype_opt
+    else
+      bdtype = 'VOLUME'
+    endif
+    !
+    ! -- Set the budget dimension
+    if(present(bddim_opt)) then
+      bddim = bddim_opt
+    else
+      bddim = 'L**3'
+    endif
+    !
+    ! -- Set the budget zone
+    if(present(bdzone_opt)) then
+      bdzone = bdzone_opt
+    else
+      bdzone = 'ENTIRE MODEL'
+    endif
+    !
+    ! -- Set the label title
+    if(present(labeltitle_opt)) then
+      labeltitle = labeltitle_opt
+    else
+      labeltitle = 'PACKAGE NAME'
+    endif
+    !
     ! -- setup the budget table object
-    ! -- TODO: GET DIMENSIONS (e.g. L**3) IN HERE
-    call this%budtable%budget_df(nbudterm, this%name)
+    call this%budtable%budget_df(nbudterm, bdtype, bddim, labeltitle, bdzone)
     !
     ! -- Return
     return

@@ -245,6 +245,8 @@ def get_model(idx, dir):
                                                   pname='MAW-1',
                                                   auxiliary=['aux1', 'aux2'])
 
+            mvt = flopy.mf6.modflow.ModflowGwtmvt(gwt)
+
         # sources
         sourcerecarray = [('CHD-1', 'AUX', 'CONCENTRATION'), ]
         if not mwton:

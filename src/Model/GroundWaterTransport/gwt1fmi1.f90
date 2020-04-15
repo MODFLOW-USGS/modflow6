@@ -64,6 +64,7 @@ module GwtFmiModule
   
     procedure :: fmi_df
     procedure :: fmi_ar
+    procedure :: fmi_rp
     procedure :: fmi_ad
     procedure :: fmi_fc
     procedure :: fmi_bdcalc
@@ -221,6 +222,39 @@ module GwtFmiModule
     ! -- Return
     return
   end subroutine fmi_ar
+  
+  subroutine fmi_rp(this, inmvr)
+! ******************************************************************************
+! fmi_rp -- Read and prepare
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use TdisModule, only: kper, nper
+    ! -- dummy
+    class(GwtFmiType) :: this
+    integer(I4B), intent(in) :: inmvr
+    ! -- local
+    character(len=LINELENGTH) :: errmsg
+    ! -- formats
+! ------------------------------------------------------------------------------
+    !
+    ! --Check to make sure MVT Package is active if mvr flows are available.
+    !   This cannot be checked until RP because exchange doesn't set a pointer 
+    !   to mvrbudobj until exg_ar().
+    if (inmvr == 0 .and. kper * nper == 1) then
+      if (associated(this%mvrbudobj)) then
+        write(errmsg,'(4x,a)') 'GWF WATER MOVER IS ACTIVE BUT THE GWT MVT &
+          &PACKAGE HAS NOT BEEN SPECIFIED.  ACTIVATE GWT MVT PACKAGE.'
+        call store_error(errmsg)
+        call ustop()
+      end if
+    end if
+    !
+    ! -- Return
+    return
+  end subroutine fmi_rp
   
   subroutine fmi_ad(this, cnew)
 ! ******************************************************************************

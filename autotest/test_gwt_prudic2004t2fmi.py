@@ -420,6 +420,9 @@ def run_transport_model():
     ]
     fmi = flopy.mf6.ModflowGwtfmi(gwt, packagedata=pd)
 
+    # mover transport package
+    mvt = flopy.mf6.modflow.ModflowGwtmvt(gwt)
+
     oc = flopy.mf6.ModflowGwtoc(gwt,
                                 budget_filerecord='{}.cbc'.format(gwtname),
                                 concentration_filerecord='{}.ucn'.format(

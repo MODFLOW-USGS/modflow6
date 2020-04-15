@@ -365,6 +365,9 @@ def get_model(idx, dir):
                                                   pname='SFR-1',
                                                   auxiliary=['aux1', 'aux2'])
 
+        # mover transport package
+        mvt = flopy.mf6.modflow.ModflowGwtmvt(gwt)
+
         oc = flopy.mf6.ModflowGwtoc(gwt,
                                     budget_filerecord='{}.cbc'.format(gwtname),
                                     concentration_filerecord='{}.ucn'.format(

@@ -93,7 +93,7 @@ module BudgetModule
     ! -- Allocate arrays
     call this%allocate_arrays()
     !
-    ! -- Set the budget name
+    ! -- Set the budget type
     if(present(bdtype)) then
       this%bdtype = bdtype
     else

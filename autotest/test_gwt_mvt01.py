@@ -236,10 +236,10 @@ def get_model(idx, dir):
                                 headprintrecord=[
                                     ('COLUMNS', 10, 'WIDTH', 15,
                                      'DIGITS', 6, 'GENERAL')],
-                                saverecord=[('HEAD', 'ALL', 'STEPS'),
-                                            ('BUDGET', 'ALL', 'STEPS')],
-                                printrecord=[('HEAD', 'LAST', 'STEPS'),
-                                             ('BUDGET', 'LAST', 'STEPS')])
+                                saverecord=[('HEAD', 'ALL'),
+                                            ('BUDGET', 'ALL')],
+                                printrecord=[('HEAD', 'LAST'),
+                                             ('BUDGET', 'LAST')])
 
 
     packages = [('lak-1',), ('sfr-1',), ]
@@ -388,6 +388,9 @@ def get_model(idx, dir):
                                           observations=sft_obs,
                                           pname='SFR-1',
                                           auxiliary=['aux1', 'aux2'])
+
+    # mover transport package
+    mvt = flopy.mf6.modflow.ModflowGwtmvt(gwt, print_flows=True)
 
     # output control
     oc = flopy.mf6.ModflowGwtoc(gwt,
