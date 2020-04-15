@@ -53,7 +53,6 @@
 		<Filter Name="Geometry">
 		<File RelativePath="..\src\Model\Geometry\BaseGeometry.f90"/>
 		<File RelativePath="..\src\Model\Geometry\CircularGeometry.f90"/>
-		<File RelativePath="..\src\Model\Geometry\RectangularChGeometry.f90"/>
 		<File RelativePath="..\src\Model\Geometry\RectangularGeometry.f90"/></Filter>
 		<Filter Name="GroundWaterFlow">
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3.f90"/>
@@ -144,6 +143,7 @@
 		<File RelativePath="..\src\Utilities\kind.f90"/>
 		<File RelativePath="..\src\Utilities\List.f90"/>
 		<File RelativePath="..\src\Utilities\ListReader.f90"/>
+		<File RelativePath="..\src\Utilities\Message.f90"/>
 		<File RelativePath="..\src\Utilities\NameFile.f90"/>
 		<File RelativePath="..\src\Utilities\OpenSpec.f90"/>
 		<File RelativePath="..\src\Utilities\Sim.f90"/>

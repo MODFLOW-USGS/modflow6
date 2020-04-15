@@ -339,7 +339,7 @@ logical function print_errors()
   return
 end function print_errors
 
-subroutine print_warnings()
+logical function print_warnings()
   ! **************************************************************************
   ! Print all warning messages that have been stored
   ! **************************************************************************
@@ -352,7 +352,9 @@ subroutine print_warnings()
   ! -- formats
 10 format(/,'WARNINGS:',/)
   !
+  print_warnings = .false.
   if (allocated(sim_warnings)) then
+    print_warnings = .true.
     isize = size(sim_warnings)
     if (isize>0) then
       if (associated(iout)) then
@@ -371,7 +373,7 @@ subroutine print_warnings()
   endif
   !
   return
-end subroutine print_warnings
+end function print_warnings
 
 subroutine print_notes()
   ! **************************************************************************
@@ -580,12 +582,13 @@ subroutine ustop(stopmess,ioutlocal)
       'Program terminated normally, but see warning(s) above.'
   character(len=300) :: msg
   logical :: warnings_found
-  logical :: errorfound, success
+  logical :: errorfound
+  logical :: success
   ! format
   1 format()
   !---------------------------------------------------------------------------
   call print_notes()
-  call print_warnings()
+  warnings_found = print_warnings()
   errorfound = print_errors()
   if (present(stopmess)) then
     if (stopmess.ne.' ') then
@@ -599,7 +602,7 @@ subroutine ustop(stopmess,ioutlocal)
     endif
   endif
   !
-  warnings_found = count_warnings() > 0
+  ! -- evaluate model conversion success
   if (errorfound) then
     msg = ermsg
     success = .false.

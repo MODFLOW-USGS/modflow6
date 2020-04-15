@@ -64,7 +64,7 @@ def build_mf6(idx, ws):
 
     # create iterative model solution and register the gwf model with it
     flopy.mf6.ModflowIms(sim, print_option='SUMMARY', complexity='COMPLEX',
-                         inner_hclose=1e-9, outer_hclose=1e-9)
+                         inner_dvclose=1e-9, outer_dvclose=1e-9)
 
     flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
                             delr=delr, delc=delc,
