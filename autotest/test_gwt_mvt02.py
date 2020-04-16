@@ -307,7 +307,9 @@ def get_model(idx, dir):
                                               auxiliary=['aux1', 'aux2'])
 
         # mover transport package
-        mvt = flopy.mf6.modflow.ModflowGwtmvt(gwt, print_flows=True)
+        fname = '{}.mvt.bud'.format(gwtname)
+        mvt = flopy.mf6.modflow.ModflowGwtmvt(gwt, print_flows=True,
+                                              budget_filerecord=fname)
 
         # output control
         oc = flopy.mf6.ModflowGwtoc(gwt,
@@ -378,6 +380,13 @@ def eval_results(sim):
               63.8175964355, 71.6825866699]
 
     assert np.allclose(simres, answer), '{} {}'.format(simres, answer)
+
+    # load the mvt budget file
+    fname = gwtname + '.mvt.bud'
+    fname = os.path.join(sim.simpath, fname)
+    assert os.path.isfile(fname)
+    mobj = flopy.utils.CellBudgetFile(fname, precision='double', verbose=False)
+
 
     # load the sft budget file
     fname = gwtname + '.sft.bud'

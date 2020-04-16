@@ -332,7 +332,7 @@ module GwtModule
     ! -- Define packages and utility objects
     call this%dis%dis_df()
     call this%fmi%fmi_df(this%dis, this%inssm)
-    if (this%inmvt > 0) call this%mvt%mvt_df()
+    if (this%inmvt > 0) call this%mvt%mvt_df(this%dis)
     if (this%indsp > 0) call this%dsp%dsp_df(this%dis)
     if (this%inssm > 0) call this%ssm%ssm_df()
     call this%oc%oc_df()
@@ -446,12 +446,13 @@ module GwtModule
     !
     ! -- Allocate and read modules attached to model
     call this%fmi%fmi_ar(this%ibound)
-    if(this%inic  > 0) call this%ic%ic_ar(this%x)
-    if(this%inmst > 0) call this%mst%mst_ar(this%dis, this%ibound)
-    if(this%inadv > 0) call this%adv%adv_ar(this%dis, this%ibound)
-    if(this%indsp > 0) call this%dsp%dsp_ar(this%ibound, this%mst%porosity)
-    if(this%inssm > 0) call this%ssm%ssm_ar(this%dis, this%ibound, this%x)
-    if(this%inobs > 0) call this%obs%gwt_obs_ar(this%ic, this%x, this%flowja)
+    if (this%inmvt > 0) call this%mvt%mvt_ar()
+    if (this%inic  > 0) call this%ic%ic_ar(this%x)
+    if (this%inmst > 0) call this%mst%mst_ar(this%dis, this%ibound)
+    if (this%inadv > 0) call this%adv%adv_ar(this%dis, this%ibound)
+    if (this%indsp > 0) call this%dsp%dsp_ar(this%ibound, this%mst%porosity)
+    if (this%inssm > 0) call this%ssm%ssm_ar(this%dis, this%ibound, this%x)
+    if (this%inobs > 0) call this%obs%gwt_obs_ar(this%ic, this%x, this%flowja)
     !
     ! -- Call dis_ar to write binary grid file
     !call this%dis%dis_ar(this%npf%icelltype)
@@ -895,6 +896,9 @@ module GwtModule
       enddo
       !
       if (ibudfl /= 0) then
+        !
+        ! -- Mover budget output
+        if(this%inmvt > 0) call this%mvt%mvt_ot()
         !
         ! -- gwt model budget
         call this%budget%budget_ot(kstp, kper, this%iout)
