@@ -2,15 +2,17 @@ module GwtMvtModule
   
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LINELENGTH, MAXCHARLEN, DZERO, LENPAKLOC, &
-                             DNODATA, LENPACKAGENAME
+                             DNODATA, LENPACKAGENAME, TABCENTER, LENMODELNAME
   use SimModule, only: store_error, ustop
   use BaseDisModule, only: DisBaseType
   use NumericalPackageModule, only: NumericalPackageType
   use GwtFmiModule, only: GwtFmiType
   use BudgetModule, only: BudgetType, budget_cr
   use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr
+  use TableModule, only: TableType, table_cr
 
   implicit none
+  
   private
   public :: GwtMvtType
   public :: mvt_cr
@@ -23,6 +25,9 @@ module GwtMvtModule
     type(BudgetObjectType), pointer                    :: budobj => null()      ! budget container (used to write binary file)
     character(len=LENPACKAGENAME),                                             &
       dimension(:), pointer, contiguous                :: paknames => null()       !array of package names
+    !
+    ! -- table objects
+    type(TableType), pointer :: outputtab => null()
   contains
     procedure :: mvt_df
     procedure :: mvt_ar
@@ -37,6 +42,8 @@ module GwtMvtModule
     procedure :: mvt_setup_budobj
     procedure :: mvt_fill_budobj
     procedure :: mvt_scan_mvrbudobj
+    procedure, private :: mvt_setup_outputtab
+    procedure, private :: mvt_print_outputtab
   end type GwtMvtType
 
   contains
@@ -125,12 +132,8 @@ module GwtMvtModule
     ! -- locals
 ! ------------------------------------------------------------------------------
     !
-    ! -- Define the budget object to be the size of package names
-    !call this%budget%budget_df(this%maxpackages, 'TRANSPORT MOVER')
-    !
-    ! -- setup the budget object
-    ! -- todo: doesn't work here.  GWF-GWT hasn't set fmi%mvr_budobj yet
-    !call this%mvt_setup_budobj()
+    ! -- setup the output table
+    call this%mvt_setup_outputtab()
     !
     ! -- Return
     return
@@ -328,6 +331,11 @@ module GwtMvtModule
       end do
     end if
     !
+    ! -- Write the flow table
+    if (ibudfl /= 0 .and. this%iprflow /= 0 .and. isuppress_output == 0) then
+      call this%mvt_print_outputtab()
+    end if
+    !
     ! -- write the flows from the budobj
     ibinun = 0
     if(this%ibudgetout /= 0) then
@@ -443,6 +451,13 @@ module GwtMvtModule
       call this%budobj%budgetobject_da()
       deallocate(this%budobj)
       nullify(this%budobj)
+      !
+      ! -- output table object
+      if (associated(this%outputtab)) then
+        call this%outputtab%table_da()
+        deallocate(this%outputtab)
+        nullify(this%outputtab)
+      end if
     endif
     !
     ! -- Scalars
@@ -653,7 +668,6 @@ module GwtMvtModule
           cp = this%fmi%datp(ipr)%concpack(n1)
         else
           ! -- Must be a regular stress package
-          ! -- todo: what about advanced package but not using SFT/LKT/MWT/UZT?
           igwtnode = this%fmi%gwfpackages(ipr)%nodelist(n1)
           cp = cnew(igwtnode)
         end if
@@ -728,5 +742,106 @@ module GwtMvtModule
     return
   end subroutine mvt_scan_mvrbudobj
   
+  subroutine mvt_setup_outputtab(this)
+! ******************************************************************************
+! mvt_setup_outputtab -- set up output table
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(GwtMvtType),intent(inout) :: this
+    ! -- local
+    character(len=LINELENGTH) :: title
+    character(len=LINELENGTH) :: text
+    integer(I4B) :: ntabcol
+    integer(I4B) :: maxrow
+    integer(I4B) :: ilen
+! ------------------------------------------------------------------------------
+    !
+    ! -- allocate and initialize the output table
+    if (this%iprflow /= 0) then
+      !
+      ! -- dimension table
+      ntabcol = 6
+      maxrow = 0
+      !
+      ! -- initialize the output table object
+      title = 'TRANSPORT MOVER PACKAGE (' // trim(this%name) // &
+              ') FLOW RATES'
+      call table_cr(this%outputtab, this%name, title)
+      call this%outputtab%table_df(maxrow, ntabcol, this%iout, &
+                                    transient=.TRUE.)
+      text = 'NUMBER'
+      call this%outputtab%initialize_column(text, 10, alignment=TABCENTER)
+      text = 'PROVIDER LOCATION'
+      ilen = LENMODELNAME+LENPACKAGENAME+1
+      call this%outputtab%initialize_column(text, ilen)
+      text = 'PROVIDER ID'
+      call this%outputtab%initialize_column(text, 10)
+      text = 'PROVIDED RATE'
+      call this%outputtab%initialize_column(text, 10)
+      text = 'RECEIVER LOCATION'
+      ilen = LENMODELNAME+LENPACKAGENAME+1
+      call this%outputtab%initialize_column(text, ilen)
+      text = 'RECEIVER ID'
+      call this%outputtab%initialize_column(text, 10)
+      
+    end if
+    !
+    ! -- return
+    return
+  end subroutine mvt_setup_outputtab
+
+  subroutine mvt_print_outputtab(this)
+! ******************************************************************************
+! mvt_print_outputtab -- set up output table
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(GwtMvttype),intent(inout) :: this
+    ! -- local
+    character (len=LINELENGTH) :: title
+    integer(I4B) :: i
+    integer(I4B) :: n
+    integer(I4B) :: inum
+    integer(I4B) :: ntabrows
+    integer(I4B) :: nlist
+! ------------------------------------------------------------------------------
+    !
+    ! -- determine number of table rows
+    ntabrows = 0
+    do i = 1, this%budobj%nbudterm
+      nlist = this%budobj%budterm(i)%nlist
+      ntabrows = ntabrows + nlist
+    end do
+    !
+    ! -- Add terms and print the table
+    title = 'TRANSPORT MOVER PACKAGE (' // trim(this%name) //     &
+            ') FLOW RATES'
+    call this%outputtab%set_title(title)
+    call this%outputtab%set_maxbound(ntabrows)
+    !
+    ! -- Process each table row
+    inum = 1
+    do i = 1, this%budobj%nbudterm
+      nlist = this%budobj%budterm(i)%nlist
+      do n = 1, nlist
+        call this%outputtab%add_term(inum)
+        call this%outputtab%add_term(this%budobj%budterm(i)%text2id1)
+        call this%outputtab%add_term(this%budobj%budterm(i)%id2(n))
+        call this%outputtab%add_term(this%budobj%budterm(i)%flow(n))
+        call this%outputtab%add_term(this%budobj%budterm(i)%text2id2)
+        call this%outputtab%add_term(this%budobj%budterm(i)%id2(n))
+        inum = inum + 1
+      end do
+    end do
+    !
+    ! -- return
+    return
+  end subroutine mvt_print_outputtab
+
 end module GwtMvtModule
   
