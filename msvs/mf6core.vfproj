@@ -166,9 +166,10 @@
 		<File RelativePath="..\src\Utilities\kind.f90"/>
 		<File RelativePath="..\src\Utilities\List.f90"/>
 		<File RelativePath="..\src\Utilities\ListReader.f90"/>
+		<File RelativePath="..\src\Utilities\PackageBudget.f90"/>
+		<File RelativePath="..\src\Utilities\Message.f90"/>
 		<File RelativePath="..\src\Utilities\NameFile.f90"/>
 		<File RelativePath="..\src\Utilities\OpenSpec.f90"/>
-		<File RelativePath="..\src\Utilities\PackageBudget.f90"/>
 		<File RelativePath="..\src\Utilities\Sim.f90"/>
 		<File RelativePath="..\src\Utilities\SimVariables.f90"/>
 		<File RelativePath="..\src\Utilities\SmoothingFunctions.f90"/>

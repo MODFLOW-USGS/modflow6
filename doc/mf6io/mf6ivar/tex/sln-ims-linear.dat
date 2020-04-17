@@ -1,6 +1,6 @@
 BEGIN LINEAR
   INNER_MAXIMUM <inner_maximum>
-  INNER_HCLOSE <inner_hclose>
+  INNER_DVCLOSE <inner_dvclose>
   INNER_RCLOSE <inner_rclose> [<rclose_option>] 
   LINEAR_ACCELERATION <linear_acceleration>
   [RELAXATION_FACTOR <relaxation_factor>]

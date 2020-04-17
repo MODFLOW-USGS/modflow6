@@ -1255,7 +1255,7 @@ module GwfMvrModule
     ! -- return
     return
   end subroutine mvr_fill_budobj
-  
+
   subroutine mvr_setup_outputtab(this)
 ! ******************************************************************************
 ! mvr_setup_outputtab -- set up output table

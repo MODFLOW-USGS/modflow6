@@ -298,11 +298,6 @@ module GwtMvtModule
     integer(I4B), intent(in) :: isuppress_output
     real(DP), intent(in), dimension(:) :: cnew
     ! -- local
-    integer(I4B) :: i
-    integer(I4B) :: n
-    integer(I4B) :: nlist
-    integer(I4B) :: id1
-    integer(I4B) :: id2
     integer(I4B) :: ibinun
     real(DP) :: rate
     ! -- formats

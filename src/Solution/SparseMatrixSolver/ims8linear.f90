@@ -29,7 +29,7 @@
     integer(I4B), POINTER :: NIABCGS => NULL()
     integer(I4B), POINTER :: NIAPC => NULL()
     integer(I4B), POINTER :: NJAPC => NULL()
-    real(DP), POINTER :: HCLOSE => NULL()
+    real(DP), POINTER :: DVCLOSE => NULL()
     real(DP), POINTER :: RCLOSE => NULL()
     real(DP), POINTER :: RELAX => NULL()
     real(DP), POINTER :: EPFACT => NULL()
@@ -107,7 +107,8 @@
 !        SPECIFICATIONS:
 !     ------------------------------------------------------------------
       use MemoryManagerModule, only: mem_allocate
-      use SimModule, only: ustop, store_error, count_errors
+      use SimModule, only: ustop, store_error, count_errors,            &
+                           store_warning
       !IMPLICIT NONE
 !     + + + DUMMY VARIABLES + + +
       CLASS(IMSLINEAR_DATA), INTENT(INOUT) :: THIS
@@ -129,7 +130,9 @@
       integer(I4B), INTENT(IN), OPTIONAL :: LFINDBLOCK
 !     + + + LOCAL VARIABLES + + +
       LOGICAL :: lreaddata
-      character(len=LINELENGTH) :: errmsg, keyword
+      character(len=LINELENGTH) :: errmsg
+      character(len=LINELENGTH) :: warnmsg
+      character(len=LINELENGTH) :: keyword
       integer(I4B) :: i, n
       integer(I4B) :: i0
       integer(I4B) :: iscllen, iolen
@@ -224,7 +227,13 @@
           ! -- parse keyword
           select case (keyword)
             case ('INNER_HCLOSE')
-              this%hclose = parser%GetDouble()
+              this%DVCLOSE = parser%GetDouble()
+              write(warnmsg,'(a,1x,a)')                                          &
+                'INNER_HCLOSE SCHEDULED FOR DEPRECATION',                        &
+                'USE INNER_DVCLOSE INSTEAD.'
+              call store_warning(warnmsg)
+            case ('INNER_DVCLOSE')
+              this%DVCLOSE = parser%GetDouble()
             case ('INNER_RCLOSE')
               this%rclose = parser%GetDouble()
               ! -- look for additional key words
@@ -250,9 +259,9 @@
                 THIS%ILINMETH = 2
               else
                 THIS%ILINMETH = 0
-                write(errmsg,'(4x,a,a)') &
-     &            '****ERROR. UNKNOWN IMSLINEAR LINEAR_ACCELERATION METHOD: ', &
-     &            trim(keyword)
+                write(errmsg,'(3a)')                                             &
+                  'UNKNOWN IMSLINEAR LINEAR_ACCELERATION METHOD (',              &
+                  trim(keyword), ').'
                 call store_error(errmsg)
               end if
             case ('SCALING_METHOD')
@@ -265,9 +274,8 @@
               else if (keyword.eq.'L2NORM') then
                 i = 2
               else
-                write(errmsg,'(4x,a,a)') &
-     &            '****ERROR. UNKNOWN IMSLINEAR SCALING_METHOD: ', &
-     &            trim(keyword)
+                write(errmsg,'(3a)')                                             &
+                  'UNKNOWN IMSLINEAR SCALING_METHOD (', trim(keyword), ').'
                 call store_error(errmsg)
               end if
               THIS%ISCL = i
@@ -283,9 +291,8 @@
               else if (keyword == 'MD') then
                 i = 2
               else
-                write(errmsg,'(4x,a,a)') &
-     &            '****ERROR. UNKNOWN IMSLINEAR REORDERING_METHOD: ', &
-                  trim(keyword)
+                write(errmsg,'(3a)')                                             &
+                  'UNKNOWN IMSLINEAR REORDERING_METHOD (', trim(keyword), ').'
                 call store_error(errmsg)
               end if
               THIS%IORD = i
@@ -297,9 +304,9 @@
               i = parser%GetInteger()
               this%level = i
               if (i < 0) then
-                write(errmsg,'(4x,a,a)') &
-     &            '****ERROR. PRECONDITIONER_LEVELS: ', &
-     &            'MUST BE GREATER THAN OR EQUAL TO ZERO'
+                write(errmsg,'(a,1x,a)')                                         &
+                  'IMSLINEAR PRECONDITIONER_LEVELS MUST BE GREATER THAN',        &
+                  'OR EQUAL TO ZERO'
                 call store_error(errmsg)
               end if
               !write(clevel, '(i15)') i
@@ -307,23 +314,21 @@
               r = parser%GetDouble()
               THIS%DROPTOL = r
               if (r < DZERO) then
-                write(errmsg,'(4x,a,a)') &
-     &            '****ERROR. PRECONDITIONER_DROP_TOLERANCE: ', &
-     &            'MUST BE GREATER THAN OR EQUAL TO ZERO'
+                write(errmsg,'(a,1x,a)')                                         &
+                  'IMSLINEAR PRECONDITIONER_DROP_TOLERANCE',                     &
+                  'MUST BE GREATER THAN OR EQUAL TO ZERO'
                 call store_error(errmsg)
               end if
-              !write(cdroptol, '(e15.5)') r
             case default
-              write(errmsg,'(4x,a,a)') &
-     &          '****WARNING. UNKNOWN IMSLINEAR KEYWORD: ', &
-     &          trim(keyword)
+                write(errmsg,'(3a)')                                             &
+                  'UNKNOWN IMSLINEAR KEYWORD (', trim(keyword), ').'
               call store_error(errmsg)
           end select
         end do
         write(iout,'(1x,a)') 'END OF LINEAR DATA'
       else
         if (IFDPARAM ==  0) THEN
-          write(errmsg,'(1x,a)') 'NO LINEAR BLOCK DETECTED.'
+          write(errmsg,'(a)') 'NO LINEAR BLOCK DETECTED.'
           call store_error(errmsg)
         end if
       end if
@@ -343,33 +348,34 @@
 !-------ERROR CHECKING FOR OPTIONS
       IF (THIS%ISCL < 0 ) THIS%ISCL = 0
       IF (THIS%ISCL > 2 ) THEN
-        WRITE( errmsg,'(A)' ) 'IMSLINEAR7AR: ISCL MUST BE .LE. 2'
+        WRITE(errmsg,'(A)') 'IMSLINEAR7AR ISCL MUST BE <= 2'
         call store_error(errmsg)
       END IF
       IF (THIS%IORD < 0 ) THIS%IORD = 0
       IF (THIS%IORD > 2) THEN
-        WRITE( errmsg,'(A)' ) 'IMSLINEAR7AR: IORD MUST BE .LE. 2'
+        WRITE(errmsg,'(A)') 'IMSLINEAR7AR IORD MUST BE <= 2'
         call store_error(errmsg)
       END IF
       IF (THIS%NORTH < 0) THEN
-        WRITE( errmsg,'(A)' ) 'IMSLINEAR7AR: NORTH MUST .GE. 0'
+        WRITE(errmsg,'(A)') 'IMSLINEAR7AR NORTH MUST >= 0'
         call store_error(errmsg)
       END IF
-      IF (THIS%RCLOSE ==  DZERO) THEN
+      IF (THIS%RCLOSE == DZERO) THEN
         IF (THIS%ICNVGOPT /= 3) THEN
-          WRITE( errmsg,'(A)' ) 'IMSLINEAR7AR: RCLOSE MUST .NE. 0.0'
+          WRITE(errmsg,'(A)') 'IMSLINEAR7AR RCLOSE MUST > 0.0'
           call store_error(errmsg)
         END IF
       END IF
       IF (THIS%RELAX < DZERO) THEN
-        WRITE( errmsg,'(A)' ) 'IMSLINEAR7AR: RELAX MUST BE .GE. 0.0'
+        WRITE(errmsg,'(A)') 'IMSLINEAR7AR RELAX MUST BE >= 0.0'
         call store_error(errmsg)
       END IF
       IF (THIS%RELAX > DONE) THEN
-        WRITE( errmsg,'(A)' ) 'IMSLINEAR7AR: RELAX MUST BE .LE. 1.0'
+        WRITE(errmsg,'(A)') 'IMSLINEAR7AR RELAX MUST BE <= 1.0'
         call store_error(errmsg)
       END IF
-
+!
+!-------CHECK FOR ERRORS IN IMSLINEAR      
       if (count_errors() > 0) then
         call parser%StoreErrorUnit()
         call ustop()
@@ -583,12 +589,12 @@
       clevel = ''
       cdroptol = ''
       !
-      ! -- PRINT MXITER,ITER1,IPC,ISCL,IORD,HCLOSE,RCLOSE
-      write(this%iout,2010)                                        &
+      ! -- PRINT MXITER,ITER1,IPC,ISCL,IORD,DVCLOSE,RCLOSE
+      write(this%iout,2010)                                         &
                         clintit(THIS%ILINMETH), MXITER, THIS%ITER1, &
                         clin(THIS%ILINMETH), cipc(THIS%IPC),        &
                         cscale(THIS%ISCL), corder(THIS%IORD),       &
-                        THIS%NORTH, THIS%HCLOSE, THIS%RCLOSE,       &
+                        THIS%NORTH, THIS%DVCLOSE, THIS%RCLOSE,      &
                         THIS%ICNVGOPT, ccnvgopt(THIS%ICNVGOPT),     &
                         THIS%RELAX
       if (this%level > 0) then
@@ -643,7 +649,7 @@
       call mem_allocate(this%niabcgs, 'NIABCGS', this%origin)
       call mem_allocate(this%niapc, 'NIAPC', this%origin)
       call mem_allocate(this%njapc, 'NJAPC', this%origin)
-      call mem_allocate(this%hclose, 'HCLOSE', this%origin)
+      call mem_allocate(this%dvclose, 'DVCLOSE', this%origin)
       call mem_allocate(this%rclose, 'RCLOSE', this%origin)
       call mem_allocate(this%relax, 'RELAX', this%origin)
       call mem_allocate(this%epfact, 'EPFACT', this%origin)
@@ -668,7 +674,7 @@
       this%niabcgs = 0
       this%niapc = 0
       this%njapc = 0
-      this%hclose = DZERO
+      this%dvclose = DZERO
       this%rclose = DZERO
       this%relax = DZERO
       this%epfact = DZERO
@@ -728,7 +734,7 @@
       call mem_deallocate(this%niabcgs)
       call mem_deallocate(this%niapc)
       call mem_deallocate(this%njapc)
-      call mem_deallocate(this%hclose)
+      call mem_deallocate(this%dvclose)
       call mem_deallocate(this%rclose)
       call mem_deallocate(this%relax)
       call mem_deallocate(this%epfact)
@@ -771,7 +777,7 @@
           THIS%IPC = 1
           THIS%ISCL = 0
           THIS%IORD = 0
-          THIS%HCLOSE = DEM3
+          THIS%DVCLOSE = DEM3
           THIS%RCLOSE = DEM1
           THIS%RELAX = DZERO
           THIS%LEVEL = 0
@@ -784,7 +790,7 @@
           THIS%IPC = 2
           THIS%ISCL = 0
           THIS%IORD = 0
-          THIS%HCLOSE = DEM2
+          THIS%DVCLOSE = DEM2
           THIS%RCLOSE = DEM1
           THIS%RELAX = 0.97D0
           THIS%LEVEL = 0
@@ -797,7 +803,7 @@
           THIS%IPC = 3
           THIS%ISCL = 0
           THIS%IORD = 0
-          THIS%HCLOSE = DEM1
+          THIS%DVCLOSE = DEM1
           THIS%RCLOSE = DEM1
           THIS%RELAX = DZERO
           THIS%LEVEL = 5
@@ -929,7 +935,7 @@
         CALL IMSLINEARSUB_CG(ICNVG, itmax, innerit,                             &
                              THIS%NEQ, THIS%NJA, THIS%NIAPC, THIS%NJAPC,        &
                              THIS%IPC, THIS%NITERC, THIS%ICNVGOPT, THIS%NORTH,  &
-                             THIS%HCLOSE, THIS%RCLOSE, THIS%L2NORM0,            &
+                             THIS%DVCLOSE, THIS%RCLOSE, THIS%L2NORM0,           &
                              THIS%EPFACT, THIS%IA0, THIS%JA0, THIS%A0,          &
                              THIS%IAPC, THIS%JAPC, THIS%APC,                    &
                              THIS%X, THIS%RHS, THIS%D, THIS%P, THIS%Q, THIS%Z,  &
@@ -943,7 +949,7 @@
                                THIS%NEQ, THIS%NJA, THIS%NIAPC, THIS%NJAPC,      &
                                THIS%IPC, THIS%NITERC, THIS%ICNVGOPT, THIS%NORTH,&
                                THIS%ISCL, THIS%DSCALE,                          &
-                               THIS%HCLOSE, THIS%RCLOSE, THIS%L2NORM0,          &
+                               THIS%DVCLOSE, THIS%RCLOSE, THIS%L2NORM0,         &
                                THIS%EPFACT,  THIS%IA0, THIS%JA0, THIS%A0,       &
                                THIS%IAPC, THIS%JAPC, THIS%APC,                  &
                                THIS%X, THIS%RHS, THIS%D, THIS%P, THIS%Q,        &
@@ -1021,11 +1027,12 @@
           CASE ( 2 ) 
             nsp = 3 * NEQ + 4 * NJA 
             ALLOCATE ( iwork1(nsp)  ) 
-            CALL ims_odrv(NEQ, NJA, nsp, IA, JA, LORDER, iwork0,        &
+            CALL ims_odrv(NEQ, NJA, nsp, IA, JA, LORDER, iwork0,                 &
                           iwork1, iflag)                           
             IF (iflag.NE.0) THEN 
-              write(errmsg,'(A)') 'ERROR CREATING MINIMUM DEGREE '//   &
-     &                   'ORDER PERMUTATION '                           
+              write(errmsg,'(A,1X,A)')                                           &
+                'IMSLINEARSUB_CALC_ORDER ERROR CREATING MINIMUM DEGREE ',        &
+                'ORDER PERMUTATION '                           
               call store_error(errmsg) 
               !call ustop()                                             
             END IF 
@@ -1244,8 +1251,7 @@
                                         APC, JLU, IW, NJAPC, WLU, JW, ierr,     &
                                         izero, delta)
               IF (ierr.NE.0) THEN
-                write(errmsg,'(4x,a,1x,a)') &
-                    '****ERROR. ILUT ERROR: ', cerr(-ierr)
+                write(errmsg,'(a,1x,a)') 'ILUT ERROR: ', cerr(-ierr)
                 call store_error(errmsg)
                 call parser%StoreErrorUnit()
                 call ustop()
@@ -1489,7 +1495,7 @@
       SUBROUTINE IMSLINEARSUB_CG(ICNVG, ITMAX, INNERIT,                         &
                                  NEQ, NJA, NIAPC, NJAPC,                        &
                                  IPC, NITERC, ICNVGOPT, NORTH,                  &
-                                 HCLOSE, RCLOSE, L2NORM0, EPFACT,               &
+                                 DVCLOSE, RCLOSE, L2NORM0, EPFACT,              &
                                  IA0, JA0, A0, IAPC, JAPC, APC,                 &
                                  X, B, D, P, Q, Z,                              &
                                  NJLU, IW, JLU,                                 &
@@ -1509,7 +1515,7 @@
         integer(I4B), INTENT(INOUT) :: NITERC 
         integer(I4B), INTENT(IN)    :: ICNVGOPT 
         integer(I4B), INTENT(IN)    :: NORTH 
-        real(DP), INTENT(IN) :: HCLOSE 
+        real(DP), INTENT(IN) :: DVCLOSE 
         real(DP), INTENT(IN) :: RCLOSE 
         real(DP), INTENT(IN) :: L2NORM0 
         real(DP), INTENT(IN) :: EPFACT 
@@ -1664,7 +1670,7 @@
           END IF 
           CALL IMSLINEARSUB_TESTCNVG(ICNVGOPT, ICNVG, INNERIT,                  &
                                      deltax, rcnvg,                             &
-                                     L2NORM0, EPFACT, HCLOSE, RCLOSE) 
+                                     L2NORM0, EPFACT, DVCLOSE, RCLOSE) 
 !
 !-----------CHECK FOR EXACT SOLUTION                                    
           IF (rcnvg == DZERO) ICNVG = 1 
@@ -1698,7 +1704,7 @@
       SUBROUTINE IMSLINEARSUB_BCGS(ICNVG, ITMAX, INNERIT,                       &
                                    NEQ, NJA, NIAPC, NJAPC,                      &
                                    IPC, NITERC, ICNVGOPT, NORTH, ISCL, DSCALE,  &
-                                   HCLOSE, RCLOSE, L2NORM0, EPFACT,             &
+                                   DVCLOSE, RCLOSE, L2NORM0, EPFACT,            &
                                    IA0, JA0, A0, IAPC, JAPC, APC,               &
                                    X, B, D, P, Q,                               &
                                    T, V, DHAT, PHAT, QHAT,                      &
@@ -1721,7 +1727,7 @@
         integer(I4B), INTENT(IN)    :: NORTH
         integer(I4B), INTENT(IN)    :: ISCL 
         real(DP), DIMENSION(NEQ), INTENT(IN) :: DSCALE 
-        real(DP), INTENT(IN) :: HCLOSE 
+        real(DP), INTENT(IN) :: DVCLOSE 
         real(DP), INTENT(IN) :: RCLOSE 
         real(DP), INTENT(IN) :: L2NORM0 
         real(DP), INTENT(IN) :: EPFACT 
@@ -1853,7 +1859,7 @@
 !            END DO 
 !            CALL IMSLINEARSUB_TESTCNVG(ICNVGOPT, ICNVG, INNERIT,                &
 !                                       deltax, rmax,                            &
-!                                       rmax, EPFACT, HCLOSE, RCLOSE )          
+!                                       rmax, EPFACT, DVCLOSE, RCLOSE )          
 !            IF (ICNVG.NE.0 ) EXIT INNER 
 !          END IF 
 !-----------APPLY PRECONDITIONER TO UPDATE QHAT                         
@@ -1943,7 +1949,7 @@
           END IF 
           CALL IMSLINEARSUB_TESTCNVG(ICNVGOPT, ICNVG, INNERIT,                  &
                                      deltax, rcnvg,                             &
-                                     L2NORM0, EPFACT, HCLOSE, RCLOSE)         
+                                     L2NORM0, EPFACT, DVCLOSE, RCLOSE)         
 !          
 !-----------CHECK FOR EXACT SOLUTION                                    
           IF (rcnvg == DZERO) ICNVG = 1 
@@ -1991,7 +1997,7 @@
 !---------TEST FOR SOLVER CONVERGENCE                                   
         SUBROUTINE IMSLINEARSUB_TESTCNVG(Icnvgopt, Icnvg, Iiter,                &
                                          Hmax, Rmax,                            &
-                                         Rmax0, Epfact, Hclose, Rclose )         
+                                         Rmax0, Epfact, Dvclose, Rclose )         
         IMPLICIT NONE 
 !       + + + DUMMY ARGUMENTS + + +                                       
         integer(I4B), INTENT(IN)         :: Icnvgopt 
@@ -2001,17 +2007,17 @@
         real(DP), INTENT(IN) :: Rmax 
         real(DP), INTENT(IN) :: Rmax0 
         real(DP), INTENT(IN) :: Epfact 
-        real(DP), INTENT(IN) :: Hclose 
+        real(DP), INTENT(IN) :: Dvclose 
         real(DP), INTENT(IN) :: Rclose 
 !       + + + LOCAL DEFINITIONS + + +                                     
 !       + + + FUNCTIONS + + +                                             
 !       + + + CODE + + +                                                  
         IF (Icnvgopt ==  0) THEN 
-          IF (ABS(Hmax) <= Hclose .AND. ABS(Rmax) <= Rclose) THEN 
+          IF (ABS(Hmax) <= Dvclose .AND. ABS(Rmax) <= Rclose) THEN 
             Icnvg = 1 
           END IF 
         ELSE IF (Icnvgopt == 1) THEN 
-          IF (ABS(Hmax) <= Hclose .AND. ABS(Rmax) <= Rclose) THEN
+          IF (ABS(Hmax) <= Dvclose .AND. ABS(Rmax) <= Rclose) THEN
             IF (iiter == 1) THEN 
               Icnvg = 1
             ELSE
@@ -2019,19 +2025,19 @@
             END IF
           END IF 
         ELSE IF (Icnvgopt == 2) THEN 
-          IF (ABS(Hmax) <= Hclose .OR. Rmax <= Rclose) THEN 
+          IF (ABS(Hmax) <= Dvclose .OR. Rmax <= Rclose) THEN 
             Icnvg = 1 
           ELSE IF (Rmax <= Rmax0*Epfact) THEN 
             Icnvg = -1 
           END IF
         ELSE IF (Icnvgopt == 3) THEN 
-          IF (ABS(Hmax) <= Hclose) THEN
+          IF (ABS(Hmax) <= Dvclose) THEN
             Icnvg = 1 
           ELSE IF (Rmax <= Rmax0*Rclose) THEN  
             Icnvg = -1 
           END IF
         ELSE IF (Icnvgopt == 4) THEN 
-          IF (ABS(Hmax) <= Hclose .AND. Rmax <= Rclose) THEN
+          IF (ABS(Hmax) <= Dvclose .AND. Rmax <= Rclose) THEN
             Icnvg = 1 
           ELSE IF (Rmax <=  Rmax0*Epfact) THEN  
             Icnvg = -1 

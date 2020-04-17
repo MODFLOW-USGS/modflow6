@@ -5,7 +5,7 @@ module SimulationCreateModule
   use SimVariablesModule,     only: simfile, simlstfile, iout
   use GenericUtilitiesModule, only: sim_message, write_centered
   use SimModule,              only: ustop, store_error, count_errors,            &
-                                    store_error_unit, maxerrors
+                                    store_error_unit, MaxErrors
   use InputOutputModule,      only: getunit, urword, openfile
   use ArrayHandlersModule,    only: expandarray, ifind
   use BaseModelModule,        only: BaseModelType
@@ -214,6 +214,7 @@ module SimulationCreateModule
     use SimVariablesModule, only: isimcontinue, isimcheck
     ! -- local
     integer(I4B) :: ierr
+    integer(I4B) :: imax
     logical :: isfound, endOfBlock
     character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: keyword
@@ -247,9 +248,10 @@ module SimulationCreateModule
               call ustop()
             endif
           case ('MAXERRORS')
-            maxerrors = parser%GetInteger()
+            imax = parser%GetInteger()
+            call MaxErrors(imax)
             write(iout, '(4x, a, i0)')                                         &
-                  'MAXIMUM NUMBER OF ERRORS THAT WILL BE STORED IS ', maxerrors
+                  'MAXIMUM NUMBER OF ERRORS THAT WILL BE STORED IS ', imax
           case default
             write(errmsg, '(4x,a,a)') &
                   '****ERROR. UNKNOWN SIMULATION OPTION: ',                    &

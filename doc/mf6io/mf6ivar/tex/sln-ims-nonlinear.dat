@@ -1,5 +1,5 @@
 BEGIN NONLINEAR
-  OUTER_HCLOSE <outer_hclose>
+  OUTER_DVCLOSE <outer_dvclose>
   OUTER_MAXIMUM <outer_maximum>
   [UNDER_RELAXATION <under_relaxation>]
   [UNDER_RELAXATION_THETA <under_relaxation_theta>]
