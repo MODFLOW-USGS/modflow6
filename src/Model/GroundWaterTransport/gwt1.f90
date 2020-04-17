@@ -490,7 +490,7 @@ module GwtModule
     integer(I4B) :: ip
 ! ------------------------------------------------------------------------------
     !
-    ! -- Check to make sure mvr flows available
+    ! -- In fmi, check for mvt and mvrbudobj consistency
     call this%fmi%fmi_rp(this%inmvt)
     if (this%inmvt > 0) call this%mvt%mvt_rp()
     !

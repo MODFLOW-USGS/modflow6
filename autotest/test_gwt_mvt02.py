@@ -345,14 +345,12 @@ def build_models():
 def eval_results(sim):
     print('evaluating results...')
 
-    # ensure lake concentrations were saved
+    # ensure sfr concentrations were saved
     name = ex[sim.idxsim]
     gwtname = 'gwt_' + name
     fname = gwtname + '.sft.bin'
     fname = os.path.join(sim.simpath, fname)
     assert os.path.isfile(fname)
-
-    # load the lake concentrations and make sure all values are correct
     cobj = flopy.utils.HeadFile(fname, text='CONCENTRATION')
     csft = cobj.get_data().flatten()
 

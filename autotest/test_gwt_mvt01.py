@@ -469,6 +469,17 @@ def eval_results(sim):
     res = bobj.get_data(text='storage')[-1]
     #print(res)
 
+    # get mvt results from listing file
+    bud_lst = ['SFR-1_IN', 'SFR-1_OUT',
+               'LAK-1_IN', 'LAK-1_OUT']
+    fname = gwtname + '.lst'
+    fname = os.path.join(sim.simpath, fname)
+    budl = flopy.utils.Mf6ListBudget(fname, budgetkey='TRANSPORT MOVER BUDGET FOR ENTIRE MODEL')
+    names = list(bud_lst)
+    d0 = budl.get_budget(names=names)[0]
+    errmsg = 'SFR-1_OUT NOT EQUAL LAK-1_IN\n{}\n{}'.format(d0['SFR-1_OUT'], d0['LAK-1_IN'])
+    assert np.allclose(d0['SFR-1_OUT'], d0['LAK-1_IN'])
+
     # uncomment when testing so files aren't deleted
     # assert False
 

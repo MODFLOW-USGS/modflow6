@@ -231,7 +231,7 @@ module GwtFmiModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule, only: kper, nper
+    use TdisModule, only: kper, kstp
     ! -- dummy
     class(GwtFmiType) :: this
     integer(I4B), intent(in) :: inmvr
@@ -243,10 +243,17 @@ module GwtFmiModule
     ! --Check to make sure MVT Package is active if mvr flows are available.
     !   This cannot be checked until RP because exchange doesn't set a pointer 
     !   to mvrbudobj until exg_ar().
-    if (inmvr == 0 .and. kper * nper == 1) then
-      if (associated(this%mvrbudobj)) then
+    if (kper * kstp == 1) then
+      if (associated(this%mvrbudobj) .and. inmvr == 0) then
         write(errmsg,'(4x,a)') 'GWF WATER MOVER IS ACTIVE BUT THE GWT MVT &
           &PACKAGE HAS NOT BEEN SPECIFIED.  ACTIVATE GWT MVT PACKAGE.'
+        call store_error(errmsg)
+        call ustop()
+      end if
+      if (.not. associated(this%mvrbudobj) .and. inmvr > 0) then
+        write(errmsg,'(4x,a)') 'GWF WATER MOVER TERMS ARE NOT AVAILABLE &
+          &BUT THE GWT MVT PACKAGE HAS BEEN ACTIVATED.  GWF-GWT EXCHANGE &
+          &OR SPECIFY GWFMOVER IN FMI PACKAGEDATA.'
         call store_error(errmsg)
         call ustop()
       end if

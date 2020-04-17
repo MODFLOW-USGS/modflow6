@@ -148,28 +148,18 @@ module GwtMvtModule
     ! -- dummy
     class(GwtMvtType) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
-    ! --Check to make sure mover flows are available, otherwise terminate with
-    !   error.  This cannot be checked until RP because exchange doesn't set
-    !   a pointer to mvrbudobj until exg_ar().
+    ! -- At this point, the mvrbudobj is available to set up the mvt budobj
     if (kper * kstp == 1) then
-      if (.not. associated(this%fmi%mvrbudobj)) then
-        write(errmsg,'(4x,a)') 'GWF WATER MOVER TERMS ARE NOT AVAILABLE &
-          &TO THE GWT MVT PACKAGE.  ACTIVATE GWF-GWT EXCHANGE OR SPECIFY &
-          &GWFMOVER IN FMI PACKAGEDATA.'
-        call store_error(errmsg)
-        call ustop()
-      end if
       !
       ! -- set up the mvt budobject
       call this%mvt_scan_mvrbudobj()
       call this%mvt_setup_budobj()
       !
       ! -- Define the budget object to be the size of maxpackages
-      call this%budget%budget_df(this%maxpackages, 'TRANSPORT MOVER')
+      call this%budget%budget_df(this%maxpackages, 'TRANSPORT MOVER', bddim='M')
     end if
     !
     ! -- Return
@@ -596,7 +586,7 @@ module GwtMvtModule
     !
     ! -- set up budobj
     call budgetobject_cr(this%budobj, 'TRANSPORT MOVER')
-    call this%budobj%budgetobject_df(ncv, nbudterm, 0, 0)
+    call this%budobj%budgetobject_df(ncv, nbudterm, 0, 0, bddim_opt='M')
     !
     ! -- Go through the water mover budget terms and set up the transport
     !    mover budget terms
@@ -688,7 +678,8 @@ module GwtMvtModule
 
   subroutine mvt_scan_mvrbudobj(this)
 ! ******************************************************************************
-! mvt_scan_mvrbudobj -- Read and prepare
+! mvt_scan_mvrbudobj -- scan through the gwf water mover budget object and
+!   determine the maximum number of packages and unique package names
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
