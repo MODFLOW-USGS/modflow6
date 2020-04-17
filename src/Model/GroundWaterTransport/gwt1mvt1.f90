@@ -439,18 +439,26 @@ module GwtMvtModule
     ! -- local
 ! ------------------------------------------------------------------------------
     !
+    ! -- Deallocate arrays if package was active
+    if(this%inunit > 0) then
+      !
+      ! -- character array
+      deallocate(this%paknames)
+      !
+      ! -- budget object
+      call this%budget%budget_da()
+      deallocate(this%budget)
+      !
+      ! -- budobj
+      call this%budobj%budgetobject_da()
+      deallocate(this%budobj)
+      nullify(this%budobj)
+    endif
+    !
     ! -- Scalars
     this%fmi => null()
     call mem_deallocate(this%maxpackages)
     call mem_deallocate(this%ibudgetout)
-    !
-    ! -- character
-    deallocate(this%paknames)
-    !
-    ! -- budobj
-    call this%budobj%budgetobject_da()
-    deallocate(this%budobj)
-    nullify(this%budobj)
     !
     ! -- deallocate scalars in NumericalPackageType
     call this%NumericalPackageType%da()
