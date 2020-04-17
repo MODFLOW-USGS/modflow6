@@ -315,22 +315,6 @@ module GwtMvtModule
     ! -- fill the budget object
     call this%mvt_fill_budobj(cnew)
     !
-    ! -- If requested, print header and list of mvt flows to list file
-    if(ibudfl /= 0 .and. this%iprflow == 1 .and. isuppress_output == 0) then
-      write(this%iout, fmttkk) '     MVT SUMMARY', kper, kstp
-      do i = 1, this%budobj%nbudterm
-        nlist = this%budobj%budterm(i)%nlist
-        do n = 1, nlist
-          id1 = this%budobj%budterm(i)%id1(n)
-          id2 = this%budobj%budterm(i)%id2(n)
-          rate = this%budobj%budterm(i)%flow(n)
-          write(this%iout, fmtmvt) &
-            this%budobj%budterm(i)%text2id1, id1, rate, &
-            this%budobj%budterm(i)%text2id2, id2
-        end do
-      end do
-    end if
-    !
     ! -- Write the flow table
     if (ibudfl /= 0 .and. this%iprflow /= 0 .and. isuppress_output == 0) then
       call this%mvt_print_outputtab()
@@ -763,7 +747,7 @@ module GwtMvtModule
     if (this%iprflow /= 0) then
       !
       ! -- dimension table
-      ntabcol = 6
+      ntabcol = 7
       maxrow = 0
       !
       ! -- initialize the output table object
@@ -779,7 +763,9 @@ module GwtMvtModule
       call this%outputtab%initialize_column(text, ilen)
       text = 'PROVIDER ID'
       call this%outputtab%initialize_column(text, 10)
-      text = 'PROVIDED RATE'
+      text = 'PROVIDER FLOW RATE'
+      call this%outputtab%initialize_column(text, 10)
+      text = 'PROVIDER TRANSPORT RATE'
       call this%outputtab%initialize_column(text, 10)
       text = 'RECEIVER LOCATION'
       ilen = LENMODELNAME+LENPACKAGENAME+1
@@ -804,6 +790,7 @@ module GwtMvtModule
     class(GwtMvttype),intent(inout) :: this
     ! -- local
     character (len=LINELENGTH) :: title
+    character(len=LENMODELNAME+LENPACKAGENAME+1) :: cloc1, cloc2
     integer(I4B) :: i
     integer(I4B) :: n
     integer(I4B) :: inum
@@ -829,11 +816,16 @@ module GwtMvtModule
     do i = 1, this%budobj%nbudterm
       nlist = this%budobj%budterm(i)%nlist
       do n = 1, nlist
+        cloc1 = trim(adjustl(this%budobj%budterm(i)%text1id1)) // ' ' // &
+                trim(adjustl(this%budobj%budterm(i)%text2id1))
+        cloc2 = trim(adjustl(this%budobj%budterm(i)%text1id1)) // ' ' // &
+                trim(adjustl(this%budobj%budterm(i)%text2id1))
         call this%outputtab%add_term(inum)
-        call this%outputtab%add_term(this%budobj%budterm(i)%text2id1)
+        call this%outputtab%add_term(cloc1)
         call this%outputtab%add_term(this%budobj%budterm(i)%id2(n))
+        call this%outputtab%add_term(-this%fmi%mvrbudobj%budterm(i)%flow(n))
         call this%outputtab%add_term(this%budobj%budterm(i)%flow(n))
-        call this%outputtab%add_term(this%budobj%budterm(i)%text2id2)
+        call this%outputtab%add_term(cloc2)
         call this%outputtab%add_term(this%budobj%budterm(i)%id2(n))
         inum = inum + 1
       end do
