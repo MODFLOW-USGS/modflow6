@@ -51,11 +51,11 @@ def get_model(idx, dir):
     ninner = 100
     relax = 0.99
     imsgwf = flopy.mf6.ModflowIms(sim, print_option='ALL',
-                                  outer_hclose=hclose,
+                                  outer_dvclose=hclose,
                                   outer_maximum=nouter,
                                   under_relaxation='NONE',
                                   inner_maximum=ninner,
-                                  inner_hclose=hclose,
+                                  inner_dvclose=hclose,
                                   rcloserecord=rclose,
                                   linear_acceleration='CG',
                                   scaling_method='NONE',
@@ -266,11 +266,11 @@ def get_model(idx, dir):
         ninner = 20
         relax = 0.97
         imsgwt = flopy.mf6.ModflowIms(sim, print_option='ALL',
-                                      outer_hclose=hclose,
+                                      outer_dvclose=hclose,
                                       outer_maximum=nouter,
                                       under_relaxation='NONE',
                                       inner_maximum=ninner,
-                                      inner_hclose=hclose,
+                                      inner_dvclose=hclose,
                                       rcloserecord=rclose,
                                       linear_acceleration='BICGSTAB',
                                       scaling_method='NONE',

@@ -70,11 +70,11 @@ def get_model(idx, dir):
     gwf = flopy.mf6.ModflowGwf(sim, modelname=gwfname)
 
     imsgwf = flopy.mf6.ModflowIms(sim, print_option='ALL',
-                                  outer_hclose=hclose,
+                                  outer_dvclose=hclose,
                                   outer_maximum=nouter,
                                   under_relaxation='NONE',
                                   inner_maximum=ninner,
-                                  inner_hclose=hclose, rcloserecord=rclose,
+                                  inner_dvclose=hclose, rcloserecord=rclose,
                                   linear_acceleration='BICGSTAB',
                                   scaling_method='NONE',
                                   reordering_method='NONE',
@@ -178,11 +178,11 @@ def get_model(idx, dir):
     gwt = flopy.mf6.ModflowGwt(sim, modelname=gwtname)
 
     imsgwt = flopy.mf6.ModflowIms(sim, print_option='ALL',
-                                  outer_hclose=hclose,
+                                  outer_dvclose=hclose,
                                   outer_maximum=nouter,
                                   under_relaxation='NONE',
                                   inner_maximum=ninner,
-                                  inner_hclose=hclose, rcloserecord=rclose,
+                                  inner_dvclose=hclose, rcloserecord=rclose,
                                   linear_acceleration='BICGSTAB',
                                   scaling_method='NONE',
                                   reordering_method='NONE',
