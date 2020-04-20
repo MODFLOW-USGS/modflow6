@@ -80,12 +80,12 @@ def build_mf6(idx, ws, binaryobs=True):
 
     # create iterative model solution and register the gwf model with it
     ims = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
-                               outer_hclose=hclose,
+                               outer_dvclose=hclose,
                                outer_maximum=nouter,
                                under_relaxation='none',
                                backtracking_number=0,
                                inner_maximum=ninner,
-                               inner_hclose=hclose,
+                               inner_dvclose=hclose,
                                rcloserecord=rclose,
                                linear_acceleration='CG',
                                scaling_method='NONE',

@@ -11,13 +11,13 @@ module GwtObsModule
   implicit none
 
   private
-  public :: GwtObsType, obs_cr
+  public :: GwtObsType, gwt_obs_cr
 
   type, extends(ObsType) :: GwtObsType
     ! -- Private members
-    type(GwtIcType), pointer, private                :: ic => null()            ! initial conditions
-    real(DP), pointer, dimension(:), private         :: x => null()             ! concentration
-    real(DP), dimension(:), pointer, private         :: flowja => null()        ! intercell flows
+    type(GwtIcType), pointer, private                    :: ic => null()         ! initial conditions
+    real(DP), dimension(:), pointer, contiguous, private :: x => null()          ! concentration
+    real(DP), dimension(:), pointer, contiguous, private :: flowja => null()     ! intercell flows
   contains
     ! -- Public procedures
     procedure, public :: gwt_obs_ar
@@ -31,9 +31,9 @@ module GwtObsModule
 
 contains
 
-  subroutine obs_cr(obs, inobs)
+  subroutine gwt_obs_cr(obs, inobs)
 ! ******************************************************************************
-! obs_cr -- Create a new GwtObsType object
+! gwt_obs_cr -- Create a new GwtObsType object
 ! Subroutine: (1) creates object
 !             (2) allocates pointers
 !             (3) initializes values
@@ -53,7 +53,7 @@ contains
     obs%inUnitObs => inobs
     !
     return
-  end subroutine obs_cr
+  end subroutine gwt_obs_cr
 
   subroutine gwt_obs_ar(this, ic, x, flowja)
 ! ******************************************************************************
@@ -65,8 +65,8 @@ contains
     ! -- dummy
     class(GwtObsType),                    intent(inout) :: this
     type(GwtIcType),  pointer,               intent(in) :: ic
-    real(DP), pointer, dimension(:), intent(in) :: x
-    real(DP), pointer, dimension(:), intent(in) :: flowja
+    real(DP), dimension(:), pointer, contiguous, intent(in) :: x
+    real(DP), dimension(:), pointer, contiguous, intent(in) :: flowja
 ! ------------------------------------------------------------------------------
     !
     ! Call ar method of parent class
@@ -174,7 +174,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwtObsType),                    intent(inout) :: this
+    class(GwtObsType), intent(inout) :: this
 ! ------------------------------------------------------------------------------
     !
     nullify(this%ic)
@@ -193,10 +193,10 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwtObsType),                    intent(inout) :: this
-    type(GwtIcType),  pointer,               intent(in) :: ic
-    real(DP), pointer, dimension(:), intent(in) :: x
-    real(DP), pointer, dimension(:), intent(in) :: flowja
+    class(GwtObsType), intent(inout) :: this
+    type(GwtIcType), pointer, intent(in) :: ic
+    real(DP), dimension(:), pointer, contiguous, intent(in) :: x
+    real(DP), dimension(:), pointer, contiguous, intent(in) :: flowja
 ! ------------------------------------------------------------------------------
     !
     this%ic => ic

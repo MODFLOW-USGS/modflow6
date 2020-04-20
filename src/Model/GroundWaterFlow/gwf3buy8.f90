@@ -1,3 +1,8 @@
+! Buoyancy Package for representing variable-density groundwater flow
+! The BUY Package does not work yet with the NPF XT3D option
+! Need to add buoyancy terms to LAK, SFR, MAW, and maybe UZF
+
+  
 module GwfBuyModule
   
   use KindModule,                 only: DP, I4B
@@ -25,7 +30,7 @@ module GwfBuyModule
     integer(I4B), dimension(:), pointer         :: ibound     => null()         ! store pointer to ibound
     real(DP), dimension(:), pointer             :: conc       => null()         ! pointer to concentration array
     integer(I4B), dimension(:), pointer         :: icbund     => null()         ! store pointer to gwt ibound array
-    integer(I4B), dimension(:), pointer, contiguous :: iauxpak => null() ! aux col for component concentration
+    integer(I4B), dimension(:), pointer, contiguous :: iauxpak => null()        ! aux col for component concentration
   contains    
     procedure :: buy_ar
     procedure :: buy_rp
@@ -113,8 +118,9 @@ module GwfBuyModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_setptr
+    use SimModule, only: store_error, ustop
     ! -- dummy
-    class(GwfBuyType)                       :: this
+    class(GwfBuyType) :: this
     class(DisBaseType), pointer, intent(in) :: dis
     type(GwfNpfType), pointer, intent(in) :: npf
     integer(I4B), dimension(:), pointer     :: ibound
@@ -132,6 +138,14 @@ module GwfBuyModule
     this%dis     => dis
     this%npf     => npf
     this%ibound  => ibound
+    !
+    ! -- Ensure NPF XT3D is not on
+    if (this%npf%ixt3d /= 0) then
+      call store_error('Error in model ' // trim(this%name_model) // &
+        '.  The XT3D option cannot be used with the BUY Package.')
+      call this%parser%StoreErrorUnit()
+      call ustop()
+    endif
     !
     ! -- Allocate arrays
     call this%allocate_arrays(dis%nodes)
@@ -280,7 +294,7 @@ module GwfBuyModule
     !
     ! -- Add density terms based on boundary package type
     select case (packobj%filtyp)
-      case('GHB', 'LAK')
+      case('GHB')
         !
         ! -- general head boundary
         call buy_cf_ghb(packobj, hnew, this%dense, this%elev, this%denseref, &

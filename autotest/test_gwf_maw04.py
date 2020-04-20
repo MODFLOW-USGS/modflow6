@@ -120,8 +120,8 @@ def get_model(idx, dir):
                                  perioddata=tdis_rc)
 
     # create iterative model solution
-    ims = flopy.mf6.ModflowIms(sim, inner_hclose=hclose, rcloserecord=rclose,
-                               outer_hclose=hclose)
+    ims = flopy.mf6.ModflowIms(sim, inner_dvclose=hclose, rcloserecord=rclose,
+                               outer_dvclose=hclose)
 
     # create gwf model
     gwf = flopy.mf6.ModflowGwf(sim, modelname=name, save_flows=True)

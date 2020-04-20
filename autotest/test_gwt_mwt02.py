@@ -66,11 +66,11 @@ def get_model(idx, dir):
                             model_nam_file='{}.nam'.format(gwfname))
 
     imsgwf = flopy.mf6.ModflowIms(sim, print_option='ALL',
-                                  outer_hclose=hclose,
+                                  outer_dvclose=hclose,
                                   outer_maximum=nouter,
                                   under_relaxation='NONE',
                                   inner_maximum=ninner,
-                                  inner_hclose=hclose, rcloserecord=rclose,
+                                  inner_dvclose=hclose, rcloserecord=rclose,
                                   linear_acceleration='CG',
                                   scaling_method='NONE',
                                   reordering_method='NONE',
@@ -168,11 +168,11 @@ def get_model(idx, dir):
             nouter, ninner = 700, 2
             hclose, rclose, relax = 1e-8, 1e-6, 0.97
             imsgwt = flopy.mf6.ModflowIms(sim, print_option='ALL',
-                                          outer_hclose=hclose,
+                                          outer_dvclose=hclose,
                                           outer_maximum=nouter,
                                           under_relaxation='NONE',
                                           inner_maximum=ninner,
-                                          inner_hclose=hclose, rcloserecord=rclose,
+                                          inner_dvclose=hclose, rcloserecord=rclose,
                                           linear_acceleration='BICGSTAB',
                                           scaling_method='NONE',
                                           reordering_method='NONE',
@@ -244,6 +244,8 @@ def get_model(idx, dir):
                                                   observations=mwt_obs,
                                                   pname='MAW-1',
                                                   auxiliary=['aux1', 'aux2'])
+
+            mvt = flopy.mf6.modflow.ModflowGwtmvt(gwt)
 
         # sources
         sourcerecarray = [('CHD-1', 'AUX', 'CONCENTRATION'), ]

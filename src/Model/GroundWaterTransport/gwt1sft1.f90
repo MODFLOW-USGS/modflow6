@@ -33,22 +33,12 @@
 module GwtSftModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DZERO, DONE, DHALF, DEP20, LENFTYPE, LINELENGTH,  &
-                             LENBOUNDNAME, NAMEDBOUNDFLAG, DNODATA,            &
-                             TABLEFT, TABCENTER, TABRIGHT,                     &
-                             TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
+  use ConstantsModule, only: DZERO, DONE, LINELENGTH, LENBOUNDNAME
   use SimModule, only: store_error, count_errors, store_error_unit, ustop
   use BndModule, only: BndType, GetBndFromList
   use GwtFmiModule, only: GwtFmiType
   use SfrModule, only: SfrType
   use MemoryTypeModule, only: MemoryTSType
-  use BudgetModule, only: BudgetType
-  use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr, budgetobject_cr_bfr
-  use BudgetFileReaderModule, only: BudgetFileReaderType
-  use ObserveModule, only: ObserveType
-  use InputOutputModule, only: extract_idnum_or_bndname
-  use BaseDisModule, only: DisBaseType
-  use ArrayHandlersModule, only: ExpandArray
   use GwtAptModule, only: GwtAptType
   
   implicit none

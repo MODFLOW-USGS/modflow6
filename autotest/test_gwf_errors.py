@@ -158,10 +158,7 @@ def test_sim_errors():
     sim = get_minimal_gwf_simulation(ws,
                                      chdkwargs=chdkwargs)
     sim.write_simulation()
-    err_str = ['11 errors detected.',
-               'ERROR OCCURRED WHILE READING FILE:',
-               'test.chd',
-               'Stopping due to error(s)']
+    err_str = ["1. ERROR OCCURRED WHILE READING FILE 'test.chd'"]
     run_mf6_error(ws, err_str)
     return
 
@@ -178,9 +175,10 @@ def test_sim_maxerrors():
                                      simnamefilekwargs=simnamefilekwargs,
                                      chdkwargs=chdkwargs)
     sim.write_simulation()
-    err_str = ['5 errors detected.',
-               '6 additional errors detected but not printed.',
-               'Stopping due to error(s)']
+    err_str = ['5. Cell is already a constant head ((1,1,1)).',
+               '5 additional errors detected but not printed.',
+               'UNIT ERROR REPORT:',
+               "1. ERROR OCCURRED WHILE READING FILE 'test.chd'"]
     run_mf6_error(ws, err_str)
     return
 
@@ -199,11 +197,10 @@ def test_disu_errors():
                                      disukwargs=disukwargs,
                                      chdkwargs={'stress_period_data': [[]]})
     sim.write_simulation()
-    err_str = ['Top elevation (    2.00000    ) for cell 10 is above bottom elevation (',
+    err_str = ['1. Top elevation (    2.00000    ) for cell 10 is above bottom elevation (',
                '-1.00000    ) for cell 1. Based on node numbering rules cell 10 must be',
                'below cell 1.',
-               '3 errors detected.',
-               'Stopping due to error(s)']
+               "*  ERROR OCCURRED WHILE READING FILE 'test.disu'"]
     run_mf6_error(ws, err_str)
     return
 

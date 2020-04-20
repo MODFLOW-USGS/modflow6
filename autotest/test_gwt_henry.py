@@ -42,10 +42,6 @@ def get_model(idx, dir):
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
-    # This should be changed to one true and one false after scott fixes
-    # flopy.
-    single_matrix_list = [False, False]
-    single_matrix = single_matrix_list[idx]
     nouter, ninner = 100, 300
     hclose, rclose, relax = 1e-10, 1e-6, 0.97
 
@@ -64,24 +60,20 @@ def get_model(idx, dir):
     gwfname = 'gwf_' + name
     gwtname = 'gwt_' + name
 
-    gwf = flopy.mf6.MFModel(sim, model_type='gwf6', modelname=gwfname,
-                            model_nam_file='{}.nam'.format(gwfname))
+    gwf = flopy.mf6.ModflowGwf(sim, modelname=gwfname)
 
     imsgwf = flopy.mf6.ModflowIms(sim, print_option='ALL',
-                                  outer_hclose=hclose,
+                                  outer_dvclose=hclose,
                                   outer_maximum=nouter,
                                   under_relaxation='NONE',
                                   inner_maximum=ninner,
-                                  inner_hclose=hclose, rcloserecord=rclose,
+                                  inner_dvclose=hclose, rcloserecord=rclose,
                                   linear_acceleration='BICGSTAB',
                                   scaling_method='NONE',
                                   reordering_method='NONE',
                                   relaxation_factor=relax,
                                   filename='{}.ims'.format(gwfname))
-    if single_matrix:
-        sim.register_ims_package(imsgwf, [gwfname, gwtname])
-    else:
-        sim.register_ims_package(imsgwf, [gwfname])
+    sim.register_ims_package(imsgwf, [gwfname])
 
     dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
                                   delr=delr, delc=delc,
@@ -144,22 +136,20 @@ def get_model(idx, dir):
                                              ('BUDGET', 'LAST')])
 
     # create gwt model
-    gwt = flopy.mf6.MFModel(sim, model_type='gwt6', modelname=gwtname,
-                            model_nam_file='{}.nam'.format(gwtname))
+    gwt = flopy.mf6.ModflowGwt(sim, modelname=gwtname)
 
-    if not single_matrix:
-        imsgwt = flopy.mf6.ModflowIms(sim, print_option='ALL',
-                                      outer_hclose=hclose,
-                                      outer_maximum=nouter,
-                                      under_relaxation='NONE',
-                                      inner_maximum=ninner,
-                                      inner_hclose=hclose, rcloserecord=rclose,
-                                      linear_acceleration='BICGSTAB',
-                                      scaling_method='NONE',
-                                      reordering_method='NONE',
-                                      relaxation_factor=relax,
-                                      filename='{}.ims'.format(gwtname))
-        sim.register_ims_package(imsgwt, [gwt.name])
+    imsgwt = flopy.mf6.ModflowIms(sim, print_option='ALL',
+                                  outer_dvclose=hclose,
+                                  outer_maximum=nouter,
+                                  under_relaxation='NONE',
+                                  inner_maximum=ninner,
+                                  inner_dvclose=hclose, rcloserecord=rclose,
+                                  linear_acceleration='BICGSTAB',
+                                  scaling_method='NONE',
+                                  reordering_method='NONE',
+                                  relaxation_factor=relax,
+                                  filename='{}.ims'.format(gwtname))
+    sim.register_ims_package(imsgwt, [gwt.name])
 
     dis = flopy.mf6.ModflowGwtdis(gwt, nlay=nlay, nrow=nrow, ncol=ncol,
                                   delr=delr, delc=delc,

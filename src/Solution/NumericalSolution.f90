@@ -63,7 +63,7 @@ module NumericalSolutionModule
     real(DP), pointer                                    :: breduc => NULL()
     real(DP), pointer                                    :: btol => NULL()
     real(DP), pointer                                    :: res_lim => NULL()
-    real(DP), pointer                                    :: hclose => NULL()
+    real(DP), pointer                                    :: dvclose => NULL()
     real(DP), pointer                                    :: hiclose => NULL()
     real(DP), pointer                                    :: bigchold => NULL()
     real(DP), pointer                                    :: bigch => NULL()
@@ -245,7 +245,7 @@ contains
     call mem_allocate(this%ttsoln, 'TTSOLN', solutionname)
     call mem_allocate(this%neq, 'NEQ', solutionname)
     call mem_allocate(this%nja, 'NJA', solutionname)
-    call mem_allocate(this%hclose, 'HCLOSE', solutionname)
+    call mem_allocate(this%dvclose, 'DVCLOSE', solutionname)
     call mem_allocate(this%hiclose, 'HICLOSE', solutionname)
     call mem_allocate(this%bigchold, 'BIGCHOLD', solutionname)
     call mem_allocate(this%bigch, 'BIGCH', solutionname)
@@ -292,7 +292,7 @@ contains
     this%ttsoln = DZERO
     this%neq = 0
     this%nja = 0
-    this%hclose = DZERO
+    this%dvclose = DZERO
     this%hiclose = DZERO
     this%bigchold = DZERO
     this%bigch = DZERO
@@ -466,19 +466,22 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_reallocate
     use SimVariablesModule, only: iout
-    use SimModule, only: ustop, store_error, count_errors
+    use SimModule, only: ustop, store_error, count_errors, store_warning
     use InputOutputModule, only: getunit, openfile
     ! -- dummy
     class(NumericalSolutionType) :: this
     ! -- local
     class(NumericalModelType), pointer :: mp
     class(NumericalExchangeType), pointer :: cp
+    character(len=linelength) :: errmsg
+    character(len=linelength) :: warnmsg
+    character(len=linelength) :: keyword
+    character(len=linelength) :: fname
+    character(len=linelength) :: msg
     integer(I4B) :: i
     integer(I4B) :: im
     integer(I4B) :: ifdparam, mxvl, npp
     integer(I4B) :: imslinear
-    character(len=linelength) :: errmsg, keyword, fname
-    character(len=linelength) :: msg
     integer(I4B) :: isymflg=1
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
@@ -525,8 +528,8 @@ contains
           else if (keyword.eq.'ALL') then
             this%iprims = 2
           else
-            write(errmsg,'(4x,a,a)') 'IMS sln_ar: UNKNOWN IMS PRINT OPTION: ', &
-              trim(keyword)
+            write(errmsg,'(3a)')                                                 &
+              'UNKNOWN IMS PRINT OPTION (', trim(keyword), ').'
             call store_error(errmsg)
           end if
         case ('COMPLEXITY')
@@ -541,9 +544,8 @@ contains
             ifdparam = 3
             WRITE(IOUT,25)
           else
-            write(errmsg,'(4x,a,a)')                                           &
-              'IMS sln_ar: UNKNOWN IMS COMPLEXITY OPTION: ',                   &
-              trim(keyword)
+            write(errmsg,'(3a)')                                                 &
+              'UNKNOWN IMS COMPLEXITY OPTION (', trim(keyword), ').'
             call store_error(errmsg)
           end if
         case ('CSV_OUTER_OUTPUT')
@@ -551,11 +553,11 @@ contains
           if (keyword == 'FILEOUT') then
             call this%parser%GetString(fname)
             this%icsvouterout = getunit()
-            call openfile(this%icsvouterout, iout, fname, 'CSV_OUTER_OUTPUT',  &
+            call openfile(this%icsvouterout, iout, fname, 'CSV_OUTER_OUTPUT',    &
                           filstat_opt='REPLACE')
             write(iout,fmtcsvout) trim(fname), this%icsvouterout
           else
-            write(errmsg,'(4x,a)') 'IMS sln_ar: OPTIONAL CSV_OUTER_OUTPUT ' // &
+            write(errmsg,'(a)') 'OPTIONAL CSV_OUTER_OUTPUT ' //                  &
               'KEYWORD MUST BE FOLLOWED BY FILEOUT'
             call store_error(errmsg)
           end if
@@ -564,14 +566,19 @@ contains
           if (keyword == 'FILEOUT') then
             call this%parser%GetString(fname)
             this%icsvinnerout = getunit()
-            call openfile(this%icsvinnerout, iout, fname, 'CSV_INNER_OUTPUT',  &
+            call openfile(this%icsvinnerout, iout, fname, 'CSV_INNER_OUTPUT',    &
                           filstat_opt='REPLACE')
             write(iout,fmtcsvout) trim(fname), this%icsvinnerout
           else
-            write(errmsg,'(4x,a)') 'IMS sln_ar: OPTIONAL CSV_INNER_OUTPUT ' // &
+            write(errmsg,'(a)') 'OPTIONAL CSV_INNER_OUTPUT ' //                  &
               'KEYWORD MUST BE FOLLOWED BY FILEOUT'
             call store_error(errmsg)
           end if
+        case ('CSV_OUTPUT')
+          write(errmsg,'(a,1x,a)')                                               &
+            'OPTIONAL CSV_OUTPUT HAS BEEN DEPRECATED USE CSV_OUTER_OUTPUT',      &
+            'AND/OR CSV_INNER_OUTPUT INSTEAD'
+          call store_error(errmsg)
         case ('NO_PTC')
           call this%parser%GetStringCaps(keyword)
           select case(keyword)
@@ -604,60 +611,60 @@ contains
           if (keyword == 'FILEOUT') then
             call this%parser%GetString(fname)
             this%iptcout = getunit()
-            call openfile(this%iptcout, iout, fname, 'PTC-OUT',                &
+            call openfile(this%iptcout, iout, fname, 'PTC-OUT',                  &
                           filstat_opt='REPLACE')
             write(iout,fmtptcout) trim(fname), this%iptcout
           else
-            write(errmsg,'(4x,a)') 'IMS sln_ar: OPTIONAL PTC_OUTPUT ' //       &
-              'KEYWORD MUST BE FOLLOWED BY FILEOUT'
+            write(errmsg,'(a)')                                                  &
+              'OPTIONAL PTC_OUTPUT KEYWORD MUST BE FOLLOWED BY FILEOUT'
             call store_error(errmsg)
           end if
         case ('DEV_PTC_OPTION')
           call this%parser%DevOpt()
           this%iallowptc = 1
           this%iptcopt = 1
-          write(IOUT,'(1x,A)')                                                 &
-            'PSEUDO-TRANSIENT CONTINUATION USES BNORM AND L2NORM TO ' //       &
+          write(IOUT,'(1x,A)')                                                   &
+            'PSEUDO-TRANSIENT CONTINUATION USES BNORM AND L2NORM TO ' //         &
             'SET INITIAL VALUE'
         case ('DEV_PTC_EXPONENT')
           call this%parser%DevOpt()
           rval = this%parser%GetDouble()
           if (rval < DZERO) then
-            write(errmsg,'(4x,a)') 'IMS sln_ar: PTC_EXPONENT MUST BE > 0.'
+            write(errmsg,'(a)') 'PTC_EXPONENT MUST BE > 0.'
             call store_error(errmsg)
           else
             this%iallowptc = 1
             this%ptcexp = rval
-            write(IOUT,'(1x,A,1x,g15.7)')                                      &
+            write(IOUT,'(1x,A,1x,g15.7)')                                        &
               'PSEUDO-TRANSIENT CONTINUATION EXPONENT', this%ptcexp
           end if
         case ('DEV_PTC_THRESHOLD')
           call this%parser%DevOpt()
           rval = this%parser%GetDouble()
           if (rval < DZERO) then
-            write(errmsg,'(4x,a)')'IMS sln_ar: PTC_THRESHOLD MUST BE > 0.'
+            write(errmsg,'(a)') 'PTC_THRESHOLD MUST BE > 0.'
             call store_error(errmsg)
           else
             this%iallowptc = 1
             this%ptcthresh = rval
-            write(IOUT,'(1x,A,1x,g15.7)')                                      &
+            write(IOUT,'(1x,A,1x,g15.7)')                                        &
               'PSEUDO-TRANSIENT CONTINUATION THRESHOLD', this%ptcthresh
           end if
         case ('DEV_PTC_DEL0')
           call this%parser%DevOpt()
           rval = this%parser%GetDouble()
           if (rval < DZERO) then
-            write(errmsg,'(4x,a)')'IMS sln_ar: PTC_DEL0 MUST BE > 0.'
+            write(errmsg,'(a)')'IMS sln_ar: PTC_DEL0 MUST BE > 0.'
             call store_error(errmsg)
           else
             this%iallowptc = 1
             this%ptcdel0 = rval
-            write(IOUT,'(1x,A,1x,g15.7)')                                      &
+            write(IOUT,'(1x,A,1x,g15.7)')                                        &
               'PSEUDO-TRANSIENT CONTINUATION INITIAL TIMESTEP', this%ptcdel0
           end if
         case default
-          write(errmsg,'(4x,a,a)') 'IMS sln_ar: UNKNOWN IMS OPTION: ',         &
-            trim(keyword)
+          write(errmsg,'(a,2(1x,a))')                                            &
+            'UNKNOWN IMS OPTION  (', trim(keyword), ').'
           call store_error(errmsg)
         end select
       end do
@@ -666,11 +673,11 @@ contains
       write(iout,'(1x,a)')'NO IMS OPTION BLOCK DETECTED.'
     end if
 
-00021 FORMAT(1X,'SIMPLE OPTION:',/,                                            &
+00021 FORMAT(1X,'SIMPLE OPTION:',/,                                              &
     &       1X,'DEFAULT SOLVER INPUT VALUES FOR FAST SOLUTIONS')
-00023 FORMAT(1X,'MODERATE OPTION:',/,1X,'DEFAULT SOLVER',                      &
+00023 FORMAT(1X,'MODERATE OPTION:',/,1X,'DEFAULT SOLVER',                        &
     &          ' INPUT VALUES REFLECT MODERETELY NONLINEAR MODEL')
-00025 FORMAT(1X,'COMPLEX OPTION:',/,1X,'DEFAULT SOLVER',                       &
+00025 FORMAT(1X,'COMPLEX OPTION:',/,1X,'DEFAULT SOLVER',                         &
     & ' INPUT VALUES REFLECT STRONGLY NONLINEAR MODEL')
 
     !-------READ NONLINEAR ITERATION PARAMETERS AND LINEAR SOLVER SELECTION INDEX
@@ -691,7 +698,17 @@ contains
         ! -- parse keyword
         select case (keyword)
         case ('OUTER_HCLOSE')
-          this%hclose  = this%parser%GetDouble()
+          this%dvclose  = this%parser%GetDouble()
+          write(warnmsg,'(a)')                                                   &
+            'OUTER_HCLOSE SCHEDULED FOR DEPRECATION USE OUTER_DVCLOSE INSTEAD.'
+          call store_warning(warnmsg)
+        case ('OUTER_DVCLOSE')
+          this%dvclose  = this%parser%GetDouble()
+        case ('OUTER_RCLOSEBND')
+          write(errmsg,'(a,1x,a)')                                              &
+            'OUTER_RCLOSEBND HAS BEEN DEPRECATED BECAUSE OUTER_DVCLOSE IS',     &
+            'USED TO EVALUATE PACKAGE CONVERGENCE.'
+          call store_error(errmsg)
         case ('OUTER_MAXIMUM')
           this%mxiter  = this%parser%GetInteger()
         case ('UNDER_RELAXATION')
@@ -706,18 +723,20 @@ contains
           else if (keyword == 'DBD') then
             ival = 3
           else
-            write(errmsg,'(1x,a)') 'IMS sln_ar: UNKNOWN UNDER_RELAXATION SPECIFIED.'
+            write(errmsg,'(3a)')                                                 &
+              'UNKNOWN UNDER_RELAXATION SPECIFIED (', trim(keyword), ').'
             call store_error(errmsg)
           end if
           this%nonmeth = ival
         case ('LINEAR_SOLVER')
           call this%parser%GetStringCaps(keyword)
           ival = 1
-          if (keyword.eq.'DEFAULT' .or.                                        &
+          if (keyword.eq.'DEFAULT' .or.                                          &
               keyword.eq.'LINEAR') then
             ival = 1
           else
-            write(errmsg,'(1x,a)') 'IMS sln_ar: UNKNOWN LINEAR_SOLVER SPECIFIED.'
+            write(errmsg,'(3a)')                                                 &
+              'UNKNOWN LINEAR_SOLVER SPECIFIED (', trim(keyword), ').'
             call store_error(errmsg)
           end if
           this%linmeth = ival
@@ -739,20 +758,22 @@ contains
         case ('BACKTRACKING_RESIDUAL_LIMIT')
           this%res_lim = this%parser%GetDouble()
         case default
-          write(errmsg,'(4x,a,a)')'IMS sln_ar: UNKNOWN IMS NONLINEAR KEYWORD: ', &
-            trim(keyword)
+          write(errmsg,'(3a)')                                                   &
+            'UNKNOWN IMS NONLINEAR KEYWORD (', trim(keyword), ').'
           call store_error(errmsg)
         end select
       end do
       write(iout,'(1x,a)') 'END OF IMS NONLINEAR DATA'
     else
       if (IFDPARAM.EQ.0) then
-        write(errmsg,'(1x,a)') 'NO IMS NONLINEAR BLOCK DETECTED.'
+        write(errmsg,'(a)') 'NO IMS NONLINEAR BLOCK DETECTED.'
         call store_error(errmsg)
       end if
     end if
     !
-    IF ( THIS%THETA < DEM3 ) this%theta = DEM3
+    if (THIS%THETA < DEM3) then
+      this%theta = DEM3
+    end if
     !
     ! -- backtracking should only be used if this%nonmeth > 0
     if (this%nonmeth < 1) then
@@ -761,7 +782,7 @@ contains
     !
     ! -- check that MXITER is greater than zero
     if (this%mxiter <= 0) then
-      write(errmsg,'(a)') 'IMS sln_ar: OUTER ITERATION NUMBER MUST BE > 0.'
+      write(errmsg,'(a)') 'OUTER ITERATION NUMBER MUST BE > 0.'
       call store_error(errmsg)
     END IF
     !
@@ -775,28 +796,30 @@ contains
       WRITE(IOUT,*) '***UNDER-RELAXATION WILL NOT BE USED***'
       WRITE(IOUT,*)
     ELSE
-      WRITE(errmsg,'(a)') '***INCORRECT VALUE FOR VARIABLE NONMETH ',          &
-        &                      'WAS SPECIFIED. CHECK INPUT.***'
+      WRITE(errmsg,'(a)')                                                        &
+        'INCORRECT VALUE FOR VARIABLE NONMETH WAS SPECIFIED.'
       call store_error(errmsg)
     END IF
-    ! call secondary subroutine to initialize and read linear solver parameters
-    ! IMSLINEAR solver
+    !
+    ! -- call secondary subroutine to initialize and read linear 
+    !    solver parameters IMSLINEAR solver
     if ( this%linmeth == 1 )then
       allocate(this%imslinear)
       WRITE(IOUT,*) '***IMS LINEAR SOLVER WILL BE USED***'
-      call this%imslinear%imslinear_allocate(this%name, this%iu, IOUT,         &
-                                             this%iprims, this%mxiter,         &
-                                             ifdparam, imslinear,              &
-                                             this%neq, this%nja, this%ia,      &
-                                             this%ja, this%amat, this%rhs,     &
+      call this%imslinear%imslinear_allocate(this%name, this%iu, IOUT,           &
+                                             this%iprims, this%mxiter,           &
+                                             ifdparam, imslinear,                &
+                                             this%neq, this%nja, this%ia,        &
+                                             this%ja, this%amat, this%rhs,       &
                                              this%x, this%nitermax)
       WRITE(IOUT,*)
       isymflg = 0
       if ( imslinear.eq.1 ) isymflg = 1
-    ! incorrect linear solver flag
+    !
+    ! -- incorrect linear solver flag
     ELSE
-      WRITE(errmsg, *) '***INCORRECT VALUE FOR LINEAR SOLUTION ', &
-        &                'METHOD SPECIFIED. CHECK INPUT.***'
+      WRITE(errmsg, '(a)')                                                       &
+        'INCORRECT VALUE FOR LINEAR SOLUTION METHOD SPECIFIED.'
       call store_error(errmsg)
     END IF
     !
@@ -827,11 +850,11 @@ contains
     ! -- write solver data to output file
     !
     ! -- non-linear solver data
-    WRITE(IOUT,9002) this%hclose, this%mxiter,                                 &
+    WRITE(IOUT,9002) this%dvclose, this%mxiter,                                &
                      this%iprims, this%nonmeth, this%linmeth
     !
     ! -- standard outer iteration formats
-9002 FORMAT(1X,'OUTER ITERATION CONVERGENCE CRITERION     (HCLOSE) = ', E15.6, &
+9002 FORMAT(1X,'OUTER ITERATION CONVERGENCE CRITERION    (DVCLOSE) = ', E15.6, &
     &      /1X,'MAXIMUM NUMBER OF OUTER ITERATIONS        (MXITER) = ', I9,    &
     &      /1X,'SOLVER PRINTOUT INDEX                     (IPRIMS) = ', I9,    &
     &      /1X,'NONLINEAR ITERATION METHOD            (NONLINMETH) = ', I9,    &
@@ -913,7 +936,14 @@ contains
       end do
     end do
     !
-    ! close ims input file
+    ! -- check for numerical solution errors
+    ierr = count_errors()
+    if (ierr > 0) then
+      call this%parser%StoreErrorUnit()
+      call ustop()
+    end if
+    !
+    ! -- close ims input file
     call this%parser%Clear()
     !
     ! -- return
@@ -1057,7 +1087,7 @@ contains
     call mem_deallocate(this%ttsoln)
     call mem_deallocate(this%neq)
     call mem_deallocate(this%nja)
-    call mem_deallocate(this%hclose)
+    call mem_deallocate(this%dvclose)
     call mem_deallocate(this%hiclose)
     call mem_deallocate(this%bigchold)
     call mem_deallocate(this%bigch)
@@ -1516,7 +1546,7 @@ contains
     call this%sln_outer_check(this%hncg(kiter), this%lrch(1,kiter))
     if (this%icnvg /= 0) then
       this%icnvg = 0
-      if (abs(this%hncg(kiter)) <= this%hclose) then
+      if (abs(this%hncg(kiter)) <= this%dvclose) then
         this%icnvg = 1
       end if
     end if
@@ -1597,7 +1627,7 @@ contains
     end do
     !
     ! -- evaluate package convergence
-    if (abs(dpak) > this%hclose) then
+    if (abs(dpak) > this%dvclose) then
       this%icnvg = 0
       ! -- write message to stdout
       if (iend /= 0) then
@@ -1663,9 +1693,9 @@ contains
         call this%sln_maxval(this%neq, this%dxold, dxmax)
         !
         ! -- evaluate convergence
-        if (abs(dxmax) <= this%hclose .and.                                      &
-            abs(this%hncg(kiter)) <= this%hclose .and.                           &
-            abs(dpak) <= this%hclose) then
+        if (abs(dxmax) <= this%dvclose .and.                                     &
+            abs(this%hncg(kiter)) <= this%dvclose .and.                          &
+            abs(dpak) <= this%dvclose) then
           this%icnvg = 1
           !
           ! -- reset outer head change and location for output
@@ -2446,7 +2476,7 @@ contains
     ! -- simple option
     select case ( ifdparam )
     case ( 1 )
-      this%hclose = dem3
+      this%dvclose = dem3
       this%mxiter = 25
       this%nonmeth = 0
       this%theta = 1.0
@@ -2460,7 +2490,7 @@ contains
     !
     ! -- moderate
     case ( 2 )
-      this%hclose = dem2
+      this%dvclose = dem2
       this%mxiter = 50
       this%nonmeth = 3
       this%theta = 0.9d0
@@ -2474,7 +2504,7 @@ contains
     !
     ! -- complex
     case ( 3 )
-      this%hclose = dem1
+      this%dvclose = dem1
       this%mxiter = 100
       this%nonmeth = 3
       this%theta = 0.8d0
@@ -2568,7 +2598,7 @@ contains
           ! -- backtrack heads
           call this%sln_backtracking_xupdate(btflag)
           !
-          ! -- head change less than hclose
+          ! -- head change less than dvclose
           if (btflag == 0) then
             ibflag = 4
             exit btloop
@@ -2680,7 +2710,7 @@ contains
       if(absdelx > chmax) chmax = absdelx
     end do
     ! perform backtracking if free of constraints and set counter and flag
-    if (chmax >= this%hclose) then
+    if (chmax >= this%dvclose) then
       btflag = 1
       do n = 1, this%neq
         if (this%active(n) < 1) cycle

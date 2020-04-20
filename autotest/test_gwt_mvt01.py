@@ -74,11 +74,11 @@ def get_model(idx, dir):
                             model_nam_file='{}.nam'.format(gwfname))
 
     imsgwf = flopy.mf6.ModflowIms(sim, print_option='ALL',
-                                  outer_hclose=hclose,
+                                  outer_dvclose=hclose,
                                   outer_maximum=nouter,
                                   under_relaxation='NONE',
                                   inner_maximum=ninner,
-                                  inner_hclose=hclose, rcloserecord=rclose,
+                                  inner_dvclose=hclose, rcloserecord=rclose,
                                   linear_acceleration='BICGSTAB',
                                   scaling_method='NONE',
                                   reordering_method='NONE',
@@ -236,10 +236,10 @@ def get_model(idx, dir):
                                 headprintrecord=[
                                     ('COLUMNS', 10, 'WIDTH', 15,
                                      'DIGITS', 6, 'GENERAL')],
-                                saverecord=[('HEAD', 'ALL', 'STEPS'),
-                                            ('BUDGET', 'ALL', 'STEPS')],
-                                printrecord=[('HEAD', 'LAST', 'STEPS'),
-                                             ('BUDGET', 'LAST', 'STEPS')])
+                                saverecord=[('HEAD', 'ALL'),
+                                            ('BUDGET', 'ALL')],
+                                printrecord=[('HEAD', 'LAST'),
+                                             ('BUDGET', 'LAST')])
 
 
     packages = [('lak-1',), ('sfr-1',), ]
@@ -263,11 +263,11 @@ def get_model(idx, dir):
 
     if not single_matrix:
         imsgwt = flopy.mf6.ModflowIms(sim, print_option='ALL',
-                                      outer_hclose=hclose,
+                                      outer_dvclose=hclose,
                                       outer_maximum=nouter,
                                       under_relaxation='NONE',
                                       inner_maximum=ninner,
-                                      inner_hclose=hclose, rcloserecord=rclose,
+                                      inner_dvclose=hclose, rcloserecord=rclose,
                                       linear_acceleration='BICGSTAB',
                                       scaling_method='NONE',
                                       reordering_method='NONE',
@@ -389,6 +389,9 @@ def get_model(idx, dir):
                                           pname='SFR-1',
                                           auxiliary=['aux1', 'aux2'])
 
+    # mover transport package
+    mvt = flopy.mf6.modflow.ModflowGwtmvt(gwt, print_flows=True)
+
     # output control
     oc = flopy.mf6.ModflowGwtoc(gwt,
                                 budget_filerecord='{}.cbc'.format(gwtname),
@@ -465,6 +468,17 @@ def eval_results(sim):
     # check the storage terms, which include the total mass in the reach as an aux variable
     res = bobj.get_data(text='storage')[-1]
     #print(res)
+
+    # get mvt results from listing file
+    bud_lst = ['SFR-1_IN', 'SFR-1_OUT',
+               'LAK-1_IN', 'LAK-1_OUT']
+    fname = gwtname + '.lst'
+    fname = os.path.join(sim.simpath, fname)
+    budl = flopy.utils.Mf6ListBudget(fname, budgetkey='TRANSPORT MOVER BUDGET FOR ENTIRE MODEL')
+    names = list(bud_lst)
+    d0 = budl.get_budget(names=names)[0]
+    errmsg = 'SFR-1_OUT NOT EQUAL LAK-1_IN\n{}\n{}'.format(d0['SFR-1_OUT'], d0['LAK-1_IN'])
+    assert np.allclose(d0['SFR-1_OUT'], d0['LAK-1_IN'])
 
     # uncomment when testing so files aren't deleted
     # assert False

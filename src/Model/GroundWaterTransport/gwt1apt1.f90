@@ -40,11 +40,10 @@ module GwtAptModule
                              LENBOUNDNAME, NAMEDBOUNDFLAG, DNODATA,            &
                              TABLEFT, TABCENTER, TABRIGHT,                     &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
-  use SimModule, only: store_error, count_errors, store_error_unit, ustop
+  use SimModule, only: store_error, count_errors, ustop
   use BndModule, only: BndType, GetBndFromList
   use GwtFmiModule, only: GwtFmiType
   use MemoryTypeModule, only: MemoryTSType
-  use BudgetModule, only: BudgetType
   use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr, budgetobject_cr_bfr
   use BudgetFileReaderModule, only: BudgetFileReaderType
   use ObserveModule, only: ObserveType
@@ -1396,10 +1395,8 @@ module GwtAptModule
     ! -- local
     character(len=MAXCHARLEN) :: fname, keyword
     ! -- formats
-    character(len=*),parameter :: fmtlakbin = &
+    character(len=*),parameter :: fmtaptbin = &
       "(4x, a, 1x, a, 1x, ' WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I7)"
-    character(len=*),parameter :: fmtlakbud = &
-      "(4x, a, 1x, a, 1x, ' WILL BE READ FROM FILE: ', a, /4x, 'OPENED ON UNIT: ', I7)"
 ! ------------------------------------------------------------------------------
     !
     select case (option)
@@ -1425,7 +1422,7 @@ module GwtAptModule
           this%iconcout = getunit()
           call openfile(this%iconcout, this%iout, fname, 'DATA(BINARY)',  &
                        form, access, 'REPLACE')
-          write(this%iout,fmtlakbin) trim(adjustl(this%text)), 'CONCENTRATION', fname, this%iconcout
+          write(this%iout,fmtaptbin) trim(adjustl(this%text)), 'CONCENTRATION', fname, this%iconcout
           found = .true.
         else
           call store_error('OPTIONAL CONCENTRATION KEYWORD MUST BE FOLLOWED BY FILEOUT')
@@ -1437,7 +1434,7 @@ module GwtAptModule
           this%ibudgetout = getunit()
           call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)',  &
                         form, access, 'REPLACE')
-          write(this%iout,fmtlakbin) trim(adjustl(this%text)), 'BUDGET', fname, this%ibudgetout
+          write(this%iout,fmtaptbin) trim(adjustl(this%text)), 'BUDGET', fname, this%ibudgetout
           found = .true.
         else
           call store_error('OPTIONAL BUDGET KEYWORD MUST BE FOLLOWED BY FILEOUT')
@@ -2103,7 +2100,8 @@ module GwtAptModule
     !
     ! -- set up budobj
     call budgetobject_cr(this%budobj, this%name)
-    call this%budobj%budgetobject_df(this%ncv, nbudterm, 0, 0)
+    call this%budobj%budgetobject_df(this%ncv, nbudterm, 0, 0, &
+                                     bddim_opt='M')
     idx = 0
     !
     ! -- Go through and set up each budget term

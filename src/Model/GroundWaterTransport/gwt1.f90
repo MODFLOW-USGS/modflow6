@@ -76,6 +76,7 @@ module GwtModule
     type(BudgetType),               pointer :: budget  => null()                ! budget object
     integer(I4B),                   pointer :: inic    => null()                ! unit number IC
     integer(I4B),                   pointer :: infmi   => null()                ! unit number FMI
+    integer(I4B),                   pointer :: inmvt   => null()                ! unit number MVT
     integer(I4B),                   pointer :: inmst   => null()                ! unit number MST
     integer(I4B),                   pointer :: inadv   => null()                ! unit number ADV
     integer(I4B),                   pointer :: indsp   => null()                ! unit number DSP
@@ -114,7 +115,7 @@ module GwtModule
   data cunit/   'DIS6 ', 'DISV6', 'DISU6', 'IC6  ', 'MST6 ', & !  5
                 'ADV6 ', 'DSP6 ', 'SSM6 ', '     ', 'CNC6 ', & ! 10
                 'OC6  ', 'OBS6 ', 'FMI6 ', 'SRC6 ', 'IST6 ', & ! 15
-                'LKT6 ', 'SFT6 ', 'MWT6 ', 'UZT6 ', '     ', & ! 20
+                'LKT6 ', 'SFT6 ', 'MWT6 ', 'UZT6 ', 'MVT6 ', & ! 20
                 80 * '     '/
   
   contains
@@ -147,7 +148,7 @@ module GwtModule
     use GwtSsmModule,               only: ssm_cr
     use GwtMvtModule,               only: mvt_cr
     use GwtOcModule,                only: oc_cr
-    use GwtObsModule,               only: obs_cr
+    use GwtObsModule,               only: gwt_obs_cr
     use BudgetModule,               only: budget_cr
     use NameFileModule,             only: NameFileType
     ! -- dummy
@@ -259,6 +260,7 @@ module GwtModule
     if(indisv6 > 0) indis = indisv6
     call namefile_obj%get_unitnumber('IC6',  this%inic, 1)
     call namefile_obj%get_unitnumber('FMI6', this%infmi, 1)
+    call namefile_obj%get_unitnumber('MVT6', this%inmvt, 1)
     call namefile_obj%get_unitnumber('MST6', this%inmst, 1)
     call namefile_obj%get_unitnumber('ADV6', this%inadv, 1)
     call namefile_obj%get_unitnumber('DSP6', this%indsp, 1)
@@ -288,9 +290,9 @@ module GwtModule
     call adv_cr(this%adv, this%name, this%inadv, this%iout, this%fmi)
     call dsp_cr(this%dsp, this%name, this%indsp, this%iout, this%fmi)
     call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi)
-    call mvt_cr(this%mvt, this%name, 0, this%iout, this%fmi)
+    call mvt_cr(this%mvt, this%name, this%inmvt, this%iout, this%fmi)
     call oc_cr(this%oc, this%name, this%inoc, this%iout)
-    call obs_cr(this%obs, this%inobs)
+    call gwt_obs_cr(this%obs, this%inobs)
     !
     ! -- Create stress packages
     ipakid = 1
@@ -330,6 +332,7 @@ module GwtModule
     ! -- Define packages and utility objects
     call this%dis%dis_df()
     call this%fmi%fmi_df(this%dis, this%inssm)
+    if (this%inmvt > 0) call this%mvt%mvt_df(this%dis)
     if (this%indsp > 0) call this%dsp%dsp_df(this%dis)
     if (this%inssm > 0) call this%ssm%ssm_df()
     call this%oc%oc_df()
@@ -443,12 +446,13 @@ module GwtModule
     !
     ! -- Allocate and read modules attached to model
     call this%fmi%fmi_ar(this%ibound)
-    if(this%inic  > 0) call this%ic%ic_ar(this%x)
-    if(this%inmst > 0) call this%mst%mst_ar(this%dis, this%ibound)
-    if(this%inadv > 0) call this%adv%adv_ar(this%dis, this%ibound)
-    if(this%indsp > 0) call this%dsp%dsp_ar(this%ibound, this%mst%porosity)
-    if(this%inssm > 0) call this%ssm%ssm_ar(this%dis, this%ibound, this%x)
-    if(this%inobs > 0) call this%obs%gwt_obs_ar(this%ic, this%x, this%flowja)
+    if (this%inmvt > 0) call this%mvt%mvt_ar()
+    if (this%inic  > 0) call this%ic%ic_ar(this%x)
+    if (this%inmst > 0) call this%mst%mst_ar(this%dis, this%ibound)
+    if (this%inadv > 0) call this%adv%adv_ar(this%dis, this%ibound)
+    if (this%indsp > 0) call this%dsp%dsp_ar(this%ibound, this%mst%porosity)
+    if (this%inssm > 0) call this%ssm%ssm_ar(this%dis, this%ibound, this%x)
+    if (this%inobs > 0) call this%obs%gwt_obs_ar(this%ic, this%x, this%flowja)
     !
     ! -- Call dis_ar to write binary grid file
     !call this%dis%dis_ar(this%npf%icelltype)
@@ -485,6 +489,10 @@ module GwtModule
     class(BndType), pointer :: packobj
     integer(I4B) :: ip
 ! ------------------------------------------------------------------------------
+    !
+    ! -- In fmi, check for mvt and mvrbudobj consistency
+    call this%fmi%fmi_rp(this%inmvt)
+    if (this%inmvt > 0) call this%mvt%mvt_rp()
     !
     ! -- Check with TDIS on whether or not it is time to RP
     if (.not. readnewdata) return
@@ -602,8 +610,10 @@ module GwtModule
     ! -- call fc routines
     call this%fmi%fmi_fc(this%dis%nodes, this%xold, this%nja, njasln,          &
                          amatsln, this%idxglo, this%rhs)
-    call this%mvt%mvt_fc(this%dis%nodes, this%xold, this%nja, njasln,          &
-                         amatsln, this%idxglo, this%rhs)
+    if (this%inmvt > 0) then
+      call this%mvt%mvt_fc(this%dis%nodes, this%xold, this%nja, njasln,          &
+                           amatsln, this%idxglo, this%x, this%rhs)
+    end if
     if(this%inmst > 0) then
       call this%mst%mst_fc(this%dis%nodes, this%xold, this%nja, njasln,        &
                            amatsln, this%idxglo, this%rhs)
@@ -654,7 +664,7 @@ module GwtModule
 ! ------------------------------------------------------------------------------
     !
     ! -- If mover is on, then at least 2 outers required
-    call this%mvt%mvt_cc(kiter, iend, icnvgmod, cpak, dpak)
+    if (this%inmvt > 0) call this%mvt%mvt_cc(kiter, iend, icnvgmod, cpak, dpak)
     !
     ! -- Call package cc routines
     !do ip = 1, this%bndlist%Count()
@@ -760,6 +770,11 @@ module GwtModule
     !
     ! -- Clear obs
     call this%obs%obs_bd_clear()
+    !
+    ! -- Mover budget
+    if (this%inmvt > 0) then
+      call this%mvt%mvt_bd(icbcfl, ibudfl, isuppress_output, this%x)
+    end if
     !
     ! -- Boundary packages calculate budget and total flows to model budget
     do ip = 1, this%bndlist%Count()
@@ -882,6 +897,9 @@ module GwtModule
       !
       if (ibudfl /= 0) then
         !
+        ! -- Mover budget output
+        if(this%inmvt > 0) call this%mvt%mvt_ot()
+        !
         ! -- gwt model budget
         call this%budget%budget_ot(kstp, kper, this%iout)
       end if
@@ -948,6 +966,7 @@ module GwtModule
     ! -- Scalars
     call mem_deallocate(this%inic)
     call mem_deallocate(this%infmi)
+    call mem_deallocate(this%inmvt)
     call mem_deallocate(this%inmst)
     call mem_deallocate(this%inadv)
     call mem_deallocate(this%indsp)
@@ -1007,6 +1026,7 @@ module GwtModule
     ! -- allocate members that are part of model class
     call mem_allocate(this%inic , 'INIC',  modelname)
     call mem_allocate(this%infmi, 'INFMI', modelname)
+    call mem_allocate(this%inmvt, 'INMVT', modelname)
     call mem_allocate(this%inmst, 'INMST', modelname)
     call mem_allocate(this%inadv, 'INADV', modelname)
     call mem_allocate(this%indsp, 'INDSP', modelname)
@@ -1016,6 +1036,7 @@ module GwtModule
     !
     this%inic  = 0
     this%infmi = 0
+    this%inmvt = 0
     this%inmst = 0
     this%inadv = 0
     this%indsp = 0
