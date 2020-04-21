@@ -1,11 +1,22 @@
 ! Module description:
-! TODO_MJR
-!
+! 
+! This module holds the MODFLOW 6 BMI interface. The interface matches the CSDMS standard, with
+! a few exceptions:
+  
+! - This interface will build into a shared library that can be called from other
+!   executables and scripts, not necessarily written in Fortran. Therefore we have
+!   omitted the type-boundness of the routines, since they cannot have the
+!   bind(C,"...") attribute.
+! - MODFLOW has internal data arrays with rank > 1 that we would like to expose.
+!   The get_value_ptr calls below support this, returning a C-style pointer to the arrays,
+!   and methods have been added to query the variable's rank and shape.
+! 
 ! Note on style: BMI apparently uses underscores, we use underscores in some 
 ! places but camelcase in other. Since this is a dedicated BMI interface module,
 ! we'll use underscores here as well.
 module mf6bmi
   use Mf6CoreModule
+  use TdisModule, only: kper, kstp
   use bmif, only: BMI_SUCCESS, BMI_FAILURE
   use iso_c_binding, only: c_int, c_char, c_double, C_NULL_CHAR, c_loc, c_ptr
   use KindModule, only: DP, I4B
@@ -58,14 +69,7 @@ module mf6bmi
     
     hasConverged = Mf6Update()
     
-    ! TODO_MJR: not sure about this. Should bmi_status only represent the
-    ! state of the BMI, or does it include the state of the simulation?
-    if (hasConverged) then
-      bmi_status = BMI_SUCCESS
-    else
-      bmi_status = BMI_FAILURE
-    end if
-    
+    bmi_status = BMI_SUCCESS
   end function bmi_update
      
   ! Perform teardown tasks for the model.
@@ -397,6 +401,7 @@ module mf6bmi
     else if ((grid_type_f == "DISV") .or. (grid_type_f == "DISU")) then
       grid_type_f = "unstructured"
     else
+      write(*,*) 'BMI error: cannot find grind type for model \"', model_name, '\"'
       bmi_status = BMI_FAILURE
       return
     end if
@@ -497,7 +502,6 @@ module mf6bmi
     model_name = get_model_name(grid_id)
     call mem_setptr(grid_shape_ptr, "MSHAPE", trim(model_name) // " DIS")
     
-    ! TODO_MJR: review this!
     if (grid_shape_ptr(1) == 1) then
       array = grid_shape_ptr(2:3)
       grid_shape_ptr => array
@@ -590,32 +594,7 @@ module mf6bmi
     grid_y = c_loc(array_ptr)
     bmi_status = BMI_SUCCESS
   end function get_grid_y
-  
-
-  ! Get a copy of values (flattened!) of the given double variable.
-  function get_value_double(c_var_name, x, nx) result(bmi_status) bind(C, name="get_value_double")
-  !DEC$ ATTRIBUTES DLLEXPORT :: get_value_double
-    use MemoryManagerModule, only: copy_dbl1d
-    character (kind=c_char), intent(in) :: c_var_name(*)
-    integer, intent(in) :: nx
-    real(DP), dimension(nx), intent(inout) :: x    
-    integer :: bmi_status
-    ! local
-    integer :: idx, i
-    character(len=LENORIGIN) :: origin, var_name
-    character(len=LENVARNAME) :: var_name_only
     
-    var_name = char_array_to_string(c_var_name, strlen(c_var_name))
-    
-    idx = index(var_name, '/', back=.true.)
-    origin = var_name(:idx-1)
-    var_name_only = var_name(idx+1:)
-    
-    call copy_dbl1d(x, var_name_only, origin)
-    bmi_status = BMI_SUCCESS
-    
-  end function get_value_double
-  
   ! NOTE: node in BMI-terms is a vertex in Modflow terms
   ! Get the number of nodes in an unstructured grid.
   function get_grid_node_count(grid_id, count) result(bmi_status) bind(C, name="get_grid_node_count")
@@ -703,8 +682,6 @@ module mf6bmi
     character(len=LENMODELNAME) :: model_name
     integer, dimension(:), pointer, contiguous :: iavert_ptr
     integer, dimension(:), pointer, contiguous :: array_ptr
-    ! TODO_MJR: this array will not work for multiple models, or multiple calls,
-    ! should we let the outside manage the memory?
     integer, dimension(:), target, allocatable, save :: array
     
     ! make sure function is only used for unstructured grids
@@ -839,7 +816,7 @@ module mf6bmi
       end if
     end do
     
-    ! TODO_MJR: error message, should never get here...
+    write(*,*) 'BMI error: no model for grid id \"', grid_id, '\"'
     
   end function get_model_name
   
