@@ -158,7 +158,9 @@ def run_flow_model():
 
 
     sim.write_simulation()
-    sim.run_simulation(silent=False)
+    success, buff = sim.run_simulation(silent=False)
+    errmsg = 'flow model did not terminate successfully\n{}'.format(buff)
+    assert success, errmsg
 
     return
 
@@ -231,7 +233,9 @@ def run_transport_model():
                                              ('BUDGET', 'ALL')])
 
     sim.write_simulation()
-    sim.run_simulation()
+    success, buff = sim.run_simulation(silent=False)
+    errmsg = 'transport model did not terminate successfully\n{}'.format(buff)
+    assert success, errmsg
 
     fname = gwtname + '.lst'
     fname = os.path.join(wst, fname)
