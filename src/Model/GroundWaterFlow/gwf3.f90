@@ -335,7 +335,7 @@ module GwfModule
     !
     ! -- Estimate maximum number of budget terms that would show up in the
     !    GWF Model budget table
-    maxbudterms = 0
+    maxbudterms = 1
     if (this%insto > 0) maxbudterms = maxbudterms + 2
     if (this%incsub > 0) maxbudterms = maxbudterms + 4
     maxbudterms = maxbudterms + this%bndlist%Count() * 4
