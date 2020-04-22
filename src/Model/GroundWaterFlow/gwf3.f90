@@ -324,6 +324,7 @@ module GwfModule
     class(GwfModelType) :: this
     ! -- local
     integer(I4B) :: ip
+    integer(I4B) :: maxbudterms
     class(BndType), pointer :: packobj
 ! ------------------------------------------------------------------------------
     !
@@ -331,8 +332,16 @@ module GwfModule
     call this%dis%dis_df()
     call this%npf%npf_df(this%dis, this%xt3d, this%ingnc)
     call this%oc%oc_df()
-    ! -- todo: niunit is not a good indicator of budterm size
-    call this%budget%budget_df(niunit, 'VOLUME', 'L**3')
+    !
+    ! -- Estimate maximum number of budget terms that would show up in the
+    !    GWF Model budget table
+    maxbudterms = 0
+    if (this%insto > 0) maxbudterms = maxbudterms + 2
+    if (this%incsub > 0) maxbudterms = maxbudterms + 4
+    maxbudterms = maxbudterms + this%bndlist%Count() * 4
+    call this%budget%budget_df(maxbudterms, 'VOLUME', 'L**3')
+    !
+    ! -- gnc df
     if(this%ingnc > 0) call this%gnc%gnc_df(this)
     !
     ! -- Assign or point model members to dis members

@@ -1,4 +1,3 @@
-! -- todo: need a way to write a budget table to the list file for the budget terms
 ! -- todo: need observations for SSM terms
   
 module GwtSsmModule
@@ -267,25 +266,29 @@ module GwtSsmModule
     integer(I4B), intent(in) :: isuppress_output
     type(BudgetType), intent(inout) :: model_budget
     ! -- local
+    character(len=LENPACKAGENAME) :: rowlabel  = 'SSM'
     integer(I4B) :: ip
     integer(I4B) :: n
     integer(I4B) :: i
     integer(I4B) :: iauxpos
+    real(DP), dimension(:, :), allocatable :: budterm
     real(DP) :: rate
-    real(DP) :: rin, rout
     real(DP) :: qbnd
     real(DP) :: ctmp
     real(DP) :: cbnd
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize 
-    rin = DZERO
-    rout = DZERO
+    allocate(budterm(2, this%fmi%nflowpack))
     !
     ! -- do for each flow package
-    ! -- todo: may want ssm broken down further so that the budget table
-    !    contains the contributions for each flow package
     do ip = 1, this%fmi%nflowpack
+      !
+      ! -- Initialize the rate accumulators
+      budterm(1, ip) = DZERO
+      budterm(2, ip) = DZERO
+      !
+      ! -- cycle if package is being managed as an advanced package
       if (this%fmi%iatp(ip) /= 0) cycle
       !
       ! -- do for each boundary
@@ -318,9 +321,9 @@ module GwtSsmModule
         ! -- Rate is now a mass flux
         rate = qbnd * ctmp
         if(rate < DZERO) then
-          rout = rout - rate
+          budterm(2, ip) = budterm(2, ip) - rate
         else
-          rin = rin + rate
+          budterm(1, ip) = budterm(1, ip) + rate
         endif
         !
       enddo
@@ -328,7 +331,11 @@ module GwtSsmModule
     enddo
     !
     ! -- Add contributions to model budget
-    call model_budget%addentry(rin, rout, delt, text, isuppress_output)
+    call model_budget%addentry(budterm, delt, this%fmi%flowpacknamearray,      &
+                               isuppress_output, rowlabel=rowlabel)
+    !
+    ! -- deallocate
+    deallocate(budterm)
     !
     ! -- Return
     return

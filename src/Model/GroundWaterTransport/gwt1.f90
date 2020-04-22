@@ -326,6 +326,7 @@ module GwtModule
     class(GwtModelType) :: this
     ! -- local
     integer(I4B) :: ip
+    integer(I4B) :: maxbudterms
     class(BndType), pointer :: packobj
 ! ------------------------------------------------------------------------------
     !
@@ -336,7 +337,16 @@ module GwtModule
     if (this%indsp > 0) call this%dsp%dsp_df(this%dis)
     if (this%inssm > 0) call this%ssm%ssm_df()
     call this%oc%oc_df()
-    call this%budget%budget_df(niunit, 'MASS', 'M')
+    !
+    ! -- Estimate maximum number of budget terms that would show up in the
+    !    GWF Model budget table
+    maxbudterms = 0
+    if (this%inmst > 0) maxbudterms = maxbudterms + 4
+    if (this%inssm > 0) maxbudterms = maxbudterms + 1
+    maxbudterms = maxbudterms + 1  ! fmi
+    maxbudterms = maxbudterms + this%bndlist%Count() * 4
+    maxbudterms = maxbudterms + this%fmi%nflowpack
+    call this%budget%budget_df(maxbudterms, 'MASS', 'M')
     !
     ! -- Assign or point model members to dis members
     this%neq = this%dis%nodes
@@ -348,7 +358,7 @@ module GwtModule
     call this%allocate_arrays()
     !
     ! -- Define packages and assign iout for time series managers
-    do ip=1,this%bndlist%Count()
+    do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_df(this%neq, this%dis)
       packobj%TsManager%iout = this%iout

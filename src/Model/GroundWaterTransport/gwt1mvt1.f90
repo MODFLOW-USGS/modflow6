@@ -299,7 +299,6 @@ module GwtMvtModule
     real(DP), intent(in), dimension(:) :: cnew
     ! -- local
     integer(I4B) :: ibinun
-    real(DP) :: rate
     ! -- formats
     character(len=*), parameter :: fmttkk = &
       "(1X,/1X,A,'   PERIOD ',I0,'   STEP ',I0)"
