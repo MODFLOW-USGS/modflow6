@@ -4,6 +4,11 @@
 !entries must be provided, and they must be provided in the same order.  If not,
 !the module will terminate with an error.
 !
+!Maxsize is required as part of the df method and the arrays will be allocated
+!to maxsize.  If additional entries beyond maxsize are added, the arrays
+!will dynamically increase in size, however, to avoid allocation and copying,
+!it is best to set maxsize large enough up front.
+!
 !vbvl(1, :) contains cumulative rate in
 !vbvl(2, :) contains cumulative rate out
 !vbvl(3, :) contains rate in
@@ -14,7 +19,7 @@
 module BudgetModule
 
   use KindModule, only: DP, I4B
-  use SimModule,       only: store_error, count_errors, ustop
+  use SimModule,  only: store_error, count_errors, ustop
   use ConstantsModule, only: LINELENGTH, LENBUDTXT, LENPACKAGENAME
   
   implicit none
@@ -45,6 +50,7 @@ module BudgetModule
     ! -- private
     procedure          :: allocate_scalars
     procedure, private :: allocate_arrays
+    procedure, private :: resize
   end type BudgetType
 
   contains
@@ -404,12 +410,19 @@ module BudgetModule
     character(len=*), parameter :: fmtbuderr = &
       "('Error in MODFLOW 6.', 'Entries do not match: ', (a), (a) )"
     integer(I4B) :: iscv
+    integer(I4B) :: maxsize
 ! ------------------------------------------------------------------------------
     !
     iscv = 0
     if(present(isupress_accumulate)) then
       iscv = isupress_accumulate
     endif
+    !
+    ! -- ensure budget arrays are large enough
+    maxsize = this%msum
+    if (maxsize > this%maxsize) then
+      call this%resize(maxsize)
+    end if
     !
     ! -- If budget has been written at least once, then make sure that the present
     !    text entry matches the last text entry
@@ -469,6 +482,7 @@ module BudgetModule
     character(len=*), parameter :: fmtbuderr = &
       "('Error in MODFLOW 6.', 'Entries do not match: ', (a), (a) )"
     integer(I4B) :: iscv, i
+    integer(I4B) :: nbudterms, maxsize
 ! ------------------------------------------------------------------------------
     !
     iscv = 0
@@ -476,6 +490,14 @@ module BudgetModule
       iscv = isupress_accumulate
     endif
     !
+    ! -- ensure budget arrays are large enough
+    nbudterms = size(budtxt)
+    maxsize = this%msum - 1 + nbudterms
+    if (maxsize > this%maxsize) then
+      call this%resize(maxsize)
+    end if
+    !
+    ! -- Process each of the multi-entry budget terms
     do i = 1, size(budtxt)
       !
       ! -- If budget has been written at least once, then make sure that the present
@@ -587,5 +609,52 @@ module BudgetModule
     !
     return
   end subroutine allocate_arrays
+  
+  subroutine resize(this, maxsize)
+! ******************************************************************************
+! resize -- resize budget arrays
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(BudgetType) :: this
+    integer(I4B), intent(in) :: maxsize
+    ! -- local
+    real(DP), dimension(:, :), allocatable :: vbvl
+    character(len=LENBUDTXT), dimension(:), allocatable :: vbnm
+    character(len=LENPACKAGENAME), dimension(:), allocatable :: rowlabel
+    integer(I4B) :: maxsizeold
+! ------------------------------------------------------------------------------
+    !
+    ! -- allocate and copy into local storage
+    maxsizeold = this%maxsize
+    allocate(vbvl(4, maxsizeold))
+    allocate(vbnm(maxsizeold))
+    allocate(rowlabel(maxsizeold))
+    vbvl(:, :) = this%vbvl(:, :)
+    vbnm(:) = this%vbnm(:)
+    rowlabel(:) = this%rowlabel(:)
+    !
+    ! -- Set new size and reallocate
+    this%maxsize = maxsize
+    call this%allocate_arrays()
+    !
+    ! -- Copy from local back into member variables
+    this%vbvl(:, 1:maxsizeold) = vbvl(:, 1:maxsizeold)
+    this%vbnm(1:maxsizeold) = vbnm(1:maxsizeold)
+    this%rowlabel(1:maxsizeold) = rowlabel(1:maxsizeold)
+    !
+    ! - deallocate local copies
+    deallocate(vbvl)
+    deallocate(vbnm)
+    deallocate(rowlabel)
+    !
+    ! -- return
+    return
+  end subroutine resize
+  
+  
 
 end module BudgetModule
