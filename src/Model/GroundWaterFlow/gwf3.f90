@@ -325,7 +325,6 @@ module GwfModule
     call this%dis%dis_df()
     call this%npf%npf_df(this%dis, this%xt3d, this%ingnc)
     call this%oc%oc_df()
-    ! -- todo: niunit is not a good indicator of budterm size
     call this%budget%budget_df(niunit, 'VOLUME', 'L**3')
     if(this%ingnc > 0) call this%gnc%gnc_df(this)
     !
