@@ -326,7 +326,6 @@ module GwtModule
     class(GwtModelType) :: this
     ! -- local
     integer(I4B) :: ip
-    integer(I4B) :: maxbudterms
     class(BndType), pointer :: packobj
 ! ------------------------------------------------------------------------------
     !
@@ -337,16 +336,7 @@ module GwtModule
     if (this%indsp > 0) call this%dsp%dsp_df(this%dis)
     if (this%inssm > 0) call this%ssm%ssm_df()
     call this%oc%oc_df()
-    !
-    ! -- Estimate maximum number of budget terms that would show up in the
-    !    GWF Model budget table
-    maxbudterms = 1
-    if (this%inmst > 0) maxbudterms = maxbudterms + 4
-    if (this%inssm > 0) maxbudterms = maxbudterms + 1
-    maxbudterms = maxbudterms + 1  ! fmi
-    maxbudterms = maxbudterms + this%bndlist%Count() * 4
-    maxbudterms = maxbudterms + this%fmi%nflowpack
-    call this%budget%budget_df(maxbudterms, 'MASS', 'M')
+    call this%budget%budget_df(niunit, 'MASS', 'M')
     !
     ! -- Assign or point model members to dis members
     this%neq = this%dis%nodes
