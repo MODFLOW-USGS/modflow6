@@ -17,6 +17,42 @@ longname print option
 description is an optional keyword that defines default non-linear and linear solver parameters.  SIMPLE - indicates that default solver input values will be defined that work well for nearly linear models. This would be used for models that do not include nonlinear stress packages and models that are either confined or consist of a single unconfined layer that is thick enough to contain the water table within a single layer. MODERATE - indicates that default solver input values will be defined that work well for moderately nonlinear models. This would be used for models that include nonlinear stress packages and models that consist of one or more unconfined layers. The MODERATE option should be used when the SIMPLE option does not result in successful convergence.  COMPLEX - indicates that default solver input values will be defined that work well for highly nonlinear models. This would be used for models that include nonlinear stress packages and models that consist of one or more unconfined layers representing complex geology and surface-water/groundwater interaction. The COMPLEX option should be used when the MODERATE option does not result in successful convergence.  Non-linear and linear solver parameters assigned using a specified complexity can be modified in the NONLINEAR and LINEAR blocks. If the COMPLEXITY option is not specified, NONLINEAR and LINEAR variables will be assigned the simple complexity values.
 
 block options
+name csv_output_filerecord
+type record csv_output fileout csvfile
+shape
+reader urword
+tagged true
+optional true
+deprecated 6.1.1
+longname
+description
+
+block options
+name csv_output
+type keyword
+shape
+in_record true
+reader urword
+tagged true
+optional false
+deprecated 6.1.1
+longname budget keyword
+description keyword to specify that the record corresponds to the comma separated values solver convergence output.  The CSV\_OUTPUT option has been deprecated and split into the CSV_OUTER_OUTPUT and CSV_INNER_OUTPUT options.  Starting with MODFLOW 6 version 6.1.1 if the CSV_OUTPUT option is specified, then it is treated as the CSV_OUTER_OUTPUT option.
+
+block options
+name csvfile
+type string
+preserve_case true
+shape
+in_record true
+reader urword
+tagged false
+optional false
+deprecated 6.1.1
+longname file keyword
+description name of the ascii comma separated values output file to write solver convergence information. If PRINT\_OPTION is NONE or SUMMARY, comma separated values output includes maximum head change convergence information at the end of each outer iteration for each time step. If PRINT\_OPTION is ALL, comma separated values output includes maximum head change and maximum residual convergence information for the solution and each model (if the solution includes more than one model) and linear acceleration information for each inner iteration.
+
+block options
 name csv_outer_output_filerecord
 type record csv_outer_output fileout outer_csvfile
 shape
@@ -125,12 +161,30 @@ description is an optional keyword that is used to define options for disabling 
 # --------------------- sln ims nonlinear ---------------------
 
 block nonlinear
+name outer_hclose
+type double precision
+reader urword
+optional true
+deprecated 6.1.1
+longname head change criterion
+description real value defining the head change criterion for convergence of the outer (nonlinear) iterations, in units of length. When the maximum absolute value of the head change at all nodes during an iteration is less than or equal to OUTER\_HCLOSE, iteration stops. Commonly, OUTER\_HCLOSE equals 0.01.  The OUTER\_HCLOSE option has been deprecated in favor of the more general OUTER\_DVCLOSE (for dependent variable), however either one can be specified in order to maintain backward compatibility.
+
+block nonlinear
 name outer_dvclose
 type double precision
 reader urword
 optional false
 longname dependent-variable change criterion
 description real value defining the dependent-variable (for example, head) change criterion for convergence of the outer (nonlinear) iterations, in units of the dependent-variable (for example, length for head). When the maximum absolute value of the dependent-variable change at all nodes during an iteration is less than or equal to OUTER\_DVCLOSE, iteration stops. Commonly, OUTER\_DVCLOSE equals 0.01. The keyword, OUTER\_HCLOSE can be still be specified instead of OUTER\_DVCLOSE for backward compatibility with previous versions of MODFLOW 6 but eventually OUTER\_HCLOSE will be deprecated and specification of OUTER\_HCLOSE will cause MODFLOW 6 to terminate with an error.
+
+block nonlinear
+name outer_rclosebnd
+type double precision
+reader urword
+optional true
+deprecated 6.1.1
+description real value defining the residual tolerance for convergence of model packages that solve a separate equation not solved by the IMS linear solver. This value represents the maximum allowable residual between successive outer iterations at any single model package element. An example of a model package that would use OUTER\_RCLOSEBND to evaluate convergence is the SFR package which solves a continuity equation for each reach.  The OUTER\_RCLOSEBND option is deprecated and has no effect on simulation results as of version 6.1.1.  The keyword, OUTER\_RCLOSEBND can be still be specified for backward compatibility with previous versions of MODFLOW 6 but eventually specificiation of OUTER\_RCLOSEBND will cause MODFLOW 6 to terminate with an error.
+longname boundary package flow residual tolerance
 
 block nonlinear
 name outer_maximum
@@ -222,6 +276,15 @@ reader urword
 optional false
 longname maximum number of inner iterations
 description integer value defining the maximum number of inner (linear) iterations. The number typically depends on the characteristics of the matrix solution scheme being used. For nonlinear problems, INNER\_MAXIMUM usually ranges from 60 to 600; a value of 100 will be sufficient for most linear problems.
+
+block linear
+name inner_hclose
+type double precision
+reader urword
+optional true
+deprecated 6.1.1
+longname head change tolerance
+description real value defining the head change criterion for convergence of the inner (linear) iterations, in units of length. When the maximum absolute value of the head change at all nodes during an iteration is less than or equal to INNER\_HCLOSE, the matrix solver assumes convergence. Commonly, INNER\_HCLOSE is set an order of magnitude less than the OUTER\_HCLOSE value specified for the NONLINEAR block.  The INNER\_HCLOSE keyword has been deprecated in favor of the more general INNER\_DVCLOSE (for dependent variable), however either one can be specified in order to maintain backward compatibility.
 
 block linear
 name inner_dvclose

@@ -23,6 +23,7 @@ A MODFLOW 6 variable, and its place within a block and on a line is defined usin
 * preserve_case -- default is false, but should be set to true for file names
 * default_value -- default value for the variable.  Should be executable with Python
 * numeric_index -- default is false.  if true, then this is an index variable.  Is useful for Flopy to treat as zero-based.
+* deprecated -- default is ''.  if not '' then this MODFLOW 6 variable is considered deprecated.  The string for deprecated should be the version (such as 6.1.1) that corresponds to when the option was deprecated.
 
 # Definition Files
 
