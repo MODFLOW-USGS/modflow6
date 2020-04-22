@@ -19,6 +19,15 @@ longname name of auxiliary variable for multiplier
 description REPLACE auxmultname {'{#1}': 'drain conductance'}
 
 block options
+name auxdepthname
+type string
+shape
+reader urword
+optional true
+longname name of auxiliary variable for drainage depth
+description name of auxiliary variable to be used to define the drainage depth used to scale drainage discharge. If a positive drainage depth value is specified for a drain then HDRN is the elevation at which the drain starts to discharge and HDRN + DDRN is the elevation when the drain conductance (COND) scaling factor is 1. If a negative drainage depth value is specified for a drain then HDRN + DDRN is the elevation at which the drain starts to discharge and HDRN is the elevation when the conductance (COND) scaling factor is 1. Linear- or cubic-scaling is used to scale the drain conductance (COND) the if the Standard or Newton-Raphson Formulation are used, respectively.
+
+block options
 name boundnames
 type keyword
 shape

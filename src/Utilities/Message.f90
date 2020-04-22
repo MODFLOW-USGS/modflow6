@@ -256,12 +256,14 @@ module MessageModule
     end if
     !
     ! -- process optional dummy variables
-    !    set the unit number
+    ! -- set the unit number
     if(present(iunit))then
       if (iunit > 0) then
         junit = iunit
       end if
     end if
+    !
+    ! -- set the message level
     if (present(level)) then
       ilevel = level
     else

@@ -479,7 +479,7 @@ end subroutine sChSmooth
 
 
 
-  function sQSaturation(top, bot, x) result(y)
+  function sQSaturation(top, bot, x, c1, c2) result(y)
 ! ******************************************************************************
 ! Nonlinear smoothing function returns value between 0-1;
 ! Cubic saturation function
@@ -493,6 +493,8 @@ end subroutine sChSmooth
     real(DP), intent(in) :: top
     real(DP), intent(in) :: bot
     real(DP), intent(in) :: x
+    real(DP), intent(in), optional :: c1
+    real(DP), intent(in), optional :: c2
     ! -- local
     real(DP) :: w
     real(DP) :: b
@@ -502,11 +504,31 @@ end subroutine sChSmooth
 ! ------------------------------------------------------------------------------
 !   code
 !
+    !
+    ! -- process optional variables
+    if (present(c1)) then
+      cof1 = c1
+    else
+      cof1 = -DTWO
+    end if
+    if (present(c2)) then
+      cof2 = c2
+    else
+      cof2 = DTHREE
+    end if
+    !
+    ! -- calculate head diference from bottom (w),
+    !    calculate range (b), and
+    !    calculate normalized head difference from bottom (s)
     w = x - bot
     b = top - bot
     s = w / b
-    cof1 = -DTWO / b**DTHREE
-    cof2 = DTHREE / b**DTWO
+    !
+    ! -- divide cof1 and cof2 by range to the power 3 and 2, respectively
+    cof1 = cof1 / b**DTHREE
+    cof2 = cof2 / b**DTWO
+    !
+    ! -- calculate fraction
     if (s < DZERO) then
       y = DZERO
     else if(s < DONE) then
@@ -514,11 +536,12 @@ end subroutine sChSmooth
     else
       y = DONE
     end if
-    
+    !
+    ! -- return
     return
   end function sQSaturation
   
-  function sQSaturationDerivative(top, bot, x) result(y)
+  function sQSaturationDerivative(top, bot, x, c1, c2) result(y)
 ! ******************************************************************************
 ! Nonlinear smoothing function returns value between 0-1;
 ! Cubic saturation function
@@ -532,6 +555,8 @@ end subroutine sChSmooth
     real(DP), intent(in) :: top
     real(DP), intent(in) :: bot
     real(DP), intent(in) :: x
+    real(DP), intent(in), optional :: c1
+    real(DP), intent(in), optional :: c2
     ! -- local
     real(DP) :: w
     real(DP) :: b
@@ -541,11 +566,32 @@ end subroutine sChSmooth
 ! ------------------------------------------------------------------------------
 !   code
 !
+    !
+    ! -- process optional variables
+    if (present(c1)) then
+      cof1 = c1 
+    else
+      cof1 = -DTWO
+    end if
+    if (present(c2)) then
+      cof2 = c2
+    else
+      cof2 = DTHREE
+    end if
+    !
+    ! -- calculate head diference from bottom (w),
+    !    calculate range (b), and
+    !    calculate normalized head difference from bottom (s)
     w = x - bot
     b = top - bot
     s = w / b
-    cof1 = -DSIX / b**DTHREE
-    cof2 = DSIX / b**DTWO
+    !
+    ! -- multiply cof1 and cof2 by 3 and 2, respectively, and then 
+    !    divide by range to the power 3 and 2, respectively
+    cof1 = cof1 * DTHREE / b**DTHREE
+    cof2 = cof2 * DTWO / b**DTWO
+    !
+    ! -- calculate derivative of fraction with respect to x
     if (s < DZERO) then
       y = DZERO
     else if(s < DONE) then
@@ -553,7 +599,8 @@ end subroutine sChSmooth
     else
       y = DZERO
     end if
-    
+    !
+    ! -- return
     return
   end function sQSaturationDerivative
   
