@@ -1,6 +1,7 @@
 BEGIN OPTIONS
   [AUXILIARY <auxiliary(naux)>]
   [AUXMULTNAME <auxmultname>]
+  [AUXDEPTHNAME <auxdepthname>]
   [BOUNDNAMES]
   [PRINT_INPUT]
   [PRINT_FLOWS]

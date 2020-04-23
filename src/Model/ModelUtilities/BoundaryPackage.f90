@@ -290,7 +290,7 @@ module BndModule
     character(len=LINELENGTH) :: line, errmsg
     ! -- formats
     character(len=*),parameter :: fmtblkerr = &
-      "('Error.  Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
+      "('Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
     character(len=*),parameter :: fmtlsp = &
       "(1X,/1X,'REUSING ',A,'S FROM LAST STRESS PERIOD')"
     character(len=*), parameter :: fmtnbd = &
@@ -1199,8 +1199,6 @@ module BndModule
               errmsg = 'TS6 keyword must be followed by "FILEIN" ' //          &
                        'then by filename.'
               call store_error(errmsg)
-              call this%parser%StoreErrorUnit()
-              call ustop()
             endif
             call this%parser%GetString(fname)
             write(this%iout,fmtts)trim(fname)
@@ -1211,8 +1209,6 @@ module BndModule
                 errmsg = 'TAS6 FILE cannot be used ' // &
                          'with selected discretization type.'
                 call store_error(errmsg)
-                call this%parser%StoreErrorUnit()
-                call ustop()
               endif
             else
               errmsg = 'The ' // trim(this%filtyp) // &
@@ -1250,8 +1246,6 @@ module BndModule
               errmsg = 'Multiple OBS6 keywords detected in OPTIONS block. ' // &
                        'Only one OBS6 entry allowed for a package.'
               call store_error(errmsg)
-              call this%parser%StoreErrorUnit()
-              call ustop()
             endif
             this%obs%active = .true.
             call this%parser%GetString(this%obs%inputFilename)
@@ -1266,8 +1260,8 @@ module BndModule
           case ('DEV_NO_NEWTON')
             call this%parser%DevOpt()
             this%inewton = 0
-            write(this%iout, '(4x,a)')                                         &
-                             'NEWTON-RAPHSON method disabled for unconfined cells'
+            write(this%iout, '(4x,a)')                                           &
+              'NEWTON-RAPHSON method disabled for unconfined cells'
           case default
             !
             ! -- Check for child class options
@@ -1275,17 +1269,15 @@ module BndModule
             !
             ! -- No child class options found, so print error message
             if(.not. foundchildclassoption) then
-              write(errmsg,'(4x,a,a)') '****ERROR. UNKNOWN '// &
-                trim(adjustl(this%text))//' OPTION: ', trim(keyword)
+              write(errmsg,'(a,3(1x,a))')                                        &
+                'UNKNOWN', trim(adjustl(this%text)), 'OPTION:', trim(keyword)
               call store_error(errmsg)
-              call this%parser%StoreErrorUnit()
-              call ustop()
             endif
         end select
       end do
-      write(this%iout,'(1x,a)')'END OF '//trim(adjustl(this%text))//' OPTIONS'
+      write(this%iout,'(1x,a)') 'END OF '//trim(adjustl(this%text)) // ' OPTIONS'
     else
-      write(this%iout,'(1x,a)')'NO '//trim(adjustl(this%text))// &
+      write(this%iout,'(1x,a)') 'NO '//trim(adjustl(this%text)) //               &
         ' OPTION BLOCK DETECTED.'
     end if
     !
@@ -1294,11 +1286,10 @@ module BndModule
       !
       ! -- Error if no aux variable specified
       if(this%naux == 0) then
-        write(errmsg,'(4x,a,a)') '****ERROR. AUXMULTNAME WAS SPECIFIED AS ' // &
-          trim(adjustl(sfacauxname))//' BUT NO AUX VARIABLES SPECIFIED.'
+        write(errmsg,'(a,2(1x,a))')                                              &
+          'AUXMULTNAME WAS SPECIFIED AS', trim(adjustl(sfacauxname)),            &
+          'BUT NO AUX VARIABLES SPECIFIED.'
         call store_error(errmsg)
-        call this%parser%StoreErrorUnit()
-        call ustop()
       endif
       !
       ! -- Assign mult column
@@ -1312,14 +1303,18 @@ module BndModule
       !
       ! -- Error if aux variable cannot be found
       if(this%iauxmultcol == 0) then
-        write(errmsg,'(4x,a,a)') '****ERROR. AUXMULTNAME WAS SPECIFIED AS ' // &
-          trim(adjustl(sfacauxname))//' BUT NO AUX VARIABLE FOUND WITH ' //    &
-          'THIS NAME.'
+        write(errmsg,'(a,2(1x,a))')                                              &
+          'AUXMULTNAME WAS SPECIFIED AS', trim(adjustl(sfacauxname)),            &
+          'BUT NO AUX VARIABLE FOUND WITH THIS NAME.'
         call store_error(errmsg)
-        call this%parser%StoreErrorUnit()
-        call ustop()
       endif
-    endif
+    end if
+    !
+    ! -- terminate if errors were detected
+    if (count_errors() > 0) then
+      call this%parser%StoreErrorUnit()
+      call ustop()
+    end if
     !
     ! -- return
     return
@@ -1333,7 +1328,7 @@ module BndModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, store_error, store_error_unit
+    use SimModule, only: ustop, store_error, count_errors, store_error_unit
     ! -- dummy
     class(BndType),intent(inout) :: this
     ! -- local
@@ -1360,12 +1355,9 @@ module BndModule
             this%maxbound = this%parser%GetInteger()
             write(this%iout,'(4x,a,i7)') 'MAXBOUND = ', this%maxbound
           case default
-            write(errmsg,'(4x,a,a)') &
-              '****ERROR. UNKNOWN '//trim(this%text)//' DIMENSION: ', &
-                                     trim(keyword)
+            write(errmsg,'(a,3(1x,a))') &
+              'UNKNOWN', trim(this%text), 'DIMENSION:', trim(keyword)
             call store_error(errmsg)
-            call this%parser%StoreErrorUnit()
-            call ustop()
         end select
       end do
       !
@@ -1378,12 +1370,15 @@ module BndModule
     !
     ! -- verify dimensions were set
     if(this%maxbound <= 0) then
-      write(errmsg, '(1x,a)') &
-        'ERROR.  MAXBOUND MUST BE AN INTEGER GREATER THAN ZERO.'
+      write(errmsg, '(a)') 'MAXBOUND MUST BE AN INTEGER GREATER THAN ZERO.'
       call store_error(errmsg)
+    end if
+    !
+    ! -- terminate if there are errors
+    if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
       call ustop()
-    endif
+    end if
     !
     ! -- Call define_listlabel to construct the list label that is written
     !    when PRINT_INPUT option is used.
