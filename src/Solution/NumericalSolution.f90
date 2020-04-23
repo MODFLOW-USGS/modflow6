@@ -466,7 +466,8 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_reallocate
     use SimVariablesModule, only: iout
-    use SimModule, only: ustop, store_error, count_errors, store_warning
+    use SimModule, only: ustop, store_error, count_errors,                       &
+                         deprecation_warning
     use InputOutputModule, only: getunit, openfile
     ! -- dummy
     class(NumericalSolutionType) :: this
@@ -574,11 +575,6 @@ contains
               'KEYWORD MUST BE FOLLOWED BY FILEOUT'
             call store_error(errmsg)
           end if
-        case ('CSV_OUTPUT')
-          write(errmsg,'(a,1x,a)')                                               &
-            'OPTIONAL CSV_OUTPUT HAS BEEN DEPRECATED USE CSV_OUTER_OUTPUT',      &
-            'AND/OR CSV_INNER_OUTPUT INSTEAD'
-          call store_error(errmsg)
         case ('NO_PTC')
           call this%parser%GetStringCaps(keyword)
           select case(keyword)
@@ -595,6 +591,29 @@ contains
           this%iallowptc = ival
           write(IOUT,'(1x,A)') 'PSEUDO-TRANSIENT CONTINUATION DISABLED FOR' // &
             ' ' // trim(adjustl(msg)) // ' STRESS-PERIOD(S)'
+        !
+        ! -- DEPRECATED OPTIONS
+        case ('CSV_OUTPUT')
+          call this%parser%GetStringCaps(keyword)
+          if (keyword == 'FILEOUT') then
+            call this%parser%GetString(fname)
+            this%icsvouterout = getunit()
+            call openfile(this%icsvouterout, iout, fname, 'CSV_OUTPUT',          &
+                          filstat_opt='REPLACE')
+            write(iout,fmtcsvout) trim(fname), this%icsvouterout
+            !
+            ! -- create warning message
+            write(warnmsg,'(a)')                                                 &
+              'OUTER ITERATION INFORMATION WILL BE SAVED TO ' // trim(fname)
+            !
+            ! -- create deprecation warning
+            call deprecation_warning('OPTIONS', 'CSV_OUTPUT', '6.1.2',            &
+                                     warnmsg, this%parser%GetUnit())
+          else
+            write(errmsg,'(a)') 'OPTIONAL CSV_OUTPUT ' //                        &
+              'KEYWORD MUST BE FOLLOWED BY FILEOUT'
+            call store_error(errmsg)
+          end if
         !
         ! -- right now these are options that are only available in the
         !    development version and are not included in the documentation.
@@ -697,18 +716,8 @@ contains
         call this%parser%GetStringCaps(keyword)
         ! -- parse keyword
         select case (keyword)
-        case ('OUTER_HCLOSE')
-          this%dvclose  = this%parser%GetDouble()
-          write(warnmsg,'(a)')                                                   &
-            'OUTER_HCLOSE SCHEDULED FOR DEPRECATION USE OUTER_DVCLOSE INSTEAD.'
-          call store_warning(warnmsg)
         case ('OUTER_DVCLOSE')
           this%dvclose  = this%parser%GetDouble()
-        case ('OUTER_RCLOSEBND')
-          write(errmsg,'(a,1x,a)')                                              &
-            'OUTER_RCLOSEBND HAS BEEN DEPRECATED BECAUSE OUTER_DVCLOSE IS',     &
-            'USED TO EVALUATE PACKAGE CONVERGENCE.'
-          call store_error(errmsg)
         case ('OUTER_MAXIMUM')
           this%mxiter  = this%parser%GetInteger()
         case ('UNDER_RELAXATION')
@@ -757,6 +766,27 @@ contains
           this%breduc = this%parser%GetDouble()
         case ('BACKTRACKING_RESIDUAL_LIMIT')
           this%res_lim = this%parser%GetDouble()
+        !
+        ! -- deprecated variables
+        case ('OUTER_HCLOSE')
+          this%dvclose  = this%parser%GetDouble()
+          !
+          ! -- create warning message
+          write(warnmsg,'(a)')                                                   &
+            'SETTING OUTER_DVCLOSE TO OUTER_HCLOSE VALUE'
+          !
+          ! -- create deprecation warning
+          call deprecation_warning('NONLINEAR', 'OUTER_HCLOSE', '6.1.2',         &
+                                   warnmsg, this%parser%GetUnit())
+        case ('OUTER_RCLOSEBND')
+          !
+          ! -- create warning message
+          write(warnmsg,'(a)')                                                   &
+            'OUTER_DVCLOSE IS USED TO EVALUATE PACKAGE CONVERGENCE'
+          !
+          ! -- create deprecation warning
+          call deprecation_warning('NONLINEAR', 'OUTER_RCLOSEBND', '6.1.2',      &
+                                   warnmsg, this%parser%GetUnit())
         case default
           write(errmsg,'(3a)')                                                   &
             'UNKNOWN IMS NONLINEAR KEYWORD (', trim(keyword), ').'

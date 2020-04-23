@@ -108,7 +108,7 @@
 !     ------------------------------------------------------------------
       use MemoryManagerModule, only: mem_allocate
       use SimModule, only: ustop, store_error, count_errors,            &
-                           store_warning
+                           deprecation_warning
       !IMPLICIT NONE
 !     + + + DUMMY VARIABLES + + +
       CLASS(IMSLINEAR_DATA), INTENT(INOUT) :: THIS
@@ -226,12 +226,6 @@
           call parser%GetStringCaps(keyword)
           ! -- parse keyword
           select case (keyword)
-            case ('INNER_HCLOSE')
-              this%DVCLOSE = parser%GetDouble()
-              write(warnmsg,'(a,1x,a)')                                          &
-                'INNER_HCLOSE SCHEDULED FOR DEPRECATION',                        &
-                'USE INNER_DVCLOSE INSTEAD.'
-              call store_warning(warnmsg)
             case ('INNER_DVCLOSE')
               this%DVCLOSE = parser%GetDouble()
             case ('INNER_RCLOSE')
@@ -319,6 +313,20 @@
                   'MUST BE GREATER THAN OR EQUAL TO ZERO'
                 call store_error(errmsg)
               end if
+            !
+            ! -- deprecated variables
+            case ('INNER_HCLOSE')
+              this%DVCLOSE = parser%GetDouble()
+              !
+              ! -- create warning message
+              write(warnmsg,'(a)')                                               &
+                'SETTING INNER_DVCLOSE TO INNER_HCLOSE VALUE'
+              !
+              ! -- create deprecation warning
+              call deprecation_warning('LINEAR', 'INNER_HCLOSE', '6.1.2',        &
+                                       warnmsg, parser%GetUnit())
+            !
+            ! -- default
             case default
                 write(errmsg,'(3a)')                                             &
                   'UNKNOWN IMSLINEAR KEYWORD (', trim(keyword), ').'

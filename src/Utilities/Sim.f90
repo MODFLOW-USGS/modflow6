@@ -20,6 +20,7 @@ module SimModule
   public :: converge_check
   public :: final_message
   public :: store_warning
+  public :: deprecation_warning
   public :: store_note
   public :: count_warnings
   public :: count_notes
@@ -119,6 +120,39 @@ subroutine store_error(errmsg)
   return
 end subroutine store_error
 
+subroutine get_filename(iunit, fname)
+! ******************************************************************************
+! Get filename from unit number
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+  ! -- modules
+  ! -- dummy
+  integer(I4B), intent(in) :: iunit
+  character(len=*), intent(inout) :: fname
+  ! -- local
+  integer(I4B) :: ipos
+  integer(I4B) :: ilen
+! ------------------------------------------------------------------------------
+  !
+  ! -- get file name from unit number
+  inquire(unit=iunit, name=fname)
+  !
+  ! -- extract filename from full path, if present
+  ipos = index(fname, '/', back=.TRUE.)
+  if (ipos < 1) then
+    ipos = index(fname, '\', back=.TRUE.)
+  end if
+  if (ipos > 0) then
+    ilen = len_trim(fname)
+    write(fname, '(a)') fname(ipos+1:ilen) // ' '
+  end if
+  !
+  ! -- return
+  return
+end subroutine get_filename
+
 subroutine store_error_unit(iunit)
 ! ******************************************************************************
 ! Convert iunit to file name and indicate error reading from this file
@@ -186,6 +220,47 @@ subroutine store_warning(warnmsg)
   ! -- return
   return
 end subroutine store_warning
+
+subroutine deprecation_warning(cblock, cvar, cver, warnmsg, iunit)
+! ******************************************************************************
+! Store a warning message for printing at end of simulation
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+  ! -- modules
+  use ArrayHandlersModule, only: ExpandArray
+  ! -- dummy
+  character(len=*), intent(in) :: cblock
+  character(len=*), intent(in) :: cvar
+  character(len=*), intent(in) :: cver
+  character(len=*), intent(in), optional :: warnmsg
+  integer(I4B), intent(in), optional :: iunit
+  ! -- local
+  character(len=MAXCHARLEN) :: message
+  character(len=LINELENGTH) :: fname
+! ------------------------------------------------------------------------------
+  !
+  ! -- build message
+  write(message,'(a)')                                                           &
+    trim(cblock) // " BLOCK VARIABLE '" // trim(cvar) // "'"
+  if (present(iunit)) then
+    call get_filename(iunit, fname)
+    write(message,'(a,1x,3a)')                                                   &
+      trim(message), "IN FILE '", trim(fname), "'"
+  end if 
+  write(message,'(a)')                                                           &
+    trim(message) // ' WAS DEPRECATED IN VERSION ' // trim(cver) // '.'
+  if (present(warnmsg)) then
+    write(message,'(a,1x,2a)') trim(message), trim(warnmsg), '.'
+  end if
+  !
+  ! -- store warning
+  call sim_warnings%store_message(message)
+  !
+  ! -- return
+  return
+end subroutine deprecation_warning
 
 subroutine store_note(note)
 ! ******************************************************************************
