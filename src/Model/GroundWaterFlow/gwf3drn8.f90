@@ -30,8 +30,9 @@ module DrnModule
       procedure :: bnd_cf => drn_cf
       procedure :: bnd_fc => drn_fc
       procedure :: bnd_fn => drn_fn
-      procedure :: define_listlabel
       procedure :: bnd_da => drn_da
+      procedure :: define_listlabel
+      procedure :: get_drain_elevations
       ! -- methods for observations
       procedure, public :: bnd_obs_supported => drn_obs_supported
       procedure, public :: bnd_df_obs => drn_df_obs
@@ -244,8 +245,14 @@ contains
     integer(I4B) :: i
     integer(I4B) :: node
     real(DP) :: bt
+    real(DP) :: drndepth
+    real(DP) :: drntop
+    real(DP) :: drnbot
     ! -- formats
-    character(len=*), parameter :: fmtdrnerr = &
+    character(len=*), parameter :: fmtddrnerr =                             &
+      "('SCALED-CONDUCTANCE DRN BOUNDARY (',i0,') BOTTOM ELEVATION " //     &
+      "(',f10.3,') IS LESS THAN CELL BOTTOM (',f10.3,')')"
+    character(len=*), parameter :: fmtdrnerr =                              &
       "('DRN BOUNDARY (',i0,') ELEVATION (',f10.3,') IS LESS THAN CELL " // &
       "BOTTOM (',f10.3,')')"
 ! ------------------------------------------------------------------------------
@@ -254,9 +261,18 @@ contains
     do i = 1, this%nbound
         node = this%nodelist(i)
         bt = this%dis%bot(node)
+        !
+        ! -- calculate the drainage depth and the top and bottom of
+        !    the conductance scaling elevations
+        call this%get_drain_elevations(i, drndepth, drntop, drnbot)
+        !
         ! -- accumulate errors
-        if (this%bound(1,i) < bt .and. this%icelltype(node) /= 0) then
-          write(errmsg, fmt=fmtdrnerr) i, this%bound(1,i), bt
+        if (drnbot < bt .and. this%icelltype(node) /= 0) then
+          if (drndepth /= DZERO) then
+            write(errmsg, fmt=fmtddrnerr) i, drnbot, bt
+          else
+            write(errmsg, fmt=fmtdrnerr) i, drnbot, bt
+          end if
           call store_error(errmsg)
         end if
     end do
@@ -286,13 +302,11 @@ contains
     ! -- local
     integer(I4B) :: i
     integer(I4B) :: node
-    real(DP) :: drnelev
     real(DP) :: cdrn
     real(DP) :: xnew
     real(DP) :: drndepth
-    real(DP) :: elev
-    real(DP) :: tp
-    real(DP) :: bt
+    real(DP) :: drntop
+    real(DP) :: drnbot
     real(DP) :: fact
     logical :: lrm
 ! ------------------------------------------------------------------------------
@@ -317,28 +331,22 @@ contains
       end if
       !
       ! -- set local variables for this drain
-      drnelev = this%bound(1,i)
       cdrn = this%bound(2,i)
       xnew = this%xnew(node)
       !
-      ! -- set the drainage depth
-      drndepth = DZERO
-      if (this%iauxddrncol > 0) then
-        drndepth = this%auxvar(this%iauxddrncol, i)
-      end if
+      ! -- calculate the drainage depth and the top and bottom of
+      !    the conductance scaling elevations
+      call this%get_drain_elevations(i, drndepth, drntop, drnbot)
       !
       ! -- calculate scaling factor
       if (drndepth /= DZERO) then
-        elev = drnelev + drndepth
-        tp = max(elev, drnelev)
-        bt = min(elev, drnelev)
         if (this%icubic_scaling /= 0) then
-          fact = sQSaturation(tp, bt, xnew, c1=-DONE, c2=DTWO)
+          fact = sQSaturation(drntop, drnbot, xnew, c1=-DONE, c2=DTWO)
         else
-          fact = sQuadraticSaturation(tp, bt, xnew, eps=DZERO)
+          fact = sQuadraticSaturation(drntop, drnbot, xnew, eps=DZERO)
         end if
       else
-        if (xnew <= drnelev) then
+        if (xnew <= drnbot) then
           fact = DZERO
         else
           fact = DONE
@@ -346,7 +354,7 @@ contains
       end if
       !
       ! -- calculate rhs and hcof
-      this%rhs(i) = -fact * cdrn * drnelev
+      this%rhs(i) = -fact * cdrn * drnbot
       this%hcof(i) = -fact * cdrn
     end do
     !
@@ -416,13 +424,11 @@ contains
     integer(I4B) :: i
     integer(I4B) :: node
     integer(I4B) :: ipos
-    real(DP) :: drnelev
     real(DP) :: cdrn
     real(DP) :: xnew
     real(DP) :: drndepth
-    real(DP) :: elev
-    real(DP) :: tp
-    real(DP) :: bt
+    real(DP) :: drntop
+    real(DP) :: drnbot
     real(DP) :: drterm
 ! --------------------------------------------------------------------------
 
@@ -438,23 +444,18 @@ contains
         end if
         !
         ! -- set local variables for this drain
-        drnelev = this%bound(1,i)
         cdrn = this%bound(2,i)
         xnew = this%xnew(node)
         !
-        ! -- set the drainage depth
-        drndepth = DZERO
-        if (this%iauxddrncol > 0) then
-          drndepth = this%auxvar(this%iauxddrncol, i)
-        end if
+        ! -- calculate the drainage depth and the top and bottom of
+        !    the conductance scaling elevations
+        call this%get_drain_elevations(i, drndepth, drntop, drnbot)
         !
         ! -- calculate scaling factor
         if (drndepth /= DZERO) then
-          elev = drnelev + drndepth
-          tp = max(elev, drnelev)
-          bt = min(elev, drnelev)
-          drterm = sQSaturationDerivative(tp, bt, xnew, c1=-DONE, c2=DTWO)
-          drterm = drterm * cdrn * (bt - xnew)
+          drterm = sQSaturationDerivative(drntop, drnbot, xnew,                  &
+                                          c1=-DONE, c2=DTWO)
+          drterm = drterm * cdrn * (drnbot - xnew)
           !
           ! -- fill amat and rhs with newton-raphson terms
           ipos = ia(node)
@@ -501,6 +502,49 @@ contains
     return
   end subroutine define_listlabel
 
+    
+  subroutine get_drain_elevations(this, i, drndepth, drntop, drnbot)
+! ******************************************************************************
+! get_drain_elevations -- Define drain depth and the top and bottom elevations
+!                         used to scale the drain conductance.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(DrnType), intent(inout) :: this
+    integer(I4B), intent(in) :: i
+    real(DP), intent(inout) :: drndepth
+    real(DP), intent(inout) :: drntop
+    real(DP), intent(inout) :: drnbot
+    ! -- local
+    real(DP) :: drnelev
+    real(DP) :: elev
+! ------------------------------------------------------------------------------
+    !
+    ! -- initialize dummy and local variables
+    drndepth = DZERO
+    drnelev = this%bound(1,i)
+    !
+    ! -- set the drain depth
+    if (this%iauxddrncol > 0) then
+      drndepth = this%auxvar(this%iauxddrncol, i)
+    end if
+    !
+    ! -- calculate the top and bottom drain elevations
+    if (drndepth /= DZERO) then
+      elev = drnelev + drndepth
+      drntop = max(elev, drnelev)
+      drnbot = min(elev, drnelev)
+    else
+      drntop = drnelev
+      drnbot = drnelev
+    end if
+    !
+    ! -- return
+    return
+  end subroutine get_drain_elevations
+  
   ! -- Procedures related to observations
 
   logical function drn_obs_supported(this)
