@@ -1,7 +1,7 @@
 module SimModule
   
   use KindModule,             only: DP, I4B
-  use CompilerVersion,        only: get_os
+  use DefinedMacros,          only: get_os
   use ConstantsModule,        only: MAXCHARLEN, LINELENGTH,                      &
                                     DONE,                                        &
                                     IUSTART, IULAST,                             &

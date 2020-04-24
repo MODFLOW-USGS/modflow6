@@ -1,7 +1,6 @@
       module CompilerVersion
         ! -- modules
         use KindModule, only: I4B
-        use ConstantsModule, only: OSUNDEF, OSLINUX, OSMAC, OSWIN
         implicit none
         private
         ! -- compiler version
@@ -13,7 +12,7 @@
         integer(I4B) :: imajor = 0
         integer(I4B) :: iminor = 0
         integer(I4B) :: imicro = 0
-        public :: get_compiler, get_compile_date, get_os
+        public :: get_compiler, get_compile_date
         contains
   
         subroutine get_compiler(txt)
@@ -70,46 +69,5 @@
           ! return
           return
         end subroutine get_compile_date
-
-        
-        function get_os() result(ios)
-          integer(I4B) :: ios
-          !
-          ! -- initialize ios
-          ios = OSUNDEF
-          !
-          ! -- set variables
-#ifdef __GFORTRAN__ 
-# ifdef __linux__
-          ios = OSLINUX
-# endif
-# ifdef __unix__
-          ios = OSUNIX
-# endif
-# ifdef __APPLE__
-          ios = OSMAC
-# endif
-# ifdef _WIN32
-          ios = OSWIN
-# endif
-#endif
-#ifdef __INTEL_COMPILER
-# ifdef __linux__
-          ios = OSLINUX
-# endif
-# ifdef __unix__
-          ios = OSUNIX
-# endif
-# ifdef __APPLE__
-          ios = OSMAC
-# endif
-# ifdef _WIN32
-          ios = OSWIN
-# endif
-#endif
-          !
-          ! return
-          return
-        end function get_os
         
       end module CompilerVersion
