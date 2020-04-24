@@ -1,10 +1,12 @@
 module SimModule
   
   use KindModule,             only: DP, I4B
+  use CompilerVersion,        only: get_os
   use ConstantsModule,        only: MAXCHARLEN, LINELENGTH,                      &
                                     DONE,                                        &
                                     IUSTART, IULAST,                             &
-                                    VSUMMARY, VALL, VDEBUG
+                                    VSUMMARY, VALL, VDEBUG,                      &
+                                    OSWIN, OSUNDEF
   use SimVariablesModule,     only: istdout, iout, isim_level, ireturnerr,       &
                                     iforcestop, iunext
   use GenericUtilitiesModule, only: sim_message, stop_with_error
@@ -135,17 +137,31 @@ subroutine get_filename(iunit, fname)
   character(len=*), intent(inout) :: fname
   ! -- local
   integer(I4B) :: ipos
+  integer(I4B) :: ios
   integer(I4B) :: ilen
 ! ------------------------------------------------------------------------------
   !
   ! -- get file name from unit number
   inquire(unit=iunit, name=fname)
   !
+  ! -- determine the operating system
+  ios = get_os()
+  !
   ! -- extract filename from full path, if present
-  ipos = index(fname, '/', back=.TRUE.)
-  if (ipos < 1) then
-    ipos = index(fname, '\', back=.TRUE.)
+  !    forward slash on linux, unix, and osx
+  if (ios /= OSWIN) then
+    ipos = index(fname, '/', back=.TRUE.)
   end if
+  !
+  ! -- check for backslash on windows or undefined os and 
+  !    forward slashes were not found
+  if (ios == OSWIN .or. ios == OSUNDEF) then
+    if (ipos < 1) then
+      ipos = index(fname, '\', back=.TRUE.)
+    end if
+  end if
+  !
+  ! -- exclude the path from the file name
   if (ipos > 0) then
     ilen = len_trim(fname)
     write(fname, '(a)') fname(ipos+1:ilen) // ' '
