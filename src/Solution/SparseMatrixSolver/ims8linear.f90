@@ -323,7 +323,7 @@
                 'SETTING INNER_DVCLOSE TO INNER_HCLOSE VALUE'
               !
               ! -- create deprecation warning
-              call deprecation_warning('LINEAR', 'INNER_HCLOSE', '6.1.2',        &
+              call deprecation_warning('LINEAR', 'INNER_HCLOSE', '6.1.1',        &
                                        warnmsg, parser%GetUnit())
             !
             ! -- default

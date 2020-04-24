@@ -122,7 +122,9 @@ end subroutine store_error
 
 subroutine get_filename(iunit, fname)
 ! ******************************************************************************
-! Get filename from unit number
+! Get filename from unit number. If the INQUIRE function returns the full
+! path (for example, the INTEL compiler) then the returned file name (fname)  
+! is limited to the filename without the path.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -209,7 +211,6 @@ subroutine store_warning(warnmsg)
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
   ! -- modules
-  use ArrayHandlersModule, only: ExpandArray
   ! -- dummy
   character(len=*), intent(in) :: warnmsg
 ! ------------------------------------------------------------------------------
@@ -221,9 +222,20 @@ subroutine store_warning(warnmsg)
   return
 end subroutine store_warning
 
-subroutine deprecation_warning(cblock, cvar, cver, warnmsg, iunit)
+subroutine deprecation_warning(cblock, cvar, cver, endmsg, iunit)
 ! ******************************************************************************
-! Store a warning message for printing at end of simulation
+! Store a warning message for deprecated variables and printing at the 
+! end of simulation
+!
+! -- Arguments are as follows:
+!       CBLOCK       : block name
+!       CVAR         : variable name
+!       CVER         : version when variable was deprecated  
+!       ENDMSG       : optional user defined message to append at the end of 
+!                      the deprecation warning
+!       IUNIT        : optional input file unit number with the deprecated 
+!                      variable
+!
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -234,7 +246,7 @@ subroutine deprecation_warning(cblock, cvar, cver, warnmsg, iunit)
   character(len=*), intent(in) :: cblock
   character(len=*), intent(in) :: cvar
   character(len=*), intent(in) :: cver
-  character(len=*), intent(in), optional :: warnmsg
+  character(len=*), intent(in), optional :: endmsg
   integer(I4B), intent(in), optional :: iunit
   ! -- local
   character(len=MAXCHARLEN) :: message
@@ -251,8 +263,8 @@ subroutine deprecation_warning(cblock, cvar, cver, warnmsg, iunit)
   end if 
   write(message,'(a)')                                                           &
     trim(message) // ' WAS DEPRECATED IN VERSION ' // trim(cver) // '.'
-  if (present(warnmsg)) then
-    write(message,'(a,1x,2a)') trim(message), trim(warnmsg), '.'
+  if (present(endmsg)) then
+    write(message,'(a,1x,2a)') trim(message), trim(endmsg), '.'
   end if
   !
   ! -- store warning

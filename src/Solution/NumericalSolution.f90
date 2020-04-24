@@ -607,7 +607,7 @@ contains
               'OUTER ITERATION INFORMATION WILL BE SAVED TO ' // trim(fname)
             !
             ! -- create deprecation warning
-            call deprecation_warning('OPTIONS', 'CSV_OUTPUT', '6.1.2',            &
+            call deprecation_warning('OPTIONS', 'CSV_OUTPUT', '6.1.1',            &
                                      warnmsg, this%parser%GetUnit())
           else
             write(errmsg,'(a)') 'OPTIONAL CSV_OUTPUT ' //                        &
@@ -776,7 +776,7 @@ contains
             'SETTING OUTER_DVCLOSE TO OUTER_HCLOSE VALUE'
           !
           ! -- create deprecation warning
-          call deprecation_warning('NONLINEAR', 'OUTER_HCLOSE', '6.1.2',         &
+          call deprecation_warning('NONLINEAR', 'OUTER_HCLOSE', '6.1.1',         &
                                    warnmsg, this%parser%GetUnit())
         case ('OUTER_RCLOSEBND')
           !
@@ -785,7 +785,7 @@ contains
             'OUTER_DVCLOSE IS USED TO EVALUATE PACKAGE CONVERGENCE'
           !
           ! -- create deprecation warning
-          call deprecation_warning('NONLINEAR', 'OUTER_RCLOSEBND', '6.1.2',      &
+          call deprecation_warning('NONLINEAR', 'OUTER_RCLOSEBND', '6.1.1',      &
                                    warnmsg, this%parser%GetUnit())
         case default
           write(errmsg,'(3a)')                                                   &
