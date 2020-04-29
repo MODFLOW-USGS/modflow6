@@ -20,9 +20,10 @@ module mf6bmi
   use bmif, only: BMI_SUCCESS, BMI_FAILURE
   use iso_c_binding, only: c_int, c_char, c_double, C_NULL_CHAR, c_loc, c_ptr
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: LENORIGIN, LENVARNAME, LENMODELNAME, MAXCHARLEN
+  use ConstantsModule, only: LENORIGIN, LENVARNAME, LENMODELNAME, MAXCHARLEN, LINELENGTH
   use SimVariablesModule, only: simstdout, istdout
   use InputOutputModule, only: getunit
+  use GenericUtilitiesModule, only: sim_message
   implicit none
   
   ! Define global constants  
@@ -370,16 +371,20 @@ module mf6bmi
     character(len=LENMODELNAME) :: model_name
     
     model_name = get_model_name(grid_id) 
-    bmi_status = get_grid_type_model(model_name, grid_type_f)
-    if (bmi_status == BMI_FAILURE) return
+    if (model_name == '') then      
+      bmi_status = BMI_FAILURE
+      return
+    end if
     
+    bmi_status = BMI_SUCCESS
+    call get_grid_type_model(model_name, grid_type_f) 
     grid_type(1:len(trim(grid_type_f))+1) = string_to_char_array(trim(grid_type_f), len(trim(grid_type_f)))
     
   end function get_grid_type
   
   ! internal helper function to return the grid type for a 
   ! named model as a fortran string following BMI convention
-  function get_grid_type_model(model_name, grid_type_f) result(bmi_status)
+  subroutine get_grid_type_model(model_name, grid_type_f)
     use ListsModule, only: basemodellist
     use NumericalModelModule, only: NumericalModelType, GetNumericalModelFromList
     character(len=LENMODELNAME) :: model_name
@@ -389,6 +394,7 @@ module mf6bmi
     integer :: i    
     class(NumericalModelType), pointer :: numericalModel
     
+    grid_type_f = "unknown"
     do i = 1,basemodellist%Count()
       numericalModel => GetNumericalModelFromList(basemodellist, i)
       if (numericalModel%name == model_name) then
@@ -400,14 +406,9 @@ module mf6bmi
       grid_type_f = "rectilinear"
     else if ((grid_type_f == "DISV") .or. (grid_type_f == "DISU")) then
       grid_type_f = "unstructured"
-    else
-      write(*,*) 'BMI error: cannot find grind type for model \"', model_name, '\"'
-      bmi_status = BMI_FAILURE
-      return
     end if
-    bmi_status = BMI_SUCCESS
     
-  end function get_grid_type_model
+  end subroutine get_grid_type_model
   
   !TODO_JH: Currently only works for rectilinear grids
   ! Get number of dimensions of the computational grid.
@@ -721,7 +722,7 @@ module mf6bmi
     is_match = .false.
      
     model_name = get_model_name(grid_id)
-    status = get_grid_type_model(model_name, grid_type_f) 
+    call get_grid_type_model(model_name, grid_type_f) 
     
     ! careful comparison:
     expected_type_f = char_array_to_string(expected_type, strlen(expected_type))
@@ -805,7 +806,8 @@ module mf6bmi
     ! local
     integer :: i
     class(BaseModelType), pointer :: baseModel    
-
+    character(len=LINELENGTH) :: error_msg
+    
     model_name = ''
     
     do i = 1,basemodellist%Count()
@@ -816,7 +818,9 @@ module mf6bmi
       end if
     end do
     
-    write(*,*) 'BMI error: no model for grid id \"', grid_id, '\"'
+    write(error_msg,'(a,i)') 'BMI error: no model for grid id ', grid_id
+    call sim_message(error_msg, iunit=istdout, skipbefore=1, skipafter=1)
+    
     
   end function get_model_name
   
