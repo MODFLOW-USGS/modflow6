@@ -259,7 +259,9 @@ def get_model(idx, dir):
                                           packagedata=lktpackagedata,
                                           lakeperioddata=lktperioddata,
                                           observations=lkt_obs,
-                                          pname='LAK-1',
+                                          flow_package_name = 'LAK-1',
+                                          flow_package_auxiliary_name='CONCENTRATION',
+                                          pname='LKT-1',
                                           auxiliary=['aux1', 'aux2'])
     # output control
     oc = flopy.mf6.ModflowGwtoc(gwt,

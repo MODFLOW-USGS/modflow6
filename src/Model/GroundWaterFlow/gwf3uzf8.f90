@@ -1010,6 +1010,7 @@ contains
     if (this%naux > 0) then
       do n = 1, this%maxbound
         do iaux = 1, this%naux
+          if (this%noupdateauxvar(iaux) /= 0) cycle
           ii = (n - 1) * this%naux + iaux
           this%auxvar(iaux, n) = this%lauxvar(ii)%value
         end do

@@ -164,11 +164,9 @@ def get_model(idx, dir):
               ]
 
     # note: for specifying sfr number, use fortran indexing!
-    #sfr_obs = {('sfr_obs.csv'): [('lakestage', 'stage', 1),
-    #                             ('lakevolume', 'volume', 1),
-    #                             ('lak1', 'lak', 1, 1),
-    #                             ('lak2', 'lak', 1, 2),
-    #                             ('lak3', 'lak', 1, 3)]}
+    fname = gwfname + '.sfr.obs.csv'
+    sfr_obs = {fname: [('sfrstage1', 'stage', 1),
+                       ('sfrgwf1', 'sfr', 1)]}
 
     sfr = flopy.mf6.modflow.ModflowGwfsfr(gwf, save_flows=True,
                                           print_input=True,
@@ -181,7 +179,7 @@ def get_model(idx, dir):
                                           pname='SFR-1',
                                           connectiondata=con_data,
                                           perioddata=p_data,
-                                          #observations=lak_obs,
+                                          observations=sfr_obs,
                                           #auxiliary=['CONCENTRATION',
                                           #           'DENSITY'],
                                           )

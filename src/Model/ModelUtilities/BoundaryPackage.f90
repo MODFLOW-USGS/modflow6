@@ -50,6 +50,7 @@ module BndModule
     integer(I4B), pointer :: ioffset     => null()                               !offset of this package in the model
     ! -- arrays
     integer(I4B), dimension(:), pointer, contiguous :: nodelist => null()        !vector of reduced node numbers
+    integer(I4B), dimension(:), pointer, contiguous :: noupdateauxvar => null()  !override auxvars from being updated
     real(DP), dimension(:,:), pointer, contiguous :: bound => null()             !array of package specific boundary numbers
     real(DP), dimension(:), pointer, contiguous :: hcof => null()                !diagonal contribution
     real(DP), dimension(:), pointer, contiguous :: rhs => null()                 !right-hand side contribution
@@ -850,6 +851,7 @@ module BndModule
     !
     ! -- deallocate arrays
     call mem_deallocate(this%nodelist)
+    call mem_deallocate(this%noupdateauxvar)
     call mem_deallocate(this%bound)
     call mem_deallocate(this%hcof)
     call mem_deallocate(this%rhs)
@@ -1016,6 +1018,11 @@ module BndModule
       call mem_allocate(this%nodelist, this%maxbound, 'NODELIST', this%origin)
       this%nodelist = 0
     endif
+    !
+    ! -- noupdateauxvar (allows an external caller to stop auxvars from being
+    !    recalculated
+    call mem_allocate(this%noupdateauxvar, this%naux, 'NOUPDATEAUXVAR', this%origin)
+    this%noupdateauxvar(:) = 0
     !
     ! -- Allocate the bound array
     call mem_allocate(this%bound, this%ncolbnd, this%maxbound, 'BOUND',        &

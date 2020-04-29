@@ -160,7 +160,7 @@ module GwtMwtModule
     !    the budget file reader, otherwise set a pointer to the flow package
     !    budobj
     if (this%fmi%flows_from_file) then
-      call this%fmi%set_aptbudobj_pointer(this%name, this%flowbudptr)
+      call this%fmi%set_aptbudobj_pointer(this%flowpackagename, this%flowbudptr)
       if (associated(this%flowbudptr)) found = .true.
       !
     else
@@ -169,8 +169,12 @@ module GwtMwtModule
         !    this transport package name
         do ip = 1, this%fmi%gwfbndlist%Count()
           packobj => GetBndFromList(this%fmi%gwfbndlist, ip)
-          if (packobj%name == this%name) then
+          if (packobj%name == this%flowpackagename) then
             found = .true.
+            !
+            ! -- store BndType pointer to packobj, and then
+            !    use the select type to point to the budobj in flow package
+            this%flowpackagebnd => packobj
             select type (packobj)
               type is (MawType)
                 this%flowbudptr => packobj%budobj
@@ -183,8 +187,8 @@ module GwtMwtModule
     !
     ! -- error if flow package not found
     if (.not. found) then
-      write(errmsg, '(a)') '****ERROR. CORRESPONDING FLOW PACKAGE NOT FOUND &
-                            &FOR' // ftype // '.'
+      write(errmsg, '(a)') 'COULD NOT FIND FLOW PACKAGE WITH NAME '&
+                            &// trim(adjustl(this%flowpackagename)) // '.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
       call ustop()

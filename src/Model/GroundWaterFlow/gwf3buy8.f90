@@ -1,6 +1,7 @@
 ! Buoyancy Package for representing variable-density groundwater flow
 ! The BUY Package does not work yet with the NPF XT3D option
 ! Need to add buoyancy terms to LAK, SFR, MAW, and maybe UZF
+! How to handle multiple species?
 
   
 module GwfBuyModule
@@ -274,7 +275,7 @@ module GwfBuyModule
     class(BndType), pointer :: packobj
     real(DP), intent(in), dimension(:) :: hnew
     ! -- local
-    integer(I4B) :: n, locdense, locelev
+    integer(I4B) :: n, locdense, locelev, locconc
 ! ------------------------------------------------------------------------------
     !
     ! -- Return if freshwater head formulation; all boundary heads must be
@@ -284,11 +285,14 @@ module GwfBuyModule
     ! -- Add buoyancy terms for head-dependent boundaries
     locdense = 0
     locelev = 0
+    locconc = 0
     do n = 1, packobj%naux
       if (packobj%auxname(n) == 'DENSITY') then
         locdense = n
       else if (packobj%auxname(n) == 'ELEVATION') then
         locelev = n
+      else if (packobj%auxname(n) == 'CONCENTRATION') then
+        locconc = n
       end if
     end do
     !
@@ -306,8 +310,13 @@ module GwfBuyModule
                         locdense, locelev, this%iform)
       case('DRN')
         !
-        ! drain
+        ! -- drain
         call buy_cf_drn(packobj, hnew, this%dense, this%denseref)
+      case('LAK')
+        !
+        ! -- lake
+        call buy_cf_lak(packobj, hnew, this%dense, this%elev, this%denseref, &
+                        this%drhodc, locdense, locconc, this%iform)
       case default
         !
         ! -- nothing
@@ -363,7 +372,7 @@ module GwfBuyModule
       hghb = packobj%bound(1, n)
       cond = packobj%bound(2, n)
       !
-      ! --calculate HCOF and RHS terms
+      ! -- calculate HCOF and RHS terms
       call calc_ghb_hcof_rhs_terms(denseref, denseghb, dense(node),            &
                                    elevghb, elev(node), hghb, hnew(node),      &
                                    cond, iform, rhsterm, hcofterm)      
@@ -544,6 +553,70 @@ module GwfBuyModule
     return
   end subroutine buy_cf_drn
   
+  subroutine buy_cf_lak(packobj, hnew, dense, elev, denseref, drhodc,          &
+                        locdense, locconc, iform)
+! ******************************************************************************
+! buy_cf_lak -- Pass density information into lak package; density terms are
+!   calculated in the lake package as part of lak_calculate_density_exchange
+!   method
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use BndModule, only: BndType
+    use LakModule, only: LakType
+    class(BndType), pointer :: packobj
+    ! -- dummy
+    real(DP), intent(in), dimension(:) :: hnew
+    real(DP), intent(in), dimension(:) :: dense
+    real(DP), intent(in), dimension(:) :: elev
+    real(DP), intent(in) :: denseref
+    real(DP), intent(in) :: drhodc
+    integer(I4B), intent(in) :: locdense
+    integer(I4B), intent(in) :: locconc
+    integer(I4B), intent(in) :: iform
+    ! -- local
+    integer(I4B) :: n
+    integer(I4B) :: node
+    real(DP) :: denselak
+    real(DP) :: conclak
+! ------------------------------------------------------------------------------
+    !
+    ! -- Insert the lake and gwf relative densities into col 1 and 2 and the
+    !    gwf elevation into col 3 of the lake package denseterms array
+    select type(packobj)
+    type is (LakType)
+      do n = 1, packobj%nbound
+        !
+        ! -- get gwf node number
+        node = packobj%nodelist(n)
+        if (packobj%ibound(node) <= 0) cycle
+        !
+        ! -- Determine lak density
+        denselak = denseref
+        if (locdense > 0) denselak = packobj%auxvar(locdense, n)
+        if (locconc > 0) then
+          conclak = packobj%auxvar(2, n)
+          denselak = calcdens(denseref, drhodc, conclak)
+        end if
+        !
+        ! -- fill lak relative density into column 1 of denseterms
+        packobj%denseterms(1, n) = denselak / denseref
+        !
+        ! -- fill gwf relative density into column 2 of denseterms
+        packobj%denseterms(2, n) = dense(node) / denseref
+        !
+        ! -- fill gwf elevation into column 3 of denseterms
+        packobj%denseterms(3, n) = elev(node)
+        !
+      end do
+    end select
+    !
+    ! -- Return
+    return
+  end subroutine buy_cf_lak
+                        
   subroutine buy_fc(this, kiter, njasln, amat, idxglo, rhs, hnew)
 ! ******************************************************************************
 ! buy_fc -- Fill coefficients

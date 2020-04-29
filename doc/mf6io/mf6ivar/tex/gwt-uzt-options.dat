@@ -1,5 +1,7 @@
 BEGIN OPTIONS
+  [FLOW_PACKAGE_NAME <flow_package_name>]
   [AUXILIARY <auxiliary(naux)>]
+  [FLOW_PACKAGE_AUXILIARY_NAME <flow_package_auxiliary_name>]
   [BOUNDNAMES]
   [PRINT_INPUT]
   [PRINT_CONCENTRATION]
