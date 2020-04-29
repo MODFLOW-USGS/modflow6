@@ -121,8 +121,8 @@ def get_model(idx, dir):
                                       dense=dense)
 
     nlakeconn = 11  # note: number of connections for this lake
-    # pak_data = [lakeno, strt, nlakeconn, CONC, dense, boundname]
-    pak_data = [(0, 2.25, nlakeconn, 0., lake_dense)]
+    # pak_data = [lakeno, strt, nlakeconn, dense, boundname]
+    pak_data = [(0, 2.25, nlakeconn, lake_dense)]
 
     connlen = delr / 2.
     connwidth = delc
@@ -174,8 +174,7 @@ def get_model(idx, dir):
                                           connectiondata=con_data,
                                           perioddata=p_data,
                                           observations=lak_obs,
-                                          auxiliary=['CONCENTRATION',
-                                                     'DENSITY'])
+                                          auxiliary=['DENSITY'])
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(gwf,
