@@ -16,9 +16,6 @@ matrix:
   - env: FC=gfortran-7
   - env: FC=gfortran-8
   - env: FC=gfortran-9
-env:
-  global:
-  - PYTHONPATH="$HOME/anaconda/bin"
 before_install: ./travis/before_install.sh
 install: ./travis/install.sh
 before_script: ./travis/before_script.sh
