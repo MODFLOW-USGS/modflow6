@@ -472,6 +472,7 @@ module GwfModule
                                 this%xold, this%flowja)
       ! -- Read and allocate package
       call packobj%bnd_ar()
+      if (this%inbuy > 0) call this%buy%buy_ar_bnd(packobj, this%x)
     enddo
     !
     ! -- return

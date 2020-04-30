@@ -257,6 +257,7 @@ module LakModule
     procedure, private :: lak_linear_interpolation
     procedure, private :: lak_setup_budobj
     procedure, private :: lak_fill_budobj
+    procedure          :: lak_activate_density
     procedure, private :: lak_calculate_density_exchange
   end type LakType
 
@@ -362,7 +363,7 @@ contains
     this%pdmax = DEM1
     this%bditems = 11
     this%cbcauxitems = 1
-    this%idense = 1  ! todo: hardwired!
+    this%idense = 0
     !
     ! -- return
     return
@@ -422,15 +423,16 @@ contains
     !
     ! -- allocate qleak and qsto
     call mem_allocate(this%qleak, this%maxbound, 'QLEAK', this%origin)
-    call mem_allocate(this%denseterms, 3, this%MAXBOUND, 'DENSETERMS', this%origin)
     do i = 1, this%maxbound
       this%qleak(i) = DZERO
-      this%denseterms(:, i) = DZERO
     end do
     call mem_allocate(this%qsto, this%nlakes, 'QSTO', this%origin)
     do i = 1, this%nlakes
       this%qsto(i) = DZERO
     end do
+    !
+    ! -- allocate denseterms to size 0
+    call mem_allocate(this%denseterms, 3, 0, 'DENSETERMS', this%origin)
     !
     ! -- return
     return
@@ -6269,6 +6271,30 @@ contains
     ! -- return
     return
   end subroutine lak_fill_budobj
+  
+  subroutine lak_activate_density(this)
+! ******************************************************************************
+! lak_activate_density -- Activate addition of density terms
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(LakType),intent(inout) :: this
+    ! -- local
+    ! -- formats
+! ------------------------------------------------------------------------------
+    !
+    ! -- Set idense and reallocate denseterms to be of size MZXBOUND
+    this%idense = 1
+    call mem_reallocate(this%denseterms, 3, this%MAXBOUND, 'DENSETERMS', &
+                        this%origin)
+    write(this%iout,'(/1x,a)') 'DENSITY TERMS HAVE BEEN ACTIVATED FOR LAKE &
+      &PACKAGE: ' // trim(adjustl(this%name))
+    !
+    ! -- return
+    return
+  end subroutine lak_activate_density
 
   subroutine lak_calculate_density_exchange(this, iconn, stage, head, cond,    &
                                             botl, flow, gwfhcof, gwfrhs)
@@ -6372,11 +6398,11 @@ contains
         ! -- Add contribution of second density term:
         !      cond * (havg - elevavg) * (densegwf - denselak) / denseref
         elevgwf = this%denseterms(3, iconn)
-        if (this%ictype(iconn) == 0) then
-          ! -- vertical connection
+        if (this%ictype(iconn) == 0 .or. this%ictype(iconn) == 3) then
+          ! -- vertical or embedded vertical connection
           elevlak = botl
-        else  ! TODO: embedded?
-          ! -- horizontal connection
+        else
+          ! -- horizontal or embedded horizontal connection
           elevlak = elevgwf
         end if
         elevavg = DHALF * (elevlak + elevgwf)

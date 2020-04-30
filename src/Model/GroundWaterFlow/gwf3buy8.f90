@@ -34,6 +34,7 @@ module GwfBuyModule
     integer(I4B), dimension(:), pointer, contiguous :: iauxpak => null()        ! aux col for component concentration
   contains    
     procedure :: buy_ar
+    procedure :: buy_ar_bnd
     procedure :: buy_rp
     procedure :: buy_cf
     procedure :: buy_cf_bnd
@@ -161,6 +162,42 @@ module GwfBuyModule
     return
   end subroutine buy_ar
 
+  subroutine buy_ar_bnd(this, packobj, hnew)
+! ******************************************************************************
+! buy_ar_bnd -- buoyancy ar_bnd routine to activate density in packages
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use BndModule, only: BndType
+    use LakModule, only: LakType
+    ! -- dummy
+    class(GwfBuyType) :: this
+    class(BndType), pointer :: packobj
+    real(DP), intent(in), dimension(:) :: hnew
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    ! -- Add density terms based on boundary package type
+    select case (packobj%filtyp)
+      case('LAK')
+        !
+        ! -- activate density for lake package
+        select type(packobj)
+        type is (LakType)
+          call packobj%lak_activate_density()
+        end select
+        
+      case default
+        !
+        ! -- nothing
+    end select
+    !
+    ! -- Return
+    return
+  end subroutine buy_ar_bnd
+  
   subroutine buy_rp(this)
 ! ******************************************************************************
 ! buy_rp -- Check for new buy period data
