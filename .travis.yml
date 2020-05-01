@@ -11,14 +11,12 @@ cache:
   - "$HOME/.local"
 matrix:
   include:
-  - env: FC=gfortran-4.9
-  - env: FC=gfortran-6
-  - env: FC=gfortran-7
-  - env: FC=gfortran-8
-  - env: FC=gfortran-9
+  - env: FC=gfortran-4.9 PYTHONPATH="$HOME/anaconda/bin" PATH="$PYTHONPATH:$PATH"
+  - env: FC=gfortran-6 PYTHONPATH="$HOME/anaconda/bin" PATH="$PYTHONPATH:$PATH"
+  - env: FC=gfortran-7 PYTHONPATH="$HOME/anaconda/bin" PATH="$PYTHONPATH:$PATH"
+  - env: FC=gfortran-8 PYTHONPATH="$HOME/anaconda/bin" PATH="$PYTHONPATH:$PATH"
+  - env: FC=gfortran-9 PYTHONPATH="$HOME/anaconda/bin" PATH="$PYTHONPATH:$PATH"
 before_install:
-  - PYTHONPATH="$HOME/anaconda/bin"
-  - PATH="$PYTHONPATH:$PATH"
   - ./travis/before_install.sh
 install:
   - ./travis/install.sh
