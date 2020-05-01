@@ -1,8 +1,6 @@
 #!/bin/bash
 set -e
 
-export BRANCH=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_BRANCH;
-  else echo $TRAVIS_PULL_REQUEST_BRANCH; fi)
 echo "TRAVIS_BRANCH=$TRAVIS_BRANCH, PR=$PR, BRANCH=$BRANCH"
 pwd
 git clone https://github.com/MODFLOW-USGS/modflow6-examples ../modflow6-examples

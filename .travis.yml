@@ -9,13 +9,18 @@ cache:
   directories:
   - "$HOME/.cache/pip"
   - "$HOME/.local"
-matrix:
-  include:
-  - env: FC=gfortran-4.9 PATH="$HOME/anaconda/bin:$PATH"
-  - env: FC=gfortran-6 PATH="$HOME/anaconda/bin:$PATH"
-  - env: FC=gfortran-7 PATH="$HOME/anaconda/bin:$PATH"
-  - env: FC=gfortran-8 PATH="$HOME/anaconda/bin:$PATH"
-  - env: FC=gfortran-9 PATH="$HOME/anaconda/bin:$PATH"
+env:
+  global:
+    - PATH="$HOME/anaconda/bin:$PATH"
+    - BRANCH=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_BRANCH;
+      else echo $TRAVIS_PULL_REQUEST_BRANCH; fi)
+  matrix:
+    include:
+    - env: FC=gfortran-4.9
+    - env: FC=gfortran-6
+    - env: FC=gfortran-7
+    - env: FC=gfortran-8
+    - env: FC=gfortran-9
 before_install:
   - ./travis/before_install.sh
 install:
