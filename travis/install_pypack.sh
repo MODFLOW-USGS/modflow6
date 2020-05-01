@@ -9,8 +9,8 @@ pip config --user set global.progress_bar off
 pip install https://github.com/modflowpy/flopy/zipball/develop
 #git clone https://github.com/modflowpy/pymake --depth 1 --branch=master ~/pymake
 #pip install --user -e ~/pymake
-pip install https://github.com/modflowpy/pymake/master
+pip install https://github.com/modflowpy/pymake/zipball/master
 #git clone https://github.com/mjr-deltares/modflow6-bmipy.git --depth 1 --branch=master ~/amipy
 #pip install --user -e ~/amipy
-pip install https://github.com/mjr-deltares/modflow6-bmipy/master
+pip install https://github.com/mjr-deltares/modflow6-bmipy/zipball/master
 
