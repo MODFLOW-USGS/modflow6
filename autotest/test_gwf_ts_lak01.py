@@ -45,7 +45,7 @@ delr = delc = [250.00, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0,
                1000.0, 1000.0, 1000.0, 1000.0, 250.00]
 top = 500.
 botm = [107., 97., 87., 77., 67.]
-idomain = np.ones(shape3d, dtype=np.int32)
+idomain = np.ones(shape3d, dtype=np.int)
 idomain[0, 6:11, 6:11] = 0
 idomain[1, 7:10, 7:10] = 0
 
@@ -68,17 +68,17 @@ chd_arr = np.linspace(160, 140, ncol)
 for k in range(nlay):
     for j in range(nrow):
         if j > 0 and j < nrow - 1:
-            for i in range(ncol):
-                chd_spd.append([(k, j, i), chd_arr[i]])
-        else:
             chd_spd.append([(k, j, 0), chd_arr[0]])
             chd_spd.append([(k, j, ncol - 1), chd_arr[-1]])
+        else:
+            for i in range(ncol):
+                chd_spd.append([(k, j, i), chd_arr[i]])
 
 # recharge data
 recharge = 0.116e-1
 
 # lake data
-packagedata = [(0, 109., 57)]
+packagedata = [(0, 110., 57)]
 outlets = [(0, 0, 0, 'SPECIFIED', -999, -999, -999, -999)]
 nlakes = len(packagedata)
 noutlets = len(outlets)
@@ -141,7 +141,7 @@ connectiondata = [
     (0, 55, (0, 9, 11), 'HORIZONTAL', 0.1, 0, 0, 500, 500),
     (0, 56, (0, 10, 11), 'HORIZONTAL', 0.1, 0, 0, 500, 500)]
 
-stage, evap, runoff, withdrawal, rate = 110., 0.0103, 0.002, 0.001, -0.001
+stage, evap, runoff, withdrawal, rate = 110., 0.0103, 2000., 1000., -1000.0
 lakeperioddata = [(0, 'status', 'active'),
                   (0, 'stage', stage),
                   (0, 'rainfall', recharge),
@@ -155,14 +155,14 @@ lakeperioddatats = [(0, 'status', 'active'),
                     (0, 'rainfall', 'rainfall'),
                     (0, 'evaporation', 'evap'),
                     (0, 'runoff', 'runoff'),
-                    (0, 'withdrawal', 'withdrawl'),
+                    (0, 'withdrawal', 'withdrawal'),
                     (0, 'rate', 'outlet')]
 
 ts_names = ['stage', 'rainfall', 'evap', 'runoff', 'withdrawal', 'rate']
-ts_methods = ['linear'] * len(ts_names)
+ts_methods = ['linearend'] * len(ts_names)
 
 ts_data = []
-ts_times = np.linspace(0., sim_time + pertime, num=pertime, dtype=np.float)
+ts_times = np.arange(0., sim_time + 2. * pertime, pertime, dtype=np.float)
 for t in ts_times:
     ts_data.append((t, stage, recharge, evap, runoff, withdrawal, rate))
 
@@ -181,9 +181,11 @@ def build_model(ws, name, timeseries=False):
                                rcloserecord=[0.01, 'strict'])
     gwf = flopy.mf6.ModflowGwf(sim, modelname=name, save_flows=True)
     dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
-                                  delr=delr, delc=delc, top=top, botm=botm)
+                                  delr=delr, delc=delc, top=top, botm=botm,
+                                  idomain=idomain)
     npf = flopy.mf6.ModflowGwfnpf(gwf, k=kh, icelltype=icelltype)
-    sto = flopy.mf6.ModflowGwfsto(gwf, sy=sy, ss=ss, transient={0: True},
+    sto = flopy.mf6.ModflowGwfsto(gwf, storagecoefficient=storage_coefficient,
+                                  sy=sy, ss=ss, transient={0: True},
                                   iconvert=iconvert)
     chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd)
     rch = flopy.mf6.ModflowGwfrcha(gwf, recharge=recharge)
