@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "TRAVIS_BRANCH=$TRAVIS_BRANCH, PR=$PR, BRANCH=$BRANCH"
+echo "TRAVIS_BRANCH=$TRAVIS_BRANCH, BRANCH=$BRANCH"
 pwd
 git clone https://github.com/MODFLOW-USGS/modflow6-examples ../modflow6-examples
 cd ../modflow6-examples
@@ -15,7 +15,8 @@ which python
 python --version
 python -c "import numpy as np; \
   print('numpy version {}'.format(np.__version__))"
-python -c "import flopy; flopypth = flopy.__path__[0]; print('flopy is installed in {}'.format(flopypth))"
+python -c "import flopy; flopypth = flopy.__path__[0]; \
+  print('flopy is installed in {}'.format(flopypth))"
 python -c "import flopy; dir(flopy.mf6)"
 cd ./autotest
 python update_flopy.py
