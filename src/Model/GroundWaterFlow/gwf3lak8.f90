@@ -87,7 +87,7 @@ module LakModule
     real(DP), dimension(:), pointer, contiguous  :: avail => null()
     real(DP), dimension(:), pointer, contiguous  :: lkgwsink => null()
     ! -- time series aware data
-    type (MemoryTSType), dimension(:), pointer, contiguous :: stage => null()
+    !type (MemoryTSType), dimension(:), pointer, contiguous :: stage => null()
     type (MemoryTSType), dimension(:), pointer, contiguous :: rainfall => null()
     type (MemoryTSType), dimension(:), pointer,                                 &
                          contiguous :: evaporation => null()
@@ -96,6 +96,7 @@ module LakModule
     type (MemoryTSType), dimension(:), pointer,                                 &
                          contiguous :: withdrawal => null()
     type (MemoryTSType), dimension(:), pointer, contiguous :: lauxvar => null()
+    real(DP), dimension(:), pointer, contiguous :: stage => null()
     !
     ! -- table data
     type (LakTabType), dimension(:), pointer, contiguous :: laketables => null()
@@ -1646,7 +1647,9 @@ contains
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: ustop, store_error, count_errors
-    use TimeSeriesManagerModule, only: read_single_value_or_time_series
+    use TimeSeriesLinkModule, only:  TimeSeriesLinkType
+    use TimeSeriesManagerModule, only: read_single_value_or_time_series,         &
+                                       read_value_or_time_series
     ! -- dummy
     class(LakType),intent(inout) :: this
     ! -- local
@@ -1674,7 +1677,10 @@ contains
     character (len=14) :: cbedcond
     character (len=10), dimension(0:3) :: ctype
     character (len=15) :: nodestr
-    !data
+    real(DP), pointer :: bndElem => null()
+    type(TimeSeriesLinkType), pointer :: tsLinkBnd => null()
+    type(TimeSeriesLinkType), pointer :: tsLinkAux => null()
+    ! -- data
     data ctype(0) /'VERTICAL  '/
     data ctype(1) /'HORIZONTAL'/
     data ctype(2) /'EMBEDDEDH '/
@@ -1688,14 +1694,17 @@ contains
       write(text,'(g15.7)') this%strt(n)
       endtim = DZERO
       jj = 1    ! For STAGE
-      call read_single_value_or_time_series(text, &
-                                            this%stage(n)%value, &
-                                            this%stage(n)%name, &
-                                            endtim,  &
-                                            this%name, 'BND', this%TsManager, &
-                                            this%iprpak, n, jj, 'STAGE', &
-                                            this%lakename(n), this%inunit)
-
+      !call read_single_value_or_time_series(text, &
+      !                                      this%stage(n)%value, &
+      !                                      this%stage(n)%name, &
+      !                                      endtim,  &
+      !                                      this%name, 'BND', this%TsManager, &
+      !                                      this%iprpak, n, jj, 'STAGE', &
+      !                                      this%lakename(n), this%inunit)
+      tsLinkBnd => NULL()
+      bndElem => this%stage(n)
+      call read_value_or_time_series(text, n, jj, bndElem, this%name, 'BND',     &
+                                     this%tsManager, this%iprpak, tsLinkBnd)
     end do
     !
     ! -- initialize status (iboundpak) of lakes to active
@@ -2990,7 +2999,9 @@ contains
 ! ------------------------------------------------------------------------------
     !use ConstantsModule, only: LINELENGTH, DTWO
     use TdisModule, only: kper, perlen, totimsav
-    use TimeSeriesManagerModule, only: read_single_value_or_time_series
+    use TimeSeriesLinkModule, only:  TimeSeriesLinkType
+    use TimeSeriesManagerModule, only: read_single_value_or_time_series,         &
+                                       read_value_or_time_series
     use InputOutputModule, only: urword
     use SimModule, only: ustop, store_error
     ! -- dummy
@@ -3014,6 +3025,9 @@ contains
     integer(I4B) :: iaux
     real(DP) :: rval
     real(DP) :: endtim
+    real(DP), pointer :: bndElem => null()
+    type(TimeSeriesLinkType), pointer :: tsLinkBnd => null()
+    type(TimeSeriesLinkType), pointer :: tsLinkAux => null()
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
@@ -3063,13 +3077,18 @@ contains
         call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
         text = line(istart:istop)
         jj = 1    ! For STAGE
-        call read_single_value_or_time_series(text, &
-                                              this%stage(itmp)%value, &
-                                              this%stage(itmp)%name, &
-                                              endtim,  &
-                                              this%name, 'BND', this%TsManager, &
-                                              this%iprpak, itmp, jj, 'STAGE', &
-                                              bndName, this%inunit)
+        !call read_single_value_or_time_series(text, &
+        !                                      this%stage(itmp)%value, &
+        !                                      this%stage(itmp)%name, &
+        !                                      endtim,  &
+        !                                      this%name, 'BND', this%TsManager, &
+        !                                      this%iprpak, itmp, jj, 'STAGE', &
+        !                                      bndName, this%inunit)
+        tsLinkBnd => NULL()
+        bndElem => this%stage(itmp)
+        call read_value_or_time_series(text, itmp, jj, bndElem, this%name,       &
+                                       'BND', this%tsManager, this%iprpak,       &
+                                       tsLinkBnd)
       case ('RAINFALL')
         ierr = this%lak_check_valid(itemno)
         if (ierr /= 0) goto 999
@@ -3656,7 +3675,8 @@ contains
       this%xoldpak(n) = this%xnewpak(n)
       this%stageiter(n) = this%xnewpak(n)
       if (this%iboundpak(n) < 0) then
-        this%xnewpak(n) = this%stage(n)%value
+        !this%xnewpak(n) = this%stage(n)%value
+        this%xnewpak(n) = this%stage(n)
       end if
       this%seep0(n) = DZERO
     end do
