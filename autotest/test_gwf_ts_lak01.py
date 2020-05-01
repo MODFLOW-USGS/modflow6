@@ -52,7 +52,7 @@ idomain[1, 7:10, 7:10] = 0
 # temporal discretization
 nper = 10
 sim_time = 5000.
-pertime = sim_time / nper
+pertime = sim_time / float(nper)
 period_data = []
 for n in range(nper):
     period_data.append((pertime, 10, 1.0))
@@ -162,7 +162,7 @@ ts_names = ['stage', 'rainfall', 'evap', 'runoff', 'withdrawal', 'rate']
 ts_methods = ['linear'] * len(ts_names)
 
 ts_data = []
-ts_times = np.linspace(0., sim_time + pertime, pertime)
+ts_times = np.linspace(0., sim_time + pertime, num=pertime, dtype=np.float)
 for t in ts_times:
     ts_data.append((t, stage, recharge, evap, runoff, withdrawal, rate))
 

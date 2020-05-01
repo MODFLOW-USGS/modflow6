@@ -88,15 +88,21 @@ module LakModule
     real(DP), dimension(:), pointer, contiguous  :: lkgwsink => null()
     ! -- time series aware data
     !type (MemoryTSType), dimension(:), pointer, contiguous :: stage => null()
-    type (MemoryTSType), dimension(:), pointer, contiguous :: rainfall => null()
-    type (MemoryTSType), dimension(:), pointer,                                 &
-                         contiguous :: evaporation => null()
-    type (MemoryTSType), dimension(:), pointer, contiguous :: runoff => null()
-    type (MemoryTSType), dimension(:), pointer, contiguous :: inflow => null()
-    type (MemoryTSType), dimension(:), pointer,                                 &
-                         contiguous :: withdrawal => null()
-    type (MemoryTSType), dimension(:), pointer, contiguous :: lauxvar => null()
+    !type (MemoryTSType), dimension(:), pointer, contiguous :: rainfall => null()
+    !type (MemoryTSType), dimension(:), pointer,                                 &
+    !                     contiguous :: evaporation => null()
+    !type (MemoryTSType), dimension(:), pointer, contiguous :: runoff => null()
+    !type (MemoryTSType), dimension(:), pointer, contiguous :: inflow => null()
+    !type (MemoryTSType), dimension(:), pointer,                                 &
+    !                     contiguous :: withdrawal => null()
+    !type (MemoryTSType), dimension(:), pointer, contiguous :: lauxvar => null()
     real(DP), dimension(:), pointer, contiguous :: stage => null()
+    real(DP), dimension(:), pointer, contiguous :: rainfall => null()
+    real(DP), dimension(:), pointer, contiguous :: evaporation => null()
+    real(DP), dimension(:), pointer, contiguous :: runoff => null()
+    real(DP), dimension(:), pointer, contiguous :: inflow => null()
+    real(DP), dimension(:), pointer, contiguous :: withdrawal => null()
+    real(DP), dimension(:), pointer, contiguous :: lauxvar => null()
     !
     ! -- table data
     type (LakTabType), dimension(:), pointer, contiguous :: laketables => null()
@@ -438,7 +444,9 @@ contains
     ! -- modules
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: ustop, store_error, count_errors, store_error_unit
-    use TimeSeriesManagerModule, only: read_single_value_or_time_series
+    use TimeSeriesLinkModule, only:  TimeSeriesLinkType
+    use TimeSeriesManagerModule, only: read_single_value_or_time_series,         &
+                                       read_value_or_time_series 
     ! -- dummy
     class(LakType),intent(inout) :: this
     ! -- local
@@ -456,6 +464,8 @@ contains
     integer(I4B) :: nlak
     integer(I4B) :: nconn
     integer(I4B), dimension(:), pointer, contiguous :: nboundchk
+    real(DP), pointer :: bndElem => null()
+    type(TimeSeriesLinkType), pointer :: tsLinkAux => null()
     ! -- format
     !
     ! -- code
@@ -614,14 +624,19 @@ contains
           text = caux(iaux)
           jj = 1 !iaux
           ii = (n-1) * this%naux + iaux
-          call read_single_value_or_time_series(text, &
-                                                this%lauxvar(ii)%value, &
-                                                this%lauxvar(ii)%name, &
-                                                DZERO,  &
-                                                this%Name, 'AUX', this%TsManager, &
-                                                this%iprpak, n, jj, &
-                                                this%auxname(iaux), &
-                                                bndName, this%parser%iuactive)
+          !call read_single_value_or_time_series(text, &
+          !                                      this%lauxvar(ii)%value, &
+          !                                      this%lauxvar(ii)%name, &
+          !                                      DZERO,  &
+          !                                      this%Name, 'AUX', this%TsManager, &
+          !                                      this%iprpak, n, jj, &
+          !                                      this%auxname(iaux), &
+          !                                      bndName, this%parser%iuactive)
+          tsLinkAux => NULL()
+          bndElem => this%lauxvar(ii)
+          call read_value_or_time_series(text, itmp, jj, bndElem, this%name,     &
+                                         'AUX', this%tsManager, this%iprpak,     &
+                                         tsLinkAux)
         end do
 
         nlak = nlak + 1
@@ -1679,7 +1694,6 @@ contains
     character (len=15) :: nodestr
     real(DP), pointer :: bndElem => null()
     type(TimeSeriesLinkType), pointer :: tsLinkBnd => null()
-    type(TimeSeriesLinkType), pointer :: tsLinkAux => null()
     ! -- data
     data ctype(0) /'VERTICAL  '/
     data ctype(1) /'HORIZONTAL'/
@@ -2459,7 +2473,8 @@ contains
     else
       call this%lak_calculate_sarea(ilak, stage, sa)
     end if
-    ra = this%rainfall(ilak)%value * sa !this%sareamax(ilak)
+    !ra = this%rainfall(ilak)%value * sa !this%sareamax(ilak)
+    ra = this%rainfall(ilak) * sa
     !
     ! -- return
     return
@@ -2479,7 +2494,8 @@ contains
     ! -- formats
 ! ------------------------------------------------------------------------------
     ! -- runoff
-    ro = this%runoff(ilak)%value
+    !ro = this%runoff(ilak)%value
+    ro = this%runoff(ilak)
     !
     ! -- return
     return
@@ -2499,7 +2515,8 @@ contains
     ! -- formats
 ! ------------------------------------------------------------------------------
     ! -- inflow to lake
-    qin = this%inflow(ilak)%value
+    !qin = this%inflow(ilak)%value
+    qin = this%inflow(ilak)
     !
     ! -- return
     return
@@ -2548,7 +2565,8 @@ contains
     ! -- formats
 ! ------------------------------------------------------------------------------
     ! -- withdrawals - limit to sum of inflows and available volume
-    wr = this%withdrawal(ilak)%value
+    !wr = this%withdrawal(ilak)%value
+    wr = this%withdrawal(ilak)
     if (wr > avail) then
       wr = -avail
     else
@@ -2582,7 +2600,8 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- evaporation - limit to sum of inflows and available volume
     call this%lak_calculate_sarea(ilak, stage, sa)
-    ev = sa * this%evaporation(ilak)%value
+    !ev = sa * this%evaporation(ilak)%value
+    ev = sa * this%evaporation(ilak)
     if (ev > avail) then
       ev = -avail
     else
@@ -3096,17 +3115,28 @@ contains
         call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
         text = line(istart:istop)
         jj = 1    ! For RAINFALL
-        call read_single_value_or_time_series(text, &
-                                              this%rainfall(itmp)%value, &
-                                              this%rainfall(itmp)%name, &
-                                              endtim,  &
-                                              this%name, 'BND', this%TsManager, &
-                                              this%iprpak, itmp, jj, 'RAINFALL', &
-                                              bndName, this%inunit)
-        if (this%rainfall(itmp)%value < DZERO) then
+        !call read_single_value_or_time_series(text, &
+        !                                      this%rainfall(itmp)%value, &
+        !                                      this%rainfall(itmp)%name, &
+        !                                      endtim,  &
+        !                                      this%name, 'BND', this%TsManager, &
+        !                                      this%iprpak, itmp, jj, 'RAINFALL', &
+        !                                      bndName, this%inunit)
+        !if (this%rainfall(itmp)%value < DZERO) then
+        !  write(errmsg, '(4x, a, i0, a, G0, a)') &
+        !    '****ERROR. LAKE ', itmp, ' WAS ASSIGNED A RAINFALL VALUE OF ', &
+        !    this%rainfall(itmp)%value, '. RAINFALL MUST BE POSITIVE.'
+        !  call store_error(errmsg)
+        !end if
+        tsLinkBnd => NULL()
+        bndElem => this%rainfall(itmp)
+        call read_value_or_time_series(text, itmp, jj, bndElem, this%name,       &
+                                       'BND', this%tsManager, this%iprpak,       &
+                                       tsLinkBnd)
+        if (this%rainfall(itmp) < DZERO) then
           write(errmsg, '(4x, a, i0, a, G0, a)') &
             '****ERROR. LAKE ', itmp, ' WAS ASSIGNED A RAINFALL VALUE OF ', &
-            this%rainfall(itmp)%value, '. RAINFALL MUST BE POSITIVE.'
+            this%rainfall(itmp), '. RAINFALL MUST BE POSITIVE.'
           call store_error(errmsg)
         end if
       case ('EVAPORATION')
@@ -3116,17 +3146,28 @@ contains
         call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
         text = line(istart:istop)
         jj = 1    ! For EVAPORATION
-        call read_single_value_or_time_series(text, &
-                                              this%evaporation(itmp)%value, &
-                                              this%evaporation(itmp)%name, &
-                                              endtim,  &
-                                              this%name, 'BND', this%TsManager, &
-                                              this%iprpak, itmp, jj, 'EVAPORATION', &
-                                              bndName, this%inunit)
-        if (this%evaporation(itmp)%value < DZERO) then
+        !call read_single_value_or_time_series(text, &
+        !                                      this%evaporation(itmp)%value, &
+        !                                      this%evaporation(itmp)%name, &
+        !                                      endtim,  &
+        !                                      this%name, 'BND', this%TsManager, &
+        !                                      this%iprpak, itmp, jj, 'EVAPORATION', &
+        !                                      bndName, this%inunit)
+        !if (this%evaporation(itmp)%value < DZERO) then
+        !  write(errmsg, '(4x, a, i0, a, G0, a)') &
+        !    '****ERROR. LAKE ', itmp, ' WAS ASSIGNED AN EVAPORATION VALUE OF ', &
+        !    this%evaporation(itmp)%value, '. EVAPORATION MUST BE POSITIVE.'
+        !  call store_error(errmsg)
+        !end if
+        tsLinkBnd => NULL()
+        bndElem => this%evaporation(itmp)
+        call read_value_or_time_series(text, itmp, jj, bndElem, this%name,       &
+                                       'BND', this%tsManager, this%iprpak,       &
+                                       tsLinkBnd)
+        if (this%evaporation(itmp) < DZERO) then
           write(errmsg, '(4x, a, i0, a, G0, a)') &
             '****ERROR. LAKE ', itmp, ' WAS ASSIGNED AN EVAPORATION VALUE OF ', &
-            this%evaporation(itmp)%value, '. EVAPORATION MUST BE POSITIVE.'
+            this%evaporation(itmp), '. EVAPORATION MUST BE POSITIVE.'
           call store_error(errmsg)
         end if
       case ('RUNOFF')
@@ -3136,17 +3177,28 @@ contains
         call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
         text = line(istart:istop)
         jj = 1    ! For RUNOFF
-        call read_single_value_or_time_series(text, &
-                                              this%runoff(itmp)%value, &
-                                              this%runoff(itmp)%name, &
-                                              endtim,  &
-                                              this%name, 'BND', this%TsManager, &
-                                              this%iprpak, itmp, jj, 'RUNOFF', &
-                                              bndName, this%inunit)
-        if (this%runoff(itmp)%value < DZERO) then
+        !call read_single_value_or_time_series(text, &
+        !                                      this%runoff(itmp)%value, &
+        !                                      this%runoff(itmp)%name, &
+        !                                      endtim,  &
+        !                                      this%name, 'BND', this%TsManager, &
+        !                                      this%iprpak, itmp, jj, 'RUNOFF', &
+        !                                      bndName, this%inunit)
+        !if (this%runoff(itmp)%value < DZERO) then
+        !  write(errmsg, '(4x, a, i0, a, G0, a)') &
+        !    '****ERROR. LAKE ', itmp, ' WAS ASSIGNED A RUNOFF VALUE OF ', &
+        !    this%runoff(itmp)%value, '. RUNOFF MUST BE POSITIVE.'
+        !  call store_error(errmsg)
+        !end if
+        tsLinkBnd => NULL()
+        bndElem => this%runoff(itmp)
+        call read_value_or_time_series(text, itmp, jj, bndElem, this%name,       &
+                                       'BND', this%tsManager, this%iprpak,       &
+                                       tsLinkBnd)
+        if (this%runoff(itmp) < DZERO) then
           write(errmsg, '(4x, a, i0, a, G0, a)') &
             '****ERROR. LAKE ', itmp, ' WAS ASSIGNED A RUNOFF VALUE OF ', &
-            this%runoff(itmp)%value, '. RUNOFF MUST BE POSITIVE.'
+            this%runoff(itmp), '. RUNOFF MUST BE POSITIVE.'
           call store_error(errmsg)
         end if
       case ('INFLOW')
@@ -3156,17 +3208,28 @@ contains
         call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
         text = line(istart:istop)
         jj = 1    ! For specified INFLOW
-        call read_single_value_or_time_series(text, &
-                                              this%inflow(itmp)%value, &
-                                              this%inflow(itmp)%name, &
-                                              endtim,  &
-                                              this%name, 'BND', this%TsManager, &
-                                              this%iprpak, itmp, jj, 'INFLOW', &
-                                              bndName, this%inunit)
-        if (this%inflow(itmp)%value < DZERO) then
+        !call read_single_value_or_time_series(text, &
+        !                                      this%inflow(itmp)%value, &
+        !                                      this%inflow(itmp)%name, &
+        !                                      endtim,  &
+        !                                      this%name, 'BND', this%TsManager, &
+        !                                      this%iprpak, itmp, jj, 'INFLOW', &
+        !                                      bndName, this%inunit)
+        !if (this%inflow(itmp)%value < DZERO) then
+        !  write(errmsg, '(4x, a, i0, a, G0, a)') &
+        !    '****ERROR. LAKE ', itmp, ' WAS ASSIGNED AN INFLOW VALUE OF ', &
+        !    this%inflow(itmp)%value, '. INFLOW MUST BE POSITIVE.'
+        !  call store_error(errmsg)
+        !end if
+        tsLinkBnd => NULL()
+        bndElem => this%inflow(itmp)
+        call read_value_or_time_series(text, itmp, jj, bndElem, this%name,       &
+                                       'BND', this%tsManager, this%iprpak,       &
+                                       tsLinkBnd)
+        if (this%inflow(itmp) < DZERO) then
           write(errmsg, '(4x, a, i0, a, G0, a)') &
             '****ERROR. LAKE ', itmp, ' WAS ASSIGNED AN INFLOW VALUE OF ', &
-            this%inflow(itmp)%value, '. INFLOW MUST BE POSITIVE.'
+            this%inflow(itmp), '. INFLOW MUST BE POSITIVE.'
           call store_error(errmsg)
         end if
       case ('WITHDRAWAL')
@@ -3176,17 +3239,28 @@ contains
         call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
         text = line(istart:istop)
         jj = 1    ! For specified WITHDRAWAL
-        call read_single_value_or_time_series(text, &
-                                              this%withdrawal(itmp)%value, &
-                                              this%withdrawal(itmp)%name, &
-                                              endtim,  &
-                                              this%name, 'BND', this%TsManager, &
-                                              this%iprpak, itmp, jj, 'WITHDRAWAL', &
-                                              bndName, this%inunit)
-        if (this%withdrawal(itmp)%value < DZERO) then
+        !call read_single_value_or_time_series(text, &
+        !                                      this%withdrawal(itmp)%value, &
+        !                                      this%withdrawal(itmp)%name, &
+        !                                      endtim,  &
+        !                                      this%name, 'BND', this%TsManager, &
+        !                                      this%iprpak, itmp, jj, 'WITHDRAWAL', &
+        !                                      bndName, this%inunit)
+        !if (this%withdrawal(itmp)%value < DZERO) then
+        !  write(errmsg, '(4x, a, i0, a, G0, a)') &
+        !    '****ERROR. LAKE ', itmp, ' WAS ASSIGNED A WITHDRAWAL VALUE OF ', &
+        !    this%withdrawal(itmp)%value, '. WITHDRAWAL MUST BE POSITIVE.'
+        !  call store_error(errmsg)
+        !end if
+        tsLinkBnd => NULL()
+        bndElem => this%withdrawal(itmp)
+        call read_value_or_time_series(text, itmp, jj, bndElem, this%name,       &
+                                       'BND', this%tsManager, this%iprpak,       &
+                                       tsLinkBnd)
+        if (this%withdrawal(itmp) < DZERO) then
           write(errmsg, '(4x, a, i0, a, G0, a)') &
             '****ERROR. LAKE ', itmp, ' WAS ASSIGNED A WITHDRAWAL VALUE OF ', &
-            this%withdrawal(itmp)%value, '. WITHDRAWAL MUST BE POSITIVE.'
+            this%withdrawal(itmp), '. WITHDRAWAL MUST BE POSITIVE.'
           call store_error(errmsg)
         end if
       case ('RATE')
@@ -3203,6 +3277,11 @@ contains
                                               this%name, 'BND', this%TsManager, &
                                               this%iprpak, itmp, jj, 'OUTRATE', &
                                               bndName, this%inunit)
+        !tsLinkBnd => NULL()
+        !bndElem => this%outrate(itmp)
+        !call read_value_or_time_series(text, itmp, jj, bndElem, this%name,       &
+        !                               'BND', this%tsManager, this%iprpak,       &
+        !                               tsLinkBnd)
       case ('INVERT')
         ierr = this%lak_check_valid(-itemno)
         if (ierr /= 0) goto 999
@@ -3271,14 +3350,19 @@ contains
           text = line(istart:istop)
           jj = 1 !iaux
           ii = (itmp-1) * this%naux + iaux
-          call read_single_value_or_time_series(text, &
-                                                this%lauxvar(ii)%value, &
-                                                this%lauxvar(ii)%name, &
-                                                endtim,  &
-                                                this%Name, 'AUX', this%TsManager, &
-                                                this%iprpak, itmp, jj, &
-                                                this%auxname(iaux), bndName, &
-                                                this%inunit)
+          !call read_single_value_or_time_series(text, &
+          !                                      this%lauxvar(ii)%value, &
+          !                                      this%lauxvar(ii)%name, &
+          !                                      endtim,  &
+          !                                      this%Name, 'AUX', this%TsManager, &
+          !                                      this%iprpak, itmp, jj, &
+          !                                      this%auxname(iaux), bndName, &
+          !                                      this%inunit)
+          tsLinkAux => NULL()
+          bndElem => this%lauxvar(ii)
+          call read_value_or_time_series(text, itmp, jj, bndElem, this%name,     &
+                                         'AUX', this%tsManager, this%iprpak,     &
+                                         tsLinkAux)
           exit
         end do
       case default
@@ -3663,7 +3747,8 @@ contains
         do j = this%idxlakeconn(n), this%idxlakeconn(n + 1) - 1
           do iaux = 1, this%naux
             ii = (n - 1) * this%naux + iaux
-            this%auxvar(iaux, j) = this%lauxvar(ii)%value
+            !this%auxvar(iaux, j) = this%lauxvar(ii)%value
+            this%auxvar(iaux, j) = this%lauxvar(ii)
           end do
         end do
       end do
@@ -4217,11 +4302,13 @@ contains
         call this%lak_accumulate_chterm(n, rrate, chratin, chratout)
         !
         ! -- runoff
-        rrate = this%runoff(n)%value
+        !rrate = this%runoff(n)%value
+        rrate = this%runoff(n)
         call this%lak_accumulate_chterm(n, rrate, chratin, chratout)
         !
         ! -- inflow
-        rrate = this%inflow(n)%value
+        !rrate = this%inflow(n)%value
+        rrate = this%inflow(n)
         call this%lak_accumulate_chterm(n, rrate, chratin, chratout)
         !
         ! -- withdrawals
@@ -4838,7 +4925,8 @@ contains
               end if
             case ('RUNOFF')
               if (this%iboundpak(jj) /= 0) then
-                v = this%runoff(jj)%value
+                !v = this%runoff(jj)%value
+                v = this%runoff(jj)
               end if
             case ('LAK')
               n = this%imap(jj)
@@ -6141,7 +6229,8 @@ contains
     idx = idx + 1
     call this%budobj%budterm(idx)%reset(this%nlakes)
     do n = 1, this%nlakes
-      q = this%runoff(n)%value
+      !q = this%runoff(n)%value
+      q = this%runoff(n)
       call this%budobj%budterm(idx)%update_term(n, n, q)
     end do
 
@@ -6150,7 +6239,8 @@ contains
     idx = idx + 1
     call this%budobj%budterm(idx)%reset(this%nlakes)
     do n = 1, this%nlakes
-      q = this%inflow(n)%value
+      !q = this%inflow(n)%value
+      q = this%inflow(n)
       call this%budobj%budterm(idx)%update_term(n, n, q)
     end do
     
@@ -6233,7 +6323,8 @@ contains
         q = DZERO
         do i = 1, naux
           ii = (n - 1) * naux + i
-          auxvartmp(i) = this%lauxvar(ii)%value
+          !auxvartmp(i) = this%lauxvar(ii)%value
+          auxvartmp(i) = this%lauxvar(ii)
         end do
         call this%budobj%budterm(idx)%update_term(n, n, q, auxvartmp)
       end do

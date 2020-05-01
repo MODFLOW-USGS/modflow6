@@ -824,7 +824,6 @@ module GwfStoModule
     logical :: isconv
     character(len=24), dimension(4) :: aname
     integer(I4B) :: n
-    real(DP) :: thick
     ! -- formats
     !data
     data aname(1) /'                ICONVERT'/
@@ -955,7 +954,7 @@ module GwfStoModule
   ! -- converts the primary storage into sc1*area
   subroutine convert_sc1(this)
     class(GwfStotype) :: this
-    ! local
+    ! -- local
     integer(I4B) :: n
     real(DP) :: thick
     
@@ -974,7 +973,7 @@ module GwfStoModule
   ! -- converts the secondary storage into sc2*area
   subroutine convert_sc2(this)
     class(GwfStotype) :: this
-    ! local
+    ! -- local
     integer(I4B) :: n
     
     do n=1, this%dis%nodes
