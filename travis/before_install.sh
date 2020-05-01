@@ -1,7 +1,6 @@
 #!/bin/bash
 set -e
 
-echo "PYTHONPATH ${PYTHONPATH}"
 sudo apt-add-repository -y ppa:ubuntu-toolchain-r/test
 sudo apt-get update -y
 sudo apt-get install -y $FC

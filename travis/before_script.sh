@@ -1,7 +1,6 @@
 #!/bin/bash
 set -e
 
-echo "PYTHONPATH ${PYTHONPATH}"
 export BRANCH=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_BRANCH;
   else echo $TRAVIS_PULL_REQUEST_BRANCH; fi)
 echo "TRAVIS_BRANCH=$TRAVIS_BRANCH, PR=$PR, BRANCH=$BRANCH"

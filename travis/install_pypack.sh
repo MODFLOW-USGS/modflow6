@@ -1,7 +1,6 @@
 #!/bin/bash
 set -e
 
-echo "PYTHONPATH ${PYTHONPATH}"
 python --version
 pip --version
 pip config --user set global.progress_bar off
