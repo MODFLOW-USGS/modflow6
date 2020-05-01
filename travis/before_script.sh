@@ -17,8 +17,7 @@ which python
 python --version
 python -c "import numpy as np; \
   print('numpy version {}'.format(np.__version__))"
-python -c "import flopy; flopypth = flopy.__path__[0]; print('flopy is \
-  installed in {}'.format(flopypth))"
+python -c "import flopy; flopypth = flopy.__path__[0]; print('flopy is installed in {}'.format(flopypth))"
 python -c "import flopy; dir(flopy.mf6)"
 cd ./autotest
 python update_flopy.py
