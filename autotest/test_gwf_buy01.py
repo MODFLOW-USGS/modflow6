@@ -98,7 +98,8 @@ def get_model(idx, dir):
                                   icelltype=1, k=Kh)
 
     d = dense[idx]
-    buy = flopy.mf6.ModflowGwfbuy(gwf,
+    pd = [(0, 0.7, 0., 'none', 'none')]
+    buy = flopy.mf6.ModflowGwfbuy(gwf, nrhospecies=1, packagedata=pd,
                                   denseref=1000., drhodc=0.7,
                                   dense=d)
 

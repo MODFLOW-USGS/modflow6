@@ -6,11 +6,12 @@
   
 module GwfBuyModule
   
-  use KindModule,                 only: DP, I4B
-  use ConstantsModule,            only: DHALF, DZERO, DONE
-  use NumericalPackageModule,     only: NumericalPackageType
-  use BaseDisModule,              only: DisBaseType
-  use GwfNpfModule,               only: GwfNpfType
+  use KindModule,             only: DP, I4B
+  use ConstantsModule,        only: DHALF, DZERO, DONE, LENMODELNAME,          &
+                                        LENAUXNAME
+  use NumericalPackageModule, only: NumericalPackageType
+  use BaseDisModule,          only: DisBaseType
+  use GwfNpfModule,           only: GwfNpfType
   
   implicit none
 
@@ -25,14 +26,22 @@ module GwfBuyModule
     integer(I4B), pointer                       :: ireaddense => null()         ! if 1 then dense has been read from input file
     integer(I4B), pointer                       :: iconcset   => null()         ! if 1 then conc is pointed to a gwt model%x
     real(DP), pointer                           :: denseref   => null()         ! reference fluid density
-    real(DP), pointer                           :: drhodc     => null()         ! change in density with change in concentration
+    real(DP), pointer                           :: drhodc      => null()        ! change in density with change in concentration
     real(DP), dimension(:), pointer, contiguous :: dense      => null()         ! density
     real(DP), dimension(:), pointer, contiguous :: elev       => null()         ! cell center elevation (optional; if not specified, hten use (top+bot)/2)
     integer(I4B), dimension(:), pointer         :: ibound     => null()         ! store pointer to ibound
     real(DP), dimension(:), pointer             :: conc       => null()         ! pointer to concentration array
     integer(I4B), dimension(:), pointer         :: icbund     => null()         ! store pointer to gwt ibound array
     integer(I4B), dimension(:), pointer, contiguous :: iauxpak => null()        ! aux col for component concentration
+    
+    integer(I4B), pointer                       :: nrhospecies => null()        ! number of species used in equation of state to calculate density
+    real(DP), dimension(:), pointer, contiguous :: ddrhodc      => null()       ! change in density with change in concentration
+    real(DP), dimension(:), pointer, contiguous :: crhoref     => null()        ! reference concentration used in equation of state
+    character(len=LENMODELNAME), dimension(:), allocatable :: cmodelname        ! names of gwt models used in equation of state
+    character(len=LENAUXNAME), dimension(:), allocatable :: cauxspeciesname     ! names of gwt models used in equation of state
+    
   contains    
+    procedure :: buy_df
     procedure :: buy_ar
     procedure :: buy_ar_bnd
     procedure :: buy_rp
@@ -41,6 +50,8 @@ module GwfBuyModule
     procedure :: buy_fc
     procedure :: buy_flowja
     procedure :: buy_da
+    procedure, private :: read_dimensions
+    procedure, private :: read_packagedata
     procedure, private :: calcbuy
     procedure, private :: calchhterms
     procedure, private :: buy_calcdens
@@ -111,9 +122,9 @@ module GwfBuyModule
     return
   end subroutine buy_cr
 
-  subroutine buy_ar(this, dis, npf, ibound)
+  subroutine buy_df(this, dis)
 ! ******************************************************************************
-! buy_ar -- Allocate and Read
+! buy_df -- Allocate and Read
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -124,8 +135,6 @@ module GwfBuyModule
     ! -- dummy
     class(GwfBuyType) :: this
     class(DisBaseType), pointer, intent(in) :: dis
-    type(GwfNpfType), pointer, intent(in) :: npf
-    integer(I4B), dimension(:), pointer     :: ibound
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtbuy =                                    &
@@ -137,7 +146,43 @@ module GwfBuyModule
     write(this%iout, fmtbuy) this%inunit
     !
     ! -- store pointers to arguments that were passed in
-    this%dis     => dis
+    this%dis => dis
+    !
+    ! -- Read buoyancy options
+    call this%read_options()
+    !
+    ! -- Read buoyancy dimensions
+    call this%read_dimensions()
+    !
+    ! -- Allocate arrays
+    call this%allocate_arrays(dis%nodes)
+    !
+    ! -- Read buoyancy packagedata
+    call this%read_packagedata()
+    !
+    ! -- Return
+    return
+  end subroutine buy_df
+
+  subroutine buy_ar(this, npf, ibound)
+! ******************************************************************************
+! buy_ar -- Allocate and Read
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use MemoryManagerModule, only: mem_setptr
+    use SimModule, only: store_error, ustop
+    ! -- dummy
+    class(GwfBuyType) :: this
+    type(GwfNpfType), pointer, intent(in) :: npf
+    integer(I4B), dimension(:), pointer :: ibound
+    ! -- local
+    ! -- formats
+! ------------------------------------------------------------------------------
+    !
+    ! -- store pointers to arguments that were passed in
     this%npf     => npf
     this%ibound  => ibound
     !
@@ -148,12 +193,6 @@ module GwfBuyModule
       call this%parser%StoreErrorUnit()
       call ustop()
     endif
-    !
-    ! -- Allocate arrays
-    call this%allocate_arrays(dis%nodes)
-    !
-    ! -- Read storage options
-    call this%read_options()
     !
     ! -- Calculate cell elevations
     call this%buy_calcelev()
@@ -759,6 +798,10 @@ module GwfBuyModule
     if(this%inunit > 0) then
       call mem_deallocate(this%elev)
       call mem_deallocate(this%dense)
+      call mem_deallocate(this%ddrhodc)
+      call mem_deallocate(this%crhoref)
+      deallocate(this%cmodelname)
+      deallocate(this%cauxspeciesname)
       this%conc => null()
       this%icbund => null()
     endif
@@ -770,6 +813,8 @@ module GwfBuyModule
     call mem_deallocate(this%iconcset)
     call mem_deallocate(this%denseref)
     call mem_deallocate(this%drhodc)
+    
+    call mem_deallocate(this%nrhospecies)
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
@@ -778,6 +823,101 @@ module GwfBuyModule
     return
   end subroutine buy_da
 
+  subroutine read_dimensions(this)
+! ******************************************************************************
+! read_dimensions -- Read the dimensions for this package
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule, only: LINELENGTH
+    use SimModule, only: ustop, store_error, count_errors, store_error_unit
+    ! -- dummy
+    class(GwfBuyType),intent(inout) :: this
+    ! -- local
+    character (len=LINELENGTH) :: errmsg, keyword
+    integer(I4B) :: ierr
+    logical :: isfound, endOfBlock
+    ! -- format
+! ------------------------------------------------------------------------------
+    !
+    ! -- get dimensions block
+    call this%parser%GetBlock('DIMENSIONS', isfound, ierr, &
+                              supportOpenClose=.true.)
+    !
+    ! -- parse dimensions block if detected
+    if (isfound) then
+      write(this%iout,'(/1x,a)')'PROCESSING BUY DIMENSIONS'
+      do
+        call this%parser%GetNextLine(endOfBlock)
+        if (endOfBlock) exit
+        call this%parser%GetStringCaps(keyword)
+        select case (keyword)
+          case ('NRHOSPECIES')
+            this%nrhospecies = this%parser%GetInteger()
+            write(this%iout,'(4x,a,i0)')'NRHOSPECIES = ', this%nrhospecies
+          case default
+            write(errmsg,'(4x,a,a)')                                           &
+              'UNKNOWN BUY DIMENSION: ', trim(keyword)
+            call store_error(errmsg)
+            call this%parser%StoreErrorUnit()
+            call ustop()
+        end select
+      end do
+      write(this%iout,'(1x,a)')'END OF BUY DIMENSIONS'
+    else
+      call store_error('ERROR.  REQUIRED DIMENSIONS BLOCK NOT FOUND.')
+      call this%parser%StoreErrorUnit()
+      call ustop()
+    end if
+    !
+    ! -- return
+    return
+  end subroutine read_dimensions
+
+  subroutine read_packagedata(this)
+! ******************************************************************************
+! read_packagedata -- Read PACKAGEDATA block
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use SimModule, only: store_error, store_error_unit, ustop
+    ! -- dummy
+    class(GwfBuyType) :: this
+    ! -- local
+    integer(I4B) :: ierr
+    integer(I4B) :: irhospec
+    logical :: isfound, endOfBlock
+    logical :: blockrequired
+! ------------------------------------------------------------------------------
+    !
+    ! -- get packagedata block
+    blockrequired = .true.
+    call this%parser%GetBlock('PACKAGEDATA', isfound, ierr,                    &
+                              blockRequired=blockRequired)
+    !
+    ! -- parse options block if detected
+    if (isfound) then
+      write(this%iout,'(1x,a)')'PROCESSING BUY PACKAGEDATA'
+      do
+        call this%parser%GetNextLine(endOfBlock)
+        if (endOfBlock) exit
+        irhospec = this%parser%GetInteger()
+        this%ddrhodc(irhospec) = this%parser%GetDouble()
+        this%crhoref(irhospec) = this%parser%GetDouble()
+        call this%parser%GetStringCaps(this%cmodelname(irhospec))
+        call this%parser%GetStringCaps(this%cauxspeciesname(irhospec))
+      end do
+      write(this%iout,'(1x,a)') 'END OF BUY PACKAGEDATA'
+    end if
+    !
+    ! -- return
+    return
+  end subroutine read_packagedata
+  
   subroutine calcbuy(this, n, m, icon, hn, hm, buy)
 ! ******************************************************************************
 ! calcbuy -- Calculate buyancy term for this connection
@@ -1051,6 +1191,9 @@ module GwfBuyModule
     call mem_allocate(this%iconcset, 'ICONCSET', this%origin)
     call mem_allocate(this%denseref, 'DENSEREF', this%origin)
     call mem_allocate(this%drhodc, 'DRHODC', this%origin)
+
+    call mem_allocate(this%nrhospecies, 'NRHOSPECIES', this%origin)
+    
     !
     ! -- Initialize
     this%ireadelev = 0
@@ -1058,6 +1201,9 @@ module GwfBuyModule
     this%ireaddense = 0
     this%denseref = 1000.d0
     this%drhodc = 0.7d0
+    
+    this%nrhospecies = 0
+    
     !
     ! -- Initialize default to LHS implementation of hydraulic head formulation
     this%iform = 2
@@ -1086,12 +1232,25 @@ module GwfBuyModule
     ! -- Allocate
     call mem_allocate(this%dense, nodes, 'DENSE', this%origin)
     call mem_allocate(this%elev, nodes, 'ELEV', this%origin)
+    call mem_allocate(this%ddrhodc, this%nrhospecies, 'DRHODC', this%origin)
+    call mem_allocate(this%crhoref, this%nrhospecies, 'CRHOREF', this%origin)
+    allocate(this%cmodelname(this%nrhospecies))
+    allocate(this%cauxspeciesname(this%nrhospecies))
     !
     ! -- Initialize
     do i = 1, nodes
       this%dense(i) = this%denseref
       this%elev(i) = DZERO
     enddo
+    !
+    ! -- Initialize nrhospecies arrays
+    do i = 1, this%nrhospecies
+      this%ddrhodc(i) = DZERO
+      this%crhoref(i) = DZERO
+      this%cmodelname(i) = ''
+      this%cauxspeciesname(i) = ''
+    end do
+    !
     ! -- Return
     return
   end subroutine allocate_arrays

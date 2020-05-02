@@ -330,6 +330,7 @@ module GwfModule
     ! -- Define packages and utility objects
     call this%dis%dis_df()
     call this%npf%npf_df(this%dis, this%xt3d, this%ingnc)
+    call this%buy%buy_df(this%dis)
     call this%oc%oc_df()
     call this%budget%budget_df(niunit, 'VOLUME', 'L**3')
     !
@@ -452,7 +453,7 @@ module GwfModule
     ! -- Allocate and read modules attached to model
     if(this%inic  > 0) call this%ic%ic_ar(this%x)
     if(this%innpf > 0) call this%npf%npf_ar(this%ic, this%ibound, this%x)
-    if(this%inbuy > 0) call this%buy%buy_ar(this%dis, this%npf, this%ibound)
+    if(this%inbuy > 0) call this%buy%buy_ar(this%npf, this%ibound)
     if(this%inhfb > 0) call this%hfb%hfb_ar(this%ibound, this%xt3d, this%dis)
     if(this%insto > 0) call this%sto%sto_ar(this%dis, this%ibound)
     if(this%incsub > 0) call this%csub%csub_ar(this%dis, this%ibound)

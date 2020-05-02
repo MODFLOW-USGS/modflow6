@@ -1,0 +1,5 @@
+BEGIN PACKAGEDATA
+  <irhospec> <ddrhodc> <crhoref> <modelname> <auxspeciesname>
+  <irhospec> <ddrhodc> <crhoref> <modelname> <auxspeciesname>
+  ...
+END PACKAGEDATA

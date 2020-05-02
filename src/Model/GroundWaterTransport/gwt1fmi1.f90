@@ -752,6 +752,7 @@ module GwtFmiModule
     !
     ! -- initialize
     iapt = 0
+    blockrequired = .true.
     !
     ! -- get options block
     call this%parser%GetBlock('PACKAGEDATA', isfound, ierr,                    &
