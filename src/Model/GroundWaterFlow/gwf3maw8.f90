@@ -1996,6 +1996,7 @@ contains
       do n = 1, this%nmawwells
         do j = 1, this%mawwells(n)%ngwfnodes
           do iaux = 1, this%naux
+            if (this%noupdateauxvar(iaux) /= 0) cycle
             this%auxvar(iaux, ibnd) = this%mawwells(n)%auxvar(iaux)%value
           end do
           ibnd = ibnd + 1

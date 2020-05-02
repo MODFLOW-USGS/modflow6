@@ -184,6 +184,10 @@ module LakModule
     ! -- laketable objects
     type(TableType), pointer :: pakcsvtab => null()
     !
+    ! -- density variables
+    integer(I4B), pointer :: idense
+    real(DP), dimension(:, :), pointer, contiguous  :: denseterms => null()
+    !
     ! -- type bound procedures
     contains
     procedure :: lak_allocate_scalars
@@ -253,6 +257,8 @@ module LakModule
     procedure, private :: lak_linear_interpolation
     procedure, private :: lak_setup_budobj
     procedure, private :: lak_fill_budobj
+    procedure          :: lak_activate_density
+    procedure, private :: lak_calculate_density_exchange
   end type LakType
 
 contains
@@ -336,6 +342,7 @@ contains
     call mem_allocate(this%check_attr, 'check_attr', this%origin)
     call mem_allocate(this%bditems, 'BDITEMS', this%origin)
     call mem_allocate(this%cbcauxitems, 'CBCAUXITEMS', this%origin)
+    call mem_allocate(this%idense, 'IDENSE', this%origin)
     !
     ! -- Set values
     this%iprhed = 0
@@ -356,6 +363,7 @@ contains
     this%pdmax = DEM1
     this%bditems = 11
     this%cbcauxitems = 1
+    this%idense = 0
     !
     ! -- return
     return
@@ -422,6 +430,9 @@ contains
     do i = 1, this%nlakes
       this%qsto(i) = DZERO
     end do
+    !
+    ! -- allocate denseterms to size 0
+    call mem_allocate(this%denseterms, 3, 0, 'DENSETERMS', this%origin)
     !
     ! -- return
     return
@@ -2301,14 +2312,13 @@ contains
     integer(I4B) :: igwfnode
     real(DP)  :: flow
     real(DP) :: hgwf
-    real(DP) :: cond
     ! -- formats
 ! ------------------------------------------------------------------------------
     totflow = DZERO
     do j = this%idxlakeconn(ilak), this%idxlakeconn(ilak+1)-1
       igwfnode = this%cellid(j)
       hgwf = this%xnew(igwfnode)
-      call this%lak_calculate_conn_exchange(ilak, j, stage, hgwf, flow, cond)
+      call this%lak_calculate_conn_exchange(ilak, j, stage, hgwf, flow)
       totflow = totflow + flow
     end do
     !
@@ -2317,7 +2327,8 @@ contains
   end subroutine lak_calculate_exchange
 
 
-  subroutine lak_calculate_conn_exchange(this, ilak, iconn, stage, head, flow, cond)
+  subroutine lak_calculate_conn_exchange(this, ilak, iconn, stage, head, flow, &
+                                         gwfhcof, gwfrhs)
 ! ******************************************************************************
 ! lak_calculate_conn_exchange -- Calculate the groundwater-lake flow at a
 !                                provided stage and groundwater head.
@@ -2332,19 +2343,56 @@ contains
     real(DP), intent(in) :: stage
     real(DP), intent(in) :: head
     real(DP), intent(inout) :: flow
-    real(DP), intent(inout) :: cond
+    real(DP), intent(inout), optional :: gwfhcof
+    real(DP), intent(inout), optional :: gwfrhs
     ! -- local
     real(DP) :: botl
+    real(DP) :: cond
     real(DP) :: ss
     real(DP) :: hh
+    real(DP) :: gwfhcof0
+    real(DP) :: gwfrhs0
     ! -- formats
 ! ------------------------------------------------------------------------------
     flow = DZERO
     call this%lak_calculate_conn_conductance(ilak, iconn, stage, head, cond)
     botl = this%belev(iconn)
-    ss = max(stage, botl)
-    hh = max(head, botl)
+    !
+    ! -- Set ss to stage or botl 
+    if (stage >= botl) then
+      ss = stage
+    else
+      ss = botl
+    end if
+    !
+    ! -- set hh to head or botl
+    if (head >= botl) then
+      hh = head
+    else
+      hh = botl
+    end if
+    !
+    ! -- calculate flow, positive into lake
     flow = cond * (hh - ss)
+    !
+    ! -- Calculate gwfhcof and gwfrhs
+    if (head >= botl) then
+      gwfhcof0 = -cond
+      gwfrhs0 = -cond * ss
+    else
+      gwfhcof0 = DZERO
+      gwfrhs0 = flow
+    endif
+    !
+    ! Add density contributions, if active
+    if (this%idense /= 0) then
+      call this%lak_calculate_density_exchange(iconn, stage, head, cond, botl, &
+                                               flow, gwfhcof0, gwfrhs0)
+    end if
+    !
+    ! -- If present update gwfhcof and gwfrhs
+    if (present(gwfhcof)) gwfhcof = gwfhcof0
+    if (present(gwfrhs)) gwfrhs = gwfrhs0
     !
     ! -- return
     return
@@ -2352,7 +2400,7 @@ contains
 
 
   subroutine lak_estimate_conn_exchange(this, iflag, ilak, iconn, idry, stage, &
-                                        head, flow, cond, source)
+                                        head, flow, source, gwfhcof, gwfrhs)
 ! ******************************************************************************
 ! lak_estimate_conn_exchange -- Calculate the groundwater-lake flow at a
 !                               provided stage and groundwater head.
@@ -2369,14 +2417,17 @@ contains
     real(DP), intent(in) :: stage
     real(DP), intent(in) :: head
     real(DP), intent(inout) :: flow
-    real(DP), intent(inout) :: cond
     real(DP), intent(inout) :: source
+    real(DP), intent(inout), optional :: gwfhcof
+    real(DP), intent(inout), optional :: gwfrhs
     ! -- local
+    real(DP) :: gwfhcof0, gwfrhs0
     ! -- formats
 ! ------------------------------------------------------------------------------
     flow = DZERO
     idry = 0
-    call this%lak_calculate_conn_exchange(ilak, iconn, stage, head, flow, cond)
+    call this%lak_calculate_conn_exchange(ilak, iconn, stage, head, flow, &
+                                          gwfhcof0, gwfrhs0)
     if (iflag == 1) then
       if (flow > DZERO) then
         source = source + flow
@@ -2390,6 +2441,10 @@ contains
         source = source + flow
       end if
     end if
+    !
+    ! -- Set gwfhcof and gwfrhs if present
+    if (present(gwfhcof)) gwfhcof = gwfhcof0
+    if (present(gwfrhs)) gwfrhs = gwfrhs0
     !
     ! -- return
     return
@@ -3593,25 +3648,21 @@ contains
       write(this%iout,fmtlsp) trim(this%filtyp)
     endif
     !
-    !write summary of lake stress period error messages
+    ! -- write summary of lake stress period error messages
     ierr = count_errors()
     if (ierr > 0) then
       call this%parser%StoreErrorUnit()
       call ustop()
     end if
     !
-    ! -- fill arrays
+    ! -- fill bound array with lake stage, conductance, and bottom elevation
     do n = 1, this%nlakes
       do j = this%idxlakeconn(n), this%idxlakeconn(n+1)-1
         node = this%cellid(j)
         this%nodelist(j) = node
-
         this%bound(1,j) = this%xnewpak(n)
-
         this%bound(2,j) = this%satcond(j)
-
         this%bound(3,j) = this%belev(j)
-
       end do
     end do
     !
@@ -3643,6 +3694,7 @@ contains
       do n = 1, this%nlakes
         do j = this%idxlakeconn(n), this%idxlakeconn(n + 1) - 1
           do iaux = 1, this%naux
+            if (this%noupdateauxvar(iaux) /= 0) cycle
             ii = (n - 1) * this%naux + iaux
             this%auxvar(iaux, j) = this%lauxvar(ii)%value
           end do
@@ -3802,7 +3854,6 @@ contains
       call this%pakmvrobj%fc()
     end if
     !
-    !
     ! -- make a stab at a solution
     call this%lak_solve()
     !
@@ -3846,7 +3897,6 @@ contains
     real(DP) :: qinf
     real(DP) :: ex
     real(DP) :: head
-    real(DP) :: clak1
     real(DP) :: q
     real(DP) :: q1
     real(DP) :: rterm
@@ -3866,7 +3916,7 @@ contains
             ! -- estimate lake-aquifer exchange with perturbed groundwater head
             !    exchange is relative to the lake
             !avail = DEP20
-            call this%lak_estimate_conn_exchange(2, n, j, idry, hlak, head+this%delh, q1, clak1, avail)
+            call this%lak_estimate_conn_exchange(2, n, j, idry, hlak, head+this%delh, q1, avail)
             q1 = -q1
             ! -- calculate unperturbed lake-aquifer exchange
             q = this%hcof(j) * head - this%rhs(j)
@@ -4151,9 +4201,6 @@ contains
     integer(I4B) :: igwfnode
     real(DP) :: hlak, hgwf
     real(DP) :: v0, v1
-    real(DP) :: cond
-    !real(DP) :: blak
-    !real(DP) :: s
     real(DP) :: d
     real(DP) :: v
     ! -- for observations
@@ -4243,7 +4290,7 @@ contains
       do j = this%idxlakeconn(n), this%idxlakeconn(n+1)-1
         igwfnode = this%cellid(j)
         hgwf = this%xnew(igwfnode)
-        call this%lak_calculate_conn_exchange(n, j, hlak, hgwf, rrate, cond)
+        call this%lak_calculate_conn_exchange(n, j, hlak, hgwf, rrate)
         !blak = this%belev(j)
         !if (-this%hcof(j) > DZERO) then
         !  if (hgwf >= blak) then
@@ -4417,6 +4464,7 @@ contains
     call mem_deallocate(this%qauxcbc)
     call mem_deallocate(this%qleak)
     call mem_deallocate(this%qsto)
+    call mem_deallocate(this%denseterms)
     !
     ! -- tables
     do n = 1, this%nlakes
@@ -4479,6 +4527,7 @@ contains
     call mem_deallocate(this%check_attr)
     call mem_deallocate(this%bditems)
     call mem_deallocate(this%cbcauxitems)
+    call mem_deallocate(this%idense)
     !
     call mem_deallocate(this%nlakeconn)
     call mem_deallocate(this%idxlakeconn)
@@ -5259,6 +5308,7 @@ contains
     integer(I4B) :: maxiter
     integer(I4B) :: ncnv
     integer(I4B) :: idry
+    integer(I4B) :: idry1
     integer(I4B) :: igwfnode
     integer(I4B) :: ibflg
     integer(I4B) :: idhp
@@ -5273,11 +5323,10 @@ contains
     real(DP) :: ex
     real(DP) :: ev
     real(DP) :: outinf
-    real(DP) :: s
     real(DP) :: qlakgw
     real(DP) :: qlakgw1
-    real(DP) :: clak
-    real(DP) :: clak1
+    real(DP) :: gwfhcof
+    real(DP) :: gwfrhs
     real(DP) :: avail
     real(DP) :: resid
     real(DP) :: resid1
@@ -5397,9 +5446,13 @@ contains
             head = this%xnew(igwfnode)
             if (this%ncncvr(n) /= 2) then
               if (this%ibound(igwfnode) > 0) then
-                call this%lak_estimate_conn_exchange(i, n, j, idry, hlak, head, qlakgw, clak, this%flwiter(n))
-                call this%lak_estimate_conn_exchange(i, n, j, idry, hlak+delh, head, qlakgw1, clak1, this%flwiter1(n))
-                !write(1051,'(2(i10),4(g15.7))') j, idry, clak, hlak, head, qlakgw
+                call this%lak_estimate_conn_exchange(i, n, j, idry, hlak,      &
+                                                     head, qlakgw,             &
+                                                     this%flwiter(n),          &
+                                                     gwfhcof, gwfrhs)
+                call this%lak_estimate_conn_exchange(i, n, j, idry1, hlak+delh,&
+                                                     head, qlakgw1,            &
+                                                     this%flwiter1(n))
                 !
                 ! -- add to gwf matrix
                 if (ncnv == 0 .and. i == 2) then
@@ -5407,14 +5460,8 @@ contains
                     this%ncncvr(n) = 2
                   end if
                   if (idry /= 1) then
-                    if (head >= this%belev(j)) then
-                      s = max(hlak, this%belev(j))
-                      this%hcof(j) = -clak
-                      this%rhs(j) = -clak * s
-                    else
-                      this%hcof(j) = DZERO
-                      this%rhs(j) = qlakgw
-                    end if
+                    this%hcof(j) = gwfhcof
+                    this%rhs(j) = gwfrhs
                   else
                     this%hcof(j) = DZERO
                     this%rhs(j) = qlakgw
@@ -5644,7 +5691,6 @@ contains
     real(DP) :: hp
     real(DP) :: head
     real(DP) :: qlakgw
-    real(DP) :: clak
     real(DP) :: v0
     ! code
     !
@@ -5663,7 +5709,7 @@ contains
       igwfnode = this%cellid(j)
       if (this%ibound(igwfnode) == 0) cycle
       head = this%xnew(igwfnode) + hp
-      call this%lak_estimate_conn_exchange(1, n, j, idry, hlak, head, qlakgw, clak, avail)
+      call this%lak_estimate_conn_exchange(1, n, j, idry, hlak, head, qlakgw, avail)
     end do
     !
     ! -- add rainfall
@@ -5722,7 +5768,6 @@ contains
     real(DP) :: sout
     real(DP) :: sin
     real(DP) :: qlakgw
-    real(DP) :: clak
     real(DP) :: seep
     real(DP) :: hlak0
     real(DP) :: v0
@@ -5751,7 +5796,7 @@ contains
       igwfnode = this%cellid(j)
       if (this%ibound(igwfnode) == 0) cycle
       head = this%xnew(igwfnode) + hp
-      call this%lak_estimate_conn_exchange(2, n, j, idry, hlak, head, qlakgw, clak, avail)
+      call this%lak_estimate_conn_exchange(2, n, j, idry, hlak, head, qlakgw, avail)
       seep = seep + qlakgw
     end do
     !
@@ -6226,5 +6271,151 @@ contains
     ! -- return
     return
   end subroutine lak_fill_budobj
+  
+  subroutine lak_activate_density(this)
+! ******************************************************************************
+! lak_activate_density -- Activate addition of density terms
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(LakType),intent(inout) :: this
+    ! -- local
+    ! -- formats
+! ------------------------------------------------------------------------------
+    !
+    ! -- Set idense and reallocate denseterms to be of size MZXBOUND
+    this%idense = 1
+    call mem_reallocate(this%denseterms, 3, this%MAXBOUND, 'DENSETERMS', &
+                        this%origin)
+    write(this%iout,'(/1x,a)') 'DENSITY TERMS HAVE BEEN ACTIVATED FOR LAKE &
+      &PACKAGE: ' // trim(adjustl(this%name))
+    !
+    ! -- return
+    return
+  end subroutine lak_activate_density
+
+  subroutine lak_calculate_density_exchange(this, iconn, stage, head, cond,    &
+                                            botl, flow, gwfhcof, gwfrhs)
+! ******************************************************************************
+! lak_calculate_density_exchange -- Calculate the groundwater-lake density 
+!                                   exchange terms.
+!
+! -- Arguments are as follows:
+!     iconn       : lak-gwf connection number
+!     stage       : lake stage
+!     head        : gwf head
+!     cond        : conductance
+!     botl        : bottom elevation of this connection
+!     flow        : calculated flow, updated here with density terms
+!     gwfhcof     : gwf head coefficient, updated here with density terms
+!     gwfrhs      : gwf right-hand-side value, updated here with density terms
+!
+! -- Member variable used here
+!     denseterms  : shape (3, MAXBOUND), filled by buoyancy package
+!                     col 1 is relative density of lake (denselak / denseref)
+!                     col 2 is relative density of gwf cell (densegwf / denseref)
+!                     col 3 is elevation of gwf cell (densegwf / denseref)
+!
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(LakType),intent(inout) :: this
+    integer(I4B), intent(in) :: iconn
+    real(DP), intent(in) :: stage
+    real(DP), intent(in) :: head
+    real(DP), intent(in) :: cond
+    real(DP), intent(in) :: botl
+    real(DP), intent(inout) :: flow
+    real(DP), intent(inout) :: gwfhcof
+    real(DP), intent(inout) :: gwfrhs
+    ! -- local
+    real(DP) :: ss
+    real(DP) :: hh
+    real(DP) :: havg
+    real(DP) :: rdenselak
+    real(DP) :: rdensegwf
+    real(DP) :: rdenseavg
+    real(DP) :: elevlak
+    real(DP) :: elevgwf
+    real(DP) :: elevavg
+    real(DP) :: d1
+    real(DP) :: d2
+    logical :: stage_below_bot
+    logical :: head_below_bot
+    ! -- formats
+! ------------------------------------------------------------------------------
+    !
+    ! -- Set lak density to lak density or gwf density
+    if (stage >= botl) then
+      ss = stage
+      stage_below_bot = .false.
+      rdenselak = this%denseterms(1, iconn)  ! lak rel density
+    else
+      ss = botl
+      stage_below_bot = .true.
+      rdenselak = this%denseterms(2, iconn)  ! gwf rel density
+    end if
+    !
+    ! -- set hh to head or botl
+    if (head >= botl) then
+      hh = head
+      head_below_bot = .false.
+      rdensegwf = this%denseterms(2, iconn)  ! gwf rel density
+    else
+      hh = botl
+      head_below_bot = .true.
+      rdensegwf = this%denseterms(1, iconn)  ! lak rel density
+    end if
+    !
+    ! -- todo: hack because denseterms not updated in a cf calculation
+    if (rdensegwf == DZERO) return
+    !
+    ! -- Update flow
+    if (stage_below_bot .and. head_below_bot) then
+      !
+      ! -- flow is zero, so no terms are updated
+      !
+    else
+      !
+      ! -- calulate average relative density
+      rdenseavg = DHALF * (rdenselak + rdensegwf)
+      !
+      ! -- Add contribution of first density term: 
+      !      cond * (denseavg/denseref - 1) * (hgwf - hlak)
+      d1 = cond * (rdenseavg - DONE) 
+      gwfhcof = gwfhcof - d1
+      gwfrhs = gwfrhs - d1 * ss
+      d1 = d1 * (hh - ss)
+      flow = flow + d1
+      !
+      ! -- Add second density term if stage and head not below bottom
+      if (.not. stage_below_bot .and. .not. head_below_bot) then
+        !
+        ! -- Add contribution of second density term:
+        !      cond * (havg - elevavg) * (densegwf - denselak) / denseref
+        elevgwf = this%denseterms(3, iconn)
+        if (this%ictype(iconn) == 0 .or. this%ictype(iconn) == 3) then
+          ! -- vertical or embedded vertical connection
+          elevlak = botl
+        else
+          ! -- horizontal or embedded horizontal connection
+          elevlak = elevgwf
+        end if
+        elevavg = DHALF * (elevlak + elevgwf)
+        havg = DHALF * (hh + ss)
+        d2 = cond * (havg - elevavg) * (rdensegwf - rdenselak)
+        gwfrhs = gwfrhs + d2
+        flow = flow + d2
+      end if
+    end if
+    !
+    ! -- return
+    return
+  end subroutine lak_calculate_density_exchange
+
 
 end module LakModule
