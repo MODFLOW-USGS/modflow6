@@ -51,11 +51,11 @@ idomain[1, 7:10, 7:10] = 0
 
 # temporal discretization
 nper = 10
-sim_time = 5000.
+sim_time = 20000.
 pertime = sim_time / float(nper)
 period_data = []
 for n in range(nper):
-    period_data.append((pertime, 10, 1.0))
+    period_data.append((pertime, 20, 1.0))
 
 strt = 115.
 icelltype = iconvert = 1
@@ -79,7 +79,7 @@ recharge = 0.116e-1
 
 # lake data
 packagedata = [(0, 110., 57)]
-outlets = [(0, 0, 0, 'SPECIFIED', -999, -999, -999, -999)]
+outlets = [(0, 0, -1, 'SPECIFIED', -999, -999, -999, -999)]
 nlakes = len(packagedata)
 noutlets = len(outlets)
 connectiondata = [
@@ -141,7 +141,7 @@ connectiondata = [
     (0, 55, (0, 9, 11), 'HORIZONTAL', 0.1, 0, 0, 500, 500),
     (0, 56, (0, 10, 11), 'HORIZONTAL', 0.1, 0, 0, 500, 500)]
 
-stage, evap, runoff, withdrawal, rate = 110., 0.0103, 2000., 1000., -1000.0
+stage, evap, runoff, withdrawal, rate = 110., 0.0103, 1000., 10000., -225000.0
 lakeperioddata = [(0, 'status', 'active'),
                   (0, 'stage', stage),
                   (0, 'rainfall', recharge),
@@ -158,7 +158,7 @@ lakeperioddatats = [(0, 'status', 'active'),
                     (0, 'withdrawal', 'withdrawal'),
                     (0, 'rate', 'outlet')]
 
-ts_names = ['stage', 'rainfall', 'evap', 'runoff', 'withdrawal', 'rate']
+ts_names = ['stage', 'rainfall', 'evap', 'runoff', 'withdrawal', 'outlet']
 ts_methods = ['linearend'] * len(ts_names)
 
 ts_data = []
@@ -166,6 +166,7 @@ ts_times = np.arange(0., sim_time + 2. * pertime, pertime, dtype=np.float)
 for t in ts_times:
     ts_data.append((t, stage, recharge, evap, runoff, withdrawal, rate))
 
+lak_obs = {'lak_obs.csv': [('lake1', 'STAGE', (0,))]}
 
 def build_model(ws, name, timeseries=False):
     hdsfile = '{}.hds'.format(name)
@@ -203,6 +204,8 @@ def build_model(ws, name, timeseries=False):
                                   outlets=outlets,
                                   perioddata=lakpd,
                                   pname='lak-1')
+    lak.obs.initialize(filename='{}.lak.obs'.format(name), digits=20,
+                       print_input=True, continuous=lak_obs)
     if timeseries:
         fname = '{}.lak.ts'.format(name)
         lak.ts.initialize(filename=fname, timeseries=ts_data,
