@@ -3630,27 +3630,26 @@ contains
     class(LakType) :: this
     ! -- local
     integer(I4B) :: n
-    !integer(I4B) :: j, iaux, ii
+    integer(I4B) :: j
+    integer(I4B) :: iaux
 ! ------------------------------------------------------------------------------
     !
     ! -- Advance the time series
     call this%TsManager%ad()
-    !!
-    !! -- update auxiliary variables by copying from the derived-type time
-    !!    series variable into the bndpackage auxvar variable so that this
-    !!    information is properly written to the GWF budget file
-    !if (this%naux > 0) then
-    !  do n = 1, this%nlakes
-    !    do j = this%idxlakeconn(n), this%idxlakeconn(n + 1) - 1
-    !      do iaux = 1, this%naux
-    !        if (this%noupdateauxvar(iaux) /= 0) cycle
-    !        ii = (n - 1) * this%naux + iaux
-    !        !this%auxvar(iaux, j) = this%lauxvar(ii)%value
-    !        this%auxvar(iaux, j) = this%lauxvar(ii)
-    !      end do
-    !    end do
-    !  end do
-    !end if
+    !
+    ! -- update auxiliary variables by copying from the derived-type time
+    !    series variable into the bndpackage auxvar variable so that this
+    !    information is properly written to the GWF budget file
+    if (this%naux > 0) then
+      do n = 1, this%nlakes
+        do j = this%idxlakeconn(n), this%idxlakeconn(n + 1) - 1
+          do iaux = 1, this%naux
+            if (this%noupdateauxvar(iaux) /= 0) cycle
+            this%auxvar(iaux, j) = this%lauxvar(iaux, n)
+          end do
+        end do
+      end do
+    end if
     !
     ! -- copy xnew into xold and set xnewpak to stage%value for
     !    constant stage lakes

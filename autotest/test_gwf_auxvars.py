@@ -30,7 +30,6 @@ auxvar2 = 102.
 
 
 def get_model(idx, dir):
-
     nlay, nrow, ncol = 1, 10, 10
     nper = 3
     perlen = [1., 1., 1.]
@@ -97,7 +96,7 @@ def get_model(idx, dir):
     # chd files
     chdlist0 = []
     chdlist0.append([(0, 0, 0), 100.])
-    chdlist0.append([(0, nrow-1, ncol-1), 95.])
+    chdlist0.append([(0, nrow - 1, ncol - 1), 95.])
 
     chdspdict = {0: chdlist0}
     chd = flopy.mf6.ModflowGwfchd(gwf,
@@ -118,11 +117,14 @@ def get_model(idx, dir):
                                   auxiliary=['aux1', 'aux2'],
                                   connectiondata=wellconnectionsrecarray,
                                   perioddata=wellperiodrecarray)
-    #maw.remove()
+    # maw.remove()
 
     # <rno> <cellid(ncelldim)> <rlen> <rwid> <rgrd> <rtp> <rbth> <rhk> <man> <ncon> <ustrf> <ndv> [<aux(naux)>] [<boundname>]
-    packagedata = [[0, (0, 5, ncol-2), delr, 10., 0.001, 98., 1., 1., 0.3, 1, 1.0, 0, auxvar1, auxvar2],
-                   [1, (0, 5, ncol-1), delr, 10., 0.001, 97., 1., 1., 0.3, 1, 1.0, 0, auxvar1, auxvar2]]
+    packagedata = [
+        [0, (0, 5, ncol - 2), delr, 10., 0.001, 98., 1., 1., 0.3, 1, 1.0, 0,
+         auxvar1, auxvar2],
+        [1, (0, 5, ncol - 1), delr, 10., 0.001, 97., 1., 1., 0.3, 1, 1.0, 0,
+         auxvar1, auxvar2]]
     connectiondata = [[0, -1],
                       [1, 0]]
     sfr = flopy.mf6.ModflowGwfsfr(gwf,
@@ -134,7 +136,7 @@ def get_model(idx, dir):
                                   packagedata=packagedata,
                                   auxiliary=['aux1', 'aux2'],
                                   connectiondata=connectiondata)
-    #sfr.remove()
+    # sfr.remove()
 
     # <lakeno> <strt> <nlakeconn> [<aux(naux)>] [<boundname>]
     packagedata = [[0, 100., 1, auxvar1, auxvar2, 'lake1'],
@@ -152,17 +154,19 @@ def get_model(idx, dir):
                                   packagedata=packagedata,
                                   auxiliary=['aux1', 'aux2'],
                                   connectiondata=connectiondata)
-    #lak.remove()
+    # lak.remove()
 
     # <iuzno> <cellid(ncelldim)> <landflag> <ivertcon> <surfdep> <vks> <thtr> <thts> <thti> <eps> [<boundname>]
-    packagedata = [[0, (0, nrow - 1, 5), 1, -1, .1, .01, .01, .1, .01, 3.5, 'uz1'],
-                   [1, (0, nrow - 1, 6), 1, -1, .1, .01, .01, .1, .01, 3.5, 'uz1'],
-                   [2, (0, nrow - 1, 7), 1, -1, .1, .01, .01, .1, .01, 3.5, 'uz1'],
-                   [3, (0, nrow - 1, 8), 1, -1, .1, .01, .01, .1, .01, 3.5, 'uz1']]
+    packagedata = [
+        [0, (0, nrow - 1, 5), 1, -1, .1, .01, .01, .1, .01, 3.5, 'uz1'],
+        [1, (0, nrow - 1, 6), 1, -1, .1, .01, .01, .1, .01, 3.5, 'uz1'],
+        [2, (0, nrow - 1, 7), 1, -1, .1, .01, .01, .1, .01, 3.5, 'uz1'],
+        [3, (0, nrow - 1, 8), 1, -1, .1, .01, .01, .1, .01, 3.5, 'uz1']]
     # <iuzno> <finf> <pet> <extdp> <extwc> <ha> <hroot> <rootact> [<aux(naux)>]
     perioddata = []
     for p in packagedata:
-        perioddata.append((p[0], 0.001, 0., 1., 0., 0., 0., 0., auxvar1, auxvar2))
+        perioddata.append(
+            (p[0], 0.001, 0., 1., 0., 0., 0., 0., auxvar1, auxvar2))
     uzf = flopy.mf6.ModflowGwfuzf(gwf,
                                   boundnames=True,
                                   print_input=True,
