@@ -51,11 +51,11 @@ idomain[1, 7:10, 7:10] = 0
 
 # temporal discretization
 nper = 10
-sim_time = 20000.
+sim_time = 15000.
 pertime = sim_time / float(nper)
 period_data = []
 for n in range(nper):
-    period_data.append((pertime, 20, 1.0))
+    period_data.append((pertime, 10, 1.0))
 
 strt = 115.
 icelltype = iconvert = 1
@@ -78,7 +78,8 @@ for k in range(nlay):
 recharge = 0.116e-1
 
 # lake data
-packagedata = [(0, 110., 57)]
+stage, temp, conc = 110., 75., 0.5
+packagedata = [(0, stage, 57, temp, conc)]
 outlets = [(0, 0, -1, 'SPECIFIED', -999, -999, -999, -999)]
 nlakes = len(packagedata)
 noutlets = len(outlets)
@@ -142,31 +143,56 @@ connectiondata = [
     (0, 56, (0, 10, 11), 'HORIZONTAL', 0.1, 0, 0, 500, 500)]
 
 stage, evap, runoff, withdrawal, rate = 110., 0.0103, 1000., 10000., -225000.0
-lakeperioddata = [(0, 'status', 'active'),
-                  (0, 'stage', stage),
-                  (0, 'rainfall', recharge),
-                  (0, 'evaporation', evap),
-                  (0, 'runoff', runoff),
-                  (0, 'withdrawal', withdrawal),
-                  (0, 'rate', rate)]
+lakeperioddata0 = [(0, 'status', 'active'),
+                   (0, 'stage', stage),
+                   (0, 'rainfall', recharge),
+                   (0, 'evaporation', evap),
+                   (0, 'runoff', runoff),
+                   (0, 'withdrawal', withdrawal),
+                   (0, 'rate', rate),
+                   (0, 'AUXILIARY', 'temperature', temp),
+                   (0, 'AUXILIARY', 'salinity', conc)]
+lakeperioddata1 = [(0, 'rainfall', 0.0)]
+lakeperioddata2 = [(0, 'rainfall', recharge)]
+lakeperioddata3 = [(0, 'withdrawal', -rate), (0, 'rate', -withdrawal)]
+lakeperioddata = {0: lakeperioddata0, 1: lakeperioddata1,
+                  2: lakeperioddata2, 3: lakeperioddata3}
 
-lakeperioddatats = [(0, 'status', 'active'),
-                    (0, 'stage', 'stage'),
-                    (0, 'rainfall', 'rainfall'),
-                    (0, 'evaporation', 'evap'),
-                    (0, 'runoff', 'runoff'),
-                    (0, 'withdrawal', 'withdrawal'),
-                    (0, 'rate', 'outlet')]
+lakeperioddatats0 = [(0, 'status', 'active'),
+                     (0, 'stage', 'stage'),
+                     (0, 'rainfall', 'rainfall'),
+                     (0, 'evaporation', 'evap'),
+                     (0, 'runoff', 'runoff'),
+                     (0, 'withdrawal', 'withdrawal'),
+                     (0, 'rate', 'outlet'),
+                     (0, 'AUXILIARY', 'salinity', 'concentration'),
+                     (0, 'AUXILIARY', 'temperature', 'temperature')]
+lakeperioddatats1 = [(0, 'rainfall', 0.0),
+                     (0, 'rate', rate)]
+lakeperioddatats2 = [(0, 'rainfall', 'rainfall2'),
+                     (0, 'rate', 'outlet')]
+lakeperioddatats3 = [(0, 'stage', 'stage'),
+                     (0, 'rainfall', 'rainfall'),
+                     (0, 'evaporation', 'evap'),
+                     (0, 'runoff', 'runoff'),
+                     (0, 'withdrawal', 'outlet2'),
+                     (0, 'rate', 'withdrawal2')]
+lakeperioddatats = {0: lakeperioddatats0, 1: lakeperioddatats1,
+                    2: lakeperioddatats2, 3: lakeperioddatats3}
 
-ts_names = ['stage', 'rainfall', 'evap', 'runoff', 'withdrawal', 'outlet']
+ts_names = ['stage', 'rainfall', 'evap', 'runoff', 'withdrawal', 'outlet',
+            'concentration', 'temperature', 'rainfall2',
+            'outlet2', 'withdrawal2']
 ts_methods = ['linearend'] * len(ts_names)
 
 ts_data = []
 ts_times = np.arange(0., sim_time + 2. * pertime, pertime, dtype=np.float)
 for t in ts_times:
-    ts_data.append((t, stage, recharge, evap, runoff, withdrawal, rate))
+    ts_data.append((t, stage, recharge, evap, runoff, withdrawal, rate,
+                    temp, conc, recharge, -rate, -withdrawal))
 
 lak_obs = {'lak_obs.csv': [('lake1', 'STAGE', (0,))]}
+
 
 def build_model(ws, name, timeseries=False):
     hdsfile = '{}.hds'.format(name)
@@ -174,7 +200,7 @@ def build_model(ws, name, timeseries=False):
     # build the model
     sim = flopy.mf6.MFSimulation(sim_name=name, exe_name='mf6', sim_ws=ws)
     tdis = flopy.mf6.ModflowTdis(sim, nper=nper, perioddata=period_data)
-    ims = flopy.mf6.ModflowIms(sim, print_option='ALL',
+    ims = flopy.mf6.ModflowIms(sim, print_option='NONE',
                                linear_acceleration='CG',
                                outer_maximum=500, inner_maximum=100,
                                outer_dvclose=1e-6,
@@ -197,8 +223,10 @@ def build_model(ws, name, timeseries=False):
     lak = flopy.mf6.ModflowGwflak(gwf,
                                   nlakes=nlakes,
                                   noutlets=noutlets,
+                                  print_input=True,
                                   print_stage=True,
                                   print_flows=True,
+                                  auxiliary=['temperature', 'salinity'],
                                   packagedata=packagedata,
                                   connectiondata=connectiondata,
                                   outlets=outlets,
@@ -218,7 +246,7 @@ def build_model(ws, name, timeseries=False):
                                 budget_filerecord='{}.cbc'.format(name),
                                 saverecord=[('HEAD', 'ALL'),
                                             ('BUDGET', 'ALL')],
-                                printrecord=[('BUDGET', 'ALL')])
+                                printrecord=[('BUDGET', 'LAST')])
 
     return sim
 
