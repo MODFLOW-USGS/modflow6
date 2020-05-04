@@ -215,8 +215,8 @@ def run_transport_model():
     ssm = flopy.mf6.ModflowGwtssm(gwt, print_flows=True, sources=sourcerecarray)
 
     pd = [
-        ('GWFHEAD', '../flow/flow.hds'),
-        ('GWFBUDGET', '../flow/flow.bud'),
+        ('GWFHEAD', '../flow/flow.hds', None),
+        ('GWFBUDGET', '../flow/flow.bud', None),
     ]
     fmi = flopy.mf6.ModflowGwtfmi(gwt, packagedata=pd, flow_imbalance_correction=True)
 

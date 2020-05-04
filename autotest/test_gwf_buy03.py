@@ -21,8 +21,8 @@ from framework import testing_framework
 from simulation import Simulation
 
 ex = ['buy_03a', 'buy_03b']
-dense = [[1030., 1020., 1015., 1010., 1000.],
-         [1030., 1020., 1015., 1010., 1000.],]
+concbuy = [[40., 30., 17.5, 15., 0.],
+           [40., 30., 17.5, 15., 0.],]
 dz = [10., 10.]
 hhformulation_rhs = [False, True]
 exdirs = []
@@ -105,9 +105,11 @@ def get_model(idx, dir):
                                   save_specific_discharge=True,
                                   icelltype=1, k=Kh)
 
-    d = dense[idx]
+    c = concbuy[idx]
     hhrhs = hhformulation_rhs[idx]
-    buy = flopy.mf6.ModflowGwfbuy(gwf, denseref=1000., drhodc=0.7, dense=d,
+    pd = [(0, 0.7, 0., 'none', 'none')]
+    buy = flopy.mf6.ModflowGwfbuy(gwf, nrhospecies=len(pd), packagedata=pd,
+                                  denseref=1000., concentration=c,
                                   hhformulation_rhs=hhrhs)
 
     # ghb files
@@ -119,7 +121,6 @@ def get_model(idx, dir):
                                    print_input=True,
                                    auxiliary=['density', 'elevation'],
                                    pname='GHB-1')
-
 
     # drn files
     drnlist1 = []
@@ -180,9 +181,9 @@ def eval_results(sim):
     h1 = 100.
     h2 = head[0]
     dh = h1 - h2
-    ddense = dense[idx]
+    c = concbuy[idx]
     rho1 = ghbdens
-    rho2 = ddense[0]
+    rho2 = 1000. + 0.7 * c[0]
     z1 = ghbelev
     ddz = dz[idx]
     b2 = 0. - ddz

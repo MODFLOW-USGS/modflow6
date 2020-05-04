@@ -74,6 +74,7 @@ def get_model(idx, dir):
 
     # create gwf model
     gwfname = 'gwf_' + name
+    gwtname = 'gwt_' + name
 
     gwf = flopy.mf6.ModflowGwf(sim, modelname=gwfname, newtonoptions=True)
 
@@ -117,8 +118,8 @@ def get_model(idx, dir):
 
     buy_on = True
     if buy_on:
-        buy = flopy.mf6.ModflowGwfbuy(gwf,
-                                      denseref=1000., drhodc=0.7)
+        pd = [(0, 0.7, 0., gwtname, 'CONCENTRATION')]
+        buy = flopy.mf6.ModflowGwfbuy(gwf, denseref=1000., packagedata=pd)
 
     nlakeconn = 11  # note: number of connections for this lake
     # pak_data = [lakeno, strt, nlakeconn, testauxvar, concentration, boundname]
@@ -193,7 +194,6 @@ def get_model(idx, dir):
     transport = True
     if transport:
 
-        gwtname = 'gwt_' + name
         gwt = flopy.mf6.ModflowGwt(sim, modelname=gwtname)
 
         imsgwt = flopy.mf6.ModflowIms(sim, print_option='ALL',

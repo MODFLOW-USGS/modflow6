@@ -412,11 +412,11 @@ def run_transport_model():
                                               auxiliary=['aux1', 'aux2'])
 
     pd = [
-        ('GWFHEAD', '../flow/flow.hds'),
-        ('GWFBUDGET', '../flow/flow.bud'),
-        ('GWFMOVER', '../flow/flow.mvr.bud'),
-        ('LAK-1', '../flow/flow.lak.bud'),
-        ('SFR-1', '../flow/flow.sfr.bud'),
+        ('GWFHEAD', '../flow/flow.hds', None),
+        ('GWFBUDGET', '../flow/flow.bud', None),
+        ('GWFMOVER', '../flow/flow.mvr.bud', None),
+        ('LAK-1', '../flow/flow.lak.bud', None),
+        ('SFR-1', '../flow/flow.sfr.bud', None),
     ]
     fmi = flopy.mf6.ModflowGwtfmi(gwt, packagedata=pd)
 

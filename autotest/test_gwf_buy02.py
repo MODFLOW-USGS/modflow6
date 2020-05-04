@@ -22,10 +22,10 @@ from framework import testing_framework
 from simulation import Simulation
 
 ex = ['buy_02a', 'buy_02b', 'buy_02c', 'buy_02d', 'buy_02e', 'buy_02f']
-dense = [1000., 1024.5, 1024.5,
-         [1024.5, 1020., 1015., 1010., 1000.],
-         [1024.5, 1020., 1015., 1010., 1000.],
-         [1024.5, 1020., 1015., 1010., 1000.]]
+concbuy = [0., 35., 35.,
+           [35., 30., 17.5, 5., 0.],
+           [35., 30., 17.5, 5., 0.],
+           [35., 30., 17.5, 5., 0.]]
 dz = [0., 0., 10., 0., 10., 10.]
 hhformulation_rhs = [False, False, False, False, False, True]
 exdirs = []
@@ -107,9 +107,11 @@ def get_model(idx, dir):
                                   save_specific_discharge=True,
                                   icelltype=1, k=Kh)
 
-    d = dense[idx]
+    d = concbuy[idx]
     hhrhs = hhformulation_rhs[idx]
-    buy = flopy.mf6.ModflowGwfbuy(gwf, denseref=1000., drhodc=0.7, dense=d,
+    pd = [(0, 0.7, 0., 'none', 'none')]
+    buy = flopy.mf6.ModflowGwfbuy(gwf, nrhospecies=len(pd), packagedata=pd,
+                                  denseref=1000., concentration=d,
                                   hhformulation_rhs=hhrhs)
 
     # chd files
@@ -173,12 +175,12 @@ def eval_results(sim):
     h1 = head[0]
     h2 = head[1]
     dh = h1 - h2
-    ddense = dense[idx]
-    if isinstance(ddense, list):
-        rho1 = ddense[0]
-        rho2 = ddense[1]
+    c = concbuy[idx]
+    if isinstance(c, list):
+        rho1 = 1000. + .7 * c[0]
+        rho2 = 1000. + .7 * c[1]
     else:
-        rho1 = rho2 = ddense
+        rho1 = rho2 = 1000. + 0.7 * c
     z1 = (h1 - 0.) / 2
     ddz = dz[idx]
     b2 = 0. - ddz

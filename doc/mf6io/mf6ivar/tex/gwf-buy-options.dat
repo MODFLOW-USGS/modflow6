@@ -1,4 +1,3 @@
 BEGIN OPTIONS
   [DENSEREF <denseref>]
-  [DRHODC <drhodc>]
 END OPTIONS

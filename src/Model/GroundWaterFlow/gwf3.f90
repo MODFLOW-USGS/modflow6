@@ -330,12 +330,10 @@ module GwfModule
     ! -- Define packages and utility objects
     call this%dis%dis_df()
     call this%npf%npf_df(this%dis, this%xt3d, this%ingnc)
-    call this%buy%buy_df(this%dis)
     call this%oc%oc_df()
     call this%budget%budget_df(niunit, 'VOLUME', 'L**3')
-    !
-    ! -- gnc df
-    if(this%ingnc > 0) call this%gnc%gnc_df(this)
+    if (this%inbuy > 0) call this%buy%buy_df(this%dis)
+    if (this%ingnc > 0) call this%gnc%gnc_df(this)
     !
     ! -- Assign or point model members to dis members
     !    this%neq will be incremented if packages add additional unknowns

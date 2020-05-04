@@ -7,8 +7,6 @@
 
 \item \texttt{denseref}---fluid reference density used in the equation of state.  This value is set to 1000. if not specified as an option.
 
-\item \texttt{drhodc}---slope of the density-concentration line used in the equation of state.  This value is set to 0.7 if not specified as an option.
-
 \end{description}
 \item \textbf{Block: DIMENSIONS}
 
@@ -21,7 +19,7 @@
 \begin{description}
 \item \texttt{irhospec}---integer value that defines the species number associated with the specified PACKAGEDATA data on the line. IRHOSPECIES must be greater than zero and less than or equal to NRHOSPECIES. Information must be specified for each of the NRHOSPECIES species or the program will terminate with an error.  The program will also terminate with an error if information for a species is specified more than once.
 
-\item \texttt{ddrhodc}---real value that defines the slope of the density-concentration line for this species used in the density equation of state.
+\item \texttt{drhodc}---real value that defines the slope of the density-concentration line for this species used in the density equation of state.
 
 \item \texttt{crhoref}---real value that defines the reference concentration value used for this species in the density equation of state.
 
@@ -37,7 +35,7 @@
 
 \item \texttt{elevation}---cell center elevation for each cell in the grid.  This may be useful for constructing two-dimensional cross section models using an areal grid.
 
-\item \texttt{dense}---user-specified fluid density array.  If this array is specified, then these density values remain constant at the user-specified values.
+\item \texttt{concentration}---user-specified concentration array.  If this array is specified, then these concentrations are converted to densities using the equation of state values specified in the PACKAGEDATA block.  If this CONCENTRATION array is specified, then the NRHOSPECIES dimension must be one.
 
 \end{description}
 

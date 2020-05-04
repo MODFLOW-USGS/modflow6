@@ -26,7 +26,7 @@ from simulation import Simulation
 
 ex = ['buy_lak_01a', 'buy_lak_01b', 'buy_lak_01c']
 buy_on_list = [False, True, True]
-dense_list = [1000., 1000., 1024.5]
+concbuylist = [0., 0., 35.]
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
@@ -113,12 +113,14 @@ def get_model(idx, dir):
 
     sto = flopy.mf6.ModflowGwfsto(gwf, sy=0.3, ss=0., iconvert=1)
 
-    dense = lake_dense = dense_list[idx]
+    c = concbuylist[idx]
+    lake_dense = 1000. + 0.7 * c
     buy_on = buy_on_list[idx]
     if buy_on:
-        buy = flopy.mf6.ModflowGwfbuy(gwf,
-                                      denseref=1000., drhodc=0.7,
-                                      dense=dense)
+        pd = [(0, 0.7, 0., 'none', 'none')]
+        buy = flopy.mf6.ModflowGwfbuy(gwf, packagedata=pd,
+                                      denseref=1000.,
+                                      concentration=c)
 
     nlakeconn = 11  # note: number of connections for this lake
     # pak_data = [lakeno, strt, nlakeconn, dense, boundname]
@@ -187,80 +189,6 @@ def get_model(idx, dir):
                                             ('BUDGET', 'ALL', 'STEPS')],
                                 printrecord=[('HEAD', 'LAST', 'STEPS'),
                                              ('BUDGET', 'LAST', 'STEPS')])
-
-    # create gwt model
-    transport = False
-    if transport:
-
-        gwtname = 'gwt_' + name
-        gwt = flopy.mf6.ModflowGwt(sim, modelname=gwtname)
-
-        imsgwt = flopy.mf6.ModflowIms(sim, print_option='ALL',
-                                      outer_dvclose=hclose,
-                                      outer_maximum=nouter,
-                                      under_relaxation='NONE',
-                                      inner_maximum=ninner,
-                                      inner_dvclose=hclose, rcloserecord=rclose,
-                                      linear_acceleration='BICGSTAB',
-                                      scaling_method='NONE',
-                                      reordering_method='NONE',
-                                      relaxation_factor=relax,
-                                      filename='{}.ims'.format(gwtname))
-        sim.register_ims_package(imsgwt, [gwt.name])
-
-        dis = flopy.mf6.ModflowGwtdis(gwt, nlay=nlay, nrow=nrow, ncol=ncol,
-                                      delr=delr, delc=delc,
-                                      top=top, botm=botm, idomain=idomain)
-
-        # initial conditions
-        ic = flopy.mf6.ModflowGwtic(gwt, strt=0.)
-
-        # advection
-        adv = flopy.mf6.ModflowGwtadv(gwt, scheme='UPSTREAM')
-
-        # dispersion
-        # diffc = 0.0
-        # dsp = flopy.mf6.ModflowGwtdsp(gwt, xt3d=True, diffc=diffc,
-        #                              alh=0.1, ath1=0.01, atv=0.05)
-
-        # storage
-        porosity = 0.30
-        sto = flopy.mf6.ModflowGwtmst(gwt, porosity=porosity)
-
-        # sources
-        sourcerecarray = [('CHD-1', 'AUX', 'CONCENTRATION'),
-                          ('CHD-2', 'AUX', 'CONCENTRATION')]
-        ssm = flopy.mf6.ModflowGwtssm(gwt, sources=sourcerecarray)
-
-        lktpackagedata = [(0, 35., 99., 999., 'mylake'), ]
-        lkt = flopy.mf6.modflow.ModflowGwtlkt(gwt,
-                                              boundnames=True,
-                                              save_flows=True,
-                                              print_input=True,
-                                              print_flows=True,
-                                              print_concentration=True,
-                                              concentration_filerecord=gwtname + '.lkt.bin',
-                                              budget_filerecord='gwtlak1.bud',
-                                              packagedata=lktpackagedata,
-                                              pname='LAK-1',
-                                              auxiliary=['aux1', 'aux2'])
-        # output control
-        oc = flopy.mf6.ModflowGwtoc(gwt,
-                                    budget_filerecord='{}.cbc'.format(gwtname),
-                                    concentration_filerecord='{}.ucn'.format(
-                                        gwtname),
-                                    concentrationprintrecord=[
-                                        ('COLUMNS', 10, 'WIDTH', 15,
-                                         'DIGITS', 6, 'GENERAL')],
-                                    saverecord=[('CONCENTRATION', 'ALL', 'STEP')],
-                                    printrecord=[('CONCENTRATION', 'ALL', 'STEP'),
-                                                 ('BUDGET', 'ALL', 'STEP')])
-
-        # GWF GWT exchange
-        gwfgwt = flopy.mf6.ModflowGwfgwt(sim, exgtype='GWF6-GWT6',
-                                         exgmnamea=gwfname, exgmnameb=gwtname,
-                                         filename='{}.gwfgwt'.format(name))
-
 
     return sim
 

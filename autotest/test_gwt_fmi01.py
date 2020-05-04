@@ -157,8 +157,8 @@ def get_model(idx, dir):
     fbin.close()
 
     # flow model interface
-    packagedata = [('GWFBUDGET', 'mybudget.bud'),
-                   ('GWFHEAD', 'myhead.hds')]
+    packagedata = [('GWFBUDGET', 'mybudget.bud', None),
+                   ('GWFHEAD', 'myhead.hds', None)]
     fmi = flopy.mf6.ModflowGwtfmi(gwt, flow_imbalance_correction=True,
                                   packagedata=packagedata)
 

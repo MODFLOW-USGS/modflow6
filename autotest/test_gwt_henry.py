@@ -89,7 +89,8 @@ def get_model(idx, dir):
                                   icelltype=0,
                                   k=864.)
 
-    buy = flopy.mf6.ModflowGwfbuy(gwf)
+    pd = [(0, 0.7, 0., gwtname, 'none')]
+    buy = flopy.mf6.ModflowGwfbuy(gwf, packagedata=pd)
 
     def chd_value(k):
         #depth = k * delz + 0.5 * delz

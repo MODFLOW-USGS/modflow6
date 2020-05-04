@@ -17,7 +17,7 @@ exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
 
-no_ptcrecords = ['FIRST', 'ALL', '']
+no_ptcrecords = ['FIRST', 'ALL', None]
 
 ddir = 'data'
 

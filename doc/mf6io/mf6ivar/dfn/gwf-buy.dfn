@@ -27,14 +27,6 @@ longname reference density
 description fluid reference density used in the equation of state.  This value is set to 1000. if not specified as an option.
 default_value 1000.
 
-block options
-name drhodc
-type double
-reader urword
-optional true
-longname slope of the density-concentration line
-description slope of the density-concentration line used in the equation of state.  This value is set to 0.7 if not specified as an option.
-default_value 0.7
 
 # --------------------- gwf buy dimensions ---------------------
 
@@ -51,7 +43,7 @@ description number of species used in density equation of state
 
 block packagedata
 name packagedata
-type recarray irhospec ddrhodc crhoref modelname auxspeciesname
+type recarray irhospec drhodc crhoref modelname auxspeciesname
 shape (nrhospecies)
 reader urword
 longname
@@ -69,7 +61,7 @@ description integer value that defines the species number associated with the sp
 numeric_index true
 
 block packagedata
-name ddrhodc
+name drhodc
 type double precision
 shape
 tagged false
@@ -134,12 +126,12 @@ longname elevation array
 description cell center elevation for each cell in the grid.  This may be useful for constructing two-dimensional cross section models using an areal grid.
 
 block period
-name dense
+name concentration
 type double precision
 shape (ncol*nrow*nlay; ncpl*nlay)
 reader readarray
 layered true
 optional true
-longname fluid density array
-description user-specified fluid density array.  If this array is specified, then these density values remain constant at the user-specified values.
+longname concentration array
+description user-specified concentration array.  If this array is specified, then these concentrations are converted to densities using the equation of state values specified in the PACKAGEDATA block.  If this CONCENTRATION array is specified, then the NRHOSPECIES dimension must be one.
 
