@@ -38,6 +38,7 @@ module BlockParserModule
     procedure, public :: GetString
     procedure, public :: GetStringCaps
     procedure, public :: StoreErrorUnit
+    procedure, public :: GetUnit
     procedure, public :: DevOpt
     procedure, private :: ReadScalarError
   end type BlockParserType
@@ -395,6 +396,18 @@ contains
     !
     return
   end subroutine StoreErrorUnit
+
+  function GetUnit(this) result(i)
+    ! -- return
+    integer(I4B) :: i
+    ! -- dummy
+    class(BlockParserType), intent(inout) :: this
+    ! -- local
+    !
+    i = this%iuext
+    !
+    return
+  end function GetUnit
 
   subroutine DevOpt(this)
 ! ******************************************************************************

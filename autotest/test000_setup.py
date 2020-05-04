@@ -58,101 +58,14 @@ def test_create_dirs():
     return
 
 
-def getmfexes(pth='.', version='', pltfrm=None):
-    """
-    Get the latest MODFLOW binary executables from a github site
-    (https://github.com/MODFLOW-USGS/executables) for the specified
-    operating system and put them in the specified path.
-
-    Parameters
-    ----------
-    pth : str
-        Location to put the executables (default is current working directory)
-
-    version : str
-        Version of the MODFLOW-USGS/executables release to use.
-
-    pltfrm : str
-        Platform that will run the executables.  Valid values include mac,
-        linux, win32 and win64.  If platform is None, then routine will
-        download the latest appropriate zipfile from the github repository
-        based on the platform running this script.
-
-    """
-
-    # Determine the platform in order to construct the zip file name
-    if pltfrm is None:
-        if sys.platform.lower() == 'darwin':
-            pltfrm = 'mac'
-        elif sys.platform.lower().startswith('linux'):
-            pltfrm = 'linux'
-        elif 'win' in sys.platform.lower():
-            is_64bits = sys.maxsize > 2 ** 32
-            if is_64bits:
-                pltfrm = 'win64'
-            else:
-                pltfrm = 'win32'
-        else:
-            errmsg = ('Could not determine platform'
-                      '.  sys.platform is {}'.format(sys.platform))
-            raise Exception(errmsg)
-    else:
-        assert pltfrm in ['mac', 'linux', 'win32', 'win64']
-    zipname = '{}.zip'.format(pltfrm)
-
-    # Determine path for file download and then download and unzip
-    url = ('https://github.com/MODFLOW-USGS/executables/'
-           'releases/download/{}/'.format(version))
-    assets = {p: url + p for p in ['mac.zip', 'linux.zip',
-                                   'win32.zip', 'win64.zip']}
-    download_url = assets[zipname]
-    pymake.download_and_unzip(download_url, pth, verify=False)
-
-    return
-
-
 def test_getmfexes():
-    yield getmfexes, mfexe_pth, download_version
-    return
-
-
-def copy_app_in_mfexe(target):
-    found = False
-    if os.path.isdir(mfexe_pth):
-        if target in os.listdir(mfexe_pth):
-            srcpth = os.path.join(mfexe_pth, target)
+    pymake.getmfexes(mfexe_pth)
+    for target in os.listdir(mfexe_pth):
+        srcpth = os.path.join(mfexe_pth, target)
+        if os.path.isfile(srcpth):
             dstpth = os.path.join(ebindir, target)
             print('copying {} -> {}'.format(srcpth, dstpth))
             shutil.copy(srcpth, dstpth)
-            found = True
-
-    return found
-
-
-def test_build_modflow():
-    found = copy_app_in_mfexe('mf2005dbl' + eext)
-    if not found:
-        pymake.build_apps('mf2005')
-    return
-
-
-def test_build_mfnwt():
-    found = copy_app_in_mfexe('mfnwtdbl' + eext)
-    if not found:
-        pymake.build_apps('mfnwt')
-    return
-
-
-def test_build_usg():
-    found = copy_app_in_mfexe('mfusgdbl' + eext)
-    if not found:
-        pymake.build_apps('mfusg')
-
-
-def test_build_lgr():
-    found = copy_app_in_mfexe('mflgrdbl' + eext)
-    if not found:
-        pymake.build_apps('mflgr')
     return
 
 
@@ -176,7 +89,6 @@ def test_build_modflow6():
         # add -Werror for compilation to terminate if errors are found
         fflags = ('-Wtabs -Wline-truncation -Wunused-label '
                   '-Wunused-variable -pedantic -std=f2008')
-        #fflags = None
 
     pymake.main(srcdir, target, fc=fc, cc=cc, include_subdirs=True,
                 fflags=fflags)
@@ -262,7 +174,6 @@ def test_build_zonebudget():
         # add -Werror for compilation to terminate if errors are found
         fflags = ('-Wtabs -Wline-truncation -Wunused-label '
                   '-Wunused-variable -pedantic -std=f2008')
-        #fflags = None
 
     pymake.main(srcdir, target, fc=fc, cc=cc, extrafiles=extrafiles,
                 fflags=fflags)
@@ -273,11 +184,7 @@ def test_build_zonebudget():
 
 if __name__ == "__main__":
     test_create_dirs()
-    getmfexes(pth=mfexe_pth, version=download_version)
-    test_build_modflow()
-    test_build_mfnwt()
-    test_build_usg()
-    test_build_lgr()
+    test_getmfexes()
     test_build_modflow6()
     test_build_modflow6_so()
     test_build_mf5to6()

@@ -68,8 +68,12 @@ contains
     ! -- dummy
     class(HashTableNodeType), intent(in)  :: this
     character(len=*),         intent(in)  :: key
-    integer(I4B),                  intent(out) :: indx
+    integer(I4B),             intent(out) :: indx
     !
+    ! -- initialize return variable
+    indx = 0
+    !
+    ! -- get node number
     if (allocated(this%key) .and. (this%key == key)) then
       indx = this%indx
     else if(associated(this%NextNode)) then
