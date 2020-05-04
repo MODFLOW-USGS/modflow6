@@ -579,7 +579,7 @@ contains
     !
     ! -- parse locations block if detected
     if (isfound) then
-      write(this%iout,'(/1x,a)')'PROCESSING '//trim(adjustl(this%text))// &
+      write(this%iout,'(/1x,a)') 'PROCESSING ' // trim(adjustl(this%text)) //    &
         ' PACKAGEDATA'
       nlak = 0
       nconn = 0
@@ -589,8 +589,7 @@ contains
         n = this%parser%GetInteger()
 
         if (n < 1 .or. n > this%nlakes) then
-          write(errmsg,'(4x,a,1x,i6)') &
-            '****ERROR. lakeno MUST BE > 0 and <= ', this%nlakes
+          write(errmsg,'(a,1x,i6)') 'lakeno MUST BE > 0 and <= ', this%nlakes
           call store_error(errmsg)
           cycle
         end if
@@ -605,8 +604,7 @@ contains
         ival = this%parser%GetInteger()
 
         if (ival < 0) then
-          write(errmsg,'(4x,a,1x,i6)') &
-            '****ERROR. nlakeconn MUST BE >= 0 for lake ', n
+          write(errmsg,'(a,1x,i6)') 'nlakeconn MUST BE >= 0 for lake ', n
           call store_error(errmsg)
         end if
 
@@ -648,18 +646,19 @@ contains
       ! -- check for duplicate or missing lakes
       do n = 1, this%nlakes
         if (nboundchk(n) == 0) then
-          write(errmsg,'(a,1x,i0)')  'ERROR.  NO DATA SPECIFIED FOR LAKE', n
+          write(errmsg,'(a,1x,i0)')  'NO DATA SPECIFIED FOR LAKE', n
           call store_error(errmsg)
         else if (nboundchk(n) > 1) then
-          write(errmsg,'(a,1x,i0,1x,a,1x,i0,1x,a)')                             &
-            'ERROR.  DATA FOR LAKE', n, 'SPECIFIED', nboundchk(n), 'TIMES'
+          write(errmsg,'(a,1x,i0,1x,a,1x,i0,1x,a)')                              &
+            'DATA FOR LAKE', n, 'SPECIFIED', nboundchk(n), 'TIMES'
           call store_error(errmsg)
         end if
       end do
 
-      write(this%iout,'(1x,a)')'END OF '//trim(adjustl(this%text))//' PACKAGEDATA'
+      write(this%iout,'(1x,a)') 'END OF ' // trim(adjustl(this%text)) //         &
+                                ' PACKAGEDATA'
     else
-      call store_error('ERROR.  REQUIRED PACKAGEDATA BLOCK NOT FOUND.')
+      call store_error('REQUIRED PACKAGEDATA BLOCK NOT FOUND.')
     end if
     !
     ! -- terminate if any errors were detected
@@ -749,7 +748,7 @@ contains
       
 
       ! -- process the lake connection data
-      write(this%iout,'(/1x,a)')'PROCESSING '//trim(adjustl(this%text))// &
+      write(this%iout,'(/1x,a)')'PROCESSING '//trim(adjustl(this%text))//        &
         ' LAKE_CONNECTIONS'
       do
         call this%parser%GetNextLine(endOfBlock)
@@ -757,17 +756,16 @@ contains
         n = this%parser%GetInteger()
 
         if (n < 1 .or. n > this%nlakes) then
-          write(errmsg,'(4x,a,1x,i6)') &
-            '****ERROR. lakeno MUST BE > 0 and <= ', this%nlakes
+          write(errmsg,'(a,1x,i6)') 'lakeno MUST BE > 0 and <= ', this%nlakes
           call store_error(errmsg)
           cycle
         end if
 
         ! -- read connection number
         ival = this%parser%GetInteger()
-        if (ival <1 .or. ival > this%nlakeconn(n)) then
-          write(errmsg,'(4x,a,1x,i4,1x,a,1x,i6)') &
-            '****ERROR. iconn FOR LAKE ', n, 'MUST BE > 1 and <= ', this%nlakeconn(n)
+        if (ival < 1 .or. ival > this%nlakeconn(n)) then
+          write(errmsg,'(a,1x,i4,1x,a,1x,i6)')                                   &
+            'iconn FOR LAKE ', n, 'MUST BE > 1 and <= ', this%nlakeconn(n)
           call store_error(errmsg)
           cycle
         end if
@@ -789,8 +787,8 @@ contains
         !
         ! -- determine if a valid cell location was provided
         if (nn < 1) then
-          write(errmsg,'(4x,a,1x,i4,1x,a,1x,i4)') &
-            '****ERROR. INVALID cellid FOR LAKE ', n, 'connection', j
+          write(errmsg,'(a,1x,i4,1x,a,1x,i4)')                                   &
+            'INVALID cellid FOR LAKE ', n, 'connection', j
           call store_error(errmsg)
         end if
 
@@ -810,8 +808,8 @@ contains
           case ('EMBEDDEDV')
             this%ictype(ipos) = 3
           case default
-            write(errmsg,'(4x,a,1x,i4,1x,a,1x,i4,1x,a,a,a)') &
-              '****ERROR. UNKNOWN ctype FOR LAKE ', n, 'connection', j, &
+            write(errmsg,'(a,1x,i4,1x,a,1x,i4,1x,a,a,a)')                        &
+              'UNKNOWN ctype FOR LAKE ', n, 'connection', j,                     &
               '(', trim(keyword), ')'
             call store_error(errmsg)
         end select
@@ -827,8 +825,7 @@ contains
         end select
 
         if (keyword /= 'NONE' .and. this%bedleak(ipos) < dzero) then
-          write(errmsg,'(4x,a,1x,i4,1x,a)') &
-            '****ERROR. bedleak FOR LAKE ', n, 'MUST BE >= 0'
+          write(errmsg,'(a,1x,i4,1x,a)') 'bedleak FOR LAKE ', n, 'MUST BE >= 0'
           call store_error(errmsg)
         end if
 
@@ -841,10 +838,11 @@ contains
         ! -- connection length
         rval = this%parser%GetDouble()
         if (rval < dzero)  then
-          if (this%ictype(ipos) == 1 .or. this%ictype(ipos) == 2 .or. this%ictype(ipos) == 3) then
-            write(errmsg,'(4x,a,1x,i4,1x,a,1x,i4,1x,a)') &
-              '****ERROR. connection length (connlength) FOR LAKE ', n, ' HORIZONTAL CONNECTION ', j, &
-              'MUST BE >= 0'
+          if (this%ictype(ipos) == 1 .or. this%ictype(ipos) == 2 .or.            &
+              this%ictype(ipos) == 3) then
+            write(errmsg,'(a,1x,i4,1x,a,1x,i4,1x,a)')                            &
+              'connection length (connlength) FOR LAKE ', n,                     &
+              ' HORIZONTAL CONNECTION ', j, 'MUST BE >= 0'
             call store_error(errmsg)
           else
             rval = DZERO
@@ -856,9 +854,9 @@ contains
         rval = this%parser%GetDouble()
         if (rval < dzero)  then
           if (this%ictype(ipos) == 1) then
-            write(errmsg,'(4x,a,1x,i4,1x,a,1x,i4,1x,a)') &
-              '****ERROR. cell width (connwidth) FOR LAKE ', n, ' HORIZONTAL CONNECTION ', j, &
-              'MUST BE >= 0'
+            write(errmsg,'(a,1x,i4,1x,a,1x,i4,1x,a)')                            &
+              'cell width (connwidth) FOR LAKE ', n,                             &
+              ' HORIZONTAL CONNECTION ',  j, 'MUST BE >= 0'
             call store_error(errmsg)
           else
             rval = DZERO
@@ -866,9 +864,10 @@ contains
         end if
         this%connwidth(ipos) = rval
       end do
-      write(this%iout,'(1x,a)')'END OF '//trim(adjustl(this%text))//' CONNECTIONDATA'
+      write(this%iout,'(1x,a)')                                                  &
+        'END OF '//trim(adjustl(this%text))//' CONNECTIONDATA'
     else
-      call store_error('ERROR.  REQUIRED CONNECTIONDATA BLOCK NOT FOUND.')
+      call store_error('REQUIRED CONNECTIONDATA BLOCK NOT FOUND.')
     end if
     !
     ! -- terminate if any errors were detected
@@ -884,9 +883,8 @@ contains
         if (this%ictype(ipos) /= 2 .and. this%ictype(ipos) /= 3) cycle
         j = j + 1
         if (j > 1) then
-           write(errmsg,'(4x,a,1x,i4,1x,a,1x,i4,1x,a)') &
-                  '****ERROR. nlakeconn FOR LAKE', n, 'EMBEDDED CONNECTION', j, &
-                  ' EXCEEDS 1.'
+           write(errmsg,'(a,1x,i4,1x,a,1x,i4,1x,a)')                             &
+             'nlakeconn FOR LAKE', n, 'EMBEDDED CONNECTION', j, ' EXCEEDS 1.'
            call store_error(errmsg)
         end if
       end do
@@ -905,10 +903,10 @@ contains
           icellid = this%cellid(ipos)
           if (icellid == icellid0) then
             if (this%ictype(ipos) == 0) then
-                write(errmsg,'(4x,a,1x,i4,1x,a,1x,i4,1x,a,1x,i4,1x,a)') &
-                      '****ERROR. EMBEDDED LAKE', n,                   &
-                      'CANNOT COINCIDE WITH VERTICAL CONNECTION', j,   &
-                      'IN LAKE', nn, '.'
+                write(errmsg,'(a,1x,i4,1x,a,1x,i4,1x,a,1x,i4,1x,a)')             &
+                  'EMBEDDED LAKE', n,                                            &
+                  'CANNOT COINCIDE WITH VERTICAL CONNECTION', j,                 &
+                  'IN LAKE', nn, '.'
                 call store_error(errmsg)
             end if
           end if
@@ -936,18 +934,18 @@ contains
             this%belev(ipos) = bot
           else
             if (this%belev(ipos) >= this%telev(ipos)) then
-              write(errmsg,'(4x,a,1x,i4,1x,a,1x,i4,1x,a)') &
-                '****ERROR. telev FOR LAKE ', n, ' HORIZONTAL CONNECTION ', j, &
+              write(errmsg,'(a,1x,i4,1x,a,1x,i4,1x,a)')                          &
+                'telev FOR LAKE ', n, ' HORIZONTAL CONNECTION ', j,              &
                 'MUST BE >= belev'
               call store_error(errmsg)
             else if (this%belev(ipos) < bot) then
-              write(errmsg,'(4x,a,1x,i4,1x,a,1x,i4,1x,a,1x,g15.7,1x,a)') &
-                '****ERROR. belev FOR LAKE ', n, ' HORIZONTAL CONNECTION ', j, &
+              write(errmsg,'(a,1x,i4,1x,a,1x,i4,1x,a,1x,g15.7,1x,a)')            &
+                'belev FOR LAKE ', n, ' HORIZONTAL CONNECTION ', j,              &
                 'MUST BE >= cell bottom (', bot, ')'
               call store_error(errmsg)
             else if (this%telev(ipos) > top) then
-              write(errmsg,'(4x,a,1x,i4,1x,a,1x,i4,1x,a,1x,g15.7,1x,a)') &
-                '****ERROR. telev FOR LAKE ', n, ' HORIZONTAL CONNECTION ', j, &
+              write(errmsg,'(a,1x,i4,1x,a,1x,i4,1x,a,1x,g15.7,1x,a)')            &
+                'telev FOR LAKE ', n, ' HORIZONTAL CONNECTION ', j,              &
                 'MUST BE <= cell top (', top, ')'
               call store_error(errmsg)
             end if
@@ -963,12 +961,12 @@ contains
         !
         ! -- check for missing or duplicate lake connections
         if (nboundchk(ipos) == 0) then
-          write(errmsg,'(a,1x,i0,1x,a,1x,i0)')                                  &
-            'ERROR.  NO DATA SPECIFIED FOR LAKE', n, 'CONNECTION', j
+          write(errmsg,'(a,1x,i0,1x,a,1x,i0)')                                   &
+            'NO DATA SPECIFIED FOR LAKE', n, 'CONNECTION', j
           call store_error(errmsg)
         else if (nboundchk(ipos) > 1) then
-          write(errmsg,'(a,1x,i0,1x,a,1x,i0,1x,a,1x,i0,1x,a)')                  &
-            'ERROR.  DATA FOR LAKE', n, 'CONNECTION', j,                        &
+          write(errmsg,'(a,1x,i0,1x,a,1x,i0,1x,a,1x,i0,1x,a)')                   &
+            'DATA FOR LAKE', n, 'CONNECTION', j,                                 &
             'SPECIFIED', nboundchk(ipos), 'TIMES'
           call store_error(errmsg)
         end if
@@ -1038,7 +1036,7 @@ contains
     if (isfound) then
       ntabs = 0
       ! -- process the lake connection data
-      write(this%iout,'(/1x,a)')'PROCESSING '//trim(adjustl(this%text))// &
+      write(this%iout,'(/1x,a)')'PROCESSING '//trim(adjustl(this%text))//        &
         ' LAKE_TABLES'
       readtable: do
         call this%parser%GetNextLine(endOfBlock)
@@ -1046,8 +1044,7 @@ contains
         n = this%parser%GetInteger()
 
         if (n < 1 .or. n > this%nlakes) then
-          write(errmsg,'(4x,a,1x,i6)') &
-            '****ERROR. lakeno MUST BE > 0 and <= ', this%nlakes
+          write(errmsg,'(a,1x,i6)') 'lakeno MUST BE > 0 and <= ', this%nlakes
           call store_error(errmsg)
           cycle readtable
         end if
@@ -1062,7 +1059,7 @@ contains
           case('TAB6')
             call this%parser%GetStringCaps(keyword)
             if(trim(adjustl(keyword)) /= 'FILEIN') then
-              errmsg = 'TAB6 keyword must be followed by "FILEIN" ' //      &
+              errmsg = 'TAB6 keyword must be followed by "FILEIN" ' //           &
                         'then by filename.'
               call store_error(errmsg)
               cycle readtable
@@ -1070,31 +1067,32 @@ contains
             call this%parser%GetString(line)
             call this%lak_read_table(n, line)
           case default
-            write(errmsg,'(4x,a,1x,i4,1x,a)') &
-              '****ERROR. LAKE TABLE ENTRY for LAKE ', n, 'MUST INCLUDE TAB6 KEYWORD'
+            write(errmsg,'(a,1x,i4,1x,a)')                                       &
+              'LAKE TABLE ENTRY for LAKE ', n, 'MUST INCLUDE TAB6 KEYWORD'
             call store_error(errmsg)
             cycle readtable
         end select
       end do readtable
       
-      write(this%iout,'(1x,a)')'END OF '//trim(adjustl(this%text))//' LAKE_TABLES'
+      write(this%iout,'(1x,a)')                                                  &
+        'END OF ' // trim(adjustl(this%text)) // ' LAKE_TABLES'
       !
       ! -- check for missing or duplicate lake connections
       if (ntabs < this%ntables) then
-        write(errmsg,'(a,1x,i0,1x,a,1x,i0)')                                    &
-          'ERROR.  TABLE DATA ARE SPECIFIED', ntabs,                            &
+        write(errmsg,'(a,1x,i0,1x,a,1x,i0)')                                     &
+          'TABLE DATA ARE SPECIFIED', ntabs,                                     &
           'TIMES BUT NTABLES IS SET TO', this%ntables
         call store_error(errmsg)
       end if
       do n = 1, this%nlakes
         if (this%ntabrow(n) > 0 .and. nboundchk(n) > 1) then
-          write(errmsg,'(a,1x,i0,1x,a,1x,i0,1x,a)')                             &
-            'ERROR.  TABLE DATA FOR LAKE', n, 'SPECIFIED', nboundchk(n), 'TIMES'
+          write(errmsg,'(a,1x,i0,1x,a,1x,i0,1x,a)')                              &
+            'TABLE DATA FOR LAKE', n, 'SPECIFIED', nboundchk(n), 'TIMES'
           call store_error(errmsg)
         end if
       end do
     else
-      call store_error('ERROR.  REQUIRED TABLES BLOCK NOT FOUND.')
+      call store_error('REQUIRED TABLES BLOCK NOT FOUND.')
     end if
     !
     ! -- deallocate local storage
@@ -1143,7 +1141,11 @@ contains
     real(DP) :: sa
     real(DP) :: wa
     real(DP) :: v
+    real(DP) :: v0
     type(BlockParserType) :: parser
+    ! -- formats
+    character(len=*), parameter :: fmttaberr =                                   &
+      '(a,1x,i4,1x,a,1x,g15.6,1x,a,1x,i6,1x,a,1x,i4,1x,a,1x,g15.6,1x,a)'
 ! ------------------------------------------------------------------------------
 
     ! -- format
@@ -1166,8 +1168,8 @@ contains
     if (isfound) then
       ! -- process the lake connection data
       if (this%iprpak /= 0) then
-        write(this%iout,'(/1x,a)')                                              &
-          'PROCESSING '//trim(adjustl(this%text))//' DIMENSIONS'
+        write(this%iout,'(/1x,a)')                                               &
+          'PROCESSING ' // trim(adjustl(this%text)) // ' DIMENSIONS'
       end if
       readdims: do
         call parser%GetNextLine(endOfBlock)
@@ -1178,8 +1180,7 @@ contains
             n = parser%GetInteger()
 
             if (n < 1) then
-              write(errmsg,'(4x,a)') &
-                '****ERROR. LAKE TABLE NROW MUST BE > 0'
+              write(errmsg,'(a)') 'LAKE TABLE NROW MUST BE > 0'
               call store_error(errmsg)
             end if
           case ('NCOL')
@@ -1191,35 +1192,33 @@ contains
               jmin = 3
             end if
             if (j < jmin) then
-              write(errmsg,'(4x,a,1x,i0)') &
-                '****ERROR. LAKE TABLE NCOL MUST BE >= ', jmin
+              write(errmsg,'(a,1x,i0)') 'LAKE TABLE NCOL MUST BE >= ', jmin
               call store_error(errmsg)
             end if
 
           case default
-            write(errmsg,'(4x,a,a)') &
-              '****ERROR. UNKNOWN '//trim(this%text)//' DIMENSIONS KEYWORD: ', &
-                                     trim(keyword)
+            write(errmsg,'(a,a)')                                                &
+              'UNKNOWN '//trim(this%text)//' DIMENSIONS KEYWORD: ', trim(keyword)
             call store_error(errmsg)
         end select
       end do readdims
       if (this%iprpak /= 0) then
-        write(this%iout,'(1x,a)')                                               &
-          'END OF '//trim(adjustl(this%text))//' DIMENSIONS'
+        write(this%iout,'(1x,a)')                                                &
+          'END OF ' // trim(adjustl(this%text)) // ' DIMENSIONS'
       end if
     else
-      call store_error('ERROR.  REQUIRED DIMENSIONS BLOCK NOT FOUND.')
+      call store_error('REQUIRED DIMENSIONS BLOCK NOT FOUND.')
     end if
     !
     ! -- check that ncol and nrow have been specified
     if (n < 1) then
-      write(errmsg,'(4x,a)') &
-        '****ERROR. NROW NOT SPECIFIED IN THE LAKE TABLE DIMENSIONS BLOCK'
+      write(errmsg,'(a)')                                                        &
+        'NROW NOT SPECIFIED IN THE LAKE TABLE DIMENSIONS BLOCK'
       call store_error(errmsg)
     end if
     if (j < 1) then
-      write(errmsg,'(4x,a)') &
-        '****ERROR. NCOL NOT SPECIFIED IN THE LAKE TABLE DIMENSIONS BLOCK'
+      write(errmsg,'(a)')                                                        &
+        'NCOL NOT SPECIFIED IN THE LAKE TABLE DIMENSIONS BLOCK'
       call store_error(errmsg)
     end if
     !
@@ -1273,17 +1272,17 @@ contains
         end do readtabledata
         
         if (this%iprpak /= 0) then
-          write(this%iout,'(1x,a)')                                             &
+          write(this%iout,'(1x,a)')                                              &
             'END OF '//trim(adjustl(this%text))//' TABLE'
         end if
       else
-        call store_error('ERROR.  REQUIRED TABLE BLOCK NOT FOUND.')
+        call store_error('REQUIRED TABLE BLOCK NOT FOUND.')
       end if
       !
       ! -- error condition if number of rows read are not equal to nrow
       if (ipos /= this%ntabrow(ilak)) then
-        write(errmsg,'(a,1x,i0,1x,a,1x,i0,1x,a)') &
-          'ERROR. NROW SET TO',this%ntabrow(ilak), 'BUT', ipos, 'ROWS WERE READ'
+        write(errmsg,'(a,1x,i0,1x,a,1x,i0,1x,a)')                                &
+          'NROW SET TO', this%ntabrow(ilak), 'BUT', ipos, 'ROWS WERE READ'
         call store_error(errmsg)
       end if
       !
@@ -1294,9 +1293,9 @@ contains
           vol = this%laketables(ilak)%tabvolume(n)
           sa = this%laketables(ilak)%tabsarea(n)
           wa = this%laketables(ilak)%tabwarea(n)
-          v = vol * sa * wa
+          vol = vol * sa * wa
           ! -- check if all entries are zero
-          if (v > DZERO) exit
+          if (vol > DZERO) exit
           ! -- set lake bottom
           this%lakebot(ilak) = this%laketables(ilak)%tabstage(n)
           this%belev(ilak) = this%laketables(ilak)%tabstage(n)
@@ -1308,34 +1307,45 @@ contains
       !
       ! -- verify the table data
       do n = 2, this%ntabrow(ilak)
-        if (this%laketables(ilak)%tabstage(n) <= this%laketables(ilak)%tabstage(n-1)) then
-          write(errmsg,'(4x,a,1x,i4,1x,a,1x,g15.6,1x,a,1x,i6,1x,a,1x,i4,1x,a,1x,g15.6,1x,a)') &
-            '****ERROR. TABLE STAGE ENTRY', n, '(', this%laketables(ilak)%tabstage(n), &
-            ') FOR LAKE ', ilak, 'MUST BE GREATER THAN THE PREVIOUS STAGE ENTRY', &
+        v = this%laketables(ilak)%tabstage(n)
+        v0 = this%laketables(ilak)%tabstage(n-1)
+        if (v <= v0) then
+          write(errmsg,fmttaberr)                                                &
+            'TABLE STAGE ENTRY', n, '(', this%laketables(ilak)%tabstage(n),      &
+            ') FOR LAKE ', ilak, 'MUST BE GREATER THAN THE PREVIOUS STAGE ENTRY',&
             n-1, '(', this%laketables(ilak)%tabstage(n-1), ')'
           call store_error(errmsg)
         end if
-        if (this%laketables(ilak)%tabvolume(n) <= this%laketables(ilak)%tabvolume(n-1)) then
-          write(errmsg,'(4x,a,1x,i4,1x,a,1x,g15.6,1x,a,1x,i6,1x,a,1x,i4,1x,a,1x,g15.6,1x,a)') &
-            '****ERROR. TABLE VOLUME ENTRY', n, '(', this%laketables(ilak)%tabvolume(n), &
-            ') FOR LAKE ', ilak, 'MUST BE GREATER THAN THE PREVIOUS VOLUME ENTRY', &
+        v = this%laketables(ilak)%tabvolume(n)
+        v0 = this%laketables(ilak)%tabvolume(n-1)
+        if (v <= v0) then
+          write(errmsg,fmttaberr)                                                &
+            'TABLE VOLUME ENTRY', n, '(', this%laketables(ilak)%tabvolume(n),    &
+            ') FOR LAKE ',                                                       &
+            ilak, 'MUST BE GREATER THAN THE PREVIOUS VOLUME ENTRY',              &
             n-1, '(', this%laketables(ilak)%tabvolume(n-1), ')'
           call store_error(errmsg)
         end if
-        if (this%laketables(ilak)%tabsarea(n) < this%laketables(ilak)%tabsarea(n-1)) then
-          write(errmsg,'(4x,a,1x,i4,1x,a,1x,g15.6,1x,a,1x,i6,1x,a,1x,i4,1x,a,1x,g15.6,1x,a)') &
-            '****ERROR. TABLE SURFACE AREA ENTRY', n, '(', this%laketables(ilak)%tabsarea(n), &
-            ') FOR LAKE ', ilak, 'MUST BE GREATER THAN OR EQUAL TO THE PREVIOUS SURFACE AREA ENTRY', &
+        v = this%laketables(ilak)%tabsarea(n)
+        v0 = this%laketables(ilak)%tabsarea(n-1)
+        if (v < v0) then
+          write(errmsg,fmttaberr)                                                &
+            'TABLE SURFACE AREA ENTRY', n, '(',                                  &
+            this%laketables(ilak)%tabsarea(n), ') FOR LAKE ', ilak,              &
+            'MUST BE GREATER THAN OR EQUAL TO THE PREVIOUS SURFACE AREA ENTRY',  &
             n-1, '(', this%laketables(ilak)%tabsarea(n-1), ')'
           call store_error(errmsg)
         end if
         iconn = this%idxlakeconn(ilak)
         if (this%ictype(iconn) == 2 .or. this%ictype(iconn) == 3) then
-          if (this%laketables(ilak)%tabwarea(n) < this%laketables(ilak)%tabwarea(n-1)) then
-            write(errmsg,'(4x,a,1x,i4,1x,a,1x,g15.6,1x,a,1x,i6,1x,a,1x,i4,1x,a,1x,g15.6,1x,a)') &
-              '****ERROR. TABLE EXCHANGE AREA ENTRY', n, '(', this%laketables(ilak)%tabwarea(n), &
-              ') FOR LAKE ', ilak, 'MUST BE GREATER THAN OR EQUAL TO THE PREVIOUS EXCHANGE AREA ENTRY', &
-              n-1, '(', this%laketables(ilak)%tabwarea(n-1), ')'
+          v = this%laketables(ilak)%tabwarea(n)
+          v0 = this%laketables(ilak)%tabwarea(n-1)
+          if (v < v0) then
+            write(errmsg,fmttaberr)                                              &
+              'TABLE EXCHANGE AREA ENTRY', n, '(',                               &
+              this%laketables(ilak)%tabwarea(n), ') FOR LAKE ', ilak,            &
+              'MUST BE GREATER THAN OR EQUAL TO THE PREVIOUS EXCHANGE AREA ' //  &
+              'ENTRY', n-1, '(', this%laketables(ilak)%tabwarea(n-1), ')'
             call store_error(errmsg)
           end if
         end if
@@ -1417,16 +1427,16 @@ contains
         end do
 
         ! -- process the lake connection data
-        write(this%iout,'(/1x,a)')'PROCESSING '//trim(adjustl(this%text))//     &
-          ' OUTLETS'
+        write(this%iout,'(/1x,a)')                                               &
+          'PROCESSING ' // trim(adjustl(this%text)) // ' OUTLETS'
         readoutlet: do
           call this%parser%GetNextLine(endOfBlock)
           if (endOfBlock) exit
           n = this%parser%GetInteger()
 
           if (n < 1 .or. n > this%noutlets) then
-            write(errmsg,'(4x,a,1x,i6)') &
-              '****ERROR. outletno MUST BE > 0 and <= ', this%noutlets
+            write(errmsg,'(a,1x,i6)')                                            &
+              'outletno MUST BE > 0 and <= ', this%noutlets
             call store_error(errmsg)
             cycle readoutlet
           end if
@@ -1437,9 +1447,8 @@ contains
           ! -- read outlet lakein
           ival = this%parser%GetInteger()
           if (ival <1 .or. ival > this%nlakes) then
-            write(errmsg,'(4x,a,1x,i4,1x,a,1x,i6)') &
-              '****ERROR. lakein FOR OUTLET ', n, 'MUST BE > 0 and <= ',        &
-              this%nlakes
+            write(errmsg,'(a,1x,i4,1x,a,1x,i6)')                                 &
+              'lakein FOR OUTLET ', n, 'MUST BE > 0 and <= ', this%nlakes
             call store_error(errmsg)
             cycle readoutlet
           end if
@@ -1448,9 +1457,8 @@ contains
           ! -- read outlet lakeout
           ival = this%parser%GetInteger()
           if (ival <0 .or. ival > this%nlakes) then
-            write(errmsg,'(4x,a,1x,i4,1x,a,1x,i6)') &
-              '****ERROR. lakeout FOR OUTLET ', n, 'MUST BE >= 0 and <= ',      &
-              this%nlakes
+            write(errmsg,'(a,1x,i4,1x,a,1x,i6)')                                 &
+              'lakeout FOR OUTLET ', n, 'MUST BE >= 0 and <= ', this%nlakes
             call store_error(errmsg)
             cycle readoutlet
           end if
@@ -1466,9 +1474,8 @@ contains
             case ('WEIR')
               this%iouttype(n) = 2
             case default
-              write(errmsg,'(4x,a,1x,i4,1x,a,a,a)') &
-                '****ERROR. UNKNOWN couttype FOR OUTLET ', n,                   &
-                '(', trim(keyword), ')'
+              write(errmsg,'(a,1x,i4,1x,a,a,a)')                                 &
+                'UNKNOWN couttype FOR OUTLET ', n, '(', trim(keyword), ')'
               call store_error(errmsg)
               cycle readoutlet
             end select
@@ -1483,42 +1490,42 @@ contains
           ! -- outlet invert
           call this%parser%GetString(text)
           bndElem => this%outinvert(n)
-          call read_value_or_time_series_adv(text, n, jj, bndElem, this%name,      &
-                                             'BND', this%tsManager, this%iprpak,   &
+          call read_value_or_time_series_adv(text, n, jj, bndElem, this%name,    &
+                                             'BND', this%tsManager, this%iprpak, &
                                              'INVERT')
           !
           ! -- outlet width
           call this%parser%GetString(text)
           bndElem => this%outwidth(n)
-          call read_value_or_time_series_adv(text, n, jj, bndElem, this%name,      &
-                                             'BND', this%tsManager, this%iprpak,   &
+          call read_value_or_time_series_adv(text, n, jj, bndElem, this%name,    &
+                                             'BND', this%tsManager, this%iprpak, &
                                              'WIDTH')
           !
           ! -- outlet roughness
           call this%parser%GetString(text)
           bndElem => this%outrough(n)
-          call read_value_or_time_series_adv(text, n, jj, bndElem, this%name,      &
-                                             'BND', this%tsManager, this%iprpak,   &
+          call read_value_or_time_series_adv(text, n, jj, bndElem, this%name,    &
+                                             'BND', this%tsManager, this%iprpak, &
                                              'ROUGH')
           !
           ! -- outlet slope
           call this%parser%GetString(text)
           bndElem => this%outslope(n)
-          call read_value_or_time_series_adv(text, n, jj, bndElem, this%name,      &
-                                             'BND', this%tsManager, this%iprpak,   &
+          call read_value_or_time_series_adv(text, n, jj, bndElem, this%name,    &
+                                             'BND', this%tsManager, this%iprpak, &
                                              'SLOPE')
         end do readoutlet
-        write(this%iout,'(1x,a)') 'END OF ' // trim(adjustl(this%text)) //      &
+        write(this%iout,'(1x,a)') 'END OF ' // trim(adjustl(this%text)) //       &
                                    ' OUTLETS'
         !
         ! -- check for duplicate or missing outlets
         do n = 1, this%noutlets
           if (nboundchk(n) == 0) then
-            write(errmsg,'(a,1x,i0)') 'ERROR.  NO DATA SPECIFIED FOR OUTLET', n
+            write(errmsg,'(a,1x,i0)') 'NO DATA SPECIFIED FOR OUTLET', n
             call store_error(errmsg)
           else if (nboundchk(n) > 1) then
-            write(errmsg,'(a,1x,i0,1x,a,1x,i0,1x,a)')                           &
-              'ERROR.  DATA FOR OUTLET', n, 'SPECIFIED', nboundchk(n), 'TIMES'
+            write(errmsg,'(a,1x,i0,1x,a,1x,i0,1x,a)')                            &
+              'DATA FOR OUTLET', n, 'SPECIFIED', nboundchk(n), 'TIMES'
             call store_error(errmsg)
           end if
         end do
@@ -1526,14 +1533,15 @@ contains
         ! -- deallocate local storage
         deallocate(nboundchk)
       else
-        write(errmsg,'(a,1x,a)') 'ERROR.  AN OUTLETS BLOCK SHOULD NOT BE',      &
-          'SPECIFIED IF NOUTLETS IS NOT SPECIFIED OR IS SPECIFIED TO BE 0.'
+        write(errmsg,'(a,1x,a)')                                                 &
+          'AN OUTLETS BLOCK SHOULD NOT BE SPECIFIED IF NOUTLETS IS NOT',         &
+          'SPECIFIED OR IS SPECIFIED TO BE 0.'
           call store_error(errmsg)
       end if
       
     else
       if (this%noutlets > 0) then
-        call store_error('ERROR.  REQUIRED OUTLETS BLOCK NOT FOUND.')
+        call store_error('REQUIRED OUTLETS BLOCK NOT FOUND.')
       end if
     end if
     !
@@ -1577,7 +1585,7 @@ contains
     !
     ! -- parse dimensions block if detected
     if (isfound) then
-      write(this%iout,'(/1x,a)')'PROCESSING '//trim(adjustl(this%text))// &
+      write(this%iout,'(/1x,a)') 'PROCESSING ' // trim(adjustl(this%text)) //    &
         ' DIMENSIONS'
       do
         call this%parser%GetNextLine(endOfBlock)
@@ -1594,20 +1602,20 @@ contains
             this%ntables = this%parser%GetInteger()
             write(this%iout,'(4x,a,i7)')'NTABLES = ', this%ntables
           case default
-            write(errmsg,'(4x,a,a)') &
-              '****ERROR. UNKNOWN '//trim(this%text)//' DIMENSION: ', &
-                                     trim(keyword)
+            write(errmsg,'(a,a)')                                                &
+              'UNKNOWN '//trim(this%text)//' DIMENSION: ', trim(keyword)
             call store_error(errmsg)
         end select
       end do
-      write(this%iout,'(1x,a)')'END OF '//trim(adjustl(this%text))//' DIMENSIONS'
+      write(this%iout,'(1x,a)')                                                  &
+        'END OF ' // trim(adjustl(this%text)) // ' DIMENSIONS'
     else
-      call store_error('ERROR.  REQUIRED DIMENSIONS BLOCK NOT FOUND.')
+      call store_error('REQUIRED DIMENSIONS BLOCK NOT FOUND.')
     end if
 
     if (this%nlakes < 0) then
-      write(errmsg, '(1x,a)') &
-        'ERROR:  NLAKES WAS NOT SPECIFIED OR WAS SPECIFIED INCORRECTLY.'
+      write(errmsg, '(a)')                                                       &
+        'NLAKES WAS NOT SPECIFIED OR WAS SPECIFIED INCORRECTLY.'
       call store_error(errmsg)
     end if
     !
@@ -3019,15 +3027,15 @@ contains
     ival = abs(itemno)
     if (itemno > 0) then
       if (ival < 1 .or. ival > this%nlakes) then
-        write(errmsg,'(4x,a,1x,i6,1x,a,1x,i6)') &
-          '****ERROR. LAKENO ', itemno, 'MUST BE > 0 and <= ', this%nlakes
+        write(errmsg,'(a,1x,i6,1x,a,1x,i6)')                                     &
+          'LAKENO ', itemno, 'MUST BE > 0 and <= ', this%nlakes
         call store_error(errmsg)
         ierr = 1
       end if
     else
       if (ival < 1 .or. ival > this%noutlets) then
-        write(errmsg,'(4x,a,1x,i6,1x,a,1x,i6)') &
-          '****ERROR. IOUTLET ', itemno, 'MUST BE > 0 and <= ', this%noutlets
+        write(errmsg,'(a,1x,i6,1x,a,1x,i6)')                                     &
+          'IOUTLET ', itemno, 'MUST BE > 0 and <= ', this%noutlets
         call store_error(errmsg)
         ierr = 1
       end if
@@ -3099,15 +3107,15 @@ contains
         else if (text == 'ACTIVE') then
           this%iboundpak(itmp) = 1
         else
-          write(errmsg,'(4x,a,a)') &
-            '****ERROR. UNKNOWN '//trim(this%text)//' LAK STATUS KEYWORD: ', &
-            text
+          write(errmsg,'(a,a)')                                                  &
+            'UNKNOWN ' // trim(this%text)//' LAK STATUS KEYWORD: ', text
           call store_error(errmsg)
         end if
       case ('STAGE')
         ierr = this%lak_check_valid(itemno)
         if (ierr /= 0) goto 999
-        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
+        call urword(line, lloc, istart, istop, 0, ival, rval,                    &
+                    this%iout, this%inunit)
         text = line(istart:istop)
         jj = 1    ! For STAGE
         bndElem => this%stage(itmp)
@@ -3117,7 +3125,8 @@ contains
       case ('RAINFALL')
         ierr = this%lak_check_valid(itemno)
         if (ierr /= 0) goto 999
-        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
+        call urword(line, lloc, istart, istop, 0, ival, rval,                    &
+                    this%iout, this%inunit)
         text = line(istart:istop)
         jj = 1    ! For RAINFALL
         bndElem => this%rainfall(itmp)
@@ -3125,15 +3134,16 @@ contains
                                            'BND', this%tsManager, this%iprpak,   &
                                            'RAINFALL')
         if (this%rainfall(itmp) < DZERO) then
-          write(errmsg, '(4x, a, i0, a, G0, a)') &
-            '****ERROR. LAKE ', itmp, ' WAS ASSIGNED A RAINFALL VALUE OF ', &
+          write(errmsg, '(a,i0,a,G0,a)')                                         &
+            'LAKE ', itmp, ' WAS ASSIGNED A RAINFALL VALUE OF ',                 &
             this%rainfall(itmp), '. RAINFALL MUST BE POSITIVE.'
           call store_error(errmsg)
         end if
       case ('EVAPORATION')
         ierr = this%lak_check_valid(itemno)
         if (ierr /= 0) goto 999
-        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
+        call urword(line, lloc, istart, istop, 0, ival, rval,                    &
+                    this%iout, this%inunit)
         text = line(istart:istop)
         jj = 1    ! For EVAPORATION
         bndElem => this%evaporation(itmp)
@@ -3141,15 +3151,16 @@ contains
                                            'BND', this%tsManager, this%iprpak,   &
                                            'EVAPORATION')
         if (this%evaporation(itmp) < DZERO) then
-          write(errmsg, '(4x, a, i0, a, G0, a)') &
-            '****ERROR. LAKE ', itmp, ' WAS ASSIGNED AN EVAPORATION VALUE OF ', &
+          write(errmsg, '(a,i0,a,G0,a)')                                         &
+            'LAKE ', itmp, ' WAS ASSIGNED AN EVAPORATION VALUE OF ',             &
             this%evaporation(itmp), '. EVAPORATION MUST BE POSITIVE.'
           call store_error(errmsg)
         end if
       case ('RUNOFF')
         ierr = this%lak_check_valid(itemno)
         if (ierr /= 0) goto 999
-        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
+        call urword(line, lloc, istart, istop, 0, ival, rval,                    &
+                    this%iout, this%inunit)
         text = line(istart:istop)
         jj = 1    ! For RUNOFF
         bndElem => this%runoff(itmp)
@@ -3157,15 +3168,16 @@ contains
                                            'BND', this%tsManager, this%iprpak,   &
                                            'RUNOFF')
         if (this%runoff(itmp) < DZERO) then
-          write(errmsg, '(4x, a, i0, a, G0, a)') &
-            '****ERROR. LAKE ', itmp, ' WAS ASSIGNED A RUNOFF VALUE OF ', &
+          write(errmsg, '(a,i0,a,G0,a)')                                         &
+            'LAKE ', itmp, ' WAS ASSIGNED A RUNOFF VALUE OF ',                   &
             this%runoff(itmp), '. RUNOFF MUST BE POSITIVE.'
           call store_error(errmsg)
         end if
       case ('INFLOW')
         ierr = this%lak_check_valid(itemno)
         if (ierr /= 0) goto 999
-        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
+        call urword(line, lloc, istart, istop, 0, ival, rval,                    &
+                    this%iout, this%inunit)
         text = line(istart:istop)
         jj = 1    ! For specified INFLOW
         bndElem => this%inflow(itmp)
@@ -3173,15 +3185,16 @@ contains
                                            'BND', this%tsManager, this%iprpak,   &
                                            'INFLOW')
         if (this%inflow(itmp) < DZERO) then
-          write(errmsg, '(4x, a, i0, a, G0, a)') &
-            '****ERROR. LAKE ', itmp, ' WAS ASSIGNED AN INFLOW VALUE OF ', &
+          write(errmsg, '(a,i0,a,G0,a)')                                         &
+            'LAKE ', itmp, ' WAS ASSIGNED AN INFLOW VALUE OF ',                  &
             this%inflow(itmp), '. INFLOW MUST BE POSITIVE.'
           call store_error(errmsg)
         end if
       case ('WITHDRAWAL')
         ierr = this%lak_check_valid(itemno)
         if (ierr /= 0) goto 999
-        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
+        call urword(line, lloc, istart, istop, 0, ival, rval,                    &
+                    this%iout, this%inunit)
         text = line(istart:istop)
         jj = 1    ! For specified WITHDRAWAL
         bndElem => this%withdrawal(itmp)
@@ -3189,8 +3202,8 @@ contains
                                            'BND', this%tsManager, this%iprpak,   &
                                            'WITHDRAWL')
         if (this%withdrawal(itmp) < DZERO) then
-          write(errmsg, '(4x, a, i0, a, G0, a)') &
-            '****ERROR. LAKE ', itmp, ' WAS ASSIGNED A WITHDRAWAL VALUE OF ', &
+          write(errmsg, '(a,i0,a,G0,a)')                                         &
+            'LAKE ', itmp, ' WAS ASSIGNED A WITHDRAWAL VALUE OF ',               &
             this%withdrawal(itmp), '. WITHDRAWAL MUST BE POSITIVE.'
           call store_error(errmsg)
         end if
@@ -3198,7 +3211,8 @@ contains
         ierr = this%lak_check_valid(-itemno)
         if (ierr /= 0) goto 999
         bndName = 'OUTLET' // citem
-        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
+        call urword(line, lloc, istart, istop, 0, ival, rval,                    &
+                    this%iout, this%inunit)
         text = line(istart:istop)
         jj = 1    ! For specified OUTLET RATE
         bndElem => this%outrate(itmp)
@@ -3209,7 +3223,8 @@ contains
         ierr = this%lak_check_valid(-itemno)
         if (ierr /= 0) goto 999
         bndName = 'OUTLET' // citem
-        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
+        call urword(line, lloc, istart, istop, 0, ival, rval,                    &
+                    this%iout, this%inunit)
         text = line(istart:istop)
         jj = 1    ! For OUTLET INVERT
         bndElem => this%outinvert(itmp)
@@ -3220,7 +3235,8 @@ contains
         ierr = this%lak_check_valid(-itemno)
         if (ierr /= 0) goto 999
         bndName = 'OUTLET' // citem
-        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
+        call urword(line, lloc, istart, istop, 0, ival, rval,                    &
+                    this%iout, this%inunit)
         text = line(istart:istop)
         jj = 1    ! For OUTLET WIDTH
         bndElem => this%outwidth(itmp)
@@ -3231,7 +3247,8 @@ contains
         ierr = this%lak_check_valid(-itemno)
         if (ierr /= 0) goto 999
         bndName = 'OUTLET' // citem
-        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
+        call urword(line, lloc, istart, istop, 0, ival, rval,                    &
+                    this%iout, this%inunit)
         text = line(istart:istop)
         jj = 1    ! For OUTLET ROUGHNESS
         bndElem => this%outrough(itmp)
@@ -3242,7 +3259,8 @@ contains
         ierr = this%lak_check_valid(-itemno)
         if (ierr /= 0) goto 999
         bndName = 'OUTLET' // citem
-        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
+        call urword(line, lloc, istart, istop, 0, ival, rval,                    &
+                    this%iout, this%inunit)
         text = line(istart:istop)
         jj = 1    ! For OUTLET SLOPE
         bndElem => this%outslope(itmp)
@@ -3252,11 +3270,13 @@ contains
       case ('AUXILIARY')
         ierr = this%lak_check_valid(itemno)
         if (ierr /= 0) goto 999
-        call urword(line, lloc, istart, istop, 1, ival, rval, this%iout, this%inunit)
+        call urword(line, lloc, istart, istop, 1, ival, rval,                    &
+                    this%iout, this%inunit)
         caux = line(istart:istop)
         do jj = 1, this%naux
           if (trim(adjustl(caux)) /= trim(adjustl(this%auxname(jj)))) cycle
-          call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
+          call urword(line, lloc, istart, istop, 0, ival, rval,                  &
+                      this%iout, this%inunit)
           text = line(istart:istop)
           ii = itmp
           bndElem => this%lauxvar(jj, ii)
@@ -3266,9 +3286,9 @@ contains
           exit
         end do
       case default
-        write(errmsg,'(4x,a,a)') &
-          '****ERROR. UNKNOWN '//trim(this%text)//' LAK DATA KEYWORD: ', &
-                                  line(istart:istop)
+        write(errmsg,'(2a)')                                                     &
+          'UNKNOWN ' // trim(this%text) // ' LAK DATA KEYWORD: ',                &
+          line(istart:istop)
     end select
     !
     ! -- terminate if any errors were detected
@@ -3307,11 +3327,10 @@ contains
     ! -- formats
 ! ------------------------------------------------------------------------------
     if (len(msg) == 0) then
-      write(errmsg,'(4x,a,1x,a,1x,a,1x,i6,1x,a)') &
-        '****ERROR.', keyword, ' for LAKE', ilak, 'has already been set.'
+      write(errmsg,'(a,1x,a,1x,i6,1x,a)')                                        &
+        keyword, ' for LAKE', ilak, 'has already been set.'
     else
-      write(errmsg,'(4x,a,1x,a,1x,a,1x,i6,1x,a)') &
-        '****ERROR.', keyword, ' for LAKE', ilak, msg
+      write(errmsg,'(a,1x,a,1x,i6,1x,a)') keyword, ' for LAKE', ilak, msg
     end if
     call store_error(errmsg)
     ! -- return
@@ -3523,7 +3542,7 @@ contains
     integer(I4B) :: isfirst
     ! -- formats
     character(len=*),parameter :: fmtblkerr = &
-      "('Error.  Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
+      "('Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
     character(len=*),parameter :: fmtlsp = &
       "(1X,/1X,'REUSING ',A,'S FROM LAST STRESS PERIOD')"
 ! ------------------------------------------------------------------------------
@@ -4904,8 +4923,7 @@ contains
                 call this%lak_calculate_conn_conductance(n, jj, hlak, hgwf, v)
               end if
             case default
-              errmsg = 'Error: Unrecognized observation type: ' // &
-                        trim(obsrv%ObsTypeId)
+              errmsg = 'Unrecognized observation type: ' // trim(obsrv%ObsTypeId)
               call store_error(errmsg)
               call ustop()
           end select
@@ -4924,13 +4942,13 @@ contains
     ! -- local
     integer(I4B) :: i, j, n, nn1, nn2
     integer(I4B) :: jj
-    character(len=200) :: ermsg
+    character(len=LINELENGTH) :: errmsg
     character(len=LENBOUNDNAME) :: bname
     logical :: jfound
     class(ObserveType),   pointer :: obsrv => null()
     ! --------------------------------------------------------------------------
     ! -- formats
-10  format('Error: Boundary "',a,'" for observation "',a, &
+10  format('Boundary "',a,'" for observation "',a,                               &
            '" is invalid in package "',a,'"')
     !
     do i = 1, this%obs%npakobs
@@ -4952,9 +4970,9 @@ contains
           !    Iterate through all lakes to identify and store
           !    corresponding index in bound array.
           jfound = .false.
-          if (obsrv%ObsTypeId=='LAK' .or.   &
-               obsrv%ObsTypeId=='CONDUCTANCE' .or.       &
-               obsrv%ObsTypeId=='WETTED-AREA') then
+          if (obsrv%ObsTypeId=='LAK' .or.                                        &
+              obsrv%ObsTypeId=='CONDUCTANCE' .or.                                &
+              obsrv%ObsTypeId=='WETTED-AREA') then
             do j = 1, this%nlakes
               do jj = this%idxlakeconn(j), this%idxlakeconn(j+1) - 1
                 if (this%boundname(jj) == bname) then
@@ -4965,8 +4983,8 @@ contains
                 end if
               end do
             end do
-          else if (obsrv%ObsTypeId=='EXT-OUTFLOW' .or.   &
-                   obsrv%ObsTypeId=='TO-MVR' .or. &
+          else if (obsrv%ObsTypeId=='EXT-OUTFLOW' .or.                           &
+                   obsrv%ObsTypeId=='TO-MVR' .or.                                &
                    obsrv%ObsTypeId=='OUTLET') then
             do j = 1, this%noutlets
               jj = this%lakein(j)
@@ -4988,16 +5006,16 @@ contains
             end do
           end if
           if (.not. jfound) then
-            write(ermsg,10)trim(bname), trim(obsrv%Name), trim(this%name)
-            call store_error(ermsg)
+            write(errmsg,10)trim(bname), trim(obsrv%Name), trim(this%name)
+            call store_error(errmsg)
           end if
         end if
       else
         call ExpandArray(obsrv%indxbnds)
         n = size(obsrv%indxbnds)
         if (n == 1) then
-          if (obsrv%ObsTypeId=='LAK' .or.   &
-               obsrv%ObsTypeId=='CONDUCTANCE' .or.       &
+          if (obsrv%ObsTypeId=='LAK' .or.                                        &
+               obsrv%ObsTypeId=='CONDUCTANCE' .or.                               &
                obsrv%ObsTypeId=='WETTED-AREA') then
             nn2 = obsrv%NodeNumber2
             j = this%idxlakeconn(nn1) + nn2 - 1
@@ -5006,8 +5024,8 @@ contains
             obsrv%indxbnds(1) = nn1
           end if
         else
-          ermsg = 'Programming error in lak_rp_obs'
-          call store_error(ermsg)
+          errmsg = 'Programming error in lak_rp_obs'
+          call store_error(errmsg)
         endif
       end if
       !
@@ -5016,55 +5034,57 @@ contains
       if (obsrv%ObsTypeId == 'STAGE') then
         n = size(obsrv%indxbnds)
         if (n > 1) then
-          write(ermsg, '(4x,a,4(1x,a))') &
-            'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
-            'for observation', trim(adjustl(obsrv%Name)), &
+          write(errmsg, '(a,3(1x,a))')                                           &
+            trim(adjustl(obsrv%ObsTypeId)),                                      &
+            'for observation', trim(adjustl(obsrv%Name)),                        &
             ' must be assigned to a lake with a unique boundname.'
-          call store_error(ermsg)
+          call store_error(errmsg)
         end if
       end if
       !
       ! -- check that index values are valid
-      if (obsrv%ObsTypeId=='TO-MVR' .or. &
-          obsrv%ObsTypeId=='EXT-OUTFLOW' .or. &
+      if (obsrv%ObsTypeId=='TO-MVR' .or.                                         &
+          obsrv%ObsTypeId=='EXT-OUTFLOW' .or.                                    &
           obsrv%ObsTypeId=='OUTLET') then
         do j = 1, size(obsrv%indxbnds)
           nn1 =  obsrv%indxbnds(j)
           if (nn1 < 1 .or. nn1 > this%noutlets) then
-            write(ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
-              'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
-              ' outlet must be > 0 and <=', this%noutlets, &
+            write(errmsg, '(a,1x,a,1x,i0,1x,a,1x,i0,a)')                         &
+              trim(adjustl(obsrv%ObsTypeId)),                                    &
+              ' outlet must be > 0 and <=', this%noutlets,                       &
               '(specified value is ', nn1, ')'
-            call store_error(ermsg)
+            call store_error(errmsg)
           end if
         end do
-      else if (obsrv%ObsTypeId=='LAK' .or.   &
-               obsrv%ObsTypeId=='CONDUCTANCE' .or.       &
+      else if (obsrv%ObsTypeId=='LAK' .or.                                       &
+               obsrv%ObsTypeId=='CONDUCTANCE' .or.                               &
                obsrv%ObsTypeId=='WETTED-AREA') then
         do j = 1, size(obsrv%indxbnds)
           nn1 =  obsrv%indxbnds(j)
           if (nn1 < 1 .or. nn1 > this%maxbound) then
-            write(ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
-              'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
-              ' lake connection number must be > 0 and <=', this%maxbound, &
+            write(errmsg, '(a,1x,a,1x,i0,1x,a,1x,i0,a)')                         &
+              trim(adjustl(obsrv%ObsTypeId)),                                    &
+              'lake connection number must be > 0 and <=', this%maxbound,        &
               '(specified value is ', nn1, ')'
-            call store_error(ermsg)
+            call store_error(errmsg)
           end if
         end do
       else
         do j = 1, size(obsrv%indxbnds)
           nn1 =  obsrv%indxbnds(j)
           if (nn1 < 1 .or. nn1 > this%nlakes) then
-            write(ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
-              'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
-              ' lake must be > 0 and <=', this%nlakes, &
+            write(errmsg, '(a,1x,a,1x,i0,1x,a,1x,i0,a)')                         &
+              trim(adjustl(obsrv%ObsTypeId)),                                    &
+              ' lake must be > 0 and <=', this%nlakes,                           &
               '(specified value is ', nn1, ')'
-            call store_error(ermsg)
+            call store_error(errmsg)
           end if
         end do
       end if
     end do
-    if (count_errors() > 0) call ustop()
+    if (count_errors() > 0) then
+      call ustop()
+    end if
     !
     return
   end subroutine lak_rp_obs
