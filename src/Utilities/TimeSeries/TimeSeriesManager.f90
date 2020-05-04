@@ -749,9 +749,21 @@ module TimeSeriesManagerModule
   subroutine read_value_or_time_series_adv(textInput, ii, jj, bndElem, pkgName,  &
                                            auxOrBnd, tsManager, iprpak, varName)
 ! ******************************************************************************
-! read_single_value_or_time_series -- 
-!    Call this subroutine if the time-series link is NOT available or
-!    needed and if you need to select the link by its Text member.
+! read_single_value_or_time_series_adv -- Call this subroutine from advanced 
+!    packages to define timeseries link for a variable (varName).
+!
+! -- Arguments are as follows:
+!       textInput    : string that is either a float or a string name
+!       ii           : column number  
+!       jj           : row number  
+!       bndElem      : pointer to a position in an array in package pkgName  
+!       pkgName      : package name
+!       auxOrBnd     : 'AUX' or 'BND' keyword
+!       tsManager    : timeseries manager object for package
+!       iprpak       : integer flag indicating if interpolated timeseries values
+!                      should be printed to package iout during TsManager%ad() 
+!       varName      : variable name
+!
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -767,96 +779,57 @@ module TimeSeriesManagerModule
     integer(I4B),                intent(in)    :: iprpak
     character(len=*),            intent(in)    :: varName
     ! -- local
-    integer(I4B) :: i, istat, nlinks
+    integer(I4B) :: istat
     real(DP) :: v
     character(len=LINELENGTH) :: ermsg
     character(len=LENTIMESERIESNAME) :: tsNameTemp
     logical :: found
-    integer(I4B) :: removeLink
     type(TimeSeriesType),     pointer :: timeseries => null()
-    type(TimeSeriesLinkType), pointer :: tslTemp => null()
     type(TimeSeriesLinkType), pointer :: tsLink => null()
 ! ------------------------------------------------------------------------------
     !
+    ! -- attempt to read textInput as a real value
     read (textInput, *, iostat=istat) v
+    !
+    ! -- numeric value
     if (istat == 0) then
-      ! Numeric value was successfully read.
+      !
+      ! -- Numeric value was successfully read.
       bndElem = v
-      ! Look to see if this array element already has a time series
-      ! linked to it.  If so, remove the link.
-      nlinks = tsManager%CountLinks(auxOrBnd)
-      found = .false.
-      removeLink = -1
-      csearchlinks: do i=1,nlinks
-        tslTemp => tsManager%GetLink(auxOrBnd, i)
-        if (tslTemp%PackageName == pkgName) then
-          ! -- Check ii against iRow, varName against Text member of link
-          if (tslTemp%IRow==ii .and. same_word(tslTemp%Text,varName)) then
-            ! -- This array element is already linked to a time series.
-            found = .true.
-            removeLink = i
-            exit csearchlinks
-          endif
-        endif
-      enddo csearchlinks
-      if (found) then
-        if (removeLink > 0) then
-          if (auxOrBnd == 'BND') then
-            call tsManager%boundTsLinks%RemoveNode(removeLink, .true.)
-          else if (auxOrBnd == 'AUX') then
-            call tsManager%auxvarTsLinks%RemoveNode(removeLink, .true.)
-          end if
-        end if
-      end if
+      !
+      ! -- remove existing link if it exists for this boundary element
+      found = remove_existing_link(tsManager, ii, jj, pkgName,                   &
+                                   auxOrBnd, varName)
+    !
+    ! -- timeseries
     else
-      ! Attempt to read numeric value from textInput failed.
-      ! Text should be a time-series name.
+      !
+      ! -- attempt to read numeric value from textInput failed.
+      !    Text should be a time-series name.
       tsNameTemp = textInput
       call UPCASE(tsNameTemp)
-      ! -- If textInput is a time-series name, get average value
+      !
+      ! -- if textInput is a time-series name, get average value
       !    from time series.
       timeseries => tsManager%get_time_series(tsNameTemp)
-      ! -- Create a time series link and add it to the package
+      !
+      ! -- create a time series link and add it to the package
       !    list of time series links used by the array.
       if (associated(timeseries)) then
-        ! -- Assign average value from time series to current
-        !    array element
+        !
+        ! -- Assign average value from time series to current array element
         v = timeseries%GetValue(totimsav, totim)
         bndElem = v
-        ! Look to see if this array element already has a time series
-        ! linked to it.  If not, make a link to it.
-        nlinks = tsManager%CountLinks(auxOrBnd)
-        found = .false.
-        removeLink = -1
-        searchlinks: do i=1,nlinks
-          tslTemp => tsManager%GetLink(auxOrBnd, i)
-          if (tslTemp%PackageName == pkgName) then
-            ! -- Check ii against iRow, varName against Text member of link
-            if (tslTemp%IRow==ii .and. same_word(tslTemp%Text,varName)) then
-              if (tslTemp%timeseries%name==tsNameTemp) then
-                ! -- This array element is already linked to a time series.
-                found = .true.
-                exit searchlinks
-              else
-                if (tslTemp%auxOrBnd == auxOrBnd) then
-                  removeLink = i
-                end if
-              end if
-            endif
-          endif
-        enddo searchlinks
-        if (.not. found) then
-          if (removeLink > 0) then
-            if (auxOrBnd == 'BND') then
-              call tsManager%boundTsLinks%RemoveNode(removeLink, .true.)
-            else if (auxOrBnd == 'AUX') then
-              call tsManager%auxvarTsLinks%RemoveNode(removeLink, .true.)
-            end if
-          end if
-          ! -- Link was not found. Make one and add it to the list.
-          call tsManager%make_link(timeseries, pkgName, auxOrBnd, bndElem, &
-                                   ii, jj, iprpak, tsLink, varName, '')
-        endif
+        !
+        ! -- remove existing link if it exists for this boundary element
+        found = remove_existing_link(tsManager, ii, jj,                          &
+                                     pkgName, auxOrBnd, varName)
+        !
+        ! -- Add link to the list.
+        call tsManager%make_link(timeseries, pkgName, auxOrBnd, bndElem,         &
+                                  ii, jj, iprpak, tsLink, varName, '')
+      !
+      ! -- not a valid timeseries name
       else
         ermsg = 'Error in list input. Expected numeric value or ' // &
                   'time-series name, but found: ' // trim(textInput)
@@ -865,5 +838,71 @@ module TimeSeriesManagerModule
     end if
     return
   end subroutine read_value_or_time_series_adv
+!  
+! -- private subroutines
+  function remove_existing_link(tsManager, ii, jj,                              &
+                                pkgName, auxOrBnd, varName) result(found)
+! ******************************************************************************
+! remove_existing_link -- remove an existing timeseries link if it is defined.
+!
+! -- Arguments are as follows:
+!       tsManager    : timeseries manager object for package
+!       ii           : column number  
+!       jj           : row number  
+!       pkgName      : package name
+!       auxOrBnd     : 'AUX' or 'BND' keyword
+!       varName      : variable name
+!
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- return variable
+    logical :: found
+    ! -- dummy
+    type(TimeSeriesManagerType), intent(inout) :: tsManager
+    integer(I4B),                intent(in)    :: ii
+    integer(I4B),                intent(in)    :: jj
+    character(len=*),            intent(in)    :: pkgName
+    character(len=3),            intent(in)    :: auxOrBnd
+    character(len=*),            intent(in)    :: varName
+    ! -- local
+    integer(I4B) :: i
+    integer(I4B) :: nlinks
+    integer(I4B) :: removeLink
+    type(TimeSeriesLinkType), pointer :: tslTemp => null()
+! ------------------------------------------------------------------------------
+    !
+    ! -- determine if link exists
+    nlinks = tsManager%CountLinks(auxOrBnd)
+    found = .FALSE.
+    removeLink = -1
+    csearchlinks: do i = 1, nlinks
+      tslTemp => tsManager%GetLink(auxOrBnd, i)
+      if (tslTemp%PackageName == pkgName) then
+        !
+        ! -- Check ii against iRow, jj against jCol, and varName 
+        !    against Text member of link
+        if (tslTemp%IRow == ii .and. tslTemp%JCol == jj .and.                      &
+            same_word(tslTemp%Text, varName)) then
+          !
+          ! -- This array element is already linked to a time series.
+          found = .TRUE.
+          removeLink = i
+          exit csearchlinks
+        end if
+      end if
+    end do csearchlinks
+    !
+    ! -- remove link if it was found
+    if (removeLink > 0) then
+      if (auxOrBnd == 'BND') then
+        call tsManager%boundTsLinks%RemoveNode(removeLink, .TRUE.)
+      else if (auxOrBnd == 'AUX') then
+        call tsManager%auxvarTsLinks%RemoveNode(removeLink, .TRUE.)
+      end if
+    end if
+    return
+  end function remove_existing_link
 
 end module TimeSeriesManagerModule

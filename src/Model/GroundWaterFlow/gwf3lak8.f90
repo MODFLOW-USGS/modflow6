@@ -3063,7 +3063,6 @@ contains
     integer(I4B) :: lloc
     integer(I4B) :: ii
     integer(I4B) :: jj
-    !integer(I4B) :: iaux
     real(DP) :: rval
     real(DP), pointer :: bndElem => null()
     ! -- formats
@@ -3270,8 +3269,6 @@ contains
         write(errmsg,'(4x,a,a)') &
           '****ERROR. UNKNOWN '//trim(this%text)//' LAK DATA KEYWORD: ', &
                                   line(istart:istop)
-        call store_error(errmsg)
-        call ustop()
     end select
     !
     ! -- terminate if any errors were detected
