@@ -86,16 +86,6 @@ module LakModule
     character (len=8), dimension(:), pointer, contiguous :: status => null()
     real(DP), dimension(:), pointer, contiguous  :: avail => null()
     real(DP), dimension(:), pointer, contiguous  :: lkgwsink => null()
-    ! -- time series aware data
-    !type (MemoryTSType), dimension(:), pointer, contiguous :: stage => null()
-    !type (MemoryTSType), dimension(:), pointer, contiguous :: rainfall => null()
-    !type (MemoryTSType), dimension(:), pointer,                                 &
-    !                     contiguous :: evaporation => null()
-    !type (MemoryTSType), dimension(:), pointer, contiguous :: runoff => null()
-    !type (MemoryTSType), dimension(:), pointer, contiguous :: inflow => null()
-    !type (MemoryTSType), dimension(:), pointer,                                 &
-    !                     contiguous :: withdrawal => null()
-    !type (MemoryTSType), dimension(:), pointer, contiguous :: lauxvar => null()
     real(DP), dimension(:), pointer, contiguous :: stage => null()
     real(DP), dimension(:), pointer, contiguous :: rainfall => null()
     real(DP), dimension(:), pointer, contiguous :: evaporation => null()
@@ -159,12 +149,6 @@ module LakModule
     integer(I4B), dimension(:), pointer, contiguous :: lakein => null()
     integer(I4B), dimension(:), pointer, contiguous :: lakeout => null()
     integer(I4B), dimension(:), pointer, contiguous :: iouttype => null()
-    !type (MemoryTSType), dimension(:), pointer, contiguous :: outrate => null()
-    !type (MemoryTSType), dimension(:), pointer,                                 &
-    !                     contiguous :: outinvert => null()
-    !type (MemoryTSType), dimension(:), pointer, contiguous :: outwidth => null()
-    !type (MemoryTSType), dimension(:), pointer, contiguous :: outrough => null()
-    !type (MemoryTSType), dimension(:), pointer, contiguous :: outslope => null()
     real(DP), dimension(:), pointer, contiguous :: outrate => null()
     real(DP), dimension(:), pointer, contiguous :: outinvert => null()
     real(DP), dimension(:), pointer, contiguous :: outwidth => null()
@@ -2501,7 +2485,6 @@ contains
     else
       call this%lak_calculate_sarea(ilak, stage, sa)
     end if
-    !ra = this%rainfall(ilak)%value * sa !this%sareamax(ilak)
     ra = this%rainfall(ilak) * sa
     !
     ! -- return
@@ -2522,7 +2505,6 @@ contains
     ! -- formats
 ! ------------------------------------------------------------------------------
     ! -- runoff
-    !ro = this%runoff(ilak)%value
     ro = this%runoff(ilak)
     !
     ! -- return
@@ -2543,7 +2525,6 @@ contains
     ! -- formats
 ! ------------------------------------------------------------------------------
     ! -- inflow to lake
-    !qin = this%inflow(ilak)%value
     qin = this%inflow(ilak)
     !
     ! -- return
@@ -2593,7 +2574,6 @@ contains
     ! -- formats
 ! ------------------------------------------------------------------------------
     ! -- withdrawals - limit to sum of inflows and available volume
-    !wr = this%withdrawal(ilak)%value
     wr = this%withdrawal(ilak)
     if (wr > avail) then
       wr = -avail
@@ -2628,7 +2608,6 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- evaporation - limit to sum of inflows and available volume
     call this%lak_calculate_sarea(ilak, stage, sa)
-    !ev = sa * this%evaporation(ilak)%value
     ev = sa * this%evaporation(ilak)
     if (ev > avail) then
       ev = -avail
@@ -2698,7 +2677,6 @@ contains
     do n = 1, this%noutlets
       if (this%lakein(n) == ilak) then
         rate = DZERO
-        !d = stage - this%outinvert(n)%value
         d = stage - this%outinvert(n)
         if (this%outdmax > DZERO) then
           if (d > this%outdmax) d = this%outdmax
@@ -2707,7 +2685,6 @@ contains
         select case (this%iouttype(n))
           ! specified rate
           case(0)
-            !rate = this%outrate(n)%value
             rate = this%outrate(n)
             if (-rate > avail) then
               rate = -avail
@@ -2717,24 +2694,19 @@ contains
             if (d > DZERO) then
               c = (this%convlength**DONETHIRD) * this%convtime
               gsm = DZERO
-              !if (this%outrough(n)%value > DZERO) then
-              !  gsm = DONE / this%outrough(n)%value
               if (this%outrough(n) > DZERO) then
                 gsm = DONE / this%outrough(n)
               end if
-              !rate = -c * gsm * this%outwidth(n)%value * ( d**DFIVETHIRDS ) * sqrt(this%outslope(n)%value)
-              rate = -c * gsm * this%outwidth(n) * ( d**DFIVETHIRDS ) * sqrt(this%outslope(n))
+              rate = -c * gsm * this%outwidth(n) * ( d**DFIVETHIRDS ) *          &
+                     sqrt(this%outslope(n))
             end if
           ! weir
           case (2)
             if (d > DZERO) then
-              !rate = -DTWOTHIRDS * DCD * this%outwidth(n)%value * d * sqrt(DTWO * g * d)
-              rate = -DTWOTHIRDS * DCD * this%outwidth(n) * d * sqrt(DTWO * g * d)
+              rate = -DTWOTHIRDS * DCD * this%outwidth(n) * d *                  &
+                     sqrt(DTWO * g * d)
             end if
         end select
-        !if (-rate > avail) then
-        !  rate = -avail
-        !end if
         this%simoutrate(n) = rate
         avail = avail + rate
         outoutf = outoutf + rate
@@ -2890,7 +2862,7 @@ contains
 
   subroutine lak_get_outlet_tomover(this, ilak, outoutf)
 ! ******************************************************************************
-! llak_get_outlet_tomover -- Get the outlet to mover from a lake.
+! lak_get_outlet_tomover -- Get the outlet to mover from a lake.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -3667,13 +3639,12 @@ contains
       end do
     end if
     !
-    ! -- copy xnew into xold and set xnewpak to stage%value for
+    ! -- copy xnew into xold and set xnewpak to stage for
     !    constant stage lakes
     do n = 1, this%nlakes
       this%xoldpak(n) = this%xnewpak(n)
       this%stageiter(n) = this%xnewpak(n)
       if (this%iboundpak(n) < 0) then
-        !this%xnewpak(n) = this%stage(n)%value
         this%xnewpak(n) = this%stage(n)
       end if
       this%seep0(n) = DZERO
@@ -4210,12 +4181,10 @@ contains
         call this%lak_accumulate_chterm(n, rrate, chratin, chratout)
         !
         ! -- runoff
-        !rrate = this%runoff(n)%value
         rrate = this%runoff(n)
         call this%lak_accumulate_chterm(n, rrate, chratin, chratout)
         !
         ! -- inflow
-        !rrate = this%inflow(n)%value
         rrate = this%inflow(n)
         call this%lak_accumulate_chterm(n, rrate, chratin, chratout)
         !
@@ -4835,7 +4804,6 @@ contains
               end if
             case ('RUNOFF')
               if (this%iboundpak(jj) /= 0) then
-                !v = this%runoff(jj)%value
                 v = this%runoff(jj)
               end if
             case ('LAK')
@@ -6141,7 +6109,6 @@ contains
     idx = idx + 1
     call this%budobj%budterm(idx)%reset(this%nlakes)
     do n = 1, this%nlakes
-      !q = this%runoff(n)%value
       q = this%runoff(n)
       call this%budobj%budterm(idx)%update_term(n, n, q)
     end do
@@ -6151,7 +6118,6 @@ contains
     idx = idx + 1
     call this%budobj%budterm(idx)%reset(this%nlakes)
     do n = 1, this%nlakes
-      !q = this%inflow(n)%value
       q = this%inflow(n)
       call this%budobj%budterm(idx)%update_term(n, n, q)
     end do
@@ -6233,9 +6199,6 @@ contains
       call this%budobj%budterm(idx)%reset(this%nlakes)
       do n = 1, this%nlakes
         q = DZERO
-        !do i = 1, naux
-        !  ii = (n - 1) * naux + i
-        !  auxvartmp(i) = this%lauxvar(ii)%value
         do jj = 1, naux
           ii = n
           auxvartmp(jj) = this%lauxvar(jj, ii)

@@ -49,15 +49,15 @@ module SfrModule
   type :: SfrDataType
     ! -- diversion data
     type (SfrDivType), dimension(:), pointer, contiguous :: diversion => null()
-    ! -- aux data
-    type (SfrTSType), dimension(:), pointer, contiguous :: auxvar => null()
-    ! -- boundary data
-    type (SfrTSType), pointer :: rough => null()
-    type (SfrTSType), pointer :: rain => null()
-    type (SfrTSType), pointer :: evap => null()
-    type (SfrTSType), pointer :: inflow => null()
-    type (SfrTSType), pointer :: runoff => null()
-    type (SfrTSType), pointer :: sstage => null()
+    !! -- aux data
+    !type (SfrTSType), dimension(:), pointer, contiguous :: auxvar => null()
+    !! -- boundary data
+    !type (SfrTSType), pointer :: rough => null()
+    !type (SfrTSType), pointer :: rain => null()
+    !type (SfrTSType), pointer :: evap => null()
+    !type (SfrTSType), pointer :: inflow => null()
+    !type (SfrTSType), pointer :: runoff => null()
+    !type (SfrTSType), pointer :: sstage => null()
     ! -- arrays of data for reach
     integer(I4B), dimension(:), pointer, contiguous :: iconn => null()
     integer(I4B), dimension(:), pointer, contiguous :: idir => null()
@@ -136,6 +136,17 @@ module SfrModule
     real(DP), dimension(:), pointer, contiguous :: simrunoff => null()
     real(DP), dimension(:), pointer, contiguous :: stage0 => null()
     real(DP), dimension(:), pointer, contiguous :: usflow0 => null()
+    ! -- boundary data
+    real(DP), dimension(:), pointer, contiguous :: rough => null()
+    real(DP), dimension(:), pointer, contiguous :: rain => null()
+    real(DP), dimension(:), pointer, contiguous :: evap => null()
+    real(DP), dimension(:), pointer, contiguous :: inflow => null()
+    real(DP), dimension(:), pointer, contiguous :: runoff => null()
+    real(DP), dimension(:), pointer, contiguous :: sstage => null()
+    ! -- reach aux variables
+    real(DP), dimension(:,:), pointer, contiguous :: rauxvar => null()
+    ! -- type bound procedures
+    
     ! -- type bound procedures
     contains
     procedure :: sfr_allocate_scalars
@@ -314,6 +325,7 @@ contains
     class(SfrType),   intent(inout) :: this
     ! -- local
     integer(I4B) :: i
+    integer(I4B) :: j
 ! ------------------------------------------------------------------------------
     !
     ! -- call standard BndType allocate scalars
@@ -346,6 +358,20 @@ contains
     call mem_allocate(this%simrunoff, this%maxbound, 'SIMRUNOFF', this%origin)
     call mem_allocate(this%stage0, this%maxbound, 'STAGE0', this%origin)
     call mem_allocate(this%usflow0, this%maxbound, 'USFLOW0', this%origin)
+    !
+    ! -- boundary data
+    call mem_allocate(this%rough, this%maxbound, 'ROUGH', this%origin)
+    call mem_allocate(this%rain, this%maxbound, 'RAIN', this%origin)
+    call mem_allocate(this%evap, this%maxbound, 'EVAP', this%origin)
+    call mem_allocate(this%inflow, this%maxbound, 'INFLOW', this%origin)
+    call mem_allocate(this%runoff, this%maxbound, 'RUNOFF', this%origin)
+    call mem_allocate(this%sstage, this%maxbound, 'SSTAGE', this%origin)
+    !
+    ! -- aux variables
+    call mem_allocate(this%rauxvar, this%naux, this%maxbound,                    &
+                      'RAUXVAR', this%origin)
+    !
+    ! -- initialize variables
     do i = 1, this%maxbound
       this%iboundpak(i) = 1
       this%igwfnode(i) = 0
@@ -369,6 +395,19 @@ contains
       this%simrunoff(i) = DZERO
       this%stage0(i) = DZERO
       this%usflow0(i) = DZERO
+      !
+      ! -- boundary data
+      this%rough(i) = DZERO
+      this%rain(i) = DZERO
+      this%evap(i) = DZERO
+      this%inflow(i) = DZERO
+      this%runoff(i) = DZERO
+      this%sstage(i) = DZERO
+      !
+      ! -- aux variables
+      do j = 1, this%naux
+        this%rauxvar(j, i) = DZERO
+      end do
     end do
     
     !
@@ -706,7 +745,8 @@ contains
   ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: ustop, store_error, count_errors
-    use TimeSeriesManagerModule, only: read_single_value_or_time_series
+    use TimeSeriesManagerModule, only: read_value_or_time_series_adv,            &
+                                       read_single_value_or_time_series
     ! -- dummy
     class(SfrType),intent(inout) :: this
     ! -- local
@@ -718,9 +758,11 @@ contains
     integer(I4B) :: n, ierr, ival
     logical :: isfound, endOfBlock
     integer(I4B) :: i
+    integer(I4B) :: ii
     integer(I4B) :: jj
     integer(I4B) :: iaux
     integer, allocatable, dimension(:) :: nboundchk
+    real(DP), pointer :: bndElem => null()
     ! -- format
   ! ------------------------------------------------------------------------------
     !
@@ -840,36 +882,47 @@ contains
         ! -- set Mannings
         text = manningname
         jj = 1 !iaux
-        call read_single_value_or_time_series(text, &
-                                              this%reaches(n)%rough%value, &
-                                              this%reaches(n)%rough%name, &
-                                              DZERO,  &
-                                              this%Name, 'BND', this%TsManager, &
-                                              this%iprpak, n, jj, &
-                                              'MANNING', bndName, &
-                                              this%parser%iuactive)
+        !call read_single_value_or_time_series(text, &
+        !                                      this%reaches(n)%rough%value, &
+        !                                      this%reaches(n)%rough%name, &
+        !                                      DZERO,  &
+        !                                      this%Name, 'BND', this%TsManager, &
+        !                                      this%iprpak, n, jj, &
+        !                                      'MANNING', bndName, &
+        !                                      this%parser%iuactive)
+        bndElem => this%rough(n)
+        call read_value_or_time_series_adv(text, n, jj, bndElem, this%name,      &
+                                            'BND', this%tsManager, this%iprpak,  &
+                                            'MANNING')
 
 
         ! -- get aux data
-        do iaux = 1, this%naux
+        !do iaux = 1, this%naux
+        do jj = 1, this%naux
           text = caux(iaux)
-          jj = 1 !iaux
-          call read_single_value_or_time_series(text, &
-                                                this%reaches(n)%auxvar(iaux)%value, &
-                                                this%reaches(n)%auxvar(iaux)%name, &
-                                                DZERO,  &
-                                                this%Name, 'AUX', this%TsManager, &
-                                                this%iprpak, n, jj, &
-                                                this%auxname(iaux), bndName, &
-                                                this%parser%iuactive)
+          !jj = 1 !iaux
+          !call read_single_value_or_time_series(text, &
+          !                                      this%reaches(n)%auxvar(iaux)%value, &
+          !                                      this%reaches(n)%auxvar(iaux)%name, &
+          !                                      DZERO,  &
+          !                                      this%Name, 'AUX', this%TsManager, &
+          !                                      this%iprpak, n, jj, &
+          !                                      this%auxname(iaux), bndName, &
+          !                                      this%parser%iuactive)
+          ii = n
+          bndElem => this%rauxvar(jj, ii)
+          call read_value_or_time_series_adv(text, ii, jj, bndElem, this%name,   &
+                                             'AUX', this%tsManager, this%iprpak, &
+                                             this%auxname(jj))
         end do
 
         ! -- initialize sstage to the top of the reach
         !    this value would be used by simple routing reaches
         !    on kper = 1 and kstp = 1 if a stage is not specified
         !    on the status line for the reach
-        this%reaches(n)%sstage%name = ''
-        this%reaches(n)%sstage%value = this%strtop(n)
+        !this%reaches(n)%sstage%name = ''
+        !this%reaches(n)%sstage%value = this%strtop(n)
+        this%sstage(n) = this%strtop(n)
 
       end do
       write(this%iout,'(1x,a)')'END OF '//trim(adjustl(this%text))//' PACKAGEDATA'
@@ -1391,7 +1444,8 @@ contains
       do n = 1, this%maxbound
         do iaux = 1, this%naux
           if (this%noupdateauxvar(iaux) /= 0) cycle
-          this%auxvar(iaux, n) = this%reaches(n)%auxvar(iaux)%value
+          !this%auxvar(iaux, n) = this%reaches(n)%auxvar(iaux, n)
+          this%auxvar(iaux, n) = this%rauxvar(iaux, n)
         end do
       end do
     end if
@@ -1400,7 +1454,8 @@ contains
     do n = 1, this%maxbound
       this%usflow(n) = DZERO
       if (this%iboundpak(n) < 0) then
-        this%stage(n) = this%reaches(n)%sstage%value
+        !this%stage(n) = this%reaches(n)%sstage%value
+        this%stage(n) = this%sstage(n)
       end if
     end do
     !
@@ -2010,6 +2065,17 @@ contains
     call mem_deallocate(this%stage0)
     call mem_deallocate(this%usflow0)
     !
+    ! -- boundary data
+    call mem_deallocate(this%rough)
+    call mem_deallocate(this%rain)
+    call mem_deallocate(this%evap)
+    call mem_deallocate(this%inflow)
+    call mem_deallocate(this%runoff)
+    call mem_deallocate(this%sstage)
+    !
+    ! -- aux variables
+    call mem_deallocate(this%rauxvar)
+    !
     ! -- deallocation diversions
     do n = 1, this%maxbound
       if (this%ndiv(n) > 0) then
@@ -2273,7 +2339,8 @@ contains
                 v = this%pakmvrobj%get_qfrommvr(n)
               end if
             case ('EXT-INFLOW')
-              v = this%reaches(n)%inflow%value
+              !v = this%reaches(n)%inflow%value
+              v = this%inflow(n)
             case ('INFLOW')
               v = this%usflow(n)
             case ('OUTFLOW')
@@ -2281,7 +2348,8 @@ contains
             case ('EXT-OUTFLOW')
               v = this%qextoutflow(n)
             case ('RAINFALL')
-              v = this%reaches(n)%rain%value
+              !v = this%reaches(n)%rain%value
+              v = this%rain(n)
             case ('RUNOFF')
               v = this%simrunoff(n)
             case ('EVAPORATION')
@@ -2470,7 +2538,8 @@ contains
 ! ------------------------------------------------------------------------------
     !use ConstantsModule, only: LINELENGTH, DTWO
     use TdisModule, only: kper, perlen, totimsav
-    use TimeSeriesManagerModule, only: read_single_value_or_time_series
+    use TimeSeriesManagerModule, only: read_value_or_time_series_adv,            &
+                                       read_single_value_or_time_series
     use InputOutputModule, only: urword
     use SimModule, only: ustop, store_error
     ! -- dummy
@@ -2485,13 +2554,18 @@ contains
     character(len=LINELENGTH) :: keyword
     character(len=LINELENGTH) :: errmsg
     character(len=LENBOUNDNAME) :: bndName
-    integer(I4B) :: ival, istart, istop, jj
+    integer(I4B) :: ival
+    integer(I4B) :: istart
+    integer(I4B) :: istop
+    integer(I4B) :: ii
+    integer(I4B) :: jj
     integer(I4B) :: i0
     integer(I4B) :: lloc
     integer(I4B) :: idiv
-    integer(I4B) :: iaux
+    !integer(I4B) :: iaux
     real(DP) :: rval
     real(DP) :: endtim
+    real(DP), pointer :: bndElem => null()
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
@@ -2531,69 +2605,96 @@ contains
         call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
         text = line(istart:istop)
         jj = 1  ! For 'MANNING'
-        call read_single_value_or_time_series(text, &
-                                              this%reaches(n)%rough%value, &
-                                              this%reaches(n)%rough%name, &
-                                              endtim,  &
-                                              this%Name, 'BND', this%TsManager, &
-                                              this%iprpak, n, jj, 'MANNING', &
-                                              bndName, this%inunit)
+        !call read_single_value_or_time_series(text, &
+        !                                      this%reaches(n)%rough%value, &
+        !                                      this%reaches(n)%rough%name, &
+        !                                      endtim,  &
+        !                                      this%Name, 'BND', this%TsManager, &
+        !                                      this%iprpak, n, jj, 'MANNING', &
+        !                                      bndName, this%inunit)
+        bndElem => this%rough(n)
+        call read_value_or_time_series_adv(text, n, jj, bndElem, this%name,      &
+                                           'BND', this%tsManager, this%iprpak,   &
+                                           'MANNING')
       case ('STAGE')
         call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
         text = line(istart:istop)
         jj = 1  ! For 'STAGE'
-        call read_single_value_or_time_series(text, &
-                                              this%reaches(n)%sstage%value, &
-                                              this%reaches(n)%sstage%name, &
-                                              endtim,  &
-                                              this%Name, 'BND', this%TsManager, &
-                                              this%iprpak, n, jj, 'STAGE', &
-                                              bndName, this%inunit)
+        !call read_single_value_or_time_series(text, &
+        !                                      this%reaches(n)%sstage%value, &
+        !                                      this%reaches(n)%sstage%name, &
+        !                                      endtim,  &
+        !                                      this%Name, 'BND', this%TsManager, &
+        !                                      this%iprpak, n, jj, 'STAGE', &
+        !                                      bndName, this%inunit)
+        bndElem => this%sstage(n)
+        call read_value_or_time_series_adv(text, n, jj, bndElem, this%name,      &
+                                           'BND', this%tsManager, this%iprpak,   &
+                                           'STAGE')
       case ('RAINFALL')
         call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
         text = line(istart:istop)
         jj = 1  ! For 'RAIN'
-        call read_single_value_or_time_series(text, &
-                                              this%reaches(n)%rain%value, &
-                                              this%reaches(n)%rain%name, &
-                                              endtim,  &
-                                              this%Name, 'BND', this%TsManager, &
-                                              this%iprpak, n, jj, 'RAINFALL', &
-                                              bndName, this%inunit)
+        !call read_single_value_or_time_series(text, &
+        !                                      this%reaches(n)%rain%value, &
+        !                                      this%reaches(n)%rain%name, &
+        !                                      endtim,  &
+        !                                      this%Name, 'BND', this%TsManager, &
+        !                                      this%iprpak, n, jj, 'RAINFALL', &
+        !                                      bndName, this%inunit)
+        bndElem => this%rain(n)
+        call read_value_or_time_series_adv(text, n, jj, bndElem, this%name,      &
+                                           'BND', this%tsManager, this%iprpak,   &
+                                           'RAIN')
       case ('EVAPORATION')
         call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
         text = line(istart:istop)
-        jj = 2  ! For 'EVAP'
-        call read_single_value_or_time_series(text, &
-                                              this%reaches(n)%evap%value, &
-                                              this%reaches(n)%evap%name, &
-                                              endtim,  &
-                                              this%Name, 'BND', this%TsManager, &
-                                              this%iprpak, n, jj, &
-                                              'EVAPORATION', bndName, &
-                                              this%inunit)
+        !jj = 2  ! For 'EVAP'
+        !call read_single_value_or_time_series(text, &
+        !                                      this%reaches(n)%evap%value, &
+        !                                      this%reaches(n)%evap%name, &
+        !                                      endtim,  &
+        !                                      this%Name, 'BND', this%TsManager, &
+        !                                      this%iprpak, n, jj, &
+        !                                      'EVAPORATION', bndName, &
+        !                                      this%inunit)
+        jj = 1  ! For 'EVAP'
+        bndElem => this%rough(n)
+        call read_value_or_time_series_adv(text, n, jj, bndElem, this%name,      &
+                                           'BND', this%tsManager, this%iprpak,   &
+                                           'MANNING')
       case ('RUNOFF')
         call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
         text = line(istart:istop)
-        jj = 3  ! For 'RUNOFF'
-        call read_single_value_or_time_series(text, &
-                                              this%reaches(n)%runoff%value, &
-                                              this%reaches(n)%runoff%name, &
-                                              endtim,  &
-                                              this%Name, 'BND', this%TsManager, &
-                                              this%iprpak, n, jj, 'RUNOFF', &
-                                              bndName, this%inunit)
-      case ('INFLOW')
+        !jj = 3  ! For 'RUNOFF'
+        !call read_single_value_or_time_series(text, &
+        !                                      this%reaches(n)%runoff%value, &
+        !                                      this%reaches(n)%runoff%name, &
+        !                                      endtim,  &
+        !                                      this%Name, 'BND', this%TsManager, &
+        !                                      this%iprpak, n, jj, 'RUNOFF', &
+        !                                      bndName, this%inunit)
+        jj = 1  ! For 'RUNOFF'
+        bndElem => this%runoff(n)
+        call read_value_or_time_series_adv(text, n, jj, bndElem, this%name,      &
+                                           'BND', this%tsManager, this%iprpak,   &
+                                           'RUNOFF')
+     case ('INFLOW')
         call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
         text = line(istart:istop)
-        jj = 4  ! For 'INFLOW'
-        call read_single_value_or_time_series(text, &
-                                              this%reaches(n)%inflow%value, &
-                                              this%reaches(n)%inflow%name, &
-                                              endtim,  &
-                                              this%Name, 'BND', this%TsManager, &
-                                              this%iprpak, n, jj, 'INFLOW', &
-                                              bndName, this%inunit)
+        !jj = 4  ! For 'INFLOW'
+        !call read_single_value_or_time_series(text, &
+        !                                      this%reaches(n)%inflow%value, &
+        !                                      this%reaches(n)%inflow%name, &
+        !                                      endtim,  &
+        !                                      this%Name, 'BND', this%TsManager, &
+        !                                      this%iprpak, n, jj, 'INFLOW', &
+        !                                      bndName, this%inunit)
+        jj = 1  ! For 'INFLOW'
+        bndElem => this%inflow(n)
+        call read_value_or_time_series_adv(text, n, jj, bndElem, this%name,      &
+                                           'BND', this%tsManager, this%iprpak,   &
+                                           'INFLOW')
       case ('DIVERSION')
         !
         ! -- make sure reach has at least one diversion
@@ -2639,19 +2740,24 @@ contains
       case ('AUXILIARY')
         call urword(line, lloc, istart, istop, 1, ival, rval, this%iout, this%inunit)
         caux = line(istart:istop)
-        do iaux = 1, this%naux
-          if (trim(adjustl(caux)) /= trim(adjustl(this%auxname(iaux)))) cycle
+        do jj = 1, this%naux
+          if (trim(adjustl(caux)) /= trim(adjustl(this%auxname(jj)))) cycle
           call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
           text = line(istart:istop)
-          jj = 1 !iaux
-          call read_single_value_or_time_series(text, &
-                                                this%reaches(n)%auxvar(iaux)%value, &
-                                                this%reaches(n)%auxvar(iaux)%name, &
-                                                endtim,  &
-                                                this%Name, 'BND', this%TsManager, &
-                                                this%iprpak, n, jj, &
-                                                this%auxname(iaux), bndName, &
-                                                this%inunit)
+          !jj = 1 !iaux
+          !call read_single_value_or_time_series(text, &
+          !                                      this%reaches(n)%auxvar(iaux)%value, &
+          !                                      this%reaches(n)%auxvar(iaux)%name, &
+          !                                      endtim,  &
+          !                                      this%Name, 'BND', this%TsManager, &
+          !                                      this%iprpak, n, jj, &
+          !                                      this%auxname(iaux), bndName, &
+          !                                      this%inunit)
+          ii = n
+          bndElem => this%rauxvar(jj, ii)
+          call read_value_or_time_series_adv(text, ii, jj, bndElem, this%name,   &
+                                             'AUX', this%tsManager, this%iprpak, &
+                                             this%auxname(jj))
           exit
         end do
 
@@ -2681,7 +2787,7 @@ contains
     ! -- local
     character(len=LINELENGTH) :: errmsg
     character(len=10) :: crch
-    integer(I4B) :: iaux
+    !integer(I4B) :: iaux
 ! ------------------------------------------------------------------------------
     !
     ! -- make sure reach has not been allocated
@@ -2693,48 +2799,48 @@ contains
       call ustop()
     end if
     ! -- allocate pointers
-    allocate(this%reaches(n)%rough)
-    allocate(this%reaches(n)%rough%name)
-    allocate(this%reaches(n)%rough%value)
-    allocate(this%reaches(n)%rain)
-    allocate(this%reaches(n)%rain%name)
-    allocate(this%reaches(n)%rain%value)
-    allocate(this%reaches(n)%evap)
-    allocate(this%reaches(n)%evap%name)
-    allocate(this%reaches(n)%evap%value)
-    allocate(this%reaches(n)%inflow)
-    allocate(this%reaches(n)%inflow%name)
-    allocate(this%reaches(n)%inflow%value)
-    allocate(this%reaches(n)%runoff)
-    allocate(this%reaches(n)%runoff%name)
-    allocate(this%reaches(n)%runoff%value)
-    allocate(this%reaches(n)%sstage)
-    allocate(this%reaches(n)%sstage%name)
-    allocate(this%reaches(n)%sstage%value)
-    if (this%naux > 0) then
-      allocate(this%reaches(n)%auxvar(this%naux))
-      do iaux = 1, this%naux
-        allocate(this%reaches(n)%auxvar(iaux)%name)
-        allocate(this%reaches(n)%auxvar(iaux)%value)
-      end do
-    end if
+    !allocate(this%reaches(n)%rough)
+    !allocate(this%reaches(n)%rough%name)
+    !allocate(this%reaches(n)%rough%value)
+    !allocate(this%reaches(n)%rain)
+    !allocate(this%reaches(n)%rain%name)
+    !allocate(this%reaches(n)%rain%value)
+    !allocate(this%reaches(n)%evap)
+    !allocate(this%reaches(n)%evap%name)
+    !allocate(this%reaches(n)%evap%value)
+    !allocate(this%reaches(n)%inflow)
+    !allocate(this%reaches(n)%inflow%name)
+    !allocate(this%reaches(n)%inflow%value)
+    !allocate(this%reaches(n)%runoff)
+    !allocate(this%reaches(n)%runoff%name)
+    !allocate(this%reaches(n)%runoff%value)
+    !allocate(this%reaches(n)%sstage)
+    !allocate(this%reaches(n)%sstage%name)
+    !allocate(this%reaches(n)%sstage%value)
+    !if (this%naux > 0) then
+    !  allocate(this%reaches(n)%auxvar(this%naux))
+    !  do iaux = 1, this%naux
+    !    allocate(this%reaches(n)%auxvar(iaux)%name)
+    !    allocate(this%reaches(n)%auxvar(iaux)%value)
+    !  end do
+    !end if
     !
     ! -- initialize a few items
-    this%reaches(n)%rough%name = ''
-    this%reaches(n)%rain%name = ''
-    this%reaches(n)%evap%name = ''
-    this%reaches(n)%inflow%name = ''
-    this%reaches(n)%runoff%name = ''
-    this%reaches(n)%sstage%name = ''
-    this%reaches(n)%rough%value = DZERO
-    this%reaches(n)%rain%value = DZERO
-    this%reaches(n)%evap%value = DZERO
-    this%reaches(n)%inflow%value = DZERO
-    this%reaches(n)%runoff%value = DZERO
-    this%reaches(n)%sstage%value = DZERO
-    do iaux = 1, this%naux
-      this%reaches(n)%auxvar(iaux)%value = DZERO
-    end do
+    !this%reaches(n)%rough%name = ''
+    !this%reaches(n)%rain%name = ''
+    !this%reaches(n)%evap%name = ''
+    !this%reaches(n)%inflow%name = ''
+    !this%reaches(n)%runoff%name = ''
+    !this%reaches(n)%sstage%name = ''
+    !this%reaches(n)%rough%value = DZERO
+    !this%reaches(n)%rain%value = DZERO
+    !this%reaches(n)%evap%value = DZERO
+    !this%reaches(n)%inflow%value = DZERO
+    !this%reaches(n)%runoff%value = DZERO
+    !this%reaches(n)%sstage%value = DZERO
+    !do iaux = 1, this%naux
+    !  this%reaches(n)%auxvar(iaux)%value = DZERO
+    !end do
     !
     ! -- return
     return
@@ -2751,7 +2857,7 @@ contains
     class(SfrType) :: this
     integer(I4B), intent(in) :: n
     ! -- local
-    integer(I4B) :: iaux
+    !integer(I4B) :: iaux
 ! ------------------------------------------------------------------------------
     !
     ! -- connections
@@ -2763,31 +2869,31 @@ contains
     endif
     !
     ! -- deallocate pointers
-    deallocate(this%reaches(n)%rough%name)
-    deallocate(this%reaches(n)%rough%value)
-    deallocate(this%reaches(n)%rough)
-    deallocate(this%reaches(n)%rain%name)
-    deallocate(this%reaches(n)%rain%value)
-    deallocate(this%reaches(n)%rain)
-    deallocate(this%reaches(n)%evap%name)
-    deallocate(this%reaches(n)%evap%value)
-    deallocate(this%reaches(n)%evap)
-    deallocate(this%reaches(n)%inflow%name)
-    deallocate(this%reaches(n)%inflow%value)
-    deallocate(this%reaches(n)%inflow)
-    deallocate(this%reaches(n)%runoff%name)
-    deallocate(this%reaches(n)%runoff%value)
-    deallocate(this%reaches(n)%runoff)
-    deallocate(this%reaches(n)%sstage%name)
-    deallocate(this%reaches(n)%sstage%value)
-    deallocate(this%reaches(n)%sstage)
-    if (this%naux > 0) then
-      do iaux = 1, this%naux
-        deallocate(this%reaches(n)%auxvar(iaux)%name)
-        deallocate(this%reaches(n)%auxvar(iaux)%value)
-      end do
-      deallocate(this%reaches(n)%auxvar)
-    end if
+    !deallocate(this%reaches(n)%rough%name)
+    !deallocate(this%reaches(n)%rough%value)
+    !deallocate(this%reaches(n)%rough)
+    !deallocate(this%reaches(n)%rain%name)
+    !deallocate(this%reaches(n)%rain%value)
+    !deallocate(this%reaches(n)%rain)
+    !deallocate(this%reaches(n)%evap%name)
+    !deallocate(this%reaches(n)%evap%value)
+    !deallocate(this%reaches(n)%evap)
+    !deallocate(this%reaches(n)%inflow%name)
+    !deallocate(this%reaches(n)%inflow%value)
+    !deallocate(this%reaches(n)%inflow)
+    !deallocate(this%reaches(n)%runoff%name)
+    !deallocate(this%reaches(n)%runoff%value)
+    !deallocate(this%reaches(n)%runoff)
+    !deallocate(this%reaches(n)%sstage%name)
+    !deallocate(this%reaches(n)%sstage%value)
+    !deallocate(this%reaches(n)%sstage)
+    !if (this%naux > 0) then
+    !  do iaux = 1, this%naux
+    !    deallocate(this%reaches(n)%auxvar(iaux)%name)
+    !    deallocate(this%reaches(n)%auxvar(iaux)%value)
+    !  end do
+    !  deallocate(this%reaches(n)%auxvar)
+    !end if
     !
     ! -- return
     return
@@ -2950,10 +3056,14 @@ contains
     end do
     this%usflow(n) = qu
     ! -- calculate remaining terms
-    qi = this%reaches(n)%inflow%value
-    qr = this%reaches(n)%rain%value * this%width(n) * this%length(n)
-    qe = this%reaches(n)%evap%value * this%width(n) * this%length(n)
-    qro = this%reaches(n)%runoff%value
+    !qi = this%reaches(n)%inflow%value
+    !qr = this%reaches(n)%rain%value * this%width(n) * this%length(n)
+    !qe = this%reaches(n)%evap%value * this%width(n) * this%length(n)
+    !qro = this%reaches(n)%runoff%value
+    qi = this%inflow(n)
+    qr = this%rain(n) * this%width(n) * this%length(n)
+    qe = this%evap(n) * this%width(n) * this%length(n)
+    qro = this%runoff(n)
     !
     ! -- Water mover term; assume that it goes in at the upstream end of the reach
     qfrommvr = DZERO
@@ -2994,7 +3104,8 @@ contains
     if (this%iboundpak(n) > 0) then
       call this%sfr_rectch_depth(n, qmp, d1)
     else
-      this%stage(n) = this%reaches(n)%sstage%value
+      !this%stage(n) = this%reaches(n)%sstage%value
+      this%stage(n) = this%sstage(n)
       d1 = max(DZERO, this%stage(n) - this%strtop(n))
     end if
     !
@@ -3414,15 +3525,18 @@ contains
     !
     ! -- calculate flow terms
     qu = this%usflow(n)
-    qi = this%reaches(n)%inflow%value
-    qro = this%reaches(n)%runoff%value
+    !qi = this%reaches(n)%inflow%value
+    !qro = this%reaches(n)%runoff%value
+    qi = this%inflow(n)
+    qro = this%runoff(n)
     !
     ! -- calculate rainfall and evap
     a = this%surface_area(n)
     ae = this%surface_area_wet(n, depth)
-    qr = this%reaches(n)%rain%value * a
-    !qe = this%reaches(n)%evap%value * ae
-    qe = this%reaches(n)%evap%value * a
+    !qr = this%reaches(n)%rain%value * a
+    !qe = this%reaches(n)%evap%value * a
+    qr = this%rain(n) * a
+    qe = this%evap(n) * a
     !
     ! -- calculate mover term
     qfrommvr = DZERO
@@ -3479,7 +3593,8 @@ contains
     ! -- calculate terms for Manning's equation
     call sChSmooth(depth, sat, derv)
     s = this%slope(n)
-    r = this%reaches(n)%rough%value
+    !r = this%reaches(n)%rough%value
+    r = this%rough(n)
     aw = this%area_wet(n, depth)
     wp = this%perimeter_wet(n)
     rh = DZERO
@@ -3655,7 +3770,8 @@ contains
     ! -- calculate stream depth at the midpoint
     w = this%width(n)
     s = this%slope(n)
-    r = this%reaches(n)%rough%value
+    !r = this%reaches(n)%rough%value
+    r = this%rough(n)
     qconst = this%unitconv * w * sqrt(s) / r
     d1 = (q1 / qconst)**DP6
     if (d1 < DEM30) d1 = DZERO
@@ -3747,14 +3863,15 @@ contains
         end if
       end if
       ! -- check reach roughness
-      if (this%reaches(n)%rough%value <= DZERO) then
-        errmsg = 'ERROR: Reach ' // crch // " Manning's roughness " //           &
+      !if (this%reaches(n)%rough%value <= DZERO) then
+      if (this%rough(n) <= DZERO) then
+        errmsg = 'Reach ' // crch // " Manning's roughness " //                  &
                  'coefficient must be > 0.0'
         call store_error(errmsg)
       end if
       ! -- check reach upstream fraction
       if (this%ustrf(n) < DZERO) then
-        errmsg = 'ERROR: Reach ' // crch // " upstream fraction must be >= 0.0"
+        errmsg = 'Reach ' // crch // " upstream fraction must be >= 0.0"
         call store_error(errmsg)
       end if
       ! -- write summary of reach information
@@ -3767,7 +3884,8 @@ contains
         call this%inputtab%add_term(this%strtop(n))
         call this%inputtab%add_term(this%bthick(n))
         call this%inputtab%add_term(this%hk(n))
-        call this%inputtab%add_term(this%reaches(n)%rough%value)
+        !call this%inputtab%add_term(this%reaches(n)%rough%value)
+        call this%inputtab%add_term(this%rough(n))
         call this%inputtab%add_term(this%ustrf(n))
       end if
     end do
@@ -4537,7 +4655,8 @@ contains
     call this%budobj%budterm(idx)%reset(this%maxbound)
     do n = 1, this%maxbound
       a = this%surface_area(n)
-      q = this%reaches(n)%rain%value * a
+      !q = this%reaches(n)%rain%value * a
+      q = this%rain(n) * a
       call this%budobj%budterm(idx)%update_term(n, n, q)
     end do
     
@@ -4564,7 +4683,8 @@ contains
     idx = idx + 1
     call this%budobj%budterm(idx)%reset(this%maxbound)
     do n = 1, this%maxbound
-      q = this%reaches(n)%inflow%value
+      !q = this%reaches(n)%inflow%value
+      q = this%inflow(n)
       call this%budobj%budterm(idx)%update_term(n, n, q)
     end do
     
