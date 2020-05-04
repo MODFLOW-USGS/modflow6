@@ -899,7 +899,7 @@ contains
         ! -- get aux data
         !do iaux = 1, this%naux
         do jj = 1, this%naux
-          text = caux(iaux)
+          text = caux(jj)
           !jj = 1 !iaux
           !call read_single_value_or_time_series(text, &
           !                                      this%reaches(n)%auxvar(iaux)%value, &
@@ -2659,7 +2659,7 @@ contains
         !                                      'EVAPORATION', bndName, &
         !                                      this%inunit)
         jj = 1  ! For 'EVAP'
-        bndElem => this%rough(n)
+        bndElem => this%evap(n)
         call read_value_or_time_series_adv(text, n, jj, bndElem, this%name,      &
                                            'BND', this%tsManager, this%iprpak,   &
                                            'MANNING')
