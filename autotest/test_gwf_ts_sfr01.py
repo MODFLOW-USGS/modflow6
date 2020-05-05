@@ -35,6 +35,9 @@ def build_model(ws, name, timeseries=False):
         tdis_rc.append((1., 1, 1.0))
     ts_times = np.arange(0., 2., 1., dtype=np.float)
 
+    auxnames = ['temp', 'conc']
+    temp, conc = 32.5, 0.1
+
     # spatial discretization data
     nlay, nrow, ncol = 3, 10, 10
     delr, delc = 100., 100.
@@ -103,15 +106,15 @@ def build_model(ws, name, timeseries=False):
     # sfr file
     packagedata = [
         [0, (1 - 1, 4 - 1, 1 - 1), 3.628E+001, 1.0, 1.0E-003, 0.0, 1.0, 1.0E-4,
-         1.0E-1, 1, 0.0, 0],
+         1.0E-1, 1, 0.0, 1, temp, conc],
         [1, (1 - 1, 4 - 1, 2 - 1), 1.061E+002, 1.0, 1.0E-003, 0.0, 1.0, 1.0E-4,
-         1.0E-1, 2, 1.0, 0],
+         1.0E-1, 2, 1.0, 1, temp, conc],
         [2, (1 - 1, 4 - 1, 3 - 1), 6.333E+001, 1.0, 1.0E-003, 0.0, 1.0, 1.0E-4,
-         1.0E-1, 2, 1.0, 0],
+         1.0E-1, 2, 1.0, 2, temp, conc],
         [3, (1 - 1, 5 - 1, 3 - 1), 4.279E+001, 1.0, 1.0E-003, 0.0, 1.0, 1.0E-4,
-         1.0E-1, 2, 1.0, 0],
+         1.0E-1, 2, 1.0, 1, temp, conc],
         [4, (1 - 1, 5 - 1, 4 - 1), 6.532E+001, 1.0, 1.0E-003, 0.0, 1.0, 1.0E-4,
-         1.0E-1, 1, 1.0, 0],
+         1.0E-1, 1, 1.0, 0, temp, conc],
     ]
     connectiondata = [
         [0, -1],
@@ -120,30 +123,45 @@ def build_model(ws, name, timeseries=False):
         [3, 2, -4],
         [4, 3],
     ]
+    divdata = [[0, 0, 1, 'threshold'],
+               [1, 0, 2, 'threshold'],
+               [2, 1, 3, 'threshold'],
+               [2, 0, 3, 'threshold'],
+               [3, 0, 4, 'threshold']]
+    inflow, divflow = 1., 0.1
+    ts_names = ['inflow', 'divflow'] + auxnames
     perioddata = [[0, 'status', 'active'],
                   [1, 'status', 'active'],
                   [2, 'status', 'active'],
                   [3, 'status', 'active'],
-                  [4, 'status', 'active']]
-    inflow = 1.
-    ts_names = ['inflow']
+                  [4, 'status', 'active'],
+                  [0, 'diversion', 0, divflow],
+                  [1, 'diversion', 0, divflow],
+                  [2, 'diversion', 0, divflow],
+                  [3, 'diversion', 0, divflow]]
     if timeseries:
         perioddata.append([0, 'inflow', 'inflow'])
+        perioddata.append([2, 'diversion', 1, 'divflow'])
+        perioddata.append([0, 'AUXILIARY', 'conc', 'conc'])
+        perioddata.append([2, 'AUXILIARY', 'temp', 'temp'])
         ts_methods = ['linearend'] * len(ts_names)
         ts_data = []
         for t in ts_times:
-            ts_data.append((t, inflow))
+            ts_data.append((t, inflow, divflow, temp, conc))
     else:
         perioddata.append([0, 'inflow', inflow])
+        perioddata.append([2, 'diversion', 1, divflow])
 
     cnvgpth = '{}.sfr.cnvg.csv'.format(name)
     sfr = flopy.mf6.ModflowGwfsfr(gwf,
+                                  auxiliary=auxnames,
                                   print_input=True,
                                   mover=True, nreaches=5,
                                   maximum_depth_change=1.e-5,
                                   package_convergence_filerecord=cnvgpth,
                                   packagedata=packagedata,
                                   connectiondata=connectiondata,
+                                  diversions=divdata,
                                   perioddata=perioddata, pname='sfr-1')
     if timeseries:
         fname = '{}.sfr.ts'.format(name)
