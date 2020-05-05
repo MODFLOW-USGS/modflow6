@@ -2,7 +2,6 @@
 
 block options
 name dev_efh_formulation
-in_record true
 type keyword
 reader urword
 optional true
@@ -11,7 +10,6 @@ description use the variable-density equivalent freshwater head formulation inst
 
 block options
 name hhformulation_rhs
-in_record true
 type keyword
 reader urword
 optional true
@@ -36,7 +34,7 @@ type integer
 reader urword
 optional false
 longname number of species used in density equation of state
-description number of species used in density equation of state
+description number of species used in density equation of state.  This value must be one or greater.  The value must be one if concentrations are specified using the CONCENTRATION keyword in the PERIOD block below.
 
 
 # --------------------- gwf buy packagedata ---------------------

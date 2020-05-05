@@ -6262,13 +6262,19 @@ contains
     ! -- dummy
     class(LakType),intent(inout) :: this
     ! -- local
+    integer(I4B) :: i, j
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
-    ! -- Set idense and reallocate denseterms to be of size MZXBOUND
+    ! -- Set idense and reallocate denseterms to be of size MAXBOUND
     this%idense = 1
     call mem_reallocate(this%denseterms, 3, this%MAXBOUND, 'DENSETERMS', &
                         this%origin)
+    do i = 1, this%maxbound
+      do j = 1, 3
+        this%denseterms(j, i) = DZERO
+      end do
+    end do
     write(this%iout,'(/1x,a)') 'DENSITY TERMS HAVE BEEN ACTIVATED FOR LAKE &
       &PACKAGE: ' // trim(adjustl(this%name))
     !

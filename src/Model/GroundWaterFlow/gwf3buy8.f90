@@ -402,6 +402,11 @@ module GwfBuyModule
           exit
         end if
       end do
+      if (locconc(i) == 0) then
+        ! -- one not found, so don't use and mark all as 0
+        locconc(:) = 0
+        exit
+      end if
     end do
     !
     ! -- Add density terms based on boundary package type
@@ -409,13 +414,15 @@ module GwfBuyModule
       case('GHB')
         !
         ! -- general head boundary
-        call buy_cf_ghb(packobj, hnew, this%dense, this%elev, this%denseref, &
-                        locdense, locelev, this%iform)
+        call buy_cf_ghb(packobj, hnew, this%dense, this%elev, this%denseref,   &
+                        locelev, locdense, locconc, this%drhodc, this%crhoref, &
+                        this%ctemp, this%iform)
       case('RIV')
         !
         ! -- river
-        call buy_cf_riv(packobj, hnew, this%dense, this%elev, this%denseref, &
-                        locdense, locelev, this%iform)
+        call buy_cf_riv(packobj, hnew, this%dense, this%elev, this%denseref,   &
+                        locelev, locdense, locconc, this%drhodc, this%crhoref, &
+                        this%ctemp, this%iform)
       case('DRN')
         !
         ! -- drain
@@ -423,9 +430,9 @@ module GwfBuyModule
       case('LAK')
         !
         ! -- lake
-        call buy_cf_lak(packobj, hnew, this%dense, this%elev, this%denseref, &
-                        this%drhodc, this%crhoref, this%ctemp, &
-                        locdense, locconc, this%iform)
+        call buy_cf_lak(packobj, hnew, this%dense, this%elev, this%denseref,   &
+                        locdense, locconc, this%drhodc, this%crhoref,          &
+                        this%ctemp, this%iform)
       case default
         !
         ! -- nothing
@@ -438,8 +445,59 @@ module GwfBuyModule
     return
   end subroutine buy_cf_bnd
   
-  subroutine buy_cf_ghb(packobj, hnew, dense, elev, denseref, locdense, &
-                        locelev, iform)
+  function get_bnd_density(n, locdense, locconc, denseref, drhodc, crhoref,    &
+                           ctemp, auxvar) result (densebnd)
+! ******************************************************************************
+! get_bnd_density -- Return the density of the boundary package using one of
+!   several different options in the following order of priority:
+!     1. Assign as aux variable in column with name 'DENSITY'
+!     2. Calculate using equation of state and nrhospecies aux columns
+!     3. If neither of those, then assign as denseref
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    integer(I4B), intent(in) :: n
+    integer(I4B), intent(in) :: locdense
+    integer(I4B), dimension(:), intent(in) :: locconc
+    real(DP), intent(in) :: denseref
+    real(DP), dimension(:), intent(in) :: drhodc
+    real(DP), dimension(:), intent(in) :: crhoref
+    real(DP), dimension(:), intent(inout) :: ctemp
+    real(DP), dimension(:, :), intent(in) :: auxvar
+    ! -- return
+    real(DP) :: densebnd
+    ! -- local
+    integer(I4B) :: i
+! ------------------------------------------------------------------------------
+    !
+    ! -- assign boundary density based on one of three options
+    if (locdense > 0) then
+      ! -- assign density to an aux column named 'DENSITY'
+      densebnd = auxvar(locdense, n)
+    else if (locconc(1) > 0) then
+      ! -- calculate density using one or more concentration auxcolumns
+      do i = 1, size(locconc)
+        ctemp(i) = DZERO
+        if (locconc(i) > 0) then
+          ctemp(i) = auxvar(locconc(i), n)
+        end if
+      end do
+      densebnd = calcdens(denseref, drhodc, crhoref, ctemp)
+    else
+      ! -- neither of the above, so assign as denseref
+      densebnd = denseref
+    end if
+    !
+    ! -- return
+    return
+  end function get_bnd_density
+  
+  subroutine buy_cf_ghb(packobj, hnew, dense, elev, denseref, locelev,         &
+                        locdense, locconc, drhodc, crhoref, ctemp,             &
+                        iform)
 ! ******************************************************************************
 ! buy_cf_ghb -- Fill ghb coefficients
 ! ******************************************************************************
@@ -454,8 +512,12 @@ module GwfBuyModule
     real(DP), intent(in), dimension(:) :: dense
     real(DP), intent(in), dimension(:) :: elev
     real(DP), intent(in) :: denseref
-    integer(I4B), intent(in) :: locdense
     integer(I4B), intent(in) :: locelev
+    integer(I4B), intent(in) :: locdense
+    integer(I4B), dimension(:), intent(in) :: locconc
+    real(DP), dimension(:), intent(in) :: drhodc
+    real(DP), dimension(:), intent(in) :: crhoref
+    real(DP), dimension(:), intent(inout) :: ctemp
     integer(I4B), intent(in) :: iform
     ! -- local
     integer(I4B) :: n
@@ -473,8 +535,8 @@ module GwfBuyModule
       if (packobj%ibound(node) <= 0) cycle
       !
       ! -- density
-      denseghb = denseref
-      if (locdense > 0) denseghb = packobj%auxvar(locdense, n)
+      denseghb = get_bnd_density(n, locdense, locconc, denseref, &
+                                   drhodc, crhoref, ctemp, packobj%auxvar)
       !
       ! -- elevation
       elevghb = elev(node)
@@ -552,8 +614,9 @@ module GwfBuyModule
     return
   end subroutine calc_ghb_hcof_rhs_terms
   
-  subroutine buy_cf_riv(packobj, hnew, dense, elev, denseref, locdense,        &
-                       locelev, iform)
+  subroutine buy_cf_riv(packobj, hnew, dense, elev, denseref, locelev,         &
+                        locdense, locconc, drhodc, crhoref, ctemp,             &
+                        iform)
 ! ******************************************************************************
 ! buy_cf_riv -- Fill riv coefficients
 ! ******************************************************************************
@@ -568,8 +631,12 @@ module GwfBuyModule
     real(DP), intent(in), dimension(:) :: dense
     real(DP), intent(in), dimension(:) :: elev
     real(DP), intent(in) :: denseref
-    integer(I4B), intent(in) :: locdense
     integer(I4B), intent(in) :: locelev
+    integer(I4B), intent(in) :: locdense
+    integer(I4B), dimension(:), intent(in) :: locconc
+    real(DP), dimension(:), intent(in) :: drhodc
+    real(DP), dimension(:), intent(in) :: crhoref
+    real(DP), dimension(:), intent(inout) :: ctemp
     integer(I4B), intent(in) :: iform
     ! -- local
     integer(I4B) :: n
@@ -589,8 +656,8 @@ module GwfBuyModule
       if (packobj%ibound(node) <= 0) cycle
       !
       ! -- density
-      denseriv = denseref
-      if (locdense > 0) denseriv = packobj%auxvar(locdense, n)
+      denseriv = get_bnd_density(n, locdense, locconc, denseref, &
+                                   drhodc, crhoref, ctemp, packobj%auxvar)
       !
       ! -- elevation
       elevriv = elev(node)
@@ -665,8 +732,8 @@ module GwfBuyModule
     return
   end subroutine buy_cf_drn
   
-  subroutine buy_cf_lak(packobj, hnew, dense, elev, denseref, drhodc,          &
-                        crhoref, ctemp, locdense, locconc, iform)
+  subroutine buy_cf_lak(packobj, hnew, dense, elev, denseref, locdense,        &
+                        locconc, drhodc, crhoref, ctemp, iform)
 ! ******************************************************************************
 ! buy_cf_lak -- Pass density information into lak package; density terms are
 !   calculated in the lake package as part of lak_calculate_density_exchange
@@ -684,19 +751,17 @@ module GwfBuyModule
     real(DP), intent(in), dimension(:) :: dense
     real(DP), intent(in), dimension(:) :: elev
     real(DP), intent(in) :: denseref
+    integer(I4B), intent(in) :: locdense
+    integer(I4B), dimension(:), intent(in) :: locconc
     real(DP), dimension(:), intent(in) :: drhodc
     real(DP), dimension(:), intent(in) :: crhoref
     real(DP), dimension(:), intent(inout) :: ctemp
-    integer(I4B), intent(in) :: locdense
-    integer(I4B), dimension(:), intent(in) :: locconc
     integer(I4B), intent(in) :: iform
     ! -- local
     integer(I4B) :: i
     integer(I4B) :: n
     integer(I4B) :: node
     real(DP) :: denselak
-    real(DP) :: conclak
-    logical :: anylocconc
 ! ------------------------------------------------------------------------------
     !
     ! -- Insert the lake and gwf relative densities into col 1 and 2 and the
@@ -710,20 +775,8 @@ module GwfBuyModule
         if (packobj%ibound(node) <= 0) cycle
         !
         ! -- Determine lak density
-        denselak = denseref
-        if (locdense > 0) denselak = packobj%auxvar(locdense, n)
-        anylocconc = .false.
-        do i = 1, size(locconc)
-          ctemp(i) = DZERO
-          if (locconc(i) > 0) then
-            conclak = packobj%auxvar(locconc(i), n)
-            ctemp(i) = conclak
-            anylocconc = .true.
-          end if
-        end do
-        if (anylocconc) then
-          denselak = calcdens(denseref, drhodc, crhoref, ctemp)
-        end if
+        denselak = get_bnd_density(n, locdense, locconc, denseref, &
+                                   drhodc, crhoref, ctemp, packobj%auxvar)
         !
         ! -- fill lak relative density into column 1 of denseterms
         packobj%denseterms(1, n) = denselak / denseref
@@ -913,10 +966,17 @@ module GwfBuyModule
       end do
       write(this%iout,'(1x,a)')'END OF BUY DIMENSIONS'
     else
-      call store_error('ERROR.  REQUIRED DIMENSIONS BLOCK NOT FOUND.')
+      call store_error('REQUIRED BUY DIMENSIONS BLOCK NOT FOUND.')
       call this%parser%StoreErrorUnit()
       call ustop()
     end if
+    !
+    ! -- check dimension
+    if (this%nrhospecies < 1) then
+      call store_error('NRHOSPECIES MUST BE GREATER THAN ONE.')
+      call this%parser%StoreErrorUnit()
+      call ustop()
+    endif
     !
     ! -- return
     return

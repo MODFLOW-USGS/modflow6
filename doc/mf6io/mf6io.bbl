@@ -1,4 +1,4 @@
-\begin{thebibliography}{26}
+\begin{thebibliography}{27}
 \providecommand{\natexlab}[1]{#1}
 \expandafter\ifx\csname urlstyle\endcsname\relax
   \providecommand{\doi}[1]{doi:\discretionary{}{}{}#1}\else
@@ -114,6 +114,13 @@ Langevin, C.D., Hughes, J.D., Provost, A.M., Banta, E.R., Niswonger, R.G., and
   Panday, Sorab, 2017, Documentation for the MODFLOW 6 Groundwater Flow (GWF)
   Model: {U.S. Geological Survey Techniques and Methods, book 6, chap. A55, 197
   p.}, accessed August 4, 2017, at \url{https://doi.org/10.3133/tm6A55}.
+
+\bibitem[{Langevin and others(2020)Langevin, Panday, and
+  Provost}]{langevin2020}
+Langevin, C.D., Panday, Sorab, and Provost, A.M., 2020, Hydraulic-head
+  formulation for density-dependent flow and transport: Groundwater, v.~58,
+  no.~3, p.~349--362, \url{https://doi.org/10.1111/gwat.12967},
+  \url{https://ngwa.onlinelibrary.wiley.com/doi/abs/10.1111/gwat.12967}.
 
 \bibitem[{Leake and Lilly(1997)}]{leake1997documentation}
 Leake, S.A., and Lilly, M.R., 1997, Documentation of computer program (FHB1)
