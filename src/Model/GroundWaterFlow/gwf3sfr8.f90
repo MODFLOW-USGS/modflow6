@@ -145,6 +145,14 @@ module SfrModule
     real(DP), dimension(:), pointer, contiguous :: sstage => null()
     ! -- reach aux variables
     real(DP), dimension(:,:), pointer, contiguous :: rauxvar => null()
+    ! -- diversion data
+    integer(I4B), dimension(:), pointer, contiguous :: iadiv => null()
+    integer(I4B), dimension(:), pointer, contiguous :: divreach => null()
+    !integer(I4B), dimension(:), pointer, contiguous :: diviprior => null()
+    character (len=10), dimension(:), pointer, contiguous :: divcprior => null()
+    real(DP), dimension(:), pointer, contiguous :: divflow => null()
+    real(DP), dimension(:), pointer, contiguous :: divq => null()
+    
     ! -- type bound procedures
     
     ! -- type bound procedures
@@ -173,8 +181,8 @@ module SfrModule
     ! -- private procedures
     procedure, private :: allocate_reach
     procedure, private :: deallocate_reach
-    procedure, private :: allocate_diversion
-    procedure, private :: deallocate_diversion
+    !procedure, private :: allocate_diversion
+    !procedure, private :: deallocate_diversion
     procedure, private :: sfr_set_stressperiod
     procedure, private :: sfr_solve
     procedure, private :: sfr_update_flows
@@ -371,6 +379,13 @@ contains
     call mem_allocate(this%rauxvar, this%naux, this%maxbound,                    &
                       'RAUXVAR', this%origin)
     !
+    ! -- diversion variables
+    call mem_allocate(this%iadiv, this%maxbound+1, 'IADIV', this%origin)
+    call mem_allocate(this%divreach, 0, 'DIVREACH', this%origin)
+    !call mem_allocate(this%diviprior, 0, 'DIVIPRIOR', this%origin)
+    call mem_allocate(this%divflow, 0, 'DIVFLOW', this%origin)
+    call mem_allocate(this%divq, 0, 'DIVQ', this%origin)
+    !
     ! -- initialize variables
     do i = 1, this%maxbound
       this%iboundpak(i) = 1
@@ -522,10 +537,6 @@ contains
     ! -- Call define_listlabel to construct the list label that is written
     !    when PRINT_INPUT option is used.
     call this%define_listlabel()
-
-    
-    
-    
     !
     ! -- Allocate arrays in package superclass
     call this%sfr_allocate_arrays()
@@ -855,7 +866,7 @@ contains
         this%ndiv(n) = ival
         if (ival > 0) then
           this%idiversions = 1
-          call this%allocate_diversion(n, ival)
+          !call this%allocate_diversion(n, ival)
         else if (ival < 0) then
           ival = 0
         end if
@@ -1117,6 +1128,7 @@ contains
   !    SPECIFICATIONS:
   ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
+    use MemoryManagerModule, only: mem_reallocate
     use SimModule, only: ustop, store_error, count_errors
     ! -- dummy
     class(SfrType),intent(inout) :: this
@@ -1124,15 +1136,41 @@ contains
     character (len=LINELENGTH) :: errmsg
     character (len=10) :: cnum
     character (len=10) :: cval
-    integer(I4B) :: j, n, ierr, ival
+    integer(I4B) :: j
+    integer(I4B) :: n
+    integer(I4B) :: ierr
+    integer(I4B) :: ival
+    integer(I4B) :: i0
+    integer(I4B) :: i1
     integer(I4B) :: ipos
     integer(I4B) :: ndiv
+    integer(I4B) :: ndiversions
+    integer(I4B) :: idivreach
     logical :: isfound, endOfBlock
     integer(I4B) :: idiv
     integer, allocatable, dimension(:) :: iachk
     integer, allocatable, dimension(:) :: nboundchk
     ! -- format
   ! ------------------------------------------------------------------------------
+    !
+    ! -- determine the total number of diversions and fill iadiv
+    ndiversions = 0
+    i0 = 1
+    this%iadiv(1) = i0
+    do n = 1, this%maxbound
+      ndiversions = ndiversions + this%ndiv(n)
+      i0 = i0 + this%ndiv(n)
+      this%iadiv(n+1) = i0
+    end do
+    !
+    ! -- reallocate memory for diversions
+    if (ndiversions > 0) then
+      call mem_reallocate(this%divreach, ndiversions, 'DIVREACH', this%origin)
+      !call mem_reallocate(this%diviprior, ndiversions, 'DIVIPRIOR', this%origin)
+      allocate(this%divcprior(ndiversions))
+      call mem_reallocate(this%divflow, ndiversions, 'DIVFLOW', this%origin)
+      call mem_reallocate(this%divq, ndiversions, 'DIVQ', this%origin)
+    end if
     !
     ! -- read diversions
     call this%parser%GetBlock('DIVERSIONS', isfound, ierr,                      &
@@ -1169,7 +1207,7 @@ contains
           n = this%parser%GetInteger()
           if (n < 1 .or. n > this%maxbound) then
             write(cnum, '(i0)') n
-            errmsg = 'ERROR: reach number should be between 1 and ' //          &
+            errmsg = 'reach number should be between 1 and ' //                  &
                       trim(cnum) // '.'
             call store_error(errmsg)
             cycle
@@ -1178,7 +1216,7 @@ contains
           ! -- make sure reach has at least one diversion
           if (this%ndiv(n) < 1) then
             write(cnum, '(i0)') n
-            errmsg = 'ERROR: diversions cannot be specified ' //                &
+            errmsg = 'diversions cannot be specified ' //                        &
                      'for reach ' // trim(cnum)
             call store_error(errmsg)
             cycle
@@ -1188,9 +1226,9 @@ contains
           ival = this%parser%GetInteger()
           if (ival < 1 .or. ival > this%ndiv(n)) then
             write(cnum, '(i0)') n
-            errmsg = 'ERROR: reach  ' // trim(cnum)
+            errmsg = 'reach  ' // trim(cnum)
             write(cnum, '(i0)') this%ndiv(n)
-            errmsg = trim(errmsg) // ' diversion number should be between ' //  &
+            errmsg = trim(errmsg) // ' diversion number should be between ' //   &
                      '1 and ' // trim(cnum) // '.'
             call store_error(errmsg)
             cycle
@@ -1206,12 +1244,15 @@ contains
           ival = this%parser%GetInteger()
           if (ival < 1 .or. ival > this%maxbound) then
             write(cnum, '(i0)') ival
-            errmsg = 'ERROR: diversion target reach number should be ' //       &
+            errmsg = 'diversion target reach number should be ' //               &
                      'between 1 and ' // trim(cnum) // '.'
             call store_error(errmsg)
             cycle
           end if
-          this%reaches(n)%diversion(idiv)%reach = ival
+          idivreach = ival
+          i1 = this%iadiv(n) + idiv - 1
+          this%divreach(i1) = idivreach
+          !this%reaches(n)%diversion(idiv)%reach = idivreach
           !
           ! -- get cprior
           call this%parser%GetStringCaps(cval)
@@ -1226,15 +1267,24 @@ contains
             case('EXCESS')
               ival = -3
             case default
-              errmsg = 'ERROR: INVALID CPRIOR TYPE ' // trim(cval)
+              errmsg = 'INVALID CPRIOR TYPE ' // trim(cval)
               call store_error(errmsg)
           end select
-          this%reaches(n)%diversion(idiv)%cprior = cval
-          this%reaches(n)%diversion(idiv)%iprior = ival
+          this%divcprior(i1) = cval
+          !this%diviprior(i1) = ival
+          !this%reaches(n)%diversion(idiv)%cprior = cval
+          !this%reaches(n)%diversion(idiv)%iprior = ival
+          !!
+          !! -- fill flat diversion structure
+          !i0 = this%iadiv(n)
+          !i1 = i0 + idiv - 1
+          !this%divreach(i1) = idivreach
+          !this%diviprior(i1) = ival
+          !this%divcprior(i1) = cval
 
         end do
         
-        write(this%iout,'(1x,a)') 'END OF ' // trim(adjustl(this%text)) //      &
+        write(this%iout,'(1x,a)') 'END OF ' // trim(adjustl(this%text)) //       &
                                   ' DIVERSIONS'
         
         do n = 1, this%maxbound
@@ -1243,12 +1293,12 @@ contains
             !
             ! -- check for missing or duplicate reach diversions
             if (nboundchk(ipos) == 0) then
-              write(errmsg,'(a,1x,i0,1x,a,1x,i0)')                              &
-                'ERROR.  NO DATA SPECIFIED FOR REACH', n, 'DIVERSION', j
+              write(errmsg,'(a,1x,i0,1x,a,1x,i0)')                               &
+                'NO DATA SPECIFIED FOR REACH', n, 'DIVERSION', j
               call store_error(errmsg)
             else if (nboundchk(ipos) > 1) then
-              write(errmsg,'(a,1x,i0,1x,a,1x,i0,1x,a,1x,i0,1x,a)')              &
-                'ERROR.  DATA FOR REACH', n, 'DIVERSION', j,                    &
+              write(errmsg,'(a,1x,i0,1x,a,1x,i0,1x,a,1x,i0,1x,a)')               &
+                'DATA FOR REACH', n, 'DIVERSION', j,                             &
                 'SPECIFIED', nboundchk(ipos), 'TIMES'
               call store_error(errmsg)
             end if
@@ -1261,13 +1311,13 @@ contains
       else
         !
         ! -- error condition
-        write(errmsg,'(a,1x,a)') 'ERROR.  A DIVERSIONS BLOCK SHOULD NOT BE',    &
+        write(errmsg,'(a,1x,a)') 'A DIVERSIONS BLOCK SHOULD NOT BE',             &
           'SPECIFIED IF DIVERSIONS ARE NOT SPECIFIED.'
           call store_error(errmsg)
       end if
     else
       if (this%idiversions /= 0) then
-        call store_error('ERROR.  REQUIRED DIVERSIONS BLOCK NOT FOUND.')
+        call store_error('REQUIRED DIVERSIONS BLOCK NOT FOUND.')
       end if
     end if
     !
@@ -1380,8 +1430,7 @@ contains
         if (endOfBlock) exit
         n = this%parser%GetInteger()
         if (n < 1 .or. n > this%maxbound) then
-          write(errmsg,'(4x,a,1x,i6)') &
-            '****ERROR. RNO MUST BE > 0 and <= ', this%maxbound
+          write(errmsg,'(a,1x,i6)') 'RNO MUST BE > 0 and <= ', this%maxbound
           call store_error(errmsg)
           cycle
         end if
@@ -2076,12 +2125,22 @@ contains
     ! -- aux variables
     call mem_deallocate(this%rauxvar)
     !
-    ! -- deallocation diversions
-    do n = 1, this%maxbound
-      if (this%ndiv(n) > 0) then
-        call this%deallocate_diversion(n)
-      endif
-    enddo
+    ! -- diversion variables
+    call mem_deallocate(this%iadiv)
+    call mem_deallocate(this%divreach)
+    !call mem_deallocate(this%diviprior)
+    if (associated(this%divcprior)) then
+      deallocate(this%divcprior)
+    end if
+    call mem_deallocate(this%divflow)
+    call mem_deallocate(this%divq)
+    !!
+    !! -- deallocation diversions
+    !do n = 1, this%maxbound
+    !  if (this%ndiv(n) > 0) then
+    !    call this%deallocate_diversion(n)
+    !  endif
+    !enddo
     call mem_deallocate(this%ndiv)
     !
     ! -- deallocate reaches
@@ -2700,49 +2759,55 @@ contains
         ! -- make sure reach has at least one diversion
         if (this%ndiv(n) < 1) then
           write(cnum, '(i0)') n
-          errmsg = 'ERROR: diversions cannot be specified for reach ' // trim(cnum)
+          errmsg = 'diversions cannot be specified for reach ' // trim(cnum)
           call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-          call ustop()
         end if
         !
         ! -- read diversion number
-        call urword(line, lloc, istart, istop, 2, ival, rval, this%iout, this%inunit)
+        call urword(line, lloc, istart, istop, 2, ival, rval,                    &
+                    this%iout, this%inunit)
         if (ival < 1 .or. ival > this%ndiv(n)) then
           write(cnum, '(i0)') n
-          errmsg = 'ERROR: reach  ' // trim(cnum)
+          errmsg = 'reach  ' // trim(cnum)
           write(cnum, '(i0)') this%ndiv(n)
           errmsg = trim(errmsg) // ' diversion number should be between 1 ' //   &
                    'and ' // trim(cnum) // '.'
           call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-          call ustop()
         end if
         idiv = ival
         !
         ! -- read value
         call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
         text = line(istart:istop)
-        jj = 5   ! for 'DIVERSION'
-        call read_single_value_or_time_series(text, &
-                                              this%reaches(n)%diversion(idiv)%rate%value, &
-                                              this%reaches(n)%diversion(idiv)%rate%name, &
-                                              endtim,  &
-                                              this%Name, 'BND', this%TsManager, &
-                                              this%iprpak, n, jj, 'DIVERSION', &
-                                              bndName, this%inunit)
-
+        !jj = 5   ! for 'DIVERSION'
+        !call read_single_value_or_time_series(text, &
+        !                                      this%reaches(n)%diversion(idiv)%rate%value, &
+        !                                      this%reaches(n)%diversion(idiv)%rate%name, &
+        !                                      endtim,  &
+        !                                      this%Name, 'BND', this%TsManager, &
+        !                                      this%iprpak, n, jj, 'DIVERSION', &
+        !                                      bndName, this%inunit)
+        !
+        ii = this%iadiv(n) + idiv - 1
+        jj = 1  ! For 'INFLOW'
+        bndElem => this%divflow(ii)
+        call read_value_or_time_series_adv(text, ii, jj, bndElem, this%name,     &
+                                           'BND', this%tsManager, this%iprpak,   &
+                                           'DIVFLOW')
       case ('UPSTREAM_FRACTION')
         ichkustrm = 1
-        call urword(line, lloc, istart, istop, 3, ival, rval, this%iout, this%inunit)
+        call urword(line, lloc, istart, istop, 3, ival, rval,                    &
+                    this%iout, this%inunit)
         this%ustrf(n) = rval
 
       case ('AUXILIARY')
-        call urword(line, lloc, istart, istop, 1, ival, rval, this%iout, this%inunit)
+        call urword(line, lloc, istart, istop, 1, ival, rval,                    &
+                    this%iout, this%inunit)
         caux = line(istart:istop)
         do jj = 1, this%naux
           if (trim(adjustl(caux)) /= trim(adjustl(this%auxname(jj)))) cycle
-          call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
+          call urword(line, lloc, istart, istop, 0, ival, rval,                  &
+                      this%iout, this%inunit)
           text = line(istart:istop)
           !jj = 1 !iaux
           !call read_single_value_or_time_series(text, &
@@ -2762,12 +2827,10 @@ contains
         end do
 
       case default
-        write(errmsg,'(4x,a,a)') &
-          '****ERROR. UNKNOWN '//trim(this%text)//' SFR DATA KEYWORD: ', &
-                                  line(istart:istop)
+        write(errmsg,'(a,a)') &
+          'UNKNOWN ' // trim(this%text) // ' SFR DATA KEYWORD: ',                &
+          line(istart:istop)
         call store_error(errmsg)
-        call this%parser%StoreErrorUnit()
-        call ustop()
       end select
     !
     ! -- return
@@ -2899,80 +2962,80 @@ contains
     return
   end subroutine deallocate_reach
 
-  subroutine allocate_diversion(this, n, ndiv)
-! ******************************************************************************
-! allocate_diversion -- Allocate diversion pointers for reach(n).
-! ******************************************************************************
+!  subroutine allocate_diversion(this, n, ndiv)
+!! ******************************************************************************
+!! allocate_diversion -- Allocate diversion pointers for reach(n).
+!! ******************************************************************************
+!!
+!!    SPECIFICATIONS:
+!! ------------------------------------------------------------------------------
+!    class(SfrType) :: this
+!    integer(I4B), intent(in) :: n
+!    integer(I4B), intent(in) :: ndiv
+!    ! -- local
+!    character(len=LINELENGTH) :: errmsg
+!    character(len=10) :: crch
+!    integer(I4B) :: j
+!! ------------------------------------------------------------------------------
+!    !
+!    ! -- make sure reach has not been allocated
+!    if (associated(this%reaches(n)%diversion)) then
+!      write(crch, '(i10)') n
+!      errmsg = 'ERROR: reach ' // trim(adjustl(crch)) // &
+!              ' diversions are already allocated'
+!      call store_error(errmsg)
+!      call this%parser%StoreErrorUnit()
+!      call ustop()
+!    end if
+!    ! -- allocate pointers
+!    allocate(this%reaches(n)%diversion(ndiv))
+!    do j = 1, ndiv
+!      allocate(this%reaches(n)%diversion(j)%reach)
+!      allocate(this%reaches(n)%diversion(j)%cprior)
+!      allocate(this%reaches(n)%diversion(j)%iprior)
+!      allocate(this%reaches(n)%diversion(j)%rate)
+!      allocate(this%reaches(n)%diversion(j)%rate%name)
+!      allocate(this%reaches(n)%diversion(j)%rate%value)
+!      ! -- initialize a few variables
+!      this%reaches(n)%diversion(j)%reach = 0
+!      this%reaches(n)%diversion(j)%cprior = ''
+!      this%reaches(n)%diversion(j)%iprior = 0
+!      this%reaches(n)%diversion(j)%rate%name = ''
+!      this%reaches(n)%diversion(j)%rate%value = DZERO
+!    end do
+!    !
+!    ! -- return
+!    return
+!  end subroutine allocate_diversion
 !
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(SfrType) :: this
-    integer(I4B), intent(in) :: n
-    integer(I4B), intent(in) :: ndiv
-    ! -- local
-    character(len=LINELENGTH) :: errmsg
-    character(len=10) :: crch
-    integer(I4B) :: j
-! ------------------------------------------------------------------------------
-    !
-    ! -- make sure reach has not been allocated
-    if (associated(this%reaches(n)%diversion)) then
-      write(crch, '(i10)') n
-      errmsg = 'ERROR: reach ' // trim(adjustl(crch)) // &
-              ' diversions are already allocated'
-      call store_error(errmsg)
-      call this%parser%StoreErrorUnit()
-      call ustop()
-    end if
-    ! -- allocate pointers
-    allocate(this%reaches(n)%diversion(ndiv))
-    do j = 1, ndiv
-      allocate(this%reaches(n)%diversion(j)%reach)
-      allocate(this%reaches(n)%diversion(j)%cprior)
-      allocate(this%reaches(n)%diversion(j)%iprior)
-      allocate(this%reaches(n)%diversion(j)%rate)
-      allocate(this%reaches(n)%diversion(j)%rate%name)
-      allocate(this%reaches(n)%diversion(j)%rate%value)
-      ! -- initialize a few variables
-      this%reaches(n)%diversion(j)%reach = 0
-      this%reaches(n)%diversion(j)%cprior = ''
-      this%reaches(n)%diversion(j)%iprior = 0
-      this%reaches(n)%diversion(j)%rate%name = ''
-      this%reaches(n)%diversion(j)%rate%value = DZERO
-    end do
-    !
-    ! -- return
-    return
-  end subroutine allocate_diversion
-
-  subroutine deallocate_diversion(this, n)
-! ******************************************************************************
-! deallocate_diversion
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(SfrType) :: this
-    integer(I4B), intent(in) :: n
-    ! -- local
-    integer(I4B) :: j
-! ------------------------------------------------------------------------------
-    !
-    ! -- make sure reach has not been allocated
-    ! -- allocate pointers
-    do j = 1, this%ndiv(n)
-      deallocate(this%reaches(n)%diversion(j)%reach)
-      deallocate(this%reaches(n)%diversion(j)%cprior)
-      deallocate(this%reaches(n)%diversion(j)%iprior)
-      deallocate(this%reaches(n)%diversion(j)%rate%name)
-      deallocate(this%reaches(n)%diversion(j)%rate%value)
-      deallocate(this%reaches(n)%diversion(j)%rate)
-    end do
-    deallocate(this%reaches(n)%diversion)
-    !
-    ! -- return
-    return
-  end subroutine deallocate_diversion
+!  subroutine deallocate_diversion(this, n)
+!! ******************************************************************************
+!! deallocate_diversion
+!! ******************************************************************************
+!!
+!!    SPECIFICATIONS:
+!! ------------------------------------------------------------------------------
+!    class(SfrType) :: this
+!    integer(I4B), intent(in) :: n
+!    ! -- local
+!    integer(I4B) :: j
+!! ------------------------------------------------------------------------------
+!    !
+!    ! -- make sure reach has not been allocated
+!    ! -- allocate pointers
+!    do j = 1, this%ndiv(n)
+!      deallocate(this%reaches(n)%diversion(j)%reach)
+!      deallocate(this%reaches(n)%diversion(j)%cprior)
+!      deallocate(this%reaches(n)%diversion(j)%iprior)
+!      deallocate(this%reaches(n)%diversion(j)%rate%name)
+!      deallocate(this%reaches(n)%diversion(j)%rate%value)
+!      deallocate(this%reaches(n)%diversion(j)%rate)
+!    end do
+!    deallocate(this%reaches(n)%diversion)
+!    !
+!    ! -- return
+!    return
+!  end subroutine deallocate_diversion
 
   subroutine sfr_solve(this, n, h, hcof, rhs, update)
   ! ******************************************************************************
@@ -3415,7 +3478,9 @@ contains
       ! -- local
       integer(I4B) :: i
       integer(I4B) :: n2
-      real(DP) :: q2
+      integer(I4B) :: idiv
+      integer(I4B) :: i1
+      real(DP) :: qdiv
       real(DP) :: f
   ! ------------------------------------------------------------------------------
     !
@@ -3433,9 +3498,12 @@ contains
       ! -- route water to diversions
       do i = 1, this%nconnreach(n)
         if (this%reaches(n)%idir(i) > 0) cycle
-        if (this%reaches(n)%idiv(i) == 0) cycle
-        call this%sfr_calc_div(n, this%reaches(n)%idiv(i), qd, q2)
-        this%reaches(n)%qconn(i) = q2
+        idiv = this%reaches(n)%idiv(i)
+        if (idiv == 0) cycle
+        i1 = this%iadiv(n) + idiv - 1
+        call this%sfr_calc_div(n, idiv, qd, qdiv)
+        this%reaches(n)%qconn(i) = qdiv
+        this%divq(i1) = qdiv
       end do
       !
       ! -- Mover terms: store outflow after diversion loss
@@ -3693,9 +3761,9 @@ contains
   end subroutine sfr_calc_cond
 
 
-  subroutine sfr_calc_div(this, n, i, q, qd)
+  subroutine sfr_calc_div(this, n, i, qd, qdiv)
   ! ******************************************************************************
-  ! sfr_calc_resid -- Calculate residual for reach
+  ! sfr_calc_div -- Calculate the diversion flow for reach
   ! ******************************************************************************
   !
   !    SPECIFICATIONS:
@@ -3703,54 +3771,55 @@ contains
       class(SfrType) :: this
       integer(I4B), intent(in) :: n
       integer(I4B), intent(in) :: i
-      real(DP), intent(inout) :: q
       real(DP), intent(inout) :: qd
+      real(DP), intent(inout) :: qdiv
       ! -- local
       character (len=10) :: cp
+      integer(I4B) :: i1
       integer(I4B) :: n2
       !integer(I4B) :: ip
       real(DP) :: v
   ! ------------------------------------------------------------------------------
     !
     ! -- set local variables
-    n2 = this%reaches(n)%diversion(i)%reach
-    cp = this%reaches(n)%diversion(i)%cprior
-    !ip = this%reaches(n)%diversion(i)%iprior
-    v = this%reaches(n)%diversion(i)%rate%value
+    i1 = this%iadiv(n) + i - 1
+    n2 = this%divreach(i1)
+    cp = this%divcprior(i1)
+    v = this%divflow(i1)
+    !n2 = this%reaches(n)%diversion(i)%reach
+    !cp = this%reaches(n)%diversion(i)%cprior
+    !!ip = this%reaches(n)%diversion(i)%iprior
+    !v = this%reaches(n)%diversion(i)%rate%value
     !
     ! -- calculate diversion
     select case(cp)
       ! -- flood diversion
-      !case (-3)
       case ('EXCESS')
-        if (q < v) then
+        if (qd < v) then
           v = DZERO
         else
-          v = q - v
+          v = qd - v
         end if
       ! -- diversion percentage
-      !case (-2)
       case ('FRACTION')
-        v = q * v
+        v = qd * v
       ! -- STR priority algorithm
-      !case (-1)
       case ('THRESHOLD')
-        if (q < v) then
+        if (qd < v) then
           v = DZERO
         end if
       ! -- specified diversion
-      !case (0)
       case ('UPTO')
-        if (v > q) then
-          v = q
+        if (v > qd) then
+          v = qd
         end if
       case default
         v = DZERO
     end select
     !
     ! -- update upstream from for downstream reaches
-    q = q - v
-    qd = v
+    qd = qd - v
+    qdiv = v
     !
     ! -- return
     return
@@ -4138,10 +4207,13 @@ contains
     character (len=10) :: cprior
     character (len=LINELENGTH) :: errmsg
     integer(I4B) :: maxdiv
-    integer(I4B) :: n, nn, nc
+    integer(I4B) :: n
+    integer(I4B) :: nn
+    integer(I4B) :: nc
     integer(I4B) :: ii
     integer(I4B) :: idiv
     integer(I4B) :: ifound
+    integer(I4B) :: i1
     ! -- format
 10  format('Diversion ',i0,' of reach ',i0,                                      &
            ' is invalid or has not been defined.')
@@ -4178,16 +4250,22 @@ contains
       !line = '     ' // crch
       
       do idiv = 1, this%ndiv(n)
+        !
+        ! -- determine diversion index
+        i1 = this%iadiv(n) + idiv - 1
+        !
+        ! -- write idiv to cdiv
         write(cdiv, '(i5)') idiv
         !
         !
-        nn = this%reaches(n)%diversion(idiv)%reach
+        nn = this%divreach(i1)
+        !nn = this%reaches(n)%diversion(idiv)%reach
         write(crch2, '(i5)') nn
         !
         ! -- make sure diversion reach is connected to current reach
         ifound = 0
         if (nn < 1 .or. nn > this%maxbound) then
-          write(errmsg,10)idiv, n
+          write(errmsg,10) idiv, n
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
           call ustop()
@@ -4209,14 +4287,16 @@ contains
           call store_error(errmsg)
         end if
         ! -- iprior
-        cprior = this%reaches(n)%diversion(idiv)%cprior
+        cprior = this%divcprior(i1)
+        !cprior = this%reaches(n)%diversion(idiv)%cprior
         !
         ! -- add terms to the table
         if (this%iprpak /= 0) then
           call this%inputtab%add_term(n)
           call this%inputtab%add_term(idiv)
           call this%inputtab%add_term(nn)
-          call this%inputtab%add_term(this%reaches(n)%diversion(idiv)%cprior)
+          !call this%inputtab%add_term(this%reaches(n)%diversion(idiv)%cprior)
+          call this%inputtab%add_term(cprior)
         end if
       end do
     end do
@@ -4239,9 +4319,13 @@ contains
     integer(I4B) :: maxcols
     integer(I4B) :: npairs
     integer(I4B) :: ipair
-    integer(I4B) :: i, n
+    integer(I4B) :: i
+    integer(I4B) :: n
     integer(I4B) :: n2
     integer(I4B) :: idiv
+    integer(I4B) :: i0
+    integer(I4B) :: i1
+    integer(I4B) :: ipos
     integer(I4B) :: ids
     real(DP) :: f
     real(DP) :: rval
@@ -4287,6 +4371,23 @@ contains
       end do
     end if
     !
+    ! -- fill
+    do n = 1, this%maxbound
+      do idiv = 1, this%ndiv(n)
+        i0 = this%iadiv(n)
+        i1 = this%iadiv(n+1) - 1
+        do ipos = i0, i1 
+          do i = 1, this%nconnreach(n)
+            n2 = this%reaches(n)%iconn(i)
+            if (this%divreach(ipos) == n2) then
+              this%reaches(n)%idiv(i) = ipos - i0 + 1
+              exit
+            end if 
+          end do
+        end do
+      end do
+    end do
+    !
     ! -- calculate the total fraction of connected reaches that are
     !    not diversions and check that the sum of upstream fractions
     !    is equal to 1 for each reach
@@ -4331,8 +4432,9 @@ contains
           call this%inputtab%add_term(this%ustrf(n2))
         end if
         eachdiv: do idiv = 1, this%ndiv(n)
-          if (this%reaches(n)%diversion(idiv)%reach == n2) then
-            this%reaches(n)%idiv(i) = idiv
+          !if (this%reaches(n)%diversion(idiv)%reach == n2) then
+          if (this%divreach(i1) == n2) then
+            !this%reaches(n)%idiv(i) = idiv
             ladd = .false.
             exit eachconn
           end if
@@ -4599,6 +4701,8 @@ contains
     integer(I4B) :: i, n, n1, n2
     integer(I4B) :: ii
     integer(I4B) :: idx
+    integer(I4B) :: idiv
+    integer(I4B) :: i1
     real(DP) :: q
     real(DP) :: qt
     real(DP) :: d
@@ -4693,13 +4797,26 @@ contains
     idx = idx + 1
     call this%budobj%budterm(idx)%reset(this%maxbound)
     do n = 1, this%maxbound
-      q = this%dsflow(n)
-      if (q > DZERO) q = -q
+      !q = this%dsflow(n)
+      !if (q > DZERO) q = -q
+      q = DZERO
       do i = 1, this%nconnreach(n)
         if (this%reaches(n)%idir(i) > 0) cycle
-        q = DZERO
-        exit
+        idiv = this%reaches(n)%idiv(i)
+        if (idiv > 0) then
+          i1 = this%iadiv(n) + idiv - 1
+          q = q + this%divq(i1)
+        else
+          q = q + this%reaches(n)%qconn(i)
+        end if
+        !if (this%reaches(n)%idir(i) > 0) cycle
+        !q = DZERO
+        !exit
       end do
+      q = q - this%dsflow(n)
+      !if (q > DZERO) then
+      !  q = q - this%dsflow(n)
+      !end if
       if (this%imover == 1) then
         q = q + this%pakmvrobj%get_qtomvr(n)
       end if

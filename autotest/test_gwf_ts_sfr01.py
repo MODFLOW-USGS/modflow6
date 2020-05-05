@@ -106,28 +106,44 @@ def build_model(ws, name, timeseries=False):
     # sfr file
     packagedata = [
         [0, (1 - 1, 4 - 1, 1 - 1), 3.628E+001, 1.0, 1.0E-003, 0.0, 1.0, 1.0E-4,
-         1.0E-1, 1, 0.0, 1, temp, conc],
+         1.0E-1, 2, 0.0, 1, temp, conc],
         [1, (1 - 1, 4 - 1, 2 - 1), 1.061E+002, 1.0, 1.0E-003, 0.0, 1.0, 1.0E-4,
-         1.0E-1, 2, 1.0, 1, temp, conc],
+         1.0E-1, 3, 1.0, 1, temp, conc],
         [2, (1 - 1, 4 - 1, 3 - 1), 6.333E+001, 1.0, 1.0E-003, 0.0, 1.0, 1.0E-4,
-         1.0E-1, 2, 1.0, 2, temp, conc],
+         1.0E-1, 4, 1.0, 2, temp, conc],
         [3, (1 - 1, 5 - 1, 3 - 1), 4.279E+001, 1.0, 1.0E-003, 0.0, 1.0, 1.0E-4,
-         1.0E-1, 2, 1.0, 1, temp, conc],
+         1.0E-1, 3, 1.0, 1, temp, conc],
         [4, (1 - 1, 5 - 1, 4 - 1), 6.532E+001, 1.0, 1.0E-003, 0.0, 1.0, 1.0E-4,
          1.0E-1, 1, 1.0, 0, temp, conc],
+        [5, (1 - 1, 4 - 1, 1 - 1), 10., 1.0, 1.0E-003, 0.0, 1.0, 0.0,
+         1.0E-1, 1, 0.0, 0, temp, conc],
+        [6, (1 - 1, 4 - 1, 2 - 1), 10., 1.0, 1.0E-003, 0.0, 1.0, 0.0,
+         1.0E-1, 1, 0.0, 0, temp, conc],
+        [7, (1 - 1, 4 - 1, 3 - 1), 10., 1.0, 1.0E-003, 0.0, 1.0, 0.0,
+         1.0E-1, 1, 0.0, 0, temp, conc],
+        [8, (1 - 1, 4 - 1, 3 - 1), 10., 1.0, 1.0E-003, 0.0, 1.0, 0.0,
+         1.0E-1, 1, 0.0, 0, temp, conc],
+        [9, (1 - 1, 5 - 1, 4 - 1), 10., 1.0, 1.0E-003, 0.0, 1.0, 0.0,
+         1.0E-1, 1, 0.0, 0, temp, conc],
     ]
     connectiondata = [
-        [0, -1],
-        [1, 0, -2],
-        [2, 1, -3],
-        [3, 2, -4],
+        [0, -1, -5],
+        [1, 0, -2, -6],
+        [2, 1, -3, -7, -8],
+        [3, 2, -4, -9],
         [4, 3],
+        [5, 0],
+        [6, 1],
+        [7, 2],
+        [8, 2],
+        [9, 3]
     ]
-    divdata = [[0, 0, 1, 'excess'],
-               [1, 0, 2, 'excess'],
-               [2, 1, 3, 'excess'],
-               [2, 0, 3, 'excess'],
-               [3, 0, 4, 'excess']]
+    cprior = 'upto'
+    divdata = [[0, 0, 5, cprior],
+               [1, 0, 6, cprior],
+               [2, 1, 7, cprior],
+               [2, 0, 8, cprior],
+               [3, 0, 9, cprior]]
     inflow, divflow = 1., 0.05
     ts_names = ['inflow', 'divflow'] + auxnames
     perioddata = [[0, 'status', 'active'],
@@ -156,7 +172,7 @@ def build_model(ws, name, timeseries=False):
     sfr = flopy.mf6.ModflowGwfsfr(gwf,
                                   auxiliary=auxnames,
                                   print_input=True,
-                                  mover=True, nreaches=5,
+                                  mover=True, nreaches=len(packagedata),
                                   maximum_depth_change=1.e-5,
                                   package_convergence_filerecord=cnvgpth,
                                   packagedata=packagedata,
@@ -276,7 +292,9 @@ def build_model(ws, name, timeseries=False):
         ('uzf-1', 5, 'sfr-1', 0, 'factor', 1.),
         ('uzf-1', 6, 'sfr-1', 0, 'factor', 1.),
         ('uzf-1', 7, 'sfr-1', 0, 'factor', 1.),
-        ('uzf-1', 8, 'sfr-1', 0, 'factor', 1.)]
+        ('uzf-1', 8, 'sfr-1', 0, 'factor', 1.),
+        ('sfr-1', 2, 'sfr-1', 3, 'factor', 0.5)
+    ]
     mvr = flopy.mf6.ModflowGwfmvr(gwf, maxmvr=len(perioddata),
                                   budget_filerecord='{}.mvr.bud'.format(name),
                                   maxpackages=len(packages),
