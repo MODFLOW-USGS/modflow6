@@ -123,12 +123,12 @@ def build_model(ws, name, timeseries=False):
         [3, 2, -4],
         [4, 3],
     ]
-    divdata = [[0, 0, 1, 'threshold'],
-               [1, 0, 2, 'threshold'],
-               [2, 1, 3, 'threshold'],
-               [2, 0, 3, 'threshold'],
-               [3, 0, 4, 'threshold']]
-    inflow, divflow = 1., 0.1
+    divdata = [[0, 0, 1, 'excess'],
+               [1, 0, 2, 'excess'],
+               [2, 1, 3, 'excess'],
+               [2, 0, 3, 'excess'],
+               [3, 0, 4, 'excess']]
+    inflow, divflow = 1., 0.05
     ts_names = ['inflow', 'divflow'] + auxnames
     perioddata = [[0, 'status', 'active'],
                   [1, 'status', 'active'],
