@@ -282,7 +282,7 @@ module GwfModule
     call csub_cr(this%csub, this%name, this%insto, this%sto%name,               &
                  this%incsub, this%iout)
     call ic_cr(this%ic, this%name, this%inic, this%iout, this%dis)
-    call mvr_cr(this%mvr, this%name, this%inmvr, this%iout, dis=this%dis)
+    call mvr_cr(this%mvr, this%name, this%inmvr, this%iout, this%dis)
     call oc_cr(this%oc, this%name, this%inoc, this%iout)
     call gwf_obs_cr(this%obs, this%inobs)
     !
