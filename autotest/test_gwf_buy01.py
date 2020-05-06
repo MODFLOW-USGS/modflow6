@@ -19,7 +19,7 @@ from framework import testing_framework
 from simulation import Simulation
 
 ex = ['buy_01a', 'buy_01b', 'buy_01c']
-dense = [1000., 1024.5, 1024.5]
+concbuy = [0., 35., 35.]
 dz = [0., 0., 10.]
 exdirs = []
 for s in ex:
@@ -97,10 +97,10 @@ def get_model(idx, dir):
                                   save_specific_discharge=True,
                                   icelltype=1, k=Kh)
 
-    d = dense[idx]
-    buy = flopy.mf6.ModflowGwfbuy(gwf,
-                                  denseref=1000., drhodc=0.7,
-                                  dense=d)
+    d = concbuy[idx]
+    pd = [(0, 0.7, 0., 'none', 'none')]
+    buy = flopy.mf6.ModflowGwfbuy(gwf, nrhospecies=len(pd), packagedata=pd,
+                                  denseref=1000., concentration=d)
 
     # chd files
     chdlist1 = []
@@ -152,7 +152,7 @@ def eval_results(sim):
     h1 = 101.
     h2 = 100.
     dh = h1 - h2
-    rho1 = rho2 = dense[idx]
+    rho1 = rho2 = 1000. + 0.7 * concbuy[idx]
     z1 = 50.
     ddz = dz[idx]
     z2 = 50.

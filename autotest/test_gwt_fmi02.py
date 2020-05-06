@@ -77,7 +77,7 @@ def run_transport_model():
     ic = flopy.mf6.ModflowGwtic(gwt)
     mst = flopy.mf6.ModflowGwtmst(gwt, porosity=0.2)
     adv = flopy.mf6.ModflowGwtadv(gwt)
-    pd = [('GWFBUDGET', '../flow/flow.bud')]
+    pd = [('GWFBUDGET', '../flow/flow.bud', None)]
     fmi = flopy.mf6.ModflowGwtfmi(gwt, packagedata=pd)
     sources = [('CHD-1', 'AUX', 'CONCENTRATION')]
     ssm = flopy.mf6.ModflowGwtssm(gwt, print_flows=True, sources=sources)

@@ -152,7 +152,9 @@ def get_model(idx, dir):
                                   steady_state=[False],
                                   transient=[True])
 
-    buy = flopy.mf6.ModflowGwfbuy(gwf, hhformulation_rhs=False)
+    pd = [(0, 0.7, 0., gwtname, 'none')]
+    buy = flopy.mf6.ModflowGwfbuy(gwf, hhformulation_rhs=False,
+                                  packagedata=pd)
 
     # drn and ghb
     kidx, iidx, jidx = np.where(idomain > 1)

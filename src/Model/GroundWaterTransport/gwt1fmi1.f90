@@ -1,8 +1,3 @@
-! -- todo: gwfsat is not right for FMI budget flows
-! -- todo: don't have gwficelltype for FMI budget flows
-! -- todo: flowerr correction should be an option in FMI
-! -- todo: lots more error checking
-! -- todo: deallocation
 module GwtFmiModule
   
   use KindModule,             only: DP, I4B
@@ -20,7 +15,7 @@ module GwtFmiModule
   private
   public :: GwtFmiType
   public :: fmi_cr
-
+  
   type :: DataAdvancedPackageType
     real(DP), dimension(:), contiguous, pointer :: concpack => null()
     real(DP), dimension(:), contiguous, pointer :: qmfrommvr => null()
@@ -452,31 +447,11 @@ module GwtFmiModule
       rout = DZERO
       nodes = this%dis%nodes
       !
-      ! -- Accumulate the flow error term
-      do n = 1, nodes
-        if (this%ibound(n) <= 0) cycle
-        rate = this%flowerr(n) * cnew(n)
-        if (rate < 0) then
-          rin = rin - rate
-        else
-          rout = rout + rate
-        endif
-      enddo
-      !
-      ! -- Add contributions to model budget
-      call model_budget%addentry(rin, rout, delt, '      FLOW-ERROR',            &
-                                 isuppress_output)
-      !
-      ! -- initialize 
-      rin = DZERO
-      rout = DZERO
-      nodes = this%dis%nodes
-      !
       ! -- Accumulate the flow correction term
       do n = 1, nodes
         if (this%ibound(n) <= 0) cycle
-        rate = this%flowerr(n) * cnew(n)
-        if (rate < 0) then
+        rate = -this%flowerr(n) * cnew(n)
+        if (rate < DZERO) then
           rout = rout - rate
         else
           rin = rin + rate
@@ -485,7 +460,7 @@ module GwtFmiModule
       !
       ! -- Add contributions to model budget
       call model_budget%addentry(rin, rout, delt, ' FLOW-CORRECTION',          &
-                                 isuppress_output)
+                                 isuppress_output, rowlabel=this%name)
     end if
     !
     ! -- Return
@@ -636,7 +611,6 @@ module GwtFmiModule
         this%gwfflowja(n) = DZERO
       end do
       !
-      !
       ! -- allocate and initialize storage arrays
       if (this%igwfstrgss == 0) then
         call mem_allocate(this%gwfstrgss, 1, 'GWFSTRGSS', this%origin)
@@ -778,6 +752,7 @@ module GwtFmiModule
     !
     ! -- initialize
     iapt = 0
+    blockrequired = .true.
     !
     ! -- get options block
     call this%parser%GetBlock('PACKAGEDATA', isfound, ierr,                    &

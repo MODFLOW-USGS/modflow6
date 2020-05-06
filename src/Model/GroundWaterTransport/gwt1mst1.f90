@@ -452,7 +452,8 @@ module GwtMstModule
     enddo
     !
     ! -- Add contributions to model budget
-    call model_budget%addentry(rin, rout, delt, budtxt(1), isuppress_output)
+    call model_budget%addentry(rin, rout, delt, budtxt(1), isuppress_output,   &
+                               rowlabel=this%name)
     !
     ! -- Return
     return
@@ -523,7 +524,7 @@ module GwtMstModule
     !
     ! -- Add decay contributions to model budget
     call model_budget%addentry(rdcyin, rdcyout, delt, budtxt(2),               &
-                                isuppress_output)
+                                isuppress_output, rowlabel=this%name)
     !
     ! -- Return
     return
@@ -602,7 +603,7 @@ module GwtMstModule
     !
     ! -- Add sorbtion contributions to model budget
     call model_budget%addentry(rsrbin, rsrbout, delt, budtxt(3),               &
-                                isuppress_output)
+                                isuppress_output, rowlabel=this%name)
     !
     ! -- Calculate sorbed decay change
     if (this%idcy /= 0) then
@@ -641,7 +642,7 @@ module GwtMstModule
       ! -- Add decay contributions to model budget
       if (this%idcy > 0) then
         call model_budget%addentry(rrctin, rrctout, delt, budtxt(4),           &
-                                   isuppress_output)
+                                   isuppress_output, rowlabel=this%name)
       endif
     endif
     !

@@ -507,7 +507,6 @@ module GwfMvrModule
     integer(I4B), intent(in) :: ibudfl
     integer(I4B), intent(in) :: isuppress_output
     ! -- locals
-    integer(I4B) :: i
     integer(I4B) :: ibinun
     ! -- formats
     character(len=*), parameter :: fmttkk = &

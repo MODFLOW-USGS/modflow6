@@ -1,4 +1,4 @@
 BEGIN OPTIONS
+  [HHFORMULATION_RHS]
   [DENSEREF <denseref>]
-  [DRHODC <drhodc>]
 END OPTIONS

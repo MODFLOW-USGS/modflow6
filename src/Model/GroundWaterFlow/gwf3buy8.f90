@@ -1,44 +1,66 @@
 ! Buoyancy Package for representing variable-density groundwater flow
 ! The BUY Package does not work yet with the NPF XT3D option
 ! Need to add buoyancy terms to LAK, SFR, MAW, and maybe UZF
+! How to handle multiple species?
 
   
 module GwfBuyModule
   
-  use KindModule,                 only: DP, I4B
-  use ConstantsModule,            only: DHALF, DZERO, DONE
-  use NumericalPackageModule,     only: NumericalPackageType
-  use BaseDisModule,              only: DisBaseType
-  use GwfNpfModule,               only: GwfNpfType
+  use KindModule,             only: DP, I4B
+  use SimModule,              only: ustop, store_error, count_errors,          &
+                                    store_error_unit
+  use MemoryManagerModule,    only: mem_allocate, mem_reallocate,              &
+                                    mem_deallocate
+  use ConstantsModule,        only: DHALF, DZERO, DONE, LENMODELNAME,          &
+                                    LENAUXNAME
+  use NumericalPackageModule, only: NumericalPackageType
+  use BaseDisModule,          only: DisBaseType
+  use GwfNpfModule,           only: GwfNpfType
   
   implicit none
 
   private
   public :: GwfBuyType
   public :: buy_cr
+  
+  type :: ConcentrationPointer
+    real(DP), dimension(:), pointer             :: conc       => null()         ! pointer to concentration array
+    integer(I4B), dimension(:), pointer         :: icbund     => null()         ! store pointer to gwt ibound array
+  end type ConcentrationPointer
 
   type, extends(NumericalPackageType) :: GwfBuyType
     type(GwfNpfType), pointer                   :: npf        => null()         ! npf object
     integer(I4B), pointer                       :: iform      => null()         ! formulation: 0 freshwater head, 1 hydraulic head, 2 hh rhs
     integer(I4B), pointer                       :: ireadelev  => null()         ! if 1 then elev has been allocated and filled
-    integer(I4B), pointer                       :: ireaddense => null()         ! if 1 then dense has been read from input file
+    integer(I4B), pointer                       :: ireadconcbuy => null()       ! if 1 then dense has been read from this buy input file
     integer(I4B), pointer                       :: iconcset   => null()         ! if 1 then conc is pointed to a gwt model%x
     real(DP), pointer                           :: denseref   => null()         ! reference fluid density
-    real(DP), pointer                           :: drhodc     => null()         ! change in density with change in concentration
     real(DP), dimension(:), pointer, contiguous :: dense      => null()         ! density
+    real(DP), dimension(:), pointer, contiguous :: concbuy    => null()         ! concentration array if specified in buy package
     real(DP), dimension(:), pointer, contiguous :: elev       => null()         ! cell center elevation (optional; if not specified, hten use (top+bot)/2)
     integer(I4B), dimension(:), pointer         :: ibound     => null()         ! store pointer to ibound
-    real(DP), dimension(:), pointer             :: conc       => null()         ! pointer to concentration array
-    integer(I4B), dimension(:), pointer         :: icbund     => null()         ! store pointer to gwt ibound array
-    integer(I4B), dimension(:), pointer, contiguous :: iauxpak => null()        ! aux col for component concentration
+    
+    integer(I4B), pointer                       :: nrhospecies => null()        ! number of species used in equation of state to calculate density
+    real(DP), dimension(:), pointer, contiguous :: drhodc      => null()        ! change in density with change in concentration
+    real(DP), dimension(:), pointer, contiguous :: crhoref     => null()        ! reference concentration used in equation of state
+    real(DP), dimension(:), pointer, contiguous :: ctemp       => null()        ! temporary array of size (nrhospec) to pass to calcdens
+    character(len=LENMODELNAME), dimension(:), allocatable :: cmodelname        ! names of gwt models used in equation of state
+    character(len=LENAUXNAME), dimension(:), allocatable :: cauxspeciesname     ! names of gwt models used in equation of state
+
+    type(ConcentrationPointer), allocatable, dimension(:) :: modelconc           ! concentration pointer for each transport model
+    
   contains    
+    procedure :: buy_df
     procedure :: buy_ar
+    procedure :: buy_ar_bnd
     procedure :: buy_rp
     procedure :: buy_cf
     procedure :: buy_cf_bnd
     procedure :: buy_fc
     procedure :: buy_flowja
     procedure :: buy_da
+    procedure, private :: read_dimensions
+    procedure, private :: read_packagedata
     procedure, private :: calcbuy
     procedure, private :: calchhterms
     procedure, private :: buy_calcdens
@@ -48,12 +70,11 @@ module GwfBuyModule
     procedure, private :: read_options
     procedure, private :: read_data
     procedure :: set_concentration_pointer
-    procedure :: set_iauxpak_pointer
   end type GwfBuyType
   
   contains
   
-  function calcdens(denseref, drhodc, conc) result(dense)
+  function calcdens(denseref, drhodc, crhoref, conc) result(dense)
 ! ******************************************************************************
 ! calcdens -- generic function to calculate fluid density from concentration
 ! ******************************************************************************
@@ -62,14 +83,21 @@ module GwfBuyModule
 ! ------------------------------------------------------------------------------
     ! -- dummy
     real(DP), intent(in) :: denseref
-    real(DP), intent(in) :: drhodc
-    real(DP), intent(in) :: conc
+    real(DP), dimension(:), intent(in) :: drhodc
+    real(DP), dimension(:), intent(in) :: crhoref
+    real(DP), dimension(:), intent(in) :: conc
     ! -- return
     real(DP) :: dense
     ! -- local
+    integer(I4B) :: nrhospec
+    integer(I4B) :: i
 ! ------------------------------------------------------------------------------
     !
-    dense = denseref + drhodc * conc
+    nrhospec = size(drhodc)
+    dense = denseref
+    do i = 1, nrhospec
+      dense = dense + drhodc(i) * (conc(i) - crhoref(i))
+    end do
     !
     ! -- return
     return
@@ -109,21 +137,17 @@ module GwfBuyModule
     return
   end subroutine buy_cr
 
-  subroutine buy_ar(this, dis, npf, ibound)
+  subroutine buy_df(this, dis)
 ! ******************************************************************************
-! buy_ar -- Allocate and Read
+! buy_df -- Allocate and Read
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use MemoryManagerModule, only: mem_setptr
-    use SimModule, only: store_error, ustop
     ! -- dummy
     class(GwfBuyType) :: this
     class(DisBaseType), pointer, intent(in) :: dis
-    type(GwfNpfType), pointer, intent(in) :: npf
-    integer(I4B), dimension(:), pointer     :: ibound
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtbuy =                                    &
@@ -135,7 +159,41 @@ module GwfBuyModule
     write(this%iout, fmtbuy) this%inunit
     !
     ! -- store pointers to arguments that were passed in
-    this%dis     => dis
+    this%dis => dis
+    !
+    ! -- Read buoyancy options
+    call this%read_options()
+    !
+    ! -- Read buoyancy dimensions
+    call this%read_dimensions()
+    !
+    ! -- Allocate arrays
+    call this%allocate_arrays(dis%nodes)
+    !
+    ! -- Read buoyancy packagedata
+    call this%read_packagedata()
+    !
+    ! -- Return
+    return
+  end subroutine buy_df
+
+  subroutine buy_ar(this, npf, ibound)
+! ******************************************************************************
+! buy_ar -- Allocate and Read
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwfBuyType) :: this
+    type(GwfNpfType), pointer, intent(in) :: npf
+    integer(I4B), dimension(:), pointer :: ibound
+    ! -- local
+    ! -- formats
+! ------------------------------------------------------------------------------
+    !
+    ! -- store pointers to arguments that were passed in
     this%npf     => npf
     this%ibound  => ibound
     !
@@ -147,12 +205,6 @@ module GwfBuyModule
       call ustop()
     endif
     !
-    ! -- Allocate arrays
-    call this%allocate_arrays(dis%nodes)
-    !
-    ! -- Read storage options
-    call this%read_options()
-    !
     ! -- Calculate cell elevations
     call this%buy_calcelev()
     !
@@ -160,6 +212,42 @@ module GwfBuyModule
     return
   end subroutine buy_ar
 
+  subroutine buy_ar_bnd(this, packobj, hnew)
+! ******************************************************************************
+! buy_ar_bnd -- buoyancy ar_bnd routine to activate density in packages
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use BndModule, only: BndType
+    use LakModule, only: LakType
+    ! -- dummy
+    class(GwfBuyType) :: this
+    class(BndType), pointer :: packobj
+    real(DP), intent(in), dimension(:) :: hnew
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    ! -- Add density terms based on boundary package type
+    select case (packobj%filtyp)
+      case('LAK')
+        !
+        ! -- activate density for lake package
+        select type(packobj)
+        type is (LakType)
+          call packobj%lak_activate_density()
+        end select
+        
+      case default
+        !
+        ! -- nothing
+    end select
+    !
+    ! -- Return
+    return
+  end subroutine buy_ar_bnd
+  
   subroutine buy_rp(this)
 ! ******************************************************************************
 ! buy_rp -- Check for new buy period data
@@ -169,15 +257,20 @@ module GwfBuyModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: ustop, store_error, count_errors, store_error_unit
-    use TdisModule, only: kper, nper
+    use TdisModule, only: kstp, kper, nper
     ! -- dummy
     class(GwfBuyType) :: this
     ! -- local
     character(len=LINELENGTH) :: line, errmsg
     integer(I4B) :: ierr
+    integer(I4B) :: i
     logical :: isfound
     ! -- formats
+    character(len=*),parameter :: fmtc = &
+      "('BUOYANCY PACKAGE DOES NOT HAVE HAVE A CONCENTRATION SET &
+       &FOR SPECIES ',i0,'. ONE OR MORE MODEL NAMES MAY BE SPECIFIED &
+       &INCORRECTLY IN THE PACKAGEDATA BLOCK OR A GWF-GWT EXCHANGE MAY NEED &
+       &TO BE ACTIVATED.')"
     character(len=*),parameter :: fmtblkerr = &
       "('Error.  Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
     character(len=*),parameter :: fmtlsp = &
@@ -217,16 +310,18 @@ module GwfBuyModule
       write(this%iout,fmtlsp) 'BUY'
     endif
     !
-    ! -- Check to make sure that dense is available from being read or 
-    !    from being set as a pointer
-    if (this%ireaddense == 0 .and. this%iconcset == 0) then
-      write(errmsg, '(a)') '****ERROR. DENSITY NOT SET FOR BUY &
-                            &PACKAGE.  A GWF-GWT EXCHANGE MUST BE &
-                            &SPECIFIED OR DENSITY MUST BE SPECIFIED &
-                            &IN THE BUY PERIOD BLOCK.'
-      call store_error(errmsg)
-      call this%parser%StoreErrorUnit()
-      call ustop()
+    ! -- Check to make sure all concentration pointers have been set
+    if (kstp * kper == 1) then
+      do i = 1, this%nrhospecies
+        if (.not. associated(this%modelconc(i)%conc)) then
+          write(errmsg, fmtc) i
+          call store_error(errmsg)
+        end if
+      end do
+      if (count_errors() > 0) then
+        call this%parser%StoreErrorUnit()
+        call ustop()
+      end if
     end if
     !
     ! -- return
@@ -274,16 +369,22 @@ module GwfBuyModule
     class(BndType), pointer :: packobj
     real(DP), intent(in), dimension(:) :: hnew
     ! -- local
+    integer(I4B) :: i, j
     integer(I4B) :: n, locdense, locelev
+    integer(I4B), dimension(:), allocatable :: locconc
 ! ------------------------------------------------------------------------------
     !
     ! -- Return if freshwater head formulation; all boundary heads must be
     !    entered as freshwater equivalents
     if (this%iform == 0) return
     !
-    ! -- Add buoyancy terms for head-dependent boundaries
+    ! -- initialize
     locdense = 0
     locelev = 0
+    allocate(locconc(this%nrhospecies))
+    locconc(:) = 0
+    !
+    ! -- Add buoyancy terms for head-dependent boundaries
     do n = 1, packobj%naux
       if (packobj%auxname(n) == 'DENSITY') then
         locdense = n
@@ -292,33 +393,111 @@ module GwfBuyModule
       end if
     end do
     !
+    ! -- find aux columns for concentrations that affect density
+    do i = 1, this%nrhospecies
+      locconc(i) = 0
+      do j = 1, packobj%naux
+        if (this%cauxspeciesname(i) == packobj%auxname(j)) then
+          locconc(i) = j
+          exit
+        end if
+      end do
+      if (locconc(i) == 0) then
+        ! -- one not found, so don't use and mark all as 0
+        locconc(:) = 0
+        exit
+      end if
+    end do
+    !
     ! -- Add density terms based on boundary package type
     select case (packobj%filtyp)
       case('GHB')
         !
         ! -- general head boundary
-        call buy_cf_ghb(packobj, hnew, this%dense, this%elev, this%denseref, &
-                        locdense, locelev, this%iform)
+        call buy_cf_ghb(packobj, hnew, this%dense, this%elev, this%denseref,   &
+                        locelev, locdense, locconc, this%drhodc, this%crhoref, &
+                        this%ctemp, this%iform)
       case('RIV')
         !
         ! -- river
-        call buy_cf_riv(packobj, hnew, this%dense, this%elev, this%denseref, &
-                        locdense, locelev, this%iform)
+        call buy_cf_riv(packobj, hnew, this%dense, this%elev, this%denseref,   &
+                        locelev, locdense, locconc, this%drhodc, this%crhoref, &
+                        this%ctemp, this%iform)
       case('DRN')
         !
-        ! drain
+        ! -- drain
         call buy_cf_drn(packobj, hnew, this%dense, this%denseref)
+      case('LAK')
+        !
+        ! -- lake
+        call buy_cf_lak(packobj, hnew, this%dense, this%elev, this%denseref,   &
+                        locdense, locconc, this%drhodc, this%crhoref,          &
+                        this%ctemp, this%iform)
       case default
         !
         ! -- nothing
     end select
     !
+    ! -- deallocate
+    deallocate(locconc)
+    !
     ! -- Return
     return
   end subroutine buy_cf_bnd
   
-  subroutine buy_cf_ghb(packobj, hnew, dense, elev, denseref, locdense, &
-                        locelev, iform)
+  function get_bnd_density(n, locdense, locconc, denseref, drhodc, crhoref,    &
+                           ctemp, auxvar) result (densebnd)
+! ******************************************************************************
+! get_bnd_density -- Return the density of the boundary package using one of
+!   several different options in the following order of priority:
+!     1. Assign as aux variable in column with name 'DENSITY'
+!     2. Calculate using equation of state and nrhospecies aux columns
+!     3. If neither of those, then assign as denseref
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    integer(I4B), intent(in) :: n
+    integer(I4B), intent(in) :: locdense
+    integer(I4B), dimension(:), intent(in) :: locconc
+    real(DP), intent(in) :: denseref
+    real(DP), dimension(:), intent(in) :: drhodc
+    real(DP), dimension(:), intent(in) :: crhoref
+    real(DP), dimension(:), intent(inout) :: ctemp
+    real(DP), dimension(:, :), intent(in) :: auxvar
+    ! -- return
+    real(DP) :: densebnd
+    ! -- local
+    integer(I4B) :: i
+! ------------------------------------------------------------------------------
+    !
+    ! -- assign boundary density based on one of three options
+    if (locdense > 0) then
+      ! -- assign density to an aux column named 'DENSITY'
+      densebnd = auxvar(locdense, n)
+    else if (locconc(1) > 0) then
+      ! -- calculate density using one or more concentration auxcolumns
+      do i = 1, size(locconc)
+        ctemp(i) = DZERO
+        if (locconc(i) > 0) then
+          ctemp(i) = auxvar(locconc(i), n)
+        end if
+      end do
+      densebnd = calcdens(denseref, drhodc, crhoref, ctemp)
+    else
+      ! -- neither of the above, so assign as denseref
+      densebnd = denseref
+    end if
+    !
+    ! -- return
+    return
+  end function get_bnd_density
+  
+  subroutine buy_cf_ghb(packobj, hnew, dense, elev, denseref, locelev,         &
+                        locdense, locconc, drhodc, crhoref, ctemp,             &
+                        iform)
 ! ******************************************************************************
 ! buy_cf_ghb -- Fill ghb coefficients
 ! ******************************************************************************
@@ -333,8 +512,12 @@ module GwfBuyModule
     real(DP), intent(in), dimension(:) :: dense
     real(DP), intent(in), dimension(:) :: elev
     real(DP), intent(in) :: denseref
-    integer(I4B), intent(in) :: locdense
     integer(I4B), intent(in) :: locelev
+    integer(I4B), intent(in) :: locdense
+    integer(I4B), dimension(:), intent(in) :: locconc
+    real(DP), dimension(:), intent(in) :: drhodc
+    real(DP), dimension(:), intent(in) :: crhoref
+    real(DP), dimension(:), intent(inout) :: ctemp
     integer(I4B), intent(in) :: iform
     ! -- local
     integer(I4B) :: n
@@ -352,8 +535,8 @@ module GwfBuyModule
       if (packobj%ibound(node) <= 0) cycle
       !
       ! -- density
-      denseghb = denseref
-      if (locdense > 0) denseghb = packobj%auxvar(locdense, n)
+      denseghb = get_bnd_density(n, locdense, locconc, denseref, &
+                                   drhodc, crhoref, ctemp, packobj%auxvar)
       !
       ! -- elevation
       elevghb = elev(node)
@@ -363,7 +546,7 @@ module GwfBuyModule
       hghb = packobj%bound(1, n)
       cond = packobj%bound(2, n)
       !
-      ! --calculate HCOF and RHS terms
+      ! -- calculate HCOF and RHS terms
       call calc_ghb_hcof_rhs_terms(denseref, denseghb, dense(node),            &
                                    elevghb, elev(node), hghb, hnew(node),      &
                                    cond, iform, rhsterm, hcofterm)      
@@ -431,8 +614,9 @@ module GwfBuyModule
     return
   end subroutine calc_ghb_hcof_rhs_terms
   
-  subroutine buy_cf_riv(packobj, hnew, dense, elev, denseref, locdense,        &
-                       locelev, iform)
+  subroutine buy_cf_riv(packobj, hnew, dense, elev, denseref, locelev,         &
+                        locdense, locconc, drhodc, crhoref, ctemp,             &
+                        iform)
 ! ******************************************************************************
 ! buy_cf_riv -- Fill riv coefficients
 ! ******************************************************************************
@@ -447,8 +631,12 @@ module GwfBuyModule
     real(DP), intent(in), dimension(:) :: dense
     real(DP), intent(in), dimension(:) :: elev
     real(DP), intent(in) :: denseref
-    integer(I4B), intent(in) :: locdense
     integer(I4B), intent(in) :: locelev
+    integer(I4B), intent(in) :: locdense
+    integer(I4B), dimension(:), intent(in) :: locconc
+    real(DP), dimension(:), intent(in) :: drhodc
+    real(DP), dimension(:), intent(in) :: crhoref
+    real(DP), dimension(:), intent(inout) :: ctemp
     integer(I4B), intent(in) :: iform
     ! -- local
     integer(I4B) :: n
@@ -468,8 +656,8 @@ module GwfBuyModule
       if (packobj%ibound(node) <= 0) cycle
       !
       ! -- density
-      denseriv = denseref
-      if (locdense > 0) denseriv = packobj%auxvar(locdense, n)
+      denseriv = get_bnd_density(n, locdense, locconc, denseref, &
+                                   drhodc, crhoref, ctemp, packobj%auxvar)
       !
       ! -- elevation
       elevriv = elev(node)
@@ -544,6 +732,68 @@ module GwfBuyModule
     return
   end subroutine buy_cf_drn
   
+  subroutine buy_cf_lak(packobj, hnew, dense, elev, denseref, locdense,        &
+                        locconc, drhodc, crhoref, ctemp, iform)
+! ******************************************************************************
+! buy_cf_lak -- Pass density information into lak package; density terms are
+!   calculated in the lake package as part of lak_calculate_density_exchange
+!   method
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use BndModule, only: BndType
+    use LakModule, only: LakType
+    class(BndType), pointer :: packobj
+    ! -- dummy
+    real(DP), intent(in), dimension(:) :: hnew
+    real(DP), intent(in), dimension(:) :: dense
+    real(DP), intent(in), dimension(:) :: elev
+    real(DP), intent(in) :: denseref
+    integer(I4B), intent(in) :: locdense
+    integer(I4B), dimension(:), intent(in) :: locconc
+    real(DP), dimension(:), intent(in) :: drhodc
+    real(DP), dimension(:), intent(in) :: crhoref
+    real(DP), dimension(:), intent(inout) :: ctemp
+    integer(I4B), intent(in) :: iform
+    ! -- local
+    integer(I4B) :: i
+    integer(I4B) :: n
+    integer(I4B) :: node
+    real(DP) :: denselak
+! ------------------------------------------------------------------------------
+    !
+    ! -- Insert the lake and gwf relative densities into col 1 and 2 and the
+    !    gwf elevation into col 3 of the lake package denseterms array
+    select type(packobj)
+    type is (LakType)
+      do n = 1, packobj%nbound
+        !
+        ! -- get gwf node number
+        node = packobj%nodelist(n)
+        if (packobj%ibound(node) <= 0) cycle
+        !
+        ! -- Determine lak density
+        denselak = get_bnd_density(n, locdense, locconc, denseref, &
+                                   drhodc, crhoref, ctemp, packobj%auxvar)
+        !
+        ! -- fill lak relative density into column 1 of denseterms
+        packobj%denseterms(1, n) = denselak / denseref
+        !
+        ! -- fill gwf relative density into column 2 of denseterms
+        packobj%denseterms(2, n) = dense(node) / denseref
+        !
+        ! -- fill gwf elevation into column 3 of denseterms
+        packobj%denseterms(3, n) = elev(node)
+        !
+      end do
+    end select
+    !
+    ! -- Return
+    return
+  end subroutine buy_cf_lak
+                        
   subroutine buy_fc(this, kiter, njasln, amat, idxglo, rhs, hnew)
 ! ******************************************************************************
 ! buy_fc -- Fill coefficients
@@ -640,7 +890,6 @@ module GwfBuyModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
     class(GwfBuyType) :: this
 ! ------------------------------------------------------------------------------
@@ -649,17 +898,23 @@ module GwfBuyModule
     if(this%inunit > 0) then
       call mem_deallocate(this%elev)
       call mem_deallocate(this%dense)
-      this%conc => null()
-      this%icbund => null()
+      call mem_deallocate(this%concbuy)
+      call mem_deallocate(this%drhodc)
+      call mem_deallocate(this%crhoref)
+      call mem_deallocate(this%ctemp)
+      deallocate(this%cmodelname)
+      deallocate(this%cauxspeciesname)
+      deallocate(this%modelconc)
     endif
     !
     ! -- Scalars
     call mem_deallocate(this%iform)
     call mem_deallocate(this%ireadelev)
-    call mem_deallocate(this%ireaddense)
+    call mem_deallocate(this%ireadconcbuy)
     call mem_deallocate(this%iconcset)
     call mem_deallocate(this%denseref)
-    call mem_deallocate(this%drhodc)
+    
+    call mem_deallocate(this%nrhospecies)
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
@@ -668,6 +923,106 @@ module GwfBuyModule
     return
   end subroutine buy_da
 
+  subroutine read_dimensions(this)
+! ******************************************************************************
+! read_dimensions -- Read the dimensions for this package
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule, only: LINELENGTH
+    ! -- dummy
+    class(GwfBuyType),intent(inout) :: this
+    ! -- local
+    character (len=LINELENGTH) :: errmsg, keyword
+    integer(I4B) :: ierr
+    logical :: isfound, endOfBlock
+    ! -- format
+! ------------------------------------------------------------------------------
+    !
+    ! -- get dimensions block
+    call this%parser%GetBlock('DIMENSIONS', isfound, ierr, &
+                              supportOpenClose=.true.)
+    !
+    ! -- parse dimensions block if detected
+    if (isfound) then
+      write(this%iout,'(/1x,a)')'PROCESSING BUY DIMENSIONS'
+      do
+        call this%parser%GetNextLine(endOfBlock)
+        if (endOfBlock) exit
+        call this%parser%GetStringCaps(keyword)
+        select case (keyword)
+          case ('NRHOSPECIES')
+            this%nrhospecies = this%parser%GetInteger()
+            write(this%iout,'(4x,a,i0)')'NRHOSPECIES = ', this%nrhospecies
+          case default
+            write(errmsg,'(4x,a,a)')                                           &
+              'UNKNOWN BUY DIMENSION: ', trim(keyword)
+            call store_error(errmsg)
+            call this%parser%StoreErrorUnit()
+            call ustop()
+        end select
+      end do
+      write(this%iout,'(1x,a)')'END OF BUY DIMENSIONS'
+    else
+      call store_error('REQUIRED BUY DIMENSIONS BLOCK NOT FOUND.')
+      call this%parser%StoreErrorUnit()
+      call ustop()
+    end if
+    !
+    ! -- check dimension
+    if (this%nrhospecies < 1) then
+      call store_error('NRHOSPECIES MUST BE GREATER THAN ONE.')
+      call this%parser%StoreErrorUnit()
+      call ustop()
+    endif
+    !
+    ! -- return
+    return
+  end subroutine read_dimensions
+
+  subroutine read_packagedata(this)
+! ******************************************************************************
+! read_packagedata -- Read PACKAGEDATA block
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwfBuyType) :: this
+    ! -- local
+    integer(I4B) :: ierr
+    integer(I4B) :: irhospec
+    logical :: isfound, endOfBlock
+    logical :: blockrequired
+! ------------------------------------------------------------------------------
+    !
+    ! -- get packagedata block
+    blockrequired = .true.
+    call this%parser%GetBlock('PACKAGEDATA', isfound, ierr,                    &
+                              blockRequired=blockRequired)
+    !
+    ! -- parse options block if detected
+    if (isfound) then
+      write(this%iout,'(1x,a)')'PROCESSING BUY PACKAGEDATA'
+      do
+        call this%parser%GetNextLine(endOfBlock)
+        if (endOfBlock) exit
+        irhospec = this%parser%GetInteger()
+        this%drhodc(irhospec) = this%parser%GetDouble()
+        this%crhoref(irhospec) = this%parser%GetDouble()
+        call this%parser%GetStringCaps(this%cmodelname(irhospec))
+        call this%parser%GetStringCaps(this%cauxspeciesname(irhospec))
+      end do
+      write(this%iout,'(1x,a)') 'END OF BUY PACKAGEDATA'
+    end if
+    !
+    ! -- return
+    return
+  end subroutine read_packagedata
+  
   subroutine calcbuy(this, n, m, icon, hn, hm, buy)
 ! ******************************************************************************
 ! calcbuy -- Calculate buyancy term for this connection
@@ -871,20 +1226,24 @@ module GwfBuyModule
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwfBuyType) :: this
+    
     ! -- local
     integer(I4B) :: n
+    integer(I4B) :: i
 ! ------------------------------------------------------------------------------
     !
     ! -- Calculate the density using the specified concentration array
-    if (this%ireaddense == 0) then
-      do n = 1, this%dis%nodes
-        if(this%icbund(n) == 0) then
-          this%dense(n) = this%conc(n)  !set to cinact
+    do n = 1, this%dis%nodes
+      do i = 1, this%nrhospecies
+        if(this%modelconc(i)%icbund(n) == 0) then
+          this%ctemp = DZERO
         else
-          this%dense(n) = calcdens(this%denseref, this%drhodc, this%conc(n))
-        endif
-      enddo
-    endif
+          this%ctemp(i) = this%modelconc(i)%conc(n)
+        end if
+      end do
+      this%dense(n) = calcdens(this%denseref, this%drhodc, this%crhoref, &
+                               this%ctemp)
+    enddo
     !
     ! -- Return
     return
@@ -924,7 +1283,6 @@ module GwfBuyModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use MemoryManagerModule, only: mem_allocate
     use ConstantsModule, only: DZERO
     ! -- dummy
     class(GwfBuyType) :: this
@@ -937,17 +1295,21 @@ module GwfBuyModule
     ! -- Allocate
     call mem_allocate(this%iform, 'IFORM', this%origin)
     call mem_allocate(this%ireadelev, 'IREADELEV', this%origin)
-    call mem_allocate(this%ireaddense, 'IREADDENSE', this%origin)
+    call mem_allocate(this%ireadconcbuy, 'IREADCONCBUY', this%origin)
     call mem_allocate(this%iconcset, 'ICONCSET', this%origin)
     call mem_allocate(this%denseref, 'DENSEREF', this%origin)
-    call mem_allocate(this%drhodc, 'DRHODC', this%origin)
+
+    call mem_allocate(this%nrhospecies, 'NRHOSPECIES', this%origin)
+    
     !
     ! -- Initialize
     this%ireadelev = 0
     this%iconcset = 0
-    this%ireaddense = 0
+    this%ireadconcbuy = 0
     this%denseref = 1000.d0
-    this%drhodc = 0.7d0
+    
+    this%nrhospecies = 0
+    
     !
     ! -- Initialize default to LHS implementation of hydraulic head formulation
     this%iform = 2
@@ -965,7 +1327,6 @@ module GwfBuyModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(GwfBuyType) :: this
     integer(I4B), intent(in) :: nodes
@@ -975,13 +1336,30 @@ module GwfBuyModule
     !
     ! -- Allocate
     call mem_allocate(this%dense, nodes, 'DENSE', this%origin)
+    call mem_allocate(this%concbuy, 0, 'CONCBUY', this%origin)
     call mem_allocate(this%elev, nodes, 'ELEV', this%origin)
+    call mem_allocate(this%drhodc, this%nrhospecies, 'DRHODC', this%origin)
+    call mem_allocate(this%crhoref, this%nrhospecies, 'CRHOREF', this%origin)
+    call mem_allocate(this%ctemp, this%nrhospecies, 'CTEMP', this%origin)
+    allocate(this%cmodelname(this%nrhospecies))
+    allocate(this%cauxspeciesname(this%nrhospecies))
+    allocate(this%modelconc(this%nrhospecies))
     !
     ! -- Initialize
     do i = 1, nodes
       this%dense(i) = this%denseref
       this%elev(i) = DZERO
     enddo
+    !
+    ! -- Initialize nrhospecies arrays
+    do i = 1, this%nrhospecies
+      this%drhodc(i) = DZERO
+      this%crhoref(i) = DZERO
+      this%ctemp(i) = DZERO
+      this%cmodelname(i) = ''
+      this%cauxspeciesname(i) = ''
+    end do
+    !
     ! -- Return
     return
   end subroutine allocate_arrays
@@ -995,7 +1373,6 @@ module GwfBuyModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule,   only: LINELENGTH
-    use SimModule,         only: ustop, store_error
     ! -- dummy
     class(GwfBuyType) :: this
     ! -- local
@@ -1027,11 +1404,6 @@ module GwfBuyModule
             write(this%iout, '(4x,a,1pg15.6)')                                 &
                              'REFERENCE DENSITY HAS BEEN SET TO: ',  &
                              this%denseref
-          case ('DRHODC')
-            this%drhodc = this%parser%GetDouble()
-            write(this%iout, '(4x,a,1pg15.6)')                                 &
-                             'DRHODC HAS BEEN SET TO: ',  &
-                             this%drhodc
           case ('DEV_EFH_FORMULATION')
             call this%parser%DevOpt()
             this%iform = 0
@@ -1062,11 +1434,10 @@ module GwfBuyModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule,   only: LINELENGTH
-    use SimModule,         only: ustop, store_error
     ! -- dummy
     class(GwfBuyType) :: this
     ! -- local
-    character(len=LINELENGTH) :: line, keyword
+    character(len=LINELENGTH) :: line, keyword, errmsg
     integer(I4B) :: istart, istop, lloc
     logical :: endOfBlock
     character(len=24) :: aname(2)
@@ -1075,7 +1446,7 @@ module GwfBuyModule
     !
     ! -- Setup the label
     aname(1) = '       ELEVATION'
-    aname(2) = '           DENSE'
+    aname(2) = '   CONCENTRATION'
     !
     do
       call this%parser%GetNextLine(endOfBlock)
@@ -1091,11 +1462,30 @@ module GwfBuyModule
         call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,    &
                                       this%parser%iuactive, this%elev,         &
                                       aname(1))
-      case ('DENSE')
-        this%ireaddense = 1
+      case ('CONCENTRATION')
+        if (this%ireadconcbuy == 0) then
+          call mem_reallocate(this%concbuy, this%dis%nodes, 'CONCBUY',         &
+            this%origin)
+        end if
+        this%ireadconcbuy = 1
         call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,    &
-                                      this%parser%iuactive, this%dense,        &
+                                      this%parser%iuactive, this%concbuy,      &
                                       aname(2))
+        this%modelconc(1)%conc => this%concbuy
+        this%modelconc(1)%icbund => this%ibound
+        if (this%nrhospecies /= 1) then
+          errmsg = 'NRHOSPECIES MUST BE 1 IF CONCENTRATION IS SPECIFIED IN BUY &
+            &PACKAGE'
+          call store_error(errmsg)
+          call this%parser%StoreErrorUnit()
+          call ustop()
+        end if
+      case default
+        write(errmsg,'(4x,a,a)')'UKNOWN BUOYANCY PERIOD DATA KEYWORD: ',       &
+                                  trim(keyword)
+        call store_error(errmsg)
+        call this%parser%StoreErrorUnit()
+        call ustop()
       end select
     end do
     !
@@ -1103,7 +1493,7 @@ module GwfBuyModule
     return
   end subroutine read_data
 
-  subroutine set_concentration_pointer(this, conc, icbund)
+  subroutine set_concentration_pointer(this, modelname, conc, icbund)
 ! ******************************************************************************
 ! set_concentration_pointer
 ! ******************************************************************************
@@ -1113,37 +1503,27 @@ module GwfBuyModule
     ! -- modules
     ! -- dummy
     class(GwfBuyType) :: this
+    character(len=LENMODELNAME), intent(in) :: modelname
     real(DP), dimension(:), pointer :: conc
     integer(I4B), dimension(:), pointer :: icbund
     ! -- local
+    integer(I4B) :: i
+    logical :: found
 ! ------------------------------------------------------------------------------
     !
     this%iconcset = 1
-    this%conc => conc
-    this%icbund => icbund
+    found = .false.
+    do i = 1, this%nrhospecies
+      if (this%cmodelname(i) == modelname) then
+        this%modelconc(i)%conc => conc
+        this%modelconc(i)%icbund => icbund
+        found = .true.
+        exit
+      end if
+    end do
     !
     ! -- Return
     return
   end subroutine set_concentration_pointer
-  
-  subroutine set_iauxpak_pointer(this, iauxpak)
-! ******************************************************************************
-! set_concentration_pointer
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    ! -- dummy
-    class(GwfBuyType) :: this
-    integer(I4B), dimension(:), pointer, contiguous :: iauxpak
-    ! -- local
-! ------------------------------------------------------------------------------
-    !
-    this%iauxpak => iauxpak
-    !
-    ! -- Return
-    return
-  end subroutine set_iauxpak_pointer
   
 end module GwfBuyModule

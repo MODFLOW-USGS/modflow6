@@ -1390,6 +1390,7 @@ contains
     if (this%naux > 0) then
       do n = 1, this%maxbound
         do iaux = 1, this%naux
+          if (this%noupdateauxvar(iaux) /= 0) cycle
           this%auxvar(iaux, n) = this%reaches(n)%auxvar(iaux)%value
         end do
       end do

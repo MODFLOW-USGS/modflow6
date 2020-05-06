@@ -37,9 +37,10 @@ module GwtAptModule
 
   use KindModule, only: DP, I4B
   use ConstantsModule, only: DZERO, DONE, DHALF, DEP20, LENFTYPE, LINELENGTH,  &
-                             LENBOUNDNAME, NAMEDBOUNDFLAG, DNODATA,            &
-                             TABLEFT, TABCENTER, TABRIGHT,                     &
-                             TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
+                             LENBOUNDNAME, LENPACKAGENAME, NAMEDBOUNDFLAG,     &
+                             DNODATA, TABLEFT, TABCENTER, TABRIGHT,            &
+                             TABSTRING, TABUCSTRING, TABINTEGER, TABREAL,      &
+                             LENAUXNAME
   use SimModule, only: store_error, count_errors, ustop
   use BndModule, only: BndType, GetBndFromList
   use GwtFmiModule, only: GwtFmiType
@@ -60,16 +61,17 @@ module GwtAptModule
   
   type, extends(BndType) :: GwtAptType
     
-    character (len=8), dimension(:), pointer, contiguous :: status => null()
-    integer(I4B), pointer                              :: imatrows => null()   ! if active, add new rows to matrix
-    integer(I4B), pointer                              :: iprconc => null()
-    integer(I4B), pointer                              :: iconcout => null()
-    integer(I4B), pointer                              :: ibudgetout => null()
-    integer(I4B), pointer                              :: cbcauxitems => NULL()
-    integer(I4B), pointer                              :: ncv => null()         ! number of control volumes
-    integer(I4B), pointer                              :: bditems => NULL()
-    integer(I4B), pointer                              :: igwfaptpak => null()  ! package number of corresponding this package
-    real(DP), dimension(:), pointer, contiguous        :: strt => null()        ! starting feature concentration
+    character(len=LENPACKAGENAME)                      :: flowpackagename = ''      ! name of corresponding flow package
+    character(len=8), dimension(:), pointer, contiguous :: status => null()         ! active, inactive, constant
+    character(len=LENAUXNAME)                          :: cauxfpconc = ''           ! name of aux column in flow package auxvar array for concentration
+    integer(I4B), pointer                              :: iauxfpconc => null()      ! column in flow package bound array to insert concs
+    integer(I4B), pointer                              :: imatrows => null()        ! if active, add new rows to matrix
+    integer(I4B), pointer                              :: iprconc => null()         ! print conc to listing file
+    integer(I4B), pointer                              :: iconcout => null()        ! unit number for conc output file
+    integer(I4B), pointer                              :: ibudgetout => null()      ! unit number for budget output file
+    integer(I4B), pointer                              :: ncv => null()             ! number of control volumes
+    integer(I4B), pointer                              :: igwfaptpak => null()      ! package number of corresponding this package
+    real(DP), dimension(:), pointer, contiguous        :: strt => null()            ! starting feature concentration
     integer(I4B), dimension(:), pointer, contiguous    :: idxlocnode => null()      ! map position in global rhs and x array of pack entry
     integer(I4B), dimension(:), pointer, contiguous    :: idxpakdiag => null()      ! map diag position of feature in global amat
     integer(I4B), dimension(:), pointer, contiguous    :: idxdglo => null()         ! map position in global array of package diagonal row entries
@@ -79,9 +81,9 @@ module GwtAptModule
     integer(I4B), dimension(:), pointer, contiguous    :: idxfjfdglo => null()      ! map diagonal feature to feature in global amat
     integer(I4B), dimension(:), pointer, contiguous    :: idxfjfoffdglo => null()   ! map off diagonal feature to feature in global amat
     integer(I4B), dimension(:), pointer, contiguous    :: iboundpak => null()       ! package ibound
-    real(DP), dimension(:), pointer, contiguous        :: xnewpak => null()     ! feature concentration for current time step
-    real(DP), dimension(:), pointer, contiguous        :: xoldpak => null()     ! feature concentration from previous time step
-    real(DP), dimension(:), pointer, contiguous        :: dbuff => null()
+    real(DP), dimension(:), pointer, contiguous        :: xnewpak => null()         ! feature concentration for current time step
+    real(DP), dimension(:), pointer, contiguous        :: xoldpak => null()         ! feature concentration from previous time step
+    real(DP), dimension(:), pointer, contiguous        :: dbuff => null()           ! temporary storage array
     character(len=LENBOUNDNAME), dimension(:), pointer,                         &
                                  contiguous :: featname => null()
     type (MemoryTSType), dimension(:), pointer, contiguous :: lauxvar => null()
@@ -98,6 +100,9 @@ module GwtAptModule
     integer(I4B), pointer                              :: nconcbudssm => null() ! number of concbudssm terms (columns)
     real(DP), dimension(:, : ), pointer, contiguous    :: concbudssm => null()  ! user specified concentrations for flow terms
     real(DP), dimension(:), pointer, contiguous        :: qmfrommvr => null()   ! a mass flow coming from the mover that needs to be added
+    !
+    ! -- pointer to flow package boundary
+    type(BndType), pointer                             :: flowpackagebnd => null()
     !
     ! -- budget objects
     type(BudgetObjectType), pointer                    :: budobj => null()      ! apt solute budget object
@@ -155,6 +160,7 @@ module GwtAptModule
     procedure, private :: apt_stor_term
     procedure, private :: apt_tmvr_term
     procedure, private :: apt_fjf_term
+    procedure, private :: apt_copy2flowp
     
   end type GwtAptType
 
@@ -332,6 +338,9 @@ module GwtAptModule
     ! -- dummy
     class(GwtAptType), intent(inout) :: this
     ! -- local
+    character(len=LINELENGTH) :: errmsg
+    integer(I4B) :: j
+    logical :: found
     ! -- formats
     character(len=*), parameter :: fmtapt =                                    &
       "(1x,/1x,'APT -- ADVANCED PACKAGE TRANSPORT, VERSION 1, 3/5/2020',       &
@@ -352,7 +361,7 @@ module GwtAptModule
     !
     ! -- Find the package index in the GWF model or GWF budget file 
     !    for the corresponding apt flow package
-    call this%fmi%get_package_index(this%name, this%igwfaptpak)
+    call this%fmi%get_package_index(this%flowpackagename, this%igwfaptpak)
     !
     ! -- Tell fmi that this package is being handled by APT, otherwise
     !    SSM would handle the flows into GWT from this pack.  Then point the
@@ -360,6 +369,34 @@ module GwtAptModule
     this%fmi%iatp(this%igwfaptpak) = 1
     this%fmi%datp(this%igwfaptpak)%concpack => this%xnewpak
     this%fmi%datp(this%igwfaptpak)%qmfrommvr => this%qmfrommvr
+    !
+    ! -- If there is an aassociated flow package and the user wishes to put
+    !    simulated concentrations into a aux variable column, then find 
+    !    the column number.
+    if (associated(this%flowpackagebnd)) then
+      if (this%cauxfpconc /= '') then
+        found = .false.
+        do j = 1, this%flowpackagebnd%naux
+          if (this%flowpackagebnd%auxname(j) == this%cauxfpconc) then
+            this%iauxfpconc = j
+            found = .true.
+            exit
+          end if
+        end do
+        if (this%iauxfpconc == 0) then
+          errmsg = 'COULD NOT FIND AUXILIARY VARIABLE ' // &
+            trim(adjustl(this%cauxfpconc)) // ' IN FLOW PACKAGE ' // &
+            trim(adjustl(this%flowpackagename))
+          call store_error(errmsg)
+          call this%parser%StoreErrorUnit()
+          call ustop()
+        else
+          ! -- tell package not to update this auxiliary variable
+          this%flowpackagebnd%noupdateauxvar(this%iauxfpconc) = 1
+          call this%apt_copy2flowp()
+        end if
+      end if
+    end if
     !
     ! -- Return
     return
@@ -753,6 +790,7 @@ module GwtAptModule
     else
       call this%apt_fc_expanded(rhs, ia, idxglo, amatsln)
     end if
+    !
     ! -- Return
     return
   end subroutine apt_fc
@@ -1049,6 +1087,9 @@ module GwtAptModule
                   this%ncv, 1, 1, ibinun)
     end if
     !
+    ! -- Copy concentrations into the flow package auxiliary variable
+    call this%apt_copy2flowp()
+    !
     ! -- Set unit number for binary budget output
     ibinun = 0
     if(this%ibudgetout /= 0) then
@@ -1187,13 +1228,13 @@ module GwtAptModule
     call this%BndType%allocate_scalars()
     !
     ! -- Allocate
+    call mem_allocate(this%iauxfpconc, 'IAUXFPCONC', this%origin)
     call mem_allocate(this%imatrows, 'IMATROWS', this%origin)
     call mem_allocate(this%iprconc, 'IPRCONC', this%origin)
     call mem_allocate(this%iconcout, 'ICONCOUT', this%origin)
     call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%origin)
     call mem_allocate(this%igwfaptpak, 'IGWFAPTPAK', this%origin)
     call mem_allocate(this%ncv, 'NCV', this%origin)
-    call mem_allocate(this%bditems, 'BDITEMS', this%origin)
     call mem_allocate(this%idxbudfjf, 'IDXBUDFJF', this%origin)
     call mem_allocate(this%idxbudgwf, 'IDXBUDGWF', this%origin)
     call mem_allocate(this%idxbudsto, 'IDXBUDSTO', this%origin)
@@ -1203,13 +1244,13 @@ module GwtAptModule
     call mem_allocate(this%nconcbudssm, 'NCONCBUDSSM', this%origin)
     ! 
     ! -- Initialize
+    this%iauxfpconc = 0
     this%imatrows = 1
     this%iprconc = 0
     this%iconcout = 0
     this%ibudgetout = 0
     this%igwfaptpak = 0
     this%ncv = 0
-    this%bditems = 9
     this%idxbudfjf = 0
     this%idxbudgwf = 0
     this%idxbudsto = 0
@@ -1331,13 +1372,13 @@ module GwtAptModule
     deallocate(this%idxfjfoffdglo)
     !
     ! -- deallocate scalars
+    call mem_deallocate(this%iauxfpconc)
     call mem_deallocate(this%imatrows)
     call mem_deallocate(this%iprconc)
     call mem_deallocate(this%iconcout)
     call mem_deallocate(this%ibudgetout)
     call mem_deallocate(this%igwfaptpak)
     call mem_deallocate(this%ncv)
-    call mem_deallocate(this%bditems)
     call mem_deallocate(this%idxbudfjf)
     call mem_deallocate(this%idxbudgwf)
     call mem_deallocate(this%idxbudsto)
@@ -1400,6 +1441,18 @@ module GwtAptModule
 ! ------------------------------------------------------------------------------
     !
     select case (option)
+      case ('FLOW_PACKAGE_NAME')
+        call this%parser%GetStringCaps(this%flowpackagename)
+        write(this%iout,'(4x,a)') &
+          'THIS '//trim(adjustl(this%text))//' PACKAGE CORRESPONDS TO A GWF &
+          &PACKAGE WITH THE NAME '//trim(adjustl(this%flowpackagename))
+        found = .true.
+      case ('FLOW_PACKAGE_AUXILIARY_NAME')
+        call this%parser%GetStringCaps(this%cauxfpconc)
+        write(this%iout,'(4x,a)') &
+          'SIMULATED CONCENTRATIONS WILL BE COPIED INTO THE FLOW PACKAGE &
+          &AUXILIARY VARIABLE WITH THE NAME ' //trim(adjustl(this%cauxfpconc))
+        found = .true.
       case ('DEV_NONEXPANDING_MATRIX')
         ! -- use an iterative solution where concentration is not solved
         !    as part of the matrix.  It is instead solved separately with a 
@@ -1466,6 +1519,14 @@ module GwtAptModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Set a pointer to the GWF LAK Package budobj
+    if (this%flowpackagename == '') then
+      this%flowpackagename = this%name
+      write(this%iout,'(4x,a)') &
+        'THE FLOW PACKAGE NAME FOR '//trim(adjustl(this%text))//' WAS NOT &
+        &SPECIFIED.  SETTING FLOW PACKAGE NAME TO '// &
+        &trim(adjustl(this%flowpackagename))
+      
+    end if
     call this%find_apt_package()
     !
     ! -- Set dimensions from the GWF LAK package
@@ -1516,7 +1577,7 @@ module GwtAptModule
 
   subroutine apt_read_cvs(this)
 ! ******************************************************************************
-! apt_read_cvs -- Read feature infromation for this package
+! apt_read_cvs -- Read feature information for this package
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -2506,6 +2567,36 @@ module GwtAptModule
     ! -- return
     return
   end subroutine apt_fjf_term
+  
+  subroutine apt_copy2flowp(this)
+! ******************************************************************************
+! apt_copy2flowp -- copy concentrations into flow package aux variable
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwtAptType) :: this
+    ! -- local
+    integer(I4B) :: n, j
+! ------------------------------------------------------------------------------
+    !
+    ! -- copy
+    if (this%iauxfpconc /= 0) then
+      !
+      ! -- go through each apt-gwf connection
+      do j = 1, this%flowbudptr%budterm(this%idxbudgwf)%nlist
+        !
+        ! -- set n to feature number and process if active feature
+        n = this%flowbudptr%budterm(this%idxbudgwf)%id1(j)
+        this%flowpackagebnd%auxvar(this%iauxfpconc, j) = this%xnewpak(n)
+      end do
+    end if
+    !
+    ! -- return
+    return
+  end subroutine apt_copy2flowp
   
   logical function apt_obs_supported(this)
 ! ******************************************************************************

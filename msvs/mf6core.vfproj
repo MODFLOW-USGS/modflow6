@@ -5,7 +5,7 @@
 		<Platform Name="x64"/></Platforms>
 	<Configurations>
 		<Configuration Name="Debug|x64" ConfigurationType="typeStaticLibrary">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" WarnDeclarations="true" WarnUnusedVariables="true" WarnInterfaces="true" FloatingPointExceptionHandling="fpe0" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebugDLL"/>
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" WarnDeclarations="true" WarnUnusedVariables="true" WarnInterfaces="true" FloatingPointExceptionHandling="fpe0" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebugDLL"/>
 				<Tool Name="VFLibrarianTool"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
@@ -54,7 +54,6 @@
 		<Filter Name="Geometry">
 		<File RelativePath="..\src\Model\Geometry\BaseGeometry.f90"/>
 		<File RelativePath="..\src\Model\Geometry\CircularGeometry.f90"/>
-		<File RelativePath="..\src\Model\Geometry\RectangularChGeometry.f90"/>
 		<File RelativePath="..\src\Model\Geometry\RectangularGeometry.f90"/></Filter>
 		<Filter Name="GroundWaterFlow">
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3.f90"/>
@@ -156,8 +155,17 @@
 		<File RelativePath="..\src\Utilities\BudgetObject.f90"/>
 		<File RelativePath="..\src\Utilities\BudgetTerm.f90"/>
 		<File RelativePath="..\src\Utilities\comarg.f90"/>
-		<File RelativePath="..\src\Utilities\compilerversion.fpp"/>
+		<File RelativePath="..\src\Utilities\compilerversion.fpp">
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration></File>
 		<File RelativePath="..\src\Utilities\Constants.f90"/>
+		<File RelativePath="..\src\Utilities\defmacro.fpp"/>
 		<File RelativePath="..\src\Utilities\genericutils.f90"/>
 		<File RelativePath="..\src\Utilities\HashTable.f90"/>
 		<File RelativePath="..\src\Utilities\HeadFileReader.f90"/>

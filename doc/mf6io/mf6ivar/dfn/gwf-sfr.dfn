@@ -669,7 +669,7 @@ tagged false
 in_record true
 reader urword
 longname diversion number
-description diversion number.
+description an integer value specifying which diversion of reach RNO that DIVFLOW is being specified for.  Must be less or equal to ndv for the current reach (RNO).
 numeric_index true
 
 block period

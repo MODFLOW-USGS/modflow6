@@ -348,7 +348,7 @@ module GwtModule
     call this%allocate_arrays()
     !
     ! -- Define packages and assign iout for time series managers
-    do ip=1,this%bndlist%Count()
+    do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_df(this%neq, this%dis)
       packobj%TsManager%iout = this%iout

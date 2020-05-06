@@ -23,6 +23,8 @@ module GwfStoModule
     integer(I4B), dimension(:), pointer, contiguous  :: iconvert => null()       !confined (0) or convertible (1)
     real(DP),dimension(:), pointer, contiguous       :: sc1 => null()            !primary storage capacity (when cell is fully saturated)
     real(DP),dimension(:), pointer, contiguous       :: sc2 => null()            !secondary storage capacity (when cell is partially saturated)
+    integer(I4B), pointer                            :: iresetsc1 => null()      !should be set to 1 whenever sc1 has been updated 'in-flight', this triggers the conversion
+    integer(I4B), pointer                            :: iresetsc2 => null()      !should be set to 1 whenever sc2 has been updated 'in-flight', this triggers the conversion
     real(DP), dimension(:), pointer, contiguous      :: strgss => null()         !vector of specific storage rates
     real(DP), dimension(:), pointer, contiguous      :: strgsy => null()         !vector of specific yield rates
     integer(I4B), dimension(:), pointer, contiguous  :: ibound => null()         !pointer to model ibound
@@ -40,6 +42,7 @@ module GwfStoModule
     procedure, private :: allocate_arrays
     procedure, private :: read_options
     procedure, private :: read_data
+    procedure, private :: convert_sc1, convert_sc2
   endtype
 
   contains
@@ -182,8 +185,20 @@ module GwfStoModule
     end if
     !
     ! -- read data if ionper == kper
+    ! are these here to anticipate reading ss,sy per stress period?
     readss = .false.
-    readsy = .false.
+    readsy = .false.   
+    
+    ! when in-memory reset of coefficients, redo calculations
+    if (this%iresetsc1 == 1) then     
+      call this%convert_sc1()
+      this%iresetsc1 = 0
+    end if
+    if (this%iresetsc2 == 1) then
+      call this%convert_sc2()
+      this%iresetsc2 = 0
+    end if
+    
     !stotxt = aname(2)
     if(this%ionper==kper) then
       write(this%iout, '(//,1x,a)') 'UPDATING STORAGE VALUES'
@@ -620,6 +635,8 @@ module GwfStoModule
     call mem_deallocate(this%isseg)
     call mem_deallocate(this%satomega)
     call mem_deallocate(this%iusesy)
+    call mem_deallocate(this%iresetsc1)
+    call mem_deallocate(this%iresetsc2)
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
@@ -650,12 +667,16 @@ module GwfStoModule
     call mem_allocate(this%isfac, 'ISFAC', this%origin)
     call mem_allocate(this%isseg, 'ISSEG', this%origin)
     call mem_allocate(this%satomega, 'SATOMEGA', this%origin)
+    call mem_allocate(this%iresetsc1, 'IRESETSC1', this%origin)
+    call mem_allocate(this%iresetsc2, 'IRESETSC2', this%origin)
     !
     ! -- Initialize
     this%iusesy = 0
     this%isfac = 0
     this%isseg = 0
     this%satomega = DZERO
+    this%iresetsc1 = 0
+    this%iresetsc2 = 0
     !
     ! -- Return
     return
@@ -803,7 +824,6 @@ module GwfStoModule
     logical :: isconv
     character(len=24), dimension(4) :: aname
     integer(I4B) :: n
-    real(DP) :: thick
     ! -- formats
     !data
     data aname(1) /'                ICONVERT'/
@@ -919,7 +939,26 @@ module GwfStoModule
     !
     ! -- calculate sc1
     if (readss) then
-      if(this%isfac == 0) then
+      call this%convert_sc1()
+    endif
+    !
+    ! -- calculate sc2
+    if(readsy) then
+      call this%convert_sc2()
+    endif
+    !
+    ! -- Return
+    return
+  end subroutine read_data
+
+  ! -- converts the primary storage into sc1*area
+  subroutine convert_sc1(this)
+    class(GwfStotype) :: this
+    ! -- local
+    integer(I4B) :: n
+    real(DP) :: thick
+    
+    if(this%isfac == 0) then
         do n = 1, this%dis%nodes
           thick = this%dis%top(n) - this%dis%bot(n)
           this%sc1(n) = this%sc1(n) * thick * this%dis%area(n)
@@ -928,18 +967,19 @@ module GwfStoModule
         do n = 1, this%dis%nodes
           this%sc1(n) = this%sc1(n) * this%dis%area(n)
         enddo
-      endif
-    endif
-    !
-    ! -- calculate sc2
-    if(readsy) then
-      do n=1, this%dis%nodes
-        this%sc2(n) = this%sc2(n) * this%dis%area(n)
-      enddo
-    endif
-    !
-    ! -- Return
-    return
-  end subroutine read_data
-
+      endif    
+  end subroutine convert_sc1
+  
+  ! -- converts the secondary storage into sc2*area
+  subroutine convert_sc2(this)
+    class(GwfStotype) :: this
+    ! -- local
+    integer(I4B) :: n
+    
+    do n=1, this%dis%nodes
+      this%sc2(n) = this%sc2(n) * this%dis%area(n)
+    enddo
+    
+  end subroutine convert_sc2
+    
 end module GwfStoModule

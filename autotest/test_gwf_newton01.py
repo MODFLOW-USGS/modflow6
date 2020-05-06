@@ -57,14 +57,15 @@ def build_mf6(idx, ws):
     flopy.mf6.ModflowTdis(sim, time_units='DAYS',
                           nper=nper, perioddata=tdis_rc)
 
+    # create iterative model solution and register the gwf model with it
+    flopy.mf6.ModflowIms(sim, print_option='SUMMARY', complexity='COMPLEX',
+                         inner_dvclose=1e-9, outer_dvclose=1e-9)
+
     # create gwf model
     gwf = flopy.mf6.ModflowGwf(sim, modelname=name,
                                save_flows=True,
                                newtonoptions='')
 
-    # create iterative model solution and register the gwf model with it
-    flopy.mf6.ModflowIms(sim, print_option='SUMMARY', complexity='COMPLEX',
-                         inner_dvclose=1e-9, outer_dvclose=1e-9)
 
     flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
                             delr=delr, delc=delc,

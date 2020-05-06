@@ -49,7 +49,7 @@
 
 \item \texttt{id2}---is the identifier for the receiver.  The receiver identifier is the reach number (SFR Package), Lake number (LAK Package), well number (MAW Package), or UZF cell number.
 
-\item \texttt{mvrtype}---is the character string signifying the method for determining how much water will be moved.  Supported values are ``FACTOR'' ``EXCESS'' ``THRESHOLD'' and ``UPTO''.  These four options determine how the receiver flow rate, $Q_R$, is calculated.  These options are based the options available in the SFR2 Package for diverting stream flow.
+\item \texttt{mvrtype}---is the character string signifying the method for determining how much water will be moved.  Supported values are ``FACTOR'' ``EXCESS'' ``THRESHOLD'' and ``UPTO''.  These four options determine how the receiver flow rate, $Q_R$, is calculated.  These options mirror the options defined for the cprior variable in the SFR package, with the term ``FACTOR'' being functionally equivalent to the ``FRACTION'' option for cprior.
 
 \item \texttt{value}---is the value to be used in the equation for calculating the amount of water to move.  For the ``FACTOR'' option, VALUE is the $\alpha$ factor.  For the remaining options, VALUE is the specified flow rate, $Q_S$.
 

@@ -1,6 +1,15 @@
 # --------------------- gwt lkt options ---------------------
 
 block options
+name flow_package_name
+type string
+shape
+reader urword
+optional true
+longname keyword to specify name of corresponding flow package
+description keyword to specify the name of the corresponding flow package.  If not specified, then the corresponding flow package must have the same name as this advanced transport package (the name associated with this package in the GWT name file).
+
+block options
 name auxiliary
 type string
 shape (naux)
@@ -8,6 +17,15 @@ reader urword
 optional true
 longname keyword to specify aux variables
 description REPLACE auxnames {'{#1}': 'Groundwater Transport'}
+
+block options
+name flow_package_auxiliary_name
+type string
+shape
+reader urword
+optional true
+longname keyword to specify name of concentration auxiliary variable in flow package
+description keyword to specify the name of an auxiliary variable in the corresponding flow package.  If specified, then the simulated concentrations from this advanced transport package will be copied into the auxiliary variable specified with this name.  Note that the flow package must have an auxiliary variable with this name or the program will terminate with an error.  If the flows for this advanced transport package are read from a file, then this option will have no affect.
 
 block options
 name boundnames
