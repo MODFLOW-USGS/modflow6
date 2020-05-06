@@ -1,7 +1,5 @@
 import os
 import numpy as np
-import shutil
-from nose.tools import *
 
 try:
     import flopy
@@ -14,6 +12,7 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
+paktest = 'sfr'
 ex = ['ts_sfr01']
 exdirs = []
 for s in ex:
@@ -168,11 +167,14 @@ def build_model(ws, name, timeseries=False):
         perioddata.append([0, 'inflow', inflow])
         perioddata.append([2, 'diversion', 1, divflow])
 
+    budpth = '{}.{}.cbc'.format(name, paktest)
     cnvgpth = '{}.sfr.cnvg.csv'.format(name)
     sfr = flopy.mf6.ModflowGwfsfr(gwf,
                                   auxiliary=auxnames,
                                   print_input=True,
-                                  mover=True, nreaches=len(packagedata),
+                                  budget_filerecord=budpth,
+                                  mover=True,
+                                  nreaches=len(packagedata),
                                   maximum_depth_change=1.e-5,
                                   package_convergence_filerecord=cnvgpth,
                                   packagedata=packagedata,
@@ -293,7 +295,9 @@ def build_model(ws, name, timeseries=False):
         ('uzf-1', 6, 'sfr-1', 0, 'factor', 1.),
         ('uzf-1', 7, 'sfr-1', 0, 'factor', 1.),
         ('uzf-1', 8, 'sfr-1', 0, 'factor', 1.),
-        ('sfr-1', 2, 'sfr-1', 3, 'factor', 0.5)
+        ('sfr-1', 2, 'sfr-1', 3, 'factor', 0.5),
+        ('sfr-1', 6, 'sfr-1', 4, 'factor', 0.5),
+        ('sfr-1', 8, 'sfr-1', 4, 'factor', 0.5),
     ]
     mvr = flopy.mf6.ModflowGwfmvr(gwf, maxmvr=len(perioddata),
                                   budget_filerecord='{}.mvr.bud'.format(name),
@@ -332,16 +336,70 @@ def eval_model(sim):
 
     fname = '{}.cbc'.format(os.path.basename(sim.name))
 
-    # open first cbc file
+    # open first gwf cbc file
     fpth = os.path.join(sim.simpath, fname)
     cobj0 = flopy.utils.CellBudgetFile(fpth, precision='double')
 
-    # open second cbc file
+    # open second gwf cbc file
     fpth = os.path.join(sim.simpath, 'mf6', fname)
     cobj1 = flopy.utils.CellBudgetFile(fpth, precision='double')
 
+    # define file path and evaluate difference
+    fname = '{}.cbc.cmp.out'.format(os.path.basename(sim.name))
+    fpth = os.path.join(sim.simpath, fname)
+    eval_bud_diff(fpth, cobj0, cobj1)
+
+    # evaluate the sfr package budget file
+    fname = '{}.{}.cbc'.format(os.path.basename(sim.name), paktest)
+    # open first sfr cbc file
+    fpth = os.path.join(sim.simpath, fname)
+    cobj0 = flopy.utils.CellBudgetFile(fpth, precision='double')
+
+    # open second sfr cbc file
+    fpth = os.path.join(sim.simpath, 'mf6', fname)
+    cobj1 = flopy.utils.CellBudgetFile(fpth, precision='double')
+
+    # define file path and evaluate difference
+    fname = '{}.{}.cbc.cmp.out'.format(os.path.basename(sim.name), paktest)
+    fpth = os.path.join(sim.simpath, fname)
+    eval_bud_diff(fpth, cobj0, cobj1)
+
+    # do some spot checks on the first sfr cbc file
+    v0 = cobj0.get_data(totim=1.0, text='FLOW-JA-FACE')[0]
+    q = []
+    for idx, node in enumerate(v0['node']):
+        if node > 5:
+            q.append(v0['q'][idx])
+    v0 = np.array(q)
+    check = np.ones(v0.shape, dtype=np.float) * 5e-2
+    assert np.allclose(v0, check), 'FLOW-JA-FACE failed'
+
+    v0 = cobj0.get_data(totim=1.0, text='EXT-OUTFLOW')[0]
+    v0 = v0['q'][4:]
+    check = np.array([-0.80371, -5e-2, -2.5e-2, -5e-2, -2.5e-2, -5e-2])
+    assert np.allclose(v0, check), 'EXT-OUTFLOW failed'
+
+    v0 = cobj0.get_data(totim=1.0, text='FROM-MVR')[0]
+    v0 = v0['q'][4:]
+    check = np.array([5e-2, 0., 0., 0., 0., 0.])
+    assert np.allclose(v0, check), 'FROM-MVR failed'
+
+    v0 = cobj0.get_data(totim=1.0, text='TO-MVR')[0]
+    v0 = v0['q'][4:]
+    check = np.array([0., 0., -2.5e-2, 0., -2.5e-2, 0.])
+    assert np.allclose(v0, check), 'FROM-MVR failed'
+
+    return
+
+
+def eval_bud_diff(fpth, b0, b1, dtol=1e-6):
+    diffmax = 0.
+    difftag = 'None'
+    difftime = None
+    fail = False
+
     # build list of cbc data to retrieve
-    avail = cobj1.get_unique_record_names()
+    avail = b0.get_unique_record_names()
 
     # initialize list for storing totals for each budget term terms
     cbc_keys = []
@@ -351,19 +409,10 @@ def eval_model(sim):
         t = t.strip()
         cbc_keys.append(t)
 
-    # set criteria
-    dtol = 1e-6
-    diffmax = 0.
-    difftag = 'None'
-    difftime = None
-    fail = False
-
     # open a summary file and write header
-    fname = '{}.cbc.cmp.out'.format(os.path.basename(sim.name))
-    fpth = os.path.join(sim.simpath, fname)
     f = open(fpth, 'w')
     line = '{:15s}'.format('Time')
-    line += '{:15s}'.format('Datatype')
+    line += ' {:15s}'.format('Datatype')
     line += ' {:15s}'.format('Variables')
     line += ' {:15s}'.format('Timeseries')
     line += ' {:15s}'.format('Difference')
@@ -371,18 +420,25 @@ def eval_model(sim):
     f.write(len(line) * '-' + '\n')
 
     # get data from cbc file
-    kk = cobj0.get_kstpkper()
-    times = cobj0.get_times()
+    kk = b0.get_kstpkper()
+    times = b0.get_times()
     for idx, (k, t) in enumerate(zip(kk, times)):
+        v0sum = 0.
+        v1sum = 0.
         for key in cbc_keys:
-            v0 = cobj0.get_data(kstpkper=k, text=key)[0]
-            v1 = cobj1.get_data(kstpkper=k, text=key)[0]
+            v0 = b0.get_data(kstpkper=k, text=key)[0]
+            v1 = b1.get_data(kstpkper=k, text=key)[0]
             if isinstance(v0, np.recarray):
                 v0 = v0['q'].sum()
                 v1 = v1['q'].sum()
             else:
                 v0 = v0.flatten().sum()
                 v1 = v1.flatten().sum()
+
+            # sum all of the values
+            if key != 'AUXILIARY':
+                v0sum += v0
+                v1sum += v1
 
             diff = v0 - v1
             if abs(diff) > abs(diffmax):
@@ -392,22 +448,43 @@ def eval_model(sim):
             if abs(diff) > dtol:
                 fail = True
             line = '{:15g}'.format(t)
-            line += '{:15s}'.format(key)
+            line += ' {:15s}'.format(key)
             line += ' {:15g}'.format(v0)
             line += ' {:15g}'.format(v1)
             line += ' {:15g}'.format(diff)
             f.write(line + '\n')
 
-    msg = 'Maximum cbc difference:        {}\n'.format(diffmax)
+    # evaluate the sums
+    diff = v0sum - v1sum
+    if abs(diff) > dtol:
+        fail = True
+    line = '{:15g}'.format(t)
+    line += ' {:15s}'.format('TOTAL')
+    line += ' {:15g}'.format(v0sum)
+    line += ' {:15g}'.format(v1sum)
+    line += ' {:15g}'.format(diff)
+    f.write(line + '\n')
+
+    msg = '\nSummary of changes in {}\n'.format(os.path.basename(fpth))
+    msg += '-' * 72 + '\n'
+    msg += 'Maximum cbc difference:        {}\n'.format(diffmax)
     msg += 'Maximum cbc difference time:   {}\n'.format(difftime)
     msg += 'Maximum cbc datatype:          {}\n'.format(difftag)
     if fail:
-        msg += 'Maximum cbc citeria exceeded:  {}\n'.format(dtol)
+        msg += 'Maximum cbc criteria exceeded:  {}'.format(dtol)
     assert not fail, msg
 
     # close summary file and print the final message
     f.close()
     print(msg)
+
+    msg = 'sum of first cbc file flows ({}) '.format(v0sum) + \
+          'exceeds dtol ({})'.format(dtol)
+    assert abs(v0sum) < dtol, msg
+
+    msg = 'sum of second cbc file flows ({}) '.format(v1sum) + \
+          'exceeds dtol ({})'.format(dtol)
+    assert abs(v1sum) < dtol, msg
 
     return
 
