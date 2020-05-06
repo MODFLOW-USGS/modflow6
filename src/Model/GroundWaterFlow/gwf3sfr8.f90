@@ -31,24 +31,24 @@ module SfrModule
   !
   character(len=LENFTYPE)       :: ftype = 'SFR'
   character(len=LENPACKAGENAME) :: text  = '             SFR'
-  !
-  ! -- timeseries type for
-  type :: SfrTSType
-    character (len=LENTIMESERIESNAME), pointer :: name => null()
-    real(DP), pointer :: value => null()
-  end type SfrTSType
-  !
-  type :: SfrDivType
-    integer(I4B), pointer :: reach => null()
-    integer(I4B), pointer :: iprior => null()
-    character (len=10), pointer :: cprior => null()
-    type (SfrTSType), pointer :: rate => null()
-  end type SfrDivType
+  !!
+  !! -- timeseries type for
+  !type :: SfrTSType
+  !  character (len=LENTIMESERIESNAME), pointer :: name => null()
+  !  real(DP), pointer :: value => null()
+  !end type SfrTSType
+  !!
+  !type :: SfrDivType
+  !  integer(I4B), pointer :: reach => null()
+  !  integer(I4B), pointer :: iprior => null()
+  !  character (len=10), pointer :: cprior => null()
+  !  type (SfrTSType), pointer :: rate => null()
+  !end type SfrDivType
   !
   ! -- Streamflow Routing derived data type
   type :: SfrDataType
-    ! -- diversion data
-    type (SfrDivType), dimension(:), pointer, contiguous :: diversion => null()
+    !! -- diversion data
+    !type (SfrDivType), dimension(:), pointer, contiguous :: diversion => null()
     !! -- aux data
     !type (SfrTSType), dimension(:), pointer, contiguous :: auxvar => null()
     !! -- boundary data
@@ -90,6 +90,7 @@ module SfrModule
     integer(I4B), pointer :: cbcauxitems => NULL()
     integer(I4B), pointer :: icheck => NULL()
     integer(I4B), pointer :: iconvchk => NULL()
+    integer(I4B), pointer :: iustrf_ts => NULL()
     integer(I4B), pointer :: gwfiss => NULL()
     ! -- double precision
     real(DP), pointer :: unitconv => NULL()
@@ -295,6 +296,7 @@ contains
     call mem_allocate(this%nconn, 'NCONN', this%origin)
     call mem_allocate(this%icheck, 'ICHECK', this%origin)
     call mem_allocate(this%iconvchk, 'ICONVCHK', this%origin)
+    call mem_allocate(this%iustrf_ts, 'IUSTRF_TS', this%origin)
     !
     ! -- set pointer to gwf iss
     call mem_setptr(this%gwfiss, 'ISS', trim(this%name_model))
@@ -311,10 +313,10 @@ contains
     this%unitconv = DONE
     this%dmaxchg = DEM5
     this%deps = DP999 * this%dmaxchg
-    !this%imover = 0
     this%nconn = 0
     this%icheck = 1
     this%iconvchk = 1
+    this%iustrf_ts = 0
     !
     ! -- return
     return
@@ -762,9 +764,14 @@ contains
     class(SfrType),intent(inout) :: this
     ! -- local
     character (len=LINELENGTH) :: errmsg
-    character(len=LINELENGTH) :: text, cellid, keyword
+    character(len=LINELENGTH) :: text
+    character(len=LINELENGTH) :: cellid
+    character(len=LINELENGTH) :: keyword
     character (len=10) :: cnum
-    character(len=LENBOUNDNAME) :: bndName, bndNameTemp, manningname
+    character(len=LENBOUNDNAME) :: bndName
+    character(len=LENBOUNDNAME) :: bndNameTemp
+    character(len=LENBOUNDNAME) :: manningname
+    character(len=LENBOUNDNAME) :: ustrfname
     character(len=50), dimension(:), allocatable :: caux
     integer(I4B) :: n, ierr, ival
     logical :: isfound, endOfBlock
@@ -860,7 +867,8 @@ contains
           ival = 0
         end if
         ! -- get upstream fraction for reach
-        this%ustrf(n) = this%parser%GetDouble()
+        !this%ustrf(n) = this%parser%GetDouble()
+        call this%parser%GetString(ustrfname)
         ! -- get number of diversions for reach
         ival = this%parser%GetInteger()
         this%ndiv(n) = ival
@@ -889,10 +897,10 @@ contains
           !this%boundname(n) = bndName
         end if
         this%sfrname(n) = bndName
-
+        !
         ! -- set Mannings
         text = manningname
-        jj = 1 !iaux
+        jj = 1 !for 'ROUGH'
         !call read_single_value_or_time_series(text, &
         !                                      this%reaches(n)%rough%value, &
         !                                      this%reaches(n)%rough%name, &
@@ -905,8 +913,14 @@ contains
         call read_value_or_time_series_adv(text, n, jj, bndElem, this%name,      &
                                             'BND', this%tsManager, this%iprpak,  &
                                             'MANNING')
-
-
+        !
+        ! -- set upstream fraction
+        text = ustrfname
+        jj = 1  ! For 'USTRF'
+        bndElem => this%ustrf(n)
+        call read_value_or_time_series_adv(text, n, jj, bndElem, this%name,      &
+                                           'BND', this%tsManager, this%iprpak,   &
+                                           'USTRF')
         ! -- get aux data
         !do iaux = 1, this%naux
         do jj = 1, this%naux
@@ -1141,8 +1155,8 @@ contains
     integer(I4B) :: ierr
     integer(I4B) :: ival
     integer(I4B) :: i0
-    integer(I4B) :: i1
     integer(I4B) :: ipos
+    integer(I4B) :: jpos
     integer(I4B) :: ndiv
     integer(I4B) :: ndiversions
     integer(I4B) :: idivreach
@@ -1250,8 +1264,8 @@ contains
             cycle
           end if
           idivreach = ival
-          i1 = this%iadiv(n) + idiv - 1
-          this%divreach(i1) = idivreach
+          jpos = this%iadiv(n) + idiv - 1
+          this%divreach(jpos) = idivreach
           !this%reaches(n)%diversion(idiv)%reach = idivreach
           !
           ! -- get cprior
@@ -1270,17 +1284,10 @@ contains
               errmsg = 'INVALID CPRIOR TYPE ' // trim(cval)
               call store_error(errmsg)
           end select
-          this%divcprior(i1) = cval
-          !this%diviprior(i1) = ival
+          this%divcprior(jpos) = cval
+          !this%diviprior(jpos) = ival
           !this%reaches(n)%diversion(idiv)%cprior = cval
           !this%reaches(n)%diversion(idiv)%iprior = ival
-          !!
-          !! -- fill flat diversion structure
-          !i0 = this%iadiv(n)
-          !i1 = i0 + idiv - 1
-          !this%divreach(i1) = idivreach
-          !this%diviprior(i1) = ival
-          !this%divcprior(i1) = cval
 
         end do
         
@@ -1485,6 +1492,12 @@ contains
     !
     ! -- Advance the time series manager
     call this%TsManager%ad()
+    !
+    ! -- check upstream fractions if time series are being used to
+    !    define this variable
+    if (this%iustrf_ts /= 0) then
+      call this%sfr_check_ustrf()
+    end if
     !
     ! -- update auxiliary variables by copying from the derived-type time
     !    series variable into the bndpackage auxvar variable so that this
@@ -2188,6 +2201,7 @@ contains
     call mem_deallocate(this%nconn)
     call mem_deallocate(this%icheck)
     call mem_deallocate(this%iconvchk)
+    call mem_deallocate(this%iustrf_ts)
     nullify(this%gwfiss)
     !
     ! -- call BndType deallocate
@@ -2598,7 +2612,8 @@ contains
     !use ConstantsModule, only: LINELENGTH, DTWO
     use TdisModule, only: kper, perlen, totimsav
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv,            &
-                                       read_single_value_or_time_series
+                                       read_single_value_or_time_series,         &
+                                       is_timeseries
     use InputOutputModule, only: urword
     use SimModule, only: ustop, store_error
     ! -- dummy
@@ -2613,6 +2628,7 @@ contains
     character(len=LINELENGTH) :: keyword
     character(len=LINELENGTH) :: errmsg
     character(len=LENBOUNDNAME) :: bndName
+    logical :: use_ts
     integer(I4B) :: ival
     integer(I4B) :: istart
     integer(I4B) :: istop
@@ -2739,7 +2755,8 @@ contains
                                            'BND', this%tsManager, this%iprpak,   &
                                            'RUNOFF')
      case ('INFLOW')
-        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
+        call urword(line, lloc, istart, istop, 0, ival, rval,                    &
+                    this%iout, this%inunit)
         text = line(istart:istop)
         !jj = 4  ! For 'INFLOW'
         !call read_single_value_or_time_series(text, &
@@ -2796,9 +2813,25 @@ contains
                                            'DIVFLOW')
       case ('UPSTREAM_FRACTION')
         ichkustrm = 1
-        call urword(line, lloc, istart, istop, 3, ival, rval,                    &
+        !call urword(line, lloc, istart, istop, 3, ival, rval,                    &
+        !            this%iout, this%inunit)
+        !this%ustrf(n) = rval
+        call urword(line, lloc, istart, istop, 0, ival, rval,                    &
                     this%iout, this%inunit)
-        this%ustrf(n) = rval
+        text = line(istart:istop)
+        jj = 1  ! For 'USTRF'
+        bndElem => this%ustrf(n)
+        call read_value_or_time_series_adv(text, n, jj, bndElem, this%name,      &
+                                           'BND', this%tsManager, this%iprpak,   &
+                                           'USTRF')
+        !
+        ! -- determine if a time series is being used
+        if (this%iustrf_ts == 0) then
+          use_ts = is_timeseries(this%tsManager, n, jj, this%name, 'BND', 'USTRF')
+          if (use_ts) then
+            this%iustrf_ts = 1
+          end if 
+        end if
 
       case ('AUXILIARY')
         call urword(line, lloc, istart, istop, 1, ival, rval,                    &
@@ -3479,7 +3512,7 @@ contains
       integer(I4B) :: i
       integer(I4B) :: n2
       integer(I4B) :: idiv
-      integer(I4B) :: i1
+      integer(I4B) :: jpos
       real(DP) :: qdiv
       real(DP) :: f
   ! ------------------------------------------------------------------------------
@@ -3500,10 +3533,10 @@ contains
         if (this%reaches(n)%idir(i) > 0) cycle
         idiv = this%reaches(n)%idiv(i)
         if (idiv == 0) cycle
-        i1 = this%iadiv(n) + idiv - 1
+        jpos = this%iadiv(n) + idiv - 1
         call this%sfr_calc_div(n, idiv, qd, qdiv)
         this%reaches(n)%qconn(i) = qdiv
-        this%divq(i1) = qdiv
+        this%divq(jpos) = qdiv
       end do
       !
       ! -- Mover terms: store outflow after diversion loss
@@ -3775,17 +3808,17 @@ contains
       real(DP), intent(inout) :: qdiv
       ! -- local
       character (len=10) :: cp
-      integer(I4B) :: i1
+      integer(I4B) :: jpos
       integer(I4B) :: n2
       !integer(I4B) :: ip
       real(DP) :: v
   ! ------------------------------------------------------------------------------
     !
     ! -- set local variables
-    i1 = this%iadiv(n) + i - 1
-    n2 = this%divreach(i1)
-    cp = this%divcprior(i1)
-    v = this%divflow(i1)
+    jpos = this%iadiv(n) + i - 1
+    n2 = this%divreach(jpos)
+    cp = this%divcprior(jpos)
+    v = this%divflow(jpos)
     !n2 = this%reaches(n)%diversion(i)%reach
     !cp = this%reaches(n)%diversion(i)%cprior
     !!ip = this%reaches(n)%diversion(i)%iprior
@@ -4213,7 +4246,7 @@ contains
     integer(I4B) :: ii
     integer(I4B) :: idiv
     integer(I4B) :: ifound
-    integer(I4B) :: i1
+    integer(I4B) :: jpos
     ! -- format
 10  format('Diversion ',i0,' of reach ',i0,                                      &
            ' is invalid or has not been defined.')
@@ -4252,13 +4285,13 @@ contains
       do idiv = 1, this%ndiv(n)
         !
         ! -- determine diversion index
-        i1 = this%iadiv(n) + idiv - 1
+        jpos = this%iadiv(n) + idiv - 1
         !
         ! -- write idiv to cdiv
         write(cdiv, '(i5)') idiv
         !
         !
-        nn = this%divreach(i1)
+        nn = this%divreach(jpos)
         !nn = this%reaches(n)%diversion(idiv)%reach
         write(crch2, '(i5)') nn
         !
@@ -4267,9 +4300,8 @@ contains
         if (nn < 1 .or. nn > this%maxbound) then
           write(errmsg,10) idiv, n
           call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-          call ustop()
-        endif
+          cycle
+        end if
         connreach: do ii = 1, this%nconnreach(nn)
           nc = this%reaches(nn)%iconn(ii)
           if (nc == n) then
@@ -4280,14 +4312,14 @@ contains
           end if
         end do connreach
         if (ifound /= 1) then
-          errmsg = 'ERROR: Reach ' // crch // ' is not a upstream reach for ' // &
+          errmsg = 'Reach ' // crch // ' is not a upstream reach for ' //        &
                    'reach ' // crch2 // ' as a result diversion ' // cdiv //     &
                    ' from reach ' // crch //' to reach ' // crch2 //             &
                    ' is not possible. Check reach connectivity.'
           call store_error(errmsg)
         end if
         ! -- iprior
-        cprior = this%divcprior(i1)
+        cprior = this%divcprior(jpos)
         !cprior = this%reaches(n)%diversion(idiv)%cprior
         !
         ! -- add terms to the table
@@ -4325,7 +4357,7 @@ contains
     integer(I4B) :: idiv
     integer(I4B) :: i0
     integer(I4B) :: i1
-    integer(I4B) :: ipos
+    integer(I4B) :: jpos
     integer(I4B) :: ids
     real(DP) :: f
     real(DP) :: rval
@@ -4371,20 +4403,37 @@ contains
       end do
     end if
     !
-    ! -- fill
+    ! -- fill diversion number for each connection
     do n = 1, this%maxbound
       do idiv = 1, this%ndiv(n)
         i0 = this%iadiv(n)
         i1 = this%iadiv(n+1) - 1
-        do ipos = i0, i1 
+        do jpos = i0, i1 
           do i = 1, this%nconnreach(n)
             n2 = this%reaches(n)%iconn(i)
-            if (this%divreach(ipos) == n2) then
-              this%reaches(n)%idiv(i) = ipos - i0 + 1
+            if (this%divreach(jpos) == n2) then
+              this%reaches(n)%idiv(i) = jpos - i0 + 1
               exit
             end if 
           end do
         end do
+      end do
+    end do
+    !
+    ! -- check that the upstream fraction for reach connected by
+    !    a diversion is zero
+    do n = 1, this%maxbound
+      do idiv = 1, this%ndiv(n)
+        jpos = this%iadiv(n) + idiv - 1
+        n2 = this%divreach(jpos)
+        f = this%ustrf(n2)
+        if (f /= DZERO) then
+          write(errmsg, '(a,2(1x,i0,1x,a),1x,a,g0,a,2(1x,a))')                   &
+            'Reach', n, 'is connected to reach', n2, 'by a diversion',           &
+            'but the upstream fraction is not equal to zero (', f, '). Check',   &
+            trim(this%name), 'package diversion and package data.'
+          call store_error(errmsg)
+        end if
       end do
     end do
     !
@@ -4432,8 +4481,9 @@ contains
           call this%inputtab%add_term(this%ustrf(n2))
         end if
         eachdiv: do idiv = 1, this%ndiv(n)
+          jpos = this%iadiv(n) + idiv - 1
           !if (this%reaches(n)%diversion(idiv)%reach == n2) then
-          if (this%divreach(i1) == n2) then
+          if (this%divreach(jpos) == n2) then
             !this%reaches(n)%idiv(i) = idiv
             ladd = .false.
             exit eachconn
@@ -4458,9 +4508,10 @@ contains
       !    the sum of fractions is not equal to 1
       if (ids /= 0) then
         if (abs(f-DONE) > DEM6) then
-          write(cval, '(f10.4)') f
-          errmsg = 'ERROR: upstream fractions for reach ' // crch // ' not ' //   &
-                  'equal to one (' // cval // '). Check reach connectivity.'
+          write(errmsg, '(a,1x,i0,1x,a,g0,a,3(1x,a))')                           &
+            'Upstream fractions for reach ', n, 'is not equal to one (', f,      &
+            '). Check', trim(this%name), 'package reach connectivity and',       &
+            'package data.'
           call store_error(errmsg)
         end if
       end if
@@ -4702,7 +4753,7 @@ contains
     integer(I4B) :: ii
     integer(I4B) :: idx
     integer(I4B) :: idiv
-    integer(I4B) :: i1
+    integer(I4B) :: jpos
     real(DP) :: q
     real(DP) :: qt
     real(DP) :: d
@@ -4804,8 +4855,8 @@ contains
         if (this%reaches(n)%idir(i) > 0) cycle
         idiv = this%reaches(n)%idiv(i)
         if (idiv > 0) then
-          i1 = this%iadiv(n) + idiv - 1
-          q = q + this%divq(i1)
+          jpos = this%iadiv(n) + idiv - 1
+          q = q + this%divq(jpos)
         else
           q = q + this%reaches(n)%qconn(i)
         end if

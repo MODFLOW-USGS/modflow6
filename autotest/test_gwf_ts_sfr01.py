@@ -143,8 +143,8 @@ def build_model(ws, name, timeseries=False):
                [2, 1, 7, cprior],
                [2, 0, 8, cprior],
                [3, 0, 9, cprior]]
-    inflow, divflow = 1., 0.05
-    ts_names = ['inflow', 'divflow'] + auxnames
+    inflow, divflow, upstream_fraction = 1., 0.05, 0.
+    ts_names = ['inflow', 'divflow', 'ustrf'] + auxnames
     perioddata = [[0, 'status', 'active'],
                   [1, 'status', 'active'],
                   [2, 'status', 'active'],
@@ -159,10 +159,13 @@ def build_model(ws, name, timeseries=False):
         perioddata.append([2, 'diversion', 1, 'divflow'])
         perioddata.append([0, 'AUXILIARY', 'conc', 'conc'])
         perioddata.append([2, 'AUXILIARY', 'temp', 'temp'])
+        perioddata.append([5, 'upstream_fraction', 'ustrf'])
+        perioddata.append([7, 'upstream_fraction', 'ustrf'])
+        perioddata.append([9, 'upstream_fraction', 'ustrf'])
         ts_methods = ['linearend'] * len(ts_names)
         ts_data = []
         for t in ts_times:
-            ts_data.append((t, inflow, divflow, temp, conc))
+            ts_data.append((t, inflow, divflow, upstream_fraction, temp, conc))
     else:
         perioddata.append([0, 'inflow', inflow])
         perioddata.append([2, 'diversion', 1, divflow])
