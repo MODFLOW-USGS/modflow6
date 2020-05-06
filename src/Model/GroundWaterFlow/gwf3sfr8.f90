@@ -1,18 +1,18 @@
 module SfrModule
   !
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: LINELENGTH, LENBOUNDNAME, LENTIMESERIESNAME,      &
-                             DZERO, DPREC, DEM30, DEM6, DEM5, DEM4, DEM2,      &
-                             DHALF, DP6, DTWOTHIRDS, DP7, DP9, DP99, DP999,    &
-                             DONE, D1P1, DFIVETHIRDS, DTWO, DPI, DEIGHT,       &
-                             DHUNDRED, DEP20,                                  &
-                             NAMEDBOUNDFLAG, LENBOUNDNAME, LENFTYPE,           &
-                             LENPACKAGENAME, LENPAKLOC, MAXCHARLEN,            &
-                             DHNOFLO, DHDRY, DNODATA,                          &
+  use ConstantsModule, only: LINELENGTH, LENBOUNDNAME, LENTIMESERIESNAME,        &
+                             DZERO, DPREC, DEM30, DEM6, DEM5, DEM4, DEM2,        &
+                             DHALF, DP6, DTWOTHIRDS, DP7, DP9, DP99, DP999,      &
+                             DONE, D1P1, DFIVETHIRDS, DTWO, DPI, DEIGHT,         &
+                             DHUNDRED, DEP20,                                    &
+                             NAMEDBOUNDFLAG, LENBOUNDNAME, LENFTYPE,             &
+                             LENPACKAGENAME, LENPAKLOC, MAXCHARLEN,              &
+                             DHNOFLO, DHDRY, DNODATA,                            &
                              TABLEFT, TABCENTER, TABRIGHT
-  use SmoothingModule,  only: sQuadraticSaturation, sQSaturation,              &
-                              sQuadraticSaturationDerivative,                  &
-                              sQSaturationDerivative,                          &
+  use SmoothingModule,  only: sQuadraticSaturation, sQSaturation,                &
+                              sQuadraticSaturationDerivative,                    &
+                              sQSaturationDerivative,                            &
                               sCubicSaturation, sChSmooth
   use BndModule, only: BndType
   use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr
@@ -21,7 +21,8 @@ module SfrModule
   use ObsModule, only: ObsType
   use InputOutputModule, only: get_node, URWORD, extract_idnum_or_bndname
   use BaseDisModule, only: DisBaseType
-  use SimModule, only: count_errors, store_error, store_error_unit, ustop
+  use SimModule, only: count_errors, store_error, store_error_unit,              &
+                       store_warning, ustop
   use GenericUtilitiesModule, only: sim_message
   use SparseModule, only: sparsematrix
   use ArrayHandlersModule, only: ExpandArray
@@ -90,7 +91,6 @@ module SfrModule
     integer(I4B), pointer :: cbcauxitems => NULL()
     integer(I4B), pointer :: icheck => NULL()
     integer(I4B), pointer :: iconvchk => NULL()
-    integer(I4B), pointer :: iustrf_ts => NULL()
     integer(I4B), pointer :: gwfiss => NULL()
     ! -- double precision
     real(DP), pointer :: unitconv => NULL()
@@ -296,7 +296,6 @@ contains
     call mem_allocate(this%nconn, 'NCONN', this%origin)
     call mem_allocate(this%icheck, 'ICHECK', this%origin)
     call mem_allocate(this%iconvchk, 'ICONVCHK', this%origin)
-    call mem_allocate(this%iustrf_ts, 'IUSTRF_TS', this%origin)
     !
     ! -- set pointer to gwf iss
     call mem_setptr(this%gwfiss, 'ISS', trim(this%name_model))
@@ -316,7 +315,6 @@ contains
     this%nconn = 0
     this%icheck = 1
     this%iconvchk = 1
-    this%iustrf_ts = 0
     !
     ! -- return
     return
@@ -1483,6 +1481,7 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    use TimeSeriesManagerModule, only: var_timeseries
     ! -- dummy
     class(SfrType) :: this
     ! -- local
@@ -1495,7 +1494,7 @@ contains
     !
     ! -- check upstream fractions if time series are being used to
     !    define this variable
-    if (this%iustrf_ts /= 0) then
+    if (var_timeseries(this%tsManager, this%name, 'USTRF')) then
       call this%sfr_check_ustrf()
     end if
     !
@@ -2201,7 +2200,6 @@ contains
     call mem_deallocate(this%nconn)
     call mem_deallocate(this%icheck)
     call mem_deallocate(this%iconvchk)
-    call mem_deallocate(this%iustrf_ts)
     nullify(this%gwfiss)
     !
     ! -- call BndType deallocate
@@ -2612,8 +2610,7 @@ contains
     !use ConstantsModule, only: LINELENGTH, DTWO
     use TdisModule, only: kper, perlen, totimsav
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv,            &
-                                       read_single_value_or_time_series,         &
-                                       is_timeseries
+                                       read_single_value_or_time_series
     use InputOutputModule, only: urword
     use SimModule, only: ustop, store_error
     ! -- dummy
@@ -2628,7 +2625,6 @@ contains
     character(len=LINELENGTH) :: keyword
     character(len=LINELENGTH) :: errmsg
     character(len=LENBOUNDNAME) :: bndName
-    logical :: use_ts
     integer(I4B) :: ival
     integer(I4B) :: istart
     integer(I4B) :: istop
@@ -2824,15 +2820,6 @@ contains
         call read_value_or_time_series_adv(text, n, jj, bndElem, this%name,      &
                                            'BND', this%tsManager, this%iprpak,   &
                                            'USTRF')
-        !
-        ! -- determine if a time series is being used
-        if (this%iustrf_ts == 0) then
-          use_ts = is_timeseries(this%tsManager, n, jj, this%name, 'BND', 'USTRF')
-          if (use_ts) then
-            this%iustrf_ts = 1
-          end if 
-        end if
-
       case ('AUXILIARY')
         call urword(line, lloc, istart, istop, 1, ival, rval,                    &
                     this%iout, this%inunit)
@@ -4423,6 +4410,16 @@ contains
     ! -- check that the upstream fraction for reach connected by
     !    a diversion is zero
     do n = 1, this%maxbound
+      !
+      ! -- determine the number of downstream reaches
+      ids = 0
+      do i = 1, this%nconnreach(n)
+        if (this%reaches(n)%idir(i) < 0) then
+          ids = ids + 1
+        end if
+      end do
+      !
+      ! -- evaluate the diversions
       do idiv = 1, this%ndiv(n)
         jpos = this%iadiv(n) + idiv - 1
         n2 = this%divreach(jpos)
@@ -4432,7 +4429,15 @@ contains
             'Reach', n, 'is connected to reach', n2, 'by a diversion',           &
             'but the upstream fraction is not equal to zero (', f, '). Check',   &
             trim(this%name), 'package diversion and package data.'
-          call store_error(errmsg)
+          if (ids > 1) then
+            call store_error(errmsg)
+          else
+            write(errmsg, '(a,3(1x,a))')                                         &
+              trim(errmsg), 'A warning instead of an error is issued because',   &
+              'the reach is only connected to the diversion reach in the ',      &
+              'downstream direction.'
+            call store_warning(errmsg)
+          end if
         end if
       end do
     end do

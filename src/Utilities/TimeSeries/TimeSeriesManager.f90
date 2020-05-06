@@ -24,7 +24,7 @@ module TimeSeriesManagerModule
   public :: TimeSeriesManagerType, read_value_or_time_series,                    &
             read_single_value_or_time_series,                                    &
             read_value_or_time_series_adv,                                       &
-            is_timeseries, tsmanager_cr
+            var_timeseries, tsmanager_cr
 
   type TimeSeriesManagerType
     integer(I4B), public :: iout = 0                                             ! output unit number
@@ -879,14 +879,14 @@ module TimeSeriesManagerModule
     removeLink = -1
     csearchlinks: do i = 1, nlinks
       tslTemp => tsManager%GetLink(auxOrBnd, i)
+      !
+      ! -- Check ii against iRow, jj against jCol, and varName 
+      !    against Text member of link
       if (tslTemp%PackageName == pkgName) then
         !
-        ! -- Check ii against iRow, jj against jCol, and varName 
-        !    against Text member of link
+        ! -- This array element is already linked to a time series.
         if (tslTemp%IRow == ii .and. tslTemp%JCol == jj .and.                      &
             same_word(tslTemp%Text, varName)) then
-          !
-          ! -- This array element is already linked to a time series.
           found = .TRUE.
           removeLink = i
           exit csearchlinks
@@ -907,18 +907,15 @@ module TimeSeriesManagerModule
     return
   end function remove_existing_link
 
-  function is_timeseries(tsManager, ii, jj,                              &
-                         pkgName, auxOrBnd, varName) result(tsexists)
+  function var_timeseries(tsManager, pkgName, varName, auxOrBnd) result(tsexists)
 ! ******************************************************************************
-! is_timeseries -- determine if a  timeseries link is defined.
+! var_timeseries -- determine if a timeseries link with varName is defined.
 !
 ! -- Arguments are as follows:
 !       tsManager    : timeseries manager object for package
-!       ii           : column number  
-!       jj           : row number  
 !       pkgName      : package name
-!       auxOrBnd     : 'AUX' or 'BND' keyword
 !       varName      : variable name
+!       auxOrBnd     : optional 'AUX' or 'BND' keyword
 !
 ! ******************************************************************************
 !
@@ -928,36 +925,34 @@ module TimeSeriesManagerModule
     logical :: tsexists
     ! -- dummy
     type(TimeSeriesManagerType), intent(inout) :: tsManager
-    integer(I4B), intent(in)    :: ii
-    integer(I4B), intent(in)    :: jj
     character(len=*), intent(in) :: pkgName
-    character(len=3), intent(in) :: auxOrBnd
-    character(len=*), intent(in), optional :: varName
+    character(len=*), intent(in) :: varName
+    character(len=3), intent(in), optional :: auxOrBnd
     ! -- local
+    character(len=3) :: ctstype
     integer(I4B) :: i
     integer(I4B) :: nlinks
     type(TimeSeriesLinkType), pointer :: tslTemp => null()
 ! ------------------------------------------------------------------------------
     !
+    ! -- process optional variables
+    if (present(auxOrBnd)) then
+      ctstype = auxOrBnd
+    else
+      ctstype = 'BND'
+    end if
+    !
     ! -- initialize the return variable and the number of timeseries links
     tsexists = .FALSE.
-    nlinks = tsManager%CountLinks(auxOrBnd)
+    nlinks = tsManager%CountLinks(ctstype)
     !
     ! -- determine if link exists
     csearchlinks: do i = 1, nlinks
-      tslTemp => tsManager%GetLink(auxOrBnd, i)
+      tslTemp => tsManager%GetLink(ctstype, i)
       if (tslTemp%PackageName == pkgName) then
         !
-        ! -- Check ii against iRow, jj against jCol, and varName 
-        !    against Text member of link
-        if (tslTemp%IRow == ii .and. tslTemp%JCol == jj) then
-          if (present(varName)) then
-            if (.not. same_word(tslTemp%Text, varName)) then
-              cycle csearchlinks
-            end if
-          end if
-          !
-          ! -- This array element is already linked to a time series.
+        ! -- Check varName against Text member of link
+        if (same_word(tslTemp%Text, varName)) then
           tsexists = .TRUE.
           exit csearchlinks
         end if
@@ -966,6 +961,6 @@ module TimeSeriesManagerModule
     !
     ! -- return
     return
-  end function is_timeseries
+  end function var_timeseries
 
 end module TimeSeriesManagerModule
