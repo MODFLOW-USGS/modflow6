@@ -137,6 +137,11 @@ module SfrModule
     real(DP), dimension(:), pointer, contiguous :: simrunoff => null()
     real(DP), dimension(:), pointer, contiguous :: stage0 => null()
     real(DP), dimension(:), pointer, contiguous :: usflow0 => null()
+    ! -- connection data
+    integer(I4B), dimension(:), pointer, contiguous :: iconn => null()
+    integer(I4B), dimension(:), pointer, contiguous :: idir => null()
+    integer(I4B), dimension(:), pointer, contiguous :: idiv => null()
+    real(DP), dimension(:), pointer, contiguous :: qconn => null()
     ! -- boundary data
     real(DP), dimension(:), pointer, contiguous :: rough => null()
     real(DP), dimension(:), pointer, contiguous :: rain => null()
@@ -366,6 +371,14 @@ contains
     call mem_allocate(this%simrunoff, this%maxbound, 'SIMRUNOFF', this%origin)
     call mem_allocate(this%stage0, this%maxbound, 'STAGE0', this%origin)
     call mem_allocate(this%usflow0, this%maxbound, 'USFLOW0', this%origin)
+    !
+    ! -- connection data
+    call mem_allocate(this%ia, this%maxbound+1, 'IA', this%origin)
+    call mem_allocate(this%ja, 0, 'JA', this%origin)
+    call mem_allocate(this%iconn, 0, 'ICONN', this%origin)
+    call mem_allocate(this%idir, 0, 'IDIR', this%origin)
+    call mem_allocate(this%idiv, 0, 'IDIV', this%origin)
+    call mem_allocate(this%qconn, 0, 'QCONN', this%origin)
     !
     ! -- boundary data
     call mem_allocate(this%rough, this%maxbound, 'ROUGH', this%origin)
@@ -991,17 +1004,28 @@ contains
   !    SPECIFICATIONS:
   ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
+    use MemoryManagerModule, only: mem_reallocate
     use SimModule, only: ustop, store_error, count_errors
     ! -- dummy
     class(SfrType),intent(inout) :: this
     ! -- local
     character (len=LINELENGTH) :: line, errmsg
-    integer(I4B) :: n, ierr, ival
-    logical :: isfound, endOfBlock
-    integer(I4B) :: i
+    logical :: isfound
+    logical :: endOfBlock
+    integer(I4B) :: n
+    integer(I4B) :: i 
+    integer(I4B) :: j
+    integer(I4B) :: jj
+    integer(I4B) :: jcol
+    integer(I4B) :: jcol2
     integer(I4B) :: nja
+    integer(I4B) :: ival
+    integer(I4B) :: idir
+    integer(I4B) :: ierr
+    integer(I4B) :: nconnmax
     integer(I4B), dimension(:), pointer, contiguous :: rowmaxnnz => null()
     integer, allocatable, dimension(:) :: nboundchk
+    integer, allocatable, dimension(:,:) :: iconndata
     ! -- format
   ! ------------------------------------------------------------------------------
     !
@@ -1011,21 +1035,49 @@ contains
       nboundchk(n) = 0
     end do
     !
-    ! -- 
+    ! -- calculate the number of non-zero entries (size of ja maxtrix)
     nja = 0
+    nconnmax = 0
     allocate(rowmaxnnz(this%maxbound))
     do n = 1, this%maxbound
       ival = this%nconnreach(n)
       if (ival < 0) ival = 0
       rowmaxnnz(n) = ival + 1
       nja = nja + ival + 1
-    enddo 
+      if (ival > nconnmax) then
+        nconnmax = ival
+      end if
+    end do 
+    !
+    ! -- reallocate connection data for package
+    call mem_reallocate(this%ja, nja, 'JA', this%origin)
+    call mem_reallocate(this%iconn, nja, 'ICONN', this%origin)
+    call mem_reallocate(this%idir, nja, 'IDIR', this%origin)
+    call mem_reallocate(this%idiv, nja, 'IDIV', this%origin)
+    call mem_reallocate(this%qconn, nja, 'QCONN', this%origin)
+    !
+    ! -- initialize connection data
+    do n = 1, nja
+      this%iconn(n) = 0
+      this%idir(n) = 0
+      this%idiv(n) = 0
+      this%qconn(n) = DZERO
+    end do
+    !
+    ! -- allocate space for iconndata
+    allocate(iconndata(nconnmax, this%maxbound))
+    !
+    ! -- initialize iconndata
+    do n = 1, this%maxbound
+      do j = 1, nconnmax
+        iconndata(j, n) = 0
+      end do
+    end do
     !
     ! -- allocate space for connectivity
     allocate(this%sparse)
     !
     ! -- set up sparse
-    
     call this%sparse%init(this%maxbound, this%maxbound, rowmaxnnz)
     !
     ! -- read connection data
@@ -1034,8 +1086,8 @@ contains
     !
     ! -- parse reach connectivity block if detected
     if (isfound) then
-      write(this%iout,'(/1x,a)')'PROCESSING '//trim(adjustl(this%text))// &
-        ' CONNECTIONDATA'
+      write(this%iout,'(/1x,a)')                                                 &
+        'PROCESSING ' // trim(adjustl(this%text)) // ' CONNECTIONDATA'
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
@@ -1045,7 +1097,7 @@ contains
         !
         ! -- check for error
         if(n < 1 .or. n > this%maxbound) then
-          write(errmsg, '(a, i0)') 'SFR REACH LESS THAN ONE OR > NREACHES: ', n
+          write(errmsg, '(a, i0)') 'SFR reach less than one or > NREACHES: ', n
           call store_error(errmsg)
           cycle
         endif
@@ -1060,68 +1112,108 @@ contains
         !
         ! -- fill off diagonals
         do i = 1, this%nconnreach(n)
+          !
+          ! -- get connected reach
           ival = this%parser%GetInteger()
+          !
+          ! -- save connection data to temporary iconndata
+          iconndata(i, n) = ival
+          !
+          ! -- determine idir
           if (ival < 0) then
-            this%reaches(n)%idir(i) = -1
+            !this%reaches(n)%idir(i) = -1
+            idir = -1
             ival = abs(ival)
           elseif (ival == 0) then
             call store_error('Missing or zero connection reach in line:')
             call store_error(line)
           else
-            this%reaches(n)%idir(i) = 1
+            !this%reaches(n)%idir(i) = 1
+            idir = 1
           end if
           if (ival > this%maxbound) then
             call store_error('Reach number exceeds NREACHES in line:')
             call store_error(line)
           endif
           this%reaches(n)%iconn(i) = ival
+          this%reaches(n)%idir(i) = idir
           this%reaches(n)%idiv(i) = 0
+          !
+          ! -- add connection to sparse
           call this%sparse%addconnection(n, ival, 1)
         end do
       end do
       
-      write(this%iout,'(1x,a)') 'END OF '//trim(adjustl(this%text))//            &
-                                ' CONNECTIONDATA'
+      write(this%iout,'(1x,a)')                                                  &
+        'END OF ' // trim(adjustl(this%text)) // ' CONNECTIONDATA'
       
       do n = 1, this%maxbound
         if (this%nconnreach(n) > 0) then
           !
           ! -- check for missing or duplicate sfr connections
           if (nboundchk(n) == 0) then
-            write(errmsg,'(a,1x,i0)')                                             &
-              'ERROR.  NO CONNECTION DATA SPECIFIED FOR REACH', n
+            write(errmsg,'(a,1x,i0)')                                            &
+              'No connection data specified for reach', n
             call store_error(errmsg)
           else if (nboundchk(n) > 1) then
-            write(errmsg,'(a,1x,i0,1x,a,1x,i0,1x,a)')                             &
-              'ERROR.  CONNECTION DATA FOR REACH', n,                             &
-              'SPECIFIED', nboundchk(n), 'TIMES'
+            write(errmsg,'(a,1x,i0,1x,a,1x,i0,1x,a)')                            &
+              'Connection data for reach', n,                                    &
+              'specified', nboundchk(n), 'times.'
             call store_error(errmsg)
           end if
         end if
       end do
       
     else
-      call store_error('ERROR.  REQUIRED CONNECTIONDATA BLOCK NOT FOUND.')
+      call store_error('Required connectiondata block not found.')
     end if
-    !
-    ! -- deallocate local storage for reach connections
-    deallocate(nboundchk)
     !
     ! -- terminate if errors encountered in connectiondata block
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
       call ustop()
     end if
+    !!
+    !! -- allocate ia and ja for package
+    !allocate(this%ia(this%maxbound+1))
+    !allocate(this%ja(nja))
     !
-    ! -- allocate ia and ja for package
-    allocate(this%ia(this%maxbound+1))
-    allocate(this%ja(nja))
+    ! -- sort the ja array
+    call this%sparse%sort()
     !
     ! -- create ia and ja from sparse
     call this%sparse%filliaja(this%ia,this%ja,ierr)
     !
-    ! -- deallocate temporary storage
+    ! -- test for error condition
+    if (ierr /= 0) then
+      write(errmsg, '(a,3(1x,a))')                                               &
+        'Could not fill', trim(this%name), 'package IA and JA connection data.', &
+        'Check connectivity data in connectiondata block'
+    end if
+    !
+    ! -- fill flat connection storage
+    do n = 1, this%maxbound
+      do j = this%ia(n) + 1, this%ia(n+1) - 1
+        jcol = this%ja(j)
+        do jj = 1, this%nconnreach(n)
+          jcol2 = iconndata(jj, n)
+          if (abs(jcol2) == jcol) then
+            idir = 1
+            if (jcol2 < 0) then
+              idir = -1
+            end if
+            this%iconn(j) = jcol
+            this%idir(j) = idir
+            exit
+          end if
+        end do
+      end do
+    end do
+    !
+    ! -- deallocate temporary local storage for reach connections
     deallocate(rowmaxnnz)
+    deallocate(nboundchk)
+    deallocate(iconndata)
     !
     ! -- destroy sparse
     call this%sparse%destroy()
@@ -1928,8 +2020,13 @@ contains
       if (qext > DZERO) then
         qext = -qext
       end if
-      do i = 1, this%nconnreach(n)
-        if (this%reaches(n)%idir(i) > 0) cycle
+      !do i = 1, this%nconnreach(n)
+      !  if (this%reaches(n)%idir(i) > 0) cycle
+      !  qext = DZERO
+      !  exit
+      !end do
+      do i = this%ia(n) + 1, this%ia(n+1) - 1
+        if (this%idir(i) > 0) cycle
         qext = DZERO
         exit
       end do
@@ -2126,6 +2223,14 @@ contains
     call mem_deallocate(this%stage0)
     call mem_deallocate(this%usflow0)
     !
+    ! -- connection data
+    call mem_deallocate(this%ia)
+    call mem_deallocate(this%ja)
+    call mem_deallocate(this%iconn)
+    call mem_deallocate(this%idir)
+    call mem_deallocate(this%idiv)
+    call mem_deallocate(this%qconn)
+    !
     ! -- boundary data
     call mem_deallocate(this%rough)
     call mem_deallocate(this%rain)
@@ -2161,10 +2266,10 @@ contains
     enddo
     deallocate(this%reaches)
     call mem_deallocate(this%nconnreach)
-    !
-    ! -- ia ja
-    deallocate(this%ia)
-    deallocate(this%ja)
+    !!
+    !! -- ia ja
+    !deallocate(this%ia)
+    !deallocate(this%ja)
     !
     ! -- budobj
     call this%budobj%budgetobject_da()
@@ -2607,7 +2712,6 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    !use ConstantsModule, only: LINELENGTH, DTWO
     use TdisModule, only: kper, perlen, totimsav
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv,            &
                                        read_single_value_or_time_series
@@ -3128,13 +3232,22 @@ contains
     !    groundwater leakage
     ! -- calculate upstream flow
     qu = DZERO
-    do i = 1, this%nconnreach(n)
-      if (this%reaches(n)%idir(i) < 0) cycle
-      n2 = this%reaches(n)%iconn(i)
-      do ii = 1, this%nconnreach(n2)
-        if (this%reaches(n2)%idir(ii) > 0) cycle
-        if (this%reaches(n2)%iconn(ii) /= n) cycle
-        qu = qu + this%reaches(n2)%qconn(ii)
+    !do i = 1, this%nconnreach(n)
+    !  if (this%reaches(n)%idir(i) < 0) cycle
+    !  n2 = this%reaches(n)%iconn(i)
+    !  do ii = 1, this%nconnreach(n2)
+    !    if (this%reaches(n2)%idir(ii) > 0) cycle
+    !    if (this%reaches(n2)%iconn(ii) /= n) cycle
+    !    qu = qu + this%reaches(n2)%qconn(ii)
+    !  end do
+    !end do
+    do i = this%ia(n) + 1, this%ia(n+1) - 1
+      if (this%idir(i) < 0) cycle
+      n2 = this%iconn(i)
+      do ii = this%ia(n2) + 1, this%ia(n2+1) - 1
+        if (this%idir(ii) > 0) cycle
+        if (this%iconn(ii) /= n) cycle
+        qu = qu + this%qconn(ii)
       end do
     end do
     this%usflow(n) = qu
@@ -3516,13 +3629,22 @@ contains
     if (qd > DZERO) then
       !
       ! -- route water to diversions
-      do i = 1, this%nconnreach(n)
-        if (this%reaches(n)%idir(i) > 0) cycle
-        idiv = this%reaches(n)%idiv(i)
+      !do i = 1, this%nconnreach(n)
+      !  if (this%reaches(n)%idir(i) > 0) cycle
+      !  idiv = this%reaches(n)%idiv(i)
+      !  if (idiv == 0) cycle
+      !  jpos = this%iadiv(n) + idiv - 1
+      !  call this%sfr_calc_div(n, idiv, qd, qdiv)
+      !  this%reaches(n)%qconn(i) = qdiv
+      !  this%divq(jpos) = qdiv
+      !end do
+      do i = this%ia(n) + 1, this%ia(n+1) - 1
+        if (this%idir(i) > 0) cycle
+        idiv = this%idiv(i)
         if (idiv == 0) cycle
         jpos = this%iadiv(n) + idiv - 1
         call this%sfr_calc_div(n, idiv, qd, qdiv)
-        this%reaches(n)%qconn(i) = qdiv
+        this%qconn(i) = qdiv
         this%divq(jpos) = qdiv
       end do
       !
@@ -3535,17 +3657,28 @@ contains
       endif
       !
       ! -- route remaining water to downstream reaches
-      do i = 1, this%nconnreach(n)
-        if (this%reaches(n)%idir(i) > 0) cycle
-        if (this%reaches(n)%idiv(i) > 0) cycle
-        n2 = this%reaches(n)%iconn(i)
+      !do i = 1, this%nconnreach(n)
+      !  if (this%reaches(n)%idir(i) > 0) cycle
+      !  if (this%reaches(n)%idiv(i) > 0) cycle
+      !  n2 = this%reaches(n)%iconn(i)
+      !  f = this%ustrf(n2) / this%ftotnd(n)
+      !  this%reaches(n)%qconn(i) = qd * f
+      !end do
+      do i = this%ia(n) + 1, this%ia(n+1) - 1
+        if (this%idir(i) > 0) cycle
+        if (this%idiv(i) > 0) cycle
+        n2 = this%iconn(i)
         f = this%ustrf(n2) / this%ftotnd(n)
-        this%reaches(n)%qconn(i) = qd * f
+        this%qconn(i) = qd * f
       end do
     else
-      do i = 1, this%nconnreach(n)
-        if (this%reaches(n)%idir(i) > 0) cycle
-        this%reaches(n)%qconn(i) = DZERO
+      !do i = 1, this%nconnreach(n)
+      !  if (this%reaches(n)%idir(i) > 0) cycle
+      !  this%reaches(n)%qconn(i) = DZERO
+      !end do
+      do i = this%ia(n) + 1, this%ia(n+1) - 1
+        if (this%idir(i) > 0) cycle
+        this%qconn(i) = DZERO
       end do
     end if
     !
@@ -4027,32 +4160,53 @@ contains
     ! -- connection check
     do n = 1, this%maxbound
       write(crch, '(i5)') n
-      eachconn: do i = 1, this%nconnreach(n)
-        nn = this%reaches(n)%iconn(i)
+      !eachconn: do i = 1, this%nconnreach(n)
+      !  nn = this%reaches(n)%iconn(i)
+      !  write(crch2, '(i5)') nn
+      !  ifound = 0
+      !  connreach: do ii = 1, this%nconnreach(nn)
+      !    nc = this%reaches(nn)%iconn(ii)
+      !    if (nc == n) then
+      !      ifound = 1
+      !      exit connreach
+      !    end if
+      !  end do connreach
+      !  if (ifound /= 1) then
+      !    errmsg = 'ERROR: Reach ' // crch // ' is connected to ' //             &
+      !             'reach ' // crch2 // ' but reach ' // crch2 //                &
+      !             ' is not connected to reach ' // crch // '.'
+      !    call store_error(errmsg)
+      !    call this%parser%StoreErrorUnit()
+      !    call ustop()
+      !  end if
+      !end do eachconn
+      eachconn: do i = this%ia(n) + 1, this%ia(n+1) - 1
+        nn = this%iconn(i)
         write(crch2, '(i5)') nn
         ifound = 0
-        connreach: do ii = 1, this%nconnreach(nn)
-          nc = this%reaches(nn)%iconn(ii)
+        connreach: do ii = this%ia(nn) + 1, this%ia(nn+1) - 1
+          nc = this%iconn(ii)
           if (nc == n) then
             ifound = 1
             exit connreach
           end if
         end do connreach
         if (ifound /= 1) then
-          errmsg = 'ERROR: Reach ' // crch // ' is connected to ' //             &
+          errmsg = 'Reach ' // crch // ' is connected to ' //                    &
                    'reach ' // crch2 // ' but reach ' // crch2 //                &
                    ' is not connected to reach ' // crch // '.'
           call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-          call ustop()
         end if
       end do eachconn
       !
       ! -- write connection data to the table
       if (this%iprpak /= 0) then
         call this%inputtab%add_term(n)
-        do i = 1, this%nconnreach(n)
-          call this%inputtab%add_term(this%reaches(n)%iconn(i))
+        !do i = 1, this%nconnreach(n)
+        !  call this%inputtab%add_term(this%reaches(n)%iconn(i))
+        !end do
+        do i = this%ia(n) + 1, this%ia(n+1) - 1
+          call this%inputtab%add_term(this%iconn(i))
         end do
         nn = maxconn - this%nconnreach(n)
         do i = 1, nn
@@ -4067,22 +4221,45 @@ contains
     ierr = 0
     do n = 1, this%maxbound
       write(crch, '(i5)') n
-      eachconnv: do i = 1, this%nconnreach(n)
+      !eachconnv: do i = 1, this%nconnreach(n)
+      !  !
+      !  ! -- skip downstream connections
+      !  if (this%reaches(n)%idir(i) < 0) cycle eachconnv
+      !  nn = this%reaches(n)%iconn(i)
+      !  write(crch2, '(i5)') nn
+      !  connreachv: do ii = 1, this%nconnreach(nn)
+      !    ! -- skip downstream connections
+      !    if (this%reaches(nn)%idir(ii) < 0) cycle connreachv
+      !    nc = this%reaches(nn)%iconn(ii)
+      !    !
+      !    ! -- if n == n then that means reach n is an upstream connection for
+      !    !    reach nn and reach nn is an upstream connection for reach n
+      !    if (nc == n) then
+      !      ierr = ierr + 1
+      !      errmsg = 'ERROR: Reach ' // crch // ' is connected to ' //           &
+      !               'reach ' // crch2 // ' but streamflow from reach ' //       &
+      !               crch // ' to reach ' // crch2 // ' is not permitted.'
+      !      call store_error(errmsg)
+      !      exit connreachv
+      !    end if
+      !  end do connreachv
+      !end do eachconnv
+      eachconnv: do i = this%ia(n) + 1, this%ia(n + 1) - 1
         !
         ! -- skip downstream connections
-        if (this%reaches(n)%idir(i) < 0) cycle eachconnv
-        nn = this%reaches(n)%iconn(i)
+        if (this%idir(i) < 0) cycle eachconnv
+        nn = this%iconn(i)
         write(crch2, '(i5)') nn
-        connreachv: do ii = 1, this%nconnreach(nn)
+        connreachv: do ii = this%ia(nn) + 1, this%ia(nn+1) - 1
           ! -- skip downstream connections
-          if (this%reaches(nn)%idir(ii) < 0) cycle connreachv
-          nc = this%reaches(nn)%iconn(ii)
+          if (this%idir(ii) < 0) cycle connreachv
+          nc = this%iconn(ii)
           !
-          ! -- if n == n then that means reach n is an upstream connection for
+          ! -- if nc == n then that means reach n is an upstream connection for
           !    reach nn and reach nn is an upstream connection for reach n
           if (nc == n) then
             ierr = ierr + 1
-            errmsg = 'ERROR: Reach ' // crch // ' is connected to ' //           &
+            errmsg = 'Reach ' // crch // ' is connected to ' //                  &
                      'reach ' // crch2 // ' but streamflow from reach ' //       &
                      crch // ' to reach ' // crch2 // ' is not permitted.'
             call store_error(errmsg)
@@ -4091,7 +4268,9 @@ contains
         end do connreachv
       end do eachconnv
     end do
-    if (ierr > 0) then
+    !
+    ! -- terminate if connectivity errors
+    if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
       call ustop()
     end if
@@ -4100,22 +4279,43 @@ contains
     !    the upstream reaches for the reach
     do n = 1, this%maxbound
       write(crch, '(i5)') n
-      eachconnds: do i = 1, this%nconnreach(n)
-        nn = this%reaches(n)%iconn(i)
-        if (this%reaches(n)%idir(i) > 0) cycle eachconnds
+      !eachconnds: do i = 1, this%nconnreach(n)
+      !  nn = this%reaches(n)%iconn(i)
+      !  if (this%reaches(n)%idir(i) > 0) cycle eachconnds
+      !  write(crch2, '(i5)') nn
+      !  ifound = 0
+      !  connreachds: do ii = 1, this%nconnreach(nn)
+      !    nc = this%reaches(nn)%iconn(ii)
+      !    if (nc == n) then
+      !      if (this%reaches(n)%idir(i) /= this%reaches(nn)%idir(ii)) then
+      !        ifound = 1
+      !      end if
+      !      exit connreachds
+      !    end if
+      !  end do connreachds
+      !  if (ifound /= 1) then
+      !    errmsg = 'ERROR: Reach ' // crch // ' downstream connected reach ' //  &
+      !             'is reach ' // crch2 // ' but reach ' // crch // ' is not' // &
+      !             ' the upstream connected reach for reach ' // crch2 // '.'
+      !    call store_error(errmsg)
+      !  end if
+      !end do eachconnds
+      eachconnds: do i = this%ia(n) + 1, this%ia(n+1) - 1
+        nn = this%iconn(i)
+        if (this%idir(i) > 0) cycle eachconnds
         write(crch2, '(i5)') nn
         ifound = 0
-        connreachds: do ii = 1, this%nconnreach(nn)
-          nc = this%reaches(nn)%iconn(ii)
+        connreachds: do ii = this%ia(nn) + 1, this%ia(nn+1) - 1
+          nc = this%iconn(ii)
           if (nc == n) then
-            if (this%reaches(n)%idir(i) /= this%reaches(nn)%idir(ii)) then
+            if (this%idir(i) /= this%idir(ii)) then
               ifound = 1
             end if
             exit connreachds
           end if
         end do connreachds
         if (ifound /= 1) then
-          errmsg = 'ERROR: Reach ' // crch // ' downstream connected reach ' //  &
+          errmsg = 'Reach ' // crch // ' downstream connected reach ' //         &
                    'is reach ' // crch2 // ' but reach ' // crch // ' is not' // &
                    ' the upstream connected reach for reach ' // crch2 // '.'
           call store_error(errmsg)
@@ -4130,8 +4330,13 @@ contains
       maxconn = 0
       do n = 1, this%maxbound
         ii = 0
-        do i = 1, this%nconnreach(n)
-          if (this%reaches(n)%idir(i) > 0) then
+        !do i = 1, this%nconnreach(n)
+        !  if (this%reaches(n)%idir(i) > 0) then
+        !    ii = ii + 1
+        !  end if
+        !end do
+        do i = this%ia(n) + 1, this%ia(n+1) - 1
+          if (this%idir(i) > 0) then
             ii = ii + 1
           end if
         end do
@@ -4156,9 +4361,15 @@ contains
       do n = 1, this%maxbound
         call this%inputtab%add_term(n)
         ii = 0
-        do i = 1, this%nconnreach(n)
-          if (this%reaches(n)%idir(i) > 0) then
-            call this%inputtab%add_term(this%reaches(n)%iconn(i))
+        !do i = 1, this%nconnreach(n)
+        !  if (this%reaches(n)%idir(i) > 0) then
+        !    call this%inputtab%add_term(this%reaches(n)%iconn(i))
+        !    ii = ii + 1
+        !  end if
+        !end do
+        do i = this%ia(n) + 1, this%ia(n+1) - 1
+          if (this%idir(i) > 0) then
+            call this%inputtab%add_term(this%iconn(i))
             ii = ii + 1
           end if
         end do
@@ -4172,8 +4383,13 @@ contains
       maxconn = 0
       do n = 1, this%maxbound
         ii = 0
-        do i = 1, this%nconnreach(n)
-          if (this%reaches(n)%idir(i) < 0) then
+        !do i = 1, this%nconnreach(n)
+        !  if (this%reaches(n)%idir(i) < 0) then
+        !    ii = ii + 1
+        !  end if
+        !end do
+        do i = this%ia(n) + 1, this%ia(n+1) - 1
+          if (this%idir(i) < 0) then
             ii = ii + 1
           end if
         end do
@@ -4198,9 +4414,15 @@ contains
       do n = 1, this%maxbound
         call this%inputtab%add_term(n)
         ii = 0
-        do i = 1, this%nconnreach(n)
-          if (this%reaches(n)%idir(i) < 0) then
-            call this%inputtab%add_term(this%reaches(n)%iconn(i))
+        !do i = 1, this%nconnreach(n)
+        !  if (this%reaches(n)%idir(i) < 0) then
+        !    call this%inputtab%add_term(this%reaches(n)%iconn(i))
+        !    ii = ii + 1
+        !  end if
+        !end do
+        do i = this%ia(n) + 1, this%ia(n+1) - 1
+          if (this%idir(i) < 0) then
+            call this%inputtab%add_term(this%iconn(i))
             ii = ii + 1
           end if
         end do
@@ -4357,11 +4579,24 @@ contains
       npairs = 0
       do n = 1, this%maxbound
         ipair = 0
-        ec: do i = 1, this%nconnreach(n)
+        !ec: do i = 1, this%nconnreach(n)
+        !  !
+        !  ! -- skip upstream connections
+        !  if (this%reaches(n)%idir(i) > 0) cycle ec
+        !  n2 = this%reaches(n)%iconn(i)
+        !  !
+        !  ! -- skip inactive downstream reaches
+        !  if (this%iboundpak(n2) == 0) cycle ec
+        !  !
+        !  ! -- increment ipair and see if it exceeds npairs
+        !  ipair = ipair + 1
+        !  npairs = max(npairs, ipair)
+        !end do ec
+        ec: do i = this%ia(n) + 1, this%ia(n+1) - 1
           !
           ! -- skip upstream connections
-          if (this%reaches(n)%idir(i) > 0) cycle ec
-          n2 = this%reaches(n)%iconn(i)
+          if (this%idir(i) > 0) cycle ec
+          n2 = this%iconn(i)
           !
           ! -- skip inactive downstream reaches
           if (this%iboundpak(n2) == 0) cycle ec
@@ -4396,10 +4631,17 @@ contains
         i0 = this%iadiv(n)
         i1 = this%iadiv(n+1) - 1
         do jpos = i0, i1 
-          do i = 1, this%nconnreach(n)
-            n2 = this%reaches(n)%iconn(i)
+          !do i = 1, this%nconnreach(n)
+          !  n2 = this%reaches(n)%iconn(i)
+          !  if (this%divreach(jpos) == n2) then
+          !    this%reaches(n)%idiv(i) = jpos - i0 + 1
+          !    exit
+          !  end if 
+          !end do
+          do i = this%ia(n) + 1, this%ia(n+1) - 1
+            n2 = this%ja(i)
             if (this%divreach(jpos) == n2) then
-              this%reaches(n)%idiv(i) = jpos - i0 + 1
+              this%idiv(i) = jpos - i0 + 1
               exit
             end if 
           end do
@@ -4413,8 +4655,13 @@ contains
       !
       ! -- determine the number of downstream reaches
       ids = 0
-      do i = 1, this%nconnreach(n)
-        if (this%reaches(n)%idir(i) < 0) then
+      !do i = 1, this%nconnreach(n)
+      !  if (this%reaches(n)%idir(i) < 0) then
+      !    ids = ids + 1
+      !  end if
+      !end do
+      do i = this%ia(n) + 1, this%ia(n+1) - 1
+        if (this%idir(i) < 0) then
           ids = ids + 1
         end if
       end do
@@ -4454,17 +4701,61 @@ contains
         call this%inputtab%add_term(n)
       end if
       ipair = 0
-      eachconn: do i = 1, this%nconnreach(n)
+      !eachconn: do i = 1, this%nconnreach(n)
+      !  lcycle = .FALSE.
+      !  !
+      !  ! -- initialize downstream connection q
+      !  this%reaches(n)%qconn(i) = DZERO
+      !  !
+      !  ! -- skip upstream connections
+      !  if (this%reaches(n)%idir(i) > 0) then
+      !    lcycle = .TRUE.
+      !  end if
+      !  n2 = this%reaches(n)%iconn(i)
+      !  !
+      !  ! -- skip inactive downstream reaches
+      !  if (this%iboundpak(n2) == 0) then
+      !    lcycle = .TRUE.
+      !  end if
+      !  if (lcycle) then
+      !    cycle eachconn
+      !  end if
+      !  ipair = ipair + 1
+      !  write(crch2, '(i5)') n2
+      !  ids = ids + 1
+      !  ladd = .true.
+      !  f = f + this%ustrf(n2)
+      !  write(cval, '(f10.4)') this%ustrf(n2)
+      !  !
+      !  ! -- write upstream fractions
+      !  if (this%iprpak /= 0) then
+      !    call this%inputtab%add_term(n2)
+      !    call this%inputtab%add_term(this%ustrf(n2))
+      !  end if
+      !  eachdiv: do idiv = 1, this%ndiv(n)
+      !    jpos = this%iadiv(n) + idiv - 1
+      !    !if (this%reaches(n)%diversion(idiv)%reach == n2) then
+      !    if (this%divreach(jpos) == n2) then
+      !      !this%reaches(n)%idiv(i) = idiv
+      !      ladd = .false.
+      !      exit eachconn
+      !    end if
+      !  end do eachdiv
+      !  if (ladd) then
+      !    rval = rval + this%ustrf(n2)
+      !  end if
+      !end do eachconn
+      eachconn: do i = this%ia(n) + 1, this%ia(n+1) - 1
         lcycle = .FALSE.
         !
         ! -- initialize downstream connection q
-        this%reaches(n)%qconn(i) = DZERO
+        this%qconn(i) = DZERO
         !
         ! -- skip upstream connections
-        if (this%reaches(n)%idir(i) > 0) then
+        if (this%idir(i) > 0) then
           lcycle = .TRUE.
         end if
-        n2 = this%reaches(n)%iconn(i)
+        n2 = this%iconn(i)
         !
         ! -- skip inactive downstream reaches
         if (this%iboundpak(n2) == 0) then
@@ -4487,9 +4778,7 @@ contains
         end if
         eachdiv: do idiv = 1, this%ndiv(n)
           jpos = this%iadiv(n) + idiv - 1
-          !if (this%reaches(n)%diversion(idiv)%reach == n2) then
           if (this%divreach(jpos) == n2) then
-            !this%reaches(n)%idiv(i) = idiv
             ladd = .false.
             exit eachconn
           end if
@@ -4581,8 +4870,12 @@ contains
     q = DZERO
     do n = 1, this%maxbound
       n1 = n
-      do i = 1, this%nconnreach(n)
-        n2 = this%reaches(n)%iconn(i)
+      !do i = 1, this%nconnreach(n)
+      !  n2 = this%reaches(n)%iconn(i)
+      !  call this%budobj%budterm(idx)%update_term(n1, n2, q)
+      !end do
+      do i = this%ia(n) + 1, this%ia(n+1) - 1
+        n2 = this%iconn(i)
         call this%budobj%budterm(idx)%update_term(n1, n2, q)
       end do
     end do
@@ -4775,19 +5068,40 @@ contains
     call this%budobj%budterm(idx)%reset(this%nconn)
     do n = 1, this%maxbound
       n1 = n
-      do i = 1, this%nconnreach(n)
-        n2 = this%reaches(n)%iconn(i)
+      !do i = 1, this%nconnreach(n)
+      !  n2 = this%reaches(n)%iconn(i)
+      !  ! flow to downstream reaches
+      !  if (this%reaches(n)%idir(i) < 0) then
+      !    qt = this%dsflow(n)
+      !    q = -this%reaches(n)%qconn(i)
+      !  ! flow from upstream reaches
+      !  else
+      !    qt = this%usflow(n)
+      !    do ii = 1, this%nconnreach(n2)
+      !      if (this%reaches(n2)%idir(ii) > 0) cycle
+      !      if (this%reaches(n2)%iconn(ii) /= n) cycle
+      !      q = this%reaches(n2)%qconn(ii)
+      !      exit
+      !    end do
+      !  end if
+      !  ! calculate flow area
+      !  call this%sfr_rectch_depth(n, qt, d)
+      !  this%qauxcbc(1) = d * this%width(n)
+      !  call this%budobj%budterm(idx)%update_term(n1, n2, q, this%qauxcbc)
+      !end do
+      do i = this%ia(n) + 1, this%ia(n+1) - 1
+        n2 = this%iconn(i)
         ! flow to downstream reaches
-        if (this%reaches(n)%idir(i) < 0) then
+        if (this%idir(i) < 0) then
           qt = this%dsflow(n)
-          q = -this%reaches(n)%qconn(i)
+          q = -this%qconn(i)
         ! flow from upstream reaches
         else
           qt = this%usflow(n)
-          do ii = 1, this%nconnreach(n2)
-            if (this%reaches(n2)%idir(ii) > 0) cycle
-            if (this%reaches(n2)%iconn(ii) /= n) cycle
-            q = this%reaches(n2)%qconn(ii)
+          do ii = this%ia(n2) + 1, this%ia(n2+1) - 1
+            if (this%idir(ii) > 0) cycle
+            if (this%iconn(ii) /= n) cycle
+            q = this%qconn(ii)
             exit
           end do
         end if
@@ -4856,18 +5170,28 @@ contains
       !q = this%dsflow(n)
       !if (q > DZERO) q = -q
       q = DZERO
-      do i = 1, this%nconnreach(n)
-        if (this%reaches(n)%idir(i) > 0) cycle
-        idiv = this%reaches(n)%idiv(i)
+      !do i = 1, this%nconnreach(n)
+      !  if (this%reaches(n)%idir(i) > 0) cycle
+      !  idiv = this%reaches(n)%idiv(i)
+      !  if (idiv > 0) then
+      !    jpos = this%iadiv(n) + idiv - 1
+      !    q = q + this%divq(jpos)
+      !  else
+      !    q = q + this%reaches(n)%qconn(i)
+      !  end if
+      !  !if (this%reaches(n)%idir(i) > 0) cycle
+      !  !q = DZERO
+      !  !exit
+      !end do
+      do i = this%ia(n) + 1, this%ia(n+1) - 1
+        if (this%idir(i) > 0) cycle
+        idiv = this%idiv(i)
         if (idiv > 0) then
           jpos = this%iadiv(n) + idiv - 1
           q = q + this%divq(jpos)
         else
-          q = q + this%reaches(n)%qconn(i)
+          q = q + this%qconn(i)
         end if
-        !if (this%reaches(n)%idir(i) > 0) cycle
-        !q = DZERO
-        !exit
       end do
       q = q - this%dsflow(n)
       !if (q > DZERO) then
