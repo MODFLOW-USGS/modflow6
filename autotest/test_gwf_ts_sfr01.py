@@ -143,7 +143,7 @@ def build_model(ws, name, timeseries=False):
                [2, 1, 7, cprior],
                [2, 0, 8, cprior],
                [3, 0, 9, cprior]]
-    inflow, divflow, upstream_fraction = 1., 0.05, 0.
+    inflow, divflow, divflow2, upstream_fraction = 1., 0.05, 0.04, 0.
     ts_names = ['inflow', 'divflow', 'ustrf'] + auxnames
     perioddata = [[0, 'status', 'active'],
                   [1, 'status', 'active'],
@@ -152,7 +152,7 @@ def build_model(ws, name, timeseries=False):
                   [4, 'status', 'active'],
                   [0, 'diversion', 0, divflow],
                   [1, 'diversion', 0, divflow],
-                  [2, 'diversion', 0, divflow],
+                  [2, 'diversion', 0, divflow2],
                   [3, 'diversion', 0, divflow]]
     if timeseries:
         perioddata.append([0, 'inflow', 'inflow'])
@@ -375,21 +375,22 @@ def eval_model(sim):
             q.append(v0['q'][idx])
     v0 = np.array(q)
     check = np.ones(v0.shape, dtype=np.float) * 5e-2
+    check[-2] = 4e-2
     assert np.allclose(v0, check), 'FLOW-JA-FACE failed'
 
     v0 = cobj0.get_data(totim=1.0, text='EXT-OUTFLOW')[0]
     v0 = v0['q'][4:]
-    check = np.array([-0.80371, -5e-2, -2.5e-2, -5e-2, -2.5e-2, -5e-2])
+    check = np.array([-0.80871, -5e-2, -2.5e-2, -5e-2, -2.0e-2, -5e-2])
     assert np.allclose(v0, check), 'EXT-OUTFLOW failed'
 
     v0 = cobj0.get_data(totim=1.0, text='FROM-MVR')[0]
     v0 = v0['q'][4:]
-    check = np.array([5e-2, 0., 0., 0., 0., 0.])
+    check = np.array([4.5e-2, 0., 0., 0., 0., 0.])
     assert np.allclose(v0, check), 'FROM-MVR failed'
 
     v0 = cobj0.get_data(totim=1.0, text='TO-MVR')[0]
     v0 = v0['q'][4:]
-    check = np.array([0., 0., -2.5e-2, 0., -2.5e-2, 0.])
+    check = np.array([0., 0., -2.5e-2, 0., -2.0e-2, 0.])
     assert np.allclose(v0, check), 'FROM-MVR failed'
 
     return

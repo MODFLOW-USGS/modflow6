@@ -45,27 +45,27 @@ module SfrModule
   !  character (len=10), pointer :: cprior => null()
   !  type (SfrTSType), pointer :: rate => null()
   !end type SfrDivType
-  !
-  ! -- Streamflow Routing derived data type
-  type :: SfrDataType
-    !! -- diversion data
-    !type (SfrDivType), dimension(:), pointer, contiguous :: diversion => null()
-    !! -- aux data
-    !type (SfrTSType), dimension(:), pointer, contiguous :: auxvar => null()
-    !! -- boundary data
-    !type (SfrTSType), pointer :: rough => null()
-    !type (SfrTSType), pointer :: rain => null()
-    !type (SfrTSType), pointer :: evap => null()
-    !type (SfrTSType), pointer :: inflow => null()
-    !type (SfrTSType), pointer :: runoff => null()
-    !type (SfrTSType), pointer :: sstage => null()
-    ! -- arrays of data for reach
-    integer(I4B), dimension(:), pointer, contiguous :: iconn => null()
-    integer(I4B), dimension(:), pointer, contiguous :: idir => null()
-    integer(I4B), dimension(:), pointer, contiguous :: idiv => null()
-    ! -- double precision arrays for reach
-    real(DP), dimension(:), pointer, contiguous :: qconn => null()
-  end type SfrDataType
+  !!
+  !! -- Streamflow Routing derived data type
+  !type :: SfrDataType
+  !  !! -- diversion data
+  !  !type (SfrDivType), dimension(:), pointer, contiguous :: diversion => null()
+  !  !! -- aux data
+  !  !type (SfrTSType), dimension(:), pointer, contiguous :: auxvar => null()
+  !  !! -- boundary data
+  !  !type (SfrTSType), pointer :: rough => null()
+  !  !type (SfrTSType), pointer :: rain => null()
+  !  !type (SfrTSType), pointer :: evap => null()
+  !  !type (SfrTSType), pointer :: inflow => null()
+  !  !type (SfrTSType), pointer :: runoff => null()
+  !  !type (SfrTSType), pointer :: sstage => null()
+  !  ! -- arrays of data for reach
+  !  integer(I4B), dimension(:), pointer, contiguous :: iconn => null()
+  !  integer(I4B), dimension(:), pointer, contiguous :: idir => null()
+  !  integer(I4B), dimension(:), pointer, contiguous :: idiv => null()
+  !  ! -- double precision arrays for reach
+  !  real(DP), dimension(:), pointer, contiguous :: qconn => null()
+  !end type SfrDataType
   !
   private
   public :: sfr_create
@@ -107,7 +107,7 @@ module SfrModule
     !
     ! -- sfr budget object
     type(BudgetObjectType), pointer :: budobj => null()
-    type(SfrDataType), dimension(:), pointer, contiguous :: reaches => NULL()
+    !type(SfrDataType), dimension(:), pointer, contiguous :: reaches => NULL()
     type(sparsematrix), pointer :: sparse => null()
     !
     ! -- sfr table objects
@@ -138,7 +138,7 @@ module SfrModule
     real(DP), dimension(:), pointer, contiguous :: stage0 => null()
     real(DP), dimension(:), pointer, contiguous :: usflow0 => null()
     ! -- connection data
-    integer(I4B), dimension(:), pointer, contiguous :: iconn => null()
+    !integer(I4B), dimension(:), pointer, contiguous :: iconn => null()
     integer(I4B), dimension(:), pointer, contiguous :: idir => null()
     integer(I4B), dimension(:), pointer, contiguous :: idiv => null()
     real(DP), dimension(:), pointer, contiguous :: qconn => null()
@@ -185,8 +185,8 @@ module SfrModule
     procedure, public :: bnd_rp_obs => sfr_rp_obs
     procedure, private :: sfr_bd_obs
     ! -- private procedures
-    procedure, private :: allocate_reach
-    procedure, private :: deallocate_reach
+    !procedure, private :: allocate_reach
+    !procedure, private :: deallocate_reach
     !procedure, private :: allocate_diversion
     !procedure, private :: deallocate_diversion
     procedure, private :: sfr_set_stressperiod
@@ -375,7 +375,7 @@ contains
     ! -- connection data
     call mem_allocate(this%ia, this%maxbound+1, 'IA', this%origin)
     call mem_allocate(this%ja, 0, 'JA', this%origin)
-    call mem_allocate(this%iconn, 0, 'ICONN', this%origin)
+    !call mem_allocate(this%iconn, 0, 'ICONN', this%origin)
     call mem_allocate(this%idir, 0, 'IDIR', this%origin)
     call mem_allocate(this%idiv, 0, 'IDIV', this%origin)
     call mem_allocate(this%qconn, 0, 'QCONN', this%origin)
@@ -794,9 +794,11 @@ contains
     real(DP), pointer :: bndElem => null()
     ! -- format
   ! ------------------------------------------------------------------------------
+    !!
+    !! -- allocate space for sfr reach data
+    !allocate(this%reaches(this%maxbound))
     !
-    ! -- allocate space for sfr reach data
-    allocate(this%reaches(this%maxbound))
+    ! -- allocate space for checking sfr reach data
     allocate(nboundchk(this%maxbound))
     do i = 1, this%maxbound
       nboundchk(i) = 0
@@ -831,8 +833,8 @@ contains
         ! -- increment nboundchk
         nboundchk(n) = nboundchk(n) + 1
 
-        ! -- allocate data for this reach
-        call this%allocate_reach(n, nboundchk(n))
+        !! -- allocate data for this reach
+        !call this%allocate_reach(n, nboundchk(n))
         ! -- get model node number
         call this%parser%GetCellid(this%dis%ndim, cellid, flag_string=.true.)
         this%igwfnode(n) = this%dis%noder_from_cellid(cellid, &
@@ -869,14 +871,20 @@ contains
         ival = this%parser%GetInteger()
         this%nconnreach(n) = ival
         this%nconn = this%nconn + ival
-        if (ival > 0) then
-          allocate(this%reaches(n)%iconn(ival))
-          allocate(this%reaches(n)%idir(ival))
-          allocate(this%reaches(n)%idiv(ival))
-          allocate(this%reaches(n)%qconn(ival))
-        else if (ival < 0) then
-          ival = 0
+        if (ival < 0) then
+          write(errmsg, '(a,1x,i0,1x,a,i0,a)')                                   &
+            'NCON for reach', n,                                                 &
+            'must be greater than or equal to 0 (', ival, ').'
+          call store_error(errmsg)
         end if
+        !if (ival > 0) then
+        !  allocate(this%reaches(n)%iconn(ival))
+        !  allocate(this%reaches(n)%idir(ival))
+        !  allocate(this%reaches(n)%idiv(ival))
+        !  allocate(this%reaches(n)%qconn(ival))
+        !else if (ival < 0) then
+        !  ival = 0
+        !end if
         ! -- get upstream fraction for reach
         !this%ustrf(n) = this%parser%GetDouble()
         call this%parser%GetString(ustrfname)
@@ -1051,14 +1059,14 @@ contains
     !
     ! -- reallocate connection data for package
     call mem_reallocate(this%ja, nja, 'JA', this%origin)
-    call mem_reallocate(this%iconn, nja, 'ICONN', this%origin)
+    !call mem_reallocate(this%iconn, nja, 'ICONN', this%origin)
     call mem_reallocate(this%idir, nja, 'IDIR', this%origin)
     call mem_reallocate(this%idiv, nja, 'IDIV', this%origin)
     call mem_reallocate(this%qconn, nja, 'QCONN', this%origin)
     !
     ! -- initialize connection data
     do n = 1, nja
-      this%iconn(n) = 0
+      !this%iconn(n) = 0
       this%idir(n) = 0
       this%idiv(n) = 0
       this%qconn(n) = DZERO
@@ -1135,9 +1143,9 @@ contains
             call store_error('Reach number exceeds NREACHES in line:')
             call store_error(line)
           endif
-          this%reaches(n)%iconn(i) = ival
-          this%reaches(n)%idir(i) = idir
-          this%reaches(n)%idiv(i) = 0
+          !this%reaches(n)%iconn(i) = ival
+          !this%reaches(n)%idir(i) = idir
+          !this%reaches(n)%idiv(i) = 0
           !
           ! -- add connection to sparse
           call this%sparse%addconnection(n, ival, 1)
@@ -1202,7 +1210,7 @@ contains
             if (jcol2 < 0) then
               idir = -1
             end if
-            this%iconn(j) = jcol
+            !this%iconn(j) = jcol
             this%idir(j) = idir
             exit
           end if
@@ -2211,6 +2219,7 @@ contains
     call mem_deallocate(this%bthick)
     call mem_deallocate(this%hk)
     call mem_deallocate(this%slope)
+    call mem_deallocate(this%nconnreach)
     call mem_deallocate(this%ustrf)
     call mem_deallocate(this%ftotnd)
     call mem_deallocate(this%usflow)
@@ -2226,7 +2235,7 @@ contains
     ! -- connection data
     call mem_deallocate(this%ia)
     call mem_deallocate(this%ja)
-    call mem_deallocate(this%iconn)
+    !call mem_deallocate(this%iconn)
     call mem_deallocate(this%idir)
     call mem_deallocate(this%idiv)
     call mem_deallocate(this%qconn)
@@ -2259,13 +2268,13 @@ contains
     !  endif
     !enddo
     call mem_deallocate(this%ndiv)
-    !
-    ! -- deallocate reaches
-    do n = 1, this%maxbound
-      call this%deallocate_reach(n)
-    enddo
-    deallocate(this%reaches)
-    call mem_deallocate(this%nconnreach)
+    !!
+    !! -- deallocate reaches
+    !do n = 1, this%maxbound
+    !  call this%deallocate_reach(n)
+    !enddo
+    !deallocate(this%reaches)
+    !call mem_deallocate(this%nconnreach)
     !!
     !! -- ia ja
     !deallocate(this%ia)
@@ -2961,131 +2970,131 @@ contains
     return
   end subroutine sfr_set_stressperiod
 
-  subroutine allocate_reach(this, n, nboundchk)
-! ******************************************************************************
-! allocate_reach -- Allocate pointers for reach(n).
-! ******************************************************************************
+!  subroutine allocate_reach(this, n, nboundchk)
+!! ******************************************************************************
+!! allocate_reach -- Allocate pointers for reach(n).
+!! ******************************************************************************
+!!
+!!    SPECIFICATIONS:
+!! ------------------------------------------------------------------------------
+!    class(SfrType) :: this
+!    integer(I4B), intent(in) :: n
+!    integer(I4B), intent(in) :: nboundchk
+!    ! -- local
+!    character(len=LINELENGTH) :: errmsg
+!    character(len=10) :: crch
+!    !integer(I4B) :: iaux
+!! ------------------------------------------------------------------------------
+!    !
+!    ! -- make sure reach has not been allocated
+!    if (nboundchk > 1) then
+!      write(crch, '(i10)') n
+!      errmsg = 'reach ' // trim(crch) // ' is already allocated'
+!      call store_error(errmsg)
+!      call this%parser%StoreErrorUnit()
+!      call ustop()
+!    end if
+!    ! -- allocate pointers
+!    !allocate(this%reaches(n)%rough)
+!    !allocate(this%reaches(n)%rough%name)
+!    !allocate(this%reaches(n)%rough%value)
+!    !allocate(this%reaches(n)%rain)
+!    !allocate(this%reaches(n)%rain%name)
+!    !allocate(this%reaches(n)%rain%value)
+!    !allocate(this%reaches(n)%evap)
+!    !allocate(this%reaches(n)%evap%name)
+!    !allocate(this%reaches(n)%evap%value)
+!    !allocate(this%reaches(n)%inflow)
+!    !allocate(this%reaches(n)%inflow%name)
+!    !allocate(this%reaches(n)%inflow%value)
+!    !allocate(this%reaches(n)%runoff)
+!    !allocate(this%reaches(n)%runoff%name)
+!    !allocate(this%reaches(n)%runoff%value)
+!    !allocate(this%reaches(n)%sstage)
+!    !allocate(this%reaches(n)%sstage%name)
+!    !allocate(this%reaches(n)%sstage%value)
+!    !if (this%naux > 0) then
+!    !  allocate(this%reaches(n)%auxvar(this%naux))
+!    !  do iaux = 1, this%naux
+!    !    allocate(this%reaches(n)%auxvar(iaux)%name)
+!    !    allocate(this%reaches(n)%auxvar(iaux)%value)
+!    !  end do
+!    !end if
+!    !
+!    ! -- initialize a few items
+!    !this%reaches(n)%rough%name = ''
+!    !this%reaches(n)%rain%name = ''
+!    !this%reaches(n)%evap%name = ''
+!    !this%reaches(n)%inflow%name = ''
+!    !this%reaches(n)%runoff%name = ''
+!    !this%reaches(n)%sstage%name = ''
+!    !this%reaches(n)%rough%value = DZERO
+!    !this%reaches(n)%rain%value = DZERO
+!    !this%reaches(n)%evap%value = DZERO
+!    !this%reaches(n)%inflow%value = DZERO
+!    !this%reaches(n)%runoff%value = DZERO
+!    !this%reaches(n)%sstage%value = DZERO
+!    !do iaux = 1, this%naux
+!    !  this%reaches(n)%auxvar(iaux)%value = DZERO
+!    !end do
+!    !
+!    ! -- return
+!    return
+!  end subroutine allocate_reach
 !
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(SfrType) :: this
-    integer(I4B), intent(in) :: n
-    integer(I4B), intent(in) :: nboundchk
-    ! -- local
-    character(len=LINELENGTH) :: errmsg
-    character(len=10) :: crch
-    !integer(I4B) :: iaux
-! ------------------------------------------------------------------------------
-    !
-    ! -- make sure reach has not been allocated
-    if (nboundchk > 1) then
-      write(crch, '(i10)') n
-      errmsg = 'reach ' // trim(crch) // ' is already allocated'
-      call store_error(errmsg)
-      call this%parser%StoreErrorUnit()
-      call ustop()
-    end if
-    ! -- allocate pointers
-    !allocate(this%reaches(n)%rough)
-    !allocate(this%reaches(n)%rough%name)
-    !allocate(this%reaches(n)%rough%value)
-    !allocate(this%reaches(n)%rain)
-    !allocate(this%reaches(n)%rain%name)
-    !allocate(this%reaches(n)%rain%value)
-    !allocate(this%reaches(n)%evap)
-    !allocate(this%reaches(n)%evap%name)
-    !allocate(this%reaches(n)%evap%value)
-    !allocate(this%reaches(n)%inflow)
-    !allocate(this%reaches(n)%inflow%name)
-    !allocate(this%reaches(n)%inflow%value)
-    !allocate(this%reaches(n)%runoff)
-    !allocate(this%reaches(n)%runoff%name)
-    !allocate(this%reaches(n)%runoff%value)
-    !allocate(this%reaches(n)%sstage)
-    !allocate(this%reaches(n)%sstage%name)
-    !allocate(this%reaches(n)%sstage%value)
-    !if (this%naux > 0) then
-    !  allocate(this%reaches(n)%auxvar(this%naux))
-    !  do iaux = 1, this%naux
-    !    allocate(this%reaches(n)%auxvar(iaux)%name)
-    !    allocate(this%reaches(n)%auxvar(iaux)%value)
-    !  end do
-    !end if
-    !
-    ! -- initialize a few items
-    !this%reaches(n)%rough%name = ''
-    !this%reaches(n)%rain%name = ''
-    !this%reaches(n)%evap%name = ''
-    !this%reaches(n)%inflow%name = ''
-    !this%reaches(n)%runoff%name = ''
-    !this%reaches(n)%sstage%name = ''
-    !this%reaches(n)%rough%value = DZERO
-    !this%reaches(n)%rain%value = DZERO
-    !this%reaches(n)%evap%value = DZERO
-    !this%reaches(n)%inflow%value = DZERO
-    !this%reaches(n)%runoff%value = DZERO
-    !this%reaches(n)%sstage%value = DZERO
-    !do iaux = 1, this%naux
-    !  this%reaches(n)%auxvar(iaux)%value = DZERO
-    !end do
-    !
-    ! -- return
-    return
-  end subroutine allocate_reach
-
-  subroutine deallocate_reach(this, n)
-! ******************************************************************************
-! deallocate_reach -- Deallocate pointers for reach(n).
-! ******************************************************************************
+!  subroutine deallocate_reach(this, n)
+!! ******************************************************************************
+!! deallocate_reach -- Deallocate pointers for reach(n).
+!! ******************************************************************************
+!!
+!!    SPECIFICATIONS:
+!! ------------------------------------------------------------------------------
+!    ! -- dummy
+!    class(SfrType) :: this
+!    integer(I4B), intent(in) :: n
+!    ! -- local
+!    !integer(I4B) :: iaux
+!! ------------------------------------------------------------------------------
+!    !
+!    ! -- connections
+!    if (this%nconnreach(n) > 0) then
+!      deallocate(this%reaches(n)%iconn)
+!      deallocate(this%reaches(n)%idir)
+!      deallocate(this%reaches(n)%idiv)
+!      deallocate(this%reaches(n)%qconn)
+!    endif
+!    !
+!    ! -- deallocate pointers
+!    !deallocate(this%reaches(n)%rough%name)
+!    !deallocate(this%reaches(n)%rough%value)
+!    !deallocate(this%reaches(n)%rough)
+!    !deallocate(this%reaches(n)%rain%name)
+!    !deallocate(this%reaches(n)%rain%value)
+!    !deallocate(this%reaches(n)%rain)
+!    !deallocate(this%reaches(n)%evap%name)
+!    !deallocate(this%reaches(n)%evap%value)
+!    !deallocate(this%reaches(n)%evap)
+!    !deallocate(this%reaches(n)%inflow%name)
+!    !deallocate(this%reaches(n)%inflow%value)
+!    !deallocate(this%reaches(n)%inflow)
+!    !deallocate(this%reaches(n)%runoff%name)
+!    !deallocate(this%reaches(n)%runoff%value)
+!    !deallocate(this%reaches(n)%runoff)
+!    !deallocate(this%reaches(n)%sstage%name)
+!    !deallocate(this%reaches(n)%sstage%value)
+!    !deallocate(this%reaches(n)%sstage)
+!    !if (this%naux > 0) then
+!    !  do iaux = 1, this%naux
+!    !    deallocate(this%reaches(n)%auxvar(iaux)%name)
+!    !    deallocate(this%reaches(n)%auxvar(iaux)%value)
+!    !  end do
+!    !  deallocate(this%reaches(n)%auxvar)
+!    !end if
+!    !
+!    ! -- return
+!    return
+!  end subroutine deallocate_reach
 !
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    class(SfrType) :: this
-    integer(I4B), intent(in) :: n
-    ! -- local
-    !integer(I4B) :: iaux
-! ------------------------------------------------------------------------------
-    !
-    ! -- connections
-    if (this%nconnreach(n) > 0) then
-      deallocate(this%reaches(n)%iconn)
-      deallocate(this%reaches(n)%idir)
-      deallocate(this%reaches(n)%idiv)
-      deallocate(this%reaches(n)%qconn)
-    endif
-    !
-    ! -- deallocate pointers
-    !deallocate(this%reaches(n)%rough%name)
-    !deallocate(this%reaches(n)%rough%value)
-    !deallocate(this%reaches(n)%rough)
-    !deallocate(this%reaches(n)%rain%name)
-    !deallocate(this%reaches(n)%rain%value)
-    !deallocate(this%reaches(n)%rain)
-    !deallocate(this%reaches(n)%evap%name)
-    !deallocate(this%reaches(n)%evap%value)
-    !deallocate(this%reaches(n)%evap)
-    !deallocate(this%reaches(n)%inflow%name)
-    !deallocate(this%reaches(n)%inflow%value)
-    !deallocate(this%reaches(n)%inflow)
-    !deallocate(this%reaches(n)%runoff%name)
-    !deallocate(this%reaches(n)%runoff%value)
-    !deallocate(this%reaches(n)%runoff)
-    !deallocate(this%reaches(n)%sstage%name)
-    !deallocate(this%reaches(n)%sstage%value)
-    !deallocate(this%reaches(n)%sstage)
-    !if (this%naux > 0) then
-    !  do iaux = 1, this%naux
-    !    deallocate(this%reaches(n)%auxvar(iaux)%name)
-    !    deallocate(this%reaches(n)%auxvar(iaux)%value)
-    !  end do
-    !  deallocate(this%reaches(n)%auxvar)
-    !end if
-    !
-    ! -- return
-    return
-  end subroutine deallocate_reach
-
 !  subroutine allocate_diversion(this, n, ndiv)
 !! ******************************************************************************
 !! allocate_diversion -- Allocate diversion pointers for reach(n).
@@ -3243,10 +3252,12 @@ contains
     !end do
     do i = this%ia(n) + 1, this%ia(n+1) - 1
       if (this%idir(i) < 0) cycle
-      n2 = this%iconn(i)
+      !n2 = this%iconn(i)
+      n2 = this%ja(i)
       do ii = this%ia(n2) + 1, this%ia(n2+1) - 1
         if (this%idir(ii) > 0) cycle
-        if (this%iconn(ii) /= n) cycle
+        !if (this%iconn(ii) /= n) cycle
+        if (this%ja(ii) /= n) cycle
         qu = qu + this%qconn(ii)
       end do
     end do
@@ -3667,7 +3678,8 @@ contains
       do i = this%ia(n) + 1, this%ia(n+1) - 1
         if (this%idir(i) > 0) cycle
         if (this%idiv(i) > 0) cycle
-        n2 = this%iconn(i)
+        !n2 = this%iconn(i)
+        n2 = this%ja(i)
         f = this%ustrf(n2) / this%ftotnd(n)
         this%qconn(i) = qd * f
       end do
@@ -4181,11 +4193,13 @@ contains
       !  end if
       !end do eachconn
       eachconn: do i = this%ia(n) + 1, this%ia(n+1) - 1
-        nn = this%iconn(i)
+        !nn = this%iconn(i)
+        nn = this%ja(i)
         write(crch2, '(i5)') nn
         ifound = 0
         connreach: do ii = this%ia(nn) + 1, this%ia(nn+1) - 1
-          nc = this%iconn(ii)
+          !nc = this%iconn(ii)
+          nc = this%ja(ii)
           if (nc == n) then
             ifound = 1
             exit connreach
@@ -4206,7 +4220,8 @@ contains
         !  call this%inputtab%add_term(this%reaches(n)%iconn(i))
         !end do
         do i = this%ia(n) + 1, this%ia(n+1) - 1
-          call this%inputtab%add_term(this%iconn(i))
+          !call this%inputtab%add_term(this%iconn(i))
+          call this%inputtab%add_term(this%ja(i))
         end do
         nn = maxconn - this%nconnreach(n)
         do i = 1, nn
@@ -4248,12 +4263,14 @@ contains
         !
         ! -- skip downstream connections
         if (this%idir(i) < 0) cycle eachconnv
-        nn = this%iconn(i)
+        !nn = this%iconn(i)
+        nn = this%ja(i)
         write(crch2, '(i5)') nn
         connreachv: do ii = this%ia(nn) + 1, this%ia(nn+1) - 1
           ! -- skip downstream connections
           if (this%idir(ii) < 0) cycle connreachv
-          nc = this%iconn(ii)
+          !nc = this%iconn(ii)
+          nc = this%ja(ii)
           !
           ! -- if nc == n then that means reach n is an upstream connection for
           !    reach nn and reach nn is an upstream connection for reach n
@@ -4301,12 +4318,14 @@ contains
       !  end if
       !end do eachconnds
       eachconnds: do i = this%ia(n) + 1, this%ia(n+1) - 1
-        nn = this%iconn(i)
+        !nn = this%iconn(i)
+        nn = this%ja(i)
         if (this%idir(i) > 0) cycle eachconnds
         write(crch2, '(i5)') nn
         ifound = 0
         connreachds: do ii = this%ia(nn) + 1, this%ia(nn+1) - 1
-          nc = this%iconn(ii)
+          !nc = this%iconn(ii)
+          nc = this%ja(ii)
           if (nc == n) then
             if (this%idir(i) /= this%idir(ii)) then
               ifound = 1
@@ -4369,7 +4388,8 @@ contains
         !end do
         do i = this%ia(n) + 1, this%ia(n+1) - 1
           if (this%idir(i) > 0) then
-            call this%inputtab%add_term(this%iconn(i))
+            !call this%inputtab%add_term(this%iconn(i))
+            call this%inputtab%add_term(this%ja(i))
             ii = ii + 1
           end if
         end do
@@ -4422,7 +4442,8 @@ contains
         !end do
         do i = this%ia(n) + 1, this%ia(n+1) - 1
           if (this%idir(i) < 0) then
-            call this%inputtab%add_term(this%iconn(i))
+            !call this%inputtab%add_term(this%iconn(i))
+            call this%inputtab%add_term(this%ja(i))
             ii = ii + 1
           end if
         end do
@@ -4511,10 +4532,20 @@ contains
           call store_error(errmsg)
           cycle
         end if
-        connreach: do ii = 1, this%nconnreach(nn)
-          nc = this%reaches(nn)%iconn(ii)
+        !connreach: do ii = 1, this%nconnreach(nn)
+        !  nc = this%reaches(nn)%iconn(ii)
+        !  if (nc == n) then
+        !    if (this%reaches(nn)%idir(ii) > 0) then
+        !      ifound = 1
+        !    end if
+        !    exit connreach
+        !  end if
+        !end do connreach
+        connreach: do ii = this%ia(nn) + 1, this%ia(nn+1) - 1
+          !nc = this%iconn(ii)
+          nc = this%ja(ii)
           if (nc == n) then
-            if (this%reaches(nn)%idir(ii) > 0) then
+            if (this%idir(ii) > 0) then
               ifound = 1
             end if
             exit connreach
@@ -4596,7 +4627,8 @@ contains
           !
           ! -- skip upstream connections
           if (this%idir(i) > 0) cycle ec
-          n2 = this%iconn(i)
+          !n2 = this%iconn(i)
+          n2 = this%ja(i)
           !
           ! -- skip inactive downstream reaches
           if (this%iboundpak(n2) == 0) cycle ec
@@ -4755,7 +4787,8 @@ contains
         if (this%idir(i) > 0) then
           lcycle = .TRUE.
         end if
-        n2 = this%iconn(i)
+        !n2 = this%iconn(i)
+        n2 = this%ja(i)
         !
         ! -- skip inactive downstream reaches
         if (this%iboundpak(n2) == 0) then
@@ -4875,7 +4908,8 @@ contains
       !  call this%budobj%budterm(idx)%update_term(n1, n2, q)
       !end do
       do i = this%ia(n) + 1, this%ia(n+1) - 1
-        n2 = this%iconn(i)
+        !n2 = this%iconn(i)
+        n2 = this%ja(i)
         call this%budobj%budterm(idx)%update_term(n1, n2, q)
       end do
     end do
@@ -5090,7 +5124,8 @@ contains
       !  call this%budobj%budterm(idx)%update_term(n1, n2, q, this%qauxcbc)
       !end do
       do i = this%ia(n) + 1, this%ia(n+1) - 1
-        n2 = this%iconn(i)
+        !n2 = this%iconn(i)
+        n2 = this%ja(i)
         ! flow to downstream reaches
         if (this%idir(i) < 0) then
           qt = this%dsflow(n)
@@ -5100,7 +5135,8 @@ contains
           qt = this%usflow(n)
           do ii = this%ia(n2) + 1, this%ia(n2+1) - 1
             if (this%idir(ii) > 0) cycle
-            if (this%iconn(ii) /= n) cycle
+            !if (this%iconn(ii) /= n) cycle
+            if (this%ja(ii) /= n) cycle
             q = this%qconn(ii)
             exit
           end do
