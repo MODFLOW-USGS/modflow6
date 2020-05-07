@@ -181,7 +181,7 @@
 | GWF | BUY | OPTIONS | DENSEREF | DOUBLE | fluid reference density used in the equation of state.  This value is set to 1000. if not specified as an option. |
 | GWF | BUY | OPTIONS | DENSITY | KEYWORD | keyword to specify that record corresponds to density. |
 | GWF | BUY | OPTIONS | FILEOUT | KEYWORD | keyword to specify that an output filename is expected next. |
-| GWF | BUY | OPTIONS | DENSITYFILE | STRING | name of the binary output file to write density information. |
+| GWF | BUY | OPTIONS | DENSITYFILE | STRING | name of the binary output file to write density information.  The density file has the same format as the head file.  Density values will be written to the density file whenever heads are written to the binary head file.  The settings for controlling head output are contained in the Output Control option. |
 | GWF | BUY | DIMENSIONS | NRHOSPECIES | INTEGER | number of species used in density equation of state.  This value must be one or greater.  The value must be one if concentrations are specified using the CONCENTRATION keyword in the PERIOD block below. |
 | GWF | BUY | PACKAGEDATA | IRHOSPEC | INTEGER | integer value that defines the species number associated with the specified PACKAGEDATA data on the line. IRHOSPECIES must be greater than zero and less than or equal to NRHOSPECIES. Information must be specified for each of the NRHOSPECIES species or the program will terminate with an error.  The program will also terminate with an error if information for a species is specified more than once. |
 | GWF | BUY | PACKAGEDATA | DRHODC | DOUBLE PRECISION | real value that defines the slope of the density-concentration line for this species used in the density equation of state. |

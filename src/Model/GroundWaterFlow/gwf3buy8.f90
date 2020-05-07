@@ -880,18 +880,7 @@ module GwfBuyModule
     real(DP) :: dinact
 ! ------------------------------------------------------------------------------
     !
-    ! -- Set unit number for binary output
-    if(this%ipakcb < 0) then
-      ibinun = icbcun
-    elseif(this%ipakcb == 0) then
-      ibinun = 0
-    else
-      ibinun = this%ipakcb
-    endif
-    if(icbcfl == 0) ibinun = 0
-    
-    !
-    ! -- Set unit number for binary compaction and z-displacement output
+    ! -- Set unit number for density output
     if(this%ioutdense /= 0) then
       ibinun = 1
     else
