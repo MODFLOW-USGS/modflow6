@@ -54,7 +54,9 @@ def build_model(ws, name, timeseries=False):
     imsla = 'BICGSTAB'
 
     # build MODFLOW 6 files
-    sim = flopy.mf6.MFSimulation(sim_name=name, version='mf6',
+    sim = flopy.mf6.MFSimulation(sim_name=name,
+                                 memory_print_option='all',
+                                 version='mf6',
                                  exe_name='mf6',
                                  sim_ws=ws)
     # create tdis package
