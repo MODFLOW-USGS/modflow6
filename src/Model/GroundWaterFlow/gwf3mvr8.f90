@@ -163,7 +163,7 @@ module GwfMvrModule
 
   contains
 
-  subroutine mvr_cr(mvrobj, name_parent, inunit, iout, iexgmvr, dis)
+  subroutine mvr_cr(mvrobj, name_parent, inunit, iout, dis, iexgmvr)
 ! ******************************************************************************
 ! mvr_cr -- Create a new mvr object
 ! ******************************************************************************
@@ -175,8 +175,8 @@ module GwfMvrModule
     character(len=*), intent(in) :: name_parent
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
+    class(DisBaseType), pointer, intent(in) :: dis
     integer(I4B), optional :: iexgmvr
-    class(DisBaseType), pointer, intent(in), optional :: dis
 ! ------------------------------------------------------------------------------
     !
     ! -- Create the object
@@ -190,7 +190,7 @@ module GwfMvrModule
     call mvrobj%allocate_scalars()
     !
     ! -- Set pointer to dis
-    if (present(dis)) mvrobj%dis => dis
+    mvrobj%dis => dis
     !
     ! -- Set variables
     mvrobj%inunit = inunit
