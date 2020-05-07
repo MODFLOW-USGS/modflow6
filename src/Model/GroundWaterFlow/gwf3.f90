@@ -543,6 +543,7 @@ module GwfModule
     if(this%innpf > 0) call this%npf%npf_ad(this%dis%nodes, this%xold)
     if(this%insto > 0) call this%sto%sto_ad()
     if(this%incsub > 0)  call this%csub%csub_ad(this%dis%nodes, this%x)
+    if(this%inbuy > 0)  call this%buy%buy_ad()
     if(this%inmvr > 0) call this%mvr%mvr_ad()
     do ip=1,this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
@@ -1007,11 +1008,17 @@ module GwfModule
                            isuppress_output, this%budget)
       call this%sto%bdsav(icbcfl, icbcun)
     endif
+    !
     ! -- Skeletal storage, compaction and subsidence
     if (this%incsub > 0) then
       call this%csub%bdcalc(this%dis%nodes, this%x, this%xold,                 &
                             isuppress_output, this%budget)
       call this%csub%bdsav(idvfl, icbcfl, icbcun)
+    end if
+    !
+    ! -- Buoyancy save density
+    if (this%inbuy > 0) then
+      call this%buy%buy_bdsav(idvfl, icbcfl, icbcun)
     end if
     !
     ! -- Node Property Flow

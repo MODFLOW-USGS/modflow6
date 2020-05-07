@@ -25,6 +25,51 @@ longname reference density
 description fluid reference density used in the equation of state.  This value is set to 1000. if not specified as an option.
 default_value 1000.
 
+block options
+name density_filerecord
+type record density fileout densityfile
+shape
+reader urword
+tagged true
+optional true
+longname
+description
+
+block options
+name density
+type keyword
+shape
+in_record true
+reader urword
+tagged true
+optional false
+longname density keyword
+description keyword to specify that record corresponds to density.
+
+block options
+name fileout
+type keyword
+shape
+in_record true
+reader urword
+tagged true
+optional false
+longname file keyword
+description keyword to specify that an output filename is expected next.
+
+block options
+name densityfile
+type string
+preserve_case true
+shape
+in_record true
+reader urword
+tagged false
+optional false
+longname file keyword
+description name of the binary output file to write density information.
+
+
 
 # --------------------- gwf buy dimensions ---------------------
 
@@ -80,7 +125,7 @@ description real value that defines the reference concentration value used for t
 
 block packagedata
 name modelname
-type double precision
+type string
 in_record true
 tagged false
 shape
@@ -90,7 +135,7 @@ description name of GWT model used to simulate a species that will be used in th
 
 block packagedata
 name auxspeciesname
-type double precision
+type string
 in_record true
 tagged false
 shape
