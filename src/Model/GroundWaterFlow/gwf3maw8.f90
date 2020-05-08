@@ -73,11 +73,11 @@ module MawModule
     real(DP), dimension(:), pointer, contiguous :: botscrn => NULL()
     ! -- time-series aware data
     ! -- aux data
-    type (MawWellTSType), dimension(:), pointer, contiguous :: auxvar => null()
+    !type (MawWellTSType), dimension(:), pointer, contiguous :: auxvar => null()
     ! -- pumping rate
-    type(MawWellTSType), pointer :: rate => null()
+    !type(MawWellTSType), pointer :: rate => null()
     ! -- well head
-    type(MawWellTSType), pointer :: head => null()
+    !type(MawWellTSType), pointer :: head => null()
   end type MawWellType
   !
   private
@@ -143,8 +143,13 @@ module MawModule
                                   contiguous :: cmawname => null()
     integer(I4B), dimension(:), pointer, contiguous :: idxmawconn => null()
     !
+    ! -- time-series aware data
+    real(DP), dimension(:), pointer, contiguous :: rate => null()
+    real(DP), dimension(:), pointer, contiguous :: well_head => null()
+    real(DP), dimension(:,:), pointer, contiguous :: mauxvar => null()
+    !
     ! -- imap vector
-    integer(I4B), dimension(:), pointer, contiguous :: imap       => null()
+    integer(I4B), dimension(:), pointer, contiguous :: imap => null()
     !
     ! -- maw output data
     real(DP), dimension(:), pointer, contiguous :: qauxcbc => null()
@@ -157,7 +162,8 @@ module MawModule
     ! -- type bound procedures
     contains
     procedure :: maw_allocate_scalars
-    procedure :: maw_allocate_arrays
+    procedure :: maw_allocate_well_arrays
+    procedure :: maw_allocate_conn_arrays
     procedure :: bnd_options => maw_options
     procedure :: read_dimensions => maw_read_dimensions
     procedure :: read_initial_attr => maw_read_initial_attr
@@ -299,9 +305,9 @@ contains
     return
   end subroutine maw_allocate_scalars
 
-  subroutine maw_allocate_arrays(this)
+  subroutine maw_allocate_well_arrays(this)
 ! ******************************************************************************
-! allocate_scalars -- allocate scalar members
+! maw_allocate_arrays -- allocate well arrays
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -314,24 +320,20 @@ contains
     integer(I4B) :: i
 ! ------------------------------------------------------------------------------
     !
-    ! -- call standard BndType allocate scalars
-    call this%BndType%allocate_arrays()
-    !
     ! -- allocate cmawname
     allocate(this%cmawname(this%nmawwells))
     !
     ! -- allocate idxmawconn
     call mem_allocate(this%idxmawconn, this%nmawwells+1, 'IDXMAWCONN', this%origin)
     !
-    ! -- allocate imap
-    call mem_allocate(this%imap, this%MAXBOUND, 'IMAP', this%origin)
+    ! -- timeseries aware variables
+    call mem_allocate(this%rate, this%nmawwells, 'RATE', this%origin)
+    call mem_allocate(this%well_head, this%nmawwells, 'WELL_HEAD', this%origin)
+    call mem_allocate(this%mauxvar, this%naux, this%nmawwells, 'MAUXVAR', this%origin)
     !
-    ! -- initialize idxmawconn and imap
-    do i = 1, this%nmawwells+1
+    ! -- initialize idxmawconn
+    do i = 1, this%nmawwells + 1
       this%idxmawconn(i) = 0
-    end do
-    do i = 1, this%maxbound
-      this%imap(i) = 0
     end do
     !
     ! -- allocate character array for budget text
@@ -366,11 +368,7 @@ contains
       this%qauxcbc(i) = DZERO
     end do
     !
-    ! -- allocate qleak and qsto
-    call mem_allocate(this%qleak, this%maxbound, 'QLEAK', this%origin)
-    do i = 1, this%maxbound
-      this%qleak(i) = DZERO
-    end do
+    ! -- allocate flowing well data
     if (this%iflowingwells /= 0) then
       call mem_allocate(this%qfw, this%nmawwells, 'QFW', this%origin)
     else
@@ -382,14 +380,52 @@ contains
     !
     ! -- initialize flowing well, storage, and constant flow terms
     do i = 1, this%nmawwells
-      if (this%iflowingwells /= 0) this%qfw(i) = DZERO
+      if (this%iflowingwells /= 0) then
+        this%qfw(i) = DZERO
+      end if
       this%qsto(i) = DZERO
       this%qconst(i) = DZERO
     end do
     !
     ! -- return
     return
-  end subroutine maw_allocate_arrays
+  end subroutine maw_allocate_well_arrays
+
+  subroutine maw_allocate_conn_arrays(this)
+! ******************************************************************************
+! maw_allocate_conn_arrays -- allocate connection arrays
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use MemoryManagerModule, only: mem_allocate
+    ! -- dummy
+    class(MawType),   intent(inout) :: this
+    ! -- local
+    integer(I4B) :: i
+! ------------------------------------------------------------------------------
+    !
+    ! -- call standard BndType allocate scalars
+    call this%BndType%allocate_arrays()
+    !
+    ! -- allocate imap
+    call mem_allocate(this%imap, this%MAXBOUND, 'IMAP', this%origin)
+    !
+    ! -- initialize imap
+    do i = 1, this%maxbound
+      this%imap(i) = 0
+    end do
+    !
+    ! -- allocate qleak
+    call mem_allocate(this%qleak, this%maxbound, 'QLEAK', this%origin)
+    do i = 1, this%maxbound
+      this%qleak(i) = DZERO
+    end do
+    !
+    ! -- return
+    return
+  end subroutine maw_allocate_conn_arrays
 
   subroutine maw_read_wells(this)
 ! ******************************************************************************
@@ -399,25 +435,29 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
-    use TimeSeriesManagerModule, only: read_single_value_or_time_series
+    use TimeSeriesManagerModule, only: read_value_or_time_series_adv
     ! -- dummy
     class(MawType),intent(inout) :: this
     ! -- local
     character(len=LINELENGTH) :: errmsg
-    character(len=LINELENGTH) :: text, keyword, cstr
+    character(len=LINELENGTH) :: text
+    character(len=LINELENGTH) :: keyword
+    character(len=LINELENGTH) :: cstr
     character(len=LINELENGTH) :: strttext
-    character(len=LENBOUNDNAME) :: bndName, bndNameTemp
+    character(len=LENBOUNDNAME) :: bndName
+    character(len=LENBOUNDNAME) :: bndNameTemp
     character(len=9) :: cno
     character(len=50), dimension(:), allocatable :: caux
     integer(I4B) :: ival
     logical :: isfound, endOfBlock
     real(DP) :: rval
     integer(I4B) :: n
+    integer(I4B) :: ii
     integer(I4B) :: jj
-    integer(I4B) :: iaux
+    !integer(I4B) :: iaux
     integer(I4B) :: itmp
     integer(I4B) :: ierr
-    real(DP) :: endtim
+    real(DP), pointer :: bndElem => null()
     integer(I4B), dimension(:), pointer, contiguous :: nboundchk
     ! -- format
     character(len=*),parameter :: fmthdbot = &
@@ -448,15 +488,18 @@ contains
       allocate(caux(this%naux))
     end if
     !
+    ! -- allocate well data
+    call this%maw_allocate_well_arrays()
+    !
     ! -- read maw well data
     ! -- get wells block
-    call this%parser%GetBlock('PACKAGEDATA', isfound, ierr, &
-      supportopenclose=.true.)
+    call this%parser%GetBlock('PACKAGEDATA', isfound, ierr,                     &
+                              supportopenclose=.true.)
     !
     ! -- parse locations block if detected
     if (isfound) then
-      write(this%iout,'(/1x,a)')'PROCESSING '//trim(adjustl(this%text))// &
-        ' PACKAGEDATA'
+      write(this%iout,'(/1x,a)')                                                 &
+        'PROCESSING ' // trim(adjustl(this%text)) // ' PACKAGEDATA'
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
@@ -464,29 +507,32 @@ contains
         n = ival
 
         if (n < 1 .or. n > this%nmawwells) then
-          write(errmsg,'(4x,a,1x,i6)') &
-            '****ERROR. IMAW MUST BE > 0 and <= ', this%nmawwells
+          write(errmsg,'(a,1x,i0,a)')                                            &
+            'IMAW must be greater than 0 and less than or equal to',             &
+            this%nmawwells, '.'
           call store_error(errmsg)
           cycle
         end if
-        
+        !
         ! -- increment nboundchk
         nboundchk(n) = nboundchk(n) + 1
-
+        !
         ! -- radius
         rval = this%parser%GetDouble()
         if (rval <= DZERO) then
-          write(errmsg,'(4x,a,1x,i6,1x,a)') &
-            '****ERROR. RADIUS FOR WELL', n, 'MUST BE GR5EATER THAN ZERO.'
+          write(errmsg,'(a,1x,i0,1x,a)')                                         &
+            'Radius for well', n, 'must be greater than zero.'
           call store_error(errmsg)
-          cycle
         end if
         this%mawwells(n)%radius = rval
         this%mawwells(n)%area = DPI * rval**DTWO
+        !
         ! -- well bottom
         this%mawwells(n)%bot = this%parser%GetDouble()
+        !
         ! -- strt
         call this%parser%GetString(strttext)
+        !
         ! -- ieqn
         call this%parser%GetStringCaps(keyword)
         if (keyword=='SPECIFIED') then
@@ -500,22 +546,22 @@ contains
         else if (keyword=='MEAN') then
           this%mawwells(n)%ieqn = 4
         else
-          write(errmsg,'(4x,a,1x,i6,1x,a)') &
-            '****ERROR. CONDEQN FOR WELL', n, &
-            'MUST BE "CONDUCTANCE", "THIEM" "MEAN", OR "SKIN".'
+          write(errmsg,'(a,1x,i0,1x,a)')                                         &
+            'CONDEQN for well', n,                                               &
+            "must be 'CONDUCTANCE', 'THIEM', 'MEAN', or 'SKIN'."
         end if
         ! -- ngwnodes
         ival = this%parser%GetInteger()
         if (ival < 1) then
-          write(errmsg,'(4x,a,1x,i6,1x,a)') &
-            '****ERROR. NGWFNODES FOR WELL', n, 'MUST BE GREATER THAN ZERO'
+          write(errmsg,'(a,1x,i0,1x,a)')                                         &
+            'NGWFNODES for well', n, 'must be greater than zero.'
           call store_error(errmsg)
         end if
         
         if (ival > 0) then
           this%mawwells(n)%ngwfnodes = ival
         end if
-
+        !
         ! -- allocate storage for connection data needed for the MAW well
         allocate(this%mawwells(n)%gwfnodes(this%mawwells(n)%ngwfnodes))
         allocate(this%mawwells(n)%satcond(this%mawwells(n)%ngwfnodes))
@@ -530,17 +576,17 @@ contains
             this%mawwells(n)%ieqn==4) then
           allocate(this%mawwells(n)%sradius(this%mawwells(n)%ngwfnodes))
         end if
-
+        !
         ! -- increment maxbound
         itmp = itmp + this%mawwells(n)%ngwfnodes
         !
         ! -- set default bndName
         write (cno,'(i9.9)') n
         bndName = 'MAWWELL' // cno
-
+        !
         ! -- get aux data
-        do iaux = 1, this%naux
-          call this%parser%GetString(caux(iaux))
+        do jj = 1, this%naux
+          call this%parser%GetString(caux(jj))
         end do
 
         ! -- read well name
@@ -549,56 +595,71 @@ contains
           call this%parser%GetStringCaps(bndNameTemp)
           if (bndNameTemp /= '') then
             this%mawwells(n)%name = bndNameTemp(1:16)
-          endif
+          end if
         else
           bndName = ''
         endif
         ! fill timeseries aware data
         jj = 1    ! For WELL_HEAD
-        endtim = DZERO
-        call read_single_value_or_time_series(strttext, &
-                                              this%mawwells(n)%head%value, &
-                                              this%mawwells(n)%head%name, &
-                                              endtim,  &
-                                              this%name, 'BND', this%TsManager, &
-                                              this%iprpak, n, jj, 'HEAD', &
-                                              bndName, this%parser%iuactive)
-        this%mawwells(n)%strt = this%mawwells(n)%head%value
+        !endtim = DZERO
+        !call read_single_value_or_time_series(strttext, &
+        !                                      this%mawwells(n)%well_head%value, &
+        !                                      this%mawwells(n)%well_head%name, &
+        !                                      endtim,  &
+        !                                      this%name, 'BND', this%TsManager, &
+        !                                      this%iprpak, n, jj, 'HEAD', &
+        !                                      bndName, this%parser%iuactive)
+        bndElem => this%well_head(n)
+        call read_value_or_time_series_adv(strttext, n, jj, bndElem, this%name,  &
+                                           'BND', this%tsManager, this%iprpak,   &
+                                           'WELL_HEAD')
+        !
+        ! -- set starting head value
+        !this%mawwells(n)%strt = this%mawwells(n)%well_head%value
+        this%mawwells(n)%strt = this%well_head(n)
+        !
+        ! -- check for error condition
         if (this%mawwells(n)%strt < this%mawwells(n)%bot) then
           write(cstr, fmthdbot) this%mawwells(n)%strt, this%mawwells(n)%bot
           call this%maw_set_attribute_error(n, 'STRT', trim(cstr))
         end if
-
+        !
         ! -- fill aux data
-        do iaux = 1, this%naux
-          text = caux(iaux)
-          jj = 1 !iaux
-          call read_single_value_or_time_series(trim(adjustl(text)), &
-                                                this%mawwells(n)%auxvar(iaux)%value, &
-                                                this%mawwells(n)%auxvar(iaux)%name, &
-                                                endtim,  &
-                                                this%Name, 'AUX', this%TsManager, &
-                                                this%iprpak, n, jj, &
-                                                this%auxname(iaux), &
-                                                bndName, this%parser%iuactive)
+        do jj = 1, this%naux
+          text = caux(jj)
+          !jj = 1 !iaux
+          !call read_single_value_or_time_series(trim(adjustl(text)), &
+          !                                      this%mawwells(n)%auxvar(iaux)%value, &
+          !                                      this%mawwells(n)%auxvar(iaux)%name, &
+          !                                      endtim,  &
+          !                                      this%Name, 'AUX', this%TsManager, &
+          !                                      this%iprpak, n, jj, &
+          !                                      this%auxname(iaux), &
+          !                                      bndName, this%parser%iuactive)
+          ii = n
+          bndElem => this%mauxvar(jj, ii)
+          call read_value_or_time_series_adv(text, ii, jj, bndElem, this%name,   &
+                                             'AUX', this%tsManager, this%iprpak, &
+                                             this%auxname(jj))
         end do
       end do
 
-      write(this%iout,'(1x,a)')'END OF '//trim(adjustl(this%text))//' PACKAGEDATA'
+      write(this%iout,'(1x,a)')                                                  &
+        'END OF ' // trim(adjustl(this%text)) // ' PACKAGEDATA'
       !
       ! -- check for duplicate or missing wells
       do n = 1,  this%nmawwells
         if (nboundchk(n) == 0) then
-          write(errmsg,'(a,1x,i0)')  'ERROR.  NO DATA SPECIFIED FOR MAW WELL', n
+          write(errmsg,'(a,1x,i0,a)')  'No data specified for maw well', n, '.'
           call store_error(errmsg)
         else if (nboundchk(n) > 1) then
           write(errmsg,'(a,1x,i0,1x,a,1x,i0,1x,a)')                             &
-            'ERROR.  DATA FOR MAW WELL', n, 'SPECIFIED', nboundchk(n), 'TIMES'
+            'Data for maw well', n, 'specified', nboundchk(n), 'times.'
           call store_error(errmsg)
         end if
       end do
     else
-      call store_error('ERROR.  REQUIRED PACKAGEDATA BLOCK NOT FOUND.')
+      call store_error('Required packagedata block not found.')
     end if
     !
     ! -- terminate if any errors were detected
@@ -878,8 +939,7 @@ contains
     end if
     !
     ! -- stop if errors were encountered in the DIMENSIONS block
-    ierr = count_errors()
-    if (ierr > 0) then
+    if (count_errors() > 0) then
       call ustop()
     end if
     !
@@ -1163,17 +1223,19 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule, only: kper, perlen, totimsav
-    use TimeSeriesManagerModule, only: read_single_value_or_time_series
+    !use TdisModule, only: kper
+    use TimeSeriesManagerModule, only: read_value_or_time_series_adv
     ! -- dummy
     class(MawType),intent(inout) :: this
     integer(I4B), intent(in) :: imaw
     character (len=*), intent(in) :: line
     ! -- local
-    character(len=LINELENGTH) :: text, cstr
+    character(len=LINELENGTH) :: errmsg
+    character(len=LINELENGTH) :: errmsgr
+    character(len=LINELENGTH) :: text
+    character(len=LINELENGTH) :: cstr
     character(len=LINELENGTH) :: caux
     character(len=LINELENGTH) :: keyword
-    character(len=LINELENGTH) :: errmsg
     character(len=LENBOUNDNAME) :: bndName
     character(len=9) :: cmaw
     integer(I4B) :: ival, istart, istop
@@ -1182,18 +1244,14 @@ contains
     integer(I4B) :: ii
     integer(I4B) :: jj
     integer(I4B) :: idx
-    integer(I4B) :: iaux
+    !integer(I4B) :: iaux
     real(DP) :: rval
-    real(DP) :: endtim
+    real(DP), pointer :: bndElem => null()
     integer(I4B) :: istat
-    character(len=MAXCHARLEN) :: ermsg, ermsgr
     ! -- formats
     character(len=*),parameter :: fmthdbot = &
       "('well head (',G0,') must be >= BOTTOM_ELEVATION (',G0, ').')"
 ! ------------------------------------------------------------------------------
-    !
-    ! -- Find time interval of current stress period.
-    endtim = totimsav + perlen(kper)
     !
     ! -- Assign boundary name, if available
     !
@@ -1214,12 +1272,14 @@ contains
     !
     ! -- read line
     lloc = 1
-    call urword(line, lloc, istart, istop, 1, ival, rval, this%iout, this%inunit)
+    call urword(line, lloc, istart, istop, 1, ival, rval,                        &
+                this%iout, this%inunit)
     i0 = istart
     keyword = line(istart:istop)
     select case (line(istart:istop))
       case ('STATUS')
-        call urword(line, lloc, istart, istop, 1, ival, rval, this%iout, this%inunit)
+        call urword(line, lloc, istart, istop, 1, ival, rval,                    &
+                    this%iout, this%inunit)
         text = line(istart:istop)
         this%mawwells(imaw)%status = text(1:8)
         if (text == 'CONSTANT') then
@@ -1229,49 +1289,71 @@ contains
         else if (text == 'ACTIVE') then
           this%iboundpak(imaw) = 1
         else
-          write(errmsg,'(4x,a,a)') &
-            '****ERROR. UNKNOWN '//trim(this%text)//' MAW STATUS KEYWORD: ', &
-            text
+          write(errmsg,'(a,a)')                                                  &
+            'Unknown ' // trim(this%text) // " maw status keyword: '",           &
+            trim(text) // "'."
           call store_error(errmsg)
         end if
       case ('RATE')
-        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
+        call urword(line, lloc, istart, istop, 0, ival, rval,                    &
+                    this%iout, this%inunit)
         text = line(istart:istop)
         jj = 1    ! For RATE
-        call read_single_value_or_time_series(text, &
-                                              this%mawwells(imaw)%rate%value, &
-                                              this%mawwells(imaw)%rate%name, &
-                                              endtim,  &
-                                              this%name, 'BND', this%TsManager, &
-                                              this%iprpak, imaw, jj, 'RATE', &
-                                              bndName, this%inunit)
+        !call read_single_value_or_time_series(text, &
+        !                                      this%mawwells(imaw)%rate%value, &
+        !                                      this%mawwells(imaw)%rate%name, &
+        !                                      endtim,  &
+        !                                      this%name, 'BND', this%TsManager, &
+        !                                      this%iprpak, imaw, jj, 'RATE', &
+        !                                      bndName, this%inunit)
+        bndElem => this%rate(imaw)
+        call read_value_or_time_series_adv(text, imaw, jj, bndElem, this%name,   &
+                                           'BND', this%tsManager, this%iprpak,   &
+                                           'RATE')
      case ('WELL_HEAD')
-        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
+        call urword(line, lloc, istart, istop, 0, ival, rval,                    &
+                    this%iout, this%inunit)
         text = line(istart:istop)
         jj = 1    ! For WELL_HEAD
-        call read_single_value_or_time_series(text, &
-                                              this%mawwells(imaw)%head%value, &
-                                              this%mawwells(imaw)%head%name, &
-                                              endtim,  &
-                                              this%name, 'BND', this%TsManager, &
-                                              this%iprpak, imaw, jj, 'HEAD', &
-                                              bndName, this%inunit)
-        this%xnewpak(imaw) = this%mawwells(imaw)%head%value
-        if (this%mawwells(imaw)%head%value < this%mawwells(imaw)%bot) then
-          write(cstr, fmthdbot) this%mawwells(imaw)%head%value, this%mawwells(imaw)%bot
+        !call read_single_value_or_time_series(text, &
+        !                                      this%mawwells(imaw)%well_head%value, &
+        !                                      this%mawwells(imaw)%well_head%name, &
+        !                                      endtim,  &
+        !                                      this%name, 'BND', this%TsManager, &
+        !                                      this%iprpak, imaw, jj, 'HEAD', &
+        !                                      bndName, this%inunit)
+        bndElem => this%well_head(imaw)
+        call read_value_or_time_series_adv(text, imaw, jj, bndElem, this%name,   &
+                                           'BND', this%tsManager, this%iprpak,   &
+                                           'WELL_HEAD')
+        !
+        !
+        !this%xnewpak(imaw) = this%mawwells(imaw)%well_head%value
+        this%xnewpak(imaw) = this%well_head(imaw)
+        !
+        ! -- check for error condition
+        !if (this%mawwells(imaw)%well_head%value < this%mawwells(imaw)%bot) then
+        if (this%well_head(imaw) < this%mawwells(imaw)%bot) then
+          write(cstr, fmthdbot)                                                  &
+            this%well_head(imaw), this%mawwells(imaw)%bot
           call this%maw_set_attribute_error(imaw, 'WELL HEAD', trim(cstr))
         end if
       case ('FLOWING_WELL')
-        call urword(line, lloc, istart, istop, 3, ival, rval, this%iout, this%inunit)
+        call urword(line, lloc, istart, istop, 3, ival, rval,                    &
+                    this%iout, this%inunit)
         this%mawwells(imaw)%fwelev = rval
-        call urword(line, lloc, istart, istop, 3, ival, rval, this%iout, this%inunit)
+        call urword(line, lloc, istart, istop, 3, ival, rval,                    &
+                    this%iout, this%inunit)
         this%mawwells(imaw)%fwcond = rval
-        call urword(line, lloc, istart, istop, 3, ival, rval, -this%iout, this%inunit)
+        call urword(line, lloc, istart, istop, 3, ival, rval,                    &
+                    -this%iout, this%inunit)
         this%mawwells(imaw)%fwrlen = rval
       case ('RATE_SCALING')
-        call urword(line, lloc, istart, istop, 3, ival, rval, this%iout, this%inunit)
+        call urword(line, lloc, istart, istop, 3, ival, rval,                    &
+                    this%iout, this%inunit)
         this%mawwells(imaw)%pumpelev = rval
-        call urword(line, lloc, istart, istop, 3, ival, rval, this%iout, this%inunit)
+        call urword(line, lloc, istart, istop, 3, ival, rval,                    &
+                    this%iout, this%inunit)
         this%mawwells(imaw)%reduction_length = rval
         if (rval < DZERO) then
           call this%maw_set_attribute_error(imaw, trim(keyword), 'must be >= 0.')
@@ -1281,43 +1363,50 @@ contains
         if (line(istart:istop) == 'OFF') then
           this%mawwells(imaw)%shutofflevel = DEP20
         else
-          read (line(istart:istop), *,iostat=istat,iomsg=ermsgr) this%mawwells(imaw)%shutofflevel
+          read (line(istart:istop), *, iostat=istat, iomsg=errmsgr)              &
+            this%mawwells(imaw)%shutofflevel
           if (istat /= 0) then
-            ermsg = 'Error reading HEAD_LIMIT value.'
-            call store_error(ermsg)
-            call store_error(ermsgr)
-            call ustop()
-          endif
+            errmsg = 'Could not read HEAD_LIMIT value. ' // trim(errmsgr)
+            call store_error(errmsg)
+          end if
         end if
       case ('SHUT_OFF')
-        call urword(line, lloc, istart, istop, 3, ival, rval, this%iout, this%inunit)
+        call urword(line, lloc, istart, istop, 3, ival, rval,                    &
+                    this%iout, this%inunit)
         this%mawwells(imaw)%shutoffmin = rval
-        call urword(line, lloc, istart, istop, 3, ival, rval, this%iout, this%inunit)
+        call urword(line, lloc, istart, istop, 3, ival, rval,                    &
+                    this%iout, this%inunit)
         this%mawwells(imaw)%shutoffmax = rval
       case ('AUXILIARY')
-        call urword(line, lloc, istart, istop, 1, ival, rval, this%iout, this%inunit)
+        call urword(line, lloc, istart, istop, 1, ival, rval,                    &
+                    this%iout, this%inunit)
         caux = line(istart:istop)
-        do iaux = 1, this%naux
-          if (trim(adjustl(caux)) /= trim(adjustl(this%auxname(iaux)))) cycle
-          call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
+        do jj = 1, this%naux
+          if (trim(adjustl(caux)) /= trim(adjustl(this%auxname(jj)))) cycle
+          call urword(line, lloc, istart, istop, 0, ival, rval,                  &
+                      this%iout, this%inunit)
           text = line(istart:istop)
-          jj = 1 !iaux
-          call read_single_value_or_time_series(text, &
-                                                this%mawwells(imaw)%auxvar(iaux)%value, &
-                                                this%mawwells(imaw)%auxvar(iaux)%name, &
-                                                endtim,  &
-                                                this%Name, 'AUX', this%TsManager, &
-                                                this%iprpak, imaw, jj, &
-                                                this%auxname(iaux), bndName, &
-                                                this%inunit)
+          !jj = 1 !iaux
+          !call read_single_value_or_time_series(text, &
+          !                                      this%mawwells(imaw)%auxvar(iaux)%value, &
+          !                                      this%mawwells(imaw)%auxvar(iaux)%name, &
+          !                                      endtim,  &
+          !                                      this%Name, 'AUX', this%TsManager, &
+          !                                      this%iprpak, imaw, jj, &
+          !                                      this%auxname(iaux), bndName, &
+          !                                      this%inunit)
+          ii = imaw
+          bndElem => this%mauxvar(jj, ii)
+          call read_value_or_time_series_adv(text, ii, jj, bndElem, this%name,   &
+                                             'AUX', this%tsManager, this%iprpak, &
+                                             this%auxname(jj))
           exit
         end do
       case default
-        write(errmsg,'(4x,a,a)') &
-          '****ERROR. UNKNOWN '//trim(this%text)//' MAW DATA KEYWORD: ', &
-                                  line(istart:istop)
+        write(errmsg,'(a,a)') &
+          'Unknown ' // trim(this%text) // " maw data keyword: '",               &
+          line(istart:istop) // "'."
         call store_error(errmsg)
-        call ustop()
       end select
 
     !
@@ -1670,8 +1759,8 @@ contains
       this%satomega = DEM6
     end if
     !
-    ! -- Allocate arrays in MAW and in package superclass
-    call this%maw_allocate_arrays()
+    ! -- Allocate connection arrays in MAW and in package superclass
+    call this%maw_allocate_conn_arrays()
     !
     ! -- read optional initial package parameters
     call this%read_initial_attr()
@@ -1818,8 +1907,7 @@ contains
     endif
     !
     !write summary of maw well stress period error messages
-    ierr = count_errors()
-    if (ierr > 0) then
+    if (count_errors() > 0) then
       call ustop()
     end if
     !
@@ -1858,9 +1946,11 @@ contains
         do n = 1, this%nmawwells
           call this%inputtab%add_term(n)
           call this%inputtab%add_term(this%mawwells(n)%status)
-          call this%inputtab%add_term(this%mawwells(n)%rate%value)
+          !call this%inputtab%add_term(this%mawwells(n)%rate%value)
+          call this%inputtab%add_term(this%rate(n))
           if (this%iboundpak(n) < 0) then
-            call this%inputtab%add_term(this%mawwells(n)%head%value)
+            !call this%inputtab%add_term(this%mawwells(n)%well_head%value)
+            call this%inputtab%add_term(this%well_head(n))
           else
             call this%inputtab%add_term(' ')
           end if
@@ -1958,7 +2048,8 @@ contains
         this%bound(3,ibnd) = this%mawwells(n)%botscrn(j)
 
         if (this%iboundpak(n) > 0) then
-          this%bound(4,ibnd) = this%mawwells(n)%rate%value
+          !this%bound(4,ibnd) = this%mawwells(n)%rate%value
+          this%bound(4,ibnd) = this%rate(n)
         else
           this%bound(4,ibnd) = DZERO
         end if
@@ -1982,7 +2073,9 @@ contains
     class(MawType) :: this
     ! -- local
     integer(I4B) :: n
-    integer(I4B) :: j, iaux, ibnd
+    integer(I4B) :: j
+    integer(I4B) :: jj
+    integer(I4B) :: ibnd
 ! ------------------------------------------------------------------------------
     !
     ! -- Advance the time series
@@ -1995,9 +2088,10 @@ contains
       ibnd = 1
       do n = 1, this%nmawwells
         do j = 1, this%mawwells(n)%ngwfnodes
-          do iaux = 1, this%naux
-            if (this%noupdateauxvar(iaux) /= 0) cycle
-            this%auxvar(iaux, ibnd) = this%mawwells(n)%auxvar(iaux)%value
+          do jj = 1, this%naux
+            if (this%noupdateauxvar(jj) /= 0) cycle
+            !this%auxvar(jj, ibnd) = this%mawwells(n)%auxvar(jj)%value
+            this%auxvar(jj, ibnd) = this%mauxvar(jj, n)
           end do
           ibnd = ibnd + 1
         end do
@@ -2009,7 +2103,8 @@ contains
       this%xoldpak(n) = this%xnewpak(n)
       this%mawwells(n)%xoldsto = this%mawwells(n)%xsto
       if (this%iboundpak(n) < 0) then
-        this%xnewpak(n) = this%mawwells(n)%head%value
+        !this%xnewpak(n) = this%mawwells(n)%well_head%value
+        this%xnewpak(n) = this%well_head(n)
       end if
     end do
     !
@@ -2120,7 +2215,8 @@ contains
       iloc = this%idxlocnode(n)
       ! -- update head value for constant head maw wells
       if (this%iboundpak(n) < 0) then
-        this%xnewpak(n) = this%mawwells(n)%head%value
+        !this%xnewpak(n) = this%mawwells(n)%well_head%value
+        this%xnewpak(n) = this%well_head(n)
       end if
       hmaw = this%xnewpak(n)
       ! -- add pumping rate to active or constant maw well
@@ -2696,6 +2792,13 @@ contains
     deallocate(this%cmawname)
     deallocate(this%cmawbudget)
     call mem_deallocate(this%idxmawconn)
+    !
+    ! -- timeseries aware variables
+    call mem_deallocate(this%mauxvar)
+    call mem_deallocate(this%rate)
+    call mem_deallocate(this%well_head)
+    !
+    ! --
     call mem_deallocate(this%imap)
     call mem_deallocate(this%dbuff)
     deallocate(this%cauxcbc)
@@ -3042,7 +3145,7 @@ contains
     ! -- local
     integer(I4B) :: i, j, n, nn1, nn2
     integer(I4B) :: jj
-    character(len=200) :: ermsg
+    character(len=200) :: errmsg
     character(len=LENBOUNDNAME) :: bname
     logical :: jfound
     class(ObserveType),   pointer :: obsrv => null()
@@ -3094,8 +3197,8 @@ contains
             end do
           end if
           if (.not. jfound) then
-            write(ermsg,10)trim(bname), trim(obsrv%Name), trim(this%name)
-            call store_error(ermsg)
+            write(errmsg,10)trim(bname), trim(obsrv%Name), trim(this%name)
+            call store_error(errmsg)
           end if
         end if
       else
@@ -3111,8 +3214,8 @@ contains
             obsrv%indxbnds(1) = nn1
           end if
         else
-          ermsg = 'Programming error in maw_rp_obs'
-          call store_error(ermsg)
+          errmsg = 'Programming error in maw_rp_obs'
+          call store_error(errmsg)
         endif
       end if
       !
@@ -3121,11 +3224,11 @@ contains
       if (obsrv%ObsTypeId == 'HEAD') then
         n = size(obsrv%indxbnds)
         if (n > 1) then
-          write (ermsg, '(4x,a,4(1x,a))') &
+          write (errmsg, '(4x,a,4(1x,a))') &
             'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
             'for observation', trim(adjustl(obsrv%Name)), &
             ' must be assigned to a multi-aquifer well with a unique boundname.'
-          call store_error(ermsg)
+          call store_error(errmsg)
         end if
       end if
       !
@@ -3138,22 +3241,22 @@ contains
           nn2 = nn1 - this%idxmawconn(n) + 1
           jj = this%idxmawconn(n+1) - this%idxmawconn(n)
           if (nn1 < 1 .or. nn1 > this%maxbound) then
-            write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
+            write (errmsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
               'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
               ' multi-aquifer well connection number must be > 0 and <=', &
               jj, '(specified value is ', nn2, ')'
-            call store_error(ermsg)
+            call store_error(errmsg)
           end if
         end do
       else
         do j = 1, size(obsrv%indxbnds)
           nn1 =  obsrv%indxbnds(j)
           if (nn1 < 1 .or. nn1 > this%nmawwells) then
-            write (ermsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
+            write (errmsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
               'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
               ' multi-aquifer well must be > 0 and <=', this%nmawwells, &
               '(specified value is ', nn1, ')'
-            call store_error(ermsg)
+            call store_error(errmsg)
           end if
         end do
       end if
@@ -3451,7 +3554,8 @@ contains
     q = DZERO
     !
     ! -- Assign rate as the user-provided base pumping rate
-    rate = this%mawwells(n)%rate%value
+    !rate = this%mawwells(n)%rate%value
+    rate = this%rate(n)
     !
     ! -- Assign q differently depending on whether this is an extraction well
     !    (rate < 0) or an injection well (rate > 0).
@@ -3740,16 +3844,16 @@ contains
     class(MawType) :: this
     integer(I4B), intent(in) :: n
     ! -- local
-    character(len=LINELENGTH) :: ermsg
+    character(len=LINELENGTH) :: errmsg
     character(len=10) :: cwel
-    integer(I4B) :: iaux
+    !integer(I4B) :: iaux
 ! ------------------------------------------------------------------------------
     !
     ! -- make sure maw well has not been allocated
     if (associated(this%mawwells(n)%ieqn)) then
       write (cwel, '(i10)') n
-      ermsg = 'multi-aquifer well ' // trim(cwel) // ' is already allocated'
-      call store_error(ermsg)
+      errmsg = 'multi-aquifer well ' // trim(cwel) // ' is already allocated'
+      call store_error(errmsg)
       call ustop()
     end if
     ! -- allocate pointers
@@ -3779,20 +3883,21 @@ contains
     allocate(this%mawwells(n)%shutoffweight)
     allocate(this%mawwells(n)%shutoffdq)
     allocate(this%mawwells(n)%shutoffqold)
-    ! -- timeseries aware data
-    if (this%naux > 0) then
-      allocate(this%mawwells(n)%auxvar(this%naux))
-      do iaux = 1, this%naux
-        allocate(this%mawwells(n)%auxvar(iaux)%name)
-        allocate(this%mawwells(n)%auxvar(iaux)%value)
-      end do
-    end if
-    allocate(this%mawwells(n)%rate)
-    allocate(this%mawwells(n)%rate%name)
-    allocate(this%mawwells(n)%rate%value)
-    allocate(this%mawwells(n)%head)
-    allocate(this%mawwells(n)%head%name)
-    allocate(this%mawwells(n)%head%value)
+    !!
+    !! -- timeseries aware data
+    !if (this%naux > 0) then
+    !  allocate(this%mawwells(n)%auxvar(this%naux))
+    !  do iaux = 1, this%naux
+    !    allocate(this%mawwells(n)%auxvar(iaux)%name)
+    !    allocate(this%mawwells(n)%auxvar(iaux)%value)
+    !  end do
+    !end if
+    !allocate(this%mawwells(n)%rate)
+    !allocate(this%mawwells(n)%rate%name)
+    !allocate(this%mawwells(n)%rate%value)
+    !allocate(this%mawwells(n)%well_head)
+    !allocate(this%mawwells(n)%well_head%name)
+    !allocate(this%mawwells(n)%well_head%value)
     !
     ! -- initialize a few well variables
     this%mawwells(n)%name = ''
@@ -3820,15 +3925,15 @@ contains
     this%mawwells(n)%shutoffweight = DONE
     this%mawwells(n)%shutoffdq = DONE
     this%mawwells(n)%shutoffqold = DONE
-    ! -- timeseries aware data
-    do iaux = 1, this%naux
-      this%mawwells(n)%auxvar(iaux)%name = ''
-      this%mawwells(n)%auxvar(iaux)%value = DZERO
-    end do
-    this%mawwells(n)%rate%name = ''
-    this%mawwells(n)%rate%value = DZERO
-    this%mawwells(n)%head%name = ''
-    this%mawwells(n)%head%value = DZERO
+    !! -- timeseries aware data
+    !do iaux = 1, this%naux
+    !  this%mawwells(n)%auxvar(iaux)%name = ''
+    !  this%mawwells(n)%auxvar(iaux)%value = DZERO
+    !end do
+    !this%mawwells(n)%rate%name = ''
+    !this%mawwells(n)%rate%value = DZERO
+    !this%mawwells(n)%well_head%name = ''
+    !this%mawwells(n)%well_head%value = DZERO
     !
     ! -- return
     return
@@ -3845,7 +3950,7 @@ contains
     class(MawType) :: this
     integer(I4B), intent(in) :: n
     ! -- local
-    integer(I4B) :: iaux
+    !integer(I4B) :: iaux
 ! ------------------------------------------------------------------------------
     !
     deallocate(this%mawwells(n)%gwfnodes)
@@ -3886,20 +3991,20 @@ contains
     deallocate(this%mawwells(n)%shutoffweight)
     deallocate(this%mawwells(n)%shutoffdq)
     deallocate(this%mawwells(n)%shutoffqold)
-    ! -- timeseries aware data
-    if (this%naux > 0) then
-      do iaux = 1, this%naux
-        deallocate(this%mawwells(n)%auxvar(iaux)%name)
-        deallocate(this%mawwells(n)%auxvar(iaux)%value)
-      end do
-      deallocate(this%mawwells(n)%auxvar)
-    end if
-    deallocate(this%mawwells(n)%rate%name)
-    deallocate(this%mawwells(n)%rate%value)
-    deallocate(this%mawwells(n)%rate)
-    deallocate(this%mawwells(n)%head%name)
-    deallocate(this%mawwells(n)%head%value)
-    deallocate(this%mawwells(n)%head)
+    !! -- timeseries aware data
+    !if (this%naux > 0) then
+    !  do iaux = 1, this%naux
+    !    deallocate(this%mawwells(n)%auxvar(iaux)%name)
+    !    deallocate(this%mawwells(n)%auxvar(iaux)%value)
+    !  end do
+    !  deallocate(this%mawwells(n)%auxvar)
+    !end if
+    !deallocate(this%mawwells(n)%rate%name)
+    !deallocate(this%mawwells(n)%rate%value)
+    !deallocate(this%mawwells(n)%rate)
+    !deallocate(this%mawwells(n)%well_head%name)
+    !deallocate(this%mawwells(n)%well_head%value)
+    !deallocate(this%mawwells(n)%well_head)
     !
     ! -- return
     return

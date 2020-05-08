@@ -2599,7 +2599,6 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use TdisModule, only: kper, perlen, totimsav
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
     use InputOutputModule, only: urword
     use SimModule, only: ustop, store_error
@@ -2623,15 +2622,10 @@ contains
     integer(I4B) :: i0
     integer(I4B) :: lloc
     integer(I4B) :: idiv
-    !integer(I4B) :: iaux
     real(DP) :: rval
-    real(DP) :: endtim
     real(DP), pointer :: bndElem => null()
     ! -- formats
 ! ------------------------------------------------------------------------------
-    !
-    ! -- Find time interval of current stress period.
-    endtim = totimsav + perlen(kper)
     !
     ! -- Assign boundary name
     if (this%inamedbound==1) then
