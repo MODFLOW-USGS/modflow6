@@ -113,6 +113,34 @@ module MawModule
     ! -- derived types
     type(MawWellType), dimension(:), pointer, contiguous :: mawwells => NULL()
     !
+    ! -- from MawWellType (for each well)
+    character (len=8), dimension(:), pointer, contiguous :: status => null()
+    integer(I4B), dimension(:), pointer, contiguous :: ngwfnodes => null()
+    integer(I4B), dimension(:), pointer, contiguous :: ieqn => null()
+    integer(I4B), dimension(:), pointer, contiguous :: ishutoff => null()
+    integer(I4B), dimension(:), pointer, contiguous :: ifwdischarge => null()
+    real(DP), dimension(:), pointer, contiguous :: strt => null()
+    real(DP), dimension(:), pointer, contiguous :: radius => null()
+    real(DP), dimension(:), pointer, contiguous :: area => null()
+    real(DP), dimension(:), pointer, contiguous :: pumpelev => null()
+    real(DP), dimension(:), pointer, contiguous :: bot => null()
+    real(DP), dimension(:), pointer, contiguous :: ratesim => null()
+    real(DP), dimension(:), pointer, contiguous :: reduction_length => null()
+    real(DP), dimension(:), pointer, contiguous :: fwelev => null()
+    real(DP), dimension(:), pointer, contiguous :: fwcond => null()
+    real(DP), dimension(:), pointer, contiguous :: fwrlen => null()
+    real(DP), dimension(:), pointer, contiguous :: fwcondsim => null()
+    real(DP), dimension(:), pointer, contiguous :: xsto => null()
+    real(DP), dimension(:), pointer, contiguous :: xoldsto => null()
+    real(DP), dimension(:), pointer, contiguous :: shutoffmin => null()
+    real(DP), dimension(:), pointer, contiguous :: shutoffmax => null()
+    real(DP), dimension(:), pointer, contiguous :: shutofflevel => null()
+    real(DP), dimension(:), pointer, contiguous :: shutoffweight => null()
+    real(DP), dimension(:), pointer, contiguous :: shutoffdq => null()
+    real(DP), dimension(:), pointer, contiguous :: shutoffqold => null()
+    !
+    ! -- from MawWellType (for each connections)
+    !
     ! -- for budgets
     integer(I4B), pointer :: bditems => NULL()
     type(BudgetObjectType), pointer :: budobj => null()
@@ -320,22 +348,6 @@ contains
     integer(I4B) :: i
 ! ------------------------------------------------------------------------------
     !
-    ! -- allocate cmawname
-    allocate(this%cmawname(this%nmawwells))
-    !
-    ! -- allocate idxmawconn
-    call mem_allocate(this%idxmawconn, this%nmawwells+1, 'IDXMAWCONN', this%origin)
-    !
-    ! -- timeseries aware variables
-    call mem_allocate(this%rate, this%nmawwells, 'RATE', this%origin)
-    call mem_allocate(this%well_head, this%nmawwells, 'WELL_HEAD', this%origin)
-    call mem_allocate(this%mauxvar, this%naux, this%nmawwells, 'MAUXVAR', this%origin)
-    !
-    ! -- initialize idxmawconn
-    do i = 1, this%nmawwells + 1
-      this%idxmawconn(i) = 0
-    end do
-    !
     ! -- allocate character array for budget text
     allocate(this%cmawbudget(this%bditems))
     !
@@ -348,6 +360,83 @@ contains
     this%cmawbudget(6) = '        FROM-MVR'
     this%cmawbudget(7) = '     RATE-TO-MVR'
     this%cmawbudget(8) = '  FW-RATE-TO-MVR'
+    !
+    ! -- allocate character arrays
+    allocate(this%cmawname(this%nmawwells))
+    allocate(this%status(this%nmawwells))
+    !
+    ! -- allocate well data pointers in memory manager
+    call mem_allocate(this%ngwfnodes, this%nmawwells, 'NGWFNODES', this%origin)
+    call mem_allocate(this%ieqn, this%nmawwells, 'IEQN', this%origin)
+    call mem_allocate(this%ishutoff, this%nmawwells, 'ISHUTOFF', this%origin)
+    call mem_allocate(this%ifwdischarge, this%nmawwells, 'IFWDISCHARGE',         &
+                      this%origin)
+    call mem_allocate(this%strt, this%nmawwells, 'STRT', this%origin)
+    call mem_allocate(this%radius, this%nmawwells, 'RADIUS', this%origin)
+    call mem_allocate(this%area, this%nmawwells, 'AREA', this%origin)
+    call mem_allocate(this%pumpelev, this%nmawwells, 'PUMPELEV', this%origin)
+    call mem_allocate(this%bot, this%nmawwells, 'BOT', this%origin)
+    call mem_allocate(this%ratesim, this%nmawwells, 'RATESIM', this%origin)
+    call mem_allocate(this%reduction_length, this%nmawwells, 'REDUCTION_LENGTH', &
+                      this%origin)
+    call mem_allocate(this%fwelev, this%nmawwells, 'FWELEV', this%origin)
+    call mem_allocate(this%fwcond, this%nmawwells, 'FWCONDS', this%origin)
+    call mem_allocate(this%fwrlen, this%nmawwells, 'FWRLEN', this%origin)
+    call mem_allocate(this%fwcondsim, this%nmawwells, 'FWCONDSIM', this%origin)
+    call mem_allocate(this%xsto, this%nmawwells, 'XSTO', this%origin)
+    call mem_allocate(this%xoldsto, this%nmawwells, 'XOLDSTO', this%origin)
+    call mem_allocate(this%shutoffmin, this%nmawwells, 'SHUTOFFMIN', this%origin)
+    call mem_allocate(this%shutoffmax, this%nmawwells, 'SHUTOFFMAX', this%origin)
+    call mem_allocate(this%shutofflevel, this%nmawwells, 'SHUTOFFLEVEL',         &
+                      this%origin)
+    call mem_allocate(this%shutoffweight, this%nmawwells, 'SHUTOFFWEIGHT',       &
+                      this%origin)
+    call mem_allocate(this%shutoffdq, this%nmawwells, 'SHUTOFFDQ', this%origin)
+    call mem_allocate(this%shutoffqold, this%nmawwells, 'SHUTOFFQOLD',           &
+                      this%origin)
+    !
+    ! -- initialize well data
+    do i = 1, this%nmawwells
+      this%status(i) = 'ACTIVE'
+      this%ngwfnodes(i) = 0
+      this%ieqn(i) = 0
+      this%ishutoff(i) = 0
+      this%ifwdischarge(i) = 0
+      this%strt(i) = DEP20
+      this%radius(i) = DEP20
+      this%area(i) = DZERO
+      this%pumpelev(i) = DEP20
+      this%bot(i) = DEP20
+      this%ratesim(i) = DZERO
+      this%reduction_length(i) = DEP20
+      this%fwelev(i) = DZERO
+      this%fwcond(i) = DZERO
+      this%fwrlen(i) = DZERO
+      this%fwcondsim(i) = DZERO
+      this%xsto(i) = DZERO
+      this%xoldsto(i) = DZERO
+      this%shutoffmin(i) = DZERO
+      this%shutoffmax(i) = DZERO
+      this%shutofflevel(i) = DEP20
+      this%shutoffweight(i) = DONE
+      this%shutoffdq(i) = DONE
+      this%shutoffqold(i) = DONE
+    end do
+    !
+    ! -- allocate idxmawconn
+    call mem_allocate(this%idxmawconn, this%nmawwells+1, 'IDXMAWCONN',           &
+                      this%origin)
+    !
+    ! -- timeseries aware variables
+    call mem_allocate(this%rate, this%nmawwells, 'RATE', this%origin)
+    call mem_allocate(this%well_head, this%nmawwells, 'WELL_HEAD', this%origin)
+    call mem_allocate(this%mauxvar, this%naux, this%nmawwells, 'MAUXVAR',        &
+                      this%origin)
+    !
+    ! -- initialize idxmawconn
+    do i = 1, this%nmawwells + 1
+      this%idxmawconn(i) = 0
+    end do
     !
     ! -- allocate and initialize dbuff
     if (this%iheadout > 0) then
@@ -455,6 +544,7 @@ contains
     integer(I4B) :: ii
     integer(I4B) :: jj
     !integer(I4B) :: iaux
+    integer(I4B) :: ieqn
     integer(I4B) :: itmp
     integer(I4B) :: ierr
     real(DP), pointer :: bndElem => null()
@@ -524,11 +614,14 @@ contains
             'Radius for well', n, 'must be greater than zero.'
           call store_error(errmsg)
         end if
-        this%mawwells(n)%radius = rval
-        this%mawwells(n)%area = DPI * rval**DTWO
+        !this%mawwells(n)%radius = rval
+        !this%mawwells(n)%area = DPI * rval**DTWO
+        this%radius(n) = rval
+        this%area(n) = DPI * rval**DTWO
         !
         ! -- well bottom
-        this%mawwells(n)%bot = this%parser%GetDouble()
+        !this%mawwells(n)%bot = this%parser%GetDouble()
+        this%bot(n) = this%parser%GetDouble()
         !
         ! -- strt
         call this%parser%GetString(strttext)
@@ -536,20 +629,26 @@ contains
         ! -- ieqn
         call this%parser%GetStringCaps(keyword)
         if (keyword=='SPECIFIED') then
-          this%mawwells(n)%ieqn = 0
+          !this%mawwells(n)%ieqn = 0
+          ieqn = 0
         else if (keyword=='THEIM' .or. keyword=='THIEM') then
-          this%mawwells(n)%ieqn = 1
+          ieqn = 1
+          !this%mawwells(n)%ieqn = 1
         else if (keyword=='SKIN') then
-          this%mawwells(n)%ieqn = 2
+          ieqn = 2
+          !this%mawwells(n)%ieqn = 2
         else if (keyword=='CUMULATIVE') then
-          this%mawwells(n)%ieqn = 3
+          ieqn = 3
+          !this%mawwells(n)%ieqn = 3
         else if (keyword=='MEAN') then
-          this%mawwells(n)%ieqn = 4
+          ieqn = 4
+          !this%mawwells(n)%ieqn = 4
         else
           write(errmsg,'(a,1x,i0,1x,a)')                                         &
             'CONDEQN for well', n,                                               &
             "must be 'CONDUCTANCE', 'THIEM', 'MEAN', or 'SKIN'."
         end if
+        this%ieqn(n) = ieqn
         ! -- ngwnodes
         ival = this%parser%GetInteger()
         if (ival < 1) then
@@ -559,26 +658,28 @@ contains
         end if
         
         if (ival > 0) then
-          this%mawwells(n)%ngwfnodes = ival
+          !this%mawwells(n)%ngwfnodes = ival
+          this%ngwfnodes(n) = ival
         end if
         !
         ! -- allocate storage for connection data needed for the MAW well
-        allocate(this%mawwells(n)%gwfnodes(this%mawwells(n)%ngwfnodes))
-        allocate(this%mawwells(n)%satcond(this%mawwells(n)%ngwfnodes))
-        allocate(this%mawwells(n)%simcond(this%mawwells(n)%ngwfnodes))
-        allocate(this%mawwells(n)%topscrn(this%mawwells(n)%ngwfnodes))
-        allocate(this%mawwells(n)%botscrn(this%mawwells(n)%ngwfnodes))
-        if (this%mawwells(n)%ieqn==2 .OR. this%mawwells(n)%ieqn==3 .OR.       &
-            this%mawwells(n)%ieqn==4) then
-          allocate(this%mawwells(n)%hk(this%mawwells(n)%ngwfnodes))
+        allocate(this%mawwells(n)%gwfnodes(this%ngwfnodes(n)))
+        allocate(this%mawwells(n)%satcond(this%ngwfnodes(n)))
+        allocate(this%mawwells(n)%simcond(this%ngwfnodes(n)))
+        allocate(this%mawwells(n)%topscrn(this%ngwfnodes(n)))
+        allocate(this%mawwells(n)%botscrn(this%ngwfnodes(n)))
+        if (this%ieqn(n) == 2 .OR. this%ieqn(n) == 3 .OR.                        &
+            this%ieqn(n) == 4) then
+          allocate(this%mawwells(n)%hk(this%ngwfnodes(n)))
         end if
-        if (this%mawwells(n)%ieqn==2 .OR. this%mawwells(n)%ieqn==3 .OR.       &
-            this%mawwells(n)%ieqn==4) then
-          allocate(this%mawwells(n)%sradius(this%mawwells(n)%ngwfnodes))
+        if (this%ieqn(n) == 2 .OR. this%ieqn(n) == 3 .OR.                        &
+            this%ieqn(n) == 4) then
+          allocate(this%mawwells(n)%sradius(this%ngwfnodes(n)))
         end if
         !
         ! -- increment maxbound
-        itmp = itmp + this%mawwells(n)%ngwfnodes
+        !itmp = itmp + this%mawwells(n)%ngwfnodes
+        itmp = itmp + this%ngwfnodes(n)
         !
         ! -- set default bndName
         write (cno,'(i9.9)') n
@@ -590,11 +691,13 @@ contains
         end do
 
         ! -- read well name
-        this%mawwells(n)%name = bndName
+        !this%mawwells(n)%name = bndName
+        this%cmawname(n) = bndName
         if (this%inamedbound /= 0) then
           call this%parser%GetStringCaps(bndNameTemp)
           if (bndNameTemp /= '') then
-            this%mawwells(n)%name = bndNameTemp(1:16)
+            !this%mawwells(n)%name = bndNameTemp(1:16)
+            this%cmawname(n) = bndNameTemp(1:16)
           end if
         else
           bndName = ''
@@ -616,11 +719,17 @@ contains
         !
         ! -- set starting head value
         !this%mawwells(n)%strt = this%mawwells(n)%well_head%value
-        this%mawwells(n)%strt = this%well_head(n)
+        this%strt(n) = this%well_head(n)
+        !!
+        !! -- check for error condition
+        !if (this%mawwells(n)%strt < this%mawwells(n)%bot) then
+        !  write(cstr, fmthdbot) this%mawwells(n)%strt, this%mawwells(n)%bot
+        !  call this%maw_set_attribute_error(n, 'STRT', trim(cstr))
+        !end if
         !
         ! -- check for error condition
-        if (this%mawwells(n)%strt < this%mawwells(n)%bot) then
-          write(cstr, fmthdbot) this%mawwells(n)%strt, this%mawwells(n)%bot
+        if (this%strt(n) < this%bot(n)) then
+          write(cstr, fmthdbot) this%strt(n), this%bot(n)
           call this%maw_set_attribute_error(n, 'STRT', trim(cstr))
         end if
         !
@@ -722,7 +831,8 @@ contains
     allocate(iachk(this%nmawwells+1))
     iachk(1) = 1
     do n = 1, this%nmawwells
-      iachk(n+1) = iachk(n) +  this%mawwells(n)%ngwfnodes
+      !iachk(n+1) = iachk(n) +  this%mawwells(n)%ngwfnodes
+      iachk(n+1) = iachk(n) +  this%ngwfnodes(n)
     end do
     allocate(nboundchk(this%maxbound))
     do n = 1, this%maxbound
@@ -744,17 +854,28 @@ contains
         n = ival
 
         if (n < 1 .or. n > this%nmawwells) then
-          write(errmsg,'(4x,a,1x,i6)') &
-            '****ERROR. IMAW MUST BE > 0 and <= ', this%nmawwells
+          write(errmsg,'(a,1x,i0,a)')                                            &
+            'IMAW must be greater than 0 and less than or equal to ',            &
+            this%nmawwells, '.'
           call store_error(errmsg)
           cycle
         end if
 
         ! -- read connection number
         ival = this%parser%GetInteger()
-        if (ival < 1 .or. ival > this%mawwells(n)%ngwfnodes) then
-          write(errmsg,'(4x,a,1x,i4,1x,a,1x,i6)') &
-            '****ERROR. JCONN FOR WELL ', n, 'MUST BE > 1 and <= ', this%mawwells(n)%ngwfnodes
+        !if (ival < 1 .or. ival > this%mawwells(n)%ngwfnodes) then
+        !  write(errmsg,'(a,1x,i0,1x,a,1x,i0,a)')                                 &
+        !    'JCONN for well ', n,                                                &
+        !    'must be greater than 1 and less than or equal to ',                 &
+        !    this%mawwells(n)%ngwfnodes, '.'
+        !  call store_error(errmsg)
+        !  cycle
+        !end if
+        if (ival < 1 .or. ival > this%ngwfnodes(n)) then
+          write(errmsg,'(a,1x,i0,1x,a,1x,i0,a)')                                 &
+            'JCONN for well ', n,                                                &
+            'must be greater than 1 and less than or equal to ',                 &
+            this%ngwfnodes(n), '.'
           call store_error(errmsg)
           cycle
         end if
@@ -768,12 +889,14 @@ contains
         nn  = this%dis%noder_from_cellid(cellid, this%inunit, this%iout)
         topnn = this%dis%top(nn)
         botnn = this%dis%bot(nn)
-        botw = this%mawwells(n)%bot
+        !botw = this%mawwells(n)%bot
+        botw = this%bot(n)
         ! -- set gwf node number for connection
         this%mawwells(n)%gwfnodes(j) = nn
         ! -- top of screen
         rval = this%parser%GetDouble()
-        if (this%mawwells(n)%ieqn /= 4) then
+        !if (this%mawwells(n)%ieqn /= 4) then
+        if (this%ieqn(n) /= 4) then
           rval = topnn
         else
           if (rval > topnn) then
@@ -783,7 +906,8 @@ contains
         this%mawwells(n)%topscrn(j)  = rval
         ! -- bottom of screen
         rval = this%parser%GetDouble()
-        if (this%mawwells(n)%ieqn /= 4) then
+        !if (this%mawwells(n)%ieqn /= 4) then
+        if (this%ieqn(n) /= 4) then
           rval = botnn
         else
           if (rval < botnn) then
@@ -793,43 +917,57 @@ contains
         this%mawwells(n)%botscrn(j)  = rval
         ! adjust the bottom of the well for all conductance approaches
         ! except for "mean"
-        if (this%mawwells(n)%ieqn /= 4) then
+        !if (this%mawwells(n)%ieqn /= 4) then
+        if (this%ieqn(n) /= 4) then
           if (rval < botw) then
             botw = rval
-            this%mawwells(n)%bot = rval
+            !this%mawwells(n)%bot = rval
+            this%bot(n) = rval
           end if
         end if
         ! -- hydraulic conductivity or conductance
         rval = this%parser%GetDouble()
-        if (this%mawwells(n)%ieqn==0) then
+        !if (this%mawwells(n)%ieqn==0) then
+        !  this%mawwells(n)%satcond(j)  = rval
+        !else if (this%mawwells(n)%ieqn==2 .OR. this%mawwells(n)%ieqn==3 .OR.  &
+        !         this%mawwells(n)%ieqn==4) then
+        !  this%mawwells(n)%hk(j) = rval
+        !end if
+        if (this%ieqn(n) == 0) then
           this%mawwells(n)%satcond(j)  = rval
-        else if (this%mawwells(n)%ieqn==2 .OR. this%mawwells(n)%ieqn==3 .OR.  &
-                 this%mawwells(n)%ieqn==4) then
+        else if (this%ieqn(n) == 2 .OR. this%ieqn(n) == 3 .OR.                   &
+                 this%ieqn(n) == 4) then
           this%mawwells(n)%hk(j) = rval
         end if
         ! -- skin radius
         rval = this%parser%GetDouble()
-        if (this%mawwells(n)%ieqn==2 .OR. this%mawwells(n)%ieqn==3 .OR.       &
-            this%mawwells(n)%ieqn==4) then
+        !if (this%mawwells(n)%ieqn==2 .OR. this%mawwells(n)%ieqn==3 .OR.       &
+        !    this%mawwells(n)%ieqn==4) then
+        !  this%mawwells(n)%sradius(j) = rval
+        !end if
+        if (this%ieqn(n) == 2 .OR. this%ieqn(n) == 3 .OR.                        &
+            this%ieqn(n) == 4) then
           this%mawwells(n)%sradius(j) = rval
         end if
       end do
-      write(this%iout,'(1x,a)')'END OF '//trim(adjustl(this%text))//' CONNECTIONDATA'
+      write(this%iout,'(1x,a)')                                                  &
+        'END OF ' // trim(adjustl(this%text)) // ' CONNECTIONDATA'
       
       ipos = 0
       do n = 1, this%nmawwells
-        do j = 1, this%mawwells(n)%ngwfnodes
+        !do j = 1, this%mawwells(n)%ngwfnodes
+        do j = 1, this%ngwfnodes(n)
           ipos = ipos + 1
           !
           ! -- check for missing or duplicate maw well connections
           if (nboundchk(ipos) == 0) then
-            write(errmsg,'(a,1x,i0,1x,a,1x,i0)')                                &
-              'ERROR.  NO DATA SPECIFIED FOR MAW WELL', n, 'CONNECTION', j
+            write(errmsg,'(a,1x,i0,1x,a,1x,i0,a)')                               &
+              'No data specified for maw well', n, 'connection', j, '.'
             call store_error(errmsg)
           else if (nboundchk(ipos) > 1) then
-            write(errmsg,'(a,1x,i0,1x,a,1x,i0,1x,a,1x,i0,1x,a)')                &
-              'ERROR.  DATA FOR MAW WELL', n, 'CONNECTION', j,                  &
-              'SPECIFIED', nboundchk(n), 'TIMES'
+            write(errmsg,'(a,1x,i0,1x,a,1x,i0,1x,a,1x,i0,1x,a)')                 &
+              'Data for maw well', n, 'connection', j,                           &
+              'specified', nboundchk(n), 'times.'
             call store_error(errmsg)
           end if
         end do
@@ -838,10 +976,30 @@ contains
       ! -- make sure that more than one connection per cell is only specified 
       !    wells using the mean conducance type
       do n = 1, this%nmawwells
-        if (this%mawwells(n)%ieqn /= 4) then
-          do j = 1, this%mawwells(n)%ngwfnodes
+        !if (this%mawwells(n)%ieqn /= 4) then
+        !  do j = 1, this%mawwells(n)%ngwfnodes
+        !    nn = this%mawwells(n)%gwfnodes(j) 
+        !    do jj = 1, this%mawwells(n)%ngwfnodes
+        !      ! skip current maw node
+        !      if (jj == j) then
+        !        cycle
+        !      end if
+        !      nn2 =  this%mawwells(n)%gwfnodes(jj) 
+        !      if (nn2 == nn) then
+        !        call this%dis%noder_to_string(nn, nodestr)
+        !        write(errmsg,'(a,1x,i0,1x,a,1x,i0,3(1x,a))')                    &
+        !          'ERROR.  ONLY ONE CONNECTION CAN BE SPECIFIED FOR MAW WELL',  &
+        !          n, 'CONNECTION', j, 'TO GWF CELL', trim(adjustl(nodestr)),   &
+        !          'UNLESS THE MEAN CONDEQN IS SPECIFIED'
+        !        call store_error(errmsg)
+        !      end if
+        !    end do
+        !  end do
+        !end if
+        if (this%ieqn(n) /= 4) then
+          do j = 1, this%ngwfnodes(n)
             nn = this%mawwells(n)%gwfnodes(j) 
-            do jj = 1, this%mawwells(n)%ngwfnodes
+            do jj = 1, this%ngwfnodes(n)
               ! skip current maw node
               if (jj == j) then
                 cycle
@@ -849,10 +1007,10 @@ contains
               nn2 =  this%mawwells(n)%gwfnodes(jj) 
               if (nn2 == nn) then
                 call this%dis%noder_to_string(nn, nodestr)
-                write(errmsg,'(a,1x,i0,1x,a,1x,i0,3(1x,a))')                    &
-                  'ERROR.  ONLY ONE CONNECTION CAN BE SPECIFIED FOR MAW WELL',  &
-                  n, 'CONNECTION', j, 'TO GWF CELL', trim(adjustl(nodestr)),   &
-                  'UNLESS THE MEAN CONDEQN IS SPECIFIED'
+                write(errmsg,'(a,1x,i0,1x,a,1x,i0,3(1x,a))')                     &
+                  'Only one connection can be specified for maw well',           &
+                  n, 'connection', j, 'to gwf cell', trim(adjustl(nodestr)),     &
+                  'unless the mean condeqn is specified.'
                 call store_error(errmsg)
               end if
             end do
@@ -860,7 +1018,7 @@ contains
         end if
       end do
     else
-      call store_error('ERROR.  REQUIRED CONNECTIONDATA BLOCK NOT FOUND.')
+      call store_error('Required connectiondata block not found.')
     end if
     !
     ! -- deallocate local variable
@@ -946,6 +1104,8 @@ contains
     ! -- read wells block
     call this%maw_read_wells()
     !
+    ! -- allocate arrays
+    !
     ! -- read well_connections block
     call this%maw_read_well_connections()
     !
@@ -1012,25 +1172,35 @@ contains
     !
     ! -- initialize xnewpak
     do n = 1, this%nmawwells
-      this%xnewpak(n) = this%mawwells(n)%strt
+      !this%xnewpak(n) = this%mawwells(n)%strt
+      this%xnewpak(n) = this%strt(n)
     end do
     !
     ! -- initialize status (iboundpak) of maw wells to active
     do n = 1, this%nmawwells
-      if (this%mawwells(n)%status == 'CONSTANT') then
-        this%iboundpak(n) = -1
-      else if (this%mawwells(n)%status == 'INACTIVE') then
-        this%iboundpak(n) = 0
-      else if (this%mawwells(n)%status == 'ACTIVE ') then
-        this%iboundpak(n) = 1
-      end if
+      !if (this%mawwells(n)%status == 'CONSTANT') then
+      !  this%iboundpak(n) = -1
+      !else if (this%mawwells(n)%status == 'INACTIVE') then
+      !  this%iboundpak(n) = 0
+      !else if (this%mawwells(n)%status == 'ACTIVE ') then
+      !  this%iboundpak(n) = 1
+      !end if
+      select case (this%status(n))
+        case('CONSTANT')
+          this%iboundpak(n) = -1
+        case('INACTIVE')
+          this%iboundpak(n) = 0
+        case('ACTIVE')
+          this%iboundpak(n) = 1
+      end select
     end do
     !
     ! -- set idxmawconn and imap for each connection
     idx = 0
     this%idxmawconn(1) = 1
     do n = 1, this%nmawwells
-      do j = 1, this%mawwells(n)%ngwfnodes
+      !do j = 1, this%mawwells(n)%ngwfnodes
+      do j = 1, this%ngwfnodes(n)
         idx = idx + 1
         this%imap(idx) = n
       end do
@@ -1041,10 +1211,11 @@ contains
     if (this%inamedbound /= 0) then
       idx = 0
       do n = 1, this%nmawwells
-        this%cmawname(n) = this%mawwells(n)%name
+        !this%cmawname(n) = this%mawwells(n)%name
         do j = 1, this%mawwells(n)%ngwfnodes
           idx = idx + 1
-          this%boundname(idx) = this%mawwells(n)%name
+          !this%boundname(idx) = this%mawwells(n)%name
+          this%boundname(idx) = this%cmawname(n)
         end do
       end do
     else
@@ -1057,9 +1228,11 @@ contains
     if (this%inamedbound /= 0) then
       idx = 0
       do n = 1, this%nmawwells
-        do j = 1, this%mawwells(n)%ngwfnodes
+        !do j = 1, this%mawwells(n)%ngwfnodes
+        do j = 1, this%ngwfnodes(n)
           idx = idx + 1
-          this%boundname(idx) = this%mawwells(n)%name
+          !this%boundname(idx) = this%mawwells(n)%name
+          this%boundname(idx) = this%cmawname(n)
           this%imap(idx) = n
         end do
       end do
@@ -1080,8 +1253,14 @@ contains
       !
       ! -- calculate saturated conductance only if CONDUCTANCE was not
       !    specified for each maw-gwf connection (CONDUCTANCE keyword).
-      do j = 1, this%mawwells(n)%ngwfnodes
-        if (this%mawwells(n)%ieqn /= 0) then
+      !do j = 1, this%mawwells(n)%ngwfnodes
+      !  if (this%mawwells(n)%ieqn /= 0) then
+      !    inode = this%mawwells(n)%gwfnodes(j)
+      !    call this%maw_calculate_satcond(n, j, inode)
+      !  end if
+      !end do
+      do j = 1, this%ngwfnodes(n)
+        if (this%ieqn(n) /= 0) then
           inode = this%mawwells(n)%gwfnodes(j)
           call this%maw_calculate_satcond(n, j, inode)
         end if
@@ -1117,16 +1296,28 @@ contains
         text = 'NAME'
         call this%inputtab%initialize_column(text, 20, alignment=TABLEFT)
       end if    
+      !do n = 1, this%nmawwells
+      !  call this%inputtab%add_term(n)
+      !  call this%inputtab%add_term(this%mawwells(n)%radius)
+      !  call this%inputtab%add_term(this%mawwells(n)%area)
+      !  call this%inputtab%add_term(this%mawwells(n)%bot)
+      !  call this%inputtab%add_term(this%mawwells(n)%strt)
+      !  call this%inputtab%add_term(this%mawwells(n)%ngwfnodes)
+      !  call this%inputtab%add_term(ccond(this%mawwells(n)%ieqn))
+      !  if (this%inamedbound /= 0) then 
+      !    call this%inputtab%add_term(this%mawwells(n)%name)
+      !  end if
+      !end do
       do n = 1, this%nmawwells
         call this%inputtab%add_term(n)
-        call this%inputtab%add_term(this%mawwells(n)%radius)
-        call this%inputtab%add_term(this%mawwells(n)%area)
-        call this%inputtab%add_term(this%mawwells(n)%bot)
-        call this%inputtab%add_term(this%mawwells(n)%strt)
-        call this%inputtab%add_term(this%mawwells(n)%ngwfnodes)
-        call this%inputtab%add_term(ccond(this%mawwells(n)%ieqn))
+        call this%inputtab%add_term(this%radius(n))
+        call this%inputtab%add_term(this%area(n))
+        call this%inputtab%add_term(this%bot(n))
+        call this%inputtab%add_term(this%strt(n))
+        call this%inputtab%add_term(this%ngwfnodes(n))
+        call this%inputtab%add_term(ccond(this%ieqn(n)))
         if (this%inamedbound /= 0) then 
-          call this%inputtab%add_term(this%mawwells(n)%name)
+          call this%inputtab%add_term(this%cmawname(n))
         end if
       end do
     end if
@@ -1161,7 +1352,8 @@ contains
       !
       ! -- write the data to the table
       do n = 1, this%nmawwells
-        do j = 1, this%mawwells(n)%ngwfnodes
+        !do j = 1, this%mawwells(n)%ngwfnodes
+        do j = 1, this%ngwfnodes(n)
           call this%inputtab%add_term(n)
           call this%inputtab%add_term(j)
           nn = this%mawwells(n)%gwfnodes(j)
@@ -1169,18 +1361,18 @@ contains
           call this%inputtab%add_term(nodestr)
           call this%inputtab%add_term(this%mawwells(n)%topscrn(j))
           call this%inputtab%add_term(this%mawwells(n)%botscrn(j))
-          if (this%mawwells(n)%ieqn == 2 .or.                                    &
-              this%mawwells(n)%ieqn == 3 .or.                                    &
-              this%mawwells(n)%ieqn == 4) then
+          if (this%ieqn(n) == 2 .or.                                             &
+              this%ieqn(n) == 3 .or.                                             &
+              this%ieqn(n) == 4) then
             call this%inputtab%add_term(this%mawwells(n)%sradius(j))
             call this%inputtab%add_term(this%mawwells(n)%hk(j))
           else
             call this%inputtab%add_term(' ')      
             call this%inputtab%add_term(' ')      
           end if      
-          if (this%mawwells(n)%ieqn == 1 .or.                                    &
-              this%mawwells(n)%ieqn == 2 .or.                                    &
-              this%mawwells(n)%ieqn == 3) then
+          if (this%ieqn(n) == 1 .or.                                             &
+              this%ieqn(n) == 2 .or.                                             &
+              this%ieqn(n) == 3) then
             k11 = this%gwfk11(nn)
             if (this%gwfik22 == 0) then
               k22 = this%gwfk11(nn)
@@ -1261,7 +1453,8 @@ contains
     if (this%inamedbound==1) then
       idx = 0
       do ii = 1, imaw
-        do jj = 1, this%mawwells(ii)%ngwfnodes
+        !do jj = 1, this%mawwells(ii)%ngwfnodes
+        do jj = 1, this%ngwfnodes(ii)
           idx = idx + 1
         end do
       end do
@@ -1281,7 +1474,8 @@ contains
         call urword(line, lloc, istart, istop, 1, ival, rval,                    &
                     this%iout, this%inunit)
         text = line(istart:istop)
-        this%mawwells(imaw)%status = text(1:8)
+        !this%mawwells(imaw)%status = text(1:8)
+        this%status(imaw) = text(1:8)
         if (text == 'CONSTANT') then
           this%iboundpak(imaw) = -1
         else if (text == 'INACTIVE') then
@@ -1333,38 +1527,47 @@ contains
         !
         ! -- check for error condition
         !if (this%mawwells(imaw)%well_head%value < this%mawwells(imaw)%bot) then
-        if (this%well_head(imaw) < this%mawwells(imaw)%bot) then
+        if (this%well_head(imaw) < this%bot(imaw)) then
           write(cstr, fmthdbot)                                                  &
-            this%well_head(imaw), this%mawwells(imaw)%bot
+            this%well_head(imaw), this%bot(imaw)
           call this%maw_set_attribute_error(imaw, 'WELL HEAD', trim(cstr))
         end if
       case ('FLOWING_WELL')
         call urword(line, lloc, istart, istop, 3, ival, rval,                    &
                     this%iout, this%inunit)
-        this%mawwells(imaw)%fwelev = rval
+        !this%mawwells(imaw)%fwelev = rval
+        this%fwelev(imaw) = rval
         call urword(line, lloc, istart, istop, 3, ival, rval,                    &
                     this%iout, this%inunit)
-        this%mawwells(imaw)%fwcond = rval
+        !this%mawwells(imaw)%fwcond = rval
+        this%fwcond(imaw) = rval
         call urword(line, lloc, istart, istop, 3, ival, rval,                    &
                     -this%iout, this%inunit)
-        this%mawwells(imaw)%fwrlen = rval
+        !this%mawwells(imaw)%fwrlen = rval
+        this%fwrlen(imaw) = rval
       case ('RATE_SCALING')
         call urword(line, lloc, istart, istop, 3, ival, rval,                    &
                     this%iout, this%inunit)
-        this%mawwells(imaw)%pumpelev = rval
+        !this%mawwells(imaw)%pumpelev = rval
+        this%pumpelev(imaw) = rval
         call urword(line, lloc, istart, istop, 3, ival, rval,                    &
                     this%iout, this%inunit)
-        this%mawwells(imaw)%reduction_length = rval
+        !this%mawwells(imaw)%reduction_length = rval
+        this%reduction_length(imaw) = rval
         if (rval < DZERO) then
           call this%maw_set_attribute_error(imaw, trim(keyword), 'must be >= 0.')
         end if
       case ('HEAD_LIMIT')
-        call urword(line, lloc, istart, istop, 1, ival, rval, this%iout, this%inunit)
+        call urword(line, lloc, istart, istop, 1, ival, rval,                    &
+                    this%iout, this%inunit)
         if (line(istart:istop) == 'OFF') then
-          this%mawwells(imaw)%shutofflevel = DEP20
+          !this%mawwells(imaw)%shutofflevel = DEP20
+          this%shutofflevel(imaw) = DEP20
         else
+          !read (line(istart:istop), *, iostat=istat, iomsg=errmsgr)              &
+          !  this%mawwells(imaw)%shutofflevel
           read (line(istart:istop), *, iostat=istat, iomsg=errmsgr)              &
-            this%mawwells(imaw)%shutofflevel
+            this%shutofflevel(imaw)
           if (istat /= 0) then
             errmsg = 'Could not read HEAD_LIMIT value. ' // trim(errmsgr)
             call store_error(errmsg)
@@ -1373,10 +1576,12 @@ contains
       case ('SHUT_OFF')
         call urword(line, lloc, istart, istop, 3, ival, rval,                    &
                     this%iout, this%inunit)
-        this%mawwells(imaw)%shutoffmin = rval
+        !this%mawwells(imaw)%shutoffmin = rval
+        this%shutoffmin(imaw) = rval
         call urword(line, lloc, istart, istop, 3, ival, rval,                    &
                     this%iout, this%inunit)
-        this%mawwells(imaw)%shutoffmax = rval
+        !this%mawwells(imaw)%shutoffmax = rval
+        this%shutoffmax(imaw) = rval
       case ('AUXILIARY')
         call urword(line, lloc, istart, istop, 1, ival, rval,                    &
                     this%iout, this%inunit)
@@ -1468,7 +1673,7 @@ contains
 ! ------------------------------------------------------------------------------
     idx = 1
     do n = 1, this%nmawwells
-      if (this%mawwells(n)%ngwfnodes < 1) then
+      if (this%ngwfnodes(n) < 1) then
         call this%maw_set_attribute_error(n, 'NGWFNODES', 'must be greater ' //  &
                                           'than 0.')
       end if
@@ -1478,16 +1683,56 @@ contains
         !write(cstr, fmthdbot) this%xnewpak(n), this%mawwells(n)%bot
         !call this%maw_set_attribute_error(n, 'WELL HEAD', trim(cstr))
       !end if
-      if (this%mawwells(n)%radius == DEP20) then
+      !if (this%mawwells(n)%radius == DEP20) then
+      if (this%radius(n) == DEP20) then
         call this%maw_set_attribute_error(n, 'RADIUS', 'has not been specified.')
       end if
-      if (this%mawwells(n)%shutoffmin > DZERO) then
-        if (this%mawwells(n)%shutoffmin >= this%mawwells(n)%shutoffmax) then
+      !if (this%mawwells(n)%shutoffmin > DZERO) then
+      !  if (this%mawwells(n)%shutoffmin >= this%mawwells(n)%shutoffmax) then
+      !    call this%maw_set_attribute_error(n, 'SHUT_OFF', 'shutoffmax must ' // &
+      !                                      'be > shutoffmin.')
+      !  end if
+      !end if
+      if (this%shutoffmin(n) > DZERO) then
+        if (this%shutoffmin(n) >= this%shutoffmax(n)) then
           call this%maw_set_attribute_error(n, 'SHUT_OFF', 'shutoffmax must ' // &
                                             'be > shutoffmin.')
         end if
       end if
-      do j = 1, this%mawwells(n)%ngwfnodes
+      !do j = 1, this%mawwells(n)%ngwfnodes
+      !  ! -- write gwfnode number
+      !  write(cgwfnode,'(a,i0,a)') 'gwfnode(', j,')'
+      !  if (this%mawwells(n)%botscrn(j) >= this%mawwells(n)%topscrn(j)) then
+      !    call this%maw_set_attribute_error(n, 'SCREEN_TOP', 'screen bottom ' // &
+      !                                      'must be < screen top. ' //          &
+      !                                      trim(cgwfnode))
+      !  end if
+      !  if (this%mawwells(n)%ieqn==2 .OR. this%mawwells(n)%ieqn==3 .OR.          &
+      !      this%mawwells(n)%ieqn==4) then
+      !    if (this%mawwells(n)%sradius(j) > DZERO) then
+      !      if (this%mawwells(n)%sradius(j) <= this%mawwells(n)%radius) then
+      !        call this%maw_set_attribute_error(n, 'RADIUS_SKIN', 'skin ' //     &
+      !                                          'radius must be >= well ' //     &
+      !                                          'radius. ' // trim(cgwfnode))
+      !      end if
+      !    end if
+      !    if (this%mawwells(n)%hk(j) <= DZERO) then
+      !      call this%maw_set_attribute_error(n, 'HK_SKIN', 'skin hyraulic ' //  &
+      !                                        'conductivity must be > zero. ' // &
+      !                                        trim(cgwfnode))
+      !    end if
+      !  else if (this%mawwells(n)%ieqn == 0) then
+      !    if (this%mawwells(n)%satcond(j) < DZERO) then
+      !      call this%maw_set_attribute_error(n, 'HK_SKIN',                      &
+      !                                        'skin hyraulic conductivity ' //   &
+      !                                        'must be >= zero when using ' //   &
+      !                                        'SPECIFIED condeqn. ' //           &
+      !                                        trim(cgwfnode))
+      !    end if    
+      !  end if
+      !  idx = idx + 1
+      !end do
+      do j = 1, this%ngwfnodes(n)
         ! -- write gwfnode number
         write(cgwfnode,'(a,i0,a)') 'gwfnode(', j,')'
         if (this%mawwells(n)%botscrn(j) >= this%mawwells(n)%topscrn(j)) then
@@ -1495,10 +1740,10 @@ contains
                                             'must be < screen top. ' //          &
                                             trim(cgwfnode))
         end if
-        if (this%mawwells(n)%ieqn==2 .OR. this%mawwells(n)%ieqn==3 .OR.          &
-            this%mawwells(n)%ieqn==4) then
+        if (this%ieqn(n) == 2 .OR. this%ieqn(n) == 3 .OR.                        &
+            this%ieqn(n) == 4) then
           if (this%mawwells(n)%sradius(j) > DZERO) then
-            if (this%mawwells(n)%sradius(j) <= this%mawwells(n)%radius) then
+            if (this%mawwells(n)%sradius(j) <= this%radius(n)) then
               call this%maw_set_attribute_error(n, 'RADIUS_SKIN', 'skin ' //     &
                                                 'radius must be >= well ' //     &
                                                 'radius. ' // trim(cgwfnode))
@@ -1509,7 +1754,7 @@ contains
                                               'conductivity must be > zero. ' // &
                                               trim(cgwfnode))
           end if
-        else if (this%mawwells(n)%ieqn == 0) then
+        else if (this%ieqn(n) == 0) then
           if (this%mawwells(n)%satcond(j) < DZERO) then
             call this%maw_set_attribute_error(n, 'HK_SKIN',                      &
                                               'skin hyraulic conductivity ' //   &
@@ -1551,7 +1796,8 @@ contains
     do n = 1, this%nmawwells
       nglo = moffset + this%dis%nodes + this%ioffset + n
       call sparse%addconnection(nglo, nglo, 1)
-      do j = 1, this%mawwells(n)%ngwfnodes
+      !do j = 1, this%mawwells(n)%ngwfnodes
+      do j = 1, this%ngwfnodes(n)
         jj = this%mawwells(n)%gwfnodes(j)
         jglo = jj + moffset
         call sparse%addconnection(nglo, jglo, 1)
@@ -1598,7 +1844,8 @@ contains
     do n = 1, this%nmawwells
       iglo = moffset + this%dis%nodes + this%ioffset + n
       this%idxlocnode(n) = this%dis%nodes + this%ioffset + n
-      do ii = 1, this%mawwells(n)%ngwfnodes
+      !do ii = 1, this%mawwells(n)%ngwfnodes
+      do ii = 1, this%ngwfnodes(n)
         j =  this%mawwells(n)%gwfnodes(ii)
         jglo = j + moffset
         searchloop: do jj = iasln(iglo), iasln(iglo + 1) - 1
@@ -1614,7 +1861,8 @@ contains
     ! -- maw contributions gwf portion of global matrix
     ipos = 1
     do n = 1, this%nmawwells
-      do ii = 1, this%mawwells(n)%ngwfnodes
+      !do ii = 1, this%mawwells(n)%ngwfnodes
+      do ii = 1, this%ngwfnodes(n)
         iglo = this%mawwells(n)%gwfnodes(ii) + moffset
         jglo = moffset + this%dis%nodes + this%ioffset + n
         symsearchloop: do jj = iasln(iglo), iasln(iglo + 1) - 1
@@ -1945,7 +2193,8 @@ contains
         call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)
         do n = 1, this%nmawwells
           call this%inputtab%add_term(n)
-          call this%inputtab%add_term(this%mawwells(n)%status)
+          !call this%inputtab%add_term(this%mawwells(n)%status)
+          call this%inputtab%add_term(this%status(n))
           !call this%inputtab%add_term(this%mawwells(n)%rate%value)
           call this%inputtab%add_term(this%rate(n))
           if (this%iboundpak(n) < 0) then
@@ -1954,9 +2203,12 @@ contains
           else
             call this%inputtab%add_term(' ')
           end if
-          call this%inputtab%add_term(this%mawwells(n)%pumpelev)
-          if (this%mawwells(n)%reduction_length /= DEP20) then
-            call this%inputtab%add_term(this%mawwells(n)%reduction_length)
+          !call this%inputtab%add_term(this%mawwells(n)%pumpelev)
+          call this%inputtab%add_term(this%pumpelev(n))
+          !if (this%mawwells(n)%reduction_length /= DEP20) then
+          !  call this%inputtab%add_term(this%mawwells(n)%reduction_length)
+          if (this%reduction_length(n) /= DEP20) then
+            call this%inputtab%add_term(this%reduction_length(n))
           else
             call this%inputtab%add_term(' ')
           end if
@@ -1973,7 +2225,8 @@ contains
           ntabcols = 4
           ntabrows = 0
           do n = 1, this%nmawwells
-            if (this%mawwells(n)%fwcond > DZERO) then
+            !if (this%mawwells(n)%fwcond > DZERO) then
+            if (this%fwcond(n) > DZERO) then
               ntabrows = ntabrows + 1
             end if
           end do
@@ -1989,11 +2242,17 @@ contains
             text = 'REDUCTION LENGTH'
             call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)
             do n = 1, this%nmawwells
-              if (this%mawwells(n)%fwcond > DZERO) then
+              !if (this%mawwells(n)%fwcond > DZERO) then
+              !  call this%inputtab%add_term(n)
+              !  call this%inputtab%add_term(this%mawwells(n)%fwelev)
+              !  call this%inputtab%add_term(this%mawwells(n)%fwcond)
+              !  call this%inputtab%add_term(this%mawwells(n)%fwrlen)
+              !end if
+              if (this%fwcond(n) > DZERO) then
                 call this%inputtab%add_term(n)
-                call this%inputtab%add_term(this%mawwells(n)%fwelev)
-                call this%inputtab%add_term(this%mawwells(n)%fwcond)
-                call this%inputtab%add_term(this%mawwells(n)%fwrlen)
+                call this%inputtab%add_term(this%fwelev(n))
+                call this%inputtab%add_term(this%fwcond(n))
+                call this%inputtab%add_term(this%fwrlen(n))
               end if
             end do
           end if
@@ -2007,7 +2266,8 @@ contains
         ntabcols = 4
         ntabrows = 0
         do n = 1, this%nmawwells
-          if (this%mawwells(n)%shutofflevel /= DEP20) then
+          !if (this%mawwells(n)%shutofflevel /= DEP20) then
+          if (this%shutofflevel(n) /= DEP20) then
             ntabrows = ntabrows + 1
           end if
         end do
@@ -2023,11 +2283,17 @@ contains
           text = 'MAXIMUM Q'
           call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)
           do n = 1, this%nmawwells
-            if (this%mawwells(n)%shutofflevel /= DEP20) then
+            !if (this%mawwells(n)%shutofflevel /= DEP20) then
+            !  call this%inputtab%add_term(n)
+            !  call this%inputtab%add_term(this%mawwells(n)%shutofflevel)
+            !  call this%inputtab%add_term(this%mawwells(n)%shutoffmin)
+            !  call this%inputtab%add_term(this%mawwells(n)%shutoffmax)
+            !end if
+            if (this%shutofflevel(n) /= DEP20) then
               call this%inputtab%add_term(n)
-              call this%inputtab%add_term(this%mawwells(n)%shutofflevel)
-              call this%inputtab%add_term(this%mawwells(n)%shutoffmin)
-              call this%inputtab%add_term(this%mawwells(n)%shutoffmax)
+              call this%inputtab%add_term(this%shutofflevel(n))
+              call this%inputtab%add_term(this%shutoffmin(n))
+              call this%inputtab%add_term(this%shutoffmax(n))
             end if
           end do
         end if
@@ -2037,7 +2303,8 @@ contains
     ! -- fill arrays
     ibnd = 1
     do n = 1, this%nmawwells
-      do j = 1, this%mawwells(n)%ngwfnodes
+      !do j = 1, this%mawwells(n)%ngwfnodes
+      do j = 1, this%ngwfnodes(n)
         node = this%mawwells(n)%gwfnodes(j)
         this%nodelist(ibnd) = node
 
@@ -2087,7 +2354,8 @@ contains
     if (this%naux > 0) then
       ibnd = 1
       do n = 1, this%nmawwells
-        do j = 1, this%mawwells(n)%ngwfnodes
+        !do j = 1, this%mawwells(n)%ngwfnodes
+        do j = 1, this%ngwfnodes(n)
           do jj = 1, this%naux
             if (this%noupdateauxvar(jj) /= 0) cycle
             !this%auxvar(jj, ibnd) = this%mawwells(n)%auxvar(jj)%value
@@ -2101,7 +2369,8 @@ contains
     ! -- copy xnew into xold
     do n = 1, this%nmawwells
       this%xoldpak(n) = this%xnewpak(n)
-      this%mawwells(n)%xoldsto = this%mawwells(n)%xsto
+      !this%mawwells(n)%xoldsto = this%mawwells(n)%xsto
+      this%xoldsto(n) = this%xsto(n)
       if (this%iboundpak(n) < 0) then
         !this%xnewpak(n) = this%mawwells(n)%well_head%value
         this%xnewpak(n) = this%well_head(n)
@@ -2112,9 +2381,14 @@ contains
     !  specified flowing well discharge elevation
     if (kper==1 .and. kstp==1) then
       do n = 1, this%nmawwells
-        if (this%mawwells(n)%fwcond > DZERO) then
-          if (this%mawwells(n)%xoldsto > this%mawwells(n)%fwelev) then
-            this%mawwells(n)%xoldsto = this%mawwells(n)%fwelev
+        !if (this%mawwells(n)%fwcond > DZERO) then
+        !  if (this%mawwells(n)%xoldsto > this%mawwells(n)%fwelev) then
+        !    this%mawwells(n)%xoldsto = this%mawwells(n)%fwelev
+        !  end if
+        !end if
+        if (this%fwcond(n) > DZERO) then
+          if (this%xoldsto(n) > this%fwelev(n)) then
+            this%xoldsto(n) = this%fwelev(n)
           end if
         end if
       end do
@@ -2221,30 +2495,46 @@ contains
       hmaw = this%xnewpak(n)
       ! -- add pumping rate to active or constant maw well
       if (this%iboundpak(n) == 0) then
-        this%mawwells(n)%ratesim = DZERO
+        !this%mawwells(n)%ratesim = DZERO
+        this%ratesim(n) = DZERO
       else
         call this%maw_calculate_wellq(n, hmaw, rate)
-        this%mawwells(n)%ratesim = rate
-        !write (1999,'(i5,5(g15.7))') this%ishutoffcnt, hmaw, rate, this%mawwells(n)%shutoffqold, &
-        !                             this%mawwells(n)%shutoffdq, this%mawwells(n)%shutoffweight
+        !this%mawwells(n)%ratesim = rate
+        this%ratesim(n) = rate
         rhs(iloc) = rhs(iloc) - rate
         ! -- location of diagonal for maw row
         iposd = this%idxdglo(idx)
         ! -- add flowing well
-        this%mawwells(n)%xsto = hmaw
+        !this%mawwells(n)%xsto = hmaw
+        this%xsto(n) = hmaw
         ratefw = DZERO
         if (this%iflowingwells > 0) then
-          if (this%mawwells(n)%fwcond > DZERO) then
-            bt = this%mawwells(n)%fwelev
-            tp = bt + this%mawwells(n)%fwrlen
+          !if (this%mawwells(n)%fwcond > DZERO) then
+          !  bt = this%mawwells(n)%fwelev
+          !  tp = bt + this%mawwells(n)%fwrlen
+          !  scale = sQSaturation(tp, bt, hmaw)
+          !  cfw = scale * this%mawwells(n)%fwcond
+          !  this%mawwells(n)%ifwdischarge = 0
+          !  if (cfw > DZERO) then
+          !    this%mawwells(n)%ifwdischarge = 1
+          !    this%mawwells(n)%xsto = bt
+          !  end if
+          !  this%mawwells(n)%fwcondsim = cfw
+          !  amatsln(iposd) = amatsln(iposd) - cfw
+          !  rhs(iloc) = rhs(iloc) - cfw * bt
+          !  ratefw = cfw * (bt - hmaw)
+          !end if
+          if (this%fwcond(n) > DZERO) then
+            bt = this%fwelev(n)
+            tp = bt + this%fwrlen(n)
             scale = sQSaturation(tp, bt, hmaw)
-            cfw = scale * this%mawwells(n)%fwcond
-            this%mawwells(n)%ifwdischarge = 0
+            cfw = scale * this%fwcond(n)
+            this%ifwdischarge(n) = 0
             if (cfw > DZERO) then
-              this%mawwells(n)%ifwdischarge = 1
-              this%mawwells(n)%xsto = bt
+              this%ifwdischarge(n) = 1
+              this%xsto(n) = bt
             end if
-            this%mawwells(n)%fwcondsim = cfw
+            this%fwcondsim(n) = cfw
             amatsln(iposd) = amatsln(iposd) - cfw
             rhs(iloc) = rhs(iloc) - cfw * bt
             ratefw = cfw * (bt - hmaw)
@@ -2252,12 +2542,19 @@ contains
         end if
         ! -- add maw storage changes
         if (this%imawiss /= 1) then
-          if (this%mawwells(n)%ifwdischarge /= 1) then
-            amatsln(iposd) = amatsln(iposd) - (this%mawwells(n)%area / delt)
-            rhs(iloc) = rhs(iloc) - (this%mawwells(n)%area * this%mawwells(n)%xoldsto / delt)
+          !if (this%mawwells(n)%ifwdischarge /= 1) then
+          !  amatsln(iposd) = amatsln(iposd) - (this%mawwells(n)%area / delt)
+          !  rhs(iloc) = rhs(iloc) - (this%mawwells(n)%area * this%mawwells(n)%xoldsto / delt)
+          !else
+          !  cterm = this%mawwells(n)%xoldsto - this%mawwells(n)%fwelev
+          !  rhs(iloc) = rhs(iloc) - (this%mawwells(n)%area * cterm / delt)
+          !end if
+          if (this%ifwdischarge(n) /= 1) then
+            amatsln(iposd) = amatsln(iposd) - (this%area(n) / delt)
+            rhs(iloc) = rhs(iloc) - (this%area(n) * this%xoldsto(n) / delt)
           else
-            cterm = this%mawwells(n)%xoldsto - this%mawwells(n)%fwelev
-            rhs(iloc) = rhs(iloc) - (this%mawwells(n)%area * cterm / delt)
+            cterm = this%xoldsto(n) - this%fwelev(n)
+            rhs(iloc) = rhs(iloc) - (this%area(n) * cterm / delt)
           end if
         end if
         !
@@ -2270,7 +2567,8 @@ contains
         endif
         !
       endif
-      do j = 1, this%mawwells(n)%ngwfnodes
+      !do j = 1, this%mawwells(n)%ngwfnodes
+      do j = 1, this%ngwfnodes(n)
         if (this%iboundpak(n) /= 0) then
           igwfnode = this%mawwells(n)%gwfnodes(j)
           call this%maw_calculate_saturation(n, j, igwfnode, sat)
@@ -2361,7 +2659,8 @@ contains
         iposd = this%idxdglo(idx)
         scale = DONE
         drterm = DZERO
-        rate = this%mawwells(n)%ratesim
+        !rate = this%mawwells(n)%ratesim
+        rate = this%ratesim(n)
         !--calculate final derivative for pumping rate
         call this%maw_calculate_wellq(n, hmaw+DEM4, rate2)
         drterm = (rate2 - rate) / DEM4
@@ -2370,40 +2669,56 @@ contains
         rhs(iloc) = rhs(iloc) + drterm * hmaw
         ! -- add flowing well
         if (this%iflowingwells > 0) then
-          if (this%mawwells(n)%fwcond > DZERO) then
-            bt = this%mawwells(n)%fwelev
-            tp = bt + this%mawwells(n)%fwrlen
+          !if (this%mawwells(n)%fwcond > DZERO) then
+          if (this%fwcond(n) > DZERO) then
+            !bt = this%mawwells(n)%fwelev
+            !tp = bt + this%mawwells(n)%fwrlen
+            bt = this%fwelev(n)
+            tp = bt + this%fwrlen(n)
             scale = sQSaturation(tp, bt, hmaw)
-            cfw = scale * this%mawwells(n)%fwcond
-            this%mawwells(n)%ifwdischarge = 0
-            if (cfw > DZERO) this%mawwells(n)%ifwdischarge = 1
-            this%mawwells(n)%fwcondsim = cfw
+            !cfw = scale * this%mawwells(n)%fwcond
+            !this%mawwells(n)%ifwdischarge = 0
+            cfw = scale * this%fwcond(n)
+            this%ifwdischarge(n) = 0
+            !if (cfw > DZERO) this%mawwells(n)%ifwdischarge = 1
+            !this%mawwells(n)%fwcondsim = cfw
+            if (cfw > DZERO) then
+              this%ifwdischarge(n) = 1
+            end if
+            this%fwcondsim(n) = cfw
             rate = cfw * (bt - hmaw)
             rterm = -cfw * hmaw
             !--calculate derivative for flowing well
             if (hmaw < tp) then
               derv = sQSaturationDerivative(tp, bt, hmaw)
-              drterm = -(cfw + this%mawwells(n)%fwcond * derv * (hmaw - bt))
+              !drterm = -(cfw + this%mawwells(n)%fwcond * derv * (hmaw - bt))
+              drterm = -(cfw + this%fwcond(n) * derv * (hmaw - bt))
               !--fill amat and rhs with newton-raphson terms
+              !amatsln(iposd) = amatsln(iposd) -                                &
+              !                 this%mawwells(n)%fwcond * derv * (hmaw - bt)
               amatsln(iposd) = amatsln(iposd) -                                &
-                               this%mawwells(n)%fwcond * derv * (hmaw - bt)
+                               this%fwcond(n) * derv * (hmaw - bt)
               rhs(iloc) = rhs(iloc) - rterm + drterm * hmaw
             end if
           end if
         end if
         ! -- add maw storage changes
         if (this%imawiss /= 1) then
-          if (this%mawwells(n)%ifwdischarge /= 1) then
-            rate = this%mawwells(n)%area * hmaw / delt
+          !if (this%mawwells(n)%ifwdischarge /= 1) then
+          !  rate = this%mawwells(n)%area * hmaw / delt
+          if (this%ifwdischarge(n) /= 1) then
+            rate = this%area(n) * hmaw / delt
             rterm = -rate
             !--calculate storage derivative
-            drterm = -this%mawwells(n)%area / delt
+            !drterm = -this%mawwells(n)%area / delt
+            drterm = -this%area(n) / delt
             !--fill amat and rhs with storage components
             rhs(iloc) = rhs(iloc) - rterm + drterm * hmaw
           end if
         end if
       end if
-      do j = 1, this%mawwells(n)%ngwfnodes
+      !do j = 1, this%mawwells(n)%ngwfnodes
+      do j = 1, this%ngwfnodes(n)
         if (this%iboundpak(n) /= 0) then
           igwfnode = this%mawwells(n)%gwfnodes(j)
           hgwf = this%xnew(igwfnode)
@@ -2486,7 +2801,8 @@ contains
     ! -- Newton-Raphson under-relaxation
     do n = 1, this%nmawwells
       if (this%iboundpak(n) < 1) cycle
-      botw = this%mawwells(n)%bot
+      !botw = this%mawwells(n)%bot
+      botw = this%bot(n)
       ! -- only apply Newton-Raphson under-relaxation if
       !    solution head is below the bottom of the well
       if (x(n) < botw) then
@@ -2575,10 +2891,11 @@ contains
       !
       ! -- set hmaw and xsto
       hmaw = this%xnewpak(n)
-      this%mawwells(n)%xsto = hmaw
+      !this%mawwells(n)%xsto = hmaw
+      this%xsto(n) = hmaw
       !
       ! -- add pumping rate to active maw well
-      rrate = this%mawwells(n)%ratesim
+      rrate = this%ratesim(n)
       !
       ! -- If flow is out of maw set qout to rrate.
       if (rrate < DZERO) then
@@ -2587,10 +2904,19 @@ contains
       !
       ! -- add flowing well
       if (this%iflowingwells > 0) then
-        if (this%mawwells(n)%fwcond > DZERO) then
-          cfw = this%mawwells(n)%fwcondsim
-          this%mawwells(n)%xsto = this%mawwells(n)%fwelev
-          rrate = cfw * (this%mawwells(n)%fwelev - hmaw)
+        !if (this%mawwells(n)%fwcond > DZERO) then
+        !  cfw = this%mawwells(n)%fwcondsim
+        !  this%mawwells(n)%xsto = this%mawwells(n)%fwelev
+        !  rrate = cfw * (this%mawwells(n)%fwelev - hmaw)
+        !  this%qfw(n) = rrate
+        !  !
+        !  ! -- Subtract flowing well rrate from qout.
+        !  this%qout(n) = this%qout(n) + rrate
+        !end if
+        if (this%fwcond(n) > DZERO) then
+          cfw = this%fwcondsim(n)
+          this%xsto(n) = this%fwelev(n)
+          rrate = cfw * (this%fwelev(n) - hmaw)
           this%qfw(n) = rrate
           !
           ! -- Subtract flowing well rrate from qout.
@@ -2600,7 +2926,8 @@ contains
       !
       ! -- Calculate qsto
       if (this%imawiss /= 1) then
-        rrate = -this%mawwells(n)%area * (this%mawwells(n)%xsto - this%mawwells(n)%xoldsto) / delt
+        !rrate = -this%mawwells(n)%area * (this%mawwells(n)%xsto - this%mawwells(n)%xoldsto) / delt
+        rrate = -this%area(n) * (this%xsto(n) - this%xoldsto(n)) / delt
         this%qsto(n) = rrate
       end if
     end do
@@ -2611,7 +2938,8 @@ contains
       rrate = DZERO
       hmaw = this%xnewpak(n)
       this%qconst(n) = DZERO
-      do j = 1, this%mawwells(n)%ngwfnodes
+      !do j = 1, this%mawwells(n)%ngwfnodes
+      do j = 1, this%ngwfnodes(n)
         this%qleak(ibnd) = DZERO
         if (this%iboundpak(n) == 0) cycle
         igwfnode = this%mawwells(n)%gwfnodes(j)
@@ -2646,7 +2974,8 @@ contains
       if (this%iboundpak(n) < 0) then
         !
         ! -- add well pumping rate
-        this%qconst(n) = this%qconst(n) - this%mawwells(n)%ratesim
+        !this%qconst(n) = this%qconst(n) - this%mawwells(n)%ratesim
+        this%qconst(n) = this%qconst(n) - this%ratesim(n)
         !
         ! -- add flowing well rate
         if (this%iflowingwells > 0) then
@@ -2677,7 +3006,8 @@ contains
     if (ibinun > 0) then
       do n = 1, this%nmawwells
         v = this%xnewpak(n)
-        d = v - this%mawwells(n)%bot
+        !d = v - this%mawwells(n)%bot
+        d = v - this%bot(n)
         if (this%iboundpak(n) == 0) then
           v = DHNOFLO
         else if (d <= DZERO) then
@@ -2788,10 +3118,37 @@ contains
       nullify(this%headtab)
     end if
     !
-    ! -- arrays
-    deallocate(this%cmawname)
+    ! -- character arrays
     deallocate(this%cmawbudget)
+    deallocate(this%cmawname)
+    deallocate(this%status)
+    
     call mem_deallocate(this%idxmawconn)
+    !
+    ! -- deallocate well data pointers in memory manager
+    call mem_deallocate(this%ngwfnodes)
+    call mem_deallocate(this%ieqn)
+    call mem_deallocate(this%ishutoff)
+    call mem_deallocate(this%ifwdischarge)
+    call mem_deallocate(this%strt)
+    call mem_deallocate(this%radius)
+    call mem_deallocate(this%area)
+    call mem_deallocate(this%pumpelev)
+    call mem_deallocate(this%bot)
+    call mem_deallocate(this%ratesim)
+    call mem_deallocate(this%reduction_length)
+    call mem_deallocate(this%fwelev)
+    call mem_deallocate(this%fwcond)
+    call mem_deallocate(this%fwrlen)
+    call mem_deallocate(this%fwcondsim)
+    call mem_deallocate(this%xsto)
+    call mem_deallocate(this%xoldsto)
+    call mem_deallocate(this%shutoffmin)
+    call mem_deallocate(this%shutoffmax)
+    call mem_deallocate(this%shutofflevel)
+    call mem_deallocate(this%shutoffweight)
+    call mem_deallocate(this%shutoffdq)
+    call mem_deallocate(this%shutoffqold)
     !
     ! -- timeseries aware variables
     call mem_deallocate(this%mauxvar)
@@ -3054,7 +3411,8 @@ contains
               end if
             case ('RATE')
               if (this%iboundpak(jj) /= 0) then
-                v = this%mawwells(jj)%ratesim
+                !v = this%mawwells(jj)%ratesim
+                v = this%ratesim(jj)
                 if (v < DZERO .and. this%qout(jj) < DZERO) then
                   qfact = v / this%qout(jj)
                   if (this%imover == 1) then
@@ -3065,7 +3423,8 @@ contains
             case ('RATE-TO-MVR')
               if (this%iboundpak(jj) /= 0) then
                 if (this%imover == 1) then
-                  v = this%mawwells(jj)%ratesim
+                  !v = this%mawwells(jj)%ratesim
+                  v = this%ratesim(jj)
                   qfact = DZERO
                   if (v < DZERO .and. this%qout(jj) < DZERO) then
                     qfact = v / this%qout(jj)
@@ -3079,8 +3438,10 @@ contains
             case ('FW-RATE')
               if (this%iboundpak(jj) /= 0 .and. this%iflowingwells /= 0) then
                 hmaw = this%xnewpak(jj)
-                cmaw = this%mawwells(jj)%fwcondsim
-                v = cmaw * (this%mawwells(jj)%fwelev - hmaw)
+                !cmaw = this%mawwells(jj)%fwcondsim
+                !v = cmaw * (this%mawwells(jj)%fwelev - hmaw)
+                cmaw = this%fwcondsim(jj)
+                v = cmaw * (this%fwelev(jj) - hmaw)
                 if (v < DZERO .and. this%qout(jj) < DZERO) then
                   qfact = v / this%qout(jj)
                   if (this%imover == 1) then
@@ -3092,8 +3453,10 @@ contains
               if (this%iboundpak(jj) /= 0 .and. this%iflowingwells /= 0) then
                 if (this%imover == 1) then
                   hmaw = this%xnewpak(jj)
-                  cmaw = this%mawwells(jj)%fwcondsim
-                  v = cmaw * (this%mawwells(jj)%fwelev - hmaw)
+                  !cmaw = this%mawwells(jj)%fwcondsim
+                  !v = cmaw * (this%mawwells(jj)%fwelev - hmaw)
+                  cmaw = this%fwcondsim(jj)
+                  v = cmaw * (this%fwelev(jj) - hmaw)
                   qfact = DZERO
                   if (v < DZERO .and. this%qout(jj) < DZERO) then
                     qfact = v / this%qout(jj)
@@ -3121,7 +3484,8 @@ contains
               end if
             case ('FW-CONDUCTANCE')
               if (this%iboundpak(jj) /= 0) then
-                v = this%mawwells(jj)%fwcondsim
+                !v = this%mawwells(jj)%fwcondsim
+                v = this%fwcondsim(jj)
               end if
             case default
               errmsg = 'Error: Unrecognized observation type: ' // &
@@ -3412,29 +3776,33 @@ contains
     !
     ! -- conductance calculations
     ! -- Thiem equation (1) and cumulative Thiem and skin equations (3)
-    if (this%mawwells(i)%ieqn == 1 .or. this%mawwells(i)%ieqn == 3) then
-      lc1 = log(eradius / this%mawwells(i)%radius) / T2pi
+    !if (this%mawwells(i)%ieqn == 1 .or. this%mawwells(i)%ieqn == 3) then
+    if (this%ieqn(i) == 1 .or. this%ieqn(i) == 3) then
+      lc1 = log(eradius / this%radius(i)) / T2pi
     end if
     ! -- skin equation (2) and cumulative Thiem and skin equations (3)
-    if (this%mawwells(i)%ieqn == 2 .or. this%mawwells(i)%ieqn == 3) then
+    !if (this%mawwells(i)%ieqn == 2 .or. this%mawwells(i)%ieqn == 3) then
+    if (this%ieqn(i) == 2 .or. this%ieqn(i) == 3) then
       hks = this%mawwells(i)%hk(j)
       if (tthkw * hks > DZERO) then
         Tcontrast = (sqrtk11k22 * tthka) / (hks * tthkw)
         skin = (Tcontrast - DONE) *                                              &
                 log(this%mawwells(i)%sradius(j) / this%mawwells(i)%radius)
+        !
         ! -- trap invalid transmissvity contrast if using skin equation (2).
         !    Not trapped for cumulative Thiem and skin equations (3) 
         !    because the MNW2 package allowed this condition (for 
         !    backward compatibility with the MNW2 package for  
         !    MODFLOW-2005, MODFLOW-NWT, and MODFLOW-USG).
-        if (Tcontrast <= 1 .and. this%mawwells(i)%ieqn == 2) then
+        !if (Tcontrast <= 1 .and. this%mawwells(i)%ieqn == 2) then
+        if (Tcontrast <= 1 .and. this%ieqn(i) == 2) then
           iTcontrastErr = 1
-          write(errmsg, '(4x,a,g0,a,1x,i0,1x,a,1x,i0,a,4(1x,a))')                &
-            '****ERROR. INVALID CALCULATED TRANSMISSIVITY CONTRAST (', Tcontrast,&
-            ') for MAW WELL', i, 'CONNECTION', j, '.', 'THIS HAPPENS WHEN THE',  &
-            'SKIN TRANSMISSIVITY EQUALS OR EXCEEDS THE AQUIFER TRANSMISSIVITY.', &
-            'CONSIDER DECREASING HK_SKIN FOR THE CONNECTION OR USING THE',       &
-            'CUMULATIVE OR MEAN CONDUCTANCE EQUATIONS.'
+          write(errmsg, '(a,g0,a,1x,i0,1x,a,1x,i0,a,4(1x,a))')                   &
+            'Invalid calculated transmissivity contrast (', Tcontrast,           &
+            ') for maw well', i, 'connection', j, '.', 'This happens when the',  &
+            'skin transmissivity equals or exceeds the aquifer transmissivity.', &
+            'Consider decreasing HK_SKIN for the connection or using the',       &
+            'CUMULATIVE or MEAN conductance equations.'
           call store_error(errmsg)
         else
           lc2 = skin / T2pi
@@ -3443,17 +3811,21 @@ contains
     end if
     ! -- conductance using screen elevations, hk, well radius, 
     !    and screen radius
-    if (this%mawwells(i)%ieqn == 4) then
+    !if (this%mawwells(i)%ieqn == 4) then
+    if (this%ieqn(i) == 4) then
       hks = this%mawwells(i)%hk(j)
-      ravg = DHALF * (this%mawwells(i)%radius + this%mawwells(i)%sradius(j))
-      slen = this%mawwells(i)%sradius(j) - this%mawwells(i)%radius
+      !ravg = DHALF * (this%mawwells(i)%radius + this%mawwells(i)%sradius(j))
+      !slen = this%mawwells(i)%sradius(j) - this%mawwells(i)%radius
+      ravg = DHALF * (this%radius(i) + this%mawwells(i)%sradius(j))
+      slen = this%mawwells(i)%sradius(j) - this%radius(i)
       pavg = DTWOPI * ravg
       c = hks * pavg * tthkw / slen
     end if
     !
     ! -- calculate final conductance for Theim (1), Skin (2), and 
     ! and cumulative Thiem and skin equations (3)
-    if (this%mawwells(i)%ieqn < 4) then
+    !if (this%mawwells(i)%ieqn < 4) then
+    if (this%ieqn(i) < 4) then
       if (lc1 + lc2 /= DZERO) then
         c = DONE / (lc1 + lc2)
       else
@@ -3564,52 +3936,71 @@ contains
       ! -- If well shut off is activated, then turn off well if necessary,
       !    or if shut off is not activated then check to see if rate scaling 
       !    is on.
-      if (this%mawwells(n)%shutofflevel /= DEP20) then
+      !if (this%mawwells(n)%shutofflevel /= DEP20) then
+      if (this%shutofflevel(n) /= DEP20) then
         call this%maw_calculate_qpot(n, q)
         if (q < DZERO) q = DZERO
         if (q > -rate) q = -rate
 
         if (this%ishutoffcnt == 1) then
-          this%mawwells(n)%shutoffweight = DONE
-          this%mawwells(n)%shutoffdq = DZERO
-          this%mawwells(n)%shutoffqold = q
+          !this%mawwells(n)%shutoffweight = DONE
+          !this%mawwells(n)%shutoffdq = DZERO
+          !this%mawwells(n)%shutoffqold = q
+          this%shutoffweight(n) = DONE
+          this%shutoffdq(n) = DZERO
+          this%shutoffqold(n) = q
         end if
 
-        dq = q - this%mawwells(n)%shutoffqold
-        weight = this%mawwells(n)%shutoffweight
+        !dq = q - this%mawwells(n)%shutoffqold
+        !weight = this%mawwells(n)%shutoffweight
+        dq = q - this%shutoffqold(n)
+        weight = this%shutoffweight(n)
 
         ! -- for flip-flop condition, decrease factor
-        if ( this%mawwells(n)%shutoffdq*dq < DZERO ) then
-          weight = this%theta * this%mawwells(n)%shutoffweight
+        !if ( this%mawwells(n)%shutoffdq*dq < DZERO ) then
+        !  weight = this%theta * this%mawwells(n)%shutoffweight
+        if ( this%shutoffdq(n) * dq < DZERO ) then
+          weight = this%theta * this%shutoffweight(n)
         ! -- when change is of same sign, increase factor
         else
-          weight = this%mawwells(n)%shutoffweight + this%kappa
+          !weight = this%mawwells(n)%shutoffweight + this%kappa
+          weight = this%shutoffweight(n) + this%kappa
         end if
         if ( weight > DONE ) weight = DONE
 
-        q = this%mawwells(n)%shutoffqold + weight * dq
+        !q = this%mawwells(n)%shutoffqold + weight * dq
+        !
+        !this%mawwells(n)%shutoffqold = q
+        !this%mawwells(n)%shutoffdq = dq
+        !this%mawwells(n)%shutoffweight = weight
+        q = this%shutoffqold(n) + weight * dq
 
-        this%mawwells(n)%shutoffqold = q
-        this%mawwells(n)%shutoffdq = dq
-        this%mawwells(n)%shutoffweight = weight
+        this%shutoffqold(n) = q
+        this%shutoffdq(n) = dq
+        this%shutoffweight(n) = weight
 
         !
         ! -- If shutoffmin and shutoffmax are specified then apply 
         !    additional checks for when to shut off the well.
-        if (this%mawwells(n)%shutoffmin > DZERO) then
-          if (hmaw < this%mawwells(n)%shutofflevel) then
+        !if (this%mawwells(n)%shutoffmin > DZERO) then
+        !  if (hmaw < this%mawwells(n)%shutofflevel) then
+        if (this%shutoffmin(n) > DZERO) then
+          if (hmaw < this%shutofflevel(n)) then
             !
             ! -- calculate adjusted well rate subject to constraints
             ! -- well is shutoff
-            if (this%mawwells(n)%ishutoff /= 0) then
+            !if (this%mawwells(n)%ishutoff /= 0) then
+            if (this%ishutoff(n) /= 0) then
               q = DZERO
             ! --- well is not shut off
             else
               ! -- turn off well if q is less than the minimum rate and
               !    reset the ishutoff flag if at least on iteration 3
-              if (q < this%mawwells(n)%shutoffmin) then
+              !if (q < this%mawwells(n)%shutoffmin) then
+              if (q < this%shutoffmin(n)) then
                 if (this%ishutoffcnt > 2) then
-                  this%mawwells(n)%ishutoff = 1
+                  !this%mawwells(n)%ishutoff = 1
+                  this%ishutoff(n) = 1
                 end if
                 q = DZERO
               ! -- leave well on and use the specified rate
@@ -3618,12 +4009,20 @@ contains
             end if
           ! -- try to use the specified rate or the potential rate
           else
-            if (q > this%mawwells(n)%shutoffmax) then
+            !if (q > this%mawwells(n)%shutoffmax) then
+            !  if (this%ishutoffcnt <= 2) then
+            !    this%mawwells(n)%ishutoff = 0
+            !  end if
+            !end if
+            !if (this%mawwells(n)%ishutoff /= 0) then
+            !  q = DZERO
+            !end if
+            if (q > this%shutoffmax(n)) then
               if (this%ishutoffcnt <= 2) then
-                this%mawwells(n)%ishutoff = 0
+                this%ishutoff(n) = 0
               end if
             end if
-            if (this%mawwells(n)%ishutoff /= 0) then
+            if (this%ishutoff(n) /= 0) then
               q = DZERO
             end if
           end if
@@ -3637,9 +4036,14 @@ contains
         !    sum of maw pump elevation (pumpelev) and the specified reduction 
         !    length.  The rate will go to zero as hmaw drops to the pump
         !    elevation.
-        if (this%mawwells(n)%reduction_length /= DEP20) then
-          bt = this%mawwells(n)%pumpelev
-          tp = bt + this%mawwells(n)%reduction_length
+        !if (this%mawwells(n)%reduction_length /= DEP20) then
+        !  bt = this%mawwells(n)%pumpelev
+        !  tp = bt + this%mawwells(n)%reduction_length
+        !  scale = sQSaturation(tp, bt, hmaw)
+        !end if
+        if (this%reduction_length(n) /= DEP20) then
+          bt = this%pumpelev(n)
+          tp = bt + this%reduction_length(n)
           scale = sQSaturation(tp, bt, hmaw)
         end if
         q = scale * rate
@@ -3649,44 +4053,66 @@ contains
       !
       ! -- Handle the injection case (rate > 0) differently than extraction.
       q = rate
-      if (this%mawwells(n)%shutofflevel /= DEP20) then
+      !if (this%mawwells(n)%shutofflevel /= DEP20) then
+      if (this%shutofflevel(n) /= DEP20) then
         call this%maw_calculate_qpot(n, q)
         q = -q
         if (q < DZERO) q = DZERO
         if (q > rate) q = rate
 
         if (this%ishutoffcnt == 1) then
-          this%mawwells(n)%shutoffweight = DONE
-          this%mawwells(n)%shutoffdq = DZERO
-          this%mawwells(n)%shutoffqold = q
+          !this%mawwells(n)%shutoffweight = DONE
+          !this%mawwells(n)%shutoffdq = DZERO
+          !this%mawwells(n)%shutoffqold = q
+          this%shutoffweight(n) = DONE
+          this%shutoffdq(n) = DZERO
+          this%shutoffqold(n) = q
         end if
 
-        dq = q - this%mawwells(n)%shutoffqold
-        weight = this%mawwells(n)%shutoffweight
+        !dq = q - this%mawwells(n)%shutoffqold
+        !weight = this%mawwells(n)%shutoffweight
+        dq = q - this%shutoffqold(n)
+        weight = this%shutoffweight(n)
 
         ! -- for flip-flop condition, decrease factor
-        if ( this%mawwells(n)%shutoffdq*dq < DZERO ) then
-          weight = this%theta * this%mawwells(n)%shutoffweight
+        !if ( this%mawwells(n)%shutoffdq*dq < DZERO ) then
+        !  weight = this%theta * this%mawwells(n)%shutoffweight
+        !! -- when change is of same sign, increase factor
+        !else
+        !  weight = this%mawwells(n)%shutoffweight + this%kappa
+        !end if
+        if ( this%shutoffdq(n) * dq < DZERO ) then
+          weight = this%theta * this%shutoffweight(n)
         ! -- when change is of same sign, increase factor
         else
-          weight = this%mawwells(n)%shutoffweight + this%kappa
+          weight = this%shutoffweight(n) + this%kappa
         end if
         if ( weight > DONE ) weight = DONE
         
-        q = this%mawwells(n)%shutoffqold + weight * dq
+        !q = this%mawwells(n)%shutoffqold + weight * dq
+        !
+        !this%mawwells(n)%shutoffqold = q
+        !this%mawwells(n)%shutoffdq = dq
+        !this%mawwells(n)%shutoffweight = weight
+        q = this%shutoffqold(n) + weight * dq
         
-        this%mawwells(n)%shutoffqold = q
-        this%mawwells(n)%shutoffdq = dq
-        this%mawwells(n)%shutoffweight = weight
+        this%shutoffqold(n) = q
+        this%shutoffdq(n) = dq
+        this%shutoffweight(n) = weight
         
       else
         scale = DONE
         ! -- Apply rate scaling for an injection well by reducting the 
         !    injection rate as hmaw rises above the pump elevation.  The rate
         !    will approach zero as hmaw approaches pumpelev + reduction_length.
-        if (this%mawwells(n)%reduction_length /= DEP20) then
-          bt = this%mawwells(n)%pumpelev
-          tp = bt + this%mawwells(n)%reduction_length
+        !if (this%mawwells(n)%reduction_length /= DEP20) then
+        !  bt = this%mawwells(n)%pumpelev
+        !  tp = bt + this%mawwells(n)%reduction_length
+        !  scale = DONE - sQSaturation(tp, bt, hmaw)
+        !endif
+        if (this%reduction_length(n) /= DEP20) then
+          bt = this%pumpelev(n)
+          tp = bt + this%reduction_length(n)
           scale = DONE - sQSaturation(tp, bt, hmaw)
         endif
         q = scale * rate
@@ -3728,33 +4154,56 @@ contains
     !--initialize qnet
     qnet = DZERO
    ! --
-    htmp = this%mawwells(n)%shutofflevel
+    !htmp = this%mawwells(n)%shutofflevel
+    htmp = this%shutofflevel(n)
+    !
     ! -- calculate discharge to flowing wells
     if (this%iflowingwells > 0) then
-      if (this%mawwells(n)%fwcond > DZERO) then
-        bt = this%mawwells(n)%fwelev
-        tp = bt + this%mawwells(n)%fwrlen
+      !if (this%mawwells(n)%fwcond > DZERO) then
+      !  bt = this%mawwells(n)%fwelev
+      !  tp = bt + this%mawwells(n)%fwrlen
+      if (this%fwcond(n) > DZERO) then
+        bt = this%fwelev(n)
+        tp = bt + this%fwrlen(n)
         scale = sQSaturation(tp, bt, htmp)
-        cfw = scale * this%mawwells(n)%fwcond
-        this%mawwells(n)%ifwdischarge = 0
+        !cfw = scale * this%mawwells(n)%fwcond
+        !this%mawwells(n)%ifwdischarge = 0
+        !if (cfw > DZERO) then
+        !  this%mawwells(n)%ifwdischarge = 1
+        !  this%mawwells(n)%xsto = bt
+        !end if
+        cfw = scale * this%fwcond(n)
+        this%ifwdischarge(n) = 0
         if (cfw > DZERO) then
-          this%mawwells(n)%ifwdischarge = 1
-          this%mawwells(n)%xsto = bt
+          this%ifwdischarge(n) = 1
+          this%xsto(n) = bt
         end if
         qnet = qnet + cfw * (bt - htmp)
       end if
     end if
     ! -- calculate maw storage changes
     if (this%imawiss /= 1) then
-      if (this%mawwells(n)%ifwdischarge /= 1) then
-        hdterm = this%mawwells(n)%xoldsto - htmp
+      !if (this%mawwells(n)%ifwdischarge /= 1) then
+      !  hdterm = this%mawwells(n)%xoldsto - htmp
+      !else
+      !  hdterm = this%mawwells(n)%xoldsto - this%mawwells(n)%fwelev
+      !end if
+      !qnet = qnet - (this%mawwells(n)%area * hdterm / delt)
+      if (this%ifwdischarge(n) /= 1) then
+        hdterm = this%xoldsto(n) - htmp
       else
-        hdterm = this%mawwells(n)%xoldsto - this%mawwells(n)%fwelev
+        hdterm = this%xoldsto(n) - this%fwelev(n)
       end if
-      qnet = qnet - (this%mawwells(n)%area * hdterm / delt)
+      qnet = qnet - (this%area(n) * hdterm / delt)
     end if
     ! -- calculate inflow from aquifer
-    do j = 1, this%mawwells(n)%ngwfnodes
+    !do j = 1, this%mawwells(n)%ngwfnodes
+    !  igwfnode = this%mawwells(n)%gwfnodes(j)
+    !  call this%maw_calculate_saturation(n, j, igwfnode, sat) !, hv)
+    !  cmaw = this%mawwells(n)%satcond(j) * sat
+    !  hgwf = this%xnew(igwfnode)
+    !  bmaw = this%mawwells(n)%botscrn(j)
+    do j = 1, this%ngwfnodes(n)
       igwfnode = this%mawwells(n)%gwfnodes(j)
       call this%maw_calculate_saturation(n, j, igwfnode, sat) !, hv)
       cmaw = this%mawwells(n)%satcond(j) * sat
@@ -3797,7 +4246,8 @@ contains
       ibnd = 1
       do n = 1, this%nmawwells
         hmaw = this%xnewpak(n)
-        do j = 1, this%mawwells(n)%ngwfnodes
+        !do j = 1, this%mawwells(n)%ngwfnodes
+        do j = 1, this%ngwfnodes(n)
           node = this%nodelist(ibnd)
           this%hcof(ibnd) = DZERO
           this%rhs(ibnd) = DZERO
@@ -4067,7 +4517,8 @@ contains
     call this%budobj%budterm(idx)%reset(this%maxbound)
     q = DZERO
     do n = 1, this%nmawwells
-      do j = 1, this%mawwells(n)%ngwfnodes
+      !do j = 1, this%mawwells(n)%ngwfnodes
+      do j = 1, this%ngwfnodes(n)
         n2 = this%mawwells(n)%gwfnodes(j)
         call this%budobj%budterm(idx)%update_term(n, n2, q)
       end do
@@ -4250,12 +4701,14 @@ contains
     call this%budobj%budterm(idx)%reset(this%maxbound)
     ibnd = 1
     do n = 1, this%nmawwells
-      do j = 1, this%mawwells(n)%ngwfnodes
+      !do j = 1, this%mawwells(n)%ngwfnodes
+      do j = 1, this%ngwfnodes(n)
         n2 = this%mawwells(n)%gwfnodes(j)
         tmaw = this%mawwells(n)%topscrn(j)
         bmaw = this%mawwells(n)%botscrn(j)
         call this%maw_calculate_saturation(n, j, n2, sat)
-        this%qauxcbc(1) = DTWO * DPI * this%mawwells(n)%radius * sat * (tmaw - bmaw)
+        !this%qauxcbc(1) = DTWO * DPI * this%mawwells(n)%radius * sat * (tmaw - bmaw)
+        this%qauxcbc(1) = DTWO * DPI * this%radius(n) * sat * (tmaw - bmaw)
         q = this%qleak(ibnd)
         call this%budobj%budterm(idx)%update_term(n, n2, q, this%qauxcbc)
         ibnd = ibnd + 1
@@ -4266,7 +4719,8 @@ contains
     idx = idx + 1
     call this%budobj%budterm(idx)%reset(this%nmawwells)
     do n = 1, this%nmawwells
-      q = this%mawwells(n)%ratesim
+      !q = this%mawwells(n)%ratesim
+      q = this%ratesim(n)
       ! -- adjust if well rate is an outflow
       if (this%imover == 1 .and. q < DZERO) then
         qfact = DONE
@@ -4300,11 +4754,13 @@ contains
     idx = idx + 1
     call this%budobj%budterm(idx)%reset(this%nmawwells)
     do n = 1, this%nmawwells
-      b = this%mawwells(n)%xsto - this%mawwells(n)%bot
+      !b = this%mawwells(n)%xsto - this%mawwells(n)%bot
+      b = this%xsto(n) - this%bot(n)
       if (b < DZERO) then
         b = DZERO
       end if
-      v = this%mawwells(n)%area * b
+      !v = this%mawwells(n)%area * b
+      v = this%area(n) * b
       if (this%imawissopt /= 1) then
         q = this%qsto(n)
       else
@@ -4353,7 +4809,8 @@ contains
         q = this%pakmvrobj%get_qtomvr(n)
         if (q > DZERO) then
           q = -q
-          q2 = this%mawwells(n)%ratesim
+          !q2 = this%mawwells(n)%ratesim
+          q2 = this%ratesim(n)
           ! -- adjust TO MOVER if well rate is outflow
           if (q2 < DZERO) then
             qfact = q2 / this%qout(n)
@@ -4392,7 +4849,8 @@ contains
           q = this%pakmvrobj%get_qtomvr(n)
           if (q > DZERO) then
             q = -q
-            q2 = this%mawwells(n)%ratesim
+            !q2 = this%mawwells(n)%ratesim
+            q2 = this%ratesim(n)
             ! -- adjust TO MOVER if well rate is outflow
             qfact = DONE
             if (this%qout(n) < DZERO) then
