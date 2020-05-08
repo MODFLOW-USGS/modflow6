@@ -12,7 +12,7 @@ module GwfBuyModule
   use MemoryManagerModule,    only: mem_allocate, mem_reallocate,              &
                                     mem_deallocate
   use ConstantsModule,        only: DHALF, DZERO, DONE, LENMODELNAME,          &
-                                    LENAUXNAME
+                                    LENAUXNAME, DHNOFLO, MAXCHARLEN, LINELENGTH
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule,          only: DisBaseType
   use GwfNpfModule,           only: GwfNpfType
@@ -30,6 +30,7 @@ module GwfBuyModule
 
   type, extends(NumericalPackageType) :: GwfBuyType
     type(GwfNpfType), pointer                   :: npf        => null()         ! npf object
+    integer(I4B), pointer                       :: ioutdense  => null()         ! unit number for saving density
     integer(I4B), pointer                       :: iform      => null()         ! formulation: 0 freshwater head, 1 hydraulic head, 2 hh rhs
     integer(I4B), pointer                       :: ireadelev  => null()         ! if 1 then elev has been allocated and filled
     integer(I4B), pointer                       :: ireadconcbuy => null()       ! if 1 then dense has been read from this buy input file
@@ -54,9 +55,11 @@ module GwfBuyModule
     procedure :: buy_ar
     procedure :: buy_ar_bnd
     procedure :: buy_rp
+    procedure :: buy_ad
     procedure :: buy_cf
     procedure :: buy_cf_bnd
     procedure :: buy_fc
+    procedure :: buy_bdsav
     procedure :: buy_flowja
     procedure :: buy_da
     procedure, private :: read_dimensions
@@ -256,7 +259,6 @@ module GwfBuyModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule, only: LINELENGTH
     use TdisModule, only: kstp, kper, nper
     ! -- dummy
     class(GwfBuyType) :: this
@@ -328,6 +330,25 @@ module GwfBuyModule
     return
   end subroutine buy_rp
 
+  subroutine buy_ad(this)
+! ******************************************************************************
+! buy_ad -- Advance
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(GwfBuyType) :: this
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    ! -- update density using the last concentration
+    call this%buy_calcdens()
+    !
+    ! -- Return
+    return
+  end subroutine buy_ad
+  
   subroutine buy_cf(this, kiter)
 ! ******************************************************************************
 ! buy_cf -- Fill coefficients
@@ -340,9 +361,6 @@ module GwfBuyModule
     integer(I4B) :: kiter
     ! -- local
 ! ------------------------------------------------------------------------------
-    !
-    ! -- update density using the last concentration
-    call this%buy_calcdens()
     !
     ! -- Recalculate the elev array for this iteration
     if (this%ireadelev == 0) then
@@ -758,7 +776,6 @@ module GwfBuyModule
     real(DP), dimension(:), intent(inout) :: ctemp
     integer(I4B), intent(in) :: iform
     ! -- local
-    integer(I4B) :: i
     integer(I4B) :: n
     integer(I4B) :: node
     real(DP) :: denselak
@@ -842,6 +859,54 @@ module GwfBuyModule
     return
   end subroutine buy_fc
 
+  subroutine buy_bdsav(this, idvfl, icbcfl, icbcun)
+! ******************************************************************************
+! buy_bdsav -- Fill coefficients
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(GwfBuyType) :: this
+    integer(I4B), intent(in) :: idvfl
+    integer(I4B), intent(in) :: icbcfl
+    integer(I4B), intent(in) :: icbcun
+    ! -- local
+    character(len=1) :: cdatafmp=' ', editdesc=' '
+    integer(I4B) :: ibinun
+    integer(I4B) :: iprint
+    integer(I4B) :: nvaluesp
+    integer(I4B) :: nwidthp
+    real(DP) :: dinact
+! ------------------------------------------------------------------------------
+    !
+    ! -- Set unit number for density output
+    if(this%ioutdense /= 0) then
+      ibinun = 1
+    else
+      ibinun = 0
+    endif
+    if(idvfl == 0) ibinun = 0
+    !
+    ! -- save density array
+    if (ibinun /= 0) then
+      iprint = 0
+      dinact = DHNOFLO
+      !
+      ! -- write density to binary file
+      if (this%ioutdense /= 0) then
+        ibinun = this%ioutdense
+        call this%dis%record_array(this%dense, this%iout, iprint, ibinun,       &
+                                   '         DENSITY', cdatafmp, nvaluesp,      &
+                                   nwidthp, editdesc, dinact)
+      end if
+    end if
+    
+    !
+    ! -- Return
+    return
+  end subroutine buy_bdsav
+
   subroutine buy_flowja(this, hnew, flowja)
 ! ******************************************************************************
 ! buy_flowja -- Add buy term to flowja
@@ -908,6 +973,7 @@ module GwfBuyModule
     endif
     !
     ! -- Scalars
+    call mem_deallocate(this%ioutdense)
     call mem_deallocate(this%iform)
     call mem_deallocate(this%ireadelev)
     call mem_deallocate(this%ireadconcbuy)
@@ -931,7 +997,6 @@ module GwfBuyModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule, only: LINELENGTH
     ! -- dummy
     class(GwfBuyType),intent(inout) :: this
     ! -- local
@@ -993,11 +1058,22 @@ module GwfBuyModule
     ! -- dummy
     class(GwfBuyType) :: this
     ! -- local
+    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: ierr
     integer(I4B) :: irhospec
     logical :: isfound, endOfBlock
     logical :: blockrequired
+    integer(I4B), dimension(:), allocatable :: itemp
+    ! -- format
+    character(len=*),parameter :: fmterr = &
+      "('INVALID VALUE FOR IRHOSPEC (',i0,') DETECTED IN BUY PACKAGE. &
+      &IRHOSPEC MUST BE > 0 AND < NRHOSPECIES, AND DUPLICATE VALUES &
+      &ARE NOT ALLOWED.')"
 ! ------------------------------------------------------------------------------
+    !
+    ! -- initialize
+    allocate(itemp(this%nrhospecies))
+    itemp(:) = 0
     !
     ! -- get packagedata block
     blockrequired = .true.
@@ -1011,6 +1087,15 @@ module GwfBuyModule
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
         irhospec = this%parser%GetInteger()
+        if (irhospec < 1 .or. irhospec > this%nrhospecies) then
+          write(errmsg, fmterr) irhospec
+          call store_error(errmsg)
+        end if
+        if (itemp(irhospec) /= 0) then
+          write(errmsg, fmterr) irhospec
+          call store_error(errmsg)
+        end if
+        itemp(irhospec) = 1
         this%drhodc(irhospec) = this%parser%GetDouble()
         this%crhoref(irhospec) = this%parser%GetDouble()
         call this%parser%GetStringCaps(this%cmodelname(irhospec))
@@ -1018,6 +1103,15 @@ module GwfBuyModule
       end do
       write(this%iout,'(1x,a)') 'END OF BUY PACKAGEDATA'
     end if
+    !
+    ! -- Check for errors.
+    if (count_errors() > 0) then
+      call this%parser%StoreErrorUnit()
+      call ustop()
+    end if
+    !
+    ! -- deallocate
+    deallocate(itemp)
     !
     ! -- return
     return
@@ -1293,6 +1387,7 @@ module GwfBuyModule
     call this%NumericalPackageType%allocate_scalars()
     !
     ! -- Allocate
+    call mem_allocate(this%ioutdense, 'IOUTDENSE', this%origin)
     call mem_allocate(this%iform, 'IFORM', this%origin)
     call mem_allocate(this%ireadelev, 'IREADELEV', this%origin)
     call mem_allocate(this%ireadconcbuy, 'IREADCONCBUY', this%origin)
@@ -1303,6 +1398,7 @@ module GwfBuyModule
     
     !
     ! -- Initialize
+    this%ioutdense = 0
     this%ireadelev = 0
     this%iconcset = 0
     this%ireadconcbuy = 0
@@ -1372,14 +1468,18 @@ module GwfBuyModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule,   only: LINELENGTH
+    use OpenSpecModule, only: access, form
+    use InputOutputModule, only: urword, getunit, urdaux, openfile
     ! -- dummy
     class(GwfBuyType) :: this
     ! -- local
     character(len=LINELENGTH) :: errmsg, keyword
+    character(len=MAXCHARLEN) :: fname
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     ! -- formats
+    character(len=*),parameter :: fmtfileout = &
+      "(4x, 'BUY ', 1x, a, 1x, ' WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I7)"
 ! ------------------------------------------------------------------------------
     !
     ! -- get options block
@@ -1410,6 +1510,20 @@ module GwfBuyModule
             this%iasym = 0
             write(this%iout,'(4x,a)') &
               'FORMULATION SET TO EQUIVALENT FRESHWATER HEAD'
+          case ('DENSITY')
+            call this%parser%GetStringCaps(keyword)
+            if (keyword == 'FILEOUT') then
+              call this%parser%GetString(fname)
+              this%ioutdense = getunit()
+              call openfile(this%ioutdense, this%iout, fname, 'DATA(BINARY)',  &
+                            form, access, 'REPLACE')
+              write(this%iout,fmtfileout) &
+                'DENSITY', fname, this%ioutdense
+            else 
+              errmsg = 'OPTIONAL DENSITY KEYWORD MUST BE ' //                  &
+                       'FOLLOWED BY FILEOUT'
+              call store_error(errmsg)
+            end if
           case default
             write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN BUY OPTION: ',         &
                                      trim(keyword)
@@ -1433,7 +1547,6 @@ module GwfBuyModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule,   only: LINELENGTH
     ! -- dummy
     class(GwfBuyType) :: this
     ! -- local
