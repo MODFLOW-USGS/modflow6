@@ -720,7 +720,7 @@ contains
 
   subroutine sfr_read_packagedata(this)
   ! ******************************************************************************
-  ! sfr_read_packagedata -- read package data
+  ! sfr_read_packagedata -- read package data for each reach
   ! ******************************************************************************
   !
   !    SPECIFICATIONS:
@@ -876,6 +876,7 @@ contains
         call read_value_or_time_series_adv(text, n, jj, bndElem, this%name,      &
                                            'BND', this%tsManager, this%iprpak,   &
                                            'USTRF')
+        !
         ! -- get aux data
         do jj = 1, this%naux
           text = caux(jj)
@@ -885,7 +886,7 @@ contains
                                              'AUX', this%tsManager, this%iprpak, &
                                              this%auxname(jj))
         end do
-
+        !
         ! -- initialize sstage to the top of the reach
         !    this value would be used by simple routing reaches
         !    on kper = 1 and kstp = 1 if a stage is not specified
@@ -931,7 +932,7 @@ contains
 
   subroutine sfr_read_connectiondata(this)
   ! ******************************************************************************
-  ! sfr_read_connectiondata -- 
+  ! sfr_read_connectiondata -- read connection data for each reach
   ! ******************************************************************************
   !
   !    SPECIFICATIONS:
@@ -1147,7 +1148,7 @@ contains
 
   subroutine sfr_read_diversions(this)
   ! ******************************************************************************
-  ! sfr_read_diversions -- 
+  ! sfr_read_diversions -- read diversion data for each diversion
   ! ******************************************************************************
   !
   !    SPECIFICATIONS:
@@ -1191,7 +1192,6 @@ contains
     ! -- reallocate memory for diversions
     if (ndiversions > 0) then
       call mem_reallocate(this%divreach, ndiversions, 'DIVREACH', this%origin)
-      !call mem_reallocate(this%diviprior, ndiversions, 'DIVIPRIOR', this%origin)
       allocate(this%divcprior(ndiversions))
       call mem_reallocate(this%divflow, ndiversions, 'DIVFLOW', this%origin)
       call mem_reallocate(this%divq, ndiversions, 'DIVQ', this%origin)
@@ -2153,7 +2153,6 @@ contains
     ! -- diversion variables
     call mem_deallocate(this%iadiv)
     call mem_deallocate(this%divreach)
-    !call mem_deallocate(this%diviprior)
     if (associated(this%divcprior)) then
       deallocate(this%divcprior)
     end if
@@ -2431,7 +2430,7 @@ contains
                 v = -v
               end if
             case default
-              msg = 'Error: Unrecognized observation type: ' // trim(obsrv%ObsTypeId)
+              msg = 'Unrecognized observation type: ' // trim(obsrv%ObsTypeId)
               call store_error(msg)
           end select
           call this%obs%SaveOneSimval(obsrv, v)

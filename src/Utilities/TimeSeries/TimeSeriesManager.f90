@@ -563,7 +563,7 @@ module TimeSeriesManagerModule
     type(TimeSeriesLinkType), pointer :: tslTemp => null()
     integer(I4B)              :: i, istat, nlinks
     real(DP)                  :: r
-    character(len=LINELENGTH) :: ermsg
+    character(len=LINELENGTH) :: errmsg
     character(len=LENTIMESERIESNAME) :: tsNameTemp
     logical :: found
 ! ------------------------------------------------------------------------------
@@ -602,13 +602,13 @@ module TimeSeriesManagerModule
         enddo searchlinks
         if (.not. found) then
           ! -- Link was not found. Make one and add it to the list.
-          call tsManager%make_link(timeseries, pkgName, auxOrBnd, bndElem, &
+          call tsManager%make_link(timeseries, pkgName, auxOrBnd, bndElem,      &
                                    ii, jj, iprpak, tsLink, '', '')
         endif
       else
-        ermsg = 'Error in list input. Expected numeric value or ' // &
-                  'time-series name, but found: ' // trim(textInput)
-        call store_error(ermsg)
+        errmsg = 'Error in list input. Expected numeric value or ' //            &
+                 "time-series name, but found '" // trim(textInput) // "'."
+        call store_error(errmsg)
       endif
     endif
   end subroutine read_value_or_time_series
@@ -642,7 +642,7 @@ module TimeSeriesManagerModule
     ! -- local
     integer(I4B) :: i, istat, nlinks
     real(DP) :: v
-    character(len=LINELENGTH) :: ermsg
+    character(len=LINELENGTH) :: errmsg
     character(len=LENTIMESERIESNAME) :: tsNameTemp
     logical :: found
     integer(I4B) :: removeLink
@@ -729,16 +729,16 @@ module TimeSeriesManagerModule
             end if
           end if
           ! -- Link was not found. Make one and add it to the list.
-          call tsManager%make_link(timeseries, pkgName, auxOrBnd, bndElem, &
+          call tsManager%make_link(timeseries, pkgName, auxOrBnd, bndElem,       &
                                    ii, jj, iprpak, tsLink, linkText, bndName)
           !! -- update array element
           !v = timeseries%GetValue(totim, endtim)
           !bndElem = v
         endif
       else
-        ermsg = 'Error in list input. Expected numeric value or ' // &
-                  'time-series name, but found: ' // trim(textInput)
-        call store_error(ermsg)
+        errmsg = 'Error in list input. Expected numeric value or ' //            &
+                 "time-series name, but found '" // trim(textInput) // "'."
+        call store_error(errmsg)
         call store_error_unit(inunit)
         call ustop()
       end if
@@ -781,7 +781,7 @@ module TimeSeriesManagerModule
     ! -- local
     integer(I4B) :: istat
     real(DP) :: v
-    character(len=LINELENGTH) :: ermsg
+    character(len=LINELENGTH) :: errmsg
     character(len=LENTIMESERIESNAME) :: tsNameTemp
     logical :: found
     type(TimeSeriesType),     pointer :: timeseries => null()
@@ -831,9 +831,9 @@ module TimeSeriesManagerModule
       !
       ! -- not a valid timeseries name
       else
-        ermsg = 'Error in list input. Expected numeric value or ' // &
-                  'time-series name, but found: ' // trim(textInput)
-        call store_error(ermsg)
+        errmsg = 'Error in list input. Expected numeric value or ' //            &
+                 "time-series name, but found '" // trim(textInput) // "'."
+        call store_error(errmsg)
       end if
     end if
     return
