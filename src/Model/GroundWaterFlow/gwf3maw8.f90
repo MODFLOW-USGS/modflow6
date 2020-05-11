@@ -38,31 +38,31 @@ module MawModule
   end type MawWellTSType
 
   type :: MawWellType
-    character (len=LENBOUNDNAME), pointer :: name => null()
-    character (len=8), pointer :: status => null()
-    integer(I4B), pointer :: ngwfnodes => null()
-    integer(I4B), pointer :: ieqn => null()
-    integer(I4B), pointer :: ishutoff => null()
-    integer(I4B), pointer :: ifwdischarge => null()
-    real(DP), pointer :: strt => null()
-    real(DP), pointer :: radius => null()
-    real(DP), pointer :: area => null()
-    real(DP), pointer :: pumpelev => null()
-    real(DP), pointer :: bot => null()
-    real(DP), pointer :: ratesim => null()
-    real(DP), pointer :: reduction_length => null()
-    real(DP), pointer :: fwelev => null()
-    real(DP), pointer :: fwcond => null()
-    real(DP), pointer :: fwrlen => null()
-    real(DP), pointer :: fwcondsim => null()
-    real(DP), pointer :: xsto => null()
-    real(DP), pointer :: xoldsto => null()
-    real(DP), pointer :: shutoffmin => null()
-    real(DP), pointer :: shutoffmax => null()
-    real(DP), pointer :: shutofflevel => null()
-    real(DP), pointer :: shutoffweight => null()
-    real(DP), pointer :: shutoffdq => null()
-    real(DP), pointer :: shutoffqold => null()
+    !character (len=LENBOUNDNAME), pointer :: name => null()
+    !character (len=8), pointer :: status => null()
+    !integer(I4B), pointer :: ngwfnodes => null()
+    !integer(I4B), pointer :: ieqn => null()
+    !integer(I4B), pointer :: ishutoff => null()
+    !integer(I4B), pointer :: ifwdischarge => null()
+    !real(DP), pointer :: strt => null()
+    !real(DP), pointer :: radius => null()
+    !real(DP), pointer :: area => null()
+    !real(DP), pointer :: pumpelev => null()
+    !real(DP), pointer :: bot => null()
+    !real(DP), pointer :: ratesim => null()
+    !real(DP), pointer :: reduction_length => null()
+    !real(DP), pointer :: fwelev => null()
+    !real(DP), pointer :: fwcond => null()
+    !real(DP), pointer :: fwrlen => null()
+    !real(DP), pointer :: fwcondsim => null()
+    !real(DP), pointer :: xsto => null()
+    !real(DP), pointer :: xoldsto => null()
+    !real(DP), pointer :: shutoffmin => null()
+    !real(DP), pointer :: shutoffmax => null()
+    !real(DP), pointer :: shutofflevel => null()
+    !real(DP), pointer :: shutoffweight => null()
+    !real(DP), pointer :: shutoffdq => null()
+    !real(DP), pointer :: shutoffqold => null()
     ! -- vectors
     integer(I4B), dimension(:), pointer, contiguous :: gwfnodes => NULL()
     real(DP), dimension(:), pointer, contiguous :: sradius => NULL()
@@ -216,7 +216,7 @@ module MawModule
     ! -- private procedures
     procedure, private :: maw_read_wells
     procedure, private :: maw_read_well_connections
-    procedure, private :: maw_allocate_well
+    !procedure, private :: maw_allocate_well
     procedure, private :: maw_deallocate_well
     procedure, private :: maw_check_attributes
     procedure, private :: maw_set_stressperiod
@@ -346,6 +346,7 @@ contains
     class(MawType),   intent(inout) :: this
     ! -- local
     integer(I4B) :: i
+    integer(I4B) :: jj
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate character array for budget text
@@ -395,6 +396,17 @@ contains
     call mem_allocate(this%shutoffqold, this%nmawwells, 'SHUTOFFQOLD',           &
                       this%origin)
     !
+    ! -- timeseries aware variables
+    call mem_allocate(this%rate, this%nmawwells, 'RATE', this%origin)
+    call mem_allocate(this%well_head, this%nmawwells, 'WELL_HEAD', this%origin)
+    if (this%naux > 0) then
+      jj = this%naux
+    else
+      jj = 1
+    end if
+    call mem_allocate(this%mauxvar, jj, this%nmawwells, 'MAUXVAR',               &
+                      this%origin)
+    !
     ! -- initialize well data
     do i = 1, this%nmawwells
       this%status(i) = 'ACTIVE'
@@ -421,16 +433,17 @@ contains
       this%shutoffweight(i) = DONE
       this%shutoffdq(i) = DONE
       this%shutoffqold(i) = DONE
+      !
+      ! -- timeseries aware variables
+      this%rate(i) = DZERO
+      this%well_head(i) = DZERO
+      do jj = 1, max(1, this%naux)
+        this%mauxvar(jj, i) = DZERO
+      end do
     end do
     !
     ! -- allocate idxmawconn
     call mem_allocate(this%idxmawconn, this%nmawwells+1, 'IDXMAWCONN',           &
-                      this%origin)
-    !
-    ! -- timeseries aware variables
-    call mem_allocate(this%rate, this%nmawwells, 'RATE', this%origin)
-    call mem_allocate(this%well_head, this%nmawwells, 'WELL_HEAD', this%origin)
-    call mem_allocate(this%mauxvar, this%naux, this%nmawwells, 'MAUXVAR',        &
                       this%origin)
     !
     ! -- initialize idxmawconn
@@ -567,10 +580,10 @@ contains
     !
     ! -- allocate space for mawwells data
     allocate(this%mawwells(this%nmawwells))
-    ! -- allocate pointers
-    do n = 1, this%nmawwells
-      call this%maw_allocate_well(n)
-    enddo
+    !! -- allocate pointers
+    !do n = 1, this%nmawwells
+    !  call this%maw_allocate_well(n)
+    !enddo
     this%npakeq = this%nmawwells
     !
     ! -- allocate local storage for aux variables
@@ -1212,7 +1225,8 @@ contains
       idx = 0
       do n = 1, this%nmawwells
         !this%cmawname(n) = this%mawwells(n)%name
-        do j = 1, this%mawwells(n)%ngwfnodes
+        !do j = 1, this%mawwells(n)%ngwfnodes
+        do j = 1, this%ngwfnodes(n)
           idx = idx + 1
           !this%boundname(idx) = this%mawwells(n)%name
           this%boundname(idx) = this%cmawname(n)
@@ -3786,8 +3800,10 @@ contains
       hks = this%mawwells(i)%hk(j)
       if (tthkw * hks > DZERO) then
         Tcontrast = (sqrtk11k22 * tthka) / (hks * tthkw)
+        !skin = (Tcontrast - DONE) *                                              &
+        !        log(this%mawwells(i)%sradius(j) / this%mawwells(i)%radius)
         skin = (Tcontrast - DONE) *                                              &
-                log(this%mawwells(i)%sradius(j) / this%mawwells(i)%radius)
+                log(this%mawwells(i)%sradius(j) / this%radius(i))
         !
         ! -- trap invalid transmissvity contrast if using skin equation (2).
         !    Not trapped for cumulative Thiem and skin equations (3) 
@@ -4284,110 +4300,110 @@ contains
   end subroutine maw_cfupdate
 
 
-  subroutine maw_allocate_well(this, n)
-! ******************************************************************************
-! allocate_reach -- Allocate pointers for multi-aquifer well mawwells(n).
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(MawType) :: this
-    integer(I4B), intent(in) :: n
-    ! -- local
-    character(len=LINELENGTH) :: errmsg
-    character(len=10) :: cwel
-    !integer(I4B) :: iaux
-! ------------------------------------------------------------------------------
-    !
-    ! -- make sure maw well has not been allocated
-    if (associated(this%mawwells(n)%ieqn)) then
-      write (cwel, '(i10)') n
-      errmsg = 'multi-aquifer well ' // trim(cwel) // ' is already allocated'
-      call store_error(errmsg)
-      call ustop()
-    end if
-    ! -- allocate pointers
-    !allocate(character (len=LENBOUNDNAME) :: this%mawwells(n)%name)
-    allocate(this%mawwells(n)%name)
-    allocate(this%mawwells(n)%status)
-    allocate(this%mawwells(n)%ngwfnodes)
-    allocate(this%mawwells(n)%ieqn)
-    allocate(this%mawwells(n)%ishutoff)
-    allocate(this%mawwells(n)%ifwdischarge)
-    allocate(this%mawwells(n)%strt)
-    allocate(this%mawwells(n)%radius)
-    allocate(this%mawwells(n)%area)
-    allocate(this%mawwells(n)%pumpelev)
-    allocate(this%mawwells(n)%bot)
-    allocate(this%mawwells(n)%ratesim)
-    allocate(this%mawwells(n)%reduction_length)
-    allocate(this%mawwells(n)%fwelev)
-    allocate(this%mawwells(n)%fwcond)
-    allocate(this%mawwells(n)%fwrlen)
-    allocate(this%mawwells(n)%fwcondsim)
-    allocate(this%mawwells(n)%xsto)
-    allocate(this%mawwells(n)%xoldsto)
-    allocate(this%mawwells(n)%shutoffmin)
-    allocate(this%mawwells(n)%shutoffmax)
-    allocate(this%mawwells(n)%shutofflevel)
-    allocate(this%mawwells(n)%shutoffweight)
-    allocate(this%mawwells(n)%shutoffdq)
-    allocate(this%mawwells(n)%shutoffqold)
-    !!
-    !! -- timeseries aware data
-    !if (this%naux > 0) then
-    !  allocate(this%mawwells(n)%auxvar(this%naux))
-    !  do iaux = 1, this%naux
-    !    allocate(this%mawwells(n)%auxvar(iaux)%name)
-    !    allocate(this%mawwells(n)%auxvar(iaux)%value)
-    !  end do
-    !end if
-    !allocate(this%mawwells(n)%rate)
-    !allocate(this%mawwells(n)%rate%name)
-    !allocate(this%mawwells(n)%rate%value)
-    !allocate(this%mawwells(n)%well_head)
-    !allocate(this%mawwells(n)%well_head%name)
-    !allocate(this%mawwells(n)%well_head%value)
-    !
-    ! -- initialize a few well variables
-    this%mawwells(n)%name = ''
-    this%mawwells(n)%status = 'ACTIVE'
-    this%mawwells(n)%ngwfnodes = 0
-    this%mawwells(n)%ieqn = 0
-    this%mawwells(n)%ishutoff = 0
-    this%mawwells(n)%ifwdischarge = 0
-    this%mawwells(n)%strt = DEP20
-    this%mawwells(n)%radius = DEP20
-    this%mawwells(n)%area = DZERO
-    this%mawwells(n)%pumpelev = DEP20
-    this%mawwells(n)%bot = DEP20
-    this%mawwells(n)%ratesim = DZERO
-    this%mawwells(n)%reduction_length = DEP20
-    this%mawwells(n)%fwelev = DZERO
-    this%mawwells(n)%fwcond = DZERO
-    this%mawwells(n)%fwrlen = DZERO
-    this%mawwells(n)%fwcondsim = DZERO
-    this%mawwells(n)%xsto = DZERO
-    this%mawwells(n)%xoldsto = DZERO
-    this%mawwells(n)%shutoffmin = DZERO
-    this%mawwells(n)%shutoffmax = DZERO
-    this%mawwells(n)%shutofflevel = DEP20
-    this%mawwells(n)%shutoffweight = DONE
-    this%mawwells(n)%shutoffdq = DONE
-    this%mawwells(n)%shutoffqold = DONE
-    !! -- timeseries aware data
-    !do iaux = 1, this%naux
-    !  this%mawwells(n)%auxvar(iaux)%name = ''
-    !  this%mawwells(n)%auxvar(iaux)%value = DZERO
-    !end do
-    !this%mawwells(n)%rate%name = ''
-    !this%mawwells(n)%rate%value = DZERO
-    !this%mawwells(n)%well_head%name = ''
-    !this%mawwells(n)%well_head%value = DZERO
-    !
-    ! -- return
-    return
-  end subroutine maw_allocate_well
+!  subroutine maw_allocate_well(this, n)
+!! ******************************************************************************
+!! allocate_reach -- Allocate pointers for multi-aquifer well mawwells(n).
+!! ******************************************************************************
+!!
+!!    SPECIFICATIONS:
+!! ------------------------------------------------------------------------------
+!    class(MawType) :: this
+!    integer(I4B), intent(in) :: n
+!    ! -- local
+!    !character(len=LINELENGTH) :: errmsg
+!    !character(len=10) :: cwel
+!    !integer(I4B) :: iaux
+!! ------------------------------------------------------------------------------
+!    !!
+!    !! -- make sure maw well has not been allocated
+!    !if (associated(this%mawwells(n)%ieqn)) then
+!    !  write (cwel, '(i10)') n
+!    !  errmsg = 'multi-aquifer well ' // trim(cwel) // ' is already allocated'
+!    !  call store_error(errmsg)
+!    !  call ustop()
+!    !end if
+!    ! -- allocate pointers
+!    !allocate(character (len=LENBOUNDNAME) :: this%mawwells(n)%name)
+!    !allocate(this%mawwells(n)%name)
+!    !allocate(this%mawwells(n)%status)
+!    !allocate(this%mawwells(n)%ngwfnodes)
+!    !allocate(this%mawwells(n)%ieqn)
+!    !allocate(this%mawwells(n)%ishutoff)
+!    !allocate(this%mawwells(n)%ifwdischarge)
+!    !allocate(this%mawwells(n)%strt)
+!    !allocate(this%mawwells(n)%radius)
+!    !allocate(this%mawwells(n)%area)
+!    !allocate(this%mawwells(n)%pumpelev)
+!    !allocate(this%mawwells(n)%bot)
+!    !allocate(this%mawwells(n)%ratesim)
+!    !allocate(this%mawwells(n)%reduction_length)
+!    !allocate(this%mawwells(n)%fwelev)
+!    !allocate(this%mawwells(n)%fwcond)
+!    !allocate(this%mawwells(n)%fwrlen)
+!    !allocate(this%mawwells(n)%fwcondsim)
+!    !allocate(this%mawwells(n)%xsto)
+!    !allocate(this%mawwells(n)%xoldsto)
+!    !allocate(this%mawwells(n)%shutoffmin)
+!    !allocate(this%mawwells(n)%shutoffmax)
+!    !allocate(this%mawwells(n)%shutofflevel)
+!    !allocate(this%mawwells(n)%shutoffweight)
+!    !allocate(this%mawwells(n)%shutoffdq)
+!    !allocate(this%mawwells(n)%shutoffqold)
+!    !!
+!    !! -- timeseries aware data
+!    !if (this%naux > 0) then
+!    !  allocate(this%mawwells(n)%auxvar(this%naux))
+!    !  do iaux = 1, this%naux
+!    !    allocate(this%mawwells(n)%auxvar(iaux)%name)
+!    !    allocate(this%mawwells(n)%auxvar(iaux)%value)
+!    !  end do
+!    !end if
+!    !allocate(this%mawwells(n)%rate)
+!    !allocate(this%mawwells(n)%rate%name)
+!    !allocate(this%mawwells(n)%rate%value)
+!    !allocate(this%mawwells(n)%well_head)
+!    !allocate(this%mawwells(n)%well_head%name)
+!    !allocate(this%mawwells(n)%well_head%value)
+!    !!
+!    !! -- initialize a few well variables
+!    !this%mawwells(n)%name = ''
+!    !this%mawwells(n)%status = 'ACTIVE'
+!    !this%mawwells(n)%ngwfnodes = 0
+!    !this%mawwells(n)%ieqn = 0
+!    !this%mawwells(n)%ishutoff = 0
+!    !this%mawwells(n)%ifwdischarge = 0
+!    !this%mawwells(n)%strt = DEP20
+!    !this%mawwells(n)%radius = DEP20
+!    !this%mawwells(n)%area = DZERO
+!    !this%mawwells(n)%pumpelev = DEP20
+!    !this%mawwells(n)%bot = DEP20
+!    !this%mawwells(n)%ratesim = DZERO
+!    !this%mawwells(n)%reduction_length = DEP20
+!    !this%mawwells(n)%fwelev = DZERO
+!    !this%mawwells(n)%fwcond = DZERO
+!    !this%mawwells(n)%fwrlen = DZERO
+!    !this%mawwells(n)%fwcondsim = DZERO
+!    !this%mawwells(n)%xsto = DZERO
+!    !this%mawwells(n)%xoldsto = DZERO
+!    !this%mawwells(n)%shutoffmin = DZERO
+!    !this%mawwells(n)%shutoffmax = DZERO
+!    !this%mawwells(n)%shutofflevel = DEP20
+!    !this%mawwells(n)%shutoffweight = DONE
+!    !this%mawwells(n)%shutoffdq = DONE
+!    !this%mawwells(n)%shutoffqold = DONE
+!    !! -- timeseries aware data
+!    !do iaux = 1, this%naux
+!    !  this%mawwells(n)%auxvar(iaux)%name = ''
+!    !  this%mawwells(n)%auxvar(iaux)%value = DZERO
+!    !end do
+!    !this%mawwells(n)%rate%name = ''
+!    !this%mawwells(n)%rate%value = DZERO
+!    !this%mawwells(n)%well_head%name = ''
+!    !this%mawwells(n)%well_head%value = DZERO
+!    !
+!    ! -- return
+!    return
+!  end subroutine maw_allocate_well
 
   subroutine maw_deallocate_well(this, n)
 ! ******************************************************************************
@@ -4408,39 +4424,41 @@ contains
     deallocate(this%mawwells(n)%simcond)
     deallocate(this%mawwells(n)%topscrn)
     deallocate(this%mawwells(n)%botscrn)
-    if (this%mawwells(n)%ieqn==2 .OR. this%mawwells(n)%ieqn==3 .OR.           &
-        this%mawwells(n)%ieqn==4) then
+    !if (this%mawwells(n)%ieqn==2 .OR. this%mawwells(n)%ieqn==3 .OR.           &
+    !    this%mawwells(n)%ieqn==4) then
+    if (this%ieqn(n) == 2 .OR. this%ieqn(n) == 3 .OR.                            &
+        this%ieqn(n) == 4) then
       deallocate(this%mawwells(n)%hk)
     end if
-    if (this%mawwells(n)%ieqn==2 .OR. this%mawwells(n)%ieqn==3 .OR.           &
-        this%mawwells(n)%ieqn==4) then
+    if (this%ieqn(n) == 2 .OR. this%ieqn(n) == 3 .OR.                            &
+        this%ieqn(n) == 4) then
       deallocate(this%mawwells(n)%sradius)
     end if
-    deallocate(this%mawwells(n)%name)
-    deallocate(this%mawwells(n)%status)
-    deallocate(this%mawwells(n)%ngwfnodes)
-    deallocate(this%mawwells(n)%ieqn)
-    deallocate(this%mawwells(n)%ishutoff)
-    deallocate(this%mawwells(n)%ifwdischarge)
-    deallocate(this%mawwells(n)%strt)
-    deallocate(this%mawwells(n)%radius)
-    deallocate(this%mawwells(n)%area)
-    deallocate(this%mawwells(n)%pumpelev)
-    deallocate(this%mawwells(n)%bot)
-    deallocate(this%mawwells(n)%ratesim)
-    deallocate(this%mawwells(n)%reduction_length)
-    deallocate(this%mawwells(n)%fwelev)
-    deallocate(this%mawwells(n)%fwcond)
-    deallocate(this%mawwells(n)%fwrlen)
-    deallocate(this%mawwells(n)%fwcondsim)
-    deallocate(this%mawwells(n)%xsto)
-    deallocate(this%mawwells(n)%xoldsto)
-    deallocate(this%mawwells(n)%shutoffmin)
-    deallocate(this%mawwells(n)%shutoffmax)
-    deallocate(this%mawwells(n)%shutofflevel)
-    deallocate(this%mawwells(n)%shutoffweight)
-    deallocate(this%mawwells(n)%shutoffdq)
-    deallocate(this%mawwells(n)%shutoffqold)
+    !deallocate(this%mawwells(n)%name)
+    !deallocate(this%mawwells(n)%status)
+    !deallocate(this%mawwells(n)%ngwfnodes)
+    !deallocate(this%mawwells(n)%ieqn)
+    !deallocate(this%mawwells(n)%ishutoff)
+    !deallocate(this%mawwells(n)%ifwdischarge)
+    !deallocate(this%mawwells(n)%strt)
+    !deallocate(this%mawwells(n)%radius)
+    !deallocate(this%mawwells(n)%area)
+    !deallocate(this%mawwells(n)%pumpelev)
+    !deallocate(this%mawwells(n)%bot)
+    !deallocate(this%mawwells(n)%ratesim)
+    !deallocate(this%mawwells(n)%reduction_length)
+    !deallocate(this%mawwells(n)%fwelev)
+    !deallocate(this%mawwells(n)%fwcond)
+    !deallocate(this%mawwells(n)%fwrlen)
+    !deallocate(this%mawwells(n)%fwcondsim)
+    !deallocate(this%mawwells(n)%xsto)
+    !deallocate(this%mawwells(n)%xoldsto)
+    !deallocate(this%mawwells(n)%shutoffmin)
+    !deallocate(this%mawwells(n)%shutoffmax)
+    !deallocate(this%mawwells(n)%shutofflevel)
+    !deallocate(this%mawwells(n)%shutoffweight)
+    !deallocate(this%mawwells(n)%shutoffdq)
+    !deallocate(this%mawwells(n)%shutoffqold)
     !! -- timeseries aware data
     !if (this%naux > 0) then
     !  do iaux = 1, this%naux
