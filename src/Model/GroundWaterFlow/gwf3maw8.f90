@@ -31,23 +31,7 @@ module MawModule
   !
   character(len=LENFTYPE)       :: ftype = 'MAW'
   character(len=LENPACKAGENAME) :: text  = '             MAW'
-  !
-  type :: MawWellTSType
-    character (len=LENTIMESERIESNAME), pointer :: name => null()
-    real(DP), pointer :: value => null()
-  end type MawWellTSType
 
-  !type :: MawWellType
-  !  ! -- vectors
-  !  !integer(I4B), dimension(:), pointer, contiguous :: gwfnodes => NULL()
-  !  !real(DP), dimension(:), pointer, contiguous :: sradius => NULL()
-  !  !real(DP), dimension(:), pointer, contiguous :: hk => NULL()
-  !  !real(DP), dimension(:), pointer, contiguous :: satcond => NULL()
-  !  !real(DP), dimension(:), pointer, contiguous :: simcond => NULL()
-  !  real(DP), dimension(:), pointer, contiguous :: topscrn => NULL()
-  !  real(DP), dimension(:), pointer, contiguous :: botscrn => NULL()
-  !end type MawWellType
-  !
   private
   public :: maw_create
   !
@@ -77,11 +61,8 @@ module MawModule
     ! -- for underrelaxation of estimated well q if using shutoff
     real(DP), pointer :: theta => NULL()
     real(DP), pointer :: kappa => NULL()
-    !!
-    !! -- derived types
-    !type(MawWellType), dimension(:), pointer, contiguous :: mawwells => NULL()
     !
-    ! -- from MawWellType (for each well)
+    ! -- vector data for each well
     character (len=8), dimension(:), pointer, contiguous :: status => null()
     integer(I4B), dimension(:), pointer, contiguous :: ngwfnodes => null()
     integer(I4B), dimension(:), pointer, contiguous :: ieqn => null()
@@ -106,8 +87,37 @@ module MawModule
     real(DP), dimension(:), pointer, contiguous :: shutoffweight => null()
     real(DP), dimension(:), pointer, contiguous :: shutoffdq => null()
     real(DP), dimension(:), pointer, contiguous :: shutoffqold => null()
+    character (len=LENBOUNDNAME), dimension(:), pointer,                        &
+                                  contiguous :: cmawname => null()
     !
-    ! -- from MawWellType (for each connections)
+    ! -- time-series aware data
+    real(DP), dimension(:), pointer, contiguous :: rate => null()
+    real(DP), dimension(:), pointer, contiguous :: well_head => null()
+    real(DP), dimension(:,:), pointer, contiguous :: mauxvar => null()
+    !
+    ! -- ia vector for connections
+    integer(I4B), dimension(:), pointer, contiguous :: iaconn => null()
+    !
+    ! -- vector data for each connections
+    integer(I4B), dimension(:), pointer, contiguous :: gwfnodes => NULL()
+    real(DP), dimension(:), pointer, contiguous :: sradius => NULL()
+    real(DP), dimension(:), pointer, contiguous :: hk => NULL()
+    real(DP), dimension(:), pointer, contiguous :: satcond => NULL()
+    real(DP), dimension(:), pointer, contiguous :: simcond => NULL()
+    real(DP), dimension(:), pointer, contiguous :: topscrn => NULL()
+    real(DP), dimension(:), pointer, contiguous :: botscrn => NULL()
+    !
+    ! -- imap vector
+    integer(I4B), dimension(:), pointer, contiguous :: imap => null()
+    !
+    ! -- maw output data
+    real(DP), dimension(:), pointer, contiguous :: qauxcbc => null()
+    real(DP), dimension(:), pointer, contiguous :: dbuff => null()
+    real(DP), dimension(:), pointer, contiguous :: qleak => null()
+    real(DP), dimension(:), pointer, contiguous :: qout => null()
+    real(DP), dimension(:), pointer, contiguous :: qfw => null()
+    real(DP), dimension(:), pointer, contiguous :: qsto => null()
+    real(DP), dimension(:), pointer, contiguous :: qconst => null()
     !
     ! -- for budgets
     integer(I4B), pointer :: bditems => NULL()
@@ -134,39 +144,10 @@ module MawModule
     real(DP), dimension(:), pointer, contiguous  :: xoldpak => null()            !package xold vector
     real(DP), dimension(:), pointer, contiguous  :: cterm => null()              !package c vector
     !
-    ! -- vector data (start of flattening for future removal of MawWellType)
-    character (len=LENBOUNDNAME), dimension(:), pointer,                        &
-                                  contiguous :: cmawname => null()
-    integer(I4B), dimension(:), pointer, contiguous :: iaconn => null()
-    integer(I4B), dimension(:), pointer, contiguous :: gwfnodes => NULL()
-    real(DP), dimension(:), pointer, contiguous :: sradius => NULL()
-    real(DP), dimension(:), pointer, contiguous :: hk => NULL()
-    real(DP), dimension(:), pointer, contiguous :: satcond => NULL()
-    real(DP), dimension(:), pointer, contiguous :: simcond => NULL()
-    real(DP), dimension(:), pointer, contiguous :: topscrn => NULL()
-    real(DP), dimension(:), pointer, contiguous :: botscrn => NULL()
-    !
-    ! -- time-series aware data
-    real(DP), dimension(:), pointer, contiguous :: rate => null()
-    real(DP), dimension(:), pointer, contiguous :: well_head => null()
-    real(DP), dimension(:,:), pointer, contiguous :: mauxvar => null()
-    !
-    ! -- imap vector
-    integer(I4B), dimension(:), pointer, contiguous :: imap => null()
-    !
-    ! -- maw output data
-    real(DP), dimension(:), pointer, contiguous :: qauxcbc => null()
-    real(DP), dimension(:), pointer, contiguous :: dbuff => null()
-    real(DP), dimension(:), pointer, contiguous :: qleak => null()
-    real(DP), dimension(:), pointer, contiguous :: qout => null()
-    real(DP), dimension(:), pointer, contiguous :: qfw => null()
-    real(DP), dimension(:), pointer, contiguous :: qsto => null()
-    real(DP), dimension(:), pointer, contiguous :: qconst => null()
     ! -- type bound procedures
     contains
     procedure :: maw_allocate_scalars
-    procedure :: maw_allocate_well_arrays
-    procedure :: maw_allocate_conn_arrays
+    procedure :: maw_allocate_well_conn_arrays
     procedure :: maw_allocate_arrays
     procedure :: bnd_options => maw_options
     procedure :: read_dimensions => maw_read_dimensions
@@ -311,7 +292,7 @@ contains
     return
   end subroutine maw_allocate_scalars
 
-  subroutine maw_allocate_well_arrays(this)
+  subroutine maw_allocate_well_conn_arrays(this)
 ! ******************************************************************************
 ! maw_allocate_arrays -- allocate well arrays
 ! ******************************************************************************
@@ -385,9 +366,31 @@ contains
     call mem_allocate(this%mauxvar, jj, this%nmawwells, 'MAUXVAR',               &
                       this%origin)
     !
+    ! -- allocate and initialize dbuff
+    if (this%iheadout > 0) then
+      call mem_allocate(this%dbuff, this%nmawwells, 'DBUFF', this%origin)
+    else
+      call mem_allocate(this%dbuff, 0, 'DBUFF', this%origin)
+    end if
+    !
     ! -- allocate iaconn
     call mem_allocate(this%iaconn, this%nmawwells+1, 'iaconn',           &
                       this%origin)
+    !
+    ! -- allocate imap
+    call mem_allocate(this%imap, this%MAXBOUND, 'IMAP', this%origin)
+    !
+    ! -- allocate connection data
+    call mem_allocate(this%gwfnodes, this%maxbound, 'GWFNODES', this%origin)
+    call mem_allocate(this%sradius, this%maxbound, 'SRADIUS', this%origin)
+    call mem_allocate(this%hk, this%maxbound, 'HK', this%origin)
+    call mem_allocate(this%satcond, this%maxbound, 'SATCOND', this%origin)
+    call mem_allocate(this%simcond, this%maxbound, 'SIMCOND', this%origin)
+    call mem_allocate(this%topscrn, this%maxbound, 'TOPSCRN', this%origin)
+    call mem_allocate(this%botscrn, this%maxbound, 'BOTSCRN', this%origin)
+    !
+    ! -- allocate qleak
+    call mem_allocate(this%qleak, this%maxbound, 'QLEAK', this%origin)
     !
     ! -- initialize well data
     do i = 1, this%nmawwells
@@ -422,22 +425,17 @@ contains
       do jj = 1, max(1, this%naux)
         this%mauxvar(jj, i) = DZERO
       end do
+      !
+      ! -- dbuff
+      if (this%iheadout > 0) then
+        this%dbuff(i) = DZERO
+      end if
     end do
     !
     ! -- initialize iaconn
     do i = 1, this%nmawwells + 1
       this%iaconn(i) = 0
     end do
-    !
-    ! -- allocate and initialize dbuff
-    if (this%iheadout > 0) then
-      call mem_allocate(this%dbuff, this%nmawwells, 'DBUFF', this%origin)
-      do i = 1, this%nmawwells
-        this%dbuff(i) = DZERO
-      end do
-    else
-      call mem_allocate(this%dbuff, 0, 'DBUFF', this%origin)
-    end if
     !
     ! -- allocate character array for budget text
     allocate(this%cauxcbc(this%cbcauxitems))
@@ -467,40 +465,6 @@ contains
       this%qconst(i) = DZERO
     end do
     !
-    ! -- return
-    return
-  end subroutine maw_allocate_well_arrays
-
-  subroutine maw_allocate_conn_arrays(this)
-! ******************************************************************************
-! maw_allocate_conn_arrays -- allocate connection arrays
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use MemoryManagerModule, only: mem_allocate
-    ! -- dummy
-    class(MawType),   intent(inout) :: this
-    ! -- local
-    integer(I4B) :: i
-! ------------------------------------------------------------------------------
-    !
-    ! -- allocate imap
-    call mem_allocate(this%imap, this%MAXBOUND, 'IMAP', this%origin)
-    !
-    ! -- allocate connection data
-    call mem_allocate(this%gwfnodes, this%maxbound, 'GWFNODES', this%origin)
-    call mem_allocate(this%sradius, this%maxbound, 'SRADIUS', this%origin)
-    call mem_allocate(this%hk, this%maxbound, 'HK', this%origin)
-    call mem_allocate(this%satcond, this%maxbound, 'SATCOND', this%origin)
-    call mem_allocate(this%simcond, this%maxbound, 'SIMCOND', this%origin)
-    call mem_allocate(this%topscrn, this%maxbound, 'TOPSCRN', this%origin)
-    call mem_allocate(this%botscrn, this%maxbound, 'BOTSCRN', this%origin)
-    !
-    ! -- allocate qleak
-    call mem_allocate(this%qleak, this%maxbound, 'QLEAK', this%origin)
-    !
     ! -- initialize connection data
     do i = 1, this%maxbound
       this%imap(i) = 0
@@ -516,7 +480,7 @@ contains
     !
     ! -- return
     return
-  end subroutine maw_allocate_conn_arrays
+  end subroutine maw_allocate_well_conn_arrays
 
   subroutine maw_allocate_arrays(this)
 ! ******************************************************************************
@@ -556,54 +520,61 @@ contains
     character(len=LINELENGTH) :: text
     character(len=LINELENGTH) :: keyword
     character(len=LINELENGTH) :: cstr
-    character(len=LINELENGTH) :: strttext
     character(len=LENBOUNDNAME) :: bndName
     character(len=LENBOUNDNAME) :: bndNameTemp
     character(len=9) :: cno
-    character(len=50), dimension(:), allocatable :: caux
+    logical :: isfound
+    logical :: endOfBlock
     integer(I4B) :: ival
-    logical :: isfound, endOfBlock
-    real(DP) :: rval
     integer(I4B) :: n
     integer(I4B) :: j
     integer(I4B) :: ii
     integer(I4B) :: jj
-    !integer(I4B) :: iaux
     integer(I4B) :: ieqn
     integer(I4B) :: itmp
     integer(I4B) :: ierr
     integer(I4B) :: idx
+    real(DP) :: rval
     real(DP), pointer :: bndElem => null()
-    integer(I4B), dimension(:), pointer, contiguous :: nboundchk
+    ! -- local allocatable arrays
+    character(len=LINELENGTH), dimension(:), allocatable :: strttext
+    character(len=LENBOUNDNAME), dimension(:), allocatable :: nametxt
+    character(len=50), dimension(:,:), allocatable :: caux
+    integer(I4B), dimension(:), allocatable :: nboundchk
+    integer(I4B), dimension(:), allocatable :: wellieqn
+    integer(I4B), dimension(:), allocatable :: ngwfnodes
+    real(DP), dimension(:), allocatable :: radius
+    real(DP), dimension(:), allocatable :: bottom
     ! -- format
-    character(len=*),parameter :: fmthdbot = &
-      "('well head (', G0, ') must be >= BOTTOM_ELEVATION (', G0, ').')"
+    character(len=*), parameter :: fmthdbot =                                    &
+      "('well head (', G0, ') must be greater than or equal to the               &
+     &BOTTOM_ELEVATION (', G0, ').')"
 ! ------------------------------------------------------------------------------
     !
     ! -- code
     !
     ! -- allocate and initialize temporary variables
+    allocate(strttext(this%nmawwells))
+    allocate(nametxt(this%nmawwells))
+    if (this%naux > 0) then
+      allocate(caux(this%naux, this%nmawwells))
+    end if
     allocate(nboundchk(this%nmawwells))
+    allocate(wellieqn(this%nmawwells))
+    allocate(ngwfnodes(this%nmawwells))
+    allocate(radius(this%nmawwells))
+    allocate(bottom(this%nmawwells))
+    !
+    ! -- initialize temporary variables
     do n = 1, this%nmawwells
       nboundchk(n) = 0
     end do
     !
     ! -- initialize itmp
     itmp = 0
-    !!
-    !! -- allocate space for mawwells data
-    !allocate(this%mawwells(this%nmawwells))
     !
     ! -- set npakeq to nmawwells
     this%npakeq = this%nmawwells
-    !
-    ! -- allocate local storage for aux variables
-    if (this%naux > 0) then
-      allocate(caux(this%naux))
-    end if
-    !
-    ! -- allocate well data
-    call this%maw_allocate_well_arrays()
     !
     ! -- read maw well data
     ! -- get wells block
@@ -638,14 +609,13 @@ contains
             'Radius for well', n, 'must be greater than zero.'
           call store_error(errmsg)
         end if
-        this%radius(n) = rval
-        this%area(n) = DPI * rval**DTWO
+        radius(n) = rval
         !
         ! -- well bottom
-        this%bot(n) = this%parser%GetDouble()
+        bottom(n) = this%parser%GetDouble()
         !
         ! -- strt
-        call this%parser%GetString(strttext)
+        call this%parser%GetString(strttext(n))
         !
         ! -- ieqn
         call this%parser%GetStringCaps(keyword)
@@ -664,83 +634,41 @@ contains
             'CONDEQN for well', n,                                               &
             "must be 'CONDUCTANCE', 'THIEM', 'MEAN', or 'SKIN'."
         end if
-        this%ieqn(n) = ieqn
+        wellieqn(n) = ieqn
         !
         ! -- ngwnodes
         ival = this%parser%GetInteger()
         if (ival < 1) then
+          ival = 0
           write(errmsg,'(a,1x,i0,1x,a)')                                         &
             'NGWFNODES for well', n, 'must be greater than zero.'
           call store_error(errmsg)
         end if
         
         if (ival > 0) then
-          this%ngwfnodes(n) = ival
+          ngwfnodes(n) = ival
         end if
         !
-        ! -- allocate storage for connection data needed for the MAW well
-        !allocate(this%mawwells(n)%gwfnodes(this%ngwfnodes(n)))
-        !allocate(this%mawwells(n)%satcond(this%ngwfnodes(n)))
-        !allocate(this%mawwells(n)%simcond(this%ngwfnodes(n)))
-        !allocate(this%mawwells(n)%topscrn(this%ngwfnodes(n)))
-        !allocate(this%mawwells(n)%botscrn(this%ngwfnodes(n)))
-        !if (this%ieqn(n) == 2 .OR. this%ieqn(n) == 3 .OR.                        &
-        !    this%ieqn(n) == 4) then
-        !  allocate(this%mawwells(n)%hk(this%ngwfnodes(n)))
-        !end if
-        !if (this%ieqn(n) == 2 .OR. this%ieqn(n) == 3 .OR.                        &
-        !    this%ieqn(n) == 4) then
-        !  allocate(this%mawwells(n)%sradius(this%ngwfnodes(n)))
-        !end if
-        !
         ! -- increment maxbound
-        itmp = itmp + this%ngwfnodes(n)
+        itmp = itmp + ival
+        !
+        ! -- get aux data
+        do jj = 1, this%naux
+          call this%parser%GetString(caux(jj, n))
+        end do
         !
         ! -- set default bndName
         write (cno,'(i9.9)') n
         bndName = 'MAWWELL' // cno
         !
-        ! -- get aux data
-        do jj = 1, this%naux
-          call this%parser%GetString(caux(jj))
-        end do
-        !
         ! -- read well name
-        this%cmawname(n) = bndName
         if (this%inamedbound /= 0) then
           call this%parser%GetStringCaps(bndNameTemp)
           if (bndNameTemp /= '') then
-            this%cmawname(n) = bndNameTemp(1:16)
+            bndName = bndNameTemp(1:16)
           end if
-        else
-          bndName = ''
         end if
-        !
-        ! fill timeseries aware data
-        jj = 1    ! For WELL_HEAD
-        bndElem => this%well_head(n)
-        call read_value_or_time_series_adv(strttext, n, jj, bndElem, this%name,  &
-                                           'BND', this%tsManager, this%iprpak,   &
-                                           'WELL_HEAD')
-        !
-        ! -- set starting head value
-        this%strt(n) = this%well_head(n)
-        !
-        ! -- check for error condition
-        if (this%strt(n) < this%bot(n)) then
-          write(cstr, fmthdbot) this%strt(n), this%bot(n)
-          call this%maw_set_attribute_error(n, 'STRT', trim(cstr))
-        end if
-        !
-        ! -- fill aux data
-        do jj = 1, this%naux
-          text = caux(jj)
-          ii = n
-          bndElem => this%mauxvar(jj, ii)
-          call read_value_or_time_series_adv(text, ii, jj, bndElem, this%name,   &
-                                             'AUX', this%tsManager, this%iprpak, &
-                                             this%auxname(jj))
-        end do
+        nametxt(n) = bndName
       end do
 
       write(this%iout,'(1x,a)')                                                  &
@@ -771,8 +699,47 @@ contains
     this%maxbound = itmp
     write(this%iout,'(//4x,a,i7)') 'MAXBOUND = ', this%maxbound
     !
-    ! -- allocate connection data
-    call this%maw_allocate_conn_arrays()
+    ! -- allocate well and connection data
+    call this%maw_allocate_well_conn_arrays()
+    !
+    ! -- fill well data with data stored in temporary local arrays
+    do n = 1,  this%nmawwells
+      rval = radius(n)
+      this%radius(n) = rval
+      this%area(n) = DPI * rval**DTWO
+      this%bot(n) = bottom(n)
+      this%ieqn(n) = wellieqn(n)
+      this%ngwfnodes(n) = ngwfnodes(n)
+      this%cmawname(n) = nametxt(n)
+      !
+      ! fill timeseries aware data
+      !
+      ! -- well_head and strt
+      jj = 1    ! For WELL_HEAD
+      bndElem => this%well_head(n)
+      call read_value_or_time_series_adv(strttext(n), n, jj, bndElem, this%name, &
+                                         'BND', this%tsManager, this%iprpak,     &
+                                         'WELL_HEAD')
+      !
+      ! -- set starting head value
+      this%strt(n) = this%well_head(n)
+      !
+      ! -- check for error condition
+      if (this%strt(n) < this%bot(n)) then
+        write(cstr, fmthdbot) this%strt(n), this%bot(n)
+        call this%maw_set_attribute_error(n, 'STRT', trim(cstr))
+      end if
+      !
+      ! -- fill aux data
+      do jj = 1, this%naux
+        text = caux(jj, n)
+        ii = n
+        bndElem => this%mauxvar(jj, ii)
+        call read_value_or_time_series_adv(text, ii, jj, bndElem, this%name,     &
+                                           'AUX', this%tsManager, this%iprpak,   &
+                                           this%auxname(jj))
+      end do
+    end do 
     !
     ! -- set iaconn and imap for each connection
     idx = 0
@@ -786,10 +753,16 @@ contains
     end do
     !
     ! -- deallocate local storage
-    deallocate(nboundchk)
+    deallocate(strttext)
+    deallocate(nametxt)
     if (this%naux > 0) then
       deallocate(caux)
     end if
+    deallocate(nboundchk)
+    deallocate(wellieqn)
+    deallocate(ngwfnodes)
+    deallocate(radius)
+    deallocate(bottom)
     !
     ! -- return
     return
@@ -894,7 +867,6 @@ contains
         botw = this%bot(n)
         !
         ! -- set gwf node number for connection
-        !this%mawwells(n)%gwfnodes(j) = nn
         this%gwfnodes(jpos) = nn
         !
         ! -- top of screen
@@ -906,7 +878,6 @@ contains
             rval = topnn
           end if
         end if
-        !this%mawwells(n)%topscrn(j)  = rval
         this%topscrn(jpos) = rval
         !
         ! -- bottom of screen
@@ -918,7 +889,6 @@ contains
             rval = botnn
           end if
         end if
-        !this%mawwells(n)%botscrn(j)  = rval
         this%botscrn(jpos) = rval
         !
         ! -- adjust the bottom of the well for all conductance approaches
@@ -933,11 +903,9 @@ contains
         ! -- hydraulic conductivity or conductance
         rval = this%parser%GetDouble()
         if (this%ieqn(n) == 0) then
-          !this%mawwells(n)%satcond(j)  = rval
           this%satcond(jpos) = rval
         else if (this%ieqn(n) == 2 .OR. this%ieqn(n) == 3 .OR.                   &
                  this%ieqn(n) == 4) then
-          !this%mawwells(n)%hk(j) = rval
           this%hk(jpos) = rval
         end if
         !
@@ -945,7 +913,6 @@ contains
         rval = this%parser%GetDouble()
         if (this%ieqn(n) == 2 .OR. this%ieqn(n) == 3 .OR.                        &
             this%ieqn(n) == 4) then
-          !this%mawwells(n)%sradius(j) = rval
           this%sradius(jpos) = rval
         end if
       end do
@@ -976,16 +943,13 @@ contains
       do n = 1, this%nmawwells
         if (this%ieqn(n) /= 4) then
           do j = 1, this%ngwfnodes(n)
-            !nn = this%mawwells(n)%gwfnodes(j) 
-            !jpos = this%iaconn(n) + j - 1
             nn = this%get_gwfnode(n, j)
             do jj = 1, this%ngwfnodes(n)
-              ! skip current maw node
+              !
+              ! -- skip current maw node
               if (jj == j) then
                 cycle
               end if
-              !nn2 =  this%mawwells(n)%gwfnodes(jj) 
-              !jpos = this%iaconn(n) + jj - 1
               nn2 = this%get_gwfnode(n, jj)
               if (nn2 == nn) then
                 call this%dis%noder_to_string(nn, nodestr)
@@ -1223,9 +1187,6 @@ contains
       !    specified for each maw-gwf connection (CONDUCTANCE keyword).
       do j = 1, this%ngwfnodes(n)
         if (this%ieqn(n) /= 0) then
-          !inode = this%mawwells(n)%gwfnodes(j)
-          !jpos = this%iaconn(n) + j - 1
-          !jpos = this%maw_get_jpos(n, j)
           inode = this%get_gwfnode(n, j)
           call this%maw_calculate_satcond(n, j, inode)
         end if
@@ -1308,21 +1269,15 @@ contains
         do j = 1, this%ngwfnodes(n)
           call this%inputtab%add_term(n)
           call this%inputtab%add_term(j)
-          !nn = this%mawwells(n)%gwfnodes(j)
-          !jpos = this%iaconn(n) + j - 1
           jpos =this%get_jpos(n, j)
           nn = this%get_gwfnode(n, j)
           call this%dis%noder_to_string(nn, nodestr)
           call this%inputtab%add_term(nodestr)
-          !call this%inputtab%add_term(this%mawwells(n)%topscrn(j))
-          !call this%inputtab%add_term(this%mawwells(n)%botscrn(j))
           call this%inputtab%add_term(this%topscrn(jpos))
           call this%inputtab%add_term(this%botscrn(jpos))
           if (this%ieqn(n) == 2 .or.                                             &
               this%ieqn(n) == 3 .or.                                             &
               this%ieqn(n) == 4) then
-            !call this%inputtab%add_term(this%mawwells(n)%sradius(j))
-            !call this%inputtab%add_term(this%mawwells(n)%hk(j))
             call this%inputtab%add_term(this%sradius(jpos))
             call this%inputtab%add_term(this%hk(jpos))
           else
@@ -1344,7 +1299,6 @@ contains
             call this%inputtab%add_term(' ')
             call this%inputtab%add_term(' ')
           end if
-          !call this%inputtab%add_term(this%mawwells(n)%satcond(j))
           call this%inputtab%add_term(this%satcond(jpos))
         end do
       end do
@@ -1622,7 +1576,6 @@ contains
         write(cgwfnode,'(a,i0,a)') 'gwfnode(', j,')'
         !
         ! -- connection screen data
-        !if (this%mawwells(n)%botscrn(j) >= this%mawwells(n)%topscrn(j)) then
         if (this%botscrn(jpos) >= this%topscrn(jpos)) then
           call this%maw_set_attribute_error(n, 'SCREEN_TOP', 'screen bottom ' // &
                                             'must be less tha screen top. ' //   &
@@ -1632,8 +1585,6 @@ contains
         ! -- connection skin radius
         if (this%ieqn(n) == 2 .OR. this%ieqn(n) == 3 .OR.                        &
             this%ieqn(n) == 4) then
-          !if (this%mawwells(n)%sradius(j) > DZERO) then
-          !  if (this%mawwells(n)%sradius(j) <= this%radius(n)) then
           if (this%sradius(jpos) > DZERO) then
             if (this%sradius(jpos) <= this%radius(n)) then
               call this%maw_set_attribute_error(n, 'RADIUS_SKIN', 'skin ' //     &
@@ -1644,7 +1595,6 @@ contains
           end if
           !
           ! -- skin hydraulic conductivity
-          !if (this%mawwells(n)%hk(j) <= DZERO) then
           if (this%hk(jpos) <= DZERO) then
             call this%maw_set_attribute_error(n, 'HK_SKIN', 'skin hyraulic ' //  &
                                               'conductivity must be greater ' // &
@@ -1653,7 +1603,6 @@ contains
         else if (this%ieqn(n) == 0) then
           !
           ! -- saturated conductance
-          !if (this%mawwells(n)%satcond(j) < DZERO) then
           if (this%satcond(jpos) < DZERO) then
             call this%maw_set_attribute_error(n, 'HK_SKIN',                      &
                                               'skin hyraulic conductivity ' //   &
@@ -1700,8 +1649,6 @@ contains
       nglo = moffset + this%dis%nodes + this%ioffset + n
       call sparse%addconnection(nglo, nglo, 1)
       do j = 1, this%ngwfnodes(n)
-        !jj = this%mawwells(n)%gwfnodes(j)
-        !jpos = this%maw_get_jpos(n, j)
         jj = this%get_gwfnode(n, j)
         jglo = jj + moffset
         call sparse%addconnection(nglo, jglo, 1)
@@ -1750,8 +1697,6 @@ contains
       iglo = moffset + this%dis%nodes + this%ioffset + n
       this%idxlocnode(n) = this%dis%nodes + this%ioffset + n
       do ii = 1, this%ngwfnodes(n)
-        !j =  this%mawwells(n)%gwfnodes(ii)
-        !jpos = this%get_jpos(n, ii)
         j = this%get_gwfnode(n, ii)
         jglo = j + moffset
         searchloop: do jj = iasln(iglo), iasln(iglo + 1) - 1
@@ -1768,8 +1713,6 @@ contains
     ipos = 1
     do n = 1, this%nmawwells
       do ii = 1, this%ngwfnodes(n)
-        !iglo = this%mawwells(n)%gwfnodes(ii) + moffset
-        !jpos = this%maw_get_jpos(n, ii)
         iglo = this%get_gwfnode(n, ii) + moffset
         jglo = moffset + this%dis%nodes + this%ioffset + n
         symsearchloop: do jj = iasln(iglo), iasln(iglo + 1) - 1
@@ -2194,17 +2137,14 @@ contains
     ibnd = 1
     do n = 1, this%nmawwells
       do j = 1, this%ngwfnodes(n)
-        !node = this%mawwells(n)%gwfnodes(j)
         jpos = this%get_jpos(n, j)
         node = this%get_gwfnode(n, j)
         this%nodelist(ibnd) = node
 
         this%bound(1,ibnd) = this%xnewpak(n)
 
-        !this%bound(2,ibnd) = this%mawwells(n)%satcond(j)
         this%bound(2,ibnd) = this%satcond(jpos)
 
-        !this%bound(3,ibnd) = this%mawwells(n)%botscrn(j)
         this%bound(3,ibnd) = this%botscrn(jpos)
 
         if (this%iboundpak(n) > 0) then
@@ -2431,17 +2371,13 @@ contains
       end if
       do j = 1, this%ngwfnodes(n)
         if (this%iboundpak(n) /= 0) then
-          !igwfnode = this%mawwells(n)%gwfnodes(j)
           jpos = this%get_jpos(n, j)
           igwfnode = this%get_gwfnode(n, j)
           call this%maw_calculate_saturation(n, j, igwfnode, sat)
-          !cmaw = this%mawwells(n)%satcond(j) * sat
-          !this%mawwells(n)%simcond(j) = cmaw
           cmaw = this%satcond(jpos) * sat
           this%simcond(jpos) = cmaw
 
           bnode = this%dis%bot(igwfnode)
-          !bmaw = this%mawwells(n)%botscrn(j)
           bmaw = this%botscrn(jpos)
           !
           ! -- calculate cterm - relative to gwf
@@ -2460,8 +2396,6 @@ contains
           rhs(iloc) = rhs(iloc) + cterm
           !
           ! -- add to gwf row for maw connection
-          !isymnode = this%mawwells(n)%gwfnodes(j)
-          !jpos = this%maw_get_jpos(n, j)
           isymnode = this%get_gwfnode(n, j)
           isymloc = ia(isymnode)
           ipossymd = this%idxsymdglo(idx)
@@ -2588,21 +2522,16 @@ contains
       end if
       do j = 1, this%ngwfnodes(n)
         if (this%iboundpak(n) /= 0) then
-          !igwfnode = this%mawwells(n)%gwfnodes(j)
           jpos = this%get_jpos(n, j)
           igwfnode = this%get_gwfnode(n, j)
           hgwf = this%xnew(igwfnode)
           !
           ! -- calculate upstream weighted conductance
           call this%maw_calculate_saturation(n, j, igwfnode, sat)
-          !cmaw = this%mawwells(n)%satcond(j) * sat
-          !this%mawwells(n)%simcond(j) = cmaw
           cmaw = this%satcond(jpos) * sat
           this%simcond(jpos) = cmaw
           !
           ! -- set top and bottom of the screen
-          !tmaw = this%mawwells(n)%topscrn(j)
-          !bmaw = this%mawwells(n)%botscrn(j)
           tmaw = this%topscrn(jpos)
           bmaw = this%botscrn(jpos)
           !
@@ -2611,8 +2540,6 @@ contains
           iposoffd = this%idxoffdglo(idx)
           !
           ! -- add to gwf row for maw connection
-          !isymnode = this%mawwells(n)%gwfnodes(j)
-          !jpos = this%maw_get_jpos(n, j)
           isymnode = this%get_gwfnode(n, j)
           isymloc = ia(isymnode)
           ipossymd = this%idxsymdglo(idx)
@@ -2625,7 +2552,6 @@ contains
           !
           ! -- maw is upstream
           if (hmaw > hgwf) then
-            !term = drterm * this%mawwells(n)%satcond(j) * (hmaw - hgwf)
             term = drterm * this%satcond(jpos) * (hmaw - hgwf)
             rhs(iloc) = rhs(iloc) + term * hmaw
             rhs(isymnode) = rhs(isymnode) - term * hmaw
@@ -2636,7 +2562,6 @@ contains
           !
           ! -- gwf is upstream
           else
-            !term = -drterm * this%mawwells(n)%satcond(j) * (hgwf - hmaw)
             term = -drterm * this%satcond(jpos) * (hgwf - hmaw)
             rhs(iloc) = rhs(iloc) + term * hgwf
             rhs(isymnode) = rhs(isymnode) - term * hgwf
@@ -2817,14 +2742,11 @@ contains
       do j = 1, this%ngwfnodes(n)
         this%qleak(ibnd) = DZERO
         if (this%iboundpak(n) == 0) cycle
-        !igwfnode = this%mawwells(n)%gwfnodes(j)
         jpos = this%get_jpos(n, j)
         igwfnode = this%get_gwfnode(n, j)
         hgwf = this%xnew(igwfnode)
-        !cmaw = this%mawwells(n)%simcond(j)
         cmaw = this%simcond(jpos)
 
-        !bmaw = this%mawwells(n)%botscrn(j)
         bmaw = this%botscrn(jpos)
         !
         ! -- calculate cterm - relative to gwf
@@ -2972,12 +2894,6 @@ contains
     ! -- local
     !integer(I4B) :: n
 ! ------------------------------------------------------------------------------
-    !!
-    !! -- mawwells derived type array
-    !do n = 1, this%nmawwells
-    !  call this%maw_deallocate_well(n)
-    !end do
-    !deallocate(this%mawwells)
     !
     ! -- budobj
     call this%budobj%budgetobject_da()
@@ -3362,9 +3278,6 @@ contains
               n = this%imap(jj)
               if (this%iboundpak(n) /= 0) then
                 nn = jj - this%iaconn(n) + 1
-                !igwfnode = this%mawwells(n)%gwfnodes(nn)
-                !igwfnode = this%get_gwfnode(n, nn)
-                !v = this%mawwells(n)%simcond(nn)
                 jpos = this%get_jpos(n, nn)
                 v = this%simcond(jpos)
               end if
@@ -3642,8 +3555,6 @@ contains
     !
     ! -- set top and bottom of well screen
     c = DZERO
-    !topw = this%mawwells(i)%topscrn(j)
-    !botw = this%mawwells(i)%botscrn(j)
     topw = this%topscrn(jpos)
     botw = this%botscrn(jpos)
     tthkw = topw - botw
@@ -3681,12 +3592,9 @@ contains
     !
     ! -- skin equation (2) and cumulative Thiem and skin equations (3)
     if (this%ieqn(i) == 2 .or. this%ieqn(i) == 3) then
-      !hks = this%mawwells(i)%hk(j)
       hks = this%hk(jpos)
       if (tthkw * hks > DZERO) then
         Tcontrast = (sqrtk11k22 * tthka) / (hks * tthkw)
-        !skin = (Tcontrast - DONE) *                                              &
-        !        log(this%mawwells(i)%sradius(j) / this%radius(i))
         skin = (Tcontrast - DONE) * log(this%sradius(jpos) / this%radius(i))
         !
         ! -- trap invalid transmissvity contrast if using skin equation (2).
@@ -3711,9 +3619,6 @@ contains
     ! -- conductance using screen elevations, hk, well radius, 
     !    and screen radius
     if (this%ieqn(i) == 4) then
-      !hks = this%mawwells(i)%hk(j)
-      !ravg = DHALF * (this%radius(i) + this%mawwells(i)%sradius(j))
-      !slen = this%mawwells(i)%sradius(j) - this%radius(i)
       hks = this%hk(jpos)
       ravg = DHALF * (this%radius(i) + this%sradius(jpos))
       slen = this%sradius(jpos) - this%radius(i)
@@ -3744,7 +3649,6 @@ contains
     end if
     !
     ! -- set saturated conductance
-    !this%mawwells(i)%satcond(j) = c
     this%satcond(jpos) = c
     !
     ! -- return
@@ -3779,9 +3683,8 @@ contains
       !
       ! -- set hwell
       hwell = this%xnewpak(i)
+      !
       ! -- set top and bottom of the well connection
-      !topw = this%mawwells(i)%topscrn(j)
-      !botw = this%mawwells(i)%botscrn(j)
       topw = this%topscrn(jpos)
       botw = this%botscrn(jpos)
       !
@@ -4041,14 +3944,11 @@ contains
     !
     ! -- calculate inflow from aquifer
     do j = 1, this%ngwfnodes(n)
-      !igwfnode = this%mawwells(n)%gwfnodes(j)
       jpos = this%get_jpos(n, j)
       igwfnode = this%get_gwfnode(n, j)
       call this%maw_calculate_saturation(n, j, igwfnode, sat)
-      !cmaw = this%mawwells(n)%satcond(j) * sat
       cmaw = this%satcond(jpos) * sat
       hgwf = this%xnew(igwfnode)
-      !bmaw = this%mawwells(n)%botscrn(j)
       bmaw = this%botscrn(jpos)
       hv = htmp
       if (hv < bmaw) then
@@ -4101,10 +4001,8 @@ contains
           if (this%iboundpak(n) == 0) then
             cmaw = DZERO
           else
-            !cmaw = this%mawwells(n)%satcond(j) * sat
             cmaw = this%satcond(jpos) * sat
           end if
-          !this%mawwells(n)%simcond(j) = cmaw
           this%simcond(jpos) = cmaw
 
           this%bound(2,ibnd) = cmaw
@@ -4128,37 +4026,6 @@ contains
       ! -- Return
       return
   end subroutine maw_cfupdate
-
-!  subroutine maw_deallocate_well(this, n)
-!! ******************************************************************************
-!! maw_deallocate_well -- deallocate pointers for multi-aquifer well mawwells(n).
-!! ******************************************************************************
-!!
-!!    SPECIFICATIONS:
-!! ------------------------------------------------------------------------------
-!    ! -- dummy
-!    class(MawType) :: this
-!    integer(I4B), intent(in) :: n
-!    ! -- local
-!! ------------------------------------------------------------------------------
-!    !
-!    !deallocate(this%mawwells(n)%gwfnodes)
-!    !deallocate(this%mawwells(n)%satcond)
-!    !deallocate(this%mawwells(n)%simcond)
-!    deallocate(this%mawwells(n)%topscrn)
-!    deallocate(this%mawwells(n)%botscrn)
-!    !if (this%ieqn(n) == 2 .OR. this%ieqn(n) == 3 .OR.                            &
-!    !    this%ieqn(n) == 4) then
-!    !  deallocate(this%mawwells(n)%hk)
-!    !end if
-!    !if (this%ieqn(n) == 2 .OR. this%ieqn(n) == 3 .OR.                            &
-!    !    this%ieqn(n) == 4) then
-!    !  deallocate(this%mawwells(n)%sradius)
-!    !end if
-!    !
-!    ! -- return
-!    return
-!  end subroutine maw_deallocate_well
 
   subroutine maw_setup_budobj(this)
 ! ******************************************************************************
@@ -4218,7 +4085,6 @@ contains
     q = DZERO
     do n = 1, this%nmawwells
       do j = 1, this%ngwfnodes(n)
-        !n2 = this%mawwells(n)%gwfnodes(j)
         n2 = this%get_gwfnode(n, j)
         call this%budobj%budterm(idx)%update_term(n, n2, q)
       end do
@@ -4403,11 +4269,8 @@ contains
     ibnd = 1
     do n = 1, this%nmawwells
       do j = 1, this%ngwfnodes(n)
-        !n2 = this%mawwells(n)%gwfnodes(j)
         jpos = this%get_jpos(n, j)
         n2 = this%get_gwfnode(n, j)
-        !tmaw = this%mawwells(n)%topscrn(j)
-        !bmaw = this%mawwells(n)%botscrn(j)
         tmaw = this%topscrn(jpos)
         bmaw = this%botscrn(jpos)
         call this%maw_calculate_saturation(n, j, n2, sat)
