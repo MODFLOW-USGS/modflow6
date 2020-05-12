@@ -23,7 +23,7 @@ module ConstantsModule
   integer(I4B), parameter :: LENDATETIME = 30
   integer(I4B), parameter :: LINELENGTH = 300
   integer(I4B), parameter :: LENLISTLABEL = 500
-  integer(I4B), parameter :: MAXCHARLEN = 1000
+  integer(I4B), parameter :: MAXCHARLEN = max(1000, LENBIGLINE)
   integer(I4B), parameter :: MAXOBSTYPES = 100
   integer(I4B), parameter :: NAMEDBOUNDFLAG = -9
   integer(I4B), parameter :: LENPAKLOC = 34
