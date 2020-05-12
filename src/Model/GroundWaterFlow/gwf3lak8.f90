@@ -6265,7 +6265,7 @@ contains
 !     denseterms  : shape (3, MAXBOUND), filled by buoyancy package
 !                     col 1 is relative density of lake (denselak / denseref)
 !                     col 2 is relative density of gwf cell (densegwf / denseref)
-!                     col 3 is elevation of gwf cell (densegwf / denseref)
+!                     col 3 is elevation of gwf cell
 !
 ! ******************************************************************************
 !
