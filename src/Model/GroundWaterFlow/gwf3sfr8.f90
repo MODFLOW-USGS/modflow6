@@ -1197,6 +1197,12 @@ contains
       call mem_reallocate(this%divq, ndiversions, 'DIVQ', this%origin)
     end if
     !
+    ! -- inititialize diversion flow
+    do n = 1, ndiversions
+      this%divflow(n) = DZERO
+      this%divq(n) = DZERO
+    end do
+    !
     ! -- read diversions
     call this%parser%GetBlock('DIVERSIONS', isfound, ierr,                      &
                               supportOpenClose=.true.,                          &
@@ -2786,7 +2792,7 @@ contains
       real(DP) :: sumleak, sumrch
   ! ------------------------------------------------------------------------------
     !
-    ! --
+    ! -- process optional variables
     if (present(update)) then
       lupdate = update
     else
@@ -2800,9 +2806,12 @@ contains
     hcof = DZERO
     rhs = DZERO
     !
-    ! -- initialize q1, q2, and qgwf
+    ! -- initialize d1, d2, q1, q2, qsrc, and qgwf
+    d1 = DZERO
+    d2 = DZERO
     q1 = DZERO
     q2 = DZERO
+    qsrc = DZERO
     qgwf = DZERO
     qgwfold = DZERO
     !
@@ -4152,7 +4161,7 @@ contains
           jpos = this%iadiv(n) + idiv - 1
           if (this%divreach(jpos) == n2) then
             ladd = .false.
-            exit eachconn
+            exit eachdiv
           end if
         end do eachdiv
         if (ladd) then
