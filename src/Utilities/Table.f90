@@ -584,7 +584,7 @@ module TableModule
     end do
     !
     ! -- add empty strings to complete the line
-    do i = this%ientry + 1, this%ntableterm
+    do i = icols + 1, this%ntableterm
       call this%add_term(' ')
     end do
     !

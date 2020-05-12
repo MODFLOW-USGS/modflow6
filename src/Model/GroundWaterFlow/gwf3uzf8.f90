@@ -667,7 +667,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule, only: kper, nper !, perlen, totimsav
+    use TdisModule, only: kper, nper
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
     use InputOutputModule, only: urword
     use SimModule, only: ustop, store_error, count_errors
@@ -684,7 +684,6 @@ contains
     integer (I4B) :: j
     integer (I4B) :: jj
     integer(I4B) :: ierr
-    !real (DP) :: endtim
     real(DP), pointer :: bndElem => null()
     ! -- table output
     character (len=20) :: cellid
@@ -708,9 +707,6 @@ contains
     ! -- Set ionper to the stress period number for which a new block of data
     !    will be read.
     if (this%inunit == 0) return
-    !!
-    !! -- Find time interval of current stress period.
-    !endtim = totimsav + perlen(kper)
     !
     ! -- get stress period data
     if (this%ionper < kper) then
@@ -925,9 +921,8 @@ contains
       if (this%iprpak /= 0) then
         call this%inputtab%finalize_table()
       end if
-
-      write(this%iout,'(1x,a,1x,i6)')'END OF '//trim(adjustl(this%text)) //    &
-        ' PERIOD', kper
+    !
+    ! -- using stress period data from the previous stress period
     else
       write(this%iout,fmtlsp) trim(this%filtyp)
     endif

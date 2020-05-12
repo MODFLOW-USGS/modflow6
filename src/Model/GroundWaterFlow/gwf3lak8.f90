@@ -2999,22 +2999,24 @@ contains
     ival = abs(itemno)
     if (itemno > 0) then
       if (ival < 1 .or. ival > this%nlakes) then
-        write(errmsg,'(a,1x,i6,1x,a,1x,i6)')                                     &
-          'LAKENO ', itemno, 'MUST BE > 0 and <= ', this%nlakes
+        write(errmsg,'(a,1x,i0,1x,a,1x,i0,a)')                                   &
+          'LAKENO', itemno, 'must be greater than 0 and less than or equal to',  &
+          this%nlakes, '.'
         call store_error(errmsg)
         ierr = 1
       end if
     else
       if (ival < 1 .or. ival > this%noutlets) then
-        write(errmsg,'(a,1x,i6,1x,a,1x,i6)')                                     &
-          'IOUTLET ', itemno, 'MUST BE > 0 and <= ', this%noutlets
+        write(errmsg,'(a,1x,i0,1x,a,1x,i0,a)')                                     &
+          'IOUTLET', itemno, 'must be greater than 0 and less than or equal to',   &
+          this%noutlets, '.'
         call store_error(errmsg)
         ierr = 1
       end if
     end if
   end function lak_check_valid
 
-  subroutine lak_set_stressperiod(this, itemno, line)
+  subroutine lak_set_stressperiod(this, itemno)
 ! ******************************************************************************
 ! lak_set_stressperiod -- Set a stress period attribute for lakweslls(itemno)
 !                         using keywords.
@@ -3023,259 +3025,218 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
-    use InputOutputModule, only: urword
     use SimModule, only: ustop, store_error
     ! -- dummy
     class(LakType),intent(inout) :: this
     integer(I4B), intent(in) :: itemno
-    character (len=*), intent(in) :: line
     ! -- local
     character(len=LINELENGTH) :: text
     character(len=LINELENGTH) :: caux
     character(len=LINELENGTH) :: keyword
     character(len=LINELENGTH) :: errmsg
-    character(len=LENBOUNDNAME) :: bndName
-    character(len=9) :: citem
     integer(I4B) :: ierr
-    integer(I4B) :: itmp
-    integer(I4B) :: ival, istart, istop
-    integer(I4B) :: i0
-    integer(I4B) :: lloc
     integer(I4B) :: ii
     integer(I4B) :: jj
-    real(DP) :: rval
     real(DP), pointer :: bndElem => null()
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
-    ! -- write abs(itemno) to citem string
-    itmp = ABS(itemno)
-    write(citem,'(i9.9)') itmp
-    !
-    ! -- Assign boundary name
-    if (this%inamedbound==1) then
-      bndName = this%boundname(itemno)
-    else
-      bndName = ''
-    end if
-    !
     ! -- read line
-    lloc = 1
-    call urword(line, lloc, istart, istop, 1, ival, rval, this%iout, this%inunit)
-    i0 = istart
-    keyword = line(istart:istop)
-    select case (line(istart:istop))
+    call this%parser%GetStringCaps(keyword)
+    select case (keyword)
       case ('STATUS')
         ierr = this%lak_check_valid(itemno)
-        if (ierr /= 0) goto 999
-        !bndName = this%boundname(itemno)
-        call urword(line, lloc, istart, istop, 1, ival, rval, this%iout, this%inunit)
-        text = line(istart:istop)
-        this%status(itmp) = text(1:8)
+        if (ierr /= 0) then
+          goto 999
+        end if
+        call this%parser%GetStringCaps(text)
+        this%status(itemno) = text(1:8)
         if (text == 'CONSTANT') then
-          this%iboundpak(itmp) = -1
+          this%iboundpak(itemno) = -1
         else if (text == 'INACTIVE') then
-          this%iboundpak(itmp) = 0
+          this%iboundpak(itemno) = 0
         else if (text == 'ACTIVE') then
-          this%iboundpak(itmp) = 1
+          this%iboundpak(itemno) = 1
         else
           write(errmsg,'(a,a)')                                                  &
-            'UNKNOWN ' // trim(this%text)//' LAK STATUS KEYWORD: ', text
+            'Unknown ' // trim(this%text)//' lak status keyword: ', text // '.'
           call store_error(errmsg)
         end if
       case ('STAGE')
         ierr = this%lak_check_valid(itemno)
-        if (ierr /= 0) goto 999
-        call urword(line, lloc, istart, istop, 0, ival, rval,                    &
-                    this%iout, this%inunit)
-        text = line(istart:istop)
+        if (ierr /= 0) then
+          goto 999
+        end if
+        call this%parser%GetString(text)
         jj = 1    ! For STAGE
-        bndElem => this%stage(itmp)
-        call read_value_or_time_series_adv(text, itmp, jj, bndElem, this%name,   &
+        bndElem => this%stage(itemno)
+        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%name, &
                                            'BND', this%tsManager, this%iprpak,   &
                                            'STAGE')
       case ('RAINFALL')
         ierr = this%lak_check_valid(itemno)
-        if (ierr /= 0) goto 999
-        call urword(line, lloc, istart, istop, 0, ival, rval,                    &
-                    this%iout, this%inunit)
-        text = line(istart:istop)
+        if (ierr /= 0) then
+          goto 999
+        end if
+        call this%parser%GetString(text)
         jj = 1    ! For RAINFALL
-        bndElem => this%rainfall(itmp)
-        call read_value_or_time_series_adv(text, itmp, jj, bndElem, this%name,   &
+        bndElem => this%rainfall(itemno)
+        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%name, &
                                            'BND', this%tsManager, this%iprpak,   &
                                            'RAINFALL')
-        if (this%rainfall(itmp) < DZERO) then
+        if (this%rainfall(itemno) < DZERO) then
           write(errmsg, '(a,i0,a,G0,a)')                                         &
-            'LAKE ', itmp, ' WAS ASSIGNED A RAINFALL VALUE OF ',                 &
-            this%rainfall(itmp), '. RAINFALL MUST BE POSITIVE.'
+            'Lake ', itemno, ' was assigned a rainfall value of ',               &
+            this%rainfall(itemno), '. Rainfall must be positive.'
           call store_error(errmsg)
         end if
       case ('EVAPORATION')
         ierr = this%lak_check_valid(itemno)
-        if (ierr /= 0) goto 999
-        call urword(line, lloc, istart, istop, 0, ival, rval,                    &
-                    this%iout, this%inunit)
-        text = line(istart:istop)
+        if (ierr /= 0) then
+          goto 999
+        end if
+        call this%parser%GetString(text)
         jj = 1    ! For EVAPORATION
-        bndElem => this%evaporation(itmp)
-        call read_value_or_time_series_adv(text, itmp, jj, bndElem, this%name,   &
+        bndElem => this%evaporation(itemno)
+        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%name, &
                                            'BND', this%tsManager, this%iprpak,   &
                                            'EVAPORATION')
-        if (this%evaporation(itmp) < DZERO) then
+        if (this%evaporation(itemno) < DZERO) then
           write(errmsg, '(a,i0,a,G0,a)')                                         &
-            'LAKE ', itmp, ' WAS ASSIGNED AN EVAPORATION VALUE OF ',             &
-            this%evaporation(itmp), '. EVAPORATION MUST BE POSITIVE.'
+            'Lake ', itemno, ' was assigned an evaporation value of ',           &
+            this%evaporation(itemno), '. Evaporation must be positive.'
           call store_error(errmsg)
         end if
       case ('RUNOFF')
         ierr = this%lak_check_valid(itemno)
-        if (ierr /= 0) goto 999
-        call urword(line, lloc, istart, istop, 0, ival, rval,                    &
-                    this%iout, this%inunit)
-        text = line(istart:istop)
+        if (ierr /= 0) then
+          goto 999
+        end if
+        call this%parser%GetString(text)
         jj = 1    ! For RUNOFF
-        bndElem => this%runoff(itmp)
-        call read_value_or_time_series_adv(text, itmp, jj, bndElem, this%name,   &
+        bndElem => this%runoff(itemno)
+        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%name, &
                                            'BND', this%tsManager, this%iprpak,   &
                                            'RUNOFF')
-        if (this%runoff(itmp) < DZERO) then
+        if (this%runoff(itemno) < DZERO) then
           write(errmsg, '(a,i0,a,G0,a)')                                         &
-            'LAKE ', itmp, ' WAS ASSIGNED A RUNOFF VALUE OF ',                   &
-            this%runoff(itmp), '. RUNOFF MUST BE POSITIVE.'
+            'Lake ', itemno, ' was assigned a runoff value of ',                 &
+            this%runoff(itemno), '. Runoff must be positive.'
           call store_error(errmsg)
         end if
       case ('INFLOW')
         ierr = this%lak_check_valid(itemno)
-        if (ierr /= 0) goto 999
-        call urword(line, lloc, istart, istop, 0, ival, rval,                    &
-                    this%iout, this%inunit)
-        text = line(istart:istop)
+        if (ierr /= 0) then
+          goto 999
+        end if
+        call this%parser%GetString(text)
         jj = 1    ! For specified INFLOW
-        bndElem => this%inflow(itmp)
-        call read_value_or_time_series_adv(text, itmp, jj, bndElem, this%name,   &
+        bndElem => this%inflow(itemno)
+        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%name, &
                                            'BND', this%tsManager, this%iprpak,   &
                                            'INFLOW')
-        if (this%inflow(itmp) < DZERO) then
+        if (this%inflow(itemno) < DZERO) then
           write(errmsg, '(a,i0,a,G0,a)')                                         &
-            'LAKE ', itmp, ' WAS ASSIGNED AN INFLOW VALUE OF ',                  &
-            this%inflow(itmp), '. INFLOW MUST BE POSITIVE.'
+            'Lake ', itemno, ' was assigned an inflow value of ',                &
+            this%inflow(itemno), '. Inflow must be positive.'
           call store_error(errmsg)
         end if
       case ('WITHDRAWAL')
         ierr = this%lak_check_valid(itemno)
-        if (ierr /= 0) goto 999
-        call urword(line, lloc, istart, istop, 0, ival, rval,                    &
-                    this%iout, this%inunit)
-        text = line(istart:istop)
+        if (ierr /= 0) then
+          goto 999
+        end if
+        call this%parser%GetString(text)
         jj = 1    ! For specified WITHDRAWAL
-        bndElem => this%withdrawal(itmp)
-        call read_value_or_time_series_adv(text, itmp, jj, bndElem, this%name,   &
+        bndElem => this%withdrawal(itemno)
+        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%name, &
                                            'BND', this%tsManager, this%iprpak,   &
                                            'WITHDRAWL')
-        if (this%withdrawal(itmp) < DZERO) then
+        if (this%withdrawal(itemno) < DZERO) then
           write(errmsg, '(a,i0,a,G0,a)')                                         &
-            'LAKE ', itmp, ' WAS ASSIGNED A WITHDRAWAL VALUE OF ',               &
-            this%withdrawal(itmp), '. WITHDRAWAL MUST BE POSITIVE.'
+            'Lake ', itemno, ' was assigned a withdrawal value of ',             &
+            this%withdrawal(itemno), '. Withdrawal must be positive.'
           call store_error(errmsg)
         end if
       case ('RATE')
         ierr = this%lak_check_valid(-itemno)
-        if (ierr /= 0) goto 999
-        bndName = 'OUTLET' // citem
-        call urword(line, lloc, istart, istop, 0, ival, rval,                    &
-                    this%iout, this%inunit)
-        text = line(istart:istop)
+        if (ierr /= 0) then
+          goto 999
+        end if
+        call this%parser%GetString(text)
         jj = 1    ! For specified OUTLET RATE
-        bndElem => this%outrate(itmp)
-        call read_value_or_time_series_adv(text, itmp, jj, bndElem, this%name,   &
+        bndElem => this%outrate(itemno)
+        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%name, &
                                            'BND', this%tsManager, this%iprpak,   &
                                            'RATE')
       case ('INVERT')
         ierr = this%lak_check_valid(-itemno)
-        if (ierr /= 0) goto 999
-        bndName = 'OUTLET' // citem
-        call urword(line, lloc, istart, istop, 0, ival, rval,                    &
-                    this%iout, this%inunit)
-        text = line(istart:istop)
+        if (ierr /= 0) then
+          goto 999
+        end if
+        call this%parser%GetString(text)
         jj = 1    ! For OUTLET INVERT
-        bndElem => this%outinvert(itmp)
-        call read_value_or_time_series_adv(text, itmp, jj, bndElem, this%name,   &
+        bndElem => this%outinvert(itemno)
+        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%name, &
                                            'BND', this%tsManager, this%iprpak,   &
                                            'INVERT')
       case ('WIDTH')
         ierr = this%lak_check_valid(-itemno)
-        if (ierr /= 0) goto 999
-        bndName = 'OUTLET' // citem
-        call urword(line, lloc, istart, istop, 0, ival, rval,                    &
-                    this%iout, this%inunit)
-        text = line(istart:istop)
+        if (ierr /= 0) then
+          goto 999
+        end if
+        call this%parser%GetString(text)
         jj = 1    ! For OUTLET WIDTH
-        bndElem => this%outwidth(itmp)
-        call read_value_or_time_series_adv(text, itmp, jj, bndElem, this%name,       &
-                                           'BND', this%tsManager, this%iprpak,       &
+        bndElem => this%outwidth(itemno)
+        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%name, &
+                                           'BND', this%tsManager, this%iprpak,   &
                                            'WIDTH')
       case ('ROUGH')
         ierr = this%lak_check_valid(-itemno)
-        if (ierr /= 0) goto 999
-        bndName = 'OUTLET' // citem
-        call urword(line, lloc, istart, istop, 0, ival, rval,                    &
-                    this%iout, this%inunit)
-        text = line(istart:istop)
+        if (ierr /= 0) then
+          goto 999
+        end if
+        call this%parser%GetString(text)
         jj = 1    ! For OUTLET ROUGHNESS
-        bndElem => this%outrough(itmp)
-        call read_value_or_time_series_adv(text, itmp, jj, bndElem, this%name,   &
+        bndElem => this%outrough(itemno)
+        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%name, &
                                            'BND', this%tsManager, this%iprpak,   &
                                            'ROUGH')
       case ('SLOPE')
         ierr = this%lak_check_valid(-itemno)
-        if (ierr /= 0) goto 999
-        bndName = 'OUTLET' // citem
-        call urword(line, lloc, istart, istop, 0, ival, rval,                    &
-                    this%iout, this%inunit)
-        text = line(istart:istop)
+        if (ierr /= 0) then
+          goto 999
+        end if
+        call this%parser%GetString(text)
         jj = 1    ! For OUTLET SLOPE
-        bndElem => this%outslope(itmp)
-        call read_value_or_time_series_adv(text, itmp, jj, bndElem, this%name,   &
+        bndElem => this%outslope(itemno)
+        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%name, &
                                            'BND', this%tsManager, this%iprpak,   &
                                            'SLOPE')
       case ('AUXILIARY')
         ierr = this%lak_check_valid(itemno)
-        if (ierr /= 0) goto 999
-        call urword(line, lloc, istart, istop, 1, ival, rval,                    &
-                    this%iout, this%inunit)
-        caux = line(istart:istop)
+        if (ierr /= 0) then
+          goto 999
+        end if
+        call this%parser%GetStringCaps(caux)
         do jj = 1, this%naux
           if (trim(adjustl(caux)) /= trim(adjustl(this%auxname(jj)))) cycle
-          call urword(line, lloc, istart, istop, 0, ival, rval,                  &
-                      this%iout, this%inunit)
-          text = line(istart:istop)
-          ii = itmp
+          call this%parser%GetString(text)
+          ii = itemno
           bndElem => this%lauxvar(jj, ii)
-          call read_value_or_time_series_adv(text, itmp, jj, bndElem, this%name, &
-                                             'AUX', this%tsManager, this%iprpak, &
-                                             this%auxname(jj))
+          call read_value_or_time_series_adv(text, itemno, jj, bndElem,          &
+                                             this%name, 'AUX', this%tsManager,   &
+                                             this%iprpak, this%auxname(jj))
           exit
         end do
       case default
         write(errmsg,'(2a)')                                                     &
-          'UNKNOWN ' // trim(this%text) // ' LAK DATA KEYWORD: ',                &
-          line(istart:istop)
+          'Unknown ' // trim(this%text) // ' lak data keyword: ',                &
+          trim(keyword) // '.'
     end select
     !
-    ! -- terminate if any errors were detected
-999 if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
-      call ustop()
-    end if
-    !
-    ! -- write keyword data to output file
-    if (this%iprpak /= 0) then
-      write(this%iout, '(3x,i10,1x,a)') itmp, line(i0:istop)
-    end if
-    !
     ! -- return
-    return
+999 return
   end subroutine lak_set_stressperiod
 
 
@@ -3504,23 +3465,22 @@ contains
     ! -- dummy
     class(LakType),intent(inout) :: this
     ! -- local
-    integer(I4B) :: ierr
-    integer(I4B) :: node, n
-    logical :: isfound, endOfBlock
+    character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: line
     character(len=LINELENGTH) :: errmsg
+    logical :: isfound
+    logical :: endOfBlock
+    integer(I4B) :: ierr
+    integer(I4B) :: node
+    integer(I4B) :: n
     integer(I4B) :: itemno
     integer(I4B) :: j
-    integer(I4B) :: isfirst
     ! -- formats
     character(len=*),parameter :: fmtblkerr = &
       "('Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
     character(len=*),parameter :: fmtlsp = &
       "(1X,/1X,'REUSING ',A,'S FROM LAST STRESS PERIOD')"
 ! ------------------------------------------------------------------------------
-    !
-    ! -- initialize flags
-    isfirst = 1
     !
     ! -- set nbound to maxbound
     this%nbound = this%maxbound
@@ -3557,37 +3517,56 @@ contains
     !
     ! -- Read data if ionper == kper
     if(this%ionper == kper) then
-
+      !
+      ! -- setup table for period data
+      if (this%iprpak /= 0) then
+        !
+        ! -- reset the input table object
+        title = trim(adjustl(this%text)) // ' PACKAGE (' //                        &
+                trim(adjustl(this%name)) //') DATA FOR PERIOD'
+        write(title, '(a,1x,i6)') trim(adjustl(title)), kper
+        call table_cr(this%inputtab, this%name, title)
+        call this%inputtab%table_df(1, 4, this%iout, finalize=.FALSE.)
+        text = 'NUMBER'
+        call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+        text = 'KEYWORD'
+        call this%inputtab%initialize_column(text, 20, alignment=TABLEFT)
+        do n = 1, 2
+          write(text, '(a,1x,i6)') 'VALUE', n
+          call this%inputtab%initialize_column(text, 15, alignment=TABCENTER)
+        end do
+      end if
+      !
+      ! -- read the data
       this%check_attr = 1
       stressperiod: do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
-        if (isfirst /= 0) then
-          isfirst = 0
-          if (this%iprpak /= 0) then
-            write(this%iout,'(/1x,a,1x,i6,/)')                                  &
-              'READING '//trim(adjustl(this%text))//' DATA FOR PERIOD', kper
-            write(this%iout,'(3x,a)')  '     LAKE KEYWORD AND DATA'
-            write(this%iout,'(3x,78("-"))')
-          end if
-        end if
+        !
+        ! -- get lake or outlet number
         itemno = this%parser%GetInteger()
-        call this%parser%GetRemainingLine(line)
-        call this%lak_set_stressperiod(itemno, line)
+        !
+        ! -- read data from the rest of the line
+        call this%lak_set_stressperiod(itemno)
+        !
+        ! -- write line to table
+        if (this%iprpak /= 0) then
+          call this%parser%GetCurrentLine(line)
+          call this%inputtab%line_to_columns(line)
+        end if
       end do stressperiod
 
       if (this%iprpak /= 0) then
-        write(this%iout,'(/1x,a,1x,i6,/)')                                      &
-          'END OF '//trim(adjustl(this%text))//' DATA FOR PERIOD', kper
+        call this%inputtab%finalize_table()
       end if
     !
+    ! -- using stress period data from the previous stress period
     else
       write(this%iout,fmtlsp) trim(this%filtyp)
     endif
     !
     ! -- write summary of lake stress period error messages
-    ierr = count_errors()
-    if (ierr > 0) then
+    if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
       call ustop()
     end if
