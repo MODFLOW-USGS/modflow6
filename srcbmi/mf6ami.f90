@@ -22,6 +22,15 @@ module mf6ami
     
   end function ami_prepare_timestep
     
+  function ami_do_timestep() result(bmi_status) bind(C, name="do_timestep")
+  !DEC$ ATTRIBUTES DLLEXPORT :: ami_do_timestep
+    integer(kind=c_int) :: bmi_status
+    
+    call Mf6DoTimestep()
+    bmi_status = BMI_SUCCESS
+    
+  end function ami_do_timestep
+  
   function ami_finalize_timestep() result(bmi_status) bind(C, name="finalize_timestep")
   !DEC$ ATTRIBUTES DLLEXPORT :: ami_finalize_timestep
     integer(kind=c_int) :: bmi_status
