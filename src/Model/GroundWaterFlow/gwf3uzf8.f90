@@ -12,7 +12,6 @@ module UzfModule
                              TABLEFT, TABCENTER, TABRIGHT,                      &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
   use GenericUtilitiesModule, only: sim_message
-  use MemoryTypeModule, only: MemoryTSType
   use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_setptr,      &
                                  mem_deallocate
   use SparseModule, only: sparsematrix
