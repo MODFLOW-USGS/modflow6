@@ -1948,8 +1948,6 @@ contains
       end do
       if (this%iprpak /= 0) then
         call this%inputtab%finalize_table()
-        write(this%iout,'(/1x,a,1x,i6,/)')                                      &
-          'END OF ' // trim(adjustl(this%text)) // ' DATA FOR PERIOD', kper
       end if
     !
     ! -- usiing data from the last stress period

@@ -1454,19 +1454,18 @@ contains
         end if
         !
         ! -- read data from the rest of the line
-        call this%parser%GetRemainingLine(line)
-        call this%sfr_set_stressperiod(n, line, ichkustrm)
+        call this%sfr_set_stressperiod(n, ichkustrm)
         !
         ! -- write line to table
         if (this%iprpak /= 0) then
-          call this%inputtab%add_term(n)
+          call this%parser%GetCurrentLine(line)
           call this%inputtab%line_to_columns(line)
         end if
       end do
       if (this%iprpak /= 0) then
         call this%inputtab%finalize_table()
       end if
-
+    !
     ! -- Reuse data from last stress period
     else
       write(this%iout,fmtlsp) trim(this%filtyp)
@@ -2591,7 +2590,7 @@ contains
   !
 
 
-  subroutine sfr_set_stressperiod(this, n, line, ichkustrm)
+  subroutine sfr_set_stressperiod(this, n, ichkustrm)
 ! ******************************************************************************
 ! sfr_set_stressperiod -- Set a stress period attribute for sfr reach n
 !                         using keywords.
@@ -2600,12 +2599,10 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
-    use InputOutputModule, only: urword
     use SimModule, only: ustop, store_error
     ! -- dummy
     class(SfrType),intent(inout) :: this
     integer(I4B), intent(in) :: n
-    character (len=*), intent(in) :: line
     integer(I4B), intent(inout) :: ichkustrm
     ! -- local
     character(len=10) :: cnum
@@ -2613,37 +2610,20 @@ contains
     character(len=LINELENGTH) :: caux
     character(len=LINELENGTH) :: keyword
     character(len=LINELENGTH) :: errmsg
-    character(len=LENBOUNDNAME) :: bndName
     integer(I4B) :: ival
-    integer(I4B) :: istart
-    integer(I4B) :: istop
     integer(I4B) :: ii
     integer(I4B) :: jj
-    integer(I4B) :: i0
-    integer(I4B) :: lloc
     integer(I4B) :: idiv
-    real(DP) :: rval
     real(DP), pointer :: bndElem => null()
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
-    ! -- Assign boundary name
-    if (this%inamedbound==1) then
-      bndName = this%boundname(n)
-    else
-      bndName = ''
-    end if
-    !
     ! -- read line
-    lloc = 1
-    call urword(line, lloc, istart, istop, 1, ival, rval, this%iout, this%inunit)
-    i0 = istart
-    keyword = line(istart:istop)
-    select case (line(istart:istop))
+    call this%parser%GetStringCaps(keyword)
+    select case (keyword)
       case ('STATUS')
         ichkustrm = 1
-        call urword(line, lloc, istart, istop, 1, ival, rval, this%iout, this%inunit)
-        text = line(istart:istop)
+        call this%parser%GetStringCaps(text)
         if (text == 'INACTIVE') then
           this%iboundpak(n) = 0
         else if (text == 'ACTIVE') then
@@ -2656,49 +2636,42 @@ contains
           call store_error(errmsg)
         end if
       case ('MANNING')
-        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
-        text = line(istart:istop)
+        call this%parser%GetString(text)
         jj = 1  ! For 'MANNING'
         bndElem => this%rough(n)
         call read_value_or_time_series_adv(text, n, jj, bndElem, this%name,      &
                                            'BND', this%tsManager, this%iprpak,   &
                                            'MANNING')
       case ('STAGE')
-        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
-        text = line(istart:istop)
+        call this%parser%GetString(text)
         jj = 1  ! For 'STAGE'
         bndElem => this%sstage(n)
         call read_value_or_time_series_adv(text, n, jj, bndElem, this%name,      &
                                            'BND', this%tsManager, this%iprpak,   &
                                            'STAGE')
       case ('RAINFALL')
-        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
-        text = line(istart:istop)
+        call this%parser%GetString(text)
         jj = 1  ! For 'RAIN'
         bndElem => this%rain(n)
         call read_value_or_time_series_adv(text, n, jj, bndElem, this%name,      &
                                            'BND', this%tsManager, this%iprpak,   &
                                            'RAIN')
       case ('EVAPORATION')
-        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
-        text = line(istart:istop)
+        call this%parser%GetString(text)
         jj = 1  ! For 'EVAP'
         bndElem => this%evap(n)
         call read_value_or_time_series_adv(text, n, jj, bndElem, this%name,      &
                                            'BND', this%tsManager, this%iprpak,   &
                                            'MANNING')
       case ('RUNOFF')
-        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
-        text = line(istart:istop)
+        call this%parser%GetString(text)
         jj = 1  ! For 'RUNOFF'
         bndElem => this%runoff(n)
         call read_value_or_time_series_adv(text, n, jj, bndElem, this%name,      &
                                            'BND', this%tsManager, this%iprpak,   &
                                            'RUNOFF')
      case ('INFLOW')
-        call urword(line, lloc, istart, istop, 0, ival, rval,                    &
-                    this%iout, this%inunit)
-        text = line(istart:istop)
+        call this%parser%GetString(text)
         jj = 1  ! For 'INFLOW'
         bndElem => this%inflow(n)
         call read_value_or_time_series_adv(text, n, jj, bndElem, this%name,      &
@@ -2714,8 +2687,7 @@ contains
         end if
         !
         ! -- read diversion number
-        call urword(line, lloc, istart, istop, 2, ival, rval,                    &
-                    this%iout, this%inunit)
+        ival = this%parser%GetInteger()
         if (ival < 1 .or. ival > this%ndiv(n)) then
           write(cnum, '(i0)') n
           errmsg = 'Reach  ' // trim(cnum)
@@ -2727,8 +2699,7 @@ contains
         idiv = ival
         !
         ! -- read value
-        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
-        text = line(istart:istop)
+        call this%parser%GetString(text)
         ii = this%iadiv(n) + idiv - 1
         jj = 1  ! For 'DIVERSION'
         bndElem => this%divflow(ii)
@@ -2737,23 +2708,17 @@ contains
                                            'DIVFLOW')
       case ('UPSTREAM_FRACTION')
         ichkustrm = 1
-        call urword(line, lloc, istart, istop, 0, ival, rval,                    &
-                    this%iout, this%inunit)
-        text = line(istart:istop)
+        call this%parser%GetString(text)
         jj = 1  ! For 'USTRF'
         bndElem => this%ustrf(n)
         call read_value_or_time_series_adv(text, n, jj, bndElem, this%name,      &
                                            'BND', this%tsManager, this%iprpak,   &
                                            'USTRF')
       case ('AUXILIARY')
-        call urword(line, lloc, istart, istop, 1, ival, rval,                    &
-                    this%iout, this%inunit)
-        caux = line(istart:istop)
+        call this%parser%GetStringCaps(caux)
         do jj = 1, this%naux
           if (trim(adjustl(caux)) /= trim(adjustl(this%auxname(jj)))) cycle
-          call urword(line, lloc, istart, istop, 0, ival, rval,                  &
-                      this%iout, this%inunit)
-          text = line(istart:istop)
+          call this%parser%GetString(text)
           ii = n
           bndElem => this%rauxvar(jj, ii)
           call read_value_or_time_series_adv(text, ii, jj, bndElem, this%name,   &
@@ -2765,7 +2730,7 @@ contains
       case default
         write(errmsg,'(a,a)') &
           'Unknown ' // trim(this%text) // ' sfr data keyword: ',                &
-          line(istart:istop)
+          trim(keyword) // '.'
         call store_error(errmsg)
       end select
     !

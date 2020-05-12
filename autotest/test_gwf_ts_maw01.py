@@ -132,7 +132,10 @@ def build_model(ws, name, timeseries=False):
         [4, 'status', 'active'],
     ]
     cnvgpth = '{}.sfr.cnvg.csv'.format(name)
-    sfr = flopy.mf6.ModflowGwfsfr(gwf, mover=True, nreaches=5,
+    sfr = flopy.mf6.ModflowGwfsfr(gwf,
+                                  print_input=True,
+                                  mover=True,
+                                  nreaches=5,
                                   maximum_depth_change=1.e-5,
                                   package_convergence_filerecord=cnvgpth,
                                   packagedata=packagedata,
@@ -209,16 +212,19 @@ def build_model(ws, name, timeseries=False):
         (1, 10, (1, 3, 8), 'vertical', 1.e-05, -1., 0., 0., 0.)]
     perioddata = [(1, 'status', 'active'),
                   (1, 'rainfall', '0.0'),
-                  (1, 'evaporation', '0.000000000000e+000'),
-                  (1, 'runoff', '0.000000000000e+000'),
-                  (1, 'withdrawal', '0.000000000000e+000'),
-                  (0, 'rate', '1.000000000000e+000'),
-                  (0, 'invert', '1.000000000000e-003'),
-                  (0, 'width', '0.000000000000e+000'),
-                  (0, 'slope', '1.000000000000e-003'),
-                  (0, 'rough', '1.000000000000e-001')]
+                  (1, 'evaporation', '0.0'),
+                  (1, 'runoff', '0.0'),
+                  (1, 'withdrawal', '0.0'),
+                  (0, 'rate', '1.0'),
+                  (0, 'invert', '1.0e-003'),
+                  (0, 'width', '0.0'),
+                  (0, 'slope', '1.0e-003'),
+                  (0, 'rough', '1.0e-001')]
     cnvgpth = '{}.lak.cnvg.csv'.format(name)
-    lak = flopy.mf6.ModflowGwflak(gwf, mover=True, nlakes=nlakes,
+    lak = flopy.mf6.ModflowGwflak(gwf,
+                                  print_input=True,
+                                  mover=True,
+                                  nlakes=nlakes,
                                   noutlets=noutlets,
                                   print_stage=True,
                                   print_flows=True,
@@ -251,6 +257,7 @@ def build_model(ws, name, timeseries=False):
 
     cnvgpth = '{}.uzf.cnvg.csv'.format(name)
     uzf = flopy.mf6.ModflowGwfuzf(gwf,
+                                  print_input=True,
                                   mover=True,
                                   package_convergence_filerecord=cnvgpth,
                                   nuzfcells=len(packagedata),
