@@ -11,7 +11,6 @@ module LakModule
                              LENPAKLOC, DNODATA,                               &
                              TABLEFT, TABCENTER, TABRIGHT,                     &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
-  use MemoryTypeModule, only: MemoryTSType
   use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_setptr,     &
                                  mem_deallocate
   use SmoothingModule,  only: sQuadraticSaturation, sQSaturation,              &
