@@ -2835,7 +2835,6 @@ contains
       real(DP) :: derv
       real(DP) :: dlh, dlhold
       real(DP) :: fp
-      real(DP) :: sat, sat1, sat2
       real(DP) :: err, errold
       real(DP) :: sumleak, sumrch
       real(DP) :: gwfhcof, gwfrhs
@@ -3187,11 +3186,11 @@ contains
       ! -- stream leakage is head dependent
       else if ((sumleak-qsrc) < -DEM30) then
         if (this%gwfiss == 0) then
-          rhs = rhs - gwfrhs - sumrch
+          rhs = rhs + gwfrhs - sumrch
         else
-          rhs = rhs - gwfrhs
+          rhs = rhs + gwfrhs
         end if
-        hcof = -gwfhcof
+        hcof = gwfhcof
       !
       ! -- place holder for UZF
       else
@@ -3472,8 +3471,8 @@ contains
       htmp = bt
     end if
     qgwf = sat * cond * (htmp - hsfr)
-    gwfrhs0 = sat * cond * hsfr
-    gwfhcof0 = cond
+    gwfrhs0 = -sat * cond * hsfr
+    gwfhcof0 = -sat * cond
     !
     ! Add density contributions, if active
     if (this%idense /= 0) then

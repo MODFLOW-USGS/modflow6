@@ -225,6 +225,7 @@ module GwfBuyModule
     ! -- modules
     use BndModule, only: BndType
     use LakModule, only: LakType
+    use SfrModule, only: SfrType
     ! -- dummy
     class(GwfBuyType) :: this
     class(BndType), pointer :: packobj
@@ -240,6 +241,14 @@ module GwfBuyModule
         select type(packobj)
         type is (LakType)
           call packobj%lak_activate_density()
+        end select
+        
+      case('SFR')
+        !
+        ! -- activate density for sfr package
+        select type(packobj)
+        type is (SfrType)
+          call packobj%sfr_activate_density()
         end select
         
       case default
@@ -449,6 +458,12 @@ module GwfBuyModule
         !
         ! -- lake
         call buy_cf_lak(packobj, hnew, this%dense, this%elev, this%denseref,   &
+                        locdense, locconc, this%drhodc, this%crhoref,          &
+                        this%ctemp, this%iform)
+      case('SFR')
+        !
+        ! -- sfr
+        call buy_cf_sfr(packobj, hnew, this%dense, this%elev, this%denseref,   &
                         locdense, locconc, this%drhodc, this%crhoref,          &
                         this%ctemp, this%iform)
       case default
@@ -810,6 +825,67 @@ module GwfBuyModule
     ! -- Return
     return
   end subroutine buy_cf_lak
+                        
+  subroutine buy_cf_sfr(packobj, hnew, dense, elev, denseref, locdense,        &
+                        locconc, drhodc, crhoref, ctemp, iform)
+! ******************************************************************************
+! buy_cf_sfr -- Pass density information into sfr package; density terms are
+!   calculated in the sfr package as part of sfr_calculate_density_exchange
+!   method
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use BndModule, only: BndType
+    use SfrModule, only: SfrType
+    class(BndType), pointer :: packobj
+    ! -- dummy
+    real(DP), intent(in), dimension(:) :: hnew
+    real(DP), intent(in), dimension(:) :: dense
+    real(DP), intent(in), dimension(:) :: elev
+    real(DP), intent(in) :: denseref
+    integer(I4B), intent(in) :: locdense
+    integer(I4B), dimension(:), intent(in) :: locconc
+    real(DP), dimension(:), intent(in) :: drhodc
+    real(DP), dimension(:), intent(in) :: crhoref
+    real(DP), dimension(:), intent(inout) :: ctemp
+    integer(I4B), intent(in) :: iform
+    ! -- local
+    integer(I4B) :: n
+    integer(I4B) :: node
+    real(DP) :: densesfr
+! ------------------------------------------------------------------------------
+    !
+    ! -- Insert the sfr and gwf relative densities into col 1 and 2 and the
+    !    gwf elevation into col 3 of the sfr package denseterms array
+    select type(packobj)
+    type is (SfrType)
+      do n = 1, packobj%nbound
+        !
+        ! -- get gwf node number
+        node = packobj%nodelist(n)
+        if (packobj%ibound(node) <= 0) cycle
+        !
+        ! -- Determine sfr density
+        densesfr = get_bnd_density(n, locdense, locconc, denseref, &
+                                   drhodc, crhoref, ctemp, packobj%auxvar)
+        !
+        ! -- fill sfr relative density into column 1 of denseterms
+        packobj%denseterms(1, n) = densesfr / denseref
+        !
+        ! -- fill gwf relative density into column 2 of denseterms
+        packobj%denseterms(2, n) = dense(node) / denseref
+        !
+        ! -- fill gwf elevation into column 3 of denseterms
+        packobj%denseterms(3, n) = elev(node)
+        !
+      end do
+    end select
+    !
+    ! -- Return
+    return
+  end subroutine buy_cf_sfr
                         
   subroutine buy_fc(this, kiter, njasln, amat, idxglo, rhs, hnew)
 ! ******************************************************************************
