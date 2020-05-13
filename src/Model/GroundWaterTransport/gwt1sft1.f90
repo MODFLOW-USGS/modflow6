@@ -640,6 +640,7 @@ end subroutine find_sft_package
     ! -- dummy
     class(GwtSftType), intent(inout) :: this
     ! -- local
+    integer(I4B) :: n
 ! ------------------------------------------------------------------------------
     !    
     ! -- time series
@@ -650,6 +651,14 @@ end subroutine find_sft_package
     !
     ! -- call standard GwtApttype allocate arrays
     call this%GwtAptType%apt_allocate_arrays()
+    !
+    ! -- Initialize
+    do n = 1, this%ncv
+      this%concrain(n) = DZERO
+      this%concevap(n) = DZERO
+      this%concroff(n) = DZERO
+      this%conciflw(n) = DZERO
+    end do
     !
     !
     ! -- Return

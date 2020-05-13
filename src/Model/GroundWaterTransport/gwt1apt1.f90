@@ -1282,6 +1282,7 @@ module GwtAptModule
       this%ccterm(n) = DZERO
       this%qmfrommvr(n) = DZERO
       this%concbudssm(:, n) = DZERO
+      this%concfeat(n) = DZERO
     end do
     !
     ! -- Return
@@ -1588,6 +1589,7 @@ module GwtAptModule
     do n = 1, this%ncv
       !this%status(n) = 'ACTIVE'
       this%strt(n) = DEP20
+      this%lauxvar(:, n) = DZERO
       this%xoldpak(n) = DEP20
       if (this%imatrows == 0) then
         this%iboundpak(n) = 1

@@ -598,6 +598,7 @@ module GwtUztModule
     ! -- dummy
     class(GwtUztType), intent(inout) :: this
     ! -- local
+    integer(I4B) :: n
 ! ------------------------------------------------------------------------------
     !    
     ! -- time series
@@ -606,6 +607,12 @@ module GwtUztModule
     !
     ! -- call standard GwtApttype allocate arrays
     call this%GwtAptType%apt_allocate_arrays()
+    !
+    ! -- Initialize
+    do n = 1, this%ncv
+      this%concinfl(n) = DZERO
+      this%concuzet(n) = DZERO
+    end do
     !
     !
     ! -- Return
