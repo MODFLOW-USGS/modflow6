@@ -121,9 +121,11 @@ module SfrModule
     character (len=10), dimension(:), pointer, contiguous :: divcprior => null()
     real(DP), dimension(:), pointer, contiguous :: divflow => null()
     real(DP), dimension(:), pointer, contiguous :: divq => null()
-    
-    ! -- type bound procedures
-    
+    !
+    ! -- density variables
+    integer(I4B), pointer :: idense
+    real(DP), dimension(:, :), pointer, contiguous  :: denseterms => null()
+    !
     ! -- type bound procedures
     contains
     procedure :: sfr_allocate_scalars
@@ -179,6 +181,9 @@ module SfrModule
     procedure, private :: sfr_fill_budobj
     ! -- table
     procedure, private :: sfr_setup_tableobj
+    ! -- density
+    procedure :: sfr_activate_density
+    procedure, private :: sfr_calculate_density_exchange
   end type SfrType
 
 contains
@@ -260,6 +265,7 @@ contains
     call mem_allocate(this%nconn, 'NCONN', this%origin)
     call mem_allocate(this%icheck, 'ICHECK', this%origin)
     call mem_allocate(this%iconvchk, 'ICONVCHK', this%origin)
+    call mem_allocate(this%idense, 'IDENSE', this%origin)
     !
     ! -- set pointer to gwf iss
     call mem_setptr(this%gwfiss, 'ISS', trim(this%name_model))
@@ -279,6 +285,7 @@ contains
     this%nconn = 0
     this%icheck = 1
     this%iconvchk = 1
+    this%idense = 0
     !
     ! -- return
     return
@@ -436,6 +443,9 @@ contains
     !
     !-- fill cauxcbc
     this%cauxcbc(1) = 'FLOW-AREA       '
+    !
+    ! -- allocate denseterms to size 0
+    call mem_allocate(this%denseterms, 3, 0, 'DENSETERMS', this%origin)
     !
     ! -- return
     return
@@ -2131,6 +2141,7 @@ contains
     call mem_deallocate(this%simrunoff)
     call mem_deallocate(this%stage0)
     call mem_deallocate(this%usflow0)
+    call mem_deallocate(this%denseterms)
     !
     ! -- connection data
     call mem_deallocate(this%ia)
@@ -2195,6 +2206,7 @@ contains
     call mem_deallocate(this%nconn)
     call mem_deallocate(this%icheck)
     call mem_deallocate(this%iconvchk)
+    call mem_deallocate(this%idense)
     nullify(this%gwfiss)
     !
     ! -- call BndType deallocate
@@ -2823,12 +2835,12 @@ contains
       real(DP) :: derv
       real(DP) :: dlh, dlhold
       real(DP) :: fp
-      real(DP) :: sat, sat1, sat2
       real(DP) :: err, errold
       real(DP) :: sumleak, sumrch
+      real(DP) :: gwfhcof, gwfrhs
   ! ------------------------------------------------------------------------------
     !
-    ! --
+    ! -- Initialize
     if (present(update)) then
       lupdate = update
     else
@@ -2952,16 +2964,19 @@ contains
       ! -- estimate flow at end points
       ! -- end point 1
       if (hgwf > tp) then
-        qgwf1 = cstr * (tp - hgwf)
+        call this%sfr_calc_qgwf(n, DZERO, hgwf, qgwf1)
+        qgwf1 = -qgwf1
         qen1 = qmp - DHALF * qgwf1
       else
         qgwf1 = DZERO
         qen1 = qmpsrc
       end if
       if (hgwf > bt) then
-        qgwf2 = cstr * (tp + en2 - hgwf)
+        call this%sfr_calc_qgwf(n, en2, hgwf, qgwf2)
+        qgwf2 = -qgwf2
       else
-        qgwf2 = cstr * (tp + en2 - bt)
+        call this%sfr_calc_qgwf(n, en2, bt, qgwf2)
+        qgwf2 = -qgwf2
       end if
       if (qgwf2 > qsrc) qgwf2 = qsrc
       ! -- calculate two depths
@@ -3000,25 +3015,16 @@ contains
         call this%sfr_calc_qman(n, d1, q1)
         call this%sfr_calc_qman(n, d2, q2)
         ! -- calculate groundwater leakage at both end points
-        call sChSmooth(d1, sat1, derv)
-        call sChSmooth(d2, sat2, derv)
-        if (hgwf > bt) then
-          qgwf1 = sat1 * cstr * (d1 + tp - hgwf)
-          qgwf2 = sat2 * cstr * (d2 + tp - hgwf)
-        else
-          qgwf1 = sat1 * cstr * (d1 + tp - bt)
-          qgwf2 = sat2 * cstr * (d2 + tp - bt)
-        end if
+        call this%sfr_calc_qgwf(n, d1, hgwf, qgwf1)
+        qgwf1 = -qgwf1
+        call this%sfr_calc_qgwf(n, d2, hgwf, qgwf2)
+        qgwf2 = -qgwf2
         !
         if (qgwf1 >= qsrc) then
           en2 = dpp
           dpp = DHALF * (en1 + en2)
-          call sChSmooth(dpp, sat, derv)
-          if (hgwf > bt) then
-            qgwfp = sat * cstr * (dpp + tp - hgwf)
-          else
-            qgwfp = sat * cstr * (dpp + tp - bt)
-          end if
+          call this%sfr_calc_qgwf(n, dpp, hgwf, qgwfp)
+          qgwfp = -qgwfp
           if (qgwfp > qsrc) qgwfp = qsrc
           call this%sfr_rectch_depth(n, (qmpsrc-DHALF*qgwfp), dx)
           ibflg = 1
@@ -3075,13 +3081,9 @@ contains
             dpp = DHALF * (en1 + en2)
           end if
           !
-          ! --
-          call sChSmooth(dpp, sat, derv)
-          if (hgwf > bt) then
-            qgwfp = sat * cstr * (dpp + tp - hgwf)
-          else
-            qgwfp = sat * cstr * (dpp + tp - bt)
-          end if
+          ! -- Calculate perturbed gwf flow
+          call this%sfr_calc_qgwf(n, dpp, hgwf, qgwfp)
+          qgwfp = -qgwfp
           if (qgwfp > qsrc) then
             qgwfp = qsrc
             if (abs(en1-en2) < this%dmaxchg*DEM6) then
@@ -3109,6 +3111,8 @@ contains
         else
           err = abs(dlh)
         end if
+        !
+        ! -- check for convergence and exit if converged
         if (err < this%dmaxchg) then
           d1 = dpp
           qgwf = qgwfp
@@ -3131,12 +3135,9 @@ contains
 
     ! -- simple routing option or where depth = 0 and hgwf < bt
     if (isolve == 0) then
-      call sChSmooth(d1, sat, derv)
-      if (hgwf > bt) then
-        qgwf = sat * cstr * (d1 + tp - hgwf)
-      else
-        qgwf = sat * cstr * (d1 + tp - bt)
-      end if
+      call this%sfr_calc_qgwf(n, d1, hgwf, qgwf)
+      qgwf = -qgwf
+      !
       ! -- leakage exceeds inflow
       if (qgwf > qsrc) then
         d1 = DZERO
@@ -3146,10 +3147,10 @@ contains
       ! -- set qd
       qd = qsrc - qgwf
     end if
-
+    !
     ! -- update sfr stage
     hsfr = tp + d1
-
+    !
     ! -- update stored values
     if (lupdate) then
       !
@@ -3172,20 +3173,25 @@ contains
       sumrch = qgwf
     end if
     !
-    ! -- calculate hcof and rhs for MODFLOW
-    call sChSmooth(d1, sat, derv)
+    ! -- make final qgwf calculation and obtain
+    !    gwfhcof and gwfrhs values
+    call this%sfr_calc_qgwf(n, d1, hgwf, qgwf, gwfhcof, gwfrhs)
+    !
+    !
     if (abs(sumleak) > DZERO) then
       ! -- stream leakage is not head dependent
       if (hgwf < bt) then
         rhs = rhs - sumrch
+      !
       ! -- stream leakage is head dependent
       else if ((sumleak-qsrc) < -DEM30) then
         if (this%gwfiss == 0) then
-          rhs = rhs - sat * cstr * hsfr - sumrch
+          rhs = rhs + gwfrhs - sumrch
         else
-          rhs = rhs - sat * cstr * hsfr
+          rhs = rhs + gwfrhs
         end if
-        hcof = -cstr
+        hcof = gwfhcof
+      !
       ! -- place holder for UZF
       else
         if (this%gwfiss == 0) then
@@ -3194,6 +3200,7 @@ contains
           rhs = rhs - sumleak
         end if
       end if
+    !
     ! -- add groundwater leakage
     else if (hgwf < bt) then
       rhs = rhs - sumrch
@@ -3412,9 +3419,10 @@ contains
   end subroutine sfr_calc_qman
 
 
-  subroutine sfr_calc_qgwf(this, n, depth, hgwf, qgwf)
+  subroutine sfr_calc_qgwf(this, n, depth, hgwf, qgwf, gwfhcof, gwfrhs)
   ! ******************************************************************************
   ! sfr_calc_qgwf -- Calculate sfr-aquifer exchange (relative to sfr reach)
+  !   so flow is positive into the stream reach
   ! ******************************************************************************
   !
   !    SPECIFICATIONS:
@@ -3424,6 +3432,8 @@ contains
       real(DP), intent(in) :: depth
       real(DP), intent(in) :: hgwf
       real(DP), intent(inout) :: qgwf
+      real(DP), intent(inout), optional :: gwfhcof
+      real(DP), intent(inout), optional :: gwfrhs
       ! -- local
       integer(I4B) :: node
       real(DP) :: tp
@@ -3433,6 +3443,7 @@ contains
       real(DP) :: cond
       real(DP) :: sat
       real(DP) :: derv
+      real(DP) :: gwfhcof0, gwfrhs0
   ! ------------------------------------------------------------------------------
     !
     ! -- initialize qgwf
@@ -3460,6 +3471,18 @@ contains
       htmp = bt
     end if
     qgwf = sat * cond * (htmp - hsfr)
+    gwfrhs0 = -sat * cond * hsfr
+    gwfhcof0 = -sat * cond
+    !
+    ! Add density contributions, if active
+    if (this%idense /= 0) then
+      call this%sfr_calculate_density_exchange(n, hsfr, hgwf, cond, bt,        &
+                                               qgwf, gwfhcof0, gwfrhs0)
+    end if
+    !
+    ! -- Set gwfhcof and gwfrhs if present
+    if (present(gwfhcof)) gwfhcof = gwfhcof0
+    if (present(gwfrhs)) gwfrhs = gwfrhs0
     !
     ! -- return
     return
@@ -4822,5 +4845,153 @@ contains
     ! -- Return
     return
   end function top_width_wet
+
+  subroutine sfr_activate_density(this)
+! ******************************************************************************
+! sfr_activate_density -- Activate addition of density terms
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- module
+    use MemoryManagerModule, only: mem_reallocate
+    ! -- dummy
+    class(SfrType),intent(inout) :: this
+    ! -- local
+    integer(I4B) :: i, j
+    ! -- formats
+! ------------------------------------------------------------------------------
+    !
+    ! -- Set idense and reallocate denseterms to be of size MAXBOUND
+    this%idense = 1
+    call mem_reallocate(this%denseterms, 3, this%MAXBOUND, 'DENSETERMS', &
+                        this%origin)
+    do i = 1, this%maxbound
+      do j = 1, 3
+        this%denseterms(j, i) = DZERO
+      end do
+    end do
+    write(this%iout,'(/1x,a)') 'DENSITY TERMS HAVE BEEN ACTIVATED FOR SFR &
+      &PACKAGE: ' // trim(adjustl(this%name))
+    !
+    ! -- return
+    return
+  end subroutine sfr_activate_density
+
+  subroutine sfr_calculate_density_exchange(this, n, stage, head, cond,        &
+                                            bots, flow, gwfhcof, gwfrhs)
+! ******************************************************************************
+! sfr_calculate_density_exchange -- Calculate the groundwater-sfr density 
+!                                   exchange terms.
+!
+! -- Arguments are as follows:
+!     n           : sfr reach number
+!     stage       : sfr stage
+!     head        : gwf head
+!     cond        : conductance
+!     bots        : bottom elevation of the stream
+!     flow        : calculated flow, updated here with density terms
+!     gwfhcof     : gwf head coefficient, updated here with density terms
+!     gwfrhs      : gwf right-hand-side value, updated here with density terms
+!
+! -- Member variable used here
+!     denseterms  : shape (3, MAXBOUND), filled by buoyancy package
+!                     col 1 is relative density of sfr (densesfr / denseref)
+!                     col 2 is relative density of gwf cell (densegwf / denseref)
+!                     col 3 is elevation of gwf cell
+!
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(SfrType),intent(inout) :: this
+    integer(I4B), intent(in) :: n
+    real(DP), intent(in) :: stage
+    real(DP), intent(in) :: head
+    real(DP), intent(in) :: cond
+    real(DP), intent(in) :: bots
+    real(DP), intent(inout) :: flow
+    real(DP), intent(inout) :: gwfhcof
+    real(DP), intent(inout) :: gwfrhs
+    ! -- local
+    real(DP) :: ss
+    real(DP) :: hh
+    real(DP) :: havg
+    real(DP) :: rdensesfr
+    real(DP) :: rdensegwf
+    real(DP) :: rdenseavg
+    real(DP) :: elevsfr
+    real(DP) :: elevgwf
+    real(DP) :: elevavg
+    real(DP) :: d1
+    real(DP) :: d2
+    logical :: stage_below_bot
+    logical :: head_below_bot
+    ! -- formats
+! ------------------------------------------------------------------------------
+    !
+    ! -- Set sfr density to sfr density or gwf density
+    if (stage >= bots) then
+      ss = stage
+      stage_below_bot = .false.
+      rdensesfr = this%denseterms(1, n)  ! sfr rel density
+    else
+      ss = bots
+      stage_below_bot = .true.
+      rdensesfr = this%denseterms(2, n)  ! gwf rel density
+    end if
+    !
+    ! -- set hh to head or bots
+    if (head >= bots) then
+      hh = head
+      head_below_bot = .false.
+      rdensegwf = this%denseterms(2, n)  ! gwf rel density
+    else
+      hh = bots
+      head_below_bot = .true.
+      rdensegwf = this%denseterms(1, n)  ! sfr rel density
+    end if
+    !
+    ! -- todo: hack because denseterms not updated in a cf calculation
+    if (rdensegwf == DZERO) return
+    !
+    ! -- Update flow
+    if (stage_below_bot .and. head_below_bot) then
+      !
+      ! -- flow is zero, so no terms are updated
+      !
+    else
+      !
+      ! -- calulate average relative density
+      rdenseavg = DHALF * (rdensesfr + rdensegwf)
+      !
+      ! -- Add contribution of first density term: 
+      !      cond * (denseavg/denseref - 1) * (hgwf - hsfr)
+      d1 = cond * (rdenseavg - DONE) 
+      gwfhcof = gwfhcof - d1
+      gwfrhs = gwfrhs - d1 * ss
+      d1 = d1 * (hh - ss)
+      flow = flow + d1
+      !
+      ! -- Add second density term if stage and head not below bottom
+      if (.not. stage_below_bot .and. .not. head_below_bot) then
+        !
+        ! -- Add contribution of second density term:
+        !      cond * (havg - elevavg) * (densegwf - densesfr) / denseref
+        elevgwf = this%denseterms(3, n)
+        elevsfr = bots
+        elevavg = DHALF * (elevsfr + elevgwf)
+        havg = DHALF * (hh + ss)
+        d2 = cond * (havg - elevavg) * (rdensegwf - rdensesfr)
+        gwfrhs = gwfrhs + d2
+        flow = flow + d2
+      end if
+    end if
+    !
+    ! -- return
+    return
+  end subroutine sfr_calculate_density_exchange
+
 
 end module SfrModule
