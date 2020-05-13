@@ -4,7 +4,7 @@ module MemoryManagerModule
   use ConstantsModule,        only: DZERO, LENORIGIN, LENVARNAME, LINELENGTH,    &
                                     LENMEMTYPE
   use SimModule,              only: store_error, ustop
-  use MemoryTypeModule,       only: MemoryTSType, MemoryType
+  use MemoryTypeModule,       only: MemoryType
   use MemoryListModule,       only: MemoryListType
   
   implicit none
@@ -31,7 +31,6 @@ module MemoryManagerModule
   integer(I8B) :: nvalues_achr = 0
   integer(I8B) :: nvalues_aint = 0
   integer(I8B) :: nvalues_adbl = 0
-  integer(I8B) :: nvalues_ats = 0
   integer(I4B) :: iprmem = 0
 
   interface mem_allocate
@@ -39,8 +38,7 @@ module MemoryManagerModule
                      allocate_int, allocate_int1d, allocate_int2d,             &
                      allocate_int3d,                                           &
                      allocate_dbl, allocate_dbl1d, allocate_dbl2d,             &
-                     allocate_dbl3d,                                           &
-                     allocate_ts1d
+                     allocate_dbl3d
   end interface mem_allocate
   
   interface mem_reallocate
@@ -69,8 +67,7 @@ module MemoryManagerModule
                      deallocate_int, deallocate_int1d, deallocate_int2d,         &
                      deallocate_int3d,                                           &
                      deallocate_dbl, deallocate_dbl1d, deallocate_dbl2d,         &
-                     deallocate_dbl3d,                                           &
-                     deallocate_ts1d
+                     deallocate_dbl3d
   end interface mem_deallocate
 
   contains
@@ -113,7 +110,6 @@ module MemoryManagerModule
       if(associated(mt%adbl1d)) rank = 1
       if(associated(mt%adbl2d)) rank = 2 
       if(associated(mt%adbl3d)) rank = 3 
-      if(associated(mt%ats1d)) rank = 1      
     end if    
     
   end subroutine get_mem_rank 
@@ -161,7 +157,6 @@ module MemoryManagerModule
       if(associated(mt%adbl1d)) mem_shape = shape(mt%adbl1d)
       if(associated(mt%adbl2d)) mem_shape = shape(mt%adbl2d)
       if(associated(mt%adbl3d)) mem_shape = shape(mt%adbl3d)
-      if(associated(mt%ats1d)) mem_shape = shape(mt%ats1d)
     else
       ! to communicate failure
       mem_shape(1) = -1
@@ -450,36 +445,6 @@ module MemoryManagerModule
                                                        nrow, nlay
     call memorylist%add(mt)
   end subroutine allocate_dbl3d
-
-  subroutine allocate_ts1d(ats, isize, name, origin)
-    type (MemoryTSType), dimension(:), pointer, contiguous, intent(inout) :: ats
-    integer(I4B), intent(in) :: isize
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: origin
-    integer(I4B) :: istat
-    integer(I4B) :: i
-    type(MemoryType), pointer :: mt
-    character(len=100) :: ermsg
-    call check_varname(name)
-    allocate(ats(isize), stat=istat, errmsg=ermsg)
-    if(istat /= 0) call allocate_error(name, origin, istat, ermsg, isize)
-    do i = 1, isize
-      allocate(ats(i)%name, stat=istat, errmsg=ermsg)
-      if(istat /= 0) call allocate_error(name, origin, istat, ermsg, isize)
-      ats(i)%name = ''
-      allocate(ats(i)%value, stat=istat, errmsg=ermsg)
-      ats(i)%value = DZERO
-      if(istat /= 0) call allocate_error(name, origin, istat, ermsg, isize)
-    end do
-    nvalues_ats = nvalues_ats + isize
-    allocate(mt)
-    mt%ats1d => ats
-    mt%isize = isize
-    mt%name = name
-    mt%origin = origin
-    write(mt%memtype, "(a,' (',i0,')')") 'TIMESERIES', isize
-    call memorylist%add(mt)
-  end subroutine allocate_ts1d
   
   subroutine reallocate_int1d(aint, isize, name, origin)
     integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: aint
@@ -1189,38 +1154,6 @@ module MemoryManagerModule
     endif
   end subroutine deallocate_dbl3d
   
-  subroutine deallocate_ts1d(ats1d)
-    type (MemoryTSType), dimension(:), pointer, contiguous, intent(inout) :: ats1d
-    class(MemoryType), pointer :: mt
-    integer(I4B) :: ipos
-    integer(I4B) :: i
-    logical :: found 
-    found = .false.
-    do ipos = 1, memorylist%count()
-      mt => memorylist%Get(ipos)
-      if (associated(mt%ats1d, ats1d)) then
-        nullify(mt%ats1d)
-        found = .true.
-        exit
-      end if
-    end do
-    if (.not. found .and. size(ats1d) > 0 ) then
-      call store_error('programming error in deallocate_ts1d')
-      call ustop()
-    else
-      do i = 1, size(ats1d)
-        deallocate(ats1d(i)%name)
-        deallocate(ats1d(i)%value)
-      enddo
-      if (mt%master) then
-        deallocate(ats1d)
-      else
-        nullify(ats1d)
-      end if
-    endif
-    return
-  end subroutine deallocate_ts1d
-  
   subroutine mem_set_print_option(iout, keyword, errmsg)
     integer(I4B), intent(in) :: iout
     character(len=*), intent(in) :: keyword
@@ -1307,12 +1240,11 @@ module MemoryManagerModule
     endif
     !
     ! -- Calculate and write total memory allocation
-    bytesmb = (nvalues_aint * I4B + &
-               nvalues_adbl * DP + &
-               nvalues_ats * DP) / 1000000.d0
+    bytesmb = (nvalues_aint * I4B +                                            &
+               nvalues_adbl * DP) / 1000000.d0
     write(iout, *)
     write(iout, fmt) 'Number of allocated integer variables:   ', nvalues_aint
-    write(iout, fmt) 'Number of allocated real variables:    ', nvalues_adbl + nvalues_ats
+    write(iout, fmt) 'Number of allocated real variables:    ', nvalues_adbl
     write(iout, fmtd) 'Allocated memory in megabytes: ', bytesmb
     write(iout, *)
   end subroutine mem_usage

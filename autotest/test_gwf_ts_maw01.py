@@ -12,8 +12,8 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-paktest = 'sfr'
-ex = ['ts_sfr01']
+paktest = 'maw'
+ex = ['ts_{}01'.format(paktest)]
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
@@ -48,8 +48,8 @@ def build_model(ws, name, timeseries=False):
     hk = 1.e-4
 
     # solver options
-    nouter, ninner = 600, 100
-    hclose, rclose, relax = 1e-6, 0.1, 1.
+    nouter, ninner = 1000, 100
+    hclose, rclose, relax = 1e-6, 1e-3, 1.
     newtonoptions = ''
     imsla = 'BICGSTAB'
 
@@ -107,102 +107,80 @@ def build_model(ws, name, timeseries=False):
     # sfr file
     packagedata = [
         [0, (1 - 1, 4 - 1, 1 - 1), 3.628E+001, 1.0, 1.0E-003, 0.0, 1.0, 1.0E-4,
-         1.0E-1, 2, 0.0, 1, temp, conc],
+         1.0E-1, 1, 0.0, 0],
         [1, (1 - 1, 4 - 1, 2 - 1), 1.061E+002, 1.0, 1.0E-003, 0.0, 1.0, 1.0E-4,
-         1.0E-1, 3, 1.0, 1, temp, conc],
+         1.0E-1, 2, 1.0, 0],
         [2, (1 - 1, 4 - 1, 3 - 1), 6.333E+001, 1.0, 1.0E-003, 0.0, 1.0, 1.0E-4,
-         1.0E-1, 4, 1.0, 2, temp, conc],
+         1.0E-1, 2, 1.0, 0],
         [3, (1 - 1, 5 - 1, 3 - 1), 4.279E+001, 1.0, 1.0E-003, 0.0, 1.0, 1.0E-4,
-         1.0E-1, 3, 1.0, 1, temp, conc],
+         1.0E-1, 2, 1.0, 0],
         [4, (1 - 1, 5 - 1, 4 - 1), 6.532E+001, 1.0, 1.0E-003, 0.0, 1.0, 1.0E-4,
-         1.0E-1, 1, 1.0, 0, temp, conc],
-        [5, (1 - 1, 4 - 1, 1 - 1), 10., 1.0, 1.0E-003, 0.0, 1.0, 0.0,
-         1.0E-1, 1, 0.0, 0, temp, conc],
-        [6, (1 - 1, 4 - 1, 2 - 1), 10., 1.0, 1.0E-003, 0.0, 1.0, 0.0,
-         1.0E-1, 1, 0.0, 0, temp, conc],
-        [7, (1 - 1, 4 - 1, 3 - 1), 10., 1.0, 1.0E-003, 0.0, 1.0, 0.0,
-         1.0E-1, 1, 0.0, 0, temp, conc],
-        [8, (1 - 1, 4 - 1, 3 - 1), 10., 1.0, 1.0E-003, 0.0, 1.0, 0.0,
-         1.0E-1, 1, 0.0, 0, temp, conc],
-        [9, (1 - 1, 5 - 1, 4 - 1), 10., 1.0, 1.0E-003, 0.0, 1.0, 0.0,
-         1.0E-1, 1, 0.0, 0, temp, conc],
+         1.0E-1, 1, 1.0, 0],
     ]
     connectiondata = [
-        [0, -1, -5],
-        [1, 0, -2, -6],
-        [2, -3, -7, -8, 1],
-        [3, -4, -9, 2],
+        [0, -1],
+        [1, 0, -2],
+        [2, 1, -3],
+        [3, 2, -4],
         [4, 3],
-        [5, 0],
-        [6, 1],
-        [7, 2],
-        [8, 2],
-        [9, 3]
     ]
-    cprior = 'upto'
-    divdata = [[0, 0, 5, cprior],
-               [1, 0, 6, cprior],
-               [2, 1, 7, cprior],
-               [2, 0, 8, cprior],
-               [3, 0, 9, cprior]]
-    inflow, divflow, divflow2, upstream_fraction = 1., 0.05, 0.04, 0.
-    ts_names = ['inflow', 'divflow', 'ustrf'] + auxnames
-    perioddata = [[0, 'status', 'active'],
-                  [1, 'status', 'active'],
-                  [2, 'status', 'active'],
-                  [3, 'status', 'active'],
-                  [4, 'status', 'active'],
-                  [0, 'diversion', 0, divflow],
-                  [1, 'diversion', 0, divflow],
-                  [2, 'diversion', 0, divflow2],
-                  [3, 'diversion', 0, divflow]]
-    if timeseries:
-        perioddata.append([0, 'inflow', 'inflow'])
-        perioddata.append([2, 'diversion', 1, 'divflow'])
-        perioddata.append([0, 'AUXILIARY', 'conc', 'conc'])
-        perioddata.append([2, 'AUXILIARY', 'temp', 'temp'])
-        perioddata.append([5, 'upstream_fraction', 'ustrf'])
-        perioddata.append([7, 'upstream_fraction', 'ustrf'])
-        perioddata.append([9, 'upstream_fraction', 'ustrf'])
-        ts_methods = ['linearend'] * len(ts_names)
-        ts_data = []
-        for t in ts_times:
-            ts_data.append((t, inflow, divflow, upstream_fraction, temp, conc))
-    else:
-        perioddata.append([0, 'inflow', inflow])
-        perioddata.append([2, 'diversion', 1, divflow])
-
-    budpth = '{}.{}.cbc'.format(name, paktest)
+    perioddata = [
+        [0, 'status', 'active'],
+        [1, 'status', 'active'],
+        [2, 'status', 'active'],
+        [3, 'status', 'active'],
+        [4, 'status', 'active'],
+    ]
     cnvgpth = '{}.sfr.cnvg.csv'.format(name)
     sfr = flopy.mf6.ModflowGwfsfr(gwf,
-                                  auxiliary=auxnames,
                                   print_input=True,
-                                  budget_filerecord=budpth,
                                   mover=True,
-                                  nreaches=len(packagedata),
+                                  nreaches=5,
                                   maximum_depth_change=1.e-5,
                                   package_convergence_filerecord=cnvgpth,
                                   packagedata=packagedata,
                                   connectiondata=connectiondata,
-                                  diversions=divdata,
                                   perioddata=perioddata, pname='sfr-1')
-    if timeseries:
-        fname = '{}.sfr.ts'.format(name)
-        sfr.ts.initialize(filename=fname, timeseries=ts_data,
-                          time_series_namerecord=ts_names,
-                          interpolation_methodrecord=ts_methods)
 
-    packagedata = [[0, 1.0, -20., 0.0, 'SPECIFIED', 2], ]
+    packagedata = [[0, 1.0, -20., 0.0, 'SPECIFIED', 2, temp, conc], ]
     nmawwells = len(packagedata)
     connectiondata = [
         [1 - 1, 1 - 1, (1 - 1, 5 - 1, 8 - 1), 0.0, -20, 1.0, 1.1],
         [1 - 1, 2 - 1, (2 - 1, 5 - 1, 8 - 1), 0.0, -20, 1.0, 1.1]]
-    perioddata = [[0, 'FLOWING_WELL', 0., 0., 0.],
-                  [0, 'RATE', 1.e-3]]
-    maw = flopy.mf6.ModflowGwfmaw(gwf, mover=True, nmawwells=nmawwells,
+
+    perioddata = [[0, 'FLOWING_WELL', 0., 1., 0.1]]
+    rate = 4e-3
+    ts_names = ['rate'] + auxnames
+    if timeseries:
+        perioddata.append([0, 'rate', 'rate'])
+        perioddata.append([0, 'AUXILIARY', 'conc', 'conc'])
+        perioddata.append([0, 'AUXILIARY', 'temp', 'temp'])
+        ts_methods = ['linearend'] * len(ts_names)
+        ts_data = []
+        for t in ts_times:
+            ts_data.append((t, rate, temp, conc))
+    else:
+        perioddata.append([0, 'rate', rate])
+        perioddata.append([0, 'AUXILIARY', 'conc', conc])
+        perioddata.append([0, 'AUXILIARY', 'temp', temp])
+
+    budpth = '{}.{}.cbc'.format(name, paktest)
+    maw = flopy.mf6.ModflowGwfmaw(gwf,
+                                  print_head=True,
+                                  budget_filerecord=budpth,
+                                  mover=True,
+                                  auxiliary=auxnames,
+                                  flowing_wells=True,
+                                  nmawwells=nmawwells,
+                                  print_input=True,
                                   packagedata=packagedata,
                                   connectiondata=connectiondata,
                                   perioddata=perioddata, pname='maw-1')
+    if timeseries:
+        fname = '{}.{}.ts'.format(name, paktest)
+        maw.ts.initialize(filename=fname, timeseries=ts_data,
+                          time_series_namerecord=ts_names,
+                          interpolation_methodrecord=ts_methods)
 
     packagedata = [(0, 1., 11),
                    (1, 0.5, 11)]
@@ -234,16 +212,19 @@ def build_model(ws, name, timeseries=False):
         (1, 10, (1, 3, 8), 'vertical', 1.e-05, -1., 0., 0., 0.)]
     perioddata = [(1, 'status', 'active'),
                   (1, 'rainfall', '0.0'),
-                  (1, 'evaporation', '0.000000000000e+000'),
-                  (1, 'runoff', '0.000000000000e+000'),
-                  (1, 'withdrawal', '0.000000000000e+000'),
-                  (0, 'rate', '1.000000000000e+000'),
-                  (0, 'invert', '1.000000000000e-003'),
-                  (0, 'width', '0.000000000000e+000'),
-                  (0, 'slope', '1.000000000000e-003'),
-                  (0, 'rough', '1.000000000000e-001')]
+                  (1, 'evaporation', '0.0'),
+                  (1, 'runoff', '0.0'),
+                  (1, 'withdrawal', '0.0'),
+                  (0, 'rate', '1.0'),
+                  (0, 'invert', '1.0e-003'),
+                  (0, 'width', '0.0'),
+                  (0, 'slope', '1.0e-003'),
+                  (0, 'rough', '1.0e-001')]
     cnvgpth = '{}.lak.cnvg.csv'.format(name)
-    lak = flopy.mf6.ModflowGwflak(gwf, mover=True, nlakes=nlakes,
+    lak = flopy.mf6.ModflowGwflak(gwf,
+                                  print_input=True,
+                                  mover=True,
+                                  nlakes=nlakes,
                                   noutlets=noutlets,
                                   print_stage=True,
                                   print_flows=True,
@@ -273,8 +254,10 @@ def build_model(ws, name, timeseries=False):
                   [6, 1.e-8, 0, 0, 0, 0, 0, 0],
                   [7, 1.e-8, 0, 0, 0, 0, 0, 0],
                   [8, 1.e-8, 0, 0, 0, 0, 0, 0], ]
+
     cnvgpth = '{}.uzf.cnvg.csv'.format(name)
     uzf = flopy.mf6.ModflowGwfuzf(gwf,
+                                  print_input=True,
                                   mover=True,
                                   package_convergence_filerecord=cnvgpth,
                                   nuzfcells=len(packagedata),
@@ -285,7 +268,7 @@ def build_model(ws, name, timeseries=False):
     packages = [('drn-1',), ('lak-1',), ('maw-1',), ('sfr-1',), ('uzf-1',)]
     perioddata = [
         ('drn-1', 0, 'lak-1', 1, 'excess', 1.),
-        ('drn-1', 0, 'maw-1', 0, 'threshold', 2.),
+        ('drn-1', 0, 'maw-1', 0, 'threshold', 1.e-3),
         ('drn-1', 0, 'sfr-1', 2, 'upto', 3.),
         ('drn-1', 1, 'lak-1', 1, 'excess', 1.),
         ('drn-1', 1, 'maw-1', 0, 'threshold', 2.),
@@ -300,10 +283,7 @@ def build_model(ws, name, timeseries=False):
         ('uzf-1', 6, 'sfr-1', 0, 'factor', 1.),
         ('uzf-1', 7, 'sfr-1', 0, 'factor', 1.),
         ('uzf-1', 8, 'sfr-1', 0, 'factor', 1.),
-        ('sfr-1', 2, 'sfr-1', 3, 'factor', 0.5),
-        ('sfr-1', 6, 'sfr-1', 4, 'factor', 0.5),
-        ('sfr-1', 8, 'sfr-1', 4, 'factor', 0.5),
-    ]
+        ('maw-1', 0, 'lak-1', 1, 'factor', 0.5)]
     mvr = flopy.mf6.ModflowGwfmvr(gwf, maxmvr=len(perioddata),
                                   budget_filerecord='{}.mvr.bud'.format(name),
                                   maxpackages=len(packages),
@@ -368,32 +348,6 @@ def eval_model(sim):
     fname = '{}.{}.cbc.cmp.out'.format(os.path.basename(sim.name), paktest)
     fpth = os.path.join(sim.simpath, fname)
     eval_bud_diff(fpth, cobj0, cobj1)
-
-    # do some spot checks on the first sfr cbc file
-    v0 = cobj0.get_data(totim=1.0, text='FLOW-JA-FACE')[0]
-    q = []
-    for idx, node in enumerate(v0['node']):
-        if node > 5:
-            q.append(v0['q'][idx])
-    v0 = np.array(q)
-    check = np.ones(v0.shape, dtype=np.float) * 5e-2
-    check[-2] = 4e-2
-    assert np.allclose(v0, check), 'FLOW-JA-FACE failed'
-
-    v0 = cobj0.get_data(totim=1.0, text='EXT-OUTFLOW')[0]
-    v0 = v0['q'][4:]
-    check = np.array([-0.80871, -5e-2, -2.5e-2, -5e-2, -2.0e-2, -5e-2])
-    assert np.allclose(v0, check), 'EXT-OUTFLOW failed'
-
-    v0 = cobj0.get_data(totim=1.0, text='FROM-MVR')[0]
-    v0 = v0['q'][4:]
-    check = np.array([4.5e-2, 0., 0., 0., 0., 0.])
-    assert np.allclose(v0, check), 'FROM-MVR failed'
-
-    v0 = cobj0.get_data(totim=1.0, text='TO-MVR')[0]
-    v0 = v0['q'][4:]
-    check = np.array([0., 0., -2.5e-2, 0., -2.0e-2, 0.])
-    assert np.allclose(v0, check), 'FROM-MVR failed'
 
     return
 

@@ -40,7 +40,6 @@ module GwtMwtModule
   use BndModule, only: BndType, GetBndFromList
   use GwtFmiModule, only: GwtFmiType
   use MawModule, only: MawType
-  use MemoryTypeModule, only: MemoryTSType
   use GwtAptModule, only: GwtAptType
   
   implicit none
@@ -57,7 +56,7 @@ module GwtMwtModule
     integer(I4B), pointer                                  :: idxbudfwrt => null()  ! index of flowing well rate terms in flowbudptr
     integer(I4B), pointer                                  :: idxbudrtmv => null()  ! index of rate to mover terms in flowbudptr
     integer(I4B), pointer                                  :: idxbudfrtm => null()  ! index of flowing well rate to mover terms in flowbudptr
-    type (MemoryTSType), dimension(:), pointer, contiguous :: concrate => null()    ! well rate concentration
+    real(DP), dimension(:), pointer, contiguous            :: concrate => null()    ! well rate concentration
 
   contains
   
@@ -677,7 +676,7 @@ module GwtMwtModule
       h = qbnd
       r = DZERO
     else
-      ctmp = this%concrate(n1)%value
+      ctmp = this%concrate(n1)
       h = DZERO
       r = -qbnd * ctmp
     end if
@@ -840,53 +839,42 @@ module GwtMwtModule
     return
   end subroutine mwt_bd_obs
 
-  subroutine mwt_set_stressperiod(this, itemno, itmp, line, found, &
-                                  lloc, istart, istop, endtim, bndName)
+  subroutine mwt_set_stressperiod(this, itemno, keyword, found)
 ! ******************************************************************************
 ! mwt_set_stressperiod -- Set a stress period attribute for using keywords.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use TimeSeriesManagerModule, only: read_single_value_or_time_series
-    use InputOutputModule, only: urword
+    use TimeSeriesManagerModule, only: read_value_or_time_series_adv
     ! -- dummy
     class(GwtMwtType),intent(inout) :: this
     integer(I4B), intent(in) :: itemno
-    integer(I4B), intent(in) :: itmp
-    character (len=*), intent(in) :: line
+    character(len=*), intent(in) :: keyword
     logical, intent(inout) :: found
-    integer(I4B), intent(inout) :: lloc
-    integer(I4B), intent(inout) :: istart
-    integer(I4B), intent(inout) :: istop
-    real(DP), intent(in) :: endtim
-    character(len=LENBOUNDNAME), intent(in) :: bndName
     ! -- local
     character(len=LINELENGTH) :: text
     integer(I4B) :: ierr
-    integer(I4B) :: ival
     integer(I4B) :: jj
-    real(DP) :: rval
+    real(DP), pointer :: bndElem => null()
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
     ! RATE <rate>
     !
     found = .true.
-    select case (line(istart:istop))
+    select case (keyword)
       case ('RATE')
         ierr = this%apt_check_valid(itemno)
-        if (ierr /= 0) goto 999
-        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
-        text = line(istart:istop)
-        jj = 1    ! For RATE
-        call read_single_value_or_time_series(text, &
-                                              this%concrate(itmp)%value, &
-                                              this%concrate(itmp)%name, &
-                                              endtim,  &
-                                              this%name, 'BND', this%TsManager, &
-                                              this%iprpak, itmp, jj, 'RATE', &
-                                              bndName, this%inunit)
+        if (ierr /= 0) then
+          goto 999
+        end if
+        call this%parser%GetString(text)
+        jj = 1
+        bndElem => this%concrate(itemno)
+        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%name, &
+                                           'BND', this%tsManager, this%iprpak,   &
+                                           'RATE')
       case default
         !
         ! -- keyword not recognized so return to caller with found = .false.
@@ -898,5 +886,6 @@ module GwtMwtModule
     ! -- return
     return
   end subroutine mwt_set_stressperiod
+
 
 end module GwtMwtModule
