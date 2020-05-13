@@ -55,6 +55,7 @@ module UzfModule
     !
     ! -- uzf kinematic object
     type(UzfCellGroupType), pointer                    :: uzfobj      => null()
+    type(UzfCellGroupType)                             :: uzfobjwork
     !
     ! -- pointer to gwf variables
     integer(I4B), pointer                                  :: gwfiss      => null()
@@ -329,7 +330,7 @@ contains
     call mem_allocate(this%hroot, this%nodes, 'HROOT', this%origin)
     call mem_allocate(this%rootact, this%nodes, 'ROOTACT', this%origin)
     call mem_allocate(this%uauxvar, this%naux, this%nodes, 'UAUXVAR', this%origin)
-
+    
     ! -- initialize
     do i = 1, this%nodes
       this%appliedinf(i) = DZERO
@@ -634,6 +635,7 @@ contains
     ! -- initialize uzf group object
     allocate(this%uzfobj)
     call this%uzfobj%init(this%nodes, this%nwav, this%origin)
+    call this%uzfobjwork%init(1, this%nwav)
     !
     ! -- Set pointers to GWF model arrays
     call mem_setptr(this%gwftop, 'TOP', trim(this%name_model)//' DIS')
@@ -1959,11 +1961,9 @@ contains
     real(DP) :: hgwf, hgwflm1, cvv, uzderiv, gwet, derivgwet
     real(DP) :: qfrommvr, qformvr,sumaet
     character(len=LINELENGTH) :: errmsg
-    type(UzfCellGroupType) :: uzfobjwork
 ! ------------------------------------------------------------------------------
     !
     ! -- Initialize
-    call uzfobjwork%init(1, this%nwav)
     ierr = 0
     sumaet = DZERO
     !
@@ -1999,7 +1999,7 @@ contains
         cvv = DZERO
         !
         ! -- solve for current uzf cell
-        call this%uzfobj%formulate(uzfobjwork, ivertflag, i,                   &
+        call this%uzfobj%formulate(this%uzfobjwork, ivertflag, i,              &
                                     this%totfluxtot, this%ietflag,             &
                                     this%issflag,this%iseepflag,               &
                                     trhs1,thcof1,hgwf,hgwflm1,cvv,uzderiv,     &
@@ -2034,6 +2034,9 @@ contains
       !
       end if
     end do
+    !
+    ! -- return
+    return
   end subroutine uzf_solve
 
   subroutine define_listlabel(this)
@@ -2972,6 +2975,8 @@ contains
     !
     ! -- deallocate uzf objects
     call this%uzfobj%dealloc()
+    call this%uzfobjwork%dealloc()
+
     nullify(this%uzfobj)
     call this%budobj%budgetobject_da()
     deallocate(this%budobj)
