@@ -1,5 +1,4 @@
 import os
-import sys
 import numpy as np
 
 try:
@@ -22,6 +21,7 @@ from framework import testing_framework
 from simulation import Simulation
 
 ex = ['csub_subwt02a', 'csub_subwt02b', 'csub_subwt02c', 'csub_subwt02d']
+timeseries = [True, False, True, False]
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
@@ -54,6 +54,7 @@ perlen = [1., 21915., 21915.]
 nstp = [1, 60, 60]
 tsmult = [1., 1., 1.]
 steady = [True, False, False]
+ts_times = np.arange(0., 60000, 10000., dtype=np.float)
 
 # spatial discretization
 nlay, nrow, ncol = 4, ib0.shape[0], ib0.shape[1]
@@ -293,13 +294,22 @@ def get_model(idx, dir):
 
     # csub files
     gg = []
+    if timeseries[idx]:
+        sig0v = 'geostress'
+        ts_methods = ['linearend']
+        ts_data = []
+        for t in ts_times:
+            ts_data.append((t, gs0[idx]))
+    else:
+        sig0v = gs0[idx]
     for i in range(nrow):
         for j in range(ncol):
             if ib0[i, j] > 0:
-                gg.append([(0, i, j), gs0[idx]])
+                gg.append([(0, i, j), sig0v])
     sig0 = {0: gg}
     opth = '{}.csub.obs'.format(name)
     csub = flopy.mf6.ModflowGwfcsub(gwf,
+                                    # print_input=True,
                                     # interbed_stress_offset=True,
                                     boundnames=True,
                                     compression_indices=True,
@@ -314,6 +324,11 @@ def get_model(idx, dir):
                                     packagedata=swt6,
                                     maxsig0=len(gg),
                                     stress_period_data=sig0)
+    if timeseries[idx]:
+        fname = '{}.csub.ts'.format(name)
+        csub.ts.initialize(filename=fname, timeseries=ts_data,
+                           time_series_namerecord=[sig0v],
+                           interpolation_methodrecord=ts_methods)
 
     cobs = [('w1l1', 'interbed-compaction', '01_09_10'),
             ('w1l2', 'interbed-compaction', '02_09_10'),
@@ -355,7 +370,6 @@ def get_model(idx, dir):
             ('sk1l2', 'ske-cell', (1, 8, 9)),
             ('sk2l4', 'ske-cell', (3, 11, 6)),
             ('t1l2', 'theta', '02_09_10')]
-
 
     orecarray = {'csub_obs.csv': cobs}
     csub_obs_package = csub.obs.initialize(filename=opth, digits=10,
