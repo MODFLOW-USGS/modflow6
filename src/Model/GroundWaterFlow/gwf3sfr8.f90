@@ -580,7 +580,7 @@ contains
     select case (option)
       case ('PRINT_STAGE')
         this%iprhed = 1
-        write(this%iout,'(4x,a)') trim(adjustl(this%text))// &
+        write(this%iout,'(4x,a)') trim(adjustl(this%text))//                     &
           ' STAGES WILL BE PRINTED TO LISTING FILE.'
         found = .true.
       case('STAGE')
@@ -588,24 +588,25 @@ contains
         if (keyword == 'FILEOUT') then
           call this%parser%GetString(fname)
           this%istageout = getunit()
-          call openfile(this%istageout, this%iout, fname, 'DATA(BINARY)',  &
+          call openfile(this%istageout, this%iout, fname, 'DATA(BINARY)',        &
                        form, access, 'REPLACE')
           write(this%iout,fmtsfrbin) 'STAGE', fname, this%istageout
           found = .true.
         else
-          call store_error('OPTIONAL STAGE KEYWORD MUST BE FOLLOWED BY FILEOUT')
+          call store_error('Optional stage keyword must be followed by fileout.')
         end if
       case('BUDGET')
         call this%parser%GetStringCaps(keyword)
         if (keyword == 'FILEOUT') then
           call this%parser%GetString(fname)
           this%ibudgetout = getunit()
-          call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)',  &
+          call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)',       &
                         form, access, 'REPLACE')
           write(this%iout,fmtsfrbin) 'BUDGET', fname, this%ibudgetout
           found = .true.
         else
-          call store_error('OPTIONAL BUDGET KEYWORD MUST BE FOLLOWED BY FILEOUT')
+          call store_error('Optional budget keyword must be ' //                 &
+                           'followed by fileout.')
         end if
       case('PACKAGE_CONVERGENCE')
         call this%parser%GetStringCaps(keyword)
@@ -617,8 +618,8 @@ contains
           write(this%iout,fmtsfrbin) 'PACKAGE_CONVERGENCE', fname, this%ipakcsv
           found = .true.
         else
-          call store_error('OPTIONAL PACKAGE_CONVERGENCE KEYWORD MUST BE ' //    &
-                           'FOLLOWED BY FILEOUT')
+          call store_error('Optional package_convergence keyword must be ' //    &
+                           'followed by fileout.')
         end if
       case('UNIT_CONVERSION')
         this%unitconv = this%parser%GetDouble()
@@ -2631,15 +2632,18 @@ contains
     ! formats
     !
     strng = obsrv%IDstring
+    !
     ! -- Extract reach number from strng and store it.
     !    If 1st item is not an integer(I4B), it should be a
     !    boundary name--deal with it.
     icol = 1
+    !
     ! -- get reach number or boundary name
     call extract_idnum_or_bndname(strng, icol, istart, istop, nn1, bndname)
     if (nn1 == NAMEDBOUNDFLAG) then
       obsrv%FeatureName = bndname
     endif
+    !
     ! -- store reach number (NodeNumber)
     obsrv%NodeNumber = nn1
     !
@@ -2847,7 +2851,7 @@ contains
       real(DP) :: gwfhcof, gwfrhs
   ! ------------------------------------------------------------------------------
     !
-    ! -- Initialize
+    ! -- Process optional dummy variables
     if (present(update)) then
       lupdate = update
     else
