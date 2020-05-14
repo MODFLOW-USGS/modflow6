@@ -24,7 +24,6 @@ module SfrModule
   use SimModule, only: count_errors, store_error, store_error_unit,              &
                        store_warning, ustop
   use GenericUtilitiesModule, only: sim_message
-  use SparseModule, only: sparsematrix
   use ArrayHandlersModule, only: ExpandArray
   use BlockParserModule,   only: BlockParserType
   !
@@ -52,6 +51,7 @@ module SfrModule
     integer(I4B), pointer :: ipakcsv => null()
     integer(I4B), pointer :: idiversions => null()
     integer(I4B), pointer :: nconn => NULL()
+    integer(I4B), pointer :: maxsfrpicard => NULL()
     integer(I4B), pointer :: maxsfrit => NULL()
     integer(I4B), pointer :: bditems => NULL()
     integer(I4B), pointer :: cbcauxitems => NULL()
@@ -73,7 +73,6 @@ module SfrModule
     !
     ! -- sfr budget object
     type(BudgetObjectType), pointer :: budobj => null()
-    type(sparsematrix), pointer :: sparse => null()
     !
     ! -- sfr table objects
     type(TableType), pointer :: stagetab => null()
@@ -256,6 +255,7 @@ contains
     call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%origin)
     call mem_allocate(this%ipakcsv, 'IPAKCSV', this%origin)
     call mem_allocate(this%idiversions, 'IDIVERSIONS', this%origin)
+    call mem_allocate(this%maxsfrpicard, 'MAXSFRPICARD', this%origin)
     call mem_allocate(this%maxsfrit, 'MAXSFRIT', this%origin)
     call mem_allocate(this%bditems, 'BDITEMS', this%origin)
     call mem_allocate(this%cbcauxitems, 'CBCAUXITEMS', this%origin)
@@ -276,6 +276,7 @@ contains
     this%ibudgetout = 0
     this%ipakcsv = 0
     this%idiversions = 0
+    this%maxsfrpicard = 100
     this%maxsfrit = 100
     this%bditems = 8
     this%cbcauxitems = 1
@@ -563,20 +564,23 @@ contains
     character(len=MAXCHARLEN) :: fname, keyword
     ! -- formats
     character(len=*),parameter :: fmtunitconv = &
-      "(4x, 'UNIT CONVERSION VALUE (',g15.7,') SPECIFIED.')"
+      "(4x, 'UNIT CONVERSION VALUE (',g0,') SPECIFIED.')"
+    character(len=*),parameter :: fmtpicard = &
+      "(4x, 'MAXIMUM SFR PICARD ITERATION VALUE (',i0,') SPECIFIED.')"
     character(len=*),parameter :: fmtiter = &
-      "(4x, 'MAXIMUM SFR ITERATION VALUE (',i15,') SPECIFIED.')"
+      "(4x, 'MAXIMUM SFR ITERATION VALUE (',i0,') SPECIFIED.')"
     character(len=*),parameter :: fmtdmaxchg = &
-      "(4x, 'MAXIMUM DEPTH CHANGE VALUE (',g15.7,') SPECIFIED.')"
+      "(4x, 'MAXIMUM DEPTH CHANGE VALUE (',g0,') SPECIFIED.')"
     character(len=*),parameter :: fmtsfrbin = &
-      "(4x, 'SFR ', 1x, a, 1x, ' WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I7)"
+      "(4x, 'SFR ', 1x, a, 1x, ' WILL BE SAVED TO FILE: ', a, /4x,               &
+     &'OPENED ON UNIT: ', I7)"
 ! ------------------------------------------------------------------------------
     !
     ! -- Check for SFR options
     select case (option)
       case ('PRINT_STAGE')
         this%iprhed = 1
-        write(this%iout,'(4x,a)') trim(adjustl(this%text))// &
+        write(this%iout,'(4x,a)') trim(adjustl(this%text))//                     &
           ' STAGES WILL BE PRINTED TO LISTING FILE.'
         found = .true.
       case('STAGE')
@@ -584,24 +588,25 @@ contains
         if (keyword == 'FILEOUT') then
           call this%parser%GetString(fname)
           this%istageout = getunit()
-          call openfile(this%istageout, this%iout, fname, 'DATA(BINARY)',  &
+          call openfile(this%istageout, this%iout, fname, 'DATA(BINARY)',        &
                        form, access, 'REPLACE')
           write(this%iout,fmtsfrbin) 'STAGE', fname, this%istageout
           found = .true.
         else
-          call store_error('OPTIONAL STAGE KEYWORD MUST BE FOLLOWED BY FILEOUT')
+          call store_error('Optional stage keyword must be followed by fileout.')
         end if
       case('BUDGET')
         call this%parser%GetStringCaps(keyword)
         if (keyword == 'FILEOUT') then
           call this%parser%GetString(fname)
           this%ibudgetout = getunit()
-          call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)',  &
+          call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)',       &
                         form, access, 'REPLACE')
           write(this%iout,fmtsfrbin) 'BUDGET', fname, this%ibudgetout
           found = .true.
         else
-          call store_error('OPTIONAL BUDGET KEYWORD MUST BE FOLLOWED BY FILEOUT')
+          call store_error('Optional budget keyword must be ' //                 &
+                           'followed by fileout.')
         end if
       case('PACKAGE_CONVERGENCE')
         call this%parser%GetStringCaps(keyword)
@@ -613,12 +618,16 @@ contains
           write(this%iout,fmtsfrbin) 'PACKAGE_CONVERGENCE', fname, this%ipakcsv
           found = .true.
         else
-          call store_error('OPTIONAL PACKAGE_CONVERGENCE KEYWORD MUST BE ' //    &
-                           'FOLLOWED BY FILEOUT')
+          call store_error('Optional package_convergence keyword must be ' //    &
+                           'followed by fileout.')
         end if
       case('UNIT_CONVERSION')
         this%unitconv = this%parser%GetDouble()
         write(this%iout, fmtunitconv) this%unitconv
+        found = .true.
+      case('MAXIMUM_PICARD_ITERATIONS')
+        this%maxsfrpicard = this%parser%GetInteger()
+        write(this%iout, fmtpicard) this%maxsfrpicard
         found = .true.
       case('MAXIMUM_ITERATIONS')
         this%maxsfrit = this%parser%GetInteger()
@@ -797,15 +806,13 @@ contains
 
         ! -- increment nboundchk
         nboundchk(n) = nboundchk(n) + 1
-
-        !! -- allocate data for this reach
-        !call this%allocate_reach(n, nboundchk(n))
+        !
         ! -- get model node number
         call this%parser%GetCellid(this%dis%ndim, cellid, flag_string=.true.)
         this%igwfnode(n) = this%dis%noder_from_cellid(cellid, &
                            this%inunit, this%iout, flag_string=.true.)
         this%igwftopnode(n) = this%igwfnode(n)
-        !cdl this%nodelist(n) = this%igwfnode(n)
+        !
         ! -- read the cellid string and determine if 'none' is specified
         if (this%igwfnode(n) < 1) then
           call this%parser%GetStringCaps(keyword)
@@ -950,6 +957,7 @@ contains
     use ConstantsModule, only: LINELENGTH
     use MemoryManagerModule, only: mem_reallocate
     use SimModule, only: ustop, store_error, count_errors
+    use SparseModule, only: sparsematrix
     ! -- dummy
     class(SfrType),intent(inout) :: this
     ! -- local
@@ -971,6 +979,7 @@ contains
     integer(I4B), dimension(:), pointer, contiguous :: rowmaxnnz => null()
     integer, allocatable, dimension(:) :: nboundchk
     integer, allocatable, dimension(:,:) :: iconndata
+    type(sparsematrix), pointer :: sparse => null()
     ! -- format
   ! ------------------------------------------------------------------------------
     !
@@ -1018,10 +1027,10 @@ contains
     end do
     !
     ! -- allocate space for connectivity
-    allocate(this%sparse)
+    allocate(sparse)
     !
     ! -- set up sparse
-    call this%sparse%init(this%maxbound, this%maxbound, rowmaxnnz)
+    call sparse%init(this%maxbound, this%maxbound, rowmaxnnz)
     !
     ! -- read connection data
     call this%parser%GetBlock('CONNECTIONDATA', isfound, ierr, &
@@ -1053,7 +1062,7 @@ contains
         end if
         !
         ! -- add diagonal connection for reach
-        call this%sparse%addconnection(n, n, 1)
+        call sparse%addconnection(n, n, 1)
         !
         ! -- fill off diagonals
         do i = 1, this%nconnreach(n)
@@ -1080,7 +1089,7 @@ contains
           endif
           !
           ! -- add connection to sparse
-          call this%sparse%addconnection(n, ival, 1)
+          call sparse%addconnection(n, ival, 1)
         end do
       end do
       
@@ -1115,7 +1124,7 @@ contains
     end if
     !
     ! -- create ia and ja from sparse
-    call this%sparse%filliaja(this%ia, this%ja, ierr, sort=.TRUE.)
+    call sparse%filliaja(this%ia, this%ja, ierr, sort=.TRUE.)
     !
     ! -- test for error condition
     if (ierr /= 0) then
@@ -1148,8 +1157,8 @@ contains
     deallocate(iconndata)
     !
     ! -- destroy sparse
-    call this%sparse%destroy()
-    deallocate(this%sparse)
+    call sparse%destroy()
+    deallocate(sparse)
     !
     ! -- return
     return
@@ -1618,56 +1627,90 @@ contains
     integer(I4B), dimension(:), intent(in) :: idxglo
     real(DP), dimension(:), intent(inout) :: amatsln
     ! -- local
-    integer(I4B) :: i, n
+    integer(I4B) :: i
+    integer(I4B) :: n
     integer(I4B) :: ipos
     integer(I4B) :: node
+    real(DP) :: s0
+    real(DP) :: ds
+    real(DP) :: dsmax
     real(DP) :: hgwf
     real(DP) :: v
     real(DP) :: hhcof
     real(DP) :: rrhs
 ! --------------------------------------------------------------------------
     !
-    ! -- pakmvrobj fc
-    if(this%imover == 1) then
-      call this%pakmvrobj%fc()
-    endif
-    !
-    ! -- solve for each sfr reach
-    do n = 1, this%nbound
-      node = this%igwfnode(n)
-      if (node > 0) then
-        hgwf = this%xnew(node)
-      else
-        hgwf = DEP20
-      end if
+    ! -- picard iterations for sfr to achieve good solution regardless
+    !    of reach order
+    sfrpicard: do i = 1, this%maxsfrpicard
       !
-      ! -- save previous stage and upstream flow
-      this%stage0(n) = this%stage(n)
-      this%usflow0(n) = this%usflow(n)
+      ! -- initialize maximum stage change for iteration to zero
+      dsmax = DZERO
       !
-      ! -- solve for flow in swr
-      if (this%iboundpak(n) /= 0) then
-        call this%sfr_solve(n, hgwf, hhcof, rrhs)
-      else
-        this%depth(n) = DZERO
-        this%stage(n) = this%strtop(n)
-        v = DZERO
-        call this%sfr_update_flows(n, v, v)
-        hhcof = DZERO
-        rrhs = DZERO
+      ! -- pakmvrobj fc - reset qformvr to zero
+      if(this%imover == 1) then
+        call this%pakmvrobj%fc()
+      endif
+      !
+      ! -- solve for each sfr reach
+      reachsolve: do n = 1, this%nbound
+        node = this%igwfnode(n)
+        if (node > 0) then
+          hgwf = this%xnew(node)
+        else
+          hgwf = DEP20
+        end if
+        !
+        ! -- save previous stage and upstream flow
+        if (i == 1) then
+          this%stage0(n) = this%stage(n)
+          this%usflow0(n) = this%usflow(n)
+        end if
+        !
+        ! -- set initial stage to calculate stage change
+        s0 = this%stage(n)
+        !
+        ! -- solve for flow in swr
+        if (this%iboundpak(n) /= 0) then
+          call this%sfr_solve(n, hgwf, hhcof, rrhs)
+        else
+          this%depth(n) = DZERO
+          this%stage(n) = this%strtop(n)
+          v = DZERO
+          call this%sfr_update_flows(n, v, v)
+          hhcof = DZERO
+          rrhs = DZERO
+        end if
+        !
+        ! -- set package hcof and rhs
+        this%hcof(n) = hhcof
+        this%rhs(n) = rrhs
+        !
+        ! -- calculate stage change
+        ds = s0 - this%stage(n)
+        !
+        ! -- evaluate if stage change exceeds dsmax
+        if (abs(ds) > abs(dsmax)) then
+          dsmax = ds
+        end if
+        
+      end do reachsolve
+      !
+      ! -- evaluate if the sfr picard iterations should be terminated
+      if (abs(dsmax) <= this%dmaxchg) then
+        exit sfrpicard
       end if
-      this%hcof(n) = hhcof
-      this%rhs(n) = rrhs
-    end do
+    
+    end do sfrpicard
     !
     ! -- Copy package rhs and hcof into solution rhs and amat
-    do i = 1, this%nbound
-      n = this%nodelist(i)
-      if (n < 1) cycle
-      rhs(n) = rhs(n) + this%rhs(i)
-      ipos = ia(n)
-      amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + this%hcof(i)
-    enddo
+    do n = 1, this%nbound
+      node = this%nodelist(n)
+      if (node < 1) cycle
+      rhs(node) = rhs(node) + this%rhs(n)
+      ipos = ia(node)
+      amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + this%hcof(n)
+    end do
     !
     ! -- return
     return
@@ -2201,6 +2244,7 @@ contains
     call mem_deallocate(this%ibudgetout)
     call mem_deallocate(this%ipakcsv)
     call mem_deallocate(this%idiversions)
+    call mem_deallocate(this%maxsfrpicard)
     call mem_deallocate(this%maxsfrit)
     call mem_deallocate(this%bditems)
     call mem_deallocate(this%cbcauxitems)
@@ -2588,15 +2632,18 @@ contains
     ! formats
     !
     strng = obsrv%IDstring
+    !
     ! -- Extract reach number from strng and store it.
     !    If 1st item is not an integer(I4B), it should be a
     !    boundary name--deal with it.
     icol = 1
+    !
     ! -- get reach number or boundary name
     call extract_idnum_or_bndname(strng, icol, istart, istop, nn1, bndname)
     if (nn1 == NAMEDBOUNDFLAG) then
       obsrv%FeatureName = bndname
     endif
+    !
     ! -- store reach number (NodeNumber)
     obsrv%NodeNumber = nn1
     !
@@ -2804,7 +2851,7 @@ contains
       real(DP) :: gwfhcof, gwfrhs
   ! ------------------------------------------------------------------------------
     !
-    ! -- Initialize
+    ! -- Process optional dummy variables
     if (present(update)) then
       lupdate = update
     else
@@ -3125,6 +3172,7 @@ contains
       this%depth(n) = d1
       this%stage(n) = hsfr
       !
+      ! -- update flows
       call this%sfr_update_flows(n, qd, qgwf)
     end if
     !
