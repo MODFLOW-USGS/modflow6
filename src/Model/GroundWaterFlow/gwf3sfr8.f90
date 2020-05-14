@@ -24,7 +24,6 @@ module SfrModule
   use SimModule, only: count_errors, store_error, store_error_unit,              &
                        store_warning, ustop
   use GenericUtilitiesModule, only: sim_message
-  use SparseModule, only: sparsematrix
   use ArrayHandlersModule, only: ExpandArray
   use BlockParserModule,   only: BlockParserType
   !
@@ -73,7 +72,6 @@ module SfrModule
     !
     ! -- sfr budget object
     type(BudgetObjectType), pointer :: budobj => null()
-    type(sparsematrix), pointer :: sparse => null()
     !
     ! -- sfr table objects
     type(TableType), pointer :: stagetab => null()
@@ -940,6 +938,7 @@ contains
     use ConstantsModule, only: LINELENGTH
     use MemoryManagerModule, only: mem_reallocate
     use SimModule, only: ustop, store_error, count_errors
+    use SparseModule, only: sparsematrix
     ! -- dummy
     class(SfrType),intent(inout) :: this
     ! -- local
@@ -961,6 +960,7 @@ contains
     integer(I4B), dimension(:), pointer, contiguous :: rowmaxnnz => null()
     integer, allocatable, dimension(:) :: nboundchk
     integer, allocatable, dimension(:,:) :: iconndata
+    type(sparsematrix), pointer :: sparse => null()
     ! -- format
   ! ------------------------------------------------------------------------------
     !
@@ -1008,10 +1008,10 @@ contains
     end do
     !
     ! -- allocate space for connectivity
-    allocate(this%sparse)
+    allocate(sparse)
     !
     ! -- set up sparse
-    call this%sparse%init(this%maxbound, this%maxbound, rowmaxnnz)
+    call sparse%init(this%maxbound, this%maxbound, rowmaxnnz)
     !
     ! -- read connection data
     call this%parser%GetBlock('CONNECTIONDATA', isfound, ierr, &
@@ -1043,7 +1043,7 @@ contains
         end if
         !
         ! -- add diagonal connection for reach
-        call this%sparse%addconnection(n, n, 1)
+        call sparse%addconnection(n, n, 1)
         !
         ! -- fill off diagonals
         do i = 1, this%nconnreach(n)
@@ -1070,7 +1070,7 @@ contains
           endif
           !
           ! -- add connection to sparse
-          call this%sparse%addconnection(n, ival, 1)
+          call sparse%addconnection(n, ival, 1)
         end do
       end do
       
@@ -1105,7 +1105,7 @@ contains
     end if
     !
     ! -- create ia and ja from sparse
-    call this%sparse%filliaja(this%ia, this%ja, ierr, sort=.TRUE.)
+    call sparse%filliaja(this%ia, this%ja, ierr, sort=.TRUE.)
     !
     ! -- test for error condition
     if (ierr /= 0) then
@@ -1138,8 +1138,8 @@ contains
     deallocate(iconndata)
     !
     ! -- destroy sparse
-    call this%sparse%destroy()
-    deallocate(this%sparse)
+    call sparse%destroy()
+    deallocate(sparse)
     !
     ! -- return
     return
