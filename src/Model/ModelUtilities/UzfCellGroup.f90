@@ -2374,6 +2374,11 @@ module UzfCellGroupModule
       end if
     end do
 500 continue
+    !
+    ! -- deallocate temporary worker
+    call uzfktemp%dealloc()
+    !
+    ! -- return
     return
   end subroutine uzet
 

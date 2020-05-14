@@ -33,7 +33,6 @@ module GwtUztModule
   use BndModule, only: BndType, GetBndFromList
   use GwtFmiModule, only: GwtFmiType
   use UzfModule, only: UzfType
-  use MemoryTypeModule, only: MemoryTSType
   use GwtAptModule, only: GwtAptType
   
   implicit none
@@ -50,8 +49,8 @@ module GwtUztModule
     integer(I4B), pointer                                  :: idxbudrinf => null()  ! index of rejected infiltration terms in flowbudptr
     integer(I4B), pointer                                  :: idxbuduzet => null()  ! index of unsat et terms in flowbudptr
     integer(I4B), pointer                                  :: idxbudritm => null()  ! index of rej infil to mover rate to mover terms in flowbudptr
-    type (MemoryTSType), dimension(:), pointer, contiguous :: concinfl => null()    ! infiltration concentration
-    type (MemoryTSType), dimension(:), pointer, contiguous :: concuzet => null()    ! unsat et concentration
+    real(DP), dimension(:), pointer, contiguous            :: concinfl => null()    ! infiltration concentration
+    real(DP), dimension(:), pointer, contiguous            :: concuzet => null()    ! unsat et concentration
 
   contains
   
@@ -599,6 +598,7 @@ module GwtUztModule
     ! -- dummy
     class(GwtUztType), intent(inout) :: this
     ! -- local
+    integer(I4B) :: n
 ! ------------------------------------------------------------------------------
     !    
     ! -- time series
@@ -607,6 +607,12 @@ module GwtUztModule
     !
     ! -- call standard GwtApttype allocate arrays
     call this%GwtAptType%apt_allocate_arrays()
+    !
+    ! -- Initialize
+    do n = 1, this%ncv
+      this%concinfl(n) = DZERO
+      this%concuzet(n) = DZERO
+    end do
     !
     !
     ! -- Return
@@ -674,7 +680,7 @@ module GwtUztModule
       h = qbnd
       r = DZERO
     else
-      ctmp = this%concinfl(n1)%value
+      ctmp = this%concinfl(n1)
       h = DZERO
       r = -qbnd * ctmp
     end if
@@ -709,7 +715,7 @@ module GwtUztModule
     n1 = this%flowbudptr%budterm(this%idxbudrinf)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudrinf)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudrinf)%flow(ientry)
-    ctmp = this%concinfl(n1)%value
+    ctmp = this%concinfl(n1)
     if (present(rrate)) rrate = ctmp * qbnd
     if (present(rhsval)) rhsval = DZERO
     if (present(hcofval)) hcofval = qbnd
@@ -743,7 +749,7 @@ module GwtUztModule
     n2 = this%flowbudptr%budterm(this%idxbuduzet)%id2(ientry)
     ! -- note that qbnd is negative for uzet
     qbnd = this%flowbudptr%budterm(this%idxbuduzet)%flow(ientry)
-    ctmp = this%concuzet(n1)%value
+    ctmp = this%concuzet(n1)
     if (this%xnewpak(n1) < ctmp) then
       omega = DONE
     else
@@ -782,7 +788,7 @@ module GwtUztModule
     n1 = this%flowbudptr%budterm(this%idxbudritm)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudritm)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudritm)%flow(ientry)
-    ctmp = this%concinfl(n1)%value
+    ctmp = this%concinfl(n1)
     if (present(rrate)) rrate = ctmp * qbnd
     if (present(rhsval)) rhsval = DZERO
     if (present(hcofval)) hcofval = qbnd
@@ -846,66 +852,54 @@ module GwtUztModule
     return
   end subroutine uzt_bd_obs
 
-  subroutine uzt_set_stressperiod(this, itemno, itmp, line, found, &
-                                  lloc, istart, istop, endtim, bndName)
+  subroutine uzt_set_stressperiod(this, itemno, keyword, found)
 ! ******************************************************************************
 ! uzt_set_stressperiod -- Set a stress period attribute for using keywords.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use TimeSeriesManagerModule, only: read_single_value_or_time_series
-    use InputOutputModule, only: urword
+    use TimeSeriesManagerModule, only: read_value_or_time_series_adv
     ! -- dummy
     class(GwtUztType),intent(inout) :: this
     integer(I4B), intent(in) :: itemno
-    integer(I4B), intent(in) :: itmp
-    character (len=*), intent(in) :: line
+    character(len=*), intent(in) :: keyword
     logical, intent(inout) :: found
-    integer(I4B), intent(inout) :: lloc
-    integer(I4B), intent(inout) :: istart
-    integer(I4B), intent(inout) :: istop
-    real(DP), intent(in) :: endtim
-    character(len=LENBOUNDNAME), intent(in) :: bndName
     ! -- local
     character(len=LINELENGTH) :: text
     integer(I4B) :: ierr
-    integer(I4B) :: ival
     integer(I4B) :: jj
-    real(DP) :: rval
+    real(DP), pointer :: bndElem => null()
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
-    ! RATE <rate>
+    ! INFILTRATION <infiltration>
+    ! UZET <uzet>
     !
     found = .true.
-    select case (line(istart:istop))
+    select case (keyword)
       case ('INFILTRATION')
         ierr = this%apt_check_valid(itemno)
-        if (ierr /= 0) goto 999
-        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
-        text = line(istart:istop)
-        jj = 1    ! For INFILTRATION
-        call read_single_value_or_time_series(text, &
-                                              this%concinfl(itmp)%value, &
-                                              this%concinfl(itmp)%name, &
-                                              endtim,  &
-                                              this%name, 'BND', this%TsManager, &
-                                              this%iprpak, itmp, jj, 'INFILTRATION', &
-                                              bndName, this%inunit)
+        if (ierr /= 0) then
+          goto 999
+        end if
+        call this%parser%GetString(text)
+        jj = 1
+        bndElem => this%concinfl(itemno)
+        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%name, &
+                                           'BND', this%tsManager, this%iprpak,   &
+                                           'INFILTRATION')
       case ('UZET')
         ierr = this%apt_check_valid(itemno)
-        if (ierr /= 0) goto 999
-        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
-        text = line(istart:istop)
-        jj = 1    ! For UZET
-        call read_single_value_or_time_series(text, &
-                                              this%concuzet(itmp)%value, &
-                                              this%concuzet(itmp)%name, &
-                                              endtim,  &
-                                              this%name, 'BND', this%TsManager, &
-                                              this%iprpak, itmp, jj, 'UZET', &
-                                              bndName, this%inunit)
+        if (ierr /= 0) then
+          goto 999
+        end if
+        call this%parser%GetString(text)
+        jj = 1
+        bndElem => this%concuzet(itemno)
+        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%name, &
+                                           'BND', this%tsManager, this%iprpak,   &
+                                           'UZET')
       case default
         !
         ! -- keyword not recognized so return to caller with found = .false.
@@ -917,5 +911,6 @@ module GwtUztModule
     ! -- return
     return
   end subroutine uzt_set_stressperiod
+
 
 end module GwtUztModule

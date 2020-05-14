@@ -136,12 +136,12 @@ module MessageModule
       integer(I4B), intent(in), optional :: level
       ! -- local
       character(len=LINELENGTH) :: errmsg
+      character(len=LINELENGTH) :: cerr
       integer(I4B) :: iu
       integer(I4B) :: ilevel
       integer(I4B) :: i
       integer(I4B) :: isize
       integer(I4B) :: iwidth
-      real(DP) :: rval
       ! -- formats
       character(len=*), parameter :: stdfmt = "(/,A,/)"
     ! ------------------------------------------------------------------------------
@@ -165,8 +165,8 @@ module MessageModule
           !
           ! -- calculate the maximum width of the prepended string
           !    for the counter
-          rval = real(isize, DP)
-          iwidth = modulo(log10(rval), DONE) + 1
+          write(cerr, '(i0)') isize
+          iwidth = len_trim(cerr) + 1
           !
           ! -- write title for message
           if (iu > 0) then

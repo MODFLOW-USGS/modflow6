@@ -1689,8 +1689,6 @@ contains
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
     use MemoryManagerModule, only: mem_allocate, mem_setptr
-!    use SimModule, only: ustop, store_error, count_errors, store_error_unit
-    use TimeSeriesManagerModule, only: read_single_value_or_time_series
     ! -- dummy
     class(GwfCsubType),intent(inout) :: this
     ! -- local

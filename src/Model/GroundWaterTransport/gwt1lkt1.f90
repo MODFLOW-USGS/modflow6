@@ -39,7 +39,6 @@ module GwtLktModule
   use BndModule, only: BndType, GetBndFromList
   use GwtFmiModule, only: GwtFmiType
   use LakModule, only: LakType
-  use MemoryTypeModule, only: MemoryTSType
   use GwtAptModule, only: GwtAptType
   
   implicit none
@@ -59,10 +58,10 @@ module GwtLktModule
     integer(I4B), pointer                              :: idxbudwdrl => null()  ! index of withdrawal terms in flowbudptr
     integer(I4B), pointer                              :: idxbudoutf => null()  ! index of outflow terms in flowbudptr
 
-    type (MemoryTSType), dimension(:), pointer, contiguous :: concrain => null() ! rainfall concentration
-    type (MemoryTSType), dimension(:), pointer, contiguous :: concevap => null() ! evaporation concentration
-    type (MemoryTSType), dimension(:), pointer, contiguous :: concroff => null() ! runoff concentration
-    type (MemoryTSType), dimension(:), pointer, contiguous :: conciflw => null() ! inflow concentration
+    real(DP), dimension(:), pointer, contiguous        :: concrain => null() ! rainfall concentration
+    real(DP), dimension(:), pointer, contiguous        :: concevap => null() ! evaporation concentration
+    real(DP), dimension(:), pointer, contiguous        :: concroff => null() ! runoff concentration
+    real(DP), dimension(:), pointer, contiguous        :: conciflw => null() ! inflow concentration
 
   contains
   
@@ -692,6 +691,7 @@ end subroutine find_lkt_package
     ! -- dummy
     class(GwtLktType), intent(inout) :: this
     ! -- local
+    integer(I4B) :: n
 ! ------------------------------------------------------------------------------
     !    
     ! -- time series
@@ -702,6 +702,14 @@ end subroutine find_lkt_package
     !
     ! -- call standard GwtApttype allocate arrays
     call this%GwtAptType%apt_allocate_arrays()
+    !
+    ! -- Initialize
+    do n = 1, this%ncv
+      this%concrain(n) = DZERO
+      this%concevap(n) = DZERO
+      this%concroff(n) = DZERO
+      this%conciflw(n) = DZERO
+    end do
     !
     !
     ! -- Return
@@ -766,7 +774,7 @@ end subroutine find_lkt_package
     n1 = this%flowbudptr%budterm(this%idxbudrain)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudrain)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudrain)%flow(ientry)
-    ctmp = this%concrain(n1)%value
+    ctmp = this%concrain(n1)
     if (present(rrate)) rrate = ctmp * qbnd
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
@@ -800,7 +808,7 @@ end subroutine find_lkt_package
     n2 = this%flowbudptr%budterm(this%idxbudevap)%id2(ientry)
     ! -- note that qbnd is negative for evap
     qbnd = this%flowbudptr%budterm(this%idxbudevap)%flow(ientry)
-    ctmp = this%concevap(n1)%value
+    ctmp = this%concevap(n1)
     if (this%xnewpak(n1) < ctmp) then
       omega = DONE
     else
@@ -839,7 +847,7 @@ end subroutine find_lkt_package
     n1 = this%flowbudptr%budterm(this%idxbudroff)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudroff)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudroff)%flow(ientry)
-    ctmp = this%concroff(n1)%value
+    ctmp = this%concroff(n1)
     if (present(rrate)) rrate = ctmp * qbnd
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
@@ -871,7 +879,7 @@ end subroutine find_lkt_package
     n1 = this%flowbudptr%budterm(this%idxbudiflw)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudiflw)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudiflw)%flow(ientry)
-    ctmp = this%conciflw(n1)%value
+    ctmp = this%conciflw(n1)
     if (present(rrate)) rrate = ctmp * qbnd
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
@@ -1044,33 +1052,24 @@ end subroutine find_lkt_package
     return
   end subroutine lkt_bd_obs
 
-  subroutine lkt_set_stressperiod(this, itemno, itmp, line, found, &
-                                  lloc, istart, istop, endtim, bndName)
+  subroutine lkt_set_stressperiod(this, itemno, keyword, found)
 ! ******************************************************************************
 ! lkt_set_stressperiod -- Set a stress period attribute for using keywords.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use TimeSeriesManagerModule, only: read_single_value_or_time_series
-    use InputOutputModule, only: urword
+    use TimeSeriesManagerModule, only: read_value_or_time_series_adv
     ! -- dummy
     class(GwtLktType),intent(inout) :: this
     integer(I4B), intent(in) :: itemno
-    integer(I4B), intent(in) :: itmp
-    character (len=*), intent(in) :: line
+    character(len=*), intent(in) :: keyword
     logical, intent(inout) :: found
-    integer(I4B), intent(inout) :: lloc
-    integer(I4B), intent(inout) :: istart
-    integer(I4B), intent(inout) :: istop
-    real(DP), intent(in) :: endtim
-    character(len=LENBOUNDNAME), intent(in) :: bndName
     ! -- local
     character(len=LINELENGTH) :: text
     integer(I4B) :: ierr
-    integer(I4B) :: ival
     integer(I4B) :: jj
-    real(DP) :: rval
+    real(DP), pointer :: bndElem => null()
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
@@ -1081,59 +1080,51 @@ end subroutine find_lkt_package
     ! WITHDRAWAL <withdrawal>
     !
     found = .true.
-    select case (line(istart:istop))
+    select case (keyword)
       case ('RAINFALL')
         ierr = this%apt_check_valid(itemno)
-        if (ierr /= 0) goto 999
-        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
-        text = line(istart:istop)
-        jj = 1    ! For RAINFALL
-        call read_single_value_or_time_series(text, &
-                                              this%concrain(itmp)%value, &
-                                              this%concrain(itmp)%name, &
-                                              endtim,  &
-                                              this%name, 'BND', this%TsManager, &
-                                              this%iprpak, itmp, jj, 'RAINFALL', &
-                                              bndName, this%inunit)
+        if (ierr /= 0) then
+          goto 999
+        end if
+        call this%parser%GetString(text)
+        jj = 1
+        bndElem => this%concrain(itemno)
+        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%name, &
+                                           'BND', this%tsManager, this%iprpak,   &
+                                           'RAINFALL')
       case ('EVAPORATION')
         ierr = this%apt_check_valid(itemno)
-        if (ierr /= 0) goto 999
-        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
-        text = line(istart:istop)
-        jj = 1    ! For EVAPORATION
-        call read_single_value_or_time_series(text, &
-                                              this%concevap(itmp)%value, &
-                                              this%concevap(itmp)%name, &
-                                              endtim,  &
-                                              this%name, 'BND', this%TsManager, &
-                                              this%iprpak, itmp, jj, 'EVAPORATION', &
-                                              bndName, this%inunit)
+        if (ierr /= 0) then
+          goto 999
+        end if
+        call this%parser%GetString(text)
+        jj = 1
+        bndElem => this%concevap(itemno)
+        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%name, &
+                                           'BND', this%tsManager, this%iprpak,   &
+                                           'EVAPORATION')
       case ('RUNOFF')
         ierr = this%apt_check_valid(itemno)
-        if (ierr /= 0) goto 999
-        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
-        text = line(istart:istop)
-        jj = 1    ! For RUNOFF
-        call read_single_value_or_time_series(text, &
-                                              this%concroff(itmp)%value, &
-                                              this%concroff(itmp)%name, &
-                                              endtim,  &
-                                              this%name, 'BND', this%TsManager, &
-                                              this%iprpak, itmp, jj, 'RUNOFF', &
-                                              bndName, this%inunit)
+        if (ierr /= 0) then
+          goto 999
+        end if
+        call this%parser%GetString(text)
+        jj = 1
+        bndElem => this%concroff(itemno)
+        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%name, &
+                                           'BND', this%tsManager, this%iprpak,   &
+                                           'RUNOFF')
       case ('INFLOW')
         ierr = this%apt_check_valid(itemno)
-        if (ierr /= 0) goto 999
-        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
-        text = line(istart:istop)
-        jj = 1    ! For INFLOW
-        call read_single_value_or_time_series(text, &
-                                              this%conciflw(itmp)%value, &
-                                              this%conciflw(itmp)%name, &
-                                              endtim,  &
-                                              this%name, 'BND', this%TsManager, &
-                                              this%iprpak, itmp, jj, 'INFLOW', &
-                                              bndName, this%inunit)
+        if (ierr /= 0) then
+          goto 999
+        end if
+        call this%parser%GetString(text)
+        jj = 1
+        bndElem => this%conciflw(itemno)
+        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%name, &
+                                           'BND', this%tsManager, this%iprpak,   &
+                                           'INFLOW')
       case default
         !
         ! -- keyword not recognized so return to caller with found = .false.

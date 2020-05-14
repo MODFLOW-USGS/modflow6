@@ -44,8 +44,8 @@ module GwtAptModule
   use SimModule, only: store_error, count_errors, ustop
   use BndModule, only: BndType, GetBndFromList
   use GwtFmiModule, only: GwtFmiType
-  use MemoryTypeModule, only: MemoryTSType
   use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr, budgetobject_cr_bfr
+  use TableModule, only: table_cr
   use BudgetFileReaderModule, only: BudgetFileReaderType
   use ObserveModule, only: ObserveType
   use InputOutputModule, only: extract_idnum_or_bndname
@@ -86,7 +86,8 @@ module GwtAptModule
     real(DP), dimension(:), pointer, contiguous        :: dbuff => null()           ! temporary storage array
     character(len=LENBOUNDNAME), dimension(:), pointer,                         &
                                  contiguous :: featname => null()
-    type (MemoryTSType), dimension(:), pointer, contiguous :: lauxvar => null()
+    real(DP), dimension(:), pointer, contiguous        :: concfeat => null()    ! concentration of the feature
+    real(DP), dimension(:,:), pointer, contiguous      :: lauxvar => null()     ! auxiliary variable
     type(GwtFmiType), pointer                          :: fmi => null()         ! pointer to fmi object
     real(DP), dimension(:), pointer, contiguous        :: qsto => null()        ! mass flux due to storage change
     real(DP), dimension(:), pointer, contiguous        :: ccterm => null()      ! mass flux required to maintain constant concentration
@@ -110,9 +111,6 @@ module GwtAptModule
     !
     ! -- budget file reader
     type(BudgetFileReaderType)                         :: bfr                   ! budget file reader
-
-    ! -- time series aware data
-    type (MemoryTSType), dimension(:), pointer, contiguous :: concfeat => null()  ! feature concentration
     
   contains
   
@@ -334,7 +332,6 @@ module GwtAptModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule,   only: LINELENGTH
     ! -- dummy
     class(GwtAptType), intent(inout) :: this
     ! -- local
@@ -411,7 +408,6 @@ module GwtAptModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use ConstantsModule, only: LINELENGTH
     use TdisModule, only: kper, nper
     ! -- dummy
     class(GwtAptType), intent(inout) :: this
@@ -419,10 +415,10 @@ module GwtAptModule
     integer(I4B) :: ierr
     integer(I4B) :: n
     logical :: isfound, endOfBlock
+    character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: line
     character(len=LINELENGTH) :: errmsg
     integer(I4B) :: itemno
-    integer(I4B) :: isfirst
     integer(I4B) :: igwfnode
     ! -- formats
     character(len=*),parameter :: fmtblkerr = &
@@ -430,9 +426,6 @@ module GwtAptModule
     character(len=*),parameter :: fmtlsp = &
       "(1X,/1X,'REUSING ',A,'S FROM LAST STRESS PERIOD')"
 ! ------------------------------------------------------------------------------
-    !
-    ! -- initialize flags
-    isfirst = 1
     !
     ! -- set nbound to maxbound
     this%nbound = this%maxbound
@@ -469,28 +462,49 @@ module GwtAptModule
     !
     ! -- Read data if ionper == kper
     if(this%ionper == kper) then
+      !
+      ! -- setup table for period data
+      if (this%iprpak /= 0) then
+        !
+        ! -- reset the input table object
+        title = trim(adjustl(this%text)) // ' PACKAGE (' //                        &
+                trim(adjustl(this%name)) //') DATA FOR PERIOD'
+        write(title, '(a,1x,i6)') trim(adjustl(title)), kper
+        call table_cr(this%inputtab, this%name, title)
+        call this%inputtab%table_df(1, 4, this%iout, finalize=.FALSE.)
+        text = 'NUMBER'
+        call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+        text = 'KEYWORD'
+        call this%inputtab%initialize_column(text, 20, alignment=TABLEFT)
+        do n = 1, 2
+          write(text, '(a,1x,i6)') 'VALUE', n
+          call this%inputtab%initialize_column(text, 15, alignment=TABCENTER)
+        end do
+      end if
+      !
+      ! -- read data
       stressperiod: do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
-        if (isfirst /= 0) then
-          isfirst = 0
-          if (this%iprpak /= 0) then
-            write(this%iout,'(/1x,a,1x,i6,/)')                                  &
-              'READING '//trim(adjustl(this%text))//' DATA FOR PERIOD', kper
-            write(this%iout,'(3x,a)')  '     '//trim(adjustl(this%text))//' KEYWORD AND DATA'
-            write(this%iout,'(3x,78("-"))')
-          end if
-        end if
+        !
+        ! -- get feature number
         itemno = this%parser%GetInteger()
-        call this%parser%GetRemainingLine(line)
-        call this%apt_set_stressperiod(itemno, line)
+        !
+        ! -- read data from the rest of the line
+        call this%apt_set_stressperiod(itemno)
+        !
+        ! -- write line to table
+        if (this%iprpak /= 0) then
+          call this%parser%GetCurrentLine(line)
+          call this%inputtab%line_to_columns(line)
+        end if
       end do stressperiod
 
       if (this%iprpak /= 0) then
-        write(this%iout,'(/1x,a,1x,i6,/)')                                      &
-          'END OF '//trim(adjustl(this%text))//' DATA FOR PERIOD', kper
+        call this%inputtab%finalize_table()
       end if
     !
+    ! -- using stress period data from the previous stress period
     else
       write(this%iout,fmtlsp) trim(this%filtyp)
     endif
@@ -512,7 +526,7 @@ module GwtAptModule
     return
   end subroutine apt_rp
 
-  subroutine apt_set_stressperiod(this, itemno, line)
+  subroutine apt_set_stressperiod(this, itemno)
 ! ******************************************************************************
 ! apt_set_stressperiod -- Set a stress period attribute for feature (itemno)
 !                         using keywords.
@@ -520,30 +534,20 @@ module GwtAptModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use TdisModule, only: kper, perlen, totimsav
-    use TimeSeriesManagerModule, only: read_single_value_or_time_series
-    use InputOutputModule, only: urword
+    ! -- module
+    use TimeSeriesManagerModule, only: read_value_or_time_series_adv
     ! -- dummy
     class(GwtAptType),intent(inout) :: this
     integer(I4B), intent(in) :: itemno
-    character (len=*), intent(in) :: line
     ! -- local
     character(len=LINELENGTH) :: text
     character(len=LINELENGTH) :: caux
     character(len=LINELENGTH) :: keyword
     character(len=LINELENGTH) :: errmsg
-    character(len=LENBOUNDNAME) :: bndName
-    character(len=9) :: citem
     integer(I4B) :: ierr
-    integer(I4B) :: itmp
-    integer(I4B) :: ival, istart, istop
-    integer(I4B) :: i0
-    integer(I4B) :: lloc
     integer(I4B) :: ii
     integer(I4B) :: jj
-    integer(I4B) :: iaux
-    real(DP) :: rval
-    real(DP) :: endtim
+    real(DP), pointer :: bndElem => null()
     logical :: found
     ! -- formats
 ! ------------------------------------------------------------------------------
@@ -554,91 +558,65 @@ module GwtAptModule
     ! WITHDRAWAL <withdrawal>
     ! AUXILIARY <auxname> <auxval>    
     !
-    ! -- Find time interval of current stress period.
-    endtim = totimsav + perlen(kper)
-    !
-    ! -- write abs(itemno) to citem string
-    itmp = ABS(itemno)
-    write (citem,'(i9.9)') itmp
-    !
-    ! -- Assign boundary name
-    if (this%inamedbound == 1) then
-      bndName = this%boundname(itemno)
-    else
-      bndName = ''
-    end if
-    !
     ! -- read line
-    lloc = 1
-    call urword(line, lloc, istart, istop, 1, ival, rval, this%iout, this%inunit)
-    i0 = istart
-    keyword = line(istart:istop)
-    select case (line(istart:istop))
+    call this%parser%GetStringCaps(keyword)
+    select case (keyword)
       case ('STATUS')
         ierr = this%apt_check_valid(itemno)
-        if (ierr /= 0) goto 999
-        call urword(line, lloc, istart, istop, 1, ival, rval, this%iout, this%inunit)
-        text = line(istart:istop)
-        this%status(itmp) = text(1:8)
+        if (ierr /= 0) then
+          goto 999
+        end if
+        call this%parser%GetStringCaps(text)
+        this%status(itemno) = text(1:8)
         if (text == 'CONSTANT') then
-          this%iboundpak(itmp) = -1
+          this%iboundpak(itemno) = -1
         else if (text == 'INACTIVE') then
-          this%iboundpak(itmp) = 0
+          this%iboundpak(itemno) = 0
         else if (text == 'ACTIVE') then
-          this%iboundpak(itmp) = 1
+          this%iboundpak(itemno) = 1
         else
-          write(errmsg,'(4x,a,a)') &
-            '****ERROR. UNKNOWN ' // trim(this%text) // ' STATUS KEYWORD: ', &
-            text
+          write(errmsg,'(a,a)')                                                  &
+            'Unknown ' // trim(this%text)//' status keyword: ', text // '.'
           call store_error(errmsg)
         end if
       case ('CONCENTRATION')
         ierr = this%apt_check_valid(itemno)
-        if (ierr /= 0) goto 999
-        call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
-        text = line(istart:istop)
+        if (ierr /= 0) then
+          goto 999
+        end if
+        call this%parser%GetString(text)
         jj = 1    ! For feature concentration
-        call read_single_value_or_time_series(text, &
-                                              this%concfeat(itmp)%value, &
-                                              this%concfeat(itmp)%name, &
-                                              endtim,  &
-                                              this%name, 'BND', this%TsManager, &
-                                              this%iprpak, itmp, jj, 'CONCENTRATION', &
-                                              bndName, this%inunit)
+        bndElem => this%concfeat(itemno)
+        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%name, &
+                                           'BND', this%tsManager, this%iprpak,   &
+                                           'CONCENTRATION')
       case ('AUXILIARY')
         ierr = this%apt_check_valid(itemno)
-        if (ierr /= 0) goto 999
-        call urword(line, lloc, istart, istop, 1, ival, rval, this%iout, this%inunit)
-        caux = line(istart:istop)
-        do iaux = 1, this%naux
-          if (trim(adjustl(caux)) /= trim(adjustl(this%auxname(iaux)))) cycle
-          call urword(line, lloc, istart, istop, 0, ival, rval, this%iout, this%inunit)
-          text = line(istart:istop)
-          jj = 1 !iaux
-          ii = (itmp-1) * this%naux + iaux
-          call read_single_value_or_time_series(text, &
-                                                this%lauxvar(ii)%value, &
-                                                this%lauxvar(ii)%name, &
-                                                endtim,  &
-                                                this%Name, 'AUX', this%TsManager, &
-                                                this%iprpak, itmp, jj, &
-                                                this%auxname(iaux), bndName, &
-                                                this%inunit)
+        if (ierr /= 0) then
+          goto 999
+        end if
+        call this%parser%GetStringCaps(caux)
+        do jj = 1, this%naux
+          if (trim(adjustl(caux)) /= trim(adjustl(this%auxname(jj)))) cycle
+          call this%parser%GetString(text)
+          ii = itemno
+          bndElem => this%lauxvar(jj, ii)
+          call read_value_or_time_series_adv(text, itemno, jj, bndElem,          &
+                                             this%name, 'AUX', this%tsManager,   &
+                                             this%iprpak, this%auxname(jj))
           exit
         end do
       case default
         !
         ! -- call the specific package to look for stress period data
-        call this%pak_set_stressperiod(itemno, itmp, line, found, lloc, istart, &
-                                       istop, endtim, bndName)
+        call this%pak_set_stressperiod(itemno, keyword, found)
         !
         ! -- terminate with error if data not valid
         if (.not. found) then
-          write(errmsg,'(4x,a,a)') &
-            '****ERROR. UNKNOWN ' // trim(this%text) // ' DATA KEYWORD: ', &
-                                    line(istart:istop)
+          write(errmsg,'(2a)')                                                  &
+            'Unknown ' // trim(adjustl(this%text)) // ' data keyword: ',        &
+            trim(keyword) // '.'
           call store_error(errmsg)
-          call ustop()
         end if
     end select
     !
@@ -648,17 +626,11 @@ module GwtAptModule
       call ustop()
     end if
     !
-    ! -- write keyword data to output file
-    if (this%iprpak /= 0) then
-      write (this%iout, '(3x,i10,1x,a)') itmp, line(i0:istop)
-    end if
-    !
     ! -- return
     return
   end subroutine apt_set_stressperiod
 
-  subroutine pak_set_stressperiod(this, itemno, itmp, line, found,  &
-                                  lloc, istart, istop, endtim, bndName)
+  subroutine pak_set_stressperiod(this, itemno, keyword, found)
 ! ******************************************************************************
 ! pak_set_stressperiod -- Set a stress period attribute for individual package.
 !   This must be overridden.
@@ -669,14 +641,8 @@ module GwtAptModule
     ! -- dummy
     class(GwtAptType),intent(inout) :: this
     integer(I4B), intent(in) :: itemno
-    integer(I4B), intent(in) :: itmp
-    character (len=*), intent(in) :: line
+    character(len=*), intent(in) :: keyword
     logical, intent(inout) :: found
-    integer(I4B), intent(inout) :: lloc
-    integer(I4B), intent(inout) :: istart
-    integer(I4B), intent(inout) :: istop
-    real(DP), intent(in) :: endtim
-    character(len=LENBOUNDNAME), intent(in) :: bndName
     ! -- local
 
     ! -- formats
@@ -725,7 +691,7 @@ module GwtAptModule
     class(GwtAptType) :: this
     ! -- local
     integer(I4B) :: n
-    integer(I4B) :: j, iaux, ii
+    integer(I4B) :: j, iaux
 ! ------------------------------------------------------------------------------
     !
     ! -- Advance the time series
@@ -738,8 +704,7 @@ module GwtAptModule
       do j = 1, this%flowbudptr%budterm(this%idxbudgwf)%nlist
         n = this%flowbudptr%budterm(this%idxbudgwf)%id1(j)
         do iaux = 1, this%naux
-          ii = (n - 1) * this%naux + iaux
-          this%auxvar(iaux, j) = this%lauxvar(ii)%value
+          this%auxvar(iaux, j) = this%lauxvar(iaux, n)
         end do
       end do
     end if
@@ -749,7 +714,7 @@ module GwtAptModule
     do n = 1, this%ncv
       this%xoldpak(n) = this%xnewpak(n)
       if (this%iboundpak(n) < 0) then
-        this%xnewpak(n) = this%concfeat(n)%value
+        this%xnewpak(n) = this%concfeat(n)
       end if
     end do
     !
@@ -1310,8 +1275,6 @@ module GwtAptModule
     ! -- mass added from the mover transport package
     call mem_allocate(this%qmfrommvr, this%ncv, 'QMFROMMVR', this%origin)
     !
-    ! -- Initialize
-    !
     ! -- initialize arrays
     do n = 1, this%ncv
       this%status(n) = 'ACTIVE'
@@ -1319,6 +1282,7 @@ module GwtAptModule
       this%ccterm(n) = DZERO
       this%qmfrommvr(n) = DZERO
       this%concbudssm(:, n) = DZERO
+      this%concfeat(n) = DZERO
     end do
     !
     ! -- Return
@@ -1509,7 +1473,6 @@ module GwtAptModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use ConstantsModule, only: LINELENGTH
     ! -- dummy
     class(GwtAptType),intent(inout) :: this
     ! -- local
@@ -1583,9 +1546,8 @@ module GwtAptModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule, only: LINELENGTH
     use MemoryManagerModule, only: mem_allocate
-    use TimeSeriesManagerModule, only: read_single_value_or_time_series
+    use TimeSeriesManagerModule, only: read_value_or_time_series_adv
     ! -- dummy
     class(GwtAptType),intent(inout) :: this
     ! -- local
@@ -1603,19 +1565,15 @@ module GwtAptModule
     integer(I4B) :: nlak
     integer(I4B) :: nconn
     integer(I4B), dimension(:), pointer, contiguous :: nboundchk
+    real(DP), pointer :: bndElem => null()
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize itmp
     itmp = 0
     !
-    ! -- allocate lake data
+    ! -- allocate apt data
     call mem_allocate(this%strt, this%ncv, 'STRT', this%origin)
-    !call mem_allocate(this%rainfall, this%ncv, 'RAINFALL', this%origin)
-    !call mem_allocate(this%evaporation, this%ncv, 'EVAPORATION', this%origin)
-    !call mem_allocate(this%runoff, this%ncv, 'RUNOFF', this%origin)
-    !call mem_allocate(this%inflow, this%ncv, 'INFLOW', this%origin)
-    !call mem_allocate(this%withdrawal, this%ncv, 'WITHDRAWAL', this%origin)
-    call mem_allocate(this%lauxvar, this%naux*this%ncv, 'LAUXVAR', this%origin)
+    call mem_allocate(this%lauxvar, this%naux, this%ncv, 'LAUXVAR', this%origin)
     !
     ! -- lake boundary and concentrations
     if (this%imatrows == 0) then
@@ -1631,6 +1589,7 @@ module GwtAptModule
     do n = 1, this%ncv
       !this%status(n) = 'ACTIVE'
       this%strt(n) = DEP20
+      this%lauxvar(:, n) = DZERO
       this%xoldpak(n) = DEP20
       if (this%imatrows == 0) then
         this%iboundpak(n) = 1
@@ -1683,7 +1642,7 @@ module GwtAptModule
 
         ! -- set default bndName
         write (cno,'(i9.9)') n
-        bndName = 'Lake' // cno
+        bndName = 'Feature' // cno
 
         ! -- featname
         if (this%inamedbound /= 0) then
@@ -1696,27 +1655,15 @@ module GwtAptModule
 
         ! -- fill time series aware data
         ! -- fill aux data
-        do iaux = 1, this%naux
-          !
-          ! -- Assign boundary name
-          if (this%inamedbound==1) then
-            bndName = this%featname(n)
-          else
-            bndName = ''
-          end if
-          text = caux(iaux)
-          jj = 1 !iaux
-          ii = (n-1) * this%naux + iaux
-          call read_single_value_or_time_series(text, &
-                                                this%lauxvar(ii)%value, &
-                                                this%lauxvar(ii)%name, &
-                                                DZERO,  &
-                                                this%Name, 'AUX', this%TsManager, &
-                                                this%iprpak, n, jj, &
-                                                this%auxname(iaux), &
-                                                bndName, this%parser%iuactive)
+        do jj = 1, this%naux
+          text = caux(jj)
+          ii = n
+          bndElem => this%lauxvar(jj, ii)
+          call read_value_or_time_series_adv(text, ii, jj, bndElem, this%name,   &
+                                             'AUX', this%tsManager, this%iprpak, &
+                                             this%auxname(jj))
         end do
-
+      
         nlak = nlak + 1
       end do
       !
@@ -1764,7 +1711,6 @@ module GwtAptModule
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
     use BudgetModule, only: budget_cr
-    use TimeSeriesManagerModule, only: read_single_value_or_time_series
     ! -- dummy
     class(GwtAptType),intent(inout) :: this
     ! -- local
@@ -2337,7 +2283,6 @@ module GwtAptModule
     integer(I4B) :: naux
     real(DP), dimension(:), allocatable :: auxvartmp
     integer(I4B) :: i, j, n1, n2
-    integer(I4B) :: ii
     integer(I4B) :: idx
     integer(I4B) :: nlen
     integer(I4B) :: nlist
@@ -2452,8 +2397,7 @@ module GwtAptModule
       do n1 = 1, this%ncv
         q = DZERO
         do i = 1, naux
-          ii = (n1 - 1) * naux + i
-          auxvartmp(i) = this%lauxvar(ii)%value
+          auxvartmp(i) = this%lauxvar(i, n1)
         end do
         call this%budobj%budterm(idx)%update_term(n1, n1, q, auxvartmp)
       end do

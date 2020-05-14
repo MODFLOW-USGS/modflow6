@@ -138,7 +138,7 @@ def get_model(idx, dir):
     connectiondata = [
         [1 - 1, 1 - 1, (1 - 1, 5 - 1, 8 - 1), 0.0, -20, 1.0, 1.1],
         [1 - 1, 2 - 1, (2 - 1, 5 - 1, 8 - 1), 0.0, -20, 1.0, 1.1]]
-    perioddata = [[0, 'FLOWING_WELL', 0., 0.],
+    perioddata = [[0, 'FLOWING_WELL', 0., 0., 0.],
                   [0, 'RATE', 1.e-3]]
     maw = flopy.mf6.ModflowGwfmaw(gwf, mover=True, nmawwells=nmawwells,
                                   packagedata=packagedata,

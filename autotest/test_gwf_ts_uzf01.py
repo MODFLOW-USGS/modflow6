@@ -12,8 +12,8 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-paktest = 'sfr'
-ex = ['ts_sfr01']
+paktest = 'uzf'
+ex = ['ts_uzf01']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
@@ -146,7 +146,6 @@ def build_model(ws, name, timeseries=False):
                [2, 0, 8, cprior],
                [3, 0, 9, cprior]]
     inflow, divflow, divflow2, upstream_fraction = 1., 0.05, 0.04, 0.
-    ts_names = ['inflow', 'divflow', 'ustrf'] + auxnames
     perioddata = [[0, 'status', 'active'],
                   [1, 'status', 'active'],
                   [2, 'status', 'active'],
@@ -155,29 +154,16 @@ def build_model(ws, name, timeseries=False):
                   [0, 'diversion', 0, divflow],
                   [1, 'diversion', 0, divflow],
                   [2, 'diversion', 0, divflow2],
-                  [3, 'diversion', 0, divflow]]
-    if timeseries:
-        perioddata.append([0, 'inflow', 'inflow'])
-        perioddata.append([2, 'diversion', 1, 'divflow'])
-        perioddata.append([0, 'AUXILIARY', 'conc', 'conc'])
-        perioddata.append([2, 'AUXILIARY', 'temp', 'temp'])
-        perioddata.append([5, 'upstream_fraction', 'ustrf'])
-        perioddata.append([7, 'upstream_fraction', 'ustrf'])
-        perioddata.append([9, 'upstream_fraction', 'ustrf'])
-        ts_methods = ['linearend'] * len(ts_names)
-        ts_data = []
-        for t in ts_times:
-            ts_data.append((t, inflow, divflow, upstream_fraction, temp, conc))
-    else:
-        perioddata.append([0, 'inflow', inflow])
-        perioddata.append([2, 'diversion', 1, divflow])
+                  [3, 'diversion', 0, divflow],
+                  [0, 'inflow', inflow],
+                  [2, 'diversion', 1, divflow],
+                  ]
 
-    budpth = '{}.{}.cbc'.format(name, paktest)
     cnvgpth = '{}.sfr.cnvg.csv'.format(name)
     sfr = flopy.mf6.ModflowGwfsfr(gwf,
                                   auxiliary=auxnames,
                                   print_input=True,
-                                  budget_filerecord=budpth,
+                                  print_flows=True,
                                   mover=True,
                                   nreaches=len(packagedata),
                                   maximum_depth_change=1.e-5,
@@ -186,11 +172,6 @@ def build_model(ws, name, timeseries=False):
                                   connectiondata=connectiondata,
                                   diversions=divdata,
                                   perioddata=perioddata, pname='sfr-1')
-    if timeseries:
-        fname = '{}.sfr.ts'.format(name)
-        sfr.ts.initialize(filename=fname, timeseries=ts_data,
-                          time_series_namerecord=ts_names,
-                          interpolation_methodrecord=ts_methods)
 
     packagedata = [[0, 1.0, -20., 0.0, 'SPECIFIED', 2], ]
     nmawwells = len(packagedata)
@@ -254,33 +235,88 @@ def build_model(ws, name, timeseries=False):
                                   perioddata=perioddata,
                                   pname='lak-1')
 
+    kv = 1e-5
     packagedata = [
-        (0, (0, 5, 1), 1, -1, 1., 1.e-05, 0.2, 0.4, 0.3, 3.5),
-        (1, (0, 5, 2), 1, -1, 1., 1.e-05, 0.2, 0.4, 0.3, 3.5),
-        (2, (0, 5, 3), 1, -1, 1., 1.e-05, 0.2, 0.4, 0.3, 3.5),
-        (3, (0, 6, 1), 1, -1, 1., 1.e-05, 0.2, 0.4, 0.3, 3.5),
-        (4, (0, 6, 2), 1, -1, 1., 1.e-05, 0.2, 0.4, 0.3, 3.5),
-        (5, (0, 6, 3), 1, -1, 1., 1.e-05, 0.2, 0.4, 0.3, 3.5),
-        (6, (0, 7, 1), 1, -1, 1., 1.e-05, 0.2, 0.4, 0.3, 3.5),
-        (7, (0, 7, 2), 1, -1, 1., 1.e-05, 0.2, 0.4, 0.3, 3.5),
-        (8, (0, 7, 3), 1, -1, 1., 1.e-05, 0.2, 0.4, 0.3, 3.5)]
-    perioddata = [[0, 1.e-8, 0, 0, 0, 0, 0, 0],
-                  [1, 1.e-8, 0, 0, 0, 0, 0, 0],
-                  [2, 1.e-8, 0, 0, 0, 0, 0, 0],
-                  [3, 1.e-8, 0, 0, 0, 0, 0, 0],
-                  [4, 1.e-8, 0, 0, 0, 0, 0, 0],
-                  [5, 1.e-8, 0, 0, 0, 0, 0, 0],
-                  [6, 1.e-8, 0, 0, 0, 0, 0, 0],
-                  [7, 1.e-8, 0, 0, 0, 0, 0, 0],
-                  [8, 1.e-8, 0, 0, 0, 0, 0, 0], ]
+        (0, (0, 5, 1), 1, -1, 1., kv, 0.2, 0.4, 0.3, 3.5),
+        (1, (0, 5, 2), 1, -1, 1., kv, 0.2, 0.4, 0.3, 3.5),
+        (2, (0, 5, 3), 1, -1, 1., kv, 0.2, 0.4, 0.3, 3.5),
+        (3, (0, 6, 1), 1, -1, 1., kv, 0.2, 0.4, 0.3, 3.5),
+        (4, (0, 6, 2), 1, -1, 1., kv, 0.2, 0.4, 0.3, 3.5),
+        (5, (0, 6, 3), 1, -1, 1., kv, 0.2, 0.4, 0.3, 3.5),
+        (6, (0, 7, 1), 1, -1, 1., kv, 0.2, 0.4, 0.3, 3.5),
+        (7, (0, 7, 2), 1, -1, 1., kv, 0.2, 0.4, 0.3, 3.5),
+        (8, (0, 7, 3), 1, -1, 1., kv, 0.2, 0.4, 0.3, 3.5)]
+    finf, pet, extdp, extwc, = 1e-8, 5e-9, 1., 0.01
+    ha, hroot, rootact = 0., 0., 0.
+    ts_names = ['finf', 'pet', 'extdp', 'extwc',
+                'ha', 'hroot', 'rootact'] + auxnames
+    if timeseries:
+        ts_methods = ['linearend'] * len(ts_names)
+        ts_data = []
+        for t in ts_times:
+            ts_data.append((t, finf, pet, extdp, extwc,
+                            ha, hroot, rootact, temp, conc))
+        perioddata = [[0, 'finf', 'pet', 'extdp', 'extwc',
+                       'ha', 'hroot', 'rootact', 'temp', 'conc'],
+                      [1, 'finf', 'pet', 'extdp', 'extwc',
+                       'ha', 'hroot', 'rootact', 'temp', 'conc'],
+                      [2, 'finf', 'pet', 'extdp', 'extwc',
+                       'ha', 'hroot', 'rootact', 'temp', 'conc'],
+                      [3, 'finf', 'pet', 'extdp', 'extwc',
+                       'ha', 'hroot', 'rootact', 'temp', 'conc'],
+                      [4, 'finf', 'pet', 'extdp', 'extwc',
+                       'ha', 'hroot', 'rootact', 'temp', 'conc'],
+                      [5, 'finf', 'pet', 'extdp', 'extwc',
+                       'ha', 'hroot', 'rootact', 'temp', 'conc'],
+                      [6, 'finf', 'pet', 'extdp', 'extwc',
+                       'ha', 'hroot', 'rootact', 'temp', 'conc'],
+                      [7, 'finf', 'pet', 'extdp', 'extwc',
+                       'ha', 'hroot', 'rootact', 'temp', 'conc'],
+                      [8, 'finf', 'pet', 'extdp', 'extwc',
+                       'ha', 'hroot', 'rootact', 'temp', 'conc'],
+                      ]
+    else:
+        perioddata = [[0, finf, pet, extdp, extwc,
+                       ha, hroot, rootact, temp, conc],
+                      [1, finf, pet, extdp, extwc,
+                       ha, hroot, rootact, temp, conc],
+                      [2, finf, pet, extdp, extwc,
+                       ha, hroot, rootact, temp, conc],
+                      [3, finf, pet, extdp, extwc,
+                       ha, hroot, rootact, temp, conc],
+                      [4, finf, pet, extdp, extwc,
+                       ha, hroot, rootact, temp, conc],
+                      [5, finf, pet, extdp, extwc,
+                       ha, hroot, rootact, temp, conc],
+                      [6, finf, pet, extdp, extwc,
+                       ha, hroot, rootact, temp, conc],
+                      [7, finf, pet, extdp, extwc,
+                       ha, hroot, rootact, temp, conc],
+                      [8, finf, pet, extdp, extwc,
+                       ha, hroot, rootact, temp, conc],
+                      ]
+
+    budpth = '{}.{}.cbc'.format(name, paktest)
     cnvgpth = '{}.uzf.cnvg.csv'.format(name)
     uzf = flopy.mf6.ModflowGwfuzf(gwf,
+                                  print_input=True,
+                                  print_flows=True,
+                                  budget_filerecord=budpth,
                                   mover=True,
+                                  auxiliary=auxnames,
+                                  simulate_et=True,
+                                  linear_gwet=True,
                                   package_convergence_filerecord=cnvgpth,
                                   nuzfcells=len(packagedata),
-                                  ntrailwaves=7, nwavesets=40,
+                                  ntrailwaves=7,
+                                  nwavesets=40,
                                   packagedata=packagedata,
                                   perioddata=perioddata, pname='uzf-1')
+    if timeseries:
+        fname = '{}.{}.ts'.format(name, paktest)
+        uzf.ts.initialize(filename=fname, timeseries=ts_data,
+                          time_series_namerecord=ts_names,
+                          interpolation_methodrecord=ts_methods)
 
     packages = [('drn-1',), ('lak-1',), ('maw-1',), ('sfr-1',), ('uzf-1',)]
     perioddata = [
@@ -368,32 +404,6 @@ def eval_model(sim):
     fname = '{}.{}.cbc.cmp.out'.format(os.path.basename(sim.name), paktest)
     fpth = os.path.join(sim.simpath, fname)
     eval_bud_diff(fpth, cobj0, cobj1)
-
-    # do some spot checks on the first sfr cbc file
-    v0 = cobj0.get_data(totim=1.0, text='FLOW-JA-FACE')[0]
-    q = []
-    for idx, node in enumerate(v0['node']):
-        if node > 5:
-            q.append(v0['q'][idx])
-    v0 = np.array(q)
-    check = np.ones(v0.shape, dtype=np.float) * 5e-2
-    check[-2] = 4e-2
-    assert np.allclose(v0, check), 'FLOW-JA-FACE failed'
-
-    v0 = cobj0.get_data(totim=1.0, text='EXT-OUTFLOW')[0]
-    v0 = v0['q'][4:]
-    check = np.array([-0.80871, -5e-2, -2.5e-2, -5e-2, -2.0e-2, -5e-2])
-    assert np.allclose(v0, check), 'EXT-OUTFLOW failed'
-
-    v0 = cobj0.get_data(totim=1.0, text='FROM-MVR')[0]
-    v0 = v0['q'][4:]
-    check = np.array([4.5e-2, 0., 0., 0., 0., 0.])
-    assert np.allclose(v0, check), 'FROM-MVR failed'
-
-    v0 = cobj0.get_data(totim=1.0, text='TO-MVR')[0]
-    v0 = v0['q'][4:]
-    check = np.array([0., 0., -2.5e-2, 0., -2.0e-2, 0.])
-    assert np.allclose(v0, check), 'FROM-MVR failed'
 
     return
 
