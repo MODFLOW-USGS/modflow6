@@ -187,7 +187,7 @@ module GwfCsubModule
     real(DP), dimension(:), pointer, contiguous :: sig0 => null()                !array of package specific boundary numbers
     !
     ! -- timeseries
-    type(TimeSeriesManagerType), pointer :: TsManager => null()                  ! time series manager
+    type(TimeSeriesManagerType), pointer :: TsManager => null()                  !time series manager
     !
     ! -- observation data
     integer(I4B), pointer :: inobspkg => null()                                  !unit number for obs package
@@ -343,7 +343,6 @@ contains
     call mem_allocate(this%ninterbeds, 'NINTERBEDS', this%origin)
     call mem_allocate(this%maxsig0, 'MAXSIG0', this%origin)
     call mem_allocate(this%nbound, 'NBOUND', this%origin)
-    !call mem_allocate(this%ncolbnd, 'NCOLBND', this%origin)
     call mem_allocate(this%iscloc, 'ISCLOC', this%origin)
     call mem_allocate(this%iauxmultcol, 'IAUXMULTCOL', this%origin)
     call mem_allocate(this%ndelaycells, 'NDELAYCELLS', this%origin)
@@ -390,7 +389,6 @@ contains
     this%ninterbeds = 0
     this%maxsig0 = 0
     this%nbound = 0
-    !this%ncolbnd = 1
     this%iscloc = 0
     this%iauxmultcol = 0
     this%ndelaycells = 19
@@ -1739,7 +1737,7 @@ contains
 
         if (itmp < 1 .or. itmp > this%ninterbeds) then
           write(errmsg,'(a,1x,i0,2(1x,a),1x,i0,a)')                           &
-            'Interbed number (', itmp, ') MUST BE greater than 0 and ',       &
+            'Interbed number (', itmp, ') must be greater than 0 and ',       &
             'less than or equal to', this%ninterbeds, '.'
           call store_error(errmsg)
           cycle
@@ -2434,7 +2432,8 @@ contains
           ! default case
           case default
             write(errmsg,'(a,3(1x,a),a)')                                        &
-              'Unknown', trim(adjustl(this%name)), 'Option:', trim(keyword), '.'
+              'Unknown', trim(adjustl(this%name)), "option '",                   &
+              trim(keyword), "'."
             call store_error(errmsg)
         end select
       end do
@@ -2776,14 +2775,11 @@ contains
       !
       ! -- interbed storage
       deallocate(this%boundname)
-      !deallocate(this%sig0bname)
       deallocate(this%auxname)
       call mem_deallocate(this%auxvar)
       call mem_deallocate(this%ci)
       call mem_deallocate(this%rci)
       call mem_deallocate(this%pcs)
-      !call mem_deallocate(this%thick)
-      !call mem_deallocate(this%theta)
       call mem_deallocate(this%rnb)
       call mem_deallocate(this%kv)
       call mem_deallocate(this%h0)
@@ -2986,7 +2982,7 @@ contains
             write(this%iout,'(4x,a,i0)') 'MAXSIG0 = ', this%maxsig0
           case default
             write(errmsg,'(a,3(1x,a),a)') &
-              'Unknown', trim(this%name), 'dimension:', trim(keyword), '.'
+              'Unknown', trim(this%name), "dimension '", trim(keyword), "'."
             call store_error(errmsg)
         end select
       end do
@@ -3138,7 +3134,7 @@ contains
             isgs = 1
         case default
             write(errmsg,'(a,1x,a,a)')                                           &
-              'Unknown GRIDDATA tag:', trim(keyword), '.'
+              "Unknown GRIDDATA tag '", trim(keyword), "'."
             call store_error(errmsg)
         end select
       end do
@@ -3452,12 +3448,10 @@ contains
         if (es < DEM6) then
           ierr = ierr + 1
           call this%dis%noder_to_string(node, cellid)
-          write(errmsg, '(a,g0.7,a,1x,a)')                                       &
-            'ERROR: SMALL TO NEGATIVE EFFECTIVE STRESS (', es, ') IN CELL',      &
-            trim(adjustl(cellid))
-          call store_error(errmsg)
-          write(errmsg, '(4x,a,1x,g0.7,3(1x,a,1x,g0.7),1x,a)')                   &
-            '(', es, '=', this%cg_gs(node), '- (', hcell, '-', bot, ')'
+          write(errmsg, '(a,g0,a,1x,a,1x,a,4(g0,a))')                            &
+            'Small to negative effective stress (', es, ') in cell',             &
+            trim(adjustl(cellid)), '. (', es, ' = ', this%cg_gs(node),           &
+            ' - (', hcell, ' - ', bot, ').'
           call store_error(errmsg)
         end if
       end if
@@ -3466,10 +3460,10 @@ contains
     ! -- write a summary error message
     if (ierr > 0) then
         write(errmsg, '(a,1x,i0,3(1x,a))')                                       &
-          'ERROR SOLUTION: SMALL TO NEGATIVE EFFECTIVE STRESS VALUES IN', ierr,  &
-          'CELLS CAN BE ELIMINATED BY INCREASING STORAGE VALUES AND/OR ',        &
-          'ADDING/MODIFYINGSTRESS BOUNDARIES TO PREVENT WATER-LEVELS FROM',      &
-          'EXCEEDING THE TOP OF THE MODEL' 
+          'Solution: small to negative effective stress values in', ierr,        &
+          'cells can be eliminated by increasing storage values and/or ',        &
+          'adding/modifying stress boundaries to prevent water-levels from',     &
+          'exceeding the top of the model.' 
         call store_error(errmsg)
         call this%parser%StoreErrorUnit()
         call ustop()
@@ -3504,15 +3498,15 @@ contains
       theta = this%thetaini(i)
       call this%csub_adj_matprop(comp, thick, theta)
       if (thick <= DZERO) then
-        write(errmsg,'(4x,2a,1x,i0,1x,a,1x,g0,1x,a)')                           &
-          '****ERROR. ADJUSTED THICKNESS FOR NO-DELAY ',                        &
-          'INTERBED', i, 'IS <= 0 (', thick, ')'
+        write(errmsg,'(a,1x,i0,1x,a,g0,a)')                                      &
+          'Adjusted thickness for no-delay interbed', i,                         &
+          'is less than or equal to 0 (', thick, ').'
         call store_error(errmsg)
       end if
       if (theta <= DZERO) then
-        write(errmsg,'(4x,2a,1x,i0,1x,a,1x,g0,1x,a)')                           &
-          '****ERROR. ADJUSTED THETA FOR NO-DELAY ',                            &
-          'INTERBED (', i, ') IS <= 0 (', theta, ')'
+        write(errmsg,'(a,1x,i0,1x,a,g0,a)')                                      &
+          'Adjusted theta for no-delay interbed', i,                             &
+          'is less than or equal to 0 (', theta, ').'
         call store_error(errmsg)
       end if
       this%thick(i) = thick
@@ -3726,8 +3720,6 @@ contains
           call this%parser%GetCurrentLine(line)
           write(errmsg, fmtblkerr) adjustl(trim(line))
           call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-          call ustop()
         end if
       endif
     end if
@@ -3862,9 +3854,9 @@ contains
     if (this%ninterbeds > 0) then
       if (kper > 1 .and. kper < nper) then
         if (this%gwfiss /= 0) then
-          write(errmsg, '(1x,a,i0,a,1x,a,1x,a,1x,i0,1x,a)')                     &
-            'ERROR:  Only the first and last (', nper, ')',                     &
-            'stress period can be steady if interbeds are simulated.',          &
+          write(errmsg, '(a,i0,a,1x,a,1x,a,1x,i0,1x,a)')                         &
+            'Only the first and last (', nper, ')',                              &
+            'stress period can be steady if interbeds are simulated.',           &
             'Stress period', kper, 'has been defined to be steady state.'
           call store_error(errmsg)
           call ustop()
@@ -4106,9 +4098,9 @@ contains
       ! -- write error message if negative compression indices
       if (fact <= DZERO) then
         call this%dis%noder_to_string(node, cellid)
-        write(errmsg,'(4x,a,1x,a)')                                              &
-          '****ERROR. NEGATIVE RECOMPRESSION INDEX CALCULATED FOR CELL',         &
-          trim(adjustl(cellid))
+        write(errmsg,'(a,1x,a,a)')                                               &
+          'Negative recompression index calculated for cell',                    &
+          trim(adjustl(cellid)), '.'
         call store_error(errmsg)
       end if
     end do
@@ -4148,9 +4140,9 @@ contains
       ! -- write error message if negative compression indices 
       if (fact <= DZERO) then
         call this%dis%noder_to_string(node, cellid)
-        write(errmsg,'(4x,a,1x,i0,2(1x,a))')                                     &
-          '****ERROR. NEGATIVE COMPRESSION INDICES CALCULATED FOR INTERBED',     &
-          ib, 'IN CELL', trim(adjustl(cellid))
+        write(errmsg,'(a,1x,i0,2(1x,a),a)')                                      &
+          'Negative compression indices calculated for interbed', ib,            &
+          'in cell', trim(adjustl(cellid)), '.'
         call store_error(errmsg)
       end if
     end do
@@ -4783,7 +4775,7 @@ contains
             if (this%ieslag == 0) then
               !
               ! -- calculate compaction
-              call this%csub_delay_calc_comp(ib, hcell, hcellold,      &
+              call this%csub_delay_calc_comp(ib, hcell, hcellold,                &
                                              comp, compi, compe)
               this%comp(ib) = comp
               !
@@ -4799,10 +4791,10 @@ contains
         else
           if (idelaycalc < 0) then
             call this%dis%noder_to_string(node, cellid)
-            write(errmsg,'(4x,a,1x,g0,1x,a,1x,a,1x,a,1x,g0,1x,a,1x,i0)')         &
-              '****ERROR. HEAD (', hcell, ') IN NON-CONVERTIBLE CELL (',         &
-              trim(adjustl(cellid)), ') DROPPED BELOW THE TOP OF THE CELL (',    &
-              top, ') FOR DELAY INTERBED ', ib
+            write(errmsg,'(a,g0,a,1x,a,1x,a,g0,a,1x,i0,a)')                      &
+              'Head (', hcell, ') in non-convertible cell',                      &
+              trim(adjustl(cellid)), 'dropped below the top of the cell (',      &
+              top, ') for delay interbed ', ib, '.'
             call store_error(errmsg)
           end if
         end if
@@ -5082,15 +5074,15 @@ contains
       theta = this%cg_thetaini(node)
       call this%csub_adj_matprop(comp, thick, theta)
       if (thick <= DZERO) then
-        write(errmsg,'(4x,a,1x,a,1x,a,1x,g0,1x,a)')                             &
-          '****ERROR. ADJUSTED THICKNESS FOR CELL', trim(adjustl(cellid)),      &
-          'IS <= 0 (', thick, ')'
+        write(errmsg,'(a,1x,a,1x,a,g0,a)')                                       &
+          'Adjusted thickness for cell', trim(adjustl(cellid)),                  &
+          'is less than or equal to 0 (', thick, ').'
         call store_error(errmsg)
       end if
       if (theta <= DZERO) then
-        write(errmsg,'(4x,a,1x,a,1x,a,1x,g0,1x,a)')                             &
-          '****ERROR. ADJUSTED THETA FOR CELL', trim(adjustl(cellid)),          &
-          'IS <= 0 (', theta, ')'
+        write(errmsg,'(a,1x,a,1x,a,g0,a)')                                       &
+          'Adjusted theta for cell', trim(adjustl(cellid)),                      &
+          'is less than or equal to 0 (', theta, ').'
         call store_error(errmsg)
       end if
       this%cg_thick(node) = thick
@@ -5853,10 +5845,10 @@ contains
     ! -- check that aquifer head is above the top of the interbed
     if (hcell < top) then
       call this%dis%noder_to_string(node, cellid)
-      write(errmsg, '(a,g0,a,1x,a,1x,a,1x,i0,1x,a,g0,a)') &
-        'ERROR: HEAD (', hcell, ') IN CONVERTIBLE CELL', trim(adjustl(cellid)), &
-        'IS LESS THAN THE TOP OF DELAY INTERBED', ib,                           &
-        '(', top,')'
+      write(errmsg, '(a,g0,a,1x,a,1x,a,1x,i0,1x,a,g0,a)')                        &
+        'Head (', hcell, ') in convertible cell', trim(adjustl(cellid)),         &
+        'is less than the top of delay interbed', ib,                            &
+        '(', top,').'
       call store_error(errmsg)
     end if
     !
@@ -6360,15 +6352,15 @@ contains
         theta = this%dbthetaini(n, idelay)
         call this%csub_adj_matprop(comp, thick, theta)
         if (thick <= DZERO) then
-          write(errmsg,'(4x,2(a,1x,i0,1x),a,1x,g0,1x,a)')                         &
-            '****ERROR. ADJUSTED THICKNESS FOR DELAY INTERBED (',                 &
-            ib, ') CELL (', n, ') IS <= 0 (', thick, ')'
+          write(errmsg,'(2(a,i0),a,g0,a)')                                       &
+            'Adjusted thickness for delay interbed (', ib,                       &
+            ') cell (', n, ') is less than or equal to 0 (', thick, ').'
           call store_error(errmsg)
         end if
         if (theta <= DZERO) then
-          write(errmsg,'(4x,2(a,1x,i0,1x),a,1x,g0,1x,a)')                         &
-            '****ERROR. ADJUSTED THETA FOR DELAY INTERBED (',                     &
-            ib, ') CELL (', n, 'IS <= 0 (', theta, ')'
+          write(errmsg,'(2(a,i0),a,g0,a)')                                       &
+            'Adjusted theta for delay interbed (', ib,                           &
+            ') cell (', n, 'is less than or equal to 0 (', theta, ').'
           call store_error(errmsg)
         end if
         this%dbdz(n, idelay) = thick
@@ -6683,6 +6675,8 @@ contains
     ! -- dummy
     class(GwfCsubType), intent(inout) :: this
     ! -- local
+    type(ObserveType), pointer :: obsrv => null()
+    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: i
     integer(I4B) :: j
     integer(I4B) :: n
@@ -6693,8 +6687,6 @@ contains
     real(DP) :: v
     real(DP) :: r
     real(DP) :: f
-    character(len=100) :: msg
-    type(ObserveType), pointer :: obsrv => null()
     !---------------------------------------------------------------------------
     !
     ! -- Fill simulated values for all csub observations
@@ -6763,9 +6755,9 @@ contains
                   case ('PRECONSTRESS-CELL')
                     v = this%pcs(n)
                   case default
-                    msg = 'Error: Unrecognized observation type: ' //            &
-                          trim(obsrv%ObsTypeId)
-                    call store_error(msg)
+                    errmsg = "Unrecognized observation type '" //                &
+                             trim(obsrv%ObsTypeId) // "'."
+                    call store_error(errmsg)
                 end select
                 call this%obs%SaveOneSimval(obsrv, v)
               end do
@@ -6877,9 +6869,9 @@ contains
                   idelay = this%idelay(n)
                   v = this%dbflowbot(idelay)
                 case default
-                  msg = 'Error: Unrecognized observation type: ' //                &
-                        trim(obsrv%ObsTypeId)
-                  call store_error(msg)
+                  errmsg = "Unrecognized observation type: '" //                 &
+                    trim(obsrv%ObsTypeId) // "'."
+                  call store_error(errmsg)
               end select
               call this%obs%SaveOneSimval(obsrv, v)
             end do
@@ -6904,12 +6896,12 @@ contains
     ! -- dummy
     class(GwfCsubType), intent(inout) :: this
     ! -- local
-    integer(I4B) :: i, j, n
-    integer(I4B) :: n2
-    integer(I4B) :: idelay
     class(ObserveType), pointer :: obsrv => null()
     character(len=LENBOUNDNAME) :: bname
     character(len=LINELENGTH) :: errmsg
+    integer(I4B) :: i, j, n
+    integer(I4B) :: n2
+    integer(I4B) :: idelay
     !
     !  -- return if observations are not supported 
     if (.not. this%csub_obs_supported()) then
@@ -6974,10 +6966,10 @@ contains
             j = (idelay - 1) * this%ndelaycells + 1
             n2 = obsrv%NodeNumber2
             if (n2 < 1 .or. n2 > this%ndelaycells) then
-              write (errmsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
-                'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
-                ' interbed cell must be > 0 and <=', this%ndelaycells, &
-                '(specified value is ', n2, ')'
+              write (errmsg, '(a,2(1x,a),1x,i0,1x,a,i0,a)')                      &
+                trim(adjustl(obsrv%ObsTypeId)), 'interbed cell must be ',        &
+                'greater than 0 and less than or equal to', this%ndelaycells,    &
+                '(specified value is ', n2, ').'
               call store_error(errmsg)
             else
               j = (idelay - 1) * this%ndelaycells + n2
@@ -6989,23 +6981,23 @@ contains
         end if
       !
       ! -- interbed value
-      else if (obsrv%ObsTypeId == 'CSUB' .or.                                   &
-               obsrv%ObsTypeId == 'INELASTIC-CSUB' .or.                         &
-               obsrv%ObsTypeId == 'ELASTIC-CSUB' .or.                           &
-               obsrv%ObsTypeId == 'SK' .or.                                     &
-               obsrv%ObsTypeId == 'SKE' .or.                                    &
-               obsrv%ObsTypeId == 'THICKNESS' .or.                              &
-               obsrv%ObsTypeId == 'THETA' .or.                                  &
-               obsrv%ObsTypeId == 'INTERBED-COMPACTION' .or.                    &
-               obsrv%ObsTypeId == 'INELASTIC-COMPACTION' .or.                   &
+      else if (obsrv%ObsTypeId == 'CSUB' .or.                                    &
+               obsrv%ObsTypeId == 'INELASTIC-CSUB' .or.                          &
+               obsrv%ObsTypeId == 'ELASTIC-CSUB' .or.                            &
+               obsrv%ObsTypeId == 'SK' .or.                                      &
+               obsrv%ObsTypeId == 'SKE' .or.                                     &
+               obsrv%ObsTypeId == 'THICKNESS' .or.                               &
+               obsrv%ObsTypeId == 'THETA' .or.                                   &
+               obsrv%ObsTypeId == 'INTERBED-COMPACTION' .or.                     &
+               obsrv%ObsTypeId == 'INELASTIC-COMPACTION' .or.                    &
                obsrv%ObsTypeId == 'ELASTIC-COMPACTION') then
         if (this%ninterbeds > 0) then
           j = obsrv%NodeNumber
           if (j < 1 .or. j > this%ninterbeds) then
-            write (errmsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)')             &
-              'ERROR:', trim(adjustl(obsrv%ObsTypeId)),                         &
-              ' interbed cell must be > 0 and <=', this%ninterbeds,             &
-              '(specified value is ', j, ')'
+            write (errmsg, '(a,2(1x,a),1x,i0,1x,a,i0,a)')                        &
+              trim(adjustl(obsrv%ObsTypeId)), 'interbed cell must be greater',   &
+              'than 0 and less than or equal to', this%ninterbeds,               &
+              '(specified value is ', j, ').'
             call store_error(errmsg)
           else
             obsrv%BndFound = .true.
@@ -7015,15 +7007,15 @@ contains
             obsrv%indxbnds(n) = j
           end if
         end if
-      else if (obsrv%ObsTypeId == 'DELAY-FLOWTOP' .or.                          &
+      else if (obsrv%ObsTypeId == 'DELAY-FLOWTOP' .or.                           &
                obsrv%ObsTypeId == 'DELAY-FLOWBOT') then
         if (this%ninterbeds > 0) then
           j = obsrv%NodeNumber
           if (j < 1 .or. j > this%ninterbeds) then
-            write (errmsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
-              'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
-              ' interbed cell must be > 0 and <=', this%ninterbeds, &
-              '(specified value is ', j, ')'
+            write (errmsg, '(a,2(1x,a),1x,i0,1x,a,i0,a)')                        &
+              trim(adjustl(obsrv%ObsTypeId)), 'interbed cell must be greater ',  &
+              'than 0 and less than or equal to', this%ninterbeds,               &
+              '(specified value is ', j, ').'
             call store_error(errmsg)
           end if
           idelay = this%idelay(j)
