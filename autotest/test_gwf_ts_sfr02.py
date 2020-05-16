@@ -13,7 +13,7 @@ from framework import testing_framework
 from simulation import Simulation
 
 paktest = 'sfr'
-ex = ['ts_sfr01']
+ex = ['ts_sfr02']
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join('temp', s))
@@ -108,7 +108,7 @@ def build_model(ws, name, timeseries=False):
     packagedata = [
         [0, (1 - 1, 4 - 1, 1 - 1), 3.628E+001, 1.0, 1.0E-003, 0.0, 1.0, 1.0E-4,
          1.0E-1, 2, 0.0, 1, temp, conc],
-        [1, (1 - 1, 4 - 1, 2 - 1), 1.061E+002, 1.0, 1.0E-003, 0.0, 1.0, 1.0E-4,
+        [6, (1 - 1, 4 - 1, 2 - 1), 1.061E+002, 1.0, 1.0E-003, 0.0, 1.0, 1.0E-4,
          1.0E-1, 3, 1.0, 1, temp, conc],
         [2, (1 - 1, 4 - 1, 3 - 1), 6.333E+001, 1.0, 1.0E-003, 0.0, 1.0, 1.0E-4,
          1.0E-1, 4, 1.0, 2, temp, conc],
@@ -118,7 +118,7 @@ def build_model(ws, name, timeseries=False):
          1.0E-1, 1, 1.0, 0, temp, conc],
         [5, (1 - 1, 4 - 1, 1 - 1), 10., 1.0, 1.0E-003, 0.0, 1.0, 0.0,
          1.0E-1, 1, 0.0, 0, temp, conc],
-        [6, (1 - 1, 4 - 1, 2 - 1), 10., 1.0, 1.0E-003, 0.0, 1.0, 0.0,
+        [1, (1 - 1, 4 - 1, 2 - 1), 10., 1.0, 1.0E-003, 0.0, 1.0, 0.0,
          1.0E-1, 1, 0.0, 0, temp, conc],
         [7, (1 - 1, 4 - 1, 3 - 1), 10., 1.0, 1.0E-003, 0.0, 1.0, 0.0,
          1.0E-1, 1, 0.0, 0, temp, conc],
@@ -128,32 +128,32 @@ def build_model(ws, name, timeseries=False):
          1.0E-1, 1, 0.0, 0, temp, conc],
     ]
     connectiondata = [
-        [0, -1, -5],
-        [1, 0, -2, -6],
-        [2, -3, -7, -8, 1],
+        [0, -6, -5],
+        [6, 0, -2, -1],
+        [2, -3, -7, -8, 6],
         [3, -4, -9, 2],
         [4, 3],
         [5, 0],
-        [6, 1],
+        [1, 6],
         [7, 2],
         [8, 2],
         [9, 3]
     ]
     cprior = 'upto'
     divdata = [[0, 0, 5, cprior],
-               [1, 0, 6, cprior],
+               [6, 0, 1, cprior],
                [2, 1, 7, cprior],
                [2, 0, 8, cprior],
                [3, 0, 9, cprior]]
     inflow, divflow, divflow2, upstream_fraction = 1., 0.05, 0.04, 0.
     ts_names = ['inflow', 'divflow', 'ustrf'] + auxnames
     perioddata = [[0, 'status', 'active'],
-                  [1, 'status', 'active'],
+                  [6, 'status', 'active'],
                   [2, 'status', 'active'],
                   [3, 'status', 'active'],
                   [4, 'status', 'active'],
                   [0, 'diversion', 0, divflow],
-                  [1, 'diversion', 0, divflow],
+                  [6, 'diversion', 0, divflow],
                   [2, 'diversion', 0, divflow2],
                   [3, 'diversion', 0, divflow]]
     if timeseries:
@@ -175,7 +175,7 @@ def build_model(ws, name, timeseries=False):
     budpth = '{}.{}.cbc'.format(name, paktest)
     cnvgpth = '{}.sfr.cnvg.csv'.format(name)
     sfr = flopy.mf6.ModflowGwfsfr(gwf,
-                                  maximum_picard_iterations=1,
+                                  maximum_picard_iterations=5,
                                   auxiliary=auxnames,
                                   print_input=True,
                                   budget_filerecord=budpth,
@@ -302,7 +302,7 @@ def build_model(ws, name, timeseries=False):
         ('uzf-1', 7, 'sfr-1', 0, 'factor', 1.),
         ('uzf-1', 8, 'sfr-1', 0, 'factor', 1.),
         ('sfr-1', 2, 'sfr-1', 3, 'factor', 0.5),
-        ('sfr-1', 6, 'sfr-1', 4, 'factor', 0.5),
+        ('sfr-1', 1, 'sfr-1', 4, 'factor', 0.5),
         ('sfr-1', 8, 'sfr-1', 4, 'factor', 0.5),
     ]
     mvr = flopy.mf6.ModflowGwfmvr(gwf, maxmvr=len(perioddata),
@@ -371,30 +371,45 @@ def eval_model(sim):
     eval_bud_diff(fpth, cobj0, cobj1)
 
     # do some spot checks on the first sfr cbc file
+    nodes = [2, 5, 6, 8, 9, 10]
+    # FLOW-JA-FACE
     v0 = cobj0.get_data(totim=1.0, text='FLOW-JA-FACE')[0]
     q = []
     for idx, node in enumerate(v0['node']):
-        if node > 5:
+        if node in nodes:
             q.append(v0['q'][idx])
     v0 = np.array(q)
     check = np.ones(v0.shape, dtype=np.float) * 5e-2
+    check[1] = 0.76743
     check[-2] = 4e-2
     assert np.allclose(v0, check), 'FLOW-JA-FACE failed'
 
     v0 = cobj0.get_data(totim=1.0, text='EXT-OUTFLOW')[0]
-    v0 = v0['q'][4:]
-    check = np.array([-0.80871, -5e-2, -2.5e-2, -5e-2, -2.0e-2, -5e-2])
+    q = []
+    for idx, node in enumerate(v0['node']):
+        if node in nodes:
+            q.append(v0['q'][idx])
+    v0 = np.array(q)
+    check = np.array([-2.5e-2, -0.80871, -5e-2, -5e-2, -2.e-2, -5e-2])
     assert np.allclose(v0, check), 'EXT-OUTFLOW failed'
 
     v0 = cobj0.get_data(totim=1.0, text='FROM-MVR')[0]
-    v0 = v0['q'][4:]
-    check = np.array([4.5e-2, 0., 0., 0., 0., 0.])
+    q = []
+    for idx, node in enumerate(v0['node']):
+        if node in nodes:
+            q.append(v0['q'][idx])
+    v0 = np.array(q)
+    check = np.array([0., 4.5e-2, 0., 0., 0., 0.])
     assert np.allclose(v0, check), 'FROM-MVR failed'
 
     v0 = cobj0.get_data(totim=1.0, text='TO-MVR')[0]
-    v0 = v0['q'][4:]
-    check = np.array([0., 0., -2.5e-2, 0., -2.0e-2, 0.])
-    assert np.allclose(v0, check), 'FROM-MVR failed'
+    q = []
+    for idx, node in enumerate(v0['node']):
+        if node in nodes:
+            q.append(v0['q'][idx])
+    v0 = np.array(q)
+    check = np.array([-2.5e-2, 0., 0., 0., -2.0e-2, 0.])
+    assert np.allclose(v0, check), 'TO-MVR failed'
 
     return
 

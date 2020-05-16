@@ -244,12 +244,20 @@ longname
 description REPLACE mover {'{#1}': 'SFR'}
 
 block options
+name maximum_picard_iterations
+type integer
+reader urword
+optional true
+longname SFR picard iterations
+description value that defines the maximum number of Streamflow Routing picard iterations allowed when solving for reach stages and flows as part of the GWF formulate step. Picard iterations are used to minimize differences in SFR package results between subsequent GWF picard (non-linear) iterations as a result of non-optimal reach numbering. If reaches are numbered in order, from upstream to downstream, MAXIMUM\_PICARD\_ITERATIONS can be set to 1 to reduce model run time. By default, MAXIMUM\_PICARD\_ITERATIONS is equal to 100.
+
+block options
 name maximum_iterations
 type integer
 reader urword
 optional true
 longname SFR Newton-Raphson iterations
-description value that defines the maximum number of Streamflow Routing Newton-Raphson iterations allowed for a reach. By default, MAXSFRIT is equal to 100.
+description value that defines the maximum number of Streamflow Routing Newton-Raphson iterations allowed for a reach. By default, MAXIMUM\_ITERATIONS is equal to 100.
 
 block options
 name maximum_depth_change
