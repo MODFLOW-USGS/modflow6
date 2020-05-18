@@ -466,6 +466,12 @@ module GwfBuyModule
         call buy_cf_sfr(packobj, hnew, this%dense, this%elev, this%denseref,   &
                         locdense, locconc, this%drhodc, this%crhoref,          &
                         this%ctemp, this%iform)
+      case('MAW')
+        !
+        ! -- maw
+        call buy_cf_maw(packobj, hnew, this%dense, this%elev, this%denseref,   &
+                        locdense, locconc, this%drhodc, this%crhoref,          &
+                        this%ctemp, this%iform)
       case default
         !
         ! -- nothing
@@ -886,6 +892,67 @@ module GwfBuyModule
     ! -- Return
     return
   end subroutine buy_cf_sfr
+                        
+  subroutine buy_cf_maw(packobj, hnew, dense, elev, denseref, locdense,        &
+                        locconc, drhodc, crhoref, ctemp, iform)
+! ******************************************************************************
+! buy_cf_maw -- Pass density information into sfr package; density terms are
+!   calculated in the maw package as part of maw_calculate_density_exchange
+!   method
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use BndModule, only: BndType
+    use MawModule, only: MawType
+    class(BndType), pointer :: packobj
+    ! -- dummy
+    real(DP), intent(in), dimension(:) :: hnew
+    real(DP), intent(in), dimension(:) :: dense
+    real(DP), intent(in), dimension(:) :: elev
+    real(DP), intent(in) :: denseref
+    integer(I4B), intent(in) :: locdense
+    integer(I4B), dimension(:), intent(in) :: locconc
+    real(DP), dimension(:), intent(in) :: drhodc
+    real(DP), dimension(:), intent(in) :: crhoref
+    real(DP), dimension(:), intent(inout) :: ctemp
+    integer(I4B), intent(in) :: iform
+    ! -- local
+    integer(I4B) :: n
+    integer(I4B) :: node
+    real(DP) :: densemaw
+! ------------------------------------------------------------------------------
+    !
+    ! -- Insert the maw and gwf relative densities into col 1 and 2 and the
+    !    gwf elevation into col 3 of the maw package denseterms array
+    select type(packobj)
+    type is (MawType)
+      do n = 1, packobj%nbound
+        !
+        ! -- get gwf node number
+        node = packobj%nodelist(n)
+        if (packobj%ibound(node) <= 0) cycle
+        !
+        ! -- Determine maw density
+        densemaw = get_bnd_density(n, locdense, locconc, denseref, &
+                                   drhodc, crhoref, ctemp, packobj%auxvar)
+        !
+        ! -- fill maw relative density into column 1 of denseterms
+        packobj%denseterms(1, n) = densemaw / denseref
+        !
+        ! -- fill gwf relative density into column 2 of denseterms
+        packobj%denseterms(2, n) = dense(node) / denseref
+        !
+        ! -- fill gwf elevation into column 3 of denseterms
+        packobj%denseterms(3, n) = elev(node)
+        !
+      end do
+    end select
+    !
+    ! -- Return
+    return
+  end subroutine buy_cf_maw
                         
   subroutine buy_fc(this, kiter, njasln, amat, idxglo, rhs, hnew)
 ! ******************************************************************************
