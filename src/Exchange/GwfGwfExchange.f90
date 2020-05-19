@@ -457,7 +457,7 @@ contains
     return
   end subroutine gwf_gwf_rp
 
-  subroutine gwf_gwf_ad(this, isolnid, kpicard, isubtime)
+  subroutine gwf_gwf_ad(this, isolnid, kpicard)
 ! ******************************************************************************
 ! gwf_gwf_ad -- Initialize package x values to zero for explicit exchanges
 ! ******************************************************************************
@@ -469,14 +469,13 @@ contains
     class(GwfExchangeType) :: this
     integer(I4B), intent(in) :: isolnid
     integer(I4B), intent(in) :: kpicard
-    integer(I4B), intent(in) :: isubtime
     ! -- local
 ! ------------------------------------------------------------------------------
     !
     ! -- Advance mover
     if(this%inmvr > 0) call this%mvr%mvr_ad()
     !
-    ! -- Push simulated values to preceding time/subtime step
+    ! -- Push simulated values to preceding time step
     call this%obs%obs_ad()
     !
     ! -- Return

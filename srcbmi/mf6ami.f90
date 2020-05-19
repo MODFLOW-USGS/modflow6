@@ -13,8 +13,9 @@ module mf6ami
     
   contains
   
-  function ami_prepare_timestep() result(bmi_status) bind(C, name="prepare_timestep")
+  function ami_prepare_timestep(dt) result(bmi_status) bind(C, name="prepare_timestep")
   !DEC$ ATTRIBUTES DLLEXPORT :: ami_prepare_timestep
+    double precision, intent(in) :: dt ! we cannot set the timestep (yet), ignore for now
     integer(kind=c_int) :: bmi_status
       
     call Mf6PrepareTimestep()    
@@ -84,8 +85,8 @@ module mf6ami
     ! get the numerical solution we are running
     ns => getSolution(subcomponent_idx)
     
-    ! prepare with defaults, i.e. no subtiming and picard
-    call ns%prepareIteration(1, 1)
+    ! prepare with defaults, no picard
+    call ns%prepareIteration(1)
     
     ! reset counter
     allocate(iterationCounter)
@@ -143,7 +144,7 @@ module mf6ami
     hasConverged = 1
     
     ! finish up
-    call ns%finalizeIteration(iterationCounter, hasConverged, 1, 0)
+    call ns%finalizeIteration(iterationCounter, hasConverged, 0)
     
     ! check convergence on solution
     if (hasConverged == 1) then
