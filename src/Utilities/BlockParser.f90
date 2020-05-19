@@ -38,6 +38,7 @@ module BlockParserModule
     procedure, public :: GetString
     procedure, public :: GetStringCaps
     procedure, public :: StoreErrorUnit
+    procedure, public :: GetUnit
     procedure, public :: DevOpt
     procedure, private :: ReadScalarError
   end type BlockParserType
@@ -254,14 +255,15 @@ contains
     class(BlockParserType), intent(inout) :: this
     character(len=*), intent(in) :: vartype
     ! -- local
-    character(len=LINELENGTH) :: errmsg
+    character(len=MAXCHARLEN) :: errmsg
     !
-    write(errmsg, '(a, a)') 'Error in block ', trim(this%blockName)
+    write(errmsg, '(3a)') 'Error in block ', trim(this%blockName), '.'
+    write(errmsg, '(4a)')                                                        &
+      trim(errmsg), ' Could not read variable of type ', trim(vartype),          &
+                    " from the following line: '"
+    write(errmsg, '(3a)')                                                        &
+      trim(errmsg), trim(adjustl(this%line)), "'."
     call store_error(errmsg)
-    write(errmsg, '(a, a, a)') 'Could not read variable of type ', vartype,    &
-                               ' from the following line: '
-    call store_error(errmsg)
-    call store_error(trim(adjustl(this%line)))
     call this%StoreErrorUnit()
     call ustop()
   end subroutine ReadScalarError
@@ -322,14 +324,12 @@ contains
     class(BlockParserType), intent(inout) :: this
     ! -- local
     logical :: endofblock
-    character(len=LINELENGTH) :: errmsg
+    character(len=MAXCHARLEN) :: errmsg
     !
     call this%GetNextLine(endofblock)
     if (.not. endofblock) then
-      errmsg = '****ERROR. LOOKING FOR "END ' // trim(this%blockname) // &
-        '".  FOUND: '
-      call store_error(errmsg)
-      errmsg = '"' // trim(this%line) // '"'
+      errmsg = "LOOKING FOR 'END " // trim(this%blockname) //                    &
+               "'.  FOUND: " // "'" // trim(this%line) // "'."
       call store_error(errmsg)
       call this%StoreErrorUnit()
       call ustop()
@@ -396,6 +396,18 @@ contains
     return
   end subroutine StoreErrorUnit
 
+  function GetUnit(this) result(i)
+    ! -- return
+    integer(I4B) :: i
+    ! -- dummy
+    class(BlockParserType), intent(inout) :: this
+    ! -- local
+    !
+    i = this%iuext
+    !
+    return
+  end function GetUnit
+
   subroutine DevOpt(this)
 ! ******************************************************************************
 ! DevOpt -- development option.  This subroutine will cause the program to
@@ -411,16 +423,15 @@ contains
     ! -- dummy
     class(BlockParserType), intent(inout) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg
+    character(len=MAXCHARLEN) :: errmsg
     ! -- format
-    character(len=*), parameter :: fmterr =                                    &
-      "(4x, 'INVALID KEYWORD **',A,'** DETECTED IN BLOCK **',A,'**')"
 ! ------------------------------------------------------------------------------
     !
     ! -- If release mode (not develop mode), then option not available.
     !    Terminate with an error.
     if (IDEVELOPMODE == 0) then
-      write(errmsg, fmterr) trim(this%laststring), trim(this%blockname)
+      errmsg = "Invalid keyword '" // trim(this%laststring) // &
+               "' detected in block '" // trim(this%blockname) // "'."
       call store_error(errmsg)
       call this%StoreErrorUnit()
       call ustop()

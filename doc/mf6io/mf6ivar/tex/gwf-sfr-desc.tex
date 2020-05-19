@@ -41,7 +41,9 @@
 
 \item \texttt{MOVER}---keyword to indicate that this instance of the SFR Package can be used with the Water Mover (MVR) Package.  When the MOVER option is specified, additional memory is allocated within the package to store the available, provided, and received water.
 
-\item \texttt{maximum\_iterations}---value that defines the maximum number of Streamflow Routing Newton-Raphson iterations allowed for a reach. By default, MAXSFRIT is equal to 100.
+\item \texttt{maximum\_picard\_iterations}---value that defines the maximum number of Streamflow Routing picard iterations allowed when solving for reach stages and flows as part of the GWF formulate step. Picard iterations are used to minimize differences in SFR package results between subsequent GWF picard (non-linear) iterations as a result of non-optimal reach numbering. If reaches are numbered in order, from upstream to downstream, MAXIMUM\_PICARD\_ITERATIONS can be set to 1 to reduce model run time. By default, MAXIMUM\_PICARD\_ITERATIONS is equal to 100.
+
+\item \texttt{maximum\_iterations}---value that defines the maximum number of Streamflow Routing Newton-Raphson iterations allowed for a reach. By default, MAXIMUM\_ITERATIONS is equal to 100.
 
 \item \texttt{maximum\_depth\_change}---value that defines the depth closure tolerance. By default, DMAXCHG is equal to $1 \times 10^{-5}$.
 
@@ -77,7 +79,7 @@
 
 \item \texttt{ncon}---integer value that defines the number of reaches connected to the reach.
 
-\item \texttt{ustrf}---real value that defines the fraction of upstream flow from each upstream reach that is applied as upstream inflow to the reach. The sum of all USTRF values for all reaches connected to the same upstream reach must be equal to one and USTRF must be greater than or equal to zero.
+\item \textcolor{blue}{\texttt{ustrf}---real value that defines the fraction of upstream flow from each upstream reach that is applied as upstream inflow to the reach. The sum of all USTRF values for all reaches connected to the same upstream reach must be equal to one and USTRF must be greater than or equal to zero. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.}
 
 \item \texttt{ndv}---integer value that defines the number of downstream diversions for the reach.
 
@@ -144,7 +146,7 @@ AUXILIARY <auxname> <@auxval@>
 
 \item \texttt{DIVERSION}---keyword to indicate diversion record.
 
-\item \texttt{idv}---diversion number.
+\item \texttt{idv}---an integer value specifying which diversion of reach RNO that DIVFLOW is being specified for.  Must be less or equal to ndv for the current reach (RNO).
 
 \item \textcolor{blue}{\texttt{divflow}---real or character value that defines the volumetric diversion (DIVFLOW) rate for the streamflow routing reach. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.}
 

@@ -244,12 +244,20 @@ longname
 description REPLACE mover {'{#1}': 'SFR'}
 
 block options
+name maximum_picard_iterations
+type integer
+reader urword
+optional true
+longname SFR picard iterations
+description value that defines the maximum number of Streamflow Routing picard iterations allowed when solving for reach stages and flows as part of the GWF formulate step. Picard iterations are used to minimize differences in SFR package results between subsequent GWF picard (non-linear) iterations as a result of non-optimal reach numbering. If reaches are numbered in order, from upstream to downstream, MAXIMUM\_PICARD\_ITERATIONS can be set to 1 to reduce model run time. By default, MAXIMUM\_PICARD\_ITERATIONS is equal to 100.
+
+block options
 name maximum_iterations
 type integer
 reader urword
 optional true
 longname SFR Newton-Raphson iterations
-description value that defines the maximum number of Streamflow Routing Newton-Raphson iterations allowed for a reach. By default, MAXSFRIT is equal to 100.
+description value that defines the maximum number of Streamflow Routing Newton-Raphson iterations allowed for a reach. By default, MAXIMUM\_ITERATIONS is equal to 100.
 
 block options
 name maximum_depth_change
@@ -398,8 +406,9 @@ shape
 tagged false
 in_record true
 reader urword
+time_series true
 longname fraction of upstream flow
-description real value that defines the fraction of upstream flow from each upstream reach that is applied as upstream inflow to the reach. The sum of all USTRF values for all reaches connected to the same upstream reach must be equal to one and USTRF must be greater than or equal to zero.
+description real value that defines the fraction of upstream flow from each upstream reach that is applied as upstream inflow to the reach. The sum of all USTRF values for all reaches connected to the same upstream reach must be equal to one and USTRF must be greater than or equal to zero. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.
 
 block packagedata
 name ndv
@@ -669,7 +678,7 @@ tagged false
 in_record true
 reader urword
 longname diversion number
-description diversion number.
+description an integer value specifying which diversion of reach RNO that DIVFLOW is being specified for.  Must be less or equal to ndv for the current reach (RNO).
 numeric_index true
 
 block period

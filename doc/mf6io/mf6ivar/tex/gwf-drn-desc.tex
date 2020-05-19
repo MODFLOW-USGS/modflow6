@@ -7,6 +7,8 @@
 
 \item \texttt{auxmultname}---name of auxiliary variable to be used as multiplier of drain conductance.
 
+\item \texttt{auxdepthname}---name of auxiliary variable to be used to define the drainage depth used to scale drainage discharge. If a positive drainage depth value is specified for a drain then HDRN is the elevation at which the drain starts to discharge and HDRN + DDRN is the elevation when the drain conductance (COND) scaling factor is 1. If a negative drainage depth value is specified for a drain then HDRN + DDRN is the elevation at which the drain starts to discharge and HDRN is the elevation when the conductance (COND) scaling factor is 1. Linear- or cubic-scaling is used to scale the drain conductance (COND) the if the Standard or Newton-Raphson Formulation are used, respectively.
+
 \item \texttt{BOUNDNAMES}---keyword to indicate that boundary names may be provided with the list of drain cells.
 
 \item \texttt{PRINT\_INPUT}---keyword to indicate that the list of drain information will be written to the listing file immediately after it is read.

@@ -5,12 +5,7 @@ module MemoryTypeModule
                              MAXMEMRANK, LENMEMTYPE
   implicit none
   private
-  public :: MemoryTSType, MemoryType
-
-  type :: MemoryTSType
-    character (len=LENTIMESERIESNAME), pointer :: name => null()
-    real(DP), pointer :: value => null()
-  end type MemoryTSType
+  public :: MemoryType
  
   type MemoryType
     character(len=LENVARNAME)                              :: name                   !name of the array
@@ -29,7 +24,6 @@ module MemoryTypeModule
     real(DP), dimension(:), pointer, contiguous            :: adbl1d      => null()  !pointer to 1d double array
     real(DP), dimension(:, :), pointer, contiguous         :: adbl2d      => null()  !pointer to 2d double array
     real(DP), dimension(:, :, :), pointer, contiguous      :: adbl3d      => null()  !pointer to 3d double array
-    type (MemoryTSType), dimension(:), pointer, contiguous :: ats1d       => null()  !pointer to a time series array
   contains
     procedure :: table_entry
     procedure :: mt_associated
@@ -67,7 +61,6 @@ module MemoryTypeModule
     if(associated(this%adbl1d)) al = .true.
     if(associated(this%adbl2d)) al = .true. 
     if(associated(this%adbl3d)) al = .true. 
-    if(associated(this%ats1d)) al = .true. 
   end function mt_associated
   
 end module MemoryTypeModule

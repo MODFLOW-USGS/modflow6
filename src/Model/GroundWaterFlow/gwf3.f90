@@ -281,7 +281,7 @@ module GwfModule
     call csub_cr(this%csub, this%name, this%insto, this%sto%name,               &
                  this%incsub, this%iout)
     call ic_cr(this%ic, this%name, this%inic, this%iout, this%dis)
-    call mvr_cr(this%mvr, this%name, this%inmvr, this%iout, dis=this%dis)
+    call mvr_cr(this%mvr, this%name, this%inmvr, this%iout, this%dis)
     call oc_cr(this%oc, this%name, this%inoc, this%iout)
     call gwf_obs_cr(this%obs, this%inobs)
     !
@@ -324,7 +324,6 @@ module GwfModule
     call this%dis%dis_df()
     call this%npf%npf_df(this%dis, this%xt3d, this%ingnc)
     call this%oc%oc_df()
-    ! -- todo: niunit is not a good indicator of budterm size
     call this%budget%budget_df(niunit, 'VOLUME', 'L**3')
     if(this%ingnc > 0) call this%gnc%gnc_df(this)
     !

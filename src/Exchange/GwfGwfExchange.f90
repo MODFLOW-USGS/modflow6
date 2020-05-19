@@ -1541,8 +1541,14 @@ contains
     ! -- local
 ! ------------------------------------------------------------------------------
     !
-    ! -- Create and initialize the mover object
-    call mvr_cr(this%mvr, this%name, this%inmvr, iout, iexgmvr=1)
+    ! -- Create and initialize the mover object  Here, dis is set to the one
+    !    for gwfmodel1 so that a call to save flows has an associated dis
+    !    object.  Because the conversion flags for the mover are both false,
+    !    the dis object does not convert from reduced to user node numbers. 
+    !    So in this case, the dis object is just writing unconverted package
+    !    numbers to the binary budget file.
+    call mvr_cr(this%mvr, this%name, this%inmvr, iout, this%gwfmodel1%dis,     &
+                iexgmvr=1)
     !
     ! -- Return
     return
