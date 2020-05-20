@@ -6,6 +6,7 @@ module BndModule
                                           LENORIGIN, MAXCHARLEN, LINELENGTH,   &
                                           DNODATA, LENLISTLABEL, LENPAKLOC,    &
                                           TABLEFT, TABCENTER
+  use SimVariablesModule,           only: errmsg
   use SimModule,                    only: count_errors, store_error, ustop,    &
                                           store_error_unit
   use NumericalPackageModule,       only: NumericalPackageType
@@ -33,7 +34,8 @@ module BndModule
     ! -- characters
     character(len=LENLISTLABEL) :: listlabel   = ''                              !title of table written for RP
     character(len=LENPACKAGENAME) :: text = ''
-    character(len=LENAUXNAME), allocatable, dimension(:) :: auxname              !name for each auxiliary variable
+    character(len=LENAUXNAME), dimension(:), pointer,                         &
+                                 contiguous :: auxname => null()                 !vector of auxname
     character(len=LENBOUNDNAME), dimension(:), pointer,                         &
                                  contiguous :: boundname => null()               !vector of boundnames
     !
@@ -288,7 +290,7 @@ module BndModule
     ! -- local
     integer(I4B) :: ierr, nlist
     logical :: isfound
-    character(len=LINELENGTH) :: line, errmsg
+    character(len=LINELENGTH) :: line
     ! -- formats
     character(len=*),parameter :: fmtblkerr = &
       "('Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
@@ -858,8 +860,8 @@ module BndModule
     call mem_deallocate(this%simvals)
     call mem_deallocate(this%simtomvr)
     call mem_deallocate(this%auxvar)
-    deallocate(this%boundname)
-    deallocate(this%auxname)
+    call mem_deallocate(this%boundname, 'BOUNDNAME', this%origin)
+    call mem_deallocate(this%auxname, 'AUXNAME', this%origin)
     nullify(this%icelltype)
     !
     ! -- pakmvrobj
@@ -965,9 +967,6 @@ module BndModule
     allocate(this%TsManager)
     allocate(this%TasManager)
     !
-    ! -- Allocate text strings
-    allocate(this%auxname(0))
-    !
     ! -- Initialize variables
     this%ibcnum = 0
     this%maxbound = 0
@@ -1047,7 +1046,7 @@ module BndModule
     if(present(auxvar)) then
       this%auxvar => auxvar
     else
-      call mem_allocate(this%auxvar, this%naux, this%maxbound, 'AUXVAR',       &
+      call mem_allocate(this%auxvar, this%naux, this%maxbound, 'AUXVAR',         &
                         this%origin)
       do i = 1, this%maxbound
         do j = 1, this%naux
@@ -1057,19 +1056,19 @@ module BndModule
     endif
     !
     ! -- Allocate boundname
-    if(this%inamedbound==1) then
-      allocate(this%boundname(this%maxbound))
-    else
-      allocate(this%boundname(1))
-    endif
+    if (this%inamedbound /= 0) then
+      call mem_allocate(this%boundname, LENBOUNDNAME, this%maxbound,             &
+                        'BOUNDNAME', this%origin)
+    end if
     !
     ! -- Set pointer to ICELLTYPE. For GWF boundary packages, 
     !    this%ictorigin will be 'NPF'.  If boundary packages do not set
     !    this%ictorigin, then icelltype will remain as null()
-    if (this%ictorigin /= '')                                                  &
+    if (this%ictorigin /= '') then
       call mem_setptr(this%icelltype, 'ICELLTYPE',                             &
                       trim(adjustl(this%name_model)) // ' ' //                 &
                       trim(adjustl(this%ictorigin)))
+    end if
     !
     ! -- Initialize values
     do j = 1, this%maxbound
@@ -1080,11 +1079,7 @@ module BndModule
     do i = 1, this%maxbound
       this%hcof(i) = DZERO
       this%rhs(i) = DZERO
-      if(this%inamedbound==1) then
-        this%boundname(i) = ''
-      end if
     end do
-    if(this%inamedbound /= 1) this%boundname(1) = ''
     !
     ! -- setup the output table
     call this%pak_setup_outputtab()
@@ -1140,17 +1135,25 @@ module BndModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule,     only: LINELENGTH
     use InputOutputModule,   only: urdaux
+    use MemoryManagerModule, only: mem_allocate
     use SimModule,           only: ustop, store_error, store_error_unit
     ! -- dummy
     class(BndType),intent(inout) :: this
     ! -- local
-    character(len=LINELENGTH) :: line, errmsg, fname, keyword
+    character(len=LINELENGTH) :: line
+    character(len=LINELENGTH) :: fname
+    character(len=LINELENGTH) :: keyword
     character(len=LENAUXNAME) :: sfacauxname
-    integer(I4B) :: lloc,istart,istop,n,ierr
+    character(len=LENAUXNAME), dimension(:), allocatable :: caux
+    integer(I4B) :: lloc
+    integer(I4B) :: istart
+    integer(I4B) :: istop
+    integer(I4B) :: n
+    integer(I4B) :: ierr
     integer(I4B) :: inobs
-    logical :: isfound, endOfBlock
+    logical :: isfound
+    logical :: endOfBlock
     logical :: foundchildclassoption
     ! -- format
     character(len=*),parameter :: fmtflow = &
@@ -1177,14 +1180,22 @@ module BndModule
         //' OPTIONS'
       do
         call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
+        if (endOfBlock) then
+          exit
+        end if
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
           case('AUX', 'AUXILIARY')
             call this%parser%GetRemainingLine(line)
             lloc = 1
-            call urdaux(this%naux, this%parser%iuactive, this%iout, lloc, &
-                        istart, istop, this%auxname, line, this%text)
+            call urdaux(this%naux, this%parser%iuactive, this%iout, lloc,        &
+                        istart, istop, caux, line, this%text)
+            call mem_allocate(this%auxname, LENAUXNAME, this%naux,               &
+                                'AUXNAME', this%origin)
+            do n = 1, this%naux
+              this%auxname(n) = caux(n)
+            end do
+            deallocate(caux)
           case ('SAVE_FLOWS')
             this%ipakcb = -1
             write(this%iout, fmtflow2)
@@ -1339,9 +1350,10 @@ module BndModule
     ! -- dummy
     class(BndType),intent(inout) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg, keyword
+    character(len=LINELENGTH) :: keyword
+    logical :: isfound
+    logical :: endOfBlock
     integer(I4B) :: ierr
-    logical :: isfound, endOfBlock
     ! -- format
 ! ------------------------------------------------------------------------------
     !

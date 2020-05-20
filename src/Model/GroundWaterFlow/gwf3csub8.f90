@@ -20,6 +20,7 @@ module GwfCsubModule
   use InputOutputModule, only: get_node, extract_idnum_or_bndname
   use BaseDisModule, only: DisBaseType
   use SimModule, only: count_errors, store_error, store_error_unit, ustop 
+  use SimVariablesModule, only: errmsg
   use ArrayHandlersModule, only: ExpandArray
   use SortModule, only: qsort, selectn
   !
@@ -50,7 +51,8 @@ module GwfCsubModule
   type, extends(NumericalPackageType) :: GwfCsubType
     character(len=LENBOUNDNAME), dimension(:),                                  &
                                  pointer, contiguous :: boundname => null()      !vector of boundnames
-    character(len=LENAUXNAME), allocatable, dimension(:) :: auxname              !name for each auxiliary variable
+    character(len=LENAUXNAME), dimension(:), pointer,                         &
+                                 contiguous :: auxname => null()                 !vector of auxname
     character(len=500) :: listlabel   = ''                                       !title of table written for RP
     character(len=LENORIGIN) :: stoname
     integer(I4B), pointer :: istounit => null()
@@ -379,9 +381,6 @@ contains
     !
     ! -- allocate TS object
     allocate(this%TsManager)
-    !
-    ! -- Allocate text strings
-    allocate(this%auxname(0))
     !
     ! -- initialize values
     this%istounit = 0
@@ -1686,7 +1685,6 @@ contains
     ! -- dummy
     class(GwfCsubType),intent(inout) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: cellid
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: tag
@@ -2130,18 +2128,20 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: MAXCHARLEN, DZERO
+    use MemoryManagerModule, only: mem_allocate
     use OpenSpecModule, only: access, form
     use InputOutputModule, only: urword, getunit, urdaux, openfile
     implicit none
     ! -- dummy
     class(GwfCsubType),   intent(inout) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: keyword
     character(len=LINELENGTH) :: line
     character(len=MAXCHARLEN) :: fname
+    character(len=LENAUXNAME), dimension(:), allocatable :: caux
     logical :: isfound
     logical :: endOfBlock
+    integer(I4B) :: n
     integer(I4B) :: lloc
     integer(I4B) :: istart
     integer(I4B) :: istop
@@ -2184,14 +2184,22 @@ contains
       write(this%iout,'(1x,a)') 'PROCESSING CSUB OPTIONS'
       do
         call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
+        if (endOfBlock) then
+          exit
+        end if
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
           case('AUX', 'AUXILIARY')
             call this%parser%GetRemainingLine(line)
             lloc = 1
             call urdaux(this%naux, this%parser%iuactive, this%iout, lloc,        &
-                        istart, istop, this%auxname, line, this%name)
+                        istart, istop, caux, line, this%name)
+            call mem_allocate(this%auxname, LENAUXNAME, this%naux,               &
+                              'AUXNAME', this%origin)
+            do n = 1, this%naux
+              this%auxname(n) = caux(n)
+            end do
+            deallocate(caux)
           case ('SAVE_FLOWS')
             this%ipakcb = -1
             write(this%iout, fmtflow2)
@@ -2774,8 +2782,8 @@ contains
       call mem_deallocate(this%cell_thick)
       !
       ! -- interbed storage
-      deallocate(this%boundname)
-      deallocate(this%auxname)
+      call mem_deallocate(this%boundname, 'BOUNDNAME', this%origin)
+      call mem_deallocate(this%auxname, 'AUXNAME', this%origin)
       call mem_deallocate(this%auxvar)
       call mem_deallocate(this%ci)
       call mem_deallocate(this%rci)
@@ -2951,7 +2959,6 @@ contains
     ! -- dummy
     class(GwfCsubType),intent(inout) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     character(len=LENBOUNDNAME) :: keyword
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
@@ -3034,7 +3041,6 @@ contains
     ! -- local
     logical :: isfound, endOfBlock
     character(len=LINELENGTH) :: line
-    character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: keyword
     character(len=20) :: cellid
     integer(I4B) :: iske
@@ -3415,7 +3421,6 @@ contains
     implicit none
     class(GwfCsubType) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     character(len=20) :: cellid
     integer(I4B) :: ierr
     integer(I4B) :: node
@@ -3485,7 +3490,6 @@ contains
     class(GwfCsubType), intent(inout) :: this
     integer(I4B),intent(in) :: i
     ! locals
-    character(len=LINELENGTH) :: errmsg
     real(DP) :: comp
     real(DP) :: thick
     real(DP) :: theta
@@ -3679,7 +3683,6 @@ contains
     class(GwfCsubType),intent(inout) :: this
     ! -- local
     character(len=LINELENGTH) :: line
-    character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: text
     character(len=20) :: cellid
@@ -3839,7 +3842,6 @@ contains
     integer(I4B), intent(in) :: nodes
     real(DP), dimension(nodes), intent(in) :: hnew
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: ib
     integer(I4B) :: n
     integer(I4B) :: idelay
@@ -3963,7 +3965,6 @@ contains
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: tag
     character(len=20) :: cellid
-    character (len=LINELENGTH) :: errmsg
     integer(I4B) :: ib
     integer(I4B) :: node
     integer(I4B) :: n
@@ -4718,7 +4719,6 @@ contains
     real(DP), intent(inout) :: rhs
     ! locals
     character(len=20) :: cellid
-    character (len=LINELENGTH) :: errmsg
     integer(I4B) :: idelaycalc
     real(DP) :: snnew
     real(DP) :: snold
@@ -5059,7 +5059,6 @@ contains
     class(GwfCsubType), intent(inout) :: this
     integer(I4B),intent(in) :: node
     ! locals
-    character(len=LINELENGTH) :: errmsg
     character(len=20) :: cellid
     real(DP) :: comp
     real(DP) :: thick
@@ -5828,7 +5827,6 @@ contains
     integer(I4B), intent(in) :: ib
     real(DP), intent(in) :: hcell
     ! -- local variables
-    character(len=LINELENGTH) :: errmsg
     character(len=20) :: cellid
     integer(I4B) :: idelay
     integer(I4B) :: node
@@ -6320,7 +6318,6 @@ contains
     class(GwfCsubType), intent(inout) :: this
     integer(I4B), intent(in) :: ib
     ! -- local variables
-    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: idelay
     integer(I4B) :: n
     real(DP) :: comp
@@ -6676,7 +6673,6 @@ contains
     class(GwfCsubType), intent(inout) :: this
     ! -- local
     type(ObserveType), pointer :: obsrv => null()
-    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: i
     integer(I4B) :: j
     integer(I4B) :: n
@@ -6898,7 +6894,6 @@ contains
     ! -- local
     class(ObserveType), pointer :: obsrv => null()
     character(len=LENBOUNDNAME) :: bname
-    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: i, j, n
     integer(I4B) :: n2
     integer(I4B) :: idelay
