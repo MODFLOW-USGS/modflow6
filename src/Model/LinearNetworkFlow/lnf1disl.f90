@@ -139,10 +139,10 @@ module LnfDislModule
     call mem_allocate(disext%vertices, 3, disext%nvert, 'VERTICES', disext%origin)
     call mem_allocate(disext%cellfdc, disext%nodesuser, 'CELLFDC', disext%origin)
     ! -- Allocate geometries array
-    call mem_allocate(disext%iageom, disext%nodesuser, 'CELLFDC', disext%origin)
-    call mem_allocate(disext%iageocellnum, disext%nodesuser, 'CELLFDC', disext%origin)
+    call mem_allocate(disext%iageom, disext%nodesuser, 'IAGEOM', disext%origin)
+    call mem_allocate(disext%iageocellnum, disext%nodesuser, 'IAGEOCELLNUM', disext%origin)
     allocate(disext%jametries(disext%nsupportedgeoms))
-    !call mem_allocate(disext%jametries, disext%nsupportedgeoms, 'CELLFDC', disext%origin)
+    !call mem_allocate(disext%jametries, disext%nsupportedgeoms, 'JAMETRIES', disext%origin)
 
     !
     ! -- fill data
