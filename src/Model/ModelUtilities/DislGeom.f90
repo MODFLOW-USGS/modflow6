@@ -19,7 +19,6 @@ module DislGeom
     real(DP), pointer, dimension(:, :) :: vertices => null()
     real(DP), pointer, dimension(:, :) :: cellcenters => null()
     integer(I4B), pointer, dimension(:, :) :: centerverts => null()
-    integer(I4B), pointer, dimension(:) :: connections => null()                 ! node connections (node1, node2, shared vertex)
     integer(I4B), pointer, dimension(:) :: nodereduced => null()
     integer(I4B), pointer, dimension(:) :: nodeuser => null()
   contains

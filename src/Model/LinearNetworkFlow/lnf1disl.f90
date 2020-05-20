@@ -11,26 +11,37 @@ module LnfDislModule
   use MemoryManagerModule, only: mem_allocate
   use TdisModule,          only: kstp, kper, pertim, totim, delt
   use DislGeom, only: calcdist, partialdist
+  use BaseGeometryModule, only: GeometryBaseType
 
   implicit none
   private
-  public disl_cr, disl_init_mem, LnfDislType
+  public disl_cr, disl_init_mem, LnfDislType, GeometryContainer
+
+  type :: GeometryContainer
+    class(GeometryBaseType), pointer :: obj
+  end type GeometryContainer
 
   type, extends(DisBaseType) :: LnfDislType
     integer(I4B), pointer :: nvert => null()                                     ! number of x,y vertices
+    integer(I4B), pointer :: nsupportedgeoms => null()                           ! number of supported geometries
+    integer(I4B), pointer :: nactivegeoms => null()                              ! number of active geometries
     real(DP), dimension(:,:), pointer, contiguous :: vertices => null()          ! cell vertices stored as 3d array of x, y, and z
     real(DP), dimension(:,:), pointer, contiguous :: cellcenters => null()       ! cell centers stored as 3d array of x, y, and z
     integer(I4B), dimension(:,:), pointer, contiguous :: centerverts => null()   ! vertex at cell center or vertices cell center is between
     real(DP), dimension(:), pointer, contiguous :: cellfdc => null()             ! fdc stored as array
     integer(I4B), dimension(:), pointer, contiguous :: iavert => null()          ! cell vertex pointer ia array
     integer(I4B), dimension(:), pointer, contiguous :: javert => null()          ! cell vertex pointer ja array
-    integer(I4B), dimension(:), pointer, contiguous :: iavertcells => null()      ! vertex to cells ia array
-    integer(I4B), dimension(:), pointer, contiguous :: javertcells => null()      ! vertex to cells ja array
-    integer(I4B), dimension(:), pointer, contiguous :: idomain  => null()        ! idomain (ncpl, 1, nlay)
+    integer(I4B), dimension(:), pointer, contiguous :: iavertcells => null()     ! vertex to cells ia array
+    integer(I4B), dimension(:), pointer, contiguous :: javertcells => null()     ! vertex to cells ja array
+    integer(I4B), dimension(:), pointer, contiguous :: idomain  => null()        ! idomain (nodes)
+    integer(I4B), dimension(:), pointer, contiguous :: iageom  => null()         ! cell geometry pointer ia array (nodes))
+    integer(I4B), dimension(:), pointer, contiguous :: iageocellnum  => null()   ! cell geometry number ia array (nodes))
+    type(GeometryContainer), allocatable, dimension(:) :: jametries              ! active geometry classes ja array
   contains
     procedure :: dis_df => disl_df
     procedure :: dis_da => disl_da
     procedure :: get_cellxy => get_cellxy_disl
+    procedure, public :: register_geometry
     procedure, public :: record_array
     procedure, public :: record_srcdst_list_header
     ! -- helper functions
@@ -60,16 +71,17 @@ module LnfDislModule
 
   contains
 
-  subroutine disl_cr(dis, name_model, inunit, iout)
+  subroutine disl_cr(dis, name_model, inunit, nsupportedgeoms, iout)
 ! ******************************************************************************
 ! disl_cr -- Create a new discretization by vertices object
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    class(DisBaseType), pointer :: dis
+    class(LnfDislType), pointer :: dis
     character(len=*), intent(in) :: name_model
     integer(I4B), intent(in) :: inunit
+    integer(I4B), intent(in) :: nsupportedgeoms
     integer(I4B), intent(in) :: iout
     type(LnfDislType), pointer :: disnew
 ! ------------------------------------------------------------------------------
@@ -78,6 +90,7 @@ module LnfDislModule
     call disnew%allocate_scalars(name_model)
     dis%inunit = inunit
     dis%iout = iout
+    disnew%nsupportedgeoms = nsupportedgeoms
     !
     ! -- Initialize block parser
     call dis%parser%Initialize(dis%inunit, dis%iout)
@@ -93,7 +106,7 @@ module LnfDislModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    class(DisBaseType), pointer :: dis
+    class(LnfDislType), pointer :: dis
     character(len=*), intent(in) :: name_model
     integer(I4B), intent(in) :: iout
     integer(I4B), intent(in) :: nnodes
@@ -125,6 +138,12 @@ module LnfDislModule
     call mem_allocate(disext%centerverts, 2, disext%nodesuser, 'CENTERVERTS', disext%origin)
     call mem_allocate(disext%vertices, 3, disext%nvert, 'VERTICES', disext%origin)
     call mem_allocate(disext%cellfdc, disext%nodesuser, 'CELLFDC', disext%origin)
+    ! -- Allocate geometries array
+    call mem_allocate(disext%iageom, disext%nodesuser, 'IAGEOM', disext%origin)
+    call mem_allocate(disext%iageocellnum, disext%nodesuser, 'IAGEOCELLNUM', disext%origin)
+    allocate(disext%jametries(disext%nsupportedgeoms))
+    !call mem_allocate(disext%jametries, disext%nsupportedgeoms, 'JAMETRIES', disext%origin)
+
     !
     ! -- fill data
     do k = 1, disext%nodesuser
@@ -133,6 +152,8 @@ module LnfDislModule
       else
         ival = 1
       end if
+      disext%iageom(k) = 0
+      disext%iageocellnum(k) = 0
       disext%idomain(k) = ival
     end do
     do n = 1, disext%nvert
@@ -147,6 +168,43 @@ module LnfDislModule
     ! -- Return
     return
   end subroutine disl_init_mem
+
+  subroutine register_geometry(this, geopkg)
+! ******************************************************************************
+! register_geometry -- registers active geometry package with disl
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    use ConstantsModule, only: LINELENGTH
+    class(LnfDislType) :: this
+    class(GeometryBaseType), target, intent(in) :: geopkg
+    ! -- locals
+    character(len=LINELENGTH) :: errmsg
+    integer(I4B) :: k
+
+! ------------------------------------------------------------------------------
+    ! save active geometry package in array
+    this%nactivegeoms = this%nactivegeoms + 1
+    this%jametries(this%nactivegeoms)%obj => geopkg
+    ! update node to geometry ia lookup
+    do k = 1, size(geopkg%nodelist)
+      if (this%iageom(geopkg%nodelist(k)) /= 0) then
+        ! more than one geometry points to the same node
+        write(errmsg,'(4x,a,i0,a)')'****ERROR. NODE ', geopkg%nodelist(k), &
+              ' HAS MULTIPLE GEOMETRIES.'
+        call store_error(errmsg)
+        call this%parser%StoreErrorUnit()
+        call ustop()
+      end if
+      this%iageom(geopkg%nodelist(k)) = this%nactivegeoms
+      this%iageocellnum(geopkg%nodelist(k)) = k
+    end do
+    !
+    ! -- Return
+    return
+  end subroutine register_geometry
 
   subroutine disl_df(this)
 ! ******************************************************************************
@@ -212,6 +270,8 @@ module LnfDislModule
     call mem_deallocate(this%nvert)
     !
     ! -- Deallocate Arrays
+    call mem_deallocate(this%nsupportedgeoms)
+    call mem_deallocate(this%nactivegeoms)
     call mem_deallocate(this%nodereduced)
     call mem_deallocate(this%nodeuser)
     call mem_deallocate(this%cellcenters)
@@ -223,6 +283,10 @@ module LnfDislModule
     call mem_deallocate(this%iavertcells)
     call mem_deallocate(this%javertcells)
     call mem_deallocate(this%idomain)
+    call mem_deallocate(this%iageom)
+    call mem_deallocate(this%iageocellnum)
+    
+    deallocate(this%jametries)
     !
     ! -- Return
     return
@@ -383,11 +447,16 @@ module LnfDislModule
     call mem_allocate(this%cellfdc, this%nodesuser, 'CELLFDC', this%origin)
     call mem_allocate(this%cellcenters, 3, this%nodesuser, 'CELLCENTERS', this%origin)
     call mem_allocate(this%centerverts, 2, this%nodesuser, 'CENTERVERTS', this%origin)
+    call mem_allocate(this%iageom, this%nodesuser, 'IAGEOM', this%origin)
+    call mem_allocate(this%iageocellnum, this%nodesuser, 'IAGEOCELLNUM', this%origin) 
+    allocate(this%jametries(this%nsupportedgeoms))
 
     !
     ! -- initialize all cells to be active (idomain = 1)
     do k = 1, this%nodesuser
       this%idomain(k) = 1
+      this%iageom(k) = 0
+      this%iageocellnum(k) = 0
     end do
     !
     ! -- Return
@@ -876,7 +945,7 @@ module LnfDislModule
     ! -- Return
     return
   end subroutine read_cell1d
-
+  
   subroutine connect(this)
 ! ******************************************************************************
 ! connect -- Build grid connections
@@ -1057,8 +1126,8 @@ module LnfDislModule
     integer(I4B), intent(in) :: nodeu
     character(len=*), intent(inout) :: str
     ! -- local
-    integer(I4B) :: i, j, k
     character(len=10) :: unstr
+    integer(I4B) :: i, j, k
 ! ------------------------------------------------------------------------------
     !
     write(unstr, '(i10)') nodeu
@@ -1304,9 +1373,12 @@ module LnfDislModule
     !
     ! -- Allocate
     call mem_allocate(this%nvert, 'NVERT', this%origin)
+    call mem_allocate(this%nsupportedgeoms, 'NSUPPORTEDGEOMS', this%origin)
+    call mem_allocate(this%nactivegeoms, 'NACTIVEGEOMS', this%origin)
     !
     ! -- Initialize
     this%nvert = 0
+    this%nactivegeoms = 0
     this%ndim = 1
     !
     ! -- Return

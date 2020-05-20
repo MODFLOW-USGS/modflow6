@@ -5,10 +5,11 @@ module LnfModule
   use ConstantsModule,             only: LENFTYPE, LENPAKLOC,                    &
                                          DZERO, DEM1, DTEN, DEP20
   use NumericalModelModule,        only: NumericalModelType
-  use BaseDisModule,               only: DisBaseType
+  use LnfDislModule,               only: LnfDislType
   use BndModule,                   only: BndType, AddBndToList, GetBndFromList
-  use GwfIcModule,                 only: GwfIcType
-  !use LnfNpfModule,                only: LnfNpfType
+  use LnfIcModule,                 only: LnfIcType
+  use LnfNpflModule,                only: LnfNpflType
+  use LnfOcModule,                 only: LnfOcType
   !use LnfStoModule,                only: sto_cr
   !use LnfMvrModule,                only: mvr_cr
   use CircularGeometryModule,      only: cgeo_cr
@@ -29,15 +30,15 @@ module LnfModule
 
   type, extends(NumericalModelType) :: LnfModelType
 
-    type(GwfIcType),                pointer :: ic        => null()                ! initial conditions package
-    !type(LnfNpfType),               pointer :: npf       => null()                ! node property flow package
+    type(LnfIcType),                pointer :: ic        => null()                ! initial conditions package
+    type(LnfNpflType),              pointer :: npf       => null()                ! node property flow package
     !type(LnfStoType),               pointer :: sto       => null()                ! storage package
     !type(LnfMvrType),               pointer :: mvr       => null()                ! water mover package
-    type(GwfOcType),                pointer :: oc        => null()                ! output control package
+    type(LnfOcType),                pointer :: oc        => null()                ! output control package
     type(BudgetType),               pointer :: budget    => null()                ! budget object
     integer(I4B),                   pointer :: inic      => null()                ! unit number IC
     integer(I4B),                   pointer :: inoc      => null()                ! unit number OC
-    !integer(I4B),                   pointer :: innpf     => null()                ! unit number NPF
+    integer(I4B),                   pointer :: innpf     => null()                ! unit number NPF
     integer(I4B),                   pointer :: insto     => null()                ! unit number STO
     integer(I4B),                   pointer :: inmvr     => null()                ! unit number MVR
     integer(I4B),                   pointer :: incgeo    => null()                ! unit number CGEO
@@ -51,6 +52,7 @@ module LnfModule
     class(GeometryBaseType),        pointer  :: cgeo     => null()                !circular geometry object
     class(GeometryBaseType),        pointer  :: rgeo     => null()                !rectangular geometry object
     class(GeometryBaseType),        pointer  :: ngeo     => null()                !rectangular geometry object
+    class(LnfDislType),             pointer  :: disl     => null()
 
   contains
 
@@ -85,7 +87,7 @@ module LnfModule
   integer(I4B), parameter :: NIUNIT=100
   character(len=LENFTYPE), dimension(NIUNIT) :: cunit
   data cunit/   'IC6  ', 'DISL6', '     ', 'OC6  ', '     ', & !  5
-                'STO6 ', '     ', '     ', '     ', '     ', & ! 10
+                'STO6 ', '     ', '     ', 'NPFL6', '     ', & ! 10
                 'CGEO6', 'RGEO6', 'NGEO6', '     ', '     ', & ! 15
                 '     ', 'CHD6 ', '     ', '     ', '     ', & ! 20
                 '     ', '     ', '     ', '     ', '     ', & ! 25
@@ -111,14 +113,15 @@ module LnfModule
     use ConstantsModule,            only: LINELENGTH, LENPACKAGENAME
     use VersionModule,              only: VERSION, MFVNAM, MFTITLE,             &
                                           FMTDISCLAIMER, IDEVELOPMODE
+    use SimVariablesModule,         only: istdout
     use CompilerVersion
     use MemoryManagerModule,        only: mem_allocate
     use LnfDislModule,              only: disl_cr
-    !use LnfNpfModule,               only: npf_cr
+    use LnfNpflModule,               only: npf_cr
     !use LnfStoModule,               only: sto_cr
     !use LnfMvrModule,               only: mvr_cr
-    use GwfIcModule,                only: ic_cr
-    use GwfOcModule,                only: oc_cr
+    use LnfIcModule,                only: ic_cr
+    use LnfOcModule,                only: oc_cr
     use BudgetModule,               only: budget_cr
     use NameFileModule,             only: NameFileType
     ! -- dummy
@@ -127,6 +130,7 @@ module LnfModule
     character(len=*), intent(in)  :: modelname
     logical, optional, intent(in) :: smr
     ! -- local
+    integer(I4B) :: nsupportedgeoms
     integer(I4B) :: indis
     integer(I4B) :: indisl6
     integer(I4B) :: ipakid, i, j, iu, ipaknum
@@ -193,6 +197,8 @@ module LnfModule
     !
     ! -- Parse options in the LNF name file
     do i = 1, size(namefile_obj%opts)
+      !write(iu,'(a)') trim(newline)
+      write(istdout, '(a)') namefile_obj%opts(i)
       call ParseLine(namefile_obj%opts(i), nwords, words)
       call upcase(words(1))
       select case(words(1))
@@ -240,30 +246,33 @@ module LnfModule
     if(indisl6 > 0) indis = indisl6
     call namefile_obj%get_unitnumber('IC6',  this%inic, 1)
     call namefile_obj%get_unitnumber('OC6',  this%inoc, 1)
-    !call namefile_obj%get_unitnumber('NPF6', this%innpf, 1)
+    call namefile_obj%get_unitnumber('NPFL6', this%innpf, 1)
     call namefile_obj%get_unitnumber('STO6', this%insto, 1)
     call namefile_obj%get_unitnumber('MVR6', this%inmvr, 1)
     call namefile_obj%get_unitnumber('CGEO6', this%incgeo, 1)
     call namefile_obj%get_unitnumber('RGEO6', this%inrgeo, 1)
     call namefile_obj%get_unitnumber('NGEO6', this%inngeo, 1)
+    ! increment nsupportedgeom when new geometries are added
+    nsupportedgeoms = 3
     !
     ! -- Check to make sure that required ftype's have been specified
     call this%ftype_check(namefile_obj, indis)
     !!
     !! -- Create discretization object
     if (indisl6 > 0) then
-      call disl_cr(this%dis, this%name, indis, this%iout)
+      call disl_cr(this%disl, this%name, indis, nsupportedgeoms, this%iout)
+      this%dis => this%disl
     !else
     !  ! -- todo - issue error and stop if disl not specified
     endif
     !!
     !! -- Create utility objects
-    !call budget_cr(this%budget, this%name)
+    call budget_cr(this%budget, this%name)
     !!
     !! -- Create packages that are tied directly to model
-    !!call npf_cr(this%npf, this%name, this%innpf, this%iout)
+    call npf_cr(this%npf, this%name, this%innpf, this%iout)
     !!call sto_cr(this%sto, this%name, this%insto, this%iout)
-    !!call mvr_cr(this%mvr, this%name, this%inmvr, this%iout, dis=this%dis)
+    !!call mvr_cr(this%mvr, this%name, this%inmvr, this%iout, dis=this%disl)
     if (this%incgeo /= 0) then
       call cgeo_cr(this%cgeo, this%name, this%incgeo, this%iout)
     end if
@@ -273,8 +282,8 @@ module LnfModule
     if (this%inngeo /= 0) then
       call ngeo_cr(this%ngeo, this%name, this%inngeo, this%iout)
     end if
-    !call ic_cr(this%ic, this%name, this%inic, this%iout, this%dis)
-    !call oc_cr(this%oc, this%name, this%inoc, this%iout)
+    call ic_cr(this%ic, this%name, this%inic, this%iout, this%dis)
+    call oc_cr(this%oc, this%name, this%inoc, this%iout)
     !!
     !! -- Create stress packages
     !ipakid = 1
@@ -312,30 +321,30 @@ module LnfModule
 ! ------------------------------------------------------------------------------
     !!
     !! -- Define packages and utility objects
-    call this%dis%dis_df()
-    !!call this%npf%npf_df(this%dis, this%xt3d, this%ingnc)
-    !call this%oc%oc_df()
+    call this%disl%dis_df()
+    call this%npf%npf_df(this%disl)
+    call this%oc%oc_df()
     !! -- todo: niunit is not a good indicator of budterm size
-    !call this%budget%budget_df(niunit, 'VOLUME', 'L**3')
+    call this%budget%budget_df(niunit, 'VOLUME', 'L**3')
     !!
     !! -- Assign or point model members to dis members
     !!    this%neq will be incremented if packages add additional unknowns
-    !this%neq = this%dis%nodes
-    !this%nja = this%dis%nja
-    !this%ia  => this%dis%con%ia
-    !this%ja  => this%dis%con%ja
+    this%neq = this%disl%nodes
+    this%nja = this%disl%nja
+    this%ia  => this%disl%con%ia
+    this%ja  => this%disl%con%ja
     !!
     !! -- Allocate model arrays, now that neq and nja are known
-    !call this%allocate_arrays()
+    call this%allocate_arrays()
     !!
     !! -- Define packages and assign iout for time series managers
     !do ip = 1, this%bndlist%Count()
     !  packobj => GetBndFromList(this%bndlist, ip)
-    !  call packobj%bnd_df(this%neq, this%dis)
+    !  call packobj%bnd_df(this%neq, this%disl)
     !enddo
     !!
     !! -- Store information needed for observations
-    !!call this%obs%obs_df(this%iout, this%name, 'LNF', this%dis)
+    !!call this%obs%obs_df(this%iout, this%name, 'LNF', this%disl)
     !
     ! -- return
     return
@@ -359,10 +368,10 @@ module LnfModule
 ! ------------------------------------------------------------------------------
     !!
     !! -- Add the primary grid connections of this model to sparse
-    call this%dis%dis_ac(this%moffset, sparse)
+    call this%disl%dis_ac(this%moffset, sparse)
     !!
     !! -- Add any additional connections that NPF may need
-    !if(this%innpf > 0) call this%npf%npf_ac(this%moffset, sparse)
+    if(this%innpf > 0) call this%npf%npf_ac(this%moffset, sparse)
     !!
     !! -- Add any package connections
     !do ip = 1, this%bndlist%Count()
@@ -393,10 +402,10 @@ module LnfModule
     !!
     !! -- Find the position of each connection in the global ia, ja structure
     !!    and store them in idxglo.
-    call this%dis%dis_mc(this%moffset, this%idxglo, iasln, jasln)
+    call this%disl%dis_mc(this%moffset, this%idxglo, iasln, jasln)
     !!
     !! -- Map any additional connections that NPF may need
-    !if(this%innpf > 0) call this%npf%npf_mc(this%moffset, iasln, jasln)
+    if(this%innpf > 0) call this%npf%npf_mc(this%moffset, iasln, jasln)
     !!
     !! -- Map any package connections
     !do ip=1,this%bndlist%Count()
@@ -425,25 +434,34 @@ module LnfModule
 ! ------------------------------------------------------------------------------
     !!
     !! -- Allocate and read modules attached to model
-    !if(this%inic  > 0) call this%ic%ic_ar(this%x)
-    !if(this%innpf > 0) call this%npf%npf_ar(this%ic, this%ibound, this%x)
-    !if(this%insto > 0) call this%sto%sto_ar(this%dis, this%ibound)
+    if(this%incgeo > 0) then
+      call this%cgeo%geo_ar()
+      call this%disl%register_geometry(this%cgeo)
+    end if
+    if(this%inrgeo > 0) then
+      call this%rgeo%geo_ar()
+      call this%disl%register_geometry(this%rgeo)
+    end if
+    if(this%inngeo > 0) then
+      call this%ngeo%geo_ar()
+      call this%disl%register_geometry(this%ngeo)
+    end if
+    if(this%inic  > 0) call this%ic%ic_ar(this%x)
+    if(this%innpf > 0) call this%npf%npf_ar(this%ic, this%ibound, this%x)
+    !if(this%insto > 0) call this%sto%sto_ar(this%disl, this%ibound)
     !if(this%inmvr > 0) call this%mvr%mvr_ar()
-    if(this%incgeo > 0) call this%cgeo%geo_ar()
-    if(this%inrgeo > 0) call this%rgeo%geo_ar()
-    if(this%inngeo > 0) call this%ngeo%geo_ar()
     !if(this%inobs > 0) call this%obs%lnf_obs_ar(this%ic, this%x, this%flowja)
     !!
     !! -- Call dis_ar to write binary grid file
-    !call this%dis%dis_ar(this%npf%icelltype)
+    call this%disl%dis_ar(this%npf%icelltype)
     !!
     !! -- set up output control
-    !call this%oc%oc_ar(this%x, this%dis, this%npf%hnoflo)
+    call this%oc%oc_ar(this%x, this%dis, this%npf%hnoflo)
     !!
     !! -- Package input files now open, so allocate and read
     !do ip = 1,this%bndlist%Count()
     !  packobj => GetBndFromList(this%bndlist, ip)
-    !  call packobj%set_pointers(this%dis%nodes, this%ibound, this%x,           &
+    !  call packobj%set_pointers(this%disl%nodes, this%ibound, this%x,           &
     !                            this%xold, this%flowja)
     !  ! -- Read and allocate package
     !  call packobj%bnd_ar()
@@ -474,7 +492,7 @@ module LnfModule
     if (.not. readnewdata) return
     !!
     !! -- Read and prepare
-    !if(this%inoc > 0)  call this%oc%oc_rp()
+    if(this%inoc > 0)  call this%oc%oc_rp()
     !!if(this%insto > 0) call this%sto%sto_rp()
     !do ip = 1, this%bndlist%Count()
     !  packobj => GetBndFromList(this%bndlist, ip)
@@ -506,12 +524,12 @@ module LnfModule
 ! ------------------------------------------------------------------------------
     !!
     !! -- copy x into xold
-    !do n=1,this%dis%nodes
-    !  this%xold(n)=this%x(n)
-    !enddo
+    do n=1,this%disl%nodes
+      this%xold(n)=this%x(n)
+    enddo
     !!
     !! -- Advance
-    !!if(this%innpf > 0) call this%npf%npf_ad(this%dis%nodes, this%xold)
+    if(this%innpf > 0) call this%npf%npf_ad(this%disl%nodes, this%xold)
     !!if(this%insto > 0) call this%sto%sto_ad()
     !!if(this%inmvr > 0) call this%mvr%mvr_ad()
     !do ip=1,this%bndlist%Count()
@@ -545,7 +563,7 @@ module LnfModule
 ! ------------------------------------------------------------------------------
     !!
     !! -- Call package cf routines
-    !!if(this%innpf > 0) call this%npf%npf_cf(kiter, this%dis%nodes, this%x)
+    if(this%innpf > 0) call this%npf%npf_cf(kiter, this%disl%nodes, this%x)
     !do ip = 1, this%bndlist%Count()
     !  packobj => GetBndFromList(this%bndlist, ip)
     !  call packobj%bnd_cf()
@@ -563,6 +581,8 @@ module LnfModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
+    use TdisModule, only: delt
+    use ConstantsModule,        only: DZERO, DONE
     class(LnfModelType) :: this
     integer(I4B), intent(in) :: kiter
     integer(I4B), intent(in) :: njasln
@@ -570,8 +590,10 @@ module LnfModule
     integer(I4B), intent(in) :: inwtflag
     ! -- local
     class(BndType), pointer :: packobj
-    integer(I4B) :: ip
+    integer(I4B) :: ipm, n, idiag
     integer(I4B) :: inwt, inwtsto, inwtpak
+    real(DP) :: ss0, ss1, ssh0, ssh1, tled, rho1
+    
 ! ------------------------------------------------------------------------------
     !!
     !! -- newton flags
@@ -583,9 +605,51 @@ module LnfModule
     !endif
     !!
     !! -- Fill standard conductance terms
-    !if(this%innpf > 0) call this%npf%npf_fc(kiter, njasln, amatsln,            &
-    !                                        this%idxglo, this%rhs, this%x)
-    !! -- storage
+    if(this%innpf > 0) call this%npf%npf_fc(kiter, njasln, amatsln,            &
+                                            this%idxglo, this%rhs, this%x)
+    
+    ! -- loop through and calculate storage contribution to hcof and rhs
+    do n = 1, this%disl%nodes
+      idiag = this%disl%con%ia(n)
+      if (this%ibound(n) < 1) cycle
+      ! -- aquifer elevations and thickness
+      !tp = this%dis%top(n)
+      !bt = this%dis%bot(n)
+      !tthk = tp - bt
+
+      !! -- storage
+      tled = DONE / delt
+      !rhsterm = DZERO
+      !snnew = sQuadraticSaturation(tp, bt, this%x(n), this%satomega)
+      !snold = sQuadraticSaturation(tp, bt, this%xold(n), this%satomega)
+
+      ! -- storage coefficients
+      rho1 = 0.000001 * tled
+      !rho2 = 0.000001 * tled
+      ss0 = DONE
+      ss1 = DONE
+      ssh0 = this%xold(n)
+      ssh1 = DZERO
+
+      amatsln(this%idxglo(idiag)) = amatsln(this%idxglo(idiag)) - rho1 * ss1
+      this%rhs(n) = this%rhs(n) - rho1 * ss0 * ssh0 + rho1 * ssh1
+
+      ! -- add specific yield terms to amat at rhs
+      !if (snnew < DONE) then
+      !  if (snnew > DZERO) then
+      !    amat(idxglo(idiag)) = amat(idxglo(idiag)) - tled
+      !    rhsterm = tled * tthk * snold
+      !    rhsterm = rhsterm + tled * bt
+      !  else
+      !    rhsterm = -tled * tthk * (DZERO - snold)
+      !  end if
+      ! -- known flow from specific yield
+      !else
+      !rhsterm = -tled * tthk * (DONE - snold)
+      !end if
+      !this%rhs(n) = this%rhs(n) - rhsterm
+    end do
+    
     !if(this%insto > 0) then
     !  call this%sto%sto_fc(kiter, this%xold, this%x, njasln, amatsln,          &
     !                       this%idxglo, this%rhs)
@@ -655,7 +719,7 @@ module LnfModule
     ! -- return
     return
   end subroutine lnf_cc
-  
+
   subroutine lnf_ptcchk(this, iptc)
 ! ******************************************************************************
 ! lnf_ptcchk -- check if pseudo-transient continuation factor should be used
@@ -669,17 +733,17 @@ module LnfModule
     class(LnfModelType) :: this
     integer(I4B), intent(inout) :: iptc
 ! ------------------------------------------------------------------------------
-    ! -- determine if pseudo-transient continuation should be applied to this 
+    ! -- determine if pseudo-transient continuation should be applied to this
     !    model - pseudo-transient continuation only applied to problems that
     !    use the Newton-Raphson formulation during steady-state stress periods
-    !iptc = 0
-    !if (this%iss > 0) then
-    !  if (this%inewton > 0) then
-    !    iptc = this%inewton
-    !  else
-    !    iptc = this%npf%inewton
-    !  end if
-    !end if
+    iptc = 0
+    if (this%iss > 0) then
+      if (this%inewton > 0) then
+        iptc = this%inewton
+      else
+        iptc = this%npf%inewton
+      end if
+    end if
     !
     ! -- return
     return
@@ -725,7 +789,7 @@ module LnfModule
     ! -- set temporary flag indicating if pseudo-transient continuation should
     !    be used for this model and time step
     iptct = 0
-    !! -- only apply pseudo-transient continuation to problems using the 
+    !! -- only apply pseudo-transient continuation to problems using the
     !!    Newton-Raphson formulations for steady-state stress periods
     !if (this%iss > 0) then
     !  if (this%inewton > 0) then
@@ -740,12 +804,12 @@ module LnfModule
     !  diagmin = DEP20
     !  diagmax = DZERO
     !  diagcnt = DZERO
-    !  do n = 1, this%dis%nodes
+    !  do n = 1, this%disl%nodes
     !    if (this%npf%ibound(n) < 1) cycle
     !    jcol = n + this%moffset
     !    !
-    !    ! get the maximum volume of the cell (head at top of cell)        
-    !    v = this%dis%get_cell_volume(n, this%dis%top(n))
+    !    ! get the maximum volume of the cell (head at top of cell)
+    !    v = this%disl%get_cell_volume(n, this%disl%top(n))
     !    !
     !    ! -- calculate the residual for the cell
     !    resid = DZERO
@@ -760,8 +824,8 @@ module LnfModule
     !    ptcdelem1 = abs(resid) / v
     !    !
     !    ! -- set ptcf if the reciprocal of the pseudo-time step
-    !    !    exceeds the current value (equivalent to using the 
-    !    !    smallest pseudo-time step) 
+    !    !    exceeds the current value (equivalent to using the
+    !    !    smallest pseudo-time step)
     !    if (ptcdelem1 > ptcf) ptcf = ptcdelem1
     !    !
     !    ! -- determine minimum and maximum diagonal entries
@@ -798,8 +862,8 @@ module LnfModule
   subroutine lnf_nur(this, neqmod, x, xtemp, dx, inewtonur, dxmax, locmax)
 ! ******************************************************************************
 ! lnf_nur -- under-relaxation
-! Subroutine: (1) Under-relaxation of Linear Network Flow Model Heads for 
-!                 current outer iteration using the cell bottoms at the bottom 
+! Subroutine: (1) Under-relaxation of Linear Network Flow Model Heads for
+!                 current outer iteration using the cell bottoms at the bottom
 !                 of the model
 ! ******************************************************************************
 !
@@ -835,7 +899,7 @@ module LnfModule
     !  end if
     !  !
     !  ! -- Call package nur routines
-    !  i0 = this%dis%nodes + 1
+    !  i0 = this%disl%nodes + 1
     !  do ip = 1, this%bndlist%Count()
     !    packobj => GetBndFromList(this%bndlist, ip)
     !    if (packobj%npakeq > 0) then
@@ -870,10 +934,10 @@ module LnfModule
     !
     ! -- Construct the flowja array.  Flowja is calculated each time, even if
     !    output is suppressed.  (flowja is positive into a cell.)
-    !do i = 1, this%nja
-    !  this%flowja(i) = DZERO
-    !enddo
-    !if(this%innpf > 0) call this%npf%npf_flowja(this%x, this%flowja)
+    do i = 1, this%nja
+      this%flowja(i) = DZERO
+    enddo
+    if(this%innpf > 0) call this%npf%npf_flowja(this%x, this%flowja)
     !
     ! -- Return
     return
@@ -902,37 +966,37 @@ module LnfModule
     this%icnvg = icnvg
     !!
     !! -- Set write and print flags differently if output is suppressed.
-    !if(isuppress_output == 0) then
-    !  idvfl = 0
-    !  if(this%oc%oc_save('HEAD')) idvfl = 1
-    !  icbcfl = 0
-    !  if(this%oc%oc_save('BUDGET')) icbcfl = 1
-    !  icbcun = this%oc%oc_save_unit('BUDGET')
-    !  ibudfl = 0
-    !  if(this%oc%oc_print('BUDGET')) ibudfl = 1
-    !  iprobs = 1
-    !else
-    !  icbcfl = 0
-    !  ibudfl = 0
-    !  icbcun = 0
-    !  iprobs = 0
-    !  idvfl  = 0
-    !endif
+    if(isuppress_output == 0) then
+      idvfl = 0
+      if(this%oc%oc_save('HEAD')) idvfl = 1
+      icbcfl = 0
+      if(this%oc%oc_save('BUDGET')) icbcfl = 1
+      icbcun = this%oc%oc_save_unit('BUDGET')
+      ibudfl = 0
+      if(this%oc%oc_print('BUDGET')) ibudfl = 1
+      iprobs = 1
+    else
+      icbcfl = 0
+      ibudfl = 0
+      icbcun = 0
+      iprobs = 0
+      idvfl  = 0
+    endif
     !!
     !! -- Budget routines (start by resetting)
-    !call this%budget%reset()
+    call this%budget%reset()
     !!
     !! -- Storage
     !if(this%insto > 0) then
-    !  call this%sto%bdcalc(this%dis%nodes, this%x, this%xold,                  &
+    !  call this%sto%bdcalc(this%disl%nodes, this%x, this%xold,                  &
     !                       isuppress_output, this%budget)
     !  call this%sto%bdsav(icbcfl, icbcun)
     !endif
     !!
     !! -- Node Property Flow
-    !if(this%innpf > 0) then
-    !  call this%npf%npf_bdadj(this%flowja, icbcfl, icbcun)
-    !endif
+    if(this%innpf > 0) then
+      call this%npf%npf_bdadj(this%flowja, icbcfl, icbcun)
+    endif
     !!
     !! -- Clear obs
     !call this%obs%obs_bd_clear()
@@ -948,11 +1012,11 @@ module LnfModule
     !enddo
     !!
     !! -- Calculate and write simulated values for observations
-    !if(iprobs /= 0) then
-    !  if (icnvg > 0) then
-    !    call this%obs%obs_bd()
-    !  endif
-    !endif
+!    if(iprobs /= 0) then
+!      if (icnvg > 0) then
+!        call this%obs%obs_bd()
+!      endif
+!    endif
     !
     ! -- Return
     return
@@ -981,36 +1045,36 @@ module LnfModule
 ! ------------------------------------------------------------------------------
     !!
     !! -- Set ibudfl flag for printing budget information
-    !ibudfl = 0
-    !if(this%oc%oc_print('BUDGET')) ibudfl = 1
-    !if(this%icnvg == 0) ibudfl = 1
-    !if(endofperiod) ibudfl = 1
+    ibudfl = 0
+    if(this%oc%oc_print('BUDGET')) ibudfl = 1
+    if(this%icnvg == 0) ibudfl = 1
+    if(endofperiod) ibudfl = 1
     !!
     !! -- Set ibudfl flag for printing dependent variable information
-    !ihedfl = 0
-    !if(this%oc%oc_print('HEAD')) ihedfl = 1
-    !if(this%icnvg == 0) ihedfl = 1
-    !if(endofperiod) ihedfl = 1
+    ihedfl = 0
+    if(this%oc%oc_print('HEAD')) ihedfl = 1
+    if(this%icnvg == 0) ihedfl = 1
+    if(endofperiod) ihedfl = 1
     !!
     !! -- Output individual flows if requested
-    !if(ibudfl /= 0) then
+    if(ibudfl /= 0) then
     !  !
     !  ! -- NPF output
-    !  if(this%innpf > 0) call this%npf%npf_ot(this%flowja)
-    !endif
+      if(this%innpf > 0) call this%npf%npf_ot(this%flowja)
+    endif
     !!
     !! -- Output control
-    !ipflg = 0
-    !this%budget%budperc = 1.e30
-    !if(this%icnvg == 0) then
-    !  write(this%iout,fmtnocnvg) kstp, kper
-    !  ipflg = 1
-    !endif
-    !call this%oc%oc_ot(ipflg)
+    ipflg = 0
+    this%budget%budperc = 1.e30
+    if(this%icnvg == 0) then
+      write(this%iout,fmtnocnvg) kstp, kper
+      ipflg = 1
+    endif
+    call this%oc%oc_ot(ipflg)
     !!
     !! -- Write Budget and Head if these conditions are met
-    !if (ibudfl /= 0 .or. ihedfl /=0) then
-    !  ipflg = 1
+    if (ibudfl /= 0 .or. ihedfl /=0) then
+      ipflg = 1
     !  !
     !  ! -- Package budget output
     !  do ip = 1, this%bndlist%Count()
@@ -1018,18 +1082,18 @@ module LnfModule
     !    call packobj%bnd_ot(kstp, kper, this%iout, ihedfl, ibudfl)
     !  enddo
     !  !
-    !  if (ibudfl /= 0) then
+      if (ibudfl /= 0) then
     !    !
     !    ! -- Mover budget output
     !    if(this%inmvr > 0) call this%mvr%mvr_ot()
     !    !
-    !    ! -- gwf model budget
-    !    call this%budget%budget_ot(kstp, kper, this%iout)
-    !  end if
-    !end if
+        ! -- lnf model budget
+        call this%budget%budget_ot(kstp, kper, this%iout)
+      end if
+    end if
     !!
     !! -- Timing Output
-    !if(ipflg == 1) call tdis_ot(this%iout)
+    if(ipflg == 1) call tdis_ot(this%iout)
     !!
     !! -- OBS output
     !call this%obs%obs_ot()
@@ -1075,13 +1139,13 @@ module LnfModule
 ! ------------------------------------------------------------------------------
     !!
     !! -- Internal flow packages deallocate
-    !call this%dis%dis_da()
-    !call this%ic%ic_da()
-    !!call this%npf%npf_da()
+    call this%disl%dis_da()
+    call this%ic%ic_da()
+    call this%npf%npf_da()
     !call this%sto%sto_da()
-    !call this%budget%budget_da()
+    call this%budget%budget_da()
     !call this%mvr%mvr_da()
-    !call this%oc%oc_da()
+    call this%oc%oc_da()
     !call this%obs%obs_da()
     !
     ! -- geometry objects
@@ -1099,14 +1163,14 @@ module LnfModule
     end if
     !!
     !! -- Internal package objects
-    !deallocate(this%dis)
-    !deallocate(this%ic)
-    !!deallocate(this%npf)
+    deallocate(this%disl)
+    deallocate(this%ic)
+    deallocate(this%npf)
     !deallocate(this%sto)
-    !deallocate(this%budget)
+    deallocate(this%budget)
     !deallocate(this%mvr)
     !deallocate(this%obs)
-    !deallocate(this%oc)
+    deallocate(this%oc)
     !!
     !! -- Boundary packages
     !do ip = 1, this%bndlist%Count()
@@ -1119,7 +1183,7 @@ module LnfModule
     call mem_deallocate(this%inic)
     call mem_deallocate(this%inoc)
     call mem_deallocate(this%inobs)
-    !call mem_deallocate(this%innpf)
+    call mem_deallocate(this%innpf)
     call mem_deallocate(this%insto)
     call mem_deallocate(this%inmvr)
     call mem_deallocate(this%incgeo)
@@ -1201,9 +1265,9 @@ module LnfModule
     iasym = 0
     !!
     !! -- NPF
-    !if (this%innpf > 0) then
-    !  if (this%npf%iasym /= 0) iasym = 1
-    !endif
+    if (this%innpf > 0) then
+      if (this%npf%iasym /= 0) iasym = 1
+    endif
     !!
     !! -- Check for any packages that introduce matrix asymmetry
     !do ip=1,this%bndlist%Count()
@@ -1235,7 +1299,7 @@ module LnfModule
     ! -- allocate members that are part of model class
     call mem_allocate(this%inic,  'INIC',  modelname)
     call mem_allocate(this%inoc,  'INOC',  modelname)
-    !call mem_allocate(this%innpf, 'INNPF', modelname)
+    call mem_allocate(this%innpf, 'INNPF', modelname)
     call mem_allocate(this%insto, 'INSTO', modelname)
     call mem_allocate(this%inmvr, 'INMVR', modelname)
     call mem_allocate(this%incgeo, 'INCGEO', modelname)
@@ -1247,7 +1311,7 @@ module LnfModule
     !
     this%inic = 0
     this%inoc = 0
-    !this%innpf = 0
+    this%innpf = 0
     this%insto = 0
     this%inmvr = 0
     this%incgeo = 0
@@ -1383,11 +1447,11 @@ module LnfModule
         'ERROR. DISCRETIZATION (DIS6, DISV6, or DISU6) PACKAGE NOT SPECIFIED.'
       call store_error(errmsg)
     endif
-    !if(this%innpf==0) then
-    !  write(errmsg, '(1x,a)') &
-    !    'ERROR.  NODE PROPERTY FLOW (NPF6) PACKAGE NOT SPECIFIED.'
-    !  call store_error(errmsg)
-    !endif
+    if(this%innpf==0) then
+      write(errmsg, '(1x,a)') &
+        'ERROR.  NODE PROPERTY FLOW (NPF6) PACKAGE NOT SPECIFIED.'
+      call store_error(errmsg)
+    endif
     if(count_errors() > 0) then
       write(errmsg,'(1x,a)') 'ERROR. REQUIRED PACKAGE(S) NOT SPECIFIED.'
       call store_error(errmsg)
